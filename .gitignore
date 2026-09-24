@@ -1,0 +1,28 @@
+# Unreal generated output, including project/plugin subdirectories
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+# Keep Build/ (source packaging resources); outputs go in Builds/
+/Builds/
+/Dist/
+/Local/
+.vs/
+.idea/
+.vscode/
+*.sln
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+*.sdf
+*.opensdf
+*.VC.db-shm
+*.VC.db-wal
+# Blender backups; keep authored .blend via LFS
+*.blend1
+*.blend2
+__pycache__/
+*.pyc
+Thumbs.db
+.DS_Store

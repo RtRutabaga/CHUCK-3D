@@ -1,0 +1,21 @@
+* text=auto
+*.md text eol=lf
+*.json text eol=lf
+*.ini text eol=lf
+*.uproject text eol=lf
+*.uplugin text eol=lf
+*.uasset filter=lfs diff=lfs merge=lfs -text
+*.umap filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+# Preserve reference snapshots byte-for-byte, including source whitespace.
+References/Original/*.md -text -whitespace
