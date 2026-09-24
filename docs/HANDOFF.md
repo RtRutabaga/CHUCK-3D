@@ -1,6 +1,18 @@
 # Handoff — 2026-09-24
 
-Setup stage complete; playable milestone pending tool installation.
+Movement/camera prototype source prepared; compilation and runtime verification pending Unreal installation.
+
+## Current work — movement and camera milestone
+
+The user narrowed the next milestone to walking, jumping, collision, two switchable cameras, keyboard/Xbox support, and a dock/tavern/human scale scene. Combat, dialogue, pickups, additional maps and finished art are deferred until camera feedback.
+
+Epic Games Launcher and Visual Studio Build Tools 2022 17.14.41 are installed. MSVC tools directory is 14.44.35207; Windows SDK is 10.0.26100.0. Unreal 5.7 was selected in the launcher (its tile resolved to 5.7.4). The user signed in. The pricing/licensing agreement is still open; automatic approval review rejected accepting it without explicit authorization. An asynchronous request asks the user to review/accept it and reply 'accepted'. Do not click acceptance or bypass that review while it is pending.
+
+Unreal/Chuck3D now contains a C++ project, character, runtime primitive docks scene, HUD and input configuration. This replaces the initial Blueprint-only implementation suggestion with reproducible source. Tools contains asset-generation, build/package and runtime smoke-test scripts. docs/PLAYTEST.md documents intended launching and controls. Launch-Prototype.cmd targets the future local package. The scene is generated at runtime, with a small editor-created map and material assets; those assets do not exist yet.
+
+Verification so far: PowerShell scripts parse, .uproject JSON parses. No Unreal compilation, runtime test, visual test, gamepad test or Windows package has succeeded or been attempted without the engine. Do not label this milestone complete. Once the licensing step is resolved, finish the engine installation, build, fix compiler/runtime issues, run smoke/visual checks, package Windows, verify LFS before local binary commits, update these notes and commit the verified milestone. Do not push: separate public-reference publication approval remains pending.
+
+## Earlier setup context
 
 Read the original current handoff, game bible, documentation guide, current-phase status, decisions, Phase 2 and Phase 14 Waterdeep design. Original HEAD: 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Original game is complete; no new 2D phase is being opened.
 
