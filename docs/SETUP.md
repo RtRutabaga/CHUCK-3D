@@ -34,9 +34,9 @@ The workspace is under OneDrive. Avoid concurrent sync/edit of Unreal binary ass
 
 ## Git, binary assets, and deployment
 
-This repository uses its own main branch and local LFS hooks. No remote is configured. Unreal .uasset/.umap, Blender sources and common binary asset imports are assigned to LFS in .gitattributes before any are added. No binary assets are committed at this stage.
+This repository uses its own main branch and local LFS hooks. Its separate public remote is https://github.com/RtRutabaga/CHUCK-3D.git, created at the user's request. Unreal .uasset/.umap, Blender sources and common binary asset imports are assigned to LFS in .gitattributes before any are added. No binary assets are committed at this stage.
 
-Before the first binary commit: check git check-attr, git lfs status and git lfs ls-files; confirm pointers rather than raw blobs in the index. Before publishing, choose a separate remote with LFS support and confirm storage/bandwidth limits and locking support. Validate a fresh clone plus git lfs pull. Installed LFS alone does not prove remote availability or provide automatic backups; avoid simultaneous editing of the same binary asset.
+Before the first binary commit: check git check-attr, git lfs status and git lfs ls-files; confirm pointers rather than raw blobs in the index. GitHub is the selected LFS remote; storage/bandwidth allowance and locking support still need checking before uploading binary assets. Validate a fresh clone plus git lfs pull once assets exist. Installed LFS alone does not prove a binary round trip or provide automatic backups; avoid simultaneous editing of the same binary asset.
 
 Keep .uproject, Config, Content, source assets and any Source code under version control. Ignore Binaries, DerivedDataCache, Intermediate, Saved, IDE state and packaged Builds. Retain Build source resources such as icons and any deliberately supplied plugin binaries by explicit review rather than globally ignoring all DLLs.
 
