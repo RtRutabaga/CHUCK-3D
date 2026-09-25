@@ -6,7 +6,7 @@ Scope: one placeholder Waterdeep dock, tavern frontage and stationary human scal
 
 Double-click `Launch-Prototype.cmd` at the repository root. It opens `Builds/Windows/Chuck3D.exe` in a 1280 x 720 window. Click the game window to capture input. This local packaged build does not need the Unreal editor open.
 
-Verified 2026-09-24: Unreal 5.7.4 Windows Development package builds and runs. All 19 runtime checks passed in the rendered package, including pier-gap jumps in both cameras and simulated keyboard/Xbox input. Both rendered views were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
+Verified 2026-09-24: Unreal 5.7.4 Windows Development package builds and runs. All 23 rendered runtime checks passed in the rendered package, including pier-gap jumps in both cameras and simulated keyboard/Xbox input. Both rendered views were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
 
 ## Controls
 
@@ -17,10 +17,11 @@ Verified 2026-09-24: Unreal 5.7.4 Windows Development package builds and runs. A
 | Switch elevated / rat-height follow | C | Y |
 | Turn view | Mouse left/right, or Q/E | Right stick left/right |
 | Look up/down in rat-height mode | Mouse up/down | Right stick up/down |
+| Center camera behind Chuck | F | Right-stick click |
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
-Elevated view uses a fixed downward angle. Rat-height view stays about 29 cm above the floor at rest and allows limited vertical look. Both use camera collision and identical character movement. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset preserves your selected camera mode.
+Elevated view uses a fixed downward angle. Rat-height view stays about 31 cm above the floor at rest and allows limited vertical look. Both use camera collision, capped follow smoothing and identical character movement. Switching blends smoothly; mouse sensitivity is lower and the rat-height view is pulled back to reveal more surroundings. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset preserves your selected camera mode.
 
 ## Compare the cameras
 
@@ -52,3 +53,7 @@ To repeat the rendered packaged checks and capture both views:
 ```
 
 The test exits automatically. Logs and screenshots are under Builds/Windows/Chuck3D/Saved. This package is local generated output and is intentionally excluded from Git; another checkout must rebuild it.
+
+When an obstacle forces the camera within 38 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
+
+The normal smoke run performs 22 checks; adding -ChuckCapture adds the settled recenter check for 23. These automated checks do not establish subjective camera comfort or validate a physical controller.

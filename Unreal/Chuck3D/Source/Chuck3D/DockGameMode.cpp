@@ -1,5 +1,7 @@
 #include "DockGameMode.h"
 #include "ChuckCharacter.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -53,7 +55,7 @@ void ADockGameMode::StartPlay()
     };
     // Units are centimetres. Ground top = 0; geometry is intentionally simple.
     Shape(TEXT("Quay"),FVector(-150,0,-20),FVector(700,800,40),TEXT("Stone"));
-    Shape(TEXT("Sea"),FVector(900,0,-65),FVector(2200,2400,10),TEXT("Water"),nullptr,false);
+    Shape(TEXT("Sea"),FVector(900,0,-65),FVector(18000,18000,10),TEXT("Water"),nullptr,false);
     // Short pier with a 24 cm missing board. Chuck's jump travels about 41 cm.
     for(int32 Row=0;Row<26;++Row)
     {
@@ -97,10 +99,86 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("HumanBoot"),Human+FVector(X,-4,7),FVector(19,34,14),TEXT("Dark"));
         Shape(TEXT("HumanLeg"),Human+FVector(X,0,48),FVector(17,20,70),TEXT("Navy"));
     }
-    Shape(TEXT("HumanBody"),Human+FVector(0,0,115),FVector(49,27,70),TEXT("Navy"));
+    Shape(TEXT("HumanBody"),Human+FVector(0,0,115),FVector(49,30,70),TEXT("Navy"),Sphere);
     Shape(TEXT("HumanHead"),Human+FVector(0,0,165),FVector(25,25,30),TEXT("Skin"),Sphere);
-    for(float X : {-31.f,31.f}) Shape(TEXT("HumanArm"),Human+FVector(X,0,112),FVector(13,17,62),TEXT("Navy"));
+    for(float X : {-31.f,31.f}) Shape(TEXT("HumanArm"),Human+FVector(X,0,112),FVector(13,17,62),TEXT("Navy"),Sphere);
 
+    Shape(TEXT("WorkerCap"),Human+FVector(0,0,178),FVector(28,29,4),TEXT("Dark"),Sphere,false);
+    Shape(TEXT("WorkerBelt"),Human+FVector(0,0,89),FVector(44,29,5),TEXT("Wood"),nullptr,false);
+    for(float X : {-31.f,31.f}) Shape(TEXT("WorkerHand"),Human+FVector(X,0,79),FVector(10,12,15),TEXT("Skin"),Sphere,false);
+    // Surface detail is nonblocking; the original simple collision remains predictable.
+    FRandomStream DetailRandom(73);
+    for(int32 Row=0;Row<20;++Row) for(int32 Col=0;Col<17;++Col)
+    {
+        const float X=-477+Col*40+(Row%2)*14;
+        if(X>181) continue;
+        auto* Paver=Shape(TEXT("Paving"),FVector(X,-380+Row*38,-1.2f),FVector(37,35,3),DetailRandom.FRand()>.45f ? TEXT("Stone") : TEXT("Plaster"),nullptr,false);
+        Paver->SetActorRotation(FRotator(0,DetailRandom.FRandRange(-1.5f,1.5f),0));
+    }
+    for(int32 Row=0;Row<26;++Row)
+    {
+        if(Row==13) continue;
+        for(float Y : {-73.f,73.f})
+            Shape(TEXT("PlankNail"),FVector(212+Row*24,Y,.3f),FVector(1.6f,1.6f,.6f),TEXT("Dark"),Cylinder,false);
+        // Long fine seams make grain visible at Chuck's scale.
+        for(int32 Grain=0;Grain<3;++Grain)
+            Shape(TEXT("WoodGrain"),FVector(205+Row*24+Grain*5,DetailRandom.FRandRange(-10,10),.05f),FVector(.3f,130, .1f),TEXT("Wood"),nullptr,false);
+    }
+    for(float X : {210.f,450.f,790.f}) for(float Y : {-100.f,100.f})
+    {
+        for(float Z : {12.f,19.f})
+            Shape(TEXT("PostBand"),FVector(X,Y,Z),FVector(23,23,3),TEXT("Dark"),Cylinder,false);
+        Shape(TEXT("PostCap"),FVector(X,Y,31),FVector(24,24,3),TEXT("WoodLight"),Cylinder,false);
+    }
+    for(float X : {-230.f,135.f})
+    {
+        Shape(TEXT("WindowMullion"),FVector(X,309,160),FVector(4,5,80),TEXT("Wood"),nullptr,false);
+        Shape(TEXT("WindowCrossbar"),FVector(X,309,160),FVector(64,5,4),TEXT("Wood"),nullptr,false);
+        Shape(TEXT("WindowSill"),FVector(X,305,112),FVector(90,24,7),TEXT("Stone"),nullptr,false);
+    }
+    for(float Z : {28.f,218.f,298.f})
+        Shape(TEXT("HorizontalTimber"),FVector(-60,326,Z),FVector(550,14,10),TEXT("Wood"),nullptr,false);
+    for(int32 Slat=0;Slat<8;++Slat)
+        Shape(TEXT("DoorBoard"),FVector(-2+Slat*12,319,105),FVector(10.5f,3,205),Slat%3 ? TEXT("Wood") : TEXT("WoodLight"),nullptr,false);
+    for(float Z : {42.f,177.f})
+        Shape(TEXT("DoorIron"),FVector(40,315,Z),FVector(91,3,5),TEXT("Dark"),nullptr,false);
+    // Overlapping slate strips and projecting rafters give the frontage a roof silhouette.
+    for(int32 Row=0;Row<5;++Row) for(int32 Col=0;Col<20;++Col)
+    {
+        auto* Tile=Shape(TEXT("RoofSlate"),FVector(-349+Col*30,315+Row*22,320+Row*10),FVector(29,30,5),Row%2 ? TEXT("Roof") : TEXT("Dark"),nullptr,false);
+        Tile->SetActorRotation(FRotator(0,0,24));
+    }
+    for(float X : {-320.f,-200.f,-80.f,40.f,160.f})
+        Shape(TEXT("Rafter"),FVector(X,323,308),FVector(10,90,12),TEXT("Wood"),nullptr,false);
+    for(int32 Band=0;Band<12;++Band)
+    {
+        const float Angle=Band*PI/6;
+        Shape(TEXT("BarrelStave"),FVector(-330+30*FMath::Cos(Angle),-80+30*FMath::Sin(Angle),44),FVector(3,3,84),TEXT("WoodLight"),Cylinder,false);
+    }
+    for(float Z : {7.f,53.f})
+        Shape(TEXT("CrateFrame"),FVector(-80,26,Z),FVector(64,5,6),TEXT("Wood"),nullptr,false);
+    for(float X : {-107.f,-53.f})
+        Shape(TEXT("CrateFrame"),FVector(X,26,30),FVector(6,5,60),TEXT("Wood"),nullptr,false);
+    auto* Brace=Shape(TEXT("CrateBrace"),FVector(-80,23,30),FVector(73,4,5),TEXT("Wood"),nullptr,false);
+    Brace->SetActorRotation(FRotator(40,0,0));
+    // A quiet harbor silhouette beyond the playable dock; no additional map.
+    for(int32 Building=0;Building<11;++Building)
+    {
+        const float Height=DetailRandom.FRandRange(280,580);
+        Shape(TEXT("FarWarehouse"),FVector(3500,-2200+Building*420,Height*.5f-55),FVector(250,245,Height),Building%2 ? TEXT("Roof") : TEXT("Stone"),nullptr,false);
+        Shape(TEXT("FarRoof"),FVector(3500,-2200+Building*420,Height-40),FVector(275,270,25),TEXT("Dark"),nullptr,false);
+    }
+    Shape(TEXT("MooredHull"),FVector(980,600,-30),FVector(550,160,90),TEXT("Wood"),Sphere,false);
+    Shape(TEXT("ShipMast"),FVector(980,600,210),FVector(10,10,460),TEXT("Wood"),Cylinder,false);
+    Shape(TEXT("ShipYard"),FVector(980,600,320),FVector(12,260,10),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("FurledSail"),FVector(980,600,312),FVector(18,245,19),TEXT("Plaster"),Sphere,false);
+    // Slim ripple strips break up the flat water without costly transparent shaders.
+    for(int32 Ripple=0;Ripple<70;++Ripple)
+        Shape(TEXT("WaterRipple"),FVector(DetailRandom.FRandRange(300,1700),DetailRandom.FRandRange(-1000,1100),-59.8f),FVector(DetailRandom.FRandRange(20,100),1.2f,.1f),TEXT("Sky"),nullptr,false);
+    auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
+    HarborFog->GetComponent()->SetFogDensity(.018f);
+    HarborFog->GetComponent()->SetStartDistance(1000);
+    HarborFog->GetComponent()->SetFogInscatteringColor(FLinearColor(.38f,.48f,.53f));
     auto* Sun = World->SpawnActor<ADirectionalLight>(FVector(0,0,500),FRotator(-38,-40,0));
     Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sun->GetLightComponent()->SetIntensity(3.0f);
@@ -172,6 +250,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1)
         {
             Check(Chuck->GetActorLocation().X > -440,TEXT("warehouse wall blocks walking"));
+            Check(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentLocation().X > -441, TEXT("camera retracts before warehouse wall"));
             Chuck->SetActorLocation(FVector(1000,0,-130)); TestStage=4; StageTime=0;
         }
     }
@@ -196,6 +275,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
         Check(Chuck->GetActorLocation().X > -175,TEXT("keyboard W mapping walks"));
         Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
+        Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,145.f,1.f),TEXT("rat-height camera blend settles"));
         Chuck->ResetToDock();
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1));
         TestStage=6; StageTime=0;
@@ -210,6 +290,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Released,0));
             Check(Chuck->GetActorLocation().X > -175,TEXT("Xbox left-stick mapping walks"));
             Check(Chuck->IsElevated(),TEXT("Xbox Y mapping switches camera"));
+            Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,340.f,1.f),TEXT("elevated camera blend settles"));
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Pressed,1));
             MaxJumpZ=Chuck->GetActorLocation().Z;
             TestStage=7; StageTime=0;
@@ -244,8 +325,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,18)); TestStage=8; StageTime=0; }
             else if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
             {
-                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(-30,100,18));
-                Cast<APlayerController>(Chuck->GetController())->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::MouseX,IE_Axis,28.125f));
+                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(-30,180,18));
+                Chuck->SetActorRotation(FRotator(0,45,0));
+                Chuck->Recenter();
+                auto* CapturePC=Cast<APlayerController>(Chuck->GetController());
+                CapturePC->FlushPressedKeys();
+                Chuck->DisableInput(CapturePC);
                 TestStage=20; StageTime=0;
             }
             else TestStage=99;
@@ -253,6 +338,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
     else if(TestStage==20 && StageTime>2)
     {
+        Check(FMath::Abs(FMath::FindDeltaAngleDegrees(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw,45.f))<1.f,TEXT("camera recenters behind Chuck"));
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Scale_Elevated.png"),true,false);
         TestStage=21; StageTime=0;
     }
@@ -283,5 +369,5 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("30.48 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    C / Y: camera    Mouse, Q/E / Right stick: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("R / View: reset    Esc / Menu: exit    Compare the same route in both cameras."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
+    DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    Compare the same route in both cameras."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

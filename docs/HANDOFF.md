@@ -1,6 +1,12 @@
 # Handoff — 2026-09-24
 
-The first playable Waterdeep movement/camera milestone is complete locally. Launch `Launch-Prototype.cmd` from the repository root; it opens the packaged Windows build without the editor. See docs/PLAYTEST.md for controls and the comparison route. User feedback: the blockout is too rudimentary for a useful camera comparison. The next pass should improve visual presentation and natural game-camera feel while keeping the same small docks scope; no camera has been selected.
+The first playable Waterdeep movement/camera milestone is complete locally. A second presentation/camera pass is now implemented. Launch `Launch-Prototype.cmd` from the repository root; it opens the packaged Windows build without the editor. See docs/PLAYTEST.md for controls and the comparison route. User feedback: the blockout is too rudimentary for a useful camera comparison. This pass improves visual presentation and camera behavior while keeping the same small docks scope; no camera has been selected.
+
+## Presentation and camera pass
+
+Added stone paving, plank grain and nails, mooring hardware, window/door timber details, roof slates, crate/barrel details and a distant harbor/boat silhouette with haze. These are procedural engine primitives, not finished artwork or Blender assets. Rounded jacket pieces replace the boxy shell; restrained foot movement gives walking a basic visual cue. Chuck remains 30.48 cm tall and silent. No new interactions or playable areas.
+
+Both views remain available. Elevated boom is 340 cm at -48 degrees, 65-degree FOV. Rat-height boom is 145 cm, lens about 31 cm above the floor, 78-degree FOV. View changes blend, orbit is damped, positional follow lag is capped at 8 cm, and mouse sensitivity is reduced. F / Xbox right-stick click recenters behind Chuck. No motion blur or camera shake. Chuck is temporarily hidden when camera collision pulls the lens within 38 cm, preventing the head/jacket from blocking the view. Tight-space framing and subjective comfort still need playtesting.
 
 ## What runs
 
@@ -11,10 +17,10 @@ The editor map is intentionally empty until Play: the game mode constructs the s
 ## Verified
 
 - Editor and game C++ targets compiled; Windows Development BuildCookRun completed with exit code 0.
-- Final packaged game ran with DirectX 11 rendering at 1280 x 720. All 19 runtime checks passed: spawn/scale, walking, jumping/landing, wall collision, falling reset, camera switching, pier collision, simulated keyboard/Xbox input, and crossing the same pier gap in both cameras.
-- Both rendered camera captures were inspected. Ambient lighting was corrected so the shaded human and tavern stay readable. Purple jacket and rat/human scale are visible. Earlier manual keyboard C switching also worked in the packaged window.
+- Final packaged game ran with DirectX 11 rendering at 1280 x 720. All 23 rendered runtime checks passed: spawn/scale, walking, jumping/landing, wall collision, falling reset, camera switching, pier collision, simulated keyboard/Xbox input, crossing the same pier gap in both cameras, camera retraction at the warehouse wall, settled camera blends, and recentering.
+- Final presentation-pass captures were inspected in both camera modes. Paving and facade details render, Chuck remains visible in the clear comparison position, and the low view emphasizes the human-scale door. Foreground props can still occupy much of the rat-height view; this is an unresolved framing/comfort consideration, not a selected final camera. Earlier manual keyboard C switching worked before this pass.
 - Physical Xbox hardware, long-session performance, and the user's full comfort/visibility route have NOT been verified. No final camera selection.
-- Evidence stays in ignored Local/package-console.txt, Local/packaged-rendered-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Scale_*.png.
+- Evidence stays in ignored Local/presentation-build.log, Local/presentation-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Scale_*.png.
 
 ## Repository boundaries
 

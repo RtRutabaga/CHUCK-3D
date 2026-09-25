@@ -5,6 +5,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UStaticMeshComponent;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -16,6 +17,7 @@ public:
     virtual void SetupPlayerInputComponent(UInputComponent* Input) override;
     void ToggleCamera();
     void ResetToDock();
+    void Recenter();
     bool IsElevated() const { return bElevated; }
     static FVector StartLocation() { return FVector(-240, -180, 18); }
 protected:
@@ -27,6 +29,11 @@ private:
     bool bElevated = true;
     float ViewYaw = 0;
     float ViewPitch = 0;
+    float CameraBlend = 1;
+    float GaitPhase = 0;
+    UPROPERTY() UStaticMeshComponent* LeftFoot;
+    UPROPERTY() UStaticMeshComponent* RightFoot;
+
     void Forward(float Value);
     void Right(float Value);
     void MouseLook(float Value);
@@ -34,5 +41,5 @@ private:
     void MousePitch(float Value);
     void StickPitch(float Value);
     void Quit();
-    void UpdateCamera();
+    void UpdateCamera(float DeltaSeconds = 0);
 };
