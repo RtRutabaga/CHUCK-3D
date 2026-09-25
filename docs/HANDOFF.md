@@ -20,8 +20,8 @@ The editor map is intentionally empty until Play: the game mode constructs the s
 
 Original CHUCK-game remains strictly read-only. Its reference HEAD was 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Only selected reference documents/excerpts were copied; References/PROVENANCE.md records hashes and origins. No original code or assets were copied. Historical 2D campaign instructions do not expand this prototype.
 
-The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. After being explicitly informed that the history contains copied reference documents and local source paths, the user authorized proceeding with the public GitHub push on 2026-09-24. That resolves the earlier publication approval hold.
+The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. After being explicitly informed that the history contains copied reference documents and local source paths, the user authorized proceeding with the public GitHub push on 2026-09-24. That resolves the earlier publication approval hold. The main branch and all 15 LFS assets were pushed successfully. A fresh clone in ignored Local/remote-verification downloaded the assets, passed git lfs fsck, and matched the source map hash.
 
-Unreal generated folders and packaged Builds are excluded. The 15 authored map/material assets total 78,711 bytes and use Git LFS; remote account allowance and upload/download round-trip remain unverified. No GitHub binary storage has been consumed by these local assets. See docs/SETUP.md for the LFS assessment.
+Unreal generated folders and packaged Builds are excluded. The 15 authored map/material assets total 78,711 bytes and use Git LFS; upload/download round-trip and integrity checks passed. Approximately 79 KB of assets were uploaded; remaining account allowance is still unknown. See docs/SETUP.md for the LFS assessment.
 
 Missing original geography/player-progression supplements were not found; do not invent their contents.

@@ -8,6 +8,6 @@ A separate Windows PC adaptation prototype in Unreal Engine, with Blender for la
 - [Reference provenance](References/PROVENANCE.md)
 - [Current handoff](docs/HANDOFF.md)
 
-Status: playable Windows placeholder milestone built and verified with Unreal 5.7.4. Double-click `Launch-Prototype.cmd` for the local build. See [controls and camera comparison route](docs/PLAYTEST.md). All 19 packaged runtime checks passed; physical Xbox testing and the camera decision remain open. Blender is deferred until custom assets. The milestone is committed locally; public publication has been authorized.
+Status: playable Windows placeholder milestone built and verified with Unreal 5.7.4. Double-click `Launch-Prototype.cmd` for the local build. See [controls and camera comparison route](docs/PLAYTEST.md). All 19 packaged runtime checks passed; physical Xbox testing and the camera decision remain open. Blender is deferred until custom assets. The milestone is published to the separate public GitHub repository, with its 15 small assets in Git LFS. Packaged builds remain local and excluded from Git.
 
 The original `C:\Users\ashsm\OneDrive\Documents\CHUCK-game` is read-only reference. This repository has its own history and public remote at [RtRutabaga/CHUCK-3D](https://github.com/RtRutabaga/CHUCK-3D). No deployment is configured. Never reuse the original game's remote, Pages workflow, save locations, or release destination.
