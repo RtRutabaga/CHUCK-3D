@@ -1,6 +1,6 @@
 # Handoff — 2026-09-24
 
-The first playable Waterdeep movement/camera milestone is complete locally. Launch `Launch-Prototype.cmd` from the repository root; it opens the packaged Windows build without the editor. See docs/PLAYTEST.md for controls and the comparison route. Stop development here until the user compares the cameras.
+The first playable Waterdeep movement/camera milestone is complete locally. Launch `Launch-Prototype.cmd` from the repository root; it opens the packaged Windows build without the editor. See docs/PLAYTEST.md for controls and the comparison route. User feedback: the blockout is too rudimentary for a useful camera comparison. The next pass should improve visual presentation and natural game-camera feel while keeping the same small docks scope; no camera has been selected.
 
 ## What runs
 
@@ -20,7 +20,7 @@ The editor map is intentionally empty until Play: the game mode constructs the s
 
 Original CHUCK-game remains strictly read-only. Its reference HEAD was 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Only selected reference documents/excerpts were copied; References/PROVENANCE.md records hashes and origins. No original code or assets were copied. Historical 2D campaign instructions do not expand this prototype.
 
-The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. The first push remains blocked by automatic approval review because the existing history includes copied reference documents and local source paths; explicit approval of that public payload is still required. Do not push without resolving that approval. Local milestone commits are authorized.
+The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. After being explicitly informed that the history contains copied reference documents and local source paths, the user authorized proceeding with the public GitHub push on 2026-09-24. That resolves the earlier publication approval hold.
 
 Unreal generated folders and packaged Builds are excluded. The 15 authored map/material assets total 78,711 bytes and use Git LFS; remote account allowance and upload/download round-trip remain unverified. No GitHub binary storage has been consumed by these local assets. See docs/SETUP.md for the LFS assessment.
 

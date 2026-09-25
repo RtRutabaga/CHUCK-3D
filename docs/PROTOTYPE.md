@@ -22,6 +22,6 @@ Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visib
 - Both switchable camera modes run in the same Windows build.
 - Controls and exact launch instructions are documented.
 - Runtime checks and visual inspection are recorded honestly, with physical-controller verification distinguished from simulated input tests.
-- Commit locally only; public GitHub push remains separately blocked pending reference-publication approval.
+- Keep source and LFS assets in the separate public CHUCK-3D repository; public publication was authorized on 2026-09-24.
 
 Camera decision: OPEN. This milestone exists for the user's comparison, not a commitment to either view.
