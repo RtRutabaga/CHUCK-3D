@@ -1,31 +1,27 @@
 # Handoff — 2026-09-24
 
-Movement/camera prototype source prepared; compilation and runtime verification pending Unreal installation.
+The first playable Waterdeep movement/camera milestone is complete locally. Launch `Launch-Prototype.cmd` from the repository root; it opens the packaged Windows build without the editor. See docs/PLAYTEST.md for controls and the comparison route. Stop development here until the user compares the cameras.
 
-## Current work — movement and camera milestone
+## What runs
 
-The user narrowed the next milestone to walking, jumping, collision, two switchable cameras, keyboard/Xbox support, and a dock/tavern/human scale scene. Combat, dialogue, pickups, additional maps and finished art are deferred until camera feedback.
+Unreal 5.7.4 (CL 51494982), C++ runtime scene built from primitives: quay and pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Chuck is a 30.48 cm gray rat with a purple open-jacket proxy. Walking, jumping, blocking collision, fall reset, elevated and rat-height cameras, keyboard/mouse and Xbox mappings are implemented. No dialogue, combat, pickups, finished artwork or additional maps.
 
-Epic Games Launcher and Visual Studio Build Tools 2022 17.14.41 are installed. MSVC tools directory is 14.44.35207; Windows SDK is 10.0.26100.0. Unreal 5.7 was selected in the launcher (its tile resolved to 5.7.4). The user signed in. The pricing/licensing agreement is still open; automatic approval review rejected accepting it without explicit authorization. An asynchronous request asks the user to review/accept it and reply 'accepted'. Do not click acceptance or bypass that review while it is pending.
+The editor map is intentionally empty until Play: the game mode constructs the scene. Content contains one small map and 14 flat materials. Blender is deferred until custom assets. Exact installed compiler/SDK versions and the original hardware assessment are in docs/SETUP.md. Build scripts use one compilation action without UBA because this 16 GB machine encountered memory pressure. Close Unreal before building to avoid Live Coding conflicts.
 
-Unreal/Chuck3D now contains a C++ project, character, runtime primitive docks scene, HUD and input configuration. This replaces the initial Blueprint-only implementation suggestion with reproducible source. Tools contains asset-generation, build/package and runtime smoke-test scripts. docs/PLAYTEST.md documents intended launching and controls. Launch-Prototype.cmd targets the future local package. The scene is generated at runtime, with a small editor-created map and material assets; those assets do not exist yet.
+## Verified
 
-Verification so far: PowerShell scripts parse, .uproject JSON parses. No Unreal compilation, runtime test, visual test, gamepad test or Windows package has succeeded or been attempted without the engine. Do not label this milestone complete. Once the licensing step is resolved, finish the engine installation, build, fix compiler/runtime issues, run smoke/visual checks, package Windows, verify LFS before local binary commits, update these notes and commit the verified milestone. Do not push: separate public-reference publication approval remains pending.
+- Editor and game C++ targets compiled; Windows Development BuildCookRun completed with exit code 0.
+- Final packaged game ran with DirectX 11 rendering at 1280 x 720. All 19 runtime checks passed: spawn/scale, walking, jumping/landing, wall collision, falling reset, camera switching, pier collision, simulated keyboard/Xbox input, and crossing the same pier gap in both cameras.
+- Both rendered camera captures were inspected. Ambient lighting was corrected so the shaded human and tavern stay readable. Purple jacket and rat/human scale are visible. Earlier manual keyboard C switching also worked in the packaged window.
+- Physical Xbox hardware, long-session performance, and the user's full comfort/visibility route have NOT been verified. No final camera selection.
+- Evidence stays in ignored Local/package-console.txt, Local/packaged-rendered-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Scale_*.png.
 
-## Earlier setup context
+## Repository boundaries
 
-Read the original current handoff, game bible, documentation guide, current-phase status, decisions, Phase 2 and Phase 14 Waterdeep design. Original HEAD: 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Original game is complete; no new 2D phase is being opened.
+Original CHUCK-game remains strictly read-only. Its reference HEAD was 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Only selected reference documents/excerpts were copied; References/PROVENANCE.md records hashes and origins. No original code or assets were copied. Historical 2D campaign instructions do not expand this prototype.
 
-This repository contains a concise 3D brief, hardware/install assessment, explicit camera comparison plan, Unreal Git exclusions and LFS policy. Only selected design references and small status/decision excerpts are copied; provenance records source hashes. No game code or assets copied.
+The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. The first push remains blocked by automatic approval review because the existing history includes copied reference documents and local source paths; explicit approval of that public payload is still required. Do not push without resolving that approval. Local milestone commits are authorized.
 
-Hardware: Ryzen 5 7600, 16 GB class RAM, RTX 4060 with 8 GB VRAM, about 329.5 GiB free on C:. Git/LFS available. Unreal, Epic Launcher, Blender and C++ development tools not detected in the checked locations. Engine/Blender versions intentionally unpinned; no installation performed.
+Unreal generated folders and packaged Builds are excluded. The 15 authored map/material assets total 78,711 bytes and use Git LFS; remote account allowance and upload/download round-trip remain unverified. No GitHub binary storage has been consumed by these local assets. See docs/SETUP.md for the LFS assessment.
 
-Next: install and record a compatible Unreal binary release, create the Blueprint graybox at Unreal/Chuck3D, establish Chuck's scale, and implement both cameras. Blender comes with custom asset work. No .uproject, map, playable interactions, camera playtest, or Windows package exists yet. Do not report this setup as a playable prototype.
-
-Setup verification: full reference copies matched source SHA-256 hashes; generated project/plugin paths and packaged output match Git exclusions; .uasset, .umap and .blend resolve to LFS. Local LFS hooks initialized; no binary assets present. Source whitespace is intentionally preserved in reference snapshots.
-
-GitHub follow-up: user explicitly chose Public. Created https://github.com/RtRutabaga/CHUCK-3D and configured it as this project's origin. Before the first push, verified that no generated files are tracked, project/plugin generated directories and packaged builds are ignored, binary asset extensions resolve to LFS, and the local LFS pre-push hook exists. No deployment configured; original CHUCK repository untouched. LFS binary upload/download and account quota remain untested because this repository contains only text.
-
-First push is pending: automatic approval review blocked public publication of the copied reference documents and project metadata (including local source paths). The remote was created successfully, but no push ran. Explicit user approval of that payload is required before retrying publication.
-
-Missing original references: geography and player-progression supplements named by docs/README.md are absent; a repository filename search found neither. Do not invent their content. The original phase-2 'current' label is historical and superseded by CURRENT-PHASE.md.
+Missing original geography/player-progression supplements were not found; do not invent their contents.

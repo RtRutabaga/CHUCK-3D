@@ -7,6 +7,8 @@ Saved/
 /Builds/
 /Dist/
 /Local/
+# Unreal cooker access-order logs are generated, unlike authored Build resources.
+**/Build/*/FileOpenOrder/
 .vs/
 .idea/
 .vscode/

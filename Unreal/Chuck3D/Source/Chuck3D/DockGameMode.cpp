@@ -19,6 +19,10 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "HAL/PlatformMisc.h"
+#include "GameFramework/PlayerController.h"
+#include "InputKeyEventArgs.h"
+#include "UnrealClient.h"
+#include "Misc/Paths.h"
 
 ADockGameMode::ADockGameMode()
 {
@@ -104,6 +108,10 @@ void ADockGameMode::StartPlay()
     auto* Sky = World->SpawnActor<ASkyLight>();
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sky->GetLightComponent()->SetIntensity(0.8f);
+    // The enclosing sky is 90 m away, below UE's default 1500 m sky threshold.
+    // Capture it as ambient light so the shaded sides remain readable at rat height.
+    Sky->GetLightComponent()->SkyDistanceThreshold = 1000;
+    Sky->GetLightComponent()->bLowerHemisphereIsBlack = false;
     // A pale enclosing sphere gives skylight capture a quiet flat horizon.
     auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(18000,18000,18000),TEXT("Sky"),Sphere,false);
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
@@ -175,6 +183,89 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Check(!HitGap,TEXT("missing pier board is a real gap"));
         const bool HitBoard=GetWorld()->LineTraceSingleByChannel(Hit,FVector(500,0,50),FVector(500,0,-30),ECC_Visibility);
         Check(HitBoard,TEXT("adjacent pier board has collision"));
+        Chuck->ResetToDock();
+        auto* PC=Cast<APlayerController>(Chuck->GetController());
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Pressed,1));
+        TestStage=5; StageTime=0;
+    }
+    else if(TestStage==5 && StageTime>1)
+    {
+        auto* PC=Cast<APlayerController>(Chuck->GetController());
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
+        Check(Chuck->GetActorLocation().X > -175,TEXT("keyboard W mapping walks"));
+        Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
+        Chuck->ResetToDock();
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1));
+        TestStage=6; StageTime=0;
+    }
+    else if(TestStage==6)
+    {
+        auto* PC=Cast<APlayerController>(Chuck->GetController());
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY,IE_Axis,1));
+        if(StageTime>1)
+        {
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY,IE_Axis,0));
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Released,0));
+            Check(Chuck->GetActorLocation().X > -175,TEXT("Xbox left-stick mapping walks"));
+            Check(Chuck->IsElevated(),TEXT("Xbox Y mapping switches camera"));
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Pressed,1));
+            MaxJumpZ=Chuck->GetActorLocation().Z;
+            TestStage=7; StageTime=0;
+        }
+    }
+    else if(TestStage==7)
+    {
+        MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        if(StageTime>1)
+        {
+            Check(MaxJumpZ>30,TEXT("Xbox A mapping jumps"));
+            Cast<APlayerController>(Chuck->GetController())->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Released,0));
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(465,0,18));
+            TestStage=8; StageTime=0;
+        }
+    }
+    else if(TestStage==8)
+    {
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(Chuck->GetActorLocation().X>=500 && Chuck->GetCharacterMovement()->IsMovingOnGround())
+        { Chuck->Jump(); TestStage=9; StageTime=0; }
+        else if(StageTime>2) { Check(false,TEXT("pier jump approach")); TestStage=9; StageTime=0; }
+    }
+    else if(TestStage==9)
+    {
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>1)
+        {
+            Check(Chuck->GetActorLocation().X>550 && Chuck->GetCharacterMovement()->IsMovingOnGround(),GapRuns==0 ? TEXT("pier gap crossed in elevated camera") : TEXT("pier gap crossed in rat-height camera"));
+            ++GapRuns;
+            if(GapRuns==1)
+            { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,18)); TestStage=8; StageTime=0; }
+            else if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+            {
+                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(-30,100,18));
+                Cast<APlayerController>(Chuck->GetController())->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::MouseX,IE_Axis,28.125f));
+                TestStage=20; StageTime=0;
+            }
+            else TestStage=99;
+        }
+    }
+    else if(TestStage==20 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Scale_Elevated.png"),true,false);
+        TestStage=21; StageTime=0;
+    }
+    else if(TestStage==21 && StageTime>1)
+    { Chuck->ToggleCamera(); TestStage=22; StageTime=0; }
+    else if(TestStage==22 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Scale_RatHeight.png"),true,false);
+        TestStage=23; StageTime=0;
+    }
+    else if(TestStage==23 && StageTime>1) TestStage=99;
+    else if(TestStage==99)
+    {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
         bSmokeTest=false;
         FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0);

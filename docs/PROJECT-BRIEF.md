@@ -10,7 +10,7 @@ Exploration and environmental storytelling lead. Preserve warmth, melancholy, my
 
 Begin in an ordinary, quiet morning at the docks: one pier, a short warehouse frontage, a barrel nook, and a small exploration loop. Bobert, if represented, stays asleep, unnamed in the game, and noninteractive. No additional campaign cameos; the optional HEROD COVER BAND / TONIGHT ONLY poster is the bible's sole other opening reference.
 
-Milestone interactions: walking, jumping, scratching, one NPC conversation, one inspectable object, one breakable, and one cigarette pickup. Conversations contain NPC speech, never authored replies from Chuck. Inspect text is external observation, not Chuck's thoughts. The pickup need only demonstrate collection; sanity, smoking, saving and respawning are separate future decisions.
+The current milestone is walking, jumping, collision, keyboard/Xbox controls, and two switchable cameras in a dock/tavern/human-scale scene. The user deferred combat, dialogue, pickups and finished art until those fundamentals are tested. Scratching, one NPC conversation, one inspectable object, one breakable, and one cigarette pickup remain later prototype goals, not requirements of this camera build. When implemented, conversations contain NPC speech, never authored replies from Chuck; inspect text is external observation, not Chuck's thoughts.
 
 Evaluate an elevated camera and a camera following at rat height using identical geometry and movement before choosing either. Placeholder Chuck must already communicate small scale and the purple jacket.
 

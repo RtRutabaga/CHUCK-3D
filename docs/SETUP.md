@@ -1,5 +1,15 @@
 # Computer and setup assessment
 
+## Installed for the movement prototype
+
+2026-09-24: Unreal Engine **5.7.4**, changelist **51494982**, at `C:\Program Files\Epic Games\UE_5.7`; Visual Studio Build Tools **2022 17.14.41**, MSVC compiler **14.44.35229** (tools folder 14.44.35207), Windows SDK **10.0.26100.0**, and .NET Framework **4.8 SDK/targeting pack**. Unreal uses its bundled .NET **8.0.412**. Epic Games Launcher was installed through winget; the user completed sign-in and licensing. Blender remains deferred because this milestone uses only engine primitives.
+
+The project uses a small C++ module rather than the initially suggested Blueprint-only setup to make the geometry and control logic reproducible from source. First editor compilation succeeded, but Unreal's header precompile encountered memory pressure. The build script now limits compilation to one action and disables Unreal Build Accelerator. Close the editor before building to avoid Live Coding conflicts. No unrelated user applications were closed.
+
+Before the first binary commit, assessed 15 prototype map/material files totaling **78,711 bytes**, already covered by LFS attributes. The remote endpoint is the separate `RtRutabaga/CHUCK-3D` repository. [GitHub's LFS billing documentation](https://docs.github.com/en/billing/concepts/product-billing/git-lfs) lists 10 GiB storage and bandwidth included for Free accounts; this account's remaining allowance has not been inspected. The tiny initial asset set is suitable for LFS. No asset upload or remote round-trip is claimed: public publication approval is still pending. Verify remaining allowance before any future push; local commits do not consume GitHub storage.
+
+The remainder of this document records the original pre-install assessment, not the current installation state.
+
 Inspected 2026-09-24, before installations or version selection.
 
 | Item | Observed |
