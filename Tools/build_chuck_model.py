@@ -8,6 +8,7 @@ import math
 import random
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 from mathutils.noise import noise
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -105,7 +106,7 @@ def cloth_limb(name,a,b,start_radius,end_radius,mat):
         radius=(start_radius*(1-t)+end_radius*t)*(.9+.1*math.sin(t*math.pi))
         for j in range(segments):
             angle=j*math.tau/segments
-            fold=.18*math.sin(t*math.pi*7+angle*2)+.1*math.sin(angle*5+t*3)
+            fold=.11*math.sin(t*math.pi*5+angle*2)+.06*math.sin(angle*5+t*3)
             verts.append(center+(radius+fold)*(u*math.cos(angle)+v*math.sin(angle)))
     for row in range(rings-1):
         for j in range(segments):
@@ -127,8 +128,32 @@ for i in range(len(profile)-1):
         k=i*N+j; n=i*N+(j+1)%N
         faces.append((k,n,n+N,k+N))
 faces += [tuple(reversed(range(N))), tuple((len(profile)-1)*N+j for j in range(N))]
-mesh('Torso',verts,faces,'Fur',2)
-ellipsoid('LightChest',(6.2,0,33),(2.5,6.3,12.5),'Chest')
+torso=mesh('Torso',verts,faces,'Fur',2)
+
+def conform_patch(name,source,material,a_half,z_lo,z_hi,rise,sink,cols=24,rows=28):
+    """Light fur bib that follows the evaluated torso surface: raised at its
+    centre, sunk below the surface at its border so no rim or gap shows."""
+    bpy.context.view_layer.update()
+    tree=BVHTree.FromObject(source,bpy.context.evaluated_depsgraph_get())
+    verts,faces=[],[]
+    for r in range(rows):
+        v=2*r/(rows-1)-1
+        z=z_lo+(z_hi-z_lo)*(v+1)/2
+        width=a_half*(1-v*v)**.35
+        for c in range(cols):
+            u=2*c/(cols-1)-1
+            a=u*width
+            origin=Vector((0,0,z)); direction=Vector((math.cos(a),math.sin(a),0))
+            hit,normal,_,_=tree.ray_cast(origin,direction,40)
+            falloff=(1-u**4)*(1-v**4)**.5
+            verts.append(hit+normal*(rise*falloff-sink*(1-falloff)))
+    for r in range(rows-1):
+        for c in range(cols-1):
+            k=r*cols+c
+            faces.append((k,k+1,k+1+cols,k+cols))
+    return mesh(name,verts,faces,material,1)
+
+conform_patch('LightChest',torso,'Chest',1.3,15,45.8,.4,.25)
 for side in (-1,1):
     limb('Thigh',(-2,side*6,21),(-4,side*7.2,11),4.6,'Fur')
     limb('Shin',(-4,side*7.2,12),(2,side*7,5),2.7,'Fur')
@@ -163,45 +188,111 @@ for side in (-1,1):
     for i in range(4):
         tube('Whisker',[(13+i*.6,side*3.7,50),(15+i*.6,side*9,50.8-i*.7),(12+i*2,side*(16+i),52-i*1.4)],.028,'Whisker',1)
 
-# Open jacket shell. The front opening exposes the light chest.
-verts, faces = [], []
-J = 44
-jacket_rows = [(19,8.7,11.4,-1),(21,9.1,11.6,-1),(30,9.6,11.8,-.5),(39,9.0,11.3,0),(44,7.0,9.6,0),(46,5.5,7,0)]
-for row,(z,rx,ry,cx) in enumerate(jacket_rows):
-    for j in range(J):
-        a = .66 + (2*math.pi-1.32)*j/(J-1)
-        fold=.35*math.sin(a*9+row*.65)
-        verts.append((cx+(rx+fold)*math.cos(a),(ry+fold)*math.sin(a),z+.35*math.sin(a*5)))
-for i in range(len(jacket_rows)-1):
+# Open jacket: one continuous garment surface. Every body row, the collar stand,
+# the fold and the collar/lapel fall share one grid and one front-edge function,
+# so plackets, lapels and stitching cannot drift away from the shell edge.
+# Solidify gives real cloth thickness; its rim closes every boundary and the
+# inner shell carries the lining (Seam slot). The chest opening stays open.
+JACKET_PROFILE=[(18.5,8.9,11.5,-1),(21,9.1,11.6,-1),(30,9.6,11.8,-.5),(38,9.2,11.4,0),
+                (42,8.0,10.4,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
+JACKET_THICKNESS=.4
+
+def jacket_radii(z):
+    rows=JACKET_PROFILE
+    if z<=rows[0][0]: return rows[0][1:]
+    for lo,hi in zip(rows,rows[1:]):
+        if z<=hi[0]:
+            f=(z-lo[0])/(hi[0]-lo[0])
+            return tuple(a*(1-f)+b*f for a,b in zip(lo[1:],hi[1:]))
+    return rows[-1][1:]
+
+def jacket_edge_angle(z):
+    """Half-angle of the open front, measured from +X; widens into the collar."""
+    f=max(0.,min(1.,(z-34)/13.))
+    return .58+.47*f*f
+
+def jacket_point(t,z,lift=0.,fold=0.):
+    """t runs 0..1 from the +Y front edge around the back to the -Y front edge."""
+    edge=jacket_edge_angle(z)
+    a=edge+(2*math.pi-2*edge)*t
+    rx,ry,cx=jacket_radii(z)
+    return Vector((cx+(rx+lift+fold)*math.cos(a),(ry+lift+fold)*math.sin(a),z))
+
+def collar_bottom(t):
+    # Collar sits at 44.6 cm behind the neck; near each front edge the fall
+    # continues down the chest as the rolled lapel.
+    e=min(t,1-t)
+    return 44.6-7.4*max(0.,1-e/.1)**1.5
+
+J=56
+rows=[]  # (kind, per-column (z, lift, cloth fold amplitude))
+body_z=[18.5+i*1.15 for i in range(26)]+[48.3]
+for z in body_z:
+    rows.append(('body',[(z,0.,.22*max(0.,min(1.,(46-z)/6))) for _ in range(J)]))
+rows.append(('fall',[(48.8,.45,0.) for _ in range(J)]))
+FALL=8
+for i in range(1,FALL+1):
+    s=i/FALL
+    rows.append(('fall',[(48.8+(collar_bottom(j/(J-1))-48.8)*s,.6+1.1*s,0.) for j in range(J)]))
+verts,faces,face_kind=[],[],[]
+for r,(kind,cols) in enumerate(rows):
+    for j,(z,lift,amp) in enumerate(cols):
+        t=j/(J-1)
+        edge_calm=min(1.,min(t,1-t)/.06)  # keep the placket edge straight
+        fold=amp*edge_calm*math.sin(t*math.tau*4.5+z*.55)
+        verts.append(jacket_point(t,z,lift,fold))
+for r in range(len(rows)-1):
     for j in range(J-1):
-        k=i*J+j
-        faces.append((k,k+1,k+1+J,k+J))
-jacket=mesh('OpenJacket',verts,faces,'Jacket',2)
-solid=jacket.modifiers.new('Fabric thickness','SOLIDIFY'); solid.thickness=.35
+        k=r*J+j
+        faces.append((k,k+1,k+1+J,k+J)); face_kind.append(rows[r+1][0])
+jacket=mesh('OpenJacket',verts,faces,'Jacket',1)
+jacket.data.materials.append(MATS['Seam']); jacket.data.materials.append(MATS['Jacket'])
+for face,kind in zip(jacket.data.polygons,face_kind):
+    # Body faces: outer 0 (Jacket), solidified inner 1 (lining). The collar
+    # fall is folded over, so its visible face is the solidified one.
+    face.material_index=0 if kind=='body' else 1
+solid=jacket.modifiers.new('Fabric thickness','SOLIDIFY')
+solid.thickness=JACKET_THICKNESS; solid.offset=-1; solid.use_even_offset=True
+solid.use_rim=True; solid.material_offset=1; solid.material_offset_rim=0
+
+def box_mesh(name,items,mat):
+    """items: (center, axis_u, axis_v, axis_w, half-sizes) boxes in one mesh."""
+    verts,faces=[],[]
+    for c,u,v,w,(hu,hv,hw) in items:
+        base=len(verts)
+        for su in (-1,1):
+            for sv in (-1,1):
+                for sw in (-1,1):
+                    verts.append(c+u*hu*su+v*hv*sv+w*hw*sw)
+        faces+=[(base+q[0],base+q[1],base+q[2],base+q[3]) for q in
+                ((0,1,3,2),(4,6,7,5),(0,4,5,1),(2,3,7,6),(0,2,6,4),(1,5,7,3))]
+    return mesh(name,verts,faces,mat)
+
+teeth=[]
+for side_t in (.004,.996):
+    for i in range(34):
+        z=19.2+i*.5
+        c=jacket_point(side_t,z,.16)
+        n=Vector((c.x,c.y,0)).normalized(); w=Vector((0,0,1)); u=w.cross(n)
+        c=c+u*(.12 if i%2 else -.12)
+        teeth.append((c,n,u,w,(.12,.26,.13)))
+    tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (19,24,29,34,36.2)],.2,'Seam',1)
+box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
-    # Folded lapels, sleeves and visible cuffs.
-    lapel=mesh('Lapel',[(6,side*4.1,46.5),(9,side*7,43),(10,side*5.5,35),(8.4,side*3.7,41)],[(0,1,2,3)],'Seam')
-    sol=lapel.modifiers.new('Lapel thickness','SOLIDIFY'); sol.thickness=.35
-    bevel=lapel.modifiers.new('Lapel edge','BEVEL'); bevel.width=.3; bevel.segments=3
     cloth_limb('Sleeve',(0,side*10,41),(-1,side*14,29),4.8,4.1,'Jacket')
     cloth_limb('SleeveLower',(-1,side*14,30),(3,side*14,22),4.1,3.6,'Jacket')
     limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),4.15,'Seam')
     ellipsoid('Hand',(4.8,side*14,19.2),(3,2.7,3.6),'Skin')
     for finger in range(3):
         limb('Finger',(6,side*(12.4+finger*1.2),19),(7,side*(12.4+finger*1.2),16.5),.75,'Skin')
-    tube('FrontSeam',[(7,side*5.3,21),(8.8,side*5.3,31),(8.2,side*4.5,40)],.15,'Seam')
-    tube('Pocket',[(5.9,side*9.3,28),(7.2,side*8.7,25),(7.1,side*8.5,22)],.25,'Seam')
-    for z in (23,29,35):
-        ellipsoid('Fastener',(8,side*5.6,z),(.25,.45,.45),'Metal',16,8)
-    tube('ShoulderSeam',[(-6,side*7,44),(0,side*10.4,43),(3,side*11.5,39)],.16,'Seam')
-for z in (20,21.2):
-    points=[]
-    for j in range(28):
-        a=.66+(2*math.pi-1.32)*j/27
-        points.append((-1+9*math.cos(a),11.8*math.sin(a),z))
-    tube('HemStitch',points,.10,'Seam',1)
-for side in (-1,1):
-    tube('BackSeam',[(-8.7,side*5,22),(-9.3,side*5,33),(-7,side*4,42)],.14,'Seam')
+for t0 in (.075,.925):
+    # Slanted welt pocket stitched on the shell surface.
+    d=-1 if t0<.5 else 1
+    tube('Pocket',[jacket_point(t0,28,.08),jacket_point(t0+d*.02,25.5,.08),jacket_point(t0+d*.035,23,.08)],.22,'Seam')
+for z in (19.4,20.4):
+    tube('HemStitch',[jacket_point(i/40*.99+.005,z,.06) for i in range(41)],.09,'Seam',1)
+for t0 in (.41,.59):
+    tube('BackSeam',[jacket_point(t0,z,.06) for z in (19.6,27,35,42.5)],.12,'Seam')
 
 # Tapered, curved tail with subtle ring anatomy.
 points=[Vector(p) for p in [(-6,0,17),(-14,1,9),(-23,3,5),(-34,5,3),(-44,9,2),(-51,13,2.5)]]
@@ -269,8 +360,7 @@ def face_fur(point,normal):
 
 fur_surface(head,'CheekFur','Fur',6500,91,(.28,.72),(-.6,0,-.2),face_fur)
 chest=bpy.data.objects['LightChest']
-fur_surface(chest,'ChestFur','Chest',4600,93,(.28,.68),(0,0,-.85),lambda p,n:n.x>.35 and abs(p.y)<5.6)
-torso=bpy.data.objects['Torso']
+fur_surface(chest,'ChestFur','Chest',4600,93,(.28,.68),(0,0,-.85),lambda p,n:n.x>.2)
 fur_surface(torso,'BellyFur','Fur',2600,97,(.3,.7),(0,0,-.7),lambda p,n:p.z<21 and p.x>0)
 for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0] in ('Thigh','Shin')]):
     label=part.name.split('.')[0]

@@ -1,0 +1,36 @@
+# Agent handoff — Claude Code, jacket continuity and neutral chest
+
+- **Owner, task, branch, worktree:** Claude Code (Opus 5.5, Claude desktop app), `docs/agent-tasks/CLAUDE-CHARACTER.md` first bounded assignment. Authored in the app's own worktree `.claude/worktrees/project-orientation-fd7504` on branch `claude/project-orientation-fd7504`, because the app blocks edits into another worktree. `codex/claude-character` was then fast-forwarded to the same commit. `Local/AgentWorktrees/claude-character` was not edited.
+- **Base commit and delivered commit(s):** base `d10eba4`. Delivered: the single commit on `codex/claude-character` directly after `d10eba4` ("Rebuild Chuck jacket as one continuous garment").
+- **Changed paths; any changes outside initial ownership:** `Tools/build_chuck_model.py`, `SourceAssets/Chuck/{Chuck.blend, SK_ChuckBody.fbx, SM_ChuckBody.fbx, SM_ChuckFoot.fbx, README.md}`, new `SourceAssets/Chuck/{check_model.py, review_renders.py, Review/}`, and this file. No changes outside the owned paths. No Unreal assets or runtime code touched.
+- **Summary and comparison with user references:**
+  - The jacket shell, collar stand, collar fold and both lapels are now one continuous grid driven by a single front-edge function. Solidify gives 0.4 cm thickness; its rim closes every edge; the inner face is the lining (`Seam` slot).
+  - The front edges carry a zipper (teeth `Metal`, tape `Seam`), as in `Chuck-Standing.jpg`. Welt pockets, hem and back stitching sit on the same surface function.
+  - Removed: floating lapel quads, `FrontSeam` tubes, fasteners and shoulder seams that hovered off the shell (see `Review/before/close_edge_right.jpg`).
+  - Chest: the separate protruding ellipsoid (hard rim, dark torso visible in the opening) is replaced by a cream patch ray-cast onto the evaluated torso, sunk at its border. The opening now shows cream chest top to bottom, like the references.
+  - Sleeve folds reduced (less "puffer" banding).
+  - Still well short of the references: head, ears, hands, legs and feet are the old primitives. Sleeves remain tubes overlapping the shell at the shoulder.
+- **Rig/rest-pose/scale/material/asset-path contract changes:** none. Same 14 bones, parents and head positions (verified). Ear top 65.000 cm. Same material slot names (the jacket now also uses `Metal` for zipper teeth, an existing slot). Same asset names and export settings. All new jacket parts are weighted 100% to `root`, as the old jacket was.
+- **Source of truth; generator versus manual edits; safe reproduce/export/import steps:**
+  - `Tools/build_chuck_model.py` is the source of truth; `Chuck.blend` and the FBXs are regenerated from it with no manual edits. Git history shows the .blend has only ever changed together with the generator.
+  - Reproduce: `blender --background --python Tools/build_chuck_model.py` (writes `SourceAssets/Chuck/*`).
+  - Unreal import by the integration owner: `Tools/Build-ChuckAssets.ps1` (runs Blender, then both UE imports). Not run here.
+- **Exact tool versions and commands actually run:**
+  - Blender 4.5.14 LTS (`%LOCALAPPDATA%\Programs\CHUCK-Tools\blender-4.5.14-windows-x64\blender.exe`).
+  - Commands: the generator; `SourceAssets/Chuck/check_model.py` on the old and new .blend; `SourceAssets/Chuck/review_renders.py` on the old and new .blend.
+  - Pillow 12.3.0 for PNG→JPG evidence conversion.
+- **Tests/measurements passed and failed; evidence paths:**
+  - `check_model.py` on the new .blend: all PASS. Bones/parents, 65 cm, slot names, bone-only vertex groups, 0 vertices with weight total ≠ 1, 0 open jacket-shell edges.
+  - The open-edge check also passes on the old model, so it does not catch between-part gaps; the renders are the evidence for that.
+  - Triangles: body 131,194 → 161,334 (+23%), foot 10,944 unchanged. Body bounds X −51.06..18.9, Y ±19.0, Z 1.62..65.0.
+  - Evidence: `SourceAssets/Chuck/Review/after/*.jpg` (front, side, rear, three_quarter, scale_side, close_front_opening, close_edge_left/right, close_collar, close_elbow, close_edge_underside) and `Review/before/*.jpg`.
+- **Visual/motion review findings; known gaps; what was not tested:**
+  - Not tested: Unreal import, packaging, `Verify-Package.ps1`, any motion or posed bend. The jacket is rigid on `root`, so arm swing will still intersect sleeves with the shell at the shoulder.
+  - Remaining flaws: sleeve–shell join is an overlap, not an armhole. Hands are blobs. Legs are separate ellipsoids, detached from feet in the neutral review pose (runtime places the feet). Feet are flat discs, and head/ear/nose are not yet close to the references. No UVs or LODs. The Workbench renders show forms only, not Unreal materials.
+  - The collar stand sits near the head's underside; check it for clipping when the head bone turns.
+- **Binary files/size/LFS status; generated-file exclusion check:** `.blend` (~36 MB) and FBX (~10 MB) remain in LFS via `.gitattributes`. The 15 review JPGs total ~1.1 MB and are LFS-tracked (`*.jpg`). No generated Unreal output is committed.
+- **Heavy tools currently running:** none.
+- **Integration order and any coordination required:**
+  - Cherry-pick the commit onto main, then run `Tools/Build-ChuckAssets.ps1` with Unreal closed, then the normal package and verification.
+  - No rig change, so it can integrate independently of Codex's movement work.
+  - Proposed next steps, not started: a jacket that deforms with the arms (sleeves joined to the shell through armholes, graded shoulder weights), then the production-rig proposal from `CHARACTER-PLAN.md` step 3 before remodeling legs, feet and hands.
