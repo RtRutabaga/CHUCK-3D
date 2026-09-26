@@ -31,4 +31,3 @@ Build-ArtMaterials.ps1 reapplies the committed scans after procedural generation
 ## Remaining visual work
 
 Priorities after this study are better character anatomy/jacket folds and joint topology, a proper fur solution, authored UV texture work, believable prop meshes and improved water/shore transitions. Both camera views must remain useful at each step. Performance and visual fidelity need sustained profiling and playtesting before adopting heavier rendering features.
-

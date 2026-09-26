@@ -56,10 +56,12 @@ The test exits automatically. Logs and screenshots are under Builds/Windows/Chuc
 
 When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
 
-The normal smoke run performs 36 checks; adding -ChuckCapture adds the settled recenter check for 37 and captures both views plus walking poses. These automated checks do not establish subjective camera comfort or validate a physical controller.
+The normal smoke run performs 38 checks; adding -ChuckCapture adds the settled recenter check for 39 and captures both views plus walking poses. These automated checks do not establish subjective camera comfort or validate a physical controller.
 
 For this rig pass, walk, turn, stop and jump on clear quay ground in both views. Watch whether the legs remain connected to the feet, the small sleeve/tail movements read naturally, and stops settle without distracting motion. Joint surfaces and foot planting are still prototype quality.
 
 For the graphics pass, compare fur and purple-jacket readability in sun and shade, surface detail near the crate and pier, and the distant harbor silhouette in both views. Water is an opaque procedural study; shoreline transitions and final props are still unfinished.
 
 The scanned surface pass replaces the paving overlay with irregular stone joints and weathered timber maps. Compare detail and repetition at the barrel, crate and pier in both cameras. There is no physical displacement; walking collision remains smooth.
+
+At the far end of the pier, face the moored boat in rat-height mode, then switch to elevated. Compare harbor context with near-foot visibility. The boat and rope coil are scenery, not destinations or interactable objects.

@@ -24,7 +24,7 @@ The barrel now has 20 bowed staves, inset lids, iron hoops and rivets; the crate
 
 ## Rat anatomy and fur silhouette pass
 
-Chuck now has a continuous tapered skull/muzzle, a smaller nasal pad, smaller outward-angled ears, dark fur eyelids and short tapered fur clusters over the back/sides of the skull. The 65 cm ear height and existing bones remain unchanged. This is geometric fur detail rather than a groom; no facial expression or dialogue system was added. The Windows package passed all 37 checks, and front/side captures were inspected.
+Chuck now has a continuous tapered skull/muzzle, a smaller nasal pad, smaller outward-angled ears, dark fur eyelids and short tapered fur clusters over the back/sides of the skull. The 65 cm ear height and existing bones remain unchanged. This is geometric fur detail rather than a groom; no facial expression or dialogue system was added. The Windows package passed all 39 checks, and front/side captures were inspected.
 
 ## Cameras
 
@@ -33,11 +33,11 @@ Both views remain available, with no final selection. Elevated: 400 cm boom, -48
 ## Verified in this pass
 
 - Editor and game targets compiled; Windows Development BuildCookRun completed with exit code 0. The final cook log was checked for material compilation failures and invalid shader maps; none remained.
-- Packaged DirectX 11 game ran at 1280 x 720 with all 37 rendered runtime checks passing (zero failures).
+- Packaged DirectX 11 game ran at 1280 x 720 with all 39 rendered runtime checks passing (zero failures).
 - Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
 - Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
 - Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/surface-build.log, Local/surface-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
+- Evidence is ignored: Local/boat-build.log, Local/boat-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
 
 ## Repository boundaries and publication
 
@@ -55,5 +55,8 @@ The user requested continued graphics work until a usage limit blocks progress. 
 
 ## Scanned surface pass
 
-Six 2K CC0 Poly Haven texture maps now drive stone and timber color, roughness, occlusion and normals. Provenance and hashes are in SourceAssets/Surfaces/PolyHaven. The decorative rectangular paving overlay was removed without changing quay collision. BuildCookRun passed with no material compile failures; the packaged game passed all 37 rendered checks. Elevated, rat-height and barrel captures were inspected. No new dependencies or purchases. Remaining remote LFS account allowance is unknown.
+Six 2K CC0 Poly Haven texture maps now drive stone and timber color, roughness, occlusion and normals. Provenance and hashes are in SourceAssets/Surfaces/PolyHaven. The decorative rectangular paving overlay was removed without changing quay collision. BuildCookRun passed with no material compile failures; the packaged game passed all 39 rendered checks. Elevated, rat-height and barrel captures were inspected. No new dependencies or purchases. Remaining remote LFS account allowance is unknown.
 
+## Moored boat pass
+
+The old hull sphere and mast shapes are replaced by an original Blender working boat with strakes, ribs, thwarts, furled canvas and rigging. A low rope coil sits beside a pier bollard. Both are noncolliding scenery; no new map, interaction or buoyancy. BuildCookRun passed and all 39 rendered checks passed. Harbor_RatHeight and Harbor_Elevated captures were inspected: the follow view reads the boat silhouette; the elevated view emphasizes nearby walking surfaces and does not frame the whole boat. Source/reproduction details are in SourceAssets/Docks/README.md. Published surface assets through 31be3fb were downloaded in Local/remote-verification, passed LFS fsck and matched sampled source/imported hashes.

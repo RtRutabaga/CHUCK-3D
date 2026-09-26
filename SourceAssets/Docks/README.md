@@ -23,3 +23,9 @@ powershell -NoProfile -File .\Tools\Build-DockProps.ps1
 The script uses the installed Blender and Unreal versions, generates only the named source assets, imports to `/Game/Art/Props`, assigns the authored art materials and checks bounds/completion. Preserve manual sculpt edits separately before regeneration. Ordinary game builds use the committed `.uasset` files and do not require Blender.
 
 Files use Git LFS; Blender backups, logs and packaged output remain ignored. These are geometry studies, not production assets with authored UV textures, damage variants or LODs. Material grain currently follows the procedural surface mapping rather than individual stave UVs.
+
+## Moored working boat
+
+`HarborBoat.blend` and `SM_HarborBoat.fbx` contain an original six-metre open cargo boat: eight strakes per side, gunwales, rubbing strips, internal ribs, floor boards, thwarts, keel, rudder/tiller, mast, yard, furled canvas and standing rigging. Origin is at the waterline, placed at world Z -60. Imported complete bounds are about 628.1 x 222.4 x 494.2 cm, including rigging and underwater hull. The source mesh has 5,482 polygons before export triangulation. It replaces the old flattened sphere and mast primitives; it is nonplayable scenery, without buoyancy or sail simulation.
+
+`SM_RopeCoil` is a low decorative coil beside a pier bollard, approximately 54.8 x 41 x 2.6 cm, with no collision. The source has 2,898 polygons. Regenerate both with `powershell -NoProfile -File .\Tools\Build-HarborBoat.ps1`. This uses the existing Blender and Unreal installations and performs no downloads. The importer checks centimetre bounds and assigns existing art materials. Timber uses the sourced world-projected texture rather than plank-specific UVs; canvas and rope currently share the procedural plaster material and remain a surface-study limitation.

@@ -45,6 +45,8 @@ void ADockGameMode::StartPlay()
     auto* BarrelMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockBarrel.SM_DockBarrel"));
     auto* CrateMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockCrate.SM_DockCrate"));
     auto* PlankMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockPlank.SM_DockPlank"));
+    auto* BoatMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_HarborBoat.SM_HarborBoat"));
+    auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
     auto Prop = [&](const TCHAR* Name,FVector Position,UStaticMesh* Asset)
     {
         auto* Actor=World->SpawnActor<AStaticMeshActor>(Position,FRotator::ZeroRotator);
@@ -194,10 +196,8 @@ void ADockGameMode::StartPlay()
             Shape(TEXT("FarWindow"),FVector(3373,CenterY+Offset,Z),FVector(3,27,43),TEXT("Dark"),nullptr,false);
     }
     Shape(TEXT("FarHarborWall"),FVector(3440,0,-8),FVector(170,4850,94),TEXT("Stone"),nullptr,false);
-    Shape(TEXT("MooredHull"),FVector(980,600,-30),FVector(550,160,90),TEXT("Wood"),Sphere,false);
-    Shape(TEXT("ShipMast"),FVector(980,600,210),FVector(10,10,460),TEXT("Wood"),Cylinder,false);
-    Shape(TEXT("ShipYard"),FVector(980,600,320),FVector(12,260,10),TEXT("Wood"),nullptr,false);
-    Shape(TEXT("FurledSail"),FVector(980,600,312),FVector(18,245,19),TEXT("Plaster"),Sphere,false);
+    if(BoatMesh) Prop(TEXT("HarborBoatArt"),FVector(980,600,-60),BoatMesh);
+    if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
     // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
@@ -242,7 +242,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(TestStage==0 && StageTime>1)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
-        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt")})
+        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt"),TEXT("HarborBoatArt"),TEXT("RopeCoilArt")})
         {
             TArray<AActor*> Props;
             UGameplayStatics::GetAllActorsWithTag(this,FName(Tag),Props);
@@ -466,7 +466,26 @@ void ADockGameMode::Tick(float DeltaSeconds)
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Props_Barrel.png"),true,false);
         TestStage=31; StageTime=0;
     }
-    else if(TestStage==31 && StageTime>1) TestStage=99;
+    else if(TestStage==31 && StageTime>1)
+    {
+        Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(690,0,36));
+        Chuck->SetActorRotation(FRotator(0,64,0)); Chuck->Recenter();
+        if(Chuck->IsElevated()) Chuck->ToggleCamera();
+        TestStage=32; StageTime=0;
+    }
+    else if(TestStage==32 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Harbor_RatHeight.png"),true,false);
+        TestStage=33; StageTime=0;
+    }
+    else if(TestStage==33 && StageTime>1)
+    { Chuck->ToggleCamera(); TestStage=34; StageTime=0; }
+    else if(TestStage==34 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Harbor_Elevated.png"),true,false);
+        TestStage=35; StageTime=0;
+    }
+    else if(TestStage==35 && StageTime>1) TestStage=99;
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
