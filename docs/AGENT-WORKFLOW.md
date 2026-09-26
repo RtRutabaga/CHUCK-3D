@@ -64,3 +64,5 @@ Use only one Unreal editor/build/import at a time on this 16 GB machine. Text/co
 5. Update HANDOFF with what actually passed, inspect LFS/exclusions, commit imported assets and publish verified main under existing permission. Refresh task branches from that integration point only when their working trees are clean and their owners are ready.
 
 The original `CHUCK-game` remains strictly read-only. Public CHUCK-3D publication permission continues; it does not authorize new paid assets, credentials, engine installs or changes to the original game.
+
+Preparation verified: both worktrees were created from the same workflow base, remained clean, and a second setup run preserved them. Sampled Blender source, imported skeletal asset and CLAUDE.md hashes match the integration checkout. Worktree/generated directories are not tracked. Agent sessions and Claude installation/authentication remain unperformed.
