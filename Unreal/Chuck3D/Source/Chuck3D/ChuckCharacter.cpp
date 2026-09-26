@@ -263,7 +263,7 @@ void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
         for(int32 I=0; I<2; ++I)
             Error[I]=FVector::Dist2D(Feet[I].Position,Neutral[I])+FMath::Abs(FMath::FindDeltaAngleDegrees(Feet[I].Rotation.Rotator().Yaw,GetActorRotation().Yaw))*.06f;
         const bool bWalking=Speed>4.f;
-        const int32 Candidate=bWalking ? NextFoot : (Error[0]>=Error[1] ? 0:1);
+        const int32 Candidate=!Feet[0].bSupported ? 0 : (!Feet[1].bSupported ? 1 : (bWalking ? NextFoot : (Error[0]>=Error[1] ? 0:1)));
         if(Error[Candidate]>(bWalking ? .35f:2.f))
         {
             SwingFoot=Candidate;
@@ -327,8 +327,20 @@ void AChuckCharacter::UpdateSkeleton()
         if(Upper==INDEX_NONE || Lower==INDEX_NONE) return;
         const FVector Hip=Rest[Upper].GetLocation(), Knee=Rest[Lower].GetLocation();
         const FVector RestAnkle(2,Sign*7,5);
-        const FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+Foot->GetRelativeRotation().RotateVector(FVector(-2,0,2.5f)));
+        FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+Foot->GetRelativeRotation().RotateVector(FVector(-2,0,2.5f)));
         const float A=FVector::Distance(Hip,Knee), B=FVector::Distance(Knee,RestAnkle);
+        if(FVector::Distance(Target,Hip)>A+B-.01f)
+        {
+            // A sharp turn can outrun a planted leg. Release that contact and
+            // bring the visible ankle into reach, rather than disconnecting
+            // shin and paw. Prioritize its next support step. Authored turns
+            // and toe joints will replace this temporary-rig recovery.
+            const FVector Reachable=Hip+(Target-Hip).GetSafeNormal()*(A+B-.01f);
+            Foot->AddWorldOffset(Body->GetComponentTransform().TransformVector(Reachable-Target));
+            const int32 I=Sign<0 ? 0:1;
+            Feet[I].Position=Foot->GetComponentLocation(); Feet[I].bSupported=false;
+            Target=Reachable;
+        }
         const FVector Direction=(Target-Hip).GetSafeNormal();
         const float D=FMath::Clamp(static_cast<float>(FVector::Distance(Target,Hip)),FMath::Abs(A-B)+.01f,A+B-.01f);
         const float Along=(A*A+D*D-B*B)/(2*D);
