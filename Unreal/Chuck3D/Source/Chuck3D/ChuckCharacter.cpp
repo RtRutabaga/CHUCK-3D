@@ -249,8 +249,8 @@ void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
             SwingFoot=Candidate;
             FFootContact& Foot=Feet[Candidate];
             Foot.Start=Foot.Position; Foot.StartRotation=Foot.Rotation; Foot.Elapsed=0;
-            Foot.Duration=bWalking ? FMath::Lerp(.24f,.14f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
-            if(bFirstStep && bWalking) Foot.Duration=FMath::Min(Foot.Duration,.12f);
+            Foot.Duration=bWalking ? FMath::Lerp(.22f,.12f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
+            if(bFirstStep && bWalking) Foot.Duration=FMath::Min(Foot.Duration,.08f);
             bFirstStep=false;
         }
     }
