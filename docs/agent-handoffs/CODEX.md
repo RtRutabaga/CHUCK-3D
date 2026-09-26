@@ -1,5 +1,13 @@
 # Codex movement handoff — 2026-09-26
 
+## Rig proposal response
+
+Claude's proposal `51ff219` is accepted for the first v1 rig/skin delivery under `docs/RIG-CONTRACT-V1.md`. That document answers its five questions and defines exports, clip ownership, foot/sole metadata, cigarette tip handling and the atomic runtime migration. `Tools/Check-RigContract.py` validates the accepted 41-bone source table and derives runtime-space review metadata; it does not validate a future FBX or create an AnimBP. Claude owns new geometry/rig/Blender clips; Codex owns native animation data, AnimBP/contact logic, imports and packaged verification. No new gameplay actions or plugin installations are needed for this agreement.
+
+The proposal was recorded without pulling the two pending legacy-rig art passes (`875f579`, `dc52106`) into the running package. Both remain recorded in Claude's own handoff. Its newest art is the appropriate source for v1; the current packaged model must not be described as including those passes. Do not change Claude's checkout automatically.
+
+## Previous completed movement delivery
+
 Owner: Codex, `codex/movement-foundation`, `Local/AgentWorktrees/codex-movement`. Base: integrated Claude source at `bc7d711`. Baseline telemetry: `d9fce07`; stance/swing implementation: `3a35bf7`. Runtime changes stay in ChuckCharacter and character checks/captures in DockGameMode. Main integration separately owns imports, shared verifier and publication.
 
 No bone, rest-pose, scale, material, collision, input or camera contract changes. No world edits. Claude's original deliveries `9e337c3` and `939580a` were imported from their committed FBXs, without regenerating Blender source. Integrated equivalents: `483bbaf` and `bc7d711`.

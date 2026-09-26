@@ -2,6 +2,12 @@
 
 ## Current priority
 
+**Rig proposal reviewed and accepted by Codex for the first v1 delivery.** Read `docs/RIG-CONTRACT-V1.md` before changing bones or starting new runtime animation. Claude's proposal files from `51ff219` are recorded separately, without importing pending legacy-rig art commits `875f579`/`dc52106`. The current playable package remains the verified 9b9bd46 integration described below. No new rig, animation blueprint, clips or game features are running yet.
+
+Codex answered all five rig questions: SkeletalMesh + AnimInstance/AnimBP Two Bone IK, no Control Rig dependency now; accepted 41-bone hierarchy/rest coordinates; preserve and verify axes/helpers on import; derive new reach/poles from rest pose; fit sole markers and a real cigarette-tip attachment. Claude can proceed with v1 rig/skin and first clips under the documented contract. Its worktrees were not changed.
+
+Source contract validation passed with `Tools/Check-RigContract.py --output Local/rig-v1-review.json`: 41 bones / 35 deforming, script/JSON match, valid hierarchy, mirrored forward knee poles, upper/lower leg lengths 8.7687/9.3670 cm. This checks source metadata only; new-rig FBX/import/deformation/package checks await delivery. No new Unreal build was needed for this documentation/checker milestone.
+
 **Character first. World/setting work is paused.** The user says Chuck remains far from the supplied goal: primitive appearance, cartoony movement, unnatural leg placement and unintended gaps along the open jacket/zipper edges. The latest checks do not establish acceptable character quality. Read CHARACTER-PLAN.md before more implementation and AGENT-WORKFLOW.md for the prepared Codex/Claude Code split.
 
 The eventual rig must support walking, running, rolling, side-jumping, climbing and smoking with a cigarette kept in the mouth. These are design requirements, not a claim that all actions are playable. Keep Chuck silent, restrained and about 65 cm tall; oversized open purple jacket, gray-brown rat anatomy. The supplied reference images take precedence over the current procedural study.

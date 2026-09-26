@@ -1,5 +1,13 @@
 # Reference provenance
 
+## User-supplied resource guide
+
+Added 2026-09-26: `References/chuck-3d-resource-guide.md`, copied byte-for-byte from `C:\Users\ashsm\.codex\codex-remote-attachments\01a0d449-b2e8-7fc1-9502-ac6cb557fa6d\15159EA9-DE10-4994-A871-2110A6081741\1-chuck-3d-resource-guide.md`.
+SHA-256 (source and copy): `3DA84004DB51ED3CBF379940AA9DA2D05BDF7BD13A9E4157C72D812C233900C0`.
+Directional suggestions, not a replacement for the user's character target or current milestone. Applicability and current-resource corrections: `docs/RESOURCE-GUIDE-NOTES.md`.
+
+## Original game references
+
 Captured 2026-09-24 from read-only source: C:\Users\ashsm\OneDrive\Documents\CHUCK-game
 Source HEAD: 87585dd6efb3d9fb0a44dd33549fa521f17b6701
 
