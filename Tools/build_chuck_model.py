@@ -222,35 +222,59 @@ for i in range(steps-1):
         faces.append((k,n,n+sides,k+sides))
 mesh('Tail',verts,faces,'Skin',1)
 
-# Short tapered fur clusters soften the skull silhouette without an alpha groom.
-# Sample surface area, not vertex density, and avoid the eye/muzzle region.
-rng=random.Random(91)
-bpy.context.view_layer.update()
-evaluated=head.evaluated_get(bpy.context.evaluated_depsgraph_get())
-surface=evaluated.to_mesh(); surface.calc_loop_triangles()
-triangles=list(surface.loop_triangles)
-verts,faces=[],[]
-for tri in rng.choices(triangles,weights=[t.area for t in triangles],k=1100):
-    a,b,c=[surface.vertices[i] for i in tri.vertices]
-    u=rng.random(); v=rng.random()
-    if u+v>1: u,v=1-u,1-v
-    point=a.co*(1-u-v)+b.co*u+c.co*v
-    if point.x>5 or point.z<48: continue
-    normal=(a.normal*(1-u-v)+b.normal*u+c.normal*v).normalized()
-    tangent=normal.cross(Vector((0,0,1)))
-    if tangent.length<.01: tangent=normal.cross(Vector((0,1,0)))
-    tangent.normalize(); bitangent=normal.cross(tangent).normalized()
-    root=point-normal*.025
-    length=rng.uniform(.18,.48); width=rng.uniform(.06,.12)
-    tip=point+normal*length+Vector((-.16,0,-.07))
-    start=len(verts)
-    for j in range(3):
-        angle=j*math.tau/3
-        verts.append(root+width*(tangent*math.cos(angle)+bitangent*math.sin(angle)))
-    verts.append(tip)
-    faces += [(start+j,start+(j+1)%3,start+3) for j in range(3)]
-mesh('CheekFur',verts,faces,'Fur')
-evaluated.to_mesh_clear()
+# Short directional geometric tufts. Sample evaluated surface area so modifiers,
+# limb rotation and nonuniform authored topology do not bias coverage.
+def fur_surface(source,name,material,count,seed,lengths,groom,accept):
+    rng=random.Random(seed)
+    bpy.context.view_layer.update()
+    evaluated=source.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    surface=evaluated.to_mesh(); surface.calc_loop_triangles()
+    triangles=list(surface.loop_triangles)
+    transform=source.matrix_world
+    normals=transform.to_3x3().inverted().transposed()
+    verts,faces=[],[]
+    for tri in rng.choices(triangles,weights=[t.area for t in triangles],k=count):
+        a,b,c=[surface.vertices[i] for i in tri.vertices]
+        u=rng.random(); v=rng.random()
+        if u+v>1: u,v=1-u,1-v
+        point=transform @ (a.co*(1-u-v)+b.co*u+c.co*v)
+        normal=(normals @ (a.normal*(1-u-v)+b.normal*u+c.normal*v)).normalized()
+        if not accept(point,normal): continue
+        tangent=normal.cross(Vector((0,0,1)))
+        if tangent.length<.01: tangent=normal.cross(Vector((0,1,0)))
+        tangent.normalize(); bitangent=normal.cross(tangent).normalized()
+        root=point-normal*.035
+        length=rng.uniform(*lengths)
+        # Shorter, narrower facial hairs preserve the muzzle rather than obscuring it.
+        if name=='CheekFur' and point.x>6: length*=.45
+        width=rng.uniform(.045,.095)
+        direction=Vector(groom); direction-=normal*direction.dot(normal)
+        tip=point+normal*length+direction*length
+        start=len(verts)
+        for j in range(3):
+            angle=j*math.tau/3
+            verts.append(root+width*(tangent*math.cos(angle)+bitangent*math.sin(angle)))
+        verts.append(tip)
+        faces += [(start+j,start+(j+1)%3,start+3) for j in range(3)]
+    mesh(name,verts,faces,material)
+    evaluated.to_mesh_clear()
+
+def face_fur(point,normal):
+    if point.x>15.3 or point.z<48: return False
+    # Bare eyelids, nose and mouth stay legible; no exaggerated furry eyebrows.
+    for side in (-1,1):
+        delta=point-Vector((7.1,side*5.45,54.6))
+        if (delta.x/2.4)**2+(delta.y/1.8)**2+(delta.z/1.8)**2<1: return False
+    return True
+
+fur_surface(head,'CheekFur','Fur',6500,91,(.28,.72),(-.6,0,-.2),face_fur)
+chest=bpy.data.objects['LightChest']
+fur_surface(chest,'ChestFur','Chest',4600,93,(.28,.68),(0,0,-.85),lambda p,n:n.x>.35 and abs(p.y)<5.6)
+torso=bpy.data.objects['Torso']
+fur_surface(torso,'BellyFur','Fur',2600,97,(.3,.7),(0,0,-.7),lambda p,n:p.z<21 and p.x>0)
+for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0] in ('Thigh','Shin')]):
+    label=part.name.split('.')[0]
+    fur_surface(part,label+'Fur','Fur',1800,101+i,(.22,.55),(0,0,-.8),lambda p,n:p.z<22)
 
 def combine(objects, name):
     if name == 'SM_ChuckBody':
@@ -267,8 +291,8 @@ def combine(objects, name):
             # FBX -> Unreal reflects Y. Name sides by their runtime coordinates.
             side = 'L' if center.y > 0 else 'R'
             bone = 'root'
-            if label in ('Thigh', 'Shin'):
-                bone = ('thigh_' if label == 'Thigh' else 'shin_') + side
+            if label in ('Thigh', 'Shin', 'ThighFur', 'ShinFur'):
+                bone = ('thigh_' if label in ('Thigh','ThighFur') else 'shin_') + side
             elif label in ('Sleeve','SleeveLower','Cuff','Hand','Finger'):
                 bone = ('arm_' if label == 'Sleeve' else 'forearm_') + side
             elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
