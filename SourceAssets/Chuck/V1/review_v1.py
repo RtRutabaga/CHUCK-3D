@@ -84,13 +84,17 @@ poser.leg('L', poser.rest_head['toes_L'], 38, -38)
 shot('pose_toe_roll_side', (2, 45, 5), (0, 7, 4), lens=60)
 
 poser.reset()
-poser.rotate('clavicle_L', 'X', 18); poser.rotate('clavicle_R', 'X', -18)
-poser.rotate('upperarm_L', 'Y', -165); poser.rotate('upperarm_R', 'Y', -150)
-poser.rotate('lowerarm_L', 'Y', -15); poser.rotate('lowerarm_R', 'Y', -25)
+# Overhead grip (climb reach): clavicles shrug, arm IK puts both wrists above
+# the ears, fingers and thumbs curl round an imaginary bar.
+poser.rotate('clavicle_L', 'X', 22); poser.rotate('clavicle_R', 'X', -22)
+poser.rotate('spine_02', 'Y', -5); poser.rotate('chest', 'Y', -4); poser.rotate('head', 'Y', -14)
+poser.update()
+grip_reach = {s: poser.arm(s, (3.0, k * 9.5, 62.5)) for s, k in (('L', 1), ('R', -1))}
 for s in 'LR':
-    poser.rotate(f'fingers_{s}', 'Y', -75); poser.rotate(f'thumb_{s}', 'Z', 35 if s == 'L' else -35)
-poser.rotate('spine_02', 'Y', -4); poser.rotate('head', 'Y', -12)
+    poser.rotate(f'fingers_{s}', 'Y', 70); poser.rotate(f'thumb_{s}', 'Y', 50)
 poser.update(); neutral_legs()
+print('CHUCK_V1_GRIP', {s: round(r, 3) for s, r in grip_reach.items()},
+      {s: [round(c, 2) for c in poser.head(f'hand_{s}')] for s in 'LR'})
 shot('pose_overhead_grip_side', (0, -150, 45), (0, 0, 42), lens=45)
 shot('pose_overhead_grip_three_quarter', (120, -100, 55), (0, 0, 45), lens=45)
 

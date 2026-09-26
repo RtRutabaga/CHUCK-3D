@@ -47,7 +47,7 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
   - Jacket shell follows the upper arm near the armhole and lifts with the thighs at the hem.
   - Sleeves: clavicle/chest → upper arm → lower arm. Hands: hand → fingers/thumb.
   - Head, with a neck blend at the back, jaw on the chin/lower lip/lower muzzle, and ears.
-  - Legs: pelvis → thigh → calf → foot. Paws: calf → foot → toes. Tail: tail_0 → tail_5.
+  - Legs: pelvis → thigh → calf → foot. Paws are rigid on foot/toes (heel pad included), blending to the calf only on the heel mound around the hock. Tail: tail_0 → tail_5.
   - Every deforming bone carries weight; helpers carry none. At most 4 influences per vertex. No `_L`/`_R` cross-weighting.
 
 ## Sole markers (measured)
@@ -75,27 +75,19 @@ All clips are 30 fps with `root` static (root motion off); the runtime moves or 
 
 Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperextended. `ik_foot_*` follow the solved hock and `ik_hand_*` the posed wrist in every frame; `socket_cigarette` rides the jaw. `check_v1.py` confirms the start/stop seams match WalkLoop frame 0 to 0.000 cm / 0.00°.
 
-**Measured on the deformed mesh** (`Review/stance_drift_report.json`): world-space drift of the mid-toe sole under each planted paw, using the manifest's capsule travel/yaw.
+**Measured on the deformed mesh** (`Review/stance_drift_report.json`): world-space drift of the mid-toe sole under each planted paw, using the manifest's capsule travel/yaw. The maximum is 0.002 cm/s in every clip; toes stay flat and planted through toe roll. `Review/walk_contact_report.json` tracks the ball pad instead. It moves at exactly 95.0 cm/s during flat stance and lifts during toe roll (up to 4.5 cm/s on the roll frame), which is intended.
 
-| Clip | Max drift (cm/s) |
-| --- | --- |
-| WalkLoop | 0.60 |
-| WalkStart / WalkStop | 1.1 |
-| Turns | 1.55 |
-| JumpLand | 2.5 |
-| JumpStart | 5.3 |
-
-The JumpStart figure comes from the 0.09 s push onto the toes, about 0.5 cm in total. `Review/walk_contact_report.json` also shows the ball-of-paw sole moving at 95.0 cm/s through WalkLoop stance, 0.03–0.05 cm above the ground. The mid-toe sole is the right contact to measure: in toe roll the ball pad lifts while the toes stay planted.
+**Ground:** `check_v1.py` checks every frame of every clip, and no deformed vertex goes below Z = -0.002 cm (the resting sole). A tail ground-clearance pass (`Poser.clear_ground`) lifts any tail joint that would dip, allowing for the tail's radius plus 0.9 cm margin.
 
 ## Pose evidence (`Review/`)
 
 - Neutral: front, side, rear, three-quarter, scale.
-- Pose studies: crouch/curl, forward knee flexion, toe roll, overhead grip, and the cigarette held at the left lip corner with the jaw opened 6°. The cigarette is a temporary render-only stick on the socket, not an asset.
+- Pose studies: crouch/curl, forward knee flexion, toe roll, overhead grip (two-bone arm IK `Poser.arm`: wrists at 62.5 cm above the ears' base, elbows bent outward, reach 0.93, clavicles shrugged, fingers/thumbs curled), and the cigarette held at the left lip corner with the jaw opened 6°. The cigarette is a temporary render-only stick on the socket, not an asset.
 - Clips: `strip_<Clip>.jpg` (side view; turns from above-front).
 
 ## Known limits
 
-- **Overhead grip:** reads as a hand at head height rather than a full overhead reach. The clavicle/upper-arm range for climbing needs a follow-up study.
+- **Overhead grip:** reaches above the head, but the jacket armhole and hem stretch visibly in that pose (no cloth simulation).
 - **Jacket:** a separate shell skinned to the body, with no cloth simulation. The armhole stretches at large raises.
 - **Hands:** one curl bone for four fingers, as accepted for v1.
 - **Ankle:** the leg/paw seam at the ankle is covered by the heel mound, not merged topology.

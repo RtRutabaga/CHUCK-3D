@@ -72,6 +72,20 @@ for clip in MANIFEST['clips']:
                      for c in root_curves for k in c.keyframe_points), default=0)
         check(moved < 1e-6, f"clip {clip['name']} root bone static", f'{moved:.2e}')
 
+# Ground: no deformed vertex below the floor in any frame of any clip.
+rig.animation_data_create()
+for clip in MANIFEST['clips']:
+    rig.animation_data.action = bpy.data.actions[f"AS_Chuck_{clip['name']}"]
+    low = (9., None)
+    for f in range(clip['first_frame'], clip['last_frame'] + 1):
+        bpy.context.scene.frame_set(f)
+        ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()
+        z = min(v.co.z for v in m.vertices)
+        ev.to_mesh_clear()
+        if z < low[0]: low = (z, f)
+    check(low[0] > -.1, f"clip {clip['name']} stays above ground", f'min z {low[0]:.3f} cm at frame {low[1]}')
+rig.animation_data.action = None
+
 # Seams: WalkStart's last frame and WalkStop's first frame must equal
 # WalkLoop frame 0 so the transitions blend without a pop.
 def pose_at(action_name, frame):

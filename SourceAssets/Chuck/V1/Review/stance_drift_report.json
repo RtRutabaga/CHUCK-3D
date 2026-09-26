@@ -10,10 +10,10 @@
     0,
     5
    ],
-   "max_world_slip_cm_s": 0.598,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
-    1.509
+    0.549
    ]
   },
   {
@@ -26,10 +26,10 @@
     5,
     8
    ],
-   "max_world_slip_cm_s": 0.014,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.548,
-    0.551
+    0.549,
+    0.549
    ]
   }
  ],
@@ -44,10 +44,10 @@
     0,
     8
    ],
-   "max_world_slip_cm_s": 0.596,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
-    0.548,
-    1.509
+    0.549,
+    0.549
    ]
   },
   {
@@ -60,10 +60,10 @@
     0,
     3
    ],
-   "max_world_slip_cm_s": 1.093,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
     0.549,
-    0.92
+    0.549
    ]
   },
   {
@@ -76,10 +76,10 @@
     8,
     12
    ],
-   "max_world_slip_cm_s": 1.109,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
-    0.548,
-    1.021
+    0.549,
+    0.549
    ]
   }
  ],
@@ -94,10 +94,10 @@
     0,
     6
    ],
-   "max_world_slip_cm_s": 1.09,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
-    0.548,
-    0.919
+    0.549,
+    0.549
    ]
   },
   {
@@ -126,10 +126,10 @@
     6,
     15
    ],
-   "max_world_slip_cm_s": 0.003,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
     0.549,
-    0.55
+    0.549
    ]
   }
  ],
@@ -144,10 +144,10 @@
     0,
     1
    ],
-   "max_world_slip_cm_s": 1.554,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.489,
-    0.765
+    0.549,
+    0.549
    ]
   },
   {
@@ -160,10 +160,10 @@
     6,
     10
    ],
-   "max_world_slip_cm_s": 0.981,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.6,
-    1.098
+    0.549,
+    0.549
    ]
   },
   {
@@ -192,10 +192,10 @@
     0,
     6
    ],
-   "max_world_slip_cm_s": 1.107,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
-    0.92
+    0.549
    ]
   },
   {
@@ -208,10 +208,10 @@
     11,
     20
    ],
-   "max_world_slip_cm_s": 0.051,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
-    0.55
+    0.549
    ]
   }
  ],
@@ -226,10 +226,10 @@
     0,
     6
    ],
-   "max_world_slip_cm_s": 1.107,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
-    0.92
+    0.549
    ]
   },
   {
@@ -242,10 +242,10 @@
     11,
     20
    ],
-   "max_world_slip_cm_s": 0.051,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
-    0.55
+    0.549
    ]
   },
   {
@@ -258,10 +258,10 @@
     0,
     1
    ],
-   "max_world_slip_cm_s": 1.553,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.489,
-    0.765
+    0.549,
+    0.549
    ]
   },
   {
@@ -274,10 +274,10 @@
     6,
     10
    ],
-   "max_world_slip_cm_s": 0.98,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.6,
-    1.098
+    0.549,
+    0.549
    ]
   },
   {
@@ -290,7 +290,7 @@
     16,
     20
    ],
-   "max_world_slip_cm_s": 0.001,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
     0.549,
     0.549
@@ -308,10 +308,10 @@
     0,
     7
    ],
-   "max_world_slip_cm_s": 5.336,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.548,
-    1.994
+    0.549,
+    0.549
    ]
   },
   {
@@ -324,10 +324,10 @@
     0,
     7
    ],
-   "max_world_slip_cm_s": 5.336,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.548,
-    1.994
+    0.549,
+    0.549
    ]
   }
  ],
@@ -342,10 +342,10 @@
     0,
     12
    ],
-   "max_world_slip_cm_s": 2.507,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.206,
-    0.6
+    0.549,
+    0.549
    ]
   },
   {
@@ -358,10 +358,10 @@
     0,
     12
    ],
-   "max_world_slip_cm_s": 2.507,
+   "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
-    0.206,
-    0.6
+    0.549,
+    0.549
    ]
   }
  ]

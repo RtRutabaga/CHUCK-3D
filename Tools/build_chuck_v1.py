@@ -152,10 +152,16 @@ def leg_weights(p):
     return mix((pelvis, {'pelvis': 1.}), (1 - pelvis, chain_weights(p, [f'thigh_{s}', f'calf_{s}', f'foot_{s}'])))
 
 def paw_weights(p):
+    """The paw is rigid on foot/toes (heel pad included); only the heel mound
+    around the hock blends into the calf so the leg tube joins it."""
     s = side_of(p)
-    return chain_weights(p, [f'calf_{s}', f'foot_{s}', f'toes_{s}'], 1.8)
+    hock = H(f'foot_{s}')
+    calf = .7 * smoothstep(p.z, 2.8, 4.8) * (1 - smoothstep((p - hock).length, 1.5, 3.5))
+    return mix((1 - calf, chain_weights(p, [f'foot_{s}', f'toes_{s}'], 1.8)), (calf, {f'calf_{s}': 1.}))
 
 TAIL = [f'tail_{i}' for i in range(6)]
+# Tail mesh radius at each bone's head and tail (legacy tail tapers 1.8 -> .13 cm).
+TAIL_RADIUS = {b: (1.78 - 1.5 * i / 6, 1.78 - 1.5 * (i + 1) / 6) for i, b in enumerate(TAIL)}
 FIELDS = {
     'torso': (('Torso', 'LightChest', 'ChestFur', 'BellyFur'), lambda p, l: torso_weights(p)),
     'garment': (('OpenJacket', 'Zipper', 'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam'), lambda p, l: garment_weights(p)),
@@ -247,6 +253,7 @@ def author(name, frames, pose_fn, loop, extra):
     for f in range(frames):
         poser.reset()
         reach = max(reach, pose_fn(f / frames if loop else f / max(1, frames - 1), f))
+        poser.clear_ground(TAIL, TAIL_RADIUS, .9)  # margin covers mesh sag between joints
         poser.key_all(f)
     rig.animation_data.action = None
     entry = {'name': name, 'file': f'Animations/AS_Chuck_{name}.fbx', 'fps': FPS,
@@ -298,7 +305,7 @@ def foot_cycle(phase):
         u = phase / st
         offset = half - STANCE_CM * u  # planted: moves back at walking speed
         roll = smoothstep(u, .7, 1.)  # heel lifts around the ball at push-off
-        return offset, 0., 24 * roll, -24 * roll
+        return offset, 0., 24 * roll, 0.  # toes stay flat and planted through the roll
     u = (phase - st) / (1 - st)
     ease = smoothstep(u, 0., 1.)
     offset = -half + STANCE_CM * ease
@@ -370,7 +377,7 @@ def plan_foot(t, start, steps):
     for lift, land, target in steps:
         if t < lift:
             roll = smoothstep(t, lift - ROLL, lift)
-            return (pos[0], pos[1], 0.), pos[2], 24 * roll, -24 * roll
+            return (pos[0], pos[1], 0.), pos[2], 24 * roll, 0.
         if t < land:
             u = (t - lift) / (land - lift); e = smoothstep(u, 0., 1.)
             x = pos[0] + (target[0] - pos[0]) * e; y = pos[1] + (target[1] - pos[1]) * e
@@ -504,7 +511,7 @@ def jump_start(phase, f):
     poser.update()
     r = 0.
     for s in 'LR':
-        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 34 * extend, -34 * extend))
+        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 34 * extend, 0.))
     for s in 'LR': poser.hand_goal(s)
     return r
 
@@ -539,10 +546,9 @@ def jump_land(phase, f):
         poser.rotate(f'lowerarm_{s}', 'Y', -18 * arms - 6 * absorb)
     for i, b in enumerate(TAIL): poser.rotate(b, 'Y', 3 * arms - 4 * absorb)
     poser.update()
-    touch = smoothstep(t, 0., .05)
     r = 0.
     for s in 'LR':
-        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 0., 10 * (1 - touch)))
+        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 0., 0.))
     for s in 'LR': poser.hand_goal(s)
     return r
 

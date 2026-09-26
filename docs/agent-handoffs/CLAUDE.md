@@ -158,3 +158,21 @@
   - A trial of pivoting toe roll at ground level made the planted toes slide (about 10 cm/s) and was reverted.
 - **Also changed:** `Tools/chuck_v1_pose.py` gained a `heading` parameter (paw turned about Z; knee pole follows half the heading). WalkLoop output is unchanged by it.
 - **Not done:** no Unreal import or AnimBP (Codex). Turns are in-place with the body facing forward in component space, so they depend on the runtime applying the yaw profile. The overhead-grip range still needs work.
+
+## Eighth pass — v1 deformation QA while Codex is paused
+
+- **Delivered commit:** the eighth commit on `codex/claude-character` ("Fix v1 paw weights, toe roll, tail ground clearance and overhead reach"), after `6ec0682`. It changes the same V1 files; asset paths and the 41-bone table are unchanged.
+- **Found by a new per-frame ground check:**
+  - The tail went up to 12.6 cm below the floor in JumpStart, 7.2 cm in JumpLand and 0.4 cm while walking, because it rode down with the pelvis.
+  - The back of the heel pad was 100% calf-weighted and swung 0.5 cm under.
+  - The toe "droop" at landing contact pushed the toes under.
+  - The negative toe pitch during roll lifted the toes (the toes are aimed absolutely).
+  - The minimal-rotation aim rolled turned paws, dipping the inner toe.
+- **Fixes:**
+  - Rigid foot/toes paw weights, with calf only on the heel mound.
+  - Toes flat whenever grounded.
+  - `Poser.orient`, giving explicit heading-then-pitch paw rotation with no roll.
+  - `Poser.clear_ground` for the tail, with armature-space rotation and radius plus 0.9 cm margin.
+  - `Poser.arm`, two-bone arm IK, used for the overhead-grip study (wrists at 62.5 cm, elbows bent).
+- **Results (`check_v1.py`, 64 PASS):** every clip stays above ground in every frame (min -0.002 cm); seams are still exact; peak leg reach is unchanged. Deformed-mesh mid-toe drift under planted paws is now at most 0.002 cm/s in all clips, down from 0.6–5.3.
+- **Still not done:** Unreal import, AnimBP and in-game verification (Codex/integration). No cloth simulation, so the jacket stretches in the overhead pose. The leg/paw ankle is overlapping surfaces with shared weights, not merged topology.
