@@ -35,3 +35,5 @@ The separate public remote is https://github.com/RtRutabaga/CHUCK-3D. No deploym
 Unreal generated folders and packaged Builds are excluded. The 15 authored map/material assets total 78,711 bytes; two new user-provided art-reference JPGs total 537,615 bytes. All use Git LFS; upload/download round-trip and integrity checks passed. Approximately 79 KB of assets were uploaded; remaining account allowance is still unknown. See docs/SETUP.md for the LFS assessment.
 
 Missing original geography/player-progression supplements were not found; do not invent their contents.
+
+Publication status for the scale/art-reference update: local commit 95b533c completed and LFS integrity passed. Automatic approval review blocked the public push because the two newly supplied images require specific approval for public publication. No image upload or push for this update ran. Await the user's decision about publishing References/ArtDirection/Chuck-Motion.jpg and Chuck-Standing.jpg to public RtRutabaga/CHUCK-3D.
