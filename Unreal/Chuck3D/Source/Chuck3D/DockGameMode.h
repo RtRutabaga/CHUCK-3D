@@ -17,6 +17,7 @@ private:
     int32 TestStage = 0;
     float StageTime = 0;
     float MaxJumpZ = 0;
+    float MaxAirFootLift = 0;
     void Check(bool Passed, const TCHAR* Description);
     int32 TestFailures = 0;
     int32 GapRuns = 0;

@@ -22,6 +22,7 @@ public:
     static FVector StartLocation() { return FVector(-240, -180, 36); }
 protected:
     virtual void BeginPlay() override;
+    virtual void Landed(const FHitResult& Hit) override;
 private:
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
@@ -31,6 +32,10 @@ private:
     float ViewPitch = 0;
     float CameraBlend = 1;
     float GaitPhase = 0;
+    float MotionAmount = 0;
+    float AirAmount = 0;
+    float LandingCompression = 0;
+    UPROPERTY() UStaticMeshComponent* Body;
     UPROPERTY() UStaticMeshComponent* LeftFoot;
     UPROPERTY() UStaticMeshComponent* RightFoot;
 
@@ -42,4 +47,5 @@ private:
     void StickPitch(float Value);
     void Quit();
     void UpdateCamera(float DeltaSeconds = 0);
+    void UpdateMotion(float DeltaSeconds);
 };

@@ -4,9 +4,9 @@ Authored in Blender 4.5.14 LTS (build 62c1db4208e8), from the user's supplied re
 
 `Chuck.blend` is the editable source. `SM_ChuckBody.fbx` and `SM_ChuckFoot.fbx` are the Unreal import sources. Centimetres, Z up, nose toward +X, feet at ground Z=0. The body mesh reaches Z=65 at the top of the ears. The reusable foot is centered locally and placed/animated by the character code.
 
-The form study contains a continuous tapered trunk and muzzle, inset eyes and ears, cheek tufts, whiskers, a curved tapered tail, separate paws, and an open purple jacket with lapels, cuffs, pockets, seams and fasteners. Vertex colors provide restrained surface variation; material slots control roughness and metal response.
+The form study contains a continuous tapered trunk and muzzle, inset eyes and ears, cheek tufts, whiskers, a curved tapered tail, separate paws, and an open purple jacket with lapels, cuffs, pockets, seams and fasteners. Runtime material slots use the stable gray, purple, dark and pink prototype materials. Authored vertex colors are not currently used by those materials.
 
-Current geometry: body 87,064 triangles; foot 10,944 triangles (two instances in game). This is an unoptimized prototype, not final production topology. The body is rigid and only the feet retain the simple walking cue. Full skinning, a skeletal animation set, groom/hair cards, cloth simulation, authored texture maps and LODs are future work. Do not claim this reaches the final BG3-quality target.
+Current geometry: body 87,064 triangles; foot 10,944 triangles (two instances in game). This is an unoptimized prototype, not final production topology. Procedural motion adds speed-matched feet, a small hip-pivot body lean, airborne foot tuck and landing compression. The body remains a rigid mesh: knees, arms and tail do not articulate. Full skinning, a skeletal animation set, groom/hair cards, cloth simulation, authored texture maps and LODs are future work. Do not claim this reaches the final BG3-quality target.
 
 ## Rebuild
 

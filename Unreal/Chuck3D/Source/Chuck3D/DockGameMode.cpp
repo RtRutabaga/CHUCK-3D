@@ -238,14 +238,21 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1)
         {
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
+            const auto* MovingBody=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+            Check(MovingBody && MovingBody->GetRelativeRotation().Pitch < -2.f,TEXT("walking produces restrained body lean"));
             Chuck->Jump(); MaxJumpZ=Chuck->GetActorLocation().Z; TestStage=2; StageTime=0;
         }
     }
     else if(TestStage==2)
     {
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        const auto* AnimatedFoot=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("FootLeft")));
+        if(AnimatedFoot && Chuck->GetCharacterMovement()->IsFalling())
+            MaxAirFootLift=FMath::Max(MaxAirFootLift,static_cast<float>(AnimatedFoot->GetRelativeLocation().Z));
         if(StageTime>1)
         {
+            Check(MaxAirFootLift>4.f,TEXT("airborne feet tuck above resting pose"));
+            Check(AnimatedFoot && FMath::IsNearlyEqual(static_cast<float>(AnimatedFoot->GetRelativeLocation().Z),2.5f,.15f),TEXT("feet settle after landing"));
             Check(MaxJumpZ>48,TEXT("jump lifts Chuck above floor"));
             Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("jump lands back on quay"));
             Chuck->GetCharacterMovement()->StopMovementImmediately();

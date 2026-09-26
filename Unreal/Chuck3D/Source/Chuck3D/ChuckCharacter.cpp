@@ -34,7 +34,7 @@ AChuckCharacter::AChuckCharacter()
     RatVisual->SetRelativeLocation(FVector(0,0,-35.f));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> BodyAsset(TEXT("/Game/Characters/Chuck/SM_ChuckBody.SM_ChuckBody"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> FootAsset(TEXT("/Game/Characters/Chuck/SM_ChuckFoot.SM_ChuckFoot"));
-    auto* Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ChuckBody"));
+    Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ChuckBody"));
     Body->SetupAttachment(RatVisual);
     Body->SetStaticMesh(BodyAsset.Object);
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -117,7 +117,44 @@ void AChuckCharacter::ResetToDock()
     SetActorRotation(FRotator::ZeroRotator);
     ViewYaw = 0;
     ViewPitch = 0;
+    GaitPhase = MotionAmount = AirAmount = LandingCompression = 0;
+    Body->SetRelativeTransform(FTransform::Identity);
+    LeftFoot->SetRelativeLocationAndRotation(FVector(4,-7,2.5f),FRotator::ZeroRotator);
+    RightFoot->SetRelativeLocationAndRotation(FVector(4,7,2.5f),FRotator::ZeroRotator);
     UpdateCamera();
+}
+void AChuckCharacter::Landed(const FHitResult& Hit)
+{
+    // Read impact speed before CharacterMovement clears vertical velocity.
+    LandingCompression = FMath::Clamp(-GetVelocity().Z / 170.f, 0.f, 1.f);
+    Super::Landed(Hit);
+}
+
+void AChuckCharacter::UpdateMotion(float DeltaSeconds)
+{
+    const bool bAirborne = GetCharacterMovement()->IsFalling();
+    const float Speed = GetVelocity().Size2D();
+    MotionAmount = FMath::FInterpTo(MotionAmount, bAirborne ? 0.f : FMath::Clamp(Speed/95.f,0.f,1.f),DeltaSeconds,12.f);
+    AirAmount = FMath::FInterpTo(AirAmount,bAirborne ? 1.f : 0.f,DeltaSeconds,14.f);
+    LandingCompression = FMath::FInterpTo(LandingCompression,0.f,DeltaSeconds,9.f);
+    // One gait cycle per 46 cm travelled; pushing against a wall produces no steps.
+    if (!bAirborne) GaitPhase = FMath::Fmod(GaitPhase + Speed * DeltaSeconds * UE_TWO_PI / 46.f, UE_TWO_PI);
+    const float Wave = FMath::Sin(GaitPhase);
+    const float Bob = (1.f-FMath::Cos(2.f*GaitPhase))*.3f*MotionAmount;
+    const FRotator Pose(-2.5f*MotionAmount - 3.f*AirAmount,0,Wave*.65f*MotionAmount);
+    // Rotate the static form around its hips, keeping all motion off the capsule/camera.
+    const FVector Pivot(0,0,25);
+    Body->SetRelativeLocationAndRotation(Pivot-Pose.RotateVector(Pivot)+FVector(0,0,Bob-1.2f*LandingCompression),Pose);
+    auto PoseFoot = [&](UStaticMeshComponent* Foot, float Side, float Phase)
+    {
+        const float Swing = FMath::Sin(Phase);
+        const float Lift = FMath::Max(0.f,FMath::Cos(Phase));
+        Foot->SetRelativeLocationAndRotation(
+            FVector(4+Swing*3.f*MotionAmount-1.5f*AirAmount,Side*7,2.5f+Lift*1.8f*MotionAmount+2.f*AirAmount),
+            FRotator(-Lift*8.f*MotionAmount-12.f*AirAmount,0,0));
+    };
+    PoseFoot(LeftFoot,-1,GaitPhase);
+    PoseFoot(RightFoot,1,GaitPhase+UE_PI);
 }
 void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayerController>(Controller), EQuitPreference::Quit, false); }
 void AChuckCharacter::Tick(float DeltaSeconds)
@@ -126,10 +163,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     UpdateCamera(DeltaSeconds);
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     RatVisual->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
-    const float WalkAmount = FMath::Clamp(GetVelocity().Size2D()/95.f,0.f,1.f);
-    GaitPhase += DeltaSeconds * WalkAmount * 13.f;
-    const float Stride = FMath::Sin(GaitPhase)*2.5f*WalkAmount;
-    LeftFoot->SetRelativeLocation(FVector(4+Stride,-7,2.5f+FMath::Max(0.f,Stride)*.35f));
-    RightFoot->SetRelativeLocation(FVector(4-Stride,7,2.5f+FMath::Max(0.f,-Stride)*.35f));
+    UpdateMotion(DeltaSeconds);
     if (GetActorLocation().Z < -100) ResetToDock();
 }
