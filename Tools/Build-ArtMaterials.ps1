@@ -12,3 +12,12 @@ if ($LASTEXITCODE -or !(Select-String -LiteralPath $log -Pattern 'CHUCK_ART_MATE
 if (Select-String -LiteralPath $log -Pattern 'Failed to compile Material|LogShaderCompilers: Error|LogPython: Error' -Quiet) {
     throw "Art material generation reported errors; inspect $log"
 }
+$surfaceManifest=Join-Path $projectRoot 'SourceAssets\Surfaces\PolyHaven\manifest.json'
+if (Test-Path -LiteralPath $surfaceManifest) {
+    $surfaceScript=Join-Path $PSScriptRoot 'import_surface_textures.py'
+    $surfaceLog=Join-Path $projectRoot 'Unreal\Chuck3D\Saved\Logs\ChuckSurfaceTextures.log'
+    & $editor $project "-ExecutePythonScript=$surfaceScript" -unattended -nullrhi -nosplash -NoLiveCoding "-abslog=$surfaceLog"
+    if ($LASTEXITCODE -or !(Select-String -LiteralPath $surfaceLog -Pattern 'CHUCK_SCANNED_SURFACES_READY' -Quiet) -or (Select-String -LiteralPath $surfaceLog -Pattern 'Failed to compile Material|LogShaderCompilers: Error|LogPython: Error' -Quiet)) {
+        throw "Scanned surface import failed; inspect $surfaceLog"
+    }
+}

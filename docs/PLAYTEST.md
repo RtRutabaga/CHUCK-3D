@@ -61,3 +61,5 @@ The normal smoke run performs 36 checks; adding -ChuckCapture adds the settled r
 For this rig pass, walk, turn, stop and jump on clear quay ground in both views. Watch whether the legs remain connected to the feet, the small sleeve/tail movements read naturally, and stops settle without distracting motion. Joint surfaces and foot planting are still prototype quality.
 
 For the graphics pass, compare fur and purple-jacket readability in sun and shade, surface detail near the crate and pier, and the distant harbor silhouette in both views. Water is an opaque procedural study; shoreline transitions and final props are still unfinished.
+
+The scanned surface pass replaces the paving overlay with irregular stone joints and weathered timber maps. Compare detail and repetition at the barrel, crate and pier in both cameras. There is no physical displacement; walking collision remains smooth.

@@ -4,7 +4,7 @@
 
 Launch `Launch-Prototype.cmd` from the repository root for the packaged Windows prototype. See docs/PLAYTEST.md for controls and the same-route camera comparison. Unreal 5.7.4 (CL 51494982), Blender 4.5.14 LTS (62c1db4208e8); exact toolchain and hardware details are in docs/SETUP.md. No new dependencies were installed for the material and daylight pass.
 
-One Waterdeep dock scene includes a quay, pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Paving, timber, roof slates and distant harbor silhouettes remain procedural primitives. Barrel, crate and pier boards now render custom Blender meshes over the original hidden collision shapes. The editor map is intentionally empty until Play constructs the scene.
+One Waterdeep dock scene includes a quay, pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Timber framing, roof slates and distant harbor silhouettes remain procedural primitives. Scanned stone and timber now supply surface detail. Barrel, crate and pier boards now render custom Blender meshes over the original hidden collision shapes. The editor map is intentionally empty until Play constructs the scene.
 
 Chuck is a 65 cm gray rat in an oversized purple open jacket, using the imported Blender form study. This supersedes the original one-foot target. The capsule is 65 cm tall and 30 cm wide. He remains silent. No dialogue, combat, pickups or additional maps have been added.
 
@@ -37,7 +37,7 @@ Both views remain available, with no final selection. Elevated: 400 cm boom, -48
 - Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
 - Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
 - Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/head-build.log, Local/head-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
+- Evidence is ignored: Local/surface-build.log, Local/surface-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
 
 ## Repository boundaries and publication
 
@@ -52,3 +52,8 @@ Standing publication permission: the user explicitly authorized future verified 
 The graphics pass adds 19 small material .uassets under Content/Art, covered by Git LFS. /Game/Art is explicitly included in cooking. The user-authorized original procedural source requires no external asset license or paid storage purchase; remaining LFS account allowance is still unknown.
 
 The user requested continued graphics work until a usage limit blocks progress. Publish verified milestones under standing permission and continue within the existing scene/art scope. No recurring automation was requested.
+
+## Scanned surface pass
+
+Six 2K CC0 Poly Haven texture maps now drive stone and timber color, roughness, occlusion and normals. Provenance and hashes are in SourceAssets/Surfaces/PolyHaven. The decorative rectangular paving overlay was removed without changing quay collision. BuildCookRun passed with no material compile failures; the packaged game passed all 37 rendered checks. Elevated, rat-height and barrel captures were inspected. No new dependencies or purchases. Remaining remote LFS account allowance is unknown.
+

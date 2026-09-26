@@ -22,6 +22,13 @@ powershell -NoProfile -File .\Tools\Build-ArtMaterials.ps1
 
 The new art directory is explicitly included in cooking. Runtime character material slots select the authored art materials, with prototype assets retained as historical blockout resources. No new engine version, plugin, dependency, paid asset or installation is required. All generated `.uasset` source assets use the existing Git LFS policy; logs, caches and Windows packages remain ignored.
 
+## Scanned stone and timber
+
+Stone and the two timber materials now use six 2K CC0 Poly Haven maps, replacing their initial procedural color/normal treatment. Grey Stone Path by Amal Kumar tiles at 1.8 metres; Brown Planks 03 by Rob Tuytel uses a board-interior crop to avoid false joints across the modelled planks. Diffuse, packed AO/roughness/metallic and DirectX normals use world-space projection. The old decorative rectangular paving overlay is removed; quay collision is unchanged. Source URLs, license and SHA-256 hashes are recorded in SourceAssets/Surfaces/PolyHaven. Other surfaces remain original procedural materials.
+
+Build-ArtMaterials.ps1 reapplies the committed scans after procedural generation, without downloading anything. The six source JPGs total about 16.3 MB and use LFS, as do imported texture assets. No new dependency or purchase is needed. This adds surface detail, not displacement, terrain geometry or a new map.
+
 ## Remaining visual work
 
 Priorities after this study are better character anatomy/jacket folds and joint topology, a proper fur solution, authored UV texture work, believable prop meshes and improved water/shore transitions. Both camera views must remain useful at each step. Performance and visual fidelity need sustained profiling and playtesting before adopting heavier rendering features.
+

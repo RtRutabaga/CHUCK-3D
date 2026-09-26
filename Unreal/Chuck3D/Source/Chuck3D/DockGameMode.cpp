@@ -127,13 +127,7 @@ void ADockGameMode::StartPlay()
     for(float X : {-31.f,31.f}) Shape(TEXT("WorkerHand"),Human+FVector(X,0,79),FVector(10,12,15),TEXT("Skin"),Sphere,false);
     // Surface detail is nonblocking; the original simple collision remains predictable.
     FRandomStream DetailRandom(73);
-    for(int32 Row=0;Row<20;++Row) for(int32 Col=0;Col<17;++Col)
-    {
-        const float X=-477+Col*40+(Row%2)*14;
-        if(X>181) continue;
-        auto* Paver=Shape(TEXT("Paving"),FVector(X,-380+Row*38,-1.2f),FVector(37,35,3),TEXT("Stone"),nullptr,false);
-        Paver->SetActorRotation(FRotator(0,DetailRandom.FRandRange(-1.5f,1.5f),0));
-    }
+    // Scanned paving supplies irregular joints without a second rectangular overlay.
     for(int32 Row=0;!PlankMesh && Row<26;++Row)
     {
         if(Row==13) continue;

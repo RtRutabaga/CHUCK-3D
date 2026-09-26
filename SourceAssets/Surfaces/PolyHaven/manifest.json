@@ -1,0 +1,66 @@
+{
+  "provider": "Poly Haven",
+  "license_url": "https://polyhaven.com/license",
+  "assets": [
+    {
+      "file": "grey_stone_path_diff_2k.jpg",
+      "asset": "grey_stone_path",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grey_stone_path/grey_stone_path_diff_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "BF405E4E8A2D720976F710C4BB6DE7734BC0BEA613657E6C9362D3716418CC51",
+      "bytes": 3569941
+    },
+    {
+      "file": "grey_stone_path_arm_2k.jpg",
+      "asset": "grey_stone_path",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grey_stone_path/grey_stone_path_arm_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "34F450B632078B1569CBA9FDD9219203135F8EF9469694AC6E364CDFA5EC120D",
+      "bytes": 3354292
+    },
+    {
+      "file": "grey_stone_path_nor_dx_2k.jpg",
+      "asset": "grey_stone_path",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grey_stone_path/grey_stone_path_nor_dx_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "0BEA522E0BAFB0348946D876F7D4828B57EDEF4DC637FEFA3ABECCC0921D55B6",
+      "bytes": 3943302
+    },
+    {
+      "file": "brown_planks_03_diff_2k.jpg",
+      "asset": "brown_planks_03",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_planks_03/brown_planks_03_diff_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "1140CEAC531C2DFE2E714357E34CD81CCE62878CED24FA711B87C4CA24416058",
+      "bytes": 2411538
+    },
+    {
+      "file": "brown_planks_03_arm_2k.jpg",
+      "asset": "brown_planks_03",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_planks_03/brown_planks_03_arm_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "EE1E6F626913AF7B56268AC396D887B941F27EFC85006F0EC22B416E5D50E570",
+      "bytes": 600422
+    },
+    {
+      "file": "brown_planks_03_nor_dx_2k.jpg",
+      "asset": "brown_planks_03",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_planks_03/brown_planks_03_nor_dx_2k.jpg",
+      "license": "CC0-1.0",
+      "sha256": "BF0027197B403C65E8E4528FBF47BAA17D968BFD090BE29368E65DC366375A4F",
+      "bytes": 2390191
+    }
+  ]
+}
