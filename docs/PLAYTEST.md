@@ -67,3 +67,11 @@ The scanned surface pass replaces the paving overlay with irregular stone joints
 At the far end of the pier, face the moored boat in rat-height mode, then switch to elevated. Compare harbor context with near-foot visibility. The boat and rope coil are scenery, not destinations or interactable objects.
 
 The human scale reference now wears a shirt, vest, trousers and boots. Stand beside the visible knees to compare Chuck's 65 cm height with the 180 cm worker. The worker is still stationary and noninteractive.
+
+For a checked verification run from PowerShell at the repository root:
+
+```powershell
+powershell -NoProfile -File .\Tools\Verify-Package.ps1
+```
+
+This opens the existing packaged game, exercises the movement/camera checks, captures both views and exits automatically. The wrapper requires the success marker and at least 40 passing checks; it also fails on reported test/material/fatal errors even if Unreal returns exit code zero. Use `-NoCapture` for the 39-check run without screenshots. Timestamped logs go to the ignored Local directory. This command verifies the existing package; it does not rebuild stale source changes.
