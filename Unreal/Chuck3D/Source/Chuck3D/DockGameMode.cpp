@@ -198,7 +198,7 @@ void ADockGameMode::StartPlay()
     (void)Start;
     Super::StartPlay();
     if(auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0))) Chuck->ResetToDock();
-    UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 30.48 cm, human 180 cm; two cameras available."));
+    UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
 }
 
@@ -218,7 +218,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(TestStage==0 && StageTime>1)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
-        Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,30.48f,.01f),TEXT("Chuck collision height is 30.48 cm"));
+        Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,65.f,.01f),TEXT("Chuck collision height is 65 cm"));
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));
         Chuck->ToggleCamera(); Check(Chuck->IsElevated(),TEXT("switches back to elevated camera"));
@@ -238,10 +238,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
         if(StageTime>1)
         {
-            Check(MaxJumpZ>30,TEXT("jump lifts Chuck above floor"));
+            Check(MaxJumpZ>48,TEXT("jump lifts Chuck above floor"));
             Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("jump lands back on quay"));
             Chuck->GetCharacterMovement()->StopMovementImmediately();
-            Chuck->SetActorLocation(FVector(-395,0,18)); TestStage=3; StageTime=0;
+            Chuck->SetActorLocation(FVector(-395,0,36)); TestStage=3; StageTime=0;
         }
     }
     else if(TestStage==3)
@@ -275,7 +275,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
         Check(Chuck->GetActorLocation().X > -175,TEXT("keyboard W mapping walks"));
         Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
-        Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,145.f,1.f),TEXT("rat-height camera blend settles"));
+        Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,220.f,1.f),TEXT("rat-height camera blend settles"));
         Chuck->ResetToDock();
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1));
         TestStage=6; StageTime=0;
@@ -290,7 +290,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Released,0));
             Check(Chuck->GetActorLocation().X > -175,TEXT("Xbox left-stick mapping walks"));
             Check(Chuck->IsElevated(),TEXT("Xbox Y mapping switches camera"));
-            Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,340.f,1.f),TEXT("elevated camera blend settles"));
+            Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,400.f,1.f),TEXT("elevated camera blend settles"));
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Pressed,1));
             MaxJumpZ=Chuck->GetActorLocation().Z;
             TestStage=7; StageTime=0;
@@ -301,9 +301,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
         if(StageTime>1)
         {
-            Check(MaxJumpZ>30,TEXT("Xbox A mapping jumps"));
+            Check(MaxJumpZ>48,TEXT("Xbox A mapping jumps"));
             Cast<APlayerController>(Chuck->GetController())->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Released,0));
-            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(465,0,18));
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(465,0,36));
             TestStage=8; StageTime=0;
         }
     }
@@ -322,11 +322,11 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Chuck->GetActorLocation().X>550 && Chuck->GetCharacterMovement()->IsMovingOnGround(),GapRuns==0 ? TEXT("pier gap crossed in elevated camera") : TEXT("pier gap crossed in rat-height camera"));
             ++GapRuns;
             if(GapRuns==1)
-            { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,18)); TestStage=8; StageTime=0; }
+            { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,36)); TestStage=8; StageTime=0; }
             else if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
             {
-                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(-30,180,18));
-                Chuck->SetActorRotation(FRotator(0,45,0));
+                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(20,130,36));
+                Chuck->SetActorRotation(FRotator(0,60,0));
                 Chuck->Recenter();
                 auto* CapturePC=Cast<APlayerController>(Chuck->GetController());
                 CapturePC->FlushPressedKeys();
@@ -338,7 +338,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
     else if(TestStage==20 && StageTime>2)
     {
-        Check(FMath::Abs(FMath::FindDeltaAngleDegrees(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw,45.f))<1.f,TEXT("camera recenters behind Chuck"));
+        Check(FMath::Abs(FMath::FindDeltaAngleDegrees(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw,60.f))<1.f,TEXT("camera recenters behind Chuck"));
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Scale_Elevated.png"),true,false);
         TestStage=21; StageTime=0;
     }
@@ -366,7 +366,7 @@ void ADockHUD::DrawHUD()
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,18,440,79);
     DrawText(TEXT("CHUCK  /  WATERDEEP DOCKS"),FLinearColor(.94f,.88f,.75f),30,27,GEngine->GetSmallFont(),1.25f);
     DrawText(Chuck->IsElevated() ? TEXT("ELEVATED CAMERA") : TEXT("RAT-HEIGHT FOLLOW CAMERA"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
-    DrawText(TEXT("30.48 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
+    DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    C / Y: camera    Mouse, Q/E / Right stick: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    Compare the same route in both cameras."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());

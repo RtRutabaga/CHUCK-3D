@@ -13,7 +13,7 @@
 AChuckCharacter::AChuckCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
-    GetCapsuleComponent()->InitCapsuleSize(7.0f, 15.24f);
+    GetCapsuleComponent()->InitCapsuleSize(15.0f, 32.5f);
     bUseControllerRotationYaw = false;
     auto* Movement = GetCharacterMovement();
     Movement->bOrientRotationToMovement = true;
@@ -31,7 +31,8 @@ AChuckCharacter::AChuckCharacter()
 
     RatVisual = CreateDefaultSubobject<USceneComponent>(TEXT("RatVisual"));
     RatVisual->SetupAttachment(GetRootComponent());
-    RatVisual->SetRelativeLocation(FVector(0,0,-15.24f));
+    RatVisual->SetRelativeLocation(FVector(0,0,-32.5f));
+    RatVisual->SetRelativeScale3D(FVector(65.f / 30.48f));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> Gray(TEXT("/Game/Prototype/Materials/M_Gray.M_Gray"));
@@ -120,8 +121,8 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 {
     const float Target = bElevated ? 1.f : 0.f;
     CameraBlend = DeltaSeconds > 0 ? FMath::FInterpTo(CameraBlend, Target, DeltaSeconds, 7.f) : Target;
-    Boom->TargetArmLength = FMath::Lerp(145.f, 340.f, CameraBlend);
-    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(14.f,8.f,CameraBlend)));
+    Boom->TargetArmLength = FMath::Lerp(220.f, 400.f, CameraBlend);
+    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(30.f,16.f,CameraBlend)));
     // Horizontal rat-height boom keeps the lens above ground even when looking up.
     const FRotator TargetRotation(-48.f * CameraBlend, ViewYaw, 0);
     Boom->SetWorldRotation(DeltaSeconds > 0 ? FMath::RInterpTo(Boom->GetComponentRotation(),TargetRotation,DeltaSeconds,18.f) : TargetRotation);
@@ -143,7 +144,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     UpdateCamera(DeltaSeconds);
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
-    RatVisual->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 38.f,true);
+    RatVisual->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     const float WalkAmount = FMath::Clamp(GetVelocity().Size2D()/95.f,0.f,1.f);
     GaitPhase += DeltaSeconds * WalkAmount * 13.f;
     const float Stride = FMath::Sin(GaitPhase)*2.5f*WalkAmount;

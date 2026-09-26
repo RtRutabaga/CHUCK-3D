@@ -19,7 +19,7 @@ public:
     void ResetToDock();
     void Recenter();
     bool IsElevated() const { return bElevated; }
-    static FVector StartLocation() { return FVector(-240, -180, 18); }
+    static FVector StartLocation() { return FVector(-240, -180, 36); }
 protected:
     virtual void BeginPlay() override;
 private:

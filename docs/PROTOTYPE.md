@@ -2,14 +2,14 @@
 
 Current scope follows the user's request to test fundamentals before adding interactions. One Windows PC scene: detailed primitive docks, tavern frontage, stationary human scale reference, barrel, crate, low step and bench. The presentation pass adds paving, plank nails/grain, timber and door details, roof tiles and distant nonplayable harbor silhouettes. Chuck has rounded jacket pieces and restrained foot movement; these remain procedural proxies, not finished Blender assets. No combat, dialogue, pickups, additional maps or finished art.
 
-Chuck is a 30.48 cm gray rat with an oversized purple open jacket built from primitives. His capsule is 30.48 cm tall and 14 cm wide; the human is 180 cm tall and tavern door 210 cm tall. Use real scale rather than shrinking a human template visually.
+Chuck is a 65 cm gray rat with an oversized purple open jacket built from primitives. His capsule is 65 cm tall and 30 cm wide; the human is 180 cm tall and tavern door 210 cm tall. Use real scale rather than shrinking a human template visually.
 
 Unreal 5.7.4 with a small C++ runtime module replaces the initial Blueprint-only suggestion. Geometry is generated at play time; a Python editor script creates only the level and flat-color material assets. This makes the placeholder setup reproducible from source. Blender remains deferred until custom asset work.
 
 ## Camera comparison
 
-- Elevated: perspective, 340 cm collision-tested boom, 48-degree downward angle, 65-degree FOV.
-- Rat-height follow: 145 cm horizontal collision-tested boom, lens about 31 cm above the floor, 78-degree FOV; limited look up/down rotates the camera without lowering the boom beneath the floor.
+- Elevated: perspective, 400 cm collision-tested boom, 48-degree downward angle, 65-degree FOV.
+- Rat-height follow: 220 cm horizontal collision-tested boom, lens about 65 cm above the floor, 78-degree FOV; limited look up/down rotates the camera without lowering the boom beneath the floor.
 - C / Xbox Y blends between views at the same character position. Both modes use the same movement, jumping and scene. Follow smoothing is capped at 8 cm; orbit rotation is damped. No motion blur. F / right-stick click recenters behind Chuck. Mouse sensitivity is reduced.
 
 Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visibility near the barrel/crate, human scale, view of the tavern, landing readability at the pier gap, and comfort. Reset preserves the selected camera. Repeat with keyboard and Xbox controller. No final camera choice until the user plays and gives feedback.
@@ -26,4 +26,4 @@ Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visib
 
 Camera decision: OPEN. This milestone exists for the user's comparison, not a commitment to either view.
 
-When an obstacle forces the camera within 38 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
+When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.

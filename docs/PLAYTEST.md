@@ -1,12 +1,12 @@
 # Movement and camera playtest
 
-Scope: one placeholder Waterdeep dock, tavern frontage and stationary human scale reference. Chuck is 30.48 cm tall in an oversized purple open-jacket proxy. Combat, dialogue, pickups, custom art and additional maps are deferred by the latest user request.
+Scope: one placeholder Waterdeep dock, tavern frontage and stationary human scale reference. Chuck is 65 cm tall in an oversized purple open-jacket proxy. Combat, dialogue, pickups, custom art and additional maps are deferred by the latest user request.
 
 ## Launch
 
 Double-click `Launch-Prototype.cmd` at the repository root. It opens `Builds/Windows/Chuck3D.exe` in a 1280 x 720 window. Click the game window to capture input. This local packaged build does not need the Unreal editor open.
 
-Verified 2026-09-24: Unreal 5.7.4 Windows Development package builds and runs. All 23 rendered runtime checks passed in the rendered package, including pier-gap jumps in both cameras and simulated keyboard/Xbox input. Both rendered views were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
+Verified 2026-09-25 with the revised 65 cm character: Unreal 5.7.4 Windows Development package builds and runs. All 23 rendered runtime checks passed in the rendered package, including pier-gap jumps in both cameras and simulated keyboard/Xbox input. Both rendered views were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
 
 ## Controls
 
@@ -21,11 +21,11 @@ Verified 2026-09-24: Unreal 5.7.4 Windows Development package builds and runs. A
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
-Elevated view uses a fixed downward angle. Rat-height view stays about 31 cm above the floor at rest and allows limited vertical look. Both use camera collision, capped follow smoothing and identical character movement. Switching blends smoothly; mouse sensitivity is lower and the rat-height view is pulled back to reveal more surroundings. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset preserves your selected camera mode.
+Elevated view uses a fixed downward angle. Rat-height view stays about 65 cm above the floor at rest and allows limited vertical look. Both use camera collision, capped follow smoothing and identical character movement. Switching blends smoothly; mouse sensitivity is lower and the rat-height view is pulled back to reveal more surroundings. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset preserves your selected camera mode.
 
 ## Compare the cameras
 
-1. Start in elevated view. Walk to the barrel and crate; check that they block Chuck. Jump onto the 10 cm low step. Walk beneath the bench.
+1. Start in elevated view. Walk to the barrel and crate; check that they block Chuck. Jump onto the 10 cm low step. Walk around the bench; at the revised size Chuck cannot fit beneath its 41 cm clearance.
 2. Approach the dock worker and tavern door. Judge whether they feel human-sized beside Chuck. They have no interactions.
 3. Walk out along the pier. Jump the missing board near its middle. Falling resets you nearby on the quay.
 4. Press C / Y, reset with R / View, and repeat the route at rat height. Look up at the worker and frontage. Round the crate and barrel to check camera collision and visibility.
@@ -54,6 +54,6 @@ To repeat the rendered packaged checks and capture both views:
 
 The test exits automatically. Logs and screenshots are under Builds/Windows/Chuck3D/Saved. This package is local generated output and is intentionally excluded from Git; another checkout must rebuild it.
 
-When an obstacle forces the camera within 38 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
+When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
 
 The normal smoke run performs 22 checks; adding -ChuckCapture adds the settled recenter check for 23. These automated checks do not establish subjective camera comfort or validate a physical controller.
