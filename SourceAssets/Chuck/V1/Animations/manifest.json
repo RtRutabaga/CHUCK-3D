@@ -58,6 +58,503 @@
     "foot_R_lift": 0.03
    },
    "notes": "In place (root fixed). During stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll)."
+  },
+  {
+   "name": "WalkStart",
+   "file": "Animations/AS_Chuck_WalkStart.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "nominal_speed_profile_cm_s": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.05,
+     4.082
+    ],
+    [
+     0.1,
+     14.844
+    ],
+    [
+     0.15,
+     30.059
+    ],
+    [
+     0.2,
+     47.5
+    ],
+    [
+     0.25,
+     64.941
+    ],
+    [
+     0.3,
+     80.156
+    ],
+    [
+     0.35,
+     90.918
+    ],
+    [
+     0.4,
+     95.0
+    ]
+   ],
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0211,
+    0.1613,
+    0.5195,
+    1.1728,
+    2.1762,
+    3.5625,
+    5.3428,
+    7.5062,
+    10.0195,
+    12.8279,
+    15.8544,
+    19.0
+   ],
+   "travel_cm": 19.0,
+   "ends_on": "WalkLoop frame 0 (foot_L planted, foot_R late stance)",
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.28
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.25,
+      0.4
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_R_lift": 0.1,
+    "foot_R_plant": 0.25,
+    "foot_L_lift": 0.28,
+    "foot_L_plant": 0.4
+   },
+   "notes": "Speed rises with a smoothstep from 0 to 95 cm/s; planted paws are world-locked against that travel."
+  },
+  {
+   "name": "WalkStop",
+   "file": "Animations/AS_Chuck_WalkStop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 15,
+   "frame_count": 16,
+   "duration_s": 0.5,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "nominal_speed_profile_cm_s": [
+    [
+     0.0,
+     95.0
+    ],
+    [
+     0.05,
+     90.918
+    ],
+    [
+     0.1,
+     80.156
+    ],
+    [
+     0.15,
+     64.941
+    ],
+    [
+     0.2,
+     47.5
+    ],
+    [
+     0.25,
+     30.059
+    ],
+    [
+     0.3,
+     14.844
+    ],
+    [
+     0.35,
+     4.082
+    ],
+    [
+     0.4,
+     0.0
+    ]
+   ],
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    3.1456,
+    6.1721,
+    8.9805,
+    11.4938,
+    13.6572,
+    15.4375,
+    16.8238,
+    17.8272,
+    18.4805,
+    18.8387,
+    18.9789,
+    19.0,
+    19.0,
+    19.0,
+    19.0
+   ],
+   "travel_cm": 19.0,
+   "starts_from": "WalkLoop frame 0",
+   "settle_hold_s": 0.1,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.2
+     ],
+     [
+      0.36,
+      0.5
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.03
+     ],
+     [
+      0.18,
+      0.5
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_R_lift": 0.03,
+    "foot_R_plant": 0.18,
+    "foot_L_lift": 0.2,
+    "foot_L_plant": 0.36
+   },
+   "notes": "Speed falls with a smoothstep from 95 to 0 cm/s; ends in the neutral stance."
+  },
+  {
+   "name": "TurnLeft90",
+   "file": "Animations/AS_Chuck_TurnLeft90.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 20,
+   "frame_count": 21,
+   "duration_s": 0.6667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "capsule_yaw_deg_profile": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.075,
+     3.274
+    ],
+    [
+     0.15,
+     16.229
+    ],
+    [
+     0.225,
+     35.226
+    ],
+    [
+     0.3,
+     56.146
+    ],
+    [
+     0.375,
+     74.868
+    ],
+    [
+     0.45,
+     87.274
+    ],
+    [
+     0.525,
+     90.0
+    ],
+    [
+     0.6,
+     90.0
+    ]
+   ],
+   "capsule_yaw_deg_per_frame": [
+    0.0,
+    0.2045,
+    2.3867,
+    6.6667,
+    12.6828,
+    20.0733,
+    28.4766,
+    37.5309,
+    46.8745,
+    56.1458,
+    64.9831,
+    73.0247,
+    79.9089,
+    85.2739,
+    88.7582,
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+   ],
+   "yaw_sign_note": "source +Z yaw (counter-clockwise from above, toward +Y = runtime left); verify sign after import",
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.04
+     ],
+     [
+      0.2,
+      0.36
+     ],
+     [
+      0.52,
+      0.6667
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.2
+     ],
+     [
+      0.36,
+      0.6667
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_L_lift_0": 0.04,
+    "foot_L_plant_0": 0.2,
+    "foot_L_lift_1": 0.36,
+    "foot_L_plant_1": 0.52,
+    "foot_R_lift_0": 0.2,
+    "foot_R_plant_0": 0.36
+   },
+   "notes": "Turn in place: capsule yaw per profile, root fixed; paws world-locked while planted; inside paw steps twice, outside paw once."
+  },
+  {
+   "name": "TurnRight90",
+   "file": "Animations/AS_Chuck_TurnRight90.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 20,
+   "frame_count": 21,
+   "duration_s": 0.6667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "capsule_yaw_deg_profile": [
+    [
+     0.0,
+     -0.0
+    ],
+    [
+     0.075,
+     -3.274
+    ],
+    [
+     0.15,
+     -16.229
+    ],
+    [
+     0.225,
+     -35.226
+    ],
+    [
+     0.3,
+     -56.146
+    ],
+    [
+     0.375,
+     -74.868
+    ],
+    [
+     0.45,
+     -87.274
+    ],
+    [
+     0.525,
+     -90.0
+    ],
+    [
+     0.6,
+     -90.0
+    ]
+   ],
+   "capsule_yaw_deg_per_frame": [
+    -0.0,
+    -0.2045,
+    -2.3867,
+    -6.6667,
+    -12.6828,
+    -20.0733,
+    -28.4766,
+    -37.5309,
+    -46.8745,
+    -56.1458,
+    -64.9831,
+    -73.0247,
+    -79.9089,
+    -85.2739,
+    -88.7582,
+    -90.0,
+    -90.0,
+    -90.0,
+    -90.0,
+    -90.0,
+    -90.0
+   ],
+   "yaw_sign_note": "source +Z yaw (counter-clockwise from above, toward +Y = runtime left); verify sign after import",
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.2
+     ],
+     [
+      0.36,
+      0.6667
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.04
+     ],
+     [
+      0.2,
+      0.36
+     ],
+     [
+      0.52,
+      0.6667
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_L_lift_0": 0.2,
+    "foot_L_plant_0": 0.36,
+    "foot_R_lift_0": 0.04,
+    "foot_R_plant_0": 0.2,
+    "foot_R_lift_1": 0.36,
+    "foot_R_plant_1": 0.52
+   },
+   "notes": "Turn in place: capsule yaw per profile, root fixed; paws world-locked while planted; inside paw steps twice, outside paw once."
+  },
+  {
+   "name": "JumpStart",
+   "file": "Animations/AS_Chuck_JumpStart.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 8,
+   "frame_count": 9,
+   "duration_s": 0.2667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "events_s": {
+    "crouch_bottom": 0.16,
+    "takeoff": 0.25
+   },
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.25
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.25
+     ]
+    ]
+   },
+   "notes": "Anticipation crouch then extension onto the toes; capsule launch is runtime-driven at takeoff."
+  },
+  {
+   "name": "JumpLoop",
+   "file": "Animations/AS_Chuck_JumpLoop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.7432,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Airborne hold with tucked paws and balancing arms/tail; loops while airborne."
+  },
+  {
+   "name": "JumpLand",
+   "file": "Animations/AS_Chuck_JumpLand.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "events_s": {
+    "contact": 0.0,
+    "max_compression": 0.09,
+    "settled": 0.4
+   },
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.4
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.4
+     ]
+    ]
+   },
+   "notes": "Contact at frame 0 with toes slightly pointed; pelvis absorbs 4.5 cm and recovers to neutral."
   }
  ]
 }

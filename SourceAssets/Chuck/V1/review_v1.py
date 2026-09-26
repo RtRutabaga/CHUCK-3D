@@ -158,5 +158,58 @@ for s in 'LR':
                  'max_world_slip_cm_s_if_capsule_moves_at_reference': round(max(slip), 3) if slip else None,
                  'sole_z_cm_during_stance': [round(z, 3) for z in heights]}
 (out / 'walk_contact_report.json').write_text(json.dumps(report, indent=1))
+
+# Every clip with stance intervals: world-space drift of the deformed sole
+# under each planted paw, using the manifest's capsule travel/yaw per frame
+# (WalkLoop: constant reference speed). This is what the player would see.
+def world(v, clip, f):
+    t = f / clip['fps']
+    if 'capsule_travel_cm_per_frame' in clip:
+        return Vector((v.x + clip['capsule_travel_cm_per_frame'][f], v.y, v.z))
+    if 'capsule_yaw_deg_per_frame' in clip:
+        a = math.radians(clip['capsule_yaw_deg_per_frame'][f])
+        return Vector((v.x * math.cos(a) - v.y * math.sin(a), v.x * math.sin(a) + v.y * math.cos(a), v.z))
+    return Vector((v.x + clip.get('reference_speed_cm_s', 0.) * t, v.y, v.z))
+
+drift = {}
+for clip in manifest['clips']:
+    spans_by_foot = clip.get('stance_intervals_s', {})
+    if not any(spans_by_foot.values()): continue
+    rig.animation_data.action = bpy.data.actions[f"AS_Chuck_{clip['name']}"]
+    last = clip['last_frame']
+    for foot, spans in spans_by_foot.items():
+        s = foot[-1]
+        for a, b in spans:
+            f0, f1 = math.ceil(a * clip['fps'] - 1e-6), min(last, math.floor(b * clip['fps'] + 1e-6))
+            if f1 - f0 < 1: continue
+            scene.frame_set(f0)
+            # Mid-toe sole: the part that stays planted through toe roll.
+            toes = rig.pose.bones[f'toes_{s}']
+            mid = rig.matrix_world @ toes.head.lerp(toes.tail, .45)
+            ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()
+            vi = min((v for v in m.vertices if v.co.z < .6), key=lambda v: (v.co - Vector((mid.x, mid.y, 0))).length).index
+            ev.to_mesh_clear()
+            pts = []
+            for f in range(f0, f1 + 1):
+                scene.frame_set(f)
+                ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()
+                pts.append(world(m.vertices[vi].co.copy(), clip, f)); ev.to_mesh_clear()
+            speeds = [((q - p).xy.length) * clip['fps'] for p, q in zip(pts, pts[1:])]
+            drift.setdefault(clip['name'], []).append({'foot': foot, 'span_s': [a, b], 'frames': [f0, f1],
+                'max_world_slip_cm_s': round(max(speeds), 3), 'sole_z_cm': [round(min(p.z for p in pts), 3), round(max(p.z for p in pts), 3)]})
+(out / 'stance_drift_report.json').write_text(json.dumps(drift, indent=1))
+print('CHUCK_V1_STANCE_DRIFT', json.dumps({k: max(e['max_world_slip_cm_s'] for e in v) for k, v in drift.items()}))
 print('CHUCK_V1_WALK_CONTACT', json.dumps(report))
+# Frame strips of every clip (side view; turns from above-front).
+for clip in manifest['clips']:
+    rig.animation_data.action = bpy.data.actions[f"AS_Chuck_{clip['name']}"]
+    n = clip['frame_count']
+    picks = sorted({round(i * (n - 1) / 5) for i in range(6)})
+    for f in picks:
+        scene.frame_set(f)
+        if clip['name'].startswith('Turn'):
+            shot(f"clip_{clip['name']}_f{f:02d}", (70, -45, 95), (0, 0, 20), lens=40)
+        else:
+            shot(f"clip_{clip['name']}_f{f:02d}", (0, -115, 22), (0, 0, 20), lens=45)
+rig.animation_data.action = None
 print('CHUCK_V1_REVIEW_READY', out)

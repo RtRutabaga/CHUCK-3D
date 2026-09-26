@@ -1,0 +1,368 @@
+{
+ "WalkLoop": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.18
+   ],
+   "frames": [
+    0,
+    5
+   ],
+   "max_world_slip_cm_s": 0.598,
+   "sole_z_cm": [
+    0.549,
+    1.509
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.15,
+    0.3
+   ],
+   "frames": [
+    5,
+    8
+   ],
+   "max_world_slip_cm_s": 0.014,
+   "sole_z_cm": [
+    0.548,
+    0.551
+   ]
+  }
+ ],
+ "WalkStart": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.28
+   ],
+   "frames": [
+    0,
+    8
+   ],
+   "max_world_slip_cm_s": 0.596,
+   "sole_z_cm": [
+    0.548,
+    1.509
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.1
+   ],
+   "frames": [
+    0,
+    3
+   ],
+   "max_world_slip_cm_s": 1.093,
+   "sole_z_cm": [
+    0.549,
+    0.92
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.25,
+    0.4
+   ],
+   "frames": [
+    8,
+    12
+   ],
+   "max_world_slip_cm_s": 1.109,
+   "sole_z_cm": [
+    0.548,
+    1.021
+   ]
+  }
+ ],
+ "WalkStop": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.2
+   ],
+   "frames": [
+    0,
+    6
+   ],
+   "max_world_slip_cm_s": 1.09,
+   "sole_z_cm": [
+    0.548,
+    0.919
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.36,
+    0.5
+   ],
+   "frames": [
+    11,
+    15
+   ],
+   "max_world_slip_cm_s": 0.001,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.18,
+    0.5
+   ],
+   "frames": [
+    6,
+    15
+   ],
+   "max_world_slip_cm_s": 0.003,
+   "sole_z_cm": [
+    0.549,
+    0.55
+   ]
+  }
+ ],
+ "TurnLeft90": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.04
+   ],
+   "frames": [
+    0,
+    1
+   ],
+   "max_world_slip_cm_s": 1.554,
+   "sole_z_cm": [
+    0.489,
+    0.765
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.2,
+    0.36
+   ],
+   "frames": [
+    6,
+    10
+   ],
+   "max_world_slip_cm_s": 0.981,
+   "sole_z_cm": [
+    0.6,
+    1.098
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.52,
+    0.6667
+   ],
+   "frames": [
+    16,
+    20
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.2
+   ],
+   "frames": [
+    0,
+    6
+   ],
+   "max_world_slip_cm_s": 1.107,
+   "sole_z_cm": [
+    0.549,
+    0.92
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.36,
+    0.6667
+   ],
+   "frames": [
+    11,
+    20
+   ],
+   "max_world_slip_cm_s": 0.051,
+   "sole_z_cm": [
+    0.549,
+    0.55
+   ]
+  }
+ ],
+ "TurnRight90": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.2
+   ],
+   "frames": [
+    0,
+    6
+   ],
+   "max_world_slip_cm_s": 1.107,
+   "sole_z_cm": [
+    0.549,
+    0.92
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.36,
+    0.6667
+   ],
+   "frames": [
+    11,
+    20
+   ],
+   "max_world_slip_cm_s": 0.051,
+   "sole_z_cm": [
+    0.549,
+    0.55
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.04
+   ],
+   "frames": [
+    0,
+    1
+   ],
+   "max_world_slip_cm_s": 1.553,
+   "sole_z_cm": [
+    0.489,
+    0.765
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.2,
+    0.36
+   ],
+   "frames": [
+    6,
+    10
+   ],
+   "max_world_slip_cm_s": 0.98,
+   "sole_z_cm": [
+    0.6,
+    1.098
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.52,
+    0.6667
+   ],
+   "frames": [
+    16,
+    20
+   ],
+   "max_world_slip_cm_s": 0.001,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
+ ],
+ "JumpStart": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.25
+   ],
+   "frames": [
+    0,
+    7
+   ],
+   "max_world_slip_cm_s": 5.336,
+   "sole_z_cm": [
+    0.548,
+    1.994
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.25
+   ],
+   "frames": [
+    0,
+    7
+   ],
+   "max_world_slip_cm_s": 5.336,
+   "sole_z_cm": [
+    0.548,
+    1.994
+   ]
+  }
+ ],
+ "JumpLand": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.4
+   ],
+   "frames": [
+    0,
+    12
+   ],
+   "max_world_slip_cm_s": 2.507,
+   "sole_z_cm": [
+    0.206,
+    0.6
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.4
+   ],
+   "frames": [
+    0,
+    12
+   ],
+   "max_world_slip_cm_s": 2.507,
+   "sole_z_cm": [
+    0.206,
+    0.6
+   ]
+  }
+ ]
+}

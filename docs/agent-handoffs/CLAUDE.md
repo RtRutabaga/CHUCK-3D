@@ -146,3 +146,15 @@
   - The jacket stretches at large arm raises.
   - No Unreal import was attempted (integration/Codex own that).
 - **LFS:** `.blend` (22 MB) and FBX (6.3 MB + 0.7 MB of clips) are LFS via the existing patterns; review JPGs (~0.7 MB) are LFS; the `.blend1` backup is ignored.
+
+## Seventh pass — rig v1 first clip set complete
+
+- **Delivered commit:** the seventh commit on `codex/claude-character` ("Complete Chuck v1 first clip set"), after `314b3a1`.
+- **Added clips:** WalkStart, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, joining Idle and WalkLoop. All come from `Tools/build_chuck_v1.py` with a world-space footstep planner, so planted paws stay world-locked while the capsule accelerates, decelerates or turns.
+- **Manifest (`V1/Animations/manifest.json`):** stance intervals and events for every clip; speed profiles plus `capsule_travel_cm_per_frame` for start/stop; `capsule_yaw_deg_per_frame` for turns (source +Z; the sign must be verified after import); takeoff/contact/compression events for jumps. `duration_s` for one-shots is now the last-frame time.
+- **Checks (`V1/check_v1.py`, 55 PASS):** all earlier contract checks, per-clip frame ranges and static root, and seams (WalkStart end and WalkStop start match WalkLoop frame 0 to 0.000 cm / 0.00°). Peak leg reach is at most 0.892 in all clips.
+- **Deformed-mesh stance drift** (`V1/Review/stance_drift_report.json`, mid-toe sole in world space): WalkLoop 0.60, WalkStart/Stop 1.1, turns 1.55, JumpLand 2.5, JumpStart 5.3 cm/s (about 0.5 cm total during the toe push-off).
+  - Method note: an earlier measurement on the ball pad overstated turn/start slip at about 5.7 cm/s, because the pad legitimately lifts during toe roll.
+  - A trial of pivoting toe roll at ground level made the planted toes slide (about 10 cm/s) and was reverted.
+- **Also changed:** `Tools/chuck_v1_pose.py` gained a `heading` parameter (paw turned about Z; knee pole follows half the heading). WalkLoop output is unchanged by it.
+- **Not done:** no Unreal import or AnimBP (Codex). Turns are in-place with the body facing forward in component space, so they depend on the runtime applying the yaw profile. The overhead-grip range still needs work.

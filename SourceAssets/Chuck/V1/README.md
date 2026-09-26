@@ -1,16 +1,16 @@
 # Chuck rig v1 source (docs/RIG-CONTRACT-V1.md)
 
-First delivery under the accepted rig contract: the 41-bone rig with one continuously skinned mesh, pose evidence, and the first two test clips (**Idle**, **WalkLoop**). The remaining first-set clips (WalkStart, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand) are not in this delivery. None of this is used by the running game yet. The legacy `SourceAssets/Chuck` exports and 14-bone rig are unchanged.
+Delivery under the accepted rig contract: the 41-bone rig with one continuously skinned mesh, pose evidence, and the complete first clip set: Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand. None of this is used by the running game yet. The legacy `SourceAssets/Chuck` exports and 14-bone rig are unchanged.
 
 | File | Contents |
 | --- | --- |
-| `Chuck_V1.blend` | Editable source: `SK_Chuck_Rig` armature (41 bones, zero roll) with `SK_Chuck` mesh (armature modifier) and actions `AS_Chuck_Idle`, `AS_Chuck_WalkLoop` (fake user). |
+| `Chuck_V1.blend` | Editable source: `SK_Chuck_Rig` armature (41 bones, zero roll) with `SK_Chuck` mesh (armature modifier) and one `AS_Chuck_<Clip>` action per clip (fake user). |
 | `SK_Chuck.fbx` | Rest-pose armature and skinned mesh. Import to `/Game/Characters/Chuck/V1/SK_Chuck` with a new skeleton. |
 | `Animations/AS_Chuck_<Clip>.fbx` | One clip per FBX, armature only, baked every frame at 30 fps. |
-| `Animations/manifest.json` | Frame ranges, loop flags, reference speed, stance intervals and events in seconds. |
+| `Animations/manifest.json` | Per clip: frame range, duration, loop flag, stance intervals, events (seconds), peak leg reach. Walk: reference speed. Start/stop: speed profile and per-frame capsule travel. Turns: per-frame capsule yaw. |
 | `rig_v1_metadata.json` | Bone and material counts, bounds, measured sole markers (source and Unreal component space), FBX settings, rest matrices for every bone. |
 | `check_v1.py` / `review_v1.py` | Contract checks and pose evidence (see below). |
-| `Review/` | Neutral views, pose studies, WalkLoop frames, `walk_contact_report.json`. |
+| `Review/` | Neutral views, pose studies, `strip_<Clip>.jpg` frame strips, `walk_contact_report.json`, `stance_drift_report.json`. |
 
 ## Build and export
 
@@ -60,22 +60,38 @@ Versus the proposed (-4.5 / 3.4 / 8.2): the heel is 1.0 cm further back and the 
 
 ## Clips
 
-Both clips loop with no duplicate endpoint sample and keep `root` static (root motion off).
-- **Idle** (60 frames, 2 s): breathing through spine/chest/neck, small head yaw/pitch, ear and tail motion. Paws planted at rest; knees re-solved for a 0.25–0.5 cm pelvis settle.
-- **WalkLoop** (9 frames, 0.30 s, reference 95 cm/s):
-  - Stride cycle 28.5 cm; stance fraction 0.6 (17.1 cm of travel per stance).
-  - Pelvis lowered 1.6 cm with a small bob, sway and yaw; counter-rotating chest; arms swing opposite the legs; tail follows.
-  - Stance: `foot_L` 0.00–0.18 s; `foot_R` 0.15–0.30 s and 0.00–0.03 s.
-  - Heel lifts around the ball over the last 30% of stance (toe roll). Swing lift is 2.4 cm.
-  - Peak thigh+calf reach ratio 0.877.
-  - Measured on the **deformed mesh** (`Review/walk_contact_report.json`): the ball-of-paw sole vertex moves at 95.0 cm/s through stance, so with the capsule moving at 95 cm/s the world slip is ≤ 0.39 cm/s (worst sample is the start of toe roll). Sole height stays 0.03–0.05 cm.
-- **IK goals:** `ik_foot_*` follow the solved hock and `ik_hand_*` the posed wrist in every frame. `socket_cigarette` rides the jaw.
+All clips are 30 fps with `root` static (root motion off); the runtime moves or turns the capsule. Loops have no duplicate endpoint sample. For one-shots, `duration_s` is the time of the last frame.
+
+| Clip | Frames / s | Loop | Content |
+| --- | --- | --- | --- |
+| Idle | 60 / 2.0 | yes | Breathing through spine/chest/neck, small head/ear/tail motion, paws planted. |
+| WalkLoop | 9 / 0.30 | yes | 95 cm/s reference; stride cycle 28.5 cm; stance 0.6. `foot_L` stance 0–0.18 s, `foot_R` 0.15–0.30 s and 0–0.03 s. Toe roll over the last 30% of stance; 2.4 cm swing lift. |
+| WalkStart | 13 / 0.40 | no | Smoothstep 0→95 cm/s (`capsule_travel_cm_per_frame`, 19 cm). R steps first; ends **exactly** on WalkLoop frame 0. |
+| WalkStop | 16 / 0.50 | no | Starts **exactly** on WalkLoop frame 0; smoothstep 95→0 cm/s over 0.4 s (19 cm), then a 0.1 s settle into the neutral stance. |
+| TurnLeft90 / TurnRight90 | 21 / 0.67 | no | Turn in place. `capsule_yaw_deg_per_frame` rises 0→±90° (smoothstep 0.02–0.5 s). Inside paw steps twice, outside once; paws turn with their steps; head/chest lead. The sign is source +Z (toward +Y = runtime left); verify after import. |
+| JumpStart | 9 / 0.27 | no | Anticipation crouch (bottom 0.16 s), then extension onto the toes; `takeoff` event at 0.25 s. |
+| JumpLoop | 12 / 0.40 | yes | Airborne: tucked paws with toes angled for landing, balancing arms/tail. |
+| JumpLand | 13 / 0.40 | no | `contact` at frame 0; pelvis absorbs 4.5 cm (max at 0.09 s) and recovers to neutral by 0.4 s. |
+
+Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperextended. `ik_foot_*` follow the solved hock and `ik_hand_*` the posed wrist in every frame; `socket_cigarette` rides the jaw. `check_v1.py` confirms the start/stop seams match WalkLoop frame 0 to 0.000 cm / 0.00°.
+
+**Measured on the deformed mesh** (`Review/stance_drift_report.json`): world-space drift of the mid-toe sole under each planted paw, using the manifest's capsule travel/yaw.
+
+| Clip | Max drift (cm/s) |
+| --- | --- |
+| WalkLoop | 0.60 |
+| WalkStart / WalkStop | 1.1 |
+| Turns | 1.55 |
+| JumpLand | 2.5 |
+| JumpStart | 5.3 |
+
+The JumpStart figure comes from the 0.09 s push onto the toes, about 0.5 cm in total. `Review/walk_contact_report.json` also shows the ball-of-paw sole moving at 95.0 cm/s through WalkLoop stance, 0.03–0.05 cm above the ground. The mid-toe sole is the right contact to measure: in toe roll the ball pad lifts while the toes stay planted.
 
 ## Pose evidence (`Review/`)
 
 - Neutral: front, side, rear, three-quarter, scale.
 - Pose studies: crouch/curl, forward knee flexion, toe roll, overhead grip, and the cigarette held at the left lip corner with the jaw opened 6°. The cigarette is a temporary render-only stick on the socket, not an asset.
-- WalkLoop: `walkloop_side_frames.jpg`.
+- Clips: `strip_<Clip>.jpg` (side view; turns from above-front).
 
 ## Known limits
 

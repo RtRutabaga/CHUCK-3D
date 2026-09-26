@@ -56,18 +56,22 @@ class Poser:
         self.rig.pose.bones[name].matrix = m
         self.update()
 
-    def leg(self, side, ball, foot_pitch=0., toe_pitch=0., pole=(1, 0, 0)):
+    def leg(self, side, ball, foot_pitch=0., toe_pitch=0., pole=(1, 0, 0), heading=0.):
         """Plant one leg. ball: armature-space target for the toes_ head.
-        foot_pitch: degrees about Y lifting the heel (hock) around the ball.
+        foot_pitch: degrees about Y lifting the heel (hock) around the ball joint;
+        with toe_pitch = -foot_pitch the toes stay flat and planted (toe roll).
         toe_pitch: degrees the toes droop (+) or lift (-) in source space.
-        The knee bends toward pole (forward). Returns reach ratio d/(l1+l2)."""
+        heading: degrees the paw is turned about Z (turn-in-place steps).
+        The knee bends toward pole (forward, turned half the paw heading).
+        Returns reach ratio d/(l1+l2)."""
         s = side
         hip = self.head(f'thigh_{s}')
         l1, l2 = self.length(f'thigh_{s}'), self.length(f'calf_{s}')
         ball = Vector(ball)
         foot_vec = self.rest_head[f'toes_{s}'] - self.rest_head[f'foot_{s}']
         toe_vec = self.rest_tail[f'toes_{s}'] - self.rest_head[f'toes_{s}']
-        pitch = Matrix.Rotation(math.radians(foot_pitch), 3, 'Y')
+        turn = Matrix.Rotation(math.radians(heading), 3, 'Z')
+        pitch = turn @ Matrix.Rotation(math.radians(foot_pitch), 3, 'Y')
         hock = ball - pitch @ foot_vec
         span = hock - hip
         d = span.length
@@ -75,7 +79,7 @@ class Poser:
         d = max(abs(l1 - l2) + .01, min(l1 + l2 - .01, d))
         u = span.normalized()
         hock = hip + u * d
-        p = Vector(pole)
+        p = Matrix.Rotation(math.radians(heading / 2), 3, 'Z') @ Vector(pole)
         p = (p - u * p.dot(u)).normalized()
         along = (l1 * l1 - l2 * l2 + d * d) / (2 * d)
         knee = hip + u * along + p * math.sqrt(max(0., l1 * l1 - along * along))
@@ -83,7 +87,7 @@ class Poser:
         self.aim(f'calf_{s}', knee, hock - knee)
         ball = hock + pitch @ foot_vec
         self.aim(f'foot_{s}', hock, ball - hock)
-        self.aim(f'toes_{s}', ball, Matrix.Rotation(math.radians(toe_pitch), 3, 'Y') @ toe_vec)
+        self.aim(f'toes_{s}', ball, turn @ Matrix.Rotation(math.radians(toe_pitch), 3, 'Y') @ toe_vec)
         # Helper goal follows the solved hock so clips carry goal data.
         goal = self.rig.pose.bones[f'ik_foot_{s}']
         goal.location = self.rest[f'ik_foot_{s}'].to_3x3().inverted() @ (hock - self.rest_head[f'ik_foot_{s}'])

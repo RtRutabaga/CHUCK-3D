@@ -72,6 +72,24 @@ for clip in MANIFEST['clips']:
                      for c in root_curves for k in c.keyframe_points), default=0)
         check(moved < 1e-6, f"clip {clip['name']} root bone static", f'{moved:.2e}')
 
+# Seams: WalkStart's last frame and WalkStop's first frame must equal
+# WalkLoop frame 0 so the transitions blend without a pop.
+def pose_at(action_name, frame):
+    rig.animation_data_create(); rig.animation_data.action = bpy.data.actions[action_name]
+    bpy.context.scene.frame_set(frame); bpy.context.view_layer.update()
+    return {pb.name: pb.matrix.copy() for pb in rig.pose.bones}
+def seam_error(a, b):
+    loc = max((a[n].translation - b[n].translation).length for n in a)
+    rot = max(math.degrees(a[n].to_quaternion().rotation_difference(b[n].to_quaternion()).angle) for n in a)
+    return loc, rot
+clips = {c['name']: c for c in MANIFEST['clips']}
+if {'WalkLoop', 'WalkStart', 'WalkStop'} <= set(clips):
+    loop0 = pose_at('AS_Chuck_WalkLoop', 0)
+    for name, frame in (('WalkStart', clips['WalkStart']['last_frame']), ('WalkStop', 0)):
+        loc, rot = seam_error(pose_at(f'AS_Chuck_{name}', frame), loop0)
+        check(loc < .05 and rot < .5, f'seam {name} ~ WalkLoop frame 0', f'{loc:.3f} cm, {rot:.2f} deg')
+rig.animation_data.action = None
+
 # Re-import the delivered FBX into a clean scene and verify the hierarchy.
 bpy.ops.wm.read_homefile(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=str(V1 / 'SK_Chuck.fbx'))

@@ -251,7 +251,8 @@ def author(name, frames, pose_fn, loop, extra):
     rig.animation_data.action = None
     entry = {'name': name, 'file': f'Animations/AS_Chuck_{name}.fbx', 'fps': FPS,
              'first_frame': 0, 'last_frame': frames - 1, 'frame_count': frames,
-             'duration_s': round(frames / FPS, 4), 'loop': loop,
+             # Loops: frames/fps (last frame interpolates to frame 0); one-shots: last frame time.
+             'duration_s': round((frames if loop else frames - 1) / FPS, 4), 'loop': loop,
              'loop_note': 'no duplicate endpoint sample; last frame interpolates to frame 0' if loop else '',
              'root_motion': False, 'max_leg_reach_ratio': round(reach, 4)}
     entry.update(extra)
@@ -345,6 +346,245 @@ author('WalkLoop', WALK['period_frames'], walk, True, {
                  'foot_L_lift': round(WALK['stance_fraction'] * PERIOD, 4),
                  'foot_R_lift': round(((.5 + WALK['stance_fraction']) % 1) * PERIOD, 4)},
     'notes': 'In place (root fixed). During stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll).'})
+
+# ---- transitions, turns and jumps (world-space footstep planner)
+# Paws are planned in world space while the capsule (root) moves or turns, so
+# a planted paw stays world-locked; component space = Rz(-yaw) (world - travel).
+def speed_ramp(t, dur, up):
+    f = smoothstep(t / dur, 0., 1.)
+    return WALK['speed_cm_s'] * (f if up else 1 - f)
+
+def travel(t, dur, up):
+    """Distance covered by a smoothstep speed ramp up to time t (closed form)."""
+    u = max(0., min(1., t / dur))
+    ramp = u ** 3 - u ** 4 / 2  # integral of smoothstep
+    return WALK['speed_cm_s'] * dur * (ramp if up else u - ramp)
+
+# Heel-lift window = last 30% of WalkLoop stance, so transitions match the loop.
+ROLL = .3 * WALK['stance_fraction'] * PERIOD
+
+def plan_foot(t, start, steps):
+    """start: (x, y, heading). steps: [(lift_s, land_s, (x, y, heading))].
+    Returns world ball (x, y, lift), heading, foot pitch, toe pitch."""
+    pos = start
+    for lift, land, target in steps:
+        if t < lift:
+            roll = smoothstep(t, lift - ROLL, lift)
+            return (pos[0], pos[1], 0.), pos[2], 24 * roll, -24 * roll
+        if t < land:
+            u = (t - lift) / (land - lift); e = smoothstep(u, 0., 1.)
+            x = pos[0] + (target[0] - pos[0]) * e; y = pos[1] + (target[1] - pos[1]) * e
+            h = pos[2] + (target[2] - pos[2]) * e
+            return ((x, y, WALK['lift_cm'] * math.sin(math.pi * u)), h,
+                    24 * (1 - smoothstep(u, 0., .6)), 12 * math.sin(math.pi * u))
+        pos = target
+    return (pos[0], pos[1], 0.), pos[2], 0., 0.
+
+def stance_from_steps(steps, dur):
+    spans, t0 = [], 0.
+    for lift, land, _ in steps:
+        if t0 >= dur: break
+        if lift > t0: spans.append([round(t0, 4), round(min(lift, dur), 4)])
+        t0 = land
+    if t0 < dur: spans.append([round(t0, 4), round(dur, 4)])
+    return spans
+
+def to_component(x, y, dist, yaw):
+    c, s = math.cos(-yaw), math.sin(-yaw)
+    x -= dist
+    return x * c - y * s, x * s + y * c
+
+def pose_planned(t, feet, dist, yaw, k, w, lean=0., look=0.):
+    """Upper body at walk intensity k (0 idle .. 1 walking) and gait phase
+    angle w, then both legs from the planned world feet."""
+    poser.translate('pelvis', (0, .35 * k * math.cos(w - .6 * math.pi),
+                               -WALK['pelvis_drop_cm'] * k - .45 * k * math.cos(2 * w)))
+    poser.rotate('pelvis', 'Z', 3 * k * math.sin(w))
+    poser.rotate('spine_02', 'Z', -2 * k * math.sin(w) + look * .25)
+    poser.rotate('chest', 'Z', -1.5 * k * math.sin(w) + look * .2)
+    poser.rotate('spine_01', 'Y', -2.5 * k + lean)
+    poser.rotate('head', 'Z', look * .55 - 1.2 * k * math.sin(w))
+    poser.rotate('head', 'Y', 2.0 * k + .8 * k * math.cos(2 * w))
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Z', 4 * k * math.sin(w - .6 * (i + 1)) - look * .08 * (i + 1))
+    comp = {}
+    for s in 'LR':
+        (x, y, lift), heading, fp, tp = feet[s]
+        cx, cy = to_component(x, y, dist, yaw)
+        comp[s] = (Vector((cx, cy, NEUTRAL_BALL[s].z + lift)), heading - math.degrees(yaw), fp, tp)
+    half = STANCE_CM / 2
+    for s in 'LR':
+        other = 'R' if s == 'L' else 'L'
+        drive = max(-1., min(1., (comp[other][0].x - NEUTRAL_BALL[other].x) / half))
+        poser.rotate(f'upperarm_{s}', 'Y', -12 * k * drive)
+        poser.rotate(f'lowerarm_{s}', 'Y', -4 - 6 * k - 6 * k * max(0., drive))
+        poser.rotate(f'fingers_{s}', 'Y', -8 - 2 * k)
+    poser.update()
+    r = 0.
+    for s in 'LR':
+        ball, heading, fp, tp = comp[s]
+        r = max(r, poser.leg(s, ball, fp, tp, heading=heading))
+    for s in 'LR': poser.hand_goal(s)
+    return r
+
+def loop_entry(side):
+    """Component x of the ball at WalkLoop frame 0."""
+    return NEUTRAL_BALL[side].x + foot_cycle(0. if side == 'L' else .5)[0]
+
+RB = {s: (NEUTRAL_BALL[s].x, NEUTRAL_BALL[s].y, 0.) for s in 'LR'}
+SWING = (1 - WALK['stance_fraction']) * PERIOD  # 0.12 s, as in WalkLoop
+
+# WalkStart: 0 -> 95 cm/s over 0.4 s, ending on WalkLoop frame 0
+# (foot_L just planted at +half, foot_R in late stance).
+START_T = .4
+D_end = travel(START_T, START_T, True)
+start_steps = {
+    # R's second entry is its next WalkLoop lift (0.03 s after the seam), so the
+    # heel is already rolling at the seam exactly as in the loop.
+    'R': [(.1, .25, (loop_entry('R') + D_end, RB['R'][1], 0.)),
+          (START_T + .03, START_T + .15, (loop_entry('R') + D_end, RB['R'][1], 0.))],
+    'L': [(START_T - SWING, START_T, (loop_entry('L') + D_end, RB['L'][1], 0.))],
+}
+def walk_start(phase, f):
+    t = f / FPS
+    feet = {s: plan_foot(t, RB[s], start_steps[s]) for s in 'LR'}
+    return pose_planned(t, feet, travel(t, START_T, True), 0., smoothstep(t, 0., START_T),
+                        2 * math.pi * (t - START_T) / PERIOD)
+START_FRAMES = round(START_T * FPS)
+
+# WalkStop: from WalkLoop frame 0 to the neutral hold, 95 -> 0 cm/s over 0.4 s.
+STOP_T = .4
+D_stop = travel(STOP_T, STOP_T, False)
+stop_init = {s: (loop_entry(s), RB[s][1], 0.) for s in 'LR'}
+stop_steps = {
+    'R': [(.03, .03 + SWING + .03, (RB['R'][0] + D_stop, RB['R'][1], 0.))],
+    'L': [(.2, .2 + SWING + .04, (RB['L'][0] + D_stop, RB['L'][1], 0.))],
+}
+def walk_stop(phase, f):
+    t = f / FPS
+    feet = {s: plan_foot(t, stop_init[s], stop_steps[s]) for s in 'LR'}
+    return pose_planned(t, feet, travel(t, STOP_T, False), 0., 1 - smoothstep(t, 0., STOP_T),
+                        2 * math.pi * t / PERIOD)
+STOP_FRAMES = round(STOP_T * FPS) + 3  # short settle hold
+
+# Turn in place 90 degrees over 0.6 s. yaw = capsule rotation; the inside paw
+# steps twice, the outside paw once; head and chest lead the turn.
+TURN_T = .6
+def turn_clip(sign):
+    lead, trail = ('L', 'R') if sign > 0 else ('R', 'L')
+    final = 90. * sign
+    def world_rest(s, deg):
+        a = math.radians(deg); x, y, _ = RB[s]
+        return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a), deg)
+    steps = {lead: [(.04, .2, world_rest(lead, final * .55)), (.36, .52, world_rest(lead, final))],
+             trail: [(.2, .36, world_rest(trail, final))]}
+    def pose(phase, f):
+        t = f / FPS
+        yaw = math.radians(final) * smoothstep(t, .02, .5)
+        look = final * .35 * (smoothstep(t, 0., .15) - smoothstep(t, .35, .6))
+        feet = {s: plan_foot(t, RB[s], steps[s]) for s in 'LR'}
+        return pose_planned(t, feet, 0., yaw, .35 * math.sin(math.pi * min(1., t / TURN_T)),
+                            2 * math.pi * t / .3, 0., look)
+    return pose, steps
+TURN_FRAMES = round(TURN_T * FPS) + 2
+
+# Jumps: root stays put; runtime supplies the ballistic capsule motion.
+def jump_start(phase, f):
+    t = f / FPS
+    crouch = smoothstep(t, 0., .16) * (1 - smoothstep(t, .16, .25))
+    extend = smoothstep(t, .16, .25)
+    poser.translate('pelvis', (0, 0, -4.2 * crouch + 1.0 * extend))
+    poser.rotate('spine_01', 'Y', 10 * crouch - 3 * extend)
+    poser.rotate('spine_02', 'Y', 6 * crouch)
+    poser.rotate('head', 'Y', -6 * crouch)
+    for s in 'LR':
+        poser.rotate(f'upperarm_{s}', 'Y', 25 * crouch - 35 * extend)
+        poser.rotate(f'lowerarm_{s}', 'Y', -20 * crouch - 10 * extend)
+    for i, b in enumerate(TAIL): poser.rotate(b, 'Y', -4 * crouch + 3 * extend * (i + 1) / 6)
+    poser.update()
+    r = 0.
+    for s in 'LR':
+        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 34 * extend, -34 * extend))
+    for s in 'LR': poser.hand_goal(s)
+    return r
+
+def jump_loop(phase, f):
+    w = 2 * math.pi * phase
+    poser.translate('pelvis', (0, 0, 1.5))
+    poser.rotate('spine_01', 'Y', -2 + .8 * math.sin(w))
+    for s in 'LR':
+        poser.rotate(f'upperarm_{s}', 'Y', -28 + 3 * math.sin(w))
+        poser.rotate(f'upperarm_{s}', 'X', 12 if s == 'L' else -12)
+        poser.rotate(f'lowerarm_{s}', 'Y', -18)
+        poser.rotate(f'fingers_{s}', 'Y', -15)
+    for i, b in enumerate(TAIL): poser.rotate(b, 'Y', 3 + 1.5 * math.sin(w - .5 * i))
+    poser.update()
+    r = 0.
+    for s in 'LR':
+        # Paws tucked under the body, toes pointing slightly down for landing.
+        r = max(r, poser.leg(s, NEUTRAL_BALL[s] + Vector((1.5, 0, 5.5 + .4 * math.sin(w))), -8, 14))
+    for s in 'LR': poser.hand_goal(s)
+    return r
+
+def jump_land(phase, f):
+    t = f / FPS
+    absorb = smoothstep(t, 0., .08) * (1 - smoothstep(t, .1, .4))
+    poser.translate('pelvis', (0, 0, -4.5 * absorb))
+    poser.rotate('spine_01', 'Y', 9 * absorb)
+    poser.rotate('spine_02', 'Y', 5 * absorb)
+    poser.rotate('head', 'Y', -5 * absorb)
+    arms = 1 - smoothstep(t, 0., .35)
+    for s in 'LR':
+        poser.rotate(f'upperarm_{s}', 'Y', -28 * arms + 8 * absorb)
+        poser.rotate(f'lowerarm_{s}', 'Y', -18 * arms - 6 * absorb)
+    for i, b in enumerate(TAIL): poser.rotate(b, 'Y', 3 * arms - 4 * absorb)
+    poser.update()
+    touch = smoothstep(t, 0., .05)
+    r = 0.
+    for s in 'LR':
+        r = max(r, poser.leg(s, NEUTRAL_BALL[s], 0., 10 * (1 - touch)))
+    for s in 'LR': poser.hand_goal(s)
+    return r
+
+def samples(fn, dur, n=9):
+    return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
+
+author('WalkStart', START_FRAMES + 1, walk_start, False, {
+    'nominal_speed_profile_cm_s': samples(lambda t: speed_ramp(t, START_T, True), START_T),
+    'capsule_travel_cm_per_frame': [round(travel(f / FPS, START_T, True), 4) for f in range(START_FRAMES + 1)],
+    'travel_cm': round(D_end, 3), 'ends_on': 'WalkLoop frame 0 (foot_L planted, foot_R late stance)',
+    'stance_intervals_s': {f'foot_{s}': stance_from_steps(start_steps[s], START_T) for s in 'LR'},
+    'events_s': {'foot_R_lift': .1, 'foot_R_plant': .25, 'foot_L_lift': round(START_T - SWING, 4), 'foot_L_plant': START_T},
+    'notes': 'Speed rises with a smoothstep from 0 to 95 cm/s; planted paws are world-locked against that travel.'})
+author('WalkStop', STOP_FRAMES + 1, walk_stop, False, {
+    'nominal_speed_profile_cm_s': samples(lambda t: speed_ramp(t, STOP_T, False), STOP_T),
+    'capsule_travel_cm_per_frame': [round(travel(f / FPS, STOP_T, False), 4) for f in range(STOP_FRAMES + 1)],
+    'travel_cm': round(D_stop, 3), 'starts_from': 'WalkLoop frame 0', 'settle_hold_s': round(3 / FPS, 4),
+    'stance_intervals_s': {f'foot_{s}': stance_from_steps(stop_steps[s], STOP_FRAMES / FPS) for s in 'LR'},
+    'events_s': {'foot_R_lift': .03, 'foot_R_plant': round(.06 + SWING, 4),
+                 'foot_L_lift': .2, 'foot_L_plant': round(.24 + SWING, 4)},
+    'notes': 'Speed falls with a smoothstep from 95 to 0 cm/s; ends in the neutral stance.'})
+for name, sign in (('TurnLeft90', 1), ('TurnRight90', -1)):
+    fn, steps = turn_clip(sign)
+    author(name, TURN_FRAMES + 1, fn, False, {
+        'capsule_yaw_deg_profile': samples(lambda t, sign=sign: 90 * sign * smoothstep(t, .02, .5), TURN_T),
+        'capsule_yaw_deg_per_frame': [round(90 * sign * smoothstep(f / FPS, .02, .5), 4) for f in range(TURN_FRAMES + 1)],
+        'yaw_sign_note': 'source +Z yaw (counter-clockwise from above, toward +Y = runtime left); verify sign after import',
+        'stance_intervals_s': {f'foot_{s}': stance_from_steps(steps[s], TURN_FRAMES / FPS) for s in 'LR'},
+        'events_s': {f'foot_{s}_{kind}_{i}': t for s in 'LR' for i, (lift, land, _) in enumerate(steps[s])
+                     for kind, t in (('lift', lift), ('plant', land))},
+        'notes': 'Turn in place: capsule yaw per profile, root fixed; paws world-locked while planted; inside paw steps twice, outside paw once.'})
+author('JumpStart', round(.25 * FPS) + 1, jump_start, False, {
+    'events_s': {'crouch_bottom': .16, 'takeoff': .25},
+    'stance_intervals_s': {'foot_L': [[0., .25]], 'foot_R': [[0., .25]]},
+    'notes': 'Anticipation crouch then extension onto the toes; capsule launch is runtime-driven at takeoff.'})
+author('JumpLoop', 12, jump_loop, True, {
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Airborne hold with tucked paws and balancing arms/tail; loops while airborne.'})
+author('JumpLand', 13, jump_land, False, {
+    'events_s': {'contact': 0., 'max_compression': .09, 'settled': .4},
+    'stance_intervals_s': {'foot_L': [[0., .4]], 'foot_R': [[0., .4]]},
+    'notes': 'Contact at frame 0 with toes slightly pointed; pelvis absorbs 4.5 cm and recovers to neutral.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
