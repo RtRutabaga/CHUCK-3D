@@ -56,7 +56,7 @@ The test exits automatically. Logs and screenshots are under Builds/Windows/Chuc
 
 When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
 
-The normal smoke run performs 41 checks; adding -ChuckCapture adds the settled recenter check for 42 and captures both views plus walking poses. These automated checks do not establish subjective camera comfort or validate a physical controller.
+The normal smoke run performs 42 checks; adding -ChuckCapture adds the settled recenter check for 43 and captures both views plus walking poses. These automated checks do not establish subjective camera comfort or validate a physical controller.
 
 For this rig pass, walk, turn, stop and jump on clear quay ground in both views. Watch whether the legs remain connected to the feet, the small sleeve/tail movements read naturally, and stops settle without distracting motion. Joint surfaces and foot planting are still prototype quality.
 
@@ -74,4 +74,7 @@ For a checked verification run from PowerShell at the repository root:
 powershell -NoProfile -File .\Tools\Verify-Package.ps1
 ```
 
-This opens the existing packaged game, exercises the movement/camera checks, captures both views and exits automatically. The wrapper requires the success marker and at least 42 passing checks; it also fails on reported test/material/fatal errors even if Unreal returns exit code zero. Use `-NoCapture` for the 41-check run without screenshots. Timestamped logs go to the ignored Local directory. This command verifies the existing package; it does not rebuild stale source changes.
+This opens the existing packaged game, exercises the movement/camera checks, captures both views and exits automatically. The wrapper requires the success marker and at least 43 passing checks; it also fails on reported test/material/fatal errors even if Unreal returns exit code zero. Use `-NoCapture` for the 42-check run without screenshots. Timestamped logs go to the ignored Local directory. This command verifies the existing package; it does not rebuild stale source changes.
+
+
+For the character contact review, run `powershell -NoProfile -File .\Tools\Verify-Package.ps1 -MotionCapture`. It adds rear/front/side rat-height and elevated image sequences under `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Motion/View0..3`. These cover start, straight walk, 90-degree turn, stop, jump and landing. Contact telemetry is printed in the test log. Keep reviewing ankle connections and jacket shoulder joins; passing contact checks is not finished animation approval.

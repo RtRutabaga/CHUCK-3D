@@ -13,14 +13,16 @@ Keep 65 cm feet-to-ear height beside the 180 cm worker, natural gray-brown rat a
 | Jacket-edge gaps | OpenJacket uses angular shell boundaries; FrontSeam, lapels and fasteners use independently typed coordinates. At the mid-body, the seam is displaced inward/forward from the shell edge. | Build plackets/lining/zipper details from the same garment boundary, not floating pieces. Confirm front and three-quarter views, including motion. |
 | Primitive deformation | Thigh/shin and sleeve pieces overlap; source parts usually receive a single rigid bone weight. | Continuous joint topology and graduated skin weights are required for deeper bends and believable motion. |
 
-These are code/source findings, not a claim that a new motion study or repair has been performed.
+These describe the pre-rework baseline. The 2026-09-26 integrated pass replaces sinusoidal foot translation with traced world-space stance/swing, and Claude rebuilt the jacket fronts and graded sleeve weights. See HANDOFF.md and both agent handoffs for measured results and remaining defects; these improvements do not establish final character quality.
 
 ## Ordered work
 
 1. **Jacket and neutral silhouette:** eliminate unintended edge gaps, give the open fronts thickness/lining, connect collar/lapels credibly, refine muzzle/torso/limb/paw proportions against the supplied images. Keep the existing rig contract initially so this can integrate independently of movement work. Do not cover faults with more fur or accessory meshes.
 2. **Grounded walking:** separate stance from swing, measure world-space foot slip, settle starts/stops and turns, and keep knees/ankles within anatomically plausible ranges. Keep collision/cameras stable. Capture actual motion from front/side/rear at rat height and elevated view; a still pose or sinusoid-amplitude assertion is not acceptance.
 3. **Production rig proposal:** agree on a single deforming body, pelvis/spine/neck, appropriate limb/foot/toe/hand controls and skin weights, then migrate runtime and assets together. Do not silently rename bones in one branch while the other targets the old rig. Decide authored clips versus procedural corrections deliberately; the current PoseableMesh experiment is not a requirement for the final architecture.
-4. **Reference-quality surfaces:** UVs, coherent fur solution, eyes/ears/paws, worn woven jacket and controlled material detail after forms and motion work. Track triangle/texture costs and LOD needs. The current body has 131,194 triangles plus two 10,944-triangle feet, with no LODs.
+4. **Reference-quality surfaces:** UVs, coherent fur solution, eyes/ears/paws, worn woven jacket and controlled material detail after forms and motion work. Track triangle/texture costs and LOD needs. Claude's current body has 159,524 triangles plus two 10,944-triangle feet, with no LODs.
+
+Immediate art follow-up after the first integration: the open fronts are more coherent, but visible shoulder/armhole gaps and overlapping caps remain in the packaged front/rear views. The head, hands, legs and paws still read as a primitive form study. Prioritize continuous shoulder and limb construction and reference silhouette before more garment details or environment work. Codex's first long-step contact trial exposed ankle separation; the corrected short-stride pass adds a reach regression, but the separate-foot rig still needs eventual replacement.
 
 ## Eventual action requirements
 
