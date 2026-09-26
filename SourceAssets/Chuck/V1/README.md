@@ -38,17 +38,21 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
 
 ## Mesh and weights
 
-- One skinned mesh, 207,771 triangles, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
+- One skinned mesh, 207,771 triangles, one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
 - **Legs:** rebuilt knee-forward along thigh → calf → hock. Their domed ends sink into the paw heel mound.
 - **Paws:** now part of the body (the legacy `paw_parts` at origin (-0.8, ±7, 1.96)).
-- **Continuity:** leg and paw are overlapping surfaces with shared graded weights, not one merged manifold. They deform together, but a strongly bent ankle can still show the seam.
+- **Continuity:** leg and paw are overlapping surfaces, not one merged manifold. The paw, heel mound included, is rigid on foot/toes. The ankle bend happens on the fur leg tube, which grades calf → foot over about 1.5 cm around the hock. The tube's end sits inside the heel mound and is fully foot-weighted, so the join stays closed under toe roll, paw lift and crouch (`Review/ankle_join.jpg`).
 - **Weights:** graded fields per source part in `build_chuck_v1.py`.
   - Spine chain for the torso, with clavicle share at the shoulders and thigh share at the hips.
   - Jacket shell follows the upper arm near the armhole and lifts with the thighs at the hem.
   - Sleeves: clavicle/chest → upper arm → lower arm. Hands: hand → fingers/thumb.
   - Head, with a neck blend at the back, jaw on the chin/lower lip/lower muzzle, and ears.
-  - Legs: pelvis → thigh → calf → foot. Paws are rigid on foot/toes (heel pad included), blending to the calf only on the heel mound around the hock. Tail: tail_0 → tail_5.
+  - Legs: pelvis → thigh → calf, then calf → foot around the hock. Paws are rigid on foot/toes. Tail: tail_0 → tail_5.
   - Every deforming bone carries weight; helpers carry none. At most 4 influences per vertex. No `_L`/`_R` cross-weighting.
+
+## UVs
+
+`UVMap` is an automatic Smart UV Project (66°, margin 0.003) of the real surfaces: skin, fur body, jacket, eyes, paws. It covers about 56% of the 0–1 square with even texel density (`Review/uv_checker.jpg`). The 37,803 fur-tuft and whisker faces share one tiny island in the top-right corner, because they use their material's flat colour. The seams are automatic, not hand-placed, so hand-painted texture work would benefit from an authored layout later.
 
 ## Sole markers (measured)
 
@@ -91,4 +95,4 @@ Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperex
 - **Jacket:** a separate shell skinned to the body, with no cloth simulation. The armhole stretches at large raises.
 - **Hands:** one curl bone for four fingers, as accepted for v1.
 - **Ankle:** the leg/paw seam at the ankle is covered by the heel mound, not merged topology.
-- **Not tested:** no UVs or LODs; no Unreal import.
+- **Not done:** no LODs (the Unreal importer can generate them); no Unreal import. The UV seams are automatic.

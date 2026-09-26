@@ -176,3 +176,11 @@
   - `Poser.arm`, two-bone arm IK, used for the overhead-grip study (wrists at 62.5 cm, elbows bent).
 - **Results (`check_v1.py`, 64 PASS):** every clip stays above ground in every frame (min -0.002 cm); seams are still exact; peak leg reach is unchanged. Deformed-mesh mid-toe drift under planted paws is now at most 0.002 cm/s in all clips, down from 0.6–5.3.
 - **Still not done:** Unreal import, AnimBP and in-game verification (Codex/integration). No cloth simulation, so the jacket stretches in the overhead pose. The leg/paw ankle is overlapping surfaces with shared weights, not merged topology.
+
+## Ninth pass — v1 ankle continuity and UVs
+
+- **Delivered commit:** the ninth commit on `codex/claude-character` ("Close v1 ankle join and add UVs"), after `6d4c9cd`. Same V1 files and asset paths; the 41-bone table is unchanged.
+- **Ankle:** the pose study (toe roll 35°, paw lift, crouch) showed the heel mound splitting and the leg-tube end poking out. The cause was the heel mound's partial calf weight. Now the paw is fully rigid on foot/toes, the leg tube grades calf → foot over about 1.5 cm around the hock, and the tube end inside the heel is fully foot-weighted. Evidence: `SourceAssets/Chuck/V1/Review/ankle_join.jpg`.
+- **UVs:** `UVMap`, a Smart UV Project of real surfaces covering about 56% of the square; fur tufts and whiskers are parked on one corner island. A first unwrap that included the tufts packed only 1.2%. Evidence: `Review/uv_checker.jpg`. `check_v1.py` now also checks one UV channel within 0–1: 66 PASS.
+- **Measurements unchanged:** ground clearance in every clip; mid-toe stance drift at most 0.002 cm/s; start/stop seams exact; grip reach 0.93.
+- **Still not done:** Unreal import/AnimBP/in-game checks (Codex/integration); LODs; hand-authored UV seams; cloth simulation.

@@ -98,6 +98,15 @@ print('CHUCK_V1_GRIP', {s: round(r, 3) for s, r in grip_reach.items()},
 shot('pose_overhead_grip_side', (0, -150, 45), (0, 0, 42), lens=45)
 shot('pose_overhead_grip_three_quarter', (120, -100, 55), (0, 0, 45), lens=45)
 
+# Ankle join under paw pitch/lift and a deep crouch (outer and rear views).
+for name, (fp, lift, drop) in {'rest': (0, 0, 0), 'roll35': (35, 0, 0), 'lift': (-15, 6, 0), 'crouch': (0, 0, 6)}.items():
+    poser.reset()
+    if drop: poser.translate('pelvis', (0, 0, -drop)); poser.update()
+    poser.leg('R', poser.rest_head['toes_R'])
+    poser.leg('L', poser.rest_head['toes_L'] + Vector((3 if lift else 0, 0, lift)), fp, 0.)
+    shot(f'ankle_{name}_outer', (-2, 40, 6), (-2, 7, 3), lens=70)
+    shot(f'ankle_{name}_rear', (-35, 20, 8), (-3, 7, 3), lens=70)
+
 # Cigarette alignment: a temporary white stick + ember placed on the posed
 # socket_cigarette (filter at the head, lit end at the tail), jaw slightly open.
 poser.reset(); neutral_legs()

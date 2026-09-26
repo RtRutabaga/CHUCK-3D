@@ -146,18 +146,25 @@ def head_weights(p, lab):
                (ear, {f'ear_{side_of(p)}': 1.}))
 
 def leg_weights(p):
+    """Pelvis -> thigh -> calf on the leg tube; around the hock the tube
+    grades from calf to foot over about 1.5 cm, and its end (inside the heel
+    mound) is fully foot."""
     s = side_of(p)
     a = seg(p, H(f'thigh_{s}'), T(f'thigh_{s}'))[0]
     pelvis = 1 - smoothstep(a, -1.5, 2.5)
-    return mix((pelvis, {'pelvis': 1.}), (1 - pelvis, chain_weights(p, [f'thigh_{s}', f'calf_{s}', f'foot_{s}'])))
+    hock = H(f'foot_{s}')
+    calf_axis = (hock - H(f'calf_{s}')).normalized()
+    beyond = (p - hock).dot(calf_axis)  # +: past the hock along the shin
+    foot = smoothstep(beyond, -1.5, .5)
+    limb = chain_weights(p, [f'thigh_{s}', f'calf_{s}'])
+    return mix((pelvis, {'pelvis': 1.}), ((1 - pelvis) * (1 - foot), limb), ((1 - pelvis) * foot, {f'foot_{s}': 1.}))
 
 def paw_weights(p):
-    """The paw is rigid on foot/toes (heel pad included); only the heel mound
-    around the hock blends into the calf so the leg tube joins it."""
+    """The paw (heel mound included) is rigid on foot/toes. The ankle bend
+    happens on the fur leg tube, whose end sits inside the heel mound and is
+    weighted to the foot too, so the join cannot open."""
     s = side_of(p)
-    hock = H(f'foot_{s}')
-    calf = .7 * smoothstep(p.z, 2.8, 4.8) * (1 - smoothstep((p - hock).length, 1.5, 3.5))
-    return mix((1 - calf, chain_weights(p, [f'foot_{s}', f'toes_{s}'], 1.8)), (calf, {f'calf_{s}': 1.}))
+    return chain_weights(p, [f'foot_{s}', f'toes_{s}'], 1.8)
 
 TAIL = [f'tail_{i}' for i in range(6)]
 # Tail mesh radius at each bone's head and tail (legacy tail tapers 1.8 -> .13 cm).
@@ -184,6 +191,9 @@ for part in parts:
     bpy.context.view_layer.objects.active = part
     bpy.ops.object.convert(target='MESH')
     part = bpy.context.object
+    strands = part.data.attributes.new('chuck_strand', 'BOOLEAN', 'FACE')
+    is_strand = lab.endswith('Fur') or lab == 'Whisker'
+    for d in strands.data: d.value = is_strand
     groups = {}
     for v in part.data.vertices:
         p = part.matrix_world @ v.co
@@ -204,6 +214,33 @@ body = bpy.context.object; body.name = 'SK_Chuck'; body.data.name = 'SK_Chuck'
 scene.cursor.location = (0, 0, 0)
 bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+# UVs: one automatic unwrap channel so textures can be authored later (the
+# legacy parts had none). Only real surfaces are unwrapped; fur tufts and
+# whiskers (tagged chuck_strand) share one tiny corner island, since they use
+# their material's flat colour and would otherwise swamp the packing.
+import bmesh
+t_uv = __import__('time').time()
+bpy.context.view_layer.objects.active = body
+bpy.ops.object.mode_set(mode='EDIT')
+bm = bmesh.from_edit_mesh(body.data)
+tag = bm.faces.layers.bool.get('chuck_strand')
+for f in bm.faces: f.select_set(not f[tag])
+bmesh.update_edit_mesh(body.data)
+bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=.003, area_weight=0., scale_to_bounds=False)
+bm = bmesh.from_edit_mesh(body.data)
+uv = bm.loops.layers.uv.active
+tag = bm.faces.layers.bool.get('chuck_strand')
+strand_faces = 0
+for f in bm.faces:
+    if f[tag]:
+        strand_faces += 1
+        for i, l in enumerate(f.loops):
+            l[uv].uv = (.996 + .003 * (i == 1), .996 + .003 * (i == 2))
+bmesh.update_edit_mesh(body.data)
+bpy.ops.object.mode_set(mode='OBJECT')
+body.data.uv_layers[0].name = 'UVMap'
+body.data.attributes.remove(body.data.attributes['chuck_strand'])
+print('CHUCK_V1_UV', round(__import__('time').time() - t_uv, 1), 's; strand faces parked', strand_faces)
 # Weights were written as ratios; renormalize defensively after the join.
 for v in body.data.vertices:
     total = sum(g.weight for g in v.groups)

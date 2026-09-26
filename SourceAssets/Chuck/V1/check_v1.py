@@ -57,6 +57,12 @@ for v in body.data.vertices:
     wrong = '_R' if v.co.y > 0 else '_L'
     cross += any(groups[g.group].endswith(wrong) and g.weight > .01 for g in v.groups)
 check(cross == 0, 'left/right convention (+Y is _L)', f'{cross} crossed vertices')
+uv = body.data.uv_layers
+check(len(uv) == 1, 'one UV channel', [l.name for l in uv])
+if uv:
+    coords = [d.uv for d in uv[0].data]
+    inside = all(-1e-4 <= c.x <= 1 + 1e-4 and -1e-4 <= c.y <= 1 + 1e-4 for c in coords)
+    check(inside, 'UVs inside 0..1')
 mod = next((m for m in body.modifiers if m.type == 'ARMATURE'), None)
 check(mod is not None and mod.object == rig, 'armature modifier bound to rig')
 
