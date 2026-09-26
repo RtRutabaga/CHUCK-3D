@@ -21,6 +21,11 @@ private:
     void Check(bool Passed, const TCHAR* Description);
     int32 TestFailures = 0;
     int32 GapRuns = 0;
+    FVector ProbeFoot[2] = {FVector::ZeroVector,FVector::ZeroVector};
+    bool bProbeReady = false;
+    int32 ProbeSamples = 0;
+    double ProbeSlip = 0;
+    float ProbeMaxSpeed = 0;
 };
 
 UCLASS()

@@ -312,8 +312,23 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==1)
     {
         Chuck->AddMovementInput(FVector(1,0,0),1);
+        // Identical before/after measurement: flat-height feet during steady
+        // straight walking should remain still in world space during stance.
+        for(int32 I=0; I<2; ++I)
+        {
+            const auto* Foot=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(I==0 ? TEXT("FootLeft") : TEXT("FootRight")));
+            const FVector Position=Foot->GetComponentLocation();
+            if(bProbeReady && StageTime>.25f && Chuck->GetVelocity().Size2D()>90.f && FMath::Abs(Position.Z-ProbeFoot[I].Z)<.001f)
+            {
+                const float SlipSpeed=FVector::Dist2D(Position,ProbeFoot[I])/FMath::Max(DeltaSeconds,.001f);
+                ProbeSlip+=SlipSpeed; ProbeMaxSpeed=FMath::Max(ProbeMaxSpeed,SlipSpeed); ++ProbeSamples;
+            }
+            ProbeFoot[I]=Position;
+        }
+        bProbeReady=true;
         if(StageTime>1)
         {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CONTACT_MEASURE samples=%d mean_cm_s=%.4f max_cm_s=%.4f"),ProbeSamples,ProbeSamples ? ProbeSlip/ProbeSamples : -1.,ProbeMaxSpeed);
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
             auto* MovingBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
             Check(MovingBody && MovingBody->GetRelativeRotation().Pitch < -2.f,TEXT("walking produces restrained body lean"));
