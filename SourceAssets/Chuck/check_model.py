@@ -35,6 +35,9 @@ print('CHUCK_INFO body bounds', [round(min(xs), 2), round(max(xs), 2)], [round(m
 slots = sorted({m.name.split('.')[0] for m in body.data.materials})
 check(set(slots) <= {'Fur', 'Chest', 'Jacket', 'Seam', 'Skin', 'Eye', 'Claw', 'Metal', 'Whisker'}, 'material slot names', slots)
 foot_slots = sorted({m.name.split('.')[0] for m in foot.data.materials})
+fz = [v.co.z for v in foot.data.vertices]; fx = [v.co.x for v in foot.data.vertices]
+print('CHUCK_INFO foot bounds x', round(min(fx), 2), round(max(fx), 2), 'z', round(min(fz), 2), round(max(fz), 2))
+check(-2.3 < min(fz) < -1.6, 'foot sole near local z=-2 (runtime origin 2.5 cm above ground)', f'{min(fz):.2f}')
 print('CHUCK_INFO foot slots', foot_slots)
 
 groups = {g.index: g.name for g in body.vertex_groups}

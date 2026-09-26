@@ -36,11 +36,15 @@ POSES = {
     'reach80': {'arm_L': ('Y', -80), 'forearm_L': ('Y', -30), 'arm_R': ('Y', 30), 'forearm_R': ('Y', -60)},
     'raise_side45': {'arm_L': ('X', 45), 'arm_R': ('X', -45), 'forearm_L': ('Y', -30), 'forearm_R': ('Y', -30)},
     'head_turn': {'head': ('Z', 30), 'arm_L': ('Y', -10), 'arm_R': ('Y', 10)},
+    'stride': {'thigh_L': ('Y', -30), 'shin_L': ('Y', 25), 'thigh_R': ('Y', 20), 'shin_R': ('Y', -15),
+               'arm_L': ('Y', 15), 'arm_R': ('Y', -15)},
+    'crouch': {'thigh_L': ('Y', -45), 'shin_L': ('Y', 60), 'thigh_R': ('Y', -45), 'shin_R': ('Y', 60)},
 }
 VIEWS = {'three_quarter': ((120, -95, 50), (0, 0, 33)), 'side': ((0, -150, 35), (0, 0, 33)),
          'front': ((150, 0, 38), (0, 0, 33)), 'back_quarter': ((-110, 95, 50), (0, 0, 33)),
          'shoulder_L': ((25, 55, 45), (0, 11, 36)), 'shoulder_R': ((25, -55, 45), (0, -11, 36)),
-         'shoulder_R_back': ((-30, -50, 45), (0, -11, 36))}
+         'shoulder_R_back': ((-30, -50, 45), (0, -11, 36)),
+         'legs_side': ((10, -70, 15), (0, 0, 14))}
 
 def pose(spec):
     for pb in rig.pose.bones:

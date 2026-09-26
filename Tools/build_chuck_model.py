@@ -92,33 +92,59 @@ def limb(name, a, b, radius, mat):
     obj.rotation_quaternion = (Vector(b)-Vector(a)).to_track_quat('Z', 'Y')
     return obj
 
-def cloth_sleeve(name,shoulder,elbow,wrist,start_radius,end_radius,mat):
-    """One continuous tapered sleeve bending through the elbow, with shallow
-    gathered folds. A single tube avoids the pinch of two overlapping tubes."""
-    shoulder,elbow,wrist=Vector(shoulder),Vector(elbow),Vector(wrist)
-    upper=(elbow-shoulder).length; lower=(wrist-elbow).length; total=upper+lower
-    d_up=(elbow-shoulder).normalized(); d_lo=(wrist-elbow).normalized()
+def chain_tube(name,points,radius_at,mat,fold=0.,caps=(1.,1.),segments=32,rings=24,subdiv=1,squash=1.):
+    """Continuous tube along a polyline (e.g. shoulder-elbow-wrist), with ring
+    frames blended over +/-2 cm at each joint and rounded (domed) ends instead
+    of flat caps. radius_at(t) takes t in 0..1 along the polyline. squash
+    scales the tube's second cross-section axis (flattened feet/toes)."""
+    points=[Vector(p) for p in points]
+    lengths=[(b-a).length for a,b in zip(points,points[1:])]
+    dirs=[(b-a).normalized() for a,b in zip(points,points[1:])]
+    total=sum(lengths)
+    reference=Vector((0,0,1)) if abs(dirs[0].z)<.9 else Vector((1,0,0))
+    def frame(s):
+        acc=0.
+        for i,(length,d) in enumerate(zip(lengths,dirs)):
+            if s<=acc+length or i==len(lengths)-1:
+                center=points[i]+d*(s-acc)
+                direction=d
+                if i+1<len(dirs):
+                    direction=(d*(1-max(0.,min(1.,(s-acc-length+2.)/4.)))+dirs[i+1]*max(0.,min(1.,(s-acc-length+2.)/4.))).normalized()
+                if i>0:
+                    w=max(0.,min(1.,(s-acc+2.)/4.))
+                    direction=(dirs[i-1]*(1-w)+direction*w).normalized()
+                return center,direction
+            acc+=length
+    cap0=radius_at(0.)*caps[0]; cap1=radius_at(1.)*caps[1]
+    stations=[]
+    for k in range(4,0,-1):  # start dome
+        f=k/4.; stations.append((-cap0*f, math.sqrt(max(0.,1-f*f))*.98+.02, 0.))
+    for r in range(rings):
+        stations.append((total*r/(rings-1),1.,r/(rings-1)))
+    for k in range(1,5):  # end dome
+        f=k/4.; stations.append((total+cap1*f, math.sqrt(max(0.,1-f*f))*.98+.02, 1.))
     verts,faces=[],[]
-    rings,segments=22,32
-    reference=Vector((1,0,0))
-    for row in range(rings):
-        s=(row/(rings-1))*1.04*total-.04*upper  # tuck the top into the shoulder
-        center=shoulder+d_up*s if s<=upper else elbow+d_lo*(s-upper)
-        blend=max(0.,min(1.,(s-upper+2.)/4.))  # rotate ring frames over +/-2 cm
-        direction=(d_up*(1-blend)+d_lo*blend).normalized()
+    for s_along,scale,t in stations:
+        center,direction=frame(min(max(s_along,0.),total))
+        if s_along<0: center=points[0]+dirs[0]*s_along
+        if s_along>total: center=points[-1]+dirs[-1]*(s_along-total)
         u=direction.cross(reference).normalized(); v=direction.cross(u)
-        t=s/total
-        radius=(start_radius*(1-t)+end_radius*t)*(.92+.08*math.sin(max(0.,t)*math.pi))
+        radius=radius_at(t)*scale
         for j in range(segments):
             angle=j*math.tau/segments
-            fold=.11*math.sin(t*math.pi*9+angle*2)+.06*math.sin(angle*5+t*3)
-            verts.append(center+(radius+fold)*(u*math.cos(angle)+v*math.sin(angle)))
-    for row in range(rings-1):
+            wrinkle=fold*scale*(math.sin(t*math.pi*9+angle*2)+.55*math.sin(angle*5+t*3))
+            verts.append(center+(radius+wrinkle)*(u*math.cos(angle)+v*math.sin(angle)*squash))
+    n=len(stations)
+    for row in range(n-1):
         for j in range(segments):
             k=row*segments+j; nxt=row*segments+(j+1)%segments
             faces.append((k,nxt,nxt+segments,k+segments))
-    faces.extend([tuple(reversed(range(segments))),tuple((rings-1)*segments+j for j in range(segments))])
-    return mesh(name,verts,faces,mat,1)
+    faces.extend([tuple(reversed(range(segments))),tuple((n-1)*segments+j for j in range(segments))])
+    return mesh(name,verts,faces,mat,subdiv)
+
+def smoothstep(x,lo,hi):
+    f=max(0.,min(1.,(x-lo)/(hi-lo)))
+    return f*f*(3-2*f)
 
 # Continuous tapered trunk rather than overlapping spherical jacket pieces.
 verts, faces = [], []
@@ -160,8 +186,13 @@ def conform_patch(name,source,material,a_half,z_lo,z_hi,rise,sink,cols=24,rows=2
 
 conform_patch('LightChest',torso,'Chest',1.3,15,45.8,.4,.25)
 for side in (-1,1):
-    limb('Thigh',(-2,side*6,21),(-4,side*7.2,11),4.6,'Fur')
-    limb('Shin',(-4,side*7.2,12),(2,side*7,5),2.7,'Fur')
+    # One continuous haunch/thigh/shin per leg on the runtime IK chain
+    # (hip -> knee -> ankle, ChuckCharacter::SolveLeg). The domed end tucks
+    # into the paw's heel so the ankle join stays covered as the foot turns.
+    def leg_radius(t):
+        haunch=4.3-1.6*smoothstep(t,.08,.55)
+        return haunch-.75*smoothstep(t,.6,1.)
+    chain_tube('Leg',[(-2,side*6,21.5),(-4,side*7.2,11),(2,side*7,5),(2.6,side*7,3.6)],leg_radius,'Fur',caps=(.9,.6),rings=26)
 
 # Continuous tapered skull and muzzle. The earlier joined spheres made a blunt,
 # round face; these anatomical sections narrow toward a smaller nasal pad.
@@ -198,8 +229,8 @@ for side in (-1,1):
 # so plackets, lapels and stitching cannot drift away from the shell edge.
 # Solidify gives real cloth thickness; its rim closes every boundary and the
 # inner shell carries the lining (Seam slot). The chest opening stays open.
-JACKET_PROFILE=[(18.5,8.9,10.7,-1),(21,9.1,10.6,-1),(30,9.6,10.4,-.5),(38,9.2,10.3,0),
-                (42,8.0,9.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
+JACKET_PROFILE=[(18.5,8.9,10.7,-1),(21,9.1,10.6,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
+                (41,8.6,11.4,0),(43,7.7,10.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
 JACKET_THICKNESS=.4
 
 def jacket_radii(z):
@@ -284,11 +315,19 @@ for side_t in (.004,.996):
     tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (19,24,29,34,36.2)],.2,'Seam',1)
 box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
-    cloth_sleeve('Sleeve',(0,side*10.4,41),(-1,side*14,29),(3,side*14,22),4.4,3.4,'Jacket')
+    # Domed sleeve head sits under the dropped shoulder; no flat cap.
+    chain_tube('Sleeve',[(0,side*10.6,40.5),(-1,side*14,29),(3,side*14,22)],
+               lambda t:(4.4*(1-t)+3.4*t)*(.92+.08*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
     limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),3.75,'Seam')
-    ellipsoid('Hand',(4.8,side*14,19.2),(3,2.7,3.6),'Skin')
-    for finger in range(3):
-        limb('Finger',(6,side*(12.4+finger*1.2),19),(7,side*(12.4+finger*1.2),16.5),.75,'Skin')
+    ellipsoid('Hand',(4.2,side*14,19.7),(1.8,1.55,2.3),'Skin')
+    for finger in range(4):
+        # Relaxed, slightly curled fingers hanging from the palm.
+        y=side*(12.9+finger*.75)
+        length=(2.3,2.7,2.6,2.0)[finger]
+        base=Vector((5.0,y,18.4)); mid=base+Vector((.55,0,-length*.6)); tip=mid+Vector((-.15,0,-length*.45))
+        chain_tube('Finger',[base,mid,tip],lambda t:.42-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
+    chain_tube('Finger',[(4.4,side*15.2,19.4),(5.5,side*15.7,18.5),(6.1,side*15.5,17.7)],
+               lambda t:.45-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
 for t0 in (.075,.925):
     # Slanted welt pocket stitched on the shell surface.
     d=-1 if t0<.5 else 1
@@ -366,7 +405,7 @@ fur_surface(head,'CheekFur','Fur',6500,91,(.28,.72),(-.6,0,-.2),face_fur)
 chest=bpy.data.objects['LightChest']
 fur_surface(chest,'ChestFur','Chest',4600,93,(.28,.68),(0,0,-.85),lambda p,n:n.x>.2)
 fur_surface(torso,'BellyFur','Fur',2600,97,(.3,.7),(0,0,-.7),lambda p,n:p.z<21 and p.x>0)
-for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0] in ('Thigh','Shin')]):
+for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0]=='Leg']):
     label=part.name.split('.')[0]
     fur_surface(part,label+'Fur','Fur',1800,101+i,(.22,.55),(0,0,-.8),lambda p,n:p.z<22)
 
@@ -376,10 +415,21 @@ for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0] 
 ARM_CHAIN={s:(Vector((0,y*10,41)),Vector((-1,y*14,29)),Vector((3,y*14,22))) for s,y in (('L',1),('R',-1))}
 GARMENT=('OpenJacket','Zipper','ZipperTape','Pocket','HemStitch','BackSeam')
 SLEEVE=('Sleeve','Cuff')
+LEG=('Leg','LegFur')
+# Runtime IK chain (ChuckCharacter::SolveLeg): hip, knee, rest ankle.
+LEG_CHAIN={s:(Vector((-2,y*6,21)),Vector((-4,y*7.2,11)),Vector((2,y*7,5))) for s,y in (('L',1),('R',-1))}
 
-def smoothstep(x,lo,hi):
-    f=max(0.,min(1.,(x-lo)/(hi-lo)))
-    return f*f*(3-2*f)
+def leg_weights(p):
+    """Haunch blends from the body into the thigh; thigh blends into the
+    shin across the knee. Totals are 1."""
+    side='L' if p.y>0 else 'R'
+    hip,knee,ankle=LEG_CHAIN[side]
+    thigh=knee-hip; length=thigh.length
+    a=(p-hip).dot(thigh/length)
+    limb=smoothstep(a,-1.5,2.5)
+    e=smoothstep(a-length,-2.,2.)
+    weights={'root':1-limb,f'thigh_{side}':limb*(1-e),f'shin_{side}':limb*e}
+    return {bone:w for bone,w in weights.items() if w>1e-4}
 
 def garment_weights(p,label):
     """{bone: weight} for a garment vertex in world space; totals are 1."""
@@ -400,6 +450,20 @@ def garment_weights(p,label):
         chain=along*(1-smoothstep(r,3.,6.))*(1-smoothstep(a,4.,9.))
         e=0.
     weights={'root':1-chain,f'arm_{side}':chain*(1-e),f'forearm_{side}':chain*e}
+    if label not in SLEEVE:
+        # The lower jacket lifts with each thigh instead of being pierced by
+        # the haunch. Both thighs blend by distance so the centre back stays
+        # continuous when the legs move in opposite directions.
+        pull={}
+        for s,(hip,knee,_) in LEG_CHAIN.items():
+            axis=(knee-hip).normalized()
+            r=(p-(hip+axis*max(0.,min((knee-hip).length,(p-hip).dot(axis))))).length
+            pull[s]=.75*(1-smoothstep(r,5.,11.5))*(1-smoothstep(p.z,21.,28.))
+        total=sum(pull.values())
+        if total>.8:
+            pull={s:w*.8/total for s,w in pull.items()}; total=.8
+        weights={bone:w*(1-total) for bone,w in weights.items()}
+        for s,w in pull.items(): weights[f'thigh_{s}']=weights.get(f'thigh_{s}',0.)+w
     return {bone:w for bone,w in weights.items() if w>1e-4}
 
 def combine(objects, name):
@@ -417,16 +481,16 @@ def combine(objects, name):
             # FBX -> Unreal reflects Y. Name sides by their runtime coordinates.
             side = 'L' if center.y > 0 else 'R'
             bone = 'root'
-            if label in ('Thigh', 'Shin', 'ThighFur', 'ShinFur'):
-                bone = ('thigh_' if label in ('Thigh','ThighFur') else 'shin_') + side
-            elif label in ('Hand','Finger'):
+            if label in ('Hand','Finger'):
                 bone = 'forearm_' + side
             elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
                 bone = 'head'
-            if label in GARMENT+SLEEVE:
+            if label in GARMENT+SLEEVE+LEG:
                 groups={}
                 for vertex in part.data.vertices:
-                    for bone,w in garment_weights(part.matrix_world @ vertex.co,label).items():
+                    co=part.matrix_world @ vertex.co
+                    field=leg_weights(co) if label in LEG else garment_weights(co,label)
+                    for bone,w in field.items():
                         if bone not in groups: groups[bone]=part.vertex_groups.new(name=bone)
                         groups[bone].add([vertex.index],w,'REPLACE')
             elif label == 'Tail':
@@ -462,11 +526,17 @@ def combine(objects, name):
 
 body=combine(list(scene.objects),'SM_ChuckBody')
 footparts=[]
-footparts.append(ellipsoid('Foot',(1,0,0),(6.5,3.1,2),'Skin'))
-for toe in range(4):
-    y=(toe-1.5)*1.4
-    footparts.append(limb('Toe',(4,y,.1),(8,y,-.4),.7,'Skin'))
-    footparts.append(limb('Claw',(7.5,y,-.3),(9,y,-.7),.35,'Claw'))
+# Long, narrow hind paw. Runtime contract: origin 2.5 cm above ground, ankle
+# at local (-2,0,2.5) (ChuckCharacter::SolveLeg), sole close to local z=-2.
+footparts.append(chain_tube('Foot',[(-4.6,0,-.55),(-1,0,-.5),(4.6,0,-.85)],
+    lambda t:1.45+.35*math.sin(t*math.pi),'Skin',caps=(.9,.6),rings=14,squash=.74))
+footparts.append(ellipsoid('Heel',(-2.4,0,1.0),(2.0,1.6,1.9),'Skin'))
+for toe,(y,reach) in enumerate([(-2.0,2.6),(-1.0,3.6),(0.,3.9),(1.0,3.6),(2.1,2.4)]):
+    base=Vector((4.2 if abs(y)<1.5 else 3.4,y*.8,-.9)); tip=base+Vector((reach,y*.35,-.35))
+    mid=(base+tip)*.5+Vector((0,0,.25))
+    footparts.append(chain_tube('Toe',[base,mid,tip],lambda t:.6-.2*t,'Skin',caps=(.5,.8),segments=8,rings=6))
+    direction=(tip-mid).normalized()
+    footparts.append(limb('Claw',tip+direction*.25+Vector((0,0,-.15)),tip+direction*1.0+Vector((0,0,-.3)),.2,'Claw'))
 foot=combine(footparts,'SM_ChuckFoot')
 # Only body and one reusable foot are stored/exported; rest placement is in C++.
 for obj in (body,foot):

@@ -2,8 +2,8 @@
 
 blender --background SourceAssets/Chuck/Chuck.blend --python SourceAssets/Chuck/review_renders.py -- <out_dir>
 
-Never saves the .blend. Places two foot copies at an approximate neutral stance
-(runtime owns real foot placement) and a 180 cm scale bar, then renders
+Never saves the .blend. Places two foot copies at the runtime rest placement
+(ChuckCharacter owns walking foot placement) and a 180 cm scale bar, then renders
 Workbench views.
 """
 import sys
@@ -17,8 +17,9 @@ scene = bpy.context.scene
 for obj in scene.objects:
     obj.hide_render = obj.name not in ('SK_ChuckBody', 'SM_ChuckFoot')
 foot = bpy.data.objects['SM_ChuckFoot']
-foot.location = (1, 7.2, 0)
-twin = foot.copy(); twin.location = (1, -7.2, 0); scene.collection.objects.link(twin)
+# Rest placement from ChuckCharacter (foot origin 2.5 cm above ground).
+foot.location = (4, 7, 2.5)
+twin = foot.copy(); twin.location = (4, -7, 2.5); scene.collection.objects.link(twin)
 bpy.ops.mesh.primitive_cube_add(size=1, location=(45, 0, 90))
 bar = bpy.context.object; bar.scale = (4, 4, 180); bar.name = 'ScaleWorker180'
 bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, -.05))
@@ -57,4 +58,6 @@ shot('close_edge_right', (45, -38, 36), (7, -5, 32), lens=60)
 shot('close_collar', (40, -25, 60), (3, 0, 44), lens=60)
 shot('close_elbow', (10, -60, 28), (0, -13, 28), lens=60)
 shot('close_edge_underside', (40, -20, 5), (6, -5, 22), lens=60)
+shot('close_leg_foot', (38, -45, 12), (1, -7, 8), lens=60)
+shot('close_hand', (30, -38, 22), (5, -14, 19), lens=70)
 print('CHUCK_REVIEW_READY', out)

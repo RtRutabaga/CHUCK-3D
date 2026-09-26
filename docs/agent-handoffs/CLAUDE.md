@@ -56,3 +56,30 @@
   - Collar/head: a 30° head turn showed no visible collar clipping in the front view. No close-up or pitch test was done.
   - Legs, feet, hands and head are still primitives.
 - **Integration:** as before. Cherry-pick both commits in order, then run `Tools/Build-ChuckAssets.ps1`. Codex's current arm-swing code needs no change.
+
+## Third pass — continuous limbs, paws and shoulders (after main 9b9bd46 integration feedback)
+
+- **Input:** main `9b9bd46` and `docs/agent-handoffs/CODEX.md`. Packaged front/rear views showed flat sleeve caps above the shoulders and primitive legs, hands and paws. The Codex leg IK chain and foot origin were read from `ChuckCharacter.cpp` on main and kept exactly.
+- **Delivered commit:** the third commit on `codex/claude-character` ("Build continuous legs, paws, hands and domed shoulders"). It is based on `939580a`. `Tools/build_chuck_model.py` on main equals `939580a`, so it should cherry-pick cleanly onto main.
+- **Changed paths:** `Tools/build_chuck_model.py`; regenerated `SourceAssets/Chuck/{Chuck.blend, SK_ChuckBody.fbx, SM_ChuckBody.fbx, SM_ChuckFoot.fbx}`; `SourceAssets/Chuck/{README.md, check_model.py, review_renders.py, pose_test.py}`; `Review/after` (regenerated), new `Review/limbs`; this file. Nothing outside the owned paths.
+- **What changed:**
+  - `chain_tube`: a continuous tube with blended joint frames and domed ends. It replaces the sleeve builder and the separate thigh/shin ellipsoids.
+  - Legs: one tube per side along the IK chain, tucked into the heel. Graded root → thigh → shin weights.
+  - Lower jacket: blends toward both thighs by distance, so the hem lifts over the haunch.
+  - Shoulders: wider dropped shoulders cover domed sleeve heads (no flat caps).
+  - Paw: longer foot with heel, five toes and claws. Hands: palm, four curled fingers and a thumb.
+- **Contract:** unchanged. Same 14 bones, parents and heads, ear top 65.000 cm, slot names, asset paths and FBX settings. `SM_ChuckFoot` keeps slots Skin/Claw, origin convention and sole near local z=-2 (measured -1.96 vs -2.00 before). The ankle point (-2,0,2.5) sits inside the heel mound. Foot X extent is now -5.9..9.14.
+  - New weights: garment vertices now also carry `thigh_*`; legs blend `root`/`thigh_*`/`shin_*`.
+  - Source part names `Thigh`/`Shin`/`ThighFur`/`ShinFur` became `Leg`/`LegFur`; no runtime reference was found.
+- **Measurements:**
+  - `check_model.py`: all PASS (now including the foot sole check).
+  - Body 165,625 triangles (+6,101). Foot 17,120 (+6,176 each, ×2 in game).
+- **Evidence:** `SourceAssets/Chuck/Review/limbs/*_prev_vs_limbs.jpg`, with the previous delivery on the left.
+  - The previous neutral images used approximate foot placement; the new ones use runtime placement.
+  - Stride (thigh ±30/20°, knee 25°) and crouch (45°/60°) show a continuous leg, with the hem lifting instead of being pierced.
+  - Arm poses remain as in pass two.
+- **Not tested / remaining:**
+  - No Unreal import or packaged motion capture. The integration owner should re-run `Build-ChuckAssets.ps1` and `Verify-Package.ps1 -MotionCapture`, and watch the ankle/heel join during Codex's stance/swing and turns.
+  - Paws still rotate separately from the shin, so extreme foot pitch could open the ankle join.
+  - The IK "knee" sits behind the hip, which is the temporary rig's shape, not rat anatomy. A true hock/toe chain needs the coordinated rig milestone.
+  - Head and face unchanged. No UVs or LODs.
