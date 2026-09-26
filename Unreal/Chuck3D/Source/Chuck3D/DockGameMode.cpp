@@ -47,6 +47,7 @@ void ADockGameMode::StartPlay()
     auto* PlankMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockPlank.SM_DockPlank"));
     auto* BoatMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_HarborBoat.SM_HarborBoat"));
     auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
+    auto* WorkerMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockWorker.SM_DockWorker"));
     auto Prop = [&](const TCHAR* Name,FVector Position,UStaticMesh* Asset)
     {
         auto* Actor=World->SpawnActor<AStaticMeshActor>(Position,FRotator::ZeroRotator);
@@ -69,6 +70,8 @@ void ADockGameMode::StartPlay()
         Comp->SetWorldScale3D(Size/100.f);
         Comp->SetMaterial(0,Material(Color));
         Comp->SetCollisionProfileName(Collision ? TEXT("BlockAll") : TEXT("NoCollision"));
+        if(WorkerMesh && (FString(Name).StartsWith(TEXT("Human")) || FString(Name).StartsWith(TEXT("Worker"))))
+            Actor->SetActorHiddenInGame(true);
         return Actor;
     };
     // Units are centimetres. Ground top = 0; geometry is intentionally simple.
@@ -127,6 +130,7 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("WorkerCap"),Human+FVector(0,0,178),FVector(28,29,4),TEXT("Dark"),Sphere,false);
     Shape(TEXT("WorkerBelt"),Human+FVector(0,0,89),FVector(44,29,5),TEXT("Wood"),nullptr,false);
     for(float X : {-31.f,31.f}) Shape(TEXT("WorkerHand"),Human+FVector(X,0,79),FVector(10,12,15),TEXT("Skin"),Sphere,false);
+    if(WorkerMesh) Prop(TEXT("DockWorkerArt"),Human,WorkerMesh)->SetActorRotation(FRotator(0,-90,0));
     // Surface detail is nonblocking; the original simple collision remains predictable.
     FRandomStream DetailRandom(73);
     // Scanned paving supplies irregular joints without a second rectangular overlay.
@@ -242,7 +246,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(TestStage==0 && StageTime>1)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
-        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt"),TEXT("HarborBoatArt"),TEXT("RopeCoilArt")})
+        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt"),TEXT("HarborBoatArt"),TEXT("RopeCoilArt"),TEXT("DockWorkerArt")})
         {
             TArray<AActor*> Props;
             UGameplayStatics::GetAllActorsWithTag(this,FName(Tag),Props);

@@ -4,6 +4,7 @@ Run with full Unreal editor -ExecutePythonScript. Rebuilds connections without
 deleting expression objects that an already-loaded character may reference.
 """
 import unreal
+import os
 
 DEST='/Game/Art/Materials'
 LIB=unreal.MaterialEditingLibrary
@@ -29,6 +30,8 @@ SURFACES={
     'Navy':((.035,.067,.085),3,.85,.02,0),
     'Amber':((.32,.155,.045),5,.4,0,0),
     'Sky':((.4,.55,.7),8,1,0,0),
+    'Canvas':((.29,.255,.19),3,.91,.025,0),
+    'Leather':((.075,.035,.018),5,.68,.025,0),
 }
 SHADER=r'''
 struct SurfaceNoise {
@@ -106,6 +109,8 @@ def custom_inputs(names):
     return result
 
 for name,(color,kind,roughness,relief,metallic) in SURFACES.items():
+    selected=os.environ.get('CHUCK_ART_ONLY','')
+    if selected and name not in selected.split(','): continue
     mat=unreal.load_asset(f'{DEST}/M_{name}')
     if not mat: mat=tools.create_asset(f'M_{name}',DEST,unreal.Material,unreal.MaterialFactoryNew())
     character=name in ('Fur','Chest','Jacket','Seam','Skin','Eye','Claw','Metal','Whisker')
