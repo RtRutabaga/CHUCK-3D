@@ -72,3 +72,11 @@ DX11 screen-space reflections are enabled at quality 50/intensity 75, with 35 cm
 ## Directional body fur pass
 
 Short geometric tufts now cover the exposed chest, belly, legs and more of the muzzle. Facial hairs are shorter near the nose, with eye/nose/mouth clearances. Leg patches follow their matching bones. Body source is 131,194 triangles; each reusable foot is 10,944. No groom dependency or alpha cards were added. BuildCookRun passed without material errors, and the new Tools/Verify-Package.ps1 command passed all 40 checks. Front and walking captures were inspected; these stills do not establish motion quality or long-session performance. Fur and anatomy remain prototype studies. The verified wrapper was published as 6765c34.
+
+## Tavern props and claw material
+
+Original bevelled bench and shuttered/leaded windows replace visible primitives while retaining hidden collision. WindowGlass is an opaque material study; no interior or new playable area. Feet now preserve their authored Skin and Claw material slots instead of overriding both with Skin. Final packaging log: Local/tavern-final-build.log. The final package passed all 42 rendered checks (Local/verify-package-20260926-114439.log); Tavern_RatHeight was inspected. No material compile failures or variable-shadow warnings remained.
+
+## User steering — character first
+
+Finish/publish this in-flight tavern pass, then pause setting/world work. The user says Chuck remains far from the goal: primitive appearance, cartoony movement, unnatural leg placement and gaps near the open jacket/zipper edges. Automated checks do not establish acceptable character quality. Prepare a Codex plus Claude Code workflow for character work. The eventual character/rig must support walking, running, rolling, side-jumping, climbing and smoking a cigarette held in his mouth; these are design requirements, not newly implemented gameplay.

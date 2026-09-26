@@ -49,6 +49,8 @@ void ADockGameMode::StartPlay()
     auto* BoatMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_HarborBoat.SM_HarborBoat"));
     auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
     auto* WorkerMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockWorker.SM_DockWorker"));
+    auto* BenchMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_TavernBench.SM_TavernBench"));
+    auto* WindowMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_TavernWindow.SM_TavernWindow"));
     auto Prop = [&](const TCHAR* Name,FVector Position,UStaticMesh* Asset)
     {
         auto* Actor=World->SpawnActor<AStaticMeshActor>(Position,FRotator::ZeroRotator);
@@ -72,6 +74,8 @@ void ADockGameMode::StartPlay()
         Comp->SetMaterial(0,Material(Color));
         Comp->SetCollisionProfileName(Collision ? TEXT("BlockAll") : TEXT("NoCollision"));
         if(WorkerMesh && (FString(Name).StartsWith(TEXT("Human")) || FString(Name).StartsWith(TEXT("Worker"))))
+            Actor->SetActorHiddenInGame(true);
+        if((BenchMesh && FString(Name).StartsWith(TEXT("Bench"))) || (WindowMesh && FString(Name).StartsWith(TEXT("Window"))))
             Actor->SetActorHiddenInGame(true);
         return Actor;
     };
@@ -97,6 +101,7 @@ void ADockGameMode::StartPlay()
     for(float X : {-230.f,135.f}) {
         Shape(TEXT("WindowFrame"),FVector(X,322,160),FVector(80,12,95),TEXT("Wood"));
         Shape(TEXT("Window"),FVector(X,314,160),FVector(64,4,79),TEXT("Amber"));
+        if(WindowMesh) Prop(TEXT("TavernWindowArt"),FVector(X,322,160),WindowMesh)->SetActorRotation(FRotator(0,180,0));
     }
     Shape(TEXT("TavernSign"),FVector(40,313,250),FVector(170,12,32),TEXT("Wood"));
     auto* Sign = World->SpawnActor<AActor>();
@@ -118,6 +123,7 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("LowStep"),FVector(-40,-155,5),FVector(60,65,10),TEXT("Wood"));
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
+    if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
     // 180 cm dock worker, including boots and head. A scale prop, not an NPC system.
     const FVector Human(90,200,0);
     for(float X : {-12.f,12.f}) {
@@ -261,11 +267,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(TestStage==0 && StageTime>1)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
-        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt"),TEXT("HarborBoatArt"),TEXT("RopeCoilArt"),TEXT("DockWorkerArt")})
+        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt"),TEXT("HarborBoatArt"),TEXT("RopeCoilArt"),TEXT("DockWorkerArt"),TEXT("TavernBenchArt"),TEXT("TavernWindowArt")})
         {
             TArray<AActor*> Props;
             UGameplayStatics::GetAllActorsWithTag(this,FName(Tag),Props);
-            bool bValid=Props.Num()==(FString(Tag)==TEXT("DockPlankArt") ? 25 : 1);
+            const int32 Expected=FString(Tag)==TEXT("DockPlankArt") ? 25 : (FString(Tag)==TEXT("TavernWindowArt") ? 2 : 1);
+            bool bValid=Props.Num()==Expected;
             for(AActor* Actor:Props)
             {
                 const auto* Component=Actor->FindComponentByClass<UStaticMeshComponent>();
@@ -504,7 +511,19 @@ void ADockGameMode::Tick(float DeltaSeconds)
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Harbor_Elevated.png"),true,false);
         TestStage=35; StageTime=0;
     }
-    else if(TestStage==35 && StageTime>1) TestStage=99;
+    else if(TestStage==35 && StageTime>1)
+    {
+        Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-230,30,36));
+        Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter();
+        if(Chuck->IsElevated()) Chuck->ToggleCamera();
+        TestStage=36; StageTime=0;
+    }
+    else if(TestStage==36 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Tavern_RatHeight.png"),true,false);
+        TestStage=37; StageTime=0;
+    }
+    else if(TestStage==37 && StageTime>1) TestStage=99;
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

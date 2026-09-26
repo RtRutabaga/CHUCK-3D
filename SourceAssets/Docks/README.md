@@ -37,3 +37,9 @@ Files use Git LFS; Blender backups, logs and packaged output remain ignored. The
 The worker remains stationary and noninteractive. Hidden original human primitives preserve collision; the new visible mesh has none. No dialogue, rig, idle animation, face animation or additional NPC was added. This is a geometry study with overlapping clothing pieces, not a production character or a claim of realistic facial fidelity.
 
 Regenerate with `powershell -NoProfile -File .\Tools\Build-DockWorker.ps1`. The committed Canvas and Leather materials are required; `Tools/Build-ArtMaterials.ps1` can recreate them. The material generator's optional `CHUCK_ART_ONLY` environment variable accepts a comma-separated subset for incremental development. Without it, the full set is generated. No new tools or downloads are required.
+
+## Tavern frontage props
+
+`TavernProps.blend` contains `SM_TavernBench` (160 x 41.5 x 49 cm, 1,386 source polygons) and `SM_TavernWindow` (145 x 29.5 x 103.5 cm including open shutters and sill, 2,912 source polygons). These original meshes use bevelled wood, seat pegs/stretchers, small dark panes, lead diagonals, shutter planks and hinges. WindowGlass is an original opaque surface study with screen-space reflection support; there is no tavern interior or transparent view through the wall.
+
+Bench origin is ground level. Window origin is the original frame centre; its source front faces -Y, so runtime rotates it 180 degrees to compensate for FBX's Y reflection. Two copies fit within the existing frontage. Hidden original bench/window shapes retain collision and authored visuals have no new collision. Reproduce with `powershell -NoProfile -File .\Tools\Build-TavernProps.ps1`; the committed WindowGlass material can be regenerated through Build-ArtMaterials.ps1. No dependencies or external assets were added.

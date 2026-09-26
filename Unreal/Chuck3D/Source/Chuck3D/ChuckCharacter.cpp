@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -57,8 +58,16 @@ AChuckCharacter::AChuckCharacter()
         Foot->SetStaticMesh(FootAsset.Object);
         Foot->SetRelativeLocation(FVector(4,Side*7,2.5f));
         Foot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Skin.M_Skin")))
-            for(int32 I=0; I<Foot->GetNumMaterials(); ++I) Foot->SetMaterial(I,Surface);
+        if(FootAsset.Object)
+        {
+            const auto& Slots=FootAsset.Object->GetStaticMaterials();
+            for(int32 I=0; I<Slots.Num(); ++I)
+            {
+                const FString SurfaceName=Slots[I].MaterialSlotName.ToString();
+                if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),*SurfaceName,*SurfaceName)))
+                    Foot->SetMaterial(I,Surface);
+            }
+        }
         return Foot;
     };
     LeftFoot=MakeFoot(TEXT("FootLeft"),-1);
