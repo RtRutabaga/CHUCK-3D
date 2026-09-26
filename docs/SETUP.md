@@ -1,8 +1,14 @@
 # Computer and setup assessment
 
+## Blender installed for the character study
+
+2026-09-25: inspected installed tools and free storage before installation. No existing Blender was found; C: had approximately 277 GiB free. Installed portable **Blender 4.5.14 LTS**, build **62c1db4208e8**, under `C:\Users\ashsm\AppData\Local\Programs\CHUCK-Tools\blender-4.5.14-windows-x64`. Engine/project files remain separate. Downloaded from Blender's official mirror; archive SHA-256 matched `b9533d2397ac1984db4466fb23a7a4649391cca93f6e84209f9bcc60d071c8b9` from the official manifest. The first checksum comparison failed because PowerShell returned manifest bytes; decoding as UTF-8 confirmed an exact match before extraction/execution.
+
+[Blender 4.5 LTS](https://www.blender.org/releases/4-5/) is supported through July 2027. Exact rebuild commands, geometry budget and limitations are in SourceAssets/Chuck/README.md. Before committing new binaries, assessed the character's .blend, FBX, mesh and material assets at approximately 11.4 MB, covered by existing LFS attributes. The separate GitHub LFS remote previously passed upload/download verification. Remaining account quota is unknown; no paid storage purchase is authorized.
+
 ## Installed for the movement prototype
 
-2026-09-24: Unreal Engine **5.7.4**, changelist **51494982**, at `C:\Program Files\Epic Games\UE_5.7`; Visual Studio Build Tools **2022 17.14.41**, MSVC compiler **14.44.35229** (tools folder 14.44.35207), Windows SDK **10.0.26100.0**, and .NET Framework **4.8 SDK/targeting pack**. Unreal uses its bundled .NET **8.0.412**. Epic Games Launcher was installed through winget; the user completed sign-in and licensing. Blender remains deferred because this milestone uses only engine primitives.
+2026-09-24: Unreal Engine **5.7.4**, changelist **51494982**, at `C:\Program Files\Epic Games\UE_5.7`; Visual Studio Build Tools **2022 17.14.41**, MSVC compiler **14.44.35229** (tools folder 14.44.35207), Windows SDK **10.0.26100.0**, and .NET Framework **4.8 SDK/targeting pack**. Unreal uses its bundled .NET **8.0.412**. Epic Games Launcher was installed through winget; the user completed sign-in and licensing. Blender was subsequently added for the custom character form study; see below.
 
 The project uses a small C++ module rather than the initially suggested Blueprint-only setup to make the geometry and control logic reproducible from source. First editor compilation succeeded, but Unreal's header precompile encountered memory pressure. The build script now limits compilation to one action and disables Unreal Build Accelerator. Close the editor before building to avoid Live Coding conflicts. No unrelated user applications were closed.
 

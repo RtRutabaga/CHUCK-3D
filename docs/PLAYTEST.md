@@ -1,12 +1,12 @@
 # Movement and camera playtest
 
-Scope: one placeholder Waterdeep dock, tavern frontage and stationary human scale reference. Chuck is 65 cm tall in an oversized purple open-jacket proxy. Combat, dialogue, pickups, custom art and additional maps are deferred by the latest user request.
+Scope: one Waterdeep dock, tavern frontage and stationary human scale reference. Chuck is 65 cm tall in a custom Blender form study with an oversized open purple jacket. Combat, dialogue, pickups, finished art and additional maps are deferred.
 
 ## Launch
 
 Double-click `Launch-Prototype.cmd` at the repository root. It opens `Builds/Windows/Chuck3D.exe` in a 1280 x 720 window. Click the game window to capture input. This local packaged build does not need the Unreal editor open.
 
-Verified 2026-09-25 with the revised 65 cm character: Unreal 5.7.4 Windows Development package builds and runs. All 23 rendered runtime checks passed in the rendered package, including pier-gap jumps in both cameras and simulated keyboard/Xbox input. Both rendered views were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
+Verified 2026-09-26 with the custom Blender character: Unreal 5.7.4 Windows Development package builds and runs. All 25 rendered runtime checks passed, including imported mesh/ear height, pier-gap jumps in both cameras and simulated keyboard/Xbox input. Front, elevated and rat-height captures were visually inspected. A physical Xbox controller and the complete user comparison route remain untested.
 
 ## Controls
 

@@ -4,6 +4,7 @@ A separate Windows PC adaptation prototype in Unreal Engine, with Blender for la
 
 - [Project brief](docs/PROJECT-BRIEF.md)
 - [Character references and art direction](docs/ART-DIRECTION.md)
+- [Custom character asset study](SourceAssets/Chuck/README.md)
 - [Hardware and installation assessment](docs/SETUP.md)
 - [Prototype and camera test plan](docs/PROTOTYPE.md)
 - [Reference provenance](References/PROVENANCE.md)

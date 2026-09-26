@@ -31,43 +31,24 @@ AChuckCharacter::AChuckCharacter()
 
     RatVisual = CreateDefaultSubobject<USceneComponent>(TEXT("RatVisual"));
     RatVisual->SetupAttachment(GetRootComponent());
-    RatVisual->SetRelativeLocation(FVector(0,0,-32.5f));
-    RatVisual->SetRelativeScale3D(FVector(65.f / 30.48f));
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
-    static ConstructorHelpers::FObjectFinder<UMaterialInterface> Gray(TEXT("/Game/Prototype/Materials/M_Gray.M_Gray"));
-    static ConstructorHelpers::FObjectFinder<UMaterialInterface> Purple(TEXT("/Game/Prototype/Materials/M_Purple.M_Purple"));
-    static ConstructorHelpers::FObjectFinder<UMaterialInterface> Pink(TEXT("/Game/Prototype/Materials/M_Pink.M_Pink"));
-    static ConstructorHelpers::FObjectFinder<UMaterialInterface> Dark(TEXT("/Game/Prototype/Materials/M_Dark.M_Dark"));
-    auto Part = [&](const TCHAR* Name, FVector Pos, FVector Size, UMaterialInterface* Material, bool Box=false)
+    RatVisual->SetRelativeLocation(FVector(0,0,-35.f));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> BodyAsset(TEXT("/Game/Characters/Chuck/SM_ChuckBody.SM_ChuckBody"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> FootAsset(TEXT("/Game/Characters/Chuck/SM_ChuckFoot.SM_ChuckFoot"));
+    auto* Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ChuckBody"));
+    Body->SetupAttachment(RatVisual);
+    Body->SetStaticMesh(BodyAsset.Object);
+    Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    auto MakeFoot = [&](const TCHAR* Name,float Side)
     {
-        auto* Mesh = CreateDefaultSubobject<UStaticMeshComponent>(Name);
-        Mesh->SetupAttachment(RatVisual);
-        Mesh->SetStaticMesh(Box ? Cube.Object : Sphere.Object);
-        Mesh->SetRelativeLocation(Pos);
-        Mesh->SetRelativeScale3D(Size / 100.0f);
-        Mesh->SetMaterial(0, Material);
-        Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        return Mesh;
+        auto* Foot=CreateDefaultSubobject<UStaticMeshComponent>(Name);
+        Foot->SetupAttachment(RatVisual);
+        Foot->SetStaticMesh(FootAsset.Object);
+        Foot->SetRelativeLocation(FVector(4,Side*7,2.5f));
+        Foot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        return Foot;
     };
-    Part(TEXT("Body"), FVector(0,0,13), FVector(10,11,20), Gray.Object);
-    Part(TEXT("Head"), FVector(2,0,24), FVector(12,10,9), Gray.Object);
-    Part(TEXT("Muzzle"), FVector(8,0,23), FVector(9,6,5), Gray.Object);
-    Part(TEXT("Nose"), FVector(12,0,23), FVector(2,3,2), Pink.Object);
-    Part(TEXT("EarLeft"), FVector(0,-4,28), FVector(4,4,4.96f), Pink.Object);
-    Part(TEXT("EarRight"), FVector(0,4,28), FVector(4,4,4.96f), Pink.Object);
-    Part(TEXT("EyeLeft"), FVector(6,-4.2f,25), FVector(1.3f,1.3f,1), Dark.Object);
-    Part(TEXT("EyeRight"), FVector(6,4.2f,25), FVector(1.3f,1.3f,1), Dark.Object);
-    // Three pieces leave the gray chest exposed: oversized, visibly open jacket.
-    Part(TEXT("JacketBack"), FVector(-4,0,12), FVector(8,15,21), Purple.Object);
-    Part(TEXT("JacketLeft"), FVector(0,-6,12), FVector(10,6,21), Purple.Object);
-    Part(TEXT("JacketRight"), FVector(0,6,12), FVector(10,6,21), Purple.Object);
-    Part(TEXT("PawLeft"), FVector(3,-6,8), FVector(4,3,5), Gray.Object);
-    Part(TEXT("PawRight"), FVector(3,6,8), FVector(4,3,5), Gray.Object);
-    LeftFoot = Part(TEXT("FootLeft"), FVector(3,-3,2), FVector(8,3,4), Pink.Object);
-    RightFoot = Part(TEXT("FootRight"), FVector(3,3,2), FVector(8,3,4), Pink.Object);
-    Part(TEXT("Tail"), FVector(-15,0,3), FVector(24,2,2), Pink.Object);
-
+    LeftFoot=MakeFoot(TEXT("FootLeft"),-1);
+    RightFoot=MakeFoot(TEXT("FootRight"),1);
     Boom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     Boom->SetupAttachment(GetRootComponent());
     Boom->SetUsingAbsoluteRotation(true);
@@ -148,7 +129,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     const float WalkAmount = FMath::Clamp(GetVelocity().Size2D()/95.f,0.f,1.f);
     GaitPhase += DeltaSeconds * WalkAmount * 13.f;
     const float Stride = FMath::Sin(GaitPhase)*2.5f*WalkAmount;
-    LeftFoot->SetRelativeLocation(FVector(3+Stride,-3,2+FMath::Max(0.f,Stride)*.35f));
-    RightFoot->SetRelativeLocation(FVector(3-Stride,3,2+FMath::Max(0.f,-Stride)*.35f));
+    LeftFoot->SetRelativeLocation(FVector(4+Stride,-7,2.5f+FMath::Max(0.f,Stride)*.35f));
+    RightFoot->SetRelativeLocation(FVector(4-Stride,7,2.5f+FMath::Max(0.f,-Stride)*.35f));
     if (GetActorLocation().Z < -100) ResetToDock();
 }

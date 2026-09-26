@@ -4,7 +4,7 @@ The first playable Waterdeep movement/camera milestone is complete locally. A se
 
 ## Revised scale and art direction
 
-User-supplied character images are preserved under References/ArtDirection with hashes and provenance in docs/ART-DIRECTION.md. The target is natural gray-brown fur, believable rat anatomy and oversized purple cloth clothing, with Baldur's Gate 3 as the future visual quality benchmark. No finished character asset is claimed. Human scale remains 180 cm; Chuck's mesh and capsule are now 65 cm, 30 cm capsule diameter. Spawn/reset/test heights and both camera booms were adjusted. The bench is no longer passable underneath. Movement speed and jump strength are unchanged.
+User-supplied character images are preserved under References/ArtDirection with hashes and provenance in docs/ART-DIRECTION.md. The target is natural gray-brown fur, believable rat anatomy and oversized purple cloth clothing, with Baldur's Gate 3 as the future visual quality benchmark. A Blender 4.5.14 form study now supplies the body and reusable foot meshes. It is not a finished character asset: no rig, groom, cloth simulation, texture maps, LODs or final animation set. Human scale remains 180 cm; Chuck's mesh and capsule are now 65 cm, 30 cm capsule diameter. Spawn/reset/test heights and both camera booms were adjusted. The bench is no longer passable underneath. Movement speed and jump strength are unchanged.
 
 ## Presentation and camera pass
 
@@ -14,7 +14,7 @@ Both views remain available. Elevated boom is 400 cm at -48 degrees, 65-degree F
 
 ## What runs
 
-Unreal 5.7.4 (CL 51494982), C++ runtime scene built from primitives: quay and pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Chuck is a 65 cm gray rat with a purple open-jacket proxy. Walking, jumping, blocking collision, fall reset, elevated and rat-height cameras, keyboard/mouse and Xbox mappings are implemented. No dialogue, combat, pickups, finished artwork or additional maps.
+Unreal 5.7.4 (CL 51494982), C++ runtime scene built from primitives: quay and pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Chuck is a 65 cm gray rat using the imported Blender form study and stable project materials. Walking, jumping, blocking collision, fall reset, elevated and rat-height cameras, keyboard/mouse and Xbox mappings are implemented. No dialogue, combat, pickups, finished artwork or additional maps.
 
 The editor map is intentionally empty until Play: the game mode constructs the scene. Content contains one small map and 14 flat materials. Blender is deferred until custom assets. Exact installed compiler/SDK versions and the original hardware assessment are in docs/SETUP.md. Build scripts use one compilation action without UBA because this 16 GB machine encountered memory pressure. Close Unreal before building to avoid Live Coding conflicts.
 
@@ -22,7 +22,7 @@ The editor map is intentionally empty until Play: the game mode constructs the s
 
 - Editor and game C++ targets compiled; Windows Development BuildCookRun completed with exit code 0.
 - Final packaged game ran with DirectX 11 rendering at 1280 x 720. All 23 rendered runtime checks passed: spawn/scale, walking, jumping/landing, wall collision, falling reset, camera switching, pier collision, simulated keyboard/Xbox input, crossing the same pier gap in both cameras, camera retraction at the warehouse wall, settled camera blends, and recentering.
-- The revised 65 cm Windows build passed all 23 rendered checks on 2026-09-25. Both scale captures were inspected beside the unchanged 180 cm human: Chuck is visibly larger, and both views frame the new size. Foreground props can still occupy much of the rat-height view; this is an unresolved framing/comfort consideration, not a selected final camera. Earlier manual keyboard C switching worked before this pass.
+- The revised Windows build passed all 25 rendered checks on 2026-09-26: imported Blender body/ear height, spawn/scale, movement, jump/landing, wall collision, camera retraction, falling reset, camera switching/blends, simulated keyboard/Xbox input, both-camera pier gap traversal and recentering. Final front, elevated and rat-height captures were inspected. Foreground props can still occupy much of the rat-height view; this is an unresolved framing/comfort consideration, not a selected final camera.
 - Physical Xbox hardware, long-session performance, and the user's full comfort/visibility route have NOT been verified. No final camera selection.
 - Evidence stays in ignored Local/scale-build.log, Local/scale-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Scale_*.png.
 

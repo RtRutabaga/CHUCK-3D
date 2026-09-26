@@ -8,6 +8,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/StaticMeshActor.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -219,6 +220,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
         Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,65.f,.01f),TEXT("Chuck collision height is 65 cm"));
+        auto* Body=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+        Check(Body && Body->GetStaticMesh(),TEXT("custom Blender body asset loads"));
+        if(Body && Body->GetStaticMesh())
+        {
+            const auto Bounds=Body->GetStaticMesh()->GetBounds();
+            Check(FMath::IsNearlyEqual(static_cast<float>(Bounds.Origin.Z+Bounds.BoxExtent.Z),65.f,1.f),TEXT("imported model ear height is 65 cm"));
+        }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));
         Chuck->ToggleCamera(); Check(Chuck->IsElevated(),TEXT("switches back to elevated camera"));
@@ -349,7 +357,17 @@ void ADockGameMode::Tick(float DeltaSeconds)
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Scale_RatHeight.png"),true,false);
         TestStage=23; StageTime=0;
     }
-    else if(TestStage==23 && StageTime>1) TestStage=99;
+    else if(TestStage==23 && StageTime>1)
+    {
+        Chuck->SetActorRotation(FRotator(0,240,0));
+        TestStage=24; StageTime=0;
+    }
+    else if(TestStage==24 && StageTime>1)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Chuck_Front.png"),true,false);
+        TestStage=25; StageTime=0;
+    }
+    else if(TestStage==25 && StageTime>1) TestStage=99;
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
