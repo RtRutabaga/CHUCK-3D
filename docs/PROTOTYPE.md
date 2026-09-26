@@ -27,3 +27,5 @@ Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visib
 Camera decision: OPEN. This milestone exists for the user's comparison, not a commitment to either view.
 
 When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
+
+The material/daylight pass adds original procedural surfaces, atmospheric sky and richer nonplayable harbor roofs. See GRAPHICS-PASS.md. These improve the study without claiming finished artwork or changing collision and camera controls.

@@ -4,7 +4,7 @@ Authored in Blender 4.5.14 LTS (build 62c1db4208e8), from the user's supplied re
 
 `Chuck.blend` is the editable source. `SK_ChuckBody.fbx` is the skinned body import source; `SM_ChuckFoot.fbx` supplies the two foot targets. `SM_ChuckBody.fbx` preserves the static form study. Centimetres, Z up, nose toward +X, feet at ground Z=0. The body reaches Z=65 at the top of the ears. FBX reflects Y on import, so left/right bone names are assigned for Unreal coordinates.
 
-The form study contains a continuous tapered trunk and muzzle, inset eyes and ears, cheek tufts, whiskers, a curved tapered tail, separate paws, and an open purple jacket with lapels, cuffs, pockets, seams and fasteners. Runtime material slots use the stable gray, purple, dark and pink prototype materials. Authored vertex colors are not currently used by those materials.
+The form study contains a continuous tapered trunk and muzzle, inset eyes and ears, cheek tufts, whiskers, a curved tapered tail, separate paws, and an open purple jacket with lapels, cuffs, pockets, seams and fasteners. Imported slots retain the blockout materials; runtime overrides now select the original fur, chest, jacket, skin, eye and metal art materials. See docs/GRAPHICS-PASS.md. Authored vertex colors are not currently used by those materials.
 
 The body is approximately 87,000 triangles; each foot is approximately 11,000 triangles. This is unoptimized prototype topology. A 14-bone authored rig includes a root, head, paired thighs/shins and arms/forearms, and four tail bones. Source part membership supplies limb weights; neighboring tail weights blend smoothly. Unreal may add an armature root during import.
 

@@ -6,7 +6,7 @@ Scope: one Waterdeep dock, tavern frontage and stationary human scale reference.
 
 Double-click `Launch-Prototype.cmd` at the repository root. It opens `Builds/Windows/Chuck3D.exe` in a 1280 x 720 window. Click the game window to capture input. This local packaged build does not need the Unreal editor open.
 
-Verified with the skeletal Chuck update: Unreal 5.7.4 Windows Development package builds and runs. All 32 rendered runtime checks passed, including rig scale/axes, material persistence, articulated sleeve motion, pier-gap jumps in both cameras and simulated keyboard/Xbox input. A physical Xbox controller and subjective movement/camera comfort remain untested.
+Verified with the material/daylight update: Unreal 5.7.4 Windows Development package builds and runs. All 32 rendered runtime checks passed, including rig scale/axes, material persistence, articulated sleeve motion, pier-gap jumps in both cameras and simulated keyboard/Xbox input. A physical Xbox controller and subjective movement/camera comfort remain untested.
 
 ## Controls
 
@@ -59,3 +59,5 @@ When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden te
 The normal smoke run performs 31 checks; adding -ChuckCapture adds the settled recenter check for 32 and captures both views plus walking poses. These automated checks do not establish subjective camera comfort or validate a physical controller.
 
 For this rig pass, walk, turn, stop and jump on clear quay ground in both views. Watch whether the legs remain connected to the feet, the small sleeve/tail movements read naturally, and stops settle without distracting motion. Joint surfaces and foot planting are still prototype quality.
+
+For the graphics pass, compare fur and purple-jacket readability in sun and shade, surface detail near the crate and pier, and the distant harbor silhouette in both views. Water is an opaque procedural study; shoreline transitions and final props are still unfinished.

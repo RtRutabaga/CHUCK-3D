@@ -43,6 +43,7 @@ void ADockGameMode::StartPlay()
     auto* Sphere = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Cylinder = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     auto Material = [](const TCHAR* Name) {
+        if(auto* Art=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Name,Name))) return Art;
         return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Name,Name));
     };
     auto Shape = [&](const TCHAR* Name,FVector Position,FVector Size,const TCHAR* Color,UStaticMesh* Mesh=nullptr,bool Collision=true) {
@@ -115,7 +116,7 @@ void ADockGameMode::StartPlay()
     {
         const float X=-477+Col*40+(Row%2)*14;
         if(X>181) continue;
-        auto* Paver=Shape(TEXT("Paving"),FVector(X,-380+Row*38,-1.2f),FVector(37,35,3),DetailRandom.FRand()>.45f ? TEXT("Stone") : TEXT("Plaster"),nullptr,false);
+        auto* Paver=Shape(TEXT("Paving"),FVector(X,-380+Row*38,-1.2f),FVector(37,35,3),TEXT("Stone"),nullptr,false);
         Paver->SetActorRotation(FRotator(0,DetailRandom.FRandRange(-1.5f,1.5f),0));
     }
     for(int32 Row=0;Row<26;++Row)
@@ -170,25 +171,33 @@ void ADockGameMode::StartPlay()
         const float Height=DetailRandom.FRandRange(280,580);
         Shape(TEXT("FarWarehouse"),FVector(3500,-2200+Building*420,Height*.5f-55),FVector(250,245,Height),Building%2 ? TEXT("Roof") : TEXT("Stone"),nullptr,false);
         Shape(TEXT("FarRoof"),FVector(3500,-2200+Building*420,Height-40),FVector(275,270,25),TEXT("Dark"),nullptr,false);
+        const float CenterY=-2200+Building*420;
+        for(float Side : {-1.f,1.f})
+        {
+            auto* Slope=Shape(TEXT("FarPitchedRoof"),FVector(3500,CenterY+Side*65,Height-8),FVector(280,164,12),TEXT("Roof"),nullptr,false);
+            Slope->SetActorRotation(FRotator(0,0,Side*32));
+        }
+        Shape(TEXT("FarChimney"),FVector(3540,CenterY+70,Height+38),FVector(32,34,115),TEXT("Stone"),nullptr,false);
+        for(float Z=90; Z<Height-80; Z+=85) for(float Offset : {-65.f,0.f,65.f})
+            Shape(TEXT("FarWindow"),FVector(3373,CenterY+Offset,Z),FVector(3,27,43),TEXT("Dark"),nullptr,false);
     }
+    Shape(TEXT("FarHarborWall"),FVector(3440,0,-8),FVector(170,4850,94),TEXT("Stone"),nullptr,false);
     Shape(TEXT("MooredHull"),FVector(980,600,-30),FVector(550,160,90),TEXT("Wood"),Sphere,false);
     Shape(TEXT("ShipMast"),FVector(980,600,210),FVector(10,10,460),TEXT("Wood"),Cylinder,false);
     Shape(TEXT("ShipYard"),FVector(980,600,320),FVector(12,260,10),TEXT("Wood"),nullptr,false);
     Shape(TEXT("FurledSail"),FVector(980,600,312),FVector(18,245,19),TEXT("Plaster"),Sphere,false);
-    // Slim ripple strips break up the flat water without costly transparent shaders.
-    for(int32 Ripple=0;Ripple<70;++Ripple)
-        Shape(TEXT("WaterRipple"),FVector(DetailRandom.FRandRange(300,1700),DetailRandom.FRandRange(-1000,1100),-59.8f),FVector(DetailRandom.FRandRange(20,100),1.2f,.1f),TEXT("Sky"),nullptr,false);
+    // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
     HarborFog->GetComponent()->SetStartDistance(1000);
     HarborFog->GetComponent()->SetFogInscatteringColor(FLinearColor(.38f,.48f,.53f));
     auto* Sun = World->SpawnActor<ADirectionalLight>(FVector(0,0,500),FRotator(-38,-40,0));
     Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Sun->GetLightComponent()->SetIntensity(3.0f);
-    Sun->GetLightComponent()->SetLightColor(FLinearColor(1,.86f,.68f));
+    Sun->GetLightComponent()->SetIntensity(4.0f);
+    Sun->GetLightComponent()->SetLightColor(FLinearColor(1,.9f,.77f));
     auto* Sky = World->SpawnActor<ASkyLight>();
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Sky->GetLightComponent()->SetIntensity(0.8f);
+    Sky->GetLightComponent()->SetIntensity(0.55f);
     // The enclosing sky is 90 m away, below UE's default 1500 m sky threshold.
     // Capture it as ambient light so the shaded sides remain readable at rat height.
     Sky->GetLightComponent()->SkyDistanceThreshold = 1000;
@@ -235,8 +244,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(int32 I=0; I<Body->GetNumMaterials(); ++I)
             {
                 const auto* Mat=Body->GetMaterial(I);
-                bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Prototype/Materials/"));
-                bPurple |= Mat && Mat->GetName()==TEXT("M_Purple");
+                bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Art/Materials/"));
+                bPurple |= Mat && Mat->GetName()==TEXT("M_Jacket");
             }
             Check(bCorrectMaterials && bPurple,TEXT("skeletal material assignments persist including purple jacket"));
         }

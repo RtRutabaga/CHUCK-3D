@@ -40,6 +40,16 @@ AChuckCharacter::AChuckCharacter()
     Body->SetupAttachment(RatVisual);
     Body->SetSkinnedAssetAndUpdate(BodyAsset.Object);
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if(BodyAsset.Object)
+    {
+        const auto& Slots=BodyAsset.Object->GetMaterials();
+        for(int32 I=0; I<Slots.Num(); ++I)
+        {
+            const FString Name=Slots[I].MaterialSlotName.ToString();
+            if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),*Name,*Name)))
+                Body->SetMaterial(I,Surface);
+        }
+    }
     auto MakeFoot = [&](const TCHAR* Name,float Side)
     {
         auto* Foot=CreateDefaultSubobject<UStaticMeshComponent>(Name);
@@ -47,6 +57,8 @@ AChuckCharacter::AChuckCharacter()
         Foot->SetStaticMesh(FootAsset.Object);
         Foot->SetRelativeLocation(FVector(4,Side*7,2.5f));
         Foot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Skin.M_Skin")))
+            for(int32 I=0; I<Foot->GetNumMaterials(); ++I) Foot->SetMaterial(I,Surface);
         return Foot;
     };
     LeftFoot=MakeFoot(TEXT("FootLeft"),-1);
