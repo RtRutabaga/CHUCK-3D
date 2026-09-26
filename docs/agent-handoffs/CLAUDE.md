@@ -34,3 +34,25 @@
   - Cherry-pick the commit onto main, then run `Tools/Build-ChuckAssets.ps1` with Unreal closed, then the normal package and verification.
   - No rig change, so it can integrate independently of Codex's movement work.
   - Proposed next steps, not started: a jacket that deforms with the arms (sleeves joined to the shell through armholes, graded shoulder weights), then the production-rig proposal from `CHARACTER-PLAN.md` step 3 before remodeling legs, feet and hands.
+
+## Second pass — jacket follows the arms
+
+- **Delivered commit:** the commit after "Rebuild Chuck jacket as one continuous garment" on `codex/claude-character` ("Grade Chuck garment weights and join sleeves through the elbow").
+- **Changed paths:** `Tools/build_chuck_model.py`, regenerated `SourceAssets/Chuck/{Chuck.blend, *.fbx}`, `SourceAssets/Chuck/{README.md, check_model.py}`, new `SourceAssets/Chuck/pose_test.py` and `Review/poses/`, updated `Review/after/`. Nothing outside the owned paths.
+- **What changed:**
+  - Weights: jacket shell, sleeves and stitched details share one spatial field. Sleeves grade root → `arm_*` → `forearm_*`. Armhole shell cloth takes `arm_*` weight, fading out below the top of the upper arm and away from the arm axis, and never takes forearm weight.
+  - Sleeves: the two overlapping tubes (`Sleeve` + `SleeveLower`) are now one tube bending through the elbow.
+  - Neutral form: torso and jacket sides slimmed about 1 cm per side, sleeves thinned.
+- **Contract:** unchanged. Same 14 bones, parents, head positions, 65.000 cm ear top, slot names and asset names. The `SleeveLower` source part name no longer exists, but no runtime code depended on it. What changes is the weight distribution on `arm_*`/`forearm_*`/`root`: garment vertices near the arms now move with them.
+- **Measurements:**
+  - `check_model.py`: all PASS, including 2,130 (L) / 2,115 (R) vertices with graded arm/forearm weights and 0 weight-total errors.
+  - Body triangles 159,524; foot 10,944.
+- **Pose evidence** (Blender Workbench, rigid 9e337c3 weights left, graded right): `SourceAssets/Chuck/Review/poses/*_rigid_vs_graded.jpg`.
+  - Shoulder: at 35° swing, 80° reach and 45° side raise, the sleeve top no longer cuts into or separates from the shell.
+  - Elbow: the pinch between the two sleeve tubes is gone.
+- **Not tested / remaining flaws:**
+  - No Unreal import or in-game motion. The runtime currently only swings about ±7°, so the in-game difference will be subtle.
+  - At large raises the armhole cloth stretches as a smooth web; there is no real armhole seam topology or cloth simulation.
+  - Collar/head: a 30° head turn showed no visible collar clipping in the front view. No close-up or pitch test was done.
+  - Legs, feet, hands and head are still primitives.
+- **Integration:** as before. Cherry-pick both commits in order, then run `Tools/Build-ChuckAssets.ps1`. Codex's current arm-swing code needs no change.

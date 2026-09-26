@@ -46,24 +46,27 @@ def tris(obj):
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 print('CHUCK_INFO triangles body', tris(body), 'foot', tris(foot))
 
-# Jacket garment closure: jacket-material faces weighted only to root form the
-# solidified shell + zipper/stitch parts. Count open (boundary) edges on the
-# Jacket-material faces; the solidify rim should leave none.
+# Jacket garment closure: every Jacket-material face (solidified shell and
+# closed sleeve tubes) must have a neighbour across each edge.
 jacket_slots = {i for i, m in enumerate(body.data.materials) if m.name.split('.')[0] == 'Jacket'}
+lining_slots = jacket_slots | {i for i, m in enumerate(body.data.materials) if m.name.split('.')[0] == 'Seam'}
 bm = bmesh.new(); bm.from_mesh(body.data)
-root_idx = next(i for i, n in groups.items() if n == 'root')
-deform = bm.verts.layers.deform.active
-def is_shell(f):
-    return f.material_index in jacket_slots and all(root_idx in v[deform] for v in f.verts)
-shell = {f for f in bm.faces if is_shell(f)}
 open_edges = 0
-for f in shell:
+for f in bm.faces:
+    if f.material_index not in jacket_slots: continue
     for e in f.edges:
-        linked = [g for g in e.link_faces if g.material_index in jacket_slots or
-                  body.data.materials[g.material_index].name.split('.')[0] == 'Seam']
-        if len(linked) < 2: open_edges += 1
+        if sum(1 for g in e.link_faces if g.material_index in lining_slots) < 2: open_edges += 1
 check(open_edges == 0, 'jacket shell has no open edges', f'{open_edges} open')
 bm.free()
+
+# Garment deformation: sleeves and the armhole region carry graded arm/forearm
+# weights rather than a single rigid bone.
+for s in 'LR':
+    arm = next((g.index for g in body.vertex_groups if g.name == f'arm_{s}'), None)
+    fore = next((g.index for g in body.vertex_groups if g.name == f'forearm_{s}'), None)
+    blended = sum(1 for v in body.data.vertices
+                  if {g.group for g in v.groups if 0 < g.weight < 1} & {arm, fore})
+    check(blended > 0, f'graded arm weights {s}', f'{blended} blended vertices')
 
 print('CHUCK_CHECK_DONE', 'FAIL' if failures else 'PASS', failures)
 sys.exit(1 if failures else 0)

@@ -92,21 +92,26 @@ def limb(name, a, b, radius, mat):
     obj.rotation_quaternion = (Vector(b)-Vector(a)).to_track_quat('Z', 'Y')
     return obj
 
-def cloth_limb(name,a,b,start_radius,end_radius,mat):
-    """Tapered sleeve with shallow gathered folds instead of an ellipsoid."""
-    a,b=Vector(a),Vector(b)
-    direction=(b-a).normalized()
-    u=direction.cross(Vector((1,0,0))).normalized(); v=direction.cross(u)
-    length=(b-a).length
+def cloth_sleeve(name,shoulder,elbow,wrist,start_radius,end_radius,mat):
+    """One continuous tapered sleeve bending through the elbow, with shallow
+    gathered folds. A single tube avoids the pinch of two overlapping tubes."""
+    shoulder,elbow,wrist=Vector(shoulder),Vector(elbow),Vector(wrist)
+    upper=(elbow-shoulder).length; lower=(wrist-elbow).length; total=upper+lower
+    d_up=(elbow-shoulder).normalized(); d_lo=(wrist-elbow).normalized()
     verts,faces=[],[]
-    rings,segments=13,32
+    rings,segments=22,32
+    reference=Vector((1,0,0))
     for row in range(rings):
-        t=row/(rings-1)
-        center=a+direction*((t*1.14-.07)*length)
-        radius=(start_radius*(1-t)+end_radius*t)*(.9+.1*math.sin(t*math.pi))
+        s=(row/(rings-1))*1.04*total-.04*upper  # tuck the top into the shoulder
+        center=shoulder+d_up*s if s<=upper else elbow+d_lo*(s-upper)
+        blend=max(0.,min(1.,(s-upper+2.)/4.))  # rotate ring frames over +/-2 cm
+        direction=(d_up*(1-blend)+d_lo*blend).normalized()
+        u=direction.cross(reference).normalized(); v=direction.cross(u)
+        t=s/total
+        radius=(start_radius*(1-t)+end_radius*t)*(.92+.08*math.sin(max(0.,t)*math.pi))
         for j in range(segments):
             angle=j*math.tau/segments
-            fold=.11*math.sin(t*math.pi*5+angle*2)+.06*math.sin(angle*5+t*3)
+            fold=.11*math.sin(t*math.pi*9+angle*2)+.06*math.sin(angle*5+t*3)
             verts.append(center+(radius+fold)*(u*math.cos(angle)+v*math.sin(angle)))
     for row in range(rings-1):
         for j in range(segments):
@@ -117,7 +122,7 @@ def cloth_limb(name,a,b,start_radius,end_radius,mat):
 
 # Continuous tapered trunk rather than overlapping spherical jacket pieces.
 verts, faces = [], []
-profile = [(12,4,6,-2),(18,7,9,-2),(25,8.2,10,-1),(34,8,9.5,-.5),(42,6,8,0),(47,4,5,1)]
+profile = [(12,4,6,-2),(18,7,8.8,-2),(25,8.2,9.2,-1),(34,8,8.8,-.5),(42,6,7.8,0),(47,4,5,1)]
 N = 40
 for z, rx, ry, cx in profile:
     for j in range(N):
@@ -193,8 +198,8 @@ for side in (-1,1):
 # so plackets, lapels and stitching cannot drift away from the shell edge.
 # Solidify gives real cloth thickness; its rim closes every boundary and the
 # inner shell carries the lining (Seam slot). The chest opening stays open.
-JACKET_PROFILE=[(18.5,8.9,11.5,-1),(21,9.1,11.6,-1),(30,9.6,11.8,-.5),(38,9.2,11.4,0),
-                (42,8.0,10.4,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
+JACKET_PROFILE=[(18.5,8.9,10.7,-1),(21,9.1,10.6,-1),(30,9.6,10.4,-.5),(38,9.2,10.3,0),
+                (42,8.0,9.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
 JACKET_THICKNESS=.4
 
 def jacket_radii(z):
@@ -279,9 +284,8 @@ for side_t in (.004,.996):
     tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (19,24,29,34,36.2)],.2,'Seam',1)
 box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
-    cloth_limb('Sleeve',(0,side*10,41),(-1,side*14,29),4.8,4.1,'Jacket')
-    cloth_limb('SleeveLower',(-1,side*14,30),(3,side*14,22),4.1,3.6,'Jacket')
-    limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),4.15,'Seam')
+    cloth_sleeve('Sleeve',(0,side*10.4,41),(-1,side*14,29),(3,side*14,22),4.4,3.4,'Jacket')
+    limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),3.75,'Seam')
     ellipsoid('Hand',(4.8,side*14,19.2),(3,2.7,3.6),'Skin')
     for finger in range(3):
         limb('Finger',(6,side*(12.4+finger*1.2),19),(7,side*(12.4+finger*1.2),16.5),.75,'Skin')
@@ -366,6 +370,38 @@ for i,part in enumerate([o for o in list(scene.objects) if o.name.split('.')[0] 
     label=part.name.split('.')[0]
     fur_surface(part,label+'Fur','Fur',1800,101+i,(.22,.55),(0,0,-.8),lambda p,n:p.z<22)
 
+# Graded garment weights. Shell, sleeves and the details stitched to the shell
+# share one spatial field, so overlapping cloth follows the arm together instead
+# of the rigid shell cutting through a rigidly weighted sleeve.
+ARM_CHAIN={s:(Vector((0,y*10,41)),Vector((-1,y*14,29)),Vector((3,y*14,22))) for s,y in (('L',1),('R',-1))}
+GARMENT=('OpenJacket','Zipper','ZipperTape','Pocket','HemStitch','BackSeam')
+SLEEVE=('Sleeve','Cuff')
+
+def smoothstep(x,lo,hi):
+    f=max(0.,min(1.,(x-lo)/(hi-lo)))
+    return f*f*(3-2*f)
+
+def garment_weights(p,label):
+    """{bone: weight} for a garment vertex in world space; totals are 1."""
+    side='L' if p.y>0 else 'R'
+    shoulder,elbow,wrist=ARM_CHAIN[side]
+    upper=elbow-shoulder; length=upper.length; d=upper/length
+    a=(p-shoulder).dot(d)
+    # Upper arm owns cloth from just below the shoulder cap outward.
+    along=smoothstep(a,-2.,2.5)
+    if label in SLEEVE:
+        chain=along
+        e=smoothstep(a-length,-2.5,2.5)  # elbow blend on the sleeve only
+    else:
+        # Shell cloth only follows where it lies inside/next to the sleeve
+        # volume of the upper arm; it never takes forearm weight.
+        r=(p-(shoulder+d*max(0.,min(length,a)))).length
+        # Only the armhole region follows; lower side panels stay with the body.
+        chain=along*(1-smoothstep(r,3.,6.))*(1-smoothstep(a,4.,9.))
+        e=0.
+    weights={'root':1-chain,f'arm_{side}':chain*(1-e),f'forearm_{side}':chain*e}
+    return {bone:w for bone,w in weights.items() if w>1e-4}
+
 def combine(objects, name):
     if name == 'SM_ChuckBody':
         # Preserve authored part membership as weights before joining the study.
@@ -383,11 +419,17 @@ def combine(objects, name):
             bone = 'root'
             if label in ('Thigh', 'Shin', 'ThighFur', 'ShinFur'):
                 bone = ('thigh_' if label in ('Thigh','ThighFur') else 'shin_') + side
-            elif label in ('Sleeve','SleeveLower','Cuff','Hand','Finger'):
-                bone = ('arm_' if label == 'Sleeve' else 'forearm_') + side
+            elif label in ('Hand','Finger'):
+                bone = 'forearm_' + side
             elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
                 bone = 'head'
-            if label == 'Tail':
+            if label in GARMENT+SLEEVE:
+                groups={}
+                for vertex in part.data.vertices:
+                    for bone,w in garment_weights(part.matrix_world @ vertex.co,label).items():
+                        if bone not in groups: groups[bone]=part.vertex_groups.new(name=bone)
+                        groups[bone].add([vertex.index],w,'REPLACE')
+            elif label == 'Tail':
                 groups = [part.vertex_groups.new(name=f'tail_{i}') for i in range(4)]
                 for vertex in part.data.vertices:
                     x = (part.matrix_world @ vertex.co).x
