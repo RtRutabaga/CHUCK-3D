@@ -17,3 +17,9 @@ $log=Join-Path $projectRoot 'Unreal\Chuck3D\Saved\Logs\ChuckImport.log'
 if ($LASTEXITCODE -or !(Select-String -LiteralPath $log -Pattern 'CHUCK_CUSTOM_ASSETS_READY' -Quiet)) {
     throw "Character import failed; inspect $log"
 }
+$rigScript=Join-Path $PSScriptRoot 'import_chuck_rig.py'
+$rigLog=Join-Path $projectRoot 'Unreal\Chuck3D\Saved\Logs\ChuckRigImport.log'
+& $editor $project "-ExecutePythonScript=$rigScript" -unattended -nullrhi -nosplash -NoLiveCoding "-abslog=$rigLog"
+if ($LASTEXITCODE -or !(Select-String -LiteralPath $rigLog -Pattern 'CHUCK_RIG_READY' -Quiet)) {
+    throw "Character rig import failed; inspect $rigLog"
+}

@@ -3,6 +3,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -32,11 +34,11 @@ AChuckCharacter::AChuckCharacter()
     RatVisual = CreateDefaultSubobject<USceneComponent>(TEXT("RatVisual"));
     RatVisual->SetupAttachment(GetRootComponent());
     RatVisual->SetRelativeLocation(FVector(0,0,-35.f));
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> BodyAsset(TEXT("/Game/Characters/Chuck/SM_ChuckBody.SM_ChuckBody"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> BodyAsset(TEXT("/Game/Characters/Chuck/SK_ChuckBody.SK_ChuckBody"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> FootAsset(TEXT("/Game/Characters/Chuck/SM_ChuckFoot.SM_ChuckFoot"));
-    Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ChuckBody"));
+    Body = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("ChuckBody"));
     Body->SetupAttachment(RatVisual);
-    Body->SetStaticMesh(BodyAsset.Object);
+    Body->SetSkinnedAssetAndUpdate(BodyAsset.Object);
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     auto MakeFoot = [&](const TCHAR* Name,float Side)
     {
@@ -121,6 +123,7 @@ void AChuckCharacter::ResetToDock()
     Body->SetRelativeTransform(FTransform::Identity);
     LeftFoot->SetRelativeLocationAndRotation(FVector(4,-7,2.5f),FRotator::ZeroRotator);
     RightFoot->SetRelativeLocationAndRotation(FVector(4,7,2.5f),FRotator::ZeroRotator);
+    UpdateSkeleton();
     UpdateCamera();
 }
 void AChuckCharacter::Landed(const FHitResult& Hit)
@@ -155,6 +158,72 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     };
     PoseFoot(LeftFoot,-1,GaitPhase);
     PoseFoot(RightFoot,1,GaitPhase+UE_PI);
+    UpdateSkeleton();
+}
+
+void AChuckCharacter::UpdateSkeleton()
+{
+    const auto* RigAsset = Cast<USkeletalMesh>(Body->GetSkinnedAsset());
+    if (!RigAsset) return;
+    const FReferenceSkeleton& Ref = RigAsset->GetRefSkeleton();
+    Body->BoneSpaceTransforms = Ref.GetRefBonePose();
+    TArray<FTransform> Rest;
+    Rest.SetNum(Ref.GetNum());
+    for (int32 I=0; I<Ref.GetNum(); ++I)
+    {
+        const int32 Parent=Ref.GetParentIndex(I);
+        Rest[I]=Parent==INDEX_NONE ? Ref.GetRefBonePose()[I] : Ref.GetRefBonePose()[I]*Rest[Parent];
+    }
+    auto CurrentComponent = [&](int32 Index)
+    {
+        FTransform Result=Body->BoneSpaceTransforms[Index];
+        for (int32 Parent=Ref.GetParentIndex(Index); Parent!=INDEX_NONE; Parent=Ref.GetParentIndex(Parent))
+            Result=Result*Body->BoneSpaceTransforms[Parent];
+        return Result;
+    };
+    auto Rotate = [&](FName Name, const FVector& Axis, float Degrees)
+    {
+        const int32 I=Ref.FindBoneIndex(Name);
+        if(I==INDEX_NONE) return;
+        const FQuat LocalDelta(Rest[I].GetRotation().UnrotateVector(Axis),FMath::DegreesToRadians(Degrees));
+        Body->BoneSpaceTransforms[I].SetRotation((Ref.GetRefBonePose()[I].GetRotation()*LocalDelta).GetNormalized());
+    };
+    const float Wave=FMath::Sin(GaitPhase)*MotionAmount;
+    Rotate(TEXT("arm_L"),FVector::YAxisVector,7.f*Wave-3.f*AirAmount);
+    Rotate(TEXT("arm_R"),FVector::YAxisVector,-7.f*Wave-3.f*AirAmount);
+    Rotate(TEXT("forearm_L"),FVector::YAxisVector,-3.f*Wave-5.f*AirAmount);
+    Rotate(TEXT("forearm_R"),FVector::YAxisVector,3.f*Wave-5.f*AirAmount);
+    for(int32 I=0; I<4; ++I)
+        Rotate(FName(*FString::Printf(TEXT("tail_%d"),I)),FVector::ZAxisVector,
+            FMath::Sin(GaitPhase-I*.55f)*MotionAmount*2.5f);
+
+    // Two-bone IK connects each leg to its animated ankle target. Solving in
+    // body space compensates for lean and landing compression without moving feet.
+    auto SolveLeg = [&](const TCHAR* Side,UStaticMeshComponent* Foot,float Sign)
+    {
+        const int32 Upper=Ref.FindBoneIndex(FName(*FString::Printf(TEXT("thigh_%s"),Side)));
+        const int32 Lower=Ref.FindBoneIndex(FName(*FString::Printf(TEXT("shin_%s"),Side)));
+        if(Upper==INDEX_NONE || Lower==INDEX_NONE) return;
+        const FVector Hip=Rest[Upper].GetLocation(), Knee=Rest[Lower].GetLocation();
+        const FVector RestAnkle(2,Sign*7,5);
+        const FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+FVector(-2,0,2.5f));
+        const float A=FVector::Distance(Hip,Knee), B=FVector::Distance(Knee,RestAnkle);
+        const FVector Direction=(Target-Hip).GetSafeNormal();
+        const float D=FMath::Clamp(static_cast<float>(FVector::Distance(Target,Hip)),FMath::Abs(A-B)+.01f,A+B-.01f);
+        const float Along=(A*A+D*D-B*B)/(2*D);
+        const FVector Bend=(FVector(-1,0,0)-Direction*FVector::DotProduct(FVector(-1,0,0),Direction)).GetSafeNormal();
+        const FVector NewKnee=Hip+Direction*Along+Bend*FMath::Sqrt(FMath::Max(0.f,A*A-Along*Along));
+        FTransform UpperPose=Rest[Upper];
+        UpperPose.SetRotation(FQuat::FindBetweenNormals((Knee-Hip).GetSafeNormal(),(NewKnee-Hip).GetSafeNormal())*Rest[Upper].GetRotation());
+        Body->BoneSpaceTransforms[Upper]=UpperPose.GetRelativeTransform(CurrentComponent(Ref.GetParentIndex(Upper)));
+        FTransform LowerPose=Rest[Lower];
+        LowerPose.SetLocation(NewKnee);
+        LowerPose.SetRotation(FQuat::FindBetweenNormals((RestAnkle-Knee).GetSafeNormal(),(Target-NewKnee).GetSafeNormal())*Rest[Lower].GetRotation());
+        Body->BoneSpaceTransforms[Lower]=LowerPose.GetRelativeTransform(UpperPose);
+    };
+    SolveLeg(TEXT("L"),LeftFoot,-1);
+    SolveLeg(TEXT("R"),RightFoot,1);
+    Body->MarkRefreshTransformDirty();
 }
 void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayerController>(Controller), EQuitPreference::Quit, false); }
 void AChuckCharacter::Tick(float DeltaSeconds)

@@ -3,6 +3,8 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
@@ -220,12 +222,23 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
         Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,65.f,.01f),TEXT("Chuck collision height is 65 cm"));
-        auto* Body=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
-        Check(Body && Body->GetStaticMesh(),TEXT("custom Blender body asset loads"));
-        if(Body && Body->GetStaticMesh())
+        auto* Body=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+        auto* Rig=Body ? Cast<USkeletalMesh>(Body->GetSkinnedAsset()) : nullptr;
+        Check(Rig!=nullptr,TEXT("custom Blender skeletal body loads"));
+        if(Rig)
         {
-            const auto Bounds=Body->GetStaticMesh()->GetBounds();
+            const auto Bounds=Rig->GetImportedBounds();
             Check(FMath::IsNearlyEqual(static_cast<float>(Bounds.Origin.Z+Bounds.BoxExtent.Z),65.f,1.f),TEXT("imported model ear height is 65 cm"));
+            Check(Body->GetBoneIndex(TEXT("shin_L"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("arm_R"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("tail_3"))!=INDEX_NONE,TEXT("leg arm and tail bones survive packaged import"));
+            Check(FVector::Dist(Body->GetBoneLocationByName(TEXT("thigh_L"),EBoneSpaces::ComponentSpace),FVector(-2,-6,21))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
+            bool bCorrectMaterials=true, bPurple=false;
+            for(int32 I=0; I<Body->GetNumMaterials(); ++I)
+            {
+                const auto* Mat=Body->GetMaterial(I);
+                bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Prototype/Materials/"));
+                bPurple |= Mat && Mat->GetName()==TEXT("M_Purple");
+            }
+            Check(bCorrectMaterials && bPurple,TEXT("skeletal material assignments persist including purple jacket"));
         }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));
@@ -238,8 +251,14 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1)
         {
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
-            const auto* MovingBody=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+            auto* MovingBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
             Check(MovingBody && MovingBody->GetRelativeRotation().Pitch < -2.f,TEXT("walking produces restrained body lean"));
+            if(MovingBody)
+            {
+                const auto* Rig=Cast<USkeletalMesh>(MovingBody->GetSkinnedAsset());
+                const int32 Arm=MovingBody->GetBoneIndex(TEXT("arm_L"));
+                Check(Rig && Arm!=INDEX_NONE && MovingBody->BoneSpaceTransforms[Arm].GetRotation().AngularDistance(Rig->GetRefSkeleton().GetRefBonePose()[Arm].GetRotation())>.01f,TEXT("walking articulates jacket sleeve"));
+            }
             Chuck->Jump(); MaxJumpZ=Chuck->GetActorLocation().Z; TestStage=2; StageTime=0;
         }
     }
@@ -374,7 +393,30 @@ void ADockGameMode::Tick(float DeltaSeconds)
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Chuck_Front.png"),true,false);
         TestStage=25; StageTime=0;
     }
-    else if(TestStage==25 && StageTime>1) TestStage=99;
+    else if(TestStage==25 && StageTime>1)
+    {
+        Chuck->ResetToDock();
+        Chuck->SetActorRotation(FRotator(0,-55,0)); Chuck->Recenter();
+        Chuck->SetActorRotation(FRotator::ZeroRotator);
+        TestStage=26; StageTime=0;
+    }
+    else if(TestStage==26 || TestStage==28)
+    {
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>.65f)
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/(TestStage==26 ? TEXT("Screenshots/Windows/Rig_Walk_RatHeight.png") : TEXT("Screenshots/Windows/Rig_Walk_Elevated.png")),true,false);
+            ++TestStage; StageTime=0;
+        }
+    }
+    else if(TestStage==27 && StageTime>1)
+    {
+        Chuck->ResetToDock(); Chuck->ToggleCamera();
+        Chuck->SetActorRotation(FRotator(0,-55,0)); Chuck->Recenter();
+        Chuck->SetActorRotation(FRotator::ZeroRotator);
+        TestStage=28; StageTime=0;
+    }
+    else if(TestStage==29 && StageTime>1) TestStage=99;
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

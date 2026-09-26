@@ -203,6 +203,36 @@ for side in (-1,1):
         mesh('CheekFur',[(x,y,z),(x+.7,y,z+.9),(x-1.4,y+side*.75,z-.8)],[(0,1,2)],'Fur')
 
 def combine(objects, name):
+    if name == 'SM_ChuckBody':
+        # Preserve authored part membership as weights before joining the study.
+        # Curves/modifiers must be evaluated first so every exported vertex is weighted.
+        for part in objects:
+            label = part.name.split('.')[0]
+            bpy.ops.object.select_all(action='DESELECT')
+            part.select_set(True)
+            bpy.context.view_layer.objects.active = part
+            bpy.ops.object.convert(target='MESH')
+            part = bpy.context.object
+            center = sum((part.matrix_world @ v.co for v in part.data.vertices), Vector()) / len(part.data.vertices)
+            # FBX -> Unreal reflects Y. Name sides by their runtime coordinates.
+            side = 'L' if center.y > 0 else 'R'
+            bone = 'root'
+            if label in ('Thigh', 'Shin'):
+                bone = ('thigh_' if label == 'Thigh' else 'shin_') + side
+            elif label in ('Sleeve','SleeveLower','Cuff','Hand','Finger'):
+                bone = ('arm_' if label == 'Sleeve' else 'forearm_') + side
+            elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
+                bone = 'head'
+            if label == 'Tail':
+                groups = [part.vertex_groups.new(name=f'tail_{i}') for i in range(4)]
+                for vertex in part.data.vertices:
+                    x = (part.matrix_world @ vertex.co).x
+                    t = max(0., min(3., (-x-6)/12.))
+                    lo = min(2,int(t)); fraction = t-lo
+                    groups[lo].add([vertex.index],1-fraction,'REPLACE')
+                    groups[lo+1].add([vertex.index],fraction,'REPLACE')
+            else:
+                part.vertex_groups.new(name=bone).add(list(range(len(part.data.vertices))),1.,'REPLACE')
     bpy.ops.object.select_all(action='DESELECT')
     for obj in objects:
         obj.select_set(True)
@@ -239,5 +269,37 @@ for obj in (body,foot):
     bpy.ops.export_scene.fbx(filepath=str(OUT/(obj.name+'.fbx')),use_selection=True,
         object_types={'MESH'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
         bake_anim=False,add_leaf_bones=False,mesh_smooth_type='FACE')
+# Keep static exports as the original form study; a separate deformable body is
+# driven by a small runtime rig. Feet remain independent contact targets.
+rig_data = bpy.data.armatures.new('ChuckRig')
+rig = bpy.data.objects.new('ChuckRig',rig_data)
+bpy.context.collection.objects.link(rig)
+bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True)
+bpy.context.view_layer.objects.active=rig
+bpy.ops.object.mode_set(mode='EDIT')
+spec = [('root',(0,0,0),None),('head',(0,0,46),'root')]
+for side, sign in [('L',1),('R',-1)]:
+    spec += [(f'thigh_{side}',(-2,sign*6,21),'root'),
+             (f'shin_{side}',(-4,sign*7.2,11),f'thigh_{side}'),
+             (f'arm_{side}',(0,sign*10,41),'root'),
+             (f'forearm_{side}',(-1,sign*14,29),f'arm_{side}')]
+for i, point in enumerate([(-6,0,17),(-18,2,7),(-30,4,3.7),(-42,8,2.2)]):
+    spec.append((f'tail_{i}',point,'root' if i == 0 else f'tail_{i-1}'))
+for name, head_pos, parent in spec:
+    bone=rig_data.edit_bones.new(name)
+    bone.head=head_pos; bone.tail=Vector(head_pos)+Vector((0,0,5))
+    if parent: bone.parent=rig_data.edit_bones[parent]
+bpy.ops.object.mode_set(mode='OBJECT')
+skinned=body.copy(); skinned.data=body.data.copy(); skinned.name='SK_ChuckBody'
+bpy.context.collection.objects.link(skinned)
+modifier=skinned.modifiers.new('Chuck skin','ARMATURE'); modifier.object=rig
+skinned.parent=rig
+assert all(abs(sum(g.weight for g in v.groups)-1.) < .001 for v in skinned.data.vertices), 'Unweighted body vertices'
+bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); skinned.select_set(True)
+bpy.context.view_layer.objects.active=rig
+bpy.ops.export_scene.fbx(filepath=str(OUT/'SK_ChuckBody.fbx'),use_selection=True,
+    object_types={'MESH','ARMATURE'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
+    bake_anim=False,add_leaf_bones=False,mesh_smooth_type='FACE')
+body.hide_set(True); body.hide_render=True
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'Chuck.blend'))
 print('CHUCK_MODEL_READY',sum(len(obj.data.polygons) for obj in (body,foot)))

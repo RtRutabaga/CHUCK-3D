@@ -6,6 +6,7 @@
 class USpringArmComponent;
 class UCameraComponent;
 class UStaticMeshComponent;
+class UPoseableMeshComponent;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -35,7 +36,7 @@ private:
     float MotionAmount = 0;
     float AirAmount = 0;
     float LandingCompression = 0;
-    UPROPERTY() UStaticMeshComponent* Body;
+    UPROPERTY() UPoseableMeshComponent* Body;
     UPROPERTY() UStaticMeshComponent* LeftFoot;
     UPROPERTY() UStaticMeshComponent* RightFoot;
 
@@ -48,4 +49,5 @@ private:
     void Quit();
     void UpdateCamera(float DeltaSeconds = 0);
     void UpdateMotion(float DeltaSeconds);
+    void UpdateSkeleton();
 };

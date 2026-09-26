@@ -32,6 +32,8 @@ for name, color in COLORS.items():
         material.set_editor_property("two_sided", True)
         material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
         unreal.MaterialEditingLibrary.connect_material_property(expression, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    if name in ("Gray", "Purple", "Pink", "Dark"):
+        unreal.MaterialEditingLibrary.set_material_usage(material, unreal.MaterialUsage.MATUSAGE_SKELETAL_MESH)
     unreal.MaterialEditingLibrary.recompile_material(material)
     unreal.EditorAssetLibrary.save_loaded_asset(material)
 
