@@ -170,6 +170,26 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Restraint comes from the pose, not from reducing the actual planted stride.
     const FVector Pivot(0,0,25);
     Body->SetRelativeLocationAndRotation(Pivot-Pose.RotateVector(Pivot)+FVector(0,0,-.6f*LandingCompression),Pose);
+    if(!bAirborne)
+    {
+        // Keep contact targets reachable by lowering the pelvis slightly when
+        // both legs approach extension. Never drag a planted foot to hide it.
+        // Dimensions are the current shared 14-bone rest-pose contract.
+        float RequiredDrop=0;
+        UStaticMeshComponent* ContactFeet[2]={LeftFoot,RightFoot};
+        for(int32 I=0; I<2; ++I)
+        {
+            const float Sign=I==0 ? -1.f:1.f;
+            const FVector Hip(-2,Sign*6,21),Knee(-4,Sign*7.2f,11),RestAnkle(2,Sign*7,5);
+            const float Reach=FVector::Distance(Hip,Knee)+FVector::Distance(Knee,RestAnkle)-.15f;
+            const FVector HipWorld=Body->GetComponentTransform().TransformPosition(Hip);
+            const FVector AnkleWorld=ContactFeet[I]->GetComponentTransform().TransformPosition(FVector(-2,0,2.5f));
+            const float HorizontalSquared=FVector::DistSquared2D(HipWorld,AnkleWorld);
+            const float MaxVertical=FMath::Sqrt(FMath::Max(0.f,Reach*Reach-HorizontalSquared));
+            RequiredDrop=FMath::Max(RequiredDrop,static_cast<float>(HipWorld.Z-AnkleWorld.Z)-MaxVertical);
+        }
+        Body->AddRelativeLocation(FVector(0,0,-FMath::Clamp(RequiredDrop,0.f,3.f)));
+    }
     UpdateSkeleton();
 }
 
