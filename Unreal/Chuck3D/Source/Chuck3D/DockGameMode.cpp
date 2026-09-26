@@ -14,6 +14,7 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/ExponentialHeightFog.h"
+#include "Engine/PostProcessVolume.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Materials/MaterialInterface.h"
@@ -211,6 +212,20 @@ void ADockGameMode::StartPlay()
     Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sun->GetLightComponent()->SetIntensity(4.0f);
     Sun->GetLightComponent()->SetLightColor(FLinearColor(1,.9f,.77f));
+    Sun->GetLightComponent()->ContactShadowLength=8.f;
+    Sun->GetLightComponent()->ContactShadowLengthInWS=true;
+    auto* Post=World->SpawnActor<APostProcessVolume>();
+    Post->bUnbound=true;
+    Post->Settings.bOverride_AmbientOcclusionIntensity=true;
+    Post->Settings.AmbientOcclusionIntensity=.65f;
+    Post->Settings.bOverride_AmbientOcclusionRadius=true;
+    Post->Settings.AmbientOcclusionRadius=35.f;
+    Post->Settings.bOverride_AmbientOcclusionRadiusInWS=true;
+    Post->Settings.AmbientOcclusionRadiusInWS=true;
+    Post->Settings.bOverride_ScreenSpaceReflectionIntensity=true;
+    Post->Settings.ScreenSpaceReflectionIntensity=75.f;
+    Post->Settings.bOverride_ScreenSpaceReflectionQuality=true;
+    Post->Settings.ScreenSpaceReflectionQuality=50.f;
     auto* Sky = World->SpawnActor<ASkyLight>();
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sky->GetLightComponent()->SetIntensity(0.55f);

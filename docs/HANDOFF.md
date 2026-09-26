@@ -37,7 +37,7 @@ Both views remain available, with no final selection. Elevated: 400 cm boom, -48
 - Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
 - Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
 - Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/worker-build.log, Local/worker-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
+- Evidence is ignored: Local/contact-build.log, Local/contact-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
 
 ## Repository boundaries and publication
 
@@ -64,3 +64,7 @@ The old hull sphere and mast shapes are replaced by an original Blender working 
 ## Clothed dock worker pass
 
 An original static Blender human replaces the visible worker primitives: rounded boots, shaped trousers, work shirt/cuffs/collar, vest, belt, hands, cap and neutral face. Imported height is exactly 180 cm. Hidden old human geometry preserves collision. Canvas and Leather are two new original procedural materials. No NPC behavior, dialogue or animation system. BuildCookRun passed without material compile errors; all 40 rendered checks passed. Scale_RatHeight and Chuck_Front were inspected. The face and overlapping clothing topology remain a form study, not finished realism. Reproduce with Tools/Build-DockWorker.ps1 using committed art materials.
+
+## Contact shadows and reflections
+
+DX11 screen-space reflections are enabled at quality 50/intensity 75, with 35 cm ambient occlusion and 8 cm contact shadows. BuildCookRun completed without material errors; all 40 rendered checks passed. Harbor and scale captures were inspected: grounding is slightly stronger around props, while water reflections remain subtle. No Lumen, ray tracing or new dependencies. Long-run performance remains unverified. Published boat/worker assets through d233879 were downloaded into the separate verification checkout, passed LFS fsck and matched source/imported hashes; generated output is not tracked.
