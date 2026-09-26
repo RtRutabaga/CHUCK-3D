@@ -91,6 +91,29 @@ def limb(name, a, b, radius, mat):
     obj.rotation_quaternion = (Vector(b)-Vector(a)).to_track_quat('Z', 'Y')
     return obj
 
+def cloth_limb(name,a,b,start_radius,end_radius,mat):
+    """Tapered sleeve with shallow gathered folds instead of an ellipsoid."""
+    a,b=Vector(a),Vector(b)
+    direction=(b-a).normalized()
+    u=direction.cross(Vector((1,0,0))).normalized(); v=direction.cross(u)
+    length=(b-a).length
+    verts,faces=[],[]
+    rings,segments=13,32
+    for row in range(rings):
+        t=row/(rings-1)
+        center=a+direction*((t*1.14-.07)*length)
+        radius=(start_radius*(1-t)+end_radius*t)*(.9+.1*math.sin(t*math.pi))
+        for j in range(segments):
+            angle=j*math.tau/segments
+            fold=.18*math.sin(t*math.pi*7+angle*2)+.1*math.sin(angle*5+t*3)
+            verts.append(center+(radius+fold)*(u*math.cos(angle)+v*math.sin(angle)))
+    for row in range(rings-1):
+        for j in range(segments):
+            k=row*segments+j; nxt=row*segments+(j+1)%segments
+            faces.append((k,nxt,nxt+segments,k+segments))
+    faces.extend([tuple(reversed(range(segments))),tuple((rings-1)*segments+j for j in range(segments))])
+    return mesh(name,verts,faces,mat,1)
+
 # Continuous tapered trunk rather than overlapping spherical jacket pieces.
 verts, faces = [], []
 profile = [(12,4,6,-2),(18,7,9,-2),(25,8.2,10,-1),(34,8,9.5,-.5),(42,6,8,0),(47,4,5,1)]
@@ -156,8 +179,8 @@ for side in (-1,1):
     lapel=mesh('Lapel',[(6,side*4.1,46.5),(9,side*7,43),(10,side*5.5,35),(8.4,side*3.7,41)],[(0,1,2,3)],'Seam')
     sol=lapel.modifiers.new('Lapel thickness','SOLIDIFY'); sol.thickness=.35
     bevel=lapel.modifiers.new('Lapel edge','BEVEL'); bevel.width=.3; bevel.segments=3
-    limb('Sleeve',(0,side*10,41),(-1,side*14,29),4.8,'Jacket')
-    limb('SleeveLower',(-1,side*14,30),(3,side*14,22),4,'Jacket')
+    cloth_limb('Sleeve',(0,side*10,41),(-1,side*14,29),4.8,4.1,'Jacket')
+    cloth_limb('SleeveLower',(-1,side*14,30),(3,side*14,22),4.1,3.6,'Jacket')
     limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),4.15,'Seam')
     ellipsoid('Hand',(4.8,side*14,19.2),(3,2.7,3.6),'Skin')
     for finger in range(3):

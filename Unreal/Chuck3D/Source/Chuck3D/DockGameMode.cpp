@@ -42,6 +42,18 @@ void ADockGameMode::StartPlay()
     auto* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Cylinder = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+    auto* BarrelMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockBarrel.SM_DockBarrel"));
+    auto* CrateMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockCrate.SM_DockCrate"));
+    auto* PlankMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockPlank.SM_DockPlank"));
+    auto Prop = [&](const TCHAR* Name,FVector Position,UStaticMesh* Asset)
+    {
+        auto* Actor=World->SpawnActor<AStaticMeshActor>(Position,FRotator::ZeroRotator);
+        Actor->Tags.Add(FName(Name));
+        Actor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+        Actor->GetStaticMeshComponent()->SetStaticMesh(Asset);
+        Actor->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        return Actor;
+    };
     auto Material = [](const TCHAR* Name) {
         if(auto* Art=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Name,Name))) return Art;
         return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Name,Name));
@@ -64,7 +76,8 @@ void ADockGameMode::StartPlay()
     for(int32 Row=0;Row<26;++Row)
     {
         if(Row==13) continue;
-        Shape(TEXT("DockPlank"),FVector(212+Row*24,0,-6),FVector(23,180,12),Row%2 ? TEXT("Wood") : TEXT("WoodLight"));
+        auto* Collision=Shape(TEXT("DockPlank"),FVector(212+Row*24,0,-6),FVector(23,180,12),Row%2 ? TEXT("Wood") : TEXT("WoodLight"));
+        if(PlankMesh) { Collision->SetActorHiddenInGame(true); Prop(TEXT("DockPlankArt"),Collision->GetActorLocation(),PlankMesh); }
     }
     for(float X : {210.f,450.f,790.f}) for(float Y : {-100.f,100.f})
         Shape(TEXT("MooringPost"),FVector(X,Y,-25),FVector(22,22,110),TEXT("Wood"),Cylinder);
@@ -91,9 +104,11 @@ void ADockGameMode::StartPlay()
     Text->SetTextRenderColor(FColor(225,205,169));
     // Warehouse closes the back of the study; front/side edges remain readable.
     Shape(TEXT("Warehouse"),FVector(-470,50,160),FVector(60,600,320),TEXT("Plaster"));
-    Shape(TEXT("Barrel"),FVector(-330,-80,45),FVector(62,62,90),TEXT("Wood"),Cylinder);
-    for(float Z : {14.f,72.f}) Shape(TEXT("BarrelBand"),FVector(-330,-80,Z),FVector(65,65,7),TEXT("Dark"),Cylinder);
-    Shape(TEXT("Crate"),FVector(-80,60,30),FVector(60,65,60),TEXT("WoodLight"));
+    auto* BarrelCollision=Shape(TEXT("Barrel"),FVector(-330,-80,45),FVector(62,62,90),TEXT("Wood"),Cylinder);
+    if(BarrelMesh) { BarrelCollision->SetActorHiddenInGame(true); Prop(TEXT("DockBarrelArt"),BarrelCollision->GetActorLocation(),BarrelMesh); }
+    else for(float Z : {14.f,72.f}) Shape(TEXT("BarrelBand"),FVector(-330,-80,Z),FVector(65,65,7),TEXT("Dark"),Cylinder);
+    auto* CrateCollision=Shape(TEXT("Crate"),FVector(-80,60,30),FVector(60,65,60),TEXT("WoodLight"));
+    if(CrateMesh) { CrateCollision->SetActorHiddenInGame(true); Prop(TEXT("DockCrateArt"),CrateCollision->GetActorLocation(),CrateMesh); }
     Shape(TEXT("LowStep"),FVector(-40,-155,5),FVector(60,65,10),TEXT("Wood"));
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
@@ -119,7 +134,7 @@ void ADockGameMode::StartPlay()
         auto* Paver=Shape(TEXT("Paving"),FVector(X,-380+Row*38,-1.2f),FVector(37,35,3),TEXT("Stone"),nullptr,false);
         Paver->SetActorRotation(FRotator(0,DetailRandom.FRandRange(-1.5f,1.5f),0));
     }
-    for(int32 Row=0;Row<26;++Row)
+    for(int32 Row=0;!PlankMesh && Row<26;++Row)
     {
         if(Row==13) continue;
         for(float Y : {-73.f,73.f})
@@ -154,17 +169,20 @@ void ADockGameMode::StartPlay()
     }
     for(float X : {-320.f,-200.f,-80.f,40.f,160.f})
         Shape(TEXT("Rafter"),FVector(X,323,308),FVector(10,90,12),TEXT("Wood"),nullptr,false);
-    for(int32 Band=0;Band<12;++Band)
+    for(int32 Band=0;!BarrelMesh && Band<12;++Band)
     {
         const float Angle=Band*PI/6;
         Shape(TEXT("BarrelStave"),FVector(-330+30*FMath::Cos(Angle),-80+30*FMath::Sin(Angle),44),FVector(3,3,84),TEXT("WoodLight"),Cylinder,false);
     }
+    if(!CrateMesh)
+    {
     for(float Z : {7.f,53.f})
         Shape(TEXT("CrateFrame"),FVector(-80,26,Z),FVector(64,5,6),TEXT("Wood"),nullptr,false);
     for(float X : {-107.f,-53.f})
         Shape(TEXT("CrateFrame"),FVector(X,26,30),FVector(6,5,60),TEXT("Wood"),nullptr,false);
     auto* Brace=Shape(TEXT("CrateBrace"),FVector(-80,23,30),FVector(73,4,5),TEXT("Wood"),nullptr,false);
     Brace->SetActorRotation(FRotator(40,0,0));
+    }
     // A quiet harbor silhouette beyond the playable dock; no additional map.
     for(int32 Building=0;Building<11;++Building)
     {
@@ -230,6 +248,23 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(TestStage==0 && StageTime>1)
     {
         Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("spawn settles on quay"));
+        for(const TCHAR* Tag : {TEXT("DockBarrelArt"),TEXT("DockCrateArt"),TEXT("DockPlankArt")})
+        {
+            TArray<AActor*> Props;
+            UGameplayStatics::GetAllActorsWithTag(this,FName(Tag),Props);
+            bool bValid=Props.Num()==(FString(Tag)==TEXT("DockPlankArt") ? 25 : 1);
+            for(AActor* Actor:Props)
+            {
+                const auto* Component=Actor->FindComponentByClass<UStaticMeshComponent>();
+                bValid &= Component && Component->GetStaticMesh() && Component->GetCollisionEnabled()==ECollisionEnabled::NoCollision;
+            }
+            Check(bValid,*FString::Printf(TEXT("%s imports render separately from collision"),Tag));
+        }
+        FHitResult PropHit;
+        bool bHit=GetWorld()->LineTraceSingleByChannel(PropHit,FVector(-400,-80,45),FVector(-270,-80,45),ECC_Visibility);
+        Check(bHit && PropHit.GetActor() && PropHit.GetActor()->ActorHasTag(TEXT("Barrel")),TEXT("hidden barrel proxy still blocks collision"));
+        bHit=GetWorld()->LineTraceSingleByChannel(PropHit,FVector(-150,60,30),FVector(-10,60,30),ECC_Visibility);
+        Check(bHit && PropHit.GetActor() && PropHit.GetActor()->ActorHasTag(TEXT("Crate")),TEXT("hidden crate proxy still blocks collision"));
         Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,65.f,.01f),TEXT("Chuck collision height is 65 cm"));
         auto* Body=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
         auto* Rig=Body ? Cast<USkeletalMesh>(Body->GetSkinnedAsset()) : nullptr;
@@ -425,7 +460,19 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Chuck->SetActorRotation(FRotator::ZeroRotator);
         TestStage=28; StageTime=0;
     }
-    else if(TestStage==29 && StageTime>1) TestStage=99;
+    else if(TestStage==29 && StageTime>1)
+    {
+        Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-220,-90,36));
+        Chuck->SetActorRotation(FRotator(0,180,0)); Chuck->Recenter();
+        if(Chuck->IsElevated()) Chuck->ToggleCamera();
+        TestStage=30; StageTime=0;
+    }
+    else if(TestStage==30 && StageTime>2)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Props_Barrel.png"),true,false);
+        TestStage=31; StageTime=0;
+    }
+    else if(TestStage==31 && StageTime>1) TestStage=99;
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

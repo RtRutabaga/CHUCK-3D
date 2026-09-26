@@ -4,7 +4,7 @@
 
 Launch `Launch-Prototype.cmd` from the repository root for the packaged Windows prototype. See docs/PLAYTEST.md for controls and the same-route camera comparison. Unreal 5.7.4 (CL 51494982), Blender 4.5.14 LTS (62c1db4208e8); exact toolchain and hardware details are in docs/SETUP.md. No new dependencies were installed for the material and daylight pass.
 
-One Waterdeep dock scene includes a quay, pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Paving, plank details, timber, roof slates and distant harbor silhouettes remain procedural primitives. The editor map is intentionally empty until Play constructs the scene.
+One Waterdeep dock scene includes a quay, pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Paving, timber, roof slates and distant harbor silhouettes remain procedural primitives. Barrel, crate and pier boards now render custom Blender meshes over the original hidden collision shapes. The editor map is intentionally empty until Play constructs the scene.
 
 Chuck is a 65 cm gray rat in an oversized purple open jacket, using the imported Blender form study. This supersedes the original one-foot target. The capsule is 65 cm tall and 30 cm wide. He remains silent. No dialogue, combat, pickups or additional maps have been added.
 
@@ -18,6 +18,10 @@ Chuck now uses a skinned body with a 14-bone authored Blender rig (plus any impo
 
 Nineteen original procedural materials distinguish fur/cloth/skin from stone, plaster, timber, slate, metal and animated opaque water. Quay paving uses a consistent stone palette; sky gradient/clouds and the direct/ambient lighting balance replace the flat look. Existing distant warehouses gain pitched roofs, windows, chimneys and a harbor wall. No playable area or collision changes. See docs/GRAPHICS-PASS.md for the generator, limits and next art priorities. This is a step toward the supplied references, not BG3-level fidelity.
 
+## Custom prop and sleeve pass
+
+The barrel now has 20 bowed staves, inset lids, iron hoops and rivets; the crate has separate planks, rails, braces and bevelled edges; pier boards have bevels and recessed nails. Imported bounds were checked in centimetres. Hidden primitive collisions preserve the existing route and pier gap. Chuck's sleeves use tapered rings with shallow gathered folds, retaining the existing rig and scale. See SourceAssets/Docks/README.md. No new dependencies, interactions or maps.
+
 ## Cameras
 
 Both views remain available, with no final selection. Elevated: 400 cm boom, -48 degree pitch, 65 degree FOV. Rat-height: 220 cm boom, lens about 65 cm above the floor, 78 degree FOV. Switching blends, orbit is damped and positional lag is capped at 8 cm. F / Xbox right-stick click recenters. No camera shake or motion blur. Camera collision hides Chuck if the lens comes within 70 cm. Foreground props can still occupy much of the rat-height view; framing and comfort need user feedback.
@@ -25,11 +29,11 @@ Both views remain available, with no final selection. Elevated: 400 cm boom, -48
 ## Verified in this pass
 
 - Editor and game targets compiled; Windows Development BuildCookRun completed with exit code 0. The final cook log was checked for material compilation failures and invalid shader maps; none remained.
-- Packaged DirectX 11 game ran at 1280 x 720 with all 32 rendered runtime checks passing (zero failures).
-- Checks cover imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
+- Packaged DirectX 11 game ran at 1280 x 720 with all 37 rendered runtime checks passing (zero failures).
+- Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
 - Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
 - Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/art-build.log, Local/art-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*}.png.
+- Evidence is ignored: Local/props-build.log, Local/props-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
 
 ## Repository boundaries and publication
 
@@ -42,3 +46,5 @@ Authored binary assets use Git LFS; the earlier static character asset set was a
 Standing publication permission: the user explicitly authorized future verified CHUCK-3D code, documentation and project-asset commits/pushes to this public repository. Do not ask again for routine updates within that scope. Paid services, destructive changes, sensitive data publication and the original CHUCK repository are outside that authorization.
 
 The graphics pass adds 19 small material .uassets under Content/Art, covered by Git LFS. /Game/Art is explicitly included in cooking. The user-authorized original procedural source requires no external asset license or paid storage purchase; remaining LFS account allowance is still unknown.
+
+The user requested continued graphics work until a usage limit blocks progress. Publish verified milestones under standing permission and continue within the existing scene/art scope. No recurring automation was requested.
