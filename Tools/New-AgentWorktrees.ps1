@@ -10,6 +10,9 @@ if($LASTEXITCODE -or $dirty) { throw 'Commit or finish existing work before prep
 $baseCommit=& git -C $projectRoot rev-parse --verify "$BaseRef^{commit}"
 if($LASTEXITCODE) { throw "Cannot resolve base commit: $BaseRef" }
 $common=& git -C $projectRoot rev-parse --path-format=absolute --git-common-dir
+if($LASTEXITCODE -or [IO.Path]::GetFullPath((Split-Path $common -Parent)) -ne $projectRoot) {
+    throw 'Run this helper from the main integration checkout, not an agent worktree.'
+}
 & git -C $projectRoot check-ignore --quiet -- Local/AgentWorktrees/
 if($LASTEXITCODE) { throw 'Local/AgentWorktrees must be ignored before creating nested worktrees.' }
 $parent=Join-Path $projectRoot 'Local\AgentWorktrees'
