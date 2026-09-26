@@ -227,7 +227,7 @@ void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
         // Predict remaining travel, not a fixed distant landing point: braking
         // and turns can retarget a swing without dragging the planted foot.
         FVector Target;
-        Foot.bSupported=FindFootSupport(Neutral[SwingFoot]+Velocity*(Foot.Duration-Foot.Elapsed+.05f),Target);
+        Foot.bSupported=FindFootSupport(Neutral[SwingFoot]+Velocity*(Foot.Duration-Foot.Elapsed+.03f),Target);
         Foot.Position=FMath::Lerp(Foot.Start,Target,Ease)+FVector(0,0,FMath::Sin(T*PI)*2.2f);
         Foot.Rotation=FQuat::Slerp(Foot.StartRotation,Heading,Ease)*FRotator(4.f*FMath::Sin(T*PI),0,0).Quaternion();
         GaitPhase=(SwingFoot==0 ? 0.f:PI)+T*PI;
@@ -249,7 +249,7 @@ void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
             SwingFoot=Candidate;
             FFootContact& Foot=Feet[Candidate];
             Foot.Start=Foot.Position; Foot.StartRotation=Foot.Rotation; Foot.Elapsed=0;
-            Foot.Duration=bWalking ? FMath::Lerp(.3f,.2f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
+            Foot.Duration=bWalking ? FMath::Lerp(.24f,.14f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
             if(bFirstStep && bWalking) Foot.Duration=FMath::Min(Foot.Duration,.12f);
             bFirstStep=false;
         }

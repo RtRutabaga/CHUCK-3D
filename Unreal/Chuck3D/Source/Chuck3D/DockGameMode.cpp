@@ -320,6 +320,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             const auto* Foot=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(I==0 ? TEXT("FootLeft") : TEXT("FootRight")));
             const FVector Position=Foot->GetComponentLocation();
+            const auto* PoseBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+            const float Sign=I==0 ? -1.f:1.f;
+            const FVector Hip(-2,Sign*6,21),Knee(-4,Sign*7.2f,11),RestAnkle(2,Sign*7,5);
+            const FVector Ankle=PoseBody->GetComponentTransform().InverseTransformPosition(Foot->GetComponentTransform().TransformPosition(FVector(-2,0,2.5f)));
+            const float Reach=FVector::Distance(Hip,Knee)+FVector::Distance(Knee,RestAnkle);
+            ProbeReachExcess=FMath::Max(ProbeReachExcess,static_cast<float>(FVector::Distance(Hip,Ankle))-Reach);
             if(bProbeReady && StageTime>.25f && Chuck->GetVelocity().Size2D()>90.f && FMath::Abs(Position.Z-ProbeFoot[I].Z)<.001f)
             {
                 const float SlipSpeed=FVector::Dist2D(Position,ProbeFoot[I])/FMath::Max(DeltaSeconds,.001f);
@@ -334,6 +340,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
             auto* MovingBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
             Check(ProbeSamples>=10 && ProbeMaxSpeed<1.f,TEXT("steady walk stance feet stay planted within 1 cm/s"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_REACH_MEASURE max_excess_cm=%.4f"),ProbeReachExcess);
+            Check(ProbeReachExcess<.5f,TEXT("walking ankle targets remain within leg reach"));
             if(MovingBody)
             {
                 const auto* Rig=Cast<USkeletalMesh>(MovingBody->GetSkinnedAsset());
