@@ -184,3 +184,16 @@
 - **UVs:** `UVMap`, a Smart UV Project of real surfaces covering about 56% of the square; fur tufts and whiskers are parked on one corner island. A first unwrap that included the tufts packed only 1.2%. Evidence: `Review/uv_checker.jpg`. `check_v1.py` now also checks one UV channel within 0–1: 66 PASS.
 - **Measurements unchanged:** ground clearance in every clip; mid-toe stance drift at most 0.002 cm/s; start/stop seams exact; grip reach 0.93.
 - **Still not done:** Unreal import/AnimBP/in-game checks (Codex/integration); LODs; hand-authored UV seams; cloth simulation.
+
+## Tenth pass — baked surface textures for v1
+
+- **Delivered commit:** the tenth commit on `codex/claude-character` ("Bake Chuck v1 surface textures"), after `e7299f0`.
+- **Files:**
+  - New `SourceAssets/Chuck/V1/{bake_textures.py, preview_textured.py}` and `V1/Textures/T_Chuck_{BaseColor,Normal,ORM}.png` (2048², about 8.7 MB, LFS).
+  - `Tools/build_chuck_v1.py`: UV parking is now per material, zipper teeth are parked too, and the real islands are scaled into v ≤ 0.985 so the parked strip never overlaps.
+  - Regenerated `V1` Blender/FBX/review evidence.
+- **What the maps carry:** object-space procedural looks baked to the shared `UVMap`, including worn purple canvas with fading, grime, wrinkles and twill grain, streaked grey-brown fur, cream chest, mottled pink skin with tail rings, glossy eyes, horn claws and nickel zipper. The normal map is DirectX (Unreal); ORM is AO/roughness/metallic. Texel density is 12.8 px/cm at 2048² (25.7 at 4096²).
+- **Fixed during review:** zipper teeth rendered black twice. First, self-occluding parked geometry baked AO≈0, so the parked strip's AO is now forced to 1. Second, Cycles bakes no diffuse colour for metallic surfaces, so base colour is baked with metallic off.
+- **Evidence:** `V1/Review/textured_{three_quarter,front,rear,close_jacket,close_head,close_paw_tail}.jpg` (EEVEE, maps only).
+- **Checks:** `check_v1.py` 66 PASS; stance drift at most 0.002 cm/s; unchanged.
+- **Needs integration:** Unreal import of the textures and a textured material for the v1 slots (the runtime `M_Chuck_*` override must select it). Not visible in-game until v1 itself is integrated. The legacy in-game mesh has no UVs and cannot use these maps.

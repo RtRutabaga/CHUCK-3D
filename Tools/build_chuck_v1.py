@@ -192,7 +192,8 @@ for part in parts:
     bpy.ops.object.convert(target='MESH')
     part = bpy.context.object
     strands = part.data.attributes.new('chuck_strand', 'BOOLEAN', 'FACE')
-    is_strand = lab.endswith('Fur') or lab == 'Whisker'
+    # Strands and zipper teeth are sub-texel; they get a flat per-material island.
+    is_strand = lab.endswith('Fur') or lab in ('Whisker', 'Zipper')
     for d in strands.data: d.value = is_strand
     groups = {}
     for v in part.data.vertices:
@@ -216,8 +217,8 @@ bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 # UVs: one automatic unwrap channel so textures can be authored later (the
 # legacy parts had none). Only real surfaces are unwrapped; fur tufts and
-# whiskers (tagged chuck_strand) share one tiny corner island, since they use
-# their material's flat colour and would otherwise swamp the packing.
+# whiskers (tagged chuck_strand) are parked on one tiny island per material
+# along the top edge, since they use flat colour and would otherwise swamp the packing.
 import bmesh
 t_uv = __import__('time').time()
 bpy.context.view_layer.objects.active = body
@@ -232,10 +233,17 @@ uv = bm.loops.layers.uv.active
 tag = bm.faces.layers.bool.get('chuck_strand')
 strand_faces = 0
 for f in bm.faces:
+    if not f[tag]:
+        # Keep the top 1.5% strip free for the parked strand islands.
+        for l in f.loops: l[uv].uv = l[uv].uv * .985
+        continue
     if f[tag]:
         strand_faces += 1
+        # One tiny island per material along the top edge, so each strand
+        # material bakes/samples its own flat colour.
+        x0 = .004 + .008 * f.material_index
         for i, l in enumerate(f.loops):
-            l[uv].uv = (.996 + .003 * (i == 1), .996 + .003 * (i == 2))
+            l[uv].uv = (x0 + .003 * (i == 1), .996 + .003 * (i == 2))
 bmesh.update_edit_mesh(body.data)
 bpy.ops.object.mode_set(mode='OBJECT')
 body.data.uv_layers[0].name = 'UVMap'

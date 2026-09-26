@@ -10,6 +10,8 @@ Delivery under the accepted rig contract: the 41-bone rig with one continuously 
 | `Animations/manifest.json` | Per clip: frame range, duration, loop flag, stance intervals, events (seconds), peak leg reach. Walk: reference speed. Start/stop: speed profile and per-frame capsule travel. Turns: per-frame capsule yaw. |
 | `rig_v1_metadata.json` | Bone and material counts, bounds, measured sole markers (source and Unreal component space), FBX settings, rest matrices for every bone. |
 | `check_v1.py` / `review_v1.py` | Contract checks and pose evidence (see below). |
+| `Textures/T_Chuck_{BaseColor,Normal,ORM}.png` | Baked 2048² surface textures for the shared `UVMap` (see Textures). |
+| `bake_textures.py` / `preview_textured.py` | Texture bake from procedural 3D shaders; lit EEVEE preview using only the baked maps. |
 | `Review/` | Neutral views, pose studies, `strip_<Clip>.jpg` frame strips, `walk_contact_report.json`, `stance_drift_report.json`. |
 
 ## Build and export
@@ -52,7 +54,39 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
 
 ## UVs
 
-`UVMap` is an automatic Smart UV Project (66°, margin 0.003) of the real surfaces: skin, fur body, jacket, eyes, paws. It covers about 56% of the 0–1 square with even texel density (`Review/uv_checker.jpg`). The 37,803 fur-tuft and whisker faces share one tiny island in the top-right corner, because they use their material's flat colour. The seams are automatic, not hand-placed, so hand-painted texture work would benefit from an authored layout later.
+`UVMap` is an automatic Smart UV Project (66°, margin 0.003) of the real surfaces, scaled into v ≤ 0.985 (`Review/uv_checker.jpg`). The top strip (v > 0.985) holds one tiny flat island per material for sub-texel geometry: fur tufts, whiskers and zipper teeth (38,211 faces). Real surfaces are about 10,080 cm² at **12.8 px/cm with 2048² maps** (0.8 mm per texel), or 25.7 px/cm at 4096². The seams are automatic, not hand-placed.
+
+## Textures
+
+Rebuild after any mesh change:
+
+```powershell
+& $B --background SourceAssets\Chuck\V1\Chuck_V1.blend --python SourceAssets\Chuck\V1\bake_textures.py -- 2048
+& $B --background SourceAssets\Chuck\V1\Chuck_V1.blend --python SourceAssets\Chuck\V1\preview_textured.py -- <out_dir>
+```
+
+`bake_textures.py` gives each of the nine materials a procedural shader in **object space** (centimetres), so the automatic UV seams do not break the pattern. It then bakes with Cycles:
+
+| Map | Contents |
+| --- | --- |
+| `T_Chuck_BaseColor.png` (sRGB) | Albedo, baked with metallic off because Cycles returns no diffuse colour for metals. |
+| `T_Chuck_Normal.png` (linear) | Tangent space, **DirectX convention (green flipped) for Unreal**. |
+| `T_Chuck_ORM.png` (linear) | R = ambient occlusion (forced to 1 on the parked-island strip), G = roughness, B = metallic. |
+
+Surface design, following `References/ArtDirection`:
+- **Jacket:** worn purple canvas. Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
+- **Lining/stitching:** darker purple with fine grain.
+- **Fur:** grey-brown, darker along the back, with vertically stretched streaks following the hair.
+- **Chest:** warm cream with streaks.
+- **Skin (ears, nose, hands, paws, tail):** pink-brown mottling, ring scales on the tail, darker sole pads, and a little subsurface in the preview only.
+- **Eyes:** glossy near-black (roughness 0.06).
+- **Claws:** horn with streaks.
+- **Zipper:** worn nickel/steel (metallic).
+- **Whiskers:** pale.
+
+`preview_textured.py` rebuilds every material in memory from the three maps alone, the way an Unreal material would sample them, and renders warm-daylight views (`Review/textured_*.jpg`).
+
+**Unreal wiring (integration owner; not done):** import the three PNGs as sRGB colour / normal map / linear masks, and make one material using BaseColor × ORM.R, ORM.G roughness, ORM.B metallic and the normal. Assign it (or instances of it) to all nine `SK_Chuck` slots. The runtime currently overrides slots with the procedural `M_Chuck_*` materials, so that override must select the textured material for the v1 mesh. The geometric fur tufts are separate geometry and take their flat colour from the parked islands.
 
 ## Sole markers (measured)
 
