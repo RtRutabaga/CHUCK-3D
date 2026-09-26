@@ -1,0 +1,19 @@
+# Codex movement handoff — 2026-09-26
+
+Owner: Codex, `codex/movement-foundation`, `Local/AgentWorktrees/codex-movement`. Base: integrated Claude source at `bc7d711`. Baseline telemetry: `d9fce07`; stance/swing implementation: `3a35bf7`. Runtime changes stay in ChuckCharacter and character checks/captures in DockGameMode. Main integration separately owns imports, shared verifier and publication.
+
+No bone, rest-pose, scale, material, collision, input or camera contract changes. No world edits. Claude's original deliveries `9e337c3` and `939580a` were imported from their committed FBXs, without regenerating Blender source. Integrated equivalents: `483bbaf` and `bc7d711`.
+
+Walking now alternates world-locked stance and predictive swing targets, traces ground support, adjusts feet after stopping/turning, and clears contact state on jump/reset. Short initial steps avoid stretching the stationary leg at startup. The ankle offset follows each foot's retained heading. Body lean, roll and arm swing are reduced; the old sinusoidal foot translation is gone. This remains procedural animation on a temporary rig, not finished natural locomotion.
+
+Baseline packaged measurement at steady 95 cm/s walking: 43 flat-height foot samples, mean world slip **70.5968 cm/s**, maximum **100.0720 cm/s** (`Local/verify-package-20260926-124027.log`). The probe measures foot-component origins with unchanged height, excludes acceleration, and is specific to the flat test route. New regression requires at least ten samples and maximum slip below 1 cm/s. Landing checks sole clearance against an independent ground trace instead of an old actor-relative constant. The game-mode probe runs after character visual updates.
+
+Motion reproduction after packaging: `powershell -NoProfile -File Tools/Verify-Package.ps1 -MotionCapture`. This runs the rendered checks, then records rear/front/side rat-height and elevated image sequences covering start, walk, turn, stop, jump and landing. Images go to ignored `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Motion/View0..3`. Tests are scripted; physical Xbox hardware is not verified.
+
+Known limits: separate static feet, no toe roll, fixed knee bend plane, rigid segmented legs and limited pelvis motion. Traces support the existing small static route, not a general slope/stair/moving-platform solution. When no suitable support exists, a neutral visual target is used; this does not grant collision support. Jacket front continuity improves, but shoulder overlap/stretching and simplified anatomy remain Claude's next art concerns. Do not certify reference-quality art or animation from passing tests.
+
+## Next coordinated rig milestone (proposal only)
+
+Agree the centimetre rest pose, joint axes, names and socket transforms before changing assets. Add pelvis/spine/neck, proper deforming shoulder/elbow/wrist and hip/knee/ankle/toe chains with continuous weighted topology. Use authored idle/walk/start/stop/turn/jump clips in an Animation Blueprint, then limited terrain contact correction and pelvis adjustment. Keep capsule-driven locomotion initially; evaluate root motion explicitly for roll/climb rather than mixing conventions accidentally. Plan run and lateral takeoff/landing clips, hand contacts for climbing, and a mouth/head cigarette socket with restrained jaw/lip animation. No such actions or replacement rig are implemented by this pass.
+
+Final verification and publication results are recorded in the main `docs/HANDOFF.md`; no heavy tools should be started by the next art session until the current integration run has ended.
