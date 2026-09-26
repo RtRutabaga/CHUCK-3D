@@ -83,3 +83,21 @@
   - Paws still rotate separately from the shin, so extreme foot pitch could open the ankle join.
   - The IK "knee" sits behind the hip, which is the temporary rig's shape, not rat anatomy. A true hock/toe chain needs the coordinated rig milestone.
   - Head and face unchanged. No UVs or LODs.
+
+## Fourth pass — styling toward the references (while Codex is paused)
+
+- **Delivered commit:** the fourth commit on `codex/claude-character` ("Restyle Chuck face, ears, cuffs and yoke toward the references"), on top of `875f579`. It should cherry-pick onto main after `875f579`.
+- **Changed paths:** `Tools/build_chuck_model.py`; regenerated `SourceAssets/Chuck/{Chuck.blend, *.fbx}`; `SourceAssets/Chuck/{README.md, review_renders.py}` (head close-ups added); `Review/after` regenerated; new `Review/style`; this file.
+- **What changed:**
+  - Face: brows removed for a restrained expression; eyelids flatter; cream chin/cheek patch conformed to the head replaces the lip ellipsoid; mouth line on the head surface; slight nose droop.
+  - Ears: thin cupped pink ears, still exactly 65 cm at the top.
+  - Jacket: fabric band cuffs, slimmer sleeves, front/back yoke stitching.
+  - Hands: flatter palm.
+- **Contract:** unchanged. Same bones, 65.000 cm ear top, material slot names, asset paths and foot. Head parts stay 100% on `head`. Cuffs keep the graded sleeve weights. The `Brow` and `EarInner` source parts no longer exist; no runtime reference was found.
+- **Measurements:** `check_model.py` all PASS. Body 172,648 triangles (+7,023). Foot unchanged at 17,120.
+- **Pose evidence:** the 30° head turn, 45° side raise and 35° swing still hold together (`Review/style/*_prev_vs_style.jpg`).
+- **Build note:** one generator run failed with `OSError: [Errno 22]` while writing `SM_ChuckBody.fbx`. It looked like a temporary file lock (OneDrive sync); an immediate re-run succeeded. If it recurs during import, re-run the generator.
+- **Not tested / remaining:**
+  - No Unreal import.
+  - Runtime materials override slot colours, so the in-game cream/pink balance must be checked after import.
+  - Still missing versus the references: fur groom quality, eye highlights/wetness, whisker pads, woven/worn jacket surface, and the cigarette/mouth socket (planned rig work).

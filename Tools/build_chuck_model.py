@@ -198,7 +198,7 @@ for side in (-1,1):
 # round face; these anatomical sections narrow toward a smaller nasal pad.
 verts,faces=[],[]
 head_sections=[(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
-               (6,52.8,5.3,5.7),(10,51.6,4.1,3.6),(15,51,2.2,2),(17.5,51.2,1,1)]
+               (6,52.8,5.3,5.7),(10,51.6,4.1,3.6),(15,50.9,2.2,2),(17.5,50.7,1,1)]
 for x,z,ry,rz in head_sections:
     for j in range(32):
         angle=j*math.tau/32
@@ -209,18 +209,78 @@ for row in range(len(head_sections)-1):
         faces.append((k,nxt,nxt+32,k+32))
 faces += [tuple(reversed(range(32))),tuple((len(head_sections)-1)*32+j for j in range(32))]
 head=mesh('Head',verts,faces,'Fur',2)
-ellipsoid('MuzzleLight',(12,0,49.6),(4.3,3.1,1.8),'Chest')
-ellipsoid('Nose',(17.8,0,51.2),(1.1,1.3,.9),'Skin')
+bpy.context.view_layer.update()
+HEAD_TREE=BVHTree.FromObject(head,bpy.context.evaluated_depsgraph_get())
+
+def head_axis_z(x):
+    for (x0,z0,_,_),(x1,z1,_,_) in zip(head_sections,head_sections[1:]):
+        if x<=x1: return z0+(z1-z0)*max(0.,(x-x0)/(x1-x0))
+    return head_sections[-1][1]
+
+def head_surface(x,a,lift=0.):
+    """Point on the evaluated head at snout station x, angle a around the
+    snout axis (0 = straight down, positive toward +Y), plus lift along the
+    surface normal."""
+    origin=Vector((x,0,head_axis_z(x)))
+    hit,normal,_,_=HEAD_TREE.ray_cast(origin,Vector((0,math.sin(a),-math.cos(a))),20)
+    return hit+normal*lift
+
+# Cream chin, lips and cheeks conform to the head (no separate lip shell);
+# raised at the centre and sunk at the border so no rim shows.
+verts,faces=[],[]
+MU_ROWS,MU_COLS=22,20
+for r in range(MU_ROWS):
+    v=r/(MU_ROWS-1); x=4.2+v*12.1
+    reach=1.6-.45*smoothstep(v,.45,1.)
+    for c in range(MU_COLS):
+        u=2*c/(MU_COLS-1)-1
+        falloff=(1-u**4)*(1-(2*v-1)**6)
+        verts.append(head_surface(x,u*reach,.28*falloff-.22*(1-falloff)))
+for r in range(MU_ROWS-1):
+    for c in range(MU_COLS-1):
+        k=r*MU_COLS+c
+        faces.append((k,k+1,k+1+MU_COLS,k+MU_COLS))
+mesh('MuzzleLight',verts,faces,'Chest',1)
+ellipsoid('Nose',(17.75,0,50.65),(1.15,1.35,.95),'Skin')
+
+def cupped_ear(side):
+    """Thin cupped ear: pinched base, pink inner face (Skin), furred back
+    (Fur) via Solidify. Returned already converted to a mesh."""
+    facing=Vector((.5,side*.84,.12)).normalized()
+    up=Vector((0,0,1)); across=up.cross(facing).normalized(); up=facing.cross(across).normalized()
+    # Square grid mapped onto a disc: no high-valence pole to dimple the cup.
+    n=15
+    verts=[]
+    for r in range(n):
+        for c in range(n):
+            gx=2*c/(n-1)-1; gy=2*r/(n-1)-1
+            dx=gx*math.sqrt(max(0.,1-gy*gy/2)); dy=gy*math.sqrt(max(0.,1-gx*gx/2))
+            rr2=min(1.,dx*dx+dy*dy)
+            width=3.9*(.62+.38*smoothstep(dy,-1.,.1))
+            verts.append(across*(width*dx)+up*(4.5*dy)+facing*(1.25*rr2))
+    faces=[(r*n+c,r*n+c+1,(r+1)*n+c+1,(r+1)*n+c) for r in range(n-1) for c in range(n-1)]
+    # Wind faces so the base normal faces forward/outward (the pink side).
+    probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
+    if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
+    center=Vector((-1.6,side*5.5,60.2))  # pinched base sinks into the skull
+    ear=mesh('Ear',[center+v for v in verts],faces,'Skin',1)
+    ear.data.materials.append(MATS['Fur'])
+    sol=ear.modifiers.new('Ear thickness','SOLIDIFY')
+    sol.thickness=.32; sol.offset=-1; sol.use_rim=True; sol.material_offset=1; sol.material_offset_rim=1
+    bpy.ops.object.select_all(action='DESELECT'); ear.select_set(True)
+    bpy.context.view_layer.objects.active=ear
+    bpy.ops.object.convert(target='MESH')
+    return bpy.context.object
+
+ears=[cupped_ear(side) for side in (-1,1)]
+top=max((e.matrix_world @ v.co).z for e in ears for v in e.data.vertices)
+for e in ears:
+    # Contract: ear top exactly 65 cm.
+    for v in e.data.vertices: v.co.z+=65.-top
 for side in (-1,1):
-    # Top of ears is exactly 65 cm.
-    ear=ellipsoid('Ear',(-1,side*6.1,60.8),(1.1,3.7,4.2),'Fur')
-    ear.rotation_euler.z=side*math.radians(18)
-    inner=ellipsoid('EarInner',(-.1,side*6.4,60.8),(.4,3.1,3.5),'Skin')
-    inner.rotation_euler.z=ear.rotation_euler.z
-    ellipsoid('EyeLid',(6.5,side*5.2,54.4),(2,.85,1.5),'Fur')
-    ellipsoid('Eye',(7.1,side*5.45,54.6),(1.45,.75,1),'Eye')
-    tube('Brow',[(4.8,side*5.6,56),(6.5,side*6.0,56.2),(8.3,side*5.4,55.7)],.35,'Fur')
-    tube('Mouth',[(16.8,0,50.1),(14,side*1.7,49.2),(10,side*3.1,48.8)],.05,'Fur')
+    ellipsoid('EyeLid',(6.6,side*5.0,54.5),(1.75,.7,1.3),'Fur')
+    ellipsoid('Eye',(7.1,side*5.2,54.6),(1.4,.7,.98),'Eye')
+    tube('Mouth',[head_surface(x,side*a,.3) for x,a in ((16.6,.35),(14.5,.8),(12,1.05),(9.8,1.15))],.05,'Fur')
     for i in range(4):
         tube('Whisker',[(13+i*.6,side*3.7,50),(15+i*.6,side*9,50.8-i*.7),(12+i*2,side*(16+i),52-i*1.4)],.028,'Whisker',1)
 
@@ -317,9 +377,9 @@ box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
     # Domed sleeve head sits under the dropped shoulder; no flat cap.
     chain_tube('Sleeve',[(0,side*10.6,40.5),(-1,side*14,29),(3,side*14,22)],
-               lambda t:(4.4*(1-t)+3.4*t)*(.92+.08*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
-    limb('Cuff',(2.5,side*14,24),(3.8,side*14,21),3.75,'Seam')
-    ellipsoid('Hand',(4.2,side*14,19.7),(1.8,1.55,2.3),'Skin')
+               lambda t:(3.9*(1-t)+3.2*t)*(.93+.07*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
+    chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
+    ellipsoid('Hand',(4.3,side*14,19.9),(1.35,1.6,2.1),'Skin')
     for finger in range(4):
         # Relaxed, slightly curled fingers hanging from the palm.
         y=side*(12.9+finger*.75)
@@ -334,6 +394,9 @@ for t0 in (.075,.925):
     tube('Pocket',[jacket_point(t0,28,.08),jacket_point(t0+d*.02,25.5,.08),jacket_point(t0+d*.035,23,.08)],.22,'Seam')
 for z in (19.4,20.4):
     tube('HemStitch',[jacket_point(i/40*.99+.005,z,.06) for i in range(41)],.09,'Seam',1)
+for t0,t1 in ((.012,.2),(.8,.988)):
+    tube('HemStitch',[jacket_point(t0+(t1-t0)*i/8,37.2-1.2*math.sin(math.pi*i/8),.06) for i in range(9)],.09,'Seam',1)
+tube('BackSeam',[jacket_point(.3+.4*i/12,39.5+.8*math.sin(math.pi*i/12),.06) for i in range(13)],.1,'Seam',1)
 for t0 in (.41,.59):
     tube('BackSeam',[jacket_point(t0,z,.06) for z in (19.6,27,35,42.5)],.12,'Seam')
 
@@ -395,9 +458,11 @@ def fur_surface(source,name,material,count,seed,lengths,groom,accept):
 
 def face_fur(point,normal):
     if point.x>15.3 or point.z<48: return False
+    # The cream muzzle patch covers the lower snout and cheeks.
+    if point.x>4 and point.z<head_axis_z(point.x)-.5: return False
     # Bare eyelids, nose and mouth stay legible; no exaggerated furry eyebrows.
     for side in (-1,1):
-        delta=point-Vector((7.1,side*5.45,54.6))
+        delta=point-Vector((7.1,side*5.2,54.6))
         if (delta.x/2.4)**2+(delta.y/1.8)**2+(delta.z/1.8)**2<1: return False
     return True
 
