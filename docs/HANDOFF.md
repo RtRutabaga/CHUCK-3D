@@ -22,6 +22,10 @@ Nineteen original procedural materials distinguish fur/cloth/skin from stone, pl
 
 The barrel now has 20 bowed staves, inset lids, iron hoops and rivets; the crate has separate planks, rails, braces and bevelled edges; pier boards have bevels and recessed nails. Imported bounds were checked in centimetres. Hidden primitive collisions preserve the existing route and pier gap. Chuck's sleeves use tapered rings with shallow gathered folds, retaining the existing rig and scale. See SourceAssets/Docks/README.md. No new dependencies, interactions or maps.
 
+## Rat anatomy and fur silhouette pass
+
+Chuck now has a continuous tapered skull/muzzle, a smaller nasal pad, smaller outward-angled ears, dark fur eyelids and short tapered fur clusters over the back/sides of the skull. The 65 cm ear height and existing bones remain unchanged. This is geometric fur detail rather than a groom; no facial expression or dialogue system was added. The Windows package passed all 37 checks, and front/side captures were inspected.
+
 ## Cameras
 
 Both views remain available, with no final selection. Elevated: 400 cm boom, -48 degree pitch, 65 degree FOV. Rat-height: 220 cm boom, lens about 65 cm above the floor, 78 degree FOV. Switching blends, orbit is damped and positional lag is capped at 8 cm. F / Xbox right-stick click recenters. No camera shake or motion blur. Camera collision hides Chuck if the lens comes within 70 cm. Foreground props can still occupy much of the rat-height view; framing and comfort need user feedback.
@@ -33,7 +37,7 @@ Both views remain available, with no final selection. Elevated: 400 cm boom, -48
 - Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
 - Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
 - Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/props-build.log, Local/props-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
+- Evidence is ignored: Local/head-build.log, Local/head-smoke.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
 
 ## Repository boundaries and publication
 

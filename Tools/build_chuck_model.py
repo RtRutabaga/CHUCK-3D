@@ -133,29 +133,33 @@ for side in (-1,1):
     limb('Thigh',(-2,side*6,21),(-4,side*7.2,11),4.6,'Fur')
     limb('Shin',(-4,side*7.2,12),(2,side*7,5),2.7,'Fur')
 
-# Join and voxel-remesh the head/muzzle for an organic continuous silhouette.
-head = ellipsoid('Head',(2,0,53),(7.8,6.5,8.4),'Fur')
-muzzle = ellipsoid('Muzzle',(10,0,50.8),(8.2,4.7,4.2),'Fur')
-bpy.ops.object.select_all(action='DESELECT')
-head.select_set(True); muzzle.select_set(True)
-bpy.context.view_layer.objects.active = head
-bpy.ops.object.join()
-remesh = head.modifiers.new('Joined anatomy','REMESH')
-remesh.mode = 'VOXEL'; remesh.voxel_size = .42
-bpy.ops.object.modifier_apply(modifier=remesh.name)
-smooth = head.modifiers.new('Soften','SMOOTH'); smooth.factor=.8; smooth.iterations=3
-bpy.ops.object.modifier_apply(modifier=smooth.name)
-for face in head.data.polygons: face.use_smooth=True
-ellipsoid('MuzzleLight',(12,0,49.4),(5.4,4.35,2.7),'Chest')
-ellipsoid('Nose',(18,0,51),(1.65,2,1.35),'Skin')
+# Continuous tapered skull and muzzle. The earlier joined spheres made a blunt,
+# round face; these anatomical sections narrow toward a smaller nasal pad.
+verts,faces=[],[]
+head_sections=[(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
+               (6,52.8,5.3,5.7),(10,51.6,4.1,3.6),(15,51,2.2,2),(17.5,51.2,1,1)]
+for x,z,ry,rz in head_sections:
+    for j in range(32):
+        angle=j*math.tau/32
+        verts.append((x,ry*math.cos(angle),z+rz*math.sin(angle)))
+for row in range(len(head_sections)-1):
+    for j in range(32):
+        k=row*32+j; nxt=row*32+(j+1)%32
+        faces.append((k,nxt,nxt+32,k+32))
+faces += [tuple(reversed(range(32))),tuple((len(head_sections)-1)*32+j for j in range(32))]
+head=mesh('Head',verts,faces,'Fur',2)
+ellipsoid('MuzzleLight',(12,0,49.6),(4.3,3.1,1.8),'Chest')
+ellipsoid('Nose',(17.8,0,51.2),(1.1,1.3,.9),'Skin')
 for side in (-1,1):
     # Top of ears is exactly 65 cm.
-    ear=ellipsoid('Ear',(-1,side*6.1,60),(1.4,4.5,5),'Fur')
-    ellipsoid('EarInner',(.18,side*6.1,60),( .45,3.7,4.25),'Skin')
-    ellipsoid('EyeLid',(6.5,side*5.2,54.3),(2.55,1.3,1.7),'Chest')
-    ellipsoid('Eye',(7.1,side*5.8,54.4),(1.6,.8,1.15),'Eye')
+    ear=ellipsoid('Ear',(-1,side*6.1,60.8),(1.1,3.7,4.2),'Fur')
+    ear.rotation_euler.z=side*math.radians(18)
+    inner=ellipsoid('EarInner',(-.1,side*6.4,60.8),(.4,3.1,3.5),'Skin')
+    inner.rotation_euler.z=ear.rotation_euler.z
+    ellipsoid('EyeLid',(6.5,side*5.2,54.4),(2,.85,1.5),'Fur')
+    ellipsoid('Eye',(7.1,side*5.45,54.6),(1.45,.75,1),'Eye')
     tube('Brow',[(4.8,side*5.6,56),(6.5,side*6.0,56.2),(8.3,side*5.4,55.7)],.35,'Fur')
-    tube('Mouth',[(18,0,49.5),(14,side*3,48.3),(10,side*4,48.5)],.07,'Fur')
+    tube('Mouth',[(16.8,0,50.1),(14,side*1.7,49.2),(10,side*3.1,48.8)],.05,'Fur')
     for i in range(4):
         tube('Whisker',[(13+i*.6,side*3.7,50),(15+i*.6,side*9,50.8-i*.7),(12+i*2,side*(16+i),52-i*1.4)],.028,'Whisker',1)
 
@@ -218,12 +222,35 @@ for i in range(steps-1):
         faces.append((k,n,n+sides,k+sides))
 mesh('Tail',verts,faces,'Skin',1)
 
-# Sparse geometric fur tips break the cheek silhouette; no expensive hair groom.
+# Short tapered fur clusters soften the skull silhouette without an alpha groom.
+# Sample surface area, not vertex density, and avoid the eye/muzzle region.
 rng=random.Random(91)
-for side in (-1,1):
-    for i in range(24):
-        x=rng.uniform(-3,5); z=rng.uniform(48,57); y=side*rng.uniform(5,6.4)
-        mesh('CheekFur',[(x,y,z),(x+.7,y,z+.9),(x-1.4,y+side*.75,z-.8)],[(0,1,2)],'Fur')
+bpy.context.view_layer.update()
+evaluated=head.evaluated_get(bpy.context.evaluated_depsgraph_get())
+surface=evaluated.to_mesh(); surface.calc_loop_triangles()
+triangles=list(surface.loop_triangles)
+verts,faces=[],[]
+for tri in rng.choices(triangles,weights=[t.area for t in triangles],k=1100):
+    a,b,c=[surface.vertices[i] for i in tri.vertices]
+    u=rng.random(); v=rng.random()
+    if u+v>1: u,v=1-u,1-v
+    point=a.co*(1-u-v)+b.co*u+c.co*v
+    if point.x>5 or point.z<48: continue
+    normal=(a.normal*(1-u-v)+b.normal*u+c.normal*v).normalized()
+    tangent=normal.cross(Vector((0,0,1)))
+    if tangent.length<.01: tangent=normal.cross(Vector((0,1,0)))
+    tangent.normalize(); bitangent=normal.cross(tangent).normalized()
+    root=point-normal*.025
+    length=rng.uniform(.18,.48); width=rng.uniform(.06,.12)
+    tip=point+normal*length+Vector((-.16,0,-.07))
+    start=len(verts)
+    for j in range(3):
+        angle=j*math.tau/3
+        verts.append(root+width*(tangent*math.cos(angle)+bitangent*math.sin(angle)))
+    verts.append(tip)
+    faces += [(start+j,start+(j+1)%3,start+3) for j in range(3)]
+mesh('CheekFur',verts,faces,'Fur')
+evaluated.to_mesh_clear()
 
 def combine(objects, name):
     if name == 'SM_ChuckBody':
