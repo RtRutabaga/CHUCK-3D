@@ -28,3 +28,7 @@ __pycache__/
 *.pyc
 Thumbs.db
 .DS_Store
+# Per-user Claude state and optional automatically created Claude worktrees.
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/worktrees/

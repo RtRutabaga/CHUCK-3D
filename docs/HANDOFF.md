@@ -1,82 +1,46 @@
 # Handoff — 2026-09-26
 
-## Current build
+## Current priority
 
-Launch `Launch-Prototype.cmd` from the repository root for the packaged Windows prototype. See docs/PLAYTEST.md for controls and the same-route camera comparison. Unreal 5.7.4 (CL 51494982), Blender 4.5.14 LTS (62c1db4208e8); exact toolchain and hardware details are in docs/SETUP.md. No new dependencies were installed for the material and daylight pass.
+**Character first. World/setting work is paused.** The user says Chuck remains far from the supplied goal: primitive appearance, cartoony movement, unnatural leg placement and unintended gaps along the open jacket/zipper edges. The latest checks do not establish acceptable character quality. Read CHARACTER-PLAN.md before more implementation and AGENT-WORKFLOW.md for the prepared Codex/Claude Code split.
 
-One Waterdeep dock scene includes a quay, pier with a jumpable missing board, tavern frontage, 180 cm stationary human, barrel, crate, low step and bench. Timber framing, roof slates and distant harbor silhouettes remain procedural primitives. Scanned stone and timber now supply surface detail. Barrel, crate and pier boards now render custom Blender meshes over the original hidden collision shapes. The editor map is intentionally empty until Play constructs the scene.
+The eventual rig must support walking, running, rolling, side-jumping, climbing and smoking with a cigarette kept in the mouth. These are design requirements, not a claim that all actions are playable. Keep Chuck silent, restrained and about 65 cm tall; oversized open purple jacket, gray-brown rat anatomy. The supplied reference images take precedence over the current procedural study.
 
-Chuck is a 65 cm gray rat in an oversized purple open jacket, using the imported Blender form study. This supersedes the original one-foot target. The capsule is 65 cm tall and 30 cm wide. He remains silent. No dialogue, combat, pickups or additional maps have been added.
+## What runs
 
-## Latest skeletal motion pass
+Last gameplay milestone: 7104609, published to https://github.com/RtRutabaga/CHUCK-3D. Double-click Launch-Prototype.cmd for the existing local Windows package. See PLAYTEST.md for controls and the same-route camera comparison. Unreal 5.7.4 CL 51494982, Blender 4.5.14 LTS 62c1db4208e8; hardware/toolchain details in SETUP.md. No new engine, Blender or development dependency was installed in these graphics passes.
 
-Speed-matched alternating footsteps now lift and roll; the body leans slightly around the hips, feet tuck in the air, and landing produces a small compression that eases out. Movement against a wall does not advance gait phase. Reset clears the pose. Animation affects visual components only, leaving collision and camera anchors unchanged.
+One runtime-generated Waterdeep dock scene: quay, pier with a jumpable missing board, closed tavern frontage, stationary 180 cm worker, barrel, crate, bench and low step. Custom Blender prop/worker/boat meshes replace visible blockout shapes; original hidden collision preserves the route. No new map, interior, conversation, combat or pickup system. The editor level is intentionally empty until Play constructs it.
 
-Chuck now uses a skinned body with a 14-bone authored Blender rig (plus any imported armature root). Two-bone leg IK follows the foot targets while arms counter-swing and the four-bone tail sways with delayed gait phases. The head has a reserved bone but no facial animation. Motion is procedural, not a clip-based animation set. Feet remain independent static meshes; terrain-aware foot planting and production joint topology remain future work. No groom, cloth simulation, authored texture maps or LODs yet. Runtime now uses original procedural art materials for fur, chest, open purple jacket, skin, eyes and metal; imported vertex colors are not used. See SourceAssets/Chuck/README.md for reproducible generation and import.
+Chuck uses a Blender body with a 14-bone authored rig plus any imported armature root. Procedural leg IK, sleeve motion, tail sway, independent feet and sine-driven gait remain a prototype. Body source: 131,194 triangles; reusable foot: 10,944 triangles. Directional geometric fur covers portions of head, chest, belly and legs. Open jacket has seams/lapels/folds but construction defects remain. Runtime now preserves Skin and Claw foot material slots. No production groom, cloth simulation, authored motion clips, terrain-aware planting or LODs.
 
-## Material and daylight pass
+Twenty-two art materials include original procedural character/world surfaces and CC0 Poly Haven stone/timber maps with recorded source hashes/licenses. DX11 SM5 uses screen-space reflections, 35 cm AO and 8 cm contact shadows; no Lumen/ray tracing/motion blur. Water is opaque and shoreline/reflection quality remains limited. SourceAssets readmes and GRAPHICS-PASS.md describe reproduction and limits. Do not expand these world studies while character work is the priority.
 
-Nineteen original procedural materials distinguish fur/cloth/skin from stone, plaster, timber, slate, metal and animated opaque water. Quay paving uses a consistent stone palette; sky gradient/clouds and the direct/ambient lighting balance replace the flat look. Existing distant warehouses gain pitched roofs, windows, chimneys and a harbor wall. No playable area or collision changes. See docs/GRAPHICS-PASS.md for the generator, limits and next art priorities. This is a step toward the supplied references, not BG3-level fidelity.
+## Cameras and controls
 
-## Custom prop and sleeve pass
+Both cameras remain, with no selection: elevated boom 400 cm, pitch -48 degrees, FOV 65; rat-height boom 220 cm, lens about 65 cm high, FOV 78. Switching/orbit blends and positional lag is capped at 8 cm. Camera collision hides Chuck within 70 cm of the lens; foreground obstruction and comfort still need user feedback.
 
-The barrel now has 20 bowed staves, inset lids, iron hoops and rivets; the crate has separate planks, rails, braces and bevelled edges; pier boards have bevels and recessed nails. Imported bounds were checked in centimetres. Hidden primitive collisions preserve the existing route and pier gap. Chuck's sleeves use tapered rings with shallow gathered folds, retaining the existing rig and scale. See SourceAssets/Docks/README.md. No new dependencies, interactions or maps.
+WASD/arrows/left stick walk; Space/A jump; C/Y switch camera; mouse/QE/right stick turn; F/right-stick click recenter; R/View reset; Esc/Menu exit. Mouse/right-stick Y adjusts rat-height pitch. See PLAYTEST.md for exact launch and verification commands.
 
-## Rat anatomy and fur silhouette pass
+## Verified latest gameplay milestone
 
-Chuck now has a continuous tapered skull/muzzle, a smaller nasal pad, smaller outward-angled ears, dark fur eyelids and short tapered fur clusters over the back/sides of the skull. The 65 cm ear height and existing bones remain unchanged. This is geometric fur detail rather than a groom; no facial expression or dialogue system was added. The Windows package passed all 39 checks, and front/side captures were inspected.
+- Windows Development BuildCookRun completed successfully; final log Local/tavern-final-build.log contains no material compile failure, invalid shader map or remaining variable-shadow warning.
+- Tools/Verify-Package.ps1 completed with **42 passing rendered checks**, zero failures: Local/verify-package-20260926-114439.log. It requires the success marker, not merely Unreal's exit code. Without captures it expects 41 checks; that is not a claim of a separate physical-controller run.
+- Checks include loaded character/prop assets, scale, required bones/materials, sampled pose behavior, walking/jumping/landing, wall/prop collision, fall reset, simulated keyboard/Xbox input, camera transitions/recentering and the pier gap in both views.
+- Front/walking/scale/harbor and Tavern_RatHeight captures were inspected across the passes. Evidence is ignored under Local and Builds/Windows/Chuck3D/Saved/Screenshots/Windows. Still captures do not establish natural animation quality; the user specifically finds the current motion unacceptable.
+- Physical Xbox hardware, sustained frame-time performance, production animation and subjective camera comfort remain unverified. Existing tests tied to the old lean/bob implementation must not force preservation of unwanted motion.
+- Published LFS assets through d233879 were independently downloaded, fsck-checked and sampled source/import hashes matched. Later fur/tavern pushes and local LFS fsck succeeded; final round-trip status should be recorded when performed. Generated Unreal output and Blender backups remain excluded.
 
-## Cameras
+## Two-agent preparation
 
-Both views remain available, with no final selection. Elevated: 400 cm boom, -48 degree pitch, 65 degree FOV. Rat-height: 220 cm boom, lens about 65 cm above the floor, 78 degree FOV. Switching blends, orbit is damped and positional lag is capped at 8 cm. F / Xbox right-stick click recenters. No camera shake or motion blur. Camera collision hides Chuck if the lens comes within 70 cm. Foreground props can still occupy much of the rat-height view; framing and comfort need user feedback.
+CLAUDE.md imports shared AGENTS.md. CHARACTER-PLAN.md records defects, action requirements and review evidence. AGENT-WORKFLOW.md defines separate branches/worktrees, file ownership, initial rig contract, handoffs and integration. Ready-to-paste assignments are in docs/agent-tasks. Tools/New-AgentWorktrees.ps1 creates/reuses ignored Local/AgentWorktrees/codex-movement and claude-character without resetting existing work. The initial roles are Codex movement/runtime and Claude Blender character forms/jacket; the main integration owner imports accepted assets, verifies and publishes.
 
-## Verified in this pass
-
-- Editor and game targets compiled; Windows Development BuildCookRun completed with exit code 0. The final cook log was checked for material compilation failures and invalid shader maps; none remained.
-- Packaged DirectX 11 game ran at 1280 x 720 with all 40 rendered runtime checks passing (zero failures).
-- Checks cover three imported visual prop types, hidden barrel/crate collision, imported skeletal mesh/65 cm scale, required bones and hip axes, authored art material assignments including the purple jacket, articulated sleeve motion, walking lean, airborne foot tuck and settling after landing, jumping/landing, wall collision, camera retraction, fall reset, keyboard and simulated Xbox input, settled camera transitions, recentering and crossing the same pier gap in both cameras.
-- Elevated and rat-height still captures inspected. Walking captures use the same clear quay route in both modes. Still captures confirm pose and framing, not subjective animation quality.
-- Physical Xbox hardware, long-session performance and user comfort remain unverified. No final camera selection.
-- Evidence is ignored: Local/fur-build.log, Local/verify-package-20260926-081758.log and Builds/Windows/Chuck3D/Saved/Screenshots/Windows/{Scale_*,Rig_Walk_*,Props_Barrel}.png.
+Claude Code was not found on PATH or in the usual native/npm launcher locations. Git Bash is installed. No Claude installation, login, permission bypass or session was started; the user requested groundwork for their setup. Official Windows installation/sign-in steps are linked in AGENT-WORKFLOW.md. Run only one Unreal build/editor/import at a time on this 16 GB machine. Keep binary ownership explicit and don't run obsolete generators over manual art changes.
 
 ## Repository boundaries and publication
 
-Original CHUCK-game remains strictly read-only. Reference HEAD: 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Only selected reference documents/excerpts were copied; References/PROVENANCE.md records hashes and origins. No original code or assets were copied. Missing geography/player-progression supplements were not found; do not invent their contents.
+The original CHUCK-game is strictly read-only. Reference HEAD: 87585dd6efb3d9fb0a44dd33549fa521f17b6701. Only selected historical documents/excerpts were copied; References/PROVENANCE.md records origins/hashes. No original code/assets were copied. Missing geography/player-progression supplements were not found; do not invent them.
 
-Separate public remote: https://github.com/RtRutabaga/CHUCK-3D. No deployment is configured. The user explicitly authorized public publication of the reference documents, source paths, supplied JPG references and Blender/FBX/Unreal assets. The character study was published as 48a1573; a separate verification checkout downloaded LFS objects, passed git lfs fsck and matched source asset hashes. Earlier approval holds are resolved.
+CHUCK-3D has a separate public remote and no deployment. Standing user permission covers future verified project code/docs/assets commits and pushes, including supplied JPG references and Blender/FBX/Unreal assets. Do not ask again for routine publication. Paid services, sensitive data, destructive changes and the original game are outside that authorization. All authored binary types use LFS; remaining remote account allowance is unknown. No paid storage was purchased. Builds, Local evidence/worktrees, caches, Binaries, Intermediate, Saved and Blender backups remain ignored.
 
-Authored binary assets use Git LFS; the earlier static character asset set was approximately 11.4 MB. Remaining remote account allowance is unknown. The skeletal update adds about 13 MB of FBX/Unreal assets and enlarges the editable Blender source to about 16 MB. All new binary types are covered by LFS; remaining account allowance is unknown. Generated Unreal output, packaged Builds, Local evidence and Blender backups stay excluded. Close Unreal before building to avoid Live Coding conflicts; build scripts use one compile action without UBA for this 16 GB machine.
-
-Standing publication permission: the user explicitly authorized future verified CHUCK-3D code, documentation and project-asset commits/pushes to this public repository. Do not ask again for routine updates within that scope. Paid services, destructive changes, sensitive data publication and the original CHUCK repository are outside that authorization.
-
-The graphics pass adds 19 small material .uassets under Content/Art, covered by Git LFS. /Game/Art is explicitly included in cooking. The user-authorized original procedural source requires no external asset license or paid storage purchase; remaining LFS account allowance is still unknown.
-
-The user requested continued graphics work until a usage limit blocks progress. Publish verified milestones under standing permission and continue within the existing scene/art scope. No recurring automation was requested.
-
-## Scanned surface pass
-
-Six 2K CC0 Poly Haven texture maps now drive stone and timber color, roughness, occlusion and normals. Provenance and hashes are in SourceAssets/Surfaces/PolyHaven. The decorative rectangular paving overlay was removed without changing quay collision. BuildCookRun passed with no material compile failures; the packaged game passed all 40 rendered checks. Elevated, rat-height and barrel captures were inspected. No new dependencies or purchases. Remaining remote LFS account allowance is unknown.
-
-## Moored boat pass
-
-The old hull sphere and mast shapes are replaced by an original Blender working boat with strakes, ribs, thwarts, furled canvas and rigging. A low rope coil sits beside a pier bollard. Both are noncolliding scenery; no new map, interaction or buoyancy. BuildCookRun passed and all 40 rendered checks passed. Harbor_RatHeight and Harbor_Elevated captures were inspected: the follow view reads the boat silhouette; the elevated view emphasizes nearby walking surfaces and does not frame the whole boat. Source/reproduction details are in SourceAssets/Docks/README.md. Published surface assets through 31be3fb were downloaded in Local/remote-verification, passed LFS fsck and matched sampled source/imported hashes.
-
-## Clothed dock worker pass
-
-An original static Blender human replaces the visible worker primitives: rounded boots, shaped trousers, work shirt/cuffs/collar, vest, belt, hands, cap and neutral face. Imported height is exactly 180 cm. Hidden old human geometry preserves collision. Canvas and Leather are two new original procedural materials. No NPC behavior, dialogue or animation system. BuildCookRun passed without material compile errors; all 40 rendered checks passed. Scale_RatHeight and Chuck_Front were inspected. The face and overlapping clothing topology remain a form study, not finished realism. Reproduce with Tools/Build-DockWorker.ps1 using committed art materials.
-
-## Contact shadows and reflections
-
-DX11 screen-space reflections are enabled at quality 50/intensity 75, with 35 cm ambient occlusion and 8 cm contact shadows. BuildCookRun completed without material errors; all 40 rendered checks passed. Harbor and scale captures were inspected: grounding is slightly stronger around props, while water reflections remain subtle. No Lumen, ray tracing or new dependencies. Long-run performance remains unverified. Published boat/worker assets through d233879 were downloaded into the separate verification checkout, passed LFS fsck and matched source/imported hashes; generated output is not tracked.
-
-## Directional body fur pass
-
-Short geometric tufts now cover the exposed chest, belly, legs and more of the muzzle. Facial hairs are shorter near the nose, with eye/nose/mouth clearances. Leg patches follow their matching bones. Body source is 131,194 triangles; each reusable foot is 10,944. No groom dependency or alpha cards were added. BuildCookRun passed without material errors, and the new Tools/Verify-Package.ps1 command passed all 40 checks. Front and walking captures were inspected; these stills do not establish motion quality or long-session performance. Fur and anatomy remain prototype studies. The verified wrapper was published as 6765c34.
-
-## Tavern props and claw material
-
-Original bevelled bench and shuttered/leaded windows replace visible primitives while retaining hidden collision. WindowGlass is an opaque material study; no interior or new playable area. Feet now preserve their authored Skin and Claw material slots instead of overriding both with Skin. Final packaging log: Local/tavern-final-build.log. The final package passed all 42 rendered checks (Local/verify-package-20260926-114439.log); Tavern_RatHeight was inspected. No material compile failures or variable-shadow warnings remained.
-
-## User steering — character first
-
-Finish/publish this in-flight tavern pass, then pause setting/world work. The user says Chuck remains far from the goal: primitive appearance, cartoony movement, unnatural leg placement and gaps near the open jacket/zipper edges. Automated checks do not establish acceptable character quality. Prepare a Codex plus Claude Code workflow for character work. The eventual character/rig must support walking, running, rolling, side-jumping, climbing and smoking a cigarette held in his mouth; these are design requirements, not newly implemented gameplay.
+The user previously requested sustained graphics work, then specifically directed finishing/publishing the in-flight tavern pass and preparing this two-agent workflow. Do not resume world work or launch both agents automatically from that earlier request. Next implementation is character-first under the prepared assignments.

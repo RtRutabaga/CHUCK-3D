@@ -1,0 +1,9 @@
+# Starter prompt for Codex movement work
+
+Work in the prepared `codex/movement-foundation` worktree. Read AGENTS.md and the required project docs, then docs/CHARACTER-PLAN.md and docs/AGENT-WORKFLOW.md. Claude owns character Blender source on a separate branch; preserve the initial rig contract and do not edit its source/binaries or the environment.
+
+The first assignment is to replace the current sliding sinusoidal walking-foot behavior with grounded stance/swing behavior on the existing small route. Measure the current world-space foot slip before changing it. Keep the 65 cm collision, movement controls, two cameras and jump route stable. Address starts/stops and turning, knee bend stability, ankle targets and landing, with restrained weight transfer. Do not simply reduce bob or tune amplitude and call it natural movement. Do not implement run/roll/side-jump/climb/smoking gameplay yet; document what a coherent future skeletal/clip/contact architecture needs for those actions.
+
+Own ChuckCharacter.cpp/.h and character-focused checks in DockGameMode.cpp, plus docs/agent-handoffs/CODEX.md. Coordinate any bone/rest-pose/material changes with the art owner first. Replace old tests tied to a particular lean angle with meaningful contact and transition regressions where appropriate; preserve scale/collision/input/camera coverage. Do not import art or package while another session uses Unreal. The integration owner owns shared verifier counts and final publication.
+
+Deliver a focused branch commit, reproducible before/after contact measurements and actual motion captures from front/side/rear and both camera modes. Be explicit about untested physical Xbox behavior, slopes and future actions. Use the handoff template; do not claim finished animation quality from still screenshots or passing smoke tests. No world expansion or original-game changes.

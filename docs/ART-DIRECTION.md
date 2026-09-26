@@ -10,6 +10,8 @@ The user supplied two character images on 2026-09-24 and requested Baldur's Gate
 
 The cigarette is part of the supplied visual reference. Cigarette pickup/interaction remains deferred with the other gameplay interactions. No new dialogue, campaign scope, or character powers are implied.
 
+Character-first update, 2026-09-26: stop environment improvements after the in-flight tavern pass. The user identifies primitive forms, cartoony/unnatural foot placement and gaps along the open jacket edges. Prioritize believable character construction and grounded motion over more surface/world detail. Plan the eventual rig for walk, run, roll, side-jump, climb and smoking with the cigarette retained in the mouth. See CHARACTER-PLAN.md for evidence and sequencing; existing screenshots and tests are not proof that the reference quality has been reached.
+
 ## Reference provenance
 
 - `References/ArtDirection/Chuck-Motion.jpg`: user attachment Photo 1.jpg, original filename `1-Photo-1.jpg`.

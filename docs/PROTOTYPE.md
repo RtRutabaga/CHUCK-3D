@@ -29,3 +29,5 @@ Camera decision: OPEN. This milestone exists for the user's comparison, not a co
 When an obstacle forces the camera within 70 cm of Chuck, his proxy is hidden temporarily to keep the lens clear. It reappears when the camera has room. Tight-space framing still needs user feedback.
 
 The material/daylight pass adds original procedural surfaces, atmospheric sky and richer nonplayable harbor roofs. See GRAPHICS-PASS.md. These improve the study without claiming finished artwork or changing collision and camera controls.
+
+Character-first revision (2026-09-26): the user's feedback rejects the current primitive appearance, cartoony leg placement and jacket-edge gaps. Preserve this scene for comparison while character work proceeds; stop further world detail. Plan future run/roll/side-jump/climb/mouth-held smoking support in the rig, without treating those actions as implemented. Current verification expects 42 checks with captures. See CHARACTER-PLAN.md and AGENT-WORKFLOW.md.
