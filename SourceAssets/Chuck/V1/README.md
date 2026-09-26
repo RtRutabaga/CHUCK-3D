@@ -82,7 +82,7 @@ Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperex
 ## Pose evidence (`Review/`)
 
 - Neutral: front, side, rear, three-quarter, scale.
-- Pose studies: crouch/curl, forward knee flexion, toe roll, overhead grip (two-bone arm IK `Poser.arm`: wrists at 62.5 cm above the ears' base, elbows bent outward, reach 0.93, clavicles shrugged, fingers/thumbs curled), and the cigarette held at the left lip corner with the jaw opened 6°. The cigarette is a temporary render-only stick on the socket, not an asset.
+- Pose studies: crouch/curl, forward knee flexion, toe roll, overhead grip (two-bone arm IK `Poser.arm`: wrists at 62.5 cm height (ear top 65 cm), elbows bent outward, reach 0.93, clavicles shrugged, fingers/thumbs curled), and the cigarette held at the left lip corner with the jaw opened 6°. The cigarette is a temporary render-only stick on the socket, not an asset.
 - Clips: `strip_<Clip>.jpg` (side view; turns from above-front).
 
 ## Known limits
