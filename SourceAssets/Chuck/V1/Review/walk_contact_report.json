@@ -1,0 +1,36 @@
+{
+ "L": {
+  "stance_samples": 5,
+  "sole_speed_cm_s": [
+   -95.01,
+   -95.04,
+   -95.07,
+   -95.06,
+   -94.61
+  ],
+  "max_world_slip_cm_s_if_capsule_moves_at_reference": 0.391,
+  "sole_z_cm_during_stance": [
+   0.047,
+   0.042,
+   0.038,
+   0.035,
+   0.032
+  ]
+ },
+ "R": {
+  "stance_samples": 4,
+  "sole_speed_cm_s": [
+   -95.03,
+   -95.05,
+   -95.08,
+   -94.86
+  ],
+  "max_world_slip_cm_s_if_capsule_moves_at_reference": 0.14,
+  "sole_z_cm_during_stance": [
+   0.044,
+   0.04,
+   0.036,
+   0.033
+  ]
+ }
+}

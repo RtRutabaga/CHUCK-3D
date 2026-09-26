@@ -589,58 +589,67 @@ def combine(objects, name):
             colors.data[loop_id].color=tuple(min(1,c*variation) for c in base[:3])+(1,)
     return obj
 
-body=combine(list(scene.objects),'SM_ChuckBody')
-footparts=[]
-# Long, narrow hind paw. Runtime contract: origin 2.5 cm above ground, ankle
-# at local (-2,0,2.5) (ChuckCharacter::SolveLeg), sole close to local z=-2.
-footparts.append(chain_tube('Foot',[(-4.6,0,-.55),(-1,0,-.5),(4.6,0,-.85)],
-    lambda t:1.45+.35*math.sin(t*math.pi),'Skin',caps=(.9,.6),rings=14,squash=.74))
-footparts.append(ellipsoid('Heel',(-2.4,0,1.0),(2.0,1.6,1.9),'Skin'))
-for toe,(y,reach) in enumerate([(-2.0,2.6),(-1.0,3.6),(0.,3.9),(1.0,3.6),(2.1,2.4)]):
-    base=Vector((4.2 if abs(y)<1.5 else 3.4,y*.8,-.9)); tip=base+Vector((reach,y*.35,-.35))
-    mid=(base+tip)*.5+Vector((0,0,.25))
-    footparts.append(chain_tube('Toe',[base,mid,tip],lambda t:.6-.2*t,'Skin',caps=(.5,.8),segments=8,rings=6))
-    direction=(tip-mid).normalized()
-    footparts.append(limb('Claw',tip+direction*.25+Vector((0,0,-.15)),tip+direction*1.0+Vector((0,0,-.3)),.2,'Claw'))
-foot=combine(footparts,'SM_ChuckFoot')
-# Only body and one reusable foot are stored/exported; rest placement is in C++.
-for obj in (body,foot):
-    bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True)
-    bpy.context.view_layer.objects.active=obj
-    bpy.ops.export_scene.fbx(filepath=str(OUT/(obj.name+'.fbx')),use_selection=True,
-        object_types={'MESH'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
+def paw_parts(origin=(0,0,0)):
+    """Long, narrow hind paw built around origin. Legacy runtime contract:
+    origin 2.5 cm above ground, ankle at local (-2,0,2.5)
+    (ChuckCharacter::SolveLeg), sole close to local z=-2. Also reused by the
+    v1 rig builder (Tools/build_chuck_v1.py) at its own placement."""
+    o=Vector(origin)
+    parts=[chain_tube('Foot',[o+Vector(p) for p in ((-4.6,0,-.55),(-1,0,-.5),(4.6,0,-.85))],
+        lambda t:1.45+.35*math.sin(t*math.pi),'Skin',caps=(.9,.6),rings=14,squash=.74)]
+    parts.append(ellipsoid('Heel',o+Vector((-2.4,0,1.0)),(2.0,1.6,1.9),'Skin'))
+    for toe,(y,reach) in enumerate([(-2.0,2.6),(-1.0,3.6),(0.,3.9),(1.0,3.6),(2.1,2.4)]):
+        base=Vector((4.2 if abs(y)<1.5 else 3.4,y*.8,-.9)); tip=base+Vector((reach,y*.35,-.35))
+        mid=(base+tip)*.5+Vector((0,0,.25))
+        parts.append(chain_tube('Toe',[o+base,o+mid,o+tip],lambda t:.6-.2*t,'Skin',caps=(.5,.8),segments=8,rings=6))
+        direction=(tip-mid).normalized()
+        parts.append(limb('Claw',o+tip+direction*.25+Vector((0,0,-.15)),o+tip+direction*1.0+Vector((0,0,-.3)),.2,'Claw'))
+    return parts
+
+# Tools/build_chuck_v1.py runs this file with CHUCK_GEOMETRY_ONLY=True to reuse
+# the authored geometry; the legacy exports below are then skipped entirely.
+if not globals().get('CHUCK_GEOMETRY_ONLY'):
+    body=combine(list(scene.objects),'SM_ChuckBody')
+    footparts=paw_parts()
+    foot=combine(footparts,'SM_ChuckFoot')
+    # Only body and one reusable foot are stored/exported; rest placement is in C++.
+    for obj in (body,foot):
+        bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True)
+        bpy.context.view_layer.objects.active=obj
+        bpy.ops.export_scene.fbx(filepath=str(OUT/(obj.name+'.fbx')),use_selection=True,
+            object_types={'MESH'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
+            bake_anim=False,add_leaf_bones=False,mesh_smooth_type='FACE')
+    # Keep static exports as the original form study; a separate deformable body is
+    # driven by a small runtime rig. Feet remain independent contact targets.
+    rig_data = bpy.data.armatures.new('ChuckRig')
+    rig = bpy.data.objects.new('ChuckRig',rig_data)
+    bpy.context.collection.objects.link(rig)
+    bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True)
+    bpy.context.view_layer.objects.active=rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    spec = [('root',(0,0,0),None),('head',(0,0,46),'root')]
+    for side, sign in [('L',1),('R',-1)]:
+        spec += [(f'thigh_{side}',(-2,sign*6,21),'root'),
+                 (f'shin_{side}',(-4,sign*7.2,11),f'thigh_{side}'),
+                 (f'arm_{side}',(0,sign*10,41),'root'),
+                 (f'forearm_{side}',(-1,sign*14,29),f'arm_{side}')]
+    for i, point in enumerate([(-6,0,17),(-18,2,7),(-30,4,3.7),(-42,8,2.2)]):
+        spec.append((f'tail_{i}',point,'root' if i == 0 else f'tail_{i-1}'))
+    for name, head_pos, parent in spec:
+        bone=rig_data.edit_bones.new(name)
+        bone.head=head_pos; bone.tail=Vector(head_pos)+Vector((0,0,5))
+        if parent: bone.parent=rig_data.edit_bones[parent]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    skinned=body.copy(); skinned.data=body.data.copy(); skinned.name='SK_ChuckBody'
+    bpy.context.collection.objects.link(skinned)
+    modifier=skinned.modifiers.new('Chuck skin','ARMATURE'); modifier.object=rig
+    skinned.parent=rig
+    assert all(abs(sum(g.weight for g in v.groups)-1.) < .001 for v in skinned.data.vertices), 'Unweighted body vertices'
+    bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); skinned.select_set(True)
+    bpy.context.view_layer.objects.active=rig
+    bpy.ops.export_scene.fbx(filepath=str(OUT/'SK_ChuckBody.fbx'),use_selection=True,
+        object_types={'MESH','ARMATURE'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
         bake_anim=False,add_leaf_bones=False,mesh_smooth_type='FACE')
-# Keep static exports as the original form study; a separate deformable body is
-# driven by a small runtime rig. Feet remain independent contact targets.
-rig_data = bpy.data.armatures.new('ChuckRig')
-rig = bpy.data.objects.new('ChuckRig',rig_data)
-bpy.context.collection.objects.link(rig)
-bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True)
-bpy.context.view_layer.objects.active=rig
-bpy.ops.object.mode_set(mode='EDIT')
-spec = [('root',(0,0,0),None),('head',(0,0,46),'root')]
-for side, sign in [('L',1),('R',-1)]:
-    spec += [(f'thigh_{side}',(-2,sign*6,21),'root'),
-             (f'shin_{side}',(-4,sign*7.2,11),f'thigh_{side}'),
-             (f'arm_{side}',(0,sign*10,41),'root'),
-             (f'forearm_{side}',(-1,sign*14,29),f'arm_{side}')]
-for i, point in enumerate([(-6,0,17),(-18,2,7),(-30,4,3.7),(-42,8,2.2)]):
-    spec.append((f'tail_{i}',point,'root' if i == 0 else f'tail_{i-1}'))
-for name, head_pos, parent in spec:
-    bone=rig_data.edit_bones.new(name)
-    bone.head=head_pos; bone.tail=Vector(head_pos)+Vector((0,0,5))
-    if parent: bone.parent=rig_data.edit_bones[parent]
-bpy.ops.object.mode_set(mode='OBJECT')
-skinned=body.copy(); skinned.data=body.data.copy(); skinned.name='SK_ChuckBody'
-bpy.context.collection.objects.link(skinned)
-modifier=skinned.modifiers.new('Chuck skin','ARMATURE'); modifier.object=rig
-skinned.parent=rig
-assert all(abs(sum(g.weight for g in v.groups)-1.) < .001 for v in skinned.data.vertices), 'Unweighted body vertices'
-bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); skinned.select_set(True)
-bpy.context.view_layer.objects.active=rig
-bpy.ops.export_scene.fbx(filepath=str(OUT/'SK_ChuckBody.fbx'),use_selection=True,
-    object_types={'MESH','ARMATURE'},apply_unit_scale=True,axis_forward='-Y',axis_up='Z',
-    bake_anim=False,add_leaf_bones=False,mesh_smooth_type='FACE')
-body.hide_set(True); body.hide_render=True
-bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'Chuck.blend'))
-print('CHUCK_MODEL_READY',sum(len(obj.data.polygons) for obj in (body,foot)))
+    body.hide_set(True); body.hide_render=True
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'Chuck.blend'))
+    print('CHUCK_MODEL_READY',sum(len(obj.data.polygons) for obj in (body,foot)))

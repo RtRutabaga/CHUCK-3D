@@ -1,0 +1,63 @@
+{
+ "contract": "docs/RIG-CONTRACT-V1.md",
+ "skeleton": "/Game/Characters/Chuck/V1/SK_Chuck",
+ "fps": 30,
+ "clips": [
+  {
+   "name": "Idle",
+   "file": "Animations/AS_Chuck_Idle.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 59,
+   "frame_count": 60,
+   "duration_s": 2.0,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8919,
+   "notes": "Neutral hold: breathing, restrained head/ear/tail motion; paws planted at rest."
+  },
+  {
+   "name": "WalkLoop",
+   "file": "Animations/AS_Chuck_WalkLoop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 8,
+   "frame_count": 9,
+   "duration_s": 0.3,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8765,
+   "reference_speed_cm_s": 95.0,
+   "stride_cycle_cm": 28.5,
+   "stance_travel_cm": 17.1,
+   "stance_fraction": 0.6,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.18
+     ]
+    ],
+    "foot_R": [
+     [
+      0.15,
+      0.3
+     ],
+     [
+      0.0,
+      0.03
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_L_plant": 0.0,
+    "foot_R_plant": 0.15,
+    "foot_L_lift": 0.18,
+    "foot_R_lift": 0.03
+   },
+   "notes": "In place (root fixed). During stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll)."
+  }
+ ]
+}

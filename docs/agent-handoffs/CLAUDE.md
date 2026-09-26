@@ -101,3 +101,48 @@
   - No Unreal import.
   - Runtime materials override slot colours, so the in-game cream/pink balance must be checked after import.
   - Still missing versus the references: fur groom quality, eye highlights/wetness, whisker pads, woven/worn jacket surface, and the cigarette/mouth socket (planned rig work).
+
+## Fifth pass — production rig proposal (for agreement, not implemented)
+
+- **Delivered commit:** the fifth commit on `codex/claude-character` ("Propose Chuck production rig for Codex agreement"). It contains text, script and review JPGs only. No generator change, no FBX/.blend change, no contract change.
+- **Files:**
+  - `SourceAssets/Chuck/RIG-PROPOSAL.md`: rationale, skeleton, mesh/asset migration, animation approach, questions, order.
+  - `SourceAssets/Chuck/rig_proposal.py`: the bone table as the single source; builds the armature beside the current model and renders overlays; never saves.
+  - `SourceAssets/Chuck/rig_proposal.json`: the generated table.
+  - `SourceAssets/Chuck/Review/rig_proposal/*.jpg`: overlay renders.
+- **Proposal summary:** 41 bones (35 deforming).
+  - Core: pelvis/spine/chest/neck; `head` kept but re-pivoted.
+  - Face: jaw and ears.
+  - Arms: clavicle/upperarm/lowerarm/hand/fingers/thumb. Arm heads match today's `arm_*`/`forearm_*`.
+  - Legs: plantigrade thigh/calf/foot/toes with the knee forward.
+  - Tail: six bones.
+  - Helpers: `ik_foot_*`, `ik_hand_*`, and `socket_cigarette` at the left lip corner.
+  - Assets: paws merge into one skinned body (`SM_ChuckFoot` retired); new asset path imported side by side before a single runtime switch.
+- **Needs from Codex:** answers to the five questions in `RIG-PROPOSAL.md` (IK tooling / Control Rig enablement, PoseableMesh → AnimBP swap, bone axes, pelvis height and reach, extra sockets). Claude will not build the new rig until the table is agreed.
+
+## Sixth pass — rig v1 first delivery (rig/skin, pose evidence, Idle + WalkLoop)
+
+- **Input:** Codex's acceptance in `docs/RIG-CONTRACT-V1.md` (uncommitted in the main checkout when read; `Tools/Check-RigContract.py` there passes on this branch's unchanged table: 41/35, forward poles, 8.7687/9.3670 cm).
+- **Delivered commit:** the sixth commit on `codex/claude-character` ("Deliver Chuck rig v1 skin, pose evidence, Idle and WalkLoop"). It builds on the latest art (`875f579`, `dc52106`), which are still not integrated.
+- **Changed paths:**
+  - New `Tools/build_chuck_v1.py` (the separate v1 entry point) and `Tools/chuck_v1_pose.py` (posing/IK helpers).
+  - New `SourceAssets/Chuck/V1/**`: `Chuck_V1.blend`, `SK_Chuck.fbx`, `Animations/AS_Chuck_{Idle,WalkLoop}.fbx`, `Animations/manifest.json`, `rig_v1_metadata.json`, `check_v1.py`, `review_v1.py`, `README.md`, `Review/`.
+  - `Tools/build_chuck_model.py`: behaviour-preserving only. The paw construction is now `paw_parts()`, and the export tail is guarded by `CHUCK_GEOMETRY_ONLY`. Legacy output was verified identical by vertex/weight fingerprint, and the legacy binaries were not regenerated.
+- **Contract compliance** (`V1/check_v1.py`, all PASS):
+  - Rig: 41 bones and parents equal the table; rest head/tail error 0; 35 deforming; zero roll; helpers exported with no weights; every deforming bone weighted.
+  - Mesh: ear top 65.000 cm; soles at Z≈0; nine material slots including Claw; weight totals 1; max 4 influences; no `_L`/`_R` cross-weighting.
+  - Clips: root static and root motion off.
+  - FBX re-import: one armature with exactly 41 names, one skinned mesh.
+- **Delivery facts:**
+  - Export settings, per-bone rest matrices and measured sole markers are in `V1/rig_v1_metadata.json`. Heel -5.541 / ball 3.4 / toe 7.305 cm at y=±7, z=0, versus the proposed -4.5 / 3.4 / 8.2.
+  - Clip data is in `V1/Animations/manifest.json`. WalkLoop is 9 frames (0.30 s) at 95 cm/s; stance `foot_L` 0–0.18 s, `foot_R` 0.15–0.30 s and 0–0.03 s.
+- **Measured on the deformed mesh:** during WalkLoop stance the ball-of-paw sole vertex moves at 95.0 cm/s (world slip ≤ 0.39 cm/s at 95 cm/s capsule speed) and stays 0.03–0.05 cm above the ground.
+  - A first build showed 3–8 cm/s slip and 0.7 cm sinking because the ball of the paw took calf weight. The weight rule was fixed (distance falloff) before delivery.
+- **Pose evidence (`V1/Review/`):** neutral views, crouch/curl, forward knee flexion, toe roll, overhead grip, cigarette at the left lip corner with the jaw open, WalkLoop frames.
+- **Not done / remaining:**
+  - Clips not yet delivered: WalkStart, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand.
+  - Overhead grip reaches only about head height.
+  - The leg/paw ankle join is overlapping surfaces with shared weights, not merged topology.
+  - The jacket stretches at large arm raises.
+  - No Unreal import was attempted (integration/Codex own that).
+- **LFS:** `.blend` (22 MB) and FBX (6.3 MB + 0.7 MB of clips) are LFS via the existing patterns; review JPGs (~0.7 MB) are LFS; the `.blend1` backup is ignored.
