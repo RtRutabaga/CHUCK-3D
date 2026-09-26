@@ -25,6 +25,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/FileManager.h"
 #include "GameFramework/PlayerController.h"
 #include "InputKeyEventArgs.h"
 #include "UnrealClient.h"
@@ -246,7 +247,8 @@ void ADockGameMode::StartPlay()
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
-    if(auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0))) Chuck->ResetToDock();
+    if(auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0)))
+    { Chuck->ResetToDock(); AddTickPrerequisiteActor(Chuck); }
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
 }
@@ -331,7 +333,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CONTACT_MEASURE samples=%d mean_cm_s=%.4f max_cm_s=%.4f"),ProbeSamples,ProbeSamples ? ProbeSlip/ProbeSamples : -1.,ProbeMaxSpeed);
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
             auto* MovingBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
-            Check(MovingBody && MovingBody->GetRelativeRotation().Pitch < -2.f,TEXT("walking produces restrained body lean"));
+            Check(ProbeSamples>=10 && ProbeMaxSpeed<1.f,TEXT("steady walk stance feet stay planted within 1 cm/s"));
             if(MovingBody)
             {
                 const auto* Rig=Cast<USkeletalMesh>(MovingBody->GetSkinnedAsset());
@@ -350,7 +352,11 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1)
         {
             Check(MaxAirFootLift>4.f,TEXT("airborne feet tuck above resting pose"));
-            Check(AnimatedFoot && FMath::IsNearlyEqual(static_cast<float>(AnimatedFoot->GetRelativeLocation().Z),2.5f,.15f),TEXT("feet settle after landing"));
+            FHitResult FootGround;
+            FCollisionQueryParams FootQuery(SCENE_QUERY_STAT(ChuckLandingCheck),false,Chuck);
+            const FVector FootPosition=AnimatedFoot ? AnimatedFoot->GetComponentLocation():FVector::ZeroVector;
+            const bool bGround=GetWorld()->LineTraceSingleByChannel(FootGround,FootPosition+FVector(0,0,8),FootPosition-FVector(0,0,15),ECC_Visibility,FootQuery);
+            Check(AnimatedFoot && bGround && FMath::IsNearlyEqual(static_cast<float>(FootPosition.Z-FootGround.ImpactPoint.Z),2.f,.2f),TEXT("feet settle on traced ground after landing"));
             Check(MaxJumpZ>48,TEXT("jump lifts Chuck above floor"));
             Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("jump lands back on quay"));
             Chuck->GetCharacterMovement()->StopMovementImmediately();
@@ -538,7 +544,38 @@ void ADockGameMode::Tick(float DeltaSeconds)
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Tavern_RatHeight.png"),true,false);
         TestStage=37; StageTime=0;
     }
-    else if(TestStage==37 && StageTime>1) TestStage=99;
+    else if(TestStage==37 && StageTime>1)
+    {
+        TestStage=FParse::Param(FCommandLine::Get(),TEXT("ChuckMotionCapture")) ? 40:99;
+        StageTime=0;
+    }
+    else if(TestStage>=40 && TestStage<=47)
+    {
+        const int32 View=(TestStage-40)/2;
+        if(TestStage%2==0)
+        {
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-180,36));
+            const float Yaws[]={0.f,180.f,90.f,0.f};
+            Chuck->SetActorRotation(FRotator(0,Yaws[View],0)); Chuck->Recenter();
+            Chuck->SetActorRotation(FRotator::ZeroRotator);
+            if(Chuck->IsElevated()!=(View==3)) Chuck->ToggleCamera();
+            ++TestStage; StageTime=0; MotionFrame=0; bMotionJump=false;
+        }
+        else
+        {
+            if(StageTime>2 && StageTime<3.1f) Chuck->AddMovementInput(FVector::ForwardVector,1);
+            if(StageTime>=3.1f && StageTime<3.5f) Chuck->AddMovementInput(FVector::RightVector,1);
+            if(StageTime>3.9f && !bMotionJump) { Chuck->Jump(); bMotionJump=true; }
+            if(StageTime>4.05f) Chuck->StopJumping();
+            if(StageTime>=1.5f+MotionFrame*.1f && StageTime<5.3f)
+            {
+                const FString Directory=FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Motion/View%d"),View);
+                IFileManager::Get().MakeDirectory(*Directory,true);
+                FScreenshotRequest::RequestScreenshot(Directory/FString::Printf(TEXT("frame%03d.png"),MotionFrame++),false,false);
+            }
+            if(StageTime>5.4f) { ++TestStage; StageTime=0; if(TestStage==48) TestStage=99; }
+        }
+    }
     else if(TestStage==99)
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

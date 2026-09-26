@@ -40,6 +40,25 @@ private:
     UPROPERTY() UStaticMeshComponent* LeftFoot;
     UPROPERTY() UStaticMeshComponent* RightFoot;
 
+    struct FFootContact
+    {
+        FVector Position=FVector::ZeroVector;
+        FVector Start=FVector::ZeroVector;
+        FQuat Rotation=FQuat::Identity;
+        FQuat StartRotation=FQuat::Identity;
+        float Elapsed=0;
+        float Duration=.2f;
+        bool bSupported=false;
+    };
+    FFootContact Feet[2];
+    int32 SwingFoot=INDEX_NONE;
+    int32 NextFoot=0;
+    bool bContactsReady=false;
+    bool bFirstStep=true;
+    FVector PreviousMotionLocation=FVector::ZeroVector;
+    void UpdateFootContacts(float DeltaSeconds,bool bAirborne);
+    bool FindFootSupport(const FVector& Desired,FVector& Supported) const;
+
     void Forward(float Value);
     void Right(float Value);
     void MouseLook(float Value);

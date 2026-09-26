@@ -6,6 +6,7 @@
 #include "Components/PoseableMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -141,6 +142,8 @@ void AChuckCharacter::ResetToDock()
     ViewYaw = 0;
     ViewPitch = 0;
     GaitPhase = MotionAmount = AirAmount = LandingCompression = 0;
+    bContactsReady=false; bFirstStep=true; SwingFoot=INDEX_NONE; NextFoot=0;
+    PreviousMotionLocation=GetActorLocation();
     Body->SetRelativeTransform(FTransform::Identity);
     LeftFoot->SetRelativeLocationAndRotation(FVector(4,-7,2.5f),FRotator::ZeroRotator);
     RightFoot->SetRelativeLocationAndRotation(FVector(4,7,2.5f),FRotator::ZeroRotator);
@@ -161,25 +164,102 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     MotionAmount = FMath::FInterpTo(MotionAmount, bAirborne ? 0.f : FMath::Clamp(Speed/95.f,0.f,1.f),DeltaSeconds,12.f);
     AirAmount = FMath::FInterpTo(AirAmount,bAirborne ? 1.f : 0.f,DeltaSeconds,14.f);
     LandingCompression = FMath::FInterpTo(LandingCompression,0.f,DeltaSeconds,9.f);
-    // One gait cycle per 46 cm travelled; pushing against a wall produces no steps.
-    if (!bAirborne) GaitPhase = FMath::Fmod(GaitPhase + Speed * DeltaSeconds * UE_TWO_PI / 46.f, UE_TWO_PI);
+    UpdateFootContacts(DeltaSeconds,bAirborne);
     const float Wave = FMath::Sin(GaitPhase);
-    const float Bob = (1.f-FMath::Cos(2.f*GaitPhase))*.3f*MotionAmount;
-    const FRotator Pose(-2.5f*MotionAmount - 3.f*AirAmount,0,Wave*.65f*MotionAmount);
-    // Rotate the static form around its hips, keeping all motion off the capsule/camera.
+    const FRotator Pose(-1.2f*MotionAmount - 1.5f*AirAmount,0,Wave*.15f*MotionAmount);
+    // Restraint comes from the pose, not from reducing the actual planted stride.
     const FVector Pivot(0,0,25);
-    Body->SetRelativeLocationAndRotation(Pivot-Pose.RotateVector(Pivot)+FVector(0,0,Bob-1.2f*LandingCompression),Pose);
-    auto PoseFoot = [&](UStaticMeshComponent* Foot, float Side, float Phase)
-    {
-        const float Swing = FMath::Sin(Phase);
-        const float Lift = FMath::Max(0.f,FMath::Cos(Phase));
-        Foot->SetRelativeLocationAndRotation(
-            FVector(4+Swing*3.f*MotionAmount-1.5f*AirAmount,Side*7,2.5f+Lift*1.8f*MotionAmount+2.f*AirAmount),
-            FRotator(-Lift*8.f*MotionAmount-12.f*AirAmount,0,0));
-    };
-    PoseFoot(LeftFoot,-1,GaitPhase);
-    PoseFoot(RightFoot,1,GaitPhase+UE_PI);
+    Body->SetRelativeLocationAndRotation(Pivot-Pose.RotateVector(Pivot)+FVector(0,0,-.6f*LandingCompression),Pose);
     UpdateSkeleton();
+}
+
+bool AChuckCharacter::FindFootSupport(const FVector& Desired,FVector& Supported) const
+{
+    const float FloorZ=GetActorLocation().Z-GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    FHitResult Hit;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckFootSupport),false,this);
+    const FVector Top(Desired.X,Desired.Y,FloorZ+12.f);
+    const bool bHit=GetWorld()->LineTraceSingleByChannel(Hit,Top,Top-FVector(0,0,32),ECC_Visibility,Query);
+    // Visual contact correction only: it cannot climb a crate or bridge a gap.
+    if(bHit && Hit.ImpactNormal.Z>=.7f && Hit.ImpactPoint.Z<=FloorZ+7.f)
+    {
+        Supported=Hit.ImpactPoint+FVector(0,0,2.f); // mesh sole is 2 cm below its origin
+        return true;
+    }
+    Supported=FVector(Desired.X,Desired.Y,FloorZ+2.f);
+    return false;
+}
+
+void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
+{
+    UStaticMeshComponent* Components[2]={LeftFoot,RightFoot};
+    const FVector Location=GetActorLocation();
+    if(FVector::Dist(Location,PreviousMotionLocation)>50.f) bContactsReady=false;
+    PreviousMotionLocation=Location;
+    if(bAirborne)
+    {
+        bContactsReady=false; SwingFoot=INDEX_NONE; bFirstStep=true;
+        for(int32 I=0; I<2; ++I)
+            Components[I]->SetRelativeLocationAndRotation(FVector(3.f,(I==0 ? -7.f:7.f),4.5f+2.f*AirAmount),FRotator(4.f*AirAmount,0,0));
+        return;
+    }
+    FVector Neutral[2];
+    for(int32 I=0; I<2; ++I)
+        Neutral[I]=GetActorTransform().TransformPosition(FVector(4.f,I==0 ? -7.f:7.f,0));
+    const FQuat Heading=FRotator(0,GetActorRotation().Yaw,0).Quaternion();
+    const FVector Velocity=GetVelocity()*FVector(1,1,0);
+    const float Speed=Velocity.Size();
+    if(!bContactsReady)
+    {
+        for(int32 I=0; I<2; ++I)
+        {
+            Feet[I].bSupported=FindFootSupport(Neutral[I],Feet[I].Position);
+            Feet[I].Rotation=Heading;
+        }
+        bContactsReady=true; bFirstStep=true; SwingFoot=INDEX_NONE;
+    }
+    if(SwingFoot!=INDEX_NONE)
+    {
+        FFootContact& Foot=Feet[SwingFoot];
+        Foot.Elapsed=FMath::Min(Foot.Elapsed+DeltaSeconds,Foot.Duration);
+        const float T=Foot.Elapsed/Foot.Duration;
+        const float Ease=T*T*(3.f-2.f*T);
+        // Predict remaining travel, not a fixed distant landing point: braking
+        // and turns can retarget a swing without dragging the planted foot.
+        FVector Target;
+        Foot.bSupported=FindFootSupport(Neutral[SwingFoot]+Velocity*(Foot.Duration-Foot.Elapsed+.05f),Target);
+        Foot.Position=FMath::Lerp(Foot.Start,Target,Ease)+FVector(0,0,FMath::Sin(T*PI)*2.2f);
+        Foot.Rotation=FQuat::Slerp(Foot.StartRotation,Heading,Ease)*FRotator(4.f*FMath::Sin(T*PI),0,0).Quaternion();
+        GaitPhase=(SwingFoot==0 ? 0.f:PI)+T*PI;
+        if(T>=1.f)
+        {
+            Foot.Position=Target; Foot.Rotation=Heading;
+            NextFoot=1-SwingFoot; SwingFoot=INDEX_NONE;
+        }
+    }
+    else
+    {
+        float Error[2];
+        for(int32 I=0; I<2; ++I)
+            Error[I]=FVector::Dist2D(Feet[I].Position,Neutral[I])+FMath::Abs(FMath::FindDeltaAngleDegrees(Feet[I].Rotation.Rotator().Yaw,GetActorRotation().Yaw))*.06f;
+        const bool bWalking=Speed>4.f;
+        const int32 Candidate=bWalking ? NextFoot : (Error[0]>=Error[1] ? 0:1);
+        if(Error[Candidate]>(bWalking ? .35f:2.f))
+        {
+            SwingFoot=Candidate;
+            FFootContact& Foot=Feet[Candidate];
+            Foot.Start=Foot.Position; Foot.StartRotation=Foot.Rotation; Foot.Elapsed=0;
+            Foot.Duration=bWalking ? FMath::Lerp(.3f,.2f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
+            if(bFirstStep && bWalking) Foot.Duration=FMath::Min(Foot.Duration,.12f);
+            bFirstStep=false;
+        }
+    }
+    for(int32 I=0; I<2; ++I)
+    {
+        // Retain exact world position and heading throughout stance, including
+        // character translation/yaw. The two-bone solve follows these targets.
+        Components[I]->SetWorldLocationAndRotation(Feet[I].Position,Feet[I].Rotation);
+    }
 }
 
 void AChuckCharacter::UpdateSkeleton()
@@ -210,8 +290,8 @@ void AChuckCharacter::UpdateSkeleton()
         Body->BoneSpaceTransforms[I].SetRotation((Ref.GetRefBonePose()[I].GetRotation()*LocalDelta).GetNormalized());
     };
     const float Wave=FMath::Sin(GaitPhase)*MotionAmount;
-    Rotate(TEXT("arm_L"),FVector::YAxisVector,7.f*Wave-3.f*AirAmount);
-    Rotate(TEXT("arm_R"),FVector::YAxisVector,-7.f*Wave-3.f*AirAmount);
+    Rotate(TEXT("arm_L"),FVector::YAxisVector,4.f*Wave-3.f*AirAmount);
+    Rotate(TEXT("arm_R"),FVector::YAxisVector,-4.f*Wave-3.f*AirAmount);
     Rotate(TEXT("forearm_L"),FVector::YAxisVector,-3.f*Wave-5.f*AirAmount);
     Rotate(TEXT("forearm_R"),FVector::YAxisVector,3.f*Wave-5.f*AirAmount);
     for(int32 I=0; I<4; ++I)
@@ -227,7 +307,7 @@ void AChuckCharacter::UpdateSkeleton()
         if(Upper==INDEX_NONE || Lower==INDEX_NONE) return;
         const FVector Hip=Rest[Upper].GetLocation(), Knee=Rest[Lower].GetLocation();
         const FVector RestAnkle(2,Sign*7,5);
-        const FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+FVector(-2,0,2.5f));
+        const FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+Foot->GetRelativeRotation().RotateVector(FVector(-2,0,2.5f)));
         const float A=FVector::Distance(Hip,Knee), B=FVector::Distance(Knee,RestAnkle);
         const FVector Direction=(Target-Hip).GetSafeNormal();
         const float D=FMath::Clamp(static_cast<float>(FVector::Distance(Target,Hip)),FMath::Abs(A-B)+.01f,A+B-.01f);

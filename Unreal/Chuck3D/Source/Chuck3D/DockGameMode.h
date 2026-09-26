@@ -26,6 +26,8 @@ private:
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;
     float ProbeMaxSpeed = 0;
+    int32 MotionFrame = 0;
+    bool bMotionJump = false;
 };
 
 UCLASS()
