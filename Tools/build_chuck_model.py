@@ -256,8 +256,11 @@ ellipsoid('Nose',(17.7,0,50.75),(1.05,1.2,.85),'Skin')
 def cupped_ear(side):
     """Thin cupped ear: pinched base, pink inner face (Skin), furred back
     (Fur) via Solidify. Returned already converted to a mesh."""
-    facing=Vector((.5,side*.84,.12)).normalized()
-    up=Vector((0,0,1)); across=up.cross(facing).normalized(); up=facing.cross(across).normalized()
+    # Turnaround (References/ArtDirection/Chuck-Turnaround.png): the cup faces
+    # forward (the whole pink inside shows from the front) and the ear leans
+    # about 15 degrees outward from the top corner of the skull; taller than wide.
+    facing=Vector((.85,side*.45,.15)).normalized()
+    up=Vector((-.1,side*.18,.98)); across=up.cross(facing).normalized(); up=facing.cross(across).normalized()
     # Square grid mapped onto a disc: no high-valence pole to dimple the cup.
     n=15
     verts=[]
@@ -266,22 +269,21 @@ def cupped_ear(side):
             gx=2*c/(n-1)-1; gy=2*r/(n-1)-1
             dx=gx*math.sqrt(max(0.,1-gy*gy/2)); dy=gy*math.sqrt(max(0.,1-gx*gx/2))
             rr2=min(1.,dx*dx+dy*dy)
-            width=4.0*(.62+.38*smoothstep(dy,-1.,.1))
-            verts.append(across*(width*dx)+up*(4.3*dy)+facing*(1.3*rr2))
+            # Taller than wide after the head's vertical compression (about 1.3:1).
+            width=3.2*(.62+.38*smoothstep(dy,-1.,.1))
+            verts.append(across*(width*dx)+up*(4.9*dy)+facing*(1.2*rr2))
     faces=[(r*n+c,r*n+c+1,(r+1)*n+c+1,(r+1)*n+c) for r in range(n-1) for c in range(n-1)]
     # Wind faces so the base normal faces forward/outward (the pink side).
     probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
     if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
-    # The ear keeps its original high, set-back placement and orientation
-    # (user reference Chuck-Ears-HeadFur-Target.jpg). It slides inward only,
-    # until its pinched base vertex (dy=-1: -up*4.3 +facing*1.3) sits 0.5 cm
-    # inside the skull, measured on the evaluated head at the base's height.
-    # (The narrowed head had left the base 2 cm off the skull.)
-    center=Vector((-1.6,side*4.6,60.4))
-    base=center-up*4.3+facing*1.3
-    hit,_,_,_=HEAD_TREE.ray_cast(Vector((base.x,0,base.z)),Vector((0,side,0)),30)
-    inward=Vector((0,(hit.y-side*.5)-base.y,0))
-    center+=inward
+    # Seat: the pinched base (dy=-1: -up*4.9 +facing*1.2) sits 0.4 cm inside
+    # the upper side of the skull (35 degrees from vertical), found by ray cast
+    # on the evaluated head, about 4.7 cm behind the eye as in the turnaround.
+    tilt=math.radians(35)
+    origin=Vector((1.5,0,head_axis_z(1.5)))
+    hit,normal,_,_=HEAD_TREE.ray_cast(origin,Vector((0,side*math.sin(tilt),math.cos(tilt))),30)
+    base=hit-normal*.4
+    center=base+up*4.9-facing*1.2
     ear=mesh('Ear',[center+v for v in verts],faces,'Skin',1)
     ear.data.materials.append(MATS['Fur'])
     sol=ear.modifiers.new('Ear thickness','SOLIDIFY')
@@ -294,9 +296,15 @@ def cupped_ear(side):
 ears=[cupped_ear(side) for side in (-1,1)]
 top=max((e.matrix_world @ v.co).z for e in ears for v in e.data.vertices)
 for e in ears:
-    # Contract: ear top exactly 65 cm (a small vertical shift; the 0.5 cm
-    # seat depth covers it).
-    for v in e.data.vertices: v.co.z+=65.-top
+    # Contract: ear top exactly 65 cm. Shift down only (sinking the base
+    # deeper); if the ear were short of 65 cm, grow it about its base instead
+    # so it can never lift off the skull.
+    if top>=65.:
+        for v in e.data.vertices: v.co.z+=65.-top
+    else:
+        base=min((v.co for v in e.data.vertices),key=lambda c:c.z).copy()
+        k=(65.-base.z)/(top-base.z)
+        for v in e.data.vertices: v.co=base+(v.co-base)*k
 for side in (-1,1):
     # Small, high rat eyes (face-proportion target).
     ellipsoid('EyeLid',(6.7,side*3.6,54.9),(1.45,.62,1.1),'Fur')

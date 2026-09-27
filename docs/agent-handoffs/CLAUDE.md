@@ -625,3 +625,22 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Groom about 0.86 ms.
   - Evidence: `Review/fix_ears_headfur.jpg` (reference against close, front, rear and 3/4 views).
 - **Not integrated into main.** The launcher still shows `37208d3`.
+
+## Twenty-seventh pass — ears arranged as in the turnaround
+
+- **Request:** "The ears need to look more like this with their positioning", with the turnaround sheet (identical to `References/ArtDirection/Chuck-Turnaround.png`, so no new reference file).
+- **Source commit:** on top of `9ed827b`, branch `codex/claude-character`.
+- **Changes** (`cupped_ear` in `build_chuck_model.py`):
+  - **Orientation:** the cup faces forward (0.85, ±0.45, 0.15); the old one faced sideways (0.5, ±0.84). The ear leans about 12° outward.
+  - **Shape:** a taller oval, half-width 3.2 × half-height 4.9 cm, about 1.3:1 after the head's vertical compression.
+  - **Seat:** the pinched base is ray-cast onto the upper side of the skull (35° from vertical) at source x 1.5, about 4.7 cm behind the eye, and sunk 0.4 cm.
+  - **65 cm tip:** met by shifting down only; if an ear falls short it grows about its base, so it can never lift off.
+  - Two intermediate iterations (45° seat with 25° lean; then a 35° seat) read as round, Mickey-like ears and were refined.
+  - Groom ear exclusion follows: centre (1.1, ±4.4, Z(61.3)).
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - A bake retry was needed after a transient OneDrive write lock on `T_Chuck_Normal.png`.
+  - Evidence: `Review/goal_compare_ears_turnaround.jpg`.
+- **Gap:** the turnaround's ears still stand a little taller and closer together.
+- **Not integrated into main.** The launcher still shows `37208d3`.
