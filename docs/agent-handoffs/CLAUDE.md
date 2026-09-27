@@ -487,3 +487,23 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The smoke reads as a thin straight thread from most angles; the goal's curls more.
   - There is no smoking animation (hand to mouth, puff), and the `-ChuckNoCigarette` path is untested in the packaged verifier.
   - Still open from the goal list: larger hands, pointed shirt collar and flat lapels, belly shading in-game, run clip.
+
+## Twentieth pass — hands and shirt collar
+
+- **Source commit:** on top of `7974b61`, branch `codex/claude-character`.
+- **Hands** (`Tools/build_chuck_model.py`, after the goal images):
+  - slimmer palm;
+  - four long relaxed fingers, 2.9–3.9 cm (were 2.0–2.7 cm), and a longer thumb;
+  - a pale pointed claw on every digit.
+  - New part labels `Thumb`, `FingerClaw` and `ThumbClaw`. The thumb skins to `thumb_*` by part, not by a Y threshold: after the 0.88 arm narrowing the pinky surface already crossed the old 15 cm split. Claws are rigid on their digit. `chuck_v1_shape.ARM_PARTS` includes the new labels.
+- **Collar:** the collar fall now hangs to a **pointed shirt-collar tip** on each side, about 3.6 cm below the collar line (`collar_bottom`). Before, it ran 6.2 cm down the chest as a narrow roll that read as a dangling tab or drawstring.
+- **Review:** `preview_textured.py` gains `close_hand` and `close_collar` views.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Grip and curl poses (`Review/pose_overhead_grip_*`) inspected.
+- **Remaining look gaps:**
+  - belly reads grey in-game shade;
+  - cigarette sits slightly back from the goal's position;
+  - the smoke curls less than the goal's;
+  - run clip (`Chuck-Run-Cycle-Sheet.png`).

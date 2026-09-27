@@ -96,7 +96,9 @@ for name, eye, target, lens in (('three_quarter', (120, -95, 48), (0, 0, 33), 45
                                 ('rear', (-120, 80, 45), (0, 0, 30), 45),
                                 ('close_jacket', (40, -38, 38), (3, -3, 32), 55),
                                 ('close_head', (40, -32, 57), (6, 0, 53), 60),
-                                ('close_paw_tail', (18, -55, 10), (-8, -4, 4), 50)):
+                                ('close_paw_tail', (18, -55, 10), (-8, -4, 4), 50),
+                                ('close_hand', (30, -42, 25), (5, -12.3, 21), 70),
+                                ('close_collar', (38, -26, 53), (4, -1, 46), 55)):
     cam_data.lens = lens; cam.location = eye
     cam.rotation_euler = (Vector(target) - Vector(eye)).to_track_quat('-Z', 'Y').to_euler()
     scene.render.filepath = str(out / f"{'groomed' if GROOM else 'textured'}_{name}.png")

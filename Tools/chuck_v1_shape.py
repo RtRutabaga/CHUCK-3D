@@ -27,7 +27,7 @@ NECK = 47.0         # source height where the head compression starts
 TOP = 65.0          # ear tip: contract height, never moves
 TORSO_NARROW = .88  # Y scale of torso and jacket between hips and neck
 ARM_NARROW = .88    # Y scale of the whole arm chain
-ARM_PARTS = ('Sleeve', 'Cuff', 'Hand', 'Finger')
+ARM_PARTS = ('Sleeve', 'Cuff', 'Hand', 'Finger', 'Thumb', 'FingerClaw', 'ThumbClaw')
 TORSO_PARTS = ('Torso', 'LightChest', 'ChestFur', 'BellyFur', 'OpenJacket', 'Zipper',
                'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam')
 ARM_BONES = ('clavicle', 'upperarm', 'lowerarm', 'hand', 'fingers', 'thumb', 'ik_hand')

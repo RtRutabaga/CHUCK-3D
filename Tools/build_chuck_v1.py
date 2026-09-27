@@ -158,7 +158,9 @@ def hand_weights(p, lab):
     s = side_of(p)
     if lab == 'Hand':
         return chain_weights(p, [f'lowerarm_{s}', f'hand_{s}'], 1.5)
-    digit = f'thumb_{s}' if abs(p.y) > 15.0 * SHAPE.ARM_NARROW else f'fingers_{s}'
+    digit = f'thumb_{s}' if lab in ('Thumb', 'ThumbClaw') else f'fingers_{s}'
+    if lab.endswith('Claw'):
+        return {digit: 1.}  # rigid on its digit
     return chain_weights(p, [f'hand_{s}', digit], 1.)
 
 JAWED = ('Head', 'MuzzleLight', 'Mouth', 'CheekFur')
@@ -202,7 +204,7 @@ FIELDS = {
     'torso': (('Torso', 'LightChest', 'ChestFur', 'BellyFur'), lambda p, l: torso_weights(p)),
     'garment': (('OpenJacket', 'Zipper', 'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam'), lambda p, l: garment_weights(p)),
     'sleeve': (('Sleeve', 'Cuff'), lambda p, l: sleeve_weights(p)),
-    'hand': (('Hand', 'Finger'), hand_weights),
+    'hand': (('Hand', 'Finger', 'Thumb', 'FingerClaw', 'ThumbClaw'), hand_weights),
     'head': (('Head', 'MuzzleLight', 'Nose', 'EyeLid', 'Eye', 'Mouth', 'Whisker', 'CheekFur', 'Ear'), head_weights),
     'leg': (('Leg', 'LegFur'), lambda p, l: leg_weights(p)),
     'paw': (('Foot', 'Heel', 'Toe', 'Claw'), lambda p, l: paw_weights(p)),

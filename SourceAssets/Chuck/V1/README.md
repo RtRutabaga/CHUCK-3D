@@ -76,6 +76,7 @@ Rebuild after any mesh change:
 | `T_Chuck_ORM.png` (linear) | R = ambient occlusion (forced to 1 on the parked-island strip), G = roughness, B = metallic. |
 
 Surface design, following `References/ArtDirection`:
+- **Hands and collar (2026-09-27):** slender palms, long fingers (2.9–3.9 cm) with pale claws on every digit (parts `Finger`, `Thumb`, `FingerClaw`, `ThumbClaw`); pointed shirt-collar tips on the collar fall.
 - **Jacket:** worn red-violet suede/brushed canvas (2026-09-27 turnaround; more saturated than the first study's blue-purple, still below the neon of the first Unreal review). Cropped: the hem sits at 23 cm, so the hips and thighs show. Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
 - **Lining/stitching:** darker purple with fine grain.
 - **Fur:** warm taupe-brown (2026-09-27 turnaround), darker along the back, with vertically stretched streaks following the hair.

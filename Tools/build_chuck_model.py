@@ -322,7 +322,7 @@ def collar_bottom(t):
     # Collar sits at 44.6 cm behind the neck; near each front edge the fall
     # continues down the chest as the rolled lapel.
     e=min(t,1-t)
-    return 44.6-6.2*max(0.,1-e/.17)**1.2
+    return 44.6-3.6*max(0.,1-abs(e-.075)/.075)**1.3
 
 J=56
 rows=[]  # (kind, per-column (z, lift, cloth fold amplitude))
@@ -383,15 +383,20 @@ for side in (-1,1):
     chain_tube('Sleeve',[(0,side*10.6,40.5),(-1,side*14,29),(3,side*14,22)],
                lambda t:(3.9*(1-t)+3.2*t)*(.93+.07*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
     chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
-    ellipsoid('Hand',(4.3,side*14,19.9),(1.35,1.6,2.1),'Skin')
+    # Slender palm, long relaxed fingers and a pale pointed claw on every digit
+    # (2026-09-27 goal images). The thumb is its own part (skinned to thumb_*).
+    ellipsoid('Hand',(4.3,side*14,19.8),(1.1,1.35,2.25),'Skin')
     for finger in range(4):
-        # Relaxed, slightly curled fingers hanging from the palm.
-        y=side*(12.9+finger*.75)
-        length=(2.3,2.7,2.6,2.0)[finger]
-        base=Vector((5.0,y,18.4)); mid=base+Vector((.55,0,-length*.6)); tip=mid+Vector((-.15,0,-length*.45))
-        chain_tube('Finger',[base,mid,tip],lambda t:.42-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
-    chain_tube('Finger',[(4.4,side*15.2,19.4),(5.5,side*15.7,18.5),(6.1,side*15.5,17.7)],
-               lambda t:.45-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
+        y=side*(13.0+finger*.6)
+        length=(3.3,3.9,3.7,2.9)[finger]
+        base=Vector((4.9,y,18.2)); mid=base+Vector((.6,0,-length*.58)); tip=mid+Vector((-.25,0,-length*.42))
+        chain_tube('Finger',[base,mid,tip],lambda t:.34-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
+        nail=(tip-mid).normalized()
+        limb('FingerClaw',tip-nail*.05,tip+nail*.75,.1,'Claw')
+    thumb=[Vector((4.4,side*15.2,19.4)),Vector((5.6,side*15.8,18.3)),Vector((6.5,side*15.6,17.1))]
+    chain_tube('Thumb',thumb,lambda t:.36-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
+    nail=(thumb[2]-thumb[1]).normalized()
+    limb('ThumbClaw',thumb[2]-nail*.05,thumb[2]+nail*.7,.1,'Claw')
 for t0 in (.075,.925):
     # Slanted welt pocket stitched on the shell surface.
     d=-1 if t0<.5 else 1
@@ -550,7 +555,7 @@ def combine(objects, name):
             # FBX -> Unreal reflects Y. Name sides by their runtime coordinates.
             side = 'L' if center.y > 0 else 'R'
             bone = 'root'
-            if label in ('Hand','Finger'):
+            if label in ('Hand','Finger','Thumb','FingerClaw','ThumbClaw'):
                 bone = 'forearm_' + side
             elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
                 bone = 'head'
