@@ -40,6 +40,10 @@ def label(obj): return obj.name.split('.')[0]
 def side_of(p): return 'L' if p.y > 0 else 'R'
 
 # ---------------------------------------------------------------- geometry
+# Whiskers at 0.028 cm radius alias into dotted lines at game distance in
+# Unreal; v1 uses 0.05 cm (legacy output unchanged).
+for obj in [o for o in scene.objects if label(o) == 'Whisker']:
+    obj.data.bevel_depth = .05
 for obj in [o for o in scene.objects if label(o) in ('Leg', 'LegFur')]:
     bpy.data.objects.remove(obj, do_unlink=True)
 

@@ -40,7 +40,7 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
 
 ## Mesh and weights
 
-- One skinned mesh, 207,771 triangles, one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
+- One skinned mesh, 207,771 triangles (whiskers 0.05 cm radius so they don't alias into dotted lines in-engine), one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
 - **Legs:** rebuilt knee-forward along thigh → calf → hock. Their domed ends sink into the paw heel mound.
 - **Paws:** now part of the body (the legacy `paw_parts` at origin (-0.8, ±7, 1.96)).
 - **Continuity:** leg and paw are overlapping surfaces, not one merged manifold. The paw, heel mound included, is rigid on foot/toes. The ankle bend happens on the fur leg tube, which grades calf → foot over about 1.5 cm around the hock. The tube's end sits inside the heel mound and is fully foot-weighted, so the join stays closed under toe roll, paw lift and crouch (`Review/ankle_join.jpg`).
@@ -69,12 +69,12 @@ Rebuild after any mesh change:
 
 | Map | Contents |
 | --- | --- |
-| `T_Chuck_BaseColor.png` (sRGB) | Albedo, baked with metallic off because Cycles returns no diffuse colour for metals. |
+| `T_Chuck_BaseColor.png` (sRGB) | Albedo, baked with metallic off because Cycles returns no diffuse colour for metals. Each parked strand island (tufts, whiskers, zipper teeth) is filled with its material's mean surface colour, measured through an exact material-ID bake, or with a defined flat colour for whiskers and zipper, which have no surface. |
 | `T_Chuck_Normal.png` (linear) | Tangent space, **DirectX convention (green flipped) for Unreal**. |
 | `T_Chuck_ORM.png` (linear) | R = ambient occlusion (forced to 1 on the parked-island strip), G = roughness, B = metallic. |
 
 Surface design, following `References/ArtDirection`:
-- **Jacket:** worn purple canvas. Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
+- **Jacket:** worn, deep purple canvas (toned down after the first Unreal review read it as neon). Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
 - **Lining/stitching:** darker purple with fine grain.
 - **Fur:** grey-brown, darker along the back, with vertically stretched streaks following the hair.
 - **Chest:** warm cream with streaks.
@@ -86,7 +86,7 @@ Surface design, following `References/ArtDirection`:
 
 `preview_textured.py` rebuilds every material in memory from the three maps alone, the way an Unreal material would sample them, and renders warm-daylight views (`Review/textured_*.jpg`).
 
-**Unreal wiring (integration owner; not done):** import the three PNGs as sRGB colour / normal map / linear masks, and make one material using BaseColor × ORM.R, ORM.G roughness, ORM.B metallic and the normal. Assign it (or instances of it) to all nine `SK_Chuck` slots. The runtime currently overrides slots with the procedural `M_Chuck_*` materials, so that override must select the textured material for the v1 mesh. The geometric fur tufts are separate geometry and take their flat colour from the parked islands.
+**Unreal wiring (done by the integration owner in `M_Chuck_V1`):** BaseColor as Base Color, ORM.R as Ambient Occlusion (not multiplied into albedo), ORM.G roughness, ORM.B metallic, and the DirectX normal with no extra flip. It is assigned to all nine `SK_Chuck` slots. After any rebake, re-run `Tools/Import-ChuckV1.ps1`. The geometric fur tufts are separate geometry and take their flat colour from the parked islands.
 
 ## Sole markers (measured)
 

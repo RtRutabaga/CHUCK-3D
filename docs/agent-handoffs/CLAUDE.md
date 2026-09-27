@@ -197,3 +197,17 @@
 - **Evidence:** `V1/Review/textured_{three_quarter,front,rear,close_jacket,close_head,close_paw_tail}.jpg` (EEVEE, maps only).
 - **Checks:** `check_v1.py` 66 PASS; stance drift at most 0.002 cm/s; unchanged.
 - **Needs integration:** Unreal import of the textures and a textured material for the v1 slots (the runtime `M_Chuck_*` override must select it). Not visible in-game until v1 itself is integrated. The legacy in-game mesh has no UVs and cannot use these maps.
+
+## Eleventh pass — surface fixes from the first Unreal review (main `98f6d61`)
+
+- **Input:** `docs/CHUCK-V1-INTEGRATION.md` and `Local/V1UnrealReview/*.png`. v1 imported side by side and verified; the next runtime gate (AnimBP/contact migration) is Codex's.
+- **Delivered commit:** the eleventh commit on `codex/claude-character` ("Fix v1 surface colours seen in the Unreal review"), after `c5d6d25`.
+- **Changed:** `SourceAssets/Chuck/V1/bake_textures.py`, `Tools/build_chuck_v1.py`, regenerated `V1` FBX/blend/textures/review, and the V1 README.
+- **Fixes:**
+  - Jacket: base colour toned down to a deeper, less saturated violet; the engine render read it as neon.
+  - Head fur: tufts looked dark and noisy because thousands of differently shaded tufts baked into their few parked texels. Each parked island now gets its material's mean surface colour from an exact material-ID bake (no margin, no pixel filter). Whiskers and zipper, which have no real surface, use defined flat colours (pale, nickel).
+  - Whiskers: 0.028 → 0.05 cm radius in v1 only, to stop in-engine dotted aliasing. Legacy output is unchanged.
+  - README material note corrected to the integrated wiring: ORM.R as AO, not multiplied into albedo.
+- **Checks:** `check_v1.py` 66 PASS; stance drift at most 0.002 cm/s; bones, clips, UV layout and weights unchanged.
+- **Integration:** re-run `Tools/Import-ChuckV1.ps1 -Review`. `SK_Chuck.fbx` (whisker geometry) and all three textures changed; the clip FBXs were re-exported from the same actions.
+- **Still short of the references:** geometric fur tufts versus a real groom or hair cards, a stylised face, no cloth simulation.

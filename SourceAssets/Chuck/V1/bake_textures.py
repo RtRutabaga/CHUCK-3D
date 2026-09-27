@@ -107,12 +107,13 @@ def jacket(g):
     # areas and edges (pointiness), grime toward the hem, crumpled wrinkles and
     # a fine diagonal twill/canvas grain in the normal.
     blot = g.noise(.12, 3, .5)
-    base = g.ramp(blot, [(.25, (.07, .018, .15)), (.5, (.11, .03, .21)), (.8, (.16, .05, .27))])
+    # Deeper, less saturated violet: the first Unreal review read the jacket as neon.
+    base = g.ramp(blot, [(.25, (.062, .026, .11)), (.5, (.095, .042, .158)), (.8, (.135, .066, .205))])
     wear = g.math('MULTIPLY', g.math('SUBTRACT', g.pointiness, .5), 7., clamp=True)
     wear = g.math('MULTIPLY', wear, g.noise(1.8, 2, .6))
     crumple = g.noise(.9, 5, .6)
     raised = g.math('MULTIPLY', g.math('SUBTRACT', crumple, .52), 3., clamp=True)
-    faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.25, .13, .33))
+    faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.21, .14, .26))
     grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 18.), .12, clamp=True), clamp=True)
     color = g.mix(g.math('MULTIPLY', grime, .4), faded, (.06, .03, .055))
     twill = g.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='DIAGONAL')
@@ -177,6 +178,9 @@ def metal(g):
 def whisker(g):
     g.finish(g.ramp(g.noise(5, 2, .5), [(0., (.42, .39, .31)), (1., (.55, .52, .44))]), .5)
 
+# Linear flat colours for materials whose geometry is entirely parked.
+FLAT = {'Metal': (.5, .48, .45), 'Whisker': (.47, .44, .37)}
+
 SHADERS = {'Jacket': jacket, 'Seam': lining, 'Fur': fur, 'Chest': chest, 'Skin': skin,
            'Eye': eye, 'Claw': claw, 'Metal': metal, 'Whisker': whisker}
 graphs = {}
@@ -216,6 +220,39 @@ def save(name, rgb, colorspace):
 for g in graphs.values(): g.bsdf.inputs['Metallic'].default_value = 0.
 color = bake('DIFFUSE', pass_filter={'COLOR'})
 for g in graphs.values(): g.bsdf.inputs['Metallic'].default_value = g.metal
+
+# The top strip (v > 0.985) holds one flat island per material for fur tufts,
+# whiskers and zipper teeth (build_chuck_v1.py parks material index i at
+# u = .004 + .008 i). Thousands of differently shaded tufts bake into those
+# few texels, so fill each island with its material's mean surface colour,
+# measured through a material-ID bake.
+strip = int(.987 * SIZE)
+mats = list(body.data.materials)
+for i, mat in enumerate(mats):
+    g = graphs[mat.name]
+    e = g.node('ShaderNodeEmission'); e.inputs['Color'].default_value = ((i + .5) / len(mats), 0, 0, 1)
+    g.id_emit = e; g.link(e.outputs[0], g.out.inputs['Surface'])
+scene.cycles.samples = 1
+# Exact IDs: no padding and no pixel filter, so island borders never blend
+# two IDs into a third material's value.
+scene.render.bake.margin = 0; width = scene.cycles.filter_width; scene.cycles.filter_width = .01
+ids = bake('EMIT', 'Non-Color')
+scene.render.bake.margin = 8; scene.cycles.filter_width = width
+for g in graphs.values(): g.link(g.bsdf.outputs['BSDF'], g.out.inputs['Surface'])
+def srgb(c):
+    c = np.asarray(c, dtype=np.float32)
+    return np.where(c <= .0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - .055)
+for i, mat in enumerate(mats):
+    mask = np.abs(ids[..., 0] - (i + .5) / len(mats)) < .1 / len(mats); mask[strip:] = False
+    if mask.sum() > 2e-4 * SIZE * SIZE:  # a real surface, not stray border texels
+        mean = color[mask][:, :3].mean(axis=0)
+    else:
+        # All of this material's faces are parked (whiskers, zipper teeth): use
+        # the shader's intended flat colour (the legacy slot colour is stale).
+        mean = srgb(FLAT.get(mat.name.split('.')[0], mat.diffuse_color[:3]))
+    x0 = int((.004 + .008 * i - .002) * SIZE); x1 = int((.004 + .008 * i + .007) * SIZE)
+    color[strip:, x0:x1, :3] = mean
+    print('CHUCK_STRAND_COLOUR', mat.name, [round(float(c), 3) for c in mean])
 save('T_Chuck_BaseColor', color[..., :3], 'sRGB')
 scene.cycles.samples = 4
 normal = bake('NORMAL', 'Non-Color', normal_space='TANGENT')
@@ -230,11 +267,10 @@ for g in graphs.values():
     e = g.node('ShaderNodeEmission'); e.inputs['Color'].default_value = (g.metal,) * 3 + (1,)
     g.link(e.outputs[0], g.out.inputs['Surface'])
 scene.cycles.samples = 1
-metal = bake('EMIT', 'Non-Color')
+metal = bake('EMIT', 'Non-Color')  # (after the ID bake, emission is rewired to metallic)
 # The top strip (v > 0.985) holds the flat per-material islands of fur tufts,
 # whiskers and zipper teeth (see build_chuck_v1.py). Their packed geometry
 # self-occludes, so baked AO there would blacken them: force it to 1.
-strip = int(.987 * SIZE)
 ao[strip:, :, :3] = 1.
 orm = np.stack([ao[..., 0], rough[..., 0], metal[..., 0]], axis=-1)
 save('T_Chuck_ORM', orm, 'Non-Color')
