@@ -6,6 +6,12 @@ Added 2026-09-26: `References/chuck-3d-resource-guide.md`, copied byte-for-byte 
 SHA-256 (source and copy): `3DA84004DB51ED3CBF379940AA9DA2D05BDF7BD13A9E4157C72D812C233900C0`.
 Directional suggestions, not a replacement for the user's character target or current milestone. Applicability and current-resource corrections: `docs/RESOURCE-GUIDE-NOTES.md`.
 
+## User-supplied AI dev notes
+
+Added 2026-09-26: `References/ai-dev-notes.md`, copied byte-for-byte from the user's upload `AI-DEV-NOTES.md` (Claude Code session attachment `9c1969f3-AI-DEV-NOTES.md`).
+SHA-256 (source and copy): `2087EA97E404E02D4B956CADC4B6B293348B7F0E58378541244C0FA0A2C18BE5`.
+The user describes it as suggestions, not rigid rules. Applicability, conflicts with current project rules and open decisions: `docs/AI-DEV-NOTES-REVIEW.md`.
+
 ## Original game references
 
 Captured 2026-09-24 from read-only source: C:\Users\ashsm\OneDrive\Documents\CHUCK-game
