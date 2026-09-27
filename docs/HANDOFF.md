@@ -2,6 +2,21 @@
 
 ## Current launcher and integration status
 
+**Update (Claude, 2026-09-27, user request "integrate"):** Claude merged `codex/claude-character` into main as `4eef511` (merge of `699efd0..c2e31d5` over Codex's `a4b00b2`; one clean automatic merge). That brings in:
+- the four 2026-09-27 goal images and the user's snout/fur target (`References/ArtDirection/`);
+- the look passes: warm shaggy groom, narrow head, cropped red-violet jacket;
+- the v1.1 proportions and the v1.2 snout amendment (`docs/RIG-CONTRACT-V1.md`, `Tools/chuck_v1_shape.py`);
+- the cigarette prop and smoke (`-ChuckNoCigarette` removes it);
+- long clawed hands and a pointed shirt collar;
+- a 136,000-strand groom with per-strand colour variation.
+
+The package was rebuilt **in the main checkout**: editor module, then BuildCookRun into `Builds/Windows`. Then:
+- `Verify-Package.ps1 -MotionCapture`: **50 passes, 0 failures** (`Local/verify-package-20260927-121313.log`).
+- `Write-PrototypeReceipt.ps1` recorded build `4eef511`.
+- `Launch-Prototype.ps1 -CheckOnly` identified it with no newer-source warning.
+
+`Launch-Prototype.cmd` now opens this Chuck. Not verified by this integration: a physical controller, subjective camera comfort, and whether the look matches the user's taste. Remaining look gaps are listed in `docs/agent-handoffs/CLAUDE.md`, 21st pass. Nothing was pushed to the public remote.
+
 Claude's delivery through `00e46d6` is now integrated on main: v1 skeletal character, native AnimInstance/contact IK, authored walk/start/stop/turn/jump clips, three bound groom groups, and the revised jump/follow cameras. Character/art ownership follows the v2 split in AGENT-WORKFLOW.md. World work remains paused.
 
 The user reported that the normal launcher showed none of this. Cause: `Launch-Prototype.cmd` still opened main's September 26 13:03 executable, while Claude packaged the new game in `.claude/worktrees/project-orientation-fd7504/Builds/Windows`. Git commits and asset imports do not replace a packaged executable or its cooked content.
