@@ -55,18 +55,25 @@ for name,source_group in metadata['groups'].items():
     unreal.log('CHUCK_GROOM_COUNTS '+name+' '+str([(g.get_editor_property('num_curves'),g.get_editor_property('num_guides')) for g in groups]))
     assert len(groups)==1 and groups[0].get_editor_property('num_curves')==source_group['strands'],str(groups)
     mat=unreal.load_asset(DEST+'/M_'+name)
-    if not mat:
+    hair_colour=unreal.LinearColor(*metadata['suggested_hair_colours_linear'][name],1)
+    if mat:
+        # Update in place: deleting a loaded material's expressions from Python
+        # asserts (!IsRooted) in UE 5.7.4.
+        colour=lib.get_material_property_input_node(mat,unreal.MaterialProperty.MP_BASE_COLOR)
+        if not isinstance(colour,unreal.MaterialExpressionConstant3Vector):
+            raise RuntimeError('M_'+name+' base colour is not the expected constant; delete the asset and re-run')
+        colour.set_editor_property('constant',hair_colour)
+    else:
         mat=tools.create_asset('M_'+name,DEST,unreal.Material,unreal.MaterialFactoryNew())
-    lib.delete_all_material_expressions(mat)
+        colour=lib.create_material_expression(mat,unreal.MaterialExpressionConstant3Vector)
+        colour.set_editor_property('constant',hair_colour)
+        lib.connect_material_property(colour,'',unreal.MaterialProperty.MP_BASE_COLOR)
+        roughness=lib.create_material_expression(mat,unreal.MaterialExpressionConstant)
+        roughness.set_editor_property('r',.65)
+        lib.connect_material_property(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
     mat.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_HAIR)
     mat.set_editor_property('two_sided',True)
     lib.set_material_usage(mat,unreal.MaterialUsage.MATUSAGE_HAIR_STRANDS)
-    colour=lib.create_material_expression(mat,unreal.MaterialExpressionConstant3Vector)
-    colour.set_editor_property('constant',unreal.LinearColor(*metadata['suggested_hair_colours_linear'][name],1))
-    lib.connect_material_property(colour,'',unreal.MaterialProperty.MP_BASE_COLOR)
-    roughness=lib.create_material_expression(mat,unreal.MaterialExpressionConstant)
-    roughness.set_editor_property('r',.65)
-    lib.connect_material_property(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
     lib.recompile_material(mat)
     unreal.EditorAssetLibrary.save_loaded_asset(mat,only_if_is_dirty=False)
     assert unreal.ChuckReviewLibrary.configure_groom_material(groom,mat,name)

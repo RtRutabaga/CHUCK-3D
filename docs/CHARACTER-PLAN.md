@@ -2,7 +2,7 @@
 
 The user's 2026-09-26 assessment is the acceptance baseline: Chuck remains far from the goal images, his movement feels cartoony, his legs land unnaturally, his appearance is primitive/simplistic, and the jacket has unnatural gaps around the open zipper/placket edges. Passing the existing smoke tests does not contradict or resolve these defects. Stop adding world detail until character work has addressed this priority.
 
-Keep 65 cm feet-to-ear height beside the 180 cm worker, natural gray-brown rat anatomy, oversized open purple jacket and restrained silent characterization. Read ART-DIRECTION.md and inspect both References/ArtDirection JPGs. Aim for credible anatomy, garment construction and motion before adding more surface detail. The latest geometric fur is still a prototype, not a production groom or a substitute for good forms.
+Keep 65 cm feet-to-ear height beside the 180 cm worker, natural gray-brown rat anatomy, oversized open purple jacket and restrained silent characterization. Read ART-DIRECTION.md and inspect the References/ArtDirection images (the 2026-09-24 JPG pair and the 2026-09-27 turnaround, standing and run PNGs). Aim for credible anatomy, garment construction and motion before adding more surface detail. The latest geometric fur is still a prototype, not a production groom or a substitute for good forms.
 
 ## Source-level findings to verify visually
 

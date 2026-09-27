@@ -48,7 +48,8 @@ for obj in [o for o in scene.objects if label(o) in ('Leg', 'LegFur')]:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 def leg_radius(t):
-    return 4.3 - 1.6 * smoothstep(t, .08, .5) - .8 * smoothstep(t, .55, 1.)
+    # Slimmer than the first study (turnaround 2026-09-27: long, slender legs).
+    return 3.7 - 1.3 * smoothstep(t, .08, .5) - .7 * smoothstep(t, .55, 1.)
 
 PAW_ORIGIN = {}
 for s, y in (('L', 1), ('R', -1)):

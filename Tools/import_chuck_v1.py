@@ -59,12 +59,21 @@ for role, compression, srgb in (
     textures[role] = tex
 
 material = unreal.load_asset(DEST+'/M_Chuck_V1')
-if not material:
+# The graph only samples the three maps, which are re-imported in place, so an
+# existing material is kept: deleting its expressions from Python asserts
+# (!IsRooted) in UE 5.7.4 once the material has been loaded with its graph.
+build_graph = not material
+if build_graph:
     material = TOOLS.create_asset('M_Chuck_V1', DEST, unreal.Material, unreal.MaterialFactoryNew())
-LIB.delete_all_material_expressions(material)
+else:
+    for prop in (unreal.MaterialProperty.MP_BASE_COLOR, unreal.MaterialProperty.MP_NORMAL,
+                 unreal.MaterialProperty.MP_ROUGHNESS):
+        node = LIB.get_material_property_input_node(material, prop)
+        if not isinstance(node, unreal.MaterialExpressionTextureSample) or node.get_editor_property('texture') not in textures.values():
+            raise RuntimeError(f'M_Chuck_V1 {prop} is not wired to a V1 map; delete the asset and re-run')
 LIB.set_material_usage(material, unreal.MaterialUsage.MATUSAGE_SKELETAL_MESH)
 samplers = {}
-for role in textures:
+for role in (textures if build_graph else ()):
     node = LIB.create_material_expression(material, unreal.MaterialExpressionTextureSample)
     node.set_editor_property('texture', textures[role])
     node.set_editor_property('sampler_type', {
@@ -72,12 +81,12 @@ for role in textures:
         'Normal': unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
         'ORM': unreal.MaterialSamplerType.SAMPLERTYPE_MASKS}[role])
     samplers[role] = node
-for role, channel, prop in (
+for role, channel, prop in (() if not build_graph else (
         ('BaseColor', 'RGB', unreal.MaterialProperty.MP_BASE_COLOR),
         ('Normal', 'RGB', unreal.MaterialProperty.MP_NORMAL),
         ('ORM', 'R', unreal.MaterialProperty.MP_AMBIENT_OCCLUSION),
         ('ORM', 'G', unreal.MaterialProperty.MP_ROUGHNESS),
-        ('ORM', 'B', unreal.MaterialProperty.MP_METALLIC)):
+        ('ORM', 'B', unreal.MaterialProperty.MP_METALLIC))):
     if not LIB.connect_material_property(samplers[role], channel, prop):
         raise RuntimeError(f'Material connection failed: {role}/{channel}')
 LIB.recompile_material(material)

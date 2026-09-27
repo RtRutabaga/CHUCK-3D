@@ -385,3 +385,44 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Lazy auto-follow of the camera behind a moving Chuck. It changes how camera-relative input steers, so it needs the user's feel feedback first.
   - No physical-controller or subjective comfort test.
   - Traversal (run/climb/vault) waits for the user's scope decision (AGENT-WORKFLOW suggested order, step 4).
+
+## Seventeenth pass — new goal images; first look pass toward them
+
+- **Request (2026-09-27):** the user supplied four new goal images and asked to bring Chuck closer to them before any camera or roll/jump work.
+- **Source commit:** on top of `00e46d6`, branch `codex/claude-character`.
+- **References:** `References/ArtDirection/Chuck-{Turnaround,Standing-Smoking,Run-Profile,Run-Cycle-Sheet}.png` (byte-exact, SHA-256 in `docs/ART-DIRECTION.md`; LFS, 8.6 MB). `docs/ART-DIRECTION.md` has a new "Goal images, 2026-09-27" section with measured targets. `References/PROVENANCE.md` and `docs/CHARACTER-PLAN.md` point to them.
+- **Measured against the turnaround** (65 cm scale, front view): the goal head is about 8–9 cm wide against our 14.6 cm. The goal jacket runs hem ≈ 25 cm to collar ≈ 53 cm against our 18.5–49 cm. The goal coat is warm brown and shaggy against our cool grey and sleek.
+- **Changes** (all in generators, reproducible):
+  - `Tools/build_chuck_model.py`:
+    - `HEAD_NARROW = 0.72` on the skull half-widths, with the eyes, ears and whisker roots moved in with it;
+    - ears 8.6 cm tall with pink backs (bare skin both sides);
+    - jacket cropped to a 23 cm hem, with zipper, pockets, hem stitching and back seams moved up;
+    - a broader collar-to-lapel roll; the old narrow strip read as a drawstring.
+  - `Tools/build_chuck_v1.py`: slimmer legs (radius 3.7 instead of 4.3 cm at the haunch).
+  - `bake_textures.py`:
+    - warm taupe-brown coat, beige belly, pinker skin, pale claws;
+    - red-violet jacket calibrated on the Unreal render (sRGB 88, 62, 113 against the goal's 86, 46, 113; before this it was 100, 21, 125, near neon);
+    - hem grime moved to the new hem.
+  - `build_groom.py`:
+    - shaggy, clumped coat: 6 points per strand, lengths 0.6–1.8 cm, 20–45° lift, frizz, tips pulled to a guide strand (1 per 14, pull 0.6);
+    - region scales: short muzzle, spiky crown, fluffier legs;
+    - warm colours; eye and ear exclusions follow the narrower head.
+  - `import_chuck_v1.py` / `import_chuck_groom.py`: re-importing over existing materials crashed UE 5.7.4 (`Assertion failed: !IsRooted()` in `DeleteAllMaterialExpressions`). The scripts now keep an existing material and update it in place: `M_Chuck_V1` has its wiring checked, and the `M_Fur_*` colour constants are updated.
+- **Rig contract:** unchanged. The 41 bones and all bone positions are the same, and the clips were regenerated from the same table. The mesh is now 208,413 triangles (170,544 for the groom variant).
+- **Verified** (Blender 4.5.14, UE 5.7.4, one heavy process at a time):
+  - `check_v1.py`: PASS. Groom roots in Unreal: 706 at max 0.020 cm. Groom counts 30,000/16,000/22,000 with bindings.
+  - `Import-ChuckGroom.ps1 -Review`: all steps verified.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **49/49** each. Uncapped with and without groom: 0 failures.
+  - Motion measures are unchanged (slip 0, stop 18.0–18.7 cm, turn −90.000, landing 0.9997 cm).
+  - Groom GPU cost is still about 1.0 ms (3.07 vs 2.09 ms, uncapped at 1280×720), despite longer six-point strands.
+- **Evidence:**
+  - `Review/goal_compare_turnaround_unreal.jpg` (goal against the Unreal review);
+  - refreshed `groomed_*`, `textured_*`, `neutral_*`, `pose_*`, `strip_*`, `ankle_join.jpg`, `unreal_groom_*` and `runtime_front.jpg`.
+  - Note: a `-NoGroom` verifier run overwrites the game's `Chuck_Front.png`. The runtime capture was retaken from a groom run.
+- **Remaining gaps to the goal images** (next passes, largest first):
+  1. **Proportions:** the goal has long, slender legs (crotch ≈ 19 cm against our ≈ 16 cm) and a narrower torso and jacket (about 29 cm against 34 cm across the sleeves). Moving the hips and thighs changes rig bone positions: the contract table, clips, runtime reach constants and the hip test.
+  2. **Cigarette prop and smoke:** planned as a separate mesh on `socket_cigarette`, so a future pickup design isn't pre-empted.
+  3. **Hands:** larger, with longer fingers and claws.
+  4. **Collar:** a pointed shirt collar and a flatter lapel.
+  5. **Belly** reads grey and flat in-game when shaded; the colour calibration was done under the editor review lighting.
+  6. **Run clip**, from `Chuck-Run-Cycle-Sheet.png`.
