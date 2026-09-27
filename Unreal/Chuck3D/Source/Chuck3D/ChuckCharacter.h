@@ -9,6 +9,7 @@ class UGroomComponent;
 class UAnimSequence;
 class UChuckAnimInstance;
 class USkeletalMesh;
+class UStaticMeshComponent;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -26,6 +27,9 @@ public:
     /** v1 animation instance on GetMesh(); null until play begins. */
     UChuckAnimInstance* GetChuckAnim() const;
     int32 GetGroomCount() const;
+    /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
+    UStaticMeshComponent* GetCigarette() const { return Cigarette; }
+    UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
     /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air or Land. */
     const TCHAR* GetGaitName() const;
 protected:
@@ -35,6 +39,8 @@ private:
     UPROPERTY() UCameraComponent* Camera;
     UPROPERTY() TArray<UGroomComponent*> Grooms;
     UPROPERTY() USkeletalMesh* PlainMesh;
+    UPROPERTY() UStaticMeshComponent* Cigarette;
+    UPROPERTY() UStaticMeshComponent* Smoke;
     bool bElevated = true;
     float ViewYaw = 0;
     float ViewPitch = 0;

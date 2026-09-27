@@ -157,3 +157,21 @@ Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperex
 - **Hands:** one curl bone for four fingers, as accepted for v1.
 - **Ankle:** the leg/paw seam at the ankle is covered by the heel mound, not merged topology.
 - **Not done:** no LODs (the Unreal importer can generate them); no Unreal import. The UV seams are automatic.
+
+## Cigarette
+
+Every goal image shows the cigarette held in the left mouth corner with a thin smoke wisp. It is a **separate prop**, not part of the skinned body, so a future pickup design can show or hide it (the `-ChuckNoCigarette` launch flag removes it).
+
+```powershell
+& $B --background --factory-startup --python SourceAssets\Chuck\V1\build_cigarette.py
+```
+
+- **Assets:** `Cigarette/SM_Cigarette.fbx` is 7 cm, radius 0.3 cm, filter end at the origin, lit end at +X. Slots: Paper, Filter, Ash, Ember. `Cigarette/SM_CigaretteSmoke.fbx` is two crossed ribbons, 16 cm, curling and widening as they rise (slot Smoke). `T_CigaretteSmoke.png` is a vertically tileable wisp mask.
+- **Unreal:** `Tools/import_chuck_cigarette.py` runs from `Import-ChuckV1.ps1`.
+  - Flat paper, filter and ash materials.
+  - A slow 3 s emissive pulse on the ember.
+  - Translucent unlit smoke that pans the mask upward and fades at the base, the top and the edges.
+  - Existing materials are kept (delete an asset to rebuild its graph).
+- **Runtime:** `AChuckCharacter` attaches the prop to `socket_cigarette`. Its +X follows the exported bones' local axis, read from the imported rest pose, and the smoke sits at the mesh's lit end, upright in world space. The packaged check `cigarette held in the left mouth corner with upright smoke` measures aim, mouth distance and smoke orientation.
+- **Review:** `review_chuck_v1_unreal.py` shows the prop and adds a close `face` view (`Review/unreal_groom_face.jpg`, `Review/goal_compare_cigarette.jpg`).
+

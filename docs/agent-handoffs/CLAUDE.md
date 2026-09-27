@@ -460,3 +460,30 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - belly reads grey in-game shade;
   - run clip.
 - **Next-owner note for Codex:** the table consumers now read `chuck_v1_shape.load_effective_table()`. `Check-RigContract.py` still validates the unchanged v1.0 base (script/JSON match). It does not check the v1.1 positions, which are covered by `check_v1.py` and the Unreal validator.
+
+## Nineteenth pass — cigarette prop and smoke wisp
+
+- **Source commit:** on top of `270cd37`, branch `codex/claude-character`.
+- **Why:** every goal image shows the cigarette in the left mouth corner with a thin smoke wisp. It is a **separate prop** on `socket_cigarette` (not skinned into the body), so the deferred pickup design stays open. `-ChuckNoCigarette` removes it.
+- **New files:**
+  - `SourceAssets/Chuck/V1/build_cigarette.py`, producing `Cigarette/SM_Cigarette.fbx` (7 cm; Paper, Filter, Ash, Ember), `SM_CigaretteSmoke.fbx` (16 cm crossed curling ribbons) and `T_CigaretteSmoke.png`;
+  - `Tools/import_chuck_cigarette.py`, run from `Import-ChuckV1.ps1`;
+  - `/Game/Characters/Chuck/V1/Cigarette/*`.
+- **Changed files:**
+  - `ChuckCharacter.{h,cpp}`: `Cigarette` and `CigaretteSmoke` components. The prop's +X follows the exported bones' local axis, read from the imported rest pose (thigh → knee), so there is no hard-coded FBX axis conversion. The smoke sits at the mesh's lit end (bounds) with absolute, upright rotation.
+  - `DockGameMode.cpp`: new check `cigarette held in the left mouth corner with upright smoke` (aim · rest socket direction > 0.97, at the socket < 0.05 cm, smoke up > 0.999).
+  - `Verify-Package.ps1`: expects 50, or 49 with `-NoCapture`.
+  - `ChuckReviewLibrary.cpp`: `UpdateChildTransforms` after an editor pose, so socket props follow.
+  - `review_chuck_v1_unreal.py`: shows the prop and adds a `face` close-up.
+- **Materials:** flat paper, filter and ash; an ember with a slow 3 s emissive pulse (restrained, no flicker); translucent unlit smoke panning the mask upward, faded at the base, top and edges.
+- **Verified:**
+  - `Import-ChuckV1.ps1` (cigarette step `CHUCK_CIGARETTE_IMPORTED`, length 7.000 cm).
+  - Unreal groom review including `face`.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - `CHUCK_CIGARETTE_MEASURE aim_dot=0.9996 at_mouth_cm=0.0000 smoke_up=1.0000`.
+  - Evidence: `Review/unreal_groom_face.jpg` and `Review/goal_compare_cigarette.jpg`.
+- **Gaps:**
+  - The goal's cigarette sits a little further forward, nearer the nose; moving `socket_cigarette` would be a contract change.
+  - The smoke reads as a thin straight thread from most angles; the goal's curls more.
+  - There is no smoking animation (hand to mouth, puff), and the `-ChuckNoCigarette` path is untested in the packaged verifier.
+  - Still open from the goal list: larger hands, pointed shirt collar and flat lapels, belly shading in-game, run clip.

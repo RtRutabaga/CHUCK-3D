@@ -327,6 +327,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Characters/Chuck/V1/"));
             }
             Check(bCorrectMaterials && Chuck->GetGroomCount()==(bNoGroom ? 0 : 3),TEXT("v1 material and groom assignments persist"));
+            // Rest direction filter -> lit end of socket_cigarette (v1.1 table,
+            // Unreal component space): forward and to Chuck's left, slightly down.
+            const auto* Cig=Chuck->GetCigarette();
+            const auto* Wisp=Chuck->GetCigaretteSmoke();
+            const FTransform& MeshToWorld=Body->GetComponentTransform();
+            const FVector Along=Cig ? MeshToWorld.InverseTransformVectorNoScale(Cig->GetForwardVector()) : FVector::ZeroVector;
+            const float Aim=FVector::DotProduct(Along,FVector(4.4,-2.1,-.5).GetSafeNormal());
+            const float AtMouth=Cig ? FVector::Dist(Cig->GetComponentLocation(),Body->GetSocketLocation(TEXT("socket_cigarette"))) : 99.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CIGARETTE_MEASURE aim_dot=%.4f at_mouth_cm=%.4f smoke_up=%.4f"),Aim,AtMouth,Wisp ? Wisp->GetUpVector().Z : -1.);
+            Check(Cig && Wisp && Cig->GetStaticMesh() && Wisp->GetStaticMesh() && AtMouth<.05f && Aim>.97f && Wisp->GetUpVector().Z>.999f,TEXT("cigarette held in the left mouth corner with upright smoke"));
         }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));

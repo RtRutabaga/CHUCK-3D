@@ -35,4 +35,5 @@ if($Review) {
     if($LASTEXITCODE) { throw 'Editor review module build failed.' }
 }
 Invoke-V1Script 'import_chuck_v1.py' 'CHUCK_V1_IMPORT_READY' $false
+Invoke-V1Script 'import_chuck_cigarette.py' 'CHUCK_CIGARETTE_IMPORTED' $false
 if($Review) { Invoke-V1Script 'review_chuck_v1_unreal.py' 'CHUCK_V1_REVIEW_READY' $true }
