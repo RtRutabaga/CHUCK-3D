@@ -241,3 +241,36 @@ The user asked both agents to end **every** session with one explicit line sayin
 - "Next part of the work can be done here"
 
 Claude now does this. Please do the same at the end of each Codex session, from your side.
+
+## Thirteenth pass — picked up Codex's groom import; v2 work split
+
+- **Input:** Codex hit its usage limit mid-way through the groom import. Its work was **uncommitted in the main checkout**, with no handoff note:
+  - Plugins HairStrands + AlembicHairImporter; `r.SkinCache.CompileShaders`; `HairStrandsCore` in `Chuck3D.Build.cs`.
+  - `Tools/{Import-ChuckGroom.ps1, import_chuck_groom.py, prepare_groom_groups.py, validate_groom_roots.py}`.
+  - `ChuckReviewLibrary` groom helpers, and the groom/binding/material assets.
+  - Its import succeeded (3 grooms, counts exact, roots ≤ 0.020 cm), but its review render failed with "Review pose mismatch: pelvis expected 19.25, actual 19.5".
+- **Delivered commit:** `0f09073` on `codex/claude-character` ("Integrate the v1 groom in Unreal and fix the editor pose review"), on top of `28918f6` (AI-dev-notes review).
+  - Carries Codex's work over exactly; leftover duplicate imports `GR_Chuck.uasset` and `GB_Chuck_Fur_*1.uasset` are excluded.
+  - Adds Claude's fixes, re-imported assets and review evidence.
+- **Fixes:**
+  - **Review pose.** The single-node animation path does not evaluate in a non-ticking editor world: a second clip, or a `SetAnimation` call, falls back to the reference pose. New `ChuckReviewLibrary::SetEditorComponentPose` writes the evaluated clip pose straight into the `SkeletalMeshComponent` bone buffer, single-buffered so it is what is read and rendered. It keeps a real skeletal mesh component, which groom bindings require. All six groom review views now pass the pose check: Idle pelvis 19.25, walk 18.125, landing 15.0.
+  - **Groom colours.** Unreal's hair shading renders darker than a surface BSDF, so colours are tuned after the engine render (body `.3,.245,.19`; back `.2,.165,.13`; cream `.62,.54,.42`, linear).
+  - **Paws.** Fur now stops at the ankle (roots below 4.8 cm skipped) so the paws stay bare. Strands had hung over the paw tops.
+- **Verified in `.claude/worktrees/project-orientation-fd7504`** (Unreal 5.7.4, Blender 4.5.14; one heavy process at a time):
+  - `Chuck3DEditor` build succeeded.
+  - `Tools/Import-ChuckV1.ps1` (import step) passed.
+  - `import_chuck_groom.py`: `CHUCK_GROOM_IMPORTED 68000`, bindings 30,000/16,000/22,000 render and 3,000/1,600/2,200 guides.
+  - `validate_groom_roots.py`: 706 roots, max 0.020 cm.
+  - `review_chuck_v1_unreal.py -ChuckGroomReview`: 6/6 views.
+  - `check_v1.py`: 72 PASS.
+  - Evidence: `SourceAssets/Chuck/V1/Review/unreal_groom_{front,three_quarter,walk_side,land_side,rat_height,elevated}.jpg`.
+- **Not done:** no packaged build or `Verify-Package.ps1` with the Groom plugin enabled. That is the first thing the integrator (or Codex, under v2) should run. The playable character is unchanged (still the legacy runtime), and the groom performance on the 8 GB GPU is unmeasured.
+- **Main checkout cleanup (integrator, before merging):** `git merge` of this branch will refuse over the uncommitted groom files. They are all superseded by `0f09073`, except the three duplicate `GB_*1` and the unreferenced `GR_Chuck.uasset`, which should be deleted. With Unreal and Blender closed, in the main checkout:
+
+  ```powershell
+  git stash push -u -m "codex-groom-wip-superseded-by-0f09073"   # keeps a recoverable copy
+  git merge --ff-only codex/claude-character
+  ```
+
+  Keep the stash until the merged main is verified, then drop it.
+- **v2 work split (user request 2026-09-27):** `docs/AGENT-WORKFLOW.md` now leads with the v2 table. Claude owns the character end to end (including Unreal import/groom) and the v1 runtime migration, then traversal/camera. Codex takes independent packaged verification, regression tests, tooling, data import and isolated fixes (`docs/agent-tasks/CODEX-V2.md` is its starter prompt). `CLAUDE.md` is updated to match. Next-owner lines at every session end are part of the workflow for both agents.

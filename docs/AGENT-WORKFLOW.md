@@ -1,6 +1,38 @@
 # Codex + Claude Code: character-first workflow
 
-Two independent sessions, two Git worktrees, one integration owner. This is prepared repository groundwork, not an automated agent orchestrator. No Claude session, login or installation has been performed.
+Two independent sessions, two Git worktrees, one integration step. This is repository groundwork, not an automated agent orchestrator.
+
+## Current split — v2 (2026-09-27, user request)
+
+The user asked to allocate more of the work to Claude. Codex's usage limits interrupt long tasks, and `References/ai-dev-notes.md` suggests Claude for open-ended, multi-file and feel/visual work and Codex for narrow, well-specified tasks. This replaces the original ownership table below. Suggestions in the notes stay suggestions; `AGENTS.md` scope rules still govern.
+
+| Area | Owner (v2) |
+| --- | --- |
+| Character end to end: Blender source, rig, clips, textures, groom, **and their Unreal import/material/binding/review** (`Tools/*chuck_v1*`, `Tools/*groom*`, `/Game/Characters/Chuck/V1`) | **Claude** |
+| **v1 runtime migration**: SkeletalMesh + native AnimInstance/thin AnimBP, capsule-synchronised clips, foot contact/IK on the v1 skeleton, switching the default character (`ChuckCharacter.*`, character checks in `DockGameMode.cpp`) | **Claude** (was Codex) |
+| Later: traversal/parkour controller, small-character camera feel, tail/secondary motion | **Claude** |
+| Independent verification: packaged `Verify-Package.ps1 [-MotionCapture]`, reviewing Claude's branches with fresh eyes, contact/regression telemetry and tests | **Codex** |
+| Narrow tooling: validators, build/packaging scripts, data import/conversion (e.g. future 2D-game dialogue/items → Ink), save/load, isolated bug fixes given an exact file/symptom | **Codex** |
+| Integration to `main` (cherry-pick/merge verified commits, import, package, verify, update `HANDOFF.md`) | Whichever agent is active; one at a time |
+| Publishing (`git push` to the public remote) | Only after the user confirms in that session |
+
+Working rules:
+
+- **One heavy tool at a time.** Only one Unreal editor/build/import (or Blender batch) at a time on this 16 GB machine. Check `tasklist` before starting; never kill another session's process.
+- **Branches and worktrees.** Claude keeps `codex/claude-character` (`Local/AgentWorktrees/claude-character`); Codex keeps `codex/movement-foundation` (`Local/AgentWorktrees/codex-movement`). Refresh a branch from `main` only when its worktree is clean. Neither agent edits the other's worktree. Work left uncommitted in the main checkout is carried into a branch by whoever picks it up, then the main checkout is cleaned by the integrator.
+- **Handoffs.** Each agent keeps `docs/agent-handoffs/<AGENT>.md`: commits, changed paths, what actually ran, evidence, known defects.
+- **Next-owner line.** Each agent ends **every** session with one line: "Next part of the work can only be done by Codex / Claude", "could be done by either — preference: …", or "can be done here".
+- **Contracts.** A new rig/material-slot/socket contract is still agreed in a committed document (`docs/RIG-CONTRACT-V1.md` pattern) before code depends on it.
+- **Original repository.** The original `CHUCK-game` stays read-only for both agents.
+
+Suggested order now:
+
+1. **Integration.** Integrate `0f09073` and later; see `docs/agent-handoffs/CLAUDE.md`, thirteenth pass.
+2. **Claude:** v1 runtime migration.
+3. **Codex:** independent packaged verification of that migration, plus regression tests for contact slip and reach.
+4. **Then**, only if the user adopts the notes' vertical slice: traversal controller and camera (Claude); Ink dialogue/data port and one lootable item (Codex).
+
+## Original preparation (2026-09-26, historical)
 
 ## Prepared layout
 
@@ -35,7 +67,7 @@ claude
 
 Paste the assignment in `docs/agent-tasks/CLAUDE-CHARACTER.md`. Give Codex the `codex-movement` worktree and `docs/agent-tasks/CODEX-MOVEMENT.md`. Do not additionally use Claude's `--worktree` flag inside the already prepared worktree. CLAUDE.md imports the shared AGENTS.md using the official [project-memory mechanism](https://code.claude.com/docs/en/memory). Separate checkouts follow the documented [worktree workflow](https://code.claude.com/docs/en/common-workflows#run-parallel-sessions-with-worktrees).
 
-## Ownership
+## Ownership (original split — superseded by v2 above)
 
 | Owner | Initially writable scope |
 | --- | --- |
