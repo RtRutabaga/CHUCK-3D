@@ -76,8 +76,10 @@ def region_scale(p):
         return .85, .85                  # crown: textured, a little tufty, no tall crest
     if p.z > Z(47.5):
         return .8, .8                    # cheeks and nape
+    if p.z < Z(11.):
+        return .55, .6                   # shins: short, sleek (the goal's slim lower legs)
     if p.z < Z(19.):
-        return 1., 1.1                   # thighs and shins
+        return 1., 1.1                   # thighs
     return 1., 1.
 
 def group_of(tri, p, n):
@@ -144,7 +146,7 @@ for g, spec in GROUPS.items():
         length = rng.uniform(*spec['length']) * scale
         lift = rng.uniform(.45, .95) * lift_scale  # scruffy: about 25-55 degrees off the skin
         head = root.z > Z(47.5)
-        guard = g != 'Fur_Cream' and rng.random() < (GUARD * .35 if head else GUARD)
+        guard = g != 'Fur_Cream' and root.z > Z(11.) and rng.random() < (GUARD * .35 if head else GUARD)
         if guard:
             length *= rng.uniform(1.2, 1.5) if head else rng.uniform(1.6, 2.3); lift *= 1.4
         pts = [root - n * .02]             # root slightly below the skin

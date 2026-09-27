@@ -14,7 +14,7 @@
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9237,
+   "max_leg_reach_ratio": 0.9253,
    "notes": "Aplomb hold (4 s): contrapposto on the right leg, chest and chin up, slow look drift, calm breathing, a small chin lift as if drawing on the cigarette."
   },
   {
@@ -28,7 +28,7 @@
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9387,
+   "max_leg_reach_ratio": 0.9388,
    "reference_speed_cm_s": 62.0,
    "stride_cycle_cm": 31.0,
    "stance_travel_cm": 19.22,
@@ -70,7 +70,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9387,
+   "max_leg_reach_ratio": 0.9388,
    "nominal_speed_profile_cm_s": [
     [
      0.0,
@@ -167,7 +167,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9387,
+   "max_leg_reach_ratio": 0.9388,
    "nominal_speed_profile_cm_s": [
     [
      0.0,
@@ -273,7 +273,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9195,
+   "max_leg_reach_ratio": 0.9197,
    "capsule_yaw_deg_profile": [
     [
      0.0,
@@ -383,7 +383,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9167,
+   "max_leg_reach_ratio": 0.9214,
    "capsule_yaw_deg_profile": [
     [
      0.0,

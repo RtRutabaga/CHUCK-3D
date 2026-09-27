@@ -31,6 +31,9 @@ NECK = 47.0         # source height where the head compression starts
 TOP = 65.0          # ear tip: contract height, never moves
 TORSO_NARROW = .88  # Y scale of torso and jacket between hips and neck
 ARM_NARROW = .88    # Y scale of the whole arm chain
+LEG_SPREAD = 1.1    # Y scale of the leg chain (hips and paws further apart: the goal's
+                    # wider stance; narrow legs plus hip sway read as a waddle)
+LEG_BONES = ('thigh', 'calf', 'foot', 'toes', 'ik_foot')
 ARM_PARTS = ('Sleeve', 'Cuff', 'Hand', 'Finger', 'Thumb', 'FingerClaw', 'ThumbClaw')
 TORSO_PARTS = ('Torso', 'LightChest', 'ChestFur', 'BellyFur', 'OpenJacket', 'Zipper',
                'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam')
@@ -105,6 +108,9 @@ def effective_table(base):
         b = dict(bone)
         b['head'] = [round(c, 4) for c in point(bone['head'], kind)]
         b['tail'] = [round(c, 4) for c in point(bone['tail'], kind)]
+        if name.split('_')[0] in LEG_BONES or name.startswith('ik_foot'):
+            for key in ('head', 'tail'):
+                b[key][1] = round(b[key][1] * LEG_SPREAD, 4)
         out[name] = b
     return out
 

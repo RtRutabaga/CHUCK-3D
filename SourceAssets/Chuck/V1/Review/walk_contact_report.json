@@ -37,7 +37,7 @@
    -62.0,
    -63.66
   ],
-  "max_world_slip_cm_s_if_capsule_moves_at_reference": 2.849,
+  "max_world_slip_cm_s_if_capsule_moves_at_reference": 2.85,
   "sole_z_cm_during_stance": [
    0.043,
    0.037,

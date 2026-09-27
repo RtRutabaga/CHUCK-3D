@@ -92,7 +92,7 @@
     9,
     15
    ],
-   "max_world_slip_cm_s": 0.002,
+   "max_world_slip_cm_s": 0.001,
    "sole_z_cm": [
     0.549,
     0.549
@@ -110,7 +110,7 @@
     0,
     9
    ],
-   "max_world_slip_cm_s": 0.001,
+   "max_world_slip_cm_s": 0.002,
    "sole_z_cm": [
     0.549,
     0.549

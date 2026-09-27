@@ -698,3 +698,23 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Contact slip 0 (52 samples at 60 fps); stop 14.6–15.1 cm against 15.5 authored; turn −90.000.
 - **Not verified:** how it feels in motion. Stills cannot judge a saunter; the user should play it. The pier gap is still crossed at 62 cm/s in both cameras (checks pass).
 - **Not integrated into main.** The launcher still shows `2fa74eb`.
+
+## Thirtieth pass — wider, fuller legs for the saunter
+
+- **User feedback:** the legs "need to be wider especially the thighs", for "a better swagger saunter that looks less like a waddle" (not a drastic change). New reference `References/ArtDirection/Chuck-Dock-Saunter.png` (SHA-256 `CD5B5001D911CD30212617B0A35FA0950234273D23618D1D454E9A56EE8D838B`); the other two images were the existing turnaround and run sheet.
+- **Source commit:** on top of `2e7287d`, branch `codex/claude-character`.
+- **Measured** on the turnaround: the thighs are about 17 cm across both legs and about 7–8 cm thick, staying full to the knee. Ours were a 7.4 cm haunch tapering quickly, with the hips at ±6 cm. The hip height already matched (crotch about 19 cm), so leg length is unchanged.
+- **Changes:**
+  - `chuck_v1_shape.LEG_SPREAD = 1.1`: the leg chain (thigh, calf, foot, toes, `ik_foot_*`) spreads in Y, so the hips sit at ±6.6 cm. Paws follow `H('foot_*')`.
+  - New `leg_radius`: a full haunch peaking just below the jacket hem (4.6 cm), thick to the knee, then a slimmer shin.
+  - Jacket hem flared 0.5 cm so the haunch doesn't cut through.
+  - Walk: pelvis sway ±0.45 cm (was 0.7) and swing-side drop 3.2° (was 4.5°); a swagger, not a waddle.
+  - Groom: shins (below `Z(11)`) are short and sleek with no guard hairs; the fluffy thighs are kept.
+  - `DockGameMode` hip check and `docs/RIG-CONTRACT-V1.md` updated to (−2, −6.6, 22.5).
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps (rest pose < 0.01 cm).
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - Contact slip 0; stop 14.6–15.0 cm.
+  - A bake retry was needed after the OneDrive write lock on `T_Chuck_ORM.png`.
+  - Evidence: `Review/goal_compare_legs.jpg`, `Review/motion_{WalkLoop,Idle}.png`.
+- **Not integrated into main.** A worktree launcher receipt was written so the user can play it.

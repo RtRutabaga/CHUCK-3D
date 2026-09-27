@@ -321,7 +321,7 @@ for side in (-1,1):
 # so plackets, lapels and stitching cannot drift away from the shell edge.
 # Solidify gives real cloth thickness; its rim closes every boundary and the
 # inner shell carries the lining (Seam slot). The chest opening stays open.
-JACKET_PROFILE=[(23,9.3,10.8,-1),(25,9.3,10.7,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
+JACKET_PROFILE=[(23,9.4,11.3,-1),(25,9.35,11.1,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
                 (41,8.6,11.4,0),(43,7.7,10.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
 JACKET_THICKNESS=.4
 

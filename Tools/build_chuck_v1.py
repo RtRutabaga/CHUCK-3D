@@ -73,8 +73,10 @@ for obj in [o for o in scene.objects if label(o) in ('Leg', 'LegFur')]:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 def leg_radius(t):
-    # Slimmer than the first study (turnaround 2026-09-27: long, slender legs).
-    return 3.7 - 1.3 * smoothstep(t, .08, .5) - .7 * smoothstep(t, .55, 1.)
+    # Rat haunch (goal images): full thigh that stays thick to the knee
+    # (t ~ .46), peaking just below the jacket hem, then a slimmer shin.
+    return (4.0 + .6 * smoothstep(t, 0., .14) - .5 * smoothstep(t, .14, .38)
+            - 1.6 * smoothstep(t, .36, .6) - .75 * smoothstep(t, .6, 1.))
 
 PAW_ORIGIN = {}
 for s, y in (('L', 1), ('R', -1)):
@@ -84,7 +86,7 @@ for s, y in (('L', 1), ('R', -1)):
                leg_radius, 'Fur', caps=(.9, .6), rings=28)
     # Paw placed so the heel mound surrounds the hock, the toes start at the
     # toes_ head (ball) and the sole touches Z=0.
-    PAW_ORIGIN[s] = Vector((-.8, y * 7, 1.96))
+    PAW_ORIGIN[s] = Vector((-.8, H(f'foot_{s}').y, 1.96))  # follows the leg spread
     paw_parts(PAW_ORIGIN[s])
 for i, part in enumerate([o for o in scene.objects if label(o) == 'Leg']):
     fur_surface(part, 'LegFur', 'Fur', 1800, 131 + i, (.22, .55), (0, 0, -.8), lambda p, n: p.z < Z(21))
@@ -384,10 +386,10 @@ def carriage(k, w, look=0., breath=0.):
     # Pelvis: sway over the standing paw, dip at contact, twist toward the
     # forward leg, drop on the swing side. Idle: weight on the right leg (its
     # hip up), a little lower so the free knee softens.
-    poser.translate('pelvis', (0, .7 * k * math.cos(w - mid_l) - .9 * idle,
+    poser.translate('pelvis', (0, .45 * k * math.cos(w - mid_l) - .9 * idle,
                                -WALK['pelvis_drop_cm'] * k - .4 * k * math.cos(2 * w) - .45 * idle - .15 * breath))
     poser.rotate('pelvis', 'Z', -6 * k * math.cos(w))
-    poser.rotate('pelvis', 'X', 4.5 * k * math.cos(w - mid_l) - 4 * idle)
+    poser.rotate('pelvis', 'X', 3.2 * k * math.cos(w - mid_l) - 4 * idle)
     # Chest counter-rotates harder than the hips twist (the swagger), a beat
     # later; shoulders tilt against the hips (contrapposto when standing).
     poser.rotate('spine_02', 'Z', 6 * k * math.cos(w - lag) + look * .25)

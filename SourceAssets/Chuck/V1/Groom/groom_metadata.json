@@ -7,24 +7,24 @@
   "Fur_Body": {
    "strands": 60000,
    "length_cm": [
-    0.263,
-    3.82
+    0.276,
+    4.011
    ],
-   "mean_length_cm": 1.115
+   "mean_length_cm": 1.082
   },
   "Fur_Back": {
    "strands": 32000,
    "length_cm": [
-    0.374,
-    4.207
+    0.358,
+    4.294
    ],
-   "mean_length_cm": 1.306
+   "mean_length_cm": 1.253
   },
   "Fur_Cream": {
    "strands": 44000,
    "length_cm": [
-    0.198,
-    1.351
+    0.205,
+    1.336
    ],
    "mean_length_cm": 0.744
   }
@@ -34,7 +34,7 @@
   "root": 0.0055,
   "tip": 0.001
  },
- "rejected_roots_covered_eye_or_ear": 93427,
+ "rejected_roots_covered_eye_or_ear": 85695,
  "suggested_hair_colours_linear": {
   "Fur_Body": [
    0.26,
