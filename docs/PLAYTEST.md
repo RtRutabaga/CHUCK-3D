@@ -4,9 +4,11 @@ Scope: one Waterdeep dock, tavern frontage and stationary human scale reference.
 
 ## Launch
 
-Double-click `Launch-Prototype.cmd` at the repository root. It opens `Builds/Windows/Chuck3D.exe` in a 1280 x 720 window. Click the game window to capture input. This local packaged build does not need the Unreal editor open.
+Double-click `Launch-Prototype.cmd` at the repository root. It opens the verified executable under `Builds/Windows/Chuck3D/Binaries/Win64` in a 1280 x 720 window. Click the game window to capture input. No Unreal editor is needed. The launcher identifies its build and checks its executable hash against `Builds/Windows/prototype-build.json`.
 
-Verified with the custom prop/sleeve update: Unreal 5.7.4 Windows Development package builds and runs. All 37 rendered runtime checks passed, including rig scale/axes, material persistence, articulated sleeve motion, pier-gap jumps in both cameras and simulated keyboard/Xbox input. A physical Xbox controller and subjective movement/camera comfort remain untested.
+Current launcher build: Claude's `00e46d6`, promoted on September 27 after Codex independently passed all 49 rendered checks with motion capture. It includes the v1 mesh, textures, strand groom, authored movement clips/contact IK and revised cameras. A physical Xbox controller and subjective movement/camera comfort remain untested.
+
+If recent changes are missing, check where they were packaged: an agent worktree has its own `Builds` directory. Importing assets or committing/pushing source does not update this launcher. Integrate the delivery into main, then package and verify in main, or verify a copied candidate with `Tools/Verify-Package.ps1 -PackageRoot <path>` before promoting it to main's `Builds/Windows`. Keep the previous package until the replacement passes. `Build-Prototype.ps1 -Package` now verifies and records the local build automatically. A source-only delivery must not be described as ready in this launcher.
 
 ## Controls
 

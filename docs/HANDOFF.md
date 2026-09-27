@@ -1,4 +1,22 @@
-# Handoff — 2026-09-26
+# Handoff — 2026-09-27
+
+## Current launcher and integration status
+
+Claude's delivery through `00e46d6` is now integrated on main: v1 skeletal character, native AnimInstance/contact IK, authored walk/start/stop/turn/jump clips, three bound groom groups, and the revised jump/follow cameras. Character/art ownership follows the v2 split in AGENT-WORKFLOW.md. World work remains paused.
+
+The user reported that the normal launcher showed none of this. Cause: `Launch-Prototype.cmd` still opened main's September 26 13:03 executable, while Claude packaged the new game in `.claude/worktrees/project-orientation-fd7504/Builds/Windows`. Git commits and asset imports do not replace a packaged executable or its cooked content.
+
+Codex copied Claude's package into an isolated candidate (without changing Claude's worktree), ran `Verify-Package.ps1 -MotionCapture`, and obtained **49 passes, zero failures** in `Local/verify-package-20260927-093257.log`. The fresh front capture was visually inspected and shows the v1 character. That exact candidate was promoted to main's `Builds/Windows`; the old package is retained at `Builds/Windows-Previous-20260926`. Captures now live under `Builds/Windows/Chuck3D/Saved/Screenshots/Windows`.
+
+`Launch-Prototype.cmd` now calls `Tools/Launch-Prototype.ps1`, which checks the executable against a verification receipt, identifies build `00e46d6`, and warns when newer committed Unreal changes are not packaged. `Build-Prototype.ps1 -Package` now runs package verification and writes the receipt before declaring the build ready. `Verify-Package.ps1 -PackageRoot <candidate>` supports testing a copied build before promotion. Normal launch still uses main's package, never an arbitrary agent worktree.
+
+The actual `.cmd` launcher was executed after promotion and the running process path confirmed as main's `Builds/Windows/Chuck3D/Binaries/Win64/Chuck3D.exe`. The initial launcher test exposed an unavailable `Get-FileHash` command in that shell environment; hashing now uses .NET directly and the retest passed. The game was left open for the user. Script syntax and Git whitespace checks passed; no new engine build was necessary because the exact copied package passed independent verification.
+
+Interrupted Codex groom work was preserved in Git stash `e3164da437321014069a0c5bb31e14a3b1431c7a` before the fast-forward; do not reapply it over Claude's replacement implementation. No new character or world design was done during this launcher repair. Physical controller and subjective camera comfort remain unverified; the reference-quality art target is still unmet.
+
+## Historical handoff below — superseded by the launcher status above
+
+The following records the previous 14-bone package and earlier integration stages. Its statements that v1 is not playable are historical, not the current launcher state.
 
 ## Current priority
 

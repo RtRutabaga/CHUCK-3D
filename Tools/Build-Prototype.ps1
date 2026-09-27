@@ -19,4 +19,6 @@ if ($Package) {
     $output = Join-Path $projectRoot 'Builds'
     & $automationTool BuildCookRun "-project=$projectFile" -noP4 -platform=Win64 -clientconfig=Development -build -cook -stage -pak -archive "-archivedirectory=$output" -unattended -utf8output '-UbtArgs=-MaxParallelActions=1 -NoUBA'
     if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed.' }
+    & (Join-Path $PSScriptRoot 'Verify-Package.ps1')
+    & (Join-Path $PSScriptRoot 'Write-PrototypeReceipt.ps1') -VerificationLog $global:ChuckLastVerificationLog
 }

@@ -1,5 +1,13 @@
 # Codex movement handoff — 2026-09-26
 
+## September 27 — launcher repair and independent verification
+
+Reviewed Claude's delivery through `00e46d6` and the v2 ownership split. Preserved interrupted main edits in stash `e3164da437321014069a0c5bb31e14a3b1431c7a`, then fast-forwarded main. Claude's worktrees were not modified.
+
+The user was seeing the old character because main's launcher still ran the September 26 13:03 package; Claude's current package existed only in its worktree. Copied that package into a candidate, independently passed 49/49 checks with motion capture (`Local/verify-package-20260927-093257.log`), visually checked the front capture, and promoted it to main's `Builds/Windows`. Old package retained in `Builds/Windows-Previous-20260926`.
+
+Tooling changes: verifier accepts a candidate package path; launcher checks/displays a build receipt; normal packaging verifies and stamps the package. No character systems or world design changed. Earlier pending-runtime notes below are historical. Next character/design work belongs to Claude; narrow launcher/tooling verification can be done here.
+
 ## Rig proposal response
 
 Latest pickup: Claude delivered through `c5d6d25` while this review was active. Its source is now integrated, including the legacy-art dependencies; v1 FBXs/textures/clips have been imported beside the old character. Source QA passes 66 checks; Unreal rest-pose and raw animation checks pass, and import tooling restores missing loop endpoint intervals. See `docs/CHUCK-V1-INTEGRATION.md`. The next runtime task has real assets available now; do not wait for another Claude delivery or regenerate its source. Earlier pending-source notes below are historical.
