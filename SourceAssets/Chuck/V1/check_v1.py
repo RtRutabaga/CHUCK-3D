@@ -127,5 +127,38 @@ if arms:
 meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
 check(len(meshes) == 1, 'fbx: one skinned mesh')
 
+# Groom variant and strand groom (optional delivery; checked when present).
+groom_meta = V1 / 'Groom' / 'groom_metadata.json'
+if groom_meta.exists():
+    from mathutils.bvhtree import BVHTree
+    meta = json.loads(groom_meta.read_text(encoding='utf-8'))
+    bpy.ops.wm.read_homefile(use_empty=True)
+    bpy.ops.import_scene.fbx(filepath=str(V1 / 'SK_Chuck_Groomed.fbx'))
+    gmesh = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+    garm = [o for o in bpy.context.scene.objects if o.type == 'ARMATURE']
+    check(len(gmesh) == 1 and len(garm) == 1 and set(garm[0].data.bones.keys()) == set(TABLE),
+          'groom variant fbx: one mesh on the same 41-bone skeleton')
+    before = set(bpy.data.objects)
+    bpy.ops.wm.alembic_import(filepath=str(V1 / meta['file']))
+    curves = {o.name.split('.')[0]: o for o in set(bpy.data.objects) - before if o.type == 'CURVES'}
+    check(set(curves) == set(meta['groups']), 'groom groups', sorted(curves))
+    for name, o in curves.items():
+        n = len(o.data.curves)
+        check(n == meta['groups'][name]['strands'], f'groom {name} strand count', n)
+    if gmesh and curves:
+        m = gmesh[0]
+        deps = bpy.context.evaluated_depsgraph_get()
+        tree = BVHTree.FromObject(m, deps)
+        # The FBX mesh keeps source-centimetre local coordinates under a 0.01
+        # (metre) object scale; the Alembic curves are raw source centimetres.
+        worst, samples = 0., 0
+        for o in curves.values():
+            pts = o.data.points; step = meta['points_per_strand']
+            for c in range(0, len(o.data.curves), 97):
+                root = pts[c * step].position
+                hit = tree.find_nearest(root)
+                worst = max(worst, (hit[0] - root).length); samples += 1
+        check(worst < .1, 'groom roots on SK_Chuck_Groomed surface', f'{samples} sampled, max {worst:.4f} cm')
+
 print('CHUCK_V1_CHECK_DONE', 'FAIL' if failures else 'PASS', failures)
 sys.exit(1 if failures else 0)

@@ -19,7 +19,14 @@ SIZE = int(sys.argv[sys.argv.index('--') + 1]) if '--' in sys.argv and len(sys.a
 V1 = Path(bpy.data.filepath).parent
 OUT = V1 / 'Textures'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
-body = bpy.data.objects['SK_Chuck']
+# Bake from the tuft-free variant: same UVs and materials, but the geometric
+# tufts no longer drop dark AO dots at their roots (visible under the groom).
+# Tuft islands in the parked strip are filled from material means below, so
+# the maps stay valid for SK_Chuck too.
+body = bpy.data.objects['SK_Chuck_Groomed']
+bpy.data.objects['SK_Chuck_Rig'].data.pose_position = 'REST'  # bake the rest shape
+body.hide_set(False); body.hide_render = False
+bpy.data.objects['SK_Chuck'].hide_render = True
 
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'
@@ -242,9 +249,11 @@ for g in graphs.values(): g.link(g.bsdf.outputs['BSDF'], g.out.inputs['Surface']
 def srgb(c):
     c = np.asarray(c, dtype=np.float32)
     return np.where(c <= .0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - .055)
+ISLANDS = []  # (material index, surface mask or None, x0, x1) for the strip fills
 for i, mat in enumerate(mats):
     mask = np.abs(ids[..., 0] - (i + .5) / len(mats)) < .1 / len(mats); mask[strip:] = False
-    if mask.sum() > 2e-4 * SIZE * SIZE:  # a real surface, not stray border texels
+    real = mask.sum() > 2e-4 * SIZE * SIZE  # a real surface, not stray border texels
+    if real:
         mean = color[mask][:, :3].mean(axis=0)
     else:
         # All of this material's faces are parked (whiskers, zipper teeth): use
@@ -252,11 +261,13 @@ for i, mat in enumerate(mats):
         mean = srgb(FLAT.get(mat.name.split('.')[0], mat.diffuse_color[:3]))
     x0 = int((.004 + .008 * i - .002) * SIZE); x1 = int((.004 + .008 * i + .007) * SIZE)
     color[strip:, x0:x1, :3] = mean
+    ISLANDS.append((i, mask if real else None, x0, x1))
     print('CHUCK_STRAND_COLOUR', mat.name, [round(float(c), 3) for c in mean])
 save('T_Chuck_BaseColor', color[..., :3], 'sRGB')
 scene.cycles.samples = 4
 normal = bake('NORMAL', 'Non-Color', normal_space='TANGENT')
 normal[..., 1] = 1 - normal[..., 1]  # OpenGL (Blender) -> DirectX (Unreal) green channel
+normal[strip:, :, :3] = (.5, .5, 1.)  # parked strands/teeth: flat tangent normal
 save('T_Chuck_Normal', normal[..., :3], 'Non-Color')
 rough = bake('ROUGHNESS', 'Non-Color')
 scene.cycles.samples = 24
@@ -272,6 +283,13 @@ metal = bake('EMIT', 'Non-Color')  # (after the ID bake, emission is rewired to 
 # whiskers and zipper teeth (see build_chuck_v1.py). Their packed geometry
 # self-occludes, so baked AO there would blacken them: force it to 1.
 ao[strip:, :, :3] = 1.
+# The parked islands have no geometry in the tuft-free bake mesh (and would be
+# a jumble of thousands of tufts otherwise): give each its material's mean
+# roughness and its metallic value.
+for i, mask, x0, x1 in ISLANDS:
+    g = graphs[mats[i].name]
+    rough[strip:, x0:x1, :3] = rough[mask][:, 0].mean() if mask is not None else .45
+    metal[strip:, x0:x1, :3] = g.metal
 orm = np.stack([ao[..., 0], rough[..., 0], metal[..., 0]], axis=-1)
 save('T_Chuck_ORM', orm, 'Non-Color')
 print('CHUCK_TEXTURES_READY', SIZE, [p.name for p in sorted(OUT.glob('*.png'))])

@@ -211,3 +211,33 @@
 - **Checks:** `check_v1.py` 66 PASS; stance drift at most 0.002 cm/s; bones, clips, UV layout and weights unchanged.
 - **Integration:** re-run `Tools/Import-ChuckV1.ps1 -Review`. `SK_Chuck.fbx` (whisker geometry) and all three textures changed; the clip FBXs were re-exported from the same actions.
 - **Still short of the references:** geometric fur tufts versus a real groom or hair cards, a stylised face, no cloth simulation.
+
+## Twelfth pass — strand groom (user-approved) and rest-pose fix
+
+- **User decision (2026-09-26):** "go ahead and use the groom thing". Unreal Groom replaces the geometric fur tufts; this overrides the earlier "no plugin changes now" default for this one feature.
+- **Delivered commit:** the twelfth commit on `codex/claude-character` ("Add Chuck v1 strand groom and tuft-free mesh variant"), after `8363a88`.
+- **New:**
+  - `SourceAssets/Chuck/V1/{build_groom.py, SK_Chuck_Groomed.fbx}` and `V1/Groom/{GR_Chuck.abc, groom_metadata.json}` (5.5 MB).
+  - `Review/groomed_*.jpg`.
+  - `preview_textured.py --groom`, and groom checks in `check_v1.py`.
+- **Groom:** 68,000 strands in three groups (`Fur_Body`, `Fur_Back`, `Fur_Cream`), sleek and 0.35–1.2 cm long, on exposed fur only (none under the jacket, on eyelids or on ears), with a denser head. Colour is per group because Blender's Alembic export drops per-strand attributes.
+- **Tuft-free variant:** `SK_Chuck_Groomed` keeps the same skeleton, UVs and materials (170,736 triangles). `SK_Chuck` remains the fallback.
+- **Rest-pose bug found and fixed:** `Chuck_V1.blend` had been saved in the last exported clip's pose, because clearing the action does not reset bones. Scripts evaluating the saved file (texture bakes, groom) therefore saw a posed body; the first groom was up to 3 cm off the rest mesh. The builder now resets before saving, and the groom and bake scripts force `pose_position = 'REST'`. Exported FBXs and the Unreal imports were unaffected (FBX export was always at rest).
+- **Texture change:** textures are now baked from the tuft-free mesh (no tuft AO dots under the groom). The parked tuft islands get flat colour, roughness, normal and metallic, which removed glints on the fallback tufts.
+- **Shared-file change:** `.gitattributes` gains `*.abc filter=lfs diff=lfs merge=lfs -text` so the 5.5 MB groom is stored in LFS like the FBX/blend files (integration-owned file; one added line).
+- **Checks:** `check_v1.py` **72 PASS**, including groom variant on the same 41 bones, three groups with exact strand counts, and roots 0.020 cm under the rest mesh (702 sampled). Stance drift at most 0.002 cm/s; clips unchanged.
+- **For Codex / integration (Unreal):**
+  - Enable Groom (HairStrands); import `SK_Chuck_Groomed` on `SK_Chuck_Skeleton`.
+  - Import `GR_Chuck.abc` (Y-up → match the mesh), bind it to `SK_Chuck_Groomed`, and create three Hair materials from `groom_metadata.json`.
+  - Add a GroomComponent and profile on the 8 GB GPU in both cameras. Re-run `Import-ChuckV1.ps1`, since textures and `SK_Chuck.fbx` changed.
+  - Details: `SourceAssets/Chuck/V1/README.md`, Groom section.
+
+## Note to Codex — end-of-session ownership line (user request, 2026-09-26)
+
+The user asked both agents to end **every** session with one explicit line saying who can do the next part:
+
+- "Next part of the work can only be done by Codex" / "...only by Claude"
+- "Next part of the work could be done either by Claude or Codex — preference: <which, why>"
+- "Next part of the work can be done here"
+
+Claude now does this. Please do the same at the end of each Codex session, from your side.

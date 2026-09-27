@@ -199,6 +199,9 @@ for part in parts:
     # Strands and zipper teeth are sub-texel; they get a flat per-material island.
     is_strand = lab.endswith('Fur') or lab in ('Whisker', 'Zipper')
     for d in strands.data: d.value = is_strand
+    # Geometric fur tufts, removed in the groom variant (SK_Chuck_Groomed).
+    tufts = part.data.attributes.new('chuck_tuft', 'BOOLEAN', 'FACE')
+    for d in tufts.data: d.value = lab.endswith('Fur')
     groups = {}
     for v in part.data.vertices:
         p = part.matrix_world @ v.co
@@ -651,6 +654,24 @@ bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); body.select_
 bpy.context.view_layer.objects.active = rig
 bpy.ops.export_scene.fbx(filepath=str(V1 / 'SK_Chuck.fbx'), use_selection=True,
                          object_types={'ARMATURE', 'MESH'}, bake_anim=False, **FBX)
+# Groom variant: the same skinned mesh, skeleton, UVs and materials without the
+# geometric fur tufts, for use with the strand groom (V1/Groom). Unreal imports
+# it against the SK_Chuck skeleton; SK_Chuck stays the no-groom fallback.
+groomed = body.copy(); groomed.data = body.data.copy()
+groomed.name = groomed.data.name = 'SK_Chuck_Groomed'
+scene.collection.objects.link(groomed)
+import bmesh
+bm = bmesh.new(); bm.from_mesh(groomed.data)
+tuft = bm.faces.layers.bool.get('chuck_tuft')
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[tuft]], context='FACES')
+bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+bm.to_mesh(groomed.data); bm.free()
+bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True); groomed.select_set(True)
+bpy.context.view_layer.objects.active = rig
+bpy.ops.export_scene.fbx(filepath=str(V1 / 'SK_Chuck_Groomed.fbx'), use_selection=True,
+                         object_types={'ARMATURE', 'MESH'}, bake_anim=False, **FBX)
+groomed.hide_set(True); groomed.hide_render = True
+print('CHUCK_V1_GROOMED_VARIANT tris', sum(len(p.vertices) - 2 for p in groomed.data.polygons))
 manifest = {'contract': 'docs/RIG-CONTRACT-V1.md', 'skeleton': '/Game/Characters/Chuck/V1/SK_Chuck',
             'fps': FPS, 'clips': []}
 for action, entry in CLIPS:
@@ -684,6 +705,10 @@ meta = {'contract': 'docs/RIG-CONTRACT-V1.md', 'table': 'SourceAssets/Chuck/rig_
         'rest_matrices_source_armature_space': {b.name: [[round(x, 6) for x in row] for row in b.matrix_local]
                                                 for b in rig.data.bones}}
 (V1 / 'rig_v1_metadata.json').write_text(json.dumps(meta, indent=1) + '\n', encoding='utf-8')
+# Save in the rest pose: clearing the action leaves the last exported clip's
+# pose on the bones, which later scripts (groom, bakes) would evaluate.
+rig.animation_data.action = None
+poser.reset()
 bpy.ops.wm.save_as_mainfile(filepath=str(V1 / 'Chuck_V1.blend'))
 print('CHUCK_V1_READY', 'tris', tris, 'clips', [e['name'] for _, e in CLIPS],
       'reach', [e['max_leg_reach_ratio'] for _, e in CLIPS], 'markers', markers)

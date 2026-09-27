@@ -11,7 +11,9 @@ Delivery under the accepted rig contract: the 41-bone rig with one continuously 
 | `rig_v1_metadata.json` | Bone and material counts, bounds, measured sole markers (source and Unreal component space), FBX settings, rest matrices for every bone. |
 | `check_v1.py` / `review_v1.py` | Contract checks and pose evidence (see below). |
 | `Textures/T_Chuck_{BaseColor,Normal,ORM}.png` | Baked 2048² surface textures for the shared `UVMap` (see Textures). |
-| `bake_textures.py` / `preview_textured.py` | Texture bake from procedural 3D shaders; lit EEVEE preview using only the baked maps. |
+| `bake_textures.py` / `preview_textured.py` | Texture bake from procedural 3D shaders; lit EEVEE preview using only the baked maps (`--groom` previews the groom variant). |
+| `SK_Chuck_Groomed.fbx` | The same skinned mesh, skeleton, UVs and materials **without** the geometric fur tufts, for use with the strand groom. |
+| `Groom/GR_Chuck.abc`, `Groom/groom_metadata.json`, `build_groom.py` | Strand fur groom for Unreal Groom (see Groom). |
 | `Review/` | Neutral views, pose studies, `strip_<Clip>.jpg` frame strips, `walk_contact_report.json`, `stance_drift_report.json`. |
 
 ## Build and export
@@ -87,6 +89,28 @@ Surface design, following `References/ArtDirection`:
 `preview_textured.py` rebuilds every material in memory from the three maps alone, the way an Unreal material would sample them, and renders warm-daylight views (`Review/textured_*.jpg`).
 
 **Unreal wiring (done by the integration owner in `M_Chuck_V1`):** BaseColor as Base Color, ORM.R as Ambient Occlusion (not multiplied into albedo), ORM.G roughness, ORM.B metallic, and the DirectX normal with no extra flip. It is assigned to all nine `SK_Chuck` slots. After any rebake, re-run `Tools/Import-ChuckV1.ps1`. The geometric fur tufts are separate geometry and take their flat colour from the parked islands.
+
+## Groom
+
+Unreal strand fur, requested by the user in place of the spiky geometric tufts (`Review/groomed_*.jpg`).
+
+```powershell
+& $B --background SourceAssets\Chuck\V1\Chuck_V1.blend --python SourceAssets\Chuck\V1\build_groom.py
+```
+
+- **Where the fur grows:** strands grow on `SK_Chuck_Groomed` **in the rest pose** (the script forces the armature to rest), on exposed Fur and Chest (cream) surfaces. Surfaces covered by the jacket, sleeves or chest patch get none; a short ray along the normal must be clear. Eyelids and the cupped ears stay bare.
+- **Strands:** 68,000 in total, 5 points each, 0.35–1.2 cm long, 65 µm root / 15 µm tip width. They lie sleek at about 15–25° to the skin and flow toward the tail on the head and muzzle, down and back on the body, and down on the legs and chest. The head has 2.2× density.
+- **Groups** (one Alembic curves object each; Blender's Alembic export drops custom per-strand attributes such as `groom_color`, so colour is per group): `Fur_Body` 30,000, `Fur_Back` 16,000 (back, crown and upper snout, darker), `Fur_Cream` 22,000 (chest, cheeks, chin). Suggested linear colours are in `groom_metadata.json`.
+- **Coordinates:** source cm, Z-up. The Alembic is written Y-up (x, z, −y), so the Unreal groom import conversion must be set so it lands on `SK_Chuck_Groomed`. `check_v1.py` verifies the roots lie 0.020 cm under that mesh's rest surface (in source space).
+- **Texture bake:** textures are baked from the tuft-free mesh, so no tuft AO dots show under the groom. The parked tuft islands get flat material colour, roughness, normal and metallic, so the maps also stay correct for `SK_Chuck` (the no-groom fallback).
+
+**Unreal side (Codex / integration; not done here):**
+1. Enable the engine's Groom (HairStrands) plugin. This is a `Chuck3D.uproject` plugin-list change that the rig contract had deferred; the user approved using groom on 2026-09-26.
+2. Import `SK_Chuck_Groomed.fbx` onto the existing `SK_Chuck_Skeleton`.
+3. Import `GR_Chuck.abc` as a Groom asset with the conversion set to match; create a Groom Binding to `SK_Chuck_Groomed`.
+4. Add three hair materials (`Hair` shading model) using the suggested colours.
+5. Attach a GroomComponent to the skeletal mesh component, with the binding.
+6. Profile on this PC's 8 GB GPU: strand count, LOD or hair cards, and both cameras. Keep `SK_Chuck` without groom as the fallback.
 
 ## Sole markers (measured)
 

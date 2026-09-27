@@ -1,6 +1,6 @@
 """Blender 4.5 LTS: lit preview of Chuck v1 using only the baked textures.
 
-blender --background SourceAssets/Chuck/V1/Chuck_V1.blend --python SourceAssets/Chuck/V1/preview_textured.py -- <out_dir>
+blender --background SourceAssets/Chuck/V1/Chuck_V1.blend --python SourceAssets/Chuck/V1/preview_textured.py -- <out_dir> [--groom]
 
 Replaces every material (in memory, never saved) with the same simple setup
 an Unreal material would use: T_Chuck_BaseColor, T_Chuck_ORM (R AO, G rough,
@@ -15,10 +15,15 @@ import bpy
 from mathutils import Vector
 
 out = Path(sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv else 'TexturedPreview')
+GROOM = '--groom' in sys.argv  # tuft-free mesh + the Alembic strand groom
 out.mkdir(parents=True, exist_ok=True)
 V1 = Path(bpy.data.filepath).parent
 scene = bpy.context.scene
 body = bpy.data.objects['SK_Chuck']
+if GROOM:
+    body.hide_render = True; body.hide_set(True)
+    body = bpy.data.objects['SK_Chuck_Groomed']
+    body.hide_render = False; body.hide_set(False)
 
 def load(name, colorspace):
     img = bpy.data.images.load(str(V1 / 'Textures' / f'{name}.png'))
@@ -52,6 +57,23 @@ for mat in body.data.materials:
         b.inputs['Subsurface Weight'].default_value = .15
         b.inputs['Subsurface Radius'].default_value = (1., .35, .2)
 
+if GROOM:
+    # Re-import the delivered Alembic (also proves it reads back) and give each
+    # group a Principled Hair material with the suggested colours.
+    meta = __import__('json').loads((V1 / 'Groom' / 'groom_metadata.json').read_text())
+    before = set(bpy.data.objects)
+    bpy.ops.wm.alembic_import(filepath=str(V1 / 'Groom' / 'GR_Chuck.abc'))
+    for o in set(bpy.data.objects) - before:
+        group = o.name.split('.')[0]
+        colour = meta['suggested_hair_colours_linear'].get(group, (.2, .16, .12))
+        hm = bpy.data.materials.new(f'Hair_{group}'); hm.use_nodes = True
+        hn = hm.node_tree.nodes; hn.clear()
+        ho = hn.new('ShaderNodeOutputMaterial'); hb = hn.new('ShaderNodeBsdfPrincipled')
+        hb.inputs['Base Color'].default_value = (*colour, 1); hb.inputs['Roughness'].default_value = .5
+        hm.node_tree.links.new(hb.outputs[0], ho.inputs[0])
+        o.data.materials.append(hm)
+    print('CHUCK_GROOM_PREVIEW groups', sorted(o.name for o in set(bpy.data.objects) - before))
+
 bpy.ops.mesh.primitive_plane_add(size=600, location=(0, 0, -.02))
 ground = bpy.context.object
 gm = bpy.data.materials.new('Ground'); gm.use_nodes = True
@@ -77,6 +99,6 @@ for name, eye, target, lens in (('three_quarter', (120, -95, 48), (0, 0, 33), 45
                                 ('close_paw_tail', (18, -55, 10), (-8, -4, 4), 50)):
     cam_data.lens = lens; cam.location = eye
     cam.rotation_euler = (Vector(target) - Vector(eye)).to_track_quat('-Z', 'Y').to_euler()
-    scene.render.filepath = str(out / f'textured_{name}.png')
+    scene.render.filepath = str(out / f"{'groomed' if GROOM else 'textured'}_{name}.png")
     bpy.ops.render.render(write_still=True)
 print('CHUCK_TEXTURED_PREVIEW_READY', out)
