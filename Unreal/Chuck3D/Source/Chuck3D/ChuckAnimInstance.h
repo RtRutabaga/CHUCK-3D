@@ -18,9 +18,12 @@ struct FChuckAnimParams
     UAnimSequence* ClipA = nullptr;
     float TimeA = 0.f;
     float PeriodA = 0.f;
+    /** Sample left/right mirrored (e.g. WalkStop from the right-planted half stride). */
+    bool bMirrorA = false;
     UAnimSequence* ClipB = nullptr;
     float TimeB = 0.f;
     float PeriodB = 0.f;
+    bool bMirrorB = false;
     float WeightB = 0.f;
 
     /** Paw is in stance: its ball is locked in world space from the moment stance begins. */
@@ -42,6 +45,8 @@ struct FChuckAnimResult
     /** Distance the solved hock misses its IK effector by (0 when reachable). */
     float Shortfall[2] = {0.f, 0.f};
     bool bSettling[2] = {false, false};
+    /** Stance locks dropped because a paw was pulled out of reach (cumulative). */
+    int32 Releases = 0;
     int32 Evaluations = 0;
 };
 
@@ -67,7 +72,12 @@ private:
     FFootLock Locks[2];
     float DeltaTime = 0.f;
     bool bHasResult = false;
-    void Sample(UAnimSequence* Clip, float Time, float Period, FPoseContext& Out);
+    // _L/_R mirror map for the current required bones.
+    TArray<FCompactPoseBoneIndex> MirrorBones;
+    TCustomBoneIndexArray<FQuat, FCompactPoseBoneIndex> MirrorRefRotations;
+    uint16 MirrorSerial = 0;
+    void Sample(UAnimSequence* Clip, float Time, float Period, bool bMirror, FPoseContext& Out);
+    void Mirror(FCompactPose& Pose);
 };
 
 /**

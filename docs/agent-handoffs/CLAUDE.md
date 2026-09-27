@@ -316,3 +316,45 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Grooms are not simulated.
   - Groom GPU cost on the 8 GB card has not been measured.
   - The `-ChuckNoGroom` path compiles but was not run.
+
+## Fifteenth pass — WalkStop, turn in place, no-groom and GPU-cost checks
+
+- **Source commit:** on top of `3f57bf5`, branch `codex/claude-character`.
+- **Changed files:**
+  - `ChuckAnimInstance.{h,cpp}`, `ChuckCharacter.{h,cpp}`, `DockGameMode.{h,cpp}`
+  - `Chuck3D.Build.cs` (adds `RHI` for GPU frame timing)
+  - `Tools/Verify-Package.ps1`: new `-NoGroom` switch; expected passes are now 47, or 46 with `-NoCapture`.
+  - evidence `SourceAssets/Chuck/V1/Review/runtime_stop_turn_jump_view2.jpg`
+- **WalkStop:**
+  - **Braking** is now constant: 237.5 cm/s² = 95² ÷ (2 × 19 cm), with braking friction 0, so a stop from full speed takes the clip's own 19 cm / 0.4 s and is distance-matched. The previous friction 16 + 700 cm/s² stopped in about 3 cm / 0.07 s, which no authored clip could match.
+  - **Phase alignment:** WalkStop is authored to begin from WalkLoop frame 0 (left paw planted). When input is released, Chuck coasts (at most half a stride, ≤ 14 cm) to the next half-stride point.
+  - **Mirroring:** from the right-planted half the stop plays **mirrored**. `FAnimationRuntime::MirrorPose` on Y uses an `_L/_R` map built at runtime, so no mirror asset is needed.
+  - **Entry point:** the stop enters where its remaining authored travel equals v²/2a, and its stance intervals, swapped when mirrored, drive the locks.
+  - Before this alignment, uncapped frame rates showed a planted paw dragged at 82 cm/s.
+- **Turn in place:** when Chuck is standing and the input points more than 60° from his facing, he plays TurnLeft90/TurnRight90. Movement is disabled during the turn, and the capsule yaw follows the clip profile (scaled for angles other than 90°); walking starts after the last plant (0.55 s). Unreal positive yaw is a right turn; sign verified by 0 releases and 0 slip.
+- **Other runtime changes:**
+  - WalkStart now also locks stance paws from its manifest intervals.
+  - A landing without input brakes at 1000 cm/s² and goes to Idle; it only walks on with input.
+- **Test fix:** stage 6's simulated gamepad stick stays deflected after its axis-zero event, and the old test order hid this. Before the new stages, the test flushes keys and disables player input, as the capture branch already did.
+- **New checks (43 → 47):**
+  - walk stop brakes over its clip with planted paws still;
+  - walk stop settles into planted idle stance;
+  - turn in place pivots on planted paws (0 releases);
+  - turn in place faces input before walking.
+  - `CHUCK_PERF_MEASURE` logs frame and GPU time during the steady walk.
+- **Verified** (UE 5.7.4, package from BuildCookRun; one heavy process at a time):
+
+  | Run | Passes | Stop | Turn | Landing ball |
+  |---|---|---|---|---|
+  | `Verify-Package.ps1 -MotionCapture` (groom) | 47/47 | 18.01 cm, 37 locked samples, 0 cm/s, 0 releases | 24 samples, 0 cm/s, yaw −90.000 | 0.9997 cm |
+  | `Verify-Package.ps1 -NoGroom` | 47/47 | 18.01 cm, 0 cm/s | 0 cm/s, −90.000 | 0.9997 cm |
+  | uncapped (`r.VSync 0, t.MaxFPS 0`), groom | 0 failures | 18.58 cm, 184 samples, 0 cm/s | 114 samples, 0 cm/s | 0.9999 cm |
+  | uncapped, `-ChuckNoGroom` | 0 failures | 18.74 cm, 0 cm/s | 187 samples, ≤0.0001 cm/s | 0.9999 cm |
+
+  - **Groom GPU cost** (uncapped, 1280×720, steady walk): 3.02 ms per frame with grooms against 2.03 ms without, **about 1.0 ms for the 68k-strand groom**. Vsync-capped runs read 16.67 ms either way, so they give no cost information.
+  - Motion-capture frames were reviewed by eye: walk → right turn while moving → stop → jump → land, with paws grounded.
+- **Caveats and remaining flaws:**
+  - Coasting to the half stride adds up to 0.15 s before braking begins, which is a deliberate feel trade-off.
+  - Turn-in-place delays walking by 0.55 s from standing. Turns beyond 90° scale the authored yaw, so their paws may release; this is untested beyond 90°.
+  - The slip and turn measures read the proxy's evaluated paw positions.
+  - Grooms are still unsimulated.

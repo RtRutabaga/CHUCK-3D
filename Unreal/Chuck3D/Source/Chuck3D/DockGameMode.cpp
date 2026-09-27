@@ -32,6 +32,7 @@
 #include "InputKeyEventArgs.h"
 #include "UnrealClient.h"
 #include "Misc/Paths.h"
+#include "DynamicRHI.h"
 
 ADockGameMode::ADockGameMode()
 {
@@ -261,6 +262,24 @@ void ADockGameMode::Check(bool Passed,const TCHAR* Description)
     UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST %s: %s"),Passed ? TEXT("PASS") : TEXT("FAIL"),Description);
 }
 
+void ADockGameMode::ProbeLockedPaws(AChuckCharacter* Chuck,float DeltaSeconds)
+{
+    // World speed of paws the pose holds locked in stance (settle steps excluded).
+    const FChuckAnimResult Pose=Chuck->GetChuckAnim() ? Chuck->GetChuckAnim()->GetResult() : FChuckAnimResult();
+    if(Pose.Evaluations==LocoEvaluations) return;
+    for(int32 I=0; I<2; ++I)
+    {
+        const bool bLocked=Pose.LockAlpha[I]>=1.f && !Pose.bSettling[I];
+        if(LocoEvaluations>=0 && bLocoLocked[I] && bLocked)
+        {
+            LocoMaxSlip=FMath::Max(LocoMaxSlip,static_cast<float>(FVector::Dist(Pose.BallWorld[I],LocoFoot[I]))/FMath::Max(DeltaSeconds,.001f));
+            ++LocoSamples;
+        }
+        LocoFoot[I]=Pose.BallWorld[I]; bLocoLocked[I]=bLocked;
+    }
+    LocoEvaluations=Pose.Evaluations;
+}
+
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -317,6 +336,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==1)
     {
         Chuck->AddMovementInput(FVector(1,0,0),1);
+        PerfFrameMs+=DeltaSeconds*1000.; PerfGpuMs+=FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()); ++PerfFrames;
         // Measured on the evaluated pose: a paw locked in stance on flat
         // ground during steady straight walking should not move in world space.
         const FChuckAnimResult Pose=Chuck->GetChuckAnim() ? Chuck->GetChuckAnim()->GetResult() : FChuckAnimResult();
@@ -337,6 +357,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(bNewPose) bProbeReady=true;
         if(StageTime>1)
         {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PERF_MEASURE grooms=%d frames=%d mean_frame_ms=%.3f mean_gpu_ms=%.3f"),Chuck->GetGroomCount(),PerfFrames,PerfFrames ? PerfFrameMs/PerfFrames : -1.,PerfFrames ? PerfGpuMs/PerfFrames : -1.);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CONTACT_MEASURE samples=%d mean_cm_s=%.4f max_cm_s=%.4f"),ProbeSamples,ProbeSamples ? ProbeSlip/ProbeSamples : -1.,ProbeMaxSpeed);
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
             auto* MovingBody=Chuck->GetMesh();
@@ -458,18 +479,71 @@ void ADockGameMode::Tick(float DeltaSeconds)
             ++GapRuns;
             if(GapRuns==1)
             { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,36)); TestStage=8; StageTime=0; }
-            else if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+            else
             {
-                Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(20,130,36));
-                Chuck->SetActorRotation(FRotator(0,60,0));
-                Chuck->Recenter();
-                auto* CapturePC=Cast<APlayerController>(Chuck->GetController());
-                CapturePC->FlushPressedKeys();
-                Chuck->DisableInput(CapturePC);
-                TestStage=20; StageTime=0;
+                // The simulated gamepad stick from stage 6 stays deflected; the
+                // stop/turn stages drive Chuck directly, as the captures do.
+                auto* ProbePC=Cast<APlayerController>(Chuck->GetController());
+                ProbePC->FlushPressedKeys(); Chuck->DisableInput(ProbePC);
+                Chuck->ResetToDock(); TestStage=50; StageTime=0;
             }
-            else TestStage=99;
         }
+    }
+    else if(TestStage==50)
+    {
+        // Walk, release input: the distance-matched WalkStop brakes over its
+        // authored travel with planted paws held, then Chuck stands.
+        if(StageTime<1.2f) Chuck->AddMovementInput(FVector(1,0,0),1);
+        else
+        {
+            const bool bStopping=FCString::Strcmp(Chuck->GetGaitName(),TEXT("Stop"))==0;
+            // The stop is triggered by the frame whose travel crossed the half
+            // stride, so its braking distance is measured from before that frame.
+            if(!bLocoFlag && bStopping) { bLocoFlag=true; LocoStart=LocoPrevious; LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoReleases=Chuck->GetChuckAnim()->GetResult().Releases; }
+            if(bStopping) ProbeLockedPaws(Chuck,DeltaSeconds);
+            else if(!bLocoFlag) LocoPrevious=Chuck->GetActorLocation();
+            if(Chuck->GetVelocity().Size2D()>1.f) LocoValue=StageTime-1.2f;
+        }
+        if(StageTime>2.4f)
+        {
+            const FChuckAnimResult Pose=Chuck->GetChuckAnim()->GetResult();
+            const float Distance=FVector::Dist2D(Chuck->GetActorLocation(),LocoStart);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_STOP_MEASURE distance_cm=%.3f time_s=%.3f samples=%d max_cm_s=%.4f releases=%d gait=%s"),Distance,LocoValue,LocoSamples,LocoMaxSlip,Pose.Releases-LocoReleases,Chuck->GetGaitName());
+            Check(bLocoFlag && LocoSamples>=5 && LocoMaxSlip<1.f && Pose.Releases==LocoReleases && FMath::IsNearlyEqual(Distance,19.f,2.f),TEXT("walk stop brakes over its clip with planted paws still"));
+            Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Pose.LockAlpha[0]>=1.f && Pose.LockAlpha[1]>=1.f,TEXT("walk stop settles into planted idle stance"));
+            Chuck->ResetToDock(); bLocoFlag=false; TestStage=51; StageTime=0;
+        }
+    }
+    else if(TestStage==51)
+    {
+        // Ask to walk 90 degrees left from standing: Chuck pivots in place on
+        // planted paws first, then walks off facing the input.
+        if(StageTime>.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime<.3f) { LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoReleases=Chuck->GetChuckAnim()->GetResult().Releases; bLocoFlag=false; LocoValue=999; }
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Turn"))==0) { bLocoFlag=true; ProbeLockedPaws(Chuck,DeltaSeconds); }
+        if(bLocoFlag && LocoValue>900 && Chuck->GetVelocity().Size2D()>10.f) LocoValue=Chuck->GetActorRotation().Yaw;
+        if(StageTime>2)
+        {
+            const int32 Releases=Chuck->GetChuckAnim()->GetResult().Releases-LocoReleases;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TURN_MEASURE turned=%d samples=%d max_cm_s=%.4f releases=%d yaw_at_walk=%.3f"),bLocoFlag ? 1:0,LocoSamples,LocoMaxSlip,Releases,LocoValue);
+            Check(bLocoFlag && LocoSamples>=5 && LocoMaxSlip<1.f && Releases==0,TEXT("turn in place pivots on planted paws"));
+            Check(bLocoFlag && FMath::Abs(FMath::FindDeltaAngleDegrees(LocoValue,-90.f))<5.f,TEXT("turn in place faces input before walking"));
+            Chuck->ResetToDock(); TestStage=52; StageTime=0;
+        }
+    }
+    else if(TestStage==52)
+    {
+        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+        {
+            Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(20,130,36));
+            Chuck->SetActorRotation(FRotator(0,60,0));
+            Chuck->Recenter();
+            auto* CapturePC=Cast<APlayerController>(Chuck->GetController());
+            CapturePC->FlushPressedKeys();
+            Chuck->DisableInput(CapturePC);
+            TestStage=20; StageTime=0;
+        }
+        else TestStage=99;
     }
     else if(TestStage==20 && StageTime>2)
     {

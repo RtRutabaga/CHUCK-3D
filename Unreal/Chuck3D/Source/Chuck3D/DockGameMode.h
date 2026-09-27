@@ -25,6 +25,21 @@ private:
     bool bProbeReady = false;
     bool bProbeLocked[2] = {false,false};
     int32 ProbeEvaluations = -1;
+    // Stop/turn locomotion probes (stages 50-53) and frame timing.
+    FVector LocoFoot[2] = {FVector::ZeroVector,FVector::ZeroVector};
+    bool bLocoLocked[2] = {false,false};
+    int32 LocoEvaluations = -1;
+    int32 LocoSamples = 0;
+    float LocoMaxSlip = 0;
+    int32 LocoReleases = 0;
+    FVector LocoStart = FVector::ZeroVector;
+    FVector LocoPrevious = FVector::ZeroVector;
+    float LocoValue = 0;
+    bool bLocoFlag = false;
+    double PerfFrameMs = 0;
+    double PerfGpuMs = 0;
+    int32 PerfFrames = 0;
+    void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;
     float ProbeMaxSpeed = 0;

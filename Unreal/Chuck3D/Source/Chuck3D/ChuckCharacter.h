@@ -26,6 +26,8 @@ public:
     /** v1 animation instance on GetMesh(); null until play begins. */
     UChuckAnimInstance* GetChuckAnim() const;
     int32 GetGroomCount() const;
+    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air or Land. */
+    const TCHAR* GetGaitName() const;
 protected:
     virtual void BeginPlay() override;
 private:
@@ -39,9 +41,9 @@ private:
     float CameraBlend = 1;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, JumpStart, JumpLoop, JumpLand, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Air, Land };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -52,6 +54,11 @@ private:
     float StateTime = 0;
     float StartDistance = 0;
     float WalkPhase = 0;
+    float StopTravel = 0;
+    bool bStopPending = false;
+    bool bStopMirror = false;
+    float TurnStartYaw = 0;
+    float TurnDelta = 0;
     float MeshDrop = 0;
     FVector PreviousMotionLocation = FVector::ZeroVector;
     void SetClip(EClip Clip, float Time, float FadeSeconds);

@@ -5,6 +5,7 @@
 #include "AnimationRuntime.h"
 #include "BonePose.h"
 #include "TwoBoneIK.h"
+#include "Misc/ScopeExit.h"
 
 void FChuckAnimProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
 {
@@ -37,8 +38,39 @@ namespace
     constexpr float SettleLift = 1.5f;
 }
 
-void FChuckAnimProxy::Sample(UAnimSequence* Clip, float Time, float Period, FPoseContext& Out)
+void FChuckAnimProxy::Mirror(FCompactPose& Pose)
 {
+    const FBoneContainer& Bones = Pose.GetBoneContainer();
+    const int32 Num = Bones.GetCompactPoseNumBones();
+    if (MirrorBones.Num() != Num || MirrorSerial != Bones.GetSerialNumber())
+    {
+        // Pair bones by the rig's _L/_R suffix; centre bones mirror onto themselves.
+        MirrorSerial = Bones.GetSerialNumber();
+        MirrorBones.Init(FCompactPoseBoneIndex(INDEX_NONE), Num);
+        MirrorRefRotations.SetNumUninitialized(Num);
+        const FReferenceSkeleton& Ref = Bones.GetReferenceSkeleton();
+        for (FCompactPoseBoneIndex Index(0); Index < Num; ++Index)
+        {
+            FString Name = Ref.GetBoneName(Bones.MakeMeshPoseIndex(Index).GetInt()).ToString();
+            MirrorBones[Index.GetInt()] = Index;
+            const bool bLeft = Name.EndsWith(TEXT("_L"), ESearchCase::CaseSensitive);
+            if (bLeft || Name.EndsWith(TEXT("_R"), ESearchCase::CaseSensitive))
+            {
+                Name = Name.LeftChop(1) + (bLeft ? TEXT("R") : TEXT("L"));
+                const FCompactPoseBoneIndex Other = Find(Bones, *Name);
+                if (Other != INDEX_NONE) MirrorBones[Index.GetInt()] = Other;
+            }
+            const FCompactPoseBoneIndex Parent = Bones.GetParentBoneIndex(Index);
+            const FQuat Local = Bones.GetRefPoseTransform(Index).GetRotation();
+            MirrorRefRotations[Index] = Parent == INDEX_NONE ? Local : MirrorRefRotations[Parent] * Local;
+        }
+    }
+    FAnimationRuntime::MirrorPose(Pose, EAxis::Y, MirrorBones, MirrorRefRotations);
+}
+
+void FChuckAnimProxy::Sample(UAnimSequence* Clip, float Time, float Period, bool bMirror, FPoseContext& Out)
+{
+    ON_SCOPE_EXIT { if (bMirror) Mirror(Out.Pose); };
     const float Length = Clip->GetPlayLength();
     if (Period > 0.f)
     {
@@ -72,11 +104,11 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
     // 1. Sample and cross-fade the requested clips (local space).
     {
         FPoseContext PoseA(Output);
-        Sample(Params.ClipA, Params.TimeA, Params.PeriodA, PoseA);
+        Sample(Params.ClipA, Params.TimeA, Params.PeriodA, Params.bMirrorA, PoseA);
         if (Params.ClipB && Params.WeightB > KINDA_SMALL_NUMBER)
         {
             FPoseContext PoseB(Output);
-            Sample(Params.ClipB, Params.TimeB, Params.PeriodB, PoseB);
+            Sample(Params.ClipB, Params.TimeB, Params.PeriodB, Params.bMirrorB, PoseB);
             FAnimationPoseData DataA(PoseA), DataB(PoseB), OutData(Output);
             FAnimationRuntime::BlendTwoPosesTogether(DataA, DataB, 1.f - FMath::Clamp(Params.WeightB, 0.f, 1.f), OutData);
         }
@@ -184,6 +216,7 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
                 // until its next stance rather than stretching the leg.
                 Lock.bLocked = false;
                 Lock.bReleased = true;
+                ++Result.Releases;
             }
         }
         Lock.Alpha = Lock.bLocked ? 1.f : FMath::Max(0.f, Lock.Alpha - DeltaTime / LockFade);

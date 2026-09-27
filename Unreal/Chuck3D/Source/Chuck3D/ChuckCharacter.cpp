@@ -29,7 +29,11 @@ AChuckCharacter::AChuckCharacter()
     Movement->RotationRate = FRotator(0, 540, 0);
     Movement->MaxWalkSpeed = 95;
     Movement->MaxAcceleration = 550;
-    Movement->BrakingDecelerationWalking = 700;
+    // Constant braking over the authored WalkStop travel: 95^2 / (2 * 19 cm),
+    // so a stop from full speed takes the clip's 0.4 s and is distance-matched.
+    Movement->bUseSeparateBrakingFriction = true;
+    Movement->BrakingFriction = 0;
+    Movement->BrakingDecelerationWalking = 237.5f;
     Movement->JumpZVelocity = 170;
     Movement->GravityScale = 0.8f;
     Movement->AirControl = 0.35f;
@@ -49,7 +53,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -115,6 +119,11 @@ void AChuckCharacter::BeginPlay()
 }
 UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAnimInstance>(GetMesh()->GetAnimInstance()); }
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
+const TCHAR* AChuckCharacter::GetGaitName() const
+{
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land")};
+    return Names[static_cast<int32>(Gait)];
+}
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 {
     Super::SetupPlayerInputComponent(Input);
@@ -160,7 +169,10 @@ void AChuckCharacter::ResetToDock()
     ViewPitch = 0;
     Gait = EGait::Idle;
     Base = Fading = EClip::Idle;
-    BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = 0;
+    BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
+    bStopPending = bStopMirror = false;
+    GetCharacterMovement()->BrakingDecelerationWalking = 237.5f;
+    if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
     UpdateCamera();
 }
@@ -203,37 +215,75 @@ float AChuckCharacter::FindGround(const FVector& Near, float Fallback) const
 
 namespace
 {
-    // WalkStart capsule travel (Tools/build_chuck_v1.py): 95*0.4*(u^3 - u^4/2), u = t/0.4, 19 cm total.
-    float WalkStartTime(float Distance)
+    // Capsule travel of the authored start/stop clips (Tools/build_chuck_v1.py,
+    // manifest capsule_travel_cm_per_frame), u = t / 0.4 s, 19 cm each.
+    float StartTravel(float U) { return 38.f * (U * U * U - U * U * U * U * .5f); }
+    float StopTravelAt(float U) { return 38.f * (U - U * U * U + U * U * U * U * .5f); }
+    float InvertTravel(float (*Travel)(float), float Distance)
     {
         float Low = 0, High = 1;
         for (int32 I = 0; I < 24; ++I)
         {
             const float U = (Low + High) * .5f;
-            (95.f * .4f * (U * U * U - U * U * U * U * .5f) < Distance ? Low : High) = U;
+            (Travel(U) < Distance ? Low : High) = U;
         }
         return (Low + High) * .2f;
     }
-    constexpr float WalkStartTravel = 19.f;
+    constexpr float ClipTravel = 19.f;
     constexpr float WalkStride = 28.5f;
     constexpr float WalkPeriod = .3f;
+    constexpr float StopDeceleration = 237.5f;
+    constexpr float LandDeceleration = 1000.f;
+    constexpr float TurnMinAngle = 60.f;
+    constexpr float TurnEnd = .55f; // after the last plant at 0.52 s
+
+    // Manifest stance intervals (s), foot_L then foot_R, end marked by a negative.
+    struct FStance { float L[6]; float R[6]; float End; };
+    constexpr FStance StartStance{{0.f, .28f, -1}, {0.f, .1f, .25f, .4f, -1}, .4f};
+    constexpr FStance StopStance{{0.f, .2f, .36f, .5f, -1}, {0.f, .03f, .18f, .5f, -1}, .5f};
+    constexpr FStance StopStanceMirrored{{0.f, .03f, .18f, .5f, -1}, {0.f, .2f, .36f, .5f, -1}, .5f};
+    constexpr FStance TurnLeftStance{{0.f, .04f, .2f, .36f, .52f, .6667f}, {0.f, .2f, .36f, .6667f, -1}, .6667f};
+    constexpr FStance TurnRightStance{{0.f, .2f, .36f, .6667f, -1}, {0.f, .04f, .2f, .36f, .52f, .6667f}, .6667f};
+    bool InStance(const float* Intervals, float End, float Time)
+    {
+        // Trimmed at interior plant/lift events so locks never catch a moving paw.
+        for (int32 I = 0; I + 1 < 6 && Intervals[I] >= 0 && Intervals[I + 1] >= 0; I += 2)
+        {
+            const float A = Intervals[I] > 0 ? Intervals[I] + .02f : -1.f;
+            const float B = Intervals[I + 1] < End ? Intervals[I + 1] - .02f : 1e3f;
+            if (Time >= A && Time <= B) return true;
+        }
+        return false;
+    }
+    // TurnLeft90/TurnRight90 capsule yaw per frame (magnitude, degrees).
+    constexpr float TurnYaw[] = {0.f, .2045f, 2.3867f, 6.6667f, 12.6828f, 20.0733f, 28.4766f, 37.5309f, 46.8745f, 56.1458f,
+        64.9831f, 73.0247f, 79.9089f, 85.2739f, 88.7582f, 90.f};
+    float TurnProfile(float Time)
+    {
+        const float Frame = FMath::Clamp(Time * 30.f, 0.f, 15.f);
+        const int32 I = FMath::Min(FMath::FloorToInt(Frame), 14);
+        return FMath::Lerp(TurnYaw[I], TurnYaw[I + 1], Frame - I);
+    }
 }
 
 void AChuckCharacter::UpdateMotion(float DeltaSeconds)
 {
     auto* Anim = GetChuckAnim();
     if (!Anim || Clips.Contains(nullptr)) return;
-    const bool bAirborne = GetCharacterMovement()->IsFalling();
+    auto* Movement = GetCharacterMovement();
+    const bool bAirborne = Movement->IsFalling();
     const float Speed = GetVelocity().Size2D();
+    const bool bInput = Movement->GetCurrentAcceleration().SizeSquared2D() > 1.f;
     const FVector Location = GetActorLocation();
     float Travel = FVector::Dist2D(Location, PreviousMotionLocation);
     if (Travel > 50.f) Travel = 0; // teleport or reset
     PreviousMotionLocation = Location;
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+    const float Length = Clips[static_cast<int32>(Base)]->GetPlayLength();
 
-    // Distance-matched gait: walk clips advance by travelled distance, so the
-    // clip's stance paw moves exactly with the ground at any speed.
+    // Distance-matched gait: start, walk and stop clips advance by travelled
+    // distance, so the clip's stance paw moves exactly with the ground.
     if (bAirborne)
     {
         if (Gait != EGait::Air)
@@ -244,61 +294,141 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
         }
         BaseTime += DeltaSeconds;
-        if (Base == EClip::JumpStart && BaseTime >= Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength())
+        if (Base == EClip::JumpStart && BaseTime >= Length)
             SetClip(EClip::JumpLoop, 0, .1f);
     }
     else if (Gait == EGait::Air)
     {
         Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f);
     }
+    else if (Gait == EGait::Turn)
+    {
+        // Turn in place: the capsule yaw follows the clip's profile, scaled to
+        // the requested angle; movement resumes after the last plant.
+        BaseTime += DeltaSeconds;
+        SetActorRotation(FRotator(0, TurnStartYaw + TurnProfile(BaseTime) * FMath::Abs(TurnDelta) / 90.f * FMath::Sign(TurnDelta), 0));
+        if (BaseTime >= TurnEnd)
+        {
+            Movement->SetMovementMode(MOVE_Walking);
+            if (GetLastMovementInputVector().SizeSquared2D() > 0) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .15f); }
+            else { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .15f); }
+        }
+    }
     else if (Gait == EGait::Land)
     {
         BaseTime += DeltaSeconds;
-        if (Speed > 10.f && StateTime > .15f) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .15f); }
-        else if (BaseTime >= Clips[static_cast<int32>(EClip::JumpLand)]->GetPlayLength()) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
+        if (bInput && Speed > 10.f && StateTime > .15f) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .15f); }
+        else if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
     }
     else if (Gait == EGait::Idle)
     {
         BaseTime += DeltaSeconds;
-        if (Speed > 3.f) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .12f); }
+        const float Delta = bInput ? FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, Movement->GetCurrentAcceleration().Rotation().Yaw) : 0.f;
+        if (bInput && Speed < 10.f && FMath::Abs(Delta) > TurnMinAngle)
+        {
+            // Unreal yaw is clockwise from above: a positive delta turns right.
+            Gait = EGait::Turn; TurnStartYaw = GetActorRotation().Yaw; TurnDelta = Delta;
+            SetClip(Delta > 0 ? EClip::TurnRight90 : EClip::TurnLeft90, 0, .12f);
+            Movement->StopMovementImmediately();
+            Movement->DisableMovement();
+        }
+        else if (Speed > 3.f) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .12f); }
     }
-    else if (Speed < 3.f)
+    else if (Gait == EGait::Stop)
     {
+        if (bInput && Speed > 3.f) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .15f); }
+        else
+        {
+            StopTravel += Travel;
+            BaseTime = FMath::Max(BaseTime, InvertTravel(StopTravelAt, FMath::Min(StopTravel, ClipTravel)));
+            if (Speed < 1.f) BaseTime += DeltaSeconds; // blocked or already still: finish on time
+            if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .1f); }
+        }
+    }
+    else if (Speed < 3.f && !bInput)
+    {
+        bStopPending = false;
         Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
     }
-    else if (Gait == EGait::Start)
+    else
     {
-        StartDistance += Travel;
-        BaseTime = WalkStartTime(StartDistance);
-        if (StartDistance >= WalkStartTravel)
+        // Released input: WalkStop begins from WalkLoop frame 0 (left paw
+        // planted), or its mirror at half stride. Coast to the next of those,
+        // at most half a stride, then brake through the stop.
+        bStopPending = !bInput;
+        bool bEnterStop = false;
+        if (Gait == EGait::Start)
         {
-            // WalkStart ends exactly on WalkLoop frame 0.
-            Gait = EGait::Loop; WalkPhase = (StartDistance - WalkStartTravel) / WalkStride;
-            SetClip(EClip::WalkLoop, 0, 0);
+            StartDistance += Travel;
+            BaseTime = InvertTravel(StartTravel, StartDistance);
+            if (StartDistance >= ClipTravel)
+            {
+                // WalkStart ends exactly on WalkLoop frame 0.
+                Gait = EGait::Loop; WalkPhase = (StartDistance - ClipTravel) / WalkStride;
+                SetClip(EClip::WalkLoop, 0, 0);
+                bEnterStop = bStopPending;
+                bStopMirror = false;
+            }
+        }
+        else if (Gait == EGait::Loop)
+        {
+            const float Previous = WalkPhase;
+            WalkPhase = FMath::Frac(WalkPhase + Travel / WalkStride);
+            if (bStopPending && (WalkPhase < Previous || (Previous < .5f && WalkPhase >= .5f)))
+            {
+                bEnterStop = true;
+                bStopMirror = WalkPhase >= .5f;
+            }
+        }
+        if (bEnterStop)
+        {
+            // Enter where the stop's remaining authored travel equals this
+            // speed's braking distance (the start of the clip at full speed).
+            bStopPending = false;
+            Gait = EGait::Stop;
+            StopTravel = FMath::Max(0.f, ClipTravel - Speed * Speed / (2.f * StopDeceleration));
+            SetClip(EClip::WalkStop, InvertTravel(StopTravelAt, StopTravel), .06f);
         }
     }
     if (Gait == EGait::Loop)
     {
-        WalkPhase = FMath::Frac(WalkPhase + Travel / WalkStride);
         BaseTime = WalkPhase * WalkPeriod;
     }
+    else if (Gait != EGait::Start)
+    {
+        bStopPending = false;
+    }
+    // A landing without input absorbs its momentum within a few cm, before the
+    // landing paws lock (0.1 s), instead of walking on into a stop.
+    Movement->BrakingDecelerationWalking = bStopPending ? 0.f : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
 
     FChuckAnimParams& P = Anim->Params;
     P.ClipA = Clips[static_cast<int32>(Base)];
     P.TimeA = BaseTime;
     P.PeriodA = Period(Base);
+    P.bMirrorA = Base == EClip::WalkStop && bStopMirror;
     P.ClipB = FadeWeight > 0 ? Clips[static_cast<int32>(Fading)] : nullptr;
     P.TimeB = FadingTime;
     P.PeriodB = Period(Fading);
+    P.bMirrorB = Fading == EClip::WalkStop && bStopMirror;
     P.WeightB = FadeWeight;
     P.bFootIK = !bAirborne;
     P.bAllowSettle = Gait == EGait::Idle;
-    // Stance windows from the manifest: foot_L 0-0.18 s, foot_R 0.15-0.30 and
-    // 0-0.03 s of the 0.3 s loop, trimmed at plant/lift so locks never pop.
-    const bool bWalking = Gait == EGait::Loop && FadeWeight < .5f;
+    // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
+    // foot_L 0-0.18 s, foot_R 0.15-0.30 and 0-0.03 s of 0.3 s, trimmed likewise.
+    const bool bLoopDominant = (Gait == EGait::Loop && FadeWeight < .5f) || (Gait == EGait::Stop && FadeWeight >= .5f);
     const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Land && StateTime > .1f);
-    P.bStance[0] = bStanding || (bWalking && WalkPhase > .02f && WalkPhase < .58f);
-    P.bStance[1] = bStanding || (bWalking && (WalkPhase > .52f || WalkPhase < .08f));
+    const FStance* Clip = nullptr;
+    if (Gait == EGait::Start) Clip = &StartStance;
+    else if (Gait == EGait::Stop && !bLoopDominant) Clip = bStopMirror ? &StopStanceMirrored : &StopStance;
+    else if (Gait == EGait::Turn) Clip = Base == EClip::TurnLeft90 ? &TurnLeftStance : &TurnRightStance;
+    for (int32 I = 0; I < 2; ++I)
+    {
+        bool bStance = bStanding;
+        if (Clip) bStance = InStance(I == 0 ? Clip->L : Clip->R, Clip->End, BaseTime);
+        else if (bLoopDominant) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < .58f) : (WalkPhase > .52f || WalkPhase < .08f);
+        P.bStance[I] = bStance;
+    }
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
