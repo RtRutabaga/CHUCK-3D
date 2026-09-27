@@ -50,32 +50,44 @@ options.conversion_settings=conversion
 metadata=json.loads((SOURCE/'Groom/groom_metadata.json').read_text())
 report=[]
 lib=unreal.MaterialEditingLibrary
+parent=unreal.load_asset(DEST+'/M_Fur')
+if not parent:
+    parent=tools.create_asset('M_Fur',DEST,unreal.Material,unreal.MaterialFactoryNew())
+    parent.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_HAIR)
+    parent.set_editor_property('two_sided',True)
+    lib.set_material_usage(parent,unreal.MaterialUsage.MATUSAGE_HAIR_STRANDS)
+    colour=lib.create_material_expression(parent,unreal.MaterialExpressionVectorParameter)
+    colour.set_editor_property('parameter_name','HairColour')
+    colour.set_editor_property('default_value',unreal.LinearColor(.23,.13,.07,1))
+    attributes=lib.create_material_expression(parent,unreal.MaterialExpressionHairAttributes)
+    vary=lib.create_material_expression(parent,unreal.MaterialExpressionLinearInterpolate)
+    vary.set_editor_property('const_a',.85); vary.set_editor_property('const_b',1.15)
+    assert lib.connect_material_expressions(attributes,'Seed',vary,'Alpha')
+    tint=lib.create_material_expression(parent,unreal.MaterialExpressionMultiply)
+    assert lib.connect_material_expressions(colour,'',tint,'A') and lib.connect_material_expressions(vary,'',tint,'B')
+    lib.connect_material_property(tint,'',unreal.MaterialProperty.MP_BASE_COLOR)
+    roughness=lib.create_material_expression(parent,unreal.MaterialExpressionConstant)
+    roughness.set_editor_property('r',.65)
+    lib.connect_material_property(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
+    lib.recompile_material(parent)
+    unreal.EditorAssetLibrary.save_loaded_asset(parent,only_if_is_dirty=False)
 for name,source_group in metadata['groups'].items():
     groom=ingest(ROOT/'Local/GroomGroups'/f'{name}.abc','GR_Chuck_'+name,options,unreal.HairStrandsFactory())
     groups=groom.get_editor_property('hair_groups_info')
     unreal.log('CHUCK_GROOM_COUNTS '+name+' '+str([(g.get_editor_property('num_curves'),g.get_editor_property('num_guides')) for g in groups]))
     assert len(groups)==1 and groups[0].get_editor_property('num_curves')==source_group['strands'],str(groups)
+    # One parent hair material with per-strand colour variation (Hair Attributes
+    # seed, +/-15%) and one instance per group carrying the group colour, so
+    # re-imports only set a parameter (deleting a loaded material's expressions
+    # from Python asserts !IsRooted in UE 5.7.4).
     mat=unreal.load_asset(DEST+'/M_'+name)
-    hair_colour=unreal.LinearColor(*metadata['suggested_hair_colours_linear'][name],1)
-    if mat:
-        # Update in place: deleting a loaded material's expressions from Python
-        # asserts (!IsRooted) in UE 5.7.4.
-        colour=lib.get_material_property_input_node(mat,unreal.MaterialProperty.MP_BASE_COLOR)
-        if not isinstance(colour,unreal.MaterialExpressionConstant3Vector):
-            raise RuntimeError('M_'+name+' base colour is not the expected constant; delete the asset and re-run')
-        colour.set_editor_property('constant',hair_colour)
-    else:
-        mat=tools.create_asset('M_'+name,DEST,unreal.Material,unreal.MaterialFactoryNew())
-        colour=lib.create_material_expression(mat,unreal.MaterialExpressionConstant3Vector)
-        colour.set_editor_property('constant',hair_colour)
-        lib.connect_material_property(colour,'',unreal.MaterialProperty.MP_BASE_COLOR)
-        roughness=lib.create_material_expression(mat,unreal.MaterialExpressionConstant)
-        roughness.set_editor_property('r',.65)
-        lib.connect_material_property(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
-    mat.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_HAIR)
-    mat.set_editor_property('two_sided',True)
-    lib.set_material_usage(mat,unreal.MaterialUsage.MATUSAGE_HAIR_STRANDS)
-    lib.recompile_material(mat)
+    if mat and not isinstance(mat,unreal.MaterialInstanceConstant):
+        raise RuntimeError('M_'+name+' is an old plain material; delete it (and re-run) so it becomes an M_Fur instance')
+    if not mat:
+        mat=tools.create_asset('M_'+name,DEST,unreal.MaterialInstanceConstant,unreal.MaterialInstanceConstantFactoryNew())
+    lib.set_material_instance_parent(mat,parent)
+    lib.set_material_instance_vector_parameter_value(mat,'HairColour',unreal.LinearColor(*metadata['suggested_hair_colours_linear'][name],1))
+    lib.update_material_instance(mat)
     unreal.EditorAssetLibrary.save_loaded_asset(mat,only_if_is_dirty=False)
     assert unreal.ChuckReviewLibrary.configure_groom_material(groom,mat,name)
     unreal.EditorAssetLibrary.save_loaded_asset(groom,only_if_is_dirty=False)

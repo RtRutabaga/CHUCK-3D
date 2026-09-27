@@ -1,4 +1,4 @@
-"""Chuck v1.1 body proportions (docs/RIG-CONTRACT-V1.md, "v1.1 shape amendment").
+"""Chuck v1.1/v1.2 body proportions (docs/RIG-CONTRACT-V1.md, "v1.1 shape amendment").
 
 The accepted v1.0 bone table (SourceAssets/Chuck/rig_proposal.json) and the
 legacy study geometry (Tools/build_chuck_model.py) are authored in the same
@@ -17,6 +17,10 @@ sleeves (was 34). So:
   * the head compresses back so the ear tip stays at exactly 65 cm;
   * the torso/jacket narrow to TORSO_NARROW between hips and neck, and the
     whole arm chain (clavicle to fingers) narrows to ARM_NARROW.
+v1.2 (2026-09-27, Chuck-Snout-Fur-Target.png): the snout is shortened to
+SNOUT of its length in front of SNOUT_FROM for every head part and head bone
+(head/jaw tails, socket_cigarette), so the mouth corner and the cigarette
+move back with it.
 Pure Python (no bpy) so Blender, Unreal-side Python and plain scripts can use it.
 """
 
@@ -31,6 +35,10 @@ ARM_PARTS = ('Sleeve', 'Cuff', 'Hand', 'Finger', 'Thumb', 'FingerClaw', 'ThumbCl
 TORSO_PARTS = ('Torso', 'LightChest', 'ChestFur', 'BellyFur', 'OpenJacket', 'Zipper',
                'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam')
 ARM_BONES = ('clavicle', 'upperarm', 'lowerarm', 'hand', 'fingers', 'thumb', 'ik_hand')
+HEAD_PARTS = ('Head', 'MuzzleLight', 'Nose', 'EyeLid', 'Eye', 'Mouth', 'Whisker', 'CheekFur', 'Ear')
+HEAD_BONES = ('head', 'jaw', 'socket_cigarette')
+SNOUT = .82         # snout length factor in front of SNOUT_FROM (v1.2)
+SNOUT_FROM = 2.0    # source x where the snout compression starts
 
 
 def _smooth(x, lo, hi):
@@ -62,15 +70,27 @@ def torso_scale(z):
 
 
 def kind_of(label):
-    """'arm', 'torso' or 'other' (head, legs, paws, tail: no narrowing)."""
-    return 'arm' if label in ARM_PARTS else 'torso' if label in TORSO_PARTS else 'other'
+    """'arm', 'torso', 'head' or 'other' (legs, paws, tail)."""
+    if label in ARM_PARTS: return 'arm'
+    if label in TORSO_PARTS: return 'torso'
+    return 'head' if label in HEAD_PARTS else 'other'
+
+
+def X(x):
+    """Source x -> v1.2 x for head parts (snout compression)."""
+    return x if x <= SNOUT_FROM else SNOUT_FROM + (x - SNOUT_FROM) * SNOUT
+
+
+def source_x(x):
+    """Inverse of X() for head parts."""
+    return x if x <= SNOUT_FROM else SNOUT_FROM + (x - SNOUT_FROM) / SNOUT
 
 
 def point(p, kind='other'):
     """Map a source point (x, y, z) to v1.1."""
     x, y, z = p
     scale = ARM_NARROW if kind == 'arm' else torso_scale(z) if kind == 'torso' else 1.
-    return (x, y * scale, Z(z))
+    return (X(x) if kind == 'head' else x, y * scale, Z(z))
 
 
 def is_arm_bone(name):
@@ -81,7 +101,7 @@ def effective_table(base):
     """v1.1 bone table from the accepted v1.0 table (same names, parents, flags)."""
     out = {}
     for name, bone in base.items():
-        kind = 'arm' if is_arm_bone(name) else 'other'
+        kind = 'arm' if is_arm_bone(name) else 'head' if name in HEAD_BONES else 'other'
         b = dict(bone)
         b['head'] = [round(c, 4) for c in point(bone['head'], kind)]
         b['tail'] = [round(c, 4) for c in point(bone['tail'], kind)]

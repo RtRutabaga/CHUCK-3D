@@ -202,7 +202,7 @@ verts,faces=[],[]
 HEAD_NARROW=.72
 head_sections=[(x,z,ry*HEAD_NARROW,rz) for x,z,ry,rz in
                [(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
-                (6,52.8,5.3,5.7),(10,51.6,4.1,3.6),(15,50.9,2.2,2),(17.5,50.7,1,1)]]
+                (6,52.8,5.4,5.8),(10,51.6,4.5,3.95),(15,50.9,2.75,2.45),(17.5,50.7,1.35,1.25)]]
 for x,z,ry,rz in head_sections:
     for j in range(32):
         angle=j*math.tau/32
@@ -235,7 +235,8 @@ verts,faces=[],[]
 MU_ROWS,MU_COLS=22,20
 for r in range(MU_ROWS):
     v=r/(MU_ROWS-1); x=4.2+v*12.1
-    reach=1.6-.45*smoothstep(v,.45,1.)
+    # Wraps up over the whisker pads toward the nose (snout/fur target).
+    reach=1.6+.55*smoothstep(v,.5,.95)
     for c in range(MU_COLS):
         u=2*c/(MU_COLS-1)-1
         falloff=(1-u**4)*(1-(2*v-1)**6)
@@ -245,7 +246,7 @@ for r in range(MU_ROWS-1):
         k=r*MU_COLS+c
         faces.append((k,k+1,k+1+MU_COLS,k+MU_COLS))
 mesh('MuzzleLight',verts,faces,'Chest',1)
-ellipsoid('Nose',(17.75,0,50.65),(1.15,1.35,.95),'Skin')
+ellipsoid('Nose',(17.8,0,50.7),(1.2,1.35,.95),'Skin')
 
 def cupped_ear(side):
     """Thin cupped ear: pinched base, pink inner face (Skin), furred back
@@ -285,8 +286,10 @@ for side in (-1,1):
     ellipsoid('EyeLid',(6.6,side*3.65,54.5),(1.75,.7,1.3),'Fur')
     ellipsoid('Eye',(7.1,side*3.85,54.6),(1.4,.7,.98),'Eye')
     tube('Mouth',[head_surface(x,side*a,.3) for x,a in ((16.6,.35),(14.5,.8),(12,1.05),(9.8,1.15))],.05,'Fur')
-    for i in range(4):
-        tube('Whisker',[(13+i*.6,side*2.7,50),(15+i*.6,side*8,50.8-i*.7),(12+i*2,side*(15+i),52-i*1.4)],.028,'Whisker',1)
+    for i in range(7):
+        # Rows on the whisker pad, fanning up/back to down/forward.
+        root=(12.6+i*.45,side*(2.95-.17*i),51.0-i*.12)  # on the pad surface
+        tube('Whisker',[root,(15+i*.5,side*(6.4-i*.15),51.6-i*.6),(14+i*1.4,side*(11+i*.3),52.6-i*1.1)],.028,'Whisker',1)
 
 # Open jacket: one continuous garment surface. Every body row, the collar stand,
 # the fold and the collar/lapel fall share one grid and one front-edge function,

@@ -51,3 +51,7 @@ The mapping (source cm, measured on `References/ArtDirection/Chuck-Turnaround.pn
 - **Sockets:** `socket_cigarette` follows the jaw: head (12.6, 2.5, 51.92), tail (17.0, 4.6, 51.42).
 
 **Runtime impact:** the only hard-coded rest value was the packaged hip check, now (−2, −6, 22.5) in Unreal space. IK lengths come from the imported reference pose, as the contract requires. Unreal re-import now sets `update_skeleton_reference_pose`, so the existing `SK_Chuck_Skeleton` takes the new rest pose. Verified: the Unreal rest-pose validator (< 0.01 cm) and packaged `Verify-Package.ps1` 49/49, with and without the groom.
+
+### v1.2 snout amendment (2026-09-27, user target `References/ArtDirection/Chuck-Snout-Fur-Target.png`)
+
+`Tools/chuck_v1_shape.py` shortens the snout to 0.82 of its length in front of source x = 2 cm, for every head part and for the `head`, `jaw` and `socket_cigarette` bones. Bone names, hierarchy and flags are unchanged. `socket_cigarette` becomes head (10.492, 2.5, 51.917) and tail (14.1, 4.6, 51.417); the packaged cigarette aim check uses that direction (3.608, −2.1, −0.5).

@@ -155,6 +155,18 @@ def chest(g):
     streak = g.noise(2.5, 6, .6, stretch=(3.5, 3.5, .45))
     base = g.ramp(g.math('ADD', g.math('MULTIPLY', g.noise(.5, 3, .5), .6), g.math('MULTIPLY', streak, .4)),
                   [(.25, (.3, .245, .18)), (.55, (.39, .33, .255)), (.8, (.46, .4, .315))])
+    # Whisker-pad follicle dots (References/ArtDirection/Chuck-Snout-Fur-Target.png):
+    # rows of small dark pores on the cream muzzle sides only (v1.2 object space).
+    def band(v, a, b):
+        return g.math('MULTIPLY', g.math('SUBTRACT', v, a), 1. / (b - a), clamp=True)
+    x, z, y = g.axis(0), g.axis(2), g.math('ABSOLUTE', g.axis(1))
+    pad = g.math('MULTIPLY', band(x, 9.8, 10.5), g.math('SUBTRACT', 1., band(x, 13., 13.6), clamp=True))
+    pad = g.math('MULTIPLY', pad, g.math('MULTIPLY', band(z, 52.1, 52.6), g.math('SUBTRACT', 1., band(z, 54.2, 54.7), clamp=True)))
+    pad = g.math('MULTIPLY', pad, band(y, .7, 1.1))
+    vor = g.node('ShaderNodeTexVoronoi'); vor.inputs['Scale'].default_value = 2.6
+    g.link(g.P, vor.inputs['Vector'])
+    dot = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', vor.outputs['Distance'], .07), 14., clamp=True), clamp=True)
+    base = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', dot, pad), .85), base, (.1, .07, .06))
     g.finish(base, .82, 0., streak, .3, .05)
 
 def skin(g):

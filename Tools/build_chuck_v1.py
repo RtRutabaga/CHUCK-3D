@@ -65,9 +65,10 @@ for obj in [o for o in scene.objects if o.type in ('MESH', 'CURVE')]:
 ear_top = max((o.matrix_world @ v.co).z for o in scene.objects if label(o) == 'Ear' for v in o.data.vertices)
 assert abs(ear_top - 65.) < 1e-3, f'ear tip must stay at 65 cm, got {ear_top}'
 # Whiskers at 0.028 cm radius alias into dotted lines at game distance in
-# Unreal; v1 uses 0.05 cm (legacy output unchanged).
+# Unreal; v1 uses 0.035 cm, finer than before for the more numerous whiskers of
+# the snout/fur target (legacy output unchanged).
 for obj in [o for o in scene.objects if label(o) == 'Whisker']:
-    obj.data.bevel_depth = .05
+    obj.data.bevel_depth = .035
 for obj in [o for o in scene.objects if label(o) in ('Leg', 'LegFur')]:
     bpy.data.objects.remove(obj, do_unlink=True)
 
@@ -169,7 +170,7 @@ def head_weights(p, lab):
     neck = .6 * (1 - smoothstep(p.z, Z(46.5), Z(49.5))) * (1 - smoothstep(p.x, 2., 5.))
     jaw = 0.
     if lab in JAWED:
-        jaw = smoothstep(p.x, 3.5, 7.) * (1 - smoothstep(p.z - Z(head_axis_z(p.x) - 1.3), -.6, .6))
+        jaw = smoothstep(p.x, 3.5, 7.) * (1 - smoothstep(p.z - Z(head_axis_z(SHAPE.source_x(p.x)) - 1.3), -.6, .6))
     ear = 0.
     if lab == 'Ear':
         ear = smoothstep(p.z, Z(58.5), Z(61.))

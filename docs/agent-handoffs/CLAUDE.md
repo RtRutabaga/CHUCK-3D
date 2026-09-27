@@ -507,3 +507,23 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - cigarette sits slightly back from the goal's position;
   - the smoke curls less than the goal's;
   - run clip (`Chuck-Run-Cycle-Sheet.png`).
+
+## Twenty-first pass — shorter snout and finer, denser fur (user target image)
+
+- **Input:** the user's `References/ArtDirection/Chuck-Snout-Fur-Target.png` (byte-exact, SHA-256 `BF97F4DCDDD58205590298F8D05999DEEBF8036C2499B2A7A949EBB876421258`): "the snout should be shorter like this and overall with more hair detail like this".
+- **Source commit:** on top of `5694c73`, branch `codex/claude-character`.
+- **Changes:**
+  - **Snout:** v1.2 snout amendment, 0.82 length for head parts and bones (see `docs/RIG-CONTRACT-V1.md`). The front muzzle sections are fuller, with a slightly larger nose.
+  - **Cream and whisker pads:** the cream muzzle patch wraps up over the whisker pads. The bake adds follicle dots there, and the groom keeps the pads sparse (70% of roots skipped).
+  - **Whiskers:** 7 per side (was 4), fanning from the pad, shorter, 0.035 cm radius.
+  - **Groom:** 136,000 strands (was 68,000), 55 µm roots, 3.2× head density, lighter back and crown.
+  - **Unreal fur materials:** `M_Fur` is a parent hair material with a `HairColour` parameter × Hair Attributes seed variation (0.85–1.15). `M_Fur_{Body,Back,Cream}` are now instances. The old plain materials were deleted and recreated, and re-imports now just set the parameter.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Groom cost about 0.85 ms (2.82 vs 1.97 ms uncapped) despite twice the strands.
+  - Evidence: `Review/goal_compare_snout_fur.jpg` and the refreshed Review set.
+- **Gaps:**
+  - The follicle dots don't yet read through the fur at preview distance.
+  - The nose is still rounder than the target's.
+  - The target's fur has lighter tips and more visible individual hairs; Unreal's seed variation adds some of this, but the Blender preview cannot show it.

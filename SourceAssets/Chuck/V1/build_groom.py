@@ -26,7 +26,7 @@ import sys
 V1 = Path(bpy.data.filepath).parent
 sys.path.insert(0, str(V1.parents[2] / 'Tools'))
 # Source heights below are v1.0 values mapped by the v1.1 shape amendment.
-from chuck_v1_shape import Z  # noqa: E402
+from chuck_v1_shape import Z, X  # noqa: E402
 OUT = V1 / 'Groom'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
 rng = random.Random(4217)
@@ -42,7 +42,7 @@ mesh.calc_loop_triangles()
 mat_names = [m.name.split('.')[0] for m in mesh.materials]
 tree = BVHTree.FromObject(mesh_obj, deps)
 poly_mat = [p.material_index for p in mesh.polygons]
-EYES = [Vector((7.1, s * 3.85, Z(54.6))) for s in (1, -1)]
+EYES = [Vector((X(7.1), s * 3.85, Z(54.6))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
 EARS = [Vector((-1.6, s * 4.6, Z(60.4))) for s in (1, -1)]
@@ -56,11 +56,11 @@ def flow_for(p):
     return Vector((-.45, 0., -1.))       # body: down and back
 
 GROUPS = {
-    'Fur_Body':  {'count': 30000, 'length': (.9, 1.6)},
-    'Fur_Back':  {'count': 16000, 'length': (1.0, 1.8)},
-    'Fur_Cream': {'count': 22000, 'length': (.6, 1.15)},
+    'Fur_Body':  {'count': 60000, 'length': (.9, 1.6)},
+    'Fur_Back':  {'count': 32000, 'length': (1.0, 1.8)},
+    'Fur_Cream': {'count': 44000, 'length': (.6, 1.15)},
 }
-ROOT_WIDTH, TIP_WIDTH = .0075, .0015  # cm: about 75 um at the root
+ROOT_WIDTH, TIP_WIDTH = .0055, .001  # cm: about 55 um at the root
 POINTS = 6
 CLUMP_EVERY = 14      # one clump guide per this many strands
 CLUMP_PULL = .6       # how far tips converge on their guide (0..1)
@@ -68,7 +68,7 @@ CLUMP_PULL = .6       # how far tips converge on their guide (0..1)
 def region_scale(p):
     """Length and lift multipliers: short sleek muzzle, spiky crown and
     cheeks, fluffy thighs, as in the turnaround."""
-    if p.z > Z(47.5) and p.x > 7.5:
+    if p.z > Z(47.5) and p.x > X(7.5):
         return .45, .8                   # muzzle and snout
     if p.z > Z(55.):
         return 1.2, 1.6                  # crown between the ears
@@ -112,7 +112,7 @@ for g, spec in GROUPS.items():
     tris = cands[g]
     if not tris: continue
     # Denser on the head (seen close up, and the skin shows between strands).
-    weights = [t.area * (2.2 if t.center.z > Z(47.5) else 1.) for t in tris]
+    weights = [t.area * (3.2 if t.center.z > Z(47.5) else 1.) for t in tris]
     tries = 0
     while len(strands[g]) < spec['count'] and tries < spec['count'] * 4:
         tries += 1
@@ -124,7 +124,9 @@ for g, spec in GROUPS.items():
         n = t.normal.normalized()
         # Fur stops at the ankle: the paws stay bare pink skin (strands rooted
         # lower hung over the paw tops in the Unreal review).
-        if root.z < Z(4.8) or near_eye(root) or covered(root, n):
+        # Whisker pads keep sparse fur so their follicle dots show (target image).
+        pad = root.x > X(11.8) and Z(49.8) < root.z < Z(51.8) and abs(root.y) > .8
+        if root.z < Z(4.8) or near_eye(root) or covered(root, n) or (pad and rng.random() < .7):
             rejected += 1; continue
         flow = flow_for(root)
         flow = flow - n * flow.dot(n)
@@ -203,7 +205,7 @@ meta = {
     # Warm taupe-brown coat, darker back/crown and beige-cream belly after the
     # 2026-09-27 turnaround, calibrated on the Unreal review render against the
     # turnaround's leg fur (sRGB about 89, 71, 62).
-    'suggested_hair_colours_linear': {'Fur_Body': [.23, .13, .07], 'Fur_Back': [.12, .072, .042],
+    'suggested_hair_colours_linear': {'Fur_Body': [.23, .13, .07], 'Fur_Back': [.17, .105, .062],
                                       'Fur_Cream': [.56, .44, .33]},
     'clumping': {'guide_every': CLUMP_EVERY, 'tip_pull': CLUMP_PULL},
     'coordinates': 'Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). '
