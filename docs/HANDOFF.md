@@ -2,6 +2,13 @@
 
 ## Current launcher and integration status
 
+**Update 3 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `1057e0f`, adding:
+- ears arranged as in the turnaround: forward cups on the upper skull corners, seated so they cannot float;
+- natural forward finger curl;
+- textured head fur between sleek and the haircut crown.
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **50/50** (`Local/verify-package-20260927-135522.log`); receipt `1057e0f`. The executable was not relinked (no C++ change since `37208d3`); the cooked content paks are from 13:55. Nothing pushed.
+
 **Update 2 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `37208d3`, adding four passes:
 - the face-proportion pass: a short conical rat snout (0.74, v1.2 amendment), smaller high eyes;
 - a scruffy city-rat body coat with guard hairs;
