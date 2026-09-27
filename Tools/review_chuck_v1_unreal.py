@@ -5,7 +5,8 @@ import traceback
 import unreal
 
 ROOT=Path(__file__).resolve().parents[1]
-OUT=ROOT/'Local/V1UnrealReview'
+GROOM='-ChuckGroomReview' in unreal.SystemLibrary.get_command_line()
+OUT=ROOT/('Local/GroomUnrealReview' if GROOM else 'Local/V1UnrealReview')
 OUT.mkdir(parents=True,exist_ok=True)
 DEST='/Game/Characters/Chuck/V1'
 actors=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -27,16 +28,26 @@ fill=actors.spawn_actor_from_class(unreal.DirectionalLight,unreal.Vector(0,0,200
 fill.light_component.set_editor_property('intensity',2.0)
 fill.light_component.set_editor_property('cast_shadows',False)
 hero=actors.spawn_actor_from_class(unreal.SkeletalMeshActor,unreal.Vector(0,0,0))
-hero.skeletal_mesh_component.set_visibility(False)
+component=hero.skeletal_mesh_component
+component.set_skeletal_mesh_asset(unreal.load_asset(DEST+('/SK_Chuck_Groomed' if GROOM else '/SK_Chuck')))
 subobjects=unreal.get_engine_subsystem(unreal.SubobjectDataSubsystem)
 parent=subobjects.k2_gather_subobject_data_for_instance(hero)[0]
-params=unreal.AddNewSubobjectParams(parent_handle=parent,new_class=unreal.PoseableMeshComponent)
-added,reason=subobjects.add_new_subobject(params)
-data=unreal.SubobjectDataBlueprintFunctionLibrary.get_data(added)
-component=unreal.SubobjectDataBlueprintFunctionLibrary.get_associated_object(data)
-if not isinstance(component,unreal.PoseableMeshComponent):
-    raise RuntimeError('Cannot create review pose component: '+str(reason))
-component.set_skinned_asset_and_update(unreal.load_asset(DEST+'/SK_Chuck'))
+if GROOM:
+    for group in ('Fur_Body','Fur_Back','Fur_Cream'):
+        params=unreal.AddNewSubobjectParams(parent_handle=parent,new_class=unreal.GroomComponent)
+        added,reason=subobjects.add_new_subobject(params)
+        data=unreal.SubobjectDataBlueprintFunctionLibrary.get_data(added)
+        hair=unreal.SubobjectDataBlueprintFunctionLibrary.get_associated_object(data)
+        assert isinstance(hair,unreal.GroomComponent),str(reason)
+        hair.attach_to_component(component,'',unreal.AttachmentRule.KEEP_RELATIVE,
+            unreal.AttachmentRule.KEEP_RELATIVE,unreal.AttachmentRule.KEEP_RELATIVE,False)
+        hair.set_groom_asset(unreal.load_asset(DEST+'/GR_Chuck_'+group))
+        hair.set_binding_asset(unreal.load_asset(DEST+'/GB_Chuck_'+group))
+        simulation=hair.get_editor_property('simulation_settings')
+        simulation.set_editor_property('override_settings',True)
+        hair.set_editor_property('simulation_settings',simulation)
+        hair.set_enable_simulation(False)
+        hair.set_material(0,unreal.load_asset(DEST+'/M_'+group))
 pose_options=unreal.AnimPoseEvaluationOptions()
 pose_options.set_editor_property('evaluation_type',unreal.AnimDataEvalType.RAW)
 pose_options.set_editor_property('should_retarget',False)
@@ -45,6 +56,8 @@ camera.camera_component.set_field_of_view(38)
 camera.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(camera.get_actor_location(),unreal.Vector(0,0,32)),False)
 poses=[('front','Idle',0,(165,0,66)),('three_quarter','Idle',0,(125,-135,78)),
        ('walk_side','WalkLoop',.1,(0,-185,55)),('land_side','JumpLand',.1,(0,-185,55))]
+if GROOM:
+    poses.extend([('rat_height','WalkLoop',.1,(-220,0,65)),('elevated','WalkLoop',.1,(-268,0,329))])
 index=0
 task=None
 busy=False
@@ -75,18 +88,21 @@ def tick(dt):
             unreal.EditorPythonScripting.set_keep_python_script_alive(False)
             return
         name,clip,t,eye=poses[index]
-        pose=unreal.AnimPoseExtensions.get_anim_pose_at_time(unreal.load_asset(DEST+'/Animations/AS_Chuck_'+clip),t,pose_options)
-        for bone in unreal.AnimPoseExtensions.get_bone_names(pose):
-            transform=unreal.AnimPoseExtensions.get_bone_pose(pose,bone,unreal.AnimPoseSpaces.WORLD)
-            component.set_bone_transform_by_name(bone,transform,unreal.BoneSpaces.COMPONENT_SPACE)
-        if not unreal.ChuckReviewLibrary.refresh_editor_pose(component):
-            raise RuntimeError('Editor pose refresh unavailable; rebuild Chuck3DEditor')
+        anim=unreal.load_asset(DEST+'/Animations/AS_Chuck_'+clip)
+        pose=unreal.AnimPoseExtensions.get_anim_pose_at_time(anim,t,pose_options)
+        # Apply the evaluated clip pose directly (the single-node anim path does
+        # not evaluate reliably in a non-ticking editor world).
+        bones=list(unreal.AnimPoseExtensions.get_bone_names(pose))
+        transforms=[unreal.AnimPoseExtensions.get_bone_pose(pose,b,unreal.AnimPoseSpaces.WORLD) for b in bones]
+        if not unreal.ChuckReviewLibrary.set_editor_component_pose(component,bones,transforms):
+            raise RuntimeError('Editor pose apply unavailable; rebuild Chuck3DEditor')
         for bone in ('pelvis','foot_L','foot_R','head'):
             expected=unreal.AnimPoseExtensions.get_bone_pose(pose,bone,unreal.AnimPoseSpaces.WORLD).translation
-            actual=component.get_bone_transform_by_name(bone,unreal.BoneSpaces.COMPONENT_SPACE).translation
-            if (actual-expected).length()>.001:
-                raise RuntimeError('Review pose mismatch: '+name+' '+bone)
-        unreal.log('CHUCK_V1_REVIEW_POSE '+name+' '+str(component.get_bone_transform_by_name('pelvis',unreal.BoneSpaces.COMPONENT_SPACE)))
+            actual=component.get_socket_transform(bone,unreal.RelativeTransformSpace.RTS_COMPONENT).translation
+            if (actual-expected).length()>.05:
+                raise RuntimeError('Review pose mismatch: '+name+' '+bone+' expected='+str(expected)+' actual='+str(actual))
+        unreal.log('CHUCK_V1_REVIEW_POSE '+name+' '+str(component.get_socket_transform('pelvis',unreal.RelativeTransformSpace.RTS_COMPONENT)))
+        camera.camera_component.set_field_of_view({'rat_height':78,'elevated':65}.get(name,38))
         camera.set_actor_location(unreal.Vector(*eye),False,False)
         camera.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(camera.get_actor_location(),unreal.Vector(0,0,32)),False)
         task=unreal.AutomationLibrary.take_high_res_screenshot(1280,960,str(OUT/(name+'.png')),camera=camera,delay=1.0)

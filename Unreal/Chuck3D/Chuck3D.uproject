@@ -4,5 +4,9 @@
   "Category": "Games",
   "Description": "CHUCK — Waterdeep movement and camera prototype",
   "Modules": [{ "Name": "Chuck3D", "Type": "Runtime", "LoadingPhase": "Default" }],
-  "Plugins": [{ "Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": ["Editor"] }]
+  "Plugins": [
+    { "Name": "PythonScriptPlugin", "Enabled": true, "TargetAllowList": ["Editor"] },
+    { "Name": "HairStrands", "Enabled": true },
+    { "Name": "AlembicHairImporter", "Enabled": true, "TargetAllowList": ["Editor"] }
+  ]
 }

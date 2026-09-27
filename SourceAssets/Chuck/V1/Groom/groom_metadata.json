@@ -8,7 +8,7 @@
    "strands": 30000,
    "length_cm": [
     0.55,
-    1.049
+    1.05
    ],
    "mean_length_cm": 0.8
   },
@@ -18,7 +18,7 @@
     0.649,
     1.199
    ],
-   "mean_length_cm": 0.923
+   "mean_length_cm": 0.924
   },
   "Fur_Cream": {
    "strands": 22000,
@@ -34,22 +34,22 @@
   "root": 0.0065,
   "tip": 0.0015
  },
- "rejected_roots_covered_eye_or_ear": 49329,
+ "rejected_roots_covered_eye_or_ear": 52137,
  "suggested_hair_colours_linear": {
   "Fur_Body": [
-   0.19,
-   0.15,
-   0.115
+   0.3,
+   0.245,
+   0.19
   ],
   "Fur_Back": [
-   0.11,
-   0.09,
-   0.07
+   0.2,
+   0.165,
+   0.13
   ],
   "Fur_Cream": [
-   0.42,
-   0.35,
-   0.26
+   0.62,
+   0.54,
+   0.42
   ]
  },
  "coordinates": "Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). Set the groom import conversion so the result matches SK_Chuck (verify on import).",

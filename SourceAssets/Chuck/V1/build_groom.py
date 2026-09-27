@@ -101,7 +101,9 @@ for g, spec in GROUPS.items():
         if u + v > 1: u, v = 1 - u, 1 - v
         root = a * (1 - u - v) + b * u + c * v
         n = t.normal.normalized()
-        if near_eye(root) or covered(root, n):
+        # Fur stops at the ankle: the paws stay bare pink skin (strands rooted
+        # lower hung over the paw tops in the Unreal review).
+        if root.z < 4.8 or near_eye(root) or covered(root, n):
             rejected += 1; continue
         flow = flow_for(root)
         flow = flow - n * flow.dot(n)
@@ -155,8 +157,10 @@ meta = {
     'total_strands': sum(len(c) for c in strands.values()),
     'width_cm': {'root': ROOT_WIDTH, 'tip': TIP_WIDTH},
     'rejected_roots_covered_eye_or_ear': rejected,
-    'suggested_hair_colours_linear': {'Fur_Body': [.19, .15, .115], 'Fur_Back': [.11, .09, .07],
-                                      'Fur_Cream': [.42, .35, .26]},
+    # Unreal's hair shading renders darker than a surface BSDF; these are tuned
+    # against the first engine review so the coat reads grey-brown, not charcoal.
+    'suggested_hair_colours_linear': {'Fur_Body': [.3, .245, .19], 'Fur_Back': [.2, .165, .13],
+                                      'Fur_Cream': [.62, .54, .42]},
     'coordinates': 'Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). '
                    'Set the groom import conversion so the result matches SK_Chuck (verify on import).',
     'alembic_limits': 'Only positions and widths are exported; colour is per group (object), not per strand.',
