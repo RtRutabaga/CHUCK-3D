@@ -2,6 +2,8 @@
 
 ## Current launcher and integration status
 
+**Update 4 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `2fa74eb`: ears wider apart on the outer top skull corners; neutral human-like hands (palm to thigh, thumb forward, fingers curling inward, clips curl medially). Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **50/50** (`Local/verify-package-20260927-150737.log`); receipt `2fa74eb`; content paks cooked at 15:07. Nothing pushed.
+
 **Update 3 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `1057e0f`, adding:
 - ears arranged as in the turnaround: forward cups on the upper skull corners, seated so they cannot float;
 - natural forward finger curl;
