@@ -62,8 +62,9 @@ GROUPS = {
 }
 ROOT_WIDTH, TIP_WIDTH = .0055, .001  # cm: about 55 um at the root
 POINTS = 6
-CLUMP_EVERY = 14      # one clump guide per this many strands
-CLUMP_PULL = .6       # how far tips converge on their guide (0..1)
+CLUMP_EVERY = 10      # one clump guide per this many strands
+CLUMP_PULL = .75      # how far tips converge on their guide (0..1)
+GUARD = .08           # share of long, lifted guard hairs (city-rat scruff)
 
 def region_scale(p):
     """Length and lift multipliers: short sleek muzzle, spiky crown and
@@ -81,6 +82,8 @@ def region_scale(p):
 def group_of(tri, p, n):
     mat = mat_names[tri.material_index]
     if mat == 'Chest':
+        if p.z > Z(47.5) and tri.index % 3 == 0:
+            return 'Fur_Body'
         return 'Fur_Cream'
     if mat != 'Fur':
         return None
@@ -138,7 +141,10 @@ for g, spec in GROUPS.items():
         flow = (flow + jitter).normalized()
         scale, lift_scale = region_scale(root)
         length = rng.uniform(*spec['length']) * scale
-        lift = rng.uniform(.35, .7) * lift_scale  # shaggy: about 20-45 degrees off the skin
+        lift = rng.uniform(.45, .95) * lift_scale  # scruffy: about 25-55 degrees off the skin
+        guard = g != 'Fur_Cream' and rng.random() < GUARD
+        if guard:
+            length *= rng.uniform(1.6, 2.3); lift *= 1.4
         pts = [root - n * .02]             # root slightly below the skin
         pos = root.copy()
         for k in range(1, POINTS):
@@ -146,7 +152,7 @@ for g, spec in GROUPS.items():
             # The strand leaves the skin at `lift`, then lies down along the
             # flow, with a little frizz so the coat is not combed flat.
             d = (n * lift * (1 - f * .8) + flow).normalized()
-            frizz = Vector((rng.gauss(0, .12), rng.gauss(0, .12), rng.gauss(0, .12))) * f
+            frizz = Vector((rng.gauss(0, .22), rng.gauss(0, .22), rng.gauss(0, .22))) * f
             pos = pos + (d + frizz) * (length / (POINTS - 1))
             pts.append(pos.copy())
         strands[g].append(pts)
@@ -205,9 +211,9 @@ meta = {
     # Warm taupe-brown coat, darker back/crown and beige-cream belly after the
     # 2026-09-27 turnaround, calibrated on the Unreal review render against the
     # turnaround's leg fur (sRGB about 89, 71, 62).
-    'suggested_hair_colours_linear': {'Fur_Body': [.23, .13, .07], 'Fur_Back': [.17, .105, .062],
-                                      'Fur_Cream': [.56, .44, .33]},
-    'clumping': {'guide_every': CLUMP_EVERY, 'tip_pull': CLUMP_PULL},
+    'suggested_hair_colours_linear': {'Fur_Body': [.26, .15, .08], 'Fur_Back': [.18, .11, .062],
+                                      'Fur_Cream': [.44, .32, .21]},
+    'clumping': {'guide_every': CLUMP_EVERY, 'tip_pull': CLUMP_PULL, 'guard_hair_share': GUARD},
     'coordinates': 'Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). '
                    'Set the groom import conversion so the result matches SK_Chuck (verify on import).',
     'alembic_limits': 'Only positions and widths are exported; colour is per group (object), not per strand.',

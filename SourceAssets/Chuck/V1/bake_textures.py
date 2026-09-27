@@ -156,7 +156,7 @@ def fur(g):
 def chest(g):
     streak = g.noise(2.5, 6, .6, stretch=(3.5, 3.5, .45))
     base = g.ramp(g.math('ADD', g.math('MULTIPLY', g.noise(.5, 3, .5), .6), g.math('MULTIPLY', streak, .4)),
-                  [(.25, (.3, .245, .18)), (.55, (.39, .33, .255)), (.8, (.46, .4, .315))])
+                  [(.25, (.27, .2, .13)), (.55, (.35, .265, .18)), (.8, (.42, .33, .23))])
     # Whisker-pad follicle dots (References/ArtDirection/Chuck-Snout-Fur-Target.png):
     # rows of small dark pores on the cream muzzle sides only (v1.2 object space).
     def band(v, a, b):
@@ -188,7 +188,20 @@ def skin(g):
     g.finish(color, g.math('ADD', .55, g.math('MULTIPLY', pad, .2)), 0., height, .25, .03)
 
 def eye(g):
-    g.finish(g.ramp(g.noise(3, 2, .5), [(0., (.012, .009, .007)), (1., (.03, .022, .016))]), .06)
+    cx, cy, cz = SHAPE.X(7.15), 3.8, SHAPE.Z(55.0)
+    rel = g.node('ShaderNodeCombineXYZ')
+    g.link(g.math('SUBTRACT', g.axis(0), cx), rel.inputs[0])
+    g.link(g.math('SUBTRACT', g.math('ABSOLUTE', g.axis(1)), cy), rel.inputs[1])
+    g.link(g.math('SUBTRACT', g.axis(2), cz), rel.inputs[2])
+    unit = g.node('ShaderNodeVectorMath', operation='NORMALIZE'); g.link(rel.outputs[0], unit.inputs[0])
+    gaze = g.node('ShaderNodeVectorMath', operation='DOT_PRODUCT')
+    g.link(unit.outputs[0], gaze.inputs[0])
+    gaze.inputs[1].default_value = (.33, .93, .15)  # normalized sideways/forward gaze
+    streak = g.noise(9, 3, .6)
+    cos = g.math('ADD', gaze.outputs['Value'], g.math('MULTIPLY', g.math('SUBTRACT', streak, .5), .02))
+    iris = g.ramp(cos, [(0., (.012, .009, .007)), (.8, (.03, .016, .009)), (.83, (.24, .09, .02)),
+                        (.89, (.42, .2, .05)), (.935, (.3, .12, .03)), (.95, (.006, .004, .003)), (1., (.004, .003, .002))])
+    g.finish(iris, .06)
 
 def claw(g):
     streak = g.noise(3, 4, .6, stretch=(.6, 3, 3))

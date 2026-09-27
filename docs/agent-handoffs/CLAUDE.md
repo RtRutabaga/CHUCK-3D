@@ -547,3 +547,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The target's head fur is warmer tan and scruffier.
   - The target's eyes have an amber-brown iris.
 - **Not integrated into main.** The launcher still shows `4eef511`.
+
+## Twenty-third pass — softer muzzle, scruffy city-rat coat, amber eyes
+
+- **Request:** "Do the softer muzzle, scruffier fur head and body (city rat look), and amber eyes".
+- **Source commit:** on top of `b155ea1`, branch `codex/claude-character`.
+- **Changes:**
+  - **Softer muzzle:** the Chest shader (muzzle and belly) is a warmer tan-cream, and `Fur_Cream` is (.44, .32, .21). One third of the muzzle cream triangles grow body-colour strands, so the patch blends into the coat.
+  - **Scruff, head and body:**
+    - clumps tighter and stronger (a guide per 10 strands, tip pull 0.75);
+    - lift 25–55° and frizz σ 0.22;
+    - 8% guard hairs at 1.6–2.3× length and 1.4× lift;
+    - slightly warmer coat (body .26, .15, .08).
+  - **Amber eyes:** the eye shader bakes a black pupil, an amber-brown iris and a dark rim, gazing sideways and a little forward, centred from `chuck_v1_shape`.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Groom about 0.75 ms.
+  - Evidence: `Review/goal_compare_city_rat.jpg` and `Review/unreal_groom_face.jpg`.
+- **Gaps:**
+  - The belly reads grey-cream in cool light; the target is warmer.
+  - The iris is only about 10 texels across on the 2048 map, so it is soft up close.
+- **Not integrated into main.** The launcher still shows `4eef511`.
