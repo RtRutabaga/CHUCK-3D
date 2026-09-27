@@ -37,6 +37,9 @@ options.automated_import_should_detect_type = False
 options.import_materials = options.import_textures = options.import_animations = False
 options.create_physics_asset = False
 options.skeletal_mesh_import_data.normal_import_method = unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS_AND_TANGENTS
+# Rest-pose changes (e.g. the v1.1 shape amendment) must reach the existing
+# skeleton asset too, not just the mesh.
+options.skeletal_mesh_import_data.set_editor_property('update_skeleton_reference_pose', True)
 mesh = import_asset(SOURCE/'SK_Chuck.fbx', 'SK_Chuck', DEST, options)
 if not isinstance(mesh, unreal.SkeletalMesh):
     raise RuntimeError('V1 mesh is not skeletal')

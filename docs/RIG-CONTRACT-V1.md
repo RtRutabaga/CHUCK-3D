@@ -38,3 +38,16 @@ Claude's next task is the v1 source rig/skin plus pose evidence and first test c
 Before switching: check names/parents/rest transforms, 65 cm bounds, material slots, normalized weights, retained helpers, left/right convention, feet/toes/sole offsets and cigarette tip attachment under jaw motion. Capture starts, stops, both 90-degree turns and jump/landing at rat height and elevated view; inspect actual deformed paws and measure stance slip, reach, knee stability and transitions. No claim of this new rig running is made by the current contract check.
 
 Claude also delivered legacy-rig art commits `875f579` and `dc52106` after the last integrated art. They are pending Unreal integration; their source and preview images must not be described as the current packaged model. The proposal files were brought in separately from `51ff219`. Claude should build v1 from its latest art, preserving those improvements. Its existing worktrees remain untouched by this review.
+
+## v1.1 shape amendment (2026-09-27, Claude; user-requested "closer to the goal images")
+
+Bone **names, hierarchy, deform flags, sockets and clip set are unchanged**. Only rest positions move. The accepted v1.0 table stays in `SourceAssets/Chuck/rig_proposal.json` (and `Check-RigContract.py` still validates that base). The effective v1.1 table is that base mapped through `Tools/chuck_v1_shape.py`. The builder, `check_v1.py` and `validate_chuck_v1_import.py` all read it through `load_effective_table()`, and `rig_v1_metadata.json` records the effective heads.
+
+The mapping (source cm, measured on `References/ArtDirection/Chuck-Turnaround.png`):
+- **Legs:** nothing below 4 cm moves (paws, hock, ball, toes). The legs stretch up to the hip, which rises 3 cm: pelvis and thighs at 22.5 cm (was 19.5).
+- **Leg lengths** (knee kept forward): thigh 10.2011 cm, calf 10.6472 cm (were 8.7687 / 9.3670). The rest reach ratio is now 0.92 (was 0.89).
+- **Torso, arms and jacket:** rise 3 cm. The head compresses linearly back to the ear tip, which stays at **65.000 cm**.
+- **Widths:** the torso and jacket narrow to 0.88 between hips and neck, and the whole arm chain (clavicle to fingers, `ik_hand_*`) to 0.88 in Y.
+- **Sockets:** `socket_cigarette` follows the jaw: head (12.6, 2.5, 51.92), tail (17.0, 4.6, 51.42).
+
+**Runtime impact:** the only hard-coded rest value was the packaged hip check, now (−2, −6, 22.5) in Unreal space. IK lengths come from the imported reference pose, as the contract requires. Unreal re-import now sets `update_skeleton_reference_pose`, so the existing `SK_Chuck_Skeleton` takes the new rest pose. Verified: the Unreal rest-pose validator (< 0.01 cm) and packaged `Verify-Package.ps1` 49/49, with and without the groom.

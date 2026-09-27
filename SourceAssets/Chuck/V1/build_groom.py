@@ -21,8 +21,12 @@ import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
+import sys
 
 V1 = Path(bpy.data.filepath).parent
+sys.path.insert(0, str(V1.parents[2] / 'Tools'))
+# Source heights below are v1.0 values mapped by the v1.1 shape amendment.
+from chuck_v1_shape import Z  # noqa: E402
 OUT = V1 / 'Groom'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
 rng = random.Random(4217)
@@ -38,16 +42,16 @@ mesh.calc_loop_triangles()
 mat_names = [m.name.split('.')[0] for m in mesh.materials]
 tree = BVHTree.FromObject(mesh_obj, deps)
 poly_mat = [p.material_index for p in mesh.polygons]
-EYES = [Vector((7.1, s * 3.85, 54.6)) for s in (1, -1)]
+EYES = [Vector((7.1, s * 3.85, Z(54.6))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
-EARS = [Vector((-1.6, s * 4.6, 60.4)) for s in (1, -1)]
+EARS = [Vector((-1.6, s * 4.6, Z(60.4))) for s in (1, -1)]
 
 # Group definitions: strands, length range (cm), flow direction chooser.
 def flow_for(p):
-    if p.z > 47.5:                       # head and muzzle: sleek toward the tail
+    if p.z > Z(47.5):                    # head and muzzle: sleek toward the tail
         return Vector((-1., 0., -.25))
-    if p.z < 19.:                        # legs: straight down
+    if p.z < Z(19.):                     # legs: straight down
         return Vector((.1, 0., -1.))
     return Vector((-.45, 0., -1.))       # body: down and back
 
@@ -64,13 +68,13 @@ CLUMP_PULL = .6       # how far tips converge on their guide (0..1)
 def region_scale(p):
     """Length and lift multipliers: short sleek muzzle, spiky crown and
     cheeks, fluffy thighs, as in the turnaround."""
-    if p.z > 47.5 and p.x > 7.5:
+    if p.z > Z(47.5) and p.x > 7.5:
         return .45, .8                   # muzzle and snout
-    if p.z > 55.:
+    if p.z > Z(55.):
         return 1.2, 1.6                  # crown between the ears
-    if p.z > 47.5:
+    if p.z > Z(47.5):
         return .9, 1.3                   # cheeks and nape
-    if p.z < 19.:
+    if p.z < Z(19.):
         return 1., 1.1                   # thighs and shins
     return 1., 1.
 
@@ -81,7 +85,7 @@ def group_of(tri, p, n):
     if mat != 'Fur':
         return None
     # Darker coat along the back, crown and upper snout.
-    back = n.dot(Vector((-1., 0., .35)).normalized()) > .3 or (p.z > 55.5 and n.z > .35)
+    back = n.dot(Vector((-1., 0., .35)).normalized()) > .3 or (p.z > Z(55.5) and n.z > .35)
     return 'Fur_Back' if back else 'Fur_Body'
 
 def covered(p, n):
@@ -92,7 +96,7 @@ def covered(p, n):
 
 def near_eye(p):
     return any((p - e).length < 2.3 for e in EYES) or any(
-        (p - e).length < 4.8 and abs(p.y) > 3.7 and p.z > 56.5 for e in EARS)
+        (p - e).length < 4.8 and abs(p.y) > 3.7 and p.z > Z(56.5) for e in EARS)
 
 # Area-weighted candidate triangles per group.
 cands = {g: [] for g in GROUPS}
@@ -108,7 +112,7 @@ for g, spec in GROUPS.items():
     tris = cands[g]
     if not tris: continue
     # Denser on the head (seen close up, and the skin shows between strands).
-    weights = [t.area * (2.2 if t.center.z > 47.5 else 1.) for t in tris]
+    weights = [t.area * (2.2 if t.center.z > Z(47.5) else 1.) for t in tris]
     tries = 0
     while len(strands[g]) < spec['count'] and tries < spec['count'] * 4:
         tries += 1
@@ -120,7 +124,7 @@ for g, spec in GROUPS.items():
         n = t.normal.normalized()
         # Fur stops at the ankle: the paws stay bare pink skin (strands rooted
         # lower hung over the paw tops in the Unreal review).
-        if root.z < 4.8 or near_eye(root) or covered(root, n):
+        if root.z < Z(4.8) or near_eye(root) or covered(root, n):
             rejected += 1; continue
         flow = flow_for(root)
         flow = flow - n * flow.dot(n)

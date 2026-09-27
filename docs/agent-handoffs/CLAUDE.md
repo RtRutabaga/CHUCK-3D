@@ -426,3 +426,37 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   4. **Collar:** a pointed shirt collar and a flatter lapel.
   5. **Belly** reads grey and flat in-game when shaded; the colour calibration was done under the editor review lighting.
   6. **Run clip**, from `Chuck-Run-Cycle-Sheet.png`.
+
+## Eighteenth pass — v1.1 proportions (legs, torso and head toward the turnaround)
+
+- **Source commit:** on top of `699efd0`, branch `codex/claude-character`.
+- **Contract:** `docs/RIG-CONTRACT-V1.md` has a new "v1.1 shape amendment" section.
+  - Same 41 bones, hierarchy, flags and sockets; rest positions move.
+  - `Tools/chuck_v1_shape.py` (new, pure Python) maps both the accepted v1.0 table and the legacy study geometry.
+- **The shape:**
+  - paws unchanged; legs stretched so the hip rises 3 cm (thigh 10.20 cm, calf 10.65 cm, hip 22.5 cm);
+  - torso, arms and jacket up 3 cm;
+  - head compressed back under the fixed 65 cm ear tip;
+  - torso and jacket ×0.88 in width, arm chain ×0.88.
+- **Changed files:**
+  - `Tools/build_chuck_v1.py`: remaps the geometry and the table; weight bands use `Z()`; asserts the ear tip is 65 cm; metadata records the amendment.
+  - `SourceAssets/Chuck/V1/check_v1.py` and `Tools/validate_chuck_v1_import.py`: use the effective table.
+  - `build_groom.py`: region heights use `Z()`.
+  - `bake_textures.py`: hem grime at 26 cm.
+  - `import_chuck_v1.py` / `import_chuck_groom.py`: `update_skeleton_reference_pose` (the first re-import kept the old skeleton rest pose: 3.49 cm error).
+  - `DockGameMode.cpp`: hip check now (−2, −6, 22.5).
+  - Regenerated FBX, blend, groom, textures, `/Game/Characters/Chuck/V1` assets and Review images.
+- **Verified:**
+  - `check_v1.py` PASS.
+  - `Import-ChuckGroom.ps1 -Review`: all steps, including the rest-pose validator < 0.01 cm; roots 706 at max 0.020 cm.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **49/49**. Uncapped with and without groom: 0 failures.
+  - Contact slip 0; landing ball 1.0016 cm against 1.0 rest; stop 18.0–18.7 cm; turn −90.000.
+  - Groom about 0.8 ms (2.92 vs 2.09 ms uncapped).
+  - Evidence: `Review/goal_compare_turnaround_unreal.jpg` and the refreshed Review set.
+- **Remaining gaps to the goal images:**
+  - cigarette prop and smoke;
+  - larger hands with long fingers and claws;
+  - pointed shirt collar and flatter lapels (one lapel end still hangs like a tab in 3/4 view);
+  - belly reads grey in-game shade;
+  - run clip.
+- **Next-owner note for Codex:** the table consumers now read `chuck_v1_shape.load_effective_table()`. `Check-RigContract.py` still validates the unchanged v1.0 base (script/JSON match). It does not check the v1.1 positions, which are covered by `check_v1.py` and the Unreal validator.

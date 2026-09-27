@@ -14,7 +14,7 @@
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "notes": "Neutral hold: breathing, restrained head/ear/tail motion; paws planted at rest."
   },
   {
@@ -28,7 +28,7 @@
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8765,
+   "max_leg_reach_ratio": 0.8922,
    "reference_speed_cm_s": 95.0,
    "stride_cycle_cm": 28.5,
    "stance_travel_cm": 17.1,
@@ -70,7 +70,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "nominal_speed_profile_cm_s": [
     [
      0.0,
@@ -163,7 +163,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "nominal_speed_profile_cm_s": [
     [
      0.0,
@@ -264,7 +264,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "capsule_yaw_deg_profile": [
     [
      0.0,
@@ -374,7 +374,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "capsule_yaw_deg_profile": [
     [
      0.0,
@@ -484,7 +484,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "events_s": {
     "crouch_bottom": 0.16,
     "takeoff": 0.25
@@ -516,7 +516,7 @@
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.7432,
+   "max_leg_reach_ratio": 0.7901,
    "stance_intervals_s": {
     "foot_L": [],
     "foot_R": []
@@ -534,7 +534,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8919,
+   "max_leg_reach_ratio": 0.9192,
    "events_s": {
     "contact": 0.0,
     "max_compression": 0.09,

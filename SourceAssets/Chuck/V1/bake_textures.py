@@ -123,7 +123,8 @@ def jacket(g):
     crumple = g.noise(.9, 5, .6)
     raised = g.math('MULTIPLY', g.math('SUBTRACT', crumple, .52), 3., clamp=True)
     faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.22, .14, .27))
-    grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 23.), .12, clamp=True), clamp=True)
+    # Grime toward the hem, at 26 cm after the v1.1 shape amendment.
+    grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 26.), .12, clamp=True), clamp=True)
     color = g.mix(g.math('MULTIPLY', grime, .4), faded, (.06, .03, .055))
     twill = g.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='DIAGONAL')
     twill.inputs['Scale'].default_value = 2.6; twill.inputs['Distortion'].default_value = 2.

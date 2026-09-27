@@ -14,7 +14,10 @@ import bpy
 from mathutils import Vector
 
 V1 = Path(bpy.data.filepath).parent
-TABLE = json.loads((V1.parent / 'rig_proposal.json').read_text(encoding='utf-8-sig'))
+sys.path.insert(0, str(V1.parents[2] / 'Tools'))
+import chuck_v1_shape  # noqa: E402
+# Accepted v1.0 table mapped through the v1.1 shape amendment.
+TABLE = chuck_v1_shape.load_effective_table(V1.parents[2])
 MANIFEST = json.loads((V1 / 'Animations/manifest.json').read_text(encoding='utf-8'))
 failures = []
 def check(ok, label, detail=''):

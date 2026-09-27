@@ -319,7 +319,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(FMath::IsNearlyEqual(static_cast<float>(Bounds.Origin.Z+Bounds.BoxExtent.Z),65.f,1.f),TEXT("imported model ear height is 65 cm"));
             Check(Body->GetBoneIndex(TEXT("toes_L"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("upperarm_R"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("tail_5"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("socket_cigarette"))!=INDEX_NONE,TEXT("v1 leg arm tail and cigarette bones survive packaged import"));
             const int32 Hip=Rig->GetRefSkeleton().FindBoneIndex(TEXT("thigh_L"));
-            Check(Hip!=INDEX_NONE && FVector::Dist(FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Hip).GetLocation(),FVector(-2,-6,19.5))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
+            Check(Hip!=INDEX_NONE && FVector::Dist(FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Hip).GetLocation(),FVector(-2,-6,22.5))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
             bool bCorrectMaterials=Body->GetNumMaterials()>0;
             for(int32 I=0; I<Body->GetNumMaterials(); ++I)
             {

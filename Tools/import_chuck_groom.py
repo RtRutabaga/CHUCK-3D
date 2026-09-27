@@ -34,6 +34,7 @@ options.import_materials=options.import_textures=options.import_animations=False
 options.create_physics_asset=False
 options.skeleton=unreal.load_asset(DEST+'/SK_Chuck_Skeleton')
 options.skeletal_mesh_import_data.normal_import_method=unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS_AND_TANGENTS
+options.skeletal_mesh_import_data.set_editor_property('update_skeleton_reference_pose',True)
 mesh=ingest(SOURCE/'SK_Chuck_Groomed.fbx','SK_Chuck_Groomed',options)
 slots=mesh.get_editor_property('materials')
 for i,slot in enumerate(slots):

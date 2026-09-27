@@ -42,7 +42,7 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
 
 ## Mesh and weights
 
-- One skinned mesh, 208,413 triangles (170,544 for the groom variant) (whiskers 0.05 cm radius so they don't alias into dotted lines in-engine), one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
+- One skinned mesh, 208,614 triangles (170,544 for the groom variant); v1.1 proportions (`Tools/chuck_v1_shape.py`, docs/RIG-CONTRACT-V1.md) (whiskers 0.05 cm radius so they don't alias into dotted lines in-engine), one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
 - **Legs:** rebuilt knee-forward along thigh → calf → hock. Their domed ends sink into the paw heel mound.
 - **Paws:** now part of the body (the legacy `paw_parts` at origin (-0.8, ±7, 1.96)).
 - **Continuity:** leg and paw are overlapping surfaces, not one merged manifold. The paw, heel mound included, is rigid on foot/toes. The ankle bend happens on the fur leg tube, which grades calf → foot over about 1.5 cm around the hock. The tube's end sits inside the heel mound and is fully foot-weighted, so the join stays closed under toe roll, paw lift and crouch (`Review/ankle_join.jpg`).
