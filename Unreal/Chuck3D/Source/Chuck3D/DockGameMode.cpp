@@ -333,7 +333,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const auto* Wisp=Chuck->GetCigaretteSmoke();
             const FTransform& MeshToWorld=Body->GetComponentTransform();
             const FVector Along=Cig ? MeshToWorld.InverseTransformVectorNoScale(Cig->GetForwardVector()) : FVector::ZeroVector;
-            const float Aim=FVector::DotProduct(Along,FVector(3.608,-2.1,-.5).GetSafeNormal());
+            const float Aim=FVector::DotProduct(Along,FVector(3.256,-2.1,-.5).GetSafeNormal());
             const float AtMouth=Cig ? FVector::Dist(Cig->GetComponentLocation(),Body->GetSocketLocation(TEXT("socket_cigarette"))) : 99.f;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CIGARETTE_MEASURE aim_dot=%.4f at_mouth_cm=%.4f smoke_up=%.4f"),Aim,AtMouth,Wisp ? Wisp->GetUpVector().Z : -1.);
             Check(Cig && Wisp && Cig->GetStaticMesh() && Wisp->GetStaticMesh() && AtMouth<.05f && Aim>.97f && Wisp->GetUpVector().Z>.999f,TEXT("cigarette held in the left mouth corner with upright smoke"));

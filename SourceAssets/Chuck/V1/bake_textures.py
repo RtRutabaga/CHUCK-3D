@@ -17,6 +17,8 @@ import numpy as np
 
 SIZE = int(sys.argv[sys.argv.index('--') + 1]) if '--' in sys.argv and len(sys.argv) > sys.argv.index('--') + 1 else 2048
 V1 = Path(bpy.data.filepath).parent
+sys.path.insert(0, str(V1.parents[2] / 'Tools'))
+import chuck_v1_shape as SHAPE  # noqa: E402  (whisker-pad mask follows the snout amendment)
 OUT = V1 / 'Textures'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
 # Bake from the tuft-free variant: same UVs and materials, but the geometric
@@ -160,7 +162,7 @@ def chest(g):
     def band(v, a, b):
         return g.math('MULTIPLY', g.math('SUBTRACT', v, a), 1. / (b - a), clamp=True)
     x, z, y = g.axis(0), g.axis(2), g.math('ABSOLUTE', g.axis(1))
-    pad = g.math('MULTIPLY', band(x, 9.8, 10.5), g.math('SUBTRACT', 1., band(x, 13., 13.6), clamp=True))
+    pad = g.math('MULTIPLY', band(x, SHAPE.X(11.8) - .1, SHAPE.X(12.6)), g.math('SUBTRACT', 1., band(x, SHAPE.X(15.2), SHAPE.X(15.9)), clamp=True))
     pad = g.math('MULTIPLY', pad, g.math('MULTIPLY', band(z, 52.1, 52.6), g.math('SUBTRACT', 1., band(z, 54.2, 54.7), clamp=True)))
     pad = g.math('MULTIPLY', pad, band(y, .7, 1.1))
     vor = g.node('ShaderNodeTexVoronoi'); vor.inputs['Scale'].default_value = 2.6

@@ -54,4 +54,4 @@ The mapping (source cm, measured on `References/ArtDirection/Chuck-Turnaround.pn
 
 ### v1.2 snout amendment (2026-09-27, user target `References/ArtDirection/Chuck-Snout-Fur-Target.png`)
 
-`Tools/chuck_v1_shape.py` shortens the snout to 0.82 of its length in front of source x = 2 cm, for every head part and for the `head`, `jaw` and `socket_cigarette` bones. Bone names, hierarchy and flags are unchanged. `socket_cigarette` becomes head (10.492, 2.5, 51.917) and tail (14.1, 4.6, 51.417); the packaged cigarette aim check uses that direction (3.608, −2.1, −0.5).
+`Tools/chuck_v1_shape.py` shortens the snout to **0.74** (0.82 at first; revised for the user's `Chuck-Face-Proportion-Target.png`) of its length in front of source x = 2 cm, for every head part and for the `head`, `jaw` and `socket_cigarette` bones. Bone names, hierarchy and flags are unchanged. `socket_cigarette` becomes head (9.844, 2.5, 51.917) and tail (13.1, 4.6, 51.417); the packaged cigarette aim check uses that direction (3.256, −2.1, −0.5). The cranium is also taller (geometry only; `CRANIUM` in `build_chuck_model.py`).

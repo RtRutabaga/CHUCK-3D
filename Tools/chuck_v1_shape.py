@@ -37,7 +37,7 @@ TORSO_PARTS = ('Torso', 'LightChest', 'ChestFur', 'BellyFur', 'OpenJacket', 'Zip
 ARM_BONES = ('clavicle', 'upperarm', 'lowerarm', 'hand', 'fingers', 'thumb', 'ik_hand')
 HEAD_PARTS = ('Head', 'MuzzleLight', 'Nose', 'EyeLid', 'Eye', 'Mouth', 'Whisker', 'CheekFur', 'Ear')
 HEAD_BONES = ('head', 'jaw', 'socket_cigarette')
-SNOUT = .82         # snout length factor in front of SNOUT_FROM (v1.2)
+SNOUT = .74         # snout length factor in front of SNOUT_FROM (v1.2; .82 before the face-proportion target)
 SNOUT_FROM = 2.0    # source x where the snout compression starts
 
 

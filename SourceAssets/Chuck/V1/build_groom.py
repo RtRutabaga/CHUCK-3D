@@ -42,7 +42,7 @@ mesh.calc_loop_triangles()
 mat_names = [m.name.split('.')[0] for m in mesh.materials]
 tree = BVHTree.FromObject(mesh_obj, deps)
 poly_mat = [p.material_index for p in mesh.polygons]
-EYES = [Vector((X(7.1), s * 3.85, Z(54.6))) for s in (1, -1)]
+EYES = [Vector((X(7.15), s * 3.8, Z(55.0))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
 EARS = [Vector((-1.6, s * 4.6, Z(60.4))) for s in (1, -1)]

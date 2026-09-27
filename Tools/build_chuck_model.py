@@ -200,9 +200,14 @@ verts,faces=[],[]
 # Turnaround 2026-09-27: narrow, pointed head (half-widths 0.72x the first
 # study), about 8-9 cm across the cheeks seen from the front.
 HEAD_NARROW=.72
-head_sections=[(x,z,ry*HEAD_NARROW,rz) for x,z,ry,rz in
+# Face-proportion target (References/ArtDirection/Chuck-Face-Proportion-Target.png):
+# a rat profile, with the forehead sloping almost straight from the ears into a
+# short conical snout. CRANIUM lifts the skull only slightly (a strong dome read
+# as a mouse); the section centre rises by half the growth, keeping the chin line.
+CRANIUM={-2:1.08,2:1.08,6:1.05}
+head_sections=[(x,z+rz*(CRANIUM.get(x,1.)-1)*.5,ry*HEAD_NARROW,rz*CRANIUM.get(x,1.)) for x,z,ry,rz in
                [(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
-                (6,52.8,5.4,5.8),(10,51.6,4.5,3.95),(15,50.9,2.75,2.45),(17.5,50.7,1.35,1.25)]]
+                (6,52.8,5.4,5.8),(10,51.6,4.3,3.75),(15,50.9,2.4,2.15),(17.5,50.7,1.15,1.05)]]
 for x,z,ry,rz in head_sections:
     for j in range(32):
         angle=j*math.tau/32
@@ -246,7 +251,7 @@ for r in range(MU_ROWS-1):
         k=r*MU_COLS+c
         faces.append((k,k+1,k+1+MU_COLS,k+MU_COLS))
 mesh('MuzzleLight',verts,faces,'Chest',1)
-ellipsoid('Nose',(17.8,0,50.7),(1.2,1.35,.95),'Skin')
+ellipsoid('Nose',(17.7,0,50.75),(1.05,1.2,.85),'Skin')
 
 def cupped_ear(side):
     """Thin cupped ear: pinched base, pink inner face (Skin), furred back
@@ -283,8 +288,9 @@ for e in ears:
     # Contract: ear top exactly 65 cm.
     for v in e.data.vertices: v.co.z+=65.-top
 for side in (-1,1):
-    ellipsoid('EyeLid',(6.6,side*3.65,54.5),(1.75,.7,1.3),'Fur')
-    ellipsoid('Eye',(7.1,side*3.85,54.6),(1.4,.7,.98),'Eye')
+    # Small, high rat eyes (face-proportion target).
+    ellipsoid('EyeLid',(6.7,side*3.6,54.9),(1.45,.62,1.1),'Fur')
+    ellipsoid('Eye',(7.15,side*3.8,55.0),(1.15,.62,.82),'Eye')
     tube('Mouth',[head_surface(x,side*a,.3) for x,a in ((16.6,.35),(14.5,.8),(12,1.05),(9.8,1.15))],.05,'Fur')
     for i in range(7):
         # Rows on the whisker pad, fanning up/back to down/forward.

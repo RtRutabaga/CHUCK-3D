@@ -527,3 +527,23 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The follicle dots don't yet read through the fur at preview distance.
   - The nose is still rounder than the target's.
   - The target's fur has lighter tips and more visible individual hairs; Unreal's seed variation adds some of this, but the Blender preview cannot show it.
+
+## Twenty-second pass — face proportions (user target image)
+
+- **Input:** `References/ArtDirection/Chuck-Face-Proportion-Target.png` (byte-exact, SHA-256 `610C3358066A5507B6C8100023E5CF56ECFCA5F9EEF733CE319918CE580A1907`): "I'd like the face/snout proportions more like this".
+- **Source commit:** on top of `ccc6459` (main), branch `codex/claude-character`.
+- **Changes:**
+  - **Snout:** 0.74 of its length (was 0.82), through the v1.2 amendment in `Tools/chuck_v1_shape.py`; the head, jaw and cigarette-socket bones follow. The front sections are conical again, not blunt, and the nose is smaller. The cigarette aim check now uses (3.256, −2.1, −0.5).
+  - **Cranium:** `CRANIUM` gives a slight lift (×1.08) for a sloping rat forehead. A first try at ×1.3 read as a round mouse and was dropped.
+  - **Eyes:** smaller and set higher.
+  - **Whisker-pad mask:** in the bake it now follows `SHAPE.X()`.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Cigarette aim dot 0.9993; groom about 0.86 ms.
+  - Evidence: `Review/goal_compare_face.jpg`.
+- **Gaps against the target:**
+  - The cream muzzle patch reads as a bright white mask; the target's muzzle is only slightly lighter.
+  - The target's head fur is warmer tan and scruffier.
+  - The target's eyes have an amber-brown iris.
+- **Not integrated into main.** The launcher still shows `4eef511`.
