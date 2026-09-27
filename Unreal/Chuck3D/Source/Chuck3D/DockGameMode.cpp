@@ -3,7 +3,9 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "Components/PoseableMeshComponent.h"
+#include "ChuckAnimInstance.h"
+#include "AnimationRuntime.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -288,23 +290,24 @@ void ADockGameMode::Tick(float DeltaSeconds)
         bHit=GetWorld()->LineTraceSingleByChannel(PropHit,FVector(-150,60,30),FVector(-10,60,30),ECC_Visibility);
         Check(bHit && PropHit.GetActor() && PropHit.GetActor()->ActorHasTag(TEXT("Crate")),TEXT("hidden crate proxy still blocks collision"));
         Check(FMath::IsNearlyEqual(Chuck->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()*2,65.f,.01f),TEXT("Chuck collision height is 65 cm"));
-        auto* Body=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
-        auto* Rig=Body ? Cast<USkeletalMesh>(Body->GetSkinnedAsset()) : nullptr;
-        Check(Rig!=nullptr,TEXT("custom Blender skeletal body loads"));
+        auto* Body=Chuck->GetMesh();
+        auto* Rig=Body ? Body->GetSkeletalMeshAsset() : nullptr;
+        const bool bNoGroom=FParse::Param(FCommandLine::Get(),TEXT("ChuckNoGroom"));
+        Check(Rig && Rig->GetName()==(bNoGroom ? TEXT("SK_Chuck") : TEXT("SK_Chuck_Groomed")) && Chuck->GetChuckAnim(),TEXT("v1 skeletal body loads with its animation instance"));
         if(Rig)
         {
             const auto Bounds=Rig->GetImportedBounds();
             Check(FMath::IsNearlyEqual(static_cast<float>(Bounds.Origin.Z+Bounds.BoxExtent.Z),65.f,1.f),TEXT("imported model ear height is 65 cm"));
-            Check(Body->GetBoneIndex(TEXT("shin_L"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("arm_R"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("tail_3"))!=INDEX_NONE,TEXT("leg arm and tail bones survive packaged import"));
-            Check(FVector::Dist(Body->GetBoneLocationByName(TEXT("thigh_L"),EBoneSpaces::ComponentSpace),FVector(-2,-6,21))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
-            bool bCorrectMaterials=true, bPurple=false;
+            Check(Body->GetBoneIndex(TEXT("toes_L"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("upperarm_R"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("tail_5"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("socket_cigarette"))!=INDEX_NONE,TEXT("v1 leg arm tail and cigarette bones survive packaged import"));
+            const int32 Hip=Rig->GetRefSkeleton().FindBoneIndex(TEXT("thigh_L"));
+            Check(Hip!=INDEX_NONE && FVector::Dist(FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Hip).GetLocation(),FVector(-2,-6,19.5))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
+            bool bCorrectMaterials=Body->GetNumMaterials()>0;
             for(int32 I=0; I<Body->GetNumMaterials(); ++I)
             {
                 const auto* Mat=Body->GetMaterial(I);
-                bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Art/Materials/"));
-                bPurple |= Mat && Mat->GetName()==TEXT("M_Jacket");
+                bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Characters/Chuck/V1/"));
             }
-            Check(bCorrectMaterials && bPurple,TEXT("skeletal material assignments persist including purple jacket"));
+            Check(bCorrectMaterials && Chuck->GetGroomCount()==(bNoGroom ? 0 : 3),TEXT("v1 material and groom assignments persist"));
         }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));
@@ -314,39 +317,38 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==1)
     {
         Chuck->AddMovementInput(FVector(1,0,0),1);
-        // Identical before/after measurement: flat-height feet during steady
-        // straight walking should remain still in world space during stance.
-        for(int32 I=0; I<2; ++I)
+        // Measured on the evaluated pose: a paw locked in stance on flat
+        // ground during steady straight walking should not move in world space.
+        const FChuckAnimResult Pose=Chuck->GetChuckAnim() ? Chuck->GetChuckAnim()->GetResult() : FChuckAnimResult();
+        const bool bNewPose=Pose.Evaluations!=ProbeEvaluations;
+        for(int32 I=0; I<2 && bNewPose; ++I)
         {
-            const auto* Foot=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(I==0 ? TEXT("FootLeft") : TEXT("FootRight")));
-            const FVector Position=Foot->GetComponentLocation();
-            const auto* PoseBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
-            const float Sign=I==0 ? -1.f:1.f;
-            const FVector Hip(-2,Sign*6,21),Knee(-4,Sign*7.2f,11),RestAnkle(2,Sign*7,5);
-            const FVector Ankle=PoseBody->GetComponentTransform().InverseTransformPosition(Foot->GetComponentTransform().TransformPosition(FVector(-2,0,2.5f)));
-            const float Reach=FVector::Distance(Hip,Knee)+FVector::Distance(Knee,RestAnkle);
-            ProbeReachExcess=FMath::Max(ProbeReachExcess,static_cast<float>(FVector::Distance(Hip,Ankle))-Reach);
-            if(bProbeReady && StageTime>.25f && Chuck->GetVelocity().Size2D()>90.f && FMath::Abs(Position.Z-ProbeFoot[I].Z)<.001f)
+            const FVector Position=Pose.BallWorld[I];
+            ProbeReachExcess=FMath::Max(ProbeReachExcess,Pose.Shortfall[I]);
+            const bool bLocked=Pose.LockAlpha[I]>=1.f && !Pose.bSettling[I];
+            if(bProbeReady && bProbeLocked[I] && bLocked && StageTime>.25f && Chuck->GetVelocity().Size2D()>90.f)
             {
-                const float SlipSpeed=FVector::Dist2D(Position,ProbeFoot[I])/FMath::Max(DeltaSeconds,.001f);
+                const float SlipSpeed=FVector::Dist(Position,ProbeFoot[I])/FMath::Max(DeltaSeconds,.001f);
                 ProbeSlip+=SlipSpeed; ProbeMaxSpeed=FMath::Max(ProbeMaxSpeed,SlipSpeed); ++ProbeSamples;
             }
-            ProbeFoot[I]=Position;
+            ProbeFoot[I]=Position; bProbeLocked[I]=bLocked;
         }
-        bProbeReady=true;
+        ProbeEvaluations=Pose.Evaluations;
+        if(bNewPose) bProbeReady=true;
         if(StageTime>1)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CONTACT_MEASURE samples=%d mean_cm_s=%.4f max_cm_s=%.4f"),ProbeSamples,ProbeSamples ? ProbeSlip/ProbeSamples : -1.,ProbeMaxSpeed);
             Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
-            auto* MovingBody=Cast<UPoseableMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("ChuckBody")));
+            auto* MovingBody=Chuck->GetMesh();
             Check(ProbeSamples>=10 && ProbeMaxSpeed<1.f,TEXT("steady walk stance feet stay planted within 1 cm/s"));
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_REACH_MEASURE max_excess_cm=%.4f"),ProbeReachExcess);
-            Check(ProbeReachExcess<.5f,TEXT("walking ankle targets remain within leg reach"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_REACH_MEASURE max_shortfall_cm=%.4f"),ProbeReachExcess);
+            Check(ProbeReachExcess<.5f,TEXT("walking paw targets remain within leg reach"));
             if(MovingBody)
             {
-                const auto* Rig=Cast<USkeletalMesh>(MovingBody->GetSkinnedAsset());
-                const int32 Arm=MovingBody->GetBoneIndex(TEXT("arm_L"));
-                Check(Rig && Arm!=INDEX_NONE && MovingBody->BoneSpaceTransforms[Arm].GetRotation().AngularDistance(Rig->GetRefSkeleton().GetRefBonePose()[Arm].GetRotation())>.01f,TEXT("walking articulates jacket sleeve"));
+                const auto* Rig=MovingBody->GetSkeletalMeshAsset();
+                const int32 Arm=MovingBody->GetBoneIndex(TEXT("upperarm_L"));
+                const TArray<FTransform> Local=MovingBody->GetBoneSpaceTransforms();
+                Check(Rig && Local.IsValidIndex(Arm) && Local[Arm].GetRotation().AngularDistance(Rig->GetRefSkeleton().GetRefBonePose()[Arm].GetRotation())>.01f,TEXT("walking articulates jacket sleeve"));
             }
             Chuck->Jump(); MaxJumpZ=Chuck->GetActorLocation().Z; TestStage=2; StageTime=0;
         }
@@ -354,17 +356,23 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==2)
     {
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
-        const auto* AnimatedFoot=Cast<UStaticMeshComponent>(Chuck->GetDefaultSubobjectByName(TEXT("FootLeft")));
-        if(AnimatedFoot && Chuck->GetCharacterMovement()->IsFalling())
-            MaxAirFootLift=FMath::Max(MaxAirFootLift,static_cast<float>(AnimatedFoot->GetRelativeLocation().Z));
+        const FChuckAnimResult Pose=Chuck->GetChuckAnim() ? Chuck->GetChuckAnim()->GetResult() : FChuckAnimResult();
+        if(Chuck->GetCharacterMovement()->IsFalling())
+            MaxAirFootLift=FMath::Max(MaxAirFootLift,static_cast<float>(Pose.BallWorld[0].Z-Chuck->GetMesh()->GetComponentLocation().Z));
         if(StageTime>1)
         {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_AIR_MEASURE max_ball_lift_cm=%.4f"),MaxAirFootLift);
             Check(MaxAirFootLift>4.f,TEXT("airborne feet tuck above resting pose"));
             FHitResult FootGround;
             FCollisionQueryParams FootQuery(SCENE_QUERY_STAT(ChuckLandingCheck),false,Chuck);
-            const FVector FootPosition=AnimatedFoot ? AnimatedFoot->GetComponentLocation():FVector::ZeroVector;
+            const FVector FootPosition=Pose.BallWorld[0];
             const bool bGround=GetWorld()->LineTraceSingleByChannel(FootGround,FootPosition+FVector(0,0,8),FootPosition-FVector(0,0,15),ECC_Visibility,FootQuery);
-            Check(AnimatedFoot && bGround && FMath::IsNearlyEqual(static_cast<float>(FootPosition.Z-FootGround.ImpactPoint.Z),2.f,.2f),TEXT("feet settle on traced ground after landing"));
+            const auto* Rig=Chuck->GetMesh()->GetSkeletalMeshAsset();
+            const int32 Toes=Rig ? Rig->GetRefSkeleton().FindBoneIndex(TEXT("toes_L")) : INDEX_NONE;
+            const float RestBall=Toes!=INDEX_NONE ? FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Toes).GetLocation().Z : -1.f;
+            const float Clearance=bGround ? static_cast<float>(FootPosition.Z-FootGround.ImpactPoint.Z) : -99.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LAND_MEASURE ball_above_ground_cm=%.4f rest_cm=%.4f"),Clearance,RestBall);
+            Check(Pose.Evaluations>0 && bGround && FMath::IsNearlyEqual(Clearance,RestBall,.3f),TEXT("feet settle on traced ground after landing"));
             Check(MaxJumpZ>48,TEXT("jump lifts Chuck above floor"));
             Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("jump lands back on quay"));
             Chuck->GetCharacterMovement()->StopMovementImmediately();

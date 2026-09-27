@@ -5,8 +5,10 @@
 
 class USpringArmComponent;
 class UCameraComponent;
-class UStaticMeshComponent;
-class UPoseableMeshComponent;
+class UGroomComponent;
+class UAnimSequence;
+class UChuckAnimInstance;
+class USkeletalMesh;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -21,43 +23,40 @@ public:
     void Recenter();
     bool IsElevated() const { return bElevated; }
     static FVector StartLocation() { return FVector(-240, -180, 36); }
+    /** v1 animation instance on GetMesh(); null until play begins. */
+    UChuckAnimInstance* GetChuckAnim() const;
+    int32 GetGroomCount() const;
 protected:
     virtual void BeginPlay() override;
-    virtual void Landed(const FHitResult& Hit) override;
 private:
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
-    UPROPERTY() USceneComponent* RatVisual;
+    UPROPERTY() TArray<UGroomComponent*> Grooms;
+    UPROPERTY() USkeletalMesh* PlainMesh;
     bool bElevated = true;
     float ViewYaw = 0;
     float ViewPitch = 0;
     float CameraBlend = 1;
-    float GaitPhase = 0;
-    float MotionAmount = 0;
-    float AirAmount = 0;
-    float LandingCompression = 0;
-    UPROPERTY() UPoseableMeshComponent* Body;
-    UPROPERTY() UStaticMeshComponent* LeftFoot;
-    UPROPERTY() UStaticMeshComponent* RightFoot;
 
-    struct FFootContact
-    {
-        FVector Position=FVector::ZeroVector;
-        FVector Start=FVector::ZeroVector;
-        FQuat Rotation=FQuat::Identity;
-        FQuat StartRotation=FQuat::Identity;
-        float Elapsed=0;
-        float Duration=.2f;
-        bool bSupported=false;
-    };
-    FFootContact Feet[2];
-    int32 SwingFoot=INDEX_NONE;
-    int32 NextFoot=0;
-    bool bContactsReady=false;
-    bool bFirstStep=true;
-    FVector PreviousMotionLocation=FVector::ZeroVector;
-    void UpdateFootContacts(float DeltaSeconds,bool bAirborne);
-    bool FindFootSupport(const FVector& Desired,FVector& Supported) const;
+    // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, JumpStart, JumpLoop, JumpLand, Num };
+    UPROPERTY() TArray<UAnimSequence*> Clips;
+    enum class EGait : uint8 { Idle, Start, Loop, Air, Land };
+    EGait Gait = EGait::Idle;
+    EClip Base = EClip::Idle;
+    float BaseTime = 0;
+    EClip Fading = EClip::Idle;
+    float FadingTime = 0;
+    float FadeWeight = 0;
+    float FadeRate = 0;
+    float StateTime = 0;
+    float StartDistance = 0;
+    float WalkPhase = 0;
+    float MeshDrop = 0;
+    FVector PreviousMotionLocation = FVector::ZeroVector;
+    void SetClip(EClip Clip, float Time, float FadeSeconds);
+    float Period(EClip Clip) const;
+    float FindGround(const FVector& Near, float Fallback) const;
 
     void Forward(float Value);
     void Right(float Value);
@@ -68,5 +67,4 @@ private:
     void Quit();
     void UpdateCamera(float DeltaSeconds = 0);
     void UpdateMotion(float DeltaSeconds);
-    void UpdateSkeleton();
 };

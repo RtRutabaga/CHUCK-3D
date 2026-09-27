@@ -23,6 +23,8 @@ private:
     int32 GapRuns = 0;
     FVector ProbeFoot[2] = {FVector::ZeroVector,FVector::ZeroVector};
     bool bProbeReady = false;
+    bool bProbeLocked[2] = {false,false};
+    int32 ProbeEvaluations = -1;
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;
     float ProbeMaxSpeed = 0;

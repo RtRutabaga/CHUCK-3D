@@ -274,3 +274,45 @@ Claude now does this. Please do the same at the end of each Codex session, from 
 
   Keep the stash until the merged main is verified, then drop it.
 - **v2 work split (user request 2026-09-27):** `docs/AGENT-WORKFLOW.md` now leads with the v2 table. Claude owns the character end to end (including Unreal import/groom) and the v1 runtime migration, then traversal/camera. Codex takes independent packaged verification, regression tests, tooling, data import and isolated fixes (`docs/agent-tasks/CODEX-V2.md` is its starter prompt). `CLAUDE.md` is updated to match. Next-owner lines at every session end are part of the workflow for both agents.
+
+## Fourteenth pass — v1 runtime migration (playable Chuck is now v1)
+
+- **Source commit:** on top of `9daf5cb`, branch `codex/claude-character`.
+- **Changed files:**
+  - `Unreal/Chuck3D/Source/Chuck3D/ChuckAnimInstance.{h,cpp}` (new)
+  - `ChuckCharacter.{h,cpp}`
+  - `DockGameMode.{h,cpp}`
+  - `Chuck3D.Build.cs` (adds `AnimationCore`)
+  - evidence `SourceAssets/Chuck/V1/Review/runtime_{front,motion_view0,motion_view2}.jpg`
+- **Character:** `GetMesh()` uses `SK_Chuck_Groomed`, and three `GroomComponent`s (`Groom_Fur_{Body,Back,Cream}`, simulation off, `M_Fur_*`) are attached to it. The legacy `ChuckBody` PoseableMesh, the `FootLeft`/`FootRight` static paws and the `RatVisual` node are removed. `-ChuckNoGroom` removes the grooms and uses `SK_Chuck` (geometric tufts). Capsule and movement tuning are unchanged.
+- **Animation:** `UChuckAnimInstance` is native, with no binary AnimBP. Its custom `FAnimInstanceProxy::Evaluate` does the following:
+  - Samples two clip layers and cross-fades between them.
+  - Idle, WalkStart and WalkLoop are **distance-matched**. WalkStart inverts its authored travel curve (19 cm). WalkLoop advances by distance ÷ 28.5 cm stride.
+  - Air uses JumpStart from its extension half, then JumpLoop; landing uses JumpLand.
+  - Two-bone IK per leg (`AnimationCore::SolveTwoBoneIK`) keeps the clip's knee plane and its hock→ball vector.
+  - Per-paw ground traces set paw height; the pelvis drops up to 4 cm for a lower paw.
+  - **Stance locks:** during the manifest stance windows, a paw's ball is held in world space from where it was last drawn. It is released (0.08 s fade) if a turn pulls it more than 6 cm.
+  - **Settle steps** when standing: a locked paw steps (0.18 s, 1.5 cm lift) if it drifts more than 3 cm, or hovers more than 0.5 cm, from the Idle pose.
+  - Unreal imported the loop clips at their full period (Idle 2.0 / WalkLoop 0.3 / JumpLoop 0.4 s, logged as `CHUCK_CLIP`).
+- **Verifier:** the ten checks that read legacy internals were replaced one-for-one, so there are still 43. The new checks cover:
+  - the v1 mesh and animation instance, and the v1 leg, arm, tail and cigarette bones;
+  - the reference hip at (-2,-6,19.5);
+  - v1 materials and 3 grooms;
+  - evaluated-paw stance slip and IK shortfall;
+  - `upperarm_L` articulation;
+  - ball lift in the air;
+  - ball-above-ground after landing, equal to the rest height.
+- **Verified in `.claude/worktrees/project-orientation-fd7504`** (UE 5.7.4, one heavy process at a time):
+  - `Chuck3DEditor` build.
+  - `Build-Prototype.ps1 -Package`, then a second BuildCookRun after fixes.
+  - `Verify-Package.ps1`: **43 passes, failures=0**.
+  - `Verify-Package.ps1 -MotionCapture`: 43 passes, 36 frames per view.
+  - Measures (`Local/verify-package-20260926-232536.log`): contact 42 samples, max slip 0.0000 cm/s; IK shortfall 0.0000 cm; ball lift in the air 6.90 cm; landing ball 0.9997 cm above ground vs rest 1.0000.
+  - Captures reviewed by eye: the v1 groomed Chuck stands on the quay and walks with paws grounded (front, side and back views).
+- **Caveats and remaining flaws:**
+  - The slip measure reads the proxy's evaluated ball position, so it proves the lock and IK hold. It does not independently read skinned vertices.
+  - `Build-Prototype.ps1` regenerated `Content/Prototype/Materials/*.uasset`. These are world assets outside this task, so they were reverted, not committed.
+  - WalkStop and Turn clips are not used yet: stopping cross-fades to Idle, then settle steps; turning uses stance release.
+  - Grooms are not simulated.
+  - Groom GPU cost on the 8 GB card has not been measured.
+  - The `-ChuckNoGroom` path compiles but was not run.

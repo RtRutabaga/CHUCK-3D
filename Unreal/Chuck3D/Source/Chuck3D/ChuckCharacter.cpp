@@ -1,17 +1,22 @@
 #include "ChuckCharacter.h"
+#include "ChuckAnimInstance.h"
+#include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/PoseableMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
-#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "GroomAsset.h"
+#include "GroomBindingAsset.h"
+#include "GroomComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "UObject/ConstructorHelpers.h"
 
 AChuckCharacter::AChuckCharacter()
@@ -33,46 +38,40 @@ AChuckCharacter::AChuckCharacter()
     Movement->SetWalkableFloorAngle(45);
     JumpMaxHoldTime = 0;
 
-    RatVisual = CreateDefaultSubobject<USceneComponent>(TEXT("RatVisual"));
-    RatVisual->SetupAttachment(GetRootComponent());
-    RatVisual->SetRelativeLocation(FVector(0,0,-35.f));
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> BodyAsset(TEXT("/Game/Characters/Chuck/SK_ChuckBody.SK_ChuckBody"));
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> FootAsset(TEXT("/Game/Characters/Chuck/SM_ChuckFoot.SM_ChuckFoot"));
-    Body = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("ChuckBody"));
-    Body->SetupAttachment(RatVisual);
-    Body->SetSkinnedAssetAndUpdate(BodyAsset.Object);
+    // v1 character: SK_Chuck_Groomed (no geometric tufts) plus the strand groom.
+    // -ChuckNoGroom swaps in SK_Chuck, whose geometric tufts stand in for fur.
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> GroomedAsset(TEXT("/Game/Characters/Chuck/V1/SK_Chuck_Groomed.SK_Chuck_Groomed"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> PlainAsset(TEXT("/Game/Characters/Chuck/V1/SK_Chuck.SK_Chuck"));
+    PlainMesh = PlainAsset.Object;
+    USkeletalMeshComponent* Body = GetMesh();
+    Body->SetSkeletalMeshAsset(GroomedAsset.Object);
+    Body->SetRelativeLocationAndRotation(FVector(0, 0, -32.5f), FRotator::ZeroRotator);
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    if(BodyAsset.Object)
+    Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
+    Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand")};
+    for (const TCHAR* Name : ClipNames)
     {
-        const auto& Slots=BodyAsset.Object->GetMaterials();
-        for(int32 I=0; I<Slots.Num(); ++I)
-        {
-            const FString Name=Slots[I].MaterialSlotName.ToString();
-            if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),*Name,*Name)))
-                Body->SetMaterial(I,Surface);
-        }
+        ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
+        Clips.Add(Clip.Object);
     }
-    auto MakeFoot = [&](const TCHAR* Name,float Side)
+    static const TCHAR* Groups[] = {TEXT("Fur_Body"), TEXT("Fur_Back"), TEXT("Fur_Cream")};
+    for (const TCHAR* Group : Groups)
     {
-        auto* Foot=CreateDefaultSubobject<UStaticMeshComponent>(Name);
-        Foot->SetupAttachment(RatVisual);
-        Foot->SetStaticMesh(FootAsset.Object);
-        Foot->SetRelativeLocation(FVector(4,Side*7,2.5f));
-        Foot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        if(FootAsset.Object)
-        {
-            const auto& Slots=FootAsset.Object->GetStaticMaterials();
-            for(int32 I=0; I<Slots.Num(); ++I)
-            {
-                const FString SurfaceName=Slots[I].MaterialSlotName.ToString();
-                if(auto* Surface=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),*SurfaceName,*SurfaceName)))
-                    Foot->SetMaterial(I,Surface);
-            }
-        }
-        return Foot;
-    };
-    LeftFoot=MakeFoot(TEXT("FootLeft"),-1);
-    RightFoot=MakeFoot(TEXT("FootRight"),1);
+        ConstructorHelpers::FObjectFinder<UGroomAsset> GroomAsset(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/GR_Chuck_%s.GR_Chuck_%s"), Group, Group));
+        ConstructorHelpers::FObjectFinder<UGroomBindingAsset> Binding(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/GB_Chuck_%s.GB_Chuck_%s"), Group, Group));
+        ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/M_%s.M_%s"), Group, Group));
+        auto* Hair = CreateDefaultSubobject<UGroomComponent>(*FString::Printf(TEXT("Groom_%s"), Group));
+        Hair->SetupAttachment(Body);
+        Hair->SimulationSettings.bOverrideSettings = true;
+        Hair->SimulationSettings.SolverSettings.bEnableSimulation = false;
+        // Plain defaults: resources are created when the component registers.
+        Hair->GroomAsset = GroomAsset.Object;
+        Hair->BindingAsset = Binding.Object;
+        Hair->SetMaterial(0, Material.Object);
+        Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Grooms.Add(Hair);
+    }
     Boom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     Boom->SetupAttachment(GetRootComponent());
     Boom->SetUsingAbsoluteRotation(true);
@@ -91,6 +90,22 @@ AChuckCharacter::AChuckCharacter()
 void AChuckCharacter::BeginPlay()
 {
     Super::BeginPlay();
+    if (FParse::Param(FCommandLine::Get(), TEXT("ChuckNoGroom")))
+    {
+        for (UGroomComponent* Hair : Grooms)
+        {
+            Hair->DestroyComponent();
+        }
+        Grooms.Reset();
+        GetMesh()->SetSkeletalMeshAsset(PlainMesh);
+    }
+    // Stance locks are world positions: pose after this frame's movement.
+    GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
+    for (int32 I = 0; I < Clips.Num(); ++I)
+    {
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_CLIP %s length=%.4f"), Clips[I] ? *Clips[I]->GetName() : TEXT("missing"), Clips[I] ? Clips[I]->GetPlayLength() : -1.f);
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_V1_RUNTIME grooms=%d mesh=%s"), Grooms.Num(), *GetNameSafe(GetMesh()->GetSkeletalMeshAsset()));
     UpdateCamera();
     if (auto* PC = Cast<APlayerController>(Controller))
     {
@@ -98,6 +113,8 @@ void AChuckCharacter::BeginPlay()
         PC->bShowMouseCursor = false;
     }
 }
+UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAnimInstance>(GetMesh()->GetAnimInstance()); }
+int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 {
     Super::SetupPlayerInputComponent(Input);
@@ -141,230 +158,173 @@ void AChuckCharacter::ResetToDock()
     SetActorRotation(FRotator::ZeroRotator);
     ViewYaw = 0;
     ViewPitch = 0;
-    GaitPhase = MotionAmount = AirAmount = LandingCompression = 0;
-    bContactsReady=false; bFirstStep=true; SwingFoot=INDEX_NONE; NextFoot=0;
-    PreviousMotionLocation=GetActorLocation();
-    Body->SetRelativeTransform(FTransform::Identity);
-    LeftFoot->SetRelativeLocationAndRotation(FVector(4,-7,2.5f),FRotator::ZeroRotator);
-    RightFoot->SetRelativeLocationAndRotation(FVector(4,7,2.5f),FRotator::ZeroRotator);
-    UpdateSkeleton();
+    Gait = EGait::Idle;
+    Base = Fading = EClip::Idle;
+    BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = 0;
+    PreviousMotionLocation = GetActorLocation();
     UpdateCamera();
 }
-void AChuckCharacter::Landed(const FHitResult& Hit)
+
+float AChuckCharacter::Period(EClip Clip) const
 {
-    // Read impact speed before CharacterMovement clears vertical velocity.
-    LandingCompression = FMath::Clamp(-GetVelocity().Z / 170.f, 0.f, 1.f);
-    Super::Landed(Hit);
+    // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
+    // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
+    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::JumpLoop;
+    const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
+    return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
+}
+
+void AChuckCharacter::SetClip(EClip Clip, float Time, float FadeSeconds)
+{
+    if (FadeSeconds > 0)
+    {
+        Fading = Base;
+        FadingTime = BaseTime;
+        FadeWeight = 1;
+        FadeRate = 1 / FadeSeconds;
+    }
+    Base = Clip;
+    BaseTime = Time;
+    StateTime = 0;
+}
+
+float AChuckCharacter::FindGround(const FVector& Near, float Fallback) const
+{
+    // Visual contact only: it cannot climb a crate or bridge a gap.
+    const float FloorZ = GetActorLocation().Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    FHitResult Hit;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckFootGround), false, this);
+    const FVector Top(Near.X, Near.Y, FloorZ + 8.f);
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Top, Top - FVector(0, 0, 16), ECC_Visibility, Query)
+        && Hit.ImpactNormal.Z >= .7f)
+        return Hit.ImpactPoint.Z;
+    return Fallback;
+}
+
+namespace
+{
+    // WalkStart capsule travel (Tools/build_chuck_v1.py): 95*0.4*(u^3 - u^4/2), u = t/0.4, 19 cm total.
+    float WalkStartTime(float Distance)
+    {
+        float Low = 0, High = 1;
+        for (int32 I = 0; I < 24; ++I)
+        {
+            const float U = (Low + High) * .5f;
+            (95.f * .4f * (U * U * U - U * U * U * U * .5f) < Distance ? Low : High) = U;
+        }
+        return (Low + High) * .2f;
+    }
+    constexpr float WalkStartTravel = 19.f;
+    constexpr float WalkStride = 28.5f;
+    constexpr float WalkPeriod = .3f;
 }
 
 void AChuckCharacter::UpdateMotion(float DeltaSeconds)
 {
+    auto* Anim = GetChuckAnim();
+    if (!Anim || Clips.Contains(nullptr)) return;
     const bool bAirborne = GetCharacterMovement()->IsFalling();
     const float Speed = GetVelocity().Size2D();
-    MotionAmount = FMath::FInterpTo(MotionAmount, bAirborne ? 0.f : FMath::Clamp(Speed/95.f,0.f,1.f),DeltaSeconds,12.f);
-    AirAmount = FMath::FInterpTo(AirAmount,bAirborne ? 1.f : 0.f,DeltaSeconds,14.f);
-    LandingCompression = FMath::FInterpTo(LandingCompression,0.f,DeltaSeconds,9.f);
-    UpdateFootContacts(DeltaSeconds,bAirborne);
-    const float Wave = FMath::Sin(GaitPhase);
-    const FRotator Pose(-1.2f*MotionAmount - 1.5f*AirAmount,0,Wave*.15f*MotionAmount);
-    // Restraint comes from the pose, not from reducing the actual planted stride.
-    const FVector Pivot(0,0,25);
-    Body->SetRelativeLocationAndRotation(Pivot-Pose.RotateVector(Pivot)+FVector(0,0,-.6f*LandingCompression),Pose);
-    if(!bAirborne)
+    const FVector Location = GetActorLocation();
+    float Travel = FVector::Dist2D(Location, PreviousMotionLocation);
+    if (Travel > 50.f) Travel = 0; // teleport or reset
+    PreviousMotionLocation = Location;
+    StateTime += DeltaSeconds;
+    FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+
+    // Distance-matched gait: walk clips advance by travelled distance, so the
+    // clip's stance paw moves exactly with the ground at any speed.
+    if (bAirborne)
     {
-        // Keep contact targets reachable by lowering the pelvis slightly when
-        // both legs approach extension. Never drag a planted foot to hide it.
-        // Dimensions are the current shared 14-bone rest-pose contract.
-        float RequiredDrop=0;
-        UStaticMeshComponent* ContactFeet[2]={LeftFoot,RightFoot};
-        for(int32 I=0; I<2; ++I)
+        if (Gait != EGait::Air)
         {
-            const float Sign=I==0 ? -1.f:1.f;
-            const FVector Hip(-2,Sign*6,21),Knee(-4,Sign*7.2f,11),RestAnkle(2,Sign*7,5);
-            const float Reach=FVector::Distance(Hip,Knee)+FVector::Distance(Knee,RestAnkle)-.15f;
-            const FVector HipWorld=Body->GetComponentTransform().TransformPosition(Hip);
-            const FVector AnkleWorld=ContactFeet[I]->GetComponentTransform().TransformPosition(FVector(-2,0,2.5f));
-            const float HorizontalSquared=FVector::DistSquared2D(HipWorld,AnkleWorld);
-            const float MaxVertical=FMath::Sqrt(FMath::Max(0.f,Reach*Reach-HorizontalSquared));
-            RequiredDrop=FMath::Max(RequiredDrop,static_cast<float>(HipWorld.Z-AnkleWorld.Z)-MaxVertical);
+            // Takeoff is runtime-driven, so skip the clip's ground crouch and
+            // start at its extension onto the toes.
+            Gait = EGait::Air;
+            SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
         }
-        Body->AddRelativeLocation(FVector(0,0,-FMath::Clamp(RequiredDrop,0.f,3.f)));
+        BaseTime += DeltaSeconds;
+        if (Base == EClip::JumpStart && BaseTime >= Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength())
+            SetClip(EClip::JumpLoop, 0, .1f);
     }
-    UpdateSkeleton();
+    else if (Gait == EGait::Air)
+    {
+        Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f);
+    }
+    else if (Gait == EGait::Land)
+    {
+        BaseTime += DeltaSeconds;
+        if (Speed > 10.f && StateTime > .15f) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .15f); }
+        else if (BaseTime >= Clips[static_cast<int32>(EClip::JumpLand)]->GetPlayLength()) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
+    }
+    else if (Gait == EGait::Idle)
+    {
+        BaseTime += DeltaSeconds;
+        if (Speed > 3.f) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .12f); }
+    }
+    else if (Speed < 3.f)
+    {
+        Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
+    }
+    else if (Gait == EGait::Start)
+    {
+        StartDistance += Travel;
+        BaseTime = WalkStartTime(StartDistance);
+        if (StartDistance >= WalkStartTravel)
+        {
+            // WalkStart ends exactly on WalkLoop frame 0.
+            Gait = EGait::Loop; WalkPhase = (StartDistance - WalkStartTravel) / WalkStride;
+            SetClip(EClip::WalkLoop, 0, 0);
+        }
+    }
+    if (Gait == EGait::Loop)
+    {
+        WalkPhase = FMath::Frac(WalkPhase + Travel / WalkStride);
+        BaseTime = WalkPhase * WalkPeriod;
+    }
+
+    FChuckAnimParams& P = Anim->Params;
+    P.ClipA = Clips[static_cast<int32>(Base)];
+    P.TimeA = BaseTime;
+    P.PeriodA = Period(Base);
+    P.ClipB = FadeWeight > 0 ? Clips[static_cast<int32>(Fading)] : nullptr;
+    P.TimeB = FadingTime;
+    P.PeriodB = Period(Fading);
+    P.WeightB = FadeWeight;
+    P.bFootIK = !bAirborne;
+    P.bAllowSettle = Gait == EGait::Idle;
+    // Stance windows from the manifest: foot_L 0-0.18 s, foot_R 0.15-0.30 and
+    // 0-0.03 s of the 0.3 s loop, trimmed at plant/lift so locks never pop.
+    const bool bWalking = Gait == EGait::Loop && FadeWeight < .5f;
+    const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Land && StateTime > .1f);
+    P.bStance[0] = bStanding || (bWalking && WalkPhase > .02f && WalkPhase < .58f);
+    P.bStance[1] = bStanding || (bWalking && (WalkPhase > .52f || WalkPhase < .08f));
+
+    // Place the mesh on the traced ground under the capsule, then offset each
+    // paw by its own traced ground and drop the pelvis for a lower paw.
+    const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const float Ground = bAirborne ? CapsuleBottom : FindGround(Location, CapsuleBottom);
+    MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
+    GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));
+    const FChuckAnimResult Last = Anim->GetResult();
+    const float MeshZ = CapsuleBottom - MeshDrop;
+    float Lowest = 0;
+    for (int32 I = 0; I < 2; ++I)
+    {
+        const FVector Near = Last.Evaluations ? Last.BallWorld[I] : Location;
+        P.GroundOffset[I] = bAirborne ? 0.f : FMath::Clamp(FindGround(Near, MeshZ) - MeshZ, -6.f, 6.f);
+        Lowest = FMath::Min(Lowest, P.GroundOffset[I]);
+    }
+    P.PelvisOffset = FMath::Max(Lowest, -4.f);
 }
 
-bool AChuckCharacter::FindFootSupport(const FVector& Desired,FVector& Supported) const
-{
-    const float FloorZ=GetActorLocation().Z-GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    FHitResult Hit;
-    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckFootSupport),false,this);
-    const FVector Top(Desired.X,Desired.Y,FloorZ+12.f);
-    const bool bHit=GetWorld()->LineTraceSingleByChannel(Hit,Top,Top-FVector(0,0,32),ECC_Visibility,Query);
-    // Visual contact correction only: it cannot climb a crate or bridge a gap.
-    if(bHit && Hit.ImpactNormal.Z>=.7f && Hit.ImpactPoint.Z<=FloorZ+7.f)
-    {
-        Supported=Hit.ImpactPoint+FVector(0,0,2.f); // mesh sole is 2 cm below its origin
-        return true;
-    }
-    Supported=FVector(Desired.X,Desired.Y,FloorZ+2.f);
-    return false;
-}
-
-void AChuckCharacter::UpdateFootContacts(float DeltaSeconds,bool bAirborne)
-{
-    UStaticMeshComponent* Components[2]={LeftFoot,RightFoot};
-    const FVector Location=GetActorLocation();
-    if(FVector::Dist(Location,PreviousMotionLocation)>50.f) bContactsReady=false;
-    PreviousMotionLocation=Location;
-    if(bAirborne)
-    {
-        bContactsReady=false; SwingFoot=INDEX_NONE; bFirstStep=true;
-        for(int32 I=0; I<2; ++I)
-            Components[I]->SetRelativeLocationAndRotation(FVector(3.f,(I==0 ? -7.f:7.f),4.5f+2.f*AirAmount),FRotator(4.f*AirAmount,0,0));
-        return;
-    }
-    FVector Neutral[2];
-    for(int32 I=0; I<2; ++I)
-        Neutral[I]=GetActorTransform().TransformPosition(FVector(4.f,I==0 ? -7.f:7.f,0));
-    const FQuat Heading=FRotator(0,GetActorRotation().Yaw,0).Quaternion();
-    const FVector Velocity=GetVelocity()*FVector(1,1,0);
-    const float Speed=Velocity.Size();
-    if(!bContactsReady)
-    {
-        for(int32 I=0; I<2; ++I)
-        {
-            Feet[I].bSupported=FindFootSupport(Neutral[I],Feet[I].Position);
-            Feet[I].Rotation=Heading;
-        }
-        bContactsReady=true; bFirstStep=true; SwingFoot=INDEX_NONE;
-    }
-    if(SwingFoot!=INDEX_NONE)
-    {
-        FFootContact& Foot=Feet[SwingFoot];
-        Foot.Elapsed=FMath::Min(Foot.Elapsed+DeltaSeconds,Foot.Duration);
-        const float T=Foot.Elapsed/Foot.Duration;
-        const float Ease=T*T*(3.f-2.f*T);
-        // Predict remaining travel, not a fixed distant landing point: braking
-        // and turns can retarget a swing without dragging the planted foot.
-        FVector Target;
-        Foot.bSupported=FindFootSupport(Neutral[SwingFoot]+Velocity*(Foot.Duration-Foot.Elapsed+.03f),Target);
-        Foot.Position=FMath::Lerp(Foot.Start,Target,Ease)+FVector(0,0,FMath::Sin(T*PI)*2.2f);
-        Foot.Rotation=FQuat::Slerp(Foot.StartRotation,Heading,Ease)*FRotator(4.f*FMath::Sin(T*PI),0,0).Quaternion();
-        GaitPhase=(SwingFoot==0 ? 0.f:PI)+T*PI;
-        if(T>=1.f)
-        {
-            Foot.Position=Target; Foot.Rotation=Heading;
-            NextFoot=1-SwingFoot; SwingFoot=INDEX_NONE;
-        }
-    }
-    else
-    {
-        float Error[2];
-        for(int32 I=0; I<2; ++I)
-            Error[I]=FVector::Dist2D(Feet[I].Position,Neutral[I])+FMath::Abs(FMath::FindDeltaAngleDegrees(Feet[I].Rotation.Rotator().Yaw,GetActorRotation().Yaw))*.06f;
-        const bool bWalking=Speed>4.f;
-        const int32 Candidate=!Feet[0].bSupported ? 0 : (!Feet[1].bSupported ? 1 : (bWalking ? NextFoot : (Error[0]>=Error[1] ? 0:1)));
-        if(Error[Candidate]>(bWalking ? .35f:2.f))
-        {
-            SwingFoot=Candidate;
-            FFootContact& Foot=Feet[Candidate];
-            Foot.Start=Foot.Position; Foot.StartRotation=Foot.Rotation; Foot.Elapsed=0;
-            Foot.Duration=bWalking ? FMath::Lerp(.22f,.12f,FMath::Clamp(Speed/95.f,0.f,1.f)):.16f;
-            if(bFirstStep && bWalking) Foot.Duration=FMath::Min(Foot.Duration,.08f);
-            bFirstStep=false;
-        }
-    }
-    for(int32 I=0; I<2; ++I)
-    {
-        // Retain exact world position and heading throughout stance, including
-        // character translation/yaw. The two-bone solve follows these targets.
-        Components[I]->SetWorldLocationAndRotation(Feet[I].Position,Feet[I].Rotation);
-    }
-}
-
-void AChuckCharacter::UpdateSkeleton()
-{
-    const auto* RigAsset = Cast<USkeletalMesh>(Body->GetSkinnedAsset());
-    if (!RigAsset) return;
-    const FReferenceSkeleton& Ref = RigAsset->GetRefSkeleton();
-    Body->BoneSpaceTransforms = Ref.GetRefBonePose();
-    TArray<FTransform> Rest;
-    Rest.SetNum(Ref.GetNum());
-    for (int32 I=0; I<Ref.GetNum(); ++I)
-    {
-        const int32 Parent=Ref.GetParentIndex(I);
-        Rest[I]=Parent==INDEX_NONE ? Ref.GetRefBonePose()[I] : Ref.GetRefBonePose()[I]*Rest[Parent];
-    }
-    auto CurrentComponent = [&](int32 Index)
-    {
-        FTransform Result=Body->BoneSpaceTransforms[Index];
-        for (int32 Parent=Ref.GetParentIndex(Index); Parent!=INDEX_NONE; Parent=Ref.GetParentIndex(Parent))
-            Result=Result*Body->BoneSpaceTransforms[Parent];
-        return Result;
-    };
-    auto Rotate = [&](FName Name, const FVector& Axis, float Degrees)
-    {
-        const int32 I=Ref.FindBoneIndex(Name);
-        if(I==INDEX_NONE) return;
-        const FQuat LocalDelta(Rest[I].GetRotation().UnrotateVector(Axis),FMath::DegreesToRadians(Degrees));
-        Body->BoneSpaceTransforms[I].SetRotation((Ref.GetRefBonePose()[I].GetRotation()*LocalDelta).GetNormalized());
-    };
-    const float Wave=FMath::Sin(GaitPhase)*MotionAmount;
-    Rotate(TEXT("arm_L"),FVector::YAxisVector,4.f*Wave-3.f*AirAmount);
-    Rotate(TEXT("arm_R"),FVector::YAxisVector,-4.f*Wave-3.f*AirAmount);
-    Rotate(TEXT("forearm_L"),FVector::YAxisVector,-3.f*Wave-5.f*AirAmount);
-    Rotate(TEXT("forearm_R"),FVector::YAxisVector,3.f*Wave-5.f*AirAmount);
-    for(int32 I=0; I<4; ++I)
-        Rotate(FName(*FString::Printf(TEXT("tail_%d"),I)),FVector::ZAxisVector,
-            FMath::Sin(GaitPhase-I*.55f)*MotionAmount*2.5f);
-
-    // Two-bone IK connects each leg to its animated ankle target. Solving in
-    // body space compensates for lean and landing compression without moving feet.
-    auto SolveLeg = [&](const TCHAR* Side,UStaticMeshComponent* Foot,float Sign)
-    {
-        const int32 Upper=Ref.FindBoneIndex(FName(*FString::Printf(TEXT("thigh_%s"),Side)));
-        const int32 Lower=Ref.FindBoneIndex(FName(*FString::Printf(TEXT("shin_%s"),Side)));
-        if(Upper==INDEX_NONE || Lower==INDEX_NONE) return;
-        const FVector Hip=Rest[Upper].GetLocation(), Knee=Rest[Lower].GetLocation();
-        const FVector RestAnkle(2,Sign*7,5);
-        FVector Target=Body->GetRelativeTransform().InverseTransformPosition(Foot->GetRelativeLocation()+Foot->GetRelativeRotation().RotateVector(FVector(-2,0,2.5f)));
-        const float A=FVector::Distance(Hip,Knee), B=FVector::Distance(Knee,RestAnkle);
-        if(FVector::Distance(Target,Hip)>A+B-.01f)
-        {
-            // A sharp turn can outrun a planted leg. Release that contact and
-            // bring the visible ankle into reach, rather than disconnecting
-            // shin and paw. Prioritize its next support step. Authored turns
-            // and toe joints will replace this temporary-rig recovery.
-            const FVector Reachable=Hip+(Target-Hip).GetSafeNormal()*(A+B-.01f);
-            Foot->AddWorldOffset(Body->GetComponentTransform().TransformVector(Reachable-Target));
-            const int32 I=Sign<0 ? 0:1;
-            Feet[I].Position=Foot->GetComponentLocation(); Feet[I].bSupported=false;
-            Target=Reachable;
-        }
-        const FVector Direction=(Target-Hip).GetSafeNormal();
-        const float D=FMath::Clamp(static_cast<float>(FVector::Distance(Target,Hip)),FMath::Abs(A-B)+.01f,A+B-.01f);
-        const float Along=(A*A+D*D-B*B)/(2*D);
-        const FVector Bend=(FVector(-1,0,0)-Direction*FVector::DotProduct(FVector(-1,0,0),Direction)).GetSafeNormal();
-        const FVector NewKnee=Hip+Direction*Along+Bend*FMath::Sqrt(FMath::Max(0.f,A*A-Along*Along));
-        FTransform UpperPose=Rest[Upper];
-        UpperPose.SetRotation(FQuat::FindBetweenNormals((Knee-Hip).GetSafeNormal(),(NewKnee-Hip).GetSafeNormal())*Rest[Upper].GetRotation());
-        Body->BoneSpaceTransforms[Upper]=UpperPose.GetRelativeTransform(CurrentComponent(Ref.GetParentIndex(Upper)));
-        FTransform LowerPose=Rest[Lower];
-        LowerPose.SetLocation(NewKnee);
-        LowerPose.SetRotation(FQuat::FindBetweenNormals((RestAnkle-Knee).GetSafeNormal(),(Target-NewKnee).GetSafeNormal())*Rest[Lower].GetRotation());
-        Body->BoneSpaceTransforms[Lower]=LowerPose.GetRelativeTransform(UpperPose);
-    };
-    SolveLeg(TEXT("L"),LeftFoot,-1);
-    SolveLeg(TEXT("R"),RightFoot,1);
-    Body->MarkRefreshTransformDirty();
-}
 void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayerController>(Controller), EQuitPreference::Quit, false); }
 void AChuckCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     UpdateCamera(DeltaSeconds);
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
-    RatVisual->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
+    GetMesh()->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     if (GetActorLocation().Z < -100) ResetToDock();
 }
