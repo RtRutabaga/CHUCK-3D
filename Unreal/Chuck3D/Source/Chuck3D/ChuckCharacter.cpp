@@ -1,5 +1,6 @@
 #include "ChuckCharacter.h"
 #include "ChuckAnimInstance.h"
+#include "ChuckClipData.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -30,13 +31,14 @@ AChuckCharacter::AChuckCharacter()
     auto* Movement = GetCharacterMovement();
     Movement->bOrientRotationToMovement = true;
     Movement->RotationRate = FRotator(0, 540, 0);
-    Movement->MaxWalkSpeed = 95;
     Movement->MaxAcceleration = 550;
-    // Constant braking over the authored WalkStop travel: 95^2 / (2 * 19 cm),
-    // so a stop from full speed takes the clip's 0.4 s and is distance-matched.
+    // Saunter speed and constant braking over the authored WalkStop travel
+    // (v^2 / 2d), both from the clip manifest (ChuckClipData.h), so a stop
+    // from full speed takes the clip's own time and is distance-matched.
+    Movement->MaxWalkSpeed = ChuckClipData::WalkSpeed;
     Movement->bUseSeparateBrakingFriction = true;
     Movement->BrakingFriction = 0;
-    Movement->BrakingDecelerationWalking = 237.5f;
+    Movement->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     Movement->JumpZVelocity = 170;
     Movement->GravityScale = 0.8f;
     Movement->AirControl = 0.35f;
@@ -225,7 +227,7 @@ void AChuckCharacter::ResetToDock()
     Base = Fading = EClip::Idle;
     BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
     bStopPending = bStopMirror = false;
-    GetCharacterMovement()->BrakingDecelerationWalking = 237.5f;
+    GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
     bFollowReady = false;
@@ -270,11 +272,12 @@ float AChuckCharacter::FindGround(const FVector& Near, float Fallback) const
 
 namespace
 {
-    // Capsule travel of the authored start/stop clips (Tools/build_chuck_v1.py,
-    // manifest capsule_travel_cm_per_frame), u = t / 0.4 s, 19 cm each.
-    float StartTravel(float U) { return 38.f * (U * U * U - U * U * U * U * .5f); }
-    float StopTravelAt(float U) { return 38.f * (U - U * U * U + U * U * U * U * .5f); }
-    float InvertTravel(float (*Travel)(float), float Distance)
+    using namespace ChuckClipData;  // generated from the clip manifest
+    // Capsule travel of the authored start/stop clips (smoothstep speed ramps,
+    // Tools/build_chuck_v1.py `travel`): u = t / duration.
+    float StartTravelAt(float U) { return WalkSpeed * StartDuration * (U * U * U - U * U * U * U * .5f); }
+    float StopTravelAt(float U) { return WalkSpeed * StopDuration * (U - U * U * U + U * U * U * U * .5f); }
+    float InvertTravel(float (*Travel)(float), float Duration, float Distance)
     {
         float Low = 0, High = 1;
         for (int32 I = 0; I < 24; ++I)
@@ -282,23 +285,11 @@ namespace
             const float U = (Low + High) * .5f;
             (Travel(U) < Distance ? Low : High) = U;
         }
-        return (Low + High) * .2f;
+        return (Low + High) * .5f * Duration;
     }
-    constexpr float ClipTravel = 19.f;
-    constexpr float WalkStride = 28.5f;
-    constexpr float WalkPeriod = .3f;
-    constexpr float StopDeceleration = 237.5f;
+    constexpr float StopDeceleration = WalkSpeed * WalkSpeed / (2.f * StopTravel);
     constexpr float LandDeceleration = 1000.f;
     constexpr float TurnMinAngle = 60.f;
-    constexpr float TurnEnd = .55f; // after the last plant at 0.52 s
-
-    // Manifest stance intervals (s), foot_L then foot_R, end marked by a negative.
-    struct FStance { float L[6]; float R[6]; float End; };
-    constexpr FStance StartStance{{0.f, .28f, -1}, {0.f, .1f, .25f, .4f, -1}, .4f};
-    constexpr FStance StopStance{{0.f, .2f, .36f, .5f, -1}, {0.f, .03f, .18f, .5f, -1}, .5f};
-    constexpr FStance StopStanceMirrored{{0.f, .03f, .18f, .5f, -1}, {0.f, .2f, .36f, .5f, -1}, .5f};
-    constexpr FStance TurnLeftStance{{0.f, .04f, .2f, .36f, .52f, .6667f}, {0.f, .2f, .36f, .6667f, -1}, .6667f};
-    constexpr FStance TurnRightStance{{0.f, .2f, .36f, .6667f, -1}, {0.f, .04f, .2f, .36f, .52f, .6667f}, .6667f};
     bool InStance(const float* Intervals, float End, float Time)
     {
         // Trimmed at interior plant/lift events so locks never catch a moving paw.
@@ -310,13 +301,10 @@ namespace
         }
         return false;
     }
-    // TurnLeft90/TurnRight90 capsule yaw per frame (magnitude, degrees).
-    constexpr float TurnYaw[] = {0.f, .2045f, 2.3867f, 6.6667f, 12.6828f, 20.0733f, 28.4766f, 37.5309f, 46.8745f, 56.1458f,
-        64.9831f, 73.0247f, 79.9089f, 85.2739f, 88.7582f, 90.f};
     float TurnProfile(float Time)
     {
-        const float Frame = FMath::Clamp(Time * 30.f, 0.f, 15.f);
-        const int32 I = FMath::Min(FMath::FloorToInt(Frame), 14);
+        const float Frame = FMath::Clamp(Time * 30.f, 0.f, static_cast<float>(TurnYawFrames));
+        const int32 I = FMath::Min(FMath::FloorToInt(Frame), TurnYawFrames - 1);
         return FMath::Lerp(TurnYaw[I], TurnYaw[I + 1], Frame - I);
     }
 }
@@ -395,7 +383,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else
         {
             StopTravel += Travel;
-            BaseTime = FMath::Max(BaseTime, InvertTravel(StopTravelAt, FMath::Min(StopTravel, ClipTravel)));
+            BaseTime = FMath::Max(BaseTime, InvertTravel(StopTravelAt, StopDuration, FMath::Min(StopTravel, ChuckClipData::StopTravel)));
             if (Speed < 1.f) BaseTime += DeltaSeconds; // blocked or already still: finish on time
             if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .1f); }
         }
@@ -415,11 +403,11 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Gait == EGait::Start)
         {
             StartDistance += Travel;
-            BaseTime = InvertTravel(StartTravel, StartDistance);
-            if (StartDistance >= ClipTravel)
+            BaseTime = InvertTravel(StartTravelAt, StartDuration, StartDistance);
+            if (StartDistance >= ChuckClipData::StartTravel)
             {
                 // WalkStart ends exactly on WalkLoop frame 0.
-                Gait = EGait::Loop; WalkPhase = (StartDistance - ClipTravel) / WalkStride;
+                Gait = EGait::Loop; WalkPhase = (StartDistance - ChuckClipData::StartTravel) / WalkStride;
                 SetClip(EClip::WalkLoop, 0, 0);
                 bEnterStop = bStopPending;
                 bStopMirror = false;
@@ -441,8 +429,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // speed's braking distance (the start of the clip at full speed).
             bStopPending = false;
             Gait = EGait::Stop;
-            StopTravel = FMath::Max(0.f, ClipTravel - Speed * Speed / (2.f * StopDeceleration));
-            SetClip(EClip::WalkStop, InvertTravel(StopTravelAt, StopTravel), .06f);
+            StopTravel = FMath::Max(0.f, ChuckClipData::StopTravel - Speed * Speed / (2.f * StopDeceleration));
+            SetClip(EClip::WalkStop, InvertTravel(StopTravelAt, StopDuration, StopTravel), .06f);
         }
     }
     if (Gait == EGait::Loop)
@@ -470,7 +458,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.bFootIK = !bAirborne;
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
-    // foot_L 0-0.18 s, foot_R 0.15-0.30 and 0-0.03 s of 0.3 s, trimmed likewise.
+    // generated from the manifest (ChuckClipData.h), trimmed likewise.
     const bool bLoopDominant = (Gait == EGait::Loop && FadeWeight < .5f) || (Gait == EGait::Stop && FadeWeight >= .5f);
     const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Land && StateTime > .1f);
     const FStance* Clip = nullptr;
@@ -481,7 +469,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         bool bStance = bStanding;
         if (Clip) bStance = InStance(I == 0 ? Clip->L : Clip->R, Clip->End, BaseTime);
-        else if (bLoopDominant) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < .58f) : (WalkPhase > .52f || WalkPhase < .08f);
+        // WalkLoop: foot_L stands for [0, StanceFraction) of the cycle, foot_R half a cycle later, trimmed like the clips.
+        else if (bLoopDominant) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < StanceFraction - .02f)
+                                               : (WalkPhase > .52f || WalkPhase < StanceFraction - .52f);
         P.bStance[I] = bStance;
     }
 

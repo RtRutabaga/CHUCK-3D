@@ -660,3 +660,41 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Standing (`neutral_*`), walking (`walk_side_f*`) and close-hand views inspected.
   - Evidence: `Review/fix_ears_wide_hands_neutral.jpg`.
 - **Not integrated into main.** The launcher still shows `1057e0f`.
+
+## Twenty-ninth pass — aplomb idle and swagger saunter (body language)
+
+- **User direction (2026-09-27):** "Chuck, this aplomb chain smoking rat in a kick ass jacket saunters down the dock smoking his cigarette, he busts into a roll and a side jump and slashes with agility, then reassumes his cool and collected saunter." Lock the standing and walking aura first (natural hands and overall body language, a saunter with a touch of swagger), using the turnaround stance as the starting point.
+- **Push:** main (`43bf1eb`) was pushed to `origin` on the user's instruction. That uploaded about 1.9 GB of LFS objects; check the GitHub LFS quota.
+- **Research used:**
+  - Walk-cycle guides: hip/shoulder counter-rotation, with peaks offset (overlap). Scaling the hip and shoulder rotation makes a swagger. Arms swing from the shoulder with a lag; elbows bend on the upswing; hands trail.
+  - Contrapposto: weight on one leg, that hip up, shoulders tilted the opposite way, free knee soft.
+  - Dynamic similarity: Froude number Fr = v²/(gL), with a preferred walk at Fr ≈ 0.25.
+  - Chuck's 22.5 cm leg gives about 74 cm/s preferred; a saunter at about 0.7× that is **62 cm/s** (Fr ≈ 0.17). The old 95 cm/s with a 0.3 s cycle was Fr ≈ 0.41 (400 steps/min), a scurry.
+- **Changes** (`Tools/build_chuck_v1.py`):
+  - **`carriage(k, w, look, breath)`** is shared by Idle (k = 0), WalkLoop (k = 1), start/stop and turns (blending k):
+    - pelvis sway over the standing paw, dip at contact, ±6° twist toward the forward leg, 4.5° swing-side drop;
+    - chest and spine counter-twist of about +14°, lagged 0.06 cycle, with the head cancelling most of the net yaw (steady gaze);
+    - chest up, a slight lean back, chin up;
+    - arms swing ±16° from the shoulder with a lag, carried 5° out, elbows bending on the forward swing, hands trailing;
+    - a lazy tail.
+  - **WalkLoop:** 62 cm/s, 15 frames (0.5 s), 31 cm stride, stance 0.62, pelvis drop 0.6 cm, lift 1.8 cm, paws toed out 7°.
+  - **Idle** (now 4 s, 120 frames):
+    - contrapposto on the right leg (pelvis over it, hips and shoulders counter-tilted), with the free left paw 1.6 cm forward, 0.9 cm out and turned out 12°;
+    - chest and chin up; a slow look drift; one breath per 2 s; a small chin lift at 60%, as if drawing on the cigarette.
+  - **Transitions:** WalkStart and WalkStop take 0.5 s each (15.5 cm) and start and end on the idle stance, joining the loop's toe-out. Turns start and end on the idle stance.
+  - **Hands** (`build_chuck_model.py`): compact, softly curled fingers (2.2–2.9 cm), slimmer palm.
+- **Runtime sync:**
+  - `Tools/gen_chuck_clip_data.py` (new, run by the builder) writes `Unreal/Chuck3D/Source/Chuck3D/ChuckClipData.h` from the manifest: walk speed, cycle, stride, stance fraction, start/stop duration and travel, stance windows (including mirrored stop) and the turn yaw table.
+  - `ChuckCharacter.cpp` uses it for `MaxWalkSpeed`, braking (v²/2d), distance matching, stance locks and turns; there are no hard-coded clip numbers left.
+- **Tests** (`DockGameMode.cpp`):
+  - The slip probe gates at 0.9 × walk speed.
+  - The three one-second "walks" checks now require X > −200 (40 cm; the saunter covers about 50 cm). They had required X > −175 (65 cm), which assumed 95 cm/s.
+  - The stop distance is compared against the manifest's `StopTravel`.
+  - The cigarette aim threshold is 0.95 (the idle head turns and lifts up to about 12°).
+- **Tooling:** `SourceAssets/Chuck/V1/review_motion.py` (new) renders front, 3/4 and side contact sheets of WalkLoop and Idle: `Review/motion_{WalkLoop,Idle}.png`.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Contact slip 0 (52 samples at 60 fps); stop 14.6–15.1 cm against 15.5 authored; turn −90.000.
+- **Not verified:** how it feels in motion. Stills cannot judge a saunter; the user should play it. The pier gap is still crossed at 62 cm/s in both cameras (checks pass).
+- **Not integrated into main.** The launcher still shows `2fa74eb`.

@@ -358,29 +358,88 @@ def curl(s, degrees):
     about X, sign by side (_L is +Y, so its palm faces -Y)."""
     poser.rotate(f'fingers_{s}', 'X', -degrees if s == 'L' else degrees)
 
-def idle(phase, f):
-    w = 2 * math.pi * phase
-    poser.translate('pelvis', (0, 0, -.25 - .25 * math.sin(w)))
-    poser.rotate('spine_02', 'Y', -1.0 * math.sin(w))  # breath lifts the ribcage
-    poser.rotate('chest', 'Y', -.6 * math.sin(w))
-    poser.rotate('neck', 'Y', .8 * math.sin(w))
-    poser.rotate('head', 'Z', 2.5 * math.sin(w + .7))
-    poser.rotate('head', 'Y', 1.2 * math.sin(2 * w + .3))
-    for s, k in (('L', 1), ('R', -1)):
-        poser.rotate(f'upperarm_{s}', 'Y', -1.5 * math.sin(w + .4))
-        poser.rotate(f'lowerarm_{s}', 'Y', -4 - 1. * math.sin(w + .9))
-        curl(s, 8)
-        poser.rotate(f'ear_{s}', 'X', k * 1.5 * math.sin(2 * w + (0 if s == 'L' else 1.1)))
-    for i, b in enumerate(TAIL):
-        poser.rotate(b, 'Z', 3.5 * math.sin(w - .5 * i))
-    poser.update()
-    r = plant_rest()
-    for s in 'LR': poser.hand_goal(s)
-    return r
-
-WALK = {'speed_cm_s': 95.0, 'period_frames': 9, 'stance_fraction': .6, 'pelvis_drop_cm': 1.6, 'lift_cm': 2.4}
+# ---- body language (user direction 2026-09-27): "this aplomb chain smoking
+# rat in a kick ass jacket saunters down the dock ... cool and collected".
+# Walk: a saunter with a touch of swagger. Speed from dynamic similarity:
+# Froude Fr = v^2/(g L) ~ 0.25 is the preferred walk for any biped; a saunter
+# is about 0.7x that. Chuck's leg (hip 22.5 cm) gives ~62 cm/s (Fr ~0.17),
+# with a 31 cm stride and a 0.5 s cycle (the old 95 cm/s, 0.3 s cycle, Fr 0.41,
+# read as a scurry). Swagger = hips and shoulders counter-rotating more than
+# a plain walk, peaks offset (overlap), chest up, chin up, arms loose.
+WALK = {'speed_cm_s': 62.0, 'period_frames': 15, 'stance_fraction': .62, 'pelvis_drop_cm': .6, 'lift_cm': 1.8}
 PERIOD = WALK['period_frames'] / FPS
 STANCE_CM = WALK['speed_cm_s'] * PERIOD * WALK['stance_fraction']
+TOE_OUT = {'L': 7., 'R': -7.}  # saunter paws turn slightly out (degrees about Z)
+# Idle contrapposto: weight on the right leg; the free left paw rests a little
+# forward and out, turned out. Transitions start/end on this stance.
+IDLE_FOOT = {'L': (1.6, .9, 12.), 'R': (0., -.2, -6.)}  # (dx, dy, heading)
+TAU = 2 * math.pi
+
+def carriage(k, w, look=0., breath=0.):
+    """Upper body and pelvis for walk intensity k (0 = the aplomb idle stance,
+    1 = full saunter) at gait phase angle w. look: head/chest turn (deg)."""
+    idle = 1. - k
+    lag = TAU * .06    # shoulders trail the hips (overlap)
+    mid_l = TAU * .31  # left paw mid-stance
+    # Pelvis: sway over the standing paw, dip at contact, twist toward the
+    # forward leg, drop on the swing side. Idle: weight on the right leg (its
+    # hip up), a little lower so the free knee softens.
+    poser.translate('pelvis', (0, .7 * k * math.cos(w - mid_l) - .9 * idle,
+                               -WALK['pelvis_drop_cm'] * k - .4 * k * math.cos(2 * w) - .45 * idle - .15 * breath))
+    poser.rotate('pelvis', 'Z', -6 * k * math.cos(w))
+    poser.rotate('pelvis', 'X', 4.5 * k * math.cos(w - mid_l) - 4 * idle)
+    # Chest counter-rotates harder than the hips twist (the swagger), a beat
+    # later; shoulders tilt against the hips (contrapposto when standing).
+    poser.rotate('spine_02', 'Z', 6 * k * math.cos(w - lag) + look * .25)
+    poser.rotate('chest', 'Z', 8 * k * math.cos(w - lag) + look * .2)
+    poser.rotate('chest', 'X', -2.5 * k * math.cos(w - mid_l - lag) + 3 * idle)
+    # Chest up, a slight lean back, breathing in the ribcage.
+    poser.rotate('spine_01', 'Y', -3 * k - 2 * idle)
+    poser.rotate('spine_02', 'Y', -1. * breath)
+    poser.rotate('chest', 'Y', -1.5 - .6 * breath)
+    # Head steady and chin up: it cancels most of the chest twist.
+    poser.rotate('neck', 'Y', .6 * breath)
+    poser.rotate('head', 'Z', look * .55 - 6 * k * math.cos(w - lag))  # cancels most of the net chest yaw (+5 deg)
+    poser.rotate('head', 'Y', -3 - 1. * idle + .9 * k * math.cos(2 * w - lag))
+    # Tail: lazy, trailing sway.
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Z', 5 * k * math.sin(w - .7 * (i + 1)) - look * .08 * (i + 1) - 3 * idle)
+    # Arms loose from the shoulder: swing opposite the legs with a lag, carried
+    # slightly out from the jacket, elbows bend more on the forward swing, the
+    # hands trail. Idle: relaxed hang, elbows soft, the left hand a touch forward.
+    for side, sign in (('L', 1), ('R', -1)):
+        swing = math.cos(w - lag * 1.5 + (0 if side == 'L' else math.pi))  # +1 = arm back
+        poser.rotate(f'upperarm_{side}', 'Y', 16 * k * swing + (-3 if side == 'L' else 1) * idle)
+        poser.rotate(f'upperarm_{side}', 'X', sign * (5 * k + 1 * idle))
+        fwd = max(0., -swing)
+        poser.rotate(f'lowerarm_{side}', 'Y', -8 - 12 * k * fwd - 2 * k - (4 if side == 'L' else 2) * idle)
+        poser.rotate(f'hand_{side}', 'Y', 7 * k * math.cos(w - lag * 3 + (0 if side == 'L' else math.pi)))
+        curl(side, 16 + 4 * k * fwd + (4 if side == 'L' else 0) * idle)
+
+def plant_idle():
+    r = 0.
+    for side in 'LR':
+        dx, dy, h = IDLE_FOOT[side]
+        r = max(r, poser.leg(side, NEUTRAL_BALL[side] + Vector((dx, dy, 0)), heading=h))
+    return r
+
+def idle(phase, f):
+    """Aplomb hold (4 s): contrapposto on the right leg, chest up, chin up, a
+    slow look off to the side and back, one unhurried breath per 2 s and a small
+    chin lift at 60% as if drawing on the cigarette."""
+    w = TAU * phase
+    breath = math.sin(2 * w)
+    look = 9 * math.sin(w + .6) + 3 * math.sin(3 * w)
+    draw = math.exp(-((phase - .6) / .05) ** 2)
+    carriage(0., 0., look, breath)
+    poser.rotate('head', 'Y', -2.5 * draw)
+    for side, sign in (('L', 1), ('R', -1)):
+        poser.rotate(f'ear_{side}', 'X', sign * 1.2 * math.sin(4 * w + (0 if side == 'L' else 1.3)))
+        poser.rotate(f'upperarm_{side}', 'Y', -.8 * breath)
+    poser.update()
+    r = plant_idle()
+    for side in 'LR': poser.hand_goal(side)
+    return r
 
 def foot_cycle(phase):
     """(forward offset of the ball from neutral, lift, foot pitch, toe pitch)."""
@@ -394,33 +453,19 @@ def foot_cycle(phase):
     u = (phase - st) / (1 - st)
     ease = smoothstep(u, 0., 1.)
     offset = -half + STANCE_CM * ease
-    return offset, WALK['lift_cm'] * math.sin(math.pi * u), 24 * (1 - smoothstep(u, 0., .6)), 12 * math.sin(math.pi * u)
+    return offset, WALK['lift_cm'] * math.sin(math.pi * u), 24 * (1 - smoothstep(u, 0., .6)), 10 * math.sin(math.pi * u)
 
 def walk(phase, f):
-    w = 2 * math.pi * phase
-    offsets = {}
-    poser.translate('pelvis', (0, .35 * math.cos(w - .6 * math.pi), -WALK['pelvis_drop_cm'] - .45 * math.cos(2 * w)))
-    poser.rotate('pelvis', 'Z', 3 * math.sin(w))
-    poser.rotate('spine_02', 'Z', -2 * math.sin(w))
-    poser.rotate('chest', 'Z', -1.5 * math.sin(w))
-    poser.rotate('spine_01', 'Y', -2.5)  # slight forward lean while walking
-    poser.rotate('head', 'Y', 2.0 + .8 * math.cos(2 * w))
-    poser.rotate('head', 'Z', -1.2 * math.sin(w))
-    for i, b in enumerate(TAIL):
-        poser.rotate(b, 'Z', 4 * math.sin(w - .6 * (i + 1)))
-    feet = {'L': foot_cycle(phase), 'R': foot_cycle((phase + .5) % 1)}
-    for s, k in (('L', 1), ('R', -1)):
-        other = feet['R' if s == 'L' else 'L'][0] / (STANCE_CM / 2)
-        poser.rotate(f'upperarm_{s}', 'Y', -12 * other)
-        poser.rotate(f'lowerarm_{s}', 'Y', -10 - 6 * max(0., other))
-        curl(s, 10)
+    w = TAU * phase
+    carriage(1., w)
     poser.update()
+    feet = {'L': foot_cycle(phase), 'R': foot_cycle((phase + .5) % 1)}
     r = 0.
-    for s in 'LR':
-        offset, lift, fp, tp = feet[s]
-        ball = NEUTRAL_BALL[s] + Vector((offset, 0, lift))
-        r = max(r, poser.leg(s, ball, fp, tp))
-    for s in 'LR': poser.hand_goal(s)
+    for side in 'LR':
+        offset, lift, fp, tp = feet[side]
+        ball = NEUTRAL_BALL[side] + Vector((offset, 0, lift))
+        r = max(r, poser.leg(side, ball, fp, tp, heading=TOE_OUT[side]))
+    for side in 'LR': poser.hand_goal(side)
     return r
 
 def stance_intervals(offset_phase):
@@ -429,7 +474,7 @@ def stance_intervals(offset_phase):
     spans = [(a, b)] if a < b else [(a, 1.), (0., b)]
     return [[round(x * PERIOD, 4), round(y * PERIOD, 4)] for x, y in spans]
 
-author('Idle', 60, idle, True, {'notes': 'Neutral hold: breathing, restrained head/ear/tail motion; paws planted at rest.'})
+author('Idle', 120, idle, True, {'notes': 'Aplomb hold (4 s): contrapposto on the right leg, chest and chin up, slow look drift, calm breathing, a small chin lift as if drawing on the cigarette.'})
 author('WalkLoop', WALK['period_frames'], walk, True, {
     'reference_speed_cm_s': WALK['speed_cm_s'], 'stride_cycle_cm': round(WALK['speed_cm_s'] * PERIOD, 3),
     'stance_travel_cm': round(STANCE_CM, 3), 'stance_fraction': WALK['stance_fraction'],
@@ -437,7 +482,7 @@ author('WalkLoop', WALK['period_frames'], walk, True, {
     'events_s': {'foot_L_plant': 0.0, 'foot_R_plant': round(PERIOD / 2, 4),
                  'foot_L_lift': round(WALK['stance_fraction'] * PERIOD, 4),
                  'foot_R_lift': round(((.5 + WALK['stance_fraction']) % 1) * PERIOD, 4)},
-    'notes': 'In place (root fixed). During stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll).'})
+    'notes': 'Saunter with a touch of swagger. In place (root fixed); during stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll); paws toe out 7 deg.'})
 
 # ---- transitions, turns and jumps (world-space footstep planner)
 # Paws are planned in world space while the capsule (root) moves or turns, so
@@ -487,55 +532,46 @@ def to_component(x, y, dist, yaw):
     return x * c - y * s, x * s + y * c
 
 def pose_planned(t, feet, dist, yaw, k, w, lean=0., look=0.):
-    """Upper body at walk intensity k (0 idle .. 1 walking) and gait phase
+    """Carriage at walk intensity k (0 aplomb idle .. 1 saunter) and gait phase
     angle w, then both legs from the planned world feet."""
-    poser.translate('pelvis', (0, .35 * k * math.cos(w - .6 * math.pi),
-                               -WALK['pelvis_drop_cm'] * k - .45 * k * math.cos(2 * w)))
-    poser.rotate('pelvis', 'Z', 3 * k * math.sin(w))
-    poser.rotate('spine_02', 'Z', -2 * k * math.sin(w) + look * .25)
-    poser.rotate('chest', 'Z', -1.5 * k * math.sin(w) + look * .2)
-    poser.rotate('spine_01', 'Y', -2.5 * k + lean)
-    poser.rotate('head', 'Z', look * .55 - 1.2 * k * math.sin(w))
-    poser.rotate('head', 'Y', 2.0 * k + .8 * k * math.cos(2 * w))
-    for i, b in enumerate(TAIL):
-        poser.rotate(b, 'Z', 4 * k * math.sin(w - .6 * (i + 1)) - look * .08 * (i + 1))
+    carriage(k, w, look)
+    if lean: poser.rotate('spine_01', 'Y', lean)
     comp = {}
-    for s in 'LR':
-        (x, y, lift), heading, fp, tp = feet[s]
+    for side in 'LR':
+        (x, y, lift), heading, fp, tp = feet[side]
         cx, cy = to_component(x, y, dist, yaw)
-        comp[s] = (Vector((cx, cy, NEUTRAL_BALL[s].z + lift)), heading - math.degrees(yaw), fp, tp)
-    half = STANCE_CM / 2
-    for s in 'LR':
-        other = 'R' if s == 'L' else 'L'
-        drive = max(-1., min(1., (comp[other][0].x - NEUTRAL_BALL[other].x) / half))
-        poser.rotate(f'upperarm_{s}', 'Y', -12 * k * drive)
-        poser.rotate(f'lowerarm_{s}', 'Y', -4 - 6 * k - 6 * k * max(0., drive))
-        curl(s, 8 + 2 * k)
+        comp[side] = (Vector((cx, cy, NEUTRAL_BALL[side].z + lift)), heading - math.degrees(yaw), fp, tp)
     poser.update()
     r = 0.
-    for s in 'LR':
-        ball, heading, fp, tp = comp[s]
-        r = max(r, poser.leg(s, ball, fp, tp, heading=heading))
-    for s in 'LR': poser.hand_goal(s)
+    for side in 'LR':
+        ball, heading, fp, tp = comp[side]
+        r = max(r, poser.leg(side, ball, fp, tp, heading=heading))
+    for side in 'LR': poser.hand_goal(side)
     return r
 
 def loop_entry(side):
     """Component x of the ball at WalkLoop frame 0."""
     return NEUTRAL_BALL[side].x + foot_cycle(0. if side == 'L' else .5)[0]
 
-RB = {s: (NEUTRAL_BALL[s].x, NEUTRAL_BALL[s].y, 0.) for s in 'LR'}
-SWING = (1 - WALK['stance_fraction']) * PERIOD  # 0.12 s, as in WalkLoop
+# Rest = the idle contrapposto stance; loop = the saunter's paw line and toe-out.
+RB = {s: (NEUTRAL_BALL[s].x + IDLE_FOOT[s][0], NEUTRAL_BALL[s].y + IDLE_FOOT[s][1], IDLE_FOOT[s][2]) for s in 'LR'}
+LOOP_Y = {s: NEUTRAL_BALL[s].y for s in 'LR'}
+SWING = (1 - WALK['stance_fraction']) * PERIOD  # as in WalkLoop
+# WalkLoop lift of foot_R after the seam (frame 0 has foot_L just planted).
+R_LIFT = ((.5 + WALK['stance_fraction']) % 1) * PERIOD
+L_LIFT = WALK['stance_fraction'] * PERIOD
 
-# WalkStart: 0 -> 95 cm/s over 0.4 s, ending on WalkLoop frame 0
+# WalkStart: 0 -> walk speed over START_T, ending on WalkLoop frame 0
 # (foot_L just planted at +half, foot_R in late stance).
-START_T = .4
+START_T = .5
 D_end = travel(START_T, START_T, True)
+START_R = (.08, .08 + SWING)
 start_steps = {
-    # R's second entry is its next WalkLoop lift (0.03 s after the seam), so the
-    # heel is already rolling at the seam exactly as in the loop.
-    'R': [(.1, .25, (loop_entry('R') + D_end, RB['R'][1], 0.)),
-          (START_T + .03, START_T + .15, (loop_entry('R') + D_end, RB['R'][1], 0.))],
-    'L': [(START_T - SWING, START_T, (loop_entry('L') + D_end, RB['L'][1], 0.))],
+    # R's second entry is its next WalkLoop lift after the seam, so the heel is
+    # already rolling at the seam exactly as in the loop.
+    'R': [(START_R[0], START_R[1], (loop_entry('R') + D_end, LOOP_Y['R'], TOE_OUT['R'])),
+          (START_T + R_LIFT, START_T + R_LIFT + SWING, (loop_entry('R') + D_end, LOOP_Y['R'], TOE_OUT['R']))],
+    'L': [(START_T - SWING, START_T, (loop_entry('L') + D_end, LOOP_Y['L'], TOE_OUT['L']))],
 }
 def walk_start(phase, f):
     t = f / FPS
@@ -544,20 +580,22 @@ def walk_start(phase, f):
                         2 * math.pi * (t - START_T) / PERIOD)
 START_FRAMES = round(START_T * FPS)
 
-# WalkStop: from WalkLoop frame 0 to the neutral hold, 95 -> 0 cm/s over 0.4 s.
-STOP_T = .4
+# WalkStop: from WalkLoop frame 0 into the aplomb idle stance, walk speed -> 0 over STOP_T.
+STOP_T = .5
 D_stop = travel(STOP_T, STOP_T, False)
-stop_init = {s: (loop_entry(s), RB[s][1], 0.) for s in 'LR'}
+stop_init = {s: (loop_entry(s), LOOP_Y[s], TOE_OUT[s]) for s in 'LR'}
+STOP_R = (R_LIFT, R_LIFT + SWING + .03)
+STOP_L = (L_LIFT, L_LIFT + SWING + .04)
 stop_steps = {
-    'R': [(.03, .03 + SWING + .03, (RB['R'][0] + D_stop, RB['R'][1], 0.))],
-    'L': [(.2, .2 + SWING + .04, (RB['L'][0] + D_stop, RB['L'][1], 0.))],
+    'R': [(STOP_R[0], STOP_R[1], (RB['R'][0] + D_stop, RB['R'][1], RB['R'][2]))],
+    'L': [(STOP_L[0], STOP_L[1], (RB['L'][0] + D_stop, RB['L'][1], RB['L'][2]))],
 }
 def walk_stop(phase, f):
     t = f / FPS
     feet = {s: plan_foot(t, stop_init[s], stop_steps[s]) for s in 'LR'}
     return pose_planned(t, feet, travel(t, STOP_T, False), 0., 1 - smoothstep(t, 0., STOP_T),
                         2 * math.pi * t / PERIOD)
-STOP_FRAMES = round(STOP_T * FPS) + 3  # short settle hold
+STOP_FRAMES = round(STOP_L[1] * FPS) + 3  # last plant, then a short settle hold
 
 # Turn in place 90 degrees over 0.6 s. yaw = capsule rotation; the inside paw
 # steps twice, the outside paw once; head and chest lead the turn.
@@ -567,7 +605,7 @@ def turn_clip(sign):
     final = 90. * sign
     def world_rest(s, deg):
         a = math.radians(deg); x, y, _ = RB[s]
-        return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a), deg)
+        return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a), deg + RB[s][2])
     steps = {lead: [(.04, .2, world_rest(lead, final * .55)), (.36, .52, world_rest(lead, final))],
              trail: [(.2, .36, world_rest(trail, final))]}
     def pose(phase, f):
@@ -576,7 +614,7 @@ def turn_clip(sign):
         look = final * .35 * (smoothstep(t, 0., .15) - smoothstep(t, .35, .6))
         feet = {s: plan_foot(t, RB[s], steps[s]) for s in 'LR'}
         return pose_planned(t, feet, 0., yaw, .35 * math.sin(math.pi * min(1., t / TURN_T)),
-                            2 * math.pi * t / .3, 0., look)
+                            2 * math.pi * t / PERIOD, 0., look)
     return pose, steps
 TURN_FRAMES = round(TURN_T * FPS) + 2
 
@@ -645,16 +683,18 @@ author('WalkStart', START_FRAMES + 1, walk_start, False, {
     'capsule_travel_cm_per_frame': [round(travel(f / FPS, START_T, True), 4) for f in range(START_FRAMES + 1)],
     'travel_cm': round(D_end, 3), 'ends_on': 'WalkLoop frame 0 (foot_L planted, foot_R late stance)',
     'stance_intervals_s': {f'foot_{s}': stance_from_steps(start_steps[s], START_T) for s in 'LR'},
-    'events_s': {'foot_R_lift': .1, 'foot_R_plant': .25, 'foot_L_lift': round(START_T - SWING, 4), 'foot_L_plant': START_T},
-    'notes': 'Speed rises with a smoothstep from 0 to 95 cm/s; planted paws are world-locked against that travel.'})
+    'events_s': {'foot_R_lift': START_R[0], 'foot_R_plant': round(START_R[1], 4), 'foot_L_lift': round(START_T - SWING, 4), 'foot_L_plant': START_T},
+    'duration_travel_s': START_T,
+    'notes': f"Speed rises with a smoothstep from 0 to {WALK['speed_cm_s']:g} cm/s; planted paws are world-locked against that travel; starts from the aplomb idle stance."})
 author('WalkStop', STOP_FRAMES + 1, walk_stop, False, {
     'nominal_speed_profile_cm_s': samples(lambda t: speed_ramp(t, STOP_T, False), STOP_T),
     'capsule_travel_cm_per_frame': [round(travel(f / FPS, STOP_T, False), 4) for f in range(STOP_FRAMES + 1)],
     'travel_cm': round(D_stop, 3), 'starts_from': 'WalkLoop frame 0', 'settle_hold_s': round(3 / FPS, 4),
     'stance_intervals_s': {f'foot_{s}': stance_from_steps(stop_steps[s], STOP_FRAMES / FPS) for s in 'LR'},
-    'events_s': {'foot_R_lift': .03, 'foot_R_plant': round(.06 + SWING, 4),
-                 'foot_L_lift': .2, 'foot_L_plant': round(.24 + SWING, 4)},
-    'notes': 'Speed falls with a smoothstep from 95 to 0 cm/s; ends in the neutral stance.'})
+    'events_s': {'foot_R_lift': round(STOP_R[0], 4), 'foot_R_plant': round(STOP_R[1], 4),
+                 'foot_L_lift': round(STOP_L[0], 4), 'foot_L_plant': round(STOP_L[1], 4)},
+    'duration_travel_s': STOP_T,
+    'notes': f"Speed falls with a smoothstep from {WALK['speed_cm_s']:g} to 0 cm/s; ends in the aplomb idle stance."})
 for name, sign in (('TurnLeft90', 1), ('TurnRight90', -1)):
     fn, steps = turn_clip(sign)
     author(name, TURN_FRAMES + 1, fn, False, {
@@ -721,6 +761,8 @@ for action, entry in CLIPS:
 rig.animation_data.action = None
 scene.frame_start, scene.frame_end = 0, 59
 (ANIM / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
+# Keep the runtime's distance matching, stance windows and turn profile in step.
+runpy.run_path(str(ROOT / 'Tools/gen_chuck_clip_data.py'), run_name='__main__')
 
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
 zs = [v.co.z for v in body.data.vertices]

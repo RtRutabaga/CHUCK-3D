@@ -413,16 +413,17 @@ for side in (-1,1):
     chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
     # Slender palm, long relaxed fingers and a pale pointed claw on every digit
     # (2026-09-27 goal images). The thumb is its own part (skinned to thumb_*).
-    ellipsoid('Hand',(4.3,side*14,19.8),(1.35,1.05,2.25),'Skin')
+    ellipsoid('Hand',(4.3,side*14,19.8),(1.15,.95,2.0),'Skin')
     for finger in range(4):
         # Index at the front, little finger at the back; each hangs down and
         # curls toward the palm (medial, -side*Y).
         x=5.15-finger*.6
-        length=(3.3,3.9,3.7,2.9)[finger]
+        # Compact relaxed fingers (reference: softly curled hands beside the hips).
+        length=(2.5,2.9,2.8,2.2)[finger]
         base=Vector((x,side*14.05,18.2))
-        mid=base+Vector((.18,-side*.14,-.97)).normalized()*length*.55
-        tip=mid+Vector((.1,-side*.5,-.86)).normalized()*length*.45
-        chain_tube('Finger',[base,mid,tip],lambda t:.34-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
+        mid=base+Vector((.12,-side*.3,-.95)).normalized()*length*.5
+        tip=mid+Vector((.02,-side*.8,-.6)).normalized()*length*.5
+        chain_tube('Finger',[base,mid,tip],lambda t:.3-.11*t,'Skin',caps=(.5,1.),segments=8,rings=8)
         nail=(tip-mid).normalized()
         limb('FingerClaw',tip-nail*.05,tip+nail*.75,.1,'Claw')
     # Thumb at the front of the hand, angled down and in, opposing the fingers.

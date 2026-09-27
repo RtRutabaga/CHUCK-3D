@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "ChuckAnimInstance.h"
+#include "ChuckClipData.h"
 #include "AnimationRuntime.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -329,6 +330,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bCorrectMaterials && Chuck->GetGroomCount()==(bNoGroom ? 0 : 3),TEXT("v1 material and groom assignments persist"));
             // Rest direction filter -> lit end of socket_cigarette (v1.2 table,
             // Unreal component space): forward and to Chuck's left, slightly down.
+            // The aplomb idle turns and lifts the head a little (about 12 deg), hence 0.95.
             const auto* Cig=Chuck->GetCigarette();
             const auto* Wisp=Chuck->GetCigaretteSmoke();
             const FTransform& MeshToWorld=Body->GetComponentTransform();
@@ -336,7 +338,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const float Aim=FVector::DotProduct(Along,FVector(3.256,-2.1,-.5).GetSafeNormal());
             const float AtMouth=Cig ? FVector::Dist(Cig->GetComponentLocation(),Body->GetSocketLocation(TEXT("socket_cigarette"))) : 99.f;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CIGARETTE_MEASURE aim_dot=%.4f at_mouth_cm=%.4f smoke_up=%.4f"),Aim,AtMouth,Wisp ? Wisp->GetUpVector().Z : -1.);
-            Check(Cig && Wisp && Cig->GetStaticMesh() && Wisp->GetStaticMesh() && AtMouth<.05f && Aim>.97f && Wisp->GetUpVector().Z>.999f,TEXT("cigarette held in the left mouth corner with upright smoke"));
+            Check(Cig && Wisp && Cig->GetStaticMesh() && Wisp->GetStaticMesh() && AtMouth<.05f && Aim>.95f && Wisp->GetUpVector().Z>.999f,TEXT("cigarette held in the left mouth corner with upright smoke"));
         }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));
@@ -356,7 +358,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const FVector Position=Pose.BallWorld[I];
             ProbeReachExcess=FMath::Max(ProbeReachExcess,Pose.Shortfall[I]);
             const bool bLocked=Pose.LockAlpha[I]>=1.f && !Pose.bSettling[I];
-            if(bProbeReady && bProbeLocked[I] && bLocked && StageTime>.25f && Chuck->GetVelocity().Size2D()>90.f)
+            if(bProbeReady && bProbeLocked[I] && bLocked && StageTime>.25f && Chuck->GetVelocity().Size2D()>.9f*ChuckClipData::WalkSpeed)
             {
                 const float SlipSpeed=FVector::Dist(Position,ProbeFoot[I])/FMath::Max(DeltaSeconds,.001f);
                 ProbeSlip+=SlipSpeed; ProbeMaxSpeed=FMath::Max(ProbeMaxSpeed,SlipSpeed); ++ProbeSamples;
@@ -369,7 +371,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_PERF_MEASURE grooms=%d frames=%d mean_frame_ms=%.3f mean_gpu_ms=%.3f"),Chuck->GetGroomCount(),PerfFrames,PerfFrames ? PerfFrameMs/PerfFrames : -1.,PerfFrames ? PerfGpuMs/PerfFrames : -1.);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CONTACT_MEASURE samples=%d mean_cm_s=%.4f max_cm_s=%.4f"),ProbeSamples,ProbeSamples ? ProbeSlip/ProbeSamples : -1.,ProbeMaxSpeed);
-            Check(Chuck->GetActorLocation().X > -175,TEXT("walking advances across quay"));
+            Check(Chuck->GetActorLocation().X > -200,TEXT("walking advances across quay"));
             auto* MovingBody=Chuck->GetMesh();
             Check(ProbeSamples>=10 && ProbeMaxSpeed<1.f,TEXT("steady walk stance feet stay planted within 1 cm/s"));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_REACH_MEASURE max_shortfall_cm=%.4f"),ProbeReachExcess);
@@ -446,7 +448,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         auto* PC=Cast<APlayerController>(Chuck->GetController());
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
-        Check(Chuck->GetActorLocation().X > -175,TEXT("keyboard W mapping walks"));
+        Check(Chuck->GetActorLocation().X > -200,TEXT("keyboard W mapping walks"));
         Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
         Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,220.f,1.f),TEXT("rat-height camera blend settles"));
         {
@@ -470,7 +472,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY,IE_Axis,0));
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Released,0));
-            Check(Chuck->GetActorLocation().X > -175,TEXT("Xbox left-stick mapping walks"));
+            Check(Chuck->GetActorLocation().X > -200,TEXT("Xbox left-stick mapping walks"));
             Check(Chuck->IsElevated(),TEXT("Xbox Y mapping switches camera"));
             Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,400.f,1.f),TEXT("elevated camera blend settles"));
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Pressed,1));
@@ -535,7 +537,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const FChuckAnimResult Pose=Chuck->GetChuckAnim()->GetResult();
             const float Distance=FVector::Dist2D(Chuck->GetActorLocation(),LocoStart);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_STOP_MEASURE distance_cm=%.3f time_s=%.3f samples=%d max_cm_s=%.4f releases=%d gait=%s"),Distance,LocoValue,LocoSamples,LocoMaxSlip,Pose.Releases-LocoReleases,Chuck->GetGaitName());
-            Check(bLocoFlag && LocoSamples>=5 && LocoMaxSlip<1.f && Pose.Releases==LocoReleases && FMath::IsNearlyEqual(Distance,19.f,2.f),TEXT("walk stop brakes over its clip with planted paws still"));
+            Check(bLocoFlag && LocoSamples>=5 && LocoMaxSlip<1.f && Pose.Releases==LocoReleases && FMath::IsNearlyEqual(Distance,ChuckClipData::StopTravel,2.f),TEXT("walk stop brakes over its clip with planted paws still"));
             Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Pose.LockAlpha[0]>=1.f && Pose.LockAlpha[1]>=1.f,TEXT("walk stop settles into planted idle stance"));
             Chuck->ResetToDock(); bLocoFlag=false; TestStage=51; StageTime=0;
         }

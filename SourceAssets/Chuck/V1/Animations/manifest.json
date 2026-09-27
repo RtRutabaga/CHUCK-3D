@@ -8,153 +8,60 @@
    "file": "Animations/AS_Chuck_Idle.fbx",
    "fps": 30,
    "first_frame": 0,
-   "last_frame": 59,
-   "frame_count": 60,
-   "duration_s": 2.0,
+   "last_frame": 119,
+   "frame_count": 120,
+   "duration_s": 4.0,
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9192,
-   "notes": "Neutral hold: breathing, restrained head/ear/tail motion; paws planted at rest."
+   "max_leg_reach_ratio": 0.9237,
+   "notes": "Aplomb hold (4 s): contrapposto on the right leg, chest and chin up, slow look drift, calm breathing, a small chin lift as if drawing on the cigarette."
   },
   {
    "name": "WalkLoop",
    "file": "Animations/AS_Chuck_WalkLoop.fbx",
    "fps": 30,
    "first_frame": 0,
-   "last_frame": 8,
-   "frame_count": 9,
-   "duration_s": 0.3,
+   "last_frame": 14,
+   "frame_count": 15,
+   "duration_s": 0.5,
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.8922,
-   "reference_speed_cm_s": 95.0,
-   "stride_cycle_cm": 28.5,
-   "stance_travel_cm": 17.1,
-   "stance_fraction": 0.6,
+   "max_leg_reach_ratio": 0.9387,
+   "reference_speed_cm_s": 62.0,
+   "stride_cycle_cm": 31.0,
+   "stance_travel_cm": 19.22,
+   "stance_fraction": 0.62,
    "stance_intervals_s": {
     "foot_L": [
      [
       0.0,
-      0.18
+      0.31
      ]
     ],
     "foot_R": [
      [
-      0.15,
-      0.3
+      0.25,
+      0.5
      ],
      [
       0.0,
-      0.03
+      0.06
      ]
     ]
    },
    "events_s": {
     "foot_L_plant": 0.0,
-    "foot_R_plant": 0.15,
-    "foot_L_lift": 0.18,
-    "foot_R_lift": 0.03
+    "foot_R_plant": 0.25,
+    "foot_L_lift": 0.31,
+    "foot_R_lift": 0.06
    },
-   "notes": "In place (root fixed). During stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll)."
+   "notes": "Saunter with a touch of swagger. In place (root fixed); during stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll); paws toe out 7 deg."
   },
   {
    "name": "WalkStart",
    "file": "Animations/AS_Chuck_WalkStart.fbx",
-   "fps": 30,
-   "first_frame": 0,
-   "last_frame": 12,
-   "frame_count": 13,
-   "duration_s": 0.4,
-   "loop": false,
-   "loop_note": "",
-   "root_motion": false,
-   "max_leg_reach_ratio": 0.9192,
-   "nominal_speed_profile_cm_s": [
-    [
-     0.0,
-     0.0
-    ],
-    [
-     0.05,
-     4.082
-    ],
-    [
-     0.1,
-     14.844
-    ],
-    [
-     0.15,
-     30.059
-    ],
-    [
-     0.2,
-     47.5
-    ],
-    [
-     0.25,
-     64.941
-    ],
-    [
-     0.3,
-     80.156
-    ],
-    [
-     0.35,
-     90.918
-    ],
-    [
-     0.4,
-     95.0
-    ]
-   ],
-   "capsule_travel_cm_per_frame": [
-    0.0,
-    0.0211,
-    0.1613,
-    0.5195,
-    1.1728,
-    2.1762,
-    3.5625,
-    5.3428,
-    7.5062,
-    10.0195,
-    12.8279,
-    15.8544,
-    19.0
-   ],
-   "travel_cm": 19.0,
-   "ends_on": "WalkLoop frame 0 (foot_L planted, foot_R late stance)",
-   "stance_intervals_s": {
-    "foot_L": [
-     [
-      0.0,
-      0.28
-     ]
-    ],
-    "foot_R": [
-     [
-      0.0,
-      0.1
-     ],
-     [
-      0.25,
-      0.4
-     ]
-    ]
-   },
-   "events_s": {
-    "foot_R_lift": 0.1,
-    "foot_R_plant": 0.25,
-    "foot_L_lift": 0.28,
-    "foot_L_plant": 0.4
-   },
-   "notes": "Speed rises with a smoothstep from 0 to 95 cm/s; planted paws are world-locked against that travel."
-  },
-  {
-   "name": "WalkStop",
-   "file": "Animations/AS_Chuck_WalkStop.fbx",
    "fps": 30,
    "first_frame": 0,
    "last_frame": 15,
@@ -163,95 +70,197 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9192,
+   "max_leg_reach_ratio": 0.9387,
    "nominal_speed_profile_cm_s": [
     [
      0.0,
-     95.0
+     0.0
     ],
     [
-     0.05,
-     90.918
+     0.0625,
+     2.664
     ],
     [
-     0.1,
-     80.156
+     0.125,
+     9.688
     ],
     [
-     0.15,
-     64.941
-    ],
-    [
-     0.2,
-     47.5
+     0.1875,
+     19.617
     ],
     [
      0.25,
-     30.059
+     31.0
     ],
     [
-     0.3,
-     14.844
+     0.3125,
+     42.383
     ],
     [
-     0.35,
-     4.082
+     0.375,
+     52.312
     ],
     [
-     0.4,
+     0.4375,
+     59.336
+    ],
+    [
+     0.5,
+     62.0
+    ]
+   ],
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0089,
+    0.0686,
+    0.2232,
+    0.5095,
+    0.9568,
+    1.5872,
+    2.4154,
+    3.4487,
+    4.6872,
+    6.1235,
+    7.7428,
+    9.5232,
+    11.4352,
+    13.4422,
+    15.5
+   ],
+   "travel_cm": 15.5,
+   "ends_on": "WalkLoop frame 0 (foot_L planted, foot_R late stance)",
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.31
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.08
+     ],
+     [
+      0.27,
+      0.5
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_R_lift": 0.08,
+    "foot_R_plant": 0.27,
+    "foot_L_lift": 0.31,
+    "foot_L_plant": 0.5
+   },
+   "duration_travel_s": 0.5,
+   "notes": "Speed rises with a smoothstep from 0 to 62 cm/s; planted paws are world-locked against that travel; starts from the aplomb idle stance."
+  },
+  {
+   "name": "WalkStop",
+   "file": "Animations/AS_Chuck_WalkStop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 19,
+   "frame_count": 20,
+   "duration_s": 0.6333,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9387,
+   "nominal_speed_profile_cm_s": [
+    [
+     0.0,
+     62.0
+    ],
+    [
+     0.0625,
+     59.336
+    ],
+    [
+     0.125,
+     52.312
+    ],
+    [
+     0.1875,
+     42.383
+    ],
+    [
+     0.25,
+     31.0
+    ],
+    [
+     0.3125,
+     19.617
+    ],
+    [
+     0.375,
+     9.688
+    ],
+    [
+     0.4375,
+     2.664
+    ],
+    [
+     0.5,
      0.0
     ]
    ],
    "capsule_travel_cm_per_frame": [
     0.0,
-    3.1456,
-    6.1721,
-    8.9805,
-    11.4938,
-    13.6572,
-    15.4375,
-    16.8238,
-    17.8272,
-    18.4805,
-    18.8387,
-    18.9789,
-    19.0,
-    19.0,
-    19.0,
-    19.0
+    2.0578,
+    4.0648,
+    5.9768,
+    7.7572,
+    9.3765,
+    10.8128,
+    12.0513,
+    13.0846,
+    13.9128,
+    14.5432,
+    14.9905,
+    15.2768,
+    15.4314,
+    15.4911,
+    15.5,
+    15.5,
+    15.5,
+    15.5,
+    15.5
    ],
-   "travel_cm": 19.0,
+   "travel_cm": 15.5,
    "starts_from": "WalkLoop frame 0",
    "settle_hold_s": 0.1,
    "stance_intervals_s": {
     "foot_L": [
      [
       0.0,
-      0.2
+      0.31
      ],
      [
-      0.36,
-      0.5
+      0.54,
+      0.6333
      ]
     ],
     "foot_R": [
      [
       0.0,
-      0.03
+      0.06
      ],
      [
-      0.18,
-      0.5
+      0.28,
+      0.6333
      ]
     ]
    },
    "events_s": {
-    "foot_R_lift": 0.03,
-    "foot_R_plant": 0.18,
-    "foot_L_lift": 0.2,
-    "foot_L_plant": 0.36
+    "foot_R_lift": 0.06,
+    "foot_R_plant": 0.28,
+    "foot_L_lift": 0.31,
+    "foot_L_plant": 0.54
    },
-   "notes": "Speed falls with a smoothstep from 95 to 0 cm/s; ends in the neutral stance."
+   "duration_travel_s": 0.5,
+   "notes": "Speed falls with a smoothstep from 62 to 0 cm/s; ends in the aplomb idle stance."
   },
   {
    "name": "TurnLeft90",
@@ -264,7 +273,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9192,
+   "max_leg_reach_ratio": 0.9195,
    "capsule_yaw_deg_profile": [
     [
      0.0,
@@ -374,7 +383,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9192,
+   "max_leg_reach_ratio": 0.9167,
    "capsule_yaw_deg_profile": [
     [
      0.0,
