@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 2 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `37208d3`, adding four passes:
+- the face-proportion pass: a short conical rat snout (0.74, v1.2 amendment), smaller high eyes;
+- a scruffy city-rat body coat with guard hairs;
+- a softer tan-cream muzzle and amber eyes;
+- sleek, laid-back head fur (the lifted crown had read as a human haircut).
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **50 passes, 0 failures** (`Local/verify-package-20260927-130138.log`); receipt `37208d3`; `Launch-Prototype.ps1 -CheckOnly` shows no newer-source warning. Nothing pushed.
+
 **Update (Claude, 2026-09-27, user request "integrate"):** Claude merged `codex/claude-character` into main as `4eef511` (merge of `699efd0..c2e31d5` over Codex's `a4b00b2`; one clean automatic merge). That brings in:
 - the four 2026-09-27 goal images and the user's snout/fur target (`References/ArtDirection/`);
 - the look passes: warm shaggy groom, narrow head, cropped red-violet jacket;
