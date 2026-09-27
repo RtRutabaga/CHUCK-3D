@@ -272,8 +272,16 @@ def cupped_ear(side):
     # Wind faces so the base normal faces forward/outward (the pink side).
     probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
     if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
-    center=Vector((-1.6,side*4.6,60.2))  # pinched base sinks into the skull
+    # Seat the pinched base on the skull's upper side, found by ray cast on the
+    # evaluated head (fixed coordinates floated once the head was narrowed),
+    # sunk slightly into it. The base vertex (dy=-1) sits at -up*4.3 +facing*1.3.
+    tilt=math.radians(65)  # side of the skull, so the whole disc rises clear of the head
+    origin=Vector((-1.6,0,head_axis_z(-1.6)))
+    hit,normal,_,_=HEAD_TREE.ray_cast(origin,Vector((0,side*math.sin(tilt),math.cos(tilt))),30)
+    base=hit-normal*.25
+    center=base+up*4.3-facing*1.3
     ear=mesh('Ear',[center+v for v in verts],faces,'Skin',1)
+    ear['chuck_ear_base']=tuple(base)
     ear.data.materials.append(MATS['Fur'])
     sol=ear.modifiers.new('Ear thickness','SOLIDIFY')
     sol.thickness=.3; sol.offset=-1; sol.use_rim=True; sol.material_offset=0; sol.material_offset_rim=0
@@ -285,8 +293,11 @@ def cupped_ear(side):
 ears=[cupped_ear(side) for side in (-1,1)]
 top=max((e.matrix_world @ v.co).z for e in ears for v in e.data.vertices)
 for e in ears:
-    # Contract: ear top exactly 65 cm.
-    for v in e.data.vertices: v.co.z+=65.-top
+    # Contract: ear top exactly 65 cm. Scale about the seated base so the ear
+    # never lifts off the skull (a plain vertical shift would).
+    base=Vector(e['chuck_ear_base'])
+    k=(65.-base.z)/(top-base.z)
+    for v in e.data.vertices: v.co=base+(v.co-base)*k
 for side in (-1,1):
     # Small, high rat eyes (face-proportion target).
     ellipsoid('EyeLid',(6.7,side*3.6,54.9),(1.45,.62,1.1),'Fur')
@@ -398,11 +409,13 @@ for side in (-1,1):
     for finger in range(4):
         y=side*(13.0+finger*.6)
         length=(3.3,3.9,3.7,2.9)[finger]
-        base=Vector((4.9,y,18.2)); mid=base+Vector((.6,0,-length*.58)); tip=mid+Vector((-.25,0,-length*.42))
+        base=Vector((4.9,y,18.2))
+        mid=base+Vector((.42,0,-.91))*length*.55; tip=mid+Vector((.72,0,-.69))*length*.45
         chain_tube('Finger',[base,mid,tip],lambda t:.34-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
         nail=(tip-mid).normalized()
         limb('FingerClaw',tip-nail*.05,tip+nail*.75,.1,'Claw')
-    thumb=[Vector((4.4,side*15.2,19.4)),Vector((5.6,side*15.8,18.3)),Vector((6.5,side*15.6,17.1))]
+    # Thumb opposes the fingers: forward and curling slightly toward the palm.
+    thumb=[Vector((4.4,side*15.2,19.4)),Vector((5.6,side*15.7,18.4)),Vector((6.6,side*15.2,17.5))]
     chain_tube('Thumb',thumb,lambda t:.36-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
     nail=(thumb[2]-thumb[1]).normalized()
     limb('ThumbClaw',thumb[2]-nail*.05,thumb[2]+nail*.7,.1,'Claw')

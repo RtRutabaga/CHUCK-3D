@@ -585,3 +585,22 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Groom about 0.88 ms.
   - Evidence: `Review/goal_compare_head_fur.jpg`.
 - **Not integrated into main.** The launcher still shows `4eef511`.
+
+## Twenty-fifth pass — ears seated on the skull; natural finger curl
+
+- **User report:** "his ears float off his head" and "his hands/paws/fingers bend backward in a weird way".
+- **Source commit:** on top of `f797938` (main), branch `codex/claude-character`.
+- **Ears:**
+  - **Cause:** fixed ear positions (y = 4.6 cm) were kept when the head was narrowed to 0.72 (skull about 4.2 cm wide there), so the ears sat beside the head.
+  - **Fix** (`cupped_ear` in `build_chuck_model.py`): each ear's pinched base is seated by ray cast on the evaluated skull, 65° from vertical on its side, and sunk 0.25 cm. The 65 cm ear-tip contract is met by scaling about that base, not shifting, so an ear can never lift off.
+  - A first try at 50° seated the ears too high and buried half of each disc.
+  - The groom ear exclusion follows (y 4.1, |y| > 3.2).
+- **Fingers:**
+  - **Cause:** the thumb is lateral, so the palm faces forward. The finger chains curled backward, while the clips curl `fingers_*` forward (−Y), which read as hyperextension.
+  - **Fix:** fingers now continue the hand's forward-down line and curl gently toward the palm; the thumb opposes slightly.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - Grip, curl and walk poses inspected.
+  - Evidence: `Review/fix_ears_fingers.jpg`.
+- **Not integrated into main.** The launcher still shows `37208d3`.
