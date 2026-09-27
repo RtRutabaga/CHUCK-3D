@@ -644,3 +644,19 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Evidence: `Review/goal_compare_ears_turnaround.jpg`.
 - **Gap:** the turnaround's ears still stand a little taller and closer together.
 - **Not integrated into main.** The launcher still shows `37208d3`.
+
+## Twenty-eighth pass — ears wider apart; neutral, human-like hands
+
+- **User feedback:** the ears were "too close together"; the hands "still look unnatural like someone doing the 6 7 meme", and the user wants "more natural human-like hand/finger placement while standing/walking".
+- **Source commit:** on top of `1ffbec3` (main), branch `codex/claude-character`.
+- **Ears:** seated on the outer top corners of the skull (48° from vertical, was 35°) with a 17° outward lean, as in the turnaround front view. The groom ear exclusion follows.
+- **Hands:**
+  - **Cause:** the palms faced forward with the thumbs lateral and the fingers curled forward, so the hands read as held out palms-up.
+  - **Fix:** the hands are now in a neutral rest. The palm turns toward the thigh; the thumb is at the front, angled down and in; the four fingers hang in a front-to-back row and curl loosely toward the palm (medially).
+  - The clips' finger curl now uses a `curl(side, degrees)` helper in `build_chuck_v1.py`: `fingers_*` about X with sign by side (toward the medial palm), replacing the forward −Y bend in Idle, WalkLoop, WalkStop/turns and the jumps.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - Standing (`neutral_*`), walking (`walk_side_f*`) and close-hand views inspected.
+  - Evidence: `Review/fix_ears_wide_hands_neutral.jpg`.
+- **Not integrated into main.** The launcher still shows `1057e0f`.

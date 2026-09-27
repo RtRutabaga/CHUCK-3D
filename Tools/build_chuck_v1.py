@@ -353,6 +353,11 @@ def plant_rest(pelvis_drop=0.):
         r = max(r, poser.leg(s, NEUTRAL_BALL[s]))
     return r
 
+def curl(s, degrees):
+    """Curl the four fingers toward the palm, which faces the thigh (medial):
+    about X, sign by side (_L is +Y, so its palm faces -Y)."""
+    poser.rotate(f'fingers_{s}', 'X', -degrees if s == 'L' else degrees)
+
 def idle(phase, f):
     w = 2 * math.pi * phase
     poser.translate('pelvis', (0, 0, -.25 - .25 * math.sin(w)))
@@ -364,7 +369,7 @@ def idle(phase, f):
     for s, k in (('L', 1), ('R', -1)):
         poser.rotate(f'upperarm_{s}', 'Y', -1.5 * math.sin(w + .4))
         poser.rotate(f'lowerarm_{s}', 'Y', -4 - 1. * math.sin(w + .9))
-        poser.rotate(f'fingers_{s}', 'Y', -8)
+        curl(s, 8)
         poser.rotate(f'ear_{s}', 'X', k * 1.5 * math.sin(2 * w + (0 if s == 'L' else 1.1)))
     for i, b in enumerate(TAIL):
         poser.rotate(b, 'Z', 3.5 * math.sin(w - .5 * i))
@@ -408,7 +413,7 @@ def walk(phase, f):
         other = feet['R' if s == 'L' else 'L'][0] / (STANCE_CM / 2)
         poser.rotate(f'upperarm_{s}', 'Y', -12 * other)
         poser.rotate(f'lowerarm_{s}', 'Y', -10 - 6 * max(0., other))
-        poser.rotate(f'fingers_{s}', 'Y', -10)
+        curl(s, 10)
     poser.update()
     r = 0.
     for s in 'LR':
@@ -505,7 +510,7 @@ def pose_planned(t, feet, dist, yaw, k, w, lean=0., look=0.):
         drive = max(-1., min(1., (comp[other][0].x - NEUTRAL_BALL[other].x) / half))
         poser.rotate(f'upperarm_{s}', 'Y', -12 * k * drive)
         poser.rotate(f'lowerarm_{s}', 'Y', -4 - 6 * k - 6 * k * max(0., drive))
-        poser.rotate(f'fingers_{s}', 'Y', -8 - 2 * k)
+        curl(s, 8 + 2 * k)
     poser.update()
     r = 0.
     for s in 'LR':
@@ -603,7 +608,7 @@ def jump_loop(phase, f):
         poser.rotate(f'upperarm_{s}', 'Y', -28 + 3 * math.sin(w))
         poser.rotate(f'upperarm_{s}', 'X', 12 if s == 'L' else -12)
         poser.rotate(f'lowerarm_{s}', 'Y', -18)
-        poser.rotate(f'fingers_{s}', 'Y', -15)
+        curl(s, 15)
     for i, b in enumerate(TAIL): poser.rotate(b, 'Y', 3 + 1.5 * math.sin(w - .5 * i))
     poser.update()
     r = 0.

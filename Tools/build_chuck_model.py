@@ -258,9 +258,10 @@ def cupped_ear(side):
     (Fur) via Solidify. Returned already converted to a mesh."""
     # Turnaround (References/ArtDirection/Chuck-Turnaround.png): the cup faces
     # forward (the whole pink inside shows from the front) and the ear leans
-    # about 15 degrees outward from the top corner of the skull; taller than wide.
+    # about 17 degrees outward from the outer top corner of the skull (wide
+    # apart, as in the goal images); taller than wide.
     facing=Vector((.85,side*.45,.15)).normalized()
-    up=Vector((-.1,side*.18,.98)); across=up.cross(facing).normalized(); up=facing.cross(across).normalized()
+    up=Vector((-.1,side*.3,.95)); across=up.cross(facing).normalized(); up=facing.cross(across).normalized()
     # Square grid mapped onto a disc: no high-valence pole to dimple the cup.
     n=15
     verts=[]
@@ -277,9 +278,9 @@ def cupped_ear(side):
     probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
     if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
     # Seat: the pinched base (dy=-1: -up*4.9 +facing*1.2) sits 0.4 cm inside
-    # the upper side of the skull (35 degrees from vertical), found by ray cast
+    # the upper side of the skull (48 degrees from vertical), found by ray cast
     # on the evaluated head, about 4.7 cm behind the eye as in the turnaround.
-    tilt=math.radians(35)
+    tilt=math.radians(48)
     origin=Vector((1.5,0,head_axis_z(1.5)))
     hit,normal,_,_=HEAD_TREE.ray_cast(origin,Vector((0,side*math.sin(tilt),math.cos(tilt))),30)
     base=hit-normal*.4
@@ -412,17 +413,20 @@ for side in (-1,1):
     chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
     # Slender palm, long relaxed fingers and a pale pointed claw on every digit
     # (2026-09-27 goal images). The thumb is its own part (skinned to thumb_*).
-    ellipsoid('Hand',(4.3,side*14,19.8),(1.1,1.35,2.25),'Skin')
+    ellipsoid('Hand',(4.3,side*14,19.8),(1.35,1.05,2.25),'Skin')
     for finger in range(4):
-        y=side*(13.0+finger*.6)
+        # Index at the front, little finger at the back; each hangs down and
+        # curls toward the palm (medial, -side*Y).
+        x=5.15-finger*.6
         length=(3.3,3.9,3.7,2.9)[finger]
-        base=Vector((4.9,y,18.2))
-        mid=base+Vector((.42,0,-.91))*length*.55; tip=mid+Vector((.72,0,-.69))*length*.45
+        base=Vector((x,side*14.05,18.2))
+        mid=base+Vector((.18,-side*.14,-.97)).normalized()*length*.55
+        tip=mid+Vector((.1,-side*.5,-.86)).normalized()*length*.45
         chain_tube('Finger',[base,mid,tip],lambda t:.34-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
         nail=(tip-mid).normalized()
         limb('FingerClaw',tip-nail*.05,tip+nail*.75,.1,'Claw')
-    # Thumb opposes the fingers: forward and curling slightly toward the palm.
-    thumb=[Vector((4.4,side*15.2,19.4)),Vector((5.6,side*15.7,18.4)),Vector((6.6,side*15.2,17.5))]
+    # Thumb at the front of the hand, angled down and in, opposing the fingers.
+    thumb=[Vector((5.3,side*13.6,19.5)),Vector((6.1,side*13.2,18.5)),Vector((6.5,side*12.8,17.4))]
     chain_tube('Thumb',thumb,lambda t:.36-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
     nail=(thumb[2]-thumb[1]).normalized()
     limb('ThumbClaw',thumb[2]-nail*.05,thumb[2]+nail*.7,.1,'Claw')

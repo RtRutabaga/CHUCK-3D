@@ -45,7 +45,7 @@ poly_mat = [p.material_index for p in mesh.polygons]
 EYES = [Vector((X(7.15), s * 3.8, Z(55.0))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
-EARS = [Vector((1.1, s * 4.4, Z(61.3))) for s in (1, -1)]  # ear seated on the skull top-side (build_chuck_model.py)
+EARS = [Vector((1.1, s * 5.2, Z(60.8))) for s in (1, -1)]  # ear on the outer top corner of the skull (build_chuck_model.py)
 
 # Group definitions: strands, length range (cm), flow direction chooser.
 def flow_for(p):
@@ -100,7 +100,7 @@ def covered(p, n):
 
 def near_eye(p):
     return any((p - e).length < 2.3 for e in EYES) or any(
-        (p - e).length < 4.8 and abs(p.y) > 2.9 and p.z > Z(58.) for e in EARS)
+        (p - e).length < 4.8 and abs(p.y) > 3.3 and p.z > Z(57.5) for e in EARS)
 
 # Area-weighted candidate triangles per group.
 cands = {g: [] for g in GROUPS}
