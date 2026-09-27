@@ -319,7 +319,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(FMath::IsNearlyEqual(static_cast<float>(Bounds.Origin.Z+Bounds.BoxExtent.Z),65.f,1.f),TEXT("imported model ear height is 65 cm"));
             Check(Body->GetBoneIndex(TEXT("toes_L"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("upperarm_R"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("tail_5"))!=INDEX_NONE && Body->GetBoneIndex(TEXT("socket_cigarette"))!=INDEX_NONE,TEXT("v1 leg arm tail and cigarette bones survive packaged import"));
             const int32 Hip=Rig->GetRefSkeleton().FindBoneIndex(TEXT("thigh_L"));
-            Check(Hip!=INDEX_NONE && FVector::Dist(FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Hip).GetLocation(),FVector(-2,-6,19.5))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
+            Check(Hip!=INDEX_NONE && FVector::Dist(FAnimationRuntime::GetComponentSpaceTransformRefPose(Rig->GetRefSkeleton(),Hip).GetLocation(),FVector(-2,-6,22.5))<.1f,TEXT("rig hip uses centimetre scale and expected axes"));
             bool bCorrectMaterials=Body->GetNumMaterials()>0;
             for(int32 I=0; I<Body->GetNumMaterials(); ++I)
             {
@@ -327,6 +327,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 bCorrectMaterials &= Mat && Mat->GetPathName().StartsWith(TEXT("/Game/Characters/Chuck/V1/"));
             }
             Check(bCorrectMaterials && Chuck->GetGroomCount()==(bNoGroom ? 0 : 3),TEXT("v1 material and groom assignments persist"));
+            // Rest direction filter -> lit end of socket_cigarette (v1.2 table,
+            // Unreal component space): forward and to Chuck's left, slightly down.
+            const auto* Cig=Chuck->GetCigarette();
+            const auto* Wisp=Chuck->GetCigaretteSmoke();
+            const FTransform& MeshToWorld=Body->GetComponentTransform();
+            const FVector Along=Cig ? MeshToWorld.InverseTransformVectorNoScale(Cig->GetForwardVector()) : FVector::ZeroVector;
+            const float Aim=FVector::DotProduct(Along,FVector(3.608,-2.1,-.5).GetSafeNormal());
+            const float AtMouth=Cig ? FVector::Dist(Cig->GetComponentLocation(),Body->GetSocketLocation(TEXT("socket_cigarette"))) : 99.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CIGARETTE_MEASURE aim_dot=%.4f at_mouth_cm=%.4f smoke_up=%.4f"),Aim,AtMouth,Wisp ? Wisp->GetUpVector().Z : -1.);
+            Check(Cig && Wisp && Cig->GetStaticMesh() && Wisp->GetStaticMesh() && AtMouth<.05f && Aim>.97f && Wisp->GetUpVector().Z>.999f,TEXT("cigarette held in the left mouth corner with upright smoke"));
         }
         Check(Chuck->IsElevated(),TEXT("starts in elevated camera"));
         Chuck->ToggleCamera(); Check(!Chuck->IsElevated(),TEXT("switches to rat-height camera"));

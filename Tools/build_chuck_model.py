@@ -197,8 +197,12 @@ for side in (-1,1):
 # Continuous tapered skull and muzzle. The earlier joined spheres made a blunt,
 # round face; these anatomical sections narrow toward a smaller nasal pad.
 verts,faces=[],[]
-head_sections=[(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
-               (6,52.8,5.3,5.7),(10,51.6,4.1,3.6),(15,50.9,2.2,2),(17.5,50.7,1,1)]
+# Turnaround 2026-09-27: narrow, pointed head (half-widths 0.72x the first
+# study), about 8-9 cm across the cheeks seen from the front.
+HEAD_NARROW=.72
+head_sections=[(x,z,ry*HEAD_NARROW,rz) for x,z,ry,rz in
+               [(-6,54,3.2,4.5),(-2,54,5.8,7.2),(2,53.6,6.4,7.3),
+                (6,52.8,5.4,5.8),(10,51.6,4.5,3.95),(15,50.9,2.75,2.45),(17.5,50.7,1.35,1.25)]]
 for x,z,ry,rz in head_sections:
     for j in range(32):
         angle=j*math.tau/32
@@ -231,7 +235,8 @@ verts,faces=[],[]
 MU_ROWS,MU_COLS=22,20
 for r in range(MU_ROWS):
     v=r/(MU_ROWS-1); x=4.2+v*12.1
-    reach=1.6-.45*smoothstep(v,.45,1.)
+    # Wraps up over the whisker pads toward the nose (snout/fur target).
+    reach=1.6+.55*smoothstep(v,.5,.95)
     for c in range(MU_COLS):
         u=2*c/(MU_COLS-1)-1
         falloff=(1-u**4)*(1-(2*v-1)**6)
@@ -241,7 +246,7 @@ for r in range(MU_ROWS-1):
         k=r*MU_COLS+c
         faces.append((k,k+1,k+1+MU_COLS,k+MU_COLS))
 mesh('MuzzleLight',verts,faces,'Chest',1)
-ellipsoid('Nose',(17.75,0,50.65),(1.15,1.35,.95),'Skin')
+ellipsoid('Nose',(17.8,0,50.7),(1.2,1.35,.95),'Skin')
 
 def cupped_ear(side):
     """Thin cupped ear: pinched base, pink inner face (Skin), furred back
@@ -256,17 +261,17 @@ def cupped_ear(side):
             gx=2*c/(n-1)-1; gy=2*r/(n-1)-1
             dx=gx*math.sqrt(max(0.,1-gy*gy/2)); dy=gy*math.sqrt(max(0.,1-gx*gx/2))
             rr2=min(1.,dx*dx+dy*dy)
-            width=3.9*(.62+.38*smoothstep(dy,-1.,.1))
-            verts.append(across*(width*dx)+up*(4.5*dy)+facing*(1.25*rr2))
+            width=4.0*(.62+.38*smoothstep(dy,-1.,.1))
+            verts.append(across*(width*dx)+up*(4.3*dy)+facing*(1.3*rr2))
     faces=[(r*n+c,r*n+c+1,(r+1)*n+c+1,(r+1)*n+c) for r in range(n-1) for c in range(n-1)]
     # Wind faces so the base normal faces forward/outward (the pink side).
     probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
     if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
-    center=Vector((-1.6,side*5.5,60.2))  # pinched base sinks into the skull
+    center=Vector((-1.6,side*4.6,60.2))  # pinched base sinks into the skull
     ear=mesh('Ear',[center+v for v in verts],faces,'Skin',1)
     ear.data.materials.append(MATS['Fur'])
     sol=ear.modifiers.new('Ear thickness','SOLIDIFY')
-    sol.thickness=.32; sol.offset=-1; sol.use_rim=True; sol.material_offset=1; sol.material_offset_rim=1
+    sol.thickness=.3; sol.offset=-1; sol.use_rim=True; sol.material_offset=0; sol.material_offset_rim=0
     bpy.ops.object.select_all(action='DESELECT'); ear.select_set(True)
     bpy.context.view_layer.objects.active=ear
     bpy.ops.object.convert(target='MESH')
@@ -278,18 +283,20 @@ for e in ears:
     # Contract: ear top exactly 65 cm.
     for v in e.data.vertices: v.co.z+=65.-top
 for side in (-1,1):
-    ellipsoid('EyeLid',(6.6,side*5.0,54.5),(1.75,.7,1.3),'Fur')
-    ellipsoid('Eye',(7.1,side*5.2,54.6),(1.4,.7,.98),'Eye')
+    ellipsoid('EyeLid',(6.6,side*3.65,54.5),(1.75,.7,1.3),'Fur')
+    ellipsoid('Eye',(7.1,side*3.85,54.6),(1.4,.7,.98),'Eye')
     tube('Mouth',[head_surface(x,side*a,.3) for x,a in ((16.6,.35),(14.5,.8),(12,1.05),(9.8,1.15))],.05,'Fur')
-    for i in range(4):
-        tube('Whisker',[(13+i*.6,side*3.7,50),(15+i*.6,side*9,50.8-i*.7),(12+i*2,side*(16+i),52-i*1.4)],.028,'Whisker',1)
+    for i in range(7):
+        # Rows on the whisker pad, fanning up/back to down/forward.
+        root=(12.6+i*.45,side*(2.95-.17*i),51.0-i*.12)  # on the pad surface
+        tube('Whisker',[root,(15+i*.5,side*(6.4-i*.15),51.6-i*.6),(14+i*1.4,side*(11+i*.3),52.6-i*1.1)],.028,'Whisker',1)
 
 # Open jacket: one continuous garment surface. Every body row, the collar stand,
 # the fold and the collar/lapel fall share one grid and one front-edge function,
 # so plackets, lapels and stitching cannot drift away from the shell edge.
 # Solidify gives real cloth thickness; its rim closes every boundary and the
 # inner shell carries the lining (Seam slot). The chest opening stays open.
-JACKET_PROFILE=[(18.5,8.9,10.7,-1),(21,9.1,10.6,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
+JACKET_PROFILE=[(23,9.3,10.8,-1),(25,9.3,10.7,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
                 (41,8.6,11.4,0),(43,7.7,10.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
 JACKET_THICKNESS=.4
 
@@ -318,11 +325,11 @@ def collar_bottom(t):
     # Collar sits at 44.6 cm behind the neck; near each front edge the fall
     # continues down the chest as the rolled lapel.
     e=min(t,1-t)
-    return 44.6-7.4*max(0.,1-e/.1)**1.5
+    return 44.6-3.6*max(0.,1-abs(e-.075)/.075)**1.3
 
 J=56
 rows=[]  # (kind, per-column (z, lift, cloth fold amplitude))
-body_z=[18.5+i*1.15 for i in range(26)]+[48.3]
+body_z=[23+i*.975 for i in range(26)]+[48.3]
 for z in body_z:
     rows.append(('body',[(z,0.,.22*max(0.,min(1.,(46-z)/6))) for _ in range(J)]))
 rows.append(('fall',[(48.8,.45,0.) for _ in range(J)]))
@@ -366,39 +373,44 @@ def box_mesh(name,items,mat):
 
 teeth=[]
 for side_t in (.004,.996):
-    for i in range(34):
-        z=19.2+i*.5
+    for i in range(26):
+        z=23.6+i*.5
         c=jacket_point(side_t,z,.16)
         n=Vector((c.x,c.y,0)).normalized(); w=Vector((0,0,1)); u=w.cross(n)
         c=c+u*(.12 if i%2 else -.12)
         teeth.append((c,n,u,w,(.12,.26,.13)))
-    tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (19,24,29,34,36.2)],.2,'Seam',1)
+    tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (23.4,27,31,34,36.2)],.2,'Seam',1)
 box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
     # Domed sleeve head sits under the dropped shoulder; no flat cap.
     chain_tube('Sleeve',[(0,side*10.6,40.5),(-1,side*14,29),(3,side*14,22)],
                lambda t:(3.9*(1-t)+3.2*t)*(.93+.07*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
     chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
-    ellipsoid('Hand',(4.3,side*14,19.9),(1.35,1.6,2.1),'Skin')
+    # Slender palm, long relaxed fingers and a pale pointed claw on every digit
+    # (2026-09-27 goal images). The thumb is its own part (skinned to thumb_*).
+    ellipsoid('Hand',(4.3,side*14,19.8),(1.1,1.35,2.25),'Skin')
     for finger in range(4):
-        # Relaxed, slightly curled fingers hanging from the palm.
-        y=side*(12.9+finger*.75)
-        length=(2.3,2.7,2.6,2.0)[finger]
-        base=Vector((5.0,y,18.4)); mid=base+Vector((.55,0,-length*.6)); tip=mid+Vector((-.15,0,-length*.45))
-        chain_tube('Finger',[base,mid,tip],lambda t:.42-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
-    chain_tube('Finger',[(4.4,side*15.2,19.4),(5.5,side*15.7,18.5),(6.1,side*15.5,17.7)],
-               lambda t:.45-.12*t,'Skin',caps=(.5,1.),segments=8,rings=6)
+        y=side*(13.0+finger*.6)
+        length=(3.3,3.9,3.7,2.9)[finger]
+        base=Vector((4.9,y,18.2)); mid=base+Vector((.6,0,-length*.58)); tip=mid+Vector((-.25,0,-length*.42))
+        chain_tube('Finger',[base,mid,tip],lambda t:.34-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
+        nail=(tip-mid).normalized()
+        limb('FingerClaw',tip-nail*.05,tip+nail*.75,.1,'Claw')
+    thumb=[Vector((4.4,side*15.2,19.4)),Vector((5.6,side*15.8,18.3)),Vector((6.5,side*15.6,17.1))]
+    chain_tube('Thumb',thumb,lambda t:.36-.13*t,'Skin',caps=(.5,1.),segments=8,rings=8)
+    nail=(thumb[2]-thumb[1]).normalized()
+    limb('ThumbClaw',thumb[2]-nail*.05,thumb[2]+nail*.7,.1,'Claw')
 for t0 in (.075,.925):
     # Slanted welt pocket stitched on the shell surface.
     d=-1 if t0<.5 else 1
-    tube('Pocket',[jacket_point(t0,28,.08),jacket_point(t0+d*.02,25.5,.08),jacket_point(t0+d*.035,23,.08)],.22,'Seam')
-for z in (19.4,20.4):
+    tube('Pocket',[jacket_point(t0,31,.08),jacket_point(t0+d*.02,28.8,.08),jacket_point(t0+d*.035,26.6,.08)],.22,'Seam')
+for z in (23.4,24.4):
     tube('HemStitch',[jacket_point(i/40*.99+.005,z,.06) for i in range(41)],.09,'Seam',1)
 for t0,t1 in ((.012,.2),(.8,.988)):
     tube('HemStitch',[jacket_point(t0+(t1-t0)*i/8,37.2-1.2*math.sin(math.pi*i/8),.06) for i in range(9)],.09,'Seam',1)
 tube('BackSeam',[jacket_point(.3+.4*i/12,39.5+.8*math.sin(math.pi*i/12),.06) for i in range(13)],.1,'Seam',1)
 for t0 in (.41,.59):
-    tube('BackSeam',[jacket_point(t0,z,.06) for z in (19.6,27,35,42.5)],.12,'Seam')
+    tube('BackSeam',[jacket_point(t0,z,.06) for z in (23.6,29,35.5,42.5)],.12,'Seam')
 
 # Tapered, curved tail with subtle ring anatomy.
 points=[Vector(p) for p in [(-6,0,17),(-14,1,9),(-23,3,5),(-34,5,3),(-44,9,2),(-51,13,2.5)]]
@@ -546,7 +558,7 @@ def combine(objects, name):
             # FBX -> Unreal reflects Y. Name sides by their runtime coordinates.
             side = 'L' if center.y > 0 else 'R'
             bone = 'root'
-            if label in ('Hand','Finger'):
+            if label in ('Hand','Finger','Thumb','FingerClaw','ThumbClaw'):
                 bone = 'forearm_' + side
             elif label in ('Head','MuzzleLight','Nose','Ear','EarInner','EyeLid','Eye','Brow','Mouth','Whisker','CheekFur'):
                 bone = 'head'

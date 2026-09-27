@@ -114,14 +114,17 @@ def jacket(g):
     # areas and edges (pointiness), grime toward the hem, crumpled wrinkles and
     # a fine diagonal twill/canvas grain in the normal.
     blot = g.noise(.12, 3, .5)
-    # Deeper, less saturated violet: the first Unreal review read the jacket as neon.
-    base = g.ramp(blot, [(.25, (.062, .026, .11)), (.5, (.095, .042, .158)), (.8, (.135, .066, .205))])
+    # Red-violet suede (2026-09-27 turnaround). Calibrated on the Unreal render
+    # against Chuck-Turnaround.png (sRGB about 86, 46, 113): Unreal reads these
+    # far more saturated than the Blender AgX preview, so green is kept up.
+    base = g.ramp(blot, [(.25, (.095, .043, .144)), (.5, (.146, .079, .208)), (.8, (.197, .13, .256))])
     wear = g.math('MULTIPLY', g.math('SUBTRACT', g.pointiness, .5), 7., clamp=True)
     wear = g.math('MULTIPLY', wear, g.noise(1.8, 2, .6))
     crumple = g.noise(.9, 5, .6)
     raised = g.math('MULTIPLY', g.math('SUBTRACT', crumple, .52), 3., clamp=True)
-    faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.21, .14, .26))
-    grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 18.), .12, clamp=True), clamp=True)
+    faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.22, .14, .27))
+    # Grime toward the hem, at 26 cm after the v1.1 shape amendment.
+    grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 26.), .12, clamp=True), clamp=True)
     color = g.mix(g.math('MULTIPLY', grime, .4), faded, (.06, .03, .055))
     twill = g.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='DIAGONAL')
     twill.inputs['Scale'].default_value = 2.6; twill.inputs['Distortion'].default_value = 2.
@@ -144,29 +147,41 @@ def fur(g):
     mott = g.noise(.35, 4, .55)
     streak = g.noise(2.2, 6, .65, stretch=(3.5, 3.5, .45))
     tone = g.math('ADD', g.math('MULTIPLY', mott, .5), g.math('MULTIPLY', streak, .5))
-    base = g.ramp(tone, [(.25, (.115, .092, .07)), (.5, (.185, .145, .108)), (.75, (.255, .205, .155))])
-    color = g.mix(g.math('MULTIPLY', back, .45), base, (.08, .064, .05))
+    base = g.ramp(tone, [(.25, (.105, .072, .045)), (.5, (.19, .133, .085)), (.75, (.275, .197, .128))])
+    color = g.mix(g.math('MULTIPLY', back, .45), base, (.07, .047, .03))
     g.finish(color, g.math('ADD', .78, g.math('MULTIPLY', streak, .12)), 0., streak, .35, .06)
 
 def chest(g):
     streak = g.noise(2.5, 6, .6, stretch=(3.5, 3.5, .45))
     base = g.ramp(g.math('ADD', g.math('MULTIPLY', g.noise(.5, 3, .5), .6), g.math('MULTIPLY', streak, .4)),
-                  [(.25, (.3, .235, .17)), (.55, (.4, .325, .24)), (.8, (.47, .4, .31))])
+                  [(.25, (.3, .245, .18)), (.55, (.39, .33, .255)), (.8, (.46, .4, .315))])
+    # Whisker-pad follicle dots (References/ArtDirection/Chuck-Snout-Fur-Target.png):
+    # rows of small dark pores on the cream muzzle sides only (v1.2 object space).
+    def band(v, a, b):
+        return g.math('MULTIPLY', g.math('SUBTRACT', v, a), 1. / (b - a), clamp=True)
+    x, z, y = g.axis(0), g.axis(2), g.math('ABSOLUTE', g.axis(1))
+    pad = g.math('MULTIPLY', band(x, 9.8, 10.5), g.math('SUBTRACT', 1., band(x, 13., 13.6), clamp=True))
+    pad = g.math('MULTIPLY', pad, g.math('MULTIPLY', band(z, 52.1, 52.6), g.math('SUBTRACT', 1., band(z, 54.2, 54.7), clamp=True)))
+    pad = g.math('MULTIPLY', pad, band(y, .7, 1.1))
+    vor = g.node('ShaderNodeTexVoronoi'); vor.inputs['Scale'].default_value = 2.6
+    g.link(g.P, vor.inputs['Vector'])
+    dot = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', vor.outputs['Distance'], .07), 14., clamp=True), clamp=True)
+    base = g.mix(g.math('MULTIPLY', g.math('MULTIPLY', dot, pad), .85), base, (.1, .07, .06))
     g.finish(base, .82, 0., streak, .3, .05)
 
 def skin(g):
     # Pink-brown bare skin: mottling, darker creases, ring scales on the tail
     # (x < -8), slightly darker, rougher pads on the paw soles.
     mott = g.noise(1.4, 4, .6)
-    base = g.ramp(mott, [(.3, (.26, .11, .095)), (.55, (.34, .16, .13)), (.8, (.4, .2, .165))])
+    base = g.ramp(mott, [(.3, (.4, .165, .14)), (.55, (.52, .235, .195)), (.8, (.6, .29, .24))])
     rings = g.node('ShaderNodeTexWave', wave_type='RINGS', rings_direction='X')
     rings.inputs['Scale'].default_value = .9; rings.inputs['Distortion'].default_value = .4
     g.link(g.P, rings.inputs['Vector'])
     tail = g.math('MULTIPLY', g.math('SUBTRACT', -8., g.axis(0)), .5, clamp=True)
     ring = g.math('MULTIPLY', tail, rings.outputs['Fac'])
-    color = g.mix(g.math('MULTIPLY', ring, .35), base, (.2, .085, .075))
+    color = g.mix(g.math('MULTIPLY', ring, .3), base, (.3, .12, .1))
     pad = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.axis(2), 2.2), clamp=True)
-    color = g.mix(g.math('MULTIPLY', pad, .5), color, (.22, .09, .08))
+    color = g.mix(g.math('MULTIPLY', pad, .5), color, (.34, .14, .12))
     height = g.math('ADD', g.math('MULTIPLY', ring, .7), g.math('MULTIPLY', g.noise(9, 3, .6), .3))
     g.finish(color, g.math('ADD', .55, g.math('MULTIPLY', pad, .2)), 0., height, .25, .03)
 
@@ -175,7 +190,7 @@ def eye(g):
 
 def claw(g):
     streak = g.noise(3, 4, .6, stretch=(.6, 3, 3))
-    g.finish(g.ramp(streak, [(.2, (.3, .25, .18)), (.8, (.5, .44, .34))]), .42, 0., streak, .15, .02)
+    g.finish(g.ramp(streak, [(.2, (.5, .46, .4)), (.8, (.72, .69, .62))]), .38, 0., streak, .15, .02)
 
 def metal(g):
     # Worn nickel/steel zipper teeth, as in the reference (not dark brass).

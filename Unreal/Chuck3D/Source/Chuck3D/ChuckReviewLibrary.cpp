@@ -71,6 +71,8 @@ bool UChuckReviewLibrary::SetEditorComponentPose(USkeletalMeshComponent* Compone
     Component->UpdateBounds();
     Component->MarkRenderTransformDirty();
     Component->MarkRenderDynamicDataDirty();
+    // Props attached to bones (the cigarette on socket_cigarette) follow the pose.
+    Component->UpdateChildTransforms(EUpdateTransformFlags::OnlyUpdateIfUsingSocket);
     return true;
 #else
     return false;

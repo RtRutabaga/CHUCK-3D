@@ -2,7 +2,8 @@
 
 blender --background SourceAssets/Chuck/V1/Chuck_V1.blend --python SourceAssets/Chuck/V1/build_groom.py
 
-Grows short, sleek rat fur on the exposed fur/cream surfaces of
+Grows shaggy, clumped rat fur (References/ArtDirection/Chuck-Turnaround.png:
+longer coat, spiky crown, short muzzle) on the exposed fur/cream surfaces of
 SK_Chuck_Groomed (the v1 mesh without geometric tufts) in its rest pose and
 writes SourceAssets/Chuck/V1/Groom/GR_Chuck.abc plus groom_metadata.json.
 Surfaces covered by the jacket/sleeves and the eyelids get no strands.
@@ -19,8 +20,13 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
+import sys
 
 V1 = Path(bpy.data.filepath).parent
+sys.path.insert(0, str(V1.parents[2] / 'Tools'))
+# Source heights below are v1.0 values mapped by the v1.1 shape amendment.
+from chuck_v1_shape import Z, X  # noqa: E402
 OUT = V1 / 'Groom'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
 rng = random.Random(4217)
@@ -36,26 +42,41 @@ mesh.calc_loop_triangles()
 mat_names = [m.name.split('.')[0] for m in mesh.materials]
 tree = BVHTree.FromObject(mesh_obj, deps)
 poly_mat = [p.material_index for p in mesh.polygons]
-EYES = [Vector((7.1, s * 5.2, 54.6)) for s in (1, -1)]
+EYES = [Vector((X(7.1), s * 3.85, Z(54.6))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
-EARS = [Vector((-1.6, s * 5.5, 60.4)) for s in (1, -1)]
+EARS = [Vector((-1.6, s * 4.6, Z(60.4))) for s in (1, -1)]
 
 # Group definitions: strands, length range (cm), flow direction chooser.
 def flow_for(p):
-    if p.z > 47.5:                       # head and muzzle: sleek toward the tail
+    if p.z > Z(47.5):                    # head and muzzle: sleek toward the tail
         return Vector((-1., 0., -.25))
-    if p.z < 19.:                        # legs: straight down
+    if p.z < Z(19.):                     # legs: straight down
         return Vector((.1, 0., -1.))
     return Vector((-.45, 0., -1.))       # body: down and back
 
 GROUPS = {
-    'Fur_Body':  {'count': 30000, 'length': (.55, 1.05)},
-    'Fur_Back':  {'count': 16000, 'length': (.65, 1.2)},
-    'Fur_Cream': {'count': 22000, 'length': (.35, .85)},
+    'Fur_Body':  {'count': 60000, 'length': (.9, 1.6)},
+    'Fur_Back':  {'count': 32000, 'length': (1.0, 1.8)},
+    'Fur_Cream': {'count': 44000, 'length': (.6, 1.15)},
 }
-ROOT_WIDTH, TIP_WIDTH = .0065, .0015  # cm: about 65 um at the root
-POINTS = 5
+ROOT_WIDTH, TIP_WIDTH = .0055, .001  # cm: about 55 um at the root
+POINTS = 6
+CLUMP_EVERY = 14      # one clump guide per this many strands
+CLUMP_PULL = .6       # how far tips converge on their guide (0..1)
+
+def region_scale(p):
+    """Length and lift multipliers: short sleek muzzle, spiky crown and
+    cheeks, fluffy thighs, as in the turnaround."""
+    if p.z > Z(47.5) and p.x > X(7.5):
+        return .45, .8                   # muzzle and snout
+    if p.z > Z(55.):
+        return 1.2, 1.6                  # crown between the ears
+    if p.z > Z(47.5):
+        return .9, 1.3                   # cheeks and nape
+    if p.z < Z(19.):
+        return 1., 1.1                   # thighs and shins
+    return 1., 1.
 
 def group_of(tri, p, n):
     mat = mat_names[tri.material_index]
@@ -64,7 +85,7 @@ def group_of(tri, p, n):
     if mat != 'Fur':
         return None
     # Darker coat along the back, crown and upper snout.
-    back = n.dot(Vector((-1., 0., .35)).normalized()) > .3 or (p.z > 55.5 and n.z > .35)
+    back = n.dot(Vector((-1., 0., .35)).normalized()) > .3 or (p.z > Z(55.5) and n.z > .35)
     return 'Fur_Back' if back else 'Fur_Body'
 
 def covered(p, n):
@@ -75,7 +96,7 @@ def covered(p, n):
 
 def near_eye(p):
     return any((p - e).length < 2.3 for e in EYES) or any(
-        (p - e).length < 5.2 and abs(p.y) > 4.6 and p.z > 56.5 for e in EARS)
+        (p - e).length < 4.8 and abs(p.y) > 3.7 and p.z > Z(56.5) for e in EARS)
 
 # Area-weighted candidate triangles per group.
 cands = {g: [] for g in GROUPS}
@@ -91,7 +112,7 @@ for g, spec in GROUPS.items():
     tris = cands[g]
     if not tris: continue
     # Denser on the head (seen close up, and the skin shows between strands).
-    weights = [t.area * (2.2 if t.center.z > 47.5 else 1.) for t in tris]
+    weights = [t.area * (3.2 if t.center.z > Z(47.5) else 1.) for t in tris]
     tries = 0
     while len(strands[g]) < spec['count'] and tries < spec['count'] * 4:
         tries += 1
@@ -103,7 +124,9 @@ for g, spec in GROUPS.items():
         n = t.normal.normalized()
         # Fur stops at the ankle: the paws stay bare pink skin (strands rooted
         # lower hung over the paw tops in the Unreal review).
-        if root.z < 4.8 or near_eye(root) or covered(root, n):
+        # Whisker pads keep sparse fur so their follicle dots show (target image).
+        pad = root.x > X(11.8) and Z(49.8) < root.z < Z(51.8) and abs(root.y) > .8
+        if root.z < Z(4.8) or near_eye(root) or covered(root, n) or (pad and rng.random() < .7):
             rejected += 1; continue
         flow = flow_for(root)
         flow = flow - n * flow.dot(n)
@@ -113,17 +136,39 @@ for g, spec in GROUPS.items():
         jitter = Vector((rng.gauss(0, .25), rng.gauss(0, .25), rng.gauss(0, .15)))
         jitter -= n * jitter.dot(n)
         flow = (flow + jitter).normalized()
-        length = rng.uniform(*spec['length'])
-        lift = rng.uniform(.25, .45)       # sleek: about 15-25 degrees off the skin
+        scale, lift_scale = region_scale(root)
+        length = rng.uniform(*spec['length']) * scale
+        lift = rng.uniform(.35, .7) * lift_scale  # shaggy: about 20-45 degrees off the skin
         pts = [root - n * .02]             # root slightly below the skin
         pos = root.copy()
         for k in range(1, POINTS):
             f = k / (POINTS - 1)
-            # The strand leaves the skin at `lift`, then lies down along the flow.
-            d = (n * lift * (1 - f) + flow).normalized()
-            pos = pos + d * (length / (POINTS - 1))
+            # The strand leaves the skin at `lift`, then lies down along the
+            # flow, with a little frizz so the coat is not combed flat.
+            d = (n * lift * (1 - f * .8) + flow).normalized()
+            frizz = Vector((rng.gauss(0, .12), rng.gauss(0, .12), rng.gauss(0, .12))) * f
+            pos = pos + (d + frizz) * (length / (POINTS - 1))
             pts.append(pos.copy())
         strands[g].append(pts)
+
+    # Clumping: every strand's tip converges on the matching point of a nearby
+    # guide strand, so the coat reads as wet-looking locks, not a velvet.
+    curves = strands[g]
+    guides = curves[::CLUMP_EVERY]
+    kd = KDTree(len(guides))
+    for i, gpts in enumerate(guides):
+        kd.insert(gpts[0], i)
+    kd.balance()
+    for pts in curves:
+        _, gi, dist = kd.find(pts[0])
+        gpts = guides[gi]
+        if dist > 1.2 or gpts is pts:
+            continue
+        for k in range(1, POINTS):
+            f = (k / (POINTS - 1)) ** 1.4 * CLUMP_PULL
+            target = pts[0] + (gpts[k] - gpts[0])
+            target = target.lerp(gpts[k], .5)
+            pts[k] = pts[k].lerp(target, f)
 
 ev.to_mesh_clear()
 
@@ -157,10 +202,12 @@ meta = {
     'total_strands': sum(len(c) for c in strands.values()),
     'width_cm': {'root': ROOT_WIDTH, 'tip': TIP_WIDTH},
     'rejected_roots_covered_eye_or_ear': rejected,
-    # Unreal's hair shading renders darker than a surface BSDF; these are tuned
-    # against the first engine review so the coat reads grey-brown, not charcoal.
-    'suggested_hair_colours_linear': {'Fur_Body': [.3, .245, .19], 'Fur_Back': [.2, .165, .13],
-                                      'Fur_Cream': [.62, .54, .42]},
+    # Warm taupe-brown coat, darker back/crown and beige-cream belly after the
+    # 2026-09-27 turnaround, calibrated on the Unreal review render against the
+    # turnaround's leg fur (sRGB about 89, 71, 62).
+    'suggested_hair_colours_linear': {'Fur_Body': [.23, .13, .07], 'Fur_Back': [.17, .105, .062],
+                                      'Fur_Cream': [.56, .44, .33]},
+    'clumping': {'guide_every': CLUMP_EVERY, 'tip_pull': CLUMP_PULL},
     'coordinates': 'Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). '
                    'Set the groom import conversion so the result matches SK_Chuck (verify on import).',
     'alembic_limits': 'Only positions and widths are exported; colour is per group (object), not per strand.',

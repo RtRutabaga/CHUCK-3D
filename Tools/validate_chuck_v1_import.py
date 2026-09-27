@@ -7,7 +7,11 @@ import unreal
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/'SourceAssets/Chuck/V1'
 DEST='/Game/Characters/Chuck/V1'
-table=json.loads((SOURCE.parent/'rig_proposal.json').read_text())
+import sys
+sys.path.insert(0,str(ROOT/'Tools'))
+import chuck_v1_shape
+# Accepted v1.0 table mapped through the v1.1 shape amendment.
+table=chuck_v1_shape.load_effective_table(ROOT)
 manifest=json.loads((SOURCE/'Animations/manifest.json').read_text())
 mesh=unreal.load_asset(DEST+'/SK_Chuck')
 skeleton=mesh.get_editor_property('skeleton')

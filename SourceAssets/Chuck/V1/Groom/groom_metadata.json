@@ -2,55 +2,59 @@
  "file": "Groom/GR_Chuck.abc",
  "source_mesh": "SK_Chuck_Groomed (rest pose)",
  "skeleton": "/Game/Characters/Chuck/V1/SK_Chuck",
- "points_per_strand": 5,
+ "points_per_strand": 6,
  "groups": {
   "Fur_Body": {
-   "strands": 30000,
+   "strands": 60000,
    "length_cm": [
-    0.55,
-    1.05
+    0.19,
+    1.951
    ],
-   "mean_length_cm": 0.8
+   "mean_length_cm": 1.109
   },
   "Fur_Back": {
-   "strands": 16000,
+   "strands": 32000,
    "length_cm": [
-    0.649,
-    1.199
+    0.317,
+    2.269
    ],
-   "mean_length_cm": 0.924
+   "mean_length_cm": 1.437
   },
   "Fur_Cream": {
-   "strands": 22000,
+   "strands": 44000,
    "length_cm": [
-    0.351,
-    0.85
+    0.198,
+    1.266
    ],
-   "mean_length_cm": 0.6
+   "mean_length_cm": 0.708
   }
  },
- "total_strands": 68000,
+ "total_strands": 136000,
  "width_cm": {
-  "root": 0.0065,
-  "tip": 0.0015
+  "root": 0.0055,
+  "tip": 0.001
  },
- "rejected_roots_covered_eye_or_ear": 52137,
+ "rejected_roots_covered_eye_or_ear": 95250,
  "suggested_hair_colours_linear": {
   "Fur_Body": [
-   0.3,
-   0.245,
-   0.19
+   0.23,
+   0.13,
+   0.07
   ],
   "Fur_Back": [
-   0.2,
-   0.165,
-   0.13
+   0.17,
+   0.105,
+   0.062
   ],
   "Fur_Cream": [
-   0.62,
-   0.54,
-   0.42
+   0.56,
+   0.44,
+   0.33
   ]
+ },
+ "clumping": {
+  "guide_every": 14,
+  "tip_pull": 0.6
  },
  "coordinates": "Blender source cm, Z-up; the Alembic exporter writes Y-up (x, z, -y). Set the groom import conversion so the result matches SK_Chuck (verify on import).",
  "alembic_limits": "Only positions and widths are exported; colour is per group (object), not per strand."

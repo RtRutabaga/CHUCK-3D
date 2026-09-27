@@ -385,3 +385,145 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Lazy auto-follow of the camera behind a moving Chuck. It changes how camera-relative input steers, so it needs the user's feel feedback first.
   - No physical-controller or subjective comfort test.
   - Traversal (run/climb/vault) waits for the user's scope decision (AGENT-WORKFLOW suggested order, step 4).
+
+## Seventeenth pass — new goal images; first look pass toward them
+
+- **Request (2026-09-27):** the user supplied four new goal images and asked to bring Chuck closer to them before any camera or roll/jump work.
+- **Source commit:** on top of `00e46d6`, branch `codex/claude-character`.
+- **References:** `References/ArtDirection/Chuck-{Turnaround,Standing-Smoking,Run-Profile,Run-Cycle-Sheet}.png` (byte-exact, SHA-256 in `docs/ART-DIRECTION.md`; LFS, 8.6 MB). `docs/ART-DIRECTION.md` has a new "Goal images, 2026-09-27" section with measured targets. `References/PROVENANCE.md` and `docs/CHARACTER-PLAN.md` point to them.
+- **Measured against the turnaround** (65 cm scale, front view): the goal head is about 8–9 cm wide against our 14.6 cm. The goal jacket runs hem ≈ 25 cm to collar ≈ 53 cm against our 18.5–49 cm. The goal coat is warm brown and shaggy against our cool grey and sleek.
+- **Changes** (all in generators, reproducible):
+  - `Tools/build_chuck_model.py`:
+    - `HEAD_NARROW = 0.72` on the skull half-widths, with the eyes, ears and whisker roots moved in with it;
+    - ears 8.6 cm tall with pink backs (bare skin both sides);
+    - jacket cropped to a 23 cm hem, with zipper, pockets, hem stitching and back seams moved up;
+    - a broader collar-to-lapel roll; the old narrow strip read as a drawstring.
+  - `Tools/build_chuck_v1.py`: slimmer legs (radius 3.7 instead of 4.3 cm at the haunch).
+  - `bake_textures.py`:
+    - warm taupe-brown coat, beige belly, pinker skin, pale claws;
+    - red-violet jacket calibrated on the Unreal render (sRGB 88, 62, 113 against the goal's 86, 46, 113; before this it was 100, 21, 125, near neon);
+    - hem grime moved to the new hem.
+  - `build_groom.py`:
+    - shaggy, clumped coat: 6 points per strand, lengths 0.6–1.8 cm, 20–45° lift, frizz, tips pulled to a guide strand (1 per 14, pull 0.6);
+    - region scales: short muzzle, spiky crown, fluffier legs;
+    - warm colours; eye and ear exclusions follow the narrower head.
+  - `import_chuck_v1.py` / `import_chuck_groom.py`: re-importing over existing materials crashed UE 5.7.4 (`Assertion failed: !IsRooted()` in `DeleteAllMaterialExpressions`). The scripts now keep an existing material and update it in place: `M_Chuck_V1` has its wiring checked, and the `M_Fur_*` colour constants are updated.
+- **Rig contract:** unchanged. The 41 bones and all bone positions are the same, and the clips were regenerated from the same table. The mesh is now 208,413 triangles (170,544 for the groom variant).
+- **Verified** (Blender 4.5.14, UE 5.7.4, one heavy process at a time):
+  - `check_v1.py`: PASS. Groom roots in Unreal: 706 at max 0.020 cm. Groom counts 30,000/16,000/22,000 with bindings.
+  - `Import-ChuckGroom.ps1 -Review`: all steps verified.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **49/49** each. Uncapped with and without groom: 0 failures.
+  - Motion measures are unchanged (slip 0, stop 18.0–18.7 cm, turn −90.000, landing 0.9997 cm).
+  - Groom GPU cost is still about 1.0 ms (3.07 vs 2.09 ms, uncapped at 1280×720), despite longer six-point strands.
+- **Evidence:**
+  - `Review/goal_compare_turnaround_unreal.jpg` (goal against the Unreal review);
+  - refreshed `groomed_*`, `textured_*`, `neutral_*`, `pose_*`, `strip_*`, `ankle_join.jpg`, `unreal_groom_*` and `runtime_front.jpg`.
+  - Note: a `-NoGroom` verifier run overwrites the game's `Chuck_Front.png`. The runtime capture was retaken from a groom run.
+- **Remaining gaps to the goal images** (next passes, largest first):
+  1. **Proportions:** the goal has long, slender legs (crotch ≈ 19 cm against our ≈ 16 cm) and a narrower torso and jacket (about 29 cm against 34 cm across the sleeves). Moving the hips and thighs changes rig bone positions: the contract table, clips, runtime reach constants and the hip test.
+  2. **Cigarette prop and smoke:** planned as a separate mesh on `socket_cigarette`, so a future pickup design isn't pre-empted.
+  3. **Hands:** larger, with longer fingers and claws.
+  4. **Collar:** a pointed shirt collar and a flatter lapel.
+  5. **Belly** reads grey and flat in-game when shaded; the colour calibration was done under the editor review lighting.
+  6. **Run clip**, from `Chuck-Run-Cycle-Sheet.png`.
+
+## Eighteenth pass — v1.1 proportions (legs, torso and head toward the turnaround)
+
+- **Source commit:** on top of `699efd0`, branch `codex/claude-character`.
+- **Contract:** `docs/RIG-CONTRACT-V1.md` has a new "v1.1 shape amendment" section.
+  - Same 41 bones, hierarchy, flags and sockets; rest positions move.
+  - `Tools/chuck_v1_shape.py` (new, pure Python) maps both the accepted v1.0 table and the legacy study geometry.
+- **The shape:**
+  - paws unchanged; legs stretched so the hip rises 3 cm (thigh 10.20 cm, calf 10.65 cm, hip 22.5 cm);
+  - torso, arms and jacket up 3 cm;
+  - head compressed back under the fixed 65 cm ear tip;
+  - torso and jacket ×0.88 in width, arm chain ×0.88.
+- **Changed files:**
+  - `Tools/build_chuck_v1.py`: remaps the geometry and the table; weight bands use `Z()`; asserts the ear tip is 65 cm; metadata records the amendment.
+  - `SourceAssets/Chuck/V1/check_v1.py` and `Tools/validate_chuck_v1_import.py`: use the effective table.
+  - `build_groom.py`: region heights use `Z()`.
+  - `bake_textures.py`: hem grime at 26 cm.
+  - `import_chuck_v1.py` / `import_chuck_groom.py`: `update_skeleton_reference_pose` (the first re-import kept the old skeleton rest pose: 3.49 cm error).
+  - `DockGameMode.cpp`: hip check now (−2, −6, 22.5).
+  - Regenerated FBX, blend, groom, textures, `/Game/Characters/Chuck/V1` assets and Review images.
+- **Verified:**
+  - `check_v1.py` PASS.
+  - `Import-ChuckGroom.ps1 -Review`: all steps, including the rest-pose validator < 0.01 cm; roots 706 at max 0.020 cm.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **49/49**. Uncapped with and without groom: 0 failures.
+  - Contact slip 0; landing ball 1.0016 cm against 1.0 rest; stop 18.0–18.7 cm; turn −90.000.
+  - Groom about 0.8 ms (2.92 vs 2.09 ms uncapped).
+  - Evidence: `Review/goal_compare_turnaround_unreal.jpg` and the refreshed Review set.
+- **Remaining gaps to the goal images:**
+  - cigarette prop and smoke;
+  - larger hands with long fingers and claws;
+  - pointed shirt collar and flatter lapels (one lapel end still hangs like a tab in 3/4 view);
+  - belly reads grey in-game shade;
+  - run clip.
+- **Next-owner note for Codex:** the table consumers now read `chuck_v1_shape.load_effective_table()`. `Check-RigContract.py` still validates the unchanged v1.0 base (script/JSON match). It does not check the v1.1 positions, which are covered by `check_v1.py` and the Unreal validator.
+
+## Nineteenth pass — cigarette prop and smoke wisp
+
+- **Source commit:** on top of `270cd37`, branch `codex/claude-character`.
+- **Why:** every goal image shows the cigarette in the left mouth corner with a thin smoke wisp. It is a **separate prop** on `socket_cigarette` (not skinned into the body), so the deferred pickup design stays open. `-ChuckNoCigarette` removes it.
+- **New files:**
+  - `SourceAssets/Chuck/V1/build_cigarette.py`, producing `Cigarette/SM_Cigarette.fbx` (7 cm; Paper, Filter, Ash, Ember), `SM_CigaretteSmoke.fbx` (16 cm crossed curling ribbons) and `T_CigaretteSmoke.png`;
+  - `Tools/import_chuck_cigarette.py`, run from `Import-ChuckV1.ps1`;
+  - `/Game/Characters/Chuck/V1/Cigarette/*`.
+- **Changed files:**
+  - `ChuckCharacter.{h,cpp}`: `Cigarette` and `CigaretteSmoke` components. The prop's +X follows the exported bones' local axis, read from the imported rest pose (thigh → knee), so there is no hard-coded FBX axis conversion. The smoke sits at the mesh's lit end (bounds) with absolute, upright rotation.
+  - `DockGameMode.cpp`: new check `cigarette held in the left mouth corner with upright smoke` (aim · rest socket direction > 0.97, at the socket < 0.05 cm, smoke up > 0.999).
+  - `Verify-Package.ps1`: expects 50, or 49 with `-NoCapture`.
+  - `ChuckReviewLibrary.cpp`: `UpdateChildTransforms` after an editor pose, so socket props follow.
+  - `review_chuck_v1_unreal.py`: shows the prop and adds a `face` close-up.
+- **Materials:** flat paper, filter and ash; an ember with a slow 3 s emissive pulse (restrained, no flicker); translucent unlit smoke panning the mask upward, faded at the base, top and edges.
+- **Verified:**
+  - `Import-ChuckV1.ps1` (cigarette step `CHUCK_CIGARETTE_IMPORTED`, length 7.000 cm).
+  - Unreal groom review including `face`.
+  - Packaged `Verify-Package.ps1 -MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - `CHUCK_CIGARETTE_MEASURE aim_dot=0.9996 at_mouth_cm=0.0000 smoke_up=1.0000`.
+  - Evidence: `Review/unreal_groom_face.jpg` and `Review/goal_compare_cigarette.jpg`.
+- **Gaps:**
+  - The goal's cigarette sits a little further forward, nearer the nose; moving `socket_cigarette` would be a contract change.
+  - The smoke reads as a thin straight thread from most angles; the goal's curls more.
+  - There is no smoking animation (hand to mouth, puff), and the `-ChuckNoCigarette` path is untested in the packaged verifier.
+  - Still open from the goal list: larger hands, pointed shirt collar and flat lapels, belly shading in-game, run clip.
+
+## Twentieth pass — hands and shirt collar
+
+- **Source commit:** on top of `7974b61`, branch `codex/claude-character`.
+- **Hands** (`Tools/build_chuck_model.py`, after the goal images):
+  - slimmer palm;
+  - four long relaxed fingers, 2.9–3.9 cm (were 2.0–2.7 cm), and a longer thumb;
+  - a pale pointed claw on every digit.
+  - New part labels `Thumb`, `FingerClaw` and `ThumbClaw`. The thumb skins to `thumb_*` by part, not by a Y threshold: after the 0.88 arm narrowing the pinky surface already crossed the old 15 cm split. Claws are rigid on their digit. `chuck_v1_shape.ARM_PARTS` includes the new labels.
+- **Collar:** the collar fall now hangs to a **pointed shirt-collar tip** on each side, about 3.6 cm below the collar line (`collar_bottom`). Before, it ran 6.2 cm down the chest as a narrow roll that read as a dangling tab or drawstring.
+- **Review:** `preview_textured.py` gains `close_hand` and `close_collar` views.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Grip and curl poses (`Review/pose_overhead_grip_*`) inspected.
+- **Remaining look gaps:**
+  - belly reads grey in-game shade;
+  - cigarette sits slightly back from the goal's position;
+  - the smoke curls less than the goal's;
+  - run clip (`Chuck-Run-Cycle-Sheet.png`).
+
+## Twenty-first pass — shorter snout and finer, denser fur (user target image)
+
+- **Input:** the user's `References/ArtDirection/Chuck-Snout-Fur-Target.png` (byte-exact, SHA-256 `BF97F4DCDDD58205590298F8D05999DEEBF8036C2499B2A7A949EBB876421258`): "the snout should be shorter like this and overall with more hair detail like this".
+- **Source commit:** on top of `5694c73`, branch `codex/claude-character`.
+- **Changes:**
+  - **Snout:** v1.2 snout amendment, 0.82 length for head parts and bones (see `docs/RIG-CONTRACT-V1.md`). The front muzzle sections are fuller, with a slightly larger nose.
+  - **Cream and whisker pads:** the cream muzzle patch wraps up over the whisker pads. The bake adds follicle dots there, and the groom keeps the pads sparse (70% of roots skipped).
+  - **Whiskers:** 7 per side (was 4), fanning from the pad, shorter, 0.035 cm radius.
+  - **Groom:** 136,000 strands (was 68,000), 55 µm roots, 3.2× head density, lighter back and crown.
+  - **Unreal fur materials:** `M_Fur` is a parent hair material with a `HairColour` parameter × Hair Attributes seed variation (0.85–1.15). `M_Fur_{Body,Back,Cream}` are now instances. The old plain materials were deleted and recreated, and re-imports now just set the parameter.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Groom cost about 0.85 ms (2.82 vs 1.97 ms uncapped) despite twice the strands.
+  - Evidence: `Review/goal_compare_snout_fur.jpg` and the refreshed Review set.
+- **Gaps:**
+  - The follicle dots don't yet read through the fur at preview distance.
+  - The nose is still rounder than the target's.
+  - The target's fur has lighter tips and more visible individual hairs; Unreal's seed variation adds some of this, but the Blender preview cannot show it.

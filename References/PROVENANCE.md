@@ -12,6 +12,10 @@ Added 2026-09-26: `References/ai-dev-notes.md`, copied byte-for-byte from the us
 SHA-256 (source and copy): `2087EA97E404E02D4B956CADC4B6B293348B7F0E58378541244C0FA0A2C18BE5`.
 The user describes it as suggestions, not rigid rules. Applicability, conflicts with current project rules and open decisions: `docs/AI-DEV-NOTES-REVIEW.md`.
 
+## User-supplied goal images (2026-09-27)
+
+Four PNG goal images were added to `References/ArtDirection/` byte-for-byte from the user's Claude Code session attachments: `Chuck-Standing-Smoking.png`, `Chuck-Run-Profile.png`, `Chuck-Turnaround.png` and `Chuck-Run-Cycle-Sheet.png`. The hashes and what each fixes are in `docs/ART-DIRECTION.md` ("Goal images, 2026-09-27"). They are reference only, not game assets.
+
 ## Original game references
 
 Captured 2026-09-24 from read-only source: C:\Users\ashsm\OneDrive\Documents\CHUCK-game

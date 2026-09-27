@@ -42,7 +42,7 @@ Scene unit scale is 0.01 (centimetres). Re-importing `SK_Chuck.fbx` in Blender g
 
 ## Mesh and weights
 
-- One skinned mesh, 207,771 triangles (whiskers 0.05 cm radius so they don't alias into dotted lines in-engine), one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
+- One skinned mesh, 208,614 triangles (170,544 for the groom variant); v1.1 proportions (`Tools/chuck_v1_shape.py`, docs/RIG-CONTRACT-V1.md) (whiskers 0.05 cm radius so they don't alias into dotted lines in-engine), one UV channel `UVMap`, nine material slots (Fur, Chest, Jacket, Seam, Skin, Eye, Claw, Metal, Whisker). Ear top at exactly 65 cm; paw soles at Z = -0.002…0.01 cm.
 - **Legs:** rebuilt knee-forward along thigh → calf → hock. Their domed ends sink into the paw heel mound.
 - **Paws:** now part of the body (the legacy `paw_parts` at origin (-0.8, ±7, 1.96)).
 - **Continuity:** leg and paw are overlapping surfaces, not one merged manifold. The paw, heel mound included, is rigid on foot/toes. The ankle bend happens on the fur leg tube, which grades calf → foot over about 1.5 cm around the hock. The tube's end sits inside the heel mound and is fully foot-weighted, so the join stays closed under toe roll, paw lift and crouch (`Review/ankle_join.jpg`).
@@ -76,10 +76,11 @@ Rebuild after any mesh change:
 | `T_Chuck_ORM.png` (linear) | R = ambient occlusion (forced to 1 on the parked-island strip), G = roughness, B = metallic. |
 
 Surface design, following `References/ArtDirection`:
-- **Jacket:** worn, deep purple canvas (toned down after the first Unreal review read it as neon). Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
+- **Hands and collar (2026-09-27):** slender palms, long fingers (2.9–3.9 cm) with pale claws on every digit (parts `Finger`, `Thumb`, `FingerClaw`, `ThumbClaw`); pointed shirt-collar tips on the collar fall.
+- **Jacket:** worn red-violet suede/brushed canvas (2026-09-27 turnaround; more saturated than the first study's blue-purple, still below the neon of the first Unreal review). Cropped: the hem sits at 23 cm, so the hips and thighs show. Blotchy dye variation; sun-faded raised folds and edges (pointiness); grime toward the hem; crumple wrinkles, diagonal twill and fibre grain in the normal.
 - **Lining/stitching:** darker purple with fine grain.
-- **Fur:** grey-brown, darker along the back, with vertically stretched streaks following the hair.
-- **Chest:** warm cream with streaks.
+- **Fur:** warm taupe-brown (2026-09-27 turnaround), darker along the back, with vertically stretched streaks following the hair.
+- **Chest:** beige cream with streaks.
 - **Skin (ears, nose, hands, paws, tail):** pink-brown mottling, ring scales on the tail, darker sole pads, and a little subsurface in the preview only.
 - **Eyes:** glossy near-black (roughness 0.06).
 - **Claws:** horn with streaks.
@@ -99,7 +100,10 @@ Unreal strand fur, requested by the user in place of the spiky geometric tufts (
 ```
 
 - **Where the fur grows:** strands grow on `SK_Chuck_Groomed` **in the rest pose** (the script forces the armature to rest), on exposed Fur and Chest (cream) surfaces. Surfaces covered by the jacket, sleeves or chest patch get none; a short ray along the normal must be clear. Eyelids and the cupped ears stay bare.
-- **Strands:** 68,000 in total, 5 points each, 0.35–1.2 cm long, 65 µm root / 15 µm tip width. They lie sleek at about 15–25° to the skin and flow toward the tail on the head and muzzle, down and back on the body, and down on the legs and chest. The head has 2.2× density.
+- **Strands:** 68,000 in total, 6 points each, 75 µm root / 15 µm tip width. The coat is shaggy and clumped, after the 2026-09-27 turnaround:
+  - Lengths: body 0.9–1.6 cm, back 1.0–1.8 cm, cream 0.6–1.15 cm, scaled by region (muzzle ×0.45, crown ×1.2 and more lifted for a spiky look, cheeks and nape ×0.9).
+  - Strands leave the skin at about 20–45° with slight frizz. Their tips converge on the nearest of one guide strand per 14 (`clumping` in the metadata).
+  - Flow is toward the tail on the head and muzzle, down and back on the body, and down on the legs and chest. The head has 2.2× density.
 - **Groups** (one Alembic curves object each; Blender's Alembic export drops custom per-strand attributes such as `groom_color`, so colour is per group): `Fur_Body` 30,000, `Fur_Back` 16,000 (back, crown and upper snout, darker), `Fur_Cream` 22,000 (chest, cheeks, chin). Suggested linear colours are in `groom_metadata.json`.
 - **Coordinates:** source cm, Z-up. The Alembic is written Y-up (x, z, −y), so the Unreal groom import conversion must be set so it lands on `SK_Chuck_Groomed`. `check_v1.py` verifies the roots lie 0.020 cm under that mesh's rest surface (in source space).
 - **Texture bake:** textures are baked from the tuft-free mesh, so no tuft AO dots show under the groom. The parked tuft islands get flat material colour, roughness, normal and metallic, so the maps also stay correct for `SK_Chuck` (the no-groom fallback).
@@ -154,3 +158,21 @@ Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperex
 - **Hands:** one curl bone for four fingers, as accepted for v1.
 - **Ankle:** the leg/paw seam at the ankle is covered by the heel mound, not merged topology.
 - **Not done:** no LODs (the Unreal importer can generate them); no Unreal import. The UV seams are automatic.
+
+## Cigarette
+
+Every goal image shows the cigarette held in the left mouth corner with a thin smoke wisp. It is a **separate prop**, not part of the skinned body, so a future pickup design can show or hide it (the `-ChuckNoCigarette` launch flag removes it).
+
+```powershell
+& $B --background --factory-startup --python SourceAssets\Chuck\V1\build_cigarette.py
+```
+
+- **Assets:** `Cigarette/SM_Cigarette.fbx` is 7 cm, radius 0.3 cm, filter end at the origin, lit end at +X. Slots: Paper, Filter, Ash, Ember. `Cigarette/SM_CigaretteSmoke.fbx` is two crossed ribbons, 16 cm, curling and widening as they rise (slot Smoke). `T_CigaretteSmoke.png` is a vertically tileable wisp mask.
+- **Unreal:** `Tools/import_chuck_cigarette.py` runs from `Import-ChuckV1.ps1`.
+  - Flat paper, filter and ash materials.
+  - A slow 3 s emissive pulse on the ember.
+  - Translucent unlit smoke that pans the mask upward and fades at the base, the top and the edges.
+  - Existing materials are kept (delete an asset to rebuild its graph).
+- **Runtime:** `AChuckCharacter` attaches the prop to `socket_cigarette`. Its +X follows the exported bones' local axis, read from the imported rest pose, and the smoke sits at the mesh's lit end, upright in world space. The packaged check `cigarette held in the left mouth corner with upright smoke` measures aim, mouth distance and smoke orientation.
+- **Review:** `review_chuck_v1_unreal.py` shows the prop and adds a close `face` view (`Review/unreal_groom_face.jpg`, `Review/goal_compare_cigarette.jpg`).
+

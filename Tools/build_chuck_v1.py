@@ -22,11 +22,15 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'Tools'))
 from chuck_v1_pose import Poser  # noqa: E402
+import chuck_v1_shape as SHAPE  # noqa: E402
+from chuck_v1_shape import Z  # noqa: E402
 
 V1 = ROOT / 'SourceAssets' / 'Chuck' / 'V1'
 ANIM = V1 / 'Animations'
 ANIM.mkdir(parents=True, exist_ok=True)
-TABLE = json.loads((ROOT / 'SourceAssets/Chuck/rig_proposal.json').read_text(encoding='utf-8-sig'))
+# v1.1 shape amendment: the accepted v1.0 table mapped through chuck_v1_shape
+# (longer legs, narrower torso/arms, head compressed under the 65 cm ear tip).
+TABLE = SHAPE.load_effective_table(ROOT)
 G = runpy.run_path(str(ROOT / 'Tools/build_chuck_model.py'), init_globals={'CHUCK_GEOMETRY_ONLY': True})
 chain_tube, smoothstep, fur_surface, paw_parts = G['chain_tube'], G['smoothstep'], G['fur_surface'], G['paw_parts']
 head_axis_z, jacket_point = G['head_axis_z'], G['jacket_point']
@@ -40,15 +44,37 @@ def label(obj): return obj.name.split('.')[0]
 def side_of(p): return 'L' if p.y > 0 else 'R'
 
 # ---------------------------------------------------------------- geometry
+# The legacy study geometry is authored in v1.0 source space; map every part
+# through the same shape function as the bone table (world space, since some
+# parts keep an object location).
+for obj in [o for o in scene.objects if o.type in ('MESH', 'CURVE')]:
+    kind = SHAPE.kind_of(label(obj))
+    mw = obj.matrix_world; inv = mw.inverted()
+    def moved(co):
+        return inv @ Vector(SHAPE.point(mw @ Vector(co[:3]), kind))
+    if obj.type == 'MESH':
+        for v in obj.data.vertices:
+            v.co = moved(v.co)
+        obj.data.update()
+    else:
+        for spline in obj.data.splines:
+            for bp in spline.bezier_points:
+                bp.co = moved(bp.co)
+            for pt in spline.points:
+                pt.co = (*moved(pt.co), pt.co[3])
+ear_top = max((o.matrix_world @ v.co).z for o in scene.objects if label(o) == 'Ear' for v in o.data.vertices)
+assert abs(ear_top - 65.) < 1e-3, f'ear tip must stay at 65 cm, got {ear_top}'
 # Whiskers at 0.028 cm radius alias into dotted lines at game distance in
-# Unreal; v1 uses 0.05 cm (legacy output unchanged).
+# Unreal; v1 uses 0.035 cm, finer than before for the more numerous whiskers of
+# the snout/fur target (legacy output unchanged).
 for obj in [o for o in scene.objects if label(o) == 'Whisker']:
-    obj.data.bevel_depth = .05
+    obj.data.bevel_depth = .035
 for obj in [o for o in scene.objects if label(o) in ('Leg', 'LegFur')]:
     bpy.data.objects.remove(obj, do_unlink=True)
 
 def leg_radius(t):
-    return 4.3 - 1.6 * smoothstep(t, .08, .5) - .8 * smoothstep(t, .55, 1.)
+    # Slimmer than the first study (turnaround 2026-09-27: long, slender legs).
+    return 3.7 - 1.3 * smoothstep(t, .08, .5) - .7 * smoothstep(t, .55, 1.)
 
 PAW_ORIGIN = {}
 for s, y in (('L', 1), ('R', -1)):
@@ -61,7 +87,7 @@ for s, y in (('L', 1), ('R', -1)):
     PAW_ORIGIN[s] = Vector((-.8, y * 7, 1.96))
     paw_parts(PAW_ORIGIN[s])
 for i, part in enumerate([o for o in scene.objects if label(o) == 'Leg']):
-    fur_surface(part, 'LegFur', 'Fur', 1800, 131 + i, (.22, .55), (0, 0, -.8), lambda p, n: p.z < 21)
+    fur_surface(part, 'LegFur', 'Fur', 1800, 131 + i, (.22, .55), (0, 0, -.8), lambda p, n: p.z < Z(21))
 
 # ---------------------------------------------------------------- weights
 def seg(p, a, b):
@@ -91,7 +117,7 @@ def mix(*pairs):
 
 SPINE = ['pelvis', 'spine_01', 'spine_02', 'chest', 'neck']
 
-def thigh_pull(p, strength=.75, radius=(5., 11.5), height=(21., 28.)):
+def thigh_pull(p, strength=.75, radius=(5., 11.5), height=(Z(21.), Z(28.))):
     pull = {}
     for s in 'LR':
         hip, knee = H(f'thigh_{s}'), H(f'calf_{s}')
@@ -105,8 +131,8 @@ def thigh_pull(p, strength=.75, radius=(5., 11.5), height=(21., 28.)):
 def torso_weights(p):
     base = chain_weights(p, SPINE)
     s = side_of(p)
-    clav = .5 * smoothstep(abs(p.y), 5., 8.5) * (1 - smoothstep(abs(p.z - 41.5), 1.5, 4.))
-    pull = thigh_pull(p, .6, (4., 8.), (18., 23.))
+    clav = .5 * smoothstep(abs(p.y), 5. * SHAPE.TORSO_NARROW, 8.5 * SHAPE.TORSO_NARROW) * (1 - smoothstep(abs(p.z - Z(41.5)), 1.5, 4.))
+    pull = thigh_pull(p, .6, (4., 8.), (Z(18.), Z(23.)))
     rest = 1 - clav - sum(pull.values())
     return mix((rest, base), (clav, {f'clavicle_{s}': 1.}), (1., pull))
 
@@ -133,19 +159,21 @@ def hand_weights(p, lab):
     s = side_of(p)
     if lab == 'Hand':
         return chain_weights(p, [f'lowerarm_{s}', f'hand_{s}'], 1.5)
-    digit = f'thumb_{s}' if abs(p.y) > 15.0 else f'fingers_{s}'
+    digit = f'thumb_{s}' if lab in ('Thumb', 'ThumbClaw') else f'fingers_{s}'
+    if lab.endswith('Claw'):
+        return {digit: 1.}  # rigid on its digit
     return chain_weights(p, [f'hand_{s}', digit], 1.)
 
 JAWED = ('Head', 'MuzzleLight', 'Mouth', 'CheekFur')
 
 def head_weights(p, lab):
-    neck = .6 * (1 - smoothstep(p.z, 46.5, 49.5)) * (1 - smoothstep(p.x, 2., 5.))
+    neck = .6 * (1 - smoothstep(p.z, Z(46.5), Z(49.5))) * (1 - smoothstep(p.x, 2., 5.))
     jaw = 0.
     if lab in JAWED:
-        jaw = smoothstep(p.x, 3.5, 7.) * (1 - smoothstep(p.z - (head_axis_z(p.x) - 1.3), -.6, .6))
+        jaw = smoothstep(p.x, 3.5, 7.) * (1 - smoothstep(p.z - Z(head_axis_z(SHAPE.source_x(p.x)) - 1.3), -.6, .6))
     ear = 0.
     if lab == 'Ear':
-        ear = smoothstep(p.z, 58.5, 61.)
+        ear = smoothstep(p.z, Z(58.5), Z(61.))
     return mix((1 - neck - jaw - ear, {'head': 1.}), (neck, {'neck': 1.}), (jaw, {'jaw': 1.}),
                (ear, {f'ear_{side_of(p)}': 1.}))
 
@@ -177,7 +205,7 @@ FIELDS = {
     'torso': (('Torso', 'LightChest', 'ChestFur', 'BellyFur'), lambda p, l: torso_weights(p)),
     'garment': (('OpenJacket', 'Zipper', 'ZipperTape', 'Pocket', 'HemStitch', 'BackSeam'), lambda p, l: garment_weights(p)),
     'sleeve': (('Sleeve', 'Cuff'), lambda p, l: sleeve_weights(p)),
-    'hand': (('Hand', 'Finger'), hand_weights),
+    'hand': (('Hand', 'Finger', 'Thumb', 'FingerClaw', 'ThumbClaw'), hand_weights),
     'head': (('Head', 'MuzzleLight', 'Nose', 'EyeLid', 'Eye', 'Mouth', 'Whisker', 'CheekFur', 'Ear'), head_weights),
     'leg': (('Leg', 'LegFur'), lambda p, l: leg_weights(p)),
     'paw': (('Foot', 'Heel', 'Toe', 'Claw'), lambda p, l: paw_weights(p)),
@@ -692,6 +720,9 @@ scene.frame_start, scene.frame_end = 0, 59
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
 zs = [v.co.z for v in body.data.vertices]
 meta = {'contract': 'docs/RIG-CONTRACT-V1.md', 'table': 'SourceAssets/Chuck/rig_proposal.json',
+        'shape_amendment': {'module': 'Tools/chuck_v1_shape.py', 'version': 'v1.1', 'lift_cm': SHAPE.LIFT,
+                            'torso_narrow': SHAPE.TORSO_NARROW, 'arm_narrow': SHAPE.ARM_NARROW,
+                            'effective_heads_cm': {n: b['head'] for n, b in TABLE.items()}},
         'bones': len(TABLE), 'deforming': sum(b['deform'] for b in TABLE.values()),
         'triangles': tris, 'bounds_z_cm': [round(min(zs), 3), round(max(zs), 3)],
         'materials': sorted({m.name.split('.')[0] for m in body.data.materials}),

@@ -5,6 +5,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "AnimationRuntime.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -76,6 +79,21 @@ AChuckCharacter::AChuckCharacter()
         Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Grooms.Add(Hair);
     }
+    // Cigarette held in the left mouth corner (every goal image), a separate
+    // prop on the jaw's socket bone so a future pickup can show or hide it.
+    // The smoke wisp rises from the lit end and stays upright in world space.
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> CigaretteAsset(TEXT("/Game/Characters/Chuck/V1/Cigarette/SM_Cigarette.SM_Cigarette"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> SmokeAsset(TEXT("/Game/Characters/Chuck/V1/Cigarette/SM_CigaretteSmoke.SM_CigaretteSmoke"));
+    Cigarette = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cigarette"));
+    Cigarette->SetupAttachment(Body, TEXT("socket_cigarette"));
+    Cigarette->SetStaticMesh(CigaretteAsset.Object);
+    Cigarette->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Smoke = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CigaretteSmoke"));
+    Smoke->SetupAttachment(Cigarette);
+    Smoke->SetStaticMesh(SmokeAsset.Object);
+    Smoke->SetUsingAbsoluteRotation(true);
+    Smoke->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Smoke->SetCastShadow(false);
     Boom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     Boom->SetupAttachment(GetRootComponent());
     Boom->SetUsingAbsoluteRotation(true);
@@ -102,6 +120,30 @@ void AChuckCharacter::BeginPlay()
         }
         Grooms.Reset();
         GetMesh()->SetSkeletalMeshAsset(PlainMesh);
+    }
+    if (FParse::Param(FCommandLine::Get(), TEXT("ChuckNoCigarette")))
+    {
+        Smoke->DestroyComponent(); Cigarette->DestroyComponent();
+        Smoke = Cigarette = nullptr;
+    }
+    else if (const USkeletalMesh* Asset = GetMesh()->GetSkeletalMeshAsset())
+    {
+        // The prop is modelled along +X from the filter end. Exported bones all
+        // point along one local axis; read it from the imported rest pose
+        // (thigh -> knee) rather than hard-coding the FBX axis conversion.
+        const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
+        const int32 Thigh = Ref.FindBoneIndex(TEXT("thigh_L")), Knee = Ref.FindBoneIndex(TEXT("calf_L"));
+        if (Thigh != INDEX_NONE && Knee != INDEX_NONE)
+        {
+            const FTransform A = FAnimationRuntime::GetComponentSpaceTransformRefPose(Ref, Thigh);
+            const FTransform B = FAnimationRuntime::GetComponentSpaceTransformRefPose(Ref, Knee);
+            const FVector BoneAxis = A.InverseTransformVectorNoScale(B.GetLocation() - A.GetLocation()).GetSafeNormal();
+            Cigarette->SetRelativeRotation(FQuat::FindBetweenNormals(FVector::XAxisVector, BoneAxis));
+        }
+        if (const UStaticMesh* Prop = Cigarette->GetStaticMesh())
+        {
+            Smoke->SetRelativeLocation(FVector(Prop->GetBoundingBox().Max.X, 0, 0)); // the lit end
+        }
     }
     // Stance locks are world positions: pose after this frame's movement.
     GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);

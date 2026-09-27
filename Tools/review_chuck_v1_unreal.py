@@ -48,6 +48,28 @@ if GROOM:
         hair.set_editor_property('simulation_settings',simulation)
         hair.set_enable_simulation(False)
         hair.set_material(0,unreal.load_asset(DEST+'/M_'+group))
+# Cigarette prop and upright smoke on socket_cigarette, oriented like the
+# runtime (AChuckCharacter::BeginPlay): the prop's +X along the exported bones'
+# local axis, read from the imported rest pose (thigh -> knee).
+ref=unreal.AnimPoseExtensions.get_reference_pose(component.skeletal_mesh_asset.skeleton)
+thigh=unreal.AnimPoseExtensions.get_bone_pose(ref,'thigh_L',unreal.AnimPoseSpaces.WORLD)
+knee=unreal.AnimPoseExtensions.get_bone_pose(ref,'calf_L',unreal.AnimPoseSpaces.WORLD)
+bone_axis=unreal.MathLibrary.inverse_transform_direction(thigh,knee.translation-thigh.translation)
+def add_static(parent,socket,mesh):
+    params=unreal.AddNewSubobjectParams(parent_handle=subobjects.k2_gather_subobject_data_for_instance(hero)[0],new_class=unreal.StaticMeshComponent)
+    added,reason=subobjects.add_new_subobject(params)
+    comp=unreal.SubobjectDataBlueprintFunctionLibrary.get_associated_object(unreal.SubobjectDataBlueprintFunctionLibrary.get_data(added))
+    assert isinstance(comp,unreal.StaticMeshComponent),str(reason)
+    comp.set_static_mesh(unreal.load_asset(DEST+'/Cigarette/'+mesh))
+    comp.attach_to_component(parent,socket,unreal.AttachmentRule.SNAP_TO_TARGET,
+        unreal.AttachmentRule.SNAP_TO_TARGET,unreal.AttachmentRule.KEEP_RELATIVE,False)
+    return comp
+cigarette=add_static(component,'socket_cigarette','SM_Cigarette')
+cigarette.set_relative_rotation(unreal.MathLibrary.make_rot_from_x(bone_axis),False,False)
+smoke=add_static(cigarette,'','SM_CigaretteSmoke')
+smoke.set_relative_location(unreal.Vector(cigarette.get_editor_property('static_mesh').get_bounding_box().max.x,0,0),False,False)
+smoke.set_absolute(False,True,False)
+smoke.set_world_rotation(unreal.Rotator(0,0,0),False,False)
 pose_options=unreal.AnimPoseEvaluationOptions()
 pose_options.set_editor_property('evaluation_type',unreal.AnimDataEvalType.RAW)
 pose_options.set_editor_property('should_retarget',False)
@@ -55,6 +77,7 @@ camera=actors.spawn_actor_from_class(unreal.CameraActor,unreal.Vector(125,-135,7
 camera.camera_component.set_field_of_view(38)
 camera.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(camera.get_actor_location(),unreal.Vector(0,0,32)),False)
 poses=[('front','Idle',0,(165,0,66)),('three_quarter','Idle',0,(125,-135,78)),
+       ('face','Idle',0,(52,-46,62),(9,-1,53)),
        ('walk_side','WalkLoop',.1,(0,-185,55)),('land_side','JumpLand',.1,(0,-185,55))]
 if GROOM:
     poses.extend([('rat_height','WalkLoop',.1,(-220,0,65)),('elevated','WalkLoop',.1,(-268,0,329))])
@@ -87,7 +110,8 @@ def tick(dt):
             unreal.unregister_slate_post_tick_callback(handle)
             unreal.EditorPythonScripting.set_keep_python_script_alive(False)
             return
-        name,clip,t,eye=poses[index]
+        name,clip,t,eye=poses[index][:4]
+        target=poses[index][4] if len(poses[index])>4 else (0,0,32)
         anim=unreal.load_asset(DEST+'/Animations/AS_Chuck_'+clip)
         pose=unreal.AnimPoseExtensions.get_anim_pose_at_time(anim,t,pose_options)
         # Apply the evaluated clip pose directly (the single-node anim path does
@@ -104,7 +128,7 @@ def tick(dt):
         unreal.log('CHUCK_V1_REVIEW_POSE '+name+' '+str(component.get_socket_transform('pelvis',unreal.RelativeTransformSpace.RTS_COMPONENT)))
         camera.camera_component.set_field_of_view({'rat_height':78,'elevated':65}.get(name,38))
         camera.set_actor_location(unreal.Vector(*eye),False,False)
-        camera.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(camera.get_actor_location(),unreal.Vector(0,0,32)),False)
+        camera.set_actor_rotation(unreal.MathLibrary.find_look_at_rotation(camera.get_actor_location(),unreal.Vector(*target)),False)
         task=unreal.AutomationLibrary.take_high_res_screenshot(1280,960,str(OUT/(name+'.png')),camera=camera,delay=1.0)
         next_at=time.monotonic()+2
     except Exception:
