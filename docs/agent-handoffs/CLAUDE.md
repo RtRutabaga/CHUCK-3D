@@ -569,3 +569,19 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The belly reads grey-cream in cool light; the target is warmer.
   - The iris is only about 10 texels across on the 2048 map, so it is soft up close.
 - **Not integrated into main.** The launcher still shows `4eef511`.
+
+## Twenty-fourth pass — sleeker head fur (user feedback)
+
+- **Feedback:** the head fur "stands up too much and looks too much like human haircut, but i like the body fur".
+- **Source commit:** on top of `7128d41`, branch `codex/claude-character`.
+- **Change** (`build_groom.py`, head only, z > `Z(47.5)`; body untouched):
+  - crown ×0.6 length / ×0.45 lift (was 1.2 / 1.6), laid back along the skull;
+  - cheeks and nape ×0.7 / ×0.5;
+  - muzzle lift ×0.6;
+  - no guard hairs; frizz σ 0.11 (the body keeps 0.22).
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - Groom about 0.88 ms.
+  - Evidence: `Review/goal_compare_head_fur.jpg`.
+- **Not integrated into main.** The launcher still shows `4eef511`.

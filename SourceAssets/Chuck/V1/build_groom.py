@@ -67,14 +67,15 @@ CLUMP_PULL = .75      # how far tips converge on their guide (0..1)
 GUARD = .08           # share of long, lifted guard hairs (city-rat scruff)
 
 def region_scale(p):
-    """Length and lift multipliers: short sleek muzzle, spiky crown and
-    cheeks, fluffy thighs, as in the turnaround."""
+    """Length and lift multipliers. The head coat is short and lies back along
+    the skull (user feedback 2026-09-27: a lifted crown read as a human
+    haircut); the scruffy city-rat body stays as it is."""
     if p.z > Z(47.5) and p.x > X(7.5):
-        return .45, .8                   # muzzle and snout
+        return .45, .6                   # muzzle and snout
     if p.z > Z(55.):
-        return 1.2, 1.6                  # crown between the ears
+        return .6, .45                   # crown between the ears: short, laid back
     if p.z > Z(47.5):
-        return .9, 1.3                   # cheeks and nape
+        return .7, .5                    # cheeks and nape
     if p.z < Z(19.):
         return 1., 1.1                   # thighs and shins
     return 1., 1.
@@ -142,7 +143,8 @@ for g, spec in GROUPS.items():
         scale, lift_scale = region_scale(root)
         length = rng.uniform(*spec['length']) * scale
         lift = rng.uniform(.45, .95) * lift_scale  # scruffy: about 25-55 degrees off the skin
-        guard = g != 'Fur_Cream' and rng.random() < GUARD
+        head = root.z > Z(47.5)
+        guard = g != 'Fur_Cream' and not head and rng.random() < GUARD
         if guard:
             length *= rng.uniform(1.6, 2.3); lift *= 1.4
         pts = [root - n * .02]             # root slightly below the skin
@@ -152,7 +154,8 @@ for g, spec in GROUPS.items():
             # The strand leaves the skin at `lift`, then lies down along the
             # flow, with a little frizz so the coat is not combed flat.
             d = (n * lift * (1 - f * .8) + flow).normalized()
-            frizz = Vector((rng.gauss(0, .22), rng.gauss(0, .22), rng.gauss(0, .22))) * f
+            spread = .11 if head else .22  # sleeker head, scruffy body
+            frizz = Vector((rng.gauss(0, spread), rng.gauss(0, spread), rng.gauss(0, spread))) * f
             pos = pos + (d + frizz) * (length / (POINTS - 1))
             pts.append(pos.copy())
         strands[g].append(pts)
