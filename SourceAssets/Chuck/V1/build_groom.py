@@ -45,7 +45,7 @@ poly_mat = [p.material_index for p in mesh.polygons]
 EYES = [Vector((X(7.15), s * 3.8, Z(55.0))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
-EARS = [Vector((-1.6, s * 4.1, Z(60.4))) for s in (1, -1)]  # ear seats on the skull (ray cast in the model)
+EARS = [Vector((-1.6, s * 3.2, Z(60.4))) for s in (1, -1)]  # ear slid inward onto the skull (build_chuck_model.py)
 
 # Group definitions: strands, length range (cm), flow direction chooser.
 def flow_for(p):
@@ -73,9 +73,9 @@ def region_scale(p):
     if p.z > Z(47.5) and p.x > X(7.5):
         return .45, .6                   # muzzle and snout
     if p.z > Z(55.):
-        return .6, .45                   # crown between the ears: short, laid back
+        return .85, .85                  # crown: textured, a little tufty, no tall crest
     if p.z > Z(47.5):
-        return .7, .5                    # cheeks and nape
+        return .8, .8                    # cheeks and nape
     if p.z < Z(19.):
         return 1., 1.1                   # thighs and shins
     return 1., 1.
@@ -100,7 +100,7 @@ def covered(p, n):
 
 def near_eye(p):
     return any((p - e).length < 2.3 for e in EYES) or any(
-        (p - e).length < 4.8 and abs(p.y) > 3.2 and p.z > Z(56.5) for e in EARS)
+        (p - e).length < 4.8 and abs(p.y) > 2.6 and p.z > Z(57.5) for e in EARS)
 
 # Area-weighted candidate triangles per group.
 cands = {g: [] for g in GROUPS}
@@ -144,9 +144,9 @@ for g, spec in GROUPS.items():
         length = rng.uniform(*spec['length']) * scale
         lift = rng.uniform(.45, .95) * lift_scale  # scruffy: about 25-55 degrees off the skin
         head = root.z > Z(47.5)
-        guard = g != 'Fur_Cream' and not head and rng.random() < GUARD
+        guard = g != 'Fur_Cream' and rng.random() < (GUARD * .35 if head else GUARD)
         if guard:
-            length *= rng.uniform(1.6, 2.3); lift *= 1.4
+            length *= rng.uniform(1.2, 1.5) if head else rng.uniform(1.6, 2.3); lift *= 1.4
         pts = [root - n * .02]             # root slightly below the skin
         pos = root.copy()
         for k in range(1, POINTS):
@@ -154,7 +154,7 @@ for g, spec in GROUPS.items():
             # The strand leaves the skin at `lift`, then lies down along the
             # flow, with a little frizz so the coat is not combed flat.
             d = (n * lift * (1 - f * .8) + flow).normalized()
-            spread = .11 if head else .22  # sleeker head, scruffy body
+            spread = .16 if head else .22  # textured head, scruffy body
             frizz = Vector((rng.gauss(0, spread), rng.gauss(0, spread), rng.gauss(0, spread))) * f
             pos = pos + (d + frizz) * (length / (POINTS - 1))
             pts.append(pos.copy())

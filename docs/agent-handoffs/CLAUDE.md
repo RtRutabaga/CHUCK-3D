@@ -604,3 +604,24 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Grip, curl and walk poses inspected.
   - Evidence: `Review/fix_ears_fingers.jpg`.
 - **Not integrated into main.** The launcher still shows `37208d3`.
+
+## Twenty-sixth pass — ear placement and textured head fur (user reference)
+
+- **Input:** `References/ArtDirection/Chuck-Ears-HeadFur-Target.jpg` (the user's pick of an earlier render: pass 23 close-ups): ears "positioning more like this just not floating"; head fur "textured / a bit sticking out … just not so much that it looks like a haircut".
+- **Source commit:** on top of `c198639`, branch `codex/claude-character`.
+- **Ears:**
+  - The 25th pass's ray-cast seat (65° down the skull side) put the ears low, near the cheeks. That is replaced.
+  - Each ear keeps its original high, set-back placement and orientation, and slides inward only, until its pinched base vertex is 0.5 cm inside the evaluated skull at the base's height (it had been about 2 cm off after the head was narrowed).
+  - The top-at-65 cm rule is a plain vertical shift again.
+  - Groom ear exclusion: y 3.2, |y| > 2.6, z > Z(57.5).
+- **Head fur:**
+  - between the city-rat crown (1.2 / 1.6) and the sleek pass (0.6 / 0.45): crown ×0.85 length / ×0.85 lift, cheeks and nape ×0.8 / ×0.8;
+  - head frizz σ 0.16;
+  - head guard hairs at 35% of the body rate, 1.2–1.5× length.
+  - The body is unchanged.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped: 0 failures.
+  - Groom about 0.86 ms.
+  - Evidence: `Review/fix_ears_headfur.jpg` (reference against close, front, rear and 3/4 views).
+- **Not integrated into main.** The launcher still shows `37208d3`.

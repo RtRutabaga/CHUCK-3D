@@ -272,16 +272,17 @@ def cupped_ear(side):
     # Wind faces so the base normal faces forward/outward (the pink side).
     probe=(verts[1]-verts[0]).cross(verts[n]-verts[0])
     if probe.dot(facing)<0: faces=[tuple(reversed(f)) for f in faces]
-    # Seat the pinched base on the skull's upper side, found by ray cast on the
-    # evaluated head (fixed coordinates floated once the head was narrowed),
-    # sunk slightly into it. The base vertex (dy=-1) sits at -up*4.3 +facing*1.3.
-    tilt=math.radians(65)  # side of the skull, so the whole disc rises clear of the head
-    origin=Vector((-1.6,0,head_axis_z(-1.6)))
-    hit,normal,_,_=HEAD_TREE.ray_cast(origin,Vector((0,side*math.sin(tilt),math.cos(tilt))),30)
-    base=hit-normal*.25
-    center=base+up*4.3-facing*1.3
+    # The ear keeps its original high, set-back placement and orientation
+    # (user reference Chuck-Ears-HeadFur-Target.jpg). It slides inward only,
+    # until its pinched base vertex (dy=-1: -up*4.3 +facing*1.3) sits 0.5 cm
+    # inside the skull, measured on the evaluated head at the base's height.
+    # (The narrowed head had left the base 2 cm off the skull.)
+    center=Vector((-1.6,side*4.6,60.4))
+    base=center-up*4.3+facing*1.3
+    hit,_,_,_=HEAD_TREE.ray_cast(Vector((base.x,0,base.z)),Vector((0,side,0)),30)
+    inward=Vector((0,(hit.y-side*.5)-base.y,0))
+    center+=inward
     ear=mesh('Ear',[center+v for v in verts],faces,'Skin',1)
-    ear['chuck_ear_base']=tuple(base)
     ear.data.materials.append(MATS['Fur'])
     sol=ear.modifiers.new('Ear thickness','SOLIDIFY')
     sol.thickness=.3; sol.offset=-1; sol.use_rim=True; sol.material_offset=0; sol.material_offset_rim=0
@@ -293,11 +294,9 @@ def cupped_ear(side):
 ears=[cupped_ear(side) for side in (-1,1)]
 top=max((e.matrix_world @ v.co).z for e in ears for v in e.data.vertices)
 for e in ears:
-    # Contract: ear top exactly 65 cm. Scale about the seated base so the ear
-    # never lifts off the skull (a plain vertical shift would).
-    base=Vector(e['chuck_ear_base'])
-    k=(65.-base.z)/(top-base.z)
-    for v in e.data.vertices: v.co=base+(v.co-base)*k
+    # Contract: ear top exactly 65 cm (a small vertical shift; the 0.5 cm
+    # seat depth covers it).
+    for v in e.data.vertices: v.co.z+=65.-top
 for side in (-1,1):
     # Small, high rat eyes (face-proportion target).
     ellipsoid('EyeLid',(6.7,side*3.6,54.9),(1.45,.62,1.1),'Fur')
