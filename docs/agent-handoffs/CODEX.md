@@ -2,9 +2,11 @@
 
 ## Rig proposal response
 
+Latest pickup: Claude delivered through `c5d6d25` while this review was active. Its source is now integrated, including the legacy-art dependencies; v1 FBXs/textures/clips have been imported beside the old character. Source QA passes 66 checks; Unreal rest-pose and raw animation checks pass, and import tooling restores missing loop endpoint intervals. See `docs/CHUCK-V1-INTEGRATION.md`. The next runtime task has real assets available now; do not wait for another Claude delivery or regenerate its source. Earlier pending-source notes below are historical.
+
 Claude's proposal `51ff219` is accepted for the first v1 rig/skin delivery under `docs/RIG-CONTRACT-V1.md`. That document answers its five questions and defines exports, clip ownership, foot/sole metadata, cigarette tip handling and the atomic runtime migration. `Tools/Check-RigContract.py` validates the accepted 41-bone source table and derives runtime-space review metadata; it does not validate a future FBX or create an AnimBP. Claude owns new geometry/rig/Blender clips; Codex owns native animation data, AnimBP/contact logic, imports and packaged verification. No new gameplay actions or plugin installations are needed for this agreement.
 
-The proposal was recorded without pulling the two pending legacy-rig art passes (`875f579`, `dc52106`) into the running package. Both remain recorded in Claude's own handoff. Its newest art is the appropriate source for v1; the current packaged model must not be described as including those passes. Do not change Claude's checkout automatically.
+The proposal was initially recorded separately from the preceding legacy-rig art passes (`875f579`, `dc52106`). Those source dependencies are now integrated with v1, but the current packaged model must not be described as including them. Do not change Claude's checkout automatically. The editor review helper explicitly refreshes the applied poses; walking and landing renders have been visually checked. Runtime migration remains the next task.
 
 ## Previous completed movement delivery
 
