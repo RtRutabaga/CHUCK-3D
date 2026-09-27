@@ -377,6 +377,11 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==2)
     {
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        {
+            const float CameraZ=Chuck->FindComponentByClass<UCameraComponent>()->GetComponentLocation().Z;
+            if(StageTime<=DeltaSeconds*1.5f) { CameraMinZ=CameraMaxZ=CameraZ; }
+            CameraMinZ=FMath::Min(CameraMinZ,CameraZ); CameraMaxZ=FMath::Max(CameraMaxZ,CameraZ);
+        }
         const FChuckAnimResult Pose=Chuck->GetChuckAnim() ? Chuck->GetChuckAnim()->GetResult() : FChuckAnimResult();
         if(Chuck->GetCharacterMovement()->IsFalling())
             MaxAirFootLift=FMath::Max(MaxAirFootLift,static_cast<float>(Pose.BallWorld[0].Z-Chuck->GetMesh()->GetComponentLocation().Z));
@@ -395,6 +400,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_LAND_MEASURE ball_above_ground_cm=%.4f rest_cm=%.4f"),Clearance,RestBall);
             Check(Pose.Evaluations>0 && bGround && FMath::IsNearlyEqual(Clearance,RestBall,.3f),TEXT("feet settle on traced ground after landing"));
             Check(MaxJumpZ>48,TEXT("jump lifts Chuck above floor"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CAMERA_MEASURE jump_camera_travel_cm=%.3f"),CameraMaxZ-CameraMinZ);
+            Check(CameraMaxZ-CameraMinZ<8.f,TEXT("camera holds its height through a jump"));
             Check(Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("jump lands back on quay"));
             Chuck->GetCharacterMovement()->StopMovementImmediately();
             Chuck->SetActorLocation(FVector(-395,0,36)); TestStage=3; StageTime=0;
@@ -432,6 +439,15 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Check(Chuck->GetActorLocation().X > -175,TEXT("keyboard W mapping walks"));
         Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
         Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,220.f,1.f),TEXT("rat-height camera blend settles"));
+        {
+            FHitResult Floor;
+            const FVector Lens=Chuck->FindComponentByClass<UCameraComponent>()->GetComponentLocation();
+            FCollisionQueryParams LensQuery(SCENE_QUERY_STAT(ChuckLensHeight),false,Chuck);
+            const bool bFloor=GetWorld()->LineTraceSingleByChannel(Floor,Lens,Lens-FVector(0,0,200),ECC_Visibility,LensQuery);
+            const float Height=bFloor ? static_cast<float>(Lens.Z-Floor.ImpactPoint.Z) : -1.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CAMERA_MEASURE rat_lens_height_cm=%.3f"),Height);
+            Check(Height>68.f && Height<85.f,TEXT("rat-height lens sits just over Chuck's ears"));
+        }
         Chuck->ResetToDock();
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1));
         TestStage=6; StageTime=0;

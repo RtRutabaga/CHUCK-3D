@@ -39,6 +39,8 @@ private:
     double PerfFrameMs = 0;
     double PerfGpuMs = 0;
     int32 PerfFrames = 0;
+    float CameraMinZ = 0;
+    float CameraMaxZ = 0;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

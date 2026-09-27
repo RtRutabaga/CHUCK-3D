@@ -153,9 +153,21 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     const float Target = bElevated ? 1.f : 0.f;
     CameraBlend = DeltaSeconds > 0 ? FMath::FInterpTo(CameraBlend, Target, DeltaSeconds, 7.f) : Target;
     Boom->TargetArmLength = FMath::Lerp(220.f, 400.f, CameraBlend);
-    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(30.f,16.f,CameraBlend)));
-    // Horizontal rat-height boom keeps the lens above ground even when looking up.
-    const FRotator TargetRotation(-48.f * CameraBlend, ViewYaw, 0);
+    // The pivot ignores the arc of a jump (a 65 cm character's hop otherwise
+    // bobs the whole view) but follows landings on a new level and falls.
+    const float ActorZ = GetActorLocation().Z;
+    if (!bFollowReady || DeltaSeconds <= 0) { FollowZ = ActorZ; bFollowReady = true; }
+    else
+    {
+        const bool bAirborne = GetCharacterMovement()->IsFalling();
+        FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, bAirborne ? 1.5f : 8.f);
+        FollowZ = FMath::Clamp(FollowZ, ActorZ - 40.f, ActorZ + 40.f);
+    }
+    // Rat-height: chest-high pivot and a 5 degree tilt put the lens about 75 cm
+    // up, just over the ears, so Chuck sits low in frame instead of covering
+    // the view ahead. Mouse/stick pitch still turns the lens, never the boom.
+    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(22.f,16.f,CameraBlend) + FollowZ - ActorZ));
+    const FRotator TargetRotation(FMath::Lerp(-5.f, -48.f, CameraBlend), ViewYaw, 0);
     Boom->SetWorldRotation(DeltaSeconds > 0 ? FMath::RInterpTo(Boom->GetComponentRotation(),TargetRotation,DeltaSeconds,18.f) : TargetRotation);
     Camera->SetRelativeRotation(FRotator(ViewPitch*(1-CameraBlend),0,0));
     Camera->FieldOfView = FMath::Lerp(78.f,65.f,CameraBlend);
@@ -174,6 +186,7 @@ void AChuckCharacter::ResetToDock()
     GetCharacterMovement()->BrakingDecelerationWalking = 237.5f;
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
+    bFollowReady = false;
     UpdateCamera();
 }
 

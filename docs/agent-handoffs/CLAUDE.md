@@ -358,3 +358,30 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Turn-in-place delays walking by 0.55 s from standing. Turns beyond 90° scale the authored yaw, so their paws may release; this is untested beyond 90°.
   - The slip and turn measures read the proxy's evaluated paw positions.
   - Grooms are still unsimulated.
+
+## Sixteenth pass — small-character camera feel (both cameras, no choice made)
+
+- **Source commit:** on top of `7ba97dc`, branch `codex/claude-character`.
+- **Changed files:**
+  - `ChuckCharacter.{h,cpp}` (`UpdateCamera`), `DockGameMode.{h,cpp}`
+  - `Tools/Verify-Package.ps1`: expects 49, or 48 with `-NoCapture`.
+  - `docs/PROTOTYPE.md` camera bullets
+  - evidence `SourceAssets/Chuck/V1/Review/runtime_rat_height_framing.jpg`
+- **Camera decision:** stays OPEN (PROTOTYPE.md). Both modes and the toggle are unchanged in behaviour otherwise.
+- **Changes:**
+  - **Vertical follow (both views):** the boom pivot holds its height through a jump (1.5/s interpolation while falling, clamped to ±40 cm) and settles quickly when grounded (8/s), so a landing on a new level or a fall is still followed.
+  - **Rat-height framing:** the pivot is chest-high (+22 cm instead of +30 cm) and the boom is tilted −5°, giving a lens about 76 cm up, just over the ears. Previously the ear-height lens put Chuck's head in the middle of the view, covering the boat and the tavern door. Mouse/stick pitch still rotates only the lens.
+- **New checks (47 → 49):**
+  - camera holds its height through a jump (< 8 cm; measured 5.49 cm in the elevated view);
+  - rat-height lens sits just over Chuck's ears (68–85 cm; measured 75.97 cm).
+- **Verified** (UE 5.7.4, one heavy process at a time):
+  - `Verify-Package.ps1 -MotionCapture`: **49/49**.
+  - `-NoGroom`: 49/49.
+  - Uncapped with and without the groom: 0 failures.
+  - All earlier measures are unchanged (slip 0, stop 18.0–18.7 cm, turn −90.000, landing 0.9997 cm). The GPU cost of the groom is again about 1.1 ms (3.20 vs 2.06 ms).
+  - Rat-height captures were reviewed by eye.
+  - The jump camera travel before this change was not measured, so there is no before/after number.
+- **Not done:**
+  - Lazy auto-follow of the camera behind a moving Chuck. It changes how camera-relative input steers, so it needs the user's feel feedback first.
+  - No physical-controller or subjective comfort test.
+  - Traversal (run/climb/vault) waits for the user's scope decision (AGENT-WORKFLOW suggested order, step 4).

@@ -39,6 +39,9 @@ private:
     float ViewYaw = 0;
     float ViewPitch = 0;
     float CameraBlend = 1;
+    /** Camera pivot height: holds through jumps, follows real level changes. */
+    float FollowZ = 0;
+    bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
     enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Num };
