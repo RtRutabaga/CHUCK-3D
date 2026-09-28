@@ -2,6 +2,8 @@
 
 ## Current launcher and integration status
 
+**Update 6 (Claude, 2026-09-27, user request "Integrate and run"):** main fast-forwarded to `08a425b`, adding the first roll and side jump: C / Xbox B dodge; the stick held sideways (camera-relative) gives a side jump. Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **57/57** (`Local/verify-package-20260927-192523.log`); receipt `08a425b`. Nothing pushed.
+
 **Update 5 (Claude, 2026-09-27, user request "Integrate and begin roll and side jump"):** main fast-forwarded to `fd78cc8`, adding:
 - the aplomb idle and swagger saunter;
 - wider, fuller legs;
