@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 5 (Claude, 2026-09-27, user request "Integrate and begin roll and side jump"):** main fast-forwarded to `fd78cc8`, adding:
+- the aplomb idle and swagger saunter;
+- wider, fuller legs;
+- a more exaggerated, brisk swagger (72 cm/s);
+- the GTA-style continuous orbit camera, which replaces the C/Y camera switch.
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **51/51** (`Local/verify-package-20260927-184911.log`); receipt `fd78cc8`. Nothing pushed.
+
 **Update 4 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `2fa74eb`: ears wider apart on the outer top skull corners; neutral human-like hands (palm to thigh, thumb forward, fingers curling inward, clips curl medially). Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **50/50** (`Local/verify-package-20260927-150737.log`); receipt `2fa74eb`; content paks cooked at 15:07. Nothing pushed.
 
 **Update 3 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `1057e0f`, adding:
