@@ -396,5 +396,203 @@
     0.549
    ]
   }
+ ],
+ "Roll": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.08
+   ],
+   "frames": [
+    0,
+    2
+   ],
+   "max_world_slip_cm_s": 2.941,
+   "sole_z_cm": [
+    0.549,
+    0.746
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.56,
+    0.8
+   ],
+   "frames": [
+    17,
+    24
+   ],
+   "max_world_slip_cm_s": 0.001,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.08
+   ],
+   "frames": [
+    0,
+    2
+   ],
+   "max_world_slip_cm_s": 3.718,
+   "sole_z_cm": [
+    0.549,
+    0.746
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.56,
+    0.8
+   ],
+   "frames": [
+    17,
+    24
+   ],
+   "max_world_slip_cm_s": 0.001,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
+ ],
+ "SideJumpLeft": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.1
+   ],
+   "frames": [
+    0,
+    3
+   ],
+   "max_world_slip_cm_s": 10.711,
+   "sole_z_cm": [
+    0.549,
+    0.952
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.5,
+    0.8
+   ],
+   "frames": [
+    15,
+    24
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.1
+   ],
+   "frames": [
+    0,
+    3
+   ],
+   "max_world_slip_cm_s": 31.426,
+   "sole_z_cm": [
+    0.549,
+    2.666
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.5,
+    0.8
+   ],
+   "frames": [
+    15,
+    24
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
+ ],
+ "SideJumpRight": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.1
+   ],
+   "frames": [
+    0,
+    3
+   ],
+   "max_world_slip_cm_s": 32.549,
+   "sole_z_cm": [
+    0.549,
+    2.666
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.5,
+    0.8
+   ],
+   "frames": [
+    15,
+    24
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.1
+   ],
+   "frames": [
+    0,
+    3
+   ],
+   "max_world_slip_cm_s": 12.002,
+   "sole_z_cm": [
+    0.549,
+    0.952
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.5,
+    0.8
+   ],
+   "frames": [
+    15,
+    24
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
  ]
 }

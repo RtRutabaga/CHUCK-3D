@@ -563,6 +563,212 @@
     ]
    },
    "notes": "Contact at frame 0 with toes slightly pointed; pelvis absorbs 4.5 cm and recovers to neutral."
+  },
+  {
+   "name": "Roll",
+   "file": "Animations/AS_Chuck_Roll.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 24,
+   "frame_count": 25,
+   "duration_s": 0.8,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9206,
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.6641,
+    4.2475,
+    10.75,
+    17.9167,
+    25.0833,
+    32.25,
+    39.4167,
+    46.5833,
+    53.75,
+    60.9167,
+    68.0833,
+    75.25,
+    82.4043,
+    89.1006,
+    94.5483,
+    98.3089,
+    100.3431,
+    101.0091,
+    101.05,
+    101.05,
+    101.05,
+    101.05,
+    101.05,
+    101.05
+   ],
+   "capsule_speed_cm_s_profile": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.1,
+     215.0
+    ],
+    [
+     0.2,
+     215.0
+    ],
+    [
+     0.3,
+     215.0
+    ],
+    [
+     0.4,
+     215.0
+    ],
+    [
+     0.5,
+     139.32
+    ],
+    [
+     0.6,
+     6.02
+    ],
+    [
+     0.7,
+     0.0
+    ],
+    [
+     0.8,
+     0.0
+    ]
+   ],
+   "travel_cm": 101.05,
+   "duration_travel_s": 0.8,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.08
+     ],
+     [
+      0.56,
+      0.8
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.08
+     ],
+     [
+      0.56,
+      0.8
+     ]
+    ]
+   },
+   "events_s": {
+    "lift": 0.08,
+    "spin_start": 0.1,
+    "spin_end": 0.54,
+    "plant": 0.56,
+    "settled": 0.8
+   },
+   "notes": "Forward roll from and back to the aplomb stance. Root fixed: the runtime moves the capsule along capsule_travel_cm_per_frame (facing direction). One tucked revolution; the ball is ground-fitted to the deformed mesh while off the paws."
+  },
+  {
+   "name": "SideJumpLeft",
+   "file": "Animations/AS_Chuck_SideJumpLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 24,
+   "frame_count": 25,
+   "duration_s": 0.8,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "launch": {
+    "lateral_cm_s": 190.0,
+    "vertical_cm_s": 158.392,
+    "gravity_cm_s2": 784.0,
+    "apex_cm": 16.0,
+    "direction": "source +Y (Chuck left)"
+   },
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.5,
+      0.8
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.5,
+      0.8
+     ]
+    ]
+   },
+   "events_s": {
+    "takeoff": 0.1,
+    "land": 0.5,
+    "settled": 0.8
+   },
+   "notes": "Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips)."
+  },
+  {
+   "name": "SideJumpRight",
+   "file": "Animations/AS_Chuck_SideJumpRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 24,
+   "frame_count": 25,
+   "duration_s": 0.8,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "launch": {
+    "lateral_cm_s": 190.0,
+    "vertical_cm_s": 158.392,
+    "gravity_cm_s2": 784.0,
+    "apex_cm": 16.0,
+    "direction": "source -Y (Chuck right)"
+   },
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.5,
+      0.8
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.5,
+      0.8
+     ]
+    ]
+   },
+   "events_s": {
+    "takeoff": 0.1,
+    "land": 0.5,
+    "settled": 0.8
+   },
+   "notes": "Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips)."
   }
  ]
 }

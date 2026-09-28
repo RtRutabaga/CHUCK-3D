@@ -1,6 +1,6 @@
 """Blender 4.5 LTS: motion review sheets for body language (Idle, WalkLoop).
 
-blender --background SourceAssets/Chuck/V1/Chuck_V1.blend --python SourceAssets/Chuck/V1/review_motion.py -- <out_dir>
+blender --background SourceAssets/Chuck/V1/Chuck_V1.blend --python SourceAssets/Chuck/V1/review_motion.py -- <out_dir> [Clip ...]
 
 Renders each clip at evenly spaced frames from front, three-quarter and side
 cameras (in place, root fixed) and writes one contact sheet per clip:
@@ -12,7 +12,9 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 
-out = Path(sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv else 'MotionReview')
+args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+out = Path(args[0] if args else 'MotionReview')
+CLIPS = args[1:] or ['WalkLoop', 'Idle']
 out.mkdir(parents=True, exist_ok=True)
 scene = bpy.context.scene
 rig = bpy.data.objects['SK_Chuck_Rig']
@@ -67,7 +69,8 @@ def render_clip(name, columns):
     sheet.filepath_raw = str(out / f'motion_{name}.png'); sheet.file_format = 'PNG'; sheet.save()
     print('CHUCK_MOTION_SHEET', name, frames)
 
-render_clip('WalkLoop', 6)
-render_clip('Idle', 5)
+for clip in CLIPS:
+    # One-shots (roll, side jumps) get more columns to show the whole action.
+    render_clip(clip, {'Idle': 5, 'WalkLoop': 6}.get(clip, 8))
 rig.animation_data.action = None
 print('CHUCK_MOTION_REVIEW_READY', out)

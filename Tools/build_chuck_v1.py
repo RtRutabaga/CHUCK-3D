@@ -683,6 +683,169 @@ def jump_land(phase, f):
     for s in 'LR': poser.hand_goal(s)
     return r
 
+# ---- agility (user vision 2026-09-27): "he busts into a roll and a side jump
+# ... then reassumes his cool and collected saunter". Root fixed as for every
+# clip. Roll: the runtime drives the capsule along the manifest's per-frame
+# travel. Side jump: the runtime launches the capsule sideways at takeoff and
+# stops it on touchdown; the clip carries the landing's momentum in the
+# pelvis. Both start and end in the aplomb idle stance (RB), so Idle,
+# WalkStart and the settle steps pick up from them unchanged.
+import numpy as np
+from mathutils import Matrix
+
+def body_min_z():
+    """Lowest deformed vertex of the (tufted) body mesh in the current pose."""
+    ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get()); m = ev.to_mesh()
+    co = np.empty(len(m.vertices) * 3); m.vertices.foreach_get('co', co)
+    ev.to_mesh_clear()
+    return float(co[2::3].min())
+
+def ik_goals():
+    """Foot goal helpers follow the posed hocks (clips carry goal data)."""
+    for side in 'LR':
+        goal = rig.pose.bones[f'ik_foot_{side}']
+        goal.location = poser.rest[f'ik_foot_{side}'].to_3x3().inverted() @ (
+            poser.head(f'foot_{side}') - poser.rest_head[f'ik_foot_{side}'])
+        poser.hand_goal(side)
+
+# Forward roll: a quick dive off both paws, one tucked revolution over the
+# shoulders, paws come round and plant, and he rises back into the aplomb
+# stance. ~1 m (1.5 of his heights) in 0.8 s. Speed: smoothstep up to the peak
+# by 0.1 s, down to rest by 0.62 s; the paws plant at 0.56 s on the planner's
+# world positions while the last of the momentum bleeds off.
+ROLL_T, ROLL_PEAK = .8, 215.
+ROLL_LIFT, ROLL_PLANT, ROLL_SPIN = .08, .56, (.1, .54)
+ROLL_PIVOT = Vector((1., 0., 14.))  # centre of the tucked ball, before the ground fit
+def roll_speed(t):
+    return ROLL_PEAK * smoothstep(t, 0., .1) * (1 - smoothstep(t, .42, .62))
+_ROLL_N = 800
+_roll_d = [0.]
+for _i in range(_ROLL_N):
+    _a, _b = ROLL_T * _i / _ROLL_N, ROLL_T * (_i + 1) / _ROLL_N
+    _roll_d.append(_roll_d[-1] + .5 * (roll_speed(_a) + roll_speed(_b)) * (_b - _a))
+def roll_travel(t):
+    x = max(0., min(1., t / ROLL_T)) * _ROLL_N; i = min(int(x), _ROLL_N - 1)
+    return _roll_d[i] + (_roll_d[i + 1] - _roll_d[i]) * (x - i)
+ROLL_D = roll_travel(ROLL_T)
+ROLL_SPIN_D = (roll_travel(ROLL_SPIN[0]), roll_travel(ROLL_SPIN[1]))
+
+def roll_pose(t, lift_z):
+    d = roll_travel(t)
+    tuck = smoothstep(t, .02, .16) * (1 - smoothstep(t, .5, .7))
+    spin = 360 * smoothstep((d - ROLL_SPIN_D[0]) / (ROLL_SPIN_D[1] - ROLL_SPIN_D[0]), 0., 1.)
+    wrapped = spin - 360 if spin > 180 else spin
+    carriage(0., 0.)
+    # Tuck in the body frame: crouch over the paws, spine and head curl down
+    # (chin to chest, the cigarette kept clear), forearms hug in, tail curls.
+    poser.translate('pelvis', (2. * tuck, .9 * tuck, -7. * tuck))  # cancels the idle hip shift
+    poser.rotate('pelvis', 'X', 4. * tuck)
+    for bone, deg in (('spine_01', 30), ('spine_02', 34), ('chest', 30), ('neck', 25), ('head', 38)):
+        poser.rotate(bone, 'Y', deg * tuck)
+    for side, sign in (('L', 1), ('R', -1)):
+        poser.rotate(f'upperarm_{side}', 'Y', -58 * tuck)
+        poser.rotate(f'upperarm_{side}', 'X', -sign * 6 * tuck)
+        poser.rotate(f'lowerarm_{side}', 'Y', -72 * tuck)
+        curl(side, 50 * tuck)
+    for b in TAIL:  # wraps round his left hip instead of whipping over
+        poser.rotate(b, 'Y', 10 * tuck)
+        poser.rotate(b, 'Z', -18 * tuck)
+    poser.update()
+    # One revolution about the ball centre (+Y: nose down first), then the
+    # ground fit's lift. Children follow the pelvis.
+    pb = rig.pose.bones['pelvis']
+    pb.matrix = (Matrix.Translation(Vector((0., 0., lift_z))) @ Matrix.Translation(ROLL_PIVOT)
+                 @ Matrix.Rotation(math.radians(spin), 4, 'Y') @ Matrix.Translation(-ROLL_PIVOT) @ pb.matrix)
+    poser.update()
+    spin_m = Matrix.Rotation(math.radians(spin), 3, 'Y')
+    off = smoothstep(t, ROLL_LIFT - .02, ROLL_LIFT + .06)
+    on = smoothstep(t, ROLL_PLANT - .1, ROLL_PLANT)
+    r = 0.
+    for side in 'LR':
+        x, y, h = RB[side]
+        z = NEUTRAL_BALL[side].z
+        planted = Vector((x - d, y, z))            # world-locked while the capsule moves
+        landed = Vector((x + ROLL_D - d, y, z))     # final stance, world-locked from the plant
+        tucked_body = NEUTRAL_BALL[side] + Vector((2., 0., 10.))  # knees to chest
+        tucked = ROLL_PIVOT + spin_m @ (tucked_body - ROLL_PIVOT) + Vector((0., 0., lift_z))
+        ball = planted.lerp(tucked, off).lerp(landed, on)
+        pitch = (1 - on) * off * (wrapped + 25.)
+        heading = h + (0. - h) * off * (1 - on)
+        pole = Vector((1., 0., 0.)).lerp(spin_m @ Vector((1., 0., .4)), off * (1 - on))
+        r = max(r, poser.leg(side, ball, pitch, 0., pole=tuple(pole.normalized()), heading=heading))
+    ik_goals()
+    return r
+
+def roll(phase, f):
+    t = f / FPS
+    r = roll_pose(t, 0.)
+    # Ground fit: while off the paws the tucked ball rests on the ground;
+    # otherwise only lift out of it.
+    air = smoothstep(t, ROLL_LIFT, ROLL_LIFT + .06) * (1 - smoothstep(t, ROLL_PLANT - .06, ROLL_PLANT))
+    low = body_min_z() - .05
+    lift = -low * air + max(0., -low) * (1 - air)
+    if abs(lift) > .02:
+        poser.reset()
+        r = roll_pose(t, lift)
+    return r
+
+# Side jump: load onto the far leg, spring sideways, lean into the flight with
+# the lead arm out and the tail counter-swinging, land on both paws in the
+# aplomb stance and let the hips carry on a little before settling. Launch
+# 190 cm/s sideways, apex 16 cm (air 0.4 s, ~77 cm: over a body height).
+SIDE_T, SIDE_TAKEOFF, SIDE_LAND = .8, .1, .5
+SIDE_SPEED, SIDE_APEX = 190., 16.
+SIDE_GRAVITY = 980. * .8  # ChuckCharacter GravityScale 0.8
+SIDE_VZ = math.sqrt(2 * SIDE_GRAVITY * SIDE_APEX)
+
+def side_jump(sign):
+    """sign +1: Chuck's left (+Y), -1: right."""
+    lead, trail = ('L', 'R') if sign > 0 else ('R', 'L')
+    def pose(phase, f):
+        t = f / FPS
+        load = smoothstep(t, 0., .08) * (1 - smoothstep(t, .08, .13))
+        air = smoothstep(t, .08, .18) * (1 - smoothstep(t, SIDE_LAND - .08, SIDE_LAND))
+        absorb = smoothstep(t, SIDE_LAND - .02, SIDE_LAND + .07) * (1 - smoothstep(t, SIDE_LAND + .1, SIDE_T))
+        carriage(0., 0.)
+        poser.translate('pelvis', (0., sign * (-2.5 * load + 3. * absorb), -4.5 * load + 1. * air - 4.5 * absorb))
+        # Lean into the jump (top toward the travel), head held level.
+        poser.rotate('pelvis', 'X', -sign * (6 * load + 20 * air + 8 * absorb))
+        poser.rotate('chest', 'X', -sign * 4 * air)
+        poser.rotate('head', 'X', sign * (5 * load + 18 * air + 6 * absorb))
+        poser.rotate('spine_01', 'Y', 8 * load + 7 * absorb)
+        poser.rotate('chest', 'Y', 3 * load + 3 * absorb)
+        for side in 'LR':
+            out = 1 if side == 'L' else -1   # abduction sign (away from the body)
+            if side == lead:
+                poser.rotate(f'upperarm_{side}', 'X', out * (55 * air + 14 * absorb))
+                poser.rotate(f'lowerarm_{side}', 'Y', -30 * air)
+            else:
+                poser.rotate(f'upperarm_{side}', 'Y', -32 * air)
+                poser.rotate(f'upperarm_{side}', 'X', out * (8 * air + 10 * absorb))
+                poser.rotate(f'lowerarm_{side}', 'Y', -30 * air)
+            curl(side, 22 * air)
+        for i, b in enumerate(TAIL):
+            poser.rotate(b, 'Z', sign * (4 * air - 1.5 * absorb) * (i + 1) / 3)
+            poser.rotate(b, 'Y', 4 * air)
+        poser.update()
+        r = 0.
+        for side in 'LR':
+            x, y, h = RB[side]
+            ball = Vector((x, y, NEUTRAL_BALL[side].z))
+            if side == lead:
+                reach = smoothstep(t, .08, .2) * (1 - smoothstep(t, .36, SIDE_LAND - .02))
+                ball += Vector((0., sign * 6., 6.)) * reach
+                fp, tp = 0., 12 * reach
+            else:
+                tuck = smoothstep(t, .07, .16) * (1 - smoothstep(t, .36, SIDE_LAND))
+                ball += Vector((-1.5, sign * 3.5, 9.)) * tuck
+                fp = 22 * smoothstep(t, .03, .09) * (1 - smoothstep(t, .1, .16))  # push off the ball
+                tp = 18 * tuck
+            flight = smoothstep(t, .08, .16) * (1 - smoothstep(t, .4, SIDE_LAND))
+            r = max(r, poser.leg(side, ball, fp, tp, heading=h * (1 - flight)))
+        ik_goals()
+        return r
+    return pose
+
 def samples(fn, dur, n=9):
     return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
 
@@ -724,6 +887,21 @@ author('JumpLand', 13, jump_land, False, {
     'events_s': {'contact': 0., 'max_compression': .09, 'settled': .4},
     'stance_intervals_s': {'foot_L': [[0., .4]], 'foot_R': [[0., .4]]},
     'notes': 'Contact at frame 0 with toes slightly pointed; pelvis absorbs 4.5 cm and recovers to neutral.'})
+
+author('Roll', round(ROLL_T * FPS) + 1, roll, False, {
+    'capsule_travel_cm_per_frame': [round(roll_travel(f / FPS), 4) for f in range(round(ROLL_T * FPS) + 1)],
+    'capsule_speed_cm_s_profile': samples(roll_speed, ROLL_T),
+    'travel_cm': round(ROLL_D, 3), 'duration_travel_s': ROLL_T,
+    'stance_intervals_s': {'foot_L': [[0., ROLL_LIFT], [ROLL_PLANT, ROLL_T]], 'foot_R': [[0., ROLL_LIFT], [ROLL_PLANT, ROLL_T]]},
+    'events_s': {'lift': ROLL_LIFT, 'spin_start': ROLL_SPIN[0], 'spin_end': ROLL_SPIN[1], 'plant': ROLL_PLANT, 'settled': ROLL_T},
+    'notes': 'Forward roll from and back to the aplomb stance. Root fixed: the runtime moves the capsule along capsule_travel_cm_per_frame (facing direction). One tucked revolution; the ball is ground-fitted to the deformed mesh while off the paws.'})
+for name, sign in (('SideJumpLeft', 1), ('SideJumpRight', -1)):
+    author(name, round(SIDE_T * FPS) + 1, side_jump(sign), False, {
+        'launch': {'lateral_cm_s': SIDE_SPEED, 'vertical_cm_s': round(SIDE_VZ, 3), 'gravity_cm_s2': SIDE_GRAVITY,
+                   'apex_cm': SIDE_APEX, 'direction': 'source +Y (Chuck left)' if sign > 0 else 'source -Y (Chuck right)'},
+        'stance_intervals_s': {'foot_L': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]], 'foot_R': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]]},
+        'events_s': {'takeoff': SIDE_TAKEOFF, 'land': SIDE_LAND, 'settled': SIDE_T},
+        'notes': 'Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips).'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

@@ -27,4 +27,15 @@ namespace ChuckClipData
     constexpr float TurnYaw[] = {0.0000f, 0.2045f, 2.3867f, 6.6667f, 12.6828f, 20.0733f, 28.4766f, 37.5309f, 46.8745f, 56.1458f, 64.9831f, 73.0247f, 79.9089f, 85.2739f, 88.7582f, 90.0000f};
     constexpr int TurnYawFrames = 15;
     constexpr float TurnEnd = 0.5500f;  // just after the last plant
+
+    // Roll: capsule travel (cm) per 30 fps frame along the facing direction.
+    constexpr float RollTravel[] = {0.0000f, 0.6641f, 4.2475f, 10.7500f, 17.9167f, 25.0833f, 32.2500f, 39.4167f, 46.5833f, 53.7500f, 60.9167f, 68.0833f, 75.2500f, 82.4043f, 89.1006f, 94.5483f, 98.3089f, 100.3431f, 101.0091f, 101.0500f, 101.0500f, 101.0500f, 101.0500f, 101.0500f, 101.0500f};
+    constexpr int RollFrames = 24;
+    constexpr FStance RollStance{{0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, {0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, 0.8000f};
+    // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
+    constexpr float SideTakeoff = 0.1000f;
+    constexpr float SideLand = 0.5000f;
+    constexpr float SideLateralSpeed = 190.0000f;
+    constexpr float SideVerticalSpeed = 158.3920f;
+    constexpr FStance SideJumpStance{{0.0000f, 0.1000f, 0.5000f, 0.8000f, -1.0000f, -1.0000f}, {0.0000f, 0.1000f, 0.5000f, 0.8000f, -1.0000f, -1.0000f}, 0.8000f};
 }

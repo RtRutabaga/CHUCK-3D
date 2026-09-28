@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -165,7 +165,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -180,11 +180,14 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     Input->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
+    Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
-void AChuckCharacter::Forward(float Value) { AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
-void AChuckCharacter::Right(float Value) { AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
+// A dodge owns the capsule; the stick is still read to choose the next move.
+void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!IsDodging()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
+void AChuckCharacter::Right(float Value) { InputRight = Value; if (!IsDodging()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
+void AChuckCharacter::Dodge() { DodgeToward(FVector2D(InputRight, InputForward)); }
 namespace
 {
     // One orbit spans both framings the prototype compared (GTA-style, no
@@ -255,7 +258,7 @@ void AChuckCharacter::ResetToDock()
     Gait = EGait::Idle;
     Base = Fading = EClip::Idle;
     BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
-    bStopPending = bStopMirror = false;
+    bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -330,12 +333,57 @@ namespace
         }
         return false;
     }
+    float RollTravelAt(float Time)
+    {
+        const float Frame = FMath::Clamp(Time * 30.f, 0.f, static_cast<float>(RollFrames));
+        const int32 I = FMath::Min(FMath::FloorToInt(Frame), RollFrames - 1);
+        return FMath::Lerp(RollTravel[I], RollTravel[I + 1], Frame - I);
+    }
     float TurnProfile(float Time)
     {
         const float Frame = FMath::Clamp(Time * 30.f, 0.f, static_cast<float>(TurnYawFrames));
         const int32 I = FMath::Min(FMath::FloorToInt(Frame), TurnYawFrames - 1);
         return FMath::Lerp(TurnYaw[I], TurnYaw[I + 1], Frame - I);
     }
+}
+
+void AChuckCharacter::DodgeToward(FVector2D Stick)
+{
+    auto* Movement = GetCharacterMovement();
+    if (IsDodging() || Gait == EGait::Turn || Movement->IsFalling() || Movement->MovementMode == MOVE_None) return;
+    const FRotator View(0, ViewYaw, 0);
+    const FVector Ahead = View.Vector(), Side = FRotationMatrix(View).GetUnitAxis(EAxis::Y);
+    if (FMath::Abs(Stick.X) > .5f && FMath::Abs(Stick.X) > FMath::Abs(Stick.Y))
+    {
+        // Side jump: square up down the camera and spring toward the stick
+        // (Unreal +Y is right; the source clip's +Y is Chuck's left).
+        SetActorRotation(View);
+        DodgeDirection = Side * FMath::Sign(Stick.X);
+        Movement->StopMovementImmediately();
+        Gait = EGait::SideJump;
+        SetClip(Stick.X > 0 ? EClip::SideJumpRight : EClip::SideJumpLeft, 0, .08f);
+    }
+    else
+    {
+        // Roll toward the stick, or straight ahead. Enter the dive where its
+        // speed matches the current pace, so a roll from the saunter flows.
+        const FVector Wanted = Ahead * Stick.Y + Side * Stick.X;
+        DodgeDirection = Wanted.SizeSquared2D() > .04f ? Wanted.GetSafeNormal2D() : GetActorForwardVector().GetSafeNormal2D();
+        SetActorRotation(DodgeDirection.Rotation());
+        const float Pace = GetVelocity().Size2D();
+        float Entry = 0;
+        while (Entry < .1f && (RollTravelAt(Entry + 1.f / 60.f) - RollTravelAt(Entry)) * 60.f < Pace) Entry += 1.f / 120.f;
+        Gait = EGait::Roll;
+        SetClip(EClip::Roll, Entry, .08f);
+        RollDone = RollTravelAt(Entry);
+    }
+    bDodgeLaunched = bDodgeLanded = bStopPending = false;
+}
+void AChuckCharacter::FinishDodge()
+{
+    // Back to the aplomb stance the clips end on; saunter on if the stick is held.
+    if (FVector2D(InputRight, InputForward).SizeSquared() > .04f) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .15f); }
+    else { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
 }
 
 void AChuckCharacter::UpdateMotion(float DeltaSeconds)
@@ -356,7 +404,32 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
 
     // Distance-matched gait: start, walk and stop clips advance by travelled
     // distance, so the clip's stance paw moves exactly with the ground.
-    if (bAirborne)
+    if (Gait == EGait::SideJump)
+    {
+        // Launch at the clip's takeoff, hold just before its landing while in
+        // the air, stop the capsule at touchdown (the clip carries the hips on).
+        BaseTime += DeltaSeconds;
+        if (!bDodgeLaunched)
+        {
+            if (BaseTime >= SideTakeoff)
+            {
+                LaunchCharacter(DodgeDirection * SideLateralSpeed + FVector(0, 0, SideVerticalSpeed), true, true);
+                bDodgeLaunched = true;
+            }
+        }
+        else if (!bDodgeLanded)
+        {
+            if (!bAirborne && BaseTime > SideTakeoff + .05f)
+            {
+                bDodgeLanded = true;
+                Movement->StopMovementImmediately();
+                BaseTime = FMath::Max(BaseTime, SideLand);
+            }
+            else BaseTime = FMath::Min(BaseTime, SideLand - 1.f / 30.f);
+        }
+        if (bDodgeLanded && BaseTime >= Length) FinishDodge();
+    }
+    else if (bAirborne)
     {
         if (Gait != EGait::Air)
         {
@@ -372,6 +445,21 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     else if (Gait == EGait::Air)
     {
         Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f);
+    }
+    else if (Gait == EGait::Roll)
+    {
+        // The capsule follows the clip's authored travel along the roll
+        // direction. Movement ticks before the character, so this velocity
+        // is next frame's step: aim it at the travel due then (assuming a
+        // steady frame time), correcting whatever the last step missed.
+        BaseTime += DeltaSeconds;
+        RollDone += Travel;
+        if (BaseTime >= Length) FinishDodge();
+        else
+        {
+            const float RollSpeed = FMath::Max(0.f, RollTravelAt(BaseTime + DeltaSeconds) - RollDone) / FMath::Max(DeltaSeconds, 1e-4f);
+            Movement->Velocity = FVector(DodgeDirection.X * RollSpeed, DodgeDirection.Y * RollSpeed, Movement->Velocity.Z);
+        }
     }
     else if (Gait == EGait::Turn)
     {
@@ -470,9 +558,10 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         bStopPending = false;
     }
+    // During a dodge nothing brakes the capsule but the dodge itself.
     // A landing without input absorbs its momentum within a few cm, before the
     // landing paws lock (0.1 s), instead of walking on into a stop.
-    Movement->BrakingDecelerationWalking = bStopPending ? 0.f : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
+    Movement->BrakingDecelerationWalking = (bStopPending || IsDodging()) ? 0.f : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
 
     FChuckAnimParams& P = Anim->Params;
     P.ClipA = Clips[static_cast<int32>(Base)];
@@ -494,6 +583,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     if (Gait == EGait::Start) Clip = &StartStance;
     else if (Gait == EGait::Stop && !bLoopDominant) Clip = bStopMirror ? &StopStanceMirrored : &StopStance;
     else if (Gait == EGait::Turn) Clip = Base == EClip::TurnLeft90 ? &TurnLeftStance : &TurnRightStance;
+    else if (Gait == EGait::Roll) Clip = &RollStance;
+    else if (Gait == EGait::SideJump) Clip = &SideJumpStance;
     for (int32 I = 0; I < 2; ++I)
     {
         bool bStance = bStanding;
@@ -503,6 +594,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
                                                : (WalkPhase > .52f || WalkPhase < StanceFraction - .52f);
         P.bStance[I] = bStance;
     }
+    // Tucked in the roll, the paws follow the clip untouched.
+    if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.

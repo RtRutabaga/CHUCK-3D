@@ -581,7 +581,64 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const float Off=FMath::FindDeltaAngleDegrees(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw,Chuck->GetActorRotation().Yaw);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CAMERA_MEASURE follow_offset_deg=%.3f"),Off);
             Check(FMath::Abs(Off)<8.f,TEXT("orbit drifts behind Chuck while walking"));
-            Chuck->ResetToDock(); TestStage=52; StageTime=0;
+            // Next: a roll straight ahead from standing.
+            Chuck->ResetToDock(); Chuck->DodgeToward(FVector2D::ZeroVector);
+            LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; bLocoFlag=false;
+            TestStage=54; StageTime=0;
+        }
+    }
+    else if(TestStage==54)
+    {
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))==0) { bLocoFlag=true; ProbeLockedPaws(Chuck,DeltaSeconds); }
+        if(StageTime>1.3f)
+        {
+            const FVector Moved=Chuck->GetActorLocation()-AChuckCharacter::StartLocation();
+            const float Authored=ChuckClipData::RollTravel[ChuckClipData::RollFrames];
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ROLL_MEASURE travel_cm=%.3f authored_cm=%.3f side_cm=%.3f samples=%d max_cm_s=%.4f gait=%s"),Moved.X,Authored,Moved.Y,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
+            Check(bLocoFlag && FMath::Abs(Moved.X-Authored)<8.f && FMath::Abs(Moved.Y)<2.f,TEXT("roll carries Chuck its authored distance"));
+            Check(LocoSamples>=3 && LocoMaxSlip<1.f,TEXT("roll paws hold in stance"));
+            Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("roll recovers to the aplomb stance"));
+            // Next: a side jump to the right (camera-relative stick right).
+            Chuck->ResetToDock(); Chuck->DodgeToward(FVector2D(1,0));
+            LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; bLocoFlag=false; MaxJumpZ=Chuck->GetActorLocation().Z;
+            TestStage=55; StageTime=0;
+        }
+    }
+    else if(TestStage==55)
+    {
+        MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("SideJump"))==0) { bLocoFlag=true; ProbeLockedPaws(Chuck,DeltaSeconds); }
+        if(StageTime>1.3f)
+        {
+            const FVector Moved=Chuck->GetActorLocation()-AChuckCharacter::StartLocation();
+            const float Flight=2.f*ChuckClipData::SideVerticalSpeed/(980.f*Chuck->GetCharacterMovement()->GravityScale);
+            const float Authored=ChuckClipData::SideLateralSpeed*Flight;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEJUMP_MEASURE side_cm=%.3f authored_cm=%.3f forward_cm=%.3f apex_cm=%.3f yaw=%.3f samples=%d max_cm_s=%.4f gait=%s"),Moved.Y,Authored,Moved.X,MaxJumpZ-AChuckCharacter::StartLocation().Z,Chuck->GetActorRotation().Yaw,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
+            Check(bLocoFlag && FMath::Abs(Moved.Y-Authored)<12.f && FMath::Abs(Moved.X)<3.f,TEXT("side jump springs Chuck sideways its authored distance"));
+            Check(FMath::Abs(Chuck->GetActorRotation().Yaw)<1.f && LocoSamples>=3 && LocoMaxSlip<1.f,TEXT("side jump keeps facing with paws held in stance"));
+            Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("side jump recovers to the aplomb stance"));
+            Chuck->ResetToDock(); StageTime=0;
+            // Screenshots stall frames, so they come from an unmeasured replay:
+            // the roll seen from the side, then the side jump from behind.
+            if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+            {
+                Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+                Chuck->DodgeToward(FVector2D::ZeroVector); TestStage=56;
+            }
+            else TestStage=52;
+        }
+    }
+    else if(TestStage==56 || TestStage==57)
+    {
+        const bool bRoll=TestStage==56;
+        for(const float Shot : {.1f,.18f,.3f,.5f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s_%03d.png"),bRoll ? TEXT("Roll") : TEXT("SideJump"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>1.5f)
+        {
+            Chuck->ResetToDock(); StageTime=0;
+            if(bRoll) { Chuck->DodgeToward(FVector2D(1,0)); TestStage=57; }
+            else TestStage=52;
         }
     }
     else if(TestStage==52)
@@ -737,6 +794,6 @@ void ADockHUD::DrawHUD()
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    Mouse / Right stick: orbit (up = rat height, down = high)    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

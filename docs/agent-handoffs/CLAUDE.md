@@ -773,3 +773,47 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Auto-follow strength and delay, orbit speed and the default start height (elevated) are first guesses to tune by feel.
   - No GTA-style pitch auto-return; the chosen height is kept.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-third pass — roll and side jump (first pass)
+
+- **User request:** "Integrate and begin roll and side jump"; run and running jump will come later.
+- **Integration:** main fast-forwarded to `fd78cc8`, then rebuilt in the main checkout: Verify-Package `-MotionCapture` **51/51**; receipt `fd78cc8`. Recorded as `f7407d8` (HANDOFF Update 5).
+- **Source commit:** on top of `f7407d8`, branch `codex/claude-character`.
+- **Clips** (`Tools/build_chuck_v1.py`, all root-fixed; manifest-driven import, no contract change):
+  - **`Roll`** (25 frames, 0.8 s):
+    - A dive off both paws (stance 0–0.08 s), a tight tuck and one revolution about the ball centre (0.1–0.54 s). The paws plant at 0.56 s on the planner's world positions, and he rises into the aplomb stance.
+    - Speed: smoothstep up to 215 cm/s, then down to rest by 0.62 s. Travel is 101 cm (`capsule_travel_cm_per_frame`).
+    - While off the paws, the tucked ball is ground-fitted to the deformed mesh each frame (`body_min_z`), so it rests on the floor. The tail wraps round his left hip.
+  - **`SideJumpLeft` / `SideJumpRight`** (25 frames, 0.8 s):
+    - Takeoff: he loads onto the far leg, and the runtime launches him at 0.1 s (190 cm/s sideways, 158 cm/s up, 16 cm apex, 0.4 s air, about 77 cm).
+    - In the air he leans 20° into the flight; the head stays level, the lead arm is flung out, the lead leg reaches, the trail leg tucks and the tail counter-swings.
+    - He lands on both paws in the aplomb stance at 0.5 s. The hips carry on 3 cm, then settle.
+    - Each side is authored separately rather than mirrored, so the left-corner cigarette doesn't flip sides.
+  - `check_v1.py` PASS, including the no-ground-penetration check for all three clips (min z −0.002 cm).
+  - `review_motion.py` now takes clip names.
+- **Runtime** (`ChuckCharacter.cpp/h`, `ChuckClipData.h` via `gen_chuck_clip_data.py`):
+  - New `Dodge` action: C / Xbox B (`DefaultInput.ini`). `DodgeToward(stick)`: a stick held mostly sideways (camera-relative) gives a side jump that way, squared up down the camera; otherwise he rolls toward the stick, or straight ahead with no stick.
+  - Roll:
+    - It enters the dive at the point where its speed matches his current pace.
+    - Velocity is set closed-loop from distance actually travelled, because movement ticks before the character. Travel is exact even through frame hitches.
+    - Braking is off during the dodge, and foot IK is off while tucked.
+  - Side jump: `LaunchCharacter` at takeoff; the clip holds just before land while airborne; the capsule stops at touchdown.
+  - Both dodges end in the aplomb stance, then Idle, or WalkStart if the stick is held. Movement input is ignored during a dodge but still read.
+- **Tests** (`DockGameMode.cpp`, now **57**; `Verify-Package.ps1` expects 57, or 56 with `-NoCapture`):
+  - Stage 54 (roll): travel vs authored within 8 cm, paws hold, recovers to Idle.
+  - Stage 55 (side jump): lateral vs ballistic within 12 cm, facing kept, paws hold, recovers.
+  - Stages 56/57: unmeasured capture replays (`Roll_*.png`, `SideJump_*.png`), because screenshots stall frames.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **57/57**; uncapped with and without groom: 0 failures.
+  - Roll 101.050 cm (authored 101.050), paw slip 0.
+  - Side jump 79.6–82.3 cm (ballistic 76.8; touchdown is detected up to a frame late), apex 14.6 cm, yaw 0, paw slip 0.
+  - Evidence: `Review/motion_Roll.png`, `Review/motion_SideJumpLeft.png`, `Review/runtime_agility.jpg` (in-game captures, no-groom run).
+- **Remaining flaws / next:**
+  - Roll direction snaps the facing instantly.
+  - The capsule isn't shrunk, so he can't roll under low obstacles.
+  - No mid-air roll or side-jump chaining; a side jump off an edge holds the pre-landing pose until he lands.
+  - The roll's contact point is the crown of the tucked head at about 90°, not the shoulders.
+  - The keyboard/pad Dodge mapping is not exercised by automation (tests call `DodgeToward`).
+  - Not played by a human.
+  - Run and running jump are not started. Plan: a run gait from `Run-Profile`/`Run-Cycle-Sheet` (hold-to-run), a speed blend in the distance-matched gait, then a running-jump takeoff from the run phase.
+- **Not integrated into main.** A worktree launcher receipt was written.

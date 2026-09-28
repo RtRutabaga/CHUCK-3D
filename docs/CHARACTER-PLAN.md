@@ -30,8 +30,8 @@ Immediate art follow-up after the first integration: the open fronts are more co
 | --- | --- | --- |
 | Walk | Planted stance, toe/ankle articulation, believable weight transfer and turns | Playable, visual rework required |
 | Run | Separate stride/contact timing, acceleration/deceleration, tail/garment follow-through | Not implemented |
-| Roll | Continuous torso/hip deformation, clearance, recover-to-stance transition | Not implemented |
-| Side-jump | Lateral takeoff/landing, pelvis orientation, bilateral foot placement | Not implemented; ordinary jump exists |
+| Roll | Continuous torso/hip deformation, clearance, recover-to-stance transition | First pass (2026-09-27): `Roll` clip, about 1 m in 0.8 s, from and back to the aplomb stance, ground-fitted tuck. Capsule is not shrunk, so he can't yet roll under the bench |
+| Side-jump | Lateral takeoff/landing, pelvis orientation, bilateral foot placement | First pass (2026-09-27): `SideJumpLeft`/`SideJumpRight`, about 77 cm sideways with a 16 cm apex, facing kept, landing on both paws in the aplomb stance |
 | Climb | Reach/grip controls, hands/fingers, feet and root alignment to climb surface | Not implemented |
 | Smoke | Stable mouth/head attachment for a cigarette retained in the mouth; restrained jaw/lip pose and smoke origin; avoid face/jacket clipping | Not implemented; pickup remains deferred |
 

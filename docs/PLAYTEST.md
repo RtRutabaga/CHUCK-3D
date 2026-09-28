@@ -16,6 +16,7 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
 | Jump | Space | A |
+| Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way | C | B |
 | Switch elevated / rat-height follow | C | Y |
 | Turn view | Mouse left/right, or Q/E | Right stick left/right |
 | Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |

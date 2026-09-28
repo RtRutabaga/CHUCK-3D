@@ -22,6 +22,8 @@ public:
     /** Snap the orbit to the other framing preset (tests and captures; players orbit freely). */
     void ToggleCamera();
     void ResetToDock();
+    /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
+    void DodgeToward(FVector2D Stick);
     void Recenter();
     /** True when the orbit sits in its upper (elevated) half. */
     bool IsElevated() const;
@@ -34,7 +36,7 @@ public:
     /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
     UStaticMeshComponent* GetCigarette() const { return Cigarette; }
     UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
-    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air or Land. */
+    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll or SideJump. */
     const TCHAR* GetGaitName() const;
 protected:
     virtual void BeginPlay() override;
@@ -56,9 +58,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -75,6 +77,16 @@ private:
     float TurnStartYaw = 0;
     float TurnDelta = 0;
     float MeshDrop = 0;
+    // Dodges (roll / side jump) and the raw stick that chooses between them.
+    float InputForward = 0;
+    float InputRight = 0;
+    FVector DodgeDirection = FVector::ForwardVector;
+    bool bDodgeLaunched = false;
+    bool bDodgeLanded = false;
+    float RollDone = 0;  // capsule distance actually covered in this roll
+    bool IsDodging() const { return Gait == EGait::Roll || Gait == EGait::SideJump; }
+    void Dodge();
+    void FinishDodge();
     FVector PreviousMotionLocation = FVector::ZeroVector;
     void SetClip(EClip Clip, float Time, float FadeSeconds);
     float Period(EClip Clip) const;
