@@ -5,21 +5,21 @@
 namespace ChuckClipData
 {
     // WalkLoop: distance-matched saunter (manifest reference speed, cycle, stance).
-    constexpr float WalkSpeed = 62.0000f;
-    constexpr float WalkPeriod = 0.5000f;
-    constexpr float WalkStride = 31.0000f;
-    constexpr float StanceFraction = 0.6200f;
+    constexpr float WalkSpeed = 72.0000f;
+    constexpr float WalkPeriod = 0.4667f;
+    constexpr float WalkStride = 33.6000f;
+    constexpr float StanceFraction = 0.6000f;
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
     constexpr float StartDuration = 0.5000f;
-    constexpr float StartTravel = 15.5000f;
+    constexpr float StartTravel = 18.0000f;
     constexpr float StopDuration = 0.5000f;
-    constexpr float StopTravel = 15.5000f;
+    constexpr float StopTravel = 18.0000f;
 
     // Stance windows (s): foot_L spans, foot_R spans (lift/plant pairs, -1 padded), clip end.
     struct FStance { float L[6]; float R[6]; float End; };
-    constexpr FStance StartStance{{0.0000f, 0.3100f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.0000f, 0.0800f, 0.2700f, 0.5000f, -1.0000f, -1.0000f}, 0.5000f};
-    constexpr FStance StopStance{{0.0000f, 0.3100f, 0.5400f, 0.6333f, -1.0000f, -1.0000f}, {0.0000f, 0.0600f, 0.2800f, 0.6333f, -1.0000f, -1.0000f}, 0.6333f};
-    constexpr FStance StopStanceMirrored{{0.0000f, 0.0600f, 0.2800f, 0.6333f, -1.0000f, -1.0000f}, {0.0000f, 0.3100f, 0.5400f, 0.6333f, -1.0000f, -1.0000f}, 0.6333f};
+    constexpr FStance StartStance{{0.0000f, 0.3133f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.0000f, 0.0800f, 0.2667f, 0.5000f, -1.0000f, -1.0000f}, 0.5000f};
+    constexpr FStance StopStance{{0.0000f, 0.2800f, 0.5067f, 0.6000f, -1.0000f, -1.0000f}, {0.0000f, 0.0467f, 0.2633f, 0.6000f, -1.0000f, -1.0000f}, 0.6000f};
+    constexpr FStance StopStanceMirrored{{0.0000f, 0.0467f, 0.2633f, 0.6000f, -1.0000f, -1.0000f}, {0.0000f, 0.2800f, 0.5067f, 0.6000f, -1.0000f, -1.0000f}, 0.6000f};
     constexpr FStance TurnLeftStance{{0.0000f, 0.0400f, 0.2000f, 0.3600f, 0.5200f, 0.6667f}, {0.0000f, 0.2000f, 0.3600f, 0.6667f, -1.0000f, -1.0000f}, 0.6667f};
     constexpr FStance TurnRightStance{{0.0000f, 0.2000f, 0.3600f, 0.6667f, -1.0000f, -1.0000f}, {0.0000f, 0.0400f, 0.2000f, 0.3600f, 0.5200f, 0.6667f}, 0.6667f};
 

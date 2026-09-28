@@ -718,3 +718,29 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - A bake retry was needed after the OneDrive write lock on `T_Chuck_ORM.png`.
   - Evidence: `Review/goal_compare_legs.jpg`, `Review/motion_{WalkLoop,Idle}.png`.
 - **Not integrated into main.** A worktree launcher receipt was written so the user can play it.
+
+## Thirty-first pass — a more exaggerated, brisk swagger
+
+- **User request:** a swagger that's "a little more exaggerated" and still brisk, like an "im finna whoop your ass" walk.
+- **Source commit:** on top of `023986e`, branch `codex/claude-character`.
+- **Research used:**
+  - [PMC5283505](https://pmc.ncbi.nlm.nih.gov/articles/PMC5283505/): swagger is a large relative thorax–pelvis twist, which correlates with rated aggression.
+  - Johnson & Tassinary (2007, via PsyBlog): a masculine walk shows a rolling shoulder dip.
+  - Envato Tuts+ walk-cycle notes: chest out, arms carried wide with bent elbows, broad swings and bounce.
+  - A Nature Scientific Reports intimidation paper required a login and was not used.
+- **Changes** (`Tools/build_chuck_v1.py` `WALK` and `carriage`):
+  - Brisker gait: 72 cm/s, a 14-frame (0.467 s) cycle, stance 0.6 and 2 cm lift. `ChuckClipData.h` was regenerated, so the runtime speed, braking and stance follow.
+  - Pelvis yaw is 7°, with a counter-twisting chest of 9° and 12° (spine_02 and chest). The swing-side shoulder rolls and dips 5°.
+  - Chest out 2° more, with the chin level. The head counter-yaws 11° so the gaze stays down the dock. The bounce is bigger, plus a small nod.
+  - Arms swing 22°, carried 11° out from the body, with elbows bent a further 12°.
+  - The hands close loosely (curl 16 + 18k). Real fists would need finger joints the v1 rig lacks: one `fingers_*` bone bends all four fingers at the knuckle, and a higher curl read as pointing.
+- **Verified:**
+  - `check_v1.py` PASS; `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **50/50**; uncapped with and without groom: 0 failures.
+  - Contact slip 0. Stop 17.0 cm, or about 17.5 cm uncapped, which matches the new StopTravel.
+  - Evidence: `Review/motion_{WalkLoop,Idle}.png`, plus the refreshed textured/Unreal review images.
+- **Remaining flaws:**
+  - No true fists without extra finger bones (a rig-contract change).
+  - Sleeves still hide much of the elbow bend from the side.
+  - Not tested with a gamepad by a human.
+- **Not integrated into main.** A worktree launcher receipt was written.

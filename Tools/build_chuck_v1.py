@@ -366,9 +366,12 @@ def curl(s, degrees):
 # Froude Fr = v^2/(g L) ~ 0.25 is the preferred walk for any biped; a saunter
 # is about 0.7x that. Chuck's leg (hip 22.5 cm) gives ~62 cm/s (Fr ~0.17),
 # with a 31 cm stride and a 0.5 s cycle (the old 95 cm/s, 0.3 s cycle, Fr 0.41,
-# read as a scurry). Swagger = hips and shoulders counter-rotating more than
-# a plain walk, peaks offset (overlap), chest up, chin up, arms loose.
-WALK = {'speed_cm_s': 62.0, 'period_frames': 15, 'stance_fraction': .62, 'pelvis_drop_cm': .6, 'lift_cm': 1.8}
+# read as a scurry). User follow-up: more swagger, brisk, "finna whoop your ass":
+# 72 cm/s over a 14-frame cycle (Fr ~0.24, a purposeful walk). Swagger cues:
+# large thorax-pelvis relative twist (the kinematic marker of aggressive gait,
+# PMC5283505), shoulders dipping into a roll each step (Johnson & Tassinary
+# 2007), chest out, arms carried wide with bent elbows, fists, a springy bounce.
+WALK = {'speed_cm_s': 72.0, 'period_frames': 14, 'stance_fraction': .6, 'pelvis_drop_cm': .6, 'lift_cm': 2.0}
 PERIOD = WALK['period_frames'] / FPS
 STANCE_CM = WALK['speed_cm_s'] * PERIOD * WALK['stance_fraction']
 TOE_OUT = {'L': 7., 'R': -7.}  # saunter paws turn slightly out (degrees about Z)
@@ -387,36 +390,39 @@ def carriage(k, w, look=0., breath=0.):
     # forward leg, drop on the swing side. Idle: weight on the right leg (its
     # hip up), a little lower so the free knee softens.
     poser.translate('pelvis', (0, .45 * k * math.cos(w - mid_l) - .9 * idle,
-                               -WALK['pelvis_drop_cm'] * k - .4 * k * math.cos(2 * w) - .45 * idle - .15 * breath))
-    poser.rotate('pelvis', 'Z', -6 * k * math.cos(w))
+                               -WALK['pelvis_drop_cm'] * k - .7 * k * math.cos(2 * w) - .45 * idle - .15 * breath))
+    poser.rotate('pelvis', 'Z', -7 * k * math.cos(w))
     poser.rotate('pelvis', 'X', 3.2 * k * math.cos(w - mid_l) - 4 * idle)
     # Chest counter-rotates harder than the hips twist (the swagger), a beat
     # later; shoulders tilt against the hips (contrapposto when standing).
-    poser.rotate('spine_02', 'Z', 6 * k * math.cos(w - lag) + look * .25)
-    poser.rotate('chest', 'Z', 8 * k * math.cos(w - lag) + look * .2)
-    poser.rotate('chest', 'X', -2.5 * k * math.cos(w - mid_l - lag) + 3 * idle)
+    poser.rotate('spine_02', 'Z', 9 * k * math.cos(w - lag) + look * .25)
+    poser.rotate('chest', 'Z', 12 * k * math.cos(w - lag) + look * .2)
+    # Rolling shoulder dip toward the standing side each step.
+    poser.rotate('chest', 'X', -5 * k * math.cos(w - mid_l - lag) + 3 * idle)
     # Chest up, a slight lean back, breathing in the ribcage.
     poser.rotate('spine_01', 'Y', -3 * k - 2 * idle)
     poser.rotate('spine_02', 'Y', -1. * breath)
-    poser.rotate('chest', 'Y', -1.5 - .6 * breath)
+    poser.rotate('chest', 'Y', -1.5 - 2 * k - .6 * breath)  # chest out when walking
     # Head steady and chin up: it cancels most of the chest twist.
     poser.rotate('neck', 'Y', .6 * breath)
-    poser.rotate('head', 'Z', look * .55 - 6 * k * math.cos(w - lag))  # cancels most of the net chest yaw (+5 deg)
-    poser.rotate('head', 'Y', -3 - 1. * idle + .9 * k * math.cos(2 * w - lag))
+    poser.rotate('head', 'Z', look * .55 - 11 * k * math.cos(w - lag))  # steady gaze over the twist  # cancels most of the net chest yaw (+5 deg)
+    poser.rotate('head', 'Y', -3 - 1. * idle + 2.5 * k + 1.2 * k * math.cos(2 * w - lag))  # chin level, a nod on each step
     # Tail: lazy, trailing sway.
     for i, b in enumerate(TAIL):
-        poser.rotate(b, 'Z', 5 * k * math.sin(w - .7 * (i + 1)) - look * .08 * (i + 1) - 3 * idle)
+        poser.rotate(b, 'Z', 6.5 * k * math.sin(w - .7 * (i + 1)) - look * .08 * (i + 1) - 3 * idle)
     # Arms loose from the shoulder: swing opposite the legs with a lag, carried
     # slightly out from the jacket, elbows bend more on the forward swing, the
     # hands trail. Idle: relaxed hang, elbows soft, the left hand a touch forward.
     for side, sign in (('L', 1), ('R', -1)):
         swing = math.cos(w - lag * 1.5 + (0 if side == 'L' else math.pi))  # +1 = arm back
-        poser.rotate(f'upperarm_{side}', 'Y', 16 * k * swing + (-3 if side == 'L' else 1) * idle)
-        poser.rotate(f'upperarm_{side}', 'X', sign * (5 * k + 1 * idle))
+        poser.rotate(f'upperarm_{side}', 'Y', 22 * k * swing + (-3 if side == 'L' else 1) * idle)
+        poser.rotate(f'upperarm_{side}', 'X', sign * (11 * k + 1 * idle))  # arms carried wide
         fwd = max(0., -swing)
-        poser.rotate(f'lowerarm_{side}', 'Y', -8 - 12 * k * fwd - 2 * k - (4 if side == 'L' else 2) * idle)
+        poser.rotate(f'lowerarm_{side}', 'Y', -8 - 14 * k * fwd - 12 * k - (4 if side == 'L' else 2) * idle)  # elbows bent
         poser.rotate(f'hand_{side}', 'Y', 7 * k * math.cos(w - lag * 3 + (0 if side == 'L' else math.pi)))
-        curl(side, 16 + 4 * k * fwd + (4 if side == 'L' else 0) * idle)
+        # Loose, half-closed hands when walking. A true fist needs finger joints the
+        # v1 rig lacks (one fingers_* bone bends all four at the knuckle).
+        curl(side, 16 + 18 * k + 4 * k * fwd + (4 if side == 'L' else 0) * idle)
 
 def plant_idle():
     r = 0.

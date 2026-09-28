@@ -4,11 +4,11 @@
    "foot": "foot_L",
    "span_s": [
     0.0,
-    0.31
+    0.28
    ],
    "frames": [
     0,
-    9
+    8
    ],
    "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
@@ -19,12 +19,12 @@
   {
    "foot": "foot_R",
    "span_s": [
-    0.25,
-    0.5
+    0.2333,
+    0.4667
    ],
    "frames": [
-    8,
-    14
+    7,
+    13
    ],
    "max_world_slip_cm_s": 0.0,
    "sole_z_cm": [
@@ -36,7 +36,7 @@
    "foot": "foot_R",
    "span_s": [
     0.0,
-    0.06
+    0.0467
    ],
    "frames": [
     0,
@@ -54,7 +54,7 @@
    "foot": "foot_L",
    "span_s": [
     0.0,
-    0.31
+    0.3133
    ],
    "frames": [
     0,
@@ -85,7 +85,7 @@
   {
    "foot": "foot_R",
    "span_s": [
-    0.27,
+    0.2667,
     0.5
    ],
    "frames": [
@@ -104,13 +104,13 @@
    "foot": "foot_L",
    "span_s": [
     0.0,
-    0.31
+    0.28
    ],
    "frames": [
     0,
-    9
+    8
    ],
-   "max_world_slip_cm_s": 0.002,
+   "max_world_slip_cm_s": 0.001,
    "sole_z_cm": [
     0.549,
     0.549
@@ -119,11 +119,11 @@
   {
    "foot": "foot_L",
    "span_s": [
-    0.54,
-    0.6333
+    0.5067,
+    0.6
    ],
    "frames": [
-    17,
+    16,
     18
    ],
    "max_world_slip_cm_s": 0.0,
@@ -136,7 +136,7 @@
    "foot": "foot_R",
    "span_s": [
     0.0,
-    0.06
+    0.0467
    ],
    "frames": [
     0,
@@ -151,11 +151,11 @@
   {
    "foot": "foot_R",
    "span_s": [
-    0.28,
-    0.6333
+    0.2633,
+    0.6
    ],
    "frames": [
-    9,
+    8,
     18
    ],
    "max_world_slip_cm_s": 0.001,
