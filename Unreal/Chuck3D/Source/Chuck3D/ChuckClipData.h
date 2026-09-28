@@ -14,6 +14,7 @@ namespace ChuckClipData
     constexpr float RunPeriod = 0.4000f;
     constexpr float RunStride = 76.0000f;
     constexpr float RunStanceFraction = 0.3000f;
+    constexpr float RunJumpVerticalSpeed = 190.0000f;  // leap out of a run
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
     constexpr float StartDuration = 0.5000f;
     constexpr float StartTravel = 18.0000f;

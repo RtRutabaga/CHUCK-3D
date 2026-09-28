@@ -30,6 +30,8 @@ public:
     float GetRunWeight() const { return RunWeight; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
+    /** In the air on a leap out of a run. */
+    bool IsRunJumping() const { return Gait == EGait::Air && bRunJump; }
     void Recenter();
     /** True when the orbit sits in its upper (elevated) half. */
     bool IsElevated() const;
@@ -64,7 +66,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump };
     EGait Gait = EGait::Idle;
@@ -92,6 +94,8 @@ private:
     float RollDone = 0;  // capsule distance actually covered in this roll
     bool bRunHeld = false;
     float RunWeight = 0;
+    bool bRunJump = false;
+    bool bHardLanding = false;
     void RunPressed() { bRunHeld = true; }
     void RunReleased() { bRunHeld = false; }
     bool IsDodging() const { return Gait == EGait::Roll || Gait == EGait::SideJump; }

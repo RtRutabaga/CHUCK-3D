@@ -878,3 +878,30 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Keyboard D+C: +79–82 cm (right); A+C: −79–82 cm (left).
   - The existing roll (101.050 cm) and side jump are unchanged.
 - **Remaining:** not re-played by the user. The earlier run and running-jump notes still apply. **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-sixth pass — running jump
+
+- **User request:** "Running jump".
+- **Source commit:** on top of `020baee`, branch `codex/claude-character`.
+- **Clip:** `RunJump` (15 frames), a split leap from the run references.
+  - Lead leg reaching with the knee high; trail leg stretched back near horizontal.
+  - Opposite arm forward with the elbows opening; chest open, body extended 3 cm, tail up for balance.
+  - It is built as RunLoop frame 0 plus the leap offsets, faded in by 0.2 and out from 0.6 of the flight, so its last frame is exactly RunLoop frame 0 (foot_L touchdown).
+  - Reach 0.934; `check_v1.py` PASS.
+- **Runtime:**
+  - A jump with the run blend above 0.5 (and rising, not a fall) becomes a leap. Vertical speed is set to `RunJumpVerticalSpeed` (190 vs 170 for the standing jump).
+  - Clip time comes from the flight progress `(vz0 - vz) / 2vz0`, never running backwards, so the pose fits any landing height.
+  - On touchdown with the stick held (acceleration or raw stick), he goes straight into Loop at phase 0 with the run blend set to the speed. Otherwise JumpLand, braking at 2500 cm/s² to shed the run before the 0.1 s landing lock.
+- **Tests:** now **67** (`Verify-Package.ps1` expects 67, or 66 with `-NoCapture`).
+  - Stage 64: running jump with the stick held. Checks: it is a leap, distance vs ballistic within 12 cm, it lands in Loop at ≥90% run speed, and paws hold 0.1–0.6 s after landing.
+  - The run capture replay (stage 60) adds `RunJump_*.png`.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **67/67**; uncapped with and without groom: 0 failures.
+  - Leap 94.7–98.2 cm (ballistic 92.1; landing is detected up to a frame late), apex 23.0 cm, lands into the run, paw slip 0.
+  - Evidence: `Review/motion_RunJump.png`, `Review/runtime_runjump.jpg`.
+- **Remaining:**
+  - The takeoff has no anticipation or phase matching; it launches from whatever stride phase he is in, with a 0.08 s fade.
+  - No dedicated run-landing absorb beyond the stride's own compression.
+  - A leap off an edge into a long fall holds the touchdown pose.
+  - Not played by a human.
+- **Not integrated into main.** A worktree launcher receipt was written.

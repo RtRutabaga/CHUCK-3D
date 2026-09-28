@@ -99,6 +99,34 @@
    "notes": "Run with a flight phase. In place (root fixed); during stance the planted ball moves backward in component space at exactly the reference speed; forefoot strike, heel up; swing meets the ground at running speed."
   },
   {
+   "name": "RunJump",
+   "file": "Animations/AS_Chuck_RunJump.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 14,
+   "frame_count": 15,
+   "duration_s": 0.4667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9338,
+   "launch": {
+    "vertical_cm_s": 190.0,
+    "gravity_cm_s2": 784.0
+   },
+   "time_mapping": "clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = RunLoop frame 0",
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "events_s": {
+    "takeoff": 0.0,
+    "touchdown": 0.4667
+   },
+   "ends_on": "RunLoop frame 0 (foot_L touchdown)",
+   "notes": "Leap from the run: split legs, opposite arm forward, tail up; posed over normalized flight, ends on the run stride."
+  },
+  {
    "name": "WalkStart",
    "file": "Animations/AS_Chuck_WalkStart.fbx",
    "fps": 30,

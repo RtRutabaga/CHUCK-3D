@@ -62,6 +62,7 @@ def main():
         f"    constexpr float RunPeriod = {f(run['duration_s'])};",
         f"    constexpr float RunStride = {f(run['stride_cycle_cm'])};",
         f"    constexpr float RunStanceFraction = {f(run['stance_fraction'])};",
+        f"    constexpr float RunJumpVerticalSpeed = {f(clips['RunJump']['launch']['vertical_cm_s'])};  // leap out of a run",
         '    // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.',
         f"    constexpr float StartDuration = {f(start['duration_travel_s'])};",
         f"    constexpr float StartTravel = {f(start['travel_cm'])};",

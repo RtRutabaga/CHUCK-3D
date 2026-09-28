@@ -593,6 +593,47 @@ author('RunLoop', RUN['period_frames'], run, True, {
     'phase_convention': 'as WalkLoop: phase 0 = foot_L touchdown, foot_R half a cycle later (runtime blends the two loops on a shared phase)',
     'notes': 'Run with a flight phase. In place (root fixed); during stance the planted ball moves backward in component space at exactly the reference speed; forefoot strike, heel up; swing meets the ground at running speed.'})
 
+# Running jump: a leap out of the run. The clip is posed over the flight's
+# normalized progress (the runtime maps clip time from the vertical speed), so
+# it fits any landing height: the push into a split leap - lead leg reaching,
+# trail leg stretched back, opposite arm forward, chest open, tail up for
+# balance - then back to RunLoop frame 0 (foot_L touchdown), so a landing at a
+# run drops straight into the stride.
+RUN_JUMP_FRAMES = 15
+RUN_JUMP_VZ = 190.  # cm/s up (the standing jump uses 170): ~23 cm apex, ~0.48 s, ~92 cm at run speed
+def run_jump(phase, f):
+    u = f / (RUN_JUMP_FRAMES - 1)
+    leap = smoothstep(u, 0., .2) * (1 - smoothstep(u, .6, 1.))
+    run_carriage(0.)
+    poser.translate('pelvis', (0, 0, 3. * leap))
+    poser.rotate('spine_01', 'Y', -3 * leap)
+    poser.rotate('head', 'Y', -4 * leap)
+    for side, sign in (('L', 1), ('R', -1)):
+        back = 1 if side == 'L' else -1  # at RunLoop frame 0 the left arm is back
+        poser.rotate(f'upperarm_{side}', 'Y', 18 * back * leap)
+        poser.rotate(f'upperarm_{side}', 'X', sign * 10 * leap)
+        poser.rotate(f'lowerarm_{side}', 'Y', 25 * leap)
+    for i, b in enumerate(TAIL): poser.rotate(b, 'Y', (8 if i == 0 else 2) * leap)
+    poser.update()
+    split = {'L': (Vector((10., -1., 12.)), 10., -5.), 'R': (Vector((-20., 1., 12.)), 70., 40.)}
+    r = 0.
+    for side in 'LR':
+        x, lift, fp, tp = run_foot(0. if side == 'L' else .5)
+        stride = NEUTRAL_BALL[side] + Vector((x, -(1. if side == 'L' else -1.), lift))
+        off, lfp, ltp = split[side]
+        ball = stride.lerp(NEUTRAL_BALL[side] + off, leap)
+        r = max(r, poser.leg(side, ball, fp + (lfp - fp) * leap, tp + (ltp - tp) * leap, heading=TOE_OUT[side] * .4))
+    for side in 'LR': poser.hand_goal(side)
+    return r
+
+author('RunJump', RUN_JUMP_FRAMES, run_jump, False, {
+    'launch': {'vertical_cm_s': RUN_JUMP_VZ, 'gravity_cm_s2': 980. * .8},
+    'time_mapping': 'clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = RunLoop frame 0',
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'events_s': {'takeoff': 0., 'touchdown': round((RUN_JUMP_FRAMES - 1) / FPS, 4)},
+    'ends_on': 'RunLoop frame 0 (foot_L touchdown)',
+    'notes': 'Leap from the run: split legs, opposite arm forward, tail up; posed over normalized flight, ends on the run stride.'})
+
 # ---- transitions, turns and jumps (world-space footstep planner)
 # Paws are planned in world space while the capsule (root) moves or turns, so
 # a planted paw stays world-locked; component space = Rz(-yaw) (world - travel).

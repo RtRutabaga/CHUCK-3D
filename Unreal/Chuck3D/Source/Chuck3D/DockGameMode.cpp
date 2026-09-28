@@ -696,15 +696,48 @@ void ADockGameMode::Tick(float DeltaSeconds)
             else
             {
                 KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC);
-                // Screenshots stall frames, so they come from an unmeasured replay:
-                // the roll seen from the side, then the side jump from behind.
-                if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
-                {
-                    Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
-                    Chuck->DodgeToward(FVector2D::ZeroVector); TestStage=56;
-                }
-                else TestStage=52;
+                // Next: a running jump with the stick held.
+                Chuck->SetActorLocation(FVector(-240,0,36)); Chuck->SetRunHeld(true); Chuck->SetTestStick(FVector2D(0,1));
+                LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=-3; bLocoFlag=false; bKeyMeasured=false; KeySide=0;
+                TestStage=64;
             }
+        }
+    }
+    else if(TestStage==64)
+    {
+        // LocoValue: -3 running up, -1 jump pressed, -2 airborne, >= 0 landing time.
+        const bool bAir=Chuck->GetCharacterMovement()->IsFalling();
+        Chuck->AddMovementInput(FVector(1,0,0),1);  // stick held throughout, as a player would
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { Chuck->Jump(); LocoValue=-1; }
+        if(LocoValue==-1 && bAir) { LocoPrevious=Chuck->GetActorLocation(); MaxJumpZ=LocoPrevious.Z; bLocoFlag=Chuck->IsRunJumping(); LocoValue=-2; }
+        if(LocoValue==-2)
+        {
+            MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
+            if(!bAir)
+            {
+                KeySide=FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious);
+                bKeyMeasured=FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 && Chuck->GetVelocity().Size2D()>=.9f*ChuckClipData::RunSpeed;
+                LocoValue=StageTime;
+            }
+        }
+        if(LocoValue>=0 && StageTime>LocoValue+.1f && StageTime<LocoValue+.6f) ProbeLockedPaws(Chuck,DeltaSeconds);
+        if(StageTime>2.4f)
+        {
+            const float Flight=2.f*ChuckClipData::RunJumpVerticalSpeed/(980.f*Chuck->GetCharacterMovement()->GravityScale);
+            const float Ballistic=ChuckClipData::RunSpeed*Flight;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RUN_JUMP_MEASURE leap=%d distance_cm=%.3f ballistic_cm=%.3f apex_cm=%.3f into_run=%d samples=%d max_cm_s=%.4f"),bLocoFlag ? 1 : 0,KeySide,Ballistic,MaxJumpZ-LocoPrevious.Z,bKeyMeasured ? 1 : 0,LocoSamples,LocoMaxSlip);
+            Check(bLocoFlag && FMath::Abs(KeySide-Ballistic)<12.f,TEXT("running jump leaps its ballistic distance"));
+            Check(bKeyMeasured,TEXT("running jump lands straight into the run"));
+            Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("paws hold after a running landing"));
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
+            // Screenshots stall frames, so they come from an unmeasured replay:
+            // the roll seen from the side, then the side jump from behind.
+            if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+            {
+                Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+                Chuck->DodgeToward(FVector2D::ZeroVector); TestStage=56;
+            }
+            else TestStage=52;
         }
     }
     else if(TestStage==56 || TestStage==57)
@@ -728,10 +761,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==60)
     {
         Chuck->AddMovementInput(FVector(1,0,0),1);
-        for(const float Shot : {1.2f,1.27f,1.34f})
+        // The run, then a running jump (the stick held so it lands into the stride).
+        if(StageTime>=1.4f && StageTime-DeltaSeconds<1.4f) { Chuck->SetTestStick(FVector2D(0,1)); Chuck->Jump(); }
+        for(const float Shot : {1.2f,1.27f,1.34f,1.5f,1.6f,1.7f,1.85f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
-                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Run_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>1.6f) { Chuck->SetRunHeld(false); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s_%03d.png"),Shot<1.4f ? TEXT("Run") : TEXT("RunJump"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>2.2f) { Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {

@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -268,6 +268,7 @@ void AChuckCharacter::ResetToDock()
     BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     InputForward = InputRight = 0;  // refreshed every frame while input is live
+    bRunJump = bHardLanding = false;
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -333,6 +334,9 @@ namespace
     // Letting go mid-run brakes down to the saunter (about 22 cm), then the
     // authored WalkStop takes over.
     constexpr float RunBrake = 700.f;
+    // A running landing without the stick: shed the run within a few cm,
+    // before the landing paws lock (0.1 s).
+    constexpr float RunLandDeceleration = 2500.f;
     // Saunter -> run blend on the capsule speed; the stride follows it.
     float RunBlendAt(float Speed) { return FMath::Clamp((Speed - WalkSpeed) / (RunSpeed - WalkSpeed), 0.f, 1.f); }
     constexpr float TurnMinAngle = 60.f;
@@ -453,18 +457,41 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         if (Gait != EGait::Air)
         {
+            Gait = EGait::Air;
+            // A jump at a run (not a fall off an edge) becomes a leap with a
+            // little more lift.
+            bRunJump = RunWeight > .5f && GetVelocity().Z > 50.f;
+            if (bRunJump)
+            {
+                Movement->Velocity.Z = RunJumpVerticalSpeed;
+                SetClip(EClip::RunJump, 0, .08f);
+            }
             // Takeoff is runtime-driven, so skip the clip's ground crouch and
             // start at its extension onto the toes.
-            Gait = EGait::Air;
-            SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
+            else SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
         }
-        BaseTime += DeltaSeconds;
-        if (Base == EClip::JumpStart && BaseTime >= Length)
-            SetClip(EClip::JumpLoop, 0, .1f);
+        if (bRunJump)
+        {
+            // Posed over the flight: progress from the vertical speed (0 at
+            // takeoff, 1 back at takeoff height), never running backwards.
+            const float Progress = FMath::Clamp((RunJumpVerticalSpeed - static_cast<float>(GetVelocity().Z)) / (2.f * RunJumpVerticalSpeed), 0.f, 1.f);
+            BaseTime = FMath::Max(BaseTime, Progress * Clips[static_cast<int32>(EClip::RunJump)]->GetPlayLength());
+        }
+        else
+        {
+            BaseTime += DeltaSeconds;
+            if (Base == EClip::JumpStart && BaseTime >= Length)
+                SetClip(EClip::JumpLoop, 0, .1f);
+        }
     }
     else if (Gait == EGait::Air)
     {
-        Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f);
+        // The leap ends on the run's foot_L touchdown: with the stick held,
+        // land straight into the stride.
+        const bool bStickHeld = bInput || FVector2D(InputRight, InputForward).SizeSquared() > .04f;
+        if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
+        else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump; }
+        bRunJump = false;
     }
     else if (Gait == EGait::Roll)
     {
@@ -595,7 +622,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // landing paws lock (0.1 s), instead of walking on into a stop.
     Movement->BrakingDecelerationWalking = IsDodging() ? 0.f
         : bStopPending ? (Speed > WalkSpeed * 1.05f ? RunBrake : 0.f)
-        : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
+        : (Gait == EGait::Land ? (bHardLanding ? RunLandDeceleration : LandDeceleration) : StopDeceleration);
     // The run layer follows the speed in the stride and is held while the
     // stride fades out under the next clip.
     if (Gait == EGait::Loop) RunWeight = FMath::FInterpTo(RunWeight, RunBlendAt(Speed), DeltaSeconds, 10.f);
