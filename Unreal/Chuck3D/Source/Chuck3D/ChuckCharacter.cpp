@@ -189,7 +189,13 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 // A dodge owns the capsule; the stick is still read to choose the next move.
 void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!IsDodging()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
 void AChuckCharacter::Right(float Value) { InputRight = Value; if (!IsDodging()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
-void AChuckCharacter::Dodge() { DodgeToward(FVector2D(InputRight, InputForward)); }
+void AChuckCharacter::Dodge()
+{
+    // Action events dispatch before this frame's axis events: read the stick
+    // directly so a direction pressed together with C counts.
+    if (InputComponent) { InputRight = InputComponent->GetAxisValue(TEXT("Right")); InputForward = InputComponent->GetAxisValue(TEXT("Forward")); }
+    DodgeToward(FVector2D(InputRight, InputForward));
+}
 namespace
 {
     // One orbit spans both framings the prototype compared (GTA-style, no
@@ -261,6 +267,7 @@ void AChuckCharacter::ResetToDock()
     Base = Fading = EClip::Idle;
     BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
+    InputForward = InputRight = 0;  // refreshed every frame while input is live
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -357,7 +364,10 @@ namespace
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
     auto* Movement = GetCharacterMovement();
-    if (IsDodging() || Gait == EGait::Turn || Movement->IsFalling() || Movement->MovementMode == MOVE_None) return;
+    if (IsDodging() || Movement->IsFalling()) return;
+    // A dodge cuts a turn in place short (pressing a direction from standstill
+    // starts one).
+    if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
     const FRotator View(0, ViewYaw, 0);
     const FVector Ahead = View.Vector(), Side = FRotationMatrix(View).GetUnitAxis(EAxis::Y);
     if (FMath::Abs(Stick.X) > .5f && FMath::Abs(Stick.X) > FMath::Abs(Stick.Y))
@@ -435,7 +445,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             }
             else BaseTime = FMath::Min(BaseTime, SideLand - 1.f / 30.f);
         }
-        if (bDodgeLanded && BaseTime >= Length) FinishDodge();
+        // Stick held: walk or run on as soon as the landing has settled a little.
+        const bool bStick = FVector2D(InputRight, InputForward).SizeSquared() > .04f;
+        if (bDodgeLanded && (BaseTime >= Length || (bStick && BaseTime >= SideLand + .15f))) FinishDodge();
     }
     else if (bAirborne)
     {
@@ -462,10 +474,21 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // steady frame time), correcting whatever the last step missed.
         BaseTime += DeltaSeconds;
         RollDone += Travel;
-        if (BaseTime >= Length) FinishDodge();
+        // Stick held: keep the pace through the roll and come out of it
+        // straight into the stride as the paws come round, skipping the rise.
+        const bool bCarry = FVector2D(InputRight, InputForward).SizeSquared() > .04f;
+        const float Pace = bRunHeld ? RunSpeed : WalkSpeed;
+        if (bCarry && BaseTime >= RollPlant)
+        {
+            Movement->Velocity = FVector(DodgeDirection.X * FMath::Max(Speed, Pace), DodgeDirection.Y * FMath::Max(Speed, Pace), Movement->Velocity.Z);
+            Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f);
+            RunWeight = RunBlendAt(FMath::Max(Speed, Pace));
+        }
+        else if (BaseTime >= Length) FinishDodge();
         else
         {
-            const float RollSpeed = FMath::Max(0.f, RollTravelAt(BaseTime + DeltaSeconds) - RollDone) / FMath::Max(DeltaSeconds, 1e-4f);
+            float RollSpeed = FMath::Max(0.f, RollTravelAt(BaseTime + DeltaSeconds) - RollDone) / FMath::Max(DeltaSeconds, 1e-4f);
+            if (bCarry && BaseTime > .1f) RollSpeed = FMath::Max(RollSpeed, Pace);
             Movement->Velocity = FVector(DodgeDirection.X * RollSpeed, DodgeDirection.Y * RollSpeed, Movement->Velocity.Z);
         }
     }
@@ -486,7 +509,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         BaseTime += DeltaSeconds;
         // Landing at a run carries straight on into the stride.
-        if (bInput && Speed > 10.f && (StateTime > .15f || Speed > WalkSpeed * 1.2f)) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f); }
+        if (bInput && Speed > 10.f && (StateTime > .15f || Speed > WalkSpeed * 1.2f)) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f); RunWeight = RunBlendAt(Speed); }
         else if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
     }
     else if (Gait == EGait::Idle)
@@ -573,7 +596,10 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     Movement->BrakingDecelerationWalking = IsDodging() ? 0.f
         : bStopPending ? (Speed > WalkSpeed * 1.05f ? RunBrake : 0.f)
         : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
-    RunWeight = FMath::FInterpTo(RunWeight, Gait == EGait::Loop ? RunBlendAt(Speed) : 0.f, DeltaSeconds, 10.f);
+    // The run layer follows the speed in the stride and is held while the
+    // stride fades out under the next clip.
+    if (Gait == EGait::Loop) RunWeight = FMath::FInterpTo(RunWeight, RunBlendAt(Speed), DeltaSeconds, 10.f);
+    else if (Base != EClip::WalkLoop && !(FadeWeight > 0 && Fading == EClip::WalkLoop)) RunWeight = 0;
 
     FChuckAnimParams& P = Anim->Params;
     P.ClipA = Clips[static_cast<int32>(Base)];
@@ -589,6 +615,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.TimeRun = WalkPhase * RunPeriod;
     P.PeriodRun = Period(EClip::RunLoop);
     P.WeightRun = RunWeight;
+    P.bRunOnA = Base == EClip::WalkLoop;
+    P.bRunOnB = Fading == EClip::WalkLoop;
     P.bFootIK = !bAirborne;
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:

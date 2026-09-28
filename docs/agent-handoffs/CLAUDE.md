@@ -856,3 +856,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The Shift/LB mapping is not exercised by automation (tests call `SetRunHeld`).
   - Not played by a human.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-fifth pass — roll back into the run; keyboard side jumps
+
+- **User feedback** (played `724ec23`):
+  - "When running then rolling i want to be able to quickly resume running after the roll finishes, rn its a long pause."
+  - "Can i right side-jump on pc controls? only left side-jump is working."
+- **Source commit:** on top of `724ec23`, branch `codex/claude-character`.
+- **Roll carry** (`ChuckCharacter.cpp`): with the stick held, the roll keeps at least the current pace (run or saunter) after the dive. At the paw plant (`RollPlant`, 0.56 s, generated) it goes straight into the stride, skipping the 0.25 s rise, with the run blend set to the speed. With no stick held, the full recovery to the aplomb stance is unchanged. Side jump with the stick held: he walks or runs on 0.15 s after touchdown instead of at the clip end.
+- **Run layer:** now attached to the WalkLoop sample (A or B) in `ChuckAnimInstance`, so fades into and out of the stride (rolls, landings) fade the whole run pose. That fixes the run pose showing over the start of a dodge.
+- **Right side jump on keyboard:** the mappings were correct. Two causes, both fixed:
+  - Pressing D from standstill starts a turn in place, and `DodgeToward` ignored dodges during a turn. A dodge now cuts the turn short.
+  - Action events dispatch before that frame's axis events, so D and C pressed together read the stick as neutral (a forward roll). `Dodge()` now reads `Right`/`Forward` from the InputComponent directly.
+  - `ResetToDock` clears the stored stick.
+- **Tests:** now **64** (`Verify-Package.ps1` expects 64, or 63 with `-NoCapture`).
+  - Stage 61: roll out of a run with the stick held; back to ≥95% run speed in the stride within 0.75 s; paws hold after.
+  - Stages 62/63: the real key path. Input is enabled, D (or A) is held from standing, C is pressed 0.15 s later, and sideways travel along Chuck's right is measured.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **64/64**; uncapped with and without groom: 0 failures.
+  - Back to run 0.50 s after the roll starts, paw slip 0.
+  - Keyboard D+C: +79–82 cm (right); A+C: −79–82 cm (left).
+  - The existing roll (101.050 cm) and side jump are unchanged.
+- **Remaining:** not re-played by the user. The earlier run and running-jump notes still apply. **Not integrated into main.** A worktree launcher receipt was written.

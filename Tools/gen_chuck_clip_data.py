@@ -85,6 +85,7 @@ def main():
         '    constexpr float RollTravel[] = {' + ', '.join(f(v) for v in roll['capsule_travel_cm_per_frame']) + '};',
         f"    constexpr int RollFrames = {len(roll['capsule_travel_cm_per_frame']) - 1};",
         f"    constexpr FStance RollStance{stance(roll)};",
+        f"    constexpr float RollPlant = {f(roll['events_s']['plant'])};  // paws back on the ground",
         '    // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.',
         f"    constexpr float SideTakeoff = {f(side['events_s']['takeoff'])};",
         f"    constexpr float SideLand = {f(side['events_s']['land'])};",

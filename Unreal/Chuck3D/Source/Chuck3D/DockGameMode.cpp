@@ -644,16 +644,67 @@ void ADockGameMode::Tick(float DeltaSeconds)
         const float Coast=FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_RUN_STOP_MEASURE distance_cm=%.3f gait=%s"),Coast,Chuck->GetGaitName());
         Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Coast<60.f,TEXT("a stop from a run settles into the aplomb stance"));
+        // Next: roll out of a run with the stick held.
+        Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,0,36));
+        Chuck->SetRunHeld(true); Chuck->SetTestStick(FVector2D(0,1));
+        LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=-2;
+        TestStage=61; StageTime=0;
+    }
+    else if(TestStage==61)
+    {
+        const bool bRolling=FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))==0;
+        if(!bRolling) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { Chuck->DodgeToward(FVector2D(0,1)); LocoValue=-1; }
+        if(LocoValue==-1 && !bRolling && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 && Chuck->GetVelocity().Size2D()>=.95f*ChuckClipData::RunSpeed)
+            LocoValue=StageTime-1.2f;
+        if(LocoValue>=0 && StageTime-1.2f>LocoValue+.05f) ProbeLockedPaws(Chuck,DeltaSeconds);
+        if(StageTime>2.3f)
         {
-            Chuck->ResetToDock(); StageTime=0;
-            // Screenshots stall frames, so they come from an unmeasured replay:
-            // the roll seen from the side, then the side jump from behind.
-            if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ROLL_RUN_MEASURE back_to_run_s=%.3f samples=%d max_cm_s=%.4f"),LocoValue,LocoSamples,LocoMaxSlip);
+            Check(LocoValue>=0 && LocoValue<.75f,TEXT("a roll out of a run springs straight back into the run"));
+            Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("running paws hold after the roll"));
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+            // Next: the real keyboard path, D held from standing then C.
+            auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+            Chuck->EnableInput(KeyPC);
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::D,IE_Pressed,1));
+            bKeyMeasured=false; bLocoFlag=false;
+            TestStage=62; StageTime=0;
+        }
+    }
+    else if(TestStage==62 || TestStage==63)
+    {
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        const bool bRight=TestStage==62;
+        if(StageTime>=.15f && StageTime-DeltaSeconds<.15f) { KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Pressed,1)); LocoPrevious=Chuck->GetActorLocation(); }
+        if(StageTime>=.22f && StageTime-DeltaSeconds<.22f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
+        const bool bJumping=FCString::Strcmp(Chuck->GetGaitName(),TEXT("SideJump"))==0;
+        if(bJumping) bLocoFlag=true;
+        else if(bLocoFlag && !bKeyMeasured)
+        {
+            // Sideways travel over the jump, along Chuck's right (he squares up down the camera).
+            KeySide=FVector::DotProduct(Chuck->GetActorLocation()-LocoPrevious,FRotationMatrix(Chuck->GetActorRotation()).GetUnitAxis(EAxis::Y));
+            bKeyMeasured=true;
+        }
+        if(StageTime>1.5f)
+        {
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(bRight ? EKeys::D : EKeys::A,IE_Released,0));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_KEY_SIDEJUMP_MEASURE key=%s side_cm=%.3f jumped=%d"),bRight ? TEXT("D") : TEXT("A"),KeySide,bLocoFlag ? 1 : 0);
+            Check(bKeyMeasured && (bRight ? KeySide>55.f : KeySide<-55.f),bRight ? TEXT("keyboard D + C side-jumps right") : TEXT("keyboard A + C side-jumps left"));
+            Chuck->ResetToDock(); StageTime=0; bKeyMeasured=false; bLocoFlag=false;
+            if(bRight) { KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::A,IE_Pressed,1)); TestStage=63; }
+            else
             {
-                Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
-                Chuck->DodgeToward(FVector2D::ZeroVector); TestStage=56;
+                KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC);
+                // Screenshots stall frames, so they come from an unmeasured replay:
+                // the roll seen from the side, then the side jump from behind.
+                if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
+                {
+                    Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+                    Chuck->DodgeToward(FVector2D::ZeroVector); TestStage=56;
+                }
+                else TestStage=52;
             }
-            else TestStage=52;
         }
     }
     else if(TestStage==56 || TestStage==57)

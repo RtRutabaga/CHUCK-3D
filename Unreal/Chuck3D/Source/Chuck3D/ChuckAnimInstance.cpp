@@ -103,26 +103,31 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
     }
     // 1. Sample and cross-fade the requested clips (local space).
     {
+        // The run layer belongs to the WalkLoop sample, so cross-fades into
+        // or out of the stride (rolls, landings) fade the whole run pose.
+        const bool bRun = Params.ClipRun && Params.WeightRun > KINDA_SMALL_NUMBER;
+        auto AddRun = [this](FPoseContext& Pose)
+        {
+            FPoseContext Run(Pose), Blended(Pose);
+            Sample(Params.ClipRun, Params.TimeRun, Params.PeriodRun, false, Run);
+            FAnimationPoseData BaseData(Pose), RunData(Run), OutData(Blended);
+            FAnimationRuntime::BlendTwoPosesTogether(BaseData, RunData, 1.f - FMath::Clamp(Params.WeightRun, 0.f, 1.f), OutData);
+            CopyPose(Blended, Pose);
+        };
         FPoseContext PoseA(Output);
         Sample(Params.ClipA, Params.TimeA, Params.PeriodA, Params.bMirrorA, PoseA);
+        if (bRun && Params.bRunOnA) AddRun(PoseA);
         if (Params.ClipB && Params.WeightB > KINDA_SMALL_NUMBER)
         {
             FPoseContext PoseB(Output);
             Sample(Params.ClipB, Params.TimeB, Params.PeriodB, Params.bMirrorB, PoseB);
+            if (bRun && Params.bRunOnB) AddRun(PoseB);
             FAnimationPoseData DataA(PoseA), DataB(PoseB), OutData(Output);
             FAnimationRuntime::BlendTwoPosesTogether(DataA, DataB, 1.f - FMath::Clamp(Params.WeightB, 0.f, 1.f), OutData);
         }
         else
         {
             CopyPose(PoseA, Output);
-        }
-        if (Params.ClipRun && Params.WeightRun > KINDA_SMALL_NUMBER)
-        {
-            FPoseContext Run(Output), Blended(Output);
-            Sample(Params.ClipRun, Params.TimeRun, Params.PeriodRun, false, Run);
-            FAnimationPoseData BaseData(Output), RunData(Run), OutData(Blended);
-            FAnimationRuntime::BlendTwoPosesTogether(BaseData, RunData, 1.f - FMath::Clamp(Params.WeightRun, 0.f, 1.f), OutData);
-            CopyPose(Blended, Output);
         }
     }
 

@@ -28,6 +28,8 @@ public:
     void SetRunHeld(bool bHeld) { bRunHeld = bHeld; }
     /** Current saunter -> run blend (0..1). */
     float GetRunWeight() const { return RunWeight; }
+    /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
+    void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
     void Recenter();
     /** True when the orbit sits in its upper (elevated) half. */
     bool IsElevated() const;

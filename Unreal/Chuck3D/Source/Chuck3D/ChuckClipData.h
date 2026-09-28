@@ -37,6 +37,7 @@ namespace ChuckClipData
     constexpr float RollTravel[] = {0.0000f, 0.6641f, 4.2475f, 10.7500f, 17.9167f, 25.0833f, 32.2500f, 39.4167f, 46.5833f, 53.7500f, 60.9167f, 68.0833f, 75.2500f, 82.4043f, 89.1006f, 94.5483f, 98.3089f, 100.3431f, 101.0091f, 101.0500f, 101.0500f, 101.0500f, 101.0500f, 101.0500f, 101.0500f};
     constexpr int RollFrames = 24;
     constexpr FStance RollStance{{0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, {0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, 0.8000f};
+    constexpr float RollPlant = 0.5600f;  // paws back on the ground
     // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
     constexpr float SideTakeoff = 0.1000f;
     constexpr float SideLand = 0.5000f;

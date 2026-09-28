@@ -25,11 +25,13 @@ struct FChuckAnimParams
     float PeriodB = 0.f;
     bool bMirrorB = false;
     float WeightB = 0.f;
-    /** Speed layer over the A/B result: RunLoop blended in by WeightRun (saunter -> run). */
+    /** Speed layer on the WalkLoop sample (A or B): RunLoop blended in by WeightRun (saunter -> run). */
     UAnimSequence* ClipRun = nullptr;
     float TimeRun = 0.f;
     float PeriodRun = 0.f;
     float WeightRun = 0.f;
+    bool bRunOnA = false;
+    bool bRunOnB = false;
 
     /** Paw is in stance: its ball is locked in world space from the moment stance begins. */
     bool bStance[2] = {false, false};
