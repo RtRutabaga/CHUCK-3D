@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 7 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `f0b296c`, adding:
+- the run (tap Shift / LB);
+- rolling straight back into the run with the stick held;
+- keyboard side-jump fixes (a dodge cuts a turn in place short; the stick is read directly);
+- the running jump (a split leap that lands into the stride).
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **69/69** (`Local/verify-package-20260927-215040.log`); receipt `f0b296c`. Nothing pushed.
+
 **Update 6 (Claude, 2026-09-27, user request "Integrate and run"):** main fast-forwarded to `08a425b`, adding the first roll and side jump: C / Xbox B dodge; the stick held sideways (camera-relative) gives a side jump. Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **57/57** (`Local/verify-package-20260927-192523.log`); receipt `08a425b`. Nothing pushed.
 
 **Update 5 (Claude, 2026-09-27, user request "Integrate and begin roll and side jump"):** main fast-forwarded to `fd78cc8`, adding:
