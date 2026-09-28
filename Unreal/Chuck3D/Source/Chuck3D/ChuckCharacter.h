@@ -24,6 +24,10 @@ public:
     void ResetToDock();
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
+    /** Hold to run (Shift / LB); tests set it directly. */
+    void SetRunHeld(bool bHeld) { bRunHeld = bHeld; }
+    /** Current saunter -> run blend (0..1). */
+    float GetRunWeight() const { return RunWeight; }
     void Recenter();
     /** True when the orbit sits in its upper (elevated) half. */
     bool IsElevated() const;
@@ -58,7 +62,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump };
     EGait Gait = EGait::Idle;
@@ -84,6 +88,10 @@ private:
     bool bDodgeLaunched = false;
     bool bDodgeLanded = false;
     float RollDone = 0;  // capsule distance actually covered in this roll
+    bool bRunHeld = false;
+    float RunWeight = 0;
+    void RunPressed() { bRunHeld = true; }
+    void RunReleased() { bRunHeld = false; }
     bool IsDodging() const { return Gait == EGait::Roll || Gait == EGait::SideJump; }
     void Dodge();
     void FinishDodge();

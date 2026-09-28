@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -181,6 +181,8 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
+    Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
+    Input->BindAction("Run", IE_Released, this, &AChuckCharacter::RunReleased);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
@@ -270,7 +272,7 @@ float AChuckCharacter::Period(EClip Clip) const
 {
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
-    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::JumpLoop;
+    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -321,6 +323,11 @@ namespace
     }
     constexpr float StopDeceleration = WalkSpeed * WalkSpeed / (2.f * StopTravel);
     constexpr float LandDeceleration = 1000.f;
+    // Letting go mid-run brakes down to the saunter (about 22 cm), then the
+    // authored WalkStop takes over.
+    constexpr float RunBrake = 700.f;
+    // Saunter -> run blend on the capsule speed; the stride follows it.
+    float RunBlendAt(float Speed) { return FMath::Clamp((Speed - WalkSpeed) / (RunSpeed - WalkSpeed), 0.f, 1.f); }
     constexpr float TurnMinAngle = 60.f;
     bool InStance(const float* Intervals, float End, float Time)
     {
@@ -400,6 +407,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     PreviousMotionLocation = Location;
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+    if (!IsDodging()) Movement->MaxWalkSpeed = bRunHeld ? RunSpeed : WalkSpeed;
     const float Length = Clips[static_cast<int32>(Base)]->GetPlayLength();
 
     // Distance-matched gait: start, walk and stop clips advance by travelled
@@ -477,7 +485,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     else if (Gait == EGait::Land)
     {
         BaseTime += DeltaSeconds;
-        if (bInput && Speed > 10.f && StateTime > .15f) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .15f); }
+        // Landing at a run carries straight on into the stride.
+        if (bInput && Speed > 10.f && (StateTime > .15f || Speed > WalkSpeed * 1.2f)) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f); }
         else if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
     }
     else if (Gait == EGait::Idle)
@@ -533,8 +542,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else if (Gait == EGait::Loop)
         {
             const float Previous = WalkPhase;
-            WalkPhase = FMath::Frac(WalkPhase + Travel / WalkStride);
-            if (bStopPending && (WalkPhase < Previous || (Previous < .5f && WalkPhase >= .5f)))
+            WalkPhase = FMath::Frac(WalkPhase + Travel / FMath::Lerp(WalkStride, RunStride, RunBlendAt(Speed)));
+            if (bStopPending && Speed <= WalkSpeed * 1.05f && (WalkPhase < Previous || (Previous < .5f && WalkPhase >= .5f)))
             {
                 bEnterStop = true;
                 bStopMirror = WalkPhase >= .5f;
@@ -561,7 +570,10 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // During a dodge nothing brakes the capsule but the dodge itself.
     // A landing without input absorbs its momentum within a few cm, before the
     // landing paws lock (0.1 s), instead of walking on into a stop.
-    Movement->BrakingDecelerationWalking = (bStopPending || IsDodging()) ? 0.f : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
+    Movement->BrakingDecelerationWalking = IsDodging() ? 0.f
+        : bStopPending ? (Speed > WalkSpeed * 1.05f ? RunBrake : 0.f)
+        : (Gait == EGait::Land ? LandDeceleration : StopDeceleration);
+    RunWeight = FMath::FInterpTo(RunWeight, Gait == EGait::Loop ? RunBlendAt(Speed) : 0.f, DeltaSeconds, 10.f);
 
     FChuckAnimParams& P = Anim->Params;
     P.ClipA = Clips[static_cast<int32>(Base)];
@@ -573,6 +585,10 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.PeriodB = Period(Fading);
     P.bMirrorB = Fading == EClip::WalkStop && bStopMirror;
     P.WeightB = FadeWeight;
+    P.ClipRun = RunWeight > 0 ? Clips[static_cast<int32>(EClip::RunLoop)] : nullptr;
+    P.TimeRun = WalkPhase * RunPeriod;
+    P.PeriodRun = Period(EClip::RunLoop);
+    P.WeightRun = RunWeight;
     P.bFootIK = !bAirborne;
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
@@ -590,6 +606,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         bool bStance = bStanding;
         if (Clip) bStance = InStance(I == 0 ? Clip->L : Clip->R, Clip->End, BaseTime);
         // WalkLoop: foot_L stands for [0, StanceFraction) of the cycle, foot_R half a cycle later, trimmed like the clips.
+        else if (bLoopDominant && RunWeight >= .5f) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < RunStanceFraction - .02f)
+                                                                 : (WalkPhase > .52f && WalkPhase < .5f + RunStanceFraction - .02f);
         else if (bLoopDominant) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < StanceFraction - .02f)
                                                : (WalkPhase > .52f || WalkPhase < StanceFraction - .52f);
         P.bStance[I] = bStance;

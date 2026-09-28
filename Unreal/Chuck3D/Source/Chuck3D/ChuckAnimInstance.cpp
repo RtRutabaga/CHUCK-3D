@@ -116,6 +116,14 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
         {
             CopyPose(PoseA, Output);
         }
+        if (Params.ClipRun && Params.WeightRun > KINDA_SMALL_NUMBER)
+        {
+            FPoseContext Run(Output), Blended(Output);
+            Sample(Params.ClipRun, Params.TimeRun, Params.PeriodRun, false, Run);
+            FAnimationPoseData BaseData(Output), RunData(Run), OutData(Blended);
+            FAnimationRuntime::BlendTwoPosesTogether(BaseData, RunData, 1.f - FMath::Clamp(Params.WeightRun, 0.f, 1.f), OutData);
+            CopyPose(Blended, Output);
+        }
     }
 
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();

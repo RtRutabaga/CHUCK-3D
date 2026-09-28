@@ -40,6 +40,7 @@ def main():
     walk, start, stop = clips['WalkLoop'], clips['WalkStart'], clips['WalkStop']
     turn = clips['TurnLeft90']
     roll, side = clips['Roll'], clips['SideJumpLeft']
+    run = clips['RunLoop']
     yaw = [abs(v) for v in turn['capsule_yaw_deg_per_frame']]
     # Frames until the yaw reaches its final value; the tail is the settle hold.
     last = next(i for i, v in enumerate(yaw) if abs(v - yaw[-1]) < 1e-3)
@@ -56,6 +57,11 @@ def main():
         f"    constexpr float WalkPeriod = {f(walk['duration_s'])};",
         f"    constexpr float WalkStride = {f(walk['stride_cycle_cm'])};",
         f"    constexpr float StanceFraction = {f(walk['stance_fraction'])};",
+        '    // RunLoop: same phase convention as WalkLoop; the runtime blends them by speed.',
+        f"    constexpr float RunSpeed = {f(run['reference_speed_cm_s'])};",
+        f"    constexpr float RunPeriod = {f(run['duration_s'])};",
+        f"    constexpr float RunStride = {f(run['stride_cycle_cm'])};",
+        f"    constexpr float RunStanceFraction = {f(run['stance_fraction'])};",
         '    // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.',
         f"    constexpr float StartDuration = {f(start['duration_travel_s'])};",
         f"    constexpr float StartTravel = {f(start['travel_cm'])};",

@@ -492,6 +492,107 @@ author('WalkLoop', WALK['period_frames'], walk, True, {
                  'foot_R_lift': round(((.5 + WALK['stance_fraction']) % 1) * PERIOD, 4)},
     'notes': 'Saunter with a touch of swagger. In place (root fixed); during stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll); paws toe out 7 deg.'})
 
+# ---- run (References/ArtDirection/Chuck-Run-Profile.png, Chuck-Run-Cycle-Sheet.png):
+# a long stride with a flight phase, forward lean from the hips, arms pumping
+# with loose fists at about 90 degrees, heel kicked up behind, knee driven high,
+# tail streaming back. Dynamic similarity: a running Froude number ~1.5 on his
+# 22.5 cm leg gives ~1.8 m/s; stride time scales with sqrt(leg length) (a
+# human's ~0.7 s -> ~0.35 s); the reference's long, leaping stride takes the
+# slower end, 0.4 s (38 cm steps). Duty factor 0.3 (both paws off the ground
+# between steps).
+RUN = {'speed_cm_s': 190.0, 'period_frames': 12, 'stance_fraction': .3}
+RUN_PERIOD = RUN['period_frames'] / FPS
+RUN_STANCE_CM = RUN['speed_cm_s'] * RUN_PERIOD * RUN['stance_fraction']
+
+def hermite(keys, u, end_tangents=None):
+    """Cubic Hermite through keys [(u, v0, v1, ...)] with Catmull-Rom tangents;
+    end_tangents optionally fixes the first value's slope at both ends."""
+    i = next(j for j in range(len(keys) - 1) if u <= keys[j + 1][0])
+    (u0, *p0), (u1, *p1) = keys[i], keys[i + 1]
+    def tangent(j):
+        a, b = keys[max(j - 1, 0)], keys[min(j + 1, len(keys) - 1)]
+        t = [(bv - av) / (b[0] - a[0]) for av, bv in zip(a[1:], b[1:])]
+        if end_tangents and j in (0, len(keys) - 1): t[0] = end_tangents
+        return t
+    m0, m1 = tangent(i), tangent(i + 1)
+    s = (u - u0) / (u1 - u0); h = u1 - u0
+    h00, h10, h01, h11 = 2*s**3 - 3*s**2 + 1, s**3 - 2*s**2 + s, -2*s**3 + 3*s**2, s**3 - s**2
+    return [h00 * a + h10 * h * ta + h01 * b + h11 * h * tb for a, b, ta, tb in zip(p0, p1, m0, m1)]
+
+def run_foot(phase):
+    """(forward offset of the ball from neutral, lift, foot pitch, toe pitch)."""
+    st = RUN['stance_fraction']; half = RUN_STANCE_CM / 2
+    if phase < st:
+        u = phase / st
+        # Forefoot strike; the heel stays up and rises into the toe push.
+        return half - RUN_STANCE_CM * u, 0., 22 + 30 * smoothstep(u, .45, 1.), 0.
+    u = (phase - st) / (1 - st)
+    # Swing: the heel kicks up behind, the knee drives through high, the paw
+    # reaches and is pulled back to meet the ground at running speed.
+    keys = [(0., -half, 0., 52., 0.), (.12, -half - 4., 3., 62., 8.), (.38, -half - 2., 10., 80., 30.),
+            (.62, 4., 9., 25., 12.), (.86, half + 2., 4., 8., -4.), (1., half, 0., 22., 0.)]
+    ground = -RUN_STANCE_CM / st * (1 - st)  # dx/du of a planted paw: no slip at contact
+    x, lift, fp, tp = hermite(keys, u, ground)
+    return x, max(0., lift), fp, tp
+
+def run_carriage(w):
+    lag = TAU * .05
+    mid_l = TAU * RUN['stance_fraction'] / 2
+    # Lowest at each mid-stance, highest in flight; lean forward from the hips.
+    poser.translate('pelvis', (0, .3 * math.cos(w - mid_l), -1.2 - 1.3 * math.cos(2 * (w - mid_l))))
+    poser.rotate('pelvis', 'Y', 17)
+    poser.rotate('pelvis', 'Z', -6 * math.cos(w))
+    poser.rotate('pelvis', 'X', 2 * math.cos(w - mid_l))
+    poser.rotate('spine_01', 'Y', 7)
+    poser.rotate('spine_02', 'Y', 3)
+    poser.rotate('spine_02', 'Z', 6 * math.cos(w - lag))
+    poser.rotate('chest', 'Z', 8 * math.cos(w - lag))
+    poser.rotate('chest', 'Y', 2)
+    # Gaze level down the dock despite the lean.
+    poser.rotate('neck', 'Y', -9)
+    poser.rotate('head', 'Z', -9 * math.cos(w - lag))
+    poser.rotate('head', 'Y', -15 + 1.5 * math.cos(2 * w - lag))
+    # Tail streams out behind, a little wave through it.
+    for i, (b, deg) in enumerate(zip(TAIL, (12, 4, 3, 2, 0, -2))):
+        poser.rotate(b, 'Y', deg + 2.5 * math.sin(2 * w - .8 * (i + 1)))
+        poser.rotate(b, 'Z', 4 * math.sin(w - .7 * (i + 1)))
+    # Arms pump opposite the legs, elbows about 90 degrees, loose fists.
+    for side, sign in (('L', 1), ('R', -1)):
+        swing = math.cos(w - lag + (0 if side == 'L' else math.pi))  # +1 = arm back
+        poser.rotate(f'upperarm_{side}', 'Y', 40 * swing - 10)
+        poser.rotate(f'upperarm_{side}', 'X', sign * 8)
+        poser.rotate(f'lowerarm_{side}', 'Y', -78 - 14 * max(0., -swing))
+        poser.rotate(f'hand_{side}', 'Y', 6 * swing)
+        curl(side, 48)
+
+def run(phase, f):
+    run_carriage(TAU * phase)
+    poser.update()
+    r = 0.
+    for side in 'LR':
+        x, lift, fp, tp = run_foot(phase if side == 'L' else (phase + .5) % 1)
+        # Paws land a little closer to the midline at speed.
+        ball = NEUTRAL_BALL[side] + Vector((x, -(1. if side == 'L' else -1.), lift))
+        r = max(r, poser.leg(side, ball, fp, tp, heading=TOE_OUT[side] * .4))
+    for side in 'LR': poser.hand_goal(side)
+    return r
+
+def run_stance(offset_phase):
+    st = RUN['stance_fraction']
+    a, b = offset_phase % 1, (offset_phase + st) % 1
+    spans = [(a, b)] if a < b else [(a, 1.), (0., b)]
+    return [[round(x * RUN_PERIOD, 4), round(y * RUN_PERIOD, 4)] for x, y in spans]
+
+author('RunLoop', RUN['period_frames'], run, True, {
+    'reference_speed_cm_s': RUN['speed_cm_s'], 'stride_cycle_cm': round(RUN['speed_cm_s'] * RUN_PERIOD, 3),
+    'stance_travel_cm': round(RUN_STANCE_CM, 3), 'stance_fraction': RUN['stance_fraction'],
+    'stance_intervals_s': {'foot_L': run_stance(0.), 'foot_R': run_stance(.5)},
+    'events_s': {'foot_L_plant': 0.0, 'foot_R_plant': round(RUN_PERIOD / 2, 4),
+                 'foot_L_lift': round(RUN['stance_fraction'] * RUN_PERIOD, 4),
+                 'foot_R_lift': round(((.5 + RUN['stance_fraction']) % 1) * RUN_PERIOD, 4)},
+    'phase_convention': 'as WalkLoop: phase 0 = foot_L touchdown, foot_R half a cycle later (runtime blends the two loops on a shared phase)',
+    'notes': 'Run with a flight phase. In place (root fixed); during stance the planted ball moves backward in component space at exactly the reference speed; forefoot strike, heel up; swing meets the ground at running speed.'})
+
 # ---- transitions, turns and jumps (world-space footstep planner)
 # Paws are planned in world space while the capsule (root) moves or turns, so
 # a planted paw stays world-locked; component space = Rz(-yaw) (world - travel).

@@ -9,6 +9,11 @@ namespace ChuckClipData
     constexpr float WalkPeriod = 0.4667f;
     constexpr float WalkStride = 33.6000f;
     constexpr float StanceFraction = 0.6000f;
+    // RunLoop: same phase convention as WalkLoop; the runtime blends them by speed.
+    constexpr float RunSpeed = 190.0000f;
+    constexpr float RunPeriod = 0.4000f;
+    constexpr float RunStride = 76.0000f;
+    constexpr float RunStanceFraction = 0.3000f;
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
     constexpr float StartDuration = 0.5000f;
     constexpr float StartTravel = 18.0000f;

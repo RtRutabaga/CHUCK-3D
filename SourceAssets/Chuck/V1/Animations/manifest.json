@@ -60,6 +60,45 @@
    "notes": "Saunter with a touch of swagger. In place (root fixed); during stance the ball of the planted paw moves backward in component space at exactly the reference speed; heel lifts around the ball in the last 30% of stance (toe roll); paws toe out 7 deg."
   },
   {
+   "name": "RunLoop",
+   "file": "Animations/AS_Chuck_RunLoop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9338,
+   "reference_speed_cm_s": 190.0,
+   "stride_cycle_cm": 76.0,
+   "stance_travel_cm": 22.8,
+   "stance_fraction": 0.3,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.12
+     ]
+    ],
+    "foot_R": [
+     [
+      0.2,
+      0.32
+     ]
+    ]
+   },
+   "events_s": {
+    "foot_L_plant": 0.0,
+    "foot_R_plant": 0.2,
+    "foot_L_lift": 0.12,
+    "foot_R_lift": 0.32
+   },
+   "phase_convention": "as WalkLoop: phase 0 = foot_L touchdown, foot_R half a cycle later (runtime blends the two loops on a shared phase)",
+   "notes": "Run with a flight phase. In place (root fixed); during stance the planted ball moves backward in component space at exactly the reference speed; forefoot strike, heel up; swing meets the ground at running speed."
+  },
+  {
    "name": "WalkStart",
    "file": "Animations/AS_Chuck_WalkStart.fbx",
    "fps": 30,

@@ -15,6 +15,7 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Action | Keyboard / mouse | Xbox controller |
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
+| Run (hold) | Left Shift | LB |
 | Jump | Space | A |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way | C | B |
 | Switch elevated / rat-height follow | C | Y |

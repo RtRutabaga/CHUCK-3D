@@ -617,6 +617,34 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bLocoFlag && FMath::Abs(Moved.Y-Authored)<12.f && FMath::Abs(Moved.X)<3.f,TEXT("side jump springs Chuck sideways its authored distance"));
             Check(FMath::Abs(Chuck->GetActorRotation().Yaw)<1.f && LocoSamples>=3 && LocoMaxSlip<1.f,TEXT("side jump keeps facing with paws held in stance"));
             Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("side jump recovers to the aplomb stance"));
+            // Next: run straight down the quay, then let go.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,0,36)); Chuck->SetRunHeld(true);
+            LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=0;
+            TestStage=58; StageTime=0;
+        }
+    }
+    else if(TestStage==58)
+    {
+        // Hold run: the capsule reaches the run speed, the blend goes fully
+        // to RunLoop and the planted paws hold at speed.
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        LocoValue=FMath::Max(LocoValue,static_cast<float>(Chuck->GetVelocity().Size2D()));
+        if(StageTime>1.f) ProbeLockedPaws(Chuck,DeltaSeconds);
+        if(StageTime>2.f)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RUN_MEASURE speed_cm_s=%.3f authored_cm_s=%.3f blend=%.3f samples=%d max_cm_s=%.4f"),LocoValue,ChuckClipData::RunSpeed,Chuck->GetRunWeight(),LocoSamples,LocoMaxSlip);
+            Check(FMath::Abs(LocoValue-ChuckClipData::RunSpeed)<3.f && Chuck->GetRunWeight()>.95f,TEXT("run reaches the authored run speed and blend"));
+            Check(LocoSamples>=10 && LocoMaxSlip<1.f,TEXT("running paws hold in stance"));
+            Chuck->SetRunHeld(false); LocoPrevious=Chuck->GetActorLocation();
+            TestStage=59; StageTime=0;
+        }
+    }
+    else if(TestStage==59 && StageTime>1.8f)
+    {
+        const float Coast=FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_RUN_STOP_MEASURE distance_cm=%.3f gait=%s"),Coast,Chuck->GetGaitName());
+        Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0 && Coast<60.f,TEXT("a stop from a run settles into the aplomb stance"));
+        {
             Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -638,8 +666,21 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             Chuck->ResetToDock(); StageTime=0;
             if(bRoll) { Chuck->DodgeToward(FVector2D(1,0)); TestStage=57; }
-            else TestStage=52;
+            else
+            {
+                // Then the run from the side.
+                Chuck->SetActorLocation(FVector(-240,0,36)); Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter();
+                Chuck->SetActorRotation(FRotator::ZeroRotator); Chuck->SetRunHeld(true); TestStage=60;
+            }
         }
+    }
+    else if(TestStage==60)
+    {
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        for(const float Shot : {1.2f,1.27f,1.34f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Run_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>1.6f) { Chuck->SetRunHeld(false); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {
@@ -794,6 +835,6 @@ void ADockHUD::DrawHUD()
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

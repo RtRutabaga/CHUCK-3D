@@ -817,3 +817,42 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Not played by a human.
   - Run and running jump are not started. Plan: a run gait from `Run-Profile`/`Run-Cycle-Sheet` (hold-to-run), a speed blend in the distance-matched gait, then a running-jump takeoff from the run phase.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-fourth pass — run (first pass)
+
+- **User request:** "Integrate and run".
+- **Integration:** main fast-forwarded to `08a425b` (roll and side jump). Main-checkout Verify-Package `-MotionCapture` **57/57**; receipt `08a425b`. Recorded as `68bc4ee` (HANDOFF Update 6).
+- **Source commit:** on top of `68bc4ee`, branch `codex/claude-character`.
+- **Clip:** `RunLoop` (12 frames, 0.4 s), matched to the two run references.
+  - Speed from dynamic similarity: Froude ~1.5 on the 22.5 cm leg gives ~190 cm/s. The cycle is the slower end of the sqrt(leg length) scaling, for the reference's long, leaping stride: 38 cm steps. Duty factor 0.3, so there is a flight phase.
+  - Forefoot strike with the heel up; the swing is a Hermite spline that meets the ground at running speed (no contact slip).
+  - The trailing leg extends back, then the heel kicks up, the knee drives high and the paw reaches forward.
+  - 17° lean from the hips, with the neck and head countering to keep the gaze level. The arms pump ±40° with elbows at about 90° and loose fists, and the tail streams back.
+  - Same phase convention as WalkLoop.
+  - Max reach 0.934; `check_v1.py` PASS, including ground.
+- **Runtime:**
+  - `ChuckAnimInstance` gets a run layer (`ClipRun`/`WeightRun`) blended over the A/B result.
+  - `ChuckCharacter`:
+    - `Run` action: Left Shift / Xbox LB, hold. MaxWalkSpeed switches between WalkSpeed and RunSpeed.
+    - In Loop, the phase advances by travel over a stride lerped by the speed blend. The run weight is smoothed at rate 10 and is 0 outside Loop.
+    - Stance windows switch to the run's once the weight passes 0.5.
+    - Releasing the stick mid-run brakes at 700 cm/s² down to the saunter, then the usual coast and WalkStop.
+    - Landing at a run goes straight into the stride.
+  - `ChuckClipData.h` gains RunSpeed, RunPeriod, RunStride and RunStanceFraction.
+- **Tests:** now **60** (`Verify-Package.ps1` expects 60, or 59 with `-NoCapture`).
+  - Stage 58: run speed and blend; running paws hold.
+  - Stage 59: a stop from a run reaches Idle within 60 cm.
+  - Stage 60: an unmeasured side-view capture (`Run_*.png`).
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **60/60**; uncapped with and without groom: 0 failures.
+  - Run 190.000 cm/s, blend 1.0, paw slip 0.
+  - Stop from a run: about 50 cm to Idle.
+  - Evidence: `Review/motion_RunLoop.png`, `Review/runtime_run.jpg`.
+- **Remaining:**
+  - No RunStart/RunStop clips: starts go through WalkStart, and stops brake through the blended loop.
+  - The running jump is the ordinary jump clip with momentum; a dedicated leap (split legs, reach) and a run-landing clip are next.
+  - Dodges entered from a run drop the run layer over about 0.1 s.
+  - The jacket has no follow-through at speed.
+  - The Shift/LB mapping is not exercised by automation (tests call `SetRunHeld`).
+  - Not played by a human.
+- **Not integrated into main.** A worktree launcher receipt was written.
