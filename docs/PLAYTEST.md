@@ -15,7 +15,7 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Action | Keyboard / mouse | Xbox controller |
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
-| Run (hold) | Left Shift | LB |
+| Run: tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
 | Jump (while running: a leap that lands into the stride) | Space | A |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
 | Switch elevated / rat-height follow | C | Y |

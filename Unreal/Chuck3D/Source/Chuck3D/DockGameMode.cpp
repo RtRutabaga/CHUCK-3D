@@ -666,7 +666,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
             // Next: the real keyboard path, D held from standing then C.
             auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
-            Chuck->EnableInput(KeyPC);
+            Chuck->EnableInput(KeyPC); Chuck->SetLookLocked(true);
             KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::D,IE_Pressed,1));
             bKeyMeasured=false; bLocoFlag=false;
             TestStage=62; StageTime=0;
@@ -695,7 +695,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(bRight) { KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::A,IE_Pressed,1)); TestStage=63; }
             else
             {
-                KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC);
+                KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
                 // Next: a running jump with the stick held.
                 Chuck->SetActorLocation(FVector(-240,0,36)); Chuck->SetRunHeld(true); Chuck->SetTestStick(FVector2D(0,1));
                 LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=-3; bLocoFlag=false; bKeyMeasured=false; KeySide=0;
@@ -730,6 +730,37 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bKeyMeasured,TEXT("running jump lands straight into the run"));
             Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("paws hold after a running landing"));
             Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
+            // Next: the same through the real keys, Shift + W held, then Space.
+            Chuck->SetActorLocation(FVector(-380,0,36));
+            auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+            Chuck->EnableInput(KeyPC); Chuck->SetLookLocked(true);
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftShift,IE_Pressed,1));
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
+            bLocoFlag=false; LocoValue=0;
+            TestStage=65;
+        }
+    }
+    else if(TestStage==65)
+    {
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        // Shift is a tap: released at 0.2 s, the run carries on; Space at 1.2 s
+        // leaps; a second tap at 1.8 s drops back to the saunter.
+        auto Tap=[KeyPC](const FKey& Key,bool bDown){ KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(Key,bDown ? IE_Pressed : IE_Released,bDown ? 1.f : 0.f)); };
+        if(StageTime>=.2f && StageTime-DeltaSeconds<.2f) Tap(EKeys::LeftShift,false);
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { LocoValue=Chuck->GetVelocity().Size2D(); Tap(EKeys::SpaceBar,true); }
+        if(StageTime>=1.3f && StageTime-DeltaSeconds<1.3f) Tap(EKeys::SpaceBar,false);
+        if(StageTime>=1.8f && StageTime-DeltaSeconds<1.8f) Tap(EKeys::LeftShift,true);
+        if(StageTime>=1.85f && StageTime-DeltaSeconds<1.85f) Tap(EKeys::LeftShift,false);
+        if(Chuck->IsRunJumping()) bLocoFlag=true;
+        if(StageTime>3.f)
+        {
+            const float Saunter=Chuck->GetVelocity().Size2D();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_KEY_RUN_JUMP_MEASURE speed_at_press_cm_s=%.3f leap=%d speed_after_second_tap_cm_s=%.3f gait=%s"),LocoValue,bLocoFlag ? 1 : 0,Saunter,Chuck->GetGaitName());
+            Check(bLocoFlag && LocoValue>.95f*ChuckClipData::RunSpeed,TEXT("tapped Shift keeps running; Space leaps without holding Shift"));
+            Check(FMath::Abs(Saunter-ChuckClipData::WalkSpeed)<3.f,TEXT("a second Shift tap drops back to the saunter"));
+            Tap(EKeys::W,false);
+            KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+            Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
             if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
@@ -921,6 +952,6 @@ void ADockHUD::DrawHUD()
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

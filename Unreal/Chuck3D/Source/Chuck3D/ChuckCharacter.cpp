@@ -182,7 +182,6 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
     Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
-    Input->BindAction("Run", IE_Released, this, &AChuckCharacter::RunReleased);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
@@ -211,10 +210,10 @@ namespace
     constexpr float AutoFollowDelay = 1.2f;  // s without look input
     constexpr float AutoFollowRate = 1.5f;   // 1/s at full walking speed
 }
-void AChuckCharacter::MouseLook(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 0.8f); if (Value != 0) LookIdle = 0; }
-void AChuckCharacter::Turn(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 100 * GetWorld()->GetDeltaSeconds()); if (Value != 0) LookIdle = 0; }
-void AChuckCharacter::MousePitch(float Value) { LookPitch = FMath::Clamp(LookPitch + Value * 0.8f, HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
-void AChuckCharacter::StickPitch(float Value) { LookPitch = FMath::Clamp(LookPitch + Value * 80 * GetWorld()->GetDeltaSeconds(), HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::MouseLook(float Value) { if (bLookLocked) return; ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 0.8f); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::Turn(float Value) { if (bLookLocked) return; ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 100 * GetWorld()->GetDeltaSeconds()); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::MousePitch(float Value) { if (bLookLocked) return; LookPitch = FMath::Clamp(LookPitch + Value * 0.8f, HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::StickPitch(float Value) { if (bLookLocked) return; LookPitch = FMath::Clamp(LookPitch + Value * 80 * GetWorld()->GetDeltaSeconds(), HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
 bool AChuckCharacter::IsElevated() const { return LookPitch < (ElevatedPitch + RatPitch) * .5f; }
 void AChuckCharacter::ToggleCamera() { LookPitch = IsElevated() ? RatPitch : ElevatedPitch; }
 void AChuckCharacter::Recenter() { ViewYaw = GetActorRotation().Yaw; LookPitch = FMath::Min(LookPitch, RatPitch); }
@@ -421,6 +420,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     PreviousMotionLocation = Location;
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+    const EGait GaitBefore = Gait;
     if (!IsDodging()) Movement->MaxWalkSpeed = bRunHeld ? RunSpeed : WalkSpeed;
     const float Length = Clips[static_cast<int32>(Base)]->GetPlayLength();
 
@@ -617,6 +617,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         bStopPending = false;
     }
+    // Coming to a stop ends the run latch.
+    if (Gait == EGait::Idle && GaitBefore != EGait::Idle) bRunHeld = false;
     // During a dodge nothing brakes the capsule but the dodge itself.
     // A landing without input absorbs its momentum within a few cm, before the
     // landing paws lock (0.1 s), instead of walking on into a stop.

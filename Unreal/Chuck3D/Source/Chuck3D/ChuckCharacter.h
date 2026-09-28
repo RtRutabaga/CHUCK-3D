@@ -24,12 +24,14 @@ public:
     void ResetToDock();
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
-    /** Hold to run (Shift / LB); tests set it directly. */
+    /** Run latch: tap Shift / LB to run, tap again or come to a stop to saunter. Tests set it directly. */
     void SetRunHeld(bool bHeld) { bRunHeld = bHeld; }
     /** Current saunter -> run blend (0..1). */
     float GetRunWeight() const { return RunWeight; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
+    /** Tests that enable live input: ignore mouse/stick look so a real mouse cannot steer them. */
+    void SetLookLocked(bool bLocked) { bLookLocked = bLocked; }
     /** In the air on a leap out of a run. */
     bool IsRunJumping() const { return Gait == EGait::Air && bRunJump; }
     void Recenter();
@@ -95,9 +97,11 @@ private:
     bool bRunHeld = false;
     float RunWeight = 0;
     bool bRunJump = false;
+    bool bLookLocked = false;
     bool bHardLanding = false;
-    void RunPressed() { bRunHeld = true; }
-    void RunReleased() { bRunHeld = false; }
+    // A latch, not a hold: holding Shift while pressing Space (and a direction)
+    // can exceed what many keyboards register at once.
+    void RunPressed() { bRunHeld = !bRunHeld; }
     bool IsDodging() const { return Gait == EGait::Roll || Gait == EGait::SideJump; }
     void Dodge();
     void FinishDodge();

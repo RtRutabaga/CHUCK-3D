@@ -905,3 +905,20 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - A leap off an edge into a long fall holds the touchdown pose.
   - Not played by a human.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-seventh pass — run is a tap, so jumping mid-run works on any keyboard
+
+- **User feedback** (played `f2c7d48`): the running jump "doesnt work while im holding down shift, so i have to let off of shift for long enough to jump but not long enough to stop running".
+- **Source commit:** on top of `f2c7d48`, branch `codex/claude-character`.
+- **Diagnosis:**
+  - The engine's legacy chord matching is permissive about Shift (`PlayerInput.cpp` `GetChordsForKeyMapping`: `bShift == false || IsShiftPressed()`).
+  - A new real-key test (stage 65: LeftShift + W held, then SpaceBar through `PlayerController::InputKey`) leaps at 190 cm/s.
+  - So the game receives the combination. The likely cause is keyboard ghosting/rollover: Shift + a movement key + Space is a combination many keyboards drop. That can't be fixed in software.
+- **Change:**
+  - Run is now a latch: tap Shift / LB to run and it keeps running with Shift released. Tap again to saunter; coming to a stop (entering Idle) also ends it.
+  - The IE_Released binding is removed. HUD and `PLAYTEST.md` updated.
+  - Tests that enable live input lock mouse and stick look (`SetLookLocked`) so a real mouse on the machine can't steer them; the key run test starts at X −380.
+- **Tests:** now **69** (`Verify-Package.ps1` expects 69, or 68 with `-NoCapture`).
+  - Stage 65 through the real keys: Shift tapped and released, W held; Space at 1.2 s leaps at full run speed. A second Shift tap drops back to the saunter (72 cm/s).
+- **Verified:** packaged `-MotionCapture` and `-NoGroom`: **69/69**; uncapped with and without groom: 0 failures.
+- **Not verified:** the user's physical keyboard. **Not integrated into main.** A worktree launcher receipt was written.
