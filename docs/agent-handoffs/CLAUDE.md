@@ -744,3 +744,32 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Sleeves still hide much of the elbow bend from the side.
   - Not tested with a gamepad by a human.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-second pass — GTA-style continuous orbit camera
+
+- **User request:** make the camera work like GTA, with no button press needed to go between the two views.
+- **Source commit:** on top of `20da1f2`, branch `codex/claude-character`.
+- **Changes** (`ChuckCharacter.cpp/h`):
+  - `bElevated`/`CameraBlend` are replaced by one orbit pitch (`LookPitch`, smoothed at rate 14). Mouse/right-stick Y drives it at all times; the stick runs at 80°/s.
+    - −48° is the old elevated view (400 cm boom, pivot 16 cm, FOV 65). Down to −60° climbs a little higher.
+    - −5° is the old rat-height view (220 cm, pivot 22 cm, FOV 78, lens about 76 cm).
+    - Boom length, pivot and FOV blend linearly in between.
+    - Above −5° the boom stays level and only the lens tilts up, to +30°, so it never dips under the pier.
+  - Auto-follow: about 1.2 s after the last look input, while grounded and walking away from the camera, the yaw eases behind Chuck. The rate is 1.5/s × alignment × speed fraction; strafing or walking toward the lens is left alone.
+  - Recenter and reset keep the chosen height.
+  - The `Camera` action and its C/Y mappings are removed from `DefaultInput.ini`. `ToggleCamera()` stays as a preset snap for the smoke-test and capture stages. `IsElevated()` now means the upper half of the orbit.
+  - HUD text and docs (`PLAYTEST.md`, `PROTOTYPE.md`) are updated.
+- **Tests** (`DockGameMode.cpp`, now **51** checks; `Verify-Package.ps1` expects 51, or 50 with `-NoCapture`):
+  - Stage 5 holds right stick up until the orbit reaches rat height, replacing the C key.
+  - Stage 6 holds right stick down to elevated, replacing the Y button.
+  - The jump test measures the orbit pivot, not the lens, since look pitch moves the lens freely.
+  - New stage 53: with the orbit 35° off his heading, walking brings it back behind him (measured −1.1°).
+  - Simulated MouseY axis events were not sampled in capped runs, so the orbit tests use the gamepad stick. Real-mouse orbiting is untested by automation.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **51/51**; uncapped with and without groom: 0 failures.
+  - Jump pivot travel about 6 cm; rat lens 75.8 cm; follow offset −1.1° to −1.2°.
+- **Remaining:**
+  - Not played by a human with a mouse or physical controller.
+  - Auto-follow strength and delay, orbit speed and the default start height (elevated) are first guesses to tune by feel.
+  - No GTA-style pitch auto-return; the chosen height is kept.
+- **Not integrated into main.** A worktree launcher receipt was written.

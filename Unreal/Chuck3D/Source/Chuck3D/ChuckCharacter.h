@@ -19,10 +19,14 @@ public:
     AChuckCharacter();
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* Input) override;
+    /** Snap the orbit to the other framing preset (tests and captures; players orbit freely). */
     void ToggleCamera();
     void ResetToDock();
     void Recenter();
-    bool IsElevated() const { return bElevated; }
+    /** True when the orbit sits in its upper (elevated) half. */
+    bool IsElevated() const;
+    /** Orbit look pitch (deg): -60 high, -48 elevated preset, -5 rat height, up to +30 looking up. */
+    float GetLookPitch() const { return LookPitch; }
     static FVector StartLocation() { return FVector(-240, -180, 36); }
     /** v1 animation instance on GetMesh(); null until play begins. */
     UChuckAnimInstance* GetChuckAnim() const;
@@ -41,10 +45,12 @@ private:
     UPROPERTY() USkeletalMesh* PlainMesh;
     UPROPERTY() UStaticMeshComponent* Cigarette;
     UPROPERTY() UStaticMeshComponent* Smoke;
-    bool bElevated = true;
     float ViewYaw = 0;
-    float ViewPitch = 0;
-    float CameraBlend = 1;
+    /** One continuous GTA-style orbit instead of two switched cameras. */
+    float LookPitch = -48;
+    float SmoothLook = -48;
+    /** Seconds since the last look input; the orbit drifts behind Chuck after a while. */
+    float LookIdle = 0;
     /** Camera pivot height: holds through jumps, follows real level changes. */
     float FollowZ = 0;
     bool bFollowReady = false;

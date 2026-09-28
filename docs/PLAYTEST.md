@@ -18,19 +18,19 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Jump | Space | A |
 | Switch elevated / rat-height follow | C | Y |
 | Turn view | Mouse left/right, or Q/E | Right stick left/right |
-| Look up/down in rat-height mode | Mouse up/down | Right stick up/down |
+| Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |
 | Center camera behind Chuck | F | Right-stick click |
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
-Elevated view uses a fixed downward angle. Rat-height view stays about 65 cm above the floor at rest and allows limited vertical look. Both use camera collision, capped follow smoothing and identical character movement. Switching blends smoothly; mouse sensitivity is lower and the rat-height view is pulled back to reveal more surroundings. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset preserves your selected camera mode.
+The camera is one GTA-style orbit with no switch button (since 2026-09-27). Look down (mouse/right stick) and it climbs to the elevated view: 400 cm boom, 48 degrees down, or a little higher. Look up and it sweeps down and in to rat height: 220 cm boom, lens about 76 cm above the floor. Past that it keeps the lens low and tilts it up. Boom length, pivot and field of view blend continuously in between. About 1.2 s after your last look input, the camera eases back behind Chuck while he walks away from it. Strafing or walking toward the camera leaves it alone. It uses camera collision and capped follow smoothing. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset keeps your chosen camera height.
 
 ## Compare the cameras
 
 1. Start in elevated view. Walk to the barrel and crate; check that they block Chuck. Jump onto the 10 cm low step. Walk around the bench; at the revised size Chuck cannot fit beneath its 41 cm clearance.
 2. Approach the dock worker and tavern door. Judge whether they feel human-sized beside Chuck. They have no interactions.
 3. Walk out along the pier. Jump the missing board near its middle. Falling resets you nearby on the quay.
-4. Press C / Y, reset with R / View, and repeat the route at rat height. Look up at the worker and frontage. Round the crate and barrel to check camera collision and visibility.
+4. Reset with R / View, look up until the camera sits at rat height, and repeat the route. Look up at the worker and frontage. Round the crate and barrel to check camera collision and visibility.
 5. Repeat using the other input device. Report which view feels better, where Chuck disappears or distances become hard to judge, and whether the jump or movement feels too fast or too slow.
 
 Neither camera is selected as the final direction. The user authorized further presentation and animation work; the camera decision still requires playtest feedback.

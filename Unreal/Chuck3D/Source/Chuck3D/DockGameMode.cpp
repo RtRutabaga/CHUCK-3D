@@ -390,7 +390,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         MaxJumpZ=FMath::Max(MaxJumpZ,static_cast<float>(Chuck->GetActorLocation().Z));
         {
-            const float CameraZ=Chuck->FindComponentByClass<UCameraComponent>()->GetComponentLocation().Z;
+            // The orbit pivot, not the lens: look pitch moves the lens freely.
+            const float CameraZ=Chuck->FindComponentByClass<USpringArmComponent>()->GetComponentLocation().Z;
             if(StageTime<=DeltaSeconds*1.5f) { CameraMinZ=CameraMaxZ=CameraZ; }
             CameraMinZ=FMath::Min(CameraMinZ,CameraZ); CameraMaxZ=FMath::Max(CameraMaxZ,CameraZ);
         }
@@ -440,16 +441,26 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Chuck->ResetToDock();
         auto* PC=Cast<APlayerController>(Chuck->GetController());
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
-        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Pressed,1));
         TestStage=5; StageTime=0;
     }
-    else if(TestStage==5 && StageTime>1)
+    else if(TestStage==5 && (StageTime<=1.2f || (StageTime<4 && StageTime-LookReached<.6f)))
+    {
+        // Right stick up orbits the camera down to rat height; no switch
+        // button. Held until it gets there at any frame rate, then the blend
+        // settles. (Simulated mouse axes are not sampled in the capped run.)
+        auto* PC=Cast<APlayerController>(Chuck->GetController());
+        if(StageTime>1 && StageTime-DeltaSeconds<=1) PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
+        const bool bLow=Chuck->GetLookPitch()>=-5.f;
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_RightY,IE_Axis,bLow ? 0.f : 1.f));
+        if(!bLow) LookReached=StageTime;
+    }
+    else if(TestStage==5)
     {
         auto* PC=Cast<APlayerController>(Chuck->GetController());
         PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
-        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::C,IE_Released,0));
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_RightY,IE_Axis,0));
         Check(Chuck->GetActorLocation().X > -200,TEXT("keyboard W mapping walks"));
-        Check(!Chuck->IsElevated(),TEXT("keyboard C mapping switches camera"));
+        Check(!Chuck->IsElevated(),TEXT("right stick up orbits down to rat height"));
         Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,220.f,1.f),TEXT("rat-height camera blend settles"));
         {
             FHitResult Floor;
@@ -461,7 +472,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Height>68.f && Height<85.f,TEXT("rat-height lens sits just over Chuck's ears"));
         }
         Chuck->ResetToDock();
-        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Pressed,1));
+        PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_RightY,IE_Axis,-1));
         TestStage=6; StageTime=0;
     }
     else if(TestStage==6)
@@ -471,9 +482,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1)
         {
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_LeftY,IE_Axis,0));
-            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Top,IE_Released,0));
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_RightY,IE_Axis,0));
             Check(Chuck->GetActorLocation().X > -200,TEXT("Xbox left-stick mapping walks"));
-            Check(Chuck->IsElevated(),TEXT("Xbox Y mapping switches camera"));
+            Check(Chuck->IsElevated(),TEXT("Xbox right stick orbits up to elevated"));
             Check(FMath::IsNearlyEqual(Chuck->FindComponentByClass<USpringArmComponent>()->TargetArmLength,400.f,1.f),TEXT("elevated camera blend settles"));
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Gamepad_FaceButton_Bottom,IE_Pressed,1));
             MaxJumpZ=Chuck->GetActorLocation().Z;
@@ -556,6 +567,20 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TURN_MEASURE turned=%d samples=%d max_cm_s=%.4f releases=%d yaw_at_walk=%.3f"),bLocoFlag ? 1:0,LocoSamples,LocoMaxSlip,Releases,LocoValue);
             Check(bLocoFlag && LocoSamples>=5 && LocoMaxSlip<1.f && Releases==0,TEXT("turn in place pivots on planted paws"));
             Check(bLocoFlag && FMath::Abs(FMath::FindDeltaAngleDegrees(LocoValue,-90.f))<5.f,TEXT("turn in place faces input before walking"));
+            Chuck->ResetToDock(); TestStage=53; StageTime=0;
+        }
+    }
+    else if(TestStage==53)
+    {
+        // GTA-style auto-follow: with the orbit left 35 degrees off Chuck's
+        // heading and no look input, walking away eases it back behind him.
+        if(StageTime<=DeltaSeconds*1.5f) { Chuck->SetActorRotation(FRotator(0,35,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator); }
+        Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>3)
+        {
+            const float Off=FMath::FindDeltaAngleDegrees(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw,Chuck->GetActorRotation().Yaw);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CAMERA_MEASURE follow_offset_deg=%.3f"),Off);
+            Check(FMath::Abs(Off)<8.f,TEXT("orbit drifts behind Chuck while walking"));
             Chuck->ResetToDock(); TestStage=52; StageTime=0;
         }
     }
@@ -709,9 +734,9 @@ void ADockHUD::DrawHUD()
     if(!Chuck || !Canvas) return;
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,18,440,79);
     DrawText(TEXT("CHUCK  /  WATERDEEP DOCKS"),FLinearColor(.94f,.88f,.75f),30,27,GEngine->GetSmallFont(),1.25f);
-    DrawText(Chuck->IsElevated() ? TEXT("ELEVATED CAMERA") : TEXT("RAT-HEIGHT FOLLOW CAMERA"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
+    DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    C / Y: camera    Mouse, Q/E / Right stick: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    Compare the same route in both cameras."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Space / A: jump    Mouse / Right stick: orbit (up = rat height, down = high)    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

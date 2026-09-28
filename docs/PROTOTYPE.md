@@ -11,7 +11,7 @@ Unreal 5.7.4 with a small C++ runtime module replaces the initial Blueprint-only
 - Elevated: perspective, 400 cm collision-tested boom, 48-degree downward angle, 65-degree FOV.
 - Rat-height follow: 220 cm collision-tested boom from a chest-high pivot, tilted 5 degrees down, lens about 76 cm above the floor (just over Chuck's ears, so he sits low in frame rather than covering the view ahead), 78-degree FOV; limited look up/down rotates the camera without lowering the boom beneath the floor. Until 2026-09-27 the boom was horizontal with the lens at ear height (about 65 cm).
 - Both views keep their height through a jump (pivot moves about 5.5 cm for an 18 cm hop) and follow landings on a new level or falls.
-- C / Xbox Y blends between views at the same character position. Both modes use the same movement, jumping and scene. Follow smoothing is capped at 8 cm; orbit rotation is damped. No motion blur. F / right-stick click recenters behind Chuck. Mouse sensitivity is reduced.
+- Since 2026-09-27 the two views are the ends of one continuous GTA-style orbit, with no switch button. Mouse/right-stick look down climbs toward elevated; look up sweeps down to rat height, then tilts the lens up to +30 degrees. Boom length, pivot height and FOV blend with the orbit pitch. After 1.2 s without look input the orbit eases behind Chuck while he walks away from it. Before this, C / Xbox Y blended between the two fixed views. Both modes use the same movement, jumping and scene. Follow smoothing is capped at 8 cm; orbit rotation is damped. No motion blur. F / right-stick click recenters behind Chuck. Mouse sensitivity is reduced.
 
 Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visibility near the barrel/crate, human scale, view of the tavern, landing readability at the pier gap, and comfort. Reset preserves the selected camera. Repeat with keyboard and Xbox controller. No final camera choice until the user plays and gives feedback.
 
@@ -20,7 +20,7 @@ Follow the same route in [PLAYTEST.md](PLAYTEST.md) in both modes. Compare visib
 - Walk/turn/stop at rat scale using keyboard and Xbox mappings.
 - Jump and land, collide with the world, and recover locally after falling.
 - Read Chuck's gray body and purple jacket against human-scale placeholders.
-- Both switchable camera modes run in the same Windows build.
+- Both framings are reachable in one continuous orbit in the same Windows build (switchable until 2026-09-27).
 - Controls and exact launch instructions are documented.
 - Runtime checks and visual inspection are recorded honestly, with physical-controller verification distinguished from simulated input tests.
 - Keep source and LFS assets in the separate public CHUCK-3D repository; public publication was authorized on 2026-09-24.

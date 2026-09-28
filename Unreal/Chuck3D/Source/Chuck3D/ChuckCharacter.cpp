@@ -179,24 +179,53 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAxis("PitchStick", this, &AChuckCharacter::StickPitch);
     Input->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     Input->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-    Input->BindAction("Camera", IE_Pressed, this, &AChuckCharacter::ToggleCamera);
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
 void AChuckCharacter::Forward(float Value) { AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
 void AChuckCharacter::Right(float Value) { AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
-void AChuckCharacter::MouseLook(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 0.8f); }
-void AChuckCharacter::Turn(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 100 * GetWorld()->GetDeltaSeconds()); }
-void AChuckCharacter::MousePitch(float Value) { if(!bElevated) ViewPitch = FMath::Clamp(ViewPitch + Value * 0.8f,-25.f,40.f); }
-void AChuckCharacter::StickPitch(float Value) { if(!bElevated) ViewPitch = FMath::Clamp(ViewPitch + Value * 65 * GetWorld()->GetDeltaSeconds(),-25.f,40.f); }
-void AChuckCharacter::ToggleCamera() { bElevated = !bElevated; }
-void AChuckCharacter::Recenter() { ViewYaw = GetActorRotation().Yaw; ViewPitch = 0; }
+namespace
+{
+    // One orbit spans both framings the prototype compared (GTA-style, no
+    // switch button): look pitch -48 is the elevated view (400 cm boom, FOV 65)
+    // and -5 the rat-height view (220 cm boom, lens just over the ears, FOV 78).
+    // Between them boom length, pivot and FOV blend with the pitch; below -48
+    // the camera climbs a little higher; above -5 the boom stays level and
+    // only the lens looks up, so it never dips under the pier.
+    constexpr float ElevatedPitch = -48.f;
+    constexpr float RatPitch = -5.f;
+    constexpr float HighestPitch = -60.f;
+    constexpr float LookUpPitch = 30.f;
+    constexpr float AutoFollowDelay = 1.2f;  // s without look input
+    constexpr float AutoFollowRate = 1.5f;   // 1/s at full walking speed
+}
+void AChuckCharacter::MouseLook(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 0.8f); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::Turn(float Value) { ViewYaw = FRotator::NormalizeAxis(ViewYaw + Value * 100 * GetWorld()->GetDeltaSeconds()); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::MousePitch(float Value) { LookPitch = FMath::Clamp(LookPitch + Value * 0.8f, HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
+void AChuckCharacter::StickPitch(float Value) { LookPitch = FMath::Clamp(LookPitch + Value * 80 * GetWorld()->GetDeltaSeconds(), HighestPitch, LookUpPitch); if (Value != 0) LookIdle = 0; }
+bool AChuckCharacter::IsElevated() const { return LookPitch < (ElevatedPitch + RatPitch) * .5f; }
+void AChuckCharacter::ToggleCamera() { LookPitch = IsElevated() ? RatPitch : ElevatedPitch; }
+void AChuckCharacter::Recenter() { ViewYaw = GetActorRotation().Yaw; LookPitch = FMath::Min(LookPitch, RatPitch); }
 void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 {
-    const float Target = bElevated ? 1.f : 0.f;
-    CameraBlend = DeltaSeconds > 0 ? FMath::FInterpTo(CameraBlend, Target, DeltaSeconds, 7.f) : Target;
+    SmoothLook = DeltaSeconds > 0 ? FMath::FInterpTo(SmoothLook, LookPitch, DeltaSeconds, 14.f) : LookPitch;
+    const float BoomPitch = FMath::Clamp(SmoothLook, HighestPitch, RatPitch);
+    const float CameraBlend = FMath::Clamp((BoomPitch - RatPitch) / (ElevatedPitch - RatPitch), 0.f, 1.f);
     Boom->TargetArmLength = FMath::Lerp(220.f, 400.f, CameraBlend);
+    // GTA-style auto-follow: after a moment without look input the orbit eases
+    // behind Chuck while he walks away from the camera. Strafing or walking
+    // toward the lens leaves it alone.
+    LookIdle += DeltaSeconds;
+    const FVector Velocity = GetVelocity();
+    const float Speed = Velocity.Size2D();
+    if (DeltaSeconds > 0 && LookIdle > AutoFollowDelay && Speed > 10.f && GetCharacterMovement()->IsMovingOnGround())
+    {
+        const float Along = FVector::DotProduct(Velocity.GetSafeNormal2D(), FRotator(0, ViewYaw, 0).Vector());
+        const float Weight = FMath::Clamp((Along - .5f) / .5f, 0.f, 1.f) * FMath::Min(Speed / ChuckClipData::WalkSpeed, 1.f);
+        const float Behind = FMath::FindDeltaAngleDegrees(ViewYaw, GetActorRotation().Yaw);
+        ViewYaw = FRotator::NormalizeAxis(ViewYaw + Behind * FMath::Min(1.f, DeltaSeconds * AutoFollowRate * Weight));
+    }
     // The pivot ignores the arc of a jump (a 65 cm character's hop otherwise
     // bobs the whole view) but follows landings on a new level and falls.
     const float ActorZ = GetActorLocation().Z;
@@ -207,13 +236,13 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
         FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, bAirborne ? 1.5f : 8.f);
         FollowZ = FMath::Clamp(FollowZ, ActorZ - 40.f, ActorZ + 40.f);
     }
-    // Rat-height: chest-high pivot and a 5 degree tilt put the lens about 75 cm
-    // up, just over the ears, so Chuck sits low in frame instead of covering
-    // the view ahead. Mouse/stick pitch still turns the lens, never the boom.
+    // Rat-height end: chest-high pivot and a 5 degree tilt put the lens about
+    // 75 cm up, just over the ears, so Chuck sits low in frame instead of
+    // covering the view ahead. Looking further up turns the lens, not the boom.
     Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(22.f,16.f,CameraBlend) + FollowZ - ActorZ));
-    const FRotator TargetRotation(FMath::Lerp(-5.f, -48.f, CameraBlend), ViewYaw, 0);
+    const FRotator TargetRotation(BoomPitch, ViewYaw, 0);
     Boom->SetWorldRotation(DeltaSeconds > 0 ? FMath::RInterpTo(Boom->GetComponentRotation(),TargetRotation,DeltaSeconds,18.f) : TargetRotation);
-    Camera->SetRelativeRotation(FRotator(ViewPitch*(1-CameraBlend),0,0));
+    Camera->SetRelativeRotation(FRotator(SmoothLook - BoomPitch,0,0));
     Camera->FieldOfView = FMath::Lerp(78.f,65.f,CameraBlend);
 }
 void AChuckCharacter::ResetToDock()
@@ -222,7 +251,7 @@ void AChuckCharacter::ResetToDock()
     SetActorLocation(StartLocation(), false, nullptr, ETeleportType::TeleportPhysics);
     SetActorRotation(FRotator::ZeroRotator);
     ViewYaw = 0;
-    ViewPitch = 0;
+    LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
     Gait = EGait::Idle;
     Base = Fading = EClip::Idle;
     BaseTime = FadingTime = FadeWeight = StateTime = StartDistance = WalkPhase = StopTravel = 0;
