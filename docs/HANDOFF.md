@@ -2,6 +2,15 @@
 
 ## Current launcher and integration status
 
+**Update 8 (Claude, 2026-09-29, user request "Integrate"):** main fast-forwarded to `7324500`, adding:
+- the running jump and tap-to-run;
+- the claw slash: a wide, fast arc and a held flurry with a random paw order;
+- parkour: wall run, wall jump, ledge grab/hang/pull-up/drop, knee-high mantle, shimmy and the hang camera;
+- the practice yard, cargo wharf, Chandlers' Row and Timber Yard;
+- sleeves that read as arms in a coat, and a vivid violet jacket.
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **94/94** (`Local/verify-package-20260929-100457.log`); receipt `7324500`. Nothing pushed.
+
 **Update 7 (Claude, 2026-09-27, user request "Integrate"):** main fast-forwarded to `f0b296c`, adding:
 - the run (tap Shift / LB);
 - rolling straight back into the run with the stick held;
