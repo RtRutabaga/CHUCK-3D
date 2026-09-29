@@ -184,6 +184,67 @@ void BuildDockSetting(UWorld* World)
     }
     for(int32 I=0;I<4;++I)
         House(FVector(-1390+I*520,1400,20),FVector(440,480,560+(I%2)*130),TEXT("Plaster"),false);
+    // The port belongs to a rising city, not a strip of houses on an island.
+    // These are scenery beyond the existing closed perimeter, never new traversal.
+    Box(FVector(-4500,100,-160),FVector(3800,7800,360),TEXT("Stone"));
+    Box(FVector(-4650,250,120),FVector(2300,6800,200),TEXT("Stone"));
+    Box(FVector(-5500,300,330),FVector(1300,6100,220),TEXT("Stone"));
+    Box(FVector(-1100,3200,-100),FVector(3900,2000,260),TEXT("Stone"));
+    for(int32 I=0;I<8;++I)
+    {
+        const float Y=-2700+I*780.f;
+        House(FVector(-3830,Y,220),FVector(520+(I%2)*110,550,720+(I%3)*160),
+            I%3?TEXT("Plaster"):TEXT("Stone"),false);
+        House(FVector(-5240,Y+160,440),FVector(630,560,780+(I%4)*100),TEXT("Stone"),false);
+    }
+    for(int32 I=0;I<5;++I)
+        House(FVector(-2130+I*680,2830,30),FVector(560,620,660+(I%3)*130),TEXT("Plaster"),false);
+    // Retaining wall, buttresses and a distant civic roof provide a varied silhouette.
+    Box(FVector(-3500,250,160),FVector(45,6800,320),TEXT("Stone"));
+    for(float Y=-2920;Y<=3450;Y+=430)
+        Box(FVector(-3460,Y,150),FVector(95,65,300),TEXT("Stone"));
+    House(FVector(-5480,700,440),FVector(860,1160,1150),TEXT("Stone"),false);
+    for(float Y : {130.f,1270.f})
+    {
+        Box(FVector(-5480,Y,1200),FVector(270,270,1520),TEXT("Stone"));
+        Box(FVector(-5480,Y,1970),FVector(310,310,32),TEXT("Dark"));
+        for(float X : {-5590.f,-5480.f,-5370.f})
+            for(float Offset : {-110.f,110.f})
+                Box(FVector(X,Y+Offset,2020),FVector(48,48,75),TEXT("Stone"));
+    }
+    // Across the basin, connect the old distant frontage to a substantial bank.
+    Box(FVector(4660,100,-90),FVector(1650,6500,120),TEXT("Stone"));
+    for(int32 I=0;I<9;++I)
+        House(FVector(4410,-2600+I*610,-30),FVector(560,510,650+(I%4)*110),
+            I%2?TEXT("Plaster"):TEXT("Stone"),false);
+    Box(FVector(3400,100,-50),FVector(55,6300,170),TEXT("Stone"));
+    // Street-facing brackets, shutters and canopies distinguish the near buildings.
+    const FVector StreetFronts[]={FVector(-1369,-1800,0),FVector(-1329,-1080,0),
+        FVector(-1299,-360,0),FVector(-1269,430,0)};
+    for(int32 I=0;I<4;++I)
+    {
+        const FVector P=StreetFronts[I];
+        Box(P+FVector(45,0,230),FVector(100,145,8),I%2?TEXT("Wood"):TEXT("Roof"),false,FRotator(-8,0,0));
+        for(float Y : {-60.f,60.f})
+            Beam(P+FVector(0,Y,160),P+FVector(85,Y,225),6,TEXT("Wood"));
+        for(float Y : {-135.f,135.f})
+        {
+            Box(P+FVector(14,Y,350),FVector(8,28,85),TEXT("WoodLight"),false,FRotator(0,Y>0?25:-25,0));
+            Beam(P+FVector(8,Y-20,275),P+FVector(8,Y+20,320),5,TEXT("Wood"));
+        }
+        Beam(P+FVector(0,115,260),P+FVector(76,115,260),6,TEXT("Dark"));
+        Box(P+FVector(65,115,231),FVector(8,64,42),TEXT("Wood"));
+        Label(P+FVector(70,115,232),I==0?TEXT("NETS"):I==1?TEXT("STORES"):I==2?TEXT("ROPE"):TEXT("SAILS"));
+    }
+    // Flat workshop roofs stay usable: only dress faces below existing ledges.
+    for(int32 I=0;I<3;++I)
+    {
+        const float Y=-1150-I*250.f;
+        Box(FVector(-245,Y,121),FVector(30,146,6),TEXT("Wood"));
+        for(float Offset : {-62.f,62.f})
+            Beam(FVector(-259,Y+Offset,84),FVector(-232,Y+Offset,119),4,TEXT("Wood"));
+        Box(FVector(-252,Y,48),FVector(10,90,7),TEXT("WoodLight"));
+    }
     // Solid perimeter walls meet the nonplayable city; gate-shaped panels imply streets beyond.
     Box(FVector(-1790,-700,100),FVector(20,3200,200),TEXT("Stone"),true);
     Box(FVector(-800,890,100),FVector(2000,20,200),TEXT("Stone"),true);
