@@ -100,3 +100,14 @@ On the quay's south strip:
 The chimney bounce ends with a catch on a stack top; jump to pull up onto it.
 
 A wall gives one run until Chuck lands or reaches a different wall.
+
+## Cargo wharf (bigger parkour course)
+
+South of the practice yard, a stone wharf extension (8 × 6 m) laid out as one course:
+
+- **Crate staircase** along the west edge: columns 30, 60, 120, 180 and 230 cm tall. Mantle the low ones; jump and catch the tall ones. A plank bridge from the top leads onto the warehouse roof.
+- **Warehouse** (230 cm, flat roof) on a stone plinth that juts 40 cm at 115 cm. Run up and catch it, shimmy along it, or stand on it.
+- **Alley** (100 cm) between the warehouse and a 260 cm sail loft: bounce up it to either roof.
+- **Knee-high field** on the south edge: low harbour walls, bollards, barrels and a crate.
+- **Boats** moored off the wharf.
+

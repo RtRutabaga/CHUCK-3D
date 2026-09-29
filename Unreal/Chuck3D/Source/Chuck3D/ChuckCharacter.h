@@ -79,6 +79,8 @@ public:
     bool IsElevated() const;
     /** Orbit look pitch (deg): -60 high, -48 elevated preset, -5 rat height, up to +30 looking up. */
     float GetLookPitch() const { return LookPitch; }
+    /** Captures: set the orbit height directly. */
+    void SetOrbitPitch(float Pitch) { LookPitch = SmoothLook = Pitch; }
     static FVector StartLocation() { return FVector(-240, -180, 36); }
     /** v1 animation instance on GetMesh(); null until play begins. */
     UChuckAnimInstance* GetChuckAnim() const;

@@ -146,6 +146,79 @@ void ADockGameMode::StartPlay()
     // A knee-high stone mooring plinth (30 cm): walk into it and Chuck mantles up.
     Shape(TEXT("MooringPlinth"),FVector(150,-330,15),FVector(60,60,30),TEXT("Stone"));
     Shape(TEXT("MooringRing"),FVector(150,-299,18),FVector(8,3,8),TEXT("Dark"),Cylinder,false);
+    // Cargo wharf (user request 2026-09-29: "a bigger obstacle area"): a stone
+    // quay extension south of the yard, laid out as one connected parkour
+    // course in dock materials (collision-true primitives, to be dressed later):
+    //  - a crate staircase up the west edge (30/60/120/180/230 cm: mantles and
+    //    jump-and-grab steps) with a plank bridge to the warehouse roof;
+    //  - a timber-and-plaster warehouse (230 cm, flat roof) on a stone plinth
+    //    that juts 40 cm at 115 cm: a long ledge to grab, shimmy and stand on;
+    //  - a 100 cm alley between it and a 260 cm sail loft: a second chimney;
+    //  - a knee-high field of harbour walls, bollards, barrels and crates;
+    //  - boats moored off the wharf edge.
+    Shape(TEXT("Wharf"),FVector(-100,-700,-20),FVector(800,600,40),TEXT("Stone"));
+    for(const float X : {-500.f,300.f}) Shape(TEXT("WharfEdgeBeam"),FVector(X,-700,1),FVector(12,600,4),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("WharfEdgeBeam"),FVector(-100,-1000,1),FVector(812,12,4),TEXT("Wood"),nullptr,false);
+    auto CrateColumn = [&](const TCHAR* Name,float X,float Y,float Height)
+    {
+        auto* Column=Shape(Name,FVector(X,Y,Height*.5f),FVector(60,65,Height),TEXT("WoodLight"));
+        if(!CrateMesh) return;
+        Column->SetActorHiddenInGame(true);
+        for(float Z=0; Z<Height-1.f; Z+=60.f)
+        {
+            const float Part=FMath::Min(60.f,Height-Z);
+            auto* Art=Prop(TEXT("WharfCrateArt"),FVector(X,Y,Z+Part*.5f),CrateMesh);
+            Art->SetActorScale3D(FVector(1,1,Part/60.f));
+            Art->SetActorRotation(FRotator(0,FMath::RoundToInt(Z/60.f)%2 ? 1.5f : -1.f,0));
+        }
+    };
+    // Crate staircase, north to south along the west edge.
+    {
+        const float Heights[]={30.f,60.f,120.f,180.f,230.f};
+        for(int32 Step=0; Step<5; ++Step) CrateColumn(TEXT("CrateStair"),-440,-462.5f-65.f*Step,Heights[Step]);
+        Shape(TEXT("PlankBridge"),FVector(-370,-722.5f,227),FVector(80,40,6),TEXT("Wood"));
+        if(RopeMesh) Prop(TEXT("WharfRopeArt"),FVector(-440,-722,230),RopeMesh);
+    }
+    // Warehouse on its stone plinth.
+    Shape(TEXT("WharfWarehouse"),FVector(-180,-790,115),FVector(300,220,230),TEXT("Plaster"));
+    Shape(TEXT("WarehousePlinth"),FVector(-180,-660,57.5f),FVector(300,40,115),TEXT("Stone"));
+    Shape(TEXT("WarehouseRoofTrim"),FVector(-180,-790,231),FVector(306,226,4),TEXT("Dark"),nullptr,false);
+    for(const float X : {-328.f,-32.f}) for(const float Y : {-682.f,-898.f})
+        Shape(TEXT("WarehouseTimber"),FVector(X,Y,115),FVector(8,8,230),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("WarehouseBeam"),FVector(-180,-679,170),FVector(300,3,8),TEXT("Wood"),nullptr,false);
+    for(const float X : {-280.f,-180.f,-80.f})
+    {
+        Shape(TEXT("WarehouseWindowFrame"),FVector(X,-679.5f,195),FVector(42,2,40),TEXT("Wood"),nullptr,false);
+        Shape(TEXT("WarehouseWindow"),FVector(X,-679,195),FVector(34,2,32),TEXT("Amber"),nullptr,false);
+    }
+    Shape(TEXT("WarehouseDoor"),FVector(-180,-900.5f,70),FVector(90,2,140),TEXT("Wood"),nullptr,false);
+    if(RopeMesh) Prop(TEXT("WharfRopeArt"),FVector(-100,-660,115),RopeMesh);
+    // Sail loft across the alley.
+    Shape(TEXT("SailLoft"),FVector(170,-770,130),FVector(200,260,260),TEXT("Plaster"));
+    Shape(TEXT("SailLoftRoofTrim"),FVector(170,-770,261),FVector(206,266,4),TEXT("Dark"),nullptr,false);
+    for(const float X : {72.f,268.f}) for(const float Y : {-642.f,-898.f})
+        Shape(TEXT("SailLoftTimber"),FVector(X,Y,130),FVector(8,8,260),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("SailLoftHoistBeam"),FVector(170,-630,250),FVector(10,30,10),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("SailLoftDoor"),FVector(170,-639.5f,150),FVector(70,2,110),TEXT("Wood"),nullptr,false);
+    // Knee-high field: harbour walls, bollards, barrels, a crate.
+    for(const FVector& Wall : {FVector(-380,-950,17.5f),FVector(-140,-965,17.5f),FVector(120,-950,17.5f)})
+    {
+        Shape(TEXT("HarbourLowWall"),Wall,FVector(120,30,35),TEXT("Stone"));
+        Shape(TEXT("HarbourLowCoping"),Wall+FVector(0,0,18.5f),FVector(124,34,3),TEXT("Stone"),nullptr,false);
+    }
+    for(const float X : {-460.f,-260.f,-20.f,230.f})
+        Shape(TEXT("WharfBollard"),FVector(X,-985,17.5f),FVector(22,22,35),TEXT("Dark"),Cylinder);
+    for(const FVector& Spot : {FVector(-270,-935,45),FVector(-20,-935,45)})
+    {
+        auto* Barrel=Shape(TEXT("WharfBarrel"),Spot,FVector(62,62,90),TEXT("Wood"),Cylinder);
+        if(BarrelMesh) { Barrel->SetActorHiddenInGame(true); Prop(TEXT("WharfBarrelArt"),Spot,BarrelMesh); }
+    }
+    CrateColumn(TEXT("WharfCrate"),240,-930,60);
+    if(BoatMesh)
+    {
+        Prop(TEXT("WharfBoatArt"),FVector(-250,-1160,-60),BoatMesh)->SetActorRotation(FRotator(0,90,0));
+        Prop(TEXT("WharfBoatArt"),FVector(420,-760,-60),BoatMesh);
+    }
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
@@ -1034,6 +1107,46 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(FMath::Abs(FMath::FindDeltaAngleDegrees(CameraYawAtHang,-90.f))<5.f,TEXT("hanging turns the camera to face the wall with him"));
             Check(FMath::Abs(ShimmyX1-ShimmyX0-1.2f*AChuckCharacter::ShimmySpeed)<12.f && FMath::Abs(ShimmyZ1-ShimmyZ0)<1.f,TEXT("stick sideways shimmies along the edge"));
             Check(bHanging && At.X>20.f && At.X<50.f,TEXT("the shimmy stops at the end of the ledge, still hanging"));
+            // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+            PullUpsBase=Chuck->GetPullUps(); HangAt=-1; WallEnterAt=-1;
+            TestStage=82; StageTime=0;
+        }
+    }
+    else if(TestStage==82)
+    {
+        if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Climb"))==0) Chuck->SetTestStick(FVector2D::ZeroVector);
+        if(StageTime>3.f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WHARF_MEASURE route=plinth pullups=%d z=%.2f ground=%d"),Chuck->GetPullUps()-PullUpsBase,At.Z,bGround ? 1 : 0);
+            Check(Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(115.f+32.5f))<3.f && bGround,TEXT("the warehouse's stone plinth is a ledge he climbs onto"));
+            // Next: bounce up the alley between the warehouse and the sail loft.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-5,-760,36));
+            Chuck->SetActorRotation(FRotator(0,180,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+            PullUpsBase=Chuck->GetPullUps(); HangAt=-1; WallEnterAt=-1;
+            TestStage=83; StageTime=0;
+        }
+    }
+    else if(TestStage==83)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->JumpPressed();
+        const bool bRunning=Chuck->IsWallRunning();
+        if(bRunning && WallEnterAt<0) { WallEnterAt=StageTime; Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(!bRunning) WallEnterAt=-1;
+        if(bRunning && WallEnterAt>=0 && StageTime>=WallEnterAt+.25f && StageTime-DeltaSeconds<WallEnterAt+.25f) Chuck->JumpPressed();
+        if(Chuck->IsHanging() && HangAt<0) HangAt=StageTime;
+        if(HangAt>=0 && StageTime>=HangAt+.3f && StageTime-DeltaSeconds<HangAt+.3f) Chuck->JumpPressed();
+        if(StageTime>5.f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WHARF_MEASURE route=alley pullups=%d z=%.2f ground=%d"),Chuck->GetPullUps()-PullUpsBase,At.Z,bGround ? 1 : 0);
+            Check(Chuck->GetPullUps()>PullUpsBase && At.Z>255.f && bGround,TEXT("bouncing up the alley between the warehouse and the sail loft reaches the roofs"));
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -1124,7 +1237,26 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {.35f,.45f,.55f,.8f,1.2f,1.4f,1.6f,2.1f,2.4f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Ledge_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>3.f) { Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>3.f)
+        {
+            // Then the cargo wharf: from its south edge looking north over the
+            // whole course (only water behind the camera), then from the warehouse roof.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-100,-975,36));
+            Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetOrbitPitch(-38.f);
+            TestStage=84; StageTime=0;
+        }
+    }
+    else if(TestStage==84)
+    {
+        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f)
+        {
+            Chuck->SetActorLocation(FVector(-120,-780,230+35),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetOrbitPitch(-22.f);
+        }
+        for(const float Shot : {.8f,1.9f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Wharf_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>2.3f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {

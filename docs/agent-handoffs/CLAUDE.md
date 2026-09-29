@@ -1146,3 +1146,29 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The yard's look is to be dressed later.
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-fifth pass — a bigger obstacle area: the cargo wharf
+
+- **User request:** "Before we get to corners and turning I want a bigger obstacle area, expand the area".
+- **Source commit:** on top of `46cf6cf`, branch `codex/claude-character`.
+- **Scene** (`DockGameMode.cpp`): a stone wharf slab 800×600 cm (X −500..300, Y −1000..−400, top 0) joins the quay's south edge, with timber edge beams. Collision-true primitives in dock materials, to be dressed later. The course:
+  - **Crate staircase** at X −440: `CrateColumn` collision boxes with stacked or scaled `SM_DockCrate` art, 30/60/120/180/230 cm tall, stepping south. That's mantle, mantle, then three jump-and-grab steps (60/60/50 cm up). A 40 cm-wide plank bridge crosses from the 230 column to the warehouse roof, with a rope coil.
+  - **Warehouse:** a 300×220×230 plaster box with a flat walkable roof on a 300×40×115 stone plinth jutting from its north face (a 40 cm ledge: standing room for the 30 cm capsule). Visual-only timbers, beam, amber windows, door and dark roof trim.
+  - **Sail loft:** 200×260×260 at X 70..270, leaving a 100 cm alley to the warehouse's east wall. Visual-only timbers, hoist beam and door.
+  - **Knee-high field:** three 120×30×35 stone harbour walls with coping, four 35 cm bollards, two barrels (collision cylinders plus barrel art) and a 60 cm crate column.
+  - **Boats:** two `SM_HarborBoat` props moored off the south and east edges.
+  - `AChuckCharacter::SetOrbitPitch` added for captures.
+- **Tests:** now **92** (`Verify-Package.ps1` expects 92, or 91 with `-NoCapture`).
+  - Stage 82: run up the warehouse plinth and climb onto it (z = 115 + 32.5 ± 3).
+  - Stage 83: bounce up the warehouse/sail-loft alley, catch a roof edge, pull up (z > 255).
+  - Capture stage 84: `Wharf_080` from the south edge looking north, `Wharf_190` from the warehouse roof.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **92/92**; uncapped with and without groom: 0 failures.
+  - Plinth climb ends at z 149.65; the alley ends on the warehouse roof at z 264.65. All earlier parkour, run and dodge checks unchanged.
+  - Evidence: `Review/runtime_wharf.jpg`.
+- **Not verified:**
+  - The crate staircase and the plank bridge are not traversed by an automated test.
+  - The field's mantles are covered only by the generic plinth test.
+  - A first overview capture from the yard collapsed onto the paving because the boom hit the harbour wall; it was moved.
+  - Not played by the user.
+- **Next (the user's queue):** corners and turning on ledges, then tuning. **Not integrated into main.** A worktree launcher receipt was written.
