@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 29 — skyline follow-up
+
+Continued from `26df615`; no newer Claude branch commits were present. `6aa739b` changes only `DockSetting.cpp`: stepped nonplayable city ground, uphill and opposite-bank buildings, civic hall/towers, and street/workshop facade detail. All added geometry has no collision; existing parkour and character code are untouched. No binary changes or new dependencies.
+
+Windows package built (`Local/skyline-build.log`), four setting views inspected, and rendered `Verify-Package.ps1` passed 99/99 plus 15 floor/clearance checks (`Local/verify-package-20260929-131527.log`). Did not rerun motion capture or test physical controller hardware. Promoted candidate to normal launcher with receipt, retaining the previous package under `Builds/Windows-Previous-20260929-Skyline`. Repetition/material quality and distant boundaries remain unfinished. Next setting work can be done here.
+
 ## September 29 — connected docks setting
 
 Picked up clean main `03344ac` after reviewing Claude's latest integrated `c2f26c3` traversal/camera work. User authorized world expansion, superseding the character-first world pause. Worked on `codex/docks-setting` in the existing Codex worktree, integrated by fast-forward. Claude's worktrees, character assets and controller were untouched.

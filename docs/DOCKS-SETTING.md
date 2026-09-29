@@ -8,6 +8,8 @@ The new ground footprints total 513 square metres before subtracting buildings. 
 
 ## Explore
 
+The follow-up skyline pass adds stepped nonplayable land, two uphill roof rows, a distant civic hall with towers, a northward continuation and nine buildings behind the opposite waterfront. Dock Street gains canopies, brackets, shutters and trade signs; the parkour workshops gain shallow face details below their existing ledges. All additions in this pass are visual and use the existing seven materials. No playable collision, controller, character asset or route dimensions change. Background land is scenery, not an explorable extension; distant boundaries still need art refinement.
+
 From the starting quay, walk toward the cargo steps and turn west through the opening beside the old warehouse. Continue along Dock Street past the loading gantry, around the cooperage at its south end, then return through Chandlers' Row. The service quay is beyond the market stalls beside the new storehouse. Walk north around the old warehouse for the tavern rear court.
 
 Repeat in low and elevated camera framing using mouse/right-stick vertical orbit. Test the original cargo-stack chimney, crate stairs, warehouse/loft gap, row-house roof jumps and timber-yard climb to check readability with the surrounding buildings. Controls are unchanged; C / Xbox B is dodge, not a camera toggle.

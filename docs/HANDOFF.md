@@ -2,6 +2,12 @@
 
 ## Current launcher and integration status
 
+**Update 11 (Codex, September 29 — skyline and working facades):** runtime `6aa739b` adds stepped city land, uphill roof rows, a distant civic hall/towers, a northern continuation and opposite-bank buildings. Canopies, brackets, shutters and trade signs distinguish Dock Street; shallow details dress the parkour workshop faces. This is visual scenery only: playable collision, character/controller, obstacle dimensions and materials are unchanged. No new binary assets or dependencies.
+
+Build succeeded (`Local/skyline-build.log`). Packaged verifier with rendered captures passed **99/99** plus **9 ground samples / 6 capsule routes**, with no material fallback failures (`Local/verify-package-20260929-131527.log`). Four setting captures were visually reviewed (`Local/skyline-capture.log`; package `Saved/Screenshots/Windows/Setting`). MotionCapture was not rerun for this scenery-only pass. Repeated architecture, basic materials, distant boundaries and simple water remain visible limitations; background land is nonplayable scenery.
+
+Normal launcher package now carries runtime `6aa739b`; previous connected-docks build retained at `Builds/Windows-Previous-20260929-Skyline`. Use root `Launch-Prototype.cmd`. Generated files remain untracked. Next setting refinement can be done here; Claude retains character/traversal ownership.
+
 **Update 10 (Codex, September 29 — connected docks setting):** reviewed Claude's integrated work through `c2f26c3` and preserved its parkour geometry, character assets and controller. The user explicitly reopened setting work. Runtime `ab885d8` adds Dock Street, a cargo court, a service quay and tavern rear court; seven solid buildings, fuller old frontage shells, contextual obstacle dressing and 22 grounded background buildings. See `DOCKS-SETTING.md` for routes, ownership and limits.
 
 Packaged with existing Unreal 5.7.4, no installs or character regeneration. Final build: `Local/setting-build-final.log`. `Verify-Package.ps1 -MotionCapture -PackageRoot Builds/SettingCandidate/Windows` passed **99/99**, plus **9 ground samples and 6 capsule-clearance routes**, with no material fallback/compile failures: `Local/verify-package-20260929-124955.log`. The first candidate passed traversal but exposed missing instancing flags on world materials; those flags were corrected and the full suite rerun. Seven existing LFS material assets total about 191 KB; no new character binaries. LFS integrity passed and generated files remain untracked.
