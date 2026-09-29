@@ -12,6 +12,6 @@ Explain dependencies before installation. Record exact engine/tool versions once
 
 Update the handoff with what actually runs and what has actually been tested. Do not claim planned camera tests or packaging checks have passed.
 
-Character-first priority (2026-09-26): pause setting/world improvements. Chuck is still far from the supplied goal images. Address primitive anatomy, unnatural foot placement/cartoon movement and gaps along the open jacket edges before more environment work. Eventual rig requirements include walk, run, roll, side-jump, climb and a cigarette held in the mouth while smoking; these are not all current gameplay features.
+Current assignment (2026-09-29): the user reopened setting/world work after Claude's character and parkour progress. Codex may expand this same docks area with connected walkable space, buildings and contextual dressing, preserving Claude's parkour obstacles and character/controller. This supersedes the September 26 world-work pause. The supplied character images remain the art target; do not claim that the current graphics have reached it. See DOCKS-SETTING.md and the latest HANDOFF for current scope and checks.
 
 Read docs/CHARACTER-PLAN.md before character changes. For the Codex/Claude Code workflow, also read docs/AGENT-WORKFLOW.md and follow its ownership/rig contract. Use separate worktrees; do not run simultaneous Unreal builds/imports on this 16 GB machine. Do not overwrite another agent's binary assets or regenerate manually improved Blender sources with an obsolete generator.
