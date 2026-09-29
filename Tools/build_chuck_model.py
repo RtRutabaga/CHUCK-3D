@@ -321,7 +321,10 @@ for side in (-1,1):
 # so plackets, lapels and stitching cannot drift away from the shell edge.
 # Solidify gives real cloth thickness; its rim closes every boundary and the
 # inner shell carries the lining (Seam slot). The chest opening stays open.
-JACKET_PROFILE=[(23,9.4,11.3,-1),(25,9.35,11.1,-1),(30,9.6,10.4,-.5),(37,9.3,10.6,0),
+# 2026-09-29: the side panels between hem and armpit slimmed ~0.8 cm so the
+# sleeves hang free of the body with a shadowed crease between (user goal
+# image: sleeves reading as arms inside a normal coat).
+JACKET_PROFILE=[(23,9.4,11.3,-1),(25,9.35,10.8,-1),(30,9.6,9.6,-.5),(37,9.3,9.9,0),
                 (41,8.6,11.4,0),(43,7.7,10.9,0),(44.5,6.6,8.8,0),(46.5,5.4,7.2,0),(47.8,5.1,6.7,-.2)]
 JACKET_THICKNESS=.4
 
@@ -407,10 +410,41 @@ for side_t in (.004,.996):
     tube('ZipperTape',[jacket_point(side_t,z,.05) for z in (23.4,27,31,34,36.2)],.2,'Seam',1)
 box_mesh('Zipper',teeth,'Metal')
 for side in (-1,1):
-    # Domed sleeve head sits under the dropped shoulder; no flat cap.
-    chain_tube('Sleeve',[(0,side*10.6,40.5),(-1,side*14,29),(3,side*14,22)],
-               lambda t:(3.9*(1-t)+3.2*t)*(.93+.07*math.sin(t*math.pi)),'Jacket',fold=.11,caps=(.55,.25))
-    chain_tube('Cuff',[(2.25,side*14,24.4),(3.35,side*14,22.0)],lambda t:3.35,'Jacket',caps=(.12,.18),rings=4)
+    # Set-in sleeve (2026-09-29, user goal image): a rounded sleeve head under
+    # the shoulder, tapering to the wrist, cloth wrinkles at the elbow, an
+    # armhole seam where it is set into the body, a seam down the back of the
+    # sleeve and a turned-back cuff band - the cues that make a sleeve read as
+    # an arm inside a coat rather than a tube on the body.
+    sleeve_path=[Vector((0,side*10.6,40.5)),Vector((-1,side*14,29)),Vector((3,side*14,22))]
+    sleeve_r=lambda t:(3.75*(1-t)+2.95*t)*(.94+.06*math.sin(t*math.pi))
+    chain_tube('Sleeve',sleeve_path,sleeve_r,'Jacket',fold=.2,caps=(.55,.25))
+    cuff_a,cuff_b=Vector((2.1,side*14,24.6)),Vector((3.35,side*14,22.0))
+    chain_tube('Cuff',[cuff_a,cuff_b],lambda t:3.3,'Jacket',caps=(.12,.18),rings=4)
+    def seam_on_tube(center,axis,radius,plane_normal,count=32):
+        # Where a plane through center cuts a tube of this radius: a seam that
+        # lies on the cloth even when tilted (an ellipse on the cylinder).
+        axis=axis.normalized(); n=plane_normal.normalized()
+        u=axis.orthogonal().normalized(); v=axis.cross(u)
+        pts=[]
+        for i in range(count+1):
+            a=math.tau*i/count
+            radial=(u*math.cos(a)+v*math.sin(a))*radius
+            pts.append(center+radial-axis*(n.dot(radial)/n.dot(axis)))
+        return pts
+    down=(sleeve_path[1]-sleeve_path[0]).normalized()
+    # Set-in armhole seam: tilted so it rides high over the shoulder and low at the armpit.
+    tube('Sleeve',seam_on_tube(sleeve_path[0]+down*3.,down,sleeve_r(.15)+.16,down+Vector((0,side*1.2,0))),.12,'Seam',1)
+    cuff_axis=(cuff_b-cuff_a).normalized()
+    tube('Cuff',seam_on_tube(cuff_a+cuff_axis*.45,cuff_axis,3.3+.03,cuff_axis),.1,'Seam',1)   # cuff band edge
+    # Back seam of the sleeve: down its rear (-X) face, shoulder to cuff.
+    back_seam=[]
+    for i in range(13):
+        t=i/12
+        seg=0 if t<.62 else 1
+        u=t/.62 if seg==0 else (t-.62)/.38
+        c=sleeve_path[seg].lerp(sleeve_path[seg+1],u)
+        back_seam.append(c+Vector((-(sleeve_r(t)+.08),side*.4,0)))
+    tube('Sleeve',back_seam,.09,'Seam',1)
     # Slender palm, long relaxed fingers and a pale pointed claw on every digit
     # (2026-09-27 goal images). The thumb is its own part (skinned to thumb_*).
     ellipsoid('Hand',(4.3,side*14,19.8),(1.15,.95,2.0),'Skin')

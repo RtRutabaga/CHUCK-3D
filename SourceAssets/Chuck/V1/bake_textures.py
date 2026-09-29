@@ -116,15 +116,22 @@ def jacket(g):
     # areas and edges (pointiness), grime toward the hem, crumpled wrinkles and
     # a fine diagonal twill/canvas grain in the normal.
     blot = g.noise(.12, 3, .5)
-    # Red-violet suede (2026-09-27 turnaround). Calibrated on the Unreal render
-    # against Chuck-Turnaround.png (sRGB about 86, 46, 113): Unreal reads these
-    # far more saturated than the Blender AgX preview, so green is kept up.
-    base = g.ramp(blot, [(.25, (.095, .043, .144)), (.5, (.146, .079, .208)), (.8, (.197, .13, .256))])
+    # Vivid violet suede (2026-09-29 user goal image; its jacket measures a
+    # median sRGB 81, 49, 112). First pass read 74, 29, 130 in Unreal (too blue),
+    # so green and red were raised and blue eased.
+    base = g.ramp(blot, [(.25, (.09, .04, .19)), (.5, (.16, .075, .29)), (.8, (.23, .12, .38))])
     wear = g.math('MULTIPLY', g.math('SUBTRACT', g.pointiness, .5), 7., clamp=True)
     wear = g.math('MULTIPLY', wear, g.noise(1.8, 2, .6))
     crumple = g.noise(.9, 5, .6)
     raised = g.math('MULTIPLY', g.math('SUBTRACT', crumple, .52), 3., clamp=True)
-    faded = g.mix(g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), base, (.22, .14, .27))
+    faded = g.mix(g.math('MULTIPLY', g.math('ADD', wear, g.math('MULTIPLY', raised, .35)), .6), base, (.27, .16, .42))
+    # A faint lighter crackle over the suede (the goal image's distressed pattern).
+    crackle = g.node('ShaderNodeTexVoronoi', feature='DISTANCE_TO_EDGE')
+    crackle.inputs['Scale'].default_value = 1.1
+    g.link(g.P, crackle.inputs['Vector'])
+    lines = g.math('SUBTRACT', 1., g.math('MULTIPLY', crackle.outputs['Distance'], 40., clamp=True), clamp=True)
+    lines = g.math('MULTIPLY', lines, g.math('MULTIPLY', g.noise(.5, 2, .5), .45))
+    faded = g.mix(lines, faded, (.3, .18, .45))
     # Grime toward the hem, at 26 cm after the v1.1 shape amendment.
     grime = g.math('SUBTRACT', 1., g.math('MULTIPLY', g.math('SUBTRACT', g.axis(2), 26.), .12, clamp=True), clamp=True)
     color = g.mix(g.math('MULTIPLY', grime, .4), faded, (.06, .03, .055))

@@ -416,7 +416,7 @@ def carriage(k, w, look=0., breath=0.):
     for side, sign in (('L', 1), ('R', -1)):
         swing = math.cos(w - lag * 1.5 + (0 if side == 'L' else math.pi))  # +1 = arm back
         poser.rotate(f'upperarm_{side}', 'Y', 22 * k * swing + (-3 if side == 'L' else 1) * idle)
-        poser.rotate(f'upperarm_{side}', 'X', sign * (11 * k + 1 * idle))  # arms carried wide
+        poser.rotate(f'upperarm_{side}', 'X', sign * (11 * k + 5 * idle))  # arms carried wide; at rest a little off the body so the sleeves read
         fwd = max(0., -swing)
         poser.rotate(f'lowerarm_{side}', 'Y', -8 - 14 * k * fwd - 12 * k - (4 if side == 'L' else 2) * idle)  # elbows bent
         poser.rotate(f'hand_{side}', 'Y', 7 * k * math.cos(w - lag * 3 + (0 if side == 'L' else math.pi)))

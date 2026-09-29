@@ -1200,3 +1200,29 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Not traversed by automated tests: the lean-to route, the garden-wall top walk, the market stalls, the lumber chimney and the leap to the crane tower (80 cm gap, 50 cm up).
   - Not played by the user.
 - **Next (the user's queue):** corners and turning, then tuning. **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-seventh pass — sleeves that read as arms in a coat; vivid purple
+
+- **User feedback** (with a goal image, saved as `References/ArtDirection/Chuck-Jacket-Sleeves-Target.jpg`, SHA-256 `6CC4B393B47C59714335CA1D7C344CAE12F587E83CA5CCD6D10E737F9D562807`): "The jacket's arms don't read as arms within a normal coat… make it more like the top image… Also… more vibrant purple".
+- **Source commit:** on top of `3873171`, branch `codex/claude-character`.
+- **Diagnosis:** the sleeves were plain tubes whose inner surface touched the body shell (sleeve centre y 14, radius about 3.5, versus shell half-width about 10.4 at z 30). Arm and torso merged, with no armhole seam, gap or cuff structure. The dye was a dark red-violet.
+- **Changes:**
+  - `Tools/build_chuck_model.py`:
+    - `JACKET_PROFILE` side panels slimmed about 0.8 cm between the hem and armpit (ry 10.4 → 9.6 at z 30, 10.6 → 9.9 at z 37), so the sleeves hang free with a crease between.
+    - The sleeve tapers from 3.75 to 2.95 radius with deeper elbow folds (0.2), and has a turned-back cuff band.
+    - `seam_on_tube` puts seams on the cloth: a set-in armhole seam, tilted so it rides high over the shoulder and low at the armpit; a cuff edge seam; and a seam down the back of each sleeve. These are labelled Sleeve/Cuff so they skin with the sleeve.
+    - A first pass used flat rings that floated off the cloth; replaced.
+  - `Tools/build_chuck_v1.py`: at rest the arms are carried 5° off the body (was 1°).
+  - `bake_textures.py`:
+    - Jacket ramp moved from red-violet to vivid violet, plus a faint lighter Voronoi crackle (scale 1.1) like the goal's distressed suede.
+    - Calibrated in Unreal: the first pass measured a median sRGB (74, 29, 130), too blue. The final measures (82, 50, 122) against the goal's (81, 49, 112).
+- **Verified:**
+  - `rebuild-v1` build/bake/groom (136k strands)/check PASS. `Import-ChuckGroom.ps1 -Review` all steps.
+  - Packaged `-MotionCapture` and `-NoGroom`: **94/94**; uncapped with and without groom: 0 failures.
+  - Evidence: `Review/goal_compare_jacket_sleeves.jpg` (goal / Blender rear / Unreal three-quarter), plus refreshed textured and Unreal review images.
+- **Remaining:**
+  - The goal's coat is longer and boxier; Chuck's is the established cropped jacket.
+  - The lighter pattern is fainter than the goal's.
+  - The sleeves still touch the body in the rest pose itself (the idle carries them off it).
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.
