@@ -203,6 +203,7 @@ private:
     float WallPrevZ = 0;
     bool bWallAuto = false;        // caught after a wall jump: the stick isn't needed
     bool bWallJumpFlight = false;  // in the air from a wall jump
+    bool bChimney = false;         // another wall faces this one behind him: frame it side-on
     float WallCoyoteUntil = -1;
     float AirJumpPressedAt = -1e3f;
     int32 WallRuns = 0;

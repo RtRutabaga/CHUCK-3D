@@ -242,6 +242,16 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     // On a ledge the camera swings round behind him to face the wall, so the
     // stick reads naturally: up climbs, left and right shimmy. (Not on wall
     // runs: chimney bounces flip his facing every kick.)
+    // Between two facing walls (a chimney) the camera turns side-on, looking
+    // along the gap, so the bounces read left-right in front of it instead of
+    // toward and past the lens.
+    if (DeltaSeconds > 0 && LookIdle > .3f && bChimney && (Gait == EGait::WallRun || (Gait == EGait::Air && bWallJumpFlight)))
+    {
+        const float WallYaw = WallNormal.Rotation().Yaw;
+        const float Left = WallYaw + 90.f, Right = WallYaw - 90.f;
+        const float Target = FMath::Abs(FMath::FindDeltaAngleDegrees(ViewYaw, Left)) < FMath::Abs(FMath::FindDeltaAngleDegrees(ViewYaw, Right)) ? Left : Right;
+        ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, Target) * FMath::Min(1.f, DeltaSeconds * 5.f));
+    }
     if (DeltaSeconds > 0 && LookIdle > .3f && (Gait == EGait::Hang || Gait == EGait::Climb))
     {
         const float WallYaw = (-HangNormal).Rotation().Yaw;
@@ -254,7 +264,8 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     else
     {
         const bool bAirborne = GetCharacterMovement()->IsFalling();
-        FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, bAirborne ? 1.5f : 8.f);
+        // Hold height through ordinary jumps, but follow a wall climb up.
+        FollowZ = FMath::FInterpTo(FollowZ, ActorZ, DeltaSeconds, bAirborne && !bWallJumpFlight ? 1.5f : 8.f);
         FollowZ = FMath::Clamp(FollowZ, ActorZ - 40.f, ActorZ + 40.f);
     }
     // Rat-height end: chest-high pivot and a 5 degree tilt put the lens about
@@ -280,7 +291,7 @@ void AChuckCharacter::ResetToDock()
     InputForward = InputRight = 0;  // refreshed every frame while input is live
     bRunJump = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
-    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
+    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
@@ -456,7 +467,7 @@ bool AChuckCharacter::TryEnterWallRun()
     // the capsule, anything within 60 degrees of head-on, any wall that isn't
     // the one he just left.
     auto* Movement = GetCharacterMovement();
-    const FVector Probe = bWallJumpFlight ? Movement->Velocity.GetSafeNormal2D() : StickWorld().GetSafeNormal2D();
+    const FVector Probe = (bWallJumpFlight || Gait == EGait::SideJump) ? Movement->Velocity.GetSafeNormal2D() : StickWorld().GetSafeNormal2D();
     if (Probe.IsNearlyZero()) return false;
     const float Reach = GetCapsuleComponent()->GetScaledCapsuleRadius() + WallReach;
     FHitResult Hit;
@@ -488,6 +499,7 @@ bool AChuckCharacter::TryEnterWallRun()
 void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
 {
     auto* Movement = GetCharacterMovement();
+    const bool bFromSideJump = Gait == EGait::SideJump;
     WallNormal = Normal;
     // Snug against the wall (capsule surface 0.5 cm off it), facing it.
     const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -499,7 +511,14 @@ void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
     Movement->BrakingDecelerationFlying = 0;
     Gait = EGait::WallRun;
     WallRunClock = 0; WallPhase = 0; WallPrevZ = static_cast<float>(GetActorLocation().Z);
-    bWallAuto = bWallJumpFlight; bWallJumpFlight = false; bRunJump = false;
+    bWallAuto = bWallJumpFlight || bFromSideJump; bWallJumpFlight = false; bRunJump = false;
+    {
+        FHitResult Behind;
+        FCollisionQueryParams BehindQuery(SCENE_QUERY_STAT(ChuckChimney), false, this);
+        const FVector Center = GetActorLocation();
+        bChimney = GetWorld()->LineTraceSingleByChannel(Behind, Center, Center + Normal * 250.f, ECC_Visibility, BehindQuery)
+            && FVector::DotProduct(FVector(Behind.ImpactNormal.X, Behind.ImpactNormal.Y, 0).GetSafeNormal(), -Normal) > .8f;
+    }
     ++WallRuns;
     SetClip(EClip::WallRun, 0, .08f);
     if (GetWorld()->GetTimeSeconds() - AirJumpPressedAt < WallBuffer) { AirJumpPressedAt = -1e3f; WallJump(); }
@@ -889,7 +908,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
         else if (!bDodgeLanded)
         {
-            if (!bAirborne && BaseTime > SideTakeoff + .05f)
+            if (bAirborne && TryEnterWallRun()) {}  // a side jump into a wall runs up it
+            else if (!bAirborne && BaseTime > SideTakeoff + .05f)
             {
                 bDodgeLanded = true;
                 Movement->StopMovementImmediately();
@@ -938,7 +958,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // The leap ends on the run's foot_L touchdown: with the stick held,
         // land straight into the stride.
         // Back on the ground: every wall is fresh again.
-        LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; WallCoyoteUntil = -1;
+        LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; WallCoyoteUntil = -1; bChimney = false;
         const bool bStickHeld = bInput || FVector2D(InputRight, InputForward).SizeSquared() > .04f;
         if (AirApexZ - static_cast<float>(Location.Z) > RollFallHeight) LandingRoll();
         else if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }

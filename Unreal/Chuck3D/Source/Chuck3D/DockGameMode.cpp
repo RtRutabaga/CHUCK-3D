@@ -1200,6 +1200,43 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const FVector At=Chuck->GetActorLocation();
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CORNER_MEASURE outer=%d yaw_after_turn=%.1f dz=%.3f hanging=%d end=(%.1f,%.1f)"),Chuck->GetOuterCorners()-OuterBase,CornerYaw,At.Z-ShimmyZ0,Chuck->IsHanging() ? 1 : 0,At.X,At.Y);
             Check(Chuck->GetOuterCorners()>OuterBase && FMath::Abs(FMath::FindDeltaAngleDegrees(CornerYaw,0.f))<10.f && Chuck->IsHanging() && FMath::Abs(At.Z-ShimmyZ0)<1.f,TEXT("shimmying off the end of a ledge goes round the outside corner"));
+            // Next: into the cargo chimney side-on. Camera 20 degrees off the gap,
+            // side jump (stick left) at stack A, then bounce with jump alone.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-310,-337,36));
+            Chuck->SetActorRotation(FRotator(0,-70,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,-90,0));
+            Chuck->DodgeToward(FVector2D(-1,0));
+            WallRunsBase=Chuck->GetWallRuns(); WallEnterAt=-1; WallSides.Reset(); ChimneyCamYaws.Reset(); HangAt=-1;
+            bSideEntry=false; PrevGait.Reset(); PullUpsBase=Chuck->GetPullUps();
+            TestStage=90; StageTime=0;
+        }
+    }
+    else if(TestStage==90)
+    {
+        const FString G=Chuck->GetGaitName();
+        const bool bRunning=Chuck->IsWallRunning();
+        if(bRunning && WallEnterAt<0)
+        {
+            if(WallSides.Num()==0) bSideEntry=PrevGait==TEXT("SideJump");
+            WallEnterAt=StageTime; WallSides.Add(Chuck->GetActorForwardVector().X<0 ? -1 : 1);
+            ChimneyCamYaws.Add(Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw);
+        }
+        if(!bRunning) WallEnterAt=-1;
+        if(bRunning && WallEnterAt>=0 && StageTime>=WallEnterAt+.25f && StageTime-DeltaSeconds<WallEnterAt+.25f && WallSides.Num()<=5) Chuck->JumpPressed();
+        if(Chuck->IsHanging() && HangAt<0) HangAt=StageTime;
+        if(HangAt>=0 && StageTime>=HangAt+.3f && StageTime-DeltaSeconds<HangAt+.3f) Chuck->JumpPressed();
+        PrevGait=G;
+        if(StageTime>5.f)
+        {
+            bool bSideOn=ChimneyCamYaws.Num()>=2;
+            FString Yaws;
+            for(int32 I=0; I<ChimneyCamYaws.Num(); ++I)
+            {
+                Yaws+=FString::Printf(TEXT("%.0f "),ChimneyCamYaws[I]);
+                if(I>=1) bSideOn&=FMath::Abs(FMath::FindDeltaAngleDegrees(ChimneyCamYaws[I],-90.f))<10.f;
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDE_CHIMNEY_MEASURE side_entry=%d runs=%d camera_yaws=[%s] pullups=%d z=%.2f"),bSideEntry ? 1 : 0,WallSides.Num(),*Yaws,Chuck->GetPullUps()-PullUpsBase,Chuck->GetActorLocation().Z);
+            Check(bSideEntry,TEXT("a side jump into a wall runs up it"));
+            Check(bSideOn && WallSides.Num()>=3,TEXT("the chimney camera turns side-on and frames the bounce"));
             // Next: a fall from more than a short height lands in a roll.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
             Chuck->SetActorLocation(FVector(-100,-560,36+150),false,nullptr,ETeleportType::TeleportPhysics);
@@ -1573,5 +1610,5 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    LMB / X: slash    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("Jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
+    DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

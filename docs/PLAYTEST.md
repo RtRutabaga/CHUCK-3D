@@ -17,7 +17,7 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Walk relative to camera | WASD or arrow keys | Left stick |
 | Run: tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
 | Jump (while running: a leap that lands into the stride) | Space | A |
-| Wall run: jump into a wall while pushing toward it (three steps up) | Space + stick toward the wall | A + stick |
+| Wall run: jump into a wall while pushing toward it, or side jump into it (three steps up). Between two facing walls the camera turns side-on and follows the climb | Space + stick toward the wall, or C + stick sideways | A + stick, or B + stick sideways |
 | Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
 | Ledge: grabbed automatically when his paws reach a top edge. Hold toward the wall (or jump) to pull up, pull away (or dodge) to let go, jump + pull away to kick off backward | stick / Space / C | stick / A / B |
 | Shimmy: while hanging, stick left/right moves hand over hand along the edge. He goes round outside corners and turns into inside corners; keep holding the same way to carry on round (the camera catches up). He stops only where the edge really ends. The camera swings round behind him to face the wall | stick | stick |

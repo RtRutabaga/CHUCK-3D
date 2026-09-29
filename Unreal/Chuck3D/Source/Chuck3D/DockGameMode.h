@@ -61,6 +61,9 @@ private:
     float ShimmyX0 = 0, ShimmyX1 = 0, ShimmyZ0 = 0, ShimmyZ1 = 0, CameraYawAtHang = 0;
     int32 InnerBase = 0, OuterBase = 0, RollsBase = 0;
     float CornerYaw = 999, CornerAt = 0;
+    TArray<float> ChimneyCamYaws;
+    bool bSideEntry = false;
+    FString PrevGait;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

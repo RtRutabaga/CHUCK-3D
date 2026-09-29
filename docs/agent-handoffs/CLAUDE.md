@@ -1257,3 +1257,27 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Landing rolls can carry him off a roof edge.
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-ninth pass — chimney camera; side jump onto a wall
+
+- **User feedback:** with the camera-relative stick, climbing a chimney by wall-jumping back and forth leaves Chuck out of view. The user asked for side-jumping onto a wall and bouncing sideways, "or lmk if a different approach would be better".
+- **Diagnosis:**
+  - Entering the first wall means pushing toward it, so the camera sits behind him facing that wall, and every kick flies toward or past the lens.
+  - The camera also held its height through airborne time (rate 1.5), so the climb left the frame.
+- **Change** (`ChuckCharacter`):
+  - **Chimney camera:** `EnterWallRun` traces 250 cm out from the wall for another wall facing back (dot > 0.8) and sets `bChimney`. During chimney wall runs and wall-jump flights, after 0.3 s without look input, the orbit yaw eases (rate 5) to whichever side-on yaw (wall ± 90°) is nearest, looking along the gap. It's cleared on landing and reset. Single walls are unchanged.
+  - **Height follow:** the camera follows at rate 8 during wall-jump flights (and wall runs), holding height only through ordinary jumps.
+  - **Side jump onto a wall:** during a side jump's flight, `TryEnterWallRun` probes along its velocity; a hit starts a wall run with the stick not needed (`bWallAuto`), as after a wall jump.
+- **Tests:** now **99** (`Verify-Package.ps1` expects 99, or 98 with `-NoCapture`). Stage 90: in the cargo chimney with the camera 20° off the gap, side jump (stick left) at stack A, then bounce with jump alone. Checks:
+  - the first wall run is entered from the side jump;
+  - the camera yaw at the 2nd and later runs is within 10° of side-on (−90), with ≥3 runs.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **99/99**; uncapped with and without groom: 0 failures.
+  - Side-entry chimney: camera yaws at the runs −70 → −88 → −90; he catches the top and pulls up (z 274.65).
+  - The original chimney and wharf alley still pass.
+  - Evidence: `Review/runtime_chimney.jpg` (side-on bounce in game, camera rising with him).
+- **Remaining:**
+  - The camera's side-on choice (left or right of the gap) follows whichever is nearer.
+  - No special pitch.
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.
