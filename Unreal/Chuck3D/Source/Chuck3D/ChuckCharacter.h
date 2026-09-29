@@ -46,6 +46,11 @@ public:
     static constexpr float PullUpHold = .2f;
     // Hanging: stick sideways shimmies along the edge.
     static constexpr float ShimmySpeed = 45.f;   // cm/s
+    // Falls from higher than this (cm, apex to landing) end in a roll.
+    static constexpr float RollFallHeight = 80.f;
+    int32 GetOuterCorners() const { return OuterCorners; }
+    int32 GetInnerCorners() const { return InnerCorners; }
+    int32 GetLandingRolls() const { return LandingRolls; }
     // Knee-high ledges he walks into are mantled automatically (above his feet, cm).
     static constexpr float MantleMin = 6.f;
     static constexpr float MantleMax = 40.f;
@@ -161,6 +166,20 @@ private:
     float HangClock = 0;
     float HangHold = 0;
     float ShimmyPhase = 0;
+    float HangSnapTime = .12f;     // snap-in (grab) or turn (corner) duration
+    float HangYawFrom = 0;
+    // Round a corner the stick you were shimmying with keeps meaning "carry on
+    // this way" (the camera lags the turn), until you move the stick.
+    bool bCornerCarry = false;
+    float CornerCarrySide = 0;
+    FVector2D CornerCarryStick = FVector2D::ZeroVector;
+    int32 OuterCorners = 0;
+    int32 InnerCorners = 0;
+    float AirApexZ = 0;            // highest point of the current fall
+    int32 LandingRolls = 0;
+    bool TryHangCorner(const FVector& Along, float Side);
+    void TurnHangCorner(const FVector& Normal, const FVector& Edge, bool bRoom, float Side);
+    void LandingRoll();
     bool bHangRoom = false;
     FVector ClimbStart = FVector::ZeroVector;
     FVector ClimbDir = FVector::ZeroVector;

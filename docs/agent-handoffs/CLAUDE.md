@@ -1226,3 +1226,34 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The sleeves still touch the body in the rest pose itself (the idle carries them off it).
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-eighth pass — ledge corners; landing roll from a fall
+
+- **User request:** "Do ledge corners and turning, and also make it so falling for more than a short height results in an auto roll on landing". "Turning" is taken as turning corners on the ledge.
+- **Source commit:** on top of `0285878` (main after integration 8), branch `codex/claude-character`.
+- **Corners** (`ChuckCharacter`):
+  - When a shimmy step fails (no edge ahead, or the capsule sweep is blocked), `TryHangCorner(direction)` runs.
+    - **Inside corner:** a chest trace ahead finds a wall facing back (dot > 0.7) with an edge at the same height (`FindLedge` ±8 cm around `HangDrop`).
+    - **Outside corner:** it steps 2 cm at a time to where this face's edge ends, then looks for the edge on the side face (normal = travel direction), 23 cm round the corner.
+  - `TurnHangCorner` blends position and yaw over 0.3 s (`HangSnapTime`); the grab snap stays 0.12 s.
+  - Stick carry: after a turn the camera lags. The raw stick held while shimmying keeps meaning "carry on this way" (`bCornerCarry`), with pull-up/let-go suppressed, until the raw stick changes (dot < 0.7) or is released.
+    - Without this the first test run pulled up at the inside corner and let go at the outside one, because the camera-relative stick suddenly read as toward or away from the new wall.
+  - If there is no edge round a corner, he still stops.
+- **Landing roll:** `AirApexZ` tracks the highest point since leaving ground, wall or ledge. On touchdown, a fall over `RollFallHeight` (80 cm) runs `LandingRoll`: the roll clip from 0.12 s (straight into the tuck), toward the stick, else the velocity, else the facing. The roll's stick carry and exits apply as before.
+- **Yard:** an L-return on the harbour wall's east end (50×80×115 with coping at X 50..100, Y −335..−255) gives an inside corner.
+- **Tests:** now **97** (`Verify-Package.ps1` expects 97, or 96 with `-NoCapture`).
+  - Stage 80's end check is now: shimmying right turns the inside corner, still hanging, height unchanged.
+  - Stage 89: shimmy left off the west end goes round the outside corner. Checks: yaw 0 ± 10 0.35 s after the turn, still hanging, height unchanged.
+  - Stage 87: dropped from 150 cm, lands in a roll.
+  - Stage 88: a 50 cm drop just lands.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **97/97**; uncapped with and without groom: 0 failures.
+  - Inside-corner run: 1 inside and 2 outside corners, round the return, still hanging at z 93.00.
+  - Outside-corner run: 2 outside corners, yaw 0.0 after the first, dz 0.000.
+  - Falls: 150 cm → 1 roll; 50 cm → none.
+- **Remaining:**
+  - No in-game capture of corners or landing rolls yet (log evidence only).
+  - The 0.3 s corner turn has no dedicated clip (the Hang pose blends round).
+  - Landing rolls can carry him off a roof edge.
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.

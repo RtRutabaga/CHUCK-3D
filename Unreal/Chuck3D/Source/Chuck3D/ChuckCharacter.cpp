@@ -532,10 +532,83 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
     SetActorRotation((-Normal).Rotation());
     Gait = EGait::Hang;
     HangNormal = Normal; HangEdge = Edge; HangFrom = GetActorLocation();
-    HangClock = 0; HangHold = 0; bHangRoom = bRoom;
+    HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false;
     LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = false;
     ++Hangs;
     SetClip(EClip::Hang, 0, .1f);
+}
+bool AChuckCharacter::TryHangCorner(const FVector& Along, float Side)
+{
+    // The edge ran out while shimmying toward Along. Inside corner: a wall
+    // ahead facing back at him with an edge at the same height - turn onto
+    // it. Outside corner: the edge wraps round the end of this face onto the
+    // side face (facing Along) - go round it. Otherwise he just stops.
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const FVector Center = GetActorLocation();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckCorner), false, this);
+    FVector Edge; bool bRoom = false;
+    FHitResult Ahead;
+    const FVector Chest = Center + FVector(0, 0, 10);
+    if (GetWorld()->LineTraceSingleByChannel(Ahead, Chest, Chest + Along * (Radius + 12.f), ECC_Visibility, Query)
+        && FMath::Abs(Ahead.ImpactNormal.Z) < .3f)
+    {
+        const FVector Normal = FVector(Ahead.ImpactNormal.X, Ahead.ImpactNormal.Y, 0).GetSafeNormal();
+        if (FVector::DotProduct(Normal, -Along) > .7f)
+        {
+            const FVector Face = FVector(Ahead.ImpactPoint.X, Ahead.ImpactPoint.Y, HangEdge.Z) + HangNormal * 8.f;
+            if (FindLedge(Normal, Face, HangDrop - 8.f, HangDrop + 8.f, Edge, bRoom))
+            {
+                ++InnerCorners;
+                TurnHangCorner(Normal, Edge, bRoom, Side);
+                return true;
+            }
+        }
+        return false;
+    }
+    // Outside: find where this face's edge ends (2 cm steps), then the side face.
+    float Last = -1.f;
+    for (float Step = 0.f; Step <= 16.f; Step += 2.f)
+    {
+        FVector Probe; bool bProbeRoom = false;
+        if (FindLedge(HangNormal, HangEdge + Along * Step, HangDrop - 8.f, HangDrop + 8.f, Probe, bProbeRoom)) Last = Step;
+        else break;
+    }
+    if (Last < 0.f) return false;
+    const FVector Corner = HangEdge + Along * (Last + 1.f);
+    const FVector Face = Corner - HangNormal * (Radius + 8.f);
+    if (!FindLedge(Along, Face, HangDrop - 8.f, HangDrop + 8.f, Edge, bRoom)) return false;
+    ++OuterCorners;
+    TurnHangCorner(Along, Edge, bRoom, Side);
+    return true;
+}
+void AChuckCharacter::TurnHangCorner(const FVector& Normal, const FVector& Edge, bool bRoom, float Side)
+{
+    bCornerCarry = true; CornerCarrySide = FMath::Sign(Side);
+    CornerCarryStick = FVector2D(InputRight, InputForward).GetSafeNormal();
+    // Swing round onto the new face over 0.3 s (position and facing blend).
+    HangYawFrom = GetActorRotation().Yaw;
+    HangFrom = GetActorLocation();
+    HangNormal = Normal; HangEdge = Edge; bHangRoom = bRoom;
+    HangClock = 0; HangHold = 0; HangSnapTime = .3f;
+    LastWallNormal = Normal;
+    SetClip(EClip::Hang, BaseTime, .15f);
+}
+void AChuckCharacter::LandingRoll()
+{
+    // A fall from more than a short height: tuck into a roll on touchdown,
+    // toward the stick, else the way he was going, else straight ahead.
+    auto* Movement = GetCharacterMovement();
+    FVector Direction = StickWorld().GetSafeNormal2D();
+    if (Direction.IsNearlyZero()) Direction = Movement->Velocity.GetSafeNormal2D();
+    if (Direction.IsNearlyZero()) Direction = GetActorForwardVector().GetSafeNormal2D();
+    DodgeDirection = Direction;
+    SetActorRotation(Direction.Rotation());
+    Gait = EGait::Roll;
+    const float Entry = .12f;  // past the standing dive: straight into the tuck
+    SetClip(EClip::Roll, Entry, .06f);
+    RollDone = RollTravelAt(Entry);
+    bDodgeLaunched = bDodgeLanded = bStopPending = bRunJump = bHardLanding = false;
+    ++LandingRolls;
 }
 void AChuckCharacter::DropFromHang()
 {
@@ -743,13 +816,18 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         HangClock += DeltaSeconds;
         BaseTime += DeltaSeconds;
         const FVector Hold = HangEdge + HangNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f) - FVector(0, 0, HangDrop);
-        SetActorLocation(FMath::Lerp(HangFrom, Hold, FMath::SmoothStep(0.f, .12f, HangClock)), false, nullptr, ETeleportType::TeleportPhysics);
+        const float Snap = FMath::SmoothStep(0.f, HangSnapTime, HangClock);
+        SetActorLocation(FMath::Lerp(HangFrom, Hold, Snap), false, nullptr, ETeleportType::TeleportPhysics);
+        const float WallYaw = (-HangNormal).Rotation().Yaw;
+        SetActorRotation(FRotator(0, HangYawFrom + FMath::FindDeltaAngleDegrees(HangYawFrom, WallYaw) * Snap, 0));
         Movement->Velocity = FVector::ZeroVector;
-        const float Toward = FVector::DotProduct(StickWorld(), -HangNormal);
+        const FVector2D Raw(InputRight, InputForward);
+        if (bCornerCarry && (Raw.SizeSquared() < .04f || FVector2D::DotProduct(Raw.GetSafeNormal(), CornerCarryStick) < .7f)) bCornerCarry = false;
         const FVector Along = FRotationMatrix((-HangNormal).Rotation()).GetUnitAxis(EAxis::Y);  // his right, along the wall
-        const float Side = FVector::DotProduct(StickWorld(), Along);
+        const float Toward = bCornerCarry ? 0.f : FVector::DotProduct(StickWorld(), -HangNormal);
+        const float Side = bCornerCarry ? CornerCarrySide * FMath::Min(1.f, Raw.Size()) : FVector::DotProduct(StickWorld(), Along);
         float Moved = 0;
-        if (HangClock >= .12f && FMath::Abs(Side) > .4f && FMath::Abs(Side) > Toward)
+        if (HangClock >= HangSnapTime && FMath::Abs(Side) > .4f && FMath::Abs(Side) > Toward)
         {
             // Shimmy: the edge must carry on under both hands (the lead hand
             // 10 cm ahead) at about the same height, and nothing may block him.
@@ -762,7 +840,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             const FVector From = HangEdge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
             const FVector To = Edge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
             FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckShimmy), false, this);
-            if (bLedge && !GetWorld()->SweepTestByChannel(From, To, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 1.f), Query))
+            const bool bBlocked = GetWorld()->SweepTestByChannel(From, To, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 1.f), Query);
+            if ((!bLedge || bBlocked) && TryHangCorner(Along * Direction, Direction)) {}
+            else if (bLedge && !bBlocked)
             {
                 Moved = static_cast<float>(FVector::Dist(HangEdge, Edge));
                 HangEdge = Edge; bHangRoom = bRoom; HangFrom = To;
@@ -775,7 +855,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
         if (Moved <= 0 && (Base == EClip::ShimmyLeft || Base == EClip::ShimmyRight)) SetClip(EClip::Hang, 0, .15f);
         HangHold = Toward > .5f ? HangHold + DeltaSeconds : 0.f;
-        if (HangHold >= PullUpHold && bHangRoom && HangClock >= .12f) StartClimb(false, HangNormal, HangEdge);
+        if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();
     }
     else if (Gait == EGait::Climb)
@@ -860,7 +940,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // Back on the ground: every wall is fresh again.
         LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; WallCoyoteUntil = -1;
         const bool bStickHeld = bInput || FVector2D(InputRight, InputForward).SizeSquared() > .04f;
-        if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
+        if (AirApexZ - static_cast<float>(Location.Z) > RollFallHeight) LandingRoll();
+        else if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
         else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump; }
         bRunJump = false;
     }
@@ -1008,6 +1089,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         bStopPending = false;
     }
+    // The fall's apex: the ground (or wall, or ledge) height until airborne.
+    AirApexZ = Movement->IsFalling() ? FMath::Max(AirApexZ, static_cast<float>(GetActorLocation().Z)) : static_cast<float>(GetActorLocation().Z);
     // Coming to a stop ends the run latch.
     if (Gait == EGait::Idle && GaitBefore != EGait::Idle) bRunHeld = false;
     // During a dodge nothing brakes the capsule but the dodge itself.

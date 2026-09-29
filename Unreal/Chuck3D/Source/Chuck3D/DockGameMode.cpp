@@ -142,6 +142,9 @@ void ADockGameMode::StartPlay()
     }
     Shape(TEXT("HarbourWall"),FVector(-40,-360,57.5f),FVector(180,50,115),TEXT("Stone"));
     Shape(TEXT("HarbourCoping"),FVector(-40,-360,113),FVector(184,54,6),TEXT("Stone"),nullptr,false);
+    // Its east end returns north (an L): an inside corner to shimmy round.
+    Shape(TEXT("HarbourWallReturn"),FVector(75,-295,57.5f),FVector(50,80,115),TEXT("Stone"));
+    Shape(TEXT("HarbourCoping"),FVector(75,-295,113),FVector(54,84,6),TEXT("Stone"),nullptr,false);
     if(RopeMesh) Prop(TEXT("HarbourRopeArt"),FVector(20,-368,116),RopeMesh);
     // A knee-high stone mooring plinth (30 cm): walk into it and Chuck mantles up.
     Shape(TEXT("MooringPlinth"),FVector(150,-330,15),FVector(60,60,30),TEXT("Stone"));
@@ -1153,7 +1156,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // then shimmy right along it to its end.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
             Chuck->SetActorRotation(FRotator(0,-60,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,-90,0));
-            Chuck->SetTestStick(FVector2D(0,1)); HangAt=-1; ShimmyX0=ShimmyX1=ShimmyZ0=ShimmyZ1=0; CameraYawAtHang=0;
+            Chuck->SetTestStick(FVector2D(0,1)); HangAt=-1; ShimmyX0=ShimmyX1=ShimmyZ0=ShimmyZ1=0; CameraYawAtHang=0; InnerBase=Chuck->GetInnerCorners();
             TestStage=80; StageTime=0;
         }
     }
@@ -1172,10 +1175,54 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(HangAt>=0 && StageTime>HangAt+6.f)
         {
             const bool bHanging=Chuck->IsHanging();
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIMMY_MEASURE camera_yaw=%.2f moved_cm=%.2f dz=%.3f end_x=%.2f hanging=%d"),CameraYawAtHang,ShimmyX1-ShimmyX0,ShimmyZ1-ShimmyZ0,At.X,bHanging ? 1 : 0);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIMMY_MEASURE camera_yaw=%.2f moved_cm=%.2f dz=%.3f end=(%.1f,%.1f,%.2f) yaw=%.1f inner=%d outer=%d hanging=%d"),CameraYawAtHang,ShimmyX1-ShimmyX0,ShimmyZ1-ShimmyZ0,At.X,At.Y,At.Z,Chuck->GetActorRotation().Yaw,Chuck->GetInnerCorners()-InnerBase,Chuck->GetOuterCorners()-OuterBase,bHanging ? 1 : 0);
             Check(FMath::Abs(FMath::FindDeltaAngleDegrees(CameraYawAtHang,-90.f))<5.f,TEXT("hanging turns the camera to face the wall with him"));
             Check(FMath::Abs(ShimmyX1-ShimmyX0-1.2f*AChuckCharacter::ShimmySpeed)<12.f && FMath::Abs(ShimmyZ1-ShimmyZ0)<1.f,TEXT("stick sideways shimmies along the edge"));
-            Check(bHanging && At.X>20.f && At.X<50.f,TEXT("the shimmy stops at the end of the ledge, still hanging"));
+            Check(bHanging && Chuck->GetInnerCorners()>InnerBase && FMath::Abs(At.Z-ShimmyZ0)<1.f,TEXT("shimmying into an inside corner turns onto the next wall, still hanging"));
+            // Next: shimmy left to the harbour wall's west end and round the outside corner.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+            HangAt=-1; OuterBase=Chuck->GetOuterCorners(); ShimmyZ0=0; CornerYaw=999;
+            TestStage=89; StageTime=0;
+        }
+    }
+    else if(TestStage==89)
+    {
+        if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        if(Chuck->IsHanging() && HangAt<0) { HangAt=StageTime; Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(HangAt>=0 && StageTime>=HangAt+.5f && StageTime-DeltaSeconds<HangAt+.5f) { ShimmyZ0=Chuck->GetActorLocation().Z; Chuck->SetTestStick(FVector2D(-1,0)); }
+        // Just after the first outside corner (0.3 s turn): he faces the west end's side face (+X).
+        if(CornerYaw>900 && Chuck->GetOuterCorners()>OuterBase) CornerAt=StageTime, CornerYaw=-999;
+        if(CornerYaw<-900 && StageTime>=CornerAt+.35f) CornerYaw=Chuck->GetActorRotation().Yaw;
+        if(HangAt>=0 && StageTime>HangAt+4.f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CORNER_MEASURE outer=%d yaw_after_turn=%.1f dz=%.3f hanging=%d end=(%.1f,%.1f)"),Chuck->GetOuterCorners()-OuterBase,CornerYaw,At.Z-ShimmyZ0,Chuck->IsHanging() ? 1 : 0,At.X,At.Y);
+            Check(Chuck->GetOuterCorners()>OuterBase && FMath::Abs(FMath::FindDeltaAngleDegrees(CornerYaw,0.f))<10.f && Chuck->IsHanging() && FMath::Abs(At.Z-ShimmyZ0)<1.f,TEXT("shimmying off the end of a ledge goes round the outside corner"));
+            // Next: a fall from more than a short height lands in a roll.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+            Chuck->SetActorLocation(FVector(-100,-560,36+150),false,nullptr,ETeleportType::TeleportPhysics);
+            RollsBase=Chuck->GetLandingRolls(); bLocoFlag=false;
+            TestStage=87; StageTime=0;
+        }
+    }
+    else if(TestStage==87 || TestStage==88)
+    {
+        // 87: dropped from 150 cm: lands in a roll. 88: from 50 cm: just lands.
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))==0) bLocoFlag=true;
+        const int32 Rolls=Chuck->GetLandingRolls()-RollsBase;
+        if(StageTime>1.8f) UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_MEASURE stage=%d rolls=%d rolled=%d gait=%s ground=%d"),TestStage,Rolls,bLocoFlag ? 1 : 0,Chuck->GetGaitName(),Chuck->GetCharacterMovement()->IsMovingOnGround() ? 1 : 0);
+        if(StageTime>1.8f && TestStage==87)
+        {
+            Check(Rolls==1 && bLocoFlag && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("a fall of more than a short height lands in a roll"));
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-100,-560,36+50),false,nullptr,ETeleportType::TeleportPhysics);
+            RollsBase=Chuck->GetLandingRolls(); bLocoFlag=false;
+            TestStage=88; StageTime=0;
+        }
+        else if(StageTime>1.8f)
+        {
+            Check(Rolls==0 && !bLocoFlag && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("a short drop just lands, no roll"));
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
