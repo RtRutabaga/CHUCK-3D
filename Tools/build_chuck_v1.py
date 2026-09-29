@@ -1149,6 +1149,135 @@ def wall_kick(phase, f):
     ik_goals()
     return r
 
+# ---- ledges (parkour phase 3). Hang: paws on a top edge in front of him.
+# The runtime snugs the capsule to the wall (face at x = 15.5) with its centre
+# HANG_DROP below the top, so in mesh space (origin = capsule bottom) the top
+# edge is at z = HALF + HANG_DROP.
+HALF = 32.5                 # capsule half height (mesh origin = capsule bottom)
+HANG_DROP = 22.             # capsule centre below the top edge while hanging
+FACE_X = 15.5               # wall face in front of him (capsule radius + 0.5)
+TOP_Z = HALF + HANG_DROP    # the top edge in mesh space while hanging (54.5)
+GRIP = {'L': Vector((FACE_X + 1.5, 9., TOP_Z + .8)), 'R': Vector((FACE_X + 1.5, -9., TOP_Z + .8))}
+
+def hang_body(sway=0., pull=0.):
+    """Hanging on the edge: chest in at the wall, arms up to the grip, paws
+    scrabbling on the wall below, tail hanging. pull 0..1 bends the elbows."""
+    carriage(0., 0.)
+    poser.translate('pelvis', (3. + 2 * pull, .9, 1.5 * sway))
+    poser.rotate('pelvis', 'X', 4.)
+    poser.rotate('spine_01', 'Y', 6 + 6 * pull)
+    poser.rotate('spine_02', 'Y', 4)
+    poser.rotate('neck', 'Y', -10 - 6 * pull)
+    poser.rotate('head', 'Y', -12)
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Z', 4 * sway * (i + 1) / 3)
+    poser.update()
+
+def grip_arms(world_offset=Vector((0, 0, 0)), weight=1.):
+    """Wrists to the grip on the edge (shifted by the capsule's own motion so
+    the paws stay put in the world); fingers curl over the edge."""
+    for side, sign in (('L', 1), ('R', -1)):
+        if weight <= 1e-3: continue
+        fk = poser.head(f'hand_{side}')
+        target = GRIP[side] - world_offset
+        poser.arm(side, fk.lerp(target, weight), pole=(-.2, sign * .8, -.6))
+        curl(side, 55 * weight)
+
+def hang(phase, f):
+    w = TAU * phase
+    sway = math.sin(w)
+    hang_body(sway)
+    grip_arms()
+    r = 0.
+    for side in 'LR':
+        # Paws against the wall below, one a little higher, shifting slowly.
+        lift = 3. * math.sin(w + (0 if side == 'L' else math.pi))
+        ball = Vector((FACE_X - 3., NEUTRAL_BALL[side].y, 17. + (4. if side == 'L' else 0.) + lift))
+        r = max(r, poser.leg(side, ball, -75., -5., pole=(.3, 0., 1.)))
+    ik_goals()
+    return r
+
+# PullUp: from the hang onto the top. The runtime moves the capsule along
+# pull_path(t) (forward, up) from the hang position; paws and grip that are
+# planted in the world are placed at (world - path) in mesh space.
+PULL_T = .7
+PULL_UP = HANG_DROP + HALF   # capsule rise: centre from top - drop to top + half
+PULL_FWD = 34.               # capsule advance: from off the face to well onto the top
+def pull_path(t):
+    return Vector((PULL_FWD * smoothstep(t, .2, .6), 0., PULL_UP * smoothstep(t, .05, .5)))
+
+def pull_up(phase, f):
+    t = f / FPS
+    off = pull_path(t)
+    pull = smoothstep(t, 0., .25) * (1 - smoothstep(t, .3, .5))
+    over = smoothstep(t, .2, .45) * (1 - smoothstep(t, .5, .7))
+    stand = smoothstep(t, .45, .7)
+    hang_body(0., pull)
+    # Chest drives forward over the edge, then he stands up to the aplomb stance.
+    poser.rotate('spine_01', 'Y', 14 * over - 6 * stand - 6 * pull * 0)
+    poser.rotate('head', 'Y', 10 * stand)
+    poser.translate('pelvis', (-3. * stand, 0, 0))
+    poser.update()
+    grip_arms(off, 1 - smoothstep(t, .28, .45))
+    r = 0.
+    top_plant = {s: Vector((PULL_FWD + RB[s][0], RB[s][1], TOP_Z + NEUTRAL_BALL[s].z)) for s in 'LR'}  # standing ball height on the top
+    for side in 'LR':
+        hanging = Vector((FACE_X - 3., NEUTRAL_BALL[side].y, 17. + (4. if side == 'L' else 0.)))
+        if side == 'L':   # the knee comes up over the edge; the paw plants on the top
+            a, b = .3, .58
+            mid = Vector((8., NEUTRAL_BALL[side].y, 16.))
+        else:             # the trailing paw steps up to its stance on the top
+            a, b = .5, .65
+            mid = None
+        planted = top_plant[side] - off
+        if t <= a: ball, fp = hanging, -75.
+        elif t >= b: ball, fp = planted, 0.
+        else:
+            u = smoothstep(t, a, b)
+            start = hanging
+            ball = start.lerp(planted, u) + (Vector((0, 0, 10. * math.sin(math.pi * u))) if mid is None else (mid - start.lerp(planted, .5)) * math.sin(math.pi * u))
+            fp = -75. * (1 - u)
+        r = max(r, poser.leg(side, ball, fp, 0., pole=(1., 0., .3), heading=RB[side][2] * smoothstep(t, a, b)))
+    ik_goals()
+    return r
+
+# Mantle: onto a knee-high ledge in his way (auto, from walking or standing).
+# Authored for a 25 cm step; the runtime moves the capsule up the real step
+# height and MANTLE_FWD past the face over MANTLE_T.
+MANTLE_T, MANTLE_H, MANTLE_FWD = .35, 25., 28.
+def mantle_path(t):
+    return Vector((MANTLE_FWD * smoothstep(t, .08, .33), 0., MANTLE_H * smoothstep(t, .05, .25)))
+
+def mantle(phase, f):
+    t = f / FPS
+    off = mantle_path(t)
+    hop = smoothstep(t, 0., .12) * (1 - smoothstep(t, .2, .35))
+    carriage(0., 0.)
+    poser.translate('pelvis', (0, 0, -3. * hop))
+    poser.rotate('spine_01', 'Y', 14 * hop)
+    poser.rotate('head', 'Y', -8 * hop)
+    poser.update()
+    # Paws on the top for the hop (planted in the world), then away.
+    face = 18.   # the ledge face from the capsule at the start (mantle begins within reach)
+    grip = {s: Vector((face + 4., sign * 8., MANTLE_H + .8)) for s, sign in (('L', 1), ('R', -1))}
+    wgt = smoothstep(t, 0., .06) * (1 - smoothstep(t, .18, .28))
+    for side, sign in (('L', 1), ('R', -1)):
+        if wgt > 1e-3:
+            fk = poser.head(f'hand_{side}')
+            poser.arm(side, fk.lerp(grip[side] - off, wgt), pole=(-.2, sign * .8, -.6))
+            curl(side, 30 * wgt)
+    r = 0.
+    for side in 'LR':
+        x, y, h = RB[side]
+        start = Vector((x, y, NEUTRAL_BALL[side].z))
+        final = Vector((x + MANTLE_FWD, y, NEUTRAL_BALL[side].z + MANTLE_H))
+        a, b = (.03, .22) if side == 'L' else (.05, .3)  # a two-footed hop: both paws leave early
+        u = smoothstep(t, a, b)
+        world = start.lerp(final, u) + Vector((0, 0, 8. * math.sin(math.pi * u)))
+        r = max(r, poser.leg(side, world - off, 20 * math.sin(math.pi * u), 10 * math.sin(math.pi * u), heading=h))
+    ik_goals()
+    return r
+
 def samples(fn, dur, n=9):
     return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
 
@@ -1230,6 +1359,24 @@ author('WallKick', WALL_KICK_FRAMES, wall_kick, False, {
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'events_s': {'launch': 0., 'tucked': .2},
     'notes': 'Push off a wall behind him (the runtime turns Chuck to face the jump), then tuck for the flight.'})
+
+author('Hang', 36, hang, True, {
+    'hang_drop_cm': HANG_DROP, 'wall_face_x_cm': FACE_X, 'grip_z_cm': TOP_Z,
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Hanging from a top edge in front: capsule snug to the wall, centre hang_drop_cm below the top; paws on the edge, feet on the wall below.'})
+pull_frames = round(PULL_T * FPS) + 1
+author('PullUp', pull_frames, pull_up, False, {
+    'capsule_path_cm_per_frame': [[round(v, 4) for v in (pull_path(f / FPS).x, pull_path(f / FPS).z)] for f in range(pull_frames)],
+    'path_axes': ['forward (into the wall top)', 'up'], 'rise_cm': PULL_UP, 'advance_cm': PULL_FWD,
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'events_s': {'grip_release': .45, 'knee_on_top': .45, 'standing': PULL_T},
+    'notes': 'From Hang onto the top edge; the runtime moves the capsule along capsule_path_cm_per_frame.'})
+mantle_frames = round(MANTLE_T * FPS) + 1
+author('Mantle', mantle_frames, mantle, False, {
+    'capsule_path_cm_per_frame': [[round(v, 4) for v in (mantle_path(f / FPS).x, mantle_path(f / FPS).z)] for f in range(mantle_frames)],
+    'path_axes': ['forward', 'up'], 'reference_step_cm': MANTLE_H, 'advance_cm': MANTLE_FWD,
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

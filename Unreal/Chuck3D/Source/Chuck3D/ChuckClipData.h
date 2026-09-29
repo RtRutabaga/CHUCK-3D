@@ -47,6 +47,16 @@ namespace ChuckClipData
     constexpr FStance SlashLeftStance{{0.0000f, 0.2036f, 0.3055f, 0.4000f, -1.0000f, -1.0000f}, {0.0000f, 0.0436f, 0.1600f, 0.4000f, -1.0000f, -1.0000f}, 0.4000f};
     // Wall run: loop phase follows the vertical capsule travel over this stride.
     constexpr float WallRunStride = 30.0000f;
+    // Ledges: hang depth, and the capsule path (forward, up) per 30 fps frame of PullUp and Mantle.
+    constexpr float HangDrop = 22.0000f;
+    constexpr float PullUpPath[][2] = {{0.0000f, 0.0000f}, {0.0000f, 0.0000f}, {0.0000f, 0.2187f}, {0.0000f, 1.8690f}, {0.0000f, 4.9148f}, {0.0000f, 9.0903f}, {0.0000f, 14.1296f}, {0.6690f, 19.7671f}, {2.5185f, 25.7368f}, {5.3125f, 31.7730f}, {8.8148f, 37.6098f}, {12.7894f, 42.9814f}, {17.0000f, 47.6221f}, {21.2106f, 51.2659f}, {25.1852f, 53.6472f}, {28.6875f, 54.5000f}, {31.4815f, 54.5000f}, {33.3310f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}};
+    constexpr int PullUpFrames = 21;
+    constexpr float PullUpRise = 54.5000f;
+    constexpr float PullUpAdvance = 34.0000f;
+    constexpr float MantlePath[][2] = {{0.0000f, 0.0000f}, {0.0000f, 0.0000f}, {0.0000f, 0.4919f}, {0.5089f, 3.9062f}, {3.2792f, 9.4039f}, {7.7619f, 15.5961f}, {13.1604f, 21.0938f}, {18.6785f, 24.5081f}, {23.5195f, 25.0000f}, {26.8872f, 25.0000f}, {28.0000f, 25.0000f}};
+    constexpr int MantleFrames = 10;
+    constexpr float MantleRefStep = 25.0000f;
+    constexpr float MantleAdvance = 28.0000f;
     // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
     constexpr float SideTakeoff = 0.1000f;
     constexpr float SideLand = 0.5000f;

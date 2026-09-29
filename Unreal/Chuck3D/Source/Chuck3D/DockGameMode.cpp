@@ -143,6 +143,9 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("HarbourWall"),FVector(-40,-360,57.5f),FVector(180,50,115),TEXT("Stone"));
     Shape(TEXT("HarbourCoping"),FVector(-40,-360,113),FVector(184,54,6),TEXT("Stone"),nullptr,false);
     if(RopeMesh) Prop(TEXT("HarbourRopeArt"),FVector(20,-368,116),RopeMesh);
+    // A knee-high stone mooring plinth (30 cm): walk into it and Chuck mantles up.
+    Shape(TEXT("MooringPlinth"),FVector(150,-330,15),FVector(60,60,30),TEXT("Stone"));
+    Shape(TEXT("MooringRing"),FVector(150,-299,18),FVector(8,3,8),TEXT("Dark"),Cylinder,false);
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
@@ -881,8 +884,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_FLURRY_MEASURE strikes=%d order=%s gaps_s=[%.3f,%.3f] chain_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),FlurryNames.Num(),*Order,Shortest,Longest,ChuckClipData::SlashChainAt,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
             Check(FlurryNames.Num()>=5 && Rights>0 && Rights<FlurryNames.Num() && Repeats>0 && LongestRun<=2 && Shortest>ChuckClipData::SlashChainAt-.02f && Longest<ChuckClipData::SlashChainAt+.05f,TEXT("held slash flurries on a steady beat with a random paw order"));
             Check(LocoSamples>=5 && LocoMaxSlip<1.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("flurry paws hold and it settles on release"));
-            // Next: parkour. Jump into the harbour wall, pushing toward it.
-            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            // Next: parkour. Jump into a tall wall (crate stack A), pushing toward it.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-390,-275,36));  // crate stack A's north face: too tall to top out
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
             WallStart=Chuck->GetActorLocation(); WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps();
             WallEnterZ=WallPeakZ=0; WallEnterAt=WallLeaveAt=-1; bWallLanded=false;
@@ -909,7 +912,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             {
                 Check(Runs>=1 && WallPeakZ-WallEnterZ>=.8f*AChuckCharacter::WallRunRise,TEXT("jumping into a wall runs up it"));
                 Check(Runs==1 && FMath::Abs(WallLeaveAt-WallEnterAt-AChuckCharacter::WallRunTime)<.08f && bWallLanded,TEXT("three steps up, then he drops off; the same wall gives one run"));
-                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-390,-275,36));
                 Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
                 WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps();
                 WallEnterZ=WallPeakZ=0; WallEnterAt=WallLeaveAt=-1; bWallLanded=false;
@@ -923,7 +926,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
                 Chuck->SetActorRotation(FRotator(0,180,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
                 WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps(); WallStart=Chuck->GetActorLocation();
-                WallPeakZ=WallStart.Z; WallEnterAt=-1; WallSides.Reset();
+                WallPeakZ=WallStart.Z; WallEnterAt=-1; WallSides.Reset(); HangAt=-1; HangsBase=Chuck->GetHangs(); PullUpsBase=Chuck->GetPullUps();
                 TestStage=72; StageTime=0;
             }
         }
@@ -937,15 +940,73 @@ void ADockGameMode::Tick(float DeltaSeconds)
         // Kick off 0.25 s into each run, for five runs.
         if(bRunning && WallEnterAt>=0 && StageTime>=WallEnterAt+.25f && StageTime-DeltaSeconds<WallEnterAt+.25f && WallSides.Num()<=5) Chuck->JumpPressed();
         WallPeakZ=FMath::Max(WallPeakZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        // At the top of the stacks he catches an edge; a jump then pulls him up.
+        if(Chuck->IsHanging() && HangAt<0) HangAt=StageTime;
+        if(HangAt>=0 && StageTime>=HangAt+.3f && StageTime-DeltaSeconds<HangAt+.3f) Chuck->JumpPressed();
         if(StageTime>4.f)
         {
-            // Each bounce gains ~70 cm: three runs reach the 240 cm stack tops.
+            // Each bounce gains ~70 cm: three runs reach the 240 cm stack tops (and catch one).
             bool bAlternate=WallSides.Num()>=3;
             for(int32 I=1; I<WallSides.Num(); ++I) bAlternate&=WallSides[I]!=WallSides[I-1];
             const int32 Jumps=Chuck->GetWallJumps()-WallJumpsBase;
             FString Sides; for(const int32 Side : WallSides) Sides+=Side<0 ? TEXT("A") : TEXT("B");
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_MEASURE runs=%d walls=%s jumps=%d climb_cm=%.3f alternate=%d end=%s z=%.1f"),WallSides.Num(),*Sides,Jumps,WallPeakZ-WallStart.Z,bAlternate ? 1 : 0,Chuck->GetGaitName(),Chuck->GetActorLocation().Z);
-            Check(bAlternate && Jumps>=3 && WallPeakZ-WallStart.Z>=150.f,TEXT("wall jumps chain back and forth up the cargo chimney"));
+            Check(bAlternate && Jumps>=2 && WallPeakZ-WallStart.Z>=150.f,TEXT("wall jumps chain back and forth up the cargo chimney"));
+            const float OnTop=Chuck->GetActorLocation().Z-(240.f+32.5f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_TOP_MEASURE hangs=%d pullups=%d above_stack_top_cm=%.3f ground=%d"),Chuck->GetHangs()-HangsBase,Chuck->GetPullUps()-PullUpsBase,OnTop,Chuck->GetCharacterMovement()->IsMovingOnGround() ? 1 : 0);
+            Check(Chuck->GetHangs()>HangsBase && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(OnTop)<3.f && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("the chimney bounce catches a stack top; jump pulls him up onto it"));
+            // Next: the harbour wall - run up, catch the top, keep pushing: pull up.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+            HangsBase=Chuck->GetHangs(); PullUpsBase=Chuck->GetPullUps(); HangAt=-1; bStillHanging=false; HangZ=HangZ2=0;
+            TestStage=75; StageTime=0;
+        }
+    }
+    else if(TestStage==75 || TestStage==76)
+    {
+        // 75: keep the stick toward the wall: run up, catch the top, pull up.
+        // 76: let go of the stick once hanging: he hangs; then pull away: he drops.
+        const FString G=Chuck->GetGaitName();
+        if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        if(G==TEXT("Hang") && HangAt<0) { HangAt=StageTime; if(TestStage==76) Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(HangAt>=0 && StageTime>=HangAt+.3f && StageTime-DeltaSeconds<HangAt+.3f) HangZ=Chuck->GetActorLocation().Z;  // after the snap-in
+        if(TestStage==75 && G==TEXT("Climb")) Chuck->SetTestStick(FVector2D::ZeroVector);  // don't walk off the far side
+        if(TestStage==76 && HangAt>=0 && StageTime>=HangAt+1.f && StageTime-DeltaSeconds<HangAt+1.f)
+        { HangZ2=Chuck->GetActorLocation().Z; bStillHanging=G==TEXT("Hang"); Chuck->SetTestStick(FVector2D(0,-1)); }
+        if(StageTime>3.f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LEDGE_MEASURE stage=%d hangs=%d pullups=%d hang_z=%.2f later_z=%.2f still=%d end_z=%.2f ground=%d gait=%s"),TestStage,Chuck->GetHangs()-HangsBase,Chuck->GetPullUps()-PullUpsBase,HangZ,HangZ2,bStillHanging ? 1 : 0,At.Z,bGround ? 1 : 0,*G);
+            if(TestStage==75)
+            {
+                Check(Chuck->GetHangs()>HangsBase,TEXT("running up the harbour wall catches its top edge"));
+                Check(Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(115.f+32.5f))<3.f && bGround,TEXT("keeping the stick toward the wall pulls him up onto it"));
+                Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+                Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+                HangsBase=Chuck->GetHangs(); PullUpsBase=Chuck->GetPullUps(); HangAt=-1; bStillHanging=false; HangZ=HangZ2=0;
+                TestStage=76; StageTime=0;
+            }
+            else
+            {
+                Check(bStillHanging && FMath::Abs(HangZ2-HangZ)<.5f && Chuck->GetPullUps()==PullUpsBase && bGround && At.Z<40.f,TEXT("he hangs until told; pulling away lets go"));
+                // Next: walk into the knee-high mooring plinth.
+                Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(150,-250,36));
+                Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter();
+                MantlesBase=Chuck->GetMantles(); WallPeakZ=0;
+                TestStage=78; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==78)
+    {
+        if(Chuck->GetMantles()==MantlesBase) Chuck->AddMovementInput(FVector(0,-1,0),1);  // let go once he's mantling
+        WallPeakZ=FMath::Max(WallPeakZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        if(StageTime>2.2f)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MANTLE_MEASURE mantles=%d peak_z=%.2f end_z=%.2f gait=%s"),Chuck->GetMantles()-MantlesBase,WallPeakZ,Chuck->GetActorLocation().Z,Chuck->GetGaitName());
+            Check(Chuck->GetMantles()>MantlesBase && FMath::Abs(Chuck->GetActorLocation().Z-(30.f+32.5f))<3.f && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("walking into a knee-high ledge mantles onto it"));
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -1016,7 +1077,26 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {.25f,.4f,.55f,.7f,.85f,1.f,1.2f,1.4f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Chimney_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>3.f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>3.f)
+        {
+            // Then the harbour wall climb, from the side: run up, hang, pull up.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            Chuck->SetActorRotation(FRotator(0,0,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,-90,0));
+            Chuck->SetTestStick(FVector2D(-1,0)); HangAt=-1;
+            TestStage=79; StageTime=0;
+        }
+    }
+    else if(TestStage==79)
+    {
+        if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        // Hold the hang a moment for the camera, then pull up.
+        if(Chuck->IsHanging() && HangAt<0) { HangAt=StageTime; Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(HangAt>=0 && StageTime>=HangAt+.5f && StageTime-DeltaSeconds<HangAt+.5f) Chuck->JumpPressed();
+        for(const float Shot : {.35f,.45f,.55f,.8f,1.f,1.15f,1.3f,1.5f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Ledge_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>2.2f) { Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {

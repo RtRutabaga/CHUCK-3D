@@ -1072,3 +1072,47 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Hands don't touch the wall (reaching only).
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-third pass — parkour phase 3: ledge grab, hang, pull-up, drop, mantle
+
+- **User request:** "next" (phase 3 of the approved parkour plan).
+- **Source commit:** on top of `a093600`, branch `codex/claude-character`.
+- **Clips** (`Tools/build_chuck_v1.py`):
+  - `Hang`: 36-frame loop. The capsule centre sits `HANG_DROP` 22 cm below the top and snug to the wall (face at x = 15.5); wrists grip the edge by arm IK, fingers curl over, paws scrabble on the wall, gentle sway.
+  - `PullUp`: 0.7 s. The capsule follows `pull_path` (rise 54.5 cm to standing, advance 34 cm onto the top). The grip is world-locked until 0.45 s; the left knee comes over the edge and plants at 0.58, the right follows at 0.65. Both end in the aplomb stance.
+  - `Mantle`: 0.35 s, authored for a 25 cm step: a two-footed hop with paws on the top, landing standing. The runtime scales the rise to the real step.
+  - Leg reach 0.82 / 0.94 / 0.92. `check_v1.py` PASS (a first pass left a paw 1 cm into the top; fixed).
+  - `review_motion.py` draws the ledge block, moved against the authored capsule path; this also fixed a variable shadowing.
+- **Runtime** (`ChuckCharacter`):
+  - `FindLedge` traces down 8 cm past the face for a walkable top in a band relative to his centre. It confirms the face really ends there (nothing just above the top) and tests whether there is room to stand.
+  - Grab happens automatically:
+    - during a wall run, when the top is 5–45 cm above centre;
+    - in the air, when a probe at chest or hips (along the stick, or the velocity after a wall jump) finds a wall whose top is −15 to +45 cm, while he isn't falling faster than 300 cm/s. Any wall counts, including the last one.
+  - The hang snaps him in over 0.12 s. Holding toward the wall for `PullUpHold` (0.2 s), or pressing jump, pulls up if there is room; pulling away or dodge lets go (0.4 s re-grab cooldown); jump while pulling away wall-jumps backward.
+  - `TryMantle`: walking or standing with input into a ledge 6–40 cm above the feet with room, via a knee-height probe. The capsule follows the clip path scaled to the step, then goes to Idle or Start.
+  - Slash, dodge and movement input are owned or blocked while hanging or climbing.
+  - Yard: a 60×60×30 cm stone mooring plinth with an iron ring at (150, −330).
+- **Tests:** now **87** (`Verify-Package.ps1` expects 87, or 86 with `-NoCapture`).
+  - Stages 71/73 moved to crate stack A's north face, a wall too tall to top out.
+  - Stage 72 (chimney) additionally catches a stack top and jumps up onto it (≥2 kicks now, since the top catch can come before the third).
+  - Stage 75: harbour wall with the stick held: grab, then pull up to stand on the top.
+  - Stage 76: stick released at the grab: still hanging and steady 1 s later, then pulling away drops him to the quay.
+  - Stage 78: walking into the plinth mantles onto it.
+  - Stage 79: side-view capture replay (`Ledge_*.png`).
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **87/87**; uncapped with and without groom: 0 failures.
+  - Wall run unchanged (45 cm, 0.45 s).
+  - Chimney A→B→A catches a top and ends standing on the 240 cm stack (+2.15 cm, the CMC floor gap).
+  - Harbour wall: hang at z 93–95, pull-up to 149.65 (top 115 + 32.5 + 2.15).
+  - Hang held steady (93.00 → 93.00) and the drop lands.
+  - Mantle onto the plinth ends at 64.65.
+  - Evidence: `Review/motion_Hang.png`, `Review/motion_PullUp.png`, `Review/motion_Mantle.png`, `Review/runtime_ledge.jpg`.
+- **Remaining / next (phase 4):**
+  - Shimmy along the edge; hands currently fixed on the grab point.
+  - Corners.
+  - Camera framing for hangs.
+  - The snap-in can move him up to about 23 cm in 0.12 s.
+  - Mantle speed at a run isn't blended (he stops, then hops).
+  - The pull-up passes through the corner of the capsule's volume (the location is set without sweeping).
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.

@@ -37,6 +37,16 @@ public:
     bool IsWallRunning() const { return Gait == EGait::WallRun; }
     int32 GetWallRuns() const { return WallRuns; }
     int32 GetWallJumps() const { return WallJumps; }
+    bool IsHanging() const { return Gait == EGait::Hang; }
+    int32 GetHangs() const { return Hangs; }
+    int32 GetPullUps() const { return PullUps; }
+    int32 GetMantles() const { return Mantles; }
+    // Ledges: grabbed automatically when his paws reach a top edge while he is
+    // moving up or into the wall; holding toward the wall this long pulls up.
+    static constexpr float PullUpHold = .2f;
+    // Knee-high ledges he walks into are mantled automatically (above his feet, cm).
+    static constexpr float MantleMin = 6.f;
+    static constexpr float MantleMax = 40.f;
     // Parkour tuning (user vision: "feels like you're doing something difficult
     // but it's not actually that hard"): three steps up a wall, a strong kick.
     static constexpr float WallRunRise = 45.f;     // cm climbed over the three steps
@@ -96,9 +106,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -139,7 +149,28 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash || Gait == EGait::WallRun; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::Hang || Gait == EGait::Climb; }
+    // Ledge state.
+    FVector HangNormal = FVector::ZeroVector;
+    FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face
+    FVector HangFrom = FVector::ZeroVector;   // snap-in start
+    float HangClock = 0;
+    float HangHold = 0;
+    bool bHangRoom = false;
+    FVector ClimbStart = FVector::ZeroVector;
+    FVector ClimbDir = FVector::ZeroVector;
+    float ClimbRise = 0;
+    float ClimbAdvance = 0;
+    bool bClimbMantle = false;
+    float LedgeCooldownUntil = -1;
+    int32 Hangs = 0;
+    int32 PullUps = 0;
+    int32 Mantles = 0;
+    bool FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom) const;
+    void EnterHang(const FVector& Normal, const FVector& Edge, bool bRoom);
+    void DropFromHang();
+    void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge);
+    bool TryMantle();
     // Wall run / wall jump state.
     FVector WallNormal = FVector::ZeroVector;      // horizontal, out of the wall
     FVector LastWallNormal = FVector::ZeroVector;  // the wall last run: no fresh steps until another wall or the ground

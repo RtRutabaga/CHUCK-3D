@@ -43,6 +43,7 @@ def main():
     run = clips['RunLoop']
     slash = clips['SlashRight']
     wall = clips['WallRun']
+    hang, pull, mantle = clips['Hang'], clips['PullUp'], clips['Mantle']
     yaw = [abs(v) for v in turn['capsule_yaw_deg_per_frame']]
     # Frames until the yaw reaches its final value; the tail is the settle hold.
     last = next(i for i, v in enumerate(yaw) if abs(v - yaw[-1]) < 1e-3)
@@ -97,6 +98,16 @@ def main():
         f"    constexpr FStance SlashLeftStance{stance(clips['SlashLeft'])};",
         '    // Wall run: loop phase follows the vertical capsule travel over this stride.',
         f"    constexpr float WallRunStride = {f(wall['stride_cycle_cm'])};",
+        '    // Ledges: hang depth, and the capsule path (forward, up) per 30 fps frame of PullUp and Mantle.',
+        f"    constexpr float HangDrop = {f(hang['hang_drop_cm'])};",
+        '    constexpr float PullUpPath[][2] = {' + ', '.join('{' + f(a) + ', ' + f(b) + '}' for a, b in pull['capsule_path_cm_per_frame']) + '};',
+        f"    constexpr int PullUpFrames = {len(pull['capsule_path_cm_per_frame']) - 1};",
+        f"    constexpr float PullUpRise = {f(pull['rise_cm'])};",
+        f"    constexpr float PullUpAdvance = {f(pull['advance_cm'])};",
+        '    constexpr float MantlePath[][2] = {' + ', '.join('{' + f(a) + ', ' + f(b) + '}' for a, b in mantle['capsule_path_cm_per_frame']) + '};',
+        f"    constexpr int MantleFrames = {len(mantle['capsule_path_cm_per_frame']) - 1};",
+        f"    constexpr float MantleRefStep = {f(mantle['reference_step_cm'])};",
+        f"    constexpr float MantleAdvance = {f(mantle['advance_cm'])};",
         '    // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.',
         f"    constexpr float SideTakeoff = {f(side['events_s']['takeoff'])};",
         f"    constexpr float SideLand = {f(side['events_s']['land'])};",

@@ -55,6 +55,9 @@ private:
     float WallEnterZ = 0, WallPeakZ = 0, WallEnterAt = -1, WallLeaveAt = -1;
     bool bWallLanded = false;
     TArray<int32> WallSides;
+    int32 HangsBase = 0, PullUpsBase = 0, MantlesBase = 0;
+    float HangAt = -1, HangZ = 0, HangZ2 = 0;
+    bool bStillHanging = false;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

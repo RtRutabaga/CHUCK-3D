@@ -19,6 +19,8 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Jump (while running: a leap that lands into the stride) | Space | A |
 | Wall run: jump into a wall while pushing toward it (three steps up) | Space + stick toward the wall | A + stick |
 | Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
+| Ledge: grabbed automatically when his paws reach a top edge. Hold toward the wall (or jump) to pull up, pull away (or dodge) to let go, jump + pull away to kick off backward | stick / Space / C | stick / A / B |
+| Mantle: walk into a knee-high ledge (6–40 cm) and he hops up onto it | stick | stick |
 | Slash (claw scratch); tap again or hold for a flurry on a steady beat with a random paw order (never three of one paw in a row); works while moving | Left mouse button | X |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
 | Switch elevated / rat-height follow | C | Y |
@@ -91,6 +93,9 @@ For the character contact review, run `powershell -NoProfile -File .\Tools\Verif
 On the quay's south strip:
 
 - **Cargo chimney:** two 240 cm crate stacks 100 cm apart. Jump at one pushing toward it, then press jump on each wall to bounce up between them (about 70 cm gained per bounce).
-- **Stone harbour wall:** 115 cm high with a walkable top, for the coming ledge grab and pull-up.
+- **Stone harbour wall:** 115 cm high with a walkable top. Run up it and Chuck catches the top edge, then pull up or let go.
+- **Mooring plinth:** a 30 cm stone block. Walk into it and he mantles up.
+
+The chimney bounce ends with a catch on a stack top; jump to pull up onto it.
 
 A wall gives one run until Chuck lands or reaches a different wall.

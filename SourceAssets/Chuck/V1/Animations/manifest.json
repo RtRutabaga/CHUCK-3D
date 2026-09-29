@@ -1016,6 +1016,216 @@
     "tucked": 0.2
    },
    "notes": "Push off a wall behind him (the runtime turns Chuck to face the jump), then tuck for the flight."
+  },
+  {
+   "name": "Hang",
+   "file": "Animations/AS_Chuck_Hang.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 35,
+   "frame_count": 36,
+   "duration_s": 1.2,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8183,
+   "hang_drop_cm": 22.0,
+   "wall_face_x_cm": 15.5,
+   "grip_z_cm": 54.5,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hanging from a top edge in front: capsule snug to the wall, centre hang_drop_cm below the top; paws on the edge, feet on the wall below."
+  },
+  {
+   "name": "PullUp",
+   "file": "Animations/AS_Chuck_PullUp.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 21,
+   "frame_count": 22,
+   "duration_s": 0.7,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8969,
+   "capsule_path_cm_per_frame": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.2187
+    ],
+    [
+     0.0,
+     1.869
+    ],
+    [
+     0.0,
+     4.9148
+    ],
+    [
+     0.0,
+     9.0903
+    ],
+    [
+     0.0,
+     14.1296
+    ],
+    [
+     0.669,
+     19.7671
+    ],
+    [
+     2.5185,
+     25.7368
+    ],
+    [
+     5.3125,
+     31.773
+    ],
+    [
+     8.8148,
+     37.6098
+    ],
+    [
+     12.7894,
+     42.9814
+    ],
+    [
+     17.0,
+     47.6221
+    ],
+    [
+     21.2106,
+     51.2659
+    ],
+    [
+     25.1852,
+     53.6472
+    ],
+    [
+     28.6875,
+     54.5
+    ],
+    [
+     31.4815,
+     54.5
+    ],
+    [
+     33.331,
+     54.5
+    ],
+    [
+     34.0,
+     54.5
+    ],
+    [
+     34.0,
+     54.5
+    ],
+    [
+     34.0,
+     54.5
+    ],
+    [
+     34.0,
+     54.5
+    ]
+   ],
+   "path_axes": [
+    "forward (into the wall top)",
+    "up"
+   ],
+   "rise_cm": 54.5,
+   "advance_cm": 34.0,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "events_s": {
+    "grip_release": 0.45,
+    "knee_on_top": 0.45,
+    "standing": 0.7
+   },
+   "notes": "From Hang onto the top edge; the runtime moves the capsule along capsule_path_cm_per_frame."
+  },
+  {
+   "name": "Mantle",
+   "file": "Animations/AS_Chuck_Mantle.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 10,
+   "frame_count": 11,
+   "duration_s": 0.3333,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "capsule_path_cm_per_frame": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.4919
+    ],
+    [
+     0.5089,
+     3.9062
+    ],
+    [
+     3.2792,
+     9.4039
+    ],
+    [
+     7.7619,
+     15.5961
+    ],
+    [
+     13.1604,
+     21.0938
+    ],
+    [
+     18.6785,
+     24.5081
+    ],
+    [
+     23.5195,
+     25.0
+    ],
+    [
+     26.8872,
+     25.0
+    ],
+    [
+     28.0,
+     25.0
+    ]
+   ],
+   "path_axes": [
+    "forward",
+    "up"
+   ],
+   "reference_step_cm": 25.0,
+   "advance_cm": 28.0,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height."
   }
  ]
 }
