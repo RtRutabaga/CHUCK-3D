@@ -2,6 +2,13 @@
 
 ## Current launcher and integration status
 
+**Update 9 (Claude, 2026-09-29, user request "Integrate and push to GitHub"):** main fast-forwarded to `c2f26c3`, adding:
+- ledge corners (outside and inside, with the stick carried round the turn);
+- an automatic landing roll after falls over 80 cm;
+- the side-on chimney camera, which follows the climb's height;
+- side jumps into a wall starting a wall run.
+
+Rebuilt in the main checkout: `Verify-Package.ps1 -MotionCapture` **99/99** (`Local/verify-package-20260929-120607.log`); receipt `c2f26c3`. Pushed main to `origin` at the user's request. Next: Codex takes the setting/world work.
 **Update 8 (Claude, 2026-09-29, user request "Integrate"):** main fast-forwarded to `7324500`, adding:
 - the running jump and tap-to-run;
 - the claw slash: a wide, fast arc and a held flurry with a random paw order;
