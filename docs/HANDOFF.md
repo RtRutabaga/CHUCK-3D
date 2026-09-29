@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 10 (Codex, September 29 — connected docks setting):** reviewed Claude's integrated work through `c2f26c3` and preserved its parkour geometry, character assets and controller. The user explicitly reopened setting work. Runtime `ab885d8` adds Dock Street, a cargo court, a service quay and tavern rear court; seven solid buildings, fuller old frontage shells, contextual obstacle dressing and 22 grounded background buildings. See `DOCKS-SETTING.md` for routes, ownership and limits.
+
+Packaged with existing Unreal 5.7.4, no installs or character regeneration. Final build: `Local/setting-build-final.log`. `Verify-Package.ps1 -MotionCapture -PackageRoot Builds/SettingCandidate/Windows` passed **99/99**, plus **9 ground samples and 6 capsule-clearance routes**, with no material fallback/compile failures: `Local/verify-package-20260929-124955.log`. The first candidate passed traversal but exposed missing instancing flags on world materials; those flags were corrected and the full suite rerun. Seven existing LFS material assets total about 191 KB; no new character binaries. LFS integrity passed and generated files remain untracked.
+
+Four packaged setting views were reviewed at overview and street level. The expanded district remains repeated blockout architecture with closed doors and simple water; the harbor horizon and distant edges still need development. These checks do not establish physical Xbox behavior, subjective camera comfort, natural traversal on every new facade, or the reference graphics target. Claude retains character/traversal ownership. Codex setting code is isolated in `DockSetting.cpp/.h` with one scene-construction call.
+
+The verified candidate is the normal `Builds/Windows` launcher package; the previous version is retained as `Builds/Windows-Previous-20260929-Setting`. Always use the repository-root `Launch-Prototype.cmd`, whose receipt identifies runtime `ab885d8`. No original CHUCK-game files were touched.
+
 **Update 9 (Claude, 2026-09-29, user request "Integrate and push to GitHub"):** main fast-forwarded to `c2f26c3`, adding:
 - ledge corners (outside and inside, with the stick carried round the turn);
 - an automatic landing roll after falls over 80 cm;

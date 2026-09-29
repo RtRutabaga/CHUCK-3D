@@ -1,12 +1,12 @@
 # Movement and camera playtest
 
-Scope: one Waterdeep dock, tavern frontage and stationary human scale reference. Chuck is 65 cm tall in a custom Blender form study with an oversized open purple jacket. Combat, dialogue, pickups, finished art and additional maps are deferred.
+Scope: one connected Waterdeep docks scene with Claude's parkour areas, a new Dock Street loop, cargo court, service quay, buildings and a stationary human scale reference. Chuck is 65 cm tall with an oversized open purple jacket. Dialogue, pickups, finished art and additional maps remain deferred. See DOCKS-SETTING.md for the new route.
 
 ## Launch
 
 Double-click `Launch-Prototype.cmd` at the repository root. It opens the verified executable under `Builds/Windows/Chuck3D/Binaries/Win64` in a 1280 x 720 window. Click the game window to capture input. No Unreal editor is needed. The launcher identifies its build and checks its executable hash against `Builds/Windows/prototype-build.json`.
 
-Current launcher build: Claude's `00e46d6`, promoted on September 27 after Codex independently passed all 49 rendered checks with motion capture. It includes the v1 mesh, textures, strand groom, authored movement clips/contact IK and revised cameras. A physical Xbox controller and subjective movement/camera comfort remain untested.
+The launcher prints its verified revision before opening. See the latest HANDOFF entry for the current packaged milestone; source commits alone do not update the playable build. The package retains Claude's v1 character, groom, authored clips, traversal and continuous orbit camera. Physical Xbox hardware and subjective movement/camera comfort still need user testing.
 
 If recent changes are missing, check where they were packaged: an agent worktree has its own `Builds` directory. Importing assets or committing/pushing source does not update this launcher. Integrate the delivery into main, then package and verify in main, or verify a copied candidate with `Tools/Verify-Package.ps1 -PackageRoot <path>` before promoting it to main's `Builds/Windows`. Keep the previous package until the replacement passes. `Build-Prototype.ps1 -Package` now verifies and records the local build automatically. A source-only delivery must not be described as ready in this launcher.
 

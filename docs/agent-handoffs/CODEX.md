@@ -1,5 +1,15 @@
 # Codex movement handoff — 2026-09-26
 
+## September 29 — connected docks setting
+
+Picked up clean main `03344ac` after reviewing Claude's latest integrated `c2f26c3` traversal/camera work. User authorized world expansion, superseding the character-first world pause. Worked on `codex/docks-setting` in the existing Codex worktree, integrated by fast-forward. Claude's worktrees, character assets and controller were untouched.
+
+Source: `16d38ca` setting construction and route checks; `4d011c6` docs/material configuration/verifier; `09eaa9b` current scope rules; `3d917dc` seven world material usage flags; `ab885d8` reviewed facade/sign corrections. `DockGameMode.cpp` only adds the setting include and construction call. No existing obstacle dimensions changed.
+
+Final Windows package passed 99 gameplay checks with motion capture plus 15 new floor/clearance checks (`Local/verify-package-20260929-124955.log`). Build log: `Local/setting-build-final.log`; visual captures: package `Saved/Screenshots/Windows/Setting/View0..3.png`. The normal launcher package is updated with a verified receipt; old package is retained. No generated output tracked; LFS fsck passed. Material usage flags were necessary to avoid default-material substitution on instanced geometry; `Tools/configure_setting_materials.py` preserves existing graphs.
+
+Keep refinement within the same docks map. New roof traversal and camera comfort need player feedback; buildings are shells and background still repeats. Details/routes are in `DOCKS-SETTING.md`. Character and parkour improvements remain Claude's part. Next setting work can be done here.
+
 ## September 27 — launcher repair and independent verification
 
 Reviewed Claude's delivery through `00e46d6` and the v2 ownership split. Preserved interrupted main edits in stash `e3164da437321014069a0c5bb31e14a3b1431c7a`, then fast-forwarded main. Claude's worktrees were not modified.
