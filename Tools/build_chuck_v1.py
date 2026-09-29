@@ -996,34 +996,39 @@ def side_jump(sign):
 # the gaze held forward, then back to the aplomb stance. SlashRight chains into
 # SlashLeft. Root fixed: standing, the runtime moves the capsule along the
 # manifest travel; on the move it plays the upper body over the stride.
-SLASH_T, SLASH_STEP = .5, 10.
+SLASH_T, SLASH_STEP = .55, 12.
 def slash_travel(t):
-    return SLASH_STEP * smoothstep(t, .06, .36)
+    return SLASH_STEP * smoothstep(t, .06, .38)
 
 def slash_clip(side):
     sign = 1 if side == 'L' else -1  # +Y is Chuck's left
     other = 'R' if side == 'L' else 'L'
     # The opposite paw steps in with the strike; the striking side's paw follows.
-    steps = {other: [(.06, .2, (RB[other][0] + SLASH_STEP, RB[other][1], RB[other][2]))],
-             side: [(.3, .42, (RB[side][0] + SLASH_STEP, RB[side][1], RB[side][2]))]}
-    s0 = poser.rest_head[f'upperarm_{side}']
-    # Wrist path relative to the rest shoulder: cocked beside the ear, through
-    # in front of the chest, finishing low across the body.
-    path = [(.12, *(s0 + Vector((-3., sign * 4.5, 9.)))),
-            (.2, *(s0 + Vector((18., -sign * 9., -2.)))),
-            (.3, *(s0 + Vector((12., -sign * 15., -12.))))]
+    steps = {other: [(.06, .22, (RB[other][0] + SLASH_STEP, RB[other][1], RB[other][2]))],
+             side: [(.28, .42, (RB[side][0] + SLASH_STEP, RB[side][1], RB[side][2]))]}
+    # User direction 2026-09-28: "more like an almost sword slash, like how
+    # Wolverine would slash", not a punch. So the wrist rides a wide, flat arc
+    # at near full reach (~0.85) around the (turning) shoulder - high and back
+    # outside, out wide, straight ahead at full extension, across and low on the
+    # far side - with the arm kept long and the claws leading like a blade.
+    path = [(.12, -8., sign * 10., 11.),
+            (.17, 6., sign * 15., 6.),
+            (.22, 17., sign * 3., -1.),
+            (.27, 11., -sign * 12., -7.),
+            (.34, 4., -sign * 12., -13.)]
     def pose(phase, f):
         t = f / FPS
-        wind = smoothstep(t, 0., .12) * (1 - smoothstep(t, .12, .2))
-        strike = smoothstep(t, .1, .2) * (1 - smoothstep(t, .3, .48))
-        twist = sign * 22 * wind - sign * 30 * strike
+        wind = smoothstep(t, 0., .12) * (1 - smoothstep(t, .12, .22))
+        strike = smoothstep(t, .12, .26) * (1 - smoothstep(t, .36, .54))
+        twist = sign * 30 * wind - sign * 45 * strike
         carriage(0., 0.)
-        poser.translate('pelvis', (1.5 * strike, 0, -.8 * wind - 2. * strike))
+        poser.translate('pelvis', (1.2 * strike, 0, -1. * wind - 2.8 * strike))
         poser.rotate('pelvis', 'Z', .4 * twist)
         poser.rotate('spine_02', 'Z', .35 * twist)
         poser.rotate('chest', 'Z', .45 * twist)
         poser.rotate('head', 'Z', -.6 * twist)  # eyes stay on the target
-        poser.rotate('spine_01', 'Y', 8 * strike - 3 * wind)
+        poser.rotate('spine_01', 'Y', 10 * strike - 3 * wind)
+        poser.rotate('chest', 'X', sign * 6 * strike)  # shoulder drops into the cut
         poser.rotate('head', 'Y', 3 * strike)
         # The other arm pulls back and in: balance and guard.
         poser.rotate(f'upperarm_{other}', 'Y', 25 * strike + 8 * wind)
@@ -1039,17 +1044,18 @@ def slash_clip(side):
             cx, cy = to_component(x, y, d, 0.)
             r = max(r, poser.leg(s, Vector((cx, cy, NEUTRAL_BALL[s].z + lift)), fp, tp, heading=h))
         # Striking arm: IK along the path, blended from the carriage's own arm.
-        w = smoothstep(t, .02, .1) * (1 - smoothstep(t, .32, .5))
+        w = smoothstep(t, .02, .1) * (1 - smoothstep(t, .36, .55))
         if w > 1e-3:
             fk_wrist = poser.head(f'hand_{side}')
             fk_elbow = poser.head(f'lowerarm_{side}')
             shoulder = poser.head(f'upperarm_{side}')
             u = min(max(t, path[0][0]), path[-1][0])
-            target = Vector(hermite(path, u))
+            target = shoulder + Vector(hermite(path, u))
             fk_pole = (fk_elbow - (shoulder + fk_wrist) / 2).normalized()
-            pole = fk_pole.lerp(Vector((-.2, sign * 1., .35)).normalized(), w)
+            # Elbow down and slightly out: the arm stays long through the arc.
+            pole = fk_pole.lerp(Vector((-.3, sign * .3, -1.)).normalized(), w)
             poser.arm(side, fk_wrist.lerp(target, w), pole=tuple(pole))
-            curl(side, -26 * w)  # fingers open, claws leading
+            curl(side, -30 * w)  # fingers straight in line with the forearm: claws as the blade
             r = max(r, 0.)
         ik_goals()
         return r
@@ -1119,7 +1125,7 @@ for name, side in (('SlashRight', 'R'), ('SlashLeft', 'L')):
         'capsule_travel_cm_per_frame': [round(slash_travel(f / FPS), 4) for f in range(frames)],
         'travel_cm': SLASH_STEP, 'duration_travel_s': SLASH_T,
         'stance_intervals_s': {f'foot_{s}': stance_from_steps(steps[s], SLASH_T) for s in 'LR'},
-        'events_s': {'wind_up': .12, 'strike': .2, 'follow_through': .3, 'chain_from': .27, 'recovered': SLASH_T},  # chain once the paw has raked across
+        'events_s': {'wind_up': .12, 'strike': .22, 'follow_through': .34, 'chain_from': .3, 'recovered': SLASH_T},  # chain once the arc has crossed
         'striking_paw': f'hand_{side}',
         'upper_body_root': 'spine_01',
         'notes': 'Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw.'})

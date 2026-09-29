@@ -960,3 +960,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No claw trail or FX.
   - The in-game capture is small; it needs the user's eye.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-ninth pass — slash as a sword-like arc (Wolverine)
+
+- **User feedback:** "The slash reads too much like a punch, make it more like an almost sword slash, like how Wolverine from the x-men would slash".
+- **Source commit:** on top of `c355248`, branch `codex/claude-character`.
+- **Diagnosis:** the wrist went almost straight from beside the ear to in front of the chest (a jab path), with a short sweep of about 17 cm.
+- **Change** (`slash_clip` in `Tools/build_chuck_v1.py`):
+  - The wrist now rides a wide, flat arc at about 0.85 reach around the turning shoulder. Offsets are relative to the posed shoulder: high, back and outside (0.12 s) → out wide (0.17) → straight ahead at full extension (0.22) → across (0.27) → low on the far side (0.34).
+  - The elbow pole is down and slightly out so the arm stays long. Fingers are fully straight, so the claws lead like the blade.
+  - Wind-up twist 30° and unwind 45°. The striking shoulder drops into the cut (chest X 6°), with a deeper sink (2.8 cm) and lean (10°).
+  - The strike runs 0.12–0.26 s (a sweep, not a snap). Clip 0.55 s; step-in 12 cm; the rear paw follows at 0.28–0.42 s (it overreached at 1.06 with a 14 cm step); chain at 0.3 s.
+  - Max leg reach 0.918.
+- **Verified:**
+  - `check_v1.py` PASS. Packaged `-MotionCapture` and `-NoGroom`: **76/76**; uncapped with and without groom: 0 failures.
+  - Right paw sweep +23.9 → −8.6 to −10.1 cm across the body (was +14 → −3), peak 7.6–11.6 m/s.
+  - Chained step 22.1 cm (expected 22.1). Running slash keeps 190 cm/s. Paw slip 0.
+  - Evidence: `Review/motion_SlashRight.png`, `Review/motion_SlashLeft.png`, `Review/runtime_slash.jpg`.
+- **Remaining / offered:**
+  - A claw-trail streak for the strike window (a Blender-made crescent mesh with a fading material, no plugin) would sell the blade read further.
+  - The hand's roll about the forearm is not art-directed (palm-forward on the wind-up can read as a wave).
+  - No hit detection.
+- **Not integrated into main.** A worktree launcher receipt was written.
