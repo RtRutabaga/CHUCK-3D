@@ -2,6 +2,7 @@
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/CommandLine.h"
@@ -25,9 +26,9 @@ void BuildDockSetting(UWorld* World)
     Root->RegisterComponent();
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     TMap<FString,UInstancedStaticMeshComponent*> Batches;
-    auto Box=[&](FVector P,FVector Size,const TCHAR* Surface,bool Collision=false,FRotator Rotation=FRotator::ZeroRotator)
+    auto Box=[&](FVector P,FVector Size,const TCHAR* Surface,bool Collision=false,FRotator Rotation=FRotator::ZeroRotator,bool Visible=true)
     {
-        const FString Key=FString(Surface)+(Collision?TEXT("_solid"):TEXT("_detail"));
+        const FString Key=FString(Surface)+(Collision?TEXT("_solid"):TEXT("_detail"))+(Visible?TEXT(""):TEXT("_hidden"));
         auto*& Batch=Batches.FindOrAdd(Key);
         if(!Batch)
         {
@@ -38,6 +39,7 @@ void BuildDockSetting(UWorld* World)
             if(!Mat) Mat=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Surface,Surface));
             Batch->SetMaterial(0,Mat);
             Batch->SetCollisionProfileName(Collision?TEXT("BlockAll"):TEXT("NoCollision"));
+            Batch->SetVisibility(Visible);
             Batch->RegisterComponent();
         }
         Batch->AddInstance(FTransform(Rotation,P,Size/100.f));
@@ -47,6 +49,18 @@ void BuildDockSetting(UWorld* World)
         const FVector Delta=B-A;
         Box((A+B)*.5f,FVector(Delta.Size(),Width,Width),Material,false,Delta.Rotation());
     };
+    auto Prop=[&](UStaticMesh* Mesh,FVector P,FVector Scale=FVector::OneVector,float Yaw=0.f)
+    {
+        if(!Mesh) return;
+        auto* Component=NewObject<UStaticMeshComponent>(Owner);
+        Component->SetupAttachment(Root);
+        Component->SetStaticMesh(Mesh);
+        Component->SetRelativeTransform(FTransform(FRotator(0,Yaw,0),P,Scale));
+        Component->SetCollisionProfileName(TEXT("NoCollision"));
+        Component->RegisterComponent();
+    };
+    auto* CrateMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockCrate.SM_DockCrate"));
+    auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
     auto Label=[&](FVector P,const TCHAR* Words,float Yaw=0.f)
     {
         auto* Text=NewObject<UTextRenderComponent>(Owner);
@@ -148,8 +162,8 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(-770,-670,25),FVector(230,150,50),TEXT("Wood"),true);
     for(float X : {-840.f,-740.f})
     {
-        Box(FVector(X,-680,82),FVector(78,80,64),TEXT("WoodLight"),true);
-        for(float Z : {56.f,108.f}) Box(FVector(X,-722,Z),FVector(82,4,5),TEXT("Dark"));
+        Box(FVector(X,-680,82),FVector(78,80,64),TEXT("WoodLight"),true,FRotator::ZeroRotator,!CrateMesh);
+        Prop(CrateMesh,FVector(X,-680,82),FVector(78.f/60,80.f/65,64.f/60));
     }
     for(float X : {-885.f,-655.f}) Box(FVector(X,-700,200),FVector(14,14,400),TEXT("Wood"),true);
     Box(FVector(-770,-700,400),FVector(280,18,18),TEXT("Wood"));
@@ -160,7 +174,12 @@ void BuildDockSetting(UWorld* World)
     Label(FVector(-770,-693,356),TEXT("CARGO COURT"),90);
     // A continuous walking loop down Dock Street, around the cooperage and back.
     for(float Y=-2050;Y<=650;Y+=150)
-        Box(FVector(-1100,Y,.4f),FVector(18,100,1),TEXT("Dark")); // recessed-looking drainage strip
+    {
+        Box(FVector(-1100,Y,.2f),FVector(18,150,.4f),TEXT("Dark"));
+        for(float X : {-1111.f,-1089.f}) Box(FVector(X,Y,.5f),FVector(4,150,1),TEXT("Stone"));
+        for(float Offset=-65;Offset<=65;Offset+=13)
+            Box(FVector(-1100,Y+Offset,.6f),FVector(18,2,1),TEXT("Wood"));
+    }
     for(const FVector P : {FVector(-1220,-1530,0),FVector(-1220,-760,0),FVector(-1220,40,0),FVector(395,-1280,0)})
     {
         Box(P+FVector(0,0,145),FVector(10,10,290),TEXT("Wood"),true);
@@ -245,6 +264,53 @@ void BuildDockSetting(UWorld* World)
             Beam(FVector(-259,Y+Offset,84),FVector(-232,Y+Offset,119),4,TEXT("Wood"));
         Box(FVector(-252,Y,48),FVector(10,90,7),TEXT("WoodLight"));
     }
+    // Near-field detail: sit on existing faces, with no new collision or roof clutter.
+    Prop(RopeMesh,FVector(-735,-680,114),FVector(.65f),15);
+    for(float X=-870;X<=-670;X+=25)
+        Box(FVector(X,-670,50.4f),FVector(23,146,.8f),TEXT("WoodLight"));
+    // Framed doors, boards, hinges and diagonal braces on the bonded warehouse.
+    for(float X=-226;X<=-134;X+=13)
+        Box(FVector(X,-907,104),FVector(11,2,200),TEXT("WoodLight"));
+    Beam(FVector(-226,-911,20),FVector(-184,-911,195),5,TEXT("Wood"));
+    Beam(FVector(-176,-911,195),FVector(-134,-911,20),5,TEXT("Wood"));
+    for(float Z : {42.f,168.f}) for(float X : {-215.f,-145.f})
+        Box(FVector(X,-914,Z),FVector(29,3,5),TEXT("Dark"));
+    for(float X : {-187.f,-173.f}) Box(FVector(X,-916,100),FVector(3,4,14),TEXT("Dark"));
+    // Warehouse street face: timber bays and high barred windows.
+    for(float Y=-230;Y<=330;Y+=140)
+    {
+        Box(FVector(-702,Y,158),FVector(7,11,312),TEXT("Wood"));
+        if(Y<300)
+        {
+            Box(FVector(-706,Y+65,208),FVector(7,75,90),TEXT("Wood"));
+            Box(FVector(-711,Y+65,208),FVector(4,61,74),TEXT("Dark"));
+            for(float Offset : {-21.f,0.f,21.f})
+                Box(FVector(-715,Y+65+Offset,208),FVector(3,3,76),TEXT("WoodLight"));
+            Box(FVector(-716,Y+65,160),FVector(22,87,8),TEXT("Stone"));
+        }
+    }
+    // Nets hung against the solid storehouse wall, not across a walking route.
+    for(float Y : {-160.f,100.f}) Box(FVector(-724,Y,99),FVector(7,7,198),TEXT("Wood"));
+    Beam(FVector(-724,-160,195),FVector(-724,100,195),7,TEXT("Wood"));
+    for(int32 Row=0;Row<10;++Row) for(int32 Col=0;Col<16;++Col)
+    {
+        const float Y=-153+Col*15.f;
+        const float Z=38+Row*15.f;
+        const float Sag=8*FMath::Sin(PI*(Col+.5f)/16);
+        Beam(FVector(-725,Y,Z-Sag),FVector(-725,Y+15,Z+15-Sag),.65f,TEXT("WoodLight"));
+        Beam(FVector(-725,Y,Z+15-Sag),FVector(-725,Y+15,Z-Sag),.65f,TEXT("WoodLight"));
+    }
+    // The back of the tavern is a building, not an unarticulated wall.
+    for(float X : {-290.f,-70.f,150.f})
+    {
+        Box(FVector(X,668,174),FVector(90,7,114),TEXT("Wood"));
+        Box(FVector(X,673,174),FVector(72,4,96),TEXT("Dark"));
+        Box(FVector(X,677,174),FVector(5,4,96),TEXT("WoodLight"));
+        Box(FVector(X,677,174),FVector(72,4,5),TEXT("WoodLight"));
+        Box(FVector(X,680,112),FVector(105,25,8),TEXT("Stone"));
+    }
+    for(float X : {-330.f,-180.f,-30.f,120.f,210.f})
+        Box(FVector(X,668,150),FVector(11,9,300),TEXT("Wood"));
     // Solid perimeter walls meet the nonplayable city; gate-shaped panels imply streets beyond.
     Box(FVector(-1790,-700,100),FVector(20,3200,200),TEXT("Stone"),true);
     Box(FVector(-800,890,100),FVector(2000,20,200),TEXT("Stone"),true);
