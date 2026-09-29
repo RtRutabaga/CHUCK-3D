@@ -44,6 +44,8 @@ public:
     // Ledges: grabbed automatically when his paws reach a top edge while he is
     // moving up or into the wall; holding toward the wall this long pulls up.
     static constexpr float PullUpHold = .2f;
+    // Hanging: stick sideways shimmies along the edge.
+    static constexpr float ShimmySpeed = 45.f;   // cm/s
     // Knee-high ledges he walks into are mantled automatically (above his feet, cm).
     static constexpr float MantleMin = 6.f;
     static constexpr float MantleMax = 40.f;
@@ -106,7 +108,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb };
     EGait Gait = EGait::Idle;
@@ -156,6 +158,7 @@ private:
     FVector HangFrom = FVector::ZeroVector;   // snap-in start
     float HangClock = 0;
     float HangHold = 0;
+    float ShimmyPhase = 0;
     bool bHangRoom = false;
     FVector ClimbStart = FVector::ZeroVector;
     FVector ClimbDir = FVector::ZeroVector;

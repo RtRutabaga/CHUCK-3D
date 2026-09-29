@@ -20,6 +20,7 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Wall run: jump into a wall while pushing toward it (three steps up) | Space + stick toward the wall | A + stick |
 | Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
 | Ledge: grabbed automatically when his paws reach a top edge. Hold toward the wall (or jump) to pull up, pull away (or dodge) to let go, jump + pull away to kick off backward | stick / Space / C | stick / A / B |
+| Shimmy: while hanging, stick left/right moves hand over hand along the edge (stops at its end). The camera swings round behind him to face the wall | stick | stick |
 | Mantle: walk into a knee-high ledge (6–40 cm) and he hops up onto it | stick | stick |
 | Slash (claw scratch); tap again or hold for a flurry on a steady beat with a random paw order (never three of one paw in a row); works while moving | Left mouse button | X |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |

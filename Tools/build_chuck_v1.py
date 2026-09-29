@@ -1278,6 +1278,42 @@ def mantle(phase, f):
     ik_goals()
     return r
 
+# Shimmy (parkour phase 4): hand over hand along the edge while hanging. A
+# loop; each paw grips for half the cycle (world-locked, so it slides back in
+# mesh space as the capsule moves) and reaches ahead for the other half. The
+# runtime advances the phase by the capsule's sideways travel over the stride.
+SHIMMY_STRIDE, SHIMMY_FRAMES = 16., 12
+def shimmy_clip(sign):
+    """sign +1: toward Chuck's left (+Y), -1: toward his right."""
+    def pose(phase, f):
+        w = TAU * phase
+        hang_body(.5 * math.sin(2 * w))
+        poser.rotate('chest', 'Z', sign * 3.)   # leaning into the travel
+        poser.update()
+        quarter = SHIMMY_STRIDE / 4
+        for side, nominal, out in (('L', 9., 1), ('R', -9., -1)):
+            lead = (side == 'L') == (sign > 0)
+            p = phase if lead else (phase + .5) % 1
+            if p < .5:   # gripping: slides from ahead to behind as he moves
+                u = p / .5
+                y = nominal + sign * quarter - sign * 2 * quarter * u
+                reach = 0.
+            else:        # reaching ahead to the next grip
+                u = (p - .5) / .5
+                y = nominal - sign * quarter + sign * 2 * quarter * smoothstep(u, 0., 1.)
+                reach = math.sin(math.pi * u)
+            target = Vector((FACE_X + 1.5 - 2. * reach, y, TOP_Z + .8 + 3. * reach))
+            poser.arm(side, target, pole=(-.2, out * .8, -.6))
+            curl(side, 55 - 35 * reach)
+        r = 0.
+        for side in 'LR':
+            shuffle = math.sin(w + (0 if side == 'L' else math.pi))
+            ball = Vector((FACE_X - 3., NEUTRAL_BALL[side].y + sign * 2. * shuffle, 17. + (4. if side == 'L' else 0.) + 2. * max(0., shuffle)))
+            r = max(r, poser.leg(side, ball, -75., -5., pole=(.3, 0., 1.)))
+        ik_goals()
+        return r
+    return pose
+
 def samples(fn, dur, n=9):
     return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
 
@@ -1377,6 +1413,12 @@ author('Mantle', mantle_frames, mantle, False, {
     'path_axes': ['forward', 'up'], 'reference_step_cm': MANTLE_H, 'advance_cm': MANTLE_FWD,
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'notes': 'Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height.'})
+
+for name, sign in (('ShimmyLeft', 1), ('ShimmyRight', -1)):
+    author(name, SHIMMY_FRAMES, shimmy_clip(sign), True, {
+        'stride_cycle_cm': SHIMMY_STRIDE, 'hang_drop_cm': HANG_DROP,
+        'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+        'notes': 'Hand over hand along a hang edge toward Chuck\'s ' + ('left' if sign > 0 else 'right') + '; loop phase follows the capsule\'s sideways travel over stride_cycle_cm.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

@@ -1116,3 +1116,33 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The pull-up passes through the corner of the capsule's volume (the location is set without sweeping).
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-fourth pass — parkour phase 4: shimmy and hang camera
+
+- **User request:** "Next" (phase 4 of the parkour plan).
+- **Source commit:** on top of `e194472`, branch `codex/claude-character`.
+- **Clips:** `ShimmyLeft` / `ShimmyRight`, 12-frame loops with a 16 cm stride, authored separately (no mirroring).
+  - Each paw grips for half a cycle (world-locked, sliding back in mesh space) and reaches ahead 3 cm up / 2 cm out for the other half. The chest leans into the travel and the feet shuffle on the wall.
+  - Leg reach 0.66–0.67. `check_v1.py` PASS.
+- **Runtime:**
+  - Shimmy: while hanging (after the 0.12 s snap), a stick more sideways than toward the wall (|side| > 0.4) moves the edge along his right vector at `ShimmySpeed` (45 cm/s).
+  - Every step, `FindLedge` must find the edge continuing at the next point and 10 cm ahead of the lead hand, within ±8 cm of the hang height, and a slightly shrunk capsule sweep must be clear. Otherwise he stops, still hanging.
+  - The loop phase follows the distance moved over `ShimmyStride`. It fades back to `Hang` when he stops. Pull-up and drop work as before from any point along the edge.
+  - Camera: while hanging or climbing, after 0.3 s without look input the orbit yaw eases (rate 4/s) to face the wall, so the stick is intuitive: up climbs, left/right shimmies. Not during wall runs, since chimney kicks flip his facing.
+- **Tests:** now **90** (`Verify-Package.ps1` expects 90, or 89 with `-NoCapture`). Stage 80: hang on the harbour wall with the camera 30° off, then the stick right:
+  - the camera faces the wall within 5° after 1 s;
+  - he shimmies 1.2 × 45 cm ± 12 with |dz| < 1;
+  - holding on, he stops at the wall end (X 20–50) still hanging.
+  - Capture stage 79 now hangs, shimmies right, then pulls up.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **90/90**; uncapped with and without groom: 0 failures.
+  - Camera −89.5° (target −90). Shimmy 54.0 cm in 1.2 s, dz 0.000.
+  - Stops at X 39.5–40.0 (wall end 50, the lead-hand probe 10 cm ahead).
+  - Evidence: `Review/motion_ShimmyRight.png`, `Review/runtime_shimmy.jpg` (camera swings behind; hang, shimmy, pull-up in game).
+- **Remaining (phase 5, tuning):**
+  - No corners (outer or inner); he stops at the end.
+  - Numbers await the user's feel: 3 steps / 45 cm, about 70 cm per chimney bounce, kick 260/230, shimmy 45 cm/s, grab snap up to 23 cm, pull-up hold 0.2 s.
+  - Mantle from a run isn't blended.
+  - The yard's look is to be dressed later.
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.

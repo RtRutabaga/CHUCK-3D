@@ -100,6 +100,7 @@ def main():
         f"    constexpr float WallRunStride = {f(wall['stride_cycle_cm'])};",
         '    // Ledges: hang depth, and the capsule path (forward, up) per 30 fps frame of PullUp and Mantle.',
         f"    constexpr float HangDrop = {f(hang['hang_drop_cm'])};",
+        f"    constexpr float ShimmyStride = {f(clips['ShimmyLeft']['stride_cycle_cm'])};",
         '    constexpr float PullUpPath[][2] = {' + ', '.join('{' + f(a) + ', ' + f(b) + '}' for a, b in pull['capsule_path_cm_per_frame']) + '};',
         f"    constexpr int PullUpFrames = {len(pull['capsule_path_cm_per_frame']) - 1};",
         f"    constexpr float PullUpRise = {f(pull['rise_cm'])};",

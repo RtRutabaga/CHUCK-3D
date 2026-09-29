@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -239,6 +239,14 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
         const float Behind = FMath::FindDeltaAngleDegrees(ViewYaw, GetActorRotation().Yaw);
         ViewYaw = FRotator::NormalizeAxis(ViewYaw + Behind * FMath::Min(1.f, DeltaSeconds * AutoFollowRate * Weight));
     }
+    // On a ledge the camera swings round behind him to face the wall, so the
+    // stick reads naturally: up climbs, left and right shimmy. (Not on wall
+    // runs: chimney bounces flip his facing every kick.)
+    if (DeltaSeconds > 0 && LookIdle > .3f && (Gait == EGait::Hang || Gait == EGait::Climb))
+    {
+        const float WallYaw = (-HangNormal).Rotation().Yaw;
+        ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, WallYaw) * FMath::Min(1.f, DeltaSeconds * 4.f));
+    }
     // The pivot ignores the arc of a jump (a 65 cm character's hop otherwise
     // bobs the whole view) but follows landings on a new level and falls.
     const float ActorZ = GetActorLocation().Z;
@@ -285,7 +293,7 @@ float AChuckCharacter::Period(EClip Clip) const
 {
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
-    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang;
+    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang || Clip == EClip::ShimmyLeft || Clip == EClip::ShimmyRight;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -738,6 +746,34 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         SetActorLocation(FMath::Lerp(HangFrom, Hold, FMath::SmoothStep(0.f, .12f, HangClock)), false, nullptr, ETeleportType::TeleportPhysics);
         Movement->Velocity = FVector::ZeroVector;
         const float Toward = FVector::DotProduct(StickWorld(), -HangNormal);
+        const FVector Along = FRotationMatrix((-HangNormal).Rotation()).GetUnitAxis(EAxis::Y);  // his right, along the wall
+        const float Side = FVector::DotProduct(StickWorld(), Along);
+        float Moved = 0;
+        if (HangClock >= .12f && FMath::Abs(Side) > .4f && FMath::Abs(Side) > Toward)
+        {
+            // Shimmy: the edge must carry on under both hands (the lead hand
+            // 10 cm ahead) at about the same height, and nothing may block him.
+            const float Direction = FMath::Sign(Side);
+            const FVector Next = HangEdge + Along * Direction * ShimmySpeed * FMath::Min(1.f, FMath::Abs(Side)) * DeltaSeconds;
+            FVector Edge, AheadEdge; bool bRoom = false, bAheadRoom = false;
+            const bool bLedge = FindLedge(HangNormal, Next, HangDrop - 8.f, HangDrop + 8.f, Edge, bRoom)
+                && FindLedge(HangNormal, Next + Along * Direction * 10.f, HangDrop - 8.f, HangDrop + 8.f, AheadEdge, bAheadRoom);
+            const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+            const FVector From = HangEdge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
+            const FVector To = Edge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
+            FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckShimmy), false, this);
+            if (bLedge && !GetWorld()->SweepTestByChannel(From, To, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 1.f), Query))
+            {
+                Moved = static_cast<float>(FVector::Dist(HangEdge, Edge));
+                HangEdge = Edge; bHangRoom = bRoom; HangFrom = To;
+                SetActorLocation(To, false, nullptr, ETeleportType::TeleportPhysics);
+                const EClip Shimmy = Direction > 0 ? EClip::ShimmyRight : EClip::ShimmyLeft;
+                ShimmyPhase = FMath::Frac(ShimmyPhase + Moved / ShimmyStride);
+                if (Base != Shimmy) SetClip(Shimmy, ShimmyPhase * Period(Shimmy), .1f);
+                BaseTime = ShimmyPhase * Period(Shimmy);
+            }
+        }
+        if (Moved <= 0 && (Base == EClip::ShimmyLeft || Base == EClip::ShimmyRight)) SetClip(EClip::Hang, 0, .15f);
         HangHold = Toward > .5f ? HangHold + DeltaSeconds : 0.f;
         if (HangHold >= PullUpHold && bHangRoom && HangClock >= .12f) StartClimb(false, HangNormal, HangEdge);
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();

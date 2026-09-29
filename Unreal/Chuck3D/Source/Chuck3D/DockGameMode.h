@@ -58,6 +58,7 @@ private:
     int32 HangsBase = 0, PullUpsBase = 0, MantlesBase = 0;
     float HangAt = -1, HangZ = 0, HangZ2 = 0;
     bool bStillHanging = false;
+    float ShimmyX0 = 0, ShimmyX1 = 0, ShimmyZ0 = 0, ShimmyZ1 = 0, CameraYawAtHang = 0;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

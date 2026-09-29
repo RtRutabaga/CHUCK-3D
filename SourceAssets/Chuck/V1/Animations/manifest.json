@@ -1226,6 +1226,46 @@
     "foot_R": []
    },
    "notes": "Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height."
+  },
+  {
+   "name": "ShimmyLeft",
+   "file": "Animations/AS_Chuck_ShimmyLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.6697,
+   "stride_cycle_cm": 16.0,
+   "hang_drop_cm": 22.0,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hand over hand along a hang edge toward Chuck's left; loop phase follows the capsule's sideways travel over stride_cycle_cm."
+  },
+  {
+   "name": "ShimmyRight",
+   "file": "Animations/AS_Chuck_ShimmyRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.6565,
+   "stride_cycle_cm": 16.0,
+   "hang_drop_cm": 22.0,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hand over hand along a hang edge toward Chuck's right; loop phase follows the capsule's sideways travel over stride_cycle_cm."
   }
  ]
 }

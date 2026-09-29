@@ -1007,6 +1007,33 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MANTLE_MEASURE mantles=%d peak_z=%.2f end_z=%.2f gait=%s"),Chuck->GetMantles()-MantlesBase,WallPeakZ,Chuck->GetActorLocation().Z,Chuck->GetGaitName());
             Check(Chuck->GetMantles()>MantlesBase && FMath::Abs(Chuck->GetActorLocation().Z-(30.f+32.5f))<3.f && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("walking into a knee-high ledge mantles onto it"));
+            // Next: hang on the harbour wall with the camera 30 degrees off,
+            // then shimmy right along it to its end.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            Chuck->SetActorRotation(FRotator(0,-60,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,-90,0));
+            Chuck->SetTestStick(FVector2D(0,1)); HangAt=-1; ShimmyX0=ShimmyX1=ShimmyZ0=ShimmyZ1=0; CameraYawAtHang=0;
+            TestStage=80; StageTime=0;
+        }
+    }
+    else if(TestStage==80)
+    {
+        if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        if(Chuck->IsHanging() && HangAt<0) { HangAt=StageTime; Chuck->SetTestStick(FVector2D::ZeroVector); }
+        const FVector At=Chuck->GetActorLocation();
+        if(HangAt>=0 && StageTime>=HangAt+1.f && StageTime-DeltaSeconds<HangAt+1.f)
+        {
+            CameraYawAtHang=Chuck->FindComponentByClass<UCameraComponent>()->GetComponentRotation().Yaw;
+            ShimmyX0=At.X; ShimmyZ0=At.Z; Chuck->SetTestStick(FVector2D(1,0));  // camera-relative right
+        }
+        if(HangAt>=0 && StageTime>=HangAt+2.2f && StageTime-DeltaSeconds<HangAt+2.2f) { ShimmyX1=At.X; ShimmyZ1=At.Z; }
+        if(HangAt>=0 && StageTime>HangAt+6.f)
+        {
+            const bool bHanging=Chuck->IsHanging();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIMMY_MEASURE camera_yaw=%.2f moved_cm=%.2f dz=%.3f end_x=%.2f hanging=%d"),CameraYawAtHang,ShimmyX1-ShimmyX0,ShimmyZ1-ShimmyZ0,At.X,bHanging ? 1 : 0);
+            Check(FMath::Abs(FMath::FindDeltaAngleDegrees(CameraYawAtHang,-90.f))<5.f,TEXT("hanging turns the camera to face the wall with him"));
+            Check(FMath::Abs(ShimmyX1-ShimmyX0-1.2f*AChuckCharacter::ShimmySpeed)<12.f && FMath::Abs(ShimmyZ1-ShimmyZ0)<1.f,TEXT("stick sideways shimmies along the edge"));
+            Check(bHanging && At.X>20.f && At.X<50.f,TEXT("the shimmy stops at the end of the ledge, still hanging"));
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -1090,13 +1117,14 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         if(StageTime<.3f) Chuck->AddMovementInput(FVector(0,-1,0),1);
         if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
-        // Hold the hang a moment for the camera, then pull up.
+        // Hang a moment, shimmy right along the edge, then pull up.
         if(Chuck->IsHanging() && HangAt<0) { HangAt=StageTime; Chuck->SetTestStick(FVector2D::ZeroVector); }
-        if(HangAt>=0 && StageTime>=HangAt+.5f && StageTime-DeltaSeconds<HangAt+.5f) Chuck->JumpPressed();
-        for(const float Shot : {.35f,.45f,.55f,.8f,1.f,1.15f,1.3f,1.5f})
+        if(HangAt>=0 && StageTime>=HangAt+.5f && StageTime-DeltaSeconds<HangAt+.5f) Chuck->SetTestStick(FVector2D(1,0));
+        if(HangAt>=0 && StageTime>=HangAt+1.5f && StageTime-DeltaSeconds<HangAt+1.5f) { Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->JumpPressed(); }
+        for(const float Shot : {.35f,.45f,.55f,.8f,1.2f,1.4f,1.6f,2.1f,2.4f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Ledge_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>2.2f) { Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>3.f) { Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {
