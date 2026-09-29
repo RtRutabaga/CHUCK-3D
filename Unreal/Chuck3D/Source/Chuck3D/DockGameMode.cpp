@@ -760,6 +760,77 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(FMath::Abs(Saunter-ChuckClipData::WalkSpeed)<3.f,TEXT("a second Shift tap drops back to the saunter"));
             Tap(EKeys::W,false);
             KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+            // Next: a standing slash, with a second press buffered to chain the other paw.
+            Chuck->ResetToDock(); Chuck->Slash();
+            LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; bLocoFlag=false; bKeyMeasured=false;
+            SlashMin=1e3f; SlashMax=-1e3f; SlashSpeed=0; SlashLeftMin=1e3f; SlashLeftMax=-1e3f; bSlashHave=false;
+            TestStage=66; StageTime=0;
+        }
+    }
+    else if(TestStage==66 || TestStage==67)
+    {
+        // Paw sweep across the body in actor space (+Y right), and its speed.
+        const bool bRunning=TestStage==67;
+        if(bRunning) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(!bRunning && StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->Slash();  // buffered: chains
+        if(bRunning && StageTime>=1.f && StageTime-DeltaSeconds<1.f) { Chuck->Slash(); LocoValue=1e3f; }
+        const FString Name=Chuck->GetSlashName();
+        const FTransform Actor=Chuck->GetActorTransform();
+        const FVector Right=Actor.InverseTransformPosition(Chuck->GetMesh()->GetSocketLocation(TEXT("hand_R")));
+        const FVector Left=Actor.InverseTransformPosition(Chuck->GetMesh()->GetSocketLocation(TEXT("hand_L")));
+        if(Name==TEXT("SlashRight"))
+        {
+            SlashMin=FMath::Min(SlashMin,static_cast<float>(Right.Y)); SlashMax=FMath::Max(SlashMax,static_cast<float>(Right.Y));
+            // Skip the first frames: the pose still reflects the pre-reset position.
+            if(bSlashHave && StageTime>.05f) SlashSpeed=FMath::Max(SlashSpeed,static_cast<float>(FVector::Dist(Right,SlashPrevious))/FMath::Max(DeltaSeconds,.001f));
+            SlashPrevious=Right; bSlashHave=true;
+        }
+        else bSlashHave=false;
+        if(Name==TEXT("SlashLeft")) { bKeyMeasured=true; SlashLeftMin=FMath::Min(SlashLeftMin,static_cast<float>(Left.Y)); SlashLeftMax=FMath::Max(SlashLeftMax,static_cast<float>(Left.Y)); }
+        if(!bRunning && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Slash"))==0) ProbeLockedPaws(Chuck,DeltaSeconds);
+        if(bRunning && !Name.IsEmpty()) { LocoValue=FMath::Min(LocoValue,static_cast<float>(Chuck->GetVelocity().Size2D())); ProbeLockedPaws(Chuck,DeltaSeconds); }
+        if(StageTime>(bRunning ? 2.f : 1.5f))
+        {
+            const FVector Moved=Chuck->GetActorLocation()-AChuckCharacter::StartLocation();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SLASH_MEASURE mode=%s right_paw_y=[%.2f,%.2f] peak_cm_s=%.1f left_paw_y=[%.2f,%.2f] chained=%d travel_cm=%.3f min_speed_cm_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),bRunning ? TEXT("running") : TEXT("standing"),SlashMin,SlashMax,SlashSpeed,SlashLeftMin,SlashLeftMax,bKeyMeasured ? 1 : 0,Moved.X,bRunning ? LocoValue : 0.f,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
+            // The right paw starts on its own side (+Y) and rakes across the midline.
+            const bool bRake=SlashMax>8.f && SlashMin<0.f && SlashSpeed>250.f;
+            if(!bRunning)
+            {
+                Check(bRake,TEXT("standing slash rakes the right paw fast across the body"));
+                Check(bKeyMeasured && SlashLeftMin<-8.f && SlashLeftMax>0.f,TEXT("a second press chains the left paw"));
+                // The chain cuts the first step-in short at the chain point.
+                const float ChainFrame=ChuckClipData::SlashChainAt*30.f; const int32 ChainIndex=FMath::FloorToInt(ChainFrame);
+                const float Stepped=FMath::Lerp(ChuckClipData::SlashTravel[ChainIndex],ChuckClipData::SlashTravel[ChainIndex+1],ChainFrame-ChainIndex)+ChuckClipData::SlashTravel[ChuckClipData::SlashFrames];
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SLASH_STEP_MEASURE travel_cm=%.3f expected_cm=%.3f"),Moved.X,Stepped);
+                Check(FMath::Abs(Moved.X-Stepped)<3.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("two chained slashes step in and settle"));
+                Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("slash paws hold in stance"));
+                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-380,0,36)); Chuck->SetRunHeld(true);
+                LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; bKeyMeasured=false;
+                SlashMin=1e3f; SlashMax=-1e3f; SlashSpeed=0; bSlashHave=false;
+                TestStage=67; StageTime=0;
+            }
+            else
+            {
+                Check(bRake,TEXT("running slash rakes the right paw across over the stride"));
+                Check(LocoValue>.95f*ChuckClipData::RunSpeed && LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("running slash keeps the stride at speed with paws holding"));
+                Chuck->SetRunHeld(false); Chuck->ResetToDock();
+                auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+                Chuck->EnableInput(KeyPC); Chuck->SetLookLocked(true);
+                KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton,IE_Pressed,1));
+                bLocoFlag=false; TestStage=68; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==68)
+    {
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        if(StageTime>=.05f && StageTime-DeltaSeconds<.05f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton,IE_Released,0));
+        if(FCString::Strcmp(Chuck->GetSlashName(),TEXT("SlashRight"))==0) bLocoFlag=true;
+        if(StageTime>.8f)
+        {
+            Check(bLocoFlag,TEXT("left mouse button slashes"));
+            KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
             Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -797,7 +868,21 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {1.2f,1.27f,1.34f,1.5f,1.6f,1.7f,1.85f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s_%03d.png"),Shot<1.4f ? TEXT("Run") : TEXT("RunJump"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>2.2f) { Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>2.2f)
+        {
+            // Then a slash pair, seen from the front three-quarter.
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+            Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+            Chuck->Slash(); TestStage=69; StageTime=0;
+        }
+    }
+    else if(TestStage==69)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->Slash();
+        for(const float Shot : {.1f,.16f,.22f,.3f,.38f,.44f,.52f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Slash_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>1.5f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {
@@ -952,6 +1037,6 @@ void ADockHUD::DrawHUD()
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    LMB / X: slash    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

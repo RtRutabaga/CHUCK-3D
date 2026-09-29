@@ -628,5 +628,137 @@
     0.549
    ]
   }
+ ],
+ "SlashRight": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.06
+   ],
+   "frames": [
+    0,
+    1
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.2,
+    0.5
+   ],
+   "frames": [
+    6,
+    15
+   ],
+   "max_world_slip_cm_s": 0.003,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.3
+   ],
+   "frames": [
+    0,
+    9
+   ],
+   "max_world_slip_cm_s": 0.003,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.42,
+    0.5
+   ],
+   "frames": [
+    13,
+    15
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
+ ],
+ "SlashLeft": [
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.0,
+    0.3
+   ],
+   "frames": [
+    0,
+    9
+   ],
+   "max_world_slip_cm_s": 0.003,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_L",
+   "span_s": [
+    0.42,
+    0.5
+   ],
+   "frames": [
+    13,
+    15
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.0,
+    0.06
+   ],
+   "frames": [
+    0,
+    1
+   ],
+   "max_world_slip_cm_s": 0.0,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  },
+  {
+   "foot": "foot_R",
+   "span_s": [
+    0.2,
+    0.5
+   ],
+   "frames": [
+    6,
+    15
+   ],
+   "max_world_slip_cm_s": 0.003,
+   "sole_z_cm": [
+    0.549,
+    0.549
+   ]
+  }
  ]
 }

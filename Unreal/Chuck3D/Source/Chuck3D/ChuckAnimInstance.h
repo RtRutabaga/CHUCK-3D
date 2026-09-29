@@ -32,6 +32,11 @@ struct FChuckAnimParams
     float WeightRun = 0.f;
     bool bRunOnA = false;
     bool bRunOnB = false;
+    /** Upper-body layers (the spine_01 subtree) over everything above, in
+     *  order: a fading previous slash, then the current one. */
+    UAnimSequence* ClipUpper[2] = {nullptr, nullptr};
+    float TimeUpper[2] = {0.f, 0.f};
+    float WeightUpper[2] = {0.f, 0.f};
 
     /** Paw is in stance: its ball is locked in world space from the moment stance begins. */
     bool bStance[2] = {false, false};
@@ -83,6 +88,10 @@ private:
     TArray<FCompactPoseBoneIndex> MirrorBones;
     TCustomBoneIndexArray<FQuat, FCompactPoseBoneIndex> MirrorRefRotations;
     uint16 MirrorSerial = 0;
+    // spine_01 subtree for upper-body layers.
+    TArray<bool> UpperMask;
+    uint16 UpperSerial = 0;
+    void BlendUpper(FPoseContext& Output, UAnimSequence* Clip, float Time, float Weight);
     void Sample(UAnimSequence* Clip, float Time, float Period, bool bMirror, FPoseContext& Out);
     void Mirror(FCompactPose& Pose);
 };

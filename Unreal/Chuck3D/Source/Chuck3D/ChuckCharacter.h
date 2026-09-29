@@ -24,6 +24,11 @@ public:
     void ResetToDock();
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
+    /** Claw slash (LMB / X): a stepping slash when standing, the upper body
+     *  over the stride on the move; pressing again chains the other paw. */
+    void Slash();
+    /** "SlashRight"/"SlashLeft" while one plays (standing or layered), else "". */
+    const TCHAR* GetSlashName() const;
     /** Run latch: tap Shift / LB to run, tap again or come to a stop to saunter. Tests set it directly. */
     void SetRunHeld(bool bHeld) { bRunHeld = bHeld; }
     /** Current saunter -> run blend (0..1). */
@@ -46,7 +51,7 @@ public:
     /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
     UStaticMeshComponent* GetCigarette() const { return Cigarette; }
     UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
-    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll or SideJump. */
+    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump or Slash. */
     const TCHAR* GetGaitName() const;
 protected:
     virtual void BeginPlay() override;
@@ -68,9 +73,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -98,6 +103,17 @@ private:
     float RunWeight = 0;
     bool bRunJump = false;
     bool bLookLocked = false;
+    // Slash: the standing gait uses Base; on the move a layer plays (time < 0: none).
+    bool bSlashQueued = false;
+    bool bSlashRightNext = true;
+    float SlashDone = 0;
+    EClip LayerClip = EClip::SlashRight;
+    float LayerTime = -1;
+    EClip FadingLayerClip = EClip::SlashRight;
+    float FadingLayerTime = -1;
+    float FadingLayerWeight = 0;
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash; }
+    void UpdateSlashLayer(float DeltaSeconds);
     bool bHardLanding = false;
     // A latch, not a hold: holding Shift while pressing Space (and a direction)
     // can exceed what many keyboards register at once.

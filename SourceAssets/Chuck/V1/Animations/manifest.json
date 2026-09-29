@@ -836,6 +836,136 @@
     "settled": 0.8
    },
    "notes": "Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips)."
+  },
+  {
+   "name": "SlashRight",
+   "file": "Animations/AS_Chuck_SlashRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 15,
+   "frame_count": 16,
+   "duration_s": 0.5,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9396,
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0,
+    0.0146,
+    0.4859,
+    1.5005,
+    2.8936,
+    4.5007,
+    6.1573,
+    7.6985,
+    8.96,
+    9.777,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "travel_cm": 10.0,
+   "duration_travel_s": 0.5,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.06
+     ],
+     [
+      0.2,
+      0.5
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.3
+     ],
+     [
+      0.42,
+      0.5
+     ]
+    ]
+   },
+   "events_s": {
+    "wind_up": 0.12,
+    "strike": 0.2,
+    "follow_through": 0.3,
+    "chain_from": 0.27,
+    "recovered": 0.5
+   },
+   "striking_paw": "hand_R",
+   "upper_body_root": "spine_01",
+   "notes": "Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw."
+  },
+  {
+   "name": "SlashLeft",
+   "file": "Animations/AS_Chuck_SlashLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 15,
+   "frame_count": 16,
+   "duration_s": 0.5,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0,
+    0.0146,
+    0.4859,
+    1.5005,
+    2.8936,
+    4.5007,
+    6.1573,
+    7.6985,
+    8.96,
+    9.777,
+    10.0,
+    10.0,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "travel_cm": 10.0,
+   "duration_travel_s": 0.5,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.3
+     ],
+     [
+      0.42,
+      0.5
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.06
+     ],
+     [
+      0.2,
+      0.5
+     ]
+    ]
+   },
+   "events_s": {
+    "wind_up": 0.12,
+    "strike": 0.2,
+    "follow_through": 0.3,
+    "chain_from": 0.27,
+    "recovered": 0.5
+   },
+   "striking_paw": "hand_L",
+   "upper_body_root": "spine_01",
+   "notes": "Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw."
   }
  ]
 }

@@ -39,6 +39,12 @@ namespace ChuckClipData
     constexpr int RollFrames = 24;
     constexpr FStance RollStance{{0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, {0.0000f, 0.0800f, 0.5600f, 0.8000f, -1.0000f, -1.0000f}, 0.8000f};
     constexpr float RollPlant = 0.5600f;  // paws back on the ground
+    // Slash (claw scratch): capsule travel per 30 fps frame (standing), chain window, stance.
+    constexpr float SlashTravel[] = {0.0000f, 0.0000f, 0.0146f, 0.4859f, 1.5005f, 2.8936f, 4.5007f, 6.1573f, 7.6985f, 8.9600f, 9.7770f, 10.0000f, 10.0000f, 10.0000f, 10.0000f, 10.0000f};
+    constexpr int SlashFrames = 15;
+    constexpr float SlashChainAt = 0.2700f;
+    constexpr FStance SlashRightStance{{0.0000f, 0.0600f, 0.2000f, 0.5000f, -1.0000f, -1.0000f}, {0.0000f, 0.3000f, 0.4200f, 0.5000f, -1.0000f, -1.0000f}, 0.5000f};
+    constexpr FStance SlashLeftStance{{0.0000f, 0.3000f, 0.4200f, 0.5000f, -1.0000f, -1.0000f}, {0.0000f, 0.0600f, 0.2000f, 0.5000f, -1.0000f, -1.0000f}, 0.5000f};
     // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
     constexpr float SideTakeoff = 0.1000f;
     constexpr float SideLand = 0.5000f;

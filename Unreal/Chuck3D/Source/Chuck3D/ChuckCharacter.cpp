@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -165,7 +165,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -182,12 +182,13 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
     Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
+    Input->BindAction("Slash", IE_Pressed, this, &AChuckCharacter::Slash);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
 // A dodge owns the capsule; the stick is still read to choose the next move.
-void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!IsDodging()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
-void AChuckCharacter::Right(float Value) { InputRight = Value; if (!IsDodging()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
+void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!OwnsCapsule()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
+void AChuckCharacter::Right(float Value) { InputRight = Value; if (!OwnsCapsule()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
 void AChuckCharacter::Dodge()
 {
     // Action events dispatch before this frame's axis events: read the stick
@@ -268,6 +269,7 @@ void AChuckCharacter::ResetToDock()
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     InputForward = InputRight = 0;  // refreshed every frame while input is live
     bRunJump = bHardLanding = false;
+    bSlashQueued = false; bSlashRightNext = true; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -356,6 +358,14 @@ namespace
         const int32 I = FMath::Min(FMath::FloorToInt(Frame), RollFrames - 1);
         return FMath::Lerp(RollTravel[I], RollTravel[I + 1], Frame - I);
     }
+    float SlashTravelAt(float Time)
+    {
+        const float Frame = FMath::Clamp(Time * 30.f, 0.f, static_cast<float>(SlashFrames));
+        const int32 I = FMath::Min(FMath::FloorToInt(Frame), SlashFrames - 1);
+        return FMath::Lerp(SlashTravel[I], SlashTravel[I + 1], Frame - I);
+    }
+    // Upper-body slash layer envelope: in over 0.05 s, out over the last 0.15 s.
+    float LayerWeightAt(float Time, float Length) { return FMath::SmoothStep(0.f, .05f, Time) * (1.f - FMath::SmoothStep(Length - .15f, Length, Time)); }
     float TurnProfile(float Time)
     {
         const float Frame = FMath::Clamp(Time * 30.f, 0.f, static_cast<float>(TurnYawFrames));
@@ -399,6 +409,64 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
     }
     bDodgeLaunched = bDodgeLanded = bStopPending = false;
 }
+void AChuckCharacter::Slash()
+{
+    auto* Movement = GetCharacterMovement();
+    const bool bStandingSlash = Gait == EGait::Slash;
+    const bool bLayered = LayerTime >= 0;
+    if (bStandingSlash || bLayered)
+    {
+        // Buffer the next paw; it chains once this strike has gone through.
+        if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
+        return;
+    }
+    if (IsDodging()) return;
+    const EClip Clip = bSlashRightNext ? EClip::SlashRight : EClip::SlashLeft;
+    bSlashRightNext = !bSlashRightNext;
+    bSlashQueued = false;
+    if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
+    const bool bStanding = !Movement->IsFalling() && GetVelocity().Size2D() < 20.f
+        && (Gait == EGait::Idle || Gait == EGait::Stop || Gait == EGait::Land || Gait == EGait::Turn || Gait == EGait::Start);
+    if (bStanding)
+    {
+        // A stepping slash: the capsule follows the clip's 10 cm step-in.
+        Movement->StopMovementImmediately();
+        Gait = EGait::Slash;
+        SetClip(Clip, 0, .06f);
+        SlashDone = 0;
+    }
+    else
+    {
+        LayerClip = Clip;
+        LayerTime = 0;
+    }
+}
+const TCHAR* AChuckCharacter::GetSlashName() const
+{
+    const EClip Clip = Gait == EGait::Slash ? Base : (LayerTime >= 0 ? LayerClip : EClip::Num);
+    return Clip == EClip::SlashRight ? TEXT("SlashRight") : Clip == EClip::SlashLeft ? TEXT("SlashLeft") : TEXT("");
+}
+void AChuckCharacter::UpdateSlashLayer(float DeltaSeconds)
+{
+    if (FadingLayerTime >= 0)
+    {
+        FadingLayerTime += DeltaSeconds;
+        FadingLayerWeight = FMath::Max(0.f, FadingLayerWeight - DeltaSeconds / .08f);
+        if (FadingLayerWeight <= 0) FadingLayerTime = -1;
+    }
+    if (LayerTime < 0) return;
+    LayerTime += DeltaSeconds;
+    const float LayerLength = Clips[static_cast<int32>(LayerClip)]->GetPlayLength();
+    if (bSlashQueued && LayerTime >= SlashChainAt)
+    {
+        // Chain: the finished paw fades out under the next one.
+        FadingLayerClip = LayerClip; FadingLayerTime = LayerTime; FadingLayerWeight = LayerWeightAt(LayerTime, LayerLength);
+        LayerClip = LayerClip == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
+        bSlashRightNext = LayerClip == EClip::SlashLeft;
+        LayerTime = 0; bSlashQueued = false;
+    }
+    else if (LayerTime >= LayerLength) { LayerTime = -1; bSlashRightNext = true; bSlashQueued = false; }
+}
 void AChuckCharacter::FinishDodge()
 {
     // Back to the aplomb stance the clips end on; saunter on if the stick is held.
@@ -421,7 +489,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
     const EGait GaitBefore = Gait;
-    if (!IsDodging()) Movement->MaxWalkSpeed = bRunHeld ? RunSpeed : WalkSpeed;
+    if (!OwnsCapsule()) Movement->MaxWalkSpeed = bRunHeld ? RunSpeed : WalkSpeed;
+    UpdateSlashLayer(DeltaSeconds);
     const float Length = Clips[static_cast<int32>(Base)]->GetPlayLength();
 
     // Distance-matched gait: start, walk and stop clips advance by travelled
@@ -517,6 +586,28 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             float RollSpeed = FMath::Max(0.f, RollTravelAt(BaseTime + DeltaSeconds) - RollDone) / FMath::Max(DeltaSeconds, 1e-4f);
             if (bCarry && BaseTime > .1f) RollSpeed = FMath::Max(RollSpeed, Pace);
             Movement->Velocity = FVector(DodgeDirection.X * RollSpeed, DodgeDirection.Y * RollSpeed, Movement->Velocity.Z);
+        }
+    }
+    else if (Gait == EGait::Slash)
+    {
+        // Standing slash: the capsule follows the clip's step-in (closed loop,
+        // as for the roll); a buffered press chains the other paw.
+        BaseTime += DeltaSeconds;
+        SlashDone += Travel;
+        if (bSlashQueued && BaseTime >= SlashChainAt)
+        {
+            const EClip Next = Base == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
+            bSlashRightNext = Next == EClip::SlashLeft;
+            bSlashQueued = false;
+            SetClip(Next, 0, .06f);
+            SlashDone = 0;
+        }
+        else if (BaseTime >= Length) { bSlashRightNext = true; FinishDodge(); }
+        if (Gait == EGait::Slash)
+        {
+            const float Step = FMath::Max(0.f, SlashTravelAt(BaseTime + DeltaSeconds) - SlashDone) / FMath::Max(DeltaSeconds, 1e-4f);
+            const FVector Ahead = GetActorForwardVector().GetSafeNormal2D();
+            Movement->Velocity = FVector(Ahead.X * Step, Ahead.Y * Step, Movement->Velocity.Z);
         }
     }
     else if (Gait == EGait::Turn)
@@ -622,7 +713,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // During a dodge nothing brakes the capsule but the dodge itself.
     // A landing without input absorbs its momentum within a few cm, before the
     // landing paws lock (0.1 s), instead of walking on into a stop.
-    Movement->BrakingDecelerationWalking = IsDodging() ? 0.f
+    Movement->BrakingDecelerationWalking = OwnsCapsule() ? 0.f
         : bStopPending ? (Speed > WalkSpeed * 1.05f ? RunBrake : 0.f)
         : (Gait == EGait::Land ? (bHardLanding ? RunLandDeceleration : LandDeceleration) : StopDeceleration);
     // The run layer follows the speed in the stride and is held while the
@@ -646,6 +737,13 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.WeightRun = RunWeight;
     P.bRunOnA = Base == EClip::WalkLoop;
     P.bRunOnB = Fading == EClip::WalkLoop;
+    // Slash layers on the move (a standing slash plays as the base clip).
+    P.ClipUpper[0] = FadingLayerTime >= 0 ? Clips[static_cast<int32>(FadingLayerClip)] : nullptr;
+    P.TimeUpper[0] = FadingLayerTime;
+    P.WeightUpper[0] = FadingLayerWeight;
+    P.ClipUpper[1] = LayerTime >= 0 ? Clips[static_cast<int32>(LayerClip)] : nullptr;
+    P.TimeUpper[1] = LayerTime;
+    P.WeightUpper[1] = LayerTime >= 0 ? LayerWeightAt(LayerTime, Clips[static_cast<int32>(LayerClip)]->GetPlayLength()) : 0.f;
     P.bFootIK = !bAirborne;
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
@@ -658,6 +756,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     else if (Gait == EGait::Turn) Clip = Base == EClip::TurnLeft90 ? &TurnLeftStance : &TurnRightStance;
     else if (Gait == EGait::Roll) Clip = &RollStance;
     else if (Gait == EGait::SideJump) Clip = &SideJumpStance;
+    else if (Gait == EGait::Slash) Clip = Base == EClip::SlashRight ? &SlashRightStance : &SlashLeftStance;
     for (int32 I = 0; I < 2; ++I)
     {
         bool bStance = bStanding;

@@ -922,3 +922,41 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Stage 65 through the real keys: Shift tapped and released, W held; Space at 1.2 s leaps at full run speed. A second Shift tap drops back to the saunter (72 cm/s).
 - **Verified:** packaged `-MotionCapture` and `-NoGroom`: **69/69**; uncapped with and without groom: 0 failures.
 - **Not verified:** the user's physical keyboard. **Not integrated into main.** A worktree launcher receipt was written.
+
+## Thirty-eighth pass — push, then the slash (claw scratch)
+
+- **User request:** "push and do slash".
+- **Push:** main `06be7c6` pushed to `origin` (`43bf1eb..06be7c6`, 431 LFS objects, about 971 MB).
+- **Source commit:** on top of `06be7c6`, branch `codex/claude-character`.
+- **What a slash is:** Chuck's canonical attack is a claw scratch (`References/Original/PHASE-2.md`: "brief forward movement, paw scratch"; PROJECT-BRIEF lists "Scratching" as a later prototype goal), so there is no weapon.
+- **Clips:** `SlashRight` / `SlashLeft` (16 frames, 0.5 s).
+  - Wind-up to 0.12 s: the striking paw cocks beside the ear and the torso turns away (22°).
+  - Strike to 0.2 s: the torso unwinds hard (30°) and the paw rakes on a Hermite wrist path, claws leading (fingers opened), to in front of the chest.
+  - Follow-through to 0.3 s: the paw finishes low across the body. Recovered by 0.5 s.
+  - The opposite paw steps in 10 cm (a boxer's cross) and the striking side follows. The other arm pulls back as a guard, the head counters the twist to hold the gaze, and the tail counters.
+  - The striking arm uses Poser.arm IK blended from the carriage arm.
+  - Events: `chain_from` 0.27, after the paw has crossed the midline. `check_v1.py` PASS.
+- **Runtime:**
+  - `Slash` action: left mouse button / Xbox X. F stays recenter.
+  - Standing (Idle/Stop/Land/Turn/Start under 20 cm/s): `EGait::Slash` plays the clip as the base. The capsule follows the 10 cm step-in closed-loop, with stance windows from the manifest.
+  - On the move (walk, run, air): an upper-body layer, the spine_01 subtree, via `FChuckAnimProxy::BlendUpper`, over the stride. It fades in over 0.05 s and out over the last 0.15 s, and there are two slots so a chained paw fades the previous one out over 0.08 s.
+  - A press during a slash buffers the other paw, which chains at 0.27 s. A dodge can cancel a standing slash.
+  - Movement input and braking are owned by the slash while standing (`OwnsCapsule`).
+- **Tests:** now **76** (`Verify-Package.ps1` expects 76, or 75 with `-NoCapture`).
+  - Stage 66: standing slash plus a buffered second press. Checks: the right paw rakes from its own side across the midline at over 250 cm/s; the left paw chains; the step-in matches the manifest (chained: 17.8 cm expected); it settles to Idle; paws hold.
+  - Stage 67: slash while running. The rake crosses, and the stride holds 190 cm/s with paws holding.
+  - Stage 68: the left mouse button slashes (real key path, look locked).
+  - Stage 69: capture replay (`Slash_*.png`).
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **76/76**; uncapped with and without groom: 0 failures.
+  - Standing: right paw y +14.1 → −3.3 to −4.2 cm, peak 650–1010 cm/s. Step 17.9–18.3 cm (expected 17.8). Paw slip 0.
+  - Running: rake +16.4 → −4.6 cm, speed stays 190. Paw slip 0.
+  - An 11 cm "jump" seen in uncapped runs was the first frame after the test's reset teleport (a stale pose), not a pop. The measurement now skips 0.05 s.
+  - Evidence: `Review/motion_SlashRight.png`, `Review/motion_SlashLeft.png`, `Review/runtime_slash.jpg`.
+- **Remaining:**
+  - No hit detection, targets or breakables (combat encounters remain out of scope unless the user asks).
+  - The slash keeps the current facing; there's no aim toward the stick or camera.
+  - The layered slash has no pelvis or leg involvement.
+  - No claw trail or FX.
+  - The in-game capture is small; it needs the user's eye.
+- **Not integrated into main.** A worktree launcher receipt was written.

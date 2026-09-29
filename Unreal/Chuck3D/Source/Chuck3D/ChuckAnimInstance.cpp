@@ -94,6 +94,32 @@ void FChuckAnimProxy::Sample(UAnimSequence* Clip, float Time, float Period, bool
     Clip->GetAnimationPose(OutData, FAnimExtractContext(static_cast<double>(FMath::Clamp(Time, 0.f, Length)), false));
 }
 
+void FChuckAnimProxy::BlendUpper(FPoseContext& Output, UAnimSequence* Clip, float Time, float Weight)
+{
+    FPoseContext Layer(Output);
+    Sample(Clip, Time, 0.f, false, Layer);
+    const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
+    if (UpperMask.Num() != Output.Pose.GetNumBones() || UpperSerial != Bones.GetSerialNumber())
+    {
+        UpperSerial = Bones.GetSerialNumber();
+        const FCompactPoseBoneIndex Root = Find(Bones, TEXT("spine_01"));
+        UpperMask.Init(false, Output.Pose.GetNumBones());
+        for (FCompactPoseBoneIndex Index : Output.Pose.ForEachBoneIndex())
+        {
+            // Parents precede children in a compact pose.
+            const FCompactPoseBoneIndex Parent = Bones.GetParentBoneIndex(Index);
+            UpperMask[Index.GetInt()] = Index == Root || (Parent != INDEX_NONE && UpperMask[Parent.GetInt()]);
+        }
+    }
+    for (FCompactPoseBoneIndex Index : Output.Pose.ForEachBoneIndex())
+    {
+        if (!UpperMask[Index.GetInt()]) continue;
+        FTransform Blended;
+        Blended.Blend(Output.Pose[Index], Layer.Pose[Index], FMath::Clamp(Weight, 0.f, 1.f));
+        Output.Pose[Index] = Blended;
+    }
+}
+
 bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
 {
     if (!Params.ClipA)
@@ -128,6 +154,13 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
         else
         {
             CopyPose(PoseA, Output);
+        }
+        for (int32 Layer = 0; Layer < 2; ++Layer)
+        {
+            if (Params.ClipUpper[Layer] && Params.WeightUpper[Layer] > KINDA_SMALL_NUMBER)
+            {
+                BlendUpper(Output, Params.ClipUpper[Layer], Params.TimeUpper[Layer], Params.WeightUpper[Layer]);
+            }
         }
     }
 

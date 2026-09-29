@@ -41,6 +41,7 @@ def main():
     turn = clips['TurnLeft90']
     roll, side = clips['Roll'], clips['SideJumpLeft']
     run = clips['RunLoop']
+    slash = clips['SlashRight']
     yaw = [abs(v) for v in turn['capsule_yaw_deg_per_frame']]
     # Frames until the yaw reaches its final value; the tail is the settle hold.
     last = next(i for i, v in enumerate(yaw) if abs(v - yaw[-1]) < 1e-3)
@@ -87,6 +88,12 @@ def main():
         f"    constexpr int RollFrames = {len(roll['capsule_travel_cm_per_frame']) - 1};",
         f"    constexpr FStance RollStance{stance(roll)};",
         f"    constexpr float RollPlant = {f(roll['events_s']['plant'])};  // paws back on the ground",
+        '    // Slash (claw scratch): capsule travel per 30 fps frame (standing), chain window, stance.',
+        '    constexpr float SlashTravel[] = {' + ', '.join(f(v) for v in slash['capsule_travel_cm_per_frame']) + '};',
+        f"    constexpr int SlashFrames = {len(slash['capsule_travel_cm_per_frame']) - 1};",
+        f"    constexpr float SlashChainAt = {f(slash['events_s']['chain_from'])};",
+        f"    constexpr FStance SlashRightStance{stance(slash)};",
+        f"    constexpr FStance SlashLeftStance{stance(clips['SlashLeft'])};",
         '    // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.',
         f"    constexpr float SideTakeoff = {f(side['events_s']['takeoff'])};",
         f"    constexpr float SideLand = {f(side['events_s']['land'])};",

@@ -988,6 +988,73 @@ def side_jump(sign):
         return r
     return pose
 
+# ---- slash: Chuck's claw scratch (References/Original/PHASE-2.md: "brief
+# forward movement, paw scratch"; no weapon). User vision: "slashes with
+# agility". A fast diagonal rake from high on the striking side down across
+# the body, stepping in 10 cm with the opposite paw (a boxer's cross), the
+# torso winding up then unwinding hard, the other arm pulled back for balance,
+# the gaze held forward, then back to the aplomb stance. SlashRight chains into
+# SlashLeft. Root fixed: standing, the runtime moves the capsule along the
+# manifest travel; on the move it plays the upper body over the stride.
+SLASH_T, SLASH_STEP = .5, 10.
+def slash_travel(t):
+    return SLASH_STEP * smoothstep(t, .06, .36)
+
+def slash_clip(side):
+    sign = 1 if side == 'L' else -1  # +Y is Chuck's left
+    other = 'R' if side == 'L' else 'L'
+    # The opposite paw steps in with the strike; the striking side's paw follows.
+    steps = {other: [(.06, .2, (RB[other][0] + SLASH_STEP, RB[other][1], RB[other][2]))],
+             side: [(.3, .42, (RB[side][0] + SLASH_STEP, RB[side][1], RB[side][2]))]}
+    s0 = poser.rest_head[f'upperarm_{side}']
+    # Wrist path relative to the rest shoulder: cocked beside the ear, through
+    # in front of the chest, finishing low across the body.
+    path = [(.12, *(s0 + Vector((-3., sign * 4.5, 9.)))),
+            (.2, *(s0 + Vector((18., -sign * 9., -2.)))),
+            (.3, *(s0 + Vector((12., -sign * 15., -12.))))]
+    def pose(phase, f):
+        t = f / FPS
+        wind = smoothstep(t, 0., .12) * (1 - smoothstep(t, .12, .2))
+        strike = smoothstep(t, .1, .2) * (1 - smoothstep(t, .3, .48))
+        twist = sign * 22 * wind - sign * 30 * strike
+        carriage(0., 0.)
+        poser.translate('pelvis', (1.5 * strike, 0, -.8 * wind - 2. * strike))
+        poser.rotate('pelvis', 'Z', .4 * twist)
+        poser.rotate('spine_02', 'Z', .35 * twist)
+        poser.rotate('chest', 'Z', .45 * twist)
+        poser.rotate('head', 'Z', -.6 * twist)  # eyes stay on the target
+        poser.rotate('spine_01', 'Y', 8 * strike - 3 * wind)
+        poser.rotate('head', 'Y', 3 * strike)
+        # The other arm pulls back and in: balance and guard.
+        poser.rotate(f'upperarm_{other}', 'Y', 25 * strike + 8 * wind)
+        poser.rotate(f'lowerarm_{other}', 'Y', -45 * (strike + .5 * wind))
+        curl(other, 30 * strike)
+        for i, b in enumerate(TAIL):
+            poser.rotate(b, 'Z', -.25 * twist * (i + 1) / 3)
+        poser.update()
+        d = slash_travel(t)
+        r = 0.
+        for s in 'LR':
+            (x, y, lift), h, fp, tp = plan_foot(t, RB[s], steps[s])
+            cx, cy = to_component(x, y, d, 0.)
+            r = max(r, poser.leg(s, Vector((cx, cy, NEUTRAL_BALL[s].z + lift)), fp, tp, heading=h))
+        # Striking arm: IK along the path, blended from the carriage's own arm.
+        w = smoothstep(t, .02, .1) * (1 - smoothstep(t, .32, .5))
+        if w > 1e-3:
+            fk_wrist = poser.head(f'hand_{side}')
+            fk_elbow = poser.head(f'lowerarm_{side}')
+            shoulder = poser.head(f'upperarm_{side}')
+            u = min(max(t, path[0][0]), path[-1][0])
+            target = Vector(hermite(path, u))
+            fk_pole = (fk_elbow - (shoulder + fk_wrist) / 2).normalized()
+            pole = fk_pole.lerp(Vector((-.2, sign * 1., .35)).normalized(), w)
+            poser.arm(side, fk_wrist.lerp(target, w), pole=tuple(pole))
+            curl(side, -26 * w)  # fingers open, claws leading
+            r = max(r, 0.)
+        ik_goals()
+        return r
+    return pose, steps
+
 def samples(fn, dur, n=9):
     return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
 
@@ -1044,6 +1111,18 @@ for name, sign in (('SideJumpLeft', 1), ('SideJumpRight', -1)):
         'stance_intervals_s': {'foot_L': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]], 'foot_R': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]]},
         'events_s': {'takeoff': SIDE_TAKEOFF, 'land': SIDE_LAND, 'settled': SIDE_T},
         'notes': 'Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips).'})
+
+for name, side in (('SlashRight', 'R'), ('SlashLeft', 'L')):
+    fn, steps = slash_clip(side)
+    frames = round(SLASH_T * FPS) + 1
+    author(name, frames, fn, False, {
+        'capsule_travel_cm_per_frame': [round(slash_travel(f / FPS), 4) for f in range(frames)],
+        'travel_cm': SLASH_STEP, 'duration_travel_s': SLASH_T,
+        'stance_intervals_s': {f'foot_{s}': stance_from_steps(steps[s], SLASH_T) for s in 'LR'},
+        'events_s': {'wind_up': .12, 'strike': .2, 'follow_through': .3, 'chain_from': .27, 'recovered': SLASH_T},  # chain once the paw has raked across
+        'striking_paw': f'hand_{side}',
+        'upper_body_root': 'spine_01',
+        'notes': 'Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
