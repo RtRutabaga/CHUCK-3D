@@ -1172,3 +1172,31 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - A first overview capture from the yard collapsed onto the paving because the boom hit the harbour wall; it was moved.
   - Not played by the user.
 - **Next (the user's queue):** corners and turning on ledges, then tuning. **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-sixth pass — expand the area more: Chandlers' Row and the Timber Yard
+
+- **User request:** "Expand the area more".
+- **Source commit:** on top of `bc76998`, branch `codex/claude-character`.
+- **Scene** (`DockGameMode.cpp`), dock materials and collision-true primitives as before:
+  - **Chandlers' Row:** quay slab X −500..300, Y −1800..−1000.
+    - A `House` helper builds a box with visual roof trim, corner timbers, flush amber windows and a door on the east face. Three row houses at X −480..−260 are 180 (plaster), 230 (stone) and 280 cm (plaster) with 70 cm gaps, plus a 120×40×100 lean-to shed on the first house's north face.
+    - Four 120×60×80 market stalls with visual posts and canopies.
+    - A 30×600×120 garden wall with coping, reached from a 60 cm crate column.
+    - A 350×180×90 customs terrace with visual rail posts, and a 30° ramp (120 wide) oriented with `FRotationMatrix::MakeFromYZ`.
+  - **Timber Yard:** slab X 300..900, Y −1000..−400.
+    - Lumber stacks 300×60 at 160, 200 and 90 cm with visual bands; the first two leave a 100 cm chimney.
+    - A 120×120×250 crane tower 80 cm from the 200 stack, with visual legs, an arm over the water, a rope and a hanging crate.
+    - Two barrels and a hand cart.
+  - The wharf's two boats moved to the new outer edges.
+- **Tests:** now **94** (`Verify-Package.ps1` expects 94, or 93 with `-NoCapture`).
+  - Stage 85: on the 180 roof, run (run latch) toward the gap and jump at its edge. He catches the 230 roof in the air and holding the stick pulls him up (z = 230 + 34.65 ± 3).
+  - Stage 86: walk up the ramp onto the terrace (z = 90 + 34.65 ± 3).
+  - Capture stage 84 adds `Wharf_310` (the Row from the 280 roof) and `Wharf_430` (the yard from the crane tower). The south-edge view was dropped because the market canopies now block it.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **94/94**; uncapped with and without groom: 0 failures (see below for the final rebuild).
+  - Roof leap ends at z 264.65; ramp at 124.65; wharf routes unchanged.
+  - Evidence: `Review/runtime_districts.jpg` (wharf roof, Chandlers' Row, Timber Yard).
+- **Not verified:**
+  - Not traversed by automated tests: the lean-to route, the garden-wall top walk, the market stalls, the lumber chimney and the leap to the crane tower (80 cm gap, 50 cm up).
+  - Not played by the user.
+- **Next (the user's queue):** corners and turning, then tuning. **Not integrated into main.** A worktree launcher receipt was written.

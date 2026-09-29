@@ -216,9 +216,78 @@ void ADockGameMode::StartPlay()
     CrateColumn(TEXT("WharfCrate"),240,-930,60);
     if(BoatMesh)
     {
-        Prop(TEXT("WharfBoatArt"),FVector(-250,-1160,-60),BoatMesh)->SetActorRotation(FRotator(0,90,0));
-        Prop(TEXT("WharfBoatArt"),FVector(420,-760,-60),BoatMesh);
+        Prop(TEXT("WharfBoatArt"),FVector(-100,-1960,-60),BoatMesh)->SetActorRotation(FRotator(0,90,0));
+        Prop(TEXT("WharfBoatArt"),FVector(1030,-800,-60),BoatMesh);
     }
+    // Second expansion (user 2026-09-29: "expand the area more"): two more
+    // districts on new quay slabs, same dock materials and collision-true
+    // primitives.
+    // Chandlers' Row, south of the wharf (X -500..300, Y -1800..-1000).
+    Shape(TEXT("RowQuay"),FVector(-100,-1400,-20),FVector(800,800,40),TEXT("Stone"));
+    Shape(TEXT("WharfEdgeBeam"),FVector(-100,-1800,1),FVector(812,12,4),TEXT("Wood"),nullptr,false);
+    auto House = [&](const TCHAR* Name,FVector Center,FVector Size,const TCHAR* Wall)
+    {
+        Shape(Name,Center+FVector(0,0,Size.Z*.5f),Size,Wall);
+        Shape(TEXT("HouseRoofTrim"),Center+FVector(0,0,Size.Z+1),Size+FVector(6,6,-Size.Z+4),TEXT("Dark"),nullptr,false);
+        for(const float SX : {-1.f,1.f}) for(const float SY : {-1.f,1.f})
+            Shape(TEXT("HouseTimber"),Center+FVector(SX*(Size.X*.5f-2),SY*(Size.Y*.5f-2),Size.Z*.5f),FVector(8,8,Size.Z),TEXT("Wood"),nullptr,false);
+        for(float Z=60; Z<Size.Z-40; Z+=80)
+        {
+            Shape(TEXT("HouseWindow"),Center+FVector(Size.X*.5f+.5f,-Size.Y*.25f,Z),FVector(2,34,30),TEXT("Amber"),nullptr,false);
+            Shape(TEXT("HouseWindow"),Center+FVector(Size.X*.5f+.5f,Size.Y*.25f,Z),FVector(2,34,30),TEXT("Amber"),nullptr,false);
+        }
+        Shape(TEXT("HouseDoor"),Center+FVector(Size.X*.5f+.5f,0,55),FVector(2,60,110),TEXT("Wood"),nullptr,false);
+    };
+    // A rooftop row stepping up south: leap the 70 cm gaps, catch the next roof.
+    House(TEXT("RowHouse"),FVector(-370,-1150,0),FVector(220,180,180),TEXT("Plaster"));
+    House(TEXT("RowHouse"),FVector(-370,-1400,0),FVector(220,180,230),TEXT("Stone"));
+    House(TEXT("RowHouse"),FVector(-370,-1650,0),FVector(220,180,280),TEXT("Plaster"));
+    Shape(TEXT("LeanToShed"),FVector(-420,-1040,50),FVector(120,40,100),TEXT("Wood"));
+    Shape(TEXT("LeanToRoof"),FVector(-420,-1040,101),FVector(126,46,3),TEXT("Roof"),nullptr,false);
+    // Market stalls: tables to hop onto, canopies overhead (no collision).
+    for(const FVector& Stall : {FVector(-100,-1150,0),FVector(50,-1150,0),FVector(-100,-1330,0),FVector(50,-1330,0)})
+    {
+        Shape(TEXT("MarketStall"),Stall+FVector(0,0,40),FVector(120,60,80),TEXT("WoodLight"));
+        for(const float SX : {-1.f,1.f}) Shape(TEXT("MarketPost"),Stall+FVector(SX*56,-26,95),FVector(5,5,190),TEXT("Wood"),nullptr,false);
+        Shape(TEXT("MarketCanopy"),Stall+FVector(0,-10,190),FVector(130,80,3),TEXT("Roof"),nullptr,false);
+    }
+    // A long garden wall with a narrow walkable top, reached from a crate.
+    Shape(TEXT("GardenWall"),FVector(200,-1400,60),FVector(30,600,120),TEXT("Stone"));
+    Shape(TEXT("GardenCoping"),FVector(200,-1400,121),FVector(34,604,3),TEXT("Stone"),nullptr,false);
+    CrateColumn(TEXT("GardenCrate"),200,-1060,60);
+    // Customs terrace with a ramp up from the market (30 degrees).
+    Shape(TEXT("CustomsTerrace"),FVector(-25,-1690,45),FVector(350,180,90),TEXT("Stone"));
+    for(float X=-190; X<=140; X+=55) Shape(TEXT("TerracePost"),FVector(X,-1776,105),FVector(6,6,30),TEXT("Wood"),nullptr,false);
+    {
+        const float Rise=90.f, Run=Rise/FMath::Tan(FMath::DegreesToRadians(30.f)), Length=FMath::Sqrt(Rise*Rise+Run*Run);
+        const FVector Up=FVector(0,-Run,Rise).GetSafeNormal();       // along the ramp, rising south
+        const FVector Normal=FVector(0,Rise,Run).GetSafeNormal();    // its top surface normal
+        const FVector TopMid(-25,-1600+Run*.5f,Rise*.5f);
+        auto* Ramp=Shape(TEXT("TerraceRamp"),TopMid-Normal*5.f,FVector(120,Length,10),TEXT("Stone"));
+        Ramp->SetActorRotation(FRotationMatrix::MakeFromYZ(-Up,Normal).Rotator());
+    }
+    // Timber Yard, east of the wharf (X 300..900, Y -1000..-400).
+    Shape(TEXT("TimberQuay"),FVector(600,-700,-20),FVector(600,600,40),TEXT("Stone"));
+    Shape(TEXT("WharfEdgeBeam"),FVector(900,-700,1),FVector(12,600,4),TEXT("Wood"),nullptr,false);
+    auto Lumber = [&](float Y,float Height)
+    {
+        Shape(TEXT("LumberStack"),FVector(510,Y,Height*.5f),FVector(300,60,Height),TEXT("Wood"));
+        for(float Z=12; Z<Height; Z+=24) Shape(TEXT("LumberBand"),FVector(510,Y,Z),FVector(302,62,3),TEXT("WoodLight"),nullptr,false);
+    };
+    Lumber(-490,160); Lumber(-650,200); Lumber(-830,90);   // the first two leave a 100 cm chimney
+    Shape(TEXT("CraneTower"),FVector(800,-620,125),FVector(120,120,250),TEXT("Wood"));
+    for(const float SX : {-1.f,1.f}) for(const float SY : {-1.f,1.f})
+        Shape(TEXT("CraneLeg"),FVector(800+SX*58,-620+SY*58,125),FVector(10,10,250),TEXT("Dark"),nullptr,false);
+    Shape(TEXT("CraneArm"),FVector(1000,-620,262),FVector(320,14,14),TEXT("Wood"),nullptr,false);
+    Shape(TEXT("CraneRope"),FVector(1140,-620,195),FVector(2,2,120),TEXT("Dark"),nullptr,false);
+    if(CrateMesh) Prop(TEXT("CraneCrateArt"),FVector(1140,-620,105),CrateMesh);
+    for(const FVector& Spot : {FVector(720,-890,45),FVector(800,-900,45)})
+    {
+        auto* Barrel=Shape(TEXT("YardBarrel"),Spot,FVector(62,62,90),TEXT("Wood"),Cylinder);
+        if(BarrelMesh) { Barrel->SetActorHiddenInGame(true); Prop(TEXT("YardBarrelArt"),Spot,BarrelMesh); }
+    }
+    Shape(TEXT("HandCart"),FVector(450,-945,40),FVector(120,70,40),TEXT("WoodLight"));
+    for(const float SX : {-1.f,1.f}) Shape(TEXT("CartWheel"),FVector(450+SX*40,-908,20),FVector(40,6,40),TEXT("Dark"),Cylinder,false);
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
@@ -1147,6 +1216,39 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
             UE_LOG(LogTemp,Display,TEXT("CHUCK_WHARF_MEASURE route=alley pullups=%d z=%.2f ground=%d"),Chuck->GetPullUps()-PullUpsBase,At.Z,bGround ? 1 : 0);
             Check(Chuck->GetPullUps()>PullUpsBase && At.Z>255.f && bGround,TEXT("bouncing up the alley between the warehouse and the sail loft reaches the roofs"));
+            // Next: Chandlers' Row. Run across the first roof and leap the gap to the higher one.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-370,-1100,214),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1)); Chuck->SetRunHeld(true);
+            PullUpsBase=Chuck->GetPullUps(); bKeyMeasured=false;
+            TestStage=85; StageTime=0;
+        }
+    }
+    else if(TestStage==85)
+    {
+        const FVector At=Chuck->GetActorLocation();
+        const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+        if(bGround && !bKeyMeasured) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(bGround && !bKeyMeasured && At.Y<-1212.f) { Chuck->JumpPressed(); bKeyMeasured=true; }  // leap from the roof edge
+        if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Climb"))==0) Chuck->SetTestStick(FVector2D::ZeroVector);
+        if(StageTime>5.f)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DISTRICT_MEASURE route=roof_leap leaped=%d pullups=%d z=%.2f y=%.2f ground=%d"),bKeyMeasured ? 1 : 0,Chuck->GetPullUps()-PullUpsBase,At.Z,At.Y,bGround ? 1 : 0);
+            Check(bKeyMeasured && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(230.f+34.65f))<3.f && bGround,TEXT("a leap across the roof gap catches the higher roof and climbs up"));
+            // Next: walk up the ramp onto the customs terrace.
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+            Chuck->SetActorLocation(FVector(-25,-1380,36),false,nullptr,ETeleportType::TeleportPhysics); Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter();
+            TestStage=86; StageTime=0;
+        }
+    }
+    else if(TestStage==86)
+    {
+        if(StageTime<4.5f) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>5.2f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DISTRICT_MEASURE route=ramp z=%.2f y=%.2f ground=%d"),At.Z,At.Y,bGround ? 1 : 0);
+            Check(FMath::Abs(At.Z-(90.f+34.65f))<3.f && bGround,TEXT("the ramp walks him up onto the customs terrace"));
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
@@ -1253,10 +1355,22 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->SetActorLocation(FVector(-120,-780,230+35),false,nullptr,ETeleportType::TeleportPhysics);
             Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetOrbitPitch(-22.f);
         }
-        for(const float Shot : {.8f,1.9f})
+        if(StageTime>=2.2f && StageTime-DeltaSeconds<2.2f)
+        {
+            // Chandlers' Row from the tallest roof, looking north over the row and market.
+            Chuck->SetActorLocation(FVector(-370,-1650,280+35),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->SetActorRotation(FRotator(0,60,0)); Chuck->Recenter(); Chuck->SetOrbitPitch(-26.f);
+        }
+        if(StageTime>=3.4f && StageTime-DeltaSeconds<3.4f)
+        {
+            // The Timber Yard from the crane tower, looking west over the lumber stacks.
+            Chuck->SetActorLocation(FVector(800,-620,250+35),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->SetActorRotation(FRotator(0,160,0)); Chuck->Recenter(); Chuck->SetOrbitPitch(-24.f);
+        }
+        for(const float Shot : {1.9f,3.1f,4.3f})  // (the south-edge view is now blocked by the market canopies)
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Wharf_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>2.3f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>4.7f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {

@@ -111,3 +111,17 @@ South of the practice yard, a stone wharf extension (8 × 6 m) laid out as one c
 - **Knee-high field** on the south edge: low harbour walls, bollards, barrels and a crate.
 - **Boats** moored off the wharf.
 
+## Chandlers' Row and the Timber Yard
+
+Two more districts, on new quay slabs:
+
+- **Chandlers' Row** (south of the wharf, 8 × 8 m):
+  - Three row houses stepping up (180, 230 and 280 cm) with 70 cm gaps between the roofs. Leap across and the wall catch takes you onto the next roof. A 100 cm lean-to shed at the north end is the way up from the street.
+  - Four market stalls (80 cm tables) to hop onto.
+  - A 6 m garden wall, 120 cm high with a narrow walkable top, reached from a crate.
+  - A 90 cm customs terrace with a 30° ramp up to it.
+- **Timber Yard** (east of the wharf, 6 × 6 m):
+  - Lumber stacks 160, 200 and 90 cm tall. The first two are 100 cm apart: another chimney.
+  - A 250 cm crane tower, 80 cm across from the tallest stack, with its arm over the water and a hanging crate.
+  - Barrels and a hand cart.
+
