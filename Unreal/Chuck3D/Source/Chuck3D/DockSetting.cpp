@@ -100,6 +100,14 @@ void BuildDockSetting(UWorld* World)
                 Box(P+FVector(Side*(Size.X*.5f+10),Y,Z-46),FVector(22,80,8),TEXT("Stone"));
                 Box(P+FVector(Side*(Size.X*.5f+9),Y,Z),FVector(3,4,70),TEXT("WoodLight"));
             }
+            // Gable facades need human-scale openings too, including the quay store.
+            Box(P+FVector(0,Side*(Size.Y*.5f+3),104),FVector(104,6,208),TEXT("Wood"));
+            for(float X : {-Size.X*.28f,Size.X*.28f}) for(float Z=155;Z<Size.Z-25;Z+=220)
+            {
+                Box(P+FVector(X,Side*(Size.Y*.5f+3),Z),FVector(66,6,90),TEXT("Wood"));
+                Box(P+FVector(X,Side*(Size.Y*.5f+7),Z),FVector(42,3,68),TEXT("Dark"));
+                Box(P+FVector(X,Side*(Size.Y*.5f+9),Z-46),FVector(80,22,8),TEXT("Stone"));
+            }
         }
     };
     House(FVector(-1550,-1800,0),FVector(360,440,520),TEXT("Plaster"));
@@ -146,7 +154,10 @@ void BuildDockSetting(UWorld* World)
     for(float X : {-885.f,-655.f}) Box(FVector(X,-700,200),FVector(14,14,400),TEXT("Wood"),true);
     Box(FVector(-770,-700,400),FVector(280,18,18),TEXT("Wood"));
     Beam(FVector(-880,-700,320),FVector(-795,-700,396),10,TEXT("Wood"));
-    Label(FVector(-645,-700,280),TEXT("CARGO COURT"));
+    Box(FVector(-770,-700,356),FVector(200,10,36),TEXT("Wood"));
+    for(float X : {-850.f,-690.f}) Beam(FVector(X,-700,398),FVector(X,-700,372),2,TEXT("Dark"));
+    Label(FVector(-770,-707,356),TEXT("CARGO COURT"),-90);
+    Label(FVector(-770,-693,356),TEXT("CARGO COURT"),90);
     // A continuous walking loop down Dock Street, around the cooperage and back.
     for(float Y=-2050;Y<=650;Y+=150)
         Box(FVector(-1100,Y,.4f),FVector(18,100,1),TEXT("Dark")); // recessed-looking drainage strip
@@ -210,9 +221,9 @@ void BuildDockSetting(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(370,-1050,115)};
+            FVector(-1080,-500,105),FVector(840,-1780,105)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(610,-1550,170)};
+            FVector(-430,-750,145),FVector(750,-850,170)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
         for(int32 I=0;I<4;++I)
