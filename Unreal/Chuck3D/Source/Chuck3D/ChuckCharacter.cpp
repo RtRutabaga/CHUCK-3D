@@ -58,7 +58,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -166,7 +166,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -178,7 +178,7 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAxis("TurnKeys", this, &AChuckCharacter::Turn);
     Input->BindAxis("PitchMouse", this, &AChuckCharacter::MousePitch);
     Input->BindAxis("PitchStick", this, &AChuckCharacter::StickPitch);
-    Input->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+    Input->BindAction("Jump", IE_Pressed, this, &AChuckCharacter::JumpPressed);
     Input->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
@@ -272,6 +272,8 @@ void AChuckCharacter::ResetToDock()
     InputForward = InputRight = 0;  // refreshed every frame while input is live
     bRunJump = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
+    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f;
+    if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -283,7 +285,7 @@ float AChuckCharacter::Period(EClip Clip) const
 {
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
-    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop;
+    const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -379,7 +381,7 @@ namespace
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
     auto* Movement = GetCharacterMovement();
-    if (IsDodging() || Movement->IsFalling()) return;
+    if (IsDodging() || Movement->IsFalling() || Gait == EGait::WallRun) return;
     // A dodge cuts a turn in place short (pressing a direction from standstill
     // starts one).
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -410,6 +412,89 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
         RollDone = RollTravelAt(Entry);
     }
     bDodgeLaunched = bDodgeLanded = bStopPending = false;
+}
+FVector AChuckCharacter::StickWorld() const
+{
+    const FRotator View(0, ViewYaw, 0);
+    return (View.Vector() * InputForward + FRotationMatrix(View).GetUnitAxis(EAxis::Y) * InputRight).GetClampedToMaxSize(1.f);
+}
+void AChuckCharacter::JumpPressed()
+{
+    auto* Movement = GetCharacterMovement();
+    const float Now = GetWorld()->GetTimeSeconds();
+    if (Gait == EGait::WallRun || (Movement->IsFalling() && Now < WallCoyoteUntil)) { WallJump(); return; }
+    if (Movement->IsFalling()) { AirJumpPressedAt = Now; return; }  // buffered for a wall reached just after
+    Jump();
+}
+bool AChuckCharacter::TryEnterWallRun()
+{
+    // Jump into a wall while pushing toward it (or arrive from a wall jump)
+    // and Chuck runs up it. Generous: a sphere probe reaching WallReach past
+    // the capsule, anything within 60 degrees of head-on, any wall that isn't
+    // the one he just left.
+    auto* Movement = GetCharacterMovement();
+    if (Movement->Velocity.Z < -250.f) return false;
+    const FVector Probe = bWallJumpFlight ? Movement->Velocity.GetSafeNormal2D() : StickWorld().GetSafeNormal2D();
+    if (Probe.IsNearlyZero()) return false;
+    const FVector From = GetActorLocation() + FVector(0, 0, 5);
+    const float Reach = GetCapsuleComponent()->GetScaledCapsuleRadius() + WallReach;
+    FHitResult Hit;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWall), false, this);
+    if (!GetWorld()->SweepSingleByChannel(Hit, From, From + Probe * (Reach - 4.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(4.f), Query)) return false;
+    if (FMath::Abs(Hit.ImpactNormal.Z) > .3f) return false;
+    const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
+    if (FVector::DotProduct(Probe, -Normal) < .5f) return false;
+    if (!LastWallNormal.IsZero() && FVector::DotProduct(Normal, LastWallNormal) > .7f) return false;
+    EnterWallRun(Hit, Normal);
+    return true;
+}
+void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
+{
+    auto* Movement = GetCharacterMovement();
+    WallNormal = Normal;
+    // Snug against the wall (capsule surface 0.5 cm off it), facing it.
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    FVector Location = GetActorLocation();
+    Location += Normal * (Radius + .5f - FVector::DotProduct(Location - Hit.ImpactPoint, Normal));
+    SetActorLocation(Location, true);
+    SetActorRotation((-Normal).Rotation());
+    Movement->SetMovementMode(MOVE_Flying);
+    Movement->BrakingDecelerationFlying = 0;
+    Gait = EGait::WallRun;
+    WallRunClock = 0; WallPhase = 0; WallPrevZ = static_cast<float>(GetActorLocation().Z);
+    bWallAuto = bWallJumpFlight; bWallJumpFlight = false; bRunJump = false;
+    ++WallRuns;
+    SetClip(EClip::WallRun, 0, .08f);
+    if (GetWorld()->GetTimeSeconds() - AirJumpPressedAt < WallBuffer) { AirJumpPressedAt = -1e3f; WallJump(); }
+}
+void AChuckCharacter::LeaveWall()
+{
+    // Peel off: drift out from the wall and fall; a jump still kicks off it for a moment.
+    auto* Movement = GetCharacterMovement();
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = WallNormal * 40.f;
+    LastWallNormal = WallNormal;
+    WallCoyoteUntil = GetWorld()->GetTimeSeconds() + WallCoyote;
+    Gait = EGait::Air;
+    SetClip(EClip::JumpLoop, 0, .15f);
+}
+void AChuckCharacter::WallJump()
+{
+    // Kick away from the wall; the stick along the wall angles it. He turns to
+    // face where he's going, so the next wall is in front of him.
+    auto* Movement = GetCharacterMovement();
+    const FVector Stick = StickWorld();
+    const FVector Along = Stick - WallNormal * FVector::DotProduct(Stick, WallNormal);
+    const FVector Direction = (WallNormal + Along * .6f).GetSafeNormal2D();
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = Direction * WallJumpOut + FVector(0, 0, WallJumpUp);
+    SetActorRotation(Direction.Rotation());
+    LastWallNormal = WallNormal;
+    WallCoyoteUntil = -1;
+    bWallJumpFlight = true; bRunJump = false;
+    Gait = EGait::Air;
+    ++WallJumps;
+    SetClip(EClip::WallKick, 0, .05f);
 }
 AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
 {
@@ -506,7 +591,28 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
 
     // Distance-matched gait: start, walk and stop clips advance by travelled
     // distance, so the clip's stance paw moves exactly with the ground.
-    if (Gait == EGait::SideJump)
+    if (Gait == EGait::WallRun)
+    {
+        // Three steps up: rise speed falls linearly to zero over WallRunTime
+        // (WallRunRise in all); the step cycle follows the height gained.
+        WallRunClock += DeltaSeconds;
+        const float Rise = static_cast<float>(Location.Z) - WallPrevZ;
+        WallPrevZ = static_cast<float>(Location.Z);
+        WallPhase = FMath::Frac(WallPhase + FMath::Max(0.f, Rise) / WallRunStride);
+        BaseTime = WallPhase * Period(EClip::WallRun);
+        FHitResult Hit;
+        FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWallHold), false, this);
+        const FVector Chest = Location + FVector(0, 0, 15);
+        const bool bWall = GetWorld()->LineTraceSingleByChannel(Hit, Chest, Chest - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 8.f), ECC_Visibility, Query);
+        const bool bLetGo = !bWallAuto && FVector::DotProduct(StickWorld(), -WallNormal) < -.3f;
+        if (WallRunClock >= WallRunTime || !bWall || bLetGo) LeaveWall();
+        else
+        {
+            const float Up = 2.f * WallRunRise / WallRunTime * (1.f - WallRunClock / WallRunTime);
+            Movement->Velocity = FVector(0, 0, Up) - WallNormal * 30.f;
+        }
+    }
+    else if (Gait == EGait::SideJump)
     {
         // Launch at the clip's takeoff, hold just before its landing while in
         // the air, stop the capsule at touchdown (the clip carries the hips on).
@@ -550,7 +656,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // start at its extension onto the toes.
             else SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
         }
-        if (bRunJump)
+        if (TryEnterWallRun()) {}
+        else if (bRunJump)
         {
             // Posed over the flight: progress from the vertical speed (0 at
             // takeoff, 1 back at takeoff height), never running backwards.
@@ -560,7 +667,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else
         {
             BaseTime += DeltaSeconds;
-            if (Base == EClip::JumpStart && BaseTime >= Length)
+            if ((Base == EClip::JumpStart || Base == EClip::WallKick) && BaseTime >= Length)
                 SetClip(EClip::JumpLoop, 0, .1f);
         }
     }
@@ -568,6 +675,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         // The leap ends on the run's foot_L touchdown: with the stick held,
         // land straight into the stride.
+        // Back on the ground: every wall is fresh again.
+        LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; WallCoyoteUntil = -1;
         const bool bStickHeld = bInput || FVector2D(InputRight, InputForward).SizeSquared() > .04f;
         if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
         else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump; }
@@ -777,13 +886,16 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
                                                : (WalkPhase > .52f || WalkPhase < StanceFraction - .52f);
         P.bStance[I] = bStance;
     }
+    // On a wall the paws follow the clip (planted on the wall plane).
+    if (Gait == EGait::WallRun) P.bFootIK = false;
     // Tucked in the roll, the paws follow the clip untouched.
     if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const float Ground = bAirborne ? CapsuleBottom : FindGround(Location, CapsuleBottom);
+    const bool bOffGround = bAirborne || Gait == EGait::WallRun;
+    const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));
     const FChuckAnimResult Last = Anim->GetResult();
@@ -792,7 +904,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     for (int32 I = 0; I < 2; ++I)
     {
         const FVector Near = Last.Evaluations ? Last.BallWorld[I] : Location;
-        P.GroundOffset[I] = bAirborne ? 0.f : FMath::Clamp(FindGround(Near, MeshZ) - MeshZ, -6.f, 6.f);
+        P.GroundOffset[I] = bOffGround ? 0.f : FMath::Clamp(FindGround(Near, MeshZ) - MeshZ, -6.f, 6.f);
         Lowest = FMath::Min(Lowest, P.GroundOffset[I]);
     }
     P.PelvisOffset = FMath::Max(Lowest, -4.f);

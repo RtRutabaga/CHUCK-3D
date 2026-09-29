@@ -38,10 +38,16 @@ cam_data.lens = 50
 VIEWS = {'front': (125, 0, 40), 'three_quarter': (90, -90, 44), 'side': (0, -125, 36)}
 
 def render_clip(name, columns):
+    # Wall clips: show the wall they run up (surface at the capsule radius, 15 cm).
+    wall = None
+    if name == 'WallRun':
+        bpy.ops.mesh.primitive_plane_add(size=120, location=(15.5, 0, 45), rotation=(0, math.radians(90), 0))
+        wall = bpy.context.object
     action = bpy.data.actions[f'AS_Chuck_{name}']
     rig.animation_data_create(); rig.animation_data.action = action
     first, last = [int(v) for v in action.frame_range]
     frames = [first + round(i * (last - first) / (columns - 1)) for i in range(columns)]
+    frames = sorted(set(frames)); columns = len(frames)  # short clips: no repeated frames
     tiles = []
     for view, eye in VIEWS.items():
         cam.location = eye
@@ -67,6 +73,7 @@ def render_clip(name, columns):
         bpy.data.images.remove(img); tile.unlink()
     sheet.pixels = px
     sheet.filepath_raw = str(out / f'motion_{name}.png'); sheet.file_format = 'PNG'; sheet.save()
+    if wall: bpy.data.objects.remove(wall)
     print('CHUCK_MOTION_SHEET', name, frames)
 
 for clip in CLIPS:

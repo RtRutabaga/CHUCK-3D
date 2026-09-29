@@ -50,6 +50,11 @@ private:
     TArray<float> FlurryStarts;
     TArray<FString> FlurryNames;
     int32 SlashStrikeBase = 0;
+    FVector WallStart = FVector::ZeroVector;
+    int32 WallRunsBase = 0, WallJumpsBase = 0;
+    float WallEnterZ = 0, WallPeakZ = 0, WallEnterAt = -1, WallLeaveAt = -1;
+    bool bWallLanded = false;
+    TArray<int32> WallSides;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

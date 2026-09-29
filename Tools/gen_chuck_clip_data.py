@@ -42,6 +42,7 @@ def main():
     roll, side = clips['Roll'], clips['SideJumpLeft']
     run = clips['RunLoop']
     slash = clips['SlashRight']
+    wall = clips['WallRun']
     yaw = [abs(v) for v in turn['capsule_yaw_deg_per_frame']]
     # Frames until the yaw reaches its final value; the tail is the settle hold.
     last = next(i for i, v in enumerate(yaw) if abs(v - yaw[-1]) < 1e-3)
@@ -94,6 +95,8 @@ def main():
         f"    constexpr float SlashChainAt = {f(slash['events_s']['chain_from'])};",
         f"    constexpr FStance SlashRightStance{stance(slash)};",
         f"    constexpr FStance SlashLeftStance{stance(clips['SlashLeft'])};",
+        '    // Wall run: loop phase follows the vertical capsule travel over this stride.',
+        f"    constexpr float WallRunStride = {f(wall['stride_cycle_cm'])};",
         '    // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.',
         f"    constexpr float SideTakeoff = {f(side['events_s']['takeoff'])};",
         f"    constexpr float SideLand = {f(side['events_s']['land'])};",

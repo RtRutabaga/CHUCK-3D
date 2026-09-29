@@ -31,6 +31,21 @@ public:
     void Slash();
     /** Slash button released: the flurry ends after the current paw. */
     void SlashReleased() { bSlashHeld = false; }
+    /** Jump pressed: a jump on the ground; on a wall (or just after leaving
+     *  one) a wall jump; in the air, buffered for a wall reached just after. */
+    void JumpPressed();
+    bool IsWallRunning() const { return Gait == EGait::WallRun; }
+    int32 GetWallRuns() const { return WallRuns; }
+    int32 GetWallJumps() const { return WallJumps; }
+    // Parkour tuning (user vision: "feels like you're doing something difficult
+    // but it's not actually that hard"): three steps up a wall, a strong kick.
+    static constexpr float WallRunRise = 45.f;     // cm climbed over the three steps
+    static constexpr float WallRunTime = .45f;     // s (three 0.15 s steps)
+    static constexpr float WallReach = 12.f;       // cm beyond the capsule a wall still catches him
+    static constexpr float WallJumpOut = 260.f;    // cm/s away from the wall (side jump: 190)
+    static constexpr float WallJumpUp = 230.f;     // cm/s up (standing jump: 170)
+    static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
+    static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
     /** Strikes started so far (tests). */
     int32 GetSlashStrikes() const { return SlashStrikes; }
     /** Tests: a fixed paw sequence. */
@@ -81,9 +96,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -124,7 +139,24 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash || Gait == EGait::WallRun; }
+    // Wall run / wall jump state.
+    FVector WallNormal = FVector::ZeroVector;      // horizontal, out of the wall
+    FVector LastWallNormal = FVector::ZeroVector;  // the wall last run: no fresh steps until another wall or the ground
+    float WallRunClock = 0;
+    float WallPhase = 0;
+    float WallPrevZ = 0;
+    bool bWallAuto = false;        // caught after a wall jump: the stick isn't needed
+    bool bWallJumpFlight = false;  // in the air from a wall jump
+    float WallCoyoteUntil = -1;
+    float AirJumpPressedAt = -1e3f;
+    int32 WallRuns = 0;
+    int32 WallJumps = 0;
+    FVector StickWorld() const;
+    bool TryEnterWallRun();
+    void EnterWallRun(const FHitResult& Hit, const FVector& Normal);
+    void LeaveWall();
+    void WallJump();
     void UpdateSlashLayer(float DeltaSeconds);
     bool bHardLanding = false;
     // A latch, not a hold: holding Shift while pressing Space (and a direction)

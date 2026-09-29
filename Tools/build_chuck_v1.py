@@ -1064,6 +1064,91 @@ def slash_clip(side):
         return r
     return pose, steps
 
+# ---- parkour (user vision 2026-09-28: "feels like you're doing something
+# difficult but it's not actually that hard"). Jump into a wall and Chuck runs
+# up it for three steps; jump again to kick off it toward another wall.
+# WallRun: loop of two steps up a wall in front of him. The runtime holds the
+# capsule against the wall (its surface at x = capsule radius, 15 cm), so the
+# paws plant on the plane x = WALL_X with their soles on it (toes up), and the
+# loop phase follows the capsule's vertical travel (distance-matched, like the
+# walk). Arms reach up alternately, head up, back slightly arched away.
+WALL_X = 13.            # paw ball on the wall plane (capsule radius 15, 2 cm for the pad)
+WALL_RUN = {'period_frames': 10, 'stride_cm': 30., 'stance_fraction': .55,
+            'top_cm': 30., 'lift_off_cm': 4.}
+WALL_PERIOD = WALL_RUN['period_frames'] / FPS
+
+def wall_foot(phase):
+    """(x, z, foot pitch, toe pitch) of the ball: planted on the wall and moving
+    down relative to the rising body during stance; off the wall and up in swing."""
+    st, top = WALL_RUN['stance_fraction'], WALL_RUN['top_cm']
+    travel = WALL_RUN['stride_cm'] * st
+    if phase < st:
+        u = phase / st
+        return WALL_X, top - travel * u, -90., -8.
+    u = (phase - st) / (1 - st)
+    e = smoothstep(u, 0., 1.)
+    z = top - travel + travel * e
+    return WALL_X - WALL_RUN['lift_off_cm'] * math.sin(math.pi * u), z, -90. + 35 * math.sin(math.pi * u), 10 * math.sin(math.pi * u)
+
+def wall_run(phase, f):
+    w = TAU * phase
+    carriage(0., 0.)
+    # Hips in toward the wall, a small bob per step; chest arched back a
+    # touch so the head clears the wall; looking up the wall.
+    poser.translate('pelvis', (4., .9, 1.5 + .8 * math.cos(2 * w)))
+    poser.rotate('pelvis', 'X', 4.)  # cancels the idle hip tilt
+    poser.rotate('pelvis', 'Z', 5 * math.cos(w))
+    poser.rotate('spine_01', 'Y', -6)
+    poser.rotate('chest', 'Z', -7 * math.cos(w))
+    poser.rotate('neck', 'Y', -8)
+    poser.rotate('head', 'Y', -16)
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Z', 6 * math.sin(w - .6 * (i + 1)))
+    # Arms reach up the wall alternately, opposite the pushing leg.
+    for side, sign in (('L', 1), ('R', -1)):
+        reach = .5 + .5 * math.cos(w + (math.pi if side == 'L' else 0.))
+        poser.rotate(f'upperarm_{side}', 'Y', -(70 + 60 * reach))
+        poser.rotate(f'upperarm_{side}', 'X', sign * 12)
+        poser.rotate(f'lowerarm_{side}', 'Y', -35 + 20 * reach)
+        curl(side, -8)
+    poser.update()
+    r = 0.
+    for side in 'LR':
+        x, z, fp, tp = wall_foot(phase if side == 'L' else (phase + .5) % 1)
+        ball = Vector((x, NEUTRAL_BALL[side].y, z))
+        r = max(r, poser.leg(side, ball, fp, tp, pole=(.25, 0., 1.)))
+    ik_goals()
+    return r
+
+# WallKick: the push off a wall now behind him (the runtime turns him to face
+# the jump). Paws flat on the wall behind (toes down), knees bent, then the
+# legs drive him off and tuck for the flight; arms swing forward and up.
+WALL_KICK_FRAMES = 7
+def wall_kick(phase, f):
+    t = f / FPS
+    drive = smoothstep(t, 0., .12)
+    tuck = smoothstep(t, .1, .2)
+    carriage(0., 0.)
+    poser.translate('pelvis', (0, .9, 1. * drive))
+    poser.rotate('pelvis', 'X', 4.)
+    poser.rotate('spine_01', 'Y', 10 - 8 * drive)
+    poser.rotate('head', 'Y', -6)
+    for side, sign in (('L', 1), ('R', -1)):
+        poser.rotate(f'upperarm_{side}', 'Y', 20 - 70 * drive + 30 * tuck)
+        poser.rotate(f'upperarm_{side}', 'X', sign * 10)
+        poser.rotate(f'lowerarm_{side}', 'Y', -40 + 15 * drive)
+    for b in TAIL: poser.rotate(b, 'Y', 6 * drive)
+    poser.update()
+    r = 0.
+    for side in 'LR':
+        # On the wall behind (x = -WALL_X), pushing away, then tucked under the body.
+        push = NEUTRAL_BALL[side] + Vector((-WALL_X - 3. - 8. * drive, 0., 10. - 4. * drive))
+        tucked = NEUTRAL_BALL[side] + Vector((1.5, 0., 5.5))
+        ball = push.lerp(tucked, tuck)
+        r = max(r, poser.leg(side, ball, 90. * (1 - tuck) - 8 * tuck, 14 * tuck, pole=(1., 0., -.2)))
+    ik_goals()
+    return r
+
 def samples(fn, dur, n=9):
     return [[round(dur * i / (n - 1), 4), round(fn(dur * i / (n - 1)), 3)] for i in range(n)]
 
@@ -1134,6 +1219,17 @@ for name, side in (('SlashRight', 'R'), ('SlashLeft', 'L')):
         'striking_paw': f'hand_{side}',
         'upper_body_root': 'spine_01',
         'notes': 'Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw.'})
+
+author('WallRun', WALL_RUN['period_frames'], wall_run, True, {
+    'stride_cycle_cm': WALL_RUN['stride_cm'], 'stance_fraction': WALL_RUN['stance_fraction'],
+    'wall_plane_x_cm': WALL_X, 'axis': 'vertical: the planted paws move down in component space as the capsule rises',
+    'stance_intervals_s': {'foot_L': [[0., round(WALL_RUN['stance_fraction'] * WALL_PERIOD, 4)]],
+                           'foot_R': [[round(.5 * WALL_PERIOD, 4), round((.5 + WALL_RUN['stance_fraction']) * WALL_PERIOD, 4)]]},
+    'notes': 'Run up a wall in front (surface at the capsule radius). Loop phase follows vertical capsule travel over stride_cycle_cm; paws on the wall plane with soles on it.'})
+author('WallKick', WALL_KICK_FRAMES, wall_kick, False, {
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'events_s': {'launch': 0., 'tucked': .2},
+    'notes': 'Push off a wall behind him (the runtime turns Chuck to face the jump), then tuck for the flight.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

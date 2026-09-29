@@ -962,6 +962,60 @@
    "striking_paw": "hand_L",
    "upper_body_root": "spine_01",
    "notes": "Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw."
+  },
+  {
+   "name": "WallRun",
+   "file": "Animations/AS_Chuck_WallRun.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 9,
+   "frame_count": 10,
+   "duration_s": 0.3333,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8578,
+   "stride_cycle_cm": 30.0,
+   "stance_fraction": 0.55,
+   "wall_plane_x_cm": 13.0,
+   "axis": "vertical: the planted paws move down in component space as the capsule rises",
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.1833
+     ]
+    ],
+    "foot_R": [
+     [
+      0.1667,
+      0.35
+     ]
+    ]
+   },
+   "notes": "Run up a wall in front (surface at the capsule radius). Loop phase follows vertical capsule travel over stride_cycle_cm; paws on the wall plane with soles on it."
+  },
+  {
+   "name": "WallKick",
+   "file": "Animations/AS_Chuck_WallKick.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 6,
+   "frame_count": 7,
+   "duration_s": 0.2,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.8674,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "events_s": {
+    "launch": 0.0,
+    "tucked": 0.2
+   },
+   "notes": "Push off a wall behind him (the runtime turns Chuck to face the jump), then tuck for the flight."
   }
  ]
 }

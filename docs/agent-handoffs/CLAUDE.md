@@ -1027,3 +1027,48 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No hit detection.
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-second pass — parkour phases 1–2: practice yard, wall run, wall jump
+
+- **User request:** start the parkour angle. The vision: "feels like you're doing something difficult but it's not actually that hard". Wall run up about 3 steps, wall jumps back and forth between walls, then hanging, pull-up and shimmy (phases 3–4).
+- **Research and plan:** delivered in chat (Sly Cooper, AC Unity, Mirror's Edge, Prince of Persia, Brink SMART, Celeste forgiveness). The user approved the practice yard (dock- or Waterdeep-themed, kept and dressed later) and all recommendations:
+  - the stick held toward the wall triggers the wall run;
+  - the wall jump goes away from the wall and is steerable;
+  - low ledges get an automatic mantle (later).
+- **Source commit:** on top of `fdde88a`, branch `codex/claude-character`.
+- **Practice yard** (`DockGameMode.cpp`), on the quay's empty south strip, dock-built (the world pause is lifted for this at the user's request):
+  - Cargo chimney: two 60×65×240 cm stacks of `SM_DockCrate` (collision box plus four crate props each, slight yaw) at X −390 and −230. The faces at −360 and −260 leave a 100 cm gap.
+  - Stone harbour wall: 180×50×115 cm at (−40, −360), with a stone coping course and a rope coil on top.
+- **Clips:**
+  - `WallRun`: a 10-frame loop, stride 30 cm, stance 0.55. Paws plant on the wall plane at x = 13 (soles on it, toes up); arms reach up alternately, head up, hips in. The review sheet shows the wall.
+  - `WallKick`: 7 frames. Paws flat on the wall behind drive him off, then tuck.
+  - Reach 0.86/0.87. `review_motion.py` now handles short clips and draws the wall for WallRun.
+- **Runtime** (`ChuckCharacter`):
+  - `JumpPressed` replaces the direct `ACharacter::Jump` binding. On a wall, or within `WallCoyote` (0.15 s) of leaving one, it wall-jumps. In the air it buffers (`WallBuffer` 0.15 s) for a wall reached just after. On the ground it jumps.
+  - `TryEnterWallRun` runs while airborne:
+    - a 4 cm sphere sweep reaching `WallReach` (12 cm) past the capsule, along the stick (or the velocity after a wall jump);
+    - the surface must be near-vertical (|Nz| < 0.3) and within 60° of head-on;
+    - it can't be the last wall (dot > 0.7) until he lands;
+    - he must not be falling faster than 250 cm/s.
+  - `EnterWallRun`: snugs him to the wall (0.5 cm), faces it and switches to flying movement. The rise is linear-decay, 45 cm over 0.45 s (three 0.15 s steps). The step phase follows the height gained. Paw IK is off and he presses 30 cm/s into the wall.
+  - The run ends at the time limit, when the wall ends at chest height, or when the stick is pulled away (not after a wall jump, since the stick then points at the old wall). He peels off at 40 cm/s.
+  - `WallJump`: away from the wall plus 0.6 × the stick along the wall, at 260 out and 230 up. He turns to face the jump and plays WallKick then JumpLoop; the next wall is caught without the stick.
+  - Landing refreshes all walls. Dodges are blocked on the wall.
+  - HUD and `PLAYTEST.md` updated (controls and a yard section).
+- **Tests:** now **82** (`Verify-Package.ps1` expects 82, or 81 with `-NoCapture`).
+  - Stage 71: jump into the harbour wall pushing toward it. It must run up (rise ≥ 0.8 × 45 cm), last three steps (0.45 ± 0.08 s), drop off and land, with only one run on the same wall.
+  - Stage 73: a jump 0.08 s after peeling off still wall-jumps.
+  - Stage 72: cargo chimney bounces with no stick after the first wall. Runs must alternate walls (≥3), with ≥3 jumps and a climb of ≥150 cm.
+  - Stage 74: chimney capture replay (`Chimney_*.png`).
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **82/82**; uncapped with and without groom: 0 failures.
+  - Wall run 45.1–45.7 cm in 0.450–0.453 s; he drops and lands; the coyote wall jump counts.
+  - Chimney: walls A→B→A, 3 jumps, 204–205 cm climbed (about 70 cm per bounce, which reaches the 240 cm stack tops).
+  - Evidence: `Review/motion_WallRun.png`, `Review/motion_WallKick.png`, `Review/runtime_chimney.jpg`.
+- **Remaining / next (phase 3):**
+  - At the top of the stacks he can't get onto them. The ledge grab (auto when the paws reach a top edge), hang, pull-up, drop and low-ledge mantle come next; the harbour wall is built for them.
+  - Tuning (3 steps, about 70 cm per bounce, kick strength) awaits the user's feel.
+  - The camera doesn't frame wall runs specially.
+  - Hands don't touch the wall (reaching only).
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.

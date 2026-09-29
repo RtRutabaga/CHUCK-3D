@@ -126,6 +126,23 @@ void ADockGameMode::StartPlay()
     auto* CrateCollision=Shape(TEXT("Crate"),FVector(-80,60,30),FVector(60,65,60),TEXT("WoodLight"));
     if(CrateMesh) { CrateCollision->SetActorHiddenInGame(true); Prop(TEXT("DockCrateArt"),CrateCollision->GetActorLocation(),CrateMesh); }
     Shape(TEXT("LowStep"),FVector(-40,-155,5),FVector(60,65,10),TEXT("Wood"));
+    // Parkour practice yard (user request 2026-09-28), on the quay's empty south
+    // strip, dock-built so it can be dressed later and kept: a cargo chimney of
+    // two 240 cm crate stacks 100 cm apart (wall runs, wall jumps back and
+    // forth) and a 115 cm stone harbour wall with a walkable top (ledge grabs).
+    for(const float X : {-390.f,-230.f})
+    {
+        auto* Stack=Shape(TEXT("CargoStack"),FVector(X,-337.5f,120),FVector(60,65,240),TEXT("WoodLight"));
+        if(CrateMesh)
+        {
+            Stack->SetActorHiddenInGame(true);
+            for(int32 Level=0;Level<4;++Level)
+                Prop(TEXT("CargoCrateArt"),FVector(X,-337.5f,30.f+60.f*Level),CrateMesh)->SetActorRotation(FRotator(0,Level%2 ? 2.f : -1.5f,0));
+        }
+    }
+    Shape(TEXT("HarbourWall"),FVector(-40,-360,57.5f),FVector(180,50,115),TEXT("Stone"));
+    Shape(TEXT("HarbourCoping"),FVector(-40,-360,113),FVector(184,54,6),TEXT("Stone"),nullptr,false);
+    if(RopeMesh) Prop(TEXT("HarbourRopeArt"),FVector(20,-368,116),RopeMesh);
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
@@ -864,7 +881,72 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_FLURRY_MEASURE strikes=%d order=%s gaps_s=[%.3f,%.3f] chain_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),FlurryNames.Num(),*Order,Shortest,Longest,ChuckClipData::SlashChainAt,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
             Check(FlurryNames.Num()>=5 && Rights>0 && Rights<FlurryNames.Num() && Repeats>0 && LongestRun<=2 && Shortest>ChuckClipData::SlashChainAt-.02f && Longest<ChuckClipData::SlashChainAt+.05f,TEXT("held slash flurries on a steady beat with a random paw order"));
             Check(LocoSamples>=5 && LocoMaxSlip<1.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("flurry paws hold and it settles on release"));
-            Chuck->ResetToDock(); StageTime=0;
+            // Next: parkour. Jump into the harbour wall, pushing toward it.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+            WallStart=Chuck->GetActorLocation(); WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps();
+            WallEnterZ=WallPeakZ=0; WallEnterAt=WallLeaveAt=-1; bWallLanded=false;
+            TestStage=71; StageTime=0;
+        }
+    }
+    else if(TestStage==71 || TestStage==73)
+    {
+        // 71: run up the wall and drop off it; the same wall gives no second
+        // run before landing. 73: a jump just after leaving the wall kicks off.
+        const bool bRunning=Chuck->IsWallRunning();
+        if(!bRunning && WallEnterAt<0) Chuck->AddMovementInput(FVector(0,-1,0),1);
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) Chuck->JumpPressed();
+        if(bRunning && WallEnterAt<0) { WallEnterAt=StageTime; WallEnterZ=Chuck->GetActorLocation().Z; }
+        if(bRunning) WallPeakZ=FMath::Max(WallPeakZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        if(!bRunning && WallEnterAt>=0 && WallLeaveAt<0) WallLeaveAt=StageTime;
+        if(TestStage==73 && WallLeaveAt>=0 && StageTime>=WallLeaveAt+.08f && StageTime-DeltaSeconds<WallLeaveAt+.08f) Chuck->JumpPressed();
+        if(WallLeaveAt>=0 && Chuck->GetCharacterMovement()->IsMovingOnGround()) bWallLanded=true;
+        if(StageTime>2.5f)
+        {
+            const int32 Runs=Chuck->GetWallRuns()-WallRunsBase, Jumps=Chuck->GetWallJumps()-WallJumpsBase;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WALL_MEASURE stage=%d runs=%d jumps=%d rise_cm=%.3f time_on_wall_s=%.3f landed=%d gait=%s"),TestStage,Runs,Jumps,WallPeakZ-WallEnterZ,WallLeaveAt-WallEnterAt,bWallLanded ? 1 : 0,Chuck->GetGaitName());
+            if(TestStage==71)
+            {
+                Check(Runs>=1 && WallPeakZ-WallEnterZ>=.8f*AChuckCharacter::WallRunRise,TEXT("jumping into a wall runs up it"));
+                Check(Runs==1 && FMath::Abs(WallLeaveAt-WallEnterAt-AChuckCharacter::WallRunTime)<.08f && bWallLanded,TEXT("three steps up, then he drops off; the same wall gives one run"));
+                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-40,-305,36));
+                Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+                WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps();
+                WallEnterZ=WallPeakZ=0; WallEnterAt=WallLeaveAt=-1; bWallLanded=false;
+                TestStage=73; StageTime=0;
+            }
+            else
+            {
+                Check(Jumps==1,TEXT("a wall jump just after leaving the wall still counts"));
+                // Next: the cargo chimney. Jump at stack A (face X -360); kick
+                // off each wall once a run is under way.
+                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
+                Chuck->SetActorRotation(FRotator(0,180,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+                WallRunsBase=Chuck->GetWallRuns(); WallJumpsBase=Chuck->GetWallJumps(); WallStart=Chuck->GetActorLocation();
+                WallPeakZ=WallStart.Z; WallEnterAt=-1; WallSides.Reset();
+                TestStage=72; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==72)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->JumpPressed();
+        const bool bRunning=Chuck->IsWallRunning();
+        if(bRunning && WallEnterAt<0) { WallEnterAt=StageTime; WallSides.Add(Chuck->GetActorForwardVector().X<0 ? -1 : 1); Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(!bRunning) WallEnterAt=-1;
+        // Kick off 0.25 s into each run, for five runs.
+        if(bRunning && WallEnterAt>=0 && StageTime>=WallEnterAt+.25f && StageTime-DeltaSeconds<WallEnterAt+.25f && WallSides.Num()<=5) Chuck->JumpPressed();
+        WallPeakZ=FMath::Max(WallPeakZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        if(StageTime>4.f)
+        {
+            // Each bounce gains ~70 cm: three runs reach the 240 cm stack tops.
+            bool bAlternate=WallSides.Num()>=3;
+            for(int32 I=1; I<WallSides.Num(); ++I) bAlternate&=WallSides[I]!=WallSides[I-1];
+            const int32 Jumps=Chuck->GetWallJumps()-WallJumpsBase;
+            FString Sides; for(const int32 Side : WallSides) Sides+=Side<0 ? TEXT("A") : TEXT("B");
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_MEASURE runs=%d walls=%s jumps=%d climb_cm=%.3f alternate=%d end=%s z=%.1f"),WallSides.Num(),*Sides,Jumps,WallPeakZ-WallStart.Z,bAlternate ? 1 : 0,Chuck->GetGaitName(),Chuck->GetActorLocation().Z);
+            Check(bAlternate && Jumps>=3 && WallPeakZ-WallStart.Z>=150.f,TEXT("wall jumps chain back and forth up the cargo chimney"));
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:
             // the roll seen from the side, then the side jump from behind.
             if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCapture")))
@@ -915,7 +997,26 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {.1f,.16f,.22f,.3f,.38f,.44f,.52f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Slash_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>1.5f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
+        if(StageTime>1.5f)
+        {
+            // Then the cargo chimney, seen from the quay (north).
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
+            Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));
+            Chuck->SetTestStick(FVector2D(-1,0)); WallEnterAt=-1; WallSides.Reset();
+            TestStage=74; StageTime=0;
+        }
+    }
+    else if(TestStage==74)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->JumpPressed();
+        const bool bRunning=Chuck->IsWallRunning();
+        if(bRunning && WallEnterAt<0) { WallEnterAt=StageTime; WallSides.Add(1); Chuck->SetTestStick(FVector2D::ZeroVector); }
+        if(!bRunning) WallEnterAt=-1;
+        if(bRunning && WallEnterAt>=0 && StageTime>=WallEnterAt+.25f && StageTime-DeltaSeconds<WallEnterAt+.25f && WallSides.Num()<=4) Chuck->JumpPressed();
+        for(const float Shot : {.25f,.4f,.55f,.7f,.85f,1.f,1.2f,1.4f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Chimney_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>3.f) { Chuck->ResetToDock(); TestStage=52; StageTime=0; }
     }
     else if(TestStage==52)
     {
@@ -1071,5 +1172,5 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    LMB / X: slash    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
+    DrawText(TEXT("Jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

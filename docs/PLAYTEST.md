@@ -17,6 +17,8 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Walk relative to camera | WASD or arrow keys | Left stick |
 | Run: tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
 | Jump (while running: a leap that lands into the stride) | Space | A |
+| Wall run: jump into a wall while pushing toward it (three steps up) | Space + stick toward the wall | A + stick |
+| Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
 | Slash (claw scratch); tap again or hold for a flurry on a steady beat with a random paw order (never three of one paw in a row); works while moving | Left mouse button | X |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
 | Switch elevated / rat-height follow | C | Y |
@@ -83,3 +85,12 @@ This opens the existing packaged game, exercises the movement/camera checks, cap
 
 
 For the character contact review, run `powershell -NoProfile -File .\Tools\Verify-Package.ps1 -MotionCapture`. It adds rear/front/side rat-height and elevated image sequences under `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Motion/View0..3`. These cover start, straight walk, 90-degree turn, stop, jump and landing. Contact telemetry is printed in the test log. Keep reviewing ankle connections and jacket shoulder joins; passing contact checks is not finished animation approval.
+
+## Parkour practice yard
+
+On the quay's south strip:
+
+- **Cargo chimney:** two 240 cm crate stacks 100 cm apart. Jump at one pushing toward it, then press jump on each wall to bounce up between them (about 70 cm gained per bounce).
+- **Stone harbour wall:** 115 cm high with a walkable top, for the coming ledge grab and pull-up.
+
+A wall gives one run until Chuck lands or reaches a different wall.

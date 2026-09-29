@@ -45,6 +45,8 @@ namespace ChuckClipData
     constexpr float SlashChainAt = 0.2182f;
     constexpr FStance SlashRightStance{{0.0000f, 0.0436f, 0.1600f, 0.4000f, -1.0000f, -1.0000f}, {0.0000f, 0.2036f, 0.3055f, 0.4000f, -1.0000f, -1.0000f}, 0.4000f};
     constexpr FStance SlashLeftStance{{0.0000f, 0.2036f, 0.3055f, 0.4000f, -1.0000f, -1.0000f}, {0.0000f, 0.0436f, 0.1600f, 0.4000f, -1.0000f, -1.0000f}, 0.4000f};
+    // Wall run: loop phase follows the vertical capsule travel over this stride.
+    constexpr float WallRunStride = 30.0000f;
     // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
     constexpr float SideTakeoff = 0.1000f;
     constexpr float SideLand = 0.5000f;

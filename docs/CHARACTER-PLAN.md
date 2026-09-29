@@ -33,6 +33,7 @@ Immediate art follow-up after the first integration: the open fronts are more co
 | Roll | Continuous torso/hip deformation, clearance, recover-to-stance transition | First pass (2026-09-27): `Roll` clip, about 1 m in 0.8 s, from and back to the aplomb stance, ground-fitted tuck. Capsule is not shrunk, so he can't yet roll under the bench |
 | Side-jump | Lateral takeoff/landing, pelvis orientation, bilateral foot placement | First pass (2026-09-27): `SideJumpLeft`/`SideJumpRight`, about 77 cm sideways with a 16 cm apex, facing kept, landing on both paws in the aplomb stance |
 | Slash (claw scratch) | Readable wind-up, fast rake, follow-through, recover; works standing and on the move | First pass (2026-09-28): `SlashRight`/`SlashLeft` claw rake with a 10 cm step-in, chained by a second press; upper-body layer over walk/run/air. No hit detection or targets yet |
+| Parkour: wall run / wall jump | Paws planted on the wall, arms reaching; kick-off facing the jump | Phases 1–2 (2026-09-28): `WallRun` loop and `WallKick`, three steps (45 cm), wall jump 260 out / 230 up with coyote and buffer; practice yard. Ledge grab/hang/pull-up/shimmy next |
 | Climb | Reach/grip controls, hands/fingers, feet and root alignment to climb surface | Not implemented |
 | Smoke | Stable mouth/head attachment for a cigarette retained in the mouth; restrained jaw/lip pose and smoke origin; avoid face/jacket clipping | Not implemented; pickup remains deferred |
 
