@@ -4,6 +4,8 @@ Two independent sessions, two Git worktrees, one integration step. This is repos
 
 ## Current split — v2 (2026-09-27, user request)
 
+September 29 assignment: Codex owns the requested setting expansion in `DockSetting.cpp/.h`, its scene-construction call, setting validation and docs, using `codex/docks-setting` in the existing codex-movement worktree. Claude retains character, animations, traversal and camera ownership. The user's explicit setting request supersedes the earlier world pause. Integrate and package one checkout at a time.
+
 The user asked to allocate more of the work to Claude. Codex's usage limits interrupt long tasks, and `References/ai-dev-notes.md` suggests Claude for open-ended, multi-file and feel/visual work and Codex for narrow, well-specified tasks. This replaces the original ownership table below. Suggestions in the notes stay suggestions; `AGENTS.md` scope rules still govern.
 
 | Area | Owner (v2) |

@@ -1,5 +1,7 @@
 # Project brief
 
+September 29 update: the user has explicitly reopened setting work following Claude's character and parkour progress. Expand the same docks map with connected walkable streets, more buildings and dressing that explains the existing obstacles; preserve those routes. This supersedes the earlier world-work pause below. See DOCKS-SETTING.md and the latest HANDOFF for implementation and verified build status.
+
 CHUCK 3D explores whether the completed game's intimate exploration works in a human-scale 3D world. First deliverable: a small Windows PC Waterdeep docks prototype in Unreal Engine; Blender supplies custom assets after the graybox proves scale and camera.
 
 Chuck is a gray rat approximately 65 cm tall, above the human NPC kneecap, wearing an oversized purple open jacket. His quiet exhaustion and thousand-yard stare coexist with patience, fearlessness, compassion, observation, and persistence. He never speaks or has an internal monologue. Behavior, restrained animation, and others' reactions communicate his character.

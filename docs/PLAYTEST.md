@@ -25,7 +25,6 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Mantle: walk into a knee-high ledge (6–40 cm) and he hops up onto it | stick | stick |
 | Slash (claw scratch); tap again or hold for a flurry on a steady beat with a random paw order (never three of one paw in a row); works while moving | Left mouse button | X |
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
-| Switch elevated / rat-height follow | C | Y |
 | Turn view | Mouse left/right, or Q/E | Right stick left/right |
 | Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |
 | Center camera behind Chuck | F | Right-stick click |
@@ -125,4 +124,3 @@ Two more districts, on new quay slabs:
   - Lumber stacks 160, 200 and 90 cm tall. The first two are 100 cm apart: another chimney.
   - A 250 cm crane tower, 80 cm across from the tallest stack, with its arm over the water and a hanging crate.
   - Barrels and a hand cart.
-
