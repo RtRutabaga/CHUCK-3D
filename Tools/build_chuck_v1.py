@@ -996,7 +996,10 @@ def side_jump(sign):
 # the gaze held forward, then back to the aplomb stance. SlashRight chains into
 # SlashLeft. Root fixed: standing, the runtime moves the capsule along the
 # manifest travel; on the move it plays the upper body over the stride.
-SLASH_T, SLASH_STEP = .55, 12.
+SLASH_T, SLASH_STEP = .55, 12.  # base timeline (s) and step-in (cm)
+# User 2026-09-28: "make it faster". The clip plays the base timeline 1.375x
+# faster: 0.4 s, the cut itself (0.12-0.26 base) in about 0.1 s.
+SLASH_RATE = 1.375
 def slash_travel(t):
     return SLASH_STEP * smoothstep(t, .06, .38)
 
@@ -1017,7 +1020,7 @@ def slash_clip(side):
             (.27, 11., -sign * 12., -7.),
             (.34, 4., -sign * 12., -13.)]
     def pose(phase, f):
-        t = f / FPS
+        t = f / FPS * SLASH_RATE  # authored on the base timeline, played faster
         wind = smoothstep(t, 0., .12) * (1 - smoothstep(t, .12, .22))
         strike = smoothstep(t, .12, .26) * (1 - smoothstep(t, .36, .54))
         twist = sign * 30 * wind - sign * 45 * strike
@@ -1120,12 +1123,14 @@ for name, sign in (('SideJumpLeft', 1), ('SideJumpRight', -1)):
 
 for name, side in (('SlashRight', 'R'), ('SlashLeft', 'L')):
     fn, steps = slash_clip(side)
-    frames = round(SLASH_T * FPS) + 1
+    frames = round(SLASH_T / SLASH_RATE * FPS) + 1
+    fast = lambda v: round(v / SLASH_RATE, 4)
     author(name, frames, fn, False, {
-        'capsule_travel_cm_per_frame': [round(slash_travel(f / FPS), 4) for f in range(frames)],
-        'travel_cm': SLASH_STEP, 'duration_travel_s': SLASH_T,
-        'stance_intervals_s': {f'foot_{s}': stance_from_steps(steps[s], SLASH_T) for s in 'LR'},
-        'events_s': {'wind_up': .12, 'strike': .22, 'follow_through': .34, 'chain_from': .3, 'recovered': SLASH_T},  # chain once the arc has crossed
+        'capsule_travel_cm_per_frame': [round(slash_travel(f / FPS * SLASH_RATE), 4) for f in range(frames)],
+        'travel_cm': SLASH_STEP, 'duration_travel_s': fast(SLASH_T), 'playback_rate_vs_base': SLASH_RATE,
+        'stance_intervals_s': {f'foot_{s}': [[fast(a), fast(b)] for a, b in stance_from_steps(steps[s], SLASH_T)] for s in 'LR'},
+        # Chain once the arc has crossed; the runtime adds a random pause for a natural flurry.
+        'events_s': {k: fast(v) for k, v in {'wind_up': .12, 'strike': .22, 'follow_through': .34, 'chain_from': .3, 'recovered': SLASH_T}.items()},
         'striking_paw': f'hand_{side}',
         'upper_body_root': 'spine_01',
         'notes': 'Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw.'})

@@ -147,6 +147,7 @@ void AChuckCharacter::BeginPlay()
             Smoke->SetRelativeLocation(FVector(Prop->GetBoundingBox().Max.X, 0, 0)); // the lit end
         }
     }
+    SlashRandom.Initialize(FMath::Rand());
     // Stance locks are world positions: pose after this frame's movement.
     GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
     for (int32 I = 0; I < Clips.Num(); ++I)
@@ -183,6 +184,7 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
     Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
     Input->BindAction("Slash", IE_Pressed, this, &AChuckCharacter::Slash);
+    Input->BindAction("Slash", IE_Released, this, &AChuckCharacter::SlashReleased);
     Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
@@ -269,7 +271,7 @@ void AChuckCharacter::ResetToDock()
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     InputForward = InputRight = 0;  // refreshed every frame while input is live
     bRunJump = bHardLanding = false;
-    bSlashQueued = false; bSlashRightNext = true; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
+    bSlashQueued = bSlashHeld = false; bSlashRightNext = true; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -409,9 +411,11 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
     }
     bDodgeLaunched = bDodgeLanded = bStopPending = false;
 }
+float AChuckCharacter::ChuckChainAt() { return ChuckClipData::SlashChainAt; }
 void AChuckCharacter::Slash()
 {
     auto* Movement = GetCharacterMovement();
+    bSlashHeld = true;
     const bool bStandingSlash = Gait == EGait::Slash;
     const bool bLayered = LayerTime >= 0;
     if (bStandingSlash || bLayered)
@@ -440,6 +444,7 @@ void AChuckCharacter::Slash()
         LayerClip = Clip;
         LayerTime = 0;
     }
+    StartSlashTimer();
 }
 const TCHAR* AChuckCharacter::GetSlashName() const
 {
@@ -457,13 +462,14 @@ void AChuckCharacter::UpdateSlashLayer(float DeltaSeconds)
     if (LayerTime < 0) return;
     LayerTime += DeltaSeconds;
     const float LayerLength = Clips[static_cast<int32>(LayerClip)]->GetPlayLength();
-    if (bSlashQueued && LayerTime >= SlashChainAt)
+    if ((bSlashQueued || bSlashHeld) && LayerTime >= NextChainAt)
     {
         // Chain: the finished paw fades out under the next one.
         FadingLayerClip = LayerClip; FadingLayerTime = LayerTime; FadingLayerWeight = LayerWeightAt(LayerTime, LayerLength);
         LayerClip = LayerClip == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
         bSlashRightNext = LayerClip == EClip::SlashLeft;
         LayerTime = 0; bSlashQueued = false;
+        StartSlashTimer();
     }
     else if (LayerTime >= LayerLength) { LayerTime = -1; bSlashRightNext = true; bSlashQueued = false; }
 }
@@ -594,13 +600,14 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // as for the roll); a buffered press chains the other paw.
         BaseTime += DeltaSeconds;
         SlashDone += Travel;
-        if (bSlashQueued && BaseTime >= SlashChainAt)
+        if ((bSlashQueued || bSlashHeld) && BaseTime >= NextChainAt)
         {
             const EClip Next = Base == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
             bSlashRightNext = Next == EClip::SlashLeft;
             bSlashQueued = false;
             SetClip(Next, 0, .06f);
             SlashDone = 0;
+            StartSlashTimer();
         }
         else if (BaseTime >= Length) { bSlashRightNext = true; FinishDodge(); }
         if (Gait == EGait::Slash)

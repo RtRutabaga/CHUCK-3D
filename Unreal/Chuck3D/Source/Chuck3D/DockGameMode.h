@@ -47,6 +47,9 @@ private:
     float SlashMin = 0, SlashMax = 0, SlashSpeed = 0, SlashLeftMin = 0, SlashLeftMax = 0;
     FVector SlashPrevious = FVector::ZeroVector;
     bool bSlashHave = false;
+    TArray<float> FlurryStarts;
+    TArray<FString> FlurryNames;
+    FString FlurryLast;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

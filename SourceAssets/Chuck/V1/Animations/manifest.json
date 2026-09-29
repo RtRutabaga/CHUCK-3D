@@ -842,9 +842,9 @@
    "file": "Animations/AS_Chuck_SlashRight.fbx",
    "fps": 30,
    "first_frame": 0,
-   "last_frame": 16,
-   "frame_count": 17,
-   "duration_s": 0.5333,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
    "loop": false,
    "loop_note": "",
    "root_motion": false,
@@ -852,52 +852,49 @@
    "capsule_travel_cm_per_frame": [
     0.0,
     0.0,
-    0.0154,
-    0.5156,
-    1.6018,
-    3.1111,
-    4.8809,
-    6.7483,
-    8.5506,
-    10.125,
-    11.3088,
+    0.3293,
+    1.7706,
+    3.9736,
+    6.5151,
+    8.9719,
+    10.921,
     11.9392,
-    12.0,
     12.0,
     12.0,
     12.0,
     12.0
    ],
    "travel_cm": 12.0,
-   "duration_travel_s": 0.55,
+   "duration_travel_s": 0.4,
+   "playback_rate_vs_base": 1.375,
    "stance_intervals_s": {
     "foot_L": [
      [
       0.0,
-      0.06
+      0.0436
      ],
      [
-      0.22,
-      0.55
+      0.16,
+      0.4
      ]
     ],
     "foot_R": [
      [
       0.0,
-      0.28
+      0.2036
      ],
      [
-      0.42,
-      0.55
+      0.3055,
+      0.4
      ]
     ]
    },
    "events_s": {
-    "wind_up": 0.12,
-    "strike": 0.22,
-    "follow_through": 0.34,
-    "chain_from": 0.3,
-    "recovered": 0.55
+    "wind_up": 0.0873,
+    "strike": 0.16,
+    "follow_through": 0.2473,
+    "chain_from": 0.2182,
+    "recovered": 0.4
    },
    "striking_paw": "hand_R",
    "upper_body_root": "spine_01",
@@ -908,62 +905,59 @@
    "file": "Animations/AS_Chuck_SlashLeft.fbx",
    "fps": 30,
    "first_frame": 0,
-   "last_frame": 16,
-   "frame_count": 17,
-   "duration_s": 0.5333,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9176,
+   "max_leg_reach_ratio": 0.9181,
    "capsule_travel_cm_per_frame": [
     0.0,
     0.0,
-    0.0154,
-    0.5156,
-    1.6018,
-    3.1111,
-    4.8809,
-    6.7483,
-    8.5506,
-    10.125,
-    11.3088,
+    0.3293,
+    1.7706,
+    3.9736,
+    6.5151,
+    8.9719,
+    10.921,
     11.9392,
-    12.0,
     12.0,
     12.0,
     12.0,
     12.0
    ],
    "travel_cm": 12.0,
-   "duration_travel_s": 0.55,
+   "duration_travel_s": 0.4,
+   "playback_rate_vs_base": 1.375,
    "stance_intervals_s": {
     "foot_L": [
      [
       0.0,
-      0.28
+      0.2036
      ],
      [
-      0.42,
-      0.55
+      0.3055,
+      0.4
      ]
     ],
     "foot_R": [
      [
       0.0,
-      0.06
+      0.0436
      ],
      [
-      0.22,
-      0.55
+      0.16,
+      0.4
      ]
     ]
    },
    "events_s": {
-    "wind_up": 0.12,
-    "strike": 0.22,
-    "follow_through": 0.34,
-    "chain_from": 0.3,
-    "recovered": 0.55
+    "wind_up": 0.0873,
+    "strike": 0.16,
+    "follow_through": 0.2473,
+    "chain_from": 0.2182,
+    "recovered": 0.4
    },
    "striking_paw": "hand_L",
    "upper_body_root": "spine_01",

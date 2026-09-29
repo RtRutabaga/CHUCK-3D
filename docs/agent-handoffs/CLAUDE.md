@@ -982,3 +982,26 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The hand's roll about the forearm is not art-directed (palm-forward on the wind-up can read as a wave).
   - No hit detection.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Fortieth pass — faster slash; held flurry at random intervals
+
+- **User request:** "make it faster, but no streak. then make it so he can attack with both paws one then the next, but at random intervals instead of directly back and forth to make it more natural".
+- **Source commit:** on top of `a831bb9`, branch `codex/claude-character`.
+- **Faster:** `SLASH_RATE` 1.375. The arc is authored on the 0.55 s base timeline and the clip plays it in 0.4 s (13 frames), so the cut takes about 0.1 s. Manifest travel, stance windows and events are scaled to match; chain_from is 0.218 s. No streak or FX.
+- **Flurry** (`ChuckCharacter`):
+  - The Slash action now has a released binding. Holding it, or pressing again, chains the other paw at `NextChainAt` = `SlashChainAt` plus a random pause of 0–`SlashJitter` (0.16 s), drawn from a `FRandomStream` seeded at BeginPlay.
+  - Paws alternate, and the timing varies from strike to strike. A tap is a single slash. The flurry works standing (stepping in) and on the move (upper-body layer).
+  - Tests use `Slash()` + `SlashReleased()` for taps.
+- **Tests:** now **78** (`Verify-Package.ps1` expects 78, or 77 with `-NoCapture`).
+  - Stage 66's chained-step check accepts the whole random-pause window.
+  - New stage 70: slash held for 1.6 s. Checks: ≥4 strikes, paws alternate, every gap within [chain − 0.03, chain + jitter + 0.05] and the gaps are not all equal, paws hold, and it settles to Idle after release.
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **78/78**; uncapped with and without groom: 0 failures.
+  - Flurry: 6 strikes in 1.6 s; gaps 0.23–0.38 s, varying run to run. Paw peak 9–13 m/s. Paw slip 0.
+  - Evidence: `Review/motion_SlashRight.png`, `Review/motion_SlashLeft.png`, `Review/runtime_slash.jpg`.
+- **Remaining:**
+  - A standing flurry steps forward about 11 cm per strike (an advance).
+  - Paws strictly alternate; the order is not randomized.
+  - No hit detection.
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.
