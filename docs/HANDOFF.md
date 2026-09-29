@@ -2,6 +2,12 @@
 
 ## Current launcher and integration status
 
+**Update 12 (Codex, September 29 — near-field dock details):** runtime `42f33d7` reuses existing beveled crate/rope meshes in the loading court and adds platform boards, loading-door joinery, high barred warehouse windows, a net-drying frame, tavern rear windows/timber bays and continuous drain grates. Existing cargo proxy dimensions are preserved, with proxies hidden when the visual mesh is available. Added dressing is noncolliding. No character/controller, binary source or material changes; no installs or asset regeneration.
+
+Built successfully (`Local/dock-detail-build.log`). Packaged rendered checks passed **99/99** plus **9 ground / 6 capsule-route checks**, no material fallback failures (`Local/verify-package-20260929-133159.log`). Four setting captures were visually reviewed (`Local/dock-detail-capture.log`; package `Saved/Screenshots/Windows/Setting`). MotionCapture and physical-controller testing were not repeated. Repeated architecture, basic roof/material treatment and simplified water remain unfinished; this does not meet the reference graphics target.
+
+Normal root launcher uses this verified package, runtime `42f33d7`; previous skyline package is retained at `Builds/Windows-Previous-20260929-Detail`. Generated output remains untracked. Next setting refinement can be done here; character/traversal remain Claude-owned.
+
 **Update 11 (Codex, September 29 — skyline and working facades):** runtime `6aa739b` adds stepped city land, uphill roof rows, a distant civic hall/towers, a northern continuation and opposite-bank buildings. Canopies, brackets, shutters and trade signs distinguish Dock Street; shallow details dress the parkour workshop faces. This is visual scenery only: playable collision, character/controller, obstacle dimensions and materials are unchanged. No new binary assets or dependencies.
 
 Build succeeded (`Local/skyline-build.log`). Packaged verifier with rendered captures passed **99/99** plus **9 ground samples / 6 capsule routes**, with no material fallback failures (`Local/verify-package-20260929-131527.log`). Four setting captures were visually reviewed (`Local/skyline-capture.log`; package `Saved/Screenshots/Windows/Setting`). MotionCapture was not rerun for this scenery-only pass. Repeated architecture, basic materials, distant boundaries and simple water remain visible limitations; background land is nonplayable scenery.

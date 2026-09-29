@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 29 — near-field detail follow-up
+
+Continued from `046a35c`; Claude branches still at `03344ac`. Runtime `42f33d7` changes only setting construction: existing crate/rope meshes, platform boards, warehouse door joinery/windows/net frame, tavern rear articulation and drain grates. Collision proxy sizes and all Claude traversal geometry are preserved. No binary changes or asset generation.
+
+Build `Local/dock-detail-build.log` succeeded. Four packaged setting captures reviewed. Rendered verifier passed 99/99 plus 15 ground/clearance checks (`Local/verify-package-20260929-133159.log`); no material fallback failures. No new motion or hardware-controller validation. Normal launcher updated with receipt; skyline package retained as `Builds/Windows-Previous-20260929-Detail`. Main remaining setting defects: repeated forms and basic roof/material treatment. Next setting work can be done here.
+
 ## September 29 — skyline follow-up
 
 Continued from `26df615`; no newer Claude branch commits were present. `6aa739b` changes only `DockSetting.cpp`: stepped nonplayable city ground, uphill and opposite-bank buildings, civic hall/towers, and street/workshop facade detail. All added geometry has no collision; existing parkour and character code are untouched. No binary changes or new dependencies.

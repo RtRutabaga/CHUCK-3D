@@ -16,6 +16,8 @@ Repeat in low and elevated camera framing using mouse/right-stick vertical orbit
 
 ## Implementation and checks
 
+The near-field follow-up reuses the existing beveled crate and rope meshes in the cargo court, adds platform boards, loading-door boards/braces/hinges, high warehouse windows and a net-drying frame, and articulates the tavern rear with windows and timber bays. The street's dashed drain strip is now a continuous grated channel. Existing cargo collision boxes retain their dimensions and are hidden when their replacement mesh is available. All added dressing is noncolliding; it does not establish new traversal surfaces or interactive objects. No source assets were regenerated.
+
 New boxes share instanced mesh batches by material and collision profile. Seven existing world materials have their instanced-mesh usage enabled by `Tools/configure_setting_materials.py`; their graphs are preserved. No new asset types, downloads or dependencies. The seven updated LFS assets total about 191 KB; remote account allowance remains unknown and no paid storage was purchased. `BuildDockSetting` is the setting entry point; `DockGameMode` calls it during scene construction. Keep character/traversal work with Claude.
 
 `Verify-Package.ps1` requires both the existing gameplay suite and `CHUCK_WORLD_CHECK_COMPLETE failures=0`. The world checks sample nine ground points and six rat-capsule route segments. These check floor continuity and clearance, not subjective camera comfort or every new roof. `-ChuckSettingCapture` runs a separate four-view review and exits; it does not change normal play. Images go to `Saved/Screenshots/Windows/Setting` within the package.
