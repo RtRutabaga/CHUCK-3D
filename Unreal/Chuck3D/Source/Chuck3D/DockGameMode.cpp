@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "DockSetting.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -379,6 +380,7 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("FarHarborWall"),FVector(3440,0,-8),FVector(170,4850,94),TEXT("Stone"),nullptr,false);
     if(BoatMesh) Prop(TEXT("HarborBoatArt"),FVector(980,600,-60),BoatMesh);
     if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
+    BuildDockSetting(World);
     // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
