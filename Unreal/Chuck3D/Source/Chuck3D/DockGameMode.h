@@ -49,7 +49,7 @@ private:
     bool bSlashHave = false;
     TArray<float> FlurryStarts;
     TArray<FString> FlurryNames;
-    FString FlurryLast;
+    int32 SlashStrikeBase = 0;
     void ProbeLockedPaws(class AChuckCharacter* Chuck,float DeltaSeconds);
     int32 ProbeSamples = 0;
     double ProbeSlip = 0;

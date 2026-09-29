@@ -761,7 +761,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Tap(EKeys::W,false);
             KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
             // Next: a standing slash, with a second press buffered to chain the other paw.
-            Chuck->ResetToDock(); Chuck->Slash(); Chuck->SlashReleased();
+            Chuck->ResetToDock(); Chuck->Slash(); Chuck->SlashReleased(); SlashStrikeBase=Chuck->GetSlashStrikes();
             LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; bLocoFlag=false; bKeyMeasured=false;
             SlashMin=1e3f; SlashMax=-1e3f; SlashSpeed=0; SlashLeftMin=1e3f; SlashLeftMax=-1e3f; bSlashHave=false;
             TestStage=66; StageTime=0;
@@ -773,37 +773,40 @@ void ADockGameMode::Tick(float DeltaSeconds)
         const bool bRunning=TestStage==67;
         if(bRunning) Chuck->AddMovementInput(FVector(1,0,0),1);
         if(!bRunning && StageTime>=.1f && StageTime-DeltaSeconds<.1f) { Chuck->Slash(); Chuck->SlashReleased(); }  // a tap, buffered: chains
-        if(bRunning && StageTime>=1.f && StageTime-DeltaSeconds<1.f) { Chuck->Slash(); Chuck->SlashReleased(); LocoValue=1e3f; }
+        if(bRunning && StageTime>=1.f && StageTime-DeltaSeconds<1.f) { Chuck->Slash(); Chuck->SlashReleased(); SlashStrikeBase=Chuck->GetSlashStrikes(); LocoValue=1e3f; }
+        // The paw order is random: follow whichever paw the first strike uses,
+        // with its outward side as +. The second strike's paw: SlashLeft* fields.
         const FString Name=Chuck->GetSlashName();
         const FTransform Actor=Chuck->GetActorTransform();
-        const FVector Right=Actor.InverseTransformPosition(Chuck->GetMesh()->GetSocketLocation(TEXT("hand_R")));
-        const FVector Left=Actor.InverseTransformPosition(Chuck->GetMesh()->GetSocketLocation(TEXT("hand_L")));
-        if(Name==TEXT("SlashRight"))
+        const bool bRightPaw=Name==TEXT("SlashRight");
+        const FVector Paw=Actor.InverseTransformPosition(Chuck->GetMesh()->GetSocketLocation(bRightPaw ? TEXT("hand_R") : TEXT("hand_L")));
+        const float Outward=bRightPaw ? Paw.Y : -Paw.Y;
+        const int32 Strike=Chuck->GetSlashStrikes()-SlashStrikeBase;
+        if(!Name.IsEmpty() && Strike==0 && (!bRunning || StageTime>=1.f))
         {
-            SlashMin=FMath::Min(SlashMin,static_cast<float>(Right.Y)); SlashMax=FMath::Max(SlashMax,static_cast<float>(Right.Y));
+            SlashMin=FMath::Min(SlashMin,Outward); SlashMax=FMath::Max(SlashMax,Outward);
             // Skip the first frames: the pose still reflects the pre-reset position.
-            if(bSlashHave && StageTime>.05f) SlashSpeed=FMath::Max(SlashSpeed,static_cast<float>(FVector::Dist(Right,SlashPrevious))/FMath::Max(DeltaSeconds,.001f));
-            SlashPrevious=Right; bSlashHave=true;
+            if(bSlashHave && StageTime>.05f) SlashSpeed=FMath::Max(SlashSpeed,static_cast<float>(FVector::Dist(Paw,SlashPrevious))/FMath::Max(DeltaSeconds,.001f));
+            SlashPrevious=Paw; bSlashHave=true;
         }
         else bSlashHave=false;
-        if(Name==TEXT("SlashLeft")) { bKeyMeasured=true; SlashLeftMin=FMath::Min(SlashLeftMin,static_cast<float>(Left.Y)); SlashLeftMax=FMath::Max(SlashLeftMax,static_cast<float>(Left.Y)); }
+        if(!Name.IsEmpty() && Strike==1) { bKeyMeasured=true; SlashLeftMin=FMath::Min(SlashLeftMin,Outward); SlashLeftMax=FMath::Max(SlashLeftMax,Outward); }
         if(!bRunning && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Slash"))==0) ProbeLockedPaws(Chuck,DeltaSeconds);
         if(bRunning && !Name.IsEmpty()) { LocoValue=FMath::Min(LocoValue,static_cast<float>(Chuck->GetVelocity().Size2D())); ProbeLockedPaws(Chuck,DeltaSeconds); }
         if(StageTime>(bRunning ? 2.f : 1.5f))
         {
             const FVector Moved=Chuck->GetActorLocation()-AChuckCharacter::StartLocation();
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_SLASH_MEASURE mode=%s right_paw_y=[%.2f,%.2f] peak_cm_s=%.1f left_paw_y=[%.2f,%.2f] chained=%d travel_cm=%.3f min_speed_cm_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),bRunning ? TEXT("running") : TEXT("standing"),SlashMin,SlashMax,SlashSpeed,SlashLeftMin,SlashLeftMax,bKeyMeasured ? 1 : 0,Moved.X,bRunning ? LocoValue : 0.f,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
-            // The right paw starts on its own side (+Y) and rakes across the midline.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SLASH_MEASURE mode=%s first_paw_outward=[%.2f,%.2f] peak_cm_s=%.1f second_paw_outward=[%.2f,%.2f] chained=%d travel_cm=%.3f min_speed_cm_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),bRunning ? TEXT("running") : TEXT("standing"),SlashMin,SlashMax,SlashSpeed,SlashLeftMin,SlashLeftMax,bKeyMeasured ? 1 : 0,Moved.X,bRunning ? LocoValue : 0.f,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
+            // The striking paw starts on its own side and rakes across the midline.
             const bool bRake=SlashMax>8.f && SlashMin<0.f && SlashSpeed>250.f;
             if(!bRunning)
             {
-                Check(bRake,TEXT("standing slash rakes the right paw fast across the body"));
-                Check(bKeyMeasured && SlashLeftMin<-8.f && SlashLeftMax>0.f,TEXT("a second press chains the left paw"));
+                Check(bRake,TEXT("standing slash rakes its paw fast across the body"));
+                Check(bKeyMeasured && SlashLeftMin<0.f && SlashLeftMax>8.f,TEXT("a second press chains another raking strike"));
                 // The chain cuts the first step-in short at the chain point.
-                // ... and the chain point carries a random pause of up to SlashJitter.
                 auto TravelAt=[](float Time){ const float Frame=FMath::Clamp(Time*30.f,0.f,static_cast<float>(ChuckClipData::SlashFrames)); const int32 Index=FMath::Min(FMath::FloorToInt(Frame),ChuckClipData::SlashFrames-1); return FMath::Lerp(ChuckClipData::SlashTravel[Index],ChuckClipData::SlashTravel[Index+1],Frame-Index); };
                 const float Full=ChuckClipData::SlashTravel[ChuckClipData::SlashFrames];
-                const float Shortest=TravelAt(ChuckClipData::SlashChainAt)+Full, Longest=TravelAt(ChuckClipData::SlashChainAt+AChuckCharacter::SlashJitter)+Full;
+                const float Shortest=TravelAt(ChuckClipData::SlashChainAt)+Full, Longest=TravelAt(ChuckClipData::SlashChainAt+.04f)+Full;
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_SLASH_STEP_MEASURE travel_cm=%.3f expected_cm=[%.3f,%.3f]"),Moved.X,Shortest,Longest);
                 Check(Moved.X>Shortest-1.f && Moved.X<Longest+1.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("two chained slashes step in and settle"));
                 Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("slash paws hold in stance"));
@@ -814,7 +817,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             else
             {
-                Check(bRake,TEXT("running slash rakes the right paw across over the stride"));
+                Check(bRake,TEXT("running slash rakes its paw across over the stride"));
                 Check(LocoValue>.95f*ChuckClipData::RunSpeed && LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("running slash keeps the stride at speed with paws holding"));
                 Chuck->SetRunHeld(false); Chuck->ResetToDock();
                 auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
@@ -828,35 +831,38 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
         if(StageTime>=.05f && StageTime-DeltaSeconds<.05f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton,IE_Released,0));
-        if(FCString::Strcmp(Chuck->GetSlashName(),TEXT("SlashRight"))==0) bLocoFlag=true;
+        if(FCString::Strlen(Chuck->GetSlashName())>0) bLocoFlag=true;
         if(StageTime>.8f)
         {
             Check(bLocoFlag,TEXT("left mouse button slashes"));
             KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
             // Next: hold slash for a flurry.
-            Chuck->ResetToDock(); Chuck->Slash();
-            FlurryStarts.Reset(); FlurryNames.Reset(); FlurryLast.Reset();
+            Chuck->ResetToDock(); Chuck->SetSlashSeed(20260928); Chuck->Slash();
+            FlurryStarts.Reset(); FlurryNames.Reset(); FlurryStarts.Add(0); FlurryNames.Add(Chuck->GetSlashName()); SlashStrikeBase=Chuck->GetSlashStrikes();
             LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0;
             TestStage=70; StageTime=0;
         }
     }
     else if(TestStage==70)
     {
-        // Held: alternating paws, each follow-up after the chain point plus a
-        // random pause. Released at 1.6 s: the flurry ends after that paw.
-        const FString Name=Chuck->GetSlashName();
-        if(!Name.IsEmpty() && Name!=FlurryLast) { FlurryStarts.Add(StageTime); FlurryNames.Add(Name); }
-        FlurryLast=Name;
+        // Held: a strike on each chain beat, the paw random (never three of one
+        // in a row). Released at 1.6 s: the flurry ends after that paw.
+        if(Chuck->GetSlashStrikes()!=SlashStrikeBase) { SlashStrikeBase=Chuck->GetSlashStrikes(); FlurryStarts.Add(StageTime); FlurryNames.Add(Chuck->GetSlashName()); }
         if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Slash"))==0) ProbeLockedPaws(Chuck,DeltaSeconds);
         if(StageTime>=1.6f && StageTime-DeltaSeconds<1.6f) Chuck->SlashReleased();
         if(StageTime>2.4f)
         {
-            bool bAlternate=FlurryNames.Num()>=4;
-            for(int32 I=1; I<FlurryNames.Num(); ++I) bAlternate&=FlurryNames[I]!=FlurryNames[I-1];
+            int32 Rights=0, Repeats=0, LongestRun=1, Run=1;
+            for(int32 I=0; I<FlurryNames.Num(); ++I)
+            {
+                Rights+=FlurryNames[I]==TEXT("SlashRight");
+                if(I>0) { const bool bSame=FlurryNames[I]==FlurryNames[I-1]; Repeats+=bSame; Run=bSame ? Run+1 : 1; LongestRun=FMath::Max(LongestRun,Run); }
+            }
             float Shortest=1e3f, Longest=0;
             for(int32 I=1; I<FlurryStarts.Num(); ++I) { const float Gap=FlurryStarts[I]-FlurryStarts[I-1]; Shortest=FMath::Min(Shortest,Gap); Longest=FMath::Max(Longest,Gap); }
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_FLURRY_MEASURE strikes=%d gaps_s=[%.3f,%.3f] window_s=[%.3f,%.3f] samples=%d max_cm_s=%.4f gait=%s"),FlurryNames.Num(),Shortest,Longest,ChuckClipData::SlashChainAt,ChuckClipData::SlashChainAt+AChuckCharacter::SlashJitter,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
-            Check(bAlternate && Shortest>ChuckClipData::SlashChainAt-.03f && Longest<ChuckClipData::SlashChainAt+AChuckCharacter::SlashJitter+.05f && Longest-Shortest>.02f,TEXT("held slash flurries alternating paws at varied intervals"));
+            FString Order; for(const FString& Name : FlurryNames) Order+=Name==TEXT("SlashRight") ? TEXT("R") : TEXT("L");
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_FLURRY_MEASURE strikes=%d order=%s gaps_s=[%.3f,%.3f] chain_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),FlurryNames.Num(),*Order,Shortest,Longest,ChuckClipData::SlashChainAt,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
+            Check(FlurryNames.Num()>=5 && Rights>0 && Rights<FlurryNames.Num() && Repeats>0 && LongestRun<=2 && Shortest>ChuckClipData::SlashChainAt-.02f && Longest<ChuckClipData::SlashChainAt+.05f,TEXT("held slash flurries on a steady beat with a random paw order"));
             Check(LocoSamples>=5 && LocoMaxSlip<1.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("flurry paws hold and it settles on release"));
             Chuck->ResetToDock(); StageTime=0;
             // Screenshots stall frames, so they come from an unmeasured replay:

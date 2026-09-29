@@ -1005,3 +1005,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No hit detection.
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Forty-first pass — flurry: random paw order, steady timing
+
+- **User request:** "Make the ordering random not the timing".
+- **Source commit:** on top of `38207ea`, branch `codex/claude-character`.
+- **Change** (`ChuckCharacter`):
+  - The random pause is gone: every follow-up chains at `SlashChainAt` (0.218 s).
+  - `PickPaw` chooses each strike's paw: the first 50/50; each follow-up repeats the last paw with probability 0.5 unless it just repeated, so there are never three of one paw in a row.
+  - `SlashStrikes` counts strikes, and `SetSlashSeed` gives tests a fixed sequence.
+  - No clip changes.
+- **Tests:** still **78**.
+  - Stages 66/67 are paw-agnostic: they follow whichever paw strikes, with outward as +. The second press must chain another raking strike.
+  - Stage 68 accepts either paw.
+  - Stage 70 (seed 20260928): ≥5 strikes, both paws, at least one repeat, no run over 2, and every gap within [chain − 0.02, chain + 0.05].
+- **Verified:**
+  - Packaged `-MotionCapture` and `-NoGroom`: **78/78**; uncapped with and without groom: 0 failures.
+  - Flurry order LLRLLRR(L); gaps 0.218–0.233 s. Paw slip 0.
+- **Remaining:**
+  - When the running slash draws the left paw, the rake only just crosses the midline (outward min −1.0 cm vs −6 for the right). The run pose's arm and twist fight the left layer; worth tuning if it reads weak.
+  - No hit detection.
+  - Not played by the user.
+- **Not integrated into main.** A worktree launcher receipt was written.

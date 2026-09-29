@@ -25,13 +25,16 @@ public:
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
     /** Claw slash (LMB / X) pressed: a stepping slash when standing, the upper
-     *  body over the stride on the move. Pressing again, or holding, chains the
-     *  other paw after a short random pause (a natural flurry, not a metronome). */
+     *  body over the stride on the move. Pressing again, or holding, chains
+     *  another strike on a steady beat; which paw strikes is random (never three
+     *  of one paw in a row), so a flurry isn't a metronomic left-right. */
     void Slash();
     /** Slash button released: the flurry ends after the current paw. */
     void SlashReleased() { bSlashHeld = false; }
-    /** Largest random pause (s) added after the earliest chain point. */
-    static constexpr float SlashJitter = .16f;
+    /** Strikes started so far (tests). */
+    int32 GetSlashStrikes() const { return SlashStrikes; }
+    /** Tests: a fixed paw sequence. */
+    void SetSlashSeed(int32 Seed) { SlashRandom.Initialize(Seed); }
     /** "SlashRight"/"SlashLeft" while one plays (standing or layered), else "". */
     const TCHAR* GetSlashName() const;
     /** Run latch: tap Shift / LB to run, tap again or come to a stop to saunter. Tests set it directly. */
@@ -111,11 +114,10 @@ private:
     // Slash: the standing gait uses Base; on the move a layer plays (time < 0: none).
     bool bSlashQueued = false;
     bool bSlashHeld = false;
-    float NextChainAt = 0;
     FRandomStream SlashRandom;
-    void StartSlashTimer() { NextChainAt = ChuckChainAt() + SlashRandom.FRandRange(0.f, SlashJitter); }
-    static float ChuckChainAt();
-    bool bSlashRightNext = true;
+    int32 SlashStrikes = 0;
+    int32 SamePawRun = 0;
+    EClip PickPaw(bool bFirst, EClip Previous);
     float SlashDone = 0;
     EClip LayerClip = EClip::SlashRight;
     float LayerTime = -1;

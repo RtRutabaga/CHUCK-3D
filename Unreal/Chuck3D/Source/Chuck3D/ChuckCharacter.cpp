@@ -271,7 +271,7 @@ void AChuckCharacter::ResetToDock()
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     InputForward = InputRight = 0;  // refreshed every frame while input is live
     bRunJump = bHardLanding = false;
-    bSlashQueued = bSlashHeld = false; bSlashRightNext = true; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
+    bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -411,7 +411,16 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
     }
     bDodgeLaunched = bDodgeLanded = bStopPending = false;
 }
-float AChuckCharacter::ChuckChainAt() { return ChuckClipData::SlashChainAt; }
+AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
+{
+    // User 2026-09-28: random paw order, steady timing. Capped at two of one
+    // paw in a row so a streak never reads as a stuck arm.
+    ++SlashStrikes;
+    if (bFirst) { SamePawRun = 0; return SlashRandom.FRand() < .5f ? EClip::SlashRight : EClip::SlashLeft; }
+    const bool bSame = SamePawRun == 0 && SlashRandom.FRand() < .5f;
+    SamePawRun = bSame ? 1 : 0;
+    return bSame ? Previous : (Previous == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight);
+}
 void AChuckCharacter::Slash()
 {
     auto* Movement = GetCharacterMovement();
@@ -425,8 +434,7 @@ void AChuckCharacter::Slash()
         return;
     }
     if (IsDodging()) return;
-    const EClip Clip = bSlashRightNext ? EClip::SlashRight : EClip::SlashLeft;
-    bSlashRightNext = !bSlashRightNext;
+    const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
     const bool bStanding = !Movement->IsFalling() && GetVelocity().Size2D() < 20.f
@@ -444,7 +452,6 @@ void AChuckCharacter::Slash()
         LayerClip = Clip;
         LayerTime = 0;
     }
-    StartSlashTimer();
 }
 const TCHAR* AChuckCharacter::GetSlashName() const
 {
@@ -462,16 +469,14 @@ void AChuckCharacter::UpdateSlashLayer(float DeltaSeconds)
     if (LayerTime < 0) return;
     LayerTime += DeltaSeconds;
     const float LayerLength = Clips[static_cast<int32>(LayerClip)]->GetPlayLength();
-    if ((bSlashQueued || bSlashHeld) && LayerTime >= NextChainAt)
+    if ((bSlashQueued || bSlashHeld) && LayerTime >= SlashChainAt)
     {
         // Chain: the finished paw fades out under the next one.
         FadingLayerClip = LayerClip; FadingLayerTime = LayerTime; FadingLayerWeight = LayerWeightAt(LayerTime, LayerLength);
-        LayerClip = LayerClip == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
-        bSlashRightNext = LayerClip == EClip::SlashLeft;
+        LayerClip = PickPaw(false, LayerClip);
         LayerTime = 0; bSlashQueued = false;
-        StartSlashTimer();
     }
-    else if (LayerTime >= LayerLength) { LayerTime = -1; bSlashRightNext = true; bSlashQueued = false; }
+    else if (LayerTime >= LayerLength) { LayerTime = -1; bSlashQueued = false; }
 }
 void AChuckCharacter::FinishDodge()
 {
@@ -600,16 +605,13 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // as for the roll); a buffered press chains the other paw.
         BaseTime += DeltaSeconds;
         SlashDone += Travel;
-        if ((bSlashQueued || bSlashHeld) && BaseTime >= NextChainAt)
+        if ((bSlashQueued || bSlashHeld) && BaseTime >= SlashChainAt)
         {
-            const EClip Next = Base == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight;
-            bSlashRightNext = Next == EClip::SlashLeft;
             bSlashQueued = false;
-            SetClip(Next, 0, .06f);
+            SetClip(PickPaw(false, Base), 0, .06f);
             SlashDone = 0;
-            StartSlashTimer();
         }
-        else if (BaseTime >= Length) { bSlashRightNext = true; FinishDodge(); }
+        else if (BaseTime >= Length) FinishDodge();
         if (Gait == EGait::Slash)
         {
             const float Step = FMath::Max(0.f, SlashTravelAt(BaseTime + DeltaSeconds) - SlashDone) / FMath::Max(DeltaSeconds, 1e-4f);
