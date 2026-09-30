@@ -109,8 +109,32 @@ void BuildDockPlaza(UWorld* World)
             const float T=S/12.f;
             const float R=62+92*T;
             const FVector P=F+FVector(R*FMath::Cos(A),R*FMath::Sin(A),179+75*T-200*T*T);
-            Beam(Previous,P,3,TEXT("FountainWater")); Previous=P;
+            Beam(Previous,P,1.4f,TEXT("FountainWater")); Previous=P;
         }
+    }
+    // Small moving beads make the jets read as falling water instead of solid rails.
+    auto* Drops=NewObject<UInstancedStaticMeshComponent>(Owner);
+    Drops->SetupAttachment(Root); Drops->SetStaticMesh(Sphere);
+    Drops->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_FountainWater.M_FountainWater")));
+    Drops->SetCollisionProfileName(TEXT("NoCollision")); Drops->SetCastShadow(false); Drops->RegisterComponent();
+    for(int32 I=0;I<24;++I) Drops->AddInstance(FTransform(FQuat::Identity,F+FVector(0,0,170),FVector(.027f,.027f,.045f)));
+    FTimerHandle WaterMotion;
+    World->GetTimerManager().SetTimer(WaterMotion,[Weak=TWeakObjectPtr<UInstancedStaticMeshComponent>(Drops),World,F]()
+    {
+        if(!Weak.IsValid()) return;
+        for(int32 I=0;I<24;++I)
+        {
+            const float T=FMath::Frac(World->GetTimeSeconds()*.72f+(I%6)/6.f);
+            const float A=(I/6)*PI*.5f, R=62+92*T;
+            const FVector P=F+FVector(R*FMath::Cos(A),R*FMath::Sin(A),179+75*T-200*T*T);
+            Weak->UpdateInstanceTransform(I,FTransform(FQuat::Identity,P,FVector(.027f,.027f,.045f)),false,I==23,true);
+        }
+    },1.f/30.f,true);
+    // Coping and plinth courses retain the existing basin collision.
+    for(int32 I=0;I<32;++I)
+    {
+        const float A=I*2*PI/32;
+        for(float Z : {17.f,77.f}) Shape(F+FVector(209*FMath::Cos(A),209*FMath::Sin(A),Z),FVector(43,32,6),TEXT("Stone"),false,nullptr,FRotator(0,FMath::RadiansToDegrees(A)+90,0));
     }
     // Enclosing walls and a closed district gate, loosely echoing the 2D plaza.
     Shape(FVector(200,-4380,230),FVector(3200,70,460),TEXT("Stone"),true);
@@ -128,6 +152,17 @@ void BuildDockPlaza(UWorld* World)
     Shape(FVector(260,-4336,205),FVector(395,16,410),TEXT("Dark"),true);
     for(float X=84;X<=440;X+=28) Shape(FVector(X,-4317,205),FVector(11,12,410),TEXT("Wood"));
     for(float Z : {60.f,160.f,270.f,375.f}) Shape(FVector(260,-4309,Z),FVector(385,14,10),TEXT("Dark"));
+    // Iron gate straps and worn hanging standards break up the large tower faces.
+    for(float X : {-60.f,580.f})
+    {
+        Shape(FVector(X,-4134,453),FVector(100,6,184),TEXT("Dark"));
+        for(float DX : {-48.f,48.f}) Shape(FVector(X+DX,-4129,453),FVector(5,4,184),TEXT("WoodLight"));
+        Shape(FVector(X,-4127,468),FVector(38,4,6),TEXT("WoodLight"));
+        Shape(FVector(X,-4127,468),FVector(6,4,50),TEXT("WoodLight"));
+        Beam(FVector(X-63,-4130,551),FVector(X+63,-4130,551),7,TEXT("Dark"));
+    }
+    for(float X : {100.f,420.f}) for(float Z : {60.f,160.f,270.f,375.f})
+        Shape(FVector(X,-4298,Z),FVector(7,5,7),TEXT("WoodLight"),false,Sphere);
     // Small barred sewer arch set into the east wall: solid backing, no transition/interaction.
     Shape(FVector(1737,-3450,122),FVector(24,252,244),TEXT("Dark"),true);
     for(float Y : {-3596.f,-3304.f}) Shape(FVector(1720,Y,118),FVector(125,52,236),TEXT("Stone"),true);
@@ -139,6 +174,11 @@ void BuildDockPlaza(UWorld* World)
     for(float Y=-3555;Y<=-3345;Y+=30) Shape(FVector(1715,Y,112),FVector(12,10,224),TEXT("Dark"));
     for(float Z : {65.f,145.f,220.f}) Shape(FVector(1708,-3450,Z),FVector(14,225,9),TEXT("Wood"));
     Shape(FVector(1682,-3450,5),FVector(125,260,10),TEXT("Stone"),true);
+    // Closed-gate latch and runoff grating: visual only, no prompt or unlock state.
+    Shape(FVector(1695,-3450,116),FVector(13,56,13),TEXT("Dark"));
+    Shape(FVector(1686,-3450,101),FVector(10,20,27),TEXT("Dark"));
+    Shape(FVector(1650,-3450,10.2f),FVector(80,170,.4f),TEXT("Dark"));
+    for(float Y=-3520;Y<=-3380;Y+=14) Shape(FVector(1650,Y,11),FVector(78,3,2),TEXT("WoodLight"));
     // Shops remain exterior-only: smithy west, alchemist east of the closed gate.
     auto Shop=[&](FVector P,const TCHAR* Name)
     {
@@ -153,12 +193,31 @@ void BuildDockPlaza(UWorld* World)
             Shape(P+FVector(X,195,133),FVector(113,35,12),TEXT("Stone"));
         }
         for(float S : {-1.f,1.f}) Shape(P+FVector(0,S*90,520),FVector(640,221,16),TEXT("Roof"),true,nullptr,FRotator(0,0,S*29));
+        for(int32 I=0;I<12;++I)
+        {
+            const float Y=-165+I*30.f, H=FMath::Max(5.f,100-FMath::Abs(Y)*.555f);
+            for(float X : {-294.f,294.f}) Shape(P+FVector(X,Y,470+H*.5f),FVector(8,30,H),TEXT("Wood"));
+        }
+        Shape(P+FVector(0,0,574),FVector(648,16,12),TEXT("Dark"));
+        for(float X : {-180.f,180.f})
+        {
+            Shape(P+FVector(X,213,261),FVector(111,61,8),TEXT("Roof"),false,nullptr,FRotator(0,0,-8));
+            for(float DX : {-45.f,45.f}) Beam(P+FVector(X+DX,186,225),P+FVector(X+DX,237,259),5,TEXT("Wood"));
+        }
+        for(float X=-45;X<=45;X+=15) Shape(P+FVector(X,195,111),FVector(13,3,211),TEXT("WoodLight"));
+        for(float Z : {40.f,180.f}) Shape(P+FVector(0,199,Z),FVector(104,5,8),TEXT("Dark"));
+        Shape(P+FVector(39,201,102),FVector(6,8,16),TEXT("Dark"));
         Shape(P+FVector(-215,-65,545),FVector(62,62,180),TEXT("Stone"));
         Shape(P+FVector(0,195,300),FVector(270,10,42),TEXT("Wood"));
         Sign(P+FVector(0,204,301),Name);
     };
     Shop(FVector(-865,-3940,0),TEXT("SMITHY"));
     Shop(FVector(1280,-3940,0),TEXT("ALCHEMIST"));
+    // Wayfinding is mounted on existing lamp posts, outside both clear approaches.
+    Shape(FVector(530,-2219,232),FVector(190,7,38),TEXT("Wood"));
+    Sign(FVector(530,-2213,232),TEXT("FOUNTAIN PLAZA"));
+    Shape(FVector(530,-2241,232),FVector(190,7,38),TEXT("Wood"));
+    Sign(FVector(530,-2247,232),TEXT("DOCKS"),-90);
     // Anvil and forge niche; no crafting or invented NPC speech.
     Shape(FVector(-1020,-3620,37),FVector(75,65,74),TEXT("Wood"),true);
     Shape(FVector(-1020,-3620,87),FVector(98,38,24),TEXT("Dark"),true);
