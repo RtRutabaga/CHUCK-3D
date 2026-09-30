@@ -509,14 +509,27 @@ void AChuckCharacter::JumpPressed()
     }
     if (Gait == EGait::WallRun || (Movement->IsFalling() && Now < WallCoyoteUntil)) { WallJump(); return; }
     if (Movement->IsFalling()) { AirJumpPressedAt = Now; return; }  // buffered for a wall reached just after
-    // Strafing sideways: jump is a side jump that way (user 2026-09-29). Uses
-    // the axes as of last frame: strafe is held before the jump, and reading
-    // the bindings here would pick up stale values once input is switched off.
-    const bool bGrounded = Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Land || Gait == EGait::Strafe;
-    if (StrafeHeld() && bGrounded && FMath::Abs(SideInput()) > .3f && FMath::Abs(SideInput()) >= FMath::Abs(InputForward))
+    // Jump with a strafe key down is a side jump that way, whatever else is
+    // held (user 2026-09-30: running forward, press strafe + jump together to
+    // hop sideways). Sideways only, never diagonal. The keys are read from the
+    // controller's live key state, so a strafe key pressed on the same frame
+    // as jump counts (action events run before that frame's axes; the axis
+    // bindings themselves go stale once input is switched off).
+    const bool bGrounded = Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Land || Gait == EGait::Strafe || Gait == EGait::Turn;
+    float Side = FMath::Sign(StrafeKeys);
+    bool bTrigger = StrafeTrigger > .3f || bTestStrafe;
+    if (const APlayerController* PC = Cast<APlayerController>(Controller))
+    {
+        const float Keys = (PC->IsInputKeyDown(EKeys::E) ? 1.f : 0.f) - (PC->IsInputKeyDown(EKeys::Q) ? 1.f : 0.f);  // DefaultInput.ini StrafeKeys
+        if (Keys != 0) Side = Keys;
+        bTrigger = bTrigger || PC->GetInputAnalogKeyState(EKeys::Gamepad_LeftTriggerAxis) > .3f;
+    }
+    // Held LT: the stick's sideways push picks the side.
+    if (Side == 0 && bTrigger && FMath::Abs(InputRight) > .3f) Side = FMath::Sign(InputRight);
+    if (Side != 0 && bGrounded)
     {
         ++StrafeJumps;
-        DodgeToward(FVector2D(FMath::Sign(SideInput()), 0));
+        DodgeToward(FVector2D(Side, 0));
         return;
     }
     Jump();

@@ -1348,7 +1348,44 @@ void ADockGameMode::Tick(float DeltaSeconds)
             else
             {
                 KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E,IE_Released,0));
-                KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+                // Next: running forward on W, press Q and Space on the same frame.
+                Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,0,36)); Chuck->SetRunHeld(true);
+                KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
+                bKeyMeasured=false; bLocoFlag=false; KeyJumpSide=0; KeySide=0; LocoValue=0; StrafeJumpsBase=Chuck->GetStrafeJumps();
+                TestStage=94; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==94)
+    {
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        const bool bJumping=FCString::Strcmp(Chuck->GetGaitName(),TEXT("SideJump"))==0;
+        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f)
+        {
+            LocoValue=Chuck->GetVelocity().Size2D();   // speed when the keys go down
+            LocoPrevious=Chuck->GetActorLocation();
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Q,IE_Pressed,1));
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::SpaceBar,IE_Pressed,1));
+        }
+        if(StageTime>=1.05f && StageTime-DeltaSeconds<1.05f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::SpaceBar,IE_Released,0));
+        if(StageTime>1.f && StageTime<1.2f && bJumping) bLocoFlag=true;     // side jump straight away
+        if(StageTime>1.f && bJumping && !bKeyMeasured && Chuck->GetCharacterMovement()->IsMovingOnGround() && FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious)>20.f)
+        {
+            KeyJumpSide=static_cast<float>(LocoPrevious.Y-Chuck->GetActorLocation().Y);   // leftward = -Y (camera yaw 0)
+            KeySide=static_cast<float>(Chuck->GetActorLocation().X-LocoPrevious.X);       // forward drift
+            bKeyMeasured=true;
+        }
+        if(StageTime>2.4f)
+        {
+            const float Authored=ChuckClipData::SideLongLateralSpeed*2.f*ChuckClipData::SideLongVerticalSpeed/(980.f*Chuck->GetCharacterMovement()->GravityScale);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_FORWARD_STRAFE_JUMP_MEASURE speed_at_press_cm_s=%.1f side_jump_at_once=%d side_cm=%.2f authored_cm=%.2f forward_cm=%.2f long=%d strafe_jumps=%d"),
+                LocoValue,bLocoFlag ? 1 : 0,KeyJumpSide,Authored,KeySide,Chuck->WasLongSideJump() ? 1 : 0,Chuck->GetStrafeJumps()-StrafeJumpsBase);
+            Check(LocoValue>.9f*ChuckClipData::RunSpeed && bLocoFlag && bKeyMeasured && FMath::Abs(KeyJumpSide-Authored)<15.f && FMath::Abs(KeySide)<10.f && Chuck->WasLongSideJump(),
+                TEXT("running forward, strafe + jump pressed together is a side jump (sideways, not diagonal)"));
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Q,IE_Released,0));
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
+            KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+            {
                 // Next: walk gently off the harbour wall's north face: he grabs it.
                 Chuck->SetRunHeld(false); Chuck->ResetToDock();
                 Chuck->SetActorLocation(FVector(-40,-350,115+32.5f),false,nullptr,ETeleportType::TeleportPhysics);

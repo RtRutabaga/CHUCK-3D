@@ -1355,3 +1355,17 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - How they sound on the user's speakers, and the loudness balance against the music.
   - Whether the stone surface is actually detected on Codex's streets (no test walks there).
 - **Remaining:** no sounds yet for wall-run steps, hang grab, pull-up, mantle or shimmy.
+
+## Fifty-second pass — strafe key + jump is always a side jump
+
+- **User request (2026-09-30):** holding forward plus strafe moves diagonally (good). Jump pressed while a strafe key is held should always be a side jump (not a new diagonal jump), even with forward held, so they can run forward and side jump by pressing strafe and jump together.
+- **Change** (`ChuckCharacter::JumpPressed`):
+  - On the ground gaits (now including Turn), a held strafe key gives a side jump that way whatever else is held; the "mostly sideways" condition is gone.
+  - Q/E and LT are read from the player controller's live key state (`IsInputKeyDown(Q/E)`, `GetInputAnalogKeyState(LeftTriggerAxis)`). A strafe key pressed on the same frame as jump therefore counts, and stale axis bindings can't fire it after input is switched off. The keys mirror `DefaultInput.ini`.
+  - With LT, the stick's sideways push picks the side; LT with the stick straight ahead jumps normally.
+  - The side jump is the usual square-up sideways jump (short from a walk, long with run latched), with no forward carry.
+- **Tests:** **108** (107 with `-NoCapture`). Stage 94: W held on real keys with run latched from (−240, 0); at 1.0 s Q and Space are pressed on the same frame → side jump at once, long, about 125 cm to the left, under 10 cm forward drift.
+- **Verified:**
+  - Worktree `-MotionCapture` and `-NoGroom` **108/108**; uncapped with and without groom 0 failures.
+  - Stage 94: speed 225 at the press, side jump at once, 119 cm sideways (116 uncapped) against 126 authored, forward 0.00.
+- **Remaining:** Q+Space from a standstill is also a side jump now (it was before only when strafing sideways). The C + stick side jump is unchanged. Not played by the user.

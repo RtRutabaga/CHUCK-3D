@@ -18,7 +18,7 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
 | Run (225 cm/s): tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
-| Strafe: hold to sidestep facing the camera (Counter-Strike style); forward/back still work while held. With run latched it is a bounding shuffle. Jump while strafing sideways = side jump that way: short (~55 cm) from a walk, long (~125 cm) from a run | Hold Q (left) / E (right); A/D also strafe while Q or E is held | Hold LT, left stick |
+| Strafe: hold to sidestep facing the camera (Counter-Strike style); forward/back still work while held. With run latched it is a bounding shuffle. Jump with a strafe key held = side jump that way, even while running forward (press strafe and jump together to hop sideways out of a run; it is always sideways, never diagonal): short (~55 cm) from a walk, long (~125 cm) from a run | Hold Q (left) / E (right); A/D also strafe while Q or E is held | Hold LT, left stick |
 | Jump (while running: a leap that lands into the stride) | Space | A |
 | Wall run: jump into a wall while pushing toward it, or side jump into it (three steps up). Between two facing walls the camera turns side-on and follows the climb | Space + stick toward the wall, or C + stick sideways | A + stick, or B + stick sideways |
 | Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
