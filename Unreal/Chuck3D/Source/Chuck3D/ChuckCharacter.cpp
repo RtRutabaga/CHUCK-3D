@@ -11,6 +11,7 @@
 #include "Components/InputComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "AnimationRuntime.h"
 #include "Engine/SkeletalMesh.h"
@@ -102,6 +103,19 @@ AChuckCharacter::AChuckCharacter()
     Smoke->SetUsingAbsoluteRotation(true);
     Smoke->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Smoke->SetCastShadow(false);
+    // Exhaled smoke: soft puffs on instanced spheres, each fading on its own
+    // (per-instance custom data 0 = opacity; M_SmokePuff). World-space, so a
+    // breath stays where it was breathed.
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> PuffMesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> PuffMaterial(TEXT("/Game/Characters/Chuck/V1/Cigarette/M_SmokePuff.M_SmokePuff"));
+    ExhaleSmoke = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ExhaleSmoke"));
+    ExhaleSmoke->SetupAttachment(GetCapsuleComponent());
+    ExhaleSmoke->SetUsingAbsoluteLocation(true); ExhaleSmoke->SetUsingAbsoluteRotation(true); ExhaleSmoke->SetUsingAbsoluteScale(true);
+    ExhaleSmoke->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ExhaleSmoke->SetCastShadow(false);
+    ExhaleSmoke->NumCustomDataFloats = 1;
+    ExhaleSmoke->SetStaticMesh(PuffMesh.Object);
+    ExhaleSmoke->SetMaterial(0, PuffMaterial.Object);
     Boom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     Boom->SetupAttachment(GetRootComponent());
     Boom->SetUsingAbsoluteRotation(true);
@@ -164,6 +178,8 @@ void AChuckCharacter::BeginPlay()
     Load(StepRunWood, TEXT("SFX_Step_Run_Wood"), 6); Load(StepRunStone, TEXT("SFX_Step_Run_Stone"), 6);
     Load(JumpSounds, TEXT("SFX_Jump"), 3); Load(LandSounds, TEXT("SFX_Land"), 3);
     Load(SlashSounds, TEXT("SFX_Slash"), 4); Load(RollSounds, TEXT("SFX_Roll"), 2);
+    Load(ExhaleSounds, TEXT("SFX_Exhale"), 2);
+    NextExhaleAt = GetWorld()->GetTimeSeconds() + FMath::FRandRange(3.f, 6.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SFX_LOADED %d"), GetSfxLoaded());
     // Stance locks are world positions: pose after this frame's movement.
     GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
@@ -937,6 +953,61 @@ void AChuckCharacter::AddCigarettes(int32 Count)
         else ++CigaretteCount;
     }
 }
+void AChuckCharacter::Exhale()
+{
+    const float Now = GetWorld()->GetTimeSeconds();
+    ++Exhales;
+    ExhaleUntil = Now + ExhaleLength; ExhaleCarry = 0;
+    NextExhaleAt = Now + ExhaleEvery + FMath::FRandRange(0.f, 5.f);
+    // A breath out: barely there in the mix.
+    if (ExhaleSounds.Num()) UGameplayStatics::PlaySound2D(this, ExhaleSounds[FMath::RandRange(0, ExhaleSounds.Num() - 1)], .14f, FMath::FRandRange(.95f, 1.05f));
+}
+void AChuckCharacter::UpdateExhale(float DeltaSeconds)
+{
+    const float Now = GetWorld()->GetTimeSeconds();
+    // Only when calm: on his feet, not mid-move, not away in the light.
+    const bool bCalm = !GetCharacterMovement()->IsFalling() && !bAstralHidden
+        && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Land || Gait == EGait::Strafe || Gait == EGait::Turn);
+    if (Now >= NextExhaleAt && ExhaleUntil < Now) { if (bCalm) Exhale(); else NextExhaleAt = Now + 1.f; }
+    // The stream: about 16 puffs a second from the corner of his mouth where
+    // the cigarette sits, forward and a little down, easing off at the end.
+    if (Now < ExhaleUntil && GetMesh()->DoesSocketExist(TEXT("socket_cigarette")))
+    {
+        const float Left = (ExhaleUntil - Now) / ExhaleLength;
+        ExhaleCarry += DeltaSeconds * 16.f;
+        const FVector Mouth = GetMesh()->GetSocketLocation(TEXT("socket_cigarette"));
+        const FVector Out = (GetActorForwardVector() + FVector(0, 0, -.25f)).GetSafeNormal();
+        while (ExhaleCarry >= 1.f)
+        {
+            ExhaleCarry -= 1.f;
+            FSmokePuff Puff;
+            Puff.Position = Mouth + Out * 2.f;
+            Puff.Velocity = Out * FMath::FRandRange(30.f, 50.f) * (.4f + .6f * Left) + FMath::VRand() * 6.f + GetVelocity() * .5f;
+            Puff.Age = 0; Puff.Life = FMath::FRandRange(1.7f, 2.4f); Puff.Size = FMath::FRandRange(.8f, 1.2f);
+            SmokePuffs.Add(Puff);
+            ++SmokePuffsSpawned;
+        }
+    }
+    // Each puff slows, swells, rises and thins away.
+    ExhaleSmoke->ClearInstances();
+    for (int32 I = SmokePuffs.Num() - 1; I >= 0; --I)
+    {
+        FSmokePuff& Puff = SmokePuffs[I];
+        Puff.Age += DeltaSeconds;
+        if (Puff.Age >= Puff.Life) { SmokePuffs.RemoveAtSwap(I); continue; }
+        Puff.Velocity *= FMath::Max(0.f, 1.f - 1.6f * DeltaSeconds);
+        Puff.Velocity.Z += (Puff.Age > .25f ? 14.f : 0.f) * DeltaSeconds;
+        Puff.Position += Puff.Velocity * DeltaSeconds + FVector(2.f, 1.f, 0) * DeltaSeconds;   // a faint dock breeze
+    }
+    for (const FSmokePuff& Puff : SmokePuffs)
+    {
+        const float U = Puff.Age / Puff.Life;
+        const float Diameter = FMath::Lerp(3.f, 18.f, 1.f - FMath::Square(1.f - U)) * Puff.Size;   // cm
+        const int32 Index = ExhaleSmoke->AddInstance(FTransform(FRotator(0, Puff.Age * 40.f, 0), Puff.Position, FVector(Diameter / 100.f)), true);
+        ExhaleSmoke->SetCustomDataValue(Index, 0, .3f * FMath::SmoothStep(0.f, .1f, Puff.Age) * FMath::Pow(1.f - U, 1.5f), false);
+    }
+    ExhaleSmoke->MarkRenderStateDirty();
+}
 const TCHAR* AChuckCharacter::GetAstralName() const
 {
     static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning")};
@@ -1565,5 +1636,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
+    UpdateExhale(DeltaSeconds);
     if (GetActorLocation().Z < -100) ResetToDock();
 }

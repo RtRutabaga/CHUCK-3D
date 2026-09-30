@@ -1805,6 +1805,21 @@ void ADockGameMode::Tick(float DeltaSeconds)
                     FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Summon_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
         if(StageTime>12.f || (LocoValue>=0 && StageTime-LocoValue>3.2f))
         {
+            // Then a breath of smoke, close in from the front three-quarter.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-150,-20,36));
+            Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+            Chuck->SetOrbitPitch(-5.f);
+            TestStage=107; StageTime=0;
+        }
+    }
+    else if(TestStage==107)
+    {
+        if(StageTime>=.4f && StageTime-DeltaSeconds<.4f) Chuck->Exhale();
+        for(const float Shot : {.7f,1.f,1.4f,1.9f,2.6f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Exhale_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>3.f)
+        {
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));
@@ -2016,6 +2031,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             using ESfx=AChuckCharacter::ESfx;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_SFX_MEASURE loaded=%d steps=%d jumps=%d lands=%d slashes=%d rolls=%d"),Chuck->GetSfxLoaded(),
                 Chuck->GetSfxCount(ESfx::Step),Chuck->GetSfxCount(ESfx::Jump),Chuck->GetSfxCount(ESfx::Land),Chuck->GetSfxCount(ESfx::Slash),Chuck->GetSfxCount(ESfx::Roll));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_EXHALE_MEASURE exhales=%d puffs=%d"),Chuck->GetExhales(),Chuck->GetSmokePuffsSpawned());
+            Check(Chuck->GetExhales()>=5 && Chuck->GetSmokePuffsSpawned()>=Chuck->GetExhales()*8,TEXT("Chuck exhales smoke every so often on his own"));
             Check(Chuck->GetSfxLoaded()==36 && Chuck->GetSfxCount(ESfx::Step)>20 && Chuck->GetSfxCount(ESfx::Jump)>0 && Chuck->GetSfxCount(ESfx::Land)>0
                 && Chuck->GetSfxCount(ESfx::Slash)>0 && Chuck->GetSfxCount(ESfx::Roll)>0,TEXT("movement sound effects load and play (steps, jump, land, slash, roll)"));
         }

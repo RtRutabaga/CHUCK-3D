@@ -349,6 +349,12 @@ def main():
     # The chime as he appears (about 1.0 s): soft glass partials, long decay.
     add(summon_sfx, modes(rng, 1.4, [880, 2425, 4750, 7010], [.9, .5, .25, .12], [.5, .3, .15, .06]), 1.0, .6)
     write('SFX_AstralSummon_00', finish(summon_sfx), entries, 'astral_summon')
+    for i in range(2):
+        # The exhale (2026-09-30): a slow, soft breath out - air through the
+        # lips, no voice. Very quiet in the mix.
+        rng = random.Random(f'exhale-{i}')
+        out = mul(filt(noise(rng, .9), ('bp', rng.uniform(900, 1200), .6), ('lp', 2600, .7)), env(.9, .12, .22, .2))
+        write(f'SFX_Exhale_{i:02d}', finish(out), entries, 'exhale')
     (OUT / 'manifest.json').write_text(json.dumps({'sample_rate': SR, 'peak_dbfs': -3, 'generator': 'Tools/gen_chuck_sfx.py', 'sounds': entries}, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SFX_READY', len(entries), 'sounds')
 

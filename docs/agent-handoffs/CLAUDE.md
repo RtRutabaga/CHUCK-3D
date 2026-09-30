@@ -1508,3 +1508,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The summon's column facets slightly (32 sides).
   - The camera turn to his front is only for the capture; in play the camera sits behind him.
   - Not played by the user.
+
+## Fifty-seventh pass — exhaled smoke
+
+- **User (2026-09-30):**
+  - "Since Chuck is always smoking can you have him exhale smoke periodically."
+  - Also: no Astral Anchors; the map spawn is the respawn point (recorded in `PROJECT-BRIEF.md`).
+- **Runtime** (`ChuckCharacter`):
+  - Every 7–12 s, only when calm (Idle, Start, Loop, Stop, Land, Strafe or Turn, on the ground, not hidden), otherwise retried each second, `Exhale()` streams puffs for 0.7 s at 16/s from `socket_cigarette` (the mouth corner), forward and slightly down, easing off. They inherit half his velocity.
+  - Each puff is world-space. Over 1.7–2.4 s it slows (drag 1.6/s), rises after 0.25 s, drifts in a faint breeze, swells from 3 to 18 cm and fades (peak opacity 0.3; the first try at 0.42 read as a cotton-wool ball).
+  - Puffs are instanced `/Engine/BasicShapes/Sphere` with per-instance opacity (custom data 0).
+  - `SFX_Exhale` ×2: a soft filtered breath, no voice, at 0.14.
+- **Material** (`Tools/import_smoke_puff.py`, `-ExecutePythonScript`): `M_SmokePuff`.
+  - Translucent unlit pale grey, with opacity = per-instance fade × (1 − Fresnel)^1.6 × the cigarette's smoke texture panning up. Instancing enabled.
+  - No new meshes. 59 sounds in all.
+- **Tests:** **118** (117 with `-NoCapture`).
+  - Final stage: at least 5 exhales across the smoke test, and at least 8 puffs each. Measured 20/209 capped and 12–13 uncapped (a shorter run).
+  - Capture 107: one breath, close in from the front three-quarter.
+- **Verified:** worktree `-MotionCapture` and `-NoGroom` **118/118**; uncapped with and without groom 0 failures. Evidence: `V1/Review/runtime_Exhale_{100,140,190}.png`.
+- **Remaining:**
+  - No inhale (the idle clip's chin lift stays unsynchronised), and the ember doesn't brighten on a draw.
+  - Smoke comes from the mouth corner, not the nose.
+  - Not played by the user.

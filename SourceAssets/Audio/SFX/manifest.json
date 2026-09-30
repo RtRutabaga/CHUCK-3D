@@ -384,6 +384,18 @@
    "file": "SFX_AstralSummon_00.wav",
    "kind": "astral_summon",
    "duration_s": 2.4
+  },
+  {
+   "name": "SFX_Exhale_00",
+   "file": "SFX_Exhale_00.wav",
+   "kind": "exhale",
+   "duration_s": 0.9
+  },
+  {
+   "name": "SFX_Exhale_01",
+   "file": "SFX_Exhale_01.wav",
+   "kind": "exhale",
+   "duration_s": 0.9
   }
  ]
 }

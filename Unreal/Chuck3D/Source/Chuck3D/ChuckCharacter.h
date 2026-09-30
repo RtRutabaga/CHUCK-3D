@@ -11,6 +11,7 @@ class UChuckAnimInstance;
 class USkeletalMesh;
 class UStaticMeshComponent;
 class USoundBase;
+class UInstancedStaticMeshComponent;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -139,6 +140,14 @@ public:
     /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
     UStaticMeshComponent* GetCigarette() const { return Cigarette; }
     UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
+    /** Breathe out a stream of smoke now (user 2026-09-30: he's always
+     *  smoking; he exhales every 7-12 s on his own when calm). */
+    void Exhale();
+    int32 GetExhales() const { return Exhales; }
+    int32 GetSmokePuffsSpawned() const { return SmokePuffsSpawned; }
+    int32 GetSmokePuffsLive() const { return SmokePuffs.Num(); }
+    static constexpr float ExhaleEvery = 7.f;      // s, plus up to 5 s more
+    static constexpr float ExhaleLength = .7f;     // s of breath
     /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb or Strafe. */
     const TCHAR* GetGaitName() const;
 protected:
@@ -150,6 +159,16 @@ private:
     UPROPERTY() USkeletalMesh* PlainMesh;
     UPROPERTY() UStaticMeshComponent* Cigarette;
     UPROPERTY() UStaticMeshComponent* Smoke;
+    UPROPERTY() UInstancedStaticMeshComponent* ExhaleSmoke;
+    UPROPERTY() TArray<USoundBase*> ExhaleSounds;
+    struct FSmokePuff { FVector Position; FVector Velocity; float Age; float Life; float Size; };
+    TArray<FSmokePuff> SmokePuffs;
+    float NextExhaleAt = 5.f;
+    float ExhaleUntil = -1.f;
+    float ExhaleCarry = 0.f;
+    int32 Exhales = 0;
+    int32 SmokePuffsSpawned = 0;
+    void UpdateExhale(float DeltaSeconds);
     float ViewYaw = 0;
     /** One continuous GTA-style orbit instead of two switched cameras. */
     float LookPitch = -48;

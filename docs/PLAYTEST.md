@@ -48,6 +48,8 @@ Rats (2026-09-30): five big dock rats roam the cargo wharf, the timber yard and 
 - **The tell:** it stops, crouches and hisses for about half a second, then lunges.
 - **Dodging:** roll, side-jump, or step back out of reach. A bite knocks Chuck back about a metre, and he can't be bitten again for a second.
 
+Smoking (2026-09-30): every 7–12 seconds, when he's calm (standing, walking, running or strafing, not mid-move), Chuck breathes out a stream of smoke from the cigarette corner of his mouth, with a barely audible breath. It drifts, swells, rises and thins over about 2 s, and stays where it was breathed.
+
 Sanity (2026-09-30, as in the 2D game): the row of five cigarettes top-right is Chuck's Sanity.
 - **Bites:** each rat bite burns one cigarette.
 - **Refilling:** picked-up cigarettes refill the bar first; once it's full they add to the count below it, like coins.
