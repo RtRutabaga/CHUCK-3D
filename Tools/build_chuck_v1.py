@@ -1072,6 +1072,73 @@ def slash_clip(side):
         return r
     return pose, steps
 
+# Low rake (2026-09-30): the claw slash for low targets - grass tufts and jars
+# now, small rats later. The runtime picks it automatically when what the
+# strike would reach is low, so it's the same button and timing. Same
+# footwork and step-in as the slash; Chuck sinks into a crouch and folds
+# forward from the hips while the wrist rides an arc from out and up on the
+# striking side, down through the ground just ahead (about 8 cm up, 25 cm
+# out), and across low to the far side. The arc is given as directions from
+# the (moving) shoulder at 0.92 of the arm's reach, so it adapts to the pose.
+SLASH_LOW_CROUCH = 7.   # cm the hips sink at the cut
+def slash_low_clip(side):
+    sign = 1 if side == 'L' else -1
+    other = 'R' if side == 'L' else 'L'
+    steps = {other: [(.06, .22, (RB[other][0] + SLASH_STEP, RB[other][1], RB[other][2]))],
+             side: [(.28, .42, (RB[side][0] + SLASH_STEP, RB[side][1], RB[side][2]))]}
+    dirs = [(.12, -.25, sign * .75, .05),
+            (.17, .35, sign * .75, -.55),
+            (.22, .62, sign * .12, -.78),
+            (.27, .45, -sign * .55, -.72),
+            (.34, .2, -sign * .65, -.6)]
+    def pose(phase, f):
+        t = f / FPS * SLASH_RATE
+        wind = smoothstep(t, 0., .12) * (1 - smoothstep(t, .12, .22))
+        strike = smoothstep(t, .12, .26) * (1 - smoothstep(t, .36, .54))
+        low = smoothstep(t, .0, .16) * (1 - smoothstep(t, .34, .55))   # the crouch
+        twist = sign * 22 * wind - sign * 30 * strike
+        carriage(0., 0.)
+        poser.translate('pelvis', (1.5 * low, 0, -SLASH_LOW_CROUCH * low - 1. * wind))
+        poser.rotate('pelvis', 'Y', 14 * low)               # hips fold forward
+        poser.rotate('pelvis', 'Z', .4 * twist)
+        poser.rotate('spine_01', 'Y', 16 * low)
+        poser.rotate('spine_02', 'Y', 8 * low)
+        poser.rotate('spine_02', 'Z', .35 * twist)
+        poser.rotate('chest', 'Z', .45 * twist)
+        poser.rotate('chest', 'X', sign * 8 * strike)        # shoulder drops into the cut
+        poser.rotate('head', 'Z', -.6 * twist)
+        poser.rotate('neck', 'Y', -14 * low)                 # gaze on the ground just ahead, not the floor below
+        poser.rotate('head', 'Y', -10 * low)
+        poser.rotate(f'upperarm_{other}', 'Y', 20 * strike + 8 * wind)
+        poser.rotate(f'upperarm_{other}', 'X', (1 if other == 'L' else -1) * 12 * low)   # out for balance
+        poser.rotate(f'lowerarm_{other}', 'Y', -40 * (strike + .5 * wind))
+        curl(other, 30 * strike)
+        for i, b in enumerate(TAIL):
+            poser.rotate(b, 'Z', -.25 * twist * (i + 1) / 3)
+            poser.rotate(b, 'Y', -3 * low)                   # tail lifts a touch as he folds
+        poser.update()
+        d = slash_travel(t)
+        r = 0.
+        for s in 'LR':
+            (x, y, lift), h, fp, tp = plan_foot(t, RB[s], steps[s])
+            cx, cy = to_component(x, y, d, 0.)
+            r = max(r, poser.leg(s, Vector((cx, cy, NEUTRAL_BALL[s].z + lift)), fp, tp, heading=h))
+        w = smoothstep(t, .02, .1) * (1 - smoothstep(t, .36, .55))
+        if w > 1e-3:
+            fk_wrist = poser.head(f'hand_{side}')
+            fk_elbow = poser.head(f'lowerarm_{side}')
+            shoulder = poser.head(f'upperarm_{side}')
+            reach = (fk_elbow - shoulder).length + (fk_wrist - fk_elbow).length
+            u = min(max(t, dirs[0][0]), dirs[-1][0])
+            target = shoulder + Vector(hermite(dirs, u)).normalized() * reach * .92
+            fk_pole = (fk_elbow - (shoulder + fk_wrist) / 2).normalized()
+            pole = fk_pole.lerp(Vector((-.2, sign * .6, -.4)).normalized(), w)   # elbow out: a raking arm
+            poser.arm(side, fk_wrist.lerp(target, w), pole=tuple(pole))
+            curl(side, -30 * w)
+        ik_goals()
+        return r
+    return pose, steps
+
 # ---- parkour (user vision 2026-09-28: "feels like you're doing something
 # difficult but it's not actually that hard"). Jump into a wall and Chuck runs
 # up it for three steps; jump again to kick off it toward another wall.
@@ -1393,6 +1460,18 @@ for name, side in (('SlashRight', 'R'), ('SlashLeft', 'L')):
         'striking_paw': f'hand_{side}',
         'upper_body_root': 'spine_01',
         'notes': 'Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw.'})
+for name, side in (('SlashLowRight', 'R'), ('SlashLowLeft', 'L')):
+    fn, steps = slash_low_clip(side)
+    frames = round(SLASH_T / SLASH_RATE * FPS) + 1
+    fast = lambda v: round(v / SLASH_RATE, 4)
+    author(name, frames, fn, False, {
+        'capsule_travel_cm_per_frame': [round(slash_travel(f / FPS * SLASH_RATE), 4) for f in range(frames)],
+        'travel_cm': SLASH_STEP, 'duration_travel_s': fast(SLASH_T), 'playback_rate_vs_base': SLASH_RATE,
+        'stance_intervals_s': {f'foot_{s}': [[fast(a), fast(b)] for a, b in stance_from_steps(steps[s], SLASH_T)] for s in 'LR'},
+        'events_s': {k: fast(v) for k, v in {'wind_up': .12, 'strike': .22, 'follow_through': .34, 'chain_from': .3, 'recovered': SLASH_T}.items()},
+        'striking_paw': f'hand_{side}', 'crouch_cm': SLASH_LOW_CROUCH,
+        'upper_body_root': 'spine_01',
+        'notes': 'Low rake: the claw slash for low targets (grass, jars, small rats), chosen by the runtime. Same timing, footwork and travel as the slash; crouched and folded forward, the wrist sweeping through the ground just ahead.'})
 
 author('WallRun', WALL_RUN['period_frames'], wall_run, True, {
     'stride_cycle_cm': WALL_RUN['stride_cm'], 'stance_fraction': WALL_RUN['stance_fraction'],

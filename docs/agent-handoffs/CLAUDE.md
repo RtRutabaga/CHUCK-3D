@@ -1399,3 +1399,34 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No cigarette drops or pickups yet, and tufts don't regrow.
   - Stone-and-grass patches were placed by trace only. Not every patch has been looked at in game (the garden and timber yard weren't captured).
   - Not played by the user.
+
+## Fifty-fourth pass — low rake, jars, cigarette pickups and counter
+
+- **User (2026-09-30):** proceed with the suggested next steps: the low rake, cigarette drops/pickups/counter, then jars. Design note: Chuck isn't strong. He breaks grass and jars (urns in later post-prototype maps), never crates or barrels. Recorded in `PROJECT-BRIEF.md` and `CHARACTER-PLAN.md`.
+- **Low rake** (`Tools/build_chuck_v1.py` `slash_low_clip`): `SlashLowRight`/`SlashLowLeft`.
+  - Same timing, footwork and travel as the slash. The hips sink 7 cm and fold forward (pelvis 14°, spine 16°/8°). The wrist arc is given as directions from the moving shoulder at 0.92 of the arm's reach: out and up, down through the ground about 25 cm ahead, across low. Gaze stays on the ground ahead. Leg reach 0.92 (unchanged).
+  - Chosen in `PickPaw` when `LowTargetInReach` (an unbroken breakable ahead within reach + 10 cm, top below feet + 35 cm). Paw order and beat unchanged. Stance maps to the slash's (same steps).
+  - Review: `V1/Review/motion_SlashLowRight.png`.
+  - Known (also in the normal slash): at the deepest frames the pulled-back arm opens a grey fur gap at the jacket's rear armhole.
+- **Jar** (`Tools/build_clay_jar.py`, `import_clay_jar.py` via `-ExecutePythonScript`):
+  - 25.5 cm glazed terracotta storage jar: a seamless lathe with a dark shoulder glaze and drips, 5760 tris. `M_ClayJar` uses vertex colour squared, with roughness and specular from glaze alpha.
+  - 12 shards: three bands with jittered cut lines, each with its origin at its centre. The rest offsets are generated into `ClayJarData.h`.
+  - `AClayJar`: a pawn-only capsule blocker (traces ignore it, so he can't mantle onto it). `Break` hides the jar, rebuilds it from shards at their rest poses, and bursts them outward and along the swing with tumble, one bounce and settling; they sink away after 2.4 s. It plays `SFX_JarBreak` and drops its cigarettes. `SpawnDockJars` places 10 (1–3 cigarettes each, seeded).
+- **Cigarettes:**
+  - `AChuckBreakable::DropContents` pops each cigarette out as an `ACigarettePickup`: `SM_Cigarette` at 1.6×, with Ash and Ember slots set to paper (fresh, unlit), tumbling, then lying flat.
+  - Pocketed within 26 cm once 0.35 s old: `Chuck->AddCigarettes`, plus `SFX_Pickup` (paper tick and crinkle) at 0.35.
+  - About one grass tuft in three holds one.
+  - HUD: a "CIGARETTES n" box top-right, in the existing panel style.
+- **Sounds:** `SFX_JarBreak_00..02` (dull clay crack, low ring, shard knocks, a landing scatter) and `SFX_Pickup_00..02`. The earlier sounds are unchanged. 45 in all; a preview reel was made.
+- **Tests:** **113** (112 with `-NoCapture`).
+  - Stage 95 now requires the low rake, and that the cut tuft's cigarette comes out.
+  - Stage 97: walk over a cigarette → collected, counter +1, none left.
+  - Stage 98: jar 40 cm ahead. Walking into it stops at x −224 with no mantle. The low rake breaks it into 12 shards with the sound and 2 cigarettes, then he walks through.
+  - Capture 96: a tuft and a jar broken by one rake.
+  - Flurry names now match "Right" in either variant.
+- **Verified:** worktree `-MotionCapture` and `-NoGroom` **113/113**; uncapped with and without groom 0 failures. Evidence: `Props/Grass/Review/runtime_Loot_{046,060,130}.png` (counter, shatter, shards and a cigarette on the stones) and `Props/Jar/review_jar.png`.
+- **Remaining:**
+  - The front-on capture doesn't show the rake's depth well.
+  - Jars at the market and timber yard weren't looked at in game.
+  - No regrowth or respawn. Cigarettes don't persist beyond the session.
+  - Not played by the user.

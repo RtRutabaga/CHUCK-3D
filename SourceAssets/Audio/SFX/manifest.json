@@ -276,6 +276,42 @@
    "file": "SFX_Shred_02.wav",
    "kind": "shred",
    "duration_s": 0.45
+  },
+  {
+   "name": "SFX_JarBreak_00",
+   "file": "SFX_JarBreak_00.wav",
+   "kind": "jar_break",
+   "duration_s": 0.75
+  },
+  {
+   "name": "SFX_JarBreak_01",
+   "file": "SFX_JarBreak_01.wav",
+   "kind": "jar_break",
+   "duration_s": 0.75
+  },
+  {
+   "name": "SFX_JarBreak_02",
+   "file": "SFX_JarBreak_02.wav",
+   "kind": "jar_break",
+   "duration_s": 0.75
+  },
+  {
+   "name": "SFX_Pickup_00",
+   "file": "SFX_Pickup_00.wav",
+   "kind": "pickup",
+   "duration_s": 0.2
+  },
+  {
+   "name": "SFX_Pickup_01",
+   "file": "SFX_Pickup_01.wav",
+   "kind": "pickup",
+   "duration_s": 0.2
+  },
+  {
+   "name": "SFX_Pickup_02",
+   "file": "SFX_Pickup_02.wav",
+   "kind": "pickup",
+   "duration_s": 0.2
   }
  ]
 }

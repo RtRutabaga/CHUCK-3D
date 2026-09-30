@@ -984,6 +984,134 @@
    "notes": "Claw slash from and back to the aplomb stance. Standing: the runtime moves the capsule along capsule_travel_cm_per_frame. Moving: the runtime plays the spine_01 subtree over the stride. Chains into the other paw."
   },
   {
+   "name": "SlashLowRight",
+   "file": "Animations/AS_Chuck_SlashLowRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0,
+    0.3293,
+    1.7706,
+    3.9736,
+    6.5151,
+    8.9719,
+    10.921,
+    11.9392,
+    12.0,
+    12.0,
+    12.0,
+    12.0
+   ],
+   "travel_cm": 12.0,
+   "duration_travel_s": 0.4,
+   "playback_rate_vs_base": 1.375,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.0436
+     ],
+     [
+      0.16,
+      0.4
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.2036
+     ],
+     [
+      0.3055,
+      0.4
+     ]
+    ]
+   },
+   "events_s": {
+    "wind_up": 0.0873,
+    "strike": 0.16,
+    "follow_through": 0.2473,
+    "chain_from": 0.2182,
+    "recovered": 0.4
+   },
+   "striking_paw": "hand_R",
+   "crouch_cm": 7.0,
+   "upper_body_root": "spine_01",
+   "notes": "Low rake: the claw slash for low targets (grass, jars, small rats), chosen by the runtime. Same timing, footwork and travel as the slash; crouched and folded forward, the wrist sweeping through the ground just ahead."
+  },
+  {
+   "name": "SlashLowLeft",
+   "file": "Animations/AS_Chuck_SlashLowLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 12,
+   "frame_count": 13,
+   "duration_s": 0.4,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9181,
+   "capsule_travel_cm_per_frame": [
+    0.0,
+    0.0,
+    0.3293,
+    1.7706,
+    3.9736,
+    6.5151,
+    8.9719,
+    10.921,
+    11.9392,
+    12.0,
+    12.0,
+    12.0,
+    12.0
+   ],
+   "travel_cm": 12.0,
+   "duration_travel_s": 0.4,
+   "playback_rate_vs_base": 1.375,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.2036
+     ],
+     [
+      0.3055,
+      0.4
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.0436
+     ],
+     [
+      0.16,
+      0.4
+     ]
+    ]
+   },
+   "events_s": {
+    "wind_up": 0.0873,
+    "strike": 0.16,
+    "follow_through": 0.2473,
+    "chain_from": 0.2182,
+    "recovered": 0.4
+   },
+   "striking_paw": "hand_L",
+   "crouch_cm": 7.0,
+   "upper_body_root": "spine_01",
+   "notes": "Low rake: the claw slash for low targets (grass, jars, small rats), chosen by the runtime. Same timing, footwork and travel as the slash; crouched and folded forward, the wrist sweeping through the ground just ahead."
+  },
+  {
    "name": "WallRun",
    "file": "Animations/AS_Chuck_WallRun.fbx",
    "fps": 30,

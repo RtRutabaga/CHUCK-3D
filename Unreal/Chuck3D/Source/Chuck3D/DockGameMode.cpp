@@ -1,6 +1,11 @@
 #include "DockGameMode.h"
 #include "DockSetting.h"
 #include "GrassTuft.h"
+#include "ClayJar.h"
+#include "CigarettePickup.h"
+#include "ClayJarData.h"
+#include "EngineUtils.h"
+
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
 #include "TimerManager.h"
@@ -409,6 +414,7 @@ void ADockGameMode::StartPlay()
     BuildDockSetting(World);
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
+    AClayJar::SpawnDockJars(World);
     // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
@@ -1050,12 +1056,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             int32 Rights=0, Repeats=0, LongestRun=1, Run=1;
             for(int32 I=0; I<FlurryNames.Num(); ++I)
             {
-                Rights+=FlurryNames[I]==TEXT("SlashRight");
+                Rights+=FlurryNames[I].Contains(TEXT("Right"));
                 if(I>0) { const bool bSame=FlurryNames[I]==FlurryNames[I-1]; Repeats+=bSame; Run=bSame ? Run+1 : 1; LongestRun=FMath::Max(LongestRun,Run); }
             }
             float Shortest=1e3f, Longest=0;
             for(int32 I=1; I<FlurryStarts.Num(); ++I) { const float Gap=FlurryStarts[I]-FlurryStarts[I-1]; Shortest=FMath::Min(Shortest,Gap); Longest=FMath::Max(Longest,Gap); }
-            FString Order; for(const FString& Name : FlurryNames) Order+=Name==TEXT("SlashRight") ? TEXT("R") : TEXT("L");
+            FString Order; for(const FString& Name : FlurryNames) Order+=Name.Contains(TEXT("Right")) ? TEXT("R") : TEXT("L");
             UE_LOG(LogTemp,Display,TEXT("CHUCK_FLURRY_MEASURE strikes=%d order=%s gaps_s=[%.3f,%.3f] chain_s=%.3f samples=%d max_cm_s=%.4f gait=%s"),FlurryNames.Num(),*Order,Shortest,Longest,ChuckClipData::SlashChainAt,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
             Check(FlurryNames.Num()>=5 && Rights>0 && Rights<FlurryNames.Num() && Repeats>0 && LongestRun<=2 && Shortest>ChuckClipData::SlashChainAt-.02f && Longest<ChuckClipData::SlashChainAt+.05f,TEXT("held slash flurries on a steady beat with a random paw order"));
             Check(LocoSamples>=5 && LocoMaxSlip<1.f && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Idle"))==0,TEXT("flurry paws hold and it settles on release"));
@@ -1422,7 +1428,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TestTufts.Reset();
             for(const float Dx : {30.f,-60.f,110.f}) TestTufts.Add(AGrassTuft::Plant(GetWorld(),FVector2D(-240+Dx,-20),0,0.f,1.f));
-            BreaksBase=Chuck->GetSlashBreaks(); LocoValue=0; bLocoFlag=false;
+            if(TestTufts[0].IsValid()) TestTufts[0]->Cigarettes=1;
+            BreaksBase=Chuck->GetSlashBreaks(); LocoValue=0; bLocoFlag=false; KeySide=0; PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
             TestStage=95; StageTime=0;
         }
     }
@@ -1431,6 +1438,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
         const bool bPlanted=TestTufts.Num()==3 && TestTufts[0].IsValid() && TestTufts[1].IsValid() && TestTufts[2].IsValid();
         if(StageTime>=.2f && StageTime-DeltaSeconds<.2f) Chuck->Slash();
         if(StageTime>=.25f && StageTime-DeltaSeconds<.25f) Chuck->SlashReleased();
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) bLocoFlag=FString(Chuck->GetSlashName()).Contains(TEXT("Low"));
+        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f) KeySide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;   // out, or already pocketed
         if(bPlanted) LocoValue=FMath::Max(LocoValue,static_cast<float>(TestTufts[0]->GetClippingsFlying()));
         if(StageTime>=1.2f && StageTime<3.2f) Chuck->AddMovementInput(FVector(1,0,0),1);   // walk on through the far tuft
         if(StageTime>3.4f)
@@ -1438,12 +1447,60 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const bool bCut=bPlanted && TestTufts[0]->IsBroken();
             const bool bBehind=bPlanted && !TestTufts[1]->IsBroken();
             const bool bThrough=bPlanted && !TestTufts[2]->IsBroken() && Chuck->GetActorLocation().X>TestTufts[2]->GetActorLocation().X+20.f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_GRASS_MEASURE planted=%d tufts_in_play=%d cut=%d clippings=%.0f sound=%d behind_intact=%d walked_through=%d breaks=%d x=%.1f"),
-                bPlanted ? 1 : 0,AChuckBreakable::All().Num(),bCut ? 1 : 0,LocoValue,bPlanted && TestTufts[0]->PlayedShredSound() ? 1 : 0,bBehind ? 1 : 0,bThrough ? 1 : 0,Chuck->GetSlashBreaks()-BreaksBase,Chuck->GetActorLocation().X);
-            Check(bCut && LocoValue>=10 && TestTufts[0]->PlayedShredSound() && Chuck->GetSlashBreaks()==BreaksBase+1,TEXT("a slash shreds the grass tuft in front: stubble, a spray of clippings, a rustle"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GRASS_MEASURE planted=%d tufts_in_play=%d low_rake=%d cut=%d clippings=%.0f sound=%d cigarettes_out=%.0f behind_intact=%d walked_through=%d breaks=%d x=%.1f"),
+                bPlanted ? 1 : 0,AChuckBreakable::All().Num(),bLocoFlag ? 1 : 0,bCut ? 1 : 0,LocoValue,bPlanted && TestTufts[0]->PlayedShredSound() ? 1 : 0,KeySide,bBehind ? 1 : 0,bThrough ? 1 : 0,Chuck->GetSlashBreaks()-BreaksBase,Chuck->GetActorLocation().X);
+            Check(bLocoFlag && bCut && LocoValue>=10 && TestTufts[0]->PlayedShredSound() && Chuck->GetSlashBreaks()==BreaksBase+1 && KeySide==1,
+                TEXT("a low rake shreds the grass tuft in front: stubble, a spray of clippings, a rustle, and its cigarette pops out"));
             Check(bBehind && bThrough && AChuckBreakable::All().Num()>40,TEXT("tufts outside the swing are untouched, Chuck walks through grass, and the docks are planted"));
             for(auto& Tuft : TestTufts) if(Tuft.IsValid()) Tuft->Destroy();
             TestTufts.Reset();
+            for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
+            // Next: a cigarette lying 60 cm ahead: walk over it to pocket it.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            ACigarettePickup::Spawn(GetWorld(),FVector(-180,-20,1),FVector::ZeroVector,0.f);
+            PickupsBase=Chuck->GetCigarettes(); LocoValue=0;
+            TestStage=97; StageTime=0;
+        }
+    }
+    else if(TestStage==97)
+    {
+        if(StageTime>=.5f && StageTime<2.f) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>2.2f)
+        {
+            const int32 Left=ACigarettePickup::CountInWorld(GetWorld());
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PICKUP_MEASURE collected=%d left_in_world=%d count=%d x=%.1f"),Chuck->GetCigarettes()-PickupsBase,Left,Chuck->GetCigarettes(),Chuck->GetActorLocation().X);
+            Check(Chuck->GetCigarettes()==PickupsBase+1 && Left==0,TEXT("walking over a cigarette pockets it and the counter goes up"));
+            // Next: a clay jar 40 cm ahead. Walk into it (blocked, no hop onto
+            // it), then slash it: shards, a crack, two cigarettes.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            TestJar=AClayJar::Place(GetWorld(),FVector2D(-240+40,-20),0.f,2);
+            BreaksBase=Chuck->GetSlashBreaks(); MantlesBase=Chuck->GetMantles(); LocoValue=0; bLocoFlag=false; KeySide=0;
+            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
+            TestStage=98; StageTime=0;
+        }
+    }
+    else if(TestStage==98)
+    {
+        const bool bJar=TestJar.IsValid();
+        if(StageTime<1.f) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f) LocoValue=Chuck->GetActorLocation().X;   // stopped at the jar
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { Chuck->Slash(); Chuck->SlashReleased(); }
+        if(StageTime>=1.3f && StageTime-DeltaSeconds<1.3f) bLocoFlag=FString(Chuck->GetSlashName()).Contains(TEXT("Low"));
+        if(bJar && StageTime>1.2f) KeySide=FMath::Max(KeySide,static_cast<float>(TestJar->GetShardsFlying()));
+        if(StageTime>=2.f && StageTime-DeltaSeconds<2.f) KeyJumpSide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;
+        if(StageTime>=2.2f && StageTime<3.4f) Chuck->AddMovementInput(FVector(1,0,0),1);   // on through where it stood
+        if(StageTime>3.6f)
+        {
+            const float JarX=-200.f;
+            const bool bBlocked=LocoValue<JarX-ClayJarData::Radius-10.f && Chuck->GetMantles()==MantlesBase;
+            const bool bBroken=bJar && TestJar->IsBroken();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_JAR_MEASURE blocked_at_x=%.1f mantles=%d low_rake=%d broken=%d shards=%.0f sound=%d cigarettes_out=%.0f passed=%d x=%.1f"),
+                LocoValue,Chuck->GetMantles()-MantlesBase,bLocoFlag ? 1 : 0,bBroken ? 1 : 0,KeySide,bJar && TestJar->PlayedBreakSound() ? 1 : 0,KeyJumpSide,Chuck->GetActorLocation().X>JarX+20.f ? 1 : 0,Chuck->GetActorLocation().X);
+            Check(bBlocked,TEXT("a clay jar is solid: Chuck stops at it and doesn't hop onto it"));
+            Check(bLocoFlag && bBroken && KeySide==ClayJarData::ShardCount && TestJar->PlayedBreakSound() && KeyJumpSide==2 && Chuck->GetActorLocation().X>JarX+20.f,
+                TEXT("a low rake breaks the jar into shards with a crack, its cigarettes pop out, and the way is clear"));
+            if(bJar) TestJar->Destroy();
+            for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1576,6 +1633,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             TestTufts.Reset();
             for(const FVector& Spot : {FVector(30,0,0),FVector(20,45,1),FVector(55,-40,2),FVector(-15,-50,1),FVector(80,25,0)})
                 TestTufts.Add(AGrassTuft::Plant(GetWorld(),FVector2D(-240+Spot.X,-20+Spot.Y),static_cast<int32>(Spot.Z),Spot.X*7.f,1.f));
+            TestJar=AClayJar::Place(GetWorld(),FVector2D(-240+34,-20-26),30.f,2);
             TestStage=96; StageTime=0;
         }
     }
@@ -1589,6 +1647,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             for(auto& Tuft : TestTufts) if(Tuft.IsValid()) Tuft->Destroy();
             TestTufts.Reset();
+            if(TestJar.IsValid()) TestJar->Destroy();
+            for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));
@@ -1818,6 +1878,9 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("CHUCK  /  WATERDEEP DOCKS"),FLinearColor(.94f,.88f,.75f),30,27,GEngine->GetSmallFont(),1.25f);
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
+    // Cigarettes collected: the currency, kept small and quiet in the corner.
+    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),Canvas->SizeX-218,18,200,40);
+    DrawText(FString::Printf(TEXT("CIGARETTES   %d"),Chuck->GetCigarettes()),FLinearColor(.94f,.88f,.75f),Canvas->SizeX-206,28,GEngine->GetSmallFont(),1.15f);
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());

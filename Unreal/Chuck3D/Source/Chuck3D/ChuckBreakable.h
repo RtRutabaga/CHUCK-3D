@@ -21,14 +21,19 @@ public:
     /** Reach test footprint: radius around the actor origin and height above it (cm). */
     float GetHitRadius() const { return HitRadius; }
     float GetHitHeight() const { return HitHeight; }
-    /** Cigarettes released when it breaks (pickups: next pass). */
+    /** The actor origin is the middle of the thing (jars), not its base (grass). */
+    bool IsCentred() const { return bCentred; }
+    /** Cigarettes released when it breaks: they pop out as pickups. */
     int32 Cigarettes = 0;
     /** Struck by a slash sweeping along Swing (world, unit). */
     virtual void Break(const FVector& Swing) { bBroken = true; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+    /** Pop the cigarettes out (called by Break). */
+    void DropContents();
     bool bBroken = false;
     float HitRadius = 15.f;
     float HitHeight = 25.f;
+    bool bCentred = false;
 };

@@ -61,7 +61,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -825,10 +825,18 @@ AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
     ++SlashStrikes;
     PlaySfx(SlashSounds, ESfx::Slash, SlashVolume);
     SlashHitAt = GetWorld()->GetTimeSeconds() + SlashStrike;   // what it reaches breaks on the cut
-    if (bFirst) { SamePawRun = 0; return SlashRandom.FRand() < .5f ? EClip::SlashRight : EClip::SlashLeft; }
-    const bool bSame = SamePawRun == 0 && SlashRandom.FRand() < .5f;
-    SamePawRun = bSame ? 1 : 0;
-    return bSame ? Previous : (Previous == EClip::SlashRight ? EClip::SlashLeft : EClip::SlashRight);
+    const bool bPreviousRight = Previous == EClip::SlashRight || Previous == EClip::SlashLowRight;
+    bool bRight;
+    if (bFirst) { SamePawRun = 0; bRight = SlashRandom.FRand() < .5f; }
+    else
+    {
+        const bool bSame = SamePawRun == 0 && SlashRandom.FRand() < .5f;
+        SamePawRun = bSame ? 1 : 0;
+        bRight = bSame ? bPreviousRight : !bPreviousRight;
+    }
+    // Low targets (grass, jars, small rats) get the low rake: same paw, same beat.
+    if (LowTargetInReach()) return bRight ? EClip::SlashLowRight : EClip::SlashLowLeft;
+    return bRight ? EClip::SlashRight : EClip::SlashLeft;
 }
 void AChuckCharacter::Slash()
 {
@@ -871,7 +879,7 @@ void AChuckCharacter::SlashHit()
     const float Feet = static_cast<float>(Location.Z) - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const FVector Ahead = GetActorForwardVector().GetSafeNormal2D();
     const FVector Right = FVector::CrossProduct(FVector::UpVector, Ahead);
-    const bool bRightPaw = FCString::Strcmp(GetSlashName(), TEXT("SlashRight")) == 0;
+    const bool bRightPaw = FCString::Strstr(GetSlashName(), TEXT("Right")) != nullptr;
     const FVector Swing = (Right * (bRightPaw ? -1.f : 1.f) + Ahead * .6f).GetSafeNormal();
     for (const TWeakObjectPtr<AChuckBreakable>& Entry : AChuckBreakable::All())
     {
@@ -879,17 +887,36 @@ void AChuckCharacter::SlashHit()
         if (!Target || Target->IsBroken()) continue;
         const FVector To = Target->GetActorLocation() - Location;
         const float Reach = static_cast<float>(To.Size2D()) - Target->GetHitRadius();
-        const float TargetZ = static_cast<float>(Target->GetActorLocation().Z);
+        const float TargetZ = static_cast<float>(Target->GetActorLocation().Z) - (Target->IsCentred() ? Target->GetHitHeight() * .5f : 0.f);
         if (Reach > SlashReach || TargetZ > Feet + 45.f || TargetZ + Target->GetHitHeight() < Feet - 10.f) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;   // behind him, unless touching
         Target->Break(Swing);
         ++SlashBreaks;
     }
 }
+bool AChuckCharacter::LowTargetInReach() const
+{
+    const FVector Location = GetActorLocation();
+    const float Feet = static_cast<float>(Location.Z) - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const FVector Ahead = GetActorForwardVector().GetSafeNormal2D();
+    for (const TWeakObjectPtr<AChuckBreakable>& Entry : AChuckBreakable::All())
+    {
+        const AChuckBreakable* Target = Entry.Get();
+        if (!Target || Target->IsBroken()) continue;
+        const FVector To = Target->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - Target->GetHitRadius();
+        const float Bottom = static_cast<float>(Target->GetActorLocation().Z) - (Target->IsCentred() ? Target->GetHitHeight() * .5f : 0.f);
+        if (Reach <= SlashReach + 10.f && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) >= .3f || Reach <= 5.f)
+            && Bottom + Target->GetHitHeight() < Feet + 35.f && Bottom > Feet - 20.f)
+            return true;
+    }
+    return false;
+}
 const TCHAR* AChuckCharacter::GetSlashName() const
 {
     const EClip Clip = Gait == EGait::Slash ? Base : (LayerTime >= 0 ? LayerClip : EClip::Num);
-    return Clip == EClip::SlashRight ? TEXT("SlashRight") : Clip == EClip::SlashLeft ? TEXT("SlashLeft") : TEXT("");
+    return Clip == EClip::SlashRight ? TEXT("SlashRight") : Clip == EClip::SlashLeft ? TEXT("SlashLeft")
+        : Clip == EClip::SlashLowRight ? TEXT("SlashLowRight") : Clip == EClip::SlashLowLeft ? TEXT("SlashLowLeft") : TEXT("");
 }
 void AChuckCharacter::UpdateSlashLayer(float DeltaSeconds)
 {
@@ -1352,7 +1379,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     else if (Gait == EGait::Turn) Clip = Base == EClip::TurnLeft90 ? &TurnLeftStance : &TurnRightStance;
     else if (Gait == EGait::Roll) Clip = &RollStance;
     else if (Gait == EGait::SideJump) Clip = &SideJumpStance;
-    else if (Gait == EGait::Slash) Clip = Base == EClip::SlashRight ? &SlashRightStance : &SlashLeftStance;
+    else if (Gait == EGait::Slash) Clip = (Base == EClip::SlashRight || Base == EClip::SlashLowRight) ? &SlashRightStance : &SlashLeftStance;   // same footwork
     else if (Gait == EGait::Strafe && Base == EClip::StrafeLeft) Clip = &StrafeLeftStance;
     else if (Gait == EGait::Strafe && Base == EClip::StrafeRight) Clip = &StrafeRightStance;
     else if (Gait == EGait::Strafe && Base == EClip::StrafeRunLeft) Clip = &StrafeRunLeftStance;

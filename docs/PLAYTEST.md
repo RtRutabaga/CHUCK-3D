@@ -35,7 +35,13 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
-Grass (2026-09-30): about 50 scruffy weed tufts grow around the docks. There's a patch by the start, and more along the tavern front and warehouse wall, round the cargo stacks and mooring plinth, along the quay edge by the pier, in the Chandlers' Row garden and in the timber yard. Chuck walks through them. A slash (LMB / X) shreds any tuft within about 40 cm in front of him, from the ground up to his chest: it drops to stubble, clippings spray along the swing, and it rustles. Cut tufts stay cut until you restart. They'll hold cigarettes once pickups arrive.
+Grass (2026-09-30): about 50 scruffy weed tufts grow around the docks. There's a patch by the start, and more along the tavern front and warehouse wall, round the cargo stacks and mooring plinth, along the quay edge by the pier, in the Chandlers' Row garden and in the timber yard. Chuck walks through them. A slash (LMB / X) shreds any tuft within about 40 cm in front of him, from the ground up to his chest: it drops to stubble, clippings spray along the swing, and it rustles. Cut tufts stay cut until you restart. About one tuft in three hides a cigarette.
+
+Jars and cigarettes (2026-09-30):
+- **Jars:** ten glazed clay jars stand by the tavern door, along the warehouse wall, in front of the Chandlers' Row market stalls and in the timber yard. They're solid (Chuck can't walk through or hop onto them). A slash breaks one into shards with a crack, and it drops 1–3 cigarettes.
+- **Cigarettes:** they pop out and lie on the ground; walk over one to pocket it. The count is in the top-right corner.
+- **Low rake:** when a tuft or jar is in reach, the slash automatically becomes a crouched low rake.
+- **What breaks:** Chuck isn't strong. He breaks grass and jars (urns in later maps), not crates or barrels.
 
 Sound (2026-09-29): Chuck's paws tap on planks and cobbles (a different sound for each), his jacket flaps on jumps and settles on landings, the claw slash swishes and the roll tumbles, all under the soundtrack. The effects are generated in code (`SourceAssets/Audio/README.md`); tell us if any are too loud, too quiet or the wrong feel.
 

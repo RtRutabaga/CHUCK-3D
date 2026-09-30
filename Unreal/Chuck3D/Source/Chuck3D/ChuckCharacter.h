@@ -79,7 +79,10 @@ public:
     static constexpr float WallJumpUp = 230.f;     // cm/s up (standing jump: 170)
     static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
-    /** Breakables (grass tufts, later jars and rats) broken by the slash so far. */
+    /** Cigarettes collected (the currency; HUD counter). */
+    int32 GetCigarettes() const { return CigaretteCount; }
+    void AddCigarettes(int32 Count) { CigaretteCount += Count; }
+    /** Breakables (grass tufts, jars, later small rats) broken by the slash so far. */
     int32 GetSlashBreaks() const { return SlashBreaks; }
     // The slash's reach for breakables: from his centre to a target's edge (cm),
     // ground to chest. Generous on purpose ("hard-looking but easy").
@@ -136,7 +139,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe };
     EGait Gait = EGait::Idle;
@@ -172,6 +175,9 @@ private:
     FRandomStream SlashRandom;
     int32 SlashStrikes = 0;
     int32 SlashBreaks = 0;
+    int32 CigaretteCount = 0;
+    /** Something low and breakable is in the strike's reach: rake low (user 2026-09-30). */
+    bool LowTargetInReach() const;
     float SlashHitAt = -1;   // world time of the pending strike's cut
     void SlashHit();
     int32 SamePawRun = 0;

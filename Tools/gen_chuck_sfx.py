@@ -242,6 +242,37 @@ def main():
         add(out, mul(cloth(rng, .4, rng.uniform(1600, 2200), sweep=-.35, flutter=.6), env(.4, .01, .09, .03)), .01, .55)
         add(out, swish(rng, .14, .05, 700, 1800, 900), 0, .25)
         write(f'SFX_Shred_{i:02d}', finish(out), entries, 'shred')
+    for i in range(3):
+        # Clay jar breaking (2026-09-30): a dull fired-clay crack (terracotta
+        # rings briefly and low - no porcelain ping), shards knocking apart,
+        # then a light scatter as the pieces land on the stones.
+        rng = random.Random(f'jar-{i}')
+        out = buf(.75)
+        crack = mul(noise(rng, .06), env(.06, .0005, .006))
+        add(out, filt(crack, ('hp', 700, .7)), 0, 1.)
+        base = rng.uniform(620, 760)
+        add(out, modes(rng, .2, [base, base * 1.63, base * 2.41, base * 3.3], [.045, .03, .018, .011], [.6, .4, .25, .15]), 0, .7)
+        add(out, filt(mul(noise(rng, .08), env(.08, .001, .02)), ('lp', 350, .7)), 0, .8)     # the body giving way
+        for _ in range(12):
+            f0 = rng.uniform(1400, 3600)
+            tick = modes(rng, .05, [f0, f0 * 1.5], [.012, .007], [.6, .3])
+            add(out, tick, rng.uniform(.005, .12), rng.uniform(.15, .4))
+        for _ in range(9):
+            f0 = rng.uniform(1800, 4200)
+            add(out, modes(rng, .04, [f0, f0 * 1.7], [.01, .006], [.5, .25]), rng.uniform(.28, .6), rng.uniform(.06, .18))
+        write(f'SFX_JarBreak_{i:02d}', finish(out), entries, 'jar_break')
+    for i in range(3):
+        # Cigarette pickup: a soft paper tick and a brief crinkle as it's
+        # pocketed. Quiet and dry: a small reward, not a chime.
+        rng = random.Random(f'pickup-{i}')
+        out = buf(.2)
+        tap = mul(noise(rng, .02), env(.02, .0005, .003))
+        add(out, filt(tap, ('bp', rng.uniform(2400, 3200), 1.5)), 0, .8)
+        for k in range(6):
+            fib = mul(noise(rng, .01), env(.01, .0003, .0012))
+            add(out, filt(fib, ('hp', 3000, .7), ('bp', rng.uniform(4000, 7000), 1.8)), .012 + k * rng.uniform(.006, .012), rng.uniform(.2, .45))
+        add(out, mul(cloth(rng, .12, 1500, flutter=.3), env(.12, .01, .03)), .03, .25)    # into the jacket
+        write(f'SFX_Pickup_{i:02d}', finish(out), entries, 'pickup')
     (OUT / 'manifest.json').write_text(json.dumps({'sample_rate': SR, 'peak_dbfs': -3, 'generator': 'Tools/gen_chuck_sfx.py', 'sounds': entries}, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SFX_READY', len(entries), 'sounds')
 

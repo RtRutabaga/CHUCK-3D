@@ -78,6 +78,7 @@ void AGrassTuft::Break(const FVector& Swing)
     }
     FlyTime = 0;
     SetActorTickEnabled(true);
+    DropContents();
     if (ShredSounds.Num())
     {
         UGameplayStatics::PlaySound2D(this, ShredSounds[FMath::RandRange(0, ShredSounds.Num() - 1)], ShredVolume, FMath::FRandRange(.95f, 1.05f));
@@ -155,7 +156,11 @@ void AGrassTuft::SpawnDockGrass(UWorld* World)
         for (int32 I = 0; I < Patch.Count; ++I)
         {
             const FVector2D At = Patch.Center + FVector2D(Random.FRandRange(-1.f, 1.f) * Patch.Extent.X, Random.FRandRange(-1.f, 1.f) * Patch.Extent.Y);
-            if (Plant(World, At, Random.RandRange(0, 2), Random.FRandRange(0.f, 360.f), Random.FRandRange(.85f, 1.2f))) ++Planted;
+            const int32 Shape = Random.RandRange(0, 2);
+            const float Yaw = Random.FRandRange(0.f, 360.f), Size = Random.FRandRange(.85f, 1.2f);
+            // About one tuft in three hides a cigarette (Zelda's grass and rupees).
+            const bool bCigarette = Random.FRand() < .33f;
+            if (AGrassTuft* Tuft = Plant(World, At, Shape, Yaw, Size)) { Tuft->Cigarettes = bCigarette ? 1 : 0; ++Planted; }
         }
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_GRASS_PLANTED %d"), Planted);
