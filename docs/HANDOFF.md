@@ -2,6 +2,8 @@
 
 ## Current launcher and integration status
 
+**Workflow update:** the user now runs Codex and Claude sequentially and explicitly requests direct work on root `main`. Read v3 in `AGENT-WORKFLOW.md` and the updated `CLAUDE.md`. Preserve unfinished changes; use one root launcher and update its verified package for playable milestones. Existing worktrees remain intact as optional development copies. This documentation-only update does not change the game or require rebuilding it.
+
 **Update 12 (Codex, September 29 — near-field dock details):** runtime `42f33d7` reuses existing beveled crate/rope meshes in the loading court and adds platform boards, loading-door joinery, high barred warehouse windows, a net-drying frame, tavern rear windows/timber bays and continuous drain grates. Existing cargo proxy dimensions are preserved, with proxies hidden when the visual mesh is available. Added dressing is noncolliding. No character/controller, binary source or material changes; no installs or asset regeneration.
 
 Built successfully (`Local/dock-detail-build.log`). Packaged rendered checks passed **99/99** plus **9 ground / 6 capsule-route checks**, no material fallback failures (`Local/verify-package-20260929-133159.log`). Four setting captures were visually reviewed (`Local/dock-detail-capture.log`; package `Saved/Screenshots/Windows/Setting`). MotionCapture and physical-controller testing were not repeated. Repeated architecture, basic roof/material treatment and simplified water remain unfinished; this does not meet the reference graphics target.
