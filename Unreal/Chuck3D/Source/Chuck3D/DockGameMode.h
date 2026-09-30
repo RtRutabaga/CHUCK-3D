@@ -55,6 +55,9 @@ private:
     int32 AstralBase = 0;
     int32 RespawnsBase = 0;
     int32 AstralSeen = 0;
+    TWeakObjectPtr<class ADockNPC> Worker;
+    TWeakObjectPtr<class ADockNPC> TalkNPC;
+    int32 TalkSeen = 0;
     int32 StrafeJumpsBase = 0;
     int32 DropHangsBase = 0;
     bool bKeyMeasured = false;

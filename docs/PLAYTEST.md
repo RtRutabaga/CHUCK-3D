@@ -31,7 +31,8 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way (short from a walk, long with run latched). Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
 | Turn view | Mouse left/right | Right stick left/right |
 | Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |
-| Center camera behind Chuck | F | Right-stick click |
+| Center camera behind Chuck | Middle mouse button | Right-stick click |
+| Talk (to an NPC with something to say; press again for the next line) | F | Y |
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
@@ -47,6 +48,8 @@ Rats (2026-09-30): five big dock rats roam the cargo wharf, the timber yard and 
 - **Hunting:** a rat that notices Chuck within about 3.5 m on its level scurries in. You can outrun it at a run.
 - **The tell:** it stops, crouches and hisses for about half a second, then lunges.
 - **Dodging:** roll, side-jump, or step back out of reach. A bite knocks Chuck back about a metre, and he can't be bitten again for a second.
+
+The dock worker (2026-09-30): the man by the tavern door near the start is now a rigged NPC: a 180 cm dockhand in shirtsleeves, a leather jerkin and a knit cap. He breathes, shifts his weight and glances about. Within about 4.5 m he turns his head to watch Chuck, looking down at the rat. He's solid, but Chuck can't run up him or climb him. He has no dialogue yet. F / Y talks to NPCs who have something to say (there are none in the map yet): a prompt shows in reach, each press advances the line, and Chuck stays put while listening. Keyboard camera re-centre is now the middle mouse button.
 
 Smoking (2026-09-30): every 7–12 seconds, when he's calm (standing, walking, running or strafing, not mid-move), Chuck breathes out a stream of smoke from the cigarette corner of his mouth, with a barely audible breath. It drifts, swells, rises and thins over about 2 s, and stays where it was breathed.
 

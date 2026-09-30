@@ -7,6 +7,8 @@
 #include "EngineUtils.h"
 #include "EnemyRat.h"
 #include "AstralSummon.h"
+#include "DockNPC.h"
+#include "Components/SkinnedMeshComponent.h"
 
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
@@ -328,20 +330,11 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("BenchTop"),FVector(-210,225,45),FVector(160,42,8),TEXT("WoodLight"));
     for(float X : {-275.f,-145.f}) Shape(TEXT("BenchLeg"),FVector(X,225,21),FVector(12,32,42),TEXT("Wood"));
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
-    // 180 cm dock worker, including boots and head. A scale prop, not an NPC system.
+    // The dock worker by the spawn (user 2026-09-30): a rigged, procedurally
+    // posed NPC (ADockNPC) replacing the old static 180 cm scale figure, on the
+    // same spot and facing the same way. Ambient: no dialogue yet (user's call).
     const FVector Human(90,200,0);
-    for(float X : {-12.f,12.f}) {
-        Shape(TEXT("HumanBoot"),Human+FVector(X,-4,7),FVector(19,34,14),TEXT("Dark"));
-        Shape(TEXT("HumanLeg"),Human+FVector(X,0,48),FVector(17,20,70),TEXT("Navy"));
-    }
-    Shape(TEXT("HumanBody"),Human+FVector(0,0,115),FVector(49,30,70),TEXT("Navy"),Sphere);
-    Shape(TEXT("HumanHead"),Human+FVector(0,0,165),FVector(25,25,30),TEXT("Skin"),Sphere);
-    for(float X : {-31.f,31.f}) Shape(TEXT("HumanArm"),Human+FVector(X,0,112),FVector(13,17,62),TEXT("Navy"),Sphere);
-
-    Shape(TEXT("WorkerCap"),Human+FVector(0,0,178),FVector(28,29,4),TEXT("Dark"),Sphere,false);
-    Shape(TEXT("WorkerBelt"),Human+FVector(0,0,89),FVector(44,29,5),TEXT("Wood"),nullptr,false);
-    for(float X : {-31.f,31.f}) Shape(TEXT("WorkerHand"),Human+FVector(X,0,79),FVector(10,12,15),TEXT("Skin"),Sphere,false);
-    if(WorkerMesh) Prop(TEXT("DockWorkerArt"),Human,WorkerMesh)->SetActorRotation(FRotator(0,-90,0));
+    ADockNPC::SpawnDockWorker(World,Human,-90.f);
     // Surface detail is nonblocking; the original simple collision remains predictable.
     FRandomStream DetailRandom(73);
     // Scanned paving supplies irregular joints without a second rectangular overlay.
@@ -504,6 +497,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
             bool bValid=Props.Num()==Expected;
             for(AActor* Actor:Props)
             {
+                if(FString(Tag)==TEXT("DockWorkerArt"))
+                {
+                    // The worker is a rigged NPC now: a skinned body, its own blocker.
+                    const auto* Skin=Actor->FindComponentByClass<USkinnedMeshComponent>();
+                    bValid &= Skin && Skin->GetSkinnedAsset() && Skin->GetCollisionEnabled()==ECollisionEnabled::NoCollision;
+                    continue;
+                }
                 const auto* Component=Actor->FindComponentByClass<UStaticMeshComponent>();
                 bValid &= Component && Component->GetStaticMesh() && Component->GetCollisionEnabled()==ECollisionEnabled::NoCollision;
             }
@@ -1605,6 +1605,72 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 AstralSeen,AAstralSummon::GetStarted()-AstralBase,LocoValue,KeySide,Chuck->GetSanity(),Chuck->GetMesh()->IsVisible() ? 1 : 0,Walked);
             Check(AstralSeen==7 && AAstralSummon::GetStarted()-AstralBase==2 && LocoValue>0 && KeySide<5.f && Chuck->GetSanity()==AChuckCharacter::MaxSanity && Walked>20.f,
                 TEXT("at zero Sanity Chuck vanishes into astral light and is summoned back at the start, whole, and walks on"));
+            // Next: the dock worker. Chuck 1.3 m in front of him: he looks down
+            // at the rat; then far off: he looks away. He's solid, not climbable.
+            Worker=nullptr;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Worker=Entry;
+            Chuck->ResetToDock();
+            if(Worker.IsValid()) Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorForwardVector()*130.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+            Chuck->SetActorRotation((-(Worker.IsValid() ? Worker->GetActorForwardVector() : FVector::ForwardVector)).Rotation());
+            LocoValue=0; KeySide=0; KeyJumpSide=0; bLocoFlag=false; WallRunsBase=Chuck->GetWallRuns(); MantlesBase=Chuck->GetMantles();
+            TestStage=108; StageTime=0;
+        }
+    }
+    else if(TestStage==108)
+    {
+        const bool bWorker=Worker.IsValid();
+        if(bWorker && StageTime>=1.5f && StageTime-DeltaSeconds<1.5f) { LocoValue=Worker->GetLookAngles().Y; bLocoFlag=Worker->IsWatchingChuck(); }
+        // Then walk into him and jump at him: blocked, no wall run, no mantle.
+        if(bWorker && StageTime>=1.6f && StageTime<3.2f) Chuck->AddMovementInput((Worker->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+        if(StageTime>=2.6f && StageTime-DeltaSeconds<2.6f) Chuck->JumpPressed();
+        if(bWorker && StageTime>=3.4f && StageTime-DeltaSeconds<3.4f)
+        {
+            KeySide=FVector::Dist2D(Chuck->GetActorLocation(),Worker->GetActorLocation());
+            Chuck->ResetToDock(); Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorForwardVector()*800.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+        }
+        if(bWorker && StageTime>=5.2f && StageTime-DeltaSeconds<5.2f) KeyJumpSide=Worker->IsWatchingChuck() ? 1.f : 0.f;
+        if(StageTime>5.4f)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_MEASURE present=%d watching_near=%d look_down_deg=%.1f blocked_at_cm=%.1f wall_runs=%d mantles=%d watching_far=%.0f talkable=%d"),
+                bWorker ? 1 : 0,bLocoFlag ? 1 : 0,LocoValue,KeySide,Chuck->GetWallRuns()-WallRunsBase,Chuck->GetMantles()-MantlesBase,KeyJumpSide,bWorker && Worker->CanTalk() ? 1 : 0);
+            Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
+            Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
+                TEXT("the worker is solid to Chuck but can't be run up or climbed"));
+            // Next: talk, on the real keys, with a stand-in NPC who has lines.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));
+            if(TalkNPC.IsValid()) { TalkNPC->DisplayName=TEXT("Stand-in"); TalkNPC->Lines={TEXT("First line."),TEXT("Second line.")}; }
+            auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+            Chuck->EnableInput(KeyPC); Chuck->SetLookLocked(true);
+            TalkSeen=0; LocoPrevious=Chuck->GetActorLocation();
+            TestStage=109; StageTime=0;
+        }
+    }
+    else if(TestStage==109)
+    {
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        auto Press=[&](const FKey& Key,float At){ if(StageTime>=At && StageTime-DeltaSeconds<At) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(Key,IE_Pressed,1)); if(StageTime>=At+.05f && StageTime-DeltaSeconds<At+.05f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(Key,IE_Released,0)); };
+        FString Speaker, Line;
+        if(StageTime>=.4f && StageTime-DeltaSeconds<.4f && Chuck->GetTalkPrompt()==TalkNPC.Get()) TalkSeen|=1;   // prompt in reach
+        Press(EKeys::F,.5f);
+        if(StageTime>=.7f && StageTime-DeltaSeconds<.7f && Chuck->GetDialogue(Speaker,Line) && Line==TEXT("First line.")) TalkSeen|=2;
+        // Trying to walk off mid-line does nothing.
+        if(StageTime>=.8f && StageTime<1.2f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::S,StageTime-DeltaSeconds<.8f ? IE_Pressed : IE_Repeat,1));
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::S,IE_Released,0)); if(FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious)<2.f) TalkSeen|=4; }
+        Press(EKeys::F,1.4f);
+        if(StageTime>=1.6f && StageTime-DeltaSeconds<1.6f && Chuck->GetDialogue(Speaker,Line) && Line==TEXT("Second line.") && Speaker==TEXT("Stand-in")) TalkSeen|=8;
+        Press(EKeys::F,1.8f);
+        if(StageTime>=2.f && StageTime-DeltaSeconds<2.f && !Chuck->IsTalking()) TalkSeen|=16;
+        if(StageTime>2.2f)
+        {
+            // The silent worker: no prompt beside him.
+            bool bSilent=true;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt")) && Entry->CanTalk()) bSilent=false;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TALK_MEASURE steps=%d worker_silent=%d"),TalkSeen,bSilent ? 1 : 0);
+            Check(TalkSeen==31 && bSilent,TEXT("F / Y talks to an NPC with lines: a prompt in reach, lines advance, Chuck stays put, then it closes; the silent worker has none"));
+            if(TalkNPC.IsValid()) TalkNPC->Destroy();
+            KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+            // Next: the cargo wharf.
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1818,6 +1884,29 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {.7f,1.f,1.4f,1.9f,2.6f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Exhale_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>3.f)
+        {
+            // Then the dock worker watching the rat: Chuck walks up to him
+            // (camera behind Chuck at rat height), stops, looks up.
+            Worker=nullptr;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Worker=Entry;
+            Chuck->ResetToDock();
+            if(Worker.IsValid())
+            {
+                const FVector Front=Worker->GetActorForwardVector();
+                Chuck->SetActorLocation(Worker->GetActorLocation()+Front*320.f+FVector(-60.f,0,0)-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+                Chuck->SetActorRotation((Worker->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D().Rotation());
+                Chuck->Recenter(); Chuck->SetOrbitPitch(-5.f);
+            }
+            TestStage=110; StageTime=0;
+        }
+    }
+    else if(TestStage==110)
+    {
+        if(Worker.IsValid() && StageTime<1.6f) Chuck->AddMovementInput((Worker->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+        for(const float Shot : {.3f,1.8f,2.6f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Worker_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
         if(StageTime>3.f)
         {
             // Then the cargo chimney, seen from the quay (north).
@@ -2066,7 +2155,23 @@ void ADockHUD::DrawHUD()
         DrawRect(bFull ? FLinearColor(.42f,.4f,.38f) : Spent,X+43,Y,3,10);         // ash at the tip
     }
     DrawText(FString::Printf(TEXT("CIGARETTES   %d"),Chuck->GetCigarettes()),FLinearColor(.94f,.88f,.75f),PanelX+12,72,GEngine->GetSmallFont(),1.1f);
+    // Talk: a quiet prompt near the top in reach (as in the 2D game), and a
+    // plain dialogue box above the controls while someone's speaking.
+    FString Speaker, Line;
+    if(Chuck->GetDialogue(Speaker,Line))
+    {
+        const float BoxW=FMath::Min(900.f,Canvas->SizeX-80.f), BoxX=(Canvas->SizeX-BoxW)*.5f, BoxY=Canvas->SizeY-190;
+        DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.92f),BoxX,BoxY,BoxW,108);
+        DrawText(Speaker.ToUpper(),FLinearColor(.77f,.67f,.94f),BoxX+20,BoxY+12,GEngine->GetSmallFont(),1.05f);
+        DrawText(Line,FLinearColor(.95f,.93f,.9f),BoxX+20,BoxY+40,GEngine->GetSmallFont(),1.3f);
+        DrawText(TEXT("F / Y"),FLinearColor(.6f,.62f,.66f),BoxX+BoxW-70,BoxY+84,GEngine->GetSmallFont(),.9f);
+    }
+    else if(Chuck->GetTalkPrompt())
+    {
+        const FString Prompt=TEXT("F / Y   Talk");
+        DrawText(Prompt,FLinearColor(.95f,.95f,.95f),Canvas->SizeX*.5f-60,120,GEngine->GetSmallFont(),1.2f);
+    }
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
+    DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    Middle mouse / R-stick click: center    F / Y: talk    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

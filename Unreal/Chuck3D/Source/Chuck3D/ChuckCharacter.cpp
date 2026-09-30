@@ -4,6 +4,7 @@
 #include "ChuckBreakable.h"
 #include "EnemyRat.h"
 #include "AstralSummon.h"
+#include "DockNPC.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
@@ -246,6 +247,7 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Jump", IE_Pressed, this, &AChuckCharacter::JumpPressed);
     Input->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     Input->BindAction("Recenter", IE_Pressed, this, &AChuckCharacter::Recenter);
+    Input->BindAction("Interact", IE_Pressed, this, &AChuckCharacter::Interact);
     Input->BindAction("Dodge", IE_Pressed, this, &AChuckCharacter::Dodge);
     Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
     Input->BindAction("Slash", IE_Pressed, this, &AChuckCharacter::Slash);
@@ -254,10 +256,10 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
 // A dodge owns the capsule; the stick is still read to choose the next move.
-void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!OwnsCapsule()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
-void AChuckCharacter::Right(float Value) { InputRight = Value; if (!OwnsCapsule()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
+void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
+void AChuckCharacter::Right(float Value) { InputRight = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
 // Q/E strafe: sideways along the camera without turning (the facing is held in UpdateMotion).
-void AChuckCharacter::StrafeKeysAxis(float Value) { StrafeKeys = Value; if (!OwnsCapsule()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
+void AChuckCharacter::StrafeKeysAxis(float Value) { StrafeKeys = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotationMatrix(FRotator(0,ViewYaw,0)).GetUnitAxis(EAxis::Y),Value); }
 void AChuckCharacter::Dodge()
 {
     // Action events dispatch before this frame's axis events: read the stick
@@ -360,6 +362,7 @@ void AChuckCharacter::ResetToDock()
     bRunJump = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
     Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
+    TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
@@ -477,7 +480,7 @@ namespace
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
     auto* Movement = GetCharacterMovement();
-    if (IsAstral()) return;
+    if (IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang) { DropFromHang(); return; }  // dodge while hanging: let go
     if (IsDodging() || Movement->IsFalling() || Gait == EGait::WallRun || Gait == EGait::Climb) return;
     // A dodge cuts a turn in place short (pressing a direction from standstill
@@ -522,7 +525,7 @@ void AChuckCharacter::JumpPressed()
 {
     auto* Movement = GetCharacterMovement();
     const float Now = GetWorld()->GetTimeSeconds();
-    if (Gait == EGait::Climb || IsAstral()) return;
+    if (Gait == EGait::Climb || IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang)
     {
         // From a hang: pulling away and jumping kicks off backward; otherwise climb up.
@@ -872,7 +875,7 @@ void AChuckCharacter::Slash()
         if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
         return;
     }
-    if (IsDodging() || IsAstral() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return;
+    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return;
     const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -934,6 +937,7 @@ bool AChuckCharacter::TakeBite(const FVector& From)
     if (Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
     BiteImmuneUntil = Now + BiteImmunity;
     ++BitesTaken;
+    TalkingTo.Reset();
     Sanity = FMath::Max(0, Sanity - 1);
     if (Sanity == 0) { bPendingVanish = true; PendingVanishAt = Now + .35f; }
     FVector Away = (GetActorLocation() - From).GetSafeNormal2D();
@@ -951,6 +955,46 @@ void AChuckCharacter::AddCigarettes(int32 Count)
         ++PickupsCollected;
         if (Sanity < MaxSanity && !IsAstral()) ++Sanity;
         else ++CigaretteCount;
+    }
+}
+ADockNPC* AChuckCharacter::GetTalkPrompt() const
+{
+    if (IsTalking() || IsAstral() || GetCharacterMovement()->IsFalling()) return nullptr;
+    const FVector Location = GetActorLocation();
+    const FVector Ahead = GetActorForwardVector().GetSafeNormal2D();
+    ADockNPC* Best = nullptr; float BestDistance = ADockNPC::TalkRadius;
+    for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+    {
+        ADockNPC* NPC = Entry.Get();
+        if (!NPC || !NPC->CanTalk()) continue;
+        const FVector To = NPC->GetActorLocation() - Location;
+        const float Distance = static_cast<float>(To.Size2D());
+        // In reach and roughly in front (or right up against him).
+        if (Distance < BestDistance && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) > .2f || Distance < 45.f)) { Best = NPC; BestDistance = Distance; }
+    }
+    return Best;
+}
+bool AChuckCharacter::GetDialogue(FString& Speaker, FString& Text) const
+{
+    const ADockNPC* NPC = TalkingTo.Get();
+    if (!NPC || !NPC->Lines.IsValidIndex(TalkLine)) return false;
+    Speaker = NPC->DisplayName; Text = NPC->Lines[TalkLine];
+    return true;
+}
+void AChuckCharacter::Interact()
+{
+    if (IsTalking())
+    {
+        // Next line, or the conversation's over.
+        if (++TalkLine >= TalkingTo->Lines.Num()) { TalkingTo.Reset(); TalkLine = 0; }
+        return;
+    }
+    if (ADockNPC* NPC = GetTalkPrompt())
+    {
+        TalkingTo = NPC; TalkLine = 0;
+        GetCharacterMovement()->StopMovementImmediately();
+        // Chuck turns to face whoever he's listening to.
+        SetActorRotation(FRotator(0, (NPC->GetActorLocation() - GetActorLocation()).Rotation().Yaw, 0));
     }
 }
 void AChuckCharacter::Exhale()

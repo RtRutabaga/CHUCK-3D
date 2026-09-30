@@ -1530,3 +1530,42 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No inhale (the idle clip's chin lift stays unsynchronised), and the ember doesn't brighten on a draw.
   - Smoke comes from the mouth corner, not the nose.
   - Not played by the user.
+
+## Fifty-eighth pass — the dock worker NPC and talking
+
+- **User (2026-09-30):** start the human NPC by the spawn (more NPCs later); suggestion docs cover free resources.
+  - `References/chuck-3d-resource-guide.md` suggests MetaHuman, or MakeHuman + Mixamo, for humans.
+  - The user chose my recommendation: build in Blender (no installs or sign-ins; MetaHuman clothing is modern anyway). Also: no dialogue for the worker for now, and talk on F / Y.
+  - `References/Original/PHASE-2.md`: every human NPC is sized to the dock worker (the 2D scale reference); the next NPCs are the guard and the market woman.
+- **Model** (`Tools/build_dock_npc.py`): 180.4 cm to the top of the cap, facing +X, 20 bones.
+  - Lofted solids: a superellipse torso from hips to trapezius, and tapered tubes for arms and legs.
+  - Ellipsoids for skull, jaw, nose, brow, ears, cap, palm and fingers, boot feet and heels. Voxel remesh at 0.75 cm plus smoothing, no decimation (even quads keep the clothing edges clean). Automatic weights; the eyes are separate spheres. About 96k tris.
+  - Clothing by region into 10 slots: Skin, Shirt (sleeves rolled to the elbow, the jerkin's open V front, the armholes), Jerkin, Belt, Trousers (navy, as the old figure), Boots, Cap, Stubble, Brow, Eye.
+  - The first pass was stacked ellipsoids and read as a bead-jointed mannequin; lofting fixed that.
+  - Review: `NPCs/DockWorker/Review/`.
+- **Import** (`Tools/import_dock_npc.py`, generated from the rat importer): `/Game/Characters/DockWorker/SK_DockWorker` with 10 flat `M_Worker*` materials. Slots are written back and the assignments checked.
+- **Runtime:**
+  - `ADockNPC` (actor): a pawn-only capsule blocker (radius 24, half height 90), so wall-run, ledge, mantle and camera traces ignore him. The `UPoseableMeshComponent` body is posed in component space:
+    - a breath every 4.2 s, weight shift every 11 s, slight arm sway;
+    - glances every 2.5–6 s;
+    - head and neck (40/60) turning to Chuck within 450 cm and ±110°, clamped to ±70° yaw and −20 to 55° pitch, at rate 4.
+  - `SpawnDockWorker` places him at (90, 200) facing −90 (where the old figure stood), tagged `DockWorkerArt`. The old primitive figure and `SM_DockWorker` prop are no longer spawned.
+  - Talk: `AChuckCharacter::Interact` (the "Interact" action on F / Gamepad Y) starts a conversation with the nearest NPC that has `Lines`, within 120 cm and in front (dot > 0.2) or within 45 cm. Each press advances a line; the last closes it.
+    - While talking, movement, jump, dodge and slash are ignored. Chuck turns to face the speaker; a bite, reset or vanish ends it.
+    - HUD: "F / Y  Talk" near the top in reach (as in the 2D game), and a dialogue box above the controls showing the speaker's name and line.
+  - Keyboard re-centre moved from F to the middle mouse button (the right-stick click is unchanged).
+- **Tests:** **121** (120 with `-NoCapture`).
+  - The prop-tag check accepts the worker's skinned body.
+  - Stage 108: at 1.3 m in front he watches, looking down 43°; at 8 m he doesn't. Walking and jumping into him stops Chuck at 39 cm, with no wall run and no mantle.
+  - Stage 109, on real F keys with a stand-in NPC: prompt in reach, line 1, S held does nothing, line 2 with the speaker's name, closed. The worker is silent.
+  - Capture 110: Chuck walks up and the worker looks down at him.
+- **Verified:**
+  - Worktree `-MotionCapture` and `-NoGroom` **121/121**; uncapped with and without groom 0 failures.
+  - The first run failed the watch check: I required Chuck's capsule to be "visible", and player capsules aren't. It now checks that he isn't astral.
+  - Evidence: `Review/runtime_Worker_{030,260}.png`.
+- **Remaining:**
+  - A stylised face with no facial rig, and stiff, straight hanging arms.
+  - No body turn (he only watches within ±110°).
+  - About 96k tris, too heavy for a crowd without lighter detail levels.
+  - No talking NPC in the map yet (the guard and market woman are next).
+  - Not played by the user.

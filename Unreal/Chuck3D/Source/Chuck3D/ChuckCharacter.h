@@ -12,6 +12,7 @@ class USkeletalMesh;
 class UStaticMeshComponent;
 class USoundBase;
 class UInstancedStaticMeshComponent;
+class ADockNPC;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -140,6 +141,13 @@ public:
     /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
     UStaticMeshComponent* GetCigarette() const { return Cigarette; }
     UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
+    /** F / Y: talk to the NPC in front of him, or advance / close the conversation. */
+    void Interact();
+    bool IsTalking() const { return TalkingTo.IsValid(); }
+    /** Someone within reach and in front who has something to say (the HUD prompt). */
+    ADockNPC* GetTalkPrompt() const;
+    /** The line on screen: speaker and text (false when not talking). */
+    bool GetDialogue(FString& Speaker, FString& Text) const;
     /** Breathe out a stream of smoke now (user 2026-09-30: he's always
      *  smoking; he exhales every 7-12 s on his own when calm). */
     void Exhale();
@@ -167,6 +175,8 @@ private:
     float ExhaleUntil = -1.f;
     float ExhaleCarry = 0.f;
     int32 Exhales = 0;
+    TWeakObjectPtr<ADockNPC> TalkingTo;
+    int32 TalkLine = 0;
     int32 SmokePuffsSpawned = 0;
     void UpdateExhale(float DeltaSeconds);
     float ViewYaw = 0;
