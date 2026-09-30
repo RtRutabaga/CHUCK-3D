@@ -8,6 +8,17 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 18 (Claude, 2026-09-30, user request: the small rat enemy):** runtime `5ae941e` adds five big dock rats (cargo wharf, timber yard, garden):
+- a generated model, posed procedurally;
+- they roam, notice and chase Chuck, then give a clear tell (a crouch and a hiss) before a lunging bite;
+- a bite knocks Chuck back, and he has 1 s of immunity (no health yet);
+- two slashes (the low rake is automatic) kill a rat, which drops a cigarette;
+- natural rat sounds, heard only nearby.
+
+Details are in `agent-handoffs/CLAUDE.md` pass 55 and `PLAYTEST.md`.
+
+The root candidate passed `-MotionCapture` **115/115**, the world check and the music check (`Local/verify-package-20260930-103417.log`). It was promoted to `Builds/Windows` with receipt `5ae941e`; the previous package is kept as `Builds/Windows-Previous-20260930-Rat`. Not yet played by the user. Open question for the user: should Chuck have health (and what happens when it runs out)?
+
 **Update 17 (Claude, 2026-09-30, user request: low rake, cigarettes, jars):** runtime `5a869d8` adds:
 - an automatic low rake for low targets;
 - 10 breakable clay jars (solid; they shatter into shards and drop 1–3 cigarettes);
