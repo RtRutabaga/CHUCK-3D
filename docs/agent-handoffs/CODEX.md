@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 29 — user soundtrack
+
+Worked directly on main per v3 workflow. `18e6144` copies/imports the supplied WAV and starts looping 2D music at 45% with a 1.5-second fade-in. Import helper needs `-AllowCommandletAudio`; source provenance and exact format are in `SourceAssets/Audio/README.md`. No generators or character assets changed. WAV and SoundWave add roughly 49 MB of LFS data; integrity passed.
+
+Packaged verifier: 99 gameplay checks, 15 floor/clearance checks and loop-boundary playback check passed (`Local/verify-package-20260929-205701.log`); build `Local/music-build.log`. Music smoke test starts near the end; normal game starts at zero. User listening feedback is still needed for loudness/loop transition. Normal launcher package updated with receipt; prior build retained as `Builds/Windows-Previous-20260929-Music`. Next work can be done here.
+
 ## September 29 — near-field detail follow-up
 
 Continued from `046a35c`; Claude branches still at `03344ac`. Runtime `42f33d7` changes only setting construction: existing crate/rope meshes, platform boards, warehouse door joinery/windows/net frame, tavern rear articulation and drain grates. Collision proxy sizes and all Claude traversal geometry are preserved. No binary changes or asset generation.

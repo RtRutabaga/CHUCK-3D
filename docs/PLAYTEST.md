@@ -12,6 +12,8 @@ If recent changes are missing, check where they were packaged: an agent worktree
 
 ## Controls
 
+The supplied `waterdeep_docks.wav` now plays automatically as non-spatial background music, with a 1.5-second fade-in at 45% volume. It repeats the full 2:38.4 track; resetting Chuck does not restart the music. The source ending is preserved, so assess the repeat transition and loudness during play. No separate music controls have been added yet.
+
 | Action | Keyboard / mouse | Xbox controller |
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
