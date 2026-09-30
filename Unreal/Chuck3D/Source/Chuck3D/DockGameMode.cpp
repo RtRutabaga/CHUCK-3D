@@ -1,5 +1,8 @@
 #include "DockGameMode.h"
 #include "DockSetting.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundWave.h"
+#include "TimerManager.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -46,6 +49,28 @@ ADockGameMode::ADockGameMode()
 void ADockGameMode::StartPlay()
 {
     UWorld* World = GetWorld();
+    // Non-spatial background music, unaffected by Chuck's position or resets.
+    auto* Music=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_WaterdeepDocks.SW_WaterdeepDocks"));
+    const bool TestMusic=FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
+    auto* MusicComponent=Music ? UGameplayStatics::CreateSound2D(World,Music,1.f,1.f,0.f,nullptr,false,true) : nullptr;
+    if(MusicComponent)
+    {
+        // Smoke runs start just before the end to exercise looping without a long wait.
+        const float Start=TestMusic ? FMath::Max(0.f,Music->Duration-2.f) : 0.f;
+        MusicComponent->FadeIn(1.5f,.45f,Start);
+    }
+    if(TestMusic)
+    {
+        FTimerHandle MusicCheck;
+        TWeakObjectPtr<UAudioComponent> WeakMusic=MusicComponent;
+        const bool LoopConfigured=Music && Music->bLooping;
+        World->GetTimerManager().SetTimer(MusicCheck,[WeakMusic,LoopConfigured]()
+        {
+            const bool Playing=WeakMusic.IsValid() && WeakMusic->IsPlaying();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),
+                LoopConfigured && Playing ? 0 : 1,LoopConfigured,Playing);
+        },6.f,false);
+    }
     auto* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Cylinder = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
