@@ -8,6 +8,18 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 13 (Claude, 2026-09-29, user requests: strafe, faster run, drop to hang, landing roll height):** runtime `c0154fd` adds:
+- strafe on Q/E or held LT, with jump while strafing = side jump (short from a walk, long from a run);
+- a faster run (225 cm/s);
+- drop to hang when walking gently off an edge;
+- the landing roll only above a 160 cm fall.
+
+Q/E no longer turn the camera. Details are in `agent-handoffs/CLAUDE.md` pass 50 and `PLAYTEST.md`.
+
+The candidate built in the root checkout passed `Verify-Package.ps1 -MotionCapture` **106/106**, the world check and the music check (`Local/verify-package-20260929-211245.log`). It was promoted to root `Builds/Windows` with receipt `c0154fd`; the previous package is kept as `Builds/Windows-Previous-20260929-Strafe`. Worktree runs also passed `-NoGroom` and uncapped with and without groom. Not yet played by the user.
+
+This pass was authored in Claude's old app worktree and fast-forwarded onto main (that session was pinned there). Later Claude sessions should open the root project.
+
 **Workflow update:** the user now runs Codex and Claude sequentially and explicitly requests direct work on root `main`. Read v3 in `AGENT-WORKFLOW.md` and the updated `CLAUDE.md`. Preserve unfinished changes; use one root launcher and update its verified package for playable milestones. Existing worktrees remain intact as optional development copies. This documentation-only update does not change the game or require rebuilding it.
 
 **Update 12 (Codex, September 29 — near-field dock details):** runtime `42f33d7` reuses existing beveled crate/rope meshes in the loading court and adds platform boards, loading-door joinery, high barred warehouse windows, a net-drying frame, tavern rear windows/timber bays and continuous drain grates. Existing cargo proxy dimensions are preserved, with proxies hidden when the visual mesh is available. Added dressing is noncolliding. No character/controller, binary source or material changes; no installs or asset regeneration.
