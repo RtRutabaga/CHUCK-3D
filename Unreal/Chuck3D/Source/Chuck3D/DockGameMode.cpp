@@ -6,6 +6,7 @@
 #include "ClayJarData.h"
 #include "EngineUtils.h"
 #include "EnemyRat.h"
+#include "AstralSummon.h"
 
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
@@ -1432,7 +1433,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             TestTufts.Reset();
             for(const float Dx : {30.f,-60.f,110.f}) TestTufts.Add(AGrassTuft::Plant(GetWorld(),FVector2D(-240+Dx,-20),0,0.f,1.f));
             if(TestTufts[0].IsValid()) TestTufts[0]->Cigarettes=1;
-            BreaksBase=Chuck->GetSlashBreaks(); LocoValue=0; bLocoFlag=false; KeySide=0; PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
+            BreaksBase=Chuck->GetSlashBreaks(); LocoValue=0; bLocoFlag=false; KeySide=0; PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetPickupsCollected();
             TestStage=95; StageTime=0;
         }
     }
@@ -1442,7 +1443,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>=.2f && StageTime-DeltaSeconds<.2f) Chuck->Slash();
         if(StageTime>=.25f && StageTime-DeltaSeconds<.25f) Chuck->SlashReleased();
         if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) bLocoFlag=FString(Chuck->GetSlashName()).Contains(TEXT("Low"));
-        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f) KeySide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;   // out, or already pocketed
+        if(StageTime>=1.f && StageTime-DeltaSeconds<1.f) KeySide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetPickupsCollected()-CigsBase;   // out, or already pocketed
         if(bPlanted) LocoValue=FMath::Max(LocoValue,static_cast<float>(TestTufts[0]->GetClippingsFlying()));
         if(StageTime>=1.2f && StageTime<3.2f) Chuck->AddMovementInput(FVector(1,0,0),1);   // walk on through the far tuft
         if(StageTime>3.4f)
@@ -1478,7 +1479,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TestJar=AClayJar::Place(GetWorld(),FVector2D(-240+40,-20),0.f,2);
             BreaksBase=Chuck->GetSlashBreaks(); MantlesBase=Chuck->GetMantles(); LocoValue=0; bLocoFlag=false; KeySide=0;
-            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
+            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetPickupsCollected();
             TestStage=98; StageTime=0;
         }
     }
@@ -1490,7 +1491,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) { Chuck->Slash(); Chuck->SlashReleased(); }
         if(StageTime>=1.3f && StageTime-DeltaSeconds<1.3f) bLocoFlag=FString(Chuck->GetSlashName()).Contains(TEXT("Low"));
         if(bJar && StageTime>1.2f) KeySide=FMath::Max(KeySide,static_cast<float>(TestJar->GetShardsFlying()));
-        if(StageTime>=2.f && StageTime-DeltaSeconds<2.f) KeyJumpSide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;
+        if(StageTime>=2.f && StageTime-DeltaSeconds<2.f) KeyJumpSide=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetPickupsCollected()-CigsBase;
         if(StageTime>=2.2f && StageTime<3.4f) Chuck->AddMovementInput(FVector(1,0,0),1);   // on through where it stood
         if(StageTime>3.6f)
         {
@@ -1532,7 +1533,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TestRat=AEnemyRat::Place(GetWorld(),FVector2D(-195,-20),180.f);
             if(TestRat.IsValid()) TestRat->Cigarettes=1;
-            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
+            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetPickupsCollected();
             RatHitsBase=Chuck->GetSlashRatHits(); LocoValue=-1; bLocoFlag=false; KeySide=0; KeyJumpSide=0; bKeyMeasured=false;
             TestStage=102; StageTime=0;
         }
@@ -1555,12 +1556,55 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(bRat && TestRat->IsDead() && KeySide==0) { KeySide=StageTime; KeyJumpSide=TestRat->GetHitsTaken(); }
         if(StageTime>(KeySide>0 ? KeySide+2.6f : 8.f))
         {
-            const int32 Out=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;
+            const int32 Out=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetPickupsCollected()-CigsBase;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_RAT_KILL_MEASURE killed_at_s=%.2f hits=%.0f rat_hits=%d low_rake=%d cigarettes_out=%d rat_removed=%d"),KeySide,KeyJumpSide,Chuck->GetSlashRatHits()-RatHitsBase,bLocoFlag ? 1 : 0,Out,TestRat.IsValid() ? 0 : 1);
             Check(KeySide>0 && KeyJumpSide==AEnemyRat::Health && bLocoFlag && Out==1 && !TestRat.IsValid(),
                 TEXT("two slashes (low rakes) kill a rat; it drops a cigarette and is cleared away"));
             if(TestRat.IsValid()) TestRat->Destroy();
             for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
+            // Next: Sanity. A bite costs one; a cigarette refills it; the next counts.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            CigsBase=Chuck->GetCigarettes(); LocoValue=0; KeySide=0; KeyJumpSide=0;
+            TestStage=104; StageTime=0;
+        }
+    }
+    else if(TestStage==104)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) { Chuck->TakeBite(Chuck->GetActorLocation()+FVector(30,0,0)); LocoValue=Chuck->GetSanity(); }
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f) ACigarettePickup::Spawn(GetWorld(),Chuck->GetActorLocation()-FVector(0,0,34.f),FVector::ZeroVector,static_cast<float>(Chuck->GetActorLocation().Z)-35.f);
+        if(StageTime>=1.8f && StageTime-DeltaSeconds<1.8f) { KeySide=Chuck->GetSanity(); KeyJumpSide=Chuck->GetCigarettes()-CigsBase; ACigarettePickup::Spawn(GetWorld(),Chuck->GetActorLocation()-FVector(0,0,34.f),FVector::ZeroVector,static_cast<float>(Chuck->GetActorLocation().Z)-35.f); }
+        if(StageTime>2.5f)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SANITY_MEASURE after_bite=%.0f after_first=%.0f counted_after_first=%.0f after_second=%d counted_after_second=%d max=%d"),LocoValue,KeySide,KeyJumpSide,Chuck->GetSanity(),Chuck->GetCigarettes()-CigsBase,AChuckCharacter::MaxSanity);
+            Check(LocoValue==AChuckCharacter::MaxSanity-1 && KeySide==AChuckCharacter::MaxSanity && KeyJumpSide==0 && Chuck->GetSanity()==AChuckCharacter::MaxSanity && Chuck->GetCigarettes()==CigsBase+1,
+                TEXT("a bite costs a cigarette of Sanity; a cigarette refills the bar, and once it's full they count up"));
+            // Next: the last point of Sanity lost on the wharf: he vanishes and is summoned back at the start.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-100,-560,36)); Chuck->SetSanity(1);
+            AstralBase=AAstralSummon::GetStarted(); RespawnsBase=Chuck->GetRespawns(); AstralSeen=0; LocoValue=-1; LocoPrevious=FVector::ZeroVector;
+            TestStage=105; StageTime=0;
+        }
+    }
+    else if(TestStage==105)
+    {
+        if(StageTime>=.1f && StageTime-DeltaSeconds<.1f) Chuck->TakeBite(Chuck->GetActorLocation()+FVector(0,30,0));
+        const FString Phase=Chuck->GetAstralName();
+        if(Phase==TEXT("Vanishing")) AstralSeen|=1;
+        if(Phase==TEXT("Away")) AstralSeen|=2;
+        if(Phase==TEXT("Summoning")) AstralSeen|=4;
+        // Back: then he must walk off under his own power.
+        if(LocoValue<0 && AstralSeen==7 && Phase==TEXT("None") && Chuck->GetRespawns()>RespawnsBase)
+        {
+            LocoValue=StageTime; LocoPrevious=Chuck->GetActorLocation();
+            KeySide=static_cast<float>(FVector::Dist2D(Chuck->GetActorLocation(),AChuckCharacter::StartLocation()));
+        }
+        if(LocoValue>=0 && StageTime<LocoValue+.8f) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(StageTime>(LocoValue>=0 ? LocoValue+1.f : 9.f))
+        {
+            const float Walked=LocoValue>=0 ? static_cast<float>(FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious)) : 0.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_MEASURE phases=%d fx=%d respawned_at_s=%.2f from_start_cm=%.2f sanity=%d visible=%d walked_cm=%.1f"),
+                AstralSeen,AAstralSummon::GetStarted()-AstralBase,LocoValue,KeySide,Chuck->GetSanity(),Chuck->GetMesh()->IsVisible() ? 1 : 0,Walked);
+            Check(AstralSeen==7 && AAstralSummon::GetStarted()-AstralBase==2 && LocoValue>0 && KeySide<5.f && Chuck->GetSanity()==AChuckCharacter::MaxSanity && Walked>20.f,
+                TEXT("at zero Sanity Chuck vanishes into astral light and is summoned back at the start, whole, and walks on"));
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1734,6 +1778,33 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             if(TestRat.IsValid()) TestRat->Destroy();
             for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
+            // Then the last point of Sanity: he vanishes, and is summoned back
+            // at the start, seen from the front three-quarter.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-150,-20,36)); Chuck->SetSanity(1);
+            Chuck->TakeBite(Chuck->GetActorLocation()+FVector(0,30,0));
+            LocoValue=-1;
+            TestStage=106; StageTime=0;
+        }
+    }
+    else if(TestStage==106)
+    {
+        const FString Phase=Chuck->GetAstralName();
+        if(Phase==TEXT("Vanishing") && StageTime<3.f)
+            for(const float Shot : {.75f,1.05f,1.3f})
+                if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Vanish_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(Phase==TEXT("Summoning") && LocoValue<0)
+        {
+            // Turn the view to his front for the capture (play keeps it behind him).
+            LocoValue=StageTime;
+            Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+        }
+        if(LocoValue>=0)
+            for(const float Shot : {.35f,.7f,.95f,1.15f,1.45f,1.9f,2.4f,2.9f})
+                if(StageTime-LocoValue>=Shot && StageTime-LocoValue-DeltaSeconds<Shot)
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Summon_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>12.f || (LocoValue>=0 && StageTime-LocoValue>3.2f))
+        {
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));
@@ -1963,9 +2034,21 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("CHUCK  /  WATERDEEP DOCKS"),FLinearColor(.94f,.88f,.75f),30,27,GEngine->GetSmallFont(),1.25f);
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
-    // Cigarettes collected: the currency, kept small and quiet in the corner.
-    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),Canvas->SizeX-218,18,200,40);
-    DrawText(FString::Printf(TEXT("CIGARETTES   %d"),Chuck->GetCigarettes()),FLinearColor(.94f,.88f,.75f),Canvas->SizeX-206,28,GEngine->GetSmallFont(),1.15f);
+    // Sanity as a row of cigarettes (the 2D game's bar): burnt-out slots for
+    // what's been lost. Below it the cigarettes collected beyond a full bar.
+    const float PanelX=Canvas->SizeX-290;
+    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),PanelX,18,272,86);
+    DrawText(TEXT("SANITY"),FLinearColor(.77f,.67f,.94f),PanelX+12,24,GEngine->GetSmallFont(),.95f);
+    for(int32 I=0;I<AChuckCharacter::MaxSanity;++I)
+    {
+        const float X=PanelX+12+I*51, Y=48;
+        const bool bFull=I<Chuck->GetSanity();
+        const FLinearColor Spent(.2f,.2f,.22f,.9f);
+        DrawRect(bFull ? FLinearColor(.72f,.47f,.22f) : Spent,X,Y,12,10);          // filter
+        DrawRect(bFull ? FLinearColor(.93f,.91f,.86f) : Spent,X+12,Y,31,10);       // paper
+        DrawRect(bFull ? FLinearColor(.42f,.4f,.38f) : Spent,X+43,Y,3,10);         // ash at the tip
+    }
+    DrawText(FString::Printf(TEXT("CIGARETTES   %d"),Chuck->GetCigarettes()),FLinearColor(.94f,.88f,.75f),PanelX+12,72,GEngine->GetSmallFont(),1.1f);
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());

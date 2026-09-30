@@ -1472,3 +1472,39 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Procedural pose only (no authored clips); the pose hasn't been reviewed closely at speed.
   - Rats aren't respawned.
   - Not played by the user.
+
+## Fifty-sixth pass — Sanity, the astral vanish and the summon
+
+- **User (2026-09-30):** "Like the 2d game": health as a cigarette bar that cigarettes refill, and cigarettes beyond it collected like coins. Zero is a "death", but Chuck is a fey summon who can't die: he respawns at the spawn point with a magical summoning animation. Canon, `References/Original/GAME-BIBLE.md`:
+  - "Instead of health, Chuck has Sanity. Damage lowers Sanity. Cigarettes restore it. When Sanity reaches zero, Chuck quietly disappears … he returns at the most recent Astral Anchor."
+  - The Astral Sea is peaceful, ancient, quiet.
+- **Runtime** (`ChuckCharacter`):
+  - `MaxSanity` 5, and a bite costs 1. `AddCigarettes` refills Sanity first, then counts; `PickupsCollected` tracks both.
+  - At zero, `bPendingVanish` fires once he's down from the knockback. A new `EGait::Astral` (owns the capsule, no input, rats lose interest) runs:
+    - **Vanishing** (1.45 s): the `Summon` clip played backward so he sinks; an `AAstralSummon` vanish effect; hidden at 0.65 s; camera fade to indigo from 0.8 s.
+    - **Away** (0.35 s): teleport to `StartLocation`, full Sanity, camera reset.
+    - **Summoning** (2.6 s): fade in; the summon effect; he appears at 1.0 s, curled, and the clip plays forward.
+    - Then Idle and walking; `Respawns` increments.
+  - `ResetToDock` restores Sanity and clears the astral state and camera fade.
+- **Summon clip** (`build_chuck_v1.py` `summon`): 1.6 s.
+  - Curled low (hips down 11.5 cm; 13 put the rump 3 mm into the ground and failed `check_v1`), back rounded, head down, arms folded, tail wrapped. A breath, then an unhurried rise with the head last and a shoulder-roll settle. Paws planted in the idle stance; reach 0.92.
+  - Review: `V1/Review/motion_Summon.png`.
+- **Effect** (`Tools/build_astral_fx.py`, `import_astral_fx.py`, `AAstralSummon`):
+  - A rune-circle disc: a 1024 px generated texture with a double ring, ticks, glyph band and stars, turning slowly.
+  - An open column: additive, brightest at the foot, fading upward and toward the silhouette (Fresnel). The first pass read as a solid white tube; the second was brightest at the top, because the FBX import flips V.
+  - 26 star motes (instanced) spiralling in and up.
+  - Additive, unlit starlight materials with an "Intensity" parameter faded through dynamic instances. The vanish variant is narrower and quicker.
+  - Sounds: `SFX_AstralVanish` (a glassy inharmonic shimmer swelling and drifting down, a low hum) and `SFX_AstralSummon` (rising, with a soft glass chime as he appears); 57 sounds in all.
+- **HUD:** a "SANITY" row of five cigarette icons (filter, paper, ash; spent slots dark), with "CIGARETTES n" below.
+- **Tests:** **117** (116 with `-NoCapture`).
+  - Stage 104: bite 5 → 4; a pickup refills to 5 without counting; the next counts +1.
+  - Stage 105: at Sanity 1 on the wharf, a bite gives vanish → away → summon (both effects). He's back at the start (0.00 cm) at about 4.85 s with full Sanity, visible, and walks 67 cm.
+  - Capture 106: the vanish and summon from the front three-quarter.
+  - Pickup-count assertions in stages 95/98/102 now use `PickupsCollected`.
+- **Verified:** worktree `-MotionCapture` and `-NoGroom` **117/117**; uncapped with and without groom 0 failures. Evidence: `Props/Astral/Review/runtime_{Summon_070,Summon_115,Summon_190,Vanish_075}.png`.
+- **Remaining:**
+  - Respawn is always at the dock start (no Astral Anchors yet).
+  - No low-Sanity feedback beyond the bar.
+  - The summon's column facets slightly (32 sides).
+  - The camera turn to his front is only for the capture; in play the camera sits behind him.
+  - Not played by the user.

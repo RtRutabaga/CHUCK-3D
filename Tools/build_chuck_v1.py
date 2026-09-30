@@ -1139,6 +1139,45 @@ def slash_low_clip(side):
         return r
     return pose, steps
 
+# Summon (2026-09-30): Chuck is a fey summon (References/Original/GAME-BIBLE.md:
+# at zero Sanity he quietly disappears and returns at an Astral Anchor). He
+# condenses out of the light curled low - deep crouch, back rounded, head
+# down, arms folded in, tail wrapped round his feet - holds a breath, then
+# rises unhurriedly into the aplomb stance, the head lifting last, and settles
+# the jacket with a small roll of the shoulders. Played backward it is the
+# vanish (sinking down into the light). Paws planted in the idle stance.
+SUMMON_T = 1.6
+SUMMON_CROUCH = 11.5  # cm the hips sink (13 put the rump 3 mm into the ground)
+def summon(phase, f):
+    t = f / FPS
+    rise = smoothstep(t, .35, 1.1)
+    fold = 1. - rise
+    settle = smoothstep(t, 1.05, 1.25) * (1 - smoothstep(t, 1.3, 1.6))
+    breath = math.sin(math.tau * t / 1.2) * fold
+    carriage(0., 0., 0., .5 * breath)
+    poser.translate('pelvis', (1.5 * fold, 0, -SUMMON_CROUCH * fold))
+    poser.rotate('pelvis', 'Y', 22 * fold)
+    poser.rotate('spine_01', 'Y', 18 * fold)
+    poser.rotate('spine_02', 'Y', 12 * fold)
+    poser.rotate('chest', 'Y', 8 * fold - 3 * settle)
+    poser.rotate('chest', 'X', 2.5 * math.sin(math.tau * 2 * max(0., t - 1.05)) * settle)   # a shoulder roll
+    head_curl = 1. - smoothstep(t, .55, 1.3)   # the head comes up last
+    poser.rotate('neck', 'Y', 16 * head_curl)
+    poser.rotate('head', 'Y', 14 * head_curl)
+    for side, out in (('L', 1), ('R', -1)):
+        poser.rotate(f'upperarm_{side}', 'Y', -38 * fold)          # arms folded in front
+        poser.rotate(f'upperarm_{side}', 'X', -out * 14 * fold)
+        poser.rotate(f'lowerarm_{side}', 'Y', -70 * fold)
+        poser.rotate(f'hand_{side}', 'Y', 15 * fold)
+        curl(side, 30 * fold)
+    for i, b in enumerate(TAIL):                                     # wrapped round his feet
+        poser.rotate(b, 'Z', 14 * fold * (1 if i < 3 else 1.3))
+        poser.rotate(b, 'Y', -4 * fold)
+    poser.update()
+    r = plant_idle()
+    for side in 'LR': poser.hand_goal(side)
+    return r
+
 # ---- parkour (user vision 2026-09-28: "feels like you're doing something
 # difficult but it's not actually that hard"). Jump into a wall and Chuck runs
 # up it for three steps; jump again to kick off it toward another wall.
@@ -1472,6 +1511,10 @@ for name, side in (('SlashLowRight', 'R'), ('SlashLowLeft', 'L')):
         'striking_paw': f'hand_{side}', 'crouch_cm': SLASH_LOW_CROUCH,
         'upper_body_root': 'spine_01',
         'notes': 'Low rake: the claw slash for low targets (grass, jars, small rats), chosen by the runtime. Same timing, footwork and travel as the slash; crouched and folded forward, the wrist sweeping through the ground just ahead.'})
+author('Summon', round(SUMMON_T * FPS) + 1, summon, False, {
+    'events_s': {'rise_start': .35, 'standing': 1.1, 'settled': SUMMON_T}, 'crouch_cm': SUMMON_CROUCH,
+    'stance_intervals_s': {'foot_L': [[0., SUMMON_T]], 'foot_R': [[0., SUMMON_T]]},
+    'notes': 'Fey summon: curled low as he condenses out of the light, then rises into the aplomb stance and settles the jacket. Played backward by the runtime for the vanish at zero Sanity. Paws planted in the idle stance throughout.'})
 
 author('WallRun', WALL_RUN['period_frames'], wall_run, True, {
     'stride_cycle_cm': WALL_RUN['stride_cm'], 'stance_fraction': WALL_RUN['stance_fraction'],

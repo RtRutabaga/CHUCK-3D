@@ -83,12 +83,26 @@ public:
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
      *  Returns whether it landed. (No health yet: the user's call.) */
     bool TakeBite(const FVector& From);
+    // Sanity (the 2D game, GAME-BIBLE.md): damage lowers it, cigarettes
+    // restore it; at zero Chuck - a fey summon who can't die - quietly
+    // vanishes into astral light and is summoned back at the spawn point.
+    static constexpr int32 MaxSanity = 5;
+    int32 GetSanity() const { return Sanity; }
+    /** Tests. */
+    void SetSanity(int32 Value) { Sanity = FMath::Clamp(Value, 0, MaxSanity); }
+    /** Vanishing, away or being summoned back. */
+    bool IsAstral() const { return Gait == EGait::Astral || bPendingVanish; }
+    const TCHAR* GetAstralName() const;
+    int32 GetRespawns() const { return Respawns; }
+    /** Every cigarette picked up (refilling Sanity or counted). */
+    int32 GetPickupsCollected() const { return PickupsCollected; }
     int32 GetBitesTaken() const { return BitesTaken; }
     static constexpr float BiteKnockback = 230.f;   // cm/s away
     static constexpr float BiteImmunity = 1.f;       // s
     /** Cigarettes collected (the currency; HUD counter). */
     int32 GetCigarettes() const { return CigaretteCount; }
-    void AddCigarettes(int32 Count) { CigaretteCount += Count; }
+    /** Picked up: each refills a point of Sanity first; once it's full they count up like coins. */
+    void AddCigarettes(int32 Count);
     /** Breakables (grass tufts, jars, later small rats) broken by the slash so far. */
     int32 GetSlashBreaks() const { return SlashBreaks; }
     int32 GetSlashRatHits() const { return SlashRatHits; }
@@ -147,9 +161,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -186,6 +200,20 @@ private:
     int32 SlashRatHits = 0;
     int32 CigaretteCount = 0;
     int32 BitesTaken = 0;
+    int32 Sanity = MaxSanity;
+    int32 PickupsCollected = 0;
+    enum class EAstral : uint8 { None, Vanishing, Away, Summoning };
+    EAstral AstralPhase = EAstral::None;
+    float AstralClock = 0;
+    bool bPendingVanish = false;
+    float PendingVanishAt = 0;
+    bool bAstralHidden = false;
+    bool bAstralFaded = false;
+    int32 Respawns = 0;
+    void BeginVanish();
+    void UpdateAstral(float DeltaSeconds);
+    void SetAstralHidden(bool bHide);
+    void CameraFade(float From, float To, float Seconds);
     float BiteImmuneUntil = -1;
     /** Something low and breakable is in the strike's reach: rake low (user 2026-09-30). */
     bool LowTargetInReach() const;
@@ -199,7 +227,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::Hang || Gait == EGait::Climb; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::Hang || Gait == EGait::Climb; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face

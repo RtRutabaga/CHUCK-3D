@@ -154,7 +154,7 @@ void AEnemyRat::Tick(float DeltaSeconds)
         // Feet to feet: is he on the rat's level?
         Rise = static_cast<float>(FMath::Abs(ToChuck.Z - (Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - HalfHeight)));
     }
-    const bool bReachable = Chuck && Rise < 60.f;
+    const bool bReachable = Chuck && !Chuck->IsAstral() && Rise < 60.f;   // gone into the light: nothing to chase
     switch (State)
     {
     case EState::Roam:

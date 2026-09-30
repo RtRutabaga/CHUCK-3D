@@ -3,6 +3,8 @@
 #include "ChuckClipData.h"
 #include "ChuckBreakable.h"
 #include "EnemyRat.h"
+#include "AstralSummon.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -62,7 +64,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -211,7 +213,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -341,6 +343,8 @@ void AChuckCharacter::ResetToDock()
     bTestStrafe = bHangNeedsRelease = false; GetCharacterMovement()->bOrientRotationToMovement = true;
     bRunJump = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
+    Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
+    if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
@@ -457,6 +461,7 @@ namespace
 void AChuckCharacter::DodgeToward(FVector2D Stick)
 {
     auto* Movement = GetCharacterMovement();
+    if (IsAstral()) return;
     if (Gait == EGait::Hang) { DropFromHang(); return; }  // dodge while hanging: let go
     if (IsDodging() || Movement->IsFalling() || Gait == EGait::WallRun || Gait == EGait::Climb) return;
     // A dodge cuts a turn in place short (pressing a direction from standstill
@@ -501,7 +506,7 @@ void AChuckCharacter::JumpPressed()
 {
     auto* Movement = GetCharacterMovement();
     const float Now = GetWorld()->GetTimeSeconds();
-    if (Gait == EGait::Climb) return;
+    if (Gait == EGait::Climb || IsAstral()) return;
     if (Gait == EGait::Hang)
     {
         // From a hang: pulling away and jumping kicks off backward; otherwise climb up.
@@ -851,7 +856,7 @@ void AChuckCharacter::Slash()
         if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
         return;
     }
-    if (IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return;
+    if (IsDodging() || IsAstral() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return;
     const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -910,9 +915,11 @@ void AChuckCharacter::SlashHit()
 bool AChuckCharacter::TakeBite(const FVector& From)
 {
     const float Now = GetWorld()->GetTimeSeconds();
-    if (Now < BiteImmuneUntil || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
+    if (Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
     BiteImmuneUntil = Now + BiteImmunity;
     ++BitesTaken;
+    Sanity = FMath::Max(0, Sanity - 1);
+    if (Sanity == 0) { bPendingVanish = true; PendingVanishAt = Now + .35f; }
     FVector Away = (GetActorLocation() - From).GetSafeNormal2D();
     if (Away.IsNearlyZero()) Away = -GetActorForwardVector().GetSafeNormal2D();
     // A stumble back out of reach: a short hop away, the slash layer dropped.
@@ -920,6 +927,90 @@ bool AChuckCharacter::TakeBite(const FVector& From)
     if (Gait == EGait::Slash || Gait == EGait::Turn) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     LaunchCharacter(Away * BiteKnockback + FVector(0, 0, 110.f), true, true);
     return true;
+}
+void AChuckCharacter::AddCigarettes(int32 Count)
+{
+    for (int32 I = 0; I < Count; ++I)
+    {
+        ++PickupsCollected;
+        if (Sanity < MaxSanity && !IsAstral()) ++Sanity;
+        else ++CigaretteCount;
+    }
+}
+const TCHAR* AChuckCharacter::GetAstralName() const
+{
+    static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning")};
+    return Names[static_cast<int32>(AstralPhase)];
+}
+void AChuckCharacter::SetAstralHidden(bool bHide)
+{
+    bAstralHidden = bHide;
+    GetMesh()->SetVisibility(!bHide, true);
+}
+void AChuckCharacter::CameraFade(float From, float To, float Seconds)
+{
+    // The Astral Sea's colour: a deep, quiet indigo.
+    if (auto* PC = Cast<APlayerController>(Controller))
+        if (PC->PlayerCameraManager) PC->PlayerCameraManager->StartCameraFade(From, To, Seconds, FLinearColor(.015f, .015f, .05f), false, true);
+}
+void AChuckCharacter::BeginVanish()
+{
+    auto* Movement = GetCharacterMovement();
+    bPendingVanish = false;
+    Gait = EGait::Astral; AstralPhase = EAstral::Vanishing; AstralClock = 0; bAstralFaded = false;
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
+    // He sinks down into the light: the summon played backward from standing.
+    SetClip(EClip::Summon, Clips[static_cast<int32>(EClip::Summon)]->GetPlayLength(), .2f);
+    const FVector Feet = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    AAstralSummon::Start(GetWorld(), Feet, false);
+}
+void AChuckCharacter::UpdateAstral(float DeltaSeconds)
+{
+    AstralClock += DeltaSeconds;
+    const float Length = Clips[static_cast<int32>(EClip::Summon)]->GetPlayLength();
+    switch (AstralPhase)
+    {
+    case EAstral::Vanishing:
+        BaseTime = FMath::Max(0.f, Length - AstralClock * 2.2f);
+        if (AstralClock >= AAstralSummon::VanishPeak && !bAstralHidden) SetAstralHidden(true);
+        if (AstralClock >= .8f && !bAstralFaded) { CameraFade(0.f, 1.f, .6f); bAstralFaded = true; }
+        if (AstralClock >= 1.45f)
+        {
+            // Away: back to the spawn point (the Astral Anchor, later), whole again.
+            AstralPhase = EAstral::Away; AstralClock = 0;
+            SetActorLocationAndRotation(StartLocation(), FRotator::ZeroRotator, false, nullptr, ETeleportType::TeleportPhysics);
+            ViewYaw = 0; LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
+            PreviousMotionLocation = GetActorLocation();
+            Sanity = MaxSanity; BiteImmuneUntil = -1;
+        }
+        break;
+    case EAstral::Away:
+        if (AstralClock >= .35f)
+        {
+            AstralPhase = EAstral::Summoning; AstralClock = 0;
+            SetClip(EClip::Summon, 0, 0);
+            const FVector Feet = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+            AAstralSummon::Start(GetWorld(), Feet, true);
+            CameraFade(1.f, 0.f, .9f);
+        }
+        break;
+    case EAstral::Summoning:
+        // Hidden until the column peaks, then he's there, curled, and rises.
+        if (AstralClock >= AAstralSummon::SummonPeak && bAstralHidden) SetAstralHidden(false);
+        BaseTime = FMath::Max(0.f, AstralClock - AAstralSummon::SummonPeak);
+        if (BaseTime >= Length)
+        {
+            AstralPhase = EAstral::None;
+            Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
+            GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+            ++Respawns;
+        }
+        break;
+    default:
+        break;
+    }
 }
 bool AChuckCharacter::LowTargetInReach() const
 {
@@ -1015,7 +1106,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // distance, so the clip's stance paw moves exactly with the ground.
     // Walking into a knee-high ledge: mantle onto it.
     if (bInput && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe)) TryMantle();
-    if (Gait == EGait::WallRun)
+    if (bPendingVanish && GetWorld()->GetTimeSeconds() >= PendingVanishAt && (Movement->IsMovingOnGround() || GetWorld()->GetTimeSeconds() >= PendingVanishAt + .8f)) BeginVanish();
+    if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
+    else if (Gait == EGait::WallRun)
     {
         // Three steps up: rise speed falls linearly to zero over WallRunTime
         // (WallRunRise in all); the step cycle follows the height gained.
@@ -1407,7 +1500,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
     // generated from the manifest (ChuckClipData.h), trimmed likewise.
     const bool bLoopDominant = ((Gait == EGait::Loop || (Gait == EGait::Strafe && Base == EClip::WalkLoop)) && FadeWeight < .5f) || (Gait == EGait::Stop && FadeWeight >= .5f);
-    const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Land && StateTime > .1f);
+    const bool bStanding = Gait == EGait::Idle || Gait == EGait::Astral || (Gait == EGait::Land && StateTime > .1f);   // the summon keeps his paws planted
     const FStance* Clip = nullptr;
     if (Gait == EGait::Start) Clip = &StartStance;
     else if (Gait == EGait::Stop && !bLoopDominant) Clip = bStopMirror ? &StopStanceMirrored : &StopStance;
@@ -1470,7 +1563,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     UpdateCamera(DeltaSeconds);
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
-    GetMesh()->SetVisibility(FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
+    GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     if (GetActorLocation().Z < -100) ResetToDock();
 }

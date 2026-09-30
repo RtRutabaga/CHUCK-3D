@@ -372,6 +372,18 @@
    "file": "SFX_RatDeath_00.wav",
    "kind": "rat_death",
    "duration_s": 0.6
+  },
+  {
+   "name": "SFX_AstralVanish_00",
+   "file": "SFX_AstralVanish_00.wav",
+   "kind": "astral_vanish",
+   "duration_s": 1.8
+  },
+  {
+   "name": "SFX_AstralSummon_00",
+   "file": "SFX_AstralSummon_00.wav",
+   "kind": "astral_summon",
+   "duration_s": 2.4
   }
  ]
 }

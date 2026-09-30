@@ -321,6 +321,34 @@ def main():
     add(out, chirp(rng, .3, 5200, 2600, 1., vib=120.), 0)
     add(out, filt(mul(noise(rng, .1), env(.1, .004, .03)), ('lp', 600, .7)), .28, .6)   # the body flops down
     write('SFX_RatDeath_00', finish(out), entries, 'rat_death')
+    # ---- the astral vanish and summon (2026-09-30): quiet and peaceful, like
+    # the Astral Sea (GAME-BIBLE.md) - glassy inharmonic shimmer, a low hum.
+    def shimmer(rng, seconds, env_fn, glide):
+        out = buf(seconds)
+        partials = [(1180, .5), (1873, .35), (2611, .28), (3480, .2), (4705, .14), (6120, .09)]
+        for f0, a in partials:
+            ph = rng.uniform(0, math.tau); trem = rng.uniform(4, 7); tph = rng.uniform(0, math.tau)
+            for i in range(len(out)):
+                u = i / len(out)
+                ph += math.tau * f0 * (1 + glide * u) / SR
+                out[i] += a * math.sin(ph) * (.75 + .25 * math.sin(math.tau * trem * i / SR + tph)) * env_fn(u)
+        hum_ph = 0.
+        for i in range(len(out)):
+            u = i / len(out)
+            hum_ph += math.tau * 110 / SR
+            out[i] += .18 * math.sin(hum_ph) * env_fn(u)
+        air = filt(noise(rng, seconds), ('bp', 5200, .7))
+        add(out, [v * .06 * env_fn(i / len(air)) for i, v in enumerate(air)], 0)
+        return out
+    rng = random.Random('astral-vanish')
+    # Swells over 0.3 s, then drifts down and away over the rest.
+    vanish = shimmer(rng, 1.8, lambda u: min(1., u / .17) * (1 - u) ** 1.6, -.06)
+    write('SFX_AstralVanish_00', finish(vanish), entries, 'astral_vanish')
+    rng = random.Random('astral-summon')
+    summon_sfx = shimmer(rng, 2.4, lambda u: (u / .42) ** 2 if u < .42 else math.exp(-(u - .42) / .22), .05)
+    # The chime as he appears (about 1.0 s): soft glass partials, long decay.
+    add(summon_sfx, modes(rng, 1.4, [880, 2425, 4750, 7010], [.9, .5, .25, .12], [.5, .3, .15, .06]), 1.0, .6)
+    write('SFX_AstralSummon_00', finish(summon_sfx), entries, 'astral_summon')
     (OUT / 'manifest.json').write_text(json.dumps({'sample_rate': SR, 'peak_dbfs': -3, 'generator': 'Tools/gen_chuck_sfx.py', 'sounds': entries}, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SFX_READY', len(entries), 'sounds')
 

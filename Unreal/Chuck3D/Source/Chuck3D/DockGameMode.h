@@ -52,6 +52,9 @@ private:
     TWeakObjectPtr<class AEnemyRat> TestRat;
     int32 BitesBase = 0;
     int32 RatHitsBase = 0;
+    int32 AstralBase = 0;
+    int32 RespawnsBase = 0;
+    int32 AstralSeen = 0;
     int32 StrafeJumpsBase = 0;
     int32 DropHangsBase = 0;
     bool bKeyMeasured = false;

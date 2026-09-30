@@ -46,7 +46,12 @@ Jars and cigarettes (2026-09-30):
 Rats (2026-09-30): five big dock rats roam the cargo wharf, the timber yard and the Chandlers' Row garden. There are none near the start.
 - **Hunting:** a rat that notices Chuck within about 3.5 m on its level scurries in. You can outrun it at a run.
 - **The tell:** it stops, crouches and hisses for about half a second, then lunges.
-- **Dodging:** roll, side-jump, or step back out of reach. A bite knocks Chuck back about a metre, and he can't be bitten again for a second. There's no health yet.
+- **Dodging:** roll, side-jump, or step back out of reach. A bite knocks Chuck back about a metre, and he can't be bitten again for a second.
+
+Sanity (2026-09-30, as in the 2D game): the row of five cigarettes top-right is Chuck's Sanity.
+- **Bites:** each rat bite burns one cigarette.
+- **Refilling:** picked-up cigarettes refill the bar first; once it's full they add to the count below it, like coins.
+- **At zero:** Chuck, a fey summon who can't die, quietly sinks into a column of starlight and is gone. The view fades to astral indigo, and he's summoned back at the start: a rune circle, spiralling motes, then a soft column. He appears curled in the light and rises, with full Sanity and the count kept.
 - **Killing it:** slash it during the crouch; the low rake is automatic. The first hit knocks it back with a squeal, and the second kills it, dropping one or two cigarettes.
 
 Sound (2026-09-29): Chuck's paws tap on planks and cobbles (a different sound for each), his jacket flaps on jumps and settles on landings, the claw slash swishes and the roll tumbles, all under the soundtrack. The effects are generated in code (`SourceAssets/Audio/README.md`); tell us if any are too loud, too quiet or the wrong feel.
