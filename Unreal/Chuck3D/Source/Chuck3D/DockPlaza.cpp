@@ -157,8 +157,15 @@ void BuildDockPlaza(UWorld* World)
     {
         Shape(FVector(X,-4134,453),FVector(100,6,184),TEXT("Dark"));
         for(float DX : {-48.f,48.f}) Shape(FVector(X+DX,-4129,453),FVector(5,4,184),TEXT("WoodLight"));
-        Shape(FVector(X,-4127,468),FVector(38,4,6),TEXT("WoodLight"));
-        Shape(FVector(X,-4127,468),FVector(6,4,50),TEXT("WoodLight"));
+        Shape(FVector(X,-4127,480),FVector(25,4,5),TEXT("WoodLight"));
+        Shape(FVector(X,-4127,468),FVector(5,4,46),TEXT("WoodLight"));
+        Shape(FVector(X,-4127,498),FVector(17,17,3),TEXT("WoodLight"),false,Cylinder,FRotator(0,0,90));
+        Shape(FVector(X,-4124,498),FVector(9,9,3),TEXT("Dark"),false,Cylinder,FRotator(0,0,90));
+        for(float Side : {-1.f,1.f})
+        {
+            Beam(FVector(X,-4127,445),FVector(X+Side*22,-4127,459),5,TEXT("WoodLight"));
+            Beam(FVector(X+Side*22,-4127,459),FVector(X+Side*22,-4127,468),5,TEXT("WoodLight"));
+        }
         Beam(FVector(X-63,-4130,551),FVector(X+63,-4130,551),7,TEXT("Dark"));
     }
     for(float X : {100.f,420.f}) for(float Z : {60.f,160.f,270.f,375.f})
