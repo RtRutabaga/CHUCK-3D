@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "DockSetting.h"
+#include "DockPlaza.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -407,6 +408,7 @@ void ADockGameMode::StartPlay()
     if(BoatMesh) Prop(TEXT("HarborBoatArt"),FVector(980,600,-60),BoatMesh);
     if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
     BuildDockSetting(World);
+    BuildDockPlaza(World);
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
     AClayJar::SpawnDockJars(World);
@@ -416,11 +418,11 @@ void ADockGameMode::StartPlay()
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
     HarborFog->GetComponent()->SetStartDistance(1000);
-    HarborFog->GetComponent()->SetFogInscatteringColor(FLinearColor(.38f,.48f,.53f));
-    auto* Sun = World->SpawnActor<ADirectionalLight>(FVector(0,0,500),FRotator(-38,-40,0));
+    HarborFog->GetComponent()->SetFogInscatteringColor(FLinearColor(.28f,.31f,.42f));
+    auto* Sun = World->SpawnActor<ADirectionalLight>(FVector(0,0,500),FRotator(-6,-40,0));
     Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Sun->GetLightComponent()->SetIntensity(4.0f);
-    Sun->GetLightComponent()->SetLightColor(FLinearColor(1,.9f,.77f));
+    Sun->GetLightComponent()->SetIntensity(1.35f);
+    Sun->GetLightComponent()->SetLightColor(FLinearColor(1,.59f,.36f));
     Sun->GetLightComponent()->ContactShadowLength=8.f;
     Sun->GetLightComponent()->ContactShadowLengthInWS=true;
     auto* Post=World->SpawnActor<APostProcessVolume>();
@@ -437,13 +439,13 @@ void ADockGameMode::StartPlay()
     Post->Settings.ScreenSpaceReflectionQuality=50.f;
     auto* Sky = World->SpawnActor<ASkyLight>();
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-    Sky->GetLightComponent()->SetIntensity(0.55f);
+    Sky->GetLightComponent()->SetIntensity(1.05f);
     // The enclosing sky is 90 m away, below UE's default 1500 m sky threshold.
     // Capture it as ambient light so the shaded sides remain readable at rat height.
     Sky->GetLightComponent()->SkyDistanceThreshold = 1000;
     Sky->GetLightComponent()->bLowerHemisphereIsBlack = false;
     // A pale enclosing sphere gives skylight capture a quiet flat horizon.
-    auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(18000,18000,18000),TEXT("Sky"),Sphere,false);
+    auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(18000,18000,18000),TEXT("DawnSky"),Sphere,false);
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
     Sky->GetLightComponent()->RecaptureSky();
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);

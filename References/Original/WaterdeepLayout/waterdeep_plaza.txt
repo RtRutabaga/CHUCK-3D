@@ -1,0 +1,37 @@
+; WATERDEEP FOUNTAIN PLAZA — shared opening/finale geometry (48x34)
+; West returns to the docks. North gate is guarded and closed.
+; West shop is the smithy; east shop is the alchemist.
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbꝡbbbbꝡbbbbbbbbϟbbbbbbbbꝡbbbbꝡbbbbbbbbb
+rrr,,,XX,,,,{,,,,O,ꝟ,,,,,,,,,ꝟ,O,,,{,,,,XX,,,,,b
+rrrrrrrrrrrrrrr,,,,,,,,,,,,,,,,,,rrrrrrrrrrrr,,b
+rrrrrrrrrrrrrrr,,,,,,,,,,,,,,,,,,rrrrrrrrrrrr,,b
+rrrrrrrrrrrrrrr,,,,,,,,,,,,,,,,,,rrrrrrrrrrrr,,b
+eeeeeeeeeeeeeee,,,,,,,,,,,,,,,,,,eeeeeeeeeeee,,b
+ttttttttttttttt,,,,,,,,,,,,,,,,,,tttttttttttt,,b
+ttttttttttttttt,,,,,,,,,,,,,,,,,,tttttttttttt,,b
+tttttꝃtttꝉttꝃtt,,,,,,,,,,,,,,,,,,ttꝃttꝋtttꝃtt,,b
+ttttttthttttttt,,,,,,,,,,,,,,,,,,ttttttthtttt,,b
+⮜⮜,,,,,,,,,,,,,,ꜻ,,,,,,,,,,,,,,,ꜻ,,,,,,,,,,,,,,b
+⮜⮜,,OX,,⚒,,,,,,,,,,,,,,,,,,,,,O,,,,,,,⚗,,,XX,,,b
+⮜⮜,,,X,,,,,,⚙,{,,,O,,,,,,,,,,,,,,,O,{,,,,,,X,,,b
+⮜⮜,,,,,,,,,,,,,,,,,{,,⊠⊠⊠⊠⊠,,,,,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,,,ꜻ,,⊠⊠⊠⊠⊠,,ꜻ,,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,O,,,,,,,⊠⊠₣⊠⊠,,,,,,,O,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,XX,,,,,,,,,,,,,,{,,,,,,,,,,,,,,,,,b
+⮜⮜ɸ,Ʀ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,c,b
+⮜⮜,,,,,,,,,,,,,,,O,,,,,,,,,,,,,O,,,,,,,,,,,,,,,b
+⮜⮜,,aaaaaaaa,,,,,,,,,,,,,,,,,,,,,,,,XX,,,,,,,,,b
+⮜⮜,,aaaaaaaa,,,,,,,,,,,,,,,,,,,,,,,,,X,,,,,,,,,b
+⮜⮜,,PuuuuuuP,,,,,,,,,{,,,,,{,,,,,,,,,,,,,,,,O,,b
+⮜⮜,c,3,1,52,,,,{,,,,,,,,,,,,,,,,,{,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,aaaaaaaaaaaaaa,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,aaaaaaaaaaaaaa,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,PuuuuuuuuuuuuP,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,,,1,2,,5,,3,4,,,,,,,,,,,,,,,,,b
+⮜⮜,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,{,,,,,,,,,,{,,b
+⮜⮜,,,,,,XX,,,,{,,,,,,,,,,,,O,,,,,,,,,,XX,,,,,,,b
+⮜⮜,,,,,,,X,,,,,,,,,,OO,,c,{,,,,,,,,,,,,X,,,,,,,b
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

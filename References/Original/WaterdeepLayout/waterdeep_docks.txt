@@ -1,0 +1,60 @@
+; WATERDEEP DOCKS — expanded inland (56x32 tiles); piers, door,
+; and market awning enlarged per playtest direction.
+; Tavern exterior: slate roof 'r', eave 'e', tan facade 't',
+; lit windows 'W', chimneys 'm' — per the facade reference.
+; District wall: battlements 'w' over brick 'b', banners 'F',
+; torches 'i', raised portcullis gates 'g' — per the wall reference.
+; Northern boundary (row 0): same castle battlements 'w'.
+; Southern quay boundary: castle brick 'b', matching the fountain plaza.
+; North district: the three blocks are houses/shops now —
+; tavern grammar (roof 'r', eave 'e', facade 't', windows 'W',
+; chimneys 'm') plus decorative doors 'h'. Never accessible.
+; Market stall: checkered canopy, scalloped front 'u', posts 'P',
+; goods '1'-'5' (produce crates, table, barrel) under the canvas.
+; Market stall (cutaway): canopy rows 28-29, scalloped edge +
+; posts row 30, goods visible in the open front row 31. The market
+; woman ('I') stands immediately left of the open goods.
+; North: warehouse district, reached through two gaps in the old wall.
+; West: harbor with the fishing pier. Center: the great plank dock;
+; Bobert asleep in his barrel ('B') beside Chuck's spawn.
+; East: the tavern, its door ('D') and the HEROD sign ('H') out front.
+; Southeast: the market — red awning ('a') Chuck walks UNDER.
+; South: the second pier and open water.
+; The guard ('G') stands at the east edge of the upper plaza.
+; The sewer grate ('S') sits in the plaza near the guard.
+; Three '{' grass tufts frame the ruin and conceal cigarettes on stone.
+~~~~~~~wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+~~~~~~~,,,rrmrrrrr,,,,,,rrrrmrrr,,,,rrrrrmrr,,,,,,,,,,⮞⮞
+~~~~~~~,,,rrrrrrrr,,,,,,rrrrrrrr,,,,rrrrrrrr,,c,,,,,,,⮞⮞
+~~~~~~~,,,eeeeeeee,,,,,,eeeeeeee,,,,eeeeeeee,,,,,,XX,,⮞⮞
+~~~~~~~,,,tꝃtꜽhtꝃt,,,ꝅ,,tꝃtꜿhtꝃt,,ꝇ,tꝃthꝁtꝃt,,,,,,,,,,⮞⮞
+~~~~~~~,,O,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,G⮞
+~~~~~~~,,,,,,,,,,,,,c,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,S,⮞⮞
+~~~~~~~,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~wwwwwwwwwwwwwwggwwwwwwwwggwrrrrrrrrrrrrrrrrrrrrrr
+~~~~~~~bbbbbbbFbbbbbi,,ibbFbbbi,,irrrmrrrrrrrrrrrrrmrrrr
+~~~~~~~=============,,,,,,,,,,,,,,rrrrrrrrrrrrrrrrrrrrrr
+~~~~~~~ꜷ============,,,,,,c,,,,,,,rrrrrrrrrrrrrrrrrrrrrr
+~~~~~~ꝍ==oB=========,,,,,,,N,,,,,,rrrrrrrrrrrrrrrrrrrrrr
+~~~~~~~==C==========,,,,,,,,,,,,,,eeeeeeeeeeeeeeeeeeeeee
+~~~~~~~=======xx====,,,,,,,,,,,,,,tttttttttttttttttttttt
+~~~~~~~ꜷ======xx====,,,,,,,,,,,,,,tttttttttttttttttttttt
+~~~~~~~=============,,,,,,,K,,,,,,ttttttꝃtttttttꝃttttttt
+~===================,,,,,,,,,,,,,,ttttttttttDttttttttttt
+~ꜷ==================,,,,,,,,,,,,,,,,,,ꜻ,,,H,T,,,,,ꜻ,,,⮞⮞
+~===================,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~==ꜵ=====j==========,O,,,,,,,,,,{,,,,,,,,,,,,,,,,,,,OƤ⮞⮞
+~ꜭꜭꜭꜭꜭꜭ=============,,,,,,RRRfRR,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~ꜹ~~~==========x==,,,,,,RffffR,,,,,,,,,,,,,,,,,,XX,,⮞⮞
+~~~~~~~ꜷ============,,,,,,fffffR,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~=============,,,,,,RRRRRR,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~=============,,,,,{,,,,,,{,,,,,,,,,,,,,c,,,,,,,⮞⮞
+~~~~~~~=ꜵ========ꜵ==,,,,,,,,,,,,O,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~ꜭꜭꜭꜭ====ꜯꜭꜭꜭꜭ,,,,,,,,,,,,,,,,,,,,,,,XX,,,,,,,,,⮞⮞
+~~~~~~~~~~~====ꜱ~~~~,,,,,,,,,,,,,,,,,,,,,aaaaaaaaaaaa,⮞⮞
+~~~~~~~~~========ꜱ~~,,,,,,,XXX,,,c,,,,,,,aaaaaaaaaaaac⮞⮞
+~~~~~~~~~=ꜵ=j==L=ꜱ~~,,,,,,,XXX,,,,,,,,,,,PuuuuuuuuuuP,⮞⮞
+~~~~~~~~~ꜭꜭꜭꜭꜭꜭꜭꜭꜳ~~,,,,,,,,,,,,,,,,,,,,I,,1,2,5,3,4,,⮞⮞
+~~~~~~~~~~~~~~~~~~~~,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~~~~~~~~~~~~~~,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,⮞⮞
+~~~~~~~~~~~~~~~~~~~~bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
