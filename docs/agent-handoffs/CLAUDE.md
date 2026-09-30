@@ -1331,3 +1331,27 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The strafe camera doesn't reframe.
   - Drop to hang doesn't trigger when running (by design), and walking off the pier into the water now hangs.
   - Not played by the user.
+
+## Fifty-first pass — movement sound effects
+
+- **User request (2026-09-29):** walking, running, jumping, slashing and rolling sound effects suited to the game's feel, tone, style and volume. The soundtrack already exists (Codex).
+- **Source:** `Tools/gen_chuck_sfx.py` synthesizes 36 mono 48 kHz WAVs in pure Python (seeded, so reproducible, with no licence or install) into `SourceAssets/Audio/SFX` with a manifest.
+  - Steps: wood and stone × walk and run × 6 variants.
+  - Jump ×3, land ×3, slash ×4 (swish peak on the clip's 0.16 s strike), roll ×2 (contacts timed to the Roll clip).
+  - Style: a small rat's soft pads with a faint claw tick, the jacket's cloth, air swishes. No vocal efforts; no cartoon sounds.
+  - Preview reel sent to the user.
+- **Import:** `Tools/import_chuck_sfx.py` → `/Game/Art/Audio/SFX` (36 SoundWaves; cooked by the existing `/Game/Art` rule).
+- **Runtime** (`ChuckCharacter`):
+  - All sounds are 2D under the 0.45 soundtrack, with a random variant and ±5% pitch.
+  - **Steps:** on each paw plant (stance rising edge) in Start/Loop/Stop/Strafe/Turn. Stone or wood comes from the floor material's name under the paw. Run steps play above about 111 cm/s.
+  - **Jump:** on takeoff, side-jump launch and wall kick. **Land:** on landing, scaled by the drop, and on side-jump touchdown.
+  - **Slash:** every strike, via `PickPaw`. **Roll:** dodge rolls start the sound at the clip's entry offset; landing rolls add a land sound.
+  - Volumes: walk 0.3, run 0.4, jump 0.4, land 0.5, slash 0.45, roll 0.45.
+- **Tests:** **107** (106 with `-NoCapture`). The final check: all 36 sounds load, and steps (>20), jump, land, slash and roll all fired during the run.
+- **Verified:**
+  - Worktree `-MotionCapture` and `-NoGroom`: **107/107**; uncapped with and without groom: 0 failures.
+  - Fired counts, e.g. steps 243 / jumps 38 / lands 25 / slashes 13 / rolls 4.
+- **Not verified:**
+  - How they sound on the user's speakers, and the loudness balance against the music.
+  - Whether the stone surface is actually detected on Codex's streets (no test walks there).
+- **Remaining:** no sounds yet for wall-run steps, hang grab, pull-up, mantle or shimmy.

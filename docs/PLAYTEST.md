@@ -35,6 +35,8 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | Reset position and view direction | R | View button |
 | Exit prototype | Escape | Menu button |
 
+Sound (2026-09-29): Chuck's paws tap on planks and cobbles (a different sound for each), his jacket flaps on jumps and settles on landings, the claw slash swishes and the roll tumbles, all under the soundtrack. The effects are generated in code (`SourceAssets/Audio/README.md`); tell us if any are too loud, too quiet or the wrong feel.
+
 The camera is one GTA-style orbit with no switch button (since 2026-09-27). Look down (mouse/right stick) and it climbs to the elevated view: 400 cm boom, 48 degrees down, or a little higher. Look up and it sweeps down and in to rat height: 220 cm boom, lens about 76 cm above the floor. Past that it keeps the lens low and tilts it up. Boom length, pivot and field of view blend continuously in between. About 1.2 s after your last look input, the camera eases back behind Chuck while he walks away from it. Strafing or walking toward the camera leaves it alone. It uses camera collision and capped follow smoothing. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset keeps your chosen camera height.
 
 ## Compare the cameras

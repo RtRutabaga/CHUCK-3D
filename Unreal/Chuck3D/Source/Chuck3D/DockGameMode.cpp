@@ -1710,6 +1710,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
     else if(TestStage==99)
     {
+        {
+            using ESfx=AChuckCharacter::ESfx;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SFX_MEASURE loaded=%d steps=%d jumps=%d lands=%d slashes=%d rolls=%d"),Chuck->GetSfxLoaded(),
+                Chuck->GetSfxCount(ESfx::Step),Chuck->GetSfxCount(ESfx::Jump),Chuck->GetSfxCount(ESfx::Land),Chuck->GetSfxCount(ESfx::Slash),Chuck->GetSfxCount(ESfx::Roll));
+            Check(Chuck->GetSfxLoaded()==36 && Chuck->GetSfxCount(ESfx::Step)>20 && Chuck->GetSfxCount(ESfx::Jump)>0 && Chuck->GetSfxCount(ESfx::Land)>0
+                && Chuck->GetSfxCount(ESfx::Slash)>0 && Chuck->GetSfxCount(ESfx::Roll)>0,TEXT("movement sound effects load and play (steps, jump, land, slash, roll)"));
+        }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
         bSmokeTest=false;
         FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0);

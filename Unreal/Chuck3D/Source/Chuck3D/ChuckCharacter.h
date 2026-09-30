@@ -10,6 +10,7 @@ class UAnimSequence;
 class UChuckAnimInstance;
 class USkeletalMesh;
 class UStaticMeshComponent;
+class USoundBase;
 
 UCLASS()
 class CHUCK3D_API AChuckCharacter : public ACharacter
@@ -57,6 +58,10 @@ public:
     int32 GetStrafeJumps() const { return StrafeJumps; }
     /** Tests: hold strafe mode without a key. */
     void SetStrafeHeld(bool bHeld) { bTestStrafe = bHeld; }
+    /** Movement sound effects fired so far, by kind (tests): steps, jump, land, slash, roll. */
+    enum class ESfx : uint8 { Step, Jump, Land, Slash, Roll, Num };
+    int32 GetSfxCount(ESfx Kind) const { return SfxCounts[static_cast<int32>(Kind)]; }
+    int32 GetSfxLoaded() const;
     /** Last side jump was the long (running) one. */
     bool WasLongSideJump() const { return bSideLong; }
     int32 GetOuterCorners() const { return OuterCorners; }
@@ -204,6 +209,19 @@ private:
     bool bHangNeedsRelease = false;
     int32 DropHangs = 0;
     bool TryDropHang();
+    // Movement SFX (SourceAssets/Audio/SFX, Tools/gen_chuck_sfx.py), 2D under the soundtrack.
+    UPROPERTY() TArray<USoundBase*> StepWalkWood;
+    UPROPERTY() TArray<USoundBase*> StepWalkStone;
+    UPROPERTY() TArray<USoundBase*> StepRunWood;
+    UPROPERTY() TArray<USoundBase*> StepRunStone;
+    UPROPERTY() TArray<USoundBase*> JumpSounds;
+    UPROPERTY() TArray<USoundBase*> LandSounds;
+    UPROPERTY() TArray<USoundBase*> SlashSounds;
+    UPROPERTY() TArray<USoundBase*> RollSounds;
+    int32 SfxCounts[static_cast<int32>(ESfx::Num)] = {};
+    bool bPrevStance[2] = {false, false};
+    void PlaySfx(const TArray<USoundBase*>& Set, ESfx Kind, float Volume, float StartTime = 0.f);
+    void PlayStep(const FVector& Paw, float Speed);
     bool TryHangCorner(const FVector& Along, float Side);
     void TurnHangCorner(const FVector& Normal, const FVector& Edge, bool bRoom, float Side);
     void LandingRoll();

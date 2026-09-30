@@ -17,7 +17,9 @@
 #include "GroomAsset.h"
 #include "GroomBindingAsset.h"
 #include "GroomComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Sound/SoundBase.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -148,6 +150,17 @@ void AChuckCharacter::BeginPlay()
         }
     }
     SlashRandom.Initialize(FMath::Rand());
+    // Movement SFX: variants per kind (names from SourceAssets/Audio/SFX/manifest.json).
+    auto Load = [](TArray<USoundBase*>& Set, const TCHAR* Stem, int32 Count)
+    {
+        for (int32 I = 0; I < Count; ++I)
+            if (USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Stem, I, Stem, I))) Set.Add(Sound);
+    };
+    Load(StepWalkWood, TEXT("SFX_Step_Walk_Wood"), 6); Load(StepWalkStone, TEXT("SFX_Step_Walk_Stone"), 6);
+    Load(StepRunWood, TEXT("SFX_Step_Run_Wood"), 6); Load(StepRunStone, TEXT("SFX_Step_Run_Stone"), 6);
+    Load(JumpSounds, TEXT("SFX_Jump"), 3); Load(LandSounds, TEXT("SFX_Land"), 3);
+    Load(SlashSounds, TEXT("SFX_Slash"), 4); Load(RollSounds, TEXT("SFX_Roll"), 2);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SFX_LOADED %d"), GetSfxLoaded());
     // Stance locks are world positions: pose after this frame's movement.
     GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
     for (int32 I = 0; I < Clips.Num(); ++I)
@@ -161,6 +174,36 @@ void AChuckCharacter::BeginPlay()
         PC->SetInputMode(FInputModeGameOnly());
         PC->bShowMouseCursor = false;
     }
+}
+int32 AChuckCharacter::GetSfxLoaded() const
+{
+    return StepWalkWood.Num() + StepWalkStone.Num() + StepRunWood.Num() + StepRunStone.Num() + JumpSounds.Num() + LandSounds.Num() + SlashSounds.Num() + RollSounds.Num();
+}
+namespace
+{
+    // Mix under the soundtrack (music plays at 0.45); files peak at -3 dBFS.
+    constexpr float WalkStepVolume = .3f, RunStepVolume = .4f, JumpVolume = .4f, LandVolume = .5f, SlashVolume = .45f, RollVolume = .45f;
+}
+void AChuckCharacter::PlaySfx(const TArray<USoundBase*>& Set, ESfx Kind, float Volume, float StartTime)
+{
+    if (Set.Num() == 0) return;
+    // A random variant and a slight pitch spread, so repeats don't read as a loop.
+    UGameplayStatics::PlaySound2D(this, Set[FMath::RandRange(0, Set.Num() - 1)], Volume, FMath::FRandRange(.95f, 1.05f), StartTime);
+    ++SfxCounts[static_cast<int32>(Kind)];
+}
+void AChuckCharacter::PlayStep(const FVector& Paw, float Speed)
+{
+    // Stone or wood under the paw (dock materials are named M_<Surface>).
+    bool bStone = false;
+    FHitResult Hit;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckStepSurface), false, this);
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Paw + FVector(0, 0, 10), Paw - FVector(0, 0, 15), ECC_Visibility, Query))
+        if (const UPrimitiveComponent* Floor = Hit.GetComponent())
+            if (const UMaterialInterface* Surface = Floor->GetMaterial(0))
+                bStone = Surface->GetName().Contains(TEXT("Stone")) || Surface->GetName().Contains(TEXT("Plaster"));
+    const bool bRun = Speed > (ChuckClipData::WalkSpeed + ChuckClipData::StrafeRunSpeed) * .5f;
+    if (bRun) PlaySfx(bStone ? StepRunStone : StepRunWood, ESfx::Step, RunStepVolume);
+    else PlaySfx(bStone ? StepWalkStone : StepWalkWood, ESfx::Step, WalkStepVolume * FMath::Clamp(Speed / ChuckClipData::WalkSpeed, .6f, 1.f));
 }
 UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAnimInstance>(GetMesh()->GetAnimInstance()); }
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
@@ -442,6 +485,7 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
         while (Entry < .1f && (RollTravelAt(Entry + 1.f / 60.f) - RollTravelAt(Entry)) * 60.f < Pace) Entry += 1.f / 120.f;
         Gait = EGait::Roll;
         SetClip(EClip::Roll, Entry, .08f);
+        PlaySfx(RollSounds, ESfx::Roll, RollVolume, Entry);
         RollDone = RollTravelAt(Entry);
     }
     bDodgeLaunched = bDodgeLanded = bStopPending = false;
@@ -677,6 +721,8 @@ void AChuckCharacter::LandingRoll()
     SetClip(EClip::Roll, Entry, .06f);
     RollDone = RollTravelAt(Entry);
     bDodgeLaunched = bDodgeLanded = bStopPending = bRunJump = bHardLanding = false;
+    PlaySfx(LandSounds, ESfx::Land, LandVolume * .8f);
+    PlaySfx(RollSounds, ESfx::Roll, RollVolume, Entry);
     ++LandingRolls;
 }
 void AChuckCharacter::DropFromHang()
@@ -756,12 +802,14 @@ void AChuckCharacter::WallJump()
     Gait = EGait::Air;
     ++WallJumps;
     SetClip(EClip::WallKick, 0, .05f);
+    PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
 }
 AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
 {
     // User 2026-09-28: random paw order, steady timing. Capped at two of one
     // paw in a row so a streak never reads as a stuck arm.
     ++SlashStrikes;
+    PlaySfx(SlashSounds, ESfx::Slash, SlashVolume);
     if (bFirst) { SamePawRun = 0; return SlashRandom.FRand() < .5f ? EClip::SlashRight : EClip::SlashLeft; }
     const bool bSame = SamePawRun == 0 && SlashRandom.FRand() < .5f;
     SamePawRun = bSame ? 1 : 0;
@@ -966,6 +1014,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             {
                 LaunchCharacter(DodgeDirection * (bSideLong ? SideLongLateralSpeed : SideShortLateralSpeed)
                     + FVector(0, 0, bSideLong ? SideLongVerticalSpeed : SideShortVerticalSpeed), true, true);
+                PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bSideLong ? 1.f : .8f));
                 bDodgeLaunched = true;
             }
         }
@@ -976,6 +1025,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             {
                 bDodgeLanded = true;
                 Movement->StopMovementImmediately();
+                PlaySfx(LandSounds, ESfx::Land, LandVolume * .75f);
                 BaseTime = FMath::Max(BaseTime, SideLand);
             }
             else BaseTime = FMath::Min(BaseTime, SideLand - 1.f / 30.f);
@@ -996,6 +1046,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // A jump at a run (not a fall off an edge) becomes a leap with a
             // little more lift.
             bRunJump = RunWeight > .5f && GetVelocity().Z > 50.f;
+            if (GetVelocity().Z > 50.f) PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bRunJump ? 1.f : .85f));
             if (bRunJump)
             {
                 Movement->Velocity.Z = RunJumpVerticalSpeed;
@@ -1027,7 +1078,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // Back on the ground: every wall is fresh again.
         LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; WallCoyoteUntil = -1; bChimney = false;
         const bool bStickHeld = bInput || FVector2D(InputRight, InputForward).SizeSquared() > .04f;
-        if (AirApexZ - static_cast<float>(Location.Z) > RollFallHeight) LandingRoll();
+        const float Fall = AirApexZ - static_cast<float>(Location.Z);
+        if (Fall <= RollFallHeight) PlaySfx(LandSounds, ESfx::Land, LandVolume * FMath::Clamp(.6f + Fall / 120.f, .6f, 1.f));
+        if (Fall > RollFallHeight) LandingRoll();
         else if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
         else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump; }
         bRunJump = false;
@@ -1274,6 +1327,16 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else if (bLoopDominant) bStance = I == 0 ? (WalkPhase > .02f && WalkPhase < StanceFraction - .02f)
                                                : (WalkPhase > .52f || WalkPhase < StanceFraction - .52f);
         P.bStance[I] = bStance;
+    }
+    // Footsteps: a paw planting (stance begins) on the ground gaits.
+    {
+        const bool bStepGait = !bAirborne && (Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe || Gait == EGait::Turn);
+        const FChuckAnimResult Pose = Anim->GetResult();
+        for (int32 I = 0; I < 2; ++I)
+        {
+            if (bStepGait && P.bStance[I] && !bPrevStance[I]) PlayStep(Pose.Evaluations ? Pose.BallWorld[I] : Location, Gait == EGait::Turn ? ChuckClipData::WalkSpeed * .6f : Speed);
+            bPrevStance[I] = P.bStance[I];
+        }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
     if (Gait == EGait::WallRun || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;

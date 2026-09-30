@@ -1,0 +1,263 @@
+{
+ "sample_rate": 48000,
+ "peak_dbfs": -3,
+ "generator": "Tools/gen_chuck_sfx.py",
+ "sounds": [
+  {
+   "name": "SFX_Step_Walk_Wood_00",
+   "file": "SFX_Step_Walk_Wood_00.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Wood_01",
+   "file": "SFX_Step_Walk_Wood_01.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Wood_02",
+   "file": "SFX_Step_Walk_Wood_02.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Wood_03",
+   "file": "SFX_Step_Walk_Wood_03.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Wood_04",
+   "file": "SFX_Step_Walk_Wood_04.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Wood_05",
+   "file": "SFX_Step_Walk_Wood_05.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_00",
+   "file": "SFX_Step_Run_Wood_00.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_01",
+   "file": "SFX_Step_Run_Wood_01.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_02",
+   "file": "SFX_Step_Run_Wood_02.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_03",
+   "file": "SFX_Step_Run_Wood_03.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_04",
+   "file": "SFX_Step_Run_Wood_04.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Run_Wood_05",
+   "file": "SFX_Step_Run_Wood_05.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "wood"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_00",
+   "file": "SFX_Step_Walk_Stone_00.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_01",
+   "file": "SFX_Step_Walk_Stone_01.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_02",
+   "file": "SFX_Step_Walk_Stone_02.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_03",
+   "file": "SFX_Step_Walk_Stone_03.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_04",
+   "file": "SFX_Step_Walk_Stone_04.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Walk_Stone_05",
+   "file": "SFX_Step_Walk_Stone_05.wav",
+   "kind": "step_walk",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_00",
+   "file": "SFX_Step_Run_Stone_00.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_01",
+   "file": "SFX_Step_Run_Stone_01.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_02",
+   "file": "SFX_Step_Run_Stone_02.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_03",
+   "file": "SFX_Step_Run_Stone_03.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_04",
+   "file": "SFX_Step_Run_Stone_04.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Step_Run_Stone_05",
+   "file": "SFX_Step_Run_Stone_05.wav",
+   "kind": "step_run",
+   "duration_s": 0.2,
+   "surface": "stone"
+  },
+  {
+   "name": "SFX_Jump_00",
+   "file": "SFX_Jump_00.wav",
+   "kind": "jump",
+   "duration_s": 0.35
+  },
+  {
+   "name": "SFX_Jump_01",
+   "file": "SFX_Jump_01.wav",
+   "kind": "jump",
+   "duration_s": 0.35
+  },
+  {
+   "name": "SFX_Jump_02",
+   "file": "SFX_Jump_02.wav",
+   "kind": "jump",
+   "duration_s": 0.35
+  },
+  {
+   "name": "SFX_Land_00",
+   "file": "SFX_Land_00.wav",
+   "kind": "land",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_Land_01",
+   "file": "SFX_Land_01.wav",
+   "kind": "land",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_Land_02",
+   "file": "SFX_Land_02.wav",
+   "kind": "land",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_Slash_00",
+   "file": "SFX_Slash_00.wav",
+   "kind": "slash",
+   "duration_s": 0.38,
+   "strike_s": 0.16
+  },
+  {
+   "name": "SFX_Slash_01",
+   "file": "SFX_Slash_01.wav",
+   "kind": "slash",
+   "duration_s": 0.38,
+   "strike_s": 0.16
+  },
+  {
+   "name": "SFX_Slash_02",
+   "file": "SFX_Slash_02.wav",
+   "kind": "slash",
+   "duration_s": 0.38,
+   "strike_s": 0.16
+  },
+  {
+   "name": "SFX_Slash_03",
+   "file": "SFX_Slash_03.wav",
+   "kind": "slash",
+   "duration_s": 0.38,
+   "strike_s": 0.16
+  },
+  {
+   "name": "SFX_Roll_00",
+   "file": "SFX_Roll_00.wav",
+   "kind": "roll",
+   "duration_s": 0.9,
+   "contacts_s": [
+    0.21,
+    0.32,
+    0.43
+   ],
+   "plant_s": 0.56
+  },
+  {
+   "name": "SFX_Roll_01",
+   "file": "SFX_Roll_01.wav",
+   "kind": "roll",
+   "duration_s": 0.9,
+   "contacts_s": [
+    0.21,
+    0.32,
+    0.43
+   ],
+   "plant_s": 0.56
+  }
+ ]
+}
