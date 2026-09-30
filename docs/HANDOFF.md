@@ -8,6 +8,10 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 14 (Claude, 2026-09-29, user request: movement sound effects):** runtime `cf0a70e` adds generated SFX (`Tools/gen_chuck_sfx.py`, `SourceAssets/Audio/SFX`, imported to `/Game/Art/Audio/SFX`). They play 2D under the soundtrack: paw steps on wood and stone (walk and run), jump, land, claw slash and roll. Details are in `agent-handoffs/CLAUDE.md` pass 51 and `SourceAssets/Audio/README.md`.
+
+The root candidate passed `-MotionCapture` **107/107**, the world check and the music check (`Local/verify-package-20260929-221028.log`). It was promoted to `Builds/Windows` with receipt `cf0a70e`; the previous package is kept as `Builds/Windows-Previous-20260929-Sfx`. Loudness against the music and how they sound haven't been judged by ear yet.
+
 **Update 13 (Claude, 2026-09-29, user requests: strafe, faster run, drop to hang, landing roll height):** runtime `c0154fd` adds:
 - strafe on Q/E or held LT, with jump while strafing = side jump (short from a walk, long from a run);
 - a faster run (225 cm/s);
