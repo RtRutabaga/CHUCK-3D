@@ -8,6 +8,15 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 17 (Claude, 2026-09-30, user request: low rake, cigarettes, jars):** runtime `5a869d8` adds:
+- an automatic low rake for low targets;
+- 10 breakable clay jars (solid; they shatter into shards and drop 1–3 cigarettes);
+- cigarette pickups (about one grass tuft in three holds one) and a top-right counter.
+
+Design rule (user): Chuck breaks grass and jars (urns in later maps), never crates or barrels; recorded in `PROJECT-BRIEF.md`. Details are in `agent-handoffs/CLAUDE.md` pass 54.
+
+The root candidate passed `-MotionCapture` **113/113**, the world check and the music check (`Local/verify-package-20260930-092918.log`). It was promoted to `Builds/Windows` with receipt `5a869d8`; the previous package is kept as `Builds/Windows-Previous-20260930-Loot`. Not yet played by the user.
+
 **Update 16 (Claude, 2026-09-30, user request: shreddable grass tufts):** runtime `da4eea5` adds 51 generated weed tufts around the docks and a shared breakable base (`ChuckBreakable`) for grass, then jars and small enemies. A slash shreds any tuft in reach to stubble, with a clipping spray and a rustle, and Chuck walks through grass. Details are in `agent-handoffs/CLAUDE.md` pass 53 and `PLAYTEST.md`.
 
 The root candidate passed `-MotionCapture` **110/110**, the world check and the music check (`Local/verify-package-20260930-085524.log`). It was promoted to `Builds/Windows` with receipt `da4eea5`; the previous package is kept as `Builds/Windows-Previous-20260930-Grass`. Not yet played by the user. Next suggested: the low rake for low targets, then cigarette drops and pickups.
