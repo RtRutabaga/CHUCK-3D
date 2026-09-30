@@ -1,5 +1,11 @@
 # Agent handoff — Claude Code, jacket continuity and neutral chest
 
+## Current instruction for Claude — sequential main workflow
+
+The user now runs only one agent at a time and asks Claude to start working directly on `main` in `C:\Users\ashsm\OneDrive\Documents\GameDev\CHUCK-3D`. Read the v3 workflow in `docs/AGENT-WORKFLOW.md` and the latest `docs/HANDOFF.md` before resuming. Inspect status/branch and preserve unfinished work; do not reset or copy an old worktree over main. If this Claude session is pinned to its old worktree, reopen the root project before implementation. Existing worktrees have not been deleted or reset.
+
+Keep character/traversal ownership, but commit completed work on main and use the root `Launch-Prototype.cmd` as the single player-facing launcher. A playable milestone includes building, verifying and updating that launcher's package and receipt, not just committing source. Update the handoff and publish routine verified changes under existing user permission. The worktree-only instructions in the historical deliveries below are superseded.
+
 - **Owner, task, branch, worktree:** Claude Code (Opus 5.5, Claude desktop app), `docs/agent-tasks/CLAUDE-CHARACTER.md` first bounded assignment. Authored in the app's own worktree `.claude/worktrees/project-orientation-fd7504` on branch `claude/project-orientation-fd7504`, because the app blocks edits into another worktree. `codex/claude-character` was then fast-forwarded to the same commit. `Local/AgentWorktrees/claude-character` was not edited.
 - **Base commit and delivered commit(s):** base `d10eba4`. Delivered: the single commit on `codex/claude-character` directly after `d10eba4` ("Rebuild Chuck jacket as one continuous garment").
 - **Changed paths; any changes outside initial ownership:** `Tools/build_chuck_model.py`, `SourceAssets/Chuck/{Chuck.blend, SK_ChuckBody.fbx, SM_ChuckBody.fbx, SM_ChuckFoot.fbx, README.md}`, new `SourceAssets/Chuck/{check_model.py, review_renders.py, Review/}`, and this file. No changes outside the owned paths. No Unreal assets or runtime code touched.

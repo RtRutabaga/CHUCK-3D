@@ -1,8 +1,22 @@
-# Codex + Claude Code: character-first workflow
+# Codex + Claude Code workflow
 
-Two independent sessions, two Git worktrees, one integration step. This is repository groundwork, not an automated agent orchestrator.
+## Current workflow — v3: sequential work on main
 
-## Current split — v2 (2026-09-27, user request)
+The user explicitly switched to this workflow after confirming that only one agent works at a time. This section supersedes the worktree-only, separate-integration and per-session publication instructions in v2 and the historical task files below.
+
+- Both agents use `main` in `C:\Users\ashsm\OneDrive\Documents\GameDev\CHUCK-3D`. Check the actual checkout/branch, `git status` and latest handoff before edits. Never discard another session's unfinished changes. Review and continue them where appropriate; ask only if ownership or intent is unclear.
+- Claude retains character, animation, rig/import and traversal/camera ownership; Codex handles setting work and verification/tooling. The active user assignment takes precedence.
+- Only one agent edits this checkout at a time. Keep one heavy Unreal/Blender process at a time on the 16 GB machine; do not kill an unknown session's process. If simultaneous work resumes, agree on isolated branches/worktrees first.
+- Use the root `Launch-Prototype.cmd` as the single player-facing launcher. Completed playable milestones must be built, verified and promoted to root `Builds/Windows`, preserving the previous package and writing/checking the build receipt. Committing or pushing source alone does not update the game.
+- Update HANDOFF and the active agent's handoff with changes, actual test evidence, remaining flaws and launcher status. Commit completed work on main and push routine verified project changes under the user's standing publication permission. Document partial/uncommitted work honestly if interrupted.
+- Existing worktrees are retained, not deleted or reset. Before moving any unfinished work out of one, inspect its status and commits and preserve it. Old launchers/task files are historical development copies, not the default workflow. If a Claude app session is pinned to a worktree and cannot access the root checkout, ask the user to reopen the root project.
+- Separate worktrees remain optional for risky experiments. Rig contracts, binary-asset care, original-game read-only boundaries and the next-owner line still apply.
+
+## Historical workflow below
+
+The previous two-worktree setup is retained for reference; it is no longer the default.
+
+## Historical split — v2 (2026-09-27, superseded by v3)
 
 September 29 assignment: Codex owns the requested setting expansion in `DockSetting.cpp/.h`, its scene-construction call, setting validation and docs, using `codex/docks-setting` in the existing codex-movement worktree. Claude retains character, animations, traversal and camera ownership. The user's explicit setting request supersedes the earlier world pause. Integrate and package one checkout at a time.
 
