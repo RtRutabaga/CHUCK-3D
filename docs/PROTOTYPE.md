@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+September 30 setting scope: additive Waterdeep fountain plaza, walls, closed sewer gate and dawn lamps/torches, loosely based on the original 2D text maps. Preserve existing geometry and Claude's current gameplay/NPC systems. See WATERDEEP-PLAZA.md and latest HANDOFF for routes and actual validation.
+
 September 29 scope update: the user authorized a larger connected docks setting around Claude's existing parkour routes. See DOCKS-SETTING.md. Current runtime uses Claude's v1 character, authored clips and traversal, and continuous camera orbit; historical procedural-character and world-pause notes below no longer describe the latest build. HANDOFF records what has actually been packaged and checked.
 
 Current scope follows the user's request to test fundamentals before adding interactions. One Windows PC scene: detailed primitive docks, tavern frontage, stationary human scale reference, barrel, crate, low step and bench. The presentation pass adds paving, plank nails/grain, timber and door details, roof tiles and distant nonplayable harbor silhouettes. Chuck uses an imported Blender form study with restrained procedural movement. No combat, dialogue, pickups, additional maps or finished art.

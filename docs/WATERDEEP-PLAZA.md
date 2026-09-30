@@ -1,0 +1,19 @@
+# Waterdeep plaza adaptation
+
+The user requested a loose, additive adaptation of the original top-down Waterdeep map. The original docks text map identifies district walls, torches, a sewer grate near the guard, tavern, market, piers and ruins. Its adjoining plaza has a central tiered fountain, smithy, alchemist, stands, lamps and closed gate. Reference copies and SHA-256 provenance are in References/PROVENANCE.md. No original generator was run.
+
+## Layout and route
+
+The existing 3D district stays intact. New land extends beyond the market/service quay, in the negative-Y direction, instead of displacing the old streets and parkour. Two approaches join it: a narrow quay path just beyond the customs terrace, and a wider continuation of the service quay beside the storehouse. Both are at the existing ground level. The extension adds 688 square metres of ground footprint, plus connecting paths; this is not net unobstructed walking area.
+
+Follow Chandlers' Row to its far end, pass the customs terrace on its east side, and continue to the fountain. Alternatively, take the waterside route around the service-quay storehouse. The plaza has a ring route around a tiered fountain, market canopies and benches. A smithy and alchemist flank the far closed city gate; a small ruin fragment recalls the original docks. Shops remain exterior-only, with no invented dialogue or crafting systems.
+
+The barred sewer arch is in the eastern wall. It has solid collision backing and no interaction, destination or access yet. The city gate also stays closed. This is the same prototype map, not a campaign or sewer level.
+
+## Light and implementation
+
+An early-dawn palette replaces midday presentation: low warm directional fill, a cool ambient skylight, warm horizon, lit wall torches and street lamps. Local lights are shadowless with short radii to control cost; their color varies subtly. Older Dock Street lanterns are illuminated too. Fountain water has moving surface normals and four small modeled streams. Flame meshes and water remain prototype effects, not finished VFX.
+
+`DockPlaza.cpp/.h` contains the new district and its checks, called after the existing setting construction. `create_plaza_materials.py` touches only three named new world materials, covered by LFS; no engine installation, purchased asset, character import or old material regeneration. Remote LFS allowance remains unknown; no paid storage was purchased.
+
+The packaged verifier additionally requires 11 new ground samples, eight capsule-clearance segments and a sewer blocking trace. Existing world, music and Claude gameplay checks remain mandatory. These checks establish selected route continuity, not every possible climb over walls or subjective camera comfort. `-ChuckPlazaCapture` produces five review views (overview, low fountain, sewer, gate and original spawn) in `Saved/Screenshots/Windows/Plaza`, then exits. Actual run evidence is recorded in HANDOFF.

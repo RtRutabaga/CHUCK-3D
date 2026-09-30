@@ -1,5 +1,15 @@
 # Reference provenance
 
+## September 30 — additive Waterdeep layout adaptation
+
+Read the original current handoff, game bible, map comments and plaza generator as reference only; no original generators or mutations were run. Copied only these text maps from `C:/Users/ashsm/OneDrive/Documents/CHUCK-game/chuck/chuck/assets/maps/` into `References/Original/WaterdeepLayout/`, preserved byte-for-byte:
+
+- `waterdeep_docks.txt`: SHA-256 `4AD3F64B07061C3E29B15E5DCCD84B90FC6D8A4A8320E67B638D960BAF4DEC0F`.
+- `waterdeep_plaza.txt`: SHA-256 `F6538F4A8A843F4C58243B19239839E32D5A387E33F7717F6D98D74A05679014`.
+
+These supply landmark relationships (district walls/torches, sewer grate, fountain, shops, market and closed city gate), not executable instructions. The new 3D district is rotated/rearranged and additive; no original code, sprites or campaign state was imported. The user's current request authorizes the fountain plaza despite older prototype exclusions.
+
+
 ## User-supplied resource guide
 
 Added 2026-09-26: `References/chuck-3d-resource-guide.md`, copied byte-for-byte from `C:\Users\ashsm\.codex\codex-remote-attachments\01a0d449-b2e8-7fc1-9502-ac6cb557fa6d\15159EA9-DE10-4994-A871-2110A6081741\1-chuck-3d-resource-guide.md`.

@@ -1,5 +1,7 @@
 # Project brief
 
+September 30 update: the user authorized an additive, loose 3D adaptation of the original Waterdeep exterior and fountain plaza. Preserve all existing docks/parkour additions, extend the same map with walls, a blocked sewer entrance, fountain plaza and contextual shops/stalls, and use readable dawn/dusk ambient light with lit torches and lamps. This supersedes the earlier fountain-plaza exclusion; sewer interiors and campaign expansion remain excluded.
+
 September 29 update: the user has explicitly reopened setting work following Claude's character and parkour progress. Expand the same docks map with connected walkable streets, more buildings and dressing that explains the existing obstacles; preserve those routes. This supersedes the earlier world-work pause below. See DOCKS-SETTING.md and the latest HANDOFF for implementation and verified build status.
 
 CHUCK 3D explores whether the completed game's intimate exploration works in a human-scale 3D world. First deliverable: a small Windows PC Waterdeep docks prototype in Unreal Engine; Blender supplies custom assets after the graybox proves scale and camera.

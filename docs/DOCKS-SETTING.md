@@ -1,5 +1,7 @@
 # Connected docks setting — September 29, 2026
 
+September 30: the original district is preserved and extended with an adjoining fountain plaza, walls, closed sewer gate and dawn lighting. See WATERDEEP-PLAZA.md for the reference-based layout and approaches. Earlier setting-only scope below describes the retained district.
+
 The user reopened setting work after Claude's traversal progress. This remains one docks map, not a campaign expansion. Claude's character, controller, camera and existing obstacle dimensions are preserved.
 
 `DockSetting.cpp` adds a continuous west Dock Street, cargo loading court, tavern rear court and market service quay. Seven additional solid buildings have human-sized closed doors, shuttered windows, timber framing, pitched roofs and chimneys. The old tavern and warehouse frontage have building depth. Warehouse loading doors, a hoist, workshop signs, timber bands and crane bracing explain the existing parkour obstacles without adding collision to their dressing.

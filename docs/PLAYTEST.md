@@ -4,6 +4,8 @@ Scope: one connected Waterdeep docks scene with Claude's parkour areas, a new Do
 
 ## Launch
 
+The new fountain plaza is beyond the market and customs terrace. Follow Chandlers' Row to its far end and continue along the narrow quay path east of the terrace, or follow the service quay around the waterside storehouse. Both lead to the fountain, shops and walled square. The sewer arch in the eastern wall and the large city gate remain closed. Compare the approach and fountain loop at both low and elevated orbit heights; check that dawn lighting leaves landing surfaces readable while torches and lamps stand out. See WATERDEEP-PLAZA.md.
+
 Double-click `Launch-Prototype.cmd` at the repository root. It opens the verified executable under `Builds/Windows/Chuck3D/Binaries/Win64` in a 1280 x 720 window. Click the game window to capture input. No Unreal editor is needed. The launcher identifies its build and checks its executable hash against `Builds/Windows/prototype-build.json`.
 
 The launcher prints its verified revision before opening. See the latest HANDOFF entry for the current packaged milestone; source commits alone do not update the playable build. The package retains Claude's v1 character, groom, authored clips, traversal and continuous orbit camera. Physical Xbox hardware and subjective movement/camera comfort still need user testing.

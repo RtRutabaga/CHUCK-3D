@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 30 — additive original-map adaptation
+
+Worked on root main from `dd02680`, retaining Claude's worker NPC and all gameplay through `9b5b46e`. User authorized fountain plaza despite historical exclusion. Runtime `9e527bf` adds `DockPlaza.cpp/.h`, one construction call and dawn lighting; original setting geometry and character code unchanged. Added connected plaza, fountain, shop shells, market, walls and two closed gates. Three new material assets (18 KB) plus isolated generator; no original asset/code import or character regeneration. Text-map reference copies and hashes in References/PROVENANCE.md.
+
+Packaged build `Local/plaza-build.log` succeeded. Verifier passed 121 gameplay + 15 existing world + 20 new plaza checks and music-loop check (`Local/verify-package-20260930-135125.log`). Five plaza/spawn captures reviewed; no new physical-controller or motion-capture claims. Normal launcher updated with receipt; old package kept at `Builds/Windows-Previous-20260930-Plaza`. Remaining limits: prototype VFX/materials, no shop/gate interactions, arbitrary wall escape climbs not comprehensively tested. Details and route in WATERDEEP-PLAZA.md. Next setting work can be done here.
+
 ## September 29 — user soundtrack
 
 Worked directly on main per v3 workflow. `18e6144` copies/imports the supplied WAV and starts looping 2D music at 45% with a 1.5-second fade-in. Import helper needs `-AllowCommandletAudio`; source provenance and exact format are in `SourceAssets/Audio/README.md`. No generators or character assets changed. WAV and SoundWave add roughly 49 MB of LFS data; integrity passed.
