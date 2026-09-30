@@ -1430,3 +1430,45 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Jars at the market and timber yard weren't looked at in game.
   - No regrowth or respawn. Cigarettes don't persist beyond the session.
   - Not played by the user.
+
+## Fifty-fifth pass — the small rat enemy
+
+- **User request (2026-09-30):** "Do the small rat enemy" (regular largish rats; the low rake was built for them).
+- **Model** (`Tools/build_enemy_rat.py`): an ordinary big dock rat on all fours.
+  - Overlapping solids voxel-remeshed into one skin and smoothed; separate ears, eyes, nose and a tapering tail. 23-bone skeleton (spine, head, three per leg, six tail), automatic weights on the body, hand weights on the parts. 10k tris.
+  - Five material slots (Fur, Belly, Pink, Eye, Tail). The first import used vertex colour, which didn't carry through the skeletal import (it rendered plain grey).
+  - Scaled 1.2× in game: about 31 cm plus tail, 18 cm tall.
+  - Review: `Enemies/Rat/Review/`.
+- **Import** (`Tools/import_enemy_rat.py`, `-ExecutePythonScript`): `/Game/Characters/Rat/SK_Rat` with its own skeleton and five flat `M_Rat*` materials. The slot structs are copies, so each must be written back (the first pass left the default grid material). The script now checks that assignments persist.
+- **Sounds:** `SFX_RatChitter` ×3, `RatHiss` ×2, `RatBite` ×2, `RatHurt` ×2, `RatDeath`; 55 sounds in all. Played 3D with attenuation (full to 2 m, silent by 11 m). Preview reel made.
+- **Runtime:**
+  - `AEnemyRat` (`ACharacter`, no controller) is posed procedurally on a `UPoseableMeshComponent`: component-space rotations on the reference pose, parent first. The pose covers:
+    - a diagonal trot tied to ground travel (stride 10 cm + 0.1 × speed);
+    - body bob and sway, sniffing and idle looking;
+    - a tail wave that lashes in the wind-up;
+    - crouch, lunge stretch and hurt twist;
+    - the death roll onto its side, then sinking away.
+  - States: Roam → Chase → Windup → Lunge → Recover, plus Hurt and Dead.
+    - Roam: 60 cm/s round its home, with chitters. It notices Chuck within 350 cm when he's within 60 cm of its level, and loses him at 700 cm.
+    - Chase: 170 cm/s.
+    - Windup at 50 cm (inside the slash's reach): 0.45 s, facing him, crouched, hissing.
+    - Lunge: 0.25 s at 280 cm/s, one bite chance within 45 cm.
+    - Recover: backs off for 0.7 s.
+    - Two hits (`Health` 2): the first knocks it back 170 cm/s with a squeal; the second kills it, drops its cigarettes, and it is gone by 2.2 s.
+  - Chuck:
+    - `TakeBite`: knockback 230 cm/s plus a hop, then 1 s immunity. Rolling, side-jumping, hanging, climbing and wall runs avoid bites. No health yet; that's the user's call.
+    - `SlashHit` and `LowTargetInReach` include rats (hit radius 16), so they get the low rake.
+    - `ACigarettePickup::Burst` is now shared by breakables and rats.
+  - `SpawnDockRats`: 5 rats (wharf, timber yard, garden). Not spawned under `-ChuckSmokeTest`; tests place their own.
+- **Tests:** **115** (114 with `-NoCapture`).
+  - Stage 101: a rat 150 cm away chases, winds up for 0.45 s and bites at 1.2 s; Chuck is knocked back about 94 cm.
+  - Stage 102: two low rakes kill a rat in about 0.97 s; one cigarette comes out and the rat is removed.
+  - Capture 103: the encounter at rat height from the side.
+- **Verified:** worktree `-MotionCapture` and `-NoGroom` **115/115**; uncapped with and without groom 0 failures. Evidence: `Review/runtime_Rat_{105,120,240,340}.png`.
+- **Remaining:**
+  - The knockback (about 94 cm) is longer than intended; tune on feel.
+  - Rats path straight at Chuck (no obstacle avoidance) and don't climb.
+  - No hit flash or death particles.
+  - Procedural pose only (no authored clips); the pose hasn't been reviewed closely at speed.
+  - Rats aren't respawned.
+  - Not played by the user.

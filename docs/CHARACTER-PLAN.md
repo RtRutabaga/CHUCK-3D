@@ -38,7 +38,7 @@ Immediate art follow-up after the first integration: the open fronts are more co
 | Climb | Reach/grip controls, hands/fingers, feet and root alignment to climb surface | Not implemented |
 | Smoke | Stable mouth/head attachment for a cigarette retained in the mouth; restrained jaw/lip pose and smoke origin; avoid face/jacket clipping | Not implemented; pickup remains deferred |
 
-No new combat, dialogue, campaign, maps or power progression is implied. Plan these capabilities now; do not implement all actions before walking and the base model are credible.
+Enemies (2026-09-30): the small dock rat (`AEnemyRat`, `Tools/build_enemy_rat.py`) is a procedurally posed quadruped with a readable tell. It takes two slashes and bites with a knockback; no health system yet. No new combat, dialogue, campaign, maps or power progression is implied. Plan these capabilities now; do not implement all actions before walking and the base model are credible.
 
 ## Review evidence
 

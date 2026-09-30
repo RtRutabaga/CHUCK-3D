@@ -312,6 +312,66 @@
    "file": "SFX_Pickup_02.wav",
    "kind": "pickup",
    "duration_s": 0.2
+  },
+  {
+   "name": "SFX_RatChitter_00",
+   "file": "SFX_RatChitter_00.wav",
+   "kind": "rat_chitter",
+   "duration_s": 0.5
+  },
+  {
+   "name": "SFX_RatChitter_01",
+   "file": "SFX_RatChitter_01.wav",
+   "kind": "rat_chitter",
+   "duration_s": 0.5
+  },
+  {
+   "name": "SFX_RatChitter_02",
+   "file": "SFX_RatChitter_02.wav",
+   "kind": "rat_chitter",
+   "duration_s": 0.5
+  },
+  {
+   "name": "SFX_RatHiss_00",
+   "file": "SFX_RatHiss_00.wav",
+   "kind": "rat_hiss",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_RatHiss_01",
+   "file": "SFX_RatHiss_01.wav",
+   "kind": "rat_hiss",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_RatBite_00",
+   "file": "SFX_RatBite_00.wav",
+   "kind": "rat_bite",
+   "duration_s": 0.2
+  },
+  {
+   "name": "SFX_RatBite_01",
+   "file": "SFX_RatBite_01.wav",
+   "kind": "rat_bite",
+   "duration_s": 0.2
+  },
+  {
+   "name": "SFX_RatHurt_00",
+   "file": "SFX_RatHurt_00.wav",
+   "kind": "rat_hurt",
+   "duration_s": 0.25
+  },
+  {
+   "name": "SFX_RatHurt_01",
+   "file": "SFX_RatHurt_01.wav",
+   "kind": "rat_hurt",
+   "duration_s": 0.25
+  },
+  {
+   "name": "SFX_RatDeath_00",
+   "file": "SFX_RatDeath_00.wav",
+   "kind": "rat_death",
+   "duration_s": 0.6
   }
  ]
 }

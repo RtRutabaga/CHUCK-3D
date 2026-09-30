@@ -52,6 +52,15 @@ ACigarettePickup* ACigarettePickup::Spawn(UWorld* World, const FVector& From, co
     return Pickup;
 }
 
+void ACigarettePickup::Burst(UWorld* World, const FVector& Base, int32 Count, float Ground)
+{
+    const float Start = FMath::FRandRange(0.f, 360.f);
+    for (int32 I = 0; I < Count; ++I)
+    {
+        const FVector Out = FRotator(0, Start + 360.f * I / FMath::Max(1, Count) + FMath::FRandRange(-25.f, 25.f), 0).Vector();
+        Spawn(World, FVector(Base.X, Base.Y, Ground + 10.f), Out * FMath::FRandRange(45.f, 85.f) + FVector(0, 0, FMath::FRandRange(170.f, 230.f)), Ground);
+    }
+}
 int32 ACigarettePickup::CountInWorld(UWorld* World)
 {
     int32 Count = 0;

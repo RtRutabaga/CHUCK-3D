@@ -43,6 +43,12 @@ Jars and cigarettes (2026-09-30):
 - **Low rake:** when a tuft or jar is in reach, the slash automatically becomes a crouched low rake.
 - **What breaks:** Chuck isn't strong. He breaks grass and jars (urns in later maps), not crates or barrels.
 
+Rats (2026-09-30): five big dock rats roam the cargo wharf, the timber yard and the Chandlers' Row garden. There are none near the start.
+- **Hunting:** a rat that notices Chuck within about 3.5 m on its level scurries in. You can outrun it at a run.
+- **The tell:** it stops, crouches and hisses for about half a second, then lunges.
+- **Dodging:** roll, side-jump, or step back out of reach. A bite knocks Chuck back about a metre, and he can't be bitten again for a second. There's no health yet.
+- **Killing it:** slash it during the crouch; the low rake is automatic. The first hit knocks it back with a squeal, and the second kills it, dropping one or two cigarettes.
+
 Sound (2026-09-29): Chuck's paws tap on planks and cobbles (a different sound for each), his jacket flaps on jumps and settles on landings, the claw slash swishes and the roll tumbles, all under the soundtrack. The effects are generated in code (`SourceAssets/Audio/README.md`); tell us if any are too loud, too quiet or the wrong feel.
 
 The camera is one GTA-style orbit with no switch button (since 2026-09-27). Look down (mouse/right stick) and it climbs to the elevated view: 400 cm boom, 48 degrees down, or a little higher. Look up and it sweeps down and in to rat height: 220 cm boom, lens about 76 cm above the floor. Past that it keeps the lens low and tilts it up. Boom length, pivot and field of view blend continuously in between. About 1.2 s after your last look input, the camera eases back behind Chuck while he walks away from it. Strafing or walking toward the camera leaves it alone. It uses camera collision and capped follow smoothing. Controller sticks have a 20% dead zone. A fall below the dock returns Chuck to the start. Reset keeps your chosen camera height.

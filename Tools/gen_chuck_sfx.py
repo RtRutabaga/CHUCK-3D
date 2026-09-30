@@ -273,6 +273,54 @@ def main():
             add(out, filt(fib, ('hp', 3000, .7), ('bp', rng.uniform(4000, 7000), 1.8)), .012 + k * rng.uniform(.006, .012), rng.uniform(.2, .45))
         add(out, mul(cloth(rng, .12, 1500, flutter=.3), env(.12, .01, .03)), .03, .25)    # into the jacket
         write(f'SFX_Pickup_{i:02d}', finish(out), entries, 'pickup')
+    # ---- the rat enemy (2026-09-30): natural and quiet, not cartoon squeaks.
+    def chirp(rng, seconds, f0, f1, amount=1., vib=0.):
+        """A short tonal chirp sweeping f0 -> f1 with a soft attack and decay."""
+        out = buf(seconds); ph = 0.
+        for i in range(len(out)):
+            u = i / len(out)
+            f = f0 + (f1 - f0) * u + vib * math.sin(math.tau * 40 * i / SR)
+            ph += math.tau * f / SR
+            a = min(1., u / .12) * (1 - u) ** 1.5
+            out[i] = amount * a * (math.sin(ph) + .25 * math.sin(2 * ph))
+        return out
+    for i in range(3):
+        # Sniffing and chittering while it roams: quick, high, soft.
+        rng = random.Random(f'rat-chitter-{i}')
+        out = buf(.5)
+        t = 0.
+        for _ in range(rng.randint(3, 5)):
+            add(out, chirp(rng, rng.uniform(.03, .06), rng.uniform(5200, 6400), rng.uniform(4300, 5200), .5), t)
+            t += rng.uniform(.05, .11)
+        for k in range(2):   # two sniffs
+            sn = mul(noise(rng, .07), env(.07, .02, .02))
+            add(out, filt(sn, ('bp', 3500, 1.)), .3 + .09 * k, .25)
+        write(f'SFX_RatChitter_{i:02d}', finish(out), entries, 'rat_chitter')
+    for i in range(2):
+        # The wind-up hiss before a lunge: breathy, rising a little.
+        rng = random.Random(f'rat-hiss-{i}')
+        out = mul(cloth(rng, .45, 4200, sweep=.25, flutter=.25), env(.45, .06, .12, .2))
+        write(f'SFX_RatHiss_{i:02d}', finish(out), entries, 'rat_hiss')
+    for i in range(2):
+        # The bite: teeth snapping shut, a click with a small body.
+        rng = random.Random(f'rat-bite-{i}')
+        out = buf(.2)
+        add(out, filt(mul(noise(rng, .015), env(.015, .0003, .0018)), ('hp', 2000, .7)), 0, 1.)
+        add(out, modes(rng, .08, [rng.uniform(1700, 2100), 3300], [.012, .006], [.6, .3]), 0, .6)
+        add(out, filt(mul(noise(rng, .05), env(.05, .002, .012)), ('lp', 700, .7)), .003, .5)
+        write(f'SFX_RatBite_{i:02d}', finish(out), entries, 'rat_bite')
+    for i in range(2):
+        # Hurt: a short squeal falling away.
+        rng = random.Random(f'rat-hurt-{i}')
+        out = buf(.25)
+        add(out, chirp(rng, .16, rng.uniform(5600, 6200), rng.uniform(3200, 3700), 1., vib=180.), 0)
+        add(out, filt(mul(noise(rng, .06), env(.06, .002, .015)), ('bp', 3000, 1.)), 0, .3)
+        write(f'SFX_RatHurt_{i:02d}', finish(out), entries, 'rat_hurt')
+    rng = random.Random('rat-death')
+    out = buf(.6)
+    add(out, chirp(rng, .3, 5200, 2600, 1., vib=120.), 0)
+    add(out, filt(mul(noise(rng, .1), env(.1, .004, .03)), ('lp', 600, .7)), .28, .6)   # the body flops down
+    write('SFX_RatDeath_00', finish(out), entries, 'rat_death')
     (OUT / 'manifest.json').write_text(json.dumps({'sample_rate': SR, 'peak_dbfs': -3, 'generator': 'Tools/gen_chuck_sfx.py', 'sounds': entries}, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SFX_READY', len(entries), 'sounds')
 

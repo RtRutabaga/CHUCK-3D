@@ -2,6 +2,7 @@
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
 #include "ChuckBreakable.h"
+#include "EnemyRat.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -339,7 +340,7 @@ void AChuckCharacter::ResetToDock()
     InputForward = InputRight = StrafeKeys = StrafeTrigger = 0;  // refreshed every frame while input is live
     bTestStrafe = bHangNeedsRelease = false; GetCharacterMovement()->bOrientRotationToMovement = true;
     bRunJump = bHardLanding = false;
-    bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1;
+    bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
@@ -893,6 +894,32 @@ void AChuckCharacter::SlashHit()
         Target->Break(Swing);
         ++SlashBreaks;
     }
+    // Rats: the same reach, ground to chest.
+    for (const TWeakObjectPtr<AEnemyRat>& Entry : AEnemyRat::All())
+    {
+        AEnemyRat* Rat = Entry.Get();
+        if (!Rat || Rat->IsDead()) continue;
+        const FVector To = Rat->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - AEnemyRat::HitRadius;
+        if (Reach > SlashReach || FMath::Abs(To.Z) > 45.f) continue;
+        if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
+        Rat->TakeSlash(Swing);
+        ++SlashRatHits;
+    }
+}
+bool AChuckCharacter::TakeBite(const FVector& From)
+{
+    const float Now = GetWorld()->GetTimeSeconds();
+    if (Now < BiteImmuneUntil || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
+    BiteImmuneUntil = Now + BiteImmunity;
+    ++BitesTaken;
+    FVector Away = (GetActorLocation() - From).GetSafeNormal2D();
+    if (Away.IsNearlyZero()) Away = -GetActorForwardVector().GetSafeNormal2D();
+    // A stumble back out of reach: a short hop away, the slash layer dropped.
+    LayerTime = -1; bSlashQueued = false; SlashHitAt = -1;
+    if (Gait == EGait::Slash || Gait == EGait::Turn) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    LaunchCharacter(Away * BiteKnockback + FVector(0, 0, 110.f), true, true);
+    return true;
 }
 bool AChuckCharacter::LowTargetInReach() const
 {
@@ -909,6 +936,14 @@ bool AChuckCharacter::LowTargetInReach() const
         if (Reach <= SlashReach + 10.f && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) >= .3f || Reach <= 5.f)
             && Bottom + Target->GetHitHeight() < Feet + 35.f && Bottom > Feet - 20.f)
             return true;
+    }
+    for (const TWeakObjectPtr<AEnemyRat>& Entry : AEnemyRat::All())
+    {
+        const AEnemyRat* Rat = Entry.Get();
+        if (!Rat || Rat->IsDead()) continue;
+        const FVector To = Rat->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - AEnemyRat::HitRadius;
+        if (Reach <= SlashReach + 10.f && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) >= .3f || Reach <= 5.f) && FMath::Abs(To.Z) < 45.f) return true;
     }
     return false;
 }

@@ -24,6 +24,8 @@ public:
     // Pocketed when Chuck's centre comes this close (horizontal, cm), once it can be.
     static constexpr float CollectRadius = 26.f;
     static constexpr float CollectDelay = .35f;   // it visibly pops out first
+    /** Count cigarettes hopping out of Base, spread round, landing on Ground. */
+    static void Burst(UWorld* World, const FVector& Base, int32 Count, float Ground);
     /** Live pickups (tests). */
     static int32 CountInWorld(UWorld* World);
 protected:

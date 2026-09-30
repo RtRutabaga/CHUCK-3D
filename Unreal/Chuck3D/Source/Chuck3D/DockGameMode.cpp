@@ -5,6 +5,7 @@
 #include "CigarettePickup.h"
 #include "ClayJarData.h"
 #include "EngineUtils.h"
+#include "EnemyRat.h"
 
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
@@ -415,6 +416,8 @@ void ADockGameMode::StartPlay()
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
     AClayJar::SpawnDockJars(World);
+    // Rats roam in play; the smoke test places its own so none wander into other checks.
+    if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"))) AEnemyRat::SpawnDockRats(World);
     // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
@@ -1501,6 +1504,63 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 TEXT("a low rake breaks the jar into shards with a crack, its cigarettes pop out, and the way is clear"));
             if(bJar) TestJar->Destroy();
             for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
+            // Next: a rat 150 cm ahead. Chuck stands still: it should notice
+            // him, come in, give its tell (crouch and hiss), lunge and bite.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            TestRat=AEnemyRat::Place(GetWorld(),FVector2D(-90,-20),180.f);
+            BitesBase=Chuck->GetBitesTaken(); LocoPrevious=Chuck->GetActorLocation(); LocoValue=0; KeySide=-1; KeyJumpSide=0; bLocoFlag=false;
+            TestStage=101; StageTime=0;
+        }
+    }
+    else if(TestStage==101)
+    {
+        const bool bRat=TestRat.IsValid();
+        if(bRat)
+        {
+            const FString RatState=bRat ? TestRat->GetStateName() : TEXT("");
+            if(RatState==TEXT("Chase")) bLocoFlag=true;
+            if(KeySide<0 && Chuck->GetBitesTaken()>BitesBase) { KeySide=StageTime; KeyJumpSide=TestRat->GetLastWindupSeconds(); LocoPrevious=Chuck->GetActorLocation(); }
+            if(KeySide>=0 && StageTime<KeySide+.6f) LocoValue=FMath::Max(LocoValue,static_cast<float>(FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious)));
+        }
+        if(StageTime>(KeySide>=0 ? KeySide+.8f : 5.f))
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RAT_ATTACK_MEASURE chased=%d bitten_at_s=%.2f windup_s=%.2f bites=%d knockback_cm=%.1f"),bLocoFlag ? 1 : 0,KeySide,KeyJumpSide,Chuck->GetBitesTaken()-BitesBase,LocoValue);
+            Check(bLocoFlag && KeySide>0 && KeyJumpSide>=AEnemyRat::WindupTime-.02f && Chuck->GetBitesTaken()==BitesBase+1 && LocoValue>25.f,
+                TEXT("a rat notices Chuck, comes in, gives its tell and lunges; the bite knocks him back"));
+            if(bRat) TestRat->Destroy();
+            // Next: a fresh rat 45 cm ahead: slash it whenever it's in reach.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            TestRat=AEnemyRat::Place(GetWorld(),FVector2D(-195,-20),180.f);
+            if(TestRat.IsValid()) TestRat->Cigarettes=1;
+            PickupsBase=ACigarettePickup::CountInWorld(GetWorld()); CigsBase=Chuck->GetCigarettes();
+            RatHitsBase=Chuck->GetSlashRatHits(); LocoValue=-1; bLocoFlag=false; KeySide=0; KeyJumpSide=0; bKeyMeasured=false;
+            TestStage=102; StageTime=0;
+        }
+    }
+    else if(TestStage==102)
+    {
+        const bool bRat=TestRat.IsValid();
+        // Slash when it's within reach in front (the test aims for him: Chuck faces it).
+        if(bRat && !TestRat->IsDead())
+        {
+            const FVector To=TestRat->GetActorLocation()-Chuck->GetActorLocation();
+            Chuck->SetActorRotation(FRotator(0,To.Rotation().Yaw,0));
+            if(To.Size2D()<AChuckCharacter::SlashReach+AEnemyRat::HitRadius+4.f && StageTime-LocoValue>.5f && LocoValue<StageTime)
+            {
+                Chuck->Slash(); Chuck->SlashReleased(); LocoValue=StageTime;
+                bKeyMeasured=true;
+            }
+        }
+        if(bKeyMeasured && StageTime-LocoValue>=.05f && StageTime-LocoValue<.05f+DeltaSeconds*1.5f) bLocoFlag=bLocoFlag || FString(Chuck->GetSlashName()).Contains(TEXT("Low"));
+        if(bRat && TestRat->IsDead() && KeySide==0) { KeySide=StageTime; KeyJumpSide=TestRat->GetHitsTaken(); }
+        if(StageTime>(KeySide>0 ? KeySide+2.6f : 8.f))
+        {
+            const int32 Out=ACigarettePickup::CountInWorld(GetWorld())-PickupsBase+Chuck->GetCigarettes()-CigsBase;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RAT_KILL_MEASURE killed_at_s=%.2f hits=%.0f rat_hits=%d low_rake=%d cigarettes_out=%d rat_removed=%d"),KeySide,KeyJumpSide,Chuck->GetSlashRatHits()-RatHitsBase,bLocoFlag ? 1 : 0,Out,TestRat.IsValid() ? 0 : 1);
+            Check(KeySide>0 && KeyJumpSide==AEnemyRat::Health && bLocoFlag && Out==1 && !TestRat.IsValid(),
+                TEXT("two slashes (low rakes) kill a rat; it drops a cigarette and is cleared away"));
+            if(TestRat.IsValid()) TestRat->Destroy();
+            for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1648,6 +1708,31 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(auto& Tuft : TestTufts) if(Tuft.IsValid()) Tuft->Destroy();
             TestTufts.Reset();
             if(TestJar.IsValid()) TestJar->Destroy();
+            for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
+            // Then a rat encounter from the side at rat height, on open quay:
+            // it comes in, gives its tell, lunges; Chuck rakes it twice.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-150,-20,36));
+            Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+            TestRat=AEnemyRat::Place(GetWorld(),FVector2D(-30,-20),180.f);
+            LocoValue=-1;
+            TestStage=103; StageTime=0;
+        }
+    }
+    else if(TestStage==103)
+    {
+        // Chuck holds still until the bite lands, then rakes whenever it's in reach.
+        if(TestRat.IsValid() && !TestRat->IsDead() && StageTime>1.4f)
+        {
+            const FVector To=TestRat->GetActorLocation()-Chuck->GetActorLocation();
+            Chuck->SetActorRotation(FRotator(0,To.Rotation().Yaw,0));
+            if(To.Size2D()<AChuckCharacter::SlashReach+AEnemyRat::HitRadius+4.f && StageTime-LocoValue>.5f) { Chuck->Slash(); Chuck->SlashReleased(); LocoValue=StageTime; }
+        }
+        for(const float Shot : {.3f,.8f,1.05f,1.2f,1.35f,1.6f,2.f,2.4f,2.8f,3.4f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Rat_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>4.f)
+        {
+            if(TestRat.IsValid()) TestRat->Destroy();
             for(TActorIterator<ACigarettePickup> It(GetWorld()); It; ++It) It->Destroy();
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));

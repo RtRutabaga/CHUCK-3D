@@ -79,11 +79,19 @@ public:
     static constexpr float WallJumpUp = 230.f;     // cm/s up (standing jump: 170)
     static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
+    /** Bitten by a rat at From: knocked back a step, then briefly safe from
+     *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
+     *  Returns whether it landed. (No health yet: the user's call.) */
+    bool TakeBite(const FVector& From);
+    int32 GetBitesTaken() const { return BitesTaken; }
+    static constexpr float BiteKnockback = 230.f;   // cm/s away
+    static constexpr float BiteImmunity = 1.f;       // s
     /** Cigarettes collected (the currency; HUD counter). */
     int32 GetCigarettes() const { return CigaretteCount; }
     void AddCigarettes(int32 Count) { CigaretteCount += Count; }
     /** Breakables (grass tufts, jars, later small rats) broken by the slash so far. */
     int32 GetSlashBreaks() const { return SlashBreaks; }
+    int32 GetSlashRatHits() const { return SlashRatHits; }
     // The slash's reach for breakables: from his centre to a target's edge (cm),
     // ground to chest. Generous on purpose ("hard-looking but easy").
     static constexpr float SlashReach = 40.f;
@@ -175,7 +183,10 @@ private:
     FRandomStream SlashRandom;
     int32 SlashStrikes = 0;
     int32 SlashBreaks = 0;
+    int32 SlashRatHits = 0;
     int32 CigaretteCount = 0;
+    int32 BitesTaken = 0;
+    float BiteImmuneUntil = -1;
     /** Something low and breakable is in the strike's reach: rake low (user 2026-09-30). */
     bool LowTargetInReach() const;
     float SlashHitAt = -1;   // world time of the pending strike's cut
