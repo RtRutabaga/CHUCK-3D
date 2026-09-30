@@ -8,6 +8,17 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 19 (Claude, 2026-09-30, user request: Sanity and the astral respawn):** runtime `d934fee` adds Sanity, as in the 2D game:
+- a bar of five cigarettes (top right); a bite burns one;
+- picked-up cigarettes refill it, then count up like coins;
+- at zero Chuck, a fey summon who can't die, quietly sinks into starlight, the view fades to astral indigo, and he's summoned back at the start;
+- the summon: a rune circle, spiralling motes and a soft column, with him appearing curled in the light and rising (the new `Summon` clip);
+- vanish and summon sounds.
+
+Details are in `agent-handoffs/CLAUDE.md` pass 56 and `PLAYTEST.md`.
+
+The root candidate passed `-MotionCapture` **117/117**, the world check and the music check (`Local/verify-package-20260930-114301.log`). It was promoted to `Builds/Windows` with receipt `d934fee`; the previous package is kept as `Builds/Windows-Previous-20260930-Sanity`. Not yet played by the user.
+
 **Update 18 (Claude, 2026-09-30, user request: the small rat enemy):** runtime `5ae941e` adds five big dock rats (cargo wharf, timber yard, garden):
 - a generated model, posed procedurally;
 - they roam, notice and chase Chuck, then give a clear tell (a crouch and a hiss) before a lunging bite;
