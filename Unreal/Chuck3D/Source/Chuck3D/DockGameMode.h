@@ -43,6 +43,9 @@ private:
     float CameraMaxZ = 0;
     float LookReached = 0;
     float KeySide = 0;
+    float KeyJumpSide = 0;
+    int32 StrafeJumpsBase = 0;
+    int32 DropHangsBase = 0;
     bool bKeyMeasured = false;
     float SlashMin = 0, SlashMax = 0, SlashSpeed = 0, SlashLeftMin = 0, SlashLeftMax = 0;
     FVector SlashPrevious = FVector::ZeroVector;

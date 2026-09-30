@@ -500,7 +500,9 @@ author('WalkLoop', WALK['period_frames'], walk, True, {
 # human's ~0.7 s -> ~0.35 s); the reference's long, leaping stride takes the
 # slower end, 0.4 s (38 cm steps). Duty factor 0.3 (both paws off the ground
 # between steps).
-RUN = {'speed_cm_s': 190.0, 'period_frames': 12, 'stance_fraction': .3}
+# User 2026-09-29 "running a bit faster": 190 -> 225 cm/s with a quicker cycle
+# (12 -> 10 frames) so the steps stay as long as before (37.5 cm, was 38).
+RUN = {'speed_cm_s': 225.0, 'period_frames': 10, 'stance_fraction': .3}
 RUN_PERIOD = RUN['period_frames'] / FPS
 RUN_STANCE_CM = RUN['speed_cm_s'] * RUN_PERIOD * RUN['stance_fraction']
 
@@ -938,6 +940,12 @@ SIDE_T, SIDE_TAKEOFF, SIDE_LAND = .8, .1, .5
 SIDE_SPEED, SIDE_APEX = 190., 16.
 SIDE_GRAVITY = 980. * .8  # ChuckCharacter GravityScale 0.8
 SIDE_VZ = math.sqrt(2 * SIDE_GRAVITY * SIDE_APEX)
+# User 2026-09-29: a side jump out of a walk is shorter, out of a run longer.
+# Same clip (it holds before the landing for as long as he is airborne).
+SIDE_SHORT = {'lateral_cm_s': 150., 'apex_cm': 13.}   # ~0.36 s air, ~55 cm
+SIDE_LONG = {'lateral_cm_s': 265., 'apex_cm': 22.}    # ~0.47 s air, ~125 cm
+def side_launch(g):
+    return {'lateral_cm_s': g['lateral_cm_s'], 'vertical_cm_s': round(math.sqrt(2 * SIDE_GRAVITY * g['apex_cm']), 3), 'apex_cm': g['apex_cm']}
 
 def side_jump(sign):
     """sign +1: Chuck's left (+Y), -1: right."""
@@ -1367,6 +1375,7 @@ for name, sign in (('SideJumpLeft', 1), ('SideJumpRight', -1)):
     author(name, round(SIDE_T * FPS) + 1, side_jump(sign), False, {
         'launch': {'lateral_cm_s': SIDE_SPEED, 'vertical_cm_s': round(SIDE_VZ, 3), 'gravity_cm_s2': SIDE_GRAVITY,
                    'apex_cm': SIDE_APEX, 'direction': 'source +Y (Chuck left)' if sign > 0 else 'source -Y (Chuck right)'},
+        'launch_walking': side_launch(SIDE_SHORT), 'launch_running': side_launch(SIDE_LONG),
         'stance_intervals_s': {'foot_L': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]], 'foot_R': [[0., SIDE_TAKEOFF], [SIDE_LAND, SIDE_T]]},
         'events_s': {'takeoff': SIDE_TAKEOFF, 'land': SIDE_LAND, 'settled': SIDE_T},
         'notes': 'Side jump from and back to the aplomb stance, facing unchanged. Root fixed: the runtime launches the capsule sideways at takeoff, holds the clip just before land while airborne, and stops the capsule at touchdown (the clip carries the momentum in the hips).'})
@@ -1419,6 +1428,88 @@ for name, sign in (('ShimmyLeft', 1), ('ShimmyRight', -1)):
         'stride_cycle_cm': SHIMMY_STRIDE, 'hang_drop_cm': HANG_DROP,
         'stance_intervals_s': {'foot_L': [], 'foot_R': []},
         'notes': 'Hand over hand along a hang edge toward Chuck\'s ' + ('left' if sign > 0 else 'right') + '; loop phase follows the capsule\'s sideways travel over stride_cycle_cm.'})
+
+# ---- strafe (user 2026-09-29: Counter-Strike-style strafe on Q/E, jump while
+# strafing = side jump): facing held down the camera, stepping sideways.
+# Walk: a step-together sidestep (lead paw steps out, the trail paw closes
+# straight after, a beat of double support), no crossing. Run: the same
+# step-close as a bounding shuffle with a flight phase (a chassé). A lateral
+# stride is limited by how far a 20 cm leg can reach sideways, so the paws
+# travel at most about 7 cm either side of neutral in stance, and the hips sink
+# into an athletic crouch to give the legs room; cadence makes up the speed.
+# Phase 0 = lead paw touchdown; the trail paw lands `lag` of a cycle later.
+STRAFE = {'speed_cm_s': 55., 'period_frames': 12, 'stance_fraction': .65, 'lag': .35,
+          'crouch_cm': 2.5, 'lift_cm': 2.2, 'bounce_cm': .5, 'widen_cm': 1.}
+STRAFE_RUN = {'speed_cm_s': 150., 'period_frames': 10, 'stance_fraction': .3, 'lag': .15,
+              'crouch_cm': 3.5, 'lift_cm': 4.5, 'bounce_cm': 1.4, 'widen_cm': 1.5}
+
+def strafe_clip(sign, g):
+    """sign +1: toward Chuck's left (+Y), -1: right. g: STRAFE or STRAFE_RUN."""
+    lead, trail = ('L', 'R') if sign > 0 else ('R', 'L')
+    period = g['period_frames'] / FPS
+    st = g['stance_fraction']
+    half = g['speed_cm_s'] * period * st / 2      # stance travel either side of neutral
+    run = g is STRAFE_RUN
+    def foot(p):
+        """(lateral offset along the travel, lift, heel lift) at this paw's phase."""
+        if p < st:
+            u = p / st
+            return half - 2 * half * u, 0., 14 * smoothstep(u, .75, 1.)
+        u = (p - st) / (1 - st)
+        return -half + 2 * half * smoothstep(u, 0., 1.), g['lift_cm'] * math.sin(math.pi * u), 14 * (1 - smoothstep(u, 0., .5))
+    def pose(phase, f):
+        w = TAU * phase
+        mid = st * .5 + g['lag'] * .5       # centre of the step-close (lowest)
+        carriage(0., 0.)
+        # Undo the idle contrapposto shift: a square, athletic base.
+        poser.translate('pelvis', (0, .9 - sign * .35 * math.cos(w - TAU * mid),
+                                   .45 - g['crouch_cm'] - g['bounce_cm'] * math.cos(TAU * (phase - mid))))
+        poser.rotate('pelvis', 'X', 4 - sign * (4. if run else 2.))     # lean into the travel
+        poser.rotate('pelvis', 'Y', 8. if run else 3.)                  # hips back into the crouch
+        poser.rotate('spine_01', 'Y', (2. if run else -1.))
+        poser.rotate('chest', 'X', -3 + sign * (2. if run else 1.))
+        poser.rotate('head', 'X', sign * (2. if run else 1.))           # gaze stays level
+        poser.rotate('head', 'Y', -(6. if run else 2.))
+        poser.rotate('chest', 'Z', sign * 4.)                           # shoulders open a touch toward the travel
+        poser.rotate('head', 'Z', -sign * 4.)
+        for side, out in (('L', 1), ('R', -1)):
+            bob = math.cos(w - TAU * mid)
+            poser.rotate(f'upperarm_{side}', 'X', out * (6. if run else 3.) + out * 1.5 * bob)
+            poser.rotate(f'upperarm_{side}', 'Y', -(14. if run else 4.))
+            poser.rotate(f'lowerarm_{side}', 'Y', -(46. if run else 18.))
+            curl(side, 18 if run else 6)
+        for i, b in enumerate(TAIL):
+            poser.rotate(b, 'Z', -sign * (3. if run else 1.5) * (i + 1) / 3 + 2. * math.sin(w - .7 * (i + 1)))
+            if run: poser.rotate(b, 'Y', 3. + 2. * math.sin(w - .8 * (i + 1)))
+        poser.update()
+        r = 0.
+        for side in 'LR':
+            p = phase if side == lead else (phase - g['lag']) % 1
+            off, lift, heel = foot(p)
+            wide = g['widen_cm'] * (1 if side == 'L' else -1)
+            ball = NEUTRAL_BALL[side] + Vector((0., wide + sign * off, lift))
+            r = max(r, poser.leg(side, ball, heel, 0., heading=TOE_OUT[side] * .5))
+        for side in 'LR': poser.hand_goal(side)
+        return r
+    def stance(side):
+        a = 0. if side == lead else g['lag']
+        b = a + st
+        spans = [(a, b)] if b <= 1 else [(a, 1.), (0., b - 1)]
+        return [[round(x * period, 4), round(y * period, 4)] for x, y in sorted(spans)]
+    return pose, {'foot_L': stance('L'), 'foot_R': stance('R')}, half
+
+for name, sign, g in (('StrafeLeft', 1, STRAFE), ('StrafeRight', -1, STRAFE),
+                      ('StrafeRunLeft', 1, STRAFE_RUN), ('StrafeRunRight', -1, STRAFE_RUN)):
+    fn, spans, half = strafe_clip(sign, g)
+    period = g['period_frames'] / FPS
+    author(name, g['period_frames'], fn, True, {
+        'reference_speed_cm_s': g['speed_cm_s'], 'stride_cycle_cm': round(g['speed_cm_s'] * period, 3),
+        'stance_fraction': g['stance_fraction'], 'trail_lag_fraction': g['lag'],
+        'stance_travel_cm': round(2 * half, 3), 'stance_intervals_s': spans,
+        'direction': 'source +Y (Chuck left)' if sign > 0 else 'source -Y (Chuck right)',
+        'phase_convention': 'phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later',
+        'notes': ('Bounding shuffle with a flight phase' if g is STRAFE_RUN else 'Step-together sidestep, no crossing')
+                 + ', facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

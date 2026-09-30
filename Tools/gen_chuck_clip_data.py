@@ -43,6 +43,7 @@ def main():
     run = clips['RunLoop']
     slash = clips['SlashRight']
     wall = clips['WallRun']
+    strafe, strafe_run = clips['StrafeLeft'], clips['StrafeRunLeft']
     hang, pull, mantle = clips['Hang'], clips['PullUp'], clips['Mantle']
     yaw = [abs(v) for v in turn['capsule_yaw_deg_per_frame']]
     # Frames until the yaw reaches its final value; the tail is the settle hold.
@@ -115,6 +116,20 @@ def main():
         f"    constexpr float SideLateralSpeed = {f(side['launch']['lateral_cm_s'])};",
         f"    constexpr float SideVerticalSpeed = {f(side['launch']['vertical_cm_s'])};",
         f"    constexpr FStance SideJumpStance{stance(side)};",
+        '    // Side jump length follows the run latch (user 2026-09-29): short from a walk, long from a run.',
+        f"    constexpr float SideShortLateralSpeed = {f(side['launch_walking']['lateral_cm_s'])};",
+        f"    constexpr float SideShortVerticalSpeed = {f(side['launch_walking']['vertical_cm_s'])};",
+        f"    constexpr float SideLongLateralSpeed = {f(side['launch_running']['lateral_cm_s'])};",
+        f"    constexpr float SideLongVerticalSpeed = {f(side['launch_running']['vertical_cm_s'])};",
+        '    // Strafe (sidestep / bounding shuffle): loop phase follows sideways travel over the stride.',
+        f"    constexpr float StrafeSpeed = {f(strafe['reference_speed_cm_s'])};",
+        f"    constexpr float StrafeStride = {f(strafe['stride_cycle_cm'])};",
+        f"    constexpr float StrafeRunSpeed = {f(strafe_run['reference_speed_cm_s'])};",
+        f"    constexpr float StrafeRunStride = {f(strafe_run['stride_cycle_cm'])};",
+        f"    constexpr FStance StrafeLeftStance{stance(strafe)};",
+        f"    constexpr FStance StrafeRightStance{stance(clips['StrafeRight'])};",
+        f"    constexpr FStance StrafeRunLeftStance{stance(strafe_run)};",
+        f"    constexpr FStance StrafeRunRightStance{stance(clips['StrafeRunRight'])};",
         '}',
         '',
     ]

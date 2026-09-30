@@ -15,17 +15,19 @@ If recent changes are missing, check where they were packaged: an agent worktree
 | Action | Keyboard / mouse | Xbox controller |
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
-| Run: tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
+| Run (225 cm/s): tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
+| Strafe: hold to sidestep facing the camera (Counter-Strike style); forward/back still work while held. With run latched it is a bounding shuffle. Jump while strafing sideways = side jump that way: short (~55 cm) from a walk, long (~125 cm) from a run | Hold Q (left) / E (right); A/D also strafe while Q or E is held | Hold LT, left stick |
 | Jump (while running: a leap that lands into the stride) | Space | A |
 | Wall run: jump into a wall while pushing toward it, or side jump into it (three steps up). Between two facing walls the camera turns side-on and follows the climb | Space + stick toward the wall, or C + stick sideways | A + stick, or B + stick sideways |
 | Wall jump: jump while on a wall, or just after leaving it; the stick angles it; he catches the next wall on his own | Space | A |
 | Ledge: grabbed automatically when his paws reach a top edge. Hold toward the wall (or jump) to pull up, pull away (or dodge) to let go, jump + pull away to kick off backward | stick / Space / C | stick / A / B |
 | Shimmy: while hanging, stick left/right moves hand over hand along the edge. He goes round outside corners and turns into inside corners; keep holding the same way to carry on round (the camera catches up). He stops only where the edge really ends. The camera swings round behind him to face the wall | stick | stick |
-| Landing roll: a fall of more than about 80 cm (a bit over his height) ends in a roll, toward the stick or the way he was going | automatic | automatic |
+| Drop to hang: walk gently (not running, not jumping) off an edge with a drop of more than 60 cm and he turns round and grabs it, GTA-style. The stick that walked him off is ignored until you let go of it; then pull up, shimmy or let go as usual | automatic | automatic |
+| Landing roll: a fall of more than about 160 cm (about 2.5 times his height) ends in a roll, toward the stick or the way he was going | automatic | automatic |
 | Mantle: walk into a knee-high ledge (6–40 cm) and he hops up onto it | stick | stick |
 | Slash (claw scratch); tap again or hold for a flurry on a steady beat with a random paw order (never three of one paw in a row); works while moving | Left mouse button | X |
-| Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way. Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
-| Turn view | Mouse left/right, or Q/E | Right stick left/right |
+| Roll toward the stick (straight ahead if none); with the stick held left or right, side jump that way (short from a walk, long with run latched). Keep holding the stick to come out of the roll at your pace (running stays running) | C | B |
+| Turn view | Mouse left/right | Right stick left/right |
 | Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |
 | Center camera behind Chuck | F | Right-stick click |
 | Reset position and view direction | R | View button |

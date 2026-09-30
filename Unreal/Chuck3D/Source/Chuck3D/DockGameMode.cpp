@@ -778,8 +778,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>1.3f)
         {
             const FVector Moved=Chuck->GetActorLocation()-AChuckCharacter::StartLocation();
-            const float Flight=2.f*ChuckClipData::SideVerticalSpeed/(980.f*Chuck->GetCharacterMovement()->GravityScale);
-            const float Authored=ChuckClipData::SideLateralSpeed*Flight;
+            const float Flight=2.f*ChuckClipData::SideShortVerticalSpeed/(980.f*Chuck->GetCharacterMovement()->GravityScale);
+            const float Authored=ChuckClipData::SideShortLateralSpeed*Flight;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEJUMP_MEASURE side_cm=%.3f authored_cm=%.3f forward_cm=%.3f apex_cm=%.3f yaw=%.3f samples=%d max_cm_s=%.4f gait=%s"),Moved.Y,Authored,Moved.X,MaxJumpZ-AChuckCharacter::StartLocation().Z,Chuck->GetActorRotation().Yaw,LocoSamples,LocoMaxSlip,Chuck->GetGaitName());
             Check(bLocoFlag && FMath::Abs(Moved.Y-Authored)<12.f && FMath::Abs(Moved.X)<3.f,TEXT("side jump springs Chuck sideways its authored distance"));
             Check(FMath::Abs(Chuck->GetActorRotation().Yaw)<1.f && LocoSamples>=3 && LocoMaxSlip<1.f,TEXT("side jump keeps facing with paws held in stance"));
@@ -857,7 +857,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(bRight ? EKeys::D : EKeys::A,IE_Released,0));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_KEY_SIDEJUMP_MEASURE key=%s side_cm=%.3f jumped=%d"),bRight ? TEXT("D") : TEXT("A"),KeySide,bLocoFlag ? 1 : 0);
-            Check(bKeyMeasured && (bRight ? KeySide>55.f : KeySide<-55.f),bRight ? TEXT("keyboard D + C side-jumps right") : TEXT("keyboard A + C side-jumps left"));
+            Check(bKeyMeasured && (bRight ? KeySide>40.f : KeySide<-40.f),bRight ? TEXT("keyboard D + C side-jumps right") : TEXT("keyboard A + C side-jumps left"));
             Chuck->ResetToDock(); StageTime=0; bKeyMeasured=false; bLocoFlag=false;
             if(bRight) { KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::A,IE_Pressed,1)); TestStage=63; }
             else
@@ -1241,27 +1241,117 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bSideOn && WallSides.Num()>=3,TEXT("the chimney camera turns side-on and frames the bounce"));
             // Next: a fall from more than a short height lands in a roll.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
-            Chuck->SetActorLocation(FVector(-100,-560,36+150),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->SetActorLocation(FVector(-100,-560,36+220),false,nullptr,ETeleportType::TeleportPhysics);
             RollsBase=Chuck->GetLandingRolls(); bLocoFlag=false;
             TestStage=87; StageTime=0;
         }
     }
     else if(TestStage==87 || TestStage==88)
     {
-        // 87: dropped from 150 cm: lands in a roll. 88: from 50 cm: just lands.
+        // 87: dropped from 220 cm: lands in a roll. 88: from 120 cm (under the 160 cm threshold): just lands.
         if(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))==0) bLocoFlag=true;
         const int32 Rolls=Chuck->GetLandingRolls()-RollsBase;
         if(StageTime>1.8f) UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_MEASURE stage=%d rolls=%d rolled=%d gait=%s ground=%d"),TestStage,Rolls,bLocoFlag ? 1 : 0,Chuck->GetGaitName(),Chuck->GetCharacterMovement()->IsMovingOnGround() ? 1 : 0);
         if(StageTime>1.8f && TestStage==87)
         {
             Check(Rolls==1 && bLocoFlag && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("a fall of more than a short height lands in a roll"));
-            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-100,-560,36+50),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-100,-560,36+120),false,nullptr,ETeleportType::TeleportPhysics);
             RollsBase=Chuck->GetLandingRolls(); bLocoFlag=false;
             TestStage=88; StageTime=0;
         }
         else if(StageTime>1.8f)
         {
-            Check(Rolls==0 && !bLocoFlag && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("a short drop just lands, no roll"));
+            Check(Rolls==0 && !bLocoFlag && Chuck->GetCharacterMovement()->IsMovingOnGround(),TEXT("a drop under the roll height just lands, no roll"));
+            // Next: strafe on the real keys. Hold Q (left), then Space. Clear quay:
+            // left of the dock start is the practice yard's crate stack.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,0,36));
+            auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+            Chuck->EnableInput(KeyPC); Chuck->SetLookLocked(true);
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Q,IE_Pressed,1));
+            LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=0; bLocoFlag=false; bKeyMeasured=false; KeySide=0;
+            StrafeJumpsBase=Chuck->GetStrafeJumps();
+            TestStage=91; StageTime=0;
+        }
+    }
+    else if(TestStage==91 || TestStage==92)
+    {
+        // 91: Q held (strafe walk left), Space: the short side jump.
+        // 92: run latched, E held (strafe run right), Space: the long one.
+        auto* KeyPC=Cast<APlayerController>(Chuck->GetController());
+        const bool bRun=TestStage==92;
+        const float Sign=bRun ? 1.f : -1.f;
+        const bool bStrafing=Chuck->IsStrafing();
+        if(StageTime>.6f && StageTime<1.2f && bStrafing)
+        {
+            ProbeLockedPaws(Chuck,DeltaSeconds);
+            LocoValue=FMath::Max(LocoValue,static_cast<float>(FMath::Abs(Chuck->GetVelocity().Y)));
+            bLocoFlag=bLocoFlag || FMath::Abs(Chuck->GetActorRotation().Yaw)>2.f;  // facing must hold
+        }
+        if(StageTime>=1.2f && StageTime-DeltaSeconds<1.2f)
+        {
+            KeySide=bStrafing ? 1.f : 0.f;  // still strafing when jump is pressed
+            LocoPrevious=Chuck->GetActorLocation();
+            KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::SpaceBar,IE_Pressed,1));
+        }
+        if(StageTime>=1.25f && StageTime-DeltaSeconds<1.25f) KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::SpaceBar,IE_Released,0));
+        const bool bJumping=FCString::Strcmp(Chuck->GetGaitName(),TEXT("SideJump"))==0;
+        if(StageTime>1.2f && bJumping && !bKeyMeasured && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetActorLocation().Z<LocoPrevious.Z+1.f && FVector::Dist2D(Chuck->GetActorLocation(),LocoPrevious)>20.f)
+        {
+            KeyJumpSide=static_cast<float>(Chuck->GetActorLocation().Y-LocoPrevious.Y)*Sign;
+            bKeyMeasured=true;
+        }
+        if(StageTime>2.4f)
+        {
+            const float Speed=bRun ? ChuckClipData::StrafeRunSpeed : ChuckClipData::StrafeSpeed;
+            const float Vz=bRun ? ChuckClipData::SideLongVerticalSpeed : ChuckClipData::SideShortVerticalSpeed;
+            const float Authored=(bRun ? ChuckClipData::SideLongLateralSpeed : ChuckClipData::SideShortLateralSpeed)*2.f*Vz/(980.f*Chuck->GetCharacterMovement()->GravityScale);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_STRAFE_MEASURE key=%s run=%d speed_cm_s=%.2f authored_cm_s=%.2f yaw_moved=%d samples=%d max_cm_s=%.4f strafing_at_jump=%d jump_cm=%.2f authored_jump_cm=%.2f long=%d back_to_strafe=%d"),
+                bRun ? TEXT("E") : TEXT("Q"),bRun ? 1 : 0,LocoValue,Speed,bLocoFlag ? 1 : 0,LocoSamples,LocoMaxSlip,KeySide>0 ? 1 : 0,KeyJumpSide,Authored,Chuck->WasLongSideJump() ? 1 : 0,bStrafing ? 1 : 0);
+            Check(KeySide>0 && !bLocoFlag && FMath::Abs(LocoValue-Speed)<4.f && LocoSamples>=5 && LocoMaxSlip<1.f,
+                bRun ? TEXT("E with run latched: strafe run facing the camera, paws holding") : TEXT("Q held: strafe walk facing the camera, paws holding"));
+            Check(bKeyMeasured && FMath::Abs(KeyJumpSide-Authored)<15.f && Chuck->WasLongSideJump()==bRun,
+                bRun ? TEXT("jump while strafe-running is the long side jump") : TEXT("jump while strafe-walking is the short side jump"));
+            if(!bRun)
+            {
+                Check(bStrafing && Chuck->GetStrafeJumps()==StrafeJumpsBase+1,TEXT("after the side jump he strafes on while Q is held"));
+                KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Q,IE_Released,0));
+                Chuck->ResetToDock(); Chuck->SetRunHeld(true);  // rightward from the dock start (it passed there)
+                KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E,IE_Pressed,1));
+                LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0; LocoValue=0; bLocoFlag=false; bKeyMeasured=false; KeySide=0; KeyJumpSide=0;
+                TestStage=92; StageTime=0;
+            }
+            else
+            {
+                KeyPC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::E,IE_Released,0));
+                KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
+                // Next: walk gently off the harbour wall's north face: he grabs it.
+                Chuck->SetRunHeld(false); Chuck->ResetToDock();
+                Chuck->SetActorLocation(FVector(-40,-350,115+32.5f),false,nullptr,ETeleportType::TeleportPhysics);
+                Chuck->SetActorRotation(FRotator(0,90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
+                HangAt=-1; DropHangsBase=Chuck->GetDropHangs(); PullUpsBase=Chuck->GetPullUps(); CornerYaw=999;
+                TestStage=93; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==93)
+    {
+        // Stick held forward (away from the wall) the whole way: it must not
+        // let go or climb until released; then jump climbs back up.
+        if(HangAt<0) Chuck->AddMovementInput(FVector(0,1,0),1);
+        if(Chuck->IsHanging() && HangAt<0) HangAt=StageTime;
+        if(HangAt>=0 && StageTime>=HangAt+.6f && StageTime-DeltaSeconds<HangAt+.6f) CornerYaw=Chuck->GetActorRotation().Yaw, ShimmyZ0=Chuck->GetActorLocation().Z;
+        if(HangAt>=0 && StageTime>=HangAt+1.2f && StageTime-DeltaSeconds<HangAt+1.2f)
+        {
+            bLocoFlag=Chuck->IsHanging();   // still hanging with the stick held
+            Chuck->SetTestStick(FVector2D::ZeroVector);
+        }
+        if(HangAt>=0 && StageTime>=HangAt+1.4f && StageTime-DeltaSeconds<HangAt+1.4f) Chuck->JumpPressed();
+        if(StageTime>4.f)
+        {
+            const FVector At=Chuck->GetActorLocation();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DROP_HANG_MEASURE drop_hangs=%d hang_yaw=%.1f hang_z=%.2f held=%d pullups=%d end_z=%.2f"),Chuck->GetDropHangs()-DropHangsBase,CornerYaw,ShimmyZ0,bLocoFlag ? 1 : 0,Chuck->GetPullUps()-PullUpsBase,At.Z);
+            Check(Chuck->GetDropHangs()==DropHangsBase+1 && FMath::Abs(FMath::FindDeltaAngleDegrees(CornerYaw,-90.f))<5.f && FMath::Abs(ShimmyZ0-(115.f-ChuckClipData::HangDrop))<2.f,TEXT("walking gently off an edge turns round and hangs from it"));
+            Check(bLocoFlag && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(115.f+32.5f))<3.f,TEXT("the stick that walked him off is ignored until released; then he climbs back"));
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1611,6 +1701,6 @@ void ADockHUD::DrawHUD()
     DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
     DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
     DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Space / A: jump    LMB / X: slash    C / B: roll (stick sideways: side jump)    Mouse / Right stick: orbit    Q/E: turn"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
+    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    F / R-stick click: center    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }

@@ -64,36 +64,36 @@
    "file": "Animations/AS_Chuck_RunLoop.fbx",
    "fps": 30,
    "first_frame": 0,
-   "last_frame": 11,
-   "frame_count": 12,
-   "duration_s": 0.4,
+   "last_frame": 9,
+   "frame_count": 10,
+   "duration_s": 0.3333,
    "loop": true,
    "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9338,
-   "reference_speed_cm_s": 190.0,
-   "stride_cycle_cm": 76.0,
-   "stance_travel_cm": 22.8,
+   "max_leg_reach_ratio": 0.9298,
+   "reference_speed_cm_s": 225.0,
+   "stride_cycle_cm": 75.0,
+   "stance_travel_cm": 22.5,
    "stance_fraction": 0.3,
    "stance_intervals_s": {
     "foot_L": [
      [
       0.0,
-      0.12
+      0.1
      ]
     ],
     "foot_R": [
      [
-      0.2,
-      0.32
+      0.1667,
+      0.2667
      ]
     ]
    },
    "events_s": {
     "foot_L_plant": 0.0,
-    "foot_R_plant": 0.2,
-    "foot_L_lift": 0.12,
-    "foot_R_lift": 0.32
+    "foot_R_plant": 0.1667,
+    "foot_L_lift": 0.1,
+    "foot_R_lift": 0.2667
    },
    "phase_convention": "as WalkLoop: phase 0 = foot_L touchdown, foot_R half a cycle later (runtime blends the two loops on a shared phase)",
    "notes": "Run with a flight phase. In place (root fixed); during stance the planted ball moves backward in component space at exactly the reference speed; forefoot strike, heel up; swing meets the ground at running speed."
@@ -109,7 +109,7 @@
    "loop": false,
    "loop_note": "",
    "root_motion": false,
-   "max_leg_reach_ratio": 0.9338,
+   "max_leg_reach_ratio": 0.9298,
    "launch": {
     "vertical_cm_s": 190.0,
     "gravity_cm_s2": 784.0
@@ -760,6 +760,16 @@
     "apex_cm": 16.0,
     "direction": "source +Y (Chuck left)"
    },
+   "launch_walking": {
+    "lateral_cm_s": 150.0,
+    "vertical_cm_s": 142.773,
+    "apex_cm": 13.0
+   },
+   "launch_running": {
+    "lateral_cm_s": 265.0,
+    "vertical_cm_s": 185.731,
+    "apex_cm": 22.0
+   },
    "stance_intervals_s": {
     "foot_L": [
      [
@@ -807,6 +817,16 @@
     "gravity_cm_s2": 784.0,
     "apex_cm": 16.0,
     "direction": "source -Y (Chuck right)"
+   },
+   "launch_walking": {
+    "lateral_cm_s": 150.0,
+    "vertical_cm_s": 142.773,
+    "apex_cm": 13.0
+   },
+   "launch_running": {
+    "lateral_cm_s": 265.0,
+    "vertical_cm_s": 185.731,
+    "apex_cm": 22.0
    },
    "stance_intervals_s": {
     "foot_L": [
@@ -1266,6 +1286,146 @@
     "foot_R": []
    },
    "notes": "Hand over hand along a hang edge toward Chuck's right; loop phase follows the capsule's sideways travel over stride_cycle_cm."
+  },
+  {
+   "name": "StrafeLeft",
+   "file": "Animations/AS_Chuck_StrafeLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9076,
+   "reference_speed_cm_s": 55.0,
+   "stride_cycle_cm": 22.0,
+   "stance_fraction": 0.65,
+   "trail_lag_fraction": 0.35,
+   "stance_travel_cm": 14.3,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.26
+     ]
+    ],
+    "foot_R": [
+     [
+      0.14,
+      0.4
+     ]
+    ]
+   },
+   "direction": "source +Y (Chuck left)",
+   "phase_convention": "phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later",
+   "notes": "Step-together sidestep, no crossing, facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm."
+  },
+  {
+   "name": "StrafeRight",
+   "file": "Animations/AS_Chuck_StrafeRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 11,
+   "frame_count": 12,
+   "duration_s": 0.4,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9076,
+   "reference_speed_cm_s": 55.0,
+   "stride_cycle_cm": 22.0,
+   "stance_fraction": 0.65,
+   "trail_lag_fraction": 0.35,
+   "stance_travel_cm": 14.3,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.14,
+      0.4
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.26
+     ]
+    ]
+   },
+   "direction": "source -Y (Chuck right)",
+   "phase_convention": "phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later",
+   "notes": "Step-together sidestep, no crossing, facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm."
+  },
+  {
+   "name": "StrafeRunLeft",
+   "file": "Animations/AS_Chuck_StrafeRunLeft.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 9,
+   "frame_count": 10,
+   "duration_s": 0.3333,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.857,
+   "reference_speed_cm_s": 150.0,
+   "stride_cycle_cm": 50.0,
+   "stance_fraction": 0.3,
+   "trail_lag_fraction": 0.15,
+   "stance_travel_cm": 15.0,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.1
+     ]
+    ],
+    "foot_R": [
+     [
+      0.05,
+      0.15
+     ]
+    ]
+   },
+   "direction": "source +Y (Chuck left)",
+   "phase_convention": "phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later",
+   "notes": "Bounding shuffle with a flight phase, facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm."
+  },
+  {
+   "name": "StrafeRunRight",
+   "file": "Animations/AS_Chuck_StrafeRunRight.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 9,
+   "frame_count": 10,
+   "duration_s": 0.3333,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.857,
+   "reference_speed_cm_s": 150.0,
+   "stride_cycle_cm": 50.0,
+   "stance_fraction": 0.3,
+   "trail_lag_fraction": 0.15,
+   "stance_travel_cm": 15.0,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.05,
+      0.15
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.1
+     ]
+    ]
+   },
+   "direction": "source -Y (Chuck right)",
+   "phase_convention": "phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later",
+   "notes": "Bounding shuffle with a flight phase, facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm."
   }
  ]
 }

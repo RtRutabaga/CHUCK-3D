@@ -29,7 +29,7 @@ $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to comp
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {98} else {99}
+$expected=if($NoCapture) {105} else {106}
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"

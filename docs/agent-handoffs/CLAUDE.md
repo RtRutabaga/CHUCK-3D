@@ -1281,3 +1281,47 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No special pitch.
   - Not played by the user.
 - **Not integrated into main.** A worktree launcher receipt was written.
+
+## Fiftieth pass — strafe, faster run, drop to hang, landing roll height
+
+- **User requests (2026-09-29):**
+  - Q/E strafe (Counter-Strike style), with jump while strafing = side jump.
+  - The strafe jump longer when running, shorter when not.
+  - Running a bit faster.
+  - Walking gently off an edge grabs and hangs, like GTA.
+  - Double the fall height that triggers the landing roll.
+- **Clips** (`Tools/build_chuck_v1.py`, `strafe_clip`):
+  - `StrafeLeft`/`StrafeRight`: a step-together sidestep, 55 cm/s, 0.4 s cycle, stance 0.65, trail paw 0.35 of a cycle behind.
+  - `StrafeRunLeft`/`StrafeRunRight`: a bounding shuffle with a flight phase, 150 cm/s, 0.33 s cycle, stance 0.3, trail 0.15 behind.
+  - Both: athletic crouch (2.5 / 3.5 cm), a slight lean into the travel, head level. The paws never cross (closest about 7.7 cm apart).
+  - Leg reach 0.91 / 0.86.
+  - Review sheets: `Review/motion_StrafeLeft.png`, `motion_StrafeRunLeft.png`.
+- **Run:** 190 → 225 cm/s on a 10-frame cycle (was 12), steps 37.5 cm (was 38). Reach 0.93 (an 11-frame try reached 0.99 and was rejected). `RunBrake` 700 → 1000, so letting go still coasts about the same distance.
+- **Side jump:** the manifest has `launch_walking` (150 cm/s, 13 cm apex, about 55 cm) and `launch_running` (265 cm/s, 22 cm apex, about 125 cm). The runtime picks from the run latch when the jump starts. This applies to C + stick side jumps too.
+- **Runtime** (`ChuckCharacter`):
+  - **Input:** `StrafeKeys` axis (Q −1, E +1) and `StrafeTrigger` (LT axis). Q/E no longer turn the camera; the mouse and right stick do.
+  - **Strafe gait:** while strafe is held, facing is fixed to the camera yaw (720°/s) and orient-to-movement is off.
+    - Speed: `StrafeSpeed`, or `StrafeRunSpeed` with run latched.
+    - Clips: mostly sideways (lateral ≥ 0.8 × forward) plays the strafe clips, phase from sideways travel over the stride; otherwise WalkLoop plus the run layer, played backward for a back-pedal.
+    - Paw stance windows come from the manifest.
+  - **Strafe jump:** jump while strafing sideways starts a side jump. It uses the axes as of last frame; reading the bindings in `JumpPressed` picked up stale values once test input was switched off (fixed). After the jump, `FinishDodge` goes back into the strafe while it's held.
+  - **Drop to hang** (`TryDropHang`): runs on the first airborne frame when he walked off (vertical speed < 10, not running, walking-speed gait).
+    - It traces back for the face just under the top, requires no ground within `DropHangMinDrop` (60 cm) below, then finds the ledge and enters Hang.
+    - He swings round over 0.35 s. `bHangNeedsRelease` ignores the stick until it's released, so the stick that walked him off doesn't drop him or pull him up.
+  - **Landing roll:** `RollFallHeight` 80 → 160.
+- **Tests:** now **106** (105 with `-NoCapture`).
+  - New stage 91: Q held on real keys → strafe walk facing the camera with paws holding; Space gives the short jump; he strafes on afterwards.
+  - New stage 92: run latched and E held → strafe run; Space gives the long jump.
+  - New stage 93: walk off the harbour wall's north face with the stick held away: he hangs facing the wall at 93 cm, stays hanging until the stick is released, then jumps back up.
+  - Stage 55 now uses the short launch. Keyboard side-jump threshold is 40 cm. Stage 87 falls 220 cm (rolls); stage 88 falls 120 cm (no roll).
+- **Verified:**
+  - Worktree package `-MotionCapture` and `-NoGroom`: **106/106**; uncapped with and without groom: 0 failures.
+  - Strafe 55.00 / 150.00 cm/s, yaw held, paw slip 0.
+  - Strafe jumps about 57 / 130 cm (authored 55 / 126).
+  - Drop hang yaw −90, z 93.00, held, back on top at 149.65.
+  - The first rerun stalled for about 2.5 h on a test waiting for a hang (the stale-axis bug). The pass script now has a 12-minute watchdog.
+- **Remaining:**
+  - No dedicated diagonal strafe clips; diagonals use whichever clip dominates.
+  - The strafe camera doesn't reframe.
+  - Drop to hang doesn't trigger when running (by design), and walking off the pier into the water now hangs.
+  - Not played by the user.

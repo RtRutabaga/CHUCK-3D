@@ -47,7 +47,18 @@ public:
     // Hanging: stick sideways shimmies along the edge.
     static constexpr float ShimmySpeed = 45.f;   // cm/s
     // Falls from higher than this (cm, apex to landing) end in a roll.
-    static constexpr float RollFallHeight = 80.f;
+    // User 2026-09-29: doubled from 80.
+    static constexpr float RollFallHeight = 160.f;
+    // Walking gently off an edge with at least this drop below grabs it and hangs (GTA-style).
+    static constexpr float DropHangMinDrop = 60.f;
+    int32 GetDropHangs() const { return DropHangs; }
+    /** Strafe (hold Q/E or LT): facing held down the camera, sidestepping; jump = side jump. */
+    bool IsStrafing() const { return Gait == EGait::Strafe; }
+    int32 GetStrafeJumps() const { return StrafeJumps; }
+    /** Tests: hold strafe mode without a key. */
+    void SetStrafeHeld(bool bHeld) { bTestStrafe = bHeld; }
+    /** Last side jump was the long (running) one. */
+    bool WasLongSideJump() const { return bSideLong; }
     int32 GetOuterCorners() const { return OuterCorners; }
     int32 GetInnerCorners() const { return InnerCorners; }
     int32 GetLandingRolls() const { return LandingRolls; }
@@ -93,7 +104,7 @@ public:
     /** Cigarette prop on socket_cigarette; null with -ChuckNoCigarette. */
     UStaticMeshComponent* GetCigarette() const { return Cigarette; }
     UStaticMeshComponent* GetCigaretteSmoke() const { return Smoke; }
-    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump or Slash. */
+    /** Current locomotion state for tests and captures: Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb or Strafe. */
     const TCHAR* GetGaitName() const;
 protected:
     virtual void BeginPlay() override;
@@ -115,9 +126,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -177,6 +188,22 @@ private:
     int32 InnerCorners = 0;
     float AirApexZ = 0;            // highest point of the current fall
     int32 LandingRolls = 0;
+    // Strafe state.
+    float StrafeKeys = 0;          // Q/E axis
+    float StrafeTrigger = 0;       // LT axis
+    bool bTestStrafe = false;
+    float StrafePhase = 0;
+    int32 StrafeJumps = 0;
+    bool bSideLong = false;
+    bool StrafeHeld() const { return StrafeKeys != 0 || StrafeTrigger > .3f || bTestStrafe; }
+    /** Sideways stick including Q/E. */
+    float SideInput() const { return FMath::Clamp(InputRight + StrafeKeys, -1.f, 1.f); }
+    void StrafeKeysAxis(float Value);
+    void StrafeTriggerAxis(float Value) { StrafeTrigger = Value; }
+    // Drop to hang: the stick that walked him off is ignored until released.
+    bool bHangNeedsRelease = false;
+    int32 DropHangs = 0;
+    bool TryDropHang();
     bool TryHangCorner(const FVector& Along, float Side);
     void TurnHangCorner(const FVector& Normal, const FVector& Edge, bool bRoom, float Side);
     void LandingRoll();

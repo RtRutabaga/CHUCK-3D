@@ -10,9 +10,9 @@ namespace ChuckClipData
     constexpr float WalkStride = 33.6000f;
     constexpr float StanceFraction = 0.6000f;
     // RunLoop: same phase convention as WalkLoop; the runtime blends them by speed.
-    constexpr float RunSpeed = 190.0000f;
-    constexpr float RunPeriod = 0.4000f;
-    constexpr float RunStride = 76.0000f;
+    constexpr float RunSpeed = 225.0000f;
+    constexpr float RunPeriod = 0.3333f;
+    constexpr float RunStride = 75.0000f;
     constexpr float RunStanceFraction = 0.3000f;
     constexpr float RunJumpVerticalSpeed = 190.0000f;  // leap out of a run
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
@@ -64,4 +64,18 @@ namespace ChuckClipData
     constexpr float SideLateralSpeed = 190.0000f;
     constexpr float SideVerticalSpeed = 158.3920f;
     constexpr FStance SideJumpStance{{0.0000f, 0.1000f, 0.5000f, 0.8000f, -1.0000f, -1.0000f}, {0.0000f, 0.1000f, 0.5000f, 0.8000f, -1.0000f, -1.0000f}, 0.8000f};
+    // Side jump length follows the run latch (user 2026-09-29): short from a walk, long from a run.
+    constexpr float SideShortLateralSpeed = 150.0000f;
+    constexpr float SideShortVerticalSpeed = 142.7730f;
+    constexpr float SideLongLateralSpeed = 265.0000f;
+    constexpr float SideLongVerticalSpeed = 185.7310f;
+    // Strafe (sidestep / bounding shuffle): loop phase follows sideways travel over the stride.
+    constexpr float StrafeSpeed = 55.0000f;
+    constexpr float StrafeStride = 22.0000f;
+    constexpr float StrafeRunSpeed = 150.0000f;
+    constexpr float StrafeRunStride = 50.0000f;
+    constexpr FStance StrafeLeftStance{{0.0000f, 0.2600f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.1400f, 0.4000f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, 0.4000f};
+    constexpr FStance StrafeRightStance{{0.1400f, 0.4000f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.0000f, 0.2600f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, 0.4000f};
+    constexpr FStance StrafeRunLeftStance{{0.0000f, 0.1000f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.0500f, 0.1500f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, 0.3333f};
+    constexpr FStance StrafeRunRightStance{{0.0500f, 0.1500f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, {0.0000f, 0.1000f, -1.0000f, -1.0000f, -1.0000f, -1.0000f}, 0.3333f};
 }
