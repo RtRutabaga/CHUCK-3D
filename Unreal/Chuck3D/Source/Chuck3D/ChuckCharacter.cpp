@@ -1,6 +1,7 @@
 #include "ChuckCharacter.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
+#include "ChuckBreakable.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -338,7 +339,7 @@ void AChuckCharacter::ResetToDock()
     InputForward = InputRight = StrafeKeys = StrafeTrigger = 0;  // refreshed every frame while input is live
     bTestStrafe = bHangNeedsRelease = false; GetCharacterMovement()->bOrientRotationToMovement = true;
     bRunJump = bHardLanding = false;
-    bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0;
+    bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1;
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
@@ -823,6 +824,7 @@ AChuckCharacter::EClip AChuckCharacter::PickPaw(bool bFirst, EClip Previous)
     // paw in a row so a streak never reads as a stuck arm.
     ++SlashStrikes;
     PlaySfx(SlashSounds, ESfx::Slash, SlashVolume);
+    SlashHitAt = GetWorld()->GetTimeSeconds() + SlashStrike;   // what it reaches breaks on the cut
     if (bFirst) { SamePawRun = 0; return SlashRandom.FRand() < .5f ? EClip::SlashRight : EClip::SlashLeft; }
     const bool bSame = SamePawRun == 0 && SlashRandom.FRand() < .5f;
     SamePawRun = bSame ? 1 : 0;
@@ -858,6 +860,30 @@ void AChuckCharacter::Slash()
     {
         LayerClip = Clip;
         LayerTime = 0;
+    }
+}
+void AChuckCharacter::SlashHit()
+{
+    // Everything breakable within reach in front (or right against him),
+    // from the ground to his chest: grass, and later jars and low enemies.
+    // The swing sweeps across his body away from the striking paw.
+    const FVector Location = GetActorLocation();
+    const float Feet = static_cast<float>(Location.Z) - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const FVector Ahead = GetActorForwardVector().GetSafeNormal2D();
+    const FVector Right = FVector::CrossProduct(FVector::UpVector, Ahead);
+    const bool bRightPaw = FCString::Strcmp(GetSlashName(), TEXT("SlashRight")) == 0;
+    const FVector Swing = (Right * (bRightPaw ? -1.f : 1.f) + Ahead * .6f).GetSafeNormal();
+    for (const TWeakObjectPtr<AChuckBreakable>& Entry : AChuckBreakable::All())
+    {
+        AChuckBreakable* Target = Entry.Get();
+        if (!Target || Target->IsBroken()) continue;
+        const FVector To = Target->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - Target->GetHitRadius();
+        const float TargetZ = static_cast<float>(Target->GetActorLocation().Z);
+        if (Reach > SlashReach || TargetZ > Feet + 45.f || TargetZ + Target->GetHitHeight() < Feet - 10.f) continue;
+        if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;   // behind him, unless touching
+        Target->Break(Swing);
+        ++SlashBreaks;
     }
 }
 const TCHAR* AChuckCharacter::GetSlashName() const
@@ -920,6 +946,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         Gait = EGait::Strafe; StrafePhase = 0; WalkPhase = 0;
     }
     UpdateSlashLayer(DeltaSeconds);
+    if (SlashHitAt >= 0 && GetWorld()->GetTimeSeconds() >= SlashHitAt) { SlashHitAt = -1; SlashHit(); }
     const float Length = Clips[static_cast<int32>(Base)]->GetPlayLength();
 
     // Distance-matched gait: start, walk and stop clips advance by travelled

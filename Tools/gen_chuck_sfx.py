@@ -230,6 +230,18 @@ def main():
         add(out, paw(rng, 'wood', .8), plant)
         add(out, paw(rng, 'wood', .7), plant + .018)
         write(f'SFX_Roll_{i:02d}', finish(out), entries, 'roll', contacts_s=[round(s0 + span * u, 3) for u in (.25, .5, .75)], plant_s=plant)
+    for i in range(3):
+        # Grass shred (2026-09-30): a crisp tear of many fibres snapping, a
+        # leafy rustle as the clippings fly, over a brief swish.
+        rng = random.Random(f'shred-{i}')
+        out = buf(.45)
+        for _ in range(38):
+            tick = mul(noise(rng, .006), env(.006, .0002, .0008 + rng.uniform(0, .0008)))
+            at = .09 * (rng.random() ** 1.6)
+            add(out, filt(tick, ('hp', 2200, .7), ('bp', rng.uniform(2500, 7500), 1.4)), at, rng.uniform(.25, .7))
+        add(out, mul(cloth(rng, .4, rng.uniform(1600, 2200), sweep=-.35, flutter=.6), env(.4, .01, .09, .03)), .01, .55)
+        add(out, swish(rng, .14, .05, 700, 1800, 900), 0, .25)
+        write(f'SFX_Shred_{i:02d}', finish(out), entries, 'shred')
     (OUT / 'manifest.json').write_text(json.dumps({'sample_rate': SR, 'peak_dbfs': -3, 'generator': 'Tools/gen_chuck_sfx.py', 'sounds': entries}, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SFX_READY', len(entries), 'sounds')
 

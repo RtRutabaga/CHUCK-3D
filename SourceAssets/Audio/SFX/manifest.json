@@ -258,6 +258,24 @@
     0.43
    ],
    "plant_s": 0.56
+  },
+  {
+   "name": "SFX_Shred_00",
+   "file": "SFX_Shred_00.wav",
+   "kind": "shred",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_Shred_01",
+   "file": "SFX_Shred_01.wav",
+   "kind": "shred",
+   "duration_s": 0.45
+  },
+  {
+   "name": "SFX_Shred_02",
+   "file": "SFX_Shred_02.wav",
+   "kind": "shred",
+   "duration_s": 0.45
   }
  ]
 }

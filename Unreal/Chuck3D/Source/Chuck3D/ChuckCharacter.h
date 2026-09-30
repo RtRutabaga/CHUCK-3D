@@ -79,6 +79,11 @@ public:
     static constexpr float WallJumpUp = 230.f;     // cm/s up (standing jump: 170)
     static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
+    /** Breakables (grass tufts, later jars and rats) broken by the slash so far. */
+    int32 GetSlashBreaks() const { return SlashBreaks; }
+    // The slash's reach for breakables: from his centre to a target's edge (cm),
+    // ground to chest. Generous on purpose ("hard-looking but easy").
+    static constexpr float SlashReach = 40.f;
     /** Strikes started so far (tests). */
     int32 GetSlashStrikes() const { return SlashStrikes; }
     /** Tests: a fixed paw sequence. */
@@ -166,6 +171,9 @@ private:
     bool bSlashHeld = false;
     FRandomStream SlashRandom;
     int32 SlashStrikes = 0;
+    int32 SlashBreaks = 0;
+    float SlashHitAt = -1;   // world time of the pending strike's cut
+    void SlashHit();
     int32 SamePawRun = 0;
     EClip PickPaw(bool bFirst, EClip Previous);
     float SlashDone = 0;

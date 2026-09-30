@@ -1369,3 +1369,33 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Worktree `-MotionCapture` and `-NoGroom` **108/108**; uncapped with and without groom 0 failures.
   - Stage 94: speed 225 at the press, side jump at once, 119 cm sideways (116 uncapped) against 126 authored, forward 0.00.
 - **Remaining:** Q+Space from a standstill is also a side jump now (it was before only when strafing sideways). The C + stick side jump is unchanged. Not played by the user.
+
+## Fifty-third pass — shreddable grass tufts
+
+- **User direction (2026-09-30):** a key loop of the Chuck game is shredding grass tufts and breaking jars to collect the cigarettes inside (Zelda rupee style), and later fighting largish rats. The scratch may need a low variant. Start with shreddable grass.
+- **Recommendations given:**
+  - Cigarettes as grounded physical pickups with a small counter (no power progression).
+  - A shared breakable base for grass, then jars, crates and rats.
+  - A generous hit zone now; later an automatic low rake chosen when the target in front is low.
+- **Art:** `Tools/build_grass_tuft.py` (Blender) → `SourceAssets/Props/Grass`.
+  - Tufts A/B/C: 22–25 cm tall and 33–47 cm across, 760–1080 tris. Curved, tapering, double-sided blades with up-and-out normals. Vertex tint runs olive to straw; vertex alpha is the height fraction for the sway.
+  - Matching stubble (same seed, ragged 2–6 cm stalks) and a clipping blade.
+  - Review: `Review/runtime_Grass_*.png`.
+- **Import:** `Tools/import_grass_tuft.py` via `-ExecutePythonScript` (the commandlet crashed on the FBX importer) → `/Game/Art/Props/Grass`.
+  - `M_Grass`: vertex colour squared (the FBX colours arrive a gamma step bright; the first capture was yellow-green), roughness 0.85, specular 0.25. Wind sway in world position offset, about 1 cm at the tips, growing with height².
+  - Instanced-static-mesh use is enabled; the verifier caught the default-material fallback. No collision.
+- **Sounds:** `SFX_Shred_00..02` added to `gen_chuck_sfx.py`: fibre snaps, a leafy rustle and a light swish. The existing 36 regenerate byte-identical.
+- **Runtime:**
+  - `AChuckBreakable` (abstract): a registry of live breakables, plus hit radius/height, `Cigarettes` (for the next pass) and a virtual `Break(Swing)`. No collision: the slash tests reach against the list, so grass can't catch paw, ledge or camera traces.
+  - `AGrassTuft`: swaps to stubble. 18 clippings (8–12 cm) fly along the swing with drag and spin, settle flat and shrink away by 1.3 s, as instances with ticking only while flying. It plays a shred sound at 0.45.
+  - `Plant` grounds a tuft by trace (ground level only). `SpawnDockGrass` plants 9 seeded patches: 51 tufts.
+  - `ChuckCharacter`: each strike schedules a hit at the clip's strike (`SlashStrike` 0.16 s, now generated). `SlashHit` breaks every breakable whose edge is within `SlashReach` 40 cm, ahead (dot > 0.3) or touching, from ground to chest. The swing runs across the body away from the striking paw.
+- **Tests:** **110** (109 with `-NoCapture`).
+  - Stage 95: tufts 30 cm ahead, 60 cm behind and 110 cm ahead. The slash cuts only the first (18 clippings, sound, 1 break); he walks through the far one; 51 tufts are in play.
+  - Capture stage 96: a shred among five tufts.
+- **Verified:** worktree `-MotionCapture` and `-NoGroom` **110/110**; uncapped with and without groom 0 failures.
+- **Remaining:**
+  - The slash visibly passes at chest height over the grass (the low rake is next).
+  - No cigarette drops or pickups yet, and tufts don't regrow.
+  - Stone-and-grass patches were placed by trace only. Not every patch has been looked at in game (the garden and timber yard weren't captured).
+  - Not played by the user.

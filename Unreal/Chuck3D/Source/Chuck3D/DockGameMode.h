@@ -44,6 +44,8 @@ private:
     float LookReached = 0;
     float KeySide = 0;
     float KeyJumpSide = 0;
+    TArray<TWeakObjectPtr<class AGrassTuft>> TestTufts;
+    int32 BreaksBase = 0;
     int32 StrafeJumpsBase = 0;
     int32 DropHangsBase = 0;
     bool bKeyMeasured = false;

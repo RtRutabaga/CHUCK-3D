@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "DockSetting.h"
+#include "GrassTuft.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundWave.h"
 #include "TimerManager.h"
@@ -406,6 +407,8 @@ void ADockGameMode::StartPlay()
     if(BoatMesh) Prop(TEXT("HarborBoatArt"),FVector(980,600,-60),BoatMesh);
     if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
     BuildDockSetting(World);
+    // Shreddable grass tufts (after all collision exists: planted by ground traces).
+    AGrassTuft::SpawnDockGrass(World);
     // Animated opaque wave normals now replace the old geometric ripple strips.
     auto* HarborFog=World->SpawnActor<AExponentialHeightFog>();
     HarborFog->GetComponent()->SetFogDensity(.018f);
@@ -1414,6 +1417,33 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DROP_HANG_MEASURE drop_hangs=%d hang_yaw=%.1f hang_z=%.2f held=%d pullups=%d end_z=%.2f"),Chuck->GetDropHangs()-DropHangsBase,CornerYaw,ShimmyZ0,bLocoFlag ? 1 : 0,Chuck->GetPullUps()-PullUpsBase,At.Z);
             Check(Chuck->GetDropHangs()==DropHangsBase+1 && FMath::Abs(FMath::FindDeltaAngleDegrees(CornerYaw,-90.f))<5.f && FMath::Abs(ShimmyZ0-(115.f-ChuckClipData::HangDrop))<2.f,TEXT("walking gently off an edge turns round and hangs from it"));
             Check(bLocoFlag && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(115.f+32.5f))<3.f,TEXT("the stick that walked him off is ignored until released; then he climbs back"));
+            // Next: grass. A tuft 30 cm ahead (slashed), one 60 cm behind (left
+            // alone) and one 110 cm ahead (walked through), on clear quay.
+            Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            TestTufts.Reset();
+            for(const float Dx : {30.f,-60.f,110.f}) TestTufts.Add(AGrassTuft::Plant(GetWorld(),FVector2D(-240+Dx,-20),0,0.f,1.f));
+            BreaksBase=Chuck->GetSlashBreaks(); LocoValue=0; bLocoFlag=false;
+            TestStage=95; StageTime=0;
+        }
+    }
+    else if(TestStage==95)
+    {
+        const bool bPlanted=TestTufts.Num()==3 && TestTufts[0].IsValid() && TestTufts[1].IsValid() && TestTufts[2].IsValid();
+        if(StageTime>=.2f && StageTime-DeltaSeconds<.2f) Chuck->Slash();
+        if(StageTime>=.25f && StageTime-DeltaSeconds<.25f) Chuck->SlashReleased();
+        if(bPlanted) LocoValue=FMath::Max(LocoValue,static_cast<float>(TestTufts[0]->GetClippingsFlying()));
+        if(StageTime>=1.2f && StageTime<3.2f) Chuck->AddMovementInput(FVector(1,0,0),1);   // walk on through the far tuft
+        if(StageTime>3.4f)
+        {
+            const bool bCut=bPlanted && TestTufts[0]->IsBroken();
+            const bool bBehind=bPlanted && !TestTufts[1]->IsBroken();
+            const bool bThrough=bPlanted && !TestTufts[2]->IsBroken() && Chuck->GetActorLocation().X>TestTufts[2]->GetActorLocation().X+20.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GRASS_MEASURE planted=%d tufts_in_play=%d cut=%d clippings=%.0f sound=%d behind_intact=%d walked_through=%d breaks=%d x=%.1f"),
+                bPlanted ? 1 : 0,AChuckBreakable::All().Num(),bCut ? 1 : 0,LocoValue,bPlanted && TestTufts[0]->PlayedShredSound() ? 1 : 0,bBehind ? 1 : 0,bThrough ? 1 : 0,Chuck->GetSlashBreaks()-BreaksBase,Chuck->GetActorLocation().X);
+            Check(bCut && LocoValue>=10 && TestTufts[0]->PlayedShredSound() && Chuck->GetSlashBreaks()==BreaksBase+1,TEXT("a slash shreds the grass tuft in front: stubble, a spray of clippings, a rustle"));
+            Check(bBehind && bThrough && AChuckBreakable::All().Num()>40,TEXT("tufts outside the swing are untouched, Chuck walks through grass, and the docks are planted"));
+            for(auto& Tuft : TestTufts) if(Tuft.IsValid()) Tuft->Destroy();
+            TestTufts.Reset();
             // Next: the cargo wharf. Run up the warehouse's stone plinth and climb onto it.
             Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-180,-610,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetTestStick(FVector2D(0,1));
@@ -1540,6 +1570,25 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Slash_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
         if(StageTime>1.5f)
         {
+            // Then a grass shred among a few tufts, from the front three-quarter.
+            Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
+            Chuck->SetActorRotation(FRotator(0,150,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator::ZeroRotator);
+            TestTufts.Reset();
+            for(const FVector& Spot : {FVector(30,0,0),FVector(20,45,1),FVector(55,-40,2),FVector(-15,-50,1),FVector(80,25,0)})
+                TestTufts.Add(AGrassTuft::Plant(GetWorld(),FVector2D(-240+Spot.X,-20+Spot.Y),static_cast<int32>(Spot.Z),Spot.X*7.f,1.f));
+            TestStage=96; StageTime=0;
+        }
+    }
+    else if(TestStage==96)
+    {
+        if(StageTime>=.3f && StageTime-DeltaSeconds<.3f) { Chuck->Slash(); Chuck->SlashReleased(); }
+        for(const float Shot : {.25f,.46f,.52f,.6f,.72f,.9f,1.3f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Grass_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>2.f)
+        {
+            for(auto& Tuft : TestTufts) if(Tuft.IsValid()) Tuft->Destroy();
+            TestTufts.Reset();
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));

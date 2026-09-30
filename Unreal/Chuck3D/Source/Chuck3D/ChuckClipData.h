@@ -43,6 +43,7 @@ namespace ChuckClipData
     constexpr float SlashTravel[] = {0.0000f, 0.0000f, 0.3293f, 1.7706f, 3.9736f, 6.5151f, 8.9719f, 10.9210f, 11.9392f, 12.0000f, 12.0000f, 12.0000f, 12.0000f};
     constexpr int SlashFrames = 12;
     constexpr float SlashChainAt = 0.2182f;
+    constexpr float SlashStrike = 0.1600f;  // the cut: what it hits breaks here
     constexpr FStance SlashRightStance{{0.0000f, 0.0436f, 0.1600f, 0.4000f, -1.0000f, -1.0000f}, {0.0000f, 0.2036f, 0.3055f, 0.4000f, -1.0000f, -1.0000f}, 0.4000f};
     constexpr FStance SlashLeftStance{{0.0000f, 0.2036f, 0.3055f, 0.4000f, -1.0000f, -1.0000f}, {0.0000f, 0.0436f, 0.1600f, 0.4000f, -1.0000f, -1.0000f}, 0.4000f};
     // Wall run: loop phase follows the vertical capsule travel over this stride.

@@ -95,6 +95,7 @@ def main():
         '    constexpr float SlashTravel[] = {' + ', '.join(f(v) for v in slash['capsule_travel_cm_per_frame']) + '};',
         f"    constexpr int SlashFrames = {len(slash['capsule_travel_cm_per_frame']) - 1};",
         f"    constexpr float SlashChainAt = {f(slash['events_s']['chain_from'])};",
+        f"    constexpr float SlashStrike = {f(slash['events_s']['strike'])};  // the cut: what it hits breaks here",
         f"    constexpr FStance SlashRightStance{stance(slash)};",
         f"    constexpr FStance SlashLeftStance{stance(clips['SlashLeft'])};",
         '    // Wall run: loop phase follows the vertical capsule travel over this stride.',
