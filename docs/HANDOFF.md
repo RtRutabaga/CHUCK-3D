@@ -8,6 +8,10 @@ Import and Windows build succeeded (`Local/music-import-audio.log`, `Local/music
 
 Root launcher now uses the verified music package, runtime `18e6144`; previous detail build retained at `Builds/Windows-Previous-20260929-Music`. No movement, camera or setting geometry changes. Next work can be done here.
 
+**Update 20 (Claude, 2026-09-30, user request: exhaled smoke):** runtime `3a5faf8`. Every 7–12 s, when calm, Chuck breathes out a stream of soft smoke from the cigarette corner of his mouth, which drifts, swells, rises and thins. The breath is barely audible. The user doesn't want Astral Anchors: the map spawn stays the respawn point. Details are in `agent-handoffs/CLAUDE.md` pass 57.
+
+The root candidate passed `-MotionCapture` **118/118**, the world check and the music check (`Local/verify-package-20260930-121520.log`). It was promoted to `Builds/Windows` with receipt `3a5faf8`; the previous package is kept as `Builds/Windows-Previous-20260930-Exhale`. Not yet played by the user.
+
 **Update 19 (Claude, 2026-09-30, user request: Sanity and the astral respawn):** runtime `d934fee` adds Sanity, as in the 2D game:
 - a bar of five cigarettes (top right); a bite burns one;
 - picked-up cigarettes refill it, then count up like coins;
