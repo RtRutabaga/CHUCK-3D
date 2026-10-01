@@ -237,6 +237,68 @@ void BuildDockSetting(UWorld* World)
         House(FVector(4410,-2600+I*610,-30),FVector(560,510,650+(I%4)*110),
             I%2?TEXT("Plaster"):TEXT("Stone"),false);
     Box(FVector(3400,100,-50),FVector(55,6300,170),TEXT("Stone"));
+    // Opposite working waterfront: give the bank depth, loading faces and a
+    // sheltered harbor mouth. All scenery stays beyond the playable basin.
+    auto* BoatMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_HarborBoat.SM_HarborBoat"));
+    Box(FVector(3370,100,42),FVector(115,6320,20),TEXT("Stone"));
+    for(float Y=-2870;Y<=3100;Y+=310)
+    {
+        Box(FVector(3350,Y,-68),FVector(100,75,220),TEXT("Stone"));
+        Box(FVector(3292,Y,-54),FVector(22,24,180),TEXT("Wood"));
+        for(float Z : {-100.f,-15.f})
+            Box(FVector(3278,Y,Z),FVector(8,34,12),TEXT("Dark"));
+    }
+    for(int32 I=0;I<3;++I)
+    {
+        const float Y=-2100+I*1700.f;
+        // Short timber landing fingers, below rather than across the skyline.
+        Box(FVector(3160,Y,-4),FVector(420,180,24),TEXT("Wood"));
+        for(float X : {2970.f,3160.f,3350.f}) for(float Side : {-1.f,1.f})
+        {
+            Box(FVector(X,Y+Side*78,-70),FVector(24,24,230),TEXT("Wood"));
+            Box(FVector(X,Y+Side*78,51),FVector(30,30,12),TEXT("Dark"));
+        }
+        for(float X=2960;X<=3340;X+=24)
+            Box(FVector(X,Y,9),FVector(22,174,2),TEXT("WoodLight"));
+        Beam(FVector(2965,Y-80,-130),FVector(3345,Y-80,-18),12,TEXT("Wood"));
+        Prop(BoatMesh,FVector(2990,Y+240,-60),FVector(.85f),90);
+        Prop(RopeMesh,FVector(3100,Y,12),FVector(.8f));
+        // Dockside derrick and hanging tackle remain empty, not a floating load.
+        Box(FVector(3410,Y,250),FVector(28,28,500),TEXT("Wood"));
+        Beam(FVector(3410,Y,430),FVector(3100,Y,510),20,TEXT("Wood"));
+        Beam(FVector(3410,Y,240),FVector(3130,Y,495),14,TEXT("WoodLight"));
+        Beam(FVector(3100,Y,506),FVector(3100,Y,230),3,TEXT("Dark"));
+        Box(FVector(3100,Y,222),FVector(18,12,22),TEXT("Dark"));
+    }
+    // Articulate existing far warehouses rather than placing new buildings in
+    // front of them. These details sit on the west faces of the second row.
+    for(int32 I=0;I<9;++I)
+    {
+        const FVector P(4125,-2600+I*610,0);
+        Box(P+FVector(0,0,100),FVector(8,150,220),TEXT("Wood"));
+        for(float Y : {-80.f,80.f}) Box(P+FVector(-5,Y,108),FVector(14,12,236),TEXT("Stone"));
+        Box(P+FVector(-5,0,228),FVector(16,178,18),TEXT("Stone"));
+        for(float Z : {32.f,173.f}) Box(P+FVector(-9,0,Z),FVector(5,146,8),TEXT("Dark"));
+        Beam(P+FVector(-11,-65,15),P+FVector(-11,65,210),7,TEXT("WoodLight"));
+        Box(P+FVector(-70,0,260),FVector(150,210,12),TEXT("Roof"),false,FRotator(8,0,0));
+        for(float Y : {-90.f,90.f}) Beam(P+FVector(-2,Y,160),P+FVector(-125,Y,245),9,TEXT("Wood"));
+    }
+    // Distant banks continue around the inlet. Leave a broad visible shipping
+    // channel between the two breakwater heads; no bridge across open water.
+    Box(FVector(4680,4650,-140),FVector(2700,3000,240),TEXT("Stone"));
+    Box(FVector(720,4620,-140),FVector(1650,1700,240),TEXT("Stone"));
+    Box(FVector(1170,3840,-36),FVector(1300,130,190),TEXT("Stone"));
+    Box(FVector(3060,3840,-36),FVector(650,130,190),TEXT("Stone"));
+    for(float X : {1770.f,2785.f})
+    {
+        Box(FVector(X,3840,155),FVector(180,180,340),TEXT("Stone"));
+        Box(FVector(X,3840,327),FVector(215,215,24),TEXT("Dark"));
+        for(float Side : {-1.f,1.f}) for(float Other : {-1.f,1.f})
+            Box(FVector(X+Side*70,3840+Other*70,357),FVector(38,38,48),TEXT("Stone"));
+    }
+    for(int32 I=0;I<4;++I)
+        House(FVector(3900+I*420,4350+(I%2)*620,-20),FVector(360,440,540+I*80),
+            I%2?TEXT("Stone"):TEXT("Plaster"),false);
     // Street-facing brackets, shutters and canopies distinguish the near buildings.
     const FVector StreetFronts[]={FVector(-1369,-1800,0),FVector(-1329,-1080,0),
         FVector(-1299,-360,0),FVector(-1269,430,0)};
@@ -348,12 +410,12 @@ void BuildDockSetting(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(840,-1780,105)};
+            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(750,-850,170)};
+            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
-        for(int32 I=0;I<4;++I)
+        for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
         {
             FTimerHandle Handle;
             World->GetTimerManager().SetTimer(Handle,[World,Camera,I,P=Views[I],T=Targets[I]]()
@@ -373,6 +435,6 @@ void BuildDockSetting(UWorld* World)
         World->GetTimerManager().SetTimer(ExitHandle,[World]()
         {
             if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));
-        },22.f,false);
+        },30.f,false);
     }
 }
