@@ -2,6 +2,21 @@
 
 ## Current launcher and integration status
 
+**Update 28 (Claude, 2026-10-01, user request: fix the weird hand placement, with finger capability; the guard will hold a spear later):** runtime `681dd10`.
+- The humans are rebuilt on MPFB's `game_engine` rig: Unreal mannequin names and three bones in every finger, instead of `cmu_mb`'s single finger bone per hand (paddle hands). The CMU motion capture is mapped onto it by name.
+- Hands now rest beside the thighs:
+  - wrists mostly straightened (the capture's wrist data was poor);
+  - arms eased 5° out so the hands clear wider hips;
+  - every finger joint curls to a relaxed rest (little finger most, index least).
+- `ADockNPC::SetGrip(side, amount)` closes a hand into a fist round a shaft, ready for the guard's spear. The spear prop and his holding pose are not done.
+
+The root candidate passed `-MotionCapture` **125/125**, plus the world, plaza and music checks (`Local/verify-package-20261001-101818.log`).
+- Fingers curl 26–27°.
+- Straight arms hang at most 16° out; the A-pose is about 45°.
+- Promoted to `Builds/Windows` with receipt `681dd10`; the previous package is kept as `Builds/Windows-Previous-20261001-Hands`.
+
+**Caveat:** Codex was working in root at the same time. Its uncommitted edit to `Unreal/Chuck3D/Source/Chuck3D/DockSetting.cpp` (10:07, city-wall masonry, battlements and torches) was compiled into this package. So the launcher is `681dd10` plus that uncommitted change; it passed all checks. I did not touch that file. Codex should commit or revert it and re-promote so the receipt matches. Not yet played by the user.
+
 **Update 28 (Codex, October 1 — playable Dock Street):** runtime `749367b` / `6568704`, retaining Claude's `0efe501` character/NPC work. The northern town beyond the DOCK STREET sign now has continuous solid ground, an open entrance, eight existing houses with solid bodies/roofs, connected lanes/courts, shop awnings/signs/lamps, benches and cargo. The western larger-city boundary stays closed. Houses are exterior shells; no new dialogue or interiors. The interrupted draft's duplicate overlapping buildings and incomplete floor were replaced before packaging. No binary assets/dependencies added.
 
 Root launcher promoted and receipt checked at `749367b`; previous package retained at `Builds/Windows-Previous-20261001-DockStreet`. Walk directly through the DOCK STREET sign opening, then between the houses into the court. Next part of the work can be done here.

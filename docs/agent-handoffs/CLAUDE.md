@@ -1675,3 +1675,29 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - There's no grudge or flee: they don't avoid Chuck afterwards.
   - The feet slide slightly in body turns.
   - Not played by the user.
+
+## Sixty-third pass — hands and fingers
+
+- **User (2026-10-01):** the hand placement looks weird; preferably add finger capability, keeping in mind the guard will hold a spear.
+- **Causes:**
+  - `cmu_mb` has one finger bone per hand (paddle fingers).
+  - CMU wrist data bent the hands flat against the legs.
+  - The capture actors were slighter at the hip, so the hands sank into the thighs.
+- **Source:** `fc343f7`, `884c2ff`, `681dd10` on main (rebased onto Codex's Dock Street `2deace2`).
+  - Changed: `build_npc_humans.py` (game_engine rig and region names), `build_npc_mocap.py` (TAKE name map, limb AIM table), `DockNPC.cpp/.h`, `DockGameMode.cpp`, the README and docstrings, and all human/clip FBX and Unreal assets (clean re-import).
+- **Runtime:**
+  - Body bones use mannequin names, with one neck bone (look split 50/50 neck/head).
+  - Fingers: the axis for each of the 30 finger joints comes from the palms-down model pose (across the finger, toward -Z). Per frame each joint is set relative to its parent at a Relaxed curl or, by `SetGrip`, a Gripped one.
+  - Wrists: 65% slerp to the straight wrist from the rest solve.
+  - Clip arms rolled 5° out.
+- **Test:** the standing-pose check now requires a finger curl of more than 10°, and it rejects only a straight arm held more than 30° out from hanging.
+  - Hand width was dropped as a measure: a natural hanging arm reaches 34 cm, nearly the A-pose width.
+  - Two failed runs got it there (a hand on the hip at 39 cm, then a straight arm at 37 cm). The portrait capture now logs these measures per shot.
+- **Verified:**
+  - Root package 125/125 plus world, plaza and music checks: `Local/verify-package-20261001-101818.log`. Receipt `681dd10`.
+  - The package also contains Codex's uncommitted `DockSetting.cpp` edit (see HANDOFF Update 28).
+  - Evidence: `SourceAssets/NPCs/Humans/Review/runtime_{Guard,MarketWoman}_front.png`.
+- **Remaining:**
+  - Spear prop and holding pose: `SetGrip` is ready; the arm pose and the prop attached to `hand_r` are not done.
+  - No individual finger animation in the idles (fingers hold their curl).
+  - Not played by the user.
