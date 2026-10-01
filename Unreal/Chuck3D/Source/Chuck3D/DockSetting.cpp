@@ -4,6 +4,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -408,9 +409,9 @@ void BuildDockSetting(UWorld* World)
         // Resting places and cargo tuck into the edge, leaving the court open.
         Box(FVector(-1640,Y,35),FVector(65,180,12),TEXT("Wood"),true);
         for(float Side : {-1.f,1.f}) Box(FVector(-1640,Y+Side*65,16),FVector(50,14,32),TEXT("Wood"),true);
-        Prop(CrateMesh,FVector(750,Y,30));
-        Box(FVector(750,Y,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
-        Prop(RopeMesh,FVector(750,Y,61),FVector(.7f));
+        Prop(CrateMesh,FVector(820,Y,30));
+        Box(FVector(820,Y,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
+        Prop(RopeMesh,FVector(820,Y,61),FVector(.7f));
     }
     for(int32 I=0;I<4;++I)
     {
@@ -419,6 +420,16 @@ void BuildDockSetting(UWorld* World)
         Label(FVector(X,1654,255),I==0?TEXT("ROPEWORKS"):I==1?TEXT("NET MENDER"):I==2?TEXT("STORES"):TEXT("SAILMAKER"),90);
         Box(FVector(X,1680,226),FVector(190,90,8),TEXT("Roof"),false,FRotator(0,0,-8));
         for(float Side : {-1.f,1.f}) Beam(FVector(X+Side*75,1645,150),FVector(X+Side*75,1715,218),6,TEXT("Wood"));
+        Box(FVector(X+150,1652,260),FVector(24,24,36),TEXT("Dark"));
+        Box(FVector(X+150,1665,260),FVector(18,4,24),TEXT("Amber"));
+        auto* Lamp=NewObject<UPointLightComponent>(Owner);
+        Lamp->SetupAttachment(Root);
+        Lamp->SetRelativeLocation(FVector(X+150,1690,260));
+        Lamp->SetLightColor(FLinearColor(1,.55f,.23f));
+        Lamp->SetIntensity(1600);
+        Lamp->SetAttenuationRadius(360);
+        Lamp->SetCastShadows(false);
+        Lamp->RegisterComponent();
     }
     // The larger wall beyond the court stays closed.
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
