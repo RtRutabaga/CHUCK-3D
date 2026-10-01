@@ -264,9 +264,9 @@ void BuildDockSetting(UWorld* World)
         Prop(BoatMesh,FVector(2990,Y+240,-60),FVector(.85f),90);
         Prop(RopeMesh,FVector(3100,Y,12),FVector(.8f));
         // Dockside derrick and hanging tackle remain empty, not a floating load.
-        Box(FVector(3410,Y,250),FVector(28,28,500),TEXT("Wood"));
-        Beam(FVector(3410,Y,430),FVector(3100,Y,510),20,TEXT("Wood"));
-        Beam(FVector(3410,Y,240),FVector(3130,Y,495),14,TEXT("WoodLight"));
+        Box(FVector(3330,Y,250),FVector(28,28,500),TEXT("Wood"));
+        Beam(FVector(3330,Y,430),FVector(3100,Y,510),20,TEXT("Wood"));
+        Beam(FVector(3330,Y,240),FVector(3130,Y,495),14,TEXT("WoodLight"));
         Beam(FVector(3100,Y,506),FVector(3100,Y,230),3,TEXT("Dark"));
         Box(FVector(3100,Y,222),FVector(18,12,22),TEXT("Dark"));
     }
