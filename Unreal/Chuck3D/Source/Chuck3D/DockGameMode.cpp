@@ -466,7 +466,8 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     struct FShot { const TCHAR* Name; float Distance, Yaw, Height, Aim, Fov; };
     static const FShot Shots[] = {
         {TEXT("Front"),320.f,0.f,100.f,92.f,62.f}, {TEXT("ThreeQuarter"),320.f,40.f,100.f,92.f,62.f},
-        {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f} };
+        {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f},
+        {TEXT("Scratched"),260.f,60.f,100.f,92.f,62.f} };   // a scratch is triggered as this shot starts
     constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
     constexpr float Settle=3.f, Each=1.2f;
     NPCCaptureTime+=DeltaSeconds;
@@ -476,7 +477,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     if(NPCCaptureTime<Settle || !PC) return;
     const int32 Step=FMath::FloorToInt((NPCCaptureTime-Settle)/Each);
     if(Step>=NPCs.Num()*ShotCount) { FPlatformMisc::RequestExit(false); return; }
-    const ADockNPC* NPC=NPCs[Step/ShotCount].Get();
+    ADockNPC* NPC=NPCs[Step/ShotCount].Get();
     const FShot& Shot=Shots[Step%ShotCount];
     if(!NPC) return;
     if(Step!=NPCShot)
@@ -491,6 +492,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
         PC->SetViewTarget(NPCCamera.Get());
         NPCShot=Step; bNPCShotTaken=false;
+        if(FCString::Strcmp(Shot.Name,TEXT("Scratched"))==0) NPC->TakeScratch(NPC->GetActorLocation()+NPC->GetActorForwardVector()*50.f);
     }
     else if(!bNPCShotTaken && NPCCaptureTime-Settle-Step*Each>.8f)
     {
@@ -1670,6 +1672,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         // Then walk into him and jump at him: blocked, no wall run, no mantle.
         if(bWorker && StageTime>=1.6f && StageTime<3.2f) Chuck->AddMovementInput((Worker->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
         if(StageTime>=2.6f && StageTime-DeltaSeconds<2.6f) Chuck->JumpPressed();
+        if(bWorker && StageTime>=3.3f && StageTime-DeltaSeconds<3.3f) NearLookDown=Worker->GetLookAngles().Y;   // pressed up against him
         if(bWorker && StageTime>=3.4f && StageTime-DeltaSeconds<3.4f)
         {
             KeySide=FVector::Dist2D(Chuck->GetActorLocation(),Worker->GetActorLocation());
@@ -1683,16 +1686,30 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock();
             Chuck->SetActorLocation(Worker->GetActorLocation()-Worker->GetActorRightVector()*170.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
-        if(StageTime>8.6f)
+        // Then the rat scratches his shins: he starts back.
+        if(bWorker && StageTime>=8.6f && StageTime-DeltaSeconds<8.6f)
+        {
+            Chuck->ResetToDock();
+            Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorForwardVector()*55.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+            Chuck->SetActorRotation((Worker->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D().Rotation());
+            ScratchBase=Worker->GetScratches();
+        }
+        if(bWorker && StageTime>=8.7f && StageTime-DeltaSeconds<8.7f) { Chuck->Slash(); Chuck->SlashReleased(); }
+        if(bWorker && StageTime>=9.3f && StageTime-DeltaSeconds<9.3f) bLocoFlag=Worker->IsReacting();
+        if(StageTime>9.4f)
         {
             int32 Moving=0;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->HasMocap()) ++Moving;
             const float Turned=bWorker ? Worker->GetBodyTurn() : 0.f;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_LIFE_MEASURE mocap=%d worker_turn_deg=%.1f"),Moving,Turned);
             Check(Moving>=3 && FMath::Abs(Turned)>60.f,TEXT("the townsfolk move with motion capture, and the worker turns his body to a rat at his side"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_SCRATCH_MEASURE scratches=%d reacting=%d"),bWorker ? Worker->GetScratches()-ScratchBase : 0,bLocoFlag ? 1 : 0);
+            Check(bWorker && Worker->GetScratches()>ScratchBase && bLocoFlag,TEXT("a scratch at the worker's shins makes him start back"));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_MEASURE present=%d watching_near=%d look_down_deg=%.1f blocked_at_cm=%.1f wall_runs=%d mantles=%d watching_far=%.0f talkable=%d"),
                 bWorker ? 1 : 0,bLocoFlag ? 1 : 0,LocoValue,KeySide,Chuck->GetWallRuns()-WallRunsBase,Chuck->GetMantles()-MantlesBase,KeyJumpSide,bWorker && Worker->CanTalk() ? 1 : 0);
-            Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_LOOK_MEASURE at_130cm_down_deg=%.1f pressed_close_down_deg=%.1f"),LocoValue,NearLookDown);
+            Check(bWorker && bLocoFlag && LocoValue<9.f && NearLookDown>15.f && KeyJumpSide==0.f,
+                TEXT("the dock worker watches the rat when he's near (head level at 1.3 m, looking down only once it's at his feet) and looks away when he's gone"));
             Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
                 TEXT("the worker is solid to Chuck but can't be run up or climbed"));
             // Every human stands with arms down: not the model's A-pose (hands

@@ -108,6 +108,7 @@ public:
     /** Breakables (grass tufts, jars, later small rats) broken by the slash so far. */
     int32 GetSlashBreaks() const { return SlashBreaks; }
     int32 GetSlashRatHits() const { return SlashRatHits; }
+    int32 GetSlashNPCHits() const { return SlashNPCHits; }
     // The slash's reach for breakables: from his centre to a target's edge (cm),
     // ground to chest. Generous on purpose ("hard-looking but easy").
     static constexpr float SlashReach = 40.f;
@@ -229,6 +230,7 @@ private:
     int32 SlashStrikes = 0;
     int32 SlashBreaks = 0;
     int32 SlashRatHits = 0;
+    int32 SlashNPCHits = 0;
     int32 CigaretteCount = 0;
     int32 BitesTaken = 0;
     int32 Sanity = MaxSanity;

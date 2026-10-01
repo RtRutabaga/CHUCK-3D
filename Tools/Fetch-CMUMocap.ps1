@@ -5,13 +5,15 @@
 # purpose" (CMU / cgspeed). Individual files from the una-dinosauria/cmu-mocap
 # mirror of that release; the descriptions are its index. No installation.
 # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21 (head
-# tipped far back), 141_20 "Waiting" (fidgety); see Tools/build_npc_mocap.py.
+# tipped far back), 141_20 "Waiting" (fidgety), 76_06 "avoid stepping on
+# something" (a cartoonish hop); see Tools/build_npc_mocap.py.
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $destination=Join-Path $projectRoot 'SourceAssets\Mocap\CMU'
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 $takes=[ordered]@{
-    '111_28'='Standing still'; '77_02'='standing'; '18_08'='conversation - explain with hand gestures'
+    '111_28'='Standing still'; '77_02'='standing'; '18_08'='conversation - explain with hand gestures';
+    '79_73'='scared'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

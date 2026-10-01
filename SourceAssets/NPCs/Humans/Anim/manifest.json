@@ -6,19 +6,29 @@
    "fbx": "Anim/AS_Human_StandHip.fbx",
    "take": "111_28",
    "frames": 417,
-   "fps": 30
+   "fps": 30,
+   "loops": true
   },
   "StandLook": {
    "fbx": "Anim/AS_Human_StandLook.fbx",
    "take": "77_02",
    "frames": 175,
-   "fps": 30
+   "fps": 30,
+   "loops": true
   },
   "Talk": {
    "fbx": "Anim/AS_Human_Talk.fbx",
    "take": "18_08",
    "frames": 462,
-   "fps": 30
+   "fps": 30,
+   "loops": true
+  },
+  "React": {
+   "fbx": "Anim/AS_Human_React.fbx",
+   "take": "79_73",
+   "frames": 61,
+   "fps": 30,
+   "loops": false
   }
  }
 }

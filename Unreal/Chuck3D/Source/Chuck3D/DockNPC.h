@@ -51,6 +51,10 @@ public:
     bool IsWatchingChuck() const { return bWatching; }
     /** True once its motion-capture idle is playing (tests). */
     bool HasMocap() const { return SkelIndex.Num() > 0; }
+    /** Chuck's slash caught him: a start, a lean back, a little shift of the feet, then he turns to the rat. */
+    void TakeScratch(const FVector& From);
+    int32 GetScratches() const { return Scratches; }
+    bool IsReacting() const { return ReactTime >= 0.f; }
     /** Body yaw away from where it was placed (deg), for tests: turned toward Chuck. */
     float GetBodyTurn() const;
     /** How far out to the side his wider hand is (cm from his centre line), for
@@ -76,7 +80,9 @@ private:
     EDockHuman Kind = EDockHuman::Worker;
     UPROPERTY() TObjectPtr<USkeletalMesh> HumanMeshes[static_cast<int32>(EDockHuman::Count)];
     /** Motion-capture clips (CMU, Tools/build_npc_mocap.py) on the shared skeleton: idles and talk. */
-    UPROPERTY() TObjectPtr<UAnimSequence> Clips[3];
+    UPROPERTY() TObjectPtr<UAnimSequence> Clips[4];
+    float ReactTime = -1.f;                       // since the rat scratched him (-1: not reacting)
+    int32 Scratches = 0;
     int32 IdleClip = 0;
     float TalkBlend = 0;                          // 0 idle .. 1 the talk clip
     bool bTalking = false;

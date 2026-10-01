@@ -24,6 +24,14 @@
                       "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
                       "sha256":  "B57E6BA15CF2BDE4E6E4233DA53425DDE6D91952FB2BFF17A89C5FCE18A1A0CE",
                       "bytes":  1567012
+                  },
+                  {
+                      "file":  "79_73.bvh",
+                      "description":  "scared",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/079/79_73.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "78F51B188603E2EB33212929FA67C43D68B99209B4D70515AEAA7DCDE56F9230",
+                      "bytes":  672852
                   }
               ]
 }

@@ -25,9 +25,15 @@ namespace
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
-    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipCount };
+    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipCount };
     const TCHAR* ClipPaths[] = { TEXT("/Game/Characters/Humans/Anim/AS_Human_StandHip.AS_Human_StandHip"),
-        TEXT("/Game/Characters/Humans/Anim/AS_Human_StandLook.AS_Human_StandLook"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Talk.AS_Human_Talk") };
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_StandLook.AS_Human_StandLook"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Talk.AS_Human_Talk"),
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_React.AS_Human_React") };
+    // Looking down at the rat: hardly at all until it's right at his feet
+    // (a grown man doesn't crane at a rat across the street).
+    constexpr float LookDownFar = 6.f;      // deg, most he tips his head while it's further off
+    constexpr float CloseFull = 45.f, CloseStart = 95.f;   // cm between them: full look down .. from here
+    constexpr float ReactIn = .2f, ReactOut = .5f;
     constexpr float TurnRate = 70.f;      // deg/s when he turns his body to the rat
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
     // (the head looks down); + yaw turns it to his right.
@@ -58,8 +64,9 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Guard(MeshPaths[1]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Woman(MeshPaths[2]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object;
-    static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]), Talk(ClipPaths[ClipTalk]);
-    Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object;
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
+        Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]);
+    Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object; Clips[ClipReact] = React.Object;
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
 }
 
@@ -176,16 +183,28 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
         const FAnimExtractContext Context(static_cast<double>(FMath::Fmod(Time, FMath::Max(Clip->GetPlayLength(), .1f))));
         for (int32 B = 0; B < N; ++B) Clip->GetBoneTransform(Local[B], FSkeletonPoseBoneIndex(B), Context, false);
     };
-    TArray<FTransform> Local, Talk;
-    Sample(Clips[IdleClip], Local);
-    if (TalkBlend > 0.f)
+    TArray<FTransform> Local, Other;
+    const auto Blend = [&](float W)
     {
-        Sample(Clips[ClipTalk], Talk);
         for (int32 B = 0; B < N; ++B)
         {
-            Local[B].SetRotation(FQuat::Slerp(Local[B].GetRotation(), Talk[B].GetRotation(), TalkBlend));
-            Local[B].SetLocation(FMath::Lerp(Local[B].GetLocation(), Talk[B].GetLocation(), static_cast<double>(TalkBlend)));
+            Local[B].SetRotation(FQuat::Slerp(Local[B].GetRotation(), Other[B].GetRotation(), W));
+            Local[B].SetLocation(FMath::Lerp(Local[B].GetLocation(), Other[B].GetLocation(), static_cast<double>(W)));
         }
+    };
+    Sample(Clips[IdleClip], Local);
+    if (TalkBlend > 0.f) { Sample(Clips[ClipTalk], Other); Blend(TalkBlend); }
+    if (ReactTime >= 0.f)
+    {
+        // The reaction plays once over whatever he was doing, eased in and out.
+        const float Length = Clips[ClipReact]->GetPlayLength();
+        const float W = FMath::Clamp(FMath::Min(ReactTime / ReactIn, (Length - ReactTime) / ReactOut), 0.f, 1.f);
+        Other.SetNum(N);
+        {
+            const FAnimExtractContext Context(static_cast<double>(FMath::Min(ReactTime, Length)));
+            for (int32 B = 0; B < N; ++B) Clips[ClipReact]->GetBoneTransform(Other[B], FSkeletonPoseBoneIndex(B), Context, false);
+        }
+        Blend(W);
     }
     TArray<FQuat> Comp; Comp.SetNum(N);
     TArray<FQuat> World; World.SetNum(N);
@@ -205,6 +224,14 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
     FTransform Hips = FTransform::Identity;   // the clip's hips in component space
     for (int32 B = SkelIndex[BoneIndex[Pelvis]]; B != INDEX_NONE; B = Src.GetParentIndex(B)) Hips = Hips * Local[B];
     HipsOffset = (Hips.GetLocation() - SourceHips) * HipScale;
+}
+
+void ADockNPC::TakeScratch(const FVector& From)
+{
+    ++Scratches;
+    if (ReactTime >= 0.f && ReactTime < .6f) return;   // already starting back
+    ReactTime = 0.f;
+    TurnHold = 2.f; bTurning = true;                    // and he turns to see what did it
 }
 
 float ADockNPC::GetBodyTurn() const
@@ -334,7 +361,8 @@ void ADockNPC::Tick(float DeltaSeconds)
             if (FMath::Abs(YawTo) < 110.f)
             {
                 bWatching = true;
-                Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, 55.f));
+                const float Close = FMath::Clamp((CloseStart - Across) / (CloseStart - CloseFull), 0.f, 1.f);
+                Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, FMath::Lerp(LookDownFar, 55.f, Close)));
             }
             if (HasMocap()) UpdateTurn(DeltaSeconds, YawTo, true);
         }
@@ -342,6 +370,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         bTalking = Chuck->GetTalkingTo() == this;
     }
     TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
+    if (ReactTime >= 0.f && HasMocap() && (ReactTime += DeltaSeconds) > Clips[ClipReact]->GetPlayLength()) ReactTime = -1.f;
     if (!bWatching && (NextGlance -= DeltaSeconds) <= 0)
     {
         NextGlance = FMath::FRandRange(2.5f, 6.f);

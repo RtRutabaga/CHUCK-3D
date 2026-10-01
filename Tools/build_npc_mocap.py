@@ -30,12 +30,14 @@ FPS = 30
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 REVIEW = argv[argv.index('--review') + 1] if '--review' in argv else None
 LOOP = 30            # frames blended across the loop seam (1 s)
-CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to keep or None)
-    'StandHip': ('111_28', 1.0, None),     # weight on one leg, a hand to the hip
-    'StandLook': ('77_02', 1.0, None),     # standing, looking about
-    'Talk': ('18_08', 1.0, None),          # explaining with the hands
+CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to keep or None, loops)
+    'StandHip': ('111_28', 1.0, None, True),     # weight on one leg, a hand to the hip
+    'StandLook': ('77_02', 1.0, None, True),     # standing, looking about
+    'Talk': ('18_08', 1.0, None, True),          # explaining with the hands
+    'React': ('79_73', 1.4, 2.0, False),         # scratched by the rat: hands to the chest, a lean back, a small shift of the feet
     # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21
-    # "Standing still" (head tipped far back), 141_20 "Waiting" (fidgety, 5 s).
+    # "Standing still" (head tipped far back), 141_20 "Waiting" (fidgety, 5 s),
+    # 76_06 "avoid stepping on something" (a cartoonish hop with flailing arms).
 }
 # The joint that sets each bone's direction at the reference (None: follows
 # its parent). Only the limbs are aimed: the A-pose and the T-pose differ
@@ -91,7 +93,7 @@ def yaw_between(a, b):
     return Quaternion((0, 0, 1), math.atan2(a.x * b.y - a.y * b.x, a.x * b.x + a.y * b.y))
 
 
-def retarget(rig, clip, take, skip, keep):
+def retarget(rig, clip, take, skip, keep, loops=True):
     bpy.ops.import_anim.bvh(filepath=str(TAKES / f'{take}.bvh'), axis_forward='-Z', axis_up='Y', rotate_mode='NATIVE',
                             update_scene_fps=False, update_scene_duration=False)
     bvh = bpy.context.object
@@ -132,8 +134,9 @@ def retarget(rig, clip, take, skip, keep):
     unturn = yaw_between(mean_side, lateral(rig_heads, 'LeftUpLeg', 'RightUpLeg'))
     centre = sum((unturn @ fr[1] for fr in frames), Vector()) / len(frames); centre.z = 0
     frames = [({n: unturn @ q for n, q in pose.items()}, unturn @ hips - centre) for pose, hips, _ in frames]
-    # Loop: the first second becomes a blend from the clip's end back into its start.
-    n = min(LOOP, len(frames) // 3)
+    # Loop: the first second becomes a blend from the clip's end back into its
+    # start. (A one-shot is kept as it is; the runtime blends it in and out.)
+    n = min(LOOP, len(frames) // 3) if loops else 0
     m = len(frames) - n
     looped = []
     for f in range(m):
@@ -178,7 +181,7 @@ def retarget(rig, clip, take, skip, keep):
     for p in rig.pose.bones:
         p.rotation_quaternion = Quaternion(); p.location = Vector()
     print('CHUCK_CLIP', clip, take, f'frames={len(looped)}', f'seconds={len(looped) / FPS:.1f}', f'scale={scale:.4f}')
-    return {'fbx': f'Anim/AS_Human_{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS}
+    return {'fbx': f'Anim/AS_Human_{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS, 'loops': loops}
 
 
 def review(clip, frames):
@@ -199,7 +202,7 @@ clear()
 rig = load_rig()
 bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = FPS, 1.   # after the import, which sets the file's rate
 manifest = {'generator': 'Tools/build_npc_mocap.py', 'source': 'SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)', 'clips': {}}
-for clip, (take, skip, keep) in CLIPS.items():
-    manifest['clips'][clip] = retarget(rig, clip, take, skip, keep)
+for clip, (take, skip, keep, loops) in CLIPS.items():
+    manifest['clips'][clip] = retarget(rig, clip, take, skip, keep, loops)
 (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
 print('CHUCK_CLIPS_READY', sorted(manifest['clips']))

@@ -930,6 +930,17 @@ void AChuckCharacter::SlashHit()
         Rat->TakeSlash(Swing);
         ++SlashRatHits;
     }
+    // People: a scratch at the shins of anyone in reach. Nothing breaks; they react.
+    for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+    {
+        ADockNPC* NPC = Entry.Get();
+        if (!NPC) continue;
+        const FVector To = NPC->GetActorLocation() - Location;
+        if (static_cast<float>(To.Size2D()) - 24.f > SlashReach) continue;
+        if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f) continue;
+        NPC->TakeScratch(Location);
+        ++SlashNPCHits;
+    }
 }
 bool AChuckCharacter::TakeBite(const FVector& From)
 {

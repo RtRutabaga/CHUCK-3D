@@ -65,6 +65,8 @@ private:
     int32 AstralSeen = 0;
     TWeakObjectPtr<class ADockNPC> Worker;
     TWeakObjectPtr<class ADockNPC> TalkNPC;
+    float NearLookDown = 0;
+    int32 ScratchBase = 0;
     int32 TalkSeen = 0;
     int32 StrafeJumpsBase = 0;
     int32 DropHangsBase = 0;
