@@ -2,7 +2,7 @@
 
 ## September 30 — plaza detail pass
 
-Verified package promoted to the root launcher; previous package at `Builds/Windows-Previous-20260930-PlazaDetail`. Receipt check passed. Next part of the work can be done here, coordinated with Claude.
+Root launcher keeps Claude's newer combined `f7deb68` package and original receipt, which includes this plaza pass. An older candidate was briefly promoted before concurrent changes were detected; the combined package was restored and launcher check passed. Plaza-only package retained at `Builds/Windows-PlazaDetail-Verified-d38d505`. Next part of the work can be done here, coordinated with Claude.
 
 Runtime `d38d505` / `8422cd4` changes only DockPlaza.cpp: fountain coping/thinner animated jets, shop gables/hoods/door hardware, anchor banners, gate/sewer detail and approach signage. New details are noncolliding; no character/controller, existing obstacle or binary asset changes. Final build `Local/plaza-detail-build-final.log` succeeded. Five packaged plaza views reviewed; verifier passed 121 gameplay + 15 world + 20 plaza checks and music (`Local/verify-package-20260930-140609.log`). No new motion-capture or physical-controller validation. Visual quality remains provisional. User reports Claude is also running a task; avoid overlapping heavy tools or overwriting its work.
 
