@@ -60,6 +60,9 @@ public:
     /** How far out to the side his wider hand is (cm from his centre line), for
         tests: about 45 in the model's A-pose, about 25 with arms by his sides. */
     float GetWiderHandReach() const;
+    /** As GetWiderHandReach, counting only an arm held nearly straight (elbow within 30 degrees): the A-pose,
+        not a hand on the hip with the elbow out. */
+    float GetStraightArmReach() const;
     /** How far in front of his body line his more forward hand is (cm), for tests: hands at his sides, not held out. */
     float GetHandsForward() const;
     /** Close a hand (0 relaxed .. 1 a fist round a shaft): the guard's spear hand, later. Side 0 = left. */

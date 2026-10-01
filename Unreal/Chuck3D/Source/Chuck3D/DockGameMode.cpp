@@ -1693,9 +1693,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
                 if(!Entry.IsValid() || Entry==TalkNPC) continue;
-                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Ahead,Curl);
-                bPoseOK &= Out>10.f && Out<34.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
+                const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmReach(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_cm=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
+                bPoseOK &= Out>10.f && Straight<34.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
             }
         }
         // Then the rat scratches his shins: he starts back.

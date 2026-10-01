@@ -394,6 +394,20 @@ float ADockNPC::GetWiderHandReach() const
     return FMath::Max(Side(HandL), Side(HandR));
 }
 
+float ADockNPC::GetStraightArmReach() const
+{
+    const FTransform& Actor = GetActorTransform();
+    float Widest = 0.f;
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const FVector Shoulder = Body->GetBoneLocation(BoneNames[Of(UpperL, Side)]), Elbow = Body->GetBoneLocation(BoneNames[Of(LowerL, Side)]);
+        const FVector Wrist = Body->GetBoneLocation(BoneNames[Of(HandL, Side)]);
+        const float Bend = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct((Elbow - Shoulder).GetSafeNormal(), (Wrist - Elbow).GetSafeNormal())), -1.f, 1.f)));
+        if (Bend < 30.f) Widest = FMath::Max(Widest, FMath::Abs(static_cast<float>(Actor.InverseTransformPosition(Wrist).Y)));
+    }
+    return Widest;
+}
+
 float ADockNPC::GetHandsForward() const
 {
     const FTransform& Actor = GetActorTransform();
