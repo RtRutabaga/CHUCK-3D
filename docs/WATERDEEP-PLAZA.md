@@ -12,6 +12,8 @@ The barred sewer arch is in the eastern wall. It has solid collision backing and
 
 ## Light and implementation
 
+The next detail pass adds a coping course to the fountain, thinner jets with 24 moving water beads, closed shop gables, window hoods, door boards/straps, simple anchor standards and gate hardware. A two-sided sign on the approach lamp points between the docks and fountain plaza. All new decoration is noncolliding; existing route and obstacle dimensions remain unchanged. The anchor is generic harbor dressing, not a new faction or quest symbol. This pass reuses existing materials and adds no binary assets.
+
 An early-dawn palette replaces midday presentation: low warm directional fill, a cool ambient skylight, warm horizon, lit wall torches and street lamps. Local lights are shadowless with short radii to control cost; their color varies subtly. Older Dock Street lanterns are illuminated too. Fountain water has moving surface normals and four small modeled streams. Flame meshes and water remain prototype effects, not finished VFX.
 
 `DockPlaza.cpp/.h` contains the new district and its checks, called after the existing setting construction. `create_plaza_materials.py` touches only three named new world materials, covered by LFS; no engine installation, purchased asset, character import or old material regeneration. Remote LFS allowance remains unknown; no paid storage was purchased.

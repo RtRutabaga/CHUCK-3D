@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 30 — plaza detail pass
+
+Verified package promoted to the root launcher; previous package at `Builds/Windows-Previous-20260930-PlazaDetail`. Receipt check passed. Next part of the work can be done here, coordinated with Claude.
+
+Runtime `d38d505` / `8422cd4` changes only DockPlaza.cpp: fountain coping/thinner animated jets, shop gables/hoods/door hardware, anchor banners, gate/sewer detail and approach signage. New details are noncolliding; no character/controller, existing obstacle or binary asset changes. Final build `Local/plaza-detail-build-final.log` succeeded. Five packaged plaza views reviewed; verifier passed 121 gameplay + 15 world + 20 plaza checks and music (`Local/verify-package-20260930-140609.log`). No new motion-capture or physical-controller validation. Visual quality remains provisional. User reports Claude is also running a task; avoid overlapping heavy tools or overwriting its work.
+
 ## September 30 — additive original-map adaptation
 
 Worked on root main from `dd02680`, retaining Claude's worker NPC and all gameplay through `9b5b46e`. User authorized fountain plaza despite historical exclusion. Runtime `9e527bf` adds `DockPlaza.cpp/.h`, one construction call and dawn lighting; original setting geometry and character code unchanged. Added connected plaza, fountain, shop shells, market, walls and two closed gates. Three new material assets (18 KB) plus isolated generator; no original asset/code import or character regeneration. Text-map reference copies and hashes in References/PROVENANCE.md.
