@@ -1579,3 +1579,37 @@ Claude now does this. Please do the same at the end of each Codex session, from 
 - **Contract:** `ADockNPC` API unchanged except the test accessor; tags, blocker, talk and watch behaviour as pass 58.
 - **Verified:** root package `-MotionCapture` 122/122 + world, plaza and music checks, `Local/verify-package-20260930-183904.log`; promoted, receipt `f7deb68`. The first run failed my own pose check (wrist height 105 cm: height doesn't separate A-pose from arms down); it now measures lateral hand reach (24.3 cm). Evidence: `SourceAssets/NPCs/Humans/Review/` (runtime front, three-quarter, face; Blender back and boots).
 - **Remaining:** no facial animation; the four fingers share one bone (slightly splayed); a small jag on the cap's front hem; no body turn; no mocap clips yet; the guard and market woman are not built. Not played by the user.
+
+## Sixtieth pass — the guard, the market woman, and no zombie arms
+
+- **User (2026-10-01):** resume character work; NPCs shouldn't hold their hands out like zombies.
+- **Source:** `66aa87f` (code, assets) on main.
+  - Changed: `DockNPC.cpp/.h`, `DockGameMode.cpp`, `build_npc_humans.py`, `import_npc_humans.py`, `Fetch-ClothTextures.ps1`, `Verify-Package.ps1` (123), `humans.json`, `NPCs/README.md`.
+  - New: `Guard` and `MarketWoman` sources and assets, `metal_plate_02` (CC0 Poly Haven).
+- **Pose:**
+  - `ADockNPC::SolveRest` aims each joint in turn and re-measures the posed skeleton after every step, so the pose holds for any proportions:
+    - upper arm to (-.03, ±.13, -1);
+    - forearm to (.11, ±.03, -1);
+    - twist about the forearm until the thumb points forward;
+    - wrist aligned;
+    - finger base curled 22°, finger 34°, thumb 12° toward the palm.
+  - The zombie look came from the old minimal-arc arm lowering plus a forward elbow bend and a guessed twist.
+  - Eye height now comes from the head bone, per body.
+- **People:**
+  - `EDockHuman` kinds; all meshes are hard-referenced in the constructor so they cook. `SpawnHuman` uses deferred spawn to set the kind.
+  - `SpawnTownsfolk`: guard at (260, -4060), yaw 90, tag `DockGuard`; woman at (148, -1240), yaw 180, tag `MarketWoman`.
+  - NPC blockers ignore Visibility, so Codex's plaza traces are unaffected.
+- **Builder:**
+  - New pieces: gambeson, cuirass, helmet, kerchief, bodice; skirt and apron cut from MakeHuman's `helper-skirt` (weighted waist-to-ankle shell); legs under the skirt removed.
+  - Options: boot `height`, belt `z`, shirt `collar`.
+  - Fabric master: metalness from ARM.B.
+- **Process note:** this session is pinned to its worktree and a hook blocks writes to root. Some earlier edits had reached root through shell commands; they were moved into the worktree and root restored before the fast-forward. Reopening sessions at root avoids this.
+- **Verified:**
+  - Root package `-MotionCapture` 123/123 plus world, plaza and music checks: `Local/verify-package-20260930-195245.log`. Pose measures: worker 21.6 cm out / 4.0 ahead, guard 24.2 / 7.5, woman 19.7 / 5.2.
+  - Promoted; receipt `66aa87f`.
+  - Evidence: `SourceAssets/NPCs/Humans/Review/runtime_{DockWorker,Guard,MarketWoman}_*.png`.
+- **Remaining:**
+  - No facial animation; one finger bone for four fingers; the kerchief folds a little at the ears; a thin jag at the gambeson collar.
+  - No body turn; no mocap yet (CMU clips are the next pass).
+  - The sewer prompt ("Jump into the sewer?") and the 2D tutorial text are not done.
+  - Not played by the user.

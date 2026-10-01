@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 25 (Claude, 2026-10-01, user request: resume character work; NPCs must not hold their hands out like zombies):** runtime `66aa87f`.
+- Every human now stands naturally. A standing pose is solved per body from the model's A-pose: arms hanging just clear of the hips, soft elbows, palms turned to the thighs, wrists straight, fingers curled. Breathing, weight shift and glances play on top.
+- **Guard** (183 cm; quilted green gambeson, steel breastplate and helmet, hip belt, tall boots) stands before the closed city gate in the plaza. He blocks Chuck; F / Y: "Stick to the docks, rat."
+- **Market woman** (166 cm; chemise, square-necked bodice, long skirt, apron, kerchief) stands at the end of the aisle between the red-canopied market stalls: "No handouts here. If you're hungry, you should check the sewer for scraps."
+- Both lines and placements are from `References/Original/PHASE-2.md`. The sewer stays non-interactive, as Codex built it.
+
+The root candidate passed `-MotionCapture` **123/123**, the world, plaza and music checks (`Local/verify-package-20260930-195245.log`). Measured hands are 20–24 cm out and 4–8 cm ahead of the body line. Promoted to `Builds/Windows` with receipt `66aa87f`; the previous package is kept as `Builds/Windows-Previous-20261001-Townsfolk`. Details are in `agent-handoffs/CLAUDE.md` pass 60. Not yet played by the user.
+
 **Update 24 (Codex, September 30 — opposite waterfront):** runtime `bb2526a` / `c053469`, based on Claude's combined worker build `f7deb68`. Added quay coping, masonry supports and timber fenders, three landing fingers with moored boats/derricks, loading fronts on the rear warehouses, and a harbor entrance with two breakwater heads and continued land/roofs. Scenery only: existing playable collision, character, parkour, plaza and dawn lighting preserved. Existing meshes/materials reused; no binary assets or dependencies added.
 
 Windows build succeeded (`Local/harbor-bank-build-final.log`). Six setting views reviewed, with final opposite-quay inspection after moving crane posts clear of warehouse faces; capture log `Local/harbor-bank-capture-final.log` has no material errors. Rendered verifier passed **122/122**, **15 world checks**, **20 plaza checks** and music loop (`Local/verify-package-20260930-192046.log`). MotionCapture and physical-controller tests were not repeated. Architecture still repeats and water remains basic; this is not the reference graphics target.
