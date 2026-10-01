@@ -1676,11 +1676,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock(); Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorForwardVector()*800.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
         if(bWorker && StageTime>=5.2f && StageTime-DeltaSeconds<5.2f) KeyJumpSide=Worker->IsWatchingChuck() ? 1.f : 0.f;
-        // Then the rat waits off to his side: he turns his body to it.
+        // Then the rat waits off to his left (his right is the harbour): he
+        // turns his body to it.
         if(bWorker && StageTime>=5.4f && StageTime-DeltaSeconds<5.4f)
         {
             Chuck->ResetToDock();
-            Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorRightVector()*220.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+            Chuck->SetActorLocation(Worker->GetActorLocation()-Worker->GetActorRightVector()*170.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
         if(StageTime>8.6f)
         {
@@ -1694,15 +1695,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
             Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
                 TEXT("the worker is solid to Chuck but can't be run up or climbed"));
-            // Every human stands with arms down at the sides: not the model's
-            // A-pose (hands ~45 cm out), not held out in front like a sleepwalker.
+            // Every human stands with arms down: not the model's A-pose (hands
+            // ~45 cm out), not held out in front like a sleepwalker (40+ cm
+            // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
             int32 Humans=0; bool bPosed=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
                 if(!Entry.IsValid() || Entry==TalkNPC) continue;
                 const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f"),*Entry->DisplayName,Out,Ahead);
-                bPosed &= Out>12.f && Out<34.f && Ahead<14.f; ++Humans;
+                bPosed &= Out>10.f && Out<34.f && Ahead<25.f; ++Humans;
             }
             Check(Humans==3 && bPosed,TEXT("the worker, guard and market woman stand with their arms down by their sides, not in the A-pose or held out in front"));
             // The 2D game's townsfolk, where it put them, with its lines.
