@@ -376,7 +376,31 @@ void BuildDockSetting(UWorld* World)
         Box(FVector(X,668,150),FVector(11,9,300),TEXT("Wood"));
     // Dock Street entrance: the town beyond this labeled wall is now a real
     // playable neighborhood. Keep the western/far city boundary closed.
-    Box(FVector(-1790,-700,100),FVector(20,3200,200),TEXT("Stone"),true);
+    // Match the plaza's masonry thickness and battlements while retaining the
+    // existing boundary heights and entrance. Length runs along the local X axis.
+    auto CityWall=[&](FVector P,float Length,float Height,float Yaw,FVector Inward)
+    {
+        const FRotator R(0,Yaw,0);
+        Box(P+FVector(0,0,Height*.5f),FVector(Length,70,Height),TEXT("Stone"),true,R);
+        Box(P+FVector(0,0,Height-8),FVector(Length+8,88,16),TEXT("Stone"),false,R);
+        for(float Along=-Length*.5f+50;Along<Length*.5f;Along+=140)
+            Box(P+R.RotateVector(FVector(Along,0,Height+25)),FVector(78,88,65),TEXT("Stone"),true,R);
+        for(float Along=-Length*.5f+240;Along<Length*.5f-100;Along+=780)
+        {
+            const FVector T=P+R.RotateVector(FVector(Along,0,0))+Inward*65+FVector(0,0,FMath::Min(250.f,Height-45));
+            Beam(T-Inward*25-FVector(0,0,65),T,9,TEXT("Wood"));
+            Box(T+FVector(0,0,6),FVector(24,24,19),TEXT("Dark"));
+            Box(T+FVector(0,0,26),FVector(12,12,32),TEXT("TorchFlame"));
+            Box(T+FVector(3,0,46),FVector(6,7,16),TEXT("TorchFlame"));
+            auto* Light=NewObject<UPointLightComponent>(Owner);
+            Light->SetupAttachment(Root);
+            Light->SetRelativeLocation(T+FVector(0,0,35));
+            Light->SetIntensity(1500); Light->SetAttenuationRadius(390);
+            Light->SetLightColor(FLinearColor(1,.43f,.12f));
+            Light->SetCastShadows(false); Light->RegisterComponent();
+        }
+    };
+    CityWall(FVector(-1790,-700,0),3200,200,90,FVector(1,0,0));
     // Connected floor behind Dock Street, with enough depth for a street loop.
     Box(FVector(-1100,930,-45),FVector(360,100,90),TEXT("Stone"),true);
     // Wall segments leave a 320 cm entrance at the sign, while the next city
@@ -400,9 +424,9 @@ void BuildDockSetting(UWorld* World)
     for(float X=-1720;X<=-520;X+=120)
         Box(FVector(X,1940,2),FVector(2,18,2),TEXT("Wood"));
     // Close every scenery boundary of the newly playable district.
-    Box(FVector(-1790,2550,450),FVector(20,3300,900),TEXT("Stone"),true);
-    Box(FVector(890,2550,300),FVector(20,3300,600),TEXT("Stone"),true);
-    Box(FVector(-450,4190,450),FVector(2700,20,900),TEXT("Stone"),true);
+    CityWall(FVector(-1790,2550,0),3300,900,90,FVector(1,0,0));
+    CityWall(FVector(890,2550,0),3300,600,90,FVector(-1,0,0));
+    CityWall(FVector(-450,4190,0),2700,900,0,FVector(0,-1,0));
     Box(FVector(540,1100,160),FVector(700,20,320),TEXT("Stone"),true);
     for(float Y : {1900.f,3500.f})
     {
