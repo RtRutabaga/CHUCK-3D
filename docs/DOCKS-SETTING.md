@@ -1,5 +1,7 @@
 # Connected docks setting — September 29, 2026
 
+October 1: Dock Street beyond the labeled northern wall is now playable. Walk through the sign's opening, take the lane between the first buildings, and explore the shopfront court and lanes around the rear row. Continuous ground covers the northern district; eight existing houses have solid bodies and pitched roofs. Signs, awnings, lamps, benches and cargo dress the streets. Buildings remain exterior-only. The western wall separating the larger city remains closed, with northern/eastern boundaries enclosing the playable district. This supersedes the earlier description of all northern blocks as scenery. The capture now includes nine views, with entrance, court and overhead views last. The packaged verifier requires 28 Dock Street floor, capsule-route, building/roof and boundary checks in addition to the existing suites.
+
 September 30: the original district is preserved and extended with an adjoining fountain plaza, walls, closed sewer gate and dawn lighting. See WATERDEEP-PLAZA.md for the reference-based layout and approaches. Earlier setting-only scope below describes the retained district.
 
 The user reopened setting work after Claude's traversal progress. This remains one docks map, not a campaign expansion. Claude's character, controller, camera and existing obstacle dimensions are preserved.

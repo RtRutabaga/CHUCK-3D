@@ -2,6 +2,12 @@
 
 ## Current launcher and integration status
 
+**Update 28 (Codex, October 1 — playable Dock Street):** runtime `749367b` / `6568704`, retaining Claude's `0efe501` character/NPC work. The northern town beyond the DOCK STREET sign now has continuous solid ground, an open entrance, eight existing houses with solid bodies/roofs, connected lanes/courts, shop awnings/signs/lamps, benches and cargo. The western larger-city boundary stays closed. Houses are exterior shells; no new dialogue or interiors. The interrupted draft's duplicate overlapping buildings and incomplete floor were replaced before packaging. No binary assets/dependencies added.
+
+Root launcher promoted and receipt checked at `749367b`; previous package retained at `Builds/Windows-Previous-20261001-DockStreet`. Walk directly through the DOCK STREET sign opening, then between the houses into the court. Next part of the work can be done here.
+
+Final build succeeded (`Local/dock-street-build-final.log`). Packaged verifier passed **125/125 gameplay checks**, 15 world + 20 plaza checks, music loop, and **28 new Dock Street checks** (10 floors, 9 capsule routes, 8 facade/roof traces, closed western boundary): `Local/verify-package-20261001-082916.log`. Initial two route failures were cargo in the lane; moved cargo to the edge and reran successfully. Entrance, court and overhead views reviewed; final lighting capture `Local/dock-street-capture-final.log`. No physical-controller or MotionCapture repeat. Selected routes/roofs are checked; this is not exhaustive testing of all parkour escape attempts. Graphics remain provisional.
+
 **Update 27 (Claude, 2026-10-01, user request: no craned necks; react when Chuck scratches a friendly NPC):** runtime `0efe501`.
 - NPCs still turn their heads to follow Chuck, but tip down at most 6° until he's within about a metre. They only look properly down once he's at their feet (full at 45 cm).
 - Chuck's scratch now catches a friendly NPC in reach. They start back: hands to the chest, a lean and half-turn away, a small shift of the feet (a 2 s slice of CMU's "scared" take, 79_73). Then they settle and turn to the rat.

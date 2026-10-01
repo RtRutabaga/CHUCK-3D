@@ -1,5 +1,13 @@
 # Codex movement handoff — 2026-09-26
 
+## October 1 — playable Dock Street
+
+Root launcher verified at `749367b`; backup `Builds/Windows-Previous-20261001-DockStreet`. Enter beneath the DOCK STREET sign and follow the lane between houses.
+
+Runtime `749367b` / `6568704` opens the labeled northern wall into a solid town district. Corrected unfinished draft geometry, reused eight existing houses with collision, grounded the northern district, enclosed its scenery boundaries and dressed the court with signs/awnings/lamps/benches/cargo. The larger western district remains closed. No character or binary asset changes.
+
+Build `Local/dock-street-build-final.log` succeeded. Packaged verifier `Local/verify-package-20261001-082916.log` passed 125 gameplay, 15 world, 20 plaza, music and 28 new street checks. Two initial cargo-route collisions fixed; no relaxed checks. Entrance/court/overhead inspected; final capture `Local/dock-street-capture-final.log`. No physical controller or new MotionCapture run. Houses remain exterior-only, visual quality provisional. Next part of the work can be done here.
+
 ## September 30 — opposite waterfront
 
 Runtime `bb2526a` / `c053469` adds noncolliding scenery only in DockSetting.cpp: capped quay/supports/fenders, landing fingers, moored boats, derricks, warehouse loading faces, harbor breakwater heads and continued banks/roofs. Existing assets reused; Claude's current worker/gameplay preserved. Expanded setting capture from four to six views. Crane posts were corrected to sit clear of old warehouse fronts.
