@@ -40,8 +40,9 @@ public:
     /** Head turn now (deg; + looks right / + looks down), for tests. */
     FVector2D GetLookAngles() const { return Look; }
     bool IsWatchingChuck() const { return bWatching; }
-    /** The higher of his two hands above his feet (cm), for tests: by his sides, not the A-pose. */
-    float GetHigherHandHeight() const;
+    /** How far out to the side his wider hand is (cm from his centre line), for
+        tests: about 45 in the model's A-pose, about 25 with arms by his sides. */
+    float GetWiderHandReach() const;
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;

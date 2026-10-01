@@ -99,10 +99,11 @@ FTransform ADockNPC::ComponentSpaceRef(int32 Bone) const
     return Out;
 }
 
-float ADockNPC::GetHigherHandHeight() const
+float ADockNPC::GetWiderHandReach() const
 {
-    const float Feet = static_cast<float>(GetActorLocation().Z) - HalfHeight;
-    return FMath::Max(static_cast<float>(Body->GetBoneLocation(BoneNames[HandL]).Z), static_cast<float>(Body->GetBoneLocation(BoneNames[HandR]).Z)) - Feet;
+    const FTransform& Actor = GetActorTransform();
+    const auto Side = [&](EBone Hand) { return FMath::Abs(static_cast<float>(Actor.InverseTransformPosition(Body->GetBoneLocation(BoneNames[Hand])).Y)); };
+    return FMath::Max(Side(HandL), Side(HandR));
 }
 
 void ADockNPC::EndPlay(const EEndPlayReason::Type Reason)

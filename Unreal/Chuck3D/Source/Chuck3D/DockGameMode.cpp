@@ -1678,9 +1678,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
             Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
                 TEXT("the worker is solid to Chuck but can't be run up or climbed"));
-            const float Hands=bWorker ? Worker->GetHigherHandHeight() : 0.f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_POSE_MEASURE higher_hand_cm=%.1f"),Hands);
-            Check(bWorker && Hands>60.f && Hands<95.f,TEXT("the worker stands with his arms down by his sides, not in the model's A-pose"));
+            const float Hands=bWorker ? Worker->GetWiderHandReach() : 0.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_POSE_MEASURE wider_hand_out_cm=%.1f"),Hands);
+            Check(bWorker && Hands>12.f && Hands<34.f,TEXT("the worker stands with his arms down by his sides, not in the model's A-pose"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));
