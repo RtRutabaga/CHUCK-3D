@@ -8,7 +8,9 @@ Rebuild (Blender 4.5.14 with MPFB 2.0.17 and the MakeHuman CC0 asset pack, see
 docs/SETUP.md), one heavy process at a time:
 
     blender --background --python Tools/build_npc_humans.py [-- Name ...] [--review <dir>]
-    UnrealEditor-Cmd Unreal/Chuck3D/Chuck3D.uproject -ExecutePythonScript=Tools/import_npc_humans.py -unattended -nosplash -NoLiveCoding
+    Tools/Fetch-CMUMocap.ps1                                  # CMU takes (already in SourceAssets/Mocap/CMU)
+    blender --background --python Tools/build_npc_mocap.py [-- --review <dir>]
+    Tools/Import-NPCHumans.ps1 [-Clean]                       # -Clean after a skeleton or master-material change
     UnrealEditor Unreal/Chuck3D/Chuck3D.uproject -game -ChuckNPCCapture    # portraits to Saved/Screenshots/Windows/NPC_*.png
 
 - `build_npc_humans.py`: MPFB body (CC0 MakeHuman mesh and targets) with the
@@ -29,7 +31,20 @@ docs/SETUP.md), one heavy process at a time:
   the cornea), `M_HumanCard` (brows, lashes, hair), `M_HumanFabric` (Poly
   Haven weave greyed and brightness-normalised by `gain`, coloured by `tint`,
   which is the cloth's linear albedo); an instance per NPC slot.
-- Runtime: `ADockNPC` poses the shared skeleton procedurally. A standing pose
+- `build_npc_mocap.py`: three CMU motion-capture takes (free for any use;
+  Motionbuilder-friendly BVH, the same bone names as `cmu_mb`) retargeted
+  onto the dock worker's rig: the limbs are aimed from the A-pose onto each
+  take's T-pose frame, the spine, neck, head and collarbones keep the rig's own
+  neutral carriage, then every bone follows the take's change of world
+  rotation; facing and drift removed, 30 fps, the last second blended into the
+  first so it loops. Clips: `StandHip` (111_28), `StandLook` (77_02), `Talk`
+  (18_08). Every rig is named `HumanRig` so the shared skeleton has one root.
+- Runtime: `ADockNPC` plays its idle (guard: StandLook; worker and market
+  woman: StandHip, each from a random point) as changes of rotation from the
+  skeleton's rest, so it fits every body; blends to Talk while Chuck talks to
+  it; turns its body to a rat that stays off to its side (or that talks to
+  it); head look and curled fingers are laid on top. Without clips it falls
+  back to the procedural pose below. A standing pose
   is solved per body from the A-pose (upper arm hanging just clear of the hip,
   elbow soft, forearm twisted until the thumb points forward so the palm faces
   the thigh, wrist straight, fingers and thumb curled), then breathing, weight

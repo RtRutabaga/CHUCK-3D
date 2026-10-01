@@ -6,6 +6,7 @@
 class UCapsuleComponent;
 class UPoseableMeshComponent;
 class USkeletalMesh;
+class UAnimSequence;
 
 /**
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
@@ -48,6 +49,10 @@ public:
     /** Head turn now (deg; + looks right / + looks down), for tests. */
     FVector2D GetLookAngles() const { return Look; }
     bool IsWatchingChuck() const { return bWatching; }
+    /** True once its motion-capture idle is playing (tests). */
+    bool HasMocap() const { return SkelIndex.Num() > 0; }
+    /** Body yaw away from where it was placed (deg), for tests: turned toward Chuck. */
+    float GetBodyTurn() const;
     /** How far out to the side his wider hand is (cm from his centre line), for
         tests: about 45 in the model's A-pose, about 25 with arms by his sides. */
     float GetWiderHandReach() const;
@@ -70,11 +75,24 @@ private:
     bool bWatching = false;
     EDockHuman Kind = EDockHuman::Worker;
     UPROPERTY() TObjectPtr<USkeletalMesh> HumanMeshes[static_cast<int32>(EDockHuman::Count)];
+    /** Motion-capture clips (CMU, Tools/build_npc_mocap.py) on the shared skeleton: idles and talk. */
+    UPROPERTY() TObjectPtr<UAnimSequence> Clips[3];
+    int32 IdleClip = 0;
+    float TalkBlend = 0;                          // 0 idle .. 1 the talk clip
+    bool bTalking = false;
+    float HomeYaw = 0, TurnHold = 0;              // body turn toward Chuck
+    TArray<int32> SkelIndex;                      // mesh bone -> skeleton bone
+    TArray<FQuat> SourceRest;                     // skeleton rest, component space (the clips' rest)
+    FVector SourceHips = FVector::ZeroVector;
+    float HipScale = 1.f;
+    TArray<FTransform> HandLocal;                 // curled fingers relative to their parents, from the rest solve
+    void SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOffset) const;
+    void UpdateTurn(float DeltaSeconds, float YawToChuck, bool bNear);
     /** Standing pose from the model's A-pose (component-space turn per posed
         bone): arms hanging, elbows soft, palms to the thighs, fingers curled. */
     TArray<FQuat> Rest;
     float EyeHeight = 167.f;                      // above the feet, from the head bone
     void SolveRest();
-    void Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space) const;
+    void Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space, const TArray<FQuat>* BoneDelta = nullptr, const FVector& HipsOffset = FVector::ZeroVector) const;
     void UpdatePose(float DeltaSeconds);
 };

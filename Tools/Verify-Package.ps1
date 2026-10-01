@@ -31,7 +31,7 @@ $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMP
 $plazaCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_PLAZA_CHECK failures=0 floor_samples=11 capsule_routes=8 sewer_closed=1'
 $musicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {122} else {123}
+$expected=if($NoCapture) {123} else {124}
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$plazaCompleted -or !$musicCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"

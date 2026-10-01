@@ -1,0 +1,24 @@
+{
+ "generator": "Tools/build_npc_mocap.py",
+ "source": "SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)",
+ "clips": {
+  "StandHip": {
+   "fbx": "Anim/AS_Human_StandHip.fbx",
+   "take": "111_28",
+   "frames": 417,
+   "fps": 30
+  },
+  "StandLook": {
+   "fbx": "Anim/AS_Human_StandLook.fbx",
+   "take": "77_02",
+   "frames": 175,
+   "fps": 30
+  },
+  "Talk": {
+   "fbx": "Anim/AS_Human_Talk.fbx",
+   "take": "18_08",
+   "frames": 462,
+   "fps": 30
+  }
+ }
+}

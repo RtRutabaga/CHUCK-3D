@@ -23,3 +23,5 @@ References/Original/*.md -text -whitespace
 References/Original/WaterdeepLayout/*.txt -text -whitespace
 References/chuck-3d-resource-guide.md -text
 References/ai-dev-notes.md -text
+# Motion-capture takes are kept byte-exact (their SHA-256 is recorded in the manifest).
+*.bvh -text

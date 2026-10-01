@@ -1,0 +1,29 @@
+{
+    "provider":  "CMU Graphics Lab Motion Capture Database, Motionbuilder-friendly BVH release 2010",
+    "takes":  [
+                  {
+                      "file":  "111_28.bvh",
+                      "description":  "Standing still",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/111/111_28.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "B44410BE23D5895756B97960E0E40E78365F71A00CA4400EDEC6EA806D1A085D",
+                      "bytes":  1457989
+                  },
+                  {
+                      "file":  "77_02.bvh",
+                      "description":  "standing",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/077/77_02.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "D6EEF8F4AB182BEF1BB5DB0C46CBEC0261B81A63CE1720B8A19777B7E79887A9",
+                      "bytes":  705155
+                  },
+                  {
+                      "file":  "18_08.bvh",
+                      "description":  "conversation - explain with hand gestures",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/018/18_08.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "B57E6BA15CF2BDE4E6E4233DA53425DDE6D91952FB2BFF17A89C5FCE18A1A0CE",
+                      "bytes":  1567012
+                  }
+              ]
+}

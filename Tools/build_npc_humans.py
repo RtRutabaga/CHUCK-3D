@@ -334,6 +334,30 @@ def make_piece(body, piece, opts, material):
     return obj, keep
 
 
+def soften_skirt(obj, info):
+    """A skirt mustn't split between the legs: the helper's weights follow each
+    leg. Re-weight it to the hips, easing onto the thighs toward the hem (up
+    to half), blended across the middle, so it sways with the stride."""
+    left_x = info.rig.data.bones['LeftUpLeg'].head_local.x   # which side is her left
+    sign = 1. if left_x > 0 else -1.
+    names = ('Hips', 'LeftUpLeg', 'RightUpLeg')
+    for n in names:
+        if n not in obj.vertex_groups: obj.vertex_groups.new(name=n)
+    groups = {n: obj.vertex_groups[n] for n in names}
+    keep = {g.index for g in groups.values()}
+    rigged = {b.name for b in info.rig.data.bones}
+    for v in obj.data.vertices:
+        c = obj.matrix_world @ v.co
+        leg = .5 * min(1., max(0., (info.waist_z - .05 - c.z) / max(.1, info.waist_z - .05 - info.floor)))
+        left = min(1., max(0., .5 + sign * c.x / .2))
+        for g in list(v.groups):
+            if g.group not in keep and obj.vertex_groups[g.group].name in rigged:
+                obj.vertex_groups[g.group].remove([v.index])
+        groups['Hips'].add([v.index], 1. - leg, 'REPLACE')
+        groups['LeftUpLeg'].add([v.index], leg * left, 'REPLACE')
+        groups['RightUpLeg'].add([v.index], leg * (1. - left), 'REPLACE')
+
+
 def skirt_source(body):
     """MakeHuman's skirt helper (a weighted shell from waist to ankle that
     bridges the legs), as its own mesh to cut skirts and aprons from."""
@@ -391,6 +415,7 @@ def build(name, spec):
     for item in spec['outfit']:
         piece = item['piece']; slot = piece.capitalize()
         obj, keep = make_piece(skirt if piece in ('skirt', 'apron') else info, piece, item, slot_material(slot))
+        if piece in ('skirt', 'apron'): soften_skirt(obj, info)
         meshes.append(obj)
         slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'])}
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
@@ -436,7 +461,9 @@ def build(name, spec):
         o.parent = rig
         for m in o.modifiers:
             if m.type == 'ARMATURE': m.object = rig
-    rig.name = f'SK_{name}_Rig'
+    # One name for every human's rig: Unreal keeps the armature as the root
+    # bone, and the shared skeleton (and the clips) need the same root.
+    rig.name = 'HumanRig'
     # Export.
     out = OUT / name; out.mkdir(parents=True, exist_ok=True)
     bpy.ops.object.select_all(action='DESELECT')

@@ -11,8 +11,9 @@ from SourceAssets/NPCs/Humans/manifest.json:
   M_HumanFabric  Poly Haven cloth: weave = greyed colour map x Gain (brightness
                  normalised), coloured by Tint; AO/roughness, DirectX normal;
                  the mesh UVs are already in texture repeats (real size)
-Everything under /Game/Characters/Humans is generated: the folder is deleted
-and rebuilt on every run (textures, masters, instances, meshes, skeleton).
+Everything under /Game/Characters/Humans is generated. Meshes, clips, textures
+and instances are re-imported in place and existing masters kept; for a clean
+rebuild (skeleton or master graph changes) use Tools/Import-NPCHumans.ps1 -Clean.
 """
 from pathlib import Path
 import json
@@ -213,8 +214,39 @@ def import_mesh(npc, info):
     print(f'CHUCK_HUMAN_IMPORTED {npc} slots={sorted(materials)} extent=({box.x:.1f},{box.y:.1f},{box.z:.1f})')
 
 
-if ASSETS.does_directory_exist(DEST) and not ASSETS.delete_directory(DEST):
-    raise RuntimeError('Could not clear ' + DEST)
+# A clean rebuild deletes the folder on disk before the editor starts: Tools/Import-NPCHumans.ps1 -Clean.
+def import_clips():
+    """The motion-capture clips (Tools/build_npc_mocap.py) onto the shared skeleton."""
+    clips = json.loads((SOURCE / 'Anim/manifest.json').read_text(encoding='utf-8'))['clips']
+    skeleton = unreal.load_asset(SKELETON)
+    for clip, info in clips.items():
+        options = unreal.FbxImportUI()
+        options.import_mesh = False
+        options.import_as_skeletal = True
+        options.import_animations = True
+        options.import_materials = options.import_textures = False
+        options.mesh_type_to_import = unreal.FBXImportType.FBXIT_ANIMATION
+        options.automated_import_should_detect_type = False
+        options.skeleton = skeleton
+        data = options.anim_sequence_import_data
+        data.set_editor_property('animation_length', unreal.FBXAnimationLengthImportType.FBXALIT_EXPORTED_TIME)
+        data.set_editor_property('remove_redundant_keys', False)
+        data.set_editor_property('import_bone_tracks', True)
+        task = unreal.AssetImportTask()
+        task.filename = str(SOURCE / info['fbx']); task.destination_path = f'{DEST}/Anim'; task.destination_name = f'AS_Human_{clip}'
+        task.automated = True; task.replace_existing = True; task.save = True; task.options = options
+        TOOLS.import_asset_tasks([task])
+        anim = unreal.load_asset(f'{DEST}/Anim/AS_Human_{clip}')
+        if not isinstance(anim, unreal.AnimSequence):
+            raise RuntimeError(f'Clip {clip} did not import as an animation')
+        if anim.get_editor_property('skeleton').get_path_name().split('.')[0] != SKELETON:
+            raise RuntimeError(f'Clip {clip} is not on the shared skeleton')
+        try: seconds = anim.get_play_length()
+        except Exception: seconds = -1.
+        print(f'CHUCK_HUMAN_CLIP {clip} seconds={seconds:.1f}')
+
+
 for npc, info in MANIFEST['npcs'].items():
     import_mesh(npc, info)
+import_clips()
 print('CHUCK_HUMANS_IMPORT_READY', sorted(MANIFEST['npcs']))

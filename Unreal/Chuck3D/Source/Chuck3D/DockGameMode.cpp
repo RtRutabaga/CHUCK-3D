@@ -497,6 +497,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const FString Name=(NPC->DisplayName.IsEmpty() ? NPC->GetName() : NPC->DisplayName).Replace(TEXT(" "),TEXT(""));
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/NPC_%s_%s.png"),*Name,Shot.Name),false,false);
         bNPCShotTaken=true;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHOT %s look=(%.1f,%.1f) watching=%d turn=%.1f mocap=%d"),*Name,NPC->GetLookAngles().X,NPC->GetLookAngles().Y,NPC->IsWatchingChuck()?1:0,NPC->GetBodyTurn(),NPC->HasMocap()?1:0);
     }
 }
 
@@ -1675,8 +1676,19 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock(); Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorForwardVector()*800.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
         if(bWorker && StageTime>=5.2f && StageTime-DeltaSeconds<5.2f) KeyJumpSide=Worker->IsWatchingChuck() ? 1.f : 0.f;
-        if(StageTime>5.4f)
+        // Then the rat waits off to his side: he turns his body to it.
+        if(bWorker && StageTime>=5.4f && StageTime-DeltaSeconds<5.4f)
         {
+            Chuck->ResetToDock();
+            Chuck->SetActorLocation(Worker->GetActorLocation()+Worker->GetActorRightVector()*220.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
+        }
+        if(StageTime>8.6f)
+        {
+            int32 Moving=0;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->HasMocap()) ++Moving;
+            const float Turned=bWorker ? Worker->GetBodyTurn() : 0.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_LIFE_MEASURE mocap=%d worker_turn_deg=%.1f"),Moving,Turned);
+            Check(Moving>=3 && Turned>30.f,TEXT("the townsfolk move with motion capture, and the worker turns his body to a rat at his side"));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_MEASURE present=%d watching_near=%d look_down_deg=%.1f blocked_at_cm=%.1f wall_runs=%d mantles=%d watching_far=%.0f talkable=%d"),
                 bWorker ? 1 : 0,bLocoFlag ? 1 : 0,LocoValue,KeySide,Chuck->GetWallRuns()-WallRunsBase,Chuck->GetMantles()-MantlesBase,KeyJumpSide,bWorker && Worker->CanTalk() ? 1 : 0);
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));

@@ -2,6 +2,8 @@
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
+#include "Animation/AnimSequence.h"
+#include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -22,6 +24,11 @@ namespace
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
+    // Motion-capture clips: idles per kind of person, and gesturing while talking.
+    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipCount };
+    const TCHAR* ClipPaths[] = { TEXT("/Game/Characters/Humans/Anim/AS_Human_StandHip.AS_Human_StandHip"),
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_StandLook.AS_Human_StandLook"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Talk.AS_Human_Talk") };
+    constexpr float TurnRate = 70.f;      // deg/s when he turns his body to the rat
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
     // (the head looks down); + yaw turns it to his right.
     FQuat Pitch(float Degrees) { return FQuat(FVector::YAxisVector, FMath::DegreesToRadians(Degrees)); }
@@ -51,6 +58,8 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Guard(MeshPaths[1]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Woman(MeshPaths[2]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object;
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]), Talk(ClipPaths[ClipTalk]);
+    Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object;
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
 }
 
@@ -102,7 +111,7 @@ void ADockNPC::BeginPlay()
 {
     Super::BeginPlay();
     NPCRegistry.Add(this);
-    Phase = FMath::FRandRange(0.f, 10.f);
+    Phase = FMath::FRandRange(0.f, 30.f);
     NextGlance = FMath::FRandRange(1.f, 3.f);
     if (USkeletalMesh* Mesh = HumanMeshes[static_cast<int32>(Kind)]) Body->SetSkinnedAssetAndUpdate(Mesh);
     BoneIndex.Init(INDEX_NONE, BoneCount);
@@ -113,9 +122,111 @@ void ADockNPC::BeginPlay()
         for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Ref.FindBoneIndex(BoneNames[I]);
         if (!BoneIndex.Contains(INDEX_NONE)) SolveRest();
     }
+    HomeYaw = static_cast<float>(GetActorRotation().Yaw);
+    // The idle this person plays: the guard keeps looking about; the worker
+    // and the market woman stand with weight on one leg, a hand to the hip
+    // now and then (each from its own random point in the clip).
+    IdleClip = Kind == EDockHuman::Guard ? ClipStandLook : ClipStandHip;
+    bool bClips = !BoneIndex.Contains(INDEX_NONE);
+    for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
+    if (bClips)
+    {
+        // The clips are changes of rotation from the skeleton's own rest (the
+        // dock worker's); mapped by bone name onto this body.
+        const FReferenceSkeleton& Src = Clips[0]->GetSkeleton()->GetReferenceSkeleton();
+        const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+        SourceRest.SetNum(Src.GetNum());
+        for (int32 B = 0; B < Src.GetNum(); ++B)
+        {
+            const int32 P = Src.GetParentIndex(B);
+            SourceRest[B] = P >= 0 ? SourceRest[P] * Src.GetRefBonePose()[B].GetRotation() : Src.GetRefBonePose()[B].GetRotation();
+        }
+        SkelIndex.Init(INDEX_NONE, Ref.GetNum());
+        for (int32 B = 0; B < Ref.GetNum(); ++B) SkelIndex[B] = Src.FindBoneIndex(Ref.GetBoneName(B));
+        // Hips in component space (above them is the rig's root bone).
+        const auto CompAt = [](const FReferenceSkeleton& Skel, int32 Bone)
+        {
+            FTransform T = FTransform::Identity;
+            for (int32 B = Bone; B != INDEX_NONE; B = Skel.GetParentIndex(B)) T = T * Skel.GetRefBonePose()[B];
+            return T.GetLocation();
+        };
+        SourceHips = CompAt(Src, Src.FindBoneIndex(BoneNames[Pelvis]));
+        HipScale = static_cast<float>(CompAt(Ref, BoneIndex[Pelvis]).Z / FMath::Max(1., SourceHips.Z));
+        if (SkelIndex.Contains(INDEX_NONE))
+        {
+            FString Missing;
+            for (int32 B = 0; B < Ref.GetNum(); ++B) if (SkelIndex[B] == INDEX_NONE) Missing += Ref.GetBoneName(B).ToString() + TEXT(" ");
+            UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_BONES %s: no clip track for %s(mesh root %s, %d bones; skeleton root %s, %d bones)"), *GetName(), *Missing,
+                *Ref.GetBoneName(0).ToString(), Ref.GetNum(), *Src.GetBoneName(0).ToString(), Src.GetNum());
+            SkelIndex.Reset();
+        }
+    }
 }
 
-void ADockNPC::Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space) const
+void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOffset) const
+{
+    // Each clip's local bone rotations at this time, blended (idle -> talk),
+    // turned into each bone's change of rotation from the skeleton's rest,
+    // then into the extra turn beyond its parent's (what Solve applies).
+    const FReferenceSkeleton& Src = Clips[0]->GetSkeleton()->GetReferenceSkeleton();
+    const int32 N = Src.GetNum();
+    const auto Sample = [&](const UAnimSequence* Clip, TArray<FTransform>& Local)
+    {
+        Local.SetNum(N);
+        const FAnimExtractContext Context(static_cast<double>(FMath::Fmod(Time, FMath::Max(Clip->GetPlayLength(), .1f))));
+        for (int32 B = 0; B < N; ++B) Clip->GetBoneTransform(Local[B], FSkeletonPoseBoneIndex(B), Context, false);
+    };
+    TArray<FTransform> Local, Talk;
+    Sample(Clips[IdleClip], Local);
+    if (TalkBlend > 0.f)
+    {
+        Sample(Clips[ClipTalk], Talk);
+        for (int32 B = 0; B < N; ++B)
+        {
+            Local[B].SetRotation(FQuat::Slerp(Local[B].GetRotation(), Talk[B].GetRotation(), TalkBlend));
+            Local[B].SetLocation(FMath::Lerp(Local[B].GetLocation(), Talk[B].GetLocation(), static_cast<double>(TalkBlend)));
+        }
+    }
+    TArray<FQuat> Comp; Comp.SetNum(N);
+    TArray<FQuat> World; World.SetNum(N);
+    for (int32 B = 0; B < N; ++B)
+    {
+        const int32 P = Src.GetParentIndex(B);
+        Comp[B] = P >= 0 ? Comp[P] * Local[B].GetRotation() : Local[B].GetRotation();
+        World[B] = Comp[B] * SourceRest[B].Inverse();
+    }
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    BoneDelta.Init(FQuat::Identity, Ref.GetNum());
+    for (int32 B = 0; B < Ref.GetNum(); ++B)
+    {
+        const int32 P = Ref.GetParentIndex(B);
+        BoneDelta[B] = P >= 0 ? World[SkelIndex[B]] * World[SkelIndex[P]].Inverse() : World[SkelIndex[B]];
+    }
+    FTransform Hips = FTransform::Identity;   // the clip's hips in component space
+    for (int32 B = SkelIndex[BoneIndex[Pelvis]]; B != INDEX_NONE; B = Src.GetParentIndex(B)) Hips = Hips * Local[B];
+    HipsOffset = (Hips.GetLocation() - SourceHips) * HipScale;
+}
+
+float ADockNPC::GetBodyTurn() const
+{
+    return FMath::FindDeltaAngleDegrees(HomeYaw, static_cast<float>(GetActorRotation().Yaw));
+}
+
+void ADockNPC::UpdateTurn(float DeltaSeconds, float YawToChuck, bool bNear)
+{
+    // His head turns first; if the rat stays well off to the side (or he's
+    // being talked to) he turns his body to face it, and back to his post
+    // once it's gone.
+    float Target = HomeYaw;
+    const float Current = static_cast<float>(GetActorRotation().Yaw);
+    if (bNear && (bTalking || FMath::Abs(YawToChuck) > 55.f)) TurnHold += DeltaSeconds; else TurnHold = 0.f;
+    if (bNear && (bTalking || TurnHold > 1.2f)) Target = Current + YawToChuck;
+    else if (bNear) Target = Current;                       // keep facing where he turned to while the rat's near
+    const float Step = FMath::Clamp(FMath::FindDeltaAngleDegrees(Current, Target), -TurnRate * DeltaSeconds, TurnRate * DeltaSeconds);
+    if (FMath::Abs(Step) > KINDA_SMALL_NUMBER) SetActorRotation(FRotator(0.f, Current + Step, 0.f));
+}
+
+void ADockNPC::Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space, const TArray<FQuat>* BoneDelta, const FVector& HipsOffset) const
 {
     // Component space, parent first; each posed bone is turned by its delta
     // about its own joint, and its children follow.
@@ -129,6 +240,8 @@ void ADockNPC::Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space) cons
     {
         const int32 Parent = Ref.GetParentIndex(B);
         Space[B] = Parent >= 0 ? RefPose[B] * Space[Parent] : RefPose[B];
+        if (B == BoneIndex[Pelvis]) Space[B].AddToTranslation(HipsOffset);
+        if (BoneDelta) Space[B].SetRotation((*BoneDelta)[B] * Space[B].GetRotation());
         if (Which[B] != INDEX_NONE) Space[B].SetRotation(Delta[Which[B]] * Space[B].GetRotation());
     }
 }
@@ -170,6 +283,11 @@ void ADockNPC::SolveRest()
         Curl(Thumb, (At(Thumb) - At(Hand)).GetSafeNormal(), 12.f);
     }
     EyeHeight = static_cast<float>(At(Head).Z) + 9.f;   // the eyes, a hand above the skull's pivot
+    // Keep the curled hands to lay over the motion capture (it has no real finger data).
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    HandLocal.Init(FTransform::Identity, BoneCount);
+    for (const EBone B : { ThumbL, ThumbR, FingerBaseL, FingerBaseR, FingerL, FingerR })
+        HandLocal[B] = Space[BoneIndex[B]].GetRelativeTransform(Space[Ref.GetParentIndex(BoneIndex[B])]);
 }
 
 float ADockNPC::GetWiderHandReach() const
@@ -215,8 +333,12 @@ void ADockNPC::Tick(float DeltaSeconds)
                 bWatching = true;
                 Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, 55.f));
             }
+            if (HasMocap()) UpdateTurn(DeltaSeconds, YawTo, true);
         }
+        else if (HasMocap()) UpdateTurn(DeltaSeconds, 0.f, false);
+        bTalking = Chuck->GetTalkingTo() == this;
     }
+    TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
     if (!bWatching && (NextGlance -= DeltaSeconds) <= 0)
     {
         NextGlance = FMath::FRandRange(2.5f, 6.f);
@@ -232,6 +354,25 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
 {
     if (!Body->GetSkinnedAsset() || BoneIndex.Contains(INDEX_NONE)) return;
     const float T = Clock + Phase;
+    if (HasMocap())
+    {
+        // Motion capture drives the body, neck and head carriage included (the
+        // actors' necks balance their chests); where he looks is turned on top,
+        // and the hands keep their curl.
+        TArray<FQuat> BoneDelta; FVector HipsOffset;
+        SampleClips(T, BoneDelta, HipsOffset);
+        TArray<FQuat> Delta; Delta.Init(FQuat::Identity, BoneCount);
+        Delta[Neck] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+        Delta[Neck1] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+        Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
+        TArray<FTransform> Space;
+        Solve(Delta, Space, &BoneDelta, HipsOffset);
+        const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+        for (const EBone B : { ThumbL, ThumbR, FingerBaseL, FingerBaseR, FingerL, FingerR })   // parents come first
+            Space[BoneIndex[B]] = HandLocal[B] * Space[Ref.GetParentIndex(BoneIndex[B])];
+        for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
+        return;
+    }
     const float Breath = FMath::Sin(T * UE_TWO_PI / 4.2f);          // one slow breath every 4.2 s
     const float Shift = FMath::Sin(T * UE_TWO_PI / 11.f);           // weight moving between the feet
     TArray<FQuat> Delta = Rest;                                     // the standing pose, then the life on top
