@@ -81,6 +81,7 @@ private:
     float TalkBlend = 0;                          // 0 idle .. 1 the talk clip
     bool bTalking = false;
     float HomeYaw = 0, TurnHold = 0;              // body turn toward Chuck
+    bool bTurning = false;
     TArray<int32> SkelIndex;                      // mesh bone -> skeleton bone
     TArray<FQuat> SourceRest;                     // skeleton rest, component space (the clips' rest)
     FVector SourceHips = FVector::ZeroVector;

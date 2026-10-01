@@ -1689,7 +1689,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->HasMocap()) ++Moving;
             const float Turned=bWorker ? Worker->GetBodyTurn() : 0.f;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_LIFE_MEASURE mocap=%d worker_turn_deg=%.1f"),Moving,Turned);
-            Check(Moving>=3 && Turned>30.f,TEXT("the townsfolk move with motion capture, and the worker turns his body to a rat at his side"));
+            Check(Moving>=3 && FMath::Abs(Turned)>60.f,TEXT("the townsfolk move with motion capture, and the worker turns his body to a rat at his side"));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_MEASURE present=%d watching_near=%d look_down_deg=%.1f blocked_at_cm=%.1f wall_runs=%d mantles=%d watching_far=%.0f talkable=%d"),
                 bWorker ? 1 : 0,bLocoFlag ? 1 : 0,LocoValue,KeySide,Chuck->GetWallRuns()-WallRunsBase,Chuck->GetMantles()-MantlesBase,KeyJumpSide,bWorker && Worker->CanTalk() ? 1 : 0);
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));

@@ -217,10 +217,13 @@ void ADockNPC::UpdateTurn(float DeltaSeconds, float YawToChuck, bool bNear)
     // His head turns first; if the rat stays well off to the side (or he's
     // being talked to) he turns his body to face it, and back to his post
     // once it's gone.
+    // Once he starts turning he carries on until he faces it.
     float Target = HomeYaw;
     const float Current = static_cast<float>(GetActorRotation().Yaw);
-    if (bNear && (bTalking || FMath::Abs(YawToChuck) > 55.f)) TurnHold += DeltaSeconds; else TurnHold = 0.f;
-    if (bNear && (bTalking || TurnHold > 1.2f)) Target = Current + YawToChuck;
+    if (bNear && (bTalking || FMath::Abs(YawToChuck) > 55.f)) TurnHold += DeltaSeconds; else if (!bTurning) TurnHold = 0.f;
+    if (bNear && (bTalking || TurnHold > 1.2f)) bTurning = true;
+    if (!bNear || FMath::Abs(YawToChuck) < 8.f) bTurning = false;
+    if (bNear && (bTalking || bTurning)) Target = Current + YawToChuck;
     else if (bNear) Target = Current;                       // keep facing where he turned to while the rat's near
     const float Step = FMath::Clamp(FMath::FindDeltaAngleDegrees(Current, Target), -TurnRate * DeltaSeconds, TurnRate * DeltaSeconds);
     if (FMath::Abs(Step) > KINDA_SMALL_NUMBER) SetActorRotation(FRotator(0.f, Current + Step, 0.f));
