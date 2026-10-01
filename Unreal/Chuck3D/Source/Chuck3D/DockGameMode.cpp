@@ -1686,6 +1686,18 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->ResetToDock();
             Chuck->SetActorLocation(Worker->GetActorLocation()-Worker->GetActorRightVector()*170.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
+        // Their standing pose, measured before the scratch (mid-reaction his hands are at his chest).
+        if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
+        {
+            PoseHumans=0; bPoseOK=true;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+            {
+                if(!Entry.IsValid() || Entry==TalkNPC) continue;
+                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f"),*Entry->DisplayName,Out,Ahead);
+                bPoseOK &= Out>10.f && Out<34.f && Ahead<25.f; ++PoseHumans;
+            }
+        }
         // Then the rat scratches his shins: he starts back.
         if(bWorker && StageTime>=8.6f && StageTime-DeltaSeconds<8.6f)
         {
@@ -1715,15 +1727,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // Every human stands with arms down: not the model's A-pose (hands
             // ~45 cm out), not held out in front like a sleepwalker (40+ cm
             // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
-            int32 Humans=0; bool bPosed=true;
-            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
-            {
-                if(!Entry.IsValid() || Entry==TalkNPC) continue;
-                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward();
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f"),*Entry->DisplayName,Out,Ahead);
-                bPosed &= Out>10.f && Out<34.f && Ahead<25.f; ++Humans;
-            }
-            Check(Humans==3 && bPosed,TEXT("the worker, guard and market woman stand with their arms down by their sides, not in the A-pose or held out in front"));
+            Check(PoseHumans==3 && bPoseOK,TEXT("the worker, guard and market woman stand with their arms down by their sides, not in the A-pose or held out in front"));
             // The 2D game's townsfolk, where it put them, with its lines.
             TArray<AActor*> GuardFound, WomanFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);
