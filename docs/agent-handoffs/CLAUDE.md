@@ -1613,3 +1613,39 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No body turn; no mocap yet (CMU clips are the next pass).
   - The sewer prompt ("Jump into the sewer?") and the 2D tutorial text are not done.
   - Not played by the user.
+
+## Sixty-first pass — motion capture for the townsfolk, body turn, talk gestures
+
+- **User (2026-10-01):** proceed with the remaining character work; leave the sewer for later.
+- **Source:** `f3965ea`, `68547ba`, `93a586d` on main.
+  - New: `Tools/Fetch-CMUMocap.ps1`, `Tools/build_npc_mocap.py`, `Tools/Import-NPCHumans.ps1`, `SourceAssets/Mocap/CMU/` (3 BVH + manifest with SHA-256; `.bvh -text`), `SourceAssets/NPCs/Humans/Anim/`, `/Game/Characters/Humans/Anim/AS_Human_{StandHip,StandLook,Talk}`.
+  - Changed: `DockNPC.cpp/.h`, `ChuckCharacter.h` (`GetTalkingTo`), `DockGameMode.cpp`, `build_npc_humans.py`, `import_npc_humans.py`, `Verify-Package.ps1` (124), `NPCs/README.md`.
+- **Mocap:**
+  - Source: CMU Graphics Lab database, B. Hahne's Motionbuilder-friendly BVH (bone names equal to `cmu_mb`).
+  - Takes: 111_28 (StandHip), 77_02 (StandLook), 18_08 (Talk).
+  - Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21 (head thrown back), 141_20 (fidgety).
+- **Retarget:**
+  - At the take's T-pose frame, only the limbs are aimed from our A-pose. Aiming the spine, neck and collarbones onto CMU's straighter neck tipped heads back.
+  - Every bone then follows `take(f) * take(T)^-1`. Facing and drift are removed, and clips are resampled to 30 fps with a 1 s loop blend.
+  - Zero-length CMU links: Neck sits on Spine1's joint and FingerBase on the Hand's, so the hand aims at the finger.
+  - Clips are exported with the worker mesh so the FBX carries a bind pose.
+  - The scene frame rate is set after the rig FBX import, which had reset it to 24.
+- **Runtime:**
+  - Clips are sampled per bone and applied as rotation changes from the skeleton's rest (so they fit every body); hips offset at the Hips bone.
+  - Talk blends in at 2.5/s while Chuck talks to that NPC.
+  - Curled fingers are laid back over the mocap from the rest solve; the look-at is on top.
+  - Body turn: after 1.2 s with Chuck more than 55° off, the NPC turns at 70°/s until facing him, and returns to its post when he leaves.
+  - The procedural pose remains the fallback.
+- **Fixes on the way:**
+  - Each rig had exported as its own root bone (`SK_Guard_Rig`...), so only the worker could map clips. All rigs are now named `HumanRig`, with a clean rebuild (`Import-NPCHumans.ps1 -Clean`; the editor can't delete assets the game module hard-references).
+  - Skirt and apron are re-weighted to Hips / UpLegs so they don't split.
+  - The worker turn test first put Chuck on the harbour side (he fell in and was reset) and then stopped 55° short.
+- **Verified:**
+  - Root package 124/124 plus world, plaza and music checks: `Local/verify-package-20260930-211255.log`. Receipt `93a586d`.
+  - Evidence: `SourceAssets/NPCs/Humans/Review/runtime_*`.
+- **Remaining:**
+  - The feet slide slightly during a turn (no stepping clip).
+  - CMU has no real finger motion (fingers stay curled).
+  - No facial animation.
+  - The sewer prompt is deferred (user's call).
+  - Not played by the user.

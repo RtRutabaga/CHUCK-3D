@@ -2,6 +2,20 @@
 
 ## Current launcher and integration status
 
+**Update 26 (Claude, 2026-10-01, user request: proceed with character work, sewer later):** runtime `93a586d`.
+- The worker, guard and market woman now move with motion capture: three takes from Carnegie Mellon's free mocap library (any use), retargeted onto the shared skeleton.
+  - The guard keeps looking about.
+  - The worker and the woman shift their weight and set a hand on a hip now and then. Each plays from its own point in the clip.
+  - Head look-at and curled fingers are layered on top.
+- When Chuck talks to one of them, it gestures (a hand-gesturing "explaining" clip) and turns to face him.
+- If Chuck stays off to one side, the NPC turns its body to face him, then back to its post when he goes.
+- The woman's skirt and apron move with her hips and no longer split between her legs.
+
+The root candidate passed `-MotionCapture` **124/124**, plus the world, plaza and music checks (`Local/verify-package-20260930-211255.log`). New check: all three play motion capture, and the worker turns 82.8° to a rat at his side.
+- Hands measure 24–29 cm out and 9–14 cm ahead.
+- Promoted to `Builds/Windows` with receipt `93a586d`; the previous package is kept as `Builds/Windows-Previous-20261001-Mocap`.
+- Details: `agent-handoffs/CLAUDE.md` pass 61. Not yet played by the user.
+
 **Update 25 (Claude, 2026-10-01, user request: resume character work; NPCs must not hold their hands out like zombies):** runtime `66aa87f`.
 - Every human now stands naturally. A standing pose is solved per body from the model's A-pose: arms hanging just clear of the hips, soft elbows, palms turned to the thighs, wrists straight, fingers curled. Breathing, weight shift and glances play on top.
 - **Guard** (183 cm; quilted green gambeson, steel breastplate and helmet, hip belt, tall boots) stands before the closed city gate in the plaza. He blocks Chuck; F / Y: "Stick to the docks, rat."
