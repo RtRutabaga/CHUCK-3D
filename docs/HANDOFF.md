@@ -2,6 +2,16 @@
 
 ## Current launcher and integration status
 
+**Update 27 (Claude, 2026-10-01, user request: no craned necks; react when Chuck scratches a friendly NPC):** runtime `0efe501`.
+- NPCs still turn their heads to follow Chuck, but tip down at most 6° until he's within about a metre. They only look properly down once he's at their feet (full at 45 cm).
+- Chuck's scratch now catches a friendly NPC in reach. They start back: hands to the chest, a lean and half-turn away, a small shift of the feet (a 2 s slice of CMU's "scared" take, 79_73). Then they settle and turn to the rat.
+
+The root candidate passed `-MotionCapture` **125/125** and the world, plaza and music checks (`Local/verify-package-20260930-220145.log`).
+- Look-down 6.0° at 1.3 m and 52.7° when Chuck is pressed close.
+- The scratch set the reaction off; the worker turned 82.8° to a rat at his side.
+
+Promoted to `Builds/Windows` with receipt `0efe501`; the previous package is kept as `Builds/Windows-Previous-20261001-React`. Details in `agent-handoffs/CLAUDE.md` pass 62. Not yet played by the user.
+
 **Update 26 (Claude, 2026-10-01, user request: proceed with character work, sewer later):** runtime `93a586d`.
 - The worker, guard and market woman now move with motion capture: three takes from Carnegie Mellon's free mocap library (any use), retargeted onto the shared skeleton.
   - The guard keeps looking about.

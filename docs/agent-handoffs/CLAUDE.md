@@ -1649,3 +1649,29 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - No facial animation.
   - The sewer prompt is deferred (user's call).
   - Not played by the user.
+
+## Sixty-second pass — head carriage and the scratch reaction
+
+- **User (2026-10-01):** NPCs always look down at Chuck with a craned neck; they should only look down when he's practically touching them. When Chuck scratches a friendly NPC, have them react believably (brace back, or shuffle their feet).
+- **Source:** `09273cd`, `0efe501` on main.
+  - Changed: `DockNPC.cpp/.h`, `ChuckCharacter.cpp/.h` (`SlashNPCHits`), `DockGameMode.cpp/.h`, `build_npc_mocap.py` (one-shot clips), `Fetch-CMUMocap.ps1`, `Verify-Package.ps1` (125).
+  - New: `79_73.bvh`, `AS_Human_React`.
+- **Look:**
+  - Pitch is capped at `Lerp(6°, 55°, Close)`, where Close ramps from 0 at 95 cm (centre to centre) to 1 at 45 cm. Yaw is unchanged.
+- **Scratch:**
+  - `SlashHit` also checks NPCs: within 40 cm past their 24 cm capsule, in front of Chuck. It calls `ADockNPC::TakeScratch`, which starts the reaction (ignored if already within the first 0.6 s of one) and sets the body turn going.
+  - The React clip is a one-shot (79_73 from 1.4 s, 2 s long) blended over the idle and talk clips: 0.2 s in, 0.5 s out.
+  - 76_06 "avoid stepping on something" was tried and dropped: a cartoonish hop.
+  - `-ChuckNPCCapture` gains a "Scratched" shot.
+- **Tests:**
+  - Head nearly level at 1.3 m (< 9°) and looking down when pressed close (> 15°).
+  - A scratch makes the worker react.
+  - The pose check now measures before the scratch. Its first run caught the worker mid-reaction (hands at his chest, 27 cm ahead).
+- **Verified:**
+  - Root package 125/125 plus world, plaza and music checks: `Local/verify-package-20260930-220145.log`. Receipt `0efe501`.
+  - Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Guard_scratched.png`.
+- **Remaining:**
+  - The reaction is the same take for everyone, with no sound or line.
+  - There's no grudge or flee: they don't avoid Chuck afterwards.
+  - The feet slide slightly in body turns.
+  - Not played by the user.
