@@ -194,7 +194,7 @@ void BuildDockSetting(UWorld* World)
         Box(FVector(882,Y,20),FVector(24,24,40),TEXT("Dark"),true);
     // Grounded city mass beyond closed perimeter blocks. No isolated skyline boxes.
     Box(FVector(-3100,-400,-70),FVector(2600,6200,180),TEXT("Stone"));
-    Box(FVector(-600,1900,-70),FVector(2400,1600,180),TEXT("Stone"));
+    Box(FVector(-450,2550,-45),FVector(2700,3300,90),TEXT("Stone"),true);
     Box(FVector(3800,0,-80),FVector(900,5200,100),TEXT("Stone")); // bank below original distant warehouses
     for(int32 I=0;I<9;++I)
     {
@@ -202,13 +202,13 @@ void BuildDockSetting(UWorld* World)
         House(FVector(-2790,-2470+I*590,40),FVector(580,460,700+(I%4)*80),TEXT("Stone"),false);
     }
     for(int32 I=0;I<4;++I)
-        House(FVector(-1390+I*520,1400,20),FVector(440,480,560+(I%2)*130),TEXT("Plaster"),false);
+        House(FVector(-1450+I*600,1400,0),FVector(440,480,560+(I%2)*130),TEXT("Plaster"),true);
     // The port belongs to a rising city, not a strip of houses on an island.
     // These are scenery beyond the existing closed perimeter, never new traversal.
     Box(FVector(-4500,100,-160),FVector(3800,7800,360),TEXT("Stone"));
     Box(FVector(-4650,250,120),FVector(2300,6800,200),TEXT("Stone"));
     Box(FVector(-5500,300,330),FVector(1300,6100,220),TEXT("Stone"));
-    Box(FVector(-1100,3200,-100),FVector(3900,2000,260),TEXT("Stone"));
+    Box(FVector(-2400,3200,-100),FVector(1300,2000,260),TEXT("Stone"));
     for(int32 I=0;I<8;++I)
     {
         const float Y=-2700+I*780.f;
@@ -217,7 +217,7 @@ void BuildDockSetting(UWorld* World)
         House(FVector(-5240,Y+160,440),FVector(630,560,780+(I%4)*100),TEXT("Stone"),false);
     }
     for(int32 I=0;I<5;++I)
-        House(FVector(-2130+I*680,2830,30),FVector(560,620,660+(I%3)*130),TEXT("Plaster"),false);
+        House(FVector(-2130+I*680,2830,I==0?30:0),FVector(560,620,660+(I%3)*130),TEXT("Plaster"),I>0);
     // Retaining wall, buttresses and a distant civic roof provide a varied silhouette.
     Box(FVector(-3500,250,160),FVector(45,6800,320),TEXT("Stone"));
     for(float Y=-2920;Y<=3450;Y+=430)
@@ -373,11 +373,54 @@ void BuildDockSetting(UWorld* World)
     }
     for(float X : {-330.f,-180.f,-30.f,120.f,210.f})
         Box(FVector(X,668,150),FVector(11,9,300),TEXT("Wood"));
-    // Solid perimeter walls meet the nonplayable city; gate-shaped panels imply streets beyond.
+    // Dock Street entrance: the town beyond this labeled wall is now a real
+    // playable neighborhood. Keep the western/far city boundary closed.
     Box(FVector(-1790,-700,100),FVector(20,3200,200),TEXT("Stone"),true);
-    Box(FVector(-800,890,100),FVector(2000,20,200),TEXT("Stone"),true);
-    Box(FVector(-1100,875,110),FVector(180,12,220),TEXT("Wood"));
-    Label(FVector(-1100,866,250),TEXT("DOCK STREET"),-90);
+    // Connected floor behind Dock Street, with enough depth for a street loop.
+    Box(FVector(-1100,930,-45),FVector(360,100,90),TEXT("Stone"),true);
+    // Wall segments leave a 320 cm entrance at the sign, while the next city
+    // wall remains solid and non-traversable.
+    Box(FVector(-1530,890,100),FVector(540,20,200),TEXT("Stone"),true);
+    Box(FVector(-370,890,100),FVector(1140,20,200),TEXT("Stone"),true);
+    for(float X : {-1270.f,-930.f})
+    {
+        Box(FVector(X,890,110),FVector(18,30,220),TEXT("Wood"));
+        Box(FVector(X,890,240),FVector(34,34,18),TEXT("Dark"));
+        Box(FVector(X,890,330),FVector(44,44,22),TEXT("Stone"));
+    }
+    Box(FVector(-1100,890,260),FVector(380,20,44),TEXT("Wood"));
+    Label(FVector(-1100,875,260),TEXT("DOCK STREET"),-90);
+    // A small street-and-court loop makes the newly opened side useful rather
+    // than a bare collision slab. Its buildings are solid at human scale.
+    Box(FVector(-1160,1260,1),FVector(18,680,2),TEXT("Dark"));
+    for(float Y=940;Y<=1600;Y+=110)
+        Box(FVector(-1160,Y,2),FVector(18,2,2),TEXT("Wood"));
+    Box(FVector(-1150,1940,1),FVector(1320,18,2),TEXT("Dark"));
+    for(float X=-1720;X<=-520;X+=120)
+        Box(FVector(X,1940,2),FVector(2,18,2),TEXT("Wood"));
+    // Close every scenery boundary of the newly playable district.
+    Box(FVector(-1790,2550,450),FVector(20,3300,900),TEXT("Stone"),true);
+    Box(FVector(890,2550,300),FVector(20,3300,600),TEXT("Stone"),true);
+    Box(FVector(-450,4190,450),FVector(2700,20,900),TEXT("Stone"),true);
+    Box(FVector(540,1100,160),FVector(700,20,320),TEXT("Stone"),true);
+    for(float Y : {1900.f,3500.f})
+    {
+        // Resting places and cargo tuck into the edge, leaving the court open.
+        Box(FVector(-1640,Y,35),FVector(65,180,12),TEXT("Wood"),true);
+        for(float Side : {-1.f,1.f}) Box(FVector(-1640,Y+Side*65,16),FVector(50,14,32),TEXT("Wood"),true);
+        Prop(CrateMesh,FVector(750,Y,30));
+        Box(FVector(750,Y,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
+        Prop(RopeMesh,FVector(750,Y,61),FVector(.7f));
+    }
+    for(int32 I=0;I<4;++I)
+    {
+        const float X=-1450+I*600.f;
+        Box(FVector(X,1646,255),FVector(160,10,35),TEXT("Wood"));
+        Label(FVector(X,1654,255),I==0?TEXT("ROPEWORKS"):I==1?TEXT("NET MENDER"):I==2?TEXT("STORES"):TEXT("SAILMAKER"),90);
+        Box(FVector(X,1680,226),FVector(190,90,8),TEXT("Roof"),false,FRotator(0,0,-8));
+        for(float Side : {-1.f,1.f}) Beam(FVector(X+Side*75,1645,150),FVector(X+Side*75,1715,218),6,TEXT("Wood"));
+    }
+    // The larger wall beyond the court stays closed.
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
     Box(FVector(-150,1090,70),FVector(700,20,140),TEXT("Stone"),true);
     Box(FVector(190,750,70),FVector(20,700,140),TEXT("Stone"),true);
@@ -405,14 +448,36 @@ void BuildDockSetting(UWorld* World)
                 FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++Failed;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_WORLD_CHECK_COMPLETE failures=%d floor_samples=9 capsule_routes=6"),Failed);
+        int32 StreetFailures=0;
+        const FVector Street[]={FVector(-1100,800,0),FVector(-1100,1050,0),FVector(-1150,1050,0),
+            FVector(-1150,1800,0),FVector(750,1800,0),FVector(750,2300,0),
+            FVector(-1110,2300,0),FVector(-1110,3300,0),FVector(750,3300,0),FVector(750,3900,0)};
+        for(int32 I=0;I<UE_ARRAY_COUNT(Street);++I)
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,Street[I]+FVector(0,0,50),Street[I]-FVector(0,0,100),ECC_Visibility)
+                || FMath::Abs(Hit.ImpactPoint.Z)>2) ++StreetFailures;
+            if(I>0 && World->SweepSingleByChannel(Hit,Street[I-1]+FVector(0,0,35),Street[I]+FVector(0,0,35),
+                FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++StreetFailures;
+        }
+        for(int32 I=0;I<4;++I)
+        {
+            FHitResult Hit;
+            const float X=-1450+I*600.f;
+            if(!World->LineTraceSingleByChannel(Hit,FVector(X,1800,100),FVector(X,1400,100),ECC_Visibility)) ++StreetFailures;
+            if(!World->LineTraceSingleByChannel(Hit,FVector(X,1400,950),FVector(X,1400,450),ECC_Visibility)) ++StreetFailures;
+        }
+        FHitResult Boundary;
+        if(!World->LineTraceSingleByChannel(Boundary,FVector(-1700,2100,100),FVector(-1900,2100,100),ECC_Visibility)) ++StreetFailures;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKSTREET_CHECK failures=%d floors=10 routes=9 buildings=8 boundary=1"),StreetFailures);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180)};
+            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180)};
+            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
         for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
@@ -435,6 +500,6 @@ void BuildDockSetting(UWorld* World)
         World->GetTimerManager().SetTimer(ExitHandle,[World]()
         {
             if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));
-        },30.f,false);
+        },42.f,false);
     }
 }
