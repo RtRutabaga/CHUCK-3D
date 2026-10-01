@@ -14,6 +14,14 @@ public:
     virtual void Tick(float DeltaSeconds) override;
 private:
     bool bSmokeTest = false;
+    // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,
+    // face) to Saved/Screenshots/Windows/NPC_*.png, then quit. For art review.
+    bool bNPCCapture = false;
+    float NPCCaptureTime = 0;
+    int32 NPCShot = -1;
+    bool bNPCShotTaken = false;
+    TWeakObjectPtr<class ACameraActor> NPCCamera;
+    void TickNPCCapture(float DeltaSeconds);
     int32 TestStage = 0;
     float StageTime = 0;
     float MaxJumpZ = 0;

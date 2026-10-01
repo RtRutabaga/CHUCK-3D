@@ -12,9 +12,10 @@ namespace
 {
     TArray<TWeakObjectPtr<ADockNPC>> NPCRegistry;
     constexpr float HalfHeight = 90.f;
-    enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR, BoneCount };
-    const TCHAR* BoneNames[] = { TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("chest"), TEXT("neck"), TEXT("head"),
-        TEXT("clavicle_L"), TEXT("clavicle_R"), TEXT("upperarm_L"), TEXT("upperarm_R"), TEXT("lowerarm_L"), TEXT("lowerarm_R"), TEXT("hand_L"), TEXT("hand_R") };
+    // The humans' shared skeleton: MPFB's cmu_mb rig (CMU BVH bone names).
+    enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Neck1, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR, BoneCount };
+    const TCHAR* BoneNames[] = { TEXT("Hips"), TEXT("LowerBack"), TEXT("Spine"), TEXT("Spine1"), TEXT("Neck"), TEXT("Neck1"), TEXT("Head"),
+        TEXT("LeftShoulder"), TEXT("RightShoulder"), TEXT("LeftArm"), TEXT("RightArm"), TEXT("LeftForeArm"), TEXT("RightForeArm"), TEXT("LeftHand"), TEXT("RightHand") };
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
     // (the head looks down); + yaw turns it to his right.
     FQuat Pitch(float Degrees) { return FQuat(FVector::YAxisVector, FMath::DegreesToRadians(Degrees)); }
@@ -40,7 +41,7 @@ ADockNPC::ADockNPC()
     Body->SetupAttachment(Blocker);
     Body->SetRelativeLocation(FVector(0, 0, -HalfHeight));
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Worker(TEXT("/Game/Characters/DockWorker/SK_DockWorker.SK_DockWorker"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Worker(TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"));
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
 }
 
@@ -67,7 +68,41 @@ void ADockNPC::BeginPlay()
     NextGlance = FMath::FRandRange(1.f, 3.f);
     BoneIndex.Init(INDEX_NONE, BoneCount);
     if (const USkinnedAsset* Asset = Body->GetSkinnedAsset())
-        for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Asset->GetRefSkeleton().FindBoneIndex(BoneNames[I]);
+    {
+        const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
+        for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Ref.FindBoneIndex(BoneNames[I]);
+        if (!BoneIndex.Contains(INDEX_NONE))
+        {
+            // The humans are modelled in an A-pose: find the turn that brings
+            // each upper arm from there to hanging by his side (a little out,
+            // a little forward), whatever this body's proportions.
+            const FTransform Shoulder[2] = { ComponentSpaceRef(BoneIndex[UpperL]), ComponentSpaceRef(BoneIndex[UpperR]) };
+            const FTransform Elbow[2] = { ComponentSpaceRef(BoneIndex[LowerL]), ComponentSpaceRef(BoneIndex[LowerR]) };
+            for (int32 Side = 0; Side < 2; ++Side)
+            {
+                const FVector Now = (Elbow[Side].GetLocation() - Shoulder[Side].GetLocation()).GetSafeNormal();
+                const FVector Hang = FVector(.06f, FMath::Sign(Now.Y) * .1f, -1.f).GetSafeNormal();
+                ArmDown[Side] = FQuat::FindBetweenNormals(Now, Hang);
+                // Its forearm's own axis once lowered: the palm turns about that.
+                const FTransform Wrist = ComponentSpaceRef(BoneIndex[Side == 0 ? HandL : HandR]);
+                ForearmAxis[Side] = ArmDown[Side].RotateVector((Wrist.GetLocation() - Elbow[Side].GetLocation()).GetSafeNormal());
+            }
+        }
+    }
+}
+
+FTransform ADockNPC::ComponentSpaceRef(int32 Bone) const
+{
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    FTransform Out = FTransform::Identity;
+    for (int32 B = Bone; B != INDEX_NONE; B = Ref.GetParentIndex(B)) Out = Out * Ref.GetRefBonePose()[B];
+    return Out;
+}
+
+float ADockNPC::GetHigherHandHeight() const
+{
+    const float Feet = static_cast<float>(GetActorLocation().Z) - HalfHeight;
+    return FMath::Max(static_cast<float>(Body->GetBoneLocation(BoneNames[HandL]).Z), static_cast<float>(Body->GetBoneLocation(BoneNames[HandR]).Z)) - Feet;
 }
 
 void ADockNPC::EndPlay(const EEndPlayReason::Type Reason)
@@ -123,16 +158,18 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     Delta[Spine1] = Roll(-.8f * Shift);
     Delta[Spine2] = Pitch(-.6f * Breath);
     Delta[Chest] = Pitch(-1.1f * Breath) * Roll(-.6f * Shift);
-    // The look is shared 40/60 between neck and head.
-    Delta[Neck] = Yaw(.4f * Look.X) * Pitch(.4f * Look.Y);
-    Delta[Head] = Yaw(.6f * Look.X) * Pitch(.6f * Look.Y - .5f * Breath);
+    // The look is shared between the two neck bones and the head.
+    Delta[Neck] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+    Delta[Neck1] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+    Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y - .5f * Breath);
     for (int32 Side = 0; Side < 2; ++Side)
     {
         const float S = Side == 0 ? -1.f : 1.f;   // L is his left (-Y in Unreal)
         const float Sway = FMath::Sin(T * UE_TWO_PI / 5.3f + Side * 1.7f);
         Delta[Side == 0 ? ClavL : ClavR] = Roll(S * .8f * Breath);
-        Delta[Side == 0 ? UpperL : UpperR] = Pitch(-2.f * Sway) * Roll(S * -1.5f);
-        Delta[Side == 0 ? LowerL : LowerR] = Pitch(-6.f - 2.f * Sway);   // a slight bend at the elbow
+        Delta[Side == 0 ? UpperL : UpperR] = Pitch(-2.f * Sway) * ArmDown[Side];
+        // A slight bend at the elbow, the forearm turned so the palm faces his thigh.
+        Delta[Side == 0 ? LowerL : LowerR] = Pitch(-6.f - 2.f * Sway) * FQuat(ForearmAxis[Side], FMath::DegreesToRadians(S * 40.f));
     }
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     const TArray<FTransform>& RefPose = Ref.GetRefBonePose();

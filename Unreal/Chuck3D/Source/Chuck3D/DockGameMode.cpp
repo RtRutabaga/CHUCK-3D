@@ -16,6 +16,7 @@
 #include "TimerManager.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/CameraActor.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "ChuckAnimInstance.h"
@@ -455,6 +456,44 @@ void ADockGameMode::StartPlay()
     { Chuck->ResetToDock(); AddTickPrerequisiteActor(Chuck); }
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
+    bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
+}
+
+void ADockGameMode::TickNPCCapture(float DeltaSeconds)
+{
+    struct FShot { const TCHAR* Name; float Distance, Yaw, Height, Aim, Fov; };
+    static const FShot Shots[] = {
+        {TEXT("Front"),320.f,0.f,100.f,92.f,62.f}, {TEXT("ThreeQuarter"),320.f,40.f,100.f,92.f,62.f},
+        {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f} };
+    constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
+    constexpr float Settle=3.f, Each=1.2f;
+    NPCCaptureTime+=DeltaSeconds;
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
+    const TArray<TWeakObjectPtr<ADockNPC>>& NPCs=ADockNPC::All();
+    if(NPCCaptureTime<Settle || !PC) return;
+    const int32 Step=FMath::FloorToInt((NPCCaptureTime-Settle)/Each);
+    if(Step>=NPCs.Num()*ShotCount) { FPlatformMisc::RequestExit(false); return; }
+    const ADockNPC* NPC=NPCs[Step/ShotCount].Get();
+    const FShot& Shot=Shots[Step%ShotCount];
+    if(!NPC) return;
+    if(Step!=NPCShot)
+    {
+        if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
+        const FVector Feet=NPC->GetActorLocation()-FVector(0,0,NPC->GetSimpleCollisionHalfHeight());
+        const FVector Dir=NPC->GetActorForwardVector().RotateAngleAxis(Shot.Yaw,FVector::UpVector);
+        const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,Shot.Height);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,Shot.Aim)-At).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
+        PC->SetViewTarget(NPCCamera.Get());
+        NPCShot=Step; bNPCShotTaken=false;
+    }
+    else if(!bNPCShotTaken && NPCCaptureTime-Settle-Step*Each>.8f)
+    {
+        const FString Name=(NPC->DisplayName.IsEmpty() ? NPC->GetName() : NPC->DisplayName).Replace(TEXT(" "),TEXT(""));
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/NPC_%s_%s.png"),*Name,Shot.Name),false,false);
+        bNPCShotTaken=true;
+    }
 }
 
 void ADockGameMode::Check(bool Passed,const TCHAR* Description)
@@ -484,6 +523,7 @@ void ADockGameMode::ProbeLockedPaws(AChuckCharacter* Chuck,float DeltaSeconds)
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     if(!Chuck) { Check(false,TEXT("player spawned")); FPlatformMisc::RequestExitWithStatus(false,1); return; }
@@ -1638,6 +1678,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
             Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
                 TEXT("the worker is solid to Chuck but can't be run up or climbed"));
+            const float Hands=bWorker ? Worker->GetHigherHandHeight() : 0.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_POSE_MEASURE higher_hand_cm=%.1f"),Hands);
+            Check(bWorker && Hands>60.f && Hands<95.f,TEXT("the worker stands with his arms down by his sides, not in the model's A-pose"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

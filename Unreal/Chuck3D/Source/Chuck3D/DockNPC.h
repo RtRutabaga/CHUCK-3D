@@ -10,7 +10,8 @@ class USkeletalMesh;
 /**
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
  * spawn; more NPCs will follow - the 2D game's guard and market woman).
- * Procedurally posed on a plain 20-bone skeleton (Tools/build_dock_npc.py):
+ * A MakeHuman body dressed by Tools/build_npc_humans.py on the humans' shared
+ * 31-bone skeleton (MPFB cmu_mb), procedurally posed from its A-pose:
  * breathing, a slow weight shift, idle glances, and his head turning to watch
  * Chuck when the rat comes near. Solid to Chuck but not climbable (a
  * pawn-only blocker: wall-run, ledge and camera traces ignore him).
@@ -39,6 +40,8 @@ public:
     /** Head turn now (deg; + looks right / + looks down), for tests. */
     FVector2D GetLookAngles() const { return Look; }
     bool IsWatchingChuck() const { return bWatching; }
+    /** The higher of his two hands above his feet (cm), for tests: by his sides, not the A-pose. */
+    float GetHigherHandHeight() const;
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -52,5 +55,8 @@ private:
     float Clock = 0;
     float Phase = 0;                              // per-NPC offset so a crowd doesn't breathe in step
     bool bWatching = false;
+    FQuat ArmDown[2] = { FQuat::Identity, FQuat::Identity };   // A-pose -> arms by his sides
+    FVector ForearmAxis[2] = { -FVector::UpVector, -FVector::UpVector };   // lowered, component space
+    FTransform ComponentSpaceRef(int32 Bone) const;
     void UpdatePose(float DeltaSeconds);
 };

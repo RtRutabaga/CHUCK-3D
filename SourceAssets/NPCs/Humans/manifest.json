@@ -1,0 +1,96 @@
+{
+ "npcs": {
+  "DockWorker": {
+   "fbx": "DockWorker/SK_DockWorker.fbx",
+   "height_cm": 180,
+   "tris": 54888,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.45,
+      0.36
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.11,
+      0.065,
+      0.038
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.033,
+      0.022
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.065,
+      0.08
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.055,
+      0.037,
+      0.025
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Cap": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.19,
+      0.055,
+      0.035
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01.png"
+    }
+   }
+  }
+ },
+ "generator": "Tools/build_npc_humans.py",
+ "mpfb": "2.0.17",
+ "skeleton": "cmu_mb (MPFB): 31 bones, CMU BVH names"
+}

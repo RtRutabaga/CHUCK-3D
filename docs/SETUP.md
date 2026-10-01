@@ -6,6 +6,10 @@
 
 [Blender 4.5 LTS](https://www.blender.org/releases/4-5/) is supported through July 2027. Exact rebuild commands, geometry budget and limitations are in SourceAssets/Chuck/README.md. Before committing new binaries, assessed the character's .blend, FBX, mesh and material assets at approximately 11.4 MB, covered by existing LFS attributes. The separate GitHub LFS remote previously passed upload/download verification. Remaining account quota is unknown; no paid storage purchase is authorized.
 
+## Installed for the human NPCs
+
+2026-09-30, user-approved ("i approval install MPFB2, i approve download the stuff"): **MPFB 2.0.17** (MakeHuman's Blender add-on, GPL code; its generated humans are CC0), installed into Blender 4.5.14's user extension repository with `blender --command extension install-file -r user_default -e add-on-mpfb-v2.0.17.zip` (zip 45,031,536 bytes, SHA-256 `4F0A879D64A39BF646FBF5F53601AC678855DA329D650617DCA5737548239A87`). The **MakeHuman CC0 system asset pack** (`makehuman_system_assets_cc0.zip`, 280,737,770 bytes, SHA-256 `B542127A8E25547C7C29C19F2D1D2ADB9A664C80396ECD694095DBC8028A0107`) was loaded into MPFB's user data (`%APPDATA%\Blender Foundation\Blender\4.5\extensions\.user\user_default\mpfb\data`). Both archives are kept in `%LOCALAPPDATA%\Programs\CHUCK-Tools\downloads`, outside the repository. Clothing fabrics are CC0 Poly Haven textures fetched by `Tools/Fetch-ClothTextures.ps1` (hashes and real-world sizes in `SourceAssets/Surfaces/Cloth/manifest.json`). The pipeline is described in `SourceAssets/NPCs/README.md`.
+
 ## Installed for the movement prototype
 
 2026-09-24: Unreal Engine **5.7.4**, changelist **51494982**, at `C:\Program Files\Epic Games\UE_5.7`; Visual Studio Build Tools **2022 17.14.41**, MSVC compiler **14.44.35229** (tools folder 14.44.35207), Windows SDK **10.0.26100.0**, and .NET Framework **4.8 SDK/targeting pack**. Unreal uses its bundled .NET **8.0.412**. Epic Games Launcher was installed through winget; the user completed sign-in and licensing. Blender was subsequently added for the custom character form study; see below.

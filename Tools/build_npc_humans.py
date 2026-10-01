@@ -1,0 +1,421 @@
+"""Blender 4.5.14 + MPFB 2.0.17: build the human NPCs from SourceAssets/NPCs/humans.json
+(user 2026-09-30: NPCs at about Blade & Sorcery: Nomad quality, copied with minor changes).
+
+blender --background --python Tools/build_npc_humans.py [-- Name ...] [--review dir]
+  -> SourceAssets/NPCs/Humans/<Name>/SK_<Name>.fbx, SourceAssets/NPCs/Humans/manifest.json,
+     SourceAssets/NPCs/Humans/Textures/* (the MakeHuman textures used, CC0)
+
+Each NPC is data: MakeHuman macro sliders, skin, eyes, brows, lashes, hair and an
+outfit from the clothing kit below. MPFB builds the body (CC0 MakeHuman base mesh
+and targets) with the CMU motion-capture rig ("cmu_mb": its bones match the CMU
+BVH skeleton, so CMU mocap applies without retargeting), and fits the eyes, brows,
+lashes and hair. Clothing is made from the body's own surface for each region,
+pushed out and thickened into cloth with clean hems, so it fits, carries the
+body's skin weights and bends with it; body faces fully under cloth are removed
+so nothing pokes through. Fabric UVs are a box projection at a fixed real-world
+scale (the fabric's real size per texture repeat), so a weave reads true on
+every garment. The fabric texture supplies weave and grain only: the material
+greys it and multiplies by `gain` (1 / its mean linear luminance, measured
+here) and the NPC's tint, so tint is the cloth's actual colour. Output faces +X, centimetres via FBX unit conversion (metres in Blender).
+"""
+from pathlib import Path
+import json
+import math
+import shutil
+import sys
+import bmesh
+import bpy
+from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
+from bl_ext.user_default.mpfb.services import HumanService, TargetService, LocationService
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA = Path(LocationService.get_user_data())
+SPEC = json.loads((ROOT / 'SourceAssets/NPCs/humans.json').read_text(encoding='utf-8'))['npcs']
+OUT = ROOT / 'SourceAssets/NPCs/Humans'
+TEX = OUT / 'Textures'
+CLOTH = ROOT / 'SourceAssets/Surfaces/Cloth'
+# Real-world size of one repeat of each fabric (Poly Haven's dimensions).
+TILE_CM = {r['asset']: r['size_cm'] for r in json.loads((CLOTH / 'manifest.json').read_text(encoding='utf-8'))['assets']}
+FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False, primary_bone_axis='Y',
+           secondary_bone_axis='X', use_armature_deform_only=True, mesh_smooth_type='FACE', bake_anim=False)
+argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+REVIEW = argv[argv.index('--review') + 1] if '--review' in argv else None
+ONLY = [a for a in argv if a in SPEC]
+
+
+def reset_scene():
+    bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete()
+    for block in (bpy.data.meshes, bpy.data.armatures, bpy.data.materials, bpy.data.images):
+        for item in list(block):
+            if item.users == 0: block.remove(item)
+    s = bpy.context.scene
+    s.unit_settings.system = 'METRIC'; s.unit_settings.scale_length = 1.
+
+
+def activate(obj):
+    bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True); bpy.context.view_layer.objects.active = obj
+
+
+def apply_modifier(obj, kind):
+    activate(obj)
+    for m in list(obj.modifiers):
+        if m.type == kind: bpy.ops.object.modifier_apply(modifier=m.name)
+
+
+# ------------------------------------------------------------ body regions
+def dominant_bones(obj, rig):
+    names = {b.name for b in rig.data.bones}
+    index = {g.index: g.name for g in obj.vertex_groups if g.name in names}
+    out = []
+    for v in obj.data.vertices:
+        best, w = None, 0.
+        for g in v.groups:
+            if g.group in index and g.weight > w: best, w = index[g.group], g.weight
+        out.append(best)
+    return out
+
+
+class Body:
+    """Joint heights and a classifier for each vertex (metres, Blender: front -Y)."""
+    def __init__(self, obj, rig, eye_z):
+        self.obj, self.rig = obj, rig
+        self.bone = dominant_bones(obj, rig)
+        self.co = [obj.matrix_world @ v.co for v in obj.data.vertices]
+        J = lambda b, tail=False: rig.matrix_world @ (rig.data.bones[b].tail_local if tail else rig.data.bones[b].head_local)
+        self.elbow, self.wrist = J('LeftForeArm'), J('LeftHand')
+        self.knee, self.ankle = J('LeftLeg'), J('LeftFoot')
+        self.hips, self.neck, self.head = J('Hips'), J('Neck'), J('Head')
+        self.waist_z = self.hips.z + .085
+        zs = [c.z for c in self.co]
+        self.top, self.floor = max(zs), min(zs)
+        self.brow_z = eye_z + .028
+        self.eye_z = eye_z
+
+    ARMS = {'LeftShoulder', 'LeftArm', 'RightShoulder', 'RightArm'}
+    FOREARMS = {'LeftForeArm', 'RightForeArm'}
+    TORSO = {'LowerBack', 'Spine', 'Spine1', 'Hips'}
+    LEGS = {'LHipJoint', 'RHipJoint', 'LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg'}
+    FEET = {'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'}
+
+    def forearm_u(self, c):
+        """0 at the elbow, 1 at the wrist (by height)."""
+        return (self.elbow.z - c.z) / max(1e-4, self.elbow.z - self.wrist.z)
+
+    def boot_top(self):
+        return self.ankle.z + .17
+
+    def margin(self, i, piece, opts):
+        """Signed distance (metres, + inside) from vertex i to the edge of a
+        garment. Cloth is cut exactly where this crosses zero, so hems follow
+        a clean line rather than the body's quads; -1 means "never this
+        garment" (wrong part of the body)."""
+        b, c = self.bone[i], self.co[i]
+        OUT = -1.
+        if b is None: return OUT
+        if piece == 'shirt':
+            if b in self.FOREARMS:
+                cut = .3 if opts.get('sleeves') == 'rolled' else .94
+                return c.z - (self.elbow.z - cut * (self.elbow.z - self.wrist.z))
+            collar = self.neck.z + .03 - c.z   # one neckline across neck and torso bones
+            if b in self.ARMS: return collar
+            if b in self.TORSO: return min(collar, c.z - (self.waist_z - .07))
+            if b == 'Neck': return collar
+            return OUT
+        if piece == 'jerkin':
+            collar = self.neck.z + .015 - c.z
+            if b in self.TORSO: m = collar
+            elif b in self.ARMS: m = min(collar, .19 - abs(c.x))
+            elif b == 'Neck': m = collar
+            else: return OUT
+            v_bottom = self.waist_z + .2
+            if c.y < 0:   # the open V front
+                m = min(m, max(abs(c.x) - (.012 + max(0., c.z - v_bottom) * .26), v_bottom - c.z))
+            return min(m, c.z - (self.waist_z - .11))
+        if piece == 'belt':
+            if b not in self.TORSO and b not in self.LEGS: return OUT
+            return .026 - abs(c.z - (self.waist_z - .02))
+        if piece == 'trousers':
+            if b in self.LEGS | self.TORSO:   # waistband to the boots, tucked in
+                return min(self.waist_z + .01 - c.z, c.z - (self.boot_top() - .07))
+            return OUT
+        if piece == 'boots':   # the shaft; boot_feet makes the feet
+            if b not in self.FEET and b not in self.LEGS: return OUT
+            return min(self.boot_top() - c.z, c.z - (self.ankle.z + .045))
+        if piece == 'cap':
+            if b not in ('Head', 'Neck1'): return OUT
+            # A knit cap pulled down: just above the brows at the front,
+            # over the tops of the ears at the sides, to the nape at the back.
+            t = min(1., max(0., (c.y - self.head.y + .05) / .1))
+            return c.z - (self.brow_z + .01 - .055 * t)
+        raise ValueError(piece)
+
+    def covers(self, i, piece, opts):
+        """Whether the garment hides the skin at vertex i (boots: the whole foot).
+        Skin stays 2 cm in under each hem, so looking up under a brim or cuff
+        shows skin, not the inside of the body."""
+        if piece == 'boots' and self.bone[i] in self.FEET | self.LEGS and self.co[i].z < self.boot_top() - .02: return True
+        return self.margin(i, piece, opts) > .02
+
+
+# Per piece: distance out from the skin, cloth thickness, and whether the skin under it goes.
+PIECES = {
+    'shirt':    dict(offset=.006, thickness=.0035, hides=True),
+    'trousers': dict(offset=.007, thickness=.004, hides=True),
+    'boots':    dict(offset=.011, thickness=.005, hides=True),
+    'jerkin':   dict(offset=.015, thickness=.005, hides=False),
+    'belt':     dict(offset=.027, thickness=.006, hides=False),
+    'cap':      dict(offset=.012, thickness=.006, hides=True),
+}
+
+
+def fabric_gain(name, cache={}):
+    """1 / mean linear luminance of a fabric's colour map."""
+    if name not in cache:
+        import numpy as np
+        img = bpy.data.images.load(str(CLOTH / f'{name}_diff_2k.jpg')); img.scale(256, 256)
+        a = np.array(img.pixels[:]).reshape(-1, 4)[:, :3]
+        lin = np.where(a <= .04045, a / 12.92, ((a + .055) / 1.055) ** 2.4)
+        cache[name] = round(1. / float((lin @ np.array([.2126, .7152, .0722])).mean()), 3)
+        bpy.data.images.remove(img)
+    return cache[name]
+
+
+def box_uv(obj, tile_cm):
+    """Fabric UVs: per face, project on its dominant axis, one repeat per tile_cm."""
+    me = obj.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name='UVMap')
+    s = 100. / tile_cm
+    for poly in me.polygons:
+        n = poly.normal; ax = max(range(3), key=lambda k: abs(n[k]))
+        for li in poly.loop_indices:
+            co = obj.matrix_world @ me.vertices[me.loops[li].vertex_index].co
+            u, v = [(co.y, co.z), (co.x, co.z), (co.x, co.y)][ax]
+            uv.data[li].uv = (u * s, v * s)
+
+
+def relax_hems(bm, iterations=8):
+    """Region edges follow the body's quads and zig-zag; walk each hem toward
+    the line through its neighbours so it reads as a cut, sewn edge."""
+    ring = {}
+    for e in bm.edges:
+        if e.is_boundary:
+            a, b = e.verts; ring.setdefault(a, []).append(b); ring.setdefault(b, []).append(a)
+    ring = {v: n for v, n in ring.items() if len(n) == 2}
+    for _ in range(iterations):
+        for k in (.5, -.53):   # Taubin: smooth without shrinking the loop
+            new = {v: v.co + k * ((n[0].co + n[1].co) * .5 - v.co) for v, n in ring.items()}
+            for v, co in new.items(): v.co = co
+
+
+def cut_along(bm, margin):
+    """Keep the part of the surface where margin > 0, cut exactly on margin = 0.
+    A vertex that lies close to the line is slid onto it (no sliver faces);
+    other crossing edges are split at the crossing (skin weights interpolated)
+    and each face crossed is split between its two points on the line."""
+    m = bm.verts.layers.float.new('margin')
+    bm.verts.ensure_lookup_table()
+    for v in bm.verts: v[m] = margin[v.index]
+    crossing = lambda e: (e.verts[0][m] > 0 and e.verts[1][m] < 0) or (e.verts[0][m] < 0 and e.verts[1][m] > 0)
+    snap = {}
+    for e in [e for e in bm.edges if crossing(e)]:
+        a, b = e.verts; t = a[m] / (a[m] - b[m])
+        if t < .25: snap.setdefault(a, []).append(a.co.lerp(b.co, t))
+        elif t > .75: snap.setdefault(b, []).append(a.co.lerp(b.co, t))
+    for v, points in snap.items():
+        v.co = sum(points, Vector()) / len(points); v[m] = 0.
+    for e in [e for e in bm.edges if crossing(e)]:
+        a, b = e.verts; t = a[m] / (a[m] - b[m])
+        _, v = bmesh.utils.edge_split(e, a, t)
+        v[m] = 0.
+    for f in list(bm.faces):
+        if not (any(v[m] > 0 for v in f.verts) and any(v[m] < 0 for v in f.verts)): continue
+        on = [v for v in f.verts if v[m] == 0.]
+        if len(on) == 2 and not bm.edges.get(on): bmesh.utils.face_split(f, on[0], on[1])
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if any(v[m] < 0 for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    bm.verts.layers.float.remove(m)
+
+
+def boot_feet(body, boots):
+    """No toes in a boot: each boot foot is new geometry, the convex hull of
+    that foot (flat sole, rounded toe box, heel) remeshed, smoothed and pushed
+    out like the rest of the cloth, skinned from the body and joined to the
+    shaft cut from the leg."""
+    cut = body.ankle.z + .045
+    for side in (1., -1.):
+        hull = bmesh.new()
+        for i, c in enumerate(body.co):
+            if c.x * side > 0 and c.z < cut + .02 and body.bone[i] in Body.FEET | Body.LEGS: hull.verts.new(c)
+        bmesh.ops.convex_hull(hull, input=hull.verts)
+        bmesh.ops.delete(hull, geom=[v for v in hull.verts if not v.link_faces], context='VERTS')
+        me = bpy.data.meshes.new('boot_foot'); hull.to_mesh(me); hull.free()
+        foot = bpy.data.objects.new('boot_foot', me); bpy.context.collection.objects.link(foot)
+        activate(foot)
+        rm = foot.modifiers.new('Even', 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = .006
+        sm = foot.modifiers.new('Round', 'SMOOTH'); sm.factor = .8; sm.iterations = 12
+        for m in list(foot.modifiers): bpy.ops.object.modifier_apply(modifier=m.name)
+        bm = bmesh.new(); bm.from_mesh(me); bm.normal_update()
+        for v in bm.verts: v.co += v.normal * (PIECES['boots']['offset'] + PIECES['boots']['thickness'])
+        bm.to_mesh(me); bm.free()
+        # The body's skin weights onto the new foot.
+        dt = foot.modifiers.new('Weights', 'DATA_TRANSFER'); dt.object = body.obj
+        dt.use_vert_data = True; dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'POLYINTERP_NEAREST'
+        dt.layers_vgroup_select_src = 'ALL'; dt.layers_vgroup_select_dst = 'NAME'
+        bpy.ops.object.datalayout_transfer(modifier=dt.name); bpy.ops.object.modifier_apply(modifier=dt.name)
+        foot.modifiers.new('Armature', 'ARMATURE').object = body.rig
+        foot.data.materials.append(boots.data.materials[0])
+        bpy.ops.object.select_all(action='DESELECT'); foot.select_set(True); boots.select_set(True)
+        bpy.context.view_layer.objects.active = boots; bpy.ops.object.join()
+
+
+def make_piece(body, piece, opts, material):
+    p = PIECES[piece]
+    keep = [body.covers(i, piece, opts) for i in range(len(body.co))]
+    obj = body.obj.copy(); obj.data = body.obj.data.copy(); obj.name = f'{piece}'
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new(); bm.from_mesh(obj.data)
+    cut_along(bm, [body.margin(i, piece, opts) for i in range(len(body.co))])
+    relax_hems(bm)
+    bm.normal_update()
+    for v in bm.verts: v.co += v.normal * p['offset']
+    bm.to_mesh(obj.data); bm.free()
+    activate(obj)
+    sm = obj.modifiers.new('Ease', 'CORRECTIVE_SMOOTH'); sm.factor = .5; sm.iterations = 4; sm.use_only_smooth = True; sm.use_pin_boundary = True
+    bpy.ops.object.modifier_move_to_index(modifier=sm.name, index=0); bpy.ops.object.modifier_apply(modifier=sm.name)
+    sol = obj.modifiers.new('Cloth', 'SOLIDIFY'); sol.thickness = p['thickness']; sol.offset = 1.; sol.use_rim = True
+    bpy.ops.object.modifier_move_to_index(modifier=sol.name, index=0); bpy.ops.object.modifier_apply(modifier=sol.name)
+    obj.data.materials.clear(); obj.data.materials.append(material)
+    if piece == 'boots': boot_feet(body, obj)
+    for poly in obj.data.polygons: poly.material_index = 0; poly.use_smooth = True
+    box_uv(obj, TILE_CM[opts['fabric']])
+    return obj, keep
+
+
+def slot_material(name):
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    return m
+
+
+def build(name, spec):
+    reset_scene()
+    body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
+    HumanService.add_builtin_rig(body, 'cmu_mb')
+    rig = body.parent
+    parts = {}
+    def asset(kind, path):
+        obj = HumanService.add_mhclo_asset(str(path), body, asset_type=kind, subdiv_levels=0)
+        parts[kind] = obj
+    asset('Eyes', DATA / 'eyes/high-poly/high-poly.mhclo')
+    asset('Eyebrows', DATA / f"eyebrows/{spec['eyebrows']}/{spec['eyebrows']}.mhclo")
+    asset('Eyelashes', DATA / f"eyelashes/{spec['eyelashes']}/{spec['eyelashes']}.mhclo")
+    if spec.get('hair'): asset('Hair', DATA / f"hair/{spec['hair']}/{spec['hair']}.mhclo")
+    # Bake the shape and drop the helper geometry.
+    TargetService.bake_targets(body)
+    apply_modifier(body, 'MASK')
+    for obj in parts.values():
+        if obj and obj.data.shape_keys:
+            activate(obj); bpy.ops.object.shape_key_remove(all=True, apply_mix=True)
+        for m in list(obj.modifiers):
+            if m.type not in ('ARMATURE',): activate(obj); bpy.ops.object.modifier_apply(modifier=m.name)
+    # Clothing from the outfit.
+    eye_z = sum((parts['Eyes'].matrix_world @ v.co).z for v in parts['Eyes'].data.vertices) / len(parts['Eyes'].data.vertices)
+    info = Body(body, rig, eye_z)
+    hide = [False] * len(info.co)
+    meshes = [body] + [o for o in parts.values() if o]
+    slots = {}
+    for item in spec['outfit']:
+        piece = item['piece']; slot = piece.capitalize()
+        obj, keep = make_piece(info, piece, item, slot_material(slot))
+        meshes.append(obj)
+        slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'])}
+        if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
+    # Skin fully under cloth goes (a face survives if any corner shows).
+    bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    bm.to_mesh(body.data); bm.free()
+    # Materials and the textures they use.
+    TEX.mkdir(parents=True, exist_ok=True)
+    def keep_texture(src):
+        src = Path(src); dst = TEX / src.name
+        if not dst.exists() or dst.stat().st_size != src.stat().st_size: shutil.copy2(src, dst)
+        return f'Textures/{src.name}'
+    skin_dir = DATA / 'skins' / spec['skin']
+    skin_png = next(p for p in skin_dir.glob('*.png') if 'diffuse' in p.name or p.name.endswith('.png'))
+    def assign(obj, slot):
+        obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
+        for poly in obj.data.polygons: poly.material_index = 0
+    assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
+    assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
+    assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png')))}
+    lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
+    assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
+    if 'Hair' in parts:
+        hair_dir = DATA / f"hair/{spec['hair']}"
+        assign(parts['Hair'], 'Hair'); slots['Hair'] = {'type': 'card', 'texture': keep_texture(next(hair_dir.glob('*diffuse*.png')))}
+    # Face +X and stand exactly spec height tall (cap included), feet on the ground.
+    lo = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
+    hi = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
+    scale = spec['height_cm'] / 100. / (hi - lo)
+    M = Matrix.Translation((0, 0, 0)) @ Matrix.Rotation(math.radians(90), 4, 'Z') @ Matrix.Scale(scale, 4) @ Matrix.Translation((0, 0, -lo))
+    for o in meshes:
+        activate(o); bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+    for o in [rig] + meshes:
+        o.matrix_world = M @ o.matrix_world
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in [rig] + meshes: o.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in meshes:
+        o.parent = rig
+        for m in o.modifiers:
+            if m.type == 'ARMATURE': m.object = rig
+    rig.name = f'SK_{name}_Rig'
+    # Export.
+    out = OUT / name; out.mkdir(parents=True, exist_ok=True)
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in [rig] + meshes: o.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    fbx = out / f'SK_{name}.fbx'
+    bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'ARMATURE', 'MESH'}, **FBX)
+    tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
+    lo2 = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
+    hi2 = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
+    print('CHUCK_HUMAN', name, f'tris={tris}', f'height_cm={(hi2 - lo2) * 100:.1f}', f'bones={len(rig.data.bones)}', sorted(slots))
+    if REVIEW:
+        render_review(name, meshes, slots)
+    return {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots}
+
+
+def render_review(name, meshes, slots):
+    import os
+    preview = {'Skin': (.6, .42, .34), 'Eye': (.1, .08, .06), 'Brow': (.12, .08, .05), 'Lash': (.05, .04, .03), 'Hair': (.15, .1, .06)}
+    for slot, info in slots.items():
+        m = bpy.data.materials.get(slot)
+        if not m: continue
+        c = preview.get(slot) or tuple(min(1., t * .55) for t in info.get('tint', (1, 1, 1)))
+        m.diffuse_color = (*c, 1.)
+    bpy.ops.mesh.primitive_plane_add(size=6)
+    s = bpy.context.scene
+    for tag, loc, rot in (('front', (2.6, -1.1, 1.15), (82, 0, 67)), ('back', (-2.6, 1.1, 1.15), (82, 0, 247)),
+                          ('feet', (.9, -.5, .45), (60, 0, 60)), ('head', (.75, -.35, 1.68), (88, 0, 65))):
+        cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam)
+        cam.location = loc; cam.rotation_euler = tuple(math.radians(a) for a in rot); cam.data.lens = 45; s.camera = cam
+        s.render.engine = 'BLENDER_WORKBENCH'; s.display.shading.color_type = 'MATERIAL'; s.display.shading.light = 'STUDIO'
+        s.render.resolution_x, s.render.resolution_y = 800, 1000
+        s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)
+
+
+manifest_path = OUT / 'manifest.json'
+manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {'npcs': {}}
+manifest['generator'] = 'Tools/build_npc_humans.py'
+manifest['mpfb'] = '2.0.17'
+manifest['skeleton'] = 'cmu_mb (MPFB): 31 bones, CMU BVH names'
+for name, spec in SPEC.items():
+    if ONLY and name not in ONLY: continue
+    manifest['npcs'][name] = build(name, spec)
+OUT.mkdir(parents=True, exist_ok=True)
+manifest_path.write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
+print('CHUCK_HUMANS_READY', sorted(manifest['npcs']))

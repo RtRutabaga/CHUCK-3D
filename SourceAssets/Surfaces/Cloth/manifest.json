@@ -1,0 +1,138 @@
+{
+  "provider": "Poly Haven",
+  "license_url": "https://polyhaven.com/license",
+  "assets": [
+    {
+      "file": "rough_linen_diff_2k.jpg",
+      "asset": "rough_linen",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_linen/rough_linen_diff_2k.jpg",
+      "size_cm": 27.1,
+      "license": "CC0-1.0",
+      "sha256": "E71016E08DFEBEA1DD4E8A2A675E3B617A889A782AF782F1ABB795906F4DB1B4",
+      "bytes": 3607181
+    },
+    {
+      "file": "rough_linen_arm_2k.jpg",
+      "asset": "rough_linen",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_linen/rough_linen_arm_2k.jpg",
+      "size_cm": 27.1,
+      "license": "CC0-1.0",
+      "sha256": "C5F29705FC1843C15F48CA187BEC1D8B61BCCB5859CBBF9A8B793EB172F0593B",
+      "bytes": 5194705
+    },
+    {
+      "file": "rough_linen_nor_dx_2k.jpg",
+      "asset": "rough_linen",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_linen/rough_linen_nor_dx_2k.jpg",
+      "size_cm": 27.1,
+      "license": "CC0-1.0",
+      "sha256": "88FF1E7C4C5FB4A36F23D72C7A665173F6492114376D4414AB534F70F3E6CE9A",
+      "bytes": 3784169
+    },
+    {
+      "file": "caban_diff_2k.jpg",
+      "asset": "caban",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/caban/caban_diff_2k.jpg",
+      "size_cm": 27.4,
+      "license": "CC0-1.0",
+      "sha256": "C616FD58F9E0B484E664094D47632BD9D0D2247D943389B69E0E89465A68AF77",
+      "bytes": 2964872
+    },
+    {
+      "file": "caban_arm_2k.jpg",
+      "asset": "caban",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/caban/caban_arm_2k.jpg",
+      "size_cm": 27.4,
+      "license": "CC0-1.0",
+      "sha256": "46FF2D45899578E0128D66600677F3F13161E8F7F8063FB9F9244748CD736345",
+      "bytes": 5009613
+    },
+    {
+      "file": "caban_nor_dx_2k.jpg",
+      "asset": "caban",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/caban/caban_nor_dx_2k.jpg",
+      "size_cm": 27.4,
+      "license": "CC0-1.0",
+      "sha256": "48A998E340D4523FF19AF92FDA8A7A8179FB433C402A9B943C8127F30E03BB38",
+      "bytes": 2395932
+    },
+    {
+      "file": "wool_boucle_diff_2k.jpg",
+      "asset": "wool_boucle",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wool_boucle/wool_boucle_diff_2k.jpg",
+      "size_cm": 35.2,
+      "license": "CC0-1.0",
+      "sha256": "4776E044F74963C2E93D5CA85A53307CB3946C290C6DD397711B119536E4046A",
+      "bytes": 4608820
+    },
+    {
+      "file": "wool_boucle_arm_2k.jpg",
+      "asset": "wool_boucle",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wool_boucle/wool_boucle_arm_2k.jpg",
+      "size_cm": 35.2,
+      "license": "CC0-1.0",
+      "sha256": "E3D5B31B3EBD82B0878D4EB6FBF67EFE901BC152961247FD6772A92B5F2B0E46",
+      "bytes": 6250253
+    },
+    {
+      "file": "wool_boucle_nor_dx_2k.jpg",
+      "asset": "wool_boucle",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/wool_boucle/wool_boucle_nor_dx_2k.jpg",
+      "size_cm": 35.2,
+      "license": "CC0-1.0",
+      "sha256": "D4D882FB71F0BAC2B19A8DAF8EA08FA59C8654CAF747784B9B51E3519AC9125E",
+      "bytes": 4681659
+    },
+    {
+      "file": "brown_leather_diff_2k.jpg",
+      "asset": "brown_leather",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_leather/brown_leather_albedo_2k.jpg",
+      "size_cm": 40.0,
+      "license": "CC0-1.0",
+      "sha256": "B0DE2403A31EFA31E501B0028C0BD8E504D5BD6318F4A5CE90C550C3067F96D8",
+      "bytes": 2137518
+    },
+    {
+      "file": "brown_leather_arm_2k.jpg",
+      "asset": "brown_leather",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_leather/brown_leather_arm_2k.jpg",
+      "size_cm": 40.0,
+      "license": "CC0-1.0",
+      "sha256": "3C043ED2E4595E735C1CD013DACBCDFBAF8B2E5975B868D1DC188ECFE463F66D",
+      "bytes": 1870765
+    },
+    {
+      "file": "brown_leather_nor_dx_2k.jpg",
+      "asset": "brown_leather",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_leather/brown_leather_nor_dx_2k.jpg",
+      "size_cm": 40.0,
+      "license": "CC0-1.0",
+      "sha256": "1B12A10DA8A5B48EE1E9FB17C65DA1811C46077889502A302196D1A588141F1B",
+      "bytes": 3143818
+    }
+  ]
+}

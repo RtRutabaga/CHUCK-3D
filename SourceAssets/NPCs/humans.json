@@ -1,0 +1,85 @@
+{
+ "notes": "Human NPC definitions for Tools/build_npc_humans.py (MPFB 2.0.17 bodies, CC0 MakeHuman assets; clothing from the kit in the script, CC0 Poly Haven fabrics in SourceAssets/Surfaces/Cloth). Every human is sized to the 180 cm dock worker scale (References/Original/PHASE-2.md). Macro values are MakeHuman's 0..1 sliders; tint is the cloth's colour (linear albedo): the fabric texture gives weave and grain only (greyscale, brightness-normalised), at its real-world size.",
+ "npcs": {
+  "DockWorker": {
+   "height_cm": 180,
+   "macro": {
+    "gender": 1.0,
+    "age": 0.62,
+    "muscle": 0.68,
+    "weight": 0.62,
+    "height": 0.7,
+    "proportions": 0.55,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.08,
+     "asian": 0.04,
+     "caucasian": 0.88
+    }
+   },
+   "skin": "middleage_caucasian_male",
+   "eyes": "brown",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "outfit": [
+    {
+     "piece": "shirt",
+     "sleeves": "rolled",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.45,
+      0.36
+     ]
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "brown_leather",
+     "tint": [
+      0.11,
+      0.065,
+      0.038
+     ]
+    },
+    {
+     "piece": "belt",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.033,
+      0.022
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.065,
+      0.08
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.055,
+      0.037,
+      0.025
+     ]
+    },
+    {
+     "piece": "cap",
+     "fabric": "caban",
+     "tint": [
+      0.19,
+      0.055,
+      0.035
+     ]
+    }
+   ]
+  }
+ }
+}
