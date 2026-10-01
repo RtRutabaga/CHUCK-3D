@@ -133,6 +133,39 @@
       "license": "CC0-1.0",
       "sha256": "1B12A10DA8A5B48EE1E9FB17C65DA1811C46077889502A302196D1A588141F1B",
       "bytes": 3143818
+    },
+    {
+      "file": "metal_plate_02_diff_2k.jpg",
+      "asset": "metal_plate_02",
+      "map": "diff",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/metal_plate_02/metal_plate_02_diff_2k.jpg",
+      "size_cm": 200.0,
+      "license": "CC0-1.0",
+      "sha256": "2BF77BBCF18C862BF1E1501D1953CE9D511E80DF6305B46E2F38B788BD37B581",
+      "bytes": 2604239
+    },
+    {
+      "file": "metal_plate_02_arm_2k.jpg",
+      "asset": "metal_plate_02",
+      "map": "arm",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/metal_plate_02/metal_plate_02_arm_2k.jpg",
+      "size_cm": 200.0,
+      "license": "CC0-1.0",
+      "sha256": "7224EB8F7563BA0822FC882DFF8D287049929A5CB17299F08004B1A3C3FE9E55",
+      "bytes": 4445975
+    },
+    {
+      "file": "metal_plate_02_nor_dx_2k.jpg",
+      "asset": "metal_plate_02",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/metal_plate_02/metal_plate_02_nor_dx_2k.jpg",
+      "size_cm": 200.0,
+      "license": "CC0-1.0",
+      "sha256": "B0B96F77E9F396FFFD97BC2BA6882F0E06BF12732E7A0E3D6C2DEC9D66C4E637",
+      "bytes": 569450
     }
   ]
 }

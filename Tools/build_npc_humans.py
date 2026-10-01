@@ -102,8 +102,9 @@ class Body:
         """0 at the elbow, 1 at the wrist (by height)."""
         return (self.elbow.z - c.z) / max(1e-4, self.elbow.z - self.wrist.z)
 
-    def boot_top(self):
-        return self.ankle.z + .17
+    def boot_top(self, opts=None):
+        """Top of a boot: `height` above the ankle (default a calf boot; a shoe is ~.06)."""
+        return self.ankle.z + (opts or {}).get('height', .17)
 
     def margin(self, i, piece, opts):
         """Signed distance (metres, + inside) from vertex i to the edge of a
@@ -112,12 +113,19 @@ class Body:
         garment" (wrong part of the body)."""
         b, c = self.bone[i], self.co[i]
         OUT = -1.
+        clamp = lambda x: min(1., max(0., x))
+        # Cut from the skirt helper surface (see skirt_source), not the body:
+        if piece == 'skirt':
+            return c.z - (self.floor + .07)
+        if piece == 'apron':   # a front panel over the skirt
+            return min(c.z - (self.floor + .3), .15 - abs(c.x), -c.y - .01)
         if b is None: return OUT
         if piece == 'shirt':
             if b in self.FOREARMS:
                 cut = .3 if opts.get('sleeves') == 'rolled' else .94
                 return c.z - (self.elbow.z - cut * (self.elbow.z - self.wrist.z))
-            collar = self.neck.z + .03 - c.z   # one neckline across neck and torso bones
+            # One neckline across neck and torso bones (`collar`: + higher, - lower).
+            collar = self.neck.z + .03 + opts.get('collar', 0.) - c.z
             if b in self.ARMS: return collar
             if b in self.TORSO: return min(collar, c.z - (self.waist_z - .07))
             if b == 'Neck': return collar
@@ -134,27 +142,53 @@ class Body:
             return min(m, c.z - (self.waist_z - .11))
         if piece == 'belt':
             if b not in self.TORSO and b not in self.LEGS: return OUT
-            return .026 - abs(c.z - (self.waist_z - .02))
+            return .026 - abs(c.z - (self.waist_z - .02 + opts.get('z', 0.)))
         if piece == 'trousers':
             if b in self.LEGS | self.TORSO:   # waistband to the boots, tucked in
                 return min(self.waist_z + .01 - c.z, c.z - (self.boot_top() - .07))
             return OUT
         if piece == 'boots':   # the shaft; boot_feet makes the feet
             if b not in self.FEET and b not in self.LEGS: return OUT
-            return min(self.boot_top() - c.z, c.z - (self.ankle.z + .045))
+            return min(self.boot_top(opts) - c.z, c.z - (self.ankle.z + .045))
         if piece == 'cap':
             if b not in ('Head', 'Neck1'): return OUT
             # A knit cap pulled down: just above the brows at the front,
             # over the tops of the ears at the sides, to the nape at the back.
             t = min(1., max(0., (c.y - self.head.y + .05) / .1))
             return c.z - (self.brow_z + .01 - .055 * t)
+        if piece == 'helmet':   # a plain steel skull cap, a little higher at the brow
+            if b not in ('Head', 'Neck1'): return OUT
+            t = clamp((c.y - self.head.y + .05) / .1)
+            return c.z - (self.brow_z + .014 - .065 * t)
+        if piece == 'kerchief':   # a headscarf: hairline at the front, over the ears, to the nape
+            if b not in ('Head', 'Neck1', 'Neck'): return OUT
+            t = clamp((c.y - self.head.y + .04) / .1)
+            side = clamp((abs(c.x) - .06) / .03)
+            return c.z - (self.brow_z + .015 - .025 * side * (1. - t) - .1 * t)
+        if piece == 'cuirass':   # a steel breastplate and backplate over the coat
+            if b in self.ARMS: m = .15 - abs(c.x)
+            elif b in self.TORSO or b == 'Neck': m = 1.
+            else: return OUT
+            return min(m, self.neck.z - .025 - c.z, c.z - (self.waist_z - .05))
+        if piece == 'gambeson':   # a quilted coat: sleeves to the wrist, closed high collar, to the upper thigh
+            collar = self.neck.z + .035 - c.z
+            if b in self.FOREARMS: return min(collar, c.z - (self.elbow.z - .9 * (self.elbow.z - self.wrist.z)))
+            if b in self.ARMS or b == 'Neck': return collar
+            if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .16))
+            return OUT
+        if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
+            front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
+            m = self.neck.z - .01 - .1 * front - c.z
+            if b in self.ARMS: m = min(m, .17 - abs(c.x))
+            elif b not in self.TORSO and b != 'Neck': return OUT
+            return min(m, c.z - (self.waist_z - .06))
         raise ValueError(piece)
 
     def covers(self, i, piece, opts):
         """Whether the garment hides the skin at vertex i (boots: the whole foot).
         Skin stays 2 cm in under each hem, so looking up under a brim or cuff
         shows skin, not the inside of the body."""
-        if piece == 'boots' and self.bone[i] in self.FEET | self.LEGS and self.co[i].z < self.boot_top() - .02: return True
+        if piece == 'boots' and self.bone[i] in self.FEET | self.LEGS and self.co[i].z < self.boot_top(opts) - .02: return True
         return self.margin(i, piece, opts) > .02
 
 
@@ -166,6 +200,13 @@ PIECES = {
     'jerkin':   dict(offset=.015, thickness=.005, hides=False),
     'belt':     dict(offset=.027, thickness=.006, hides=False),
     'cap':      dict(offset=.012, thickness=.006, hides=True),
+    'helmet':   dict(offset=.018, thickness=.004, hides=True),
+    'kerchief': dict(offset=.01, thickness=.003, hides=True),
+    'gambeson': dict(offset=.016, thickness=.012, hides=True),
+    'cuirass':  dict(offset=.034, thickness=.006, hides=False),
+    'bodice':   dict(offset=.013, thickness=.004, hides=False),
+    'skirt':    dict(offset=.005, thickness=.004, hides=False),   # its legs are hidden in build()
+    'apron':    dict(offset=.011, thickness=.003, hides=False),
 }
 
 
@@ -293,6 +334,22 @@ def make_piece(body, piece, opts, material):
     return obj, keep
 
 
+def skirt_source(body):
+    """MakeHuman's skirt helper (a weighted shell from waist to ankle that
+    bridges the legs), as its own mesh to cut skirts and aprons from."""
+    src = body.copy(); src.data = body.data.copy(); src.name = 'skirt_source'
+    bpy.context.collection.objects.link(src)
+    for m in list(src.modifiers):
+        if m.type != 'ARMATURE': src.modifiers.remove(m)
+    g = src.vertex_groups['helper-skirt'].index
+    inside = [any(x.group == g and x.weight > .5 for x in v.groups) for v in src.data.vertices]
+    bm = bmesh.new(); bm.from_mesh(src.data); bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not all(inside[v.index] for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    bm.to_mesh(src.data); bm.free()
+    return src
+
+
 def slot_material(name):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     return m
@@ -311,8 +368,9 @@ def build(name, spec):
     asset('Eyebrows', DATA / f"eyebrows/{spec['eyebrows']}/{spec['eyebrows']}.mhclo")
     asset('Eyelashes', DATA / f"eyelashes/{spec['eyelashes']}/{spec['eyelashes']}.mhclo")
     if spec.get('hair'): asset('Hair', DATA / f"hair/{spec['hair']}/{spec['hair']}.mhclo")
-    # Bake the shape and drop the helper geometry.
+    # Bake the shape; keep the skirt helper if the outfit needs it, then drop the helpers.
     TargetService.bake_targets(body)
+    skirt_src = skirt_source(body) if any(it['piece'] in ('skirt', 'apron') for it in spec['outfit']) else None
     apply_modifier(body, 'MASK')
     for obj in parts.values():
         if obj and obj.data.shape_keys:
@@ -323,14 +381,20 @@ def build(name, spec):
     eye_z = sum((parts['Eyes'].matrix_world @ v.co).z for v in parts['Eyes'].data.vertices) / len(parts['Eyes'].data.vertices)
     info = Body(body, rig, eye_z)
     hide = [False] * len(info.co)
+    skirt = None
+    if skirt_src:
+        skirt = Body(skirt_src, rig, eye_z); skirt.floor, skirt.top = info.floor, info.top
+        # Legs under a long skirt can't be seen: the skin goes, as under other cloth.
+        hide = [info.bone[i] in Body.LEGS | {'Hips'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
     meshes = [body] + [o for o in parts.values() if o]
     slots = {}
     for item in spec['outfit']:
         piece = item['piece']; slot = piece.capitalize()
-        obj, keep = make_piece(info, piece, item, slot_material(slot))
+        obj, keep = make_piece(skirt if piece in ('skirt', 'apron') else info, piece, item, slot_material(slot))
         meshes.append(obj)
         slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'])}
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
+    if skirt_src: bpy.data.objects.remove(skirt_src)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')

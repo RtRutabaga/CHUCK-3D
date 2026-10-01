@@ -337,6 +337,8 @@ void ADockGameMode::StartPlay()
     // same spot and facing the same way. Ambient: no dialogue yet (user's call).
     const FVector Human(90,200,0);
     ADockNPC::SpawnDockWorker(World,Human,-90.f);
+    // The 2D game's guard (at the closed city gate) and market woman (by the red stalls).
+    ADockNPC::SpawnTownsfolk(World);
     // Surface detail is nonblocking; the original simple collision remains predictable.
     FRandomStream DetailRandom(73);
     // Scanned paving supplies irregular joints without a second rectangular overlay.
@@ -482,8 +484,10 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
         const FVector Feet=NPC->GetActorLocation()-FVector(0,0,NPC->GetSimpleCollisionHalfHeight());
         const FVector Dir=NPC->GetActorForwardVector().RotateAngleAxis(Shot.Yaw,FVector::UpVector);
-        const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,Shot.Height);
-        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,Shot.Aim)-At).Rotation());
+        // The face shot is aimed from each body's own eye height (a 166 cm woman, a 183 cm guard).
+        const float Lift=Shot.Distance<100.f ? NPC->GetEyeHeight()-167.f : 0.f;
+        const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,Shot.Height+Lift);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,Shot.Aim+Lift)-At).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
         PC->SetViewTarget(NPCCamera.Get());
         NPCShot=Step; bNPCShotTaken=false;
@@ -1678,9 +1682,27 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(bWorker && bLocoFlag && LocoValue>15.f && KeyJumpSide==0.f,TEXT("the dock worker watches the rat when he's near, looking down at him, and looks away when he's gone"));
             Check(bWorker && KeySide>24.f+14.f && KeySide<24.f+15.f+12.f && Chuck->GetWallRuns()==WallRunsBase && Chuck->GetMantles()==MantlesBase,
                 TEXT("the worker is solid to Chuck but can't be run up or climbed"));
-            const float Hands=bWorker ? Worker->GetWiderHandReach() : 0.f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_POSE_MEASURE wider_hand_out_cm=%.1f"),Hands);
-            Check(bWorker && Hands>12.f && Hands<34.f,TEXT("the worker stands with his arms down by his sides, not in the model's A-pose"));
+            // Every human stands with arms down at the sides: not the model's
+            // A-pose (hands ~45 cm out), not held out in front like a sleepwalker.
+            int32 Humans=0; bool bPosed=true;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+            {
+                if(!Entry.IsValid() || Entry==TalkNPC) continue;
+                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f"),*Entry->DisplayName,Out,Ahead);
+                bPosed &= Out>12.f && Out<34.f && Ahead<14.f; ++Humans;
+            }
+            Check(Humans==3 && bPosed,TEXT("the worker, guard and market woman stand with their arms down by their sides, not in the A-pose or held out in front"));
+            // The 2D game's townsfolk, where it put them, with its lines.
+            TArray<AActor*> GuardFound, WomanFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("MarketWoman"),WomanFound);
+            const auto* GuardNPC=GuardFound.Num()==1 ? Cast<ADockNPC>(GuardFound[0]) : nullptr;
+            const auto* WomanNPC=WomanFound.Num()==1 ? Cast<ADockNPC>(WomanFound[0]) : nullptr;
+            Check(GuardNPC && WomanNPC && GuardNPC->Lines.Num()==1 && GuardNPC->Lines[0]==TEXT("Stick to the docks, rat.")
+                && WomanNPC->Lines.Num()==1 && WomanNPC->Lines[0].Contains(TEXT("check the sewer for scraps"))
+                && GuardNPC->GetActorLocation().Y<-3900.f && FVector::Dist2D(WomanNPC->GetActorLocation(),FVector(-25,-1240,0))<250.f,
+                TEXT("the guard stands at the city gate and the market woman by the red market stalls, each with the 2D game's line"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

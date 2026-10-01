@@ -122,6 +122,7 @@ def build_fabric(mat, diff, arm, nor):
     LIB.connect_material_property(mul, '', unreal.MaterialProperty.MP_BASE_COLOR)
     LIB.connect_material_property(a, 'R', unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     LIB.connect_material_property(a, 'G', unreal.MaterialProperty.MP_ROUGHNESS)
+    LIB.connect_material_property(a, 'B', unreal.MaterialProperty.MP_METALLIC)   # steel helmets and plate; cloth is 0
     LIB.connect_material_property(n, 'RGB', unreal.MaterialProperty.MP_NORMAL)
     constant(mat, .3, unreal.MaterialProperty.MP_SPECULAR, 650)
 

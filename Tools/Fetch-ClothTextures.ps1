@@ -2,13 +2,14 @@
 # Same shape as Fetch-SurfaceTextures.ps1 (Codex): exact Poly Haven assets,
 # 2K colour / AO-roughness-metal / DirectX normal, no installation, manifest
 # with hashes. Medieval-appropriate cloth: linen shirts, wool (caban) breeches
-# and tunics, a knit (boucle) for caps, brown leather for jerkins, belts and boots.
+# and tunics, a knit (boucle) for caps, brown leather for jerkins, belts and boots,
+# plain worn steel plate for helmets.
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $destination=Join-Path $projectRoot 'SourceAssets\Surfaces\Cloth'
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 $records=@()
-foreach ($assetId in @('rough_linen','caban','wool_boucle','brown_leather')) {
+foreach ($assetId in @('rough_linen','caban','wool_boucle','brown_leather','metal_plate_02')) {
     # Exact file URLs from the Poly Haven API (colour maps aren't always named "diff").
     $files=Invoke-RestMethod -Uri "https://api.polyhaven.com/files/$assetId" -UseBasicParsing
     # Real-world size of one texture repeat (mm), so cloth UVs can match it.

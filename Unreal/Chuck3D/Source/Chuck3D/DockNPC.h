@@ -11,7 +11,8 @@ class USkeletalMesh;
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
  * spawn; more NPCs will follow - the 2D game's guard and market woman).
  * A MakeHuman body dressed by Tools/build_npc_humans.py on the humans' shared
- * 31-bone skeleton (MPFB cmu_mb), procedurally posed from its A-pose:
+ * 31-bone skeleton (MPFB cmu_mb), procedurally posed from its A-pose (a
+ * relaxed standing pose solved per body: no arms held out):
  * breathing, a slow weight shift, idle glances, and his head turning to watch
  * Chuck when the rat comes near. Solid to Chuck but not climbable (a
  * pawn-only blocker: wall-run, ledge and camera traces ignore him).
@@ -21,6 +22,9 @@ class USkeletalMesh;
  * with no lines is ambient (the worker, for now: no dialogue yet, user's call).
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
+/** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, Count };
+
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
 {
@@ -30,6 +34,10 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     /** The dock worker: the human-scale reference by the spawn (180 cm). */
     static ADockNPC* SpawnDockWorker(UWorld* World, const FVector& Feet, float Yaw);
+    /** Any of the humans, standing at Feet facing Yaw. */
+    static ADockNPC* SpawnHuman(UWorld* World, EDockHuman Kind, const FVector& Feet, float Yaw);
+    /** The 2D game's guard at the closed city gate and the market woman by the red awning (References/Original/PHASE-2.md). */
+    static void SpawnTownsfolk(UWorld* World);
     /** Every NPC in play (Chuck looks here for someone to talk to). */
     static const TArray<TWeakObjectPtr<ADockNPC>>& All();
     FString DisplayName;
@@ -43,6 +51,10 @@ public:
     /** How far out to the side his wider hand is (cm from his centre line), for
         tests: about 45 in the model's A-pose, about 25 with arms by his sides. */
     float GetWiderHandReach() const;
+    /** How far in front of his body line his more forward hand is (cm), for tests: hands at his sides, not held out. */
+    float GetHandsForward() const;
+    /** Eyes above the feet (cm), from this body's head bone. */
+    float GetEyeHeight() const { return EyeHeight; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -56,8 +68,13 @@ private:
     float Clock = 0;
     float Phase = 0;                              // per-NPC offset so a crowd doesn't breathe in step
     bool bWatching = false;
-    FQuat ArmDown[2] = { FQuat::Identity, FQuat::Identity };   // A-pose -> arms by his sides
-    FVector ForearmAxis[2] = { -FVector::UpVector, -FVector::UpVector };   // lowered, component space
-    FTransform ComponentSpaceRef(int32 Bone) const;
+    EDockHuman Kind = EDockHuman::Worker;
+    UPROPERTY() TObjectPtr<USkeletalMesh> HumanMeshes[static_cast<int32>(EDockHuman::Count)];
+    /** Standing pose from the model's A-pose (component-space turn per posed
+        bone): arms hanging, elbows soft, palms to the thighs, fingers curled. */
+    TArray<FQuat> Rest;
+    float EyeHeight = 167.f;                      // above the feet, from the head bone
+    void SolveRest();
+    void Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space) const;
     void UpdatePose(float DeltaSeconds);
 };
