@@ -26,8 +26,8 @@ float Ground(float X,float Y)
     const float Inland=FMath::Max3(West,North,East);
     const float Rise=FMath::Clamp(Inland/6500.f,0.f,1.f);
     const float Rolling=650.f+380.f*FMath::Sin(X*.00023f+Y*.0001f)+280.f*FMath::Cos(Y*.00031f-X*.00013f);
-    const float Ridge=1800.f*FMath::Exp(-FMath::Square((X+20000.f)/8500.f))
-        +2100.f*FMath::Exp(-FMath::Square((Y-27000.f)/11500.f));
+    const float Ridge=(3000.f+1200.f*FMath::Sin(Y*.00021f)+500.f*FMath::Sin(Y*.00049f))*FMath::Exp(-FMath::Square((X+24000.f)/10000.f))
+        +(3300.f+1300.f*FMath::Sin(X*.00017f)+650.f*FMath::Cos(X*.00041f))*FMath::Exp(-FMath::Square((Y-30000.f)/11500.f));
     return -180.f+FMath::Clamp(Inland*.18f,0.f,380.f)+Rise*(Rolling+Ridge);
 }
 }
@@ -57,7 +57,7 @@ void BuildCoastalVista(UWorld* World)
     for(int32 Y=0;Y<NY-1;++Y) for(int32 X=0;X<NX-1;++X)
     {
         const int32 A=Y*NX+X,B=A+1,C=A+NX,D=C+1;
-        Indices.Append({A,C,B,B,C,D});
+        Indices.Append({A,B,C,B,D,C});
     }
     Terrain->CreateMeshSection_LinearColor(0,V,Indices,N,UV,Colors,TArray<FProcMeshTangent>(),false);
     Terrain->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_VistaTerrain.M_VistaTerrain")));
@@ -80,8 +80,21 @@ void BuildCoastalVista(UWorld* World)
         Shape(P+FVector(0,0,H*.5f),FVector(W,D,H),Style%3?TEXT("Plaster"):TEXT("Stone"),R);
         for(float S : {-1.f,1.f})
             Shape(P+R.RotateVector(FVector(S*W*.25f,0,H+W*.1443f)),FVector(W*.57735f+25,D+30,15),TEXT("Roof"),FRotator(-S*30,Angle,0));
-        // Gable triangular silhouette and a chimney; no distant tiny windows.
-        Shape(P+FVector(0,0,H+W*.09f),FVector(W*.55f,D,W*.18f),TEXT("Wood"),R);
+        // Boarded gable closes the space under both slopes.
+        for(int32 J=0;J<8;++J)
+        {
+            const float LX=-W*.5f+(J+.5f)*W/8,GH=FMath::Max(2.f,W*.288675f-FMath::Abs(LX)*.57735f);
+            for(float Side : {-1.f,1.f}) Shape(P+R.RotateVector(FVector(LX,Side*D*.5f,H+GH*.5f)),FVector(W/8,8,GH),TEXT("Wood"),R);
+        }
+        for(float Z=180;Z<H-25;Z+=230)
+        {
+            Shape(P+FVector(0,0,Z-65),FVector(W+8,D+8,8),TEXT("Wood"),R);
+            for(float S : {-1.f,1.f}) for(float Offset : {-.27f,.27f})
+            {
+                Shape(P+R.RotateVector(FVector(S*(W*.5f+3),D*Offset,Z)),FVector(5,42,66),TEXT("Dark"),R);
+                Shape(P+R.RotateVector(FVector(W*Offset,S*(D*.5f+3),Z)),FVector(42,5,66),TEXT("Dark"),R);
+            }
+        }
         if(Style%3==0) Shape(P+R.RotateVector(FVector(W*.2f,D*.2f,H+W*.2f)),FVector(40,45,140),TEXT("Stone"),R);
     };
     // An unbroken strip behind the existing north walls joins both banks.
@@ -114,6 +127,14 @@ void BuildCoastalVista(UWorld* World)
         Shape(P+FVector(0,0,900),FVector(380,380,1800),TEXT("Stone"));
         Shape(P+FVector(0,0,1990),FVector(560,560,520),TEXT("Roof"),FRotator::ZeroRotator,true);
         House(P.X+600,P.Y,P.Z,900,650,1100,0,0);
+    }
+    // Sparse woodland silhouettes in the country beyond the built roof rows.
+    for(int32 I=0;I<380;++I)
+    {
+        const float X=Rng.FRandRange(-30000,28000),Y=Rng.FRandRange(-14000,35000),H=Ground(X,Y);
+        if(H<200 || (X>-12500 && X<11000 && Y>-6000 && Y<13000)) continue;
+        const float Height=Rng.FRandRange(350,750);
+        Shape(FVector(X,Y,H+Height*.3f),FVector(Height*.55f,Height*.55f,Height),TEXT("VistaFoliage"),FRotator::ZeroRotator,true);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaCapture")))
     {
