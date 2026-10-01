@@ -14,13 +14,21 @@ namespace
 {
     TArray<TWeakObjectPtr<ADockNPC>> NPCRegistry;
     constexpr float HalfHeight = 90.f;
-    // The humans' shared skeleton: MPFB's cmu_mb rig (CMU BVH bone names).
-    // Each R bone directly follows its L bone.
-    enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Neck1, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR,
-        ThumbL, ThumbR, FingerBaseL, FingerBaseR, FingerL, FingerR, BoneCount };
-    const TCHAR* BoneNames[] = { TEXT("Hips"), TEXT("LowerBack"), TEXT("Spine"), TEXT("Spine1"), TEXT("Neck"), TEXT("Neck1"), TEXT("Head"),
-        TEXT("LeftShoulder"), TEXT("RightShoulder"), TEXT("LeftArm"), TEXT("RightArm"), TEXT("LeftForeArm"), TEXT("RightForeArm"), TEXT("LeftHand"), TEXT("RightHand"),
-        TEXT("LThumb"), TEXT("RThumb"), TEXT("LeftFingerBase"), TEXT("RightFingerBase"), TEXT("LeftHandFinger1"), TEXT("RightHandFinger1") };
+    // The humans' shared skeleton: MPFB's game_engine rig (Unreal mannequin
+    // names, three bones per finger). Each R bone directly follows its L bone.
+    enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR,
+        ThumbL, ThumbR, MiddleL, MiddleR, BoneCount };
+    const TCHAR* BoneNames[] = { TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"), TEXT("neck_01"), TEXT("head"),
+        TEXT("clavicle_l"), TEXT("clavicle_r"), TEXT("upperarm_l"), TEXT("upperarm_r"), TEXT("lowerarm_l"), TEXT("lowerarm_r"), TEXT("hand_l"), TEXT("hand_r"),
+        TEXT("thumb_01_l"), TEXT("thumb_01_r"), TEXT("middle_01_l"), TEXT("middle_01_r") };
+    // Fingers: thumb, index, middle, ring, little; three joints each.
+    const TCHAR* FingerNames[] = { TEXT("thumb"), TEXT("index"), TEXT("middle"), TEXT("ring"), TEXT("pinky") };
+    // Degrees each joint bends toward the palm: a hand at rest (the little
+    // finger curls most, the index least), and closed round a shaft.
+    constexpr float Relaxed[5][3] = { {6.f, 10.f, 10.f}, {10.f, 16.f, 12.f}, {14.f, 20.f, 14.f}, {18.f, 24.f, 16.f}, {24.f, 28.f, 18.f} };
+    constexpr float Gripped[5][3] = { {25.f, 35.f, 25.f}, {62.f, 85.f, 55.f}, {68.f, 85.f, 55.f}, {70.f, 85.f, 55.f}, {74.f, 85.f, 55.f} };
+    constexpr float WristStraight = .65f;   // how much of the clips' unreliable wrist bend is taken out
+    constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
@@ -128,6 +136,35 @@ void ADockNPC::BeginPlay()
         const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
         for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Ref.FindBoneIndex(BoneNames[I]);
         if (!BoneIndex.Contains(INDEX_NONE)) SolveRest();
+        // Each finger joint's bending axis, from the model's pose (palms down,
+        // fingers out): across the finger, bending it toward the palm.
+        FingerBone.Init(INDEX_NONE, 30); FingerAxis.Init(FVector::ZeroVector, 30);
+        TArray<FTransform> RefSpace;
+        if (!BoneIndex.Contains(INDEX_NONE))
+        {
+            TArray<FQuat> None; None.Init(FQuat::Identity, BoneCount);
+            Solve(None, RefSpace);
+        }
+        for (int32 Side = 0; Side < 2 && RefSpace.Num(); ++Side)
+            for (int32 F = 0; F < 5; ++F)
+                for (int32 J = 0; J < 3; ++J)
+                {
+                    const int32 I = (Side * 5 + F) * 3 + J;
+                    FingerBone[I] = Ref.FindBoneIndex(*FString::Printf(TEXT("%s_%02d_%s"), FingerNames[F], J + 1, Side == 0 ? TEXT("l") : TEXT("r")));
+                }
+        if (RefSpace.Num() && !FingerBone.Contains(INDEX_NONE))
+        {
+            const FVector Palm = -FVector::UpVector;
+            for (int32 I = 0; I < 30; ++I)
+            {
+                const int32 B = FingerBone[I], J = I % 3;
+                const FVector Along = J < 2 ? RefSpace[FingerBone[I + 1]].GetLocation() - RefSpace[B].GetLocation()
+                                            : RefSpace[B].GetLocation() - RefSpace[FingerBone[I - 1]].GetLocation();
+                const FVector Axis = FVector::CrossProduct(Along.GetSafeNormal(), Palm).GetSafeNormal();
+                FingerAxis[I] = RefSpace[B].GetRotation().UnrotateVector(Axis);
+            }
+        }
+        else FingerBone.Reset();
     }
     HomeYaw = static_cast<float>(GetActorRotation().Yaw);
     // The idle this person plays: the guard keeps looking about; the worker
@@ -226,6 +263,46 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
     HipsOffset = (Hips.GetLocation() - SourceHips) * HipScale;
 }
 
+void ADockNPC::PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) const
+{
+    // Wrists: the clips' wrist data is poor (hands bent flat against the
+    // legs), so most of it gives way to a straight wrist. Then every finger
+    // joint is set relative to its parent: relaxed, or closed in a grip.
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    const TArray<FTransform>& RefPose = Ref.GetRefBonePose();
+    if (bStraightenWrists && HandLocal.Num())
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            const int32 Hand = BoneIndex[Of(HandL, Side)], Fore = BoneIndex[Of(LowerL, Side)];
+            const FQuat Straight = (HandLocal[Side] * Space[Fore]).GetRotation();
+            Space[Hand].SetRotation(FQuat::Slerp(Space[Hand].GetRotation(), Straight, WristStraight));
+        }
+    if (FingerBone.Num() != 30) return;
+    for (int32 I = 0; I < 30; ++I)
+    {
+        const int32 Side = I / 15, F = (I / 3) % 5, J = I % 3, B = FingerBone[I];
+        const float Degrees = FMath::Lerp(Relaxed[F][J], Gripped[F][J], Grip[Side]);
+        FTransform Local = RefPose[B];
+        Local.SetRotation(Local.GetRotation() * FQuat(FingerAxis[I], FMath::DegreesToRadians(Degrees)));
+        Space[B] = Local * Space[Ref.GetParentIndex(B)];
+    }
+}
+
+float ADockNPC::GetFingerCurl() const
+{
+    // The angle between each left finger's first and last joint directions.
+    if (FingerBone.Num() != 30) return 0.f;
+    float Sum = 0.f;
+    for (int32 F = 1; F < 5; ++F)
+    {
+        const FName A = Body->GetBoneName(FingerBone[F * 3]), B = Body->GetBoneName(FingerBone[F * 3 + 1]), C = Body->GetBoneName(FingerBone[F * 3 + 2]);
+        const FVector D1 = (Body->GetBoneLocation(B) - Body->GetBoneLocation(A)).GetSafeNormal();
+        const FVector D2 = (Body->GetBoneLocation(C) - Body->GetBoneLocation(B)).GetSafeNormal();
+        Sum += FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(D1, D2)), -1.f, 1.f)));
+    }
+    return Sum / 4.f;
+}
+
 void ADockNPC::TakeScratch(const FVector& From)
 {
     ++Scratches;
@@ -290,8 +367,9 @@ void ADockNPC::SolveRest()
     for (int32 Side = 0; Side < 2; ++Side)
     {
         const EBone Upper = Of(UpperL, Side), Lower = Of(LowerL, Side), Hand = Of(HandL, Side);
-        const EBone Thumb = Of(ThumbL, Side), Base = Of(FingerBaseL, Side), Finger = Of(FingerL, Side);
+        const EBone Thumb = Of(ThumbL, Side), Middle = Of(MiddleL, Side);
         const float S = FMath::Sign(static_cast<float>(At(Upper).Y));   // which side of him this arm is on
+        if (Side == 0) ArmOut = S;
         Turn(Upper, FQuat::FindBetweenNormals(Dir(Upper, Lower), FVector(-.03f, S * .13f, -1.f).GetSafeNormal()));
         Turn(Lower, FQuat::FindBetweenNormals(Dir(Lower, Hand), FVector(.11f, S * .03f, -1.f).GetSafeNormal()));
         // Twist the forearm about itself until the thumb points forward.
@@ -300,24 +378,13 @@ void ADockNPC::SolveRest()
         const FVector Want = FVector::VectorPlaneProject(FVector(1.f, -S * .25f, 0.f), Axis).GetSafeNormal();
         Turn(Lower, FQuat(Axis, FMath::Atan2(static_cast<float>(FVector::DotProduct(Axis, FVector::CrossProduct(ThumbSide, Want))),
             static_cast<float>(FVector::DotProduct(ThumbSide, Want)))));
-        Turn(Hand, FQuat::FindBetweenNormals(Dir(Hand, Base), Dir(Lower, Hand)));
-        // Fingers curl toward the palm, which now faces his thigh.
-        const FVector Palm(0.f, -S, 0.f);
-        const auto Curl = [&](EBone B, const FVector& Along, float Degrees)
-        {
-            const FVector CurlAxis = FVector::CrossProduct(Along, Palm).GetSafeNormal();
-            if (!CurlAxis.IsNearlyZero()) Turn(B, FQuat(CurlAxis, FMath::DegreesToRadians(Degrees)));
-        };
-        Curl(Base, Dir(Base, Finger), 22.f);
-        Curl(Finger, Dir(Base, Finger), 34.f);
-        Curl(Thumb, (At(Thumb) - At(Hand)).GetSafeNormal(), 12.f);
+        Turn(Hand, FQuat::FindBetweenNormals(Dir(Hand, Middle), Dir(Lower, Hand)));   // a straight wrist
     }
     EyeHeight = static_cast<float>(At(Head).Z) + 9.f;   // the eyes, a hand above the skull's pivot
-    // Keep the curled hands to lay over the motion capture (it has no real finger data).
-    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
-    HandLocal.Init(FTransform::Identity, BoneCount);
-    for (const EBone B : { ThumbL, ThumbR, FingerBaseL, FingerBaseR, FingerL, FingerR })
-        HandLocal[B] = Space[BoneIndex[B]].GetRelativeTransform(Space[Ref.GetParentIndex(BoneIndex[B])]);
+    // Keep the straight wrists to lay over the motion capture.
+    HandLocal.SetNum(2);
+    for (int32 Side = 0; Side < 2; ++Side)
+        HandLocal[Side] = Space[BoneIndex[Of(HandL, Side)]].GetRelativeTransform(Space[BoneIndex[Of(LowerL, Side)]]);
 }
 
 float ADockNPC::GetWiderHandReach() const
@@ -393,15 +460,20 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         // and the hands keep their curl.
         TArray<FQuat> BoneDelta; FVector HipsOffset;
         SampleClips(T, BoneDelta, HipsOffset);
+        // The clip actors were slighter at the hip: ease each arm out a little
+        // so the hands rest beside the thighs, not in them.
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            const float S = Side == 0 ? ArmOut : -ArmOut;
+            BoneDelta[BoneIndex[Of(UpperL, Side)]] = Roll(S * ArmClear) * BoneDelta[BoneIndex[Of(UpperL, Side)]];
+        }
         TArray<FQuat> Delta; Delta.Init(FQuat::Identity, BoneCount);
-        Delta[Neck] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
-        Delta[Neck1] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+        Delta[Neck] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
         Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
+        PoseHands(Space, true);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
-        for (const EBone B : { ThumbL, ThumbR, FingerBaseL, FingerBaseR, FingerL, FingerR })   // parents come first
-            Space[BoneIndex[B]] = HandLocal[B] * Space[Ref.GetParentIndex(BoneIndex[B])];
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         return;
     }
@@ -412,9 +484,8 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     Delta[Spine1] = Roll(-.8f * Shift);
     Delta[Spine2] = Pitch(-.6f * Breath);
     Delta[Chest] = Pitch(-1.1f * Breath) * Roll(-.6f * Shift);
-    // The look is shared between the two neck bones and the head.
-    Delta[Neck] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
-    Delta[Neck1] = Yaw(.25f * Look.X) * Pitch(.25f * Look.Y);
+    // The look is shared between the neck and the head.
+    Delta[Neck] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
     Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y - .5f * Breath);
     for (int32 Side = 0; Side < 2; ++Side)
     {
@@ -425,6 +496,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     }
     TArray<FTransform> Space;
     Solve(Delta, Space);
+    PoseHands(Space, false);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
 }

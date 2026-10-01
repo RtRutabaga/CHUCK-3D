@@ -14,7 +14,8 @@ docs/SETUP.md), one heavy process at a time:
     UnrealEditor Unreal/Chuck3D/Chuck3D.uproject -game -ChuckNPCCapture    # portraits to Saved/Screenshots/Windows/NPC_*.png
 
 - `build_npc_humans.py`: MPFB body (CC0 MakeHuman mesh and targets) with the
-  `cmu_mb` rig (31 bones, CMU motion-capture BVH names), fitted eyes, brows,
+  `game_engine` rig (53 bones, Unreal mannequin names, three bones in every
+  finger; it replaced `cmu_mb`, whose single finger bone made paddle hands), fitted eyes, brows,
   lashes, hair. Clothing is cut from the body's own surface along smooth
   signed-distance hems, pushed out and thickened, so it carries the body's
   skin weights. Pieces: shirt (rolled or full sleeves, `collar` height),
@@ -32,7 +33,7 @@ docs/SETUP.md), one heavy process at a time:
   Haven weave greyed and brightness-normalised by `gain`, coloured by `tint`,
   which is the cloth's linear albedo); an instance per NPC slot.
 - `build_npc_mocap.py`: three CMU motion-capture takes (free for any use;
-  Motionbuilder-friendly BVH, the same bone names as `cmu_mb`) retargeted
+  Motionbuilder-friendly BVH, mapped by name onto `game_engine`) retargeted
   onto the dock worker's rig: the limbs are aimed from the A-pose onto each
   take's T-pose frame, the spine, neck, head and collarbones keep the rig's own
   neutral carriage, then every bone follows the take's change of world
@@ -48,8 +49,12 @@ docs/SETUP.md), one heavy process at a time:
   is solved per body from the A-pose (upper arm hanging just clear of the hip,
   elbow soft, forearm twisted until the thumb points forward so the palm faces
   the thigh, wrist straight, fingers and thumb curled), then breathing, weight
-  shift, glances and watching Chuck play on top. Mocap clips (CMU; `cmu_mb` uses its bone names) are the
-  planned next pass.
+  shift, glances and watching Chuck play on top. Hands (both modes): the
+  clips' poor wrist data is mostly replaced by a straight wrist, the arms are
+  eased 5 degrees out so hands clear wider hips, and each finger joint bends
+  about its own axis (from the palms-down model pose) to a relaxed curl
+  (little finger most, index least) or, via `SetGrip`, a fist round a shaft
+  (for the guard's spear later).
 
 Budget: dock worker 54.9k, guard 57.3k, market woman 47.8k triangles, 10
 material slots each. Placement and lines: `ADockNPC::SpawnTownsfolk` (the

@@ -12,7 +12,7 @@ class UAnimSequence;
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
  * spawn; more NPCs will follow - the 2D game's guard and market woman).
  * A MakeHuman body dressed by Tools/build_npc_humans.py on the humans' shared
- * 31-bone skeleton (MPFB cmu_mb), procedurally posed from its A-pose (a
+ * 53-bone skeleton (MPFB game_engine, with fingers), posed from its A-pose (a
  * relaxed standing pose solved per body: no arms held out):
  * breathing, a slow weight shift, idle glances, and his head turning to watch
  * Chuck when the rat comes near. Solid to Chuck but not climbable (a
@@ -62,6 +62,10 @@ public:
     float GetWiderHandReach() const;
     /** How far in front of his body line his more forward hand is (cm), for tests: hands at his sides, not held out. */
     float GetHandsForward() const;
+    /** Close a hand (0 relaxed .. 1 a fist round a shaft): the guard's spear hand, later. Side 0 = left. */
+    void SetGrip(int32 Side, float Amount) { Grip[FMath::Clamp(Side, 0, 1)] = FMath::Clamp(Amount, 0.f, 1.f); }
+    /** Mean bend of the four fingers of the left hand (deg), for tests: curled, not straight. */
+    float GetFingerCurl() const;
     /** Eyes above the feet (cm), from this body's head bone. */
     float GetEyeHeight() const { return EyeHeight; }
 protected:
@@ -92,7 +96,12 @@ private:
     TArray<FQuat> SourceRest;                     // skeleton rest, component space (the clips' rest)
     FVector SourceHips = FVector::ZeroVector;
     float HipScale = 1.f;
-    TArray<FTransform> HandLocal;                 // curled fingers relative to their parents, from the rest solve
+    TArray<FTransform> HandLocal;                 // each hand relative to its forearm in the rest solve (a straight wrist)
+    TArray<int32> FingerBone;                     // [side][finger][joint] flattened, mesh bone indices
+    TArray<FVector> FingerAxis;                   // each finger joint's bending axis, in its own frame
+    float Grip[2] = { 0.f, 0.f };
+    float ArmOut = 1.f;                           // which way is out for the left arm (+/-Y)
+    void PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) const;
     void SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOffset) const;
     void UpdateTurn(float DeltaSeconds, float YawToChuck, bool bNear);
     /** Standing pose from the model's A-pose (component-space turn per posed

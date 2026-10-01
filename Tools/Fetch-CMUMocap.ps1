@@ -1,7 +1,7 @@
 # Motion capture for the human NPCs (user approved downloads; source chosen by
 # Claude, 2026-10-01): a few takes from the CMU Graphics Lab Motion Capture
 # Database in B. Hahne's Motionbuilder-friendly BVH conversion (2010), whose
-# bone names are exactly MPFB's cmu_mb rig. "Free to use worldwide for any
+# bones Tools/build_npc_mocap.py maps by name onto the humans' rig. "Free to use worldwide for any
 # purpose" (CMU / cgspeed). Individual files from the una-dinosauria/cmu-mocap
 # mirror of that release; the descriptions are its index. No installation.
 # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21 (head

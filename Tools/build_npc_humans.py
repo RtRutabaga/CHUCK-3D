@@ -7,8 +7,10 @@ blender --background --python Tools/build_npc_humans.py [-- Name ...] [--review 
 
 Each NPC is data: MakeHuman macro sliders, skin, eyes, brows, lashes, hair and an
 outfit from the clothing kit below. MPFB builds the body (CC0 MakeHuman base mesh
-and targets) with the CMU motion-capture rig ("cmu_mb": its bones match the CMU
-BVH skeleton, so CMU mocap applies without retargeting), and fits the eyes, brows,
+and targets) with MPFB's game engine rig ("game_engine": Unreal mannequin bone
+names, three bones per finger; CMU motion capture is mapped onto it by name in
+build_npc_mocap.py. It replaced "cmu_mb", whose one finger bone per hand made
+stiff paddle hands), and fits the eyes, brows,
 lashes and hair. Clothing is made from the body's own surface for each region,
 pushed out and thickened into cloth with clean hems, so it fits, carries the
 body's skin weights and bends with it; body faces fully under cloth are removed
@@ -83,20 +85,22 @@ class Body:
         self.bone = dominant_bones(obj, rig)
         self.co = [obj.matrix_world @ v.co for v in obj.data.vertices]
         J = lambda b, tail=False: rig.matrix_world @ (rig.data.bones[b].tail_local if tail else rig.data.bones[b].head_local)
-        self.elbow, self.wrist = J('LeftForeArm'), J('LeftHand')
-        self.knee, self.ankle = J('LeftLeg'), J('LeftFoot')
-        self.hips, self.neck, self.head = J('Hips'), J('Neck'), J('Head')
+        self.elbow, self.wrist = J('lowerarm_l'), J('hand_l')
+        self.knee, self.ankle = J('calf_l'), J('foot_l')
+        self.hips, self.neck, self.head = J('pelvis'), J('neck_01'), J('head')
         self.waist_z = self.hips.z + .085
         zs = [c.z for c in self.co]
         self.top, self.floor = max(zs), min(zs)
         self.brow_z = eye_z + .028
         self.eye_z = eye_z
 
-    ARMS = {'LeftShoulder', 'LeftArm', 'RightShoulder', 'RightArm'}
-    FOREARMS = {'LeftForeArm', 'RightForeArm'}
-    TORSO = {'LowerBack', 'Spine', 'Spine1', 'Hips'}
-    LEGS = {'LHipJoint', 'RHipJoint', 'LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg'}
-    FEET = {'LeftFoot', 'RightFoot', 'LeftToeBase', 'RightToeBase'}
+    # MPFB's game_engine rig (Unreal mannequin names, three bones per finger).
+    ARMS = {'clavicle_l', 'upperarm_l', 'clavicle_r', 'upperarm_r'}
+    FOREARMS = {'lowerarm_l', 'lowerarm_r'}
+    TORSO = {'spine_01', 'spine_02', 'spine_03', 'pelvis'}
+    LEGS = {'thigh_l', 'thigh_r', 'calf_l', 'calf_r'}
+    FEET = {'foot_l', 'foot_r', 'ball_l', 'ball_r'}
+    NECK, HEAD = 'neck_01', 'head'
 
     def forearm_u(self, c):
         """0 at the elbow, 1 at the wrist (by height)."""
@@ -128,13 +132,13 @@ class Body:
             collar = self.neck.z + .03 + opts.get('collar', 0.) - c.z
             if b in self.ARMS: return collar
             if b in self.TORSO: return min(collar, c.z - (self.waist_z - .07))
-            if b == 'Neck': return collar
+            if b == self.NECK: return collar
             return OUT
         if piece == 'jerkin':
             collar = self.neck.z + .015 - c.z
             if b in self.TORSO: m = collar
             elif b in self.ARMS: m = min(collar, .19 - abs(c.x))
-            elif b == 'Neck': m = collar
+            elif b == self.NECK: m = collar
             else: return OUT
             v_bottom = self.waist_z + .2
             if c.y < 0:   # the open V front
@@ -151,36 +155,36 @@ class Body:
             if b not in self.FEET and b not in self.LEGS: return OUT
             return min(self.boot_top(opts) - c.z, c.z - (self.ankle.z + .045))
         if piece == 'cap':
-            if b not in ('Head', 'Neck1'): return OUT
+            if b != self.HEAD: return OUT
             # A knit cap pulled down: just above the brows at the front,
             # over the tops of the ears at the sides, to the nape at the back.
             t = min(1., max(0., (c.y - self.head.y + .05) / .1))
             return c.z - (self.brow_z + .01 - .055 * t)
         if piece == 'helmet':   # a plain steel skull cap, a little higher at the brow
-            if b not in ('Head', 'Neck1'): return OUT
+            if b != self.HEAD: return OUT
             t = clamp((c.y - self.head.y + .05) / .1)
             return c.z - (self.brow_z + .014 - .065 * t)
         if piece == 'kerchief':   # a headscarf: hairline at the front, over the ears, to the nape
-            if b not in ('Head', 'Neck1', 'Neck'): return OUT
+            if b not in (self.HEAD, self.NECK): return OUT
             t = clamp((c.y - self.head.y + .04) / .1)
             side = clamp((abs(c.x) - .06) / .03)
             return c.z - (self.brow_z + .015 - .025 * side * (1. - t) - .1 * t)
         if piece == 'cuirass':   # a steel breastplate and backplate over the coat
             if b in self.ARMS: m = .15 - abs(c.x)
-            elif b in self.TORSO or b == 'Neck': m = 1.
+            elif b in self.TORSO or b == self.NECK: m = 1.
             else: return OUT
             return min(m, self.neck.z - .025 - c.z, c.z - (self.waist_z - .05))
         if piece == 'gambeson':   # a quilted coat: sleeves to the wrist, closed high collar, to the upper thigh
             collar = self.neck.z + .035 - c.z
             if b in self.FOREARMS: return min(collar, c.z - (self.elbow.z - .9 * (self.elbow.z - self.wrist.z)))
-            if b in self.ARMS or b == 'Neck': return collar
+            if b in self.ARMS or b == self.NECK: return collar
             if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .16))
             return OUT
         if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
             front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
             m = self.neck.z - .01 - .1 * front - c.z
             if b in self.ARMS: m = min(m, .17 - abs(c.x))
-            elif b not in self.TORSO and b != 'Neck': return OUT
+            elif b not in self.TORSO and b != self.NECK: return OUT
             return min(m, c.z - (self.waist_z - .06))
         raise ValueError(piece)
 
@@ -338,9 +342,9 @@ def soften_skirt(obj, info):
     """A skirt mustn't split between the legs: the helper's weights follow each
     leg. Re-weight it to the hips, easing onto the thighs toward the hem (up
     to half), blended across the middle, so it sways with the stride."""
-    left_x = info.rig.data.bones['LeftUpLeg'].head_local.x   # which side is her left
+    left_x = info.rig.data.bones['thigh_l'].head_local.x   # which side is her left
     sign = 1. if left_x > 0 else -1.
-    names = ('Hips', 'LeftUpLeg', 'RightUpLeg')
+    names = ('pelvis', 'thigh_l', 'thigh_r')
     for n in names:
         if n not in obj.vertex_groups: obj.vertex_groups.new(name=n)
     groups = {n: obj.vertex_groups[n] for n in names}
@@ -353,9 +357,9 @@ def soften_skirt(obj, info):
         for g in list(v.groups):
             if g.group not in keep and obj.vertex_groups[g.group].name in rigged:
                 obj.vertex_groups[g.group].remove([v.index])
-        groups['Hips'].add([v.index], 1. - leg, 'REPLACE')
-        groups['LeftUpLeg'].add([v.index], leg * left, 'REPLACE')
-        groups['RightUpLeg'].add([v.index], leg * (1. - left), 'REPLACE')
+        groups['pelvis'].add([v.index], 1. - leg, 'REPLACE')
+        groups['thigh_l'].add([v.index], leg * left, 'REPLACE')
+        groups['thigh_r'].add([v.index], leg * (1. - left), 'REPLACE')
 
 
 def skirt_source(body):
@@ -382,7 +386,7 @@ def slot_material(name):
 def build(name, spec):
     reset_scene()
     body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
-    HumanService.add_builtin_rig(body, 'cmu_mb')
+    HumanService.add_builtin_rig(body, 'game_engine')
     rig = body.parent
     parts = {}
     def asset(kind, path):
@@ -409,7 +413,7 @@ def build(name, spec):
     if skirt_src:
         skirt = Body(skirt_src, rig, eye_z); skirt.floor, skirt.top = info.floor, info.top
         # Legs under a long skirt can't be seen: the skin goes, as under other cloth.
-        hide = [info.bone[i] in Body.LEGS | {'Hips'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
+        hide = [info.bone[i] in Body.LEGS | {'pelvis'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
     meshes = [body] + [o for o in parts.values() if o]
     slots = {}
     for item in spec['outfit']:
@@ -503,7 +507,7 @@ manifest_path = OUT / 'manifest.json'
 manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {'npcs': {}}
 manifest['generator'] = 'Tools/build_npc_humans.py'
 manifest['mpfb'] = '2.0.17'
-manifest['skeleton'] = 'cmu_mb (MPFB): 31 bones, CMU BVH names'
+manifest['skeleton'] = 'game_engine (MPFB): 53 bones, Unreal mannequin names, three bones per finger'
 for name, spec in SPEC.items():
     if ONLY and name not in ONLY: continue
     manifest['npcs'][name] = build(name, spec)

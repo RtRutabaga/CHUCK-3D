@@ -2,8 +2,8 @@
 
 UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_npc_humans.py -unattended -nosplash -NoLiveCoding
 
-Every human shares one skeleton (SKEL_Human: MPFB's cmu_mb rig, CMU BVH bone
-names) and four master materials; each NPC gets a material instance per slot
+Every human shares one skeleton (SKEL_Human: MPFB's game_engine rig, Unreal
+mannequin bone names, three bones per finger) and four master materials; each NPC gets a material instance per slot
 from SourceAssets/NPCs/Humans/manifest.json:
   M_HumanSkin    MakeHuman skin texture
   M_HumanEye     MakeHuman eye texture, glossy

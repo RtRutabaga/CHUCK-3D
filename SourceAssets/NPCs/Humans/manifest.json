@@ -3,7 +3,7 @@
   "DockWorker": {
    "fbx": "DockWorker/SK_DockWorker.fbx",
    "height_cm": 180,
-   "tris": 54888,
+   "tris": 55824,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -92,7 +92,7 @@
   "Guard": {
    "fbx": "Guard/SK_Guard.fbx",
    "height_cm": 183,
-   "tris": 57252,
+   "tris": 57824,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -181,7 +181,7 @@
   "MarketWoman": {
    "fbx": "MarketWoman/SK_MarketWoman.fbx",
    "height_cm": 166,
-   "tris": 47792,
+   "tris": 48200,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -270,5 +270,5 @@
  },
  "generator": "Tools/build_npc_humans.py",
  "mpfb": "2.0.17",
- "skeleton": "cmu_mb (MPFB): 31 bones, CMU BVH names"
+ "skeleton": "game_engine (MPFB): 53 bones, Unreal mannequin names, three bones per finger"
 }

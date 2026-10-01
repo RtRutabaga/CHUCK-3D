@@ -1693,9 +1693,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
                 if(!Entry.IsValid() || Entry==TalkNPC) continue;
-                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward();
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f"),*Entry->DisplayName,Out,Ahead);
-                bPoseOK &= Out>10.f && Out<34.f && Ahead<25.f; ++PoseHumans;
+                const float Out=Entry->GetWiderHandReach(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Ahead,Curl);
+                bPoseOK &= Out>10.f && Out<34.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
             }
         }
         // Then the rat scratches his shins: he starts back.
@@ -1727,7 +1727,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // Every human stands with arms down: not the model's A-pose (hands
             // ~45 cm out), not held out in front like a sleepwalker (40+ cm
             // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
-            Check(PoseHumans==3 && bPoseOK,TEXT("the worker, guard and market woman stand with their arms down by their sides, not in the A-pose or held out in front"));
+            Check(PoseHumans==3 && bPoseOK,TEXT("the worker, guard and market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
             // The 2D game's townsfolk, where it put them, with its lines.
             TArray<AActor*> GuardFound, WomanFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);

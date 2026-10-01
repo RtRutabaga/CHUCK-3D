@@ -1,5 +1,5 @@
 """Blender 4.5.14: retarget the CMU idle / talk takes (Tools/Fetch-CMUMocap.ps1)
-onto the humans' shared skeleton (MPFB cmu_mb: the same bone names).
+onto the humans' shared skeleton (MPFB game_engine; bones mapped by name, TAKE).
 
 blender --background --python Tools/build_npc_mocap.py
   -> SourceAssets/NPCs/Humans/Anim/AS_Human_<Clip>.fbx (30 fps, looping; carries the worker's mesh for its bind pose)
@@ -39,20 +39,28 @@ CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to
     # "Standing still" (head tipped far back), 141_20 "Waiting" (fidgety, 5 s),
     # 76_06 "avoid stepping on something" (a cartoonish hop with flailing arms).
 }
-# The joint that sets each bone's direction at the reference (None: follows
-# its parent). Only the limbs are aimed: the A-pose and the T-pose differ
-# there. The spine, neck, head and collarbones keep this rig's own neutral
-# carriage (MakeHuman's neck sits forward of the chest; forcing it onto CMU's
-# straight neck tips the head back); the clip moves them from there. The hand
-# aims at the finger: in the CMU takes FingerBase sits on the Hand's joint.
-AIM = {'Hips': None, 'LHipJoint': None, 'LeftUpLeg': 'LeftLeg', 'LeftLeg': 'LeftFoot', 'LeftFoot': 'LeftToeBase', 'LeftToeBase': None,
-       'RHipJoint': None, 'RightUpLeg': 'RightLeg', 'RightLeg': 'RightFoot', 'RightFoot': 'RightToeBase', 'RightToeBase': None,
-       'LowerBack': None, 'Spine': None, 'Spine1': None, 'Neck': None, 'Neck1': None, 'Head': None,
-       'LeftShoulder': None, 'LeftArm': 'LeftForeArm', 'LeftForeArm': 'LeftHand', 'LeftHand': 'LeftHandFinger1',
-       'LeftFingerBase': 'LeftHandFinger1', 'LeftHandFinger1': None, 'LThumb': None,
-       'RightShoulder': None, 'RightArm': 'RightForeArm', 'RightForeArm': 'RightHand', 'RightHand': 'RightHandFinger1',
-       'RightFingerBase': 'RightHandFinger1', 'RightHandFinger1': None, 'RThumb': None}
-TAKE_NAME = {'LeftHandFinger1': 'LeftHandIndex1', 'RightHandFinger1': 'RightHandIndex1'}   # rig -> take
+# The humans' rig (MPFB game_engine, Unreal mannequin names) -> the CMU take's
+# bone. Bones with no take bone (the root, every finger: CMU has no finger
+# motion worth using) follow their parent; the runtime poses the fingers.
+TAKE = {'pelvis': 'Hips', 'spine_01': 'LowerBack', 'spine_02': 'Spine', 'spine_03': 'Spine1', 'neck_01': 'Neck', 'head': 'Head'}
+for side, Side in (('l', 'Left'), ('r', 'Right')):
+    TAKE.update({f'clavicle_{side}': f'{Side}Shoulder', f'upperarm_{side}': f'{Side}Arm', f'lowerarm_{side}': f'{Side}ForeArm',
+                 f'hand_{side}': f'{Side}Hand', f'thigh_{side}': f'{Side}UpLeg', f'calf_{side}': f'{Side}Leg',
+                 f'foot_{side}': f'{Side}Foot', f'ball_{side}': f'{Side}ToeBase'})
+# Bones aimed at the reference: (rig child joint, take bone, take child joint).
+# Only the limbs: the A-pose and the T-pose differ there. The spine, neck,
+# head and collarbones keep this rig's own neutral carriage (MakeHuman's neck
+# sits forward of the chest; forcing it onto CMU's straight neck tips the head
+# back); the clip moves them from there. The hand aims at the middle finger
+# (the take's FingerBase sits on its Hand joint, so its index joint is used).
+AIM = {}
+for side, Side in (('l', 'Left'), ('r', 'Right')):
+    AIM.update({f'upperarm_{side}': (f'lowerarm_{side}', f'{Side}Arm', f'{Side}ForeArm'),
+                f'lowerarm_{side}': (f'hand_{side}', f'{Side}ForeArm', f'{Side}Hand'),
+                f'hand_{side}': (f'middle_01_{side}', f'{Side}Hand', f'{Side}HandIndex1'),
+                f'thigh_{side}': (f'calf_{side}', f'{Side}UpLeg', f'{Side}Leg'),
+                f'calf_{side}': (f'foot_{side}', f'{Side}Leg', f'{Side}Foot'),
+                f'foot_{side}': (f'ball_{side}', f'{Side}Foot', f'{Side}ToeBase')})
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False, primary_bone_axis='Y',
            secondary_bone_axis='X', use_armature_deform_only=False, bake_anim=True, bake_anim_use_all_actions=False,
            bake_anim_use_nla_strips=False, bake_anim_step=1., bake_anim_simplify_factor=0., bake_anim_force_startend_keying=True)
@@ -104,18 +112,19 @@ def retarget(rig, clip, take, skip, keep, loops=True):
     scene.frame_set(start)
     take_ref, take_heads = world_pose(bvh)
     rig_rest, rig_heads = world_rest(rig)
-    turn = yaw_between(lateral(take_heads, 'LeftUpLeg', 'RightUpLeg'), lateral(rig_heads, 'LeftUpLeg', 'RightUpLeg'))
-    scale = (rig_heads['Hips'] - (rig_heads['LeftFoot'] + rig_heads['RightFoot']) * .5).z / \
-            (take_heads['Hips'] - (take_heads['LeftFoot'] + take_heads['RightFoot']) * .5).z
+    turn = yaw_between(lateral(take_heads, 'LeftUpLeg', 'RightUpLeg'), lateral(rig_heads, 'thigh_l', 'thigh_r'))
+    scale = ((rig_heads['pelvis'] - (rig_heads['foot_l'] + rig_heads['foot_r']) * .5).z /
+             (take_heads['Hips'] - (take_heads['LeftFoot'] + take_heads['RightFoot']) * .5).z)
+    order = sorted(rig.data.bones, key=lambda b: len(b.parent_recursive))   # parents first
     aimed = {}
-    for b in sorted(rig.data.bones, key=lambda b: len(b.parent_recursive)):   # parents first
+    for b in order:
         D = aimed[b.parent.name] if b.parent else Quaternion()
-        child = AIM.get(b.name)
-        tn = lambda n: TAKE_NAME.get(n, n)
-        if child and (rig_heads[child] - rig_heads[b.name]).length > 1e-5 and (take_heads[tn(child)] - take_heads[tn(b.name)]).length > 1e-5:
-            now = D @ (rig_heads[child] - rig_heads[b.name]).normalized()
-            want = turn @ (take_heads[tn(child)] - take_heads[tn(b.name)]).normalized()
-            D = now.rotation_difference(want) @ D
+        if b.name in AIM:
+            child, tb, tc = AIM[b.name]
+            if (rig_heads[child] - rig_heads[b.name]).length > 1e-5 and (take_heads[tc] - take_heads[tb]).length > 1e-5:
+                now = D @ (rig_heads[child] - rig_heads[b.name]).normalized()
+                want = turn @ (take_heads[tc] - take_heads[tb]).normalized()
+                D = now.rotation_difference(want) @ D
         aimed[b.name] = D
     rig_T = {n: aimed[n] @ rig_rest[n] for n in aimed}
     # Every kept frame, as world rotations and hip offsets for the rig.
@@ -125,13 +134,18 @@ def retarget(rig, clip, take, skip, keep, loops=True):
     for f in range(first, last + 1, step):
         scene.frame_set(f)
         rots, heads = world_pose(bvh)
-        pose = {n: turn @ rots[TAKE_NAME.get(n, n)] @ take_ref[TAKE_NAME.get(n, n)].inverted() @ turn.inverted() @ rig_T[n] for n in rig_T}
+        change = {}   # each rig bone's change of world rotation since the T-pose
+        for b in order:
+            t = TAKE.get(b.name)
+            change[b.name] = (turn @ rots[t] @ take_ref[t].inverted() @ turn.inverted() if t
+                              else (change[b.parent.name] if b.parent else Quaternion()))
+        pose = {n: change[n] @ rig_T[n] for n in rig_T}
         hips = turn @ (heads['Hips'] - take_heads['Hips']) * scale
         facing = turn @ lateral(heads, 'LeftUpLeg', 'RightUpLeg')
         frames.append((pose, hips, facing))
     # Remove drift: the clip's mean facing and mean ground position are the NPC's own.
     mean_side = sum((fr[2] for fr in frames), Vector()).normalized()
-    unturn = yaw_between(mean_side, lateral(rig_heads, 'LeftUpLeg', 'RightUpLeg'))
+    unturn = yaw_between(mean_side, lateral(rig_heads, 'thigh_l', 'thigh_r'))
     centre = sum((unturn @ fr[1] for fr in frames), Vector()) / len(frames); centre.z = 0
     frames = [({n: unturn @ q for n, q in pose.items()}, unturn @ hips - centre) for pose, hips, _ in frames]
     # Loop: the first second becomes a blend from the clip's end back into its
