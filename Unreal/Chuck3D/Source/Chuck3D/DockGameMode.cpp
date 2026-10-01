@@ -124,7 +124,7 @@ void ADockGameMode::StartPlay()
     };
     // Units are centimetres. Ground top = 0; geometry is intentionally simple.
     Shape(TEXT("Quay"),FVector(-150,0,-20),FVector(700,800,40),TEXT("Stone"));
-    Shape(TEXT("Sea"),FVector(900,0,-65),FVector(18000,18000,10),TEXT("Water"),nullptr,false);
+    Shape(TEXT("Sea"),FVector(900,0,-65),FVector(250000,250000,10),TEXT("Water"),nullptr,false);
     // Short pier with a 24 cm missing board. Chuck's jump travels about 41 cm.
     for(int32 Row=0;Row<26;++Row)
     {
@@ -443,12 +443,11 @@ void ADockGameMode::StartPlay()
     auto* Sky = World->SpawnActor<ASkyLight>();
     Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
     Sky->GetLightComponent()->SetIntensity(1.05f);
-    // The enclosing sky is 90 m away, below UE's default 1500 m sky threshold.
-    // Capture it as ambient light so the shaded sides remain readable at rat height.
-    Sky->GetLightComponent()->SkyDistanceThreshold = 1000;
+    // Keep the expanded coastal scenery inside the sky and out of its capture.
+    Sky->GetLightComponent()->SkyDistanceThreshold = 90000;
     Sky->GetLightComponent()->bLowerHemisphereIsBlack = false;
     // A pale enclosing sphere gives skylight capture a quiet flat horizon.
-    auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(18000,18000,18000),TEXT("DawnSky"),Sphere,false);
+    auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(300000,300000,300000),TEXT("DawnSky"),Sphere,false);
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
     Sky->GetLightComponent()->RecaptureSky();
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);

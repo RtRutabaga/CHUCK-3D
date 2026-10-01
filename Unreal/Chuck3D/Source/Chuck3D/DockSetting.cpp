@@ -1,4 +1,5 @@
 #include "DockSetting.h"
+#include "DockVista.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -284,6 +285,7 @@ void BuildDockSetting(UWorld* World)
         Box(P+FVector(-70,0,260),FVector(150,210,12),TEXT("Roof"),false,FRotator(8,0,0));
         for(float Y : {-90.f,90.f}) Beam(P+FVector(-2,Y,160),P+FVector(-125,Y,245),9,TEXT("Wood"));
     }
+    BuildCoastalVista(World);
     // Distant banks continue around the inlet. Leave a broad visible shipping
     // channel between the two breakwater heads; no bridge across open water.
     Box(FVector(4680,4650,-140),FVector(2700,3000,240),TEXT("Stone"));

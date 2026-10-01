@@ -1,0 +1,134 @@
+#include "DockVista.h"
+#include "Engine/World.h"
+#include "Engine/StaticMesh.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "ProceduralMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "TimerManager.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "HAL/FileManager.h"
+#include "UnrealClient.h"
+
+namespace
+{
+float Ground(float X,float Y)
+{
+    // Three overlapping land masses form one mainland around the north of
+    // the harbor. Negative heights let the coastline emerge from the sea.
+    const float West=-X-5800.f+700.f*FMath::Sin(Y*.00019f);
+    const float North=Y-6100.f+550.f*FMath::Sin(X*.00024f);
+    const float East=X-(6500.f+FMath::Max(0.f,-Y)*.65f)+650.f*FMath::Sin(Y*.00028f);
+    const float Inland=FMath::Max3(West,North,East);
+    const float Rise=FMath::Clamp(Inland/6500.f,0.f,1.f);
+    const float Rolling=650.f+380.f*FMath::Sin(X*.00023f+Y*.0001f)+280.f*FMath::Cos(Y*.00031f-X*.00013f);
+    const float Ridge=1800.f*FMath::Exp(-FMath::Square((X+20000.f)/8500.f))
+        +2100.f*FMath::Exp(-FMath::Square((Y-27000.f)/11500.f));
+    return -180.f+FMath::Clamp(Inland*.18f,0.f,380.f)+Rise*(Rolling+Ridge);
+}
+}
+
+void BuildCoastalVista(UWorld* World)
+{
+    auto* Owner=World->SpawnActor<AActor>(); Owner->Tags.Add(TEXT("CoastalVista"));
+    auto* Root=NewObject<USceneComponent>(Owner); Owner->SetRootComponent(Root); Root->RegisterComponent();
+    // About 25k vertices for the whole distant countryside; no physics cooking.
+    auto* Terrain=NewObject<UProceduralMeshComponent>(Owner); Terrain->SetupAttachment(Root);
+    Terrain->SetCollisionEnabled(ECollisionEnabled::NoCollision); Terrain->SetCastShadow(false);
+    Terrain->RegisterComponent();
+    TArray<FVector> V,N; TArray<int32> Indices; TArray<FVector2D> UV; TArray<FLinearColor> Colors;
+    constexpr int32 NX=154, NY=151; constexpr float Step=600.f;
+    for(int32 Y=0;Y<NY;++Y) for(int32 X=0;X<NX;++X)
+    {
+        const float WX=-52000+X*Step,WY=-40000+Y*Step,H=Ground(WX,WY);
+        V.Add(FVector(WX,WY,H)); UV.Add(FVector2D(WX/3000,WY/3000));
+        const FVector Normal=FVector(Ground(WX-100,WY)-Ground(WX+100,WY),Ground(WX,WY-100)-Ground(WX,WY+100),200).GetSafeNormal();
+        N.Add(Normal);
+        const float Variation=.5f+.5f*FMath::Sin(WX*.00065f)*FMath::Cos(WY*.00048f);
+        FLinearColor C=FMath::Lerp(FLinearColor(.105f,.15f,.085f),FLinearColor(.24f,.25f,.13f),Variation);
+        if(H<130) C=FMath::Lerp(FLinearColor(.27f,.24f,.19f),C,FMath::Clamp((H+40)/170,0.f,1.f));
+        if(Normal.Z<.90f) C=FLinearColor(.24f,.25f,.25f);
+        Colors.Add(C);
+    }
+    for(int32 Y=0;Y<NY-1;++Y) for(int32 X=0;X<NX-1;++X)
+    {
+        const int32 A=Y*NX+X,B=A+1,C=A+NX,D=C+1;
+        Indices.Append({A,C,B,B,C,D});
+    }
+    Terrain->CreateMeshSection_LinearColor(0,V,Indices,N,UV,Colors,TArray<FProcMeshTangent>(),false);
+    Terrain->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_VistaTerrain.M_VistaTerrain")));
+
+    auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
+    auto* Cone=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cone.Cone"));
+    TMap<FString,UInstancedStaticMeshComponent*> Batches;
+    auto Shape=[&](FVector P,FVector Size,const TCHAR* Mat,FRotator Rot=FRotator::ZeroRotator,bool Spire=false)
+    {
+        const FString Key=FString(Mat)+(Spire?TEXT("cone"):TEXT("cube"));
+        auto*& B=Batches.FindOrAdd(Key);
+        if(!B) { B=NewObject<UInstancedStaticMeshComponent>(Owner); B->SetupAttachment(Root); B->SetStaticMesh(Spire?Cone:Cube);
+            B->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Mat,Mat)));
+            B->SetCollisionEnabled(ECollisionEnabled::NoCollision); B->SetCastShadow(false); B->RegisterComponent(); }
+        B->AddInstance(FTransform(Rot,P,Size/100.f));
+    };
+    auto House=[&](float X,float Y,float Z,float W,float D,float H,float Angle,int32 Style)
+    {
+        const FRotator R(0,Angle,0); const FVector P(X,Y,Z);
+        Shape(P+FVector(0,0,H*.5f),FVector(W,D,H),Style%3?TEXT("Plaster"):TEXT("Stone"),R);
+        for(float S : {-1.f,1.f})
+            Shape(P+R.RotateVector(FVector(S*W*.25f,0,H+W*.1443f)),FVector(W*.57735f+25,D+30,15),TEXT("Roof"),FRotator(-S*30,Angle,0));
+        // Gable triangular silhouette and a chimney; no distant tiny windows.
+        Shape(P+FVector(0,0,H+W*.09f),FVector(W*.55f,D,W*.18f),TEXT("Wood"),R);
+        if(Style%3==0) Shape(P+R.RotateVector(FVector(W*.2f,D*.2f,H+W*.2f)),FVector(40,45,140),TEXT("Stone"),R);
+    };
+    // An unbroken strip behind the existing north walls joins both banks.
+    Shape(FVector(1900,6340,-125),FVector(10500,1050,250),TEXT("Stone"));
+    Shape(FVector(1200,5860,22),FVector(4600,65,95),TEXT("Stone"));
+    // The old opposite waterfront is backed by continuous land rather than
+    // unsupported houses. Its inland edge blends into the terrain shore.
+    Shape(FVector(6500,1800,-130),FVector(3200,9000,260),TEXT("Stone"));
+    FRandomStream Rng(31871);
+    for(int32 Row=0;Row<6;++Row) for(int32 Col=0;Col<18;++Col)
+    {
+        const float X=-7300+Col*850.f+Rng.FRandRange(-160,160), Y=7000+Row*860.f+Rng.FRandRange(-140,140);
+        const float Z=FMath::Max(0.f,Ground(X,Y)-25);
+        House(X,Y,Z,Rng.FRandRange(350,630),Rng.FRandRange(390,630),Rng.FRandRange(420,1050),Rng.FRandRange(-12,12),Col+Row);
+    }
+    for(int32 Row=0;Row<4;++Row) for(int32 Col=0;Col<12;++Col)
+    {
+        const float X=6500+Row*820.f+Rng.FRandRange(-100,100),Y=-2800+Col*700.f;
+        House(X,Y,FMath::Max(0.f,Ground(X,Y)-20),430,490,Rng.FRandRange(430,950),Rng.FRandRange(-15,15),Col+Row);
+    }
+    for(int32 Row=0;Row<5;++Row) for(int32 Col=0;Col<15;++Col)
+    {
+        const float X=-7100-Row*900.f,Y=-5200+Col*800.f;
+        House(X,Y,FMath::Max(0.f,Ground(X,Y)-25),480,550,Rng.FRandRange(550,1050),Rng.FRandRange(-12,12),Col+Row);
+    }
+    // A few taller civic silhouettes break the roof rows; no new playable sites.
+    for(FVector P : {FVector(-9200,2300,0),FVector(-4200,10700,0),FVector(4600,12000,0),FVector(9100,4100,0)})
+    {
+        P.Z=Ground(P.X,P.Y);
+        Shape(P+FVector(0,0,900),FVector(380,380,1800),TEXT("Stone"));
+        Shape(P+FVector(0,0,1990),FVector(560,560,520),TEXT("Roof"),FRotator::ZeroRotator,true);
+        House(P.X+600,P.Y,P.Z,900,650,1100,0,0);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaCapture")))
+    {
+        // Ear-height above the highest current Dock Street roof (~10.5 m).
+        const FVector Roof(-770,2830,1150);
+        const FVector Targets[]={FVector(-10000,2830,1400),FVector(0,16000,1200),FVector(12000,1500,900),FVector(2000,-16000,0),FVector(1700,6100,200)};
+        auto* Camera=World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(85);
+        for(int32 I=0;I<UE_ARRAY_COUNT(Targets);++I)
+        {
+            FTimerHandle H,S;
+            World->GetTimerManager().SetTimer(H,[World,Camera,T=Targets[I],Roof]()
+            { Camera->SetActorLocationAndRotation(Roof,(T-Roof).Rotation()); if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera); },4.f+I*4,false);
+            World->GetTimerManager().SetTimer(S,[I]()
+            { const FString D=FPaths::ScreenShotDir()/TEXT("Vista"); IFileManager::Get().MakeDirectory(*D,true); FScreenshotRequest::RequestScreenshot(D/FString::Printf(TEXT("View%d.png"),I),false,false); },6.f+I*4,false);
+        }
+        FTimerHandle Q; World->GetTimerManager().SetTimer(Q,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },26.f,false);
+    }
+}
