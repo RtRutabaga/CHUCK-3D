@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## September 30 — opposite waterfront
+
+Runtime `bb2526a` / `c053469` adds noncolliding scenery only in DockSetting.cpp: capped quay/supports/fenders, landing fingers, moored boats, derricks, warehouse loading faces, harbor breakwater heads and continued banks/roofs. Existing assets reused; Claude's current worker/gameplay preserved. Expanded setting capture from four to six views. Crane posts were corrected to sit clear of old warehouse fronts.
+
+Final build `Local/harbor-bank-build-final.log` succeeded; six views inspected with final corrected quay view checked. Capture log `Local/harbor-bank-capture-final.log` has no material errors. Package passed 122 gameplay + 15 world + 20 plaza checks and music (`Local/verify-package-20260930-192046.log`). No repeated motion capture or physical controller testing. Launcher promoted with checked receipt; prior combined worker/plaza package kept at `Builds/Windows-Previous-20260930-Harbor`. Checked runtime/launcher revisions before promotion. Water and repeated architecture remain provisional. Next part of the work can be done here.
+
 ## September 30 — plaza detail pass
 
 Root launcher keeps Claude's newer combined `f7deb68` package and original receipt, which includes this plaza pass. An older candidate was briefly promoted before concurrent changes were detected; the combined package was restored and launcher check passed. Plaza-only package retained at `Builds/Windows-PlazaDetail-Verified-d38d505`. Next part of the work can be done here, coordinated with Claude.

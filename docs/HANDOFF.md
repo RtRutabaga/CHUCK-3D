@@ -2,6 +2,12 @@
 
 ## Current launcher and integration status
 
+**Update 24 (Codex, September 30 — opposite waterfront):** runtime `bb2526a` / `c053469`, based on Claude's combined worker build `f7deb68`. Added quay coping, masonry supports and timber fenders, three landing fingers with moored boats/derricks, loading fronts on the rear warehouses, and a harbor entrance with two breakwater heads and continued land/roofs. Scenery only: existing playable collision, character, parkour, plaza and dawn lighting preserved. Existing meshes/materials reused; no binary assets or dependencies added.
+
+Windows build succeeded (`Local/harbor-bank-build-final.log`). Six setting views reviewed, with final opposite-quay inspection after moving crane posts clear of warehouse faces; capture log `Local/harbor-bank-capture-final.log` has no material errors. Rendered verifier passed **122/122**, **15 world checks**, **20 plaza checks** and music loop (`Local/verify-package-20260930-192046.log`). MotionCapture and physical-controller tests were not repeated. Architecture still repeats and water remains basic; this is not the reference graphics target.
+
+Root launcher verified at `bb2526a`; previous combined worker/plaza package retained at `Builds/Windows-Previous-20260930-Harbor`. Source revision and installed receipt were checked immediately before promotion to avoid replacing concurrent work. Generated files remain untracked. Next part of the work can be done here.
+
 **Update 23 (Claude, 2026-10-01, user request: NPCs at about Blade & Sorcery: Nomad quality, cheap to copy):** runtime `f7deb68`.
 - The dock worker is rebuilt as a MakeHuman human (MPFB 2.0.17 and the CC0 MakeHuman assets, installed and downloaded with the user's approval; versions and hashes in `SETUP.md`). He has a textured face and eyes, and wears a linen shirt with rolled sleeves, a leather jerkin, a belt, wool trousers tucked into leather boots and a red cap (CC0 Poly Haven fabrics at real size). He stands with his arms down from the model's A-pose and keeps the old behaviour (breathing, glances, watching Chuck, solid but not climbable).
 - New NPCs are data: an entry in `SourceAssets/NPCs/humans.json`, one Blender build (`Tools/build_npc_humans.py`), one import (`Tools/import_npc_humans.py`). All humans share one skeleton (MPFB `cmu_mb`, CMU mocap bone names) and four master materials. `-ChuckNPCCapture` writes portraits of every NPC. See `SourceAssets/NPCs/README.md`.
