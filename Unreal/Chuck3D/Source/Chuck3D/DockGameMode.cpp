@@ -499,7 +499,9 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const FString Name=(NPC->DisplayName.IsEmpty() ? NPC->GetName() : NPC->DisplayName).Replace(TEXT(" "),TEXT(""));
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/NPC_%s_%s.png"),*Name,Shot.Name),false,false);
         bNPCShotTaken=true;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHOT %s look=(%.1f,%.1f) watching=%d turn=%.1f mocap=%d"),*Name,NPC->GetLookAngles().X,NPC->GetLookAngles().Y,NPC->IsWatchingChuck()?1:0,NPC->GetBodyTurn(),NPC->HasMocap()?1:0);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHOT %s %s look=(%.1f,%.1f) watching=%d turn=%.1f mocap=%d hand_out=%.1f straight_out_deg=%.1f ahead=%.1f curl=%.1f"),*Name,Shot.Name,
+            NPC->GetLookAngles().X,NPC->GetLookAngles().Y,NPC->IsWatchingChuck()?1:0,NPC->GetBodyTurn(),NPC->HasMocap()?1:0,
+            NPC->GetWiderHandReach(),NPC->GetStraightArmOut(),NPC->GetHandsForward(),NPC->GetFingerCurl());
     }
 }
 
@@ -1693,9 +1695,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
                 if(!Entry.IsValid() || Entry==TalkNPC) continue;
-                const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmReach(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_cm=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
-                bPoseOK &= Out>10.f && Straight<34.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
+                const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
+                bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
             }
         }
         // Then the rat scratches his shins: he starts back.
