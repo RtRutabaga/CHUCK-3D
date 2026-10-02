@@ -2,6 +2,16 @@
 
 ## Current launcher and integration status
 
+**Update 30 (Codex, October 1 — coastal city vista):** runtime `4544034` / `650bec6`, retaining the latest Claude hands work and completing the earlier wall-style pass. Added continuous noncolliding countryside around west/north/east, connected northern harbor land and opposite-bank backing, 235 simple building silhouettes plus four towers and sparse woodland. Open sea remains to the south. Sea/sky expanded to contain the new horizon. Roof views are taken at 1150 cm above the highest Dock Street roof. Existing playable collision and traversal unchanged.
+
+Uses Unreal 5.7's bundled ProceduralMeshComponent plugin, 23,254 terrain vertices and two new LFS materials totaling 10,176 bytes. No installation/download or paid storage; LFS fsck passed. Earlier interrupted box-terrain draft was replaced before building. First rooftop review led to closed gables, simple windows/bands, terrain winding and ridge refinements. Final build `Local/coastal-vista-build-final.log` succeeded. Five packaged rooftop views inspected (`Local/coastal-vista-capture-final.log`, package `Saved/Screenshots/Windows/Vista/View0..4.png`); no material errors. Verifier passed **125/125**, 15 world + 20 plaza + 28 Dock Street checks and music (`Local/verify-package-20261001-183738.log`). No physical-controller/MotionCapture repeat or formal performance benchmark. Hills/trees/buildings remain low-detail and repetitive; target art fidelity is not achieved.
+
+Root launcher now uses the verified combined package `4544034`, receipt checked; prior hands/walls package retained at `Builds/Windows-Previous-20261001-CoastalVista`. This also finishes publication of the pending wall milestone below. Generated output is untracked. See COASTAL-VISTA.md. Next part of the work can be done here.
+
+**Update 29 (Codex, October 1 — perimeter wall styling):** runtime `cfc7ce2`, including Claude's latest hands work through `681dd10`. The user's red-marked perimeter walls now follow the plaza's stone thickness, battlements and warm interior torches, with a coping course. Existing wall heights and entrance retained; thicker solid wall bodies still pass route checks. No new assets or dependencies. This commits the wall edit that Claude's earlier hands package had included while uncommitted.
+
+Build `Local/wall-build.log` succeeded. Packaged verifier passed 125 gameplay checks, 15 world, 20 plaza, 28 Dock Street and music (`Local/verify-package-20261001-112429.log`). No physical-controller or MotionCapture repeat for this wall pass. Graphics remain provisional.
+
 **Update 28 (Claude, 2026-10-01, user request: fix the weird hand placement, with finger capability; the guard will hold a spear later):** runtime `681dd10`.
 - The humans are rebuilt on MPFB's `game_engine` rig: Unreal mannequin names and three bones in every finger, instead of `cmu_mb`'s single finger bone per hand (paddle hands). The CMU motion capture is mapped onto it by name.
 - Hands now rest beside the thighs:

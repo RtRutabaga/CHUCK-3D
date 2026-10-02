@@ -1,5 +1,9 @@
 # Connected docks setting — September 29, 2026
 
+October 1 coastal backdrop: see COASTAL-VISTA.md for the connected harbor banks, distant roof districts and countryside visible from the high roofs. These additions are noncolliding scenery.
+
+October 1 wall-style request: the user's marked Dock Street perimeter follows the fountain-plaza treatment: 70 cm masonry, stone coping, 78 cm battlements spaced at 140 cm and warm interior torches. Existing boundary heights and the Dock Street opening are retained. The longer western divider also uses this treatment; the larger city remains outside the playable district. No new binary assets or dependencies.
+
 October 1: Dock Street beyond the labeled northern wall is now playable. Walk through the sign's opening, take the lane between the first buildings, and explore the shopfront court and lanes around the rear row. Continuous ground covers the northern district; eight existing houses have solid bodies and pitched roofs. Signs, awnings, lamps, benches and cargo dress the streets. Buildings remain exterior-only. The western wall separating the larger city remains closed, with northern/eastern boundaries enclosing the playable district. This supersedes the earlier description of all northern blocks as scenery. The capture now includes nine views, with entrance, court and overhead views last. The packaged verifier requires 28 Dock Street floor, capsule-route, building/roof and boundary checks in addition to the existing suites.
 
 September 30: the original district is preserved and extended with an adjoining fountain plaza, walls, closed sewer gate and dawn lighting. See WATERDEEP-PLAZA.md for the reference-based layout and approaches. Earlier setting-only scope below describes the retained district.

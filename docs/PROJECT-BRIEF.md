@@ -1,5 +1,7 @@
 # Project brief
 
+October 1: the user requested a larger inaccessible coastal-city vista, connecting the opposite waterfront to the town around a sheltered harbor, with further roof districts and low-detail surrounding country visible from the highest playable roof. See COASTAL-VISTA.md. This expands scenery, not campaign or playable area.
+
 September 30 update: the user authorized an additive, loose 3D adaptation of the original Waterdeep exterior and fountain plaza. Preserve all existing docks/parkour additions, extend the same map with walls, a blocked sewer entrance, fountain plaza and contextual shops/stalls, and use readable dawn/dusk ambient light with lit torches and lamps. This supersedes the earlier fountain-plaza exclusion; sewer interiors and campaign expansion remain excluded.
 
 September 29 update: the user has explicitly reopened setting work following Claude's character and parkour progress. Expand the same docks map with connected walkable streets, more buildings and dressing that explains the existing obstacles; preserve those routes. This supersedes the earlier world-work pause below. See DOCKS-SETTING.md and the latest HANDOFF for implementation and verified build status.

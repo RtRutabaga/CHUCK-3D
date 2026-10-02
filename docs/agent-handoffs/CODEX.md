@@ -1,5 +1,15 @@
 # Codex movement handoff — 2026-09-26
 
+## October 1 — coastal city vista and wall completion
+
+Runtime `4544034` / `650bec6` replaces the unfinished box-terrain draft with noncolliding procedural countryside, extended sea/sky, connected northern harbor ground, distant roof districts/towers and woodland. Uses bundled ProceduralMeshComponent and two tiny new LFS materials (10,176 bytes; fsck passed), no downloads. Includes latest Claude hands and committed perimeter walls. Initial review corrected blank facades/gable gaps and terrain faces/ridges.
+
+Final build `Local/coastal-vista-build-final.log`; five roof views in package `Saved/Screenshots/Windows/Vista`, log `Local/coastal-vista-capture-final.log`, inspected. Verifier `Local/verify-package-20261001-183738.log` passed 125 gameplay plus world/plaza/Dock Street/music. No formal performance benchmark, new MotionCapture or physical controller test. Promoted to root launcher with verified receipt; backup `Builds/Windows-Previous-20261001-CoastalVista`. This completes the interrupted wall publication too. Low-detail hills/cone woodland and repeating buildings remain provisional. Next part of the work can be done here.
+
+## October 1 — perimeter wall styling
+
+Runtime `cfc7ce2`: DockSetting only, matching marked walls to plaza-style stone/battlements/torches while retaining heights and the entrance. Includes latest Claude hands work `681dd10`; commits the pending wall edit that his build had already included. No binary changes. Build `Local/wall-build.log`; verifier `Local/verify-package-20261001-112429.log` passed 125 gameplay + world/plaza/Dock Street/music. No repeated physical-controller or MotionCapture test. Next part of the work can be done here.
+
 ## October 1 — playable Dock Street
 
 Root launcher verified at `749367b`; backup `Builds/Windows-Previous-20261001-DockStreet`. Enter beneath the DOCK STREET sign and follow the lane between houses.
