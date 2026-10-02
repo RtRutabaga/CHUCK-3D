@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 1 — side gate and sewer location
+
+Final runtime `1577561` moves an old bench clear of the grate. Final build `Local/side-gate-build-final.log`, capture `Local/side-gate-capture-final.log` (views 9/10 inspected), verifier `Local/verify-package-20261001-191507.log` passed all 125 gameplay and route/music/gate checks. Root launcher receipt checked; backup `Builds/Windows-Previous-20261001-SideGate`. Earlier build evidence below preceded the bench correction.
+
+Runtime `cb6e7ed`: small closed gate on west/city-facing wall in far Dock Street, flush grate before it. Existing solid wall and floor retained; no interaction/interior/transition. Documents identify this as the future sewer entrance; plaza arch remains drain dressing. Source-only change, no binary assets. Build `Local/side-gate-build.log`; verifier `Local/verify-package-20261001-190640.log` passed 125 gameplay, existing route/music checks, and gate/ground/approach checks. No MotionCapture or physical-controller repeat. Next part of the work can be done here.
+
 ## October 1 — coastal city vista and wall completion
 
 Runtime `4544034` / `650bec6` replaces the unfinished box-terrain draft with noncolliding procedural countryside, extended sea/sky, connected northern harbor ground, distant roof districts/towers and woodland. Uses bundled ProceduralMeshComponent and two tiny new LFS materials (10,176 bytes; fsck passed), no downloads. Includes latest Claude hands and committed perimeter walls. Initial review corrected blank facades/gable gaps and terrain faces/ridges.

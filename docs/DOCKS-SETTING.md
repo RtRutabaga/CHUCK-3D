@@ -1,5 +1,7 @@
 # Connected docks setting — September 29, 2026
 
+October 1 sewer setup: a small closed timber side gate is on the western, city-facing wall at the far end of Dock Street, centered at (-1748,3650). A closed iron sewer grate lies flush in the paving in front, centered at (-1580,3650). This is the user's intended future sewer entrance location. Reach it by continuing beyond the rear row of houses and turning toward the city-facing wall. Both are noninteractive for now; solid ground remains beneath the grate. The earlier plaza sewer arch stays as existing drain dressing, not the planned entrance. No sewer map or transition has been added. Setting captures now have eleven views, ending with gate and grate close-ups; the verifier checks gate blocking, ground beneath the grate and a clear capsule approach.
+
 October 1 coastal backdrop: see COASTAL-VISTA.md for the connected harbor banks, distant roof districts and countryside visible from the high roofs. These additions are noncolliding scenery.
 
 October 1 wall-style request: the user's marked Dock Street perimeter follows the fountain-plaza treatment: 70 cm masonry, stone coping, 78 cm battlements spaced at 140 cm and warm interior torches. Existing boundary heights and the Dock Street opening are retained. The longer western divider also uses this treatment; the larger city remains outside the playable district. No new binary assets or dependencies.
