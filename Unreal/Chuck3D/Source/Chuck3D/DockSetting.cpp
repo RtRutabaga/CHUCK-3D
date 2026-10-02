@@ -429,6 +429,30 @@ void BuildDockSetting(UWorld* World)
     CityWall(FVector(-1790,2550,0),3300,900,90,FVector(1,0,0));
     CityWall(FVector(890,2550,0),3300,600,90,FVector(-1,0,0));
     CityWall(FVector(-450,4190,0),2700,900,0,FVector(0,-1,0));
+    // Modest side gate in the city-facing (west) wall of the far Dock Street
+    // court. Keep the wall solid; this is the future sewer entrance location.
+    const FVector Gate(-1748,3650,0);
+    Box(Gate+FVector(0,0,130),FVector(8,190,260),TEXT("Dark"));
+    for(float Y=-85;Y<=85;Y+=17)
+        Box(Gate+FVector(6,Y,128),FVector(7,15,252),TEXT("Wood"));
+    for(float Z : {46.f,202.f})
+        Box(Gate+FVector(12,0,Z),FVector(5,178,9),TEXT("Dark"));
+    for(float Y : {-110.f,110.f})
+        Box(Gate+FVector(10,Y,140),FVector(35,30,280),TEXT("Stone"));
+    Box(Gate+FVector(10,0,281),FVector(42,250,26),TEXT("Stone"));
+    Box(Gate+FVector(15,0,298),FVector(45,38,26),TEXT("Stone"));
+    Box(Gate+FVector(17,-25,112),FVector(6,10,24),TEXT("Dark"));
+    for(float Y : {-72.f,72.f}) for(float Z : {46.f,202.f})
+        Box(Gate+FVector(16,Y,Z),FVector(4,6,6),TEXT("Metal"));
+    // Walkable closed iron grate set flush into the paving before the gate.
+    // The original ground is retained underneath; no hole or transition yet.
+    const FVector Grate(-1580,3650,0);
+    Box(Grate+FVector(0,0,.5f),FVector(150,170,1),TEXT("Dark"));
+    for(float X : {-81.f,81.f}) Box(Grate+FVector(X,0,1),FVector(12,194,2),TEXT("Stone"));
+    for(float Y : {-91.f,91.f}) Box(Grate+FVector(0,Y,1),FVector(150,12,2),TEXT("Stone"));
+    for(float Y=-74;Y<=74;Y+=18.5f) Box(Grate+FVector(0,Y,1.4f),FVector(146,5,1.2f),TEXT("Metal"));
+    for(float X : {-52.f,52.f}) Box(Grate+FVector(X,0,1.3f),FVector(7,165,1),TEXT("Dark"));
+    for(float Y : {-63.f,63.f}) Box(Grate+FVector(-74,Y,1.5f),FVector(12,17,1),TEXT("Dark"));
     Box(FVector(540,1100,160),FVector(700,20,320),TEXT("Stone"),true);
     for(float Y : {1900.f,3500.f})
     {
@@ -507,14 +531,22 @@ void BuildDockSetting(UWorld* World)
         FHitResult Boundary;
         if(!World->LineTraceSingleByChannel(Boundary,FVector(-1700,2100,100),FVector(-1900,2100,100),ECC_Visibility)) ++StreetFailures;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKSTREET_CHECK failures=%d floors=10 routes=9 buildings=8 boundary=1"),StreetFailures);
+        FHitResult GateHit,GrateHit,ApproachHit;
+        const bool GateClosed=World->LineTraceSingleByChannel(GateHit,FVector(-1600,3650,100),FVector(-1900,3650,100),ECC_Visibility);
+        const bool GrateGround=World->LineTraceSingleByChannel(GrateHit,FVector(-1580,3650,50),FVector(-1580,3650,-100),ECC_Visibility)
+            && FMath::Abs(GrateHit.ImpactPoint.Z)<3;
+        const bool ApproachClear=!World->SweepSingleByChannel(ApproachHit,FVector(-1100,3650,35),FVector(-1580,3650,35),
+            FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f));
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEGATE_CHECK failures=%d gate_closed=%d grate_ground=%d approach_clear=%d"),
+            (!GateClosed)+(!GrateGround)+(!ApproachClear),GateClosed,GrateGround,ApproachClear);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800)};
+            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800),FVector(-1150,3430,120),FVector(-1400,3650,560)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0)};
+            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0),FVector(-1720,3650,115),FVector(-1580,3650,0)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
         for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
@@ -537,6 +569,6 @@ void BuildDockSetting(UWorld* World)
         World->GetTimerManager().SetTimer(ExitHandle,[World]()
         {
             if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));
-        },42.f,false);
+        },50.f,false);
     }
 }
