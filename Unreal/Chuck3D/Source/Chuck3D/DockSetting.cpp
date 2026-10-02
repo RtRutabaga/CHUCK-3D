@@ -457,8 +457,9 @@ void BuildDockSetting(UWorld* World)
     for(float Y : {1900.f,3500.f})
     {
         // Resting places and cargo tuck into the edge, leaving the court open.
-        Box(FVector(-1640,Y,35),FVector(65,180,12),TEXT("Wood"),true);
-        for(float Side : {-1.f,1.f}) Box(FVector(-1640,Y+Side*65,16),FVector(50,14,32),TEXT("Wood"),true);
+        const float BenchY=Y==3500.f?3300.f:Y; // Keep the new gate/grate apron clear.
+        Box(FVector(-1640,BenchY,35),FVector(65,180,12),TEXT("Wood"),true);
+        for(float Side : {-1.f,1.f}) Box(FVector(-1640,BenchY+Side*65,16),FVector(50,14,32),TEXT("Wood"),true);
         Prop(CrateMesh,FVector(820,Y,30));
         Box(FVector(820,Y,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
         Prop(RopeMesh,FVector(820,Y,61),FVector(.7f));
