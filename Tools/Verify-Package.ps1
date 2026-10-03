@@ -29,15 +29,16 @@ $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to comp
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
 $streetCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKSTREET_CHECK failures=0 floors=10 routes=9 buildings=8 boundary=1'
-$sideGateCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SIDEGATE_CHECK failures=0 gate_closed=1 grate_ground=1 approach_clear=1'
+$sideGateCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SIDEGATE_CHECK failures=0 gate_closed=1 grate_open=1 approach_clear=1'
 $courtPierCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_COURTPIER_CHECK failures=0 floors=10 routes=9'
 $dockPropsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKPROPS_CHECK failures=0 barrels=5 planks=4 boundaries=2'
 $plazaCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_PLAZA_CHECK failures=0 floor_samples=14 capsule_routes=11 sewer_closed=1'
 $musicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1'
 $chimneyCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CHIMNEY_COLLISION failures=0 checked=[1-9]'
+$hatchCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_OPENHATCH_CHECK failures=0 shaft=3 surrounds=3 raised_lid=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {124} else {125}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$musicCompleted -or !$chimneyCompleted -or $passed -lt $expected) {
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$musicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }

@@ -230,6 +230,28 @@ void BuildDockSetting(UWorld* World)
     Beam(FVector(-180,-835,280),FVector(-180,-945,280),10,TEXT("Wood"));
     Beam(FVector(-180,-940,278),FVector(-180,-940,155),2,TEXT("Dark"));
     Label(FVector(-180,-912,220),TEXT("BONDED STORES"),-90);
+    // Narrow, uneven board faces and repaired lower boards on the five flat
+    // roofed dock workshops. Decorative thickness stays outside traversal tests.
+    const FVector Workshops[]={FVector(-180,-790,230),FVector(170,-770,260),
+        FVector(-370,-1150,180),FVector(-370,-1400,230),FVector(-370,-1650,280)};
+    for(int32 W=0;W<5;++W)
+    {
+        const FVector P=Workshops[W];
+        const FVector Size=W==0?FVector(300,220,P.Z):W==1?FVector(200,260,P.Z):FVector(220,180,P.Z);
+        for(float Side : {-1.f,1.f})
+        {
+            for(int32 I=0;I<FMath::FloorToInt(Size.X/18);++I)
+                Box(FVector(P.X-Size.X*.5f+9+I*18,P.Y+Side*(Size.Y*.5f+.7f),P.Z*.5f),
+                    FVector(17,1.4f,P.Z-4),TEXT("AgedDockTimber"));
+            for(int32 I=0;I<FMath::FloorToInt(Size.Y/18);++I)
+                Box(FVector(P.X+Side*(Size.X*.5f+.7f),P.Y-Size.Y*.5f+9+I*18,P.Z*.5f),
+                    FVector(1.4f,17,P.Z-4),TEXT("AgedDockTimber"));
+            Box(FVector(P.X+Side*(Size.X*.5f+1.8f),P.Y+Size.Y*.3f,28),
+                FVector(2,47,36),TEXT("Wood"));
+            for(float Z : {18.f,P.Z-14})
+                Box(FVector(P.X,P.Y+Side*(Size.Y*.5f+1.8f),Z),FVector(Size.X,3,5),TEXT("Wood"));
+        }
+    }
     // Row houses are low workshops with working flat roofs; do not cap the jump route.
     for(int32 I=0;I<3;++I)
     {
@@ -282,7 +304,11 @@ void BuildDockSetting(UWorld* World)
         Box(FVector(882,Y,20),FVector(24,24,40),TEXT("Dark"),true);
     // Grounded city mass beyond closed perimeter blocks. No isolated skyline boxes.
     Box(FVector(-3100,-400,-70),FVector(2600,6200,180),TEXT("Stone"));
-    Box(FVector(-450,2550,-45),FVector(2700,3300,90),TEXT("Stone"),true);
+    // Continuous court paving split around the actual open sewer mouth.
+    Box(FVector(-450,2347.5f,-45),FVector(2700,2895,90),TEXT("Stone"),true);
+    Box(FVector(-450,4102.5f,-45),FVector(2700,195,90),TEXT("Stone"),true);
+    Box(FVector(-1747.5f,3900,-45),FVector(105,210,90),TEXT("Stone"),true);
+    Box(FVector(-282.5f,3900,-45),FVector(2365,210,90),TEXT("Stone"),true);
     Box(FVector(3800,0,-80),FVector(900,5200,100),TEXT("Stone")); // bank below original distant warehouses
     for(int32 I=0;I<9;++I)
     {
@@ -582,15 +608,31 @@ void BuildDockSetting(UWorld* World)
     Box(Gate+FVector(17,-25,112),FVector(6,10,24),TEXT("Dark"));
     for(float Y : {-72.f,72.f}) for(float Z : {46.f,202.f})
         Box(Gate+FVector(16,Y,Z),FVector(4,6,6),TEXT("Metal"));
-    // Walkable closed iron grate beside the gate, opposite the bench (south).
-    // The original ground is retained underneath; no hole or transition yet.
+    // Wider iron hatch, propped open on its west hinge. This is a dark drop,
+    // not a sewer level: entering it uses the existing below-quay spawn reset.
     const FVector Grate(-1580,3900,0);
-    Box(Grate+FVector(0,0,.5f),FVector(150,170,1),TEXT("Dark"));
-    for(float X : {-81.f,81.f}) Box(Grate+FVector(X,0,1),FVector(12,194,2),TEXT("Stone"));
-    for(float Y : {-91.f,91.f}) Box(Grate+FVector(0,Y,1),FVector(150,12,2),TEXT("Stone"));
-    for(float Y=-74;Y<=74;Y+=18.5f) Box(Grate+FVector(0,Y,1.4f),FVector(146,5,1.2f),TEXT("Metal"));
-    for(float X : {-52.f,52.f}) Box(Grate+FVector(X,0,1.3f),FVector(7,165,1),TEXT("Dark"));
-    for(float Y : {-63.f,63.f}) Box(Grate+FVector(-74,Y,1.5f),FVector(12,17,1),TEXT("Dark"));
+    for(float X : {-121.f,121.f}) Box(Grate+FVector(X,0,2),FVector(12,234,4),TEXT("Stone"),true);
+    for(float Y : {-111.f,111.f}) Box(Grate+FVector(0,Y,2),FVector(230,12,4),TEXT("Stone"),true);
+    for(float X : {-111.f,111.f}) Box(Grate+FVector(X,0,-105),FVector(8,210,210),TEXT("Stone"),true);
+    for(float Y : {-101.f,101.f}) Box(Grate+FVector(0,Y,-105),FVector(214,8,210),TEXT("Stone"),true);
+    // Unlit darkness occludes the global harbor plane without blocking descent.
+    Box(Grate+FVector(0,0,-18),FVector(222,202,1),TEXT("SewerVoid"));
+    const FVector Hinge=Grate+FVector(-120,0,7);
+    const FRotator Open(76,0,0);
+    auto Hatch=[&](FVector P,FVector Size){Box(Hinge+Open.RotateVector(P),Size,TEXT("RustIron"),true,Open);};
+    for(float Y : {-102.f,102.f}) Hatch(FVector(115,Y,0),FVector(230,10,8));
+    for(float X : {5.f,225.f}) Hatch(FVector(X,0,0),FVector(10,204,8));
+    for(float X=22;X<220;X+=18) Hatch(FVector(X,0,0),FVector(6,200,7));
+    for(float Y : {-58.f,58.f}) Hatch(FVector(115,Y,4),FVector(218,7,5));
+    for(float X : {22.f,76.f,130.f,184.f}) for(float Y : {-58.f,58.f})
+        Hatch(FVector(X,Y,8),FVector(10,10,4));
+    for(float Y : {-78.f,78.f})
+    {
+        Box(Hinge+FVector(0,Y,0),FVector(18,32,18),TEXT("RustIron"),true);
+        Box(Hinge+FVector(-12,Y,0),FVector(24,42,7),TEXT("RustIron"),true);
+        Beam(Hinge+FVector(30,Y,0),Hinge+Open.RotateVector(FVector(150,Y,0)),5,TEXT("RustIron"));
+    }
+    Hatch(FVector(214,0,12),FVector(8,35,7));
     Box(FVector(540,1100,160),FVector(700,20,320),TEXT("Stone"),true);
     for(float Y : {1900.f,3500.f})
     {
@@ -719,12 +761,26 @@ void BuildDockSetting(UWorld* World)
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKSTREET_CHECK failures=%d floors=10 routes=9 buildings=8 boundary=1"),StreetFailures);
         FHitResult GateHit,GrateHit,ApproachHit;
         const bool GateClosed=World->LineTraceSingleByChannel(GateHit,FVector(-1600,3650,100),FVector(-1900,3650,100),ECC_Visibility);
-        const bool GrateGround=World->LineTraceSingleByChannel(GrateHit,FVector(-1580,3900,50),FVector(-1580,3900,-100),ECC_Visibility)
-            && FMath::Abs(GrateHit.ImpactPoint.Z)<3;
-        const bool ApproachClear=!World->SweepSingleByChannel(ApproachHit,FVector(-1100,3900,35),FVector(-1580,3900,35),
+        const bool GrateOpen=!World->LineTraceSingleByChannel(GrateHit,FVector(-1580,3900,50),FVector(-1580,3900,-100),ECC_Visibility);
+        const bool ApproachClear=!World->SweepSingleByChannel(ApproachHit,FVector(-1100,3900,35),FVector(-1390,3900,35),
             FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f));
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEGATE_CHECK failures=%d gate_closed=%d grate_ground=%d approach_clear=%d"),
-            (!GateClosed)+(!GrateGround)+(!ApproachClear),GateClosed,GrateGround,ApproachClear);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEGATE_CHECK failures=%d gate_closed=%d grate_open=%d approach_clear=%d"),
+            (!GateClosed)+(!GrateOpen)+(!ApproachClear),GateClosed,GrateOpen,ApproachClear);
+        int32 HatchFailures=0;
+        for(float X : {-1640.f,-1580.f,-1520.f})
+        {
+            FHitResult Hit;
+            if(World->LineTraceSingleByChannel(Hit,FVector(X,3900,40),FVector(X,3900,-150),ECC_Visibility)) ++HatchFailures;
+        }
+        for(const FVector P : {FVector(-1400,3900,0),FVector(-1580,3760,0),FVector(-1580,4040,0)})
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,40),P-FVector(0,0,80),ECC_Visibility)
+                || FMath::Abs(Hit.ImpactPoint.Z)>2) ++HatchFailures;
+        }
+        FHitResult RaisedHatch;
+        if(!World->LineTraceSingleByChannel(RaisedHatch,FVector(-1600,4002,100),FVector(-1750,4002,100),ECC_Visibility)) ++HatchFailures;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_OPENHATCH_CHECK failures=%d shaft=3 surrounds=3 raised_lid=1"),HatchFailures);
         int32 PierFailures=0;
         const FVector PierRoute[]={FVector(750,3080,0),FVector(950,3080,0),FVector(1200,3080,0),FVector(1480,3080,0),
             FVector(1800,3080,0),FVector(2260,3080,0),FVector(1200,3350,0),FVector(1200,3550,0),FVector(1480,3550,0),FVector(2080,3550,0)};
@@ -770,6 +826,28 @@ void BuildDockSetting(UWorld* World)
                 || FMath::Abs(Hit.ImpactPoint.X-(P.X+22.5f))>2) ++ChimneyFailures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_COLLISION failures=%d checked=%d"),ChimneyFailures,SolidChimneys.Num());
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWorkshopCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();
+        Camera->GetCameraComponent()->SetFieldOfView(65);
+        const FVector Positions[]={FVector(580,-1180,230),FVector(-1280,4100,350),FVector(-1330,3900,120)};
+        const FVector Targets[]={FVector(-220,-1190,125),FVector(-1580,3900,60),FVector(-1580,3900,30)};
+        for(int32 I=0;I<3;++I)
+        {
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P=Positions[I],T=Targets[I]](){
+                Camera->SetActorLocationAndRotation(P,(T-P).Rotation());
+                if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);
+            },4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("Workshops");
+                IFileManager::Get().MakeDirectory(*Folder,true);
+                FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
+            },6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;
+        World->GetTimerManager().SetTimer(Exit,[World](){if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},18.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRuinsCapture")))
     {

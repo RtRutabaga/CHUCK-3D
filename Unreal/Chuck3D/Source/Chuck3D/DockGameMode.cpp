@@ -224,7 +224,7 @@ void ADockGameMode::StartPlay()
         if(RopeMesh) Prop(TEXT("WharfRopeArt"),FVector(-440,-722,230),RopeMesh);
     }
     // Warehouse on its stone plinth.
-    Shape(TEXT("WharfWarehouse"),FVector(-180,-790,115),FVector(300,220,230),TEXT("Plaster"));
+    Shape(TEXT("WharfWarehouse"),FVector(-180,-790,115),FVector(300,220,230),TEXT("AgedDockTimber"));
     Shape(TEXT("WarehousePlinth"),FVector(-180,-660,57.5f),FVector(300,40,115),TEXT("Stone"));
     Shape(TEXT("WarehouseRoofTrim"),FVector(-180,-790,231),FVector(306,226,4),TEXT("Dark"),nullptr,false);
     for(const float X : {-328.f,-32.f}) for(const float Y : {-682.f,-898.f})
@@ -238,7 +238,7 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("WarehouseDoor"),FVector(-180,-900.5f,70),FVector(90,2,140),TEXT("Wood"),nullptr,false);
     if(RopeMesh) Prop(TEXT("WharfRopeArt"),FVector(-100,-660,115),RopeMesh);
     // Sail loft across the alley.
-    Shape(TEXT("SailLoft"),FVector(170,-770,130),FVector(200,260,260),TEXT("Plaster"));
+    Shape(TEXT("SailLoft"),FVector(170,-770,130),FVector(200,260,260),TEXT("AgedDockTimber"));
     Shape(TEXT("SailLoftRoofTrim"),FVector(170,-770,261),FVector(206,266,4),TEXT("Dark"),nullptr,false);
     for(const float X : {72.f,268.f}) for(const float Y : {-642.f,-898.f})
         Shape(TEXT("SailLoftTimber"),FVector(X,Y,130),FVector(8,8,260),TEXT("Wood"),nullptr,false);
@@ -280,9 +280,9 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("HouseDoor"),Center+FVector(Size.X*.5f+.5f,0,55),FVector(2,60,110),TEXT("Wood"),nullptr,false);
     };
     // A rooftop row stepping up south: leap the 70 cm gaps, catch the next roof.
-    House(TEXT("RowHouse"),FVector(-370,-1150,0),FVector(220,180,180),TEXT("Plaster"));
-    House(TEXT("RowHouse"),FVector(-370,-1400,0),FVector(220,180,230),TEXT("Stone"));
-    House(TEXT("RowHouse"),FVector(-370,-1650,0),FVector(220,180,280),TEXT("Plaster"));
+    House(TEXT("RowHouse"),FVector(-370,-1150,0),FVector(220,180,180),TEXT("AgedDockTimber"));
+    House(TEXT("RowHouse"),FVector(-370,-1400,0),FVector(220,180,230),TEXT("AgedDockTimber"));
+    House(TEXT("RowHouse"),FVector(-370,-1650,0),FVector(220,180,280),TEXT("AgedDockTimber"));
     Shape(TEXT("LeanToShed"),FVector(-420,-1040,50),FVector(120,40,100),TEXT("Wood"));
     Shape(TEXT("LeanToRoof"),FVector(-420,-1040,101),FVector(126,46,3),TEXT("Roof"),nullptr,false);
     // Market stalls: tables to hop onto, canopies overhead (no collision).
