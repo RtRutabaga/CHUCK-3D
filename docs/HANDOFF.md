@@ -2,6 +2,14 @@
 
 ## Current launcher and integration status
 
+**Update 47 (Claude, October 3, user request: give the guard a spear):** runtime `fd6ffb8`.
+- The guard at the city gate holds a 212 cm town-watch spear: ash shaft, leaf blade on a socket, leather grip wrap, iron butt (`Tools/build_spear.py`, 492 tris, in the humans' fabric materials).
+- The spear stands upright beside his right foot, leaning 4° out. His right arm is solved onto it every frame (two-bone IK, elbow back and out, thumb up, fist closed with the grip pose from the hands pass). The motion-capture idle, the scratch reaction and the body turn all play with it.
+
+The root candidate passed `-MotionCapture` **126/126** plus the world, plaza and music checks (`Local/verify-package-20261003-095700.log`). New check: the guard holds an upright spear with his fist on the grip (measured 0.0 cm, 4.0°).
+
+Promoted to `Builds/Windows` with receipt `fd6ffb8`; the previous package is kept as `Builds/Windows-Previous-20261003-Spear`. Root was clean when building. Details: `agent-handoffs/CLAUDE.md` pass 64. Not yet played by the user.
+
 **Update 46 (Codex, October 3 — first playable tavern interior):** runtime `d056c62`. User explicitly authorized interior work, superseding old exterior-only exclusions. Enlarged tavern is now a hollow floor/wall/gable/roof shell with an open inward timber door and nominal 1.2 m front opening. Connected directly to the docks, no entry prompt or level transition. Room includes worn plank floor/wainscot, exposed timbers, three tables with benches, two stools, serving counter, stocked shelves, reused barrels, warm lamps and a small stone hearth/flue through the roof. Floor, walls/gables, pitched roof, furniture supports/tops, counter, barrels, hearth and chimney cap have collision. Central/east aisles lead around the bar toward the hearth and back out. No bartender, tavern conversation/shop, upstairs room or character/controller edits. Existing docks music continues. All assets/materials reused; no binary imports, dependency installation or original-game changes.
 
 First candidate built and passed initial room collision plus both actual walk circuits, but captures showed the old exterior shutter projecting into the doorway view and timber lining behind the fire. Right window/frame moved clear with corresponding inside trim; hearth has a dark backing and timber removed from its area. Static flame placeholders changed from large cubes to smaller tapered forms. Roof-end gables made solid and flue/cap added; live-camera captures added to the walk test. Flame/prop shapes and repeated materials remain visibly provisional, below the target art fidelity.

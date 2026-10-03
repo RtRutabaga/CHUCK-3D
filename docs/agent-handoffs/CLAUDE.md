@@ -1701,3 +1701,27 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Spear prop and holding pose: `SetGrip` is ready; the arm pose and the prop attached to `hand_r` are not done.
   - No individual finger animation in the idles (fingers hold their curl).
   - Not played by the user.
+
+## Sixty-fourth pass — the guard's spear
+
+- **User (2026-10-03):** give the guard a spear.
+- **Source:** `fd6ffb8` on main.
+  - New: `Tools/build_spear.py`, `SourceAssets/NPCs/Props/{SM_Spear.fbx,manifest.json}`, `/Game/Characters/Humans/Props/SM_Spear` with three material instances.
+  - Changed: `import_npc_humans.py` (`import_props`, fabric textures from any folder), `DockNPC.cpp/.h`, `DockGameMode.cpp`, `Verify-Package.ps1` (126), `NPCs/README.md`.
+- **Model:** 212 cm, origin at the butt, along +Z. Slots:
+  - Shaft: brown_planks_03 grain, 1 m tile, ash tint;
+  - Head: blade, socket and butt in metal_plate_02 steel;
+  - Wrap: brown_leather.
+  - The blade first came out needle-thin (a bad leaf curve); it's now a sine leaf, 5 cm wide and 26 cm long.
+- **Runtime:**
+  - `GiveSpear` shows a `UStaticMeshComponent` on the body (no collision) and sets `Grip[right] = 1`.
+  - `PlaceSpear` (from `GiveSpear` or `BeginPlay`, whichever comes after the rest solve): butt at (16, right×30, 0), leaning out 4°; grip point 108 cm up the shaft.
+  - `HoldSpear` runs after `PoseHands`, in both the mocap and procedural paths. It's two-bone IK to a wrist target 8 cm back along the hand and 3 cm toward the palm, with the pole back and out; the hand aims across the shaft and twists thumb-up. Descendants follow by local transforms.
+  - The worktree's PolyHaven JPGs were LFS pointers; `git lfs pull` fixed it.
+- **Verified:**
+  - Root package 126/126 plus world, plaza and music checks: `Local/verify-package-20261003-095700.log`. Receipt `fd6ffb8`.
+  - Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Guard_spear.png`.
+- **Remaining:**
+  - The fist only approximately wraps the shaft: the curl is generic, and the shaft can show through the fingers up close.
+  - The spear doesn't react to anything (no grounding check on slopes; the guard stands on flat paving).
+  - Not played by the user.
