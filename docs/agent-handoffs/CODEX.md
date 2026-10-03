@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — sewer court waterfront dock
+
+Runtime `eff5b8c`: replaced the eastern court wall with a modest timber landing/two finger piers; west/north walls, sewer setup, harbor breakwater and controller retained. Continuous solid deck at Z0 with patched boards, piles, rope and working supplies. No new binary assets/dependencies. Build `Local/court-pier-build.log`; capture `Local/court-pier-capture.log` (views 11/12 inspected). Verifier `Local/verify-package-20261002-183401.log` passed 125 gameplay, all earlier setting/music checks and ten pier floors/nine capsule routes. No manual traversal, physical-controller or MotionCapture repeat. Root launcher receipt checked; backup `Builds/Windows-Previous-20261002-CourtPier`. Generated output untracked. Next part of the work can be done here.
+
 ## October 2 — aged working docks
 
 Runtime `4443077`: maintained rough medieval dockside dressing in DockSetting/DockPlaza. Facade/door/shutter repairs, roof patches, workshop stores/ladder, laundry, bench repairs, shop supplies and canvas patches; existing materials/meshes reused, all additions noncolliding. No binaries/dependencies. Build `Local/aged-docks-build.log` succeeded. Setting views 1/7 and Plaza view1 inspected (capture logs `Local/aged-docks-setting-capture.log`, `Local/aged-docks-plaza-capture.log`). Verifier `Local/verify-package-20261002-181315.log` passed 125 gameplay and all setting/music checks. No physical-controller or MotionCapture repeat. Root launcher receipt checked, backup `Builds/Windows-Previous-20261002-AgedDocks`; generated output untracked. Still prototype geometry and materials, not final weathered art. Next part of the work can be done here.
