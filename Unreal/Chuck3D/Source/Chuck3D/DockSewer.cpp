@@ -191,7 +191,7 @@ void BuildDockSewer(UWorld* World)
             for(int32 I=0;I<=4;++I) for(int32 X=0;X<=4;++X)
             {
                 const int32 Index=StartIndex+I;const float U=X/4.f;
-                V.Add(Route[Index]+Right[Index]*((U-.5f)*130+RiftOffset(Index))+FVector(0,0,25+Layer*32+8*FMath::Sin(I+X+Layer)));
+                V.Add(Route[Index]+Right[Index]*((U-.5f)*130+RiftOffset(Index))+FVector(0,0,25+Layer*32+8*FMath::Sin(float(I+X+Layer))));
                 N.Add(FVector::UpVector);UV.Add(FVector2D(U,I*.25f));
             }
             for(int32 I=0;I<4;++I) for(int32 X=0;X<4;++X){int32 A=Base+I*5+X;T.Append({A,A+1,A+5,A+1,A+6,A+5});}
@@ -218,7 +218,7 @@ void BuildDockSewer(UWorld* World)
         if(Below==*Under) return;*Under=Below;
         for(const auto& Sky : Skies) if(Sky.Key.IsValid()) Sky.Key->SetIntensity(Below?0:Sky.Value);
         for(const auto& Sun : Suns) if(Sun.Key.IsValid()) Sun.Key->SetIntensity(Below?0:Sun.Value);
-        if(auto* Pawn=PC->GetPawn())
+        if(APawn* Pawn=PC->GetPawn())
         {
             TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);
             for(auto* Part : Parts) Part->SetLightingChannels(!Below,Below,false);

@@ -90,7 +90,7 @@ void ADockGameMode::StartPlay()
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
     World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),SewerScore](){
-        auto* PC=World->GetFirstPlayerController();auto* Pawn=PC?PC->GetPawn():nullptr;
+        auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const bool Below=Pawn && Pawn->GetActorLocation().Z<-150 && IsWithinDockSewer(Pawn->GetActorLocation());
         if(Below==Region->Underground) return;
         Region->Underground=Below;
