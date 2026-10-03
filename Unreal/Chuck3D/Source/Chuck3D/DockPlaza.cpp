@@ -221,12 +221,35 @@ void BuildDockPlaza(UWorld* World)
         for(float X=-45;X<=45;X+=15) Shape(P+FVector(X,195,111),FVector(13,3,211),TEXT("WoodLight"));
         for(float Z : {40.f,180.f}) Shape(P+FVector(0,199,Z),FVector(104,5,8),TEXT("Dark"));
         Shape(P+FVector(39,201,102),FVector(6,8,16),TEXT("Dark"));
+        // Old but tended shopfronts: repaired corners, shutters and timber knees.
+        for(float X : {-270.f,270.f})
+        {
+            for(int32 I=0;I<5;++I)
+                Shape(P+FVector(X+(X>0?-1:1)*(I%2)*12,187,28+I*25),FVector(43-I*5,4,23),TEXT("Stone"));
+            Beam(P+FVector(X,191,310),P+FVector(X+(X>0?-80:80),191,400),9,TEXT("Wood"));
+        }
+        for(float X : {-180.f,180.f}) for(float S : {-1.f,1.f})
+        {
+            Shape(P+FVector(X+S*60,199,193),FVector(27,7,112),TEXT("Wood"),false,nullptr,FRotator(0,0,S*3));
+            for(float Z : {158.f,226.f}) Shape(P+FVector(X+S*60,204,Z),FVector(27,4,6),TEXT("Dark"));
+        }
+        for(int32 I=0;I<4;++I)
+            Shape(P+FVector(-245+I*38,185,17),FVector(33,11,30),TEXT("Stone"));
         Shape(P+FVector(-215,-65,545),FVector(62,62,180),TEXT("Stone"));
         Shape(P+FVector(0,195,300),FVector(270,10,42),TEXT("Wood"));
         Sign(P+FVector(0,204,301),Name);
     };
     Shop(FVector(-865,-3940,0),TEXT("SMITHY"));
     Shop(FVector(1280,-3940,0),TEXT("ALCHEMIST"));
+    // Dry fuel stacked against the smithy, and herb bundles beneath shop eaves.
+    for(int32 Row=0;Row<3;++Row) for(int32 Col=0;Col<5;++Col)
+        Shape(FVector(-1140+Col*18,-3742,10+Row*17),FVector(16,54,15),((Row+Col)%3)?TEXT("Wood"):TEXT("WoodLight"),false,Cylinder,FRotator(90,0,0));
+    for(int32 I=0;I<5;++I)
+    {
+        const FVector P(1070+I*45,-3725,255);
+        Beam(P+FVector(0,0,34),P,1,TEXT("Wood"));
+        for(float S : {-1.f,0.f,1.f}) Beam(P+FVector(S*5,0,0),P+FVector(S*11,3,-28),3,TEXT("WoodLight"));
+    }
     // Wayfinding is mounted on existing lamp posts, outside both clear approaches.
     Shape(FVector(530,-2219,232),FVector(190,7,38),TEXT("Wood"));
     Sign(FVector(530,-2213,232),TEXT("FOUNTAIN PLAZA"));
@@ -247,6 +270,14 @@ void BuildDockPlaza(UWorld* World)
         for(float X : {-108.f,108.f}) for(float Y : {-45.f,45.f})
             Shape(P+FVector(X,Y,140),FVector(10,10,280),TEXT("Wood"),true);
         for(int32 I=0;I<10;++I) Shape(P+FVector(-112+I*25,0,288),FVector(25,155,10),I%2?TEXT("Roof"):TEXT("Plaster"),false,nullptr,FRotator(10,0,0));
+        // Stitched canvas patches and older replacement counter boards.
+        for(float X : {-55.f,65.f})
+        {
+            Shape(P+FVector(X,15,295),FVector(39,46,1),TEXT("WoodLight"),false,nullptr,FRotator(10,0,0));
+            for(float DX : {-17.f,17.f}) for(float Y=-3;Y<=31;Y+=9)
+                Shape(P+FVector(X+DX,Y,295+Y*.176f),FVector(3,1,1),TEXT("Dark"));
+        }
+        for(int32 I=0;I<8;++I) Shape(P+FVector(-105+I*30,0,89),FVector(27,103,1),I==2?TEXT("Wood"):TEXT("WoodLight"));
         for(float X : {-70.f,0.f,70.f}) Shape(P+FVector(X,0,105),FVector(54,60,35),TEXT("Wood"),true);
     }
     for(float X : {-440.f,960.f})

@@ -63,6 +63,7 @@ void BuildDockSetting(UWorld* World)
     };
     auto* CrateMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockCrate.SM_DockCrate"));
     auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
+    auto* BarrelMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockBarrel.SM_DockBarrel"));
     auto Label=[&](FVector P,const TCHAR* Words,float Yaw=0.f)
     {
         auto* Text=NewObject<UTextRenderComponent>(Owner);
@@ -123,6 +124,52 @@ void BuildDockSetting(UWorld* World)
                 Box(P+FVector(X,Side*(Size.Y*.5f+3),Z),FVector(66,6,90),TEXT("Wood"));
                 Box(P+FVector(X,Side*(Size.Y*.5f+7),Z),FVector(42,3,68),TEXT("Dark"));
                 Box(P+FVector(X,Side*(Size.Y*.5f+9),Z-46),FVector(80,22,8),TEXT("Stone"));
+            }
+        }
+        if(Solid)
+        {
+            // Repairs follow the existing building faces, never the roof route.
+            const int32 Age=FMath::Abs(FMath::RoundToInt(P.X+P.Y))/10;
+            for(float Side : {-1.f,1.f})
+            {
+                const float Face=Side*(Size.X*.5f+12);
+                // Individual lower masonry courses and replaced door boards.
+                for(int32 I=0;I<7;++I)
+                {
+                    const float Y=-Size.Y*.44f+I*Size.Y*.145f;
+                    Box(P+FVector(Face,Y,17+(I%2)*4),FVector(5,Size.Y*.13f,26),TEXT("Stone"));
+                }
+                for(float Y=-36;Y<=36;Y+=18)
+                    Box(P+FVector(Face,Y,100),FVector(3,15,194),((Age+int32(Y))%3)?TEXT("Wood"):TEXT("WoodLight"));
+                for(float Z : {39.f,169.f})
+                {
+                    Box(P+FVector(Face+Side*3,0,Z),FVector(4,87,6),TEXT("Dark"));
+                    for(float Y : {-31.f,31.f}) Box(P+FVector(Face+Side*6,Y,Z),FVector(3,4,4),TEXT("Metal"));
+                }
+                Box(P+FVector(Face+Side*6,31,97),FVector(7,6,16),TEXT("Dark"));
+                // Repaired plaster corners: exposed stone, with timber stitch braces.
+                const float End=Size.Y*.5f-45;
+                for(int32 I=0;I<4;++I)
+                    Box(P+FVector(Face,End-(I%2)*13,48+I*25),FVector(4,55-I*8,23),TEXT("Stone"));
+                Beam(P+FVector(Face,-End,265),P+FVector(Face,-End+95,355),8,TEXT("Wood"));
+                for(float Y : {-Size.Y*.3f,Size.Y*.3f})
+                {
+                    // Working wooden shutters, some closed and some pulled back.
+                    const float Opening=(Age%3)*9.f;
+                    for(float S : {-1.f,1.f})
+                    {
+                        Box(P+FVector(Face+Side*6,Y+S*(37+Opening),155),FVector(5,27,86),TEXT("Wood"),false,FRotator(0,S*Opening,0));
+                        for(float Z : {129.f,180.f}) Box(P+FVector(Face+Side*9,Y+S*(37+Opening),Z),FVector(3,28,4),TEXT("Dark"));
+                    }
+                    Box(P+FVector(Face,Y,208),FVector(27,92,8),TEXT("Wood"));
+                }
+            }
+            // A few mismatched roof repairs lie flush, leaving collision untouched.
+            for(int32 I=0;I<3;++I)
+            {
+                const float X=Size.X*(.16f+.055f*I),Y=Size.Y*(-.3f+.2f*I);
+                const float Z=Size.Z+Rise-X*.57735f+9;
+                Box(P+FVector(X,Y,Z),FVector(43,54,2),I==1?TEXT("Wood"):TEXT("Roof"),false,FRotator(-30,0,0));
             }
         }
     };
@@ -483,6 +530,50 @@ void BuildDockSetting(UWorld* World)
         Lamp->RegisterComponent();
     }
     // The larger wall beyond the court stays closed.
+    // Small working possessions stay tight to facades, outside the clear lanes.
+    for(const FVector P : {FVector(-1260,-1700,0),FVector(-1190,470,0),FVector(-1720,2100,0),FVector(820,3100,0)})
+    {
+        Prop(BarrelMesh,P+FVector(0,0,31),FVector(.68f));
+        Prop(RopeMesh,P+FVector(0,0,62),FVector(.48f),25);
+        for(int32 I=0;I<5;++I)
+            Box(P+FVector(-15+I*7,55,65),FVector(6,13,130),I%2?TEXT("Wood"):TEXT("WoodLight"),false,FRotator(0,0,-8));
+        Box(P+FVector(0,55,72),FVector(42,17,5),TEXT("Dark"));
+    }
+    // A ladder kept against the cooperage, below the eaves rather than across a route.
+    for(float Y : {-1130.f,-1090.f})
+        Beam(FVector(-1320,Y,8),FVector(-1330,Y,265),6,TEXT("WoodLight"));
+    for(float Z=30;Z<255;Z+=27) Box(FVector(-1320-Z*.038f,-1110,Z),FVector(6,47,5),TEXT("Wood"));
+    // Laundry between upper facades: muted cloth, repaired hems and visible pegs.
+    auto Laundry=[&](FVector A,FVector B)
+    {
+        const FVector D=B-A;
+        FVector Prev=A;
+        for(int32 I=1;I<=12;++I)
+        {
+            const float T=I/12.f;
+            const FVector Next=A+D*T-FVector(0,0,18*FMath::Sin(PI*T));
+            Beam(Prev,Next,1,TEXT("Wood")); Prev=Next;
+        }
+        const float Yaw=D.Rotation().Yaw;
+        for(int32 I=0;I<3;++I)
+        {
+            const float T=.25f+I*.24f;
+            const FVector Top=A+D*T-FVector(0,0,18*FMath::Sin(PI*T));
+            const float H=65+I*12;
+            for(int32 Fold=0;Fold<5;++Fold)
+                Box(Top+FRotator(0,Yaw,0).RotateVector(FVector((Fold-2)*13,(Fold%2)*3,-H*.5f)),FVector(13,2,H),I==1?TEXT("Roof"):TEXT("Plaster"),false,FRotator(0,Yaw,0));
+            Box(Top+FVector(0,0,-H+4),FVector(61,3,6),TEXT("WoodLight"),false,FRotator(0,Yaw,0));
+            for(float Offset : {-22.f,22.f}) Box(Top+FRotator(0,Yaw,0).RotateVector(FVector(Offset,0,2)),FVector(3,6,9),TEXT("Wood"),false,FRotator(0,Yaw,0));
+        }
+    };
+    Laundry(FVector(-1390,-584,340),FVector(-1390,-843,340));
+    Laundry(FVector(-1220,1648,370),FVector(-740,1648,370));
+    // Repaired benches: narrow replacement slats and iron end plates.
+    for(float Y : {1900.f,3300.f})
+    {
+        for(int32 I=0;I<5;++I) Box(FVector(-1666+I*13,Y,41.8f),FVector(11,177,1.5f),I==1?TEXT("WoodLight"):TEXT("Wood"));
+        for(float DY : {-65.f,65.f}) Box(FVector(-1640,Y+DY,43),FVector(63,5,2),TEXT("Dark"));
+    }
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
     Box(FVector(-150,1090,70),FVector(700,20,140),TEXT("Stone"),true);
     Box(FVector(190,750,70),FVector(20,700,140),TEXT("Stone"),true);
