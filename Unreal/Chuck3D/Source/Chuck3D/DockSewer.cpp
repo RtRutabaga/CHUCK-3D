@@ -1,5 +1,6 @@
 #include "DockSewer.h"
 #include "ChuckCharacter.h"
+#include "SewerSlide.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/SplineComponent.h"
@@ -102,6 +103,7 @@ bool IsInDockSewerStream(const FVector& P)
 
 bool IsWithinDockSewer(const FVector& P)
 {
+    if(IsInDockSewerSlide(P)) return true;   // the slide down from its end
     if(P.Z<-1080 || P.Z>100) return false;
     if(FMath::Abs(P.X-Shaft.X)<118 && FMath::Abs(P.Y-Shaft.Y)<108) return true;
     if(P.Z>FloorZ+590) return false;
@@ -144,6 +146,10 @@ void BuildDockSewer(UWorld* World)
         const FVector T=Spline->GetDirectionAtDistanceAlongSpline(D,ESplineCoordinateSpace::World);
         Right.Add(FVector(T.Y,-T.X,0).GetSafeNormal());
     }
+    // The clamped spline has no direction at its last point, which pinched the
+    // final ring to a line; give it the previous one so the end is a full arch
+    // (the slide's mouth sits in it).
+    if(Count>1 && Right.Last().IsNearlyZero()) Right.Last()=Right[Count-2];
     auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerRock.M_SewerRock"));
     auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
     auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
@@ -323,19 +329,9 @@ void BuildDockSewer(UWorld* World)
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_LIGHT_REGION underground_night=%d"),Below);
     },.1f,true);
-    // Temporary collapsed end, rather than a door or invented next campaign map.
-    const FVector End=Route.Last();
-    V.Reset();N.Reset();T.Reset();UV.Reset();
-    const FVector EndNormal=(Route[Count-2]-End).GetSafeNormal();
-    V.Add(End+EndNormal*10+FVector(0,0,130));N.Add(EndNormal);UV.Add(FVector2D(.5,.4));
-    for(int32 J=0;J<=Arc;++J)
-    {
-        const float A=PI*J/Arc;
-        V.Add(End+Right.Last()*((Width(Count-1)+35)*FMath::Cos(A))+FVector(0,0,(Height(Count-1)+35)*FMath::Sin(A)));
-        N.Add(EndNormal);UV.Add(FVector2D(J/float(Arc),1));
-        if(J>0) T.Append({0,J,J+1});
-    }
-    T.Append({0,Arc+1,1});MakeMesh(V,T,N,UV,Stone,true);
+    // The end: the stream runs into a narrow water slide (Claude, SewerSlide.cpp;
+    // user 2026-10-03), replacing the temporary collapsed wall.
+    BuildDockSewerSlide(Owner,Route,Right,Width(Count-1)+35,Height(Count-1)+35,RiftOffset(Count-5),Stone,Stream);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_BUILT length_cm=%.0f samples=%d north_first=1 return_south=1"),Length,Count);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))

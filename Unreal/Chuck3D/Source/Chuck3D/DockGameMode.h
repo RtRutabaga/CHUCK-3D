@@ -82,6 +82,8 @@ private:
     FVector WallStart = FVector::ZeroVector;
     int32 WallRunsBase = 0, WallJumpsBase = 0;
     float WallEnterZ = 0, WallPeakZ = 0, WallEnterAt = -1, WallLeaveAt = -1;
+    int32 SlidesBefore = 0, PullUpsBefore = 0;
+    bool bSlideOnly = false;
     bool bWallLanded = false;
     TArray<int32> WallSides;
     int32 HangsBase = 0, PullUpsBase = 0, MantlesBase = 0;

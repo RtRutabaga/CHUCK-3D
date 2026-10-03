@@ -3,6 +3,7 @@
 #include "DockPlaza.h"
 #include "DockSewer.h"
 #include "SewerLife.h"
+#include "SewerSlide.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -505,6 +506,9 @@ void ADockGameMode::StartPlay()
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
+    // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
+    bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
+    if(bSlideOnly) { bSmokeTest=true; TestStage=111; }
 }
 
 void ADockGameMode::TickNPCCapture(float DeltaSeconds)
@@ -2088,8 +2092,38 @@ void ADockGameMode::Tick(float DeltaSeconds)
         for(const float Shot : {.3f,1.8f,2.6f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Worker_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
-        if(StageTime>3.f)
+        if(StageTime>3.f) { TestStage=111; StageTime=0; }
+    }
+    else if(TestStage==111 && StageTime>.5f)
+    {
+        // The sewer's end: walk into the water slide's mouth.
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(DockSewerSlideApproach(),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(DockSewerSlideInward().Rotation()); Chuck->Recenter();
+        SlidesBefore=Chuck->GetSlides(); PullUpsBefore=Chuck->GetPullUps();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SLIDE_APPROACH at=%s mouth=%s actor=%s"),*DockSewerSlideApproach().ToString(),*DockSewerSlidePoint(0).ToString(),*Chuck->GetActorLocation().ToString());
+        TestStage=112; StageTime=0;
+    }
+    else if(TestStage==112)
+    {
+        if(!Chuck->IsAstral() && Chuck->GetSlides()==SlidesBefore) Chuck->AddMovementInput(DockSewerSlideInward(),1);
+        if(FMath::Fmod(StageTime,.5f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_SLIDE_TRACK t=%.2f p=%s astral=%s"),StageTime,*Chuck->GetActorLocation().ToString(),Chuck->GetAstralName());
+        for(const float Shot : {.6f,1.6f,2.f,2.7f,2.9f,3.1f,3.3f,4.4f,5.4f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Slide_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(StageTime>7.f)
         {
+            const FVector P=Chuck->GetActorLocation();
+            const bool bOnPier=Chuck->GetCharacterMovement()->IsMovingOnGround() && P.X>1500 && P.X<2330 && FMath::Abs(P.Y-3080)<150 && FMath::Abs(P.Z-34.65f)<6;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SLIDE_MEASURE slides=%d pullups=%d exited=%d on_pier=%d astral=%d p=%s"),Chuck->GetSlides()-SlidesBefore,
+                Chuck->GetPullUps()-PullUpsBefore,HasExitedDockSewer(),bOnPier,Chuck->IsAstral(),*P.ToString());
+            Check(Chuck->GetSlides()==SlidesBefore+1 && Chuck->GetPullUps()>PullUpsBefore && HasExitedDockSewer() && bOnPier && !Chuck->IsAstral(),
+                TEXT("the sewer's end: the stream drops into a water slide that brings Chuck out at the end of the pier, where he climbs out"));
+            if(bSlideOnly)
+            {
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
+                bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;
+            }
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));

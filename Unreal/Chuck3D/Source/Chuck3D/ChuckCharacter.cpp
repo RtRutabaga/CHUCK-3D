@@ -1,5 +1,6 @@
 #include "ChuckCharacter.h"
 #include "DockSewer.h"
+#include "SewerSlide.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
 #include "ChuckBreakable.h"
@@ -386,6 +387,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     bTestStrafe = bHangNeedsRelease = false; GetCharacterMovement()->bOrientRotationToMovement = true;
     bRunJump = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
+    RestoreSlideCamera(); bAutoClimb = false;
     Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
     TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
@@ -1090,7 +1092,7 @@ void AChuckCharacter::UpdateExhale(float DeltaSeconds)
 }
 const TCHAR* AChuckCharacter::GetAstralName() const
 {
-    static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning")};
+    static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning"), TEXT("SlideDown"), TEXT("SlideAway")};
     return Names[static_cast<int32>(AstralPhase)];
 }
 void AChuckCharacter::SetAstralHidden(bool bHide)
@@ -1098,11 +1100,58 @@ void AChuckCharacter::SetAstralHidden(bool bHide)
     bAstralHidden = bHide;
     GetMesh()->SetVisibility(!bHide, true);
 }
-void AChuckCharacter::CameraFade(float From, float To, float Seconds)
+void AChuckCharacter::CameraFade(float From, float To, float Seconds, const FLinearColor& Colour)
 {
-    // The Astral Sea's colour: a deep, quiet indigo.
+    // By default the Astral Sea's colour: a deep, quiet indigo.
     if (auto* PC = Cast<APlayerController>(Controller))
-        if (PC->PlayerCameraManager) PC->PlayerCameraManager->StartCameraFade(From, To, Seconds, FLinearColor(.015f, .015f, .05f), false, true);
+        if (PC->PlayerCameraManager) PC->PlayerCameraManager->StartCameraFade(From, To, Seconds, Colour, false, true);
+}
+void AChuckCharacter::BeginSlide(float Into)
+{
+    // Into the water slide at the end of the sewer: carried down it, out of
+    // his control, until the view goes dark; then out at the pier.
+    auto* Movement = GetCharacterMovement();
+    SlideSpeed = FMath::Max(260.f, static_cast<float>(GetVelocity().Size2D()));
+    SlideS = Into; SlideFrom = GetActorLocation();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    Gait = EGait::Astral; AstralPhase = EAstral::SlideDown; AstralClock = 0; bAstralFaded = false;
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
+    TalkingTo.Reset(); TalkLine = 0;
+    SetClip(EClip::JumpLoop, 0, .15f);
+    // The view stays at the mouth and watches him go.
+    SavedCameraRelative = Camera->GetRelativeLocation(); SavedCameraRotation = Camera->GetRelativeRotation();
+    SlideCameraAt = Camera->GetComponentLocation();
+    bSlideCamera = true;
+    ++Slides;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SLIDE_BEGIN into=%.0f speed=%.0f"), Into, SlideSpeed);
+}
+void AChuckCharacter::HoldSlideCamera()
+{
+    Camera->SetWorldLocationAndRotation(SlideCameraAt, (GetActorLocation() - SlideCameraAt).Rotation());
+}
+void AChuckCharacter::RestoreSlideCamera()
+{
+    if (!bSlideCamera) return;
+    bSlideCamera = false;
+    Camera->SetRelativeLocationAndRotation(SavedCameraRelative, SavedCameraRotation);
+}
+bool AChuckCharacter::FindPierExit()
+{
+    // The pier end's outer face, probed from the water, and its top edge
+    // measured from the hanging height there.
+    FHitResult Face;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckPierExit), false, this);
+    const FVector Probe = DockPierExitProbe();
+    if (!GetWorld()->LineTraceSingleByChannel(Face, Probe, Probe - FVector(300, 0, 0), ECC_Visibility, Query) || FMath::Abs(Face.ImpactNormal.Z) > .3f) return false;
+    const FVector Normal = FVector(Face.ImpactNormal.X, Face.ImpactNormal.Y, 0).GetSafeNormal();
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    SetActorLocation(Face.ImpactPoint + Normal * (Radius + .5f) + FVector(0, 0, -Probe.Z - ChuckClipData::HangDrop), false, nullptr, ETeleportType::TeleportPhysics);
+    FVector Edge; bool bRoom = false;
+    if (!FindLedge(Normal, Face.ImpactPoint, ChuckClipData::HangDrop - 30.f, ChuckClipData::HangDrop + 30.f, Edge, bRoom) || !bRoom) return false;
+    ExitNormal = Normal; ExitEdge = Edge;
+    SetActorLocation(Edge + Normal * (Radius + .5f) - FVector(0, 0, ChuckClipData::HangDrop), false, nullptr, ETeleportType::TeleportPhysics);
+    return true;
 }
 void AChuckCharacter::BeginVanish()
 {
@@ -1147,6 +1196,42 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
             const FVector Feet = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
             AAstralSummon::Start(GetWorld(), Feet, true);
             CameraFade(1.f, 0.f, .9f);
+        }
+        break;
+    case EAstral::SlideDown:
+    {
+        // Gathering speed down the slide; the view fades to black.
+        SlideSpeed = FMath::Min(SlideSpeed + 700.f * DeltaSeconds, 950.f);
+        SlideS = FMath::Min(SlideS + SlideSpeed * DeltaSeconds, DockSewerSlideLength());
+        const FVector On = DockSewerSlidePoint(SlideS) + FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 4.f);
+        SetActorLocation(FMath::Lerp(SlideFrom, On, FMath::SmoothStep(0.f, .25f, AstralClock)), false, nullptr, ETeleportType::TeleportPhysics);
+        SetActorRotation(FRotator(0, DockSewerSlideDirection(SlideS).Rotation().Yaw, 0));
+        if (AstralClock >= .5f && !bAstralFaded) { CameraFade(0.f, 1.f, .45f, FLinearColor::Black); bAstralFaded = true; }
+        if (AstralClock >= 1.05f)
+        {
+            // In the dark: come up at the end of the court pier.
+            AstralPhase = EAstral::SlideAway; AstralClock = 0;
+            RestoreSlideCamera();
+            bExitFound = FindPierExit();
+            if (!bExitFound) SetActorLocation(DockPierExitProbe() + FVector(-170, 0, 55), false, nullptr, ETeleportType::TeleportPhysics);
+            ViewYaw = bExitFound ? (-ExitNormal).Rotation().Yaw : 180.f;
+            SetActorRotation(FRotator(0, ViewYaw, 0));
+            LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
+            PreviousMotionLocation = GetActorLocation();
+            bSewerRespawn = false;
+            MarkDockSewerExited();
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SLIDE_EXIT found=%d edge=%s"), bExitFound, *ExitEdge.ToString());
+        }
+        break;
+    }
+    case EAstral::SlideAway:
+        if (AstralClock >= .35f)
+        {
+            // Hanging off the pier's end, he pulls himself out as the view returns.
+            AstralPhase = EAstral::None;
+            CameraFade(1.f, 0.f, .8f, FLinearColor::Black);
+            if (bExitFound) { EnterHang(ExitNormal, ExitEdge, true); bAutoClimb = true; }
+            else { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f); GetCharacterMovement()->SetMovementMode(MOVE_Walking); }
         }
         break;
     case EAstral::Summoning:
@@ -1260,6 +1345,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Walking into a knee-high ledge: mantle onto it.
     if (bInput && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe)) TryMantle();
     if (bPendingVanish && GetWorld()->GetTimeSeconds() >= PendingVanishAt && (Movement->IsMovingOnGround() || GetWorld()->GetTimeSeconds() >= PendingVanishAt + .8f)) BeginVanish();
+    // The water slide at the sewer's end takes him once he's in its mouth.
+    if (!IsAstral() && Gait != EGait::Hang && Gait != EGait::Climb && GetActorLocation().Z < -700.f)
+    {
+        const float Into = DockSewerSlideEntry(GetActorLocation());
+        if (Into > 35.f) BeginSlide(Into);
+    }
     if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
     else if (Gait == EGait::WallRun)
     {
@@ -1301,8 +1392,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (bHangNeedsRelease && Raw.SizeSquared() < .04f) bHangNeedsRelease = false;
         if (bCornerCarry && (Raw.SizeSquared() < .04f || FVector2D::DotProduct(Raw.GetSafeNormal(), CornerCarryStick) < .7f)) bCornerCarry = false;
         const FVector Along = FRotationMatrix((-HangNormal).Rotation()).GetUnitAxis(EAxis::Y);  // his right, along the wall
-        const float Toward = (bCornerCarry || bHangNeedsRelease) ? 0.f : FVector::DotProduct(StickWorld(), -HangNormal);
-        const float Side = bHangNeedsRelease ? 0.f : bCornerCarry ? CornerCarrySide * FMath::Min(1.f, Raw.Size()) : FVector::DotProduct(StickWorld(), Along);
+        const float Toward = (bCornerCarry || bHangNeedsRelease || bAutoClimb) ? 0.f : FVector::DotProduct(StickWorld(), -HangNormal);
+        const float Side = (bHangNeedsRelease || bAutoClimb) ? 0.f : bCornerCarry ? CornerCarrySide * FMath::Min(1.f, Raw.Size()) : FVector::DotProduct(StickWorld(), Along);
         float Moved = 0;
         if (HangClock >= HangSnapTime && FMath::Abs(Side) > .4f && FMath::Abs(Side) > Toward)
         {
@@ -1332,7 +1423,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
         if (Moved <= 0 && (Base == EClip::ShimmyLeft || Base == EClip::ShimmyRight)) SetClip(EClip::Hang, 0, .15f);
         HangHold = Toward > .5f ? HangHold + DeltaSeconds : 0.f;
-        if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
+        if (bAutoClimb && HangClock >= .7f) { bAutoClimb = false; StartClimb(false, HangNormal, HangEdge); }   // out of the water at the pier
+        else if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();
     }
     else if (Gait == EGait::Climb)
@@ -1648,12 +1740,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.ClipUpper[1] = LayerTime >= 0 ? Clips[static_cast<int32>(LayerClip)] : nullptr;
     P.TimeUpper[1] = LayerTime;
     P.WeightUpper[1] = LayerTime >= 0 ? LayerWeightAt(LayerTime, Clips[static_cast<int32>(LayerClip)]->GetPlayLength()) : 0.f;
-    P.bFootIK = !bAirborne;
+    P.bFootIK = !bAirborne && AstralPhase != EAstral::SlideDown;   // nothing to plant on the way down the slide
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
     // generated from the manifest (ChuckClipData.h), trimmed likewise.
     const bool bLoopDominant = ((Gait == EGait::Loop || (Gait == EGait::Strafe && Base == EClip::WalkLoop)) && FadeWeight < .5f) || (Gait == EGait::Stop && FadeWeight >= .5f);
-    const bool bStanding = Gait == EGait::Idle || Gait == EGait::Astral || (Gait == EGait::Land && StateTime > .1f);   // the summon keeps his paws planted
+    const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Astral && AstralPhase != EAstral::SlideDown) || (Gait == EGait::Land && StateTime > .1f);   // the summon keeps his paws planted
     const FStance* Clip = nullptr;
     if (Gait == EGait::Start) Clip = &StartStance;
     else if (Gait == EGait::Stop && !bLoopDominant) Clip = bStopMirror ? &StopStanceMirrored : &StopStance;
@@ -1719,6 +1811,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     if(GetActorLocation().Z>=-100) bSewerRespawn=false;
     else if(IsWithinDockSewer(GetActorLocation())) bSewerRespawn=true;
     UpdateCamera(DeltaSeconds);
+    if (bSlideCamera) HoldSlideCamera();
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);

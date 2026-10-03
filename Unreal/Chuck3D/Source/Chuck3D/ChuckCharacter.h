@@ -46,6 +46,7 @@ public:
     bool IsHanging() const { return Gait == EGait::Hang; }
     int32 GetHangs() const { return Hangs; }
     int32 GetPullUps() const { return PullUps; }
+    int32 GetSlides() const { return Slides; }
     int32 GetMantles() const { return Mantles; }
     // Ledges: grabbed automatically when his paws reach a top edge while he is
     // moving up or into the wall; holding toward the wall this long pulls up.
@@ -242,18 +243,29 @@ private:
     int32 BitesTaken = 0;
     int32 Sanity = MaxSanity;
     int32 PickupsCollected = 0;
-    enum class EAstral : uint8 { None, Vanishing, Away, Summoning };
+    enum class EAstral : uint8 { None, Vanishing, Away, Summoning, SlideDown, SlideAway };   // the last two: the sewer's water slide out
     EAstral AstralPhase = EAstral::None;
     float AstralClock = 0;
     bool bPendingVanish = false;
     float PendingVanishAt = 0;
     bool bAstralHidden = false;
     bool bAstralFaded = false;
+    // The sewer's water slide (SewerSlide.cpp): carried down, out at the pier.
+    void BeginSlide(float Into);
+    bool FindPierExit();
+    void HoldSlideCamera();
+    void RestoreSlideCamera();
+    float SlideS = 0, SlideSpeed = 0;
+    FVector SlideFrom = FVector::ZeroVector, SlideCameraAt = FVector::ZeroVector, SavedCameraRelative = FVector::ZeroVector;
+    FRotator SavedCameraRotation = FRotator::ZeroRotator;
+    FVector ExitNormal = FVector::ZeroVector, ExitEdge = FVector::ZeroVector;
+    bool bSlideCamera = false, bAutoClimb = false, bExitFound = false;
+    int32 Slides = 0;
     int32 Respawns = 0;
     void BeginVanish();
     void UpdateAstral(float DeltaSeconds);
     void SetAstralHidden(bool bHide);
-    void CameraFade(float From, float To, float Seconds);
+    void CameraFade(float From, float To, float Seconds, const FLinearColor& Colour = FLinearColor(.015f, .015f, .05f));
     float BiteImmuneUntil = -1;
     /** Something low and breakable is in the strike's reach: rake low (user 2026-09-30). */
     bool LowTargetInReach() const;
