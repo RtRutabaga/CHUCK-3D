@@ -36,10 +36,11 @@ float Ground(float X,float Y)
         const float A=FMath::Atan2(DY,DX);
         const float Spur=1+.12f*FMath::Sin(A*5+Phase)+.055f*FMath::Sin(A*9-Phase);
         const float T=FMath::Clamp(1-D/Spur,0.f,1.f);
-        return Height*FMath::Pow(T,1.45f);
+        const float Gullies=1+.07f*FMath::Sin(A*13+Phase+D*8)*T*(1-T);
+        return Height*FMath::Pow(T,1.45f)*Gullies;
     };
-    const float Mountain=FMath::Max3(Peak(X+23000,Y-6500,13000,14500,17000,.7f),
-        Peak(X+28000,Y-15500,10500,10000,10200,2.1f),Peak(X+21000,Y+4300,10000,9500,7600,1.6f));
+    const float Mountain=FMath::Max3(Peak(X+32000,Y-6500,15500,14500,12000,.7f),
+        Peak(X+36000,Y-15500,12500,10000,8000,2.1f),Peak(X+27000,Y+4300,11000,9500,6500,1.6f));
     return -180.f+FMath::Clamp(Inland*.18f,0.f,380.f)+Rise*(Rolling+Ridge+Mountain);
 }
 }
@@ -65,7 +66,8 @@ void BuildCoastalVista(UWorld* World)
         if(H<130) C=FMath::Lerp(FLinearColor(.27f,.24f,.19f),C,FMath::Clamp((H+40)/170,0.f,1.f));
         if(Normal.Z<.90f) C=FLinearColor(.24f,.25f,.25f);
         const float Rock=FMath::Max(1-Normal.Z,FMath::Clamp((H-4500)/6500,0.f,1.f));
-        const FLinearColor RockColor=FMath::Lerp(FLinearColor(.20f,.215f,.21f),FLinearColor(.34f,.32f,.27f),Variation);
+        const float Strata=.5f+.5f*FMath::Sin(H*.002f+WX*.0004f+FMath::Sin(WY*.0007f)*2);
+        const FLinearColor RockColor=FMath::Lerp(FLinearColor(.20f,.215f,.21f),FLinearColor(.39f,.37f,.31f),Variation*.5f+Strata*.5f);
         C=FMath::Lerp(C,RockColor,FMath::Clamp(Rock*1.7f,0.f,1.f));
         Colors.Add(C);
     }
@@ -171,16 +173,17 @@ void BuildCoastalVista(UWorld* World)
     {
         // Ear-height above the highest current Dock Street roof (~10.5 m).
         const FVector Roof(-770,2830,1150);
-        const FVector Targets[]={FVector(-10000,2830,1400),FVector(0,16000,1200),FVector(12000,1500,900),FVector(2000,-16000,0),FVector(1700,6100,200)};
+        const FVector Targets[]={FVector(-10000,2830,1400),FVector(0,16000,1200),FVector(12000,1500,900),FVector(2000,-16000,0),FVector(1700,6100,200),FVector(-32000,6500,6500)};
         auto* Camera=World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(85);
         for(int32 I=0;I<UE_ARRAY_COUNT(Targets);++I)
         {
             FTimerHandle H,S;
-            World->GetTimerManager().SetTimer(H,[World,Camera,T=Targets[I],Roof]()
-            { Camera->SetActorLocationAndRotation(Roof,(T-Roof).Rotation()); if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera); },4.f+I*4,false);
+            const FVector P=I==5?FVector(2260,3080,100):Roof;
+            World->GetTimerManager().SetTimer(H,[World,Camera,T=Targets[I],P]()
+            { Camera->SetActorLocationAndRotation(P,(T-P).Rotation()); if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera); },4.f+I*4,false);
             World->GetTimerManager().SetTimer(S,[I]()
             { const FString D=FPaths::ScreenShotDir()/TEXT("Vista"); IFileManager::Get().MakeDirectory(*D,true); FScreenshotRequest::RequestScreenshot(D/FString::Printf(TEXT("View%d.png"),I),false,false); },6.f+I*4,false);
         }
-        FTimerHandle Q; World->GetTimerManager().SetTimer(Q,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },26.f,false);
+        FTimerHandle Q; World->GetTimerManager().SetTimer(Q,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },30.f,false);
     }
 }
