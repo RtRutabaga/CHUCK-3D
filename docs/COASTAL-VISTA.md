@@ -1,5 +1,7 @@
 # Coastal vista
 
+October 2 mountain reference: a dominant rocky summit rises behind the western city near (-32000,6500), with two lower shoulders and uneven spurs/gullies blended into the existing countryside. Upper slopes fade from muted grass to gray-brown rock with coarse strata, and woodland is restricted below 55 m elevation. This is a loose response to the user's illustrated Waterdeep reference. It reuses the existing terrain mesh/material, adds no binary assets/dependencies, and remains noncolliding scenery. Vista review now includes a sixth view from the new dock. See HANDOFF for actual packaged review and verification.
+
 The October 1 request expands only inaccessible scenery. The playable docks, plaza, Dock Street and their collision boundaries remain the same. The view should read as one dockside district of a larger coastal city, not a literal reconstruction of Waterdeep.
 
 `DockVista.cpp` builds continuous low-detail terrain around the west, north and east of the harbor. A northern strip joins the main town to the opposite waterfront; the sea remains open to the south. Roof districts extend inland, with four taller civic silhouettes. Terrain fades from coastal rock/soil into muted green hills and ridges. The sea and sky envelope are enlarged so their old edges do not cut off the backdrop. Existing dawn lighting is retained.
