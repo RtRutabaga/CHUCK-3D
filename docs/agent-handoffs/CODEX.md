@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — modest sewer brightness increase
+
+Runtime `8b9040e` on root main from `b001f41`. Grey-blue fill1450 (was1100), slide225 (was175), colour/materials/local purple and all gameplay/return state retained. Two source lines only plus docs; no binary/import/dependency/original-game changes. Build succeeded, six tunnel captures reviewed, standard verifier132 plus all mandatory world/cave/music/sewer/tavern checks and zombie/slide/evening return passed (`Local/verify-package-20261003-140639.log`). No manual/Xbox/MotionCapture/performance/full-route/interior repeat. Root launcher checked at8b9040e, backup `Builds/Windows-Previous-20261003-SewerBrightness`, generated files excluded. See HANDOFF Update56. Next part of the work can be done here.
+
 ## October 3 — Claude handoff pickup, evening return
 
 Runtime `f94d9b3` on root main from Claude's clean `9089d99`; keeps his zombie/rats/moss/slide. Finished remaining setting step3: morning closed tavern/open hatch; Claude's real slide hook sets early-evening sun/sky/fog, closes hatch bars with hidden floor collision, opens furnished tavern. Session state persists on reset/respawn; new world resets exit flag. Narrow setting changes, no rig/animation/controller or NPC behavior changes. One owned sky material parameter revision7,250bytes LFS, attrs/fsck/dry-run passed; no dependency/original-game changes. `DockReturn.cpp/.h`, GameMode/Setting/Tavern/Sewer, slide builder reset, selective sky generator, verifier132 and docs changed. See HANDOFF Update55 and DOCKS-RETURN.md for exact tests and limits.
