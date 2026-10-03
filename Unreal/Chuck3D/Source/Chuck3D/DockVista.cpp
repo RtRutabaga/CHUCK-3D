@@ -104,6 +104,17 @@ void BuildCoastalVista(UWorld* World)
     // unsupported houses. Its inland edge blends into the terrain shore.
     Shape(FVector(6500,1800,-130),FVector(3200,9000,260),TEXT("Stone"));
     FRandomStream Rng(31871);
+    // Inland streets beyond the plaza gate: supported scenery connects west
+    // into the existing city, while the harbor mouth remains open to the east.
+    Shape(FVector(-1700,-6300,-130),FVector(6200,3900,260),TEXT("Stone"));
+    for(int32 Row=0;Row<4;++Row) for(int32 Col=0;Col<7;++Col)
+    {
+        const float X=-3850+Col*730.f, Y=-5000-Row*830.f;
+        // Preserve a suggestion of a street continuing through the closed gate.
+        if(Col==5) continue;
+        House(X,Y,0,470+(Col%2)*60,520,620+((Row+Col)%4)*170,(Col%3-1)*7,Row+Col);
+    }
+    House(-2700,-6800,0,850,750,1300,0,0);
     for(int32 Row=0;Row<6;++Row) for(int32 Col=0;Col<18;++Col)
     {
         const float X=-7300+Col*850.f+Rng.FRandRange(-160,160), Y=7000+Row*860.f+Rng.FRandRange(-140,140);

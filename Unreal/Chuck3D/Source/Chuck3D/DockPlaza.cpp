@@ -84,7 +84,7 @@ void BuildDockPlaza(UWorld* World)
     // Low quay parapets leave both existing approaches open.
     for(float X : {96.f,264.f}) Shape(FVector(X,-2040,22),FVector(12,410,44),TEXT("Stone"),true);
     Shape(FVector(894,-2070,22),FVector(12,530,44),TEXT("Stone"),true);
-    Shape(FVector(-680,-2270,24),FVector(1400,24,48),TEXT("Stone"),true);
+    // Keep the plaza approach level: the former crosswise 48 cm lip is removed.
     // Broad, ground-level ring around the fountain; visual courses never alter navigation.
     const FVector F(260,-3320,0);
     Shape(F+FVector(0,0,.7f),FVector(930,930,1),TEXT("WoodLight"),false,Cylinder);
@@ -142,6 +142,13 @@ void BuildDockPlaza(UWorld* World)
     for(float X=-1360;X<=1780;X+=140) Shape(FVector(X,-4380,485),FVector(78,88,65),TEXT("Stone"),true);
     for(float Y=-4300;Y<=-2300;Y+=140) for(float X : {-1380.f,1780.f})
         Shape(FVector(X,Y,485),FVector(88,78,65),TEXT("Stone"),true);
+    // Join the older district boundary to the plaza's western corner.
+    // This short return sits outside both ground-level plaza approaches.
+    Shape(FVector(-1585,-2300,230),FVector(480,70,460),TEXT("Stone"),true);
+    Shape(FVector(-1585,-2300,452),FVector(488,88,16),TEXT("Stone"));
+    for(float X=-1770;X<=-1370;X+=140)
+        Shape(FVector(X,-2300,485),FVector(78,88,65),TEXT("Stone"),true);
+    Torch(FVector(-1585,-2355,250));
     for(float X : {-60.f,580.f})
     {
         Shape(FVector(X,-4270,330),FVector(240,260,660),TEXT("Stone"),true);
@@ -290,10 +297,10 @@ void BuildDockPlaza(UWorld* World)
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPlazaCapture")))
     {
-        const FVector Views[]={FVector(250,-2550,1900),FVector(-170,-2800,100),FVector(1130,-3450,95),FVector(300,-3730,100),FVector(-240,-180,110)};
-        const FVector Targets[]={FVector(260,-3350,40),FVector(260,-3320,150),FVector(1740,-3450,175),FVector(260,-4340,290),FVector(90,200,135)};
+        const FVector Views[]={FVector(250,-2550,1900),FVector(-170,-2800,100),FVector(1130,-3450,95),FVector(300,-3730,100),FVector(-240,-180,110),FVector(-850,-1700,650),FVector(300,-3800,900)};
+        const FVector Targets[]={FVector(260,-3350,40),FVector(260,-3320,150),FVector(1740,-3450,175),FVector(260,-4340,290),FVector(90,200,135),FVector(-1450,-2350,180),FVector(260,-6200,700)};
         auto* Camera=World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(75);
-        for(int32 I=0;I<5;++I)
+        for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
         {
             FTimerHandle H;
             World->GetTimerManager().SetTimer(H,[World,Camera,P=Views[I],T=Targets[I]]()
@@ -303,6 +310,6 @@ void BuildDockPlaza(UWorld* World)
             { const FString D=FPaths::ScreenShotDir()/TEXT("Plaza"); IFileManager::Get().MakeDirectory(*D,true); FScreenshotRequest::RequestScreenshot(D/FString::Printf(TEXT("View%d.png"),I),false,false); },6.f+I*4,false);
         }
         FTimerHandle Quit;
-        World->GetTimerManager().SetTimer(Quit,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },26.f,false);
+        World->GetTimerManager().SetTimer(Quit,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },34.f,false);
     }
 }
