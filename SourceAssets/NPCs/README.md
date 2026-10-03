@@ -64,7 +64,9 @@ docs/SETUP.md), one heavy process at a time:
   fist closed with `SetGrip`), over whatever the motion capture is doing.
 
 Two gate guards (`Guard`, `GuardWoman`: same kit, a 174 cm Caucasian woman) stand
-either side of the plaza's closed gate, each spear on the outer side.
+either side of the plaza's closed gate, each spear on the outer side. A third (`SideGuard`, a
+181 cm Caucasian man) stands by the Dock Street side gate in the west wall, south
+of it, beside the open sewer hatch and clear of its approach.
 
 Budget: dock worker 54.9k, guards 57.3k / 52.1k, market woman 47.8k triangles, 10
 material slots each. Placement and lines: `ADockNPC::SpawnTownsfolk` (the

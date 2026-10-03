@@ -39,7 +39,7 @@ namespace
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
-        TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman") };
+        TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipCount };
@@ -81,7 +81,9 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Guard(MeshPaths[1]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Woman(MeshPaths[2]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> GuardWoman(MeshPaths[3]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> SideGuard(MeshPaths[4]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
+    HumanMeshes[4] = SideGuard.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]);
     Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object; Clips[ClipReact] = React.Object;
@@ -154,6 +156,16 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
         Guard->Lines = { TEXT("Stick to the docks, rat.") };
         Guard->GiveSpear(0);   // east of the gate: her left
     }
+    // A third guard at the Dock Street side gate in the west wall, beside the
+    // sewer hatch: south of the gate (between it and the bench), facing into
+    // the court, clear of the hatch and its approach from the east.
+    if (ADockNPC* Guard = SpawnHuman(World, EDockHuman::SideGuard, FVector(-1690, 3470, 0), 0.f))
+    {
+        Guard->Tags.Add(TEXT("DockGuardC"));
+        Guard->DisplayName = TEXT("Guard");
+        Guard->Lines = { TEXT("Stick to the docks, rat.") };
+        Guard->GiveSpear(1);   // his right, toward the gate
+    }
     // The market woman at the end of the aisle between the red-canopied stalls.
     if (ADockNPC* Woman = SpawnHuman(World, EDockHuman::MarketWoman, FVector(148, -1240, 0), 180.f))
     {
@@ -218,7 +230,7 @@ void ADockNPC::BeginPlay()
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
     // now and then (each from its own random point in the clip).
-    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman) ? ClipStandLook : ClipStandHip;
+    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard) ? ClipStandLook : ClipStandHip;
     bool bClips = !BoneIndex.Contains(INDEX_NONE);
     for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
     if (bClips)

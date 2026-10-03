@@ -511,7 +511,8 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     static const FShot Shots[] = {
         {TEXT("Front"),320.f,0.f,100.f,92.f,62.f}, {TEXT("ThreeQuarter"),320.f,40.f,100.f,92.f,62.f},
         {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f},
-        {TEXT("Scratched"),260.f,60.f,100.f,92.f,62.f} };   // a scratch is triggered as this shot starts
+        {TEXT("Scratched"),260.f,60.f,100.f,92.f,62.f},     // a scratch is triggered as this shot starts
+        {TEXT("Wide"),420.f,-25.f,230.f,90.f,85.f} };      // the place he stands in
     constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
     constexpr float Settle=3.f, Each=1.2f;
     NPCCaptureTime+=DeltaSeconds;
@@ -1774,7 +1775,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // Every human stands with arms down: not the model's A-pose (hands
             // ~45 cm out), not held out in front like a sleepwalker (40+ cm
             // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
-            Check(PoseHumans==4 && bPoseOK,TEXT("the worker, both guards and the market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
+            Check(PoseHumans==5 && bPoseOK,TEXT("the worker, the three guards and the market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
             // The 2D game's townsfolk, where it put them, with its lines.
             TArray<AActor*> GuardFound, WomanFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);
@@ -1799,6 +1800,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             bSpears&=GuardNPC && GuardB && (GuardNPC->GetActorLocation().X-260.f)*(GuardB->GetActorLocation().X-260.f)<0.f;   // either side of the gate
             Check(bSpears,TEXT("two guards stand either side of the city gate, each holding a spear upright, fist round its grip"));
+            // And one at the Dock Street side gate by the sewer hatch.
+            TArray<AActor*> GuardCFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardC"),GuardCFound);
+            const auto* GuardC=GuardCFound.Num()==1 ? Cast<ADockNPC>(GuardCFound[0]) : nullptr;
+            const float ToGate=GuardC ? static_cast<float>(FVector::Dist2D(GuardC->GetActorLocation(),FVector(-1748,3650,0))) : 1e3f;
+            const float ToHatch=GuardC ? static_cast<float>(FVector::Dist2D(GuardC->GetActorLocation(),FVector(-1580,3900,0))) : 0.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDE_GUARD_MEASURE to_gate_cm=%.0f to_hatch_cm=%.0f grip_error_cm=%.1f lean_deg=%.1f"),
+                ToGate,ToHatch,GuardC ? GuardC->GetSpearGripError() : 1e3f,GuardC ? GuardC->GetSpearLean() : 90.f);
+            Check(GuardC && GuardC->HasSpear() && GuardC->GetSpearGripError()<5.f && GuardC->GetSpearLean()<10.f && ToGate<250.f && ToHatch>300.f,
+                TEXT("a third guard stands by the Dock Street side gate near the sewer hatch, spear upright and gripped, clear of the hatch"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));
