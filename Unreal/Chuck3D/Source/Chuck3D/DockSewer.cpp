@@ -75,6 +75,23 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
 }
 
 FVector DockSewerStartLocation() { return Shaft+FVector(0,0,FloorZ+34.65f); }
+bool IsInDockSewerStream(const FVector& P)
+{
+    if(P.Z<FloorZ-16 || P.Z>FloorZ+12) return false;
+    for(int32 I=0;I<Route.Num()-5;++I)
+    {
+        if(RiftSegment(I)) continue;
+        auto Centre=[](int32 J) {
+            const FVector Tangent=(Route[FMath::Min(J+1,Route.Num()-1)]-Route[FMath::Max(J-1,0)]).GetSafeNormal();
+            return Route[J]+FVector(Tangent.Y,-Tangent.X,0)*RiftOffset(J);
+        };
+        const FVector A=Centre(I), B=Centre(I+1), D=B-A;
+        const FVector Flat(P.X,P.Y,FloorZ);
+        const float Along=FVector::DotProduct(Flat-A,D)/FMath::Max(D.SizeSquared(),1.f);
+        if(Along>=0 && Along<=1 && FVector::DistSquared2D(Flat,A+D*Along)<=41.5f*41.5f) return true;
+    }
+    return false;
+}
 
 bool IsWithinDockSewer(const FVector& P)
 {
@@ -175,7 +192,7 @@ void BuildDockSewer(UWorld* World)
     {
         const float O=RiftOffset(I);
         const float Offsets[]={-Width(I)-35,-55+O,-45+O,-32+O,32+O,45+O,55+O,Width(I)+35};
-        const float Depth=(I>=8 && I<Count-4 && (Column==3 || Column==4))?-8.f:0.f;
+        const float Depth=(I<Count-4 && (Column==3 || Column==4))?-8.f:0.f;
         V.Add(Route[I]+Right[I]*Offsets[Column]+FVector(0,0,Depth)); N.Add(FVector::UpVector);
         UV.Add(FVector2D(Offsets[Column]/100,I*.65f));
     }
@@ -187,11 +204,11 @@ void BuildDockSewer(UWorld* World)
     MakeMesh(V,T,N,UV,Stone,true);
     // Five-centimetre-deep flowing water over a solid, shallow channel bed.
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    for(int32 I=8;I<Count-4;++I) for(float Side : {-1.f,1.f})
+    for(int32 I=0;I<Count-4;++I) for(float Side : {-1.f,1.f})
     {
         V.Add(Route[I]+Right[I]*(Side*41.5f+RiftOffset(I))+FVector(0,0,-2.5f));N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.65f));
     }
-    for(int32 I=0;I<V.Num()/2-1;++I){if(RiftSegment(I+8)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+    for(int32 I=0;I<V.Num()/2-1;++I){if(RiftSegment(I)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
     MakeMesh(V,T,N,UV,Stream,false,false);
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto Box=[&](FVector P,FVector Size,UMaterialInterface* Mat,bool Solid,FRotator Rot=FRotator::ZeroRotator)
@@ -200,7 +217,7 @@ void BuildDockSewer(UWorld* World)
         B->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));B->RegisterComponent();B->AddInstance(FTransform(Rot,P,Size/100));
         B->SetLightingChannels(false,true,false);
     };
-    Box(Shaft+FVector(0,0,FloorZ-20),FVector(430,370,40),Stone,true);
+    // The continuous route floor supports the landing without covering the water bed.
     Box(Route[0]+FVector(0,0,150),FVector(Width(0)*2+35,40,340),Stone,true,
         (Route[1]-Route[0]).Rotation()+FRotator(0,90,0));
     // Extend the mouth's sides to the underground landing, with no flat blackout.
@@ -261,7 +278,7 @@ void BuildDockSewer(UWorld* World)
         if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Route[StartIndex+2]+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
-        Lamp->SetIntensity(4200);Lamp->SetAttenuationRadius(680);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
+        Lamp->SetIntensity(2600);Lamp->SetAttenuationRadius(680);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
@@ -272,7 +289,7 @@ void BuildDockSewer(UWorld* World)
     {
         auto* Fill=NewObject<UPointLightComponent>(Owner);Fill->SetupAttachment(Root);
         Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.65f));
-        Fill->SetIntensity(3800);Fill->SetAttenuationRadius(1150+400*Chamber(I));
+        Fill->SetIntensity(1600);Fill->SetAttenuationRadius(1150+400*Chamber(I));
         Fill->SetLightColor(FLinearColor(.16f,.30f,.64f));Fill->SetSourceRadius(160);
         Fill->SetLightingChannels(false,true,false);Fill->SetCastShadows(false);Fill->RegisterComponent();++FillLights;
     }
@@ -358,6 +375,37 @@ void BuildDockSewer(UWorld* World)
         {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_STREAM_MISS z=%.3f"),ChannelHit.ImpactPoint.Z);}
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_CHECK failures=%d wall_traces=%d chamber_width_cm=%.0f stream_depth_cm=5.5 night_fill_lights=%d"),CaveFailures,WallChecks,Width(Middle)*2,FillLights);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckStreamTest")))
+    {
+        struct FRun { float Time=0; int32 Target=4, Phase=0, Wet=0, DrySteps=0, Before=0; FTimerHandle Timer; };
+        auto Run=MakeShared<FRun>(); FTimerHandle Start;
+        World->GetTimerManager().SetTimer(Start,[World,Run,Right](){
+            auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
+            Chuck->SetActorLocation(Route[3]+Right[3]*RiftOffset(3)+FVector(0,0,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);Chuck->SetRunHeld(false);
+            World->GetTimerManager().SetTimer(Run->Timer,[World,Run,Right,Chuck](){
+                Run->Time+=.02f;
+                if(Run->Time<1) return;
+                const FVector Goal=Route[Run->Target]+Right[Run->Target]*(Run->Phase?110.f:RiftOffset(Run->Target));
+                Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+                if(FVector::Dist2D(Goal,Chuck->GetActorLocation())<20) ++Run->Target;
+                if(Run->Target>=13 && Run->Phase==0)
+                {
+                    Run->Wet=Chuck->GetStreamStepCount();Run->Phase=1;Run->Target=4;
+                    Chuck->GetCharacterMovement()->StopMovementImmediately();
+                    Chuck->SetActorLocation(Route[3]+Right[3]*110+FVector(0,0,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+                    Run->Before=Chuck->GetSfxCount(AChuckCharacter::ESfx::Step);
+                }
+                if(Run->Target>=13 || Run->Time>40)
+                {
+                    const bool Passed=Run->Phase==1 && Run->Target>=13 && Run->Wet>3 && Chuck->GetStreamStepCount()==Run->Wet
+                        && Chuck->GetSfxCount(AChuckCharacter::ESfx::Step)>Run->Before+3 && Chuck->GetSplashLoaded()==6;
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_STREAM_TEST_COMPLETE failures=%d wet_steps=%d final_wet_steps=%d dry_steps=%d loaded=%d elapsed=%.2f"),!Passed,Run->Wet,Chuck->GetStreamStepCount(),Chuck->GetSfxCount(AChuckCharacter::ESfx::Step)-Run->Before,Chuck->GetSplashLoaded(),Run->Time);
+                    World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+                }
+            },.02f,true);
+        },3.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
         struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
@@ -433,9 +481,9 @@ void BuildDockSewer(UWorld* World)
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
         for(int32 I=0;I<6;++I)
         {
-            const int32 Indices[]={23,173,187,343,112,23};const int32 Index=Indices[I];
+            const int32 Indices[]={23,173,187,343,112,3};const int32 Index=Indices[I];
             const FVector P=SafePoint(Index,Right)+FVector(0,0,I==4?150:110);
-            const FVector Target=Route[FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:120);
+            const FVector Target=Route[I==5?0:FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:(I==5?0:120));
             FTimerHandle View,Shot;
             World->GetTimerManager().SetTimer(View,[World,Camera,P,Target](){Camera->SetActorLocationAndRotation(P,(Target-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);},4.f+I*4.f,false);
             World->GetTimerManager().SetTimer(Shot,[World,I](){

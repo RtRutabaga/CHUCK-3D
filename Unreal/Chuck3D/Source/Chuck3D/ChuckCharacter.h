@@ -67,6 +67,8 @@ public:
     enum class ESfx : uint8 { Step, Jump, Land, Slash, Roll, Num };
     int32 GetSfxCount(ESfx Kind) const { return SfxCounts[static_cast<int32>(Kind)]; }
     int32 GetSfxLoaded() const;
+    int32 GetStreamStepCount() const { return StreamStepCount; }
+    int32 GetSplashLoaded() const { return StreamSplashSounds.Num(); }
     /** Last side jump was the long (running) one. */
     bool WasLongSideJump() const { return bSideLong; }
     int32 GetOuterCorners() const { return OuterCorners; }
@@ -303,6 +305,8 @@ private:
     // Movement SFX (SourceAssets/Audio/SFX, Tools/gen_chuck_sfx.py), 2D under the soundtrack.
     UPROPERTY() TArray<USoundBase*> StepWalkWood;
     UPROPERTY() TArray<USoundBase*> StepWalkStone;
+    UPROPERTY() TArray<USoundBase*> StreamSplashSounds;
+    int32 StreamStepCount = 0;
     UPROPERTY() TArray<USoundBase*> StepRunWood;
     UPROPERTY() TArray<USoundBase*> StepRunStone;
     UPROPERTY() TArray<USoundBase*> JumpSounds;

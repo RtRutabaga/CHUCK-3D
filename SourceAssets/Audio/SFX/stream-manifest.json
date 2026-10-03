@@ -1,0 +1,47 @@
+{
+  "provenance": "Original deterministic synthetic shallow-water footsteps; Tools/gen_stream_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_StreamSplash_00",
+      "file": "SFX_StreamSplash_00.wav",
+      "duration": 0.28,
+      "sha256": "ce4647fb063f5ea340c398312446c3d12853e273a9736cfd7508ab888a21feb7",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_StreamSplash_01",
+      "file": "SFX_StreamSplash_01.wav",
+      "duration": 0.298,
+      "sha256": "c20b037d6f651db93e696b5f233ec7fede2a7885674d5dba5d0f579fe480ad86",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_StreamSplash_02",
+      "file": "SFX_StreamSplash_02.wav",
+      "duration": 0.316,
+      "sha256": "8de0f2388b90bebababf45c1f91a9be7df108a0ad3980a601a43dbcd3dc9d29e",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_StreamSplash_03",
+      "file": "SFX_StreamSplash_03.wav",
+      "duration": 0.334,
+      "sha256": "3db30d1e5fbb75ac903e59083530d082da7a82323e3041a4110c17d5be46bc62",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_StreamSplash_04",
+      "file": "SFX_StreamSplash_04.wav",
+      "duration": 0.352,
+      "sha256": "ebeb03dc3a9f24ed400a5195a24b82069026b4fb5fd03fb2275d5b957b6133ab",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_StreamSplash_05",
+      "file": "SFX_StreamSplash_05.wav",
+      "duration": 0.37,
+      "sha256": "6a22ade5aa89a9f4c45e8d2d7991b1e3615754a55e42e6ec3988b7f68dcccb05",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

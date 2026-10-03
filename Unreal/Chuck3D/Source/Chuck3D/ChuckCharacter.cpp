@@ -181,6 +181,8 @@ void AChuckCharacter::BeginPlay()
     Load(JumpSounds, TEXT("SFX_Jump"), 3); Load(LandSounds, TEXT("SFX_Land"), 3);
     Load(SlashSounds, TEXT("SFX_Slash"), 4); Load(RollSounds, TEXT("SFX_Roll"), 2);
     Load(ExhaleSounds, TEXT("SFX_Exhale"), 2);
+    Load(StreamSplashSounds, TEXT("SFX_StreamSplash"), 6);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_STREAM_AUDIO loaded=%d"), StreamSplashSounds.Num());
     NextExhaleAt = GetWorld()->GetTimeSeconds() + FMath::FRandRange(3.f, 6.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SFX_LOADED %d"), GetSfxLoaded());
     // Stance locks are world positions: pose after this frame's movement.
@@ -215,6 +217,13 @@ void AChuckCharacter::PlaySfx(const TArray<USoundBase*>& Set, ESfx Kind, float V
 }
 void AChuckCharacter::PlayStep(const FVector& Paw, float Speed)
 {
+    if(IsInDockSewerStream(Paw) && StreamSplashSounds.Num())
+    {
+        PlaySfx(StreamSplashSounds, ESfx::Step, Speed>ChuckClipData::WalkSpeed*1.25f ? .4f : .32f);
+        ++StreamStepCount;
+        UE_LOG(LogTemp, Verbose, TEXT("CHUCK_STREAM_STEP count=%d"), StreamStepCount);
+        return;
+    }
     // Stone or wood under the paw (dock materials are named M_<Surface>).
     bool bStone = false;
     FHitResult Hit;
@@ -222,7 +231,7 @@ void AChuckCharacter::PlayStep(const FVector& Paw, float Speed)
     if (GetWorld()->LineTraceSingleByChannel(Hit, Paw + FVector(0, 0, 10), Paw - FVector(0, 0, 15), ECC_Visibility, Query))
         if (const UPrimitiveComponent* Floor = Hit.GetComponent())
             if (const UMaterialInterface* Surface = Floor->GetMaterial(0))
-                bStone = Surface->GetName().Contains(TEXT("Stone")) || Surface->GetName().Contains(TEXT("Plaster"));
+                bStone = Surface->GetName().Contains(TEXT("Stone")) || Surface->GetName().Contains(TEXT("Plaster")) || Surface->GetName().Contains(TEXT("SewerRock"));
     const bool bRun = Speed > (ChuckClipData::WalkSpeed + ChuckClipData::StrafeRunSpeed) * .5f;
     if (bRun) PlaySfx(bStone ? StepRunStone : StepRunWood, ESfx::Step, RunStepVolume);
     else PlaySfx(bStone ? StepWalkStone : StepWalkWood, ESfx::Step, WalkStepVolume * FMath::Clamp(Speed / ChuckClipData::WalkSpeed, .6f, 1.f));
