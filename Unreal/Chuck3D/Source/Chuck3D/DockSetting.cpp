@@ -94,8 +94,33 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(600,-1400,-45),FVector(600,800,90),TEXT("Stone"),true); // market service quay
     // Full depth to the two old frontage shells; leave their test-facing walls intact.
     Box(FVector(-60,530,155),FVector(560,270,310),TEXT("Plaster"),true);
-    Box(FVector(-600,50,160),FVector(200,600,320),TEXT("Stone"),true);
+    // Roofless stone store: solid lower remnant, genuinely stepped/broken upper
+    // courses rather than decorative damage over an invisible full-height box.
+    Box(FVector(-600,50,64),FVector(200,600,128),TEXT("Stone"),true);
+    for(int32 I=0;I<10;++I)
+    {
+        const float Y=-220+I*60.f;
+        const float H=I<3?192.f:I<6?112.f:160.f;
+        Box(FVector(-635,Y,128+H*.5f),FVector(130,58,H),TEXT("Stone"),true);
+        const float FrontH=I<3?120.f:I<6?48.f:96.f;
+        Box(FVector(-470,Y,200+FrontH*.5f),FVector(60,58,FrontH),TEXT("Stone"),true);
+        for(int32 J=0;J<2;++J)
+            Box(FVector(-620+J*65,Y,128+H+8+(I%3)*5),FVector(48,42,16),TEXT("Stone"),true,FRotator(0,I*13,0));
+    }
+    // Fallen masonry clustered against the ruin, outside the street route.
+    for(int32 I=0;I<18;++I)
+        Box(FVector(-735-(I%3)*15,-210+(I/3)*88,8+(I%3)*6),
+            FVector(25+(I%4)*6,24+(I%3)*7,16+(I%3)*12),TEXT("Stone"),true,FRotator(0,I*37,0));
+    // Jagged foundation stones retain the central climb/shimmy surfaces of
+    // the L remnant but visibly lose their continuous coping and straight ends.
+    for(int32 I=0;I<8;++I)
+        Box(FVector(-115+I*22,-374,119+(I%3)*4),FVector(18,20,8+(I%3)*8),TEXT("Stone"),true,FRotator(0,I*11,0));
+    for(int32 I=0;I<4;++I)
+        Box(FVector(90,-324+I*20,119+(I%2)*7),FVector(18,17,12+(I%2)*14),TEXT("Stone"),true);
+    for(int32 I=0;I<9;++I)
+        Box(FVector(-132+(I%3)*28,-398-(I/3)*20,6+(I%2)*5),FVector(21,18,12+(I%2)*10),TEXT("Stone"),true,FRotator(0,I*29,0));
 
+    TArray<FVector> SolidChimneys;
     auto House=[&](FVector P,FVector Size,const TCHAR* Surface,bool Solid=true)
     {
         Box(P+FVector(0,0,Size.Z*.5f),Size,Surface,Solid);
@@ -117,7 +142,8 @@ void BuildDockSetting(UWorld* World)
                 Box(P+FVector(X,Side*Size.Y*.5f,Size.Z+H*.5f),FVector(Size.X/12,8,H),TEXT("Wood"));
         }
         Box(P+FVector(0,0,Size.Z+Rise),FVector(14,Size.Y+48,14),TEXT("Dark"));
-        Box(P+FVector(-Size.X*.25f,Size.Y*.2f,Size.Z+Rise*.65f),FVector(45,48,150),TEXT("Stone"));
+        Box(P+FVector(-Size.X*.25f,Size.Y*.2f,Size.Z+Rise*.65f),FVector(45,48,150),TEXT("Stone"),Solid);
+        if(Solid) SolidChimneys.Add(P+FVector(-Size.X*.25f,Size.Y*.2f,Size.Z+Rise*.65f));
         // Closed doors and shuttered windows on both street-facing sides.
         for(float Side : {-1.f,1.f})
         {
@@ -600,8 +626,9 @@ void BuildDockSetting(UWorld* World)
         SolidBarrel(P+FVector(0,0,31),.68f);
         Prop(RopeMesh,P+FVector(0,0,62),FVector(.48f),25);
         for(int32 I=0;I<5;++I)
-            Box(P+FVector(-15+I*7,55,65),FVector(6,13,130),I%2?TEXT("Wood"):TEXT("WoodLight"),true,FRotator(0,0,-8));
-        Box(P+FVector(0,55,72),FVector(42,17,5),TEXT("Dark"));
+            // Foot on ground at y=80; boards meet barrel rim at y=16,z=62.
+            Box(P+FVector(-12+I*6,48,31),FVector(5,88,5),I%2?TEXT("Wood"):TEXT("WoodLight"),true,FRotator(0,0,44));
+        Box(P+FVector(0,48,34),FVector(33,5,5),TEXT("Dark"),false,FRotator(0,0,44));
     }
     // A ladder kept against the cooperage, below the eaves rather than across a route.
     for(float Y : {-1130.f,-1090.f})
@@ -721,10 +748,10 @@ void BuildDockSetting(UWorld* World)
                 || FVector::Dist(Hit.ImpactPoint,P)>35)
             { ++PropFailures; UE_LOG(LogTemp,Warning,TEXT("CHUCK_DOCKPROPS barrel failed p=%s hit=%s"),*P.ToString(),*Hit.ImpactPoint.ToString()); }
         }
-        for(const FVector P : {FVector(-1260,-1645,80),FVector(-1190,525,80),FVector(-1720,2155,80),FVector(820,3315,80)})
+        for(const FVector P : {FVector(-1260,-1652,31),FVector(-1190,518,31),FVector(-1720,2148,31),FVector(820,3308,31)})
         {
             FHitResult Hit;
-            if(!World->LineTraceSingleByChannel(Hit,P-FVector(0,40,0),P+FVector(0,40,0),ECC_Visibility)
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,40,0),P-FVector(0,40,0),ECC_Visibility)
                 || FVector::Dist(Hit.ImpactPoint,P)>22)
             { ++PropFailures; UE_LOG(LogTemp,Warning,TEXT("CHUCK_DOCKPROPS planks failed p=%s hit=%s"),*P.ToString(),*Hit.ImpactPoint.ToString()); }
         }
@@ -734,6 +761,36 @@ void BuildDockSetting(UWorld* World)
             if(!World->LineTraceSingleByChannel(Hit,P-FVector(0,100,0),P+FVector(0,100,0),ECC_Visibility)) ++PropFailures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKPROPS_CHECK failures=%d barrels=5 planks=4 boundaries=2"),PropFailures);
+        int32 ChimneyFailures=0;
+        for(const FVector P : SolidChimneys)
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(100,0,65),P-FVector(100,0,-65),ECC_Visibility)
+                || FMath::Abs(Hit.ImpactPoint.X-(P.X+22.5f))>2) ++ChimneyFailures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_COLLISION failures=%d checked=%d"),ChimneyFailures,SolidChimneys.Num());
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRuinsCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();
+        Camera->GetCameraComponent()->SetFieldOfView(65);
+        const FVector Positions[]={FVector(180,-560,390),FVector(-930,-350,330),FVector(-1090,630,100)};
+        const FVector Targets[]={FVector(-340,-140,100),FVector(-575,40,160),FVector(-1190,510,40)};
+        for(int32 I=0;I<3;++I)
+        {
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P=Positions[I],T=Targets[I]](){
+                Camera->SetActorLocationAndRotation(P,(T-P).Rotation());
+                if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);
+            },4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("Ruins");
+                IFileManager::Get().MakeDirectory(*Folder,true);
+                FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
+            },6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;
+        World->GetTimerManager().SetTimer(Exit,[World](){if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},18.f,false);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))

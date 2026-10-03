@@ -157,7 +157,9 @@ void ADockGameMode::StartPlay()
     Text->SetWorldSize(18); Text->SetText(FText::FromString(TEXT("TAVERN")));
     Text->SetTextRenderColor(FColor(225,205,169));
     // Warehouse closes the back of the study; front/side edges remain readable.
-    Shape(TEXT("Warehouse"),FVector(-470,50,160),FVector(60,600,320),TEXT("Plaster"));
+    // Surviving stone frontage of the roofless store; broken courses are built
+    // in DockSetting rather than a plaster face on a stone block.
+    Shape(TEXT("Warehouse"),FVector(-470,50,100),FVector(60,600,200),TEXT("Stone"));
     auto* BarrelCollision=Shape(TEXT("Barrel"),FVector(-330,-80,45),FVector(62,62,90),TEXT("Wood"),Cylinder);
     if(BarrelMesh) { BarrelCollision->SetActorHiddenInGame(true); Prop(TEXT("DockBarrelArt"),BarrelCollision->GetActorLocation(),BarrelMesh); }
     else for(float Z : {14.f,72.f}) Shape(TEXT("BarrelBand"),FVector(-330,-80,Z),FVector(65,65,7),TEXT("Dark"),Cylinder);
@@ -168,6 +170,9 @@ void ADockGameMode::StartPlay()
     // strip, dock-built so it can be dressed later and kept: a cargo chimney of
     // two 240 cm crate stacks 100 cm apart (wall runs, wall jumps back and
     // forth) and a 115 cm stone harbour wall with a walkable top (ledge grabs).
+    // Historical isolated stacks remain only as controller regression fixtures.
+    // They are absent from the playable starting court.
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     for(const float X : {-390.f,-230.f})
     {
         auto* Stack=Shape(TEXT("CargoStack"),FVector(X,-337.5f,120),FVector(60,65,240),TEXT("WoodLight"));
@@ -179,10 +184,8 @@ void ADockGameMode::StartPlay()
         }
     }
     Shape(TEXT("HarbourWall"),FVector(-40,-360,57.5f),FVector(180,50,115),TEXT("Stone"));
-    Shape(TEXT("HarbourCoping"),FVector(-40,-360,113),FVector(184,54,6),TEXT("Stone"),nullptr,false);
     // Its east end returns north (an L): an inside corner to shimmy round.
     Shape(TEXT("HarbourWallReturn"),FVector(75,-295,57.5f),FVector(50,80,115),TEXT("Stone"));
-    Shape(TEXT("HarbourCoping"),FVector(75,-295,113),FVector(54,84,6),TEXT("Stone"),nullptr,false);
     if(RopeMesh) Prop(TEXT("HarbourRopeArt"),FVector(20,-368,116),RopeMesh);
     // A knee-high stone mooring plinth (30 cm): walk into it and Chuck mantles up.
     Shape(TEXT("MooringPlinth"),FVector(150,-330,15),FVector(60,60,30),TEXT("Stone"));
