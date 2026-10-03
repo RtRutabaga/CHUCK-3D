@@ -595,7 +595,7 @@ void BuildDockSetting(UWorld* World)
     }
     // The larger wall beyond the court stays closed.
     // Small working possessions stay tight to facades, outside the clear lanes.
-    for(const FVector P : {FVector(-1260,-1700,0),FVector(-1190,470,0),FVector(-1720,2100,0),FVector(820,3100,0)})
+    for(const FVector P : {FVector(-1260,-1700,0),FVector(-1190,470,0),FVector(-1720,2100,0),FVector(820,3260,0)})
     {
         SolidBarrel(P+FVector(0,0,31),.68f);
         Prop(RopeMesh,P+FVector(0,0,62),FVector(.48f),25);
@@ -713,17 +713,19 @@ void BuildDockSetting(UWorld* World)
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_COURTPIER_CHECK failures=%d floors=10 routes=9"),PierFailures);
         int32 PropFailures=0;
-        for(const FVector P : {FVector(-1260,-1700,31),FVector(-1190,470,31),FVector(-1720,2100,31),FVector(820,3100,31),FVector(1060,2780,45)})
+        for(const FVector P : {FVector(-1260,-1700,31),FVector(-1190,470,31),FVector(-1720,2100,31),FVector(820,3260,31),FVector(1060,2780,45)})
         {
             FHitResult Hit;
             if(!World->LineTraceSingleByChannel(Hit,P+FVector(75,0,0),P-FVector(75,0,0),ECC_Visibility)
-                || FVector::Dist(Hit.ImpactPoint,P)>35) ++PropFailures;
+                || FVector::Dist(Hit.ImpactPoint,P)>35)
+            { ++PropFailures; UE_LOG(LogTemp,Warning,TEXT("CHUCK_DOCKPROPS barrel failed p=%s hit=%s"),*P.ToString(),*Hit.ImpactPoint.ToString()); }
         }
-        for(const FVector P : {FVector(-1260,-1645,80),FVector(-1190,525,80),FVector(-1720,2155,80),FVector(820,3155,80)})
+        for(const FVector P : {FVector(-1260,-1645,80),FVector(-1190,525,80),FVector(-1720,2155,80),FVector(820,3315,80)})
         {
             FHitResult Hit;
             if(!World->LineTraceSingleByChannel(Hit,P-FVector(0,40,0),P+FVector(0,40,0),ECC_Visibility)
-                || FVector::Dist(Hit.ImpactPoint,P)>22) ++PropFailures;
+                || FVector::Dist(Hit.ImpactPoint,P)>22)
+            { ++PropFailures; UE_LOG(LogTemp,Warning,TEXT("CHUCK_DOCKPROPS planks failed p=%s hit=%s"),*P.ToString(),*Hit.ImpactPoint.ToString()); }
         }
         for(const FVector P : {FVector(1100,3740,100),FVector(1770,3740,100)})
         {
