@@ -241,12 +241,8 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("SailLoftTimber"),FVector(X,Y,130),FVector(8,8,260),TEXT("Wood"),nullptr,false);
     Shape(TEXT("SailLoftHoistBeam"),FVector(170,-630,250),FVector(10,30,10),TEXT("Wood"),nullptr,false);
     Shape(TEXT("SailLoftDoor"),FVector(170,-639.5f,150),FVector(70,2,110),TEXT("Wood"),nullptr,false);
-    // Knee-high field: harbour walls, bollards, barrels, a crate.
-    for(const FVector& Wall : {FVector(-380,-950,17.5f),FVector(-140,-965,17.5f),FVector(120,-950,17.5f)})
-    {
-        Shape(TEXT("HarbourLowWall"),Wall,FVector(120,30,35),TEXT("Stone"));
-        Shape(TEXT("HarbourLowCoping"),Wall+FVector(0,0,18.5f),FVector(124,34,3),TEXT("Stone"),nullptr,false);
-    }
+    // Working cargo remains; isolated practice-wall stubs were removed when
+    // the wharf became part of a connected street district.
     for(const float X : {-460.f,-260.f,-20.f,230.f})
         Shape(TEXT("WharfBollard"),FVector(X,-985,17.5f),FVector(22,22,35),TEXT("Dark"),Cylinder);
     for(const FVector& Spot : {FVector(-270,-935,45),FVector(-20,-935,45)})
@@ -257,7 +253,8 @@ void ADockGameMode::StartPlay()
     CrateColumn(TEXT("WharfCrate"),240,-930,60);
     if(BoatMesh)
     {
-        Prop(TEXT("WharfBoatArt"),FVector(-100,-1960,-60),BoatMesh)->SetActorRotation(FRotator(0,90,0));
+        // The old southern berth became enclosed by the plaza extension.
+        Prop(TEXT("WharfBoatArt"),FVector(1550,-1860,-60),BoatMesh)->SetActorRotation(FRotator(0,90,0));
         Prop(TEXT("WharfBoatArt"),FVector(1030,-800,-60),BoatMesh);
     }
     // Second expansion (user 2026-09-29: "expand the area more"): two more
@@ -292,9 +289,8 @@ void ADockGameMode::StartPlay()
         for(const float SX : {-1.f,1.f}) Shape(TEXT("MarketPost"),Stall+FVector(SX*56,-26,95),FVector(5,5,190),TEXT("Wood"),nullptr,false);
         Shape(TEXT("MarketCanopy"),Stall+FVector(0,-10,190),FVector(130,80,3),TEXT("Roof"),nullptr,false);
     }
-    // A long garden wall with a narrow walkable top, reached from a crate.
-    Shape(TEXT("GardenWall"),FVector(200,-1400,60),FVector(30,600,120),TEXT("Stone"));
-    Shape(TEXT("GardenCoping"),FVector(200,-1400,121),FVector(34,604,3),TEXT("Stone"),nullptr,false);
+    // The old garden divider no longer separates different ground levels or
+    // properties: remove it to join the market and service quay naturally.
     CrateColumn(TEXT("GardenCrate"),200,-1060,60);
     // Customs terrace with a ramp up from the market (30 degrees).
     Shape(TEXT("CustomsTerrace"),FVector(-25,-1690,45),FVector(350,180,90),TEXT("Stone"));

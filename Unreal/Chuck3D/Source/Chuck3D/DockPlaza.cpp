@@ -78,12 +78,11 @@ void BuildDockPlaza(UWorld* World)
         Glow(P+FVector(0,0,35),1500,390);
     };
 
-    // Add south of the current district: no old floor, boat, obstacle or building is removed.
+    // Connected plaza apron replaces the obsolete railed narrow walkway and
+    // fills the tiny enclosed water pocket beside the former boat placement.
     Shape(FVector(200,-3325,-55),FVector(3200,2150,110),TEXT("Stone"),true);
-    Shape(FVector(600,-2070,-55),FVector(600,540,110),TEXT("Stone"),true);
-    Shape(FVector(180,-2080,-55),FVector(180,560,110),TEXT("Stone"),true);
-    // Low quay parapets leave both existing approaches open.
-    for(float X : {96.f,264.f}) Shape(FVector(X,-2040,22),FVector(12,410,44),TEXT("Stone"),true);
+    Shape(FVector(200,-2075,-55),FVector(1400,550,110),TEXT("Stone"),true);
+    // Retain the kerb only along the actual waterside edge.
     Shape(FVector(894,-2070,22),FVector(12,530,44),TEXT("Stone"),true);
     // Keep the plaza approach level: the former crosswise 48 cm lip is removed.
     // Broad, ground-level ring around the fountain; visual courses never alter navigation.
@@ -311,13 +310,14 @@ void BuildDockPlaza(UWorld* World)
         int32 Failures=0;
         const FVector Route[]={FVector(180,-1730,0),FVector(180,-2440,0),FVector(600,-1730,0),
             FVector(600,-2440,0),FVector(600,-2780,0),FVector(260,-2780,0),FVector(-180,-2980,0),
-            FVector(-180,-3650,0),FVector(630,-3650,0),FVector(630,-2980,0),FVector(1480,-3450,0)};
+            FVector(-180,-3650,0),FVector(630,-3650,0),FVector(630,-2980,0),FVector(1480,-3450,0),
+            FVector(-350,-2050,0),FVector(0,-2050,0),FVector(780,-2050,0)};
         for(const FVector P : Route)
         {
             FHitResult H;
             if(!World->LineTraceSingleByChannel(H,P+FVector(0,0,60),P-FVector(0,0,80),ECC_Visibility) || FMath::Abs(H.ImpactPoint.Z)>3) ++Failures;
         }
-        for(const FIntPoint Leg : {FIntPoint(0,1),FIntPoint(2,3),FIntPoint(3,4),FIntPoint(4,5),FIntPoint(5,6),FIntPoint(6,7),FIntPoint(7,8),FIntPoint(8,9)})
+        for(const FIntPoint Leg : {FIntPoint(0,1),FIntPoint(2,3),FIntPoint(3,4),FIntPoint(4,5),FIntPoint(5,6),FIntPoint(6,7),FIntPoint(7,8),FIntPoint(8,9),FIntPoint(11,12),FIntPoint(12,13),FIntPoint(1,12)})
         {
             FHitResult H;
             if(World->SweepSingleByChannel(H,Route[Leg.X]+FVector(0,0,35),Route[Leg.Y]+FVector(0,0,35),FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++Failures;
@@ -325,7 +325,7 @@ void BuildDockPlaza(UWorld* World)
         FHitResult Gate;
         const bool Closed=World->LineTraceSingleByChannel(Gate,FVector(1500,-3450,80),FVector(1900,-3450,80),ECC_Visibility);
         if(!Closed) ++Failures;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_PLAZA_CHECK failures=%d floor_samples=11 capsule_routes=8 sewer_closed=%d"),Failures,Closed);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_PLAZA_CHECK failures=%d floor_samples=14 capsule_routes=11 sewer_closed=%d"),Failures,Closed);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPlazaCapture")))
     {

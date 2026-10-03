@@ -639,8 +639,9 @@ void BuildDockSetting(UWorld* World)
         for(float DY : {-65.f,65.f}) Box(FVector(-1640,Y+DY,43),FVector(63,5,2),TEXT("Dark"));
     }
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
-    Box(FVector(-150,1090,70),FVector(700,20,140),TEXT("Stone"),true);
-    Box(FVector(190,750,70),FVector(20,700,140),TEXT("Stone"),true);
+    // The courtyard now joins Dock Street northward; remove its obsolete
+    // cross-street divider. Keep only a low kerb at the real eastern quay edge.
+    Box(FVector(190,750,20),FVector(20,700,40),TEXT("Stone"),true);
     BuildDockWeathering(World);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
