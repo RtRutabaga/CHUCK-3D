@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — ivy and weathered plaster
+
+Runtime `bbf66d3` / `ae5756b` / `e723888`: new DockWeathering helper, dedicated WeatheredPlaster/DockIvy materials and narrowly scoped material builder. World-space old lime render/cracks/stains, six irregular exposed masonry patches and six noncolliding ivy growths (2,304 leaves). Existing source material graphs/character/traversal untouched. New LFS assets 18,882 bytes; fsck passed, no installation/download/paid storage, remote allowance unknown.
+
+Fixed missing ivy color connection from initial cook and single-sided masonry from visual review. Final build `Local/weathering-build-verified.log`; capture `Local/weathering-capture-verified.log`. Initial ivy views 1/2 inspected; final patch views 0/3 inspected. Final verifier `Local/verify-package-20261002-185821.log` passed 125 gameplay and all setting/pier/music checks. No physical-controller, MotionCapture or formal performance benchmark. Root launcher checked at `bbf66d3`; backup `Builds/Windows-Previous-20261002-Weathering`. Generated output untracked; art still provisional. Next part of the work can be done here.
+
 ## October 2 — sewer court waterfront dock
 
 Runtime `eff5b8c`: replaced the eastern court wall with a modest timber landing/two finger piers; west/north walls, sewer setup, harbor breakwater and controller retained. Continuous solid deck at Z0 with patched boards, piles, rope and working supplies. No new binary assets/dependencies. Build `Local/court-pier-build.log`; capture `Local/court-pier-capture.log` (views 11/12 inspected). Verifier `Local/verify-package-20261002-183401.log` passed 125 gameplay, all earlier setting/music checks and ten pier floors/nine capsule routes. No manual traversal, physical-controller or MotionCapture repeat. Root launcher receipt checked; backup `Builds/Windows-Previous-20261002-CourtPier`. Generated output untracked. Next part of the work can be done here.
