@@ -248,7 +248,7 @@ void BuildDockSetting(UWorld* World)
                     FVector(1.4f,17,P.Z-4),TEXT("AgedDockTimber"));
             Box(FVector(P.X+Side*(Size.X*.5f+1.8f),P.Y+Size.Y*.3f,28),
                 FVector(2,47,36),TEXT("Wood"));
-            for(float Z : {18.f,P.Z-14})
+            for(float Z : {18.f,static_cast<float>(P.Z)-14.f})
                 Box(FVector(P.X,P.Y+Side*(Size.Y*.5f+1.8f),Z),FVector(Size.X,3,5),TEXT("Wood"));
         }
     }
