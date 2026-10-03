@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — plaza connections and town backdrop
+
+Runtime `7c28408` / `6770cda`: removed the 48 cm crosswise approach lip, joined the older western boundary to the plaza wall with a 4.8 m stone return, and added 38 noncolliding vista buildings behind the closed plaza gate. No binary assets/dependencies. First visual review led to extra rear roof rows hiding the lane's platform edge. Final build `Local/plaza-connection-build-final.log`; final capture `Local/plaza-connection-capture-final.log` (View6 inspected; junction and gate views inspected in first capture). Final verifier `Local/verify-package-20261002-175913.log` passed 125 gameplay and all setting/music checks. No physical-controller or MotionCapture repeat. Root launcher promoted and receipt checked; backup `Builds/Windows-Previous-20261002-PlazaConnection`. Generated files untracked. Next part of the work can be done here.
+
 ## October 2 — grate beside gate
 
 Runtime `cafa272`: grate moved north to (-1580,3900), opposite the bench, clearing the doorway. Packaged views 9/10 inspected. Build `Local/grate-side-build.log`; capture `Local/grate-side-capture.log`; verification `Local/verify-package-20261002-173443.log`: 125 gameplay checks and all world/plaza/Dock Street/side-gate/music checks passed. No physical-controller or MotionCapture repeat. Root launcher promoted and receipt checked; backup `Builds/Windows-Previous-20261002-GrateSide`. No new assets/dependencies; generated files untracked. Next part of the work can be done here.

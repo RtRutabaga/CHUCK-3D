@@ -2,6 +2,10 @@
 
 ## Current launcher and integration status
 
+**Update 33 (Codex, October 2 — plaza connections and town backdrop):** runtime `7c28408` / `6770cda`. Removed the crosswise 48 cm approach lip at (-680,-2270). Added a 4.8 m stone return at (-1585,-2300), with battlements/coping/torch, joining the existing western district boundary to the plaza's western wall. Added 38 noncolliding buildings and supporting scenery behind the closed plaza gate, connecting into the western vista. The initial review exposed the far platform edge down the lane; final roof rows close that view. No binary assets or dependencies added. Graphics remain provisional.
+
+Final build `Local/plaza-connection-build-final.log` succeeded. Packaged plaza views 3/5/6 reviewed across the two captures; final backdrop inspected in `Local/plaza-connection-capture-final.log`, View6. Final verifier `Local/verify-package-20261002-175913.log` passed 125 gameplay checks plus world/plaza/Dock Street/side-gate/music checks. No physical-controller or MotionCapture repeat. Root launcher promoted and receipt checked at `7c28408`; backup `Builds/Windows-Previous-20261002-PlazaConnection`. Generated output remains untracked. Next part of the work can be done here.
+
 **Update 32 (Codex, October 2 — grate beside gate):** runtime `cafa272`. Moved the grate to (-1580,3900), north of the gate and opposite the bench at Y3300; doorway paving remains clear. Updated collision probes and close-up capture positions. No new assets or dependencies.
 
 Build `Local/grate-side-build.log` succeeded; packaged views 9/10 visually inspected (`Local/grate-side-capture.log`). Verifier `Local/verify-package-20261002-173443.log` passed 125 gameplay checks plus world, plaza, Dock Street, side-gate and music checks. No physical-controller or MotionCapture repeat. Promoted to root launcher and checked receipt at `cafa272`; previous package retained at `Builds/Windows-Previous-20261002-GrateSide`. Generated files remain untracked. Next part of the work can be done here.
