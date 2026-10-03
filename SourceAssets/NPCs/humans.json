@@ -242,6 +242,87 @@
      ]
     }
    ]
+  },
+  "GuardWoman": {
+   "height_cm": 174,
+   "macro": {
+    "gender": 0.0,
+    "age": 0.42,
+    "muscle": 0.68,
+    "weight": 0.55,
+    "height": 0.62,
+    "proportions": 0.6,
+    "cupsize": 0.4,
+    "firmness": 0.6,
+    "race": {
+     "african": 0.03,
+     "asian": 0.02,
+     "caucasian": 0.95
+    }
+   },
+   "skin": "middleage_caucasian_female",
+   "eyes": "bluegreen",
+   "eyebrows": "eyebrow007",
+   "eyelashes": "eyelashes04",
+   "hair": null,
+   "outfit": [
+    {
+     "piece": "gambeson",
+     "fabric": "caban",
+     "tint": [
+      0.04,
+      0.07,
+      0.045
+     ]
+    },
+    {
+     "piece": "cuirass",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.28,
+      0.28,
+      0.29
+     ]
+    },
+    {
+     "piece": "belt",
+     "z": -0.075,
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.033,
+      0.022
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.032,
+      0.028
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.26,
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.03,
+      0.022
+     ]
+    },
+    {
+     "piece": "helmet",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ]
+    }
+   ]
   }
  }
 }

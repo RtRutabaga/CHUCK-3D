@@ -38,7 +38,8 @@ namespace
     constexpr float FistReach = 8.f;           // cm from the wrist to the middle of a closed fist
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
-        TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman") };
+        TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
+        TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipCount };
@@ -79,7 +80,8 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Worker(MeshPaths[0]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Guard(MeshPaths[1]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Woman(MeshPaths[2]);
-    HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object;
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> GuardWoman(MeshPaths[3]);
+    HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]);
     Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object; Clips[ClipReact] = React.Object;
@@ -93,23 +95,24 @@ ADockNPC::ADockNPC()
     Spear->SetVisibility(false);
 }
 
-void ADockNPC::GiveSpear()
+void ADockNPC::GiveSpear(int32 Side)
 {
     bSpear = SpearMesh != nullptr;
     if (!bSpear) return;
+    SpearSide = FMath::Clamp(Side, 0, 1);
     Spear->SetStaticMesh(SpearMesh);
     Spear->SetVisibility(true);
-    Grip[1] = 1.f;   // his right hand closed round it
+    Grip[SpearSide] = 1.f;   // that hand closed round it
     PlaceSpear();
 }
 
 void ADockNPC::PlaceSpear()
 {
-    // His right is the opposite side to the left arm (ArmOut, from the rest solve).
-    const float Right = -ArmOut;
-    const FRotator Lean(0.f, 0.f, Right * SpearLeanDeg);   // the top leans out, away from him
-    Spear->SetRelativeLocationAndRotation(FVector(SpearAhead, Right * SpearOut, 0.f), Lean);
-    SpearGrip = FVector(SpearAhead, Right * SpearOut, 0.f) + Lean.RotateVector(FVector(0.f, 0.f, SpearGripHeight));
+    // Which way is out on the spear side (the left arm's side is ArmOut, from the rest solve).
+    const float Out = SpearSide == 1 ? -ArmOut : ArmOut;
+    const FRotator Lean(0.f, 0.f, Out * SpearLeanDeg);   // the top leans out, away from the body
+    Spear->SetRelativeLocationAndRotation(FVector(SpearAhead, Out * SpearOut, 0.f), Lean);
+    SpearGrip = FVector(SpearAhead, Out * SpearOut, 0.f) + Lean.RotateVector(FVector(0.f, 0.f, SpearGripHeight));
 }
 
 ADockNPC* ADockNPC::SpawnHuman(UWorld* World, EDockHuman Kind, const FVector& Feet, float Yaw)
@@ -133,14 +136,23 @@ ADockNPC* ADockNPC::SpawnDockWorker(UWorld* World, const FVector& Feet, float Ya
 
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
-    // The guard before the closed city gate (the plaza's far wall), facing
-    // back down the plaza: he keeps the rat from the way into the city.
-    if (ADockNPC* Guard = SpawnHuman(World, EDockHuman::Guard, FVector(260, -4060, 0), 90.f))
+    // Two guards either side of the closed city gate (the plaza's far wall;
+    // the opening runs x 60..460 between the towers), facing back down the
+    // plaza: they keep the rat from the way into the city. Each holds the spear
+    // on the outer side, so the pair mirror each other.
+    if (ADockNPC* Guard = SpawnHuman(World, EDockHuman::Guard, FVector(105, -4085, 0), 90.f))
     {
         Guard->Tags.Add(TEXT("DockGuard"));
         Guard->DisplayName = TEXT("Guard");
         Guard->Lines = { TEXT("Stick to the docks, rat.") };
-        Guard->GiveSpear();
+        Guard->GiveSpear(1);   // west of the gate: his right hand is the outer one
+    }
+    if (ADockNPC* Guard = SpawnHuman(World, EDockHuman::GuardWoman, FVector(415, -4085, 0), 90.f))
+    {
+        Guard->Tags.Add(TEXT("DockGuardB"));
+        Guard->DisplayName = TEXT("Guard");
+        Guard->Lines = { TEXT("Stick to the docks, rat.") };
+        Guard->GiveSpear(0);   // east of the gate: her left
     }
     // The market woman at the end of the aisle between the red-canopied stalls.
     if (ADockNPC* Woman = SpawnHuman(World, EDockHuman::MarketWoman, FVector(148, -1240, 0), 180.f))
@@ -206,7 +218,7 @@ void ADockNPC::BeginPlay()
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
     // now and then (each from its own random point in the clip).
-    IdleClip = Kind == EDockHuman::Guard ? ClipStandLook : ClipStandHip;
+    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman) ? ClipStandLook : ClipStandHip;
     bool bClips = !BoneIndex.Contains(INDEX_NONE);
     for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
     if (bClips)
@@ -326,7 +338,7 @@ void ADockNPC::PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) cons
 
 void ADockNPC::HoldSpear(TArray<FTransform>& Space) const
 {
-    // Two-bone IK for the right arm: the fist on the grip, the elbow back and
+    // Two-bone IK for the spear arm: the fist on the grip, the elbow back and
     // out, the knuckles across the shaft with the thumb up. Children follow
     // through their local transforms (the gripped fingers come along).
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
@@ -344,9 +356,9 @@ void ADockNPC::HoldSpear(TArray<FTransform>& Space) const
         for (int32 B = Bone + 1; B < Count; ++B)
             if (Descends(B, Bone)) Space[B] = Local[B] * Space[Ref.GetParentIndex(B)];
     };
-    const int32 Upper = BoneIndex[UpperR], Lower = BoneIndex[LowerR], Hand = BoneIndex[HandR];
-    const int32 Thumb = BoneIndex[ThumbR], Middle = BoneIndex[MiddleR];
-    const float Right = -ArmOut;
+    const int32 Upper = BoneIndex[Of(UpperL, SpearSide)], Lower = BoneIndex[Of(LowerL, SpearSide)], Hand = BoneIndex[Of(HandL, SpearSide)];
+    const int32 Thumb = BoneIndex[Of(ThumbL, SpearSide)], Middle = BoneIndex[Of(MiddleL, SpearSide)];
+    const float Out = SpearSide == 1 ? -ArmOut : ArmOut;
     const FVector S = Space[Upper].GetLocation();
     const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
     const float Bl = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[Hand].GetLocation()));
@@ -354,13 +366,13 @@ void ADockNPC::HoldSpear(TArray<FTransform>& Space) const
     FVector HandDir = SpearGrip - S; HandDir.Z = 0.f; HandDir = HandDir.GetSafeNormal();
     if (HandDir.IsNearlyZero()) HandDir = FVector::ForwardVector;
     // The shaft runs through the middle of the fist: along the hand from the
-    // wrist, and a little toward the palm (thumb up, the right palm faces his left).
-    const FVector Wrist = SpearGrip - HandDir * FistReach + FVector(0.f, Right * PalmDepth, 0.f);
+    // wrist, and a little toward the palm (thumb up, the palm faces in).
+    const FVector Wrist = SpearGrip - HandDir * FistReach + FVector(0.f, Out * PalmDepth, 0.f);
     FVector ToWrist = Wrist - S;
     const float D = FMath::Clamp(static_cast<float>(ToWrist.Size()), FMath::Abs(A - Bl) + 1.f, A + Bl - .5f);
     const FVector Along = ToWrist.GetSafeNormal();
     const float CosA = FMath::Clamp((A * A + D * D - Bl * Bl) / (2.f * A * D), -1.f, 1.f);
-    const FVector Pole = FVector::VectorPlaneProject(FVector(-1.f, Right * .7f, -.2f), Along).GetSafeNormal();
+    const FVector Pole = FVector::VectorPlaneProject(FVector(-1.f, Out * .7f, -.2f), Along).GetSafeNormal();
     const FVector Elbow = S + Along * (A * CosA) + Pole * (A * FMath::Sqrt(1.f - CosA * CosA));
     Rotate(Upper, FQuat::FindBetweenNormals((Space[Lower].GetLocation() - S).GetSafeNormal(), (Elbow - S).GetSafeNormal()));
     Rotate(Lower, FQuat::FindBetweenNormals((Space[Hand].GetLocation() - Space[Lower].GetLocation()).GetSafeNormal(), (S + Along * D - Space[Lower].GetLocation()).GetSafeNormal()));
@@ -374,9 +386,10 @@ void ADockNPC::HoldSpear(TArray<FTransform>& Space) const
 float ADockNPC::GetSpearGripError() const
 {
     if (!bSpear) return 1e3f;
-    const FVector Wrist = Body->GetBoneLocation(BoneNames[HandR]), Knuckle = Body->GetBoneLocation(BoneNames[MiddleR]);
+    const FVector Wrist = Body->GetBoneLocation(BoneNames[Of(HandL, SpearSide)]), Knuckle = Body->GetBoneLocation(BoneNames[Of(MiddleL, SpearSide)]);
+    const float Out = SpearSide == 1 ? -ArmOut : ArmOut;
     const FVector Fist = Wrist + (Knuckle - Wrist).GetSafeNormal() * FistReach
-        - Body->GetComponentTransform().TransformVectorNoScale(FVector(0.f, -ArmOut * PalmDepth, 0.f));
+        - Body->GetComponentTransform().TransformVectorNoScale(FVector(0.f, Out * PalmDepth, 0.f));
     return static_cast<float>(FVector::Dist(Fist, Body->GetComponentTransform().TransformPosition(SpearGrip)));
 }
 

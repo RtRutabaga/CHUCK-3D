@@ -540,7 +540,8 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     }
     else if(!bNPCShotTaken && NPCCaptureTime-Settle-Step*Each>.8f)
     {
-        const FString Name=(NPC->DisplayName.IsEmpty() ? NPC->GetName() : NPC->DisplayName).Replace(TEXT(" "),TEXT(""));
+        // Named by its tag (two NPCs can share a display name: the gate guards).
+        const FString Name=NPC->Tags.Num() ? NPC->Tags[0].ToString() : (NPC->DisplayName.IsEmpty() ? NPC->GetName() : NPC->DisplayName).Replace(TEXT(" "),TEXT(""));
         FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/NPC_%s_%s.png"),*Name,Shot.Name),false,false);
         bNPCShotTaken=true;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHOT %s %s look=(%.1f,%.1f) watching=%d turn=%.1f mocap=%d hand_out=%.1f straight_out_deg=%.1f ahead=%.1f curl=%.1f"),*Name,Shot.Name,
@@ -1773,7 +1774,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // Every human stands with arms down: not the model's A-pose (hands
             // ~45 cm out), not held out in front like a sleepwalker (40+ cm
             // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
-            Check(PoseHumans==3 && bPoseOK,TEXT("the worker, guard and market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
+            Check(PoseHumans==4 && bPoseOK,TEXT("the worker, both guards and the market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
             // The 2D game's townsfolk, where it put them, with its lines.
             TArray<AActor*> GuardFound, WomanFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);
@@ -1784,9 +1785,20 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 && WomanNPC->Lines.Num()==1 && WomanNPC->Lines[0].Contains(TEXT("check the sewer for scraps"))
                 && GuardNPC->GetActorLocation().Y<-3900.f && FVector::Dist2D(WomanNPC->GetActorLocation(),FVector(-25,-1240,0))<250.f,
                 TEXT("the guard stands at the city gate and the market woman by the red market stalls, each with the 2D game's line"));
-            const float GripError=GuardNPC ? GuardNPC->GetSpearGripError() : 1e3f, Lean=GuardNPC ? GuardNPC->GetSpearLean() : 90.f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_GUARD_SPEAR_MEASURE has=%d grip_error_cm=%.1f lean_deg=%.1f"),GuardNPC && GuardNPC->HasSpear() ? 1 : 0,GripError,Lean);
-            Check(GuardNPC && GuardNPC->HasSpear() && GripError<5.f && Lean<10.f,TEXT("the guard holds a spear upright, his fist round its grip"));
+            // Both gate guards, either side of the gate, each with a spear held upright.
+            TArray<AActor*> GuardBFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardB"),GuardBFound);
+            const auto* GuardB=GuardBFound.Num()==1 ? Cast<ADockNPC>(GuardBFound[0]) : nullptr;
+            bool bSpears=GuardNPC && GuardB;
+            for(const ADockNPC* G : {GuardNPC,GuardB})
+            {
+                if(!G) continue;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_GUARD_SPEAR_MEASURE at=%s has=%d grip_error_cm=%.1f lean_deg=%.1f"),
+                    *G->GetActorLocation().ToString(),G->HasSpear() ? 1 : 0,G->GetSpearGripError(),G->GetSpearLean());
+                bSpears&=G->HasSpear() && G->GetSpearGripError()<5.f && G->GetSpearLean()<10.f && G->GetActorLocation().Y<-3900.f;
+            }
+            bSpears&=GuardNPC && GuardB && (GuardNPC->GetActorLocation().X-260.f)*(GuardB->GetActorLocation().X-260.f)<0.f;   // either side of the gate
+            Check(bSpears,TEXT("two guards stand either side of the city gate, each holding a spear upright, fist round its grip"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

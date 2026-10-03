@@ -26,7 +26,7 @@ class UStaticMeshComponent;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -69,10 +69,10 @@ public:
     float GetHandsForward() const;
     /** Close a hand (0 relaxed .. 1 a fist round a shaft): the guard's spear hand, later. Side 0 = left. */
     void SetGrip(int32 Side, float Amount) { Grip[FMath::Clamp(Side, 0, 1)] = FMath::Clamp(Amount, 0.f, 1.f); }
-    /** The guard's spear (Tools/build_spear.py): upright beside his right foot, his right fist round its grip. */
-    void GiveSpear();
+    /** A guard's spear (Tools/build_spear.py): upright beside the foot on Side (0 left, 1 right), that fist round its grip. */
+    void GiveSpear(int32 Side = 1);
     bool HasSpear() const { return bSpear; }
-    /** How far his right fist is from the spear's grip (cm), for tests. */
+    /** How far the spear fist is from the spear's grip (cm), for tests. */
     float GetSpearGripError() const;
     /** How far the spear leans from upright (deg), for tests. */
     float GetSpearLean() const;
@@ -117,6 +117,7 @@ private:
     UPROPERTY() UStaticMeshComponent* Spear = nullptr;
     UPROPERTY() TObjectPtr<UStaticMesh> SpearMesh;
     bool bSpear = false;
+    int32 SpearSide = 1;                          // 0 left hand, 1 right
     FVector SpearGrip = FVector::ZeroVector;      // component space: where his fist closes on the shaft
     void HoldSpear(TArray<FTransform>& Space) const;
     void PlaceSpear();
