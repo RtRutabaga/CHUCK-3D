@@ -1,5 +1,6 @@
 #include "DockSetting.h"
 #include "DockVista.h"
+#include "DockWeathering.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -30,6 +31,7 @@ void BuildDockSetting(UWorld* World)
     TMap<FString,UInstancedStaticMeshComponent*> Batches;
     auto Box=[&](FVector P,FVector Size,const TCHAR* Surface,bool Collision=false,FRotator Rotation=FRotator::ZeroRotator,bool Visible=true)
     {
+        if(Collision && FCString::Strcmp(Surface,TEXT("Plaster"))==0) Surface=TEXT("WeatheredPlaster");
         const FString Key=FString(Surface)+(Collision?TEXT("_solid"):TEXT("_detail"))+(Visible?TEXT(""):TEXT("_hidden"));
         auto*& Batch=Batches.FindOrAdd(Key);
         if(!Batch)
@@ -626,6 +628,7 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
     Box(FVector(-150,1090,70),FVector(700,20,140),TEXT("Stone"),true);
     Box(FVector(190,750,70),FVector(20,700,140),TEXT("Stone"),true);
+    BuildDockWeathering(World);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     {

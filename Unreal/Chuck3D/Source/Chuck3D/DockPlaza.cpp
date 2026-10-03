@@ -27,6 +27,7 @@ void BuildDockPlaza(UWorld* World)
     TMap<FString,UInstancedStaticMeshComponent*> Batches;
     auto Shape=[&](FVector P,FVector Size,const TCHAR* Material,bool Solid=false,UStaticMesh* Mesh=nullptr,FRotator Rot=FRotator::ZeroRotator)
     {
+        if(Solid && FCString::Strcmp(Material,TEXT("Plaster"))==0) Material=TEXT("WeatheredPlaster");
         if(!Mesh) Mesh=Cube;
         const FString Key=FString(Material)+Mesh->GetName()+(Solid?TEXT("solid"):TEXT("detail"));
         auto*& Batch=Batches.FindOrAdd(Key);
