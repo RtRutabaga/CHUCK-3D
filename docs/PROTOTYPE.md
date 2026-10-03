@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest tavern work: the enlarged tavern is a walk-in room through the open front door. Worn timber floor/beams, a bar, tables/benches, shelves and a hearth establish the interior at human scale. See TAVERN-INTERIOR.md and HANDOFF for actual verification; earlier closed-frontage/no-interior descriptions are historical.
+
 Latest cave refinement: falls and zero-sanity deaths inside the sewer respawn at its entrance. Blue night fill keeps the natural rock tunnel readable; purple astral patches show a nebula at floor level. The central channel is shallow flowing water and the midpoint opens into a wider chamber. R / controller View explicitly returns to docks. This supersedes the earlier atmosphere/respawn paragraphs below; see HANDOFF for actual verification and launcher status.
 
 October 2 atmosphere: eleven Astral Sea holes break the sewer floor; use the side banks or jump, since their visual bed has no collision. Falling into one returns Chuck to dock spawn. Purple rupture lighting replaces sewer lamps. Supplied Sewer.wav crossfades in underground and loops; the docks soundtrack returns on reset. Existing controls apply.

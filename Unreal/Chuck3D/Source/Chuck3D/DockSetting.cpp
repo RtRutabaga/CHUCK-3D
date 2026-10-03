@@ -1,6 +1,7 @@
 #include "DockSetting.h"
 #include "DockVista.h"
 #include "DockWeathering.h"
+#include "DockTavern.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -92,8 +93,11 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(-1150,-700,-45),FVector(1300,3200,90),TEXT("Stone"),true); // west dock street
     Box(FVector(-75,750,-45),FVector(850,700,90),TEXT("Stone"),true); // enlarged tavern court
     Box(FVector(600,-1400,-45),FVector(600,800,90),TEXT("Stone"),true); // market service quay
-    // Full depth to the two old frontage shells; leave their test-facing walls intact.
-    Box(FVector(-10,665,155),FVector(660,660,310),TEXT("Plaster"),true);
+    // Hollow tavern shell; the front doorway lives in DockGameMode.
+    Box(FVector(-10,665,-12),FVector(660,660,24),TEXT("Wood"),true);
+    for(float X : {-328.f,308.f})
+        Box(FVector(X,665,155),FVector(24,660,310),TEXT("Plaster"),true);
+    Box(FVector(-10,983,155),FVector(660,24,310),TEXT("Plaster"),true);
     // Roofless stone store: solid lower remnant, genuinely stepped/broken upper
     // courses rather than decorative damage over an invisible full-height box.
     Box(FVector(-600,50,64),FVector(200,600,128),TEXT("Stone"),true);
@@ -227,7 +231,7 @@ void BuildDockSetting(UWorld* World)
         const float Y=350+I*30.f;
         const float H=FMath::Max(3.f,154-FMath::Abs(Y-665)*.4663f);
         for(float X : {-340.f,320.f})
-            Box(FVector(X,Y,310+H*.5f),FVector(8,30,H),TEXT("Wood"));
+            Box(FVector(X,Y,310+H*.5f),FVector(8,30,H),TEXT("Wood"),true);
     }
     Box(FVector(-10,665,469),FVector(706,14,14),TEXT("Dark"));
 
@@ -720,6 +724,7 @@ void BuildDockSetting(UWorld* World)
     // cross-street divider. Keep only a low kerb at the real eastern quay edge.
     Box(FVector(340,750,20),FVector(20,700,40),TEXT("Stone"),true);
     BuildDockWeathering(World);
+    BuildDockTavern(World);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     {

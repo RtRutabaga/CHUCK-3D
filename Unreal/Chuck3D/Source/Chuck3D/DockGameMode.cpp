@@ -169,14 +169,16 @@ void ADockGameMode::StartPlay()
     }
     for(float X : {210.f,450.f,790.f}) for(float Y : {-100.f,100.f})
         Shape(TEXT("MooringPost"),FVector(X,Y,-25),FVector(22,22,110),TEXT("Wood"),Cylinder);
-    // Human-sized tavern frontage, quiet and closed. No interior or dialogue.
-    Shape(TEXT("Tavern"),FVector(-10,365,155),FVector(660,60,310),TEXT("Plaster"));
+    // Human-sized open doorway into the connected tavern room.
+    Shape(TEXT("Tavern"),FVector(-180,365,155),FVector(320,60,310),TEXT("Plaster"));
+    Shape(TEXT("Tavern"),FVector(210,365,155),FVector(220,60,310),TEXT("Plaster"));
+    Shape(TEXT("TavernLintel"),FVector(40,365,260),FVector(120,60,100),TEXT("Plaster"));
     Shape(TEXT("TavernRoof"),FVector(-10,357,314),FVector(700,100,16),TEXT("Roof"));
-    for(float X : {-330.f,-140.f,40.f,210.f,310.f})
+    for(float X : {-330.f,-140.f,-25.f,105.f,270.f,310.f})
         Shape(TEXT("Timber"),FVector(X,328,153),FVector(14,14,306),TEXT("Wood"));
-    Shape(TEXT("Door"),FVector(40,326,105),FVector(95,10,210),TEXT("Wood"));
-    Shape(TEXT("DoorLatch"),FVector(70,318,100),FVector(8,6,3),TEXT("Dark"));
-    for(float X : {-230.f,135.f}) {
+    Shape(TEXT("Door"),FVector(-23,382.5f,105),FVector(10,95,210),TEXT("Wood"));
+    Shape(TEXT("DoorLatch"),FVector(-30,417,100),FVector(6,8,3),TEXT("Dark"));
+    for(float X : {-230.f,190.f}) {
         Shape(TEXT("WindowFrame"),FVector(X,322,160),FVector(80,12,95),TEXT("Wood"));
         Shape(TEXT("Window"),FVector(X,314,160),FVector(64,4,79),TEXT("Amber"));
         if(WindowMesh) Prop(TEXT("TavernWindowArt"),FVector(X,322,160),WindowMesh)->SetActorRotation(FRotator(0,180,0));
@@ -391,18 +393,25 @@ void ADockGameMode::StartPlay()
             Shape(TEXT("PostBand"),FVector(X,Y,Z),FVector(23,23,3),TEXT("Dark"),Cylinder,false);
         Shape(TEXT("PostCap"),FVector(X,Y,31),FVector(24,24,3),TEXT("WoodLight"),Cylinder,false);
     }
-    for(float X : {-230.f,135.f})
+    for(float X : {-230.f,190.f})
     {
         Shape(TEXT("WindowMullion"),FVector(X,309,160),FVector(4,5,80),TEXT("Wood"),nullptr,false);
         Shape(TEXT("WindowCrossbar"),FVector(X,309,160),FVector(64,5,4),TEXT("Wood"),nullptr,false);
         Shape(TEXT("WindowSill"),FVector(X,305,112),FVector(90,24,7),TEXT("Stone"),nullptr,false);
     }
     for(float Z : {28.f,218.f,298.f})
-        Shape(TEXT("HorizontalTimber"),FVector(-10,326,Z),FVector(650,14,10),TEXT("Wood"),nullptr,false);
+    {
+        if(Z<210)
+        {
+            Shape(TEXT("HorizontalTimber"),FVector(-180,326,Z),FVector(310,14,10),TEXT("Wood"),nullptr,false);
+            Shape(TEXT("HorizontalTimber"),FVector(210,326,Z),FVector(210,14,10),TEXT("Wood"),nullptr,false);
+        }
+        else Shape(TEXT("HorizontalTimber"),FVector(-10,326,Z),FVector(650,14,10),TEXT("Wood"),nullptr,false);
+    }
     for(int32 Slat=0;Slat<8;++Slat)
-        Shape(TEXT("DoorBoard"),FVector(-2+Slat*12,319,105),FVector(10.5f,3,205),Slat%3 ? TEXT("Wood") : TEXT("WoodLight"),nullptr,false);
+        Shape(TEXT("DoorBoard"),FVector(-29,340+Slat*12,105),FVector(3,10.5f,205),Slat%3 ? TEXT("Wood") : TEXT("WoodLight"),nullptr,false);
     for(float Z : {42.f,177.f})
-        Shape(TEXT("DoorIron"),FVector(40,315,Z),FVector(91,3,5),TEXT("Dark"),nullptr,false);
+        Shape(TEXT("DoorIron"),FVector(-32,382.5f,Z),FVector(3,91,5),TEXT("Dark"),nullptr,false);
     // Overlapping slate strips and projecting rafters give the frontage a roof silhouette.
     for(int32 Row=0;Row<5;++Row) for(int32 Col=0;Col<24;++Col)
     {

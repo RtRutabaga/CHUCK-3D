@@ -1,5 +1,7 @@
 # Connected docks setting — September 29, 2026
 
+October 3 tavern interior: the enlarged building now has a hollow structural shell and open front door leading directly into a furnished room. This supersedes the earlier exterior-only description. See TAVERN-INTERIOR.md for layout, collision and review hooks; HANDOFF records actual testing and launcher status.
+
 October 3 tavern enlargement: exterior footprint grows from approximately 5.6 x 3.3 m to 6.6 x 6.6 m, mainly backward with a modest extension east. The familiar doorway/sign remain at the front. A full pitched roof, timber gables and moved rear windows follow the larger body. The court paving and eastern kerb extend to match. The partial Dock Street divider behind it is shortened from X-940..200 to X-940..-460, leaving a walkable gap beside the tavern. World checks include ground and capsule clearance along that gap and across the rear court; `-ChuckTavernCapture` produces front, rear and overhead views. No interior, new binary assets or dependencies. See latest HANDOFF for actual package verification.
 
 October 2 sewer extension: the side-gate hatch now leads by uninterrupted fall to a 244 m winding stone tunnel, north first, east across its upper stretch and back south. Earlier no-sewer/reset-on-entry descriptions below are superseded. Surface routes retained; original fall reset applies outside the shaft/tunnel footprint. See SEWER-PROTOTYPE.md and latest HANDOFF for geometry, actual test evidence and launch status.
