@@ -26,7 +26,8 @@ for name in ('WeatheredPlaster', 'DockIvy'):
         uv = node(mat, unreal.MaterialExpressionTextureCoordinate)
         color = node(mat, unreal.MaterialExpressionCustom, inputs=inputs(('C','UV')), output_type=unreal.CustomMaterialOutputType.CMOT_FLOAT3,
             code='float vein=1-smoothstep(.015,.045,abs(UV.x-.5)); float ribs=pow(saturate(cos((abs(UV.x-.5)*1.7+UV.y)*48)),12); return C*(.8+.22*UV.y)+float3(.04,.055,.015)*(vein+ribs*.35);')
-        lib.connect_material_expressions(vertex,'RGB',color,'C'); lib.connect_material_expressions(uv,'',color,'UV')
+        if not lib.connect_material_expressions(vertex,'',color,'C'): raise RuntimeError('Missing ivy vertex color connection')
+        if not lib.connect_material_expressions(uv,'',color,'UV'): raise RuntimeError('Missing ivy UV connection')
         lib.connect_material_property(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     else:
         mat.set_editor_property('tangent_space_normal',False)
