@@ -5,6 +5,12 @@
 #include "Components/SplineComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Engine/SkyLight.h"
+#include "Engine/DirectionalLight.h"
+#include "Components/DirectionalLightComponent.h"
+#include "EngineUtils.h"
+#include "Camera/PlayerCameraManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/CameraActor.h"
@@ -23,6 +29,16 @@ constexpr float FloorZ=-900.f;
 TArray<FVector> Route;
 FVector Shaft(-1580,3900,0);
 float Width(int32 I) { return I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f); }
+const int32 Rifts[]={26,54,84,114,146,180,215,249,282,316,346};
+bool RiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
+float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
+FVector SafePoint(int32 I,const TArray<FVector>& Right)
+{
+    int32 Distance=1000;
+    for(int32 S : Rifts) Distance=FMath::Min(Distance,I<S?S-I:I>S+4?I-S-4:0);
+    const float Blend=FMath::Clamp(1.f-FMath::Max(0,Distance-4)/5.f,0.f,1.f);
+    return Route[I]+Right[I]*(115*Blend);
+}
 }
 
 bool IsWithinDockSewer(const FVector& P)
@@ -75,6 +91,7 @@ void BuildDockSewer(UWorld* World)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
         Mesh->bUseComplexAsSimpleCollision=true; Mesh->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
+        Mesh->SetLightingChannels(false,true,false);
         Mesh->RegisterComponent();
         // Render the enclosing shell from either side without changing the
         // shared stone material used by the surface town. Normals face inward.
@@ -107,12 +124,17 @@ void BuildDockSewer(UWorld* World)
     }
     MakeMesh(V,T,N,UV,Stone,true);
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    for(int32 I=0;I<Count;++I) for(float Side : {-1.f,1.f})
+    for(int32 I=0;I<Count;++I) for(int32 Column=0;Column<4;++Column)
     {
-        V.Add(Route[I]+Right[I]*Side*(Width(I)+18)); N.Add(FVector::UpVector);
-        UV.Add(FVector2D(Side*2,I*.65f));
+        const float Offsets[]={-Width(I)-18,-55+RiftOffset(I),55+RiftOffset(I),Width(I)+18};
+        V.Add(Route[I]+Right[I]*Offsets[Column]); N.Add(FVector::UpVector);
+        UV.Add(FVector2D(Offsets[Column]/100,I*.65f));
     }
-    for(int32 I=0;I<Count-1;++I){const int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+    for(int32 I=0;I<Count-1;++I) for(int32 C=0;C<3;++C)
+    {
+        if(C==1 && RiftSegment(I)) continue;
+        const int32 A=I*4+C;T.Append({A,A+1,A+4,A+1,A+5,A+4});
+    }
     MakeMesh(V,T,N,UV,Stone,true);
     // Recessed-looking shallow drainage, kept away from the landing and terminus.
     V.Reset();N.Reset();T.Reset();UV.Reset();
@@ -120,13 +142,14 @@ void BuildDockSewer(UWorld* World)
     {
         V.Add(Route[I]+Right[I]*(Side*38)+FVector(0,0,.8f));N.Add(FVector::UpVector);UV.Add(FVector2D(Side*.5f,I*.12f));
     }
-    for(int32 I=0;I<V.Num()/2-1;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+    for(int32 I=0;I<V.Num()/2-1;++I){if(RiftSegment(I+8)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
     // Dark effluent ribbon avoids reflecting the outdoor sky below ground.
     MakeMesh(V,T,N,UV,Dark,false);
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Rocks=NewObject<UInstancedStaticMeshComponent>(Owner);Rocks->SetupAttachment(Root);Rocks->SetStaticMesh(Sphere);
     Rocks->SetMaterial(0,Stone);Rocks->SetCollisionProfileName(TEXT("NoCollision"));Rocks->RegisterComponent();
+    Rocks->SetLightingChannels(false,true,false);
     FRandomStream Rng(3917);
     for(int32 I=0;I<Count;I+=2) for(int32 J=0;J<11;++J)
     {
@@ -140,6 +163,7 @@ void BuildDockSewer(UWorld* World)
     {
         auto* B=NewObject<UInstancedStaticMeshComponent>(Owner);B->SetupAttachment(Root);B->SetStaticMesh(Cube);B->SetMaterial(0,Mat);
         B->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));B->RegisterComponent();B->AddInstance(FTransform(Rot,P,Size/100));
+        B->SetLightingChannels(false,true,false);
     };
     Box(Shaft+FVector(0,0,FloorZ-20),FVector(430,370,40),Stone,true);
     Box(Route[0]+FVector(0,0,150),FVector(Width(0)*2+35,40,340),Stone,true,
@@ -147,14 +171,60 @@ void BuildDockSewer(UWorld* World)
     // Extend the mouth's sides to the underground landing, with no flat blackout.
     for(float X : {-111.f,111.f}) Box(Shaft+FVector(X,0,-400),FVector(8,210,600),Stone,true);
     for(float Y : {-101.f,101.f}) Box(Shaft+FVector(0,Y,-400),FVector(214,8,600),Stone,true);
-    for(int32 I=5;I<Count;I+=18)
+    auto* Astral=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralRupture.M_AstralRupture"));
+    auto* Oil=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
+    for(int32 StartIndex : Rifts)
     {
-        const FVector P=Route[I]+Right[I]*((I/18)%2?130:-130)+FVector(0,0,175);
-        Box(P,FVector(12,12,26),Dark,false);
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(int32 I=0;I<=4;++I) for(float Side : {-1.f,1.f})
+        {
+            const int32 Index=StartIndex+I;
+            V.Add(Route[Index]+Right[Index]*(Side*55+RiftOffset(Index))+FVector(0,0,-65));
+            N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.25f));
+        }
+        for(int32 I=0;I<4;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+        MakeMesh(V,T,N,UV,Astral,false);
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(int32 Layer=0;Layer<3;++Layer)
+        {
+            const int32 Base=V.Num();
+            for(int32 I=0;I<=4;++I) for(int32 X=0;X<=4;++X)
+            {
+                const int32 Index=StartIndex+I;const float U=X/4.f;
+                V.Add(Route[Index]+Right[Index]*((U-.5f)*130+RiftOffset(Index))+FVector(0,0,25+Layer*32+8*FMath::Sin(I+X+Layer)));
+                N.Add(FVector::UpVector);UV.Add(FVector2D(U,I*.25f));
+            }
+            for(int32 I=0;I<4;++I) for(int32 X=0;X<4;++X){int32 A=Base+I*5+X;T.Append({A,A+1,A+5,A+1,A+6,A+5});}
+        }
+        MakeMesh(V,T,N,UV,Oil,false);
+        const FVector P=Route[StartIndex+2]+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
-        Lamp->SetIntensity(2100);Lamp->SetAttenuationRadius(1000);Lamp->SetLightColor(FLinearColor(.7f,.48f,.23f));
+        Lamp->SetIntensity(6500);Lamp->SetAttenuationRadius(1900);Lamp->SetLightColor(FLinearColor(.48f,.025f,1));
+        Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
+    // Skylight ignores lighting channels. Disable outdoor sun/sky only while
+    // the local view is underground, restoring their original surface values.
+    TArray<TPair<TWeakObjectPtr<USkyLightComponent>,float>> Skies;
+    for(TActorIterator<ASkyLight> It(World);It;++It) Skies.Add({It->GetLightComponent(),It->GetLightComponent()->Intensity});
+    TArray<TPair<TWeakObjectPtr<ULightComponent>,float>> Suns;
+    for(TActorIterator<ADirectionalLight> It(World);It;++It) Suns.Add({It->GetLightComponent(),It->GetLightComponent()->Intensity});
+    auto Under=MakeShared<bool>(false);
+    FTimerHandle LightTimer;
+    World->GetTimerManager().SetTimer(LightTimer,[World,Under,Skies,Suns](){
+        auto* PC=World->GetFirstPlayerController();if(!PC || !PC->PlayerCameraManager) return;
+        const FVector P=PC->PlayerCameraManager->GetCameraLocation();
+        const bool Below=P.Z<-150 && IsWithinDockSewer(P);
+        if(Below==*Under) return;*Under=Below;
+        for(const auto& Sky : Skies) if(Sky.Key.IsValid()) Sky.Key->SetIntensity(Below?0:Sky.Value);
+        for(const auto& Sun : Suns) if(Sun.Key.IsValid()) Sun.Key->SetIntensity(Below?0:Sun.Value);
+        if(auto* Pawn=PC->GetPawn())
+        {
+            TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);
+            for(auto* Part : Parts) Part->SetLightingChannels(!Below,Below,false);
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_LIGHT_REGION purple_only=%d"),Below);
+    },.1f,true);
     // Temporary collapsed end, rather than a door or invented next campaign map.
     const FVector End=Route.Last();
     Box(End+FVector(0,0,150),FVector(Width(Count-1)*2+50,65,340),Stone,true,
@@ -167,32 +237,40 @@ void BuildDockSewer(UWorld* World)
         for(int32 I=2;I<Count-2;++I)
         {
             FHitResult Hit;
-            if(!World->LineTraceSingleByChannel(Hit,Route[I]+FVector(0,0,80),Route[I]-FVector(0,0,80),ECC_Visibility)
+            const FVector P=SafePoint(I,Right),Previous=SafePoint(I-1,Right);
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,80),P-FVector(0,0,80),ECC_Visibility)
                 || FMath::Abs(Hit.ImpactPoint.Z-FloorZ)>2) ++Failed;
-            if(World->SweepSingleByChannel(Hit,Route[I-1]+FVector(0,0,36),Route[I]+FVector(0,0,36),
+            if(World->SweepSingleByChannel(Hit,Previous+FVector(0,0,36),P+FVector(0,0,36),
                 FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++Failed;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_GEOMETRY failures=%d samples=%d"),Failed,Count-4);
+        int32 HazardFailures=0;
+        for(int32 S : Rifts)
+        {
+            FHitResult Hit;const FVector P=Route[S+2]+Right[S+2]*RiftOffset(S+2);
+            if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,160),ECC_Visibility)) ++HazardFailures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=11 purple_lights=11 torches=0"),HazardFailures);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
-        struct FRun { int32 Target=5;float Time=0;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
+        struct FRun { int32 Target=5;float Time=0;float HazardAt=-1;bool HazardReset=false;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
         auto Run=MakeShared<FRun>();
         FTimerHandle Start;
-        World->GetTimerManager().SetTimer(Start,[World,Run](){
+        World->GetTimerManager().SetTimer(Start,[World,Run,Right](){
             auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
             Chuck->ResetToDock();Chuck->SetActorLocation(Shaft+FVector(0,0,70),false,nullptr,ETeleportType::TeleportPhysics);
             Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
             Chuck->SetRunHeld(true);
-            World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run](){
+            World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run,Right](){
                 if(Run->Completed) return;
                 Run->Time+=.02f;
                 if(!Run->Landed && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetActorLocation().Z<-800)
                 {Run->Landed=true;UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_FALL landed=1 elapsed=%.2f z=%.2f"),Run->Time,Chuck->GetActorLocation().Z);}
-                if(Run->Landed)
+                if(Run->Landed && !Run->Finished)
                 {
                     Chuck->SetRunHeld(true);
-                    const FVector Goal=Route[Run->Target]+FVector(0,0,34.65f);
+                    const FVector Goal=SafePoint(Run->Target,Right)+FVector(0,0,34.65f);
                     if(FVector::Dist2D(Chuck->GetActorLocation(),Goal)<55 && Run->Target<Route.Num()-5)
                     {
                         ++Run->Target;
@@ -201,10 +279,17 @@ void BuildDockSewer(UWorld* World)
                     Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
                     if(Run->Target>=Route.Num()-5) Run->Finished=true;
                 }
-                if(Run->Finished || Run->Time>210 || (Run->Time>4 && !Run->Landed) || (Run->Landed && Chuck->GetActorLocation().Z>-100))
+                if(Run->Finished && Run->HazardAt<0)
                 {
-                    const int32 Failures=(!Run->Landed)+(!Run->Finished);
-                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d reached=%d elapsed=%.2f"),Failures,Run->Landed,Run->Finished,Run->Target,Run->Time);
+                    Run->HazardAt=Run->Time;Chuck->SetRunHeld(false);Chuck->GetCharacterMovement()->StopMovementImmediately();
+                    Chuck->SetActorLocation(Route[Rifts[0]+2]+Right[Rifts[0]+2]*RiftOffset(Rifts[0]+2)+FVector(0,0,60),false,nullptr,ETeleportType::TeleportPhysics);
+                    Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+                }
+                if(Run->HazardAt>=0 && FVector::Dist(Chuck->GetActorLocation(),AChuckCharacter::StartLocation())<80) Run->HazardReset=true;
+                if(Run->HazardReset || Run->Time>210 || (Run->HazardAt>=0 && Run->Time>Run->HazardAt+4) || (Run->Time>4 && !Run->Landed) || (Run->Landed && !Run->Finished && Chuck->GetActorLocation().Z>-100))
+                {
+                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->HazardReset);
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d hazard_reset=%d reached=%d elapsed=%.2f"),Failures,Run->Landed,Run->Finished,Run->HazardReset,Run->Target,Run->Time);
                     Run->Completed=true;
                     // Do not destroy this captured delegate before using World.
                     World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
@@ -217,7 +302,7 @@ void BuildDockSewer(UWorld* World)
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
         for(int32 I=0;I<4;++I)
         {
-            const int32 Index=I==0?2:I==1?45:I==2?Count/2:Count-30;
+            const int32 Index=I==0?23:I==1?111:I==2?211:343;
             const FVector P=Route[Index]+Right[Index]*80+FVector(0,0,100);
             const FVector Target=Route[FMath::Min(Index+8,Count-1)]+FVector(0,0,120);
             FTimerHandle View,Shot;

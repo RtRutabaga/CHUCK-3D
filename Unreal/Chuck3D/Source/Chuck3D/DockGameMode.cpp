@@ -65,7 +65,9 @@ void ADockGameMode::StartPlay()
     // Non-spatial background music, unaffected by Chuck's position or resets.
     auto* Music=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_WaterdeepDocks.SW_WaterdeepDocks"));
     const bool TestMusic=FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
-    auto* MusicComponent=Music ? UGameplayStatics::CreateSound2D(World,Music,1.f,1.f,0.f,nullptr,false,true) : nullptr;
+    auto* MusicComponent=Music ? UGameplayStatics::CreateSound2D(World,Music,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    auto* SewerScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Sewer.SW_Sewer"));
+    auto* SewerScoreComponent=SewerScore ? UGameplayStatics::CreateSound2D(World,SewerScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -84,6 +86,32 @@ void ADockGameMode::StartPlay()
                 LoopConfigured && Playing ? 0 : 1,LoopConfigured,Playing);
         },6.f,false);
     }
+    struct FMusicRegion { bool Underground=false; };
+    auto Region=MakeShared<FMusicRegion>();
+    FTimerHandle RegionTimer;
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),SewerScore](){
+        auto* PC=World->GetFirstPlayerController();auto* Pawn=PC?PC->GetPawn():nullptr;
+        const bool Below=Pawn && Pawn->GetActorLocation().Z<-150 && IsWithinDockSewer(Pawn->GetActorLocation());
+        if(Below==Region->Underground) return;
+        Region->Underground=Below;
+        if(Docks.IsValid()) Docks->AdjustVolume(1.25f,Below?0.f:.45f);
+        if(Sewer.IsValid())
+        {
+            if(Below)
+            {
+                const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest"));
+                Sewer->FadeIn(1.25f,.45f,Test && SewerScore?FMath::Max(0.f,SewerScore->Duration-2.f):0.f);
+                FTimerHandle Check;
+                World->GetTimerManager().SetTimer(Check,[Sewer,SewerScore](){
+                    const bool Loop=SewerScore && SewerScore->bLooping;
+                    const bool Playing=Sewer.IsValid() && Sewer->IsPlaying();
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                },6.f,false);
+            }
+            else Sewer->FadeOut(1.25f,0.f);
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION sewer=%d"),Below);
+    },.1f,true);
     auto* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Cylinder = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -417,7 +445,6 @@ void ADockGameMode::StartPlay()
     if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
     BuildDockSetting(World);
     BuildDockPlaza(World);
-    BuildDockSewer(World);
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
     AClayJar::SpawnDockJars(World);
@@ -456,6 +483,7 @@ void ADockGameMode::StartPlay()
     auto* Horizon = Shape(TEXT("Horizon"),FVector(0,0,0),FVector(300000,300000,300000),TEXT("DawnSky"),Sphere,false);
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
     Sky->GetLightComponent()->RecaptureSky();
+    BuildDockSewer(World);
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
