@@ -66,6 +66,16 @@ void BuildDockSetting(UWorld* World)
     auto* CrateMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockCrate.SM_DockCrate"));
     auto* RopeMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
     auto* BarrelMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Props/SM_DockBarrel.SM_DockBarrel"));
+    auto SolidBarrel=[&](FVector P,float Scale=1.f)
+    {
+        Prop(BarrelMesh,P,FVector(Scale));
+        // Match the original dock barrel's cylindrical 62 x 62 x 90 cm proxy.
+        auto* Body=NewObject<UStaticMeshComponent>(Owner); Body->SetupAttachment(Root);
+        Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+        Body->SetRelativeLocation(P); Body->SetRelativeScale3D(FVector(62,62,90)*Scale/100);
+        Body->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Wood.M_Wood")));
+        Body->SetCollisionProfileName(TEXT("BlockAll")); Body->SetVisibility(!BarrelMesh); Body->RegisterComponent();
+    };
     auto Label=[&](FVector P,const TCHAR* Words,float Yaw=0.f)
     {
         auto* Text=NewObject<UTextRenderComponent>(Owner);
@@ -477,6 +487,10 @@ void BuildDockSetting(UWorld* World)
     // Inland boundaries stay closed; the eastern waterside now opens to a dock.
     CityWall(FVector(-1790,2550,0),3300,900,90,FVector(1,0,0));
     CityWall(FVector(-450,4190,0),2700,900,0,FVector(0,-1,0));
+    // Return the northern boundary along the shore, then out to the water at
+    // the breakwater end. Close the vista shortcut beside the new landing.
+    CityWall(FVector(890,3965,0),450,900,90,FVector(-1,0,0));
+    CityWall(FVector(1350,3740,0),990,900,0,FVector(0,-1,0));
     // Modest working landing, two finger piers, flush with the street paving.
     // Solid continuous deck proxies prevent cracks between decorative boards.
     auto Deck=[&](FVector P,FVector Size)
@@ -512,8 +526,7 @@ void BuildDockSetting(UWorld* World)
     for(float Y : {2740.f,3660.f})
         Beam(FVector(970,Y,-120),FVector(1450,Y,-42),15,TEXT("Wood"));
     // Tied working supplies remain off the landing's central walking line.
-    Prop(BarrelMesh,FVector(1060,2780,45));
-    Box(FVector(1060,2780,45),FVector(62,62,90),TEXT("Wood"),true,FRotator::ZeroRotator,!BarrelMesh);
+    SolidBarrel(FVector(1060,2780,45));
     Prop(CrateMesh,FVector(1370,3610,30));
     Box(FVector(1370,3610,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
     Prop(RopeMesh,FVector(1370,3610,61),FVector(.65f));
@@ -584,10 +597,10 @@ void BuildDockSetting(UWorld* World)
     // Small working possessions stay tight to facades, outside the clear lanes.
     for(const FVector P : {FVector(-1260,-1700,0),FVector(-1190,470,0),FVector(-1720,2100,0),FVector(820,3100,0)})
     {
-        Prop(BarrelMesh,P+FVector(0,0,31),FVector(.68f));
+        SolidBarrel(P+FVector(0,0,31),.68f);
         Prop(RopeMesh,P+FVector(0,0,62),FVector(.48f),25);
         for(int32 I=0;I<5;++I)
-            Box(P+FVector(-15+I*7,55,65),FVector(6,13,130),I%2?TEXT("Wood"):TEXT("WoodLight"),false,FRotator(0,0,-8));
+            Box(P+FVector(-15+I*7,55,65),FVector(6,13,130),I%2?TEXT("Wood"):TEXT("WoodLight"),true,FRotator(0,0,-8));
         Box(P+FVector(0,55,72),FVector(42,17,5),TEXT("Dark"));
     }
     // A ladder kept against the cooperage, below the eaves rather than across a route.
@@ -699,6 +712,25 @@ void BuildDockSetting(UWorld* World)
                 FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++PierFailures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_COURTPIER_CHECK failures=%d floors=10 routes=9"),PierFailures);
+        int32 PropFailures=0;
+        for(const FVector P : {FVector(-1260,-1700,31),FVector(-1190,470,31),FVector(-1720,2100,31),FVector(820,3100,31),FVector(1060,2780,45)})
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(75,0,0),P-FVector(75,0,0),ECC_Visibility)
+                || FVector::Dist(Hit.ImpactPoint,P)>35) ++PropFailures;
+        }
+        for(const FVector P : {FVector(-1260,-1645,80),FVector(-1190,525,80),FVector(-1720,2155,80),FVector(820,3155,80)})
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P-FVector(0,40,0),P+FVector(0,40,0),ECC_Visibility)
+                || FVector::Dist(Hit.ImpactPoint,P)>22) ++PropFailures;
+        }
+        for(const FVector P : {FVector(1100,3740,100),FVector(1770,3740,100)})
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P-FVector(0,100,0),P+FVector(0,100,0),ECC_Visibility)) ++PropFailures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKPROPS_CHECK failures=%d barrels=5 planks=4 boundaries=2"),PropFailures);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
