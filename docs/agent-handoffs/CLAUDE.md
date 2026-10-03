@@ -1743,3 +1743,15 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Both guards play the same idle clip (different start points).
   - Her line duplicates his.
   - Not played by the user.
+
+## Sixty-sixth pass — the side-gate guard
+
+- **User (2026-10-03):** add a Caucasian male guard by the gate next to the sewer grate.
+- **Source:** `0396522` on main.
+  - Changed: `humans.json` (SideGuard), the FBX and textures, `DockNPC.cpp/.h` (`EDockHuman::SideGuard`; spawn at (-1690, 3470), yaw 0, tag `DockGuardC`, spear right), `DockGameMode.cpp` (pose check counts 5; side-guard check; capture "Wide" shot), `Verify-Package.ps1` (127), `NPCs/README.md`.
+- **Placement:** the side gate is at (-1748, 3650) and the hatch at (-1580, 3900) (DockSetting.cpp). He stands south of the gate, clear of the hatch apron and the sewer test's approach along y 3900. NPC blockers ignore Visibility, so Codex's traces are unaffected; they pass.
+- **Verified:**
+  - Root package 127/127 plus world, plaza and music checks: `Local/verify-package-20261003-105156.log`. Receipt `0396522`.
+- **Remaining:**
+  - All three guards share one idle clip (different start points) and one line.
+  - Not played by the user.

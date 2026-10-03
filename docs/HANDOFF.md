@@ -2,6 +2,15 @@
 
 ## Current launcher and integration status
 
+**Update 49 (Claude, October 3, user request: a Caucasian male guard by the gate next to the sewer grate):** runtime `0396522`.
+- A third guard (`SideGuard`, a 181 cm Caucasian man, the same kit and spear) stands at the Dock Street side gate in the west wall, beside the open sewer hatch (`docs/SEWER-PROTOTYPE.md`).
+- He is south of the gate at (-1690, 3470), between it and the bench, facing into the court, with the spear in his right hand by the gate.
+- He stands 4.4 m from the hatch, off Chuck's approach to it from the east. He says the guards' line.
+
+The root candidate passed `-MotionCapture` **127/127** plus the world, plaza and music checks (`Local/verify-package-20261003-105156.log`). Codex's side-gate and open-hatch checks still pass (approach clear). Spear gripped at 0.0 cm, 4.0°; 189 cm from the gate.
+
+Promoted to `Builds/Windows` with receipt `0396522`; the previous package is kept as `Builds/Windows-Previous-20261003-SideGuard`. Root was clean when building. Evidence: `SourceAssets/NPCs/Humans/Review/runtime_SideGate_guard.png`. Details: `agent-handoffs/CLAUDE.md` pass 66. Not yet played by the user.
+
 **Update 48 (Claude, October 3, user request: a second guard by the first, both either side of the gate; same outfit and spear, female Caucasian):** runtime `e82be03`.
 - A second gate guard: a 174 cm Caucasian woman (`GuardWoman` in `humans.json`) in the same gambeson, breastplate, helmet, belt, trousers and boots, with the same spear.
 - The two guards stand either side of the plaza's closed gate (x 105 and 415; the opening runs 60–460), facing down the plaza.
