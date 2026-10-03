@@ -472,10 +472,59 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(-1150,1940,1),FVector(1320,18,2),TEXT("Dark"));
     for(float X=-1720;X<=-520;X+=120)
         Box(FVector(X,1940,2),FVector(2,18,2),TEXT("Wood"));
-    // Close every scenery boundary of the newly playable district.
+    // Inland boundaries stay closed; the eastern waterside now opens to a dock.
     CityWall(FVector(-1790,2550,0),3300,900,90,FVector(1,0,0));
-    CityWall(FVector(890,2550,0),3300,600,90,FVector(-1,0,0));
     CityWall(FVector(-450,4190,0),2700,900,0,FVector(0,-1,0));
+    // Modest working landing, two finger piers, flush with the street paving.
+    // Solid continuous deck proxies prevent cracks between decorative boards.
+    auto Deck=[&](FVector P,FVector Size)
+    {
+        Box(P-FVector(0,0,20),FVector(Size.X,Size.Y,40),TEXT("Wood"),true);
+        const int32 Boards=FMath::CeilToInt(Size.Y/25.f);
+        const float Pitch=Size.Y/Boards;
+        for(int32 I=0;I<Boards;++I)
+        {
+            const float Y=P.Y-Size.Y*.5f+(I+.5f)*Pitch;
+            Box(FVector(P.X,Y,.5f),FVector(Size.X-2,Pitch-1,1),I%7==0?TEXT("WoodLight"):TEXT("Wood"));
+            // Replacement boards, nails and transverse joins rather than a smooth slab.
+            for(float X : {P.X-Size.X*.35f,P.X+Size.X*.35f})
+                Box(FVector(X,Y,1.1f),FVector(3,3,1),TEXT("Dark"));
+            Box(FVector(P.X+(I%3-1)*Size.X*.18f,Y,1.05f),FVector(1,Pitch-1,.2f),TEXT("Dark"));
+        }
+        for(float S : {-1.f,1.f})
+            Box(P+FVector(0,S*(Size.Y*.5f-12),-45),FVector(Size.X+30,22,35),TEXT("Wood"));
+    };
+    Deck(FVector(1190,3200,0),FVector(620,1000,0)); // x880..1500: overlaps shore by 20 cm
+    Deck(FVector(1910,3080,0),FVector(840,300,0));
+    Deck(FVector(1820,3550,0),FVector(660,260,0));
+    auto Pile=[&](FVector P)
+    {
+        Box(P+FVector(0,0,-55),FVector(30,30,240),TEXT("Wood"),true);
+        Box(P+FVector(0,0,68),FVector(37,37,9),TEXT("WoodLight"));
+        for(float Z : {-80.f,35.f}) Box(P+FVector(0,0,Z),FVector(33,33,5),TEXT("Dark"));
+        Prop(RopeMesh,P+FVector(0,0,47),FVector(.42f));
+    };
+    for(float X : {980.f,1450.f}) for(float Y : {2715.f,3685.f}) Pile(FVector(X,Y,0));
+    for(float X : {1750.f,2280.f}) for(float Y : {2945.f,3215.f}) Pile(FVector(X,Y,0));
+    for(float X : {1770.f,2100.f}) for(float Y : {3435.f,3665.f}) Pile(FVector(X,Y,0));
+    for(float Y : {2740.f,3660.f})
+        Beam(FVector(970,Y,-120),FVector(1450,Y,-42),15,TEXT("Wood"));
+    // Tied working supplies remain off the landing's central walking line.
+    Prop(BarrelMesh,FVector(1060,2780,45));
+    Box(FVector(1060,2780,45),FVector(62,62,90),TEXT("Wood"),true,FRotator::ZeroRotator,!BarrelMesh);
+    Prop(CrateMesh,FVector(1370,3610,30));
+    Box(FVector(1370,3610,30),FVector(60,65,60),TEXT("Wood"),true,FRotator::ZeroRotator,!CrateMesh);
+    Prop(RopeMesh,FVector(1370,3610,61),FVector(.65f));
+    for(float X : {1140.f,1230.f}) Box(FVector(X,2730,36),FVector(75,50,72),TEXT("Wood"),true);
+    Box(FVector(1185,2730,77),FVector(180,60,10),TEXT("WoodLight"));
+    // A dock lamp is outside the entrance and pier walking lines.
+    Box(FVector(940,3650,145),FVector(10,10,290),TEXT("Wood"),true);
+    Box(FVector(940,3650,298),FVector(35,35,38),TEXT("Dark"));
+    Box(FVector(940,3650,298),FVector(27,27,28),TEXT("TorchFlame"));
+    auto* DockLamp=NewObject<UPointLightComponent>(Owner);
+    DockLamp->SetupAttachment(Root); DockLamp->SetRelativeLocation(FVector(940,3650,298));
+    DockLamp->SetIntensity(1600); DockLamp->SetAttenuationRadius(400);
+    DockLamp->SetLightColor(FLinearColor(1,.43f,.12f)); DockLamp->SetCastShadows(false); DockLamp->RegisterComponent();
     // Modest side gate in the city-facing (west) wall of the far Dock Street
     // court. Keep the wall solid; this is the future sewer entrance location.
     const FVector Gate(-1748,3650,0);
@@ -631,14 +680,30 @@ void BuildDockSetting(UWorld* World)
             FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f));
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEGATE_CHECK failures=%d gate_closed=%d grate_ground=%d approach_clear=%d"),
             (!GateClosed)+(!GrateGround)+(!ApproachClear),GateClosed,GrateGround,ApproachClear);
+        int32 PierFailures=0;
+        const FVector PierRoute[]={FVector(750,3080,0),FVector(950,3080,0),FVector(1200,3080,0),FVector(1480,3080,0),
+            FVector(1800,3080,0),FVector(2260,3080,0),FVector(1200,3350,0),FVector(1200,3550,0),FVector(1480,3550,0),FVector(2080,3550,0)};
+        for(const FVector P : PierRoute)
+        {
+            FHitResult Hit;
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,100),ECC_Visibility)
+                || FMath::Abs(Hit.ImpactPoint.Z)>2) ++PierFailures;
+        }
+        for(const FIntPoint Leg : {FIntPoint(0,1),FIntPoint(1,2),FIntPoint(2,3),FIntPoint(3,4),FIntPoint(4,5),FIntPoint(2,6),FIntPoint(6,7),FIntPoint(7,8),FIntPoint(8,9)})
+        {
+            FHitResult Hit;
+            if(World->SweepSingleByChannel(Hit,PierRoute[Leg.X]+FVector(0,0,35),PierRoute[Leg.Y]+FVector(0,0,35),
+                FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++PierFailures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_COURTPIER_CHECK failures=%d floors=10 routes=9"),PierFailures);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800),FVector(-1100,3650,190),FVector(-1400,3900,560)};
+            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800),FVector(-1100,3650,190),FVector(-1400,3900,560),FVector(2550,2400,1500),FVector(1000,3080,95)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0),FVector(-1720,3650,115),FVector(-1580,3900,0)};
+            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0),FVector(-1720,3650,115),FVector(-1580,3900,0),FVector(1400,3300,0),FVector(2250,3080,90)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
         for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
@@ -661,6 +726,6 @@ void BuildDockSetting(UWorld* World)
         World->GetTimerManager().SetTimer(ExitHandle,[World]()
         {
             if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));
-        },50.f,false);
+        },58.f,false);
     }
 }
