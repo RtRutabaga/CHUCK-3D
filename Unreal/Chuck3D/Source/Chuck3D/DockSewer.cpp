@@ -77,7 +77,11 @@ void BuildDockSewer(UWorld* World)
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
         Mesh->bUseComplexAsSimpleCollision=true; Mesh->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
         Mesh->RegisterComponent();
-        Mesh->CreateMeshSection_LinearColor(0,V,T,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
+        // Render the enclosing shell from either side without changing the
+        // shared stone material used by the surface town. Normals face inward.
+        TArray<int32> Faces=T;
+        for(int32 I=0;I<T.Num();I+=3) Faces.Append({T[I],T[I+2],T[I+1]});
+        Mesh->CreateMeshSection_LinearColor(0,V,Faces,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
         Mesh->SetMaterial(0,Mat);
     };
     // Inward-facing arch, continuous and collision true. Small bulges make
@@ -138,6 +142,8 @@ void BuildDockSewer(UWorld* World)
         B->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));B->RegisterComponent();B->AddInstance(FTransform(Rot,P,Size/100));
     };
     Box(Shaft+FVector(0,0,FloorZ-20),FVector(430,370,40),Stone,true);
+    Box(Route[0]+FVector(0,0,150),FVector(Width(0)*2+35,40,340),Stone,true,
+        (Route[1]-Route[0]).Rotation()+FRotator(0,90,0));
     // Extend the mouth's sides to the underground landing, with no flat blackout.
     for(float X : {-111.f,111.f}) Box(Shaft+FVector(X,0,-400),FVector(8,210,600),Stone,true);
     for(float Y : {-101.f,101.f}) Box(Shaft+FVector(0,Y,-400),FVector(214,8,600),Stone,true);
@@ -184,8 +190,13 @@ void BuildDockSewer(UWorld* World)
                 {Run->Landed=true;UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_FALL landed=1 elapsed=%.2f z=%.2f"),Run->Time,Chuck->GetActorLocation().Z);}
                 if(Run->Landed)
                 {
+                    Chuck->SetRunHeld(true);
                     const FVector Goal=Route[Run->Target]+FVector(0,0,34.65f);
-                    if(FVector::Dist2D(Chuck->GetActorLocation(),Goal)<55 && Run->Target<Route.Num()-5) ++Run->Target;
+                    if(FVector::Dist2D(Chuck->GetActorLocation(),Goal)<55 && Run->Target<Route.Num()-5)
+                    {
+                        ++Run->Target;
+                        if(Run->Target%50==0) UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_PROGRESS reached=%d elapsed=%.2f"),Run->Target,Run->Time);
+                    }
                     Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
                     if(Run->Target>=Route.Num()-5) Run->Finished=true;
                 }
