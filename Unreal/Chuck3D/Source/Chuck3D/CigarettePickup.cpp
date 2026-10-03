@@ -1,4 +1,6 @@
 #include "CigarettePickup.h"
+#include "DockSewer.h"
+#include "SewerLife.h"
 #include "ChuckCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -49,6 +51,7 @@ ACigarettePickup* ACigarettePickup::Spawn(UWorld* World, const FVector& From, co
     Pickup->Spin = FRotator(FMath::FRandRange(-500.f, 500.f), FMath::FRandRange(-360.f, 360.f), 0);
     Pickup->Ground = GroundZ;
     Pickup->bLanded = Launch.IsNearlyZero();
+    if (From.Z < -150.f && IsWithinDockSewer(From)) UseSewerLighting(Pickup);   // underground: lit by the sewer's own lights
     return Pickup;
 }
 

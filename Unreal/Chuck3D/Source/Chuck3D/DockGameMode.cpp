@@ -2,6 +2,7 @@
 #include "DockSetting.h"
 #include "DockPlaza.h"
 #include "DockSewer.h"
+#include "SewerLife.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -495,6 +496,7 @@ void ADockGameMode::StartPlay()
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
     Sky->GetLightComponent()->RecaptureSky();
     BuildDockSewer(World);
+    SpawnSewerLife(World);   // its rats and moss (Claude)
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
@@ -1800,6 +1802,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             bSpears&=GuardNPC && GuardB && (GuardNPC->GetActorLocation().X-260.f)*(GuardB->GetActorLocation().X-260.f)<0.f;   // either side of the gate
             Check(bSpears,TEXT("two guards stand either side of the city gate, each holding a spear upright, fist round its grip"));
+            // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
+            int32 FirstGroup=0;
+            for(const TWeakObjectPtr<AEnemyRat>& Entry : AEnemyRat::All())
+                if(Entry.IsValid() && FVector::Dist(Entry->GetActorLocation(),DockSewerPoint(GetSewerFirstRatsSample()))<400.f) ++FirstGroup;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_LIFE_MEASURE rats=%d first_group=%d moss_tufts=%d"),GetSewerRatsPlaced(),FirstGroup,GetSewerTuftsPlaced());
+            Check(GetSewerRatsPlaced()>=8 && FirstGroup>=3 && GetSewerTuftsPlaced()>=40,TEXT("the sewer has rats (a group just past the first gap) and moss tufts holding cigarettes"));
             // And one at the Dock Street side gate by the sewer hatch.
             TArray<AActor*> GuardCFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardC"),GuardCFound);

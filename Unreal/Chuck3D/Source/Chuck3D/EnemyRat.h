@@ -54,6 +54,8 @@ public:
     /** The docks' rats, away from the start: the cargo wharf, the timber yard, the garden. */
     static void SpawnDockRats(UWorld* World);
     static AEnemyRat* Place(UWorld* World, const FVector2D& At, float Yaw);
+    /** A rat on the floor near Ground (traced down from just above it: under other floors, e.g. in the sewer). */
+    static AEnemyRat* PlaceAt(UWorld* World, const FVector& Ground, float Yaw);
     int32 Cigarettes = 1;
     float GetLastWindupSeconds() const { return LastWindupSeconds; }
 protected:

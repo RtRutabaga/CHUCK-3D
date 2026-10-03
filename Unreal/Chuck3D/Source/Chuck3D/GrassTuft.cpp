@@ -2,6 +2,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
@@ -35,6 +36,8 @@ AGrassTuft::AGrassTuft()
         TuftMeshes.Add(Tuft.Object); StubMeshes.Add(Stub.Object);
     }
     static ConstructorHelpers::FObjectFinder<UStaticMesh> Clip(TEXT("/Game/Art/Props/Grass/SM_GrassClipping.SM_GrassClipping"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> Moss(TEXT("/Game/Art/Props/Grass/M_SewerMoss.M_SewerMoss"));
+    MossMaterial = Moss.Object;
     Clippings->SetStaticMesh(Clip.Object);
     Blades->SetStaticMesh(TuftMeshes[0]);
     HitRadius = 18.f; HitHeight = 25.f;
@@ -129,6 +132,27 @@ AGrassTuft* AGrassTuft::Plant(UWorld* World, const FVector2D& At, int32 Variant,
     Tuft->SetActorScale3D(FVector(Scale));
     Tuft->SetVariant(Variant);
     return Tuft;
+}
+
+AGrassTuft* AGrassTuft::PlantAt(UWorld* World, const FVector& Ground, int32 Variant, float Yaw, float Scale)
+{
+    FHitResult Hit;
+    const FVector Top = Ground + FVector(0, 0, 60.f);
+    if (!World->LineTraceSingleByChannel(Hit, Top, Top - FVector(0, 0, 150.f), ECC_Visibility) || Hit.ImpactNormal.Z < .8f) return nullptr;
+    auto* Tuft = World->SpawnActor<AGrassTuft>(Hit.ImpactPoint, FRotator(0, Yaw, 0));
+    if (!Tuft) return nullptr;
+    Tuft->SetActorScale3D(FVector(Scale));
+    Tuft->SetVariant(Variant);
+    return Tuft;
+}
+
+void AGrassTuft::SetMoss()
+{
+    // Squat and spread like a clump of moss rather than standing grass.
+    SetActorScale3D(GetActorScale3D() * FVector(1.25f, 1.25f, .5f));
+    if (!MossMaterial) return;
+    for (int32 I = 0; I < Blades->GetNumMaterials(); ++I) Blades->SetMaterial(I, MossMaterial);
+    for (int32 I = 0; I < Clippings->GetNumMaterials(); ++I) Clippings->SetMaterial(I, MossMaterial);
 }
 
 void AGrassTuft::SpawnDockGrass(UWorld* World)

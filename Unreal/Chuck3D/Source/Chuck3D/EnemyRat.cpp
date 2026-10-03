@@ -297,6 +297,16 @@ AEnemyRat* AEnemyRat::Place(UWorld* World, const FVector2D& At, float Yaw)
     return World->SpawnActor<AEnemyRat>(Hit.ImpactPoint + FVector(0, 0, HalfHeight + 1.f), FRotator(0, Yaw, 0), Params);
 }
 
+AEnemyRat* AEnemyRat::PlaceAt(UWorld* World, const FVector& Ground, float Yaw)
+{
+    FHitResult Hit;
+    const FVector Top = Ground + FVector(0, 0, 60.f);
+    if (!World->LineTraceSingleByChannel(Hit, Top, Top - FVector(0, 0, 150.f), ECC_Visibility) || Hit.ImpactNormal.Z < .8f) return nullptr;
+    FActorSpawnParameters Params;
+    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    return World->SpawnActor<AEnemyRat>(Hit.ImpactPoint + FVector(0, 0, HalfHeight + 1.f), FRotator(0, Yaw, 0), Params);
+}
+
 void AEnemyRat::SpawnDockRats(UWorld* World)
 {
     // Away from the start, where there's room to deal with them: the cargo

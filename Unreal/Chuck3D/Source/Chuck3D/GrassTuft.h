@@ -7,6 +7,7 @@ class UStaticMesh;
 class UStaticMeshComponent;
 class UInstancedStaticMeshComponent;
 class USoundBase;
+class UMaterialInterface;
 
 /**
  * A scruffy dock weed tuft (Tools/build_grass_tuft.py). Chuck walks through
@@ -27,6 +28,10 @@ public:
     bool PlayedShredSound() const { return bSoundPlayed; }
     /** A tuft on the ground under XY (a downward trace), unless the ground there is higher than MaxZ. */
     static AGrassTuft* Plant(UWorld* World, const FVector2D& At, int32 Variant, float Yaw, float Scale, float MaxZ = 10.f);
+    /** A tuft on the floor near Ground (traced down from just above it: under other floors, e.g. in the sewer). */
+    static AGrassTuft* PlantAt(UWorld* World, const FVector& Ground, int32 Variant, float Yaw, float Scale);
+    /** The sewer's version: damp moss and fungus (M_SewerMoss), squat, no wind. */
+    void SetMoss();
     /** The docks' grass: patches along walls, the yard, the garden and the timber yard. */
     static void SpawnDockGrass(UWorld* World);
 protected:
@@ -37,6 +42,7 @@ private:
     UPROPERTY() TArray<UStaticMesh*> TuftMeshes;
     UPROPERTY() TArray<UStaticMesh*> StubMeshes;
     UPROPERTY() TArray<USoundBase*> ShredSounds;
+    UPROPERTY() UMaterialInterface* MossMaterial = nullptr;
     int32 Variant = 0;
     bool bSoundPlayed = false;
     struct FClipping { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Scale; bool bLanded; };

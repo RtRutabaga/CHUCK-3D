@@ -27,6 +27,7 @@
 namespace {
 constexpr float FloorZ=-900.f;
 TArray<FVector> Route;
+TArray<FVector> RouteRight;
 FVector Shaft(-1580,3900,0);
 float Chamber(int32 I)
 {
@@ -75,6 +76,12 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
 }
 
 FVector DockSewerStartLocation() { return Shaft+FVector(0,0,FloorZ+34.65f); }
+int32 DockSewerSamples() { return Route.Num(); }
+FVector DockSewerPoint(int32 I) { return Route.IsValidIndex(I) ? Route[I] : FVector::ZeroVector; }
+FVector DockSewerSide(int32 I) { return RouteRight.IsValidIndex(I) ? RouteRight[I] : FVector::RightVector; }
+float DockSewerHalfWidth(int32 I) { return Route.IsValidIndex(I) ? FMath::Min(WallWidth(I,1.f),WallWidth(I,-1.f)) : 0.f; }
+bool DockSewerIsGap(int32 I) { return RiftSegment(I); }
+bool DockSewerIsChamber(int32 I) { return Route.IsValidIndex(I) && Chamber(I)>.05f; }
 bool IsInDockSewerStream(const FVector& P)
 {
     if(P.Z<FloorZ-16 || P.Z>FloorZ+12) return false;
@@ -187,6 +194,7 @@ void BuildDockSewer(UWorld* World)
         T.Append({A,B,C,B,D,C});
     }
     MakeMesh(V,T,N,UV,Stone,true);
+    RouteRight=Right;
     V.Reset();N.Reset();T.Reset();UV.Reset();
     for(int32 I=0;I<Count;++I) for(int32 Column=0;Column<8;++Column)
     {
