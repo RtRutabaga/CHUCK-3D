@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — larger tavern
+
+Runtime `33de126`: tavern 6.6 x 6.6 m exterior, larger pitched collision roof, closed gables, fitted slate strips, moved rear windows and expanded paving/kerb. Partial wall shortened to leave a 1.2 m side gap and rear-court route. No character/controller, binary-asset or dependency changes. Original repository untouched. Initial roof-detail/capture issues corrected; all three final Tavern views inspected in `Local/tavern-capture-verified.log`. Build `Local/tavern-build-verified.log` succeeded. Verifier `Local/verify-package-20261003-082445.log` passed 125 gameplay and all mandatory setting/music/sewer/cave checks, including 11 world floor samples/eight capsule routes. No manual/Xbox/MotionCapture, full sewer traversal repeat or performance test. Root launcher receipt checked at `33de126`, backup `Builds/Windows-Previous-20261003-Tavern`; generated output excluded. Next part of the work can be done here.
+
 ## October 3 — cave refinement and sewer respawn
 
 Runtime `617c651`: all existing death paths underground use the sewer entrance, while R / View remains deliberate dock exit. User-authorized narrow edits to ChuckCharacter and music region selection; no rig/animation changes. Natural continuous rock shell with matching collision replaces spherical decoration; curvature-limited inner banks retain clearance. Wider midpoint chamber, shallow flowing stream, blue ambient night fill, purple visible rupture sources, floor-level nebula/star views and retained translucent oil films. Original 2D reference inspected read-only, no source/assets copied. Three new LFS graphs total 45,903 bytes; fsck/dry run passed, remote quota unknown. No install/download. See HANDOFF Update44 for intermediate collision/material failures and corrections.
