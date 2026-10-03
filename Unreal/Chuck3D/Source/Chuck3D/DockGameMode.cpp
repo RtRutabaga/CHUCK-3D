@@ -515,6 +515,9 @@ void ADockGameMode::StartPlay()
     // -ChuckZombieTest: only the sewer zombie (stages 113-114), then quit.
     bZombieOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieTest"));
     if(bZombieOnly) { bSmokeTest=true; TestStage=113; }
+    // -ChuckWallSideTest: only the side wall run (stages 116-117), then quit.
+    bWallSideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckWallSideTest"));
+    if(bWallSideOnly) { bSmokeTest=true; TestStage=116; }
 }
 
 void ADockGameMode::TickNPCCapture(float DeltaSeconds)
@@ -2175,12 +2178,74 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Zombie->GetZombieWalkSpeed()<ChuckClipData::WalkSpeed && ZombieClosest<ZombieStartDistance-100.f && bZombieWindup && Zombie->GetBitesLanded()>=1
                 && Chuck->GetSanity()==ZombieSanityBefore-ADockNPC::ZombieBite*Zombie->GetBitesLanded() && bZombieAliveAtEight && Zombie->IsDead() && Dropped>=Zombie->Cigarettes,
                 TEXT("the sewer zombie shambles at the rat (slower than he walks), rears up and lunges, a bite costing two sanity; it stands eight scratches, the ninth puts it down, and it leaves cigarettes"));
-            TestStage=115; StageTime=0;
+            TestStage=bZombieOnly ? 115 : 116; StageTime=0;
+        }
+    }
+    else if(TestStage==116 && StageTime>.3f)
+    {
+        // The side wall run: in a narrow stretch of sewer tunnel, between two
+        // gaps, 30 cm off its right-hand wall, facing along it.
+        const int32 S=97;
+        const FVector Centre=DockSewerPoint(S)+FVector(0,0,34.65f), Side=DockSewerSide(S);
+        FHitResult Wall; FCollisionQueryParams Query(SCENE_QUERY_STAT(SideTest),false,Chuck);
+        const float D=GetWorld()->LineTraceSingleByChannel(Wall,Centre+FVector(0,0,5),Centre+FVector(0,0,5)+Side*400.f,ECC_Visibility,Query) ? static_cast<float>(Wall.Distance) : 150.f;
+        SideStart=Centre+Side*(D-30.f);
+        SideFacing=(DockSewerPoint(S+2)-DockSewerPoint(S)).GetSafeNormal2D().Rotation();
+        if(APlayerController* SidePC=GetWorld()->GetFirstPlayerController()) Chuck->DisableInput(SidePC);   // the test stick, not live axes (run on its own)
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(SideStart,false,nullptr,ETeleportType::TeleportPhysics); Chuck->SetActorRotation(SideFacing); Chuck->Recenter();
+        Chuck->SetRunHeld(SideSub==0);
+        SideRunsBefore=Chuck->GetWallSideRuns(); SideClimbsBefore=Chuck->GetWallRuns(); SideJumpAt=-1;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_SETUP sub=%d wall_cm=%.0f start=%s"),SideSub,D,*SideStart.ToString());
+        // Watched from across the tunnel for the record (the follow camera is pressed to the wall).
+        if(APlayerController* SidePC=GetWorld()->GetFirstPlayerController())
+        {
+            if(SideSub==0)
+            {
+                auto* Watch=GetWorld()->SpawnActor<ACameraActor>();
+                const FVector Mid=SideStart+SideFacing.Vector()*150.f;
+                const FVector Eye=Centre-Side*(D*.6f)+SideFacing.Vector()*30.f+FVector(0,0,60.f);
+                Watch->SetActorLocationAndRotation(Eye,(Mid+FVector(0,0,10.f)-Eye).Rotation());
+                Watch->GetCameraComponent()->SetFieldOfView(80.f);
+                SidePC->SetViewTarget(Watch);
+            }
+            else SidePC->SetViewTarget(Chuck);
+        }
+        TestStage=117; StageTime=0;
+    }
+    else if(TestStage==117)
+    {
+        Chuck->SetTestStick(FVector2D(0,1));
+        if(!Chuck->IsWallSideRunning()) Chuck->AddMovementInput(SideFacing.Vector(),1);   // as Forward() does: not while he's on the wall
+        const float Speed=static_cast<float>(Chuck->GetVelocity().Size2D());
+        if(SideJumpAt<0 && (StageTime>1.4f || (SideSub==0 && Speed>200.f && StageTime>.6f) || (SideSub==1 && StageTime>.9f))) { Chuck->JumpPressed(); SideJumpAt=StageTime; }
+        if(SideSub==0 && SideJumpAt>=0)
+            for(const float Shot : {.1f,.3f,.5f,.7f,.9f})
+                if(StageTime>=SideJumpAt+Shot && StageTime-DeltaSeconds<SideJumpAt+Shot)
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/WallSide_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(SideJumpAt>=0 && FMath::Fmod(StageTime,.25f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_TRACK sub=%d t=%.2f gait=%s speed=%.0f vz=%.0f p=%s"),SideSub,StageTime-SideJumpAt,Chuck->GetGaitName(),Chuck->GetVelocity().Size2D(),Chuck->GetVelocity().Z,*Chuck->GetActorLocation().ToString());
+        if(SideJumpAt>=0 && StageTime>SideJumpAt+2.f)
+        {
+            if(SideSub==0)
+            {
+                bSideRan=Chuck->GetWallSideRuns()==SideRunsBefore+1 && Chuck->GetWallRuns()==SideClimbsBefore;
+                SideTravel=Chuck->GetWallSideTravel(); SideRise=Chuck->GetWallSideRise();
+                bSideInSewer=IsWithinDockSewer(Chuck->GetActorLocation()) && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetActorLocation().Z<-800.f;
+                SideSub=1; TestStage=116; StageTime=0;   // then the same at a walk: an ordinary jump
+            }
+            else
+            {
+                SideRunsAtWalk=Chuck->GetWallSideRuns()-SideRunsBefore;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_MEASURE ran=%d travel_cm=%.0f rise_cm=%.0f landed_in_sewer=%d walk_jump_side_runs=%d"),bSideRan,SideTravel,SideRise,bSideInSewer,SideRunsAtWalk);
+                Check(bSideRan && SideTravel>150.f && SideRise>30.f && bSideInSewer && SideRunsAtWalk==0,
+                    TEXT("a running jump with a tunnel wall right beside him runs an arc along it (not up it); a walking jump there is an ordinary jump"));
+                SideSub=0; TestStage=115; StageTime=0;
+            }
         }
     }
     else if(TestStage==115)
     {
-        if(bZombieOnly)
+        if(bZombieOnly || bWallSideOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

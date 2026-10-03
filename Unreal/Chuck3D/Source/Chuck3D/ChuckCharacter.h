@@ -41,6 +41,12 @@ public:
      *  one) a wall jump; in the air, buffered for a wall reached just after. */
     void JumpPressed();
     bool IsWallRunning() const { return Gait == EGait::WallRun; }
+    /** Running along a wall beside him (the side wall run), and how many he has done. */
+    bool IsWallSideRunning() const { return Gait == EGait::WallSide; }
+    int32 GetWallSideRuns() const { return WallSideRuns; }
+    /** The last side wall run: distance along the wall (cm) and height gained at its top (cm). */
+    float GetWallSideTravel() const { return WallSideTravel; }
+    float GetWallSideRise() const { return WallSideRise; }
     int32 GetWallRuns() const { return WallRuns; }
     int32 GetWallJumps() const { return WallJumps; }
     bool IsHanging() const { return Gait == EGait::Hang; }
@@ -86,6 +92,13 @@ public:
     static constexpr float WallJumpOut = 260.f;    // cm/s away from the wall (side jump: 190)
     static constexpr float WallJumpUp = 230.f;     // cm/s up (standing jump: 170)
     static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
+    // The side wall run (user 2026-10-03): a running jump with a wall right
+    // beside him runs a low arc along it (a wall ahead still means climbing it).
+    static constexpr float WallSideReach = 35.f;   // cm beyond the capsule the wall may be
+    static constexpr float WallSideTime = .95f;    // s at most on the wall
+    static constexpr float WallSideUp = 260.f;     // cm/s up at the start of the arc
+    static constexpr float WallSideGravity = 520.f;   // cm/s2: a lighter fall than his own while he runs it
+    static constexpr float WallSideLean = 24.f;    // deg his body leans out from the wall
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
@@ -203,7 +216,7 @@ private:
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
     enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -279,7 +292,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::Hang || Gait == EGait::Climb; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Hang || Gait == EGait::Climb; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face
@@ -360,6 +373,13 @@ private:
     float AirJumpPressedAt = -1e3f;
     int32 WallRuns = 0;
     int32 WallJumps = 0;
+    // Side wall run state.
+    FVector WallSideAlong = FVector::ZeroVector;   // horizontal, along the wall the way he runs
+    float WallSideSpeed = 0, WallSideClock = 0, WallSideStartZ = 0, WallSideTravel = 0, WallSideRise = 0, WallSideTilt = 0;
+    int32 WallSideRuns = 0;
+    bool TryWallSideRun();
+    void LeaveWallSide();
+    bool ProbeSideWall(const FVector& From, const FVector& Side, float Reach, FVector& OutNormal, FVector& OutPoint) const;
     FVector StickWorld() const;
     bool TryEnterWallRun();
     void EnterWallRun(const FHitResult& Hit, const FVector& Normal);

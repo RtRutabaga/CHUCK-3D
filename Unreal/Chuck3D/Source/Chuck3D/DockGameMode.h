@@ -87,7 +87,12 @@ private:
     float ZombieStartDistance = 0, ZombieClosest = 1e6f, ZombieKillAt = -1;
     bool bZombieWindup = false, bZombieAliveAtEight = false;
     int32 ZombieSanityBefore = 0, ZombieCigarettesBefore = 0, ZombieHitsGiven = 0;
-    bool bSlideOnly = false, bZombieOnly = false;
+    bool bSlideOnly = false, bZombieOnly = false, bWallSideOnly = false;
+    // The side wall run test (in a narrow stretch of the sewer).
+    FVector SideStart = FVector::ZeroVector; FRotator SideFacing = FRotator::ZeroRotator;
+    int32 SideSub = 0, SideRunsBefore = 0, SideClimbsBefore = 0, SideRunsAtWalk = 0;
+    float SideJumpAt = -1, SideTravel = 0, SideRise = 0;
+    bool bSideRan = false, bSideInSewer = false;
     bool bWallLanded = false;
     TArray<int32> WallSides;
     int32 HangsBase = 0, PullUpsBase = 0, MantlesBase = 0;
