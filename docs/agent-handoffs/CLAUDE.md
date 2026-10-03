@@ -1796,3 +1796,28 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Step 3 (after-sewer evening, closed grate, open tavern; hook `HasExitedDockSewer()`).
   - Step 4 (the zombie).
   - Not played by the user.
+
+## Sixty-ninth pass — the sewer zombie (sewer plan step 4)
+
+- **User (2026-10-03):** "Proceed". The sewer plan: a hostile zombie in the wide section that can just barely be killed and is best avoided.
+- **Source:** `58ef707` on main.
+  - `humans.json`: Zombie.
+  - `build_npc_humans.py`: `ragged` and `skin_tint`.
+  - `build_npc_mocap.py`: walk mode and the three Zombie clips.
+  - `Fetch-CMUMocap.ps1`: 137_32, 137_33, 113_08.
+  - `DockNPC.cpp/.h`: Zombie mode.
+  - `ChuckCharacter.cpp/.h`: the `TakeBite` amount.
+  - `SewerLife.cpp/.h`: placement.
+  - `DockGameMode.cpp/.h`: stages 113–115 and `-ChuckZombieTest`.
+  - `Verify-Package.ps1`: 130.
+  - Zombie assets (LFS).
+- **Contract:** the shared skeleton and the existing clips are unchanged (the reimported copies were restored). Chuck's rig and clips are unchanged.
+- **Verified:**
+  - Root package 130/130: `Local/verify-package-20261003-132359.log`.
+  - Editor `-ChuckZombieTest` and `-ChuckNPCCapture`.
+- **Remaining:**
+  - Sound for the tell.
+  - Silhouette readability.
+  - Hole pattern.
+  - Collapse direction.
+  - Not played by the user.

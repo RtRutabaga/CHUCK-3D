@@ -2,6 +2,38 @@
 
 ## Current launcher and integration status
 
+**Update 54 (Claude, October 3, user-assigned sewer plan, step 4: the zombie in the wide chamber, "can just barely be killed by player but is best to avoid"):** runtime `58ef707`.
+- **The zombie** (`Zombie` in `humans.json`):
+  - A 177 cm gaunt old man, built with MPFB like the townsfolk: `old_caucasian_male` skin tinted grey, barefoot.
+  - A shirt and trousers cut with the new `ragged` option: jagged hems and small worn-through holes.
+- **Its motion** (CMU, same mirror, newly fetched takes):
+  - Idle and an in-place shamble at 37.5 cm/s, both from 137_33 "Old Man Walk". `build_npc_mocap.py` gained an in-place walk mode that strips the travel, records the speed and loops on the best-matching step.
+  - The collapse is 113_08 "Lay down", played 1.6×.
+  - The film-cliché arms-out 104_41 "ZombieWalk" was reviewed and dropped, as were three other takes.
+- **Behaviour** (`ADockNPC` Zombie mode, kinematic):
+  - It notices the rat within 4.8 m, or 7.5 m in front of it, so sneaking past behind it works.
+  - It shambles at half his walking pace and stays within 11 m of its place. Walls block it and it never steps off the floor.
+  - In reach it rears up with arms lifting for 0.8 s (the tell), then lunges down at him.
+  - A bite costs 2 sanity (`TakeBite` now takes an amount).
+  - It stands eight scratches; the ninth puts it down, and it leaves 4 cigarettes.
+- **Placement:** `SewerLife.cpp` places it at the chamber's widest sample past its gap (sample 194, half-width 415 cm). Codex's walk-through tests get none.
+
+The root candidate passed `-MotionCapture` **130/130** plus the world, music, sewer, cave and tavern checks (`Local/verify-package-20261003-132359.log`). Zombie measurement: it shambled from 365 to 69 cm, reared, lunged once and bit once (sanity 5 → 3), was alive after 8 scratches, dead after 9, and dropped 4. The townsfolk pose check now skips hostiles. `-ChuckZombieTest` runs only this stage.
+
+Promoted to `Builds/Windows` with receipt `58ef707`; the previous package is kept as `Builds/Windows-Previous-20261003-Zombie`. Root was clean when building. The reimport's re-saves of the existing humans were restored, not committed.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/Zombie_*.png` and `runtime_Zombie_*.png`.
+
+Flaws:
+- It reads mostly as a silhouette in the dim sewer.
+- No sound, so the tell is visual only.
+- The holes are still somewhat regular.
+- The collapse ends on its back.
+- The face capture shot misses its stoop.
+- Not played by the user.
+
+Sewer plan remaining: step 3 (the evening return, closed grate, open tavern; Codex's setting code, hook `HasExitedDockSewer()`), then the wall run.
+
 **Update 53 (Codex, October 3 — grey-blue sewer lighting):** runtime `2990b1c`, based on Claude's clean main `99ac9af`, retaining rats/moss and the water-slide exit. User wants dimmer, less space-like overall atmosphere. Fill colour changes saturated blue `(0.16,0.30,0.64)`→grey-blue `(0.32,0.36,0.43)`, intensity1600→1100; slide-mouth light350→175 and same grey-blue. Purple lights2600→1800, radius680→460, localizing their spill. Rock/water ambient expression changes `(0.035,0.065,0.13)`→`(0.04,0.045,0.055)`, reducing overall emissive brightness/blue dominance. Astral depth and film assets preserved. No geometry, controller/animation, rats, moss, soundtrack, footsteps or slide sequence changes. Two owned material assets regenerated with `Tools/create_sewer_cave_materials.py` using new `-ChuckAmbientOnly` filter; no shared/Astral material regeneration, installs/downloads or original-game changes. These two LFS revisions total35,531bytes; attributes/fsck passed and remote dry-run listed just them; storage allowance unavailable.
 
 First lighting candidate built but captures were excessively dark at entrance; revised neutral ambient/fill before publication. Its verifier was intentionally stopped at97 passes (`Local/verify-package-20261003-123743.log`), not a completed test. Final build `Local/sewer-grey-build-final.log` succeeded; material edit `Local/sewer-grey-materials-final.log` had no Python errors, shader jobs drained. All six final tunnel captures inspected (`Local/sewer-grey-capture-final.log`, now `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Sewer/View0..5.png`). Dim stone now reads grey-blue instead of saturated blue; purple remains prominent near rupture beds. Entry and banks remain dim, rats/moss mostly silhouettes; monitor visibility in user play. Provisional geometry/oil films remain. Final verifier `Local/verify-package-20261003-124310.log` passed129 gameplay checks plus all mandatory world/music/cave/sewer/tavern checks and actual slide/pier recovery smoke stage. No new full-sewer traversal, MotionCapture, performance, physical Xbox or manual play test; this is a lighting-only change.
