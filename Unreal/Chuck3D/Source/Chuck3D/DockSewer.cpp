@@ -189,11 +189,25 @@ void BuildDockSewer(UWorld* World)
         for(int32 I=0;I<=4;++I) for(float Side : {-1.f,1.f})
         {
             const int32 Index=StartIndex+I;
-            V.Add(Route[Index]+Right[Index]*(Side*55+RiftOffset(Index))+FVector(0,0,-65));
+            V.Add(Route[Index]+Right[Index]*(Side*55+RiftOffset(Index))+FVector(0,0,-300));
             N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.25f));
         }
         for(int32 I=0;I<4;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
-        MakeMesh(V,T,N,UV,Astral,false);
+        // Close the visual chasm, including its ends. A bed restricted to the
+        // opening's footprint lets oblique camera rays see the outdoor sky
+        // through the space between the floor and bed. All faces stay nonsolid.
+        for(int32 I=0;I<10;++I)
+        {
+            V.Add(V[I]+FVector(0,0,301));N.Add(FVector::UpVector);
+            UV.Add(FVector2D((I%2),I/2.f*.25f));
+        }
+        for(int32 I=0;I<4;++I) for(int32 Side=0;Side<2;++Side)
+        {
+            const int32 A=I*2+Side,B=A+2;
+            T.Append({A,B,A+10,B,B+10,A+10});
+        }
+        T.Append({0,10,1,1,10,11,8,9,18,9,19,18});
+        MakeMesh(V,T,N,UV,Astral,false,false);
         V.Reset();N.Reset();T.Reset();UV.Reset();
         constexpr int32 Rows=16,Columns=10;
         for(int32 Layer=0;Layer<2;++Layer)
@@ -335,7 +349,18 @@ void BuildDockSewer(UWorld* World)
             const FVector Target=Route[FMath::Min(Index+8,Count-1)]+FVector(0,0,120);
             FTimerHandle View,Shot;
             World->GetTimerManager().SetTimer(View,[World,Camera,P,Target](){Camera->SetActorLocationAndRotation(P,(Target-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);},4.f+I*4.f,false);
-            World->GetTimerManager().SetTimer(Shot,[I](){const FString Folder=FPaths::ScreenShotDir()/TEXT("Sewer");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);},6.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[World,I](){
+                for(float Y : {550.f,600.f,650.f})
+                {
+                    FHitResult Hit;
+                    if(World->GetFirstPlayerController()->GetHitResultAtScreenPosition(FVector2D(700,Y),ECC_Visibility,true,Hit))
+                    {
+                        auto* Component=Cast<UPrimitiveComponent>(Hit.GetComponent());
+                        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_CAPTURE_HIT view=%d y=%.0f actor=%s component=%s material=%s point=%s"),I,Y,*GetNameSafe(Hit.GetActor()),*GetNameSafe(Component),*GetNameSafe(Component?Component->GetMaterial(0):nullptr),*Hit.ImpactPoint.ToString());
+                    }
+                }
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("Sewer");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
+            },6.f+I*4.f,false);
         }
         FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},22.f,false);
     }
