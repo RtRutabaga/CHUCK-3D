@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — dock boundary and solid stores
+
+Runtime `84ac3a9` / `49465dc`: closed the dock's shore-side vista shortcut with a matching stone return to water; five barrels reuse original cylindrical proxy dimensions; four stored plank bundles now solid. Initial tests caught entrance interference and a prop trace hitting the nearby building; stores moved north to Y3260. Final build `Local/dock-boundary-build-final.log`, capture `Local/dock-boundary-capture-final.log` (overview inspected), verifier `Local/verify-package-20261002-193059.log`: 125 gameplay plus all setting/pier/music and eleven new props/boundary checks passed. No manual traversal/physical-controller/MotionCapture repeat. No assets/dependencies. Root launcher checked; backup `Builds/Windows-Previous-20261002-DockBoundary`; generated output untracked. Next part of the work can be done here.
+
 ## October 2 — ivy and weathered plaster
 
 Runtime `bbf66d3` / `ae5756b` / `e723888`: new DockWeathering helper, dedicated WeatheredPlaster/DockIvy materials and narrowly scoped material builder. World-space old lime render/cracks/stains, six irregular exposed masonry patches and six noncolliding ivy growths (2,304 leaves). Existing source material graphs/character/traversal untouched. New LFS assets 18,882 bytes; fsck passed, no installation/download/paid storage, remote allowance unknown.
