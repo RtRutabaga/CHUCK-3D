@@ -2,6 +2,33 @@
 
 ## Current launcher and integration status
 
+**Update 57 (Claude, October 3, the user's wall-run plan; picked up after Codex's evening return):** runtime `c3b0e91`, on Codex's clean main `9feb181`.
+- **The side wall run:**
+  - **Trigger:** grounded, at a run, a plain jump (no strafe key or trigger) with a near-vertical wall within 35 cm beside him. The wall must run parallel to his run (within about 24°) and carry on 1.2 m ahead, with nothing in front.
+  - **Unchanged:** running or jumping into a wall still climbs it. The existing climb, chimney and wall-jump measurements are unchanged.
+  - **The run:** a new `WallSide` gait runs along the wall surface, re-found every frame so curved tunnel walls carry him round. Speed is at least his run speed (about 240 cm/s), on a lighter arc for at most 0.95 s, rising about 60 cm. The run stride advances with distance; his body leans 24° out from the wall and foot IK is off.
+  - **Ending:** it ends in a fall with his momentum, and he runs on. Jump kicks off it as from the climb.
+- **Test:** new smoke stages 116 and 117 in a narrow sewer stretch (sample 97, between the gaps at 84 and 114). `-ChuckWallSideTest` runs them alone.
+
+The root candidate passed `-MotionCapture` **133/133** plus the world, music, sewer, cave and tavern checks (`Local/verify-package-20261003-142806.log`). Measured:
+- 251 cm along the wall, 58 cm up, landing in the sewer.
+- A walking jump at the same spot stays an ordinary jump (0 side runs).
+- Climb: rise 45.7 cm in 0.45 s. Chimney: ABA, 238.7 cm.
+
+Promoted to `Builds/Windows` with receipt `c3b0e91`; the previous package is kept as `Builds/Windows-Previous-20261003-WallSide`. The first promotion attempt waited until the user's open game closed.
+
+Evidence: `SourceAssets/Chuck/Review/runtime_WallSide_start.png` and `runtime_WallSide_top.png`, from a fixed observer camera.
+
+Flaws:
+- It uses his run clip; there is no dedicated wall-run clip.
+- The follow camera presses against the wall during the run.
+- No extra sound.
+- Not played by the user.
+
+Remaining from the plan:
+- A hard-to-evade zombie in the narrow tunnel, best passed by wall-running (Claude).
+- A more pronounced tunnel arch so the run carries further (Codex's sewer geometry, or Claude with the user's go-ahead).
+
 **Update 56 (Codex, October 3 — slightly brighter sewer):** runtime `8b9040e`, clean main baseline `b001f41`. Grey-blue fill1100→1450 (+31.8%); slide entrance175→225 (+28.6%). Colour, ambient materials, purple rupture lighting/radius and all geometry/gameplay/evening state remain unchanged. No binary edits/imports, dependencies or original-game changes. Build `Local/sewer-brightness-build.log` succeeded. All six tunnel views inspected (`Local/sewer-brightness-capture.log`, now `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Sewer/View0..5.png`); wall/stream details lift modestly and zombie is visible in chamber view, while cave remains dim. Final verifier `Local/verify-package-20261003-140639.log` passed132 gameplay checks plus all mandatory world/cave/sewer/music/tavern checks, zombie and actual slide/evening-return checks. No MotionCapture, full route/interior circuit repeat, manual/Xbox or performance test. Art remains provisional.
 
 Root launcher receipt/hash checked at `8b9040e`. Previous preserved at `Builds/Windows-Previous-20261003-SewerBrightness`; generated output untracked. See SEWER-PROTOTYPE.md. Next part of the work can be done here.

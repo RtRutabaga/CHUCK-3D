@@ -1821,3 +1821,20 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Hole pattern.
   - Collapse direction.
   - Not played by the user.
+
+## Seventieth pass — the side wall run
+
+- **User:** "Pick up from codex". Codex's handoff named the wall run as next. The plan is in `memory: wallrun-plan`.
+- **Source:** `c3b0e91` on main.
+  - `ChuckCharacter.cpp/.h`: `EGait::WallSide`, `TryWallSideRun`, `ProbeSideWall`, `LeaveWallSide`, the mesh lean.
+  - `DockGameMode.cpp/.h`: stages 116 and 117, plus `-ChuckWallSideTest`.
+  - `Verify-Package.ps1`: 131 Claude-side; Codex's additions bring the total to 133.
+- **Contract:** no rig or clip change. The existing gaits and their tests are unchanged.
+- **Verified:**
+  - Root package 133/133: `Local/verify-package-20261003-142806.log`.
+  - Editor `-ChuckWallSideTest`: `Local/wallside-test.log`.
+- **Remaining:**
+  - A dedicated wall-run clip.
+  - Camera handling on walls.
+  - The narrow-tunnel zombie and the steeper arch.
+  - Not played by the user.
