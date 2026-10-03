@@ -19,3 +19,5 @@ int32 GetSewerRatsPlaced();
 int32 GetSewerTuftsPlaced();
 /** The route sample index of the first rat group (just past the first gap), for tests. */
 int32 GetSewerFirstRatsSample();
+/** How many rats were placed in that first group (they wander once placed). */
+int32 GetSewerFirstGroupPlaced();

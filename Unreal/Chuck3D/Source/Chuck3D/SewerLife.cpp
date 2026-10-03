@@ -17,7 +17,7 @@
 
 namespace
 {
-    int32 RatsPlaced = 0, TuftsPlaced = 0;
+    int32 RatsPlaced = 0, TuftsPlaced = 0, FirstGroupPlaced = 0;
     constexpr int32 FirstRats = 36;       // samples: the first gap is 26..29, so a few metres beyond it
     // Rat groups along the route (sample, count); the wide chamber (around the
     // middle) is kept clear for the zombie.
@@ -35,10 +35,11 @@ void UseSewerLighting(AActor* Actor)
 int32 GetSewerRatsPlaced() { return RatsPlaced; }
 int32 GetSewerTuftsPlaced() { return TuftsPlaced; }
 int32 GetSewerFirstRatsSample() { return FirstRats; }
+int32 GetSewerFirstGroupPlaced() { return FirstGroupPlaced; }
 
 void SpawnSewerLife(UWorld* World)
 {
-    RatsPlaced = TuftsPlaced = 0;
+    RatsPlaced = TuftsPlaced = FirstGroupPlaced = 0;
     const int32 Count = DockSewerSamples();
     if (Count < 20) return;
     const bool bWalkThrough = FParse::Param(FCommandLine::Get(), TEXT("ChuckSewerTest")) || FParse::Param(FCommandLine::Get(), TEXT("ChuckStreamTest"));
@@ -56,6 +57,7 @@ void SpawnSewerLife(UWorld* World)
                     Rat->Cigarettes = 1 + (RatsPlaced % 2);
                     UseSewerLighting(Rat);
                     ++RatsPlaced;
+                    if (&Group == &RatGroups[0]) ++FirstGroupPlaced;
                 }
             }
     // Moss clumps where the floor meets the wall, alternating sides every few
