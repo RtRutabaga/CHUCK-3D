@@ -55,6 +55,10 @@ for name in ('AstralRupture', 'AstralOilMist'):
         alpha.set_editor_property('a', True)
         lib.connect_material_expressions(custom, '', alpha, '')
         lib.connect_material_property(alpha, '', unreal.MaterialProperty.MP_OPACITY)
+        # Keep refraction neutral; UV and vertex motion supply the warping.
+        refract = lib.create_material_expression(mat, unreal.MaterialExpressionConstant)
+        refract.set_editor_property('r', 1.0)
+        lib.connect_material_property(refract, '', unreal.MaterialProperty.MP_REFRACTION)
         offset = lib.create_material_expression(mat, unreal.MaterialExpressionCustom)
         offset.set_editor_property('inputs', ins); offset.set_editor_property('output_type', unreal.CustomMaterialOutputType.CMOT_FLOAT3)
         offset.set_editor_property('code', 'return float3(sin(UV.y*9+T*.3)*4,cos(UV.x*12-T*.24)*4,sin(UV.x*10+UV.y*8+T*.25)*9);')
