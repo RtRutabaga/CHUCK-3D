@@ -21,3 +21,6 @@ int32 GetSewerTuftsPlaced();
 int32 GetSewerFirstRatsSample();
 /** How many rats were placed in that first group (they wander once placed). */
 int32 GetSewerFirstGroupPlaced();
+/** The zombie in the wide chamber (null in the walk-through tests). */
+class ADockNPC* GetSewerZombie();
+int32 GetSewerZombieSample();

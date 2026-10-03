@@ -32,6 +32,30 @@
                       "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
                       "sha256":  "78F51B188603E2EB33212929FA67C43D68B99209B4D70515AEAA7DCDE56F9230",
                       "bytes":  672852
+                  },
+                  {
+                      "file":  "137_32.bvh",
+                      "description":  "Old Man Wait",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_32.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "055A87E6509F2FAF836E3CDBD2C64914F5AD4A102015FFB8354BB246BE98C5FC",
+                      "bytes":  3810827
+                  },
+                  {
+                      "file":  "137_33.bvh",
+                      "description":  "Old Man Walk",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_33.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "2FF32B96491CDEE7A3FDF6686B648A507C60D893FCB0213B933FDFDEA5A82CA0",
+                      "bytes":  2329146
+                  },
+                  {
+                      "file":  "113_08.bvh",
+                      "description":  "Lay down and get up",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/113/113_08.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "4A5B6784C5D8074E503CBDD64987C4899BC433572E51D77F1D14BA321CF16A94",
+                      "bytes":  1404746
                   }
               ]
 }

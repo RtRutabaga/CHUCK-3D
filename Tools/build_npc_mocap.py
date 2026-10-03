@@ -35,6 +35,15 @@ CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to
     'StandLook': ('77_02', 1.0, None, True),     # standing, looking about
     'Talk': ('18_08', 1.0, None, True),          # explaining with the hands
     'React': ('79_73', 1.4, 2.0, False),         # scratched by the rat: hands to the chest, a lean back, a small shift of the feet
+    # The sewer zombie (user 2026-10-03), an old man's carriage: hunched,
+    # knees bent. The walk is in place (the runtime moves it at the clip's
+    # own speed); the collapse is a lay-down played fast (ADockNPC).
+    'ZombieIdle': ('137_33', .3, 1.8, True),     # "Old Man Walk" before he sets off: stooped, swaying
+    # (137_32 "Old Man Wait" leans on its knees: catching its breath, not dead)
+    'ZombieWalk': ('137_33', 2.5, 6.0, 'walk'),  # "Old Man Walk": a slow, bent-kneed shuffle
+    'ZombieFall': ('113_08', 1.0, 2.6, False),   # "Lay down": knees go, down onto the floor, onto its back
+    # Tried and dropped for the zombie: 104_41 ZombieWalk (arms out), 91_24
+    # HurtLegWalk, 104_13 StumbleWalk, 90_16 "fall on face" (a dive).
     # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21
     # "Standing still" (head tipped far back), 141_20 "Waiting" (fidgety, 5 s),
     # 76_06 "avoid stepping on something" (a cartoonish hop with flailing arms).
@@ -148,9 +157,28 @@ def retarget(rig, clip, take, skip, keep, loops=True):
     unturn = yaw_between(mean_side, lateral(rig_heads, 'thigh_l', 'thigh_r'))
     centre = sum((unturn @ fr[1] for fr in frames), Vector()) / len(frames); centre.z = 0
     frames = [({n: unturn @ q for n, q in pose.items()}, unturn @ hips - centre) for pose, hips, _ in frames]
+    speed = 0.
+    if loops == 'walk':
+        # In place: take out the steady travel (a least-squares line through
+        # the hips); the runtime moves the NPC at this speed instead.
+        k = len(frames); mid = (k - 1) / 2
+        mean = sum((fr[1] for fr in frames), Vector()) / k
+        slope = sum(((t - mid) * (fr[1] - mean) for t, fr in enumerate(frames)), Vector()) / sum((t - mid) ** 2 for t in range(k))
+        slope.z = 0
+        speed = slope.length * FPS * 100.
+        frames = [(pose, hips - slope * (t - mid)) for t, (pose, hips) in enumerate(frames)]
+        # Loop on a matching step: from at least 1.5 s on, the frame whose legs
+        # best match the first (and room after it for the seam's blend).
+        legs = ('thigh_l', 'thigh_r', 'calf_l', 'calf_r', 'foot_l', 'foot_r')
+        def gap(a, b):
+            return sum(min(a[n].rotation_difference(b[n]).angle, 2 * math.pi - a[n].rotation_difference(b[n]).angle) for n in legs)
+        seam = 6
+        best = min(range(int(1.5 * FPS), len(frames) - seam), key=lambda f: gap(frames[f][0], frames[0][0]))
+        frames = frames[:best + seam]
+        print('CHUCK_WALK_LOOP', clip, f'speed_cm_s={speed:.1f}', f'cycle_frames={best}', f'seam_error={gap(frames[best][0], frames[0][0]):.3f}')
     # Loop: the first second becomes a blend from the clip's end back into its
     # start. (A one-shot is kept as it is; the runtime blends it in and out.)
-    n = min(LOOP, len(frames) // 3) if loops else 0
+    n = (6 if loops == 'walk' else min(LOOP, len(frames) // 3)) if loops else 0
     m = len(frames) - n
     looped = []
     for f in range(m):
@@ -195,7 +223,7 @@ def retarget(rig, clip, take, skip, keep, loops=True):
     for p in rig.pose.bones:
         p.rotation_quaternion = Quaternion(); p.location = Vector()
     print('CHUCK_CLIP', clip, take, f'frames={len(looped)}', f'seconds={len(looped) / FPS:.1f}', f'scale={scale:.4f}')
-    return {'fbx': f'Anim/AS_Human_{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS, 'loops': loops}
+    return {'fbx': f'Anim/AS_Human_{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS, 'loops': bool(loops), 'speed_cm_s': round(speed, 1)}
 
 
 def review(clip, frames):

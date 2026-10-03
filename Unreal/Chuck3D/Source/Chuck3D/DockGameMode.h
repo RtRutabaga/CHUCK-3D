@@ -83,7 +83,11 @@ private:
     int32 WallRunsBase = 0, WallJumpsBase = 0;
     float WallEnterZ = 0, WallPeakZ = 0, WallEnterAt = -1, WallLeaveAt = -1;
     int32 SlidesBefore = 0, PullUpsBefore = 0;
-    bool bSlideOnly = false;
+    // The sewer zombie test.
+    float ZombieStartDistance = 0, ZombieClosest = 1e6f, ZombieKillAt = -1;
+    bool bZombieWindup = false, bZombieAliveAtEight = false;
+    int32 ZombieSanityBefore = 0, ZombieCigarettesBefore = 0, ZombieHitsGiven = 0;
+    bool bSlideOnly = false, bZombieOnly = false;
     bool bWallLanded = false;
     TArray<int32> WallSides;
     int32 HangsBase = 0, PullUpsBase = 0, MantlesBase = 0;

@@ -404,6 +404,67 @@
      ]
     }
    ]
+  },
+  "Zombie": {
+   "height_cm": 177,
+   "note": "The sewer's zombie (user 2026-10-03): a gaunt old dead man in rags, barefoot, grey skin.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.82,
+    "muscle": 0.32,
+    "weight": 0.3,
+    "height": 0.66,
+    "proportions": 0.5,
+    "cupsize": 0.5,
+    "firmness": 0.2,
+    "race": {
+     "african": 0.02,
+     "asian": 0.03,
+     "caucasian": 0.95
+    }
+   },
+   "skin": "old_caucasian_male",
+   "skin_tint": [
+    0.55,
+    0.6,
+    0.52
+   ],
+   "eyes": "grey",
+   "eyebrows": "eyebrow008",
+   "eyelashes": "eyelashes02",
+   "hair": null,
+   "outfit": [
+    {
+     "piece": "shirt",
+     "sleeves": "rolled",
+     "ragged": 1.0,
+     "fabric": "rough_linen",
+     "tint": [
+      0.13,
+      0.12,
+      0.095
+     ]
+    },
+    {
+     "piece": "trousers",
+     "ragged": 1.0,
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.034,
+      0.03
+     ]
+    },
+    {
+     "piece": "belt",
+     "fabric": "brown_leather",
+     "tint": [
+      0.025,
+      0.019,
+      0.014
+     ]
+    }
+   ]
   }
  }
 }

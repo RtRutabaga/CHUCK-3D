@@ -55,6 +55,19 @@ docs/SETUP.md), one heavy process at a time:
   about its own axis (from the palms-down model pose) to a relaxed curl
   (little finger most, index least) or, via `SetGrip`, a fist round a shaft
   (for the guard's spear later).
+- The sewer zombie (`Zombie` in `humans.json`, user 2026-10-03): a gaunt old
+  man (`old_caucasian_male` skin tinted grey by `skin_tint`), barefoot, in a
+  shirt and trousers cut `ragged` (`tatter_hem` / `tatter_holes`: jagged hems
+  pulled back a few cm and small worn-through holes). Its clips are an old
+  man's: `ZombieIdle` and `ZombieWalk` from 137_33 "Old Man Walk" (the walk in
+  place: `build_npc_mocap.py` takes out the hips' steady travel, records the
+  speed, 37.5 cm/s, and loops on the best-matching step), `ZombieFall` from
+  113_08 "Lay down", played 1.6x as a collapse. Tried and dropped: 104_41
+  "ZombieWalk" (arms held out), 91_24, 104_13, 90_16. `ADockNPC` in
+  `EDockHuman::Zombie` mode moves it kinematically (walls block it, it never
+  steps off floor or over a gap), shambling at the clip's speed so the feet
+  don't slide; the rear-up tell, the lunge and the flinch are laid over the
+  clips. Placed by `SewerLife.cpp`; review images in `Humans/Review/Zombie_*`.
 
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials

@@ -509,6 +509,9 @@ void ADockGameMode::StartPlay()
     // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
     bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
     if(bSlideOnly) { bSmokeTest=true; TestStage=111; }
+    // -ChuckZombieTest: only the sewer zombie (stages 113-114), then quit.
+    bZombieOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieTest"));
+    if(bZombieOnly) { bSmokeTest=true; TestStage=113; }
 }
 
 void ADockGameMode::TickNPCCapture(float DeltaSeconds)
@@ -1746,7 +1749,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC) continue;
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile()) continue;
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2124,6 +2127,61 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
                 bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;
             }
+            TestStage=113; StageTime=0;
+        }
+    }
+    else if(TestStage==113 && StageTime>.3f)
+    {
+        // The zombie: the rat stands on the stream's line 3 m back the way he comes.
+        ADockNPC* Zombie=GetSewerZombie();
+        if(!Zombie) { Check(false,TEXT("the sewer zombie is placed in the wide chamber")); TestStage=115; StageTime=0; return; }
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(DockSewerPoint(GetSewerZombieSample()-5)+FVector(0,0,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation((Zombie->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D().Rotation()); Chuck->Recenter();
+        ZombieStartDistance=FVector::Dist2D(Zombie->GetActorLocation(),Chuck->GetActorLocation()); ZombieClosest=ZombieStartDistance;
+        ZombieSanityBefore=Chuck->GetSanity(); ZombieCigarettesBefore=ACigarettePickup::CountInWorld(GetWorld());
+        bZombieWindup=bZombieAliveAtEight=false; ZombieKillAt=-1; ZombieHitsGiven=0;
+        TestStage=114; StageTime=0;
+    }
+    else if(TestStage==114)
+    {
+        ADockNPC* Zombie=GetSewerZombie();
+        if(!Zombie) { TestStage=115; StageTime=0; return; }
+        ZombieClosest=FMath::Min(ZombieClosest,static_cast<float>(FVector::Dist2D(Zombie->GetActorLocation(),Chuck->GetActorLocation())));
+        bZombieWindup|=FCString::Strcmp(Zombie->GetZombieStateName(),TEXT("Windup"))==0;
+        if(FMath::Fmod(StageTime,.5f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_ZOMBIE_TRACK t=%.2f state=%s p=%s chuck=%s"),StageTime,Zombie->GetZombieStateName(),*Zombie->GetActorLocation().ToString(),*Chuck->GetActorLocation().ToString());
+        for(const float Shot : {1.5f,4.f,5.f,5.3f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Zombie_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        // Once it has bitten (or by 9 s), nine scratches, a quarter second apart.
+        if(ZombieKillAt<0 && (Zombie->GetBitesLanded()>0 || StageTime>9.f)) ZombieKillAt=StageTime+.6f;
+        if(ZombieKillAt>=0 && ZombieHitsGiven<ADockNPC::ZombieHealth && StageTime>=ZombieKillAt+ZombieHitsGiven*.25f)
+        {
+            Zombie->TakeScratch(Chuck->GetActorLocation()); ++ZombieHitsGiven;
+            if(ZombieHitsGiven==ADockNPC::ZombieHealth-1) bZombieAliveAtEight=!Zombie->IsDead();
+        }
+        if(ZombieKillAt>=0 && StageTime>=ZombieKillAt+ADockNPC::ZombieHealth*.25f+.3f && StageTime-DeltaSeconds<ZombieKillAt+ADockNPC::ZombieHealth*.25f+.3f)
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Zombie_down.png"),true,false);
+        if(ZombieKillAt>=0 && StageTime>ZombieKillAt+ADockNPC::ZombieHealth*.25f+2.5f)
+        {
+            const int32 Dropped=ACigarettePickup::CountInWorld(GetWorld())-ZombieCigarettesBefore;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ZOMBIE_MEASURE speed=%.1f start=%.0f closest=%.0f windup=%d lunges=%d bites=%d sanity=%d->%d alive_at_8=%d dead=%d hits=%d dropped=%d state=%s"),
+                Zombie->GetZombieWalkSpeed(),ZombieStartDistance,ZombieClosest,bZombieWindup,Zombie->GetLunges(),Zombie->GetBitesLanded(),ZombieSanityBefore,Chuck->GetSanity(),
+                bZombieAliveAtEight,Zombie->IsDead(),Zombie->GetHitsTaken(),Dropped,Zombie->GetZombieStateName());
+            Check(Zombie->GetZombieWalkSpeed()<ChuckClipData::WalkSpeed && ZombieClosest<ZombieStartDistance-100.f && bZombieWindup && Zombie->GetBitesLanded()>=1
+                && Chuck->GetSanity()==ZombieSanityBefore-ADockNPC::ZombieBite*Zombie->GetBitesLanded() && bZombieAliveAtEight && Zombie->IsDead() && Dropped>=Zombie->Cigarettes,
+                TEXT("the sewer zombie shambles at the rat (slower than he walks), rears up and lunges, a bite costing two sanity; it stands eight scratches, the ninth puts it down, and it leaves cigarettes"));
+            TestStage=115; StageTime=0;
+        }
+    }
+    else if(TestStage==115)
+    {
+        if(bZombieOnly)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
+            bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;
+        }
+        {
             // Then the cargo chimney, seen from the quay (north).
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-335,-337,36));
             Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter(); Chuck->SetActorRotation(FRotator(0,180,0));

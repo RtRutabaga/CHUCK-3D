@@ -7,28 +7,56 @@
    "take": "111_28",
    "frames": 417,
    "fps": 30,
-   "loops": true
+   "loops": true,
+   "speed_cm_s": 0.0
   },
   "StandLook": {
    "fbx": "Anim/AS_Human_StandLook.fbx",
    "take": "77_02",
    "frames": 175,
    "fps": 30,
-   "loops": true
+   "loops": true,
+   "speed_cm_s": 0.0
   },
   "Talk": {
    "fbx": "Anim/AS_Human_Talk.fbx",
    "take": "18_08",
    "frames": 462,
    "fps": 30,
-   "loops": true
+   "loops": true,
+   "speed_cm_s": 0.0
   },
   "React": {
    "fbx": "Anim/AS_Human_React.fbx",
    "take": "79_73",
    "frames": 61,
    "fps": 30,
-   "loops": false
+   "loops": false,
+   "speed_cm_s": 0.0
+  },
+  "ZombieIdle": {
+   "fbx": "Anim/AS_Human_ZombieIdle.fbx",
+   "take": "137_33",
+   "frames": 37,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 0.0
+  },
+  "ZombieWalk": {
+   "fbx": "Anim/AS_Human_ZombieWalk.fbx",
+   "take": "137_33",
+   "frames": 49,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 37.5
+  },
+  "ZombieFall": {
+   "fbx": "Anim/AS_Human_ZombieFall.fbx",
+   "take": "113_08",
+   "frames": 79,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0
   }
  }
 }

@@ -444,6 +444,67 @@
      "texture": "Textures/eyelashes02.png"
     }
    }
+  },
+  "Zombie": {
+   "fbx": "Zombie/SK_Zombie.fbx",
+   "height_cm": 177,
+   "tris": 40588,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.13,
+      0.12,
+      0.095
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.034,
+      0.03
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.025,
+      0.019,
+      0.014
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png",
+     "tint": [
+      0.55,
+      0.6,
+      0.52
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/grey_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow008.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

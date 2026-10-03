@@ -2,6 +2,7 @@
 #include "DockSewer.h"
 #include "EnemyRat.h"
 #include "GrassTuft.h"
+#include "DockNPC.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -18,6 +19,8 @@
 namespace
 {
     int32 RatsPlaced = 0, TuftsPlaced = 0, FirstGroupPlaced = 0;
+    TWeakObjectPtr<ADockNPC> Zombie;
+    int32 ZombieSample = -1;
     constexpr int32 FirstRats = 36;       // samples: the first gap is 26..29, so a few metres beyond it
     // Rat groups along the route (sample, count); the wide chamber (around the
     // middle) is kept clear for the zombie.
@@ -36,6 +39,8 @@ int32 GetSewerRatsPlaced() { return RatsPlaced; }
 int32 GetSewerTuftsPlaced() { return TuftsPlaced; }
 int32 GetSewerFirstRatsSample() { return FirstRats; }
 int32 GetSewerFirstGroupPlaced() { return FirstGroupPlaced; }
+ADockNPC* GetSewerZombie() { return Zombie.Get(); }
+int32 GetSewerZombieSample() { return ZombieSample; }
 
 void SpawnSewerLife(UWorld* World)
 {
@@ -60,6 +65,23 @@ void SpawnSewerLife(UWorld* World)
                     if (&Group == &RatGroups[0]) ++FirstGroupPlaced;
                 }
             }
+    // The zombie: in the wide chamber just past its gap, off the stream,
+    // facing back the way the rat comes in.
+    Zombie.Reset();
+    if (!bWalkThrough)
+    {
+        // Where the tunnel is widest (the walls pull in on the inside of a bend).
+        int32 I = FMath::Clamp(Count / 2 + 10, 8, Count - 8);
+        for (int32 J = Count / 2 + 6; J <= Count / 2 + 18 && J < Count - 8; ++J)
+            if (!DockSewerIsGap(J) && DockSewerHalfWidth(J) > DockSewerHalfWidth(I)) I = J;
+        ZombieSample = I;
+        const FVector Back = DockSewerPoint(I - 4) - DockSewerPoint(I);
+        if (ADockNPC* Dead = ADockNPC::SpawnZombie(World, DockSewerPoint(I) + DockSewerSide(I) * (.4f * DockSewerHalfWidth(I)), static_cast<float>(Back.Rotation().Yaw)))
+        {
+            UseSewerLighting(Dead);
+            Zombie = Dead;
+        }
+    }
     // Moss clumps where the floor meets the wall, alternating sides every few
     // metres, a third of them holding a cigarette (as the docks' grass).
     FRandomStream Random(20261003);
@@ -82,7 +104,7 @@ void SpawnSewerLife(UWorld* World)
             }
         }
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SEWER_LIFE rats=%d moss_tufts=%d first_rats_sample=%d walkthrough=%d"), RatsPlaced, TuftsPlaced, FirstRats, bWalkThrough ? 1 : 0);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SEWER_LIFE rats=%d moss_tufts=%d first_rats_sample=%d zombie=%d zombie_sample=%d half_width=%.0f walkthrough=%d"), RatsPlaced, TuftsPlaced, FirstRats, Zombie.IsValid() ? 1 : 0, ZombieSample, ZombieSample >= 0 ? DockSewerHalfWidth(ZombieSample) : 0.f, bWalkThrough ? 1 : 0);
     // -ChuckSewerLifeCapture: the first rat group past the gap, and a moss clump, then quit.
     if (FParse::Param(FCommandLine::Get(), TEXT("ChuckSewerLifeCapture")))
     {

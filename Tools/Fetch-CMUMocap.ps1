@@ -13,7 +13,11 @@ $destination=Join-Path $projectRoot 'SourceAssets\Mocap\CMU'
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 $takes=[ordered]@{
     '111_28'='Standing still'; '77_02'='standing'; '18_08'='conversation - explain with hand gestures';
-    '79_73'='scared'
+    '79_73'='scared';
+    # The sewer zombie (user 2026-10-03): standing, its shamble, and its collapse. Tried and
+    # dropped for it: 104_41 "ZombieWalk" (arms held out, the film cliche), 91_24 "HurtLegWalk"
+    # (upright, a 6 s cycle), 104_13 "StumbleWalk" (acrobatic), 90_16 "fall on face" (a dive).
+    '137_32'='Old Man Wait'; '137_33'='Old Man Walk'; '113_08'='Lay down and get up'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

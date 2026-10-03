@@ -969,14 +969,14 @@ void AChuckCharacter::SlashHit()
         ++SlashNPCHits;
     }
 }
-bool AChuckCharacter::TakeBite(const FVector& From)
+bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount)
 {
     const float Now = GetWorld()->GetTimeSeconds();
     if (Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
     BiteImmuneUntil = Now + BiteImmunity;
     ++BitesTaken;
     TalkingTo.Reset();
-    Sanity = FMath::Max(0, Sanity - 1);
+    Sanity = FMath::Max(0, Sanity - Amount);
     if (Sanity == 0) { bPendingVanish = true; PendingVanishAt = Now + .35f; }
     FVector Away = (GetActorLocation() - From).GetSafeNormal2D();
     if (Away.IsNearlyZero()) Away = -GetActorForwardVector().GetSafeNormal2D();

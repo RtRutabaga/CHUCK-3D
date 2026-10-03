@@ -111,6 +111,13 @@ class Body:
         return self.ankle.z + (opts or {}).get('height', .17)
 
     def margin(self, i, piece, opts):
+        """edge_margin, torn if the garment is `ragged` (the sewer zombie's rags)."""
+        m = self.edge_margin(i, piece, opts)
+        if opts.get('ragged') and m > -1.:
+            m = min(m - tatter_hem(self.co[i], opts['ragged']), tatter_holes(self.co[i], opts['ragged']))
+        return m
+
+    def edge_margin(self, i, piece, opts):
         """Signed distance (metres, + inside) from vertex i to the edge of a
         garment. Cloth is cut exactly where this crosses zero, so hems follow
         a clean line rather than the body's quads; -1 means "never this
@@ -194,6 +201,18 @@ class Body:
         shows skin, not the inside of the body."""
         if piece == 'boots' and self.bone[i] in self.FEET | self.LEGS and self.co[i].z < self.boot_top(opts) - .02: return True
         return self.margin(i, piece, opts) > .02
+
+
+def tatter_hem(c, amount):
+    """Torn cloth: every edge pulled back a jagged 0.5..4 cm (smooth enough to cut cleanly)."""
+    n = (math.sin(c.x * 61 + c.z * 23) + math.sin(c.y * 47 - c.z * 71 + 1.3) + math.sin((c.x + c.y) * 113 + 2.1)) / 3.
+    return amount * (.022 + .017 * n)
+
+
+def tatter_holes(c, amount):
+    """And worn through in a few places: negative (no cloth) inside small blobs, a few cm across."""
+    n = math.sin(c.x * 41 + c.z * 23 + .4) * math.sin(c.y * 43 - c.z * 17 + .7) * math.sin(c.z * 29 + c.x * 11)
+    return (.62 * (2. - amount) - n) * .06
 
 
 # Per piece: distance out from the skin, cloth thickness, and whether the skin under it goes.
@@ -441,6 +460,7 @@ def build(name, spec):
         obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
         for poly in obj.data.polygons: poly.material_index = 0
     assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
+    if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
     assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
     assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png')))}
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"

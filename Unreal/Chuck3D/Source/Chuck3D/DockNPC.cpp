@@ -1,5 +1,6 @@
 #include "DockNPC.h"
 #include "ChuckCharacter.h"
+#include "CigarettePickup.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -39,13 +40,21 @@ namespace
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
-        TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard") };
+        TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
+        TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
-    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipCount };
+    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
     const TCHAR* ClipPaths[] = { TEXT("/Game/Characters/Humans/Anim/AS_Human_StandHip.AS_Human_StandHip"),
         TEXT("/Game/Characters/Humans/Anim/AS_Human_StandLook.AS_Human_StandLook"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Talk.AS_Human_Talk"),
-        TEXT("/Game/Characters/Humans/Anim/AS_Human_React.AS_Human_React") };
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_React.AS_Human_React"), TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieIdle.AS_Human_ZombieIdle"),
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieWalk.AS_Human_ZombieWalk"), TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieFall.AS_Human_ZombieFall") };
+    // The zombie's shamble, in place: the walk clip's own speed at the clip
+    // skeleton's scale (Tools/build_npc_mocap.py CHUCK_WALK_LOOP; the hips are
+    // scaled to each body); its collapse is a lay-down played fast.
+    constexpr float ZombieClipSpeed = 37.5f;   // cm/s
+    constexpr float ZombieFallRate = 1.6f;
+    constexpr float ZombieTurnRate = 75.f;     // deg/s while shambling
     // Looking down at the rat: hardly at all until it's right at his feet
     // (a grown man doesn't crane at a rat across the street).
     constexpr float LookDownFar = 6.f;      // deg, most he tips his head while it's further off
@@ -82,11 +91,14 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Woman(MeshPaths[2]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> GuardWoman(MeshPaths[3]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> SideGuard(MeshPaths[4]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Zombie(MeshPaths[5]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
-    HumanMeshes[4] = SideGuard.Object;
+    HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
-        Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]);
+        Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]), ZombieIdle(ClipPaths[ClipZombieIdle]), ZombieWalk(ClipPaths[ClipZombieWalk]),
+        ZombieFall(ClipPaths[ClipZombieFall]);
     Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object; Clips[ClipReact] = React.Object;
+    Clips[ClipZombieIdle] = ZombieIdle.Object; Clips[ClipZombieWalk] = ZombieWalk.Object; Clips[ClipZombieFall] = ZombieFall.Object;
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SpearAsset(TEXT("/Game/Characters/Humans/Props/SM_Spear.SM_Spear"));
     SpearMesh = SpearAsset.Object;
@@ -125,6 +137,146 @@ ADockNPC* ADockNPC::SpawnHuman(UWorld* World, EDockHuman Kind, const FVector& Fe
     NPC->Kind = Kind;
     NPC->FinishSpawning(At);
     return NPC;
+}
+
+ADockNPC* ADockNPC::SpawnZombie(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::Zombie, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("SewerZombie"));
+    NPC->DisplayName = TEXT("Zombie");
+    return NPC;
+}
+
+const TCHAR* ADockNPC::GetZombieStateName() const
+{
+    static const TCHAR* Names[] = { TEXT("Idle"), TEXT("Shamble"), TEXT("Windup"), TEXT("Lunge"), TEXT("Recover"), TEXT("Hurt"), TEXT("Dead") };
+    return Names[static_cast<int32>(ZState)];
+}
+
+float ADockNPC::GetZombieWalkSpeed() const { return ZombieClipSpeed * HipScale; }
+
+void ADockNPC::TurnZombie(const FVector& Toward, float DeltaSeconds, float Rate)
+{
+    const FVector To = (Toward - GetActorLocation()).GetSafeNormal2D();
+    if (To.IsNearlyZero()) return;
+    const float Current = static_cast<float>(GetActorRotation().Yaw);
+    const float Step = FMath::Clamp(FMath::FindDeltaAngleDegrees(Current, static_cast<float>(To.Rotation().Yaw)), -Rate * DeltaSeconds, Rate * DeltaSeconds);
+    SetActorRotation(FRotator(0.f, Current + Step, 0.f));
+}
+
+bool ADockNPC::StepZombie(const FVector& Direction, float Distance)
+{
+    // Kinematic: blocked by walls (a capsule held clear of the floor's bumps),
+    // and only onto floor: never off an edge or over a gap in the stream bed.
+    if (Distance <= 0.f) return false;
+    const FVector From = GetActorLocation(), To = From + Direction.GetSafeNormal2D() * Distance;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ZombieStep), false, this);
+    const FCollisionObjectQueryParams Static(ECC_WorldStatic);
+    FHitResult Hit;
+    if (GetWorld()->SweepSingleByObjectType(Hit, From, To, FQuat::Identity, Static, FCollisionShape::MakeCapsule(22.f, HalfHeight - 20.f), Query))
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("CHUCK_ZOMBIE_BLOCKED by=%s/%s start_in=%d at=%s"), *GetNameSafe(Hit.GetActor()), *GetNameSafe(Hit.GetComponent()), Hit.bStartPenetrating, *Hit.ImpactPoint.ToString());
+        return false;
+    }
+    FHitResult Floor;
+    if (!GetWorld()->LineTraceSingleByObjectType(Floor, To - FVector(0, 0, HalfHeight - 30.f), To - FVector(0, 0, HalfHeight + 30.f), Static, Query))
+    {
+        UE_LOG(LogTemp, Verbose, TEXT("CHUCK_ZOMBIE_NO_FLOOR at=%s"), *To.ToString());
+        return false;
+    }
+    SetActorLocation(FVector(To.X, To.Y, Floor.ImpactPoint.Z + HalfHeight));
+    return true;
+}
+
+void ADockNPC::TickZombie(float DeltaSeconds)
+{
+    ZTime += DeltaSeconds;
+    auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    const FVector Location = GetActorLocation();
+    float Distance = 1e6f, Rise = 1e6f, Facing = 180.f;
+    FVector ToChuck = FVector::ZeroVector;
+    if (Chuck)
+    {
+        ToChuck = Chuck->GetActorLocation() - Location;
+        Distance = static_cast<float>(ToChuck.Size2D());
+        Rise = static_cast<float>(FMath::Abs((Chuck->GetActorLocation().Z - Chuck->GetSimpleCollisionHalfHeight()) - (Location.Z - HalfHeight)));
+        Facing = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(GetActorForwardVector().GetSafeNormal2D(), ToChuck.GetSafeNormal2D())), -1.f, 1.f)));
+    }
+    // A rat it could reach: on its level, not gone into the light, near its place.
+    const bool bThere = Chuck && !Chuck->IsAstral() && Rise < 80.f && FVector::Dist2D(Chuck->GetActorLocation(), ZHome) < ZombieLeash;
+    const bool bSees = bThere && (Distance < ZombieNotice || (Distance < ZombieSight && Facing < 70.f));
+    float Moved = 0.f;
+    switch (ZState)
+    {
+    case EZombie::Idle:
+        if (bSees) SetZombie(EZombie::Shamble);
+        break;
+    case EZombie::Shamble:
+    {
+        // After the rat while it's there, otherwise back to its place.
+        const bool bChase = bThere && (bSees || ZTime < 6.f || Distance < ZombieSight);
+        const FVector Goal = bChase ? Chuck->GetActorLocation() : ZHome;
+        if (!bChase && FVector::Dist2D(Location, ZHome) < 40.f) { SetZombie(EZombie::Idle); break; }
+        TurnZombie(Goal, DeltaSeconds, ZombieTurnRate);
+        const FVector To = (Goal - Location).GetSafeNormal2D();
+        const float Ahead = static_cast<float>(FVector::DotProduct(GetActorForwardVector().GetSafeNormal2D(), To));
+        // It turns before it walks, and stops short rather than pushing into him.
+        const float Speed = GetZombieWalkSpeed() * FMath::Clamp((Ahead - .3f) / .5f, 0.f, 1.f);
+        if (!(bChase && Distance < 55.f) && StepZombie(GetActorForwardVector(), Speed * DeltaSeconds)) Moved = Speed * DeltaSeconds;
+        if (bChase && Distance < ZombieStrike && Facing < 30.f) SetZombie(EZombie::Windup);
+        break;
+    }
+    case EZombie::Windup:
+        // The tell: it stops and rears up, arms lifting, turning to the rat.
+        if (Chuck) TurnZombie(Chuck->GetActorLocation(), DeltaSeconds, 45.f);
+        if (ZTime >= ZombieWindup) { LungeDir = GetActorForwardVector().GetSafeNormal2D(); bBit = false; ++Lunges; SetZombie(EZombie::Lunge); }
+        break;
+    case EZombie::Lunge:
+        // Down and forward at him; one bite, hit or miss.
+        StepZombie(LungeDir, 170.f * FMath::Max(0.f, 1.f - ZTime / ZombieLungeTime) * DeltaSeconds * 1.6f);
+        if (!bBit && ZTime >= .22f)
+        {
+            bBit = true;
+            if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .5f
+                && Chuck->TakeBite(Location, ZombieBite)) ++Bites;
+        }
+        if (ZTime >= ZombieLungeTime) SetZombie(EZombie::Recover);
+        break;
+    case EZombie::Recover:
+        if (ZTime >= ZombieRecover) SetZombie(EZombie::Shamble);
+        break;
+    case EZombie::Hurt:
+        if (ZTime >= .35f) SetZombie(EZombie::Shamble);
+        break;
+    case EZombie::Dead:
+        DeathTime += DeltaSeconds;
+        if (!bDropped && DeathTime >= 1.2f)
+        {
+            bDropped = true;
+            ACigarettePickup::Burst(GetWorld(), Location, Cigarettes, static_cast<float>(Location.Z) - HalfHeight);
+        }
+        break;
+    }
+    // The walk clip runs with the ground covered, so the feet don't slide.
+    WalkTime += Moved / FMath::Max(1.f, GetZombieWalkSpeed());
+    const auto Ease = [DeltaSeconds](float& Value, float Target, float Rate) { Value = FMath::FInterpTo(Value, Target, DeltaSeconds, Rate); };
+    Ease(WalkBlend, Moved > 0.f ? 1.f : 0.f, 5.f);
+    Ease(Rear, ZState == EZombie::Windup ? 1.f : 0.f, ZState == EZombie::Windup ? 3.5f : 6.f);
+    Ease(Reach, ZState == EZombie::Lunge ? 1.f : 0.f, ZState == EZombie::Lunge ? 14.f : 2.5f);
+    if (FlinchTime >= 0.f && (FlinchTime += DeltaSeconds) > .5f) FlinchTime = -1.f;
+    Ease(Flinch, FlinchTime >= 0.f && FlinchTime < .2f ? 1.f : 0.f, 16.f);
+    // It watches the rat it's after, down at the floor.
+    FVector2D Target(0.f, 12.f);
+    if (bThere && ZState != EZombie::Idle && ZState != EZombie::Dead)
+    {
+        const FVector Local = GetActorTransform().InverseTransformVectorNoScale(ToChuck - FVector(0, 0, EyeHeight - HalfHeight));
+        Target = FVector2D(FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -60.f, 60.f),
+            FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(-Local.Z), static_cast<float>(Local.Size2D()))), -10.f, 45.f));
+    }
+    Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, 2.5f);
+    Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, 2.5f);
+    bWatching = bThere && ZState != EZombie::Idle;
 }
 
 ADockNPC* ADockNPC::SpawnDockWorker(UWorld* World, const FVector& Feet, float Yaw)
@@ -226,6 +378,7 @@ void ADockNPC::BeginPlay()
         else FingerBone.Reset();
     }
     HomeYaw = static_cast<float>(GetActorRotation().Yaw);
+    ZHome = GetActorLocation();
     if (bSpear) PlaceSpear();   // given before play began: place it now the arms are known
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
@@ -289,7 +442,21 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
             Local[B].SetLocation(FMath::Lerp(Local[B].GetLocation(), Other[B].GetLocation(), static_cast<double>(W)));
         }
     };
-    Sample(Clips[IdleClip], Local);
+    if (Kind == EDockHuman::Zombie)
+    {
+        // Its stooped sway, the shamble over it as it walks, then the collapse (held at the end).
+        Sample(Clips[ClipZombieIdle], Local);
+        if (WalkBlend > .01f) { Sample(Clips[ClipZombieWalk], Other); Blend(WalkBlend); }
+        if (DeathTime >= 0.f)
+        {
+            const float Length = Clips[ClipZombieFall]->GetPlayLength();
+            Other.SetNum(N);
+            const FAnimExtractContext Context(static_cast<double>(FMath::Min(DeathTime * ZombieFallRate, Length)));
+            for (int32 B = 0; B < N; ++B) Clips[ClipZombieFall]->GetBoneTransform(Other[B], FSkeletonPoseBoneIndex(B), Context, false);
+            Blend(FMath::Clamp(DeathTime / .15f, 0.f, 1.f));
+        }
+    }
+    else Sample(Clips[IdleClip], Local);
     if (TalkBlend > 0.f) { Sample(Clips[ClipTalk], Other); Blend(TalkBlend); }
     if (ReactTime >= 0.f)
     {
@@ -427,6 +594,21 @@ float ADockNPC::GetFingerCurl() const
 
 void ADockNPC::TakeScratch(const FVector& From)
 {
+    if (Kind == EDockHuman::Zombie)
+    {
+        // It barely notices each one (no stagger out of a lunge); the ninth puts it down.
+        if (ZState == EZombie::Dead) return;
+        ++Scratches; ++Hits;
+        FlinchTime = 0.f;
+        if (Hits >= ZombieHealth)
+        {
+            SetZombie(EZombie::Dead); DeathTime = 0.f;
+            Blocker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            return;
+        }
+        if (ZState == EZombie::Idle || ZState == EZombie::Shamble || ZState == EZombie::Recover) SetZombie(EZombie::Hurt);
+        return;
+    }
     ++Scratches;
     if (ReactTime >= 0.f && ReactTime < .6f) return;   // already starting back
     ReactTime = 0.f;
@@ -547,6 +729,7 @@ void ADockNPC::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     Clock += DeltaSeconds;
+    if (Kind == EDockHuman::Zombie) { TickZombie(DeltaSeconds); UpdatePose(DeltaSeconds); return; }
     // Where he's looking: at Chuck when the rat's near, otherwise idle glances
     // (out over the harbour, down the quay) every few seconds.
     FVector2D Target = Glance;
@@ -606,6 +789,22 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         TArray<FQuat> Delta; Delta.Init(FQuat::Identity, BoneCount);
         Delta[Neck] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
         Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
+        if (Kind == EDockHuman::Zombie)
+        {
+            // Over the clips: rearing up with the arms lifting (the tell), then
+            // down and forward at the rat, arms reaching; a jolt when scratched.
+            const float Alive = DeathTime < 0.f ? 1.f : FMath::Clamp(1.f - DeathTime / .2f, 0.f, 1.f);
+            const float R = Rear * Alive, L = Reach * Alive, F = Flinch * Alive;
+            Delta[Spine2] = Pitch(-6.f * R + 16.f * L - 8.f * F);
+            Delta[Chest] = Pitch(-8.f * R + 14.f * L - 6.f * F) * Yaw(9.f * F);
+            Delta[Head] = Pitch(-6.f * F) * Delta[Head];
+            for (int32 Side = 0; Side < 2; ++Side)
+            {
+                const float S = Side == 0 ? ArmOut : -ArmOut;
+                Delta[Of(UpperL, Side)] = Pitch(-55.f * R - 35.f * L) * Roll(S * 8.f * R);
+                Delta[Of(LowerL, Side)] = Pitch(-25.f * R + 10.f * L);
+            }
+        }
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
