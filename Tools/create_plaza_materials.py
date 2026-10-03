@@ -1,8 +1,13 @@
 """Create only the additive plaza's dawn, flame and fountain materials."""
 import unreal
+import runpy
+from pathlib import Path
 lib = unreal.MaterialEditingLibrary
 for name in ('DawnSky', 'TorchFlame', 'FountainWater'):
     if '-ChuckSkyOnly' in unreal.SystemLibrary.get_command_line() and name != 'DawnSky':
+        continue
+    if name == 'TorchFlame':
+        runpy.run_path(str(Path(__file__).with_name('create_fire_materials.py')))
         continue
     path = '/Game/Art/Materials/M_' + name
     mat = unreal.load_asset(path)

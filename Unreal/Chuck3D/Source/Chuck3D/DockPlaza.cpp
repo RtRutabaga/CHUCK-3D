@@ -1,4 +1,5 @@
 #include "DockPlaza.h"
+#include "DockFire.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -63,7 +64,8 @@ void BuildDockPlaza(UWorld* World)
     {
         Shape(P+FVector(0,0,145),FVector(12,12,290),TEXT("Dark"),true);
         Shape(P+FVector(0,0,286),FVector(43,43,8),TEXT("Dark"));
-        Shape(P+FVector(0,0,310),FVector(29,29,39),TEXT("TorchFlame"));
+        Shape(P+FVector(0,0,292),FVector(9,9,4),TEXT("Dark"),false,Cylinder);
+        AddDockFlame(Owner,P+FVector(0,0,293),20,35);
         for(float X : {-17.f,17.f}) for(float Y : {-17.f,17.f})
             Shape(P+FVector(X,Y,310),FVector(4,4,42),TEXT("Dark"));
         Shape(P+FVector(0,0,335),FVector(48,48,10),TEXT("Dark"));
@@ -73,8 +75,7 @@ void BuildDockPlaza(UWorld* World)
     {
         Beam(P-FVector(0,18,65),P,9,TEXT("Wood"));
         Shape(P+FVector(0,0,6),FVector(24,24,19),TEXT("Dark"),false,Cylinder);
-        Shape(P+FVector(0,0,26),FVector(15,15,39),TEXT("TorchFlame"),false,Sphere);
-        Shape(P+FVector(4,0,43),FVector(7,8,21),TEXT("TorchFlame"),false,Sphere);
+        AddDockFlame(Owner,P+FVector(0,0,15),26,43);
         Glow(P+FVector(0,0,35),1500,390);
     };
 
@@ -259,7 +260,8 @@ void BuildDockPlaza(UWorld* World)
     Shape(FVector(-1020,-3620,37),FVector(75,65,74),TEXT("Wood"),true);
     Shape(FVector(-1020,-3620,87),FVector(98,38,24),TEXT("Dark"),true);
     Shape(FVector(-780,-3725,53),FVector(120,62,106),TEXT("Stone"),true);
-    Shape(FVector(-780,-3689,72),FVector(70,5,42),TEXT("TorchFlame"));
+    Shape(FVector(-780,-3689,72),FVector(70,5,42),TEXT("Dark"));
+    for(int32 I=0;I<4;++I) AddDockFlame(Owner,FVector(-805+I*17,-3684,53),19,31+(I%2)*9);
     Glow(FVector(-780,-3650,90),950,240);
     for(int32 I=0;I<7;++I)
         Shape(FVector(1100+I*40,-3729,147),FVector(15,15,26+(I%3)*9),I%2?TEXT("FountainWater"):TEXT("Amber"),false,Cylinder);
@@ -295,7 +297,7 @@ void BuildDockPlaza(UWorld* World)
     Torch(FVector(1675,-3255,235)); Torch(FVector(1675,-3645,235));
     // Light the older dock-street lanterns too; their geometry stays unchanged.
     for(const FVector P : {FVector(-1175,-1530,251),FVector(-1175,-760,251),FVector(-1175,40,251),FVector(440,-1280,251)})
-    { Shape(P,FVector(22,14,20),TEXT("TorchFlame")); Glow(P,1400,360); }
+    { AddDockFlame(Owner,P-FVector(0,0,11),15,25); Glow(P,1400,360); }
     Torch(FVector(-460,-230,225)); Torch(FVector(170,308,235));
     FTimerHandle Flicker;
     World->GetTimerManager().SetTimer(Flicker,[Lights,World]()

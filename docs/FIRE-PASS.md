@@ -1,0 +1,11 @@
+# Fire touch-up — October 3, 2026
+
+All world flame primitives now use one original procedural flame material: street/shop/pier lanterns, plaza lamps, wall torches, forge and tavern wall/ceiling lamps and hearth. Three crossed transparent cards per flame carry a tapered, animated orange/gold silhouette. Nearby warm point lights vary gently and independently; sewer fill and Astral Sea lights keep their existing behavior. Lanterns have open metal frames rather than solid boxes hiding the flame. The hearth has dark logs and small glowing ember patches.
+
+`DockFire.cpp/.h` owns construction, light variation and fixed review views. `Tools/create_fire_materials.py` owns only `M_TorchFlame` and `M_FireEmber`; the plaza material generator delegates to it, preserving the new material if reused. No downloaded textures, plugins or new dependencies. Unreal remains 5.7.4. The two graphs total 19,165 bytes and use Git LFS; remote account quota remains unknown. Generated packages and captures remain excluded from Git.
+
+Build with the existing documented Windows BuildCookRun command. Run the packaged executable with `-ChuckFireCapture -windowed -ResX=1280 -ResY=720` to save eight views in `Saved/Screenshots/Windows/Fire/View0..7.png` and exit after 30 seconds. Views cover wall torch, plaza lamp, hearth, forge, evening wall torch/hearth, Dock Street lantern and court pier lamp. The evening switch in this review is scripted; it is not proof of traversing the sewer. The normal verifier also requires `CHUCK_FIRE_CHECK failures=0`, nonzero flame/light counts and zero legacy flame primitives.
+
+The first candidate exposed orange rectangles because an opacity component mask retained a default green channel. Explicit alpha-only masking fixes that defect. The initial numeric-conversion compile error was also corrected before the successful release build. Neither intermediate candidate was promoted.
+
+This is a procedural visual improvement, below the finished reference target. Close views can still reveal crossed planes and simple holders; there is no smoke/heat distortion, fire audio, physically simulated combustion or fire damage. Flames remain noncolliding. No character, traversal, NPC behavior or music change. See the latest HANDOFF for actual verification and publication details.

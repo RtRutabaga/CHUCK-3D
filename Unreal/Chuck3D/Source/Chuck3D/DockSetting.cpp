@@ -2,6 +2,7 @@
 #include "DockVista.h"
 #include "DockWeathering.h"
 #include "DockTavern.h"
+#include "DockFire.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -306,8 +307,8 @@ void BuildDockSetting(UWorld* World)
     {
         Box(P+FVector(0,0,145),FVector(10,10,290),TEXT("Wood"),true);
         Beam(P+FVector(0,0,275),P+FVector(45,0,275),6,TEXT("Dark"));
-        Box(P+FVector(45,0,251),FVector(24,24,34),TEXT("Dark"));
-        Box(P+FVector(45,0,251),FVector(26,16,22),TEXT("Amber"));
+        for(float Z : {233.f,269.f}) Box(P+FVector(45,0,Z),FVector(30,30,4),TEXT("Dark"));
+        for(float X : {-12.f,12.f}) for(float Y : {-12.f,12.f}) Box(P+FVector(45+X,Y,251),FVector(3,3,34),TEXT("Dark"));
     }
     // Retaining quay faces descend into water, rather than exposing wafer-thin slabs.
     Box(FVector(-1150,-2310,-65),FVector(1320,30,190),TEXT("Stone"),true);
@@ -516,8 +517,7 @@ void BuildDockSetting(UWorld* World)
             const FVector T=P+R.RotateVector(FVector(Along,0,0))+Inward*65+FVector(0,0,FMath::Min(250.f,Height-45));
             Beam(T-Inward*25-FVector(0,0,65),T,9,TEXT("Wood"));
             Box(T+FVector(0,0,6),FVector(24,24,19),TEXT("Dark"));
-            Box(T+FVector(0,0,26),FVector(12,12,32),TEXT("TorchFlame"));
-            Box(T+FVector(3,0,46),FVector(6,7,16),TEXT("TorchFlame"));
+            AddDockFlame(Owner,T+FVector(0,0,15),25,43);
             auto* Light=NewObject<UPointLightComponent>(Owner);
             Light->SetupAttachment(Root);
             Light->SetRelativeLocation(T+FVector(0,0,35));
@@ -600,8 +600,9 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(1185,2730,77),FVector(180,60,10),TEXT("WoodLight"));
     // A dock lamp is outside the entrance and pier walking lines.
     Box(FVector(940,3650,145),FVector(10,10,290),TEXT("Wood"),true);
-    Box(FVector(940,3650,298),FVector(35,35,38),TEXT("Dark"));
-    Box(FVector(940,3650,298),FVector(27,27,28),TEXT("TorchFlame"));
+    for(float Z : {279.f,317.f}) Box(FVector(940,3650,Z),FVector(39,39,5),TEXT("Dark"));
+    for(float X : {-15.f,15.f}) for(float Y : {-15.f,15.f}) Box(FVector(940+X,3650+Y,298),FVector(3,3,34),TEXT("Dark"));
+    AddDockFlame(Owner,FVector(940,3650,283),19,30);
     auto* DockLamp=NewObject<UPointLightComponent>(Owner);
     DockLamp->SetupAttachment(Root); DockLamp->SetRelativeLocation(FVector(940,3650,298));
     DockLamp->SetIntensity(1600); DockLamp->SetAttenuationRadius(400);
@@ -673,8 +674,9 @@ void BuildDockSetting(UWorld* World)
         Label(FVector(X,1654,255),I==0?TEXT("ROPEWORKS"):I==1?TEXT("NET MENDER"):I==2?TEXT("STORES"):TEXT("SAILMAKER"),90);
         Box(FVector(X,1680,226),FVector(190,90,8),TEXT("Roof"),false,FRotator(0,0,-8));
         for(float Side : {-1.f,1.f}) Beam(FVector(X+Side*75,1645,150),FVector(X+Side*75,1715,218),6,TEXT("Wood"));
-        Box(FVector(X+150,1652,260),FVector(24,24,36),TEXT("Dark"));
-        Box(FVector(X+150,1665,260),FVector(18,4,24),TEXT("Amber"));
+        for(float Z : {242.f,278.f}) Box(FVector(X+150,1665,Z),FVector(27,27,4),TEXT("Dark"));
+        for(float DX : {-11.f,11.f}) for(float DY : {-11.f,11.f}) Box(FVector(X+150+DX,1665+DY,260),FVector(3,3,32),TEXT("Dark"));
+        AddDockFlame(Owner,FVector(X+150,1665,246),15,27);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);
         Lamp->SetupAttachment(Root);
         Lamp->SetRelativeLocation(FVector(X+150,1690,260));

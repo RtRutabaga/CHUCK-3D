@@ -15,6 +15,7 @@
 #include "HAL/FileManager.h"
 #include "TimerManager.h"
 #include "SewerSlide.h"
+#include "DockFire.h"
 #include "UnrealClient.h"
 
 void BuildDockTavern(UWorld* World)
@@ -151,14 +152,13 @@ void BuildDockTavern(UWorld* World)
     Shape(FVector(291,870,550),FVector(72,104,12),TEXT("Stone"),true);
     Shape(FVector(291,870,556.5f),FVector(38,63,1),TEXT("Dark"));
     Shape(FVector(279,870,27),FVector(15,95,14),TEXT("Wood"),false,false,FRotator(0,12,0));
-    auto* Fire=NewObject<UInstancedStaticMeshComponent>(Owner);Fire->SetupAttachment(Root);
-    Fire->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cone.Cone")));
-    Fire->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame")));
-    Fire->SetCollisionProfileName(TEXT("NoCollision"));Fire->RegisterComponent();
+    // Charred logs and separated ember patches beneath rising tongues.
+    for(int32 I=0;I<3;++I) Shape(FVector(278,835+I*32,27),FVector(23,40,9),TEXT("Dark"),false,false,FRotator(0,(I%2?1.f:-1.f)*14,0));
+    for(int32 I=0;I<15;++I) Shape(FVector(269+(I%3)*7,825+(I/3)*19,30),FVector(3+(I%3),5+(I%4),1.5),TEXT("FireEmber"),false,true,FRotator(0,I*37,0));
     for(int32 I=0;I<5;++I)
     {
         const float H=17+(I%3)*5.f;
-        Fire->AddInstance(FTransform(FRotator(0,0,(I%2?1.f:-1.f)*9),FVector(280,835+I*17,29+H*.5f),FVector(.12f,.12f,H/100.f)));
+        AddDockFlame(Owner,FVector(275,830+I*19,31),26,H+18);
     }
     auto Light=[&](FVector P,float Intensity,float Radius,FLinearColor Color)
     {
@@ -168,13 +168,15 @@ void BuildDockTavern(UWorld* World)
     };
     for(const FVector P : {FVector(-295,450,225),FVector(-295,900,225),FVector(274,450,225)})
     {
-        Shape(P,FVector(19,19,32),TEXT("Amber"));
+        Shape(P-FVector(0,0,13),FVector(6,6,5),TEXT("Dark"),false,true);
+        AddDockFlame(Owner,P-FVector(0,0,11),13,25);
         for(float Z : {-18.f,18.f}) Shape(P+FVector(0,0,Z),FVector(25,25,5),TEXT("Dark"));
         for(float X : {-10.f,10.f}) Shape(P+FVector(X,-10,0),FVector(3,3,35),TEXT("Dark"));
         Light(P+FVector(18,18,0),650,370,FLinearColor(1,.66f,.34f));
     }
     Beam(FVector(-10,665,442),FVector(-10,665,270),2);
-    Shape(FVector(-10,665,249),FVector(25,25,34),TEXT("Amber"));
+    AddDockFlame(Owner,FVector(-10,665,235),16,29);
+    for(float X : {-12.f,12.f}) for(float Y : {-12.f,12.f}) Shape(FVector(-10+X,665+Y,249),FVector(3,3,34),TEXT("Dark"));
     for(float Z : {229.f,269.f}) Shape(FVector(-10,665,Z),FVector(31,31,5),TEXT("Dark"));
     Light(FVector(-10,665,245),800,420,FLinearColor(1,.69f,.39f));
     Light(FVector(262,870,65),1000,390,FLinearColor(1,.43f,.16f));

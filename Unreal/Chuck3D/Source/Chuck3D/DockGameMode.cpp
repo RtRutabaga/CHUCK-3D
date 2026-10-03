@@ -5,6 +5,7 @@
 #include "SewerLife.h"
 #include "SewerSlide.h"
 #include "DockReturn.h"
+#include "DockFire.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -501,6 +502,7 @@ void ADockGameMode::StartPlay()
     BuildDockSewer(World);
     BuildDockReturn(World);
     SpawnSewerLife(World);   // its rats and moss (Claude)
+    FinishDockFire(World);
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
