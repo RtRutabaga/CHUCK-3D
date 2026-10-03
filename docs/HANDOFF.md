@@ -2,6 +2,15 @@
 
 ## Current launcher and integration status
 
+**Update 48 (Claude, October 3, user request: a second guard by the first, both either side of the gate; same outfit and spear, female Caucasian):** runtime `e82be03`.
+- A second gate guard: a 174 cm Caucasian woman (`GuardWoman` in `humans.json`) in the same gambeson, breastplate, helmet, belt, trousers and boots, with the same spear.
+- The two guards stand either side of the plaza's closed gate (x 105 and 415; the opening runs 60–460), facing down the plaza.
+- Each holds the spear on the outer side: his right, her left (`GiveSpear(Side)` mirrors the placement, IK and grip). Both say the 2D game's "Stick to the docks, rat." (the user didn't specify a line for her).
+
+The root candidate passed `-MotionCapture` **126/126** plus the world, plaza and music checks (`Local/verify-package-20261003-102630.log`). Both guards hold upright spears with their fists on the grips (0.0 cm, 4.0°), one on each side of the gate.
+
+Promoted to `Builds/Windows` with receipt `e82be03`; the previous package is kept as `Builds/Windows-Previous-20261003-Guards`. Root was clean when building. Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Gate_guards.png`. Details: `agent-handoffs/CLAUDE.md` pass 65. Not yet played by the user.
+
 **Update 47 (Claude, October 3, user request: give the guard a spear):** runtime `fd6ffb8`.
 - The guard at the city gate holds a 212 cm town-watch spear: ash shaft, leaf blade on a socket, leather grip wrap, iron butt (`Tools/build_spear.py`, 492 tris, in the humans' fabric materials).
 - The spear stands upright beside his right foot, leaning 4° out. His right arm is solved onto it every frame (two-bone IK, elbow back and out, thumb up, fist closed with the grip pose from the hands pass). The motion-capture idle, the scratch reaction and the body turn all play with it.

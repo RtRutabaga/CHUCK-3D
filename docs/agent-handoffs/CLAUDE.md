@@ -1725,3 +1725,21 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The fist only approximately wraps the shaft: the curl is generic, and the shaft can show through the fingers up close.
   - The spear doesn't react to anything (no grounding check on slopes; the guard stands on flat paving).
   - Not played by the user.
+
+## Sixty-fifth pass — two gate guards
+
+- **User (2026-10-03):** add another guard by the existing one, both either side of the gate; same outfit and spear, female Caucasian.
+- **Source:** `e82be03` on main.
+  - Changed: `humans.json` (GuardWoman), the FBX and textures, `DockNPC.cpp/.h` (`EDockHuman::GuardWoman`, `GiveSpear(Side)`, `SpearSide`), `DockGameMode.cpp`, `NPCs/README.md`.
+- **Placement:** guards at (105, -4085) and (415, -4085), yaw 90; tags `DockGuard` and `DockGuardB`.
+- **Tests:**
+  - The pose check now counts 4 humans.
+  - The guard check requires both guards, either side of x = 260, each with an upright, gripped spear.
+  - The portrait capture names files by tag; the two shared the display name "Guard" and overwrote each other.
+- **Verified:**
+  - Root package 126/126 plus world, plaza and music checks: `Local/verify-package-20261003-102630.log`. Receipt `e82be03`.
+  - Gate view: `-ChuckPlazaCapture` View3, saved as `runtime_Gate_guards.png`.
+- **Remaining:**
+  - Both guards play the same idle clip (different start points).
+  - Her line duplicates his.
+  - Not played by the user.
