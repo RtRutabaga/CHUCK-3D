@@ -28,7 +28,19 @@ float Ground(float X,float Y)
     const float Rolling=650.f+380.f*FMath::Sin(X*.00023f+Y*.0001f)+280.f*FMath::Cos(Y*.00031f-X*.00013f);
     const float Ridge=(3000.f+1200.f*FMath::Sin(Y*.00021f)+500.f*FMath::Sin(Y*.00049f))*FMath::Exp(-FMath::Square((X+24000.f)/10000.f))
         +(3300.f+1300.f*FMath::Sin(X*.00017f)+650.f*FMath::Cos(X*.00041f))*FMath::Exp(-FMath::Square((Y-30000.f)/11500.f));
-    return -180.f+FMath::Clamp(Inland*.18f,0.f,380.f)+Rise*(Rolling+Ridge);
+    // A prominent rocky coastal summit above the western city, with a shoulder
+    // and a lower inland ridge. Uneven spurs keep the outline from a smooth cone.
+    auto Peak=[](float DX,float DY,float RX,float RY,float Height,float Phase)
+    {
+        const float D=FMath::Sqrt(FMath::Square(DX/RX)+FMath::Square(DY/RY));
+        const float A=FMath::Atan2(DY,DX);
+        const float Spur=1+.12f*FMath::Sin(A*5+Phase)+.055f*FMath::Sin(A*9-Phase);
+        const float T=FMath::Clamp(1-D/Spur,0.f,1.f);
+        return Height*FMath::Pow(T,1.45f);
+    };
+    const float Mountain=FMath::Max3(Peak(X+23000,Y-6500,13000,14500,17000,.7f),
+        Peak(X+28000,Y-15500,10500,10000,10200,2.1f),Peak(X+21000,Y+4300,10000,9500,7600,1.6f));
+    return -180.f+FMath::Clamp(Inland*.18f,0.f,380.f)+Rise*(Rolling+Ridge+Mountain);
 }
 }
 
@@ -52,6 +64,9 @@ void BuildCoastalVista(UWorld* World)
         FLinearColor C=FMath::Lerp(FLinearColor(.105f,.15f,.085f),FLinearColor(.24f,.25f,.13f),Variation);
         if(H<130) C=FMath::Lerp(FLinearColor(.27f,.24f,.19f),C,FMath::Clamp((H+40)/170,0.f,1.f));
         if(Normal.Z<.90f) C=FLinearColor(.24f,.25f,.25f);
+        const float Rock=FMath::Max(1-Normal.Z,FMath::Clamp((H-4500)/6500,0.f,1.f));
+        const FLinearColor RockColor=FMath::Lerp(FLinearColor(.20f,.215f,.21f),FLinearColor(.34f,.32f,.27f),Variation);
+        C=FMath::Lerp(C,RockColor,FMath::Clamp(Rock*1.7f,0.f,1.f));
         Colors.Add(C);
     }
     for(int32 Y=0;Y<NY-1;++Y) for(int32 X=0;X<NX-1;++X)
@@ -148,7 +163,7 @@ void BuildCoastalVista(UWorld* World)
     for(int32 I=0;I<380;++I)
     {
         const float X=Rng.FRandRange(-30000,28000),Y=Rng.FRandRange(-14000,35000),H=Ground(X,Y);
-        if(H<200 || (X>-12500 && X<11000 && Y>-6000 && Y<13000)) continue;
+        if(H<200 || H>5500 || (X>-12500 && X<11000 && Y>-6000 && Y<13000)) continue;
         const float Height=Rng.FRandRange(350,750);
         Shape(FVector(X,Y,H+Height*.3f),FVector(Height*.55f,Height*.55f,Height),TEXT("VistaFoliage"),FRotator::ZeroRotator,true);
     }
