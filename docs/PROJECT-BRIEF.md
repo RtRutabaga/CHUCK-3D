@@ -1,5 +1,7 @@
 # Project brief
 
+October 2 cave refinement: user requested local sewer-entrance respawns for all tunnel deaths, readable blue night fill around the purple astral sources, nebula views at floor level, continuous natural rock walls with matching collision, a shallow flowing stream and a wider chamber midway along the existing route. This supersedes the prior purple-only illumination and dock-respawn behavior underground. R / View remains an explicit dock return. See SEWER-PROTOTYPE.md and the latest HANDOFF.
+
 October 2 sewer atmosphere authorization: use the supplied Sewer.wav underground. Remove warm lamps; purple Astral Sea floor ruptures supply the only underground lighting, with translucent warped oil-slick films above genuine fall hazards. Keep a traversable stone bank and existing surface lighting/music. See SEWER-PROTOTYPE.md for implementation and HANDOFF for verification.
 
 October 2 sewer authorization: build a connected, much longer winding underground passage entered by falling through the side-gate grate, without a question/prompt. Rounded knobbly stone tunnel walls, north first then across and winding south. This supersedes earlier sewer-interior exclusions for this prototype; no full campaign or copied dialogue. See SEWER-PROTOTYPE.md and HANDOFF for actual implementation/testing.

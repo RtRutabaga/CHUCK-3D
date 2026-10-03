@@ -25,6 +25,9 @@ public:
     /** Snap the orbit to the other framing preset (tests and captures; players orbit freely). */
     void ToggleCamera();
     void ResetToDock();
+    /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
+    void RespawnAtAreaStart();
+    FVector GetAreaStartLocation() const;
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
     /** Claw slash (LMB / X) pressed: a stepping slash when standing, the upper
@@ -164,6 +167,8 @@ public:
 protected:
     virtual void BeginPlay() override;
 private:
+    bool bSewerRespawn = false;
+    void ResetAtLocation(const FVector& Location);
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
     UPROPERTY() TArray<UGroomComponent*> Grooms;

@@ -349,10 +349,25 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 }
 void AChuckCharacter::ResetToDock()
 {
+    bSewerRespawn = false;
+    ResetAtLocation(StartLocation());
+}
+FVector AChuckCharacter::GetAreaStartLocation() const
+{
+    const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
+    return Sewer ? DockSewerStartLocation() : StartLocation();
+}
+void AChuckCharacter::RespawnAtAreaStart()
+{
+    ResetAtLocation(GetAreaStartLocation());
+}
+void AChuckCharacter::ResetAtLocation(const FVector& Location)
+{
     GetCharacterMovement()->StopMovementImmediately();
-    SetActorLocation(StartLocation(), false, nullptr, ETeleportType::TeleportPhysics);
-    SetActorRotation(FRotator::ZeroRotator);
-    ViewYaw = 0;
+    SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+    bSewerRespawn=Location.Z<-150;
+    ViewYaw = bSewerRespawn ? 90.f : 0.f;
+    SetActorRotation(FRotator(0,ViewYaw,0));
     LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
     Gait = EGait::Idle;
     Base = Fading = EClip::Idle;
@@ -1105,10 +1120,12 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
         if (AstralClock >= .8f && !bAstralFaded) { CameraFade(0.f, 1.f, .6f); bAstralFaded = true; }
         if (AstralClock >= 1.45f)
         {
-            // Away: back to the spawn point (the Astral Anchor, later), whole again.
+            // Return to this area's entrance, whole again.
             AstralPhase = EAstral::Away; AstralClock = 0;
-            SetActorLocationAndRotation(StartLocation(), FRotator::ZeroRotator, false, nullptr, ETeleportType::TeleportPhysics);
-            ViewYaw = 0; LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
+            const FVector Return=GetAreaStartLocation();
+            ViewYaw = Return.Z<-150 ? 90.f : 0.f;
+            SetActorLocationAndRotation(Return, FRotator(0,ViewYaw,0), false, nullptr, ETeleportType::TeleportPhysics);
+            LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
             PreviousMotionLocation = GetActorLocation();
             Sanity = MaxSanity; BiteImmuneUntil = -1;
         }
@@ -1688,10 +1705,14 @@ void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayer
 void AChuckCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    // Remember entry before a fall leaves the valid tunnel footprint. Surface
+    // travel/reset clears it, so later dock deaths still use the dock spawn.
+    if(GetActorLocation().Z>=-100) bSewerRespawn=false;
+    else if(IsWithinDockSewer(GetActorLocation())) bSewerRespawn=true;
     UpdateCamera(DeltaSeconds);
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation())) ResetToDock();
+    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation())) RespawnAtAreaStart();
 }

@@ -91,7 +91,8 @@ void ADockGameMode::StartPlay()
     FTimerHandle RegionTimer;
     World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),SewerScore](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
-        const bool Below=Pawn && Pawn->GetActorLocation().Z<-150 && IsWithinDockSewer(Pawn->GetActorLocation());
+        const auto* Chuck=Cast<AChuckCharacter>(Pawn);
+        const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
         if(Below==Region->Underground) return;
         Region->Underground=Below;
         if(Docks.IsValid()) Docks->AdjustVolume(1.25f,Below?0.f:.45f);

@@ -28,7 +28,32 @@ namespace {
 constexpr float FloorZ=-900.f;
 TArray<FVector> Route;
 FVector Shaft(-1580,3900,0);
-float Width(int32 I) { return I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f); }
+float Chamber(int32 I)
+{
+    const float U=FMath::Clamp(1.f-FMath::Abs(I-Route.Num()*.5f)/24.f,0.f,1.f);
+    return U*U*(3.f-2.f*U);
+}
+float Width(int32 I) { return (I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I); }
+float Height(int32 I) { return 320.f+125.f*Chamber(I); }
+float WallWidth(int32 I,float Side)
+{
+    float Limit=Width(I);
+    // Offset curves fold into knife edges when the inner wall is wider than
+    // the local bend radius. Keep that bank inside its radius of curvature.
+    for(int32 J=FMath::Max(2,I-2);J<=FMath::Min(Route.Num()-3,I+2);++J)
+    {
+        const FVector A=Route[J]-Route[J-2],B=Route[J+2]-Route[J];
+        const float Cross=FVector::CrossProduct(A.GetSafeNormal(),B.GetSafeNormal()).Z;
+        const float Angle=FMath::Atan2(Cross,FVector::DotProduct(A.GetSafeNormal(),B.GetSafeNormal()));
+        if(Angle*Side<-.01f)
+        {
+            const float Radius=(A.Size()+B.Size())*.5f/FMath::Abs(Angle);
+            // Retain a usable inner bank even at the sharpest spline extrema.
+            Limit=FMath::Min(Limit,FMath::Max(100.f,Radius*.68f));
+        }
+    }
+    return Limit;
+}
 const int32 Rifts[]={26,54,84,114,146,180,215,249,282,316,346};
 bool RiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
 float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
@@ -49,11 +74,13 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
 }
 }
 
+FVector DockSewerStartLocation() { return Shaft+FVector(0,0,FloorZ+34.65f); }
+
 bool IsWithinDockSewer(const FVector& P)
 {
     if(P.Z<-1080 || P.Z>100) return false;
     if(FMath::Abs(P.X-Shaft.X)<118 && FMath::Abs(P.Y-Shaft.Y)<108) return true;
-    if(P.Z>FloorZ+440) return false;
+    if(P.Z>FloorZ+590) return false;
     for(int32 I=1;I<Route.Num();++I)
     {
         const FVector A(Route[I-1].X,Route[I-1].Y,P.Z),B(Route[I].X,Route[I].Y,P.Z);
@@ -93,10 +120,8 @@ void BuildDockSewer(UWorld* World)
         const FVector T=Spline->GetDirectionAtDistanceAlongSpline(D,ESplineCoordinateSpace::World);
         Right.Add(FVector(T.Y,-T.X,0).GetSafeNormal());
     }
-    auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Stone.M_Stone"));
-    // The art Dark surface is metallic and reflects the outdoor capture.
-    // Use the existing matte prototype surface for the underground drainage.
-    auto* Dark=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Prototype/Materials/M_Dark.M_Dark"));
+    auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerRock.M_SewerRock"));
+    auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
     auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
@@ -107,19 +132,31 @@ void BuildDockSewer(UWorld* World)
         // shared stone material used by the surface town. Normals face inward.
         TArray<int32> Faces=T;
         if(ReverseFaces) for(int32 I=0;I<T.Num();I+=3) Faces.Append({T[I],T[I+2],T[I+1]});
-        Mesh->CreateMeshSection_LinearColor(0,V,Faces,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
+        TArray<FVector> Normals;Normals.Init(FVector::ZeroVector,V.Num());
+        for(int32 I=0;I<T.Num();I+=3)
+        {
+            const int32 A=T[I],B=T[I+1],C=T[I+2];
+            FVector Face=FVector::CrossProduct(V[B]-V[A],V[C]-V[A]);
+            if(FVector::DotProduct(Face,N[A])<0) Face=-Face;
+            Normals[A]+=Face;Normals[B]+=Face;Normals[C]+=Face;
+        }
+        for(int32 I=0;I<Normals.Num();++I) Normals[I]=Normals[I].IsNearlyZero()?N[I]:Normals[I].GetSafeNormal();
+        Mesh->CreateMeshSection_LinearColor(0,V,Faces,Normals,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
         Mesh->SetMaterial(0,Mat);
     };
-    // Inward-facing arch, continuous and collision true. Small bulges make
-    // the stone contour irregular without obstructing the central walking line.
+    // A continuous eroded rock shell: broad asymmetry and stratified ledges,
+    // with collision on the same surface. No attached spherical decorations.
     TArray<FVector> V,N; TArray<int32> T; TArray<FVector2D> UV;
-    constexpr int32 Arc=24;
+    constexpr int32 Arc=32;
     for(int32 I=0;I<Count;++I) for(int32 J=0;J<=Arc;++J)
     {
         const float A=PI*J/Arc;
-        const float Bump=6*FMath::Sin(I*1.31f+J*2.11f)+4*FMath::Cos(I*.63f-J*1.73f);
-        const float X=(Width(I)+Bump)*FMath::Cos(A);
-        const float Z=(320+Bump)*FMath::Sin(A);
+        const float Broad=FMath::PerlinNoise2D(FVector2D(I*.12f,J*.18f));
+        const float Grain=FMath::PerlinNoise2D(FVector2D(I*.47f+17,J*.53f));
+        const float Relief=22*Broad+9*Grain+9*FMath::Sin(A*5+I*.13f);
+        const float Lateral=WallWidth(I,FMath::Cos(A)>0?1.f:-1.f);
+        const float X=(Lateral+Relief*(Lateral/Width(I)))*FMath::Cos(A)+14*FMath::Sin(A)*FMath::Sin(I*.17f);
+        const float Z=(Height(I)+Relief*1.5f+12*FMath::Sin(I*.09f))*FMath::Sin(A);
         V.Add(Route[I]+Right[I]*X+FVector(0,0,Z));
         N.Add((-Right[I]*FMath::Cos(A)-FVector::UpVector*FMath::Sin(A)).GetSafeNormal());
         UV.Add(FVector2D(I*.65f,J*.24f));
@@ -134,41 +171,29 @@ void BuildDockSewer(UWorld* World)
     }
     MakeMesh(V,T,N,UV,Stone,true);
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    for(int32 I=0;I<Count;++I) for(int32 Column=0;Column<4;++Column)
+    for(int32 I=0;I<Count;++I) for(int32 Column=0;Column<8;++Column)
     {
-        const float Offsets[]={-Width(I)-18,-55+RiftOffset(I),55+RiftOffset(I),Width(I)+18};
-        V.Add(Route[I]+Right[I]*Offsets[Column]); N.Add(FVector::UpVector);
+        const float O=RiftOffset(I);
+        const float Offsets[]={-Width(I)-35,-55+O,-45+O,-32+O,32+O,45+O,55+O,Width(I)+35};
+        const float Depth=(I>=8 && I<Count-4 && (Column==3 || Column==4))?-8.f:0.f;
+        V.Add(Route[I]+Right[I]*Offsets[Column]+FVector(0,0,Depth)); N.Add(FVector::UpVector);
         UV.Add(FVector2D(Offsets[Column]/100,I*.65f));
     }
-    for(int32 I=0;I<Count-1;++I) for(int32 C=0;C<3;++C)
+    for(int32 I=0;I<Count-1;++I) for(int32 C=0;C<7;++C)
     {
-        if(C==1 && RiftSegment(I)) continue;
-        const int32 A=I*4+C;T.Append({A,A+1,A+4,A+1,A+5,A+4});
+        if(C>=1 && C<=5 && RiftSegment(I)) continue;
+        const int32 A=I*8+C;T.Append({A,A+1,A+8,A+1,A+9,A+8});
     }
     MakeMesh(V,T,N,UV,Stone,true);
-    // Recessed-looking shallow drainage, kept away from the landing and terminus.
+    // Five-centimetre-deep flowing water over a solid, shallow channel bed.
     V.Reset();N.Reset();T.Reset();UV.Reset();
     for(int32 I=8;I<Count-4;++I) for(float Side : {-1.f,1.f})
     {
-        V.Add(Route[I]+Right[I]*(Side*38)+FVector(0,0,.8f));N.Add(FVector::UpVector);UV.Add(FVector2D(Side*.5f,I*.12f));
+        V.Add(Route[I]+Right[I]*(Side*41.5f+RiftOffset(I))+FVector(0,0,-2.5f));N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.65f));
     }
     for(int32 I=0;I<V.Num()/2-1;++I){if(RiftSegment(I+8)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
-    // Dark effluent ribbon avoids reflecting the outdoor sky below ground.
-    MakeMesh(V,T,N,UV,Dark,false);
+    MakeMesh(V,T,N,UV,Stream,false,false);
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
-    auto* Sphere=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-    auto* Rocks=NewObject<UInstancedStaticMeshComponent>(Owner);Rocks->SetupAttachment(Root);Rocks->SetStaticMesh(Sphere);
-    Rocks->SetMaterial(0,Stone);Rocks->SetCollisionProfileName(TEXT("NoCollision"));Rocks->RegisterComponent();
-    Rocks->SetLightingChannels(false,true,false);
-    FRandomStream Rng(3917);
-    for(int32 I=0;I<Count;I+=2) for(int32 J=0;J<11;++J)
-    {
-        const float A=PI*(J+.5f)/11;
-        const FVector P=Route[I]+Right[I]*((Width(I)+11)*FMath::Cos(A))+FVector(0,0,12+329*FMath::Sin(A));
-        if(FVector::Dist2D(P,Shaft)<155 && P.Z>FloorZ+210) continue;
-        Rocks->AddInstance(FTransform(FRotator(Rng.FRandRange(-20,20),Rng.FRandRange(-180,180),0),P,
-            FVector(Rng.FRandRange(.45f,.85f),Rng.FRandRange(.38f,.7f),Rng.FRandRange(.38f,.65f))));
-    }
     auto Box=[&](FVector P,FVector Size,UMaterialInterface* Mat,bool Solid,FRotator Rot=FRotator::ZeroRotator)
     {
         auto* B=NewObject<UInstancedStaticMeshComponent>(Owner);B->SetupAttachment(Root);B->SetStaticMesh(Cube);B->SetMaterial(0,Mat);
@@ -181,7 +206,7 @@ void BuildDockSewer(UWorld* World)
     // Extend the mouth's sides to the underground landing, with no flat blackout.
     for(float X : {-111.f,111.f}) Box(Shaft+FVector(X,0,-400),FVector(8,210,600),Stone,true);
     for(float Y : {-101.f,101.f}) Box(Shaft+FVector(0,Y,-400),FVector(214,8,600),Stone,true);
-    auto* Astral=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralRupture.M_AstralRupture"));
+    auto* Astral=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth"));
     auto* Oil=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
     for(int32 StartIndex : Rifts)
     {
@@ -207,6 +232,13 @@ void BuildDockSewer(UWorld* World)
             T.Append({A,B,A+10,B,B+10,A+10});
         }
         T.Append({0,10,1,1,10,11,8,9,18,9,19,18});
+        // A view into space at floor level, with camera-dependent cloud/star
+        // layers supplying depth. This surface is visual only, never a bridge.
+        for(int32 I=0;I<10;++I)
+        {
+            V.Add(V[I]+FVector(0,0,296));N.Add(FVector::UpVector);UV.Add(FVector2D(I%2,(I/2)*.25f));
+        }
+        for(int32 I=0;I<4;++I){const int32 A=20+I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
         MakeMesh(V,T,N,UV,Astral,false,false);
         V.Reset();N.Reset();T.Reset();UV.Reset();
         constexpr int32 Rows=16,Columns=10;
@@ -229,9 +261,20 @@ void BuildDockSewer(UWorld* World)
         if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Route[StartIndex+2]+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
-        Lamp->SetIntensity(6500);Lamp->SetAttenuationRadius(1900);Lamp->SetLightColor(FLinearColor(.48f,.025f,1));
+        Lamp->SetIntensity(4200);Lamp->SetAttenuationRadius(680);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
+    }
+    // Soft cinematic night fill, without visible lamps or hot spots. Purple
+    // remains the only light visibly emanating from an object in the cave.
+    int32 FillLights=0;
+    for(int32 I=1;I<Count;I+=8)
+    {
+        auto* Fill=NewObject<UPointLightComponent>(Owner);Fill->SetupAttachment(Root);
+        Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.65f));
+        Fill->SetIntensity(3800);Fill->SetAttenuationRadius(1150+400*Chamber(I));
+        Fill->SetLightColor(FLinearColor(.16f,.30f,.64f));Fill->SetSourceRadius(160);
+        Fill->SetLightingChannels(false,true,false);Fill->SetCastShadows(false);Fill->RegisterComponent();++FillLights;
     }
     // Skylight ignores lighting channels. Disable outdoor sun/sky only while
     // the local view is underground, restoring their original surface values.
@@ -253,12 +296,21 @@ void BuildDockSewer(UWorld* World)
             TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);
             for(auto* Part : Parts) Part->SetLightingChannels(!Below,Below,false);
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_LIGHT_REGION purple_only=%d"),Below);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_LIGHT_REGION underground_night=%d"),Below);
     },.1f,true);
     // Temporary collapsed end, rather than a door or invented next campaign map.
     const FVector End=Route.Last();
-    Box(End+FVector(0,0,150),FVector(Width(Count-1)*2+50,65,340),Stone,true,
-        (Route.Last()-Route[Count-2]).Rotation()+FRotator(0,90,0));
+    V.Reset();N.Reset();T.Reset();UV.Reset();
+    const FVector EndNormal=(Route[Count-2]-End).GetSafeNormal();
+    V.Add(End+EndNormal*10+FVector(0,0,130));N.Add(EndNormal);UV.Add(FVector2D(.5,.4));
+    for(int32 J=0;J<=Arc;++J)
+    {
+        const float A=PI*J/Arc;
+        V.Add(End+Right.Last()*((Width(Count-1)+35)*FMath::Cos(A))+FVector(0,0,(Height(Count-1)+35)*FMath::Sin(A)));
+        N.Add(EndNormal);UV.Add(FVector2D(J/float(Arc),1));
+        if(J>0) T.Append({0,J,J+1});
+    }
+    T.Append({0,Arc+1,1});MakeMesh(V,T,N,UV,Stone,true);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_BUILT length_cm=%.0f samples=%d north_first=1 return_south=1"),Length,Count);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
@@ -269,7 +321,7 @@ void BuildDockSewer(UWorld* World)
             FHitResult Hit;
             const FVector P=SafePoint(I,Right),Previous=SafePoint(I-1,Right);
             if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,80),P-FVector(0,0,80),ECC_Visibility)
-                || FMath::Abs(Hit.ImpactPoint.Z-FloorZ)>2) ++Failed;
+                || Hit.ImpactPoint.Z<FloorZ-8.1f || Hit.ImpactPoint.Z>FloorZ+.1f) ++Failed;
             if(World->SweepSingleByChannel(Hit,Previous+FVector(0,0,36),P+FVector(0,0,36),
                 FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f)))
             {
@@ -284,10 +336,31 @@ void BuildDockSewer(UWorld* World)
             if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,160),ECC_Visibility)) ++HazardFailures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=11 purple_lights=11 torches=0"),HazardFailures);
+        int32 CaveFailures=0,WallChecks=0;
+        for(int32 I=12;I<Count-12;I+=12) for(float Side : {-1.f,1.f})
+        {
+            FHitResult Hit;const FVector P=Route[I]+FVector(0,0,75);
+            if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+70)),ECC_Visibility))
+            {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_WALL_MISS sample=%d side=%.0f"),I,Side);}
+            ++WallChecks;
+        }
+        const int32 Middle=Count/2;
+        for(float Offset : {-300.f,300.f})
+        {
+            FHitResult Hit;const FVector P=Route[Middle]+Right[Middle]*Offset;
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,80),P-FVector(0,0,80),ECC_Visibility))
+            {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_CHAMBER_MISS offset=%.0f"),Offset);}
+        }
+        FHitResult ChannelHit;
+        const FVector Channel=Route[40]+Right[40]*RiftOffset(40);
+        if(!World->LineTraceSingleByChannel(ChannelHit,Channel+FVector(0,0,50),Channel-FVector(0,0,50),ECC_Visibility)
+            || FMath::Abs(ChannelHit.ImpactPoint.Z-(FloorZ-8))>1)
+        {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_STREAM_MISS z=%.3f"),ChannelHit.ImpactPoint.Z);}
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_CHECK failures=%d wall_traces=%d chamber_width_cm=%.0f stream_depth_cm=5.5 night_fill_lights=%d"),CaveFailures,WallChecks,Width(Middle)*2,FillLights);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
-        struct FRun { int32 Target=5;float Time=0;float HazardAt=-1;float ResetAt=-1;bool HazardReset=false;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
+        struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
         auto Run=MakeShared<FRun>();
         FTimerHandle Start;
         World->GetTimerManager().SetTimer(Start,[World,Run,Right,Under](){
@@ -325,13 +398,29 @@ void BuildDockSewer(UWorld* World)
                     Chuck->SetActorLocation(Route[Rifts[0]+2]+Right[Rifts[0]+2]*RiftOffset(Rifts[0]+2)+FVector(0,0,60),false,nullptr,ETeleportType::TeleportPhysics);
                     Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
                 }
-                if(Run->HazardAt>=0 && Run->ResetAt<0 && FVector::Dist(Chuck->GetActorLocation(),AChuckCharacter::StartLocation())<80)
-                {Run->HazardReset=true;Run->ResetAt=Run->Time;}
-                const bool Restored=Run->ResetAt>=0 && Run->Time>Run->ResetAt+2 && !*Under;
-                if(Restored || Run->Time>210 || (Run->HazardAt>=0 && Run->Time>Run->HazardAt+5) || (Run->Time>4 && !Run->Landed) || (Run->Landed && !Run->Finished && Chuck->GetActorLocation().Z>-100))
+                if(Run->HazardAt>=0 && Run->ResetAt<0 && FVector::Dist(Chuck->GetActorLocation(),DockSewerStartLocation())<65)
                 {
-                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->HazardReset)+(!Restored);
-                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d hazard_reset=%d reached=%d elapsed=%.2f surface_restored=%d"),Failures,Run->Landed,Run->Finished,Run->HazardReset,Run->Target,Run->Time,Restored);
+                    Run->HazardReset=true;Run->ResetAt=Run->Time;
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_RESPAWN fall_local=1 location=%s"),*Chuck->GetActorLocation().ToString());
+                    // Exercise the actual zero-sanity vanish/summon path too.
+                    Run->DeathsBefore=Chuck->GetRespawns();
+                    Chuck->SetActorLocation(Route[Route.Num()/2]+Right[Route.Num()/2]*180+FVector(0,0,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+                    Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+                    Chuck->SetSanity(1);Chuck->TakeBite(Chuck->GetActorLocation()+FVector(100,0,0));
+                }
+                if(Run->ResetAt>=0 && !Run->SanityReset && Chuck->GetRespawns()>Run->DeathsBefore && !Chuck->IsAstral()
+                    && Chuck->GetSanity()==AChuckCharacter::MaxSanity && FVector::Dist(Chuck->GetActorLocation(),DockSewerStartLocation())<65)
+                {
+                    Run->SanityReset=true;
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_RESPAWN sanity_local=1 location=%s"),*Chuck->GetActorLocation().ToString());
+                    Chuck->ResetToDock();Run->ExitAt=Run->Time;
+                }
+                const bool Restored=Run->ExitAt>=0 && Run->Time>Run->ExitAt+2 && !*Under
+                    && FVector::Dist(Chuck->GetAreaStartLocation(),AChuckCharacter::StartLocation())<1;
+                if(Restored || Run->Time>240 || (Run->HazardAt>=0 && Run->Time>Run->HazardAt+22) || (Run->Time>4 && !Run->Landed) || (Run->Landed && !Run->Finished && Chuck->GetActorLocation().Z>-100))
+                {
+                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->HazardReset)+(!Run->SanityReset)+(!Restored);
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d hazard_reset=%d sanity_reset=%d reached=%d elapsed=%.2f surface_restored=%d"),Failures,Run->Landed,Run->Finished,Run->HazardReset,Run->SanityReset,Run->Target,Run->Time,Restored);
                     Run->Completed=true;
                     // Do not destroy this captured delegate before using World.
                     World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
@@ -342,11 +431,11 @@ void BuildDockSewer(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
-        for(int32 I=0;I<4;++I)
+        for(int32 I=0;I<6;++I)
         {
-            const int32 Index=I==0?23:I==1?111:I==2?211:343;
-            const FVector P=Route[Index]+Right[Index]*80+FVector(0,0,100);
-            const FVector Target=Route[FMath::Min(Index+8,Count-1)]+FVector(0,0,120);
+            const int32 Indices[]={23,173,187,343,112,23};const int32 Index=Indices[I];
+            const FVector P=SafePoint(Index,Right)+FVector(0,0,I==4?150:110);
+            const FVector Target=Route[FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:120);
             FTimerHandle View,Shot;
             World->GetTimerManager().SetTimer(View,[World,Camera,P,Target](){Camera->SetActorLocationAndRotation(P,(Target-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);},4.f+I*4.f,false);
             World->GetTimerManager().SetTimer(Shot,[World,I](){
@@ -362,6 +451,6 @@ void BuildDockSewer(UWorld* World)
                 const FString Folder=FPaths::ScreenShotDir()/TEXT("Sewer");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
             },6.f+I*4.f,false);
         }
-        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},22.f,false);
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},30.f,false);
     }
 }
