@@ -42,9 +42,11 @@ $caveCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CAVE_CHECK failur
 $tavernCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_TAVERN_CHECK failures=0 floors=5 routes=3 furniture=2 roof=1 doorway_initially_closed=1'
 $streamAudio=Select-String -LiteralPath $log -Pattern 'CHUCK_STREAM_AUDIO loaded=6'
 $fireCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_FIRE_CHECK failures=0 flames=[1-9][0-9]* flicker_lights=[1-9][0-9]* legacy_primitives=0'
+$narrowCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_NARROW failures=0 samples=11 nominal_width_cm=180'
+$rubbleCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SLIDE_RUBBLE rocks=44 collision=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {131} else {132}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$musicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$caveCompleted -or !$tavernCompleted -or !$streamAudio -or !$fireCompleted -or $passed -lt $expected) {
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$musicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$caveCompleted -or !$tavernCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }

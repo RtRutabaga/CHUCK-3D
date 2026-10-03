@@ -12,6 +12,12 @@ namespace
     TArray<FVector> Path, Along, Side;   // floor centre line, its direction, the horizontal right
     bool bExited = false;
     float Dip(float S) { return 6.f * FMath::Clamp(S / 60.f, 0.f, 1.f); }
+    FVector Mouth(float A,float S)
+    {
+        const float Wear=1.f-FMath::SmoothStep(0.f,160.f,S);
+        return FVector(HalfWidth*FMath::Cos(A)*(1.f+.06f*Wear*FMath::Sin(A*7.f)),0,
+            Rise*FMath::Sin(A)+5.f*Wear*FMath::Sin(A*5.f+.7f)*FMath::Sin(A));
+    }
     void Mesh(AActor* Owner, const TArray<FVector>& V, const TArray<int32>& T, const TArray<FVector>& N, const TArray<FVector2D>& UV, UMaterialInterface* Material, bool bSolid)
     {
         auto* M = NewObject<UProceduralMeshComponent>(Owner);
@@ -53,12 +59,49 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
     {
         const float A = PI * J / Arc;
         V.Add(End + R0 * (OuterHalfWidth * FMath::Cos(A)) + FVector(0, 0, OuterHeight * FMath::Sin(A)));
-        V.Add(End + R0 * (HalfWidth * FMath::Cos(A)) + FVector(0, 0, Rise * FMath::Sin(A)));
+        const FVector Inner=Mouth(A,0);
+        V.Add(End+R0*Inner.X+FVector(0,0,Inner.Z));
         N.Add(-D0); N.Add(-D0);
         UV.Add(FVector2D(J / float(Arc), 1)); UV.Add(FVector2D(J / float(Arc), .75f));
         if (J > 0) { const int32 B = J * 2; T.Append({ B - 2, B - 1, B, B - 1, B + 1, B }); }
     }
     Mesh(Owner, V, T, N, UV, Stone, true);
+    // A fallen, angular rock face hides the flat structural cap. Keep the
+    // channel's centre and its full low opening clear for the actual slide.
+    V.Reset(); N.Reset(); T.Reset(); UV.Reset();
+    FRandomStream Rubble(20261004);
+    const float G=(1.f+FMath::Sqrt(5.f))*.5f;
+    const FVector Corners[]={FVector(-1,G,0),FVector(1,G,0),FVector(-1,-G,0),FVector(1,-G,0),
+        FVector(0,-1,G),FVector(0,1,G),FVector(0,-1,-G),FVector(0,1,-G),
+        FVector(G,0,-1),FVector(G,0,1),FVector(-G,0,-1),FVector(-G,0,1)};
+    const int32 Faces[]={0,11,5,0,5,1,0,1,7,0,7,10,0,10,11,1,5,9,5,11,4,11,10,2,10,7,6,7,1,8,
+        3,9,4,3,4,2,3,2,6,3,6,8,3,8,9,4,9,5,2,4,11,6,2,10,8,6,7,9,8,1};
+    int32 RockCount=0;
+    for(int32 Row=0;Row<4;++Row) for(int32 J=0;J<=10;++J)
+    {
+        const float A=PI*J/10.f+Rubble.FRandRange(-.035f,.035f);
+        const float X=(Row==0?62.f:78.f+(Row-1)*50.f)*FMath::Cos(A);
+        const float Z=(Row==0?7.f:25.f)+(Row==0?95.f:122.f+(Row-1)*88.f)*FMath::Sin(FMath::Clamp(A,0.f,PI));
+        const FVector Centre=End+R0*X+FVector(0,0,Z)-D0*Rubble.FRandRange(12.f,45.f);
+        const FVector Size=Row==0?FVector(14,24,18):FVector(22.f+(Row-1)*8.f,35.f+(Row-1)*7.f,30.f+(Row-1)*9.f);
+        const FQuat Turn=FRotator(Rubble.FRandRange(-12.f,12.f),Rubble.FRandRange(-20.f,20.f),Rubble.FRandRange(-12.f,12.f)).Quaternion();
+        TArray<FVector> Points;
+        for(const FVector& C : Corners)
+        {
+            const FVector Local=Turn.RotateVector(C.GetSafeNormal()*Rubble.FRandRange(.88f,1.14f))*Size;
+            Points.Add(Centre+R0*Local.X+D0*Local.Y+FVector(0,0,Local.Z));
+        }
+        for(int32 F=0;F<UE_ARRAY_COUNT(Faces);F+=3)
+        {
+            const FVector A0=Points[Faces[F]],B0=Points[Faces[F+1]],C0=Points[Faces[F+2]];
+            const FVector Normal=FVector::CrossProduct(B0-A0,C0-A0).GetSafeNormal();
+            const int32 B=V.Num(); V.Append({A0,B0,C0}); T.Append({B,B+1,B+2});
+            for(int32 K=0;K<3;++K) {N.Add(Normal);UV.Add(FVector2D(K==1?1:0,K==2?1:0));}
+        }
+        ++RockCount;
+    }
+    Mesh(Owner,V,T,N,UV,Stone,true);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_SLIDE_RUBBLE rocks=%d collision=1"),RockCount);
     // The tube, closed at its far end (long out of view by then).
     V.Reset(); N.Reset(); T.Reset(); UV.Reset();
     constexpr int32 Roof = 16, Floor = 6, Loop = Roof + Floor;
@@ -68,7 +111,8 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
         for (int32 J = 0; J <= Roof; ++J)
         {
             const float A = PI * J / Roof;
-            V.Add(Path[K] + Side[K] * (HalfWidth * FMath::Cos(A)) + FVector(0, 0, Rise * FMath::Sin(A)));
+            const FVector Inner=Mouth(A,S);
+            V.Add(Path[K]+Side[K]*Inner.X+FVector(0,0,Inner.Z));
             N.Add((-Side[K] * (FMath::Cos(A) / HalfWidth) - FVector::UpVector * (FMath::Sin(A) / Rise)).GetSafeNormal());
             UV.Add(FVector2D(S / 100.f, J * .2f));
         }
@@ -114,8 +158,8 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
     auto* Light = NewObject<UPointLightComponent>(Owner);
     Light->SetupAttachment(Owner->GetRootComponent());
     Light->SetRelativeLocation(Path[3] + FVector(0, 0, 45));
-    Light->SetIntensity(225); Light->SetAttenuationRadius(420);
-    Light->SetLightColor(FLinearColor(.32f, .36f, .43f));
+    Light->SetIntensity(1100); Light->SetAttenuationRadius(420);
+    Light->SetLightColor(FLinearColor(.42f, .44f, .47f));
     Light->SetLightingChannels(false, true, false); Light->SetCastShadows(false);
     Light->RegisterComponent();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SEWER_SLIDE_BUILT length_cm=%.0f drop_cm=%.0f samples=%d"), Length, End.Z - Path.Last().Z, Path.Num());

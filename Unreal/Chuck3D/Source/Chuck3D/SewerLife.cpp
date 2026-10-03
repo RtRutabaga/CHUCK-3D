@@ -65,15 +65,12 @@ void SpawnSewerLife(UWorld* World)
                     if (&Group == &RatGroups[0]) ++FirstGroupPlaced;
                 }
             }
-    // The zombie: in the wide chamber just past its gap, off the stream,
+    // The zombie: in the new narrow passage between the first bends,
     // facing back the way the rat comes in.
     Zombie.Reset();
     if (!bWalkThrough)
     {
-        // Where the tunnel is widest (the walls pull in on the inside of a bend).
-        int32 I = FMath::Clamp(Count / 2 + 10, 8, Count - 8);
-        for (int32 J = Count / 2 + 6; J <= Count / 2 + 18 && J < Count - 8; ++J)
-            if (!DockSewerIsGap(J) && DockSewerHalfWidth(J) > DockSewerHalfWidth(I)) I = J;
+        const int32 I = FMath::Clamp(97,8,Count-8);
         ZombieSample = I;
         const FVector Back = DockSewerPoint(I - 4) - DockSewerPoint(I);
         if (ADockNPC* Dead = ADockNPC::SpawnZombie(World, DockSewerPoint(I) + DockSewerSide(I) * (.4f * DockSewerHalfWidth(I)), static_cast<float>(Back.Rotation().Yaw)))
@@ -109,18 +106,18 @@ void SpawnSewerLife(UWorld* World)
     if (FParse::Param(FCommandLine::Get(), TEXT("ChuckSewerLifeCapture")))
     {
         auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(70);
-        const int32 From[] = { FirstRats - 6, 62 }, To[] = { FirstRats + 3, 64 };
-        const float Up[] = { 70.f, 45.f }, Out[] = { 0.f, -.4f };
-        for (int32 V = 0; V < 2; ++V)
+        const int32 From[] = { FirstRats - 6, 62, 94 }, To[] = { FirstRats + 3, 64, 97 };
+        const float Up[] = { 70.f, 45.f, 80.f }, Out[] = { 0.f, -.4f, -.25f };
+        for (int32 V = 0; V < 3; ++V)
         {
             const FVector P = DockSewerPoint(From[V]) + DockSewerSide(From[V]) * (Out[V] * DockSewerHalfWidth(From[V])) + FVector(0, 0, Up[V]);
-            const FVector T = DockSewerPoint(To[V]) + DockSewerSide(To[V]) * (V ? .55f * DockSewerHalfWidth(To[V]) : 0.f) + FVector(0, 0, 15.f);
+            const FVector T = DockSewerPoint(To[V]) + DockSewerSide(To[V]) * (V ? .4f * DockSewerHalfWidth(To[V]) : 0.f) + FVector(0, 0, V==2 ? 85.f : 15.f);
             FTimerHandle View, Shot;
             World->GetTimerManager().SetTimer(View, [World, Camera, P, T]() { Camera->SetActorLocationAndRotation(P, (T - P).Rotation()); World->GetFirstPlayerController()->SetViewTarget(Camera); }, 3.f + V * 3.f, false);
             World->GetTimerManager().SetTimer(Shot, [V]() {
                 const FString Folder = FPaths::ScreenShotDir() / TEXT("SewerLife"); IFileManager::Get().MakeDirectory(*Folder, true);
                 FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("View%d.png"), V), false, false); }, 5.f + V * 3.f, false);
         }
-        FTimerHandle Quit; World->GetTimerManager().SetTimer(Quit, [World]() { World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit")); }, 10.f, false);
+        FTimerHandle Quit; World->GetTimerManager().SetTimer(Quit, [World]() { World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit")); }, 13.f, false);
     }
 }

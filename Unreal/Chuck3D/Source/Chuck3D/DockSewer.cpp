@@ -35,7 +35,8 @@ float Chamber(int32 I)
     const float U=FMath::Clamp(1.f-FMath::Abs(I-Route.Num()*.5f)/24.f,0.f,1.f);
     return U*U*(3.f-2.f*U);
 }
-float Width(int32 I) { return (I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I); }
+float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-101))); }
+float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),90.f,Narrow(I)); }
 float Height(int32 I) { return 320.f+125.f*Chamber(I); }
 float WallWidth(int32 I,float Side)
 {
@@ -302,9 +303,9 @@ void BuildDockSewer(UWorld* World)
     for(int32 I=1;I<Count;I+=8)
     {
         auto* Fill=NewObject<UPointLightComponent>(Owner);Fill->SetupAttachment(Root);
-        Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.65f));
-        Fill->SetIntensity(1450);Fill->SetAttenuationRadius(1150+400*Chamber(I));
-        Fill->SetLightColor(FLinearColor(.32f,.36f,.43f));Fill->SetSourceRadius(160);
+        Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.45f));
+        Fill->SetIntensity(4300);Fill->SetAttenuationRadius(1150+400*Chamber(I));
+        Fill->SetLightColor(FLinearColor(.42f,.44f,.47f));Fill->SetSourceRadius(160);
         Fill->SetLightingChannels(false,true,false);Fill->SetCastShadows(false);Fill->RegisterComponent();++FillLights;
     }
     // Skylight ignores lighting channels. Disable outdoor sun/sky only while
@@ -378,6 +379,14 @@ void BuildDockSewer(UWorld* World)
             || FMath::Abs(ChannelHit.ImpactPoint.Z-(FloorZ-8))>1)
         {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_STREAM_MISS z=%.3f"),ChannelHit.ImpactPoint.Z);}
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_CHECK failures=%d wall_traces=%d chamber_width_cm=%.0f stream_depth_cm=5.5 night_fill_lights=%d"),CaveFailures,WallChecks,Width(Middle)*2,FillLights);
+        int32 NarrowFailures=0;
+        for(int32 I=96;I<=106;++I) for(float Side : {-1.f,1.f})
+        {
+            FHitResult Hit;const FVector P=Route[I]+FVector(0,0,50);
+            if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*Side*140,ECC_Visibility)
+                || FVector::Dist2D(P,Hit.ImpactPoint)<55 || FVector::Dist2D(P,Hit.ImpactPoint)>125) ++NarrowFailures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_NARROW failures=%d samples=11 nominal_width_cm=180"),NarrowFailures);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckStreamTest")))
     {
@@ -483,9 +492,9 @@ void BuildDockSewer(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
-        for(int32 I=0;I<6;++I)
+        for(int32 I=0;I<8;++I)
         {
-            const int32 Indices[]={23,173,187,343,112,3};const int32 Index=Indices[I];
+            const int32 Indices[]={23,173,187,343,112,3,97,Count-5};const int32 Index=Indices[I];
             const FVector P=SafePoint(Index,Right)+FVector(0,0,I==4?150:110);
             const FVector Target=Route[I==5?0:FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:(I==5?0:120));
             FTimerHandle View,Shot;
@@ -503,6 +512,6 @@ void BuildDockSewer(UWorld* World)
                 const FString Folder=FPaths::ScreenShotDir()/TEXT("Sewer");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
             },6.f+I*4.f,false);
         }
-        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},30.f,false);
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},38.f,false);
     }
 }

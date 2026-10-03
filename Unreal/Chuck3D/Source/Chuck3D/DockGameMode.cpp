@@ -2162,7 +2162,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         // The zombie: the rat stands on the stream's line 3 m back the way he comes.
         ADockNPC* Zombie=GetSewerZombie();
-        if(!Zombie) { Check(false,TEXT("the sewer zombie is placed in the wide chamber")); TestStage=115; StageTime=0; return; }
+        if(!Zombie) { Check(false,TEXT("the sewer zombie is placed in the narrow passage")); TestStage=115; StageTime=0; return; }
         Chuck->ResetToDock();
         Chuck->SetActorLocation(DockSewerPoint(GetSewerZombieSample()-5)+FVector(0,0,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
         Chuck->SetActorRotation((Zombie->GetActorLocation()-Chuck->GetActorLocation()).GetSafeNormal2D().Rotation()); Chuck->Recenter();
