@@ -37,7 +37,7 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
     int32 Distance=1000;
     for(int32 S : Rifts) Distance=FMath::Min(Distance,I<S?S-I:I>S+4?I-S-4:0);
     const float Blend=FMath::Clamp(1.f-FMath::Max(0,Distance-4)/5.f,0.f,1.f);
-    return Route[I]+Right[I]*(115*Blend);
+    return Route[I]+Right[I]*(100*Blend);
 }
 }
 
@@ -87,7 +87,7 @@ void BuildDockSewer(UWorld* World)
     }
     auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Stone.M_Stone"));
     auto* Dark=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Dark.M_Dark"));
-    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid)
+    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
         Mesh->bUseComplexAsSimpleCollision=true; Mesh->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
@@ -96,7 +96,7 @@ void BuildDockSewer(UWorld* World)
         // Render the enclosing shell from either side without changing the
         // shared stone material used by the surface town. Normals face inward.
         TArray<int32> Faces=T;
-        for(int32 I=0;I<T.Num();I+=3) Faces.Append({T[I],T[I+2],T[I+1]});
+        if(ReverseFaces) for(int32 I=0;I<T.Num();I+=3) Faces.Append({T[I],T[I+2],T[I+1]});
         Mesh->CreateMeshSection_LinearColor(0,V,Faces,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
         Mesh->SetMaterial(0,Mat);
     };
@@ -185,18 +185,24 @@ void BuildDockSewer(UWorld* World)
         for(int32 I=0;I<4;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
         MakeMesh(V,T,N,UV,Astral,false);
         V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(int32 Layer=0;Layer<3;++Layer)
+        constexpr int32 Rows=16,Columns=10;
+        for(int32 Layer=0;Layer<2;++Layer)
         {
             const int32 Base=V.Num();
-            for(int32 I=0;I<=4;++I) for(int32 X=0;X<=4;++X)
+            for(int32 I=0;I<=Rows;++I) for(int32 X=0;X<=Columns;++X)
             {
-                const int32 Index=StartIndex+I;const float U=X/4.f;
-                V.Add(Route[Index]+Right[Index]*((U-.5f)*130+RiftOffset(Index))+FVector(0,0,25+Layer*32+8*FMath::Sin(float(I+X+Layer))));
-                N.Add(FVector::UpVector);UV.Add(FVector2D(U,I*.25f));
+                const float Along=I*4.f/Rows,U=X/float(Columns);
+                const int32 Index=StartIndex+FMath::Min(3,FMath::FloorToInt(Along));
+                const float Fraction=Along-(Index-StartIndex);
+                const FVector Center=FMath::Lerp(Route[Index],Route[Index+1],Fraction);
+                const FVector Side=FMath::Lerp(Right[Index],Right[Index+1],Fraction).GetSafeNormal();
+                const float Offset=FMath::Lerp(RiftOffset(Index),RiftOffset(Index+1),Fraction);
+                V.Add(Center+Side*((U-.5f)*130+Offset)+FVector(0,0,35+Layer*45+8*FMath::Sin(Along+U*4+Layer)));
+                N.Add(FVector::UpVector);UV.Add(FVector2D(U,I/float(Rows)));
             }
-            for(int32 I=0;I<4;++I) for(int32 X=0;X<4;++X){int32 A=Base+I*5+X;T.Append({A,A+1,A+5,A+1,A+6,A+5});}
+            for(int32 I=0;I<Rows;++I) for(int32 X=0;X<Columns;++X){int32 A=Base+I*(Columns+1)+X;T.Append({A,A+1,A+Columns+1,A+1,A+Columns+2,A+Columns+1});}
         }
-        MakeMesh(V,T,N,UV,Oil,false);
+        MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Route[StartIndex+2]+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
         Lamp->SetIntensity(6500);Lamp->SetAttenuationRadius(1900);Lamp->SetLightColor(FLinearColor(.48f,.025f,1));
@@ -271,12 +277,14 @@ void BuildDockSewer(UWorld* World)
                 {
                     Chuck->SetRunHeld(true);
                     const FVector Goal=SafePoint(Run->Target,Right)+FVector(0,0,34.65f);
-                    if(FVector::Dist2D(Chuck->GetActorLocation(),Goal)<55 && Run->Target<Route.Num()-5)
+                    if(FVector::Dist2D(Chuck->GetActorLocation(),Goal)<18 && Run->Target<Route.Num()-5)
                     {
                         ++Run->Target;
                         if(Run->Target%50==0) UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_PROGRESS reached=%d elapsed=%.2f"),Run->Target,Run->Time);
                     }
                     Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+                    if(FMath::FloorToInt(Run->Time*50)%500==0)
+                        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_POSITION target=%d p=%s goal=%s mode=%d"),Run->Target,*Chuck->GetActorLocation().ToString(),*Goal.ToString(),int32(Chuck->GetCharacterMovement()->MovementMode));
                     if(Run->Target>=Route.Num()-5) Run->Finished=true;
                 }
                 if(Run->Finished && Run->HazardAt<0)
