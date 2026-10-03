@@ -113,8 +113,8 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
     auto* Light = NewObject<UPointLightComponent>(Owner);
     Light->SetupAttachment(Owner->GetRootComponent());
     Light->SetRelativeLocation(Path[3] + FVector(0, 0, 45));
-    Light->SetIntensity(350); Light->SetAttenuationRadius(420);
-    Light->SetLightColor(FLinearColor(.16f, .30f, .64f));
+    Light->SetIntensity(175); Light->SetAttenuationRadius(420);
+    Light->SetLightColor(FLinearColor(.32f, .36f, .43f));
     Light->SetLightingChannels(false, true, false); Light->SetCastShadows(false);
     Light->RegisterComponent();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SEWER_SLIDE_BUILT length_cm=%.0f drop_cm=%.0f samples=%d"), Length, End.Z - Path.Last().Z, Path.Num());

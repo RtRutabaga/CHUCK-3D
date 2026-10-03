@@ -1,5 +1,7 @@
 # Winding sewer prototype
 
+October 3 lighting correction: desaturated grey-blue fill `(0.32,0.36,0.43)` at1100 replaces saturated blue at1600; the slide mouth uses the same colour at175 instead of350. Rock/water ambient tint is a dim neutral-blue `(0.04,0.045,0.055)` instead of `(0.035,0.065,0.13)`. Purple rupture lights are1800 with460cm radius instead of2600/680cm, concentrating the glow near the actual hazards. Astral bed/film graphics remain. No geometry, score, footsteps, rats, moss, slide sequence or controller changes. `Tools/create_sewer_cave_materials.py -ChuckAmbientOnly` (passed on Unreal's command line with ExecutePythonScript) updates only the two owned rock/water materials, preserving AstralDepth and shared materials. See latest HANDOFF for actual captures/checks and launcher.
+
 The user authorized sewer work on October 2. This supersedes earlier sewer-interior exclusions for this connected prototype, not the full campaign. Entry is a physical fall through the open rusty hatch beside the Dock Street side gate, opposite the bench. No interaction question, loading prompt or NPC dialogue.
 
 The route is approximately 244 metres long, nine metres below the court. Positive world Y is north. From the landing it snakes north from Y3900 toward Y12300, crosses east, then bends repeatedly back south toward Y2200. It is one continuous curved passage, with a temporary collapsed terminus. No copied 2D map, enemies, quests or new campaign destination. A comparison to the exact 2D route length has not been measured.

@@ -83,6 +83,8 @@ def property_constant(mat, prop, value):
     lib.connect_material_property(expression,'',prop)
 
 for name,code in [('SewerRock',ROCK),('SewerStream',WATER),('AstralDepth',SPACE)]:
+    if name=='AstralDepth' and '-ChuckAmbientOnly' in unreal.SystemLibrary.get_command_line():
+        continue
     mat=unreal.load_asset(dest+'/M_'+name)
     if mat:
         lib.delete_all_material_expressions(mat)
@@ -103,8 +105,8 @@ for name,code in [('SewerRock',ROCK),('SewerStream',WATER),('AstralDepth',SPACE)
     lib.connect_material_expressions(field,'',rgb,''); lib.connect_material_expressions(field,'',alpha,'')
     lib.connect_material_property(rgb,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR if name=='AstralDepth' else unreal.MaterialProperty.MP_BASE_COLOR)
     if name!='AstralDepth':
-        # Small blue ambient floor keeps crevices legible without visible fixtures.
-        ambient=custom(mat,'return C*float3(.035,.065,.13);',{'C':rgb},unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+        # Dim grey-blue ambient floor keeps crevices legible without a cosmic wash.
+        ambient=custom(mat,'return C*float3(.04,.045,.055);',{'C':rgb},unreal.CustomMaterialOutputType.CMOT_FLOAT3)
         lib.connect_material_property(ambient,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
         bump=custom(mat,'float3 dx=ddx(P),dy=ddy(P),n=normalize(N);float3 r1=cross(dy,n),r2=cross(n,dx);float det=dot(dx,r1);float3 grad=sign(det)*(ddx(H)*r1+ddy(H)*r2)/max(abs(det),.00001);return normalize(n-grad*'+('1.5' if name=='SewerRock' else '1.1')+');',{'P':world,'N':normal,'H':alpha},unreal.CustomMaterialOutputType.CMOT_FLOAT3)
         lib.connect_material_property(bump,'',unreal.MaterialProperty.MP_NORMAL)

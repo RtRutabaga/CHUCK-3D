@@ -292,7 +292,7 @@ void BuildDockSewer(UWorld* World)
         if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Route[StartIndex+2]+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
-        Lamp->SetIntensity(2600);Lamp->SetAttenuationRadius(680);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
+        Lamp->SetIntensity(1800);Lamp->SetAttenuationRadius(460);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
@@ -303,8 +303,8 @@ void BuildDockSewer(UWorld* World)
     {
         auto* Fill=NewObject<UPointLightComponent>(Owner);Fill->SetupAttachment(Root);
         Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.65f));
-        Fill->SetIntensity(1600);Fill->SetAttenuationRadius(1150+400*Chamber(I));
-        Fill->SetLightColor(FLinearColor(.16f,.30f,.64f));Fill->SetSourceRadius(160);
+        Fill->SetIntensity(1100);Fill->SetAttenuationRadius(1150+400*Chamber(I));
+        Fill->SetLightColor(FLinearColor(.32f,.36f,.43f));Fill->SetSourceRadius(160);
         Fill->SetLightingChannels(false,true,false);Fill->SetCastShadows(false);Fill->RegisterComponent();++FillLights;
     }
     // Skylight ignores lighting channels. Disable outdoor sun/sky only while
