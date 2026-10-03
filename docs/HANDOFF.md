@@ -2,6 +2,10 @@
 
 ## Current launcher and integration status
 
+**Update 32 (Codex, October 2 — grate beside gate):** runtime `cafa272`. Moved the grate to (-1580,3900), north of the gate and opposite the bench at Y3300; doorway paving remains clear. Updated collision probes and close-up capture positions. No new assets or dependencies.
+
+Build `Local/grate-side-build.log` succeeded; packaged views 9/10 visually inspected (`Local/grate-side-capture.log`). Verifier `Local/verify-package-20261002-173443.log` passed 125 gameplay checks plus world, plaza, Dock Street, side-gate and music checks. No physical-controller or MotionCapture repeat. Promoted to root launcher and checked receipt at `cafa272`; previous package retained at `Builds/Windows-Previous-20261002-GrateSide`. Generated files remain untracked. Next part of the work can be done here.
+
 **Update 31 (Codex, October 1 — side gate and sewer setup):** runtime `1577561` / `cb6e7ed`. A small closed timber gate with simple stone framing is on the city-facing western wall at the far end of Dock Street (-1748,3650). A flush iron grate is directly in front (-1580,3650), over retained solid ground. This is the future sewer entrance location; both props are noninteractive. Existing plaza sewer arch remains decorative drainage. No new assets/dependencies, map or dialogue.
 
 Final build `Local/side-gate-build-final.log` succeeded. Packaged verifier passed 125 gameplay checks, existing world/plaza/Dock Street/music checks and three new checks for gate blocking, ground beneath the grate and clear capsule approach (`Local/verify-package-20261001-191507.log`). Close-ups caught an existing bench overlapping the grate; it was moved along the wall, then rebuilt, captured and retested. Final captures `Local/side-gate-capture-final.log`, package `Setting/View9..10.png`, show a clear apron. No physical-controller or MotionCapture repeat. Setting review now has eleven views. Root launcher promoted and receipt checked at `1577561`; backup `Builds/Windows-Previous-20261001-SideGate`. Next part of the work can be done here.

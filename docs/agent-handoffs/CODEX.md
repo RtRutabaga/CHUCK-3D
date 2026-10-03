@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — grate beside gate
+
+Runtime `cafa272`: grate moved north to (-1580,3900), opposite the bench, clearing the doorway. Packaged views 9/10 inspected. Build `Local/grate-side-build.log`; capture `Local/grate-side-capture.log`; verification `Local/verify-package-20261002-173443.log`: 125 gameplay checks and all world/plaza/Dock Street/side-gate/music checks passed. No physical-controller or MotionCapture repeat. Root launcher promoted and receipt checked; backup `Builds/Windows-Previous-20261002-GrateSide`. No new assets/dependencies; generated files untracked. Next part of the work can be done here.
+
 ## October 1 — side gate and sewer location
 
 Final runtime `1577561` moves an old bench clear of the grate. Final build `Local/side-gate-build-final.log`, capture `Local/side-gate-capture-final.log` (views 9/10 inspected), verifier `Local/verify-package-20261001-191507.log` passed all 125 gameplay and route/music/gate checks. Root launcher receipt checked; backup `Builds/Windows-Previous-20261001-SideGate`. Earlier build evidence below preceded the bench correction.

@@ -1,6 +1,6 @@
 # Waterdeep plaza adaptation
 
-October 1 update: the user's future sewer entrance is now the ground grate before the small side gate in far Dock Street (see DOCKS-SETTING.md). The plaza's existing barred arch remains drain dressing and stays inaccessible.
+October 2 update: the user's future sewer entrance is now the ground grate beside the small side gate in far Dock Street, opposite the bench (see DOCKS-SETTING.md). The plaza's existing barred arch remains drain dressing and stays inaccessible.
 
 The user requested a loose, additive adaptation of the original top-down Waterdeep map. The original docks text map identifies district walls, torches, a sewer grate near the guard, tavern, market, piers and ruins. Its adjoining plaza has a central tiered fountain, smithy, alchemist, stands, lamps and closed gate. Reference copies and SHA-256 provenance are in References/PROVENANCE.md. No original generator was run.
 

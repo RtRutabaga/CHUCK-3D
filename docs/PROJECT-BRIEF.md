@@ -1,6 +1,6 @@
 # Project brief
 
-October 1 sewer-location correction: stage the future sewer entrance at the ground grate in front of a modest side gate on the city-facing wall of far Dock Street. The existing plaza arch remains drain dressing. Sewer access/interior is still deferred.
+October 2 sewer-location correction: stage the future sewer entrance at the ground grate beside a modest side gate on the city-facing wall of far Dock Street, opposite the bench. The existing plaza arch remains drain dressing. Sewer access/interior is still deferred.
 
 October 1: the user requested a larger inaccessible coastal-city vista, connecting the opposite waterfront to the town around a sheltered harbor, with further roof districts and low-detail surrounding country visible from the highest playable roof. See COASTAL-VISTA.md. This expands scenery, not campaign or playable area.
 
