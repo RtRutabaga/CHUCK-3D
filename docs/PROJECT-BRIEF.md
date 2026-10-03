@@ -1,5 +1,7 @@
 # Project brief
 
+October 3 return-state authorization: continuing Claude's sewer handoff implements the remaining user-assigned setting step: morning starts with the tavern closed, the completed sewer slide returns Chuck to early-evening docks, closes the hatch and opens the furnished tavern. This supersedes always-open tavern wording below; no new campaign destination or persistent save. See DOCKS-RETURN.md and latest HANDOFF.
+
 October 3 tavern interior authorization: the user requested work on the enlarged tavern's interior. A connected walk-in room with furnishings, warm lighting and an open door now supersedes historical exterior-only/closed-tavern exclusions. Keep it within the current docks prototype; see TAVERN-INTERIOR.md and HANDOFF for implementation and verified build status.
 
 October 2 cave refinement: user requested local sewer-entrance respawns for all tunnel deaths, readable blue night fill around the purple astral sources, nebula views at floor level, continuous natural rock walls with matching collision, a shallow flowing stream and a wider chamber midway along the existing route. This supersedes the prior purple-only illumination and dock-respawn behavior underground. R / View remains an explicit dock return. See SEWER-PROTOTYPE.md and the latest HANDOFF.

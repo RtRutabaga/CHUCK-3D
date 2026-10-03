@@ -2,6 +2,8 @@
 import unreal
 lib = unreal.MaterialEditingLibrary
 for name in ('DawnSky', 'TorchFlame', 'FountainWater'):
+    if '-ChuckSkyOnly' in unreal.SystemLibrary.get_command_line() and name != 'DawnSky':
+        continue
     path = '/Game/Art/Materials/M_' + name
     mat = unreal.load_asset(path)
     if not mat:
@@ -24,7 +26,13 @@ float glow=pow(saturate(dot(normalize(d.xy+0.0001),normalize(float2(1,-.4)))),5)
 float cloud=pow(saturate(sin(d.x*17+d.y*11+sin(d.y*19))*.5+.5),5)*saturate(d.z*3)*.07;
 return sky+glow*float3(.32,.11,.015)+cloud;''')
         lib.connect_material_expressions(pos, '', custom, 'P')
-        lib.connect_material_property(custom, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        tint = lib.create_material_expression(mat, unreal.MaterialExpressionVectorParameter)
+        tint.set_editor_property('parameter_name', 'SkyTint')
+        tint.set_editor_property('default_value', unreal.LinearColor(1, 1, 1, 1))
+        multiply = lib.create_material_expression(mat, unreal.MaterialExpressionMultiply)
+        lib.connect_material_expressions(custom, '', multiply, 'A')
+        lib.connect_material_expressions(tint, '', multiply, 'B')
+        lib.connect_material_property(multiply, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     else:
         color = lib.create_material_expression(mat, unreal.MaterialExpressionConstant3Vector)
         color.set_editor_property('constant', unreal.LinearColor(7, 2.0, .16, 1) if name == 'TorchFlame' else unreal.LinearColor(.025, .21, .25, 1))

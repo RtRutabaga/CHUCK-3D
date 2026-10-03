@@ -32,6 +32,7 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
     float OuterHalfWidth, float OuterHeight, float LastStreamOffset, UMaterialInterface* Stone, UMaterialInterface* Water)
 {
     const int32 Count = Route.Num();
+    bExited = false; // New world starts in morning; R only resets Chuck's position.
     if (Count < 6) return;
     const FVector End = Route.Last(), R0 = Right.Last(), D0(-R0.Y, R0.X, 0);
     Path.Reset(); Along.Reset(); Side.Reset();

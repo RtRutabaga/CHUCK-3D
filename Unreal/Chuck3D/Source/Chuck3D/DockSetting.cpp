@@ -630,7 +630,15 @@ void BuildDockSetting(UWorld* World)
     // DockSewer continues the shaft down to a real landing; no blackout lid.
     const FVector Hinge=Grate+FVector(-120,0,7);
     const FRotator Open(76,0,0);
-    auto Hatch=[&](FVector P,FVector Size){Box(Hinge+Open.RotateVector(P),Size,TEXT("RustIron"),true,Open);};
+    auto* Lid=World->SpawnActor<AActor>();Lid->Tags.Add(TEXT("SewerHatchLid"));
+    auto* LidRoot=NewObject<USceneComponent>(Lid);Lid->SetRootComponent(LidRoot);
+    LidRoot->SetMobility(EComponentMobility::Movable);LidRoot->RegisterComponent();Lid->SetActorLocationAndRotation(Hinge,Open);
+    auto Hatch=[&](FVector P,FVector Size){
+        auto* Part=NewObject<UStaticMeshComponent>(Lid);Part->SetupAttachment(LidRoot);Part->SetMobility(EComponentMobility::Movable);
+        Part->SetStaticMesh(Cube);Part->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_RustIron.M_RustIron")));
+        Part->SetRelativeLocation(P);Part->SetRelativeScale3D(Size/100);Part->SetCollisionProfileName(TEXT("BlockAll"));Part->RegisterComponent();
+        return Part;
+    };
     for(float Y : {-102.f,102.f}) Hatch(FVector(115,Y,0),FVector(230,10,8));
     for(float X : {5.f,225.f}) Hatch(FVector(X,0,0),FVector(10,204,8));
     for(float X=22;X<220;X+=18) Hatch(FVector(X,0,0),FVector(6,200,7));
@@ -641,9 +649,12 @@ void BuildDockSetting(UWorld* World)
     {
         Box(Hinge+FVector(0,Y,0),FVector(18,32,18),TEXT("RustIron"),true);
         Box(Hinge+FVector(-12,Y,0),FVector(24,42,7),TEXT("RustIron"),true);
-        Beam(Hinge+FVector(30,Y,0),Hinge+Open.RotateVector(FVector(150,Y,0)),5,TEXT("RustIron"));
+        const FVector A=Open.UnrotateVector(FVector(30,Y,0)),B(150,Y,0),D=B-A;
+        auto* Stay=Hatch((A+B)*.5f,FVector(D.Size(),5,5));Stay->SetRelativeRotation(D.Rotation());Stay->ComponentTags.Add(TEXT("OpenHatchStay"));
     }
     Hatch(FVector(214,0,12),FVector(8,35,7));
+    auto* Cover=Hatch(FVector(115,0,-3),FVector(210,194,6));
+    Cover->SetHiddenInGame(true);Cover->SetCollisionProfileName(TEXT("NoCollision"));Cover->ComponentTags.Add(TEXT("ClosedHatchFloor"));
     Box(FVector(540,1100,160),FVector(700,20,320),TEXT("Stone"),true);
     for(float Y : {1900.f,3500.f})
     {

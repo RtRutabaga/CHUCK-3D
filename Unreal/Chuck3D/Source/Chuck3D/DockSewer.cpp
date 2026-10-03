@@ -320,8 +320,8 @@ void BuildDockSewer(UWorld* World)
         const FVector P=PC->PlayerCameraManager->GetCameraLocation();
         const bool Below=P.Z<-150 && IsWithinDockSewer(P);
         if(Below==*Under) return;*Under=Below;
-        for(const auto& Sky : Skies) if(Sky.Key.IsValid()) Sky.Key->SetIntensity(Below?0:Sky.Value);
-        for(const auto& Sun : Suns) if(Sun.Key.IsValid()) Sun.Key->SetIntensity(Below?0:Sun.Value);
+        for(const auto& Sky : Skies) if(Sky.Key.IsValid()) Sky.Key->SetIntensity(Below?0:Sky.Value*(HasExitedDockSewer()?.65f:1.f));
+        for(const auto& Sun : Suns) if(Sun.Key.IsValid()) Sun.Key->SetIntensity(Below?0:Sun.Value*(HasExitedDockSewer()?.28f:1.f));
         if(APawn* Pawn=PC->GetPawn())
         {
             TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);

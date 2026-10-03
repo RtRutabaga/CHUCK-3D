@@ -1,5 +1,7 @@
 # Movement and camera playtest
 
+Post-sewer return: tavern begins closed. Enter the open side-gate hatch, follow the sewer to the downward stream slide and let Chuck climb out at the pier. The docks are now early evening, the hatch is closed and walkable, and the tavern is open. R / Xbox View preserves evening; quit/relaunch starts morning. This supersedes older always-open tavern and collapsed-sewer-end directions below. See DOCKS-RETURN.md.
+
 Scope: one connected Waterdeep docks scene with Claude's parkour areas, a new Dock Street loop, cargo court, service quay, buildings and a stationary human scale reference. Chuck is 65 cm tall with an oversized open purple jacket. Dialogue, pickups, finished art and additional maps remain deferred. See DOCKS-SETTING.md for the new route.
 
 ## Launch

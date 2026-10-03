@@ -4,6 +4,7 @@
 #include "DockSewer.h"
 #include "SewerLife.h"
 #include "SewerSlide.h"
+#include "DockReturn.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -178,8 +179,8 @@ void ADockGameMode::StartPlay()
     Shape(TEXT("TavernRoof"),FVector(-10,357,314),FVector(700,100,16),TEXT("Roof"));
     for(float X : {-330.f,-140.f,-25.f,105.f,270.f,310.f})
         Shape(TEXT("Timber"),FVector(X,328,153),FVector(14,14,306),TEXT("Wood"));
-    Shape(TEXT("Door"),FVector(-23,382.5f,105),FVector(10,95,210),TEXT("Wood"));
-    Shape(TEXT("DoorLatch"),FVector(-30,417,100),FVector(6,8,3),TEXT("Dark"));
+    Shape(TEXT("Door"),FVector(40,338,105),FVector(120,10,210),TEXT("Wood"));
+    Shape(TEXT("DoorLatch"),FVector(88,330,100),FVector(8,6,3),TEXT("Dark"));
     for(float X : {-230.f,190.f}) {
         Shape(TEXT("WindowFrame"),FVector(X,322,160),FVector(80,12,95),TEXT("Wood"));
         Shape(TEXT("Window"),FVector(X,314,160),FVector(64,4,79),TEXT("Amber"));
@@ -497,10 +498,12 @@ void ADockGameMode::StartPlay()
     Horizon->GetStaticMeshComponent()->SetCastShadow(false);
     Sky->GetLightComponent()->RecaptureSky();
     BuildDockSewer(World);
+    BuildDockReturn(World);
     SpawnSewerLife(World);   // its rats and moss (Claude)
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"))) Check(CheckDockReturn(World,false),TEXT("morning return state: open sewer hatch, closed tavern and daylight"));
     if(auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0)))
     { Chuck->ResetToDock(); AddTickPrerequisiteActor(Chuck); }
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
@@ -2122,6 +2125,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Chuck->GetPullUps()-PullUpsBefore,HasExitedDockSewer(),bOnPier,Chuck->IsAstral(),*P.ToString());
             Check(Chuck->GetSlides()==SlidesBefore+1 && Chuck->GetPullUps()>PullUpsBefore && HasExitedDockSewer() && bOnPier && !Chuck->IsAstral(),
                 TEXT("the sewer's end: the stream drops into a water slide that brings Chuck out at the end of the pier, where he climbs out"));
+            Check(CheckDockReturn(GetWorld(),true),TEXT("after the sewer slide, evening persists with a closed hatch and open tavern"));
             if(bSlideOnly)
             {
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

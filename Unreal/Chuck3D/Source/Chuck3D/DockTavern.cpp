@@ -14,6 +14,7 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "TimerManager.h"
+#include "SewerSlide.h"
 #include "UnrealClient.h"
 
 void BuildDockTavern(UWorld* World)
@@ -190,14 +191,15 @@ void BuildDockTavern(UWorld* World)
         for(int32 I=1;I<Walk.Num();++I)
         {
             FHitResult Hit;
-            if(World->SweepSingleByChannel(Hit,Walk[I-1]+FVector(0,0,35),Walk[I]+FVector(0,0,35),FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f)))
+            const bool Blocked=World->SweepSingleByChannel(Hit,Walk[I-1]+FVector(0,0,35),Walk[I]+FVector(0,0,35),FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f));
+            if(I==1 ? (!Blocked || !Hit.GetActor()->ActorHasTag(TEXT("Door"))) : Blocked)
             {++Failures;UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_BLOCK leg=%d point=%s"),I,*Hit.ImpactPoint.ToString());}
         }
         FHitResult TableHit,BarHit,RoofHit;
         if(!World->LineTraceSingleByChannel(TableHit,FVector(-215,535,120),FVector(-215,535,0),ECC_Visibility) || FMath::Abs(TableHit.ImpactPoint.Z-79)>1) ++Failures;
         if(!World->LineTraceSingleByChannel(BarHit,FVector(-65,840,160),FVector(-65,840,0),ECC_Visibility) || FMath::Abs(BarHit.ImpactPoint.Z-108)>1) ++Failures;
         if(!World->LineTraceSingleByChannel(RoofHit,FVector(291,870,620),FVector(291,870,500),ECC_Visibility) || FMath::Abs(RoofHit.ImpactPoint.Z-556)>1) ++Failures;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_CHECK failures=%d floors=5 routes=4 furniture=2 roof=1 doorway_open=1"),Failures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_CHECK failures=%d floors=5 routes=3 furniture=2 roof=1 doorway_initially_closed=1"),Failures);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTavernInteriorCapture")))
     {
@@ -217,6 +219,7 @@ void BuildDockTavern(UWorld* World)
         struct FRun {int32 Target=1,Pass=0;float Time=0,PauseUntil=-1,ShotAt=-1;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
         FTimerHandle Start;
         World->GetTimerManager().SetTimer(Start,[World,Run,Walk](){
+            MarkDockSewerExited(); // This circuit tests the accessible post-sewer interior.
             auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
             Chuck->ResetToDock();Chuck->SetActorLocation(Walk[0]+FVector(0,0,34.65f));Chuck->SetActorRotation(FRotator(0,90,0));Chuck->Recenter();
             Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Walking);Chuck->SetRunHeld(false);

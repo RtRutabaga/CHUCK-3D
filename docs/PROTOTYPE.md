@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest return state: the tavern now starts closed. The sewer-end slide returns Chuck to the pier in early evening, closes the sewer hatch and opens the tavern. R / View preserves this session state; a fresh launch starts morning. See DOCKS-RETURN.md and HANDOFF for actual checks.
+
 Latest tavern work: the enlarged tavern is a walk-in room through the open front door. Worn timber floor/beams, a bar, tables/benches, shelves and a hearth establish the interior at human scale. See TAVERN-INTERIOR.md and HANDOFF for actual verification; earlier closed-frontage/no-interior descriptions are historical.
 
 Latest cave refinement: falls and zero-sanity deaths inside the sewer respawn at its entrance. Blue night fill keeps the natural rock tunnel readable; purple astral patches show a nebula at floor level. The central channel is shallow flowing water and the midpoint opens into a wider chamber. R / controller View explicitly returns to docks. This supersedes the earlier atmosphere/respawn paragraphs below; see HANDOFF for actual verification and launcher status.
