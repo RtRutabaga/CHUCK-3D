@@ -2,6 +2,27 @@
 
 ## Current launcher and integration status
 
+**Update 51 (Claude, October 3, user request: begin the sewer plan, step 1 of 4: rats and cigarette tufts):** runtime `192dd14`.
+- `SewerLife.cpp` places 10 rats in four groups on the stream banks:
+  - three just past the first Astral gap (the 2D game's scratch lesson);
+  - pairs and a trio further on;
+  - none in the wide chamber, which is kept for the planned zombie.
+- 83 cigarette tufts as damp moss (`M_SewerMoss`, made by `Tools/create_sewer_moss_material.py`) sit in clumps along the wall bases. A third of them hold a cigarette.
+- The rats, tufts and dropped cigarettes are lit by the sewer's own lighting channel.
+- Codex's `DockSewer` gained read-only route accessors (samples, side, half width, gap, chamber). The geometry is unchanged. The scripted sewer and stream walk-throughs get no rats.
+
+The root candidate passed `-MotionCapture` **128/128** plus the world, music, sewer, cave and tavern checks (`Local/verify-package-20261003-115923.log`). New check: at least 8 rats, 3 of them in the first group, and at least 40 tufts. The first attempt failed this check because it measured rats after they had wandered; it now counts them where they were placed (`192dd14`).
+
+Promoted to `Builds/Windows` with receipt `192dd14`; the previous package is kept as `Builds/Windows-Previous-20261003-SewerLife`. Root was clean when building.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Sewer_rats.png` and `runtime_Sewer_moss.png` (`-ChuckSewerLifeCapture`).
+
+Flaws:
+- In the dimmed sewer, both rats and moss read mostly as dark silhouettes.
+- Not played by the user.
+
+Next in the plan: the water-slide exit to the end of the pier (Claude), then the after-sewer evening, closed grate and open tavern (Codex's setting code), then the zombie.
+
 **Update 50 (Codex, October 3 — dimmer sewer, entry stream and puddle footsteps):** runtime `0d34ee8`. Preserves Claude's three guards and all latest main work. Blue fill intensity 3800→1600; purple rupture intensity 4200→2600, no torches added. Shallow stream mesh and 8 cm recessed collision bed now start at the beginning wall, including the entry shaft; removed flat landing slab that would conceal the water. Entry fall now settles at Z-873.35. Existing local respawn spawn height remains -865.35 and settles onto the bed. Six original synthetic splash variants replace normal steps on grounded paw contacts within the water, excluding astral gaps; dry cave rock uses stone steps. Narrow footstep change only, no rig, animation or traversal changes. Existing music retained. Stdlib Python and installed Unreal only, no install/download or original-game mutations. Separate generator/importer preserves existing SFX. Twelve new LFS binaries total 344,503 bytes; attributes and fsck passed, remote dry-run listed only these additions; remote allowance not exposed.
 
 Build `Local/stream-build.log` succeeded (zero cook errors/warnings). Actual wet/dry walk `Local/stream-walk.log` passed in18.26 s:48 wet contacts,43 dry steps with no additional wet contacts, six assets loaded. Actual `Local/stream-sewer-route.log` passed entry fall,371 route targets, rupture/local zero-sanity respawns and explicit dock return with restored surface lighting in120.67 s. All six final captures inspected (`Local/stream-capture.log`, `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Sewer/View0..5.png`); sixth view shows stream at starting wall. Darker blue environment remains readable, purple hazards stand out; rock/water/astral visuals remain provisional. Standard verifier `Local/verify-package-20261003-112508.log` passed127 gameplay checks, all mandatory world/music/sewer/cave/tavern checks,372 sewer floor/sweep samples and60 wall traces. Verifier now also requires six splash assets loaded. No manual listening, physical Xbox, MotionCapture, performance, idle/jump splash counter test or subjective camera-comfort test.

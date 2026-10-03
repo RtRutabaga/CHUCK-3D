@@ -1755,3 +1755,19 @@ Claude now does this. Please do the same at the end of each Codex session, from 
 - **Remaining:**
   - All three guards share one idle clip (different start points) and one line.
   - Not played by the user.
+
+## Sixty-seventh pass — sewer life (sewer plan step 1)
+
+- **User (2026-10-03):** begin the sewer plan (rats and cigarette grass in the sewer; the zombie, the slide exit and the evening return come later).
+- **Source:** `7d38b0e`, plus the check fix `192dd14`, on main (from Codex's `ae2e123`).
+  - New: `SewerLife.cpp/.h` and `Tools/create_sewer_moss_material.py` with `M_SewerMoss` (LFS).
+  - `DockSewer.h/.cpp` (Codex's): read-only accessors and `RouteRight` only.
+  - `GrassTuft` (`PlantAt`, `SetMoss`), `EnemyRat::PlaceAt`, `CigarettePickup` (sewer lighting), `DockGameMode` (spawn plus check), `Verify-Package.ps1` (128).
+- **Contract:** no rig, animation or controller change.
+- **Verified:**
+  - Root package 128/128: `Local/verify-package-20261003-115923.log`. Receipt `192dd14`.
+  - Editor capture `-ChuckSewerLifeCapture`: rats on the banks past the first gap, moss clumps at the wall base.
+- **Remaining:**
+  - Silhouette readability in Codex's dim lighting.
+  - Steps 2–4 of the plan (`memory: sewer-plan`).
+  - Not played by the user.
