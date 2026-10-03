@@ -1,6 +1,7 @@
 #include "DockGameMode.h"
 #include "DockSetting.h"
 #include "DockPlaza.h"
+#include "DockSewer.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "CigarettePickup.h"
@@ -124,7 +125,12 @@ void ADockGameMode::StartPlay()
     };
     // Units are centimetres. Ground top = 0; geometry is intentionally simple.
     Shape(TEXT("Quay"),FVector(-150,0,-20),FVector(700,800,40),TEXT("Stone"));
-    Shape(TEXT("Sea"),FVector(900,0,-65),FVector(250000,250000,10),TEXT("Water"),nullptr,false);
+    // Cut only the sewer shaft out of the harbor plane so falling through
+    // the real opening never crosses a visible sheet of sea water.
+    Shape(TEXT("Sea"),FVector(900,-60602.5f,-65),FVector(250000,128795,10),TEXT("Water"),nullptr,false);
+    Shape(TEXT("Sea"),FVector(900,64502.5f,-65),FVector(250000,120995,10),TEXT("Water"),nullptr,false);
+    Shape(TEXT("Sea"),FVector(-62897.5f,3900,-65),FVector(122405,210,10),TEXT("Water"),nullptr,false);
+    Shape(TEXT("Sea"),FVector(62217.5f,3900,-65),FVector(127365,210,10),TEXT("Water"),nullptr,false);
     // Short pier with a 24 cm missing board. Chuck's jump travels about 41 cm.
     for(int32 Row=0;Row<26;++Row)
     {
@@ -411,6 +417,7 @@ void ADockGameMode::StartPlay()
     if(RopeMesh) Prop(TEXT("RopeCoilArt"),FVector(425,56,0),RopeMesh);
     BuildDockSetting(World);
     BuildDockPlaza(World);
+    BuildDockSewer(World);
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
     AClayJar::SpawnDockJars(World);

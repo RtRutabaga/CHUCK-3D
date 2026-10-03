@@ -608,15 +608,13 @@ void BuildDockSetting(UWorld* World)
     Box(Gate+FVector(17,-25,112),FVector(6,10,24),TEXT("Dark"));
     for(float Y : {-72.f,72.f}) for(float Z : {46.f,202.f})
         Box(Gate+FVector(16,Y,Z),FVector(4,6,6),TEXT("Metal"));
-    // Wider iron hatch, propped open on its west hinge. This is a dark drop,
-    // not a sewer level: entering it uses the existing below-quay spawn reset.
+    // Wider iron hatch, propped open on its west hinge above the sewer shaft.
     const FVector Grate(-1580,3900,0);
     for(float X : {-121.f,121.f}) Box(Grate+FVector(X,0,2),FVector(12,234,4),TEXT("Stone"),true);
     for(float Y : {-111.f,111.f}) Box(Grate+FVector(0,Y,2),FVector(230,12,4),TEXT("Stone"),true);
     for(float X : {-111.f,111.f}) Box(Grate+FVector(X,0,-105),FVector(8,210,210),TEXT("Stone"),true);
     for(float Y : {-101.f,101.f}) Box(Grate+FVector(0,Y,-105),FVector(214,8,210),TEXT("Stone"),true);
-    // Unlit darkness occludes the global harbor plane without blocking descent.
-    Box(Grate+FVector(0,0,-18),FVector(222,202,1),TEXT("SewerVoid"));
+    // DockSewer continues the shaft down to a real landing; no blackout lid.
     const FVector Hinge=Grate+FVector(-120,0,7);
     const FRotator Open(76,0,0);
     auto Hatch=[&](FVector P,FVector Size){Box(Hinge+Open.RotateVector(P),Size,TEXT("RustIron"),true,Open);};
