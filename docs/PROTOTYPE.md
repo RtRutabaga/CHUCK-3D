@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 2 atmosphere: eleven Astral Sea holes break the sewer floor; use the side banks or jump, since their visual bed has no collision. Falling into one returns Chuck to dock spawn. Purple rupture lighting replaces sewer lamps. Supplied Sewer.wav crossfades in underground and loops; the docks soundtrack returns on reset. Existing controls apply.
+
 October 2 sewer update: the side-gate hatch leads by physical fall into the connected winding tunnel prototype. Existing movement/camera controls apply underground; R / controller View returns to dock spawn. No entry interaction, loading question or sewer checkpoint. See SEWER-PROTOTYPE.md and latest HANDOFF for the verified package.
 
 September 30 setting scope: additive Waterdeep fountain plaza, walls, closed sewer gate and dawn lamps/torches, loosely based on the original 2D text maps. Preserve existing geometry and Claude's current gameplay/NPC systems. See WATERDEEP-PLAZA.md and latest HANDOFF for routes and actual validation.

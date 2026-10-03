@@ -1,5 +1,7 @@
 # Project brief
 
+October 2 sewer atmosphere authorization: use the supplied Sewer.wav underground. Remove warm lamps; purple Astral Sea floor ruptures supply the only underground lighting, with translucent warped oil-slick films above genuine fall hazards. Keep a traversable stone bank and existing surface lighting/music. See SEWER-PROTOTYPE.md for implementation and HANDOFF for verification.
+
 October 2 sewer authorization: build a connected, much longer winding underground passage entered by falling through the side-gate grate, without a question/prompt. Rounded knobbly stone tunnel walls, north first then across and winding south. This supersedes earlier sewer-interior exclusions for this prototype; no full campaign or copied dialogue. See SEWER-PROTOTYPE.md and HANDOFF for actual implementation/testing.
 
 October 2 hatch update: the user requested the side-gate sewer grate widened, rusty and hinged open over black depths. It is now a visual open shaft with a real paving gap and the existing below-quay reset behavior; no sewer map, transition or exploration interior is included. This supersedes the closed-ground-grate presentation below; the plaza drain and city gate stay closed.

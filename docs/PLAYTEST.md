@@ -4,6 +4,8 @@ Scope: one connected Waterdeep docks scene with Claude's parkour areas, a new Do
 
 ## Launch
 
+Sewer atmosphere: follow the stone banks beside eleven purple floor ruptures. The translucent oil-slick films and starry bed are visual only; stepping into a hole falls and resets Chuck to dock spawn. Check visibility around each bend with both camera heights, and listen for Sewer.wav fading in on descent and the docks score returning after reset. Purple rupture light replaces all sewer lamps. The recording loops every 2:54; its musical repeat transition still needs listening feedback.
+
 Sewer route (October 2): pass through the DOCK STREET opening, continue to the far court by the new finger piers, and find the small gate in its western wall. The open rusty grate is beside it, opposite the bench. Walk or jump into the opening: Chuck falls to the sewer landing without a prompt. Follow the rounded tunnel north, across its winding upper stretch, then back south to the temporary collapsed end. Use mouse/right stick to compare low and elevated orbit views at bends. R / controller View returns to the dock spawn; there is no climb-back exit yet. The plaza's separate barred drain remains closed.
 
 The new fountain plaza is beyond the market and customs terrace. Follow Chandlers' Row to its far end and continue along the narrow quay path east of the terrace, or follow the service quay around the waterside storehouse. Both lead to the fountain, shops and walled square. The sewer arch in the eastern wall and the large city gate remain closed. Compare the approach and fountain loop at both low and elevated orbit heights; check that dawn lighting leaves landing surfaces readable while torches and lamps stand out. See WATERDEEP-PLAZA.md.

@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — sewer score and astral ruptures
+
+Runtime `a96c2ae`: supplied Sewer.wav loops/crossfades underground; eleven purple-lit collision holes with noncolliding closed astral wells and animated translucent oil-slick films. Warm sewer lamps removed; sun/sky and character lighting channels restore on surface return. No character/rig changes. Inside-bank collision stall corrected by routing automated movement around outer bends; white sky leak around shallow beds fixed by visual chasm sides/ends. Two new materials plus source/imported sound, about 52.2 MB through LFS; fsck/dry run passed, remote allowance unknown. No install/download/original-game mutation. See HANDOFF Update43 for intermediate failures and exact provenance.
+
+Final build `Local/astral-chasm-build.log`; all four sewer views reviewed (`Local/astral-chasm-capture.log`). Verifier `Local/verify-package-20261002-232334.log`: 125 gameplay checks, all mandatory existing setting checks, 372 sewer floor/sweep samples and eleven open holes passed. Final actual-character run `Local/astral-chasm-traversal.log`: shaft landing1.54 s, full route371, rupture reset, surface restoration, total115.95 s; sewer score playing past loop boundary. Launcher receipt checked at `a96c2ae`, previous package preserved under `Builds/Windows-Previous-20261002-Astral`. No manual listening, physical Xbox, subjective camera, MotionCapture or performance repeat; art remains provisional. Generated output excluded. Next part of the work can be done here.
+
 ## October 2 — connected winding sewer
 
 Runtime `c075559` / `a5fc9bf` / `07fd279`: seamless grate fall to a 9 m-deep landing and 243.52 m rounded knobbly stone tunnel; north first, across east, winding south. Dark drainage, warm lamps, temporary collapsed end; R / View resets, no prompt/checkpoint/exit climb. Narrow reset exception in ChuckCharacter is the only controller edit; rig/traversal otherwise unchanged. Reused existing dependencies/assets, no imports/install. First shell invisible inside corrected; first route timed out from cleared run input; corrected holding run. Final seam/reflection and automated shutdown fixes. Obsolete automated runs cleaned up (a brief surviving-child overlap occurred before final verification).
