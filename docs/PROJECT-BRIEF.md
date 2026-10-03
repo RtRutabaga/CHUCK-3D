@@ -1,5 +1,7 @@
 # Project brief
 
+October 2 hatch update: the user requested the side-gate sewer grate widened, rusty and hinged open over black depths. It is now a visual open shaft with a real paving gap and the existing below-quay reset behavior; no sewer map, transition or exploration interior is included. This supersedes the closed-ground-grate presentation below; the plaza drain and city gate stay closed.
+
 October 2 sewer-location correction: stage the future sewer entrance at the ground grate beside a modest side gate on the city-facing wall of far Dock Street, opposite the bench. The existing plaza arch remains drain dressing. Sewer access/interior is still deferred.
 
 October 1: the user requested a larger inaccessible coastal-city vista, connecting the opposite waterfront to the town around a sheltered harbor, with further roof districts and low-detail surrounding country visible from the highest playable roof. See COASTAL-VISTA.md. This expands scenery, not campaign or playable area.
