@@ -71,7 +71,6 @@ void BuildDockSewer(UWorld* World)
     }
     auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Stone.M_Stone"));
     auto* Dark=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Dark.M_Dark"));
-    auto* Water=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Water.M_Water"));
     auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
@@ -93,7 +92,7 @@ void BuildDockSewer(UWorld* World)
         const float A=PI*J/Arc;
         const float Bump=6*FMath::Sin(I*1.31f+J*2.11f)+4*FMath::Cos(I*.63f-J*1.73f);
         const float X=(Width(I)+Bump)*FMath::Cos(A);
-        const float Z=12+(320+Bump)*FMath::Sin(A);
+        const float Z=(320+Bump)*FMath::Sin(A);
         V.Add(Route[I]+Right[I]*X+FVector(0,0,Z));
         N.Add((-Right[I]*FMath::Cos(A)-FVector::UpVector*FMath::Sin(A)).GetSafeNormal());
         UV.Add(FVector2D(I*.65f,J*.24f));
@@ -122,7 +121,8 @@ void BuildDockSewer(UWorld* World)
         V.Add(Route[I]+Right[I]*(Side*38)+FVector(0,0,.8f));N.Add(FVector::UpVector);UV.Add(FVector2D(Side*.5f,I*.12f));
     }
     for(int32 I=0;I<V.Num()/2-1;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
-    MakeMesh(V,T,N,UV,Water,false);
+    // Dark effluent ribbon avoids reflecting the outdoor sky below ground.
+    MakeMesh(V,T,N,UV,Dark,false);
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     auto* Rocks=NewObject<UInstancedStaticMeshComponent>(Owner);Rocks->SetupAttachment(Root);Rocks->SetStaticMesh(Sphere);
@@ -176,7 +176,7 @@ void BuildDockSewer(UWorld* World)
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
-        struct FRun { int32 Target=5;float Time=0;bool Landed=false;bool Finished=false;FTimerHandle Timer; };
+        struct FRun { int32 Target=5;float Time=0;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
         auto Run=MakeShared<FRun>();
         FTimerHandle Start;
         World->GetTimerManager().SetTimer(Start,[World,Run](){
@@ -185,6 +185,7 @@ void BuildDockSewer(UWorld* World)
             Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
             Chuck->SetRunHeld(true);
             World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run](){
+                if(Run->Completed) return;
                 Run->Time+=.02f;
                 if(!Run->Landed && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetActorLocation().Z<-800)
                 {Run->Landed=true;UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_FALL landed=1 elapsed=%.2f z=%.2f"),Run->Time,Chuck->GetActorLocation().Z);}
@@ -204,7 +205,9 @@ void BuildDockSewer(UWorld* World)
                 {
                     const int32 Failures=(!Run->Landed)+(!Run->Finished);
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d reached=%d elapsed=%.2f"),Failures,Run->Landed,Run->Finished,Run->Target,Run->Time);
-                    World->GetTimerManager().ClearTimer(Run->Timer);World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+                    Run->Completed=true;
+                    // Do not destroy this captured delegate before using World.
+                    World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
                 }
             },.02f,true);
         },3.f,false);
