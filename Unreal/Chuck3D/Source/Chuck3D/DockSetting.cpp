@@ -90,10 +90,10 @@ void BuildDockSetting(UWorld* World)
     };
     // Continuous ground, not isolated platforms. All new route surfaces meet z=0.
     Box(FVector(-1150,-700,-45),FVector(1300,3200,90),TEXT("Stone"),true); // west dock street
-    Box(FVector(-150,750,-45),FVector(700,700,90),TEXT("Stone"),true); // tavern court
+    Box(FVector(-75,750,-45),FVector(850,700,90),TEXT("Stone"),true); // enlarged tavern court
     Box(FVector(600,-1400,-45),FVector(600,800,90),TEXT("Stone"),true); // market service quay
     // Full depth to the two old frontage shells; leave their test-facing walls intact.
-    Box(FVector(-60,530,155),FVector(560,270,310),TEXT("Plaster"),true);
+    Box(FVector(-10,665,155),FVector(660,660,310),TEXT("Plaster"),true);
     // Roofless stone store: solid lower remnant, genuinely stepped/broken upper
     // courses rather than decorative damage over an invisible full-height box.
     Box(FVector(-600,50,64),FVector(200,600,128),TEXT("Stone"),true);
@@ -219,9 +219,17 @@ void BuildDockSetting(UWorld* World)
     House(FVector(-780,-1880,0),FVector(340,350,370),TEXT("Plaster"));
     House(FVector(-780,720,0),FVector(340,340,500),TEXT("Plaster"));
     House(FVector(600,-1550,0),FVector(340,320,400),TEXT("Stone"));
-    // Tavern gets its back wall/roof, but the familiar front and starting route stay.
+    // Deeper tavern: pitched roof spans the expanded body, with closed gables.
     for(float Side : {-1.f,1.f})
-        Box(FVector(-60,530+Side*70,346),FVector(590,167,12),TEXT("Roof"),false,FRotator(0,0,Side*25));
+        Box(FVector(-10,665+Side*165,387),FVector(700,384,12),TEXT("Roof"),true,FRotator(0,0,Side*25));
+    for(int32 I=0;I<22;++I)
+    {
+        const float Y=350+I*30.f;
+        const float H=FMath::Max(3.f,154-FMath::Abs(Y-665)*.4663f);
+        for(float X : {-340.f,320.f})
+            Box(FVector(X,Y,310+H*.5f),FVector(8,30,H),TEXT("Wood"));
+    }
+    Box(FVector(-10,665,469),FVector(706,14,14),TEXT("Dark"));
 
     // Loading-door surrounds, cargo battens and hoists: dress existing obstacles
     // without adding collision or changing their ledges, roof gaps or chimney widths.
@@ -478,16 +486,16 @@ void BuildDockSetting(UWorld* World)
         Beam(FVector(-725,Y,Z+15-Sag),FVector(-725,Y+15,Z-Sag),.65f,TEXT("WoodLight"));
     }
     // The back of the tavern is a building, not an unarticulated wall.
-    for(float X : {-290.f,-70.f,150.f})
+    for(float X : {-250.f,-10.f,230.f})
     {
-        Box(FVector(X,668,174),FVector(90,7,114),TEXT("Wood"));
-        Box(FVector(X,673,174),FVector(72,4,96),TEXT("Dark"));
-        Box(FVector(X,677,174),FVector(5,4,96),TEXT("WoodLight"));
-        Box(FVector(X,677,174),FVector(72,4,5),TEXT("WoodLight"));
-        Box(FVector(X,680,112),FVector(105,25,8),TEXT("Stone"));
+        Box(FVector(X,998,174),FVector(90,7,114),TEXT("Wood"));
+        Box(FVector(X,1003,174),FVector(72,4,96),TEXT("Dark"));
+        Box(FVector(X,1007,174),FVector(5,4,96),TEXT("WoodLight"));
+        Box(FVector(X,1007,174),FVector(72,4,5),TEXT("WoodLight"));
+        Box(FVector(X,1010,112),FVector(105,25,8),TEXT("Stone"));
     }
-    for(float X : {-330.f,-180.f,-30.f,120.f,210.f})
-        Box(FVector(X,668,150),FVector(11,9,300),TEXT("Wood"));
+    for(float X : {-330.f,-180.f,-30.f,120.f,310.f})
+        Box(FVector(X,998,150),FVector(11,9,300),TEXT("Wood"));
     // Dock Street entrance: the town beyond this labeled wall is now a real
     // playable neighborhood. Keep the western/far city boundary closed.
     // Match the plaza's masonry thickness and battlements while retaining the
@@ -520,7 +528,8 @@ void BuildDockSetting(UWorld* World)
     // Wall segments leave a 320 cm entrance at the sign, while the next city
     // wall remains solid and non-traversable.
     Box(FVector(-1530,890,100),FVector(540,20,200),TEXT("Stone"),true);
-    Box(FVector(-370,890,100),FVector(1140,20,200),TEXT("Stone"),true);
+    // Shorten the partial divider to make room for the deeper tavern.
+    Box(FVector(-700,890,100),FVector(480,20,200),TEXT("Stone"),true);
     for(float X : {-1270.f,-930.f})
     {
         Box(FVector(X,890,110),FVector(18,30,220),TEXT("Wood"));
@@ -709,7 +718,7 @@ void BuildDockSetting(UWorld* World)
     Box(FVector(-500,1000,-45),FVector(20,200,90),TEXT("Stone"),true);
     // The courtyard now joins Dock Street northward; remove its obsolete
     // cross-street divider. Keep only a low kerb at the real eastern quay edge.
-    Box(FVector(190,750,20),FVector(20,700,40),TEXT("Stone"),true);
+    Box(FVector(340,750,20),FVector(20,700,40),TEXT("Stone"),true);
     BuildDockWeathering(World);
 
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
@@ -717,7 +726,8 @@ void BuildDockSetting(UWorld* World)
         int32 Failed=0;
         const FVector Route[]={FVector(-550,-430,0),FVector(-1100,-430,0),FVector(-1100,-1450,0),
             FVector(-1100,-2150,0),FVector(-540,-2150,0),FVector(-540,-1730,0),
-            FVector(350,-1100,0),FVector(350,-1730,0),FVector(-400,750,0)};
+            FVector(350,-1100,0),FVector(350,-1730,0),FVector(-400,750,0),
+            FVector(-400,1060,0),FVector(250,1060,0)};
         for(const FVector P : Route)
         {
             FHitResult Hit;
@@ -728,13 +738,14 @@ void BuildDockSetting(UWorld* World)
         for(const TPair<FVector,FVector>& Leg : {TPair<FVector,FVector>(Route[0],Route[1]),
             TPair<FVector,FVector>(Route[1],Route[2]),TPair<FVector,FVector>(Route[2],Route[3]),
             TPair<FVector,FVector>(Route[3],Route[4]),TPair<FVector,FVector>(Route[4],Route[5]),
-            TPair<FVector,FVector>(Route[6],Route[7])})
+            TPair<FVector,FVector>(Route[6],Route[7]),TPair<FVector,FVector>(Route[8],Route[9]),
+            TPair<FVector,FVector>(Route[9],Route[10])})
         {
             FHitResult Hit;
             if(World->SweepSingleByChannel(Hit,Leg.Key+FVector(0,0,35),Leg.Value+FVector(0,0,35),
                 FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f))) ++Failed;
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_WORLD_CHECK_COMPLETE failures=%d floor_samples=9 capsule_routes=6"),Failed);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_WORLD_CHECK_COMPLETE failures=%d floor_samples=11 capsule_routes=8"),Failed);
         int32 StreetFailures=0;
         const FVector Street[]={FVector(-1100,800,0),FVector(-1100,1050,0),FVector(-1150,1050,0),
             FVector(-1150,1800,0),FVector(750,1800,0),FVector(750,2300,0),
@@ -870,6 +881,19 @@ void BuildDockSetting(UWorld* World)
         World->GetTimerManager().SetTimer(Exit,[World](){if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},18.f,false);
     }
     // Opt-in setting review only; normal play and the traversal tests keep their camera.
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTavernCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(75);
+        const FVector Views[]={FVector(600,0,350),FVector(260,1080,310),FVector(300,1050,1350)};
+        const FVector Targets[]={FVector(-10,620,180),FVector(-60,980,180),FVector(-80,670,0)};
+        for(int32 I=0;I<3;++I)
+        {
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P=Views[I],T=Targets[I]](){Camera->SetActorLocationAndRotation(P,(T-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);},4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){const FString Folder=FPaths::ScreenShotDir()/TEXT("Tavern");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);},6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},16.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),

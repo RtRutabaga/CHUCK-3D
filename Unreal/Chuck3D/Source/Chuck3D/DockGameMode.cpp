@@ -170,9 +170,9 @@ void ADockGameMode::StartPlay()
     for(float X : {210.f,450.f,790.f}) for(float Y : {-100.f,100.f})
         Shape(TEXT("MooringPost"),FVector(X,Y,-25),FVector(22,22,110),TEXT("Wood"),Cylinder);
     // Human-sized tavern frontage, quiet and closed. No interior or dialogue.
-    Shape(TEXT("Tavern"),FVector(-60,365,155),FVector(560,60,310),TEXT("Plaster"));
-    Shape(TEXT("TavernRoof"),FVector(-60,357,314),FVector(600,100,16),TEXT("Roof"));
-    for(float X : {-330.f,-140.f,40.f,210.f})
+    Shape(TEXT("Tavern"),FVector(-10,365,155),FVector(660,60,310),TEXT("Plaster"));
+    Shape(TEXT("TavernRoof"),FVector(-10,357,314),FVector(700,100,16),TEXT("Roof"));
+    for(float X : {-330.f,-140.f,40.f,210.f,310.f})
         Shape(TEXT("Timber"),FVector(X,328,153),FVector(14,14,306),TEXT("Wood"));
     Shape(TEXT("Door"),FVector(40,326,105),FVector(95,10,210),TEXT("Wood"));
     Shape(TEXT("DoorLatch"),FVector(70,318,100),FVector(8,6,3),TEXT("Dark"));
@@ -398,18 +398,19 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("WindowSill"),FVector(X,305,112),FVector(90,24,7),TEXT("Stone"),nullptr,false);
     }
     for(float Z : {28.f,218.f,298.f})
-        Shape(TEXT("HorizontalTimber"),FVector(-60,326,Z),FVector(550,14,10),TEXT("Wood"),nullptr,false);
+        Shape(TEXT("HorizontalTimber"),FVector(-10,326,Z),FVector(650,14,10),TEXT("Wood"),nullptr,false);
     for(int32 Slat=0;Slat<8;++Slat)
         Shape(TEXT("DoorBoard"),FVector(-2+Slat*12,319,105),FVector(10.5f,3,205),Slat%3 ? TEXT("Wood") : TEXT("WoodLight"),nullptr,false);
     for(float Z : {42.f,177.f})
         Shape(TEXT("DoorIron"),FVector(40,315,Z),FVector(91,3,5),TEXT("Dark"),nullptr,false);
     // Overlapping slate strips and projecting rafters give the frontage a roof silhouette.
-    for(int32 Row=0;Row<5;++Row) for(int32 Col=0;Col<20;++Col)
+    for(int32 Row=0;Row<5;++Row) for(int32 Col=0;Col<24;++Col)
     {
-        auto* Tile=Shape(TEXT("RoofSlate"),FVector(-349+Col*30,315+Row*22,320+Row*10),FVector(29,30,5),Row%2 ? TEXT("Roof") : TEXT("Dark"),nullptr,false);
-        Tile->SetActorRotation(FRotator(0,0,24));
+        const float Y=340+Row*22.f;
+        auto* Tile=Shape(TEXT("RoofSlate"),FVector(-345+Col*29,Y,310+(Y-335)*.4663f+9),FVector(28,26,3),Row%2 ? TEXT("Roof") : TEXT("Dark"),nullptr,false);
+        Tile->SetActorRotation(FRotator(0,0,-25));
     }
-    for(float X : {-320.f,-200.f,-80.f,40.f,160.f})
+    for(float X : {-320.f,-200.f,-80.f,40.f,160.f,280.f})
         Shape(TEXT("Rafter"),FVector(X,323,308),FVector(10,90,12),TEXT("Wood"),nullptr,false);
     for(int32 Band=0;!BarrelMesh && Band<12;++Band)
     {
