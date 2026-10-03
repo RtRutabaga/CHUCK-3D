@@ -22,6 +22,10 @@ void BuildDockWeathering(UWorld* World)
     Stems->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube")));
     Stems->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_Wood.M_Wood")));
     Stems->SetCollisionEnabled(ECollisionEnabled::NoCollision); Stems->RegisterComponent();
+    auto* RenderEdges=NewObject<UInstancedStaticMeshComponent>(Owner); RenderEdges->SetupAttachment(Root);
+    RenderEdges->SetStaticMesh(Stems->GetStaticMesh());
+    RenderEdges->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_WeatheredPlaster.M_WeatheredPlaster")));
+    RenderEdges->SetCollisionEnabled(ECollisionEnabled::NoCollision); RenderEdges->RegisterComponent();
     TArray<FVector> Leaves,Normals,Chips,ChipNormals; TArray<int32> Faces,ChipFaces;
     TArray<FVector2D> UV,ChipUV; TArray<FLinearColor> Colors,ChipColors;
     FRandomStream Rng(48391);
@@ -81,9 +85,14 @@ void BuildDockWeathering(UWorld* World)
             const FVector Q=P+U*(FMath::Cos(A)*W*.5f*R)+V*(FMath::Sin(A)*H*.5f*R);
             Chips.Add(Q); ChipNormals.Add(N); ChipUV.Add(FVector2D(FMath::Cos(A)*.5f+.5f,FMath::Sin(A)*.5f+.5f)); ChipColors.Add(FLinearColor::White);
             // Thin, chipped render rim instead of rectangular masonry stickers.
-            Stem(Q+N*.7f,Q+V*Rng.FRandRange(2,8),1.3f);
+            const float Edge=Rng.FRandRange(2,8);
+            RenderEdges->AddInstance(FTransform(FRotator::ZeroRotator,Q+N*.7f+V*(Edge*.5f),FVector(1.3f,1.3f,Edge)/100));
         }
-        for(int32 I=0;I<16;++I) ChipFaces.Append({Start,Start+1+I,Start+1+(I+1)%16});
+        for(int32 I=0;I<16;++I)
+        {
+            const int32 A=Start+1+I,B=Start+1+(I+1)%16;
+            ChipFaces.Append({Start,A,B,Start,B,A}); // Stone material is single-sided.
+        }
     };
     Spall(FVector(-1367,-1950,95),FVector(1,0,0),100,140);
     Spall(FVector(-1297,-185,205),FVector(1,0,0),65,95);
