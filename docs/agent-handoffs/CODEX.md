@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — aged working docks
+
+Runtime `4443077`: maintained rough medieval dockside dressing in DockSetting/DockPlaza. Facade/door/shutter repairs, roof patches, workshop stores/ladder, laundry, bench repairs, shop supplies and canvas patches; existing materials/meshes reused, all additions noncolliding. No binaries/dependencies. Build `Local/aged-docks-build.log` succeeded. Setting views 1/7 and Plaza view1 inspected (capture logs `Local/aged-docks-setting-capture.log`, `Local/aged-docks-plaza-capture.log`). Verifier `Local/verify-package-20261002-181315.log` passed 125 gameplay and all setting/music checks. No physical-controller or MotionCapture repeat. Root launcher receipt checked, backup `Builds/Windows-Previous-20261002-AgedDocks`; generated output untracked. Still prototype geometry and materials, not final weathered art. Next part of the work can be done here.
+
 ## October 2 — plaza connections and town backdrop
 
 Runtime `7c28408` / `6770cda`: removed the 48 cm crosswise approach lip, joined the older western boundary to the plaza wall with a 4.8 m stone return, and added 38 noncolliding vista buildings behind the closed plaza gate. No binary assets/dependencies. First visual review led to extra rear roof rows hiding the lane's platform edge. Final build `Local/plaza-connection-build-final.log`; final capture `Local/plaza-connection-capture-final.log` (View6 inspected; junction and gate views inspected in first capture). Final verifier `Local/verify-package-20261002-175913.log` passed 125 gameplay and all setting/music checks. No physical-controller or MotionCapture repeat. Root launcher promoted and receipt checked; backup `Builds/Windows-Previous-20261002-PlazaConnection`. Generated files untracked. Next part of the work can be done here.
