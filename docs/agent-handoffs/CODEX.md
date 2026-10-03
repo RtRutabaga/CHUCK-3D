@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — dimmer sewer and wet footsteps
+
+Runtime `0d34ee8`, root main, preserves Claude's latest guards (`f82b5ff` baseline). Blue fill1600 and purple2600; stream/recessed bed start at wall and entry landing slab removed. Six original synthetic puddle sound variants, separately generated/imported and LFS-tracked (~345kB), replace footsteps only at wet grounded paw contacts. Dry sewer rock uses stone. No rig/controller/animation changes beyond narrow footstep dispatch. See HANDOFF Update50 for complete checks/limits. Build succeeded; actual wet/dry test48 wet/43 dry with no dry splashes; full sewer traversal/fall/local respawns/dock return passed120.67s; all six captures reviewed; standard verifier127 plus world/cave/music/tavern checks passed. No manual listening, physical Xbox or MotionCapture. Root launcher receipt/hash checked, previous preserved as `Builds/Windows-Previous-20261003-DimStream`; generated output excluded. No installs or original-game mutations. Next part of the work can be done here.
+
 ## October 3 — first playable tavern room
 
 Runtime `d056c62`: hollow enlarged tavern with open inward door, worn timber interior, tables/benches, bar/stools/shelves, barrels, warm lamps and stone hearth with solid roof flue. Shell/gables/roof and furniture collision, clear centre/east aisles. Doorway shutter overlap and timber behind fire corrected. Static flames, primitive props and repetitive materials remain provisional; no bartender/dialogue/shop/upstairs or controller/character changes. Existing assets reused, no new binaries/install/original-game edits.
