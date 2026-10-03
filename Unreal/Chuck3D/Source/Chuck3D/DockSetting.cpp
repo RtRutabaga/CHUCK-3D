@@ -114,6 +114,7 @@ void BuildDockSetting(UWorld* World)
     // Jagged foundation stones retain the central climb/shimmy surfaces of
     // the L remnant but visibly lose their continuous coping and straight ends.
     for(int32 I=0;I<8;++I)
+        if(I<2 || I>5) // surviving central landing must clear Chuck's capsule
         Box(FVector(-115+I*22,-374,119+(I%3)*4),FVector(18,20,8+(I%3)*8),TEXT("Stone"),true,FRotator(0,I*11,0));
     for(int32 I=0;I<4;++I)
         Box(FVector(90,-324+I*20,119+(I%2)*7),FVector(18,17,12+(I%2)*14),TEXT("Stone"),true);
