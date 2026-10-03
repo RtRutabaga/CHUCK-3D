@@ -56,13 +56,15 @@ docs/SETUP.md), one heavy process at a time:
   (little finger most, index least) or, via `SetGrip`, a fist round a shaft
   (for the guard's spear later).
 - The sewer zombie (`Zombie` in `humans.json`, user 2026-10-03): a gaunt old
-  man (`old_caucasian_male` skin tinted grey by `skin_tint`), barefoot, in a
+  man long dead (`skin_texture` / `eye_texture`: `Tools/build_zombie_textures.py`
+  drains the `old_caucasian_male` skin grey-green, mottles it with rot and bruising,
+  veins and clustered sores, sinks the eye sockets; the eyes cloud), barefoot, in a
   shirt and trousers cut `ragged` (`tatter_hem` / `tatter_holes`: jagged hems
   pulled back a few cm and small worn-through holes). Its clips are an old
   man's: `ZombieIdle` and `ZombieWalk` from 137_33 "Old Man Walk" (the walk in
   place: `build_npc_mocap.py` takes out the hips' steady travel, records the
   speed, 37.5 cm/s, and loops on the best-matching step), `ZombieFall` from
-  113_08 "Lay down", played 1.6x as a collapse. Tried and dropped: 104_41
+  113_08 "Lay down" to 4.5 s (flat on its back), played 1.8x as a collapse. Tried and dropped: 104_41
   "ZombieWalk" (arms held out), 91_24, 104_13, 90_16. `ADockNPC` in
   `EDockHuman::Zombie` mode moves it kinematically (walls block it, it never
   steps off floor or over a gap), shambling at the clip's speed so the feet

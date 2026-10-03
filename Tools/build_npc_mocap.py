@@ -41,7 +41,8 @@ CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to
     'ZombieIdle': ('137_33', .3, 1.8, True),     # "Old Man Walk" before he sets off: stooped, swaying
     # (137_32 "Old Man Wait" leans on its knees: catching its breath, not dead)
     'ZombieWalk': ('137_33', 2.5, 6.0, 'walk'),  # "Old Man Walk": a slow, bent-kneed shuffle
-    'ZombieFall': ('113_08', 1.0, 2.6, False),   # "Lay down": knees go, down onto the floor, onto its back
+    'ZombieFall': ('113_08', 1.0, 4.5, False),   # "Lay down": knees go, down onto the floor, flat on its back
+    # (cut at 2.6 s it was still propped on its elbows, as if getting up; 111_12 "Lay down" ends sitting)
     # Tried and dropped for the zombie: 104_41 ZombieWalk (arms out), 91_24
     # HurtLegWalk, 104_13 StumbleWalk, 90_16 "fall on face" (a dive).
     # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21

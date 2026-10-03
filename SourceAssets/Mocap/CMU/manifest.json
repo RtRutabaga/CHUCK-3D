@@ -34,14 +34,6 @@
                       "bytes":  672852
                   },
                   {
-                      "file":  "137_32.bvh",
-                      "description":  "Old Man Wait",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_32.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "055A87E6509F2FAF836E3CDBD2C64914F5AD4A102015FFB8354BB246BE98C5FC",
-                      "bytes":  3810827
-                  },
-                  {
                       "file":  "137_33.bvh",
                       "description":  "Old Man Walk",
                       "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_33.bvh",

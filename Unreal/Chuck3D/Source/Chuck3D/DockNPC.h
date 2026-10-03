@@ -86,7 +86,8 @@ public:
      * shambles after him at less than his walking pace, never far from where it
      * stood and never over a gap in the floor. In reach it rears up, arms
      * lifting (the tell), then lunges down at him: a bite costs two sanity.
-     * Nine scratches put it down; it crumples and leaves cigarettes.
+     * Fourteen scratches put it down (user 2026-10-03: harder, hitting more often
+     * and more easily); it crumples flat and leaves cigarettes.
      */
     static ADockNPC* SpawnZombie(UWorld* World, const FVector& Feet, float Yaw);
     bool IsHostile() const { return Kind == EDockHuman::Zombie; }
@@ -98,16 +99,16 @@ public:
     /** Shamble speed (cm/s): the walk clip's own, at this body's scale. */
     float GetZombieWalkSpeed() const;
     int32 Cigarettes = 4;
-    static constexpr int32 ZombieHealth = 9;
+    static constexpr int32 ZombieHealth = 14;
     static constexpr int32 ZombieBite = 2;          // sanity a bite costs
-    static constexpr float ZombieNotice = 480.f;    // cm: it notices the rat this close, whichever way it faces
-    static constexpr float ZombieSight = 750.f;     // and this far in front of it
+    static constexpr float ZombieNotice = 600.f;    // cm: it notices the rat this close, whichever way it faces
+    static constexpr float ZombieSight = 900.f;     // and this far in front of it
     static constexpr float ZombieLeash = 1100.f;    // never further than this from where it stood
-    static constexpr float ZombieStrike = 115.f;    // starts the lunge from here
-    static constexpr float ZombieBiteRange = 95.f;
-    static constexpr float ZombieWindup = .8f;
+    static constexpr float ZombieStrike = 150.f;    // starts the lunge from here
+    static constexpr float ZombieBiteRange = 130.f;
+    static constexpr float ZombieWindup = .5f;
     static constexpr float ZombieLungeTime = .45f;
-    static constexpr float ZombieRecover = 1.3f;
+    static constexpr float ZombieRecover = .6f;
     /** Eyes above the feet (cm), from this body's head bone. */
     float GetEyeHeight() const { return EyeHeight; }
 protected:

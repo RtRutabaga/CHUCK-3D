@@ -53,7 +53,7 @@
   "ZombieFall": {
    "fbx": "Anim/AS_Human_ZombieFall.fbx",
    "take": "113_08",
-   "frames": 79,
+   "frames": 136,
    "fps": 30,
    "loops": false,
    "speed_cm_s": 0.0

@@ -407,16 +407,16 @@
   },
   "Zombie": {
    "height_cm": 177,
-   "note": "The sewer's zombie (user 2026-10-03): a gaunt old dead man in rags, barefoot, grey skin.",
+   "note": "The sewer's zombie (user 2026-10-03): a gaunt old man long dead, in rags, barefoot. Decayed skin and clouded eyes from Tools/build_zombie_textures.py (on the old_caucasian_male skin and grey eye).",
    "macro": {
     "gender": 1.0,
-    "age": 0.82,
-    "muscle": 0.32,
-    "weight": 0.3,
+    "age": 0.9,
+    "muscle": 0.18,
+    "weight": 0.16,
     "height": 0.66,
     "proportions": 0.5,
     "cupsize": 0.5,
-    "firmness": 0.2,
+    "firmness": 0.0,
     "race": {
      "african": 0.02,
      "asian": 0.03,
@@ -425,9 +425,9 @@
    },
    "skin": "old_caucasian_male",
    "skin_tint": [
-    0.55,
-    0.6,
-    0.52
+    0.9,
+    0.92,
+    0.86
    ],
    "eyes": "grey",
    "eyebrows": "eyebrow008",
@@ -437,22 +437,22 @@
     {
      "piece": "shirt",
      "sleeves": "rolled",
-     "ragged": 1.0,
+     "ragged": 1.45,
      "fabric": "rough_linen",
      "tint": [
-      0.13,
-      0.12,
-      0.095
+      0.085,
+      0.08,
+      0.06
      ]
     },
     {
      "piece": "trousers",
-     "ragged": 1.0,
+     "ragged": 1.35,
      "fabric": "caban",
      "tint": [
+      0.028,
       0.03,
-      0.034,
-      0.03
+      0.024
      ]
     },
     {
@@ -464,7 +464,9 @@
       0.014
      ]
     }
-   ]
+   ],
+   "skin_texture": "SourceAssets/NPCs/Humans/Textures/zombie_skin_diffuse.png",
+   "eye_texture": "SourceAssets/NPCs/Humans/Textures/zombie_eye.png"
   }
  }
 }

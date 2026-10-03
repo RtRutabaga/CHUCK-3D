@@ -53,7 +53,8 @@ namespace
     // skeleton's scale (Tools/build_npc_mocap.py CHUCK_WALK_LOOP; the hips are
     // scaled to each body); its collapse is a lay-down played fast.
     constexpr float ZombieClipSpeed = 37.5f;   // cm/s
-    constexpr float ZombieFallRate = 1.6f;
+    constexpr float ZombieFallRate = 1.8f;
+    constexpr float ZombiePace = 1.25f;        // the shamble clip played this much faster, and so it covers ground faster
     constexpr float ZombieTurnRate = 75.f;     // deg/s while shambling
     // Looking down at the rat: hardly at all until it's right at his feet
     // (a grown man doesn't crane at a rat across the street).
@@ -154,7 +155,7 @@ const TCHAR* ADockNPC::GetZombieStateName() const
     return Names[static_cast<int32>(ZState)];
 }
 
-float ADockNPC::GetZombieWalkSpeed() const { return ZombieClipSpeed * HipScale; }
+float ADockNPC::GetZombieWalkSpeed() const { return ZombieClipSpeed * ZombiePace * HipScale; }
 
 void ADockNPC::TurnZombie(const FVector& Toward, float DeltaSeconds, float Rate)
 {
@@ -234,11 +235,11 @@ void ADockNPC::TickZombie(float DeltaSeconds)
         break;
     case EZombie::Lunge:
         // Down and forward at him; one bite, hit or miss.
-        StepZombie(LungeDir, 170.f * FMath::Max(0.f, 1.f - ZTime / ZombieLungeTime) * DeltaSeconds * 1.6f);
+        StepZombie(LungeDir, 380.f * FMath::Max(0.f, 1.f - ZTime / ZombieLungeTime) * DeltaSeconds);
         if (!bBit && ZTime >= .22f)
         {
             bBit = true;
-            if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .5f
+            if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .25f
                 && Chuck->TakeBite(Location, ZombieBite)) ++Bites;
         }
         if (ZTime >= ZombieLungeTime) SetZombie(EZombie::Recover);
@@ -259,7 +260,7 @@ void ADockNPC::TickZombie(float DeltaSeconds)
         break;
     }
     // The walk clip runs with the ground covered, so the feet don't slide.
-    WalkTime += Moved / FMath::Max(1.f, GetZombieWalkSpeed());
+    WalkTime += Moved / FMath::Max(1.f, ZombieClipSpeed * HipScale);
     const auto Ease = [DeltaSeconds](float& Value, float Target, float Rate) { Value = FMath::FInterpTo(Value, Target, DeltaSeconds, Rate); };
     Ease(WalkBlend, Moved > 0.f ? 1.f : 0.f, 5.f);
     Ease(Rear, ZState == EZombie::Windup ? 1.f : 0.f, ZState == EZombie::Windup ? 3.5f : 6.f);
@@ -596,7 +597,7 @@ void ADockNPC::TakeScratch(const FVector& From)
 {
     if (Kind == EDockHuman::Zombie)
     {
-        // It barely notices each one (no stagger out of a lunge); the ninth puts it down.
+        // It barely notices each one: a jolt, nothing that stops it coming.
         if (ZState == EZombie::Dead) return;
         ++Scratches; ++Hits;
         FlinchTime = 0.f;
@@ -606,7 +607,7 @@ void ADockNPC::TakeScratch(const FVector& From)
             Blocker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             return;
         }
-        if (ZState == EZombie::Idle || ZState == EZombie::Shamble || ZState == EZombie::Recover) SetZombie(EZombie::Hurt);
+        if (ZState == EZombie::Idle) SetZombie(EZombie::Shamble);
         return;
     }
     ++Scratches;
@@ -795,8 +796,10 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             // down and forward at the rat, arms reaching; a jolt when scratched.
             const float Alive = DeathTime < 0.f ? 1.f : FMath::Clamp(1.f - DeathTime / .2f, 0.f, 1.f);
             const float R = Rear * Alive, L = Reach * Alive, F = Flinch * Alive;
-            Delta[Spine2] = Pitch(-6.f * R + 16.f * L - 8.f * F);
-            Delta[Chest] = Pitch(-8.f * R + 14.f * L - 6.f * F) * Yaw(9.f * F);
+            // A deeper stoop than the clip's old man, the head hung forward.
+            Delta[Spine2] = Pitch(5.f * Alive - 6.f * R + 16.f * L - 8.f * F);
+            Delta[Chest] = Pitch(6.f * Alive - 8.f * R + 14.f * L - 6.f * F) * Yaw(9.f * F);
+            Delta[Neck] = Pitch(8.f * Alive) * Delta[Neck];
             Delta[Head] = Pitch(-6.f * F) * Delta[Head];
             for (int32 Side = 0; Side < 2; ++Side)
             {

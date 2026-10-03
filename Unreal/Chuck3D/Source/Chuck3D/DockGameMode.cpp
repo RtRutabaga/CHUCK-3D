@@ -21,6 +21,7 @@
 #include "ChuckCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/CameraActor.h"
+#include "Components/PointLightComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "ChuckAnimInstance.h"
@@ -520,6 +521,23 @@ void ADockGameMode::StartPlay()
     if(bWallSideOnly) { bSmokeTest=true; TestStage=116; }
 }
 
+namespace
+{
+    // A lamp on a review camera, for looking at someone in the dark sewer (its own lighting channel too).
+    void SetReviewLamp(AActor* Camera, bool bOn)
+    {
+        if(!Camera) return;
+        auto* Lamp=Camera->FindComponentByClass<UPointLightComponent>();
+        if(!Lamp && bOn)
+        {
+            Lamp=NewObject<UPointLightComponent>(Camera); Lamp->SetupAttachment(Camera->GetRootComponent());
+            Lamp->SetIntensity(5000.f); Lamp->SetAttenuationRadius(1000.f); Lamp->SetLightColor(FLinearColor(.9f,.88f,.82f));
+            Lamp->SetLightingChannels(true,true,false); Lamp->SetCastShadows(true); Lamp->RegisterComponent();
+        }
+        if(Lamp) Lamp->SetVisibility(bOn);
+    }
+}
+
 void ADockGameMode::TickNPCCapture(float DeltaSeconds)
 {
     struct FShot { const TCHAR* Name; float Distance, Yaw, Height, Aim, Fov; };
@@ -551,6 +569,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,Shot.Aim+Lift)-At).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
         PC->SetViewTarget(NPCCamera.Get());
+        SetReviewLamp(NPCCamera.Get(),NPC->IsHostile());   // the zombie stands in the dark
         NPCShot=Step; bNPCShotTaken=false;
         if(FCString::Strcmp(Shot.Name,TEXT("Scratched"))==0) NPC->TakeScratch(NPC->GetActorLocation()+NPC->GetActorForwardVector()*50.f);
     }
@@ -2148,6 +2167,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
         ZombieStartDistance=FVector::Dist2D(Zombie->GetActorLocation(),Chuck->GetActorLocation()); ZombieClosest=ZombieStartDistance;
         ZombieSanityBefore=Chuck->GetSanity(); ZombieCigarettesBefore=ACigarettePickup::CountInWorld(GetWorld());
         bZombieWindup=bZombieAliveAtEight=false; ZombieKillAt=-1; ZombieHitsGiven=0;
+        // Watched, lit, from the side, for the record (the follow camera looks down at the rat).
+        if(APlayerController* ZPC=GetWorld()->GetFirstPlayerController())
+        {
+            auto* Watch=GetWorld()->SpawnActor<ACameraActor>();
+            const FVector Mid=(Zombie->GetActorLocation()+Chuck->GetActorLocation())*.5f-FVector(0,0,30.f);
+            const FVector Across=FVector::CrossProduct(FVector::UpVector,(Chuck->GetActorLocation()-Zombie->GetActorLocation()).GetSafeNormal2D());
+            const FVector Eye=Mid+Across*330.f+FVector(0,0,90.f);
+            Watch->SetActorLocationAndRotation(Eye,(Mid-Eye).Rotation()); Watch->GetCameraComponent()->SetFieldOfView(75.f);
+            SetReviewLamp(Watch,true); ZPC->SetViewTarget(Watch);
+        }
         TestStage=114; StageTime=0;
     }
     else if(TestStage==114)
@@ -2157,27 +2186,27 @@ void ADockGameMode::Tick(float DeltaSeconds)
         ZombieClosest=FMath::Min(ZombieClosest,static_cast<float>(FVector::Dist2D(Zombie->GetActorLocation(),Chuck->GetActorLocation())));
         bZombieWindup|=FCString::Strcmp(Zombie->GetZombieStateName(),TEXT("Windup"))==0;
         if(FMath::Fmod(StageTime,.5f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_ZOMBIE_TRACK t=%.2f state=%s p=%s chuck=%s"),StageTime,Zombie->GetZombieStateName(),*Zombie->GetActorLocation().ToString(),*Chuck->GetActorLocation().ToString());
-        for(const float Shot : {1.5f,4.f,5.f,5.3f})
+        for(const float Shot : {1.5f,2.9f,3.2f,3.4f})
             if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
                 FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Zombie_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
         // Once it has bitten (or by 9 s), nine scratches, a quarter second apart.
         if(ZombieKillAt<0 && (Zombie->GetBitesLanded()>0 || StageTime>9.f)) ZombieKillAt=StageTime+.6f;
-        if(ZombieKillAt>=0 && ZombieHitsGiven<ADockNPC::ZombieHealth && StageTime>=ZombieKillAt+ZombieHitsGiven*.25f)
+        if(ZombieKillAt>=0 && ZombieHitsGiven<ADockNPC::ZombieHealth && StageTime>=ZombieKillAt+ZombieHitsGiven*.15f)
         {
             Zombie->TakeScratch(Chuck->GetActorLocation()); ++ZombieHitsGiven;
             if(ZombieHitsGiven==ADockNPC::ZombieHealth-1) bZombieAliveAtEight=!Zombie->IsDead();
         }
-        if(ZombieKillAt>=0 && StageTime>=ZombieKillAt+ADockNPC::ZombieHealth*.25f+.3f && StageTime-DeltaSeconds<ZombieKillAt+ADockNPC::ZombieHealth*.25f+.3f)
+        if(ZombieKillAt>=0 && StageTime>=ZombieKillAt+ADockNPC::ZombieHealth*.15f+2.8f && StageTime-DeltaSeconds<ZombieKillAt+ADockNPC::ZombieHealth*.15f+2.8f)
             FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Zombie_down.png"),true,false);
-        if(ZombieKillAt>=0 && StageTime>ZombieKillAt+ADockNPC::ZombieHealth*.25f+2.5f)
+        if(ZombieKillAt>=0 && StageTime>ZombieKillAt+ADockNPC::ZombieHealth*.15f+3.f)
         {
             const int32 Dropped=ACigarettePickup::CountInWorld(GetWorld())-ZombieCigarettesBefore;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_ZOMBIE_MEASURE speed=%.1f start=%.0f closest=%.0f windup=%d lunges=%d bites=%d sanity=%d->%d alive_at_8=%d dead=%d hits=%d dropped=%d state=%s"),
                 Zombie->GetZombieWalkSpeed(),ZombieStartDistance,ZombieClosest,bZombieWindup,Zombie->GetLunges(),Zombie->GetBitesLanded(),ZombieSanityBefore,Chuck->GetSanity(),
                 bZombieAliveAtEight,Zombie->IsDead(),Zombie->GetHitsTaken(),Dropped,Zombie->GetZombieStateName());
             Check(Zombie->GetZombieWalkSpeed()<ChuckClipData::WalkSpeed && ZombieClosest<ZombieStartDistance-100.f && bZombieWindup && Zombie->GetBitesLanded()>=1
-                && Chuck->GetSanity()==ZombieSanityBefore-ADockNPC::ZombieBite*Zombie->GetBitesLanded() && bZombieAliveAtEight && Zombie->IsDead() && Dropped>=Zombie->Cigarettes,
-                TEXT("the sewer zombie shambles at the rat (slower than he walks), rears up and lunges, a bite costing two sanity; it stands eight scratches, the ninth puts it down, and it leaves cigarettes"));
+                && Chuck->GetSanity()==FMath::Max(0,ZombieSanityBefore-ADockNPC::ZombieBite*Zombie->GetBitesLanded()) && bZombieAliveAtEight && Zombie->IsDead() && Dropped>=Zombie->Cigarettes,
+                TEXT("the sewer zombie shambles at the rat (slower than he walks), rears up and lunges, a bite costing two sanity; it stands thirteen scratches, the fourteenth puts it down, and it leaves cigarettes"));
             TestStage=bZombieOnly ? 115 : 116; StageTime=0;
         }
     }
@@ -2517,3 +2546,4 @@ void ADockHUD::DrawHUD()
     DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
     DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    Middle mouse / R-stick click: center    F / Y: talk    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }
+

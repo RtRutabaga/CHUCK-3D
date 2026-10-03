@@ -212,7 +212,8 @@ def tatter_hem(c, amount):
 def tatter_holes(c, amount):
     """And worn through in a few places: negative (no cloth) inside small blobs, a few cm across."""
     n = math.sin(c.x * 41 + c.z * 23 + .4) * math.sin(c.y * 43 - c.z * 17 + .7) * math.sin(c.z * 29 + c.x * 11)
-    return (.62 * (2. - amount) - n) * .06
+    n *= .55 + .45 * math.sin(c.x * 9 - c.y * 13 + c.z * 7 + 1.1)   # unevenly: some places worn more than others
+    return (.62 * (2. - min(amount, 1.2)) - n) * .06
 
 
 # Per piece: distance out from the skin, cloth thickness, and whether the skin under it goes.
@@ -456,12 +457,13 @@ def build(name, spec):
         return f'Textures/{src.name}'
     skin_dir = DATA / 'skins' / spec['skin']
     skin_png = next(p for p in skin_dir.glob('*.png') if 'diffuse' in p.name or p.name.endswith('.png'))
+    if spec.get('skin_texture'): skin_png = ROOT / spec['skin_texture']   # the zombie's decayed skin (Tools/build_zombie_textures.py)
     def assign(obj, slot):
         obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
         for poly in obj.data.polygons: poly.material_index = 0
     assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
     if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
-    assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
+    assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(ROOT / spec['eye_texture'] if spec.get('eye_texture') else DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
     assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png')))}
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
     assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
