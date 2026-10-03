@@ -444,9 +444,9 @@ void BuildDockSetting(UWorld* World)
     Box(Gate+FVector(17,-25,112),FVector(6,10,24),TEXT("Dark"));
     for(float Y : {-72.f,72.f}) for(float Z : {46.f,202.f})
         Box(Gate+FVector(16,Y,Z),FVector(4,6,6),TEXT("Metal"));
-    // Walkable closed iron grate set flush into the paving before the gate.
+    // Walkable closed iron grate beside the gate, opposite the bench (south).
     // The original ground is retained underneath; no hole or transition yet.
-    const FVector Grate(-1580,3650,0);
+    const FVector Grate(-1580,3900,0);
     Box(Grate+FVector(0,0,.5f),FVector(150,170,1),TEXT("Dark"));
     for(float X : {-81.f,81.f}) Box(Grate+FVector(X,0,1),FVector(12,194,2),TEXT("Stone"));
     for(float Y : {-91.f,91.f}) Box(Grate+FVector(0,Y,1),FVector(150,12,2),TEXT("Stone"));
@@ -534,9 +534,9 @@ void BuildDockSetting(UWorld* World)
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCKSTREET_CHECK failures=%d floors=10 routes=9 buildings=8 boundary=1"),StreetFailures);
         FHitResult GateHit,GrateHit,ApproachHit;
         const bool GateClosed=World->LineTraceSingleByChannel(GateHit,FVector(-1600,3650,100),FVector(-1900,3650,100),ECC_Visibility);
-        const bool GrateGround=World->LineTraceSingleByChannel(GrateHit,FVector(-1580,3650,50),FVector(-1580,3650,-100),ECC_Visibility)
+        const bool GrateGround=World->LineTraceSingleByChannel(GrateHit,FVector(-1580,3900,50),FVector(-1580,3900,-100),ECC_Visibility)
             && FMath::Abs(GrateHit.ImpactPoint.Z)<3;
-        const bool ApproachClear=!World->SweepSingleByChannel(ApproachHit,FVector(-1100,3650,35),FVector(-1580,3650,35),
+        const bool ApproachClear=!World->SweepSingleByChannel(ApproachHit,FVector(-1100,3900,35),FVector(-1580,3900,35),
             FQuat::Identity,ECC_Visibility,FCollisionShape::MakeCapsule(15,32.5f));
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDEGATE_CHECK failures=%d gate_closed=%d grate_ground=%d approach_clear=%d"),
             (!GateClosed)+(!GrateGround)+(!ApproachClear),GateClosed,GrateGround,ApproachClear);
@@ -545,9 +545,9 @@ void BuildDockSetting(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {
         const FVector Views[]={FVector(2200,-3400,1900),FVector(-1100,-2100,100),
-            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800),FVector(-1150,3430,120),FVector(-1400,3650,560)};
+            FVector(-1080,-500,105),FVector(840,-1780,105),FVector(1000,-1000,100),FVector(900,800,180),FVector(-1100,650,100),FVector(650,2150,170),FVector(800,3900,1800),FVector(-1100,3650,190),FVector(-1400,3900,560)};
         const FVector Targets[]={FVector(-600,-600,80),FVector(-1100,-400,160),
-            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0),FVector(-1720,3650,115),FVector(-1580,3650,0)};
+            FVector(-430,-750,145),FVector(750,-850,170),FVector(3380,0,180),FVector(2200,3840,180),FVector(-1150,1500,120),FVector(-900,1600,230),FVector(-450,2300,0),FVector(-1720,3650,115),FVector(-1580,3900,0)};
         auto* Camera=World->SpawnActor<ACameraActor>();
         Camera->GetCameraComponent()->SetFieldOfView(75);
         for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
