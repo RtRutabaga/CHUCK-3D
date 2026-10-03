@@ -1,5 +1,9 @@
 # Codex movement handoff — 2026-09-26
 
+## October 2 — obsolete layout cleanup
+
+Runtime `1d3bf0d`: removed isolated wharf wall stubs, garden divider and tavern court cross-street wall; reduced actual waterside court edge to kerb. Continuous plaza apron replaces redundant bridge parapets and enclosed boat pocket; boat moved into open harbor. Useful parkour routes/controller unchanged, no assets/dependencies. Build `Local/setting-cleanup-build.log`; captures `Local/setting-cleanup-setting-capture.log` and `Local/setting-cleanup-plaza-capture.log` (both View0 inspected). Verifier `Local/verify-package-20261002-200618.log` passed 125 gameplay and all required setting/pier/prop/boundary/music checks, with plaza expanded to 14 floors/11 routes. No manual traversal, physical-controller or MotionCapture repeat. Root launcher checked; backup `Builds/Windows-Previous-20261002-SettingCleanup`; generated output untracked. Next part of the work can be done here.
+
 ## October 2 — coastal mountain
 
 Runtime `b764556` / `dd2a2f1`: mountain and shoulders integrated into existing distant terrain; rock coloration/strata and lower woodland limit, no assets/dependencies/collision changes. First cropped summit reduced and moved farther behind city. Final build `Local/mountain-build-final.log`; capture `Local/mountain-capture-final.log` (roof View0 and dock View5 inspected). Final verifier `Local/verify-package-20261002-195119.log` passed 125 gameplay and all setting/pier/prop/boundary/music checks. No physical-controller/MotionCapture/performance repeat. Root launcher checked; backup `Builds/Windows-Previous-20261002-Mountain`; generated files untracked. Still low-detail vista art. Next part of the work can be done here.

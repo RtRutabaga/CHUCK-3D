@@ -6,6 +6,8 @@ The user requested a loose, additive adaptation of the original top-down Waterde
 
 ## Layout and route
 
+October 2 cleanup: the two narrow approaches now form one continuous 14 x 5.5 m apron between the existing streets and plaza. The obsolete inner parapets and enclosed water pocket are removed; the former boat is moored in open harbor water. The outer waterside kerb remains. Verification now samples 14 floors and 11 capsule segments, including crossings through the filled pocket.
+
 October 2 follow-up: the crosswise 48 cm stone lip at the plaza approach is removed. A 4.8 m stone return with battlements and a torch joins the older western district boundary to the plaza wall, outside both approach routes. Beyond the closed city gate, a noncolliding town backdrop with supported paving, roof rows and a lane ending in buildings connects into the western city scenery. These buildings are inaccessible vista.
 
 The existing 3D district stays intact. New land extends beyond the market/service quay, in the negative-Y direction, instead of displacing the old streets and parkour. Two approaches join it: a narrow quay path just beyond the customs terrace, and a wider continuation of the service quay beside the storehouse. Both are at the existing ground level. The extension adds 688 square metres of ground footprint, plus connecting paths; this is not net unobstructed walking area.
@@ -22,4 +24,4 @@ An early-dawn palette replaces midday presentation: low warm directional fill, a
 
 `DockPlaza.cpp/.h` contains the new district and its checks, called after the existing setting construction. `create_plaza_materials.py` touches only three named new world materials, covered by LFS; no engine installation, purchased asset, character import or old material regeneration. Remote LFS allowance remains unknown; no paid storage was purchased.
 
-The packaged verifier additionally requires 11 new ground samples, eight capsule-clearance segments and a sewer blocking trace. Existing world, music and Claude gameplay checks remain mandatory. These checks establish selected route continuity, not every possible climb over walls or subjective camera comfort. `-ChuckPlazaCapture` produces seven review views (overview, low fountain, sewer, gate, original spawn, wall connection and elevated town backdrop) in `Saved/Screenshots/Windows/Plaza`, then exits. Actual run evidence is recorded in HANDOFF.
+The packaged verifier additionally requires 14 ground samples, 11 capsule-clearance segments and a sewer blocking trace. Existing world, music and Claude gameplay checks remain mandatory. These checks establish selected route continuity, not every possible climb over walls or subjective camera comfort. `-ChuckPlazaCapture` produces seven review views (overview, low fountain, sewer, gate, original spawn, wall connection and elevated town backdrop) in `Saved/Screenshots/Windows/Plaza`, then exits. Actual run evidence is recorded in HANDOFF.
