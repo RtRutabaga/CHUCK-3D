@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest sewer work: stronger neutral-grey fill shows enemies; a1.8m pinch point holds the zombie, with the wider chamber retained. Collapsed rock surrounds the water chute's irregular opening. See SEWER-PROTOTYPE.md / HANDOFF for actual traversal and launcher checks.
+
 Latest fire pass: torches, lamps, forge and tavern hearth use animated flame silhouettes with gentle local light flicker and exposed lamp frames. Hearth logs and embers add detail. See FIRE-PASS.md and HANDOFF for verified package evidence; controls remain the same.
 
 Latest return state: the tavern now starts closed. The sewer-end slide returns Chuck to the pier in early evening, closes the sewer hatch and opens the tavern. R / View preserves this session state; a fresh launch starts morning. See DOCKS-RETURN.md and HANDOFF for actual checks.

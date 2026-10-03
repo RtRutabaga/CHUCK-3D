@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — sewer visibility, pinch point and collapsed chute
+
+Runtime `754da4a`, root main from `fc13110`. Grey fill4300 at45% tunnel height, neutral grey(.42,.44,.47), chute1100; purple unchanged. Nominal1.8m passage96–106 with smooth91–111 transitions; existing zombie moved to97, AI/art retained.44 colliding angular rocks cover the chute face and frame its irregular low opening; slide route and return retained. No binary/import/dependency/original-game edits. See HANDOFF Update60 / SEWER-PROTOTYPE.md for details.
+
+Final release build succeeded; eight sewer views and three normal-light life views reviewed. Verifier133 plus every mandatory setting/music/cave/sewer/fire/tavern check passed (`Local/verify-package-20261003-162203.log`),372 route samples,60 cave/22 narrow wall traces. Actual full traversal/local falls/zero-sanity recovery/surface reset passed120.67s (`Local/sewer-readability-traversal.log`, enemies intentionally omitted); separate live-zombie wall-run239cm/63cm/underground landing passed (`Local/sewer-readability-wallside-live.log`). No universal bite-avoidance claim. Root receipt/hash checked, backup `Builds/Windows-Previous-20261003-SewerReadability`, output excluded. No manual/Xbox/MotionCapture/listening/performance test. Chunk facets and lining remain provisional; rats remain dark-coated against the lighter environment. Next part of the work can be done here.
+
 ## October 3 — shared fire touch-up
 
 Runtime `964da14`, from Claude's clean main `45cd1a3` / runtime `5c3080f`. All 53 world flames use original animated translucent cards; 46 setting/tavern/plaza point lights flicker gently. Open lantern frames and dark hearth logs/small rounded ember patches replace solid glow blocks. No character/traversal/NPC/music or sewer-lighting edits. Two owned LFS graphs total19,165bytes, attrs/fsck/dry-run passed; no install/download/original-game edits. Existing plaza generator delegates fire creation to the new generator. See FIRE-PASS.md and HANDOFF Update59.

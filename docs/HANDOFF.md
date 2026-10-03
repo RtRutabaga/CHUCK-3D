@@ -2,6 +2,18 @@
 
 ## Current launcher and integration status
 
+**Update 60 (Codex, October 3, sewer visibility, narrow passage and collapsed chute):** runtime `754da4a`, from clean main `fc13110`.
+
+- Grey fill1450→4300, lowered from65% to45% of tunnel height and shifted to neutral grey `(0.42,0.44,0.47)`; chute225→1100 in the same colour. Normally lit captures show the rats and zombie; no review lamp was added. Purple rupture1800/radius460 and the absence of sewer torches remain.
+- New nominal1.8m-wide passage at samples96–106 (~6.5m), smooth transitions91–111 clear of gaps84/114. Existing zombie placed at97, retaining Claude's model, animations and AI. Height, wider chamber, route length and rat groups remain. This carries forward the handoff's narrow-tunnel/zombie intent without a new map or enemy system.
+- Chute face dressed with44 angular rock chunks and matching triangle collision, smaller stones framing the low water opening; an irregular rim blends into the retained slide. Structural cap remains behind the collapse. First visual review still showed a clean arch; revised before publication. End rocks remain coarse procedural geometry with some repetitive facets and visible slide lining.
+- Final build `Local/sewer-readability-build-release.log` succeeded with no C++ warning/error or material fallback found. Eight final sewer views reviewed (`Local/sewer-readability-capture-release.log`), plus three normally lit life views (`Local/sewer-readability-life.log`, same lighting/NPC arrangement before the final chute-only refinement). Evidence under `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Sewer` and `SewerLife`.
+- Standard rendered verifier **133 passes**, zero failures, all mandatory world/cave/sewer/tavern/music/fire checks: `Local/verify-package-20261003-162203.log`.372 route samples,60 cave wall traces and22 new narrow-wall traces pass. Chute slide returns to pier/evening; zombie335→77cm, two bites, fourteen scratches to kill; wall run250cm/62cm rise.
+- Actual full sewer test `Local/sewer-readability-traversal.log`: entry fall, reached371, rupture/local zero-sanity respawns and explicit surface reset all pass in120.67s. This walkthrough intentionally omits enemies. Separate `-ChuckWallSideTest` with the zombie alive passed239cm/63cm rise and landing underground (`Local/sewer-readability-wallside-live.log`); this does not establish bite avoidance on every route or camera comfort.
+- Root launcher receipt/hash checked at`754da4a`, previous package preserved as `Builds/Windows-Previous-20261003-SewerReadability`. Source-only changes, no binary import, installation, download or original-game mutation. Generated output remains untracked. No manual/physical Xbox/MotionCapture/listening/performance test. Stone/rat material darkness and simple facets still need user judgment; the reference art target is unmet.
+
+Next part of the work can be done here.
+
 **Update 59 (Codex, October 3, fire touch-up):** runtime `964da14`, built on Claude's clean main `45cd1a3` / runtime `5c3080f`.
 
 - Replaced solid flame primitives throughout wall torches, plaza/street/shop/pier lamps, forge and tavern lamps/hearth with animated, tapered transparent flame cards. Open lamp frames expose the flames; hearth has dark logs and smaller rounded ember patches. Warm lighting varies gently with independent phases. Sewer/Astral lighting, character/controller, zombie behavior, music and collision routes retain Claude's work.
