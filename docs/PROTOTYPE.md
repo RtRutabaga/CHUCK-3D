@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 2 sewer update: the side-gate hatch leads by physical fall into the connected winding tunnel prototype. Existing movement/camera controls apply underground; R / controller View returns to dock spawn. No entry interaction, loading question or sewer checkpoint. See SEWER-PROTOTYPE.md and latest HANDOFF for the verified package.
+
 September 30 setting scope: additive Waterdeep fountain plaza, walls, closed sewer gate and dawn lamps/torches, loosely based on the original 2D text maps. Preserve existing geometry and Claude's current gameplay/NPC systems. See WATERDEEP-PLAZA.md and latest HANDOFF for routes and actual validation.
 
 September 29 scope update: the user authorized a larger connected docks setting around Claude's existing parkour routes. See DOCKS-SETTING.md. Current runtime uses Claude's v1 character, authored clips and traversal, and continuous camera orbit; historical procedural-character and world-pause notes below no longer describe the latest build. HANDOFF records what has actually been packaged and checked.
