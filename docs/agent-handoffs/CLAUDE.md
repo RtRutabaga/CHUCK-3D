@@ -1838,3 +1838,23 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Camera handling on walls.
   - The narrow-tunnel zombie and the steeper arch.
   - Not played by the user.
+
+## Seventy-first pass — zombie decay, flat collapse, harder
+
+- **User (2026-10-03):** more decayed; fully on the ground when it goes down; too easy (hit more frequently, more easily, harder).
+- **Source:** `5c3080f` on main.
+  - New: `Tools/build_zombie_textures.py` and the two textures.
+  - `build_npc_humans.py`: `skin_texture`, `eye_texture` and the hole tweak.
+  - `humans.json`, `build_npc_mocap.py` (the fall to 4.5 s), `Fetch-CMUMocap.ps1` (137_32 dropped).
+  - `DockNPC.cpp/.h`: tuning, no stagger, stoop.
+  - `DockGameMode.cpp`: review lamp, lit zombie camera, kill cadence 0.15 s.
+  - Zombie assets.
+- **Contract:** the shared skeleton and the other humans' assets are unchanged.
+- **Verified:**
+  - Root package 133/133: `Local/verify-package-20261003-145522.log`.
+  - Editor `-ChuckZombieTest` and `-ChuckNPCCapture`.
+- **Remaining:**
+  - Readability in the dark.
+  - Facial decay.
+  - Sound.
+  - Not played by the user.

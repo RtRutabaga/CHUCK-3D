@@ -2,6 +2,42 @@
 
 ## Current launcher and integration status
 
+**Update 58 (Claude, October 3, user feedback on the zombie: more decayed, fully on the ground when it goes down, too easy; hit more often, more easily, harder):** runtime `5c3080f`.
+- **Decay:**
+  - `Tools/build_zombie_textures.py` (Blender's numpy) derives its skin from the CC0 `old_caucasian_male` texture: drained grey-green, rot and bruise mottling, dark veins, clustered irregular sores, sunken eye sockets. The eyes are clouded.
+  - `humans.json` has `skin_texture` and `eye_texture`, which `build_npc_humans.py` now honours.
+  - Gaunter body (muscle .18, weight .16), more ragged and grimier clothes (the holes are capped and modulated, so they're less regular), and a deeper stoop with the head hung forward.
+- **Collapse:** 113_08 now runs to 4.5 s and ends flat on its back. Cut at 2.6 s, it was propped on its elbows as if getting up. Played at 1.8×.
+- **Difficulty:**
+
+  | | Before | Now |
+  |---|---|---|
+  | Health | 9 | 14 |
+  | Stagger from scratches | yes | none (only a jolt) |
+  | Tell | 0.8 s | 0.5 s |
+  | Recovery | 1.3 s | 0.6 s |
+  | Strike range | 115 cm | 150 cm |
+  | Bite range | 95 cm | 130 cm |
+  | Bite cone | dot .5 | dot .25 |
+  | Lunge travel speed | 272 cm/s | 380 cm/s |
+  | Notice / sight | 4.8 / 7.5 m | 6 / 9 m |
+  | Shamble (clip played 1.25× faster) | 37 cm/s | 46 cm/s |
+
+  Chuck's walk (72 cm/s) still outpaces it.
+- **Captures:** hostile NPCs get a review lamp in `-ChuckNPCCapture`; the zombie test has a lit side camera.
+
+The root candidate passed `-MotionCapture` **133/133** plus the world, music, sewer, cave and tavern checks (`Local/verify-package-20261003-145522.log`). Zombie measurement: 46.3 cm/s, two lunges and two bites while Chuck stood still (sanity 5 → 1), alive after 13 scratches, dead on the 14th, dropped 4. Side wall run unchanged (248 cm, 57 cm).
+
+Promoted to `Builds/Windows` with receipt `5c3080f`; the previous package is kept as `Builds/Windows-Previous-20261003-ZombieDecay`. The reimport's re-saves of the other humans and the shared textures were restored, not committed. 137_32 (no longer used) was removed.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Zombie_front_lit.png`, `_threequarter.png`, `_lunge.png` and `_down.png`.
+
+Flaws:
+- Mostly a silhouette in the sewer's real lighting; the decay reads lit or up close.
+- The face shows less decay than the body.
+- No sound.
+- Not played by the user.
+
 **Update 57 (Claude, October 3, the user's wall-run plan; picked up after Codex's evening return):** runtime `c3b0e91`, on Codex's clean main `9feb181`.
 - **The side wall run:**
   - **Trigger:** grounded, at a run, a plain jump (no strafe key or trigger) with a near-vertical wall within 35 cm beside him. The wall must run parallel to his run (within about 24°) and carry on 1.2 m ahead, with nothing in front.
