@@ -2,6 +2,17 @@
 
 ## Current launcher and integration status
 
+**Update 59 (Codex, October 3, fire touch-up):** runtime `964da14`, built on Claude's clean main `45cd1a3` / runtime `5c3080f`.
+
+- Replaced solid flame primitives throughout wall torches, plaza/street/shop/pier lamps, forge and tavern lamps/hearth with animated, tapered transparent flame cards. Open lamp frames expose the flames; hearth has dark logs and smaller rounded ember patches. Warm lighting varies gently with independent phases. Sewer/Astral lighting, character/controller, zombie behavior, music and collision routes retain Claude's work.
+- One shared `DockFire.cpp/.h` helper and owned generator `Tools/create_fire_materials.py`. The plaza generator delegates its flame material creation to it. Two LFS material graphs total 19,165 bytes; attrs, fsck and remote dry-run passed. No install/download or original-game changes; generated files remain untracked. Remote quota remains unknown.
+- First compile caught a numeric conversion and first visual candidate exposed orange rectangles from a default green channel in the opacity mask. Both corrected before publication. Final build `Local/fire-build-release.log` succeeded with no C++ warning/error or material fallback found.
+- All eight final fixed views reviewed: wall torch, plaza lamp, hearth, forge, evening wall torch/hearth, Dock Street lantern and court pier lamp (`Local/fire-capture-release.log`; `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Fire/View0..7.png`). Flame shapes differ between the paired timed hearth views. These scripted evening captures are not a new full-sewer traversal test.
+- Standard rendered verifier passed **133 gameplay checks**, plus every required world/cave/sewer/tavern/music check and the new `CHUCK_FIRE_CHECK failures=0 flames=53 flicker_lights=46 legacy_primitives=0`: `Local/verify-package-20261003-155028.log`. No MotionCapture, manual play, physical Xbox, fire-audio or formal performance test in this pass.
+- Root `Launch-Prototype.cmd` receipt/hash checked at `964da14`; previous package preserved as `Builds/Windows-Previous-20261003-Fire`. See `FIRE-PASS.md` for reproduction. Fire remains a procedural improvement: crossed planes and simple holders are visible up close; no smoke, heat distortion or fire damage. The reference art target is still unmet.
+
+Next part of the work can be done here.
+
 **Update 58 (Claude, October 3, user feedback on the zombie: more decayed, fully on the ground when it goes down, too easy; hit more often, more easily, harder):** runtime `5c3080f`.
 - **Decay:**
   - `Tools/build_zombie_textures.py` (Blender's numpy) derives its skin from the CC0 `old_caucasian_male` texture: drained grey-green, rot and bruise mottling, dark veins, clustered irregular sores, sunken eye sockets. The eyes are clouded.

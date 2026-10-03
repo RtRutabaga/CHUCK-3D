@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — shared fire touch-up
+
+Runtime `964da14`, from Claude's clean main `45cd1a3` / runtime `5c3080f`. All 53 world flames use original animated translucent cards; 46 setting/tavern/plaza point lights flicker gently. Open lantern frames and dark hearth logs/small rounded ember patches replace solid glow blocks. No character/traversal/NPC/music or sewer-lighting edits. Two owned LFS graphs total19,165bytes, attrs/fsck/dry-run passed; no install/download/original-game edits. Existing plaza generator delegates fire creation to the new generator. See FIRE-PASS.md and HANDOFF Update59.
+
+Final build `Local/fire-build-release.log` succeeded. Eight final close-up views reviewed (`Local/fire-capture-release.log`), paired hearth frames show changing flame silhouettes; no rectangle edges remain after opacity-mask correction. Standard rendered verifier133 plus all mandatory world/cave/sewer/tavern/music checks and flame check53/46/zero legacy passed (`Local/verify-package-20261003-155028.log`). No MotionCapture/manual/Xbox/audio/performance/full-tunnel-repeat checks. Root launcher receipt/hash checked at964da14, backup `Builds/Windows-Previous-20261003-Fire`, generated files excluded. Crossed flame cards and simple holders remain provisional; no smoke/heat distortion/fire damage, below reference art quality. Next part of the work can be done here.
+
 ## October 3 — modest sewer brightness increase
 
 Runtime `8b9040e` on root main from `b001f41`. Grey-blue fill1450 (was1100), slide225 (was175), colour/materials/local purple and all gameplay/return state retained. Two source lines only plus docs; no binary/import/dependency/original-game changes. Build succeeded, six tunnel captures reviewed, standard verifier132 plus all mandatory world/cave/music/sewer/tavern checks and zombie/slide/evening return passed (`Local/verify-package-20261003-140639.log`). No manual/Xbox/MotionCapture/performance/full-route/interior repeat. Root launcher checked at8b9040e, backup `Builds/Windows-Previous-20261003-SewerBrightness`, generated files excluded. See HANDOFF Update56. Next part of the work can be done here.
