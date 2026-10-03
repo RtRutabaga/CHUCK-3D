@@ -7,6 +7,8 @@ class UCapsuleComponent;
 class UPoseableMeshComponent;
 class USkeletalMesh;
 class UAnimSequence;
+class UStaticMesh;
+class UStaticMeshComponent;
 
 /**
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
@@ -67,6 +69,13 @@ public:
     float GetHandsForward() const;
     /** Close a hand (0 relaxed .. 1 a fist round a shaft): the guard's spear hand, later. Side 0 = left. */
     void SetGrip(int32 Side, float Amount) { Grip[FMath::Clamp(Side, 0, 1)] = FMath::Clamp(Amount, 0.f, 1.f); }
+    /** The guard's spear (Tools/build_spear.py): upright beside his right foot, his right fist round its grip. */
+    void GiveSpear();
+    bool HasSpear() const { return bSpear; }
+    /** How far his right fist is from the spear's grip (cm), for tests. */
+    float GetSpearGripError() const;
+    /** How far the spear leans from upright (deg), for tests. */
+    float GetSpearLean() const;
     /** Mean bend of the four fingers of the left hand (deg), for tests: curled, not straight. */
     float GetFingerCurl() const;
     /** Eyes above the feet (cm), from this body's head bone. */
@@ -105,6 +114,12 @@ private:
     float Grip[2] = { 0.f, 0.f };
     float ArmOut = 1.f;                           // which way is out for the left arm (+/-Y)
     void PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) const;
+    UPROPERTY() UStaticMeshComponent* Spear = nullptr;
+    UPROPERTY() TObjectPtr<UStaticMesh> SpearMesh;
+    bool bSpear = false;
+    FVector SpearGrip = FVector::ZeroVector;      // component space: where his fist closes on the shaft
+    void HoldSpear(TArray<FTransform>& Space) const;
+    void PlaceSpear();
     void SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOffset) const;
     void UpdateTurn(float DeltaSeconds, float YawToChuck, bool bNear);
     /** Standing pose from the model's A-pose (component-space turn per posed

@@ -1784,6 +1784,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 && WomanNPC->Lines.Num()==1 && WomanNPC->Lines[0].Contains(TEXT("check the sewer for scraps"))
                 && GuardNPC->GetActorLocation().Y<-3900.f && FVector::Dist2D(WomanNPC->GetActorLocation(),FVector(-25,-1240,0))<250.f,
                 TEXT("the guard stands at the city gate and the market woman by the red market stalls, each with the 2D game's line"));
+            const float GripError=GuardNPC ? GuardNPC->GetSpearGripError() : 1e3f, Lean=GuardNPC ? GuardNPC->GetSpearLean() : 90.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GUARD_SPEAR_MEASURE has=%d grip_error_cm=%.1f lean_deg=%.1f"),GuardNPC && GuardNPC->HasSpear() ? 1 : 0,GripError,Lean);
+            Check(GuardNPC && GuardNPC->HasSpear() && GripError<5.f && Lean<10.f,TEXT("the guard holds a spear upright, his fist round its grip"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

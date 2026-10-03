@@ -128,11 +128,11 @@ def build_fabric(mat, diff, arm, nor):
     constant(mat, .3, unreal.MaterialProperty.MP_SPECULAR, 650)
 
 
-def fabric_textures(name):
+def fabric_textures(name, source=CLOTH):
     folder = f'{DEST}/Fabrics'
-    return (texture(CLOTH / f'{name}_diff_2k.jpg', folder),
-            texture(CLOTH / f'{name}_arm_2k.jpg', folder, 'masks'),
-            texture(CLOTH / f'{name}_nor_dx_2k.jpg', folder, 'normal'))
+    return (texture(source / f'{name}_diff_2k.jpg', folder),
+            texture(source / f'{name}_arm_2k.jpg', folder, 'masks'),
+            texture(source / f'{name}_nor_dx_2k.jpg', folder, 'normal'))
 
 
 def instance(name, folder, parent, textures, tint=None, gain=None):
@@ -152,7 +152,7 @@ def instance(name, folder, parent, textures, tint=None, gain=None):
 def slot_material(npc, folder, slot, info):
     tex_folder = f'{DEST}/Textures'
     if info['type'] == 'fabric':
-        diff, arm, nor = fabric_textures(info['fabric'])
+        diff, arm, nor = fabric_textures(info['fabric'], ROOT / info['folder'] if 'folder' in info else CLOTH)
         parent = master('M_HumanFabric', lambda m: build_fabric(m, diff, arm, nor))
         return instance(f'MI_{npc}_{slot}', folder, parent, {'Diffuse': diff, 'ARM': arm, 'Normal': nor}, info['tint'], info['gain'])
     tex = texture(SOURCE / info['texture'], tex_folder)
@@ -246,7 +246,42 @@ def import_clips():
         print(f'CHUCK_HUMAN_CLIP {clip} seconds={seconds:.1f}')
 
 
+def import_props():
+    """What the humans carry (Tools/build_spear.py): static meshes in the same fabric materials."""
+    props_dir = ROOT / 'SourceAssets/NPCs/Props'
+    folder = f'{DEST}/Props'
+    for prop, info in json.loads((props_dir / 'manifest.json').read_text(encoding='utf-8'))['props'].items():
+        options = unreal.FbxImportUI()
+        options.import_mesh = True
+        options.import_as_skeletal = False
+        options.mesh_type_to_import = unreal.FBXImportType.FBXIT_STATIC_MESH
+        options.automated_import_should_detect_type = False
+        options.import_materials = options.import_textures = options.import_animations = False
+        options.static_mesh_import_data.set_editor_property('combine_meshes', True)
+        options.static_mesh_import_data.set_editor_property('auto_generate_collision', False)
+        task = unreal.AssetImportTask()
+        task.filename = str(props_dir / info['fbx']); task.destination_path = folder; task.destination_name = f'SM_{prop}'
+        task.automated = True; task.replace_existing = True; task.save = True; task.options = options
+        TOOLS.import_asset_tasks([task])
+        mesh = unreal.load_asset(f'{folder}/SM_{prop}')
+        if not isinstance(mesh, unreal.StaticMesh):
+            raise RuntimeError(f'{prop} did not import as a static mesh')
+        materials = {slot: slot_material(prop, folder, slot, s) for slot, s in info['slots'].items()}
+        mats = mesh.get_editor_property('static_materials')
+        for index, m in enumerate(mats):
+            slot = str(m.get_editor_property('material_slot_name')).split('.')[0]
+            if slot not in materials:
+                raise RuntimeError(f'Unexpected {prop} slot {slot}')
+            m.set_editor_property('material_interface', materials[slot])
+            mats[index] = m          # the list holds copies: write each slot back
+        mesh.set_editor_property('static_materials', mats)
+        ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
+        box = mesh.get_bounds().box_extent
+        print(f'CHUCK_HUMAN_PROP {prop} slots={sorted(materials)} extent=({box.x:.1f},{box.y:.1f},{box.z:.1f})')
+
+
 for npc, info in MANIFEST['npcs'].items():
     import_mesh(npc, info)
 import_clips()
+import_props()
 print('CHUCK_HUMANS_IMPORT_READY', sorted(MANIFEST['npcs']))

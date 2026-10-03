@@ -56,6 +56,13 @@ docs/SETUP.md), one heavy process at a time:
   (little finger most, index least) or, via `SetGrip`, a fist round a shaft
   (for the guard's spear later).
 
+- `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
+  leather grip wrap, iron butt), 492 tris, in the same fabric materials
+  (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).
+  At runtime it stands beside his right foot (`ADockNPC::GiveSpear`); his right
+  arm is solved onto it every frame (two-bone IK, elbow back and out, thumb up,
+  fist closed with `SetGrip`), over whatever the motion capture is doing.
+
 Budget: dock worker 54.9k, guard 57.3k, market woman 47.8k triangles, 10
 material slots each. Placement and lines: `ADockNPC::SpawnTownsfolk` (the
 guard at the closed city gate, the market woman by the red market stalls,
