@@ -2,6 +2,31 @@
 
 ## Current launcher and integration status
 
+**Update 52 (Claude, October 3, user-assigned sewer plan, step 2: the sewer end becomes the 2D game's water slide out to the pier):** runtime `8d99378`.
+- **The end:** `SewerSlide.cpp` replaces the temporary collapsed end wall with a stone ring round a low arch (1 m × 90 cm). Behind it, an 11 m tube steepens from 5° to 38°, bends away and drops 5.5 m. The stream continues into it, with a faint cold light just inside.
+- **The sequence:**
+  - Walking into the mouth starts two new Astral phases, so input is off and rats and NPCs ignore him.
+  - He is carried down the slide, accelerating, with the camera held at the mouth. The view fades to black at 0.5 s.
+  - He comes up hanging off the outer end of the court pier (2330, 3080), pulls himself up after 0.7 s with the existing pull-up, and control returns on the deck.
+- **Exit state:** `HasExitedDockSewer()` is set when he comes out, for step 3 (evening, closed grate, open tavern; Codex's setting code).
+- **Change in Codex's `DockSewer.cpp`:**
+  - The end cap is replaced by the slide.
+  - The tube counts as part of the sewer (`IsWithinDockSewer`, for lighting and respawn).
+  - The clamped spline's zero end direction, which pinched the sewer's last cross-section to a vertical line (the old cap was degenerate too), now takes the previous sample's direction.
+  - Codex's walk-through stops five samples short, so it never enters the slide. Its sewer geometry checks still pass (372 samples).
+
+The root candidate passed `-MotionCapture` **129/129** plus the world, music, sewer, cave and tavern checks (`Local/verify-package-20261003-122052.log`). New smoke stage: from 1.5 m before the mouth, walk in, then check that he slid once, pulled up once, is standing on the pier deck, is not Astral, and the exit flag is set. Measured position (2311.5, 3080, 34.65), about 5.5 s after the slide began. `-ChuckSlideTest` runs only this stage, in the editor.
+
+Promoted to `Builds/Windows` with receipt `8d99378`; the previous package is kept as `Builds/Windows-Previous-20261003-Slide`. Root was clean when building.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Slide_mouth.png`, `runtime_Slide_pier_hang.png` and `runtime_Slide_pier_out.png`.
+
+Flaws:
+- Once he drops below the mouth he is out of the held camera's view, so the slide itself isn't seen; a lower camera inside the mouth would show it.
+- No splash sound.
+- He slides in the jump-loop pose.
+- Not played by the user.
+
 **Update 51 (Claude, October 3, user request: begin the sewer plan, step 1 of 4: rats and cigarette tufts):** runtime `192dd14`.
 - `SewerLife.cpp` places 10 rats in four groups on the stream banks:
   - three just past the first Astral gap (the 2D game's scratch lesson);

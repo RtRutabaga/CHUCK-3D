@@ -1771,3 +1771,28 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Silhouette readability in Codex's dim lighting.
   - Steps 2–4 of the plan (`memory: sewer-plan`).
   - Not played by the user.
+
+## Sixty-eighth pass — the sewer's water-slide exit (sewer plan step 2)
+
+- **User (2026-10-03, assigned to Claude):** the end of the sewer becomes a narrow downward water slide. A second of sliding, a fade to black, then Chuck at the end of the pier climbing out, with control returned.
+- **Source:** `8d99378` on main.
+  - New: `SewerSlide.cpp/.h`.
+  - `ChuckCharacter.cpp/.h`:
+    - `EAstral::SlideDown/SlideAway`, `BeginSlide`, `FindPierExit`;
+    - the held slide camera;
+    - `bAutoClimb` in Hang;
+    - foot IK off while sliding;
+    - a colour for `CameraFade`.
+  - `DockSewer.cpp` (Codex's): the end cap swap, the slide counting as sewer, and the last-ring direction fix.
+  - `DockGameMode.cpp/.h`: stages 111 and 112, plus `-ChuckSlideTest`.
+  - `Verify-Package.ps1`: 129.
+- **Contract:** no rig or clip change. Hang, Climb and the Astral respawn are unchanged for their existing callers.
+- **Verified:**
+  - Root package 129/129: `Local/verify-package-20261003-122052.log`. Receipt `8d99378`.
+  - `-ChuckSlideTest` in the editor: `Local/slide-test.log` plus the screenshots.
+- **Remaining:**
+  - The slide isn't visible once he's below the mouth.
+  - No splash.
+  - Step 3 (after-sewer evening, closed grate, open tavern; hook `HasExitedDockSewer()`).
+  - Step 4 (the zombie).
+  - Not played by the user.
