@@ -26,3 +26,11 @@ User supplied `C:/Users/ashsm/Downloads/Sewer.wav` for this prototype. Copied by
 # Sewer stream footsteps — October 3
 
 Six original synthetic shallow-water paw splashes (`SFX/SFX_StreamSplash_00..05.wav`), generated deterministically with standard-library Python in `Tools/gen_stream_sfx.py`. No recordings, third-party samples or new dependencies. Mono 48 kHz, 16-bit PCM, approximately 0.28–0.37 seconds, peaks normalized to -3 dBFS. SHA256/provenance in `SFX/stream-manifest.json`; imported separately by `Tools/import_stream_sfx.py` without regenerating existing SFX. WAV and Unreal SoundWave files use Git LFS; together approximately 345 kB, remote storage allowance not exposed. Nonlooping variants replace ordinary steps for grounded paw contacts inside the shallow sewer stream, with slight existing pitch variation; dry sewer rock uses stone steps. Original sewer music unchanged.
+
+## Waterdeep night score — October 3, 2026
+
+User supplied `C:/Users/ashsm/Downloads/Waterdeep night.mp3` for the post-sewer Waterdeep return. Original copied byte-for-byte to `SourceAssets/Audio/Waterdeep night.mp3` (4,916,184 bytes), SHA-256 `72B8AFB8C4CC394B673C5A59A286F9F88EED60EE4F73EAC81D0697A788273EE6`. No authorship/licence attribution was invented.
+
+Decoded with existing `C:/Program Files/Shotcut/ffmpeg.exe`, version `n7.1-184-gdc07f98934`: `-i "Waterdeep night.mp3" -vn -ar 48000 -ac 2 -c:a pcm_s16le WaterdeepNight.wav`. No gain, trimming or musical edits. WAV is stereo 16-bit 48 kHz, 209.2 seconds, 40,166,620 bytes; SHA-256 `8FAA5CB4D98C3D7454C32800A84616337E14949BBD7A1176B50AC742E8F280E5`. `Tools/import_night_music.py` with Unreal 5.7.4 / `-AllowCommandletAudio` imports only `/Game/Art/Audio/SW_WaterdeepNight`, looping, 24,390,182 bytes. Original MP3, WAV and SoundWave total 69,472,986 bytes through Git LFS; account allowance remains unknown, no paid storage/install/download.
+
+Morning keeps the original docks score; sewer keeps Sewer.wav; after the real sewer exit, the night track crossfades in over 1.25 seconds at 45% volume. Reset retains the post-sewer session selection. Looping uses the complete recording; seamless join and subjective mix on speakers remain unverified. Smoke verification starts this track two seconds before its end and requires playback after the boundary. See latest HANDOFF for actual package results.

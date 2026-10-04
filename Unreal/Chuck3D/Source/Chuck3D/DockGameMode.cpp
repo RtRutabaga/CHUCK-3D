@@ -73,6 +73,8 @@ void ADockGameMode::StartPlay()
     auto* MusicComponent=Music ? UGameplayStatics::CreateSound2D(World,Music,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     auto* SewerScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Sewer.SW_Sewer"));
     auto* SewerScoreComponent=SewerScore ? UGameplayStatics::CreateSound2D(World,SewerScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    auto* NightScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_WaterdeepNight.SW_WaterdeepNight"));
+    auto* NightComponent=NightScore ? UGameplayStatics::CreateSound2D(World,NightScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -91,17 +93,34 @@ void ADockGameMode::StartPlay()
                 LoopConfigured && Playing ? 0 : 1,LoopConfigured,Playing);
         },6.f,false);
     }
-    struct FMusicRegion { bool Underground=false; };
+    struct FMusicRegion { bool Underground=false; int32 Mode=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),SewerScore](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),SewerScore,NightScore,TestMusic](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
-        if(Below==Region->Underground) return;
+        const int32 Mode=Below?1:HasExitedDockSewer()?2:0;
+        if(Mode==Region->Mode) return;
+        const bool ChangedArea=Below!=Region->Underground;Region->Mode=Mode;
         Region->Underground=Below;
-        if(Docks.IsValid()) Docks->AdjustVolume(1.25f,Below?0.f:.45f);
-        if(Sewer.IsValid())
+        if(Docks.IsValid()) Docks->AdjustVolume(1.25f,Mode==0?.45f:0.f);
+        if(Night.IsValid())
+        {
+            if(Mode==2 && !Night->IsPlaying())
+            {
+                Night->FadeIn(1.25f,.45f,TestMusic&&NightScore?FMath::Max(0.f,NightScore->Duration-2.f):0.f);
+                FTimerHandle Check;World->GetTimerManager().SetTimer(Check,[Night,NightScore,Region](){
+                    // The smoke suite can leave the surface before this timer;
+                    // an intentionally muted/stopped score is not a loop failure.
+                    if(Region->Mode!=2) return;
+                    const bool Loop=NightScore&&NightScore->bLooping,Playing=Night.IsValid()&&Night->IsPlaying();
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_NIGHT_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                },6.f,false);
+            }
+            else Night->AdjustVolume(1.25f,Mode==2?.45f:0.f);
+        }
+        if(Sewer.IsValid() && ChangedArea)
         {
             if(Below)
             {
@@ -116,7 +135,7 @@ void ADockGameMode::StartPlay()
             }
             else Sewer->FadeOut(1.25f,0.f);
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION sewer=%d"),Below);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION sewer=%d night=%d"),Below,Mode==2);
     },.1f,true);
     auto* Cube = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Sphere = LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
