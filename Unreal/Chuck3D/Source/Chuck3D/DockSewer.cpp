@@ -29,6 +29,7 @@ namespace {
 constexpr float FloorZ=-900.f;
 TArray<FVector> Route;
 TArray<FVector> RouteRight;
+TWeakObjectPtr<UPrimitiveComponent> AstralFloor;
 FVector Shaft(-1580,3900,0);
 float Chamber(int32 I)
 {
@@ -132,6 +133,25 @@ float DockSewerHalfWidth(int32 I) { return Route.IsValidIndex(I) ? FMath::Min(Wa
 int32 DockSewerWallRiftStart() { return WallRiftStart; }
 int32 DockSewerWallRiftEnd() { return WallRiftStart+WallRiftSpan; }
 bool DockSewerIsGap(int32 I) { return RiftSegment(I); }
+// Nine samples (~5.9 m) of run-up on the right bank, clear of the chamber's last break.
+int32 DockSewerCheckpointSample() { return WallRiftStart-9; }
+FVector DockSewerCheckpointLocation()
+{
+    const int32 I=DockSewerCheckpointSample();
+    return Route.IsValidIndex(I) && RouteRight.IsValidIndex(I) ? Route[I]+RouteRight[I]*43.f+FVector(0,0,34.65f) : DockSewerStartLocation();
+}
+float DockSewerCheckpointYaw()
+{
+    const int32 I=DockSewerCheckpointSample();
+    return Route.IsValidIndex(I+2) ? static_cast<float>((Route[I+2]-Route[I]).Rotation().Yaw) : 90.f;
+}
+int32 DockSewerNearestSample(const FVector& P)
+{
+    int32 Best=INDEX_NONE;double BestD=1e12;
+    for(int32 I=0;I<Route.Num();++I){const double D=FVector::DistSquared2D(P,Route[I]);if(D<BestD){BestD=D;Best=I;}}
+    return Best;
+}
+UPrimitiveComponent* DockSewerAstralFloor() { return AstralFloor.Get(); }
 bool DockSewerIsChamber(int32 I) { return Route.IsValidIndex(I) && Chamber(I)>.05f; }
 bool IsInDockSewerStream(const FVector& P)
 {
@@ -276,17 +296,39 @@ void BuildDockSewer(UWorld* World)
         V.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth));N.Add(FVector::UpVector);
         UV.Add(FVector2D(Offsets[Column]/100,Sample*.65f));
     }
+    TArray<int32> Open;   // the openings' cells, for the NPC-only floor below
     for(int32 Row=0;Row<(Count-1)*FloorSteps;++Row) for(int32 C=0;C<FloorColumns-1;++C)
     {
         const float Sample=(Row+.5f)/FloorSteps;const int32 Small=SmallRiftAt(Sample);
+        const int32 A=Row*FloorColumns+C;
         // Slightly stagger the two broken floor ends; the whole width is open.
         const float Jagged=.18f*FMath::Sin(C*2.3f);
-        if(Sample>=WallRiftStart+Jagged && Sample<WallRiftStart+WallRiftSpan+Jagged) continue;
-        if(C>=3 && C<=7 && LargeRiftSegment(Row/FloorSteps)) continue;
-        if(Small!=INDEX_NONE && ((C==1 && SmallRiftSide(Small)<0) || (C==9 && SmallRiftSide(Small)>0))) continue;
-        const int32 A=Row*FloorColumns+C;T.Append({A,A+1,A+FloorColumns,A+1,A+FloorColumns+1,A+FloorColumns});
+        const bool bOpen=(Sample>=WallRiftStart+Jagged && Sample<WallRiftStart+WallRiftSpan+Jagged)
+            || (C>=3 && C<=7 && LargeRiftSegment(Row/FloorSteps))
+            || (Small!=INDEX_NONE && ((C==1 && SmallRiftSide(Small)<0) || (C==9 && SmallRiftSide(Small)>0)));
+        (bOpen?Open:T).Append({A,A+1,A+FloorColumns,A+1,A+FloorColumns+1,A+FloorColumns});
     }
     MakeMesh(V,T,N,UV,Stone,true);
+    {
+        // The Astral openings only take Chuck (user 2026-10-04): an unseen
+        // floor across them that rats and humans walk on. It blocks only the
+        // Pawn channel (character movement) and is WorldStatic (the zombie's
+        // object-type step queries); Chuck's capsule ignores it when moving
+        // (AChuckCharacter::Tick), and every Visibility/Camera probe passes through.
+        auto* Plug=NewObject<UProceduralMeshComponent>(Owner);Plug->SetupAttachment(Root);
+        Plug->bUseComplexAsSimpleCollision=true;
+        Plug->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Plug->SetCollisionObjectType(ECC_WorldStatic);
+        Plug->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Plug->SetCollisionResponseToChannel(ECC_Pawn,ECR_Block);
+        Plug->SetCanEverAffectNavigation(false);
+        Plug->SetHiddenInGame(true);Plug->SetCastShadow(false);
+        Plug->ComponentTags.Add(TEXT("AstralFloor"));
+        Plug->RegisterComponent();
+        TArray<int32> Faces;for(int32 I=0;I<Open.Num();I+=3) Faces.Append({Open[I],Open[I+2],Open[I+1]});
+        Plug->CreateMeshSection_LinearColor(0,V,Faces,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),true);
+        AstralFloor=Plug;
+    }
     // Five-centimetre-deep flowing water over a solid, shallow channel bed.
     V.Reset();N.Reset();T.Reset();UV.Reset();
     for(int32 I=0;I<Count-4;++I) for(float Side : {-1.f,1.f})

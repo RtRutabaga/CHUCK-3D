@@ -7,7 +7,8 @@ class AActor;
  * What lives in the sewer (Claude; user 2026-10-03 sewer plan): rats, first a
  * small group just past the first Astral gap (the 2D game's scratch lesson,
  * References/Original/PHASE-2.md), then pairs further on; and cigarette tufts
- * as damp moss along the wall bases. The wide chamber is left for the zombie.
+ * as damp moss along the wall bases; and five zombies (one before the wide
+ * chamber, three in it, one by the end chute).
  * Not placed in the scripted walk-through tests (-ChuckSewerTest,
  * -ChuckStreamTest), where bites would end the run.
  */
@@ -21,6 +22,7 @@ int32 GetSewerTuftsPlaced();
 int32 GetSewerFirstRatsSample();
 /** How many rats were placed in that first group (they wander once placed). */
 int32 GetSewerFirstGroupPlaced();
-/** The zombie in the wide chamber (null in the walk-through tests). */
-class ADockNPC* GetSewerZombie();
-int32 GetSewerZombieSample();
+/** The sewer's zombies and their route samples (none in the walk-through tests). */
+int32 GetSewerZombieCount();
+class ADockNPC* GetSewerZombie(int32 Index);
+int32 GetSewerZombieSample(int32 Index);

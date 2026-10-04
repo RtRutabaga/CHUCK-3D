@@ -2295,8 +2295,34 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
     else if(TestStage==113 && StageTime>.3f)
     {
-        Check(!GetSewerZombie() && DockSewerWallRiftStart()>DockSewerSamples()/2+24,
-            TEXT("the post-chamber narrow passage replaces the zombie with an Astral rupture"));
+        {
+            // Five zombies: one in the tunnel before the chamber, three in it, one by the end chute; none at the break.
+            const int32 Count=DockSewerSamples(),Zombies=GetSewerZombieCount();
+            int32 Before=0,InChamber=0,AtEnd=0,AtBreak=0,Standing=0;
+            for(int32 I=0;I<Zombies;++I)
+            {
+                const int32 S=GetSewerZombieSample(I);
+                Before+=S<Count/2-24;InChamber+=DockSewerIsChamber(S);AtEnd+=S>=Count-15;
+                AtBreak+=FMath::Abs(S-DockSewerWallRiftStart())<12;
+                if(const ADockNPC* Z=GetSewerZombie(I)) Standing+=Z->GetActorLocation().Z>-900.f && Z->GetActorLocation().Z<-700.f;
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_ZOMBIES count=%d before=%d chamber=%d end=%d at_break=%d standing=%d"),Zombies,Before,InChamber,AtEnd,AtBreak,Standing);
+            Check(Zombies==5 && Before==1 && InChamber==3 && AtEnd==1 && AtBreak==0 && Standing==5 && DockSewerWallRiftStart()>Count/2+24,
+                TEXT("five sewer zombies: one before the wide chamber, three in it, one by the end chute, none at the post-chamber break"));
+            // The Astral openings take only Chuck: an NPC-only floor spans them,
+            // seen by pawn movement and the zombie's WorldStatic step queries,
+            // ignored by Chuck's capsule and every Visibility probe.
+            UPrimitiveComponent* Floor=DockSewerAstralFloor();
+            const int32 M=DockSewerWallRiftStart()+1;const FVector P=DockSewerPoint(M);
+            FHitResult Hit;FCollisionQueryParams Query;Query.AddIgnoredActor(Chuck);
+            const bool bPawnFloor=Floor && GetWorld()->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,60),ECC_Pawn,Query) && Hit.GetComponent()==Floor;
+            const bool bZombieFloor=Floor && GetWorld()->LineTraceSingleByObjectType(Hit,P+FVector(0,0,30),P-FVector(0,0,60),FCollisionObjectQueryParams(ECC_WorldStatic),Query) && Hit.GetComponent()==Floor;
+            const bool bSeeThrough=!GetWorld()->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,160),ECC_Visibility,Query);
+            const bool bChuckIgnores=Floor && Chuck->GetCapsuleComponent()->GetMoveIgnoreComponents().Contains(Floor);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_NPC_FLOOR pawn=%d zombie=%d visibility_open=%d chuck_ignores=%d"),bPawnFloor,bZombieFloor,bSeeThrough,bChuckIgnores);
+            Check(bPawnFloor && bZombieFloor && bSeeThrough && bChuckIgnores,
+                TEXT("Astral openings hold NPCs (pawn and zombie floor) while Chuck's capsule and probes pass through"));
+        }
         if(APlayerController* PC=GetWorld()->GetFirstPlayerController()) { Chuck->DisableInput(PC);PC->SetViewTarget(Chuck); }
         Chuck->ResetToDock();
         const int32 S=DockSewerWallRiftStart()-2;
@@ -2319,8 +2345,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if((Chuck->GetRespawns()>RespawnsBefore && Chuck->GetCharacterMovement()->IsMovingOnGround()) || StageTime>12)
         {
             Check(Chuck->GetFallDeaths()>FallsBefore && Chuck->GetRespawns()>RespawnsBefore
-                && Chuck->GetWallSideRuns()==SideRunsBefore && FVector::Dist2D(Chuck->GetActorLocation(),DockSewerStartLocation())<100,
-                TEXT("a plain running jump cannot clear the full-width rupture and the fall respawns at the sewer start"));
+                && Chuck->GetWallSideRuns()==SideRunsBefore && FVector::Dist2D(Chuck->GetActorLocation(),DockSewerCheckpointLocation())<100
+                && DockSewerCheckpointSample()>DockSewerSamples()/2+12 && DockSewerCheckpointSample()<DockSewerWallRiftStart()-5,
+                TEXT("a plain running jump cannot clear the full-width rupture and the fall respawns at the checkpoint just before it"));
             Chuck->SetTestStick(FVector2D::ZeroVector);Chuck->GetCharacterMovement()->StopMovementImmediately();
             SideSub=0;TestStage=bZombieOnly ? 115 : 116;StageTime=0;
         }
@@ -2329,23 +2356,25 @@ void ADockGameMode::Tick(float DeltaSeconds)
     {
         // The side wall run: in a narrow stretch of sewer tunnel, between two
         // gaps, 30 cm off its right-hand wall, facing along it.
-        const int32 S=DockSewerWallRiftStart()-3;
+        // Sub 3 (user 2026-10-04): from the far side of the tunnel, angled onto the wall.
+        const int32 S=DockSewerWallRiftStart()-(SideSub==3?7:3);
         const FVector Centre=DockSewerPoint(S)+FVector(0,0,34.65f), Side=DockSewerSide(S)*(SideSub==1?-1.f:1.f);
         FHitResult Wall; FCollisionQueryParams Query(SCENE_QUERY_STAT(SideTest),false,Chuck);
         const float D=GetWorld()->LineTraceSingleByChannel(Wall,Centre+FVector(0,0,5),Centre+FVector(0,0,5)+Side*400.f,ECC_Visibility,Query) ? static_cast<float>(Wall.Distance) : 150.f;
-        SideStart=Centre+Side*(D-30.f);
+        SideStart=SideSub==3 ? Centre-Side*30.f : Centre+Side*(D-30.f);
+        SideAngle=0;
         SideFacing=(DockSewerPoint(S+2)-DockSewerPoint(S)).GetSafeNormal2D().Rotation();
         if(APlayerController* SidePC=GetWorld()->GetFirstPlayerController()) Chuck->DisableInput(SidePC);   // the test stick, not live axes (run on its own)
         Chuck->ResetToDock();
         Chuck->SetActorLocation(SideStart,false,nullptr,ETeleportType::TeleportPhysics); Chuck->SetActorRotation(SideFacing); Chuck->Recenter();
-        Chuck->SetRunHeld(SideSub<2);
+        Chuck->SetRunHeld(SideSub!=2);
         FallsBefore=Chuck->GetFallDeaths();RespawnsBefore=Chuck->GetRespawns();
         SideRunsBefore=Chuck->GetWallSideRuns(); SideClimbsBefore=Chuck->GetWallRuns(); SideJumpAt=-1;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_SETUP sub=%d wall_cm=%.0f start=%s"),SideSub,D,*SideStart.ToString());
         // Watched from across the tunnel for the record (the follow camera is pressed to the wall).
         if(APlayerController* SidePC=GetWorld()->GetFirstPlayerController())
         {
-            if(SideSub<2)
+            if(SideSub!=2)
             {
                 auto* Watch=GetWorld()->SpawnActor<ACameraActor>();
                 const FVector Mid=SideStart+SideFacing.Vector()*150.f;
@@ -2361,17 +2390,50 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==117)
     {
         Chuck->SetTestStick(FVector2D(0,1));
-        if(!Chuck->IsWallSideRunning()) Chuck->AddMovementInput(SideFacing.Vector(),1);   // as Forward() does: not while he's on the wall
         const float Speed=static_cast<float>(Chuck->GetVelocity().Size2D());
-        if(SideJumpAt<0 && ((SideSub<2 && Speed>200.f && FVector::DotProduct(DockSewerPoint(DockSewerWallRiftStart())-Chuck->GetActorLocation(),SideFacing.Vector())<30.f) || (SideSub==2 && StageTime>.6f) || StageTime>3.f)) { Chuck->JumpPressed(); SideJumpAt=StageTime; }
-        if(SideSub<2 && SideJumpAt>=0)
+        const float ToBreak=SideSub==3 ? 65.f*(DockSewerWallRiftStart()-DockSewerNearestSample(Chuck->GetActorLocation()))
+            : static_cast<float>(FVector::DotProduct(DockSewerPoint(DockSewerWallRiftStart())-Chuck->GetActorLocation(),SideFacing.Vector()));
+        FVector Heading=SideFacing.Vector();
+        float WallGap=1e3f;
+        if(SideSub==3)
+        {
+            // Run along the far side, then veer 40 degrees onto the right-hand wall and jump as he nears it.
+            // The tunnel bends here: use the route's local direction and side.
+            const int32 Here=FMath::Clamp(DockSewerNearestSample(Chuck->GetActorLocation()),1,DockSewerSamples()-3);
+            const FVector Side=DockSewerSide(Here),Local=(DockSewerPoint(Here+1)-DockSewerPoint(Here-1)).GetSafeNormal2D();
+            Heading=Local;
+            if(ToBreak<190.f) Heading=(Local*FMath::Cos(FMath::DegreesToRadians(40.f))+Side*FMath::Sin(FMath::DegreesToRadians(40.f))).GetSafeNormal2D();
+            FHitResult Wall; FCollisionQueryParams Query(SCENE_QUERY_STAT(SideAngleTest),false,Chuck);
+            if(GetWorld()->LineTraceSingleByChannel(Wall,Chuck->GetActorLocation(),Chuck->GetActorLocation()+Side*300.f,ECC_Visibility,Query))
+            {
+                WallGap=static_cast<float>(Wall.Distance);
+                if(SideJumpAt<0 && FMath::Fmod(StageTime,.25f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_APPROACH t=%.2f to_break=%.0f wall_gap=%.0f speed=%.0f angle=%.0f"),StageTime,ToBreak,WallGap,Speed,SideAngle);
+                if(SideJumpAt<0) SideAngle=FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(static_cast<float>(FVector::DotProduct(Chuck->GetVelocity().GetSafeNormal2D(),-FVector(Wall.ImpactNormal.X,Wall.ImpactNormal.Y,0).GetSafeNormal())),-1.f,1.f)));
+            }
+        }
+        if(!Chuck->IsWallSideRunning()) Chuck->AddMovementInput(Heading,1);   // as Forward() does: not while he's on the wall
+        if(SideJumpAt<0 && ((SideSub<2 && Speed>200.f && ToBreak<30.f) || (SideSub==2 && StageTime>.6f) || (SideSub==3 && ToBreak<190.f && WallGap<62.f) || StageTime>4.f)) { Chuck->JumpPressed(); SideJumpAt=StageTime; }
+        if(SideSub!=2 && SideJumpAt>=0)
             for(const float Shot : {.1f,.3f,.5f,.7f,.9f})
                 if(StageTime>=SideJumpAt+Shot && StageTime-DeltaSeconds<SideJumpAt+Shot)
                     FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/WallSide_%d_%03d.png"),SideSub,FMath::RoundToInt(Shot*100)),true,false);
         if(SideJumpAt>=0 && FMath::Fmod(StageTime,.25f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_TRACK sub=%d t=%.2f gait=%s speed=%.0f vz=%.0f p=%s"),SideSub,StageTime-SideJumpAt,Chuck->GetGaitName(),Chuck->GetVelocity().Size2D(),Chuck->GetVelocity().Z,*Chuck->GetActorLocation().ToString());
         if(SideJumpAt>=0 && StageTime>SideJumpAt+2.f)
         {
-            if(SideSub<2)
+            if(SideSub==3)
+            {
+                const bool bRan=Chuck->GetWallSideRuns()==SideRunsBefore+1 && Chuck->GetWallRuns()==SideClimbsBefore;
+                const FVector Beyond=DockSewerPoint(DockSewerWallRiftEnd()+1);
+                const FVector Along=(Beyond-DockSewerPoint(DockSewerWallRiftEnd())).GetSafeNormal2D();
+                const bool bBeyond=IsWithinDockSewer(Chuck->GetActorLocation()) && Chuck->GetCharacterMovement()->IsMovingOnGround()
+                    && Chuck->GetActorLocation().Z<-800.f && FVector::DotProduct(Chuck->GetActorLocation()-Beyond,Along)>-20.f;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLRIFT_ANGLED ran=%d angle_deg=%.0f air_catches=%d travel_cm=%.0f landed_beyond=%d deaths=%d"),
+                    bRan,SideAngle,Chuck->GetWallSideAirCatches(),Chuck->GetWallSideTravel(),bBeyond,Chuck->GetFallDeaths()-FallsBefore);
+                Check(bRan && SideAngle>=25.f && bBeyond && Chuck->GetFallDeaths()==FallsBefore,
+                    TEXT("a running jump angled onto the wall (not parallel) is still a side wall run and clears the Astral break"));
+                SideSub=0;TestStage=bWallSideOnly ? 115 : 118;StageTime=0;
+            }
+            else if(SideSub<2)
             {
                 bSideRan=Chuck->GetWallSideRuns()==SideRunsBefore+1 && Chuck->GetWallRuns()==SideClimbsBefore;
                 SideTravel=Chuck->GetWallSideTravel();SideRise=Chuck->GetWallSideRise();
@@ -2390,7 +2452,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             {
                 SideRunsAtWalk=Chuck->GetWallSideRuns()-SideRunsBefore;
                 Check(SideRunsAtWalk==0,TEXT("a walking jump beside the cave wall remains an ordinary jump"));
-                SideSub=0;TestStage=bWallSideOnly ? 115 : 118;StageTime=0;
+                SideSub=3;TestStage=116;StageTime=0;
             }
         }
     }

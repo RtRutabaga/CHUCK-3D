@@ -54,6 +54,8 @@ public:
     /** Falls off the map (each an Astral death: he's summoned back at the area's start). */
     int32 GetFallDeaths() const { return FallDeaths; }
     int32 GetWallSideRuns() const { return WallSideRuns; }
+    /** Side wall runs caught in the air from a running jump (not started from the ground). */
+    int32 GetWallSideAirCatches() const { return WallSideAirCatches; }
     /** The last side wall run: distance along the wall (cm) and height gained at its top (cm). */
     float GetWallSideTravel() const { return WallSideTravel; }
     float GetWallSideRise() const { return WallSideRise; }
@@ -104,10 +106,15 @@ public:
     static constexpr float WallCoyote = .15f;      // s after leaving a wall a jump still kicks off it
     // The side wall run (user 2026-10-03): a running jump with a wall right
     // beside him runs a low arc along it (a wall ahead still means climbing it).
-    static constexpr float WallSideReach = 35.f;   // cm beyond the capsule the wall may be
-    static constexpr float WallSideTime = .95f;    // s at most on the wall
+    // User 2026-10-04: easier. A wall approached at up to WallSideAngle also
+    // counts (steeper is still the head-on climb), and a running jump that
+    // reaches such a wall in the air catches it there.
+    static constexpr float WallSideReach = 35.f;   // cm beyond the capsule the wall may be (straight out from it)
+    static constexpr float WallSideAngle = 50.f;   // deg between his run and the wall, at most
+    static constexpr float WallSideAirTime = .45f; // s after a running takeoff the jump can still catch a wall
+    static constexpr float WallSideTime = 1.1f;    // s at most on the wall
     static constexpr float WallSideUp = 260.f;     // cm/s up at the start of the arc
-    static constexpr float WallSideGravity = 520.f;   // cm/s2: a lighter fall than his own while he runs it
+    static constexpr float WallSideGravity = 470.f;   // cm/s2: a lighter fall than his own while he runs it
     static constexpr float WallSideLean = 24.f;    // deg his body leans out from the wall
     static constexpr float LadderSpeed = 75.f;     // cm/s up or down a ladder
     // The speed vault (user 2026-10-04): a running jump at something low and
@@ -209,6 +216,8 @@ protected:
     virtual void BeginPlay() override;
 private:
     bool bSewerRespawn = false;
+    bool bIgnoringAstralFloor = false;
+    static float AreaStartYaw(const FVector& Location);
     bool bPantryRespawn = false;   // came down into the tavern pantry: deaths there return to its ladder
     void ResetAtLocation(const FVector& Location);
     UPROPERTY() USpringArmComponent* Boom;
@@ -401,8 +410,10 @@ private:
     int32 WallJumps = 0;
     // Side wall run state.
     FVector WallSideAlong = FVector::ZeroVector;   // horizontal, along the wall the way he runs
+    float WallSideGap = 0;     // cm still between capsule and wall: closed over the first frames, not snapped
+    float RunTakeoffAt = -1;   // when the current running jump left the ground
     float WallSideSpeed = 0, WallSideClock = 0, WallSideStartZ = 0, WallSideTravel = 0, WallSideRise = 0, WallSideTilt = 0;
-    int32 WallSideRuns = 0;
+    int32 WallSideRuns = 0, WallSideAirCatches = 0;
     // Ladders (ChuckClimbable).
     int32 LadderIndex = -1, LadderMounts = 0, FallDeaths = 0;
     float LadderPhase = 0, LadderClock = 0, LadderCooldownUntil = -1;
@@ -416,7 +427,7 @@ private:
     int32 Vaults = 0, VaultRefusal = 0;
     void EnterLadder(int32 Index);
     void FallToDeath();
-    bool TryWallSideRun();
+    bool TryWallSideRun(bool bInAir = false);
     void LeaveWallSide();
     bool ProbeSideWall(const FVector& From, const FVector& Side, float Reach, FVector& OutNormal, FVector& OutPoint) const;
     FVector StickWorld() const;

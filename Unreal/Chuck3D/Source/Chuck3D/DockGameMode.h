@@ -106,7 +106,7 @@ private:
     // The side wall run test (in a narrow stretch of the sewer).
     FVector SideStart = FVector::ZeroVector; FRotator SideFacing = FRotator::ZeroRotator;
     int32 SideSub = 0, SideRunsBefore = 0, SideClimbsBefore = 0, SideRunsAtWalk = 0;
-    float SideJumpAt = -1, SideTravel = 0, SideRise = 0;
+    float SideJumpAt = -1, SideTravel = 0, SideRise = 0, SideAngle = 0;
     bool bSideRan = false, bSideInSewer = false;
     bool bWallLanded = false;
     TArray<int32> WallSides;

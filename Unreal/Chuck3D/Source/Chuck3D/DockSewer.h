@@ -19,3 +19,14 @@ bool DockSewerIsChamber(int32 Index);
 // Full-width wall-run challenge immediately after the midpoint chamber.
 int32 DockSewerWallRiftStart();
 int32 DockSewerWallRiftEnd();
+
+// Checkpoint shortly before the wall-run rupture (user 2026-10-04): a fall or
+// sanity loss at or beyond it returns Chuck here rather than to the entrance.
+int32 DockSewerCheckpointSample();
+FVector DockSewerCheckpointLocation();
+float DockSewerCheckpointYaw();
+// Nearest route sample to a point inside the sewer, or INDEX_NONE.
+int32 DockSewerNearestSample(const FVector& Position);
+// Invisible floor over every Astral opening that only non-Chuck pawns stand
+// on (Pawn channel and WorldStatic object queries); Chuck's capsule ignores it.
+class UPrimitiveComponent* DockSewerAstralFloor();

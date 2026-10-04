@@ -367,7 +367,15 @@ FVector AChuckCharacter::GetAreaStartLocation() const
 {
     const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
     if (bPantryRespawn) return DockPantryStartLocation();
-    return Sewer ? DockSewerStartLocation() : StartLocation();
+    if (!Sewer) return StartLocation();
+    // At or beyond the checkpoint before the wall-run rupture: back to it, not the entrance.
+    const int32 Sample=DockSewerNearestSample(GetActorLocation());
+    return Sample!=INDEX_NONE && Sample>=DockSewerCheckpointSample() ? DockSewerCheckpointLocation() : DockSewerStartLocation();
+}
+float AChuckCharacter::AreaStartYaw(const FVector& Location)
+{
+    if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
+    return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
 }
 void AChuckCharacter::RespawnAtAreaStart()
 {
@@ -379,7 +387,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
     bPantryRespawn=IsWithinDockPantry(Location);
     bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
-    ViewYaw = bSewerRespawn ? 90.f : 0.f;
+    ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;
     LadderIndex = -1; bClimbReverse = false;
     SetActorRotation(FRotator(0,ViewYaw,0));
     LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
@@ -867,48 +875,58 @@ bool AChuckCharacter::ProbeSideWall(const FVector& From, const FVector& Side, fl
     OutPoint = Hit.ImpactPoint;
     return FVector::DotProduct(OutNormal, -Side) > .7f;
 }
-bool AChuckCharacter::TryWallSideRun()
+bool AChuckCharacter::TryWallSideRun(bool bInAir)
 {
-    // Running straight with a wall close beside him that carries on ahead,
-    // and nothing in front (into a wall is still a climb).
+    // Running with a wall beside him, or angled onto one by up to
+    // WallSideAngle, that carries on ahead. Steeper than that (or a wall
+    // squarely in front) is still the head-on climb.
     const FVector Location = GetActorLocation();
     const FVector Ahead = GetVelocity().GetSafeNormal2D();
     if (Ahead.IsNearlyZero() || GetVelocity().Size2D() < ChuckClipData::WalkSpeed * 1.5f) return false;
     const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float MaxInto = FMath::Sin(FMath::DegreesToRadians(WallSideAngle));
     const FVector Chest = Location + FVector(0, 0, 5);
     FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSideAhead), false, this);
     FHitResult Front;
     if (GetWorld()->SweepSingleByChannel(Front, Chest, Chest + Ahead * (Radius + 60.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(6.f), Query)
-        && FVector::DotProduct(FVector(Front.ImpactNormal.X, Front.ImpactNormal.Y, 0).GetSafeNormal(), -Ahead) > .5f) return false;
+        && FVector::DotProduct(FVector(Front.ImpactNormal.X, Front.ImpactNormal.Y, 0).GetSafeNormal(), -Ahead) > MaxInto) return false;
     const FVector Right = FVector::CrossProduct(FVector::UpVector, Ahead);
     float Best = 1e6f; FVector Normal, Point;
     for (const float S : { 1.f, -1.f })
-    {
-        FVector N, P, NAhead, PAhead;
-        if (!ProbeSideWall(Chest, Right * S, Radius + WallSideReach, N, P)) continue;
-        if (FMath::Abs(FVector::DotProduct(N, Ahead)) > .4f) continue;                  // running along it, not at it
-        if (!ProbeSideWall(Chest + Ahead * 120.f, Right * S, Radius + WallSideReach + 25.f, NAhead, PAhead)) continue;   // and it carries on
-        const float D = static_cast<float>(FVector::DotProduct(Location - P, N));
-        if (D < Best) { Best = D; Normal = N; Point = P; }
-    }
+        for (const float Lead : { 0.f, .6f, 1.2f })   // straight out, then angled forward (a wall he is running onto)
+        {
+            const FVector Dir = (Right * S + Ahead * Lead).GetSafeNormal2D();
+            FVector N, P, NAhead, PAhead;
+            if (!ProbeSideWall(Chest, Dir, (Radius + WallSideReach) * FMath::Sqrt(1.f + Lead * Lead), N, P)) continue;
+            if (FVector::DotProduct(N, Right * S) > -.3f) continue;               // on that side, facing him
+            const float Into = static_cast<float>(-FVector::DotProduct(N, Ahead));
+            if (Into > MaxInto || Into < -.35f) continue;                           // along or onto it, not at it, not away from it
+            const float D = static_cast<float>(FVector::DotProduct(Location - P, N));
+            if (D > Radius + WallSideReach) continue;                               // close enough, measured straight out from it
+            const FVector Along = (Ahead - N * FVector::DotProduct(Ahead, N)).GetSafeNormal2D();
+            if (!ProbeSideWall(Chest + Along * 120.f, -N, D + 40.f, NAhead, PAhead)) continue;   // and it carries on
+            if (D < Best) { Best = D; Normal = N; Point = P; }
+        }
     if (Best > 1e5f) return false;
+    if (bInAir && !LastWallNormal.IsZero() && FVector::DotProduct(Normal, LastWallNormal) > .7f) return false;   // not the wall just left
     auto* Movement = GetCharacterMovement();
     WallNormal = Normal;
     WallSideAlong = (Ahead - Normal * FVector::DotProduct(Ahead, Normal)).GetSafeNormal2D();
     WallSideSpeed = FMath::Max(static_cast<float>(GetVelocity().Size2D()), ChuckClipData::RunSpeed) * 1.05f;
     WallSideClock = 0; WallSideTravel = 0; WallSideRise = 0;
     WallSideStartZ = static_cast<float>(Location.Z);
-    SetActorLocation(Location + Normal * (Radius + 1.f - Best), true);   // in against it
-    SetActorRotation(WallSideAlong.Rotation());
+    // Close the remaining gap over the first frames (see the WallSide tick) rather than snapping in.
+    WallSideGap = FMath::Max(0.f, Best - Radius - 1.f);
     Movement->SetMovementMode(MOVE_Flying);
     Movement->BrakingDecelerationFlying = 0;
-    Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, WallSideUp);
+    Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, WallSideUp) - WallNormal * (40.f + FMath::Min(WallSideGap * 12.f, 500.f));
     Gait = EGait::WallSide; bRunJump = false; bWallJumpFlight = false;
     LastWallNormal = FVector::ZeroVector;
     if (Base != EClip::WalkLoop) SetClip(EClip::WalkLoop, WalkPhase * Period(EClip::WalkLoop), .08f);
     RunWeight = 1.f;
     ++WallSideRuns;
-    PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
+    if (bInAir) ++WallSideAirCatches;
+    else PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
     return true;
 }
 bool AChuckCharacter::TryMountLadder()
@@ -1413,7 +1431,7 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
             // Return to this area's entrance, whole again.
             AstralPhase = EAstral::Away; AstralClock = 0;
             const FVector Return=GetAreaStartLocation();
-            ViewYaw = (Return.Z<-150 && !IsWithinDockPantry(Return)) ? 90.f : 0.f;
+            ViewYaw = AreaStartYaw(Return);
             SetActorLocationAndRotation(Return, FRotator(0,ViewYaw,0), false, nullptr, ETeleportType::TeleportPhysics);
             LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
             PreviousMotionLocation = GetActorLocation();
@@ -1644,8 +1662,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         FVector N, P;
         bool bWall = false;
         for (const float Height : { 5.f, -15.f, 25.f })
-            if (ProbeSideWall(Location + FVector(0, 0, Height), -WallNormal, Radius + 25.f, N, P)) { bWall = true; break; }
-        if (bWall) WallNormal = N;
+            if (ProbeSideWall(Location + FVector(0, 0, Height), -WallNormal, Radius + 25.f + WallSideGap, N, P)) { bWall = true; break; }
+        if (bWall)
+        {
+            WallNormal = N;
+            WallSideGap = FMath::Max(0.f, static_cast<float>(FVector::DotProduct(Location - P, N)) - Radius - 1.f);
+        }
         WallSideAlong = (WallSideAlong - WallNormal * FVector::DotProduct(WallSideAlong, WallNormal)).GetSafeNormal2D();
         const float Up = WallSideUp - WallSideGravity * WallSideClock;
         const float Moved = Travel;
@@ -1654,14 +1676,15 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         WalkPhase = FMath::Frac(WalkPhase + Moved / RunStride);
         BaseTime = WalkPhase * WalkPeriod;
         RunWeight = 1.f;
-        SetActorRotation(WallSideAlong.Rotation());
+        // Turned along the wall over a few frames (an angled approach turns him up to WallSideAngle).
+        SetActorRotation(FMath::RInterpTo(GetActorRotation(), WallSideAlong.Rotation(), DeltaSeconds, 16.f));
         FHitResult Floor;
         FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSideFloor), false, this);
         const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
         const bool bFloor = Up < 0.f && GetWorld()->LineTraceSingleByChannel(Floor, Location, Location - FVector(0, 0, Half + 4.f), ECC_Visibility, Query);
         const bool bStalled = WallSideClock > .15f && Moved < WallSideSpeed * DeltaSeconds * .3f;
         if (!bWall || WallSideClock >= WallSideTime || bFloor || bStalled) LeaveWallSide();
-        else Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, Up) - WallNormal * 40.f;
+        else Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, Up) - WallNormal * (40.f + FMath::Min(WallSideGap * 12.f, 500.f));
     }
     else if (Gait == EGait::WallRun)
     {
@@ -1804,6 +1827,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // A jump at a run (not a fall off an edge) becomes a leap with a
             // little more lift.
             bRunJump = RunWeight > .5f && GetVelocity().Z > 50.f;
+            RunTakeoffAt = bRunJump ? GetWorld()->GetTimeSeconds() : -1.f;
             if (GetVelocity().Z > 50.f) PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bRunJump ? 1.f : .85f));
             if (bRunJump)
             {
@@ -1814,7 +1838,10 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // start at its extension onto the toes.
             else SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
         }
-        if (Gait == EGait::Hang || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
+        // A running jump that reaches a wall along or angled onto it catches it and runs it.
+        if (Gait == EGait::Air && bRunJump && GetWorld()->GetTimeSeconds() - RunTakeoffAt < WallSideAirTime
+            && GetVelocity().Z > -150.f && TryWallSideRun(true)) {}
+        else if (Gait == EGait::Hang || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
         else if (bRunJump)
         {
             // Posed over the flight: progress from the vertical speed (0 at
@@ -2133,6 +2160,13 @@ void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayer
 void AChuckCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    // The sewer's NPC-only floor over the Astral openings is not there for him.
+    if (!bIgnoringAstralFloor)
+        if (UPrimitiveComponent* AstralFloor = DockSewerAstralFloor())
+        {
+            GetCapsuleComponent()->IgnoreComponentWhenMoving(AstralFloor, true);
+            bIgnoringAstralFloor = true;
+        }
     // Remember entry before a fall leaves the valid tunnel footprint. Surface
     // travel/reset clears it, so later dock deaths still use the dock spawn.
     if(GetActorLocation().Z>=-100) bSewerRespawn=false;
