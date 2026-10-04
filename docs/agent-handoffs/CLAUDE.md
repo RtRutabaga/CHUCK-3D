@@ -1960,3 +1960,18 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - A captured smithing take.
   - Leg weight shift.
   - Not played or heard by the user.
+
+## Seventy-eighth pass — cigarette HUD, no reset, full screen
+
+- **User (2026-10-04):** take out the text around the game screen (title, camera mode, scale, controls); one single cigarette HP bar as in the 2D game; remove the R return-to-start; make the game full-screen capable.
+- **Source:** `21b8004` on main (base `804a03d`).
+  - `DockGameMode.cpp` `ADockHUD::DrawHUD`: the title/camera/scale panel and the bottom controls bar are gone. Sanity is one cigarette in the 2D game's 320x180 pixel layout (`CHUCK-game src/ui/hud.py`, read only), scaled by whole pixels (4x at 720p): filter, paper that burns down with Sanity, ember at the burn line, and a faint ash line. The cigarette count is top right as `xN` with a small unlit cigarette. Talk prompt and dialogue box are unchanged.
+  - `ChuckCharacter.cpp`, `DefaultInput.ini`: the `Reset` action (R and the controller's View button) is removed. `ResetToDock` remains for falls, astral respawn and tests.
+  - `Tools/Launch-Prototype.ps1`: launches with `-fullscreen` (borderless at desktop resolution, r.FullScreenMode 1) instead of a 1280x720 window. F11 / Alt+Enter toggle remains enabled in `DefaultInput.ini`.
+  - `docs/PLAYTEST.md`: note and controls table.
+- **Contract:** unchanged.
+- **Verified:** candidate `Builds/HudCandidate` 138/138 (`Local/verify-package-20261004-130951.log`), promoted to `Builds/Windows`. Previous package: `Builds/Windows-Previous-20261004-Hud`. Receipt `21b8004` written, `Launch-Prototype.ps1 -CheckOnly` passes. Capture `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Scale_Elevated.png` shows only the full cigarette and `x5`.
+- **Remaining:**
+  - The full-screen launch and F11 toggle were not run (the verifier runs windowed); not played by the user.
+  - Without a reset, a player stuck somewhere can only quit and relaunch.
+  - Older PLAYTEST/DOCKS-RETURN notes still mention R / View; the PLAYTEST note marks them historical.

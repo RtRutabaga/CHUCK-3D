@@ -2,6 +2,15 @@
 
 ## Current launcher and integration status
 
+**Update 72 (Claude, October 4, user request: remove the on-screen text, one cigarette Sanity bar as in the 2D game, no R reset, full screen):** runtime `21b8004`, on `804a03d`.
+- HUD: only a single cigarette (top left; burns down toward the filter, ember at the burn line, ash line for what's gone; the 2D game's pixel layout scaled whole), the `xN` cigarette count (top right), the talk prompt and dialogue. The title, camera-mode, scale and controls text is gone.
+- The R / View reset is removed (`ResetToDock` still serves falls, astral respawn and tests).
+- The launcher opens borderless full screen at desktop resolution; F11 / Alt+Enter switches to a window.
+- Candidate passed 138/138 (`Local/verify-package-20261004-130951.log`); promoted to `Builds/Windows`, receipt `21b8004` written and checked; previous package `Builds/Windows-Previous-20261004-Hud`.
+- Flaws: the full-screen launch and toggle weren't exercised (the verifier runs windowed); not played by the user; with no reset, a stuck player must relaunch.
+
+Next part of the work could be done by either agent — preference: Claude for HUD/feel follow-ups; Codex for setting work.
+
 **Update 71 (Claude, October 4, user request: "do his motion and sound effects" for the blacksmith):** runtime `3477113`, on `fad4a2d`.
 - **Motion** (`DockNPC.cpp` `TickSmith`/`PoseSmith`, procedural over the halved mocap idle):
   - Each heavy blow (1.55 s) is followed by a light tap of the hammer on the bare heel of the face, a smith's rhythm.

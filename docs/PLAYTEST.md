@@ -1,5 +1,7 @@
 # Movement and camera playtest
 
+HUD and controls (October 4): the screen shows only a single cigarette for Sanity (top left, burning down toward the filter as in the 2D game), the cigarette count (top right), the talk prompt and dialogue. The title, camera-mode, scale and controls text is gone. The R / View reset has been removed; older notes below that mention it are historical. The launcher opens borderless full screen at the desktop resolution; F11 or Alt+Enter switches to a window and back.
+
 Post-sewer return: tavern begins closed. Enter the open side-gate hatch, follow the sewer to the downward stream slide and let Chuck climb out at the pier. The docks are now early evening, the hatch is closed and walkable, and the tavern is open. R / Xbox View preserves evening; quit/relaunch starts morning. This supersedes older always-open tavern and collapsed-sewer-end directions below. See DOCKS-RETURN.md.
 
 Scope: one connected Waterdeep docks scene with Claude's parkour areas, a new Dock Street loop, cargo court, service quay, buildings and a stationary human scale reference. Chuck is 65 cm tall with an oversized open purple jacket. Dialogue, pickups, finished art and additional maps remain deferred. See DOCKS-SETTING.md for the new route.
@@ -43,14 +45,14 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | Orbit camera height (up = rat height, down = high) | Mouse up/down | Right stick up/down |
 | Center camera behind Chuck | Middle mouse button | Right-stick click |
 | Talk (to an NPC with something to say; press again for the next line) | F | Y |
-| Reset position and view direction | R | View button |
-| Exit prototype | Escape | Menu button |
+| Exit | Escape | Menu button |
+| Toggle full screen / window (the launcher opens full screen) | F11 or Alt+Enter | — |
 
 Grass (2026-09-30): about 50 scruffy weed tufts grow around the docks. There's a patch by the start, and more along the tavern front and warehouse wall, round the cargo stacks and mooring plinth, along the quay edge by the pier, in the Chandlers' Row garden and in the timber yard. Chuck walks through them. A slash (LMB / X) shreds any tuft within about 40 cm in front of him, from the ground up to his chest: it drops to stubble, clippings spray along the swing, and it rustles. Cut tufts stay cut until you restart. About one tuft in three hides a cigarette.
 
 Jars and cigarettes (2026-09-30):
 - **Jars:** ten glazed clay jars stand by the tavern door, along the warehouse wall, in front of the Chandlers' Row market stalls and in the timber yard. They're solid (Chuck can't walk through or hop onto them). A slash breaks one into shards with a crack, and it drops 1–3 cigarettes.
-- **Cigarettes:** they pop out and lie on the ground; walk over one to pocket it. The count is in the top-right corner.
+- **Cigarettes:** they pop out and lie on the ground; walk over one to pocket it. The count is in the top-right corner, beside a small unlit cigarette.
 - **Low rake:** when a tuft or jar is in reach, the slash automatically becomes a crouched low rake.
 - **What breaks:** Chuck isn't strong. He breaks grass and jars (urns in later maps), not crates or barrels.
 
@@ -78,7 +80,7 @@ The camera is one GTA-style orbit with no switch button (since 2026-09-27). Look
 1. Start in elevated view. Walk to the barrel and crate; check that they block Chuck. Jump onto the 10 cm low step. Walk around the bench; at the revised size Chuck cannot fit beneath its 41 cm clearance.
 2. Approach the dock worker and tavern door. Judge whether they feel human-sized beside Chuck. They have no interactions.
 3. Walk out along the pier. Jump the missing board near its middle. Falling resets you nearby on the quay.
-4. Reset with R / View, look up until the camera sits at rat height, and repeat the route. Look up at the worker and frontage. Round the crate and barrel to check camera collision and visibility.
+4. Walk back to the start, look up until the camera sits at rat height, and repeat the route. Look up at the worker and frontage. Round the crate and barrel to check camera collision and visibility.
 5. Repeat using the other input device. Report which view feels better, where Chuck disappears or distances become hard to judge, and whether the jump or movement feels too fast or too slow.
 
 Neither camera is selected as the final direction. The user authorized further presentation and animation work; the camera decision still requires playtest feedback.
