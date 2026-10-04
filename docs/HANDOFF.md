@@ -2,6 +2,40 @@
 
 ## Current launcher and integration status
 
+**Update 71 (Claude, October 4, user request: "do his motion and sound effects" for the blacksmith):** runtime `3477113`, on `fad4a2d`.
+- **Motion** (`DockNPC.cpp` `TickSmith`/`PoseSmith`, procedural over the halved mocap idle):
+  - Each heavy blow (1.55 s) is followed by a light tap of the hammer on the bare heel of the face, a smith's rhythm.
+  - On the lift the hammer head trails the fist. On the downswing it stays cocked back, then the wrist snaps it through at contact (`Cock` lags `Swing`).
+  - His torso drives down into the blow and the tap, with a small recoil and nod as each lands.
+  - The idle's sway is halved, so he stands planted.
+  - In the pauses the hammer rests on the heel. Every third pause is longer (4.2 s): he lifts the bar about 20 cm, draws it back, turns it and looks at it, standing straighter.
+  - A blow jars the bar on the face for a moment.
+- **Sound** (`Tools/gen_anvil_sfx.py`, rewritten; stdlib-only synthesis with a stone-plaza echo):
+  - `SFX_AnvilStrike_00..03`, rebalanced so the anvil's ring leads its thud by about 16 dB.
+  - `SFX_AnvilTap_00..03`: a bright ting.
+  - `SFX_TongsClink_00..02`, on picking the bar up and setting it down.
+  - `SFX_ForgeLoop_00`: an 8 s seamless roar with crackle, looping at the forge niche (heard within about 10 m).
+  - `import_anvil_sfx.py` sets looping from the manifest.
+- **Review mode:** `-ChuckSmithCapture` films him from a fixed front three-quarter view, a frame every 60 ms (`Saved/Screenshots/Windows/Smith`).
+- **Tests:** the smith check now also requires at least 3 taps, the worst tap gap under 4 cm, the worst tongs grip on any frame under 4 cm (inspections included) and the forge sound playing. The verifier marker now expects `sounds=12`.
+
+The candidate passed `-MotionCapture` **138/138** plus every required check (`Local/verify-package-20261004-124923.log`). Measured: `strikes=61 worst_gap_cm=0.3 taps=51 worst_tap_cm=2.6 tongs_grip_cm=0.0 forge_sound=1`. One earlier candidate failed only the new tap check (worst 6.8 cm). Logging showed the arm falling short on taps, because only the blows had the body's drive. The tap now leans in too, and its spot moved 3 cm toward the near edge.
+
+Promoted to `Builds/Windows`; the receipt `3477113` was written and checked. The previous package is kept as `Builds/Windows-Previous-20261004-SmithMotion`.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Blacksmith_motion.png` (a 3.4 s contact sheet from the packaged build), plus the earlier stills.
+
+The 80 re-import-churned human `.uasset`s from Update 70 are still modified and unstaged (unchanged decision).
+
+Flaws:
+- Still procedural, not captured smithing.
+- The pose at the top of the swing lingers about 0.15 s.
+- His legs don't shift into the blows.
+- The sounds are synthetic and unheard by me (checked only by envelope and band energy).
+- Not played or heard by the user.
+
+Next part of the work could be done by either agent — preference: Claude for more of his motion (e.g. a CMU smithing take, which would need your OK to download); Codex for smithy dressing.
+
 **Update 70 (Claude, October 4, user request: "a blacksmith character (gruff white male) by the smithy and forge, make him an anvil that he'll be working at"):** runtime `f19b883`, from clean main `7ea8010`.
 - **The smith:** `Blacksmith` in `SourceAssets/NPCs/humans.json`, built by `Tools/build_npc_humans.py`.
   - A heavy-set older white man (MPFB, 184 cm) with weathered skin, bushy brows (`eyebrow009`) and a short crop (`short01`).

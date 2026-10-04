@@ -1946,3 +1946,17 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Beard.
   - Spark art.
   - Not played by the user.
+
+## Seventy-seventh pass — the blacksmith's motion and sounds
+
+- **User (2026-10-04):** do his motion and sound effects.
+- **Source:** `3477113` on main.
+  - `DockNPC.cpp/.h`: the blow/tap/lift timeline, wrist lag, body drive and recoil, halved idle sway, the inspection pause, clinks, the forge loop, `SmithEvents`.
+  - `DockGameMode.cpp/.h`: the check additions and `-ChuckSmithCapture`.
+  - `gen_anvil_sfx.py` and `import_anvil_sfx.py`: 12 sounds; `Verify-Package.ps1` (`sounds=12`).
+- **Contract:** unchanged (shared human skeleton; no Chuck changes).
+- **Verified:** root package 138/138, `Local/verify-package-20261004-124923.log`. Worst blow 0.3 cm, worst tap 2.6 cm, tongs 0.0 cm.
+- **Remaining:**
+  - A captured smithing take.
+  - Leg weight shift.
+  - Not played or heard by the user.
