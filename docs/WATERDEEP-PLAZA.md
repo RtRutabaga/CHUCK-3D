@@ -1,5 +1,7 @@
 # Waterdeep plaza adaptation
 
+October 4 fountain water pass: each basin now uses one lit translucent surface disk with animated normal detail, stone-bed refraction and four landing rings. Thin jets retain 24 traveling beads and gain 48 tiny impact splashes. The enclosing stonework/collision is unchanged. The harbor uses a separate wave material on single sheets with its two real shaft gaps preserved. See [SURFACE-WATER.md](SURFACE-WATER.md) and HANDOFF Update 69 for evidence. This supersedes the old FountainWater material on basin/jet geometry; that material remains for unrelated dressing.
+
 October 2 update: the user's future sewer entrance is now the ground grate beside the small side gate in far Dock Street, opposite the bench (see DOCKS-SETTING.md). The plaza's existing barred arch remains drain dressing and stays inaccessible.
 
 The user requested a loose, additive adaptation of the original top-down Waterdeep map. The original docks text map identifies district walls, torches, a sewer grate near the guard, tavern, market, piers and ruins. Its adjoining plaza has a central tiered fountain, smithy, alchemist, stands, lamps and closed gate. Reference copies and SHA-256 provenance are in References/PROVENANCE.md. No original generator was run.

@@ -1,5 +1,8 @@
 #include "DockPlaza.h"
 #include "DockFire.h"
+#include "SewerSlide.h"
+#include "DockReturn.h"
+#include "ProceduralMeshComponent.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -96,10 +99,31 @@ void BuildDockPlaza(UWorld* World)
         const float A=I*2*PI/32;
         Shape(F+FVector(209*FMath::Cos(A),209*FMath::Sin(A),43),FVector(43,25,64),TEXT("Stone"),true,nullptr,FRotator(0,FMath::RadiansToDegrees(A)+90,0));
     }
-    Shape(F+FVector(0,0,52),FVector(392,392,2),TEXT("FountainWater"),false,Cylinder);
+    // Single surface disks avoid double refraction through the old closed cylinders.
+    auto Basin=[&](float Radius,float Z)
+    {
+        auto* Surface=NewObject<UProceduralMeshComponent>(Owner);
+        Surface->SetupAttachment(Root); Surface->RegisterComponent();
+        TArray<FVector> V,N; TArray<int32> Tri; TArray<FVector2D> UV;
+        TArray<FLinearColor> Colors; TArray<FProcMeshTangent> Tangents;
+        V.Add(F+FVector(0,0,Z));
+        for(int32 I=0;I<=64;++I)
+        {
+            const float A=I*2*PI/64;
+            V.Add(F+FVector(Radius*FMath::Cos(A),Radius*FMath::Sin(A),Z));
+            if(I<64) Tri.Append({0,I+1,I+2});
+        }
+        for(const FVector& P : V)
+        { N.Add(FVector::UpVector); UV.Add(FVector2D(P.X,P.Y)/100.f); Tangents.Add(FProcMeshTangent(1,0,0)); }
+        Surface->CreateMeshSection_LinearColor(0,V,Tri,N,UV,Colors,Tangents,false);
+        Surface->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_FountainBasinWater.M_FountainBasinWater")));
+        Surface->SetCollisionProfileName(TEXT("NoCollision")); Surface->SetCastShadow(false);
+        return Surface;
+    };
+    auto* LowerBasin=Basin(196,53);
     Shape(F+FVector(0,0,87),FVector(54,54,160),TEXT("Stone"),true,Cylinder);
     Shape(F+FVector(0,0,167),FVector(153,153,18),TEXT("Stone"),true,Cylinder);
-    Shape(F+FVector(0,0,177),FVector(137,137,2),TEXT("FountainWater"),false,Cylinder);
+    auto* UpperBasin=Basin(68.5f,178);
     // Four small falling jets, deliberately restrained rather than a magical effect.
     for(int32 I=0;I<4;++I)
     {
@@ -110,15 +134,16 @@ void BuildDockPlaza(UWorld* World)
             const float T=S/12.f;
             const float R=62+92*T;
             const FVector P=F+FVector(R*FMath::Cos(A),R*FMath::Sin(A),179+75*T-200*T*T);
-            Beam(Previous,P,1.4f,TEXT("FountainWater")); Previous=P;
+            Beam(Previous,P,1.4f,TEXT("FountainJetWater")); Previous=P;
         }
     }
     // Small moving beads make the jets read as falling water instead of solid rails.
     auto* Drops=NewObject<UInstancedStaticMeshComponent>(Owner);
     Drops->SetupAttachment(Root); Drops->SetStaticMesh(Sphere);
-    Drops->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_FountainWater.M_FountainWater")));
+    Drops->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_FountainJetWater.M_FountainJetWater")));
     Drops->SetCollisionProfileName(TEXT("NoCollision")); Drops->SetCastShadow(false); Drops->RegisterComponent();
-    for(int32 I=0;I<24;++I) Drops->AddInstance(FTransform(FQuat::Identity,F+FVector(0,0,170),FVector(.027f,.027f,.045f)));
+    // Four impacts, twelve staggered droplets each; tiny ballistic splashes, no fog cloud.
+    for(int32 I=0;I<72;++I) Drops->AddInstance(FTransform(FQuat::Identity,F+FVector(0,0,170),FVector(.027f,.027f,.045f)));
     FTimerHandle WaterMotion;
     World->GetTimerManager().SetTimer(WaterMotion,[Weak=TWeakObjectPtr<UInstancedStaticMeshComponent>(Drops),World,F]()
     {
@@ -128,9 +153,35 @@ void BuildDockPlaza(UWorld* World)
             const float T=FMath::Frac(World->GetTimeSeconds()*.72f+(I%6)/6.f);
             const float A=(I/6)*PI*.5f, R=62+92*T;
             const FVector P=F+FVector(R*FMath::Cos(A),R*FMath::Sin(A),179+75*T-200*T*T);
-            Weak->UpdateInstanceTransform(I,FTransform(FQuat::Identity,P,FVector(.027f,.027f,.045f)),false,I==23,true);
+            Weak->UpdateInstanceTransform(I,FTransform(FQuat::Identity,P,FVector(.027f,.027f,.045f)),false,false,true);
+        }
+        for(int32 I=24;I<72;++I)
+        {
+            const int32 N=I-24;
+            const float T=FMath::Frac(World->GetTimeSeconds()*1.8f+(N%12)/12.f);
+            const float A=(N/12)*PI*.5f, Spread=N*2.399963f;
+            const FVector Landing=F+FVector(154*FMath::Cos(A),154*FMath::Sin(A),54);
+            const float Reach=11+(N%5)*2, Height=10+(N%4)*3;
+            const FVector P=Landing+FVector(Reach*T*FMath::Cos(Spread),Reach*T*FMath::Sin(Spread),4*Height*T*(1-T));
+            const float Size=.008f+.004f*(1-T);
+            Weak->UpdateInstanceTransform(I,FTransform(FQuat::Identity,P,FVector(Size,Size,Size*1.5f)),false,I==71,true);
         }
     },1.f/30.f,true);
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
+    {
+        int32 Failures=0;
+        for(const TCHAR* Name : {TEXT("FountainBasinWater"),TEXT("FountainJetWater"),TEXT("HarborWater")})
+            if(!LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Name,Name))) ++Failures;
+        for(const FString Key : {TEXT("FountainJetWaterCubedetail")})
+        {
+            auto* B=Batches.FindRef(Key);
+            if(!B || !B->GetMaterial(0) || B->GetCollisionEnabled()!=ECollisionEnabled::NoCollision) ++Failures;
+        }
+        for(auto* B : {LowerBasin,UpperBasin})
+            if(!B->GetMaterial(0) || B->GetCollisionEnabled()!=ECollisionEnabled::NoCollision) ++Failures;
+        if(Drops->GetInstanceCount()!=72 || Drops->GetCollisionEnabled()!=ECollisionEnabled::NoCollision) ++Failures;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SURFACE_WATER_CHECK failures=%d materials=3 jet_drops=24 splash_drops=48"),Failures);
+    }
     // Coping and plinth courses retain the existing basin collision.
     for(int32 I=0;I<32;++I)
     {
@@ -328,6 +379,32 @@ void BuildDockPlaza(UWorld* World)
         const bool Closed=World->LineTraceSingleByChannel(Gate,FVector(1500,-3450,80),FVector(1900,-3450,80),ECC_Visibility);
         if(!Closed) ++Failures;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_PLAZA_CHECK failures=%d floor_samples=14 capsule_routes=11 sewer_closed=%d"),Failures,Closed);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWaterCapture")))
+    {
+        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWaterNight")))
+        {
+            // Sewer construction resets its state later in BeginPlay; defer the
+            // review-only evening transition until all scene builders finish.
+            FTimerHandle Night,Check;
+            World->GetTimerManager().SetTimer(Night,[](){MarkDockSewerExited();},2.f,false);
+            World->GetTimerManager().SetTimer(Check,[World](){CheckDockReturn(World,true);},3.f,false);
+        }
+        // Each repeated view is four seconds apart, exposing actual wave/splash motion.
+        const FVector Views[]={FVector(-80,-3030,130),FVector(-80,-3030,130),FVector(260,-3290,440),FVector(260,-3290,440),FVector(640,-160,125),FVector(640,-160,125),FVector(750,-1250,860),FVector(750,-1250,860)};
+        const FVector Targets[]={FVector(260,-3320,85),FVector(260,-3320,85),FVector(260,-3320,40),FVector(260,-3320,40),FVector(1400,650,-60),FVector(1400,650,-60),FVector(2700,2000,-60),FVector(2700,2000,-60)};
+        auto* Camera=World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(65);
+        for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
+        {
+            FTimerHandle H;
+            World->GetTimerManager().SetTimer(H,[World,Camera,P=Views[I],T=Targets[I]]()
+            { Camera->SetActorLocationAndRotation(P,(T-P).Rotation()); if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera); },4.f+I*4,false);
+            FTimerHandle S;
+            World->GetTimerManager().SetTimer(S,[I]()
+            { const FString D=FPaths::ScreenShotDir()/TEXT("SurfaceWater"); IFileManager::Get().MakeDirectory(*D,true); FScreenshotRequest::RequestScreenshot(D/FString::Printf(TEXT("View%d.png"),I),false,false); },6.f+I*4,false);
+        }
+        FTimerHandle Quit;
+        World->GetTimerManager().SetTimer(Quit,[World]() { if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit")); },38.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPlazaCapture")))
     {

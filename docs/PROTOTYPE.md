@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 4 fountain/harbor continuation: separate lit water materials, basin impact rings and small animated splash droplets, plus world-space waves on single harbor sheets. Sewer water and Claude's latest character/pantry/vault work are retained. See [SURFACE-WATER.md](SURFACE-WATER.md) and the latest HANDOFF for actual packaged checks and rendering limits.
+
 Latest sewer layout: small Astral ruptures occupy the side banks, leaving the shallow stream continuous; only large ruptures cut through it. The zombie passage is narrower with steeper arched sides for the existing lateral wall run. Running parallel beside a wall + jump triggers that arc; running into a wall retains the original climb. See SEWER-PROTOTYPE.md and HANDOFF for actual checks; controls/controller code unchanged.
 
 Latest tavern addition: a provision cellar beneath the tavern, with an open hatch behind the bar and a visual ladder. Climbing is deferred to Claude. After the sewer return opens the tavern, drop through the hatch to inspect the pantry; R / controller View returns to docks. See TAVERN-PANTRY.md for the ladder contract and HANDOFF for verified launcher status.

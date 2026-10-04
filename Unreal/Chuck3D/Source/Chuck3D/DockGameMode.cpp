@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
 #include "DockPlaza.h"
 #include "DockSewer.h"
@@ -180,15 +181,71 @@ void ADockGameMode::StartPlay()
     };
     // Units are centimetres. Ground top = 0; geometry is intentionally simple.
     Shape(TEXT("Quay"),FVector(-150,0,-20),FVector(700,800,40),TEXT("Stone"));
-    // Cut only the sewer shaft out of the harbor plane so falling through
-    // the real opening never crosses a visible sheet of sea water.
-    Shape(TEXT("Sea"),FVector(900,-62062.5f,-65),FVector(250000,125875,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(900,2375,-65),FVector(250000,2840,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(-62040,915,-65),FVector(124120,80,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(63015,915,-65),FVector(125770,80,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(900,64502.5f,-65),FVector(250000,120995,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(-62897.5f,3900,-65),FVector(122405,210,10),TEXT("Water"),nullptr,false);
-    Shape(TEXT("Sea"),FVector(62217.5f,3900,-65),FVector(127365,210,10),TEXT("Water"),nullptr,false);
+    // Single surfaces avoid layered refraction; bounded-size triangles keep
+    // the rendered wave detail consistent across the enormous harbor footprint.
+    auto Sea=[&](FVector P,FVector Size)
+    {
+        auto* Actor=World->SpawnActor<AActor>(P,FRotator::ZeroRotator);
+        Actor->Tags.Add(TEXT("Sea"));
+        auto* Surface=NewObject<UProceduralMeshComponent>(Actor);
+        Actor->SetRootComponent(Surface); Surface->RegisterComponent(); Surface->SetWorldLocation(P);
+        TArray<FVector> V,N; TArray<int32> Tri; TArray<FVector2D> UV;
+        TArray<FLinearColor> Colors; TArray<FProcMeshTangent> Tangents;
+        const int32 NX=FMath::CeilToInt(Size.X/2000.f), NY=FMath::CeilToInt(Size.Y/2000.f);
+        for(int32 Y=0;Y<=NY;++Y) for(int32 X=0;X<=NX;++X)
+        {
+            const FVector Point(-Size.X*.5f+Size.X*X/NX,-Size.Y*.5f+Size.Y*Y/NY,0);
+            V.Add(Point); N.Add(FVector::UpVector);
+            UV.Add(FVector2D(P.X+Point.X,P.Y+Point.Y)/100.f); Tangents.Add(FProcMeshTangent(1,0,0));
+        }
+        for(int32 Y=0;Y<NY;++Y) for(int32 X=0;X<NX;++X)
+        {
+            const int32 A=Y*(NX+1)+X, B=A+1, C=A+NX+1, D=C+1;
+            Tri.Append({A,B,D,A,D,C});
+        }
+        Surface->CreateMeshSection_LinearColor(0,V,Tri,N,UV,Colors,Tangents,false);
+        Surface->SetMaterial(0,Material(TEXT("HarborWater")));
+        Surface->SetCollisionProfileName(TEXT("NoCollision")); Surface->SetCastShadow(false);
+    };
+    // Preserve the exact pantry and sewer shaft exclusions.
+    Sea(FVector(900,-62062.5f,-60),FVector(250000,125875,1));
+    Sea(FVector(900,2375,-60),FVector(250000,2840,1));
+    Sea(FVector(-62040,915,-60),FVector(124120,80,1));
+    Sea(FVector(63015,915,-60),FVector(125770,80,1));
+    Sea(FVector(900,64502.5f,-60),FVector(250000,120995,1));
+    Sea(FVector(-62897.5f,3900,-60),FVector(122405,210,1));
+    Sea(FVector(62217.5f,3900,-60),FVector(127365,210,1));
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
+    {
+        int32 Count=0, Failures=0;
+        auto* Water=Material(TEXT("HarborWater"));
+        if(!Water) ++Failures;
+        for(TActorIterator<AActor> It(World);It;++It)
+            if(It->ActorHasTag(TEXT("Sea")))
+            {
+                ++Count;
+                auto* C=It->FindComponentByClass<UProceduralMeshComponent>();
+                if(!C || C->GetMaterial(0)!=Water || C->GetCollisionEnabled()!=ECollisionEnabled::NoCollision) ++Failures;
+            }
+        // Visual coverage matters despite NoCollision: shafts must be dry gaps,
+        // and adjoining harbor sheets must meet without stacked translucency.
+        const FVector2D Probes[]={FVector2D(75,915),FVector2D(-1580,3900),FVector2D(0,915),FVector2D(140,915),FVector2D(0,2375),FVector2D(-1700,3900),FVector2D(-1460,3900),FVector2D(-1600,4020)};
+        for(int32 I=0;I<UE_ARRAY_COUNT(Probes);++I)
+        {
+            int32 Covers=0;
+            for(TActorIterator<AActor> It(World);It;++It)
+                if(It->ActorHasTag(TEXT("Sea")))
+                {
+                    auto* C=It->FindComponentByClass<UProceduralMeshComponent>();
+                    if(!C) {++Failures;continue;}
+                    const FBox B=C->CalcBounds(C->GetComponentTransform()).GetBox();
+                    if(Probes[I].X>B.Min.X && Probes[I].X<B.Max.X && Probes[I].Y>B.Min.Y && Probes[I].Y<B.Max.Y) ++Covers;
+                }
+            if(Covers!=(I<2?0:1)) ++Failures;
+        }
+        if(Count!=7) ++Failures;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_HARBOR_WATER_CHECK failures=%d sheets=%d collision=0 open_shafts=2 single_surface_samples=6"),Failures,Count);
+    }
     // Short pier with a 24 cm missing board. Chuck's jump travels about 41 cm.
     for(int32 Row=0;Row<26;++Row)
     {

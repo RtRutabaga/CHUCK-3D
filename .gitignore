@@ -32,3 +32,6 @@ Thumbs.db
 CLAUDE.local.md
 .claude/settings.local.json
 .claude/worktrees/
+
+# Editor-only generated Water plugin integration trial; excluded from packaging.
+/Unreal/Chuck3D/Content/Review/WaterOceanTrial*

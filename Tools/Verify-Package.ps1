@@ -33,6 +33,8 @@ $sideGateCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SIDEGATE_CHEC
 $courtPierCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_COURTPIER_CHECK failures=0 floors=10 routes=9'
 $dockPropsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKPROPS_CHECK failures=0 barrels=5 planks=4 boundaries=2'
 $plazaCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_PLAZA_CHECK failures=0 floor_samples=14 capsule_routes=11 sewer_closed=1'
+$harborWaterCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_HARBOR_WATER_CHECK failures=0 sheets=7 collision=0 open_shafts=2 single_surface_samples=6'
+$surfaceWaterCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SURFACE_WATER_CHECK failures=0 materials=3 jet_drops=24 splash_drops=48'
 $musicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1'
 $chimneyCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CHIMNEY_COLLISION failures=0 checked=[1-9]'
 $hatchCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_OPENHATCH_CHECK failures=0 shaft=3 surrounds=3 raised_lid=1'
@@ -49,7 +51,7 @@ $narrowCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_NARROW fa
 $rubbleCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SLIDE_RUBBLE rocks=44 collision=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {135} else {136}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or $passed -lt $expected) {
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }
