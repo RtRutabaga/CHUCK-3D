@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 4 plaza addition: a blacksmith hammers hot iron at an anvil in front of the smithy, beside the forge. He has strike sounds and sparks, two lines when talked to (F / Y), and a climbable anvil. See WATERDEEP-PLAZA.md and the latest HANDOFF.
+
 October 4 fountain/harbor continuation: separate lit water materials, basin impact rings and small animated splash droplets, plus world-space waves on single harbor sheets. Sewer water and Claude's latest character/pantry/vault work are retained. See [SURFACE-WATER.md](SURFACE-WATER.md) and the latest HANDOFF for actual packaged checks and rendering limits.
 
 Latest sewer layout: small Astral ruptures occupy the side banks, leaving the shallow stream continuous; only large ruptures cut through it. The zombie passage is narrower with steeper arched sides for the existing lateral wall run. Running parallel beside a wall + jump triggers that arc; running into a wall retains the original climb. See SEWER-PROTOTYPE.md and HANDOFF for actual checks; controls/controller code unchanged.

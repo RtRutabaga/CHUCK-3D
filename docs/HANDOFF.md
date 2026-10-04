@@ -2,6 +2,48 @@
 
 ## Current launcher and integration status
 
+**Update 70 (Claude, October 4, user request: "a blacksmith character (gruff white male) by the smithy and forge, make him an anvil that he'll be working at"):** runtime `f19b883`, from clean main `7ea8010`.
+- **The smith:** `Blacksmith` in `SourceAssets/NPCs/humans.json`, built by `Tools/build_npc_humans.py`.
+  - A heavy-set older white man (MPFB, 184 cm) with weathered skin, bushy brows (`eyebrow009`) and a short crop (`short01`).
+  - Dressed in a soot-grey linen shirt with rolled sleeves, a leather bib apron with shoulder straps, a long apron, trousers and boots.
+  - The new `bib` piece and the apron's `bottom`/`width` options are in the clothing kit.
+  - MakeHuman has no beards, so he has none.
+- **Props:** `Tools/build_smith_props.py` builds three props, merged into the shared props manifest (the spear's entry is kept).
+  - A London-pattern anvil (horn, heel with hardy holes, polished face 80 cm up) on an iron-hooped elm stump.
+  - A cross-peen hammer.
+  - Tongs with jaws bent 20 degrees, holding a bar that glows with `M_FireEmber`.
+- **Runtime:** `ADockNPC::SpawnBlacksmith`, called from `SpawnTownsfolk`, places him at (-950,-3664) facing the plaza, with the forge at his left.
+  - The anvil is a separate actor with three simple boxes. It replaces the old box anvil in `DockPlaza.cpp`, and Chuck can hop onto it.
+  - Both arms use a new generic two-bone IK (`PlaceHand`/`HandFrame`) over the StandHip mocap idle. The hammer swings from over his right shoulder down onto the bar; the tongs slope from his left fist at the hip to the bar on the face.
+  - He strikes in sets of six blows (1.3 s each), with a 2.6 s pause to lift and turn the work.
+  - Each blow plays one of four synthetic `SFX_AnvilStrike` sounds (`Tools/gen_anvil_sfx.py`, heard within about 25 m), throws nine sparks and flashes a light.
+  - He keeps his body at the anvil while his head follows the rat. Talked to or scratched, he rests the hammer. His lines are "Mind the sparks, rat." and "Go on. I've a hinge to finish."
+- **Tests:** the smith is exempt from the arms-down pose check. A new check covers his anvil, the forge distance, at least 3 strikes, the worst strike gap under 4 cm, the tongs grip under 4 cm and his lines.
+  - `Verify-Package.ps1` requires `CHUCK_SMITH_SPAWNED anvil=1 hammer=1 tongs=1 sounds=4`, with thresholds of 136 (no capture) and 137 (capture).
+- **Tooling:** `Import-NPCHumans.ps1 -Only Blacksmith,props` re-imports just those assets, and `Tools/import_anvil_sfx.py` imports the sounds.
+
+The candidate `Builds/SmithCandidate` passed `-MotionCapture` **138/138** plus every required check (`Local/verify-package-20261004-114823.log`). Measured: `strikes=73 worst_gap_cm=2.9 tongs_grip_cm=0.0 to_anvil_cm=49 to_forge_cm=181`.
+- The first two candidates failed only the new smith check. The worst blow was 4.6 and then 4.2 cm short, because the idle's sway took his right shoulder back.
+- The fix moved the anvil 3 cm closer, added more lean, posed the contact frame exactly, and made the test measure the worst blow instead of the last.
+
+Promoted to `Builds/Windows`; the receipt `f19b883` was written and checked. The previous package is kept as `Builds/Windows-Previous-20261004-Blacksmith`.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Blacksmith_{raised,blow,wide}.png`, `blender_Blacksmith_body.png`, `blender_Anvil_side.png`.
+
+LFS: 59 new or changed binaries, about 21.8 MB, all LFS.
+
+Uncommitted, deliberately: the first full human re-import rewrote 80 unchanged human, clip, spear and texture `.uasset`s (same sources). Restoring them with `git checkout` was blocked in this session, so they are left modified and unstaged. They are content-equivalent and were in the verified package; the user or the next agent can restore or commit them. Two unused first-try textures (`eyebrow001.png`, `short02_diffuse.png`) are untracked.
+
+Flaws:
+- The arms are procedural IK over a standing mocap idle, not captured smithing; the blow has no body follow-through or wrist snap.
+- The face review shot sees only his crown, because he looks down at the work.
+- The bib straps end at his shoulder blades.
+- No beard.
+- The sparks are small cubes.
+- Not played or heard by the user.
+
+Next part of the work could be done by either agent — preference: Claude for anything about his motion; Codex for dressing the smithy (tools rack, quench tub).
+
 **Update 69 (Codex, October 4, pickup of Claude's fountain and sea plan):** runtime `795d315`, from clean main `b848abc` (Claude sewer-water runtime `c6b9d1c`).
 
 - Added `M_FountainBasinWater`, `M_FountainJetWater` and `M_HarborWater`, owned only by `Tools/create_surface_water_materials.py`. Reuses Claude's three already copied UE Water textures; `M_SewerWater`, its generator, character/rig/controller and existing setting layout stay unchanged. Basin disks use lit translucency, animated normals, stone-bed refraction and landing rings. Four existing thin jets retain 24 traveling beads and gain 48 tiny ballistic impact droplets (native instances, not Niagara).

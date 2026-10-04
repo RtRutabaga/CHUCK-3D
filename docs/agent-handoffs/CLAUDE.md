@@ -1927,3 +1927,22 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Fountain and bay.
   - Glancing brightness.
   - Not seen in motion by the user.
+
+## Seventy-sixth pass — the plaza blacksmith and his anvil
+
+- **User (2026-10-04):** a gruff white male blacksmith by the smithy and forge, with an anvil he works at.
+- **Source:** `f19b883` on main (base `7ea8010`).
+  - `humans.json` Blacksmith; `build_npc_humans.py` (the `bib` piece, apron options).
+  - New: `build_smith_props.py`, `gen_anvil_sfx.py`, `import_anvil_sfx.py`.
+  - `import_npc_humans.py` and `Import-NPCHumans.ps1` (`-Only`); `build_spear.py` (merges the manifest).
+  - `DockNPC.cpp/.h` (`SpawnBlacksmith`, `PlaceHand`, `HandFrame`, `TickSmith`, `PoseSmith`, `Strike`), `DockGameMode.cpp` (the smith check), `DockPlaza.cpp` (Codex's: the box anvil removed).
+  - `Verify-Package.ps1` (136/137 and the smith marker).
+- **Contract:** the shared human skeleton is unchanged; the new mesh is on `SKEL_Human`. Chuck's rig and clips are untouched.
+- **Verified:** root package 138/138, `Local/verify-package-20261004-114823.log`; worst strike gap 2.9 cm over 73 blows. Editor `-game -ChuckNPCCapture`: `Local/smith-npc-capture.log`.
+- **Uncommitted:** 80 re-import-churned, content-equivalent human `.uasset`s (restoring them was blocked this session); see HANDOFF Update 70.
+- **Remaining:**
+  - A smithing mocap take or authored swing.
+  - Bib straps across the back.
+  - Beard.
+  - Spark art.
+  - Not played by the user.
