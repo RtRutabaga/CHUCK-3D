@@ -43,6 +43,11 @@ public:
     bool IsWallRunning() const { return Gait == EGait::WallRun; }
     /** Running along a wall beside him (the side wall run), and how many he has done. */
     bool IsWallSideRunning() const { return Gait == EGait::WallSide; }
+    /** On a ladder (or anything else climbable, ChuckClimbable.h), and how often he has taken hold of one. */
+    bool IsOnLadder() const { return Gait == EGait::Ladder; }
+    int32 GetLadderMounts() const { return LadderMounts; }
+    /** Falls off the map (each an Astral death: he's summoned back at the area's start). */
+    int32 GetFallDeaths() const { return FallDeaths; }
     int32 GetWallSideRuns() const { return WallSideRuns; }
     /** The last side wall run: distance along the wall (cm) and height gained at its top (cm). */
     float GetWallSideTravel() const { return WallSideTravel; }
@@ -99,6 +104,8 @@ public:
     static constexpr float WallSideUp = 260.f;     // cm/s up at the start of the arc
     static constexpr float WallSideGravity = 520.f;   // cm/s2: a lighter fall than his own while he runs it
     static constexpr float WallSideLean = 24.f;    // deg his body leans out from the wall
+    static constexpr float LadderSpeed = 75.f;     // cm/s up or down a ladder
+    static constexpr float LadderStride = 30.f;    // cm climbed per cycle of the climb clip
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
@@ -184,6 +191,7 @@ protected:
     virtual void BeginPlay() override;
 private:
     bool bSewerRespawn = false;
+    bool bPantryRespawn = false;   // came down into the tavern pantry: deaths there return to its ladder
     void ResetAtLocation(const FVector& Location);
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
@@ -216,7 +224,7 @@ private:
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
     enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -292,7 +300,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Hang || Gait == EGait::Climb; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face
@@ -377,6 +385,14 @@ private:
     FVector WallSideAlong = FVector::ZeroVector;   // horizontal, along the wall the way he runs
     float WallSideSpeed = 0, WallSideClock = 0, WallSideStartZ = 0, WallSideTravel = 0, WallSideRise = 0, WallSideTilt = 0;
     int32 WallSideRuns = 0;
+    // Ladders (ChuckClimbable).
+    int32 LadderIndex = -1, LadderMounts = 0, FallDeaths = 0;
+    float LadderPhase = 0, LadderClock = 0, LadderCooldownUntil = -1;
+    FVector LadderFrom = FVector::ZeroVector, ClimbFrom = FVector::ZeroVector;
+    bool bClimbReverse = false;    // lowering himself from the floor above onto a ladder: the pull-up played backward
+    bool TryMountLadder();
+    void EnterLadder(int32 Index);
+    void FallToDeath();
     bool TryWallSideRun();
     void LeaveWallSide();
     bool ProbeSideWall(const FVector& From, const FVector& Side, float Reach, FVector& OutNormal, FVector& OutPoint) const;

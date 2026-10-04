@@ -143,6 +143,17 @@ AClayJar* AClayJar::Place(UWorld* World, const FVector2D& At, float Yaw, int32 C
     return Jar;
 }
 
+AClayJar* AClayJar::PlaceAt(UWorld* World, const FVector& Ground, float Yaw, int32 Cigarettes)
+{
+    // Traced when the surface is already there to hit; while a room is still
+    // being built (its collision not yet in the scene) Ground is taken as given.
+    FHitResult Hit;
+    const bool bHit = World->LineTraceSingleByChannel(Hit, Ground + FVector(0, 0, 20.f), Ground - FVector(0, 0, 40.f), ECC_Visibility) && Hit.ImpactNormal.Z >= .9f;
+    auto* Jar = World->SpawnActor<AClayJar>((bHit ? Hit.ImpactPoint : Ground) + FVector(0, 0, ClayJarData::Height * .5f), FRotator(0, Yaw, 0));
+    if (Jar) Jar->Cigarettes = Cigarettes;
+    return Jar;
+}
+
 void AClayJar::SpawnDockJars(UWorld* World)
 {
     // Where a dock would keep them: by the tavern door, along the warehouse,

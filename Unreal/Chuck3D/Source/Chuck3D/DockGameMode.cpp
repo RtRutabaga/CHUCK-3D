@@ -4,6 +4,7 @@
 #include "DockSewer.h"
 #include "SewerLife.h"
 #include "SewerSlide.h"
+#include "DockPantry.h"
 #include "DockReturn.h"
 #include "DockFire.h"
 #include "GrassTuft.h"
@@ -543,6 +544,9 @@ void ADockGameMode::StartPlay()
     // -ChuckWallSideTest: only the side wall run (stages 116-117), then quit.
     bWallSideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckWallSideTest"));
     if(bWallSideOnly) { bSmokeTest=true; TestStage=116; }
+    // -ChuckPantryLadderTest: only the pantry's ladder, rupture and cheese jump (stages 118-124), then quit.
+    bPantryOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckPantryLadderTest"));
+    if(bPantryOnly) { bSmokeTest=true; TestStage=118; }
 }
 
 namespace
@@ -2292,13 +2296,119 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLSIDE_MEASURE ran=%d travel_cm=%.0f rise_cm=%.0f landed_in_sewer=%d walk_jump_side_runs=%d"),bSideRan,SideTravel,SideRise,bSideInSewer,SideRunsAtWalk);
                 Check(bSideRan && SideTravel>150.f && SideRise>30.f && bSideInSewer && SideRunsAtWalk==0,
                     TEXT("a running jump with a tunnel wall right beside him runs an arc along it (not up it); a walking jump there is an ordinary jump"));
-                SideSub=0; TestStage=115; StageTime=0;
+                SideSub=0; TestStage=bWallSideOnly ? 115 : 118; StageTime=0;
             }
+        }
+    }
+    else if(TestStage==118 && StageTime>.3f)
+    {
+        // The pantry ladder: from the cellar floor in front of it, push toward it.
+        if(APlayerController* LPC=GetWorld()->GetFirstPlayerController()) { Chuck->DisableInput(LPC); LPC->SetViewTarget(Chuck); }
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(FVector(73.5f,915,-320+34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(FRotator::ZeroRotator); Chuck->Recenter();
+        LadderMountsBefore=Chuck->GetLadderMounts(); LadderPullUpsBefore=Chuck->GetPullUps();
+        bLadderSeen=bLadderUp=bLadderDown=false; LadderTopZ=-1e6f;
+        TestStage=119; StageTime=0;
+    }
+    else if(TestStage==119)
+    {
+        // Up the whole ladder and out over the top onto the tavern floor.
+        Chuck->SetTestStick(FVector2D(0,1));
+        bLadderSeen|=Chuck->IsOnLadder();
+        LadderTopZ=FMath::Max(LadderTopZ,static_cast<float>(Chuck->GetActorLocation().Z));
+        for(const float Shot : {1.5f,3.f})
+            if(StageTime>=Shot && StageTime-DeltaSeconds<Shot)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Ladder_up_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        const FVector P=Chuck->GetActorLocation();
+        if((bLadderSeen && Chuck->GetCharacterMovement()->IsMovingOnGround() && P.Z>20.f) || StageTime>12.f)
+        {
+            bLadderUp=bLadderSeen && Chuck->GetPullUps()==LadderPullUpsBefore+1 && FMath::Abs(P.Z-34.65f)<4.f && P.X>130.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LADDER_UP ok=%d seen=%d pullups=%d p=%s t=%.2f"),bLadderUp,bLadderSeen,Chuck->GetPullUps()-LadderPullUpsBefore,*P.ToString(),StageTime);
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Ladder_top.png"),true,false);
+            bLadderSeen=false; TestStage=120; StageTime=0;
+        }
+    }
+    else if(TestStage==120 && StageTime>.7f)
+    {
+        // Then back: walk toward the drop, lower onto the ladder, down it, off at the foot.
+        Chuck->SetTestStick(FVector2D(0,-1));
+        if(!Chuck->IsOnLadder() && !bLadderSeen && Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(FVector(-1,0,0),1);
+        bLadderSeen|=Chuck->IsOnLadder();
+        if(StageTime>=2.2f && StageTime-DeltaSeconds<2.2f)
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Ladder_down.png"),true,false);
+        const FVector P=Chuck->GetActorLocation();
+        if((bLadderSeen && !Chuck->IsOnLadder() && Chuck->GetCharacterMovement()->IsMovingOnGround() && P.Z<-250.f) || StageTime>14.f)
+        {
+            bLadderDown=bLadderSeen && Chuck->GetLadderMounts()==LadderMountsBefore+2 && FMath::Abs(P.Z-(-320+34.65f))<4.f && IsWithinDockPantry(P);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LADDER_DOWN ok=%d mounts=%d p=%s t=%.2f"),bLadderDown,Chuck->GetLadderMounts()-LadderMountsBefore,*P.ToString(),StageTime);
+            Check(bLadderUp && bLadderDown,TEXT("Chuck climbs the pantry ladder its whole height without jumping on: up, out over the top onto the tavern floor, and back down from there"));
+            TestStage=121; StageTime=0;
+        }
+    }
+    else if(TestStage==121 && StageTime>.3f)
+    {
+        // A fall into one of its Astral ruptures: an Astral death, back by the ladder.
+        Chuck->SetTestStick(FVector2D::ZeroVector);
+        Chuck->SetActorLocation(FVector(240,520,-320+40.f),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        FallsBefore=Chuck->GetFallDeaths(); RespawnsBefore=Chuck->GetRespawns();
+        TestStage=122; StageTime=0;
+    }
+    else if(TestStage==122)
+    {
+        if(StageTime>=.5f && StageTime-DeltaSeconds<.5f) FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Pantry_rift_fall.png"),true,false);
+        if(FMath::Fmod(StageTime,.25f)<DeltaSeconds && StageTime<3.f)
+        {
+            FHitResult Under; FCollisionQueryParams Q(SCENE_QUERY_STAT(RiftUnder),false,Chuck);
+            const bool bUnder=GetWorld()->LineTraceSingleByChannel(Under,Chuck->GetActorLocation(),Chuck->GetActorLocation()-FVector(0,0,80),ECC_Visibility,Q);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_RIFT_TRACK t=%.2f p=%s mode=%d under=%s/%s at=%s"),StageTime,*Chuck->GetActorLocation().ToString(),int32(Chuck->GetCharacterMovement()->MovementMode),
+                bUnder?*GetNameSafe(Under.GetActor()):TEXT("-"),bUnder?*GetNameSafe(Under.GetComponent()):TEXT("-"),*Under.ImpactPoint.ToString());
+        }
+        if((Chuck->GetRespawns()>RespawnsBefore && !Chuck->IsAstral()) || StageTime>10.f)
+        {
+            const FVector P=Chuck->GetActorLocation();
+            bRiftDeath=Chuck->GetFallDeaths()==FallsBefore+1 && Chuck->GetRespawns()==RespawnsBefore+1 && FVector::Dist(P,DockPantryStartLocation())<20.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_RIFT_MEASURE ok=%d falls=%d respawns=%d p=%s t=%.2f"),bRiftDeath,Chuck->GetFallDeaths()-FallsBefore,Chuck->GetRespawns()-RespawnsBefore,*P.ToString(),StageTime);
+            TestStage=123; StageTime=0;
+        }
+    }
+    else if(TestStage==123 && StageTime>.5f)
+    {
+        // The cheese: from the edge of the sky, a full running jump straight at it.
+        const FVector2D C=DockPantrySkyCentre();
+        const FVector Edge(C.X+DockPantrySkyRadius()+130.f,C.Y,-320+34.65f);   // from the open east side
+        Chuck->SetActorLocation(Edge,false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(FRotator(0,180,0)); Chuck->Recenter();
+        Chuck->SetRunHeld(true);
+        FallsBefore=Chuck->GetFallDeaths(); RespawnsBefore=Chuck->GetRespawns(); PantryJumpAt=-1; IslandClosest=1e6f; bReachedIsland=false;
+        TestStage=124; StageTime=0;
+    }
+    else if(TestStage==124)
+    {
+        const FVector2D C=DockPantrySkyCentre();
+        const FVector P=Chuck->GetActorLocation();
+        if(PantryJumpAt<0) { Chuck->SetTestStick(FVector2D(0,1)); Chuck->AddMovementInput(FVector(-1,0,0),1); }
+        // Jump at the last of the floor.
+        if(PantryJumpAt<0 && (P.X-C.X<DockPantrySkyRadius()+22.f || StageTime>3.f)) { Chuck->JumpPressed(); PantryJumpAt=StageTime; }
+        if(FMath::Fmod(StageTime,.25f)<DeltaSeconds) UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_JUMP_TRACK t=%.2f p=%s gait=%s"),StageTime,*P.ToString(),Chuck->GetGaitName());
+        IslandClosest=FMath::Min(IslandClosest,static_cast<float>(FVector2D::Distance(FVector2D(P.X,P.Y),C)));
+        bReachedIsland|=Chuck->GetCharacterMovement()->IsMovingOnGround() && FVector2D::Distance(FVector2D(P.X,P.Y),C)<DockPantryIslandRadius()+20.f && P.Z>-320;
+        if(PantryJumpAt>=0 && StageTime>=PantryJumpAt+.3f && StageTime-DeltaSeconds<PantryJumpAt+.3f)
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Pantry_cheese_jump.png"),true,false);
+        if((PantryJumpAt>=0 && Chuck->GetRespawns()>RespawnsBefore && !Chuck->IsAstral()) || StageTime>12.f)
+        {
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector);
+            const bool bFell=Chuck->GetFallDeaths()==FallsBefore+1 && FVector::Dist(Chuck->GetActorLocation(),DockPantryStartLocation())<20.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_CHEESE_MEASURE fell=%d reached_island=%d closest_cm=%.0f gap_cm=%.0f"),bFell,bReachedIsland,IslandClosest,DockPantrySkyRadius()-DockPantryIslandRadius());
+            Check(bRiftDeath && bFell && !bReachedIsland,TEXT("in the pantry a fall into a rupture or the sky is an Astral death that brings Chuck back by the ladder, and the cheese's island is out of a running jump's reach"));
+            Chuck->ResetToDock();
+            TestStage=115; StageTime=0;
         }
     }
     else if(TestStage==115)
     {
-        if(bZombieOnly || bWallSideOnly)
+        if(bZombieOnly || bWallSideOnly || bPantryOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

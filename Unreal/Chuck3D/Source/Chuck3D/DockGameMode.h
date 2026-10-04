@@ -87,7 +87,11 @@ private:
     float ZombieStartDistance = 0, ZombieClosest = 1e6f, ZombieKillAt = -1;
     bool bZombieWindup = false, bZombieAliveAtEight = false;
     int32 ZombieSanityBefore = 0, ZombieCigarettesBefore = 0, ZombieHitsGiven = 0;
-    bool bSlideOnly = false, bZombieOnly = false, bWallSideOnly = false;
+    bool bSlideOnly = false, bZombieOnly = false, bWallSideOnly = false, bPantryOnly = false;
+    // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
+    int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
+    float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;
+    bool bLadderSeen = false, bLadderUp = false, bLadderDown = false, bRiftDeath = false, bReachedIsland = false;
     // The side wall run test (in a narrow stretch of the sewer).
     FVector SideStart = FVector::ZeroVector; FRotator SideFacing = FRotator::ZeroRotator;
     int32 SideSub = 0, SideRunsBefore = 0, SideClimbsBefore = 0, SideRunsAtWalk = 0;

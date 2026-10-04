@@ -2,6 +2,7 @@
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "SewerSlide.h"
+#include "ChuckClimbable.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
 #include "ChuckBreakable.h"
@@ -242,7 +243,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -360,12 +361,13 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 }
 void AChuckCharacter::ResetToDock()
 {
-    bSewerRespawn = false;
+    bSewerRespawn = bPantryRespawn = false;
     ResetAtLocation(StartLocation());
 }
 FVector AChuckCharacter::GetAreaStartLocation() const
 {
     const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
+    if (bPantryRespawn) return DockPantryStartLocation();
     return Sewer ? DockSewerStartLocation() : StartLocation();
 }
 void AChuckCharacter::RespawnAtAreaStart()
@@ -376,8 +378,10 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
     GetCharacterMovement()->StopMovementImmediately();
     SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
-    bSewerRespawn=Location.Z<-150;
+    bPantryRespawn=IsWithinDockPantry(Location);
+    bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
     ViewYaw = bSewerRespawn ? 90.f : 0.f;
+    LadderIndex = -1; bClimbReverse = false;
     SetActorRotation(FRotator(0,ViewYaw,0));
     LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
     Gait = EGait::Idle;
@@ -560,6 +564,12 @@ void AChuckCharacter::JumpPressed()
         if (FVector::DotProduct(StickWorld(), -HangNormal) < -.3f) { WallNormal = HangNormal; WallJump(); }
         else if (bHangRoom) StartClimb(false, HangNormal, HangEdge);
         return;
+    }
+    if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
+    {
+        WallNormal = GetChuckClimbables()[LadderIndex].Out; LadderIndex = -1;
+        LadderCooldownUntil = Now + .6f;
+        WallJump(); return;
     }
     if (Gait == EGait::WallRun || Gait == EGait::WallSide || (Movement->IsFalling() && Now < WallCoyoteUntil)) { WallJump(); return; }
     if (Movement->IsFalling()) { AirJumpPressedAt = Now; return; }  // buffered for a wall reached just after
@@ -813,6 +823,7 @@ void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVec
     Movement->SetMovementMode(MOVE_Flying);
     Movement->StopMovementImmediately();
     ClimbStart = GetActorLocation();
+    bClimbReverse = false;
     ClimbDir = -Normal;
     ClimbRise = static_cast<float>(Edge.Z - ClimbStart.Z) + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f;
     ClimbAdvance = static_cast<float>(FVector::DotProduct(ClimbStart - Edge, Normal)) + (bMantle ? 17.f : 18.5f);
@@ -899,6 +910,82 @@ bool AChuckCharacter::TryWallSideRun()
     PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
     return true;
 }
+bool AChuckCharacter::TryMountLadder()
+{
+    // Taking hold needs no jump (user 2026-10-03): walk into a ladder's foot,
+    // or, on the floor above, walk toward the drop at its top and he turns and
+    // lowers himself onto it (the pull-up, backward).
+    const FVector Stick = StickWorld();
+    if (Stick.SizeSquared() < .16f || GetWorld()->GetTimeSeconds() < LadderCooldownUntil) return false;
+    const FVector Location = GetActorLocation();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const float Feet = static_cast<float>(Location.Z) - Half;
+    const TArray<FChuckClimbable>& All = GetChuckClimbables();
+    for (int32 I = 0; I < All.Num(); ++I)
+    {
+        const FChuckClimbable& C = All[I];
+        const FVector Side = FVector::CrossProduct(FVector::UpVector, C.Out);
+        const FVector Rel = Location - C.Foot;
+        const float Front = static_cast<float>(FVector::DotProduct(Rel, C.Out));
+        if (FMath::Abs(Feet - static_cast<float>(C.Foot.Z)) < 25.f && FMath::Abs(FVector::DotProduct(Rel, Side)) < C.HalfWidth + 10.f
+            && Front > -10.f && Front < 45.f && FVector::DotProduct(Stick, -C.Out) > .6f)
+        {
+            EnterLadder(I); ++LadderMounts;
+            return true;
+        }
+        const FVector Top = Location - C.Lip;
+        const float Onto = static_cast<float>(FVector::DotProduct(Top, -C.Out));   // how far onto the floor above
+        if (FMath::Abs(Feet - C.TopZ) < 20.f && FMath::Abs(FVector::DotProduct(Top, Side)) < C.HalfWidth + 10.f
+            && Onto > 0.f && Onto < 55.f && FVector::DotProduct(Stick, C.Out) > .6f)
+        {
+            auto* Movement = GetCharacterMovement();
+            Movement->SetMovementMode(MOVE_Flying);
+            Movement->StopMovementImmediately();
+            ClimbStart = FVector(C.Foot.X, C.Foot.Y, C.TopZ - ChuckClipData::HangDrop);
+            ClimbDir = -C.Out;
+            ClimbRise = static_cast<float>(C.Lip.Z - ClimbStart.Z) + Half + 1.f;
+            ClimbAdvance = static_cast<float>(FVector::DotProduct(ClimbStart - C.Lip, C.Out)) + 18.5f;
+            bClimbMantle = false; bClimbReverse = true; LadderIndex = I; ClimbFrom = Location;
+            SetActorRotation((-C.Out).Rotation());
+            Gait = EGait::Climb;
+            const float Length = Clips[static_cast<int32>(EClip::PullUp)]->GetPlayLength();
+            SetClip(EClip::PullUp, Length, .1f);
+            BaseTime = Length;
+            ++LadderMounts;
+            return true;
+        }
+    }
+    return false;
+}
+void AChuckCharacter::EnterLadder(int32 Index)
+{
+    auto* Movement = GetCharacterMovement();
+    Movement->SetMovementMode(MOVE_Flying);
+    Movement->StopMovementImmediately();
+    LadderIndex = Index; LadderClock = 0; LadderFrom = GetActorLocation();
+    Gait = EGait::Ladder;
+    SetActorRotation((-GetChuckClimbables()[Index].Out).Rotation());
+    SetClip(EClip::WallRun, FMath::Frac(LadderPhase) * Period(EClip::WallRun), .12f);
+    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; bRunJump = false; RunWeight = 0;
+}
+void AChuckCharacter::FallToDeath()
+{
+    // Off the edge of the world (user 2026-10-03): an Astral death like any
+    // other, only there's nothing to see where he fell, so it goes dark at
+    // once; then he's summoned back at this area's start.
+    if (IsAstral()) return;
+    auto* Movement = GetCharacterMovement();
+    bPendingVanish = false;
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
+    RestoreSlideCamera(); LadderIndex = -1; bClimbReverse = false;
+    Gait = EGait::Astral; AstralPhase = EAstral::Vanishing; AstralClock = .8f; bAstralFaded = true;
+    SetAstralHidden(true);
+    CameraFade(0.f, 1.f, .35f);
+    ++FallDeaths;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_DEATH at=%s return=%s"), *GetActorLocation().ToString(), *GetAreaStartLocation().ToString());
+}
 void AChuckCharacter::LeaveWallSide()
 {
     // Off the end of the arc: carry on falling the way he was going, a touch out from the wall.
@@ -973,7 +1060,7 @@ void AChuckCharacter::Slash()
         if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
         return;
     }
-    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return;
+    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::Ladder) return;
     const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -1252,7 +1339,7 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
             // Return to this area's entrance, whole again.
             AstralPhase = EAstral::Away; AstralClock = 0;
             const FVector Return=GetAreaStartLocation();
-            ViewYaw = Return.Z<-150 ? 90.f : 0.f;
+            ViewYaw = (Return.Z<-150 && !IsWithinDockPantry(Return)) ? 90.f : 0.f;
             SetActorLocationAndRotation(Return, FRotator(0,ViewYaw,0), false, nullptr, ETeleportType::TeleportPhysics);
             LookPitch = SmoothLook = FMath::Min(LookPitch, -5.f); bFollowReady = false;
             PreviousMotionLocation = GetActorLocation();
@@ -1414,7 +1501,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Distance-matched gait: start, walk and stop clips advance by travelled
     // distance, so the clip's stance paw moves exactly with the ground.
     // Walking into a knee-high ledge: mantle onto it.
-    if (bInput && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe)) TryMantle();
+    const bool bGroundGait = !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe || Gait == EGait::Turn || Gait == EGait::Land);
+    if (bGroundGait && TryMountLadder()) {}
+    else if (bInput && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe)) TryMantle();
     if (bPendingVanish && GetWorld()->GetTimeSeconds() >= PendingVanishAt && (Movement->IsMovingOnGround() || GetWorld()->GetTimeSeconds() >= PendingVanishAt + .8f)) BeginVanish();
     // The water slide at the sewer's end takes him once he's in its mouth.
     if (!IsAstral() && Gait != EGait::Hang && Gait != EGait::Climb && GetActorLocation().Z < -700.f)
@@ -1423,6 +1512,33 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Into > 35.f) BeginSlide(Into);
     }
     if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
+    else if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
+    {
+        // Up toward it, down away from it, the climb clip stepping with the
+        // height covered; out over the top with the pull-up, off at the foot.
+        const FChuckClimbable& C = GetChuckClimbables()[LadderIndex];
+        const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        const float Bottom = static_cast<float>(C.Foot.Z) + Half + 1.f, Top = C.TopZ - ChuckClipData::HangDrop;
+        LadderClock += DeltaSeconds;
+        const float Want = static_cast<float>(FVector::DotProduct(StickWorld(), -C.Out));
+        const float Climb = FMath::Abs(Want) > .3f ? FMath::Clamp(Want * 1.3f, -1.f, 1.f) : 0.f;
+        const float Z = FMath::Clamp(static_cast<float>(Location.Z) + Climb * LadderSpeed * DeltaSeconds, Bottom, Top);
+        const float Settle = FMath::SmoothStep(0.f, .15f, LadderClock);
+        const FVector At(FMath::Lerp(LadderFrom.X, C.Foot.X, Settle), FMath::Lerp(LadderFrom.Y, C.Foot.Y, Settle), Z);
+        LadderPhase += (Z - static_cast<float>(Location.Z)) / LadderStride;
+        BaseTime = FMath::Frac(LadderPhase) * Period(EClip::WallRun);
+        SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->Velocity = FVector::ZeroVector;
+        if (Climb > 0.f && Z >= Top - .5f) { LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f; StartClimb(false, C.Out, C.Lip); }
+        else if (Climb < 0.f && Z <= Bottom + .5f)
+        {
+            Movement->SetMovementMode(MOVE_Walking);
+            Gait = EGait::Idle; LadderIndex = -1;
+            LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f;
+            SetClip(EClip::Idle, 0, .2f);
+            PreviousMotionLocation = GetActorLocation();
+        }
+    }
     else if (Gait == EGait::WallSide)
     {
         // Along the wall on a low arc, following its surface (re-found every
@@ -1530,13 +1646,20 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     }
     else if (Gait == EGait::Climb)
     {
-        BaseTime += DeltaSeconds;
+        BaseTime = bClimbReverse ? FMath::Max(0.f, BaseTime - DeltaSeconds) : BaseTime + DeltaSeconds;
         const FVector2D Path = bClimbMantle ? PathAt(MantlePath, MantleFrames, BaseTime) : PathAt(PullUpPath, PullUpFrames, BaseTime);
         const float Forward = Path.X * ClimbAdvance / (bClimbMantle ? MantleAdvance : PullUpAdvance);
         const float Up = Path.Y * ClimbRise / (bClimbMantle ? MantleRefStep : PullUpRise);
-        SetActorLocation(ClimbStart + ClimbDir * Forward + FVector(0, 0, Up), false, nullptr, ETeleportType::TeleportPhysics);
+        FVector Along = ClimbStart + ClimbDir * Forward + FVector(0, 0, Up);
+        if (bClimbReverse) Along = FMath::Lerp(ClimbFrom, Along, FMath::SmoothStep(0.f, .2f, Length - BaseTime));   // from where he stood at the edge
+        SetActorLocation(Along, false, nullptr, ETeleportType::TeleportPhysics);
         Movement->Velocity = FVector::ZeroVector;
-        if (BaseTime >= Length)
+        if (bClimbReverse && BaseTime <= 0.f)
+        {
+            bClimbReverse = false;
+            if (GetChuckClimbables().IsValidIndex(LadderIndex)) EnterLadder(LadderIndex);
+        }
+        else if (!bClimbReverse && BaseTime >= Length)
         {
             Movement->SetMovementMode(MOVE_Walking);
             LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false;
@@ -1578,7 +1701,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     else if (bAirborne)
     {
         // Walked gently off an edge (not a jump, not at a run): grab it.
-        const bool bWalkedOff = GetVelocity().Z < 10.f && RunWeight < .5f && Speed < WalkSpeed * 1.2f
+        const bool bWalkedOff = GetVelocity().Z < 10.f && RunWeight < .5f && Speed > 10.f && Speed < WalkSpeed * 1.2f   // walking, not standing (dropped in)
             && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe);
         if (Gait != EGait::Air && bWalkedOff && TryDropHang()) {}
         else if (Gait != EGait::Air)
@@ -1880,14 +2003,14 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
-    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;
+    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;
     // Tucked in the roll, the paws follow the clip untouched.
     if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Hang || Gait == EGait::Climb;
+    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));
@@ -1920,11 +2043,13 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     // travel/reset clears it, so later dock deaths still use the dock spawn.
     if(GetActorLocation().Z>=-100) bSewerRespawn=false;
     else if(IsWithinDockSewer(GetActorLocation())) bSewerRespawn=true;
+    if(IsWithinDockPantry(GetActorLocation()) && GetActorLocation().Z<-150) bPantryRespawn=true;
+    else if(GetActorLocation().Z>=-100 && !IsWithinDockPantry(GetActorLocation())) bPantryRespawn=false;
     UpdateCamera(DeltaSeconds);
     if (bSlideCamera) HoldSlideCamera();
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) RespawnAtAreaStart();
+    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) FallToDeath();
 }

@@ -28,6 +28,8 @@ public:
     bool PlayedBreakSound() const { return bSoundPlayed; }
     bool BlocksChuck() const;
     static AClayJar* Place(UWorld* World, const FVector2D& At, float Yaw, int32 Cigarettes, float MaxZ = 10.f);
+    /** On the surface just under Ground (a shelf, a cellar floor: traced from 20 cm above). */
+    static AClayJar* PlaceAt(UWorld* World, const FVector& Ground, float Yaw, int32 Cigarettes);
     /** The docks' jars: by the tavern door, the warehouse, the market stalls, the timber yard. */
     static void SpawnDockJars(UWorld* World);
 protected:
