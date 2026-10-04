@@ -2844,27 +2844,30 @@ void ADockHUD::DrawHUD()
     Super::DrawHUD();
     auto* Chuck = Cast<AChuckCharacter>(GetOwningPawn());
     if(!Chuck || !Canvas) return;
-    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,18,440,79);
-    DrawText(TEXT("CHUCK  /  WATERDEEP DOCKS"),FLinearColor(.94f,.88f,.75f),30,27,GEngine->GetSmallFont(),1.25f);
-    DrawText(Chuck->IsElevated() ? TEXT("ORBIT CAMERA: HIGH") : TEXT("ORBIT CAMERA: RAT HEIGHT"),FLinearColor(.77f,.67f,.94f),30,54,GEngine->GetSmallFont(),1.1f);
-    DrawText(TEXT("65 cm rat  /  180 cm dock worker"),FLinearColor(.7f,.73f,.76f),30,76,GEngine->GetSmallFont());
-    // Sanity as a row of cigarettes (the 2D game's bar): burnt-out slots for
-    // what's been lost. Below it the cigarettes collected beyond a full bar.
-    const float PanelX=Canvas->SizeX-290;
-    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),PanelX,18,272,86);
-    DrawText(TEXT("SANITY"),FLinearColor(.77f,.67f,.94f),PanelX+12,24,GEngine->GetSmallFont(),.95f);
-    for(int32 I=0;I<AChuckCharacter::MaxSanity;++I)
+    // Sanity is one cigarette, as in the 2D game (CHUCK-game src/ui/hud.py):
+    // the paper left is the Sanity left, burning down toward the filter with
+    // the ember at the burn line; a faint ash line marks what's gone. No
+    // frame, no numbers. Drawn in the 2D game's 320x180 pixels, scaled whole.
+    const float Px=FMath::Max(1.f,FMath::RoundToFloat(Canvas->SizeY/180.f));
+    const float CigX=4*Px, CigY=4*Px, FilterW=5*Px, CigH=4*Px, PaperMaxW=32*Px, EmberW=2*Px;
+    const float PaperW=FMath::RoundToFloat(32.f*Chuck->GetSanity()/AChuckCharacter::MaxSanity)*Px;
+    DrawRect(FLinearColor(FColor(104,102,110)),CigX+FilterW,CigY+2*Px,PaperMaxW+EmberW,Px);      // ash line
+    DrawRect(FLinearColor(FColor(214,168,110)),CigX,CigY,FilterW,CigH);                         // filter
+    if(PaperW>0)
     {
-        const float X=PanelX+12+I*51, Y=48;
-        const bool bFull=I<Chuck->GetSanity();
-        const FLinearColor Spent(.2f,.2f,.22f,.9f);
-        DrawRect(bFull ? FLinearColor(.72f,.47f,.22f) : Spent,X,Y,12,10);          // filter
-        DrawRect(bFull ? FLinearColor(.93f,.91f,.86f) : Spent,X+12,Y,31,10);       // paper
-        DrawRect(bFull ? FLinearColor(.42f,.4f,.38f) : Spent,X+43,Y,3,10);         // ash at the tip
+        DrawRect(FLinearColor(FColor(236,236,228)),CigX+FilterW,CigY,PaperW,CigH);              // paper
+        DrawRect(FLinearColor(FColor(242,146,66)),CigX+FilterW+PaperW,CigY,EmberW,CigH);        // ember
     }
-    DrawText(FString::Printf(TEXT("CIGARETTES   %d"),Chuck->GetCigarettes()),FLinearColor(.94f,.88f,.75f),PanelX+12,72,GEngine->GetSmallFont(),1.1f);
+    // Cigarettes collected beyond a full bar: top right and quiet, a small
+    // unlit cigarette beside the count, as in the 2D game.
+    const FString Count=FString::Printf(TEXT("x%d"),Chuck->GetCigarettes());
+    float CountW=0, CountH=0; GetTextSize(Count,CountW,CountH,GEngine->GetSmallFont(),Px*.4f);
+    const float CountX=Canvas->SizeX-4*Px-CountW;
+    DrawText(Count,FLinearColor(.94f,.94f,.9f,.8f),CountX,CigY-Px*.5f,GEngine->GetSmallFont(),Px*.4f);
+    DrawRect(FLinearColor(FColor(236,236,228)),CountX-12*Px,CigY+Px,7*Px,3*Px);
+    DrawRect(FLinearColor(FColor(214,168,110)),CountX-12*Px,CigY+Px,2*Px,3*Px);
     // Talk: a quiet prompt near the top in reach (as in the 2D game), and a
-    // plain dialogue box above the controls while someone's speaking.
+    // plain dialogue box near the bottom while someone's speaking.
     FString Speaker, Line;
     if(Chuck->GetDialogue(Speaker,Line))
     {
@@ -2879,8 +2882,5 @@ void ADockHUD::DrawHUD()
         const FString Prompt=TEXT("F / Y   Talk");
         DrawText(Prompt,FLinearColor(.95f,.95f,.95f),Canvas->SizeX*.5f-60,120,GEngine->GetSmallFont(),1.2f);
     }
-    DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.85f),18,Canvas->SizeY-65,Canvas->SizeX-36,47);
-    DrawText(TEXT("WASD / Left stick: walk    Shift / LB: run (tap)    Q/E or hold LT: strafe (jump: side jump)    Space / A: jump    LMB / X: slash    C / B: roll    Mouse / Right stick: orbit"),FLinearColor(.91f,.9f,.85f),30,Canvas->SizeY-58,GEngine->GetSmallFont());
-    DrawText(TEXT("Jump or side jump into a wall: run up it; jump again: kick off    Middle mouse / R-stick click: center    F / Y: talk    R / View: reset    Esc / Menu: exit    The camera drifts behind Chuck as he walks."),FLinearColor(.75f,.77f,.8f),30,Canvas->SizeY-37,GEngine->GetSmallFont());
 }
 

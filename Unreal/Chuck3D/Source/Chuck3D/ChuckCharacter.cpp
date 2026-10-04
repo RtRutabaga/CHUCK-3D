@@ -265,7 +265,6 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Run", IE_Pressed, this, &AChuckCharacter::RunPressed);
     Input->BindAction("Slash", IE_Pressed, this, &AChuckCharacter::Slash);
     Input->BindAction("Slash", IE_Released, this, &AChuckCharacter::SlashReleased);
-    Input->BindAction("Reset", IE_Pressed, this, &AChuckCharacter::ResetToDock);
     Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
 }
 // A dodge owns the capsule; the stick is still read to choose the next move.

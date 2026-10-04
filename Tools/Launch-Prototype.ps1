@@ -23,4 +23,4 @@ if(Get-Command git -ErrorAction SilentlyContinue) {
     }
 }
 if($CheckOnly) { Write-Output "CHUCK_LAUNCH_TARGET $game"; exit 0 }
-Start-Process -FilePath $game -WorkingDirectory $package -ArgumentList '-windowed','-ResX=1280','-ResY=720'
+Start-Process -FilePath $game -WorkingDirectory $package -ArgumentList '-fullscreen'
