@@ -1,5 +1,19 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — night score and smaller sewer ruptures
+
+**Update 62 (Codex, October 3, night soundtrack and smaller Astral ruptures):** runtime `ee71817`, from clean main `4d2e84d`.
+
+- User-supplied Waterdeep night.mp3 crossfades in at 45% volume over 1.25 seconds after the actual sewer-slide return. Morning/sewer keep their scores. R / View retains post-sewer selection; fresh launch starts morning. Existing outdoor evening lighting unchanged. Complete 209.2-second recording loops; subjective mix/seamless join unverified.
+- Added 20 smaller tapered fissures (~1.3m long, ~0.5–0.6m across), retaining all 11 large ones. Matching actual fall holes, enclosed nebula wells, lips and shorter upright oil veils. Small purple lights 850 / radius 300cm; large unchanged. Grey fill 4300→3000 (~30% dimmer), neutral colour/location and chute light retained. New holes before/after wider chamber; narrow zombie/wall-run corridor remains clear. Character/rig/AI retained.
+- Original MP3 copied exactly; existing Shotcut FFmpeg n7.1-184-gdc07f98934 decoded stereo 16-bit 48kHz WAV without gain/trim. Only SW_WaterdeepNight imported through Unreal 5.7.4. Provenance/hashes in Audio README. Three LFS objects total 69,472,986 bytes; attrs/fsck/dry-run passed. Remote allowance unknown; no new dependencies, paid storage or original-game changes. Generated output untracked.
+- Initial candidates exposed a chamber-covered hole and unsafe test-bank transitions; placements/bank offsets corrected. Initial loop assertion ran after the smoke suite returned underground; scoped to when night score is selected, then mandatory loop check passed on later surface return. Failed candidates never promoted.
+- Final build Local/night-small-rifts-build-release.log succeeded (58.21s), no C++ warning/error or material fallback found. Geometry Local/night-small-rifts-geometry-release.log: 372 route samples/all 31 holes pass. Eight sewer and three normal-light enemy views reviewed (Local/night-small-rifts-capture-release.log, Local/night-small-rifts-life-release.log; root package Sewer/View0..7.png, SewerLife/View0..2.png). Zombie visible; rats still dark-coated; faceted lips/oil cards provisional.
+- Rendered verifier passed **133 gameplay checks** and all mandatory world/cave/sewer/tavern/music/fire checks, including night playback after loop boundary (Local/verify-package-20261003-175019.log). Full traversal with -ChuckSewerTest -ChuckSmallRiftTest passed in125.53s, reached371, entry fall, small-hole/local respawn, zero-sanity recovery and surface reset (Local/night-small-rifts-traversal.log; walkthrough omits enemies). No manual/Xbox/MotionCapture/listening/performance test.
+- Root Launch-Prototype.cmd receipt/hash checked at ee71817; backup Builds/Windows-Previous-20261003-NightSmallRifts. Use normal sewer-slide exit to hear night score. Small holes also respawn locally; use banks/jumps. Reference art target remains unmet.
+
+Next part of the work can be done here.
+
 ## October 3 — irregular Astral fissures and vertical oil veils
 
 Runtime `f02282d`, root main from `79accde`. Eleven tapered asymmetric floor cuts, matching subdivided collision, broken recessed stone lips and enclosed noncolliding nebula wells. Two upright curved edge veils fade at their tops/ends; horizontal layers removed. One owned9,362byte LFS material regenerated, attrs/fsck/dry-run passed; atmosphere importer delegates to new generator. No audio/other-material import, install/download/original-game edit. Grey fill/NPCs/chute/controller retained. See HANDOFF Update61 / SEWER-PROTOTYPE.md.

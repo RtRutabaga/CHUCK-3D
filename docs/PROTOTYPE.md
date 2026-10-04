@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest soundtrack/lighting pass: Waterdeep night.mp3 plays after the sewer-slide return; morning and sewer scores remain. Twenty small Astral fall ruptures add purple light alongside eleven large ones; grey fill is about 30% dimmer. Small holes respawn Chuck at the sewer entrance. Use root Launch-Prototype.cmd and the normal sewer exit to hear the night score. See HANDOFF Update62 for verified checks and limitations.
+
 Latest Astral pass: irregular tapered fissures replace the rectangular holes, with matching floor collision and recessed stone edges. Upright oil veils follow the edges and fade upward. The openings remain genuine falls with local sewer respawn. See SEWER-PROTOTYPE.md / HANDOFF for actual checks.
 
 Latest sewer work: stronger neutral-grey fill shows enemies; a1.8m pinch point holds the zombie, with the wider chamber retained. Collapsed rock surrounds the water chute's irregular opening. See SEWER-PROTOTYPE.md / HANDOFF for actual traversal and launcher checks.
