@@ -1914,3 +1914,16 @@ Claude now does this. Please do the same at the end of each Codex session, from 
 - **Remaining:**
   - Bespoke low-crate art (Codex could dress them).
   - Not played by the user.
+
+## Seventy-fifth pass — sewer stream water
+
+- **User (2026-10-04):** better water from free resources, start with the sewer stream (Fab is offered if useful; not needed yet).
+- **Source:** `c6b9d1c` on main.
+  - New: `Tools/create_sewer_water_material.py`, `M_SewerWater` and the three textures.
+  - `DockSewer.cpp` (Codex's): the stream material path, with a fallback.
+- **Contract:** setting art only; Codex's stream mesh and checks are unchanged.
+- **Verified:** root package 137/137, `Local/verify-package-20261004-093145.log`.
+- **Remaining:**
+  - Fountain and bay.
+  - Glancing brightness.
+  - Not seen in motion by the user.

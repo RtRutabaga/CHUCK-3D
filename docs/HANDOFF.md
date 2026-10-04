@@ -2,6 +2,28 @@
 
 ## Current launcher and integration status
 
+**Update 68 (Claude, October 4, user request: better water from free resources, starting with the sewer stream):** runtime `c6b9d1c`.
+- **Textures:** three copied from the engine's own Water plugin (Unreal Engine content, for use in UE projects; about 11 MB of LFS) into `/Game/Art/Textures/Water`, so the project needs no plugin: `T_Water_TilingNormal_Waves_02`, `T_WaterFlow_01_Foam_Tiled` and `Caustics_Tiling_01_HDR`. The editor ran once with `-EnablePlugins=Water`; `.uproject` is unchanged.
+- **Material:** `M_SewerWater`, from `Tools/create_sewer_water_material.py`.
+  - Translucent and lit (surface per-pixel), refracting the bed (IOR 1.33).
+  - Two wave normals scrolling downstream along the stream's v at different scales and speeds, in world space (the procedural stream mesh has no tangents).
+  - Two-sided (the stream mesh's faces point down).
+  - Depth fade, so it's clearer at the shallow edges.
+  - Flowing foam on the banks.
+  - A faint caustic shimmer (the texture is HDR, scaled right down) and a glancing fresnel sheen.
+- **Wiring:** `DockSewer.cpp` (Codex's) loads it instead of `M_SewerStream`, which is kept as the fallback; the slide's stream follows. `create_sewer_cave_materials.py` still makes `M_SewerStream` but no longer drives the stream.
+
+The root candidate passed `-MotionCapture` **137/137** plus every required check, including `CHUCK_SMALL_RIFT_STREAM`, the stream audio and the slide (`Local/verify-package-20261004-093145.log`). Promoted to `Builds/Windows` with receipt `c6b9d1c`; the previous package is kept as `Builds/Windows-Previous-20261004-SewerWater`.
+
+Evidence: `SourceAssets/Setting/Review/runtime_SewerWater.png`.
+
+Flaws:
+- Reads a little pale at glancing distances (reflecting the bright walls).
+- The foam is subtle.
+- Not seen in motion by the user.
+
+Next in the water plan: the fountain basin (same textures), then a bay test with the plugin's ocean water body, falling back to its material on the existing sea sheet.
+
 **Update 67 (Claude, October 4, user request: shorter crates the right height to speed-vault):** runtime `44a64ce`.
 - **The crates:** `VaultCrates.cpp` (new) places four low cargo crates: the dock crate squashed to 40–48 cm high, 40 cm deep, 60 cm wide, with a separate invisible collision box.
   - (-800, -900), on the open quay west of the spawn, run along X.
