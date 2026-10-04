@@ -79,13 +79,18 @@ namespace
     // up 20 degrees at the boss), and the reins sloping down as much from his fist.
     const FVector TongsBar(46.07f, 0.f, 5.3f);
     constexpr float ReinsSlope = 20.f;
-    // A blow every 1.55 s: the rebound, a light tap on the heel (TapRight beside
-    // the work) at TapAt, the lift to the top at TopAt, the downswing from DownAt.
-    constexpr float StrikePeriod = 1.55f, TapAt = .3f, TopAt = .98f, DownAt = 1.12f, TapRight = 10.f;
+    // The rhythm of drawing out hot iron (user 2026-10-04: "more natural and
+    // realistic"): about a blow every 0.8 s. The hammer bounces off the work
+    // straight into the lift (LiftTime, decelerating to about shoulder height),
+    // turns over (TurnTime) and comes down fast (DownTime). After every second
+    // blow it drops lightly on the bare heel (TapRight beside the work) before
+    // the lift: TapLead covers the rebound, the drop (landing at TapAt) and its bounce.
+    constexpr float FirstLift = .62f, LiftTime = .46f, TurnTime = .06f, DownTime = .24f;
+    constexpr float TapAt = .24f, TapLead = .32f, TapLift = .4f, TapRight = 10.f;
     constexpr float SetPause = 2.6f, InspectPause = 4.2f, RestSwing = .12f;
     // The forge beside him (DockPlaza.cpp's forge niche, in his frame: behind and to his left).
     const FVector ForgeAt(-60.f, -170.f, 75.f);
-    constexpr int32 StrikesPerSet = 6;
+    constexpr int32 StrikesPerSet = 8;
     constexpr float TurnRate = 70.f;      // deg/s when he turns his body to the rat
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
     // (the head looks down); + yaw turns it to his right.
@@ -405,7 +410,7 @@ ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Ya
     NPC->StrikeAttenuation->Attenuation.bSpatialize = true;
     NPC->StrikeAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     NPC->StrikeAttenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
-    NPC->StrikeAttenuation->Attenuation.FalloffDistance = 2200.f;
+    NPC->StrikeAttenuation->Attenuation.FalloffDistance = 1600.f;
     // The forge roars and crackles beside him, heard close by.
     if (USoundBase* Loop = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_ForgeLoop_00.SFX_ForgeLoop_00")))
     {
@@ -965,7 +970,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             // straighter when he lifts the bar to look at it.
             const float Recoil = FMath::Exp(-SinceBlow / .12f);
             Delta[Spine2] = Pitch(13.f - 6.f * Swing + 5.f * Drive - 2.f * Recoil - 6.f * Inspect) * Yaw(5.f * Swing - 2.f * Recoil);
-            Delta[Chest] = Pitch(5.f - 3.f * Swing + 3.f * Drive - 3.f * Inspect) * Yaw(8.f * Swing - 2.f);
+            Delta[Chest] = Pitch(5.f - 3.f * Swing + 3.f * Drive - 3.f * Inspect) * Yaw(5.f * Swing - 2.f);
             Delta[Head] = Pitch(3.f * Recoil) * Delta[Head];
         }
         TArray<FTransform> Space;
@@ -1085,9 +1090,21 @@ void ADockNPC::TickSmith(float DeltaSeconds)
     Resting = FMath::FInterpConstantTo(Resting, bPause ? 1.f : 0.f, DeltaSeconds, 2.5f);
     const float Before = ForgeClock;
     if (Resting < .5f) ForgeClock += DeltaSeconds;
+    // A set's blows: cycle K ends with blow K + 1 (K = 0 starts from rest);
+    // the cycles after blows 2, 4 and 6 open with a tap.
+    const auto Tapping = [](int32 K) { return K >= 2 && K % 2 == 0 && K < StrikesPerSet; };
+    const auto Lift = [&](int32 K) { return K == 0 ? FirstLift : Tapping(K) ? TapLead + TapLift : LiftTime; };
+    const auto Length = [&](int32 K) { return Lift(K) + TurnTime + DownTime; };
+    float Window = 0.f;
+    for (int32 K = 0; K < StrikesPerSet; ++K) Window += Length(K);
+    // Which cycle a time in the window falls in (-1 past the last blow), and how far into it.
+    const auto CycleOf = [&](float T, float& C)
+    {
+        for (int32 K = 0; K < StrikesPerSet; ++K) { if (T < Length(K)) { C = T; return K; } T -= Length(K); }
+        C = T; return -1;
+    };
     // Three sets make a round: two with a short pause to turn the work, the
     // third with a longer one, lifting the bar up to look at it.
-    const float Window = StrikesPerSet * StrikePeriod;
     const float Round = 3.f * Window + 2.f * SetPause + InspectPause;
     const auto Where = [&](float Clock, int32& Set, float& Local, float& Pause)
     {
@@ -1108,33 +1125,42 @@ void ADockNPC::TickSmith(float DeltaSeconds)
     float S = RestSwing, R = -1.f, TapW = 0.f, Push = 0.f, Peer = 0.f, Pull = 0.f;
     BarLift = 0.f; BarRoll = Turned;
     const auto Ease = [](float A, float B, float X) { return FMath::SmoothStep(A, B, X); };
-    if (Local < Window)
+    const auto Out = [](float X) { X = FMath::Clamp(X, 0.f, 1.f); return 1.f - (1.f - X) * (1.f - X); };   // fast, then slowing
+    float C = 0.f, PreviousC = 0.f;
+    const int32 K = Local < Window ? CycleOf(Local, C) : -1;
+    const int32 PreviousK = Previous >= 0.f && Previous < Window ? CycleOf(Previous, PreviousC) : -2;
+    if (K >= 0)
     {
-        const int32 K = FMath::FloorToInt(Local / StrikePeriod);
-        const float C = Local - K * StrikePeriod;
-        const bool bTap = K >= 1;   // after every blow but the set's last (which ends the window)
-        if (C >= DownAt)
+        // How high this blow goes: no two quite alike.
+        const float H = .8f + .2f * FMath::Frac(FMath::Sin((Set * 17 + K) * 12.9898f) * 43758.5453f);
+        const float L = Lift(K);
+        if (C >= L + TurnTime)
         {
-            // The blow: the arm gathers speed; the hammer's head lags, then the wrist snaps it through.
-            const float U = (C - DownAt) / (StrikePeriod - DownAt);
-            S = 1.f - U * U; R = 1.f - U * U * U; Push = U * U;
+            // The blow: the arm gathers speed; the head lags a touch, then the wrist brings it through.
+            const float U = (C - L - TurnTime) / DownTime;
+            S = H * (1.f - U * U); R = H * (1.f - FMath::Pow(U, 2.4f)); Push = U * U;
         }
-        else if (C >= TopAt) S = 1.f;   // a beat at the top
+        else if (C >= L) S = H;   // turning over at the top, no hold
         else if (K == 0)
         {
             // From rest on the heel, up into the first blow.
-            S = FMath::Lerp(RestSwing, 1.f, Ease(0.f, TopAt, C));
-            TapW = 1.f - Ease(0.f, .45f, C);
+            S = FMath::Lerp(RestSwing, H, Ease(0.f, L, C)); R = FMath::Pow(S, 1.2f);
+            TapW = 1.f - Ease(0.f, .6f * L, C);
         }
-        else if (bTap && C < .1f) { S = .2f * Ease(0.f, .1f, C); TapW = Ease(0.f, .12f, C); }            // the rebound, drifting to the heel
-        else if (bTap && C < TapAt) { const float V = (C - .1f) / (TapAt - .1f); S = .2f * (1.f - V * V); TapW = 1.f; Push = V * V; }   // the tap, leaning into it
-        else if (bTap && C < .4f) { S = .12f * Ease(TapAt, .4f, C); TapW = 1.f; Push = 1.f - Ease(TapAt, .4f, C); }   // its bounce
-        else
+        else if (Tapping(K) && C < TapLead)
         {
-            S = FMath::Lerp(.12f, 1.f, Ease(.4f, TopAt, C)); TapW = 1.f - Ease(.4f, .7f, C);           // the lift
-            R = FMath::Pow(S, 1.4f);   // the head trails up behind the fist
+            // A small rebound drifting to the heel, the light drop (leaning into it) and its bounce.
+            if (C < .08f) { S = .18f * FMath::Sin(HALF_PI * C / .08f); TapW = Ease(0.f, .08f, C); }
+            else if (C < TapAt) { const float V = (C - .08f) / (TapAt - .08f); S = .18f * (1.f - V * V); TapW = 1.f; Push = V * V; }
+            else { S = .1f * FMath::Sin(HALF_PI * (C - TapAt) / (TapLead - TapAt)); TapW = 1.f; Push = 1.f - Ease(TapAt, TapLead, C); }
         }
-        if (bTap && C >= TapAt && (Previous < 0.f || Previous - K * StrikePeriod < TapAt) && Previous <= Local && Resting < .1f) bTapDue = true;
+        else if (Tapping(K))
+        {
+            const float X = (C - TapLead) / TapLift;
+            S = FMath::Lerp(.1f, H, Out(X)); R = FMath::Pow(S, 1.2f); TapW = 1.f - Ease(0.f, .5f, X);
+        }
+        else { S = H * Out(C / L); R = FMath::Pow(S, 1.2f); }   // bouncing off the work straight into the lift
+        if (Tapping(K) && C >= TapAt && (PreviousK != K || PreviousC < TapAt) && Previous <= Local && Resting < .1f) bTapDue = true;
     }
     else
     {
@@ -1166,13 +1192,10 @@ void ADockNPC::TickSmith(float DeltaSeconds)
     Drive = Push * (1.f - Resting);
     Inspect = Peer; BarPull = Pull;
     SinceBlow += DeltaSeconds;
-    // The blow lands at each whole period inside the window; it is struck once
-    // the pose is solved this frame (UpdatePose), and that frame shows the contact.
-    if (Resting < .1f && Previous >= 0.f && Local >= Previous)
-    {
-        const int32 K = FMath::FloorToInt(Local / StrikePeriod), KP = FMath::FloorToInt(Previous / StrikePeriod);
-        if (K > KP && K >= 1 && K <= StrikesPerSet) bStrikeDue = true;
-    }
+    // A blow lands as each cycle ends; it is struck once the pose is solved this
+    // frame (UpdatePose), and that frame shows the contact
+    // (a new cycle began, or the window ended with the set's last blow).
+    if (Resting < .1f && Previous >= 0.f && Local >= Previous && PreviousK >= 0 && (K > PreviousK || K < 0)) bStrikeDue = true;
     if (bStrikeDue) { Swing = Cock = TapBlend = 0.f; Drive = 1.f; }
     else if (bTapDue) { Swing = Cock = 0.f; TapBlend = 1.f; Drive = 1.f; }
     // Sparks fly and fall; the flash dies away.
@@ -1206,7 +1229,7 @@ void ADockNPC::Strike()
     if (Hammer)
         StrikeGap = static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), Top));
     if (StrikeSounds.Num())
-        UGameplayStatics::PlaySoundAtLocation(this, StrikeSounds[FMath::RandRange(0, StrikeSounds.Num() - 1)], Top, .85f, FMath::FRandRange(.97f, 1.03f), 0.f, StrikeAttenuation);
+        UGameplayStatics::PlaySoundAtLocation(this, StrikeSounds[FMath::RandRange(0, StrikeSounds.Num() - 1)], Top, .45f, FMath::FRandRange(.97f, 1.03f), 0.f, StrikeAttenuation);
     for (int32 I = 0; I < 9; ++I)
     {
         const float Yaw = FMath::FRandRange(0.f, 360.f);
@@ -1232,7 +1255,7 @@ void ADockNPC::Tap()
             Taps, static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), At)),
             HammerFistError, Swing, Cock, TapBlend, Resting, bStrikeDue ? 1 : 0);
     if (TapSounds.Num())
-        UGameplayStatics::PlaySoundAtLocation(this, TapSounds[FMath::RandRange(0, TapSounds.Num() - 1)], At, .4f, FMath::FRandRange(.98f, 1.02f), 0.f, StrikeAttenuation);
+        UGameplayStatics::PlaySoundAtLocation(this, TapSounds[FMath::RandRange(0, TapSounds.Num() - 1)], At, .2f, FMath::FRandRange(.98f, 1.02f), 0.f, StrikeAttenuation);
 }
 
 bool ADockNPC::IsForgeSounding() const { return ForgeAudio && ForgeAudio->IsPlaying(); }
@@ -1246,18 +1269,19 @@ void ADockNPC::PoseSmith(TArray<FTransform>& Space)
     const FVector Top = FMath::Lerp(FVector(Work.X + BarPull, Work.Y, AnvilFace + 2.f * BarHalf), Heel, TapBlend);
     // The hammer, as a frame: Along (the face's way, his knuckles) and Thumb
     // (up the handle to the head). Down: face down, handle level, coming in
-    // from his right. Raised: over his right shoulder, the head back and up.
+    // from his right. Raised: the fist about shoulder height in front of the
+    // right shoulder, the handle near upright, the head just behind it.
     // Cock turns the hammer between the two; Swing carries the fist.
     const FVector ThumbDown = FVector(1.f, -.22f * Right, .05f).GetSafeNormal();
     const FVector AlongDown = FVector::VectorPlaneProject(-FVector::UpVector, ThumbDown).GetSafeNormal();
-    const FVector ThumbUp = FVector(-.4f, .12f * Right, .9f).GetSafeNormal();
-    const FVector AlongUp = FVector::VectorPlaneProject(FVector(1.f, 0.f, .25f), ThumbUp).GetSafeNormal();
+    const FVector ThumbUp = FVector(-.2f, .1f * Right, 1.f).GetSafeNormal();
+    const FVector AlongUp = FVector::VectorPlaneProject(FVector(1.f, 0.f, .1f), ThumbUp).GetSafeNormal();
     const FQuat Down = FRotationMatrix::MakeFromXZ(AlongDown, ThumbDown).ToQuat(), Up = FRotationMatrix::MakeFromXZ(AlongUp, ThumbUp).ToQuat();
     const FQuat Q = FQuat::Slerp(Down, Up, Cock);
     const FVector FistDown = Top - AlongDown * HammerFace - ThumbDown * HammerHead;
-    const FVector FistUp(10.f, 27.f * Right, 160.f);
-    const FVector Fist = FMath::Lerp(FistDown, FistUp, Swing) + FVector(-8.f, 4.f * Right, 6.f) * FMath::Sin(PI * Swing);   // an arc, not a straight line
-    const FVector Pole = FMath::Lerp(FVector(-.35f, Right, -.6f), FVector(-.1f, Right, .1f), Swing);
+    const FVector FistUp(16.f, 25.f * Right, 140.f);
+    const FVector Fist = FMath::Lerp(FistDown, FistUp, Swing) + FVector(-5.f, 3.f * Right, 5.f) * FMath::Sin(PI * Swing);   // an arc, not a straight line
+    const FVector Pole = FMath::Lerp(FVector(-.35f, Right, -.6f), FVector(-.2f, Right, -.15f), Swing);
     PlaceHand(Space, 1, Fist, Q.GetAxisX(), Q.GetAxisZ(), Pole);
     // The tongs: from his left fist at the waist, sloping down across the face,
     // the bar flat on it under the blow; flatter when he lifts it to look.

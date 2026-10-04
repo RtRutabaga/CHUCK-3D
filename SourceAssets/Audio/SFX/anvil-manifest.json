@@ -4,65 +4,65 @@
     {
       "name": "SFX_AnvilStrike_00",
       "file": "SFX_AnvilStrike_00.wav",
-      "duration": 1.17,
+      "duration": 0.82,
       "loop": false,
-      "sha256": "0394c1971cdacdf6d770e14084d4ac27585ef3a9875965142f95ef2727459dbf",
+      "sha256": "50f5370500884a34d59c4047df145f0358d243889b276b106d5abf9e937e8377",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_01",
       "file": "SFX_AnvilStrike_01.wav",
-      "duration": 1.17,
+      "duration": 0.82,
       "loop": false,
-      "sha256": "b46bf50c4227e86459c8775df74c0d29ad1aefa4de5fcbea59cf5c2c3c9b9317",
+      "sha256": "175c2b78ee1b33c41e8c3fb9c8d71d14f25fdc31703e7dcd73834b117666428d",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_02",
       "file": "SFX_AnvilStrike_02.wav",
-      "duration": 1.17,
+      "duration": 0.82,
       "loop": false,
-      "sha256": "9847c1aa1400391362536840ee41e2f9957b2074d4d93c8bb85087ce93dace68",
+      "sha256": "266a1276175373894726c5a8b0d1d19ad33609ab5e48adf8fceaf0c689f5f733",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_03",
       "file": "SFX_AnvilStrike_03.wav",
-      "duration": 1.17,
+      "duration": 0.82,
       "loop": false,
-      "sha256": "c8eff2ba9232710d2ae8c0ba3d89b50cf097566d3aec476783fbca1cdc8eb8a6",
+      "sha256": "32ef89850240c00ae79068cce41d9b4072d75c54eaa9035c1ebefecf8015ff5e",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilTap_00",
       "file": "SFX_AnvilTap_00.wav",
-      "duration": 1.32,
+      "duration": 0.9,
       "loop": false,
-      "sha256": "b1b5c7d0d99f862301db2d863302bb9aa74158e312a7f3b8f49875a66a892eef",
+      "sha256": "e4a8cac63f04b24b629a5ea863417bfef1e0eb935d1456a2b8baba9cfabf34fd",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilTap_01",
       "file": "SFX_AnvilTap_01.wav",
-      "duration": 1.32,
+      "duration": 0.9,
       "loop": false,
-      "sha256": "d7cc8f539d6cbd58046cfec1f87c4cb6dcd13a4a5918b7b4dd2405ccd36f21a1",
+      "sha256": "529f5ba093a77b59b8c3b0fbbef56254c3624e3f618d878aa4e8f7a347697912",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilTap_02",
       "file": "SFX_AnvilTap_02.wav",
-      "duration": 1.32,
+      "duration": 0.9,
       "loop": false,
-      "sha256": "84d3853fdce324bc6a901ef10c7ae4ef7d151c207fcdbe9536015e879f68135b",
+      "sha256": "1d3eb9cd0b738f26750ab4d05c436d43a004ec2af7e2bb0b03cab13312e9717a",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilTap_03",
       "file": "SFX_AnvilTap_03.wav",
-      "duration": 1.32,
+      "duration": 0.9,
       "loop": false,
-      "sha256": "476062bede44b274439a2c42c11375593fb79bd41268ae187c227a677da9e14f",
+      "sha256": "4fada92b5c694c195898cb4fe4f1fd18ed53864880ed6be05938a3b8de4b4586",
       "peak_dbfs": -3.0
     },
     {

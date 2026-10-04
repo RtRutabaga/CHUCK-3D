@@ -3,12 +3,12 @@ motion and sound effects); no external recordings or dependencies (stdlib only).
 
 python Tools/gen_anvil_sfx.py -> SourceAssets/Audio/SFX/*.wav (+ anvil-manifest.json)
 
-  SFX_AnvilStrike_00..03  the heavy blow: hammer on hot iron on the anvil. A hard
-                          contact click, the soft bar's dull thud and the stump's
-                          thump under it, the anvil body's inharmonic ring (damped
-                          by the work and the stump) and the hammer's own short ring.
-  SFX_AnvilTap_00..03     the light tap on the bare face between blows: a bright,
-                          longer "ting", little thud.
+  SFX_AnvilStrike_00..03  the heavy blow: hammer on hot iron on the anvil. A short,
+                          solid "chank": a hard contact, the bar and face's mid-range
+                          body, a quick anvil ring deadened by the hot bar, the
+                          hammer's brief ring, the stump's faint thump.
+  SFX_AnvilTap_00..03     the light drop on the bare heel between blows: a short,
+                          softer "ting".
   SFX_TongsClink_00..02   picking up / setting down the bar: two small iron contacts.
   SFX_ForgeLoop_00        the forge beside him: a low breathing roar, a faint hiss
                           and crackles; 8 s, seamless (looped by the runtime).
@@ -61,34 +61,40 @@ def partials(t, modes):
 
 
 def strike(rng):
-    dur = .75
+    """A blow on hot iron (user 2026-10-04: more natural): the soft bar deadens
+    the anvil, so it's a short, solid "chank": a hard contact, a mid-range
+    body from the bar and face, a quick damped anvil ring, and the hammer's
+    own brief ring; the stump's thump is faint under it."""
+    dur = .5
     n = int(dur * RATE)
-    f0 = 690 * rng.uniform(.95, 1.05)
-    # Anvil body modes (inharmonic, damped by the hot bar and the stump) and the hammer's own.
+    f0 = 690 * rng.uniform(.93, 1.07)
     anvil = [(f0 * r * rng.uniform(.985, 1.015), a * rng.uniform(.8, 1.2), d * rng.uniform(.85, 1.15), rng.uniform(0, 6.3))
-             for r, a, d in ((1., .34, .2), (1.72, .3, .16), (2.61, .26, .1), (3.9, .2, .06), (5.3, .12, .04), (7.4, .07, .025))]
-    hammer = [(f * rng.uniform(.97, 1.03), a, d, rng.uniform(0, 6.3)) for f, a, d in ((3150, .1, .035), (4420, .08, .025), (6100, .05, .015))]
+             for r, a, d in ((1., .26, .09), (1.72, .24, .07), (2.61, .2, .05), (3.9, .14, .03), (5.3, .08, .02), (7.4, .05, .012))]
+    hammer = [(f * rng.uniform(.96, 1.04), a, d, rng.uniform(0, 6.3)) for f, a, d in ((3150, .07, .018), (4420, .05, .012))]
     noise = [rng.uniform(-1, 1) for _ in range(n)]
     low = onepole(noise, .02)
+    body = [m - l for m, l in zip(onepole(noise, .09), onepole(noise, .035))]   # about 300-700 Hz
     click = highpass(noise, .3)
     out = []
     for i in range(n):
         t = i / RATE
         att = 1 - math.exp(-t * 6000)
-        thud = low[i] * 2.6 * math.exp(-t * 45) + .16 * math.sin(2 * math.pi * 95 * t) * math.exp(-t * 26)   # soft bar, stump
-        out.append(click[i] * 1.1 * math.exp(-t * 700) + thud + att * (partials(t, anvil) + partials(t, hammer)))
+        thump = low[i] * 1.2 * math.exp(-t * 50) + .08 * math.sin(2 * math.pi * 95 * t) * math.exp(-t * 30)   # the stump
+        chank = body[i] * 16. * math.exp(-t * 60)
+        out.append(click[i] * .8 * math.exp(-t * 900) + thump + chank + att * (partials(t, anvil) + partials(t, hammer)))
     return out
 
 
 def tap(rng):
-    dur = .9
+    """The light drop on the bare heel: a short, softer ting (the face is warm and the drop is light)."""
+    dur = .6
     n = int(dur * RATE)
     f0 = 1180 * rng.uniform(.96, 1.04)
     ring = [(f0 * r * rng.uniform(.99, 1.01), a * rng.uniform(.8, 1.2), d * rng.uniform(.85, 1.15), rng.uniform(0, 6.3))
-            for r, a, d in ((1., .42, .45), (2.76, .3, .28), (5.4, .16, .12), (8.9, .07, .05))]
+            for r, a, d in ((1., .42, .2), (2.76, .26, .12), (5.4, .1, .05), (8.9, .04, .025))]
     noise = [rng.uniform(-1, 1) for _ in range(n)]
     click = highpass(noise, .4)
-    return [click[i] * .6 * math.exp(-i / RATE * 1200) + (1 - math.exp(-i / RATE * 8000)) * partials(i / RATE, ring) for i in range(n)]
+    return [click[i] * .4 * math.exp(-i / RATE * 1200) + (1 - math.exp(-i / RATE * 8000)) * partials(i / RATE, ring) for i in range(n)]
 
 
 def clink(rng):
@@ -150,10 +156,10 @@ def write(name, samples, loop=False):
 entries = []
 for v in range(4):
     rng = random.Random(51207 + v)
-    entries.append(write(f'SFX_AnvilStrike_{v:02d}', echo(strike(rng), rng)))
+    entries.append(write(f'SFX_AnvilStrike_{v:02d}', echo(strike(rng), rng, wet=.16, tail=.32)))
 for v in range(4):
     rng = random.Random(62011 + v)
-    entries.append(write(f'SFX_AnvilTap_{v:02d}', echo(tap(rng), rng, wet=.18)))
+    entries.append(write(f'SFX_AnvilTap_{v:02d}', echo(tap(rng), rng, wet=.14, tail=.3)))
 for v in range(3):
     rng = random.Random(73303 + v)
     entries.append(write(f'SFX_TongsClink_{v:02d}', echo(clink(rng), rng, wet=.15, tail=.25)))
