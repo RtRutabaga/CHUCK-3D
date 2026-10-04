@@ -2,6 +2,42 @@
 
 ## Current launcher and integration status
 
+**Update 65 (Claude, October 3–4, user request: pantry ladder, bigger pantry, 2D-style breakables, Astral ruptures, the unreachable cheese over the sky, every off-map fall a death):** runtime `43e20a9`, on Codex's clean main `600b6cc`.
+- **Climbing:** a new `ChuckClimbable` registry and `Ladder` gait (ropes can register the same way).
+  - Take hold by walking into its foot (no jump), or by walking toward its top from the floor above: he lowers himself on with the pull-up played backward.
+  - Stick toward it climbs and away descends, the whole height, with the climb clip stepping per 30 cm.
+  - Out over the top with the pull-up, off at the foot; jump kicks off.
+- **Pantry** (`DockPantry.cpp`, Codex's, rebuilt):
+  - 8 × 7 m (was 5.8 × 5.25). The floor is 10 cm strips with real holes.
+  - Four Astral ruptures: the sewer's depth material below each, oil haze, purple light and chips.
+  - A central jagged hole onto open sky (new `M_PantrySky` with drifting cloud, `M_PantryCloud` puffs, daylight from below) round a masonry island with a crate and the cheese (`M_Cheese`). The ring is 2.13 m: beyond the longest jump, with enough margin that he can't catch the island's edge.
+  - As in the 2D pantry: the racks' lowest-shelf jars and four floor jars are breakable clay jars, 10 in all, with 1–2 cigarettes each.
+  - Codex's hatch, shaft, ladder visual, lamps, barrels and checks are kept and adjusted to the new room. `docs/TAVERN-PANTRY.md` has the details.
+- **Falls:**
+  - Any off-map fall anywhere is now an Astral death: dark at once, then summoned back at the area start. The pantry's start is by the ladder foot; `IsWithinDockPantry` reaches 380 cm under its floor so the fall is seen first.
+  - A drop-hang now needs him to be walking off an edge, not standing (it caught him dropped at rest beside a hole).
+  - The dock fall check now waits for the return.
+- **Tests:**
+  - Smoke stages 118–124: the ladder up and back down, a rupture fall, and a running jump at the cheese. `-ChuckPantryLadderTest` runs them alone.
+  - `CHUCK_PANTRY_CHECK` now has 5 floor points, 4 routes and 4 open-hole traces.
+  - New test helper: `SetTestStickWorld`.
+
+The root candidate passed `-MotionCapture` **135/135** plus every required world, music, sewer, cave, tavern, pantry and fire check (`Local/verify-package-20261003-212909.log`). Measured:
+- **Ladder:** up and out in 4.2 s (148.5, 915, 34.65), back down in 5.0 s.
+- **Rupture fall:** respawned by the ladder in 4.7 s.
+- **Cheese jump:** fell; closest 60 cm from the island centre, never on it.
+
+Two earlier candidates failed only the old instant-reset fall check, then my ladder test's camera-relative stick, then the verifier's old pantry check string. All are fixed in tests and the verifier; no gameplay change. Promoted to `Builds/Windows` with receipt `43e20a9`; the previous package is kept as `Builds/Windows-Previous-20261004-PantryLadder`.
+
+Evidence: `SourceAssets/Setting/Review/runtime_Pantry_View1..4.png` and `SourceAssets/Chuck/Review/runtime_Ladder_*.png`.
+
+Flaws:
+- The sky is pale and the clouds are sphere puffs.
+- He turns instantly to face the ladder when lowering on from above.
+- The camera is cramped in the shaft.
+- The fall into Chult is not done (by design).
+- Not played by the user.
+
 **Update 64 (Codex, October 3, small ruptures on side banks and wall-run passage):** runtime `8c4e1e5`, from clean main `8682534`.
 
 - All20 small fissures move90cm left/right from the shallow stream centre; broad banks alternate sides and tight turns use the outer bank. Real cutouts, lips, nebula wells, oil veils and purple lights move together. Stream bed and water continue past them; only the existing11 large ruptures interrupt the stream. Grey fill, music, pantry and existing city/character systems unchanged. Small holes remain local-respawn fall hazards.

@@ -1858,3 +1858,28 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Facial decay.
   - Sound.
   - Not played by the user.
+
+## Seventy-second pass — pantry ladder, broken floor, cheese, fall deaths
+
+- **User (2026-10-03):**
+  - Climb the pantry ladder with the climb animation, up and down, without jumping (ropes later).
+  - A bigger pantry with 2D-style breakables, Astral ruptures, and cheese on a crate surrounded by sky that looks jumpable but isn't (no Chult cutscene; the sky is an off-map death).
+  - Any off-map fall a death with the summon respawn.
+- **Source:** `a606b10`, `ebc2b96`, `43e20a9` on main.
+  - New: `ChuckClimbable.cpp/.h` and `Tools/create_pantry_materials.py` with three materials.
+  - `DockPantry.cpp/.h` (Codex's; rebuilt).
+  - `ChuckCharacter.cpp/.h`: the Ladder gait, `TryMountLadder`, `EnterLadder`, `FallToDeath`, the pantry respawn, the drop-hang speed gate, `SetTestStickWorld`.
+  - `ClayJar.cpp/.h`: `PlaceAt`.
+  - `DockGameMode.cpp/.h`: stages 118–124 and the stage 4 fall wait.
+  - `Verify-Package.ps1`: 133/134 and the pantry check string.
+  - `docs/TAVERN-PANTRY.md`.
+- **Contract:** no rig or clip change; Codex's shaft and ladder coordinates are kept.
+- **Verified:**
+  - Root package 135/135: `Local/verify-package-20261003-212909.log`.
+  - Editor `-ChuckPantryLadderTest` and `-ChuckPantryCapture`.
+- **Remaining:**
+  - Sky and cloud art.
+  - Turn-in when mounting from above.
+  - Shaft camera.
+  - Ropes.
+  - Not played by the user.
