@@ -36,7 +36,7 @@ float Chamber(int32 I)
     return U*U*(3.f-2.f*U);
 }
 float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-101))); }
-float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),90.f,Narrow(I)); }
+float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),70.f,Narrow(I)); }
 float Height(int32 I) { return 320.f+125.f*Chamber(I); }
 float WallWidth(int32 I,float Side)
 {
@@ -63,6 +63,28 @@ TArray<int32> AllRifts() { TArray<int32> Result;Result.Append(Rifts,UE_ARRAY_COU
 int32 RiftSpan(int32 Start) { for(int32 S : SmallRifts) if(S==Start) return 2;return 4; }
 bool RiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;for(int32 S : SmallRifts) if(I>=S && I<S+2) return true;return false; }
 float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
+bool LargeRiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
+int32 SmallRiftAt(float Sample) { for(int32 S : SmallRifts) if(Sample>=S && Sample<=S+2) return S;return INDEX_NONE; }
+float SmallRiftSide(int32 Start)
+{
+    const int32 M=Start+1;
+    const float Left=WallWidth(M,-1),Right=WallWidth(M,1);
+    // Prefer the bank outside a tight bend; alternate where both banks are broad.
+    if(Left<125 || Right<125) return Left>Right?-1.f:1.f;
+    int32 Index=0;for(int32 S : SmallRifts){if(S==Start) break;++Index;}
+    return Index%2?-1.f:1.f;
+}
+float StreamOffset(float Sample)
+{
+    const int32 I=FMath::FloorToInt(Sample);
+    return FMath::Lerp(RiftOffset(I),RiftOffset(I+1),Sample-I);
+}
+float RuptureOffset(float Sample)
+{
+    const int32 S=SmallRiftAt(Sample);
+    return StreamOffset(Sample)+(S!=INDEX_NONE?SmallRiftSide(S)*90.f:0.f);
+}
+
 float RiftEdge(float Sample,float Side)
 {
     for(int32 S : AllRifts()) if(Sample>=S && Sample<=S+RiftSpan(S))
@@ -75,7 +97,7 @@ float RiftEdge(float Sample,float Side)
 FVector SafePoint(int32 I,const TArray<FVector>& Right)
 {
     int32 Distance=1000,Nearest=Rifts[0];
-    for(int32 S : AllRifts())
+    for(int32 S : Rifts)
     {
         const int32 D=I<S?S-I:I>S+RiftSpan(S)?I-S-RiftSpan(S):0;
         if(D<Distance){Distance=D;Nearest=S;}
@@ -85,7 +107,13 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
     const FVector Before=Route[Nearest+2]-Route[Nearest-4];
     const FVector After=Route[Nearest+8]-Route[Nearest+2];
     const float Side=FVector::CrossProduct(Before,After).Z>=0?1.f:-1.f;
-    return Route[I]+Right[I]*((RiftSpan(Nearest)==2?60.f:100.f)*Blend*Side);
+    float SmallBlend=0;
+    for(int32 S : SmallRifts)
+    {
+        const int32 D=I<S?S-I:I>S+2?I-S-2:0;
+        SmallBlend=FMath::Max(SmallBlend,FMath::Clamp(1.f-D/2.f,0.f,1.f));
+    }
+    return Route[I]+Right[I]*(100.f*Blend*Side*(1.f-SmallBlend));
 }
 }
 
@@ -101,7 +129,7 @@ bool IsInDockSewerStream(const FVector& P)
     if(P.Z<FloorZ-16 || P.Z>FloorZ+12) return false;
     for(int32 I=0;I<Route.Num()-5;++I)
     {
-        if(RiftSegment(I)) continue;
+        if(LargeRiftSegment(I)) continue;
         auto Centre=[](int32 J) {
             const FVector Tangent=(Route[FMath::Min(J+1,Route.Num()-1)]-Route[FMath::Max(J-1,0)]).GetSafeNormal();
             return Route[J]+FVector(Tangent.Y,-Tangent.X,0)*RiftOffset(J);
@@ -196,9 +224,12 @@ void BuildDockSewer(UWorld* World)
         const float A=PI*J/Arc;
         const float Broad=FMath::PerlinNoise2D(FVector2D(I*.12f,J*.18f));
         const float Grain=FMath::PerlinNoise2D(FVector2D(I*.47f+17,J*.53f));
-        const float Relief=22*Broad+9*Grain+9*FMath::Sin(A*5+I*.13f);
+        const float Relief=(22*Broad+9*Grain+9*FMath::Sin(A*5+I*.13f))*FMath::Lerp(1.f,.18f,Narrow(I));
         const float Lateral=WallWidth(I,FMath::Cos(A)>0?1.f:-1.f);
-        const float X=(Lateral+Relief*(Lateral/Width(I)))*FMath::Cos(A)+14*FMath::Sin(A)*FMath::Sin(I*.17f);
+        // Steeper lower sides support a continuous lateral wall run; round crown retained.
+        const float C=FMath::Cos(A);
+        const float Arch=FMath::Sign(C)*FMath::Pow(FMath::Abs(C),FMath::Lerp(1.f,.45f,Narrow(I)));
+        const float X=(Lateral+Relief*(Lateral/Width(I)))*Arch+14*FMath::Sin(A)*FMath::Sin(I*.17f)*(1.f-Narrow(I));
         const float Z=(Height(I)+Relief*1.5f+12*FMath::Sin(I*.09f))*FMath::Sin(A);
         V.Add(Route[I]+Right[I]*X+FVector(0,0,Z));
         N.Add((-Right[I]*FMath::Cos(A)-FVector::UpVector*FMath::Sin(A)).GetSafeNormal());
@@ -215,21 +246,31 @@ void BuildDockSewer(UWorld* World)
     MakeMesh(V,T,N,UV,Stone,true);
     RouteRight=Right;
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    constexpr int32 FloorSteps=4;
-    for(int32 Row=0;Row<=(Count-1)*FloorSteps;++Row) for(int32 Column=0;Column<8;++Column)
+    constexpr int32 FloorSteps=4,FloorColumns=12;
+    for(int32 Row=0;Row<=(Count-1)*FloorSteps;++Row) for(int32 Column=0;Column<FloorColumns;++Column)
     {
         const float Sample=Row/float(FloorSteps);const int32 I=FMath::Min(Count-2,FMath::FloorToInt(Sample));const float F=Sample-I;
-        const float O=FMath::Lerp(RiftOffset(I),RiftOffset(I+1),F),L=RiftEdge(Sample,-1),R=RiftEdge(Sample,1);
+        const float O=StreamOffset(Sample);
+        bool Large=false;for(int32 S : Rifts) if(Sample>=S && Sample<=S+4) Large=true;
+        const float L=Large?RiftEdge(Sample,-1):55.f,R=Large?RiftEdge(Sample,1):55.f;
         const float W=FMath::Lerp(Width(I),Width(I+1),F);
-        const float Offsets[]={-W-35,-L+O,-L*.82f+O,-L*.58f+O,R*.58f+O,R*.82f+O,R+O,W+35};
-        const float Depth=(I<Count-4 && (Column==3 || Column==4))?-8.f:0.f;
-        V.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth)); N.Add(FVector::UpVector);
+        const int32 Small=SmallRiftAt(Sample);const float Side=Small!=INDEX_NONE?SmallRiftSide(Small):0.f;
+        const float Q=RuptureOffset(Sample),SL=RiftEdge(Sample,-1),SR=RiftEdge(Sample,1);
+        const float LeftOuter=Side<0?Q-SL:FMath::Lerp(-W-35,O-L,.35f);
+        const float LeftInner=Side<0?Q+SR:FMath::Lerp(-W-35,O-L,.7f);
+        const float RightInner=Side>0?Q-SL:FMath::Lerp(O+R,W+35,.3f);
+        const float RightOuter=Side>0?Q+SR:FMath::Lerp(O+R,W+35,.65f);
+        const float Offsets[]={-W-35,LeftOuter,LeftInner,-L+O,-L*.82f+O,-L*.58f+O,R*.58f+O,R*.82f+O,R+O,RightInner,RightOuter,W+35};
+        const float Depth=(I<Count-4 && (Column==5 || Column==6))?-8.f:0.f;
+        V.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth));N.Add(FVector::UpVector);
         UV.Add(FVector2D(Offsets[Column]/100,Sample*.65f));
     }
-    for(int32 Row=0;Row<(Count-1)*FloorSteps;++Row) for(int32 C=0;C<7;++C)
+    for(int32 Row=0;Row<(Count-1)*FloorSteps;++Row) for(int32 C=0;C<FloorColumns-1;++C)
     {
-        if(C>=1 && C<=5 && RiftSegment(Row/FloorSteps)) continue;
-        const int32 A=Row*8+C;T.Append({A,A+1,A+8,A+1,A+9,A+8});
+        const float Sample=(Row+.5f)/FloorSteps;const int32 Small=SmallRiftAt(Sample);
+        if(C>=3 && C<=7 && LargeRiftSegment(Row/FloorSteps)) continue;
+        if(Small!=INDEX_NONE && ((C==1 && SmallRiftSide(Small)<0) || (C==9 && SmallRiftSide(Small)>0))) continue;
+        const int32 A=Row*FloorColumns+C;T.Append({A,A+1,A+FloorColumns,A+1,A+FloorColumns+1,A+FloorColumns});
     }
     MakeMesh(V,T,N,UV,Stone,true);
     // Five-centimetre-deep flowing water over a solid, shallow channel bed.
@@ -238,7 +279,7 @@ void BuildDockSewer(UWorld* World)
     {
         V.Add(Route[I]+Right[I]*(Side*41.5f+RiftOffset(I))+FVector(0,0,-2.5f));N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.65f));
     }
-    for(int32 I=0;I<V.Num()/2-1;++I){if(RiftSegment(I)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+    for(int32 I=0;I<V.Num()/2-1;++I){if(LargeRiftSegment(I)) continue;int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
     MakeMesh(V,T,N,UV,Stream,false,false);
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto Box=[&](FVector P,FVector Size,UMaterialInterface* Mat,bool Solid,FRotator Rot=FRotator::ZeroRotator)
@@ -265,11 +306,11 @@ void BuildDockSewer(UWorld* World)
             const float Sample=StartIndex+(SideIndex==0?Row:Rows-Row)*.25f;
             const int32 Index=FMath::Min(Count-2,FMath::FloorToInt(Sample));const float F=Sample-Index;
             const FVector Across=FMath::Lerp(Right[Index],Right[Index+1],F);
-            const float Offset=FMath::Lerp(RiftOffset(Index),RiftOffset(Index+1),F),Side=SideIndex==0?-1.f:1.f;
+            const float Offset=RuptureOffset(Sample),Side=SideIndex==0?-1.f:1.f;
             Edges.Add(FMath::Lerp(Route[Index],Route[Index+1],F)+Across*(Offset+Side*RiftEdge(Sample,Side)));
         }
         const int32 Middle=StartIndex+Span/2;
-        const FVector Centre=Route[Middle]+Right[Middle]*RiftOffset(Middle);
+        const FVector Centre=Route[Middle]+Right[Middle]*RuptureOffset(Middle);
         // Broken stone lip follows the real collision hole, tapering at both ends.
         V.Reset();N.Reset();T.Reset();UV.Reset();
         for(int32 I=0;I<Edges.Num();++I)
@@ -371,11 +412,24 @@ void BuildDockSewer(UWorld* World)
         int32 HazardFailures=0;
         for(int32 S : AllRifts())
         {
-            const int32 M=S+RiftSpan(S)/2;FHitResult Hit;const FVector P=Route[M]+Right[M]*RiftOffset(M);
+            const int32 M=S+RiftSpan(S)/2;FHitResult Hit;const FVector P=Route[M]+Right[M]*RuptureOffset(M);
             if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,160),ECC_Visibility))
             {++HazardFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_BLOCKED start=%d point=%s component=%s"),S,*Hit.ImpactPoint.ToString(),*GetNameSafe(Hit.GetComponent()));}
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=31 purple_lights=31 torches=0 large=11 small=20"),HazardFailures);
+        int32 StreamFailures=0;
+        for(int32 S : SmallRifts)
+        {
+            const int32 M=S+1;FHitResult Hit;const FVector P=Route[M]+Right[M]*RiftOffset(M);
+            if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,30),ECC_Visibility)
+                || FMath::Abs(Hit.ImpactPoint.Z-(FloorZ-8))>1 || !IsInDockSewerStream(P)) ++StreamFailures;
+            for(int32 Step=0;Step<=8;++Step)
+            {
+                const float Sample=S+Step*.25f,Side=SmallRiftSide(S);
+                if(90.f-RiftEdge(Sample,-Side)-41.5f<10.f) ++StreamFailures;
+            }
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SMALL_RIFT_STREAM failures=%d checked=20 clearance_cm=10"),StreamFailures);
         int32 CaveFailures=0,WallChecks=0;
         for(int32 I=12;I<Count-12;I+=12) for(float Side : {-1.f,1.f})
         {
@@ -404,7 +458,7 @@ void BuildDockSewer(UWorld* World)
             if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*Side*140,ECC_Visibility)
                 || FVector::Dist2D(P,Hit.ImpactPoint)<55 || FVector::Dist2D(P,Hit.ImpactPoint)>125) ++NarrowFailures;
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_NARROW failures=%d samples=11 nominal_width_cm=180"),NarrowFailures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_NARROW failures=%d samples=11 nominal_width_cm=140"),NarrowFailures);
         if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerGeometryOnly")))
         {FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},1.f,false);}
     }
@@ -477,7 +531,7 @@ void BuildDockSewer(UWorld* World)
                 {
                     Run->HazardAt=Run->Time;Chuck->SetRunHeld(false);Chuck->GetCharacterMovement()->StopMovementImmediately();
                     const int32 Sample=FParse::Param(FCommandLine::Get(),TEXT("ChuckSmallRiftTest"))?SmallRifts[0]+1:Rifts[0]+2;
-                    Chuck->SetActorLocation(Route[Sample]+Right[Sample]*RiftOffset(Sample)+FVector(0,0,60),false,nullptr,ETeleportType::TeleportPhysics);
+                    Chuck->SetActorLocation(Route[Sample]+Right[Sample]*RuptureOffset(Sample)+FVector(0,0,60),false,nullptr,ETeleportType::TeleportPhysics);
                     Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
                 }
                 if(Run->HazardAt>=0 && Run->ResetAt<0 && FVector::Dist(Chuck->GetActorLocation(),DockSewerStartLocation())<65)
@@ -510,12 +564,27 @@ void BuildDockSewer(UWorld* World)
             },.02f,true);
         },3.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSideRiftCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(80);
+        const int32 Starts[]={12,128,235};
+        for(int32 I=0;I<3;++I)
+        {
+            const int32 S=Starts[I],M=S+1;
+            const FVector P=Route[S-3]+Right[S-3]*RiftOffset(S-3)+FVector(0,0,105);
+            const FVector Target=Route[M]+Right[M]*(RuptureOffset(M)*.45f)+FVector(0,0,8);
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P,Target](){Camera->SetActorLocationAndRotation(P,(Target-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);},4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){const FString Folder=FPaths::ScreenShotDir()/TEXT("SideRifts");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);},6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},17.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
         for(int32 I=0;I<8;++I)
         {
-            const int32 Indices[]={23,173,187,343,112,3,97,Count-5};const int32 Index=Indices[I];
+            const int32 Indices[]={23,173,187,343,112,3,94,Count-5};const int32 Index=Indices[I];
             const FVector P=SafePoint(Index,Right)+FVector(0,0,I==4?150:110);
             const FVector Target=Route[I==5?0:FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:(I==5?0:120));
             FTimerHandle View,Shot;
