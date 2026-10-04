@@ -1008,7 +1008,7 @@ bool AChuckCharacter::TryVault()
     // Room to come down and run on, and nothing to hit going over.
     FHitResult Block;
     const FVector LandAt = Location + Ahead * Land + FVector(0, 0, LandZ + 2.f);
-    if (World->SweepSingleByChannel(Block, LandAt - Ahead * (Radius + 10.f), LandAt + Ahead * 30.f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius, Half - 2.f), Query)) return false;
+    if (World->SweepSingleByChannel(Block, LandAt - Ahead * 18.f, LandAt + Ahead * 30.f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius, Half - 2.f), Query)) return false;
     const FVector Over = FVector(0, 0, Top + 8.f);
     if (World->SweepSingleByChannel(Block, Location + Over, Location + Ahead * Land + Over, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius - 2.f, Half - 2.f), Query)) return false;
     auto* Movement = GetCharacterMovement();

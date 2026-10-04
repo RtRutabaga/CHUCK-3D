@@ -9,6 +9,7 @@
 #include "DockFire.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
+#include "VaultCrates.h"
 #include "CigarettePickup.h"
 #include "ClayJarData.h"
 #include "EngineUtils.h"
@@ -487,6 +488,7 @@ void ADockGameMode::StartPlay()
     // Shreddable grass tufts (after all collision exists: planted by ground traces).
     AGrassTuft::SpawnDockGrass(World);
     AClayJar::SpawnDockJars(World);
+    SpawnVaultCrates(World);   // low crates to speed-vault (Claude)
     // Rats roam in play; the smoke test places its own so none wander into other checks.
     if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"))) AEnemyRat::SpawnDockRats(World);
     // Animated opaque wave normals now replace the old geometric ripple strips.
@@ -2462,8 +2464,46 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 for(const TWeakObjectPtr<AActor>& Block : VaultBlocks) if(Block.IsValid()) Block->Destroy();
                 VaultBlocks.Reset(); VaultSub=0;
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
-                TestStage=115; StageTime=0;
+                CrateIndex=0; CratesVaulted=0; TestStage=127; StageTime=0;
             }
+        }
+    }
+    else if(TestStage==127 && StageTime>.3f)
+    {
+        // Each of the docks' low crates: a run at it and a jump vaults it.
+        const TArray<FVaultCrate>& Crates=GetVaultCrates();
+        if(!Crates.IsValidIndex(CrateIndex))
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_CRATES_MEASURE crates=%d vaulted=%d"),Crates.Num(),CratesVaulted);
+            Check(Crates.Num()>=4 && CratesVaulted==Crates.Num(),TEXT("the docks' low crates are the right size to speed-vault, each with room to run at it and land"));
+            Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+            TestStage=115; StageTime=0;
+            return;
+        }
+        const FVaultCrate& C=Crates[CrateIndex];
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(C.Centre-C.Run*260.f+FVector(0,0,36.f),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(C.Run.Rotation()); Chuck->Recenter();
+        Chuck->SetRunHeld(true);
+        VaultsBefore=Chuck->GetVaults(); VaultJumpAt=-1;
+        TestStage=128; StageTime=0;
+    }
+    else if(TestStage==128)
+    {
+        const FVaultCrate& C=GetVaultCrates()[CrateIndex];
+        const FVector P=Chuck->GetActorLocation();
+        const float Along=static_cast<float>(FVector::DotProduct(P-C.Centre,C.Run));
+        Chuck->SetTestStickWorld(C.Run);
+        if(!Chuck->IsVaulting() && Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(C.Run,1);
+        if(VaultJumpAt<0 && (Along>-20.f-15.f-60.f || StageTime>4.f)) { Chuck->JumpPressed(); VaultJumpAt=StageTime; }
+        if(CrateIndex==0 && VaultJumpAt>=0 && StageTime>=VaultJumpAt+.25f && StageTime-DeltaSeconds<VaultJumpAt+.25f)
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/VaultCrate.png"),true,false);
+        if(VaultJumpAt>=0 && StageTime>VaultJumpAt+1.3f)
+        {
+            const bool bOver=Chuck->GetVaults()==VaultsBefore+1 && Along>40.f && Chuck->GetCharacterMovement()->IsMovingOnGround();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_CRATE index=%d over=%d along=%.0f p=%s"),CrateIndex,bOver,Along,*P.ToString());
+            if(bOver) ++CratesVaulted;
+            ++CrateIndex; TestStage=127; StageTime=0;
         }
     }
     else if(TestStage==115)

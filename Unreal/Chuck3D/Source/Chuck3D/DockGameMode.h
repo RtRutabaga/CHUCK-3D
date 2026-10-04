@@ -93,6 +93,7 @@ private:
     int32 VaultSub = 0, VaultsBefore = 0;
     float VaultJumpAt = -1, VaultMaxZ = 0;
     bool bVaultBench = false, bVaultStairs = false, bVaultWalk = false;
+    int32 CrateIndex = 0, CratesVaulted = 0;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;
