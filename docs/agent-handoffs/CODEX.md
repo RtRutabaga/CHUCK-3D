@@ -1,5 +1,19 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — basement pantry; ladder handed to Claude
+
+**Update 63 (Codex, October 3, tavern basement pantry foundation):** runtime `daff699`, from clean main `917b841`. User assigned ladder climbing to Claude.
+
+- Added an enclosed ~5.5 x 5m usable stone cellar beneath the tavern: stone floor/walls/ceiling, masonry courses, timber beams, stocked racks, jars/sacks, reused barrels, crate and two animated warm lamps. Major furnishings and room shell have collision; small provisions are decorative. Character/rig/animation and existing sewer/city layout retained.
+- Genuine 110 x 80cm open hatch behind the right half of the bar (x20..130, y875..955), floor0 to cellar floor-320. Structural tavern floor, court and overlapping north-street foundation split around it, decorative planks clipped, water sheet cut. A handful of submerged vista triangles underneath are omitted so the scenery cannot render through the cellar; visible coastal terrain unchanged. Open lid and visual ladder reserve Claude's climb integration. No climb implementation or interaction prompt.
+- One bounded pantry exception in ChuckCharacter's below-world check allows actual basement play without labelling it sewer. Music stays in the surface/post-sewer state; deaths/reset still use dock spawn. For now enter after sewer exit opens the tavern, go around the east end of the bar, drop in, use R / View to return to docks. Ladder coordinates, proposed alignment and ownership are in TAVERN-PANTRY.md; suggested climbing poses remain untested.
+- Initial captures exposed the submerged vista plane and first shaft test found overlapping north-street collision. Corrected before promotion. Final build Local/pantry-build-release.log succeeded (122.49s), no new compile/material errors or fallback found. Initial full recompilation reported existing C4701 potentially uninitialized Normal in TryWallSideRun; that unchanged traversal code was not repaired in this setting pass.
+- Four final fixed pantry views reviewed (Local/pantry-capture-release.log, root package Saved/Screenshots/Windows/Pantry/View0..3.png). Procedural stock, material repetition and simple masonry remain provisional. Real drop landed at z=-285.35; two walking circuits with camera switching and dock reset passed in23.22s (Local/pantry-test-release.log, failures0). This is not a ladder or subjective camera-comfort test.
+- Rendered verifier passed **133 gameplay checks** and every required world/cave/sewer/tavern/music/fire check, plus six pantry floor samples, five capsule routes, shaft sweep and four wall traces (Local/verify-package-20261003-190404.log). Existing31 rupture checks pass. No new full sewer walkthrough, manual/Xbox/MotionCapture/listening/performance test; previous sewer traversal evidence remains Update62.
+- Root Launch-Prototype.cmd receipt/hash checked at daff699; backup Builds/Windows-Previous-20261003-Pantry. Source-only work: no binary import/LFS additions/dependency install/download/original-game mutation. Generated output untracked; LFS push dry-run empty. Claude can implement ladder climbing directly on root main using the documented contract. The supplied character/reference graphics target remains unmet.
+
+Next part of the work can be done here.
+
 ## October 3 — night score and smaller sewer ruptures
 
 **Update 62 (Codex, October 3, night soundtrack and smaller Astral ruptures):** runtime `ee71817`, from clean main `4d2e84d`.
