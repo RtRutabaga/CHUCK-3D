@@ -1883,3 +1883,20 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Shaft camera.
   - Ropes.
   - Not played by the user.
+
+## Seventy-third pass — speed vault
+
+- **User (2026-10-04, reference image):** speed vault over short surfaces when running and jumping; mustn't disturb climbs that follow (crate stairs).
+- **Source:** `f0b8999` on main.
+  - `build_chuck_v1.py` (SpeedVault) and `gen_chuck_clip_data.py` (VaultClear, VaultDuration).
+  - The Chuck V1 blend, manifest and `AS_Chuck_SpeedVault` FBX and uasset.
+  - `ChuckCharacter.cpp/.h` (`TryVault`, the Vault gait) and `DockGameMode.cpp/.h` (stages 125 and 126, `-ChuckVaultTest`).
+  - `Verify-Package.ps1` (134/135).
+- **Contract:** rig unchanged; the other clips are byte-identical in content.
+- **Verified:**
+  - Root package 136/136: `Local/verify-package-20261003-221922.log`.
+  - Editor `-ChuckVaultTest`: `Local/vault-test.log`.
+- **Remaining:**
+  - Paw-plant fit on unusual depths.
+  - Camera.
+  - Not played by the user.

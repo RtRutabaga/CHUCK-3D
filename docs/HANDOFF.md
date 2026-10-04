@@ -2,6 +2,35 @@
 
 ## Current launcher and integration status
 
+**Update 66 (Claude, October 4, user request with reference image: a speed vault when running and jumping over short surfaces, without breaking a climb that follows, as on the crate stairs):** runtime `f0b8999`.
+- **Clip:** a new `SpeedVault` clip in `Tools/build_chuck_v1.py`.
+  - Chest first and nearly flat, rolled onto the left side over the planted left paw, legs together trailing past on the right, the free arm flung back; it lands on RunLoop frame 0.
+  - `review_vault.py`-style renders are in `SourceAssets/Chuck/Review/SpeedVault_review.png`.
+  - Chuck V1 was regenerated: the manifest gains only the clip, `rig_v1_metadata` is unchanged, and the re-exported unchanged FBXs and imported assets were restored.
+- **Runtime (`TryVault`, `EGait::Vault`):**
+  - Only from the run (RunWeight > .5) with a plain jump (strafe jumps stay side jumps, walk jumps stay jumps).
+  - The face must be within 85 cm, the top 18–60 cm up, and the top must end within 90 cm (the floor drops away again).
+  - The landing beyond can be at most 15 cm higher, with room to land and run on and nothing to hit going over.
+  - Anything that carries on upward, or straight into something else, keeps the ordinary jump and its climbs.
+  - The capsule follows the arc fitted to the measured face, depth and landing. He then runs on, or drops if the far side is lower.
+  - The old crosswise plaza lip no longer exists (Codex removed it); the vault applies to any obstacle that fits.
+- **Tests:** smoke stages 125 and 126 on the court pier with temporary blocks. `-ChuckVaultTest` runs them alone.
+
+The root candidate passed `-MotionCapture` **136/136** plus every required world, music, sewer, cave, tavern, pantry and fire check (`Local/verify-package-20261003-221922.log`).
+- A 38 cm bench was vaulted and he ran on (landed 2.4 m on, Loop).
+- A 40 cm step with a 90 cm step behind: no vault (jumped onto the step).
+- A walking jump: no vault.
+- No other vault occurred anywhere in the run. Wall run, chimney and ladder are unchanged.
+
+Promoted to `Builds/Windows` with receipt `f0b8999`; the previous package is kept as `Builds/Windows-Previous-20261004-Vault`.
+
+Evidence: `SourceAssets/Chuck/Review/runtime_SpeedVault.png`.
+
+Flaws:
+- The paw plant is aimed at the authored mid-top, so it can sit off the real top on unusual depths.
+- No vault-specific camera.
+- Not played by the user.
+
 **Update 65 (Claude, October 3–4, user request: pantry ladder, bigger pantry, 2D-style breakables, Astral ruptures, the unreachable cheese over the sky, every off-map fall a death):** runtime `43e20a9`, on Codex's clean main `600b6cc`.
 - **Climbing:** a new `ChuckClimbable` registry and `Ladder` gait (ropes can register the same way).
   - Take hold by walking into its foot (no jump), or by walking toward its top from the floor above: he lowers himself on with the pull-up played backward.
