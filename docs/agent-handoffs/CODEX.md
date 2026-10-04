@@ -1,5 +1,16 @@
 # Codex movement handoff — 2026-09-26
 
+## October 4 — slightly dimmer sewer grey fill
+
+**Update 76 (Codex, October 4, user request: grey light slightly dimmer):** runtime `d3c8fd7`, from main `50da680` / launcher `56cbc96`.
+
+- Reduced neutral-grey fill3000→2700 and chute-mouth fill1100→990 (10% lower intensity). Grey colour/radius, ambient material tint and purple rupture lights unchanged. Two runtime parameter edits only; geometry, wall-run challenge, character/controller, music and materials retained.
+- Existing UE5.7.4/DX11 source-only build/stage against unchanged cooked assets succeeded62.87s (`Local/sewer-grey-build.log`), with no new compile warnings/errors or material fallback found. Eight sewer stills generated (`Local/sewer-grey-capture.log`); chamber, narrow rupture and chute views2/6/7 visually inspected under normal lighting. Evidence remains in root package `Saved/Screenshots/Windows/Sewer`. No new binary asset, material import, installation or LFS upload.
+- Final full/default `Tools/Verify-Package.ps1` passed **141/141** and all required gates (`Local/verify-package-20261004-151724.log`). Right/left wall runs247/242cm, both landed beyond rupture with zero falls. No additional motion-sequence or separate full-sewer route test this intensity-only pass; Update75 retains the prior complete route/recovery evidence. No physical Xbox, sustained performance or subjective user comfort test.
+- Promoted root `Builds/Windows`; receipt/hash and `Launch-Prototype.ps1 -CheckOnly` identify `d3c8fd7`. Previous wall-run package retained at `Builds/Windows-Previous-20261004-SewerGrey`; player launcher remains root `Launch-Prototype.cmd`. Original CHUCK-game untouched; generated output untracked. Claude's80 modified human assets and two untracked textures remain unstaged and unchanged (82/82 baseline hashes); package still depends on those retained local human inputs as documented in Update75.
+
+Next part of the work can be done here.
+
 ## October 4 — post-chamber wall-run rupture
 
 **Update 75 (Codex, October 4, user revision: short narrow tunnel after the wide chamber, replacing the zombie with an Astral rupture requiring a wall run):** runtime `56cbc96`, from main `2944bb3` / Claude's `fbd246e` smith-strike launcher.
