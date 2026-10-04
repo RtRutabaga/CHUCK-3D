@@ -794,9 +794,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->SetActorLocation(FVector(1000,0,-130)); TestStage=4; StageTime=0;
         }
     }
-    else if(TestStage==4 && StageTime>.3f)
+    else if(TestStage==4 && StageTime>.3f && (!Chuck->IsAstral() || StageTime>8.f))
     {
-        Check(FVector::Dist2D(Chuck->GetActorLocation(),AChuckCharacter::StartLocation())<5,TEXT("fall resets to dock"));
+        // Off the map is an Astral death (user 2026-10-03): dark, then summoned back on the dock.
+        Check(FVector::Dist2D(Chuck->GetActorLocation(),AChuckCharacter::StartLocation())<5 && Chuck->GetFallDeaths()>=1 && !Chuck->IsAstral(),TEXT("fall resets to dock"));
         FHitResult Hit;
         const bool HitGap=GetWorld()->LineTraceSingleByChannel(Hit,FVector(524,0,50),FVector(524,0,-30),ECC_Visibility);
         Check(!HitGap,TEXT("missing pier board is a real gap"));
@@ -2314,7 +2315,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==119)
     {
         // Up the whole ladder and out over the top onto the tavern floor.
-        Chuck->SetTestStick(FVector2D(0,1));
+        Chuck->SetTestStickWorld(FVector(1,0,0));
         bLadderSeen|=Chuck->IsOnLadder();
         LadderTopZ=FMath::Max(LadderTopZ,static_cast<float>(Chuck->GetActorLocation().Z));
         for(const float Shot : {1.5f,3.f})
@@ -2332,7 +2333,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==120 && StageTime>.7f)
     {
         // Then back: walk toward the drop, lower onto the ladder, down it, off at the foot.
-        Chuck->SetTestStick(FVector2D(0,-1));
+        Chuck->SetTestStickWorld(FVector(-1,0,0));
         if(!Chuck->IsOnLadder() && !bLadderSeen && Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(FVector(-1,0,0),1);
         bLadderSeen|=Chuck->IsOnLadder();
         if(StageTime>=2.2f && StageTime-DeltaSeconds<2.2f)

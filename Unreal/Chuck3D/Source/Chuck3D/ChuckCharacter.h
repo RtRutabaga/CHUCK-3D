@@ -150,6 +150,13 @@ public:
     float GetRunWeight() const { return RunWeight; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
+    /** The test stick pushed along a world direction, whichever way the camera now looks. */
+    void SetTestStickWorld(const FVector& Direction)
+    {
+        const FRotator View(0, ViewYaw, 0);
+        InputForward = static_cast<float>(FVector::DotProduct(Direction, View.Vector()));
+        InputRight = static_cast<float>(FVector::DotProduct(Direction, FRotationMatrix(View).GetUnitAxis(EAxis::Y)));
+    }
     /** Tests that enable live input: ignore mouse/stick look so a real mouse cannot steer them. */
     void SetLookLocked(bool bLocked) { bLookLocked = bLocked; }
     /** In the air on a leap out of a run. */
