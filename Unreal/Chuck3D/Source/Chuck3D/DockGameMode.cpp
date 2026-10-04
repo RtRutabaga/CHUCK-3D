@@ -594,6 +594,7 @@ void ADockGameMode::StartPlay()
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
+    bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
     bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
     if(bSlideOnly) { bSmokeTest=true; TestStage=111; }
@@ -675,6 +676,37 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     }
 }
 
+void ADockGameMode::TickSmithCapture(float DeltaSeconds)
+{
+    // Frames of the smith's work for motion review: Saved/Screenshots/Windows/Smith/frame###.png.
+    constexpr float Settle=4.f, Step=.06f, Length=4.8f;
+    SmithCaptureTime+=DeltaSeconds;
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
+    TArray<AActor*> Found;
+    UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),Found);
+    const auto* Smith=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
+    if(!PC || !Smith) return;
+    if(!NPCCamera.IsValid())
+    {
+        NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
+        const FVector Feet=Smith->GetActorLocation()-FVector(0,0,Smith->GetSimpleCollisionHalfHeight());
+        const FVector At=Feet+Smith->GetActorForwardVector().RotateAngleAxis(35.f,FVector::UpVector)*330.f+FVector(0,0,140.f);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,105.f)-At).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(55.f);
+        PC->SetViewTarget(NPCCamera.Get());
+    }
+    if(SmithCaptureTime<Settle) return;
+    if(SmithCaptureTime>Settle+Length) { FPlatformMisc::RequestExit(false); return; }
+    if(SmithCaptureTime>=SmithNextFrame)
+    {
+        SmithNextFrame=FMath::Max(SmithNextFrame+Step,SmithCaptureTime);
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Smith/frame%03d.png"),SmithFrame),false,false);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_FRAME %03d t=%.2f strikes=%d taps=%d"),SmithFrame,SmithCaptureTime-Settle,Smith->GetStrikes(),Smith->GetTaps());
+        ++SmithFrame;
+    }
+}
+
 void ADockGameMode::Check(bool Passed,const TCHAR* Description)
 {
     if(!Passed) ++TestFailures;
@@ -702,6 +734,7 @@ void ADockGameMode::ProbeLockedPaws(AChuckCharacter* Chuck,float DeltaSeconds)
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if(bSmithCapture) { TickSmithCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
@@ -1932,11 +1965,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             const AActor* SmithAnvil=Smith ? Smith->GetAnvil() : nullptr;
             const float ToForge=Smith ? static_cast<float>(FVector::Dist2D(Smith->GetActorLocation(),FVector(-780,-3725,0))) : 1e4f;
             const float ToAnvil=Smith && SmithAnvil ? static_cast<float>(FVector::Dist2D(Smith->GetActorLocation(),SmithAnvil->GetActorLocation())) : 1e4f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_MEASURE present=%d strikes=%d strike_gap_cm=%.1f worst_gap_cm=%.1f tongs_grip_cm=%.1f to_anvil_cm=%.0f to_forge_cm=%.0f forging=%d lines=%d"),
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_MEASURE present=%d strikes=%d strike_gap_cm=%.1f worst_gap_cm=%.1f tongs_grip_cm=%.1f to_anvil_cm=%.0f to_forge_cm=%.0f forging=%d lines=%d taps=%d worst_tap_cm=%.1f forge_sound=%d"),
                 Smith ? 1 : 0,Smith ? Smith->GetStrikes() : 0,Smith ? Smith->GetStrikeGap() : 1e3f,Smith ? Smith->GetWorstStrikeGap() : 1e3f,Smith ? Smith->GetTongsGripError() : 1e3f,ToAnvil,ToForge,
-                Smith && Smith->IsForging() ? 1 : 0,Smith ? Smith->Lines.Num() : 0);
-            Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
-                TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow, tongs in his other fist"));
+                Smith && Smith->IsForging() ? 1 : 0,Smith ? Smith->Lines.Num() : 0,
+                Smith ? Smith->GetTaps() : 0,Smith ? Smith->GetWorstTapGap() : 1e3f,Smith && Smith->IsForgeSounding() ? 1 : 0);
+            Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTaps()>=3 && Smith->GetWorstTapGap()<4.f && Smith->IsForgeSounding() && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
+                TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow and the bare face on each tap, tongs in his other fist, the forge roaring"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();

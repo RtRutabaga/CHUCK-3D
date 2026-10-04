@@ -22,6 +22,11 @@ private:
     bool bNPCShotTaken = false;
     TWeakObjectPtr<class ACameraActor> NPCCamera;
     void TickNPCCapture(float DeltaSeconds);
+    // -ChuckSmithCapture: the blacksmith at work, a frame every 60 ms from a fixed three-quarter view.
+    bool bSmithCapture = false;
+    float SmithCaptureTime = 0, SmithNextFrame = 0;
+    int32 SmithFrame = 0;
+    void TickSmithCapture(float DeltaSeconds);
     int32 TestStage = 0;
     float StageTime = 0;
     float MaxJumpZ = 0;

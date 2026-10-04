@@ -1,4 +1,4 @@
-"""Import only the blacksmith's anvil strikes (Tools/gen_anvil_sfx.py); preserve all existing audio assets.
+"""Import only the blacksmith's forge sounds (Tools/gen_anvil_sfx.py: strikes, taps, tongs, the forge loop); preserve all existing audio assets.
 
 UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_anvil_sfx.py -unattended -nullrhi -nosplash -NoLiveCoding
 """
@@ -22,7 +22,7 @@ for entry in entries:
     sound = unreal.load_asset('/Game/Art/Audio/SFX/' + entry['name'])
     if not isinstance(sound, unreal.SoundWave):
         raise RuntimeError('Anvil import failed: ' + entry['name'])
-    sound.set_editor_property('looping', False)
+    sound.set_editor_property('looping', bool(entry.get('loop')))
     if not unreal.EditorAssetLibrary.save_loaded_asset(sound, only_if_is_dirty=False):
         raise RuntimeError('Anvil save failed')
 unreal.log(f'CHUCK_ANVIL_IMPORTED {len(entries)}')

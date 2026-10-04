@@ -7,6 +7,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/AudioComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
@@ -78,7 +79,12 @@ namespace
     // up 20 degrees at the boss), and the reins sloping down as much from his fist.
     const FVector TongsBar(46.07f, 0.f, 5.3f);
     constexpr float ReinsSlope = 20.f;
-    constexpr float StrikePeriod = 1.3f, SetPause = 2.6f, RestSwing = .12f;
+    // A blow every 1.55 s: the rebound, a light tap on the heel (TapRight beside
+    // the work) at TapAt, the lift to the top at TopAt, the downswing from DownAt.
+    constexpr float StrikePeriod = 1.55f, TapAt = .3f, TopAt = .98f, DownAt = 1.12f, TapRight = 10.f;
+    constexpr float SetPause = 2.6f, InspectPause = 4.2f, RestSwing = .12f;
+    // The forge beside him (DockPlaza.cpp's forge niche, in his frame: behind and to his left).
+    const FVector ForgeAt(-60.f, -170.f, 75.f);
     constexpr int32 StrikesPerSet = 6;
     constexpr float TurnRate = 70.f;      // deg/s when he turns his body to the rat
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
@@ -386,9 +392,13 @@ ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Ya
     NPC->StrikeLight->SetIntensity(0.f);
     NPC->StrikeLight->SetCastShadows(false);
     NPC->StrikeLight->RegisterComponent();
-    for (int32 I = 0; I < 4; ++I)
-        if (USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/SFX_AnvilStrike_%02d.SFX_AnvilStrike_%02d"), I, I)))
-            NPC->StrikeSounds.Add(Sound);
+    // The forge's sounds (Tools/gen_anvil_sfx.py).
+    const auto Load = [](TArray<TObjectPtr<USoundBase>>& Set, const TCHAR* Stem, int32 Count)
+    {
+        for (int32 I = 0; I < Count; ++I)
+            if (USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Stem, I, Stem, I))) Set.Add(Sound);
+    };
+    Load(NPC->StrikeSounds, TEXT("SFX_AnvilStrike"), 4); Load(NPC->TapSounds, TEXT("SFX_AnvilTap"), 4); Load(NPC->ClinkSounds, TEXT("SFX_TongsClink"), 3);
     // Heard across the plaza's corner, not the docks.
     NPC->StrikeAttenuation = NewObject<USoundAttenuation>(NPC);
     NPC->StrikeAttenuation->Attenuation.bAttenuate = true;
@@ -396,9 +406,28 @@ ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Ya
     NPC->StrikeAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     NPC->StrikeAttenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
     NPC->StrikeAttenuation->Attenuation.FalloffDistance = 2200.f;
+    // The forge roars and crackles beside him, heard close by.
+    if (USoundBase* Loop = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_ForgeLoop_00.SFX_ForgeLoop_00")))
+    {
+        auto* ForgeAttenuation = NewObject<USoundAttenuation>(NPC);
+        ForgeAttenuation->Attenuation.bAttenuate = true;
+        ForgeAttenuation->Attenuation.bSpatialize = true;
+        ForgeAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+        ForgeAttenuation->Attenuation.AttenuationShapeExtents = FVector(150.f, 0.f, 0.f);
+        ForgeAttenuation->Attenuation.FalloffDistance = 900.f;
+        NPC->ForgeAudio = NewObject<UAudioComponent>(NPC, TEXT("ForgeAudio"));
+        NPC->ForgeAudio->SetupAttachment(NPC->Body);
+        NPC->ForgeAudio->SetRelativeLocation(ForgeAt);
+        NPC->ForgeAudio->SetSound(Loop);
+        NPC->ForgeAudio->AttenuationSettings = ForgeAttenuation;
+        NPC->ForgeAudio->SetVolumeMultiplier(.45f);
+        NPC->ForgeAudio->RegisterComponent();
+        NPC->ForgeAudio->Play(FMath::FRandRange(0.f, 7.f));
+    }
     NPC->ForgeClock = FMath::FRandRange(0.f, 3.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_SPAWNED anvil=%d hammer=%d tongs=%d sounds=%d"), NPC->Anvil.IsValid() ? 1 : 0,
-        NPC->Hammer && NPC->Hammer->GetStaticMesh() ? 1 : 0, NPC->Tongs && NPC->Tongs->GetStaticMesh() ? 1 : 0, NPC->StrikeSounds.Num());
+        NPC->Hammer && NPC->Hammer->GetStaticMesh() ? 1 : 0, NPC->Tongs && NPC->Tongs->GetStaticMesh() ? 1 : 0,
+        NPC->StrikeSounds.Num() + NPC->TapSounds.Num() + NPC->ClinkSounds.Num() + (NPC->ForgeAudio ? 1 : 0));
     return NPC;
 }
 
@@ -879,7 +908,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         NextGlance = FMath::FRandRange(2.5f, 6.f);
         Glance = FVector2D(FMath::FRandRange(-35.f, 35.f), FMath::FRandRange(-6.f, 10.f));
     }
-    if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f);   // his eyes on the work
+    if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f - 16.f * Inspect);   // his eyes on the work
     const float Rate = bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
@@ -928,9 +957,16 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         }
         if (IsSmith())
         {
-            // Bent over the work, the chest turning to his right as the hammer goes up.
-            Delta[Spine2] = Pitch(15.f - 8.f * Swing) * Yaw(5.f * Swing);
-            Delta[Chest] = Pitch(5.f - 2.f * Swing) * Yaw(7.f * Swing - 2.f);
+            // Planted at the anvil: the idle's sway halved (his arms are the IK's anyway).
+            for (FQuat& Q : BoneDelta) Q = FQuat::Slerp(FQuat::Identity, Q, .5f);
+            HipsOffset *= .5f;
+            // Bent over the work, the chest turning to his right as the hammer goes
+            // up, driving down into the blow, a small recoil and nod as it lands;
+            // straighter when he lifts the bar to look at it.
+            const float Recoil = FMath::Exp(-SinceBlow / .12f);
+            Delta[Spine2] = Pitch(13.f - 6.f * Swing + 5.f * Drive - 2.f * Recoil - 6.f * Inspect) * Yaw(5.f * Swing - 2.f * Recoil);
+            Delta[Chest] = Pitch(5.f - 3.f * Swing + 3.f * Drive - 3.f * Inspect) * Yaw(8.f * Swing - 2.f);
+            Delta[Head] = Pitch(3.f * Recoil) * Delta[Head];
         }
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
@@ -939,7 +975,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsSmith()) PoseSmith(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
-        if (bStrikeDue) { bStrikeDue = false; Strike(); }
+        SmithEvents();
         return;
     }
     const float Breath = FMath::Sin(T * UE_TWO_PI / 4.2f);          // one slow breath every 4.2 s
@@ -966,7 +1002,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     if (IsSmith()) PoseSmith(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
-    if (bStrikeDue) { bStrikeDue = false; Strike(); }
+    SmithEvents();
 }
 
 void ADockNPC::HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& Fist, FVector& Along, FVector& Thumb) const
@@ -1044,45 +1080,101 @@ void ADockNPC::PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& F
 
 void ADockNPC::TickSmith(float DeltaSeconds)
 {
-    // Talked to, or startled by a scratch: he rests the hammer on the work until it's over.
+    // Talked to, or startled by a scratch: he rests the hammer on the anvil until it's over.
     const bool bPause = bTalking || ReactTime >= 0.f;
     Resting = FMath::FInterpConstantTo(Resting, bPause ? 1.f : 0.f, DeltaSeconds, 2.5f);
-    const float SetLength = StrikesPerSet * StrikePeriod + SetPause, Window = StrikesPerSet * StrikePeriod;
     const float Before = ForgeClock;
     if (Resting < .5f) ForgeClock += DeltaSeconds;
-    const int32 Set = FMath::FloorToInt(ForgeClock / SetLength);
-    const float Local = FMath::Fmod(ForgeClock, SetLength), Previous = Local - (ForgeClock - Before);
-    // Between sets he turns the work over a little, the wrist rolling with the tongs.
-    const float Turned = (Set % 2) ? 8.f : -8.f;
-    float S = RestSwing;
+    // Three sets make a round: two with a short pause to turn the work, the
+    // third with a longer one, lifting the bar up to look at it.
+    const float Window = StrikesPerSet * StrikePeriod;
+    const float Round = 3.f * Window + 2.f * SetPause + InspectPause;
+    const auto Where = [&](float Clock, int32& Set, float& Local, float& Pause)
+    {
+        const int32 R = FMath::FloorToInt(Clock / Round);
+        float T = Clock - R * Round;
+        for (int32 I = 0; I < 3; ++I)
+        {
+            Pause = I == 2 ? InspectPause : SetPause;
+            if (T < Window + Pause || I == 2) { Set = R * 3 + I; Local = T; return; }
+            T -= Window + Pause;
+        }
+    };
+    int32 Set = 0, SetBefore = 0; float Local = 0, Previous = 0, Pause = SetPause, PauseBefore = SetPause;
+    Where(ForgeClock, Set, Local, Pause);
+    Where(Before, SetBefore, Previous, PauseBefore);
+    if (SetBefore != Set) Previous = -1.f;   // a new set began this frame: no event carried over
+    const float Turned = (Set % 2) ? 8.f : -8.f;   // each set the bar lies turned a little from the last
+    float S = RestSwing, R = -1.f, TapW = 0.f, Push = 0.f, Peer = 0.f, Pull = 0.f;
     BarLift = 0.f; BarRoll = Turned;
+    const auto Ease = [](float A, float B, float X) { return FMath::SmoothStep(A, B, X); };
     if (Local < Window)
     {
-        const float C = FMath::Fmod(Local, StrikePeriod);
-        const bool bFirst = Local < StrikePeriod;
-        if (C < .1f) S = bFirst ? RestSwing : RestSwing * C / .1f;                         // the rebound
-        else if (C < .75f) S = RestSwing + (1.f - RestSwing) * FMath::SmoothStep(0.f, 1.f, (C - .1f) / .65f);   // the lift
-        else if (C < .98f) S = 1.f;                                                         // at the top
-        else { const float U = (C - .98f) / (StrikePeriod - .98f); S = 1.f - U * U; }     // the blow, gathering speed
+        const int32 K = FMath::FloorToInt(Local / StrikePeriod);
+        const float C = Local - K * StrikePeriod;
+        const bool bTap = K >= 1;   // after every blow but the set's last (which ends the window)
+        if (C >= DownAt)
+        {
+            // The blow: the arm gathers speed; the hammer's head lags, then the wrist snaps it through.
+            const float U = (C - DownAt) / (StrikePeriod - DownAt);
+            S = 1.f - U * U; R = 1.f - U * U * U; Push = U * U;
+        }
+        else if (C >= TopAt) S = 1.f;   // a beat at the top
+        else if (K == 0)
+        {
+            // From rest on the heel, up into the first blow.
+            S = FMath::Lerp(RestSwing, 1.f, Ease(0.f, TopAt, C));
+            TapW = 1.f - Ease(0.f, .45f, C);
+        }
+        else if (bTap && C < .1f) { S = .2f * Ease(0.f, .1f, C); TapW = Ease(0.f, .12f, C); }            // the rebound, drifting to the heel
+        else if (bTap && C < TapAt) { const float V = (C - .1f) / (TapAt - .1f); S = .2f * (1.f - V * V); TapW = 1.f; Push = V * V; }   // the tap, leaning into it
+        else if (bTap && C < .4f) { S = .12f * Ease(TapAt, .4f, C); TapW = 1.f; Push = 1.f - Ease(TapAt, .4f, C); }   // its bounce
+        else
+        {
+            S = FMath::Lerp(.12f, 1.f, Ease(.4f, TopAt, C)); TapW = 1.f - Ease(.4f, .7f, C);           // the lift
+            R = FMath::Pow(S, 1.4f);   // the head trails up behind the fist
+        }
+        if (bTap && C >= TapAt && (Previous < 0.f || Previous - K * StrikePeriod < TapAt) && Previous <= Local && Resting < .1f) bTapDue = true;
     }
     else
     {
-        // The pause: lift the bar, give it a quarter turn, set it back down.
-        const float U = (Local - Window) / SetPause;
-        BarLift = 3.f * FMath::Sin(PI * FMath::Clamp((U - .15f) / .7f, 0.f, 1.f));
-        BarRoll = Turned + ((Set % 2) ? -16.f : 16.f) * FMath::SmoothStep(.25f, .75f, U);
+        // The pause: the hammer bounces off the last blow and is set down on the heel.
+        const float P = Local - Window, U = P / Pause;
+        S = P < .12f ? .2f * Ease(0.f, .12f, P) : FMath::Lerp(.2f, .03f, Ease(.12f, .4f, P));
+        TapW = Ease(0.f, .3f, P);
+        if (Pause > SetPause)
+        {
+            // Every third pause he lifts the bar up and draws it back to look at it, turning it.
+            Peer = Ease(.12f, .3f, U) * (1.f - Ease(.7f, .88f, U));
+            BarLift = 20.f * Peer; Pull = 12.f * Peer;
+            BarRoll = Turned + ((Set % 2) ? -16.f : 16.f) * Ease(.3f, .65f, U) + 10.f * Peer * FMath::Sin(P * 5.f);
+        }
+        else
+        {
+            BarLift = 3.f * FMath::Sin(PI * FMath::Clamp((U - .15f) / .7f, 0.f, 1.f));
+            BarRoll = Turned + ((Set % 2) ? -16.f : 16.f) * Ease(.25f, .75f, U);
+        }
+        // The tongs clink as the bar comes off the face and goes back on it.
+        const float PrevP = Previous - Window;
+        for (const float At : { .15f * Pause, .88f * Pause })
+            if (Previous >= Window && PrevP < At && P >= At) bClinkDue = true;
     }
-    Swing = FMath::Lerp(S, RestSwing, Resting);
-    // The blow lands at each whole period inside the window (not as the set rolls over);
-    // it is struck once the pose is solved this frame (UpdatePose).
+    if (R < 0.f) R = S;
+    Swing = FMath::Lerp(S, .03f, Resting);
+    Cock = FMath::Lerp(R, .03f, Resting);
+    TapBlend = FMath::Lerp(TapW, 1.f, Resting);
+    Drive = Push * (1.f - Resting);
+    Inspect = Peer; BarPull = Pull;
+    SinceBlow += DeltaSeconds;
+    // The blow lands at each whole period inside the window; it is struck once
+    // the pose is solved this frame (UpdatePose), and that frame shows the contact.
     if (Resting < .1f && Previous >= 0.f && Local >= Previous)
     {
         const int32 K = FMath::FloorToInt(Local / StrikePeriod), KP = FMath::FloorToInt(Previous / StrikePeriod);
         if (K > KP && K >= 1 && K <= StrikesPerSet) bStrikeDue = true;
     }
-    // The frame the blow lands shows the contact, whatever the frame rate
-    // (a long frame would otherwise already be into the rebound).
-    if (bStrikeDue) Swing = 0.f;
+    if (bStrikeDue) { Swing = Cock = TapBlend = 0.f; Drive = 1.f; }
+    else if (bTapDue) { Swing = Cock = 0.f; TapBlend = 1.f; Drive = 1.f; }
     // Sparks fly and fall; the flash dies away.
     for (int32 I = SparkState.Num() - 1; I >= 0; --I)
     {
@@ -1108,12 +1200,13 @@ void ADockNPC::TickSmith(float DeltaSeconds)
 void ADockNPC::Strike()
 {
     ++Strikes;
+    SinceBlow = 0.f;
     const FTransform& Comp = Body->GetComponentTransform();
     const FVector Top = Comp.TransformPosition(FVector(AnvilAhead - 1.f, AnvilRight, AnvilFace + 2.f * BarHalf));
     if (Hammer)
         StrikeGap = static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), Top));
     if (StrikeSounds.Num())
-        UGameplayStatics::PlaySoundAtLocation(this, StrikeSounds[FMath::RandRange(0, StrikeSounds.Num() - 1)], Top, .8f, FMath::FRandRange(.96f, 1.04f), 0.f, StrikeAttenuation);
+        UGameplayStatics::PlaySoundAtLocation(this, StrikeSounds[FMath::RandRange(0, StrikeSounds.Num() - 1)], Top, .85f, FMath::FRandRange(.97f, 1.03f), 0.f, StrikeAttenuation);
     for (int32 I = 0; I < 9; ++I)
     {
         const float Yaw = FMath::FRandRange(0.f, 360.f);
@@ -1123,42 +1216,83 @@ void ADockNPC::Strike()
     FlashTime = 0.f;
     if (Strikes > 3) WorstStrikeGap = FMath::Max(WorstStrikeGap, StrikeGap);   // past the loading hitch
     if (Strikes <= 3 || Strikes % 10 == 0)
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_STRIKE n=%d gap_cm=%.1f worst_cm=%.1f tongs_grip_cm=%.1f"), Strikes, StrikeGap, WorstStrikeGap, TongsGripError);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_STRIKE n=%d gap_cm=%.1f worst_cm=%.1f taps=%d worst_tap_cm=%.1f tongs_grip_cm=%.1f"),
+            Strikes, StrikeGap, WorstStrikeGap, Taps, WorstTapGap, TongsGripError);
 }
+
+void ADockNPC::Tap()
+{
+    // The light ring of the hammer dropped on the bare face, on the heel beside the work.
+    ++Taps;
+    const FVector At = Body->GetComponentTransform().TransformPosition(FVector(AnvilAhead - 4.f, AnvilRight + TapRight, AnvilFace));
+    if (Hammer && Taps > 3)
+        WorstTapGap = FMath::Max(WorstTapGap, static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), At)));
+    if (Hammer && Taps > 3 && FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), At) > 3.f)
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_TAP_MISS n=%d gap_cm=%.1f fist_error_cm=%.1f swing=%.2f cock=%.2f tap=%.2f resting=%.2f strike_due=%d"),
+            Taps, static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), At)),
+            HammerFistError, Swing, Cock, TapBlend, Resting, bStrikeDue ? 1 : 0);
+    if (TapSounds.Num())
+        UGameplayStatics::PlaySoundAtLocation(this, TapSounds[FMath::RandRange(0, TapSounds.Num() - 1)], At, .4f, FMath::FRandRange(.98f, 1.02f), 0.f, StrikeAttenuation);
+}
+
+bool ADockNPC::IsForgeSounding() const { return ForgeAudio && ForgeAudio->IsPlaying(); }
 
 void ADockNPC::PoseSmith(TArray<FTransform>& Space)
 {
     const float Right = -ArmOut;                                    // which way is his right (+Y)
-    const FVector Top(AnvilAhead - 1.f, AnvilRight, AnvilFace + 2.f * BarHalf + BarLift);
+    // Where the hammer's face comes down: the bar, or the bare heel beside it.
+    const FVector Work(AnvilAhead - 1.f - BarPull, AnvilRight, AnvilFace + 2.f * BarHalf + BarLift);
+    const FVector Heel(AnvilAhead - 4.f, AnvilRight + TapRight, AnvilFace);
+    const FVector Top = FMath::Lerp(FVector(Work.X + BarPull, Work.Y, AnvilFace + 2.f * BarHalf), Heel, TapBlend);
     // The hammer, as a frame: Along (the face's way, his knuckles) and Thumb
-    // (up the handle to the head). On the bar: face down, handle level, coming
-    // in from his right. Raised: over his right shoulder, the head back and up.
+    // (up the handle to the head). Down: face down, handle level, coming in
+    // from his right. Raised: over his right shoulder, the head back and up.
+    // Cock turns the hammer between the two; Swing carries the fist.
     const FVector ThumbDown = FVector(1.f, -.22f * Right, .05f).GetSafeNormal();
     const FVector AlongDown = FVector::VectorPlaneProject(-FVector::UpVector, ThumbDown).GetSafeNormal();
-    const FVector FistDown = Top - AlongDown * HammerFace - ThumbDown * HammerHead;
     const FVector ThumbUp = FVector(-.4f, .12f * Right, .9f).GetSafeNormal();
     const FVector AlongUp = FVector::VectorPlaneProject(FVector(1.f, 0.f, .25f), ThumbUp).GetSafeNormal();
+    const FQuat Down = FRotationMatrix::MakeFromXZ(AlongDown, ThumbDown).ToQuat(), Up = FRotationMatrix::MakeFromXZ(AlongUp, ThumbUp).ToQuat();
+    const FQuat Q = FQuat::Slerp(Down, Up, Cock);
+    const FVector FistDown = Top - AlongDown * HammerFace - ThumbDown * HammerHead;
     const FVector FistUp(10.f, 27.f * Right, 160.f);
-    const FQuat Q = FQuat::Slerp(FRotationMatrix::MakeFromXZ(AlongDown, ThumbDown).ToQuat(), FRotationMatrix::MakeFromXZ(AlongUp, ThumbUp).ToQuat(), Swing);
     const FVector Fist = FMath::Lerp(FistDown, FistUp, Swing) + FVector(-8.f, 4.f * Right, 6.f) * FMath::Sin(PI * Swing);   // an arc, not a straight line
     const FVector Pole = FMath::Lerp(FVector(-.35f, Right, -.6f), FVector(-.1f, Right, .1f), Swing);
     PlaceHand(Space, 1, Fist, Q.GetAxisX(), Q.GetAxisZ(), Pole);
     // The tongs: from his left fist at the waist, sloping down across the face,
-    // the bar flat on it under the blow. His forearm hangs; the reins leave the
-    // fist on the thumb side.
+    // the bar flat on it under the blow; flatter when he lifts it to look.
+    // His forearm hangs; the reins leave the fist on the thumb side.
+    const float Slope = FMath::DegreesToRadians(FMath::Lerp(ReinsSlope, 6.f, Inspect));
     const FVector Level = FVector(.81f, .59f * Right, 0.f).GetSafeNormal();
-    const FVector Reins = Level * FMath::Cos(FMath::DegreesToRadians(ReinsSlope)) - FVector::UpVector * FMath::Sin(FMath::DegreesToRadians(ReinsSlope));
+    const FVector Reins = Level * FMath::Cos(Slope) - FVector::UpVector * FMath::Sin(Slope);
     const FQuat Roll(Reins, FMath::DegreesToRadians(BarRoll));
     const FQuat TongsQ = Roll * FRotationMatrix::MakeFromXZ(Reins, FVector::UpVector).ToQuat();
-    const FVector Bar = Top - FVector(0.f, 0.f, BarHalf);
+    // A heavy blow jars the bar on the face for a moment.
+    const FVector Bar = Work - FVector(0.f, 0.f, BarHalf + .5f * FMath::Exp(-SinceBlow / .05f));
     const FVector LeftFist = Bar - TongsQ.RotateVector(TongsBar);
     const FVector LeftAlong = Roll.RotateVector(FVector::VectorPlaneProject(FVector(.1f, -.15f * Right, -1.f), Reins).GetSafeNormal());
     PlaceHand(Space, 0, LeftFist, LeftAlong, Reins, FVector(-.4f, -Right * .6f, -.3f));
     // Props in the fists as posed (if an arm fell short, the prop shows it and the test measures it).
     FVector F, A, T;
     HandFrame(Space, 1, F, A, T);
+    HammerFistError = static_cast<float>(FVector::Dist(F, Fist));
     if (Hammer) Hammer->SetRelativeTransform(FTransform(FRotationMatrix::MakeFromXZ(A, T).ToQuat(), F));
     HandFrame(Space, 0, F, A, T);
     TongsGripError = static_cast<float>(FVector::Dist(F, LeftFist));
+    if (Strikes > 3) WorstTongsGap = FMath::Max(WorstTongsGap, TongsGripError);   // every frame, the inspections included
     if (Tongs) Tongs->SetRelativeTransform(FTransform(TongsQ, F));
+}
+
+void ADockNPC::SmithEvents()
+{
+    // Sounds and sparks once the frame's pose (and the hammer) is in place.
+    if (bStrikeDue) { bStrikeDue = false; bTapDue = false; Strike(); }
+    if (bTapDue) { bTapDue = false; Tap(); }
+    if (bClinkDue)
+    {
+        bClinkDue = false;
+        if (ClinkSounds.Num() && Tongs)
+            UGameplayStatics::PlaySoundAtLocation(this, ClinkSounds[FMath::RandRange(0, ClinkSounds.Num() - 1)],
+                Tongs->GetComponentTransform().TransformPosition(TongsBar), .35f, FMath::FRandRange(.97f, 1.03f), 0.f, StrikeAttenuation);
+    }
 }

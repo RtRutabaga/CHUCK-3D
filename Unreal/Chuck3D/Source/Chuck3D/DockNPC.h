@@ -13,6 +13,7 @@ class UInstancedStaticMeshComponent;
 class UPointLightComponent;
 class USoundBase;
 class USoundAttenuation;
+class UAudioComponent;
 class UMaterialInterface;
 
 /**
@@ -131,12 +132,17 @@ public:
     bool IsSmith() const { return Kind == EDockHuman::Blacksmith; }
     bool IsForging() const { return IsSmith() && Resting < .5f; }
     int32 GetStrikes() const { return Strikes; }
+    /** Light taps of the hammer on the bare face between blows, and how far the face was from it at the last one (cm). */
+    int32 GetTaps() const { return Taps; }
+    float GetWorstTapGap() const { return WorstTapGap; }
+    /** True while the forge's roar is playing beside him. */
+    bool IsForgeSounding() const;
     /** How far the hammer's face was from the top of the bar at the last blow (cm), for tests. */
     float GetStrikeGap() const { return StrikeGap; }
     /** The widest such gap over every blow after the first three (cm). */
     float GetWorstStrikeGap() const { return WorstStrikeGap; }
-    /** How far the left fist is from the tongs' reins (cm), for tests. */
-    float GetTongsGripError() const { return TongsGripError; }
+    /** How far the left fist has been from the tongs' reins (cm, the worst on any frame after the first blows), for tests. */
+    float GetTongsGripError() const { return WorstTongsGap; }
     AActor* GetAnvil() const { return Anvil.Get(); }
     /** Eyes above the feet (cm), from this body's head bone. */
     float GetEyeHeight() const { return EyeHeight; }
@@ -208,18 +214,32 @@ private:
     UPROPERTY() UPointLightComponent* StrikeLight = nullptr;
     UPROPERTY() TObjectPtr<UStaticMesh> SmithMeshes[3];          // anvil, hammer, tongs
     UPROPERTY() TArray<TObjectPtr<USoundBase>> StrikeSounds;
+    UPROPERTY() TArray<TObjectPtr<USoundBase>> TapSounds;
+    UPROPERTY() TArray<TObjectPtr<USoundBase>> ClinkSounds;
+    UPROPERTY() UAudioComponent* ForgeAudio = nullptr;
     UPROPERTY() USoundAttenuation* StrikeAttenuation = nullptr;
     TWeakObjectPtr<AActor> Anvil;
     float ForgeClock = 0, Resting = 0, Swing = .12f, BarRoll = 0, BarLift = 0, FlashTime = 1.f;
+    float Cock = .12f;        // the hammer's turn in his fist (0 face down on the work .. 1 raised); lags Swing on the way down: the wrist snap
+    float TapBlend = 1.f;     // 0 aimed at the bar .. 1 at the tap spot on the heel
+    float Drive = 0.f;        // the downswing's effort (0..1), and the body behind it
+    float SinceBlow = 10.f;   // s since the last heavy blow (the recoil)
+    float Inspect = 0.f;      // 0..1 lifting the bar up to look at it
+    float BarPull = 0.f;      // cm the bar is drawn back toward him
+    int32 Taps = 0;
+    float WorstTapGap = 0.f;
+    bool bTapDue = false, bClinkDue = false;
     int32 Strikes = 0;
     bool bStrikeDue = false;
-    float StrikeGap = 1e3f, WorstStrikeGap = 0.f, TongsGripError = 1e3f;
+    float StrikeGap = 1e3f, WorstStrikeGap = 0.f, TongsGripError = 1e3f, WorstTongsGap = 0.f, HammerFistError = 0.f;
     float PalmSign[2] = { 1.f, -1.f };   // palm side relative to Along x Thumb, measured on the posed hand
     struct FSpark { FVector At, Velocity; float Age, Life; };
     TArray<FSpark> SparkState;
     void TickSmith(float DeltaSeconds);
     void PoseSmith(TArray<FTransform>& Space);
     void Strike();
+    void Tap();
+    void SmithEvents();
     /** Two-bone IK: the fist of arm Side to Fist, the hand's knuckles along Along with its thumb side along Thumb. */
     void PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole);
     /** A posed hand's fist centre and axes (component space). */

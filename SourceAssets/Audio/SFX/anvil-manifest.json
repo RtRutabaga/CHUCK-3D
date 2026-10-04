@@ -1,32 +1,100 @@
 {
-  "provenance": "Original deterministic synthetic anvil strikes; Tools/gen_anvil_sfx.py",
+  "provenance": "Original deterministic synthetic forge sounds; Tools/gen_anvil_sfx.py",
   "sounds": [
     {
       "name": "SFX_AnvilStrike_00",
       "file": "SFX_AnvilStrike_00.wav",
-      "duration": 0.9,
-      "sha256": "4e5b43f8280a7f640188518ae1a29b3557444723f44e0628cc4459b0e187bf43",
+      "duration": 1.17,
+      "loop": false,
+      "sha256": "0394c1971cdacdf6d770e14084d4ac27585ef3a9875965142f95ef2727459dbf",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_01",
       "file": "SFX_AnvilStrike_01.wav",
-      "duration": 0.98,
-      "sha256": "ecb5986a7ee2f33e37db202ca509330271c6e5a15d4f03be72cd417dbb69c393",
+      "duration": 1.17,
+      "loop": false,
+      "sha256": "b46bf50c4227e86459c8775df74c0d29ad1aefa4de5fcbea59cf5c2c3c9b9317",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_02",
       "file": "SFX_AnvilStrike_02.wav",
-      "duration": 1.06,
-      "sha256": "61bd15fcf5b0a57af9d641db1f01fda7e1ffc8344541435925aa1fa217b6bb91",
+      "duration": 1.17,
+      "loop": false,
+      "sha256": "9847c1aa1400391362536840ee41e2f9957b2074d4d93c8bb85087ce93dace68",
       "peak_dbfs": -3.0
     },
     {
       "name": "SFX_AnvilStrike_03",
       "file": "SFX_AnvilStrike_03.wav",
-      "duration": 1.14,
-      "sha256": "3793c52147cd912f4eecced82b6c844f7011a35fe11c8e01453e634b7f08d9ff",
+      "duration": 1.17,
+      "loop": false,
+      "sha256": "c8eff2ba9232710d2ae8c0ba3d89b50cf097566d3aec476783fbca1cdc8eb8a6",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilTap_00",
+      "file": "SFX_AnvilTap_00.wav",
+      "duration": 1.32,
+      "loop": false,
+      "sha256": "b1b5c7d0d99f862301db2d863302bb9aa74158e312a7f3b8f49875a66a892eef",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilTap_01",
+      "file": "SFX_AnvilTap_01.wav",
+      "duration": 1.32,
+      "loop": false,
+      "sha256": "d7cc8f539d6cbd58046cfec1f87c4cb6dcd13a4a5918b7b4dd2405ccd36f21a1",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilTap_02",
+      "file": "SFX_AnvilTap_02.wav",
+      "duration": 1.32,
+      "loop": false,
+      "sha256": "84d3853fdce324bc6a901ef10c7ae4ef7d151c207fcdbe9536015e879f68135b",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilTap_03",
+      "file": "SFX_AnvilTap_03.wav",
+      "duration": 1.32,
+      "loop": false,
+      "sha256": "476062bede44b274439a2c42c11375593fb79bd41268ae187c227a677da9e14f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TongsClink_00",
+      "file": "SFX_TongsClink_00.wav",
+      "duration": 0.55,
+      "loop": false,
+      "sha256": "7215b90bb62fd6abca7ee6c0642c0badac48a055420c8b785e10eaf96de92c8d",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TongsClink_01",
+      "file": "SFX_TongsClink_01.wav",
+      "duration": 0.55,
+      "loop": false,
+      "sha256": "9103b3aac5397d2a7c0c92f043d6d22fd62ee48316d34a3762536f149ef4da3e",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TongsClink_02",
+      "file": "SFX_TongsClink_02.wav",
+      "duration": 0.55,
+      "loop": false,
+      "sha256": "3e7ae3080afce0a8d148bc57f996696ae509b79bcc3eb635093ad461a7904d86",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_ForgeLoop_00",
+      "file": "SFX_ForgeLoop_00.wav",
+      "duration": 8.0,
+      "loop": true,
+      "sha256": "bc47c4332523ad8731e165b57dc722df3210db1147b44038200e164a31af8b78",
       "peak_dbfs": -3.0
     }
   ]
