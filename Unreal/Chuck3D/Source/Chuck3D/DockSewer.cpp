@@ -412,7 +412,7 @@ void BuildDockSewer(UWorld* World)
     {
         auto* Fill=NewObject<UPointLightComponent>(Owner);Fill->SetupAttachment(Root);
         Fill->SetRelativeLocation(Route[I]+FVector(0,0,Height(I)*.45f));
-        Fill->SetIntensity(3000);Fill->SetAttenuationRadius(1150+400*Chamber(I));
+        Fill->SetIntensity(2700);Fill->SetAttenuationRadius(1150+400*Chamber(I));
         Fill->SetLightColor(FLinearColor(.42f,.44f,.47f));Fill->SetSourceRadius(160);
         Fill->SetLightingChannels(false,true,false);Fill->SetCastShadows(false);Fill->RegisterComponent();++FillLights;
     }

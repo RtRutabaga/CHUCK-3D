@@ -1,5 +1,7 @@
 # Winding sewer prototype
 
+October 4 slight dimming: neutral-grey fill3000→2700 and chute-mouth fill1100→990 (10% lower). Colour, radius, ambient material tint and all purple rupture lights are unchanged. See the latest HANDOFF for actual rendered checks and the root launcher build.
+
 October 4 user revision: the narrow section is now after the wide chamber, with a full-width Astral rupture crossed using the existing side wall run; the former zombie is removed. This supersedes older zombie/pinch-point descriptions below. See SEWER-WALLRIFT.md and the latest HANDOFF for actual checks and launcher status.
 
 October 3 side-bank/wall-run update: all 20 small ruptures move 90cm left/right of the stream centre, alternating where banks are broad and using the outer bank at tight turns. Matching floor cuts, visual wells, oil veils and purple lamps move together. The central shallow bed/water continues past them; only the 11 original large ruptures interrupt it. A mandatory check verifies solid bed, wet-footstep classification and at least10cm separation from the water at every small rupture. Small holes remain genuine falls with local sewer respawn. Grey fill/music unchanged.

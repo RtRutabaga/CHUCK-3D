@@ -158,7 +158,7 @@ void BuildDockSewerSlide(AActor* Owner, const TArray<FVector>& Route, const TArr
     auto* Light = NewObject<UPointLightComponent>(Owner);
     Light->SetupAttachment(Owner->GetRootComponent());
     Light->SetRelativeLocation(Path[3] + FVector(0, 0, 45));
-    Light->SetIntensity(1100); Light->SetAttenuationRadius(420);
+    Light->SetIntensity(990); Light->SetAttenuationRadius(420);
     Light->SetLightColor(FLinearColor(.42f, .44f, .47f));
     Light->SetLightingChannels(false, true, false); Light->SetCastShadows(false);
     Light->RegisterComponent();
