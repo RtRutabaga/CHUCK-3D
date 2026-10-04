@@ -1,5 +1,7 @@
 # Project brief
 
+October 4 wall-run revision: the user replaced the narrow-tunnel zombie obstacle with a full-width Astral rupture in a short narrow passage after the wide sewer chamber. Use the existing lateral wall run to cross it. See SEWER-WALLRIFT.md and HANDOFF for current layout and actual tests.
+
 October 3 pantry authorization: the user requested a basement pantry entered through a ladder hole behind the tavern bar. Codex owns the cellar/hatch foundation; Claude will implement ladder climbing. This extends the connected tavern only, without new campaign destinations or item systems. See TAVERN-PANTRY.md and latest HANDOFF.
 
 October 3 return-state authorization: continuing Claude's sewer handoff implements the remaining user-assigned setting step: morning starts with the tavern closed, the completed sewer slide returns Chuck to early-evening docks, closes the hatch and opens the furnished tavern. This supersedes always-open tavern wording below; no new campaign destination or persistent save. See DOCKS-RETURN.md and latest HANDOFF.

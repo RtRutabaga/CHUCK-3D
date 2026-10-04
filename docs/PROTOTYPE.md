@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 4 user revision: the narrow section is now after the wide chamber, with a full-width Astral rupture crossed using the existing side wall run; the former zombie is removed. This supersedes older zombie/pinch-point descriptions below. See SEWER-WALLRIFT.md and the latest HANDOFF for actual checks and launcher status.
+
 October 4 forge dressing: the smithy has a brick arched fire chamber, coal bed, iron extraction hood and chimney, bellows, stocked tool bench and quenching tub. Claude's working smith, contact animation and sound are retained. See FORGE-DRESSING.md and the latest HANDOFF for actual checks and launcher build.
 
 October 4 plaza addition: a blacksmith hammers hot iron at an anvil in front of the smithy, beside the forge. Each blow is followed by a light tap on the anvil, and in the pauses he turns the bar or lifts it to look. He has strike, tap and tongs sounds, a roaring forge, sparks, two lines when talked to (F / Y), and a climbable anvil. See WATERDEEP-PLAZA.md and the latest HANDOFF.

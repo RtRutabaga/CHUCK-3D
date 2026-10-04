@@ -15,3 +15,7 @@ FVector DockSewerSide(int32 Index);
 float DockSewerHalfWidth(int32 Index);
 bool DockSewerIsGap(int32 Index);
 bool DockSewerIsChamber(int32 Index);
+
+// Full-width wall-run challenge immediately after the midpoint chamber.
+int32 DockSewerWallRiftStart();
+int32 DockSewerWallRiftEnd();

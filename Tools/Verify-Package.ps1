@@ -39,7 +39,7 @@ $musicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_MUSIC_CHECK fail
 $chimneyCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CHIMNEY_COLLISION failures=0 checked=[1-9]'
 $hatchCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_OPENHATCH_CHECK failures=0 shaft=3 surrounds=3 raised_lid=1'
 $sewerCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_GEOMETRY failures=0 samples=[1-9]'
-$astralCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_ASTRAL_HAZARDS failures=0 holes=31 purple_lights=31 torches=0 large=11 small=20'
+$astralCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_ASTRAL_HAZARDS failures=0 holes=32 purple_lights=32 torches=0 large=12 small=20'
 $nightMusicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_NIGHT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1'
 $smallStreamCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SMALL_RIFT_STREAM failures=0 checked=20 clearance_cm=10'
 $caveCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CAVE_CHECK failures=0 wall_traces=[1-9]'
@@ -48,12 +48,13 @@ $pantryCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_PANTRY_CHECK fa
 $streamAudio=Select-String -LiteralPath $log -Pattern 'CHUCK_STREAM_AUDIO loaded=6'
 $fireCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_FIRE_CHECK failures=0 flames=[1-9][0-9]* flicker_lights=[1-9][0-9]* legacy_primitives=0'
 $narrowCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_NARROW failures=0 samples=11 nominal_width_cm=140'
+$wallRiftCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLRIFT_GEOMETRY failures=0 after_chamber=1 floor_holes=6 length_cm=195 width_cm=140'
 $rubbleCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SLIDE_RUBBLE rocks=44 collision=1'
 $forgeCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_FORGE_DRESSING failures=0 materials=4 solid_samples=4 clear_routes=3'
 $smithCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SMITH_SPAWNED anvil=1 hammer=1 tongs=1 sounds=12'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {136} else {137}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or $passed -lt $expected) {
+$expected=if($NoCapture) {139} else {140}
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }

@@ -23,7 +23,7 @@ namespace
     int32 ZombieSample = -1;
     constexpr int32 FirstRats = 36;       // samples: the first gap is 26..29, so a few metres beyond it
     // Rat groups along the route (sample, count); the wide chamber (around the
-    // middle) is kept clear for the zombie.
+    // middle) is kept clear for traversal.
     const int32 RatGroups[][2] = { {FirstRats, 3}, {120, 2}, {262, 3}, {330, 2} };
 }
 
@@ -65,25 +65,14 @@ void SpawnSewerLife(UWorld* World)
                     if (&Group == &RatGroups[0]) ++FirstGroupPlaced;
                 }
             }
-    // The zombie: in the new narrow passage between the first bends,
-    // facing back the way the rat comes in.
-    Zombie.Reset();
-    if (!bWalkThrough)
-    {
-        const int32 I = FMath::Clamp(97,8,Count-8);
-        ZombieSample = I;
-        const FVector Back = DockSewerPoint(I - 4) - DockSewerPoint(I);
-        if (ADockNPC* Dead = ADockNPC::SpawnZombie(World, DockSewerPoint(I) + DockSewerSide(I) * (.4f * DockSewerHalfWidth(I)), static_cast<float>(Back.Rotation().Yaw)))
-        {
-            UseSewerLighting(Dead);
-            Zombie = Dead;
-        }
-    }
+    // User replaced the narrow-passage zombie with the post-chamber Astral break.
+    Zombie.Reset(); ZombieSample = -1;
     // Moss clumps where the floor meets the wall, alternating sides every few
     // metres, a third of them holding a cigarette (as the docks' grass).
     FRandomStream Random(20261003);
     for (int32 I = 8; I < Count - 8; I += 9)
     {
+        if (I>=DockSewerWallRiftStart()-8 && I<=DockSewerWallRiftEnd()+8) continue;
         if (DockSewerIsGap(I) || DockSewerIsGap(I + 3) || DockSewerIsGap(I - 3)) continue;
         const float Side = ((I / 9) % 2) ? -1.f : 1.f;
         const int32 Clump = 2 + Random.RandRange(0, 2);
@@ -106,7 +95,7 @@ void SpawnSewerLife(UWorld* World)
     if (FParse::Param(FCommandLine::Get(), TEXT("ChuckSewerLifeCapture")))
     {
         auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(70);
-        const int32 From[] = { FirstRats - 6, 62, 94 }, To[] = { FirstRats + 3, 64, 97 };
+        const int32 From[] = { FirstRats - 6, 62, DockSewerWallRiftStart()-3 }, To[] = { FirstRats + 3, 64, DockSewerWallRiftStart()+1 };
         const float Up[] = { 70.f, 45.f, 80.f }, Out[] = { 0.f, -.4f, -.25f };
         for (int32 V = 0; V < 3; ++V)
         {

@@ -35,7 +35,9 @@ float Chamber(int32 I)
     const float U=FMath::Clamp(1.f-FMath::Abs(I-Route.Num()*.5f)/24.f,0.f,1.f);
     return U*U*(3.f-2.f*U);
 }
-float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-101))); }
+constexpr int32 WallRiftStart=222, WallRiftSpan=3, NarrowCentre=224;
+bool WallRiftSegment(int32 I) { return I>=WallRiftStart && I<WallRiftStart+WallRiftSpan; }
+float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-NarrowCentre))); }
 float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),70.f,Narrow(I)); }
 float Height(int32 I) { return 320.f+125.f*Chamber(I); }
 float WallWidth(int32 I,float Side)
@@ -57,13 +59,13 @@ float WallWidth(int32 I,float Side)
     }
     return Limit;
 }
-const int32 Rifts[]={26,54,84,114,146,180,215,249,282,316,346};
-const int32 SmallRifts[]={12,18,22,37,43,66,73,128,135,158,165,228,235,256,274,294,302,337,357,364};
-TArray<int32> AllRifts() { TArray<int32> Result;Result.Append(Rifts,UE_ARRAY_COUNT(Rifts));Result.Append(SmallRifts,UE_ARRAY_COUNT(SmallRifts));return Result; }
-int32 RiftSpan(int32 Start) { for(int32 S : SmallRifts) if(S==Start) return 2;return 4; }
-bool RiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;for(int32 S : SmallRifts) if(I>=S && I<S+2) return true;return false; }
+const int32 Rifts[]={26,54,84,114,146,180,199,249,282,316,346};
+const int32 SmallRifts[]={12,18,22,37,43,66,73,128,135,158,165,237,242,256,274,294,302,337,357,364};
+TArray<int32> AllRifts() { TArray<int32> Result;Result.Add(WallRiftStart);Result.Append(Rifts,UE_ARRAY_COUNT(Rifts));Result.Append(SmallRifts,UE_ARRAY_COUNT(SmallRifts));return Result; }
+int32 RiftSpan(int32 Start) { if(Start==WallRiftStart) return WallRiftSpan; for(int32 S : SmallRifts) if(S==Start) return 2;return 4; }
+bool RiftSegment(int32 I) { if(WallRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;for(int32 S : SmallRifts) if(I>=S && I<S+2) return true;return false; }
 float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
-bool LargeRiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
+bool LargeRiftSegment(int32 I) { if(WallRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
 int32 SmallRiftAt(float Sample) { for(int32 S : SmallRifts) if(Sample>=S && Sample<=S+2) return S;return INDEX_NONE; }
 float SmallRiftSide(int32 Start)
 {
@@ -87,6 +89,9 @@ float RuptureOffset(float Sample)
 
 float RiftEdge(float Sample,float Side)
 {
+    // The new break reaches under both cave walls: no walkable lip beside it.
+    if(Sample>=WallRiftStart && Sample<=WallRiftStart+WallRiftSpan)
+        return Width(FMath::RoundToInt(Sample))+40.f+6.f*FMath::Sin(Sample*7.3f+Side);
     for(int32 S : AllRifts()) if(Sample>=S && Sample<=S+RiftSpan(S))
     {
         const float U=(Sample-S)/RiftSpan(S),Envelope=FMath::Pow(FMath::Max(0.f,FMath::Sin(PI*U)),.65f);
@@ -113,6 +118,8 @@ FVector SafePoint(int32 I,const TArray<FVector>& Right)
         const int32 D=I<S?S-I:I>S+2?I-S-2:0;
         SmallBlend=FMath::Max(SmallBlend,FMath::Clamp(1.f-D/2.f,0.f,1.f));
     }
+    if(I>=WallRiftStart-5 && I<=WallRiftStart+WallRiftSpan+3)
+        return Route[I]+Right[I]*43.f;
     return Route[I]+Right[I]*(100.f*Blend*Side*(1.f-SmallBlend));
 }
 }
@@ -122,6 +129,8 @@ int32 DockSewerSamples() { return Route.Num(); }
 FVector DockSewerPoint(int32 I) { return Route.IsValidIndex(I) ? Route[I] : FVector::ZeroVector; }
 FVector DockSewerSide(int32 I) { return RouteRight.IsValidIndex(I) ? RouteRight[I] : FVector::RightVector; }
 float DockSewerHalfWidth(int32 I) { return Route.IsValidIndex(I) ? FMath::Min(WallWidth(I,1.f),WallWidth(I,-1.f)) : 0.f; }
+int32 DockSewerWallRiftStart() { return WallRiftStart; }
+int32 DockSewerWallRiftEnd() { return WallRiftStart+WallRiftSpan; }
 bool DockSewerIsGap(int32 I) { return RiftSegment(I); }
 bool DockSewerIsChamber(int32 I) { return Route.IsValidIndex(I) && Chamber(I)>.05f; }
 bool IsInDockSewerStream(const FVector& P)
@@ -270,6 +279,9 @@ void BuildDockSewer(UWorld* World)
     for(int32 Row=0;Row<(Count-1)*FloorSteps;++Row) for(int32 C=0;C<FloorColumns-1;++C)
     {
         const float Sample=(Row+.5f)/FloorSteps;const int32 Small=SmallRiftAt(Sample);
+        // Slightly stagger the two broken floor ends; the whole width is open.
+        const float Jagged=.18f*FMath::Sin(C*2.3f);
+        if(Sample>=WallRiftStart+Jagged && Sample<WallRiftStart+WallRiftSpan+Jagged) continue;
         if(C>=3 && C<=7 && LargeRiftSegment(Row/FloorSteps)) continue;
         if(Small!=INDEX_NONE && ((C==1 && SmallRiftSide(Small)<0) || (C==9 && SmallRiftSide(Small)>0))) continue;
         const int32 A=Row*FloorColumns+C;T.Append({A,A+1,A+FloorColumns,A+1,A+FloorColumns+1,A+FloorColumns});
@@ -311,6 +323,27 @@ void BuildDockSewer(UWorld* World)
             const float Offset=RuptureOffset(Sample),Side=SideIndex==0?-1.f:1.f;
             Edges.Add(FMath::Lerp(Route[Index],Route[Index+1],F)+Across*(Offset+Side*RiftEdge(Sample,Side)));
         }
+        const TArray<FVector> LongEdges=Edges;
+        TArray<FVector> BrokenCaps;
+        if(StartIndex==WallRiftStart)
+        {
+            // Follow the cut floor's transverse notches, rather than closing
+            // this wall-to-wall opening with a straight rectangular space plane.
+            for(int32 End=0;End<2;++End) for(int32 C=0;C<FloorColumns;++C)
+            {
+                const float Sample=StartIndex+End*Span+.18f*FMath::Sin(C*2.3f);
+                const int32 I=FMath::FloorToInt(Sample);const float F=Sample-I;
+                const float W=FMath::Lerp(Width(I),Width(I+1),F),O=StreamOffset(Sample);
+                const float X[]={-W-35,FMath::Lerp(-W-35,O-55,.35f),FMath::Lerp(-W-35,O-55,.7f),
+                    O-55,O-45.1f,O-31.9f,O+31.9f,O+45.1f,O+55,FMath::Lerp(O+55,W+35,.3f),FMath::Lerp(O+55,W+35,.65f),W+35};
+                BrokenCaps.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*X[C]);
+            }
+            Edges.Reset();
+            for(int32 Row=0;Row<=Rows;++Row) Edges.Add(LongEdges[Row]);
+            for(int32 C=0;C<FloorColumns;++C) Edges.Add(BrokenCaps[FloorColumns+C]);
+            for(int32 Row=0;Row<=Rows;++Row) Edges.Add(LongEdges[Rows+1+Row]);
+            for(int32 C=FloorColumns-1;C>=0;--C) Edges.Add(BrokenCaps[C]);
+        }
         const int32 Middle=StartIndex+Span/2;
         const FVector Centre=Route[Middle]+Right[Middle]*RuptureOffset(Middle);
         // Broken stone lip follows the real collision hole, tapering at both ends.
@@ -343,12 +376,27 @@ void BuildDockSewer(UWorld* World)
             for(int32 Row=0;Row<=Rows;++Row) for(int32 Level=0;Level<=Levels;++Level)
             {
                 const float U=Row/float(Rows),H=Level/float(Levels);
-                const FVector Edge=Edges[SideIndex*(Rows+1)+Row],In=(Centre-Edge).GetSafeNormal2D();
+                const FVector Edge=LongEdges[SideIndex*(Rows+1)+Row],In=(Centre-Edge).GetSafeNormal2D();
                 V.Add(Edge+In*(H*H*12*Scale*FMath::Sin(U*13+SideIndex))+FVector(0,0,3+H*Scale*(105+15*FMath::Sin(U*11+SideIndex))));
                 N.Add(In);UV.Add(FVector2D(U,H));
             }
             for(int32 Row=0;Row<Rows;++Row) for(int32 Level=0;Level<Levels;++Level)
             {const int32 A=Base+Row*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
+        }
+        // Low, fading distortion at the ragged transverse ends of this break,
+        // as well as the ordinary veils along its buried side edges.
+        for(int32 End=0;End<BrokenCaps.Num()/FloorColumns;++End)
+        {
+            const int32 Base=V.Num();
+            for(int32 C=0;C<FloorColumns;++C) for(int32 Level=0;Level<=Levels;++Level)
+            {
+                const float U=C/float(FloorColumns-1),H=Level/float(Levels);
+                const FVector Edge=BrokenCaps[End*FloorColumns+C],In=(Centre-Edge).GetSafeNormal2D();
+                V.Add(Edge+In*(H*H*8*FMath::Sin(U*13))+FVector(0,0,3+H*(60+10*FMath::Sin(U*11))));
+                N.Add(In);UV.Add(FVector2D(U,H));
+            }
+            for(int32 C=0;C<FloorColumns-1;++C) for(int32 Level=0;Level<Levels;++Level)
+            {const int32 A=Base+C*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
         }
         if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Centre+FVector(0,0,25);
@@ -400,6 +448,8 @@ void BuildDockSewer(UWorld* World)
         int32 Failed=0;
         for(int32 I=2;I<Count-2;++I)
         {
+            // This deliberate missing floor is checked separately, with real traversal.
+            if(I>=WallRiftStart-1 && I<=WallRiftStart+WallRiftSpan+1) continue;
             FHitResult Hit;
             const FVector P=SafePoint(I,Right),Previous=SafePoint(I-1,Right);
             if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,80),P-FVector(0,0,80),ECC_Visibility)
@@ -418,7 +468,7 @@ void BuildDockSewer(UWorld* World)
             if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,160),ECC_Visibility))
             {++HazardFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_BLOCKED start=%d point=%s component=%s"),S,*Hit.ImpactPoint.ToString(),*GetNameSafe(Hit.GetComponent()));}
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=31 purple_lights=31 torches=0 large=11 small=20"),HazardFailures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=32 purple_lights=32 torches=0 large=12 small=20"),HazardFailures);
         int32 StreamFailures=0;
         for(int32 S : SmallRifts)
         {
@@ -454,13 +504,22 @@ void BuildDockSewer(UWorld* World)
         {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_STREAM_MISS z=%.3f"),ChannelHit.ImpactPoint.Z);}
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_CHECK failures=%d wall_traces=%d chamber_width_cm=%.0f stream_depth_cm=5.5 night_fill_lights=%d"),CaveFailures,WallChecks,Width(Middle)*2,FillLights);
         int32 NarrowFailures=0;
-        for(int32 I=96;I<=106;++I) for(float Side : {-1.f,1.f})
+        for(int32 I=NarrowCentre-5;I<=NarrowCentre+5;++I) for(float Side : {-1.f,1.f})
         {
             FHitResult Hit;const FVector P=Route[I]+FVector(0,0,50);
             if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*Side*140,ECC_Visibility)
-                || FVector::Dist2D(P,Hit.ImpactPoint)<55 || FVector::Dist2D(P,Hit.ImpactPoint)>125) ++NarrowFailures;
+                || FVector::Dist2D(P,Hit.ImpactPoint)<55 || FVector::Dist2D(P,Hit.ImpactPoint)>125)
+            {++NarrowFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_NARROW_TRACE_FAIL sample=%d side=%.0f distance=%.2f actor=%s component=%s"),I,Side,FVector::Dist2D(P,Hit.ImpactPoint),*GetNameSafe(Hit.GetActor()),*GetNameSafe(Hit.GetComponent()));}
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_NARROW failures=%d samples=11 nominal_width_cm=140"),NarrowFailures);
+        int32 RiftFailures=0;
+        for(int32 I=WallRiftStart+1;I<WallRiftStart+WallRiftSpan;++I) for(float X : {-45.f,0.f,45.f})
+        {
+            FHitResult Hit;const FVector P=Route[I]+Right[I]*X;
+            if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,160),ECC_Visibility)) ++RiftFailures;
+        }
+        if(WallRiftStart<=Count/2+24) ++RiftFailures;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLRIFT_GEOMETRY failures=%d after_chamber=1 floor_holes=6 length_cm=195 width_cm=140"),RiftFailures);
         if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerGeometryOnly")))
         {FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},1.f,false);}
     }
@@ -497,7 +556,7 @@ void BuildDockSewer(UWorld* World)
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
-        struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;FTimerHandle Timer; };
+        struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;bool WallCross=false;FTimerHandle Timer; };
         auto Run=MakeShared<FRun>();
         FTimerHandle Start;
         World->GetTimerManager().SetTimer(Start,[World,Run,Right,Under](){
@@ -519,7 +578,14 @@ void BuildDockSewer(UWorld* World)
                         ++Run->Target;
                         if(Run->Target%50==0) UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_PROGRESS reached=%d elapsed=%.2f"),Run->Target,Run->Time);
                     }
-                    Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+                    if(!Chuck->IsWallSideRunning()) Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
+                    // Target can advance above while Goal still names the preceding
+                    // waypoint. Probe the actual break, never that stale Goal.
+                    if(Run->Target==WallRiftStart && FVector::Dist2D(SafePoint(WallRiftStart,Right),Chuck->GetActorLocation())<28 && !Run->WallCross)
+                    {
+                        Chuck->JumpPressed();Run->WallCross=Chuck->IsWallSideRunning();
+                        UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_ROUTE_WALLRUN entered=%d gait=%s speed=%.0f p=%s"),Run->WallCross,Chuck->GetGaitName(),Chuck->GetVelocity().Size2D(),*Chuck->GetActorLocation().ToString());
+                    }
                     if(FMath::FloorToInt(Run->Time*50)%500==0)
                     {
                         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_POSITION target=%d p=%s goal=%s mode=%d"),Run->Target,*Chuck->GetActorLocation().ToString(),*Goal.ToString(),int32(Chuck->GetCharacterMovement()->MovementMode));
@@ -536,7 +602,8 @@ void BuildDockSewer(UWorld* World)
                     Chuck->SetActorLocation(Route[Sample]+Right[Sample]*RuptureOffset(Sample)+FVector(0,0,60),false,nullptr,ETeleportType::TeleportPhysics);
                     Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
                 }
-                if(Run->HazardAt>=0 && Run->ResetAt<0 && FVector::Dist(Chuck->GetActorLocation(),DockSewerStartLocation())<65)
+                if(Run->HazardAt>=0 && Run->ResetAt<0 && !Chuck->IsAstral() && Chuck->GetCharacterMovement()->IsMovingOnGround()
+                    && FVector::Dist(Chuck->GetActorLocation(),DockSewerStartLocation())<65)
                 {
                     Run->HazardReset=true;Run->ResetAt=Run->Time;
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_RESPAWN fall_local=1 location=%s"),*Chuck->GetActorLocation().ToString());
@@ -557,7 +624,7 @@ void BuildDockSewer(UWorld* World)
                     && FVector::Dist(Chuck->GetAreaStartLocation(),AChuckCharacter::StartLocation())<1;
                 if(Restored || Run->Time>240 || (Run->HazardAt>=0 && Run->Time>Run->HazardAt+22) || (Run->Time>4 && !Run->Landed) || (Run->Landed && !Run->Finished && Chuck->GetActorLocation().Z>-100))
                 {
-                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->HazardReset)+(!Run->SanityReset)+(!Restored);
+                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->WallCross)+(!Run->HazardReset)+(!Run->SanityReset)+(!Restored);
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d hazard_reset=%d sanity_reset=%d reached=%d elapsed=%.2f surface_restored=%d"),Failures,Run->Landed,Run->Finished,Run->HazardReset,Run->SanityReset,Run->Target,Run->Time,Restored);
                     Run->Completed=true;
                     // Do not destroy this captured delegate before using World.
@@ -569,7 +636,7 @@ void BuildDockSewer(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSideRiftCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(80);
-        const int32 Starts[]={12,128,235};
+        const int32 Starts[]={12,128,242};
         for(int32 I=0;I<3;++I)
         {
             const int32 S=Starts[I],M=S+1;
@@ -586,7 +653,7 @@ void BuildDockSewer(UWorld* World)
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(78);
         for(int32 I=0;I<8;++I)
         {
-            const int32 Indices[]={23,173,187,343,112,3,94,Count-5};const int32 Index=Indices[I];
+            const int32 Indices[]={23,173,187,343,112,3,WallRiftStart-3,Count-5};const int32 Index=Indices[I];
             const FVector P=SafePoint(Index,Right)+FVector(0,0,I==4?150:110);
             const FVector Target=Route[I==5?0:FMath::Min(Index+(I==4?4:10),Count-1)]+FVector(0,0,I==4?-4:(I==5?0:120));
             FTimerHandle View,Shot;
