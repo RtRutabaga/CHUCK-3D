@@ -2,6 +2,18 @@
 
 ## Current launcher and integration status
 
+**Update 77 (Claude, October 4, user request: easier wall run, checkpoint before the break, five sewer zombies, Astral holes affect only Chuck):** runtime `01aeeb5`, from main `ab08f20` / launcher `d3c8fd7`.
+
+- **Wall running (all walls):** side wall run now accepts approaches up to 50° onto the wall (previously ~24°); steeper or square-on is still the head-on climb. A running jump that reaches such a wall within 0.45 s of takeoff catches it in the air. The gap closes over a few frames instead of snapping, Chuck turns along the wall smoothly, and the arc is 1.1 s with 470 cm/s² gravity (was 0.95 s, 520). Measured crossings: right 263 cm / left 262 cm (was 247/242), angled 41° approach caught in the air, 271 cm, landed beyond.
+- **Checkpoint:** sample break −9 (~5.9 m of run-up). Falls or sanity loss at or beyond it return there facing along the route; earlier deaths still use the sewer entrance (route test confirms both).
+- **Zombies:** the old zombie did not fall. Its kinematic step refuses floor-less steps, and Codex's `56cbc96` intentionally removed its spawn. There are now five, at samples 100 (tunnel), 176/190/196 (chamber) and 367 (by the chute); none are near the break and all stand on the floor. They are still omitted in the scripted walk-throughs.
+- **NPC-only Astral floor:** an invisible surface made from the exact removed floor cells. It is WorldStatic and blocks only Pawn (Visibility/Camera ignored); Chuck's capsule ignores it. Rats and zombies walk across openings while Chuck falls.
+- Build: full UE5.7.4 cook/build `Local/sewer-zombies-build.log`, then source-only test fix `Local/sewer-zombies-build2.log`; only pre-existing C4701 warnings. `Verify-Package.ps1` (default, captures) passed **143** (expected raised 140→142 for the new checks) with all gates: `Local/verify-package-20261004-161735.log`. The first full run failed only the new angled test, a test-geometry issue (side vector taken from a bent stretch), fixed and re-run (`Local/verify-package-20261004-160942.log`, `Local/wallside-angled-1.log`). Full connected route `Local/sewer-zombies-route.log`: `failures=0 ... reached=371 surface_restored=1`, physical wall run entered.
+- Not tested: no visual inspection of the zombie placements or zombie fights in the chamber, no physical Xbox or subjective feel test of the wider wall-run angle around the docks, no MotionCapture run. The wider angle and air catch apply to every wall, so some dock run-jumps near walls that used to be plain leaps or climbs may now become side runs.
+- Promoted root `Builds/Windows`; receipt and `Launch-Prototype.ps1 -CheckOnly` identify `01aeeb5`. Previous package retained at `Builds/Windows-Previous-20261004-SewerZombies`. Claude's 80 modified human assets and two untracked textures remain unstaged/unchanged.
+
+Next part of the work can be done here.
+
 **Update 76 (Codex, October 4, user request: grey light slightly dimmer):** runtime `d3c8fd7`, from main `50da680` / launcher `56cbc96`.
 
 - Reduced neutral-grey fill3000→2700 and chute-mouth fill1100→990 (10% lower intensity). Grey colour/radius, ambient material tint and purple rupture lights unchanged. Two runtime parameter edits only; geometry, wall-run challenge, character/controller, music and materials retained.

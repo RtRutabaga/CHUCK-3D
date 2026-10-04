@@ -1985,3 +1985,14 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Captured smithing.
   - Tap margin.
   - Not heard by the user.
+
+## Sewer wall-run ease, checkpoint, zombies and NPC-only Astral floor (October 4)
+
+- **Source/delivered:** base `ab08f20`, delivered `01aeeb5` on main. Changed: `ChuckCharacter.{cpp,h}`, `DockSewer.{cpp,h}`, `SewerLife.{cpp,h}`, `DockGameMode.{cpp,h}`, `Tools/Verify-Package.ps1` (expected 142), `docs/SEWER-WALLRIFT.md`, HANDOFF Update 77.
+- **Contracts:** no rig, clip, material or asset change. New read-only sewer API: checkpoint sample/location/yaw, nearest sample, `DockSewerAstralFloor()`. `GetSewerZombie()` became indexed (`GetSewerZombieCount/GetSewerZombie(i)/GetSewerZombieSample(i)`).
+- **Validation:** verifier 143 passes (`Local/verify-package-20261004-161735.log`), route test `Local/sewer-zombies-route.log` failures=0, wall-side-only `Local/wallside-angled-1.log`. Evidence numbers are in HANDOFF Update 77.
+- **Flaws/not tested:** zombie placement and chamber fights not visually reviewed or playtested. The wider angle and air catch affect dock parkour globally; feel not checked by a person. Only one checkpoint: falls after the break return before it, so the wall run must be redone. Zombies float visibly over Astral openings when they cross (the intended cosmology, though it may look odd).
+- **Launcher:** root `Builds/Windows` = `01aeeb5`, backup `Builds/Windows-Previous-20261004-SewerZombies`.
+
+Next part of the work can be done here.
+
