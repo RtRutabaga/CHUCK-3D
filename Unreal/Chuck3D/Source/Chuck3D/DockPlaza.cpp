@@ -1,5 +1,6 @@
 #include "DockPlaza.h"
 #include "DockFire.h"
+#include "DockForge.h"
 #include "SewerSlide.h"
 #include "DockReturn.h"
 #include "ProceduralMeshComponent.h"
@@ -307,11 +308,8 @@ void BuildDockPlaza(UWorld* World)
     Sign(FVector(530,-2213,232),TEXT("FOUNTAIN PLAZA"));
     Shape(FVector(530,-2241,232),FVector(190,7,38),TEXT("Wood"));
     Sign(FVector(530,-2247,232),TEXT("DOCKS"),-90);
-    // Forge niche; no crafting. The anvil and the smith working at it are ADockNPC::SpawnBlacksmith's (2026-10-04).
-    Shape(FVector(-780,-3725,53),FVector(120,62,106),TEXT("Stone"),true);
-    Shape(FVector(-780,-3689,72),FVector(70,5,42),TEXT("Dark"));
-    for(int32 I=0;I<4;++I) AddDockFlame(Owner,FVector(-805+I*17,-3684,53),19,31+(I%2)*9);
-    Glow(FVector(-780,-3650,90),950,240);
+    // Working forge dressing preserves Claude's smith, anvil and sound placement.
+    BuildDockForge(Owner);
     for(int32 I=0;I<7;++I)
         Shape(FVector(1100+I*40,-3729,147),FVector(15,15,26+(I%3)*9),I%2?TEXT("FountainWater"):TEXT("Amber"),false,Cylinder);
     // Market stands and benches around the clear central loop.

@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 4 forge dressing: the smithy has a brick arched fire chamber, coal bed, iron extraction hood and chimney, bellows, stocked tool bench and quenching tub. Claude's working smith, contact animation and sound are retained. See FORGE-DRESSING.md and the latest HANDOFF for actual checks and launcher build.
+
 October 4 plaza addition: a blacksmith hammers hot iron at an anvil in front of the smithy, beside the forge. Each blow is followed by a light tap on the anvil, and in the pauses he turns the bar or lifts it to look. He has strike, tap and tongs sounds, a roaring forge, sparks, two lines when talked to (F / Y), and a climbable anvil. See WATERDEEP-PLAZA.md and the latest HANDOFF.
 
 October 4 fountain/harbor continuation: separate lit water materials, basin impact rings and small animated splash droplets, plus world-space waves on single harbor sheets. Sewer water and Claude's latest character/pantry/vault work are retained. See [SURFACE-WATER.md](SURFACE-WATER.md) and the latest HANDOFF for actual packaged checks and rendering limits.

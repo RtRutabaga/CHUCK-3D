@@ -1,5 +1,7 @@
 # Waterdeep plaza adaptation
 
+October 4 forge dressing replaces the small stone niche with an arched brick fire chamber and riveted hood/chimney, plus side-fed bellows, workbench/vise/tool rack and quenching tub. Existing smith/anvil positions and fuel stack stay intact. See FORGE-DRESSING.md and the latest HANDOFF for verification and limits.
+
 October 4 fountain water pass: each basin now uses one lit translucent surface disk with animated normal detail, stone-bed refraction and four landing rings. Thin jets retain 24 traveling beads and gain 48 tiny impact splashes. The enclosing stonework/collision is unchanged. The harbor uses a separate wave material on single sheets with its two real shaft gaps preserved. See [SURFACE-WATER.md](SURFACE-WATER.md) and HANDOFF Update 69 for evidence. This supersedes the old FountainWater material on basin/jet geometry; that material remains for unrelated dressing.
 
 October 2 update: the user's future sewer entrance is now the ground grate beside the small side gate in far Dock Street, opposite the bench (see DOCKS-SETTING.md). The plaza's existing barred arch remains drain dressing and stays inaccessible.
