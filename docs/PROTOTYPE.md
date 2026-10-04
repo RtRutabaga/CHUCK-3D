@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest tavern addition: a provision cellar beneath the tavern, with an open hatch behind the bar and a visual ladder. Climbing is deferred to Claude. After the sewer return opens the tavern, drop through the hatch to inspect the pantry; R / controller View returns to docks. See TAVERN-PANTRY.md for the ladder contract and HANDOFF for verified launcher status.
+
 Latest soundtrack/lighting pass: Waterdeep night.mp3 plays after the sewer-slide return; morning and sewer scores remain. Twenty small Astral fall ruptures add purple light alongside eleven large ones; grey fill is about 30% dimmer. Small holes respawn Chuck at the sewer entrance. Use root Launch-Prototype.cmd and the normal sewer exit to hear the night score. See HANDOFF Update62 for verified checks and limitations.
 
 Latest Astral pass: irregular tapered fissures replace the rectangular holes, with matching floor collision and recessed stone edges. Upright oil veils follow the edges and fade upward. The openings remain genuine falls with local sewer respawn. See SEWER-PROTOTYPE.md / HANDOFF for actual checks.

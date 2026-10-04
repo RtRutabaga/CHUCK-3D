@@ -1,5 +1,7 @@
 # Tavern interior foundation
 
+October 3 basement addition: the structural/decorative floor now has a real opening behind the right half of the bar, leading down to a stocked stone pantry. Ladder geometry is a placeholder; Claude owns its climb implementation. Current inspection route drops in and uses R / View to exit. See TAVERN-PANTRY.md; this supersedes the unbroken-floor description below.
+
 The user authorized tavern-interior work on October 3. This supersedes earlier exterior-only descriptions. The enlarged 6.6 x 6.6 m building now has a structural floor and enclosing walls around a 1.2 m nominal front doorway. The timber leaf stands open inward; walk through directly, with no loading screen or interaction prompt.
 
 The first room uses worn timber planks and wainscot against aging plaster, exposed roof timbers, three human-sized tables with benches, two bar stools, a serving counter, stocked shelves, reused barrels and a small stone hearth with its flue extending through the roof. Warm lamps and the hearth provide interior light while the docks score continues. Cups, bottles, static flame shapes and rafters are decorative. Walls/gables, pitched roof, floor, furniture legs/tops, bar, barrels, hearth masonry and chimney cap have collision. Furnishings retain rat-scale passages; tables and counter use the existing traversal controller.

@@ -1,5 +1,6 @@
 #include "ChuckCharacter.h"
 #include "DockSewer.h"
+#include "DockPantry.h"
 #include "SewerSlide.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
@@ -1925,5 +1926,5 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation())) RespawnAtAreaStart();
+    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) RespawnAtAreaStart();
 }

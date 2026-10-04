@@ -74,6 +74,8 @@ void BuildCoastalVista(UWorld* World)
     for(int32 Y=0;Y<NY-1;++Y) for(int32 X=0;X<NX-1;++X)
     {
         const int32 A=Y*NX+X,B=A+1,C=A+NX,D=C+1;
+        // This submerged vista seabed must not cross the playable pantry.
+        if(V[B].X>-310 && V[A].X<310 && V[C].Y>420 && V[A].Y<990) continue;
         Indices.Append({A,B,C,B,D,C});
     }
     Terrain->CreateMeshSection_LinearColor(0,V,Indices,N,UV,Colors,TArray<FProcMeshTangent>(),false);

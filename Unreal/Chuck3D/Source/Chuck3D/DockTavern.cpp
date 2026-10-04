@@ -1,4 +1,5 @@
 #include "DockTavern.h"
+#include "DockPantry.h"
 #include "ChuckCharacter.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
@@ -50,8 +51,17 @@ void BuildDockTavern(UWorld* World)
         for(int32 Piece=0;Piece<4;++Piece)
         {
             const float X=-237+Piece*151.f;
-            Shape(FVector(X,Y,.4f),FVector(150,18, .8f),(Row+Piece)%7==0?TEXT("WoodLight"):TEXT("Wood"));
-            for(float End : {-69.f,69.f}) Shape(FVector(X+End,Y,.9f),FVector(1.1f,1.1f,.5f),TEXT("Dark"),false,true);
+            const TCHAR* Surface=(Row+Piece)%7==0?TEXT("WoodLight"):TEXT("Wood");
+            if(Y+9>875 && Y-9<955 && X+75>20 && X-75<130)
+            {
+                const float L=FMath::Min(X+75,20.f),R=FMath::Max(X-75,130.f);
+                if(L>X-75) Shape(FVector((X-75+L)*.5f,Y,.4f),FVector(L-X+75,18,.8f),Surface);
+                if(R<X+75) Shape(FVector((R+X+75)*.5f,Y,.4f),FVector(X+75-R,18,.8f),Surface);
+            }
+            else Shape(FVector(X,Y,.4f),FVector(150,18,.8f),Surface);
+            for(float End : {-69.f,69.f})
+                if(!(Y>875 && Y<955 && X+End>20 && X+End<130))
+                    Shape(FVector(X+End,Y,.9f),FVector(1.1f,1.1f,.5f),TEXT("Dark"),false,true);
         }
     }
     // Timber wainscot and posts against old plaster, with vaulted roof lining.
@@ -180,6 +190,8 @@ void BuildDockTavern(UWorld* World)
     for(float Z : {229.f,269.f}) Shape(FVector(-10,665,Z),FVector(31,31,5),TEXT("Dark"));
     Light(FVector(-10,665,245),800,420,FLinearColor(1,.69f,.39f));
     Light(FVector(262,870,65),1000,390,FLinearColor(1,.43f,.16f));
+
+    BuildDockPantry(World);
 
     const TArray<FVector> Walk={FVector(40,280,0),FVector(40,450,0),FVector(40,730,0),FVector(225,740,0),FVector(225,930,0)};
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))

@@ -92,10 +92,18 @@ void BuildDockSetting(UWorld* World)
     };
     // Continuous ground, not isolated platforms. All new route surfaces meet z=0.
     Box(FVector(-1150,-700,-45),FVector(1300,3200,90),TEXT("Stone"),true); // west dock street
-    Box(FVector(-75,750,-45),FVector(850,700,90),TEXT("Stone"),true); // enlarged tavern court
+    // Split every solid layer around the pantry shaft: x20..130, y875..955.
+    auto PantryCut=[&](float X0,float X1,float Y0,float Y1,float Z,float Depth,const TCHAR* Surface)
+    {
+        Box(FVector((X0+20)*.5f,(Y0+Y1)*.5f,Z),FVector(20-X0,Y1-Y0,Depth),Surface,true);
+        Box(FVector((130+X1)*.5f,(Y0+Y1)*.5f,Z),FVector(X1-130,Y1-Y0,Depth),Surface,true);
+        Box(FVector(75,(Y0+875)*.5f,Z),FVector(110,875-Y0,Depth),Surface,true);
+        Box(FVector(75,(955+Y1)*.5f,Z),FVector(110,Y1-955,Depth),Surface,true);
+    };
+    PantryCut(-500,350,400,1100,-45,90,TEXT("Stone"));
     Box(FVector(600,-1400,-45),FVector(600,800,90),TEXT("Stone"),true); // market service quay
     // Hollow tavern shell; the front doorway lives in DockGameMode.
-    Box(FVector(-10,665,-12),FVector(660,660,24),TEXT("Wood"),true);
+    PantryCut(-340,320,335,995,-12,24,TEXT("Wood"));
     for(float X : {-328.f,308.f})
         Box(FVector(X,665,155),FVector(24,660,310),TEXT("Plaster"),true);
     Box(FVector(-10,983,155),FVector(660,24,310),TEXT("Plaster"),true);
@@ -318,7 +326,10 @@ void BuildDockSetting(UWorld* World)
     // Grounded city mass beyond closed perimeter blocks. No isolated skyline boxes.
     Box(FVector(-3100,-400,-70),FVector(2600,6200,180),TEXT("Stone"));
     // Continuous court paving split around the actual open sewer mouth.
-    Box(FVector(-450,2347.5f,-45),FVector(2700,2895,90),TEXT("Stone"),true);
+    // The north street foundation overlaps the pantry's rear half as well.
+    Box(FVector(-890,2347.5f,-45),FVector(1820,2895,90),TEXT("Stone"),true);
+    Box(FVector(515,2347.5f,-45),FVector(770,2895,90),TEXT("Stone"),true);
+    Box(FVector(75,2375,-45),FVector(110,2840,90),TEXT("Stone"),true);
     Box(FVector(-450,4102.5f,-45),FVector(2700,195,90),TEXT("Stone"),true);
     Box(FVector(-1747.5f,3900,-45),FVector(105,210,90),TEXT("Stone"),true);
     Box(FVector(-282.5f,3900,-45),FVector(2365,210,90),TEXT("Stone"),true);
