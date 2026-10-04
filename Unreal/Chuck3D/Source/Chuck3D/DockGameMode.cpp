@@ -547,6 +547,9 @@ void ADockGameMode::StartPlay()
     // -ChuckPantryLadderTest: only the pantry's ladder, rupture and cheese jump (stages 118-124), then quit.
     bPantryOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckPantryLadderTest"));
     if(bPantryOnly) { bSmokeTest=true; TestStage=118; }
+    // -ChuckVaultTest: only the speed vault (stages 125-126), then quit.
+    bVaultOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckVaultTest"));
+    if(bVaultOnly) { bSmokeTest=true; TestStage=125; }
 }
 
 namespace
@@ -2404,12 +2407,68 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_CHEESE_MEASURE fell=%d reached_island=%d closest_cm=%.0f gap_cm=%.0f"),bFell,bReachedIsland,IslandClosest,DockPantrySkyRadius()-DockPantryIslandRadius());
             Check(bRiftDeath && bFell && !bReachedIsland,TEXT("in the pantry a fall into a rupture or the sky is an Astral death that brings Chuck back by the ladder, and the cheese's island is out of a running jump's reach"));
             Chuck->ResetToDock();
-            TestStage=115; StageTime=0;
+            TestStage=bPantryOnly ? 115 : 125; StageTime=0;
+        }
+    }
+    else if(TestStage==125 && StageTime>.3f)
+    {
+        // The speed vault, on the open court pier deck (top z 0) with test obstacles:
+        // 0 a bench (40 cm, 35 deep) at a run; 1 "crate stairs" (a 40 cm step with a
+        // taller one right behind it) at a run; 2 the bench again at a walk.
+        for(const TWeakObjectPtr<AActor>& Block : VaultBlocks) if(Block.IsValid()) Block->Destroy();
+        VaultBlocks.Reset();
+        auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
+        const auto Block=[&](FVector At,FVector Size)
+        {
+            auto* B=GetWorld()->SpawnActor<AStaticMeshActor>(At,FRotator::ZeroRotator);
+            B->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+            B->GetStaticMeshComponent()->SetStaticMesh(Cube); B->SetActorScale3D(Size/100.f);
+            B->GetStaticMeshComponent()->SetCollisionProfileName(TEXT("BlockAll"));
+            VaultBlocks.Add(B);
+        };
+        Block(FVector(1817.5f,3080,20),FVector(35,120,40));
+        if(VaultSub==1) Block(FVector(1860,3080,45),FVector(50,120,90));
+        if(APlayerController* VPC=GetWorld()->GetFirstPlayerController()) { Chuck->DisableInput(VPC); VPC->SetViewTarget(Chuck); }
+        Chuck->ResetToDock();
+        Chuck->SetActorLocation(FVector(1540,3080,34.65f),false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(FRotator::ZeroRotator); Chuck->Recenter();
+        Chuck->SetRunHeld(VaultSub!=2);
+        VaultsBefore=Chuck->GetVaults(); VaultJumpAt=-1; VaultMaxZ=0;
+        TestStage=126; StageTime=0;
+    }
+    else if(TestStage==126)
+    {
+        const FVector P=Chuck->GetActorLocation();
+        Chuck->SetTestStickWorld(FVector(1,0,0));
+        if(!Chuck->IsVaulting() && Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(VaultJumpAt<0 && (P.X>1800.f-15.f-60.f || StageTime>4.f)) { Chuck->JumpPressed(); VaultJumpAt=StageTime; }
+        VaultMaxZ=FMath::Max(VaultMaxZ,static_cast<float>(P.Z));
+        if(VaultSub==0 && VaultJumpAt>=0)
+            for(const float Shot : {.1f,.28f,.46f})
+                if(StageTime>=VaultJumpAt+Shot && StageTime-DeltaSeconds<VaultJumpAt+Shot)
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Vault_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        if(VaultJumpAt>=0 && StageTime>VaultJumpAt+1.4f)
+        {
+            const int32 Done=Chuck->GetVaults()-VaultsBefore;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_MEASURE sub=%d vaults=%d p=%s gait=%s max_z=%.1f grounded=%d"),VaultSub,Done,*P.ToString(),Chuck->GetGaitName(),VaultMaxZ,Chuck->GetCharacterMovement()->IsMovingOnGround());
+            if(VaultSub==0) bVaultBench=Done==1 && P.X>1850.f && Chuck->GetCharacterMovement()->IsMovingOnGround() && FMath::Abs(P.Z-34.65f)<3.f
+                && (FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 || FCString::Strcmp(Chuck->GetGaitName(),TEXT("Land"))==0);
+            if(VaultSub==1) bVaultStairs=Done==0;
+            if(VaultSub==2) bVaultWalk=Done==0;
+            if(++VaultSub<3) { TestStage=125; StageTime=0; }
+            else
+            {
+                Check(bVaultBench && bVaultStairs && bVaultWalk,TEXT("a running jump at a bench speed-vaults it and runs on; a low step with a taller one behind it (crate stairs) and a walking jump don't vault"));
+                for(const TWeakObjectPtr<AActor>& Block : VaultBlocks) if(Block.IsValid()) Block->Destroy();
+                VaultBlocks.Reset(); VaultSub=0;
+                Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+                TestStage=115; StageTime=0;
+            }
         }
     }
     else if(TestStage==115)
     {
-        if(bZombieOnly || bWallSideOnly || bPantryOnly)
+        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

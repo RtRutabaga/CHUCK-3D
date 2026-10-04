@@ -1545,6 +1545,81 @@ author('Mantle', mantle_frames, mantle, False, {
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'notes': 'Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height.'})
 
+# Speed vault (user 2026-10-04, References: the running rat clearing a stone
+# wall with one paw on its top): out of a run, over a low thin obstacle (a
+# bench, a low wall) without breaking stride. He tips onto his left side over
+# his planted left paw, the legs tucked together and swung past on the right,
+# the free right arm out for balance, eyes ahead; then rights himself and lands
+# on the left paw at RunLoop frame 0, running on. Authored for a 40 cm top, 35
+# cm deep, its face 45 cm ahead of the capsule centre; the capsule clears the
+# top by VAULT_CLEAR. The runtime measures the real obstacle and moves the
+# capsule along the same shape (vault_path): forward evenly, up onto a plateau
+# over the top, down again; clip time = progress x duration.
+VAULT_T, VAULT_H, VAULT_FACE, VAULT_DEPTH, VAULT_FWD, VAULT_CLEAR = .5, 40., 45., 35., 125., 6.
+def vault_plateau(u):
+    return smoothstep(u, 0., .26) * (1 - smoothstep(u, .74, 1.))
+
+def vault_path(t):
+    u = min(1., t / VAULT_T)
+    return Vector((VAULT_FWD * u, 0., (VAULT_H + VAULT_CLEAR) * vault_plateau(u)))
+
+def speed_vault(phase, f):
+    t = f / FPS; u = min(1., t / VAULT_T)
+    off = vault_path(t)
+    over = smoothstep(u, .1, .36) * (1 - smoothstep(u, .6, .92))     # tipped sideways over the top
+    plant = smoothstep(u, .1, .24) * (1 - smoothstep(u, .52, .66))   # left paw on the top
+    tuck = smoothstep(u, .04, .3) * (1 - smoothstep(u, .66, .97))    # legs together, swung right
+    run_carriage(0.)
+    # The body dips low over the top (the capsule passes clear above it), hips
+    # rolled onto the left side, the legs swinging round to the right.
+    # Chest first, nearly flat over it (the reference), rolled onto the left side.
+    poser.translate('pelvis', (3. * over, -3. * over, -15. * over))
+    poser.rotate('pelvis', 'Y', 26 * over)
+    poser.rotate('pelvis', 'X', -48 * over)
+    poser.rotate('pelvis', 'Z', -14 * over)
+    poser.rotate('spine_01', 'Y', 10 * over)
+    poser.rotate('chest', 'X', 18 * over)       # shoulders come back toward level
+    poser.rotate('chest', 'Y', 8 * over)
+    poser.rotate('neck', 'Y', -14 * over)
+    poser.rotate('neck', 'X', 12 * over)
+    poser.rotate('head', 'Y', -22 * over)       # chin up: eyes on where he's going
+    poser.rotate('head', 'X', 16 * over)
+    poser.rotate('head', 'Z', 14 * over)
+    poser.rotate('upperarm_R', 'X', -55 * over)  # the free arm flung out and back for balance
+    poser.rotate('upperarm_R', 'Y', 45 * over)
+    poser.rotate('lowerarm_R', 'Y', -12 * over)
+    curl('R', 30 * over)
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Z', -10 * over * (i + 1) / 3)   # the tail swings opposite the legs
+        poser.rotate(b, 'Y', -6 * over)
+    poser.update()
+    # The left paw planted on the top, world-locked while the body passes over.
+    grip = Vector((VAULT_FACE + VAULT_DEPTH * .5, 7., VAULT_H + .8))
+    if plant > 1e-3:
+        fk = poser.head('hand_L')
+        poser.arm('L', fk.lerp(grip - off, plant), pole=(-.3, .8, -.5))
+        curl('L', 28 * plant)
+    r = 0.
+    for side in 'LR':
+        x, lift, fp, tp = run_foot(0. if side == 'L' else .5)
+        stride = NEUTRAL_BALL[side] + Vector((x, -(1. if side == 'L' else -1.), lift))
+        tucked = NEUTRAL_BALL[side] + Vector((-8. if side == 'L' else -14., -14. if side == 'L' else -10., 16. if side == 'L' else 12.))   # together, trailing behind on the right
+        ball = stride.lerp(tucked, tuck)
+        r = max(r, poser.leg(side, ball, fp * (1 - tuck) + 35 * tuck, tp * (1 - tuck) + 15 * tuck,
+                             pole=(1., -.6 * tuck, 0.), heading=TOE_OUT[side] * .4 * (1 - tuck) - 25 * tuck))
+    ik_goals()
+    return r
+
+vault_frames = round(VAULT_T * FPS) + 1
+author('SpeedVault', vault_frames, speed_vault, False, {
+    'capsule_path_cm_per_frame': [[round(v, 4) for v in (vault_path(f / FPS).x, vault_path(f / FPS).z)] for f in range(vault_frames)],
+    'path_axes': ['forward', 'up'], 'reference_height_cm': VAULT_H, 'reference_face_cm': VAULT_FACE,
+    'reference_depth_cm': VAULT_DEPTH, 'advance_cm': VAULT_FWD, 'clearance_cm': VAULT_CLEAR,
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'events_s': {'paw_plant': round(.24 * VAULT_T, 4), 'paw_release': round(.52 * VAULT_T, 4), 'touchdown': VAULT_T},
+    'ends_on': 'RunLoop frame 0 (foot_L touchdown)',
+    'notes': 'Speed vault over a low thin obstacle out of a run; the runtime fits the capsule path to the real obstacle (clip time = progress).'})
+
 for name, sign in (('ShimmyLeft', 1), ('ShimmyRight', -1)):
     author(name, SHIMMY_FRAMES, shimmy_clip(sign), True, {
         'stride_cycle_cm': SHIMMY_STRIDE, 'hang_drop_cm': HANG_DROP,

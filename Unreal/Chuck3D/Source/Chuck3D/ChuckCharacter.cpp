@@ -70,7 +70,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -243,7 +243,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -596,6 +596,8 @@ void AChuckCharacter::JumpPressed()
         DodgeToward(FVector2D(Side, 0));
         return;
     }
+    // At a run at something low and thin: over it in stride.
+    if (bGrounded && Gait == EGait::Loop && RunWeight > .5f && TryVault()) return;
     // At a run with a wall right beside him: along the wall (not a side jump, not from a walk).
     if (bGrounded && Gait == EGait::Loop && RunWeight > .5f && TryWallSideRun()) return;
     Jump();
@@ -957,6 +959,78 @@ bool AChuckCharacter::TryMountLadder()
     }
     return false;
 }
+bool AChuckCharacter::TryVault()
+{
+    // Low enough to go over, thin enough to land beyond, floor on the far side
+    // within reach and room to land and run on. Anything that carries on up
+    // (a step onto a higher crate) or straight into something else is left to
+    // the ordinary jump and its climbs.
+    const FVector Location = GetActorLocation();
+    const FVector Ahead = GetVelocity().GetSafeNormal2D();
+    if (Ahead.IsNearlyZero() || GetVelocity().Size2D() < ChuckClipData::WalkSpeed * 1.6f) return false;
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const float Feet = static_cast<float>(Location.Z) - Half;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckVault), false, this);
+    UWorld* World = GetWorld();
+    FHitResult Face;
+    const FVector Shin(Location.X, Location.Y, Feet + 12.f);
+    if (!World->SweepSingleByChannel(Face, Shin, Shin + Ahead * (Radius + VaultReach), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(5.f), Query)
+        || Face.bStartPenetrating || FMath::Abs(Face.ImpactNormal.Z) > .3f) return false;
+    const FVector Normal = FVector(Face.ImpactNormal.X, Face.ImpactNormal.Y, 0).GetSafeNormal();
+    if (FVector::DotProduct(Normal, -Ahead) < .6f) return false;   // at it, not glancing along it
+    const float FaceDist = static_cast<float>(FVector::DotProduct(Face.ImpactPoint - Location, Ahead));
+    if (FaceDist < Radius + 8.f) return false;   // already on top of it
+    const auto Ground = [&](float Along, float From, float To, float& Z) -> bool
+    {
+        FHitResult Hit;
+        const FVector P = Location + Ahead * Along;
+        if (!World->LineTraceSingleByChannel(Hit, FVector(P.X, P.Y, Feet + From), FVector(P.X, P.Y, Feet + To), ECC_Visibility, Query)) return false;
+        Z = static_cast<float>(Hit.ImpactPoint.Z) - Feet;
+        return Hit.ImpactNormal.Z > .7f;
+    };
+    float Top = 0.f;
+    if (!Ground(FaceDist + 6.f, VaultMaxHeight + 25.f, 2.f, Top) || Top < VaultMinHeight || Top > VaultMaxHeight) return false;
+    // Front to back: the top must end (the floor drops away again) within VaultMaxDepth.
+    float Depth = -1.f;
+    for (float D = 10.f; D <= VaultMaxDepth + 10.f; D += 8.f)
+    {
+        float Z = -1e4f;
+        const bool bHit = Ground(FaceDist + D, Top + 30.f, -250.f, Z);
+        if (!bHit || Z < Top - 12.f) { Depth = D - 4.f; break; }
+        if (Z > Top + 10.f) return false;   // it carries on up: a step, not a vault
+    }
+    if (Depth < 0.f) return false;
+    // Landing: floor beyond, not higher than a small step and no drop he'd vault off blind.
+    const float Land = FaceDist + Depth + Radius + 25.f;
+    float LandZ = 0.f;
+    if (!Ground(Land, Top + 30.f, -150.f, LandZ) || LandZ > 15.f) return false;
+    // Room to come down and run on, and nothing to hit going over.
+    FHitResult Block;
+    const FVector LandAt = Location + Ahead * Land + FVector(0, 0, LandZ + 2.f);
+    if (World->SweepSingleByChannel(Block, LandAt - Ahead * (Radius + 10.f), LandAt + Ahead * 30.f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius, Half - 2.f), Query)) return false;
+    const FVector Over = FVector(0, 0, Top + 8.f);
+    if (World->SweepSingleByChannel(Block, Location + Over, Location + Ahead * Land + Over, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius - 2.f, Half - 2.f), Query)) return false;
+    auto* Movement = GetCharacterMovement();
+    VaultStart = Location; VaultDir = Ahead; VaultTotal = Land;
+    VaultRise = Top + ChuckClipData::VaultClear;
+    VaultLift = FMath::Max(0.f, LandZ);   // a little higher beyond: end on it; lower: drop off at the end
+    VaultIn = FMath::Clamp((FaceDist - Radius) / Land, .1f, .45f);
+    VaultOut = FMath::Clamp((FaceDist + Depth + Radius) / Land, VaultIn + .1f, .9f);
+    VaultSpeed = FMath::Max(static_cast<float>(GetVelocity().Size2D()), ChuckClipData::RunSpeed);
+    VaultTime = FMath::Clamp(Land / VaultSpeed, .32f, .6f);
+    VaultClock = 0;
+    Movement->SetMovementMode(MOVE_Flying);
+    Movement->StopMovementImmediately();
+    SetActorRotation(Ahead.Rotation());
+    Gait = EGait::Vault; bRunJump = false;
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = false;
+    SetClip(EClip::SpeedVault, 0, .06f);
+    ++Vaults;
+    PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_VAULT top_cm=%.0f depth_cm=%.0f face_cm=%.0f land_cm=%.0f land_z=%.0f time=%.2f"), Top, Depth, FaceDist, Land, LandZ, VaultTime);
+    return true;
+}
 void AChuckCharacter::EnterLadder(int32 Index)
 {
     auto* Movement = GetCharacterMovement();
@@ -1060,7 +1134,7 @@ void AChuckCharacter::Slash()
         if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
         return;
     }
-    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::Ladder) return;
+    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::Ladder || Gait == EGait::Vault) return;
     const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -1512,6 +1586,26 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Into > 35.f) BeginSlide(Into);
     }
     if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
+    else if (Gait == EGait::Vault)
+    {
+        // Forward evenly, up onto a plateau clear of the top while he's over
+        // it, down beyond; the clip runs with the progress. Then he runs on
+        // (or drops on down, if the far side is lower).
+        VaultClock += DeltaSeconds;
+        const float U = FMath::Min(1.f, VaultClock / VaultTime);
+        BaseTime = U * Clips[static_cast<int32>(EClip::SpeedVault)]->GetPlayLength();
+        const float Plateau = FMath::SmoothStep(0.f, VaultIn, U) * (1.f - FMath::SmoothStep(VaultOut, 1.f, U));
+        const float Up = FMath::Max(VaultRise * Plateau, VaultLift * FMath::SmoothStep(VaultIn, 1.f, U));
+        SetActorLocation(VaultStart + VaultDir * (VaultTotal * U) + FVector(0, 0, Up), false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->Velocity = VaultDir * VaultSpeed;
+        if (U >= 1.f)
+        {
+            Movement->SetMovementMode(MOVE_Falling);
+            Movement->Velocity = VaultDir * VaultSpeed;
+            Gait = EGait::Air; bRunJump = true;
+            PreviousMotionLocation = GetActorLocation();
+        }
+    }
     else if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
     {
         // Up toward it, down away from it, the climb clip stepping with the
@@ -2003,14 +2097,14 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
-    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;
+    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;
     // Tucked in the roll, the paws follow the clip untouched.
     if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb;
+    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));

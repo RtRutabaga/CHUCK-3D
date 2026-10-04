@@ -45,6 +45,9 @@ public:
     bool IsWallSideRunning() const { return Gait == EGait::WallSide; }
     /** On a ladder (or anything else climbable, ChuckClimbable.h), and how often he has taken hold of one. */
     bool IsOnLadder() const { return Gait == EGait::Ladder; }
+    /** Speed vaults over low obstacles (a running jump at a bench or low wall). */
+    bool IsVaulting() const { return Gait == EGait::Vault; }
+    int32 GetVaults() const { return Vaults; }
     int32 GetLadderMounts() const { return LadderMounts; }
     /** Falls off the map (each an Astral death: he's summoned back at the area's start). */
     int32 GetFallDeaths() const { return FallDeaths; }
@@ -105,6 +108,12 @@ public:
     static constexpr float WallSideGravity = 520.f;   // cm/s2: a lighter fall than his own while he runs it
     static constexpr float WallSideLean = 24.f;    // deg his body leans out from the wall
     static constexpr float LadderSpeed = 75.f;     // cm/s up or down a ladder
+    // The speed vault (user 2026-10-04): a running jump at something low and
+    // thin with floor beyond (a bench, a low wall) goes over it in stride.
+    static constexpr float VaultMinHeight = 18.f;   // cm above his feet
+    static constexpr float VaultMaxHeight = 60.f;
+    static constexpr float VaultMaxDepth = 90.f;   // cm front to back: thicker is a step up, not a vault
+    static constexpr float VaultReach = 85.f;      // cm in front of him the face may be when he jumps
     static constexpr float LadderStride = 30.f;    // cm climbed per cycle of the climb clip
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
@@ -229,9 +238,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -307,7 +316,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Hang || Gait == EGait::Climb; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face
@@ -398,6 +407,11 @@ private:
     FVector LadderFrom = FVector::ZeroVector, ClimbFrom = FVector::ZeroVector;
     bool bClimbReverse = false;    // lowering himself from the floor above onto a ladder: the pull-up played backward
     bool TryMountLadder();
+    // Speed vault.
+    bool TryVault();
+    FVector VaultStart = FVector::ZeroVector, VaultDir = FVector::ForwardVector;
+    float VaultTotal = 0, VaultRise = 0, VaultLift = 0, VaultIn = .25f, VaultOut = .75f, VaultTime = .5f, VaultSpeed = 0, VaultClock = 0;
+    int32 Vaults = 0;
     void EnterLadder(int32 Index);
     void FallToDeath();
     bool TryWallSideRun();

@@ -59,6 +59,9 @@ namespace ChuckClipData
     constexpr int MantleFrames = 10;
     constexpr float MantleRefStep = 25.0000f;
     constexpr float MantleAdvance = 28.0000f;
+    // Speed vault: the clearance over the top and the capsule path's plateau (fraction of progress up, down).
+    constexpr float VaultClear = 6.0000f;
+    constexpr float VaultDuration = 0.5000f;
     // Side jump: sideways launch at takeoff; the clip holds just before land while airborne.
     constexpr float SideTakeoff = 0.1000f;
     constexpr float SideLand = 0.5000f;

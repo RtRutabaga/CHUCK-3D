@@ -1410,6 +1410,105 @@
    "notes": "Hop onto a knee-high ledge in his way; the runtime scales the rise to the real step height."
   },
   {
+   "name": "SpeedVault",
+   "file": "Animations/AS_Chuck_SpeedVault.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 15,
+   "frame_count": 16,
+   "duration_s": 0.5,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.1703,
+   "capsule_path_cm_per_frame": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     8.3333,
+     7.522
+    ],
+    [
+     16.6667,
+     23.8844
+    ],
+    [
+     25.0,
+     39.7815
+    ],
+    [
+     33.3333,
+     46.0
+    ],
+    [
+     41.6667,
+     46.0
+    ],
+    [
+     50.0,
+     46.0
+    ],
+    [
+     58.3333,
+     46.0
+    ],
+    [
+     66.6667,
+     46.0
+    ],
+    [
+     75.0,
+     46.0
+    ],
+    [
+     83.3333,
+     46.0
+    ],
+    [
+     91.6667,
+     46.0
+    ],
+    [
+     100.0,
+     39.7815
+    ],
+    [
+     108.3333,
+     23.8844
+    ],
+    [
+     116.6667,
+     7.522
+    ],
+    [
+     125.0,
+     0.0
+    ]
+   ],
+   "path_axes": [
+    "forward",
+    "up"
+   ],
+   "reference_height_cm": 40.0,
+   "reference_face_cm": 45.0,
+   "reference_depth_cm": 35.0,
+   "advance_cm": 125.0,
+   "clearance_cm": 6.0,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "events_s": {
+    "paw_plant": 0.12,
+    "paw_release": 0.26,
+    "touchdown": 0.5
+   },
+   "ends_on": "RunLoop frame 0 (foot_L touchdown)",
+   "notes": "Speed vault over a low thin obstacle out of a run; the runtime fits the capsule path to the real obstacle (clip time = progress)."
+  },
+  {
    "name": "ShimmyLeft",
    "file": "Animations/AS_Chuck_ShimmyLeft.fbx",
    "fps": 30,

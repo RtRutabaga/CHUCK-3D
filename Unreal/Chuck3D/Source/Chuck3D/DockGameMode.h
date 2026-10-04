@@ -87,7 +87,12 @@ private:
     float ZombieStartDistance = 0, ZombieClosest = 1e6f, ZombieKillAt = -1;
     bool bZombieWindup = false, bZombieAliveAtEight = false;
     int32 ZombieSanityBefore = 0, ZombieCigarettesBefore = 0, ZombieHitsGiven = 0;
-    bool bSlideOnly = false, bZombieOnly = false, bWallSideOnly = false, bPantryOnly = false;
+    bool bSlideOnly = false, bZombieOnly = false, bWallSideOnly = false, bPantryOnly = false, bVaultOnly = false;
+    // The speed vault tests (on the court pier, with test obstacles).
+    TArray<TWeakObjectPtr<AActor>> VaultBlocks;
+    int32 VaultSub = 0, VaultsBefore = 0;
+    float VaultJumpAt = -1, VaultMaxZ = 0;
+    bool bVaultBench = false, bVaultStairs = false, bVaultWalk = false;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;
