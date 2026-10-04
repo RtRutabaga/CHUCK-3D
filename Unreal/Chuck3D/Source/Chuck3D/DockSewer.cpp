@@ -192,7 +192,9 @@ void BuildDockSewer(UWorld* World)
     // (the slide's mouth sits in it).
     if(Count>1 && Right.Last().IsNearlyZero()) Right.Last()=Right[Count-2];
     auto* Stone=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerRock.M_SewerRock"));
-    auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
+    // Running water (Claude, Tools/create_sewer_water_material.py); the older painted stream is the fallback.
+    auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerWater.M_SewerWater"));
+    if(!Stream) Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
     auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
