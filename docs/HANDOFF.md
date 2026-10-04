@@ -2,6 +2,31 @@
 
 ## Current launcher and integration status
 
+**Update 74 (Claude, October 4, user request: "make the blacksmith's hammer strike more natural and realistic; reduce the volume of it some"):** runtime `fbd246e`, on Codex's `f41409b` forge build.
+- **Swing** (`DockNPC.cpp`):
+  - The fist now rises only to about head height, in front of his right shoulder, with the hammer head near upright. It used to wind up behind his head.
+  - The hammer bounces off the work straight into a decelerating lift (0.46 s), turns over without a hold (0.06 s) and comes down fast (0.24 s), with only a slight wrist lag.
+  - The blow heights vary a little (80–100%).
+  - Sets are eight blows, about one every 0.8 s, with a light tap on the heel after the 2nd, 4th and 6th blows instead of after every one.
+  - The chest turns less. Codex's forge, the pauses, the inspection and the tongs are unchanged.
+- **Sound** (`gen_anvil_sfx.py`): the strike is now a short, solid "chank". The hot bar deadens the anvil's ring (decays roughly halved); there's a mid-range body, a briefer hammer ring and a fainter stump thump. It drops 14 dB in its first 100 ms, with a shorter echo. The tap is shorter and softer.
+- **Volume:** strikes play at 0.45 (from 0.85), taps at 0.2 (from 0.4), and the falloff distance is 16 m (from 22).
+
+The candidate passed `-MotionCapture` **138/138** plus every required check, including `CHUCK_FORGE_DRESSING` (`Local/verify-package-20261004-140834.log`). Measured: `strikes=100 worst_gap_cm=0.3 taps=38 worst_tap_cm=3.1 tongs_grip_cm=0.0 forge_sound=1`.
+
+Promoted to `Builds/Windows`. The receipt `fbd246e` was written and checked with `Launch-Prototype.ps1 -CheckOnly`. The previous package (Codex's forge build) is kept as `Builds/Windows-Previous-20261004-SmithStrike`.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Blacksmith_strike.png` (2.3 s at 0.12 s per frame, editor `-ChuckSmithCapture` of the same source).
+
+The 80 churned human `.uasset`s and the two untracked textures are still left as they were.
+
+Flaws:
+- Still procedural (no captured smithing).
+- The worst tap is 3.1 cm against a 4 cm limit.
+- Sounds are checked by analysis only, unheard by me and by the user.
+
+Next part of the work could be done by either agent — preference: Claude for any further tuning of his motion or sound.
+
 **Update 73 (Codex, October 4, user request: dress up the forge by the blacksmith):** runtime `f81d775`, from main `ffc9c9e`; previous launcher was Claude's `21b8004` HUD build.
 
 - Replaces the small solid stone niche with a raised brick hearth, open extruded masonry arch, smaller angular coal/embers, riveted tapered iron hood and chimney above the smithy roof. Faint procedural smoke cards emerge from the stack. Side-fed bellows, worn timber bench with vise/stock, hanging tongs/pokers, stave quenching tub and modest clinker/offcuts dress the workshop. Existing fuel logs retained. No new shop interior/crafting system, campaign area or character changes.

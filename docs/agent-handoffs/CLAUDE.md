@@ -1975,3 +1975,13 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - The full-screen launch and F11 toggle were not run (the verifier runs windowed); not played by the user.
   - Without a reset, a player stuck somewhere can only quit and relaunch.
   - Older PLAYTEST/DOCKS-RETURN notes still mention R / View; the PLAYTEST note marks them historical.
+
+## Seventy-eighth pass — a more natural hammer strike, quieter
+
+- **User (2026-10-04):** make the hammer strike more natural and realistic; reduce its volume.
+- **Source:** `fbd246e` on main: `DockNPC.cpp` (schedule, swing, volumes), `gen_anvil_sfx.py` and the 12 sounds.
+- **Verified:** root package 138/138, `Local/verify-package-20261004-140834.log`. Worst blow 0.3 cm, worst tap 3.1 cm.
+- **Remaining:**
+  - Captured smithing.
+  - Tap margin.
+  - Not heard by the user.
