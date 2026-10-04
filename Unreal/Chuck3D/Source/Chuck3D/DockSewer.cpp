@@ -60,6 +60,15 @@ float WallWidth(int32 I,float Side)
 const int32 Rifts[]={26,54,84,114,146,180,215,249,282,316,346};
 bool RiftSegment(int32 I) { for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
 float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
+float RiftEdge(float Sample,float Side)
+{
+    for(int32 S : Rifts) if(Sample>=S && Sample<=S+4)
+    {
+        const float U=(Sample-S)*.25f,Envelope=FMath::Pow(FMath::Max(0.f,FMath::Sin(PI*U)),.65f);
+        return 8.f+Envelope*(54.f+8.f*FMath::Sin(Sample*4.7f+Side*2.3f)+5.f*FMath::Sin(Sample*10.1f+Side));
+    }
+    return 55.f;
+}
 FVector SafePoint(int32 I,const TArray<FVector>& Right)
 {
     int32 Distance=1000,Nearest=Rifts[0];
@@ -203,18 +212,21 @@ void BuildDockSewer(UWorld* World)
     MakeMesh(V,T,N,UV,Stone,true);
     RouteRight=Right;
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    for(int32 I=0;I<Count;++I) for(int32 Column=0;Column<8;++Column)
+    constexpr int32 FloorSteps=4;
+    for(int32 Row=0;Row<=(Count-1)*FloorSteps;++Row) for(int32 Column=0;Column<8;++Column)
     {
-        const float O=RiftOffset(I);
-        const float Offsets[]={-Width(I)-35,-55+O,-45+O,-32+O,32+O,45+O,55+O,Width(I)+35};
+        const float Sample=Row/float(FloorSteps);const int32 I=FMath::Min(Count-2,FMath::FloorToInt(Sample));const float F=Sample-I;
+        const float O=FMath::Lerp(RiftOffset(I),RiftOffset(I+1),F),L=RiftEdge(Sample,-1),R=RiftEdge(Sample,1);
+        const float W=FMath::Lerp(Width(I),Width(I+1),F);
+        const float Offsets[]={-W-35,-L+O,-L*.82f+O,-L*.58f+O,R*.58f+O,R*.82f+O,R+O,W+35};
         const float Depth=(I<Count-4 && (Column==3 || Column==4))?-8.f:0.f;
-        V.Add(Route[I]+Right[I]*Offsets[Column]+FVector(0,0,Depth)); N.Add(FVector::UpVector);
-        UV.Add(FVector2D(Offsets[Column]/100,I*.65f));
+        V.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth)); N.Add(FVector::UpVector);
+        UV.Add(FVector2D(Offsets[Column]/100,Sample*.65f));
     }
-    for(int32 I=0;I<Count-1;++I) for(int32 C=0;C<7;++C)
+    for(int32 Row=0;Row<(Count-1)*FloorSteps;++Row) for(int32 C=0;C<7;++C)
     {
-        if(C>=1 && C<=5 && RiftSegment(I)) continue;
-        const int32 A=I*8+C;T.Append({A,A+1,A+8,A+1,A+9,A+8});
+        if(C>=1 && C<=5 && RiftSegment(Row/FloorSteps)) continue;
+        const int32 A=Row*8+C;T.Append({A,A+1,A+8,A+1,A+9,A+8});
     }
     MakeMesh(V,T,N,UV,Stone,true);
     // Five-centimetre-deep flowing water over a solid, shallow channel bed.
@@ -242,53 +254,53 @@ void BuildDockSewer(UWorld* World)
     auto* Oil=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
     for(int32 StartIndex : Rifts)
     {
+        constexpr int32 Rows=16,Levels=8;
+        TArray<FVector> Edges;
+        for(int32 SideIndex=0;SideIndex<2;++SideIndex) for(int32 Row=0;Row<=Rows;++Row)
+        {
+            const float Sample=StartIndex+(SideIndex==0?Row:Rows-Row)*.25f;
+            const int32 Index=FMath::Min(Count-2,FMath::FloorToInt(Sample));const float F=Sample-Index;
+            const FVector Across=FMath::Lerp(Right[Index],Right[Index+1],F);
+            const float Offset=FMath::Lerp(RiftOffset(Index),RiftOffset(Index+1),F),Side=SideIndex==0?-1.f:1.f;
+            Edges.Add(FMath::Lerp(Route[Index],Route[Index+1],F)+Across*(Offset+Side*RiftEdge(Sample,Side)));
+        }
+        const FVector Centre=Route[StartIndex+2]+Right[StartIndex+2]*RiftOffset(StartIndex+2);
+        // Broken stone lip follows the real collision hole, tapering at both ends.
         V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(int32 I=0;I<=4;++I) for(float Side : {-1.f,1.f})
+        for(int32 I=0;I<Edges.Num();++I)
         {
-            const int32 Index=StartIndex+I;
-            V.Add(Route[Index]+Right[Index]*(Side*55+RiftOffset(Index))+FVector(0,0,-300));
-            N.Add(FVector::UpVector);UV.Add(FVector2D((Side+1)*.5f,I*.25f));
+            const FVector In=(Centre-Edges[I]).GetSafeNormal2D();
+            V.Add(Edges[I]);V.Add(Edges[I]+In*5+FVector(0,0,-24-6*FMath::Sin(I*2.7f)));
+            N.Add(FVector::UpVector);N.Add(FVector::UpVector);UV.Add(FVector2D(I*.2f,0));UV.Add(FVector2D(I*.2f,1));
+            const int32 A=I*2,B=((I+1)%Edges.Num())*2;T.Append({A,B,A+1,B,B+1,A+1});
         }
-        for(int32 I=0;I<4;++I){int32 A=I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
-        // Close the visual chasm, including its ends. A bed restricted to the
-        // opening's footprint lets oblique camera rays see the outdoor sky
-        // through the space between the floor and bed. All faces stay nonsolid.
-        for(int32 I=0;I<10;++I)
+        MakeMesh(V,T,N,UV,Stone,false);
+        // Enclosed space well and a recessed nebulous surface, all noncolliding.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(int32 I=0;I<Edges.Num();++I)
         {
-            V.Add(V[I]+FVector(0,0,301));N.Add(FVector::UpVector);
-            UV.Add(FVector2D((I%2),I/2.f*.25f));
+            V.Add(Edges[I]+FVector(0,0,-18));V.Add(Edges[I]+FVector(0,0,-300));
+            N.Add(FVector::UpVector);N.Add(FVector::UpVector);UV.Add(FVector2D(I*.2f,0));UV.Add(FVector2D(I*.2f,1));
+            const int32 A=I*2,B=((I+1)%Edges.Num())*2;T.Append({A,B,A+1,B,B+1,A+1});
         }
-        for(int32 I=0;I<4;++I) for(int32 Side=0;Side<2;++Side)
-        {
-            const int32 A=I*2+Side,B=A+2;
-            T.Append({A,B,A+10,B,B+10,A+10});
-        }
-        T.Append({0,10,1,1,10,11,8,9,18,9,19,18});
-        // A view into space at floor level, with camera-dependent cloud/star
-        // layers supplying depth. This surface is visual only, never a bridge.
-        for(int32 I=0;I<10;++I)
-        {
-            V.Add(V[I]+FVector(0,0,296));N.Add(FVector::UpVector);UV.Add(FVector2D(I%2,(I/2)*.25f));
-        }
-        for(int32 I=0;I<4;++I){const int32 A=20+I*2;T.Append({A,A+1,A+2,A+1,A+3,A+2});}
+        const int32 Top=V.Num();V.Add(Centre+FVector(0,0,-18));N.Add(FVector::UpVector);UV.Add(FVector2D(.5,.5));
+        const int32 Bottom=V.Num();V.Add(Centre+FVector(0,0,-300));N.Add(FVector::UpVector);UV.Add(FVector2D(.5,.5));
+        for(int32 I=0;I<Edges.Num();++I) {const int32 A=I*2,B=((I+1)%Edges.Num())*2;T.Append({Top,A,B,Bottom,B+1,A+1});}
         MakeMesh(V,T,N,UV,Astral,false,false);
+        // Two upright, curved edge veils. No broad horizontal floating sheets.
         V.Reset();N.Reset();T.Reset();UV.Reset();
-        constexpr int32 Rows=16,Columns=10;
-        for(int32 Layer=0;Layer<2;++Layer)
+        for(int32 SideIndex=0;SideIndex<2;++SideIndex)
         {
             const int32 Base=V.Num();
-            for(int32 I=0;I<=Rows;++I) for(int32 X=0;X<=Columns;++X)
+            for(int32 Row=0;Row<=Rows;++Row) for(int32 Level=0;Level<=Levels;++Level)
             {
-                const float Along=I*4.f/Rows,U=X/float(Columns);
-                const int32 Index=StartIndex+FMath::Min(3,FMath::FloorToInt(Along));
-                const float Fraction=Along-(Index-StartIndex);
-                const FVector Center=FMath::Lerp(Route[Index],Route[Index+1],Fraction);
-                const FVector Side=FMath::Lerp(Right[Index],Right[Index+1],Fraction).GetSafeNormal();
-                const float Offset=FMath::Lerp(RiftOffset(Index),RiftOffset(Index+1),Fraction);
-                V.Add(Center+Side*((U-.5f)*130+Offset)+FVector(0,0,35+Layer*45+8*FMath::Sin(Along+U*4+Layer)));
-                N.Add(FVector::UpVector);UV.Add(FVector2D(U,I/float(Rows)));
+                const float U=Row/float(Rows),H=Level/float(Levels);
+                const FVector Edge=Edges[SideIndex*(Rows+1)+Row],In=(Centre-Edge).GetSafeNormal2D();
+                V.Add(Edge+In*(H*H*12*FMath::Sin(U*13+SideIndex))+FVector(0,0,3+H*(105+15*FMath::Sin(U*11+SideIndex))));
+                N.Add(In);UV.Add(FVector2D(U,H));
             }
-            for(int32 I=0;I<Rows;++I) for(int32 X=0;X<Columns;++X){int32 A=Base+I*(Columns+1)+X;T.Append({A,A+1,A+Columns+1,A+1,A+Columns+2,A+Columns+1});}
+            for(int32 Row=0;Row<Rows;++Row) for(int32 Level=0;Level<Levels;++Level)
+            {const int32 A=Base+Row*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
         }
         if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Route[StartIndex+2]+FVector(0,0,25);

@@ -1,6 +1,7 @@
 """Import the supplied sewer score and create only two new astral materials."""
 from pathlib import Path
 import unreal
+import runpy
 
 root = Path(__file__).resolve().parents[1]
 task = unreal.AssetImportTask()
@@ -20,6 +21,9 @@ unreal.EditorAssetLibrary.save_loaded_asset(sound, only_if_is_dirty=False)
 unreal.log('CHUCK_SEWER_AUDIO_READY duration=' + str(sound.get_editor_property('duration')))
 lib = unreal.MaterialEditingLibrary
 for name in ('AstralRupture', 'AstralOilMist'):
+    if name=='AstralOilMist':
+        runpy.run_path(str(Path(__file__).with_name('create_rupture_mist.py')))
+        continue
     path = '/Game/Art/Materials/M_' + name
     mat = unreal.load_asset(path)
     if mat and name != 'AstralOilMist': continue
