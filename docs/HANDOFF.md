@@ -2,6 +2,17 @@
 
 ## Current launcher and integration status
 
+**Update 61 (Codex, October 3, Astral fissures and upright oil effect):** runtime `f02282d`, from clean main `79accde`.
+
+- Eleven rectangular floor cuts replaced with tapered asymmetric fissures. Four floor subdivisions per route segment align real collision with the new boundary; banks remain passable. Recessed broken stone lips frame enclosed noncolliding nebula wells. Existing space material, purple lights, brighter grey fill, NPC arrangement, chute and controller retained.
+- Oil effect now follows both curved edges vertically (~90–120cm), fading at the top and ends with animated iridescence; the two broad horizontal layers are removed. This is transparent mesh geometry, not a simulated volume; thin card/facet outlines can still show close up.
+- Only M_AstralOilMist regenerated through owned `Tools/create_rupture_mist.py`; old atmosphere importer delegates to it. One9,362byte LFS graph: attrs/fsck/dry-run passed, remote allowance unknown. No sound/other-material reimport, dependency installation, download or original-game mutation. Output remains untracked.
+- First visual candidate showed invalid floor shading from a negative rounding residue raised to a fractional power at the fissure tip. Clamped before exponentiation; initial candidate not promoted. Final build `Local/rupture-build-final.log` succeeded with no C++ warning/error or material fallback found. All eight final sewer views reviewed (`Local/rupture-capture-final.log`, root package `Saved/Screenshots/Windows/Sewer/View0..7.png`).
+- Standard rendered verifier passed **133 gameplay checks** and all mandatory world/cave/sewer/tavern/music/fire checks (`Local/verify-package-20261003-165242.log`), including372 route samples and all eleven true fall hazards. Actual traversal/local fall and zero-sanity recovery/surface reset passed120.69s, reached371 (`Local/rupture-traversal.log`; walkthrough intentionally omits enemies). No manual/Xbox/MotionCapture/listening/performance test; subjective appearance still needs user review.
+- Root launcher receipt/hash checked at`f02282d`; previous build preserved as `Builds/Windows-Previous-20261003-Ruptures`. See SEWER-PROTOTYPE.md for current design and reproduction. Coarse rim facets and simple transparent veils remain below the reference art target.
+
+Next part of the work can be done here.
+
 **Update 60 (Codex, October 3, sewer visibility, narrow passage and collapsed chute):** runtime `754da4a`, from clean main `fc13110`.
 
 - Grey fill1450→4300, lowered from65% to45% of tunnel height and shifted to neutral grey `(0.42,0.44,0.47)`; chute225→1100 in the same colour. Normally lit captures show the rats and zombie; no review lamp was added. Purple rupture1800/radius460 and the absence of sewer torches remain.

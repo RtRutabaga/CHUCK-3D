@@ -1,5 +1,11 @@
 # Codex movement handoff — 2026-09-26
 
+## October 3 — irregular Astral fissures and vertical oil veils
+
+Runtime `f02282d`, root main from `79accde`. Eleven tapered asymmetric floor cuts, matching subdivided collision, broken recessed stone lips and enclosed noncolliding nebula wells. Two upright curved edge veils fade at their tops/ends; horizontal layers removed. One owned9,362byte LFS material regenerated, attrs/fsck/dry-run passed; atmosphere importer delegates to new generator. No audio/other-material import, install/download/original-game edit. Grey fill/NPCs/chute/controller retained. See HANDOFF Update61 / SEWER-PROTOTYPE.md.
+
+Initial rounding/power invalid geometry corrected before release. Final build succeeded, eight views inspected (`Local/rupture-capture-final.log`), verifier133 and all required checks passed (`Local/verify-package-20261003-165242.log`),372 route samples/eleven fall hazards. Actual full traversal/local fall/zero-sanity recovery/surface reset passed120.69s (`Local/rupture-traversal.log`, enemies omitted). Root receipt/hash checked, backup `Builds/Windows-Previous-20261003-Ruptures`, output excluded. No manual/Xbox/MotionCapture/listening/performance test. Faceted lip/card geometry remains provisional, not simulated volume or reference-quality art. Next part of the work can be done here.
+
 ## October 3 — sewer visibility, pinch point and collapsed chute
 
 Runtime `754da4a`, root main from `fc13110`. Grey fill4300 at45% tunnel height, neutral grey(.42,.44,.47), chute1100; purple unchanged. Nominal1.8m passage96–106 with smooth91–111 transitions; existing zombie moved to97, AI/art retained.44 colliding angular rocks cover the chute face and frame its irregular low opening; slide route and return retained. No binary/import/dependency/original-game edits. See HANDOFF Update60 / SEWER-PROTOTYPE.md for details.

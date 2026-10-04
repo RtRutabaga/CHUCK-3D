@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Latest Astral pass: irregular tapered fissures replace the rectangular holes, with matching floor collision and recessed stone edges. Upright oil veils follow the edges and fade upward. The openings remain genuine falls with local sewer respawn. See SEWER-PROTOTYPE.md / HANDOFF for actual checks.
+
 Latest sewer work: stronger neutral-grey fill shows enemies; a1.8m pinch point holds the zombie, with the wider chamber retained. Collapsed rock surrounds the water chute's irregular opening. See SEWER-PROTOTYPE.md / HANDOFF for actual traversal and launcher checks.
 
 Latest fire pass: torches, lamps, forge and tavern hearth use animated flame silhouettes with gentle local light flicker and exposed lamp frames. Hearth logs and embers add detail. See FIRE-PASS.md and HANDOFF for verified package evidence; controls remain the same.
