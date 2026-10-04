@@ -2,6 +2,26 @@
 
 ## Current launcher and integration status
 
+**Update 67 (Claude, October 4, user request: shorter crates the right height to speed-vault):** runtime `44a64ce`.
+- **The crates:** `VaultCrates.cpp` (new) places four low cargo crates: the dock crate squashed to 40–48 cm high, 40 cm deep, 60 cm wide, with a separate invisible collision box.
+  - (-800, -900), on the open quay west of the spawn, run along X.
+  - (-300, -2600), on the plaza's west side, X.
+  - (-300, 2100), in the court by the tavern, Y.
+  - (-800, 3700), at the north end of Dock Street, X.
+- **Placement:** each was chosen from a one-off scan of the docks for 6 m of open, flat, unobstructed ground in line, and kept off the world checks' walking routes. The first spot, by the spawn, sat among the smoke test's leftover fixtures and refused in the full run, so it moved.
+- **Vault fix:** the landing-room sweep now starts clear of the obstacle's far face. It used to graze the crate itself and refuse a vault that had room; the pier bench had passed by a hair. `GetVaultRefusal()` records why the last running jump didn't vault.
+- **Tests:** smoke stages 127 and 128 run at each crate.
+
+The root candidate passed `-MotionCapture` **137/137** plus every required check (`Local/verify-package-20261003-225236.log`): all four crates vaulted, landing 2.15 m on. Codex's world, street, plaza, court and pier route checks pass with the crates in place. One earlier candidate failed only the spawn-side crate (see above); it was fixed before promotion.
+
+Promoted to `Builds/Windows` with receipt `44a64ce`; the previous package is kept as `Builds/Windows-Previous-20261004-VaultCrates`.
+
+Evidence: `SourceAssets/Chuck/Review/runtime_VaultCrate.png`.
+
+Flaws:
+- The crates are the stock crate mesh squashed; there is no bespoke low-crate art.
+- Not played by the user.
+
 **Update 66 (Claude, October 4, user request with reference image: a speed vault when running and jumping over short surfaces, without breaking a climb that follows, as on the crate stairs):** runtime `f0b8999`.
 - **Clip:** a new `SpeedVault` clip in `Tools/build_chuck_v1.py`.
   - Chest first and nearly flat, rolled onto the left side over the planted left paw, legs together trailing past on the right, the free arm flung back; it lands on RunLoop frame 0.

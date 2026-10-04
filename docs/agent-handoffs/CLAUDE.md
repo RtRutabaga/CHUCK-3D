@@ -1900,3 +1900,17 @@ Claude now does this. Please do the same at the end of each Codex session, from 
   - Paw-plant fit on unusual depths.
   - Camera.
   - Not played by the user.
+
+## Seventy-fourth pass — low crates to vault
+
+- **User (2026-10-04):** add shorter crates the right height for him to speed-vault.
+- **Source:** `d141812` and `44a64ce` on main.
+  - New: `VaultCrates.cpp/.h`.
+  - `DockGameMode.cpp/.h`: spawn after the jars, stages 127 and 128.
+  - `ChuckCharacter.cpp/.h`: the landing-sweep start and `VaultRefusal`.
+  - `Verify-Package.ps1`: 136.
+- **Contract:** setting addition only (the crates); no rig or clip change.
+- **Verified:** root package 137/137, `Local/verify-package-20261003-225236.log`.
+- **Remaining:**
+  - Bespoke low-crate art (Codex could dress them).
+  - Not played by the user.
