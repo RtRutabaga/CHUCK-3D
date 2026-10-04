@@ -967,7 +967,7 @@ bool AChuckCharacter::TryVault()
     // the ordinary jump and its climbs.
     const FVector Location = GetActorLocation();
     const FVector Ahead = GetVelocity().GetSafeNormal2D();
-    if (Ahead.IsNearlyZero() || GetVelocity().Size2D() < ChuckClipData::WalkSpeed * 1.6f) return false;
+    if (Ahead.IsNearlyZero() || GetVelocity().Size2D() < ChuckClipData::WalkSpeed * 1.6f) { VaultRefusal = 1; return false; }
     const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
     const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Feet = static_cast<float>(Location.Z) - Half;
@@ -976,11 +976,11 @@ bool AChuckCharacter::TryVault()
     FHitResult Face;
     const FVector Shin(Location.X, Location.Y, Feet + 12.f);
     if (!World->SweepSingleByChannel(Face, Shin, Shin + Ahead * (Radius + VaultReach), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(5.f), Query)
-        || Face.bStartPenetrating || FMath::Abs(Face.ImpactNormal.Z) > .3f) return false;
+        || Face.bStartPenetrating || FMath::Abs(Face.ImpactNormal.Z) > .3f) { VaultRefusal = 2; return false; }
     const FVector Normal = FVector(Face.ImpactNormal.X, Face.ImpactNormal.Y, 0).GetSafeNormal();
-    if (FVector::DotProduct(Normal, -Ahead) < .6f) return false;   // at it, not glancing along it
+    if (FVector::DotProduct(Normal, -Ahead) < .6f) { VaultRefusal = 3; return false; }   // at it, not glancing along it
     const float FaceDist = static_cast<float>(FVector::DotProduct(Face.ImpactPoint - Location, Ahead));
-    if (FaceDist < Radius + 8.f) return false;   // already on top of it
+    if (FaceDist < Radius + 8.f) { VaultRefusal = 4; return false; }   // already on top of it
     const auto Ground = [&](float Along, float From, float To, float& Z) -> bool
     {
         FHitResult Hit;
@@ -990,7 +990,7 @@ bool AChuckCharacter::TryVault()
         return Hit.ImpactNormal.Z > .7f;
     };
     float Top = 0.f;
-    if (!Ground(FaceDist + 6.f, VaultMaxHeight + 25.f, 2.f, Top) || Top < VaultMinHeight || Top > VaultMaxHeight) return false;
+    if (!Ground(FaceDist + 6.f, VaultMaxHeight + 25.f, 2.f, Top) || Top < VaultMinHeight || Top > VaultMaxHeight) { VaultRefusal = 5; return false; }
     // Front to back: the top must end (the floor drops away again) within VaultMaxDepth.
     float Depth = -1.f;
     for (float D = 10.f; D <= VaultMaxDepth + 10.f; D += 8.f)
@@ -998,19 +998,20 @@ bool AChuckCharacter::TryVault()
         float Z = -1e4f;
         const bool bHit = Ground(FaceDist + D, Top + 30.f, -250.f, Z);
         if (!bHit || Z < Top - 12.f) { Depth = D - 4.f; break; }
-        if (Z > Top + 10.f) return false;   // it carries on up: a step, not a vault
+        if (Z > Top + 10.f) { VaultRefusal = 6; return false; }   // it carries on up: a step, not a vault
     }
-    if (Depth < 0.f) return false;
+    if (Depth < 0.f) { VaultRefusal = 7; return false; }
     // Landing: floor beyond, not higher than a small step and no drop he'd vault off blind.
     const float Land = FaceDist + Depth + Radius + 25.f;
     float LandZ = 0.f;
-    if (!Ground(Land, Top + 30.f, -150.f, LandZ) || LandZ > 15.f) return false;
+    if (!Ground(Land, Top + 30.f, -150.f, LandZ) || LandZ > 15.f) { VaultRefusal = 8; return false; }
     // Room to come down and run on, and nothing to hit going over.
     FHitResult Block;
     const FVector LandAt = Location + Ahead * Land + FVector(0, 0, LandZ + 2.f);
-    if (World->SweepSingleByChannel(Block, LandAt - Ahead * 18.f, LandAt + Ahead * 30.f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius, Half - 2.f), Query)) return false;
+    if (World->SweepSingleByChannel(Block, LandAt - Ahead * 18.f, LandAt + Ahead * 30.f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius, Half - 2.f), Query)) { VaultRefusal = 9; return false; }
     const FVector Over = FVector(0, 0, Top + 8.f);
-    if (World->SweepSingleByChannel(Block, Location + Over, Location + Ahead * Land + Over, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius - 2.f, Half - 2.f), Query)) return false;
+    if (World->SweepSingleByChannel(Block, Location + Over, Location + Ahead * Land + Over, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeCapsule(Radius - 2.f, Half - 2.f), Query)) { VaultRefusal = 10; return false; }
+    VaultRefusal = 0;
     auto* Movement = GetCharacterMovement();
     VaultStart = Location; VaultDir = Ahead; VaultTotal = Land;
     VaultRise = Top + ChuckClipData::VaultClear;

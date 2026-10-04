@@ -13,10 +13,10 @@ const TArray<FVaultCrate>& GetVaultCrates() { return Crates; }
 
 void SpawnVaultCrates(UWorld* World)
 {
-    // By the spawn on the quay, on the plaza's west side, in the court by the
-    // tavern, and in the north end of Dock Street.
+    // On the open quay west of the spawn, on the plaza's west side, in the
+    // court by the tavern, and in the north end of Dock Street.
     Crates = {
-        { FVector(-200, -300, 0), FVector(0, 1, 0), 45.f },
+        { FVector(-800, -900, 0), FVector(1, 0, 0), 45.f },
         { FVector(-300, -2600, 0), FVector(1, 0, 0), 42.f },
         { FVector(-300, 2100, 0), FVector(0, 1, 0), 48.f },
         { FVector(-800, 3700, 0), FVector(1, 0, 0), 40.f },

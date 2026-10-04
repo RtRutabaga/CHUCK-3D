@@ -2501,7 +2501,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(VaultJumpAt>=0 && StageTime>VaultJumpAt+1.3f)
         {
             const bool bOver=Chuck->GetVaults()==VaultsBefore+1 && Along>40.f && Chuck->GetCharacterMovement()->IsMovingOnGround();
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_CRATE index=%d over=%d along=%.0f p=%s"),CrateIndex,bOver,Along,*P.ToString());
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_CRATE index=%d over=%d along=%.0f refusal=%d p=%s"),CrateIndex,bOver,Along,Chuck->GetVaultRefusal(),*P.ToString());
             if(bOver) ++CratesVaulted;
             ++CrateIndex; TestStage=127; StageTime=0;
         }

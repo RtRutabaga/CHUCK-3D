@@ -48,6 +48,8 @@ public:
     /** Speed vaults over low obstacles (a running jump at a bench or low wall). */
     bool IsVaulting() const { return Gait == EGait::Vault; }
     int32 GetVaults() const { return Vaults; }
+    /** Why the last running jump didn't vault (0: it did; tests). */
+    int32 GetVaultRefusal() const { return VaultRefusal; }
     int32 GetLadderMounts() const { return LadderMounts; }
     /** Falls off the map (each an Astral death: he's summoned back at the area's start). */
     int32 GetFallDeaths() const { return FallDeaths; }
@@ -411,7 +413,7 @@ private:
     bool TryVault();
     FVector VaultStart = FVector::ZeroVector, VaultDir = FVector::ForwardVector;
     float VaultTotal = 0, VaultRise = 0, VaultLift = 0, VaultIn = .25f, VaultOut = .75f, VaultTime = .5f, VaultSpeed = 0, VaultClock = 0;
-    int32 Vaults = 0;
+    int32 Vaults = 0, VaultRefusal = 0;
     void EnterLadder(int32 Index);
     void FallToDeath();
     bool TryWallSideRun();
