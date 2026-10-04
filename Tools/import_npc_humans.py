@@ -14,9 +14,13 @@ from SourceAssets/NPCs/Humans/manifest.json:
 Everything under /Game/Characters/Humans is generated. Meshes, clips, textures
 and instances are re-imported in place and existing masters kept; for a clean
 rebuild (skeleton or master graph changes) use Tools/Import-NPCHumans.ps1 -Clean.
+To re-import only some of it (leaving the rest's assets untouched), set
+CHUCK_HUMANS_ONLY to a comma list of NPC names and/or "clips", "props"
+(Tools/Import-NPCHumans.ps1 -Only Blacksmith,props).
 """
 from pathlib import Path
 import json
+import os
 import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -280,8 +284,9 @@ def import_props():
         print(f'CHUCK_HUMAN_PROP {prop} slots={sorted(materials)} extent=({box.x:.1f},{box.y:.1f},{box.z:.1f})')
 
 
+ONLY = {x.strip() for x in os.environ.get('CHUCK_HUMANS_ONLY', '').split(',') if x.strip()}
 for npc, info in MANIFEST['npcs'].items():
-    import_mesh(npc, info)
-import_clips()
-import_props()
-print('CHUCK_HUMANS_IMPORT_READY', sorted(MANIFEST['npcs']))
+    if not ONLY or npc in ONLY: import_mesh(npc, info)
+if not ONLY or 'clips' in ONLY: import_clips()
+if not ONLY or 'props' in ONLY: import_props()
+print('CHUCK_HUMANS_IMPORT_READY', sorted(MANIFEST['npcs']), 'only=' + (','.join(sorted(ONLY)) or 'all'))

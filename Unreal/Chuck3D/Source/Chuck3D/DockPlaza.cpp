@@ -307,9 +307,7 @@ void BuildDockPlaza(UWorld* World)
     Sign(FVector(530,-2213,232),TEXT("FOUNTAIN PLAZA"));
     Shape(FVector(530,-2241,232),FVector(190,7,38),TEXT("Wood"));
     Sign(FVector(530,-2247,232),TEXT("DOCKS"),-90);
-    // Anvil and forge niche; no crafting or invented NPC speech.
-    Shape(FVector(-1020,-3620,37),FVector(75,65,74),TEXT("Wood"),true);
-    Shape(FVector(-1020,-3620,87),FVector(98,38,24),TEXT("Dark"),true);
+    // Forge niche; no crafting. The anvil and the smith working at it are ADockNPC::SpawnBlacksmith's (2026-10-04).
     Shape(FVector(-780,-3725,53),FVector(120,62,106),TEXT("Stone"),true);
     Shape(FVector(-780,-3689,72),FVector(70,5,42),TEXT("Dark"));
     for(int32 I=0;I<4;++I) AddDockFlame(Owner,FVector(-805+I*17,-3684,53),19,31+(I%2)*9);

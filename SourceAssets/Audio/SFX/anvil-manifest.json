@@ -1,0 +1,33 @@
+{
+  "provenance": "Original deterministic synthetic anvil strikes; Tools/gen_anvil_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_AnvilStrike_00",
+      "file": "SFX_AnvilStrike_00.wav",
+      "duration": 0.9,
+      "sha256": "4e5b43f8280a7f640188518ae1a29b3557444723f44e0628cc4459b0e187bf43",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilStrike_01",
+      "file": "SFX_AnvilStrike_01.wav",
+      "duration": 0.98,
+      "sha256": "ecb5986a7ee2f33e37db202ca509330271c6e5a15d4f03be72cd417dbb69c393",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilStrike_02",
+      "file": "SFX_AnvilStrike_02.wav",
+      "duration": 1.06,
+      "sha256": "61bd15fcf5b0a57af9d641db1f01fda7e1ffc8344541435925aa1fa217b6bb91",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_AnvilStrike_03",
+      "file": "SFX_AnvilStrike_03.wav",
+      "duration": 1.14,
+      "sha256": "3793c52147cd912f4eecced82b6c844f7011a35fe11c8e01453e634b7f08d9ff",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

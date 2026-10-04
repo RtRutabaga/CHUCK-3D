@@ -505,6 +505,99 @@
      "texture": "Textures/eyelashes02.png"
     }
    }
+  },
+  "Blacksmith": {
+   "fbx": "Blacksmith/SK_Blacksmith.fbx",
+   "height_cm": 184,
+   "tris": 57154,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.27,
+      0.245,
+      0.2
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.045,
+      0.036,
+      0.028
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.025,
+      0.018
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Apron": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.085,
+      0.05,
+      0.03
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Bib": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.085,
+      0.05,
+      0.03
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/grey_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow009.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    },
+    "Hair": {
+     "type": "card",
+     "texture": "Textures/short01_diffuse.png"
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

@@ -118,10 +118,14 @@ def build():
     bpy.ops.export_scene.fbx(filepath=str(OUT / 'SM_Spear.fbx'), use_selection=True, object_types={'MESH'}, apply_unit_scale=True,
                              axis_forward='-Y', axis_up='Z', mesh_smooth_type='FACE')
     tris = sum(len(p.vertices) - 2 for p in shaft.data.polygons)
-    manifest = {'generator': 'Tools/build_spear.py', 'props': {'Spear': {
+    # Other props (Tools/build_smith_props.py) share the manifest: replace only the spear's entry.
+    path = OUT / 'manifest.json'
+    manifest = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'props': {}}
+    manifest['generator'] = 'Tools/build_spear.py'
+    manifest['props']['Spear'] = {
         'fbx': 'SM_Spear.fbx', 'length_cm': LENGTH * 100, 'grip_cm': [GRIP[0] * 100, GRIP[1] * 100], 'tris': tris,
         'slots': {slot: {'type': 'fabric', 'fabric': f, 'folder': str(folder.relative_to(ROOT)).replace('\\', '/'), 'tile_cm': tile,
-                         'tint': list(tint), 'gain': gain(f, folder)} for slot, (f, folder, tile, tint) in SLOTS.items()}}}}
+                         'tint': list(tint), 'gain': gain(f, folder)} for slot, (f, folder, tile, tint) in SLOTS.items()}}
     (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_SPEAR', f'tris={tris}', f'length_cm={LENGTH * 100:.0f}')
     if REVIEW:

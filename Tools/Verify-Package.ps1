@@ -49,9 +49,10 @@ $streamAudio=Select-String -LiteralPath $log -Pattern 'CHUCK_STREAM_AUDIO loaded
 $fireCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_FIRE_CHECK failures=0 flames=[1-9][0-9]* flicker_lights=[1-9][0-9]* legacy_primitives=0'
 $narrowCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_NARROW failures=0 samples=11 nominal_width_cm=140'
 $rubbleCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SLIDE_RUBBLE rocks=44 collision=1'
+$smithCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SMITH_SPAWNED anvil=1 hammer=1 tongs=1 sounds=4'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {135} else {136}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or $passed -lt $expected) {
+$expected=if($NoCapture) {136} else {137}
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$rubbleCompleted -or !$smithCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }

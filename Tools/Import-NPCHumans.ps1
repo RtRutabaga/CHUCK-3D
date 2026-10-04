@@ -2,9 +2,11 @@
 # (Tools/import_npc_humans.py). -Clean deletes the generated folder on disk first:
 # needed when the shared skeleton or a master material changes, and it has to
 # happen before the editor starts, because the game module hard-references the
-# humans (ADockNPC) and keeps them loaded.
+# humans (ADockNPC) and keeps them loaded. -Only re-imports just the named NPCs
+# and/or clips/props (e.g. -Only Blacksmith,props), leaving the others' assets alone.
 param(
     [switch]$Clean,
+    [string[]]$Only = @(),
     [string]$EngineRoot = 'C:\Program Files\Epic Games\UE_5.7'
 )
 $ErrorActionPreference='Stop'
@@ -14,6 +16,8 @@ $content=Join-Path $projectRoot 'Unreal\Chuck3D\Content\Characters\Humans'
 if ($Clean -and (Test-Path -LiteralPath $content)) { Remove-Item -LiteralPath $content -Recurse -Force }
 $project=Join-Path $projectRoot 'Unreal\Chuck3D\Chuck3D.uproject'
 $log=Join-Path $projectRoot 'Local\humans-import.log'
+if ($Clean -and $Only) { throw '-Clean rebuilds everything; it cannot be combined with -Only.' }
+$env:CHUCK_HUMANS_ONLY=($Only -join ',')
 & (Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe') $project "-ExecutePythonScript=$(Join-Path $PSScriptRoot 'import_npc_humans.py')" -unattended -nosplash -NoLiveCoding "-abslog=$log" | Out-Null
 if (!(Select-String -LiteralPath $log -Pattern 'CHUCK_HUMANS_IMPORT_READY' -Quiet) -or (Select-String -LiteralPath $log -Pattern 'Traceback' -Quiet)) { throw "Human import failed; inspect $log" }
 Select-String -LiteralPath $log -Pattern 'CHUCK_HUMAN' | ForEach-Object { $_.Line.Substring($_.Line.IndexOf('CHUCK')) }

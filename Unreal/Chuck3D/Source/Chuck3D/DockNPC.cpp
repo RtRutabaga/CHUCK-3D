@@ -4,6 +4,12 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
+#include "Components/BoxComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "Engine/StaticMesh.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
@@ -41,7 +47,7 @@ namespace
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
-        TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie") };
+        TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
@@ -61,6 +67,19 @@ namespace
     constexpr float LookDownFar = 6.f;      // deg, most he tips his head while it's further off
     constexpr float CloseFull = 45.f, CloseStart = 95.f;   // cm between them: full look down .. from here
     constexpr float ReactIn = .2f, ReactOut = .5f;
+    // The smith (component space: his feet, X forward, Y right). The anvil
+    // (Tools/build_smith_props.py) stands this far ahead of his feet, its horn
+    // to his left; the bar of hot iron lies across the face in front of him.
+    constexpr float AnvilAhead = 49.f, AnvilRight = 4.f;
+    constexpr float AnvilFace = 80.f;                 // cm, the working face
+    constexpr float BarHalf = .8f;                    // the bar's half thickness
+    constexpr float HammerHead = 29.f, HammerFace = 6.6f;   // handle to the head's centre; the striking face ahead of it
+    // The tongs' bar, in their own frame (Tools/build_smith_props.py: the jaws bent
+    // up 20 degrees at the boss), and the reins sloping down as much from his fist.
+    const FVector TongsBar(46.07f, 0.f, 5.3f);
+    constexpr float ReinsSlope = 20.f;
+    constexpr float StrikePeriod = 1.3f, SetPause = 2.6f, RestSwing = .12f;
+    constexpr int32 StrikesPerSet = 6;
     constexpr float TurnRate = 70.f;      // deg/s when he turns his body to the rat
     // Component axes: X forward, Y right, Z up. + pitch tips a bone forward
     // (the head looks down); + yaw turns it to his right.
@@ -93,8 +112,14 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> GuardWoman(MeshPaths[3]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> SideGuard(MeshPaths[4]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Zombie(MeshPaths[5]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Smith(MeshPaths[6]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
-    HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object;
+    HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object;
+    // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> TongsAsset(TEXT("/Game/Characters/Humans/Props/SM_Tongs.SM_Tongs"));
+    SmithMeshes[0] = AnvilAsset.Object; SmithMeshes[1] = HammerAsset.Object; SmithMeshes[2] = TongsAsset.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]), ZombieIdle(ClipPaths[ClipZombieIdle]), ZombieWalk(ClipPaths[ClipZombieWalk]),
         ZombieFall(ClipPaths[ClipZombieFall]);
@@ -289,8 +314,99 @@ ADockNPC* ADockNPC::SpawnDockWorker(UWorld* World, const FVector& Feet, float Ya
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::Blacksmith, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("Blacksmith"));
+    NPC->DisplayName = TEXT("Blacksmith");
+    NPC->Lines = { TEXT("Mind the sparks, rat."), TEXT("Go on. I've a hinge to finish.") };
+    NPC->SetGrip(0, 1.f); NPC->SetGrip(1, 1.f);   // tongs and hammer
+    // His anvil on its stump, in front of him; solid, so the rat can hop up on it.
+    const FRotator Facing(0.f, Yaw, 0.f);
+    AActor* Anvil = World->SpawnActor<AActor>();
+    if (Anvil && NPC->SmithMeshes[0])
+    {
+        auto* Mesh = NewObject<UStaticMeshComponent>(Anvil, TEXT("Anvil"));
+        Mesh->SetStaticMesh(NPC->SmithMeshes[0]);
+        Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Mesh->SetCanEverAffectNavigation(false);
+        Mesh->SetWorldLocationAndRotation(Feet + Facing.RotateVector(FVector(AnvilAhead, AnvilRight, 0.f)), FRotator(0.f, Yaw - 90.f, 0.f));
+        Anvil->SetRootComponent(Mesh);
+        Mesh->RegisterComponent();
+        // Simple boxes: the stump, the feet on it, and the body from the waist to the face (heel to horn).
+        const FVector Boxes[][2] = { { FVector(0, 0, 25), FVector(23, 23, 25) }, { FVector(0, 0, 53), FVector(17, 12.5f, 3) },
+                                     { FVector(11, 0, 68), FVector(31, 6, 12) } };
+        for (const auto& B : Boxes)
+        {
+            auto* Box = NewObject<UBoxComponent>(Anvil);
+            Box->SetupAttachment(Mesh);
+            Box->SetRelativeLocation(B[0]); Box->SetBoxExtent(B[1]);
+            Box->SetCollisionProfileName(TEXT("BlockAll"));
+            Box->SetCanEverAffectNavigation(false);
+            Box->RegisterComponent();
+        }
+        Anvil->Tags.Add(TEXT("Anvil"));
+        NPC->Anvil = Anvil;
+    }
+    // Hammer and tongs ride on his body; the runtime puts them in his fists.
+    const auto Prop = [&](UStaticMesh* Mesh, const TCHAR* Name)
+    {
+        auto* C = NewObject<UStaticMeshComponent>(NPC, Name);
+        C->SetStaticMesh(Mesh);
+        C->SetupAttachment(NPC->Body);
+        C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        C->SetCanEverAffectNavigation(false);
+        C->RegisterComponent();
+        return C;
+    };
+    NPC->Hammer = Prop(NPC->SmithMeshes[1], TEXT("Hammer"));
+    NPC->Tongs = Prop(NPC->SmithMeshes[2], TEXT("Tongs"));
+    // The bar glows: the forge's ember material.
+    if (UMaterialInterface* Ember = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_FireEmber.M_FireEmber")))
+    {
+        const int32 Hot = NPC->Tongs->GetMaterialIndex(TEXT("Hot"));
+        if (Hot != INDEX_NONE) NPC->Tongs->SetMaterial(Hot, Ember);
+    }
+    // Sparks off each blow: a few glowing specks thrown out and falling.
+    NPC->Sparks = NewObject<UInstancedStaticMeshComponent>(NPC, TEXT("Sparks"));
+    NPC->Sparks->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+    if (UMaterialInterface* Ember = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_FireEmber.M_FireEmber"))) NPC->Sparks->SetMaterial(0, Ember);
+    NPC->Sparks->SetupAttachment(NPC->GetRootComponent());
+    NPC->Sparks->SetUsingAbsoluteLocation(true); NPC->Sparks->SetUsingAbsoluteRotation(true);
+    NPC->Sparks->SetWorldLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+    NPC->Sparks->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    NPC->Sparks->SetCastShadow(false);
+    NPC->Sparks->RegisterComponent();
+    NPC->StrikeLight = NewObject<UPointLightComponent>(NPC, TEXT("StrikeLight"));
+    NPC->StrikeLight->SetupAttachment(NPC->Body);
+    NPC->StrikeLight->SetRelativeLocation(FVector(AnvilAhead, AnvilRight, AnvilFace + 15.f));
+    NPC->StrikeLight->SetLightColor(FLinearColor(1.f, .55f, .18f));
+    NPC->StrikeLight->SetAttenuationRadius(320.f);
+    NPC->StrikeLight->SetIntensity(0.f);
+    NPC->StrikeLight->SetCastShadows(false);
+    NPC->StrikeLight->RegisterComponent();
+    for (int32 I = 0; I < 4; ++I)
+        if (USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/SFX_AnvilStrike_%02d.SFX_AnvilStrike_%02d"), I, I)))
+            NPC->StrikeSounds.Add(Sound);
+    // Heard across the plaza's corner, not the docks.
+    NPC->StrikeAttenuation = NewObject<USoundAttenuation>(NPC);
+    NPC->StrikeAttenuation->Attenuation.bAttenuate = true;
+    NPC->StrikeAttenuation->Attenuation.bSpatialize = true;
+    NPC->StrikeAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+    NPC->StrikeAttenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
+    NPC->StrikeAttenuation->Attenuation.FalloffDistance = 2200.f;
+    NPC->ForgeClock = FMath::FRandRange(0.f, 3.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_SPAWNED anvil=%d hammer=%d tongs=%d sounds=%d"), NPC->Anvil.IsValid() ? 1 : 0,
+        NPC->Hammer && NPC->Hammer->GetStaticMesh() ? 1 : 0, NPC->Tongs && NPC->Tongs->GetStaticMesh() ? 1 : 0, NPC->StrikeSounds.Num());
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // The smith at his anvil in front of the smithy, the forge at his left
+    // hand (DockPlaza.cpp), facing out over the plaza.
+    SpawnBlacksmith(World, FVector(-950, -3664, 0), 90.f);
     // Two guards either side of the closed city gate (the plaza's far wall;
     // the opening runs x 60..460 between the towers), facing back down the
     // plaza: they keep the rat from the way into the city. Each holds the spear
@@ -751,9 +867,9 @@ void ADockNPC::Tick(float DeltaSeconds)
                 const float Close = FMath::Clamp((CloseStart - Across) / (CloseStart - CloseFull), 0.f, 1.f);
                 Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, FMath::Lerp(LookDownFar, 55.f, Close)));
             }
-            if (HasMocap()) UpdateTurn(DeltaSeconds, YawTo, true);
+            if (HasMocap() && !IsSmith()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil
         }
-        else if (HasMocap()) UpdateTurn(DeltaSeconds, 0.f, false);
+        else if (HasMocap() && !IsSmith()) UpdateTurn(DeltaSeconds, 0.f, false);
         bTalking = Chuck->GetTalkingTo() == this;
     }
     TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
@@ -763,9 +879,11 @@ void ADockNPC::Tick(float DeltaSeconds)
         NextGlance = FMath::FRandRange(2.5f, 6.f);
         Glance = FVector2D(FMath::FRandRange(-35.f, 35.f), FMath::FRandRange(-6.f, 10.f));
     }
+    if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f);   // his eyes on the work
     const float Rate = bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
+    if (IsSmith()) TickSmith(DeltaSeconds);
     UpdatePose(DeltaSeconds);
 }
 
@@ -808,12 +926,20 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
                 Delta[Of(LowerL, Side)] = Pitch(-25.f * R + 10.f * L);
             }
         }
+        if (IsSmith())
+        {
+            // Bent over the work, the chest turning to his right as the hammer goes up.
+            Delta[Spine2] = Pitch(15.f - 8.f * Swing) * Yaw(5.f * Swing);
+            Delta[Chest] = Pitch(5.f - 2.f * Swing) * Yaw(7.f * Swing - 2.f);
+        }
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
         if (bSpear) HoldSpear(Space);
+        if (IsSmith()) PoseSmith(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
+        if (bStrikeDue) { bStrikeDue = false; Strike(); }
         return;
     }
     const float Breath = FMath::Sin(T * UE_TWO_PI / 4.2f);          // one slow breath every 4.2 s
@@ -837,6 +963,202 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     Solve(Delta, Space);
     PoseHands(Space, false);
     if (bSpear) HoldSpear(Space);
+    if (IsSmith()) PoseSmith(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
+    if (bStrikeDue) { bStrikeDue = false; Strike(); }
+}
+
+void ADockNPC::HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& Fist, FVector& Along, FVector& Thumb) const
+{
+    // Along: wrist to the middle knuckle. The palm is where the curled middle
+    // finger's tip lies; the thumb axis is square to both, on the thumb's side.
+    const FVector Hand = Space[BoneIndex[Of(HandL, Side)]].GetLocation();
+    Along = (Space[BoneIndex[Of(MiddleL, Side)]].GetLocation() - Hand).GetSafeNormal();
+    const FVector ThumbBone = FVector::VectorPlaneProject(Space[BoneIndex[Of(ThumbL, Side)]].GetLocation() - Hand, Along);
+    FVector Palm = FVector::ZeroVector;
+    if (FingerBone.Num() == 30)
+    {
+        const int32 Base = (Side * 5 + 2) * 3;   // the middle finger
+        Palm = FVector::VectorPlaneProject(Space[FingerBone[Base + 2]].GetLocation() - Space[FingerBone[Base]].GetLocation(), Along).GetSafeNormal();
+    }
+    if (Palm.IsNearlyZero())
+    {
+        Thumb = ThumbBone.GetSafeNormal();
+        Fist = Hand + Along * FistReach;
+        return;
+    }
+    Thumb = FVector::CrossProduct(Palm, Along).GetSafeNormal();
+    if (FVector::DotProduct(Thumb, ThumbBone) < 0.f) Thumb = -Thumb;
+    Fist = Hand + Along * FistReach + Palm * PalmDepth;
+}
+
+void ADockNPC::PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole)
+{
+    // As HoldSpear: aim the upper arm and forearm so the wrist lands where the
+    // fist needs it (two-bone IK, the elbow toward Pole), then turn the hand
+    // onto Along and twist it about Along until its thumb axis is Thumb.
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    const int32 Count = Space.Num();
+    TArray<FTransform> Local; Local.SetNum(Count);
+    for (int32 B = 0; B < Count; ++B)
+    {
+        const int32 P = Ref.GetParentIndex(B);
+        Local[B] = P >= 0 ? Space[B].GetRelativeTransform(Space[P]) : Space[B];
+    }
+    const auto Descends = [&](int32 B, int32 From) { for (; B != INDEX_NONE; B = Ref.GetParentIndex(B)) if (B == From) return true; return false; };
+    const auto Rotate = [&](int32 Bone, const FQuat& Q)
+    {
+        Space[Bone].SetRotation(Q * Space[Bone].GetRotation());
+        for (int32 B = Bone + 1; B < Count; ++B)
+            if (Descends(B, Bone)) Space[B] = Local[B] * Space[Ref.GetParentIndex(B)];
+    };
+    const int32 Upper = BoneIndex[Of(UpperL, Side)], Lower = BoneIndex[Of(LowerL, Side)], Hand = BoneIndex[Of(HandL, Side)];
+    const FVector Palm = FVector::CrossProduct(Along, Thumb).GetSafeNormal() * PalmSign[Side];
+    const FVector Wrist = Fist - Along * FistReach - Palm * PalmDepth;
+    const FVector S = Space[Upper].GetLocation();
+    const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
+    const float Bl = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[Hand].GetLocation()));
+    const FVector ToWrist = Wrist - S;
+    const float D = FMath::Clamp(static_cast<float>(ToWrist.Size()), FMath::Abs(A - Bl) + 1.f, A + Bl - .5f);
+    const FVector Dir = ToWrist.GetSafeNormal();
+    const float CosA = FMath::Clamp((A * A + D * D - Bl * Bl) / (2.f * A * D), -1.f, 1.f);
+    const FVector Bend = FVector::VectorPlaneProject(Pole, Dir).GetSafeNormal();
+    const FVector Elbow = S + Dir * (A * CosA) + Bend * (A * FMath::Sqrt(1.f - CosA * CosA));
+    Rotate(Upper, FQuat::FindBetweenNormals((Space[Lower].GetLocation() - S).GetSafeNormal(), (Elbow - S).GetSafeNormal()));
+    Rotate(Lower, FQuat::FindBetweenNormals((Space[Hand].GetLocation() - Space[Lower].GetLocation()).GetSafeNormal(), (S + Dir * D - Space[Lower].GetLocation()).GetSafeNormal()));
+    FVector F, Al, Th;
+    HandFrame(Space, Side, F, Al, Th);
+    Rotate(Hand, FQuat::FindBetweenNormals(Al, Along));
+    HandFrame(Space, Side, F, Al, Th);
+    const FVector Want = FVector::VectorPlaneProject(Thumb, Along).GetSafeNormal();
+    Rotate(Hand, FQuat(Along, FMath::Atan2(static_cast<float>(FVector::DotProduct(Along, FVector::CrossProduct(Th, Want))), static_cast<float>(FVector::DotProduct(Th, Want)))));
+    // Which side of Along x Thumb this hand's palm is (a property of the skeleton: measured, not assumed).
+    if (FingerBone.Num() == 30)
+    {
+        const int32 Base = (Side * 5 + 2) * 3;
+        const FVector Curl = Space[FingerBone[Base + 2]].GetLocation() - Space[FingerBone[Base]].GetLocation();
+        PalmSign[Side] = FVector::DotProduct(Curl, FVector::CrossProduct(Along, Thumb)) >= 0.f ? 1.f : -1.f;
+    }
+}
+
+void ADockNPC::TickSmith(float DeltaSeconds)
+{
+    // Talked to, or startled by a scratch: he rests the hammer on the work until it's over.
+    const bool bPause = bTalking || ReactTime >= 0.f;
+    Resting = FMath::FInterpConstantTo(Resting, bPause ? 1.f : 0.f, DeltaSeconds, 2.5f);
+    const float SetLength = StrikesPerSet * StrikePeriod + SetPause, Window = StrikesPerSet * StrikePeriod;
+    const float Before = ForgeClock;
+    if (Resting < .5f) ForgeClock += DeltaSeconds;
+    const int32 Set = FMath::FloorToInt(ForgeClock / SetLength);
+    const float Local = FMath::Fmod(ForgeClock, SetLength), Previous = Local - (ForgeClock - Before);
+    // Between sets he turns the work over a little, the wrist rolling with the tongs.
+    const float Turned = (Set % 2) ? 8.f : -8.f;
+    float S = RestSwing;
+    BarLift = 0.f; BarRoll = Turned;
+    if (Local < Window)
+    {
+        const float C = FMath::Fmod(Local, StrikePeriod);
+        const bool bFirst = Local < StrikePeriod;
+        if (C < .1f) S = bFirst ? RestSwing : RestSwing * C / .1f;                         // the rebound
+        else if (C < .75f) S = RestSwing + (1.f - RestSwing) * FMath::SmoothStep(0.f, 1.f, (C - .1f) / .65f);   // the lift
+        else if (C < .98f) S = 1.f;                                                         // at the top
+        else { const float U = (C - .98f) / (StrikePeriod - .98f); S = 1.f - U * U; }     // the blow, gathering speed
+    }
+    else
+    {
+        // The pause: lift the bar, give it a quarter turn, set it back down.
+        const float U = (Local - Window) / SetPause;
+        BarLift = 3.f * FMath::Sin(PI * FMath::Clamp((U - .15f) / .7f, 0.f, 1.f));
+        BarRoll = Turned + ((Set % 2) ? -16.f : 16.f) * FMath::SmoothStep(.25f, .75f, U);
+    }
+    Swing = FMath::Lerp(S, RestSwing, Resting);
+    // The blow lands at each whole period inside the window (not as the set rolls over);
+    // it is struck once the pose is solved this frame (UpdatePose).
+    if (Resting < .1f && Previous >= 0.f && Local >= Previous)
+    {
+        const int32 K = FMath::FloorToInt(Local / StrikePeriod), KP = FMath::FloorToInt(Previous / StrikePeriod);
+        if (K > KP && K >= 1 && K <= StrikesPerSet) bStrikeDue = true;
+    }
+    // The frame the blow lands shows the contact, whatever the frame rate
+    // (a long frame would otherwise already be into the rebound).
+    if (bStrikeDue) Swing = 0.f;
+    // Sparks fly and fall; the flash dies away.
+    for (int32 I = SparkState.Num() - 1; I >= 0; --I)
+    {
+        FSpark& P = SparkState[I];
+        P.Age += DeltaSeconds;
+        if (P.Age > P.Life) { SparkState.RemoveAtSwap(I); continue; }
+        P.Velocity.Z -= 980.f * DeltaSeconds;
+        P.At += P.Velocity * DeltaSeconds;
+    }
+    if (Sparks)
+    {
+        Sparks->ClearInstances();
+        for (const FSpark& P : SparkState)
+        {
+            const float Size = .009f * (1.f - P.Age / P.Life) + .002f;   // the cube is 100 cm: about a centimetre, shrinking
+            Sparks->AddInstance(FTransform(P.Velocity.Rotation(), P.At, FVector(Size * 2.5f, Size, Size)), true);
+        }
+    }
+    FlashTime += DeltaSeconds;
+    if (StrikeLight) StrikeLight->SetIntensity(9000.f * FMath::Exp(-FlashTime * 22.f));
+}
+
+void ADockNPC::Strike()
+{
+    ++Strikes;
+    const FTransform& Comp = Body->GetComponentTransform();
+    const FVector Top = Comp.TransformPosition(FVector(AnvilAhead - 1.f, AnvilRight, AnvilFace + 2.f * BarHalf));
+    if (Hammer)
+        StrikeGap = static_cast<float>(FVector::Dist(Hammer->GetComponentTransform().TransformPosition(FVector(HammerFace, 0.f, HammerHead)), Top));
+    if (StrikeSounds.Num())
+        UGameplayStatics::PlaySoundAtLocation(this, StrikeSounds[FMath::RandRange(0, StrikeSounds.Num() - 1)], Top, .8f, FMath::FRandRange(.96f, 1.04f), 0.f, StrikeAttenuation);
+    for (int32 I = 0; I < 9; ++I)
+    {
+        const float Yaw = FMath::FRandRange(0.f, 360.f);
+        const FVector Out = FRotator(0.f, Yaw, 0.f).Vector() * FMath::FRandRange(140.f, 360.f) + FVector(0, 0, FMath::FRandRange(60.f, 260.f));
+        SparkState.Add({ Top, Out, 0.f, FMath::FRandRange(.22f, .55f) });
+    }
+    FlashTime = 0.f;
+    if (Strikes > 3) WorstStrikeGap = FMath::Max(WorstStrikeGap, StrikeGap);   // past the loading hitch
+    if (Strikes <= 3 || Strikes % 10 == 0)
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SMITH_STRIKE n=%d gap_cm=%.1f worst_cm=%.1f tongs_grip_cm=%.1f"), Strikes, StrikeGap, WorstStrikeGap, TongsGripError);
+}
+
+void ADockNPC::PoseSmith(TArray<FTransform>& Space)
+{
+    const float Right = -ArmOut;                                    // which way is his right (+Y)
+    const FVector Top(AnvilAhead - 1.f, AnvilRight, AnvilFace + 2.f * BarHalf + BarLift);
+    // The hammer, as a frame: Along (the face's way, his knuckles) and Thumb
+    // (up the handle to the head). On the bar: face down, handle level, coming
+    // in from his right. Raised: over his right shoulder, the head back and up.
+    const FVector ThumbDown = FVector(1.f, -.22f * Right, .05f).GetSafeNormal();
+    const FVector AlongDown = FVector::VectorPlaneProject(-FVector::UpVector, ThumbDown).GetSafeNormal();
+    const FVector FistDown = Top - AlongDown * HammerFace - ThumbDown * HammerHead;
+    const FVector ThumbUp = FVector(-.4f, .12f * Right, .9f).GetSafeNormal();
+    const FVector AlongUp = FVector::VectorPlaneProject(FVector(1.f, 0.f, .25f), ThumbUp).GetSafeNormal();
+    const FVector FistUp(10.f, 27.f * Right, 160.f);
+    const FQuat Q = FQuat::Slerp(FRotationMatrix::MakeFromXZ(AlongDown, ThumbDown).ToQuat(), FRotationMatrix::MakeFromXZ(AlongUp, ThumbUp).ToQuat(), Swing);
+    const FVector Fist = FMath::Lerp(FistDown, FistUp, Swing) + FVector(-8.f, 4.f * Right, 6.f) * FMath::Sin(PI * Swing);   // an arc, not a straight line
+    const FVector Pole = FMath::Lerp(FVector(-.35f, Right, -.6f), FVector(-.1f, Right, .1f), Swing);
+    PlaceHand(Space, 1, Fist, Q.GetAxisX(), Q.GetAxisZ(), Pole);
+    // The tongs: from his left fist at the waist, sloping down across the face,
+    // the bar flat on it under the blow. His forearm hangs; the reins leave the
+    // fist on the thumb side.
+    const FVector Level = FVector(.81f, .59f * Right, 0.f).GetSafeNormal();
+    const FVector Reins = Level * FMath::Cos(FMath::DegreesToRadians(ReinsSlope)) - FVector::UpVector * FMath::Sin(FMath::DegreesToRadians(ReinsSlope));
+    const FQuat Roll(Reins, FMath::DegreesToRadians(BarRoll));
+    const FQuat TongsQ = Roll * FRotationMatrix::MakeFromXZ(Reins, FVector::UpVector).ToQuat();
+    const FVector Bar = Top - FVector(0.f, 0.f, BarHalf);
+    const FVector LeftFist = Bar - TongsQ.RotateVector(TongsBar);
+    const FVector LeftAlong = Roll.RotateVector(FVector::VectorPlaneProject(FVector(.1f, -.15f * Right, -1.f), Reins).GetSafeNormal());
+    PlaceHand(Space, 0, LeftFist, LeftAlong, Reins, FVector(-.4f, -Right * .6f, -.3f));
+    // Props in the fists as posed (if an arm fell short, the prop shows it and the test measures it).
+    FVector F, A, T;
+    HandFrame(Space, 1, F, A, T);
+    if (Hammer) Hammer->SetRelativeTransform(FTransform(FRotationMatrix::MakeFromXZ(A, T).ToQuat(), F));
+    HandFrame(Space, 0, F, A, T);
+    TongsGripError = static_cast<float>(FVector::Dist(F, LeftFist));
+    if (Tongs) Tongs->SetRelativeTransform(FTransform(TongsQ, F));
 }

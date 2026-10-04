@@ -128,8 +128,8 @@ class Body:
         # Cut from the skirt helper surface (see skirt_source), not the body:
         if piece == 'skirt':
             return c.z - (self.floor + .07)
-        if piece == 'apron':   # a front panel over the skirt
-            return min(c.z - (self.floor + .3), .15 - abs(c.x), -c.y - .01)
+        if piece == 'apron':   # a front panel over the skirt (the smith's: longer `bottom`, wider `width`)
+            return min(c.z - (self.floor + opts.get('bottom', .3)), opts.get('width', .15) - abs(c.x), -c.y - .01)
         if b is None: return OUT
         if piece == 'shirt':
             if b in self.FOREARMS:
@@ -187,6 +187,13 @@ class Body:
             if b in self.ARMS or b == self.NECK: return collar
             if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .16))
             return OUT
+        if piece == 'bib':   # a leather apron's bib: the chest front, from below the collarbones down over the apron's top,
+            if b not in self.TORSO and b != self.NECK and b not in self.ARMS: return OUT
+            top = self.neck.z - .1
+            bib = min(top - c.z, .135 - abs(c.x), -c.y + .01, c.z - (self.waist_z - .1))
+            # and a strap from each top corner up over the shoulder, down to the shoulder blades behind.
+            strap = min(.02 - abs(abs(c.x) - .105), c.z - (top - .04 if c.y < 0 else self.neck.z - .2))
+            return max(bib, strap)
         if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
             front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
             m = self.neck.z - .01 - .1 * front - c.z
@@ -231,6 +238,7 @@ PIECES = {
     'bodice':   dict(offset=.013, thickness=.004, hides=False),
     'skirt':    dict(offset=.005, thickness=.004, hides=False),   # its legs are hidden in build()
     'apron':    dict(offset=.011, thickness=.003, hides=False),
+    'bib':      dict(offset=.016, thickness=.004, hides=False),
 }
 
 

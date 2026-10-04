@@ -467,6 +467,91 @@
    ],
    "skin_texture": "SourceAssets/NPCs/Humans/Textures/zombie_skin_diffuse.png",
    "eye_texture": "SourceAssets/NPCs/Humans/Textures/zombie_eye.png"
+  },
+  "Blacksmith": {
+   "height_cm": 184,
+   "note": "The plaza smith at his anvil by the forge (user 2026-10-04: a gruff white male blacksmith). Heavy shoulders and forearms, a soot-greyed linen shirt with the sleeves rolled, a long leather bib apron, work boots. MakeHuman has no beards; his short crop, weathered skin and heavy brows carry the gruffness.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.8,
+    "muscle": 1.0,
+    "weight": 0.92,
+    "height": 0.74,
+    "proportions": 0.3,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.01,
+     "asian": 0.02,
+     "caucasian": 0.97
+    }
+   },
+   "skin": "old_caucasian_male",
+   "eyes": "grey",
+   "eyebrows": "eyebrow009",
+   "eyelashes": "eyelashes02",
+   "hair": "short01",
+   "outfit": [
+    {
+     "piece": "shirt",
+     "sleeves": "rolled",
+     "collar": -0.02,
+     "fabric": "rough_linen",
+     "tint": [
+      0.27,
+      0.245,
+      0.2
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.045,
+      0.036,
+      0.028
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.2,
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.025,
+      0.018
+     ]
+    },
+    {
+     "piece": "apron",
+     "bottom": 0.36,
+     "width": 0.2,
+     "fabric": "brown_leather",
+     "tint": [
+      0.085,
+      0.05,
+      0.03
+     ]
+    },
+    {
+     "piece": "bib",
+     "fabric": "brown_leather",
+     "tint": [
+      0.085,
+      0.05,
+      0.03
+     ]
+    },
+    {
+     "piece": "belt",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ]
+    }
+   ]
   }
  }
 }

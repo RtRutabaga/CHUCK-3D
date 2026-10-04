@@ -9,6 +9,11 @@ class USkeletalMesh;
 class UAnimSequence;
 class UStaticMesh;
 class UStaticMeshComponent;
+class UInstancedStaticMeshComponent;
+class UPointLightComponent;
+class USoundBase;
+class USoundAttenuation;
+class UMaterialInterface;
 
 /**
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
@@ -26,7 +31,7 @@ class UStaticMeshComponent;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -109,6 +114,30 @@ public:
     static constexpr float ZombieWindup = .5f;
     static constexpr float ZombieLungeTime = .45f;
     static constexpr float ZombieRecover = .6f;
+    /**
+     * The plaza smith (user 2026-10-04: "a blacksmith character (gruff white
+     * male) by the smithy and forge, make him an anvil that he'll be working
+     * at"). Spawns his anvil (Tools/build_smith_props.py) on its stump in front
+     * of him, then works at it: a cross-peen hammer in his right fist raised
+     * and brought down on a bar of hot iron he holds on the face with tongs in
+     * his left, sets of strikes with a pause to turn the bar between them. Each
+     * blow rings (SFX_AnvilStrike) and throws a few sparks. He keeps to his
+     * anvil: his head follows the rat, his body doesn't turn; talked to, he
+     * rests the hammer until the rat goes. Both arms are placed by IK on the
+     * motion-capture idle, so the hammer's face meets the bar wherever he
+     * stands.
+     */
+    static ADockNPC* SpawnBlacksmith(UWorld* World, const FVector& Feet, float Yaw);
+    bool IsSmith() const { return Kind == EDockHuman::Blacksmith; }
+    bool IsForging() const { return IsSmith() && Resting < .5f; }
+    int32 GetStrikes() const { return Strikes; }
+    /** How far the hammer's face was from the top of the bar at the last blow (cm), for tests. */
+    float GetStrikeGap() const { return StrikeGap; }
+    /** The widest such gap over every blow after the first three (cm). */
+    float GetWorstStrikeGap() const { return WorstStrikeGap; }
+    /** How far the left fist is from the tongs' reins (cm), for tests. */
+    float GetTongsGripError() const { return TongsGripError; }
+    AActor* GetAnvil() const { return Anvil.Get(); }
     /** Eyes above the feet (cm), from this body's head bone. */
     float GetEyeHeight() const { return EyeHeight; }
 protected:
@@ -172,4 +201,27 @@ private:
     void TickZombie(float DeltaSeconds);
     bool StepZombie(const FVector& Direction, float Distance);
     void TurnZombie(const FVector& Toward, float DeltaSeconds, float Rate);
+    // The smith.
+    UPROPERTY() UStaticMeshComponent* Hammer = nullptr;
+    UPROPERTY() UStaticMeshComponent* Tongs = nullptr;
+    UPROPERTY() UInstancedStaticMeshComponent* Sparks = nullptr;
+    UPROPERTY() UPointLightComponent* StrikeLight = nullptr;
+    UPROPERTY() TObjectPtr<UStaticMesh> SmithMeshes[3];          // anvil, hammer, tongs
+    UPROPERTY() TArray<TObjectPtr<USoundBase>> StrikeSounds;
+    UPROPERTY() USoundAttenuation* StrikeAttenuation = nullptr;
+    TWeakObjectPtr<AActor> Anvil;
+    float ForgeClock = 0, Resting = 0, Swing = .12f, BarRoll = 0, BarLift = 0, FlashTime = 1.f;
+    int32 Strikes = 0;
+    bool bStrikeDue = false;
+    float StrikeGap = 1e3f, WorstStrikeGap = 0.f, TongsGripError = 1e3f;
+    float PalmSign[2] = { 1.f, -1.f };   // palm side relative to Along x Thumb, measured on the posed hand
+    struct FSpark { FVector At, Velocity; float Age, Life; };
+    TArray<FSpark> SparkState;
+    void TickSmith(float DeltaSeconds);
+    void PoseSmith(TArray<FTransform>& Space);
+    void Strike();
+    /** Two-bone IK: the fist of arm Side to Fist, the hand's knuckles along Along with its thumb side along Thumb. */
+    void PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole);
+    /** A posed hand's fist centre and axes (component space). */
+    void HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& Fist, FVector& Along, FVector& Thumb) const;
 };

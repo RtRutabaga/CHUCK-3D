@@ -1865,7 +1865,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile()) continue;
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith()) continue;   // the smith's arms are at work
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -1925,6 +1925,18 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             bSpears&=GuardNPC && GuardB && (GuardNPC->GetActorLocation().X-260.f)*(GuardB->GetActorLocation().X-260.f)<0.f;   // either side of the gate
             Check(bSpears,TEXT("two guards stand either side of the city gate, each holding a spear upright, fist round its grip"));
+            // The blacksmith at his anvil by the smithy's forge, hammering: the face meets the bar, the tongs in his other fist.
+            TArray<AActor*> SmithFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),SmithFound);
+            const auto* Smith=SmithFound.Num()==1 ? Cast<ADockNPC>(SmithFound[0]) : nullptr;
+            const AActor* SmithAnvil=Smith ? Smith->GetAnvil() : nullptr;
+            const float ToForge=Smith ? static_cast<float>(FVector::Dist2D(Smith->GetActorLocation(),FVector(-780,-3725,0))) : 1e4f;
+            const float ToAnvil=Smith && SmithAnvil ? static_cast<float>(FVector::Dist2D(Smith->GetActorLocation(),SmithAnvil->GetActorLocation())) : 1e4f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_MEASURE present=%d strikes=%d strike_gap_cm=%.1f worst_gap_cm=%.1f tongs_grip_cm=%.1f to_anvil_cm=%.0f to_forge_cm=%.0f forging=%d lines=%d"),
+                Smith ? 1 : 0,Smith ? Smith->GetStrikes() : 0,Smith ? Smith->GetStrikeGap() : 1e3f,Smith ? Smith->GetWorstStrikeGap() : 1e3f,Smith ? Smith->GetTongsGripError() : 1e3f,ToAnvil,ToForge,
+                Smith && Smith->IsForging() ? 1 : 0,Smith ? Smith->Lines.Num() : 0);
+            Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
+                TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow, tongs in his other fist"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();

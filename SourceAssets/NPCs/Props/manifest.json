@@ -47,6 +47,151 @@
      "gain": 26.931
     }
    }
+  },
+  "Anvil": {
+   "fbx": "SM_Anvil.fbx",
+   "tris": 784,
+   "bounds_min_cm": [
+    -24.8,
+    -25.0,
+    0.0
+   ],
+   "bounds_max_cm": [
+    42.1,
+    24.8,
+    80.5
+   ],
+   "face_cm": 80.0,
+   "slots": {
+    "Stump": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 60.0,
+     "tint": [
+      0.2,
+      0.13,
+      0.08
+     ],
+     "gain": 7.27
+    },
+    "Iron": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 120.0,
+     "tint": [
+      0.075,
+      0.074,
+      0.078
+     ],
+     "gain": 14.226
+    },
+    "Face": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.32,
+      0.32,
+      0.33
+     ],
+     "gain": 14.226
+    }
+   }
+  },
+  "SmithHammer": {
+   "fbx": "SM_SmithHammer.fbx",
+   "tris": 248,
+   "bounds_min_cm": [
+    -7.5,
+    -2.2,
+    -7.5
+   ],
+   "bounds_max_cm": [
+    6.6,
+    2.2,
+    31.2
+   ],
+   "head_cm": 29.0,
+   "slots": {
+    "Handle": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 50.0,
+     "tint": [
+      0.36,
+      0.25,
+      0.15
+     ],
+     "gain": 7.27
+    },
+    "Head": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.13,
+      0.13,
+      0.135
+     ],
+     "gain": 14.226
+    }
+   }
+  },
+  "Tongs": {
+   "fbx": "SM_Tongs.fbx",
+   "tris": 288,
+   "bounds_min_cm": [
+    -13.0,
+    -1.7,
+    -1.0
+   ],
+   "bounds_max_cm": [
+    54.8,
+    1.7,
+    9.1
+   ],
+   "bar_centre_cm": [
+    46.07,
+    0.0,
+    5.3
+   ],
+   "jaw_bend_deg": 20.0,
+   "slots": {
+    "Iron": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 120.0,
+     "tint": [
+      0.075,
+      0.074,
+      0.078
+     ],
+     "gain": 14.226
+    },
+    "Hot": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.6,
+      0.15,
+      0.02
+     ],
+     "gain": 14.226
+    }
+   }
   }
+ },
+ "generators": {
+  "Anvil": "Tools/build_smith_props.py",
+  "SmithHammer": "Tools/build_smith_props.py",
+  "Tongs": "Tools/build_smith_props.py"
  }
 }
