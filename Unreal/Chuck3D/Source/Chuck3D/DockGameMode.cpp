@@ -595,6 +595,7 @@ void ADockGameMode::StartPlay()
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
+    bDwarfCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckDwarfCapture"));
     // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
     bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
     if(bSlideOnly) { bSmokeTest=true; TestStage=111; }
@@ -676,6 +677,51 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     }
 }
 
+void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
+{
+    // Saved/Screenshots/Windows/Dwarf/<angle>_<view>.png: the rat 60 cm from him at each angle off his facing.
+    const float Angles[]={0.f,55.f,110.f,-55.f,-110.f};
+    constexpr float Settle=3.f, Hold=3.5f;
+    DwarfCaptureTime+=DeltaSeconds;
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    TArray<AActor*> Found;
+    UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),Found);
+    auto* Dwarf=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
+    if(!PC || !Chuck || !Dwarf || DwarfCaptureTime<Settle) return;
+    const int32 Step=FMath::FloorToInt((DwarfCaptureTime-Settle)/Hold);
+    if(Step>=UE_ARRAY_COUNT(Angles)) { FPlatformMisc::RequestExit(false); return; }
+    const FVector Feet=Dwarf->GetActorLocation()-FVector(0,0,Dwarf->GetSimpleCollisionHalfHeight());
+    const FVector Home=FRotator(0.f,120.f,0.f).Vector();   // where he was placed facing (SpawnTownsfolk)
+    if(Step!=DwarfShot)
+    {
+        DwarfShot=Step;
+        Chuck->ResetToDock();
+        const FVector Dir=Home.RotateAngleAxis(Angles[Step],FVector::UpVector);
+        Chuck->SetActorLocation(Feet+Dir*60.f+FVector(0,0,36.f));
+        Chuck->SetActorRotation((-Dir).Rotation());
+        if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
+        PC->SetViewTarget(NPCCamera.Get());
+    }
+    const float In=DwarfCaptureTime-Settle-Step*Hold;
+    for(int32 View=0;View<2;++View)
+    {
+        const float At=2.4f+View*.6f;
+        if(In<At-.3f || In-DeltaSeconds>=At) continue;
+        // Views from in front of where he now faces, either side.
+        const FVector Face=Dwarf->GetActorForwardVector().RotateAngleAxis(View ? -40.f : 40.f,FVector::UpVector);
+        const FVector Eye=Feet+Face*240.f+FVector(0,0,120.f);
+        NPCCamera->SetActorLocationAndRotation(Eye,(Feet+FVector(0,0,85.f)-Eye).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(50.f);
+        if(In>=At)
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Dwarf/%+04.0f_%s.png"),Angles[Step],View ? TEXT("left") : TEXT("right")),false,false);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_FRAME angle=%.0f view=%d look=(%.1f,%.1f) turn=%.1f axe_shoulder_gap_cm=%.1f grip_error_cm=%.1f"),
+                Angles[Step],View,Dwarf->GetLookAngles().X,Dwarf->GetLookAngles().Y,Dwarf->GetBodyTurn(),Dwarf->GetAxeShoulderGap(),Dwarf->GetSpearGripError());
+        }
+    }
+}
+
 void ADockGameMode::TickSmithCapture(float DeltaSeconds)
 {
     // Frames of the smith's work for motion review: Saved/Screenshots/Windows/Smith/frame###.png.
@@ -735,6 +781,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     if(bSmithCapture) { TickSmithCapture(DeltaSeconds); return; }
+    if(bDwarfCapture) { TickDwarfCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
@@ -1991,10 +2038,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),DwarfFound);
             const auto* Dwarf=DwarfFound.Num()==1 ? Cast<ADockNPC>(DwarfFound[0]) : nullptr;
             const float ToSmithy=Dwarf ? static_cast<float>(FVector::Dist2D(Dwarf->GetActorLocation(),FVector(-865,-3760,0))) : 1e4f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_MEASURE present=%d axe=%d grip_error_cm=%.1f lean_deg=%.1f eye_cm=%.0f to_smithy_cm=%.0f lines=%d mocap=%d"),
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_MEASURE present=%d axe=%d grip_error_cm=%.1f lean_deg=%.1f eye_cm=%.0f to_smithy_cm=%.0f lines=%d mocap=%d look_pitch_deg=%.1f"),
                 Dwarf ? 1 : 0,Dwarf && Dwarf->HasAxe() ? 1 : 0,Dwarf ? Dwarf->GetSpearGripError() : 1e3f,Dwarf ? Dwarf->GetSpearLean() : 90.f,
-                Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0);
-            Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && Dwarf->CanTalk() && Dwarf->HasMocap(),
+                Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0,Dwarf ? Dwarf->GetLookAngles().Y : 99.f);
+            Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && Dwarf->CanTalk() && Dwarf->HasMocap() && Dwarf->GetLookAngles().Y<=.5f,
                 TEXT("a dwarf stands by the smithy, shorter than the townsfolk, his battle axe grounded at his side and gripped"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));

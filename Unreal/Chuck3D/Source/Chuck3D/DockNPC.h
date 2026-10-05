@@ -86,6 +86,8 @@ public:
      */
     void GiveAxe(int32 Side = 1);
     bool HasAxe() const { return bSpear && bAxe; }
+    /** Horizontal distance (cm) from the axe's haft at its head to the nearer shoulder joint, for tests. */
+    float GetAxeShoulderGap() const;
     /**
      * A dwarf by the smithy (user 2026-10-04: "a dwarf NPC by the smithy,
      * wearing dwarven armor and holding a battle axe. Bearded."): 134 cm, in

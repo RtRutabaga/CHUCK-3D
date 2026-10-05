@@ -532,7 +532,7 @@ def skin_from_body(obj, info, below=None):
         z0, fade, bone = below
         g = obj.vertex_groups.get(bone) or obj.vertex_groups.new(name=bone)
         for v in obj.data.vertices:
-            t = min(1., max(0., (z0 - v.co.z) / fade)) * .7
+            t = min(1., max(0., (z0 - v.co.z) / fade))
             if t <= 0: continue
             for e in v.groups: e.weight *= 1 - t
             g.add([v.index], t + sum(e.weight for e in v.groups if e.group == g.index), 'REPLACE')
@@ -762,7 +762,7 @@ def make_beard(info, spec, slots):
     for obj, slot in ((beard, 'Beard'), (cards, 'BeardStrands'), (rings, 'BeardRing')):
         obj.data.materials.append(slot_material(slot))
         for p in obj.data.polygons: p.use_smooth = obj is not cards
-        skin_from_body(obj, info, (chin.z, L + .1, 'spine_03'))
+        skin_from_body(obj, info, (chin.z, spec.get('chest_fade', .07), 'spine_03'))   # the hang rests on the chest, not swinging with the head
     slots['Beard'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
     slots['BeardStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
     ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})

@@ -588,7 +588,15 @@
     "l-hand-scale-incr": 0.5,
     "r-hand-scale-incr": 0.5,
     "l-foot-scale-incr": 0.35,
-    "r-foot-scale-incr": 0.35
+    "r-foot-scale-incr": 0.35,
+    "nose-scale-horiz-incr": 0.5,
+    "nose-scale-depth-incr": 0.35,
+    "nose-volume-incr": 0.7,
+    "nose-flaring-incr": 0.6,
+    "nose-point-width-incr": 0.7,
+    "nose-hump-incr": 0.35,
+    "nose-nostrils-width-incr": 0.4,
+    "nose-scale-vert-incr": 0.2
    },
    "skin": "old_caucasian_male",
    "eyes": "brown",
@@ -598,7 +606,7 @@
    "beard": {
     "length": 0.27,
     "width": 0.09,
-    "clear": 0.06,
+    "clear": 0.075,
     "braid": 0.1,
     "tint": [
      0.3,

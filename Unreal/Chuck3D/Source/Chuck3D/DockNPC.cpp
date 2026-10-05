@@ -43,7 +43,11 @@ namespace
     // leaning a little out; his fist closes on the leather wrap.
     // (ADockNPC::PoleAhead/PoleOut/PoleLean/PoleGrip: 16, 30, 4 deg, 108 cm up the shaft, whose wrap is 100-124.)
     // The dwarf's axe: closer in and a touch more upright (a shorter body), fist mid-wrap (66-86 cm).
-    constexpr float AxeAhead = 14.f, AxeOut = 28.f, AxeLean = 3.f, AxeGrip = 76.f;
+    // Out and leaning away so the double head stays clear of his pauldrons as he turns (user 2026-10-04).
+    constexpr float AxeAhead = 16.f, AxeOut = 34.f, AxeLean = 9.f, AxeGrip = 76.f;
+    // The dwarf never looks down (his beard would go through his breastplate) and turns his head
+    // less; the clip's own head and neck motion is damped to this much.
+    constexpr float DwarfLookYaw = 25.f, DwarfClipHead = .25f;
     constexpr float FistReach = 8.f;           // cm from the wrist to the middle of a closed fist
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
@@ -754,6 +758,16 @@ float ADockNPC::GetSpearGripError() const
     return static_cast<float>(FVector::Dist(Fist, Body->GetComponentTransform().TransformPosition(SpearGrip)));
 }
 
+float ADockNPC::GetAxeShoulderGap() const
+{
+    if (!HasAxe()) return 0.f;
+    const FVector HeadAt = Spear->GetComponentTransform().TransformPosition(FVector(0.f, 0.f, 112.f));
+    float Gap = 1e3f;
+    for (int32 Side = 0; Side < 2; ++Side)
+        Gap = FMath::Min(Gap, static_cast<float>(FVector::Dist2D(HeadAt, Body->GetBoneLocation(BoneNames[Of(UpperL, Side)]))));
+    return Gap;
+}
+
 float ADockNPC::GetSpearLean() const
 {
     return bSpear ? FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(Spear->GetUpVector(), FVector::UpVector)), -1.f, 1.f))) : 90.f;
@@ -945,6 +959,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         Glance = FVector2D(FMath::FRandRange(-35.f, 35.f), FMath::FRandRange(-6.f, 10.f));
     }
     if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f - 16.f * Inspect);   // his eyes on the work
+    if (Kind == EDockHuman::Dwarf) Target = FVector2D(FMath::Clamp(Target.X, -DwarfLookYaw, DwarfLookYaw), FMath::Min(Target.Y, 0.f));
     const float Rate = bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
@@ -970,6 +985,8 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             const float S = Side == 0 ? ArmOut : -ArmOut;
             BoneDelta[BoneIndex[Of(UpperL, Side)]] = Roll(S * ArmClear) * BoneDelta[BoneIndex[Of(UpperL, Side)]];
         }
+        if (Kind == EDockHuman::Dwarf)
+            for (const int32 B : { BoneIndex[Neck], BoneIndex[Head] }) BoneDelta[B] = FQuat::Slerp(FQuat::Identity, BoneDelta[B], DwarfClipHead);
         TArray<FQuat> Delta; Delta.Init(FQuat::Identity, BoneCount);
         Delta[Neck] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
         Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);

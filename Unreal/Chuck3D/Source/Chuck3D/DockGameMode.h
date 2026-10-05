@@ -27,6 +27,12 @@ private:
     float SmithCaptureTime = 0, SmithNextFrame = 0;
     int32 SmithFrame = 0;
     void TickSmithCapture(float DeltaSeconds);
+    // -ChuckDwarfCapture: Chuck at the dwarf's feet from five directions; the dwarf turns to him (never looking
+    // down), two views of each; logs his look and the axe head's clearance from his shoulders.
+    bool bDwarfCapture = false;
+    float DwarfCaptureTime = 0;
+    int32 DwarfShot = -1;
+    void TickDwarfCapture(float DeltaSeconds);
     int32 TestStage = 0;
     float StageTime = 0;
     float MaxJumpZ = 0;
