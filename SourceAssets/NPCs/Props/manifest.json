@@ -187,11 +187,81 @@
      "gain": 14.226
     }
    }
+  },
+  "BattleAxe": {
+   "fbx": "SM_BattleAxe.fbx",
+   "length_cm": 127.0,
+   "grip_cm": [
+    66.0,
+    86.0
+   ],
+   "tris": 1360,
+   "bounds_min_cm": [
+    -22.4,
+    -3.0,
+    0.0
+   ],
+   "bounds_max_cm": [
+    22.4,
+    3.0,
+    127.0
+   ],
+   "slots": {
+    "Haft": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 80.0,
+     "tint": [
+      0.3,
+      0.19,
+      0.1
+     ],
+     "gain": 7.27
+    },
+    "Wrap": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.045,
+      0.03,
+      0.02
+     ],
+     "gain": 26.931
+    },
+    "Head": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ],
+     "gain": 14.226
+    },
+    "Trim": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "gain": 14.226
+    }
+   }
   }
  },
  "generators": {
   "Anvil": "Tools/build_smith_props.py",
   "SmithHammer": "Tools/build_smith_props.py",
-  "Tongs": "Tools/build_smith_props.py"
+  "Tongs": "Tools/build_smith_props.py",
+  "BattleAxe": "Tools/build_battle_axe.py"
  }
 }

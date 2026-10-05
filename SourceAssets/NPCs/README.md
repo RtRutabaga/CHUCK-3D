@@ -71,6 +71,23 @@ docs/SETUP.md), one heavy process at a time:
   don't slide; the rear-up tell, the lunge and the flinch are laid over the
   clips. Placed by `SewerLife.cpp`; review images in `Humans/Review/Zombie_*`.
 
+- The dwarf (`Dwarf` in `humans.json`, user 2026-10-04: "a dwarf NPC by the
+  smithy, wearing dwarven armor and holding a battle axe. Bearded."): 134 cm.
+  `targets` (MakeHuman proportion targets loaded before the rig is fitted)
+  shorten his legs and arms and broaden his torso, neck, head, hands and feet.
+  The armour is layered with per-item `offset`s: a padded coat, a `mail` shirt and
+  split `mailskirt` (generated 4-in-1 mail, `Tools/build_dwarf_textures.py`,
+  `SourceAssets/Surfaces/Armor`, chosen by the item's `folder`), a cuirass,
+  `pauldron`s and `vambrace`s (sharing the Cuirass slot via `slot`), brass `trim`
+  bands along the edges of another piece (`of`, `width`), and a helmet with a
+  `nasal`. MakeHuman has no beards, so `beard` builds one (`make_beard`): blobs
+  over the jaw and a spade hang down the chest, a moustache and two braids,
+  voxel-merged and grooved, plus loose strand cards (`beard_mass.png` /
+  `beard_strands.png`, card material, tinted) and brass braid rings; skinned to
+  the head, easing onto `spine_03` toward the tip. His axe:
+  `Tools/build_battle_axe.py` (`SM_BattleAxe`, double-bitted, 127 cm), held by
+  `ADockNPC::GiveAxe` as the guards hold their spears.
+
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials
   (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).

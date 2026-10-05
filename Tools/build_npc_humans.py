@@ -37,8 +37,10 @@ SPEC = json.loads((ROOT / 'SourceAssets/NPCs/humans.json').read_text(encoding='u
 OUT = ROOT / 'SourceAssets/NPCs/Humans'
 TEX = OUT / 'Textures'
 CLOTH = ROOT / 'SourceAssets/Surfaces/Cloth'
-# Real-world size of one repeat of each fabric (Poly Haven's dimensions).
-TILE_CM = {r['asset']: r['size_cm'] for r in json.loads((CLOTH / 'manifest.json').read_text(encoding='utf-8'))['assets']}
+ARMOR = ROOT / 'SourceAssets/Surfaces/Armor'   # generated mail (Tools/build_dwarf_textures.py); an outfit item names it with `folder`
+# Real-world size of one repeat of each fabric (Poly Haven's dimensions; the mail's own).
+TILE_CM = {r['asset']: r['size_cm'] for d in (CLOTH, ARMOR) if (d / 'manifest.json').exists()
+           for r in json.loads((d / 'manifest.json').read_text(encoding='utf-8'))['assets']}
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False, primary_bone_axis='Y',
            secondary_bone_axis='X', use_armature_deform_only=True, mesh_smooth_type='FACE', bake_anim=False)
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -88,6 +90,7 @@ class Body:
         self.elbow, self.wrist = J('lowerarm_l'), J('hand_l')
         self.knee, self.ankle = J('calf_l'), J('foot_l')
         self.hips, self.neck, self.head = J('pelvis'), J('neck_01'), J('head')
+        self.shoulder = J('upperarm_l')
         self.waist_z = self.hips.z + .085
         zs = [c.z for c in self.co]
         self.top, self.floor = max(zs), min(zs)
@@ -194,6 +197,24 @@ class Body:
             # and a strap from each top corner up over the shoulder, down to the shoulder blades behind.
             strap = min(.02 - abs(abs(c.x) - .105), c.z - (top - .04 if c.y < 0 else self.neck.z - .2))
             return max(bib, strap)
+        if piece == 'mail':   # a mail shirt: sleeves just past the elbow, a high collar, to the hips (mailskirt hangs below)
+            collar = self.neck.z + .02 - c.z
+            if b in self.FOREARMS: return c.z - (self.elbow.z - opts.get('sleeve', .22) * (self.elbow.z - self.wrist.z))
+            if b in self.ARMS or b == self.NECK: return collar
+            if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .1))
+            return OUT
+        if piece == 'mailskirt':   # cut from the skirt helper: from the waist to `bottom` below it, bridging the legs
+            return min(self.waist_z + .02 - c.z, c.z - (self.waist_z - opts.get('bottom', .3)))
+        if piece == 'pauldron':   # a plate over each shoulder cap, a `drop` down the upper arm
+            if b not in self.ARMS and b not in self.TORSO: return OUT
+            return min(c.z - (self.shoulder.z - opts.get('drop', .12)), abs(c.x) - (abs(self.shoulder.x) - opts.get('inner', .05)))
+        if piece == 'vambrace':   # a plate round the forearm, below the elbow to above the wrist
+            if b not in self.FOREARMS: return OUT
+            u = self.forearm_u(c); L = self.elbow.z - self.wrist.z
+            return min(u - .18, .9 - u) * L
+        if piece == 'trim':   # a band along the edges of another piece (`of`), `width` wide: brass edging on plate
+            m = self.margin(i, opts['of'], opts['of_opts'])
+            return -1. if m <= -1. else min(m, opts.get('width', .02) - m)
         if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
             front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
             m = self.neck.z - .01 - .1 * front - c.z
@@ -239,14 +260,19 @@ PIECES = {
     'skirt':    dict(offset=.005, thickness=.004, hides=False),   # its legs are hidden in build()
     'apron':    dict(offset=.011, thickness=.003, hides=False),
     'bib':      dict(offset=.016, thickness=.004, hides=False),
+    'mail':     dict(offset=.02, thickness=.004, hides=True),
+    'mailskirt': dict(offset=.024, thickness=.004, hides=False),
+    'pauldron': dict(offset=.052, thickness=.007, hides=False),
+    'vambrace': dict(offset=.03, thickness=.005, hides=False),
+    'trim':     dict(offset=0., thickness=.006, hides=False),   # offset: just over the piece it edges (make_piece)
 }
 
 
-def fabric_gain(name, cache={}):
+def fabric_gain(name, folder=CLOTH, cache={}):
     """1 / mean linear luminance of a fabric's colour map."""
     if name not in cache:
         import numpy as np
-        img = bpy.data.images.load(str(CLOTH / f'{name}_diff_2k.jpg')); img.scale(256, 256)
+        img = bpy.data.images.load(str(folder / f'{name}_diff_2k.jpg')); img.scale(256, 256)
         a = np.array(img.pixels[:]).reshape(-1, 4)[:, :3]
         lin = np.where(a <= .04045, a / 12.92, ((a + .055) / 1.055) ** 2.4)
         cache[name] = round(1. / float((lin @ np.array([.2126, .7152, .0722])).mean()), 3)
@@ -344,7 +370,11 @@ def boot_feet(body, boots):
 
 
 def make_piece(body, piece, opts, material):
-    p = PIECES[piece]
+    p = dict(PIECES[piece])
+    if 'offset' in opts: p['offset'] = opts['offset']   # layered armour: each layer over the last
+    if piece == 'trim':   # just proud of the outer face of the piece it edges
+        base = opts['of_opts']
+        p['offset'] = base.get('offset', PIECES[opts['of']]['offset']) + PIECES[opts['of']]['thickness'] + .005
     keep = [body.covers(i, piece, opts) for i in range(len(body.co))]
     obj = body.obj.copy(); obj.data = body.obj.data.copy(); obj.name = f'{piece}'
     bpy.context.collection.objects.link(obj)
@@ -406,6 +436,211 @@ def skirt_source(body):
     return src
 
 
+SKIRTED = ('skirt', 'apron', 'mailskirt')   # cut from the skirt helper, not the body
+
+
+def skin_to(obj, rig, weights):
+    """Vertex groups from a per-vertex {bone: weight} and an armature modifier on rig."""
+    for v, w in zip(obj.data.vertices, weights):
+        for bone, x in w.items():
+            g = obj.vertex_groups.get(bone) or obj.vertex_groups.new(name=bone)
+            g.add([v.index], x, 'REPLACE')
+    obj.modifiers.new('Armature', 'ARMATURE').object = rig
+
+
+def skin_from_body(obj, info, below=None):
+    """The body's own skin weights onto obj (nearest surface), so it moves exactly
+    with the face under it; `below` = (z, fade, toward) eases vertices under z onto
+    one bone (a beard's hang resting on the chest)."""
+    activate(obj)
+    dt = obj.modifiers.new('Weights', 'DATA_TRANSFER'); dt.object = info.obj
+    dt.use_vert_data = True; dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'POLYINTERP_NEAREST'
+    dt.layers_vgroup_select_src = 'ALL'; dt.layers_vgroup_select_dst = 'NAME'
+    bpy.ops.object.datalayout_transfer(modifier=dt.name); bpy.ops.object.modifier_apply(modifier=dt.name)
+    if below:
+        z0, fade, bone = below
+        g = obj.vertex_groups.get(bone) or obj.vertex_groups.new(name=bone)
+        for v in obj.data.vertices:
+            t = min(1., max(0., (z0 - v.co.z) / fade)) * .7
+            if t <= 0: continue
+            for e in v.groups: e.weight *= 1 - t
+            g.add([v.index], t + sum(e.weight for e in v.groups if e.group == g.index), 'REPLACE')
+    obj.modifiers.new('Armature', 'ARMATURE').object = info.rig
+
+
+def face_marks(info):
+    """Nose tip, chin and the head's front-to-back middle, from the head's own vertices."""
+    head = [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD]
+    mid = [c for c in head if abs(c.x) < .008]
+    nose = min((c for c in mid if info.eye_z - .065 < c.z < info.eye_z - .015), key=lambda c: c.y)
+    chin = min((c for c in mid if c.y < nose.y + .06), key=lambda c: c.z)
+    back = max(c.y for c in head)
+    return nose, chin, (nose.y + back) / 2
+
+
+def nasal_guard(info, material):
+    """A helmet's nasal: a tapering iron bar from the brow rim down over the nose."""
+    nose, _, _ = face_marks(info)
+    top_z, bot_z = info.brow_z + .03, nose.z + .006
+    mid = [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD and abs(c.x) < .008]
+    front = lambda z: min(c.y for c in mid if abs(c.z - z) < .008)   # the face's front at that height
+    bm = bmesh.new()
+    rings = []
+    for z, half, y in ((top_z, .01, front(top_z) - .022), (bot_z + .015, .008, nose.y - .006), (bot_z, .006, nose.y - .006)):
+        rings.append([bm.verts.new((x, y + dy, z)) for x, dy in ((-half, 0), (half, 0), (half, .005), (-half, .005))])
+    for a, b in zip(rings, rings[1:]):
+        for k in range(4): bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+    bm.faces.new(list(reversed(rings[0]))); bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new('nasal'); bm.to_mesh(me); bm.free()
+    obj = bpy.data.objects.new('nasal', me); bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(material)
+    skin_from_body(obj, info)
+    box_uv(obj, 60.)
+    return obj
+
+
+def tube(bm, centres, radii, sides=10):
+    """Capped rings along a path (each perpendicular to it)."""
+    loops = []
+    for i, (p, r) in enumerate(zip(centres, radii)):
+        d = (centres[min(i + 1, len(centres) - 1)] - centres[max(i - 1, 0)]).normalized()
+        side = d.cross(Vector((0, 0, 1)))
+        if side.length < 1e-4: side = Vector((1, 0, 0))
+        side.normalize(); up = side.cross(d).normalized()
+        loops.append([bm.verts.new(p + (side * math.cos(2 * math.pi * k / sides) + up * math.sin(2 * math.pi * k / sides)) * r) for k in range(sides)])
+    for a, b in zip(loops, loops[1:]):
+        for k in range(sides): bm.faces.new((a[k], a[(k + 1) % sides], b[(k + 1) % sides], b[k]))
+    bm.faces.new(list(reversed(loops[0]))); bm.faces.new(loops[-1])
+
+
+def voxel_merge(obj, size, smooth=0):
+    activate(obj)
+    rm = obj.modifiers.new('Merge', 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = size
+    if smooth:
+        sm = obj.modifiers.new('Round', 'SMOOTH'); sm.factor = .7; sm.iterations = smooth
+    for m in list(obj.modifiers): bpy.ops.object.modifier_apply(modifier=m.name)
+
+
+def new_object(name, bm):
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    obj = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(obj)
+    return obj
+
+
+def make_beard(info, spec, slots):
+    """A full beard (MakeHuman has none): one mass over the jaw, cheeks and upper
+    lip, hanging `length` down the chest (`clear` of the armour on it), a
+    moustache and two braids ending in brass rings, voxel-merged into one smooth
+    body with clumped strands, then loose strand cards over it for a frayed edge.
+    Skinned to the head, easing onto the chest toward the tip so it rests there
+    as he looks about. Slots Beard and BeardStrands (card material, tinted) and
+    BeardRing."""
+    import random
+    rnd = random.Random(7)
+    nose, chin, head_y = face_marks(info)
+    L, W = spec.get('length', .26), spec.get('width', .085)
+    clear = spec.get('clear', .05)
+    torso = [c for i, c in enumerate(info.co) if info.bone[i] in Body.TORSO | {Body.NECK} and abs(c.x) < .06]
+    def chest_front(z):
+        near = [c.y for c in torso if abs(c.z - z) < .02]
+        return min(near) if near else chin.y + .06
+    bm = bmesh.new()
+    # 1. The jaw: face below the cheekbones, in front of the ears, clear of the nose: a blob per vertex, united by the remesh.
+    cheek_z = info.eye_z - spec.get('cheek', .045)
+    jaw = [c for i, c in enumerate(info.co) if info.bone[i] in (Body.HEAD, Body.NECK) and c.z < cheek_z and c.y < head_y - .005
+           and c.z > chin.z - .05 and not (abs(c.x) < .03 and c.z > nose.z - .016)]
+    for c in jaw:
+        n = Vector((c.x, c.y - head_y, 0)).normalized()
+        depth = .007 + .016 * min(1., max(0., (cheek_z - c.z) / .06))
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
+    # 2. The hang: a rounded spade down the chest, narrowing to the tip.
+    steps = 9
+    for k in range(steps + 1):
+        t = k / steps
+        z = chin.z + .02 - (L + .02) * t
+        back = min(chest_front(z) - clear, chin.y + .03) if t > .15 else chin.y + .045
+        depth = .05 * (1 - .55 * t)
+        half = W * (1 - .6 * t ** 1.6)
+        for sx in (-1, 0, 1):
+            bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=1.,
+                matrix=Matrix.Translation((sx * half * .45, back - depth, z)) @ Matrix.Diagonal((half * (.6 if sx else .75), depth, .045, 1.)))
+    # 3. The moustache: from under the nose, out and down past the corners of the mouth.
+    for sx in (-1, 1):
+        pts = [Vector((sx * x, nose.y + .012 + y, nose.z - .018 - zz)) for x, y, zz in ((.004, 0, 0), (.022, .006, .008), (.036, .016, .028), (.042, .022, .05))]
+        tube(bm, pts, [.009, .011, .009, .006], 8)
+    beard = new_object('beard', bm)
+    voxel_merge(beard, .0055, 14)
+    # Clumped strands: grooves running down, deeper toward the tip.
+    for v in beard.data.vertices:
+        a = math.atan2(v.co.x, -(v.co.y - head_y))
+        fall = min(1., max(0., (chin.z - v.co.z) / L))
+        groove = math.sin(a * 46 + v.co.z * 9) * .5 + math.sin(a * 97 - v.co.z * 23 + 1.7) * .3
+        v.co += v.normal * groove * (.0025 + .005 * fall)
+    beard.data.update()
+    # Braids from the tip, each ending in a brass ring.
+    bm, rings_bm = bmesh.new(), bmesh.new()
+    tip_z = chin.z - L
+    tip_back = chest_front(tip_z + .03) - clear
+    length, lobes = spec.get('braid', .1), 7
+    for sx in (-1, 1):
+        x0, y0 = sx * W * .2, tip_back - .022
+        for k in range(lobes):
+            t = k / lobes
+            r = .013 * (1 - .35 * t)
+            bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=5, radius=1.,
+                matrix=Matrix.Translation((x0 + sx * (.004 if k % 2 else -.004), y0 - .004 * t, tip_z + .025 - length * t))
+                @ Matrix.Diagonal((r, r * .9, length / lobes * .75, 1.)))
+        rz = tip_z + .025 - length * .92
+        tube(rings_bm, [Vector((x0, y0 - .004, rz + .008)), Vector((x0, y0 - .004, rz - .008))], [.011, .011], 12)
+    braids = new_object('braids', bm)
+    voxel_merge(braids, .003)
+    bpy.ops.object.select_all(action='DESELECT'); braids.select_set(True); beard.select_set(True)
+    bpy.context.view_layer.objects.active = beard; bpy.ops.object.join()
+    rings = new_object('beard_rings', rings_bm)
+    # 4. Loose strands: cards hanging from points on the lower beard, a little proud, past its edge.
+    bm, uv_cards = bmesh.new(), []
+    pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.co.z < chin.z + .015 and v.normal.y < .2]
+    rnd.shuffle(pts)
+    for co, n in pts[:spec.get('cards', 110)]:
+        flat = Vector((n.x, n.y, 0))
+        side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
+        width, length = rnd.uniform(.012, .022), rnd.uniform(.05, .12)
+        u0 = rnd.uniform(0, .85)
+        col = []
+        for k in range(5):
+            t = k / 4
+            p = co + n * (.002 + .004 * t + .01 * t * t) - Vector((0, 0, length * t))
+            col.append((bm.verts.new(p - side * width / 2), bm.verts.new(p + side * width / 2), 1 - t))
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+    uvl = bm.loops.layers.uv.new('UVMap')
+    for f, uvs in uv_cards:
+        for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
+    cards = new_object('beard_strands', bm)
+    # UVs on the mass: around the head's vertical axis, strands running down (8 cm across, 18 cm down per repeat).
+    me = beard.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name='UVMap')
+    for poly in me.polygons:
+        for li in poly.loop_indices:
+            c = me.vertices[me.loops[li].vertex_index].co
+            uv.data[li].uv = (math.atan2(c.x, -(c.y - head_y)) * .09 / .08, c.z / .18)
+    box_uv(rings, 60.)
+    # Skin: the face's own weights under it, easing onto the chest down the hang.
+    for obj, slot in ((beard, 'Beard'), (cards, 'BeardStrands'), (rings, 'BeardRing')):
+        obj.data.materials.append(slot_material(slot))
+        for p in obj.data.polygons: p.use_smooth = obj is not cards
+        skin_from_body(obj, info, (chin.z, L + .1, 'spine_03'))
+    slots['Beard'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
+    slots['BeardStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
+    ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})
+    slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
+    print('CHUCK_BEARD', f'length_cm={L * 100:.0f}', f'mass_verts={len(beard.data.vertices)}', f'cards={len(uv_cards) // 4}')
+    return [beard, cards, rings]
+
+
 def slot_material(name):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     return m
@@ -414,6 +649,12 @@ def slot_material(name):
 def build(name, spec):
     reset_scene()
     body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
+    # Proportion targets on top of the macro sliders (the dwarf: short legs, broad torso, big hands and head),
+    # before the rig, so the rig is fitted to the shape.
+    for target, weight in spec.get('targets', {}).items():
+        path = TargetService.target_full_path(target)
+        if not path: raise ValueError(f'No MakeHuman target {target}')
+        TargetService.load_target(body, path, weight=weight, name=target)
     HumanService.add_builtin_rig(body, 'game_engine')
     rig = body.parent
     parts = {}
@@ -426,7 +667,7 @@ def build(name, spec):
     if spec.get('hair'): asset('Hair', DATA / f"hair/{spec['hair']}/{spec['hair']}.mhclo")
     # Bake the shape; keep the skirt helper if the outfit needs it, then drop the helpers.
     TargetService.bake_targets(body)
-    skirt_src = skirt_source(body) if any(it['piece'] in ('skirt', 'apron') for it in spec['outfit']) else None
+    skirt_src = skirt_source(body) if any(it['piece'] in SKIRTED for it in spec['outfit']) else None
     apply_modifier(body, 'MASK')
     for obj in parts.values():
         if obj and obj.data.shape_keys:
@@ -441,17 +682,25 @@ def build(name, spec):
     if skirt_src:
         skirt = Body(skirt_src, rig, eye_z); skirt.floor, skirt.top = info.floor, info.top
         # Legs under a long skirt can't be seen: the skin goes, as under other cloth.
-        hide = [info.bone[i] in Body.LEGS | {'pelvis'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
+        if any(it['piece'] in ('skirt', 'apron') for it in spec['outfit']):
+            hide = [info.bone[i] in Body.LEGS | {'pelvis'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
     meshes = [body] + [o for o in parts.values() if o]
     slots = {}
     for item in spec['outfit']:
-        piece = item['piece']; slot = piece.capitalize()
-        obj, keep = make_piece(skirt if piece in ('skirt', 'apron') else info, piece, item, slot_material(slot))
-        if piece in ('skirt', 'apron'): soften_skirt(obj, info)
+        piece = item['piece']; slot = item.get('slot', piece.capitalize())
+        if piece == 'trim':
+            item = dict(item, of_opts=next(it for it in spec['outfit'] if it['piece'] == item['of']))
+        obj, keep = make_piece(skirt if piece in SKIRTED else info, piece, item, slot_material(slot))
+        if piece in SKIRTED: soften_skirt(obj, info)
         meshes.append(obj)
-        slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'])}
+        folder = ROOT / item['folder'] if 'folder' in item else CLOTH
+        slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'], folder)}
+        if 'folder' in item: slots[slot]['folder'] = item['folder']
+        if piece == 'helmet' and item.get('nasal'): meshes.append(nasal_guard(info, slot_material(slot)))
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
     if skirt_src: bpy.data.objects.remove(skirt_src)
+    if spec.get('beard'):
+        meshes += make_beard(info, spec['beard'], slots)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -510,13 +759,14 @@ def build(name, spec):
     hi2 = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
     print('CHUCK_HUMAN', name, f'tris={tris}', f'height_cm={(hi2 - lo2) * 100:.1f}', f'bones={len(rig.data.bones)}', sorted(slots))
     if REVIEW:
-        render_review(name, meshes, slots)
+        render_review(name, meshes, slots, spec['height_cm'] / 180.)
     return {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots}
 
 
-def render_review(name, meshes, slots):
+def render_review(name, meshes, slots, k=1.):
     import os
-    preview = {'Skin': (.6, .42, .34), 'Eye': (.1, .08, .06), 'Brow': (.12, .08, .05), 'Lash': (.05, .04, .03), 'Hair': (.15, .1, .06)}
+    preview = {'Mail': (.1, .11, .14), 'Skin': (.6, .42, .34), 'Eye': (.1, .08, .06), 'Brow': (.12, .08, .05), 'Lash': (.05, .04, .03), 'Hair': (.15, .1, .06)}
+    k3 = lambda v: tuple(x * k for x in v)   # cameras scaled to the body (the dwarf is short)
     for slot, info in slots.items():
         m = bpy.data.materials.get(slot)
         if not m: continue
@@ -527,7 +777,7 @@ def render_review(name, meshes, slots):
     for tag, loc, rot in (('front', (2.6, -1.1, 1.15), (82, 0, 67)), ('back', (-2.6, 1.1, 1.15), (82, 0, 247)),
                           ('feet', (.9, -.5, .45), (60, 0, 60)), ('head', (.75, -.35, 1.68), (88, 0, 65))):
         cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam)
-        cam.location = loc; cam.rotation_euler = tuple(math.radians(a) for a in rot); cam.data.lens = 45; s.camera = cam
+        cam.location = k3(loc); cam.rotation_euler = tuple(math.radians(a) for a in rot); cam.data.lens = 45; s.camera = cam
         s.render.engine = 'BLENDER_WORKBENCH'; s.display.shading.color_type = 'MATERIAL'; s.display.shading.light = 'STUDIO'
         s.render.resolution_x, s.render.resolution_y = 800, 1000
         s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)

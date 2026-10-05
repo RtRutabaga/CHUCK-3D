@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -78,6 +78,22 @@ public:
     /** A guard's spear (Tools/build_spear.py): upright beside the foot on Side (0 left, 1 right), that fist round its grip. */
     void GiveSpear(int32 Side = 1);
     bool HasSpear() const { return bSpear; }
+    /**
+     * The dwarf's battle axe (Tools/build_battle_axe.py: double-bitted, 127 cm):
+     * held as the guards hold their spears, butt on the ground beside the foot
+     * on Side, that fist round its leather wrap (GetSpearGripError/GetSpearLean
+     * measure it too).
+     */
+    void GiveAxe(int32 Side = 1);
+    bool HasAxe() const { return bSpear && bAxe; }
+    /**
+     * A dwarf by the smithy (user 2026-10-04: "a dwarf NPC by the smithy,
+     * wearing dwarven armor and holding a battle axe. Bearded."): 134 cm, in
+     * mail, breastplate, pauldrons and a nasal helm edged in brass, a long
+     * braided beard, his axe grounded at his right hand. He waits on the smith,
+     * watching the rat; a couple of short lines.
+     */
+    static ADockNPC* SpawnDwarf(UWorld* World, const FVector& Feet, float Yaw);
     /** How far the spear fist is from the spear's grip (cm), for tests. */
     float GetSpearGripError() const;
     /** How far the spear leans from upright (deg), for tests. */
@@ -182,7 +198,10 @@ private:
     void PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) const;
     UPROPERTY() UStaticMeshComponent* Spear = nullptr;
     UPROPERTY() TObjectPtr<UStaticMesh> SpearMesh;
-    bool bSpear = false;
+    UPROPERTY() TObjectPtr<UStaticMesh> AxeMesh;
+    bool bSpear = false, bAxe = false;
+    // Where the pole stands and where the fist closes: the spear's, or the axe's (GiveAxe).
+    float PoleAhead = 16.f, PoleOut = 30.f, PoleLean = 4.f, PoleGrip = 108.f;
     int32 SpearSide = 1;                          // 0 left hand, 1 right
     FVector SpearGrip = FVector::ZeroVector;      // component space: where his fist closes on the shaft
     void HoldSpear(TArray<FTransform>& Space) const;

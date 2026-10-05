@@ -1,0 +1,28 @@
+{
+  "provider": "generated",
+  "generator": "Tools/build_dwarf_textures.py",
+  "license": "project-original",
+  "assets": [
+    {
+      "file": "chainmail_diff_2k.jpg",
+      "asset": "chainmail",
+      "map": "diff",
+      "resolution": 2048,
+      "size_cm": 14.4
+    },
+    {
+      "file": "chainmail_arm_2k.jpg",
+      "asset": "chainmail",
+      "map": "arm",
+      "resolution": 2048,
+      "size_cm": 14.4
+    },
+    {
+      "file": "chainmail_nor_dx_2k.jpg",
+      "asset": "chainmail",
+      "map": "nor_dx",
+      "resolution": 2048,
+      "size_cm": 14.4
+    }
+  ]
+}

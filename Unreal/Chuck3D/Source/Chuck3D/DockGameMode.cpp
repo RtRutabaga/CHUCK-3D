@@ -1933,7 +1933,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // Every human stands with arms down: not the model's A-pose (hands
             // ~45 cm out), not held out in front like a sleepwalker (40+ cm
             // ahead). Motion-capture hands clasped or on a hip sit ~17 cm ahead.
-            Check(PoseHumans==5 && bPoseOK,TEXT("the worker, the three guards and the market woman stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
+            Check(PoseHumans==6 && bPoseOK,TEXT("the worker, the three guards, the market woman and the dwarf stand with their arms down by their sides (not the A-pose, not held out in front), fingers gently curled"));
             // The 2D game's townsfolk, where it put them, with its lines.
             TArray<AActor*> GuardFound, WomanFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),GuardFound);
@@ -1986,6 +1986,16 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 ToGate,ToHatch,GuardC ? GuardC->GetSpearGripError() : 1e3f,GuardC ? GuardC->GetSpearLean() : 90.f);
             Check(GuardC && GuardC->HasSpear() && GuardC->GetSpearGripError()<5.f && GuardC->GetSpearLean()<10.f && ToGate<250.f && ToHatch>300.f,
                 TEXT("a third guard stands by the Dock Street side gate near the sewer hatch, spear upright and gripped, clear of the hatch"));
+            // The dwarf by the smithy: short, his battle axe grounded at his side, fist round its wrap.
+            TArray<AActor*> DwarfFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),DwarfFound);
+            const auto* Dwarf=DwarfFound.Num()==1 ? Cast<ADockNPC>(DwarfFound[0]) : nullptr;
+            const float ToSmithy=Dwarf ? static_cast<float>(FVector::Dist2D(Dwarf->GetActorLocation(),FVector(-865,-3760,0))) : 1e4f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_MEASURE present=%d axe=%d grip_error_cm=%.1f lean_deg=%.1f eye_cm=%.0f to_smithy_cm=%.0f lines=%d mocap=%d"),
+                Dwarf ? 1 : 0,Dwarf && Dwarf->HasAxe() ? 1 : 0,Dwarf ? Dwarf->GetSpearGripError() : 1e3f,Dwarf ? Dwarf->GetSpearLean() : 90.f,
+                Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0);
+            Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && Dwarf->CanTalk() && Dwarf->HasMocap(),
+                TEXT("a dwarf stands by the smithy, shorter than the townsfolk, his battle axe grounded at his side and gripped"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

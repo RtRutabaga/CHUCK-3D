@@ -598,6 +598,147 @@
      "texture": "Textures/short01_diffuse.png"
     }
    }
+  },
+  "Dwarf": {
+   "fbx": "Dwarf/SK_Dwarf.fbx",
+   "height_cm": 134,
+   "tris": 96368,
+   "slots": {
+    "Gambeson": {
+     "type": "fabric",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.09,
+      0.05,
+      0.035
+     ],
+     "tile_cm": 35.2,
+     "gain": 4.937
+    },
+    "Mail": {
+     "type": "fabric",
+     "fabric": "chainmail",
+     "tint": [
+      0.16,
+      0.16,
+      0.165
+     ],
+     "tile_cm": 14.4,
+     "gain": 3.468,
+     "folder": "SourceAssets/Surfaces/Armor"
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.04,
+      0.03,
+      0.022
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.022,
+      0.014
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Cuirass": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.2,
+      0.2,
+      0.21
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Trim": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.026,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Helmet": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.2,
+      0.2,
+      0.21
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Beard": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      0.3,
+      0.13,
+      0.055
+     ]
+    },
+    "BeardStrands": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      0.36,
+      0.17,
+      0.075
+     ]
+    },
+    "BeardRing": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow009.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

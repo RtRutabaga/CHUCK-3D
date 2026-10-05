@@ -41,14 +41,16 @@ namespace
     constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
     // The spear: its butt on the ground beside his right foot, a touch ahead,
     // leaning a little out; his fist closes on the leather wrap.
-    constexpr float SpearAhead = 16.f, SpearOut = 30.f, SpearLeanDeg = 4.f;
-    constexpr float SpearGripHeight = 108.f;   // cm up the shaft (the wrap is 100-124)
+    // (ADockNPC::PoleAhead/PoleOut/PoleLean/PoleGrip: 16, 30, 4 deg, 108 cm up the shaft, whose wrap is 100-124.)
+    // The dwarf's axe: closer in and a touch more upright (a shorter body), fist mid-wrap (66-86 cm).
+    constexpr float AxeAhead = 14.f, AxeOut = 28.f, AxeLean = 3.f, AxeGrip = 76.f;
     constexpr float FistReach = 8.f;           // cm from the wrist to the middle of a closed fist
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
-        TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith") };
+        TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
+        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf") };
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
@@ -124,8 +126,9 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> SideGuard(MeshPaths[4]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Zombie(MeshPaths[5]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Smith(MeshPaths[6]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Dwarf(MeshPaths[7]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
-    HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object;
+    HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
@@ -139,6 +142,8 @@ ADockNPC::ADockNPC()
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SpearAsset(TEXT("/Game/Characters/Humans/Props/SM_Spear.SM_Spear"));
     SpearMesh = SpearAsset.Object;
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> AxeAsset(TEXT("/Game/Characters/Humans/Props/SM_BattleAxe.SM_BattleAxe"));
+    AxeMesh = AxeAsset.Object;
     Spear = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Spear"));
     Spear->SetupAttachment(Body);
     Spear->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -157,13 +162,25 @@ void ADockNPC::GiveSpear(int32 Side)
     PlaceSpear();
 }
 
+void ADockNPC::GiveAxe(int32 Side)
+{
+    bSpear = bAxe = AxeMesh != nullptr;
+    if (!bSpear) return;
+    SpearSide = FMath::Clamp(Side, 0, 1);
+    PoleAhead = AxeAhead; PoleOut = AxeOut; PoleLean = AxeLean; PoleGrip = AxeGrip;
+    Spear->SetStaticMesh(AxeMesh);
+    Spear->SetVisibility(true);
+    Grip[SpearSide] = 1.f;
+    PlaceSpear();
+}
+
 void ADockNPC::PlaceSpear()
 {
     // Which way is out on the spear side (the left arm's side is ArmOut, from the rest solve).
     const float Out = SpearSide == 1 ? -ArmOut : ArmOut;
-    const FRotator Lean(0.f, 0.f, Out * SpearLeanDeg);   // the top leans out, away from the body
-    Spear->SetRelativeLocationAndRotation(FVector(SpearAhead, Out * SpearOut, 0.f), Lean);
-    SpearGrip = FVector(SpearAhead, Out * SpearOut, 0.f) + Lean.RotateVector(FVector(0.f, 0.f, SpearGripHeight));
+    const FRotator Lean(0.f, 0.f, Out * PoleLean);   // the top leans out, away from the body
+    Spear->SetRelativeLocationAndRotation(FVector(PoleAhead, Out * PoleOut, 0.f), Lean);
+    SpearGrip = FVector(PoleAhead, Out * PoleOut, 0.f) + Lean.RotateVector(FVector(0.f, 0.f, PoleGrip));
 }
 
 ADockNPC* ADockNPC::SpawnHuman(UWorld* World, EDockHuman Kind, const FVector& Feet, float Yaw)
@@ -436,8 +453,22 @@ ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Ya
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnDwarf(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::Dwarf, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("Dwarf"));
+    NPC->DisplayName = TEXT("Dwarf");
+    NPC->Lines = { TEXT("Keep clear of the edge, rat."), TEXT("He's had my other axe a week. Slow work, iron.") };
+    NPC->GiveAxe(1);
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // A dwarf waiting on the smith, east of the forge's bellows in front of
+    // the smithy, turned a little toward the anvil; his axe at his right hand.
+    SpawnDwarf(World, FVector(-520, -3625, 0), 120.f);
     // The smith at his anvil in front of the smithy, the forge at his left
     // hand (DockPlaza.cpp), facing out over the plaza.
     SpawnBlacksmith(World, FVector(-950, -3664, 0), 90.f);
@@ -534,7 +565,7 @@ void ADockNPC::BeginPlay()
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
     // now and then (each from its own random point in the clip).
-    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard) ? ClipStandLook : ClipStandHip;
+    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard || Kind == EDockHuman::Dwarf) ? ClipStandLook : ClipStandHip;
     bool bClips = !BoneIndex.Contains(INDEX_NONE);
     for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
     if (bClips)
