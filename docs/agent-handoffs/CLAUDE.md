@@ -2166,3 +2166,16 @@ Next part of the work can be done here.
 - **Repeated stale `.git/index.lock`:** suspect OneDrive sync.
 
 Next part of the work can be done here.
+
+## Old sailor with a pipe (user 2026-10-05)
+
+- **Request:** an older sailor on the pier, like the keeper with a shorter beard, smoking a pipe.
+- **Source:** `ab00272` on main.
+  - `humans.json` Sailor; `build_npc_humans.py` (`mouth_cm` in the manifest).
+  - New: `build_sailor_props.py`.
+  - `DockNPC.cpp/.h` (`SpawnSailor`, `PoseSailor`, `TickSailor`) and `DockGameMode.cpp` (the check and `-ChuckSailorCapture`).
+  - `Verify-Package.ps1`.
+- **Verified:** package 152, `Local/verify-package-20261005-152630.log`.
+- **Remaining:**
+  - Beard detail.
+  - Not played by the user.

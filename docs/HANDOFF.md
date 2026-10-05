@@ -2,6 +2,37 @@
 
 ## Current launcher and integration status
 
+**Update (Claude, October 5, user request: an older sailor NPC on the pier like the tavern keeper but with a shorter beard, smoking a pipe):** runtime `ab00272`, on `7aa6b2e`.
+
+- **Him** (`Sailor` in `humans.json`):
+  - The keeper's face and brows, older (age 1.0) and leaner, 176 cm, with grey brows (`brow_tint`).
+  - A short grey beard: 4 cm, no braids; `card_scale` 0.35 keeps the strands short.
+  - A navy watch cap with a rolled cuff (a rolled `trim` of the cap; plain wool, since the bouclé read as tweed), a navy pea coat (the gambeson cut), trousers and sea boots.
+  - 62.5k tris.
+- **Builder:** every human built from now on records `mouth_cm` in the manifest (Unreal component space, from the face landmarks). The sailor's is (14.7, 0, 157.2).
+- **Pipe:** `Tools/build_sailor_props.py` makes `SM_Pipe`, a half-bent briar with a dark bit and an ember in the bowl (`M_FireEmber`). It is clenched in the right corner of his mouth and placed each frame from the head bone, relative to its model pose. Chuck's cigarette wisp, doubled, rises from the bowl.
+- **Motion:** every 10 s his right hand cups the bowl (0.8 s up, held to 2.8 s, down by 3.6 s), blended from the idle's own hand. At 3 s he breathes out a 1.4 s stream of smoke puffs (`M_SmokePuff` on spheres, human-sized, drifting on a light breeze). Otherwise he is on the StandHip idle, glancing about and turning to the rat.
+- **Lines** (text): "Weather's turning." and "Seen bigger rats than you in a ship's bilge."
+- **Place:** (2180, 3175), yaw 60, on the court pier. That is near its outer end, 95 cm off the route line at y 3080 and about 1.5 m from the slide's climb-out at (2311, 3080).
+- **Review mode:** `-ChuckSailorCapture` films him head-and-shoulders for 12 s (`Saved/Screenshots/Windows/Sailor`).
+- **Tests:** new check covering his place on the pier and off its line, the pipe within 1 cm of his mouth, at least 2 draws, the worst hand-to-bowl error under 4 cm, the smoke puffs and his lines. He is exempt from the arms-down check. The verifier requires `CHUCK_SAILOR_SPAWNED pipe=1 smoke=1 puff=1`, with thresholds of 150/151.
+
+The candidate passed `-MotionCapture` **152** with every gate, including the court-pier routes and the slide's climb-out onto the pier (`Local/verify-package-20261005-152630.log`). Measured: `pipe_mouth_cm=0.0 draws=12 hold_cm=3.4 puffs=234`.
+
+Promoted to `Builds/Windows`; the receipt `ab00272` was written and checked with `-CheckOnly`. The previous package is kept as `Builds/Windows-Previous-20261005-Sailor`.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_Sailor_{pipe,wide}.png`, `blender_Sailor_body.png`.
+
+**Git lock:** a third stale empty `.git/index.lock` (15:17, no git process; OneDrive syncing) blocked the first commit. It was removed after checking. The receipt was briefly written against `7aa6b2e`, then rewritten.
+
+Flaws:
+- The beard is card-built: blocky up close.
+- The bowl's wisp is faint.
+- The hand-to-bowl margin is 3.4 of 4 cm.
+- Not played by the user; no voice yet (text lines only).
+
+Next part of the work could be done by either agent — preference: Claude for his motion or a voiced line if you supply one.
+
 **Update (Claude, October 5, user requests: the fountain-plaza male guard's "Move along, rat!" and the sewer guard's "Stick to the docks, rat!" from ElevenLabs clips):** runtime `66f3ef3`, on `1a4cc43`.
 
 - **Lines:**
