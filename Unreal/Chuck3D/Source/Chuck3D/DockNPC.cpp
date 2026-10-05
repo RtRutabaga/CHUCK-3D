@@ -27,10 +27,11 @@ namespace
     // The humans' shared skeleton: MPFB's game_engine rig (Unreal mannequin
     // names, three bones per finger). Each R bone directly follows its L bone.
     enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR,
-        ThumbL, ThumbR, MiddleL, MiddleR, BoneCount };
+        ThumbL, ThumbR, MiddleL, MiddleR, ThighL, ThighR, CalfL, CalfR, FootL, FootR, BallL, BallR, BoneCount };
     const TCHAR* BoneNames[] = { TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"), TEXT("neck_01"), TEXT("head"),
         TEXT("clavicle_l"), TEXT("clavicle_r"), TEXT("upperarm_l"), TEXT("upperarm_r"), TEXT("lowerarm_l"), TEXT("lowerarm_r"), TEXT("hand_l"), TEXT("hand_r"),
-        TEXT("thumb_01_l"), TEXT("thumb_01_r"), TEXT("middle_01_l"), TEXT("middle_01_r") };
+        TEXT("thumb_01_l"), TEXT("thumb_01_r"), TEXT("middle_01_l"), TEXT("middle_01_r"),
+        TEXT("thigh_l"), TEXT("thigh_r"), TEXT("calf_l"), TEXT("calf_r"), TEXT("foot_l"), TEXT("foot_r"), TEXT("ball_l"), TEXT("ball_r") };
     // Fingers: thumb, index, middle, ring, little; three joints each.
     const TCHAR* FingerNames[] = { TEXT("thumb"), TEXT("index"), TEXT("middle"), TEXT("ring"), TEXT("pinky") };
     // Degrees each joint bends toward the palm: a hand at rest (the little
@@ -54,7 +55,28 @@ namespace
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
         TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
-        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper") };
+        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper"),
+        TEXT("/Game/Characters/Humans/Bobert/SK_Bobert.SK_Bobert") };
+    // Bobert's barrel (Tools/build_bobert_barrel.py; its manifest entry has the
+    // same numbers): lying along its X, mouth to +X, origin on the ground under
+    // its middle (cm). The inside floor rises toward the ends with the bilge.
+    constexpr float BarrelLength = 86.f, BarrelBelly = 38.f, BarrelEnd = 31.f, BarrelStave = 2.6f, BarrelAxisZ = 38.6f;
+    constexpr float BarrelBedroll = -18.8f;   // the front of the rolled blanket against the back head (inside face at -37.3)
+    float BarrelRadius(float X) { const float T = FMath::Min(1.f, FMath::Abs(X) / (BarrelLength * .5f)); return BarrelBelly - (BarrelBelly - BarrelEnd) * T * T; }
+    float BarrelFloor(float X) { return BarrelAxisZ - (BarrelRadius(X) - BarrelStave); }
+    // His sleeping pose (degrees; tried on his built body and barrel in Blender
+    // before it was written here): the small of his back leaning back into the
+    // blanket, slumping forward above it, the neck forward and the head bowed
+    // and fallen to one side; knees up and a little apart, shins down and
+    // forward to the floor; forearms folded over the knees.
+    constexpr float SleepLean = 14.f, SleepCurl = 22.f, SleepNeck = 38.f, SleepNod = 50.f, SleepTiltDeg = 14.f;
+    constexpr float SleepKnee = 45.f, SleepSpread = .22f;
+    // Measured on the posed body, as fractions of his thigh bone: how far his
+    // seat is below the hip joints (where his boots are put on the floor), how
+    // far his lowest point is below them, and how far his back is behind them.
+    constexpr float SleepSeatDrop = .283f, SleepLift = .322f, SleepBack = .439f;
+    constexpr float SleepSquash = 2.5f;         // cm his back presses into the blanket
+    constexpr float SleepBreath = 5.5f;         // s, one slow sleeping breath
     // The tavern keeper's work (component space: his feet, X forward, Y right).
     // His left fist on the tankard's handle (Tools/build_keeper_props.py: the
     // origin), the body TankardBody toward its +X, the mouth TankardMouth up.
@@ -139,9 +161,13 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Smith(MeshPaths[6]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Dwarf(MeshPaths[7]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Keeper(MeshPaths[8]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> BobertBody(MeshPaths[9]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
-    HumanMeshes[8] = Keeper.Object;
+    HumanMeshes[8] = Keeper.Object; HumanMeshes[9] = BobertBody.Object;
+    // Bobert's barrel (Tools/build_bobert_barrel.py).
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> BarrelAsset(TEXT("/Game/Characters/Humans/Props/SM_BobertBarrel.SM_BobertBarrel"));
+    BarrelMesh = BarrelAsset.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
@@ -606,6 +632,7 @@ void ADockNPC::BeginPlay()
         }
         else FingerBone.Reset();
     }
+    if (IsBobert() && !BoneIndex.Contains(INDEX_NONE)) SolveSleep();
     HomeYaw = static_cast<float>(GetActorRotation().Yaw);
     ZHome = GetActorLocation();
     if (bSpear) PlaceSpear();   // given before play began: place it now the arms are known
@@ -969,6 +996,7 @@ void ADockNPC::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     Clock += DeltaSeconds;
     if (Kind == EDockHuman::Zombie) { TickZombie(DeltaSeconds); UpdatePose(DeltaSeconds); return; }
+    if (IsBobert()) { SleepClock += DeltaSeconds; UpdatePose(DeltaSeconds); return; }   // asleep: no looking about, no notice of the rat
     // Where he's looking: at Chuck when the rat's near, otherwise idle glances
     // (out over the harbour, down the quay) every few seconds.
     FVector2D Target = Glance;
@@ -1018,6 +1046,15 @@ void ADockNPC::Tick(float DeltaSeconds)
 void ADockNPC::UpdatePose(float DeltaSeconds)
 {
     if (!Body->GetSkinnedAsset() || BoneIndex.Contains(INDEX_NONE)) return;
+    if (IsBobert())
+    {
+        if (Sleep.Num() != BoneCount) return;
+        TArray<FTransform> Space;
+        PoseBobert(Space);
+        const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+        for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
+        return;
+    }
     const float T = Clock + Phase;
     if (HasMocap())
     {
@@ -1521,4 +1558,176 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
     if (RagError > 3.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_REACH phase=%d into=%.2f rag_cm=%.1f fist=%s"), Now, Into, RagError, *P.Fist.ToString());
     // The rag bunched in his fist, its tail falling toward him.
     if (Rag) Rag->SetRelativeTransform(FTransform(FRotator(0.f, 90.f, 0.f), F));
+}
+
+ADockNPC* ADockNPC::SpawnBobert(UWorld* World, const FVector& BarrelAt, float Yaw)
+{
+    // His barrel first: the art, and a hidden cylinder of the same size lying
+    // along it that is the solid part (the dock barrels' way); Chuck can climb
+    // on it but not in, so the old man is left alone.
+    AActor* Cask = World->SpawnActor<AActor>(BarrelAt, FRotator(0.f, Yaw, 0.f));
+    auto* NPC = SpawnHuman(World, EDockHuman::Bobert, BarrelAt, Yaw);
+    if (!NPC) { if (Cask) Cask->Destroy(); return nullptr; }
+    if (Cask)
+    {
+        auto* Root = NewObject<USceneComponent>(Cask, TEXT("Root"));
+        Cask->SetRootComponent(Root);
+        Root->RegisterComponent();
+        Cask->SetActorLocationAndRotation(BarrelAt, FRotator(0.f, Yaw, 0.f));
+        if (NPC->BarrelMesh)
+        {
+            auto* Art = NewObject<UStaticMeshComponent>(Cask, TEXT("Art"));
+            Art->SetMobility(EComponentMobility::Movable);
+            Art->SetStaticMesh(NPC->BarrelMesh);
+            Art->SetupAttachment(Root);
+            Art->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            Art->SetCanEverAffectNavigation(false);
+            Art->RegisterComponent();
+        }
+        if (UStaticMesh* Cylinder = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")))
+        {
+            auto* Solid = NewObject<UStaticMeshComponent>(Cask, TEXT("Solid"));
+            Solid->SetMobility(EComponentMobility::Movable);
+            Solid->SetStaticMesh(Cylinder);
+            Solid->SetupAttachment(Root);
+            // The engine cylinder is 100 cm, standing on Z: laid down along the barrel's X.
+            Solid->SetRelativeLocationAndRotation(FVector(0.f, 0.f, BarrelAxisZ), FRotator(90.f, 0.f, 0.f));
+            Solid->SetRelativeScale3D(FVector(2.f * BarrelBelly, 2.f * BarrelBelly, BarrelLength) / 100.f);
+            Solid->SetCollisionProfileName(TEXT("BlockAll"));
+            Solid->SetVisibility(false);
+            Solid->RegisterComponent();
+        }
+        Cask->Tags.Add(TEXT("BobertBarrel"));
+        NPC->Barrel = Cask;
+    }
+    NPC->Tags.Add(TEXT("Bobert"));
+    NPC->DisplayName.Empty();   // never named (GAME-BIBLE.md), never talked to: no lines
+    // He isn't the solid part; the barrel is.
+    NPC->Blocker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    NPC->SetGrip(0, .3f); NPC->SetGrip(1, .3f);   // hands loose, a little curled
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_BOBERT_SPAWNED body=%d barrel=%d at=%s yaw=%.0f"), NPC->HumanMeshes[static_cast<int32>(EDockHuman::Bobert)] ? 1 : 0,
+        NPC->BarrelMesh ? 1 : 0, *BarrelAt.ToString(), Yaw);
+    return NPC;
+}
+
+void ADockNPC::SolveSleep()
+{
+    // As SolveRest: aim each bone in turn from the model's A-pose (component
+    // space, turned about its own joint, children following), measuring the
+    // posed skeleton after every step. Then seat the body in the barrel.
+    Sleep.Init(FQuat::Identity, BoneCount);
+    TArray<FTransform> Space;
+    const auto At = [&](EBone B) { return Space[BoneIndex[B]].GetLocation(); };
+    const auto Turn = [&](EBone B, const FQuat& Q) { Sleep[B] = Q * Sleep[B]; Solve(Sleep, Space); };
+    const auto Aim = [&](EBone B, EBone Child, const FVector& Want)
+    {
+        Turn(B, FQuat::FindBetweenNormals((At(Child) - At(B)).GetSafeNormal(), Want.GetSafeNormal()));
+    };
+    const auto Rad = [](float Degrees) { return FMath::DegreesToRadians(Degrees); };
+    Solve(Sleep, Space);
+    const float S = FMath::Sign(static_cast<float>(At(UpperL).Y));   // the side his left limbs are on
+    const float Side[2] = { S, -S };
+    SleepTilt = S;
+    HeadUpLocal = Space[BoneIndex[Head]].GetRotation().UnrotateVector((At(Head) - At(Neck)).GetSafeNormal());
+    const float Thigh = static_cast<float>(FVector::Dist(At(ThighL), At(CalfL)));
+    const float Calf = static_cast<float>(FVector::Dist(At(CalfL), At(FootL)));
+    const float Ankle = static_cast<float>(At(FootL).Z);   // the ankle above his soles, standing
+    FVector FootRest = At(BallL) - At(FootL);
+    FootRest = FVector(FootRest.Size2D(), 0.f, FootRest.Z).GetSafeNormal();
+    // The back: leaning into the blanket low, slumping forward higher up; the head bowed and fallen to his left.
+    Aim(Spine1, Spine2, FVector(-FMath::Sin(Rad(SleepLean)), 0.f, FMath::Cos(Rad(SleepLean))));
+    Aim(Spine2, Chest, FVector(-FMath::Sin(Rad(SleepLean * .4f)), 0.f, FMath::Cos(Rad(SleepLean * .4f))));
+    Aim(Chest, Neck, FVector(FMath::Sin(Rad(SleepCurl)), S * .05f, FMath::Cos(Rad(SleepCurl))));
+    Aim(Neck, Head, FVector(FMath::Sin(Rad(SleepNeck)), S * FMath::Sin(Rad(SleepTiltDeg * .5f)), FMath::Cos(Rad(SleepNeck))));
+    {
+        const FVector Up = Space[BoneIndex[Head]].GetRotation().RotateVector(HeadUpLocal);
+        Turn(Head, FQuat::FindBetweenNormals(Up, FVector(FMath::Sin(Rad(SleepNod)), S * FMath::Sin(Rad(SleepTiltDeg)), FMath::Cos(Rad(SleepNod))).GetSafeNormal()));
+    }
+    // Knees up and a little apart.
+    for (int32 L = 0; L < 2; ++L)
+        Aim(Of(ThighL, L), Of(CalfL, L), FVector(FMath::Cos(Rad(SleepKnee)), Side[L] * SleepSpread, FMath::Sin(Rad(SleepKnee))));
+    // Where he'll sit in the barrel (its frame: X along it, mouth +X): his back in the blanket.
+    const FVector Hips = (At(ThighL) + At(ThighR)) * .5f;
+    const float SeatX = BarrelBedroll - SleepSquash + SleepBack * Thigh + 1.f;
+    const float SeatFloor = BarrelFloor(SeatX);
+    const float Seat = static_cast<float>(Hips.Z) - SleepSeatDrop * Thigh;   // his seat, in the body's own space
+    // Shins down and forward to the floor, which rises toward the mouth; feet flat, toes turned out.
+    for (int32 L = 0; L < 2; ++L)
+    {
+        const FVector Knee = At(Of(CalfL, L));
+        const float FootX = SeatX + static_cast<float>(Knee.X - Hips.X) + .85f * Calf;
+        const float Want = Seat + Ankle + (BarrelFloor(FootX) - SeatFloor);
+        const float Dz = FMath::Clamp((Want - static_cast<float>(Knee.Z)) / Calf, -1.f, 1.f);
+        Aim(Of(CalfL, L), Of(FootL, L), FVector(FMath::Sqrt(FMath::Max(0.f, 1.f - Dz * Dz)), Side[L] * .04f, Dz));
+        Aim(Of(FootL, L), Of(BallL, L), FVector(FootRest.X, Side[L] * .2f * FootRest.X, FootRest.Z));
+    }
+    // Into the barrel: hips over the seat, the lowest of him on the floor (the arms are placed each frame).
+    Body->SetRelativeLocation(FVector(SeatX - Hips.X, -Hips.Y, -HalfHeight + SeatFloor + .4f + SleepLift * Thigh - Hips.Z));
+    Body->SetRelativeRotation(FRotator::ZeroRotator);
+    EyeHeight = static_cast<float>(At(Head).Z) + 9.f;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_BOBERT_POSE thigh_cm=%.1f calf_cm=%.1f seat_x_cm=%.1f seat_floor_cm=%.1f"), Thigh, Calf, SeatX, SeatFloor);
+}
+
+void ADockNPC::PoseBobert(TArray<FTransform>& Space)
+{
+    // Asleep: slow deep breaths (the chest rising, the shoulders with it), and
+    // every so often the head nods a little lower and comes back.
+    const float T = SleepClock + Phase;
+    const float Breath = FMath::Sin(T * UE_TWO_PI / SleepBreath);
+    const float Cycle = FMath::Fmod(T, 23.f);
+    const float Nod = Cycle < 3.f ? FMath::Sin(Cycle / 3.f * UE_PI) : 0.f;
+    TArray<FQuat> Delta = Sleep;
+    Delta[Spine2] = Pitch(-.8f * Breath) * Sleep[Spine2];
+    Delta[Chest] = Pitch(-1.8f * Breath) * Sleep[Chest];
+    Delta[Neck] = Pitch(.6f * Breath + 3.f * Nod) * Sleep[Neck];
+    Delta[Head] = Pitch(1.f * Breath + 5.f * Nod) * Sleep[Head];
+    for (int32 L = 0; L < 2; ++L) Delta[Of(ClavL, L)] = Roll((L == 0 ? 1.f : -1.f) * SleepTilt * 1.2f * Breath) * Sleep[Of(ClavL, L)];
+    Solve(Delta, Space);
+    PoseHands(Space, false);
+    // Forearms folded over the knees: each hand on the other knee, the right a little higher, over the left.
+    const FVector Knees = (Space[BoneIndex[CalfL]].GetLocation() + Space[BoneIndex[CalfR]].GetLocation()) * .5f;
+    for (int32 L = 0; L < 2; ++L)
+    {
+        const float Mine = L == 0 ? SleepTilt : -SleepTilt, Other = -Mine;
+        const FVector Wrist = Knees + (L == 0 ? FVector(2.f, Other * 4.f, 4.5f) : FVector(4.5f, Other * 4.f, 7.5f));
+        const FVector Along = FVector(.25f, Other, -.35f).GetSafeNormal();
+        const FVector Thumb = FVector(.5f, 0.f, .85f).GetSafeNormal();
+        const FVector Palm = FVector::CrossProduct(Along, Thumb).GetSafeNormal() * PalmSign[L];
+        const FVector Fist = Wrist + Along * FistReach + Palm * PalmDepth;
+        PlaceHand(Space, L, Fist, Along, Thumb, FVector(-.3f, Mine, -.4f));
+        if (SleepClock > 2.f)
+            WorstRestHand = FMath::Max(WorstRestHand, static_cast<float>(FVector::Dist(Space[BoneIndex[Of(HandL, L)]].GetLocation(), Wrist)));
+    }
+    // Count breaths (each time the chest starts to rise).
+    const int32 Taken = FMath::FloorToInt(T / SleepBreath);
+    if (Taken > LastBreath) { if (LastBreath >= 0) ++BreathCount; LastBreath = Taken; }
+}
+
+float ADockNPC::GetSleepFitError() const
+{
+    // Each joint (with its flesh round it) must be inside the barrel: within its
+    // inner radius of the axis and between the blanket's back and the mouth
+    // (his boots may reach the rim).
+    const AActor* Cask = Barrel.Get();
+    if (!Cask || !Body->GetSkinnedAsset()) return 1e3f;
+    const FTransform Frame = Cask->GetActorTransform();
+    struct FJoint { EBone Bone; float Flesh; };
+    const FJoint Joints[] = { { Head, 9.f }, { Chest, 8.f }, { HandL, 3.f }, { HandR, 3.f }, { CalfL, 4.f }, { CalfR, 4.f }, { FootL, 3.f }, { FootR, 3.f } };
+    float Worst = 0.f;
+    for (const FJoint& J : Joints)
+    {
+        const FVector P = Frame.InverseTransformPosition(Body->GetBoneLocation(BoneNames[J.Bone]));
+        const float X = static_cast<float>(P.X);
+        const float Radial = static_cast<float>(FVector2D(P.Y, P.Z - BarrelAxisZ).Size()) + J.Flesh;
+        Worst = FMath::Max(Worst, Radial - (BarrelRadius(X) - BarrelStave));
+        Worst = FMath::Max(Worst, FMath::Max(-37.3f - X, X - BarrelLength * .5f));
+    }
+    return Worst;
+}
+
+float ADockNPC::GetHeadBow() const
+{
+    const FTransform HeadT = Body->GetBoneTransformByName(BoneNames[Head], EBoneSpaces::ComponentSpace);
+    const FVector Up = HeadT.GetRotation().RotateVector(HeadUpLocal);
+    return FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Up.X), static_cast<float>(Up.Z)));
 }

@@ -88,6 +88,34 @@ docs/SETUP.md), one heavy process at a time:
   `Tools/build_battle_axe.py` (`SM_BattleAxe`, double-bitted, 127 cm), held by
   `ADockNPC::GiveAxe` as the guards hold their spears.
 
+- Bobert (`Bobert` in `humans.json`, user 2026-10-05: "Bobert in his barrel
+  asleep like in the 2d game, positioned by starting point"; GAME-BIBLE.md: he
+  never wakes, is never named, never interacted with): a late-middle-aged
+  halfling, 97 cm, from the user's three reference images (bald with a wispy
+  fringe, big pointed ears with a ring in the right, drooping nose, bagged eyes,
+  downturned mouth; ochre open coat with a fur collar, grey-violet scarf, brown
+  shirt, red knitted wrist warmers banded off-white, baggy olive trousers,
+  boots). New kit pieces: `coat` (open front widening to lapels, sleeves to
+  `sleeve`, to `bottom` below the waist), `furcollar` (the coat's cut kept to a
+  band `depth` deep), `scarf` (wound round the neck, an end down the chest),
+  `cuff` (a band `from`..`to` down the forearm; a second with its own `slot` and
+  `offset` makes the off-white stripe). `fringe` builds the leftover hair
+  (`make_fringe`: cards scattered over the scalp's faces round the back and over
+  the ears, lying along the scalp, a few wild wisps; beard strand texture) and
+  `earring` a metal ring in one lobe (`make_earring`). His eyes are closed:
+  `eye_texture` from `Tools/build_bobert_textures.py` (lid skin from his skin
+  texture round the sockets). His barrel: `Tools/build_bobert_barrel.py`
+  (`SM_BobertBarrel`, 86 cm cask on its side on chocks, open mouth, a sack on the
+  floor and a rolled blanket against the back head; its manifest entry carries the
+  numbers `ADockNPC` seats him with). Runtime: `ADockNPC::SpawnBobert` places the
+  barrel beside Chuck's spawn and solves his sleeping pose from the A-pose
+  (`SolveSleep`: back leaning into the blanket and slumping forward, head bowed
+  and fallen sideways, knees up, shins down to the rising floor), hands folded
+  over his knees by IK each frame, slow breathing and an occasional nod. The pose
+  was first tried on his real MPFB body and the barrel in Blender (see the handoff).
+  Rebuild order: `build_bobert_textures.py`, `build_npc_humans.py -- Bobert`,
+  `build_bobert_barrel.py`, then `Tools/Import-NPCHumans.ps1 -Only Bobert,prop:BobertBarrel`.
+
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials
   (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).

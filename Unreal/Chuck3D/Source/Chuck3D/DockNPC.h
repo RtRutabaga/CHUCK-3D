@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, Bobert, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -167,6 +167,35 @@ public:
     float GetRagReachError() const { return WorstRagReach; }
     /** Polishing passes (inside or outside) begun, for tests. */
     int32 GetPolishPasses() const { return PolishPasses; }
+    /**
+     * Bobert (user 2026-10-05: "Bobert in his barrel asleep like in the 2d
+     * game, positioned by starting point"; GAME-BIBLE.md: Chuck's home is
+     * Bobert's barrel, he is asleep inside, never wakes, is never named and is
+     * never interacted with). A late-middle-aged halfling, 97 cm, asleep
+     * sitting up in an old cask lying on its side (Tools/build_bobert_barrel.py):
+     * his back to a rolled blanket against the closed head, knees up, forearms
+     * folded over them, head bowed and fallen to one side, boots at the mouth.
+     * The pose is aimed bone by bone from the model's A-pose (SolveSleep), so it
+     * fits whatever body the build gives him; he breathes slowly and deeply and
+     * now and then his head nods a little lower. No lines, no notice of the rat,
+     * no turning; the barrel is the solid part (Chuck can climb it, not get in).
+     * BarrelAt is the ground under the barrel's middle; Yaw is the way its mouth faces.
+     */
+    static ADockNPC* SpawnBobert(UWorld* World, const FVector& BarrelAt, float Yaw);
+    /** Beside Chuck's spawn (AChuckCharacter::StartLocation, -240,-180), as in the 2D game ('B' beside the
+        start), its mouth turned to the start and the first camera; clear of the harbour wall's ledge and the
+        smoke test's crate stacks. */
+    static inline const FVector BobertBarrelAt = FVector(-150.f, -250.f, 0.f);
+    static constexpr float BobertBarrelYaw = 140.f;
+    bool IsBobert() const { return Kind == EDockHuman::Bobert; }
+    AActor* GetBarrel() const { return Barrel.Get(); }
+    /** How far (cm) the worst of his head, hands, knees and feet is outside the barrel's inside (0: all in), for tests. */
+    float GetSleepFitError() const;
+    /** Head bowed below level (deg) and breaths taken, for tests. */
+    float GetHeadBow() const;
+    int32 GetBreaths() const { return BreathCount; }
+    /** Worst distance (cm, any frame after he settles) of either hand from where it rests on his knees. */
+    float GetRestingHandError() const { return WorstRestHand; }
     bool IsForging() const { return IsSmith() && Resting < .5f; }
     int32 GetStrikes() const { return Strikes; }
     /** Light taps of the hammer on the bare face between blows, and how far the face was from it at the last one (cm). */
@@ -280,6 +309,16 @@ private:
     void Strike();
     void Tap();
     void SmithEvents();
+    // Bobert.
+    UPROPERTY() TObjectPtr<UStaticMesh> BarrelMesh;
+    TWeakObjectPtr<AActor> Barrel;
+    TArray<FQuat> Sleep;                          // the sleeping pose (SolveSleep), as Rest is the standing one
+    FVector HeadUpLocal = FVector::UpVector;      // the head's up in its own frame (neck -> head at rest)
+    float SleepTilt = 1.f;                        // which way his head has fallen (+-Y)
+    float SleepClock = 0, WorstRestHand = 0;
+    int32 BreathCount = 0, LastBreath = -1;
+    void SolveSleep();
+    void PoseBobert(TArray<FTransform>& Space);
     // The tavern keeper.
     UPROPERTY() UStaticMeshComponent* Tankard = nullptr;
     UPROPERTY() UStaticMeshComponent* Rag = nullptr;

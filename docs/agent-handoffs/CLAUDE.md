@@ -2084,3 +2084,33 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `81fc1d0`; backup `Builds/Windows-Previous-20261004-DwarfBushy`.
 
 Next part of the work can be done here.
+
+## Bobert asleep in his barrel (October 5)
+
+- **Owner, task, branch, worktree:** Claude Code, user request "Add Bobert in his barrel asleep like in the 2d game, positioned by starting point" with three reference images: a halfling, not full human height, who reads as late-middle-aged. Cloud session in a Linux container on branch `claude/bobert-barrel-asleep-minc8q` (the session's designated branch, not `main`); no Windows checkout, Unreal or LFS objects.
+- **Base / delivered:** base `df963d8`; the delivered commit is on the branch above.
+- **Changed paths:**
+  - `SourceAssets/NPCs/humans.json` (+`Bobert`)
+  - `Tools/build_npc_humans.py` (pieces `coat`/`furcollar`/`scarf`/`cuff`, `make_fringe`, `make_earring`, `skull_and_ears`)
+  - new `Tools/build_bobert_barrel.py`, `Tools/build_bobert_textures.py`
+  - `DockNPC.{h,cpp}`, `DockGameMode.cpp` (spawn + smoke check), `ChuckCharacter.cpp` (scratch skips him)
+  - `Tools/Verify-Package.ps1`
+  - `SourceAssets/NPCs/README.md`, `docs/HANDOFF.md`, this file
+- **Contract:** shared human skeleton unchanged. `EBone` gains `thigh/calf/foot/ball` L/R; the clips and other NPCs leave them at identity. New assets `/Game/Characters/Humans/Bobert/SK_Bobert` and `/Game/Characters/Humans/Props/SM_BobertBarrel`. Chuck's controller, rig and the docks geometry are unchanged; the old upright barrel at (-330,-80) is kept.
+- **What was actually run** (sandbox only, outside the repo):
+  - Tools: `bpy` 4.5.4 (Blender as a Python module, pip) and MPFB **2.0.17** from its public repo tag; MakeHuman CC0 eyes from the public `makehuman` repo.
+  - Brows, lashes and skin textures were unavailable and stubbed, and the fabric gains were taken from the committed manifests (the JPGs are LFS pointers here).
+  - Commands: `build_npc_humans.py -- Bobert --review` (63.0k tris, 97.0 cm, 53 bones, slots Boots Brow Coat Cuff CuffBand Earring Eye Fringe Furcollar Lash Scarf Shirt Skin Trousers; fringe 434 cards) and `build_bobert_barrel.py` (8.3k tris, 86 x 76 x 77 cm). `build_bobert_textures.py` ran only on a flat stub skin.
+  - Regression: `build_npc_humans.py -- Dwarf` with the edited script built normally (107.3k tris, 134.0 cm, same slots).
+  - A Python port of `SolveSleep` on the built rig in the built barrel measured joint-fit worst 0.4 cm (feet at the rising floor), head bow 50°, head top 58 cm under a 74 cm inside top, boots 6.5 cm inside the mouth.
+  - Review renders (Cycles, flat colours) were sent to the user in the session; they are not committed (PNG is LFS here).
+- **Not done:** C++ compile, asset build on Windows, Unreal import, package, `Verify-Package.ps1`, in-game look, launcher promotion. Steps are in HANDOFF Update 85.
+- **Known gaps:**
+  - Closed eyes are retextured eyeballs and glossy.
+  - The fringe is cards; the sandbox renders show opaque card rectangles because there was no texture.
+  - His face is shaded inside the barrel.
+  - The hands rest by IK without finger contact.
+  - He never stirs beyond breathing and a nod (by design).
+- **Heavy tools running:** none.
+
+Next part of the work could be done by either — preference: Claude (owns the NPCs). It needs the Windows machine: build the assets, import, compile, verify and promote.

@@ -190,6 +190,34 @@ class Body:
             if b in self.ARMS or b == self.NECK: return collar
             if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .16))
             return OUT
+        if piece in ('coat', 'furcollar'):
+            # Bobert's coat: a long open wool coat, sleeves to `sleeve` of the forearm
+            # (his knitted cuffs show below), its front open all the way down, wider
+            # at the chest (the lapels fall back), to `bottom` below the waist.
+            # The fur collar is the same cut kept to a band `depth` below its neckline.
+            collar = self.neck.z + .02 - c.z
+            if b in self.FOREARMS:
+                if piece == 'furcollar': return OUT
+                m = min(collar, c.z - (self.elbow.z - opts.get('sleeve', .8) * (self.elbow.z - self.wrist.z)))
+            elif b in self.ARMS or b == self.NECK: m = collar
+            elif b in self.TORSO | self.LEGS: m = min(collar, c.z - (self.waist_z - opts.get('bottom', .16)))
+            else: return OUT
+            if c.y < 0 and b not in self.FOREARMS and abs(c.x) < .2:
+                m = min(m, abs(c.x) - (opts.get('open', .04) + max(0., c.z - (self.waist_z + .12)) * opts.get('lapel', .5)))
+            if piece == 'furcollar':
+                m = min(m, c.z - (self.neck.z - opts.get('depth', .09)))
+                if b in self.ARMS: m = min(m, .17 - abs(c.x))
+            return m
+        if piece == 'scarf':   # wound round the neck, an end hanging down the chest on his left
+            if b not in self.TORSO and b != self.NECK and b not in self.ARMS: return OUT
+            wrap = min(self.neck.z + opts.get('up', .045) - c.z, c.z - (self.neck.z - .045), .12 - abs(c.x))
+            side = opts.get('side', 1.) * (1. if self.shoulder.x > 0 else -1.)   # +1: his left
+            end = min(.032 - abs(c.x - side * .045), c.z - (self.waist_z + opts.get('hang', .1)), -c.y, self.neck.z - c.z)
+            return max(wrap, end)
+        if piece == 'cuff':   # a knitted wrist warmer (or a band on one): `from`..`to` down the forearm (0 elbow, 1 wrist)
+            if b not in self.FOREARMS: return OUT
+            u = self.forearm_u(c); L = self.elbow.z - self.wrist.z
+            return min(u - opts.get('from', .7), opts.get('to', .98) - u) * L
         if piece == 'bib':   # a leather apron's bib: the chest front, from below the collarbones down over the apron's top,
             if b not in self.TORSO and b != self.NECK and b not in self.ARMS: return OUT
             top = self.neck.z - .1
@@ -265,6 +293,10 @@ PIECES = {
     'pauldron': dict(offset=.052, thickness=.007, hides=False),
     'vambrace': dict(offset=.03, thickness=.005, hides=False),
     'trim':     dict(offset=0., thickness=.006, hides=False),   # offset: just over the piece it edges (make_piece)
+    'coat':     dict(offset=.019, thickness=.008, hides=True),
+    'furcollar': dict(offset=.03, thickness=.016, hides=False),
+    'scarf':    dict(offset=.024, thickness=.014, hides=False),
+    'cuff':     dict(offset=.01, thickness=.006, hides=False),
 }
 
 
@@ -816,6 +848,128 @@ def make_beard(info, spec, slots):
     return [beard, cards] + ([rings] if rings else [])
 
 
+def skull_and_ears(info):
+    """The skull's half width above the ears, and each ear's vertices (side +1/-1:
+    the sign of x), picked as head vertices standing out past the skull."""
+    head = [i for i in range(len(info.co)) if info.bone[i] == Body.HEAD]
+    skull = max(abs(info.co[i].x) for i in head if info.co[i].z > info.eye_z + .085)
+    ears = {sx: [info.co[i] for i in head if info.co[i].x * sx > skull + .004 and abs(info.co[i].z - info.eye_z) < .07] for sx in (-1, 1)}
+    return skull, ears
+
+
+def make_fringe(info, spec, slots):
+    """What's left of the hair on a bald head (MakeHuman has none): a horseshoe of
+    short wispy cards round the back and over the ears, from `low` below the eyes
+    at the nape to `high` above them, thinning toward its top edge, and a few
+    longer wild wisps sticking out. Slot Fringe (card material, the beard's
+    strand texture, tinted)."""
+    import random
+    rnd = random.Random(spec.get('seed', 3))
+    _, chin, head_y = face_marks(info)
+    skull, ears = skull_and_ears(info)
+    ear_front = min(c.y for e in ears.values() for c in e) if all(ears.values()) else head_y
+    low, high = spec.get('low', .045), spec.get('high', .06)
+    from mathutils.kdtree import KDTree
+    ear_pts = [c for e in ears.values() for c in e]
+    ear_tree = KDTree(max(1, len(ear_pts)))
+    for k, c in enumerate(ear_pts): ear_tree.insert(c, k)
+    ear_tree.balance()
+    # Points scattered over the scalp's faces (its vertices are too sparse), by area.
+    M = info.obj.matrix_world
+    body_bm = bmesh.new(); body_bm.from_mesh(info.obj.data); body_bm.verts.ensure_lookup_table(); body_bm.normal_update()
+    faces = [f for f in body_bm.faces if all(info.bone[v.index] == Body.HEAD for v in f.verts)]
+    count, wild = spec.get('cards', 260), spec.get('wild', 30)
+    area = sum(f.calc_area() for f in faces)
+    cands = []
+    for f in faces:
+        vs = [M @ v.co for v in f.verts]
+        for _ in range(int(f.calc_area() / area * 9000)):
+            a, b = rnd.random(), rnd.random()
+            if a + b > 1: a, b = 1 - a, 1 - b
+            k = rnd.randrange(1, len(vs) - 1)
+            c = vs[0] + (vs[k] - vs[0]) * a + (vs[k + 1] - vs[0]) * b
+            if ear_tree.find(c)[2] < .008: continue                                 # not on the ears
+            if c.y < ear_front + .015 or not (info.eye_z - low < c.z < info.eye_z + high): continue
+            if c.z < info.eye_z - .015 and c.y < ear_front + .05: continue          # below the ear only behind it (the nape), no sideburns
+            n = (M.to_3x3() @ f.normal).normalized()
+            if n.z < -.3: continue
+            top = (c.z - (info.eye_z - low)) / (low + high)
+            if rnd.random() > 1.1 - top * .8: continue                              # thinner toward the top edge
+            cands.append((c, n, top))
+    body_bm.free()
+    rnd.shuffle(cands)
+    scalp = BVHTree.FromObject(info.obj, bpy.context.evaluated_depsgraph_get()); Mi = M.inverted()
+    bm, uv_cards = bmesh.new(), []
+    for k, (co, n, top) in enumerate(cands[:count + wild]):
+        long_ = k >= count
+        length = rnd.uniform(.03, .055) if long_ else rnd.uniform(.018, .04)
+        width = rnd.uniform(.006, .011)
+        up = Vector((0, 0, 1))
+        # Out from the scalp, back and a little up; the wild ones straggle up and out.
+        along = Vector((0, 1, -.35)) - n * Vector((0, 1, -.35)).dot(n)                # back and down over the scalp
+        out = (along.normalized() * (.5 if long_ else 1.) + n * (.8 if long_ else .18) + up * ((.5 if long_ else 0.) + rnd.uniform(-.2, .2)) + Vector((rnd.uniform(-.25, .25), 0, 0))).normalized()
+        side = out.cross(n); side = side.normalized() if side.length > 1e-4 else Vector((1, 0, 0))
+        curl = rnd.uniform(-1, 1)
+        u0 = rnd.uniform(0, .85)
+        col = []
+        p, pn = co.copy(), n.copy()
+        for s in range(5):
+            t = s / 4
+            if s:
+                p = p + (out + side * curl * .5 * t) * (length / 4)
+                if not long_:   # a short wisp lies over the scalp, lifting a little toward its tip
+                    hit, normal, _, _ = scalp.find_nearest(Mi @ p)   # the tree is in the body's own (unscaled) space
+                    if hit is not None:
+                        pn = (M.to_3x3() @ normal).normalized(); p = M @ hit + pn * (.003 + .004 * t)
+            col.append((bm.verts.new(p - side * width / 2), bm.verts.new(p + side * width / 2), 1 - t))
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+    uvl = bm.loops.layers.uv.new('UVMap')
+    for f, uvs in uv_cards:
+        for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
+    obj = new_object('fringe', bm)
+    obj.data.materials.append(slot_material('Fringe'))
+    skin_from_body(obj, info)
+    slots['Fringe'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec['tint']}
+    print('CHUCK_FRINGE', f'cards={len(uv_cards) // 4}', f'candidates={len(cands)}')
+    return [obj]
+
+
+def make_earring(info, spec, slots):
+    """A plain metal ring through one ear lobe (`side`: 'right' or 'left'), hanging
+    in the plane of the ear. Slot Earring."""
+    _, ears = skull_and_ears(info)
+    left = 1. if info.shoulder.x > 0 else -1.
+    sx = -left if spec.get('side', 'right') == 'right' else left
+    lobe = min(ears[int(sx)], key=lambda c: c.z)
+    R, r = spec.get('radius', .016), spec.get('wire', .0022)
+    centre = lobe + Vector((sx * .002, 0., -R * .8))
+    bm = bmesh.new()
+    ring, sides = 24, 8
+    loops = []
+    for k in range(ring):
+        a = 2 * math.pi * k / ring
+        d = Vector((0., math.cos(a), math.sin(a)))                      # in the ear's plane (y-z)
+        d = Matrix.Rotation(math.radians(sx * 25), 3, 'Z') @ d          # turned a little forward with the ear
+        p = centre + d * R
+        t = d.cross(Matrix.Rotation(math.radians(sx * 25), 3, 'Z') @ Vector((1., 0., 0.))).normalized()
+        loops.append([bm.verts.new(p + (d * math.cos(2 * math.pi * j / sides) + d.cross(t) * math.sin(2 * math.pi * j / sides)) * r) for j in range(sides)])
+    for k in range(ring):
+        a_, b_ = loops[k], loops[(k + 1) % ring]
+        for j in range(sides): bm.faces.new((a_[j], a_[(j + 1) % sides], b_[(j + 1) % sides], b_[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = new_object('earring', bm)
+    obj.data.materials.append(slot_material('Earring'))
+    for p in obj.data.polygons: p.use_smooth = True
+    for g in list(obj.vertex_groups): obj.vertex_groups.remove(g)
+    skin_to(obj, info.rig, [{'head': 1.}] * len(obj.data.vertices))
+    box_uv(obj, 60.)
+    slots['Earring'] = {'type': 'fabric', 'fabric': spec.get('fabric', 'metal_plate_02'), 'tint': spec['tint'],
+                        'tile_cm': TILE_CM[spec.get('fabric', 'metal_plate_02')], 'gain': fabric_gain(spec.get('fabric', 'metal_plate_02'))}
+    return [obj]
+
+
 def slot_material(name):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     return m
@@ -878,6 +1032,8 @@ def build(name, spec):
     if skirt_src: bpy.data.objects.remove(skirt_src)
     if spec.get('beard'):
         meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
+    if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
+    if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
