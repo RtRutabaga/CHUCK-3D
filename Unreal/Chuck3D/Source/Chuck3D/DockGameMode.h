@@ -24,6 +24,7 @@ private:
     void TickNPCCapture(float DeltaSeconds);
     // -ChuckSmithCapture: the blacksmith at work, a frame every 60 ms from a fixed three-quarter view.
     bool bSmithCapture = false;
+    FName FilmTag = TEXT("Blacksmith");   // -ChuckKeeperCapture films the tavern keeper instead
     float SmithCaptureTime = 0, SmithNextFrame = 0;
     int32 SmithFrame = 0;
     void TickSmithCapture(float DeltaSeconds);

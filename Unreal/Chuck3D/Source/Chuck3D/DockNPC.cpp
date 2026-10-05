@@ -54,7 +54,14 @@ namespace
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
         TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
-        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf") };
+        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper") };
+    // The tavern keeper's work (component space: his feet, X forward, Y right).
+    // His left fist on the tankard's handle (Tools/build_keeper_props.py: the
+    // origin), the body TankardBody toward its +X, the mouth TankardMouth up.
+    const FVector KeeperGrip(31.f, -9.f, 118.f);    // just above the counter's back edge (top at 108 cm)
+    constexpr float TankardBody = 7.1f, TankardMouth = 5.6f, TankardRadius = 5.f;
+    // A round: the rag inside the rim, then over the outside; every third round he holds it up to look it over.
+    constexpr float PolishInside = 6.f, PolishOutside = 5.f, PolishInspect = 4.f, PolishBlend = .6f;
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
@@ -131,13 +138,19 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Zombie(MeshPaths[5]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Smith(MeshPaths[6]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Dwarf(MeshPaths[7]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Keeper(MeshPaths[8]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
+    HumanMeshes[8] = Keeper.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> TongsAsset(TEXT("/Game/Characters/Humans/Props/SM_Tongs.SM_Tongs"));
     SmithMeshes[0] = AnvilAsset.Object; SmithMeshes[1] = HammerAsset.Object; SmithMeshes[2] = TongsAsset.Object;
+    // The tavern keeper's tankard and rag (Tools/build_keeper_props.py).
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> TankardAsset(TEXT("/Game/Characters/Humans/Props/SM_Tankard.SM_Tankard"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> RagAsset(TEXT("/Game/Characters/Humans/Props/SM_Rag.SM_Rag"));
+    KeeperMeshes[0] = TankardAsset.Object; KeeperMeshes[1] = RagAsset.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]), ZombieIdle(ClipPaths[ClipZombieIdle]), ZombieWalk(ClipPaths[ClipZombieWalk]),
         ZombieFall(ClipPaths[ClipZombieFall]);
@@ -468,8 +481,37 @@ ADockNPC* ADockNPC::SpawnDwarf(UWorld* World, const FVector& Feet, float Yaw)
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnTavernKeeper(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::TavernKeeper, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("TavernKeeper"));
+    NPC->DisplayName = TEXT("Tavern keeper");
+    NPC->Lines = { TEXT("We don't serve rats."), TEXT("And stay out of my cellar.") };
+    NPC->SetGrip(0, 1.f); NPC->SetGrip(1, .75f);   // the handle; the rag bunched in his right
+    const auto Prop = [&](UStaticMesh* Mesh, const TCHAR* Name)
+    {
+        auto* C = NewObject<UStaticMeshComponent>(NPC, Name);
+        C->SetStaticMesh(Mesh);
+        C->SetupAttachment(NPC->Body);
+        C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        C->SetCanEverAffectNavigation(false);
+        C->RegisterComponent();
+        return C;
+    };
+    NPC->Tankard = Prop(NPC->KeeperMeshes[0], TEXT("Tankard"));
+    NPC->Rag = Prop(NPC->KeeperMeshes[1], TEXT("Rag"));
+    NPC->PolishClock = FMath::FRandRange(0.f, 4.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_KEEPER_SPAWNED tankard=%d rag=%d at=%s"), NPC->Tankard->GetStaticMesh() ? 1 : 0, NPC->Rag->GetStaticMesh() ? 1 : 0, *Feet.ToString());
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // The tavern keeper behind his counter (DockTavern.cpp: counter y 810..878,
+    // bottle shelves from y 941), between the barrels (east edge x -119) and
+    // the cellar hatch (lid at x 14), facing the room.
+    SpawnTavernKeeper(World, FVector(-55, 905, 0), -90.f);
     // A dwarf waiting on the smith, east of the forge's bellows in front of
     // the smithy, turned a little toward the anvil; his axe at his right hand.
     SpawnDwarf(World, FVector(-520, -3625, 0), 120.f);
@@ -946,9 +988,9 @@ void ADockNPC::Tick(float DeltaSeconds)
                 const float Close = FMath::Clamp((CloseStart - Across) / (CloseStart - CloseFull), 0.f, 1.f);
                 Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, FMath::Lerp(LookDownFar, 55.f, Close)));
             }
-            if (HasMocap() && !IsSmith()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil
+            if (HasMocap() && !IsSmith() && !IsKeeper()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil, the keeper behind his bar
         }
-        else if (HasMocap() && !IsSmith()) UpdateTurn(DeltaSeconds, 0.f, false);
+        else if (HasMocap() && !IsSmith() && !IsKeeper()) UpdateTurn(DeltaSeconds, 0.f, false);
         bTalking = Chuck->GetTalkingTo() == this;
     }
     TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
@@ -959,6 +1001,11 @@ void ADockNPC::Tick(float DeltaSeconds)
         Glance = FVector2D(FMath::FRandRange(-35.f, 35.f), FMath::FRandRange(-6.f, 10.f));
     }
     if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f - 16.f * Inspect);   // his eyes on the work
+    if (IsKeeper())
+    {
+        PolishClock += DeltaSeconds;
+        if (!bWatching) Target = FVector2D(-4.f, 30.f - 26.f * Inspect);   // on the tankard; up to it when he holds it to the light
+    }
     if (Kind == EDockHuman::Dwarf) Target = FVector2D(FMath::Clamp(Target.X, -DwarfLookYaw, DwarfLookYaw), FMath::Min(Target.Y, 0.f));
     const float Rate = bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
@@ -1021,11 +1068,20 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             Delta[Chest] = Pitch(5.f - 3.f * Swing + 3.f * Drive - 3.f * Inspect) * Yaw(5.f * Swing - 2.f);
             Delta[Head] = Pitch(3.f * Recoil) * Delta[Head];
         }
+        if (IsKeeper())
+        {
+            // Settled behind his bar, a little over the work; straighter as he holds it up.
+            for (FQuat& Q : BoneDelta) Q = FQuat::Slerp(FQuat::Identity, Q, .5f);
+            HipsOffset *= .5f;
+            Delta[Spine2] = Pitch(7.f - 5.f * Inspect);
+            Delta[Chest] = Pitch(3.f - 2.f * Inspect);
+        }
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
         if (bSpear) HoldSpear(Space);
         if (IsSmith()) PoseSmith(Space);
+        if (IsKeeper()) PoseKeeper(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         SmithEvents();
@@ -1053,6 +1109,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     PoseHands(Space, false);
     if (bSpear) HoldSpear(Space);
     if (IsSmith()) PoseSmith(Space);
+    if (IsKeeper()) PoseKeeper(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
     SmithEvents();
@@ -1367,4 +1424,100 @@ void ADockNPC::SmithEvents()
             UGameplayStatics::PlaySoundAtLocation(this, ClinkSounds[FMath::RandRange(0, ClinkSounds.Num() - 1)],
                 Tongs->GetComponentTransform().TransformPosition(TongsBar), .35f, FMath::FRandRange(.97f, 1.03f), 0.f, StrikeAttenuation);
     }
+}
+
+void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
+{
+    // Where the round is: inside the rim, over the outside, (every third
+    // round) holding it up to look it over; each blends into the next.
+    const float Round = PolishInside + PolishOutside, Cycle = 3.f * Round + PolishInspect;
+    const float T = FMath::Fmod(PolishClock, Cycle);
+    const auto PhaseAt = [&](float X, float& Into) -> int32
+    {
+        for (int32 R = 0; R < 3; ++R)
+        {
+            if (X < PolishInside) { Into = X; return 0; } X -= PolishInside;
+            if (X < PolishOutside) { Into = X; return 1; } X -= PolishOutside;
+        }
+        Into = X; return 2;
+    };
+    float Into = 0.f;
+    const int32 Now = PhaseAt(T, Into);
+    if (Now != PolishPhase) { if (Now < 2 && PolishPhase >= 0) ++PolishPasses; PolishPhase = Now; }
+    const float Right = -ArmOut;
+    struct FPose { FVector Grip, Along, Up, Fist, FistAlong, FistThumb; float Look = 0.f; };
+    const auto Pose = [&](int32 Which, float U) -> FPose
+    {
+        FPose P;
+        // The tankard turns a little in his hand as he works; its mouth tipped toward him.
+        const float Turn = FMath::DegreesToRadians(-12.f + 14.f * FMath::Sin(PolishClock * .7f));
+        FVector Tip(-.14f, 0.f, 1.f);
+        P.Grip = KeeperGrip;
+        if (Which == 2)
+        {
+            // Held up to the light, turned slowly, the rag hand down at his side.
+            const float Up = FMath::SmoothStep(0.f, .25f, U / PolishInspect) * (1.f - FMath::SmoothStep(.75f, 1.f, U / PolishInspect));
+            P.Grip += FVector(4.f, 4.f * Right, 15.f) * Up;   // up and out from him, clear of his beard
+            Tip = FMath::Lerp(Tip, FVector(-.65f, 0.f, 1.f), Up);
+            P.Look = Up;
+        }
+        P.Up = Tip.GetSafeNormal();
+        const FVector Side = FVector(-FMath::Sin(Turn), FMath::Cos(Turn) * Right, 0.f);   // from the handle toward the body: to his right
+        P.Along = FVector::VectorPlaneProject(Side, P.Up).GetSafeNormal();
+        const FVector Centre = P.Grip + P.Along * TankardBody;
+        const FVector Mouth = Centre + P.Up * TankardMouth;
+        const FVector Across = FVector::CrossProduct(P.Up, P.Along).GetSafeNormal();
+        if (Which == 0)
+        {
+            // The rag pushed into the rim, small circles and a twist of the wrist.
+            const float W = UE_TWO_PI / .85f * PolishClock;
+            P.Fist = Mouth + P.Up * 2.5f + (P.Along * FMath::Cos(W) + Across * FMath::Sin(W)) * 1.6f;
+            P.FistAlong = -P.Up;
+            P.FistThumb = FQuat(P.Up, FMath::DegreesToRadians(30.f * FMath::Sin(W))).RotateVector(-P.Along);
+        }
+        else if (Which == 1)
+        {
+            // Rubbing the outside, the palm to the pewter, round the side nearest his
+            // free hand (his right, toward him: the far side is out of his reach) and up and down.
+            const FVector Out = FQuat(P.Up, FMath::DegreesToRadians(Right * (25.f + 30.f * FMath::Sin(PolishClock * 1.4f)))).RotateVector(P.Along);
+            P.Fist = Centre + Out * (TankardRadius + 3.5f) + P.Up * (.5f + 2.5f * FMath::Sin(PolishClock * 2.6f));
+            P.FistAlong = P.Up;
+            P.FistThumb = FVector::CrossProduct(P.FistAlong, Out) * PalmSign[1];   // so the palm faces the tankard
+        }
+        else
+        {
+            P.Fist = FVector(10.f, 24.f * Right, 98.f);
+            P.FistAlong = FVector(.15f, 0.f, -1.f).GetSafeNormal();
+            P.FistThumb = FVector(1.f, 0.f, .15f).GetSafeNormal();
+        }
+        return P;
+    };
+    FPose P = Pose(Now, Into);
+    if (Into < PolishBlend && PolishClock > PolishBlend)
+    {
+        // Ease from where the last phase left off.
+        float Back = 0.f;
+        const int32 Last = PhaseAt(FMath::Fmod(T - Into - .001f + Cycle, Cycle), Back);
+        const FPose L = Pose(Last, Back);
+        const float A = FMath::SmoothStep(0.f, PolishBlend, Into);
+        P.Grip = FMath::Lerp(L.Grip, P.Grip, A); P.Fist = FMath::Lerp(L.Fist, P.Fist, A); P.Look = FMath::Lerp(L.Look, P.Look, A);
+        P.Along = FMath::Lerp(L.Along, P.Along, A).GetSafeNormal(); P.Up = FMath::Lerp(L.Up, P.Up, A).GetSafeNormal();
+        P.FistAlong = FMath::Lerp(L.FistAlong, P.FistAlong, A).GetSafeNormal(); P.FistThumb = FMath::Lerp(L.FistThumb, P.FistThumb, A).GetSafeNormal();
+    }
+    Inspect = P.Look;
+    // The left fist closes on the handle, knuckles toward the body, thumb on top.
+    PlaceHand(Space, 0, P.Grip, P.Along, P.Up, FVector(-.3f, -Right, -.6f));
+    PlaceHand(Space, 1, P.Fist, P.FistAlong, P.FistThumb, FVector(-.3f, Right, -.6f));
+    FVector F, A, Th;
+    HandFrame(Space, 0, F, A, Th);
+    const float GripError = static_cast<float>(FVector::Dist(F, P.Grip));
+    if (GetWorld()->GetTimeSeconds() > 8.f) WorstTankardGrip = FMath::Max(WorstTankardGrip, GripError);
+    if (GripError > 2.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_GRIP phase=%d into=%.2f grip_cm=%.1f grip=%s"), Now, Into, GripError, *P.Grip.ToString());
+    if (Tankard) Tankard->SetRelativeTransform(FTransform(FRotationMatrix::MakeFromXZ(P.Along, P.Up).ToQuat(), F));
+    HandFrame(Space, 1, F, A, Th);
+    const float RagError = static_cast<float>(FVector::Dist(F, P.Fist));
+    if (GetWorld()->GetTimeSeconds() > 8.f) WorstRagReach = FMath::Max(WorstRagReach, RagError);
+    if (RagError > 3.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_REACH phase=%d into=%.2f rag_cm=%.1f fist=%s"), Now, Into, RagError, *P.Fist.ToString());
+    // The rag bunched in his fist, its tail falling toward him.
+    if (Rag) Rag->SetRelativeTransform(FTransform(FRotator(0.f, 90.f, 0.f), F));
 }

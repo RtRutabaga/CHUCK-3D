@@ -744,6 +744,117 @@
      "texture": "Textures/eyelashes02.png"
     }
    }
+  },
+  "TavernKeeper": {
+   "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
+   "height_cm": 181,
+   "tris": 74866,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.46,
+      0.38
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.048,
+      0.036
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.045,
+      0.032
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Apron": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.62,
+      0.59,
+      0.52
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.55,
+      0.52,
+      0.45
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Beard": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      0.13,
+      0.1,
+      0.075
+     ]
+    },
+    "BeardStrands": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      0.24,
+      0.21,
+      0.18
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/grey_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow009.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    },
+    "Hair": {
+     "type": "card",
+     "texture": "Textures/short01_diffuse.png"
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

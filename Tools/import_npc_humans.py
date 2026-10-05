@@ -15,7 +15,8 @@ Everything under /Game/Characters/Humans is generated. Meshes, clips, textures
 and instances are re-imported in place and existing masters kept; for a clean
 rebuild (skeleton or master graph changes) use Tools/Import-NPCHumans.ps1 -Clean.
 To re-import only some of it (leaving the rest's assets untouched), set
-CHUCK_HUMANS_ONLY to a comma list of NPC names and/or "clips", "props"
+CHUCK_HUMANS_ONLY to a comma list of NPC names and/or "clips", "props" (all of
+them) or "prop:<Name>" (just that one, e.g. prop:Tankard)
 (Tools/Import-NPCHumans.ps1 -Only Blacksmith,props).
 """
 from pathlib import Path
@@ -250,11 +251,12 @@ def import_clips():
         print(f'CHUCK_HUMAN_CLIP {clip} seconds={seconds:.1f}')
 
 
-def import_props():
+def import_props(names=None):
     """What the humans carry (Tools/build_spear.py): static meshes in the same fabric materials."""
     props_dir = ROOT / 'SourceAssets/NPCs/Props'
     folder = f'{DEST}/Props'
     for prop, info in json.loads((props_dir / 'manifest.json').read_text(encoding='utf-8'))['props'].items():
+        if names and prop not in names: continue
         options = unreal.FbxImportUI()
         options.import_mesh = True
         options.import_as_skeletal = False
@@ -288,5 +290,7 @@ ONLY = {x.strip() for x in os.environ.get('CHUCK_HUMANS_ONLY', '').split(',') if
 for npc, info in MANIFEST['npcs'].items():
     if not ONLY or npc in ONLY: import_mesh(npc, info)
 if not ONLY or 'clips' in ONLY: import_clips()
+PROPS = {x[5:] for x in ONLY if x.startswith('prop:')}
 if not ONLY or 'props' in ONLY: import_props()
+elif PROPS: import_props(PROPS)
 print('CHUCK_HUMANS_IMPORT_READY', sorted(MANIFEST['npcs']), 'only=' + (','.join(sorted(ONLY)) or 'all'))

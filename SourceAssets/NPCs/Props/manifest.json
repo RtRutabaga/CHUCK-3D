@@ -256,12 +256,81 @@
      "gain": 14.226
     }
    }
+  },
+  "Tankard": {
+   "fbx": "SM_Tankard.fbx",
+   "tris": 1016,
+   "bounds_min_cm": [
+    -1.3,
+    -5.7,
+    -7.5
+   ],
+   "bounds_max_cm": [
+    12.8,
+    5.7,
+    5.6
+   ],
+   "grip_cm": [
+    7.1,
+    0.0,
+    -7.5
+   ],
+   "height_cm": 13.0,
+   "mouth_cm": [
+    7.1,
+    0.0,
+    5.5
+   ],
+   "slots": {
+    "Pewter": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.15,
+      0.15,
+      0.155
+     ],
+     "gain": 14.226
+    }
+   }
+  },
+  "Rag": {
+   "fbx": "SM_Rag.fbx",
+   "tris": 816,
+   "bounds_min_cm": [
+    -5.4,
+    -3.9,
+    -17.1
+   ],
+   "bounds_max_cm": [
+    5.3,
+    6.0,
+    4.1
+   ],
+   "slots": {
+    "Cloth": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 27.1,
+     "tint": [
+      0.34,
+      0.31,
+      0.26
+     ],
+     "gain": 2.523
+    }
+   }
   }
  },
  "generators": {
   "Anvil": "Tools/build_smith_props.py",
   "SmithHammer": "Tools/build_smith_props.py",
   "Tongs": "Tools/build_smith_props.py",
-  "BattleAxe": "Tools/build_battle_axe.py"
+  "BattleAxe": "Tools/build_battle_axe.py",
+  "Tankard": "Tools/build_keeper_props.py",
+  "Rag": "Tools/build_keeper_props.py"
  }
 }

@@ -595,6 +595,7 @@ void ADockGameMode::StartPlay()
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
     bDwarfCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckDwarfCapture"));
     // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
     bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
@@ -725,21 +726,22 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
 void ADockGameMode::TickSmithCapture(float DeltaSeconds)
 {
     // Frames of the smith's work for motion review: Saved/Screenshots/Windows/Smith/frame###.png.
-    constexpr float Settle=4.f, Step=.06f, Length=4.8f;
+    const float Settle=4.f, Step=FilmTag==TEXT("TavernKeeper") ? .25f : .06f, Length=FilmTag==TEXT("TavernKeeper") ? 30.f : 4.8f;   // the keeper's round is slower and longer
     SmithCaptureTime+=DeltaSeconds;
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
     if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
     TArray<AActor*> Found;
-    UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),Found);
+    UGameplayStatics::GetAllActorsWithTag(this,FilmTag,Found);
     const auto* Smith=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
     if(!PC || !Smith) return;
+    const bool bKeeper=Smith->IsKeeper();   // behind his counter: a closer, higher view over it
     if(!NPCCamera.IsValid())
     {
         NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
         const FVector Feet=Smith->GetActorLocation()-FVector(0,0,Smith->GetSimpleCollisionHalfHeight());
-        const FVector At=Feet+Smith->GetActorForwardVector().RotateAngleAxis(35.f,FVector::UpVector)*330.f+FVector(0,0,140.f);
-        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,105.f)-At).Rotation());
-        NPCCamera->GetCameraComponent()->SetFieldOfView(55.f);
+        const FVector At=Feet+Smith->GetActorForwardVector().RotateAngleAxis(bKeeper ? 25.f : 35.f,FVector::UpVector)*(bKeeper ? 190.f : 330.f)+FVector(0,0,bKeeper ? 175.f : 140.f);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bKeeper ? 125.f : 105.f)-At).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(bKeeper ? 45.f : 55.f);
         PC->SetViewTarget(NPCCamera.Get());
     }
     if(SmithCaptureTime<Settle) return;
@@ -747,7 +749,7 @@ void ADockGameMode::TickSmithCapture(float DeltaSeconds)
     if(SmithCaptureTime>=SmithNextFrame)
     {
         SmithNextFrame=FMath::Max(SmithNextFrame+Step,SmithCaptureTime);
-        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Smith/frame%03d.png"),SmithFrame),false,false);
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/frame%03d.png"),FilmTag==TEXT("TavernKeeper") ? TEXT("Keeper") : TEXT("Smith"),SmithFrame),false,false);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_FRAME %03d t=%.2f strikes=%d taps=%d"),SmithFrame,SmithCaptureTime-Settle,Smith->GetStrikes(),Smith->GetTaps());
         ++SmithFrame;
     }
@@ -1945,7 +1947,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith()) continue;   // the smith's arms are at work
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper()) continue;   // the smith's and the keeper's arms are at work
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2018,6 +2020,17 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Smith ? Smith->GetTaps() : 0,Smith ? Smith->GetWorstTapGap() : 1e3f,Smith && Smith->IsForgeSounding() ? 1 : 0);
             Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTaps()>=3 && Smith->GetWorstTapGap()<4.f && Smith->IsForgeSounding() && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
                 TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow and the bare face on each tap, tongs in his other fist, the forge roaring"));
+            // The tavern keeper behind his counter, between the barrels and the cellar hatch, polishing a tankard.
+            TArray<AActor*> KeeperFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("TavernKeeper"),KeeperFound);
+            const auto* Keeper=KeeperFound.Num()==1 ? Cast<ADockNPC>(KeeperFound[0]) : nullptr;
+            const FVector KeeperAt=Keeper ? Keeper->GetActorLocation() : FVector(1e4f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_KEEPER_MEASURE present=%d at=(%.0f,%.0f) tankard_grip_cm=%.1f rag_reach_cm=%.1f passes=%d lines=%d"),
+                Keeper ? 1 : 0,KeeperAt.X,KeeperAt.Y,Keeper ? Keeper->GetTankardGripError() : 1e3f,Keeper ? Keeper->GetRagReachError() : 1e3f,
+                Keeper ? Keeper->GetPolishPasses() : 0,Keeper ? Keeper->Lines.Num() : 0);
+            Check(Keeper && KeeperAt.X>-119.f+24.f && KeeperAt.X<14.f-24.f && KeeperAt.Y>878.f && KeeperAt.Y<941.f
+                && Keeper->GetTankardGripError()<3.f && Keeper->GetRagReachError()<4.f && Keeper->GetPolishPasses()>=2 && Keeper->CanTalk(),
+                TEXT("the tavern keeper stands behind the counter between the barrels and the cellar hatch, polishing a tankard in his hands"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();

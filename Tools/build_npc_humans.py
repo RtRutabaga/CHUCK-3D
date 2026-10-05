@@ -679,12 +679,12 @@ def make_beard(info, spec, slots):
         groove = math.sin(a * 46 + v.co.z * 9) * .5 + math.sin(a * 97 - v.co.z * 23 + 1.7) * .3
         v.co += v.normal * groove * (.0025 + .005 * fall)
     beard.data.update()
-    # Braids from the tip, each ending in a brass ring.
+    # Braids from the tip, each ending in a brass ring (unless `braids` is false: the tavern keeper's plain beard).
     bm, rings_bm = bmesh.new(), bmesh.new()
     tip_z = chin.z - L
     tip_back = chest_front(tip_z + .03) - clear
     length, lobes = spec.get('braid', .1), 7
-    for sx in (-1, 1):
+    for sx in ((-1, 1) if spec.get('braids', True) else ()):
         x0, y0 = sx * W * .2, tip_back - .022
         for k in range(lobes):
             t = k / lobes
@@ -694,11 +694,13 @@ def make_beard(info, spec, slots):
                 @ Matrix.Diagonal((r, r * .9, length / lobes * .75, 1.)))
         rz = tip_z + .025 - length * .92
         tube(rings_bm, [Vector((x0, y0 - .004, rz + .008)), Vector((x0, y0 - .004, rz - .008))], [.011, .011], 12)
-    braids = new_object('braids', bm)
-    voxel_merge(braids, .003)
-    bpy.ops.object.select_all(action='DESELECT'); braids.select_set(True); beard.select_set(True)
-    bpy.context.view_layer.objects.active = beard; bpy.ops.object.join()
-    rings = new_object('beard_rings', rings_bm)
+    rings = None
+    if spec.get('braids', True):
+        braids = new_object('braids', bm)
+        voxel_merge(braids, .003)
+        bpy.ops.object.select_all(action='DESELECT'); braids.select_set(True); beard.select_set(True)
+        bpy.context.view_layer.objects.active = beard; bpy.ops.object.join()
+        rings = new_object('beard_rings', rings_bm)
     # 4. Loose strands: cards hanging from points on the lower beard, a little proud, past its edge.
     bm, uv_cards = bmesh.new(), []
     pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.co.z < chin.z + .015 and v.normal.y < .2]
@@ -757,18 +759,19 @@ def make_beard(info, spec, slots):
         for li in poly.loop_indices:
             c = me.vertices[me.loops[li].vertex_index].co
             uv.data[li].uv = (math.atan2(c.x, -(c.y - head_y)) * .09 / .08, c.z / .18)
-    box_uv(rings, 60.)
+    if rings: box_uv(rings, 60.)
     # Skin: the face's own weights under it, easing onto the chest down the hang.
-    for obj, slot in ((beard, 'Beard'), (cards, 'BeardStrands'), (rings, 'BeardRing')):
+    for obj, slot in ((beard, 'Beard'), (cards, 'BeardStrands')) + (((rings, 'BeardRing'),) if rings else ()):
         obj.data.materials.append(slot_material(slot))
         for p in obj.data.polygons: p.use_smooth = obj is not cards
         skin_from_body(obj, info, (chin.z, spec.get('chest_fade', .07), 'spine_03'))   # the hang rests on the chest, not swinging with the head
     slots['Beard'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
     slots['BeardStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
-    ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})
-    slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
+    if rings:
+        ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})
+        slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
     print('CHUCK_BEARD', f'length_cm={L * 100:.0f}', f'mass_verts={len(beard.data.vertices)}', f'cards={len(uv_cards) // 4}')
-    return [beard, cards, rings]
+    return [beard, cards] + ([rings] if rings else [])
 
 
 def slot_material(name):

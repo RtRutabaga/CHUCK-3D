@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -148,6 +148,23 @@ public:
      */
     static ADockNPC* SpawnBlacksmith(UWorld* World, const FVector& Feet, float Yaw);
     bool IsSmith() const { return Kind == EDockHuman::Blacksmith; }
+    /**
+     * The tavern keeper (user 2026-10-04: like the blacksmith but with a
+     * medium-length beard and a different apron, behind the counter between
+     * the cellar hatch and the barrels, polishing a tankard; no sound, it's a
+     * quiet task). Holds a pewter tankard by its handle in his left fist
+     * (Tools/build_keeper_props.py) and works a linen rag round inside its rim,
+     * then over the outside, turning it as he goes; every third round he holds
+     * it up to look it over. Both arms by IK on the halved idle; his eyes on the
+     * work unless the rat is near; he stays behind his bar.
+     */
+    static ADockNPC* SpawnTavernKeeper(UWorld* World, const FVector& Feet, float Yaw);
+    bool IsKeeper() const { return Kind == EDockHuman::TavernKeeper; }
+    /** Worst distance (cm, any frame after he settles) of his left fist from the tankard's handle, and of the rag fist from where the polishing wants it. */
+    float GetTankardGripError() const { return WorstTankardGrip; }
+    float GetRagReachError() const { return WorstRagReach; }
+    /** Polishing passes (inside or outside) begun, for tests. */
+    int32 GetPolishPasses() const { return PolishPasses; }
     bool IsForging() const { return IsSmith() && Resting < .5f; }
     int32 GetStrikes() const { return Strikes; }
     /** Light taps of the hammer on the bare face between blows, and how far the face was from it at the last one (cm). */
@@ -261,6 +278,13 @@ private:
     void Strike();
     void Tap();
     void SmithEvents();
+    // The tavern keeper.
+    UPROPERTY() UStaticMeshComponent* Tankard = nullptr;
+    UPROPERTY() UStaticMeshComponent* Rag = nullptr;
+    UPROPERTY() TObjectPtr<UStaticMesh> KeeperMeshes[2];          // tankard, rag
+    float PolishClock = 0, WorstTankardGrip = 0, WorstRagReach = 0;
+    int32 PolishPasses = 0, PolishPhase = -1;
+    void PoseKeeper(TArray<FTransform>& Space);
     /** Two-bone IK: the fist of arm Side to Fist, the hand's knuckles along Along with its thumb side along Thumb. */
     void PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole);
     /** A posed hand's fist centre and axes (component space). */
