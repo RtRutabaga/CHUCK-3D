@@ -2042,3 +2042,16 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `2973957`; backup `Builds/Windows-Previous-20261004-DwarfLames`.
 
 Next part of the work can be done here.
+
+## Dwarf: no looking down, chest-anchored beard, axe clearance, nose (October 4)
+
+- **What changed** (`48cdda5`):
+  - His look is clamped level, with head yaw at most 25° and the clip's head motion damped.
+  - The beard hang is weighted to `spine_03` below the chin.
+  - The axe stands 34 cm out and leans 9°.
+  - MakeHuman nose targets.
+  - New `-ChuckDwarfCapture`, plus a look-pitch check.
+- **Tests:** `Local/verify-package-20261004-190150.log`, 144 passes; capture log `Local/dwarf-closeup-capture3.log`. The 38 cm attempt failed the pose check and was reverted.
+- **Launcher:** `Builds/Windows` = `48cdda5`; backup `Builds/Windows-Previous-20261004-DwarfNose`.
+
+Next part of the work can be done here.

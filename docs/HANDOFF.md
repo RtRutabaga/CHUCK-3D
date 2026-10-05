@@ -2,6 +2,23 @@
 
 ## Current launcher and integration status
 
+**Update 81 (Claude, October 4, user request: beard through the armour when the dwarf looks down, his head odd looking down, the axe head into his shoulder armour as he turns, a more dwarven nose or a fuller helmet, whichever is easier):** runtime `48cdda5`, on `2973957`.
+
+- **Never looks down:** his look target is clamped level (pitch ≤ 0) and his head turns at most 25°; his body turn does the rest. The idle clip's own head and neck motion is damped to 25%. `CHUCK_DWARF_MEASURE` now requires `look_pitch_deg ≤ 0.5`.
+- **Beard on the chest:** the beard is skinned from the face's weights. Below the chin it goes fully onto `spine_03` within 7 cm, so the hang rests on the breastplate instead of swinging with the head. It now sits 7.5 cm clear of the chest (was 6).
+- **Axe:** stands 34 cm out (was 28) and leans 9° out (was 3°, test limit 10°), so the double head stays off the pauldrons. A first try at 38 cm out failed the arms-down check (arm 50° out, `Local/verify-package-20261004-185512.log`) and was reverted. New `GetAxeShoulderGap`.
+- **Nose (the easier option, data only):** MakeHuman nose targets for a broad, fleshy, slightly humped nose; the helmet is unchanged.
+- **New `-ChuckDwarfCapture`:** puts the rat 60 cm from him at 0/±55/±110° and takes two views of each (`Saved/Screenshots/Windows/Dwarf`). Final run `Local/dwarf-closeup-capture3.log`: look pitch 0.0 in all 10 frames; axe-to-shoulder-joint gap 23.8–38.1 cm; grip error ≤ 1.5 cm. Committed `Review/runtime_Dwarf_closeup_{55,m55}.png`.
+- **Results:** `Verify-Package.ps1` **144** (expected 143) with all gates (`Local/verify-package-20261004-190150.log`). Measured `grip_error_cm=0.0 lean_deg=9.0 look_pitch_deg=0.0`; his arm is 7.4° out.
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `48cdda5`. Previous package: `Builds/Windows-Previous-20261004-DwarfNose`.
+- **Not done or still rough:**
+  - Not checked with a person playing.
+  - He no longer looks down at a rat at his feet. This is intended, but it reads as aloof.
+  - The beard stretches a little between the chin and the hang when he turns his head.
+  - He is still about 113k tris.
+
+Next part of the work can be done here.
+
 **Update 80 (Claude, October 4, user request: "Continue improving" the dwarf):** runtime `2973957`, on `9a3f935`.
 
 - **Pauldrons:** each is now three overlapping lames (drops of 15, 11 and 6.5 cm, the top one outermost), each with a rolled brass rim. A new `rigid` option weights each plate to `upperarm` 0.75 and `clavicle` 0.25 on its side, so in-engine they stand as plates over the shoulders instead of bending like sleeves. Trims now name the item they edge by `id`.
