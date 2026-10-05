@@ -73,6 +73,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         Add(TEXT("Sewer"),[Start](){return Start(TEXT("Sewer"));});
         Add(TEXT("Sewer Jump"),[Start](){return Start(TEXT("SewerJump"));});
         Add(TEXT("Waterdeep Night"),[Start](){return Start(TEXT("Night"));});
+        Add(TEXT("Tavern Pantry"),[Start](){return Start(TEXT("Pantry"));});
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
     GEngine->GameViewport->AddViewportWidgetContent(MenuWidget.ToSharedRef(),100);

@@ -600,7 +600,8 @@ void ADockGameMode::StartPlay()
             C->SetActorLocation(MenuStart==TEXT("SewerJump")?DockSewerCheckpointLocation():DockSewerStartLocation(),false,nullptr,ETeleportType::TeleportPhysics);
             C->RespawnAtAreaStart();
         }
-        if(MenuStart==TEXT("Night")) MarkDockSewerExited();
+        if(MenuStart==TEXT("Pantry")) C->SetActorLocation(DockPantryStartLocation(),false,nullptr,ETeleportType::TeleportPhysics);
+        if(MenuStart==TEXT("Night") || MenuStart==TEXT("Pantry")) MarkDockSewerExited();
         if(!MenuStart.IsEmpty()) UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*MenuStart);
     }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
