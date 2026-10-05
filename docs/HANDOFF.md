@@ -2,6 +2,26 @@
 
 ## Current launcher and integration status
 
+**Update (Claude, October 5, user requests: the fountain-plaza male guard's "Move along, rat!" and the sewer guard's "Stick to the docks, rat!" from ElevenLabs clips):** runtime `66f3ef3`, on `1a4cc43`.
+
+- **Lines:**
+  - Plaza gate guard (`DockGuard`, `Guard`): "Move along, rat!", ElevenLabs "Alexander Kensington - Studio Quality", 1.57 s. It replaces his text line, and the townsfolk check now expects it.
+  - Sewer-hatch guard (`DockGuardC`, `SideGuard`): "Stick to the docks, rat!", "Bob", 2.04 s.
+- **Both:** rebuilt with face bones (`face: true`; same tris as before) and given `SetupVoice`. `add_face_rig` no longer lets the jaw take neck skin, because collars are cut from it. The dwarf and the woman guard were rebuilt on the same rule.
+- **Known artefact:** a small notch in the guards' gambeson collar where the cuirass shows through. It is present at rest, so it is not the face rig.
+- **Checks:**
+  - `CHUCK_GUARD_VOICE_MEASURE` / `CHUCK_SIDE_GUARD_VOICE_MEASURE` (sound, 5 face bones, jaw > 3°, blinks, line).
+  - Gates `CHUCK_NPC_VOICE Guard|SideGuard lines=1 sounds=1`; expected passes 149/150.
+  - The talking close-up camera now sits at mouth height (tall guards looking down at the rat hid their faces). Review: `runtime_Guard_talk_open.png`, `runtime_SideGuard_talk_open.png`.
+- **Results:**
+  - An intermediate plaza-guard-only candidate passed 150 twice (`Local/verify-package-20261005-140827.log`, `-141302.log`).
+  - The combined candidate passed **151** twice (`-142130.log`, `-142605.log`), measuring max jaw 6.9° (plaza), 6.5–6.6° (sewer), 6.6° (woman guard) and 8.9° (dwarf).
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `66f3ef3`. Previous package: `Builds/Windows-Previous-20261005-GuardsVoice`.
+- **Git lock:** another stale empty `.git/index.lock` (14:06, no git process; OneDrive.exe is syncing this folder) blocked the commit. It was removed. This is the second today; consider moving the repo out of OneDrive or pausing sync during agent work.
+- **Not listened to by me.**
+
+Next part of the work can be done here.
+
 **Update (Claude, October 5, user request: the female guard uses this ElevenLabs audio, her line "Stick to the docks, rat"):** runtime `bed8e7d`, on `469c444`.
 
 - **Her voice:** the clip ("Blondie - Conversational", eleven_v4, 2.04 s) is the woman gate guard's (`DockGuardB`, `GuardWoman`) only line, with the same words as before. It is set up as for the dwarf: `dialogue.json`, `Voice/GuardWoman`, the regenerated `NPCVoiceData.h`, `/Game/Art/Audio/Voice/GuardWoman/VO_GuardWoman_talk_00`, and `SetupVoice` after her spear.

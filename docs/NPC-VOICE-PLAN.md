@@ -23,6 +23,8 @@ Status: **started 2026-10-05: the dwarf speaks** (see Progress below; first plan
 - Jaw range 7°.
 - `-ChuckTalkCapture=<tag>` films any voiced NPC speaking.
 
+**2026-10-05, the other two guards.** The plaza gate guard says "Move along, rat!" and the sewer-hatch guard "Stick to the docks, rat!" (user ElevenLabs clips). Both have face bones. The jaw no longer takes neck skin.
+
 - **Not yet:** barks (scratch/notice), subtitles replacing the text box (the existing dialogue text still shows the line), music ducking, Rhubarb, other NPCs' voices, the zombie's sounds, loudness-driven gestures.
 
 ## Goal

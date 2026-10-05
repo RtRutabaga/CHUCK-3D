@@ -2154,3 +2154,15 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `bed8e7d`; backup `Builds/Windows-Previous-20261005-GuardVoice`.
 
 Next part of the work can be done here.
+
+## The plaza and sewer-hatch guards speak (October 5)
+
+- **What changed** (`66f3ef3`):
+  - `DockGuard` "Move along, rat!" and `DockGuardC` "Stick to the docks, rat!", each with face bones and a voice check and gate.
+  - The jaw no longer takes neck skin.
+  - The talk-capture camera sits at mouth height.
+- **Tests:** `Local/verify-package-20261005-142605.log`, 151 passes (`-142130` also 151).
+- **Launcher:** `Builds/Windows` = `66f3ef3`; backup `Builds/Windows-Previous-20261005-GuardsVoice`.
+- **Repeated stale `.git/index.lock`:** suspect OneDrive sync.
+
+Next part of the work can be done here.
