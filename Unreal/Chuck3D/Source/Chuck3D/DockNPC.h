@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Sailor, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -181,6 +181,23 @@ public:
      */
     static ADockNPC* SpawnTavernKeeper(UWorld* World, const FVector& Feet, float Yaw);
     bool IsKeeper() const { return Kind == EDockHuman::TavernKeeper; }
+    /**
+     * The old sailor on the court pier (user 2026-10-05: like the tavern keeper
+     * but older with a shorter beard, smoking a pipe). His pipe
+     * (Tools/build_sailor_props.py) is clenched in the corner of his mouth
+     * and follows his head, a thin wisp rising from the bowl. Every 10 s his
+     * right hand comes up to cup the bowl while he draws on it, then drops,
+     * and he lets out a stream of smoke. He looks out over the water and turns
+     * to the rat when it comes near.
+     */
+    static ADockNPC* SpawnSailor(UWorld* World, const FVector& Feet, float Yaw);
+    bool IsSailor() const { return Kind == EDockHuman::Sailor; }
+    int32 GetPipeDraws() const { return PipeDraws; }
+    /** Worst distance (cm) of his right fist from the pipe's bowl while drawing, and the smoke puffs he has breathed out. */
+    float GetPipeHoldError() const { return WorstPipeHold; }
+    int32 GetPipePuffs() const { return PipePuffsSpawned; }
+    /** Distance (cm) of the pipe's bit from his mouth, as posed this frame. */
+    float GetPipeMouthError() const;
     /** Worst distance (cm, any frame after he settles) of his left fist from the tankard's handle, and of the rag fist from where the polishing wants it. */
     float GetTankardGripError() const { return WorstTankardGrip; }
     float GetRagReachError() const { return WorstRagReach; }
@@ -353,6 +370,20 @@ private:
     float PolishClock = 0, WorstTankardGrip = 0, WorstRagReach = 0;
     int32 PolishPasses = 0, PolishPhase = -1;
     void PoseKeeper(TArray<FTransform>& Space);
+    // The sailor.
+    UPROPERTY() UStaticMeshComponent* Pipe = nullptr;
+    UPROPERTY() UStaticMeshComponent* PipeWisp = nullptr;
+    UPROPERTY() UInstancedStaticMeshComponent* PipeBreath = nullptr;
+    UPROPERTY() TObjectPtr<UStaticMesh> SailorMeshes[3];          // pipe, the cigarette's smoke wisp, a sphere for breath puffs
+    UPROPERTY() TObjectPtr<UMaterialInterface> PuffMaterial;
+    FTransform HeadRef = FTransform::Identity;                    // the head bone in the model's own pose (the mouth was measured on it)
+    float PipeClock = 0, PipeHold = 0, WorstPipeHold = 0, PipeExhaleCarry = 0;
+    int32 PipeDraws = 0, PipePuffsSpawned = 0;
+    bool bPipeHeld = false;
+    struct FPuff { FVector At, Velocity; float Age, Life, Size; };
+    TArray<FPuff> PipePuffs;
+    void PoseSailor(TArray<FTransform>& Space);
+    void TickSailor(float DeltaSeconds);
     // The old elf on her bench.
     float SeatDrop = 0.f;                 // cm her hips come down from standing to the bench
     FVector2D GlanceCentre = FVector2D::ZeroVector;   // idle glances about this (yaw, pitch): the old elf's fountain

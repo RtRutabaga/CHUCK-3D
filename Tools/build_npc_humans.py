@@ -1233,6 +1233,11 @@ def build(name, spec):
     # Clothing from the outfit.
     eye_z = sum((parts['Eyes'].matrix_world @ v.co).z for v in parts['Eyes'].data.vertices) / len(parts['Eyes'].data.vertices)
     info = Body(body, rig, eye_z)
+    # The mouth (the parting of the lips, at the front of the face): where a pipe's bit sits.
+    nose, chin, _ = face_marks(info)
+    lip_z = nose.z - .3 * (nose.z - chin.z)
+    lip_y = min((c.y for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD and abs(c.x) < .008 and abs(c.z - lip_z) < .006), default=nose.y + .01)
+    mouth = Vector((0., lip_y, lip_z))
     if spec.get('face'): add_face_rig(info, parts, joints)
     hide = [False] * len(info.co)
     skirt = None
@@ -1326,7 +1331,11 @@ def build(name, spec):
     print('CHUCK_HUMAN', name, f'tris={tris}', f'height_cm={(hi2 - lo2) * 100:.1f}', f'bones={len(rig.data.bones)}', sorted(slots))
     if REVIEW:
         render_review(name, meshes, slots, spec['height_cm'] / 180.)
-    return {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots}
+    # In Unreal's component space (cm; FBX mirrors Y): the runtime places mouth props from it.
+    m = M @ mouth
+    mouth_cm = [round(m.x * 100, 1), round(-m.y * 100, 1), round(m.z * 100, 1)]
+    print('CHUCK_HUMAN_MOUTH', name, mouth_cm)
+    return {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots, 'mouth_cm': mouth_cm}
 
 
 def render_review(name, meshes, slots, k=1.):

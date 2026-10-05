@@ -57,7 +57,18 @@ namespace
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
         TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
         TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper"),
-        TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder"), TEXT("/Game/Characters/Humans/GnomeAlchemist/SK_GnomeAlchemist.SK_GnomeAlchemist") };
+        TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder"), TEXT("/Game/Characters/Humans/GnomeAlchemist/SK_GnomeAlchemist.SK_GnomeAlchemist"),
+        TEXT("/Game/Characters/Humans/Sailor/SK_Sailor.SK_Sailor") };
+    // The sailor's pipe (component space: his feet, X forward, Y right). His
+    // mouth on the model (SourceAssets/NPCs/Humans/manifest.json Sailor
+    // mouth_cm); the bit sits in its right corner, the stem forward and a
+    // little out and down. The bowl from the bit (Tools/build_sailor_props.py
+    // bowl_cm); his fist cups it from under it.
+    const FVector SailorMouth(14.7f, 0.f, 157.2f);
+    constexpr float MouthCorner = 2.2f;
+    const FVector PipeBowl(11.8f, 0.f, -1.8f), PipeCup(11.f, 0.f, -6.f);
+    // Every PipePeriod s: the hand up (PipeRaise), held while he draws (to PipeLower), down; then he breathes out.
+    constexpr float PipePeriod = 10.f, PipeRaise = .8f, PipeLower = 2.8f, PipeDown = 3.6f, PipeExhaleAt = 3.f, PipeExhaleLength = 1.4f;
     // The gnome's sleeves: each upper arm swung well forward (the elbow in front of his robe, a
     // little out), the forearm level across to just past the middle (into the other sleeve), the
     // left cuff over the right.
@@ -154,9 +165,11 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Keeper(MeshPaths[8]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Elf(MeshPaths[9]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Gnome(MeshPaths[10]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Sailor(MeshPaths[11]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
     HumanMeshes[8] = Keeper.Object; HumanMeshes[9] = Elf.Object; HumanMeshes[10] = Gnome.Object;
+    HumanMeshes[11] = Sailor.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
@@ -166,6 +179,12 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<UStaticMesh> TankardAsset(TEXT("/Game/Characters/Humans/Props/SM_Tankard.SM_Tankard"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> RagAsset(TEXT("/Game/Characters/Humans/Props/SM_Rag.SM_Rag"));
     KeeperMeshes[0] = TankardAsset.Object; KeeperMeshes[1] = RagAsset.Object;
+    // The sailor's pipe, its smoke (Chuck's cigarette wisp and breath puffs, larger).
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> PipeAsset(TEXT("/Game/Characters/Humans/Props/SM_Pipe.SM_Pipe"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> WispAsset(TEXT("/Game/Characters/Chuck/V1/Cigarette/SM_CigaretteSmoke.SM_CigaretteSmoke"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> PuffSphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> PuffMat(TEXT("/Game/Characters/Chuck/V1/Cigarette/M_SmokePuff.M_SmokePuff"));
+    SailorMeshes[0] = PipeAsset.Object; SailorMeshes[1] = WispAsset.Object; SailorMeshes[2] = PuffSphere.Object; PuffMaterial = PuffMat.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]), ZombieIdle(ClipPaths[ClipZombieIdle]), ZombieWalk(ClipPaths[ClipZombieWalk]),
         ZombieFall(ClipPaths[ClipZombieFall]);
@@ -542,8 +561,57 @@ ADockNPC* ADockNPC::SpawnAlchemist(UWorld* World, const FVector& Feet, float Yaw
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnSailor(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::Sailor, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("Sailor"));
+    NPC->DisplayName = TEXT("Old sailor");
+    NPC->Lines = { TEXT("Weather's turning."), TEXT("Seen bigger rats than you in a ship's bilge.") };
+    NPC->SetGrip(1, .8f);   // the hand that holds the bowl
+    NPC->Pipe = NewObject<UStaticMeshComponent>(NPC, TEXT("Pipe"));
+    NPC->Pipe->SetStaticMesh(NPC->SailorMeshes[0]);
+    NPC->Pipe->SetupAttachment(NPC->Body);
+    NPC->Pipe->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    NPC->Pipe->SetCanEverAffectNavigation(false);
+    NPC->Pipe->RegisterComponent();
+    if (UMaterialInterface* Ember = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_FireEmber.M_FireEmber")))
+    {
+        const int32 Hot = NPC->Pipe->GetMaterialIndex(TEXT("Hot"));
+        if (Hot != INDEX_NONE) NPC->Pipe->SetMaterial(Hot, Ember);
+    }
+    // A thin wisp rising from the bowl, upright whatever his head does.
+    NPC->PipeWisp = NewObject<UStaticMeshComponent>(NPC, TEXT("PipeWisp"));
+    NPC->PipeWisp->SetStaticMesh(NPC->SailorMeshes[1]);
+    NPC->PipeWisp->SetupAttachment(NPC->Pipe);
+    NPC->PipeWisp->SetRelativeLocation(PipeBowl);
+    NPC->PipeWisp->SetUsingAbsoluteRotation(true); NPC->PipeWisp->SetUsingAbsoluteScale(true);
+    NPC->PipeWisp->SetWorldScale3D(FVector(2.f));
+    NPC->PipeWisp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    NPC->PipeWisp->SetCastShadow(false);
+    NPC->PipeWisp->RegisterComponent();
+    // Breath: soft puffs on instanced spheres, each fading on its own (M_SmokePuff, custom data 0 = opacity), left where breathed.
+    NPC->PipeBreath = NewObject<UInstancedStaticMeshComponent>(NPC, TEXT("PipeBreath"));
+    NPC->PipeBreath->SetStaticMesh(NPC->SailorMeshes[2]);
+    NPC->PipeBreath->SetMaterial(0, NPC->PuffMaterial);
+    NPC->PipeBreath->NumCustomDataFloats = 1;
+    NPC->PipeBreath->SetupAttachment(NPC->GetRootComponent());
+    NPC->PipeBreath->SetUsingAbsoluteLocation(true); NPC->PipeBreath->SetUsingAbsoluteRotation(true); NPC->PipeBreath->SetUsingAbsoluteScale(true);
+    NPC->PipeBreath->SetWorldLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+    NPC->PipeBreath->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    NPC->PipeBreath->SetCastShadow(false);
+    NPC->PipeBreath->RegisterComponent();
+    NPC->PipeClock = FMath::FRandRange(3.f, 8.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SAILOR_SPAWNED pipe=%d smoke=%d puff=%d at=%s"), NPC->SailorMeshes[0] ? 1 : 0, NPC->SailorMeshes[1] ? 1 : 0,
+        NPC->PuffMaterial ? 1 : 0, *Feet.ToString());
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // The old sailor near the outer end of the court pier, off its centre
+    // line (the route and the slide's climb-out), looking out over the water.
+    SpawnSailor(World, FVector(2180, 3175, 0), 60.f);
     // The gnome alchemist before his shop's left window (DockPlaza.cpp: the
     // shop at 1280,-3940, its front at y -3760, the door at x 1222..1338),
     // clear of the door, facing out over the plaza.
@@ -646,6 +714,7 @@ void ADockNPC::BeginPlay()
             TArray<FQuat> None; None.Init(FQuat::Identity, BoneCount);
             Solve(None, RefSpace);
             HeadRefRotation = RefSpace[BoneIndex[Head]].GetRotation();
+            HeadRef = RefSpace[BoneIndex[Head]];
         }
         // Face bones, on the NPCs built with them (Tools/build_npc_humans.py add_face_rig).
         const TCHAR* FaceNames[] = { TEXT("jaw"), TEXT("lid_upper_l"), TEXT("lid_upper_r"), TEXT("brow_l"), TEXT("brow_r") };
@@ -1072,6 +1141,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         Glance = GlanceCentre + FVector2D(FMath::FRandRange(-Spread, Spread), FMath::FRandRange(-6.f, 10.f));
     }
     if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f - 16.f * Inspect);   // his eyes on the work
+    if (IsSailor()) TickSailor(DeltaSeconds);
     if (IsKeeper())
     {
         PolishClock += DeltaSeconds;
@@ -1280,6 +1350,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (bSpear) HoldSpear(Space);
         if (IsSmith()) PoseSmith(Space);
         if (IsKeeper()) PoseKeeper(Space);
+        if (IsSailor()) PoseSailor(Space);
         if (IsSeated()) PoseSeated(Space);
         if (IsAlchemist()) PoseSleeves(Space);
         PoseFace(Space);
@@ -1311,6 +1382,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     if (bSpear) HoldSpear(Space);
     if (IsSmith()) PoseSmith(Space);
     if (IsKeeper()) PoseKeeper(Space);
+    if (IsSailor()) PoseSailor(Space);
     if (IsSeated()) PoseSeated(Space);
     if (IsAlchemist()) PoseSleeves(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
@@ -1831,4 +1903,81 @@ void ADockNPC::PoseSleeves(TArray<FTransform>& Space)
 float ADockNPC::GetWristGap() const
 {
     return BoneIndex.Contains(INDEX_NONE) ? 1e3f : static_cast<float>(FVector::Dist(Body->GetBoneLocation(BoneNames[HandL]), Body->GetBoneLocation(BoneNames[HandR])));
+}
+
+void ADockNPC::PoseSailor(TArray<FTransform>& Space)
+{
+    // The pipe in the right corner of his mouth, riding his head.
+    const float Right = -ArmOut;
+    const FTransform PipeRest(FRotationMatrix::MakeFromXZ(FVector(1.f, .2f * Right, -.12f), FVector::UpVector).ToQuat(),
+        SailorMouth + FVector(-.5f, MouthCorner * Right, 0.f));
+    const FTransform PipeNow = PipeRest.GetRelativeTransform(HeadRef) * Space[BoneIndex[Head]];
+    if (Pipe) Pipe->SetRelativeTransform(PipeNow);
+    // The draw: his right hand up to cup the bowl, held, then down again (blended from the idle's own hand).
+    if (PipeHold <= 0.f) return;
+    FVector F, A, T;
+    HandFrame(Space, 1, F, A, T);
+    const FVector Cup = PipeNow.TransformPosition(PipeCup);
+    const FVector Along = FMath::Lerp(A, PipeNow.GetUnitAxis(EAxis::X), PipeHold).GetSafeNormal();
+    const FVector Thumb = FMath::Lerp(T, PipeNow.GetUnitAxis(EAxis::Z), PipeHold).GetSafeNormal();
+    PlaceHand(Space, 1, FMath::Lerp(F, Cup, PipeHold), Along, Thumb, FVector(-.3f, Right, -.6f));
+    if (PipeHold > .95f)
+    {
+        HandFrame(Space, 1, F, A, T);
+        if (GetWorld()->GetTimeSeconds() > 8.f) WorstPipeHold = FMath::Max(WorstPipeHold, static_cast<float>(FVector::Dist(F, Cup)));
+        if (!bPipeHeld) { bPipeHeld = true; ++PipeDraws; }
+    }
+    else bPipeHeld = false;
+}
+
+float ADockNPC::GetPipeMouthError() const
+{
+    if (!Pipe || !Body->GetSkinnedAsset()) return 1e3f;
+    const FTransform& Comp = Body->GetComponentTransform();
+    const FVector Corner = Comp.TransformPosition(SailorMouth + FVector(-.5f, MouthCorner * -ArmOut, 0.f));
+    // The mouth as the head now carries it, against where the pipe's bit actually is.
+    const FTransform HeadNow = Body->GetBoneTransform(Body->GetBoneIndex(BoneNames[Head]));
+    const FVector MouthNow = HeadNow.TransformPosition(HeadRef.InverseTransformPosition(Comp.InverseTransformPosition(Corner)));
+    return static_cast<float>(FVector::Dist(MouthNow, Pipe->GetComponentLocation()));
+}
+
+void ADockNPC::TickSailor(float DeltaSeconds)
+{
+    PipeClock += DeltaSeconds;
+    const float C = FMath::Fmod(PipeClock, PipePeriod);
+    PipeHold = C < PipeRaise ? FMath::SmoothStep(0.f, PipeRaise, C) : C < PipeLower ? 1.f : C < PipeDown ? 1.f - FMath::SmoothStep(PipeLower, PipeDown, C) : 0.f;
+    // Breathing out after the draw: a stream of puffs from the corner of his mouth, forward and a little down.
+    if (Pipe && C >= PipeExhaleAt && C < PipeExhaleAt + PipeExhaleLength)
+    {
+        const float Left = 1.f - (C - PipeExhaleAt) / PipeExhaleLength;
+        PipeExhaleCarry += DeltaSeconds * 14.f;
+        const FVector Mouth = Pipe->GetComponentLocation();
+        const FVector Out = (GetActorForwardVector() + FVector(0, 0, -.2f)).GetSafeNormal();
+        while (PipeExhaleCarry >= 1.f)
+        {
+            PipeExhaleCarry -= 1.f;
+            PipePuffs.Add({ Mouth + Out * 3.f, Out * FMath::FRandRange(45.f, 75.f) * (.4f + .6f * Left) + FMath::VRand() * 9.f, 0.f, FMath::FRandRange(2.f, 2.8f), FMath::FRandRange(.8f, 1.2f) });
+            ++PipePuffsSpawned;
+        }
+    }
+    // Each puff slows, swells, rises and thins away on the harbour breeze.
+    if (!PipeBreath) return;
+    PipeBreath->ClearInstances();
+    for (int32 I = PipePuffs.Num() - 1; I >= 0; --I)
+    {
+        FPuff& P = PipePuffs[I];
+        P.Age += DeltaSeconds;
+        if (P.Age >= P.Life) { PipePuffs.RemoveAtSwap(I); continue; }
+        P.Velocity *= FMath::Max(0.f, 1.f - 1.5f * DeltaSeconds);
+        P.Velocity.Z += (P.Age > .25f ? 18.f : 0.f) * DeltaSeconds;
+        P.At += P.Velocity * DeltaSeconds + FVector(6.f, 3.f, 0.f) * DeltaSeconds;
+    }
+    for (const FPuff& P : PipePuffs)
+    {
+        const float U = P.Age / P.Life;
+        const float Diameter = FMath::Lerp(5.f, 34.f, 1.f - FMath::Square(1.f - U)) * P.Size;
+        const int32 Index = PipeBreath->AddInstance(FTransform(FRotator(0, P.Age * 40.f, 0), P.At, FVector(Diameter / 100.f)), true);
+        PipeBreath->SetCustomDataValue(Index, 0, .28f * FMath::SmoothStep(0.f, .1f, P.Age) * FMath::Pow(1.f - U, 1.5f), false);
+    }
+    PipeBreath->MarkRenderStateDirty();
 }

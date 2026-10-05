@@ -323,6 +323,53 @@
      "gain": 2.523
     }
    }
+  },
+  "Pipe": {
+   "fbx": "SM_Pipe.fbx",
+   "tris": 596,
+   "bowl_cm": [
+    11.8,
+    0.0,
+    -1.8
+   ],
+   "slots": {
+    "Bit": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 20.0,
+     "tint": [
+      0.012,
+      0.011,
+      0.01
+     ],
+     "gain": 26.931
+    },
+    "Briar": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 12.0,
+     "tint": [
+      0.16,
+      0.065,
+      0.03
+     ],
+     "gain": 7.27
+    },
+    "Hot": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 20.0,
+     "tint": [
+      0.6,
+      0.15,
+      0.02
+     ],
+     "gain": 14.226
+    }
+   }
   }
  },
  "generators": {
@@ -331,6 +378,7 @@
   "Tongs": "Tools/build_smith_props.py",
   "BattleAxe": "Tools/build_battle_axe.py",
   "Tankard": "Tools/build_keeper_props.py",
-  "Rag": "Tools/build_keeper_props.py"
+  "Rag": "Tools/build_keeper_props.py",
+  "Pipe": "Tools/build_sailor_props.py"
  }
 }

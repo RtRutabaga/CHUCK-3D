@@ -600,6 +600,7 @@ void ADockGameMode::StartPlay()
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSailorCapture"))) { bSmithCapture=true; FilmTag=TEXT("Sailor"); }   // his pipe: head and shoulders
     bDwarfCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckDwarfCapture"));
     // -ChuckTalkCapture=<tag>: only the talking close-up, of any voiced NPC (e.g. DockGuardB).
     if(FParse::Value(FCommandLine::Get(),TEXT("ChuckTalkCapture="),TalkCaptureTag)) bDwarfCapture=true;
@@ -768,7 +769,8 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
 void ADockGameMode::TickSmithCapture(float DeltaSeconds)
 {
     // Frames of the smith's work for motion review: Saved/Screenshots/Windows/Smith/frame###.png.
-    const float Settle=4.f, Step=FilmTag==TEXT("TavernKeeper") ? .25f : .06f, Length=FilmTag==TEXT("TavernKeeper") ? 30.f : 4.8f;   // the keeper's round is slower and longer
+    const bool bSlow=FilmTag==TEXT("TavernKeeper") || FilmTag==TEXT("Sailor");   // the keeper's round and the sailor's pipe are slower and longer
+    const float Settle=4.f, Step=bSlow ? .25f : .06f, Length=FilmTag==TEXT("Sailor") ? 12.f : bSlow ? 30.f : 4.8f;
     SmithCaptureTime+=DeltaSeconds;
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
     if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
@@ -776,13 +778,14 @@ void ADockGameMode::TickSmithCapture(float DeltaSeconds)
     UGameplayStatics::GetAllActorsWithTag(this,FilmTag,Found);
     const auto* Smith=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
     if(!PC || !Smith) return;
-    const bool bKeeper=Smith->IsKeeper();   // behind his counter: a closer, higher view over it
+    const bool bKeeper=Smith->IsKeeper() || Smith->IsSailor();   // behind his counter: a closer, higher view over it; the sailor's pipe, close
     if(!NPCCamera.IsValid())
     {
         NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
         const FVector Feet=Smith->GetActorLocation()-FVector(0,0,Smith->GetSimpleCollisionHalfHeight());
-        const FVector At=Feet+Smith->GetActorForwardVector().RotateAngleAxis(bKeeper ? 25.f : 35.f,FVector::UpVector)*(bKeeper ? 190.f : 330.f)+FVector(0,0,bKeeper ? 175.f : 140.f);
-        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bKeeper ? 125.f : 105.f)-At).Rotation());
+        const bool bSailor=Smith->IsSailor();
+        const FVector At=Feet+Smith->GetActorForwardVector().RotateAngleAxis(bKeeper ? 25.f : 35.f,FVector::UpVector)*(bSailor ? 150.f : bKeeper ? 190.f : 330.f)+FVector(0,0,bSailor ? 160.f : bKeeper ? 175.f : 140.f);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bSailor ? 140.f : bKeeper ? 125.f : 105.f)-At).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(bKeeper ? 45.f : 55.f);
         PC->SetViewTarget(NPCCamera.Get());
     }
@@ -791,7 +794,7 @@ void ADockGameMode::TickSmithCapture(float DeltaSeconds)
     if(SmithCaptureTime>=SmithNextFrame)
     {
         SmithNextFrame=FMath::Max(SmithNextFrame+Step,SmithCaptureTime);
-        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/frame%03d.png"),FilmTag==TEXT("TavernKeeper") ? TEXT("Keeper") : TEXT("Smith"),SmithFrame),false,false);
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/frame%03d.png"),FilmTag==TEXT("TavernKeeper") ? TEXT("Keeper") : FilmTag==TEXT("Sailor") ? TEXT("Sailor") : TEXT("Smith"),SmithFrame),false,false);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_FRAME %03d t=%.2f strikes=%d taps=%d"),SmithFrame,SmithCaptureTime-Settle,Smith->GetStrikes(),Smith->GetTaps());
         ++SmithFrame;
     }
@@ -2001,7 +2004,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSeated() || Entry->IsAlchemist()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap, the gnome's in his sleeves
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSailor() || Entry->IsSeated() || Entry->IsAlchemist()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap, the gnome's in his sleeves
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2098,6 +2101,17 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Keeper && KeeperAt.X>-119.f+24.f && KeeperAt.X<14.f-24.f && KeeperAt.Y>878.f && KeeperAt.Y<941.f
                 && Keeper->GetTankardGripError()<3.f && Keeper->GetRagReachError()<4.f && Keeper->GetPolishPasses()>=2 && Keeper->CanTalk(),
                 TEXT("the tavern keeper stands behind the counter between the barrels and the cellar hatch, polishing a tankard in his hands"));
+            // The old sailor on the court pier, pipe in his mouth, drawing on it and breathing smoke.
+            TArray<AActor*> SailorFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Sailor"),SailorFound);
+            const auto* Sailor=SailorFound.Num()==1 ? Cast<ADockNPC>(SailorFound[0]) : nullptr;
+            const FVector SailorAt=Sailor ? Sailor->GetActorLocation() : FVector(1e4f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SAILOR_MEASURE present=%d at=(%.0f,%.0f) pipe_mouth_cm=%.1f draws=%d hold_cm=%.1f puffs=%d lines=%d"),
+                Sailor ? 1 : 0,SailorAt.X,SailorAt.Y,Sailor ? Sailor->GetPipeMouthError() : 1e3f,Sailor ? Sailor->GetPipeDraws() : 0,
+                Sailor ? Sailor->GetPipeHoldError() : 1e3f,Sailor ? Sailor->GetPipePuffs() : 0,Sailor ? Sailor->Lines.Num() : 0);
+            Check(Sailor && SailorAt.X>1500.f && SailorAt.X<2330.f && FMath::Abs(SailorAt.Y-3080.f)<150.f && FMath::Abs(SailorAt.Y-3080.f)>15.f+24.f
+                && Sailor->GetPipeMouthError()<1.f && Sailor->GetPipeDraws()>=2 && Sailor->GetPipeHoldError()<4.f && Sailor->GetPipePuffs()>0 && Sailor->CanTalk(),
+                TEXT("an old sailor stands on the court pier, off its walking line, his pipe in his mouth, drawing on it and breathing out smoke"));
             // The old elf on the bench by the fountain: hips on the bench, feet on the paving, hands in her lap.
             TArray<AActor*> ElfFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),ElfFound);
