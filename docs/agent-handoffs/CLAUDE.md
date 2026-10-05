@@ -2084,3 +2084,26 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `81fc1d0`; backup `Builds/Windows-Previous-20261004-DwarfBushy`.
 
 Next part of the work can be done here.
+
+## Old elf on the fountain bench (user 2026-10-05)
+
+- **Request:** an elderly elf woman sitting on a bench by the fountain, long braided grey hair.
+- **Source:** `2ed1cc9` on main.
+  - `humans.json` ElfElder (`seated`, `braided_hair`, `brow_texture`).
+  - `build_npc_humans.py`: `make_hair` and `seat_skirt`.
+  - New: `build_elf_textures.py`.
+  - `DockNPC.*`: `EDockHuman::ElfElder`, `SpawnElfElder`, `PoseSeated`, `TwoBone`; leg bones added to `EBone`.
+  - `DockGameMode.cpp`: her check, and `-ChuckNPCTag=`.
+  - `Verify-Package.ps1`: expects 144/145.
+- **Contract:** shared human skeleton unchanged; new `/Game/Characters/Humans/ElfElder` and two textures. The plaza bench geometry is unchanged.
+- **To reproduce:**
+  1. `blender -b -P Tools/build_elf_textures.py`
+  2. `blender -b -P Tools/build_npc_humans.py -- ElfElder`
+  3. `Tools/Import-NPCHumans.ps1 -Only ElfElder`
+- **Verified:** `Local/verify-package-20261005-080512.log`, 146 passes. `seat_cm=57.8`, foot lift 0.0, lap hands 0.0.
+- **Remaining:**
+  - A bluish hairline edge at grazing angles, and a texture seam over the crown.
+  - Not playtested.
+- **Launcher:** `Builds/Windows` = `2ed1cc9`; backup `Builds/Windows-Previous-20261005-Elf`.
+
+Next part of the work can be done here.

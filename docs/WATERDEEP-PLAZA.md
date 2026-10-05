@@ -20,6 +20,8 @@ Follow Chandlers' Row to its far end, pass the customs terrace on its east side,
 
 October 4 (user request): a blacksmith now works at an anvil in front of the smithy, the forge at his left hand. He is a heavy-set, gruff older man in a leather bib apron (`humans.json` Blacksmith). The anvil on its iron-hooped stump replaces the old box anvil. He hammers a glowing bar he holds with tongs, in sets of six blows with a pause to turn the work. Each blow rings and throws sparks; he gives two short lines if talked to. The anvil is solid and can be climbed. See `ADockNPC::SpawnBlacksmith`, `Tools/build_smith_props.py` and HANDOFF.
 
+October 5 (user request): an old elf woman sits at the fountain end of the bench west of the fountain, her long grey braid down her back, watching the water. The bench is unchanged; see `ADockNPC::SpawnElfElder` and HANDOFF Update 86.
+
 The barred sewer arch is in the eastern wall. It has solid collision backing and no interaction, destination or access yet. The city gate also stays closed. This is the same prototype map, not a campaign or sewer level.
 
 ## Light and implementation

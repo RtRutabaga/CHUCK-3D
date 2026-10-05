@@ -2,6 +2,32 @@
 
 ## Current launcher and integration status
 
+## October 5 — old elf woman on the fountain bench
+
+**Update 86 (Claude, user request: "an elderly elf woman npc sitting on a bench by the fountain, long braided gray hair"):** runtime `2ed1cc9`, on `77e4b82`.
+
+- **Her** (`ElfElder` in `humans.json`): 171 cm, slight, MakeHuman age .95, old female skin, lightly made up as an elf: pointed ears (taller, a little out), high cheekbones, an oval face, lifted outer eye corners. Long-sleeved linen shirt, sage bodice, long dark green skirt, narrow belt, soft shoes. 89k tris.
+- **Hair:** MakeHuman's `braid01` was tried first. It covers the ears completely and sweeps a modern fringe over one eye, so `make_hair` (new, in `build_npc_humans.py`) builds hers:
+  - a scalp cap combed back, its hairline over the forehead and temples, cut a finger's width clear round each ear so the pointed ears show;
+  - a 55 cm three-strand braid from a gathered knot at the nape down her back, tied above a loose tuft;
+  - strand cards over the crown.
+  - It uses the beard textures, tinted silver. Her brows are a grey re-colour of `eyebrow010` (`Tools/build_elf_textures.py`).
+- **Sitting:** the skirt is weighted by the new `seat_skirt` (onto the thighs, then the calves, bridged across the knees). `ADockNPC::SpawnElfElder` puts her hips at (-410,-3341), the fountain end of the existing plaza bench at x -440 (`DockPlaza.cpp`, unchanged), facing the docks. Her hip joints sit 9 cm over the bench top. Leg IK puts her feet flat on the paving, `PlaceHand` rests her hands on her lap, and the damped StandLook idle keeps her breathing. Her pelvis is rocked back and her back rounded. Her eyes go toward the fountain (at most about 50° of head turn) or to the rat when it is near. She never turns her body. One line: "The water sounded just the same three hundred years ago."
+- **Test:** a new check covers present, mocap, hip height 9±4 cm over the bench, over the bench near its front edge, worst foot lift <2 cm and lap-hand error <3 cm after settling, within 8 m of the fountain, no body turn, and her line. She is exempt from the arms-down check. Verifier expects 144/145.
+- **Results:** candidate default verification passed **146** with all gates (`Local/verify-package-20261005-080512.log`). Measured: `seat_cm=57.8 foot_lift_cm=0.0 lap_hand_cm=0.0 to_fountain_cm=670 body_turn_deg=0.0`. The keeper's rag check passed (0.3 cm).
+  - Review: `-ChuckNPCCapture -ChuckNPCTag=ElfElder` (new tag filter), log `Local/elf-npccapture2.log`. Front, three-quarter, face and back images are in `SourceAssets/NPCs/Humans/Review/runtime_ElfElder_*.png`; Blender renders are `ElfElder_*.png`.
+  - Build `Local/elf-build2.log`. Existing UE 5.7.4 and Blender 4.5.14; nothing installed.
+- **Promoted** to `Builds/Windows`; receipt and `Launch-Prototype.ps1 -CheckOnly` identify `2ed1cc9`. Previous package: `Builds/Windows-Previous-20261005-Elf`.
+- **Known flaws:**
+  - A faint bluish edge along the hairline at grazing angles.
+  - A lighter band at the cap's texture seam over the crown.
+  - The hair is a sculpted cap and braid with strand cards, not groom.
+  - The bench is primitive geometry.
+  - Not playtested; no MotionCapture run.
+- The import re-wrote shared human textures from unchanged sources again. They stay unstaged with the earlier churn, and two untracked first-try textures remain.
+
+Next part of the work can be done here.
+
 ## October 5 — fix fatal errors when starting from the menu
 
 **Update 85 (Codex, user report: New Game and checkpoints cause a fatal error):** runtime `898a696`, from `df963d8` / launcher `09b88b7`.
