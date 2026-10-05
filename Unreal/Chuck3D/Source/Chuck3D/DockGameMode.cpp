@@ -592,6 +592,17 @@ void ADockGameMode::StartPlay()
     if(auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0)))
     { Chuck->ResetToDock(); AddTickPrerequisiteActor(Chuck); }
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
+    const FString MenuStart=UGameplayStatics::ParseOption(OptionsString,TEXT("ChuckStart"));
+    if(auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0)))
+    {
+        if(MenuStart==TEXT("Sewer") || MenuStart==TEXT("SewerJump"))
+        {
+            C->SetActorLocation(MenuStart==TEXT("SewerJump")?DockSewerCheckpointLocation():DockSewerStartLocation(),false,nullptr,ETeleportType::TeleportPhysics);
+            C->RespawnAtAreaStart();
+        }
+        if(MenuStart==TEXT("Night")) MarkDockSewerExited();
+        if(!MenuStart.IsEmpty()) UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*MenuStart);
+    }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
@@ -3001,4 +3012,3 @@ void ADockHUD::DrawHUD()
         DrawText(Prompt,FLinearColor(.95f,.95f,.95f),Canvas->SizeX*.5f-60,120,GEngine->GetSmallFont(),1.2f);
     }
 }
-

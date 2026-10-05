@@ -140,5 +140,10 @@ class CHUCK3D_API ADockHUD : public AHUD
 {
     GENERATED_BODY()
 public:
+    virtual void BeginPlay() override;
     virtual void DrawHUD() override;
+private:
+    TSharedPtr<class SWidget> MenuWidget;
+    void ShowTitleMenu();
+    void ShowMenu(bool Checkpoints);
 };
