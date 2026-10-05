@@ -1,5 +1,19 @@
 # Codex movement handoff — 2026-09-26
 
+## October 4 — simple title menu and developer checkpoints
+
+**Update 84 (Codex, user request: CHUCK 3D title, New Game and Dev Checkpoints):** runtime `09b88b7` (menu foundation `7a03b26`), from `12d8a4e` / launcher `81fc1d0`.
+
+- Plain dark title screen with **CHUCK 3D**, **New Game**, and **Dev Checkpoints**. The world pauses while choosing. The checkpoint screen has Waterdeep, Sewer, Sewer Jump (the checkpoint before the wall-run rupture), Waterdeep Night, Tavern Pantry, and Back.
+- Every selection opens a fresh WaterdeepDocks session. New Game / Waterdeep uses morning docks; sewer starts use the existing entrance or pre-rupture spawn/recovery and facing; Night applies the existing evening return state; Pantry starts in the existing cellar and applies evening so the tavern above is open. No persistent save/load.
+- Native Slate UI in `DockMenu.cpp`; added bundled Slate/SlateCore module dependencies only. No installation, new binary asset, import, cook, controller/rig change or original-game access. Existing UE **5.7.4**, DX11, VS2022 **14.44.35229**, Windows SDK **10.0.26100.0**. Builds staged against the retained current cooked assets, including Claude's local human inputs. Existing unfinished NPC binaries/review images/textures were not staged or edited.
+- Build `Local/menu-complete-build.log` succeeded in 70.76 s. Earlier candidates also passed 145 checks (`Local/verify-package-20261004-203459.log`, `Local/verify-package-20261004-204056.log`). Final exact executable: default packaged verifier **145 passes**, all required gates, `Local/verify-package-20261004-204653.log`..
+- Title and checkpoint screens visually inspected through Unreal `Shot showui` captures. Evidence in package `Saved/Screenshots/Windows/Menu/{Title,Checkpoints}.png` (Title from the initial candidate; identical title layout). All five map-option startup paths ran; logs `Local/menu-point-{Waterdeep,Sewer,SewerJump,Night}.log` and `Local/menu-complete-Pantry.log` confirm destination selection, underground music, and evening state/music where applicable.
+- LIMITATIONS: physical Xbox menu navigation and manual mouse/keyboard click-through were not verified. Windows desktop UI review was blocked by a firewall permission prompt; no security settings were changed. Screenshots and map-option destination startup were checked separately. No new full connected sewer-route, MotionCapture, sustained-performance or subjective playtest in this menu pass.
+- Promoted to root `Builds/Windows`; receipt and `Tools/Launch-Prototype.ps1 -CheckOnly` identify `09b88b7` and pass the executable hash check. Previous package retained as `Builds/Windows-Previous-20261004-Menu`. Player launcher remains root `Launch-Prototype.cmd`.
+
+Next part of the work can be done here.
+
 ## October 4 — slightly dimmer sewer grey fill
 
 **Update 76 (Codex, October 4, user request: grey light slightly dimmer):** runtime `d3c8fd7`, from main `50da680` / launcher `56cbc96`.
