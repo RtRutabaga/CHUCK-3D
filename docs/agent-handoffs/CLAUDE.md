@@ -2129,3 +2129,16 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `bad2bc7`; backup `Builds/Windows-Previous-20261005-Gnome`.
 
 Next part of the work can be done here.
+
+## The dwarf speaks: NPC voice plan started (October 5)
+
+- **What changed** (`5d35f5c`):
+  - Voice data and tools: `dialogue.json`, `build_npc_voice.py`, `import_npc_voice.py` and the generated `NPCVoiceData.h`.
+  - `add_face_rig` on the dwarf (5 bones merged into `SKEL_Human`).
+  - `ADockNPC` voice playback, loudness jaw, brows and blinks.
+  - A smoke check, a Verify gate and the talking capture.
+- **Contract:** `SKEL_Human` gains `jaw`, `lid_upper_l/r` and `brow_l/r`. Only meshes built with `face` carry them, and the runtime gives them no clip delta.
+- **Tests:** `Local/verify-package-20261005-103446.log`, 148 passes. The other runs failed only the keeper or gnome intermittent checks (tasks offered).
+- **Launcher:** `Builds/Windows` = `5d35f5c`; backup `Builds/Windows-Previous-20261005-DwarfVoice`.
+
+Next part of the work can be done here.

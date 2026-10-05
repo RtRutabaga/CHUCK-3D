@@ -2,6 +2,37 @@
 
 ## Current launcher and integration status
 
+**Update (Claude, October 5, user request: start on the NPC voice plan, with the dwarf's ElevenLabs audio):** runtime `5d35f5c`, on `133b45b`.
+
+- **Line:** the user's clip (ElevenLabs voice "Paul - Calm, Relaxed and Deep", eleven_v4, 5.49 s) says "Ach, away wi' ye, ye mangy wee bastard—blow yer smoke somewhere else." It replaces his two text lines.
+  - The source MP3 is in `SourceAssets/NPCs/Voice/Dwarf/source`.
+  - `SourceAssets/NPCs/dialogue.json` holds the line.
+  - `Tools/build_npc_voice.py` (Blender `aud` + numpy) writes `Voice/Dwarf/talk_00.wav` and a 60 fps loudness envelope in the generated `Source/Chuck3D/NPCVoiceData.h`.
+  - `Tools/import_npc_voice.py` imports `/Game/Art/Audio/Voice/Dwarf/VO_Dwarf_talk_00`.
+- **Face bones (plan phase 1, dwarf only):** `add_face_rig` adds `jaw`, `lid_upper_l/r` and `brow_l/r` for `face: true` humans.
+  - Placed from his landmarks and skinned before the clothing is cut. The beard keeps part of the jaw below the mouth, and the brow and lash cards are re-skinned (brows never follow a blink).
+  - Importing him merged them into `SKEL_Human`. The other humans and the clips were not re-imported.
+  - Blender pose test: `Review/blender_Dwarf_face_blink.png`.
+- **Runtime:** `ADockNPC::SetupVoice`, `TickVoice` and `PoseFace`.
+  - Each line Chuck reaches is spoken from the head (spatial), and fades if Chuck leaves.
+  - Jaw up to 9° with loudness; brows lift on peaks; blinks every 2–6 s plus one at the start.
+  - Face bones are excluded from the clip deltas: a missing track samples as identity, which first stretched his face and beard over the helmet in the capture. This was caught and fixed before promotion.
+- **Lip sync:** loudness only. Rhubarb was approved in a question, but the user stopped its download, so it is not installed.
+- **Tests:**
+  - New smoke check: sound, 5 face bones, speaking, max jaw > 4°, blinks.
+  - Required gate `CHUCK_NPC_VOICE Dwarf lines=1 sounds=1`; expected passes 146/147.
+  - `-ChuckDwarfCapture` now ends with a talking close-up, a frame every 0.25 s (`Local/dwarf-voice-capture3.log`, `Review/runtime_Dwarf_talk_{open,pause}.png`).
+- **Results:**
+  - Measured `max_jaw_deg=8.9`. Jaw per frame tracks the voice: 8.6 on "Ach", 0.6 in the pause before "blow", 0 after.
+  - Verification passed **148** (`Local/verify-package-20261005-103446.log`). Three other runs of the same package failed unrelated checks:
+    - the tavern keeper's rag reach (8.5 cm against 4, twice: `-102508`, and earlier `20261004-201933`);
+    - the gnome alchemist's wrist gap (8.4 cm, `-103011`).
+  - Both are intermittent faults in those NPCs' poses that depend on the idle's phase. They are offered as separate tasks.
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `5d35f5c`. Previous package: `Builds/Windows-Previous-20261005-DwarfVoice`.
+- **Not done:** barks, subtitles replacing the text box (the existing dialogue text still shows his line), music ducking, Rhubarb, other NPCs. The jaw barely shows under the bushy beard; the voice carries it. Not listened to by me.
+
+Next part of the work can be done here.
+
 ## October 5 — gnome alchemist before the alchemist's shop
 
 **Update 87 (Claude, user request: "an alchemist vendor in front of the alchemist shop, a gnome in black robes, hands together behind robe sleeves so that they aren't visible, DnD 5e gnome height and facial features"):** runtime `bad2bc7`, on `b9f4a8f`.
