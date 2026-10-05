@@ -602,7 +602,7 @@
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 112912,
+   "tris": 107876,
    "slots": {
     "Gambeson": {
      "type": "fabric",

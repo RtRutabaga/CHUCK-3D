@@ -44,10 +44,10 @@ namespace
     // (ADockNPC::PoleAhead/PoleOut/PoleLean/PoleGrip: 16, 30, 4 deg, 108 cm up the shaft, whose wrap is 100-124.)
     // The dwarf's axe: closer in and a touch more upright (a shorter body), fist mid-wrap (66-86 cm).
     // Out and leaning away so the double head stays clear of his pauldrons as he turns (user 2026-10-04).
-    constexpr float AxeAhead = 16.f, AxeOut = 34.f, AxeLean = 9.f, AxeGrip = 76.f;
+    constexpr float AxeAhead = 16.f, AxeOut = 33.f, AxeLean = 7.f, AxeGrip = 78.f;   // grip high on the wrap: his short arm keeps a bent elbow
     // The dwarf never looks down (his beard would go through his breastplate) and turns his head
     // less; the clip's own head and neck motion is damped to this much.
-    constexpr float DwarfLookYaw = 25.f, DwarfClipHead = .25f;
+    constexpr float DwarfLookYaw = 15.f, DwarfClipHead = .25f;
     constexpr float FistReach = 8.f;           // cm from the wrist to the middle of a closed fist
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
@@ -512,9 +512,10 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
     // bottle shelves from y 941), between the barrels (east edge x -119) and
     // the cellar hatch (lid at x 14), facing the room.
     SpawnTavernKeeper(World, FVector(-55, 905, 0), -90.f);
-    // A dwarf waiting on the smith, east of the forge's bellows in front of
-    // the smithy, turned a little toward the anvil; his axe at his right hand.
-    SpawnDwarf(World, FVector(-520, -3625, 0), 120.f);
+    // A dwarf waiting on the smith beside the smith's quenching barrel
+    // (DockForge.cpp's tub at -1110,-3520: at his left front), turned toward
+    // the anvil; his axe at his right hand, away from the barrel.
+    SpawnDwarf(World, DwarfFeet, DwarfYaw);
     // The smith at his anvil in front of the smithy, the forge at his left
     // hand (DockPlaza.cpp), facing out over the plaza.
     SpawnBlacksmith(World, FVector(-950, -3664, 0), 90.f);

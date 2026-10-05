@@ -604,10 +604,10 @@
    "eyelashes": "eyelashes02",
    "hair": null,
    "beard": {
-    "length": 0.27,
-    "width": 0.09,
-    "clear": 0.075,
-    "braid": 0.1,
+    "length": 0.25,
+    "width": 0.12,
+    "clear": 0.056,
+    "braid": 0.09,
     "tint": [
      0.3,
      0.13,
@@ -626,7 +626,15 @@
       0.09
      ]
     },
-    "cheek": 0.06
+    "cheek": 0.06,
+    "bushy": true,
+    "depth": 0.075,
+    "cards": 45,
+    "lying_cards": 200,
+    "fluff_cards": 320,
+    "sideburn_cards": 60,
+    "chest_fade": 0.06,
+    "chest_from": 0.025
    },
    "outfit": [
     {

@@ -636,6 +636,7 @@ def make_beard(info, spec, slots):
     rnd = random.Random(7)
     nose, chin, head_y = face_marks(info)
     L, W = spec.get('length', .26), spec.get('width', .085)
+    bushy = spec.get('bushy', False)   # the dwarf: a full, bushy beard resting on his breastplate
     clear = spec.get('clear', .05)
     torso = [c for i, c in enumerate(info.co) if info.bone[i] in Body.TORSO | {Body.NECK} and abs(c.x) < .06]
     def chest_front(z):
@@ -648,16 +649,30 @@ def make_beard(info, spec, slots):
            and c.z > chin.z - .05 and not (abs(c.x) < .03 and c.z > nose.z - .016)]
     for c in jaw:
         n = Vector((c.x, c.y - head_y, 0)).normalized()
-        depth = .007 + .016 * min(1., max(0., (cheek_z - c.z) / .06))
+        depth = (.011 + .022 * min(1., max(0., (cheek_z - c.z) / .05))) if bushy else (.007 + .016 * min(1., max(0., (cheek_z - c.z) / .06)))
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
     # Sideburns: a band in front of each ear from the jaw up under the helmet's rim (or to the temple bare-headed).
     burns = sideburns(info, cheek_z, spec)
     for c, depth in burns:
         n = Vector((c.x, (c.y - head_y) * .5, 0)).normalized()
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
-    # 2. The hang: a rounded spade down the chest, narrowing to the tip.
+    # 2. The hang. Bushy: one broad rounded mass from the jaw, its back lying on the
+    # breastplate (`clear` = the armour's outer face) all the way down, full and
+    # deep through the middle, rounding off to a blunt bottom; no gap behind it to
+    # show it bend. Otherwise a rounded spade down the chest, narrowing to the tip.
     steps = 9
-    for k in range(steps + 1):
+    if bushy:
+        D = spec.get('depth', .075)
+        for k in range(13):
+            t = k / 12
+            z = chin.z + .035 - (L + .035) * t
+            back = min(chest_front(z) - clear, chin.y + .02)
+            depth = D * (.55 + .45 * math.sin(math.pi * min(1., t / .7) * .5 + .3)) * (1 - .5 * max(0., (t - .7) / .3) ** 2)
+            half = W * (.8 + .2 * math.sin(math.pi * min(1., t / .45) * .5)) * (1 - .55 * max(0., (t - .55) / .45) ** 1.5)
+            for sx in (-1, -.5, 0, .5, 1):
+                bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=1.,
+                    matrix=Matrix.Translation((sx * half * .55, back - depth * .9, z)) @ Matrix.Diagonal((half * .55, depth, .05, 1.)))
+    for k in range(0 if bushy else steps + 1):
         t = k / steps
         z = chin.z + .02 - (L + .02) * t
         back = min(chest_front(z) - clear, chin.y + .03) if t > .15 else chin.y + .045
@@ -672,13 +687,23 @@ def make_beard(info, spec, slots):
         tube(bm, pts, [.009, .011, .009, .006], 8)
     beard = new_object('beard', bm)
     voxel_merge(beard, .0055, 14)
-    # Clumped strands: grooves running down, deeper toward the tip.
+    # Clumped strands: grooves running down, deeper toward the tip; a bushy beard
+    # is tufted instead, lumps of curl a few cm across all over it.
     for v in beard.data.vertices:
         a = math.atan2(v.co.x, -(v.co.y - head_y))
         fall = min(1., max(0., (chin.z - v.co.z) / L))
         groove = math.sin(a * 46 + v.co.z * 9) * .5 + math.sin(a * 97 - v.co.z * 23 + 1.7) * .3
-        v.co += v.normal * groove * (.0025 + .005 * fall)
+        if bushy:
+            c = v.co
+            tuft = (math.sin(c.x * 140 + c.z * 60) * math.sin(c.z * 130 - c.y * 70 + .8) + .6 * math.sin(c.x * 260 - c.y * 190 + c.z * 210)) * .5
+            v.co += v.normal * (tuft * .006 + groove * .0015)
+        else:
+            v.co += v.normal * groove * (.0025 + .005 * fall)
     beard.data.update()
+    if bushy:   # the tufts survive a lighter mesh; it was twice the other humans' budget
+        activate(beard)
+        dec = beard.modifiers.new('Light', 'DECIMATE'); dec.ratio = spec.get('decimate', .45)
+        bpy.ops.object.modifier_apply(modifier=dec.name)
     # Braids from the tip, each ending in a brass ring (unless `braids` is false: the tavern keeper's plain beard).
     bm, rings_bm = bmesh.new(), bmesh.new()
     tip_z = chin.z - L
@@ -732,6 +757,23 @@ def make_beard(info, spec, slots):
         for a, b in zip(col, col[1:]):
             f = bm.faces.new((a[0], a[1], b[1], b[0]))
             uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+    # Bushy: short tufts standing out all over (outward and a little down), so its outline is fluff, not a shell.
+    if bushy:
+        fluff = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .45 and v.co.z < info.eye_z - .045]
+        rnd.shuffle(fluff)
+        for co, n in fluff[:spec.get('fluff_cards', 320)]:
+            out = (n * .75 - Vector((0, 0, .65))).normalized()
+            side = n.cross(Vector((0, 0, 1)))
+            side = side.normalized() if side.length > .1 else Vector((1, 0, 0))
+            width, length, u0 = rnd.uniform(.012, .022), rnd.uniform(.025, .05), rnd.uniform(0, .85)
+            col = []
+            for k in range(4):
+                t = k / 3
+                q = co - n * .004 + out * length * t - Vector((0, 0, .01 * t * t))
+                col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
+            for a, b in zip(col, col[1:]):
+                f = bm.faces.new((a[0], a[1], b[1], b[0]))
+                uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
     for item in pts:
         co, n = item[0], item[1]
         short = len(item) > 2
@@ -764,7 +806,7 @@ def make_beard(info, spec, slots):
     for obj, slot in ((beard, 'Beard'), (cards, 'BeardStrands')) + (((rings, 'BeardRing'),) if rings else ()):
         obj.data.materials.append(slot_material(slot))
         for p in obj.data.polygons: p.use_smooth = obj is not cards
-        skin_from_body(obj, info, (chin.z, spec.get('chest_fade', .07), 'spine_03'))   # the hang rests on the chest, not swinging with the head
+        skin_from_body(obj, info, (chin.z + spec.get('chest_from', 0.), spec.get('chest_fade', .07), 'spine_03'))   # the hang rests on the chest, not swinging with the head
     slots['Beard'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
     slots['BeardStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
     if rings:

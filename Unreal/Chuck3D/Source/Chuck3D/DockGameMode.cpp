@@ -693,7 +693,7 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
     const int32 Step=FMath::FloorToInt((DwarfCaptureTime-Settle)/Hold);
     if(Step>=UE_ARRAY_COUNT(Angles)) { FPlatformMisc::RequestExit(false); return; }
     const FVector Feet=Dwarf->GetActorLocation()-FVector(0,0,Dwarf->GetSimpleCollisionHalfHeight());
-    const FVector Home=FRotator(0.f,120.f,0.f).Vector();   // where he was placed facing (SpawnTownsfolk)
+    const FVector Home=FRotator(0.f,ADockNPC::DwarfYaw,0.f).Vector();   // where he was placed facing (SpawnTownsfolk)
     if(Step!=DwarfShot)
     {
         DwarfShot=Step;
@@ -2051,11 +2051,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),DwarfFound);
             const auto* Dwarf=DwarfFound.Num()==1 ? Cast<ADockNPC>(DwarfFound[0]) : nullptr;
             const float ToSmithy=Dwarf ? static_cast<float>(FVector::Dist2D(Dwarf->GetActorLocation(),FVector(-865,-3760,0))) : 1e4f;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_MEASURE present=%d axe=%d grip_error_cm=%.1f lean_deg=%.1f eye_cm=%.0f to_smithy_cm=%.0f lines=%d mocap=%d look_pitch_deg=%.1f"),
+            const float ToBarrel=Dwarf ? static_cast<float>(FVector::Dist2D(Dwarf->GetActorLocation(),FVector(-1110,-3520,0))) : 1e4f;   // the quench tub
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_MEASURE present=%d axe=%d grip_error_cm=%.1f lean_deg=%.1f eye_cm=%.0f to_smithy_cm=%.0f to_barrel_cm=%.0f lines=%d mocap=%d look_pitch_deg=%.1f"),
                 Dwarf ? 1 : 0,Dwarf && Dwarf->HasAxe() ? 1 : 0,Dwarf ? Dwarf->GetSpearGripError() : 1e3f,Dwarf ? Dwarf->GetSpearLean() : 90.f,
-                Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0,Dwarf ? Dwarf->GetLookAngles().Y : 99.f);
-            Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && Dwarf->CanTalk() && Dwarf->HasMocap() && Dwarf->GetLookAngles().Y<=.5f,
-                TEXT("a dwarf stands by the smithy, shorter than the townsfolk, his battle axe grounded at his side and gripped"));
+                Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,ToBarrel,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0,Dwarf ? Dwarf->GetLookAngles().Y : 99.f);
+            Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && ToBarrel<140.f && Dwarf->CanTalk() && Dwarf->HasMocap() && Dwarf->GetLookAngles().Y<=.5f,
+                TEXT("a dwarf stands by the smithy beside the smith's quenching barrel, shorter than the townsfolk, his battle axe grounded at his side and gripped"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

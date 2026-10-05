@@ -96,6 +96,8 @@ public:
      * watching the rat; a couple of short lines.
      */
     static ADockNPC* SpawnDwarf(UWorld* World, const FVector& Feet, float Yaw);
+    static inline const FVector DwarfFeet = FVector(-1110.f, -3425.f, 0.f);
+    static constexpr float DwarfYaw = -30.f;
     /** How far the spear fist is from the spear's grip (cm), for tests. */
     float GetSpearGripError() const;
     /** How far the spear leans from upright (deg), for tests. */
