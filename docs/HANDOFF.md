@@ -2,6 +2,21 @@
 
 ## Current launcher and integration status
 
+**Update 79 (Claude, October 4, user request: "Continue touching up the dwarf, as you do, make sure his beard sideburns go all the way up to his helmet"):** runtime `9a3f935`, on `6d48d4f`.
+
+- **Sideburns** (`sideburns()` in `build_npc_humans.py`): a band of beard in front of each ear, about 3.5 cm wide. It runs from the cheek line up to 1.2 cm above the helmet's rim, so it tucks under the helmet, and thins toward the top. Bare-headed, it would stop at the temple. Fifty short strand tufts run down it.
+- **Brass rims:** the cut brass bands broke into uneven strips around the ear and armholes. They are now `rolled` trims: a brass tube swept along the relaxed edge of each plate, wrapped round its thickness (helmet 8 mm, cuirass 6 mm, pauldrons 5 mm), skinned from the body under it. Plate hems (helmet, cuirass, pauldrons, vambraces) are relaxed 24 iterations instead of 8.
+- **Review:** a profile camera was added to the Blender review. In-engine portraits are committed as `SourceAssets/NPCs/Humans/Review/runtime_Dwarf_{sideburns,threequarter}.png`.
+- **Results:** the candidate `Builds/DwarfBurnsCandidate` passed `Verify-Package.ps1` **144** (expected 143) with all gates (`Local/verify-package-20261004-174118.log`). The dwarf measures are unchanged: `axe=1 grip_error_cm=0.0 lean_deg=3.0 eye_cm=127`. The dwarf is now 102k tris.
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `9a3f935`. Previous package: `Builds/Windows-Previous-20261004-DwarfBurns`.
+- **Still rough:**
+  - The beard is still a sculpted mass with cards, not groomed hair.
+  - A few notches of the helmet's own edge show behind the rim at the back.
+  - The pauldrons still bend like sleeves.
+  - Not playtested.
+
+Next part of the work can be done here.
+
 **Update 78 (Claude, October 4, user request: "create a dwarf npc by the smithy, wearing dwarven armor and holding a battle axe. Bearded."):** runtime `6d48d4f`, from main `0ee3f2b` / launcher `01aeeb5`.
 
 - **The dwarf** (`Dwarf` in `SourceAssets/NPCs/humans.json`, `Tools/build_npc_humans.py`): 134 cm MPFB body. New `targets` (MakeHuman proportion targets loaded before the rig is fitted) give short legs and arms, a broad deep torso, a heavy neck, and a big square head, hands and feet. He stands at (-520,-3625), facing 120°, east of the forge's bellows in front of the smithy and turned a little toward the anvil. Idle is StandLook. Lines: "Keep clear of the edge, rat." and "He's had my other axe a week. Slow work, iron."

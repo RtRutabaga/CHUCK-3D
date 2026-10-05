@@ -2018,3 +2018,16 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `6d48d4f`; backup `Builds/Windows-Previous-20261004-Dwarf`.
 
 Next part of the work can be done here.
+
+## Dwarf touch-up: sideburns and rolled rims (October 4)
+
+- **What changed** (`9a3f935`):
+  - Sideburns run from the beard up to the helmet rim, tucked under it, with short strand tufts down them.
+  - Rolled brass tubes replace the cut trim bands, which broke into strips.
+  - Plate hems are relaxed further.
+  - The Blender review has a profile camera.
+- **Files:** `Tools/build_npc_humans.py`, `humans.json`, the Dwarf FBX, uassets and manifest.
+- **Tests:** `Local/verify-package-20261004-174118.log`, 144 passes against 143 expected.
+- **Launcher:** `Builds/Windows` = `9a3f935`; backup `Builds/Windows-Previous-20261004-DwarfBurns`.
+
+Next part of the work can be done here.
