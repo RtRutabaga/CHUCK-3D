@@ -1,5 +1,17 @@
 # Codex movement handoff — 2026-09-26
 
+## October 5 — weathered timber
+
+Runtime **`b1a4277`**, on `12a21ad`; root launcher promoted from `5d35f5c`. Implemented the user's approved Poly Haven timber plan: 2K CC0 Weathered Brown Planks siding and Rough Wood grain, matte normal/roughness detail, modest colour/dampness variation. UV-only derived dock crate maps grain to each existing board/rail; original props, collision and traversal preserved. No character/NPC reimport or installation.
+
+Targeted pipeline: `Tools/Fetch-WeatheredTimber.ps1`, `Tools/build_weathered_crate.py`, `Tools/import_weathered_timber.py`; runtime crate substitution/capture helper `DockTimber.cpp/.h`. Details and provenance in `docs/WEATHERED-TIMBER.md` and `SourceAssets/Surfaces/WeatheredTimber`.
+
+Full cook/build passed (**127.25 s**, `Local/timber-build.log`); successful import `Local/timber-import4.log` after correcting node/pin names in earlier attempts. Default candidate verification passed **148**, first run, all existing gates unchanged (`Local/verify-package-20261005-123407.log`). Four morning and four evening material captures; storefront/beam/crate/barrel views plus elevated/rat-height scale frames inspected. Evening wood is dark in existing unlit shadows. No sustained performance or new MotionCapture run.
+
+Root `Launch-Prototype.cmd` now uses verified **`b1a4277`**; receipt/executable hash and `-CheckOnly` pass. Backup: `Builds/Windows-Previous-20261005-Timber`. All **80** pre-existing unfinished human inputs (78 modified uassets + 2 untracked PNGs) remain unchanged and unstaged, recorded in `Local/timber-preserved-inputs.json`; the package cooks this local human state. **19** timber LFS objects / **16,474,987 bytes**; existing filters retained, fsck passed, generated files untracked. Main handoff has complete evidence and limitations.
+
+Next part of the work can be done here.
+
 ## October 5 — fix fatal errors when starting from the menu
 
 **Update 85 (Codex, user report: New Game and checkpoints cause a fatal error):** runtime `898a696`, from `df963d8` / launcher `09b88b7`.

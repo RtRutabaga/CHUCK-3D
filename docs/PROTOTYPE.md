@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 5 timber update: the verified launcher includes 2K CC0 weathered-plank/rough-wood scans on existing timber buildings and props, with board-aligned crate UVs. No route or collision changes. Inspect with New Game / Waterdeep and compare Waterdeep Night; see WEATHERED-TIMBER.md and HANDOFF for provenance, pipeline and actual checks.
+
 October 4 user revision: the narrow section is now after the wide chamber, with a full-width Astral rupture crossed using the existing side wall run; the former zombie is removed. This supersedes older zombie/pinch-point descriptions below. See SEWER-WALLRIFT.md and the latest HANDOFF for actual checks and launcher status.
 
 October 4 forge dressing: the smithy has a brick arched fire chamber, coal bed, iron extraction hood and chimney, bellows, stocked tool bench and quenching tub. Claude's working smith, contact animation and sound are retained. See FORGE-DRESSING.md and the latest HANDOFF for actual checks and launcher build.
