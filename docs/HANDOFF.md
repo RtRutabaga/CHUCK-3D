@@ -2,6 +2,26 @@
 
 ## Current launcher and integration status
 
+**Update 83 (Claude, October 4, user request: move the dwarf next to the blacksmith's barrel; his beard bends and sticks out oddly with his armour, try a very full/bushy beard):** runtime `81fc1d0`, on `77e33c4` (Update 82's tavern keeper build).
+
+- **Place:** `ADockNPC::DwarfFeet` (-1110,-3425), `DwarfYaw` -30. The smith's quench tub (`DockForge.cpp`, -1110,-3520) is at his left front, 95 cm centre to centre, about 65 cm to its rim. He faces the anvil, and his axe hand is on the side away from the tub. `CHUCK_DWARF_MEASURE` adds `to_barrel_cm` and requires it under 140; measured 95, `to_smithy_cm` 415. The forge's clear-route gate still passes (3/3).
+- **Bushy beard** (`make_beard` `bushy` option; the tavern keeper's beard is unchanged):
+  - fuller cheek and jaw blobs;
+  - a broad rounded mass (25 cm long, 12 cm half-width, 7.5 cm deep) whose back lies on the breastplate's outer face (`clear` 5.6 cm), so there is no gap behind it to show it bending;
+  - a tufted surface, decimated to 45% (9.4k vertices);
+  - 320 short fluff cards standing out all round, plus the lying and sideburn cards; braids and rings kept.
+  - Chest anchoring now starts 2.5 cm above the chin (fade 6 cm), and head yaw is limited to 15° (was 25°), so the beard no longer sweeps over a shoulder.
+- **Axe:** 33 cm out, 7° lean, grip at 78 cm. Two intermediate settings (32 cm/9°/70 cm and 34 cm/9°/76 cm) failed the arms-down check at some idle phases: his short arm locked straight, 38–47° out (`Local/verify-package-20261004-200536.log`, `-201232.log`). With the final setting both runs measured 5.6° and 11.5°.
+- **Close-ups** (`-ChuckDwarfCapture`, `Local/dwarf-bushy-capture4.log`): look pitch 0 in all frames, axe-to-shoulder-joint gap 20.0–35.0 cm, grip error 0.0. Review images `runtime_Dwarf_closeup_{55,m110}.png`.
+- **Results:** two verification runs on the final candidate. The second passed **145** with all gates (`Local/verify-package-20261004-202408.log`), and is the promoted receipt. The first (`-201933.log`) failed only the **tavern keeper** check: rag reach 8.5 cm against a 4 cm limit (1.6 cm in the second run). That is an intermittent fault in Update 82's keeper motion that this dwarf work doesn't touch. It is unfixed and should be fixed so the gate is stable.
+- He is 108k tris. Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `81fc1d0`. Previous package: `Builds/Windows-Previous-20261004-DwarfBushy`.
+- **Known gaps:**
+  - The `-ChuckNPCCapture` "Wide" portrait of him now frames the smithy wall, because the camera ends up inside the building at his new spot. It is a review-camera artefact only.
+  - The bushy beard is cards and a sculpted mass, not groom.
+  - Not playtested.
+
+Next part of the work can be done here.
+
 **Update 82 (Claude, October 4, user request: a tavern keeper NPC like the blacksmith but with a medium-length beard and a different apron, behind the counter between the cellar hatch and the barrels, polishing a tankard, no polishing sound):** runtime `c2e8975`, on `1ea1a9f`.
 
 - **Him** (`TavernKeeper` in `humans.json`):

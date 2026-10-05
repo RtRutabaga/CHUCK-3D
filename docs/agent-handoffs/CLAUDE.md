@@ -2071,3 +2071,16 @@ Next part of the work can be done here.
   - Prop art.
   - Beard detail.
   - Not played by the user.
+
+## Dwarf by the quench barrel, bushy beard (October 4)
+
+- **What changed** (`81fc1d0`):
+  - He now stands beside the smith's quench tub, and the check requires him within 140 cm of it.
+  - `make_beard` gains a `bushy` option: a broad mass resting on the breastplate, tufts, 320 fluff cards, chest anchoring from above the chin.
+  - Head yaw is at most 15°.
+  - The axe is at 33 cm out, 7° lean, grip at 78 cm (two other settings failed the arms-down check and were not kept).
+- **Tests:** `Local/verify-package-20261004-202408.log`, 145 passes; close-ups in `Local/dwarf-bushy-capture4.log`.
+- **Flaky:** the tavern keeper's rag reach check failed once (8.5 cm against a 4 cm limit) in `-201933.log`. It is unfixed.
+- **Launcher:** `Builds/Windows` = `81fc1d0`; backup `Builds/Windows-Previous-20261004-DwarfBushy`.
+
+Next part of the work can be done here.
