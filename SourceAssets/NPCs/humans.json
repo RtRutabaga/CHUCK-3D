@@ -160,7 +160,8 @@
       0.31
      ]
     }
-   ]
+   ],
+   "face": true
   },
   "MarketWoman": {
    "height_cm": 166,
@@ -404,7 +405,8 @@
       0.31
      ]
     }
-   ]
+   ],
+   "face": true
   },
   "Zombie": {
    "height_cm": 177,

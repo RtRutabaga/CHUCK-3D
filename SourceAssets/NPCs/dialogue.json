@@ -24,6 +24,29 @@
      "end": 2.04
     }
    ]
+  },
+  "Guard": {
+   "voice": "ElevenLabs library voice 'Alexander Kensington - Studio Quality', model eleven_v4 (user 2026-10-05)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Move along, rat!",
+     "source": "Voice/Guard/source/ElevenLabs_2026-10-05_AlexanderKensington_talk_00.mp3",
+     "start": 0.0,
+     "end": 1.57
+    }
+   ]
+  },
+  "SideGuard": {
+   "voice": "ElevenLabs library voice 'Bob', model eleven_v4 (user 2026-10-05)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Stick to the docks, rat!",
+     "source": "Voice/SideGuard/source/ElevenLabs_2026-10-05_Bob_talk_00.mp3",
+     "start": 0.0
+    }
+   ]
   }
  }
 }

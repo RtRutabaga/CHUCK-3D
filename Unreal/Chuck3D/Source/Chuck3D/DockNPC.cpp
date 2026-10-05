@@ -572,6 +572,7 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
         Guard->DisplayName = TEXT("Guard");
         Guard->Lines = { TEXT("Stick to the docks, rat.") };
         Guard->GiveSpear(1);   // west of the gate: his right hand is the outer one
+        Guard->SetupVoice(TEXT("Guard"));   // user 2026-10-05: his ElevenLabs line, "Move along, rat!"
     }
     if (ADockNPC* Guard = SpawnHuman(World, EDockHuman::GuardWoman, FVector(415, -4085, 0), 90.f))
     {
@@ -590,6 +591,7 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
         Guard->DisplayName = TEXT("Guard");
         Guard->Lines = { TEXT("Stick to the docks, rat.") };
         Guard->GiveSpear(1);   // his right, toward the gate
+        Guard->SetupVoice(TEXT("SideGuard"));   // user 2026-10-05: his ElevenLabs line, "Stick to the docks, rat!"
     }
     // The market woman at the end of the aisle between the red-canopied stalls.
     if (ADockNPC* Woman = SpawnHuman(World, EDockHuman::MarketWoman, FVector(148, -1240, 0), 180.f))

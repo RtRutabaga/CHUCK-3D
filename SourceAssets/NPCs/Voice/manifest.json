@@ -14,6 +14,20 @@
    "seconds": 2.038,
    "rate": 44100,
    "peaks": 4
+  },
+  "Guard/talk_00": {
+   "wav": "Voice/Guard/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/Guard/VO_Guard_talk_00",
+   "seconds": 1.567,
+   "rate": 44100,
+   "peaks": 7
+  },
+  "SideGuard/talk_00": {
+   "wav": "Voice/SideGuard/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/SideGuard/VO_SideGuard_talk_00",
+   "seconds": 2.038,
+   "rate": 44100,
+   "peaks": 4
   }
  }
 }

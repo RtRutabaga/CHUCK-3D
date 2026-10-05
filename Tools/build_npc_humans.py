@@ -657,7 +657,7 @@ def add_face_rig(info, parts, joints=None):
         if info.bone[i] not in (Body.HEAD, Body.NECK): return {}
         out = {}
         # Jaw: below the lip line, in front of the hinge, fading out down the throat.
-        if c.y < hinge.y - .01:
+        if c.y < hinge.y - .01 and info.bone[i] == Body.HEAD:   # never the neck: collars are cut from it and would tear
             # Sharp across the lips (they part there), widening smoothly past the corners so the cheeks stretch, not tear.
             line = lip_line(abs(c.x))
             corner = contact[-1][0] if contact else .025

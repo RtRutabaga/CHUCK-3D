@@ -720,10 +720,10 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
         if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();   // talk-only runs skip the angle shots that make it
         PC->SetViewTarget(NPCCamera.Get());
         if(Talk>=1.f && DwarfFrame==0) { Dwarf->StartVoiceLine(0); }
-        const FVector Eye=Feet+FVector(0,0,Dwarf->GetEyeHeight()-10.f);
+        const FVector Eye=Feet+FVector(0,0,Dwarf->GetEyeHeight()-12.f);
         // From the side away from the pole in his or her hand (+ is to their right).
         const float Side=Dwarf->HasSpear() && Dwarf->GetPoleSide()==0 ? 30.f : -30.f;
-        const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(Side,FVector::UpVector)*85.f+FVector(0,0,4.f);
+        const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(Side,FVector::UpVector)*85.f-FVector(0,0,22.f);
         NPCCamera->SetActorLocationAndRotation(From,(Eye-From).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(38.f);
         if(Talk>=1.f+DwarfFrame*.25f && Talk<7.2f)
@@ -1991,6 +1991,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardB"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuard"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardC"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2039,10 +2043,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("MarketWoman"),WomanFound);
             const auto* GuardNPC=GuardFound.Num()==1 ? Cast<ADockNPC>(GuardFound[0]) : nullptr;
             const auto* WomanNPC=WomanFound.Num()==1 ? Cast<ADockNPC>(WomanFound[0]) : nullptr;
-            Check(GuardNPC && WomanNPC && GuardNPC->Lines.Num()==1 && GuardNPC->Lines[0]==TEXT("Stick to the docks, rat.")
+            Check(GuardNPC && WomanNPC && GuardNPC->Lines.Num()==1 && GuardNPC->Lines[0]==TEXT("Move along, rat!")
                 && WomanNPC->Lines.Num()==1 && WomanNPC->Lines[0].Contains(TEXT("check the sewer for scraps"))
                 && GuardNPC->GetActorLocation().Y<-3900.f && FVector::Dist2D(WomanNPC->GetActorLocation(),FVector(-25,-1240,0))<250.f,
-                TEXT("the guard stands at the city gate and the market woman by the red market stalls, each with the 2D game's line"));
+                TEXT("the guard stands at the city gate and the market woman by the red market stalls, each with their line (his now his own voiced \"Move along, rat!\")"));
             // Both gate guards, either side of the gate, each with a spear held upright.
             TArray<AActor*> GuardBFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardB"),GuardBFound);
@@ -2064,6 +2068,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(GuardB && GuardB->GetVoiceSoundCount()==1 && GuardB->GetFaceBoneCount()==5 && GuardB->GetMaxJawOpen()>3.f && GuardB->GetBlinks()>=1
                 && GuardB->Lines.Num()==1 && GuardB->Lines[0]==TEXT("Stick to the docks, rat."),
                 TEXT("the woman guard speaks her line aloud, her jaw opening with it, and blinks"));
+            // And the fountain-plaza guard, his own line in his own voice.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GUARD_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                GuardNPC ? GuardNPC->GetVoiceSoundCount() : 0,GuardNPC ? GuardNPC->GetFaceBoneCount() : 0,GuardNPC && GuardNPC->IsSpeaking() ? 1 : 0,
+                GuardNPC ? GuardNPC->GetMaxJawOpen() : 0.f,GuardNPC ? GuardNPC->GetBlinks() : 0,GuardNPC && GuardNPC->Lines.Num() ? *GuardNPC->Lines[0] : TEXT(""));
+            Check(GuardNPC && GuardNPC->GetVoiceSoundCount()==1 && GuardNPC->GetFaceBoneCount()==5 && GuardNPC->GetMaxJawOpen()>3.f && GuardNPC->GetBlinks()>=1,
+                TEXT("the fountain-plaza guard says \"Move along, rat!\" aloud, his jaw opening with it, and blinks"));
             // The blacksmith at his anvil by the smithy's forge, hammering: the face meets the bar, the tongs in his other fist.
             TArray<AActor*> SmithFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),SmithFound);
@@ -2130,6 +2140,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 ToGate,ToHatch,GuardC ? GuardC->GetSpearGripError() : 1e3f,GuardC ? GuardC->GetSpearLean() : 90.f);
             Check(GuardC && GuardC->HasSpear() && GuardC->GetSpearGripError()<5.f && GuardC->GetSpearLean()<10.f && ToGate<250.f && ToHatch>300.f,
                 TEXT("a third guard stands by the Dock Street side gate near the sewer hatch, spear upright and gripped, clear of the hatch"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SIDE_GUARD_VOICE_MEASURE sounds=%d face_bones=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                GuardC ? GuardC->GetVoiceSoundCount() : 0,GuardC ? GuardC->GetFaceBoneCount() : 0,GuardC ? GuardC->GetMaxJawOpen() : 0.f,
+                GuardC ? GuardC->GetBlinks() : 0,GuardC && GuardC->Lines.Num() ? *GuardC->Lines[0] : TEXT(""));
+            Check(GuardC && GuardC->GetVoiceSoundCount()==1 && GuardC->GetFaceBoneCount()==5 && GuardC->GetMaxJawOpen()>3.f && GuardC->GetBlinks()>=1
+                && GuardC->Lines.Num()==1 && GuardC->Lines[0]==TEXT("Stick to the docks, rat!"),
+                TEXT("the guard by the sewer hatch says \"Stick to the docks, rat!\" aloud, his jaw opening with it, and blinks"));
             // The dwarf by the smithy: short, his battle axe grounded at his side, fist round its wrap.
             TArray<AActor*> DwarfFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),DwarfFound);
