@@ -2031,3 +2031,14 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `9a3f935`; backup `Builds/Windows-Previous-20261004-DwarfBurns`.
 
 Next part of the work can be done here.
+
+## Dwarf: rigid lamellar pauldrons, beard strands, brows (October 4)
+
+- **What changed** (`2973957`):
+  - Pauldrons are three rigid lames with rolled brass rims (`rigid`, trims addressed by `id`).
+  - 220 more strand cards lie along the beard's surface.
+  - `brow_tint` gives auburn brows.
+- **Tests:** `Local/verify-package-20261004-180629.log`, 144 passes against 143 expected.
+- **Launcher:** `Builds/Windows` = `2973957`; backup `Builds/Windows-Previous-20261004-DwarfLames`.
+
+Next part of the work can be done here.

@@ -2,6 +2,22 @@
 
 ## Current launcher and integration status
 
+**Update 80 (Claude, October 4, user request: "Continue improving" the dwarf):** runtime `2973957`, on `9a3f935`.
+
+- **Pauldrons:** each is now three overlapping lames (drops of 15, 11 and 6.5 cm, the top one outermost), each with a rolled brass rim. A new `rigid` option weights each plate to `upperarm` 0.75 and `clavicle` 0.25 on its side, so in-engine they stand as plates over the shoulders instead of bending like sleeves. Trims now name the item they edge by `id`.
+- **Beard:** 220 strand cards lie along the beard's surface (projected onto it as they run down), on top of the hanging and sideburn cards, for 380 cards in all. Close up it reads more as hair; it is still a sculpted mass underneath.
+- **Brows:** `brow_tint` gives him auburn-brown brows to match the beard (the MakeHuman brow texture is near-black, so the tint is strong).
+- **Results:** the candidate `Builds/DwarfLamesCandidate` passed `Verify-Package.ps1` **144** (expected 143) with all gates (`Local/verify-package-20261004-180629.log`). Dwarf measures unchanged; his arms-down pose measures `hand_out_cm=28.0 straight_arm_out_deg=7.6`. He is now 112k tris. Review images: `SourceAssets/NPCs/Humans/Review/runtime_Dwarf_{front,threequarter}.png` (updated).
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `2973957`. Previous package: `Builds/Windows-Previous-20261004-DwarfLames`.
+- **Still rough:**
+  - The beard is not groomed hair.
+  - A few helmet-edge notches show at the back.
+  - The rigid pauldrons could clip into the cuirass in poses with the arms raised (not seen in the idle).
+  - The triangle budget is about twice the other humans'.
+  - Not playtested.
+
+Next part of the work can be done here.
+
 **Update 79 (Claude, October 4, user request: "Continue touching up the dwarf, as you do, make sure his beard sideburns go all the way up to his helmet"):** runtime `9a3f935`, on `6d48d4f`.
 
 - **Sideburns** (`sideburns()` in `build_npc_humans.py`): a band of beard in front of each ear, about 3.5 cm wide. It runs from the cheek line up to 1.2 cm above the helmet's rim, so it tucks under the helmet, and thins toward the top. Bare-headed, it would stop at the temple. Fifty short strand tufts run down it.
