@@ -385,6 +385,8 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
     GetCharacterMovement()->StopMovementImmediately();
     SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+    // A checkpoint teleport is not a fall from the previous area's elevation.
+    AirApexZ = static_cast<float>(Location.Z);
     bPantryRespawn=IsWithinDockPantry(Location);
     bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
     ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;

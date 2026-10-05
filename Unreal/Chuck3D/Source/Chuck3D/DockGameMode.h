@@ -12,6 +12,8 @@ public:
     ADockGameMode();
     virtual void StartPlay() override;
     virtual void Tick(float DeltaSeconds) override;
+    /** Start the chosen location in the fresh world already waiting behind the title menu. */
+    bool StartFromMenu(const FString& Point);
 private:
     bool bSmokeTest = false;
     // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,
@@ -141,9 +143,15 @@ class CHUCK3D_API ADockHUD : public AHUD
     GENERATED_BODY()
 public:
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaSeconds) override;
     virtual void DrawHUD() override;
 private:
     TSharedPtr<class SWidget> MenuWidget;
+    TMap<FString,TWeakPtr<class SButton>> MenuButtons;
+    FString MenuTestPoint;
+    int32 MenuTestStage = 0, MenuTestFailures = 0;
+    double MenuTestNext = 0;
+    TWeakObjectPtr<UWorld> MenuTestWorld;
     void ShowTitleMenu();
     void ShowMenu(bool Checkpoints);
 };

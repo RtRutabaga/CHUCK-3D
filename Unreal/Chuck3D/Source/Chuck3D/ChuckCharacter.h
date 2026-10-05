@@ -25,6 +25,8 @@ public:
     /** Snap the orbit to the other framing preset (tests and captures; players orbit freely). */
     void ToggleCamera();
     void ResetToDock();
+    /** Begin at an explicit checkpoint with fresh traversal, fall and camera state. */
+    void ResetAtLocation(const FVector& Location);
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
     void RespawnAtAreaStart();
     FVector GetAreaStartLocation() const;
@@ -219,7 +221,6 @@ private:
     bool bIgnoringAstralFloor = false;
     static float AreaStartYaw(const FVector& Location);
     bool bPantryRespawn = false;   // came down into the tavern pantry: deaths there return to its ladder
-    void ResetAtLocation(const FVector& Location);
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
     UPROPERTY() TArray<UGroomComponent*> Grooms;
