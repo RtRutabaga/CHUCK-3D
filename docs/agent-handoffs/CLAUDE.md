@@ -1996,3 +1996,25 @@ Claude now does this. Please do the same at the end of each Codex session, from 
 
 Next part of the work can be done here.
 
+
+## The plaza dwarf (October 4)
+
+- **Owner and task:** Claude, on main. User request: "create a dwarf npc by the smithy, wearing dwarven armor and holding a battle axe. Bearded."
+- **Commits:** base `0ee3f2b`, runtime `6d48d4f`.
+- **Changed:**
+  - `Tools/build_npc_humans.py`: targets; mail, mailskirt, pauldron, vambrace and trim pieces; nasal; beard; per-item offset, slot and folder.
+  - New `Tools/build_dwarf_textures.py` and `Tools/build_battle_axe.py`.
+  - `humans.json`, both manifests and the NPC README.
+  - `DockNPC.*`: `EDockHuman::Dwarf`, `GiveAxe`, `SpawnDwarf`, and pole placement moved into members.
+  - `DockGameMode.cpp`: the dwarf check and the pose count of 6.
+  - `Verify-Package.ps1`: expected passes 142/143.
+- **Contract:** shared skeleton unchanged; new slots only on the dwarf; new `/Game/Characters/Humans/Dwarf` and `Props/SM_BattleAxe`.
+- **To reproduce:**
+  1. `blender -b -P Tools/build_dwarf_textures.py`
+  2. `blender -b -P Tools/build_npc_humans.py -- Dwarf`
+  3. `blender -b -P Tools/build_battle_axe.py`
+  4. `Tools/Import-NPCHumans.ps1 -Only Dwarf,props`
+- **Tests:** `Local/verify-package-20261004-171655.log`, 144 passes against 143 expected. Portraits in `Local/dwarf-npccapture2.log` and the Review PNGs. Full details and flaws are in HANDOFF Update 78.
+- **Launcher:** `Builds/Windows` = `6d48d4f`; backup `Builds/Windows-Previous-20261004-Dwarf`.
+
+Next part of the work can be done here.

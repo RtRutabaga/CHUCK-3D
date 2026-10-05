@@ -2,6 +2,32 @@
 
 ## Current launcher and integration status
 
+**Update 78 (Claude, October 4, user request: "create a dwarf npc by the smithy, wearing dwarven armor and holding a battle axe. Bearded."):** runtime `6d48d4f`, from main `0ee3f2b` / launcher `01aeeb5`.
+
+- **The dwarf** (`Dwarf` in `SourceAssets/NPCs/humans.json`, `Tools/build_npc_humans.py`): 134 cm MPFB body. New `targets` (MakeHuman proportion targets loaded before the rig is fitted) give short legs and arms, a broad deep torso, a heavy neck, and a big square head, hands and feet. He stands at (-520,-3625), facing 120°, east of the forge's bellows in front of the smithy and turned a little toward the anvil. Idle is StandLook. Lines: "Keep clear of the edge, rat." and "He's had my other axe a week. Slow work, iron."
+- **Armour**, built from kit pieces layered with per-item `offset`s:
+  - a padded coat;
+  - a `mail` shirt and split `mailskirt` in generated 4-in-1 mail (`Tools/build_dwarf_textures.py` → `SourceAssets/Surfaces/Armor`);
+  - a steel cuirass, `pauldron`s and `vambrace`s;
+  - brass `trim` bands along the edges of the cuirass, pauldrons and helmet;
+  - a helmet with a `nasal`, a belt and heavy boots.
+- **Beard:** MakeHuman has none, so `make_beard` builds one: jaw blobs, a spade hang down the chest, a moustache and two braids with brass rings, voxel-merged and grooved, plus 110 alpha strand cards. It is auburn and skinned from the face's own weights, easing onto `spine_03` down the hang.
+- **Axe:** `Tools/build_battle_axe.py` → `SM_BattleAxe`, a double-bitted axe 127 cm long (oak haft, leather wrap at 66–86 cm, brass socket bands, top spike). `ADockNPC::GiveAxe` holds it the way the guards hold their spears (generalised pole placement); his fist is on the wrap at 76 cm.
+- **Test:** new check `CHUCK_DWARF_MEASURE`. The arms-down pose check now covers 6 humans. Expected passes are now 142/143.
+- **Results:** the candidate `Builds/DwarfCandidate` passed `Verify-Package.ps1` **144** (expected 143) plus every gate (`Local/verify-package-20261004-171655.log`). Measured `axe=1 grip_error_cm=0.0 lean_deg=3.0 eye_cm=127 to_smithy_cm=370 mocap=1`. The smith and the other humans are unchanged (smith worst gap 0.4 cm).
+- **Review:** `-ChuckNPCCapture` portraits, committed as `SourceAssets/NPCs/Humans/Review/runtime_Dwarf_{threequarter,front}.png`. The first candidate hid the axe head behind the pauldron and the nasal slid off the nose when he turned his head. Fixed by a longer haft and by face-weighted skinning, then rebuilt.
+- Promoted to `Builds/Windows`; receipt and `Launch-Prototype.ps1 -CheckOnly` identify `6d48d4f`. Previous package: `Builds/Windows-Previous-20261004-Dwarf`.
+- **Assets:** about 22 MB of new LFS binaries (FBX, textures, uassets). All 14 Props uassets were re-imported from unchanged sources and committed. The remaining 76 older churned human uassets and the two untracked textures are still unstaged and unchanged.
+- **Flaws:**
+  - The beard reads as a smooth sculpted mass, not hair.
+  - The thin brass trims break into uneven strips at mesh edges, and the helmet trim is ragged.
+  - The pauldrons deform like sleeves (body skin weights).
+  - The mail skirt reads as plain grey at a distance.
+  - The beard mesh is heavy: 96k tris in total versus about 57k for the other humans.
+  - No placement playtest and no Xbox/feel test. Not checked whether he narrows any player route past the forge (the forge clear-route gate passed).
+
+Next part of the work can be done here.
+
 **Update 77 (Claude, October 4, user request: easier wall run, checkpoint before the break, five sewer zombies, Astral holes affect only Chuck):** runtime `01aeeb5`, from main `ab08f20` / launcher `d3c8fd7`.
 
 - **Wall running (all walls):** side wall run now accepts approaches up to 50° onto the wall (previously ~24°); steeper or square-on is still the head-on climb. A running jump that reaches such a wall within 0.45 s of takeoff catches it in the air. The gap closes over a few frames instead of snapping, Chuck turns along the wall smoothly, and the arc is 1.1 s with 470 cm/s² gravity (was 0.95 s, 520). Measured crossings: right 263 cm / left 262 cm (was 247/242), angled 41° approach caught in the air, 271 cm, landed beyond.
