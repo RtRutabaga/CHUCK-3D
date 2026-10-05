@@ -602,7 +602,7 @@
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 102344,
+   "tris": 112456,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -732,7 +732,12 @@
     },
     "Brow": {
      "type": "card",
-     "texture": "Textures/eyebrow009.png"
+     "texture": "Textures/eyebrow009.png",
+     "tint": [
+      8.0,
+      4.3,
+      2.5
+     ]
     },
     "Lash": {
      "type": "card",

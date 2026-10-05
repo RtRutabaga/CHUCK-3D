@@ -213,7 +213,7 @@ class Body:
             u = self.forearm_u(c); L = self.elbow.z - self.wrist.z
             return min(u - .18, .9 - u) * L
         if piece == 'trim':   # a band along the edges of another piece (`of`), `width` wide: brass edging on plate
-            m = self.margin(i, opts['of'], opts['of_opts'])
+            m = self.margin(i, opts['of_opts']['piece'], opts['of_opts'])
             return -1. if m <= -1. else min(m, opts.get('width', .02) - m)
         if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
             front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
@@ -380,7 +380,7 @@ def rolled_trim(body, opts, material):
     """A `rolled` trim: a brass tube of `radius` swept along every edge of the
     piece it trims (`of`), wrapped round the plate's edge, so it reads as a clean
     rolled rim however coarse the body under it."""
-    of, base = opts['of'], opts['of_opts']
+    base = opts['of_opts']; of = base['piece']
     obj = body.obj.copy(); obj.data = body.obj.data.copy(); obj.name = 'trim_path'
     bpy.context.collection.objects.link(obj)
     bm = bmesh.new(); bm.from_mesh(obj.data)
@@ -426,13 +426,26 @@ def rolled_trim(body, opts, material):
     return trim, [False] * len(body.co)
 
 
+def rigidify(obj, info, weights):
+    """Plate that keeps its shape: every vertex on the same few bones, by side
+    (`rigid` = {bone stem: weight}, e.g. upperarm 0.75, clavicle 0.25), so a
+    pauldron turns with the shoulder instead of bending like a sleeve."""
+    left = 1. if info.shoulder.x > 0 else -1.
+    for g in list(obj.vertex_groups): obj.vertex_groups.remove(g)
+    for v in obj.data.vertices:
+        sx = '_l' if v.co.x * left > 0 else '_r'
+        for stem, w in weights.items():
+            g = obj.vertex_groups.get(stem + sx) or obj.vertex_groups.new(name=stem + sx)
+            g.add([v.index], w, 'REPLACE')
+
+
 def make_piece(body, piece, opts, material):
     if piece == 'trim' and opts.get('rolled'): return rolled_trim(body, opts, material)
     p = dict(PIECES[piece])
     if 'offset' in opts: p['offset'] = opts['offset']   # layered armour: each layer over the last
     if piece == 'trim':   # just proud of the outer face of the piece it edges
         base = opts['of_opts']
-        p['offset'] = base.get('offset', PIECES[opts['of']]['offset']) + PIECES[opts['of']]['thickness'] + .005
+        p['offset'] = base.get('offset', PIECES[base['piece']]['offset']) + PIECES[base['piece']]['thickness'] + .005
     keep = [body.covers(i, piece, opts) for i in range(len(body.co))]
     obj = body.obj.copy(); obj.data = body.obj.data.copy(); obj.name = f'{piece}'
     bpy.context.collection.objects.link(obj)
@@ -697,6 +710,26 @@ def make_beard(info, spec, slots):
                 if chin.z + .03 < v.co.z < burn_top and abs(v.co.x) > .045 and abs(v.normal.x) > .5]
     rnd.shuffle(side_pts)
     pts += [(co, n, True) for co, n in side_pts[:spec.get('sideburn_cards', 50)]]
+    # Strands lying over the whole beard, following its surface, so it reads as hair rather than a sculpted mass.
+    bvh = BVHTree.FromObject(beard, bpy.context.evaluated_depsgraph_get())
+    lying = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .3 and v.co.z < info.eye_z - .05]
+    rnd.shuffle(lying)
+    for co, n in lying[:spec.get('lying_cards', 220)]:
+        flat = Vector((n.x, n.y, 0))
+        side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
+        width, length, u0 = rnd.uniform(.01, .018), rnd.uniform(.03, .07), rnd.uniform(0, .85)
+        col, p = [], co.copy()
+        for k in range(5):
+            t = k / 4
+            if k:
+                p = p - Vector((0, 0, length / 4))
+                hit, normal, _, _ = bvh.find_nearest(p)
+                if hit is not None: p, n = hit.copy(), normal.copy()
+            q = p + n * (.0025 + .002 * t)
+            col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
     for item in pts:
         co, n = item[0], item[1]
         short = len(item) > 2
@@ -786,7 +819,7 @@ def build(name, spec):
     for item in spec['outfit']:
         piece = item['piece']; slot = item.get('slot', piece.capitalize())
         if piece == 'trim':
-            item = dict(item, of_opts=next(it for it in spec['outfit'] if it['piece'] == item['of']))
+            item = dict(item, of_opts=next(it for it in spec['outfit'] if it.get('id', it['piece']) == item['of']))
         obj, keep = make_piece(skirt if piece in SKIRTED else info, piece, item, slot_material(slot))
         if piece in SKIRTED: soften_skirt(obj, info)
         meshes.append(obj)
@@ -794,6 +827,8 @@ def build(name, spec):
         slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'], folder)}
         if 'folder' in item: slots[slot]['folder'] = item['folder']
         if piece == 'helmet' and item.get('nasal'): meshes.append(nasal_guard(info, slot_material(slot)))
+        rigid = item.get('rigid') or item.get('of_opts', {}).get('rigid')
+        if rigid: rigidify(obj, info, rigid)
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
     if skirt_src: bpy.data.objects.remove(skirt_src)
     if spec.get('beard'):
@@ -819,6 +854,7 @@ def build(name, spec):
     if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
     assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(ROOT / spec['eye_texture'] if spec.get('eye_texture') else DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
     assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png')))}
+    if spec.get('brow_tint'): slots['Brow']['tint'] = spec['brow_tint']   # the dwarf's auburn brows to match his beard
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
     assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
     if 'Hair' in parts:

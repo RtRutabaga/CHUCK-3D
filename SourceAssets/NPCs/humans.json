@@ -686,8 +686,10 @@
     },
     {
      "piece": "pauldron",
-     "drop": 0.13,
+     "id": "lame0",
+     "drop": 0.15,
      "inner": 0.06,
+     "offset": 0.058,
      "fabric": "metal_plate_02",
      "tint": [
       0.2,
@@ -695,7 +697,46 @@
       0.21
      ],
      "slot": "Cuirass",
-     "offset": 0.062
+     "rigid": {
+      "upperarm": 0.75,
+      "clavicle": 0.25
+     }
+    },
+    {
+     "piece": "pauldron",
+     "id": "lame1",
+     "drop": 0.11,
+     "inner": 0.06,
+     "offset": 0.064,
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.2,
+      0.2,
+      0.21
+     ],
+     "slot": "Cuirass",
+     "rigid": {
+      "upperarm": 0.75,
+      "clavicle": 0.25
+     }
+    },
+    {
+     "piece": "pauldron",
+     "id": "lame2",
+     "drop": 0.065,
+     "inner": 0.06,
+     "offset": 0.07,
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.2,
+      0.2,
+      0.21
+     ],
+     "slot": "Cuirass",
+     "rigid": {
+      "upperarm": 0.75,
+      "clavicle": 0.25
+     }
     },
     {
      "piece": "vambrace",
@@ -722,15 +763,39 @@
     },
     {
      "piece": "trim",
-     "of": "pauldron",
+     "of": "lame0",
+     "rolled": true,
+     "radius": 0.0045,
      "fabric": "metal_plate_02",
      "tint": [
       0.42,
       0.27,
       0.09
-     ],
+     ]
+    },
+    {
+     "piece": "trim",
+     "of": "lame1",
      "rolled": true,
-     "radius": 0.005
+     "radius": 0.0045,
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ]
+    },
+    {
+     "piece": "trim",
+     "of": "lame2",
+     "rolled": true,
+     "radius": 0.0045,
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ]
     },
     {
      "piece": "belt",
@@ -765,6 +830,11 @@
      "rolled": true,
      "radius": 0.008
     }
+   ],
+   "brow_tint": [
+    8.0,
+    4.3,
+    2.5
    ]
   }
  }
