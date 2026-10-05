@@ -2,6 +2,23 @@
 
 ## Current launcher and integration status
 
+## October 5 — fix fatal errors when starting from the menu
+
+**Update 85 (Codex, user report: New Game and checkpoints cause a fatal error):** runtime `898a696`, from `df963d8` / launcher `09b88b7`.
+
+- The user crash log records an access violation in the music-region timer (`ADockGameMode::StartPlay`, former line 103) on the first tick after `OpenLevel`. The menu reloaded the already-built scene, leaving a callback that referenced the destroyed world. Update 84's direct map-option checks never exercised this button-to-game transition.
+- Menu buttons now call `StartFromMenu` in the fresh paused world already behind the title, place Chuck, close the UI and resume gameplay. No second map load occurs. The existing direct `ChuckStart` option uses the same placement function.
+- The actual-button probes also exposed an unintended **86 cm landing roll** at the three underground starts: the reset retained the higher area's `AirApexZ`. `ResetAtLocation` now resets the fall apex, and is public so all menu locations use the full existing reset (including pantry recovery/facing/camera state). No traversal tuning, rig, animation asset, or setting geometry was changed.
+- Added `Tools/Verify-Menu.ps1` and `-MenuTest=<point>`: invokes real `SButton::SimulateClick` delegates through Dev Checkpoints / Back and the selected destination. Checks one map load only, the same world, pause/input/cursor state, possession, stable ground position, recovery point, zero landing rolls and morning/evening state after seven seconds of gameplay timers. Surface-light assertions are omitted for sewer views because their outdoor sun/sky are intentionally off.
+- **All six menu runs passed**, `Local/verify-menu-20261005-070518-{NewGame,Waterdeep,Sewer,SewerJump,Night,Pantry}.log`, summary `Local/menu-crash-fix-menu-tests-final.log`. Final lower starts stay at the requested X/Y; the stream settles 8 cm down onto its bed, pantry 0.86 cm down. Initial diagnostic failures and measurements remain in `Local/menu-crash-fix-*.log`.
+- Final source build `Local/menu-crash-fix-build3.log` succeeded in **144.19 s**, with existing UE **5.7.4**, VS2022 **14.44.35229**, Windows SDK **10.0.26100.0**, DX11. No install/import/cook/new binary asset. Current cooked local human assets and unstaged source assets retained.
+- Final default package verification passed **145 checks and all required gates**, `Local/verify-package-20261005-070631.log`, summary `Local/menu-crash-fix-verification.log`.
+- Promoted to root `Builds/Windows`; receipt and `Tools/Launch-Prototype.ps1 -CheckOnly` identify `898a696` and pass the executable hash check. Previous package, including the user's fatal-error logs, retained as `Builds/Windows-Previous-20261005-MenuCrash`. Root `Launch-Prototype.cmd` remains the player launcher.
+- Gameplay captures after every menu choice are in the package's `Saved/Screenshots/Windows/MenuStarts`. New Game and Sewer Jump captures visually inspected. These are automated Slate button-delegate tests; physical mouse/controller navigation has not been claimed. No new full connected sewer-route, MotionCapture or sustained-performance run.
+- Future restart/load work using `OpenLevel` must first give the procedural-world timer callbacks proper world lifetimes.
+
+Next part of the work can be done here.
+
 ## October 4 — simple title menu and developer checkpoints
 
 **Update 84 (Codex, user request: CHUCK 3D title, New Game and Dev Checkpoints):** runtime `09b88b7` (menu foundation `7a03b26`), from `12d8a4e` / launcher `81fc1d0`.
