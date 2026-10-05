@@ -711,24 +711,26 @@
     {
      "piece": "trim",
      "of": "cuirass",
-     "width": 0.018,
      "fabric": "metal_plate_02",
      "tint": [
       0.42,
       0.27,
       0.09
-     ]
+     ],
+     "rolled": true,
+     "radius": 0.006
     },
     {
      "piece": "trim",
      "of": "pauldron",
-     "width": 0.012,
      "fabric": "metal_plate_02",
      "tint": [
       0.42,
       0.27,
       0.09
-     ]
+     ],
+     "rolled": true,
+     "radius": 0.005
     },
     {
      "piece": "belt",
@@ -754,13 +756,14 @@
     {
      "piece": "trim",
      "of": "helmet",
-     "width": 0.012,
      "fabric": "metal_plate_02",
      "tint": [
       0.42,
       0.27,
       0.09
-     ]
+     ],
+     "rolled": true,
+     "radius": 0.008
     }
    ]
   }

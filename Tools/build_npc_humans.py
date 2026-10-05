@@ -369,7 +369,65 @@ def boot_feet(body, boots):
         bpy.context.view_layer.objects.active = boots; bpy.ops.object.join()
 
 
+PLATE = {'helmet', 'cuirass', 'pauldron', 'vambrace'}   # hard edges: their hems are relaxed further
+
+
+def hem_iterations(piece):
+    return 24 if piece in PLATE else 30 if piece == 'trim' else 8
+
+
+def rolled_trim(body, opts, material):
+    """A `rolled` trim: a brass tube of `radius` swept along every edge of the
+    piece it trims (`of`), wrapped round the plate's edge, so it reads as a clean
+    rolled rim however coarse the body under it."""
+    of, base = opts['of'], opts['of_opts']
+    obj = body.obj.copy(); obj.data = body.obj.data.copy(); obj.name = 'trim_path'
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new(); bm.from_mesh(obj.data)
+    cut_along(bm, [body.margin(i, of, base) for i in range(len(body.co))])
+    relax_hems(bm, hem_iterations(of))
+    bm.normal_update()
+    out = base.get('offset', PIECES[of]['offset']) + PIECES[of]['thickness'] * .5
+    for v in bm.verts: v.co += v.normal * out
+    loops, seen = [], set()
+    nxt = {}
+    for e in bm.edges:
+        if e.is_boundary:
+            a, b = e.verts; nxt.setdefault(a, []).append(b); nxt.setdefault(b, []).append(a)
+    for start in list(nxt):
+        if start in seen or len(nxt[start]) != 2: continue
+        loop, prev, cur = [start], None, start
+        seen.add(start)
+        while True:
+            step = next((n for n in nxt[cur] if n is not prev and len(nxt[n]) == 2), None)
+            if step is None or step is start or step in seen: break
+            loop.append(step); seen.add(step); prev, cur = cur, step
+        if len(loop) > 8: loops.append([v.co.copy() for v in loop])
+    bm.free(); bpy.data.objects.remove(obj)
+    r, sides = opts.get('radius', .005), 8
+    tb = bmesh.new()
+    for pts in loops:
+        n = len(pts)
+        rings = []
+        for k in range(n):
+            d = (pts[(k + 1) % n] - pts[k - 1]).normalized()
+            side = d.cross(Vector((0, 0, 1)))
+            if side.length < 1e-4: side = Vector((1, 0, 0))
+            side.normalize(); up = side.cross(d).normalized()
+            rings.append([tb.verts.new(pts[k] + (side * math.cos(2 * math.pi * j / sides) + up * math.sin(2 * math.pi * j / sides)) * r) for j in range(sides)])
+        for k in range(n):
+            a, b = rings[k], rings[(k + 1) % n]
+            for j in range(sides): tb.faces.new((a[j], a[(j + 1) % sides], b[(j + 1) % sides], b[j]))
+    trim = new_object('trim', tb)
+    trim.data.materials.append(material)
+    for poly in trim.data.polygons: poly.use_smooth = True
+    skin_from_body(trim, body)
+    box_uv(trim, TILE_CM[opts['fabric']])
+    return trim, [False] * len(body.co)
+
+
 def make_piece(body, piece, opts, material):
+    if piece == 'trim' and opts.get('rolled'): return rolled_trim(body, opts, material)
     p = dict(PIECES[piece])
     if 'offset' in opts: p['offset'] = opts['offset']   # layered armour: each layer over the last
     if piece == 'trim':   # just proud of the outer face of the piece it edges
@@ -380,7 +438,7 @@ def make_piece(body, piece, opts, material):
     bpy.context.collection.objects.link(obj)
     bm = bmesh.new(); bm.from_mesh(obj.data)
     cut_along(bm, [body.margin(i, piece, opts) for i in range(len(body.co))])
-    relax_hems(bm)
+    relax_hems(bm, hem_iterations(piece))   # plates and narrow bands show every zig-zag
     bm.normal_update()
     for v in bm.verts: v.co += v.normal * p['offset']
     bm.to_mesh(obj.data); bm.free()
@@ -528,6 +586,31 @@ def new_object(name, bm):
     return obj
 
 
+def sideburns(info, cheek_z, spec):
+    """Points (and blob sizes) for sideburns: the side of the face in front of
+    each ear, from the cheek line up to `sideburn_tuck` above the helmet's rim
+    (so they run up under it), thinning toward the top."""
+    out = []
+    head = [i for i in range(len(info.co)) if info.bone[i] == Body.HEAD]
+    for sx in (-1, 1):
+        side = [i for i in head if info.co[i].x * sx > 0 and abs(info.co[i].z - info.eye_z) < .03]
+        if not side: continue
+        ear_x = max(abs(info.co[i].x) for i in side)
+        ear_front = min(info.co[i].y for i in side if abs(info.co[i].x) > ear_x - .012)
+        width = spec.get('sideburn_width', .035)
+        helmet = next((it for it in spec.get('_outfit', []) if it['piece'] == 'helmet'), None)
+        for i in head:
+            c = info.co[i]
+            if c.x * sx <= .045 or not (ear_front - width < c.y < ear_front + .004) or c.z < cheek_z - .015: continue
+            if helmet:
+                rim = -info.edge_margin(i, 'helmet', helmet)    # metres below the rim (negative: under the helmet)
+                if rim < -spec.get('sideburn_tuck', .012): continue
+            elif c.z > info.eye_z + .02: continue
+            up = min(1., max(0., (c.z - cheek_z) / max(.01, info.eye_z + .03 - cheek_z)))
+            out.append((c, .01 - .004 * up))
+    return out
+
+
 def make_beard(info, spec, slots):
     """A full beard (MakeHuman has none): one mass over the jaw, cheeks and upper
     lip, hanging `length` down the chest (`clear` of the armour on it), a
@@ -553,6 +636,11 @@ def make_beard(info, spec, slots):
     for c in jaw:
         n = Vector((c.x, c.y - head_y, 0)).normalized()
         depth = .007 + .016 * min(1., max(0., (cheek_z - c.z) / .06))
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
+    # Sideburns: a band in front of each ear from the jaw up under the helmet's rim (or to the temple bare-headed).
+    burns = sideburns(info, cheek_z, spec)
+    for c, depth in burns:
+        n = Vector((c.x, (c.y - head_y) * .5, 0)).normalized()
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
     # 2. The hang: a rounded spade down the chest, narrowing to the tip.
     steps = 9
@@ -602,10 +690,19 @@ def make_beard(info, spec, slots):
     bm, uv_cards = bmesh.new(), []
     pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.co.z < chin.z + .015 and v.normal.y < .2]
     rnd.shuffle(pts)
-    for co, n in pts[:spec.get('cards', 110)]:
+    pts = pts[:spec.get('cards', 110)]
+    # And short tufts down the sideburns, so their edges are hair, not a rim.
+    burn_top = max((c.z for c, _ in burns), default=chin.z)
+    side_pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices
+                if chin.z + .03 < v.co.z < burn_top and abs(v.co.x) > .045 and abs(v.normal.x) > .5]
+    rnd.shuffle(side_pts)
+    pts += [(co, n, True) for co, n in side_pts[:spec.get('sideburn_cards', 50)]]
+    for item in pts:
+        co, n = item[0], item[1]
+        short = len(item) > 2
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length = rnd.uniform(.012, .022), rnd.uniform(.05, .12)
+        width, length = (rnd.uniform(.008, .014), rnd.uniform(.022, .04)) if short else (rnd.uniform(.012, .022), rnd.uniform(.05, .12))
         u0 = rnd.uniform(0, .85)
         col = []
         for k in range(5):
@@ -700,7 +797,7 @@ def build(name, spec):
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
     if skirt_src: bpy.data.objects.remove(skirt_src)
     if spec.get('beard'):
-        meshes += make_beard(info, spec['beard'], slots)
+        meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -775,7 +872,8 @@ def render_review(name, meshes, slots, k=1.):
     bpy.ops.mesh.primitive_plane_add(size=6)
     s = bpy.context.scene
     for tag, loc, rot in (('front', (2.6, -1.1, 1.15), (82, 0, 67)), ('back', (-2.6, 1.1, 1.15), (82, 0, 247)),
-                          ('feet', (.9, -.5, .45), (60, 0, 60)), ('head', (.75, -.35, 1.68), (88, 0, 65))):
+                          ('feet', (.9, -.5, .45), (60, 0, 60)), ('head', (.75, -.35, 1.68), (88, 0, 65)),
+                          ('profile', (.03, -.62, 1.66), (88, 0, 0))):
         cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam)
         cam.location = k3(loc); cam.rotation_euler = tuple(math.radians(a) for a in rot); cam.data.lens = 45; s.camera = cam
         s.render.engine = 'BLENDER_WORKBENCH'; s.display.shading.color_type = 'MATERIAL'; s.display.shading.light = 'STUDIO'
