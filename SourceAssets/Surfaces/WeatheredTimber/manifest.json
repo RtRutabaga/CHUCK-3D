@@ -1,0 +1,61 @@
+{
+  "license": "CC0-1.0",
+  "retrieved": "2026-10-05",
+  "license_url": "https://polyhaven.com/license",
+  "assets": [
+    {
+      "file": "weathered_brown_planks_diff_2k.jpg",
+      "bytes": 911358,
+      "asset": "weathered_brown_planks",
+      "map": "diff",
+      "sha256": "070EBC4C56A6729CA73A791F7CD3BAB7670EB03BFA9AC0218864A554228BCC30",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/weathered_brown_planks/weathered_brown_planks_diff_2k.jpg"
+    },
+    {
+      "file": "weathered_brown_planks_arm_2k.jpg",
+      "bytes": 824806,
+      "asset": "weathered_brown_planks",
+      "map": "arm",
+      "sha256": "61FBDCBD05B7FD66F11F691833DBCA6FE458038E97695CFD4B8A96C4E0425311",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/weathered_brown_planks/weathered_brown_planks_arm_2k.jpg"
+    },
+    {
+      "file": "weathered_brown_planks_nor_dx_2k.jpg",
+      "bytes": 1031164,
+      "asset": "weathered_brown_planks",
+      "map": "nor_dx",
+      "sha256": "0A37A723213CDB4A62F6F15F710724AB815874965641E54004C5C6F924E97F7F",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/weathered_brown_planks/weathered_brown_planks_nor_dx_2k.jpg"
+    },
+    {
+      "file": "rough_wood_diff_2k.jpg",
+      "bytes": 2223327,
+      "asset": "rough_wood",
+      "map": "diff",
+      "sha256": "0BD2B3195DB9B54D55AA0F842801220EC5E1D389F5FC1E670B378BDACA3F8E7B",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_wood/rough_wood_diff_2k.jpg"
+    },
+    {
+      "file": "rough_wood_arm_2k.jpg",
+      "bytes": 575486,
+      "asset": "rough_wood",
+      "map": "arm",
+      "sha256": "BD7597FF0D2D6682E6990A0204B67260C001CDFFE01ACF95E8F8B43881EDB4AF",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_wood/rough_wood_arm_2k.jpg"
+    },
+    {
+      "file": "rough_wood_nor_dx_2k.jpg",
+      "bytes": 2437539,
+      "asset": "rough_wood",
+      "map": "nor_dx",
+      "sha256": "816F9D2514347C89E0849C1EAF416D39728C65FD393112018EA8A97E47B6288D",
+      "resolution": 2048,
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rough_wood/rough_wood_nor_dx_2k.jpg"
+    }
+  ]
+}

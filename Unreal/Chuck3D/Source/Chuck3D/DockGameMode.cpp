@@ -8,6 +8,7 @@
 #include "DockPantry.h"
 #include "DockReturn.h"
 #include "DockFire.h"
+#include "DockTimber.h"
 #include "GrassTuft.h"
 #include "ClayJar.h"
 #include "VaultCrates.h"
@@ -585,6 +586,7 @@ void ADockGameMode::StartPlay()
     BuildDockReturn(World);
     SpawnSewerLife(World);   // its rats and moss (Claude)
     FinishDockFire(World);
+    FinishDockTimber(World);
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
