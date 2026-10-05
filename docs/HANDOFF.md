@@ -2,6 +2,45 @@
 
 ## Current launcher and integration status
 
+**Update 82 (Claude, October 4, user request: a tavern keeper NPC like the blacksmith but with a medium-length beard and a different apron, behind the counter between the cellar hatch and the barrels, polishing a tankard, no polishing sound):** runtime `c2e8975`, on `1ea1a9f`.
+
+- **Him** (`TavernKeeper` in `humans.json`):
+  - The blacksmith's face, brows (`eyebrow009`) and crop (`short01`), older and heavier with less muscle.
+  - A medium greying-brown beard, 11 cm. `make_beard` gains a `braids` option (default on, so the dwarf is unchanged); his has no braids or rings.
+  - A rolled-sleeve linen shirt, a dark cloth waistcoat and an off-white linen waist apron to the knee with a linen tie, where the smith has a leather bib.
+  - 75k tris.
+- **Place:** (-55, 905) facing the room (yaw -90). That is behind the counter (y 810–878), in front of the bottle shelves (from y 941), between the barrels (east edge x -119) and the cellar hatch lid (x 14). Nothing was removed, and the tavern aisle routes (x 40–225) are untouched.
+- **Props:** `Tools/build_keeper_props.py` builds:
+  - `SM_Tankard`: a hollow 13 cm pewter tankard with a foot, incised rings, a rolled rim and a strap handle; its origin is at his grip on the handle.
+  - `SM_Rag`: a bunched linen rag with a hanging tail.
+  - Both are merged into the props manifest. `Import-NPCHumans.ps1 -Only` now accepts `prop:<Name>`, so other props aren't re-imported.
+- **Motion** (`PoseKeeper`, IK on the halved StandHip idle):
+  - His left fist closes on the handle just above the counter's back edge, and the tankard turns slowly as he works.
+  - 6 s: the rag pushed into the rim in small circles with a wrist twist.
+  - 5 s: rubbing the outside on the side nearest his right hand. The far side was out of his reach: a first candidate missed it by 9.7 cm.
+  - Every third round, 4 s: he holds it up and out to look it over, the rag hand at his side.
+  - Phases blend over 0.6 s. His eyes stay on the work unless Chuck is near. He doesn't turn from his bar.
+  - No sound. Lines: "We don't serve rats." and "And stay out of my cellar."
+- **Review mode:** `-ChuckKeeperCapture` films him from over the counter, one frame every 0.25 s for 30 s (`Saved/Screenshots/Windows/Keeper`).
+- **Tests:** new check covering his place, the worst left-fist-to-handle error under 3 cm and the worst rag reach under 4 cm (on any frame after 8 s of game time), at least 2 polishing passes, and his lines. He is exempt from the arms-down check. The verifier requires `CHUCK_KEEPER_SPAWNED tankard=1 rag=1`, with thresholds of 143/144.
+
+The candidate passed `-MotionCapture` **145** with every gate, including tavern, pantry and the smith (`Local/verify-package-20261004-193825.log`). Measured: `tankard_grip_cm=0.0 rag_reach_cm=0.3 passes=20`.
+
+Promoted to `Builds/Windows`; the receipt `c2e8975` was written and checked with `-CheckOnly`. The previous package is kept as `Builds/Windows-Previous-20261004-Keeper`.
+
+Evidence: `SourceAssets/NPCs/Humans/Review/runtime_TavernKeeper_{polish,wide}.png`, `blender_TavernKeeper_body.png`.
+
+The keeper's import re-imported shared human textures (`T_eyebrow009`, `T_short01_diffuse`, and others already churned) from unchanged sources. They are left unstaged with the earlier churn.
+
+Flaws:
+- The pewter is a tinted generic metal texture.
+- The rag is a simple lump with a tail.
+- The beard is the dwarf's card method: blocky up close.
+- The polishing is procedural.
+- Not played by the user.
+
+Next part of the work could be done by either agent — preference: Claude for more of his motion; Codex for dressing the bar (cloths, mugs on hooks).
+
 **Update 81 (Claude, October 4, user request: beard through the armour when the dwarf looks down, his head odd looking down, the axe head into his shoulder armour as he turns, a more dwarven nose or a fuller helmet, whichever is easier):** runtime `48cdda5`, on `2973957`.
 
 - **Never looks down:** his look target is clamped level (pitch ≤ 0) and his head turns at most 25°; his body turn does the rest. The idle clip's own head and neck motion is damped to 25%. `CHUCK_DWARF_MEASURE` now requires `look_pitch_deg ≤ 0.5`.

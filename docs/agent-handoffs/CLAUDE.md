@@ -2055,3 +2055,19 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `48cdda5`; backup `Builds/Windows-Previous-20261004-DwarfNose`.
 
 Next part of the work can be done here.
+
+## Tavern keeper (user 2026-10-04)
+
+- **Request:** a tavern keeper like the blacksmith with a medium beard and a different apron, behind the counter between the hatch and the barrels, polishing a tankard silently.
+- **Source:** `c2e8975` on main.
+  - `humans.json` TavernKeeper; `build_npc_humans.py` (the `braids` option).
+  - New: `build_keeper_props.py`.
+  - `import_npc_humans.py` (`prop:<Name>`).
+  - `DockNPC.cpp/.h` (`SpawnTavernKeeper`, `PoseKeeper`) and `DockGameMode.cpp/.h` (the check and `-ChuckKeeperCapture`).
+  - `Verify-Package.ps1`.
+- **Contract:** shared human skeleton; no Chuck, tavern geometry or route changes.
+- **Verified:** package 145, `Local/verify-package-20261004-193825.log`. Grip 0.0 cm, rag 0.3 cm.
+- **Remaining:**
+  - Prop art.
+  - Beard detail.
+  - Not played by the user.
