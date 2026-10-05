@@ -640,7 +640,8 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         {TEXT("Front"),320.f,0.f,100.f,92.f,62.f}, {TEXT("ThreeQuarter"),320.f,40.f,100.f,92.f,62.f},
         {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f},
         {TEXT("Scratched"),260.f,60.f,100.f,92.f,62.f},     // a scratch is triggered as this shot starts
-        {TEXT("Wide"),420.f,-25.f,230.f,90.f,85.f} };      // the place he stands in
+        {TEXT("Wide"),420.f,-25.f,230.f,90.f,85.f},       // the place he stands in
+        {TEXT("Hands"),130.f,15.f,0.f,0.f,40.f} };        // close on the hands (heights from his eyes: the gnome's sleeves)
     constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
     constexpr float Settle=3.f, Each=1.2f;
     NPCCaptureTime+=DeltaSeconds;
@@ -663,8 +664,9 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const FVector Dir=NPC->GetActorForwardVector().RotateAngleAxis(Shot.Yaw,FVector::UpVector);
         // The face shot is aimed from each body's own eye height (a 166 cm woman, a 183 cm guard).
         const float Lift=Shot.Distance<100.f ? NPC->GetEyeHeight()-167.f : 0.f;
-        const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,Shot.Height+Lift);
-        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,Shot.Aim+Lift)-At).Rotation());
+        const bool bHands=FCString::Strcmp(Shot.Name,TEXT("Hands"))==0;
+        const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,bHands ? NPC->GetEyeHeight()*.75f : Shot.Height+Lift);
+        NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bHands ? NPC->GetEyeHeight()*.6f : Shot.Aim+Lift)-At).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
         PC->SetViewTarget(NPCCamera.Get());
         SetReviewLamp(NPCCamera.Get(),NPC->IsHostile());   // the zombie stands in the dark
@@ -1952,7 +1954,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSeated()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSeated() || Entry->IsAlchemist()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap, the gnome's in his sleeves
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2050,6 +2052,19 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Elf && Elf->HasMocap() && FMath::Abs(Elf->GetSeatHeight()-ADockNPC::ElfBench.Z-9.f)<4.f && FMath::Abs(ToBench.X)<80.f && ToBench.Y>0.f && ToBench.Y<25.f
                 && Elf->GetFootLiftError()<2.f && Elf->GetLapHandError()<3.f && ElfToFountain<800.f && FMath::Abs(Elf->GetBodyTurn())<1.f && Elf->CanTalk(),
                 TEXT("an old elf sits on the bench by the fountain: hips on the bench, feet flat on the paving, hands in her lap, never turning from it"));
+            // The gnome alchemist before his shop, forearms across so his sleeves hide his hands.
+            TArray<AActor*> GnomeFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Alchemist"),GnomeFound);
+            const auto* Gnome=GnomeFound.Num()==1 ? Cast<ADockNPC>(GnomeFound[0]) : nullptr;
+            const FVector GnomeAt=Gnome ? Gnome->GetActorLocation() : FVector(1e4f);
+            const float ToShop=static_cast<float>(FVector::Dist2D(GnomeAt,FVector(1280,-3760,0)));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ALCHEMIST_MEASURE present=%d at=(%.0f,%.0f) to_shop_front_cm=%.0f eye_cm=%.0f sleeve_reach_cm=%.1f wrist_gap_cm=%.1f hands_ahead_cm=%.1f mocap=%d lines=%d"),
+                Gnome ? 1 : 0,GnomeAt.X,GnomeAt.Y,ToShop,Gnome ? Gnome->GetEyeHeight() : 0.f,Gnome ? Gnome->GetSleeveReachError() : 1e3f,Gnome ? Gnome->GetWristGap() : 1e3f,
+                Gnome ? Gnome->GetHandsForward() : 0.f,Gnome && Gnome->HasMocap() ? 1 : 0,Gnome ? Gnome->Lines.Num() : 0);
+            // Gnome height (5e: 3-4 ft; eyes well under a man's waist-high counter), in front of the shop, wrists together ahead of him.
+            Check(Gnome && Gnome->HasMocap() && GnomeAt.Y>-3760.f && ToShop<250.f && Gnome->GetEyeHeight()>70.f && Gnome->GetEyeHeight()<100.f
+                && Gnome->GetSleeveReachError()<2.f && Gnome->GetWristGap()<8.f && Gnome->GetHandsForward()>8.f && Gnome->CanTalk(),
+                TEXT("a gnome alchemist stands before the alchemist's shop, forearms across so his sleeves meet over his hands"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();

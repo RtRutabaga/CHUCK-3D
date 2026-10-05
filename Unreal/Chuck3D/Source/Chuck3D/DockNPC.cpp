@@ -56,7 +56,11 @@ namespace
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
         TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
         TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper"),
-        TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder") };
+        TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder"), TEXT("/Game/Characters/Humans/GnomeAlchemist/SK_GnomeAlchemist.SK_GnomeAlchemist") };
+    // The gnome's sleeves: each upper arm swung well forward (the elbow in front of his robe, a
+    // little out), the forearm level across to just past the middle (into the other sleeve), the
+    // left cuff over the right.
+    constexpr float ElbowAhead = .65f, ElbowOut = .12f, SleeveCross = 2.f, SleeveStack = 1.5f;
     // The old elf on her bench (component space: the floor under her hip joints, X forward, Y right).
     constexpr float SitBone = 9.f;          // cm from her hip joints down to the bench under her (a slight woman, a skirt)
     constexpr float ShinLean = 6.f;         // deg her shins lean forward from upright, feet a little out in front
@@ -148,9 +152,10 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Dwarf(MeshPaths[7]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Keeper(MeshPaths[8]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Elf(MeshPaths[9]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Gnome(MeshPaths[10]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
-    HumanMeshes[8] = Keeper.Object; HumanMeshes[9] = Elf.Object;
+    HumanMeshes[8] = Keeper.Object; HumanMeshes[9] = Elf.Object; HumanMeshes[10] = Gnome.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
@@ -525,8 +530,22 @@ ADockNPC* ADockNPC::SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw)
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnAlchemist(UWorld* World, const FVector& Feet, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::GnomeAlchemist, Feet, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("Alchemist"));
+    NPC->DisplayName = TEXT("Alchemist");
+    NPC->Lines = { TEXT("Salves, tinctures, a tonic for the cough."), TEXT("Nothing for rats. Mind the bottles.") };
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // The gnome alchemist before his shop's left window (DockPlaza.cpp: the
+    // shop at 1280,-3940, its front at y -3760, the door at x 1222..1338),
+    // clear of the door, facing out over the plaza.
+    SpawnAlchemist(World, AlchemistFeet, AlchemistYaw);
     // The old elf on the plaza bench beside the fountain (DockPlaza.cpp), at
     // its fountain end, facing back toward the docks.
     SpawnElfElder(World, ElfHips, ElfYaw);
@@ -1115,6 +1134,12 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             Delta[Spine2] = Pitch(7.f - 5.f * Inspect);
             Delta[Chest] = Pitch(3.f - 2.f * Inspect);
         }
+        if (IsAlchemist())
+        {
+            // Standing at his shop: the idle's sway halved (his arms are the IK's).
+            for (FQuat& Q : BoneDelta) Q = FQuat::Slerp(FQuat::Identity, Q, .5f);
+            HipsOffset *= .5f;
+        }
         if (IsSeated())
         {
             // Sitting: the idle much quieter (it was stood), her hips down on the
@@ -1134,6 +1159,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsSmith()) PoseSmith(Space);
         if (IsKeeper()) PoseKeeper(Space);
         if (IsSeated()) PoseSeated(Space);
+        if (IsAlchemist()) PoseSleeves(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         SmithEvents();
@@ -1163,6 +1189,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     if (IsSmith()) PoseSmith(Space);
     if (IsKeeper()) PoseKeeper(Space);
     if (IsSeated()) PoseSeated(Space);
+    if (IsAlchemist()) PoseSleeves(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
     SmithEvents();
@@ -1654,4 +1681,31 @@ void ADockNPC::PoseSeated(TArray<FTransform>& Space)
         HandFrame(Space, Side, F, A, Th);
         if (bSettled) WorstLapHand = FMath::Max(WorstLapHand, static_cast<float>(FVector::Dist(F, Lap)));
     }
+}
+
+void ADockNPC::PoseSleeves(TArray<FTransform>& Space)
+{
+    // Forearms across in front of him, the wrists meeting a little past the
+    // middle (the left cuff just above the right), elbows down at his sides:
+    // each hand inside the other's sleeve, as far as anyone can see.
+    // From this body's own arm lengths, so the elbows bend about square whatever his size.
+    const bool bSettled = GetWorld()->GetTimeSeconds() > 8.f;
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const float Out = Side == 0 ? ArmOut : -ArmOut;   // +Y is out on this side
+        const int32 Upper = BoneIndex[Of(UpperL, Side)], Lower = BoneIndex[Of(LowerL, Side)], Hand = BoneIndex[Of(HandL, Side)];
+        const FVector S = Space[Upper].GetLocation();
+        const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
+        const float B = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[Hand].GetLocation()));
+        const FVector Elbow = S + FVector(ElbowAhead, Out * ElbowOut, -.75f).GetSafeNormal() * A;
+        const float Across = FMath::Abs(static_cast<float>(Elbow.Y) + Out * SleeveCross);
+        const FVector Wrist(Elbow.X + FMath::Sqrt(FMath::Max(B * B - Across * Across, .09f * B * B)), -Out * SleeveCross, Elbow.Z + 2.f + (Side == 0 ? SleeveStack : -SleeveStack));
+        TwoBone(Space, Upper, Lower, Hand, Wrist, Elbow - (S + Wrist) * .5f);
+        if (bSettled) WorstSleeveReach = FMath::Max(WorstSleeveReach, static_cast<float>(FVector::Dist(Space[Hand].GetLocation(), Wrist)));
+    }
+}
+
+float ADockNPC::GetWristGap() const
+{
+    return BoneIndex.Contains(INDEX_NONE) ? 1e3f : static_cast<float>(FVector::Dist(Body->GetBoneLocation(BoneNames[HandL]), Body->GetBoneLocation(BoneNames[HandR])));
 }

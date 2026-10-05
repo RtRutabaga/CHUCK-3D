@@ -215,6 +215,11 @@ class Body:
         if piece == 'trim':   # a band along the edges of another piece (`of`), `width` wide: brass edging on plate
             m = self.margin(i, opts['of_opts']['piece'], opts['of_opts'])
             return -1. if m <= -1. else min(m, opts.get('width', .02) - m)
+        if piece == 'robe':   # a robe's body: a close round collar, sleeves to the wrist (the hand isn't cloth), to the upper thigh
+            collar = self.neck.z + opts.get('collar', .02) - c.z
+            if b in self.FOREARMS | self.ARMS or b == self.NECK: return collar
+            if b in self.TORSO | self.LEGS: return min(collar, c.z - (self.waist_z - .16))
+            return OUT
         if piece == 'bodice':   # sleeveless, square-ish neckline lower at the front, to the waist
             front = clamp((-c.y - .02) / .04) * clamp((.095 - abs(c.x)) / .03)   # square front, straps beside it
             m = self.neck.z - .01 - .1 * front - c.z
@@ -264,7 +269,8 @@ PIECES = {
     'mailskirt': dict(offset=.024, thickness=.004, hides=False),
     'pauldron': dict(offset=.052, thickness=.007, hides=False),
     'vambrace': dict(offset=.03, thickness=.005, hides=False),
-    'trim':     dict(offset=0., thickness=.006, hides=False),   # offset: just over the piece it edges (make_piece)
+    'trim':     dict(offset=0., thickness=.006, hides=False),
+    'robe':     dict(offset=.012, thickness=.005, hides=True),    # long sleeves flaring wide at the wrist (`flare`); the skirt hangs below   # offset: just over the piece it edges (make_piece)
 }
 
 
@@ -454,6 +460,20 @@ def make_piece(body, piece, opts, material):
     relax_hems(bm, hem_iterations(piece))   # plates and narrow bands show every zig-zag
     bm.normal_update()
     for v in bm.verts: v.co += v.normal * p['offset']
+    if piece == 'robe' and opts.get('flare'):
+        # Bell sleeves: pushed out from the forearm's own line, from mid-forearm to a wide cuff at the wrist.
+        for sx in (-1, 1):
+            e = Vector((abs(body.elbow.x) * sx, body.elbow.y, body.elbow.z)); w = Vector((abs(body.wrist.x) * sx, body.wrist.y, body.wrist.z))
+            d = w - e; L = d.length; d.normalize()
+            for v in bm.verts:
+                if v.co.x * sx < abs(body.shoulder.x) * .5: continue
+                t = (v.co - e).dot(d) / L
+                if t <= .3: continue
+                radial = (v.co - e) - d * (v.co - e).dot(d)
+                if radial.length > .09 or radial.length < 1e-4: continue
+                k = min(1., (t - .3) / .7)
+                v.co += radial.normalized() * opts['flare'] * k * k
+                v.co += d * opts.get('cuff', .02) * k * k * k   # the cuff a little past the wrist
     bm.to_mesh(obj.data); bm.free()
     activate(obj)
     sm = obj.modifiers.new('Ease', 'CORRECTIVE_SMOOTH'); sm.factor = .5; sm.iterations = 4; sm.use_only_smooth = True; sm.use_pin_boundary = True
@@ -774,7 +794,7 @@ def make_beard(info, spec, slots):
     for co, n in lying[:spec.get('lying_cards', 220)]:
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length, u0 = rnd.uniform(.01, .018), rnd.uniform(.03, .07), rnd.uniform(0, .85)
+        width, length, u0 = rnd.uniform(.01, .018) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.03, .07) * spec.get('card_scale', 1.), rnd.uniform(0, .85)
         col, p = [], co.copy()
         for k in range(5):
             t = k / 4
@@ -809,7 +829,7 @@ def make_beard(info, spec, slots):
         short = len(item) > 2
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length = (rnd.uniform(.008, .014), rnd.uniform(.022, .04)) if short else (rnd.uniform(.012, .022), rnd.uniform(.05, .12))
+        width, length = (rnd.uniform(.008, .014), rnd.uniform(.022, .04)) if short else (rnd.uniform(.012, .022) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.05, .12) * spec.get('card_scale', 1.))   # the gnome's trimmed beard: short, fine
         u0 = rnd.uniform(0, .85)
         col = []
         for k in range(5):
@@ -844,6 +864,46 @@ def make_beard(info, spec, slots):
         slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
     print('CHUCK_BEARD', f'length_cm={L * 100:.0f}', f'mass_verts={len(beard.data.vertices)}', f'cards={len(uv_cards) // 4}')
     return [beard, cards] + ([rings] if rings else [])
+
+
+def make_braid(info, spec, top, L, r0, back_at, step):
+    """make_hair's braid: three strands crossing over one another (each a
+    figure of eight about the braid's line, a third of a turn apart), from the
+    nape down the back, close to the head and clear of the clothes further
+    down; gathered at the nape, tied off above the tuft. Returns it and the tie."""
+    steps = int(L / .004)
+    zs = [top - L * k / steps for k in range(steps + 1)]
+    ys = [back_at(z) for z in zs]
+    ys = [sum(ys[max(0, k - 6):k + 7]) / len(ys[max(0, k - 6):k + 7]) for k in range(len(ys))]   # smoothed: no steps from the mesh
+    radius = lambda s: r0 * (1 - .4 * s / L)
+    centres = [Vector((0, y + (.008 + (spec.get('clear', .028) - .008) * step(0., .09, top - z)) + radius(top - z), z)) for y, z in zip(ys, zs)]
+    bm = bmesh.new()
+    period = spec.get('braid_period', .06)
+    for strand in range(3):
+        pts, radii = [], []
+        for k, c in enumerate(centres):
+            s = top - c.z
+            r = radius(s)
+            phi = 2 * math.pi * s / (period * (1 - .3 * s / L)) + 2 * math.pi * strand / 3
+            pts.append(c + Vector((.62 * r * math.sin(phi), .32 * r * math.sin(2 * phi), 0)))
+            radii.append(.52 * r)
+        tube(bm, pts, radii, 9)
+    # Gathered at the nape, where the combed hair turns down into the braid.
+    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=1.,
+        matrix=Matrix.Translation(centres[0] + Vector((0, -.004, .006))) @ Matrix.Diagonal((r0 * 1.35, r0 * .95, r0 * 1.5, 1.)))
+    tail = centres[-1]
+    tube(bm, [tail + Vector((0, 0, .012)), tail - Vector((0, 0, .004))], [r0 * .5, r0 * .5], 10)   # the tie
+    braid = new_object('braid', bm)
+    voxel_merge(braid, .0022, 2)
+    me = braid.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name='UVMap')
+    for poly in me.polygons:
+        poly.use_smooth = True
+        for li in poly.loop_indices:
+            c = me.vertices[me.loops[li].vertex_index].co
+            uv.data[li].uv = (math.atan2(c.x, c.y - back_at(c.z)) * .02 / .08, c.z / .18)
+    return braid, tail
 
 
 def make_hair(info, spec, slots):
@@ -928,38 +988,11 @@ def make_hair(info, spec, slots):
         return max(near) if near else head_y + .08
     top = ear_top - .045
     L, r0 = spec.get('braid', .55), spec.get('braid_radius', .021)
-    steps = int(L / .004)
-    zs = [top - L * k / steps for k in range(steps + 1)]
-    ys = [back_at(z) for z in zs]
-    ys = [sum(ys[max(0, k - 6):k + 7]) / len(ys[max(0, k - 6):k + 7]) for k in range(len(ys))]   # smoothed: no steps from the mesh
-    radius = lambda s: r0 * (1 - .4 * s / L)
-    centres = [Vector((0, y + (.008 + (spec.get('clear', .028) - .008) * step(0., .09, top - z)) + radius(top - z), z)) for y, z in zip(ys, zs)]
-    bm = bmesh.new()
-    period = spec.get('braid_period', .06)
-    for strand in range(3):
-        pts, radii = [], []
-        for k, c in enumerate(centres):
-            s = top - c.z
-            r = radius(s)
-            phi = 2 * math.pi * s / (period * (1 - .3 * s / L)) + 2 * math.pi * strand / 3
-            pts.append(c + Vector((.62 * r * math.sin(phi), .32 * r * math.sin(2 * phi), 0)))
-            radii.append(.52 * r)
-        tube(bm, pts, radii, 9)
-    # Gathered at the nape, where the combed hair turns down into the braid.
-    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=1.,
-        matrix=Matrix.Translation(centres[0] + Vector((0, -.004, .006))) @ Matrix.Diagonal((r0 * 1.35, r0 * .95, r0 * 1.5, 1.)))
-    tail = centres[-1]
-    tube(bm, [tail + Vector((0, 0, .012)), tail - Vector((0, 0, .004))], [r0 * .5, r0 * .5], 10)   # the tie
-    braid = new_object('braid', bm)
-    voxel_merge(braid, .0022, 2)
-    me = braid.data
-    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
-    uv = me.uv_layers.new(name='UVMap')
-    for poly in me.polygons:
-        poly.use_smooth = True
-        for li in poly.loop_indices:
-            c = me.vertices[me.loops[li].vertex_index].co
-            uv.data[li].uv = (math.atan2(c.x, c.y - back_at(c.z)) * .02 / .08, c.z / .18)
+    braid = None
+    if L > 0:
+        braid = make_braid(info, spec, top, L, r0, back_at, step)
+    tail = braid[1] if braid else None
+    braid = braid[0] if braid else None
     # 3. Strand cards: a loose tuft below the tie, and fine strays lying back over the cap.
     bm, uv_cards = bmesh.new(), []
     def card(points, width, u0):
@@ -970,7 +1003,7 @@ def make_hair(info, spec, slots):
         for a, b in zip(col, col[1:]):
             f = bm.faces.new((a[0], a[1], b[1], b[0]))
             uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
-    for k in range(spec.get('tuft_cards', 26)):
+    for k in range(spec.get('tuft_cards', 26) if tail else 0):
         ang = rnd.uniform(0, 2 * math.pi)
         out = Vector((math.cos(ang), math.sin(ang) * .6, 0)) * rnd.uniform(.003, .012)
         length = rnd.uniform(.05, .09)
@@ -990,18 +1023,30 @@ def make_hair(info, spec, slots):
             pts.append((hit + n * (.0015 + .001 * k), n.cross(ahead).normalized()))
             p = hit + ahead * length / 3
         if len(pts) == 4 and min(kd.find(q)[2] for q, _ in pts) > .025: card(pts, rnd.uniform(.008, .014), rnd.uniform(0, .85))   # none trailing over an ear
+    # Wild hair (the gnome's): tufts standing out from the sides and back at odd angles, none over the face or an ear.
+    wild = [(v.co.copy(), v.normal.copy()) for v in cap.data.vertices
+            if v.normal.y > -.35 and v.normal.z < .8 and v.co.z - line(v.co) > .004 and kd.find(v.co)[2] > .02]
+    rnd.shuffle(wild)
+    for co, n in wild[:spec.get('wild_cards', 0)]:
+        out = (n + Vector((rnd.uniform(-.5, .5), rnd.uniform(-.1, .5), rnd.uniform(-.3, .35)))).normalized()
+        side = out.cross(Vector((0, 0, 1)))
+        side = side.normalized() if side.length > .1 else Vector((1, 0, 0))
+        length = rnd.uniform(.025, spec.get('wild_length', .06))
+        bend = Vector((0, 0, rnd.uniform(-.012, .006)))
+        card([(co - n * .003 + out * length * t + bend * t * t, side) for t in (0, .33, .66, 1.)], rnd.uniform(.006, .012), rnd.uniform(0, .85))
     uvl = bm.loops.layers.uv.new('UVMap')
     for f, uvs in uv_cards:
         for loop, uvv in zip(f.loops, uvs): loop[uvl].uv = uvv
     strands = new_object('hair_strands', bm)
-    for obj, slot in ((cap, 'Hair'), (braid, 'Hair'), (strands, 'HairStrands')):
+    parts = [(cap, 'Hair'), (strands, 'HairStrands')] + ([(braid, 'Hair')] if braid else [])
+    for obj, slot in parts:
         obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
         for p in obj.data.polygons: p.material_index = 0
-    for obj in (braid, strands): skin_from_body(obj, info)
+    for obj, _ in parts[1:]: skin_from_body(obj, info)
     slots['Hair'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
     slots['HairStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
     print('CHUCK_HAIR', f'braid_cm={L * 100:.0f}', f'ear_top_cm={ear_top * 100:.1f}', f'cap_verts={len(cap.data.vertices)}', f'cards={len(uv_cards) // 3}')
-    return [cap, braid, strands]
+    return [obj for obj, _ in parts]
 
 
 def slot_material(name):
@@ -1064,6 +1109,9 @@ def build(name, spec):
         if rigid: rigidify(obj, info, rigid)
         if PIECES[piece]['hides']: hide = [h or k for h, k in zip(hide, keep)]
     if skirt_src: bpy.data.objects.remove(skirt_src)
+    if spec.get('hide_hands'):   # the gnome's hands are always inside his sleeves: no hands at all
+        HANDS = ('hand_', 'thumb_', 'index_', 'middle_', 'ring_', 'pinky_')
+        hide = [h or (info.bone[i] or '').startswith(HANDS) for i, h in enumerate(hide)]
     if spec.get('beard'):
         meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
     if spec.get('braided_hair'):

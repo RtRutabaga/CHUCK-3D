@@ -951,6 +951,119 @@
      "texture": "Textures/eyelashes03.png"
     }
    }
+  },
+  "GnomeAlchemist": {
+   "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
+   "height_cm": 100,
+   "tris": 47820,
+   "slots": {
+    "Robe": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.024,
+      0.023,
+      0.026
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Skirt": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.024,
+      0.023,
+      0.026
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.015
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.026,
+      0.018
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Beard": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      0.95,
+      0.93,
+      0.88
+     ]
+    },
+    "BeardStrands": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      1.05,
+      1.03,
+      0.98
+     ]
+    },
+    "Hair": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      1.0,
+      0.98,
+      0.94
+     ]
+    },
+    "HairStrands": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      1.1,
+      1.08,
+      1.02
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png",
+     "tint": [
+      0.95,
+      0.84,
+      0.72
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brownlight_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow010_grey.png",
+     "tint": [
+      1.25,
+      1.25,
+      1.2
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

@@ -1068,6 +1068,158 @@
      ]
     }
    ]
+  },
+  "GnomeAlchemist": {
+   "height_cm": 100,
+   "note": "The alchemist, a gnome vendor in front of the alchemist's shop (user 2026-10-05: 'a gnome in black robes, hands together behind robe sleeves so that they aren't visible, DnD 5e gnome height and facial features'). D&D 5e gnomes are 3-4 ft and slight, with prodigious noses, large bright eyes, pointed ears, pale hair that sticks out at odd angles and, the men, short carefully trimmed beards: 100 cm, an old man with a large head on short legs, a big round nose, big eyes, pointed ears, round cheeks and the corners of the mouth turned up; wild white hair (make_hair, no braid, standing tufts) and a short white beard (make_beard). A black robe with bell sleeves (the robe piece, `flare`) over a long black skirt, a dark sash and soft shoes. His hands are never seen (hide_hands: no hand mesh); the runtime holds his forearms so the cuffs meet in front of him.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.85,
+    "muscle": 0.3,
+    "weight": 0.45,
+    "height": 0.0,
+    "proportions": 0.3,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.1,
+     "asian": 0.2,
+     "caucasian": 0.7
+    }
+   },
+   "targets": {
+    "upperlegs-height-decr": 1.0,
+    "lowerlegs-height-decr": 0.9,
+    "measure-upperarm-length-decr": 0.4,
+    "measure-lowerarm-length-decr": 0.3,
+    "head-scale-horiz-incr": 0.4,
+    "head-scale-vert-incr": 0.35,
+    "head-scale-depth-incr": 0.35,
+    "head-round": 0.4,
+    "neck-scale-vert-decr": 0.4,
+    "nose-scale-vert-incr": 0.5,
+    "nose-scale-horiz-incr": 0.5,
+    "nose-scale-depth-incr": 0.7,
+    "nose-volume-incr": 1.0,
+    "nose-point-width-incr": 1.0,
+    "nose-flaring-incr": 0.5,
+    "nose-curve-convex": 0.3,
+    "nose-point-down": 0.2,
+    "l-eye-scale-incr": 0.6,
+    "r-eye-scale-incr": 0.6,
+    "l-ear-shape-pointed": 0.8,
+    "r-ear-shape-pointed": 0.8,
+    "l-ear-scale-incr": 0.4,
+    "r-ear-scale-incr": 0.4,
+    "l-ear-wing-incr": 0.4,
+    "r-ear-wing-incr": 0.4,
+    "l-ear-rot-backward": 0.2,
+    "r-ear-rot-backward": 0.2,
+    "l-cheek-volume-incr": 0.4,
+    "r-cheek-volume-incr": 0.4,
+    "mouth-scale-horiz-incr": 0.2,
+    "mouth-angles-up": 0.4,
+    "chin-prominent-incr": 0.2
+   },
+   "skin": "old_caucasian_male",
+   "skin_tint": [
+    0.95,
+    0.84,
+    0.72
+   ],
+   "eyes": "brownlight",
+   "eyebrows": "eyebrow010",
+   "brow_texture": "SourceAssets/NPCs/Humans/Textures/eyebrow010_grey.png",
+   "brow_tint": [
+    1.25,
+    1.25,
+    1.2
+   ],
+   "eyelashes": "eyelashes02",
+   "hair": null,
+   "braided_hair": {
+    "braid": 0,
+    "hairline": 0.06,
+    "lift": 0.016,
+    "ear_clear": 0.012,
+    "stray_cards": 40,
+    "wild_cards": 70,
+    "wild_length": 0.05,
+    "tint": [
+     1.0,
+     0.98,
+     0.94
+    ],
+    "strand_tint": [
+     1.1,
+     1.08,
+     1.02
+    ]
+   },
+   "beard": {
+    "length": 0.025,
+    "width": 0.055,
+    "clear": 0.03,
+    "braids": false,
+    "cheek": 0.04,
+    "cards": 12,
+    "lying_cards": 60,
+    "sideburn_cards": 12,
+    "tint": [
+     0.95,
+     0.93,
+     0.88
+    ],
+    "strand_tint": [
+     1.05,
+     1.03,
+     0.98
+    ],
+    "card_scale": 0.45,
+    "sideburn_width": 0.022
+   },
+   "hide_hands": true,
+   "outfit": [
+    {
+     "piece": "robe",
+     "flare": 0.045,
+     "cuff": 0.02,
+     "fabric": "caban",
+     "tint": [
+      0.024,
+      0.023,
+      0.026
+     ]
+    },
+    {
+     "piece": "skirt",
+     "fabric": "caban",
+     "tint": [
+      0.024,
+      0.023,
+      0.026
+     ]
+    },
+    {
+     "piece": "belt",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.015
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.06,
+     "fabric": "brown_leather",
+     "tint": [
+      0.035,
+      0.026,
+      0.018
+     ]
+    }
+   ]
   }
  }
 }

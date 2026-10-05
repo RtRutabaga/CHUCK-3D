@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -187,6 +187,22 @@ public:
     float GetSeatHeight() const;
     float GetFootLiftError() const { return WorstFootLift; }
     float GetLapHandError() const { return WorstLapHand; }
+    /**
+     * The alchemist (user 2026-10-05: "an alchemist vendor in front of the
+     * alchemist shop, a gnome in black robes, hands together behind robe
+     * sleeves so that they aren't visible, DnD 5e gnome height and facial
+     * features"): a 100 cm gnome before the shop's left window, facing the
+     * plaza. His forearms are held across in front of him (two-bone IK on
+     * the damped idle) so the bell sleeves' cuffs meet; he has no hands to
+     * show. He watches the rat and turns to it like the townsfolk.
+     */
+    static ADockNPC* SpawnAlchemist(UWorld* World, const FVector& Feet, float Yaw);
+    bool IsAlchemist() const { return Kind == EDockHuman::GnomeAlchemist; }
+    static inline const FVector AlchemistFeet = FVector(1120.f, -3685.f, 0.f);
+    static constexpr float AlchemistYaw = 90.f;
+    /** Worst distance (cm, after he settles) of either wrist from where his sleeves want it, and the wrists' distance apart now. */
+    float GetSleeveReachError() const { return WorstSleeveReach; }
+    float GetWristGap() const;
     bool IsForging() const { return IsSmith() && Resting < .5f; }
     int32 GetStrikes() const { return Strikes; }
     /** Light taps of the hammer on the bare face between blows, and how far the face was from it at the last one (cm). */
@@ -314,6 +330,9 @@ private:
     float AnkleRest = 8.f;                // ankle height standing
     float WorstFootLift = 0.f, WorstLapHand = 0.f;
     void PoseSeated(TArray<FTransform>& Space);
+    // The gnome alchemist's sleeves.
+    float WorstSleeveReach = 0.f;
+    void PoseSleeves(TArray<FTransform>& Space);
     /** Two-bone IK: aim Upper and Lower so End lands at Target, the middle joint toward Pole (Space updated down the chain). */
     void TwoBone(TArray<FTransform>& Space, int32 Upper, int32 Lower, int32 End, const FVector& Target, const FVector& Pole) const;
     /** Two-bone IK: the fist of arm Side to Fist, the hand's knuckles along Along with its thumb side along Thumb. */

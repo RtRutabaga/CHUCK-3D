@@ -108,6 +108,21 @@ docs/SETUP.md), one heavy process at a time:
   `ADockNPC::SpawnElfElder` sits her at the fountain end of the plaza bench at
   x -440 (hips 9 cm over its top, legs and lap hands by IK). 89k triangles.
 
+- The alchemist (`GnomeAlchemist`, user 2026-10-05: "a gnome in black robes,
+  hands together behind robe sleeves so that they aren't visible, DnD 5e gnome
+  height and facial features"): 100 cm (5e gnomes are 3-4 ft). Targets give him
+  a large round head on short legs and arms, a prodigious round nose, big eyes,
+  pointed ears, round cheeks and an upturned mouth; wild white hair
+  (`make_hair` with `braid` 0 and `wild_cards` standing out from the sides and
+  back) and a white beard (`make_beard`, `card_scale` for short, fine strands).
+  A charcoal-black `robe` (new piece: collar, sleeves to the wrist, to the upper
+  thigh; `flare` pushes the forearm cloth out into bell sleeves and `cuff` runs
+  them a little past the wrist) over a long skirt, a dark belt, soft shoes.
+  `hide_hands` deletes his hands from the mesh: they are never seen.
+  `ADockNPC::SpawnAlchemist` stands him before the alchemist's left window;
+  `PoseSleeves` swings his upper arms forward and lays the forearms across so
+  the cuffs meet, left over right. 48k triangles.
+
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials
   (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).
