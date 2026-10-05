@@ -491,6 +491,36 @@ def soften_skirt(obj, info):
         groups['thigh_r'].add([v.index], leg * (1. - left), 'REPLACE')
 
 
+def seat_skirt(obj, info):
+    """A skirt for someone who only ever sits (the old elf on her bench): it has
+    to come forward over the lap and fall from the knees. Hips at the
+    waistband easing onto the thighs by just under the hip joints, the thighs
+    giving way to the calves across the knee; blended across the middle so it
+    bridges the knees instead of splitting between them."""
+    left_x = info.rig.data.bones['thigh_l'].head_local.x
+    sign = 1. if left_x > 0 else -1.
+    names = ('pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r')
+    for n in names:
+        if n not in obj.vertex_groups: obj.vertex_groups.new(name=n)
+    groups = {n: obj.vertex_groups[n] for n in names}
+    keep = {g.index for g in groups.values()}
+    rigged = {b.name for b in info.rig.data.bones}
+    step = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(min(1., max(0., (x - a) / (b - a))))
+    for v in obj.data.vertices:
+        c = obj.matrix_world @ v.co
+        leg = step(info.waist_z - .03, info.hips.z - .08, c.z)
+        shin = step(info.knee.z + .05, info.knee.z - .05, c.z)
+        left = min(1., max(0., .5 + sign * c.x / .16))
+        for g in list(v.groups):
+            if g.group not in keep and obj.vertex_groups[g.group].name in rigged:
+                obj.vertex_groups[g.group].remove([v.index])
+        groups['pelvis'].add([v.index], 1. - leg, 'REPLACE')
+        groups['thigh_l'].add([v.index], leg * (1. - shin) * left, 'REPLACE')
+        groups['thigh_r'].add([v.index], leg * (1. - shin) * (1. - left), 'REPLACE')
+        groups['calf_l'].add([v.index], leg * shin * left, 'REPLACE')
+        groups['calf_r'].add([v.index], leg * shin * (1. - left), 'REPLACE')
+
+
 def skirt_source(body):
     """MakeHuman's skirt helper (a weighted shell from waist to ankle that
     bridges the legs), as its own mesh to cut skirts and aprons from."""
@@ -816,6 +846,164 @@ def make_beard(info, spec, slots):
     return [beard, cards] + ([rings] if rings else [])
 
 
+def make_hair(info, spec, slots):
+    """Long hair combed straight back and braided (the old elf: MakeHuman's
+    braid01 hides the ears under its cap and sweeps a fringe over one eye).
+    A close cap cut from the scalp, its hairline over the forehead, passing
+    above and behind each ear (her pointed ears show), down to the nape,
+    grooved with combed strands; and one braid gathered at the nape, down her
+    back `braid` long, tied off above a loose tuft. Strand cards over the cap
+    soften it. The cap carries the scalp's own weights; the braid the nearest
+    body's (the head at the nape, the spine down her back).
+    Slots Hair (the beard's mass texture, tinted) and HairStrands."""
+    import random
+    rnd = random.Random(11)
+    _, _, head_y = face_marks(info)
+    clamp = lambda x: min(1., max(0., x))
+    step = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(clamp((x - a) / (b - a)))
+    g = info.obj.vertex_groups['ears'].index
+    on_ear = {v.index for v in info.obj.data.vertices if any(x.group == g and x.weight > .5 for x in v.groups)}
+    ears = [info.co[i] for i in on_ear]
+    ear_top = max(c.z for c in ears)
+    ear_front, ear_back = min(c.y for c in ears), max(c.y for c in ears)   # Blender: the face toward -Y
+    # 1. The cap: the scalp above the hairline, lifted off it (fuller over the
+    # crown, thin at the hairline) and grooved front to back. Over each ear it
+    # runs at the ear's root and leaves the whole ear clear (the elf's
+    # pointed tips reach nearly to her crown).
+    root = info.eye_z + spec.get('ear_root', .005)
+    def line(c):
+        side = clamp((abs(c.x) - .03) / .04)
+        front = info.brow_z + spec.get('hairline', .042) - (info.brow_z + spec.get('hairline', .042) - root) * side   # down to the temples
+        behind = step(ear_back + .002, ear_back + .03, c.y)
+        return front * (1 - behind) + (info.neck.z + .035) * behind
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(ears))
+    for k, c in enumerate(ears): kd.insert(c, k)
+    kd.balance()
+    def margin(i):
+        if info.bone[i] not in (Body.HEAD, Body.NECK) or i in on_ear: return -1.
+        # Combed back from round each ear, a finger's width clear of it.
+        return min(info.co[i].z - line(info.co[i]), kd.find(info.co[i])[2] - spec.get('ear_clear', .014))
+    cap = info.obj.copy(); cap.data = info.obj.data.copy(); cap.name = 'hair'
+    bpy.context.collection.objects.link(cap)
+    for m in list(cap.modifiers):
+        if m.type != 'ARMATURE': cap.modifiers.remove(m)
+    bm = bmesh.new(); bm.from_mesh(cap.data)
+    cut_along(bm, [margin(i) for i in range(len(info.co))])
+    relax_hems(bm, 12)
+    bm.normal_update()
+    # Strands run along meridians about an axis from the brow back and down to the nape.
+    centre = Vector((0, head_y, info.eye_z + .01))
+    axis = Vector((0, 1, -.75)).normalized()
+    across = Vector((1, 0, 0))
+    def merid(co):
+        d = co - centre
+        a = math.atan2(d.dot(across), d.dot(axis.cross(across)))   # round the axis
+        return a, math.acos(max(-1., min(1., d.normalized().dot(axis))))
+    lift = spec.get('lift', .012)
+    for v in bm.verts:
+        a, _ = merid(v.co)
+        groove = math.sin(a * 38) * .5 + math.sin(a * 83 + 1.3) * .3
+        v.co += v.normal * (lift * (.12 + .88 * step(0., .045, v.co.z - line(v.co))) + groove * .0012 * step(0., .01, v.co.z - line(v.co)))
+    bm.to_mesh(cap.data); bm.free()
+    activate(cap)
+    sm = cap.modifiers.new('Ease', 'CORRECTIVE_SMOOTH'); sm.factor = .5; sm.iterations = 6; sm.use_only_smooth = True; sm.use_pin_boundary = True
+    bpy.ops.object.modifier_move_to_index(modifier=sm.name, index=0); bpy.ops.object.modifier_apply(modifier=sm.name)
+    sol = cap.modifiers.new('Hair', 'SOLIDIFY'); sol.thickness = .0025; sol.offset = 1.; sol.use_rim = True
+    bpy.ops.object.modifier_move_to_index(modifier=sol.name, index=0); bpy.ops.object.modifier_apply(modifier=sol.name)
+    me = cap.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name='UVMap')
+    for poly in me.polygons:
+        poly.use_smooth = True
+        for li in poly.loop_indices:
+            a, t = merid(me.vertices[me.loops[li].vertex_index].co)
+            uv.data[li].uv = (a * .09 / .08, t * .1 / .18)
+    # 2. The braid: three strands crossing over one another (each a figure of
+    # eight about the braid's line, a third of a turn apart), from the nape
+    # down her back, close to the head and clear of her clothes further down.
+    torso = [c for i, c in enumerate(info.co) if info.bone[i] in Body.TORSO | {Body.NECK, Body.HEAD} and abs(c.x) < .045]
+    def back_at(z):
+        near = [c.y for c in torso if abs(c.z - z) < .015]
+        return max(near) if near else head_y + .08
+    top = ear_top - .045
+    L, r0 = spec.get('braid', .55), spec.get('braid_radius', .021)
+    steps = int(L / .004)
+    zs = [top - L * k / steps for k in range(steps + 1)]
+    ys = [back_at(z) for z in zs]
+    ys = [sum(ys[max(0, k - 6):k + 7]) / len(ys[max(0, k - 6):k + 7]) for k in range(len(ys))]   # smoothed: no steps from the mesh
+    radius = lambda s: r0 * (1 - .4 * s / L)
+    centres = [Vector((0, y + (.008 + (spec.get('clear', .028) - .008) * step(0., .09, top - z)) + radius(top - z), z)) for y, z in zip(ys, zs)]
+    bm = bmesh.new()
+    period = spec.get('braid_period', .06)
+    for strand in range(3):
+        pts, radii = [], []
+        for k, c in enumerate(centres):
+            s = top - c.z
+            r = radius(s)
+            phi = 2 * math.pi * s / (period * (1 - .3 * s / L)) + 2 * math.pi * strand / 3
+            pts.append(c + Vector((.62 * r * math.sin(phi), .32 * r * math.sin(2 * phi), 0)))
+            radii.append(.52 * r)
+        tube(bm, pts, radii, 9)
+    # Gathered at the nape, where the combed hair turns down into the braid.
+    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=1.,
+        matrix=Matrix.Translation(centres[0] + Vector((0, -.004, .006))) @ Matrix.Diagonal((r0 * 1.35, r0 * .95, r0 * 1.5, 1.)))
+    tail = centres[-1]
+    tube(bm, [tail + Vector((0, 0, .012)), tail - Vector((0, 0, .004))], [r0 * .5, r0 * .5], 10)   # the tie
+    braid = new_object('braid', bm)
+    voxel_merge(braid, .0022, 2)
+    me = braid.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name='UVMap')
+    for poly in me.polygons:
+        poly.use_smooth = True
+        for li in poly.loop_indices:
+            c = me.vertices[me.loops[li].vertex_index].co
+            uv.data[li].uv = (math.atan2(c.x, c.y - back_at(c.z)) * .02 / .08, c.z / .18)
+    # 3. Strand cards: a loose tuft below the tie, and fine strays lying back over the cap.
+    bm, uv_cards = bmesh.new(), []
+    def card(points, width, u0):
+        col = []
+        for k, (q, side) in enumerate(points):
+            t = k / (len(points) - 1)
+            col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+    for k in range(spec.get('tuft_cards', 26)):
+        ang = rnd.uniform(0, 2 * math.pi)
+        out = Vector((math.cos(ang), math.sin(ang) * .6, 0)) * rnd.uniform(.003, .012)
+        length = rnd.uniform(.05, .09)
+        side = Vector((-math.sin(ang), math.cos(ang), 0))
+        card([(tail + out * (1 + 1.8 * t) - Vector((0, 0, length * t)), side) for t in (0, .33, .66, 1.)], rnd.uniform(.008, .014), rnd.uniform(0, .85))
+    bvh = BVHTree.FromObject(cap, bpy.context.evaluated_depsgraph_get())
+    roots = [v.co.copy() for v in cap.data.vertices if v.normal.z > -.3 and v.co.z - line(v.co) > .03 and kd.find(v.co)[2] > .03]
+    rnd.shuffle(roots)
+    for co in roots[:spec.get('stray_cards', 60)]:
+        p, length = co.copy(), rnd.uniform(.04, .08)
+        pts = []
+        for k in range(4):
+            hit, n, _, _ = bvh.find_nearest(p)
+            if hit is None: break
+            r = (hit - centre).normalized()
+            ahead = (axis - r * axis.dot(r)).normalized()   # down the meridian, toward the nape
+            pts.append((hit + n * (.0015 + .001 * k), n.cross(ahead).normalized()))
+            p = hit + ahead * length / 3
+        if len(pts) == 4 and min(kd.find(q)[2] for q, _ in pts) > .025: card(pts, rnd.uniform(.008, .014), rnd.uniform(0, .85))   # none trailing over an ear
+    uvl = bm.loops.layers.uv.new('UVMap')
+    for f, uvs in uv_cards:
+        for loop, uvv in zip(f.loops, uvs): loop[uvl].uv = uvv
+    strands = new_object('hair_strands', bm)
+    for obj, slot in ((cap, 'Hair'), (braid, 'Hair'), (strands, 'HairStrands')):
+        obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
+        for p in obj.data.polygons: p.material_index = 0
+    for obj in (braid, strands): skin_from_body(obj, info)
+    slots['Hair'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
+    slots['HairStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
+    print('CHUCK_HAIR', f'braid_cm={L * 100:.0f}', f'ear_top_cm={ear_top * 100:.1f}', f'cap_verts={len(cap.data.vertices)}', f'cards={len(uv_cards) // 3}')
+    return [cap, braid, strands]
+
+
 def slot_material(name):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     return m
@@ -866,7 +1054,7 @@ def build(name, spec):
         if piece == 'trim':
             item = dict(item, of_opts=next(it for it in spec['outfit'] if it.get('id', it['piece']) == item['of']))
         obj, keep = make_piece(skirt if piece in SKIRTED else info, piece, item, slot_material(slot))
-        if piece in SKIRTED: soften_skirt(obj, info)
+        if piece in SKIRTED: (seat_skirt if spec.get('seated') else soften_skirt)(obj, info)
         meshes.append(obj)
         folder = ROOT / item['folder'] if 'folder' in item else CLOTH
         slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'], folder)}
@@ -878,6 +1066,8 @@ def build(name, spec):
     if skirt_src: bpy.data.objects.remove(skirt_src)
     if spec.get('beard'):
         meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
+    if spec.get('braided_hair'):
+        meshes += make_hair(info, spec['braided_hair'], slots)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -898,7 +1088,8 @@ def build(name, spec):
     assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
     if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
     assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(ROOT / spec['eye_texture'] if spec.get('eye_texture') else DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
-    assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png')))}
+    brow_png = ROOT / spec['brow_texture'] if spec.get('brow_texture') else next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png'))   # the old elf's grey (Tools/build_elf_textures.py)
+    assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(brow_png)}
     if spec.get('brow_tint'): slots['Brow']['tint'] = spec['brow_tint']   # the dwarf's auburn brows to match his beard
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
     assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
@@ -949,6 +1140,7 @@ def render_review(name, meshes, slots, k=1.):
         m = bpy.data.materials.get(slot)
         if not m: continue
         c = preview.get(slot) or tuple(min(1., t * .55) for t in info.get('tint', (1, 1, 1)))
+        if '_grey' in info.get('texture', '') or (slot.startswith('Hair') and 'tint' in info): c = (.5, .5, .48)   # the old elf's hair and brows
         m.diffuse_color = (*c, 1.)
     bpy.ops.mesh.primitive_plane_add(size=6)
     s = bpy.context.scene

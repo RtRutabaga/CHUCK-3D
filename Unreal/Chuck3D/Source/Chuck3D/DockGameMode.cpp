@@ -646,7 +646,10 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     NPCCaptureTime+=DeltaSeconds;
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
     if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
-    const TArray<TWeakObjectPtr<ADockNPC>>& NPCs=ADockNPC::All();
+    // -ChuckNPCTag=<tag> films just that one (e.g. ElfElder).
+    TArray<TWeakObjectPtr<ADockNPC>> NPCs=ADockNPC::All();
+    FString OnlyTag;
+    if(FParse::Value(FCommandLine::Get(),TEXT("ChuckNPCTag="),OnlyTag)) NPCs.RemoveAll([&](const TWeakObjectPtr<ADockNPC>& N){ return !N.IsValid() || !N->ActorHasTag(*OnlyTag); });
     if(NPCCaptureTime<Settle || !PC) return;
     const int32 Step=FMath::FloorToInt((NPCCaptureTime-Settle)/Each);
     if(Step>=NPCs.Num()*ShotCount) { FPlatformMisc::RequestExit(false); return; }
@@ -1949,7 +1952,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper()) continue;   // the smith's and the keeper's arms are at work
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSeated()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2033,6 +2036,20 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Keeper && KeeperAt.X>-119.f+24.f && KeeperAt.X<14.f-24.f && KeeperAt.Y>878.f && KeeperAt.Y<941.f
                 && Keeper->GetTankardGripError()<3.f && Keeper->GetRagReachError()<4.f && Keeper->GetPolishPasses()>=2 && Keeper->CanTalk(),
                 TEXT("the tavern keeper stands behind the counter between the barrels and the cellar hatch, polishing a tankard in his hands"));
+            // The old elf on the bench by the fountain: hips on the bench, feet on the paving, hands in her lap.
+            TArray<AActor*> ElfFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),ElfFound);
+            const auto* Elf=ElfFound.Num()==1 ? Cast<ADockNPC>(ElfFound[0]) : nullptr;
+            const FVector ElfAt=Elf ? Elf->GetActorLocation() : FVector(1e4f);
+            const FVector ToBench=ElfAt-ADockNPC::ElfBench;
+            const float ElfToFountain=static_cast<float>(FVector::Dist2D(ElfAt,FVector(260,-3320,0)));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ELF_MEASURE present=%d at=(%.0f,%.0f) seat_cm=%.1f bench_top_cm=%.0f foot_lift_cm=%.1f lap_hand_cm=%.1f to_fountain_cm=%.0f body_turn_deg=%.1f mocap=%d lines=%d"),
+                Elf ? 1 : 0,ElfAt.X,ElfAt.Y,Elf ? Elf->GetSeatHeight() : 0.f,ADockNPC::ElfBench.Z,Elf ? Elf->GetFootLiftError() : 1e3f,Elf ? Elf->GetLapHandError() : 1e3f,
+                ElfToFountain,Elf ? Elf->GetBodyTurn() : 0.f,Elf && Elf->HasMocap() ? 1 : 0,Elf ? Elf->Lines.Num() : 0);
+            // Her hip joints a sit-bone above the bench top (not standing at ~85 cm), over the bench's 50 cm depth near its front edge.
+            Check(Elf && Elf->HasMocap() && FMath::Abs(Elf->GetSeatHeight()-ADockNPC::ElfBench.Z-9.f)<4.f && FMath::Abs(ToBench.X)<80.f && ToBench.Y>0.f && ToBench.Y<25.f
+                && Elf->GetFootLiftError()<2.f && Elf->GetLapHandError()<3.f && ElfToFountain<800.f && FMath::Abs(Elf->GetBodyTurn())<1.f && Elf->CanTalk(),
+                TEXT("an old elf sits on the bench by the fountain: hips on the bench, feet flat on the paving, hands in her lap, never turning from it"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();

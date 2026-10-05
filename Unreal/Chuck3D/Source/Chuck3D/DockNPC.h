@@ -32,7 +32,7 @@ class UMaterialInterface;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, Count };
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -167,6 +167,26 @@ public:
     float GetRagReachError() const { return WorstRagReach; }
     /** Polishing passes (inside or outside) begun, for tests. */
     int32 GetPolishPasses() const { return PolishPasses; }
+    /**
+     * An old elf woman on the bench by the fountain (user 2026-10-05: "an
+     * elderly elf woman npc sitting on a bench by the fountain, long braided
+     * gray hair"). She only ever sits: hips on the bench's front edge, feet
+     * flat on the paving (both legs by IK), hands resting on her lap, a little
+     * rounded in the back; the motion-capture idle, damped, keeps her
+     * breathing and shifting. Her eyes go to the fountain, or to the rat when
+     * it comes near; she never turns her body. Hips is where her hip joints
+     * sit, on the floor below them; Yaw the way she faces.
+     */
+    static ADockNPC* SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw);
+    bool IsSeated() const { return Kind == EDockHuman::ElfElder; }
+    /** The plaza bench she sits on (DockPlaza.cpp: x -440, y -3350, 185 x 50, top 49 cm) and where she sits on it: toward its fountain end, facing the docks. */
+    static inline const FVector ElfBench = FVector(-440.f, -3350.f, 49.f);
+    static inline const FVector ElfHips = FVector(-410.f, -3341.f, 0.f);
+    static constexpr float ElfYaw = 90.f;
+    /** Height of her hip joints above the floor (cm, now), and the worst seen after she settles: of either heel off the floor (cm) and of either hand from its place on her lap (cm). */
+    float GetSeatHeight() const;
+    float GetFootLiftError() const { return WorstFootLift; }
+    float GetLapHandError() const { return WorstLapHand; }
     bool IsForging() const { return IsSmith() && Resting < .5f; }
     int32 GetStrikes() const { return Strikes; }
     /** Light taps of the hammer on the bare face between blows, and how far the face was from it at the last one (cm). */
@@ -287,6 +307,15 @@ private:
     float PolishClock = 0, WorstTankardGrip = 0, WorstRagReach = 0;
     int32 PolishPasses = 0, PolishPhase = -1;
     void PoseKeeper(TArray<FTransform>& Space);
+    // The old elf on her bench.
+    float SeatDrop = 0.f;                 // cm her hips come down from standing to the bench
+    FVector2D GlanceCentre = FVector2D::ZeroVector;   // idle glances about this (yaw, pitch): the old elf's fountain
+    FQuat FootRest[2];                    // each foot flat, as in the standing rest pose
+    float AnkleRest = 8.f;                // ankle height standing
+    float WorstFootLift = 0.f, WorstLapHand = 0.f;
+    void PoseSeated(TArray<FTransform>& Space);
+    /** Two-bone IK: aim Upper and Lower so End lands at Target, the middle joint toward Pole (Space updated down the chain). */
+    void TwoBone(TArray<FTransform>& Space, int32 Upper, int32 Lower, int32 End, const FVector& Target, const FVector& Pole) const;
     /** Two-bone IK: the fist of arm Side to Fist, the hand's knuckles along Along with its thumb side along Thumb. */
     void PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole);
     /** A posed hand's fist centre and axes (component space). */

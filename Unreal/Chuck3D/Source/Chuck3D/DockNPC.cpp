@@ -27,10 +27,11 @@ namespace
     // The humans' shared skeleton: MPFB's game_engine rig (Unreal mannequin
     // names, three bones per finger). Each R bone directly follows its L bone.
     enum EBone { Pelvis, Spine1, Spine2, Chest, Neck, Head, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR,
-        ThumbL, ThumbR, MiddleL, MiddleR, BoneCount };
+        ThumbL, ThumbR, MiddleL, MiddleR, ThighL, ThighR, CalfL, CalfR, FootL, FootR, BoneCount };
     const TCHAR* BoneNames[] = { TEXT("pelvis"), TEXT("spine_01"), TEXT("spine_02"), TEXT("spine_03"), TEXT("neck_01"), TEXT("head"),
         TEXT("clavicle_l"), TEXT("clavicle_r"), TEXT("upperarm_l"), TEXT("upperarm_r"), TEXT("lowerarm_l"), TEXT("lowerarm_r"), TEXT("hand_l"), TEXT("hand_r"),
-        TEXT("thumb_01_l"), TEXT("thumb_01_r"), TEXT("middle_01_l"), TEXT("middle_01_r") };
+        TEXT("thumb_01_l"), TEXT("thumb_01_r"), TEXT("middle_01_l"), TEXT("middle_01_r"),
+        TEXT("thigh_l"), TEXT("thigh_r"), TEXT("calf_l"), TEXT("calf_r"), TEXT("foot_l"), TEXT("foot_r") };
     // Fingers: thumb, index, middle, ring, little; three joints each.
     const TCHAR* FingerNames[] = { TEXT("thumb"), TEXT("index"), TEXT("middle"), TEXT("ring"), TEXT("pinky") };
     // Degrees each joint bends toward the palm: a hand at rest (the little
@@ -54,7 +55,14 @@ namespace
         TEXT("/Game/Characters/Humans/Guard/SK_Guard.SK_Guard"), TEXT("/Game/Characters/Humans/MarketWoman/SK_MarketWoman.SK_MarketWoman"),
         TEXT("/Game/Characters/Humans/GuardWoman/SK_GuardWoman.SK_GuardWoman"), TEXT("/Game/Characters/Humans/SideGuard/SK_SideGuard.SK_SideGuard"),
         TEXT("/Game/Characters/Humans/Zombie/SK_Zombie.SK_Zombie"), TEXT("/Game/Characters/Humans/Blacksmith/SK_Blacksmith.SK_Blacksmith"),
-        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper") };
+        TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper"),
+        TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder") };
+    // The old elf on her bench (component space: the floor under her hip joints, X forward, Y right).
+    constexpr float SitBone = 9.f;          // cm from her hip joints down to the bench under her (a slight woman, a skirt)
+    constexpr float ShinLean = 6.f;         // deg her shins lean forward from upright, feet a little out in front
+    constexpr float LapAlong = .55f;        // her hands rest this far from hip to knee
+    constexpr float LapLift = 10.5f;        // and this far over the thigh bone (the thigh, the skirt, the palm under the fist's middle)
+    const FVector Fountain(260.f, -3320.f, 0.f);   // DockPlaza.cpp's fountain, where her eyes go
     // The tavern keeper's work (component space: his feet, X forward, Y right).
     // His left fist on the tankard's handle (Tools/build_keeper_props.py: the
     // origin), the body TankardBody toward its +X, the mouth TankardMouth up.
@@ -139,9 +147,10 @@ ADockNPC::ADockNPC()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Smith(MeshPaths[6]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Dwarf(MeshPaths[7]);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Keeper(MeshPaths[8]);
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> Elf(MeshPaths[9]);
     HumanMeshes[0] = Worker.Object; HumanMeshes[1] = Guard.Object; HumanMeshes[2] = Woman.Object; HumanMeshes[3] = GuardWoman.Object;
     HumanMeshes[4] = SideGuard.Object; HumanMeshes[5] = Zombie.Object; HumanMeshes[6] = Smith.Object; HumanMeshes[7] = Dwarf.Object;
-    HumanMeshes[8] = Keeper.Object;
+    HumanMeshes[8] = Keeper.Object; HumanMeshes[9] = Elf.Object;
     // The smith's anvil, hammer and tongs (Tools/build_smith_props.py).
     static ConstructorHelpers::FObjectFinder<UStaticMesh> AnvilAsset(TEXT("/Game/Characters/Humans/Props/SM_Anvil.SM_Anvil"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> HammerAsset(TEXT("/Game/Characters/Humans/Props/SM_SmithHammer.SM_SmithHammer"));
@@ -506,8 +515,21 @@ ADockNPC* ADockNPC::SpawnTavernKeeper(UWorld* World, const FVector& Feet, float 
     return NPC;
 }
 
+ADockNPC* ADockNPC::SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw)
+{
+    auto* NPC = SpawnHuman(World, EDockHuman::ElfElder, Hips, Yaw);
+    if (!NPC) return nullptr;
+    NPC->Tags.Add(TEXT("ElfElder"));
+    NPC->DisplayName = TEXT("Old elf");
+    NPC->Lines = { TEXT("The water sounded just the same three hundred years ago.") };
+    return NPC;
+}
+
 void ADockNPC::SpawnTownsfolk(UWorld* World)
 {
+    // The old elf on the plaza bench beside the fountain (DockPlaza.cpp), at
+    // its fountain end, facing back toward the docks.
+    SpawnElfElder(World, ElfHips, ElfYaw);
     // The tavern keeper behind his counter (DockTavern.cpp: counter y 810..878,
     // bottle shelves from y 941), between the barrels (east edge x -119) and
     // the cellar hatch (lid at x 14), facing the room.
@@ -576,6 +598,21 @@ void ADockNPC::BeginPlay()
         const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
         for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Ref.FindBoneIndex(BoneNames[I]);
         if (!BoneIndex.Contains(INDEX_NONE)) SolveRest();
+        if (IsSeated() && !BoneIndex.Contains(INDEX_NONE))
+        {
+            // Sitting: her hips come down onto the bench; her eyes with them.
+            // Her feet keep their standing rest (flat on the floor).
+            TArray<FTransform> Standing;
+            Solve(Rest, Standing);
+            const float HipZ = static_cast<float>(Standing[BoneIndex[ThighL]].GetLocation().Z + Standing[BoneIndex[ThighR]].GetLocation().Z) * .5f;
+            SeatDrop = ElfBench.Z + SitBone - HipZ;
+            EyeHeight += SeatDrop;
+            for (int32 Side = 0; Side < 2; ++Side) FootRest[Side] = Standing[BoneIndex[Of(FootL, Side)]].GetRotation();
+            AnkleRest = static_cast<float>(Standing[BoneIndex[FootL]].GetLocation().Z);
+            // Her glances: about the fountain, from where she sits.
+            const FVector ToFountain = GetActorTransform().InverseTransformVectorNoScale(Fountain - GetActorLocation());
+            GlanceCentre = FVector2D(FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(ToFountain.Y, ToFountain.X)), -35.f, 35.f), 4.f);
+        }
         // Each finger joint's bending axis, from the model's pose (palms down,
         // fingers out): across the finger, bending it toward the palm.
         FingerBone.Init(INDEX_NONE, 30); FingerAxis.Init(FVector::ZeroVector, 30);
@@ -612,7 +649,7 @@ void ADockNPC::BeginPlay()
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
     // now and then (each from its own random point in the clip).
-    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard || Kind == EDockHuman::Dwarf) ? ClipStandLook : ClipStandHip;
+    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard || Kind == EDockHuman::Dwarf || IsSeated()) ? ClipStandLook : ClipStandHip;
     bool bClips = !BoneIndex.Contains(INDEX_NONE);
     for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
     if (bClips)
@@ -989,9 +1026,9 @@ void ADockNPC::Tick(float DeltaSeconds)
                 const float Close = FMath::Clamp((CloseStart - Across) / (CloseStart - CloseFull), 0.f, 1.f);
                 Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, FMath::Lerp(LookDownFar, 55.f, Close)));
             }
-            if (HasMocap() && !IsSmith() && !IsKeeper()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil, the keeper behind his bar
+            if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil, the keeper behind his bar, the elf on her bench
         }
-        else if (HasMocap() && !IsSmith() && !IsKeeper()) UpdateTurn(DeltaSeconds, 0.f, false);
+        else if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated()) UpdateTurn(DeltaSeconds, 0.f, false);
         bTalking = Chuck->GetTalkingTo() == this;
     }
     TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
@@ -999,7 +1036,8 @@ void ADockNPC::Tick(float DeltaSeconds)
     if (!bWatching && (NextGlance -= DeltaSeconds) <= 0)
     {
         NextGlance = FMath::FRandRange(2.5f, 6.f);
-        Glance = FVector2D(FMath::FRandRange(-35.f, 35.f), FMath::FRandRange(-6.f, 10.f));
+        const float Spread = IsSeated() ? 18.f : 35.f;   // the old elf's eyes stay near the fountain
+        Glance = GlanceCentre + FVector2D(FMath::FRandRange(-Spread, Spread), FMath::FRandRange(-6.f, 10.f));
     }
     if (IsSmith() && !bWatching) Target = FVector2D(0.f, 30.f - 16.f * Inspect);   // his eyes on the work
     if (IsKeeper())
@@ -1077,12 +1115,25 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             Delta[Spine2] = Pitch(7.f - 5.f * Inspect);
             Delta[Chest] = Pitch(3.f - 2.f * Inspect);
         }
+        if (IsSeated())
+        {
+            // Sitting: the idle much quieter (it was stood), her hips down on the
+            // bench, the pelvis rocked back a little and the back rounded over it.
+            for (FQuat& Q : BoneDelta) Q = FQuat::Slerp(FQuat::Identity, Q, .35f);
+            HipsOffset = HipsOffset * .25f + FVector(0.f, 0.f, SeatDrop);
+            Delta[Pelvis] = Pitch(-7.f);
+            Delta[Spine1] = Pitch(4.f);
+            Delta[Spine2] = Pitch(5.f);
+            Delta[Chest] = Pitch(4.f);
+            Delta[Neck] = Pitch(-4.f) * Delta[Neck];
+        }
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
         if (bSpear) HoldSpear(Space);
         if (IsSmith()) PoseSmith(Space);
         if (IsKeeper()) PoseKeeper(Space);
+        if (IsSeated()) PoseSeated(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         SmithEvents();
@@ -1106,11 +1157,12 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         Delta[Of(UpperL, Side)] = Pitch(-1.5f * Sway) * Rest[Of(UpperL, Side)];   // a small swing from the shoulder
     }
     TArray<FTransform> Space;
-    Solve(Delta, Space);
+    Solve(Delta, Space, nullptr, FVector(0.f, 0.f, SeatDrop));
     PoseHands(Space, false);
     if (bSpear) HoldSpear(Space);
     if (IsSmith()) PoseSmith(Space);
     if (IsKeeper()) PoseKeeper(Space);
+    if (IsSeated()) PoseSeated(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
     SmithEvents();
@@ -1521,4 +1573,85 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
     if (RagError > 3.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_REACH phase=%d into=%.2f rag_cm=%.1f fist=%s"), Now, Into, RagError, *P.Fist.ToString());
     // The rag bunched in his fist, its tail falling toward him.
     if (Rag) Rag->SetRelativeTransform(FTransform(FRotator(0.f, 90.f, 0.f), F));
+}
+
+float ADockNPC::GetSeatHeight() const
+{
+    if (BoneIndex.Contains(INDEX_NONE)) return 0.f;
+    const float Floor = static_cast<float>(GetActorLocation().Z) - HalfHeight;
+    return static_cast<float>(Body->GetBoneLocation(BoneNames[ThighL]).Z + Body->GetBoneLocation(BoneNames[ThighR]).Z) * .5f - Floor;
+}
+
+void ADockNPC::TwoBone(TArray<FTransform>& Space, int32 Upper, int32 Lower, int32 End, const FVector& Target, const FVector& Pole) const
+{
+    // As PlaceHand's arm: the law of cosines for the middle joint, bent toward Pole; children follow.
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    const int32 Count = Space.Num();
+    TArray<FTransform> Local; Local.SetNum(Count);
+    for (int32 B = 0; B < Count; ++B)
+    {
+        const int32 P = Ref.GetParentIndex(B);
+        Local[B] = P >= 0 ? Space[B].GetRelativeTransform(Space[P]) : Space[B];
+    }
+    const auto Descends = [&](int32 B, int32 From) { for (; B != INDEX_NONE; B = Ref.GetParentIndex(B)) if (B == From) return true; return false; };
+    const auto Rotate = [&](int32 Bone, const FQuat& Q)
+    {
+        Space[Bone].SetRotation(Q * Space[Bone].GetRotation());
+        for (int32 B = Bone + 1; B < Count; ++B)
+            if (Descends(B, Bone)) Space[B] = Local[B] * Space[Ref.GetParentIndex(B)];
+    };
+    const FVector S = Space[Upper].GetLocation();
+    const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
+    const float Bl = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[End].GetLocation()));
+    const FVector To = Target - S;
+    const float D = FMath::Clamp(static_cast<float>(To.Size()), FMath::Abs(A - Bl) + 1.f, A + Bl - .2f);
+    const FVector Dir = To.GetSafeNormal();
+    const float CosA = FMath::Clamp((A * A + D * D - Bl * Bl) / (2.f * A * D), -1.f, 1.f);
+    const FVector Bend = FVector::VectorPlaneProject(Pole, Dir).GetSafeNormal();
+    const FVector Mid = S + Dir * (A * CosA) + Bend * (A * FMath::Sqrt(1.f - CosA * CosA));
+    Rotate(Upper, FQuat::FindBetweenNormals((Space[Lower].GetLocation() - S).GetSafeNormal(), (Mid - S).GetSafeNormal()));
+    Rotate(Lower, FQuat::FindBetweenNormals((Space[End].GetLocation() - Space[Lower].GetLocation()).GetSafeNormal(), (S + Dir * D - Space[Lower].GetLocation()).GetSafeNormal()));
+}
+
+void ADockNPC::PoseSeated(TArray<FTransform>& Space)
+{
+    // Her legs: thighs forward over the bench's edge, shins down to her feet
+    // flat on the paving a little in front of her knees, knees a touch apart.
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    const bool bSettled = GetWorld()->GetTimeSeconds() > 8.f;
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const int32 Thigh = BoneIndex[Of(ThighL, Side)], Calf = BoneIndex[Of(CalfL, Side)], Foot = BoneIndex[Of(FootL, Side)];
+        const FVector Hip = Space[Thigh].GetLocation();
+        const float Lt = static_cast<float>(FVector::Dist(Hip, Space[Calf].GetLocation()));
+        const float Lc = static_cast<float>(FVector::Dist(Space[Calf].GetLocation(), Space[Foot].GetLocation()));
+        const float KneeZ = AnkleRest + Lc * FMath::Cos(FMath::DegreesToRadians(ShinLean));
+        const float Rise = static_cast<float>(Hip.Z) - KneeZ;
+        const float KneeX = static_cast<float>(Hip.X) + FMath::Sqrt(FMath::Max(Lt * Lt - Rise * Rise, 1.f));
+        const FVector Ankle(KneeX + Lc * FMath::Sin(FMath::DegreesToRadians(ShinLean)), Hip.Y * 1.15f, AnkleRest);
+        TwoBone(Space, Thigh, Calf, Foot, Ankle, FVector(1.f, 0.f, .4f));
+        // The foot as it stood: flat on the floor (the toes follow it).
+        const int32 Count = Space.Num();
+        TArray<FTransform> Local; Local.SetNum(Count);
+        for (int32 B = Foot; B < Count; ++B) Local[B] = Space[B].GetRelativeTransform(Space[Ref.GetParentIndex(B)]);
+        Space[Foot].SetRotation(FootRest[Side]);
+        for (int32 B = Foot + 1; B < Count; ++B)
+            for (int32 P = Ref.GetParentIndex(B); P != INDEX_NONE; P = Ref.GetParentIndex(P))
+                if (P == Foot) { Space[B] = Local[B] * Space[Ref.GetParentIndex(B)]; break; }
+        if (bSettled) WorstFootLift = FMath::Max(WorstFootLift, FMath::Abs(static_cast<float>(Space[Foot].GetLocation().Z) - AnkleRest));
+    }
+    // Her hands resting on her lap, one on each thigh, fingers forward and in, palms down.
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const float Out = Side == 0 ? ArmOut : -ArmOut;   // +Y is out on this side
+        const FVector Hip = Space[BoneIndex[Of(ThighL, Side)]].GetLocation(), Knee = Space[BoneIndex[Of(CalfL, Side)]].GetLocation();
+        const FVector Lap = FMath::Lerp(Hip, Knee, LapAlong) + FVector(0.f, -Out * 2.f, LapLift);
+        const FVector Along = FVector(.85f, -Out * .42f, -.2f).GetSafeNormal();
+        const FVector Palm = -FVector::UpVector;
+        const FVector Thumb = FVector::CrossProduct(Palm * PalmSign[Side], Along).GetSafeNormal();
+        PlaceHand(Space, Side, Lap, Along, Thumb, FVector(-.4f, Out, -.3f));
+        FVector F, A, Th;
+        HandFrame(Space, Side, F, A, Th);
+        if (bSettled) WorstLapHand = FMath::Max(WorstLapHand, static_cast<float>(FVector::Dist(F, Lap)));
+    }
 }

@@ -88,6 +88,26 @@ docs/SETUP.md), one heavy process at a time:
   `Tools/build_battle_axe.py` (`SM_BattleAxe`, double-bitted, 127 cm), held by
   `ADockNPC::GiveAxe` as the guards hold their spears.
 
+- The old elf (`ElfElder` in `humans.json`, user 2026-10-05: "an elderly elf
+  woman npc sitting on a bench by the fountain, long braided gray hair"): 171 cm,
+  slight, MakeHuman age .95 on the `old_caucasian_female` skin. Ear `targets`
+  (pointed, taller, a little back and out) plus high cheekbones, an oval face and
+  lifted outer eye corners. MakeHuman's `braid01` hides the ears under a cap and
+  sweeps a fringe over one eye, so `braided_hair` builds the hair instead
+  (`make_hair`): a cap cut from the scalp, combed back, its hairline over the
+  forehead and temples and a finger's width clear round each ear, lifted fuller
+  over the crown and grooved along strands running to the nape; a 55 cm
+  three-strand braid (each strand a figure of eight about the braid's line)
+  from a gathered knot at the nape down her back, tied above a loose tuft; strand
+  cards over the crown. All in the beard's textures, tinted silver. Her grey brows:
+  `Tools/build_elf_textures.py` (`eyebrow010_grey.png`). A long-sleeved linen
+  shirt, sage bodice, long dark green skirt, narrow belt and soft shoes. She only
+  ever sits (`seated`), so her skirt is weighted by `seat_skirt` (hips at the
+  waistband, onto the thighs below the hip joints, the calves below the knee,
+  blended across the middle so it bridges her knees) rather than `soften_skirt`.
+  `ADockNPC::SpawnElfElder` sits her at the fountain end of the plaza bench at
+  x -440 (hips 9 cm over its top, legs and lap hands by IK). 89k triangles.
+
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials
   (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).

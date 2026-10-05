@@ -957,6 +957,117 @@
      ]
     }
    ]
+  },
+  "ElfElder": {
+   "height_cm": 171,
+   "note": "An old elf woman sitting on the bench by the fountain (user 2026-10-05: 'an elderly elf woman npc sitting on a bench by the fountain, long braided gray hair'). Slight and long-boned, very old (MakeHuman age near its top), the old female skin; MakeHuman targets give her long pointed ears swept back, high cheekbones, an oval face and a lift at the outer corners of the eyes. Silver hair combed back clear of the ears into one long braid down her back (build_npc_humans.make_hair); MakeHuman brows re-coloured grey (Tools/build_elf_textures.py). A long-sleeved linen shirt, a sage bodice, a long dark green skirt weighted to sit (build_npc_humans.seat_skirt), a narrow belt, soft low shoes.",
+   "seated": true,
+   "macro": {
+    "gender": 0.0,
+    "age": 0.95,
+    "muscle": 0.3,
+    "weight": 0.32,
+    "height": 0.6,
+    "proportions": 0.8,
+    "cupsize": 0.35,
+    "firmness": 0.2,
+    "race": {
+     "african": 0.0,
+     "asian": 0.08,
+     "caucasian": 0.92
+    }
+   },
+   "targets": {
+    "l-ear-shape-pointed": 1.0,
+    "r-ear-shape-pointed": 1.0,
+    "l-ear-scale-vert-incr": 0.7,
+    "r-ear-scale-vert-incr": 0.7,
+    "l-ear-rot-backward": 0.15,
+    "r-ear-rot-backward": 0.15,
+    "l-ear-wing-incr": 0.35,
+    "r-ear-wing-incr": 0.35,
+    "l-ear-trans-up": 0.3,
+    "r-ear-trans-up": 0.3,
+    "l-cheek-bones-incr": 0.5,
+    "r-cheek-bones-incr": 0.5,
+    "head-oval": 0.5,
+    "chin-width-decr": 0.3,
+    "l-eye-corner2-up": 0.4,
+    "r-eye-corner2-up": 0.4,
+    "nose-scale-horiz-decr": 0.25
+   },
+   "skin": "old_caucasian_female",
+   "eyes": "bluegreen",
+   "eyebrows": "eyebrow010",
+   "brow_texture": "SourceAssets/NPCs/Humans/Textures/eyebrow010_grey.png",
+   "eyelashes": "eyelashes03",
+   "hair": null,
+   "braided_hair": {
+    "hairline": 0.042,
+    "lift": 0.012,
+    "braid": 0.55,
+    "braid_radius": 0.021,
+    "clear": 0.028,
+    "tint": [
+     0.95,
+     0.93,
+     0.88
+    ],
+    "strand_tint": [
+     1.05,
+     1.03,
+     0.98
+    ]
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.46,
+      0.47,
+      0.41
+     ]
+    },
+    {
+     "piece": "bodice",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.075,
+      0.05
+     ]
+    },
+    {
+     "piece": "skirt",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.055,
+      0.042
+     ]
+    },
+    {
+     "piece": "belt",
+     "z": -0.06,
+     "fabric": "brown_leather",
+     "tint": [
+      0.055,
+      0.038,
+      0.024
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.07,
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.034,
+      0.025
+     ]
+    }
+   ]
   }
  }
 }
