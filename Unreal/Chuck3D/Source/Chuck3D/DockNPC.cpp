@@ -19,6 +19,7 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
+#include "NPCVoiceData.h"
 
 namespace
 {
@@ -491,6 +492,7 @@ ADockNPC* ADockNPC::SpawnDwarf(UWorld* World, const FVector& Feet, float Yaw)
     NPC->Tags.Add(TEXT("Dwarf"));
     NPC->DisplayName = TEXT("Dwarf");
     NPC->Lines = { TEXT("Keep clear of the edge, rat."), TEXT("He's had my other axe a week. Slow work, iron.") };
+    NPC->SetupVoice(TEXT("Dwarf"));   // user 2026-10-05: his ElevenLabs line replaces these
     NPC->GiveAxe(1);
     return NPC;
 }
@@ -640,7 +642,12 @@ void ADockNPC::BeginPlay()
         {
             TArray<FQuat> None; None.Init(FQuat::Identity, BoneCount);
             Solve(None, RefSpace);
+            HeadRefRotation = RefSpace[BoneIndex[Head]].GetRotation();
         }
+        // Face bones, on the NPCs built with them (Tools/build_npc_humans.py add_face_rig).
+        const TCHAR* FaceNames[] = { TEXT("jaw"), TEXT("lid_upper_l"), TEXT("lid_upper_r"), TEXT("brow_l"), TEXT("brow_r") };
+        for (int32 I = 0; I < 5; ++I) FaceBone[I] = Ref.FindBoneIndex(FaceNames[I]);
+        NextBlink = FMath::FRandRange(1.5f, 4.f);
         for (int32 Side = 0; Side < 2 && RefSpace.Num(); ++Side)
             for (int32 F = 0; F < 5; ++F)
                 for (int32 J = 0; J < 3; ++J)
@@ -770,6 +777,9 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
         const int32 P = Ref.GetParentIndex(B);
         BoneDelta[B] = P >= 0 ? World[SkelIndex[B]] * World[SkelIndex[P]].Inverse() : World[SkelIndex[B]];
     }
+    // The face bones have no track in the clips (a missing track samples as identity, not the
+    // bone's rest, which would twist the face): they keep their rest under the head, and PoseFace moves them.
+    for (const int32 B : FaceBone) if (BoneDelta.IsValidIndex(B)) BoneDelta[B] = FQuat::Identity;
     FTransform Hips = FTransform::Identity;   // the clip's hips in component space
     for (int32 B = SkelIndex[BoneIndex[Pelvis]]; B != INDEX_NONE; B = Src.GetParentIndex(B)) Hips = Hips * Local[B];
     HipsOffset = (Hips.GetLocation() - SourceHips) * HipScale;
@@ -1069,7 +1079,116 @@ void ADockNPC::Tick(float DeltaSeconds)
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
     if (IsSmith()) TickSmith(DeltaSeconds);
+    TickVoice(DeltaSeconds);
     UpdatePose(DeltaSeconds);
+}
+
+int32 ADockNPC::SetupVoice(const TCHAR* Npc)
+{
+    VoiceLines.Reset(); VoiceSounds.Reset();
+    TArray<FString> Text;
+    for (int32 I = 0; I < NPCVoiceData::LineCount; ++I)
+    {
+        const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
+        if (FCString::Strcmp(L.Npc, Npc) != 0) continue;
+        USoundBase* Sound = LoadObject<USoundBase>(nullptr, L.Sound);
+        if (!Sound) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_VOICE_MISSING %s %s"), Npc, L.Id); continue; }
+        VoiceLines.Add(I); VoiceSounds.Add(Sound); Text.Add(L.Text);
+    }
+    if (Text.Num()) Lines = Text;
+    if (VoiceSounds.Num() && !VoiceAudio)
+    {
+        // From his mouth: heard across this corner of the plaza, clearly within a few metres.
+        auto* Attenuation = NewObject<USoundAttenuation>(this);
+        Attenuation->Attenuation.bAttenuate = true;
+        Attenuation->Attenuation.bSpatialize = true;
+        Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+        Attenuation->Attenuation.AttenuationShapeExtents = FVector(400.f, 0.f, 0.f);
+        Attenuation->Attenuation.FalloffDistance = 1400.f;
+        VoiceAudio = NewObject<UAudioComponent>(this, TEXT("VoiceAudio"));
+        VoiceAudio->SetupAttachment(Body);
+        VoiceAudio->SetRelativeLocation(FVector(10.f, 0.f, 120.f));
+        VoiceAudio->AttenuationSettings = Attenuation;
+        VoiceAudio->bAutoActivate = false;
+        VoiceAudio->RegisterComponent();
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_NPC_VOICE %s lines=%d sounds=%d"), Npc, VoiceLines.Num(), VoiceSounds.Num());
+    return VoiceLines.Num();
+}
+
+bool ADockNPC::StartVoiceLine(int32 Index)
+{
+    if (!VoiceSounds.IsValidIndex(Index) || !VoiceAudio) return false;
+    VoiceLine = Index; VoiceTime = 0.f; MaxJawOpen = 0.f;
+    VoiceAudio->SetSound(VoiceSounds[Index]);
+    VoiceAudio->Play();
+    if (BlinkTime < 0.f) { BlinkTime = 0.f; ++Blinks; }   // a blink as he starts
+    return true;
+}
+
+int32 ADockNPC::GetFaceBoneCount() const
+{
+    int32 N = 0;
+    for (const int32 B : FaceBone) N += B != INDEX_NONE;
+    return N;
+}
+
+float ADockNPC::VoiceLoudness() const
+{
+    if (VoiceTime < 0.f || !VoiceLines.IsValidIndex(VoiceLine)) return 0.f;
+    const NPCVoiceData::FLine& L = NPCVoiceData::Lines[VoiceLines[VoiceLine]];
+    const float F = VoiceTime * NPCVoiceData::EnvelopeRate;
+    const int32 A = FMath::Clamp(FMath::FloorToInt(F), 0, L.Frames - 1), B = FMath::Min(A + 1, L.Frames - 1);
+    return FMath::Lerp(static_cast<float>(L.Envelope[A]), static_cast<float>(L.Envelope[B]), F - FMath::FloorToFloat(F)) / 255.f;
+}
+
+void ADockNPC::TickVoice(float DeltaSeconds)
+{
+    // The line Chuck is on: each new one is spoken; leaving the conversation lets it trail off.
+    if (VoiceSounds.Num())
+    {
+        const auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        const int32 Line = bTalking && Chuck ? Chuck->GetTalkLine() : -1;
+        if (Line != HeardLine)
+        {
+            HeardLine = Line;
+            if (Line >= 0) StartVoiceLine(Line);
+            else if (IsSpeaking() && VoiceAudio) { VoiceAudio->FadeOut(.3f, 0.f); VoiceTime = -1.f; }
+        }
+    }
+    if (VoiceTime >= 0.f && VoiceLines.IsValidIndex(VoiceLine)
+        && (VoiceTime += DeltaSeconds) > NPCVoiceData::Lines[VoiceLines[VoiceLine]].Seconds + .15f) VoiceTime = -1.f;
+    // The jaw follows the voice's loudness (quick to open, a little slower to close), the brows lift on its peaks.
+    const float Loud = VoiceLoudness();
+    const float Want = 9.f * FMath::Pow(Loud, .8f);
+    JawOpen = FMath::FInterpTo(JawOpen, Want, DeltaSeconds, Want > JawOpen ? 28.f : 16.f);
+    MaxJawOpen = FMath::Max(MaxJawOpen, JawOpen);
+    BrowLift = FMath::FInterpTo(BrowLift, .55f * FMath::Clamp((Loud - .7f) / .3f, 0.f, 1.f), DeltaSeconds, 8.f);
+    // Blinks every few seconds: lids down in 70 ms, held briefly, up in 110 ms.
+    if (BlinkTime < 0.f && (NextBlink -= DeltaSeconds) <= 0.f) { BlinkTime = 0.f; ++Blinks; }
+    if (BlinkTime >= 0.f)
+    {
+        BlinkTime += DeltaSeconds;
+        Blink = BlinkTime < .07f ? BlinkTime / .07f : BlinkTime < .1f ? 1.f : FMath::Max(0.f, 1.f - (BlinkTime - .1f) / .11f);
+        if (BlinkTime > .21f) { BlinkTime = -1.f; Blink = 0.f; NextBlink = FMath::FRandRange(2.f, 6.f); }
+    }
+}
+
+void ADockNPC::PoseFace(TArray<FTransform>& Space) const
+{
+    // Each face bone is turned (jaw, lids) or lifted (brows) about the head's own
+    // axes as they are now: across his head (+ tips forward and down), and up.
+    if (FaceBone[0] == INDEX_NONE || !Space.IsValidIndex(BoneIndex[Head])) return;
+    const FQuat HeadNow = Space[BoneIndex[Head]].GetRotation() * HeadRefRotation.Inverse();
+    const FVector Across = HeadNow.RotateVector(FVector::YAxisVector), Up = HeadNow.RotateVector(FVector::ZAxisVector);
+    const auto Turn = [&](int32 B, float Degrees)
+    {
+        if (B != INDEX_NONE && Space.IsValidIndex(B)) Space[B].SetRotation(FQuat(Across, FMath::DegreesToRadians(Degrees)) * Space[B].GetRotation());
+    };
+    Turn(FaceBone[0], JawOpen);
+    Turn(FaceBone[1], 38.f * Blink); Turn(FaceBone[2], 38.f * Blink);
+    for (int32 I = 3; I < 5; ++I)
+        if (FaceBone[I] != INDEX_NONE && Space.IsValidIndex(FaceBone[I])) Space[FaceBone[I]].AddToTranslation(Up * BrowLift);
 }
 
 void ADockNPC::UpdatePose(float DeltaSeconds)
@@ -1160,6 +1279,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsKeeper()) PoseKeeper(Space);
         if (IsSeated()) PoseSeated(Space);
         if (IsAlchemist()) PoseSleeves(Space);
+        PoseFace(Space);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         SmithEvents();

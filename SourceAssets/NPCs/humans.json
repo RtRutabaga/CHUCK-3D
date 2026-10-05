@@ -851,7 +851,8 @@
     8.0,
     4.3,
     2.5
-   ]
+   ],
+   "face": true
   },
   "TavernKeeper": {
    "height_cm": 181,

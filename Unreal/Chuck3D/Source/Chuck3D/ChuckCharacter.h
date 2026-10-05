@@ -198,6 +198,8 @@ public:
     /** F / Y: talk to the NPC in front of him, or advance / close the conversation. */
     void Interact();
     bool IsTalking() const { return TalkingTo.IsValid(); }
+    /** Which of the NPC's lines is showing (0 first). */
+    int32 GetTalkLine() const { return TalkLine; }
     /** Who Chuck is talking to (they gesture while he listens). */
     const ADockNPC* GetTalkingTo() const { return TalkingTo.Get(); }
     /** Someone within reach and in front who has something to say (the HUD prompt). */

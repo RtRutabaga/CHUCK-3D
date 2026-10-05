@@ -698,8 +698,34 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
     auto* Dwarf=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
     if(!PC || !Chuck || !Dwarf || DwarfCaptureTime<Settle) return;
     const int32 Step=FMath::FloorToInt((DwarfCaptureTime-Settle)/Hold);
-    if(Step>=UE_ARRAY_COUNT(Angles)) { FPlatformMisc::RequestExit(false); return; }
     const FVector Feet=Dwarf->GetActorLocation()-FVector(0,0,Dwarf->GetSimpleCollisionHalfHeight());
+    if(Step>=UE_ARRAY_COUNT(Angles))
+    {
+        // Then he speaks his line to the rat in front of him: a face close-up every 0.25 s (Dwarf/talk_##.png).
+        const float Talk=DwarfCaptureTime-Settle-UE_ARRAY_COUNT(Angles)*Hold;
+        if(Talk>8.f) { FPlatformMisc::RequestExit(false); return; }
+        if(DwarfShot!=100)
+        {
+            DwarfShot=100; DwarfFrame=0;
+            Chuck->ResetToDock();
+            const FVector Ahead=Dwarf->GetActorForwardVector();
+            Chuck->SetActorLocation(Feet+Ahead*80.f+FVector(0,0,36.f));
+            Chuck->SetActorRotation((-Ahead).Rotation());
+        }
+        if(Talk>=1.f && DwarfFrame==0) { Dwarf->StartVoiceLine(0); }
+        const FVector Eye=Feet+FVector(0,0,Dwarf->GetEyeHeight()-10.f);
+        const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(-30.f,FVector::UpVector)*85.f+FVector(0,0,4.f);
+        NPCCamera->SetActorLocationAndRotation(From,(Eye-From).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(38.f);
+        if(Talk>=1.f+DwarfFrame*.25f && Talk<7.2f)
+        {
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Dwarf/talk_%02d.png"),DwarfFrame),false,false);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_TALK_FRAME %02d t=%.2f speaking=%d jaw_deg=%.1f blinks=%d look=(%.1f,%.1f)"),DwarfFrame,Talk-1.f,
+                Dwarf->IsSpeaking() ? 1 : 0,Dwarf->GetJawOpen(),Dwarf->GetBlinks(),Dwarf->GetLookAngles().X,Dwarf->GetLookAngles().Y);
+            ++DwarfFrame;
+        }
+        return;
+    }
     const FVector Home=FRotator(0.f,ADockNPC::DwarfYaw,0.f).Vector();   // where he was placed facing (SpawnTownsfolk)
     if(Step!=DwarfShot)
     {
@@ -1949,6 +1975,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Chuck->SetActorLocation(Worker->GetActorLocation()-Worker->GetActorRightVector()*170.f-FVector(0,0,Worker->GetActorLocation().Z-36.f));
         }
         // Their standing pose, measured before the scratch (mid-reaction his hands are at his chest).
+        if(StageTime>=8.52f && StageTime-DeltaSeconds<8.52f)
+        {
+            TArray<AActor*> Talker;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+        }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
             PoseHumans=0; bPoseOK=true;
@@ -2091,6 +2123,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetEyeHeight() : 0.f,ToSmithy,ToBarrel,Dwarf ? Dwarf->Lines.Num() : 0,Dwarf && Dwarf->HasMocap() ? 1 : 0,Dwarf ? Dwarf->GetLookAngles().Y : 99.f);
             Check(Dwarf && Dwarf->HasAxe() && Dwarf->GetSpearGripError()<5.f && Dwarf->GetSpearLean()<10.f && Dwarf->GetEyeHeight()<135.f && ToSmithy<450.f && ToBarrel<140.f && Dwarf->CanTalk() && Dwarf->HasMocap() && Dwarf->GetLookAngles().Y<=.5f,
                 TEXT("a dwarf stands by the smithy beside the smith's quenching barrel, shorter than the townsfolk, his battle axe grounded at his side and gripped"));
+            // His voice (docs/NPC-VOICE-PLAN.md): the line's sound and face bones loaded, and while he speaks his jaw opens with it.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f jaw_deg=%.1f blinks=%d line=%s"),
+                Dwarf ? Dwarf->GetVoiceSoundCount() : 0,Dwarf ? Dwarf->GetFaceBoneCount() : 0,Dwarf && Dwarf->IsSpeaking() ? 1 : 0,
+                Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
+            Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
+                && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),
+                TEXT("the dwarf speaks his line aloud: his voice plays and his jaw opens with it, and he blinks"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));

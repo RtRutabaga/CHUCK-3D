@@ -1,0 +1,12 @@
+{
+ "generator": "Tools/build_npc_voice.py",
+ "lines": {
+  "Dwarf/talk_00": {
+   "wav": "Voice/Dwarf/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/Dwarf/VO_Dwarf_talk_00",
+   "seconds": 5.486,
+   "rate": 44100,
+   "peaks": 13
+  }
+ }
+}

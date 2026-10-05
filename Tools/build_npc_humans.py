@@ -569,6 +569,99 @@ def skin_to(obj, rig, weights):
     obj.modifiers.new('Armature', 'ARMATURE').object = rig
 
 
+FACE_BONES = ('jaw', 'lid_upper_l', 'lid_upper_r', 'brow_l', 'brow_r')
+
+
+def add_face_rig(info, parts):
+    """Face bones for speech (docs/NPC-VOICE-PLAN.md phase 1), placed from this
+    body's own landmarks and skinned on its face with distance falloff:
+      jaw            hinge in front of the ears, tail at the chin: opens the mouth
+      lid_upper_l/r  at each eyeball's centre: turning it down closes the upper lid (blink)
+      brow_l/r       over each brow: lifted for emphasis
+    The bones only exist on NPCs with `face` (the shared skeleton gains them on
+    import; the other humans and the motion-capture clips don't carry them and
+    are unaffected). Weights go on the body before the clothing is cut from it,
+    so the beard (skinned from the face) follows the jaw too; the brows' and
+    lashes' card meshes are re-skinned from the face."""
+    rig, body = info.rig, info.obj
+    nose, chin, head_y = face_marks(info)
+    eyes = parts['Eyes']
+    ev = [eyes.matrix_world @ v.co for v in eyes.data.vertices]
+    left = 1. if info.shoulder.x > 0 else -1.          # which side of x is his left (Unreal names)
+    centre = {}
+    for side in (1, -1):
+        pts = [c for c in ev if c.x * side > 0]
+        centre['l' if side == left else 'r'] = sum(pts, Vector()) / len(pts)
+    head_pts = [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD]
+    side_pts = [c for c in head_pts if abs(c.z - info.eye_z) < .03]
+    ear_x = max(abs(c.x) for c in side_pts)
+    ear_y = min(c.y for c in side_pts if abs(c.x) > ear_x - .012)      # front of the ear
+    mouth_z = nose.z - .028 * (nose.z - chin.z) / .065                  # the lip line, scaled to this face
+    hinge = Vector((0., ear_y + .004, info.eye_z - .05))
+    brow = {k: Vector((c.x * 1.05, c.y - .006, info.brow_z + .006)) for k, c in centre.items()}
+    # Bones (rig space).
+    to_rig = rig.matrix_world.inverted()
+    activate(rig); bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    def bone(name, head, tail):
+        b = eb.new(name); b.head = to_rig @ head; b.tail = to_rig @ tail; b.parent = eb['head']; b.use_deform = True; b.use_connect = False
+    bone('jaw', hinge, Vector((0., chin.y + .01, chin.z + .01)))
+    for k, c in centre.items():
+        bone(f'lid_upper_{k}', c, c + Vector((0., -.02, 0.)))
+        bone(f'brow_{k}', brow[k], brow[k] + Vector((0., -.02, 0.)))
+    bpy.ops.object.mode_set(mode='OBJECT')
+    # Weights on the body, each taken from what the vertex had (head/neck).
+    smooth = lambda x: x * x * (3 - 2 * x)
+    clamp = lambda x: min(1., max(0., x))
+    def weight(c, i):
+        if info.bone[i] not in (Body.HEAD, Body.NECK): return {}
+        out = {}
+        # Jaw: below the lip line, in front of the hinge, fading out down the throat.
+        if c.y < hinge.y - .01:
+            w = smooth(clamp((mouth_z - c.z) / .012)) * smooth(clamp((hinge.y - .01 - c.y) / .03)) * smooth(clamp((c.z - (chin.z - .045)) / .03))
+            if w > 0: out['jaw'] = w
+        for k, ec in centre.items():
+            d = (c - ec).length
+            # The upper lid: over the eyeball, above its centre.
+            w = smooth(clamp((.0185 - d) / .005)) * smooth(clamp((c.z - ec.z + .001) / .004)) * smooth(clamp((info.brow_z - .004 - c.z) / .006)) * (1. if c.y < ec.y + .004 else 0.)
+            if w > 0: out[f'lid_upper_{k}'] = w
+            # The brow: around it, never up under the helmet's rim.
+            d = (c - brow[k]).length
+            w = smooth(clamp((.026 - d) / .014)) * smooth(clamp((brow[k].z + .012 - c.z) / .006)) * (1. if c.y < ec.y else 0.)
+            if w > 0: out[f'brow_{k}'] = w
+        return out
+    groups = {n: body.vertex_groups.get(n) or body.vertex_groups.new(name=n) for n in FACE_BONES}
+    touched = 0
+    for v, c in zip(body.data.vertices, info.co):
+        w = weight(c, v.index)
+        if not w: continue
+        total = min(1., sum(w.values()))
+        for e in v.groups: e.weight *= 1 - total
+        for n, x in w.items(): groups[n].add([v.index], x * (1. if total <= 1 else 1. / sum(w.values())), 'REPLACE')
+        touched += 1
+    # The brow and lash cards follow the skin under them.
+    for kind in ('Eyebrows', 'Eyelashes'):
+        obj = parts.get(kind)
+        if not obj: continue
+        for g in list(obj.vertex_groups): obj.vertex_groups.remove(g)
+        activate(obj)
+        dt = obj.modifiers.new('Weights', 'DATA_TRANSFER'); dt.object = body
+        dt.use_vert_data = True; dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'NEAREST'
+        dt.layers_vgroup_select_src = 'ALL'; dt.layers_vgroup_select_dst = 'NAME'
+        bpy.ops.object.datalayout_transfer(modifier=dt.name); bpy.ops.object.modifier_apply(modifier=dt.name)
+        bpy.ops.object.modifier_move_to_index(modifier=next(m.name for m in obj.modifiers if m.type == 'ARMATURE'), index=len(obj.modifiers) - 1)
+        if kind == 'Eyebrows':   # the brow hair goes with the brow, never down with a blink
+            for k in centre:
+                lid, brow_g = obj.vertex_groups.get(f'lid_upper_{k}'), obj.vertex_groups.get(f'brow_{k}') or obj.vertex_groups.new(name=f'brow_{k}')
+                if not lid: continue
+                for v in obj.data.vertices:
+                    w = next((e.weight for e in v.groups if e.group == lid.index), 0.)
+                    if w <= 0: continue
+                    b = next((e.weight for e in v.groups if e.group == brow_g.index), 0.)
+                    brow_g.add([v.index], w + b, 'REPLACE'); lid.remove([v.index])
+    print('CHUCK_FACE_RIG', f'bones={len(FACE_BONES)}', f'skinned_verts={touched}', f'mouth_z={mouth_z:.3f}', f'hinge={tuple(round(x, 3) for x in hinge)}')
+
+
 def skin_from_body(obj, info, below=None):
     """The body's own skin weights onto obj (nearest surface), so it moves exactly
     with the face under it; `below` = (z, fade, toward) eases vertices under z onto
@@ -581,11 +674,15 @@ def skin_from_body(obj, info, below=None):
     if below:
         z0, fade, bone = below
         g = obj.vertex_groups.get(bone) or obj.vertex_groups.new(name=bone)
+        jaw = obj.vertex_groups.get('jaw')
         for v in obj.data.vertices:
             t = min(1., max(0., (z0 - v.co.z) / fade))
             if t <= 0: continue
-            for e in v.groups: e.weight *= 1 - t
-            g.add([v.index], t + sum(e.weight for e in v.groups if e.group == g.index), 'REPLACE')
+            # The jaw keeps its hold further down (the beard under the mouth opens with it); the rest goes to the chest.
+            tj = min(1., max(0., (z0 - .035 - v.co.z) / (fade + .08)))
+            for e in v.groups:
+                if e.group != g.index: e.weight *= 1 - (tj if jaw and e.group == jaw.index else t)
+            g.add([v.index], max(0., 1. - sum(e.weight for e in v.groups if e.group != g.index)), 'REPLACE')
     obj.modifiers.new('Armature', 'ARMATURE').object = info.rig
 
 
@@ -1085,6 +1182,7 @@ def build(name, spec):
     # Clothing from the outfit.
     eye_z = sum((parts['Eyes'].matrix_world @ v.co).z for v in parts['Eyes'].data.vertices) / len(parts['Eyes'].data.vertices)
     info = Body(body, rig, eye_z)
+    if spec.get('face'): add_face_rig(info, parts)
     hide = [False] * len(info.co)
     skirt = None
     if skirt_src:

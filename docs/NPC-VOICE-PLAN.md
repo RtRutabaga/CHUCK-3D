@@ -1,6 +1,24 @@
 # NPC voices, lip sync and body language: plan
 
-Status: **planned, not started** (user, 2026-10-04: "go with the lighter recommended route … don't start yet, just build the md"). Owner: Claude (NPCs, rig, animation). Chuck stays silent (AGENTS.md); only NPCs speak.
+Status: **started 2026-10-05: the dwarf speaks** (see Progress below; first planned (user, 2026-10-04: "go with the lighter recommended route … don't start yet, just build the md"). Owner: Claude (NPCs, rig, animation). Chuck stays silent (AGENTS.md); only NPCs speak.
+
+## Progress
+
+**2026-10-05, the dwarf (vertical slice of phases 1–3).** The user supplied his ElevenLabs line (voice "Paul - Calm, Relaxed and Deep", eleven_v4) with new text: "Ach, away wi' ye, ye mangy wee bastard—blow yer smoke somewhere else." It replaces his two old text lines.
+
+- **Face rig (phase 1), dwarf only:** `jaw`, `lid_upper_l/r` and `brow_l/r`, built by `add_face_rig` in `Tools/build_npc_humans.py` for humans with `face: true`.
+  - Bones are placed from his landmarks and skinned on the face before the clothing is cut. The beard under his mouth keeps part of the jaw's weight, and the brow and lash cards are re-skinned from the face.
+  - Importing him merged the five bones into the shared `SKEL_Human`. The other humans and the clips don't carry them and were not re-imported, so the plan's full `-Clean` rebuild was not needed. Lip bones were left out: the bushy beard hides his lips.
+- **Lip sync:** loudness-driven for now. Rhubarb was approved, but its download was stopped by the user, so it is not installed. `Tools/build_npc_voice.py` (Blender's `aud` + numpy, no new dependency) writes:
+  - each line's WAV (`SourceAssets/NPCs/Voice/<NPC>/<id>.wav`);
+  - a 60 fps loudness envelope in the generated `Source/Chuck3D/NPCVoiceData.h`.
+  The jaw opens with it (up to 9°), and the brows lift on its peaks. Rhubarb mouth shapes remain the plan for NPCs whose mouths show.
+- **Voices (phase 3):**
+  - `SourceAssets/NPCs/dialogue.json` holds the lines; the user's source MP3 is kept in `Voice/<NPC>/source`.
+  - `Tools/import_npc_voice.py` imports the WAVs to `/Game/Art/Audio/Voice/<NPC>/VO_<NPC>_<id>` (always cooked).
+  - `ADockNPC::SetupVoice` sets the NPC's `Lines` to the voiced text, and `TickVoice` speaks each line Chuck reaches (spatial, from his head; it fades if Chuck leaves).
+  - Blinks every 2–6 s, and one when he starts.
+- **Not yet:** barks (scratch/notice), subtitles replacing the text box (the existing dialogue text still shows the line), music ducking, Rhubarb, other NPCs' voices, the zombie's sounds, loudness-driven gestures.
 
 ## Goal
 

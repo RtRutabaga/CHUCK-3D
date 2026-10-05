@@ -34,7 +34,7 @@ private:
     // down), two views of each; logs his look and the axe head's clearance from his shoulders.
     bool bDwarfCapture = false;
     float DwarfCaptureTime = 0;
-    int32 DwarfShot = -1;
+    int32 DwarfShot = -1, DwarfFrame = 0;
     void TickDwarfCapture(float DeltaSeconds);
     int32 TestStage = 0;
     float StageTime = 0;
