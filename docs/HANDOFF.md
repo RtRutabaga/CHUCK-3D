@@ -2,6 +2,25 @@
 
 ## Current launcher and integration status
 
+**Update (Claude, October 5, user request: the female guard uses this ElevenLabs audio, her line "Stick to the docks, rat"):** runtime `bed8e7d`, on `469c444`.
+
+- **Her voice:** the clip ("Blondie - Conversational", eleven_v4, 2.04 s) is the woman gate guard's (`DockGuardB`, `GuardWoman`) only line, with the same words as before. It is set up as for the dwarf: `dialogue.json`, `Voice/GuardWoman`, the regenerated `NPCVoiceData.h`, `/Game/Art/Audio/Voice/GuardWoman/VO_GuardWoman_talk_00`, and `SetupVoice` after her spear.
+- **Her face:** `face: true`; she was rebuilt with the five face bones (same 52,084 tris).
+  - Her lips show, so `add_face_rig` now splits the upper and lower lip on the traced contact line from MPFB's `lips` group: a smooth z = a + b·x² fit, each lip vertex assigned by facing near the line, and soft toward the corners.
+  - Earlier attempts stretched the mouth (too soft a split), lifted the nose (MPFB's `joint-mouth` sits above the lips; `joint-jaw` is the chin's tip, so neither is used), or tore the corners. Blender pose test: `Review/blender_GuardWoman_jaw_open.png`.
+  - The dwarf was rebuilt on the same rule.
+- **Runtime:** jaw range 7° for lips that show (9° for the dwarf under his beard).
+- **Tests and captures:**
+  - New check `CHUCK_GUARDB_VOICE_MEASURE` (sound, 5 face bones, jaw > 3°, blinks, her line) and a gate `CHUCK_NPC_VOICE GuardWoman lines=1 sounds=1`. Expected passes are 147/148.
+  - `-ChuckTalkCapture=<tag>` films any voiced NPC speaking, from the side away from their pole. Its first build crashed (no camera in talk-only mode); this was fixed.
+  - Her close-ups: `Review/runtime_GuardWoman_talk_{open,closed}.png` (`Local/guard-talk-capture.log`).
+- **Results:** four verification runs of this content all passed **149**, with the last two on the promoted package (`Local/verify-package-20261005-132736.log`, `-133211.log`). Measured `max_jaw_deg=6.6` for her.
+- Promoted to `Builds/Windows`; receipt and `-CheckOnly` identify `bed8e7d`. Previous package: `Builds/Windows-Previous-20261005-GuardVoice`.
+- **Lock incident:** a stale empty `.git/index.lock` (13:02, no git process running) blocked the commit while the promotion ran in parallel. The receipt was first written against `469c444`. After the lock was removed and the work committed, it was rewritten against `bed8e7d`.
+- **Not done:** the male guards still have text only (their line is the same words, but no voice was supplied). Barks, subtitles and ducking are still to do. Not listened to by me.
+
+Next part of the work can be done here.
+
 **Update (Codex, October 5, user request: proceed with free worn/weathered timber resources):** runtime **`b1a4277`**, from `12a21ad` / launcher `5d35f5c`.
 
 - Imported Poly Haven **Weathered Brown Planks** and **Rough Wood**, six verified **2K JPG** diffuse / ARM / DirectX-normal maps. CC0 source URLs, source sizes, SHA-256 hashes and license links are recorded in `SourceAssets/Surfaces/WeatheredTimber`. No new installation, plugin or account. Existing UE **5.7.4**, Blender **4.5.14**, VS2022 toolchain **14.44.35229**, Windows SDK **10.0.26100.0**.

@@ -2142,3 +2142,15 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `5d35f5c`; backup `Builds/Windows-Previous-20261005-DwarfVoice`.
 
 Next part of the work can be done here.
+
+## The woman gate guard speaks (October 5)
+
+- **What changed** (`bed8e7d`):
+  - Her ElevenLabs line, with face bones (`face: true`).
+  - `add_face_rig` splits the lips on the traced contact line from MPFB's `lips` group.
+  - Jaw range 7° for lips that show.
+  - Her check and voice gate; `-ChuckTalkCapture=<tag>`.
+- **Tests:** four runs, all 149 passes; the last two are `Local/verify-package-20261005-132736.log` and `-133211.log`.
+- **Launcher:** `Builds/Windows` = `bed8e7d`; backup `Builds/Windows-Previous-20261005-GuardVoice`.
+
+Next part of the work can be done here.

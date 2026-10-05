@@ -18,6 +18,11 @@ Status: **started 2026-10-05: the dwarf speaks** (see Progress below; first plan
   - `Tools/import_npc_voice.py` imports the WAVs to `/Game/Art/Audio/Voice/<NPC>/VO_<NPC>_<id>` (always cooked).
   - `ADockNPC::SetupVoice` sets the NPC's `Lines` to the voiced text, and `TickVoice` speaks each line Chuck reaches (spatial, from his head; it fades if Chuck leaves).
   - Blinks every 2–6 s, and one when he starts.
+**2026-10-05, the woman gate guard.** The user supplied her line ("Blondie - Conversational", eleven_v4): "Stick to the docks, rat."
+- Her face rig opens her visible lips. The split follows the traced lip contact (MPFB `lips` group): a smooth curve, each lip vertex assigned by facing near the line, soft toward the corners.
+- Jaw range 7°.
+- `-ChuckTalkCapture=<tag>` films any voiced NPC speaking.
+
 - **Not yet:** barks (scratch/notice), subtitles replacing the text box (the existing dialogue text still shows the line), music ducking, Rhubarb, other NPCs' voices, the zombie's sounds, loudness-driven gestures.
 
 ## Goal
