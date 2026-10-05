@@ -7,6 +7,13 @@
    "seconds": 5.486,
    "rate": 44100,
    "peaks": 13
+  },
+  "GuardWoman/talk_00": {
+   "wav": "Voice/GuardWoman/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/GuardWoman/VO_GuardWoman_talk_00",
+   "seconds": 2.038,
+   "rate": 44100,
+   "peaks": 4
   }
  }
 }

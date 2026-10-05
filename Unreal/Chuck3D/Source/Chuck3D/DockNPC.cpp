@@ -579,6 +579,7 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
         Guard->DisplayName = TEXT("Guard");
         Guard->Lines = { TEXT("Stick to the docks, rat.") };
         Guard->GiveSpear(0);   // east of the gate: her left
+        Guard->SetupVoice(TEXT("GuardWoman"));   // user 2026-10-05: her ElevenLabs line, the same words
     }
     // A third guard at the Dock Street side gate in the west wall, beside the
     // sewer hatch: south of the gate (between it and the bench), facing into
@@ -1160,7 +1161,7 @@ void ADockNPC::TickVoice(float DeltaSeconds)
         && (VoiceTime += DeltaSeconds) > NPCVoiceData::Lines[VoiceLines[VoiceLine]].Seconds + .15f) VoiceTime = -1.f;
     // The jaw follows the voice's loudness (quick to open, a little slower to close), the brows lift on its peaks.
     const float Loud = VoiceLoudness();
-    const float Want = 9.f * FMath::Pow(Loud, .8f);
+    const float Want = (Kind == EDockHuman::Dwarf ? 9.f : 7.f) * FMath::Pow(Loud, .8f);   // his under a beard; lips that show open less
     JawOpen = FMath::FInterpTo(JawOpen, Want, DeltaSeconds, Want > JawOpen ? 28.f : 16.f);
     MaxJawOpen = FMath::Max(MaxJawOpen, JawOpen);
     BrowLift = FMath::FInterpTo(BrowLift, .55f * FMath::Clamp((Loud - .7f) / .3f, 0.f, 1.f), DeltaSeconds, 8.f);

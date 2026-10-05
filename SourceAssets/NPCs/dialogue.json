@@ -6,10 +6,22 @@
    "talk": [
     {
      "id": "talk_00",
-     "text": "Ach, away wi' ye, ye mangy wee bastard\u2014blow yer smoke somewhere else.",
+     "text": "Ach, away wi' ye, ye mangy wee bastard—blow yer smoke somewhere else.",
      "source": "Voice/Dwarf/source/ElevenLabs_2026-10-05_Paul_talk_00.mp3",
      "start": 0.0,
      "end": 5.49
+    }
+   ]
+  },
+  "GuardWoman": {
+   "voice": "ElevenLabs library voice 'Blondie - Conversational', model eleven_v4 (user 2026-10-05)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Stick to the docks, rat.",
+     "source": "Voice/GuardWoman/source/ElevenLabs_2026-10-05_Blondie_talk_00.mp3",
+     "start": 0.0,
+     "end": 2.04
     }
    ]
   }

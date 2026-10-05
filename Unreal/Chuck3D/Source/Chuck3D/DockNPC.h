@@ -78,6 +78,7 @@ public:
     /** A guard's spear (Tools/build_spear.py): upright beside the foot on Side (0 left, 1 right), that fist round its grip. */
     void GiveSpear(int32 Side = 1);
     bool HasSpear() const { return bSpear; }
+    int32 GetPoleSide() const { return SpearSide; }
     /**
      * The dwarf's battle axe (Tools/build_battle_axe.py: double-bitted, 127 cm):
      * held as the guards hold their spears, butt on the ground beside the foot

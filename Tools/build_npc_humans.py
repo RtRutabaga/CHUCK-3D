@@ -572,7 +572,19 @@ def skin_to(obj, rig, weights):
 FACE_BONES = ('jaw', 'lid_upper_l', 'lid_upper_r', 'brow_l', 'brow_r')
 
 
-def add_face_rig(info, parts):
+def joint_positions(body):
+    """World position of each of MPFB's joint markers (the 'joint-*' helper cubes' centres) on the baked body."""
+    names = {g.index: g.name for g in body.vertex_groups if g.name.startswith('joint-')}
+    sums = {}
+    for v in body.data.vertices:
+        for e in v.groups:
+            if e.group in names and e.weight > .5:
+                n = names[e.group]; c = body.matrix_world @ v.co
+                s, k = sums.get(n, (Vector(), 0)); sums[n] = (s + c, k + 1)
+    return {n: s / k for n, (s, k) in sums.items()}
+
+
+def add_face_rig(info, parts, joints=None):
     """Face bones for speech (docs/NPC-VOICE-PLAN.md phase 1), placed from this
     body's own landmarks and skinned on its face with distance falloff:
       jaw            hinge in front of the ears, tail at the chin: opens the mouth
@@ -596,7 +608,37 @@ def add_face_rig(info, parts):
     side_pts = [c for c in head_pts if abs(c.z - info.eye_z) < .03]
     ear_x = max(abs(c.x) for c in side_pts)
     ear_y = min(c.y for c in side_pts if abs(c.x) > ear_x - .012)      # front of the ear
-    mouth_z = nose.z - .028 * (nose.z - chin.z) / .065                  # the lip line, scaled to this face
+    joints = joints or {}
+    # The lip line: estimated from the nose and chin, then settled on the lips' contact (MPFB's 'lips' group,
+    # down the middle: the most set-back point of the outer surface near the estimate, between the two lips'
+    # bulges; the mouth's inner surface, further back still, is left out). MPFB's joint-mouth sits above the
+    # lips and joint-jaw is the chin's tip, so neither is used. The hinge is in front of the ears.
+    smooth = lambda x: x * x * (3 - 2 * x)
+    clamp = lambda x: min(1., max(0., x))
+    mouth_z = nose.z - .028 * (nose.z - chin.z) / .065
+    lg = body.vertex_groups.get('lips')
+    lip_pts = [info.co[v.index] for v in body.data.vertices if any(e.group == lg.index and e.weight > .5 for e in v.groups)] if lg else []
+    contact = []   # (|x|, z) along the line where the lips meet, from the middle out to the corners
+    if lip_pts:
+        width = max(abs(c.x) for c in lip_pts)
+        z, x = mouth_z, 0.
+        while x < width:
+            col = [c for c in lip_pts if x - .002 <= abs(c.x) < x + .002]
+            if col:
+                front = min(c.y for c in col)
+                near = [c for c in col if abs(c.z - z) < .006 and c.y < front + .0105]
+                if near: z = max(near, key=lambda c: c.y).z
+            contact.append((x, z)); x += .004
+        # A smooth line through them, z = a + b x^2 (least squares): lips curve down to the corners, they don't zig-zag.
+        n = len(contact); sx = sum(x * x for x, _ in contact); sxx = sum(x ** 4 for x, _ in contact)
+        sz = sum(z for _, z in contact); sxz = sum(x * x * z for x, z in contact)
+        den = n * sxx - sx * sx
+        fit_b = (n * sxz - sx * sz) / den if abs(den) > 1e-12 else 0.
+        fit_a = (sz - fit_b * sx) / n
+        mouth_z = fit_a
+    lip_set = {v.index for v in body.data.vertices if lg and any(e.group == lg.index and e.weight > .5 for e in v.groups)}
+    def lip_line(ax):
+        return fit_a + fit_b * min(ax, contact[-1][0]) ** 2 if contact else mouth_z
     hinge = Vector((0., ear_y + .004, info.eye_z - .05))
     brow = {k: Vector((c.x * 1.05, c.y - .006, info.brow_z + .006)) for k, c in centre.items()}
     # Bones (rig space).
@@ -611,14 +653,22 @@ def add_face_rig(info, parts):
         bone(f'brow_{k}', brow[k], brow[k] + Vector((0., -.02, 0.)))
     bpy.ops.object.mode_set(mode='OBJECT')
     # Weights on the body, each taken from what the vertex had (head/neck).
-    smooth = lambda x: x * x * (3 - 2 * x)
-    clamp = lambda x: min(1., max(0., x))
     def weight(c, i):
         if info.bone[i] not in (Body.HEAD, Body.NECK): return {}
         out = {}
         # Jaw: below the lip line, in front of the hinge, fading out down the throat.
         if c.y < hinge.y - .01:
-            w = smooth(clamp((mouth_z - c.z) / .012)) * smooth(clamp((hinge.y - .01 - c.y) / .03)) * smooth(clamp((c.z - (chin.z - .045)) / .03))
+            # Sharp across the lips (they part there), widening smoothly past the corners so the cheeks stretch, not tear.
+            line = lip_line(abs(c.x))
+            corner = contact[-1][0] if contact else .025
+            if i in lip_set and abs(c.z - line) < .005 and abs(c.x) < .7 * corner:
+                # At the lips' meeting: the upper lip's underside faces down, the lower lip's top faces up.
+                split = 1. if body.data.vertices[i].normal.z > 0 else 0.
+            else:
+                # Toward the corners the lips hardly part: a soft blend there, widening on into the cheeks.
+                soft = .003 + .009 * smooth(clamp((abs(c.x) - .55 * corner) / (.5 * corner))) + .006 * smooth(clamp((abs(c.x) - corner) / .02)) if c.y < nose.y + .03 else .015
+                split = smooth(clamp((line - c.z) / soft + .5))
+            w = split * smooth(clamp((hinge.y - .01 - c.y) / .03)) * smooth(clamp((c.z - (chin.z - .045)) / .03))
             if w > 0: out['jaw'] = w
         for k, ec in centre.items():
             d = (c - ec).length
@@ -659,7 +709,7 @@ def add_face_rig(info, parts):
                     if w <= 0: continue
                     b = next((e.weight for e in v.groups if e.group == brow_g.index), 0.)
                     brow_g.add([v.index], w + b, 'REPLACE'); lid.remove([v.index])
-    print('CHUCK_FACE_RIG', f'bones={len(FACE_BONES)}', f'skinned_verts={touched}', f'mouth_z={mouth_z:.3f}', f'hinge={tuple(round(x, 3) for x in hinge)}')
+    print('CHUCK_FACE_RIG', f'bones={len(FACE_BONES)}', f'skinned_verts={touched}', f'mouth_z={mouth_z:.3f}', f'lip_line_points={len(contact)}', f'hinge={tuple(round(x, 3) for x in hinge)}')
 
 
 def skin_from_body(obj, info, below=None):
@@ -1173,6 +1223,7 @@ def build(name, spec):
     # Bake the shape; keep the skirt helper if the outfit needs it, then drop the helpers.
     TargetService.bake_targets(body)
     skirt_src = skirt_source(body) if any(it['piece'] in SKIRTED for it in spec['outfit']) else None
+    joints = joint_positions(body) if spec.get('face') else {}   # MPFB's face joint markers live on helpers, about to go
     apply_modifier(body, 'MASK')
     for obj in parts.values():
         if obj and obj.data.shape_keys:
@@ -1182,7 +1233,7 @@ def build(name, spec):
     # Clothing from the outfit.
     eye_z = sum((parts['Eyes'].matrix_world @ v.co).z for v in parts['Eyes'].data.vertices) / len(parts['Eyes'].data.vertices)
     info = Body(body, rig, eye_z)
-    if spec.get('face'): add_face_rig(info, parts)
+    if spec.get('face'): add_face_rig(info, parts, joints)
     hide = [False] * len(info.co)
     skirt = None
     if skirt_src:

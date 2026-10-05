@@ -35,6 +35,7 @@ private:
     bool bDwarfCapture = false;
     float DwarfCaptureTime = 0;
     int32 DwarfShot = -1, DwarfFrame = 0;
+    FString TalkCaptureTag;
     void TickDwarfCapture(float DeltaSeconds);
     int32 TestStage = 0;
     float StageTime = 0;

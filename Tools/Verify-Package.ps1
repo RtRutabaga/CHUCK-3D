@@ -54,9 +54,10 @@ $forgeCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_FORGE_DRESSING f
 $smithCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SMITH_SPAWNED anvil=1 hammer=1 tongs=1 sounds=12'
 $keeperCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_KEEPER_SPAWNED tankard=1 rag=1'
 $dwarfVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE Dwarf lines=1 sounds=1'
+$guardVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE GuardWoman lines=1 sounds=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {146} else {147}
-if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$keeperCompleted -or $passed -lt $expected) {
+$expected=if($NoCapture) {147} else {148}
+if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$guardVoice -or !$keeperCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }

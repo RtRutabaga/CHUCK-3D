@@ -601,6 +601,8 @@ void ADockGameMode::StartPlay()
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
     bDwarfCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckDwarfCapture"));
+    // -ChuckTalkCapture=<tag>: only the talking close-up, of any voiced NPC (e.g. DockGuardB).
+    if(FParse::Value(FCommandLine::Get(),TEXT("ChuckTalkCapture="),TalkCaptureTag)) bDwarfCapture=true;
     // -ChuckSlideTest: only the sewer's water-slide exit (stage 111), then quit.
     bSlideOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSlideTest"));
     if(bSlideOnly) { bSmokeTest=true; TestStage=111; }
@@ -674,6 +676,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         SetReviewLamp(NPCCamera.Get(),NPC->IsHostile());   // the zombie stands in the dark
         NPCShot=Step; bNPCShotTaken=false;
         if(FCString::Strcmp(Shot.Name,TEXT("Scratched"))==0) NPC->TakeScratch(NPC->GetActorLocation()+NPC->GetActorForwardVector()*50.f);
+        if(FCString::Strcmp(Shot.Name,TEXT("Face"))==0) NPC->StartVoiceLine(0);   // voiced NPCs are caught mid-line
     }
     else if(!bNPCShotTaken && NPCCaptureTime-Settle-Step*Each>.8f)
     {
@@ -696,15 +699,15 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
     auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     TArray<AActor*> Found;
-    UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),Found);
+    UGameplayStatics::GetAllActorsWithTag(this,TalkCaptureTag.IsEmpty() ? FName(TEXT("Dwarf")) : FName(*TalkCaptureTag),Found);
     auto* Dwarf=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
     if(!PC || !Chuck || !Dwarf || DwarfCaptureTime<Settle) return;
-    const int32 Step=FMath::FloorToInt((DwarfCaptureTime-Settle)/Hold);
+    const int32 Step=TalkCaptureTag.IsEmpty() ? FMath::FloorToInt((DwarfCaptureTime-Settle)/Hold) : UE_ARRAY_COUNT(Angles);   // talk only
     const FVector Feet=Dwarf->GetActorLocation()-FVector(0,0,Dwarf->GetSimpleCollisionHalfHeight());
     if(Step>=UE_ARRAY_COUNT(Angles))
     {
         // Then he speaks his line to the rat in front of him: a face close-up every 0.25 s (Dwarf/talk_##.png).
-        const float Talk=DwarfCaptureTime-Settle-UE_ARRAY_COUNT(Angles)*Hold;
+        const float Talk=DwarfCaptureTime-Settle-(TalkCaptureTag.IsEmpty() ? UE_ARRAY_COUNT(Angles)*Hold : 0.f);
         if(Talk>8.f) { FPlatformMisc::RequestExit(false); return; }
         if(DwarfShot!=100)
         {
@@ -714,14 +717,18 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
             Chuck->SetActorLocation(Feet+Ahead*80.f+FVector(0,0,36.f));
             Chuck->SetActorRotation((-Ahead).Rotation());
         }
+        if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();   // talk-only runs skip the angle shots that make it
+        PC->SetViewTarget(NPCCamera.Get());
         if(Talk>=1.f && DwarfFrame==0) { Dwarf->StartVoiceLine(0); }
         const FVector Eye=Feet+FVector(0,0,Dwarf->GetEyeHeight()-10.f);
-        const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(-30.f,FVector::UpVector)*85.f+FVector(0,0,4.f);
+        // From the side away from the pole in his or her hand (+ is to their right).
+        const float Side=Dwarf->HasSpear() && Dwarf->GetPoleSide()==0 ? 30.f : -30.f;
+        const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(Side,FVector::UpVector)*85.f+FVector(0,0,4.f);
         NPCCamera->SetActorLocationAndRotation(From,(Eye-From).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(38.f);
         if(Talk>=1.f+DwarfFrame*.25f && Talk<7.2f)
         {
-            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Dwarf/talk_%02d.png"),DwarfFrame),false,false);
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/talk_%02d.png"),TalkCaptureTag.IsEmpty() ? TEXT("Dwarf") : *TalkCaptureTag,DwarfFrame),false,false);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_TALK_FRAME %02d t=%.2f speaking=%d jaw_deg=%.1f blinks=%d look=(%.1f,%.1f)"),DwarfFrame,Talk-1.f,
                 Dwarf->IsSpeaking() ? 1 : 0,Dwarf->GetJawOpen(),Dwarf->GetBlinks(),Dwarf->GetLookAngles().X,Dwarf->GetLookAngles().Y);
             ++DwarfFrame;
@@ -1982,6 +1989,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             TArray<AActor*> Talker;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Dwarf"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardB"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2048,6 +2057,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             bSpears&=GuardNPC && GuardB && (GuardNPC->GetActorLocation().X-260.f)*(GuardB->GetActorLocation().X-260.f)<0.f;   // either side of the gate
             Check(bSpears,TEXT("two guards stand either side of the city gate, each holding a spear upright, fist round its grip"));
+            // The woman guard says her line aloud (her ElevenLabs voice), her jaw opening with it.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GUARDB_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                GuardB ? GuardB->GetVoiceSoundCount() : 0,GuardB ? GuardB->GetFaceBoneCount() : 0,GuardB && GuardB->IsSpeaking() ? 1 : 0,
+                GuardB ? GuardB->GetMaxJawOpen() : 0.f,GuardB ? GuardB->GetBlinks() : 0,GuardB && GuardB->Lines.Num() ? *GuardB->Lines[0] : TEXT(""));
+            Check(GuardB && GuardB->GetVoiceSoundCount()==1 && GuardB->GetFaceBoneCount()==5 && GuardB->GetMaxJawOpen()>3.f && GuardB->GetBlinks()>=1
+                && GuardB->Lines.Num()==1 && GuardB->Lines[0]==TEXT("Stick to the docks, rat."),
+                TEXT("the woman guard speaks her line aloud, her jaw opening with it, and blinks"));
             // The blacksmith at his anvil by the smithy's forge, hammering: the face meets the bar, the tongs in his other fist.
             TArray<AActor*> SmithFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),SmithFound);
