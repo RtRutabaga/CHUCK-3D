@@ -2107,3 +2107,25 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `2ed1cc9`; backup `Builds/Windows-Previous-20261005-Elf`.
 
 Next part of the work can be done here.
+
+## Gnome alchemist before the alchemist's shop (user 2026-10-05)
+
+- **Request:** a gnome alchemist vendor in black robes, hands hidden in his sleeves, D&D 5e height and features.
+- **Source:** `bad2bc7` on main.
+  - `humans.json` GnomeAlchemist.
+  - `build_npc_humans.py`: the `robe` piece (`flare`, `cuff`), `hide_hands`, `make_braid` (split out, optional) and `wild_cards`, beard `card_scale`.
+  - `DockNPC.*`: `SpawnAlchemist`, `PoseSleeves`.
+  - `DockGameMode.cpp`: his check and the `Hands` review shot.
+  - `Verify-Package.ps1`: expects 145/146.
+- **Contract:** shared skeleton unchanged; his mesh has no hand geometry, but the hand bones are still there. New `/Game/Characters/Humans/GnomeAlchemist`. The shop geometry is unchanged.
+- **To reproduce:**
+  1. `blender -b -P Tools/build_npc_humans.py -- GnomeAlchemist`
+  2. `Tools/Import-NPCHumans.ps1 -Only GnomeAlchemist`
+- **Verified:** `Local/verify-package-20261005-085221.log`, 147 passes. Wrist gap 4.3 cm, sleeve IK error 0.0 cm.
+- **Remaining:**
+  - The beard is fuller than "trimmed".
+  - The arms are folded at chest height.
+  - Not playtested.
+- **Launcher:** `Builds/Windows` = `bad2bc7`; backup `Builds/Windows-Previous-20261005-Gnome`.
+
+Next part of the work can be done here.

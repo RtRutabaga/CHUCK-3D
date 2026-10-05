@@ -2,6 +2,37 @@
 
 ## Current launcher and integration status
 
+## October 5 — gnome alchemist before the alchemist's shop
+
+**Update 87 (Claude, user request: "an alchemist vendor in front of the alchemist shop, a gnome in black robes, hands together behind robe sleeves so that they aren't visible, DnD 5e gnome height and facial features"):** runtime `bad2bc7`, on `b9f4a8f`.
+
+- **Him** (`GnomeAlchemist` in `humans.json`): 100 cm (5e gnomes are 3-4 ft; the dwarf is 134). He is old, with a large round head on short legs and arms.
+  - Face, after the 5e PHB description: a prodigious round nose, big eyes, pointed ears, round cheeks and the corners of the mouth turned up.
+  - Wild white hair standing out at odd angles, and a white beard.
+  - A charcoal-black robe with bell sleeves over a long skirt, a dark belt and soft shoes. 48k tris.
+- **Build changes** (`build_npc_humans.py`):
+  - A new `robe` piece: collar, sleeves to the wrist and body to the upper thigh. `flare` belled sleeves and `cuff` let them run past the wrist.
+  - `hide_hands` deletes the hands from the mesh.
+  - `make_hair`'s braid is now optional (moved to `make_braid`), with `wild_cards` tufts. `make_beard` gains `card_scale`.
+  - The elf rebuilds identically: same triangle and card counts, and her committed FBX was kept.
+- **Pose:** `ADockNPC::SpawnAlchemist` stands him at (1120,-3685), in front of the shop's left window, clear of the door, facing the plaza. `PoseSleeves` uses two-bone IK on the halved idle. It takes his arm lengths into account, swings the upper arms forward and lays the forearms level across, so the cuffs meet a little past the middle, left over right.
+  - The first attempt left the forearms inside his torso, with only the cuff tips showing at the chest. Fixed and checked with the new close `Hands` review shot (scaled to each NPC's eye height).
+  - He watches and turns to the rat like the townsfolk. Lines: "Salves, tinctures, a tonic for the cough." / "Nothing for rats. Mind the bottles."
+- **Test:** a new check covers present, mocap, in front of the shop (y > -3760, within 250 cm of its front), eye height 70-100 cm, sleeve IK error <2 cm, wrists <8 cm apart and ahead of him, and his lines. He is exempt from the arms-down check. Verifier expects 145/146.
+- **Results:** candidate default verification passed **147** with all gates (`Local/verify-package-20261005-085221.log`). Measured: `eye_cm=97 sleeve_reach_cm=0.0 wrist_gap_cm=4.3 hands_ahead_cm=13.3`. The elf and keeper checks are unchanged.
+  - Review: `Local/gnome-npccapture4.log`, with `Review/runtime_GnomeAlchemist_{front,threequarter,face,hands}.png` and Blender `GnomeAlchemist_*.png`.
+  - Builds: `Local/gnome-build*.log`. Nothing installed.
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `bad2bc7`. Previous package: `Builds/Windows-Previous-20261005-Gnome`.
+- **Known flaws:**
+  - The beard is fuller than a 5e "trimmed" beard.
+  - The eyes read only slightly enlarged.
+  - The folded arms sit at chest height rather than the belly.
+  - The black robe reads mostly as a silhouette in the shop's shadow.
+  - Card hair, not groom. Not playtested.
+- Unchanged human re-import churn is again left unstaged.
+
+Next part of the work can be done here.
+
 ## October 5 — old elf woman on the fountain bench
 
 **Update 86 (Claude, user request: "an elderly elf woman npc sitting on a bench by the fountain, long braided gray hair"):** runtime `2ed1cc9`, on `77e4b82`.
