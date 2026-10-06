@@ -15,6 +15,20 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: add this audio for the alchemist's line "Summon. Tell your master I'll have another shipment of halfling leaf for him to move soon. I'm waiting on a caravan out of Athkatla… They should've been here by now."):** runtime `c40968f`, on `5a06680`.
+
+- **Voice:** the gnome alchemist outside the alchemist's shop. The user's `Alchemist_audio.mp3`, 11.96 s (whole file), levelled +4.3 dB. It replaces his two text lines.
+- **Face:** `face: true`. He was rebuilt with the five face bones (same 47,476 tris; robe, hidden hands, hair and beard unchanged) and re-imported. `SetupVoice("GnomeAlchemist")`.
+- **Tests:** new `CHUCK_ALCHEMIST_VOICE_MEASURE` (his line starts with the others) and gate `CHUCK_NPC_VOICE GnomeAlchemist lines=1 sounds=1`. Thresholds 159/160. His sleeve check is unchanged (wrist gap 4.3 cm, IK 0.0).
+- **Results:** the candidate passed **161** with every gate (`Local/verify-package-20261006-134713.log`). Measured `max_jaw_deg=7.0`.
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `c40968f`. Previous package: `Builds/Windows-Previous-20261006-AlchemistVoice`.
+- **Not done:**
+  - Not listened to by me. "Summon" is used as written.
+  - His jaw moves under a full beard, so the motion shows mostly as the beard.
+  - The 14 pre-existing `Prototype/Materials` changes are still left alone.
+
+Next part of the work can be done here.
+
 **Update (Claude, October 6, user request: add the market woman's audio, "No handouts. If you're hungry, check the sewer for scraps."):** runtime `aba1447`, on `0798300`.
 
 - **Voice:** the user's `Market_woman_audio.mp3`, 4.44 s (whole file), levelled +1.9 dB. It replaces her old text line ("No handouts here. If you're hungry, you should check the sewer for scraps."). The townsfolk check's "check the sewer for scraps" still matches.

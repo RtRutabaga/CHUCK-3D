@@ -2402,3 +2402,12 @@ Next part of the work can be done here.
 - **Remaining:** not listened to.
 
 Next part of the work can be done here.
+
+## Gnome alchemist's voice line (user 2026-10-06)
+
+- **Source:** `c40968f`: `dialogue.json` GnomeAlchemist, `humans.json` `face: true` (rebuilt, same tris), his FBX/assets, `VO_GnomeAlchemist_talk_00`, `NPCVoiceData.h`, `DockNPC.cpp`, `DockGameMode.cpp` (voice check), `Verify-Package.ps1` 159/160 + gate.
+- **Verified:** `Local/verify-package-20261006-134713.log`, 161 passes; jaw 7.0 degrees.
+- **Launcher:** `Builds/Windows` = `c40968f`; backup `Builds/Windows-Previous-20261006-AlchemistVoice`.
+- **Remaining:** not listened to.
+
+Next part of the work can be done here.
