@@ -87,7 +87,12 @@
      "type": "card",
      "texture": "Textures/eyelashes01.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.7,
+    0.0,
+    161.7
+   ]
   },
   "Guard": {
    "fbx": "Guard/SK_Guard.fbx",

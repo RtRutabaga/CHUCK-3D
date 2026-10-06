@@ -58,6 +58,17 @@
      "start": 0.0
     }
    ]
+  },
+  "Worker": {
+   "voice": "ElevenLabs library voice 'Simon - Clear & professional British', model eleven_v4 (user 2026-10-06)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Don’t you worry, Chuck! I’ll keep good watch over Bobert while he sleeps. Late-riser, that one, innit he? …But I swear I’ll earn me keep! I won’t let any of them rats nibble on his nose this time.",
+     "source": "Voice/Worker/source/ElevenLabs_2026-10-06_Simon_talk_00.mp3",
+     "start": 0.0
+    }
+   ]
   }
  }
 }

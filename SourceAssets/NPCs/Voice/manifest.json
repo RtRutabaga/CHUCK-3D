@@ -40,6 +40,14 @@
    "rate": 44100,
    "peaks": 22,
    "gain_db": 2.92
+  },
+  "Worker/talk_00": {
+   "wav": "Voice/Worker/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/Worker/VO_Worker_talk_00",
+   "seconds": 11.729,
+   "rate": 44100,
+   "peaks": 37,
+   "gain_db": 1.08
   }
  }
 }

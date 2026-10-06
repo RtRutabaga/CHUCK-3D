@@ -391,6 +391,7 @@ ADockNPC* ADockNPC::SpawnDockWorker(UWorld* World, const FVector& Feet, float Ya
     if (!NPC) return nullptr;
     NPC->Tags.Add(TEXT("DockWorkerArt"));   // the human-scale reference the smoke test looks for
     NPC->DisplayName = TEXT("Dock worker");
+    NPC->SetupVoice(TEXT("Worker"));   // user 2026-10-06: his ElevenLabs line, keeping watch over Bobert
     return NPC;
 }
 

@@ -458,7 +458,7 @@ void ADockGameMode::StartPlay()
     if(BenchMesh) Prop(TEXT("TavernBenchArt"),FVector(-210,225,0),BenchMesh);
     // The dock worker by the spawn (user 2026-09-30): a rigged, procedurally
     // posed NPC (ADockNPC) replacing the old static 180 cm scale figure, on the
-    // same spot and facing the same way. Ambient: no dialogue yet (user's call).
+    // same spot and facing the same way, outside the tavern. He speaks one line (user 2026-10-06).
     const FVector Human(90,200,0);
     ADockNPC::SpawnDockWorker(World,Human,-90.f);
     // The 2D game's guard (at the closed city gate) and market woman (by the red stalls).
@@ -2019,6 +2019,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Sailor"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockWorkerArt"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2139,6 +2141,18 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Sailor && Sailor->GetVoiceSoundCount()==1 && Sailor->GetFaceBoneCount()==5 && Sailor->GetMaxJawOpen()>3.f && Sailor->GetBlinks()>=1
                 && Sailor->Lines.Num()==1 && Sailor->Lines[0].StartsWith(TEXT("Another ship came back with no crew")),
                 TEXT("the old sailor speaks his line aloud, his pipe out of his mouth, his jaw moving with it, and blinks"));
+            // The dock worker by the tavern speaks his line (user 2026-10-06).
+            {
+                TArray<AActor*> WorkerFound;
+                UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockWorkerArt"),WorkerFound);
+                const auto* Speaker=WorkerFound.Num()==1 ? Cast<ADockNPC>(WorkerFound[0]) : nullptr;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_WORKER_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                    Speaker ? Speaker->GetVoiceSoundCount() : 0,Speaker ? Speaker->GetFaceBoneCount() : 0,Speaker && Speaker->IsSpeaking() ? 1 : 0,
+                    Speaker ? Speaker->GetMaxJawOpen() : 0.f,Speaker ? Speaker->GetBlinks() : 0,Speaker && Speaker->Lines.Num() ? *Speaker->Lines[0] : TEXT(""));
+                Check(Speaker && Speaker->GetVoiceSoundCount()==1 && Speaker->GetFaceBoneCount()==5 && Speaker->IsSpeaking() && Speaker->GetMaxJawOpen()>3.f && Speaker->GetBlinks()>=1
+                    && Speaker->Lines.Num()==1 && Speaker->Lines[0].StartsWith(TEXT("Don\u2019t you worry, Chuck!")),
+                    TEXT("the dock worker by the tavern speaks his line aloud, his jaw moving with it, and blinks"));
+            }
             // The old elf on the bench by the fountain: hips on the bench, feet on the paving, hands in her lap.
             TArray<AActor*> ElfFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),ElfFound);
@@ -2236,11 +2250,11 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>=2.f && StageTime-DeltaSeconds<2.f && !Chuck->IsTalking()) TalkSeen|=16;
         if(StageTime>2.2f)
         {
-            // The silent worker: no prompt beside him.
-            bool bSilent=true;
-            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt")) && Entry->CanTalk()) bSilent=false;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_TALK_MEASURE steps=%d worker_silent=%d"),TalkSeen,bSilent ? 1 : 0);
-            Check(TalkSeen==31 && bSilent,TEXT("F / Y talks to an NPC with lines: a prompt in reach, lines advance, Chuck stays put, then it closes; the silent worker has none"));
+            // The worker has a line of his own now (user 2026-10-06): he can be talked to.
+            bool bWorkerTalks=false;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt")) && Entry->CanTalk()) bWorkerTalks=true;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TALK_MEASURE steps=%d worker_talks=%d"),TalkSeen,bWorkerTalks ? 1 : 0);
+            Check(TalkSeen==31 && bWorkerTalks,TEXT("F / Y talks to an NPC with lines: a prompt in reach, lines advance, Chuck stays put, then it closes; the worker has his line"));
             if(TalkNPC.IsValid()) TalkNPC->Destroy();
             KeyPC->FlushPressedKeys(); Chuck->DisableInput(KeyPC); Chuck->SetLookLocked(false);
             // Next: the cargo wharf.
