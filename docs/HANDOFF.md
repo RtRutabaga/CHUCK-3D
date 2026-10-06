@@ -15,6 +15,26 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: move the elderly elf and her bench to the bay side of the fountain, not close to the alchemist, and give her this recorded line):** runtime `ab8a26b`, on `5a3cb51`.
+
+- **Where:** the harbour touches the plaza only at its north-east corner, beside the waterside kerb at x 894. West of the plaza are walls and town; to the south are the gate and the shops. Her bench moves from west of the fountain (-440,-3350) to its north-east, bay side, at (930,-2560).
+  - It is turned to face the fountain (yaw -131.4), with the bay and the moored boat behind her.
+  - It is 10 m from the fountain's centre and 11 m from the alchemist. It is clear of the x 600 walking route, the lamp at (830,-2780) and the east market stand.
+  - `DockPlaza.cpp` now builds that bench from `ADockNPC::ElfBench`/`ElfYaw` (one source of truth). The east bench at (960,-3350) is unchanged.
+- **Voice:** "Well, look at you! What a big and strong young lad you are! Do your parents know you're out this late, dear? They must be wondering where you've got to." The user's `Old_lady_lines.mp3`, 10.27 s (whole file), levelled +3.2 dB. It replaces her old text line.
+  - `face: true`: she was rebuilt with the five face bones (same 88,990 tris) and re-imported. `SetupVoice("ElfElder")`.
+- **Tests:**
+  - Her seat check now measures in the bench's own frame. It also requires her to be on the bay side (north of the fountain) and more than 8 m from the alchemist, within 11 m of the fountain.
+  - New `CHUCK_ELF_VOICE_MEASURE` check (her line starts with the others) and gate `CHUCK_NPC_VOICE ElfElder lines=1 sounds=1`. Thresholds 157/158.
+- **Results:** the candidate passed **159** with every gate, including `CHUCK_PLAZA_CHECK` (14 floors, 11 capsule routes) (`Local/verify-package-20261006-110816.log`).
+  - Measured `seat_cm=57.9 foot_lift_cm=0.0 lap_hand_cm=0.0 to_fountain_cm=1005 max_jaw_deg=6.7`.
+  - Review: `SourceAssets/NPCs/Humans/Review/runtime_ElfElder_bay_{front,wide}.png` show the bay and boat behind her. The plaza overview `Local`/package `Plaza/View0.png` shows the old west bench gone.
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `ab8a26b`. Previous package: `Builds/Windows-Previous-20261006-ElfBay`.
+- **Left alone:** 14 modified `Content/Prototype/Materials/M_*.uasset` were already in the checkout (not from this work; `Build-Prototype.ps1` regenerates them). They are unstaged and untouched.
+- **Not done:** not listened to by me. "Big and strong young lad" is addressed to Chuck, as written.
+
+Next part of the work can be done here.
+
 ## October 6 — Bobert's face can be seen (Claude, user request: "Make his face easier to see")
 
 - **Source:** `9b555b6`. `DockNPC.cpp`: `SleepNeck` 38→26, `SleepNod` 50→31 (his face looks out of the mouth, not at his knees); a `Fill` point light on the barrel at (30,0,50), intensity 160, radius 85, no shadows, specular 0. `DockNPC.h`/`.cpp`: `GetHeadLocation`. `DockGameMode.cpp`: `-ChuckNPCCapture` frames Bobert from outside the mouth, aimed at his head (Wide unchanged).

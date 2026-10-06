@@ -2375,3 +2375,12 @@ Next part of the work can be done here.
 - **Not verified by ear:** the loudness inside versus outside, and whether the subtitle timing matches his delivery. The keeper has no face rig, so his jaw stays still.
 
 Next part of the work can be done here.
+
+## Old elf to the bay side, voiced (user 2026-10-06)
+
+- **Source:** `ab8a26b`: `DockNPC.h` (`ElfBench` (930,-2560), `ElfYaw` -131.4, derived `ElfHips`), `DockPlaza.cpp` (her bench built from those, rotated; old west bench removed), `DockNPC.cpp` (`SetupVoice("ElfElder")`), `DockGameMode.cpp` (bench-frame seat check, bay side and alchemist distance, voice check), elf FBX/assets with face bones, `VO_ElfElder_talk_00`, `dialogue.json`, `Verify-Package.ps1` 157/158 + gate.
+- **Verified:** `Local/verify-package-20261006-110816.log`, 159 passes; plaza routes intact.
+- **Launcher:** `Builds/Windows` = `ab8a26b`; backup `Builds/Windows-Previous-20261006-ElfBay`.
+- **Remaining:** not listened to; pre-existing unstaged `Prototype/Materials` changes left alone.
+
+Next part of the work can be done here.
