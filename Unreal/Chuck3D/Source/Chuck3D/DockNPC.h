@@ -267,6 +267,8 @@ public:
     float GetSleepFitError() const;
     /** Head bowed below level (deg) and breaths taken, for tests. */
     float GetHeadBow() const;
+    /** Where his head bone is (world), for the review camera. */
+    FVector GetHeadLocation() const;
     int32 GetBreaths() const { return BreathCount; }
     /** Worst distance (cm, any frame after he settles) of either hand from where it rests on his knees. */
     float GetRestingHandError() const { return WorstRestHand; }

@@ -675,6 +675,14 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const bool bHands=FCString::Strcmp(Shot.Name,TEXT("Hands"))==0;
         const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,bHands ? NPC->GetEyeHeight()*.75f : Shot.Height+Lift);
         NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bHands ? NPC->GetEyeHeight()*.6f : Shot.Aim+Lift)-At).Rotation());
+        if(NPC->IsBobert() && FCString::Strcmp(Shot.Name,TEXT("Wide"))!=0)
+        {
+            // He lies in his barrel (its mouth his forward): every shot but the wide one looks in at his face from
+            // outside the mouth, at a third of the distance and a little above him, as the rat or the camera would.
+            const FVector HeadAt=NPC->GetHeadLocation();
+            const FVector In=HeadAt+Dir*FMath::Max(60.f,Shot.Distance*.35f)+FVector(0,0,Shot.Distance<100.f ? 4.f : 22.f);
+            NPCCamera->SetActorLocationAndRotation(In,(HeadAt-In).Rotation());
+        }
         NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
         PC->SetViewTarget(NPCCamera.Get());
         SetReviewLamp(NPCCamera.Get(),NPC->IsHostile());   // the zombie stands in the dark

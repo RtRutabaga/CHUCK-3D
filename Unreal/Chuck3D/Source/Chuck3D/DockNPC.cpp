@@ -92,8 +92,14 @@ namespace
     // before it was written here): the small of his back leaning back into the
     // blanket, slumping forward above it, the neck forward and the head bowed
     // and fallen to one side; knees up and a little apart, shins down and
-    // forward to the floor; forearms folded over the knees.
-    constexpr float SleepLean = 14.f, SleepCurl = 22.f, SleepNeck = 38.f, SleepNod = 50.f, SleepTiltDeg = 14.f;
+    // forward to the floor; forearms folded over the knees. The head is bowed
+    // only so far that his face still looks out of the barrel's mouth (user
+    // 2026-10-06: "make his face easier to see"; it was 50, his face to his knees).
+    constexpr float SleepLean = 14.f, SleepCurl = 22.f, SleepNeck = 26.f, SleepNod = 31.f, SleepTiltDeg = 14.f;
+    // A soft fill inside the mouth, the daylight off the paving: in the barrel's
+    // shade his face was black. No shadows and no glint on his closed lids.
+    const FVector BarrelFill(30.f, 0.f, 50.f);
+    constexpr float BarrelFillIntensity = 160.f, BarrelFillRadius = 85.f;
     constexpr float SleepKnee = 45.f, SleepSpread = .22f;
     // Measured on the posed body, as fractions of his thigh bone: how far his
     // seat is below the hip joints (where his boots are put on the floor), how
@@ -2142,6 +2148,15 @@ ADockNPC* ADockNPC::SpawnBobert(UWorld* World, const FVector& BarrelAt, float Ya
             Solid->SetVisibility(false);
             Solid->RegisterComponent();
         }
+        auto* Fill = NewObject<UPointLightComponent>(Cask, TEXT("Fill"));
+        Fill->SetupAttachment(Root);
+        Fill->SetRelativeLocation(BarrelFill);
+        Fill->SetIntensity(BarrelFillIntensity);
+        Fill->SetAttenuationRadius(BarrelFillRadius);
+        Fill->SetLightColor(FLinearColor(1.f, .93f, .84f));
+        Fill->SetCastShadows(false);
+        Fill->SetSpecularScale(0.f);
+        Fill->RegisterComponent();
         Cask->Tags.Add(TEXT("BobertBarrel"));
         NPC->Barrel = Cask;
     }
@@ -2268,6 +2283,11 @@ float ADockNPC::GetSleepFitError() const
         Worst = FMath::Max(Worst, FMath::Max(-37.3f - X, X - BarrelLength * .5f));
     }
     return Worst;
+}
+
+FVector ADockNPC::GetHeadLocation() const
+{
+    return Body->GetBoneLocation(BoneNames[Head]);
 }
 
 float ADockNPC::GetHeadBow() const
