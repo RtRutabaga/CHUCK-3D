@@ -2326,3 +2326,39 @@ Next part of the work can be done here.
 - Untouched: the uncommitted October 4 MarketWoman/Zombie/clip/texture `.uasset` changes, and the untracked `eyebrow001.png`/`short02_diffuse.png`.
 
 Next part of the work can be done here.
+
+## October 6 — The tavern's night talk: Dougmund's rant, the keeper cuts in (Claude, user request with `Dougmond_night_dialogue.mp3`)
+
+- **Source:** `2c1fe81`.
+  - **Voice data:** `dialogue.json` gives each NPC optional `ambient` lines besides `talk`.
+    - `Worker/night_00` is the user's mp3, kept as `Voice/Worker/source/ElevenLabs_2026-10-06_Dougmund_night_00.mp3`. It is 25.0 s after levelling.
+    - `TavernKeeper/night_00` is **text only**, with no `source` yet. `build_npc_voice.py` writes it with no wav or asset, an empty envelope and 0.38 s a word (33.4 s).
+    - `VO_Worker_night_00` was imported with `CHUCK_VOICE_ONLY=Worker`.
+  - **`DockNPC`:**
+    - `SetupVoice` keeps only `talk_*` lines.
+    - `StartAmbient`/`StopAmbient` play an ambient line, optionally looped with a pause. A line with no sound still runs for its length, so its subtitles work.
+    - Ambient lines use a room attenuation: full within 250 cm, falloff 1300 cm, and occlusion (volume 0.3, low-pass 1200 Hz), so they are quiet through the walls and clear through the open door.
+    - `StartTavernNight`, called from the evening switch: the worker is named "Dougmund" for the night and his talk lines are cleared, so there is no F/Y. He rants on a loop with a 5.5 s pause and drinks in each pause; his tankard waits on the table while he speaks.
+    - `TickTavernNight`: after Chuck has spent 1.5 s inside `TavernRoom` (x -314..294, y 400..965, z -40..450), the keeper says his line once. Dougmund is cut off 0.35 s later and stays quiet.
+    - `GetAmbientSubtitle` shows overheard talk only while Chuck is in the room. It splits the line into sentence groups of 45 characters or more, timed by their share of the line's length.
+  - **HUD:** that subtitle uses the dialogue box without the F/Y hint. The box now wraps long lines.
+  - **Music duck:** ambient speech ducks the music only while Chuck is in the room.
+  - **`CheckDockReturn`:** at night, the worker must not be talkable, and he must be looping or already cut off. By day, the night stage must be 0.
+  - **`-ChuckTavernNightCapture`:** the capture now also tests the scene. It puts Chuck outside the door, then inside, and writes `Scene_*.png` with the HUD and logs `CHUCK_TAVERN_NIGHT_SCENE failures=N`.
+- **When the keeper's audio arrives:** add `"source"` (and `"voice"`) to `TavernKeeper/night_00` in `dialogue.json`, run `build_npc_voice.py`, then `CHUCK_VOICE_ONLY=TavernKeeper` with `import_npc_voice.py`. No code change is needed.
+- **Verified:**
+  - Package `Local/verify-package-20261006-101741.log`: 158 passes.
+  - `Verify-Menu.ps1`: 6/6.
+  - `-ChuckReturnTest`: failures=0 (`Local/tavern-talk-return-test.log`).
+  - Scene test `Local/tavern-talk-capture.log`: failures=0.
+    - Outside: the loop is speaking, he can't be talked to, no subtitle.
+    - Inside: the keeper interrupts 1.5 s after entry; the worker stops; the subtitle shows "Tavern keeper" moving through the sentence groups.
+- **Review:** `SourceAssets/NPCs/Humans/Review/runtime_tavern_night_Scene_*.png`.
+- **Launcher:** `Builds/Windows` is `2c1fe81` (`-CheckOnly` passes). Backup: `Builds/Windows-Previous-20261006-TavernTalk` (the `b7b1f68` build).
+- **Not verified:**
+  - No one has listened to the actual loudness outside versus inside; the occlusion values are untested by ear.
+  - The keeper has no audio yet and no face rig, so his jaw won't move even once his audio arrives.
+  - Subtitle timing is proportional to length, not word-timed.
+  - Not played by the user.
+
+Next part of the work can be done here.
