@@ -606,7 +606,7 @@ ADockNPC* ADockNPC::SpawnAlchemist(UWorld* World, const FVector& Feet, float Yaw
     if (!NPC) return nullptr;
     NPC->Tags.Add(TEXT("Alchemist"));
     NPC->DisplayName = TEXT("Alchemist");
-    NPC->Lines = { TEXT("Salves, tinctures, a tonic for the cough."), TEXT("Nothing for rats. Mind the bottles.") };
+    NPC->SetupVoice(TEXT("GnomeAlchemist"));   // user 2026-10-06: his recorded line (the shipment from Athkatla) replaces the text ones
     return NPC;
 }
 

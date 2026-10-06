@@ -80,6 +80,14 @@
    "rate": 44100,
    "peaks": 15,
    "gain_db": 1.87
+  },
+  "GnomeAlchemist/talk_00": {
+   "wav": "Voice/GnomeAlchemist/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/GnomeAlchemist/VO_GnomeAlchemist_talk_00",
+   "seconds": 11.964,
+   "rate": 44100,
+   "peaks": 28,
+   "gain_db": 4.31
   }
  }
 }

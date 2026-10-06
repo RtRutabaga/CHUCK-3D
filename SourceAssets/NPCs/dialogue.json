@@ -112,6 +112,17 @@
      "start": 0.0
     }
    ]
+  },
+  "GnomeAlchemist": {
+   "voice": "ElevenLabs line supplied by the user as 'Alchemist_audio.mp3' (user 2026-10-06)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Summon. Tell your master I’ll have another shipment of halfling leaf for him to move soon. I’m waiting on a caravan out of Athkatla… They should’ve been here by now.",
+     "source": "Voice/GnomeAlchemist/source/Alchemist_audio_talk_00.mp3",
+     "start": 0.0
+    }
+   ]
   }
  }
 }

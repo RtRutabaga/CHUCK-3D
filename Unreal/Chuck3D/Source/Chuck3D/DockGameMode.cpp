@@ -2038,6 +2038,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("MarketWoman"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Alchemist"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2219,6 +2221,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Gnome && Gnome->HasMocap() && GnomeAt.Y>-3760.f && ToShop<250.f && Gnome->GetEyeHeight()>70.f && Gnome->GetEyeHeight()<100.f
                 && Gnome->GetSleeveReachError()<2.f && Gnome->GetWristGap()<8.f && Gnome->GetHandsForward()>8.f && Gnome->CanTalk(),
                 TEXT("a gnome alchemist stands before the alchemist's shop, forearms across so his sleeves meet over his hands"));
+            // His recorded line (user 2026-10-06), started with the others.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ALCHEMIST_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                Gnome ? Gnome->GetVoiceSoundCount() : 0,Gnome ? Gnome->GetFaceBoneCount() : 0,Gnome && Gnome->IsSpeaking() ? 1 : 0,
+                Gnome ? Gnome->GetMaxJawOpen() : 0.f,Gnome ? Gnome->GetBlinks() : 0,Gnome && Gnome->Lines.Num() ? *Gnome->Lines[0] : TEXT(""));
+            Check(Gnome && Gnome->GetVoiceSoundCount()==1 && Gnome->GetFaceBoneCount()==5 && Gnome->IsSpeaking() && Gnome->GetMaxJawOpen()>3.f && Gnome->GetBlinks()>=1
+                && Gnome->Lines.Num()==1 && Gnome->Lines[0].StartsWith(TEXT("Summon.")),
+                TEXT("the gnome alchemist speaks his line aloud, his jaw moving with it, and blinks"));
             // The sewer's life: rats just past the first gap (the scratch lesson) and further on, moss tufts along it.
             // Counted where they were placed: by now they have wandered.
             const int32 FirstGroup=GetSewerFirstGroupPlaced();
