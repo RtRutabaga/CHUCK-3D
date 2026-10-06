@@ -6,7 +6,7 @@ Use free scanned surfaces to make the existing timber feel old, repaired and exp
 
 - Poly Haven **Weathered Brown Planks**, 2K: washed brown/grey siding, knots, scraped surface and board seams on the existing aging-timber buildings (`M_AgedDockTimber`). Vertical wall boards; grain follows the board length.
 - Poly Haven **Rough Wood**, 2K: rough, split grain on individual structural beams, door boards, braces, pier boards and barrel staves (`M_Wood`, `M_WoodLight`). Existing light/dark board choices retain a restrained difference.
-- Crates use a UV-only derivative of the existing mesh with separate long-axis mapping for each connected crate board/rail (`M_WeatheredCrate`, `M_WeatheredCrateLight`). Existing board gaps, bevels and nail heads remain geometry. No change to hidden blockers or vault dimensions.
+- Crates use a board-mapped derivative of the existing mesh with separate long-axis mapping for each connected crate board/rail (`M_WeatheredCrate`, `M_WeatheredCrateLight`). Existing board gaps, bevels and nail heads remain geometry. The October 6 correction recesses the panels and rail joints to eliminate exposed coplanar faces while retaining the outer bounds. No change to hidden blockers or vault dimensions.
 - Matte roughness, shallow normal detail, subtle colour variation and modest darkening within the lowest metre of outdoor timber. No shiny varnish, bright painted wood or wholesale green moss coverage.
 
 The projected materials use local mesh positions and **vertex-interpolated instance transforms**. This aligns grain to a beam even when it is rotated or scaled in an instanced batch; it avoids a world-axis grain direction cutting across diagonal braces. Texture scale is in centimetres rather than stretching one image to cover a building. Siding uses 130 cm per scan tile; rough grain uses 90 cm. Normals are projected into world space; the UV-authored crates use tangent-space normals. The wood remains nonmetallic.
@@ -29,3 +29,9 @@ Launch the root `Launch-Prototype.cmd`, choose **New Game** / **Waterdeep**, and
 For a developer capture, run the verified game with `-ChuckTimberCapture -windowed -ResX=1280 -ResY=720`. Four fixed views are written under `Chuck3D/Saved/Screenshots/Windows/Timber` and the process exits. The existing `-ChuckWorkshopCapture` is also useful for the storehouse and timber storefront.
 
 Remaining limits: building bodies are still simple blockout shapes; their scanned cracks are surface detail, not carved openings. Most individual beams still have square geometric edges. This pass does not claim final asset quality or add destructible wood.
+
+## October 6 — crate shimmer correction
+
+The original crate has rails, panels and corner battens with coincident outward planes. World-aligned colour previously concealed their depth-buffer conflict; the new independent board UVs made it visible as flickering grain. The derivative now separates those surfaces. Its geometry check finds **84 exposed coplanar face intersections before, zero after**, with unchanged outer bounds. Texture resolution, normals, roughness, buildings and collision are retained.
+
+`Tools/import_weathered_crate.py` reimports only the derivative mesh. `-ChuckCrateMotionCapture` captures 20 stationary views, then 30 near and 30 farther orbit views around the starting crate, under `Saved/Screenshots/Windows/CrateMotion`. Some requests can be dropped if frame timing is slow; compare matching frame names. Actual before/after evidence and final package checks are in the latest handoff.

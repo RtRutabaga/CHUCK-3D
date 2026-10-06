@@ -2,8 +2,19 @@
   "source": "SourceAssets/Docks/SM_DockCrate.fbx",
   "source_sha256": "5ae8de784c56d4fc4e1d16666bba6442c5f6707b7b4ad8acd07e0dfc2c45ecdb",
   "derived": "SM_WeatheredDockCrate.fbx",
-  "derived_sha256": "ae2ef3ae143a1768da93233eeeede83465f9e62d57b96a1e2faa084cfc710ff0",
+  "derived_sha256": "325db97c7a19001afd2721387a1da2be9ea7c79eecccbce28edfa779a5f51093",
   "blender": "4.5.14 LTS",
   "connected_pieces": 50,
-  "changes": "UV projection only, per connected board PCA; geometry and original FBX preserved"
+  "recessed_pieces": {
+    "front_panel": 10,
+    "side_panel": 10,
+    "front_rail": 4,
+    "side_rail": 4,
+    "lid": 10
+  },
+  "visible_coplanar_overlaps_before": 84,
+  "visible_coplanar_overlaps_after": 0,
+  "panel_inset_cm": 0.6,
+  "rail_inset_cm": 0.25,
+  "changes": "Per-board PCA UVs; recess 38 panels/rails/lids to separate coplanar faces; outer bounds, topology, original FBX preserved"
 }

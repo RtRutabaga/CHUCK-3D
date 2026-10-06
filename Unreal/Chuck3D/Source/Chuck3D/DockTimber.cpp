@@ -29,6 +29,26 @@ void FinishDockTimber(UWorld* World)
         }
     }
     UE_LOG(LogTemp,Display,TEXT("CHUCK_WEATHERED_TIMBER crate_art=%d derived_uv=%d"),Crates,Weathered!=nullptr);
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCrateMotionCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();
+        Camera->GetCameraComponent()->SetFieldOfView(50);
+        const FVector Target(-80,60,30);
+        for(int32 I=0;I<80;++I)
+        {
+            const float Angle=FMath::DegreesToRadians(-70.f+((I-20)%30)*2.f);
+            const float Radius=I<50?220.f:420.f,Height=I<50?75.f:160.f;
+            const FVector P=I<20?Target+FVector(150,-160,75):Target+FVector(FMath::Cos(Angle)*Radius,FMath::Sin(Angle)*Radius,Height);
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P,Target]()
+            {Camera->SetActorLocationAndRotation(P,(Target-P).Rotation());if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);},5.f+I*.12f,false);
+            World->GetTimerManager().SetTimer(Shot,[I]()
+            {const FString Folder=FPaths::ScreenShotDir()/TEXT("CrateMotion");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("Frame%03d.png"),I),false,false);},5.06f+I*.12f,false);
+        }
+        FTimerHandle Exit;
+        World->GetTimerManager().SetTimer(Exit,[](){FPlatformMisc::RequestExit(false);},16.f,false);
+        return;
+    }
     if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckTimberCapture"))) return;
     auto* Camera=World->SpawnActor<ACameraActor>();
     Camera->GetCameraComponent()->SetFieldOfView(60);
