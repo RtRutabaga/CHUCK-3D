@@ -1100,6 +1100,49 @@ def make_braid(info, spec, top, L, r0, back_at, step):
     return braid, tail
 
 
+def make_ponytail(info, spec, slots):
+    """A braided tail under a headscarf (the market woman, user 2026-10-06: "a blond pony tail like
+    the old lady's, but keep her cap over head"): make_braid's braid alone, no scalp cap (her
+    kerchief covers the head), its gathered top just under the kerchief's back edge, then down her
+    back `braid` long, tied off above a loose tuft. Slots Hair and HairStrands, as make_hair."""
+    import random
+    rnd = random.Random(13)
+    _, _, head_y = face_marks(info)
+    step = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(min(1., max(0., (x - a) / (b - a))))
+    torso = [c for i, c in enumerate(info.co) if info.bone[i] in Body.TORSO | {Body.NECK, Body.HEAD} and abs(c.x) < .045]
+    def back_at(z):
+        near = [c.y for c in torso if abs(c.z - z) < .015]
+        return max(near) if near else head_y + .08
+    top = info.brow_z - .1 + spec.get('under_scarf', .005)   # the kerchief's back edge (edge_margin 'kerchief'), a little under it
+    L, r0 = spec.get('braid', .4), spec.get('braid_radius', .02)
+    braid, tail = make_braid(info, spec, top, L, r0, back_at, step)
+    bm, uv_cards = bmesh.new(), []
+    for k in range(spec.get('tuft_cards', 26)):
+        ang = rnd.uniform(0, 2 * math.pi)
+        out = Vector((math.cos(ang), math.sin(ang) * .6, 0)) * rnd.uniform(.003, .012)
+        length, width, u0 = rnd.uniform(.05, .09), rnd.uniform(.008, .014), rnd.uniform(0, .85)
+        side = Vector((-math.sin(ang), math.cos(ang), 0))
+        col = []
+        for t in (0, .33, .66, 1.):
+            q = tail + out * (1 + 1.8 * t) - Vector((0, 0, length * t))
+            col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+    uvl = bm.loops.layers.uv.new('UVMap')
+    for f, uvs in uv_cards:
+        for loop, uvv in zip(f.loops, uvs): loop[uvl].uv = uvv
+    strands = new_object('hair_strands', bm)
+    for obj, slot in ((braid, 'Hair'), (strands, 'HairStrands')):
+        obj.data.materials.clear(); obj.data.materials.append(slot_material(slot))
+        for p in obj.data.polygons: p.material_index = 0
+        skin_from_body(obj, info)
+    slots['Hair'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
+    slots['HairStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
+    print('CHUCK_PONYTAIL', f'braid_cm={L * 100:.0f}', f'top_cm={top * 100:.1f}', f'cards={len(uv_cards) // 3}')
+    return [braid, strands]
+
+
 def make_hair(info, spec, slots):
     """Long hair combed straight back and braided (the old elf: MakeHuman's
     braid01 hides the ears under its cap and sweeps a fringe over one eye).
@@ -1441,6 +1484,8 @@ def build(name, spec):
         meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
     if spec.get('braided_hair'):
         meshes += make_hair(info, spec['braided_hair'], slots)
+    if spec.get('ponytail'):
+        meshes += make_ponytail(info, spec['ponytail'], slots)
     if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
     if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
     # Skin fully under cloth goes (a face survives if any corner shows).

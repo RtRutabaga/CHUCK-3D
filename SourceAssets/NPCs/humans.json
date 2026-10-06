@@ -186,6 +186,21 @@
    "eyebrows": "eyebrow008",
    "eyelashes": "eyelashes03",
    "hair": null,
+   "ponytail": {
+    "braid": 0.4,
+    "braid_radius": 0.02,
+    "clear": 0.028,
+    "tint": [
+     1.0,
+     0.78,
+     0.42
+    ],
+    "strand_tint": [
+     1.1,
+     0.9,
+     0.52
+    ]
+   },
    "outfit": [
     {
      "piece": "shirt",

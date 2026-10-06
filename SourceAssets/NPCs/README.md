@@ -115,6 +115,11 @@ docs/SETUP.md), one heavy process at a time:
   `ADockNPC::SpawnElfElder` sits her at the fountain end of the plaza bench at
   x -440 (hips 9 cm over its top, legs and lap hands by IK). 89k triangles.
 
+- The market woman's braid (`ponytail` in `humans.json`, user 2026-10-06: "a blond pony tail
+  like the old lady's, but keep her cap over head"): `make_ponytail` builds the elf's
+  three-strand braid alone (no scalp cap), 40 cm, its gathered top just under the back edge
+  of her kerchief, tinted blond; the kerchief is unchanged.
+
 - The alchemist (`GnomeAlchemist`, user 2026-10-05: "a gnome in black robes,
   hands together behind robe sleeves so that they aren't visible, DnD 5e gnome
   height and facial features"): 100 cm (5e gnomes are 3-4 ft). Targets give him

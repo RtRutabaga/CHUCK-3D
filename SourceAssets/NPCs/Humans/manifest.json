@@ -186,7 +186,7 @@
   "MarketWoman": {
    "fbx": "MarketWoman/SK_MarketWoman.fbx",
    "height_cm": 166,
-   "tris": 48200,
+   "tris": 77292,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -254,6 +254,24 @@
      "tile_cm": 27.1,
      "gain": 2.523
     },
+    "Hair": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      1.0,
+      0.78,
+      0.42
+     ]
+    },
+    "HairStrands": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      1.1,
+      0.9,
+      0.52
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/middleage_lightskinned_female_diffuse.png"
@@ -270,7 +288,12 @@
      "type": "card",
      "texture": "Textures/eyelashes03.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.8,
+    0.0,
+    148.8
+   ]
   },
   "GuardWoman": {
    "fbx": "GuardWoman/SK_GuardWoman.fbx",
