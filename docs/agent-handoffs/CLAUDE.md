@@ -2384,3 +2384,12 @@ Next part of the work can be done here.
 - **Remaining:** not listened to; pre-existing unstaged `Prototype/Materials` changes left alone.
 
 Next part of the work can be done here.
+
+## Market woman's blond braid (user 2026-10-06)
+
+- **Source:** `2caa2c6`: `build_npc_humans.make_ponytail`, `humans.json` MarketWoman `ponytail`, her FBX/assets, NPC README.
+- **Verified:** `Local/verify-package-20261006-115124.log`, 159 passes.
+- **Launcher:** `Builds/Windows` = `2caa2c6`; backup `Builds/Windows-Previous-20261006-MarketTail`.
+- **Remaining:** braid doesn't swing; not playtested.
+
+Next part of the work can be done here.

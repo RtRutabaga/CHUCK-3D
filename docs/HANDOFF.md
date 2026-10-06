@@ -15,6 +15,19 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: "Give the market lady a blond pony tail like the old lady's, but keep her cap over head"):** runtime `2caa2c6`, on `57e3b5d`.
+
+- **Hair:**
+  - New `make_ponytail` in `build_npc_humans.py` builds the elf's three-strand braid (`make_braid`) on its own, without the elf's scalp cap.
+  - Its gathered top is tucked just under the back edge of her kerchief, and it runs 40 cm down her back, tied above a loose tuft, tinted blond (beard textures).
+  - `humans.json` MarketWoman gains `ponytail`. Her kerchief, outfit and face are unchanged.
+  - She is rebuilt at 77.3k tris (was 48.2k; the braid accounts for the difference) and re-imported with `-Only MarketWoman`. No runtime code change.
+- **Results:** the candidate passed **159** with every gate (`Local/verify-package-20261006-115124.log`). Her arms-down pose and the shake check hold (9/9 steady). Review: `SourceAssets/NPCs/Humans/Review/runtime_MarketWoman_ponytail.png` (back view: the blond braid from under the scarf).
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `2caa2c6`. Previous package: `Builds/Windows-Previous-20261006-MarketTail`.
+- **Not done:** the braid is sculpted, not groom; it doesn't swing (skinned to her back). Not playtested.
+
+Next part of the work can be done here.
+
 **Update (Claude, October 6, user request: move the elderly elf and her bench to the bay side of the fountain, not close to the alchemist, and give her this recorded line):** runtime `ab8a26b`, on `5a3cb51`.
 
 - **Where:** the harbour touches the plaza only at its north-east corner, beside the waterside kerb at x 894. West of the plaza are walls and town; to the south are the gate and the shops. Her bench moves from west of the fountain (-440,-3350) to its north-east, bay side, at (930,-2560).
