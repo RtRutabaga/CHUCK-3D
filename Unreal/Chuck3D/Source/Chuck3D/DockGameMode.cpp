@@ -770,15 +770,17 @@ void ADockGameMode::TickSmithCapture(float DeltaSeconds)
 {
     // Frames of the smith's work for motion review: Saved/Screenshots/Windows/Smith/frame###.png.
     const bool bSlow=FilmTag==TEXT("TavernKeeper") || FilmTag==TEXT("Sailor");   // the keeper's round and the sailor's pipe are slower and longer
-    const float Settle=4.f, Step=bSlow ? .25f : .06f, Length=FilmTag==TEXT("Sailor") ? 12.f : bSlow ? 30.f : 4.8f;
+    const float Settle=4.f, Step=bSlow ? .25f : .06f, Length=FilmTag==TEXT("Sailor") ? 14.f : bSlow ? 30.f : 4.8f;
     SmithCaptureTime+=DeltaSeconds;
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
     if(APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0)) Chuck->SetActorHiddenInGame(true);
     TArray<AActor*> Found;
     UGameplayStatics::GetAllActorsWithTag(this,FilmTag,Found);
-    const auto* Smith=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
+    auto* Smith=Found.Num() ? Cast<ADockNPC>(Found[0]) : nullptr;
     if(!PC || !Smith) return;
-    const bool bKeeper=Smith->IsKeeper() || Smith->IsSailor();   // behind his counter: a closer, higher view over it; the sailor's pipe, close
+    const bool bKeeper=Smith->IsKeeper() || Smith->IsSailor();
+    // The sailor speaks his line 3 s into the film: the pipe comes out to his chest while he talks.
+    if(Smith->IsSailor() && SmithCaptureTime-DeltaSeconds<Settle+3.f && SmithCaptureTime>=Settle+3.f) Smith->StartVoiceLine(0);   // behind his counter: a closer, higher view over it; the sailor's pipe, close
     if(!NPCCamera.IsValid())
     {
         NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
@@ -1998,6 +2000,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockGuardC"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Sailor"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2112,6 +2116,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Sailor && SailorAt.X>1500.f && SailorAt.X<2330.f && FMath::Abs(SailorAt.Y-3080.f)<150.f && FMath::Abs(SailorAt.Y-3080.f)>15.f+24.f
                 && Sailor->GetPipeMouthError()<1.f && Sailor->GetPipeDraws()>=2 && Sailor->GetPipeHoldError()<4.f && Sailor->GetPipePuffs()>0 && Sailor->CanTalk(),
                 TEXT("an old sailor stands on the court pier, off its walking line, his pipe in his mouth, drawing on it and breathing out smoke"));
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SAILOR_VOICE_MEASURE sounds=%d face_bones=%d max_jaw_deg=%.1f blinks=%d pipe_out=%.2f line=%s"),
+                Sailor ? Sailor->GetVoiceSoundCount() : 0,Sailor ? Sailor->GetFaceBoneCount() : 0,Sailor ? Sailor->GetMaxJawOpen() : 0.f,
+                Sailor ? Sailor->GetBlinks() : 0,Sailor ? Sailor->GetPipeOut() : 0.f,Sailor && Sailor->Lines.Num() ? *Sailor->Lines[0] : TEXT(""));
+            Check(Sailor && Sailor->GetVoiceSoundCount()==1 && Sailor->GetFaceBoneCount()==5 && Sailor->GetMaxJawOpen()>3.f && Sailor->GetBlinks()>=1
+                && Sailor->Lines.Num()==1 && Sailor->Lines[0].StartsWith(TEXT("Another ship came back with no crew")),
+                TEXT("the old sailor speaks his line aloud, his pipe out of his mouth, his jaw moving with it, and blinks"));
             // The old elf on the bench by the fountain: hips on the bench, feet on the paving, hands in her lap.
             TArray<AActor*> ElfFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),ElfFound);

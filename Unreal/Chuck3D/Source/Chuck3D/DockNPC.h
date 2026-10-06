@@ -198,6 +198,8 @@ public:
     int32 GetPipePuffs() const { return PipePuffsSpawned; }
     /** Distance (cm) of the pipe's bit from his mouth, as posed this frame. */
     float GetPipeMouthError() const;
+    /** How far his pipe is out of his mouth (0..1): it comes out while he speaks. */
+    float GetPipeOut() const { return PipeOut; }
     /** Worst distance (cm, any frame after he settles) of his left fist from the tankard's handle, and of the rag fist from where the polishing wants it. */
     float GetTankardGripError() const { return WorstTankardGrip; }
     float GetRagReachError() const { return WorstRagReach; }
@@ -378,6 +380,7 @@ private:
     UPROPERTY() TObjectPtr<UMaterialInterface> PuffMaterial;
     FTransform HeadRef = FTransform::Identity;                    // the head bone in the model's own pose (the mouth was measured on it)
     float PipeClock = 0, PipeHold = 0, WorstPipeHold = 0, PipeExhaleCarry = 0;
+    float PipeOut = 0;   // 0 the pipe in his mouth .. 1 taken out and held at his chest while he speaks
     int32 PipeDraws = 0, PipePuffsSpawned = 0;
     bool bPipeHeld = false;
     struct FPuff { FVector At, Velocity; float Age, Life, Size; };

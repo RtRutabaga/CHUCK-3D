@@ -1,12 +1,16 @@
 """Import the NPC voice lines (Tools/build_npc_voice.py) as SoundWaves under /Game/Art/Audio/Voice (always cooked).
 
 UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_npc_voice.py -unattended -nullrhi -nosplash -NoLiveCoding
+Set CHUCK_VOICE_ONLY to a comma list of NPC names to import just their lines (the others' assets untouched).
 """
 import json
+import os
 from pathlib import Path
 import unreal
 root = Path(__file__).resolve().parents[1] / 'SourceAssets/NPCs'
 lines = json.loads((root / 'Voice/manifest.json').read_text(encoding='utf-8'))['lines']
+only = {x.strip() for x in os.environ.get('CHUCK_VOICE_ONLY', '').split(',') if x.strip()}
+if only: lines = {k: v for k, v in lines.items() if k.split('/')[0] in only}
 tasks = []
 for key, line in lines.items():
     folder, name = line['asset'].rsplit('/', 1)

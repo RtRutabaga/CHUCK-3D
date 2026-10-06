@@ -568,6 +568,7 @@ ADockNPC* ADockNPC::SpawnSailor(UWorld* World, const FVector& Feet, float Yaw)
     NPC->Tags.Add(TEXT("Sailor"));
     NPC->DisplayName = TEXT("Old sailor");
     NPC->Lines = { TEXT("Weather's turning."), TEXT("Seen bigger rats than you in a ship's bilge.") };
+    // user 2026-10-06: his ElevenLabs line (Matthew Schmitz, "Old Pirate Captain") replaces these.
     NPC->SetGrip(1, .8f);   // the hand that holds the bowl
     NPC->Pipe = NewObject<UStaticMeshComponent>(NPC, TEXT("Pipe"));
     NPC->Pipe->SetStaticMesh(NPC->SailorMeshes[0]);
@@ -602,6 +603,7 @@ ADockNPC* ADockNPC::SpawnSailor(UWorld* World, const FVector& Feet, float Yaw)
     NPC->PipeBreath->SetCastShadow(false);
     NPC->PipeBreath->RegisterComponent();
     NPC->PipeClock = FMath::FRandRange(3.f, 8.f);
+    NPC->SetupVoice(TEXT("Sailor"));
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SAILOR_SPAWNED pipe=%d smoke=%d puff=%d at=%s"), NPC->SailorMeshes[0] ? 1 : 0, NPC->SailorMeshes[1] ? 1 : 0,
         NPC->PuffMaterial ? 1 : 0, *Feet.ToString());
     return NPC;
@@ -1912,15 +1914,31 @@ void ADockNPC::PoseSailor(TArray<FTransform>& Space)
     const FTransform PipeRest(FRotationMatrix::MakeFromXZ(FVector(1.f, .2f * Right, -.12f), FVector::UpVector).ToQuat(),
         SailorMouth + FVector(-.5f, MouthCorner * Right, 0.f));
     const FTransform PipeNow = PipeRest.GetRelativeTransform(HeadRef) * Space[BoneIndex[Head]];
-    if (Pipe) Pipe->SetRelativeTransform(PipeNow);
-    // The draw: his right hand up to cup the bowl, held, then down again (blended from the idle's own hand).
-    if (PipeHold <= 0.f) return;
+    // His hand: up to cup the bowl (a draw, or to take the pipe out to speak), then out
+    // to his chest with it while he talks; blended from the idle's own hand.
+    const float HandUp = FMath::Max(PipeHold, FMath::Min(1.f, PipeOut * 2.f));
+    const float Out = FMath::Clamp(PipeOut * 2.f - 1.f, 0.f, 1.f);
+    if (HandUp <= 0.f) { if (Pipe) Pipe->SetRelativeTransform(PipeNow); return; }
     FVector F, A, T;
     HandFrame(Space, 1, F, A, T);
     const FVector Cup = PipeNow.TransformPosition(PipeCup);
-    const FVector Along = FMath::Lerp(A, PipeNow.GetUnitAxis(EAxis::X), PipeHold).GetSafeNormal();
-    const FVector Thumb = FMath::Lerp(T, PipeNow.GetUnitAxis(EAxis::Z), PipeHold).GetSafeNormal();
-    PlaceHand(Space, 1, FMath::Lerp(F, Cup, PipeHold), Along, Thumb, FVector(-.3f, Right, -.6f));
+    const FVector ChestAlong = FVector(1.f, -.25f * Right, .35f).GetSafeNormal();
+    const FVector ChestThumb = FVector::VectorPlaneProject(FVector(-.2f, 0.f, 1.f), ChestAlong).GetSafeNormal();
+    const FVector Want = FMath::Lerp(Cup, FVector(28.f, 8.f * Right, 130.f), Out);
+    const FVector WantAlong = FMath::Lerp(PipeNow.GetUnitAxis(EAxis::X), ChestAlong, Out).GetSafeNormal();
+    const FVector WantThumb = FMath::Lerp(PipeNow.GetUnitAxis(EAxis::Z), ChestThumb, Out).GetSafeNormal();
+    PlaceHand(Space, 1, FMath::Lerp(F, Want, HandUp), FMath::Lerp(A, WantAlong, HandUp).GetSafeNormal(), FMath::Lerp(T, WantThumb, HandUp).GetSafeNormal(), FVector(-.3f, Right, -.6f));
+    // The pipe: in his teeth, or (once out) in his fist, the bowl cupped.
+    HandFrame(Space, 1, F, A, T);
+    if (Pipe)
+    {
+        if (Out <= 0.f) Pipe->SetRelativeTransform(PipeNow);
+        else
+        {
+            const FQuat Held = FRotationMatrix::MakeFromXZ(A, T).ToQuat();
+            Pipe->SetRelativeTransform(FTransform(Held, F - Held.RotateVector(PipeCup)));
+        }
+    }
     if (PipeHold > .95f)
     {
         HandFrame(Space, 1, F, A, T);
@@ -1933,6 +1951,7 @@ void ADockNPC::PoseSailor(TArray<FTransform>& Space)
 float ADockNPC::GetPipeMouthError() const
 {
     if (!Pipe || !Body->GetSkinnedAsset()) return 1e3f;
+    if (PipeOut > 0.f) return 0.f;   // out in his hand while he speaks
     const FTransform& Comp = Body->GetComponentTransform();
     const FVector Corner = Comp.TransformPosition(SailorMouth + FVector(-.5f, MouthCorner * -ArmOut, 0.f));
     // The mouth as the head now carries it, against where the pipe's bit actually is.
@@ -1943,11 +1962,15 @@ float ADockNPC::GetPipeMouthError() const
 
 void ADockNPC::TickSailor(float DeltaSeconds)
 {
-    PipeClock += DeltaSeconds;
+    // Talking, he takes the pipe out and holds it at his chest; his smoking waits until it's back in.
+    const bool bSpeak = bTalking || IsSpeaking();
+    PipeOut = FMath::FInterpConstantTo(PipeOut, bSpeak ? 1.f : 0.f, DeltaSeconds, 1.6f);
+    const bool bSmoking = !bSpeak && PipeOut <= 0.f;
+    if (bSmoking) PipeClock += DeltaSeconds;
     const float C = FMath::Fmod(PipeClock, PipePeriod);
-    PipeHold = C < PipeRaise ? FMath::SmoothStep(0.f, PipeRaise, C) : C < PipeLower ? 1.f : C < PipeDown ? 1.f - FMath::SmoothStep(PipeLower, PipeDown, C) : 0.f;
+    PipeHold = !bSmoking ? 0.f : C < PipeRaise ? FMath::SmoothStep(0.f, PipeRaise, C) : C < PipeLower ? 1.f : C < PipeDown ? 1.f - FMath::SmoothStep(PipeLower, PipeDown, C) : 0.f;
     // Breathing out after the draw: a stream of puffs from the corner of his mouth, forward and a little down.
-    if (Pipe && C >= PipeExhaleAt && C < PipeExhaleAt + PipeExhaleLength)
+    if (Pipe && bSmoking && C >= PipeExhaleAt && C < PipeExhaleAt + PipeExhaleLength)
     {
         const float Left = 1.f - (C - PipeExhaleAt) / PipeExhaleLength;
         PipeExhaleCarry += DeltaSeconds * 14.f;

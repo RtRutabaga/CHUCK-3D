@@ -47,6 +47,17 @@
      "start": 0.0
     }
    ]
+  },
+  "Sailor": {
+   "voice": "ElevenLabs library voice 'Matthew Schmitz - Old Pirate Captain', model eleven_v4 (user 2026-10-06)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Another ship came back with no crew, third time this month… harbormaster thinks it’s fine… but I don’t know what to make of it",
+     "source": "Voice/Sailor/source/ElevenLabs_2026-10-06_MatthewSchmitz_talk_00.mp3",
+     "start": 0.0
+    }
+   ]
   }
  }
 }
