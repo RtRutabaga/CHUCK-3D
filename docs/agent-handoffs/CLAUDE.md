@@ -2289,7 +2289,7 @@ Next part of the work can be done here.
   - Final package `Local/verify-package-20261005-221237.log`: 158 passes.
   - The first package's run failed only "paws hold after a running landing", a Chuck traversal check unrelated to NPC meshes. Its rerun `-220449` passed 158.
 - **Review:** `-ChuckNPCCapture -ChuckNPCTag=<Sailor|TavernKeeper|Dwarf|Alchemist>`; logs are `Local/beard-npccapture-*.log`. Images: `SourceAssets/NPCs/Humans/Review/runtime_*_beard_*.png`, and Blender textured sheets `blender_*_beard.png` (taken before the root fade and the sailor's tint fix).
-- **Launcher:** `Builds/Windows` is this build; the backup is `Builds/Windows-Previous-20261006-Beards` (the `9b555b6` Bobert-face build).
+- **Launcher:** `Builds/Windows` is this build (receipt `9fe5375`, `Launch-Prototype.ps1 -CheckOnly` passes); the backup is `Builds/Windows-Previous-20261006-Beards` (the `9b555b6` Bobert-face build).
 - **Remaining:**
   - The sailor's sideburn still shows a rough flat edge by the ear in close-up.
   - The keeper's face capture looks down at his tankard, so his beard was judged from the three-quarter shot only.
