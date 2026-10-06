@@ -81,6 +81,21 @@ namespace
     constexpr float LapAlong = .55f;        // her hands rest this far from hip to knee
     constexpr float LapLift = 10.5f;        // and this far over the thigh bone (the thigh, the skirt, the palm under the fist's middle)
     const FVector Fountain(260.f, -3320.f, 0.f);   // DockPlaza.cpp's fountain, where her eyes go
+    // The dock worker at his tavern table at night (component space as hers).
+    // His mouth on the model (SourceAssets/NPCs/Humans/manifest.json DockWorker mouth_cm).
+    const FVector WorkerMouth(15.7f, 0.f, 161.7f);
+    constexpr float WorkerSitBone = 10.5f;     // a man in trousers: a little more under him than the elf
+    const FVector TavernBar(-55.f, 905.f, 150.f);  // the keeper behind his counter (SpawnTownsfolk), where his eyes go
+    // The tankard (Tools/build_keeper_props.py, its manifest entry): the handle's
+    // middle 7.5 cm over its base; the rim 4.4 cm round, 5.5 cm over the grip.
+    constexpr float TankardGripHeight = 7.5f, TankardRim = 4.4f, TankardRimHeight = 5.5f;
+    // Resting on the table in front of him, a little to his right, his fist on the handle.
+    constexpr float DrinkRestAhead = 34.f, DrinkRestOut = 14.f;
+    // Every DrinkPeriod s: up to his lips (to DrinkRaise), tipped further as he
+    // drinks (to DrinkLower), and down to the table (by DrinkDown). The tankard
+    // tips from DrinkTipStart to DrinkTipEnd degrees off upright, his head back by DrinkHeadBack.
+    constexpr float DrinkPeriod = 15.f, DrinkRaise = 1.3f, DrinkLower = 3.4f, DrinkDown = 4.7f;
+    constexpr float DrinkTipStart = 62.f, DrinkTipEnd = 100.f, DrinkHeadBack = 16.f;
     // Bobert's barrel (Tools/build_bobert_barrel.py; its manifest entry has the
     // same numbers): lying along its X, mouth to +X, origin on the ground under
     // its middle (cm). The inside floor rises toward the ends with the bilge.
@@ -726,20 +741,10 @@ void ADockNPC::BeginPlay()
         const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
         for (int32 I = 0; I < BoneCount; ++I) BoneIndex[I] = Ref.FindBoneIndex(BoneNames[I]);
         if (!BoneIndex.Contains(INDEX_NONE)) SolveRest();
-        if (IsSeated() && !BoneIndex.Contains(INDEX_NONE))
+        if (Kind == EDockHuman::ElfElder && !BoneIndex.Contains(INDEX_NONE))
         {
-            // Sitting: her hips come down onto the bench; her eyes with them.
-            // Her feet keep their standing rest (flat on the floor).
-            TArray<FTransform> Standing;
-            Solve(Rest, Standing);
-            const float HipZ = static_cast<float>(Standing[BoneIndex[ThighL]].GetLocation().Z + Standing[BoneIndex[ThighR]].GetLocation().Z) * .5f;
-            SeatDrop = ElfBench.Z + SitBone - HipZ;
-            EyeHeight += SeatDrop;
-            for (int32 Side = 0; Side < 2; ++Side) FootRest[Side] = Standing[BoneIndex[Of(FootL, Side)]].GetRotation();
-            AnkleRest = static_cast<float>(Standing[BoneIndex[FootL]].GetLocation().Z);
-            // Her glances: about the fountain, from where she sits.
-            const FVector ToFountain = GetActorTransform().InverseTransformVectorNoScale(Fountain - GetActorLocation());
-            GlanceCentre = FVector2D(FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(ToFountain.Y, ToFountain.X)), -35.f, 35.f), 4.f);
+            bSeated = true; SeatTop = ElfBench.Z; SeatBone = SitBone;
+            SetupSeat(Fountain);   // her glances go about the fountain
         }
         // Each finger joint's bending axis, from the model's pose (palms down,
         // fingers out): across the finger, bending it toward the palm.
@@ -1186,6 +1191,15 @@ void ADockNPC::Tick(float DeltaSeconds)
         PolishClock += DeltaSeconds;
         if (!bWatching) Target = FVector2D(-4.f, 30.f - 26.f * Inspect);   // on the tankard; up to it when he holds it to the light
     }
+    if (bDrinker)
+    {
+        const float Before = FMath::Fmod(DrinkClock, DrinkPeriod);
+        DrinkClock += DeltaSeconds;
+        const float U = FMath::Fmod(DrinkClock, DrinkPeriod);
+        if (Before < DrinkRaise && U >= DrinkRaise) ++Drinks;
+        // Drinking, he looks along the tankard, his head going back as it tips.
+        if (DrinkLift > 0.f) Target = FMath::Lerp(Target, FVector2D(0.f, -DrinkHeadBack * FMath::SmoothStep(DrinkRaise, DrinkLower, U)), DrinkLift);
+    }
     if (Kind == EDockHuman::Dwarf) Target = FVector2D(FMath::Clamp(Target.X, -DwarfLookYaw, DwarfLookYaw), FMath::Min(Target.Y, 0.f));
     const float Rate = bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
@@ -1411,6 +1425,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsKeeper()) PoseKeeper(Space);
         if (IsSailor()) PoseSailor(Space);
         if (IsSeated()) PoseSeated(Space);
+        if (bDrinker) PoseDrink(Space);
         if (IsAlchemist()) PoseSleeves(Space);
         PoseFace(Space);
         ProbeShake(Space, DeltaSeconds);
@@ -1444,6 +1459,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
     if (IsKeeper()) PoseKeeper(Space);
     if (IsSailor()) PoseSailor(Space);
     if (IsSeated()) PoseSeated(Space);
+    if (bDrinker) PoseDrink(Space);
     if (IsAlchemist()) PoseSleeves(Space);
     const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
     for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
@@ -1895,6 +1911,81 @@ void ADockNPC::TwoBone(TArray<FTransform>& Space, int32 Upper, int32 Lower, int3
     Rotate(Lower, FQuat::FindBetweenNormals((Space[End].GetLocation() - Space[Lower].GetLocation()).GetSafeNormal(), (S + Dir * D - Space[Lower].GetLocation()).GetSafeNormal()));
 }
 
+void ADockNPC::SetupSeat(const FVector& LookAt)
+{
+    // Sitting: the hips come down onto the bench; the eyes with them.
+    // The feet keep their standing rest (flat on the floor).
+    TArray<FTransform> Standing;
+    Solve(Rest, Standing);
+    const float HipZ = static_cast<float>(Standing[BoneIndex[ThighL]].GetLocation().Z + Standing[BoneIndex[ThighR]].GetLocation().Z) * .5f;
+    SeatDrop = SeatTop + SeatBone - HipZ;
+    EyeHeight += SeatDrop;
+    for (int32 Side = 0; Side < 2; ++Side) FootRest[Side] = Standing[BoneIndex[Of(FootL, Side)]].GetRotation();
+    AnkleRest = static_cast<float>(Standing[BoneIndex[FootL]].GetLocation().Z);
+    // Idle glances about LookAt, from where the NPC sits.
+    const FVector To = GetActorTransform().InverseTransformVectorNoScale(LookAt - GetActorLocation());
+    GlanceCentre = FVector2D(FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X)), -35.f, 35.f), 4.f);
+}
+
+void ADockNPC::SitInTavern()
+{
+    if (bSeated || BoneIndex.Contains(INDEX_NONE)) return;
+    // From outside the door to the bench: the switch happens while the slide's view is black.
+    SetActorLocationAndRotation(TavernHips + FVector(0.f, 0.f, HalfHeight), FRotator(0.f, TavernYaw, 0.f));
+    HomeYaw = TavernYaw; bTurning = false; TurnHold = 0.f;
+    bSeated = true; SeatTop = TavernBenchTop; SeatBone = WorkerSitBone;
+    SetupSeat(TavernBar);
+    Glance = GlanceCentre;
+    IdleClip = ClipStandLook;   // the quieter idle, as the elf's
+    bDrinker = true;
+    SetGrip(1, 1.f);            // his right fist round the handle
+    Tankard = NewObject<UStaticMeshComponent>(this, TEXT("Tankard"));
+    Tankard->SetStaticMesh(KeeperMeshes[0]);
+    Tankard->SetupAttachment(Body);
+    Tankard->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Tankard->SetCanEverAffectNavigation(false);
+    Tankard->RegisterComponent();
+    DrinkClock = FMath::FRandRange(DrinkDown, DrinkPeriod - 4.f);   // between drinks
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_WORKER_TAVERN seated=1 tankard=%d at=%s seat_drop=%.1f"), KeeperMeshes[0] ? 1 : 0, *TavernHips.ToString(), SeatDrop);
+}
+
+void ADockNPC::DrinkIn(float Seconds)
+{
+    DrinkClock = DrinkPeriod - FMath::Clamp(Seconds, 0.f, DrinkPeriod - DrinkDown);
+}
+
+void ADockNPC::PoseDrink(TArray<FTransform>& Space)
+{
+    const float Right = -ArmOut;
+    const float U = FMath::Fmod(DrinkClock, DrinkPeriod);
+    const float A = FMath::SmoothStep(0.f, DrinkRaise, U) * (1.f - FMath::SmoothStep(DrinkLower, DrinkDown, U));
+    DrinkLift = A;
+    // On the table: standing on its base, its body toward his left.
+    const FVector RestGrip(DrinkRestAhead, DrinkRestOut * Right, TavernTableTop + TankardGripHeight + .2f);
+    const FVector RestAlong = FVector(.35f, -Right, 0.f).GetSafeNormal();
+    // At his lips: its mouth tipped to him, the rim's lower edge on his lower lip,
+    // the handle to his right. His lips from the head as posed (tipped back while he drinks).
+    const FVector Lips = Space[BoneIndex[Head]].TransformPosition(HeadRef.InverseTransformPosition(WorkerMouth));
+    const float Tip = FMath::DegreesToRadians(FMath::Lerp(DrinkTipStart, DrinkTipEnd, FMath::SmoothStep(DrinkRaise, DrinkLower, U)));
+    const FVector DrinkUp(-FMath::Sin(Tip), 0.f, FMath::Cos(Tip));
+    const FVector DrinkAlong(0.f, -Right, 0.f);
+    const auto RimLow = [](const FVector& Up) { return FVector::VectorPlaneProject(-FVector::UpVector, Up).GetSafeNormal(); };
+    const FVector Contact = Lips + FVector(.6f, 0.f, -.8f);
+    const FVector DrinkGrip = Contact - DrinkAlong * TankardBody - DrinkUp * TankardRimHeight - RimLow(DrinkUp) * TankardRim;
+    const FVector Handle = FMath::Lerp(RestGrip, DrinkGrip, A);
+    const FVector Up = FMath::Lerp(FVector::UpVector, DrinkUp, A).GetSafeNormal();
+    const FVector Along = FVector::VectorPlaneProject(FMath::Lerp(RestAlong, DrinkAlong, A), Up).GetSafeNormal();
+    // The right fist on the handle, knuckles toward the tankard, thumb along its up; the elbow out and down, up as it lifts.
+    PlaceHand(Space, 1, Handle, Along, Up, FVector(-.3f, Right, FMath::Lerp(-.7f, -.15f, A)));
+    FVector F, FA, FT;
+    HandFrame(Space, 1, F, FA, FT);
+    const bool bSettled = GetWorld()->GetTimeSeconds() > 8.f;
+    if (bSettled) WorstDrinkGrip = FMath::Max(WorstDrinkGrip, static_cast<float>(FVector::Dist(F, Handle)));
+    if (bSettled && A > .95f)
+        WorstDrinkLip = FMath::Max(WorstDrinkLip, static_cast<float>(FVector::Dist(F + Along * TankardBody + Up * TankardRimHeight + RimLow(Up) * TankardRim, Contact)));
+    if (Tankard) Tankard->SetRelativeTransform(FTransform(FRotationMatrix::MakeFromXZ(Along, Up).ToQuat(), F));
+}
+
 void ADockNPC::PoseSeated(TArray<FTransform>& Space)
 {
     // Her legs: thighs forward over the bench's edge, shins down to her feet
@@ -1923,7 +2014,7 @@ void ADockNPC::PoseSeated(TArray<FTransform>& Space)
         if (bSettled) WorstFootLift = FMath::Max(WorstFootLift, FMath::Abs(static_cast<float>(Space[Foot].GetLocation().Z) - AnkleRest));
     }
     // Her hands resting on her lap, one on each thigh, fingers forward and in, palms down.
-    for (int32 Side = 0; Side < 2; ++Side)
+    for (int32 Side = 0; Side < (bDrinker ? 1 : 2); ++Side)   // the drinker's right hand is on his tankard (PoseDrink)
     {
         const float Out = Side == 0 ? ArmOut : -ArmOut;   // +Y is out on this side
         const FVector Hip = Space[BoneIndex[Of(ThighL, Side)]].GetLocation(), Knee = Space[BoneIndex[Of(CalfL, Side)]].GetLocation();

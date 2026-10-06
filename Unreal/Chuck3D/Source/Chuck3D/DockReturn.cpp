@@ -1,6 +1,7 @@
 #include "DockReturn.h"
 #include "SewerSlide.h"
 #include "ChuckCharacter.h"
+#include "DockNPC.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Engine/DirectionalLight.h"
@@ -40,6 +41,11 @@ bool CheckDockReturn(UWorld* World,bool Evening)
     for(TActorIterator<ASkyLight> It(World);It;++It)
     {++Skies;if(FMath::Abs(It->GetLightComponent()->Intensity-(Evening?1.05f*.65f:1.05f))>.01f) ++Failed;}
     if(Suns!=1 || Skies!=1) ++Failed;
+    // The dock worker: outside the door by day, at his tavern table with his drink at night.
+    const ADockNPC* Worker=nullptr;
+    for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Worker=Entry.Get();
+    const bool Seated=Worker && Worker->IsSeated() && Worker->IsDrinker() && FVector::Dist2D(Worker->GetActorLocation(),ADockNPC::TavernHips)<1.f;
+    if(!Worker || Seated!=Evening) ++Failed;
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RETURN_CHECK failures=%d evening=%d hatch_closed=%d tavern_open=%d sun=%.3f sky=%.3f"),Failed,Evening,Evening,!DoorBlocked,Evening?1.35f*.28f:1.35f,Evening?1.05f*.65f:1.05f);
     return Failed==0;
 }
@@ -79,6 +85,8 @@ void BuildDockReturn(UWorld* World)
         {It->GetLightComponent()->SetIntensity(1.05f*.65f);It->GetLightComponent()->RecaptureSky();}
         for(TActorIterator<AExponentialHeightFog> It(World);It;++It)
             It->GetComponent()->SetFogInscatteringColor(FLinearColor(.12f,.14f,.21f));
+        // The dock worker goes in for a drink (user 2026-10-06).
+        for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Entry->SitInTavern();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCK_RETURN_APPLIED evening=1 hatch_closed=1 tavern_open=1"));
     },.05f,true);
 
@@ -128,6 +136,38 @@ void BuildDockReturn(UWorld* World)
                 }
             },.02f,true);
         },3.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTavernNightCapture")))
+    {
+        // Saved/Screenshots/Windows/TavernNight/<Rest|Drink>_View<n>.png: the dock worker at his table at night,
+        // between drinks and then with the tankard at his lips; his grip and lip fit logged.
+        FTimerHandle Night;World->GetTimerManager().SetTimer(Night,[](){MarkDockSewerExited();},1.f,false);
+        auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(50);
+        const FVector Views[][2]={{FVector(-120,770,150),FVector(-215,640,105)},{FVector(-80,610,115),FVector(-215,648,100)},{FVector(40,540,30),FVector(-215,650,90)}};
+        const auto Worker=[](){ADockNPC* W=nullptr;for(const TWeakObjectPtr<ADockNPC>& E : ADockNPC::All()) if(E.IsValid() && E->ActorHasTag(TEXT("DockWorkerArt"))) W=E.Get();return W;};
+        FTimerHandle Rest;World->GetTimerManager().SetTimer(Rest,[Worker](){if(ADockNPC* W=Worker()) W->DrinkIn(6.f);},4.f,false);
+        for(int32 Shot=0;Shot<6;++Shot)
+        {
+            const bool Drink=Shot>=3;const int32 V=Shot%3;
+            const float At=Drink?10.f+V*.7f:5.f+V*.7f;   // the drink set going at 8.5 (lips by 9.8, down from 11.9)
+            FTimerHandle View,Take;
+            World->GetTimerManager().SetTimer(View,[World,Camera,V,P=Views[V][0],T=Views[V][1]](){
+                if(APawn* C=World->GetFirstPlayerController()->GetPawn()) C->SetActorHiddenInGame(true);
+                Camera->SetActorLocationAndRotation(P,(T-P).Rotation());World->GetFirstPlayerController()->SetViewTarget(Camera);
+            },At,false);
+            World->GetTimerManager().SetTimer(Take,[Worker,Drink,V](){
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("TavernNight");IFileManager::Get().MakeDirectory(*Folder,true);
+                FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("%s_View%d.png"),Drink?TEXT("Drink"):TEXT("Rest"),V),false,false);
+                if(const ADockNPC* W=Worker()) UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_SHOT %s view=%d lift=%.2f"),Drink?TEXT("Drink"):TEXT("Rest"),V,W->GetDrinkLift());
+            },At+.25f,false);
+        }
+        FTimerHandle Go;World->GetTimerManager().SetTimer(Go,[Worker](){if(ADockNPC* W=Worker()) W->DrinkIn(0.f);},8.5f,false);
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World,Worker](){
+            const ADockNPC* W=Worker();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_CAPTURE seated=%d drinker=%d at=%s drinks=%d grip_cm=%.2f lip_cm=%.2f turn=%.1f"),W && W->IsSeated(),W && W->IsDrinker(),
+                W ? *W->GetActorLocation().ToString() : TEXT("none"),W ? W->GetDrinks() : -1,W ? W->GetDrinkGripError() : 1e3f,W ? W->GetDrinkLipError() : 1e3f,W ? W->GetBodyTurn() : 0.f);
+            World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+        },14.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckReturnCapture")))
     {

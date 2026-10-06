@@ -216,7 +216,7 @@ public:
      * sit, on the floor below them; Yaw the way she faces.
      */
     static ADockNPC* SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw);
-    bool IsSeated() const { return Kind == EDockHuman::ElfElder; }
+    bool IsSeated() const { return bSeated; }
     /** The plaza bench she sits on (DockPlaza.cpp: x -440, y -3350, 185 x 50, top 49 cm) and where she sits on it: toward its fountain end, facing the docks. */
     static inline const FVector ElfBench = FVector(-440.f, -3350.f, 49.f);
     static inline const FVector ElfHips = FVector(-410.f, -3341.f, 0.f);
@@ -225,6 +225,31 @@ public:
     float GetSeatHeight() const;
     float GetFootLiftError() const { return WorstFootLift; }
     float GetLapHandError() const { return WorstLapHand; }
+    /**
+     * The dock worker's night (user 2026-10-06: "move the npc by the tavern into
+     * the tavern after sewer when its night ... sitting ... by the table, drink
+     * in hand"). Once Chuck is out of the sewer (DockReturn.cpp's evening), he
+     * sits on the south bench of the west table by the bar (DockTavern.cpp:
+     * table at -215,705, 130 x 85, top 79; that bench's top 47.5 cm), facing the
+     * bar, as the old elf sits: legs under the table, left hand on his thigh. His
+     * right fist holds a tankard by its handle, standing on the table; every
+     * DrinkPeriod s he lifts it to his lips, tips it and his head back and
+     * drinks, then sets it down. His eyes go to the bar, or to the rat near him.
+     */
+    void SitInTavern();
+    static inline const FVector TavernHips = FVector(-215.f, 636.f, 0.f);
+    static constexpr float TavernBenchTop = 47.5f;
+    static constexpr float TavernTableTop = 79.f;
+    static constexpr float TavernYaw = 90.f;
+    bool IsDrinker() const { return bDrinker; }
+    /** Drinks taken; how far the tankard is up (0 on the table .. 1 at his lips). */
+    int32 GetDrinks() const { return Drinks; }
+    float GetDrinkLift() const { return DrinkLift; }
+    /** Worst distance (cm, after he settles) of his right fist from the tankard's handle, and, while it is up, of its rim from his lips. */
+    float GetDrinkGripError() const { return WorstDrinkGrip; }
+    float GetDrinkLipError() const { return WorstDrinkLip; }
+    /** Start the next drink in Seconds (tests and the night capture). */
+    void DrinkIn(float Seconds);
     /**
      * The alchemist (user 2026-10-05: "an alchemist vendor in front of the
      * alchemist shop, a gnome in black robes, hands together behind robe
@@ -434,7 +459,10 @@ private:
     TArray<FPuff> PipePuffs;
     void PoseSailor(TArray<FTransform>& Space);
     void TickSailor(float DeltaSeconds);
-    // The old elf on her bench.
+    // The old elf on her bench (and the dock worker on his, at night).
+    bool bSeated = false;
+    float SeatTop = 0.f, SeatBone = 9.f;  // the bench's top (cm) and how far the hip joints sit above it
+    void SetupSeat(const FVector& LookAt);
     float SeatDrop = 0.f;                 // cm her hips come down from standing to the bench
     FVector2D GlanceCentre = FVector2D::ZeroVector;   // idle glances about this (yaw, pitch): the old elf's fountain
     FQuat FootRest[2];                    // each foot flat, as in the standing rest pose
@@ -451,6 +479,11 @@ private:
     float ProbeYawPrev = 0.f, ProbeYawVel = 0.f;
     int32 YawReversals = 0;
     void ProbeShake(const TArray<FTransform>& Space, float DeltaSeconds);
+    // The dock worker's drink.
+    bool bDrinker = false;
+    float DrinkClock = 0.f, DrinkLift = 0.f, WorstDrinkGrip = 0.f, WorstDrinkLip = 0.f;
+    int32 Drinks = 0;
+    void PoseDrink(TArray<FTransform>& Space);
     // The gnome alchemist's sleeves.
     float WorstSleeveReach = 0.f;
     void PoseSleeves(TArray<FTransform>& Space);
