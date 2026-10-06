@@ -136,3 +136,7 @@ Bones, not shape keys, because the runtime poses with `UPoseableMeshComponent`, 
 - **Voices:** picks per NPC from the ElevenLabs library or voice design (the guards could share one voice, or differ).
 - **Generation:** whether the user generates the audio by hand, or provides `ELEVENLABS_API_KEY` in their own environment for a script.
 - **Licence:** whether the ElevenLabs plan covers commercial use, if this ships.
+
+## Mix (2026-10-06)
+
+User: "make all npc dialogue louder in relation to the music". `build_npc_voice.py` levels every line to -18 dB speech RMS (peaks capped at -1 dBFS), and `ADockGameMode::UpdateMusicDuck` lowers the score to 0.35 of its level while any NPC speaks. New lines get both automatically.

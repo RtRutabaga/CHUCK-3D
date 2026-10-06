@@ -2190,3 +2190,12 @@ Next part of the work can be done here.
   - `import_npc_voice.py` (`CHUCK_VOICE_ONLY`), `Verify-Package.ps1`.
 - **Verified:** package 153, `Local/verify-package-20261005-171205.log`.
 - **Remaining:** not listened to by me.
+
+## NPC dialogue louder than the music (user 2026-10-06)
+
+- **Source:** `ab1ce8e`: `build_npc_voice.py` (levelling: -18 dB speech RMS, -1 dBFS peak cap), the voice WAVs/manifest/`VO_*` assets, `DockGameMode.*` (`UpdateMusicDuck`, two checks), `Verify-Package.ps1` 153/154.
+- **Verified:** `Local/verify-package-20261005-175019.log`, 155 passes; duck 0.35 while speaking, back to 1.00 after.
+- **Launcher:** `Builds/Windows` = `ab1ce8e`; backup `Builds/Windows-Previous-20261006-VoiceLevel`.
+- **Remaining:** not listened to; tune `MusicDuckLevel` / `SPEECH_DB` by ear if needed.
+
+Next part of the work can be done here.
