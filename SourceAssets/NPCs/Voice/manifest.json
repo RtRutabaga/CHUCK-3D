@@ -88,6 +88,14 @@
    "rate": 44100,
    "peaks": 28,
    "gain_db": 4.31
+  },
+  "Blacksmith/talk_00": {
+   "wav": "Voice/Blacksmith/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/Blacksmith/VO_Blacksmith_talk_00",
+   "seconds": 8.516,
+   "rate": 44100,
+   "peaks": 8,
+   "gain_db": 2.44
   }
  }
 }

@@ -39,6 +39,7 @@ namespace
     // finger curls most, the index least), and closed round a shaft.
     constexpr float Relaxed[5][3] = { {6.f, 10.f, 10.f}, {10.f, 16.f, 12.f}, {14.f, 20.f, 14.f}, {18.f, 24.f, 16.f}, {24.f, 28.f, 18.f} };
     constexpr float Gripped[5][3] = { {25.f, 35.f, 25.f}, {62.f, 85.f, 55.f}, {68.f, 85.f, 55.f}, {70.f, 85.f, 55.f}, {74.f, 85.f, 55.f} };
+    constexpr float SmithSpeakPause = .7f;   // s the smith waits, hammer down, before he speaks
     constexpr float ClipSmoothing = .1f;    // s: the motion capture's low-pass (its jitter is several times a second)
     constexpr float WristStraight = .65f;   // how much of the clips' unreliable wrist bend is taken out
     constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
@@ -448,7 +449,7 @@ ADockNPC* ADockNPC::SpawnBlacksmith(UWorld* World, const FVector& Feet, float Ya
     if (!NPC) return nullptr;
     NPC->Tags.Add(TEXT("Blacksmith"));
     NPC->DisplayName = TEXT("Blacksmith");
-    NPC->Lines = { TEXT("Mind the sparks, rat."), TEXT("Go on. I've a hinge to finish.") };
+    NPC->SetupVoice(TEXT("Blacksmith"));   // user 2026-10-06: his recorded line about Bobert replaces the text ones
     NPC->SetGrip(0, 1.f); NPC->SetGrip(1, 1.f);   // tongs and hammer
     // His anvil on its stump, in front of him; solid, so the rat can hop up on it.
     const FRotator Facing(0.f, Yaw, 0.f);
@@ -1250,6 +1251,12 @@ void ADockNPC::EnsureVoiceAudio()
     }
 }
 
+void ADockNPC::RequestVoiceLine(int32 Index)
+{
+    if (IsSmith() && VoiceSounds.IsValidIndex(Index)) { PendingVoice = Index; RestedFor = 0.f; SpeechRestLowest = 1.f; return; }
+    StartVoiceLine(Index);
+}
+
 bool ADockNPC::StartVoiceLine(int32 Index)
 {
     if (!VoiceSounds.IsValidIndex(Index) || !VoiceAudio) return false;
@@ -1287,10 +1294,22 @@ void ADockNPC::TickVoice(float DeltaSeconds)
         if (Line != HeardLine)
         {
             HeardLine = Line;
-            if (Line >= 0) StartVoiceLine(Line);
-            else if (IsSpeaking() && VoiceAudio) { VoiceAudio->FadeOut(.3f, 0.f); VoiceTime = -1.f; }
+            if (Line >= 0) RequestVoiceLine(Line);
+            else
+            {
+                PendingVoice = -1;
+                if (IsSpeaking() && VoiceAudio) { VoiceAudio->FadeOut(.3f, 0.f); VoiceTime = -1.f; }
+            }
         }
     }
+    // The smith: hammer down first, a moment's pause, then he speaks.
+    if (PendingVoice >= 0)
+    {
+        if (Resting > .98f) RestedFor += DeltaSeconds;
+        if (RestedFor >= SmithSpeakPause) { PauseBeforeSpeech = RestedFor; const int32 Line = PendingVoice; PendingVoice = -1; StartVoiceLine(Line); }
+    }
+    const bool bWasSpeaking = IsSpeaking();
+    if (IsSmith() && bWasSpeaking) SpeechRestLowest = FMath::Min(SpeechRestLowest, Resting);
     if (VoiceTime >= 0.f && VoiceLines.IsValidIndex(VoiceLine)
         && (VoiceTime += DeltaSeconds) > NPCVoiceData::Lines[VoiceLines[VoiceLine]].Seconds + .15f)
     {
@@ -1298,6 +1317,7 @@ void ADockNPC::TickVoice(float DeltaSeconds)
         // Dougmund ends his rant: a drink in the pause before he starts again.
         if (bAmbientVoice && bDrinker && AmbientLine >= 0) DrinkIn(.3f);
     }
+    if (bWasSpeaking && !IsSpeaking() && IsSmith()) StrikesAtSpeechEnd = Strikes;   // back to work from here
     // Ambient speech: stopped (cut off), or started again after its pause.
     if (AmbientStopIn >= 0.f && (AmbientStopIn -= DeltaSeconds) < 0.f)
     {
@@ -1569,7 +1589,7 @@ void ADockNPC::PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& F
 void ADockNPC::TickSmith(float DeltaSeconds)
 {
     // Talked to, or startled by a scratch: he rests the hammer on the anvil until it's over.
-    const bool bPause = bTalking || ReactTime >= 0.f;
+    const bool bPause = bTalking || ReactTime >= 0.f || PendingVoice >= 0 || IsSpeaking();   // and until his line is done
     Resting = FMath::FInterpConstantTo(Resting, bPause ? 1.f : 0.f, DeltaSeconds, 2.5f);
     const float Before = ForgeClock;
     if (Resting < .5f) ForgeClock += DeltaSeconds;

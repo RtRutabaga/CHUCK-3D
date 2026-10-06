@@ -2040,6 +2040,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Alchemist"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            // The smith is asked as in conversation: hammer down, a pause, then his line.
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->RequestVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2132,6 +2135,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Smith ? Smith->GetTaps() : 0,Smith ? Smith->GetWorstTapGap() : 1e3f,Smith && Smith->IsForgeSounding() ? 1 : 0);
             Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTaps()>=3 && Smith->GetWorstTapGap()<4.f && Smith->IsForgeSounding() && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
                 TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow and the bare face on each tap, tongs in his other fist, the forge roaring"));
+            // Asked for his line just under a second ago: he has stopped work and is pausing, not yet speaking.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_TALK_START pending=%d speaking=%d forging=%d"),Smith && Smith->IsVoicePending() ? 1 : 0,Smith && Smith->IsSpeaking() ? 1 : 0,Smith && Smith->IsForging() ? 1 : 0);
+            Check(Smith && Smith->IsVoicePending() && !Smith->IsSpeaking() && !Smith->IsForging(),
+                TEXT("talked to, the smith stops work and pauses before he speaks"));
             // The tavern keeper behind his counter, between the barrels and the cellar hatch, polishing a tankard.
             TArray<AActor*> KeeperFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("TavernKeeper"),KeeperFound);
@@ -3191,6 +3198,20 @@ void ADockGameMode::Tick(float DeltaSeconds)
             }
             UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHAKE_MEASURE measured=%d steady=%d worst_share=%.3f"),Measured,Steady,Worst);
             Check(Measured>=8 && Steady==Measured,TEXT("the standing NPCs (the dwarf among them) hold still without shaking"));
+        }
+        {
+            // The smith's line: spoken after the pause, his hammer down throughout, and he went back to work after.
+            TArray<AActor*> SmithFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),SmithFound);
+            const auto* Smith=SmithFound.Num()==1 ? Cast<ADockNPC>(SmithFound[0]) : nullptr;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_VOICE_MEASURE sounds=%d face_bones=%d max_jaw_deg=%.1f blinks=%d pause_s=%.2f rest_while_speaking=%.2f strikes_after=%d line=%s"),
+                Smith ? Smith->GetVoiceSoundCount() : 0,Smith ? Smith->GetFaceBoneCount() : 0,Smith ? Smith->GetMaxJawOpen() : 0.f,Smith ? Smith->GetBlinks() : 0,
+                Smith ? Smith->GetPauseBeforeSpeech() : -1.f,Smith ? Smith->GetSpeechRestLowest() : 0.f,Smith ? Smith->GetStrikesSinceSpeech() : 0,
+                Smith && Smith->Lines.Num() ? *Smith->Lines[0] : TEXT(""));
+            Check(Smith && Smith->GetVoiceSoundCount()==1 && Smith->GetFaceBoneCount()==5 && Smith->GetMaxJawOpen()>3.f && Smith->GetBlinks()>=1
+                && Smith->GetPauseBeforeSpeech()>=.6f && Smith->GetPauseBeforeSpeech()<1.5f && Smith->GetSpeechRestLowest()>.95f && Smith->GetStrikesSinceSpeech()>=3
+                && Smith->Lines.Num()==1 && Smith->Lines[0].StartsWith(TEXT("It pains me")),
+                TEXT("the smith speaks his line after a pause, hammer resting the whole time, then goes back to his anvil"));
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_RETURN lowest=%.2f now=%.2f recovered=%d"),DuckLowest,MusicDuck,bDuckRecovered ? 1 : 0);
         Check(DuckLowest<.4f && bDuckRecovered,TEXT("the music comes back up once the NPCs have finished speaking"));

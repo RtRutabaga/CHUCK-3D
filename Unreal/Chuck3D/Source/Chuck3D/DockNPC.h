@@ -162,6 +162,15 @@ public:
     int32 SetupVoice(const TCHAR* Npc);
     /** Speak line Index now (tests and talk); false without that voiced line. */
     bool StartVoiceLine(int32 Index);
+    /** A line asked for in conversation: spoken at once, except by the smith (user 2026-10-06), who first
+        rests his hammer on the anvil, pauses a moment, then speaks; he goes back to work once it's done. */
+    void RequestVoiceLine(int32 Index);
+    bool IsVoicePending() const { return PendingVoice >= 0; }
+    /** The smith's last spoken line, for tests: how long he paused with the hammer down before speaking (s),
+        the least his hammer was rested while he spoke (0..1), and his blows since he finished. */
+    float GetPauseBeforeSpeech() const { return PauseBeforeSpeech; }
+    float GetSpeechRestLowest() const { return SpeechRestLowest; }
+    int32 GetStrikesSinceSpeech() const { return StrikesAtSpeechEnd >= 0 ? Strikes - StrikesAtSpeechEnd : 0; }
     bool IsSpeaking() const { return VoiceTime >= 0.f; }
     int32 GetVoiceSoundCount() const { return VoiceSounds.Num(); }
     int32 GetFaceBoneCount() const;
@@ -385,6 +394,8 @@ private:
     UPROPERTY() UAudioComponent* VoiceAudio = nullptr;
     TArray<int32> VoiceLines;                     // indices into NPCVoiceData::Lines, in talk order
     int32 VoiceLine = -1, HeardLine = -1, Blinks = 0;
+    int32 PendingVoice = -1, StrikesAtSpeechEnd = -1;
+    float RestedFor = 0.f, PauseBeforeSpeech = -1.f, SpeechRestLowest = 1.f;
     int32 TalkVoiceCount = 0;                     // VoiceLines' first entries are the talk lines; ambient ones follow
     // Ambient speech (the tavern at night).
     int32 AmbientLine = -1, AmbientPlays = 0, NightStage = 0;

@@ -625,7 +625,12 @@
      "type": "card",
      "texture": "Textures/short01_diffuse.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.5,
+    0.0,
+    164.7
+   ]
   },
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
