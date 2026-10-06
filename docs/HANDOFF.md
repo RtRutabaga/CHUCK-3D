@@ -15,6 +15,32 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+## October 5 (merged to main October 6) — Bobert asleep in his barrel (source only, not built)
+
+**Update (Claude, cloud session, user request: "Add Bobert in his barrel asleep like in the 2d game, positioned by starting point", with three reference images; a halfling, not full human height, reading as late-middle-aged):** source on branch `claude/bobert-barrel-asleep-minc8q`, from `df963d8`. **Not built, imported, packaged or played.** This session ran in a Linux cloud container with no Unreal and no LFS access, so the launcher package is unchanged (`09b88b7`) and not stale with respect to anything it claims.
+
+- **Him:** `Bobert` in `humans.json`, 97 cm. MPFB targets for a slightly larger head, shorter shins, bigger hands and feet, big pointed ears with lobes, a long drooping nose, heavy eye bags, a downturned mouth. Coat, fur collar, scarf, knitted cuffs with an off-white band, brown shirt, olive trousers, boots. A wispy fringe round a bald head and a ring in his right ear. Closed eyes (lid-coloured eye texture). New generator features in `build_npc_humans.py`: pieces `coat`, `furcollar`, `scarf`, `cuff`; `fringe` (`make_fringe`), `earring` (`make_earring`). Other NPCs' specs don't use them; a Dwarf rebuild in the sandbox was the regression check (see the Claude handoff).
+- **His barrel:** `Tools/build_bobert_barrel.py` → `SM_BobertBarrel` (an 86 cm cask lying on chocks, open mouth with one stave snapped short, a sack on the floor, a rolled blanket against the back head). Closed eyes: `Tools/build_bobert_textures.py` → `Textures/bobert_eye_closed.png`.
+- **Place:** `ADockNPC::BobertBarrelAt` (-150,-250), mouth yaw 140°, so it faces the spawn (-240,-180) and the first camera; about 80 cm from the spawn at the mouth's nearest corner, 28 cm clear of the harbour wall, 59 cm clear of the smoke test's crate stack B. The old upright dock barrel at (-330,-80) is unchanged.
+- **Runtime** (`DockNPC.cpp`): `SpawnBobert` adds the barrel (art plus a hidden lying cylinder, BlockAll: climbable, not enterable). `SolveSleep` aims his bones from the A-pose: back into the blanket, slumped, head bowed 50° and fallen sideways, knees up, shins to the rising floor. Arms are folded over the knees by `PlaceHand` IK each frame. He breathes every 5.5 s and nods every 23 s. No lines, no name, no looking at Chuck, and Chuck's scratch skips him. `EBone` gains the leg bones (other NPCs' deltas there stay identity).
+- **Test:** new smoke check `CHUCK_BOBERT_MEASURE`, which requires: all joints inside the barrel (fit error under 2 cm), head bow over 25°, at least 1 breath, hands within 6 cm of their rest, silent, within 250 cm of the start. He is excluded from the arms-down check. `Verify-Package.ps1` requires `CHUCK_BOBERT_SPAWNED body=1 barrel=1`; thresholds are now 144/145.
+- **To finish (Windows, one heavy tool at a time):**
+  1. `blender --background --python Tools/build_bobert_textures.py`
+  2. `blender --background --python Tools/build_npc_humans.py -- Bobert --review SourceAssets/NPCs/Humans/Review`
+  3. `blender --background --python Tools/build_bobert_barrel.py`
+  4. `Tools/Import-NPCHumans.ps1 -Only Bobert,prop:BobertBarrel`
+  5. Build, run `Verify-Package.ps1`, check him with `-ChuckNPCCapture` (tag `Bobert`), then promote.
+  - If C++ compilation fails, the new code is confined to `SpawnBobert`/`SolveSleep`/`PoseBobert`/`GetSleepFitError`/`GetHeadBow` and the small hooks.
+- **Flaws:**
+  - The C++ was not compiled.
+  - The barrel's `gain` values and the review images came from the sandbox (fabric JPGs unavailable; gains were copied from the committed manifests).
+  - The brows and lashes were stubs in the sandbox renders.
+  - The closed lids are the eyeballs retextured, not real lid geometry, and are glossy (`M_HumanEye` roughness 0.12).
+  - The fringe is cards.
+  - His face sits in the barrel's shade.
+
+Next part of the work could be done by either — preference: Claude. It needs the Windows machine.
+
 **Update (Claude, October 6, user request: give the NPC standing by the tavern this ElevenLabs line):** runtime `2b727c6`, on `df31a2d`.
 
 - **Who:** the dock worker at (90,200), just outside the tavern beside its bench. He had no dialogue until now. (The keeper is inside, behind the counter.)

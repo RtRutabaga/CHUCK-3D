@@ -1327,6 +1327,183 @@
     }
    ],
    "face": true
+  },
+  "Bobert": {
+   "height_cm": 97,
+   "note": "Bobert (user 2026-10-05): asleep in his barrel by the spawn, as in the 2D game (GAME-BIBLE: Chuck's home is Bobert's barrel; he never wakes and is never named). A late-middle-aged halfling, 97 cm: a small man's proportions with a slightly larger head, bigger hands and feet; bald on top with a wispy grey-brown fringe, big pointed ears (a steel ring in his right), a long drooping nose, heavy bags under the eyes, a downturned mouth, deep lines. From the supplied references: a long open ochre wool coat with a fur collar, a grey-violet scarf, a brown collared shirt, red knitted wrist warmers banded in off-white, baggy olive trousers, worn brown boots. Sleeping: closed lids (eye_texture from Tools/build_bobert_textures.py); posed seated in the barrel by ADockNPC.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.76,
+    "muscle": 0.3,
+    "weight": 0.45,
+    "height": 0.0,
+    "proportions": 0.3,
+    "cupsize": 0.5,
+    "firmness": 0.3,
+    "race": {
+     "african": 0.02,
+     "asian": 0.03,
+     "caucasian": 0.95
+    }
+   },
+   "targets": {
+    "head-scale-horiz-incr": 0.3,
+    "head-scale-vert-incr": 0.35,
+    "head-scale-depth-incr": 0.3,
+    "upperlegs-height-decr": 0.0,
+    "lowerlegs-height-decr": 0.35,
+    "l-hand-scale-incr": 0.35,
+    "r-hand-scale-incr": 0.35,
+    "l-foot-scale-incr": 0.45,
+    "r-foot-scale-incr": 0.45,
+    "l-ear-shape-pointed": 1.0,
+    "r-ear-shape-pointed": 1.0,
+    "l-ear-scale-incr": 0.8,
+    "r-ear-scale-incr": 0.8,
+    "l-ear-scale-vert-incr": 0.5,
+    "r-ear-scale-vert-incr": 0.5,
+    "l-ear-flap-incr": 0.6,
+    "r-ear-flap-incr": 0.6,
+    "l-ear-lobe-incr": 0.5,
+    "r-ear-lobe-incr": 0.5,
+    "nose-scale-vert-incr": 0.45,
+    "nose-scale-depth-incr": 0.3,
+    "nose-volume-incr": 0.35,
+    "nose-point-width-incr": 0.45,
+    "nose-point-down": 0.5,
+    "nose-hump-incr": 0.2,
+    "l-eye-bag-incr": 0.8,
+    "r-eye-bag-incr": 0.8,
+    "l-eye-bag-height-incr": 0.5,
+    "r-eye-bag-height-incr": 0.5,
+    "l-eye-eyefold-down": 0.4,
+    "r-eye-eyefold-down": 0.4,
+    "mouth-angles-down": 0.7,
+    "mouth-laugh-lines-out": 0.5,
+    "l-cheek-bones-incr": 0.3,
+    "r-cheek-bones-incr": 0.3,
+    "chin-prominent-incr": 0.2,
+    "forehead-scale-vert-incr": 0.35
+   },
+   "skin": "old_caucasian_male",
+   "eyes": "grey",
+   "eyebrows": "eyebrow009",
+   "eyelashes": "eyelashes02",
+   "hair": null,
+   "outfit": [
+    {
+     "piece": "shirt",
+     "collar": 0.0,
+     "fabric": "caban",
+     "tint": [
+      0.09,
+      0.06,
+      0.035
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "rough_linen",
+     "tint": [
+      0.15,
+      0.15,
+      0.065
+     ],
+     "offset": 0.014
+    },
+    {
+     "piece": "boots",
+     "height": 0.1,
+     "fabric": "brown_leather",
+     "tint": [
+      0.06,
+      0.035,
+      0.02
+     ]
+    },
+    {
+     "piece": "cuff",
+     "from": 0.62,
+     "to": 0.98,
+     "fabric": "wool_boucle",
+     "tint": [
+      0.24,
+      0.045,
+      0.035
+     ]
+    },
+    {
+     "piece": "cuff",
+     "slot": "CuffBand",
+     "from": 0.66,
+     "to": 0.74,
+     "offset": 0.016,
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.4
+     ]
+    },
+    {
+     "piece": "coat",
+     "sleeve": 0.7,
+     "bottom": 0.17,
+     "open": 0.035,
+     "lapel": 0.55,
+     "fabric": "caban",
+     "tint": [
+      0.34,
+      0.2,
+      0.065
+     ]
+    },
+    {
+     "piece": "scarf",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.12,
+      0.11,
+      0.15
+     ]
+    },
+    {
+     "piece": "furcollar",
+     "depth": 0.085,
+     "open": 0.06,
+     "fabric": "wool_boucle",
+     "tint": [
+      0.22,
+      0.16,
+      0.1
+     ]
+    }
+   ],
+   "brow_tint": [
+    0.55,
+    0.5,
+    0.45
+   ],
+   "fringe": {
+    "tint": [
+     0.32,
+     0.29,
+     0.26
+    ],
+    "low": 0.06,
+    "high": 0.07,
+    "cards": 420,
+    "wild": 14
+   },
+   "earring": {
+    "side": "right",
+    "tint": [
+     0.38,
+     0.37,
+     0.36
+    ]
+   },
+   "eye_texture": "SourceAssets/NPCs/Humans/Textures/bobert_eye_closed.png"
   }
  }
 }

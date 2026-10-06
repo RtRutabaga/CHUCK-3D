@@ -1213,7 +1213,7 @@ void AChuckCharacter::SlashHit()
     for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
     {
         ADockNPC* NPC = Entry.Get();
-        if (!NPC) continue;
+        if (!NPC || NPC->IsBobert()) continue;   // the sleeper in the barrel is never interacted with (GAME-BIBLE.md)
         const FVector To = NPC->GetActorLocation() - Location;
         if (static_cast<float>(To.Size2D()) - 24.f > SlashReach) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f) continue;

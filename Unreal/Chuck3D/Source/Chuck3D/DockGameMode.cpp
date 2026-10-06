@@ -461,6 +461,8 @@ void ADockGameMode::StartPlay()
     // same spot and facing the same way, outside the tavern. He speaks one line (user 2026-10-06).
     const FVector Human(90,200,0);
     ADockNPC::SpawnDockWorker(World,Human,-90.f);
+    // Bobert asleep in his barrel beside the spawn, as in the 2D game (user 2026-10-05).
+    ADockNPC::SpawnBobert(World,ADockNPC::BobertBarrelAt,ADockNPC::BobertBarrelYaw);
     // The 2D game's guard (at the closed city gate) and market woman (by the red stalls).
     ADockNPC::SpawnTownsfolk(World);
     // Surface detail is nonblocking; the original simple collision remains predictable.
@@ -2027,7 +2029,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             PoseHumans=0; bPoseOK=true;
             for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
             {
-                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSailor() || Entry->IsSeated() || Entry->IsAlchemist()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap, the gnome's in his sleeves
+                if(!Entry.IsValid() || Entry==TalkNPC || Entry->IsHostile() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSailor() || Entry->IsSeated() || Entry->IsAlchemist() || Entry->IsBobert()) continue;   // the smith's and the keeper's arms are at work; the elf's hands are in her lap, the gnome's in his sleeves; Bobert sits asleep
                 const float Out=Entry->GetWiderHandReach(), Straight=Entry->GetStraightArmOut(), Ahead=Entry->GetHandsForward(), Curl=Entry->GetFingerCurl();
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_HUMAN_POSE_MEASURE who=%s hand_out_cm=%.1f straight_arm_out_deg=%.1f hand_ahead_cm=%.1f finger_curl_deg=%.1f"),*Entry->DisplayName,Out,Straight,Ahead,Curl);
                 bPoseOK &= Out>10.f && Straight<30.f && Ahead<25.f && Curl>10.f; ++PoseHumans;
@@ -2223,6 +2225,18 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),
                 TEXT("the dwarf speaks his line aloud: his voice plays and his jaw opens with it, and he blinks"));
+            // Bobert asleep in his barrel beside the spawn: all of him inside it, head bowed, breathing, hands on his knees, silent.
+            TArray<AActor*> BobertFound;
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("Bobert"),BobertFound);
+            const auto* Bobert=BobertFound.Num()==1 ? Cast<ADockNPC>(BobertFound[0]) : nullptr;
+            const AActor* Cask=Bobert ? Bobert->GetBarrel() : nullptr;
+            const float ToStart=Cask ? static_cast<float>(FVector::Dist2D(Cask->GetActorLocation(),AChuckCharacter::StartLocation())) : 1e4f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_BOBERT_MEASURE present=%d barrel=%d fit_error_cm=%.1f head_bow_deg=%.1f breaths=%d hand_rest_cm=%.1f lines=%d to_start_cm=%.0f"),
+                Bobert ? 1 : 0,Cask ? 1 : 0,Bobert ? Bobert->GetSleepFitError() : 1e3f,Bobert ? Bobert->GetHeadBow() : 0.f,Bobert ? Bobert->GetBreaths() : 0,
+                Bobert ? Bobert->GetRestingHandError() : 1e3f,Bobert ? Bobert->Lines.Num() : 0,ToStart);
+            Check(Bobert && Cask && Bobert->GetSleepFitError()<2.f && Bobert->GetHeadBow()>25.f && Bobert->GetBreaths()>=1 && Bobert->GetRestingHandError()<6.f
+                && !Bobert->CanTalk() && ToStart<250.f,
+                TEXT("Bobert sits asleep in his barrel beside the spawn: all of him inside it, head bowed, breathing, his forearms folded on his knees, silent"));
             // Next: talk, on the real keys, with a stand-in NPC who has lines.
             Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,-20,36));
             TalkNPC=GetWorld()->SpawnActor<ADockNPC>(FVector(-240+100,-20,90),FRotator(0,180,0));
