@@ -2036,6 +2036,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("MarketWoman"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2185,6 +2187,18 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 && Elf->GetFootLiftError()<2.f && Elf->GetLapHandError()<3.f && ElfToFountain<1100.f && ElfAt.Y>-3320.f+400.f && ElfToAlchemist>800.f
                 && FMath::Abs(Elf->GetBodyTurn())<1.f && Elf->CanTalk(),
                 TEXT("an old elf sits on her bench on the bay side of the fountain, away from the alchemist: hips on the bench, feet flat on the paving, hands in her lap, never turning from it"));
+            // The market woman's recorded line (user 2026-10-06), started with the others.
+            {
+                TArray<AActor*> MarketFound;
+                UGameplayStatics::GetAllActorsWithTag(this,TEXT("MarketWoman"),MarketFound);
+                const auto* Market=MarketFound.Num()==1 ? Cast<ADockNPC>(MarketFound[0]) : nullptr;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_MARKET_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                    Market ? Market->GetVoiceSoundCount() : 0,Market ? Market->GetFaceBoneCount() : 0,Market && Market->IsSpeaking() ? 1 : 0,
+                    Market ? Market->GetMaxJawOpen() : 0.f,Market ? Market->GetBlinks() : 0,Market && Market->Lines.Num() ? *Market->Lines[0] : TEXT(""));
+                Check(Market && Market->GetVoiceSoundCount()==1 && Market->GetFaceBoneCount()==5 && Market->GetMaxJawOpen()>3.f && Market->GetBlinks()>=1
+                    && Market->Lines.Num()==1 && Market->Lines[0].StartsWith(TEXT("No handouts.")),
+                    TEXT("the market woman speaks her line aloud, her jaw moving with it, and blinks"));
+            }
             // Her recorded line (user 2026-10-06), started with the others: her jaw moves with it as she sits.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_ELF_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
                 Elf ? Elf->GetVoiceSoundCount() : 0,Elf ? Elf->GetFaceBoneCount() : 0,Elf && Elf->IsSpeaking() ? 1 : 0,

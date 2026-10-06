@@ -717,7 +717,7 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
     {
         Woman->Tags.Add(TEXT("MarketWoman"));
         Woman->DisplayName = TEXT("Market woman");
-        Woman->Lines = { TEXT("No handouts here. If you're hungry, you should check the sewer for scraps.") };
+        Woman->SetupVoice(TEXT("MarketWoman"));   // user 2026-10-06: her recorded line, "No handouts. If you're hungry, check the sewer for scraps."
     }
 }
 

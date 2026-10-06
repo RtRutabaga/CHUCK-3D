@@ -72,6 +72,14 @@
    "rate": 44100,
    "peaks": 36,
    "gain_db": 3.15
+  },
+  "MarketWoman/talk_00": {
+   "wav": "Voice/MarketWoman/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/MarketWoman/VO_MarketWoman_talk_00",
+   "seconds": 4.441,
+   "rate": 44100,
+   "peaks": 15,
+   "gain_db": 1.87
   }
  }
 }
