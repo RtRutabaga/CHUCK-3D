@@ -6,35 +6,40 @@
    "asset": "/Game/Art/Audio/Voice/Dwarf/VO_Dwarf_talk_00",
    "seconds": 5.486,
    "rate": 44100,
-   "peaks": 13
+   "peaks": 13,
+   "gain_db": 2.91
   },
   "GuardWoman/talk_00": {
    "wav": "Voice/GuardWoman/talk_00.wav",
    "asset": "/Game/Art/Audio/Voice/GuardWoman/VO_GuardWoman_talk_00",
    "seconds": 2.038,
    "rate": 44100,
-   "peaks": 4
+   "peaks": 4,
+   "gain_db": 1.11
   },
   "Guard/talk_00": {
    "wav": "Voice/Guard/talk_00.wav",
    "asset": "/Game/Art/Audio/Voice/Guard/VO_Guard_talk_00",
    "seconds": 1.567,
    "rate": 44100,
-   "peaks": 7
+   "peaks": 7,
+   "gain_db": -0.41
   },
   "SideGuard/talk_00": {
    "wav": "Voice/SideGuard/talk_00.wav",
    "asset": "/Game/Art/Audio/Voice/SideGuard/VO_SideGuard_talk_00",
    "seconds": 2.038,
    "rate": 44100,
-   "peaks": 4
+   "peaks": 4,
+   "gain_db": 2.91
   },
   "Sailor/talk_00": {
    "wav": "Voice/Sailor/talk_00.wav",
    "asset": "/Game/Art/Audio/Voice/Sailor/VO_Sailor_talk_00",
    "seconds": 8.516,
    "rate": 44100,
-   "peaks": 22
+   "peaks": 22,
+   "gain_db": 2.92
   }
  }
 }

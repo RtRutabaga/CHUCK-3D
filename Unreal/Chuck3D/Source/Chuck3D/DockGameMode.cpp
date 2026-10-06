@@ -79,6 +79,7 @@ void ADockGameMode::StartPlay()
     auto* SewerScoreComponent=SewerScore ? UGameplayStatics::CreateSound2D(World,SewerScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     auto* NightScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_WaterdeepNight.SW_WaterdeepNight"));
     auto* NightComponent=NightScore ? UGameplayStatics::CreateSound2D(World,NightScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -826,9 +827,25 @@ void ADockGameMode::ProbeLockedPaws(AChuckCharacter* Chuck,float DeltaSeconds)
     LocoEvaluations=Pose.Evaluations;
 }
 
+void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
+{
+    constexpr float MusicDuckLevel = .35f;            // about -9 dB under a speaking NPC
+    constexpr float DuckDown = 4.f, DuckUp = .9f;      // per second: under in a quarter second, back over about a second
+    constexpr float DuckHold = .4f;                    // s after the line before the music returns
+    bool bSpeech = false;
+    for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking();
+    DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
+    const float Target = DuckQuiet < DuckHold ? MusicDuckLevel : 1.f;
+    MusicDuck = FMath::FInterpConstantTo(MusicDuck, Target, DeltaSeconds, Target < MusicDuck ? DuckDown : DuckUp);
+    DuckLowest = FMath::Min(DuckLowest, MusicDuck);
+    if(DuckLowest < .5f && MusicDuck > .99f) bDuckRecovered = true;
+    for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks) if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck);
+}
+
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    UpdateMusicDuck(DeltaSeconds);
     if(bSmithCapture) { TickSmithCapture(DeltaSeconds); return; }
     if(bDwarfCapture) { TickDwarfCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
@@ -2185,6 +2202,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f jaw_deg=%.1f blinks=%d line=%s"),
                 Dwarf ? Dwarf->GetVoiceSoundCount() : 0,Dwarf ? Dwarf->GetFaceBoneCount() : 0,Dwarf && Dwarf->IsSpeaking() ? 1 : 0,
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
+            // The score sinks under them while they speak.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==3 && MusicTracks[0].IsValid(),
+                TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),
                 TEXT("the dwarf speaks his line aloud: his voice plays and his jaw opens with it, and he blinks"));
@@ -3082,6 +3103,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Chuck->GetSfxLoaded()==36 && Chuck->GetSfxCount(ESfx::Step)>20 && Chuck->GetSfxCount(ESfx::Jump)>0 && Chuck->GetSfxCount(ESfx::Land)>0
                 && Chuck->GetSfxCount(ESfx::Slash)>0 && Chuck->GetSfxCount(ESfx::Roll)>0,TEXT("movement sound effects load and play (steps, jump, land, slash, roll)"));
         }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_RETURN lowest=%.2f now=%.2f recovered=%d"),DuckLowest,MusicDuck,bDuckRecovered ? 1 : 0);
+        Check(DuckLowest<.4f && bDuckRecovered,TEXT("the music comes back up once the NPCs have finished speaking"));
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
         bSmokeTest=false;
         FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0);

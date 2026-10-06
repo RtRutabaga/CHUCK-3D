@@ -24,6 +24,14 @@ private:
     bool bNPCShotTaken = false;
     TWeakObjectPtr<class ACameraActor> NPCCamera;
     void TickNPCCapture(float DeltaSeconds);
+    // NPC speech over the music (user 2026-10-06: "make all npc dialogue louder in relation to
+    // the music"): while anyone speaks, every score track's volume multiplier eases down to
+    // MusicDuckLevel (quickly), and back up once they've finished (slowly). Separate from the
+    // tracks' own region fades, which use AdjustVolume/FadeIn.
+    TArray<TWeakObjectPtr<class UAudioComponent>> MusicTracks;
+    float MusicDuck = 1.f, DuckLowest = 1.f, DuckQuiet = 0.f;
+    bool bDuckRecovered = false;
+    void UpdateMusicDuck(float DeltaSeconds);
     // -ChuckSmithCapture: the blacksmith at work, a frame every 60 ms from a fixed three-quarter view.
     bool bSmithCapture = false;
     FName FilmTag = TEXT("Blacksmith");   // -ChuckKeeperCapture films the tavern keeper instead
