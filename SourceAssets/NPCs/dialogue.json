@@ -80,12 +80,14 @@
    ]
   },
   "TavernKeeper": {
-   "voice": "pending: the user is supplying the ElevenLabs take (2026-10-06)",
+   "voice": "ElevenLabs take supplied by the user (2026-10-06), Tavern_keeper_audio.mp3",
    "ambient": [
     {
      "id": "night_00",
      "note": "user 2026-10-06: once Chuck is inside the tavern at night, the keeper interrupts Dougmund and says this once",
-     "text": "Awright, awright, that’ll do, Dougmund. Give it a rest, would ya? …Chuck! There y’are. Been waitin’ for you to come round. Now look—when Bobert wakes up, you tell ’im he’s got to stop rootin’ about in me bin out back. Frightens off the customers, don’t it? I’m more’n happy to give you two whatever I’m chuckin’ out anyway. Matter o’ fact, there’s a bit o’ cheese down in the cellar. Gone a touch funny, but I reckon that won’t bother you. Go on, climb down and help yourself."
+     "text": "Awright, awright, that’ll do, Dougmund. Give it a rest, would ya? …Chuck! There y’are. Been waitin’ for you to come round. Now look—when Bobert wakes up, you tell ’im he’s got to stop rootin’ about in me bin out back. Frightens off the customers, don’t it? I’m more’n happy to give you two whatever I’m chuckin’ out anyway. Matter o’ fact, there’s a bit o’ cheese down in the cellar. Gone a touch funny, but I reckon that won’t bother you. Go on, climb down and help yourself.",
+     "source": "Voice/TavernKeeper/source/ElevenLabs_2026-10-06_TavernKeeper_night_00.mp3",
+     "start": 0.0
     }
    ]
   }

@@ -56,6 +56,14 @@
    "rate": 44100,
    "peaks": 78,
    "gain_db": 0.95
+  },
+  "TavernKeeper/night_00": {
+   "wav": "Voice/TavernKeeper/night_00.wav",
+   "asset": "/Game/Art/Audio/Voice/TavernKeeper/VO_TavernKeeper_night_00",
+   "seconds": 28.526,
+   "rate": 44100,
+   "peaks": 67,
+   "gain_db": 1.02
   }
  }
 }
