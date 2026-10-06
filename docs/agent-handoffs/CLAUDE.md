@@ -2298,3 +2298,31 @@ Next part of the work can be done here.
 - Untouched: the uncommitted October 4 MarketWoman/Zombie/clip/texture `.uasset` modifications and the untracked `eyebrow001.png`/`short02_diffuse.png` that were in the tree before this session.
 
 Next part of the work can be done here.
+
+## October 6 — The dock worker drinks in the tavern at night (Claude, user request: "move the npc by the tavern into the tavern after sewer when its night, he should be sitting on the middle north bench by the table, drink in hand")
+
+- **Which bench:** asked, because "middle north bench" was ambiguous. The user chose the west table by the bar (`DockTavern.cpp` table at -215,705), its **south** bench (top 47.5 cm). He sits facing north toward the bar.
+- **Source:** `b7b1f68`.
+  - `DockNPC.h/.cpp`: the elf's seating is now general (`bSeated`, `SeatTop`, `SeatBone`, `SetupSeat(LookAt)`). The elf's behaviour is unchanged.
+  - New `SitInTavern()`: moves him to `TavernHips` (-215,636), yaw 90, with a 10.5 cm sit bone. His idle glances go to the keeper, and he plays the quieter idle.
+  - He has a tankard (the keeper's `SM_Tankard`) in his right fist on the table. His left hand rests on his thigh.
+  - `PoseDrink`: every 15 s he raises the tankard to his lips. It tips 62→100°, his head goes back 16°, and he sets it down again. The lips come from the manifest's `mouth_cm` (15.7, 0, 161.7) on the posed head.
+  - `DockReturn.cpp`: the evening switch calls `SitInTavern` on `DockWorkerArt`. `CheckDockReturn` now requires him outside by day and seated at night.
+  - New `-ChuckTavernNightCapture`, which writes `Saved/Screenshots/Windows/TavernNight/{Rest,Drink}_View{0,1,2}.png`.
+- **Contract:** no asset, rig or bone changes. By day he is unchanged: same spot, line and smoke-test stages, all of which run before the slide.
+- **Verified:**
+  - Package `Local/verify-package-20261006-095031.log`: 158 passes. The first run (`-094536`) failed only the keeper rag-reach check (8.5 cm), which earlier handoffs record as intermittent. The keeper's code is untouched.
+  - `Verify-Menu.ps1` passed all 6 points, including Night and Pantry with the new worker check.
+  - `-ChuckReturnTest` passed with failures=0 (`Local/tavern-night-return-test.log`).
+  - Capture `Local/tavern-night-capture.log`: seated=1, drinks=1, worst grip 0.00 cm, rim-to-lip 1.59 cm.
+- **Review:** `SourceAssets/NPCs/Humans/Review/runtime_worker_tavern_night_*.png`. Front view: the tankard is at his mouth, and his elbow is up and out. Low view: seated, thighs under the table.
+- **Launcher:** `Builds/Windows` is `b7b1f68`, and `Launch-Prototype.ps1 -CheckOnly` passes. Backup: `Builds/Windows-Previous-20261006-TavernNight` (the `9fe5375` beards build).
+- **Remaining:**
+  - At night he still has his day line about watching over Bobert; night lines are the next request.
+  - There is no walk in; he is moved while the slide's view is black.
+  - From his left, the raised tankard reads close to his eye.
+  - His left hand is mostly hidden under the table edge.
+  - Not played by the user.
+- Untouched: the uncommitted October 4 MarketWoman/Zombie/clip/texture `.uasset` changes, and the untracked `eyebrow001.png`/`short02_diffuse.png`.
+
+Next part of the work can be done here.
