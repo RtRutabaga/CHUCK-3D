@@ -1176,6 +1176,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         else if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated()) UpdateTurn(DeltaSeconds, 0.f, false);
         bTalking = Chuck->GetTalkingTo() == this;
     }
+    if (NightStage > 0 && IsKeeper()) TickTavernNight(DeltaSeconds);
     TalkBlend = FMath::FInterpConstantTo(TalkBlend, bTalking ? 1.f : 0.f, DeltaSeconds, 2.5f);
     if (ReactTime >= 0.f && HasMocap() && (ReactTime += DeltaSeconds) > Clips[ClipReact]->GetPlayLength()) ReactTime = -1.f;
     if (!bWatching && (NextGlance -= DeltaSeconds) <= 0)
@@ -1194,7 +1195,8 @@ void ADockNPC::Tick(float DeltaSeconds)
     if (bDrinker)
     {
         const float Before = FMath::Fmod(DrinkClock, DrinkPeriod);
-        DrinkClock += DeltaSeconds;
+        // While he rants, the tankard waits on the table (he drinks in the pauses).
+        if (!(IsAmbientSpeaking() && Before >= DrinkDown)) DrinkClock += DeltaSeconds;
         const float U = FMath::Fmod(DrinkClock, DrinkPeriod);
         if (Before < DrinkRaise && U >= DrinkRaise) ++Drinks;
         // Drinking, he looks along the tankard, his head going back as it tips.
@@ -1216,13 +1218,21 @@ int32 ADockNPC::SetupVoice(const TCHAR* Npc)
     for (int32 I = 0; I < NPCVoiceData::LineCount; ++I)
     {
         const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
-        if (FCString::Strcmp(L.Npc, Npc) != 0) continue;
+        if (FCString::Strcmp(L.Npc, Npc) != 0 || !FString(L.Id).StartsWith(TEXT("talk_"))) continue;   // ambient lines: StartAmbient
         USoundBase* Sound = LoadObject<USoundBase>(nullptr, L.Sound);
         if (!Sound) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_VOICE_MISSING %s %s"), Npc, L.Id); continue; }
         VoiceLines.Add(I); VoiceSounds.Add(Sound); Text.Add(L.Text);
     }
     if (Text.Num()) Lines = Text;
-    if (VoiceSounds.Num() && !VoiceAudio)
+    TalkVoiceCount = VoiceLines.Num();
+    if (VoiceSounds.Num()) EnsureVoiceAudio();
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_NPC_VOICE %s lines=%d sounds=%d"), Npc, VoiceLines.Num(), VoiceSounds.Num());
+    return VoiceLines.Num();
+}
+
+void ADockNPC::EnsureVoiceAudio()
+{
+    if (!VoiceAudio)
     {
         // From his mouth: heard across this corner of the plaza, clearly within a few metres.
         auto* Attenuation = NewObject<USoundAttenuation>(this);
@@ -1238,16 +1248,14 @@ int32 ADockNPC::SetupVoice(const TCHAR* Npc)
         VoiceAudio->bAutoActivate = false;
         VoiceAudio->RegisterComponent();
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_NPC_VOICE %s lines=%d sounds=%d"), Npc, VoiceLines.Num(), VoiceSounds.Num());
-    return VoiceLines.Num();
 }
 
 bool ADockNPC::StartVoiceLine(int32 Index)
 {
     if (!VoiceSounds.IsValidIndex(Index) || !VoiceAudio) return false;
-    VoiceLine = Index; VoiceTime = 0.f; MaxJawOpen = 0.f;
-    VoiceAudio->SetSound(VoiceSounds[Index]);
-    VoiceAudio->Play();
+    VoiceLine = Index; VoiceTime = 0.f; MaxJawOpen = 0.f; bAmbientVoice = false;
+    // A line whose audio isn't supplied yet (no sound) still runs, for its length, on its subtitles.
+    if (VoiceSounds[Index]) { VoiceAudio->SetSound(VoiceSounds[Index]); VoiceAudio->Play(); }
     if (BlinkTime < 0.f) { BlinkTime = 0.f; ++Blinks; }   // a blink as he starts
     return true;
 }
@@ -1263,6 +1271,7 @@ float ADockNPC::VoiceLoudness() const
 {
     if (VoiceTime < 0.f || !VoiceLines.IsValidIndex(VoiceLine)) return 0.f;
     const NPCVoiceData::FLine& L = NPCVoiceData::Lines[VoiceLines[VoiceLine]];
+    if (L.Frames < 2) return 0.f;   // text only: no envelope yet
     const float F = VoiceTime * NPCVoiceData::EnvelopeRate;
     const int32 A = FMath::Clamp(FMath::FloorToInt(F), 0, L.Frames - 1), B = FMath::Min(A + 1, L.Frames - 1);
     return FMath::Lerp(static_cast<float>(L.Envelope[A]), static_cast<float>(L.Envelope[B]), F - FMath::FloorToFloat(F)) / 255.f;
@@ -1271,10 +1280,10 @@ float ADockNPC::VoiceLoudness() const
 void ADockNPC::TickVoice(float DeltaSeconds)
 {
     // The line Chuck is on: each new one is spoken; leaving the conversation lets it trail off.
-    if (VoiceSounds.Num())
+    if (TalkVoiceCount)
     {
         const auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
-        const int32 Line = bTalking && Chuck ? Chuck->GetTalkLine() : -1;
+        const int32 Line = bTalking && Chuck && Chuck->GetTalkLine() < TalkVoiceCount ? Chuck->GetTalkLine() : -1;
         if (Line != HeardLine)
         {
             HeardLine = Line;
@@ -1283,7 +1292,25 @@ void ADockNPC::TickVoice(float DeltaSeconds)
         }
     }
     if (VoiceTime >= 0.f && VoiceLines.IsValidIndex(VoiceLine)
-        && (VoiceTime += DeltaSeconds) > NPCVoiceData::Lines[VoiceLines[VoiceLine]].Seconds + .15f) VoiceTime = -1.f;
+        && (VoiceTime += DeltaSeconds) > NPCVoiceData::Lines[VoiceLines[VoiceLine]].Seconds + .15f)
+    {
+        VoiceTime = -1.f;
+        // Dougmund ends his rant: a drink in the pause before he starts again.
+        if (bAmbientVoice && bDrinker && AmbientLine >= 0) DrinkIn(.3f);
+    }
+    // Ambient speech: stopped (cut off), or started again after its pause.
+    if (AmbientStopIn >= 0.f && (AmbientStopIn -= DeltaSeconds) < 0.f)
+    {
+        AmbientLine = -1; AmbientStopIn = -1.f;
+        if (IsAmbientSpeaking()) { if (VoiceAudio) VoiceAudio->FadeOut(AmbientFade, 0.f); VoiceTime = -1.f; }
+    }
+    if (AmbientLine >= 0 && !IsSpeaking() && (AmbientWait -= DeltaSeconds) <= 0.f)
+    {
+        StartVoiceLine(AmbientLine);
+        bAmbientVoice = true; ++AmbientPlays;
+        AmbientWait = AmbientPause;
+        if (!bAmbientLoop) AmbientLine = -1;
+    }
     // The jaw follows the voice's loudness (quick to open, a little slower to close), the brows lift on its peaks.
     const float Loud = VoiceLoudness();
     const float Want = (Kind == EDockHuman::Dwarf ? 9.f : 7.f) * FMath::Pow(Loud, .8f);   // his under a beard; lips that show open less
@@ -1952,6 +1979,122 @@ void ADockNPC::SitInTavern()
 void ADockNPC::DrinkIn(float Seconds)
 {
     DrinkClock = DrinkPeriod - FMath::Clamp(Seconds, 0.f, DrinkPeriod - DrinkDown);
+}
+
+namespace
+{
+    ADockNPC* FindNPC(const TCHAR* Tag)
+    {
+        for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if (Entry.IsValid() && Entry->ActorHasTag(Tag)) return Entry.Get();
+        return nullptr;
+    }
+}
+
+void ADockNPC::StartTavernNight()
+{
+    ADockNPC* Worker = FindNPC(TEXT("DockWorkerArt"));
+    ADockNPC* Keeper = FindNPC(TEXT("TavernKeeper"));
+    if (!Worker || !Keeper || Keeper->NightStage > 0) return;
+    // Nobody to talk to tonight: Dougmund holds forth (his day line is gone), the keeper waits for the rat.
+    Worker->DisplayName = TEXT("Dougmund");
+    Worker->Lines.Reset();
+    Worker->StartAmbient(TEXT("night_00"), true, 5.5f, 1.f);
+    Keeper->NightStage = 1;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_TAVERN_NIGHT_START rant=%d keeper_line=%d"), Worker->HasAmbientLoop() ? 1 : 0,
+        Keeper->VoiceLines.Num() > 0 ? 1 : 0);
+}
+
+int32 ADockNPC::GetTavernNightStage()
+{
+    const ADockNPC* Keeper = FindNPC(TEXT("TavernKeeper"));
+    return Keeper ? Keeper->NightStage : 0;
+}
+
+void ADockNPC::TickTavernNight(float DeltaSeconds)
+{
+    if (NightStage != 1) return;
+    const auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    InsideTime = Chuck && !Chuck->IsAstral() && InTavern(Chuck->GetActorLocation()) ? InsideTime + DeltaSeconds : 0.f;
+    if (InsideTime < TavernInterrupt) return;
+    // "Awright, awright, that'll do, Dougmund": he's cut off a moment after the keeper starts.
+    NightStage = 2;
+    StartAmbient(TEXT("night_00"), false);
+    if (ADockNPC* Worker = FindNPC(TEXT("DockWorkerArt"))) Worker->StopAmbient(.35f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_TAVERN_NIGHT_INTERRUPT chuck=%s"), *Chuck->GetActorLocation().ToString());
+}
+
+bool ADockNPC::StartAmbient(const TCHAR* Id, bool bLoop, float Pause, float Delay)
+{
+    // The line's index among this NPC's voice lines (added after the talk lines on first use).
+    const FString Npc = Kind == EDockHuman::Worker ? TEXT("Worker") : Kind == EDockHuman::TavernKeeper ? TEXT("TavernKeeper") : DisplayName.Replace(TEXT(" "), TEXT(""));
+    int32 Index = INDEX_NONE;
+    for (int32 I = 0; I < VoiceLines.Num(); ++I)
+        if (Npc == NPCVoiceData::Lines[VoiceLines[I]].Npc && FCString::Strcmp(NPCVoiceData::Lines[VoiceLines[I]].Id, Id) == 0) Index = I;
+    for (int32 I = 0; Index == INDEX_NONE && I < NPCVoiceData::LineCount; ++I)
+    {
+        const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
+        if (Npc != L.Npc || FCString::Strcmp(L.Id, Id) != 0) continue;
+        USoundBase* Sound = *L.Sound ? LoadObject<USoundBase>(nullptr, L.Sound) : nullptr;
+        if (*L.Sound && !Sound) UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_VOICE_MISSING %s %s"), *Npc, Id);
+        Index = VoiceLines.Add(I); VoiceSounds.Add(Sound);
+    }
+    if (Index == INDEX_NONE) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_AMBIENT_MISSING %s %s"), *Npc, Id); return false; }
+    EnsureVoiceAudio();
+    // In the room: full a few metres round, falling away over the room and the street,
+    // and muffled by walls (heard outside through the open door, quietly through the plaster).
+    if (!RoomAttenuation)
+    {
+        RoomAttenuation = NewObject<USoundAttenuation>(this);
+        FSoundAttenuationSettings& A = RoomAttenuation->Attenuation;
+        A.bAttenuate = true; A.bSpatialize = true;
+        A.AttenuationShape = EAttenuationShape::Sphere;
+        A.AttenuationShapeExtents = FVector(250.f, 0.f, 0.f);
+        A.FalloffDistance = 1300.f;
+        A.bEnableOcclusion = true;
+        A.OcclusionTraceChannel = ECC_Visibility;
+        A.OcclusionVolumeAttenuation = .3f;
+        A.OcclusionLowPassFilterFrequency = 1200.f;
+        A.OcclusionInterpolationTime = .3f;
+    }
+    VoiceAudio->AttenuationSettings = RoomAttenuation;
+    AmbientLine = Index; bAmbientLoop = bLoop; AmbientPause = Pause; AmbientWait = Delay; AmbientStopIn = -1.f;
+    return true;
+}
+
+void ADockNPC::StopAmbient(float Delay, float Fade)
+{
+    AmbientStopIn = FMath::Max(Delay, 0.f); AmbientFade = Fade;
+}
+
+bool ADockNPC::GetAmbientSubtitle(const FVector& At, FString& Speaker, FString& Text)
+{
+    if (!InTavern(At)) return false;
+    // The latest to start speaking (the keeper over Dougmund as he cuts in).
+    const ADockNPC* Who = nullptr;
+    for (const TWeakObjectPtr<ADockNPC>& Entry : All())
+        if (Entry.IsValid() && Entry->IsAmbientSpeaking() && (!Who || Entry->VoiceTime < Who->VoiceTime)) Who = Entry.Get();
+    if (!Who) return false;
+    const NPCVoiceData::FLine& L = NPCVoiceData::Lines[Who->VoiceLines[Who->VoiceLine]];
+    // Sentences, gathered into parts of a readable length, each shown for its share of the line by length.
+    TArray<FString> Parts;
+    FString Part;
+    const FString Whole(L.Text);
+    for (int32 I = 0; I < Whole.Len(); ++I)
+    {
+        Part.AppendChar(Whole[I]);
+        const bool bEnd = FString(TEXT(".!?\u2026")).Contains(FString::Chr(Whole[I])) && (I + 1 == Whole.Len() || Whole[I + 1] == TEXT(' '));
+        if ((bEnd && Part.TrimStartAndEnd().Len() >= 45) || I + 1 == Whole.Len()) { Parts.Add(Part.TrimStartAndEnd()); Part.Reset(); }
+    }
+    int32 Total = 0;
+    for (const FString& P : Parts) Total += P.Len();
+    float Into = Who->VoiceTime / FMath::Max(L.Seconds, .1f) * Total;
+    for (const FString& P : Parts)
+    {
+        Text = P;
+        if ((Into -= P.Len()) < 0.f) break;
+    }
+    Speaker = Who->DisplayName;
+    return true;
 }
 
 void ADockNPC::PoseDrink(TArray<FTransform>& Space)

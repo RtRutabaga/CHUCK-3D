@@ -46,6 +46,9 @@ bool CheckDockReturn(UWorld* World,bool Evening)
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Worker=Entry.Get();
     const bool Seated=Worker && Worker->IsSeated() && Worker->IsDrinker() && FVector::Dist2D(Worker->GetActorLocation(),ADockNPC::TavernHips)<1.f;
     if(!Worker || Seated!=Evening) ++Failed;
+    // And at night he rants on a loop with no one talking to him, until the keeper cuts in.
+    const int32 Stage=ADockNPC::GetTavernNightStage();
+    if(Evening ? !(Worker && !Worker->CanTalk() && (Stage==2 || (Stage==1 && Worker->HasAmbientLoop()))) : Stage!=0) ++Failed;
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RETURN_CHECK failures=%d evening=%d hatch_closed=%d tavern_open=%d sun=%.3f sky=%.3f"),Failed,Evening,Evening,!DoorBlocked,Evening?1.35f*.28f:1.35f,Evening?1.05f*.65f:1.05f);
     return Failed==0;
 }
@@ -87,6 +90,7 @@ void BuildDockReturn(UWorld* World)
             It->GetComponent()->SetFogInscatteringColor(FLinearColor(.12f,.14f,.21f));
         // The dock worker goes in for a drink (user 2026-10-06).
         for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Entry->SitInTavern();
+        ADockNPC::StartTavernNight();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCK_RETURN_APPLIED evening=1 hatch_closed=1 tavern_open=1"));
     },.05f,true);
 
@@ -162,12 +166,42 @@ void BuildDockReturn(UWorld* World)
             },At+.25f,false);
         }
         FTimerHandle Go;World->GetTimerManager().SetTimer(Go,[Worker](){if(ADockNPC* W=Worker()) W->DrinkIn(0.f);},8.5f,false);
-        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World,Worker](){
+        // Then the night's talk: Chuck outside the open door (Dougmund ranting, no subtitles), then
+        // inside (the keeper cuts in, Dougmund stops; subtitles on). Shots with the HUD: Scene_<n>.png.
+        struct FScene {int32 Failures=0;};auto Scene=MakeShared<FScene>();
+        const auto Keeper=[](){ADockNPC* K=nullptr;for(const TWeakObjectPtr<ADockNPC>& E : ADockNPC::All()) if(E.IsValid() && E->ActorHasTag(TEXT("TavernKeeper"))) K=E.Get();return K;};
+        const auto Subtitle=[World](FString& Speaker,FString& Line){APawn* C=World->GetFirstPlayerController()->GetPawn();return C && ADockNPC::GetAmbientSubtitle(C->GetActorLocation(),Speaker,Line);};
+        FTimerHandle Outside;World->GetTimerManager().SetTimer(Outside,[World](){
+            if(auto* C=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn()))
+            {C->SetActorHiddenInGame(false);C->SetActorLocation(FVector(40,250,34.65f));C->SetActorRotation(FRotator(0,90,0));World->GetFirstPlayerController()->SetViewTarget(C);C->Recenter();}
+        },13.f,false);
+        FTimerHandle OutsideCheck;World->GetTimerManager().SetTimer(OutsideCheck,[World,Worker,Keeper,Subtitle,Scene](){
+            const ADockNPC* W=Worker();FString S,L;const bool Sub=Subtitle(S,L);
+            Scene->Failures+=!(W && W->HasAmbientLoop() && !W->CanTalk() && !Sub && ADockNPC::GetTavernNightStage()==1);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_OUTSIDE loop=%d speaking=%d plays=%d talk=%d subtitle=%d stage=%d"),W && W->HasAmbientLoop(),W && W->IsAmbientSpeaking(),
+                W ? W->GetAmbientPlays() : 0,W && W->CanTalk(),Sub,ADockNPC::GetTavernNightStage());
+            const FString Folder=FPaths::ScreenShotDir()/TEXT("TavernNight");FScreenshotRequest::RequestScreenshot(Folder/TEXT("Scene_0_outside.png"),true,false);
+        },14.5f,false);
+        FTimerHandle Inside;World->GetTimerManager().SetTimer(Inside,[World](){
+            if(APawn* C=World->GetFirstPlayerController()->GetPawn()) C->SetActorLocation(FVector(40,560,34.65f));
+        },15.f,false);
+        for(int32 Shot=1;Shot<4;++Shot)
+        {
+            FTimerHandle Check;World->GetTimerManager().SetTimer(Check,[World,Worker,Keeper,Subtitle,Scene,Shot](){
+                const ADockNPC* W=Worker();const ADockNPC* K=Keeper();FString S,L;const bool Sub=Subtitle(S,L);
+                if(Shot==1) Scene->Failures+=!(K && W && ADockNPC::GetTavernNightStage()==2 && K->IsAmbientSpeaking() && !W->IsSpeaking() && !W->HasAmbientLoop() && Sub && S==K->DisplayName);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_INSIDE shot=%d stage=%d keeper_speaking=%d worker_speaking=%d subtitle=%d speaker=%s line=%s"),Shot,ADockNPC::GetTavernNightStage(),
+                    K && K->IsAmbientSpeaking(),W && W->IsSpeaking(),Sub,*S,*L);
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("TavernNight");FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("Scene_%d_inside.png"),Shot),true,false);
+            },17.5f+(Shot-1)*6.f,false);
+        }
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World,Worker,Scene](){
             const ADockNPC* W=Worker();
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_CAPTURE seated=%d drinker=%d at=%s drinks=%d grip_cm=%.2f lip_cm=%.2f turn=%.1f"),W && W->IsSeated(),W && W->IsDrinker(),
                 W ? *W->GetActorLocation().ToString() : TEXT("none"),W ? W->GetDrinks() : -1,W ? W->GetDrinkGripError() : 1e3f,W ? W->GetDrinkLipError() : 1e3f,W ? W->GetBodyTurn() : 0.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_SCENE failures=%d"),Scene->Failures);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-        },14.f,false);
+        },31.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckReturnCapture")))
     {

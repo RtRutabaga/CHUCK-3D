@@ -843,7 +843,10 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     constexpr float DuckDown = 4.f, DuckUp = .9f;      // per second: under in a quarter second, back over about a second
     constexpr float DuckHold = .4f;                    // s after the line before the music returns
     bool bSpeech = false;
-    for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking();
+    // The tavern's night talk runs all night: it ducks the music only for a rat in the room.
+    const APawn* Listener = UGameplayStatics::GetPlayerPawn(this,0);
+    const bool bInTavern = Listener && ADockNPC::InTavern(Listener->GetActorLocation());
+    for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking() && (!Entry->IsAmbientSpeaking() || bInTavern);
     DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
     const float Target = DuckQuiet < DuckHold ? MusicDuckLevel : 1.f;
     MusicDuck = FMath::FInterpConstantTo(MusicDuck, Target, DeltaSeconds, Target < MusicDuck ? DuckDown : DuckUp);
@@ -3191,14 +3194,27 @@ void ADockHUD::DrawHUD()
     DrawRect(FLinearColor(FColor(214,168,110)),CountX-12*Px,CigY+Px,2*Px,3*Px);
     // Talk: a quiet prompt near the top in reach (as in the 2D game), and a
     // plain dialogue box near the bottom while someone's speaking.
+    // Overheard talk (the tavern at night: nobody to press F to) gets the same box, without the prompt.
     FString Speaker, Line;
-    if(Chuck->GetDialogue(Speaker,Line))
+    const bool bTalk=Chuck->GetDialogue(Speaker,Line);
+    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line))
     {
-        const float BoxW=FMath::Min(900.f,Canvas->SizeX-80.f), BoxX=(Canvas->SizeX-BoxW)*.5f, BoxY=Canvas->SizeY-190;
-        DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.92f),BoxX,BoxY,BoxW,108);
+        const float BoxW=FMath::Min(900.f,Canvas->SizeX-80.f), BoxX=(Canvas->SizeX-BoxW)*.5f;
+        // The line wrapped to the box (long voiced lines ran off its edge).
+        TArray<FString> Rows; FString Row;
+        TArray<FString> Words; Line.ParseIntoArray(Words,TEXT(" "));
+        for(const FString& Word : Words)
+        {
+            const FString Try=Row.IsEmpty() ? Word : Row+TEXT(" ")+Word;
+            float W=0,H=0; GetTextSize(Try,W,H,GEngine->GetSmallFont(),1.3f);
+            if(W>BoxW-40 && !Row.IsEmpty()) { Rows.Add(Row); Row=Word; } else Row=Try;
+        }
+        if(!Row.IsEmpty()) Rows.Add(Row);
+        const float RowH=24.f, BoxH=FMath::Max(108.f,64.f+Rows.Num()*RowH), BoxY=Canvas->SizeY-82-BoxH;
+        DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.92f),BoxX,BoxY,BoxW,BoxH);
         DrawText(Speaker.ToUpper(),FLinearColor(.77f,.67f,.94f),BoxX+20,BoxY+12,GEngine->GetSmallFont(),1.05f);
-        DrawText(Line,FLinearColor(.95f,.93f,.9f),BoxX+20,BoxY+40,GEngine->GetSmallFont(),1.3f);
-        DrawText(TEXT("F / Y"),FLinearColor(.6f,.62f,.66f),BoxX+BoxW-70,BoxY+84,GEngine->GetSmallFont(),.9f);
+        for(int32 I=0;I<Rows.Num();++I) DrawText(Rows[I],FLinearColor(.95f,.93f,.9f),BoxX+20,BoxY+40+I*RowH,GEngine->GetSmallFont(),1.3f);
+        if(bTalk) DrawText(TEXT("F / Y"),FLinearColor(.6f,.62f,.66f),BoxX+BoxW-70,BoxY+BoxH-24,GEngine->GetSmallFont(),.9f);
     }
     else if(Chuck->GetTalkPrompt())
     {

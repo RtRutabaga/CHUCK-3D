@@ -48,6 +48,14 @@
    "rate": 44100,
    "peaks": 37,
    "gain_db": 1.08
+  },
+  "Worker/night_00": {
+   "wav": "Voice/Worker/night_00.wav",
+   "asset": "/Game/Art/Audio/Voice/Worker/VO_Worker_night_00",
+   "seconds": 24.999,
+   "rate": 44100,
+   "peaks": 78,
+   "gain_db": 0.95
   }
  }
 }

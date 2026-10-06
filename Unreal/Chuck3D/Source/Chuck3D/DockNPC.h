@@ -51,7 +51,8 @@ public:
     static const TArray<TWeakObjectPtr<ADockNPC>>& All();
     FString DisplayName;
     TArray<FString> Lines;
-    bool CanTalk() const { return Lines.Num() > 0; }
+    /** Not while an ambient line is running (the tavern at night): those aren't conversations. */
+    bool CanTalk() const { return Lines.Num() > 0 && AmbientLine < 0 && !IsAmbientSpeaking(); }
     static constexpr float TalkRadius = 120.f;     // cm from Chuck's centre to the NPC's
     static constexpr float NoticeRange = 450.f;    // he watches Chuck within this
     /** Head turn now (deg; + looks right / + looks down), for tests. */
@@ -251,6 +252,30 @@ public:
     /** Start the next drink in Seconds (tests and the night capture). */
     void DrinkIn(float Seconds);
     /**
+     * The tavern at night (user 2026-10-06), started by the evening switch
+     * after SitInTavern: no talking to anyone. Dougmund (the dock worker) rants
+     * his ambient line over and over from his seat, drinking in each pause,
+     * heard from his mouth: quiet through the walls outside, full inside. Once
+     * Chuck has been inside the room TavernInterrupt s, the keeper cuts him
+     * off with his own line, once, and Dougmund stays quiet for the night.
+     * Subtitles for these only while Chuck is in the room (GetAmbientSubtitle).
+     */
+    static void StartTavernNight();
+    /** 0 before the night, 1 Dougmund ranting, 2 the keeper has cut in. */
+    static int32 GetTavernNightStage();
+    static inline const FBox TavernRoom = FBox(FVector(-314.f, 400.f, -40.f), FVector(294.f, 965.f, 450.f));
+    static bool InTavern(const FVector& At) { return TavernRoom.IsInsideOrOn(At); }
+    static constexpr float TavernInterrupt = 1.5f;     // s inside before the keeper speaks up
+    /** Speak this NPC's ambient line Id (NPCVoiceData), after Delay s; with bLoop, again Pause s after each time. */
+    bool StartAmbient(const TCHAR* Id, bool bLoop, float Pause = 0.f, float Delay = 0.f);
+    /** Stop the ambient line (and its loop) after Delay s, fading out over Fade s. */
+    void StopAmbient(float Delay = 0.f, float Fade = .25f);
+    bool IsAmbientSpeaking() const { return bAmbientVoice && IsSpeaking(); }
+    bool HasAmbientLoop() const { return AmbientLine >= 0 && bAmbientLoop; }
+    int32 GetAmbientPlays() const { return AmbientPlays; }
+    /** While Chuck (At) is in the tavern: who is speaking an ambient line and the part of it being spoken now. */
+    static bool GetAmbientSubtitle(const FVector& At, FString& Speaker, FString& Text);
+    /**
      * The alchemist (user 2026-10-05: "an alchemist vendor in front of the
      * alchemist shop, a gnome in black robes, hands together behind robe
      * sleeves so that they aren't visible, DnD 5e gnome height and facial
@@ -358,6 +383,14 @@ private:
     UPROPERTY() UAudioComponent* VoiceAudio = nullptr;
     TArray<int32> VoiceLines;                     // indices into NPCVoiceData::Lines, in talk order
     int32 VoiceLine = -1, HeardLine = -1, Blinks = 0;
+    int32 TalkVoiceCount = 0;                     // VoiceLines' first entries are the talk lines; ambient ones follow
+    // Ambient speech (the tavern at night).
+    int32 AmbientLine = -1, AmbientPlays = 0, NightStage = 0;
+    bool bAmbientLoop = false, bAmbientVoice = false;
+    float AmbientPause = 0.f, AmbientWait = 0.f, AmbientStopIn = -1.f, AmbientFade = .25f, InsideTime = 0.f;
+    UPROPERTY() TObjectPtr<USoundAttenuation> RoomAttenuation;
+    void EnsureVoiceAudio();
+    void TickTavernNight(float DeltaSeconds);
     float VoiceTime = -1.f, JawOpen = 0.f, MaxJawOpen = 0.f, BrowLift = 0.f, Blink = 0.f, BlinkTime = -1.f, NextBlink = 3.f;
     int32 FaceBone[5] = { INDEX_NONE, INDEX_NONE, INDEX_NONE, INDEX_NONE, INDEX_NONE };   // jaw, lid l/r, brow l/r
     FQuat HeadRefRotation = FQuat::Identity;      // the head's component-space rotation in the model's pose
