@@ -1175,6 +1175,147 @@
     0.0,
     157.2
    ]
+  },
+  "Bobert": {
+   "fbx": "Bobert/SK_Bobert.fbx",
+   "height_cm": 97,
+   "tris": 63568,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.09,
+      0.06,
+      0.035
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.15,
+      0.15,
+      0.065
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.06,
+      0.035,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Cuff": {
+     "type": "fabric",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.24,
+      0.045,
+      0.035
+     ],
+     "tile_cm": 35.2,
+     "gain": 4.937
+    },
+    "CuffBand": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.4
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Coat": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.34,
+      0.2,
+      0.065
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Scarf": {
+     "type": "fabric",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.12,
+      0.11,
+      0.15
+     ],
+     "tile_cm": 35.2,
+     "gain": 4.937
+    },
+    "Furcollar": {
+     "type": "fabric",
+     "fabric": "wool_boucle",
+     "tint": [
+      0.22,
+      0.16,
+      0.1
+     ],
+     "tile_cm": 35.2,
+     "gain": 4.937
+    },
+    "Fringe": {
+     "type": "card",
+     "texture": "Textures/beard_strands.png",
+     "tint": [
+      0.32,
+      0.29,
+      0.26
+     ]
+    },
+    "Earring": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.38,
+      0.37,
+      0.36
+     ],
+     "tile_cm": 200.0,
+     "gain": 14.226
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/bobert_eye_closed.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow009.png",
+     "tint": [
+      0.55,
+      0.5,
+      0.45
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    }
+   },
+   "mouth_cm": [
+    9.8,
+    0.0,
+    83.9
+   ]
   }
  },
  "generator": "Tools/build_npc_humans.py",

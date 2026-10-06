@@ -2177,8 +2177,8 @@ void ADockNPC::SolveSleep()
     const float Thigh = static_cast<float>(FVector::Dist(At(ThighL), At(CalfL)));
     const float Calf = static_cast<float>(FVector::Dist(At(CalfL), At(FootL)));
     const float Ankle = static_cast<float>(At(FootL).Z);   // the ankle above his soles, standing
-    FVector FootRest = At(BallL) - At(FootL);
-    FootRest = FVector(FootRest.Size2D(), 0.f, FootRest.Z).GetSafeNormal();
+    FVector SoleRest = At(BallL) - At(FootL);
+    SoleRest = FVector(SoleRest.Size2D(), 0.f, SoleRest.Z).GetSafeNormal();
     // The back: leaning into the blanket low, slumping forward higher up; the head bowed and fallen to his left.
     Aim(Spine1, Spine2, FVector(-FMath::Sin(Rad(SleepLean)), 0.f, FMath::Cos(Rad(SleepLean))));
     Aim(Spine2, Chest, FVector(-FMath::Sin(Rad(SleepLean * .4f)), 0.f, FMath::Cos(Rad(SleepLean * .4f))));
@@ -2204,7 +2204,7 @@ void ADockNPC::SolveSleep()
         const float Want = Seat + Ankle + (BarrelFloor(FootX) - SeatFloor);
         const float Dz = FMath::Clamp((Want - static_cast<float>(Knee.Z)) / Calf, -1.f, 1.f);
         Aim(Of(CalfL, L), Of(FootL, L), FVector(FMath::Sqrt(FMath::Max(0.f, 1.f - Dz * Dz)), Side[L] * .04f, Dz));
-        Aim(Of(FootL, L), Of(BallL, L), FVector(FootRest.X, Side[L] * .2f * FootRest.X, FootRest.Z));
+        Aim(Of(FootL, L), Of(BallL, L), FVector(SoleRest.X, Side[L] * .2f * SoleRest.X, SoleRest.Z));
     }
     // Into the barrel: hips over the seat, the lowest of him on the floor (the arms are placed each frame).
     Body->SetRelativeLocation(FVector(SeatX - Hips.X, -Hips.Y, -HalfHeight + SeatFloor + .4f + SleepLift * Thigh - Hips.Z));
