@@ -15,6 +15,28 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: the blacksmith's line and audio; he stops work when talked to, pauses briefly before speaking, and resumes after):** runtime `34ad28c`, on `e9b923c`.
+
+- **Line:** "It pains me to see Bobert living like that… I know what he did in Icewind Dale. The man's a hero." The user's `Blacksmith_audio.mp3`, 8.52 s (whole file), levelled +2.4 dB. It replaces his two text lines.
+- **Face:** `face: true`. He was rebuilt with the five face bones (same 57,154 tris) and re-imported. `SetupVoice("Blacksmith")`.
+- **Behaviour** (`ADockNPC::RequestVoiceLine`, used by conversation):
+  - The smith already rested his hammer on the anvil while talked to. Now his line waits until the hammer is fully down, then pauses 0.7 s more (`SmithSpeakPause`) before he speaks: about 1.1 s from the conversation opening.
+  - He stays at rest until the line has finished, even if it outlasts the conversation's opening, then goes back to the anvil.
+  - Closing the conversation before he speaks cancels the line. Closing it mid-line fades it out, as for the others.
+  - Other NPCs still speak at once.
+- **Tests:**
+  - `CHUCK_SMITH_TALK_START`: asked for his line in the voice stage, 0.9 s later he has stopped work and is pausing, not yet speaking.
+  - `CHUCK_SMITH_VOICE_MEASURE`, at the end of the suite: the line was spoken, the pause was 0.6-1.5 s, his hammer was fully rested throughout, and he struck at least 3 blows after.
+  - Gate `CHUCK_NPC_VOICE Blacksmith lines=1 sounds=1`. Thresholds 161/162.
+- **Results:** the candidate passed **163** with every gate (`Local/verify-package-20261006-150235.log`). Measured `pending=1 speaking=0 forging=0`, then `pause_s=0.70 rest_while_speaking=1.00 strikes_after=108 max_jaw_deg=7.0`. His forging checks are unchanged (strike gap 0.4 cm, tongs 0.0).
+  - Review: `SourceAssets/NPCs/Humans/Review/runtime_Blacksmith_speaking.png` (hammer down on the bar mid-line).
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `34ad28c`. Previous package: `Builds/Windows-Previous-20261006-SmithVoice`.
+- **Not done:**
+  - Not listened to or played through by me. The pause length (0.7 s) is the value to tune.
+  - `-ChuckTalkCapture=Blacksmith` produced no frames, and the NPC capture's face shot frames the back of his head at the anvil.
+
+Next part of the work can be done here.
+
 **Update (Claude, October 6, user request: add this audio for the alchemist's line "Summon. Tell your master I'll have another shipment of halfling leaf for him to move soon. I'm waiting on a caravan out of Athkatla… They should've been here by now."):** runtime `c40968f`, on `5a06680`.
 
 - **Voice:** the gnome alchemist outside the alchemist's shop. The user's `Alchemist_audio.mp3`, 11.96 s (whole file), levelled +4.3 dB. It replaces his two text lines.

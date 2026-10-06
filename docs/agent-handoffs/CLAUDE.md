@@ -2411,3 +2411,12 @@ Next part of the work can be done here.
 - **Remaining:** not listened to.
 
 Next part of the work can be done here.
+
+## Blacksmith's voice line, pause and resume (user 2026-10-06)
+
+- **Source:** `34ad28c`: `dialogue.json` Blacksmith, `humans.json` `face: true` (rebuilt, same tris), his FBX/assets, `VO_Blacksmith_talk_00`, `NPCVoiceData.h`, `DockNPC.*` (`RequestVoiceLine`, `SmithSpeakPause` 0.7 s, rest while pending/speaking, speech measures), `DockGameMode.cpp` (two checks), `Verify-Package.ps1` 161/162 + gate.
+- **Verified:** `Local/verify-package-20261006-150235.log`, 163 passes; pause 0.70 s, rest 1.00 while speaking, 108 blows after.
+- **Launcher:** `Builds/Windows` = `34ad28c`; backup `Builds/Windows-Previous-20261006-SmithVoice`.
+- **Remaining:** not listened to; tune the pause by ear.
+
+Next part of the work can be done here.
