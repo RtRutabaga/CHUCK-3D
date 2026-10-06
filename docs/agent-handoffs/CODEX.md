@@ -1,5 +1,17 @@
 # Codex movement handoff — 2026-09-26
 
+## October 6 — crate shimmer
+
+Runtime **`be5107a`**, on `2aa3130` / launcher `ab1ce8e`. Fixed the original crate's competing coplanar board/frame surfaces, exposed by the independent board UVs. Recessed panels/lids 0.6 cm, rails 0.25 cm inward and at upper/lower ends, and tucked front rail end caps behind corner battens (59 cm length). Outer bounds, topology, original source FBX/Blender files and collision/vault proxies preserved. No material/texture or building changes.
+
+Geometry regression check: **84 exposed coplanar pairs before, zero after**. `Tools/import_weathered_crate.py` imports only the derivative crate; bounds and material bindings pass. Existing Blender 4.5.14 / UE 5.7.4; nothing installed. Successful logs `Local/crate-shimmer-blender2.log`, `Local/crate-shimmer-import.log`.
+
+Before/after `-ChuckCrateMotionCapture` reviews generated 78 fixed/near/far frames each; inspected static and orbit views. On 15 matched stationary samples, rail-region temporal variation dropped ~38% and 50%, background unchanged (`Local/crate-shimmer-pixel-analysis.json`). This is sampled automatic-camera evidence, not every distance or manual input. Before package `Builds/CrateBefore/Windows`, after frames in current root package's `Saved/Screenshots/Windows/CrateMotion`.
+
+Full corrected cook/package **36.20 s**, `Local/crate-shimmer-build.log`; default verification passed **155 and every gate**, first run (`Local/verify-package-20261005-180354.log`). Source/asset milestone committed; root `Launch-Prototype.cmd` promoted to **`be5107a`**, receipt/hash/CheckOnly passed. Previous package retained at `Builds/Windows-Previous-20261006-CrateShimmer`. Claude's voice/music update retained; its running verification was allowed to finish before the crate build. All 47 remaining unfinished human inputs (45 uassets + 2 unused PNGs) unchanged/unstaged. Two LFS binaries, 287,375 bytes; fsck passed, generated output untracked. Main handoff has full evidence and limitations.
+
+Next part of the work can be done here.
+
 ## October 5 — weathered timber
 
 Runtime **`b1a4277`**, on `12a21ad`; root launcher promoted from `5d35f5c`. Implemented the user's approved Poly Haven timber plan: 2K CC0 Weathered Brown Planks siding and Rough Wood grain, matte normal/roughness detail, modest colour/dampness variation. UV-only derived dock crate maps grain to each existing board/rail; original props, collision and traversal preserved. No character/NPC reimport or installation.
