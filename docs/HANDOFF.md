@@ -15,7 +15,7 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
-## October 5 (merged to main October 6) — Bobert asleep in his barrel (source only, not built)
+## October 6 — Bobert asleep in his barrel (cloud source merged, built and promoted)
 
 **Update (Claude, cloud session, user request: "Add Bobert in his barrel asleep like in the 2d game, positioned by starting point", with three reference images; a halfling, not full human height, reading as late-middle-aged):** source on branch `claude/bobert-barrel-asleep-minc8q`, from `df963d8`. **Not built, imported, packaged or played.** This session ran in a Linux cloud container with no Unreal and no LFS access, so the launcher package is unchanged (`09b88b7`) and not stale with respect to anything it claims.
 
@@ -39,7 +39,14 @@ Next part of the work can be done here.
   - The fringe is cards.
   - His face sits in the barrel's shade.
 
-Next part of the work could be done by either — preference: Claude. It needs the Windows machine.
+**Merged and built on Windows (Claude, October 6):** the cloud branch `claude/bobert-barrel` (`bda1310`) was merged as `26c7432`. Main had added the elf, gnome and sailor in the same files, so Bobert is mesh slot 12 and `EDockHuman` puts him after `Sailor`; scratch and arms-down skip him; the verifier expects **156/157** plus `CHUCK_BOBERT_SPAWNED`. Compile fix and built assets: `697ab5d` (his local `FootRest` shadowed main's new member, renamed `SoleRest`). Ran the four "to finish" steps above with Blender 4.5.14 and UE 5.7 (`Local/bobert-{textures,body,barrel}.log`); SK_Bobert 63.6k tris, 97 cm; SM_BobertBarrel 8.3k tris; the import touched only Bobert's assets.
+
+- **Verified:** package build OK; first verification 157 passes with one `FAIL`, the known intermittent tavern-keeper rag check (`Local/verify-package-20261005-204512.log`); rerun on the same package **158 passes, no failures** (`Local/verify-package-20261005-205009.log`): `fit_error_cm=0.0 head_bow_deg=49.0 breaths=23 hand_rest_cm=0.0 lines=0 to_start_cm=114`.
+- **Looked at:** `-ChuckNPCCapture -ChuckNPCTag=Bobert` frames a standing NPC, so its shots miss him; the Wide shot shows him in the barrel by the start, knees up, boots at the mouth (`Local/bobert-wide-zoom.png`). His face is not readable at that distance (in the barrel's shade). Not played by the user.
+- **Launcher:** `Builds/Windows` = `697ab5d`, receipt and `Launch-Prototype.ps1 -CheckOnly` OK; previous package `Builds/Windows-Previous-20261006-Bobert`.
+- **Remaining:** the flaws above; a capture shot that frames a seated/lying NPC; Build-Prototype regenerated `Content/Prototype/Materials/*.uasset` again (reverted, not committed).
+
+Next part of the work can be done here.
 
 **Update (Claude, October 6, user request: give the NPC standing by the tavern this ElevenLabs line):** runtime `2b727c6`, on `df31a2d`.
 

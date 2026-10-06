@@ -2247,4 +2247,12 @@ Next part of the work can be done here.
   - He never stirs beyond breathing and a nod (by design).
 - **Heavy tools running:** none.
 
-Next part of the work could be done by either — preference: Claude (owns the NPCs). It needs the Windows machine: build the assets, import, compile, verify and promote.
+## Bobert merged, built and promoted (October 6)
+
+- **Source:** merge `26c7432` (cloud `bda1310` onto `f3b978a`; Bobert slot 12, after `Sailor`; verifier 156/157), then `697ab5d` (`FootRest` local renamed `SoleRest`; Bobert FBX/PNG and Unreal assets).
+- **Run:** `build_bobert_textures.py`, `build_npc_humans.py -- Bobert`, `build_bobert_barrel.py`, `Import-NPCHumans.ps1 -Only Bobert,prop:BobertBarrel`, `Build-Prototype.ps1 -Package`, `Verify-Package.ps1` rerun.
+- **Verified:** `Local/verify-package-20261005-205009.log`, 158 passes, no failures (the first run failed only the intermittent keeper rag check).
+- **Launcher:** `Builds/Windows` = `697ab5d`; backup `Builds/Windows-Previous-20261006-Bobert`.
+- **Remaining:** face unreadable in the barrel's shade; NPC capture does not frame him; not played by the user. Remote branches `claude/bobert-barrel` and `claude/bobert-barrel-asleep-minc8q` are now merged and can be deleted.
+
+Next part of the work can be done here.
