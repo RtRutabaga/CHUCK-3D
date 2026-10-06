@@ -1,5 +1,18 @@
 # Handoff — 2026-09-27
 
+## October 6 — weathered square shops and flat shack roofs
+
+Runtime **`905c613`**, on `50888e5`. Bonded Stores, Sail Loft, Chandler, Sail Repair and Cooper now have staggered split-shake courses: uneven widths/butt ends, shallow varied relief and selected end splits. Surface wear sits on sound shells; doors, windows, signs, hoists and parkour obstacles remain. Existing CC0 Rough Wood materials reused; no installations, imports or new binary assets.
+
+Flat plank roofs now have seams, recessed underlay, 8 cm eaves, worn fascia and edge repairs. Hidden roof collision follows the skin, **5 cm above** original landing heights. Roof-leap assertion expects the new **235 cm** landing with its existing 3 cm tolerance unchanged. Wall shakes have no collision; original shells remain climb surfaces. Fascia corners meet without overlapping coplanar top faces.
+
+Actual evidence: source-only skip-cook review build **119.00 s** (`Local/shop-build.log`); after fascia/assertion adjustments, final build **82.66 s** (`Local/shop-verified-build.log`). Existing UE **5.7.4**, VS2022; cooked assets reused. Three daytime and three evening `-ChuckShopCapture` views reviewed (`Local/shop-morning`, package `Saved/Screenshots/Windows/Shops`, `Local/shop-review.log`, `Local/shop-night-review.log`), night start/return confirmed. Final default verification passed **155 checks and all gates**, first run (`Local/verify-package-20261005-182445.log`, `Local/shop-verification.log`). Alley climb and roof leap passed; roof leap grounded at **z=269.65**, pull-up=1. Final player-camera rooftop `Wharf_310.png` reviewed. No new manual-input, sustained-performance or MotionCapture claim; evening lighting retains existing dark tone.
+
+Root **`Launch-Prototype.cmd`** now uses **`Builds/Windows` / `905c613`**; receipt/hash/CheckOnly pass. Inspect via New Game / Waterdeep. Previous crate-corrected package retained at **`Builds/Windows-Previous-20261006-Shops`**. Source milestone pushed to main. No new LFS upload; fsck passed and generated output remains untracked. All **47** unfinished human inputs remain hash-identical to `Local/shop-preserved-inputs.json`, unstaged. Reused cooked cache contains the earlier packaged local human state; no pristine-checkout reproduction claim. Original 2D repository untouched.
+
+Next part of the work can be done here.
+
+
 ## Current launcher and integration status
 
 **Update (Codex, October 6, user report: new crate wood shimmers):** runtime **`be5107a`**, from `2aa3130` / launcher `ab1ce8e`.
