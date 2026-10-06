@@ -2362,3 +2362,16 @@ Next part of the work can be done here.
   - Not played by the user.
 
 Next part of the work can be done here.
+
+## October 6 — The keeper's night line is voiced (Claude, user upload `Tavern_keeper_audio.mp3`)
+
+- **Source:** `c756a91`. The upload is kept as `Voice/TavernKeeper/source/ElevenLabs_2026-10-06_TavernKeeper_night_00.mp3`. `dialogue.json` gives `TavernKeeper/night_00` its `source`.
+- **Rebuild:** `build_npc_voice.py` levelled it to 28.53 s (+1.02 dB), replacing the 33.4 s text-only estimate. Imported as `VO_TavernKeeper_night_00` with `CHUCK_VOICE_ONLY=TavernKeeper`. No code change.
+- **Verified:**
+  - Package `Local/verify-package-20261006-104033.log`: 158 passes.
+  - `Verify-Menu.ps1`: 6/6.
+  - Scene test `Local/keeper-voice-capture.log`: failures=0, no `VOICE_MISSING`. The keeper cuts in, the worker stops and the subtitles advance.
+- **Launcher:** `Builds/Windows` is `c756a91` (`-CheckOnly` passes). Backup: `Builds/Windows-Previous-20261006-KeeperVoice` (the `2c1fe81` build).
+- **Not verified by ear:** the loudness inside versus outside, and whether the subtitle timing matches his delivery. The keeper has no face rig, so his jaw stays still.
+
+Next part of the work can be done here.
