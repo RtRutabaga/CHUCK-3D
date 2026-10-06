@@ -15,6 +15,18 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: add the market woman's audio, "No handouts. If you're hungry, check the sewer for scraps."):** runtime `aba1447`, on `0798300`.
+
+- **Voice:** the user's `Market_woman_audio.mp3`, 4.44 s (whole file), levelled +1.9 dB. It replaces her old text line ("No handouts here. If you're hungry, you should check the sewer for scraps."). The townsfolk check's "check the sewer for scraps" still matches.
+- **Face:** `face: true`. She was rebuilt with the five face bones (same 77,292 tris; her blond braid and kerchief unchanged) and re-imported. `SetupVoice("MarketWoman")`.
+- **Tests:** new `CHUCK_MARKET_VOICE_MEASURE` (her line starts with the others) and gate `CHUCK_NPC_VOICE MarketWoman lines=1 sounds=1`. Thresholds 158/159.
+- **Results:** the candidate passed **160** with every gate (`Local/verify-package-20261006-130114.log`). Measured `max_jaw_deg=7.0`.
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `aba1447`. Previous package: `Builds/Windows-Previous-20261006-MarketVoice`.
+- **Left alone:** the 14 `Content/Prototype/Materials/M_*.uasset` modified at 10:39 (before this session's work) are still unstaged and untouched.
+- **Not done:** not listened to by me.
+
+Next part of the work can be done here.
+
 **Update (Claude, October 6, user request: "Give the market lady a blond pony tail like the old lady's, but keep her cap over head"):** runtime `2caa2c6`, on `57e3b5d`.
 
 - **Hair:**

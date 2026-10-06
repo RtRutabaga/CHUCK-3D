@@ -2393,3 +2393,12 @@ Next part of the work can be done here.
 - **Remaining:** braid doesn't swing; not playtested.
 
 Next part of the work can be done here.
+
+## Market woman's voice line (user 2026-10-06)
+
+- **Source:** `aba1447`: `dialogue.json` MarketWoman, `humans.json` `face: true` (rebuilt, same tris), her FBX/assets, `VO_MarketWoman_talk_00`, `NPCVoiceData.h`, `DockNPC.cpp`, `DockGameMode.cpp` (voice check), `Verify-Package.ps1` 158/159 + gate.
+- **Verified:** `Local/verify-package-20261006-130114.log`, 160 passes; jaw 7.0 degrees.
+- **Launcher:** `Builds/Windows` = `aba1447`; backup `Builds/Windows-Previous-20261006-MarketVoice`.
+- **Remaining:** not listened to.
+
+Next part of the work can be done here.
