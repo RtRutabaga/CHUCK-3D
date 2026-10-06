@@ -596,7 +596,7 @@ ADockNPC* ADockNPC::SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw)
     if (!NPC) return nullptr;
     NPC->Tags.Add(TEXT("ElfElder"));
     NPC->DisplayName = TEXT("Old elf");
-    NPC->Lines = { TEXT("The water sounded just the same three hundred years ago.") };
+    NPC->SetupVoice(TEXT("ElfElder"));   // user 2026-10-06: her recorded line replaces the old text one
     return NPC;
 }
 
@@ -667,8 +667,8 @@ void ADockNPC::SpawnTownsfolk(UWorld* World)
     // shop at 1280,-3940, its front at y -3760, the door at x 1222..1338),
     // clear of the door, facing out over the plaza.
     SpawnAlchemist(World, AlchemistFeet, AlchemistYaw);
-    // The old elf on the plaza bench beside the fountain (DockPlaza.cpp), at
-    // its fountain end, facing back toward the docks.
+    // The old elf on her bench on the bay side of the fountain (DockPlaza.cpp
+    // builds it from ElfBench), facing the fountain.
     SpawnElfElder(World, ElfHips, ElfYaw);
     // The tavern keeper behind his counter (DockTavern.cpp: counter y 810..878,
     // bottle shelves from y 941), between the barrels (east edge x -119) and

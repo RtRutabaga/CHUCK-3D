@@ -1072,7 +1072,8 @@
       0.025
      ]
     }
-   ]
+   ],
+   "face": true
   },
   "GnomeAlchemist": {
    "height_cm": 100,

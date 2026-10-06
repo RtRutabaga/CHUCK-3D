@@ -64,6 +64,14 @@
    "rate": 44100,
    "peaks": 67,
    "gain_db": 1.02
+  },
+  "ElfElder/talk_00": {
+   "wav": "Voice/ElfElder/talk_00.wav",
+   "asset": "/Game/Art/Audio/Voice/ElfElder/VO_ElfElder_talk_00",
+   "seconds": 10.266,
+   "rate": 44100,
+   "peaks": 36,
+   "gain_db": 3.15
   }
  }
 }

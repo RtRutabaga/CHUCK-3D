@@ -2034,6 +2034,8 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("DockWorkerArt"),Talker);
             if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
+            UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),Talker);
+            if(auto* Speaker=Talker.Num() ? Cast<ADockNPC>(Talker[0]) : nullptr) Speaker->StartVoiceLine(0);
         }
         if(StageTime>=8.5f && StageTime-DeltaSeconds<8.5f)
         {
@@ -2171,15 +2173,25 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("ElfElder"),ElfFound);
             const auto* Elf=ElfFound.Num()==1 ? Cast<ADockNPC>(ElfFound[0]) : nullptr;
             const FVector ElfAt=Elf ? Elf->GetActorLocation() : FVector(1e4f);
-            const FVector ToBench=ElfAt-ADockNPC::ElfBench;
+            const FVector ToBench=FRotator(0,ADockNPC::ElfYaw,0).UnrotateVector(ElfAt-ADockNPC::ElfBench);   // X forward off the bench's middle, Y along it
             const float ElfToFountain=static_cast<float>(FVector::Dist2D(ElfAt,FVector(260,-3320,0)));
             UE_LOG(LogTemp,Display,TEXT("CHUCK_ELF_MEASURE present=%d at=(%.0f,%.0f) seat_cm=%.1f bench_top_cm=%.0f foot_lift_cm=%.1f lap_hand_cm=%.1f to_fountain_cm=%.0f body_turn_deg=%.1f mocap=%d lines=%d"),
                 Elf ? 1 : 0,ElfAt.X,ElfAt.Y,Elf ? Elf->GetSeatHeight() : 0.f,ADockNPC::ElfBench.Z,Elf ? Elf->GetFootLiftError() : 1e3f,Elf ? Elf->GetLapHandError() : 1e3f,
                 ElfToFountain,Elf ? Elf->GetBodyTurn() : 0.f,Elf && Elf->HasMocap() ? 1 : 0,Elf ? Elf->Lines.Num() : 0);
-            // Her hip joints a sit-bone above the bench top (not standing at ~85 cm), over the bench's 50 cm depth near its front edge.
-            Check(Elf && Elf->HasMocap() && FMath::Abs(Elf->GetSeatHeight()-ADockNPC::ElfBench.Z-9.f)<4.f && FMath::Abs(ToBench.X)<80.f && ToBench.Y>0.f && ToBench.Y<25.f
-                && Elf->GetFootLiftError()<2.f && Elf->GetLapHandError()<3.f && ElfToFountain<800.f && FMath::Abs(Elf->GetBodyTurn())<1.f && Elf->CanTalk(),
-                TEXT("an old elf sits on the bench by the fountain: hips on the bench, feet flat on the paving, hands in her lap, never turning from it"));
+            // Her hip joints a sit-bone above the bench top (not standing at ~85 cm), over the bench's 50 cm depth near its front edge;
+            // on the bay side of the fountain (north of it, toward the harbour) and well away from the alchemist's shop.
+            const float ElfToAlchemist=static_cast<float>(FVector::Dist2D(ElfAt,ADockNPC::AlchemistFeet));
+            Check(Elf && Elf->HasMocap() && FMath::Abs(Elf->GetSeatHeight()-ADockNPC::ElfBench.Z-9.f)<4.f && FMath::Abs(ToBench.Y)<80.f && ToBench.X>0.f && ToBench.X<25.f
+                && Elf->GetFootLiftError()<2.f && Elf->GetLapHandError()<3.f && ElfToFountain<1100.f && ElfAt.Y>-3320.f+400.f && ElfToAlchemist>800.f
+                && FMath::Abs(Elf->GetBodyTurn())<1.f && Elf->CanTalk(),
+                TEXT("an old elf sits on her bench on the bay side of the fountain, away from the alchemist: hips on the bench, feet flat on the paving, hands in her lap, never turning from it"));
+            // Her recorded line (user 2026-10-06), started with the others: her jaw moves with it as she sits.
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ELF_VOICE_MEASURE sounds=%d face_bones=%d speaking=%d max_jaw_deg=%.1f blinks=%d line=%s"),
+                Elf ? Elf->GetVoiceSoundCount() : 0,Elf ? Elf->GetFaceBoneCount() : 0,Elf && Elf->IsSpeaking() ? 1 : 0,
+                Elf ? Elf->GetMaxJawOpen() : 0.f,Elf ? Elf->GetBlinks() : 0,Elf && Elf->Lines.Num() ? *Elf->Lines[0] : TEXT(""));
+            Check(Elf && Elf->GetVoiceSoundCount()==1 && Elf->GetFaceBoneCount()==5 && Elf->IsSpeaking() && Elf->GetMaxJawOpen()>3.f && Elf->GetBlinks()>=1
+                && Elf->Lines.Num()==1 && Elf->Lines[0].StartsWith(TEXT("Well, look at you!")),
+                TEXT("the old elf speaks her line aloud from her bench, her jaw moving with it, and blinks"));
             // The gnome alchemist before his shop, forearms across so his sleeves hide his hands.
             TArray<AActor*> GnomeFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Alchemist"),GnomeFound);

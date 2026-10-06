@@ -90,6 +90,17 @@
      "start": 0.0
     }
    ]
+  },
+  "ElfElder": {
+   "voice": "ElevenLabs line supplied by the user as 'Old_lady_lines.mp3' (user 2026-10-06)",
+   "talk": [
+    {
+     "id": "talk_00",
+     "text": "Well, look at you! What a big and strong young lad you are! Do your parents know you’re out this late, dear? They must be wondering where you’ve got to.",
+     "source": "Voice/ElfElder/source/Old_lady_lines_talk_00.mp3",
+     "start": 0.0
+    }
+   ]
   }
  }
 }

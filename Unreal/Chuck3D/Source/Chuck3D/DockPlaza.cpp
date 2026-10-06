@@ -3,6 +3,7 @@
 #include "DockForge.h"
 #include "SewerSlide.h"
 #include "DockReturn.h"
+#include "DockNPC.h"
 #include "ProceduralMeshComponent.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
@@ -329,10 +330,12 @@ void BuildDockPlaza(UWorld* World)
         for(int32 I=0;I<8;++I) Shape(P+FVector(-105+I*30,0,89),FVector(27,103,1),I==2?TEXT("Wood"):TEXT("WoodLight"));
         for(float X : {-70.f,0.f,70.f}) Shape(P+FVector(X,0,105),FVector(54,60,35),TEXT("Wood"),true);
     }
-    for(float X : {-440.f,960.f})
+    // The east bench; the west one moved to the bay side, turned to the fountain, with the old elf on it (ADockNPC::ElfBench, user 2026-10-06).
+    for(const FVector B : {FVector(960,-3350,0),FVector(ADockNPC::ElfBench.X,ADockNPC::ElfBench.Y,0)})
     {
-        Shape(FVector(X,-3350,44),FVector(185,50,10),TEXT("WoodLight"),true);
-        for(float DX : {-65.f,65.f}) Shape(FVector(X+DX,-3350,20),FVector(14,42,40),TEXT("Dark"),true);
+        const FRotator R(0,B.X==960 ? 0.f : ADockNPC::ElfYaw+90.f,0);   // the bench's length runs across the way she faces
+        Shape(B+R.RotateVector(FVector(0,0,44)),FVector(185,50,10),TEXT("WoodLight"),true,nullptr,R);
+        for(float DX : {-65.f,65.f}) Shape(B+R.RotateVector(FVector(DX,0,20)),FVector(14,42,40),TEXT("Dark"),true,nullptr,R);
     }
     // Ruin fragment off the main loop recalls the docks' old broken enclosure.
     Shape(FVector(-1080,-3180,42),FVector(180,34,84),TEXT("Stone"),true);

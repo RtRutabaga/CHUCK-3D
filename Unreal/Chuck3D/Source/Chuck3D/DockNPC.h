@@ -218,10 +218,12 @@ public:
      */
     static ADockNPC* SpawnElfElder(UWorld* World, const FVector& Hips, float Yaw);
     bool IsSeated() const { return bSeated; }
-    /** The plaza bench she sits on (DockPlaza.cpp: x -440, y -3350, 185 x 50, top 49 cm) and where she sits on it: toward its fountain end, facing the docks. */
-    static inline const FVector ElfBench = FVector(-440.f, -3350.f, 49.f);
-    static inline const FVector ElfHips = FVector(-410.f, -3341.f, 0.f);
-    static constexpr float ElfYaw = 90.f;
+    /** Her bench (built by DockPlaza.cpp from these: 185 x 50, top 49 cm) on the bay side of the
+        fountain, north-east of it toward the harbour's edge and well clear of the alchemist (user
+        2026-10-06), turned to face the fountain; she sits a little off its middle, near its front edge. */
+    static inline const FVector ElfBench = FVector(930.f, -2560.f, 49.f);
+    static constexpr float ElfYaw = -131.4f;   // toward the fountain at (260,-3320)
+    static inline const FVector ElfHips = FVector(ElfBench.X, ElfBench.Y, 0.f) + FRotator(0.f, ElfYaw, 0.f).RotateVector(FVector(9.f, -30.f, 0.f));
     /** Height of her hip joints above the floor (cm, now), and the worst seen after she settles: of either heel off the floor (cm) and of either hand from its place on her lap (cm). */
     float GetSeatHeight() const;
     float GetFootLiftError() const { return WorstFootLift; }

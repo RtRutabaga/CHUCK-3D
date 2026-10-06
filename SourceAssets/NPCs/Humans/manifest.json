@@ -965,7 +965,12 @@
      "type": "card",
      "texture": "Textures/eyelashes03.png"
     }
-   }
+   },
+   "mouth_cm": [
+    17.9,
+    0.0,
+    153.2
+   ]
   },
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
