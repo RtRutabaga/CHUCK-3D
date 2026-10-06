@@ -15,6 +15,21 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user report: "The dwarf has a weird jittery shake to him"):** runtime `e600279`, on `2aa3130`.
+
+- **Cause, measured:** a new per-frame probe (`ADockNPC::ProbeShake`) counts how often each bone's velocity reverses frame to frame (above 3 cm/s each way). In a `-ChuckDwarfCapture` run (`Local/jitter-dwarfcapture.log`):
+  - Every motion-capture NPC's feet and calves reversed on 10-26% of frames. The dwarf was at 17%, and the guards, on the same StandLook take, at 18-26%.
+  - The damped or IK-posed alchemist and the seated elf were at 1-3%.
+  - This is frame-to-frame noise in the CMU takes. Nothing dwarf-specific (face bones, axe IK, look clamp, body turn) stood out.
+- **Fix:** `UpdatePose` low-passes the sampled clip. Each bone's turn and the hips ease toward the clip with a 0.1 s time constant (`ClipSmoothing`), so the sway, glances, talk gestures and reactions stay. Afterwards every standing NPC reversed on 0-1% of frames (dwarf 0%) (`Local/jitter-dwarfcapture2.log`). The smith's, keeper's and sailor's remaining reversals are their deliberate hand work.
+- **Test:** `CHUCK_NPC_SHAKE_MEASURE` requires the 8 standing mocap NPCs (smith, keeper, sailor and zombies excluded) to reverse on under 3% of frames over the whole suite. Each NPC's `CHUCK_NPC_SHAKE` breakdown is logged at exit. Thresholds 154/155.
+- **Results:** the candidate passed **156** with all gates (`Local/verify-package-20261005-185930.log`), including the zombie, the worker's scratch reaction and the voice/jaw checks. Measured `measured=8 steady=8 worst_share=0.007`.
+  - An earlier `-NoCapture -skipcook` probe run (`-184753.log`) completed with no failures but only 141 passes. It was a diagnostic run only, not the verification.
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `e600279`. Previous package: `Builds/Windows-Previous-20261006-Jitter`.
+- **Not done:** not watched in play by me. The motion lags the raw clip by about 0.1 s. The clip FBXs themselves are still unfiltered.
+
+Next part of the work can be done here.
+
 **Update (Codex, October 6, user report: new crate wood shimmers):** runtime **`be5107a`**, from `2aa3130` / launcher `ab1ce8e`.
 
 - **Cause:** the original crate has coplanar outward faces where panels, rails and corner battens overlap, including the top/lid and rail end caps. Independent board UVs made the depth conflict conspicuous. This is a geometry correction; no wood textures, materials, normal strength, lighting or building surfaces were changed.

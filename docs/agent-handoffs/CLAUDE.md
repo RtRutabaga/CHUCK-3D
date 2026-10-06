@@ -2199,3 +2199,13 @@ Next part of the work can be done here.
 - **Remaining:** not listened to; tune `MusicDuckLevel` / `SPEECH_DB` by ear if needed.
 
 Next part of the work can be done here.
+
+## NPC motion-capture shake (user 2026-10-06: the dwarf's jitter)
+
+- **Source:** `e600279`, `DockNPC.*` (clip low-pass `ClipSmoothing` 0.1 s, `ProbeShake`/`GetJitterReport`), `DockGameMode.cpp` (shake check), `Verify-Package.ps1` 154/155.
+- **Cause:** CMU take noise: every mocap NPC's feet and calves reversed on 10-26% of frames (dwarf 17%); after the fix, 0-1%.
+- **Verified:** `Local/verify-package-20261005-185930.log`, 156 passes.
+- **Launcher:** `Builds/Windows` = `e600279`; backup `Builds/Windows-Previous-20261006-Jitter`.
+- **Remaining:** not watched in play; clip FBXs themselves unfiltered.
+
+Next part of the work can be done here.
