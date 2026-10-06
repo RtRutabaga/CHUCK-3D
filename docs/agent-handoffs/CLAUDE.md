@@ -2209,3 +2209,12 @@ Next part of the work can be done here.
 - **Remaining:** not watched in play; clip FBXs themselves unfiltered.
 
 Next part of the work can be done here.
+
+## Dock worker's voice line (user 2026-10-06)
+
+- **Source:** `2b727c6`: `dialogue.json` Worker, `humans.json` DockWorker `face: true` (rebuilt, same tris), DockWorker assets/FBX, `VO_Worker_talk_00`, `NPCVoiceData.h`, `DockNPC.cpp` (`SetupVoice("Worker")`), `DockGameMode.cpp` (voice check, talk test now requires his line), `Verify-Package.ps1` 155/156 + Worker voice gate.
+- **Verified:** `Local/verify-package-20261005-192656.log`, 157 passes; jaw 6.8 degrees.
+- **Launcher:** `Builds/Windows` = `2b727c6`; backup `Builds/Windows-Previous-20261006-WorkerVoice`.
+- **Remaining:** not listened to; the long line shows as one text line.
+
+Next part of the work can be done here.

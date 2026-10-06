@@ -15,6 +15,20 @@ Next part of the work can be done here.
 
 ## Current launcher and integration status
 
+**Update (Claude, October 6, user request: give the NPC standing by the tavern this ElevenLabs line):** runtime `2b727c6`, on `df31a2d`.
+
+- **Who:** the dock worker at (90,200), just outside the tavern beside its bench. He had no dialogue until now. (The keeper is inside, behind the counter.)
+- **Line:** "Don't you worry, Chuck! I'll keep good watch over Bobert while he sleeps. Late-riser, that one, innit he? …But I swear I'll earn me keep! I won't let any of them rats nibble on his nose this time." The user's three paragraphs are joined into one spoken/text line.
+  - ElevenLabs "Simon - Clear & professional British", eleven_v4, 11.73 s (the whole file), levelled +1.1 dB by `build_npc_voice.py`.
+  - Source MP3 is in `SourceAssets/NPCs/Voice/Worker/source`. The other lines' WAVs regenerated unchanged.
+- **Face:** `face: true` for DockWorker. He was rebuilt with the five face bones (same 55,824 tris) and re-imported with `-Only DockWorker`. That re-import replaced his share of the earlier re-import churn, which is now committed. `SetupVoice("Worker")` drives his jaw from loudness and blinks.
+- **Tests:** the old talk-test clause "the silent worker has none" now requires his line (`worker_talks=1`). New `CHUCK_WORKER_VOICE_MEASURE` check (his line starts with the others in the voice stage). Gate `CHUCK_NPC_VOICE Worker lines=1 sounds=1`; thresholds 155/156.
+- **Results:** the candidate passed **157** with every gate (`Local/verify-package-20261005-192656.log`). Measured `max_jaw_deg=6.8`. Every other worker check (watching, look-down, blocking, scratch) is unchanged. The music ducks under him and the shake check holds. Evidence: `SourceAssets/NPCs/Humans/Review/runtime_DockWorker_talk.png` (mid-line).
+- **Promoted** to `Builds/Windows`; receipt and `-CheckOnly` identify `2b727c6`. Previous package: `Builds/Windows-Previous-20261006-WorkerVoice`.
+- **Not done:** not listened to by me. There are no subtitle timing or line breaks for the 11.7 s line, which shows as one text line. "Bobert" doesn't exist in the game yet.
+
+Next part of the work can be done here.
+
 **Update (Claude, October 6, user report: "The dwarf has a weird jittery shake to him"):** runtime `e600279`, on `2aa3130`.
 
 - **Cause, measured:** a new per-frame probe (`ADockNPC::ProbeShake`) counts how often each bone's velocity reverses frame to frame (above 3 cm/s each way). In a `-ChuckDwarfCapture` run (`Local/jitter-dwarfcapture.log`):
