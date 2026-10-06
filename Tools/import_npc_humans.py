@@ -8,6 +8,7 @@ from SourceAssets/NPCs/Humans/manifest.json:
   M_HumanSkin    MakeHuman skin texture
   M_HumanEye     MakeHuman eye texture, glossy
   M_HumanCard    brows, lashes, hair: masked by the texture's alpha, two-sided
+  M_HumanHair    beard locks (slot type "hair"): M_HumanCard with a dithered mask
   M_HumanFabric  Poly Haven cloth: weave = greyed colour map x Gain (brightness
                  normalised), coloured by Tint; AO/roughness, DirectX normal;
                  the mesh UVs are already in texture repeats (real size)
@@ -167,6 +168,9 @@ def slot_material(npc, folder, slot, info):
         parent = master('M_HumanEye', lambda m: build_eye(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED)
     elif info['type'] == 'card':
         parent = master('M_HumanCard', lambda m: build_card(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED, two_sided=True)
+    elif info['type'] == 'hair':   # beard locks: the card graph, its alpha edges dithered (soft under TAA), not cut hard
+        parent = master('M_HumanHair', lambda m: build_card(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED, two_sided=True,
+                        dither_opacity_mask=True, opacity_mask_clip_value=.25)
     else:
         raise RuntimeError(f'Unknown slot type {info["type"]}')
     return instance(f'MI_{npc}_{slot}', folder, parent, {'Diffuse': tex}, info.get('tint'))

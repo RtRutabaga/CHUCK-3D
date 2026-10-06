@@ -2265,3 +2265,36 @@ Next part of the work can be done here.
 - **Remaining:** his fringe cards render as flat grey rectangles on the scalp (clearly visible now); brows and closed-lid lashes read as hard black lines; the fill is constant, so at night his face stays lit; not played by the user.
 
 Next part of the work can be done here.
+
+## October 6 — Better beards; the sailor's hair matches his beard (Claude, user request: "for all npc's with beards make the beards look better (also for the sailor make his hair color match his beard)")
+
+- **Bearded NPCs:** Dwarf, TavernKeeper, GnomeAlchemist, Sailor (all `make_beard`).
+- **Cause:** `beard_strands.png` is opaque almost edge to edge, so every strand card rendered as a solid rectangle. Non-bushy sideburns stood off the face as flat slabs. The sailor's MakeHuman `eyebrow009` is near-black, and his ×5 `brow_tint` could not lighten it.
+- **Source:**
+  - New `Tools/build_beard_textures.py` writes `Textures/beard_locks.png` and `eyebrow009_grey.png`. The locks are eight tapered, see-through clumps, with clear sides and the root fading in.
+  - `build_npc_humans.py`:
+    - `lock_uv` maps one lock per card, and all beard cards use it. Cards are a little wider.
+    - Lying-card length scales with √`card_scale`.
+    - Non-bushy sideburns and jaw blobs sit closer to the skin, thinning toward the temple and ear. The dwarf's bushy beard keeps its old shape.
+    - `make_fringe` takes `locks`; Bobert's fringe is unchanged.
+    - BeardStrands and the sailor's Fringe use slot type `hair`.
+  - `import_npc_humans.py`: new master `M_HumanHair` (the card graph, `dither_opacity_mask`, clip 0.25).
+  - `humans.json`:
+    - Sailor: `brow_texture` `eyebrow009_grey` with `brow_tint` 1 (it must be explicit, because the instance keeps an old override); a grey `fringe` under the cap; beard `lying_cards` 320.
+    - Keeper `lying_cards` 340, gnome 140.
+  - The four FBXs, the manifest, `SourceAssets/NPCs/README.md` and the Unreal assets (four NPC folders, `M_HumanHair`, `T_beard_locks`, `T_eyebrow009_grey`, `MI_Sailor_Fringe`).
+- **Contract:** skeleton, bones, slots (the sailor gains `Fringe`), heights and mouth positions are unchanged. Tris: Dwarf 107,876 (same), Keeper 74,838, Gnome 47,476, Sailor 64,748.
+- **Run:** the texture script, then `build_npc_humans.py -- Sailor TavernKeeper Dwarf GnomeAlchemist`, then `Import-NPCHumans.ps1 -Only ...`. Then the `T_beard_locks.uasset` was deleted and the Sailor re-imported, because the importer reuses an existing texture asset. Then `Build-Prototype.ps1 -Package` twice.
+- **Verified:**
+  - Final package `Local/verify-package-20261005-221237.log`: 158 passes.
+  - The first package's run failed only "paws hold after a running landing", a Chuck traversal check unrelated to NPC meshes. Its rerun `-220449` passed 158.
+- **Review:** `-ChuckNPCCapture -ChuckNPCTag=<Sailor|TavernKeeper|Dwarf|Alchemist>`; logs are `Local/beard-npccapture-*.log`. Images: `SourceAssets/NPCs/Humans/Review/runtime_*_beard_*.png`, and Blender textured sheets `blender_*_beard.png` (taken before the root fade and the sailor's tint fix).
+- **Launcher:** `Builds/Windows` is this build; the backup is `Builds/Windows-Previous-20261006-Beards` (the `9b555b6` Bobert-face build).
+- **Remaining:**
+  - The sailor's sideburn still shows a rough flat edge by the ear in close-up.
+  - The keeper's face capture looks down at his tankard, so his beard was judged from the three-quarter shot only.
+  - The gnome's scalp hair (`make_hair`) and Bobert's fringe still use the old opaque strands, which show as rectangles. Those are not beards, so they were left.
+  - Not played by the user.
+- Untouched: the uncommitted October 4 MarketWoman/Zombie/clip/texture `.uasset` modifications and the untracked `eyebrow001.png`/`short02_diffuse.png` that were in the tree before this session.
+
+Next part of the work can be done here.

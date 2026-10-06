@@ -708,8 +708,8 @@
      ]
     },
     "BeardStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
      "tint": [
       0.36,
       0.17,
@@ -748,12 +748,17 @@
      "type": "card",
      "texture": "Textures/eyelashes02.png"
     }
-   }
+   },
+   "mouth_cm": [
+    14.6,
+    0.0,
+    115.8
+   ]
   },
   "TavernKeeper": {
    "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
    "height_cm": 181,
-   "tris": 74866,
+   "tris": 74838,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -831,8 +836,8 @@
      ]
     },
     "BeardStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
      "tint": [
       0.24,
       0.21,
@@ -859,7 +864,12 @@
      "type": "card",
      "texture": "Textures/short01_diffuse.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.3,
+    0.0,
+    161.9
+   ]
   },
   "ElfElder": {
    "fbx": "ElfElder/SK_ElfElder.fbx",
@@ -960,7 +970,7 @@
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
    "height_cm": 100,
-   "tris": 47820,
+   "tris": 47476,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -1016,8 +1026,8 @@
      ]
     },
     "BeardStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
      "tint": [
       1.05,
       1.03,
@@ -1068,12 +1078,17 @@
      "type": "card",
      "texture": "Textures/eyelashes02.png"
     }
-   }
+   },
+   "mouth_cm": [
+    11.0,
+    0.0,
+    85.7
+   ]
   },
   "Sailor": {
    "fbx": "Sailor/SK_Sailor.fbx",
    "height_cm": 176,
-   "tris": 62500,
+   "tris": 64748,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -1134,14 +1149,23 @@
      "type": "card",
      "texture": "Textures/beard_mass.png",
      "tint": [
-      0.3,
-      0.29,
-      0.27
+      0.28,
+      0.27,
+      0.255
      ]
     },
     "BeardStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
+     "tint": [
+      0.5,
+      0.49,
+      0.46
+     ]
+    },
+    "Fringe": {
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
      "tint": [
       0.5,
       0.49,
@@ -1158,11 +1182,11 @@
     },
     "Brow": {
      "type": "card",
-     "texture": "Textures/eyebrow009.png",
+     "texture": "Textures/eyebrow009_grey.png",
      "tint": [
-      5.0,
-      5.0,
-      4.8
+      1.0,
+      1.0,
+      1.0
      ]
     },
     "Lash": {

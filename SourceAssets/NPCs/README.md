@@ -84,7 +84,14 @@ docs/SETUP.md), one heavy process at a time:
   over the jaw and a spade hang down the chest, a moustache and two braids,
   voxel-merged and grooved, plus loose strand cards (`beard_mass.png` /
   `beard_strands.png`, card material, tinted) and brass braid rings; skinned to
-  the head, easing onto `spine_03` toward the tip. His axe:
+  the head, easing onto `spine_03` toward the tip. Since 2026-10-06 ("make the
+  beards look better") every beard's strand cards use `beard_locks.png`
+  (`Tools/build_beard_textures.py`: eight tapered, see-through locks, one per
+  card via `lock_uv`, so a card no longer shows as a solid rectangle) in the
+  `M_HumanHair` master (slot type `hair`: the card graph with a dithered mask).
+  Non-bushy sideburns and jaw blobs sit close to the skin and thin toward the
+  temple and ear. The sailor's brows are `eyebrow009_grey.png` and he has short
+  grey hair under his cap (`fringe` with `locks`). His axe:
   `Tools/build_battle_axe.py` (`SM_BattleAxe`, double-bitted, 127 cm), held by
   `ADockNPC::GiveAxe` as the guards hold their spears.
 

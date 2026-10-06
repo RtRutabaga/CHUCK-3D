@@ -828,6 +828,16 @@ def new_object(name, bm):
     return obj
 
 
+LOCKS = 8   # columns in Textures/beard_locks.png (Tools/build_beard_textures.py)
+
+
+def lock_uv(rnd):
+    """A strand card's U span: exactly one lock of beard_locks.png, so the card's
+    outline is the lock's tapered clump, not its own rectangle."""
+    k = rnd.randrange(LOCKS)
+    return k / LOCKS + .002, (k + 1) / LOCKS - .002
+
+
 def sideburns(info, cheek_z, spec):
     """Points (and blob sizes) for sideburns: the side of the face in front of
     each ear, from the cheek line up to `sideburn_tuck` above the helmet's rim
@@ -849,7 +859,10 @@ def sideburns(info, cheek_z, spec):
                 if rim < -spec.get('sideburn_tuck', .012): continue
             elif c.z > info.eye_z + .02: continue
             up = min(1., max(0., (c.z - cheek_z) / max(.01, info.eye_z + .03 - cheek_z)))
-            out.append((c, .01 - .004 * up))
+            if spec.get('bushy'): out.append((c, .01 - .004 * up)); continue
+            # Close to the skin, thinning up the temple and back toward the ear, so it has no slab edge.
+            back = min(1., max(.3, (ear_front + .004 - c.y) / .016))
+            out.append((c, (.0075 - .0045 * up) * back))
     return out
 
 
@@ -878,13 +891,13 @@ def make_beard(info, spec, slots):
            and c.z > chin.z - .05 and not (abs(c.x) < .03 and c.z > nose.z - .016)]
     for c in jaw:
         n = Vector((c.x, c.y - head_y, 0)).normalized()
-        depth = (.011 + .022 * min(1., max(0., (cheek_z - c.z) / .05))) if bushy else (.007 + .016 * min(1., max(0., (cheek_z - c.z) / .06)))
-        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
+        depth = (.011 + .022 * min(1., max(0., (cheek_z - c.z) / .05))) if bushy else (.004 + .019 * min(1., max(0., (cheek_z - c.z) / .06)) ** 1.3)
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * (.55 if bushy else .3)))
     # Sideburns: a band in front of each ear from the jaw up under the helmet's rim (or to the temple bare-headed).
     burns = sideburns(info, cheek_z, spec)
     for c, depth in burns:
         n = Vector((c.x, (c.y - head_y) * .5, 0)).normalized()
-        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * .55))
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * (.55 if bushy else .25)))
     # 2. The hang. Bushy: one broad rounded mass from the jaw, its back lying on the
     # breastplate (`clear` = the armour's outer face) all the way down, full and
     # deep through the middle, rounding off to a blunt bottom; no gap behind it to
@@ -973,7 +986,8 @@ def make_beard(info, spec, slots):
     for co, n in lying[:spec.get('lying_cards', 220)]:
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length, u0 = rnd.uniform(.01, .018) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.03, .07) * spec.get('card_scale', 1.), rnd.uniform(0, .85)
+        width, length = rnd.uniform(.014, .024) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.035, .075) * spec.get('card_scale', 1.) ** .5
+        u0, u1 = lock_uv(rnd)
         col, p = [], co.copy()
         for k in range(5):
             t = k / 4
@@ -985,7 +999,7 @@ def make_beard(info, spec, slots):
             col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
         for a, b in zip(col, col[1:]):
             f = bm.faces.new((a[0], a[1], b[1], b[0]))
-            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
     # Bushy: short tufts standing out all over (outward and a little down), so its outline is fluff, not a shell.
     if bushy:
         fluff = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .45 and v.co.z < info.eye_z - .045]
@@ -994,7 +1008,8 @@ def make_beard(info, spec, slots):
             out = (n * .75 - Vector((0, 0, .65))).normalized()
             side = n.cross(Vector((0, 0, 1)))
             side = side.normalized() if side.length > .1 else Vector((1, 0, 0))
-            width, length, u0 = rnd.uniform(.012, .022), rnd.uniform(.025, .05), rnd.uniform(0, .85)
+            width, length = rnd.uniform(.016, .028), rnd.uniform(.025, .05)
+            u0, u1 = lock_uv(rnd)
             col = []
             for k in range(4):
                 t = k / 3
@@ -1002,14 +1017,14 @@ def make_beard(info, spec, slots):
                 col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
             for a, b in zip(col, col[1:]):
                 f = bm.faces.new((a[0], a[1], b[1], b[0]))
-                uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+                uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
     for item in pts:
         co, n = item[0], item[1]
         short = len(item) > 2
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length = (rnd.uniform(.008, .014), rnd.uniform(.022, .04)) if short else (rnd.uniform(.012, .022) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.05, .12) * spec.get('card_scale', 1.))   # the gnome's trimmed beard: short, fine
-        u0 = rnd.uniform(0, .85)
+        width, length = (rnd.uniform(.011, .018), rnd.uniform(.022, .04)) if short else (rnd.uniform(.016, .028) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.05, .12) * spec.get('card_scale', 1.))   # the gnome's trimmed beard: short, fine
+        u0, u1 = lock_uv(rnd)
         col = []
         for k in range(5):
             t = k / 4
@@ -1017,7 +1032,7 @@ def make_beard(info, spec, slots):
             col.append((bm.verts.new(p - side * width / 2), bm.verts.new(p + side * width / 2), 1 - t))
         for a, b in zip(col, col[1:]):
             f = bm.faces.new((a[0], a[1], b[1], b[0]))
-            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
     uvl = bm.loops.layers.uv.new('UVMap')
     for f, uvs in uv_cards:
         for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
@@ -1037,7 +1052,7 @@ def make_beard(info, spec, slots):
         for p in obj.data.polygons: p.use_smooth = obj is not cards
         skin_from_body(obj, info, (chin.z + spec.get('chest_from', 0.), spec.get('chest_fade', .07), 'spine_03'))   # the hang rests on the chest, not swinging with the head
     slots['Beard'] = {'type': 'card', 'texture': 'Textures/beard_mass.png', 'tint': spec['tint']}
-    slots['BeardStrands'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec.get('strand_tint', spec['tint'])}
+    slots['BeardStrands'] = {'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': spec.get('strand_tint', spec['tint'])}
     if rings:
         ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})
         slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
@@ -1245,6 +1260,7 @@ def make_fringe(info, spec, slots):
     strand texture, tinted)."""
     import random
     rnd = random.Random(spec.get('seed', 3))
+    locks = spec.get('locks', False)   # the sailor's grey hair under his cap: the beard's locks (Bobert keeps his strands)
     _, chin, head_y = face_marks(info)
     skull, ears = skull_and_ears(info)
     ear_front = min(c.y for e in ears.values() for c in e) if all(ears.values()) else head_y
@@ -1283,14 +1299,14 @@ def make_fringe(info, spec, slots):
     for k, (co, n, top) in enumerate(cands[:count + wild]):
         long_ = k >= count
         length = rnd.uniform(.03, .055) if long_ else rnd.uniform(.018, .04)
-        width = rnd.uniform(.006, .011)
+        width = rnd.uniform(.006, .011) * (1.6 if locks else 1.)
         up = Vector((0, 0, 1))
         # Out from the scalp, back and a little up; the wild ones straggle up and out.
         along = Vector((0, 1, -.35)) - n * Vector((0, 1, -.35)).dot(n)                # back and down over the scalp
         out = (along.normalized() * (.5 if long_ else 1.) + n * (.8 if long_ else .18) + up * ((.5 if long_ else 0.) + rnd.uniform(-.2, .2)) + Vector((rnd.uniform(-.25, .25), 0, 0))).normalized()
         side = out.cross(n); side = side.normalized() if side.length > 1e-4 else Vector((1, 0, 0))
         curl = rnd.uniform(-1, 1)
-        u0 = rnd.uniform(0, .85)
+        u0, u1 = lock_uv(rnd) if locks else (lambda u: (u, u + .15))(rnd.uniform(0, .85))
         col = []
         p, pn = co.copy(), n.copy()
         for s in range(5):
@@ -1304,14 +1320,15 @@ def make_fringe(info, spec, slots):
             col.append((bm.verts.new(p - side * width / 2), bm.verts.new(p + side * width / 2), 1 - t))
         for a, b in zip(col, col[1:]):
             f = bm.faces.new((a[0], a[1], b[1], b[0]))
-            uv_cards.append((f, ((u0, a[2]), (u0 + .15, a[2]), (u0 + .15, b[2]), (u0, b[2]))))
+            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
     uvl = bm.loops.layers.uv.new('UVMap')
     for f, uvs in uv_cards:
         for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
     obj = new_object('fringe', bm)
     obj.data.materials.append(slot_material('Fringe'))
     skin_from_body(obj, info)
-    slots['Fringe'] = {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec['tint']}
+    slots['Fringe'] = ({'type': 'hair', 'texture': 'Textures/beard_locks.png', 'tint': spec['tint']} if locks
+                       else {'type': 'card', 'texture': 'Textures/beard_strands.png', 'tint': spec['tint']})
     print('CHUCK_FRINGE', f'cards={len(uv_cards) // 4}', f'candidates={len(cands)}')
     return [obj]
 
