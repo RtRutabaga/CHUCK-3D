@@ -2256,3 +2256,12 @@ Next part of the work can be done here.
 - **Remaining:** face unreadable in the barrel's shade; NPC capture does not frame him; not played by the user. Remote branches `claude/bobert-barrel` and `claude/bobert-barrel-asleep-minc8q` are now merged and can be deleted.
 
 Next part of the work can be done here.
+
+## October 6 — Bobert's face can be seen (Claude, user request: "Make his face easier to see")
+
+- **Source:** `9b555b6`. `DockNPC.cpp`: `SleepNeck` 38→26, `SleepNod` 50→31 (his face looks out of the mouth, not at his knees); a `Fill` point light on the barrel at (30,0,50), intensity 160, radius 85, no shadows, specular 0. `DockNPC.h`/`.cpp`: `GetHeadLocation`. `DockGameMode.cpp`: `-ChuckNPCCapture` frames Bobert from outside the mouth, aimed at his head (Wide unchanged).
+- **Verified:** `Local/verify-package-20261005-210931.log`, 158 passes, no failures; `head_bow_deg=30.0 fit_error_cm=0.0`. The first run (`-210411`) failed only the intermittent gnome sleeve check. Review: `Local/bobert-face-after.png`, `Local/bobert-front-after.png`.
+- **Launcher:** `Builds/Windows` = `9b555b6`; backup `Builds/Windows-Previous-20261006-BobertFace` (the `697ab5d` build).
+- **Remaining:** his fringe cards render as flat grey rectangles on the scalp (clearly visible now); brows and closed-lid lashes read as hard black lines; the fill is constant, so at night his face stays lit; not played by the user.
+
+Next part of the work can be done here.
