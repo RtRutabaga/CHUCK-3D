@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+Square timber shops: five existing workshops now have staggered weathered shake cladding and flat plank roofs with overhanging eaves/fascia. Roof collision follows the new top, 5 cm above the previous landing; doors, windows and parkour routes remain. See WEATHERED-TIMBER.md and HANDOFF for verified launcher evidence.
+
 October 5 timber update: the verified launcher includes 2K CC0 weathered-plank/rough-wood scans on existing timber buildings and props, with board-aligned crate UVs. No route or collision changes. Inspect with New Game / Waterdeep and compare Waterdeep Night; see WEATHERED-TIMBER.md and HANDOFF for provenance, pipeline and actual checks.
 
 October 4 user revision: the narrow section is now after the wide chamber, with a full-width Astral rupture crossed using the existing side wall run; the former zombie is removed. This supersedes older zombie/pinch-point descriptions below. See SEWER-WALLRIFT.md and the latest HANDOFF for actual checks and launcher status.

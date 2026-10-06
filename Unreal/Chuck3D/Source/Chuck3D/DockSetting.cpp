@@ -251,27 +251,84 @@ void BuildDockSetting(UWorld* World)
     Beam(FVector(-180,-835,280),FVector(-180,-945,280),10,TEXT("Wood"));
     Beam(FVector(-180,-940,278),FVector(-180,-940,155),2,TEXT("Dark"));
     Label(FVector(-180,-912,220),TEXT("BONDED STORES"),-90);
-    // Narrow, uneven board faces and repaired lower boards on the five flat
-    // roofed dock workshops. Decorative thickness stays outside traversal tests.
+    // Sound shop shells beneath split, weather-worn shake cladding. Courses
+    // have irregular butt ends and shallow relief, never competing coplanar faces.
     const FVector Workshops[]={FVector(-180,-790,230),FVector(170,-770,260),
         FVector(-370,-1150,180),FVector(-370,-1400,230),FVector(-370,-1650,280)};
     for(int32 W=0;W<5;++W)
     {
         const FVector P=Workshops[W];
         const FVector Size=W==0?FVector(300,220,P.Z):W==1?FVector(200,260,P.Z):FVector(220,180,P.Z);
+        FRandomStream Wear(7301+W*97);
+        for(int32 Face=0;Face<4;++Face)
+        {
+            const bool AcrossX=Face<2;
+            const float Side=Face%2?1.f:-1.f;
+            const float Width=AcrossX?Size.X:Size.Y;
+            const float Depth=AcrossX?Size.Y:Size.X;
+            for(int32 Course=0;Course<FMath::CeilToInt(P.Z/48.f);++Course)
+            {
+                float U=-Width*.5f;
+                while(U<Width*.5f-1)
+                {
+                    const float BW=FMath::Min(Wear.FRandRange(15,26),Width*.5f-U);
+                    const float Bottom=FMath::Max(4.f,Course*48.f-Wear.FRandRange(0,7));
+                    const float Top=FMath::Min(P.Z-9,Course*48.f+55);
+                    const float Mid=U+BW*.5f;
+                    // Retain the existing doors and windows rather than boarding
+                    // them over. Their surrounds sit proud of the repaired skin.
+                    bool Opening=false;
+                    if(W==0 && AcrossX && Side<0) Opening=FMath::Abs(Mid)<55 && Bottom<145;
+                    if(W==0 && AcrossX && Side>0)
+                        for(float Window : {-100.f,0.f,100.f}) Opening|=FMath::Abs(Mid-Window)<27 && Bottom<218 && Top>172;
+                    if(W==1 && AcrossX && Side>0) Opening=FMath::Abs(Mid)<43 && Bottom<210 && Top>91;
+                    if(W>=2 && !AcrossX && Side>0)
+                    {
+                        Opening=FMath::Abs(Mid)<36 && Bottom<114;
+                        for(float Z=60;Z<P.Z-40;Z+=80)
+                            Opening|=(FMath::Abs(FMath::Abs(Mid)-Size.Y*.25f)<22 && Bottom<Z+19 && Top>Z-19);
+                    }
+                    if(!Opening && Top>Bottom)
+                    {
+                        const float Thick=Wear.FRandRange(2,4);
+                        const float Out=Depth*.5f+Thick*.5f+.8f;
+                        const FVector Loc=AcrossX?FVector(P.X+Mid,P.Y+Side*Out,(Bottom+Top)*.5f):FVector(P.X+Side*Out,P.Y+Mid,(Bottom+Top)*.5f);
+                        const FVector Dim=AcrossX?FVector(FMath::Max(1.f,BW-1.2f),Thick,Top-Bottom):FVector(Thick,FMath::Max(1.f,BW-1.2f),Top-Bottom);
+                        Box(Loc,Dim,(Course+static_cast<int32>(U))%5==0?TEXT("WoodLight"):TEXT("Wood"));
+                        // Narrow split at selected butt ends; a shorter sliver
+                        // makes the edge read chipped without opening the shell.
+                        if(BW>12 && Wear.FRand()<.24f)
+                        {
+                            FVector Chip=Loc; Chip.Z=Bottom+7;
+                            if(AcrossX) Chip.X+=BW*.36f; else Chip.Y+=BW*.36f;
+                            Box(Chip,AcrossX?FVector(3,Thick+.8f,14):FVector(Thick+.8f,3,14),TEXT("Dark"));
+                        }
+                    }
+                    U+=BW;
+                }
+            }
+        }
+        // Flat, usable shack roof: a dark underlay, irregular broad planks,
+        // projecting eaves and worn fascia. Five cm added to the old roof height.
+        const FVector RoofSize(Size.X+16,Size.Y+16,6);
+        Box(FVector(P.X,P.Y,P.Z+2),RoofSize,TEXT("Dark"),true,FRotator::ZeroRotator,false);
+        Box(FVector(P.X,P.Y,P.Z+1),FVector(RoofSize.X,RoofSize.Y,3),TEXT("Dark"));
+        const int32 Boards=FMath::CeilToInt(RoofSize.X/23.f);
+        const float BW=RoofSize.X/Boards;
+        for(int32 I=0;I<Boards;++I)
+        {
+            const float X=P.X-RoofSize.X*.5f+(I+.5f)*BW;
+            // Separated seams expose recessed underlay, not coincident surfaces.
+            Box(FVector(X,P.Y,P.Z+3.5f),FVector(BW-1.1f,RoofSize.Y-Wear.FRandRange(0,3),3),I%5==0?TEXT("WoodLight"):TEXT("Wood"));
+        }
         for(float Side : {-1.f,1.f})
         {
-            for(int32 I=0;I<FMath::FloorToInt(Size.X/18);++I)
-                Box(FVector(P.X-Size.X*.5f+9+I*18,P.Y+Side*(Size.Y*.5f+.7f),P.Z*.5f),
-                    FVector(17,1.4f,P.Z-4),TEXT("AgedDockTimber"));
-            for(int32 I=0;I<FMath::FloorToInt(Size.Y/18);++I)
-                Box(FVector(P.X+Side*(Size.X*.5f+.7f),P.Y-Size.Y*.5f+9+I*18,P.Z*.5f),
-                    FVector(1.4f,17,P.Z-4),TEXT("AgedDockTimber"));
-            Box(FVector(P.X+Side*(Size.X*.5f+1.8f),P.Y+Size.Y*.3f,28),
-                FVector(2,47,36),TEXT("Wood"));
-            for(float Z : {18.f,static_cast<float>(P.Z)-14.f})
-                Box(FVector(P.X,P.Y+Side*(Size.Y*.5f+1.8f),Z),FVector(Size.X,3,5),TEXT("Wood"));
+            Box(FVector(P.X,P.Y+Side*(RoofSize.Y*.5f+1),P.Z-3),FVector(RoofSize.X+4,4,12),TEXT("Wood"));
+            Box(FVector(P.X+Side*(RoofSize.X*.5f+1),P.Y,P.Z-3),FVector(4,RoofSize.Y-2,12),TEXT("Wood"));
         }
+        // A restrained pair of repairs lies below the walkable top skin.
+        for(float Side : {-1.f,1.f})
+            Box(FVector(P.X+Side*Size.X*.28f,P.Y-Size.Y*.5f-9,P.Z-7),FVector(38,2,13),TEXT("WoodLight"));
     }
     // Row houses are low workshops with working flat roofs; do not cap the jump route.
     for(int32 I=0;I<3;++I)
@@ -864,6 +921,28 @@ void BuildDockSetting(UWorld* World)
                 || FMath::Abs(Hit.ImpactPoint.X-(P.X+22.5f))>2) ++ChimneyFailures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHIMNEY_COLLISION failures=%d checked=%d"),ChimneyFailures,SolidChimneys.Num());
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckShopCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();
+        Camera->GetCameraComponent()->SetFieldOfView(65);
+        const FVector Positions[]={FVector(530,-1170,260),FVector(100,-1040,410),FVector(-25,-1510,315)};
+        const FVector Targets[]={FVector(-340,-1300,145),FVector(-165,-795,165),FVector(-370,-1400,220)};
+        for(int32 I=0;I<3;++I)
+        {
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P=Positions[I],T=Targets[I]](){
+                Camera->SetActorLocationAndRotation(P,(T-P).Rotation());
+                if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);
+            },4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("Shops");
+                IFileManager::Get().MakeDirectory(*Folder,true);
+                FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
+            },6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;
+        World->GetTimerManager().SetTimer(Exit,[World](){if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},18.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWorkshopCapture")))
     {

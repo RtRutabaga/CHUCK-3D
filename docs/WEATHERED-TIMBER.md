@@ -35,3 +35,11 @@ Remaining limits: building bodies are still simple blockout shapes; their scanne
 The original crate has rails, panels and corner battens with coincident outward planes. World-aligned colour previously concealed their depth-buffer conflict; the new independent board UVs made it visible as flickering grain. The derivative now separates those surfaces. Its geometry check finds **84 exposed coplanar face intersections before, zero after**, with unchanged outer bounds. Texture resolution, normals, roughness, buildings and collision are retained.
 
 `Tools/import_weathered_crate.py` reimports only the derivative mesh. `-ChuckCrateMotionCapture` captures 20 stationary views, then 30 near and 30 farther orbit views around the starting crate, under `Saved/Screenshots/Windows/CrateMotion`. Some requests can be dropped if frame timing is slow; compare matching frame names. Actual before/after evidence and final package checks are in the latest handoff.
+
+## Square-shop shakes and flat shack roofs
+
+The five flat-roof timber workshops (Bonded Stores, Sail Loft, Chandler, Sail Repair and Cooper) retain their solid shells and existing doors/windows. Split-shake courses use the existing CC0 Rough Wood materials on irregular-width boards, staggered butt ends, shallow varied relief and selected dark end splits. This is surface age rather than structural collapse. Original texture/asset provenance above still applies; no new assets or dependencies.
+
+Flat plank roofs have recessed underlay, visible seams, projecting eaves, worn fascia and small edge repairs. A continuous hidden collision plate supports the roof skin, raising each original landing by 5 cm; eaves project 8 cm per side. Wall dressing has no collision, so the original solid shells remain the climb surfaces. Existing rooftop steps, hoists and signs are retained.
+
+Developer review: `-ChuckShopCapture` writes three daytime views under `Saved/Screenshots/Windows/Shops`; launch with `/Game/Prototype/WaterdeepDocks?ChuckStart=Night` for the same views at dusk. The normal player cameras and controls are unchanged.

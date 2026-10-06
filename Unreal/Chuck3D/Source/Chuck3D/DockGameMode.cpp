@@ -2301,7 +2301,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         if(StageTime>5.f)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DISTRICT_MEASURE route=roof_leap leaped=%d pullups=%d z=%.2f y=%.2f ground=%d"),bKeyMeasured ? 1 : 0,Chuck->GetPullUps()-PullUpsBase,At.Z,At.Y,bGround ? 1 : 0);
-            Check(bKeyMeasured && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(230.f+34.65f))<3.f && bGround,TEXT("a leap across the roof gap catches the higher roof and climbs up"));
+            Check(bKeyMeasured && Chuck->GetPullUps()>PullUpsBase && FMath::Abs(At.Z-(235.f+34.65f))<3.f && bGround,TEXT("a leap across the roof gap catches the higher roof and climbs up"));
             // Next: walk up the ramp onto the customs terrace.
             Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
             Chuck->SetActorLocation(FVector(-25,-1380,36),false,nullptr,ETeleportType::TeleportPhysics); Chuck->SetActorRotation(FRotator(0,-90,0)); Chuck->Recenter();
