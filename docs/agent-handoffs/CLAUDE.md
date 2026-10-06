@@ -2179,3 +2179,14 @@ Next part of the work can be done here.
 - **Remaining:**
   - Beard detail.
   - Not played by the user.
+
+## The old sailor's voice (user 2026-10-06)
+
+- **Source:** `77e81ef` on main.
+  - `dialogue.json`, `Voice/Sailor`, `NPCVoiceData.h`.
+  - Sailor `face: true`.
+  - `DockNPC.cpp/.h`: `SetupVoice`, the pipe out while speaking.
+  - `DockGameMode.cpp`: the voice stage and check.
+  - `import_npc_voice.py` (`CHUCK_VOICE_ONLY`), `Verify-Package.ps1`.
+- **Verified:** package 153, `Local/verify-package-20261005-171205.log`.
+- **Remaining:** not listened to by me.
