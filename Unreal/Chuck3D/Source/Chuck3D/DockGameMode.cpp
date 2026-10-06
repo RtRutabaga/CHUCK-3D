@@ -3103,6 +3103,21 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Chuck->GetSfxLoaded()==36 && Chuck->GetSfxCount(ESfx::Step)>20 && Chuck->GetSfxCount(ESfx::Jump)>0 && Chuck->GetSfxCount(ESfx::Land)>0
                 && Chuck->GetSfxCount(ESfx::Slash)>0 && Chuck->GetSfxCount(ESfx::Roll)>0,TEXT("movement sound effects load and play (steps, jump, land, slash, roll)"));
         }
+        // No shaking: the standing townsfolk's bones (motion capture, low-passed) rarely reverse
+        // direction frame to frame (the CMU jitter had their feet doing so on 10-26% of frames).
+        // The smith, keeper and sailor are left out: their hands' work reverses on purpose.
+        {
+            int32 Steady=0, Measured=0; float Worst=0.f;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+            {
+                if(!Entry.IsValid()) continue;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_JITTER who=%s %s"),Entry->Tags.Num() ? *Entry->Tags[0].ToString() : *Entry->DisplayName,*Entry->GetJitterReport());
+                if(!Entry->HasMocap() || Entry->IsSmith() || Entry->IsKeeper() || Entry->IsSailor() || Entry->IsHostile()) continue;
+                ++Measured; Steady+=Entry->GetShakeShare()<.03f; Worst=FMath::Max(Worst,Entry->GetShakeShare());
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_NPC_SHAKE_MEASURE measured=%d steady=%d worst_share=%.3f"),Measured,Steady,Worst);
+            Check(Measured>=8 && Steady==Measured,TEXT("the standing NPCs (the dwarf among them) hold still without shaking"));
+        }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_RETURN lowest=%.2f now=%.2f recovered=%d"),DuckLowest,MusicDuck,bDuckRecovered ? 1 : 0);
         Check(DuckLowest<.4f && bDuckRecovered,TEXT("the music comes back up once the NPCs have finished speaking"));
         UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);

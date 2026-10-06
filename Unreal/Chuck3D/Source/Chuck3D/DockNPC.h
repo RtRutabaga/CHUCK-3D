@@ -257,6 +257,12 @@ public:
     AActor* GetAnvil() const { return Anvil.Get(); }
     /** Eyes above the feet (cm), from this body's head bone. */
     float GetEyeHeight() const { return EyeHeight; }
+    /** Shake probe (user 2026-10-06: the dwarf's "weird jittery shake"): after 8 s, the bone whose
+        velocity most often reverses frame to frame (moving > 3 cm/s each way), how many times, and
+        the body's yaw reversals. Smooth motion reverses only at the ends of a sway. */
+    FString GetJitterReport() const;
+    float GetShakeShare() const { return ProbeFrames ? static_cast<float>(GetWorstReversals()) / ProbeFrames : 0.f; }
+    int32 GetWorstReversals() const;
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -394,6 +400,16 @@ private:
     float AnkleRest = 8.f;                // ankle height standing
     float WorstFootLift = 0.f, WorstLapHand = 0.f;
     void PoseSeated(TArray<FTransform>& Space);
+    /** The clips, low-passed (ClipSmoothing): the CMU takes carry frame-to-frame noise that shook the legs. */
+    TArray<FQuat> SmoothDelta;
+    FVector SmoothHips = FVector::ZeroVector;
+    TArray<FVector> ProbePrev, ProbeVel;
+    TArray<int32> ProbeReversals;
+    TArray<float> ProbeSwing;      // summed |velocity change| at each reversal (cm/s)
+    int32 ProbeFrames = 0;
+    float ProbeYawPrev = 0.f, ProbeYawVel = 0.f;
+    int32 YawReversals = 0;
+    void ProbeShake(const TArray<FTransform>& Space, float DeltaSeconds);
     // The gnome alchemist's sleeves.
     float WorstSleeveReach = 0.f;
     void PoseSleeves(TArray<FTransform>& Space);

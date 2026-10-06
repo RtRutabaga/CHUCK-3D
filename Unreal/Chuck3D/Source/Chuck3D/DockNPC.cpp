@@ -39,6 +39,7 @@ namespace
     // finger curls most, the index least), and closed round a shaft.
     constexpr float Relaxed[5][3] = { {6.f, 10.f, 10.f}, {10.f, 16.f, 12.f}, {14.f, 20.f, 14.f}, {18.f, 24.f, 16.f}, {24.f, 28.f, 18.f} };
     constexpr float Gripped[5][3] = { {25.f, 35.f, 25.f}, {62.f, 85.f, 55.f}, {68.f, 85.f, 55.f}, {70.f, 85.f, 55.f}, {74.f, 85.f, 55.f} };
+    constexpr float ClipSmoothing = .1f;    // s: the motion capture's low-pass (its jitter is several times a second)
     constexpr float WristStraight = .65f;   // how much of the clips' unreliable wrist bend is taken out
     constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
     // The spear: its butt on the ground beside his right foot, a touch ahead,
@@ -1100,6 +1101,7 @@ float ADockNPC::GetHandsForward() const
 
 void ADockNPC::EndPlay(const EEndPlayReason::Type Reason)
 {
+    if (ProbeFrames > 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_NPC_SHAKE who=%s %s"), Tags.Num() ? *Tags[0].ToString() : *DisplayName, *GetJitterReport());
     NPCRegistry.Remove(this);
     Super::EndPlay(Reason);
 }
@@ -1277,6 +1279,17 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         // and the hands keep their curl.
         TArray<FQuat> BoneDelta; FVector HipsOffset;
         SampleClips(T, BoneDelta, HipsOffset);
+        // The motion capture's own jitter (user 2026-10-06: the dwarf's "weird jittery shake"; every
+        // mocap NPC's feet and calves reversed direction on 10-26% of frames): each bone's turn and
+        // the hips eased toward the clip with a short time constant, which keeps the sway and glances.
+        if (SmoothDelta.Num() != BoneDelta.Num()) { SmoothDelta = BoneDelta; SmoothHips = HipsOffset; }
+        else
+        {
+            const float A = 1.f - FMath::Exp(-DeltaSeconds / ClipSmoothing);
+            for (int32 B = 0; B < BoneDelta.Num(); ++B) SmoothDelta[B] = FQuat::Slerp(SmoothDelta[B], BoneDelta[B], A).GetNormalized();
+            SmoothHips = FMath::Lerp(SmoothHips, HipsOffset, static_cast<double>(A));
+        }
+        BoneDelta = SmoothDelta; HipsOffset = SmoothHips;
         // The clip actors were slighter at the hip: ease each arm out a little
         // so the hands rest beside the thighs, not in them.
         for (int32 Side = 0; Side < 2; ++Side)
@@ -1356,6 +1369,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsSeated()) PoseSeated(Space);
         if (IsAlchemist()) PoseSleeves(Space);
         PoseFace(Space);
+        ProbeShake(Space, DeltaSeconds);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
         for (int32 B = 0; B < Space.Num(); ++B) Body->SetBoneTransformByName(Ref.GetBoneName(B), Space[B], EBoneSpaces::ComponentSpace);
         SmithEvents();
@@ -2003,4 +2017,52 @@ void ADockNPC::TickSailor(float DeltaSeconds)
         PipeBreath->SetCustomDataValue(Index, 0, .28f * FMath::SmoothStep(0.f, .1f, P.Age) * FMath::Pow(1.f - U, 1.5f), false);
     }
     PipeBreath->MarkRenderStateDirty();
+}
+
+void ADockNPC::ProbeShake(const TArray<FTransform>& Space, float DeltaSeconds)
+{
+    if (DeltaSeconds <= 0.f) return;
+    const bool bCount = GetWorld()->GetTimeSeconds() > 8.f;
+    if (ProbePrev.Num() != Space.Num())
+    {
+        ProbePrev.SetNum(Space.Num()); ProbeVel.Init(FVector::ZeroVector, Space.Num()); ProbeReversals.Init(0, Space.Num()); ProbeSwing.Init(0.f, Space.Num());
+        for (int32 B = 0; B < Space.Num(); ++B) ProbePrev[B] = Space[B].GetLocation();
+        ProbeYawPrev = static_cast<float>(GetActorRotation().Yaw);
+        return;
+    }
+    for (int32 B = 0; B < Space.Num(); ++B)
+    {
+        const FVector V = (Space[B].GetLocation() - ProbePrev[B]) / DeltaSeconds;
+        if (bCount && V.Size() > 3.f && ProbeVel[B].Size() > 3.f && FVector::DotProduct(V, ProbeVel[B]) < 0.f)
+        { ++ProbeReversals[B]; ProbeSwing[B] += static_cast<float>((V - ProbeVel[B]).Size()); }
+        ProbeVel[B] = V; ProbePrev[B] = Space[B].GetLocation();
+    }
+    ProbeFrames += bCount;
+    const float Yaw = static_cast<float>(GetActorRotation().Yaw);
+    const float YawV = FMath::FindDeltaAngleDegrees(ProbeYawPrev, Yaw) / DeltaSeconds;
+    if (bCount && FMath::Abs(YawV) > 2.f && FMath::Abs(ProbeYawVel) > 2.f && YawV * ProbeYawVel < 0.f) ++YawReversals;
+    ProbeYawVel = YawV; ProbeYawPrev = Yaw;
+}
+
+int32 ADockNPC::GetWorstReversals() const
+{
+    int32 Worst = 0;
+    for (const int32 R : ProbeReversals) Worst = FMath::Max(Worst, R);
+    return FMath::Max(Worst, YawReversals);
+}
+
+FString ADockNPC::GetJitterReport() const
+{
+    // The six bones with the most reversals: name, share of frames reversing (%), mean velocity jump (cm/s).
+    TArray<int32> Order;
+    for (int32 B = 0; B < ProbeReversals.Num(); ++B) if (ProbeReversals[B]) Order.Add(B);
+    Order.Sort([&](int32 A, int32 B) { return ProbeReversals[A] > ProbeReversals[B]; });
+    FString Out = FString::Printf(TEXT("frames=%d yaw_reversals=%d"), ProbeFrames, YawReversals);
+    for (int32 I = 0; I < FMath::Min(6, Order.Num()); ++I)
+    {
+        const int32 B = Order[I];
+        Out += FString::Printf(TEXT(" %s=%.0f%%/%.0f"), *Body->GetSkinnedAsset()->GetRefSkeleton().GetBoneName(B).ToString(),
+            100.f * ProbeReversals[B] / FMath::Max(1, ProbeFrames), ProbeSwing[B] / ProbeReversals[B]);
+    }
+    return Out;
 }
