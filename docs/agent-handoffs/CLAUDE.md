@@ -2448,4 +2448,15 @@ User closed the game. The sign-cleanup package **16d18c0** includes the pending 
 - **Note:** `Verify-Package.ps1 -NoCapture` got 149 passes against its expected 161 (now 162) in `-204843`: its expected count has drifted (pre-existing); full runs are correct.
 - **Remaining:** not watched in play; her react/talk clips are still the stood ones (eased in).
 
+## Smith at once and louder; Dougmund from the crate stairs, music down, rant resumes (user 2026-10-06)
+
+- **Source:** `7a94283`.
+  - Smith: `SmithSpeakPause` 0, and he speaks only once `Resting > .98` (hammer down); check expects pause < 0.1 s (measured 0.02).
+  - Smith loudness: his line is deep (70% of energy < 300 Hz) and was peak-held 6 dB under the others in the 300-4000 Hz speech band (-25.9 vs -19.4..-20.4 dB). `build_npc_voice.py` gains per-line `boost_db` through a look-ahead limiter (5 ms hold, 60 ms release, to -1 dBFS); `dialogue.json` gives him +10 dB → -20.4 dB band (dwarf's level; limiter > 3 dB on 7% of the line). Re-imported with `CHUCK_VOICE_ONLY=Blacksmith` (`Local/smith-loud-import.log`); the other wavs are byte-identical.
+  - `DockNPC`: worker room attenuation inner 800 cm, falloff 2400 cm, occlusion .6, low-pass 2.5 kHz. `TavernApproach` box (crate staircase to tavern) and `NearTavernAtNight`; `ADockGameMode::UpdateMusicDuck` holds the music at 0.35 there at night. Night stage 3: `TavernResume` 45 s after the keeper's line ends, Dougmund's loop restarts (5.5 s pause). `CheckDockReturn` accepts stage 3. `GetVoiceVolumeAt`, `ADockGameMode::GetMusicDuck` for tests.
+  - `-ChuckTavernNightCapture` now ~98 s: crate stairs check, quiet after the keeper, resume check.
+- **Verified (candidate `Builds/TavernNightTalkCandidate/Windows`):** `Local/verify-package-20261006-212151.log`, 164 passes. `Local/tavern-night-talk-capture.log` failures=0: stairs 13.5 m, voice 0.77 before walls (occluded), music 0.35; keeper done → quiet; resume 73.7 s after the cut-in (28.5 s line + 45 s), looping and speaking.
+- **Launcher: STALE, still `2540372`.** The game was open; nothing was moved. To finish: close the game, move `Builds/Windows` to `Builds/Windows-Previous-20261006-NightTalk`, move the candidate's `Windows` to `Builds/Windows`, `Write-PrototypeReceipt.ps1 -VerificationLog Local/verify-package-20261006-212151.log`, `Launch-Prototype.cmd -CheckOnly`.
+- **Remaining:** not listened to. Muffled through walls at the stairs it may still want more; Dougmund's voice from the stairs is occluded by the tavern's south wall.
+
 Next part of the work can be done here.
