@@ -2426,4 +2426,11 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `b3654da` (`-CheckOnly` passes); backup `Builds/Windows-Previous-20261006-TavernTiming`.
 - **Remaining:** not listened to; the rant's reach and 3.5 s cut-in need tuning by ear. The uncommitted Unreal asset re-saves in the working tree predate this session and were left alone.
 
+## Bobert's barrel light: dimmer by day, gone at night (user 2026-10-06)
+
+- **Source:** `e1b121e`. `DockNPC.cpp` barrel `Fill`: intensity 160 → 50, radius 85 → 65 cm, colour warm (1,.93,.84) → neutral daylight (.96,.95,.92), source radius 40 cm. `DockReturn.cpp`: the evening switch destroys the barrel's point light; `CheckDockReturn` requires 1 barrel light by day, 0 at night (`barrel_lights=` in `CHUCK_RETURN_CHECK`).
+- **Verified (candidate `Builds/BarrelLightCandidate/Windows`):** `Local/verify-package-20261006-193618.log`, 163 passes. `Local/barrel-light-ChuckReturnTest.log`: failures=0, barrel_lights=1 by day, 0 in the evening. Face/front review: `Local/bobert-barrel-light-{face,front}.png` (compare `Local/bobert-face-after.png`); his face is still readable.
+- **Launcher: STALE, still `b3654da`.** Promotion failed because the user had the game open from `Builds/Windows`. The partial move was undone by copying back; `-CheckOnly` passes on `b3654da`. `Builds/Windows-Previous-20261006-BarrelLight` holds 3 leftover locked copies (exe, tbbmalloc, DirectML) that can be deleted once the game is closed. To finish: close the game, delete that folder, move `Builds/Windows` to it, move `Builds/BarrelLightCandidate/Windows` to `Builds/Windows`, run `Write-PrototypeReceipt.ps1 -VerificationLog Local/verify-package-20261006-193618.log` and `Launch-Prototype.cmd -CheckOnly`.
+- **Remaining:** night not looked at in a capture (the light is simply gone). The barrel's inside still takes sky light by day.
+
 Next part of the work can be done here.
