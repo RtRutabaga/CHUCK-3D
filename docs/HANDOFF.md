@@ -1,5 +1,12 @@
 # Handoff — 2026-09-27
 
+## October 7 — Chuck sprints on all fours (Claude)
+
+Runtime **`1bc88e1`**. Left Ctrl / left stick click while moving: a 2.5 s burst at 380 cm/s on all four paws (new `SprintLoop` half-bound clip), then back up into the run; it recovers for 10 s with no HUD, and a press meanwhile does nothing. Jumping, dodging, strafing, letting go or leaving the ground ends it early; jumps and falls leave at run speed, so parkour tuning is unchanged. New checks: stages 129-130 / `-ChuckSprintTest`. Verifier expects 168. Full verification **169 passes, 0 failures** (`Local/verify-package-20261007-080038.log`). A first run failed only the intermittent keeper rag-reach sample seen in earlier logs. Root **Launch-Prototype.cmd** = **`1bc88e1`** (includes the pending smith/Dougmund `7a94283`); previous at `Builds/Windows-Previous-20261007-Sprint`. The 40 unfinished assets are untouched. Details and flaws are in `docs/agent-handoffs/CLAUDE.md`.
+
+Next part of the work can be done here.
+
+
 ## October 6 — aged timber pyrography-style business signs
 
 Runtime **`fdbe142`**, on `c6dc1c0`. All **14** remaining trade/tavern signs now use shared `DockSigns.cpp`: chipped, bevelled irregular timber slabs, existing scanned Rough Wood (`M_WoodLight`), end checking, rusted fixings, rear cleats and short hangers where needed. Old smooth boards and pale text components replaced; names/mounting positions retained, previously removed area labels stay absent. Dark brown scorch rim and near-black letter core sit 1.2/1.8 mm above the surface. This is a layered pyrography appearance, not physical engraving or simulated burning. Default UE text font retained for readability. Decorative signs have no collision; existing route checks pass. See TRADE-SIGNS.md. No installations, imports or new binary assets.

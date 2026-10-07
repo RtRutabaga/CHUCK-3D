@@ -2460,3 +2460,20 @@ User closed the game. The sign-cleanup package **16d18c0** includes the pending 
 - **Remaining:** not listened to. Muffled through walls at the stairs it may still want more; Dougmund's voice from the stairs is occluded by the tavern's south wall.
 
 Next part of the work can be done here.
+
+## Four-legged sprint with a ten-second recovery (user 2026-10-07)
+
+- **Ask:** "sprint using all fours like a rat sprinting ... a brief sprint with a cooldown period, not displayed by hud, maybe 10 seconds".
+- **Source:** `1bc88e1` on main (base `cafa367`).
+  - `build_chuck_v1.py`: new `SprintLoop` (8 frames, 380 cm/s, 101 cm stride). Half-bound: hind paws land 0.07 apart (25% stance), forepaws at 0.44/0.52 (20% stance), extended and gathered flights, spine flexing between them, head held level (19-25 cm head-bone height), ears back, tail straight behind. Forepaws use arm IK at authoring only. Review: `SourceAssets/Chuck/Review/SprintLoop_review.png`.
+  - `gen_chuck_clip_data.py` → `ChuckClipData.h`: `SprintSpeed/Period/Stride/StanceFraction/HindLag`.
+  - `ChuckCharacter`: `Sprint` action (Left Ctrl, Gamepad_LeftThumbstick). `TrySprint`: needs a stick direction, ground and a plain gait (idle/start/loop/stop/land), not strafing. 2.5 s at 380 cm/s (acceleration 1100), then `RunBrake` sheds to the run (run latch stays on). Recovery 10 s from the end, no HUD; a press meanwhile does nothing. Ends early on jump (`JumpPressed`), dodge/vault/any non-Loop gait, strafe, released input (movement acceleration), or leaving the ground. Jumps and falls clamp horizontal speed to the run speed so the gaps and wall runs keep their run tuning. `ResetAtLocation` clears it.
+  - `ChuckAnimInstance`: sprint layer over the run layer on the WalkLoop sample, same phase (`WalkPhase`); pose weight blends in at 10/s, out at 7/s; stride lerps to the sprint stride; hind stance windows from the manifest.
+  - Tools: `Import-ChuckV1.ps1 -Clips <names>` (clip-only import against the existing mesh/skeleton). `validate_chuck_v1_import.py` warns instead of asserting the rest pose in that mode: **the committed `SK_Chuck_Skeleton` reference pose is 3.0-3.8 cm off the v1.1 table (pelvis and up), pre-existing**. A full import would refresh it but re-save the mesh. All 32 clips validated; the loop's closing sample was restored.
+  - Tests: stages 129-130 (after the crate vaults) and `-ChuckSprintTest`; 5 checks. `Verify-Package.ps1` expects 168 (167 `-NoCapture`).
+- **Verified:** `-ChuckSprintTest` `Local/sprint-test-3.log` failures=0. Full `Local/verify-package-20261007-080038.log` **169 passes, 0 failures**: max 380.00 cm/s, weight 1.0, lasted 2.514 s, back at 225 cm/s, refused during recovery with 10.00 s left, 25 locked hind-paw samples with 0 slip, jump out leaves at 225 cm/s. Roof leap z269.65, run 225. The first full run (`-075532`) failed only the tavern keeper's rag reach (8.5 cm), which already appears in earlier logs (Oct 5/6); the rerun passed. In-game captures (elevated camera, from behind): `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Sprint_*.png`, sheet `Local/sprint-ingame-contact.png`.
+- **Launcher:** `Builds/Windows` = `1bc88e1`, receipt written, `-CheckOnly` passes. Previous `2540372` at `Builds/Windows-Previous-20261007-Sprint`. This build includes `7a94283` (smith/Dougmund), so that pending promotion is done; `Builds/TavernNightTalkCandidate` is now unused and left in place.
+- **Preserved:** the 40 pre-existing modified human/material assets are hash-identical to `Local/sprint-preserved-inputs.sha1`, unstaged.
+- **Remaining:** not played by hand; the Ctrl/L3 keys go through the real input path only in TrySprint's stick read, not in automation. Forepaws are clip-placed (no runtime hand IK), so they can float or sink on slopes and steps. The walk/run → sprint blend passes through a half-crouched pose for about 0.2 s. A sprint off a ledge drops to run speed in the air. No sprint sound or forepaw footsteps (hind paws use the run steps).
+
+Next part of the work can be done here.
