@@ -1,3 +1,4 @@
+#include "DockSigns.h"
 #include "DockPlaza.h"
 #include "DockFire.h"
 #include "DockForge.h"
@@ -50,12 +51,7 @@ void BuildDockPlaza(UWorld* World)
     auto Beam=[&](FVector A,FVector B,float Width,const TCHAR* Mat)
     { const FVector D=B-A; Shape((A+B)*.5f,FVector(D.Size(),Width,Width),Mat,false,nullptr,D.Rotation()); };
     auto Sign=[&](FVector P,const TCHAR* Words,float Yaw=90.f)
-    {
-        auto* T=NewObject<UTextRenderComponent>(Owner); T->SetupAttachment(Root);
-        T->SetRelativeLocation(P); T->SetRelativeRotation(FRotator(0,Yaw,0));
-        T->SetWorldSize(19); T->SetHorizontalAlignment(EHTA_Center);
-        T->SetText(FText::FromString(Words)); T->SetTextRenderColor(FColor(205,185,145)); T->RegisterComponent();
-    };
+    { AddDockTradeSign(World,P,Words,Yaw,190.f); };
     TArray<TWeakObjectPtr<UPointLightComponent>> Lights;
     auto Glow=[&](FVector P,float Intensity,float Radius)
     {
@@ -290,7 +286,6 @@ void BuildDockPlaza(UWorld* World)
         for(int32 I=0;I<4;++I)
             Shape(P+FVector(-245+I*38,185,17),FVector(33,11,30),TEXT("Stone"));
         Shape(P+FVector(-215,-65,545),FVector(62,62,180),TEXT("Stone"));
-        Shape(P+FVector(0,195,300),FVector(270,10,42),TEXT("Wood"));
         Sign(P+FVector(0,204,301),Name);
     };
     Shop(FVector(-865,-3940,0),TEXT("SMITHY"));

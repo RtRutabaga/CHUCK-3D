@@ -59,3 +59,5 @@ Known scope limits: repeated blockout architecture, closed doors, no interiors o
 ## Signage cleanup — October 6
 
 Keep in-world signage for businesses and the tavern. Removed developer-style area labels Cargo Court (both sides), Dock Street, Fountain Plaza, Docks and the user-rejected Bonded Stores label. Removed the cargo hanging board/chains and the street/plaza signboards rather than leaving blank signs. The cargo hoist frame, lamp posts, architecture and all collision/traversal surfaces remain. Trade/shop signs (Chandler, Sail Repair, Cooper, Nets, Stores, Rope, Sails, Ropeworks, Net Mender, Sailmaker, Smithy, Alchemist) and Tavern remain. No assets, materials or dependencies changed.
+
+Remaining business signs now share rough-hewn timber slabs and dark scorch-edged pyrography-style letters, including the tavern. See [TRADE-SIGNS.md](TRADE-SIGNS.md) for geometry, surface-treatment limits and developer review. Area labels stay removed.

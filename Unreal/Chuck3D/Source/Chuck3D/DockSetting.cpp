@@ -1,4 +1,5 @@
 #include "DockSetting.h"
+#include "DockSigns.h"
 #include "DockVista.h"
 #include "DockWeathering.h"
 #include "DockTavern.h"
@@ -79,17 +80,7 @@ void BuildDockSetting(UWorld* World)
         Body->SetCollisionProfileName(TEXT("BlockAll")); Body->SetVisibility(!BarrelMesh); Body->RegisterComponent();
     };
     auto Label=[&](FVector P,const TCHAR* Words,float Yaw=0.f)
-    {
-        auto* Text=NewObject<UTextRenderComponent>(Owner);
-        Text->SetupAttachment(Root);
-        Text->SetRelativeLocation(P);
-        Text->SetRelativeRotation(FRotator(0,Yaw,0));
-        Text->SetWorldSize(16);
-        Text->SetHorizontalAlignment(EHTA_Center);
-        Text->SetTextRenderColor(FColor(205,191,154));
-        Text->SetText(FText::FromString(Words));
-        Text->RegisterComponent();
-    };
+    { AddDockTradeSign(World,P,Words,Yaw); };
     // Continuous ground, not isolated platforms. All new route surfaces meet z=0.
     Box(FVector(-1150,-700,-45),FVector(1300,3200,90),TEXT("Stone"),true); // west dock street
     // Split every solid layer around the pantry shaft: x20..130, y875..955.
@@ -333,7 +324,6 @@ void BuildDockSetting(UWorld* World)
     for(int32 I=0;I<3;++I)
     {
         const float Y=-1150-I*250.f;
-        Box(FVector(-254,Y,136),FVector(6,130,26),TEXT("Wood"));
         Label(FVector(-249,Y,136),I==0?TEXT("CHANDLER"):I==1?TEXT("SAIL REPAIR"):TEXT("COOPER"));
         for(float Offset : {-60.f,60.f})
             Box(FVector(-256,Y+Offset,55),FVector(4,6,110),TEXT("Dark"));
@@ -505,7 +495,7 @@ void BuildDockSetting(UWorld* World)
             Beam(P+FVector(8,Y-20,275),P+FVector(8,Y+20,320),5,TEXT("Wood"));
         }
         Beam(P+FVector(0,115,260),P+FVector(76,115,260),6,TEXT("Dark"));
-        Box(P+FVector(65,115,231),FVector(8,64,42),TEXT("Wood"));
+        Beam(P+FVector(70,115,258),P+FVector(70,115,247),1.2f,TEXT("Dark"));
         Label(P+FVector(70,115,232),I==0?TEXT("NETS"):I==1?TEXT("STORES"):I==2?TEXT("ROPE"):TEXT("SAILS"));
     }
     // Flat workshop roofs stay usable: only dress faces below existing ledges.
@@ -731,7 +721,6 @@ void BuildDockSetting(UWorld* World)
     for(int32 I=0;I<4;++I)
     {
         const float X=-1450+I*600.f;
-        Box(FVector(X,1646,255),FVector(160,10,35),TEXT("Wood"));
         Label(FVector(X,1654,255),I==0?TEXT("ROPEWORKS"):I==1?TEXT("NET MENDER"):I==2?TEXT("STORES"):TEXT("SAILMAKER"),90);
         Box(FVector(X,1680,226),FVector(190,90,8),TEXT("Roof"),false,FRotator(0,0,-8));
         for(float Side : {-1.f,1.f}) Beam(FVector(X+Side*75,1645,150),FVector(X+Side*75,1715,218),6,TEXT("Wood"));

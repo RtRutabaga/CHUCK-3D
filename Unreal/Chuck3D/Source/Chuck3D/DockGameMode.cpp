@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
 #include "DockPlaza.h"
@@ -271,16 +272,7 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("Window"),FVector(X,314,160),FVector(64,4,79),TEXT("Amber"));
         if(WindowMesh) Prop(TEXT("TavernWindowArt"),FVector(X,322,160),WindowMesh)->SetActorRotation(FRotator(0,180,0));
     }
-    Shape(TEXT("TavernSign"),FVector(40,313,250),FVector(170,12,32),TEXT("Wood"));
-    auto* Sign = World->SpawnActor<AActor>();
-    auto* Text = NewObject<UTextRenderComponent>(Sign);
-    Sign->SetRootComponent(Text); Text->RegisterComponent();
-    Text->SetWorldLocation(FVector(40,305,248));
-    Text->SetWorldRotation(FRotator(0,-90,0));
-    Text->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
-    Text->SetVerticalAlignment(EVerticalTextAligment::EVRTA_TextCenter);
-    Text->SetWorldSize(18); Text->SetText(FText::FromString(TEXT("TAVERN")));
-    Text->SetTextRenderColor(FColor(225,205,169));
+    AddDockTradeSign(World,FVector(40,305,248),TEXT("TAVERN"),-90.f,150.f);
     // Warehouse closes the back of the study; front/side edges remain readable.
     // Surviving stone frontage of the roofless store; broken courses are built
     // in DockSetting rather than a plaster face on a stone block.
@@ -590,6 +582,7 @@ void ADockGameMode::StartPlay()
     SpawnSewerLife(World);   // its rats and moss (Claude)
     FinishDockFire(World);
     FinishDockTimber(World);
+    ReviewDockTradeSigns(World);
     auto* Start = World->SpawnActor<APlayerStart>(AChuckCharacter::StartLocation(),FRotator::ZeroRotator);
     (void)Start;
     Super::StartPlay();
