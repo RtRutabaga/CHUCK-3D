@@ -1,5 +1,18 @@
 # Codex movement handoff — 2026-09-26
 
+## October 6 — aged timber pyrography-style business signs
+
+Runtime **`fdbe142`**, on `c6dc1c0`. All **14** remaining trade/tavern signs now use shared `DockSigns.cpp`: chipped, bevelled irregular timber slabs, existing scanned Rough Wood (`M_WoodLight`), end checking, rusted fixings, rear cleats and short hangers where needed. Old smooth boards and pale text components replaced; names/mounting positions retained, previously removed area labels stay absent. Dark brown scorch rim and near-black letter core sit 1.2/1.8 mm above the surface. This is a layered pyrography appearance, not physical engraving or simulated burning. Default UE text font retained for readability. Decorative signs have no collision; existing route checks pass. See TRADE-SIGNS.md. No installations, imports or new binary assets.
+
+Build/review: initial source-only skip-cook build **166.11 s** (`Local/pyro-signs-build.log`), then support/review helper build **139.29 s** (`Local/pyro-signs-final-build.log`). Close-ups exposed wrong face winding (rear cleats visible through the slab) and an overly broad scorch rim. Corrected Unreal clockwise winding while retaining outward normals, and reduced the rim. Final corrected build **20.58 s**, `Local/pyro-signs-corrected-build.log`, existing UE5.7.4 / VS2022. Initial plaza context captures reviewed; corrected `-ChuckSignCapture` discovers all tagged sign actors and produced **14** reviewed close-ups (`Local/pyro-signs-corrected-review.log`, launcher `Saved/Screenshots/Windows/TradeSigns`, ignored contact sheet `Local/pyro-signs-contact.png`). Corrected wood faces occlude rear fixings; all names fit/readable in close-up. Review flag leaves normal cameras unchanged. No night close-up, new manual-input or sustained-performance test claim.
+
+Final default packaged verification passed **163 checks/all gates**, first run, `Local/verify-package-20261006-203727.log` / `Local/pyro-signs-verification.log`; no thresholds changed. Roof leap z269.65, movement, routes, NPC voices and day/night return/barrel lighting retained. Root **Launch-Prototype.cmd** now launches **`Builds/Windows` / `fdbe142`**; receipt/hash/CheckOnly pass. Prior sign-cleanup build retained at **`Builds/Windows-Previous-20261006-PyroSigns`**. Runtime source and completion handoff published to main.
+
+All **40** pre-existing unfinished inputs remain hash-identical to `Local/pyro-signs-preserved-inputs.json`, unstaged. Existing cooked cache reused; not a pristine-checkout reproduction claim. No new LFS uploads; fsck passed, generated output stays untracked. Original 2D repository untouched.
+
+Next part of the work can be done here.
+
+
 ## October 6 — sign cleanup verified and launcher updated
 
 User requested only plausible business/tavern signs. Removed Cargo Court (both sides), Dock Street, Fountain Plaza, Docks, and the user-rejected Bonded Stores label. Removed their decorative hanging boards/chains where present; cargo hoist frame, lamp posts, architecture and collision retained. Chandler/Sail Repair/Cooper, other trade/shop signs, Smithy/Alchemist and Tavern remain. Source changes only in DockSetting.cpp and DockPlaza.cpp; no imports, binary assets or dependencies.
