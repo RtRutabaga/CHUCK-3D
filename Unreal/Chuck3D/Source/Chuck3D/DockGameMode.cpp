@@ -841,7 +841,9 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     const bool bInTavern = Listener && ADockNPC::InTavern(Listener->GetActorLocation());
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking() && (!Entry->IsAmbientSpeaking() || bInTavern);
     DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
-    const float Target = DuckQuiet < DuckHold ? MusicDuckLevel : 1.f;
+    // At night, from the crate staircase to the tavern, the music stays down under the tavern's talk.
+    const bool bByTavern = Listener && ADockNPC::NearTavernAtNight(Listener->GetActorLocation());
+    const float Target = DuckQuiet < DuckHold || bByTavern ? MusicDuckLevel : 1.f;
     MusicDuck = FMath::FInterpConstantTo(MusicDuck, Target, DeltaSeconds, Target < MusicDuck ? DuckDown : DuckUp);
     DuckLowest = FMath::Min(DuckLowest, MusicDuck);
     if(DuckLowest < .5f && MusicDuck > .99f) bDuckRecovered = true;
@@ -3216,9 +3218,9 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Smith ? Smith->GetPauseBeforeSpeech() : -1.f,Smith ? Smith->GetSpeechRestLowest() : 0.f,Smith ? Smith->GetStrikesSinceSpeech() : 0,
                 Smith && Smith->Lines.Num() ? *Smith->Lines[0] : TEXT(""));
             Check(Smith && Smith->GetVoiceSoundCount()==1 && Smith->GetFaceBoneCount()==5 && Smith->GetMaxJawOpen()>3.f && Smith->GetBlinks()>=1
-                && Smith->GetPauseBeforeSpeech()>=.15f && Smith->GetPauseBeforeSpeech()<.6f && Smith->GetSpeechRestLowest()>.95f && Smith->GetStrikesSinceSpeech()>=3
+                && Smith->GetPauseBeforeSpeech()>=0.f && Smith->GetPauseBeforeSpeech()<.1f && Smith->GetSpeechRestLowest()>.95f && Smith->GetStrikesSinceSpeech()>=3
                 && Smith->Lines.Num()==1 && Smith->Lines[0].StartsWith(TEXT("It pains me")),
-                TEXT("the smith speaks his line after a pause, hammer resting the whole time, then goes back to his anvil"));
+                TEXT("the smith speaks his line as soon as his hammer is down, resting it the whole time, then goes back to his anvil"));
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_RETURN lowest=%.2f now=%.2f recovered=%d"),DuckLowest,MusicDuck,bDuckRecovered ? 1 : 0);
         Check(DuckLowest<.4f && bDuckRecovered,TEXT("the music comes back up once the NPCs have finished speaking"));

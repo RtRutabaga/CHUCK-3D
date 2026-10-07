@@ -39,7 +39,7 @@ namespace
     // finger curls most, the index least), and closed round a shaft.
     constexpr float Relaxed[5][3] = { {6.f, 10.f, 10.f}, {10.f, 16.f, 12.f}, {14.f, 20.f, 14.f}, {18.f, 24.f, 16.f}, {24.f, 28.f, 18.f} };
     constexpr float Gripped[5][3] = { {25.f, 35.f, 25.f}, {62.f, 85.f, 55.f}, {68.f, 85.f, 55.f}, {70.f, 85.f, 55.f}, {74.f, 85.f, 55.f} };
-    constexpr float SmithSpeakPause = .2f;   // s the smith waits, hammer down, before he speaks
+    constexpr float SmithSpeakPause = 0.f;   // s the smith waits, hammer down, before he speaks (user 2026-10-06: none)
     constexpr float ClipSmoothing = .1f;    // s: the motion capture's low-pass (its jitter is several times a second)
     constexpr float WristStraight = .65f;   // how much of the clips' unreliable wrist bend is taken out
     constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
@@ -1308,11 +1308,11 @@ void ADockNPC::TickVoice(float DeltaSeconds)
             }
         }
     }
-    // The smith: hammer down first, a moment's pause, then he speaks.
+    // The smith: hammer down first, then he speaks.
     if (PendingVoice >= 0)
     {
         if (Resting > .98f) RestedFor += DeltaSeconds;
-        if (RestedFor >= SmithSpeakPause) { PauseBeforeSpeech = RestedFor; const int32 Line = PendingVoice; PendingVoice = -1; StartVoiceLine(Line); }
+        if (Resting > .98f && RestedFor >= SmithSpeakPause) { PauseBeforeSpeech = RestedFor; const int32 Line = PendingVoice; PendingVoice = -1; StartVoiceLine(Line); }
     }
     const bool bWasSpeaking = IsSpeaking();
     if (IsSmith() && bWasSpeaking) SpeechRestLowest = FMath::Min(SpeechRestLowest, Resting);
@@ -2040,6 +2040,18 @@ int32 ADockNPC::GetTavernNightStage()
 
 void ADockNPC::TickTavernNight(float DeltaSeconds)
 {
+    // After the keeper's line: a while, then Dougmund is off again, on his loop with its pauses.
+    if (NightStage == 2)
+    {
+        if (ResumeIn < 0.f && AmbientPlays > 0 && AmbientLine < 0 && !IsSpeaking()) ResumeIn = TavernResume;
+        if (ResumeIn >= 0.f && (ResumeIn -= DeltaSeconds) < 0.f)
+        {
+            ADockNPC* Worker = FindNPC(TEXT("DockWorkerArt"));
+            if (Worker && Worker->StartAmbient(TEXT("night_00"), true, 5.5f, 0.f)) NightStage = 3;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_TAVERN_NIGHT_RESUME rant=%d"), Worker && Worker->HasAmbientLoop() ? 1 : 0);
+        }
+        return;
+    }
     if (NightStage != 1) return;
     const auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     InsideTime = Chuck && !Chuck->IsAstral() && InTavern(Chuck->GetActorLocation()) ? InsideTime + DeltaSeconds : 0.f;
@@ -2070,7 +2082,8 @@ bool ADockNPC::StartAmbient(const TCHAR* Id, bool bLoop, float Pause, float Dela
     EnsureVoiceAudio();
     // In the room: full a few metres round, falling away over the room and the street,
     // and muffled by walls (heard outside through the open door, quietly through the plaster).
-    // Dougmund is loud: his rant carries well up the street as Chuck approaches.
+    // Dougmund is loud: his rant is heard anywhere from the crate staircase to the tavern
+    // (user 2026-10-06; TavernApproach), the walls taking less off it and keeping his words.
     if (!RoomAttenuation)
     {
         const bool bLoud = Kind == EDockHuman::Worker;
@@ -2078,17 +2091,24 @@ bool ADockNPC::StartAmbient(const TCHAR* Id, bool bLoop, float Pause, float Dela
         FSoundAttenuationSettings& A = RoomAttenuation->Attenuation;
         A.bAttenuate = true; A.bSpatialize = true;
         A.AttenuationShape = EAttenuationShape::Sphere;
-        A.AttenuationShapeExtents = FVector(bLoud ? 450.f : 250.f, 0.f, 0.f);
-        A.FalloffDistance = bLoud ? 2300.f : 1300.f;
+        A.AttenuationShapeExtents = FVector(bLoud ? 800.f : 250.f, 0.f, 0.f);
+        A.FalloffDistance = bLoud ? 2400.f : 1300.f;
         A.bEnableOcclusion = true;
         A.OcclusionTraceChannel = ECC_Visibility;
-        A.OcclusionVolumeAttenuation = bLoud ? .45f : .3f;
-        A.OcclusionLowPassFilterFrequency = 1200.f;
+        A.OcclusionVolumeAttenuation = bLoud ? .6f : .3f;
+        A.OcclusionLowPassFilterFrequency = bLoud ? 2500.f : 1200.f;
         A.OcclusionInterpolationTime = .3f;
     }
     VoiceAudio->AttenuationSettings = RoomAttenuation;
     AmbientLine = Index; bAmbientLoop = bLoop; AmbientPause = Pause; AmbientWait = Delay; AmbientStopIn = -1.f;
     return true;
+}
+
+float ADockNPC::GetVoiceVolumeAt(const FVector& At) const
+{
+    if (!VoiceAudio || !VoiceAudio->AttenuationSettings) return 0.f;
+    const FSoundAttenuationSettings& A = VoiceAudio->AttenuationSettings->Attenuation;
+    return A.Evaluate(VoiceAudio->GetComponentTransform(), At);
 }
 
 void ADockNPC::StopAmbient(float Delay, float Fade)

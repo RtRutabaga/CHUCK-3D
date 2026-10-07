@@ -94,8 +94,8 @@
    "asset": "/Game/Art/Audio/Voice/Blacksmith/VO_Blacksmith_talk_00",
    "seconds": 8.516,
    "rate": 44100,
-   "peaks": 8,
-   "gain_db": 2.44
+   "peaks": 27,
+   "gain_db": 12.44
   }
  }
 }

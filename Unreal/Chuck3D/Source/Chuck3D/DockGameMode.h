@@ -14,6 +14,8 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     /** Start the chosen location in the fresh world already waiting behind the title menu. */
     bool StartFromMenu(const FString& Point);
+    /** The score's current duck (1 full, MusicDuckLevel under speech or by the tavern at night). */
+    float GetMusicDuck() const { return MusicDuck; }
 private:
     bool bSmokeTest = false;
     // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,

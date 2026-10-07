@@ -2,6 +2,8 @@
 #include "SewerSlide.h"
 #include "ChuckCharacter.h"
 #include "DockNPC.h"
+#include "DockGameMode.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Engine/DirectionalLight.h"
@@ -47,9 +49,9 @@ bool CheckDockReturn(UWorld* World,bool Evening)
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Worker=Entry.Get();
     const bool Seated=Worker && Worker->IsSeated() && Worker->IsDrinker() && FVector::Dist2D(Worker->GetActorLocation(),ADockNPC::TavernHips)<1.f;
     if(!Worker || Seated!=Evening) ++Failed;
-    // And at night he rants on a loop with no one talking to him, until the keeper cuts in.
+    // And at night he rants on a loop with no one talking to him, until the keeper cuts in (and again after).
     const int32 Stage=ADockNPC::GetTavernNightStage();
-    if(Evening ? !(Worker && !Worker->CanTalk() && (Stage==2 || (Stage==1 && Worker->HasAmbientLoop()))) : Stage!=0) ++Failed;
+    if(Evening ? !(Worker && !Worker->CanTalk() && (Stage==2 || ((Stage==1 || Stage==3) && Worker->HasAmbientLoop()))) : Stage!=0) ++Failed;
     // Bobert's barrel: its daylight fill by day, no light at all at night.
     int32 BarrelLights=-1;
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->IsBobert() && Entry->GetBarrel())
@@ -180,6 +182,20 @@ void BuildDockReturn(UWorld* World)
         struct FScene {int32 Failures=0;};auto Scene=MakeShared<FScene>();
         const auto Keeper=[](){ADockNPC* K=nullptr;for(const TWeakObjectPtr<ADockNPC>& E : ADockNPC::All()) if(E.IsValid() && E->ActorHasTag(TEXT("TavernKeeper"))) K=E.Get();return K;};
         const auto Subtitle=[World](FString& Speaker,FString& Line){APawn* C=World->GetFirstPlayerController()->GetPawn();return C && ADockNPC::GetAmbientSubtitle(C->GetActorLocation(),Speaker,Line);};
+        // First at the foot of the crate staircase (user 2026-10-06: Dougmund heard from there to the
+        // tavern, the music down): his voice's distance volume there, whether walls are between, the duck.
+        FTimerHandle Stairs;World->GetTimerManager().SetTimer(Stairs,[World](){
+            if(APawn* C=World->GetFirstPlayerController()->GetPawn()) C->SetActorLocation(FVector(-380,-700,34.65f));
+        },11.f,false);
+        FTimerHandle StairsCheck;World->GetTimerManager().SetTimer(StairsCheck,[World,Worker,Scene](){
+            const ADockNPC* W=Worker();const APawn* C=World->GetFirstPlayerController()->GetPawn();
+            const auto* Mode=Cast<ADockGameMode>(UGameplayStatics::GetGameMode(World));
+            const float Volume=W && C ? W->GetVoiceVolumeAt(C->GetActorLocation()) : 0.f;
+            FHitResult Hit;const bool Walled=W && C && World->LineTraceSingleByChannel(Hit,W->GetActorLocation()+FVector(0,0,60),C->GetActorLocation(),ECC_Visibility);
+            Scene->Failures+=!(C && ADockNPC::NearTavernAtNight(C->GetActorLocation()) && Volume>=.6f && Mode && Mode->GetMusicDuck()<.4f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_STAIRS near=%d distance_cm=%.0f voice_volume=%.2f occluded=%d music_duck=%.2f"),C && ADockNPC::NearTavernAtNight(C->GetActorLocation()),
+                W && C ? FVector::Dist(W->GetActorLocation(),C->GetActorLocation()) : -1.f,Volume,Walled,Mode ? Mode->GetMusicDuck() : -1.f);
+        },12.5f,false);
         FTimerHandle Outside;World->GetTimerManager().SetTimer(Outside,[World](){
             if(auto* C=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn()))
             {C->SetActorHiddenInGame(false);C->SetActorLocation(FVector(40,250,34.65f));C->SetActorRotation(FRotator(0,90,0));World->GetFirstPlayerController()->SetViewTarget(C);C->Recenter();}
@@ -204,13 +220,25 @@ void BuildDockReturn(UWorld* World)
                 const FString Folder=FPaths::ScreenShotDir()/TEXT("TavernNight");FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("Scene_%d_inside.png"),Shot),true,false);
             },16.f+ADockNPC::TavernInterrupt+(Shot-1)*6.f,false);
         }
+        // The keeper done (his 28.5 s line), Dougmund quiet; TavernResume s later, ranting again on his loop.
+        const float KeeperDone=15.f+ADockNPC::TavernInterrupt+30.f;
+        FTimerHandle Quiet;World->GetTimerManager().SetTimer(Quiet,[Worker,Keeper,Scene](){
+            const ADockNPC* W=Worker();const ADockNPC* K=Keeper();
+            Scene->Failures+=!(W && K && ADockNPC::GetTavernNightStage()==2 && !K->IsSpeaking() && !W->IsSpeaking());
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_QUIET stage=%d keeper_speaking=%d worker_speaking=%d"),ADockNPC::GetTavernNightStage(),K && K->IsSpeaking(),W && W->IsSpeaking());
+        },KeeperDone+1.f,false);
+        FTimerHandle Resumed;World->GetTimerManager().SetTimer(Resumed,[Worker,Scene](){
+            const ADockNPC* W=Worker();
+            Scene->Failures+=!(W && ADockNPC::GetTavernNightStage()==3 && W->HasAmbientLoop() && W->IsAmbientSpeaking());
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_RESUMED stage=%d loop=%d speaking=%d plays=%d"),ADockNPC::GetTavernNightStage(),W && W->HasAmbientLoop(),W && W->IsAmbientSpeaking(),W ? W->GetAmbientPlays() : 0);
+        },KeeperDone+ADockNPC::TavernResume+3.f,false);
         FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World,Worker,Scene](){
             const ADockNPC* W=Worker();
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_CAPTURE seated=%d drinker=%d at=%s drinks=%d grip_cm=%.2f lip_cm=%.2f turn=%.1f"),W && W->IsSeated(),W && W->IsDrinker(),
                 W ? *W->GetActorLocation().ToString() : TEXT("none"),W ? W->GetDrinks() : -1,W ? W->GetDrinkGripError() : 1e3f,W ? W->GetDrinkLipError() : 1e3f,W ? W->GetBodyTurn() : 0.f);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_SCENE failures=%d"),Scene->Failures);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-        },29.5f+ADockNPC::TavernInterrupt,false);
+        },KeeperDone+ADockNPC::TavernResume+5.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckReturnCapture")))
     {

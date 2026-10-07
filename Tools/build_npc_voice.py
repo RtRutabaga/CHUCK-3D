@@ -10,7 +10,8 @@ Every line is levelled to the same speech loudness, SPEECH_DB (RMS over its
 voiced 50 ms windows), as far as its peaks allow (PEAK_DB): the ElevenLabs
 takes came in 4 dB apart, and the quietest sat barely over the music (user
 2026-10-06: "make all npc dialogue louder in relation to the music"; the game
-also ducks the music while anyone speaks, ADockGameMode).
+also ducks the music while anyone speaks, ADockGameMode). A line's optional
+'boost_db' raises it beyond that through a look-ahead peak limiter (deep voices).
 The envelope is the line's own loudness at 60 frames a second (RMS over 30 ms,
 divided by its 95th percentile, clipped to 1, as 0..255): ADockNPC opens the
 jaw, lifts the brows and nods with it while the line plays. (Rhubarb mouth
@@ -53,6 +54,17 @@ def level(x, rate):
     return min(SPEECH_DB - speech, PEAK_DB - peak)
 
 
+def limit(x, rate, look=.005, release=.06):
+    """Look-ahead peak limiter to PEAK_DB: the gain each sample needs, held over +-5 ms, eased back over 60 ms."""
+    from numpy.lib.stride_tricks import sliding_window_view
+    need = np.minimum(1., 10 ** (PEAK_DB / 20) / np.maximum(np.abs(x), 1e-9))
+    n, k = int(rate * look), int(rate * release)
+    g = sliding_window_view(np.pad(need, (n, n), constant_values=1.), 2 * n + 1).min(axis=1)
+    g = np.minimum(g, np.convolve(np.pad(g, (k, k), constant_values=1.), np.ones(k) / k, 'same')[k:-k])
+    g = np.convolve(np.pad(g, (n, n), constant_values=1.), np.ones(2 * n + 1) / (2 * n + 1), 'same')[n:-n]
+    return x * g
+
+
 def envelope(x, rate):
     hop, win = rate // FPS, int(rate * .03)
     rms = np.sqrt(np.convolve(x * x, np.ones(win) / win, 'same'))[::hop]
@@ -74,6 +86,11 @@ for npc, spec in SPEC.items():
         x[:fade] *= np.linspace(0, 1, fade); x[-fade:] *= np.linspace(1, 0, fade)
         gain_db = level(x, rate)
         x = x * 10 ** (gain_db / 20)
+        # A deep voice (the smith's: 70% of its energy under 300 Hz) is peak-held well under the others
+        # in the speech band; 'boost_db' raises it further, a limiter keeping the peaks (user 2026-10-06).
+        if line.get('boost_db'):
+            gain_db += line['boost_db']
+            x = limit(x * 10 ** (line['boost_db'] / 20), rate)
         dst = NPCS / 'Voice' / npc / f"{line['id']}.wav"
         dst.parent.mkdir(parents=True, exist_ok=True)
         with wave.open(str(dst), 'wb') as w:

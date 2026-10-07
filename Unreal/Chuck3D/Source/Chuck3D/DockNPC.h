@@ -268,12 +268,19 @@ public:
      * his ambient line over and over from his seat, drinking in each pause,
      * heard from his mouth: quiet through the walls outside, full inside. Once
      * Chuck has been inside the room TavernInterrupt s, the keeper cuts him
-     * off with his own line, once, and Dougmund stays quiet for the night.
+     * off with his own line, once; TavernResume s after the keeper has
+     * finished, Dougmund takes up his rant again on its loop (user 2026-10-06).
      * Subtitles for these only while Chuck is in the room (GetAmbientSubtitle).
      */
     static void StartTavernNight();
-    /** 0 before the night, 1 Dougmund ranting, 2 the keeper has cut in. */
+    /** 0 before the night, 1 Dougmund ranting, 2 the keeper has cut in, 3 Dougmund ranting again. */
     static int32 GetTavernNightStage();
+    static constexpr float TavernResume = 45.f;        // s after the keeper's line before Dougmund starts again
+    /** From the crate staircase to the tavern (user 2026-10-06): Dougmund heard, the music down, at night. */
+    static inline const FBox TavernApproach = FBox(FVector(-560.f, -800.f, -100.f), FVector(420.f, 965.f, 600.f));
+    static bool NearTavernAtNight(const FVector& At) { return GetTavernNightStage() > 0 && TavernApproach.IsInsideOrOn(At); }
+    /** The distance volume of this NPC's voice at At (0..1, before occlusion), for tests. */
+    float GetVoiceVolumeAt(const FVector& At) const;
     static inline const FBox TavernRoom = FBox(FVector(-314.f, 400.f, -40.f), FVector(294.f, 965.f, 450.f));
     static bool InTavern(const FVector& At) { return TavernRoom.IsInsideOrOn(At); }
     static constexpr float TavernInterrupt = 3.5f;     // s inside before the keeper speaks up
@@ -402,7 +409,7 @@ private:
     // Ambient speech (the tavern at night).
     int32 AmbientLine = -1, AmbientPlays = 0, NightStage = 0;
     bool bAmbientLoop = false, bAmbientVoice = false;
-    float AmbientPause = 0.f, AmbientWait = 0.f, AmbientStopIn = -1.f, AmbientFade = .25f, InsideTime = 0.f;
+    float AmbientPause = 0.f, AmbientWait = 0.f, AmbientStopIn = -1.f, AmbientFade = .25f, InsideTime = 0.f, ResumeIn = -1.f;
     UPROPERTY() TObjectPtr<USoundAttenuation> RoomAttenuation;
     void EnsureVoiceAudio();
     void TickTavernNight(float DeltaSeconds);

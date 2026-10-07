@@ -131,7 +131,8 @@
      "id": "talk_00",
      "text": "It pains me to see Bobert living like that… I know what he did in Icewind Dale. The man’s a hero.",
      "source": "Voice/Blacksmith/source/Blacksmith_audio_talk_00.mp3",
-     "start": 0.0
+     "start": 0.0,
+     "boost_db": 10.0
     }
    ]
   }
