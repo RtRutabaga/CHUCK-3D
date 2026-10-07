@@ -2434,3 +2434,9 @@ Next part of the work can be done here.
 - **Remaining:** night not looked at in a capture (the light is simply gone). The barrel's inside still takes sky light by day.
 
 Next part of the work can be done here.
+
+## Codex completion — October 6
+
+User closed the game. The sign-cleanup package **16d18c0** includes the pending **e1b121e** barrel-light change and is now the root launcher build. Default verification passed **163/all gates**, `Local/verify-package-20261006-195800.log`; day/evening return checks confirm barrel_lights=1/0. Receipt/hash/CheckOnly pass. Prior b3654da launcher preserved at `Builds/Windows-Previous-20261006-SignCleanup`; partial legacy BarrelLight backup and unused candidate left intact. All 40 existing unfinished assets unchanged/unstaged. See main HANDOFF for sign cleanup and reviewed captures.
+
+Next part of the work can be done here.
