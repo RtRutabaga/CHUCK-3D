@@ -276,7 +276,7 @@ public:
     static int32 GetTavernNightStage();
     static inline const FBox TavernRoom = FBox(FVector(-314.f, 400.f, -40.f), FVector(294.f, 965.f, 450.f));
     static bool InTavern(const FVector& At) { return TavernRoom.IsInsideOrOn(At); }
-    static constexpr float TavernInterrupt = 1.5f;     // s inside before the keeper speaks up
+    static constexpr float TavernInterrupt = 3.5f;     // s inside before the keeper speaks up
     /** Speak this NPC's ambient line Id (NPCVoiceData), after Delay s; with bLoop, again Pause s after each time. */
     bool StartAmbient(const TCHAR* Id, bool bLoop, float Pause = 0.f, float Delay = 0.f);
     /** Stop the ambient line (and its loop) after Delay s, fading out over Fade s. */

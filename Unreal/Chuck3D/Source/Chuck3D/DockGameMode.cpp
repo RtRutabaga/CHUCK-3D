@@ -2135,10 +2135,11 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Smith ? Smith->GetTaps() : 0,Smith ? Smith->GetWorstTapGap() : 1e3f,Smith && Smith->IsForgeSounding() ? 1 : 0);
             Check(Smith && SmithAnvil && Smith->GetStrikes()>=3 && Smith->GetWorstStrikeGap()<4.f && Smith->GetTaps()>=3 && Smith->GetWorstTapGap()<4.f && Smith->IsForgeSounding() && Smith->GetTongsGripError()<4.f && ToAnvil<80.f && ToForge<300.f && Smith->CanTalk(),
                 TEXT("the blacksmith works at his anvil beside the forge: the hammer's face meets the hot bar on each blow and the bare face on each tap, tongs in his other fist, the forge roaring"));
-            // Asked for his line just under a second ago: he has stopped work and is pausing, not yet speaking.
+            // Asked for his line a moment ago: he has stopped work (past his brief pause, often already speaking;
+            // the pause itself is measured after the line).
             UE_LOG(LogTemp,Display,TEXT("CHUCK_SMITH_TALK_START pending=%d speaking=%d forging=%d"),Smith && Smith->IsVoicePending() ? 1 : 0,Smith && Smith->IsSpeaking() ? 1 : 0,Smith && Smith->IsForging() ? 1 : 0);
-            Check(Smith && Smith->IsVoicePending() && !Smith->IsSpeaking() && !Smith->IsForging(),
-                TEXT("talked to, the smith stops work and pauses before he speaks"));
+            Check(Smith && (Smith->IsVoicePending() || Smith->IsSpeaking()) && !Smith->IsForging(),
+                TEXT("talked to, the smith stops work to answer"));
             // The tavern keeper behind his counter, between the barrels and the cellar hatch, polishing a tankard.
             TArray<AActor*> KeeperFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("TavernKeeper"),KeeperFound);
@@ -3209,7 +3210,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Smith ? Smith->GetPauseBeforeSpeech() : -1.f,Smith ? Smith->GetSpeechRestLowest() : 0.f,Smith ? Smith->GetStrikesSinceSpeech() : 0,
                 Smith && Smith->Lines.Num() ? *Smith->Lines[0] : TEXT(""));
             Check(Smith && Smith->GetVoiceSoundCount()==1 && Smith->GetFaceBoneCount()==5 && Smith->GetMaxJawOpen()>3.f && Smith->GetBlinks()>=1
-                && Smith->GetPauseBeforeSpeech()>=.6f && Smith->GetPauseBeforeSpeech()<1.5f && Smith->GetSpeechRestLowest()>.95f && Smith->GetStrikesSinceSpeech()>=3
+                && Smith->GetPauseBeforeSpeech()>=.15f && Smith->GetPauseBeforeSpeech()<.6f && Smith->GetSpeechRestLowest()>.95f && Smith->GetStrikesSinceSpeech()>=3
                 && Smith->Lines.Num()==1 && Smith->Lines[0].StartsWith(TEXT("It pains me")),
                 TEXT("the smith speaks his line after a pause, hammer resting the whole time, then goes back to his anvil"));
         }

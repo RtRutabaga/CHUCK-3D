@@ -193,7 +193,7 @@ void BuildDockReturn(UWorld* World)
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_INSIDE shot=%d stage=%d keeper_speaking=%d worker_speaking=%d subtitle=%d speaker=%s line=%s"),Shot,ADockNPC::GetTavernNightStage(),
                     K && K->IsAmbientSpeaking(),W && W->IsSpeaking(),Sub,*S,*L);
                 const FString Folder=FPaths::ScreenShotDir()/TEXT("TavernNight");FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("Scene_%d_inside.png"),Shot),true,false);
-            },17.5f+(Shot-1)*6.f,false);
+            },16.f+ADockNPC::TavernInterrupt+(Shot-1)*6.f,false);
         }
         FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World,Worker,Scene](){
             const ADockNPC* W=Worker();
@@ -201,7 +201,7 @@ void BuildDockReturn(UWorld* World)
                 W ? *W->GetActorLocation().ToString() : TEXT("none"),W ? W->GetDrinks() : -1,W ? W->GetDrinkGripError() : 1e3f,W ? W->GetDrinkLipError() : 1e3f,W ? W->GetBodyTurn() : 0.f);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_NIGHT_SCENE failures=%d"),Scene->Failures);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-        },31.f,false);
+        },29.5f+ADockNPC::TavernInterrupt,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckReturnCapture")))
     {

@@ -39,7 +39,7 @@ namespace
     // finger curls most, the index least), and closed round a shaft.
     constexpr float Relaxed[5][3] = { {6.f, 10.f, 10.f}, {10.f, 16.f, 12.f}, {14.f, 20.f, 14.f}, {18.f, 24.f, 16.f}, {24.f, 28.f, 18.f} };
     constexpr float Gripped[5][3] = { {25.f, 35.f, 25.f}, {62.f, 85.f, 55.f}, {68.f, 85.f, 55.f}, {70.f, 85.f, 55.f}, {74.f, 85.f, 55.f} };
-    constexpr float SmithSpeakPause = .7f;   // s the smith waits, hammer down, before he speaks
+    constexpr float SmithSpeakPause = .2f;   // s the smith waits, hammer down, before he speaks
     constexpr float ClipSmoothing = .1f;    // s: the motion capture's low-pass (its jitter is several times a second)
     constexpr float WristStraight = .65f;   // how much of the clips' unreliable wrist bend is taken out
     constexpr float ArmClear = 5.f;         // deg the clips' arms are eased out so the hands clear wider hips
@@ -2062,17 +2062,19 @@ bool ADockNPC::StartAmbient(const TCHAR* Id, bool bLoop, float Pause, float Dela
     EnsureVoiceAudio();
     // In the room: full a few metres round, falling away over the room and the street,
     // and muffled by walls (heard outside through the open door, quietly through the plaster).
+    // Dougmund is loud: his rant carries well up the street as Chuck approaches.
     if (!RoomAttenuation)
     {
+        const bool bLoud = Kind == EDockHuman::Worker;
         RoomAttenuation = NewObject<USoundAttenuation>(this);
         FSoundAttenuationSettings& A = RoomAttenuation->Attenuation;
         A.bAttenuate = true; A.bSpatialize = true;
         A.AttenuationShape = EAttenuationShape::Sphere;
-        A.AttenuationShapeExtents = FVector(250.f, 0.f, 0.f);
-        A.FalloffDistance = 1300.f;
+        A.AttenuationShapeExtents = FVector(bLoud ? 450.f : 250.f, 0.f, 0.f);
+        A.FalloffDistance = bLoud ? 2300.f : 1300.f;
         A.bEnableOcclusion = true;
         A.OcclusionTraceChannel = ECC_Visibility;
-        A.OcclusionVolumeAttenuation = .3f;
+        A.OcclusionVolumeAttenuation = bLoud ? .45f : .3f;
         A.OcclusionLowPassFilterFrequency = 1200.f;
         A.OcclusionInterpolationTime = .3f;
     }
