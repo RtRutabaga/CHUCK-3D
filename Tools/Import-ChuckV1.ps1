@@ -1,5 +1,7 @@
 param(
     [switch]$Review,
+    # -Clips SprintLoop,...: import only these clips against the existing mesh/skeleton.
+    [string[]]$Clips,
     [string]$EngineRoot='C:\Program Files\Epic Games\UE_5.7'
 )
 $ErrorActionPreference='Stop'
@@ -34,6 +36,8 @@ if($Review) {
     & $buildTool Chuck3DEditor Win64 Development "-Project=$project" -WaitMutex -MaxParallelActions=1 -NoUBA
     if($LASTEXITCODE) { throw 'Editor review module build failed.' }
 }
-Invoke-V1Script 'import_chuck_v1.py' 'CHUCK_V1_IMPORT_READY' $false
-Invoke-V1Script 'import_chuck_cigarette.py' 'CHUCK_CIGARETTE_IMPORTED' $false
+$env:CHUCK_V1_CLIPS_ONLY=($Clips -join ',')
+try { Invoke-V1Script 'import_chuck_v1.py' 'CHUCK_V1_IMPORT_READY' $false }
+finally { Remove-Item Env:CHUCK_V1_CLIPS_ONLY -ErrorAction SilentlyContinue }
+if(!$Clips) { Invoke-V1Script 'import_chuck_cigarette.py' 'CHUCK_CIGARETTE_IMPORTED' $false }
 if($Review) { Invoke-V1Script 'review_chuck_v1_unreal.py' 'CHUCK_V1_REVIEW_READY' $true }

@@ -615,6 +615,9 @@ void ADockGameMode::StartPlay()
     // -ChuckVaultTest: only the speed vault (stages 125-126), then quit.
     bVaultOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckVaultTest"));
     if(bVaultOnly) { bSmokeTest=true; TestStage=125; }
+    // -ChuckSprintTest: only the four-legged sprint (stages 129-130), then quit.
+    bSprintOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSprintTest"));
+    if(bSprintOnly) { bSmokeTest=true; TestStage=129; }
 }
 
 namespace
@@ -2927,7 +2930,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_VAULT_CRATES_MEASURE crates=%d vaulted=%d"),Crates.Num(),CratesVaulted);
             Check(Crates.Num()>=4 && CratesVaulted==Crates.Num(),TEXT("the docks' low crates are the right size to speed-vault, each with room to run at it and land"));
             Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
-            TestStage=115; StageTime=0;
+            SprintSub=0; TestStage=129; StageTime=0;
             return;
         }
         const FVaultCrate& C=Crates[CrateIndex];
@@ -2956,9 +2959,68 @@ void ADockGameMode::Tick(float DeltaSeconds)
             ++CrateIndex; TestStage=127; StageTime=0;
         }
     }
+    else if(TestStage==129 && StageTime>.3f)
+    {
+        // The sprint, down the quay where the run is measured (stage 58); the
+        // whole burst (about 10 m) has to fit before the quay ends.
+        Chuck->ResetToDock(); Chuck->SetActorLocation(FVector(-240,0,36));
+        Chuck->SetActorRotation(FRotator::ZeroRotator); Chuck->Recenter();
+        Chuck->SetRunHeld(true); Chuck->SetTestStick(FVector2D(0,1));
+        LocoEvaluations=-1; LocoSamples=0; LocoMaxSlip=0;
+        bSprintStarted=bSprintRefused=false; SprintStartAt=SprintEndAt=SprintJumpAt=-1; SprintMaxSpeed=SprintMaxWeight=SprintCooldownSeen=0;
+        TestStage=130; StageTime=0;
+    }
+    else if(TestStage==130)
+    {
+        Chuck->SetTestStick(FVector2D(0,1));
+        if(Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(FVector(1,0,0),1);
+        if(SprintStartAt<0 && StageTime>=.3f) { bSprintStarted=Chuck->TrySprint(); SprintStartAt=StageTime; }
+        const float Speed=Chuck->GetVelocity().Size2D();
+        if(Chuck->IsSprinting())
+        {
+            SprintMaxSpeed=FMath::Max(SprintMaxSpeed,Speed); SprintMaxWeight=FMath::Max(SprintMaxWeight,Chuck->GetSprintWeight());
+            if(Chuck->GetSprintWeight()>.98f && StageTime>SprintStartAt+.6f) ProbeLockedPaws(Chuck,DeltaSeconds);
+            if(SprintSub==0)
+                for(const float Shot : {.7f,.75f,.8f,.85f,.9f})
+                    if(StageTime-SprintStartAt>=Shot && StageTime-DeltaSeconds-SprintStartAt<Shot)
+                        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/Sprint_%03d.png"),FMath::RoundToInt(Shot*100)),true,false);
+        }
+        if(SprintSub==0)
+        {
+            if(SprintStartAt>=0 && SprintEndAt<0 && !Chuck->IsSprinting()) { SprintEndAt=StageTime; bSprintRefused=!Chuck->TrySprint(); SprintCooldownSeen=Chuck->GetSprintCooldownLeft(); }
+            if((SprintEndAt>=0 && StageTime>SprintEndAt+.55f) || StageTime>6.f)
+            {
+                const float Lasted=SprintEndAt-SprintStartAt;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_MEASURE started=%d max_cm_s=%.2f authored_cm_s=%.2f max_weight=%.3f lasted_s=%.3f after_weight=%.3f after_cm_s=%.2f refused=%d cooldown_s=%.2f samples=%d slip_cm_s=%.4f p=%s"),
+                    bSprintStarted,SprintMaxSpeed,ChuckClipData::SprintSpeed,SprintMaxWeight,Lasted,Chuck->GetSprintWeight(),Speed,bSprintRefused,SprintCooldownSeen,LocoSamples,LocoMaxSlip,*Chuck->GetActorLocation().ToString());
+                Check(bSprintStarted && FMath::Abs(SprintMaxSpeed-ChuckClipData::SprintSpeed)<5.f && SprintMaxWeight>.98f,TEXT("the sprint drops him onto all fours at the authored sprint speed"));
+                Check(FMath::Abs(Lasted-AChuckCharacter::SprintDuration)<.1f && Chuck->GetSprintWeight()<.05f && FMath::Abs(Speed-ChuckClipData::RunSpeed)<10.f,TEXT("the sprint is brief, then he is back up running"));
+                Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("sprinting hind paws hold in stance"));
+                Check(bSprintRefused && FMath::Abs(SprintCooldownSeen-AChuckCharacter::SprintCooldown)<.1f,TEXT("the sprint recovers for ten seconds; a press meanwhile does nothing"));
+                // Next: a jump out of a fresh sprint (the reset is a rested start).
+                SprintSub=1; TestStage=129; StageTime=0;
+            }
+        }
+        else
+        {
+            if(SprintJumpAt<0 && SprintStartAt>=0 && StageTime>=SprintStartAt+.7f)
+            {
+                const bool bWasSprinting=Chuck->IsSprinting();
+                Chuck->JumpPressed(); SprintJumpAt=StageTime;
+                const float Shed=Chuck->GetCharacterMovement()->Velocity.Size2D();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_JUMP_MEASURE was_sprinting=%d sprinting=%d cm_s=%.2f cooldown_s=%.2f"),bWasSprinting,Chuck->IsSprinting(),Shed,Chuck->GetSprintCooldownLeft());
+                Check(bWasSprinting && !Chuck->IsSprinting() && Shed<=ChuckClipData::RunSpeed+1.f && Chuck->GetSprintCooldownLeft()>9.5f,TEXT("a jump out of the sprint leaves at run speed and starts the recovery"));
+            }
+            if(SprintJumpAt>=0 && StageTime>SprintJumpAt+1.5f)
+            {
+                Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+                SprintSub=0; TestStage=115; StageTime=0;
+            }
+        }
+    }
     else if(TestStage==115)
     {
-        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly)
+        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly || bSprintOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

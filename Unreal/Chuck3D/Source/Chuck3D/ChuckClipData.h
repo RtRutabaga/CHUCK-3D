@@ -15,6 +15,12 @@ namespace ChuckClipData
     constexpr float RunStride = 75.0000f;
     constexpr float RunStanceFraction = 0.3000f;
     constexpr float RunJumpVerticalSpeed = 190.0000f;  // leap out of a run
+    // SprintLoop: the four-legged burst; phase 0 = foot_L touchdown, foot_R SprintHindLag later.
+    constexpr float SprintSpeed = 380.0000f;
+    constexpr float SprintPeriod = 0.2667f;
+    constexpr float SprintStride = 101.3330f;
+    constexpr float SprintStanceFraction = 0.2500f;
+    constexpr float SprintHindLag = 0.0700f;
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
     constexpr float StartDuration = 0.5000f;
     constexpr float StartTravel = 18.0000f;

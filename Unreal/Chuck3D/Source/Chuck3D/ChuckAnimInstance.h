@@ -30,6 +30,11 @@ struct FChuckAnimParams
     float TimeRun = 0.f;
     float PeriodRun = 0.f;
     float WeightRun = 0.f;
+    /** Over the run layer: the four-legged SprintLoop by WeightSprint (same phase). */
+    UAnimSequence* ClipSprint = nullptr;
+    float TimeSprint = 0.f;
+    float PeriodSprint = 0.f;
+    float WeightSprint = 0.f;
     bool bRunOnA = false;
     bool bRunOnB = false;
     /** Upper-body layers (the spine_01 subtree) over everything above, in

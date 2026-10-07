@@ -1687,6 +1687,52 @@
    "direction": "source -Y (Chuck right)",
    "phase_convention": "phase 0 = lead paw touchdown; the trail paw closes trail_lag_fraction later",
    "notes": "Bounding shuffle with a flight phase, facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm."
+  },
+  {
+   "name": "SprintLoop",
+   "file": "Animations/AS_Chuck_SprintLoop.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 7,
+   "frame_count": 8,
+   "duration_s": 0.2667,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.798,
+   "reference_speed_cm_s": 380.0,
+   "stride_cycle_cm": 101.333,
+   "stance_fraction": 0.25,
+   "fore_stance_fraction": 0.2,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.0667
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0187,
+      0.0853
+     ]
+    ],
+    "hand_L": [
+     [
+      0.1387,
+      0.192
+     ]
+    ],
+    "hand_R": [
+     [
+      0.1173,
+      0.1707
+     ]
+    ]
+   },
+   "hind_lag_fraction": 0.07,
+   "phase_convention": "phase 0 = foot_L touchdown, foot_R hind_lag_fraction later; forepaws land fore_land (R) and fore_land + fore_lag (L); the runtime advances the phase by travel over stride_cycle_cm",
+   "notes": "Four-legged half-bound sprint. In place (root fixed); planted hind balls and forepaw wrists move backward in component space at exactly the reference speed. Forepaws are placed by the clip only (no runtime hand IK)."
   }
  ]
 }

@@ -132,13 +132,19 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
         // The run layer belongs to the WalkLoop sample, so cross-fades into
         // or out of the stride (rolls, landings) fade the whole run pose.
         const bool bRun = Params.ClipRun && Params.WeightRun > KINDA_SMALL_NUMBER;
-        auto AddRun = [this](FPoseContext& Pose)
+        auto Over = [this](FPoseContext& Pose, UAnimSequence* Clip, float Time, float Period, float Weight)
         {
-            FPoseContext Run(Pose), Blended(Pose);
-            Sample(Params.ClipRun, Params.TimeRun, Params.PeriodRun, false, Run);
-            FAnimationPoseData BaseData(Pose), RunData(Run), OutData(Blended);
-            FAnimationRuntime::BlendTwoPosesTogether(BaseData, RunData, 1.f - FMath::Clamp(Params.WeightRun, 0.f, 1.f), OutData);
+            FPoseContext Sampled(Pose), Blended(Pose);
+            Sample(Clip, Time, Period, false, Sampled);
+            FAnimationPoseData BaseData(Pose), OverData(Sampled), OutData(Blended);
+            FAnimationRuntime::BlendTwoPosesTogether(BaseData, OverData, 1.f - FMath::Clamp(Weight, 0.f, 1.f), OutData);
             CopyPose(Blended, Pose);
+        };
+        auto AddRun = [this, &Over](FPoseContext& Pose)
+        {
+            Over(Pose, Params.ClipRun, Params.TimeRun, Params.PeriodRun, Params.WeightRun);
+            if (Params.ClipSprint && Params.WeightSprint > KINDA_SMALL_NUMBER)
+                Over(Pose, Params.ClipSprint, Params.TimeSprint, Params.PeriodSprint, Params.WeightSprint);
         };
         FPoseContext PoseA(Output);
         Sample(Params.ClipA, Params.TimeA, Params.PeriodA, Params.bMirrorA, PoseA);

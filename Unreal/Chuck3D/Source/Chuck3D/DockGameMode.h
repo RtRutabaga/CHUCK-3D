@@ -119,6 +119,10 @@ private:
     float VaultJumpAt = -1, VaultMaxZ = 0;
     bool bVaultBench = false, bVaultStairs = false, bVaultWalk = false;
     int32 CrateIndex = 0, CratesVaulted = 0;
+    // The sprint tests: a full burst on the quay, then a jump out of one.
+    bool bSprintOnly = false, bSprintStarted = false, bSprintRefused = false;
+    int32 SprintSub = 0;
+    float SprintStartAt = -1, SprintEndAt = -1, SprintJumpAt = -1, SprintMaxSpeed = 0, SprintMaxWeight = 0, SprintCooldownSeen = 0;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;

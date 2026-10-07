@@ -1708,6 +1708,119 @@ for name, sign, g in (('StrafeLeft', 1, STRAFE), ('StrafeRight', -1, STRAFE),
         'notes': ('Bounding shuffle with a flight phase' if g is STRAFE_RUN else 'Step-together sidestep, no crossing')
                  + ', facing unchanged. Root fixed; the runtime advances the phase by sideways capsule travel over stride_cycle_cm.'})
 
+
+# ---- sprint (user 2026-10-07: "sprint using all fours like a rat sprinting",
+# a brief burst with a cooldown). Down onto all four paws in a half-bound, the
+# rat's fast gait: the hind paws land almost together and drive, the body
+# stretches out through a short extended flight, the forepaws land one after
+# the other and pull, then the hind legs swing past them in the gathered
+# flight with the back arched. Back low and long, head up and level, tail
+# streaming straight back. 380 cm/s (1.7x the run) over an 8-frame stride
+# (101 cm, about two body lengths, as galloping quadrupeds do). Hind stance
+# 25% and fore stance 20% of the stride, each paw moving back at exactly the
+# reference speed in component space while planted.
+SPRINT = {'speed_cm_s': 380.0, 'period_frames': 8, 'hind_stance': .25, 'fore_stance': .2,
+          'hind_lag': .07, 'fore_land': .44, 'fore_lag': .08}
+SPRINT_PERIOD = SPRINT['period_frames'] / FPS
+SPRINT_STRIDE = SPRINT['speed_cm_s'] * SPRINT_PERIOD
+SPRINT_HIND_CM = SPRINT_STRIDE * SPRINT['hind_stance']
+SPRINT_FORE_CM = SPRINT_STRIDE * SPRINT['fore_stance']
+SPRINT_HIND_X = -2.5   # hind stance centre, forward of the neutral ball (cm)
+SPRINT_FORE_Y = 8.5    # forepaws this far either side of the midline
+SPRINT_WRIST_Z = 2.2   # wrist height with the palm flat on the ground
+
+def sprint_hind(phase):
+    """(forward offset of the ball from neutral, lift, foot pitch, toe pitch)."""
+    st = SPRINT['hind_stance']; half = SPRINT_HIND_CM / 2
+    if phase < st:
+        u = phase / st
+        return SPRINT_HIND_X + half - SPRINT_HIND_CM * u, 0., 30 + 34 * smoothstep(u, .35, 1.), -10 * smoothstep(u, .35, 1.)
+    u = (phase - st) / (1 - st)
+    # Kicked out behind, then folded up under the belly and swung far forward
+    # past the forepaws' prints in the gathered flight, reaching down to land.
+    keys = [(0., -half, 0., 64., -10.), (.15, -half - 4., 4., 80., 10.), (.42, -half + 4., 9., 70., 35.),
+            (.72, half + 3., 8., 30., 15.), (.9, half + 2., 3., 26., 0.), (1., half, 0., 30., 0.)]
+    ground = -SPRINT_HIND_CM / st * (1 - st)
+    x, lift, fp, tp = hermite(keys, u, ground)
+    return SPRINT_HIND_X + x, max(0., lift), fp, tp
+
+def sprint_fore(phase):
+    """(forward offset of the wrist from the shoulder line, lift, stance 0..1)."""
+    st = SPRINT['fore_stance']; half = SPRINT_FORE_CM / 2
+    if phase < st:
+        u = phase / st
+        return half - SPRINT_FORE_CM * u, 0., 1.
+    u = (phase - st) / (1 - st)
+    # Peel off behind, tuck up under the chest, reach well out in front.
+    keys = [(0., -half, 0.), (.18, -half - 3., 3.5), (.45, -2., 8.), (.78, half + 5., 5.), (1., half, 0.)]
+    ground = -SPRINT_FORE_CM / st * (1 - st)
+    x, lift = hermite(keys, u, ground)
+    return x, max(0., lift), 0.
+
+def sprint(phase, f):
+    w = TAU * phase
+    # Spine: gathered (hips tucked, back arched up) as the hind paws land,
+    # stretched out as the forepaws reach for the ground.
+    gather = math.cos(w - TAU * .02)          # +1 gathered, -1 extended
+    # Lowest through each stance, highest in the two flights.
+    bob = .5 * (math.cos(2 * (w - TAU * .1)) + 1)
+    poser.translate('pelvis', (2., 0, -5.5 - 1.6 * bob))
+    poser.rotate('pelvis', 'Y', 62 + 6 * gather)
+    poser.rotate('spine_01', 'Y', 10 + 3 * gather)
+    poser.rotate('spine_02', 'Y', 10 + 2 * gather)
+    poser.rotate('chest', 'Y', 6 - 4 * gather)
+    poser.rotate('pelvis', 'Z', 2.5 * math.sin(w))
+    # Neck and head come back up so the eyes look straight down the dock,
+    # countering the spine's pitch so the head rides nearly level.
+    poser.rotate('chest', 'Y', -3 * gather)
+    poser.rotate('neck', 'Y', -44 - 9 * gather)
+    poser.rotate('head', 'Y', -42 - 4 * gather + 2 * math.cos(2 * w))
+    for side, sign in (('L', 1), ('R', -1)):
+        poser.rotate(f'ear_{side}', 'Y', 14)   # ears laid back
+    # Tail streams out straight behind, low, a small wave through it.
+    for i, (b, deg) in enumerate(zip(TAIL, (-48, -4, -2, 0, 1, 1))):
+        poser.rotate(b, 'Y', deg + 3 * math.sin(w - .9 * (i + 1)))
+        poser.rotate(b, 'Z', 3 * math.sin(w - .7 * (i + 1)))
+    poser.update()
+    # Forepaws: two-bone arm IK to a wrist target under the shoulder line,
+    # elbows back like a quadruped's, palms flat and fingers forward in
+    # stance, the paw curled back under in swing.
+    for side, sign in (('L', 1), ('R', -1)):
+        land = SPRINT['fore_land'] + (SPRINT['fore_lag'] if side == 'L' else 0.)
+        x, lift, plant = sprint_fore((phase - land) % 1)
+        # Shoulder blade: reaches forward with the paw, drawn back in stance.
+        poser.translate(f'clavicle_{side}', (.12 * x, 0, -1.5))
+        poser.update()
+        shoulder = poser.head(f'upperarm_{side}')
+        wrist = Vector((shoulder.x + 2. + x, sign * SPRINT_FORE_Y, SPRINT_WRIST_Z + lift))
+        poser.arm(side, wrist, pole=(-1., .35 * sign, .25))
+        curl_back = 1. - plant
+        poser.aim(f'hand_{side}', wrist, Vector((1., 0., -.05)).lerp(Vector((-.4, 0., -1.)), curl_back * smoothstep(lift, 0., 3.)))
+        curl(side, 12 + 40 * curl_back)
+    r = 0.
+    for side in 'LR':
+        x, lift, fp, tp = sprint_hind((phase - (0. if side == 'L' else SPRINT['hind_lag'])) % 1)
+        ball = NEUTRAL_BALL[side] + Vector((x, 0., lift))
+        r = max(r, poser.leg(side, ball, fp, tp, heading=0.))
+    ik_goals()
+    return r
+
+def sprint_stance(start, frac):
+    a, b = start % 1, (start + frac) % 1
+    spans = [(a, b)] if a < b else [(a, 1.), (0., b)]
+    return [[round(x * SPRINT_PERIOD, 4), round(y * SPRINT_PERIOD, 4)] for x, y in sorted(spans)]
+
+author('SprintLoop', SPRINT['period_frames'], sprint, True, {
+    'reference_speed_cm_s': SPRINT['speed_cm_s'], 'stride_cycle_cm': round(SPRINT_STRIDE, 3),
+    'stance_fraction': SPRINT['hind_stance'], 'fore_stance_fraction': SPRINT['fore_stance'],
+    'stance_intervals_s': {'foot_L': sprint_stance(0., SPRINT['hind_stance']),
+                           'foot_R': sprint_stance(SPRINT['hind_lag'], SPRINT['hind_stance']),
+                           'hand_L': sprint_stance(SPRINT['fore_land'] + SPRINT['fore_lag'], SPRINT['fore_stance']),
+                           'hand_R': sprint_stance(SPRINT['fore_land'], SPRINT['fore_stance'])},
+    'hind_lag_fraction': SPRINT['hind_lag'],
+    'phase_convention': 'phase 0 = foot_L touchdown, foot_R hind_lag_fraction later; forepaws land fore_land (R) and fore_land + fore_lag (L); the runtime advances the phase by travel over stride_cycle_cm',
+    'notes': 'Four-legged half-bound sprint. In place (root fixed); planted hind balls and forepaw wrists move backward in component space at exactly the reference speed. Forepaws are placed by the clip only (no runtime hand IK).'})
+
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
            primary_bone_axis='Y', secondary_bone_axis='X', use_armature_deform_only=False,
