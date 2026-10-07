@@ -112,10 +112,12 @@ namespace
     // only so far that his face still looks out of the barrel's mouth (user
     // 2026-10-06: "make his face easier to see"; it was 50, his face to his knees).
     constexpr float SleepLean = 14.f, SleepCurl = 22.f, SleepNeck = 26.f, SleepNod = 31.f, SleepTiltDeg = 14.f;
-    // A soft fill inside the mouth, the daylight off the paving: in the barrel's
-    // shade his face was black. No shadows and no glint on his closed lids.
+    // A faint fill inside the mouth, the daylight off the paving: in the barrel's
+    // shade his face was black. No shadows and no glint on his closed lids. Kept
+    // dim and short so it reads as bounce, not a lamp (user 2026-10-06: it was
+    // 160 / 85 cm, "unnatural"); removed at night (DockReturn.cpp).
     const FVector BarrelFill(30.f, 0.f, 50.f);
-    constexpr float BarrelFillIntensity = 160.f, BarrelFillRadius = 85.f;
+    constexpr float BarrelFillIntensity = 50.f, BarrelFillRadius = 65.f;
     constexpr float SleepKnee = 45.f, SleepSpread = .22f;
     // Measured on the posed body, as fractions of his thigh bone: how far his
     // seat is below the hip joints (where his boots are put on the floor), how
@@ -2409,7 +2411,8 @@ ADockNPC* ADockNPC::SpawnBobert(UWorld* World, const FVector& BarrelAt, float Ya
         Fill->SetRelativeLocation(BarrelFill);
         Fill->SetIntensity(BarrelFillIntensity);
         Fill->SetAttenuationRadius(BarrelFillRadius);
-        Fill->SetLightColor(FLinearColor(1.f, .93f, .84f));
+        Fill->SetLightColor(FLinearColor(.96f, .95f, .92f));   // the paving's daylight, not a warm glow
+        Fill->SetSourceRadius(40.f);
         Fill->SetCastShadows(false);
         Fill->SetSpecularScale(0.f);
         Fill->RegisterComponent();

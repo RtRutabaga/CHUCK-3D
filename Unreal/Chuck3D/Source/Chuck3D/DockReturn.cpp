@@ -12,6 +12,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -49,7 +50,12 @@ bool CheckDockReturn(UWorld* World,bool Evening)
     // And at night he rants on a loop with no one talking to him, until the keeper cuts in.
     const int32 Stage=ADockNPC::GetTavernNightStage();
     if(Evening ? !(Worker && !Worker->CanTalk() && (Stage==2 || (Stage==1 && Worker->HasAmbientLoop()))) : Stage!=0) ++Failed;
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RETURN_CHECK failures=%d evening=%d hatch_closed=%d tavern_open=%d sun=%.3f sky=%.3f"),Failed,Evening,Evening,!DoorBlocked,Evening?1.35f*.28f:1.35f,Evening?1.05f*.65f:1.05f);
+    // Bobert's barrel: its daylight fill by day, no light at all at night.
+    int32 BarrelLights=-1;
+    for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->IsBobert() && Entry->GetBarrel())
+    {TArray<UPointLightComponent*> Lights;Entry->GetBarrel()->GetComponents(Lights);BarrelLights=Lights.Num();}
+    if(BarrelLights!=(Evening?0:1)) ++Failed;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RETURN_CHECK failures=%d evening=%d hatch_closed=%d tavern_open=%d sun=%.3f sky=%.3f barrel_lights=%d"),Failed,Evening,Evening,!DoorBlocked,Evening?1.35f*.28f:1.35f,Evening?1.05f*.65f:1.05f,BarrelLights);
     return Failed==0;
 }
 
@@ -91,6 +97,9 @@ void BuildDockReturn(UWorld* World)
         // The dock worker goes in for a drink (user 2026-10-06).
         for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->ActorHasTag(TEXT("DockWorkerArt"))) Entry->SitInTavern();
         ADockNPC::StartTavernNight();
+        // No daylight off the paving at night: Bobert's barrel loses its fill light.
+        for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) if(Entry.IsValid() && Entry->IsBobert() && Entry->GetBarrel())
+        {TArray<UPointLightComponent*> Lights;Entry->GetBarrel()->GetComponents(Lights);for(UPointLightComponent* L : Lights) L->DestroyComponent();}
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DOCK_RETURN_APPLIED evening=1 hatch_closed=1 tavern_open=1"));
     },.05f,true);
 
