@@ -34,7 +34,8 @@ The supplied `waterdeep_docks.wav` now plays automatically as non-spatial backgr
 | --- | --- | --- |
 | Walk relative to camera | WASD or arrow keys | Left stick |
 | Run (225 cm/s): tap to start, tap again or stop to saunter (no need to hold it while jumping) | Left Shift | LB |
-| Sprint: while moving, a brief burst on all fours (380 cm/s, 2.5 s), then he is back up running. It needs about 10 s to recover; there is no meter, and a press meanwhile does nothing. Jumping, dodging, strafing or letting go ends it early (a jump leaves at run speed) | Left Ctrl | Left stick click (L3) |
+| Sprint: while moving, a brief burst on all fours (380 cm/s, 2.5 s), then he is back up running. It needs about 10 s to recover; there is no meter, and a press meanwhile does nothing. Dodging, strafing, letting go or a real fall ends it early; small step-downs don't | Left Ctrl | Left stick click (L3) |
+| Sprint leap: jump while sprinting for a long leap on all fours (about 2.4 m, twice the running jump, 36 cm high) that lands back into the sprint. Vaults and side wall runs out of a sprint stay at run speed | Space while sprinting | A while sprinting |
 | Strafe: hold to sidestep facing the camera (Counter-Strike style); forward/back still work while held. With run latched it is a bounding shuffle. Jump with a strafe key held = side jump that way, even while running forward (press strafe and jump together to hop sideways out of a run; it is always sideways, never diagonal): short (~55 cm) from a walk, long (~125 cm) from a run | Hold Q (left) / E (right); A/D also strafe while Q or E is held | Hold LT, left stick |
 | Jump (while running: a leap that lands into the stride) | Space | A |
 | Wall run: jump into a wall while pushing toward it, or side jump into it (three steps up). Between two facing walls the camera turns side-on and follows the climb | Space + stick toward the wall, or C + stick sideways | A + stick, or B + stick sideways |

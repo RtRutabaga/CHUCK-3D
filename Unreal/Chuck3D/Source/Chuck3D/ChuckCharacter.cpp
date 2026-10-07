@@ -70,7 +70,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -401,7 +401,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     bStopPending = bStopMirror = bDodgeLaunched = bDodgeLanded = false;
     InputForward = InputRight = StrafeKeys = StrafeTrigger = 0;  // refreshed every frame while input is live
     bTestStrafe = bHangNeedsRelease = false; GetCharacterMovement()->bOrientRotationToMovement = true;
-    bRunJump = bHardLanding = false;
+    bRunJump = bSprintLeap = bSprintLeapPending = bHardLanding = false;
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
     RestoreSlideCamera(); bAutoClimb = false;
     Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
@@ -618,7 +618,6 @@ void AChuckCharacter::JumpPressed()
     auto* Movement = GetCharacterMovement();
     const float Now = GetWorld()->GetTimeSeconds();
     if (Gait == EGait::Climb || IsAstral() || IsTalking()) return;
-    if (IsSprinting()) EndSprint(true);
     if (Gait == EGait::Hang)
     {
         // From a hang: pulling away and jumping kicks off backward; otherwise climb up.
@@ -657,10 +656,21 @@ void AChuckCharacter::JumpPressed()
         DodgeToward(FVector2D(Side, 0));
         return;
     }
+    // Vaults and side wall runs out of a sprint are tuned for the run: try
+    // them at run speed (they take over the capsule, which ends the sprint).
+    const FVector Before = Movement->Velocity;
+    if (IsSprinting())
+    {
+        const FVector Run = FVector(Before.X, Before.Y, 0).GetClampedToMaxSize(ChuckClipData::RunSpeed);
+        Movement->Velocity = FVector(Run.X, Run.Y, Before.Z);
+    }
     // At a run at something low and thin: over it in stride.
     if (bGrounded && Gait == EGait::Loop && RunWeight > .5f && TryVault()) return;
     // At a run with a wall right beside him: along the wall (not a side jump, not from a walk).
     if (bGrounded && Gait == EGait::Loop && RunWeight > .5f && TryWallSideRun()) return;
+    Movement->Velocity = Before;
+    // At a sprint: the long leap, carrying on into the gallop.
+    bSprintLeapPending = IsSprinting() && bGrounded && Gait == EGait::Loop;
     Jump();
 }
 bool AChuckCharacter::TryEnterWallRun()
@@ -714,7 +724,7 @@ void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
     Movement->BrakingDecelerationFlying = 0;
     Gait = EGait::WallRun;
     WallRunClock = 0; WallPhase = 0; WallPrevZ = static_cast<float>(GetActorLocation().Z);
-    bWallAuto = bWallJumpFlight || bFromSideJump; bWallJumpFlight = false; bRunJump = false;
+    bWallAuto = bWallJumpFlight || bFromSideJump; bWallJumpFlight = false; bRunJump = bSprintLeap = false;
     {
         FHitResult Behind;
         FCollisionQueryParams BehindQuery(SCENE_QUERY_STAT(ChuckChimney), false, this);
@@ -788,7 +798,7 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
     Gait = EGait::Hang;
     HangNormal = Normal; HangEdge = Edge; HangFrom = GetActorLocation();
     HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false; bHangNeedsRelease = false;
-    LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = false;
+    LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = bSprintLeap = false;
     ++Hangs;
     SetClip(EClip::Hang, 0, .1f);
 }
@@ -862,7 +872,7 @@ void AChuckCharacter::LandingRoll()
     const float Entry = .12f;  // past the standing dive: straight into the tuck
     SetClip(EClip::Roll, Entry, .06f);
     RollDone = RollTravelAt(Entry);
-    bDodgeLaunched = bDodgeLanded = bStopPending = bRunJump = bHardLanding = false;
+    bDodgeLaunched = bDodgeLanded = bStopPending = bRunJump = bSprintLeap = bSprintLeapPending = bHardLanding = false;
     PlaySfx(LandSounds, ESfx::Land, LandVolume * .8f);
     PlaySfx(RollSounds, ESfx::Roll, RollVolume, Entry);
     ++LandingRolls;
@@ -974,7 +984,7 @@ bool AChuckCharacter::TryWallSideRun(bool bInAir)
     Movement->SetMovementMode(MOVE_Flying);
     Movement->BrakingDecelerationFlying = 0;
     Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, WallSideUp) - WallNormal * (40.f + FMath::Min(WallSideGap * 12.f, 500.f));
-    Gait = EGait::WallSide; bRunJump = false; bWallJumpFlight = false;
+    Gait = EGait::WallSide; bRunJump = bSprintLeap = false; bWallJumpFlight = false;
     LastWallNormal = FVector::ZeroVector;
     if (Base != EClip::WalkLoop) SetClip(EClip::WalkLoop, WalkPhase * Period(EClip::WalkLoop), .08f);
     RunWeight = 1.f;
@@ -1095,7 +1105,7 @@ bool AChuckCharacter::TryVault()
     Movement->SetMovementMode(MOVE_Flying);
     Movement->StopMovementImmediately();
     SetActorRotation(Ahead.Rotation());
-    Gait = EGait::Vault; bRunJump = false;
+    Gait = EGait::Vault; bRunJump = bSprintLeap = false;
     LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = false;
     SetClip(EClip::SpeedVault, 0, .06f);
     ++Vaults;
@@ -1112,7 +1122,7 @@ void AChuckCharacter::EnterLadder(int32 Index)
     Gait = EGait::Ladder;
     SetActorRotation((-GetChuckClimbables()[Index].Out).Rotation());
     SetClip(EClip::WallRun, FMath::Frac(LadderPhase) * Period(EClip::WallRun), .12f);
-    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; bRunJump = false; RunWeight = 0;
+    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; bRunJump = bSprintLeap = false; RunWeight = 0;
 }
 void AChuckCharacter::FallToDeath()
 {
@@ -1141,7 +1151,7 @@ void AChuckCharacter::LeaveWallSide()
     Movement->Velocity = FVector(V.X, V.Y, FMath::Min(static_cast<float>(V.Z), 0.f)) * FVector(.92f, .92f, 1.f) + WallNormal * 50.f;
     LastWallNormal = WallNormal;
     WallCoyoteUntil = GetWorld()->GetTimeSeconds() + WallCoyote;
-    Gait = EGait::Air; bRunJump = false;
+    Gait = EGait::Air; bRunJump = bSprintLeap = false;
     SetClip(EClip::JumpLoop, 0, .15f);
 }
 void AChuckCharacter::LeaveWall()
@@ -1168,7 +1178,7 @@ void AChuckCharacter::WallJump()
     SetActorRotation(Direction.Rotation());
     LastWallNormal = WallNormal;
     WallCoyoteUntil = -1;
-    bWallJumpFlight = true; bRunJump = false;
+    bWallJumpFlight = true; bRunJump = bSprintLeap = false;
     Gait = EGait::Air;
     ++WallJumps;
     SetClip(EClip::WallKick, 0, .05f);
@@ -1879,16 +1889,29 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else if (Gait != EGait::Air)
         {
             Gait = EGait::Air;
-            // A jump at a run (not a fall off an edge) becomes a leap with a
-            // little more lift.
-            bRunJump = RunWeight > .5f && GetVelocity().Z > 50.f;
+            // A jump at a sprint is the long leap; at a run (not a fall off an
+            // edge) a leap with a little more lift.
+            bSprintLeap = bSprintLeapPending && IsSprinting() && GetVelocity().Z > 50.f;
+            bSprintLeapPending = false;
+            bRunJump = !bSprintLeap && RunWeight > .5f && GetVelocity().Z > 50.f;
             RunTakeoffAt = bRunJump ? GetWorld()->GetTimeSeconds() : -1.f;
-            if (GetVelocity().Z > 50.f) PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bRunJump ? 1.f : .85f));
-            if (bRunJump)
+            if (GetVelocity().Z > 50.f) PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bRunJump || bSprintLeap ? 1.f : .85f));
+            if (bSprintLeap)
+            {
+                // Off at the full gallop, along the way he's going.
+                const FVector Along = GetVelocity().GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector().GetSafeNormal2D() : GetVelocity().GetSafeNormal2D();
+                Movement->Velocity = Along * FMath::Max(Speed, SprintSpeed) + FVector(0, 0, SprintLeapVerticalSpeed);
+                ++SprintLeaps;
+                SetClip(EClip::SprintLeap, 0, .08f);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT_LEAP takeoff=%d at=%s"), SprintLeaps, *Location.ToString());
+            }
+            else if (bRunJump)
             {
                 Movement->Velocity.Z = RunJumpVerticalSpeed;
                 SetClip(EClip::RunJump, 0, .08f);
             }
+            // Stepping down at a sprint: the gallop carries on over it.
+            else if (IsSprinting()) {}
             // Takeoff is runtime-driven, so skip the clip's ground crouch and
             // start at its extension onto the toes.
             else SetClip(EClip::JumpStart, Clips[static_cast<int32>(EClip::JumpStart)]->GetPlayLength() * .5f, .06f);
@@ -1897,6 +1920,11 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Gait == EGait::Air && bRunJump && GetWorld()->GetTimeSeconds() - RunTakeoffAt < WallSideAirTime
             && GetVelocity().Z > -150.f && TryWallSideRun(true)) {}
         else if (Gait == EGait::Hang || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
+        else if (bSprintLeap)
+        {
+            const float Progress = FMath::Clamp((SprintLeapVerticalSpeed - static_cast<float>(GetVelocity().Z)) / (2.f * SprintLeapVerticalSpeed), 0.f, 1.f);
+            BaseTime = FMath::Max(BaseTime, Progress * Clips[static_cast<int32>(EClip::SprintLeap)]->GetPlayLength());
+        }
         else if (bRunJump)
         {
             // Posed over the flight: progress from the vertical speed (0 at
@@ -1921,9 +1949,18 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const float Fall = AirApexZ - static_cast<float>(Location.Z);
         if (Fall <= RollFallHeight) PlaySfx(LandSounds, ESfx::Land, LandVolume * FMath::Clamp(.6f + Fall / 120.f, .6f, 1.f));
         if (Fall > RollFallHeight) LandingRoll();
+        // The leap lands on the forepaws, at that point of the gallop (or of
+        // the run, if the sprint ran out in the air).
+        else if (bSprintLeap && bStickHeld && Speed > WalkSpeed)
+        {
+            Gait = EGait::Loop; WalkPhase = SprintForeLand; SetClip(EClip::WalkLoop, WalkPhase * WalkPeriod, .06f); RunWeight = 1.f;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT_LEAP land=%d at=%s sprinting=%d"), SprintLeaps, *Location.ToString(), IsSprinting() ? 1 : 0);
+        }
+        // Down a step at a sprint: on in stride.
+        else if (IsSprinting() && Base == EClip::WalkLoop && bStickHeld) { Gait = EGait::Loop; RunWeight = 1.f; }
         else if (bRunJump && bStickHeld && Speed > WalkSpeed) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .06f); RunWeight = RunBlendAt(Speed); }
-        else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump; }
-        bRunJump = false;
+        else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump || bSprintLeap; }
+        bRunJump = bSprintLeap = false;
     }
     else if (Gait == EGait::Strafe)
     {
@@ -2108,10 +2145,15 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     if (IsSprinting())
     {
         SprintLeft -= DeltaSeconds;
+        const bool bLeaping = Gait == EGait::Air && bSprintLeap;
+        SprintAirTime = Movement->IsFalling() && !bLeaping ? SprintAirTime + DeltaSeconds : 0.f;
         if (SprintLeft <= 0) EndSprint(false);
-        else if (Movement->IsFalling()) EndSprint(true);
+        else if (bLeaping) {}   // the leap carries the sprint
+        else if (Movement->IsFalling()) { if (SprintAirTime > SprintDropGrace) EndSprint(true); }
         else if (Gait != EGait::Loop || bStrafe || !bInput || IsTalking()) EndSprint(false);   // let go of the stick: over
     }
+    // A real fall once the sprint is over: out of the frozen gallop into the jump pose.
+    if (!IsSprinting() && Gait == EGait::Air && !bSprintLeap && !bRunJump && Base == EClip::WalkLoop) SetClip(EClip::JumpLoop, 0, .15f);
     // Coming to a stop ends the run latch.
     if (Gait == EGait::Idle && GaitBefore != EGait::Idle) bRunHeld = false;
     // During a dodge nothing brakes the capsule but the dodge itself.
@@ -2126,7 +2168,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // stride fades out under the next clip.
     if (Gait == EGait::Loop) RunWeight = FMath::FInterpTo(RunWeight, RunBlendAt(Speed), DeltaSeconds, 10.f);
     else if (Base != EClip::WalkLoop && !(FadeWeight > 0 && Fading == EClip::WalkLoop)) RunWeight = 0;
-    SprintWeight = FMath::FInterpTo(SprintWeight, IsSprinting() && Gait == EGait::Loop ? 1.f : 0.f, DeltaSeconds, IsSprinting() ? SprintBlendIn : SprintBlendOut);
+    // Held through the leap, so he lands into the gallop.
+    SprintWeight = FMath::FInterpTo(SprintWeight, IsSprinting() && (Gait == EGait::Loop || Gait == EGait::Air) ? 1.f : 0.f, DeltaSeconds, IsSprinting() ? SprintBlendIn : SprintBlendOut);
     if (!IsSprinting() && SprintWeight < .01f) SprintWeight = 0;
 
     FChuckAnimParams& P = Anim->Params;

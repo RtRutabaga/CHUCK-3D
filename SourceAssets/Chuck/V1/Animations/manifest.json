@@ -1733,6 +1733,36 @@
    "hind_lag_fraction": 0.07,
    "phase_convention": "phase 0 = foot_L touchdown, foot_R hind_lag_fraction later; forepaws land fore_land (R) and fore_land + fore_lag (L); the runtime advances the phase by travel over stride_cycle_cm",
    "notes": "Four-legged half-bound sprint. In place (root fixed); planted hind balls and forepaw wrists move backward in component space at exactly the reference speed. Forepaws are placed by the clip only (no runtime hand IK)."
+  },
+  {
+   "name": "SprintLeap",
+   "file": "Animations/AS_Chuck_SprintLeap.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 17,
+   "frame_count": 18,
+   "duration_s": 0.5667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.0807,
+   "launch": {
+    "vertical_cm_s": 230.0,
+    "horizontal_cm_s": 380.0,
+    "gravity_cm_s2": 784.0
+   },
+   "time_mapping": "clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = SprintLoop at fore_land_phase",
+   "fore_land_phase": 0.44,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "events_s": {
+    "takeoff": 0.0,
+    "touchdown": 0.5667
+   },
+   "ends_on": "SprintLoop at fore_land_phase (forepaw R touchdown)",
+   "notes": "Leap out of the sprint: stretched out long in the air, forepaws reaching, hind legs trailing; lands on the forepaws into the gallop."
   }
  ]
 }

@@ -1757,14 +1757,16 @@ def sprint_fore(phase):
     x, lift = hermite(keys, u, ground)
     return x, max(0., lift), 0.
 
-def sprint(phase, f):
+def sprint(phase, f, leap=0.):
+    """leap 0..1: stretched out in the sprint leap (0 = the plain stride)."""
     w = TAU * phase
     # Spine: gathered (hips tucked, back arched up) as the hind paws land,
     # stretched out as the forepaws reach for the ground.
     gather = math.cos(w - TAU * .02)          # +1 gathered, -1 extended
+    gather += (-1.4 - gather) * leap          # the leap: stretched longer still
     # Lowest through each stance, highest in the two flights.
     bob = .5 * (math.cos(2 * (w - TAU * .1)) + 1)
-    poser.translate('pelvis', (2., 0, -5.5 - 1.6 * bob))
+    poser.translate('pelvis', (2., 0, -5.5 - 1.6 * bob + 2.5 * leap))
     poser.rotate('pelvis', 'Y', 62 + 6 * gather)
     poser.rotate('spine_01', 'Y', 10 + 3 * gather)
     poser.rotate('spine_02', 'Y', 10 + 2 * gather)
@@ -1774,12 +1776,13 @@ def sprint(phase, f):
     # countering the spine's pitch so the head rides nearly level.
     poser.rotate('chest', 'Y', -3 * gather)
     poser.rotate('neck', 'Y', -44 - 9 * gather)
-    poser.rotate('head', 'Y', -42 - 4 * gather + 2 * math.cos(2 * w))
+    poser.rotate('head', 'Y', -42 - 4 * gather + 2 * math.cos(2 * w) - 5 * leap)   # eyes on the landing
     for side, sign in (('L', 1), ('R', -1)):
-        poser.rotate(f'ear_{side}', 'Y', 14)   # ears laid back
-    # Tail streams out straight behind, low, a small wave through it.
+        poser.rotate(f'ear_{side}', 'Y', 14 + 10 * leap)   # ears laid back (flat in the leap)
+    # Tail streams out straight behind, low, a small wave through it; in the
+    # leap it lifts a little for balance.
     for i, (b, deg) in enumerate(zip(TAIL, (-48, -4, -2, 0, 1, 1))):
-        poser.rotate(b, 'Y', deg + 3 * math.sin(w - .9 * (i + 1)))
+        poser.rotate(b, 'Y', deg + 3 * math.sin(w - .9 * (i + 1)) + (10 if i == 0 else 2) * leap)
         poser.rotate(b, 'Z', 3 * math.sin(w - .7 * (i + 1)))
     poser.update()
     # Forepaws: two-bone arm IK to a wrist target under the shoulder line,
@@ -1788,18 +1791,27 @@ def sprint(phase, f):
     for side, sign in (('L', 1), ('R', -1)):
         land = SPRINT['fore_land'] + (SPRINT['fore_lag'] if side == 'L' else 0.)
         x, lift, plant = sprint_fore((phase - land) % 1)
+        # The leap: both forepaws reach well out ahead, open, ready to land.
+        x += (SPRINT_FORE_CM / 2 + 5. - x) * leap
+        lift += (6. - lift) * leap
         # Shoulder blade: reaches forward with the paw, drawn back in stance.
         poser.translate(f'clavicle_{side}', (.12 * x, 0, -1.5))
         poser.update()
         shoulder = poser.head(f'upperarm_{side}')
         wrist = Vector((shoulder.x + 2. + x, sign * SPRINT_FORE_Y, SPRINT_WRIST_Z + lift))
         poser.arm(side, wrist, pole=(-1., .35 * sign, .25))
-        curl_back = 1. - plant
-        poser.aim(f'hand_{side}', wrist, Vector((1., 0., -.05)).lerp(Vector((-.4, 0., -1.)), curl_back * smoothstep(lift, 0., 3.)))
+        curl_back = (1. - plant) * (1. - leap)
+        # At full reach the solver stops short of the target: the paw stays on the arm.
+        poser.aim(f'hand_{side}', poser.head(f'hand_{side}'), Vector((1., 0., -.05)).lerp(Vector((-.4, 0., -1.)), curl_back * smoothstep(lift, 0., 3.)))
         curl(side, 12 + 40 * curl_back)
     r = 0.
     for side in 'LR':
         x, lift, fp, tp = sprint_hind((phase - (0. if side == 'L' else SPRINT['hind_lag'])) % 1)
+        # The leap: hind legs stretched out behind from the push, toes pointed.
+        x += (SPRINT_HIND_X - SPRINT_HIND_CM / 2 - 12. - x) * leap
+        lift += (8. - lift) * leap
+        fp += (85. - fp) * leap
+        tp += (35. - tp) * leap
         ball = NEUTRAL_BALL[side] + Vector((x, 0., lift))
         r = max(r, poser.leg(side, ball, fp, tp, heading=0.))
     ik_goals()
@@ -1820,6 +1832,33 @@ author('SprintLoop', SPRINT['period_frames'], sprint, True, {
     'hind_lag_fraction': SPRINT['hind_lag'],
     'phase_convention': 'phase 0 = foot_L touchdown, foot_R hind_lag_fraction later; forepaws land fore_land (R) and fore_land + fore_lag (L); the runtime advances the phase by travel over stride_cycle_cm',
     'notes': 'Four-legged half-bound sprint. In place (root fixed); planted hind balls and forepaw wrists move backward in component space at exactly the reference speed. Forepaws are placed by the clip only (no runtime hand IK).'})
+
+# Sprint leap (user 2026-10-07: "jumping while sprinting ... a leap that is
+# much further than a running jump while still being believable"). Out of the
+# gallop he takes off at the full 380 cm/s with 230 cm/s of lift (the running
+# jump: 225 and 190): about 0.59 s in the air, some 2.2 m (twice the running
+# jump's 1.1 m, a little over three of his heights) with a 34 cm apex. Posed over
+# the flight's normalized progress like RunJump: the stride runs on from the
+# end of the hind paws' push (phase .2) to the forepaws' touchdown (fore_land),
+# and over the middle of the flight he stretches out long - forepaws reaching
+# ahead, hind legs trailing, ears flat, tail lifted - then gathers to land on
+# the forepaws, so the runtime carries straight on into the gallop.
+SPRINT_LEAP_FRAMES = 18
+SPRINT_LEAP_VZ = 230.
+
+def sprint_leap(phase, f):
+    u = f / (SPRINT_LEAP_FRAMES - 1)
+    leap = smoothstep(u, 0., .25) * (1 - smoothstep(u, .6, 1.))
+    return sprint(SPRINT['fore_land'] - .24 * (1 - u), f, leap)
+
+author('SprintLeap', SPRINT_LEAP_FRAMES, sprint_leap, False, {
+    'launch': {'vertical_cm_s': SPRINT_LEAP_VZ, 'horizontal_cm_s': SPRINT['speed_cm_s'], 'gravity_cm_s2': 980. * .8},
+    'time_mapping': 'clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = SprintLoop at fore_land_phase',
+    'fore_land_phase': SPRINT['fore_land'],
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'events_s': {'takeoff': 0., 'touchdown': round((SPRINT_LEAP_FRAMES - 1) / FPS, 4)},
+    'ends_on': 'SprintLoop at fore_land_phase (forepaw R touchdown)',
+    'notes': 'Leap out of the sprint: stretched out long in the air, forepaws reaching, hind legs trailing; lands on the forepaws into the gallop.'})
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

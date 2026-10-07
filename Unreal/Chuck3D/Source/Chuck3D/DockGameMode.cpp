@@ -2973,7 +2973,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     else if(TestStage==130)
     {
         Chuck->SetTestStick(FVector2D(0,1));
-        if(Chuck->GetCharacterMovement()->IsMovingOnGround()) Chuck->AddMovementInput(FVector(1,0,0),1);
+        Chuck->AddMovementInput(FVector(1,0,0),1);   // held throughout, through the leap too
         if(SprintStartAt<0 && StageTime>=.3f) { bSprintStarted=Chuck->TrySprint(); SprintStartAt=StageTime; }
         const float Speed=Chuck->GetVelocity().Size2D();
         if(Chuck->IsSprinting())
@@ -3003,16 +3003,34 @@ void ADockGameMode::Tick(float DeltaSeconds)
         }
         else
         {
+            // A jump at the sprint: the long leap on all fours, landing back into the gallop.
             if(SprintJumpAt<0 && SprintStartAt>=0 && StageTime>=SprintStartAt+.7f)
             {
-                const bool bWasSprinting=Chuck->IsSprinting();
+                SprintLeapFrom=Chuck->GetActorLocation(); SprintLeapRise=0; SprintLandAt=-1; bSprintLeapSeen=false;
                 Chuck->JumpPressed(); SprintJumpAt=StageTime;
-                const float Shed=Chuck->GetCharacterMovement()->Velocity.Size2D();
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_JUMP_MEASURE was_sprinting=%d sprinting=%d cm_s=%.2f cooldown_s=%.2f"),bWasSprinting,Chuck->IsSprinting(),Shed,Chuck->GetSprintCooldownLeft());
-                Check(bWasSprinting && !Chuck->IsSprinting() && Shed<=ChuckClipData::RunSpeed+1.f && Chuck->GetSprintCooldownLeft()>9.5f,TEXT("a jump out of the sprint leaves at run speed and starts the recovery"));
             }
-            if(SprintJumpAt>=0 && StageTime>SprintJumpAt+1.5f)
+            if(SprintJumpAt>=0 && SprintLandAt<0)
             {
+                bSprintLeapSeen|=Chuck->IsSprintLeaping();
+                SprintLeapRise=FMath::Max(SprintLeapRise,static_cast<float>(Chuck->GetActorLocation().Z-SprintLeapFrom.Z));
+                if(StageTime>=SprintJumpAt+.3f && StageTime-DeltaSeconds<SprintJumpAt+.3f)
+                    FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/SprintLeap.png"),true,false);
+                if(bSprintLeapSeen && !Chuck->IsSprintLeaping() && Chuck->GetCharacterMovement()->IsMovingOnGround())
+                { SprintLandAt=StageTime; SprintLeapDistance=FVector::Dist2D(Chuck->GetActorLocation(),SprintLeapFrom); }
+            }
+            if(SprintLandAt>=0 && StageTime>=SprintLandAt+.15f && StageTime-DeltaSeconds<SprintLandAt+.15f)
+            {
+                // The running jump for comparison: 190 cm/s up at 225 cm/s (gravity 0.8 g).
+                const float RunLeap=ChuckClipData::RunSpeed*2.f*ChuckClipData::RunJumpVerticalSpeed/(980.f*.8f);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE leaps=%d distance_cm=%.1f run_jump_cm=%.1f ratio=%.2f rise_cm=%.1f air_s=%.3f gait=%s sprinting=%d weight=%.3f cm_s=%.1f"),
+                    Chuck->GetSprintLeaps(),SprintLeapDistance,RunLeap,SprintLeapDistance/RunLeap,SprintLeapRise,SprintLandAt-SprintJumpAt,Chuck->GetGaitName(),Chuck->IsSprinting(),Chuck->GetSprintWeight(),Chuck->GetVelocity().Size2D());
+                Check(Chuck->GetSprintLeaps()==1 && SprintLeapDistance>1.8f*RunLeap && SprintLeapDistance<270.f && SprintLeapRise>25.f && SprintLeapRise<45.f,
+                    TEXT("a jump at a sprint is a long leap, about twice the running jump"));
+                Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 && Chuck->IsSprinting() && Chuck->GetSprintWeight()>.9f,TEXT("the sprint leap lands back into the gallop"));
+            }
+            if(((SprintLandAt>=0 && StageTime>SprintLandAt+.3f) || (SprintJumpAt>=0 && StageTime>SprintJumpAt+2.f)) && SprintJumpAt>=0)
+            {
+                if(SprintLandAt<0) { UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE no landing seen=%d"),bSprintLeapSeen); Check(false,TEXT("a jump at a sprint is a long leap, about twice the running jump")); Check(false,TEXT("the sprint leap lands back into the gallop")); }
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
                 SprintSub=0; TestStage=115; StageTime=0;
             }

@@ -176,6 +176,7 @@ public:
     static constexpr float SprintDuration = 2.5f;   // s on all fours
     static constexpr float SprintCooldown = 10.f;   // s after it ends
     static constexpr float SprintAcceleration = 1100.f;   // cm/s2 into the burst (walk/run: 550)
+    static constexpr float SprintDropGrace = .2f;   // s off the ground (a step down) before a fall ends it
     /** Start the sprint if he can (tests and the input). */
     bool TrySprint();
     bool IsSprinting() const { return SprintLeft > 0; }
@@ -184,6 +185,13 @@ public:
     /** Seconds until the sprint can start again (0: ready). */
     float GetSprintCooldownLeft() const;
     int32 GetSprints() const { return Sprints; }
+    // The sprint leap (user 2026-10-07): a plain jump at a sprint keeps the
+    // sprint going and is a long leap on all fours at the full sprint speed
+    // with more lift (SprintLeapVerticalSpeed); he lands on his forepaws back
+    // into the gallop. Vaults, side jumps and wall runs out of a sprint stay at
+    // run speed.
+    bool IsSprintLeaping() const { return Gait == EGait::Air && bSprintLeap; }
+    int32 GetSprintLeaps() const { return SprintLeaps; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
     /** The test stick pushed along a world direction, whichever way the camera now looks. */
@@ -268,7 +276,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault };
     EGait Gait = EGait::Idle;
@@ -301,6 +309,10 @@ private:
     float SprintReadyAt = -1e9f; // world time the next sprint may start
     float SprintWeight = 0;
     int32 Sprints = 0;
+    bool bSprintLeapPending = false;   // jump pressed at a sprint, not yet off the ground
+    bool bSprintLeap = false;
+    float SprintAirTime = 0;   // off the ground at a sprint, not leaping
+    int32 SprintLeaps = 0;
     void SprintPressed() { TrySprint(); }
     /** Ends the sprint and starts the recovery; bShed: back down to run speed at once (jumps). */
     void EndSprint(bool bShed);

@@ -73,6 +73,8 @@ def main():
         f"    constexpr float SprintStride = {f(clips['SprintLoop']['stride_cycle_cm'])};",
         f"    constexpr float SprintStanceFraction = {f(clips['SprintLoop']['stance_fraction'])};",
         f"    constexpr float SprintHindLag = {f(clips['SprintLoop']['hind_lag_fraction'])};",
+        f"    constexpr float SprintLeapVerticalSpeed = {f(clips['SprintLeap']['launch']['vertical_cm_s'])};  // leap out of the sprint",
+        f"    constexpr float SprintForeLand = {f(clips['SprintLeap']['fore_land_phase'])};  // the leap lands on the forepaws here in the stride",
         '    // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.',
         f"    constexpr float StartDuration = {f(start['duration_travel_s'])};",
         f"    constexpr float StartTravel = {f(start['travel_cm'])};",

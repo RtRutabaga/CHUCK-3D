@@ -123,6 +123,9 @@ private:
     bool bSprintOnly = false, bSprintStarted = false, bSprintRefused = false;
     int32 SprintSub = 0;
     float SprintStartAt = -1, SprintEndAt = -1, SprintJumpAt = -1, SprintMaxSpeed = 0, SprintMaxWeight = 0, SprintCooldownSeen = 0;
+    FVector SprintLeapFrom = FVector::ZeroVector;
+    float SprintLeapRise = 0, SprintLandAt = -1, SprintLeapDistance = 0;
+    bool bSprintLeapSeen = false;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;
