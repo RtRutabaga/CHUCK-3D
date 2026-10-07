@@ -1,5 +1,12 @@
 # Handoff — 2026-09-27
 
+## October 7 — sprint leap (Claude)
+
+Source **`a3a2662`**. Jump while sprinting: a long leap on all fours (new `SprintLeap` clip), about 2.4 m (2.2× the running jump's 1.1 m), with a 36 cm apex and 0.63 s in the air. He lands on his forepaws back into the gallop and the sprint carries on. Short step-downs no longer end a sprint. Forepaws no longer float off the cuffs at full reach. Verification **170 passes, 0 failures** (`Local/verify-package-20261007-102239.log`). **Launcher stale (`1bc88e1`)**: the game was open; promote `Builds/SprintLeapCandidate/Windows` as described in `docs/agent-handoffs/CLAUDE.md`.
+
+Next part of the work can be done here.
+
+
 ## October 7 — Chuck sprints on all fours (Claude)
 
 Runtime **`1bc88e1`**. Left Ctrl / left stick click while moving: a 2.5 s burst at 380 cm/s on all four paws (new `SprintLoop` half-bound clip), then back up into the run; it recovers for 10 s with no HUD, and a press meanwhile does nothing. Jumping, dodging, strafing, letting go or leaving the ground ends it early; jumps and falls leave at run speed, so parkour tuning is unchanged. New checks: stages 129-130 / `-ChuckSprintTest`. Verifier expects 168. Full verification **169 passes, 0 failures** (`Local/verify-package-20261007-080038.log`). A first run failed only the intermittent keeper rag-reach sample seen in earlier logs. Root **Launch-Prototype.cmd** = **`1bc88e1`** (includes the pending smith/Dougmund `7a94283`); previous at `Builds/Windows-Previous-20261007-Sprint`. The 40 unfinished assets are untouched. Details and flaws are in `docs/agent-handoffs/CLAUDE.md`.
