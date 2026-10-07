@@ -66,7 +66,7 @@ $alchemistVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE GnomeA
 $smithVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE Blacksmith lines=1 sounds=1'
 $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED body=1 barrel=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {161} else {162}
+$expected=if($NoCapture) {162} else {163}
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$guardVoice -or !$plazaGuardVoice -or !$sideGuardVoice -or !$sailorVoice -or !$workerVoice -or !$elfVoice -or !$marketVoice -or !$alchemistVoice -or !$smithVoice -or !$keeperCompleted -or !$sailorCompleted -or !$bobertCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"

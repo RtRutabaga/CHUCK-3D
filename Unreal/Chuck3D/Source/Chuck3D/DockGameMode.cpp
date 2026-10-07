@@ -3194,6 +3194,19 @@ void ADockGameMode::Tick(float DeltaSeconds)
             Check(Measured>=8 && Steady==Measured,TEXT("the standing NPCs (the dwarf among them) hold still without shaking"));
         }
         {
+            // The old elf on her bench doesn't twitch: her head turns far more gently than the guards',
+            // who play the same stood idle with its quick head flick.
+            float Elf=-1.f, Guards=0.f;
+            for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
+            {
+                if(!Entry.IsValid()) continue;
+                if(Entry->ActorHasTag(TEXT("ElfElder"))) Elf=Entry->GetPeakHeadAccel();
+                if(Entry->ActorHasTag(TEXT("DockGuard")) || Entry->ActorHasTag(TEXT("DockGuardB")) || Entry->ActorHasTag(TEXT("DockGuardC"))) Guards=FMath::Max(Guards,Entry->GetPeakHeadAccel());
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ELF_TWITCH_MEASURE elf_head_accel_deg=%.0f guards_head_accel_deg=%.0f"),Elf,Guards);
+            Check(Elf>=0.f && Guards>0.f && Elf<Guards*.5f,TEXT("the old elf sits still on her bench, her head turning gently, without twitching"));
+        }
+        {
             // The smith's line: spoken after the pause, his hammer down throughout, and he went back to work after.
             TArray<AActor*> SmithFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Blacksmith"),SmithFound);

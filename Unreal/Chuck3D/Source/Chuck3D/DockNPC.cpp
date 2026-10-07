@@ -52,6 +52,10 @@ namespace
     // The dwarf never looks down (his beard would go through his breastplate) and turns his head
     // less; the clip's own head and neck motion is damped to this much.
     constexpr float DwarfLookYaw = 15.f, DwarfClipHead = .25f;
+    // Seated (the old elf; Dougmund at his tavern table): the stood idle's quick head flick (about 4 s
+    // into the take) read as a twitch on the bench (user 2026-10-06). Its head and neck are damped to
+    // this much, the rest of the clip low-passed more slowly, and her glances turn more gently.
+    constexpr float SeatClipHead = .2f, SeatSmoothing = .35f, SeatLookRate = 1.2f;
     constexpr float FistReach = 8.f;           // cm from the wrist to the middle of a closed fist
     constexpr float PalmDepth = 3.f;           // cm from the knuckle line to the middle of the fist, palm side
     const TCHAR* MeshPaths[] = { TEXT("/Game/Characters/Humans/DockWorker/SK_DockWorker.SK_DockWorker"),
@@ -1206,7 +1210,7 @@ void ADockNPC::Tick(float DeltaSeconds)
         if (DrinkLift > 0.f) Target = FMath::Lerp(Target, FVector2D(0.f, -DrinkHeadBack * FMath::SmoothStep(DrinkRaise, DrinkLower, U)), DrinkLift);
     }
     if (Kind == EDockHuman::Dwarf) Target = FVector2D(FMath::Clamp(Target.X, -DwarfLookYaw, DwarfLookYaw), FMath::Min(Target.Y, 0.f));
-    const float Rate = bWatching ? 4.f : 2.f;
+    const float Rate = IsSeated() ? SeatLookRate * (bWatching ? 2.f : 1.f) : bWatching ? 4.f : 2.f;
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
     if (IsSmith()) TickSmith(DeltaSeconds);
@@ -1392,7 +1396,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (SmoothDelta.Num() != BoneDelta.Num()) { SmoothDelta = BoneDelta; SmoothHips = HipsOffset; }
         else
         {
-            const float A = 1.f - FMath::Exp(-DeltaSeconds / ClipSmoothing);
+            const float A = 1.f - FMath::Exp(-DeltaSeconds / (IsSeated() ? SeatSmoothing : ClipSmoothing));
             for (int32 B = 0; B < BoneDelta.Num(); ++B) SmoothDelta[B] = FQuat::Slerp(SmoothDelta[B], BoneDelta[B], A).GetNormalized();
             SmoothHips = FMath::Lerp(SmoothHips, HipsOffset, static_cast<double>(A));
         }
@@ -1406,6 +1410,8 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         }
         if (Kind == EDockHuman::Dwarf)
             for (const int32 B : { BoneIndex[Neck], BoneIndex[Head] }) BoneDelta[B] = FQuat::Slerp(FQuat::Identity, BoneDelta[B], DwarfClipHead);
+        if (IsSeated())
+            for (const int32 B : { BoneIndex[Neck], BoneIndex[Head] }) BoneDelta[B] = FQuat::Slerp(FQuat::Identity, BoneDelta[B], SeatClipHead);
         TArray<FQuat> Delta; Delta.Init(FQuat::Identity, BoneCount);
         Delta[Neck] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
         Delta[Head] = Yaw(.5f * Look.X) * Pitch(.5f * Look.Y);
@@ -2337,8 +2343,24 @@ void ADockNPC::ProbeShake(const TArray<FTransform>& Space, float DeltaSeconds)
         const FVector V = (Space[B].GetLocation() - ProbePrev[B]) / DeltaSeconds;
         if (bCount && V.Size() > 3.f && ProbeVel[B].Size() > 3.f && FVector::DotProduct(V, ProbeVel[B]) < 0.f)
         { ++ProbeReversals[B]; ProbeSwing[B] += static_cast<float>((V - ProbeVel[B]).Size()); }
+        // A twitch: the largest one-frame change of velocity (cm/s^2), where in the idle clip it came.
+        const float Accel = static_cast<float>((V - ProbeVel[B]).Size()) / DeltaSeconds;
+        if (bCount && ProbeFrames > 1 && Accel > PeakAccel)
+        {
+            PeakAccel = Accel; PeakBone = B;
+            PeakClipAt = HasMocap() ? FMath::Fmod(Clock + Phase, FMath::Max(Clips[IdleClip]->GetPlayLength(), .1f)) : -1.f;
+        }
         ProbeVel[B] = V; ProbePrev[B] = Space[B].GetLocation();
     }
+    // The head's turn: its largest one-frame change of angular speed (deg/s^2).
+    const FQuat HeadNow = Space[BoneIndex[Head]].GetRotation();
+    if (ProbeFrames > 0)
+    {
+        const float Speed = FMath::RadiansToDegrees(static_cast<float>(HeadNow.AngularDistance(ProbeHeadPrev))) / DeltaSeconds;
+        if (bCount && ProbeFrames > 2) PeakHeadAccel = FMath::Max(PeakHeadAccel, FMath::Abs(Speed - ProbeHeadSpeed) / DeltaSeconds);
+        ProbeHeadSpeed = Speed;
+    }
+    ProbeHeadPrev = HeadNow;
     ProbeFrames += bCount;
     const float Yaw = static_cast<float>(GetActorRotation().Yaw);
     const float YawV = FMath::FindDeltaAngleDegrees(ProbeYawPrev, Yaw) / DeltaSeconds;
@@ -2359,7 +2381,9 @@ FString ADockNPC::GetJitterReport() const
     TArray<int32> Order;
     for (int32 B = 0; B < ProbeReversals.Num(); ++B) if (ProbeReversals[B]) Order.Add(B);
     Order.Sort([&](int32 A, int32 B) { return ProbeReversals[A] > ProbeReversals[B]; });
-    FString Out = FString::Printf(TEXT("frames=%d yaw_reversals=%d"), ProbeFrames, YawReversals);
+    FString Out = FString::Printf(TEXT("frames=%d yaw_reversals=%d head_accel_deg=%.0f peak_accel=%.0f@%s clip_at=%.2f/%.2f"), ProbeFrames, YawReversals, PeakHeadAccel, PeakAccel,
+        PeakBone >= 0 ? *Body->GetSkinnedAsset()->GetRefSkeleton().GetBoneName(PeakBone).ToString() : TEXT("none"), PeakClipAt,
+        HasMocap() ? Clips[IdleClip]->GetPlayLength() : 0.f);
     for (int32 I = 0; I < FMath::Min(6, Order.Num()); ++I)
     {
         const int32 B = Order[I];

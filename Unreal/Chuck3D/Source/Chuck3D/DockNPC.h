@@ -355,6 +355,8 @@ public:
     FString GetJitterReport() const;
     float GetShakeShare() const { return ProbeFrames ? static_cast<float>(GetWorstReversals()) / ProbeFrames : 0.f; }
     int32 GetWorstReversals() const;
+    /** The head's largest one-frame change of turning speed after 8 s (deg/s^2): a twitch. */
+    float GetPeakHeadAccel() const { return PeakHeadAccel; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -524,6 +526,10 @@ private:
     int32 ProbeFrames = 0;
     float ProbeYawPrev = 0.f, ProbeYawVel = 0.f;
     int32 YawReversals = 0;
+    float PeakAccel = 0.f, PeakClipAt = -1.f;
+    float PeakHeadAccel = 0.f, ProbeHeadSpeed = 0.f;
+    FQuat ProbeHeadPrev = FQuat::Identity;
+    int32 PeakBone = -1;
     void ProbeShake(const TArray<FTransform>& Space, float DeltaSeconds);
     // The dock worker's drink.
     bool bDrinker = false;
