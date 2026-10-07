@@ -2419,4 +2419,11 @@ Next part of the work can be done here.
 - **Launcher:** `Builds/Windows` = `34ad28c`; backup `Builds/Windows-Previous-20261006-SmithVoice`.
 - **Remaining:** not listened to; tune the pause by ear.
 
+## Smith pause, keeper cut-in timing, rant reach (user 2026-10-06)
+
+- **Source:** `b3654da`: `DockNPC.cpp` `SmithSpeakPause` 0.7 → 0.2 s; worker-only room attenuation (inner 250 → 450 cm, falloff 1300 → 2300 cm, wall occlusion volume .30 → .45; the keeper keeps the old values). `DockNPC.h` `TavernInterrupt` 1.5 → 3.5 s. `DockReturn.cpp` night capture shots/exit follow `TavernInterrupt`. `DockGameMode.cpp`: the start-of-talk smith check accepts him already speaking; the end check now expects a 0.15–0.6 s pause.
+- **Verified:** `Local/verify-package-20261006-185442.log`, 163 passes, pause_s=0.20. Scene test `Local/tavern-timing-capture.log`: failures=0, interrupt 4.0 s after Chuck is placed inside (3.5 s plus timing slack), keeper subtitles advance.
+- **Launcher:** `Builds/Windows` = `b3654da` (`-CheckOnly` passes); backup `Builds/Windows-Previous-20261006-TavernTiming`.
+- **Remaining:** not listened to; the rant's reach and 3.5 s cut-in need tuning by ear. The uncommitted Unreal asset re-saves in the working tree predate this session and were left alone.
+
 Next part of the work can be done here.
