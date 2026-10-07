@@ -55,3 +55,7 @@ New boxes share instanced mesh batches by material and collision profile. Seven 
 `Verify-Package.ps1` requires both the existing gameplay suite and `CHUCK_WORLD_CHECK_COMPLETE failures=0`. The world checks sample nine ground points and six rat-capsule route segments. These check floor continuity and clearance, not subjective camera comfort or every new roof. `-ChuckSettingCapture` runs a separate six-view review and exits; it does not change normal play. Images go to `Saved/Screenshots/Windows/Setting` within the package.
 
 Known scope limits: repeated blockout architecture, closed doors, no interiors or NPC activity, and a simple opaque sea. The new buildings need art refinement and player feedback on routes and camera obstruction. Passing collision checks does not establish finished graphics or natural city scale.
+
+## Signage cleanup — October 6
+
+Keep in-world signage for businesses and the tavern. Removed developer-style area labels Cargo Court (both sides), Dock Street, Fountain Plaza, Docks and the user-rejected Bonded Stores label. Removed the cargo hanging board/chains and the street/plaza signboards rather than leaving blank signs. The cargo hoist frame, lamp posts, architecture and all collision/traversal surfaces remain. Trade/shop signs (Chandler, Sail Repair, Cooper, Nets, Stores, Rope, Sails, Ropeworks, Net Mender, Sailmaker, Smithy, Alchemist) and Tavern remain. No assets, materials or dependencies changed.

@@ -304,11 +304,6 @@ void BuildDockPlaza(UWorld* World)
         Beam(P+FVector(0,0,34),P,1,TEXT("Wood"));
         for(float S : {-1.f,0.f,1.f}) Beam(P+FVector(S*5,0,0),P+FVector(S*11,3,-28),3,TEXT("WoodLight"));
     }
-    // Wayfinding is mounted on existing lamp posts, outside both clear approaches.
-    Shape(FVector(530,-2219,232),FVector(190,7,38),TEXT("Wood"));
-    Sign(FVector(530,-2213,232),TEXT("FOUNTAIN PLAZA"));
-    Shape(FVector(530,-2241,232),FVector(190,7,38),TEXT("Wood"));
-    Sign(FVector(530,-2247,232),TEXT("DOCKS"),-90);
     // Working forge dressing preserves Claude's smith, anvil and sound placement.
     BuildDockForge(Owner);
     for(int32 I=0;I<7;++I)

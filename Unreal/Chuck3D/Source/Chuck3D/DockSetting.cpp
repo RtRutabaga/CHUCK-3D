@@ -250,7 +250,6 @@ void BuildDockSetting(UWorld* World)
     for(float X : {-228.f,-132.f}) Box(FVector(X,-908,105),FVector(8,8,210),TEXT("Dark"));
     Beam(FVector(-180,-835,280),FVector(-180,-945,280),10,TEXT("Wood"));
     Beam(FVector(-180,-940,278),FVector(-180,-940,155),2,TEXT("Dark"));
-    Label(FVector(-180,-912,220),TEXT("BONDED STORES"),-90);
     // Sound shop shells beneath split, weather-worn shake cladding. Courses
     // have irregular butt ends and shallow relief, never competing coplanar faces.
     const FVector Workshops[]={FVector(-180,-790,230),FVector(170,-770,260),
@@ -356,10 +355,6 @@ void BuildDockSetting(UWorld* World)
     for(float X : {-885.f,-655.f}) Box(FVector(X,-700,200),FVector(14,14,400),TEXT("Wood"),true);
     Box(FVector(-770,-700,400),FVector(280,18,18),TEXT("Wood"));
     Beam(FVector(-880,-700,320),FVector(-795,-700,396),10,TEXT("Wood"));
-    Box(FVector(-770,-700,356),FVector(200,10,36),TEXT("Wood"));
-    for(float X : {-850.f,-690.f}) Beam(FVector(X,-700,398),FVector(X,-700,372),2,TEXT("Dark"));
-    Label(FVector(-770,-707,356),TEXT("CARGO COURT"),-90);
-    Label(FVector(-770,-693,356),TEXT("CARGO COURT"),90);
     // A continuous walking loop down Dock Street, around the cooperage and back.
     for(float Y=-2050;Y<=650;Y+=150)
     {
@@ -608,8 +603,6 @@ void BuildDockSetting(UWorld* World)
         Box(FVector(X,890,240),FVector(34,34,18),TEXT("Dark"));
         Box(FVector(X,890,330),FVector(44,44,22),TEXT("Stone"));
     }
-    Box(FVector(-1100,890,260),FVector(380,20,44),TEXT("Wood"));
-    Label(FVector(-1100,875,260),TEXT("DOCK STREET"),-90);
     // A small street-and-court loop makes the newly opened side useful rather
     // than a bare collision slab. Its buildings are solid at human scale.
     Box(FVector(-1160,1260,1),FVector(18,680,2),TEXT("Dark"));

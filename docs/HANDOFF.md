@@ -1,5 +1,16 @@
 # Handoff — 2026-09-27
 
+## October 6 — sign cleanup prepared; launcher update pending
+
+User requested only plausible business/tavern signs. Removed Cargo Court (both sides), Dock Street, Fountain Plaza, Docks, and the user-rejected Bonded Stores label. Removed their decorative hanging boards/chains where present; cargo hoist frame, lamp posts, architecture and collision retained. Chandler/Sail Repair/Cooper, other trade/shop signs, Smithy/Alchemist and Tavern remain. Source changes only in DockSetting.cpp and DockPlaza.cpp; no imports, binary assets or dependencies.
+
+Candidate **`Builds/SignCleanup/Windows`** built successfully in **139.06 s**, existing UE5.7.4, one-worker BuildCookRun with `-skipcook`, `Local/sign-cleanup-build.log`. Includes Claude's latest **`e1b121e`** barrel day/night lighting source, whose launcher promotion was pending in `aa22365`. Reuses current cooked assets. Diff whitespace check passed.
+
+**Pending:** packaged verification, visual review, promotion/receipt and publication. User's game remains open (Chuck3D PIDs 8392 / 20532); close request sent, no reply yet. Do not replace its files or claim the launcher updated. Root launcher still **`b3654da`**. Once closed, run default `Tools/Verify-Package.ps1 -PackageRoot Builds/SignCleanup/Windows`, inspect scene capture, then promote with a new backup name (avoid the partial legacy BarrelLight backup), write receipt, CheckOnly, update this entry and push. Existing unfinished inputs recorded in **`Local/signs-preserved-inputs.json`**; preserve all of them. Original 2D repository untouched.
+
+Next part of the work can be done here.
+
+
 ## October 6 — weathered square shops and flat shack roofs
 
 Runtime **`905c613`**, on `50888e5`. Bonded Stores, Sail Loft, Chandler, Sail Repair and Cooper now have staggered split-shake courses: uneven widths/butt ends, shallow varied relief and selected end splits. Surface wear sits on sound shells; doors, windows, signs, hoists and parkour obstacles remain. Existing CC0 Rough Wood materials reused; no installations, imports or new binary assets.
