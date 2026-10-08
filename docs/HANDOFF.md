@@ -2,7 +2,7 @@
 
 ## October 7 — sprint leap (Claude)
 
-Source **`a3a2662`**. Jump while sprinting: a long leap on all fours (new `SprintLeap` clip), about 2.4 m (2.2× the running jump's 1.1 m), with a 36 cm apex and 0.63 s in the air. He lands on his forepaws back into the gallop and the sprint carries on. Short step-downs no longer end a sprint. Forepaws no longer float off the cuffs at full reach. Verification **170 passes, 0 failures** (`Local/verify-package-20261007-102239.log`). **Launcher stale (`1bc88e1`)**: the game was open; promote `Builds/SprintLeapCandidate/Windows` as described in `docs/agent-handoffs/CLAUDE.md`.
+Source **`a3a2662`**. Jump while sprinting: a long leap on all fours (new `SprintLeap` clip), about 2.4 m (2.2× the running jump's 1.1 m), with a 36 cm apex and 0.63 s in the air. He lands on his forepaws back into the gallop and the sprint carries on. Short step-downs no longer end a sprint. Forepaws no longer float off the cuffs at full reach. Verification **170 passes, 0 failures** (`Local/verify-package-20261007-102239.log`). Root **Launch-Prototype.cmd** now runs this build (receipt `f06d45e`); previous at `Builds/Windows-Previous-20261007-SprintLeap`.
 
 Next part of the work can be done here.
 
