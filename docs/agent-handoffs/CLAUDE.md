@@ -2510,3 +2510,19 @@ Next part of the work can be done here.
 - **Remaining:** not played by hand. Upward roof-to-roof jumps beyond ~45 cm still don't work (the leap's apex is 42 cm plus the scramble window). The west-row house gables (~2.2–2.9 m apart) work downhill only. The tavern was not changed (closed gables, real interior). The pull-up still passes visually through a thin eave during its 0.7 s. Survey covered y ±3000, not the plaza shops (y -3940); their fill is reasoned, not surveyed.
 
 Next part of the work can be done here.
+
+## Sprint stamina ring (user 2026-10-08)
+
+- **Ask:** the supplied icon as a stamina bar top right under the cigarette count, shining purple briefly when full. Sprint only when full; the sprint drains it fully. It recharges with the same timing even while running or jumping. An interrupted sprint keeps its unused stamina and refills from there.
+- **Source:** `48431f8` on main.
+  - `ChuckCharacter`: `bSprinting` + `Stamina` replace `SprintLeft`/`SprintReadyAt`. A sprint needs `Stamina >= 1`; sprinting drains `dt/SprintDuration`; otherwise it refills `dt/SprintCooldown` (any gait); `StaminaFullAt` marks the moment it's full. `EndSprint` keeps what's left. `GetSprintCooldownLeft()` = `(1-Stamina)*10`. `GetStamina`, `SetStamina` (tests). Reset = full.
+  - HUD `ADockHUD::DrawStamina` (`DockGameMode.cpp`): canvas-triangle ring to the icon's measured shape (head 2°, tail 341°, width .19→.005 of the outer radius, rounded head, colours (217,61,254)→(150,32,252)→(172,36,254)), faint track, outer radius 6 HUD px (72 px at 1080p), right-aligned under the count. Emblem `T_StaminaEmblem` at 1.6× the outer radius: white when ready, .55 alpha grey while charging. Shine for 0.9 s after full: additive ring +.6 px at .32 intensity, emblem tint .4 (toned down from the first look, `Local/stamina-hud-closeup.png` → `-1080.png`).
+  - Art: `References/ArtDirection/Chuck-Stamina-Icon.png` (user source); `Tools/build_stamina_emblem.py` → `SourceAssets/UI/T_StaminaEmblem.png` (256², alpha from brightness, ring masked out); `Tools/import_stamina_emblem.py` → `/Game/Art/UI/T_StaminaEmblem` (UI group, no mips; `/Game/Art` is always cooked). Log `Local/stamina-emblem-import.log`.
+  - `Chuck3D.Build.cs` adds the engine's `RenderCore` (for `GWhiteTexture`); no installation.
+  - Tests: sprint sub 2 (2 checks); captures `Stamina_Refilling.png`, `Stamina_FullShine.png`. Verifier expects 175 (174 `-NoCapture`).
+- **Verified:** `-ChuckSprintTest` at 1280 and 1920: left 0.487 after half, a press refused, refilled in 5.14/5.15 s (10 × 0.513), restart 1. Full `Local/verify-package-20261007-214449.log` **176 passes, 0 failures**, first run.
+- **Launcher:** `Builds/Windows` = `48431f8`, receipt written, `-CheckOnly` passes. Previous `7dc3b73` at `Builds/Windows-Previous-20261008-Stamina`.
+- **Preserved:** 40 pre-existing inputs unchanged.
+- **Remaining:** not seen in motion by hand (captures only). The ring sits in the 2D HUD's pixel scale but is drawn smooth, not pixel-snapped. While sprinting the emblem is dimmed (not full). The sprint leap drains stamina in the air like the gallop.
+
+Next part of the work can be done here.

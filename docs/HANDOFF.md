@@ -1,5 +1,12 @@
 # Handoff — 2026-09-27
 
+## October 8 — sprint stamina ring (Claude)
+
+Runtime **`48431f8`**. A stamina ring from the user's icon sits top right under the cigarette count: the white paw emblem inside a purple ring drawn to the icon's shape. It drains as he sprints, refills in 10 s from empty (whatever he's doing), and shines purple briefly when full. A sprint needs it full. A sprint cut short keeps what's left (half used → 5 s refill). Verification **176 passes, 0 failures** (`Local/verify-package-20261007-214449.log`). Root **Launch-Prototype.cmd** = `48431f8`; previous at `Builds/Windows-Previous-20261008-Stamina`. Details: `docs/agent-handoffs/CLAUDE.md`.
+
+Next part of the work can be done here.
+
+
 ## October 7 — roofs: longer leap, easier ledges, no attics (Claude)
 
 Runtime **`7dc3b73`**. The sprint leap is longer: about 2.9 m (2.6× the running jump), 42 cm high. It works from a small step-down too. The 1.4 m gap between the Bonded Stores and Chandler's roofs now goes either way: down by landing, up by scrambling over the edge. Ledges work on pitched eaves: slope-aware edge, a real standing spot to pull up onto, a hang clear of overhangs, a scramble when arriving with the edge at his hips, a softer pull-up stick. Hidden collision fills the roof spaces of the pitched houses and plaza shops, whose open gables let him climb into the attics. New `-ChuckRoofTest` (4 checks) and `-ChuckRoofSurvey`. Verification **174 passes, 0 failures** (`Local/verify-package-20261007-200440.log`). Root **Launch-Prototype.cmd** = `7dc3b73`; previous at `Builds/Windows-Previous-20261007-Roofs`. Details: `docs/agent-handoffs/CLAUDE.md`.
