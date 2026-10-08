@@ -1,5 +1,12 @@
 # Handoff — 2026-09-27
 
+## October 8 — leap: free of stamina, needs a run-up; cheese is one-way (Claude)
+
+Runtime **`3fd9930`**. The sprint leap no longer drains stamina. It needs 1 m of straight sprinting run-up on the ground; without it, a sprint jump is the ordinary running jump. The pantry cheese can be reached with a leap from the cellar floor but not left: the island gives at most 80 cm of run-up, and the sky hole's rim can't be caught. All 20 tested ways back fall into the sky (`-ChuckCheeseTest`). Verification **180 passes, 0 failures** (`Local/verify-package-20261008-113730.log`). Root **Launch-Prototype.cmd** = `3fd9930`; previous at `Builds/Windows-Previous-20261008-Cheese`.
+
+Next part of the work can be done here.
+
+
 ## October 8 — sprint stamina ring (Claude)
 
 Runtime **`48431f8`**. A stamina ring from the user's icon sits top right under the cigarette count: the white paw emblem inside a purple ring drawn to the icon's shape. It drains as he sprints, refills in 10 s from empty (whatever he's doing), and shines purple briefly when full. A sprint needs it full. A sprint cut short keeps what's left (half used → 5 s refill). Verification **176 passes, 0 failures** (`Local/verify-package-20261007-214449.log`). Root **Launch-Prototype.cmd** = `48431f8`; previous at `Builds/Windows-Previous-20261008-Stamina`. Details: `docs/agent-handoffs/CLAUDE.md`.

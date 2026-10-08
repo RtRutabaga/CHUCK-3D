@@ -2526,3 +2526,17 @@ Next part of the work can be done here.
 - **Remaining:** not seen in motion by hand (captures only). The ring sits in the 2D HUD's pixel scale but is drawn smooth, not pixel-snapped. While sprinting the emblem is dimmed (not full). The sprint leap drains stamina in the air like the gallop.
 
 Next part of the work can be done here.
+
+## Leap: free of stamina, needs a run-up; cheese is one-way (user 2026-10-08)
+
+- **Ask:** the sprint jump shouldn't run down the bar. It should need a short sprinting run-up ("just barely longer than the width of a crate"). Reaching the pantry cheese must leave no way back except falling into the sky.
+- **Source:** `3fd9930` on main.
+  - `ChuckCharacter`: stamina drains only when not leaping. `SprintLeapRunup` 100 cm: `RunupFrom`/`RunupDir`/`RunupLength` measure straight grounded sprinting. A turn >25° restarts it; airborne zeroes the direction so landing restarts it, while the length survives for the step-down grace leap. `JumpPressed`: with too little run-up, `EndSprint(true)` and the ordinary jump. `GetSprintRunup()`. `ResetAtLocation` clears it.
+  - `DockPantry`: `IsDockPantrySkyRim` (|z−floor|<25, radius within ±35 cm of the sky hole's), refused by `FindLedge`. The island's own edge is unaffected.
+  - Tests: `-ChuckCheeseTest` / stages 133–134 (2 checks); sprint test +2 (leap stamina cost 0.007 after allowing for the 0.15 s of gallop; 33 cm run-up → ordinary jump). `Verify-Package.ps1` expects 179 (178 `-NoCapture`).
+- **Why 1 m:** the user's "barely more than a crate" (56–60 cm) would have let him leap back off the cheese. Measured island maximum: 68 cm from the crate's edge, 80 cm from its perched corners. 1 m keeps a 20 cm margin. The arrival (floor → crate top) needs the cellar's open run (223 cm here, from the north-east corner).
+- **Verified:** `-ChuckCheeseTest` twice (`Local/cheese-Cheese-5.log`, `-6.log`): arrived on the crate top (z −229); 20/20 attempts back in the sky; no leaps. Full `Local/verify-package-20261008-113730.log` **180 passes, 0 failures**, first run. The old pantry cheese check still has the running jump falling short (closest 60 cm).
+- **Launcher:** `Builds/Windows` = `3fd9930`; previous `48431f8` at `Builds/Windows-Previous-20261008-Cheese`.
+- **Remaining:** the attempts cover the obvious straight lines (8 headings × crate top / island floor, 4 side jumps), not every curve or stamina/latch combination. Nothing in the pantry ceiling or walls was checked for a wall-run route back (the sky hole's outer edge is ≥2 m from any wall). Not played by hand.
+
+Next part of the work can be done here.
