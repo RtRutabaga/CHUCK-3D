@@ -1,5 +1,12 @@
 # Handoff — 2026-09-27
 
+## October 7 — roofs: longer leap, easier ledges, no attics (Claude)
+
+Runtime **`7dc3b73`**. The sprint leap is longer: about 2.9 m (2.6× the running jump), 42 cm high. It works from a small step-down too. The 1.4 m gap between the Bonded Stores and Chandler's roofs now goes either way: down by landing, up by scrambling over the edge. Ledges work on pitched eaves: slope-aware edge, a real standing spot to pull up onto, a hang clear of overhangs, a scramble when arriving with the edge at his hips, a softer pull-up stick. Hidden collision fills the roof spaces of the pitched houses and plaza shops, whose open gables let him climb into the attics. New `-ChuckRoofTest` (4 checks) and `-ChuckRoofSurvey`. Verification **174 passes, 0 failures** (`Local/verify-package-20261007-200440.log`). Root **Launch-Prototype.cmd** = `7dc3b73`; previous at `Builds/Windows-Previous-20261007-Roofs`. Details: `docs/agent-handoffs/CLAUDE.md`.
+
+Next part of the work can be done here.
+
+
 ## October 7 — sprint leap (Claude)
 
 Source **`a3a2662`**. Jump while sprinting: a long leap on all fours (new `SprintLeap` clip), about 2.4 m (2.2× the running jump's 1.1 m), with a 36 cm apex and 0.63 s in the air. He lands on his forepaws back into the gallop and the sprint carries on. Short step-downs no longer end a sprint. Forepaws no longer float off the cuffs at full reach. Verification **170 passes, 0 failures** (`Local/verify-package-20261007-102239.log`). Root **Launch-Prototype.cmd** now runs this build (receipt `f06d45e`); previous at `Builds/Windows-Previous-20261007-SprintLeap`.
