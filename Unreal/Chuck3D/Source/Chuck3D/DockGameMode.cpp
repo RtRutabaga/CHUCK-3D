@@ -32,6 +32,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckClipData.h"
+#include "Misc/FileHelper.h"
 #include "AnimationRuntime.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -618,6 +619,43 @@ void ADockGameMode::StartPlay()
     // -ChuckSprintTest: only the four-legged sprint (stages 129-130), then quit.
     bSprintOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckSprintTest"));
     if(bSprintOnly) { bSmokeTest=true; TestStage=129; }
+    // -ChuckRoofTest: only the roof leaps, gable and eave (stages 131-132), then quit.
+    bRoofOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckRoofTest"));
+    if(bRoofOnly) { bSmokeTest=true; TestStage=131; RoofSub=0; }
+    // -ChuckRoofSurvey: a top-down height map of what Chuck can stand on (20 cm
+    // grid, Pawn channel) to Saved/RoofSurvey.csv, for planning roof routes; then quit.
+    // -ChuckRoofSurvey=x0,x1,y0,y1,step narrows it (and names what each trace hits).
+    FString SurveyArea;
+    const bool bSurveyArea=FParse::Value(FCommandLine::Get(),TEXT("ChuckRoofSurvey="),SurveyArea,false);
+    if(bSurveyArea || FParse::Param(FCommandLine::Get(),TEXT("ChuckRoofSurvey")))
+    {
+        TArray<FString> Parts; SurveyArea.ParseIntoArray(Parts,TEXT(","));
+        const bool bFine=Parts.Num()==5;
+        const float X0=bFine?FCString::Atof(*Parts[0]):-3000.f, X1=bFine?FCString::Atof(*Parts[1]):3000.f;
+        const float Y0=bFine?FCString::Atof(*Parts[2]):-3000.f, Y1=bFine?FCString::Atof(*Parts[3]):3000.f, Step=bFine?FCString::Atof(*Parts[4]):20.f;
+        FTimerHandle Survey;
+        GetWorldTimerManager().SetTimer(Survey,[this,X0,X1,Y0,Y1,Step,bFine]()
+        {
+            FString Csv=bFine?TEXT("x,y,z,nz,what\n"):TEXT("x,y,z,nz\n");
+            FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckRoofSurvey),false);
+            if(APawn* Pawn=UGameplayStatics::GetPlayerPawn(this,0)) Query.AddIgnoredActor(Pawn);
+            int32 Hits=0;
+            for(float X=X0;X<=X1;X+=Step) for(float Y=Y0;Y<=Y1;Y+=Step)
+            {
+                FHitResult Hit;
+                if(GetWorld()->LineTraceSingleByChannel(Hit,FVector(X,Y,2500),FVector(X,Y,-300),ECC_Pawn,Query))
+                {
+                    Csv+=FString::Printf(TEXT("%.0f,%.0f,%.1f,%.3f"),X,Y,Hit.ImpactPoint.Z,Hit.ImpactNormal.Z);
+                    if(bFine) Csv+=FString::Printf(TEXT(",%s/%s#%d"),*GetNameSafe(Hit.GetActor()),*GetNameSafe(Hit.GetComponent()),Hit.Item);
+                    Csv+=TEXT("\n"); ++Hits;
+                }
+            }
+            const FString Path=FPaths::ProjectSavedDir()/TEXT("RoofSurvey.csv");
+            FFileHelper::SaveStringToFile(Csv,*Path);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_ROOF_SURVEY hits=%d file=%s"),Hits,*Path);
+            FPlatformMisc::RequestExitWithStatus(false,0);
+        },3.f,false);
+    }
 }
 
 namespace
@@ -3024,21 +3062,97 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 const float RunLeap=ChuckClipData::RunSpeed*2.f*ChuckClipData::RunJumpVerticalSpeed/(980.f*.8f);
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE leaps=%d distance_cm=%.1f run_jump_cm=%.1f ratio=%.2f rise_cm=%.1f air_s=%.3f gait=%s sprinting=%d weight=%.3f cm_s=%.1f"),
                     Chuck->GetSprintLeaps(),SprintLeapDistance,RunLeap,SprintLeapDistance/RunLeap,SprintLeapRise,SprintLandAt-SprintJumpAt,Chuck->GetGaitName(),Chuck->IsSprinting(),Chuck->GetSprintWeight(),Chuck->GetVelocity().Size2D());
-                Check(Chuck->GetSprintLeaps()==1 && SprintLeapDistance>1.8f*RunLeap && SprintLeapDistance<270.f && SprintLeapRise>25.f && SprintLeapRise<45.f,
-                    TEXT("a jump at a sprint is a long leap, about twice the running jump"));
+                Check(Chuck->GetSprintLeaps()==1 && SprintLeapDistance>2.2f*RunLeap && SprintLeapDistance<330.f && SprintLeapRise>30.f && SprintLeapRise<50.f,
+                    TEXT("a jump at a sprint is a long leap, about two and a half times the running jump"));
                 Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 && Chuck->IsSprinting() && Chuck->GetSprintWeight()>.9f,TEXT("the sprint leap lands back into the gallop"));
             }
             if(((SprintLandAt>=0 && StageTime>SprintLandAt+.3f) || (SprintJumpAt>=0 && StageTime>SprintJumpAt+2.f)) && SprintJumpAt>=0)
             {
-                if(SprintLandAt<0) { UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE no landing seen=%d"),bSprintLeapSeen); Check(false,TEXT("a jump at a sprint is a long leap, about twice the running jump")); Check(false,TEXT("the sprint leap lands back into the gallop")); }
+                if(SprintLandAt<0) { UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE no landing seen=%d"),bSprintLeapSeen); Check(false,TEXT("a jump at a sprint is a long leap, about two and a half times the running jump")); Check(false,TEXT("the sprint leap lands back into the gallop")); }
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
-                SprintSub=0; TestStage=115; StageTime=0;
+                SprintSub=0; RoofSub=0; TestStage=bSprintOnly ? 115 : 131; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==131 && StageTime>.3f)
+    {
+        // The workshop roofs: Bonded Stores (top 235, south edge y -900) and
+        // the Chandler's (top 185, north edge y -1060), 1.4 m apart past the eaves.
+        // 0: sprint leap down onto the Chandler's; 1: back up, too high to land on,
+        // so over the edge; 2: falling past a house's open gable end (never into
+        // its roof space); 3: catching a pitched house eave and pulling up onto the slope.
+        if(APlayerController* RPC=GetWorld()->GetFirstPlayerController()) { Chuck->DisableInput(RPC); RPC->SetViewTarget(Chuck); }   // the test stick, not the keyboard
+        // The rats roaming the workshop roofs would get in the way of measuring the leaps.
+        for(TActorIterator<AEnemyRat> Rat(GetWorld()); Rat; ++Rat) Rat->SetActorEnableCollision(false);
+        Chuck->ResetToDock();
+        Chuck->SetRunHeld(RoofSub<2);
+        RoofJumpAt=-1; RoofMaxZ=-1e6f; bRoofFlag=bRoofAttic=false;
+        RoofPullUpsBefore=Chuck->GetPullUps(); RoofScramblesBefore=Chuck->GetLedgeScrambles(); RoofHangsBefore=Chuck->GetHangs();
+        const FVector Starts[]={FVector(-300,-690,235+34),FVector(-300,-1225,185+34),FVector(-780,515,480),FVector(-575,720,480)};
+        const float Yaws[]={-90.f,90.f,90.f,180.f};
+        Chuck->SetActorLocation(Starts[RoofSub],false,nullptr,ETeleportType::TeleportPhysics);
+        Chuck->SetActorRotation(FRotator(0,Yaws[RoofSub],0)); Chuck->Recenter();
+        TestStage=132; StageTime=0;
+    }
+    else if(TestStage==132)
+    {
+        const FVector P=Chuck->GetActorLocation();
+        const FVector Dirs[]={FVector(0,-1,0),FVector(0,1,0),FVector(0,1,0),FVector(-1,0,0)};
+        const FVector Dir=Dirs[RoofSub];
+        Chuck->SetTestStickWorld(Dir);
+        Chuck->AddMovementInput(Dir,1);
+        RoofMaxZ=FMath::Max(RoofMaxZ,static_cast<float>(P.Z));
+        // The house at (-780,720): footprint x -950..-610, y 550..890, top 500 with the pitched roof above.
+        if(P.X>-950 && P.X<-610 && P.Y>550 && P.Y<890 && P.Z>500 && P.Z<620)
+        {
+            const float Roof=500+(170-FMath::Abs(P.X+780))*.57735f;   // the slope's top surface (less its thickness)
+            if(P.Z<Roof) bRoofAttic=true;
+        }
+        const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround() && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Climb"))!=0;
+        if(RoofSub<2)
+        {
+            if(StageTime>=.25f && StageTime-DeltaSeconds<.25f) Chuck->TrySprint();
+            const float EdgeY=RoofSub==0 ? -885.f : -1075.f;
+            if(RoofJumpAt<0 && StageTime>.3f && (RoofSub==0 ? P.Y<=EdgeY : P.Y>=EdgeY)) { UE_LOG(LogTemp,Display,TEXT("CHUCK_ROOF_JUMP sub=%d p=%s gait=%s sprinting=%d"),RoofSub,*P.ToString(),Chuck->GetGaitName(),Chuck->IsSprinting()); Chuck->JumpPressed(); RoofJumpAt=StageTime; }
+            if(RoofJumpAt>=0 && StageTime>RoofJumpAt+.4f && bGround && !bRoofFlag)
+            {
+                bRoofFlag=true;
+                const bool bOn=RoofSub==0 ? (P.Y<-1060 && P.Y>-1240 && FMath::Abs(P.Z-(185+32.5f))<4.f) : (P.Y>-900 && P.Y<-680 && FMath::Abs(P.Z-(235+32.5f))<4.f);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_ROOF_MEASURE sub=%d on=%d p=%s leaps=%d scrambles=%d pullups=%d hangs=%d after_s=%.2f"),RoofSub,bOn,*P.ToString(),Chuck->GetSprintLeaps(),Chuck->GetLedgeScrambles()-RoofScramblesBefore,Chuck->GetPullUps()-RoofPullUpsBefore,Chuck->GetHangs()-RoofHangsBefore,StageTime-RoofJumpAt);
+                if(RoofSub==0) bRoofDown=bOn; else bRoofUp=bOn;   // (lane x -300: where the two roofs overlap)
+                if(RoofSub==0 && bOn) FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/RoofLeap.png"),true,false);
+            }
+        }
+        const bool bDone=RoofSub<2 ? (bRoofFlag && StageTime>RoofJumpAt+1.2f) || StageTime>5.f : StageTime>3.f;
+        if(bDone)
+        {
+            if(RoofSub==2)
+            {
+                bRoofGable=!bRoofAttic;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_ROOF_MEASURE sub=2 attic=%d hangs=%d pullups=%d max_z=%.1f p=%s"),bRoofAttic,Chuck->GetHangs()-RoofHangsBefore,Chuck->GetPullUps()-RoofPullUpsBefore,RoofMaxZ,*P.ToString());
+            }
+            if(RoofSub==3)
+            {
+                const bool bOnSlope=bGround && P.X>-780 && P.X<-610 && P.Y>550 && P.Y<890 && P.Z>500+32.f;
+                bRoofEave=bOnSlope && !bRoofAttic && Chuck->GetPullUps()>RoofPullUpsBefore;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_ROOF_MEASURE sub=3 on_slope=%d attic=%d hangs=%d pullups=%d p=%s gait=%s"),bOnSlope,bRoofAttic,Chuck->GetHangs()-RoofHangsBefore,Chuck->GetPullUps()-RoofPullUpsBefore,*P.ToString(),Chuck->GetGaitName());
+            }
+            if(++RoofSub<4) { TestStage=131; StageTime=0; }
+            else
+            {
+                Check(bRoofDown,TEXT("a sprint leap clears the gap between workshop roofs, down onto the next"));
+                Check(bRoofUp,TEXT("leaping back up a roof's height, he gets over its edge onto it"));
+                Check(bRoofGable,TEXT("a house's gable end never lets him into the roof space"));
+                Check(bRoofEave,TEXT("a pitched roof's eave can be caught and pulled up onto"));
+                for(TActorIterator<AEnemyRat> Rat(GetWorld()); Rat; ++Rat) Rat->SetActorEnableCollision(true);
+                Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+                RoofSub=0; TestStage=115; StageTime=0;
             }
         }
     }
     else if(TestStage==115)
     {
-        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly || bSprintOnly)
+        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly || bSprintOnly || bRoofOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

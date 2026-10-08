@@ -126,6 +126,11 @@ private:
     FVector SprintLeapFrom = FVector::ZeroVector;
     float SprintLeapRise = 0, SprintLandAt = -1, SprintLeapDistance = 0;
     bool bSprintLeapSeen = false;
+    // The roof tests: sprint leaps between the workshop roofs, a house's gable end and eave.
+    bool bRoofOnly = false, bRoofFlag = false, bRoofAttic = false;
+    int32 RoofSub = 0, RoofPullUpsBefore = 0, RoofScramblesBefore = 0, RoofHangsBefore = 0;
+    float RoofJumpAt = -1, RoofMaxZ = 0;
+    bool bRoofDown = false, bRoofUp = false, bRoofGable = false, bRoofEave = false;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;

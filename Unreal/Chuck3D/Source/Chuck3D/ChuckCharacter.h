@@ -66,6 +66,8 @@ public:
     bool IsHanging() const { return Gait == EGait::Hang; }
     int32 GetHangs() const { return Hangs; }
     int32 GetPullUps() const { return PullUps; }
+    /** Leaps that arrived a little high and scrambled straight onto the top. */
+    int32 GetLedgeScrambles() const { return LedgeScrambles; }
     int32 GetSlides() const { return Slides; }
     int32 GetMantles() const { return Mantles; }
     // Ledges: grabbed automatically when his paws reach a top edge while he is
@@ -314,6 +316,7 @@ private:
     float SprintAirTime = 0;   // off the ground at a sprint, not leaping
     int32 SprintLeaps = 0;
     void SprintPressed() { TrySprint(); }
+    void StartSprintLeap();
     /** Ends the sprint and starts the recovery; bShed: back down to run speed at once (jumps). */
     void EndSprint(bool bShed);
     bool bLookLocked = false;
@@ -427,8 +430,15 @@ private:
     float LedgeCooldownUntil = -1;
     int32 Hangs = 0;
     int32 PullUps = 0;
+    int32 LedgeScrambles = 0;
     int32 Mantles = 0;
     bool FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom) const;
+    /** Where he ends up standing after climbing over Edge: the first clear spot
+     *  inward from it (In cm first, then further), on whatever slope is there. */
+    bool FindStand(const FVector& Normal, const FVector& Edge, float In, FVector& OutStand) const;
+    /** The capsule while hanging from Edge, kept clear of any eave overhanging the face. */
+    FVector HangHoldAt(const FVector& Edge) const;
+    float HangOut = 0, HangLower = 0;   // extra clearance from the face / below the edge for this grab
     void EnterHang(const FVector& Normal, const FVector& Edge, bool bRoom);
     void DropFromHang();
     void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge);

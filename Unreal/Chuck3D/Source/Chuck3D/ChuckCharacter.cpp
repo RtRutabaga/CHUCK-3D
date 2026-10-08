@@ -568,6 +568,17 @@ FVector AChuckCharacter::StickWorld() const
     const FRotator View(0, ViewYaw, 0);
     return (View.Vector() * InputForward + FRotationMatrix(View).GetUnitAxis(EAxis::Y) * SideInput()).GetClampedToMaxSize(1.f);
 }
+void AChuckCharacter::StartSprintLeap()
+{
+    // Pushing off from the gallop, along the way he's going.
+    auto* Movement = GetCharacterMovement();
+    const FVector Along = GetVelocity().GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector().GetSafeNormal2D() : GetVelocity().GetSafeNormal2D();
+    Movement->Velocity = Along * FMath::Max(static_cast<float>(GetVelocity().Size2D()), ChuckClipData::SprintLeapSpeed) + FVector(0, 0, ChuckClipData::SprintLeapVerticalSpeed);
+    Gait = EGait::Air; bSprintLeap = true; bSprintLeapPending = bRunJump = false; SprintAirTime = 0;
+    ++SprintLeaps;
+    SetClip(EClip::SprintLeap, 0, .08f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT_LEAP takeoff=%d at=%s"), SprintLeaps, *GetActorLocation().ToString());
+}
 bool AChuckCharacter::TrySprint()
 {
     auto* Movement = GetCharacterMovement();
@@ -607,7 +618,7 @@ void AChuckCharacter::EndSprint(bool bShed)
         const FVector Run = Flat.GetSafeNormal() * ChuckClipData::RunSpeed;
         Movement->Velocity = FVector(Run.X, Run.Y, Movement->Velocity.Z);
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s"), Sprints, bShed ? 1 : 0, GetGaitName());
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s at=%s air_s=%.2f"), Sprints, bShed ? 1 : 0, GetGaitName(), *GetActorLocation().ToString(), SprintAirTime);
 }
 float AChuckCharacter::GetSprintCooldownLeft() const
 {
@@ -632,6 +643,8 @@ void AChuckCharacter::JumpPressed()
         WallJump(); return;
     }
     if (Gait == EGait::WallRun || Gait == EGait::WallSide || (Movement->IsFalling() && Now < WallCoyoteUntil)) { WallJump(); return; }
+    // Off a small step at a sprint (still within its grace): the leap all the same.
+    if (Movement->IsFalling() && IsSprinting() && Gait == EGait::Air && !bSprintLeap && SprintAirTime < SprintDropGrace) { StartSprintLeap(); PlaySfx(JumpSounds, ESfx::Jump, JumpVolume); return; }
     if (Movement->IsFalling()) { AirJumpPressedAt = Now; return; }  // buffered for a wall reached just after
     // Jump with a strafe key down is a side jump that way, whatever else is
     // held (user 2026-09-30: running forward, press strafe + jump together to
@@ -685,26 +698,36 @@ bool AChuckCharacter::TryEnterWallRun()
     const float Reach = GetCapsuleComponent()->GetScaledCapsuleRadius() + WallReach;
     FHitResult Hit;
     FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWall), false, this);
-    bool bHit = false;
-    for (const float Height : {5.f, -15.f})  // chest, then hips (a top below his chest)
+    bool bHit = false, bFeetOnly = false;
+    for (const float Height : {5.f, -15.f, -21.f, -27.f})  // chest, then hips (a top below his chest), then lower (a top at his hips)
     {
         const FVector From = GetActorLocation() + FVector(0, 0, Height);
         bHit = GetWorld()->SweepSingleByChannel(Hit, From, From + Probe * (Reach - 4.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(4.f), Query)
             && FMath::Abs(Hit.ImpactNormal.Z) <= .3f;
-        if (bHit) break;
+        if (bHit) { bFeetOnly = Height < -20.f; break; }
     }
     if (!bHit) return false;
     const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
     if (FVector::DotProduct(Probe, -Normal) < .5f) return false;
     // A top edge within reach: grab it (any wall, even the one just left).
     FVector Edge; bool bRoom = false;
-    if (Movement->Velocity.Z > -300.f && GetWorld()->GetTimeSeconds() >= LedgeCooldownUntil
-        && FindLedge(Normal, Hit.ImpactPoint, -15.f, 45.f, Edge, bRoom))
+    if (Movement->Velocity.Z > -400.f && GetWorld()->GetTimeSeconds() >= LedgeCooldownUntil)
     {
-        EnterHang(Normal, Edge, bRoom);
-        return true;
+        if (!bFeetOnly && FindLedge(Normal, Hit.ImpactPoint, -15.f, 45.f, Edge, bRoom))
+        {
+            EnterHang(Normal, Edge, bRoom);
+            return true;
+        }
+        // Arriving with the top already at his hips (a leap a little high):
+        // scramble straight on rather than bounce off the edge.
+        if (FindLedge(Normal, Hit.ImpactPoint, -34.f, -15.f, Edge, bRoom) && bRoom)
+        {
+            StartClimb(true, Normal, Edge);
+            ++LedgeScrambles;
+            return true;
+        }
     }
-    if (Movement->Velocity.Z < -250.f) return false;
+    if (bFeetOnly || Movement->Velocity.Z < -250.f) return false;   // no wall run off a face below his hips
     if (!LastWallNormal.IsZero() && FVector::DotProduct(Normal, LastWallNormal) > .7f) return false;
     EnterWallRun(Hit, Normal);
     return true;
@@ -748,13 +771,44 @@ bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint,
     FHitResult Top;
     const FVector Start(Over.X, Over.Y, Center.Z + MaxAbove + 5.f), End(Over.X, Over.Y, Center.Z + MinAbove);
     if (!GetWorld()->LineTraceSingleByChannel(Top, Start, End, ECC_Visibility, Query) || Top.bStartPenetrating || Top.ImpactNormal.Z < .7f) return false;
+    // Nothing just above the top: the lip trace follows the top's own slope
+    // inward, so a pitched roof's eave counts as an edge (a level trace would
+    // run into the rising roof and reject it).
+    const float Rise = -FVector::DotProduct(Top.ImpactNormal, -Normal) / Top.ImpactNormal.Z;   // cm up per cm inward
     FHitResult Above;
-    const FVector Lip = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z + 6.f) + Normal * 2.f;
-    if (GetWorld()->LineTraceSingleByChannel(Above, Lip, Lip - Normal * 14.f, ECC_Visibility, Query)) return false;
+    const FVector Lip = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z + 6.f - 10.f * Rise) + Normal * 2.f;
+    if (GetWorld()->LineTraceSingleByChannel(Above, Lip, Lip - Normal * 14.f + FVector(0, 0, 14.f * Rise), ECC_Visibility, Query)) return false;
     OutEdge = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z);
-    const FVector Stand = OutEdge - Normal * (Radius + 4.f) + FVector(0, 0, Half + 2.f);
-    bRoom = !GetWorld()->OverlapBlockingTestByChannel(Stand, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius, Half), Query);
+    FVector Stand;
+    bRoom = FindStand(Normal, OutEdge, Radius + 4.f, Stand);
     return true;
+}
+bool AChuckCharacter::FindStand(const FVector& Normal, const FVector& Edge, float In, FVector& OutStand) const
+{
+    // Up on the top, a little in from the edge; on a slope he settles where
+    // the capsule's round bottom rests, and a spot that is blocked (a chimney,
+    // the roof rising into it) moves him further in.
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckStand), false, this);
+    for (const float Extra : {0.f, 6.f, 14.f, 24.f})
+    {
+        const FVector At = Edge - Normal * (In + Extra);
+        FHitResult Floor;
+        const FVector From(At.X, At.Y, Edge.Z + 30.f + .9f * (In + Extra)), To(At.X, At.Y, Edge.Z - 12.f);
+        if (!GetWorld()->LineTraceSingleByChannel(Floor, From, To, ECC_Visibility, Query) || Floor.bStartPenetrating || Floor.ImpactNormal.Z < .7f) continue;
+        const FVector Stand(At.X, At.Y, Floor.ImpactPoint.Z + Half + 1.f + Radius * (1.f / Floor.ImpactNormal.Z - 1.f));
+        if (!GetWorld()->OverlapBlockingTestByChannel(Stand + FVector(0, 0, 1.f), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius, Half), Query))
+        {
+            OutStand = Stand;
+            return true;
+        }
+    }
+    return false;
+}
+FVector AChuckCharacter::HangHoldAt(const FVector& Edge) const
+{
+    return Edge + HangNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f + HangOut) - FVector(0, 0, HangDrop + HangLower);
 }
 bool AChuckCharacter::TryDropHang()
 {
@@ -797,6 +851,26 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
     SetActorRotation((-Normal).Rotation());
     Gait = EGait::Hang;
     HangNormal = Normal; HangEdge = Edge; HangFrom = GetActorLocation();
+    // Under an eave the usual hang would put his head in the roof: hang a
+    // little further out and lower instead, clear of it.
+    HangOut = HangLower = 0;
+    {
+        const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+        const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckHangClear), false, this);
+        const auto Clear = [&](float Out, float Lower)
+        {
+            HangOut = Out; HangLower = Lower;
+            return !GetWorld()->OverlapBlockingTestByChannel(HangHoldAt(Edge), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, Half - 1.f), Query);
+        };
+        bool bClear = false;
+        for (const float Lower : {0.f, 8.f, 16.f, 24.f})
+        {
+            for (const float Out : {0.f, 5.f, 10.f, 15.f}) if (Clear(Out, Lower)) { bClear = true; break; }
+            if (bClear) break;
+        }
+        if (!bClear) HangOut = HangLower = 0;
+    }
     HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false; bHangNeedsRelease = false;
     LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = bSprintLeap = false;
     ++Hangs;
@@ -898,8 +972,12 @@ void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVec
     ClimbStart = GetActorLocation();
     bClimbReverse = false;
     ClimbDir = -Normal;
-    ClimbRise = static_cast<float>(Edge.Z - ClimbStart.Z) + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f;
-    ClimbAdvance = static_cast<float>(FVector::DotProduct(ClimbStart - Edge, Normal)) + (bMantle ? 17.f : 18.5f);
+    // To where he will stand: the first clear spot in from the edge (on a
+    // pitched roof, up the slope); a flat top gives the authored distances.
+    FVector Stand;
+    if (!FindStand(Normal, Edge, bMantle ? 17.f : 18.5f, Stand)) Stand = Edge - Normal * (bMantle ? 17.f : 18.5f) + FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f);
+    ClimbRise = static_cast<float>(Stand.Z - ClimbStart.Z);
+    ClimbAdvance = static_cast<float>(FVector::DotProduct(Stand - ClimbStart, -Normal));
     bClimbMantle = bMantle;
     SetActorRotation((-Normal).Rotation());
     Gait = EGait::Climb;
@@ -1781,7 +1859,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // climbs up; away lets go.
         HangClock += DeltaSeconds;
         BaseTime += DeltaSeconds;
-        const FVector Hold = HangEdge + HangNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f) - FVector(0, 0, HangDrop);
+        const FVector Hold = HangHoldAt(HangEdge);
         const float Snap = FMath::SmoothStep(0.f, HangSnapTime, HangClock);
         SetActorLocation(FMath::Lerp(HangFrom, Hold, Snap), false, nullptr, ETeleportType::TeleportPhysics);
         const float WallYaw = (-HangNormal).Rotation().Yaw;
@@ -1804,8 +1882,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             const bool bLedge = FindLedge(HangNormal, Next, HangDrop - 8.f, HangDrop + 8.f, Edge, bRoom)
                 && FindLedge(HangNormal, Next + Along * Direction * 10.f, HangDrop - 8.f, HangDrop + 8.f, AheadEdge, bAheadRoom);
             const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
-            const FVector From = HangEdge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
-            const FVector To = Edge + HangNormal * (Radius + .5f) - FVector(0, 0, HangDrop);
+            const FVector From = HangHoldAt(HangEdge);
+            const FVector To = HangHoldAt(Edge);
             FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckShimmy), false, this);
             const bool bBlocked = GetWorld()->SweepTestByChannel(From, To, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 1.f), Query);
             if ((!bLedge || bBlocked) && TryHangCorner(Along * Direction, Direction)) {}
@@ -1821,7 +1899,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             }
         }
         if (Moved <= 0 && (Base == EClip::ShimmyLeft || Base == EClip::ShimmyRight)) SetClip(EClip::Hang, 0, .15f);
-        HangHold = Toward > .5f ? HangHold + DeltaSeconds : 0.f;
+        // Up: the stick anywhere toward the wall (within about 70 degrees), held briefly.
+        HangHold = Toward > .35f ? HangHold + DeltaSeconds : 0.f;
         if (bAutoClimb && HangClock >= .7f) { bAutoClimb = false; StartClimb(false, HangNormal, HangEdge); }   // out of the water at the pier
         else if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();
@@ -1843,6 +1922,13 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
         else if (!bClimbReverse && BaseTime >= Length)
         {
+            // Never left inside anything (a roof, an attic): nudge out to the nearest clear spot.
+            FVector Spot = GetActorLocation(); const FRotator Facing = GetActorRotation();
+            if (GetWorld()->EncroachingBlockingGeometry(this, Spot, Facing) && GetWorld()->FindTeleportSpot(this, Spot, Facing))
+            {
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_CLIMB_UNSTUCK from=%s to=%s"), *GetActorLocation().ToString(), *Spot.ToString());
+                SetActorLocation(Spot, false, nullptr, ETeleportType::TeleportPhysics);
+            }
             Movement->SetMovementMode(MOVE_Walking);
             LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false;
             PreviousMotionLocation = GetActorLocation();
@@ -1896,15 +1982,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             bRunJump = !bSprintLeap && RunWeight > .5f && GetVelocity().Z > 50.f;
             RunTakeoffAt = bRunJump ? GetWorld()->GetTimeSeconds() : -1.f;
             if (GetVelocity().Z > 50.f) PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * (bRunJump || bSprintLeap ? 1.f : .85f));
-            if (bSprintLeap)
-            {
-                // Off at the full gallop, along the way he's going.
-                const FVector Along = GetVelocity().GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector().GetSafeNormal2D() : GetVelocity().GetSafeNormal2D();
-                Movement->Velocity = Along * FMath::Max(Speed, SprintSpeed) + FVector(0, 0, SprintLeapVerticalSpeed);
-                ++SprintLeaps;
-                SetClip(EClip::SprintLeap, 0, .08f);
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT_LEAP takeoff=%d at=%s"), SprintLeaps, *Location.ToString());
-            }
+            if (bSprintLeap) StartSprintLeap();
             else if (bRunJump)
             {
                 Movement->Velocity.Z = RunJumpVerticalSpeed;

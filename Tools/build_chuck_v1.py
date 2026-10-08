@@ -1835,16 +1835,20 @@ author('SprintLoop', SPRINT['period_frames'], sprint, True, {
 
 # Sprint leap (user 2026-10-07: "jumping while sprinting ... a leap that is
 # much further than a running jump while still being believable"). Out of the
-# gallop he takes off at the full 380 cm/s with 230 cm/s of lift (the running
-# jump: 225 and 190): about 0.59 s in the air, some 2.2 m (twice the running
-# jump's 1.1 m, a little over three of his heights) with a 34 cm apex. Posed over
+# gallop he pushes off to 420 cm/s with 250 cm/s of lift (the running jump: 225
+# and 190): about 0.64 s in the air, some 2.7 m (two and a half times the running
+# jump's 1.1 m, about four of his heights) with a 40 cm apex. User follow-up the
+# same day: "slightly further, long enough that there is at least one roof to
+# roof jump" (was 380/230: 2.4 m, 36 cm) - the workshop roofs' 1.6 m gaps with
+# a 45 cm step now go either way, down by landing and up by scrambling over. Posed over
 # the flight's normalized progress like RunJump: the stride runs on from the
 # end of the hind paws' push (phase .2) to the forepaws' touchdown (fore_land),
 # and over the middle of the flight he stretches out long - forepaws reaching
 # ahead, hind legs trailing, ears flat, tail lifted - then gathers to land on
 # the forepaws, so the runtime carries straight on into the gallop.
 SPRINT_LEAP_FRAMES = 18
-SPRINT_LEAP_VZ = 230.
+SPRINT_LEAP_VZ = 250.
+SPRINT_LEAP_SPEED = 420.   # the push-off: a little faster than the gallop
 
 def sprint_leap(phase, f):
     u = f / (SPRINT_LEAP_FRAMES - 1)
@@ -1852,7 +1856,7 @@ def sprint_leap(phase, f):
     return sprint(SPRINT['fore_land'] - .24 * (1 - u), f, leap)
 
 author('SprintLeap', SPRINT_LEAP_FRAMES, sprint_leap, False, {
-    'launch': {'vertical_cm_s': SPRINT_LEAP_VZ, 'horizontal_cm_s': SPRINT['speed_cm_s'], 'gravity_cm_s2': 980. * .8},
+    'launch': {'vertical_cm_s': SPRINT_LEAP_VZ, 'horizontal_cm_s': SPRINT_LEAP_SPEED, 'gravity_cm_s2': 980. * .8},
     'time_mapping': 'clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = SprintLoop at fore_land_phase',
     'fore_land_phase': SPRINT['fore_land'],
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},

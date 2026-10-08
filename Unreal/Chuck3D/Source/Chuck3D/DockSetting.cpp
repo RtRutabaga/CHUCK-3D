@@ -139,6 +139,16 @@ void BuildDockSetting(UWorld* World)
         for(float Side : {-1.f,1.f})
             Box(P+FVector(Side*Size.X*.25f,0,Size.Z+Rise*.5f),
                 FVector(Size.X*.57735f+24,Size.Y+40,12),TEXT("Roof"),Solid,FRotator(-Side*30,0,0));
+        // Hidden: the roof space under the slopes is solid, so the boarded gable
+        // ends (visual only) can't be climbed or fallen through into an attic.
+        if(Solid)
+            for(float Side : {-1.f,1.f})
+            {
+                const FRotator Pitch(-Side*30,0,0);
+                const float Depth=Rise*.866f;   // the slope line down to the middle of the house top
+                Box(P+FVector(Side*Size.X*.25f,0,Size.Z+Rise*.5f)-Pitch.RotateVector(FVector::UpVector)*(Depth*.5f-1.f),
+                    FVector(Size.X*.57735f,Size.Y+16,Depth+4),TEXT("Dark"),true,Pitch,false);
+            }
         for(int32 Plank=0;Plank<12;++Plank)
         {
             const float X=-Size.X*.5f+(Plank+.5f)*Size.X/12;

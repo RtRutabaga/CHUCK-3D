@@ -1747,8 +1747,8 @@
    "root_motion": false,
    "max_leg_reach_ratio": 1.0807,
    "launch": {
-    "vertical_cm_s": 230.0,
-    "horizontal_cm_s": 380.0,
+    "vertical_cm_s": 250.0,
+    "horizontal_cm_s": 420.0,
     "gravity_cm_s2": 784.0
    },
    "time_mapping": "clip time = flight progress (vz0 - vz) / (2 vz0) x duration; last frame = SprintLoop at fore_land_phase",

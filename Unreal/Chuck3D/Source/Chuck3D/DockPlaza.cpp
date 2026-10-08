@@ -32,11 +32,11 @@ void BuildDockPlaza(UWorld* World)
     auto* Cylinder=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     auto* Sphere=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     TMap<FString,UInstancedStaticMeshComponent*> Batches;
-    auto Shape=[&](FVector P,FVector Size,const TCHAR* Material,bool Solid=false,UStaticMesh* Mesh=nullptr,FRotator Rot=FRotator::ZeroRotator)
+    auto Shape=[&](FVector P,FVector Size,const TCHAR* Material,bool Solid=false,UStaticMesh* Mesh=nullptr,FRotator Rot=FRotator::ZeroRotator,bool Hidden=false)
     {
         if(Solid && FCString::Strcmp(Material,TEXT("Plaster"))==0) Material=TEXT("WeatheredPlaster");
         if(!Mesh) Mesh=Cube;
-        const FString Key=FString(Material)+Mesh->GetName()+(Solid?TEXT("solid"):TEXT("detail"));
+        const FString Key=FString(Material)+Mesh->GetName()+(Solid?TEXT("solid"):TEXT("detail"))+(Hidden?TEXT("hidden"):TEXT(""));
         auto*& Batch=Batches.FindOrAdd(Key);
         if(!Batch)
         {
@@ -44,6 +44,7 @@ void BuildDockPlaza(UWorld* World)
             Batch->SetupAttachment(Root); Batch->SetStaticMesh(Mesh);
             Batch->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Material,Material)));
             Batch->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
+            Batch->SetVisibility(!Hidden);
             Batch->RegisterComponent();
         }
         Batch->AddInstance(FTransform(Rot,P,Size/100.f));
@@ -257,6 +258,14 @@ void BuildDockPlaza(UWorld* World)
             Shape(P+FVector(X,195,133),FVector(113,35,12),TEXT("Stone"));
         }
         for(float S : {-1.f,1.f}) Shape(P+FVector(0,S*90,520),FVector(640,221,16),TEXT("Roof"),true,nullptr,FRotator(0,0,S*29));
+        // Hidden: the roof space is solid, so the boarded gables (visual only)
+        // can't be climbed into.
+        for(float S : {-1.f,1.f})
+        {
+            const FRotator Roll(0,0,S*29);
+            const float Depth=180.f*FMath::Tan(FMath::DegreesToRadians(29.f))*FMath::Cos(FMath::DegreesToRadians(29.f));
+            Shape(P+FVector(0,S*90,520)-Roll.RotateVector(FVector::UpVector)*(Depth*.5f-1.f),FVector(600,180.f/FMath::Cos(FMath::DegreesToRadians(29.f)),Depth+4),TEXT("Dark"),true,nullptr,Roll,true);
+        }
         for(int32 I=0;I<12;++I)
         {
             const float Y=-165+I*30.f, H=FMath::Max(5.f,100-FMath::Abs(Y)*.555f);
