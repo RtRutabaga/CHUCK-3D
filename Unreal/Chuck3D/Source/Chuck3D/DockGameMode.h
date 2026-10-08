@@ -129,11 +129,17 @@ private:
     // Stamina carried over a sprint cut short: what's left, how long the refill took, a sprint once full.
     float SprintStaminaLeft = -1, SprintRefillS = -1, SprintRefillFrom = -1;
     bool bSprintRestart = false;
+    float SprintStaminaAtJump = -1, SprintLeapsBefore = 0;
     // The roof tests: sprint leaps between the workshop roofs, a house's gable end and eave.
     bool bRoofOnly = false, bRoofFlag = false, bRoofAttic = false;
     int32 RoofSub = 0, RoofPullUpsBefore = 0, RoofScramblesBefore = 0, RoofHangsBefore = 0;
     float RoofJumpAt = -1, RoofMaxZ = 0;
     bool bRoofDown = false, bRoofUp = false, bRoofGable = false, bRoofEave = false;
+    // The cheese test: every way back off the pantry's cheese island ends in the sky.
+    bool bCheeseOnly = false, bCheeseArrived = false;
+    int32 CheeseSub = 0, CheeseBack = 0, CheeseSky = 0, CheeseLeapsBefore = 0, CheeseLeapsFromIsland = 0;
+    float CheeseJumpAt = -1, CheeseMaxRunup = 0;
+    FString CheeseBackWhere;
     // The pantry tests: the ladder up and down, a fall into a rupture, the jump at the cheese.
     int32 LadderMountsBefore = 0, LadderPullUpsBefore = 0, FallsBefore = 0, RespawnsBefore = 0;
     float LadderTopZ = -1e6f, PantryJumpAt = -1, IslandClosest = 1e6f;

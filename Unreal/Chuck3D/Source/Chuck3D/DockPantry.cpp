@@ -67,6 +67,13 @@ int32 DockPantryHoleAt(const FVector2D& At) { return HoleAt(static_cast<float>(A
 FVector2D DockPantrySkyCentre() { return SkyCentre; }
 float DockPantrySkyRadius() { return SkyRadius; }
 float DockPantryIslandRadius() { return IslandRadius; }
+bool IsDockPantrySkyRim(const FVector& Edge)
+{
+    // Whatever reaches the outer rim from inside the hole (a jump back off the
+    // cheese's island) falls: the cheese is a one-way trip.
+    const float R = static_cast<float>(FVector2D::Distance(FVector2D(Edge.X, Edge.Y), SkyCentre));
+    return FMath::Abs(Edge.Z - Floor) < 25.f && R > SkyRadius - 35.f && R < SkyRadius + 35.f;
+}
 
 void BuildDockPantry(UWorld* World)
 {

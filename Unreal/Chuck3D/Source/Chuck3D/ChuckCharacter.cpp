@@ -392,7 +392,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
     ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;
     LadderIndex = -1; bClimbReverse = false;
-    bSprinting = false; SprintWeight = 0; Stamina = 1.f;   // a fresh start is a rested rat
+    bSprinting = false; SprintWeight = 0; Stamina = 1.f; RunupLength = 0; RunupDir = FVector::ZeroVector;   // a fresh start is a rested rat
     SetActorRotation(FRotator(0,ViewYaw,0));
     LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
     Gait = EGait::Idle;
@@ -594,6 +594,7 @@ bool AChuckCharacter::TrySprint()
     }
     if (FVector2D(InputRight, InputForward).SizeSquared() <= .04f) return false;
     bSprinting = true;
+    RunupDir = FVector::ZeroVector; RunupLength = 0;
     ++Sprints;
     bRunHeld = true;   // he comes out of it still running
     bStopPending = false;
@@ -643,7 +644,7 @@ void AChuckCharacter::JumpPressed()
     }
     if (Gait == EGait::WallRun || Gait == EGait::WallSide || (Movement->IsFalling() && Now < WallCoyoteUntil)) { WallJump(); return; }
     // Off a small step at a sprint (still within its grace): the leap all the same.
-    if (Movement->IsFalling() && IsSprinting() && Gait == EGait::Air && !bSprintLeap && SprintAirTime < SprintDropGrace) { StartSprintLeap(); PlaySfx(JumpSounds, ESfx::Jump, JumpVolume); return; }
+    if (Movement->IsFalling() && IsSprinting() && Gait == EGait::Air && !bSprintLeap && SprintAirTime < SprintDropGrace && RunupLength >= SprintLeapRunup) { StartSprintLeap(); PlaySfx(JumpSounds, ESfx::Jump, JumpVolume); return; }
     if (Movement->IsFalling()) { AirJumpPressedAt = Now; return; }  // buffered for a wall reached just after
     // Jump with a strafe key down is a side jump that way, whatever else is
     // held (user 2026-09-30: running forward, press strafe + jump together to
@@ -681,8 +682,11 @@ void AChuckCharacter::JumpPressed()
     // At a run with a wall right beside him: along the wall (not a side jump, not from a walk).
     if (bGrounded && Gait == EGait::Loop && RunWeight > .5f && TryWallSideRun()) return;
     Movement->Velocity = Before;
-    // At a sprint: the long leap, carrying on into the gallop.
-    bSprintLeapPending = IsSprinting() && bGrounded && Gait == EGait::Loop;
+    // At a sprint with a run-up behind him: the long leap, carrying on into
+    // the gallop. Without one, the ordinary running jump (the sprint ends,
+    // keeping its stamina).
+    bSprintLeapPending = IsSprinting() && bGrounded && Gait == EGait::Loop && RunupLength >= SprintLeapRunup;
+    if (IsSprinting() && !bSprintLeapPending) EndSprint(true);
     Jump();
 }
 bool AChuckCharacter::TryEnterWallRun()
@@ -778,6 +782,7 @@ bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint,
     const FVector Lip = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z + 6.f - 10.f * Rise) + Normal * 2.f;
     if (GetWorld()->LineTraceSingleByChannel(Above, Lip, Lip - Normal * 14.f + FVector(0, 0, 14.f * Rise), ECC_Visibility, Query)) return false;
     OutEdge = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z);
+    if (IsDockPantrySkyRim(OutEdge)) return false;   // the sky hole's rim crumbles under his paws
     FVector Stand;
     bRoom = FindStand(Normal, OutEdge, Radius + 4.f, Stand);
     return true;
@@ -2221,8 +2226,20 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // The sprint runs out, or ends with anything but the plain stride.
     if (IsSprinting())
     {
-        Stamina = FMath::Max(0.f, Stamina - DeltaSeconds / SprintDuration);
         const bool bLeaping = Gait == EGait::Air && bSprintLeap;
+        if (!bLeaping) Stamina = FMath::Max(0.f, Stamina - DeltaSeconds / SprintDuration);   // the leap is free
+        // The run-up: straight sprinting on the ground. Off the ground it starts
+        // over on landing (what was run up stays for a leap off a small step).
+        if (Movement->IsFalling()) RunupDir = FVector::ZeroVector;
+        else
+        {
+            const FVector Dir = GetVelocity().GetSafeNormal2D();
+            if (!Dir.IsNearlyZero())
+            {
+                if (RunupDir.IsNearlyZero() || FVector::DotProduct(Dir, RunupDir) < FMath::Cos(FMath::DegreesToRadians(25.f))) { RunupFrom = GetActorLocation(); RunupDir = Dir; }
+                RunupLength = FMath::Max(0.f, static_cast<float>(FVector::DotProduct(GetActorLocation() - RunupFrom, RunupDir)));
+            }
+        }
         SprintAirTime = Movement->IsFalling() && !bLeaping ? SprintAirTime + DeltaSeconds : 0.f;
         if (Stamina <= 0.f) EndSprint(false);
         else if (bLeaping) {}   // the leap carries the sprint

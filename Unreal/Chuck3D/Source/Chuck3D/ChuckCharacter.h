@@ -201,6 +201,17 @@ public:
     // into the gallop. Vaults, side jumps and wall runs out of a sprint stay at
     // run speed.
     bool IsSprintLeaping() const { return Gait == EGait::Air && bSprintLeap; }
+    // The leap needs a sprinting run-up (user 2026-10-08): this far in a straight
+    // line on the ground at a sprint (a turn of more than 25 degrees or leaving
+    // the ground starts it over); without it a jump is the ordinary running
+    // jump. A metre - not much more than a crate's width (the docks' 60 cm,
+    // the pantry's 56) - but longer than any straight run the pantry's cheese
+    // island allows (68 cm measured, across its crate's diagonal), so a rat
+    // that gets onto the cheese can't leap back off it. The leap itself costs
+    // no stamina.
+    static constexpr float SprintLeapRunup = 100.f;   // cm
+    /** Straight sprinting run-up so far on the ground (cm). */
+    float GetSprintRunup() const { return RunupLength; }
     int32 GetSprintLeaps() const { return SprintLeaps; }
     /** Tests (input disabled): the raw stick a dodge reads to choose its exit. */
     void SetTestStick(FVector2D Stick) { InputRight = Stick.X; InputForward = Stick.Y; }
@@ -322,6 +333,8 @@ private:
     int32 Sprints = 0;
     bool bSprintLeapPending = false;   // jump pressed at a sprint, not yet off the ground
     bool bSprintLeap = false;
+    FVector RunupFrom = FVector::ZeroVector, RunupDir = FVector::ZeroVector;
+    float RunupLength = 0;
     float SprintAirTime = 0;   // off the ground at a sprint, not leaping
     int32 SprintLeaps = 0;
     void SprintPressed() { TrySprint(); }

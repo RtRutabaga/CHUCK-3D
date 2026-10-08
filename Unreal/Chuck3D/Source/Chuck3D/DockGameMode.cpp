@@ -624,6 +624,9 @@ void ADockGameMode::StartPlay()
     // -ChuckRoofTest: only the roof leaps, gable and eave (stages 131-132), then quit.
     bRoofOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckRoofTest"));
     if(bRoofOnly) { bSmokeTest=true; TestStage=131; RoofSub=0; }
+    // -ChuckCheeseTest: only the cheese island's one-way trip (stages 133-134), then quit.
+    bCheeseOnly = FParse::Param(FCommandLine::Get(),TEXT("ChuckCheeseTest"));
+    if(bCheeseOnly) { bSmokeTest=true; TestStage=133; CheeseSub=0; }
     // -ChuckRoofSurvey: a top-down height map of what Chuck can stand on (20 cm
     // grid, Pawn channel) to Saved/RoofSurvey.csv, for planning roof routes; then quit.
     // -ChuckRoofSurvey=x0,x1,y0,y1,step narrows it (and names what each trace hits).
@@ -3048,7 +3051,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
             // A jump at the sprint: the long leap on all fours, landing back into the gallop.
             if(SprintJumpAt<0 && SprintStartAt>=0 && StageTime>=SprintStartAt+.7f)
             {
-                SprintLeapFrom=Chuck->GetActorLocation(); SprintLeapRise=0; SprintLandAt=-1; bSprintLeapSeen=false;
+                SprintLeapFrom=Chuck->GetActorLocation(); SprintLeapRise=0; SprintLandAt=-1; bSprintLeapSeen=false; SprintStaminaAtJump=Chuck->GetStamina();
                 Chuck->JumpPressed(); SprintJumpAt=StageTime;
             }
             if(SprintJumpAt>=0 && SprintLandAt<0)
@@ -3069,6 +3072,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Check(Chuck->GetSprintLeaps()==1 && SprintLeapDistance>2.2f*RunLeap && SprintLeapDistance<330.f && SprintLeapRise>30.f && SprintLeapRise<50.f,
                     TEXT("a jump at a sprint is a long leap, about two and a half times the running jump"));
                 Check(FCString::Strcmp(Chuck->GetGaitName(),TEXT("Loop"))==0 && Chuck->IsSprinting() && Chuck->GetSprintWeight()>.9f,TEXT("the sprint leap lands back into the gallop"));
+                // Stamina on landing, less the 0.15 s of gallop since: the leap itself is free.
+                const float LeapCost=SprintStaminaAtJump-(Chuck->GetStamina()+.15f/AChuckCharacter::SprintDuration);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_STAMINA at_jump=%.3f now=%.3f leap_cost=%.3f"),SprintStaminaAtJump,Chuck->GetStamina(),LeapCost);
+                Check(FMath::Abs(LeapCost)<.03f,TEXT("the sprint leap costs no stamina"));
             }
             if(((SprintLandAt>=0 && StageTime>SprintLandAt+.3f) || (SprintJumpAt>=0 && StageTime>SprintJumpAt+2.f)) && SprintJumpAt>=0)
             {
@@ -3077,7 +3084,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 SprintSub=2; SprintStaminaLeft=SprintRefillS=SprintRefillFrom=-1; bSprintRestart=false; TestStage=129; StageTime=0;
             }
         }
-        else
+        else if(SprintSub==2)
         {
             // Half the sprint, then let go: half the stamina is left, it refills
             // in half the time, and only once it's full can he sprint again.
@@ -3099,6 +3106,28 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_STAMINA_MEASURE left=%.3f expected=%.3f refused=%d refill_s=%.2f expected_s=%.2f restart=%d"),SprintStaminaLeft,.5f,bSprintRefused,SprintRefillS,AChuckCharacter::SprintCooldown*.5f,bSprintRestart);
                 Check(FMath::Abs(SprintStaminaLeft-.5f)<.04f && bSprintRefused,TEXT("a sprint cut short keeps its stamina: half used leaves half, and no sprint until it's full"));
                 Check(FMath::Abs(SprintRefillS-AChuckCharacter::SprintCooldown*(1.f-SprintStaminaLeft))<.15f && bSprintRestart,TEXT("half the stamina refills in half the time, then he can sprint again"));
+                // Next: a jump straight out of a fresh sprint, before any run-up.
+                SprintSub=3; SprintJumpAt=-1; TestStage=129; StageTime=0;
+            }
+        }
+        else
+        {
+            // Sprinting, then a jump at once (well under a metre of run-up):
+            // the ordinary running jump, and the sprint ends keeping its stamina.
+            if(SprintJumpAt<0 && SprintStartAt>=0 && Chuck->IsSprinting() && StageTime>=SprintStartAt+.15f)
+            {
+                SprintLeapsBefore=Chuck->GetSprintLeaps(); const float Runup=Chuck->GetSprintRunup();
+                Chuck->JumpPressed(); SprintJumpAt=StageTime; SprintStaminaAtJump=Chuck->GetStamina();
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_SHORT_JUMP runup_cm=%.0f needed_cm=%.0f"),Runup,AChuckCharacter::SprintLeapRunup);
+            }
+            if(SprintJumpAt>=0 && StageTime>=SprintJumpAt+.1f && StageTime-DeltaSeconds<SprintJumpAt+.1f)
+            {
+                const bool bOrdinary=Chuck->GetSprintLeaps()==SprintLeapsBefore && Chuck->IsRunJumping() && !Chuck->IsSprinting() && Chuck->GetVelocity().Size2D()<=ChuckClipData::RunSpeed*1.05f;   // (air control adds a little)
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_SHORT_JUMP_MEASURE ordinary=%d leaps=%d run_jump=%d sprinting=%d cm_s=%.1f stamina=%.3f at_jump=%.3f"),bOrdinary,Chuck->GetSprintLeaps()-static_cast<int32>(SprintLeapsBefore),Chuck->IsRunJumping(),Chuck->IsSprinting(),Chuck->GetVelocity().Size2D(),Chuck->GetStamina(),SprintStaminaAtJump);
+                Check(bOrdinary && Chuck->GetStamina()>=SprintStaminaAtJump-.01f && Chuck->GetStamina()<1.f,TEXT("a sprint jump without a run-up is the ordinary running jump; the sprint ends keeping its stamina"));
+            }
+            if(SprintJumpAt>=0 && StageTime>=SprintJumpAt+1.2f)
+            {
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
                 SprintSub=0; RoofSub=0; TestStage=bSprintOnly ? 115 : 131; StageTime=0;
             }
@@ -3176,13 +3205,88 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Check(bRoofEave,TEXT("a pitched roof's eave can be caught and pulled up onto"));
                 for(TActorIterator<AEnemyRat> Rat(GetWorld()); Rat; ++Rat) Rat->SetActorEnableCollision(true);
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
-                RoofSub=0; TestStage=115; StageTime=0;
+                RoofSub=0; TestStage=bRoofOnly ? 115 : 133; CheeseSub=0; StageTime=0;
+            }
+        }
+    }
+    else if(TestStage==133 && StageTime>.3f)
+    {
+        // The cheese (user 2026-10-08): "if the player somehow makes it to the
+        // cheese in the pantry there should be no way to make it back without
+        // falling into the sky opening". Sub 0: a sprint leap from the cellar
+        // floor reaches it. 1-8: sprint and jump across the crate top (axes and
+        // diagonals, from its far side); 9-16: sprint and jump along the island
+        // floor beside the crate; 17-20: a long side jump off the crate's edge.
+        // Every one of 1-20 must end in the sky.
+        if(CheeseSub==0)
+        {
+            if(APlayerController* CPC=GetWorld()->GetFirstPlayerController()) { Chuck->DisableInput(CPC); CPC->SetViewTarget(Chuck); }
+            CheeseBack=CheeseSky=CheeseLeapsFromIsland=0; CheeseMaxRunup=0; bCheeseArrived=false; CheeseBackWhere.Empty();
+        }
+        const FVector2D C2=DockPantrySkyCentre();
+        const FVector C(C2.X,C2.Y,-320.f);
+        const int32 K=CheeseSub-1;
+        const float Angle=(K%8)*45.f;
+        const FVector Dir=FRotator(0,Angle,0).Vector();
+        const FVector Side=FVector::CrossProduct(FVector::UpVector,Dir);
+        const bool bDiag=(K%2)==1;
+        FVector At; float Yaw=Angle;
+        if(CheeseSub==0) { At=FVector(300,950,-320+34.65f); Yaw=(C-At).GetSafeNormal2D().Rotation().Yaw; }   // from the north-east corner, clear of the racks, rift and ladder
+        else if(CheeseSub<=8) At=C-Dir*(bDiag?46.f:32.f)+FVector(0,0,56+34.f);       // crate top, perched right out on its far edge or corner
+        else if(CheeseSub<=16) At=C+Side*46.f-Dir*30.f+FVector(0,0,34.65f);          // island floor beside the crate
+        else { const FVector Out=FRotator(0,(CheeseSub-17)*90.f,0).Vector(); At=C+Out*18.f+FVector(0,0,56+34.f); Yaw=(CheeseSub-17)*90.f-90.f; }   // crate edge, outward to his right
+        Chuck->ResetAtLocation(At); Chuck->SetActorRotation(FRotator(0,Yaw,0)); Chuck->Recenter();
+        Chuck->SetStamina(1.f); Chuck->SetRunHeld(true);
+        CheeseLeapsBefore=Chuck->GetSprintLeaps(); CheeseJumpAt=-1;
+        TestStage=134; StageTime=0;
+    }
+    else if(TestStage==134)
+    {
+        const FVector2D C2=DockPantrySkyCentre();
+        const FVector P=Chuck->GetActorLocation();
+        const float R=static_cast<float>(FVector2D::Distance(FVector2D(P.X,P.Y),C2));
+        const int32 K=CheeseSub-1;
+        const FVector Dir=CheeseSub==0 ? (FVector(C2.X,C2.Y,0)-FVector(300,950,0)).GetSafeNormal() : FRotator(0,(K%8)*45.f,0).Vector();
+        const float Along=static_cast<float>(FVector::DotProduct(FVector(P.X-C2.X,P.Y-C2.Y,0),Dir));
+        if(CheeseSub<=16)
+        {
+            if(CheeseJumpAt<0) { Chuck->SetTestStickWorld(Dir); Chuck->AddMovementInput(Dir,1); }
+            if(StageTime>=.12f && StageTime-DeltaSeconds<.12f) Chuck->TrySprint();
+            if(CheeseSub>0 && Chuck->IsSprinting()) CheeseMaxRunup=FMath::Max(CheeseMaxRunup,Chuck->GetSprintRunup());
+            const float JumpAt=CheeseSub<=8 ? ((K%2)==1 ? 34.f : 23.f) : 24.f;   // just short of the crate's or the island's far edge
+            const bool bReady=CheeseSub==0 ? R<DockPantrySkyRadius()+12.f : Along>=JumpAt;
+            if(CheeseJumpAt<0 && (bReady || StageTime>3.f)) { Chuck->JumpPressed(); CheeseJumpAt=StageTime; }
+        }
+        else if(CheeseJumpAt<0 && StageTime>=.2f) { Chuck->DodgeToward(FVector2D(1,0)); CheeseJumpAt=StageTime; }
+        const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround() && FCString::Strcmp(Chuck->GetGaitName(),TEXT("Climb"))!=0;
+        const bool bSky=P.Z<-420.f;
+        const bool bFloor=bGround && R>DockPantrySkyRadius()-20.f && FMath::Abs(P.Z-(-320.f+34.65f))<10.f && CheeseJumpAt>=0 && StageTime>CheeseJumpAt+.3f;
+        const bool bIsland=bGround && R<DockPantryIslandRadius()+25.f && P.Z>-320.f && CheeseJumpAt>=0 && StageTime>CheeseJumpAt+.5f;
+        if(bSky || bFloor || bIsland || StageTime>4.f)
+        {
+            const int32 Leaps=Chuck->GetSprintLeaps()-CheeseLeapsBefore;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHEESE_ATTEMPT sub=%d result=%s leaps=%d runup_cm=%.0f p=%s gait=%s"),CheeseSub,bSky?TEXT("sky"):bFloor?TEXT("floor"):bIsland?TEXT("island"):TEXT("other"),Leaps,Chuck->GetSprintRunup(),*P.ToString(),Chuck->GetGaitName());
+            if(CheeseSub==0) bCheeseArrived=bIsland;
+            else
+            {
+                if(bSky) ++CheeseSky;
+                if(bFloor) { ++CheeseBack; CheeseBackWhere+=FString::Printf(TEXT(" %d"),CheeseSub); }
+                CheeseLeapsFromIsland+=Leaps;
+            }
+            if(++CheeseSub<=20) { TestStage=133; StageTime=0; }
+            else
+            {
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_CHEESE_MEASURE arrived=%d back=%d (%s) sky=%d of 20 leaps_from_island=%d max_island_runup_cm=%.0f needed_cm=%.0f"),bCheeseArrived,CheeseBack,*CheeseBackWhere,CheeseSky,CheeseLeapsFromIsland,CheeseMaxRunup,AChuckCharacter::SprintLeapRunup);
+                Check(bCheeseArrived,TEXT("a sprint leap from the cellar floor reaches the cheese's island"));
+                Check(CheeseBack==0 && CheeseLeapsFromIsland==0 && CheeseMaxRunup<AChuckCharacter::SprintLeapRunup,TEXT("off the cheese's island there is no way back: no run-up for a leap, every jump ends in the sky"));
+                Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+                CheeseSub=0; TestStage=115; StageTime=0;
             }
         }
     }
     else if(TestStage==115)
     {
-        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly || bSprintOnly || bRoofOnly)
+        if(bZombieOnly || bWallSideOnly || bPantryOnly || bVaultOnly || bSprintOnly || bRoofOnly || bCheeseOnly)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_TEST_COMPLETE failures=%d"),TestFailures);
             bSmokeTest=false; FPlatformMisc::RequestExitWithStatus(false,TestFailures ? 1 : 0); return;

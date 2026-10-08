@@ -14,3 +14,5 @@ int32 DockPantryHoleAt(const FVector2D& At);
 FVector2D DockPantrySkyCentre();
 float DockPantrySkyRadius();
 float DockPantryIslandRadius();
+/** The broken rim of the pantry's sky hole (not the island's edge): it crumbles, so Chuck can't catch or scramble onto it. */
+bool IsDockPantrySkyRim(const FVector& Edge);
