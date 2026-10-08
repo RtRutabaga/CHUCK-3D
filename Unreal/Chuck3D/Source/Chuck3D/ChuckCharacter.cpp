@@ -392,7 +392,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
     ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;
     LadderIndex = -1; bClimbReverse = false;
-    SprintLeft = SprintWeight = 0; SprintReadyAt = -1e9f;   // a fresh start is a rested rat
+    bSprinting = false; SprintWeight = 0; Stamina = 1.f;   // a fresh start is a rested rat
     SetActorRotation(FRotator(0,ViewYaw,0));
     LookPitch = SmoothLook = FMath::Min(LookPitch, RatPitch);  // keep the chosen height
     Gait = EGait::Idle;
@@ -582,7 +582,7 @@ void AChuckCharacter::StartSprintLeap()
 bool AChuckCharacter::TrySprint()
 {
     auto* Movement = GetCharacterMovement();
-    if (IsSprinting() || GetSprintCooldownLeft() > 0 || IsAstral() || IsTalking() || OwnsCapsule() || Movement->IsFalling() || StrafeHeld()) return false;
+    if (IsSprinting() || Stamina < 1.f || IsAstral() || IsTalking() || OwnsCapsule() || Movement->IsFalling() || StrafeHeld()) return false;
     if (Gait != EGait::Idle && Gait != EGait::Start && Gait != EGait::Loop && Gait != EGait::Stop && Gait != EGait::Land) return false;
     // Action events dispatch before this frame's axes: read the stick directly
     // so a direction pressed together with Ctrl counts. Standing still, the
@@ -593,7 +593,7 @@ bool AChuckCharacter::TrySprint()
         if (R != 0 || F != 0) { InputRight = R; InputForward = F; }
     }
     if (FVector2D(InputRight, InputForward).SizeSquared() <= .04f) return false;
-    SprintLeft = SprintDuration;
+    bSprinting = true;
     ++Sprints;
     bRunHeld = true;   // he comes out of it still running
     bStopPending = false;
@@ -607,8 +607,7 @@ bool AChuckCharacter::TrySprint()
 }
 void AChuckCharacter::EndSprint(bool bShed)
 {
-    SprintLeft = 0;
-    SprintReadyAt = GetWorld()->GetTimeSeconds() + SprintCooldown;
+    bSprinting = false;   // what stamina is left stays, and refills from there
     // Leaps, vaults and wall runs keep their run-speed tuning: the gaps and
     // walls were laid out for it.
     auto* Movement = GetCharacterMovement();
@@ -618,11 +617,11 @@ void AChuckCharacter::EndSprint(bool bShed)
         const FVector Run = Flat.GetSafeNormal() * ChuckClipData::RunSpeed;
         Movement->Velocity = FVector(Run.X, Run.Y, Movement->Velocity.Z);
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s at=%s air_s=%.2f"), Sprints, bShed ? 1 : 0, GetGaitName(), *GetActorLocation().ToString(), SprintAirTime);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s at=%s air_s=%.2f stamina=%.3f"), Sprints, bShed ? 1 : 0, GetGaitName(), *GetActorLocation().ToString(), SprintAirTime, Stamina);
 }
 float AChuckCharacter::GetSprintCooldownLeft() const
 {
-    return IsSprinting() ? SprintCooldown : FMath::Max(0.f, SprintReadyAt - static_cast<float>(GetWorld()->GetTimeSeconds()));
+    return IsSprinting() ? SprintCooldown : (1.f - Stamina) * SprintCooldown;
 }
 void AChuckCharacter::JumpPressed()
 {
@@ -2222,13 +2221,19 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // The sprint runs out, or ends with anything but the plain stride.
     if (IsSprinting())
     {
-        SprintLeft -= DeltaSeconds;
+        Stamina = FMath::Max(0.f, Stamina - DeltaSeconds / SprintDuration);
         const bool bLeaping = Gait == EGait::Air && bSprintLeap;
         SprintAirTime = Movement->IsFalling() && !bLeaping ? SprintAirTime + DeltaSeconds : 0.f;
-        if (SprintLeft <= 0) EndSprint(false);
+        if (Stamina <= 0.f) EndSprint(false);
         else if (bLeaping) {}   // the leap carries the sprint
         else if (Movement->IsFalling()) { if (SprintAirTime > SprintDropGrace) EndSprint(true); }
         else if (Gait != EGait::Loop || bStrafe || !bInput || IsTalking()) EndSprint(false);   // let go of the stick: over
+    }
+    // Not sprinting, whatever he's doing: stamina refills.
+    else if (Stamina < 1.f)
+    {
+        Stamina = FMath::Min(1.f, Stamina + DeltaSeconds / SprintCooldown);
+        if (Stamina >= 1.f) StaminaFullAt = GetWorld()->GetTimeSeconds();
     }
     // A real fall once the sprint is over: out of the frozen gallop into the jump pose.
     if (!IsSprinting() && Gait == EGait::Air && !bSprintLeap && !bRunJump && Base == EClip::WalkLoop) SetClip(EClip::JumpLoop, 0, .15f);

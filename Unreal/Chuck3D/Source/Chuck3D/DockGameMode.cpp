@@ -47,6 +47,8 @@
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Canvas.h"
+#include "CanvasItem.h"
+#include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
 #include "Materials/MaterialInterface.h"
 #include "GameFramework/PlayerStart.h"
@@ -3010,8 +3012,10 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
     else if(TestStage==130)
     {
-        Chuck->SetTestStick(FVector2D(0,1));
-        Chuck->AddMovementInput(FVector(1,0,0),1);   // held throughout, through the leap too
+        // Sub 2 lets go of the stick halfway through its sprint (SprintEndAt marks the release).
+        const bool bPush=SprintSub!=2 || SprintEndAt<0 || SprintRefillS>=0;
+        Chuck->SetTestStick(bPush ? FVector2D(0,1) : FVector2D::ZeroVector);
+        if(bPush) Chuck->AddMovementInput(FVector(1,0,0),1);   // held throughout, through the leap too
         if(SprintStartAt<0 && StageTime>=.3f) { bSprintStarted=Chuck->TrySprint(); SprintStartAt=StageTime; }
         const float Speed=Chuck->GetVelocity().Size2D();
         if(Chuck->IsSprinting())
@@ -3034,12 +3038,12 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Check(bSprintStarted && FMath::Abs(SprintMaxSpeed-ChuckClipData::SprintSpeed)<5.f && SprintMaxWeight>.98f,TEXT("the sprint drops him onto all fours at the authored sprint speed"));
                 Check(FMath::Abs(Lasted-AChuckCharacter::SprintDuration)<.1f && Chuck->GetSprintWeight()<.05f && FMath::Abs(Speed-ChuckClipData::RunSpeed)<10.f,TEXT("the sprint is brief, then he is back up running"));
                 Check(LocoSamples>=5 && LocoMaxSlip<1.f,TEXT("sprinting hind paws hold in stance"));
-                Check(bSprintRefused && FMath::Abs(SprintCooldownSeen-AChuckCharacter::SprintCooldown)<.1f,TEXT("the sprint recovers for ten seconds; a press meanwhile does nothing"));
+                Check(bSprintRefused && FMath::Abs(SprintCooldownSeen-AChuckCharacter::SprintCooldown)<.1f,TEXT("a full sprint empties the stamina: ten seconds to refill, and a press meanwhile does nothing"));
                 // Next: a jump out of a fresh sprint (the reset is a rested start).
                 SprintSub=1; TestStage=129; StageTime=0;
             }
         }
-        else
+        else if(SprintSub==1)
         {
             // A jump at the sprint: the long leap on all fours, landing back into the gallop.
             if(SprintJumpAt<0 && SprintStartAt>=0 && StageTime>=SprintStartAt+.7f)
@@ -3069,6 +3073,32 @@ void ADockGameMode::Tick(float DeltaSeconds)
             if(((SprintLandAt>=0 && StageTime>SprintLandAt+.3f) || (SprintJumpAt>=0 && StageTime>SprintJumpAt+2.f)) && SprintJumpAt>=0)
             {
                 if(SprintLandAt<0) { UE_LOG(LogTemp,Display,TEXT("CHUCK_SPRINT_LEAP_MEASURE no landing seen=%d"),bSprintLeapSeen); Check(false,TEXT("a jump at a sprint is a long leap, about two and a half times the running jump")); Check(false,TEXT("the sprint leap lands back into the gallop")); }
+                // Next: a sprint cut short (the reset is a rested start).
+                SprintSub=2; SprintStaminaLeft=SprintRefillS=SprintRefillFrom=-1; bSprintRestart=false; TestStage=129; StageTime=0;
+            }
+        }
+        else
+        {
+            // Half the sprint, then let go: half the stamina is left, it refills
+            // in half the time, and only once it's full can he sprint again.
+            if(SprintEndAt<0 && SprintStartAt>=0 && StageTime>=SprintStartAt+AChuckCharacter::SprintDuration*.5f) SprintEndAt=StageTime;
+            if(SprintEndAt>=0 && SprintStaminaLeft<0 && !Chuck->IsSprinting())
+            {
+                SprintStaminaLeft=Chuck->GetStamina(); SprintRefillFrom=StageTime;
+                Chuck->SetTestStick(FVector2D(0,1)); bSprintRefused=!Chuck->TrySprint(); Chuck->SetTestStick(FVector2D::ZeroVector);
+            }
+            if(SprintStaminaLeft>=0 && SprintRefillS<0 && Chuck->GetStamina()>=1.f) { SprintRefillS=StageTime-SprintRefillFrom; SprintJumpAt=StageTime; }
+            // The HUD ring: part full while refilling, then its shine on coming back to full.
+            if(SprintRefillFrom>=0 && StageTime>=SprintRefillFrom+1.f && StageTime-DeltaSeconds<SprintRefillFrom+1.f)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Stamina_Refilling.png"),true,false);
+            if(SprintRefillS>=0 && StageTime>=SprintJumpAt+.4f && StageTime-DeltaSeconds<SprintJumpAt+.4f)
+                FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Screenshots/Windows/Stamina_FullShine.png"),true,false);
+            if(SprintRefillS>=0 && !bSprintRestart && StageTime>=SprintJumpAt+.45f) bSprintRestart=Chuck->TrySprint();
+            if((SprintRefillS>=0 && StageTime>=SprintJumpAt+.7f) || StageTime>12.f)
+            {
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_STAMINA_MEASURE left=%.3f expected=%.3f refused=%d refill_s=%.2f expected_s=%.2f restart=%d"),SprintStaminaLeft,.5f,bSprintRefused,SprintRefillS,AChuckCharacter::SprintCooldown*.5f,bSprintRestart);
+                Check(FMath::Abs(SprintStaminaLeft-.5f)<.04f && bSprintRefused,TEXT("a sprint cut short keeps its stamina: half used leaves half, and no sprint until it's full"));
+                Check(FMath::Abs(SprintRefillS-AChuckCharacter::SprintCooldown*(1.f-SprintStaminaLeft))<.15f && bSprintRestart,TEXT("half the stamina refills in half the time, then he can sprint again"));
                 Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
                 SprintSub=0; RoofSub=0; TestStage=bSprintOnly ? 115 : 131; StageTime=0;
             }
@@ -3424,6 +3454,78 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
 }
 
+void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
+{
+    // The stamina ring (References/ArtDirection/Chuck-Stamina-Icon.png): the
+    // white paw emblem inside a purple ring that starts thick and rounded just
+    // right of twelve o'clock and tapers clockwise to a hairline at about
+    // eleven (measured from the icon: 76 -> 2 px over 2..341 degrees of a
+    // 400 px outer radius, magenta to violet). The ring is drawn here so it can
+    // show the stamina left: it retracts toward its head as he sprints and grows
+    // back clockwise as it refills. Full: the emblem is bright and the ring
+    // shines purple for a moment; charging: the emblem is dimmed.
+    if(!StaminaEmblem) StaminaEmblem=LoadObject<UTexture2D>(nullptr,TEXT("/Game/Art/UI/T_StaminaEmblem.T_StaminaEmblem"));
+    const float Stamina=Chuck->GetStamina();
+    const float Outer=6.f*Px;
+    const FVector2D Centre(Canvas->SizeX-4*Px-Outer,Top+Outer);
+    constexpr float Start=2.f, End=341.f;
+    const auto Width=[&](float T){ return FMath::Max(.8f,Outer*(.19f*FMath::Pow(1.f-T,1.1f)+.005f)); };
+    const auto At=[&](float T,float R)
+    {
+        const float A=FMath::DegreesToRadians(Start+(End-Start)*T);
+        return FVector2D(Centre.X+R*FMath::Sin(A),Centre.Y-R*FMath::Cos(A));
+    };
+    const auto Colour=[](float T)
+    {
+        const FLinearColor Head(FColor(217,61,254)), Mid(FColor(150,32,252)), Tail(FColor(172,36,254));
+        return T<.5f ? FMath::Lerp(Head,Mid,T*2.f) : FMath::Lerp(Mid,Tail,(T-.5f)*2.f);
+    };
+    // The band from the head (T 0) to T1, Grow px wider each side, as triangles.
+    const auto Band=[&](float T1,float Grow,TFunctionRef<FLinearColor(float)> Tint,ESimpleElementBlendMode Blend)
+    {
+        if(T1<=0.f) return;
+        TArray<FCanvasUVTri> Tris;
+        const int32 Segments=FMath::Max(2,FMath::CeilToInt(96*T1));
+        for(int32 I=0;I<Segments;++I)
+        {
+            const float T0=T1*I/Segments, TN=T1*(I+1)/Segments;
+            const FVector2D O0=At(T0,Outer+Grow), I0=At(T0,Outer-Width(T0)-Grow), O1=At(TN,Outer+Grow), I1=At(TN,Outer-Width(TN)-Grow);
+            FCanvasUVTri A,B;
+            A.V0_Pos=O0; A.V1_Pos=I0; A.V2_Pos=O1; B.V0_Pos=I0; B.V1_Pos=I1; B.V2_Pos=O1;
+            A.V0_Color=A.V1_Color=B.V0_Color=Tint(T0); A.V2_Color=B.V1_Color=B.V2_Color=Tint(TN);
+            Tris.Add(A); Tris.Add(B);
+        }
+        // The rounded head: a fan round the band's middle at its start.
+        const float HeadR=Width(0.f)*.5f+Grow;
+        const FVector2D HeadC=At(0.f,Outer-Width(0.f)*.5f);
+        for(int32 I=0;I<16;++I)
+        {
+            const float A0=2*PI*I/16, A1=2*PI*(I+1)/16;
+            FCanvasUVTri F;
+            F.V0_Pos=HeadC; F.V1_Pos=HeadC+HeadR*FVector2D(FMath::Cos(A0),FMath::Sin(A0)); F.V2_Pos=HeadC+HeadR*FVector2D(FMath::Cos(A1),FMath::Sin(A1));
+            F.V0_Color=F.V1_Color=F.V2_Color=Tint(0.f);
+            Tris.Add(F);
+        }
+        FCanvasTriangleItem Item(Tris,GWhiteTexture);
+        Item.BlendMode=Blend;
+        Canvas->DrawItem(Item);
+    };
+    // A faint track for the part that's spent, then what's left.
+    Band(1.f,0.f,[](float){ return FLinearColor(.24f,.08f,.36f,.22f); },SE_BLEND_Translucent);
+    Band(Stamina,0.f,[&](float T){ return Colour(T); },SE_BLEND_Translucent);
+    // Just full again: a brief purple shine over the ring and the emblem.
+    const float Since=GetWorld()->GetTimeSeconds()-Chuck->GetStaminaFullAt();
+    const float Shine=Stamina>=1.f && Since>=0.f && Since<.9f ? FMath::Sin(PI*Since/.9f) : 0.f;
+    if(Shine>0.f) Band(1.f,.6f*Px*Shine,[&](float T){ FLinearColor C=Colour(T)*(.32f*Shine); C.A=1.f; return C; },SE_BLEND_Additive);
+    if(StaminaEmblem)
+    {
+        const float Size=Outer*1.6f;   // the emblem fills the ring's inner disc (320 of 400 in the icon)
+        const FLinearColor Ready=FMath::Lerp(FLinearColor::White,FLinearColor(FColor(226,150,255)),.4f*Shine);
+        const FLinearColor Tint=Stamina>=1.f ? Ready : FLinearColor(.85f,.85f,.88f,.55f);
+        DrawTexture(StaminaEmblem,Centre.X-Size*.5f,Centre.Y-Size*.5f,Size,Size,0,0,1,1,Tint,BLEND_Translucent);
+    }
+}
+
 void ADockHUD::DrawHUD()
 {
     Super::DrawHUD();
@@ -3451,6 +3553,7 @@ void ADockHUD::DrawHUD()
     DrawText(Count,FLinearColor(.94f,.94f,.9f,.8f),CountX,CigY-Px*.5f,GEngine->GetSmallFont(),Px*.4f);
     DrawRect(FLinearColor(FColor(236,236,228)),CountX-12*Px,CigY+Px,7*Px,3*Px);
     DrawRect(FLinearColor(FColor(214,168,110)),CountX-12*Px,CigY+Px,2*Px,3*Px);
+    DrawStamina(Chuck,Px,CigY+FMath::Max(CountH,5*Px)+2*Px);
     // Talk: a quiet prompt near the top in reach (as in the 2D game), and a
     // plain dialogue box near the bottom while someone's speaking.
     // Overheard talk (the tavern at night: nobody to press F to) gets the same box, without the prompt.

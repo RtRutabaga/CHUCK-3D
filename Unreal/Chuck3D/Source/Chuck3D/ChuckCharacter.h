@@ -171,20 +171,28 @@ public:
     /** Current saunter -> run blend (0..1). */
     float GetRunWeight() const { return RunWeight; }
     // The sprint (user 2026-10-07): Left Ctrl / left stick click while moving
-    // drops him onto all fours for a brief burst at SprintSpeed, then about ten
-    // seconds before he can do it again. No HUD: a press while it recovers does
-    // nothing. Jumping, dodging, strafing, letting go of the stick or leaving
-    // the ground ends it early (the recovery still applies).
-    static constexpr float SprintDuration = 2.5f;   // s on all fours
-    static constexpr float SprintCooldown = 10.f;   // s after it ends
+    // drops him onto all fours for a brief burst at SprintSpeed. Stamina (the
+    // purple ring in the HUD, user 2026-10-08): he can only start a sprint with
+    // it full; sprinting drains it in SprintDuration, and anything else refills
+    // it in SprintCooldown from empty (running and jumping too). A sprint that
+    // ends early (a dodge, strafing, letting go, a fall) keeps what's left, so
+    // half a sprint used refills in half the time.
+    static constexpr float SprintDuration = 2.5f;   // s on all fours, from full stamina
+    static constexpr float SprintCooldown = 10.f;   // s to refill from empty
     static constexpr float SprintAcceleration = 1100.f;   // cm/s2 into the burst (walk/run: 550)
     static constexpr float SprintDropGrace = .2f;   // s off the ground (a step down) before a fall ends it
     /** Start the sprint if he can (tests and the input). */
     bool TrySprint();
-    bool IsSprinting() const { return SprintLeft > 0; }
+    bool IsSprinting() const { return bSprinting; }
+    /** Sprint stamina 0..1 (1: a sprint can start). */
+    float GetStamina() const { return Stamina; }
+    /** World time stamina last came back to full (the HUD's brief shine). */
+    float GetStaminaFullAt() const { return StaminaFullAt; }
+    /** Tests: set the stamina directly. */
+    void SetStamina(float Value) { Stamina = FMath::Clamp(Value, 0.f, 1.f); }
     /** Run -> four-legged sprint pose blend (0..1). */
     float GetSprintWeight() const { return SprintWeight; }
-    /** Seconds until the sprint can start again (0: ready). */
+    /** Seconds until stamina is full again (0: ready; a full refill while sprinting). */
     float GetSprintCooldownLeft() const;
     int32 GetSprints() const { return Sprints; }
     // The sprint leap (user 2026-10-07): a plain jump at a sprint keeps the
@@ -307,8 +315,9 @@ private:
     bool bRunHeld = false;
     float RunWeight = 0;
     bool bRunJump = false;
-    float SprintLeft = 0;        // s of sprint remaining (0: not sprinting)
-    float SprintReadyAt = -1e9f; // world time the next sprint may start
+    bool bSprinting = false;
+    float Stamina = 1.f;
+    float StaminaFullAt = -1e9f;
     float SprintWeight = 0;
     int32 Sprints = 0;
     bool bSprintLeapPending = false;   // jump pressed at a sprint, not yet off the ground

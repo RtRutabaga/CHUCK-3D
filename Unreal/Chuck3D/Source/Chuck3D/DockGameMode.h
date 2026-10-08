@@ -126,6 +126,9 @@ private:
     FVector SprintLeapFrom = FVector::ZeroVector;
     float SprintLeapRise = 0, SprintLandAt = -1, SprintLeapDistance = 0;
     bool bSprintLeapSeen = false;
+    // Stamina carried over a sprint cut short: what's left, how long the refill took, a sprint once full.
+    float SprintStaminaLeft = -1, SprintRefillS = -1, SprintRefillFrom = -1;
+    bool bSprintRestart = false;
     // The roof tests: sprint leaps between the workshop roofs, a house's gable end and eave.
     bool bRoofOnly = false, bRoofFlag = false, bRoofAttic = false;
     int32 RoofSub = 0, RoofPullUpsBefore = 0, RoofScramblesBefore = 0, RoofHangsBefore = 0;
@@ -177,4 +180,7 @@ private:
     TWeakObjectPtr<UWorld> MenuTestWorld;
     void ShowTitleMenu();
     void ShowMenu(bool Checkpoints);
+    /** The stamina ring under the cigarette count (user 2026-10-08). */
+    void DrawStamina(const class AChuckCharacter* Chuck, float Px, float Top);
+    UPROPERTY() class UTexture2D* StaminaEmblem = nullptr;
 };
