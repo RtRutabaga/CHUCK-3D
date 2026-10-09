@@ -27,8 +27,8 @@ $leapLog=Join-Path $evidence ('verify-leap-rift-'+(Get-Date -Format 'yyyyMMdd-HH
 $leapArguments=@('-ChuckLeapRiftTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$leapLog+'"'))
 if (!$NoCapture) { $leapArguments+='-ChuckLeapRiftMotionCapture' }
 $leapProcess=Start-Process -FilePath $game -ArgumentList $leapArguments -WindowStyle Hidden -Wait -PassThru
-if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CHUCK_LEAPRIFT_TEST_COMPLETE failures=0 trials=6 sprint=1 ordinary=3 wall_assisted=2' -Quiet)) {
-    throw "Sprint-only Astral gap traversal verification failed. Inspect $leapLog"
+if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CHUCK_LEAPRIFT_TEST_COMPLETE failures=0 trials=6 sprint=1 ordinary=3 wall_assisted=2 bypass_allowed=1' -Quiet)) {
+    throw "Astral floor gap traversal verification failed. Inspect $leapLog"
 }
 # Lamp alleys (user 2026-10-09): chimney climbs caught at the eave and pulled up
 # onto each alley's roof, a wall jump caught by a lantern ring, brachiation down
@@ -43,7 +43,7 @@ $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hid
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
-$leapGeometry=Select-String -LiteralPath $log -Pattern 'CHUCK_LEAPRIFT_GEOMETRY failures=0 floor_holes=9 wall_clearance_samples=18 length_cm=260 after_chamber=1'
+$leapGeometry=Select-String -LiteralPath $log -Pattern 'CHUCK_LEAPRIFT_GEOMETRY failures=0 floor_holes=9 solid_camera_walls=26 length_cm=260 after_chamber=1'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
 $wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=15 grips=15 swing_grips=15 clear_swings=12 collision=0'
 $streetCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKSTREET_CHECK failures=0 floors=10 routes=9 buildings=8 boundary=1'
@@ -85,7 +85,7 @@ $smithVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE Blacksmith
 $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED body=1 barrel=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {178} else {179}
-if (!$leapGeometry) { throw "Sprint-only gap geometry verification failed. Inspect $log" }
+if (!$leapGeometry) { throw "Astral floor gap geometry verification failed. Inspect $log" }
 if (!$wallLampsCompleted) { throw "Wall lamp geometry verification failed. Inspect $log" }
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$guardVoice -or !$plazaGuardVoice -or !$sideGuardVoice -or !$sailorVoice -or !$workerVoice -or !$elfVoice -or !$marketVoice -or !$alchemistVoice -or !$smithVoice -or !$keeperCompleted -or !$sailorCompleted -or !$bobertCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }

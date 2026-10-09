@@ -126,13 +126,13 @@ void StartSewerLeapRiftReview(UWorld* World)
             if(Run->Crossed || Fell || Run->Time>6.f || (Run->JumpAt>=0 && Run->Time>Run->JumpAt+(Run->Trial>=4?5.f:3.f)))
             {
                 const bool Pass=Run->Trial==0 ? Run->Crossed && Run->SeenLeap && !Fell && Run->Runup>=AChuckCharacter::SprintLeapRunup
-                    : !Run->Crossed && Fell && Run->JumpAt>=0 && Chuck->GetSprintLeaps()==Run->Leaps && (Run->Trial<4 ? Run->SeenRunJump : Run->SeenWall);
+                    : (Run->Crossed || Fell) && Run->JumpAt>=0 && Chuck->GetSprintLeaps()==Run->Leaps && (Run->Trial<4 ? Run->SeenRunJump : Run->SeenWall);
                 Run->Failures+=!Pass;
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_TRIAL trial=%d pass=%d crossed=%d fell=%d leap=%d wall=%d run_jump=%d peak_cm=%.1f p=%s"),Run->Trial,Pass,Run->Crossed,Fell,Run->SeenLeap,Run->SeenWall,Run->SeenRunJump,Run->Peak,*P.ToString());
                 ++Run->Trial;Run->Started=false;
                 if(Run->Trial==6)
                 {
-                    UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_TEST_COMPLETE failures=%d trials=6 sprint=1 ordinary=3 wall_assisted=2"),Run->Failures);
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_TEST_COMPLETE failures=%d trials=6 sprint=1 ordinary=3 wall_assisted=2 bypass_allowed=1"),Run->Failures);
                     World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
                 }
             }

@@ -38,9 +38,8 @@ float Chamber(int32 I)
     return U*U*(3.f-2.f*U);
 }
 constexpr int32 WallRiftStart=222, WallRiftSpan=3, NarrowCentre=224;
-constexpr int32 LeapRiftStart=306, LeapRiftSpan=4, LeapWallCutPadding=5;
+constexpr int32 LeapRiftStart=306, LeapRiftSpan=4;
 bool LeapRiftSegment(int32 I) { return I>=LeapRiftStart && I<LeapRiftStart+LeapRiftSpan; }
-bool LeapWallCut(int32 I) { return I>=LeapRiftStart-LeapWallCutPadding && I<LeapRiftStart+LeapRiftSpan+LeapWallCutPadding; }
 bool WallRiftSegment(int32 I) { return I>=WallRiftStart && I<WallRiftStart+WallRiftSpan; }
 float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-NarrowCentre))); }
 float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),70.f,Narrow(I)); }
@@ -232,16 +231,10 @@ void BuildDockSewer(UWorld* World)
     // Running water (Claude, Tools/create_sewer_water_material.py); the older painted stream is the fallback.
     auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerWater.M_SewerWater"));
     if(!Stream) Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
-    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true,bool CameraOnly=false)
+    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
         Mesh->bUseComplexAsSimpleCollision=true; Mesh->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
-        if(CameraOnly)
-        {
-            Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-            Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
-            Mesh->SetCollisionResponseToChannel(ECC_Camera,ECR_Block);
-        }
         Mesh->SetLightingChannels(false,true,false);
         Mesh->RegisterComponent();
         // Render the enclosing shell from either side without changing the
@@ -257,7 +250,7 @@ void BuildDockSewer(UWorld* World)
             Normals[A]+=Face;Normals[B]+=Face;Normals[C]+=Face;
         }
         for(int32 I=0;I<Normals.Num();++I) Normals[I]=Normals[I].IsNearlyZero()?N[I]:Normals[I].GetSafeNormal();
-        Mesh->CreateMeshSection_LinearColor(0,V,Faces,Normals,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid || CameraOnly);
+        Mesh->CreateMeshSection_LinearColor(0,V,Faces,Normals,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
         Mesh->SetMaterial(0,Mat);
         return Mesh;
     };
@@ -287,8 +280,6 @@ void BuildDockSewer(UWorld* World)
         // Leave the entry shaft unroofed over its landing chamber.
         const FVector Mid=(V[A]+V[B]+V[C]+V[D])*.25f;
         if(FVector::Dist2D(Mid,Shaft)<150 && Mid.Z>FloorZ+220) continue;
-        // The tear eats the low side walls on both approaches: no wall-run bypass.
-        if(LeapWallCut(I) && (J<8 || J>=Arc-8)) continue;
         T.Append({A,B,C,B,D,C});
     }
     MakeMesh(V,T,N,UV,Stone,true);
@@ -400,12 +391,15 @@ void BuildDockSewer(UWorld* World)
             // this wall-to-wall opening with a straight rectangular space plane.
             for(int32 End=0;End<2;++End) for(int32 C=0;C<FloorColumns;++C)
             {
-                const float Sample=StartIndex+End*Span+.18f*FMath::Sin(C*2.3f);
+                const float Sample=StartIndex+End*Span+(StartIndex==LeapRiftStart?0.f:.18f*FMath::Sin(C*2.3f));
                 const int32 I=FMath::FloorToInt(Sample);const float F=Sample-I;
                 const float W=FMath::Lerp(Width(I),Width(I+1),F),O=StreamOffset(Sample);
                 const float X[]={-W-35,FMath::Lerp(-W-35,O-55,.35f),FMath::Lerp(-W-35,O-55,.7f),
                     O-55,O-45.1f,O-31.9f,O+31.9f,O+45.1f,O+55,FMath::Lerp(O+55,W+35,.3f),FMath::Lerp(O+55,W+35,.65f),W+35};
-                BrokenCaps.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*X[C]);
+                FVector Lip=FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*X[C];
+                if(StartIndex==LeapRiftStart)
+                    Lip+=LeapAlong*(End*LeapLength-FVector::DotProduct(Lip-LeapNear,LeapAlong));
+                BrokenCaps.Add(Lip);
             }
             Edges.Reset();
             for(int32 Row=0;Row<=Rows;++Row) Edges.Add(LongEdges[Row]);
@@ -437,96 +431,54 @@ void BuildDockSewer(UWorld* World)
         const int32 Bottom=V.Num();V.Add(Centre+FVector(0,0,-300));N.Add(FVector::UpVector);UV.Add(FVector2D(.5,.5));
         for(int32 I=0;I<Edges.Num();++I) {const int32 A=I*2,B=((I+1)%Edges.Num())*2;T.Append({Top,A,B,Bottom,B+1,A+1});}
         MakeMesh(V,T,N,UV,Astral,false,false);
-        // Two upright, curved edge veils. No broad horizontal floating sheets.
-        V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(int32 SideIndex=0;SideIndex<2;++SideIndex)
+        // Other ruptures keep their edge veils; this leap has only Astral floor.
+        if(StartIndex!=LeapRiftStart)
         {
-            const int32 Base=V.Num();
-            for(int32 Row=0;Row<=Rows;++Row) for(int32 Level=0;Level<=Levels;++Level)
+            // Two upright, curved edge veils. No broad horizontal floating sheets.
+            V.Reset();N.Reset();T.Reset();UV.Reset();
+            for(int32 SideIndex=0;SideIndex<2;++SideIndex)
             {
-                const float U=Row/float(Rows),H=Level/float(Levels);
-                const FVector Edge=LongEdges[SideIndex*(Rows+1)+Row],In=(Centre-Edge).GetSafeNormal2D();
-                V.Add(Edge+In*(H*H*12*Scale*FMath::Sin(U*13+SideIndex))+FVector(0,0,3+H*Scale*(105+15*FMath::Sin(U*11+SideIndex))));
-                N.Add(In);UV.Add(FVector2D(U,H));
+                const int32 Base=V.Num();
+                for(int32 Row=0;Row<=Rows;++Row) for(int32 Level=0;Level<=Levels;++Level)
+                {
+                    const float U=Row/float(Rows),H=Level/float(Levels);
+                    const FVector Edge=LongEdges[SideIndex*(Rows+1)+Row],In=(Centre-Edge).GetSafeNormal2D();
+                    V.Add(Edge+In*(H*H*12*Scale*FMath::Sin(U*13+SideIndex))+FVector(0,0,3+H*Scale*(105+15*FMath::Sin(U*11+SideIndex))));
+                    N.Add(In);UV.Add(FVector2D(U,H));
+                }
+                for(int32 Row=0;Row<Rows;++Row) for(int32 Level=0;Level<Levels;++Level)
+                {const int32 A=Base+Row*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
             }
-            for(int32 Row=0;Row<Rows;++Row) for(int32 Level=0;Level<Levels;++Level)
-            {const int32 A=Base+Row*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
-        }
-        // Low, fading distortion at the ragged transverse ends of this break,
-        // as well as the ordinary veils along its buried side edges.
-        for(int32 End=0;End<BrokenCaps.Num()/FloorColumns;++End)
-        {
-            const int32 Base=V.Num();
-            for(int32 C=0;C<FloorColumns;++C) for(int32 Level=0;Level<=Levels;++Level)
+            // Low, fading distortion at the ragged transverse ends of this break,
+            // as well as the ordinary veils along its buried side edges.
+            for(int32 End=0;End<BrokenCaps.Num()/FloorColumns;++End)
             {
-                const float U=C/float(FloorColumns-1),H=Level/float(Levels);
-                const FVector Edge=BrokenCaps[End*FloorColumns+C],In=(Centre-Edge).GetSafeNormal2D();
-                V.Add(Edge+In*(H*H*8*FMath::Sin(U*13))+FVector(0,0,3+H*(60+10*FMath::Sin(U*11))));
-                N.Add(In);UV.Add(FVector2D(U,H));
+                const int32 Base=V.Num();
+                for(int32 C=0;C<FloorColumns;++C) for(int32 Level=0;Level<=Levels;++Level)
+                {
+                    const float U=C/float(FloorColumns-1),H=Level/float(Levels);
+                    const FVector Edge=BrokenCaps[End*FloorColumns+C],In=(Centre-Edge).GetSafeNormal2D();
+                    V.Add(Edge+In*(H*H*8*FMath::Sin(U*13))+FVector(0,0,3+H*(60+10*FMath::Sin(U*11))));
+                    N.Add(In);UV.Add(FVector2D(U,H));
+                }
+                for(int32 C=0;C<FloorColumns-1;++C) for(int32 Level=0;Level<Levels;++Level)
+                {const int32 A=Base+C*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
             }
-            for(int32 C=0;C<FloorColumns-1;++C) for(int32 Level=0;Level<Levels;++Level)
-            {const int32 A=Base+C*(Levels+1)+Level;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
+            if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         }
-        if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerNoMist"))) MakeMesh(V,T,N,UV,Oil,false,false);
         const FVector P=Centre+FVector(0,0,25);
         auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(P);
         Lamp->SetIntensity(Span==2?850:1800);Lamp->SetAttenuationRadius(Span==2?300:460);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
-    // Astral walls stop the spring-arm camera while ignoring movement probes.
-    int32 AstralCameraFailures=0,AstralCameraSamples=0;
+    // A horizontal depth beneath the floor closes seams between the straight
+    // jump lips and curved banks. No upright Astral panels or collision.
     const FVector LeapAcross(-LeapAlong.Y,LeapAlong.X,0);
-    for(float Side : {-1.f,1.f})
-    {
-        V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(int32 I=LeapRiftStart-LeapWallCutPadding-3;I<=LeapRiftStart+LeapRiftSpan+LeapWallCutPadding+3;++I)
-        {
-            // Keep the tear planar: spline-offset panels fold into fins here.
-            const FVector P=LeapNear+LeapAlong*FVector::DotProduct(Route[I]-LeapNear,LeapAlong)+LeapAcross*(Side*185.f);
-            for(float Z : {-300.f,370.f})
-            { V.Add(P+FVector(0,0,Z));N.Add(-Right[I]*Side);UV.Add(FVector2D(I*.17f,(Z+300)/670)); }
-            if(I>LeapRiftStart-LeapWallCutPadding-3)
-            { const int32 A=V.Num()-4;T.Append({A,A+1,A+2,A+1,A+3,A+2}); }
-        }
-        auto* Wall=MakeMesh(V,T,N,UV,Astral,false,true,true);
-        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLeapRiftCapture")))
-        {
-            for(int32 I=LeapRiftStart;I<LeapRiftStart+3;++I)
-            {
-                const int32 A=(I-(LeapRiftStart-LeapWallCutPadding-3))*2;
-                const FVector P=(V[A]+V[A+2])*.5f+FVector(0,0,400);
-                const FVector Normal=-LeapAcross*Side;
-                FHitResult Hit;
-                if(!World->SweepSingleByChannel(Hit,P+Normal*15,P-Normal*15,FQuat::Identity,ECC_Camera,FCollisionShape::MakeSphere(3)) || Hit.GetComponent()!=Wall) ++AstralCameraFailures;
-                ++AstralCameraSamples;
-            }
-            if(Wall->GetCollisionResponseToChannel(ECC_Pawn)!=ECR_Ignore || Wall->GetCollisionResponseToChannel(ECC_Visibility)!=ECR_Ignore) ++AstralCameraFailures;
-        }
-    }
-    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLeapRiftCapture")))
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_CAMERA_CHECK failures=%d walls=2 camera_samples=%d"),AstralCameraFailures,AstralCameraSamples);
-    // A recessed depth behind the torn lips closes views of the outdoor sky
-    // beneath the floor; it never supplies a walking or wall-running surface.
     V.Reset();N.Reset();T.Reset();UV.Reset();
     for(float End : {-650.f,LeapLength+650.f}) for(float Side : {-650.f,650.f})
-    {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,-300));N.Add(FVector::UpVector);UV.Add(FVector2D(End/500,Side/500));}
+    {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,-30));N.Add(FVector::UpVector);UV.Add(FVector2D(End/500,Side/500));}
     T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
-    // Back the straight tear with distant depths behind the bent rock ends.
-    for(float End : {-650.f,LeapLength+650.f})
-    {
-        V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(float Side : {-650.f,650.f}) for(float Z : {-300.f,500.f})
-        {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,Z));N.Add(LeapAlong);UV.Add(FVector2D(Side/500,Z/500));}
-        T.Append({0,1,2,1,3,2});MakeMesh(V,T,N,UV,Astral,false);
-    }
-    for(float End : {-10.f,LeapLength+10.f})
-    {
-        V.Reset();N.Reset();T.Reset();UV.Reset();
-        for(float Side : {-500.f,500.f}) for(float Z : {-300.f,0.f})
-        {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,Z));N.Add(LeapAlong);UV.Add(FVector2D(Side/500,Z/300));}
-        T.Append({0,1,2,1,3,2});MakeMesh(V,T,N,UV,Astral,false);
-    }
     // Soft cinematic night fill, without visible lamps or hot spots. Purple
     // remains the only light visibly emanating from an object in the cave.
     int32 FillLights=0;
@@ -608,7 +560,6 @@ void BuildDockSewer(UWorld* World)
         int32 CaveFailures=0,WallChecks=0;
         for(int32 I=12;I<Count-12;I+=12) for(float Side : {-1.f,1.f})
         {
-            if(LeapWallCut(I)) continue;
             FHitResult Hit;const FVector P=Route[I]+FVector(0,0,75);
             if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+70)),ECC_Visibility))
             {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_WALL_MISS sample=%d side=%.0f"),I,Side);}
@@ -647,15 +598,17 @@ void BuildDockSewer(UWorld* World)
         int32 LeapFailures=0;
         for(int32 I=LeapRiftStart+1;I<LeapRiftStart+LeapRiftSpan;++I) for(float Side : {-1.f,0.f,1.f})
         {
-            FHitResult Hit;const FVector P=Route[I]+Right[I]*(Side*(Width(I)-20));
+            // The restored inner rock wall narrows this bend: probe the usable
+            // opening rather than the nominal floor width behind that wall.
+            FHitResult Hit;const FVector P=Route[I]+Right[I]*(Side*(WallWidth(I,Side)-55));
             if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,160),ECC_Visibility)) { ++LeapFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_FLOOR_HIT sample=%d side=%.0f p=%s hit=%s normal=%s"),I,Side,*P.ToString(),*Hit.ImpactPoint.ToString(),*Hit.ImpactNormal.ToString()); }
         }
         for(int32 I=LeapRiftStart-4;I<=LeapRiftStart+LeapRiftSpan+4;++I) for(float Side : {-1.f,1.f})
         {
             FHitResult Hit;const FVector P=Route[I]+FVector(0,0,100);
-            if(World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+65)),ECC_Visibility)) { ++LeapFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_WALL_HIT sample=%d side=%.0f p=%s hit=%s normal=%s"),I,Side,*P.ToString(),*Hit.ImpactPoint.ToString(),*Hit.ImpactNormal.ToString()); }
+            if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+200)),ECC_Camera)) { ++LeapFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_WALL_MISSING sample=%d side=%.0f p=%s"),I,Side,*P.ToString()); }
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_GEOMETRY failures=%d floor_holes=9 wall_clearance_samples=18 length_cm=260 after_chamber=1"),LeapFailures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_GEOMETRY failures=%d floor_holes=9 solid_camera_walls=26 length_cm=260 after_chamber=1"),LeapFailures);
         if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerGeometryOnly")))
         {FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},1.f,false);}
     }

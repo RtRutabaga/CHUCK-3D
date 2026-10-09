@@ -1,6 +1,6 @@
 # Waterdeep movement and camera milestone
 
-October 9: farther past the wide sewer zombie chamber, a new 2.60 m full-width Astral gap requires the four-legged sprint leap. Lower side walls are interrupted to prevent wall-run bypasses. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for verified package evidence.
+October 9: farther past the wide sewer zombie chamber, a new 2.60 m full-width Astral gap encourages the four-legged sprint leap. Only the Astral floor opening remains there; stone side walls are restored and bypasses are allowed. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for verified package evidence.
 
 Square timber shops: five existing workshops now have staggered weathered shake cladding and flat plank roofs with overhanging eaves/fascia. Roof collision follows the new top, 5 cm above the previous landing; doors, windows and parkour routes remain. See WEATHERED-TIMBER.md and HANDOFF for verified launcher evidence.
 
