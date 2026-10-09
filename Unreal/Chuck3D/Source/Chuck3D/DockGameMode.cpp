@@ -3721,9 +3721,8 @@ void ADockHUD::DrawHUD()
             UE_LOG(LogTemp,Display,TEXT("CHUCK_SUBTITLE_CUE t=%.2f speaker=%s rows=%d fits=%d text=%s"),GetWorld()->GetTimeSeconds(),*Speaker,Rows.Num(),Fits,*Line);
         }
         for(int32 I=0;I<Rows.Num();++I) Centre(Rows[I],Top+I*RowH,Font,FLinearColor(.97f,.95f,.90f));
-        // Speaker and close control remain small; the spoken sentence leads.
+        // Only the spoken sentence and the small close control are displayed.
         const FSlateFontInfo Small=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(16.f*UiScale));
-        Centre(Speaker,Top-24.f*UiScale,Small,FLinearColor(.85f,.81f,.93f,.9f));
         if(bTalk) Centre(TEXT("F / Y"),Bottom+12.f*UiScale,Small,FLinearColor(.8f,.8f,.8f,.8f));
     }
     else if(Chuck->GetTalkPrompt())
