@@ -19,6 +19,8 @@
 #include "EnemyRat.h"
 #include "AstralSummon.h"
 #include "DockNPC.h"
+#include "DockSubtitles.h"
+#include "NPCVoiceData.h"
 #include "Components/SkinnedMeshComponent.h"
 
 #include "Components/AudioComponent.h"
@@ -601,6 +603,32 @@ void ADockGameMode::StartPlay()
     const FString MenuStart=UGameplayStatics::ParseOption(OptionsString,TEXT("ChuckStart"));
     if(!MenuStart.IsEmpty()) StartFromMenu(MenuStart);
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
+    if(bSmokeTest)
+    {
+        bool Readable=true, Alchemist=false, Elder=false;
+        int32 CueCount=0;
+        for(const NPCVoiceData::FLine& Voice : NPCVoiceData::Lines)
+        {
+            const float Pause=FCString::Strcmp(Voice.Npc,TEXT("Blacksmith"))==0 ? 1.8f : 0.f;
+            const auto Parts=DockSubtitles::Split(Voice.Text);
+            const auto Cues=DockSubtitles::Group(Parts,Voice.Seconds-Pause);
+            int32 Total=0, Grouped=0;
+            for(const FString& Part : Parts) Total+=Part.Len();
+            TArray<FString> Joined;
+            for(const auto& Cue : Cues) { Grouped+=Cue.Weight; Joined.Add(Cue.Text.Replace(TEXT("\n"),TEXT(" "))); }
+            Readable &= Total==Grouped && FString::Join(Parts,TEXT(" "))==FString::Join(Joined,TEXT(" "));
+            for(const auto& Cue : Cues)
+                Readable &= Cues.Num()==1 || (Voice.Seconds-Pause)*Cue.Weight/FMath::Max(1,Total)>=2.249f;
+            CueCount+=Cues.Num();
+            if(FCString::Strcmp(Voice.Npc,TEXT("GnomeAlchemist"))==0)
+                Alchemist=!Cues.IsEmpty() && Cues[0].Text.StartsWith(TEXT("Summon.\nTell your master"));
+            if(FCString::Strcmp(Voice.Npc,TEXT("ElfElder"))==0)
+                Elder=!Cues.IsEmpty() && Cues[0].Text.StartsWith(TEXT("Well, look at you!\nWhat a big"));
+        }
+        Readable &= DockSubtitles::At(TEXT("One. Two."),5.f,1.f,1.8f)==TEXT("... ");
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_SUBTITLE_READABILITY cues=%d readable=%d alchemist=%d elder=%d"),CueCount,Readable,Alchemist,Elder);
+        Check(Readable && Alchemist && Elder,TEXT("subtitles preserve words and timing weights, group quick phrases with adjacent sentences, and retain the smith opening pause"));
+    }
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
@@ -3679,21 +3707,26 @@ void ADockHUD::DrawHUD()
         const auto Measure=FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
         const float MaxWidth=Canvas->SizeX*.8f;
         const auto Width=[&](const FString& Text){return static_cast<float>(Measure->Measure(Text,Font).X);};
-        TArray<FString> Rows; FString Row;
-        TArray<FString> Words; Line.ParseIntoArrayWS(Words);
-        for(const FString& Word : Words)
+        TArray<FString> Rows, Paragraphs;
+        Line.ParseIntoArray(Paragraphs,TEXT("\n"));
+        for(const FString& Paragraph : Paragraphs)
         {
-            const FString Try=Row.IsEmpty() ? Word : Row+TEXT(" ")+Word;
-            if(Width(Try)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row.Reset(); }
-            // Also handle an unusually long unbroken word, rather than clipping it.
-            for(int32 I=0;I<Word.Len();++I)
+            FString Row;
+            TArray<FString> Words; Paragraph.ParseIntoArrayWS(Words);
+            for(const FString& Word : Words)
             {
-                const FString Next=Row+(I==0 && !Row.IsEmpty() ? TEXT(" ") : TEXT(""))+FString::Chr(Word[I]);
-                if(Width(Next)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row=FString::Chr(Word[I]); }
-                else Row=Next;
+                const FString Try=Row.IsEmpty() ? Word : Row+TEXT(" ")+Word;
+                if(Width(Try)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row.Reset(); }
+                // Also handle an unusually long unbroken word, rather than clipping it.
+                for(int32 I=0;I<Word.Len();++I)
+                {
+                    const FString Next=Row+(I==0 && !Row.IsEmpty() ? TEXT(" ") : TEXT(""))+FString::Chr(Word[I]);
+                    if(Width(Next)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row=FString::Chr(Word[I]); }
+                    else Row=Next;
+                }
             }
+            if(!Row.IsEmpty()) Rows.Add(Row);
         }
-        if(!Row.IsEmpty()) Rows.Add(Row);
         float RowH=Measure->GetMaxCharacterHeight(Font)*1.12f;
         // A fallback for future text-only paragraphs and unusually narrow windows:
         // fit the measured block inside the bottom third of the screen.
