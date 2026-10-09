@@ -30,13 +30,22 @@ $leapProcess=Start-Process -FilePath $game -ArgumentList $leapArguments -WindowS
 if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CHUCK_LEAPRIFT_TEST_COMPLETE failures=0 trials=6 sprint=1 ordinary=3 wall_assisted=2' -Quiet)) {
     throw "Sprint-only Astral gap traversal verification failed. Inspect $leapLog"
 }
+# Lamp alleys (user 2026-10-09): chimney climbs caught at the eave and pulled up
+# onto each alley's roof, a wall jump caught by a lantern ring, brachiation down
+# the alley and back, and a kick off a ring into a chimney climb to the roof.
+$swingLog=Join-Path $evidence ('verify-lamp-swing-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$swingArguments=@('-ChuckLampSwingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$swingLog+'"'))
+$swingProcess=Start-Process -FilePath $game -ArgumentList $swingArguments -WindowStyle Hidden -Wait -PassThru
+if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern 'CHUCK_LAMPSWING_TEST_COMPLETE failures=0 trials=7 chimneys=3 catch=1 swings=2 kick=1' -Quiet)) {
+    throw "Lamp-alley climb and brachiation verification failed. Inspect $swingLog"
+}
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
 $leapGeometry=Select-String -LiteralPath $log -Pattern 'CHUCK_LEAPRIFT_GEOMETRY failures=0 floor_holes=9 wall_clearance_samples=18 length_cm=260 after_chamber=1'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
-$wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=12 grips=12 collision=0'
+$wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=15 grips=15 swing_grips=15 clear_swings=12 collision=0'
 $streetCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKSTREET_CHECK failures=0 floors=10 routes=9 buildings=8 boundary=1'
 $sideGateCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SIDEGATE_CHECK failures=0 gate_closed=1 grate_open=1 approach_clear=1'
 $courtPierCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_COURTPIER_CHECK failures=0 floors=10 routes=9'

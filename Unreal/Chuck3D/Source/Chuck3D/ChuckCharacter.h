@@ -81,6 +81,24 @@ public:
     // Walking gently off an edge with at least this drop below grabs it and hangs (GTA-style).
     static constexpr float DropHangMinDrop = 60.f;
     int32 GetDropHangs() const { return DropHangs; }
+    // Brachiation (user 2026-10-09, "look hard, be easy"): in the air near a
+    // swing grip (ChuckClimbable.h: the high lanterns' rings) his paws close on
+    // it and he hangs and swings from it. Jump flies him to the next ring the
+    // way the stick points (straight on with the stick let go) and catches it
+    // for him; with none that way it kicks him off along the stick (a wall in
+    // reach is run up as after a wall jump). Dodge lets go. The stick along
+    // the swing pumps it.
+    static constexpr float SwingCatchReach = 45.f;   // cm sideways from his raised paws a ring is still caught
+    static constexpr float SwingLeapRange = 240.f;   // cm to the next ring at most
+    bool IsSwinging() const { return Gait == EGait::Swing; }
+    bool IsSwingLeaping() const { return Gait == EGait::SwingLeap; }
+    /** The grip he hangs from (GetChuckSwingGrips index), or -1. */
+    int32 GetSwingGrip() const { return Gait == EGait::Swing ? SwingGrip : -1; }
+    int32 GetSwingCatches() const { return SwingCatches; }
+    int32 GetSwingLeaps() const { return SwingLeapCount; }
+    int32 GetSwingDismounts() const { return SwingDismounts; }
+    /** Edges caught from below an overhang (an eave jutting over the wall he came up). */
+    int32 GetEaveGrabs() const { return EaveGrabs; }
     /** Strafe (hold Q/E or LT): facing held down the camera, sidestepping; jump = side jump. */
     bool IsStrafing() const { return Gait == EGait::Strafe; }
     int32 GetStrafeJumps() const { return StrafeJumps; }
@@ -297,9 +315,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeap, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -390,7 +408,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face
@@ -465,6 +483,29 @@ private:
     void DropFromHang();
     void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge);
     bool TryMantle();
+    /** Any top edge his paws reach ahead along Probe (an eave over his head, a sloped cut end included). */
+    bool TryGrabEdge(const FVector& Probe);
+    bool bHangClimbQueued = false;   // a jump pressed as he caught the edge: up and over once he's hanging
+    int32 EaveGrabs = 0;
+    // Brachiation state.
+    int32 SwingGrip = -1, SwingTarget = -1, SwingLeft = -1;   // hanging from / flying to / last let go of
+    float SwingAngle = 0, SwingRate = 0;   // pendulum (rad, rad/s; positive: his body ahead of the grip)
+    float SwingClock = 0, SwingBlendTime = .15f, SwingRegrabAt = -1, SwingYawFrom = 0;
+    float SwingLeapClock = 0, SwingLeapTime = .5f, SwingLeapLift = 0, SwingLeapFromAngle = 0, SwingLeapYaw = 0;
+    FVector SwingDir = FVector::ForwardVector, SwingFrom = FVector::ZeroVector, SwingLeapFrom = FVector::ZeroVector, SwingLeapDir = FVector::ForwardVector;
+    bool bSwingJumpQueued = false;
+    int32 SwingCatches = 0, SwingLeapCount = 0, SwingDismounts = 0;
+    // The whole body pitched about the capsule centre (the swing), easing back upright after.
+    float BodyPitch = 0;
+    FVector BodyPitchAxis = FVector::RightVector;
+    bool bBodyPitchLive = false;
+    bool TrySwingCatch();
+    void EnterSwing(int32 Index, bool bFromLeap);
+    void SwingJump();
+    int32 FindSwingTarget(const FVector& Want) const;
+    void LeaveSwing(const FVector& Velocity, bool bKick);
+    /** Capsule centre hanging from Grip with the body pitched BodyDeg about its line (current facing). */
+    FVector SwingCentre(const FVector& Grip, float BodyDeg) const;
     // Wall run / wall jump state.
     FVector WallNormal = FVector::ZeroVector;      // horizontal, out of the wall
     FVector LastWallNormal = FVector::ZeroVector;  // the wall last run: no fresh steps until another wall or the ground

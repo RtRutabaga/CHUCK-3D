@@ -1,7 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 class UWorld;
-enum class EDockTutorial : uint8 { Run,Jump,WallCargo,WallLamps,Scratch,SmallEnemy,LargeEnemy,Dodge,WallRun,Leap,None };
+enum class EDockTutorial : uint8 { Run,Jump,WallCargo,WallLamps,Scratch,SmallEnemy,LargeEnemy,Dodge,WallRun,Leap,Swing,None };
 struct FDockTutorial
 {
     uint32 Seen=0;

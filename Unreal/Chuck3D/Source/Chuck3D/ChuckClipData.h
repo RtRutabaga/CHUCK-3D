@@ -60,6 +60,12 @@ namespace ChuckClipData
     // Ledges: hang depth, and the capsule path (forward, up) per 30 fps frame of PullUp and Mantle.
     constexpr float HangDrop = 22.0000f;
     constexpr float ShimmyStride = 16.0000f;
+    // Brachiation: the ring in mesh space (forward, up from the capsule bottom), the swing angle at the clip ends, and where the leap starts and ends on that scale.
+    constexpr float SwingGripX = 5.5000f;
+    constexpr float SwingGripZ = 63.5000f;
+    constexpr float SwingMaxAngle = 40.0000f;
+    constexpr float SwingRelease = 0.7500f;
+    constexpr float SwingCatch = -0.6250f;
     constexpr float PullUpPath[][2] = {{0.0000f, 0.0000f}, {0.0000f, 0.0000f}, {0.0000f, 0.2187f}, {0.0000f, 1.8690f}, {0.0000f, 4.9148f}, {0.0000f, 9.0903f}, {0.0000f, 14.1296f}, {0.6690f, 19.7671f}, {2.5185f, 25.7368f}, {5.3125f, 31.7730f}, {8.8148f, 37.6098f}, {12.7894f, 42.9814f}, {17.0000f, 47.6221f}, {21.2106f, 51.2659f}, {25.1852f, 53.6472f}, {28.6875f, 54.5000f}, {31.4815f, 54.5000f}, {33.3310f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}, {34.0000f, 54.5000f}};
     constexpr int PullUpFrames = 21;
     constexpr float PullUpRise = 54.5000f;

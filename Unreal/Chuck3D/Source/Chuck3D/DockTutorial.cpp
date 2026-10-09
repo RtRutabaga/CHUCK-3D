@@ -31,8 +31,14 @@ EDockTutorial FDockTutorial::Candidate(UWorld* World,const FVector& P,bool Night
         if(Ready(EDockTutorial::Jump) && P.Z<270 && Box(-600,-300,-610,-320)) return EDockTutorial::Jump;
         if(Ready(EDockTutorial::WallCargo) && P.Z<320 &&
             (Box(-625,-490,-940,-620) || Box(-25,65,-940,-600))) return EDockTutorial::WallCargo;
-        if(Ready(EDockTutorial::WallLamps) && P.Y>=2450 && P.Y<=3160)
-            for(float X : {-1790.f,-1110.f,-430.f}) if(FMath::Abs(P.X-X)<80) return EDockTutorial::WallLamps;
+        // The three lantern alleys between the tall rear-row houses (DockSetting.cpp):
+        // wall jumping at their foot, the rings once he's climbed up among them.
+        if(P.Y>=2450 && P.Y<=3160)
+            for(float X : {-1110.f,-430.f,250.f}) if(FMath::Abs(P.X-X)<80)
+            {
+                if(Ready(EDockTutorial::Swing) && P.Z>380) return EDockTutorial::Swing;
+                if(Ready(EDockTutorial::WallLamps) && P.Z<200) return EDockTutorial::WallLamps;
+            }
         if(Ready(EDockTutorial::Scratch) && !Night)
             for(TActorIterator<AEnemyRat> Rat(World);Rat;++Rat)
                 if(!Rat->IsDead() && Rat->GetActorLocation().Z>-150 &&
@@ -63,6 +69,7 @@ FString FDockTutorial::Text(EDockTutorial Id)
     case EDockTutorial::LargeEnemy:return TEXT("Larger enemies are best to avoid");
     case EDockTutorial::Dodge:return TEXT("Dodge attacks: press C to roll.\nHold A or D and press C to side jump.");
     case EDockTutorial::WallRun:return TEXT("Tap Left Shift to run beside the wall, then press Space to wall run.\nKeep moving along the wall to cross the gap.");
+    case EDockTutorial::Swing:return TEXT("Wall jump up to a lantern's ring and Chuck grabs it.\nPress Space to swing to the next ring, W, A, S, D to aim. C lets go.");
     case EDockTutorial::Leap:return TEXT("While running, press Left Ctrl to sprint on all fours.\nSprint straight for at least a metre, then press Space near the edge to leap across.");
     default:return FString();
     }
@@ -118,19 +125,19 @@ void StartDockTutorialReview(UWorld* World)
 {
     if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckTutorialReview"))) return;
     auto Failures=MakeShared<int32>(0);
-    // Ten actual HUD triggers; isolate overlapping lessons only in this review.
+    // Eleven actual HUD triggers; isolate overlapping lessons only in this review.
     const FVector Points[]={FVector(-240,-180,36),FVector(-440,-420,36),FVector(20,-720,36),
         FVector(-1110,2500,36),FVector(500,-500,36),DockSewerPoint(GetSewerFirstRatsSample())+FVector(0,0,35),
         DockSewerPoint(94)+FVector(0,0,35),DockSewerPoint(DockSewerSamples()/2-15)+FVector(0,0,35),
-        DockSewerCheckpointLocation(),DockSewerPoint(DockSewerLeapRiftStart()-5)+FVector(0,0,35)};
-    for(int32 I=0;I<10;++I)
+        DockSewerCheckpointLocation(),DockSewerPoint(DockSewerLeapRiftStart()-5)+FVector(0,0,35),FVector(-430,2830,520)};
+    for(int32 I=0;I<11;++I)
     {
         FTimerHandle Move,Shot;
         World->GetTimerManager().SetTimer(Move,[World,Failures,I,P=Points[I]](){
             auto* PC=World->GetFirstPlayerController();auto* Chuck=Cast<AChuckCharacter>(PC->GetPawn());
             Chuck->DisableInput(PC);Chuck->ResetAtLocation(P);
-            auto* HUD=Cast<ADockHUD>(PC->GetHUD());HUD->ReviewTutorial(uint32(1023)&~(1u<<I));
-            if(FDockTutorial::Candidate(World,P,false,1023u&~(1u<<I))!=EDockTutorial(I)) ++*Failures;
+            auto* HUD=Cast<ADockHUD>(PC->GetHUD());HUD->ReviewTutorial(uint32(2047)&~(1u<<I));
+            if(FDockTutorial::Candidate(World,P,false,2047u&~(1u<<I))!=EDockTutorial(I)) ++*Failures;
         },3.f+I*2.f,false);
         World->GetTimerManager().SetTimer(Shot,[I](){
             const FString Dir=FPaths::ScreenShotDir()/TEXT("Tutorials");IFileManager::Get().MakeDirectory(*Dir,true);
@@ -143,10 +150,10 @@ void StartDockTutorialReview(UWorld* World)
         if(State.Update(World,P,false,0).IsEmpty()) ++*Failures;
         State.Update(World,FVector(0,400,36),false,1);
         if(!State.Update(World,P,false,2).IsEmpty()) ++*Failures;
-        if(FDockTutorial::Candidate(World,RatP,true,1023u&~(1u<<4))!=EDockTutorial::None) ++*Failures;
+        if(FDockTutorial::Candidate(World,RatP,true,2047u&~(1u<<4))!=EDockTutorial::None) ++*Failures;
         for(int32 Sample : {120,262,330})
             if(FDockTutorial::Candidate(World,DockSewerPoint(Sample)+FVector(0,0,35),false)!=EDockTutorial::None) ++*Failures;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_TUTORIAL_TEST_COMPLETE failures=%d prompts=10 run_once=1 later_sewer_rats=0 night_rats=0"),*Failures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TUTORIAL_TEST_COMPLETE failures=%d prompts=11 run_once=1 later_sewer_rats=0 night_rats=0"),*Failures);
         World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-    },25.f,false);
+    },27.f,false);
 }

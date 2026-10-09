@@ -13,3 +13,17 @@ void AddChuckClimbable(const FChuckClimbable& Climbable)
 }
 
 const TArray<FChuckClimbable>& GetChuckClimbables() { return Climbables; }
+
+namespace
+{
+    TArray<FChuckSwingGrip> SwingGrips;
+}
+
+void AddChuckSwingGrip(const FChuckSwingGrip& Grip)
+{
+    for (const FChuckSwingGrip& G : SwingGrips)
+        if (FVector::Dist(G.Grip, Grip.Grip) < 1.f) return;
+    SwingGrips.Add(Grip);
+}
+
+const TArray<FChuckSwingGrip>& GetChuckSwingGrips() { return SwingGrips; }

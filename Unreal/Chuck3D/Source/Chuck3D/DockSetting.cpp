@@ -4,6 +4,8 @@
 #include "DockWeathering.h"
 #include "DockTavern.h"
 #include "DockFire.h"
+#include "ChuckClimbable.h"
+#include "LampSwing.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -799,88 +801,116 @@ void BuildDockSetting(UWorld* World)
     BuildDockWeathering(World);
     BuildDockTavern(World);
 
-    // High service lanterns on opposed pitched-roof Dock Street houses. Geometry is dressing;
-    // the tagged, named arm tips are an explicit future brachiation contract.
+    // High service lanterns on opposed pitched-roof Dock Street houses, zig-zagging
+    // between the two walls of each alley: Chuck's brachiation run (user 2026-10-09).
+    // Each hangs a forged lamplighter's ring under its cage; the ring's bottom bar is
+    // the grip (ChuckClimbable.h). Named, tagged grip components remain for tools.
     TArray<FVector> LampGrips;
     TArray<FVector> LampMounts;
     TArray<FVector> LampNormals;
     auto WallLamp=[&](const TCHAR* Name,FVector Mount,FVector Out)
     {
+        // Mount: on the wall face at the arm's top; Out: the facade's outward normal.
         const FVector Along(-Out.Y,Out.X,0);
         auto P=[&](float Reach,float Side,float Z){return Mount+Out*Reach+Along*Side+FVector(0,0,Z);};
         const FRotator Yaw=Out.Rotation();
-        Box(P(3,0,-17),FVector(5,12,43),TEXT("Dark"),false,Yaw);
+        Box(P(2.5f,0,-17),FVector(5,12,43),TEXT("Dark"),false,Yaw);
         for(float Z : {-34.f,0.f}) for(float Side : {-4.f,4.f})
-            Box(P(6,Side,Z),FVector(2,2.5f,2.5f),TEXT("Metal"),false,Yaw);
-        Beam(P(5,0,0),P(34,0,0),3.5f,TEXT("Dark"));
-        Beam(P(6,0,-33),P(29,0,-3),2.7f,TEXT("Dark"));
+            Box(P(5.5f,Side,Z),FVector(2,2.5f,2.5f),TEXT("Metal"),false,Yaw);
+        Beam(P(5,0,0),P(38,0,0),3.5f,TEXT("Dark"));
+        Beam(P(6,0,-33),P(32,0,-3),2.7f,TEXT("Dark"));
         // A small curled forge-work brace, in the same vertical plane as the arm.
         for(int32 I=0;I<18;++I)
         {
             const float A=I*PI*1.65f/18, B=(I+1)*PI*1.65f/18;
             const float R0=7.f-I*.22f,R1=7.f-(I+1)*.22f;
-            Beam(P(15+FMath::Cos(A)*R0,0,-12+FMath::Sin(A)*R0),
-                 P(15+FMath::Cos(B)*R1,0,-12+FMath::Sin(B)*R1),1.8f,TEXT("Dark"));
+            Beam(P(16+FMath::Cos(A)*R0,0,-12+FMath::Sin(A)*R0),
+                 P(16+FMath::Cos(B)*R1,0,-12+FMath::Sin(B)*R1),1.8f,TEXT("Dark"));
         }
-        Beam(P(29,0,-2),P(29,0,-10),2,TEXT("Dark"));
+        Beam(P(32,0,-2),P(32,0,-10),2,TEXT("Dark"));
         // Open iron cage: flame remains visible, with a rain cap and vent neck.
         for(float Z : {-48.f,-18.f})
-            Box(P(29,0,Z),FVector(19,19,3),TEXT("Dark"),false,Yaw);
+            Box(P(32,0,Z),FVector(19,19,3),TEXT("Dark"),false,Yaw);
         for(float X : {-8.f,8.f}) for(float Y : {-8.f,8.f})
-            Beam(P(29+X,Y,-46),P(29+X,Y,-20),1.5f,TEXT("Dark"));
+            Beam(P(32+X,Y,-46),P(32+X,Y,-20),1.5f,TEXT("Dark"));
         for(float Z : {-39.f,-27.f})
         {
             for(float Side : {-8.f,8.f})
             {
-                Beam(P(21,Side,Z),P(37,Side,Z),1,TEXT("Dark"));
-                Beam(P(29+Side,-8,Z),P(29+Side,8,Z),1,TEXT("Dark"));
+                Beam(P(24,Side,Z),P(40,Side,Z),1,TEXT("Dark"));
+                Beam(P(32+Side,-8,Z),P(32+Side,8,Z),1,TEXT("Dark"));
             }
         }
-        Box(P(29,0,-14),FVector(12,12,5),TEXT("Dark"),false,Yaw);
-        Box(P(29,0,-10),FVector(6,6,3),TEXT("Metal"),false,Yaw);
+        Box(P(32,0,-14),FVector(12,12,5),TEXT("Dark"),false,Yaw);
+        Box(P(32,0,-10),FVector(6,6,3),TEXT("Metal"),false,Yaw);
         for(float Side : {-1.f,1.f})
-            Box(P(29+Side*5.5f,0,-17),FVector(13,22,2),TEXT("Dark"),false,
+            Box(P(32+Side*5.5f,0,-17),FVector(13,22,2),TEXT("Dark"),false,
                 FRotator(-Side*24,Yaw.Yaw,0));
-        AddDockFlame(Owner,P(29,0,-45),7,22);
+        // The lamplighter's ring: an eye under the cage floor, a short link and a
+        // forged ring across the alley's line (its plane holds the arm), worn bright
+        // on the bottom bar where hooks - and paws - take it.
+        Box(P(32,0,-51.5f),FVector(4,4,3),TEXT("Dark"),false,Yaw);
+        Beam(P(32,0,-52),P(32,0,-56),1.6f,TEXT("Dark"));
+        constexpr float RingR=7.f, RingZ=-62.f;
+        for(int32 I=0;I<32;++I)
+        {
+            const float A=I*2*PI/32, B=(I+1)*2*PI/32;
+            const bool Worn=FMath::Sin((A+B)*.5f)<-.8f;
+            Beam(P(32+FMath::Cos(A)*RingR,0,RingZ+FMath::Sin(A)*RingR),
+                 P(32+FMath::Cos(B)*RingR,0,RingZ+FMath::Sin(B)*RingR),1.6f,Worn?TEXT("Metal"):TEXT("Dark"));
+        }
+        AddDockFlame(Owner,P(32,0,-45),7,22);
         auto* Light=NewObject<UPointLightComponent>(Owner);
-        Light->SetupAttachment(Root);Light->SetRelativeLocation(P(29,0,-32));
+        Light->SetupAttachment(Root);Light->SetRelativeLocation(P(32,0,-32));
         Light->SetLightColor(FLinearColor(1,.47f,.17f));Light->SetIntensity(650);
         Light->SetAttenuationRadius(210);Light->SetCastShadows(false);Light->RegisterComponent();
-        auto* Grip=NewObject<USceneComponent>(Owner,FName(Name));
-        Grip->SetupAttachment(Root);Grip->SetRelativeLocation(P(32,0,0));
-        Grip->ComponentTags.Add(TEXT("DockLampGrip"));Grip->RegisterComponent();
-        LampGrips.Add(P(32,0,0));LampMounts.Add(Mount);LampNormals.Add(Out);
+        const FVector Grip=P(32,0,RingZ-RingR);
+        auto* GripPoint=NewObject<USceneComponent>(Owner,FName(Name));
+        GripPoint->SetupAttachment(Root);GripPoint->SetRelativeLocation(Grip);
+        GripPoint->ComponentTags.Add(TEXT("DockLampGrip"));GripPoint->RegisterComponent();
+        FChuckSwingGrip Swing; Swing.Grip=Grip; Swing.Along=Along; AddChuckSwingGrip(Swing);
+        LampGrips.Add(Grip);LampMounts.Add(Mount);LampNormals.Add(Out);
     };
-    // Four tall rear-row houses between the sewer gate and large northern pier.
-    // Three 120 cm lanes; mounts sit on clear upper wall panels below the eaves.
-    for(int32 Lane=0;Lane<3;++Lane) for(int32 I=0;I<2;++I)
+    // Four tall rear-row houses between the sewer gate and large northern pier, three
+    // 120 cm lanes. Per lane five lanterns alternate walls 125-135 cm apart along it,
+    // clear of the shuttered windows (y 2644/3016); arm tops 612-626 cm, below every
+    // eave, so the rings (grips 543-557 cm) are reached by wall jumping, not from the ground.
+    const float LampY[]={2570,2705,2830,2955,3090};
+    const float LampTop[]={612,622,616,626,612};
+    for(int32 Lane=0;Lane<3;++Lane) for(int32 I=0;I<5;++I)
     {
         const float Left=-1450+Lane*680.f;
-        const float Y=2720+I*220.f, Z=530+I*60.f;
-        WallLamp(*FString::Printf(TEXT("WallLampGrip_Rear%d_East_%d"),Lane+1,I),
-            FVector(Left+294,Y,Z),FVector(1,0,0));
-        WallLamp(*FString::Printf(TEXT("WallLampGrip_Rear%d_West_%d"),Lane+2,I),
-            FVector(Left+386,Y+24,Z+20),FVector(-1,0,0));
+        const bool West=I%2==0;   // on the western wall of the lane (house Lane+1's east facade)
+        WallLamp(*FString::Printf(TEXT("WallLampGrip_Rear%d_%s_%d"),West?Lane+1:Lane+2,West?TEXT("East"):TEXT("West"),I),
+            FVector(West?Left+280:Left+400,LampY[I],LampTop[I]),FVector(West?1:-1,0,0));
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     {
-        int32 Failures=0;
+        int32 Failures=0,Clear=0;
         for(int32 I=0;I<LampGrips.Num();++I)
         {
             FHitResult Hit;
-            // Mounts must touch a real solid wall; arm tips remain unobstructed.
-            if(!World->LineTraceSingleByChannel(Hit,LampMounts[I]+LampNormals[I]*10,
-                LampMounts[I]-LampNormals[I]*22,ECC_Visibility)) ++Failures;
+            // Mounts must touch a real solid wall; rings remain unobstructed and high.
+            if(!World->LineTraceSingleByChannel(Hit,LampMounts[I]+LampNormals[I]*10-FVector(0,0,17),
+                LampMounts[I]-LampNormals[I]*8-FVector(0,0,17),ECC_Visibility) || FMath::Abs(FVector::DotProduct(Hit.ImpactPoint-LampMounts[I],LampNormals[I]))>1.f) ++Failures;
             if(World->LineTraceSingleByChannel(Hit,LampGrips[I]+FVector(0,0,5),
                 LampGrips[I]-FVector(0,0,5),ECC_Visibility) || LampGrips[I].Z<500) ++Failures;
+            // Hanging from it, and the flight to the next ring in its lane, is clear for his capsule.
+            const FVector Hang=LampGrips[I]-FVector(0,0,33);
+            if(I%5<4)
+            {
+                if(World->SweepSingleByChannel(Hit,Hang,LampGrips[I+1]-FVector(0,0,33),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeCapsule(15,32.5f))) ++Failures;
+                else ++Clear;
+            }
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLLAMPS_CHECK failures=%d lamps=%d grips=%d collision=0"),Failures,LampMounts.Num(),LampGrips.Num());
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLLAMPS_CHECK failures=%d lamps=%d grips=%d swing_grips=%d clear_swings=%d collision=0"),Failures,LampMounts.Num(),LampGrips.Num(),GetChuckSwingGrips().Num(),Clear);
     }
+    StartLampSwingReview(World);
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWallLampCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(65);
-        const FVector Views[]={FVector(-1110,2490,90),FVector(-1110,2535,620),FVector(-455,2840,630)};
-        const FVector Targets[]={FVector(-1110,2800,550),FVector(-1110,2825,560),FVector(-453,2940,575)};
+        const FVector Views[]={FVector(-1110,2490,90),FVector(-1110,2470,600),FVector(-430,2880,590)};
+        const FVector Targets[]={FVector(-1110,2800,550),FVector(-1110,2830,560),FVector(-403,2955,570)};
         for(int32 I=0;I<3;++I)
         {
             FTimerHandle View,Shot;

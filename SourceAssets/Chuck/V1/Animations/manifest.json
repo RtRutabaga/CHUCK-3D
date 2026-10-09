@@ -1763,6 +1763,55 @@
    },
    "ends_on": "SprintLoop at fore_land_phase (forepaw R touchdown)",
    "notes": "Leap out of the sprint: stretched out long in the air, forepaws reaching, hind legs trailing; lands on the forepaws into the gallop."
+  },
+  {
+   "name": "Swing",
+   "file": "Animations/AS_Chuck_Swing.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 20,
+   "frame_count": 21,
+   "duration_s": 0.6667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.6723,
+   "grip_cm": [
+    5.5,
+    63.5
+   ],
+   "swing_max_deg": 40.0,
+   "time_mapping": "clip time = (pendulum angle / swing_max_deg + 1) / 2 x duration (positive: body ahead of the grip)",
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hanging from a ring overhead by both paws; the runtime pitches the mesh about the grip by the pendulum angle and poses the clip by it."
+  },
+  {
+   "name": "SwingLeap",
+   "file": "Animations/AS_Chuck_SwingLeap.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 15,
+   "frame_count": 16,
+   "duration_s": 0.5,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.12,
+   "grip_cm": [
+    5.5,
+    63.5
+   ],
+   "release_swing": 0.75,
+   "catch_swing": -0.625,
+   "time_mapping": "clip time = flight progress x duration; first/last frames = Swing at release_swing / catch_swing x swing_max_deg",
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Ring to ring: off at the front of the arc, arms thrown forward, legs long behind, paws closing on the next ring with the body behind it."
   }
  ]
 }

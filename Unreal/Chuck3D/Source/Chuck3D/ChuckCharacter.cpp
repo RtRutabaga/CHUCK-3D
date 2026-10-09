@@ -70,7 +70,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeap")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -243,7 +243,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -334,6 +334,9 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
         const float Target = FMath::Abs(FMath::FindDeltaAngleDegrees(ViewYaw, Left)) < FMath::Abs(FMath::FindDeltaAngleDegrees(ViewYaw, Right)) ? Left : Right;
         ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, Target) * FMath::Min(1.f, DeltaSeconds * 5.f));
     }
+    // Swinging ring to ring: behind him, looking down the line of rings.
+    if (DeltaSeconds > 0 && LookIdle > .3f && (Gait == EGait::Swing || Gait == EGait::SwingLeap))
+        ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, GetActorRotation().Yaw) * FMath::Min(1.f, DeltaSeconds * 3.f));
     if (DeltaSeconds > 0 && LookIdle > .3f && (Gait == EGait::Hang || Gait == EGait::Climb))
     {
         const float WallYaw = (-HangNormal).Rotation().Yaw;
@@ -408,6 +411,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
+    SwingGrip = SwingTarget = SwingLeft = -1; SwingRegrabAt = -1; bSwingJumpQueued = bHangClimbQueued = bBodyPitchLive = false; BodyPitch = 0;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
@@ -529,6 +533,8 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
     auto* Movement = GetCharacterMovement();
     if (IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang) { DropFromHang(); return; }  // dodge while hanging: let go
+    if (Gait == EGait::Swing) { LeaveSwing(SwingDir * 30.f, false); return; }
+    if (Gait == EGait::SwingLeap) return;
     if (IsDodging() || Movement->IsFalling() || Gait == EGait::WallRun || Gait == EGait::Climb) return;
     // A dodge cuts a turn in place short (pressing a direction from standstill
     // starts one).
@@ -631,11 +637,17 @@ void AChuckCharacter::JumpPressed()
     if (Gait == EGait::Climb || IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang)
     {
-        // From a hang: pulling away and jumping kicks off backward; otherwise climb up.
-        if (FVector::DotProduct(StickWorld(), -HangNormal) < -.3f) { WallNormal = HangNormal; WallJump(); }
+        // From a hang: pulling away and jumping kicks off backward; otherwise
+        // climb up (the stick still held from before the catch doesn't count;
+        // pressed during the catch itself, up once he has hold).
+        if (!bHangNeedsRelease && FVector::DotProduct(StickWorld(), -HangNormal) < -.3f) { WallNormal = HangNormal; WallJump(); }
+        else if (bHangRoom && HangClock < HangSnapTime) bHangClimbQueued = true;
         else if (bHangRoom) StartClimb(false, HangNormal, HangEdge);
         return;
     }
+    if (Gait == EGait::Swing) { SwingJump(); return; }
+    // Pressed in the flight between rings: on to the next as soon as he has this one.
+    if (Gait == EGait::SwingLeap) { if (SwingLeapClock > SwingLeapTime - .35f) bSwingJumpQueued = true; return; }
     if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
     {
         WallNormal = GetChuckClimbables()[LadderIndex].Out; LadderIndex = -1;
@@ -696,7 +708,9 @@ bool AChuckCharacter::TryEnterWallRun()
     // the capsule, anything within 60 degrees of head-on, any wall that isn't
     // the one he just left.
     auto* Movement = GetCharacterMovement();
-    const FVector Probe = (bWallJumpFlight || Gait == EGait::SideJump) ? Movement->Velocity.GetSafeNormal2D() : StickWorld().GetSafeNormal2D();
+    FVector Probe = (bWallJumpFlight || Gait == EGait::SideJump) ? Movement->Velocity.GetSafeNormal2D() : StickWorld().GetSafeNormal2D();
+    // Stopped short by an eave or ledge in a wall jump's flight: still the way he faces.
+    if (Probe.IsNearlyZero() && bWallJumpFlight) Probe = GetActorForwardVector().GetSafeNormal2D();
     if (Probe.IsNearlyZero()) return false;
     const float Reach = GetCapsuleComponent()->GetScaledCapsuleRadius() + WallReach;
     FHitResult Hit;
@@ -709,7 +723,7 @@ bool AChuckCharacter::TryEnterWallRun()
             && FMath::Abs(Hit.ImpactNormal.Z) <= .3f;
         if (bHit) { bFeetOnly = Height < -20.f; break; }
     }
-    if (!bHit) return false;
+    if (!bHit) return TryGrabEdge(Probe);
     const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
     if (FVector::DotProduct(Probe, -Normal) < .5f) return false;
     // A top edge within reach: grab it (any wall, even the one just left).
@@ -730,6 +744,7 @@ bool AChuckCharacter::TryEnterWallRun()
             return true;
         }
     }
+    if (TryGrabEdge(Probe)) return true;
     if (bFeetOnly || Movement->Velocity.Z < -250.f) return false;   // no wall run off a face below his hips
     if (!LastWallNormal.IsZero() && FVector::DotProduct(Normal, LastWallNormal) > .7f) return false;
     EnterWallRun(Hit, Normal);
@@ -774,6 +789,8 @@ bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint,
     FHitResult Top;
     const FVector Start(Over.X, Over.Y, Center.Z + MaxAbove + 5.f), End(Over.X, Over.Y, Center.Z + MinAbove);
     if (!GetWorld()->LineTraceSingleByChannel(Top, Start, End, ECC_Visibility, Query) || Top.bStartPenetrating || Top.ImpactNormal.Z < .7f) return false;
+    // A "top" with something solid right on it is a face inside a roof or wall (the trace began inside it), not an edge.
+    if (GetWorld()->OverlapBlockingTestByChannel(Top.ImpactPoint + FVector(0, 0, 3.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(1.5f), Query)) return false;
     // Nothing just above the top: the lip trace follows the top's own slope
     // inward, so a pitched roof's eave counts as an edge (a level trace would
     // run into the rising roof and reject it).
@@ -781,7 +798,20 @@ bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint,
     FHitResult Above;
     const FVector Lip = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z + 6.f - 10.f * Rise) + Normal * 2.f;
     if (GetWorld()->LineTraceSingleByChannel(Above, Lip, Lip - Normal * 14.f + FVector(0, 0, 14.f * Rise), ECC_Visibility, Query)) return false;
-    OutEdge = FVector(FacePoint.X, FacePoint.Y, Top.ImpactPoint.Z);
+    // An overhang (a roof's eave, a coping stone): the top carries on out past
+    // the face below. His paws take its outer lip, where it really ends.
+    FVector LipAt = FacePoint;
+    float LipZ = static_cast<float>(Top.ImpactPoint.Z);
+    for (float Out = 2.f; Out <= 24.f; Out += 2.f)
+    {
+        const FVector At = FacePoint + Normal * Out;
+        const float Expect = static_cast<float>(Top.ImpactPoint.Z) - Rise * (Out + 8.f);
+        FHitResult Eave;
+        if (!GetWorld()->LineTraceSingleByChannel(Eave, FVector(At.X, At.Y, Expect + 6.f), FVector(At.X, At.Y, Expect - 6.f), ECC_Visibility, Query)
+            || Eave.bStartPenetrating || Eave.ImpactNormal.Z < .7f) break;
+        LipAt = At; LipZ = static_cast<float>(Eave.ImpactPoint.Z);
+    }
+    OutEdge = FVector(LipAt.X, LipAt.Y, LipZ);
     if (IsDockPantrySkyRim(OutEdge)) return false;   // the sky hole's rim crumbles under his paws
     FVector Stand;
     bRoom = FindStand(Normal, OutEdge, Radius + 4.f, Stand);
@@ -875,7 +905,13 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
         }
         if (!bClear) HangOut = HangLower = 0;
     }
-    HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false; bHangNeedsRelease = false;
+    HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false;
+    // Still pushing the way the last wall jump went (away from this wall): that
+    // stick doesn't let go of the edge he just caught; it counts once released.
+    bHangNeedsRelease = FVector::DotProduct(StickWorld(), -Normal) < -.3f;
+    // Jump pressed on the way up to it: over the top as soon as he has hold.
+    bHangClimbQueued = bRoom && GetWorld()->GetTimeSeconds() - AirJumpPressedAt < .3f;
+    if (bHangClimbQueued) AirJumpPressedAt = -1e3f;
     LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = bSprintLeap = false;
     ++Hangs;
     SetClip(EClip::Hang, 0, .1f);
@@ -1008,6 +1044,218 @@ bool AChuckCharacter::TryMantle()
     if (!FindLedge(Normal, Hit.ImpactPoint, -Half + MantleMin, -Half + MantleMax, Edge, bRoom) || !bRoom) return false;
     StartClimb(true, Normal, Edge);
     return true;
+}
+bool AChuckCharacter::TryGrabEdge(const FVector& Probe)
+{
+    // "Look hard, be easy": any top edge his paws can reach ahead of him is
+    // caught - a wall's top, the cut end of a pitched roof's eave, and an eave
+    // jutting out over the wall he came up (it stops his head before the
+    // usual reach finds its top: he stretches up for its lip instead).
+    auto* Movement = GetCharacterMovement();
+    if (Probe.IsNearlyZero() || Movement->Velocity.Z < -400.f || GetWorld()->GetTimeSeconds() < LedgeCooldownUntil) return false;
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    const FVector Center = GetActorLocation();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckGrabEdge), false, this);
+    FHitResult Over;
+    const FVector Head = Center + Probe * (Radius * .5f) + FVector(0, 0, Half - 2.f);
+    const bool bUnder = GetWorld()->LineTraceSingleByChannel(Over, Head, Head + FVector(0, 0, 28.f), ECC_Visibility, Query) && Over.ImpactNormal.Z < -.3f;
+    for (const float Height : {24.f, 12.f, 0.f, -12.f})
+    {
+        FHitResult Hit;
+        const FVector From = Center + FVector(0, 0, Height);
+        if (!GetWorld()->SweepSingleByChannel(Hit, From, From + Probe * (Radius + WallReach + 2.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(4.f), Query)
+            || Hit.bStartPenetrating || Hit.ImpactNormal.Z > .3f || Hit.ImpactNormal.Z < -.65f) continue;   // a face: upright, or an eave's cut end sloping under
+        const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
+        if (Normal.IsNearlyZero() || FVector::DotProduct(Probe, -Normal) < .5f) continue;
+        FVector Edge; bool bRoom = false;
+        if (FindLedge(Normal, Hit.ImpactPoint, -15.f, bUnder ? 75.f : 45.f, Edge, bRoom) && Edge.Z - Center.Z <= (bUnder ? 64.f : 45.f))
+        {
+            if (bUnder) ++EaveGrabs;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_EDGE_GRAB under=%d height=%.0f edge_above=%.1f room=%d at=%s"), bUnder ? 1 : 0, Height, Edge.Z - Center.Z, bRoom ? 1 : 0, *Edge.ToString());
+            EnterHang(Normal, Edge, bRoom);
+            return true;
+        }
+    }
+    return false;
+}
+FVector AChuckCharacter::SwingCentre(const FVector& Grip, float BodyDeg) const
+{
+    // Hands at the grip, the body pitched BodyDeg about it (positive: feet
+    // forward); upright, the clip's grip is ahead of and above his centre.
+    const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+    const FVector Off = Forward * ChuckClipData::SwingGripX + FVector(0, 0, ChuckClipData::SwingGripZ - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    const FQuat R(FVector::CrossProduct(Forward, FVector::UpVector).GetSafeNormal(), FMath::DegreesToRadians(BodyDeg));
+    return Grip - R.RotateVector(Off);
+}
+namespace
+{
+    // Upright, the clip's grip is ahead of his centre: this much body pitch puts
+    // it straight above (the pendulum's rest). Swing length: grip to centre.
+    float SwingRestTilt() { return FMath::RadiansToDegrees(FMath::Atan2(ChuckClipData::SwingGripX, ChuckClipData::SwingGripZ - 32.5f)); }
+    float SwingLength() { return FMath::Sqrt(FMath::Square(ChuckClipData::SwingGripX) + FMath::Square(ChuckClipData::SwingGripZ - 32.5f)); }
+    constexpr float SwingGravity = 980.f * .8f;   // his GravityScale
+}
+bool AChuckCharacter::TrySwingCatch()
+{
+    // His paws, reaching up, find a ring near them: he takes it. Generous - a
+    // wall jump that passes near one catches it without aiming at it exactly.
+    if (Gait == EGait::Swing || Gait == EGait::SwingLeap || Gait == EGait::Hang || Gait == EGait::Climb || IsAstral()) return false;
+    if (GetCharacterMovement()->Velocity.Z < -500.f) return false;
+    const TArray<FChuckSwingGrip>& Grips = GetChuckSwingGrips();
+    const FVector Center = GetActorLocation();
+    const FVector Paws = Center + FVector(0, 0, ChuckClipData::SwingGripZ - GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    const float Now = GetWorld()->GetTimeSeconds();
+    int32 Best = -1; float BestScore = 1e9f;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSwingCatch), false, this);
+    for (int32 I = 0; I < Grips.Num(); ++I)
+    {
+        if (I == SwingLeft && Now < SwingRegrabAt) continue;
+        const FVector Delta = Grips[I].Grip - Paws;
+        const float Side = static_cast<float>(Delta.Size2D());
+        if (Side > SwingCatchReach || Delta.Z > 30.f || Delta.Z < -45.f) continue;
+        const float Score = Side + FMath::Abs(static_cast<float>(Delta.Z)) * .5f;
+        FHitResult Block;
+        if (Score < BestScore && !GetWorld()->LineTraceSingleByChannel(Block, Center, Grips[I].Grip, ECC_Visibility, Query)) { Best = I; BestScore = Score; }
+    }
+    if (Best < 0) return false;
+    EnterSwing(Best, false);
+    return true;
+}
+void AChuckCharacter::EnterSwing(int32 Index, bool bFromLeap)
+{
+    auto* Movement = GetCharacterMovement();
+    const FChuckSwingGrip& Grip = GetChuckSwingGrips()[Index];
+    const FVector Velocity = Movement->Velocity;
+    // Swung along its line (the lanterns' alley), whichever way he was going or facing.
+    // Caught crossing its line (a chimney's wall jump), the way the camera looks along it.
+    FVector Heading = bFromLeap ? SwingLeapDir : (Velocity.SizeSquared2D() > 2500.f ? Velocity.GetSafeNormal2D() : GetActorForwardVector().GetSafeNormal2D());
+    if (!bFromLeap && FMath::Abs(FVector::DotProduct(Heading, Grip.Along.GetSafeNormal2D())) < .35f) Heading = FRotator(0, ViewYaw, 0).Vector();
+    SwingDir = Grip.Along.GetSafeNormal2D() * (FVector::DotProduct(Heading, Grip.Along) >= 0.f ? 1.f : -1.f);
+    Movement->SetMovementMode(MOVE_Flying);
+    Movement->StopMovementImmediately();
+    const float L = SwingLength();
+    if (bFromLeap)
+    {
+        // Caught with the body behind the ring, carrying on through: up to about
+        // 35 degrees in front before it swings back.
+        SwingAngle = FMath::DegreesToRadians(ChuckClipData::SwingCatch * ChuckClipData::SwingMaxAngle);
+        SwingRate = FMath::Sqrt(FMath::Max(0.f, 2.f * SwingGravity / L * (FMath::Cos(SwingAngle) - FMath::Cos(FMath::DegreesToRadians(35.f)))));
+        SwingBlendTime = .02f;
+    }
+    else
+    {
+        // From wherever his centre is: the arc's angle from there, a little of
+        // his momentum along it; drawn onto the arc over the catch.
+        const FVector Rel = GetActorLocation() - Grip.Grip;
+        SwingAngle = FMath::Clamp(FMath::Atan2(static_cast<float>(FVector::DotProduct(Rel, SwingDir)), FMath::Max(5.f, static_cast<float>(-Rel.Z))), -.7f, .7f);
+        SwingRate = FMath::Clamp(static_cast<float>(FVector::DotProduct(Velocity, SwingDir)) / L * .5f, -2.5f, 2.5f);
+        SwingBlendTime = .18f;
+    }
+    SwingFrom = GetActorLocation();
+    SwingYawFrom = GetActorRotation().Yaw;
+    SwingGrip = Index; SwingTarget = -1; SwingClock = 0;
+    Gait = EGait::Swing;
+    LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bRunJump = bSprintLeap = bSprintLeapPending = false; WallCoyoteUntil = -1;
+    if (!bFromLeap)
+    {
+        bSwingJumpQueued = GetWorld()->GetTimeSeconds() - AirJumpPressedAt < .25f;
+        if (bSwingJumpQueued) AirJumpPressedAt = -1e3f;
+    }
+    ++SwingCatches;
+    SetClip(EClip::Swing, (FMath::Clamp(FMath::RadiansToDegrees(SwingAngle) / ChuckClipData::SwingMaxAngle, -1.f, 1.f) + 1.f) * .5f * Clips[static_cast<int32>(EClip::Swing)]->GetPlayLength(), bFromLeap ? .06f : .12f);
+    if (!bFromLeap) PlaySfx(LandSounds, ESfx::Land, LandVolume * .45f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_CATCH grip=%d leap=%d catches=%d angle=%.1f at=%s"), Index, bFromLeap ? 1 : 0, SwingCatches, FMath::RadiansToDegrees(SwingAngle), *GetActorLocation().ToString());
+}
+int32 AChuckCharacter::FindSwingTarget(const FVector& Want) const
+{
+    // The nearest ring the way he wants to go, in reach and in plain sight.
+    const TArray<FChuckSwingGrip>& Grips = GetChuckSwingGrips();
+    if (!Grips.IsValidIndex(SwingGrip)) return -1;
+    const FVector From = Grips[SwingGrip].Grip;
+    const FVector Dir = Want.GetSafeNormal2D();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSwingTarget), false, this);
+    int32 Best = -1; float BestScore = 1e9f;
+    for (int32 I = 0; I < Grips.Num(); ++I)
+    {
+        if (I == SwingGrip) continue;
+        const FVector Delta = Grips[I].Grip - From;
+        const float Reach = static_cast<float>(Delta.Size2D());
+        if (Reach < 40.f || Reach > SwingLeapRange || Delta.Z > 70.f || Delta.Z < -130.f) continue;
+        const float Along = static_cast<float>(FVector::DotProduct(Delta.GetSafeNormal2D(), Dir));
+        if (Along < .55f) continue;
+        const float Score = Reach * (1.6f - Along);
+        if (Score >= BestScore) continue;
+        FHitResult Block;
+        const float Drop = ChuckClipData::SwingGripZ - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        if (GetWorld()->LineTraceSingleByChannel(Block, From, Grips[I].Grip, ECC_Visibility, Query)
+            || GetWorld()->SweepSingleByChannel(Block, From - FVector(0, 0, Drop), Grips[I].Grip - FVector(0, 0, Drop), FQuat::Identity, ECC_Pawn,
+                FCollisionShape::MakeCapsule(GetCapsuleComponent()->GetScaledCapsuleRadius() - 1.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 1.f), Query)) continue;
+        Best = I; BestScore = Score;
+    }
+    return Best;
+}
+void AChuckCharacter::SwingJump()
+{
+    // Toward the stick (straight on along the swing with it let go): the next
+    // ring that way, flown to and caught for him; none, and he kicks off.
+    const TArray<FChuckSwingGrip>& Grips = GetChuckSwingGrips();
+    const FVector Stick = StickWorld();
+    const bool bAimed = Stick.SizeSquared2D() > .12f;
+    const FVector Want = bAimed ? Stick.GetSafeNormal2D() : SwingDir;
+    int32 Target = FindSwingTarget(Want);
+    // Let go of the stick at the end of a line of rings: back along it (only a
+    // direction held toward no ring kicks him off).
+    if (Target < 0 && !bAimed) Target = FindSwingTarget(-SwingDir);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_JUMP grip=%d aimed=%d want=%s target=%d"), SwingGrip, bAimed ? 1 : 0, *Want.ToCompactString(), Target);
+    if (Target < 0 || !Grips.IsValidIndex(SwingGrip))
+    {
+        LeaveSwing(Want * WallJumpOut * .9f + FVector(0, 0, WallJumpUp), true);
+        return;
+    }
+    SwingLeapFrom = Grips[SwingGrip].Grip;
+    SwingTarget = Target;
+    const FVector Delta = Grips[Target].Grip - SwingLeapFrom;
+    SwingLeapDir = Delta.GetSafeNormal2D();
+    // A real flight's timing and arc (his gravity), a little quicker over short hops.
+    SwingLeapTime = FMath::Clamp(static_cast<float>(Delta.Size()) / 320.f, .36f, .6f);
+    SwingLeapLift = FMath::Min(30.f, SwingGravity * SwingLeapTime * SwingLeapTime / 8.f);
+    SwingLeapFromAngle = SwingAngle;
+    SwingLeapClock = 0;
+    SwingYawFrom = GetActorRotation().Yaw;
+    const FVector Along = Grips[Target].Along.GetSafeNormal2D();
+    SwingLeapYaw = (Along * (FVector::DotProduct(SwingLeapDir, Along) >= 0.f ? 1.f : -1.f)).Rotation().Yaw;
+    SwingLeft = SwingGrip; SwingGrip = -1;
+    SwingRegrabAt = GetWorld()->GetTimeSeconds() + .4f;
+    bSwingJumpQueued = false;
+    Gait = EGait::SwingLeap;
+    ++SwingLeapCount;
+    SetClip(EClip::SwingLeap, 0, .1f);
+    PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * .8f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_LEAP from=%d to=%d leaps=%d dist=%.1f time=%.2f"), SwingLeft, Target, SwingLeapCount, Delta.Size(), SwingLeapTime);
+}
+void AChuckCharacter::LeaveSwing(const FVector& Velocity, bool bKick)
+{
+    // Let go (dodge) or kicked off with nowhere to swing to: in the air, the
+    // ring out of reach for a moment; a kick runs a wall he reaches like a wall jump.
+    auto* Movement = GetCharacterMovement();
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = Velocity;
+    SwingLeft = SwingGrip; SwingGrip = -1;
+    SwingRegrabAt = GetWorld()->GetTimeSeconds() + (bKick ? .5f : .7f);
+    bSwingJumpQueued = false;
+    LastWallNormal = FVector::ZeroVector; WallCoyoteUntil = -1;
+    bWallJumpFlight = bKick;
+    Gait = EGait::Air;
+    if (bKick)
+    {
+        SetActorRotation(Velocity.GetSafeNormal2D().Rotation());
+        ++SwingDismounts;
+        PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
+        SetClip(EClip::JumpLoop, 0, .12f);
+    }
+    else SetClip(EClip::JumpLoop, 0, .15f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_LEAVE grip=%d kick=%d at=%s"), SwingLeft, bKick ? 1 : 0, *GetActorLocation().ToString());
 }
 bool AChuckCharacter::ProbeSideWall(const FVector& From, const FVector& Side, float Reach, FVector& OutNormal, FVector& OutPoint) const
 {
@@ -1721,6 +1969,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
     const EGait GaitBefore = Gait;
+    bBodyPitchLive = false;
     const bool bStrafe = StrafeHeld();
     if (!OwnsCapsule()) Movement->MaxWalkSpeed = IsSprinting() ? SprintSpeed : bStrafe ? (bRunHeld ? StrafeRunSpeed : StrafeSpeed) : (bRunHeld ? RunSpeed : WalkSpeed);
     Movement->MaxAcceleration = IsSprinting() ? SprintAcceleration : 550.f;
@@ -1798,6 +2047,50 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             PreviousMotionLocation = GetActorLocation();
         }
     }
+    else if (Gait == EGait::Swing && GetChuckSwingGrips().IsValidIndex(SwingGrip))
+    {
+        // A pendulum from the ring (his gravity, the clip's arm length), drawn
+        // onto from wherever he caught it; the stick along it pumps the swing
+        // and it settles if left alone. The clip is posed by the angle; the
+        // whole body pitches about the grip with it.
+        SwingClock += DeltaSeconds;
+        const FVector Grip = GetChuckSwingGrips()[SwingGrip].Grip;
+        const float L = SwingLength();
+        const float Push = static_cast<float>(FVector::DotProduct(StickWorld(), SwingDir));
+        float Accel = -SwingGravity / L * FMath::Sin(SwingAngle) - .9f * SwingRate;
+        if (FMath::Abs(Push) > .3f && Push * SwingRate > 0.f && FMath::Abs(SwingAngle) < FMath::DegreesToRadians(50.f)) Accel += Push * 9.f;
+        SwingRate += Accel * DeltaSeconds;
+        SwingAngle = FMath::Clamp(SwingAngle + SwingRate * DeltaSeconds, -1.f, 1.f);
+        const float Turn = FMath::SmoothStep(0.f, .2f, SwingClock);
+        SetActorRotation(FRotator(0, SwingYawFrom + FMath::FindDeltaAngleDegrees(SwingYawFrom, SwingDir.Rotation().Yaw) * Turn, 0));
+        const float Body = SwingRestTilt() + FMath::RadiansToDegrees(SwingAngle);
+        SetActorLocation(FMath::Lerp(SwingFrom, SwingCentre(Grip, Body), FMath::SmoothStep(0.f, SwingBlendTime, SwingClock)), false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->Velocity = FVector::ZeroVector;
+        BodyPitch = Body; BodyPitchAxis = FVector::CrossProduct(GetActorForwardVector().GetSafeNormal2D(), FVector::UpVector).GetSafeNormal(); bBodyPitchLive = true;
+        BaseTime = (FMath::Clamp(FMath::RadiansToDegrees(SwingAngle) / ChuckClipData::SwingMaxAngle, -1.f, 1.f) + 1.f) * .5f * Length;
+        if (bSwingJumpQueued && SwingClock >= .1f) { bSwingJumpQueued = false; SwingJump(); }
+    }
+    else if (Gait == EGait::SwingLeap && GetChuckSwingGrips().IsValidIndex(SwingTarget))
+    {
+        // Ring to ring: his paws follow a real flight's arc from one to the
+        // other; the body swings from its release through to hanging behind
+        // the next ring (the clip's own release and catch angles), turning onto
+        // the new ring's line, and the catch carries on into the swing.
+        SwingLeapClock += DeltaSeconds;
+        const float U = FMath::Min(1.f, SwingLeapClock / SwingLeapTime);
+        const FVector To = GetChuckSwingGrips()[SwingTarget].Grip;
+        const FVector Paws = FMath::Lerp(SwingLeapFrom, To, U) + FVector(0, 0, SwingLeapLift * 4.f * U * (1.f - U));
+        const float Pose = ChuckClipData::SwingRelease + (ChuckClipData::SwingCatch - ChuckClipData::SwingRelease) * FMath::SmoothStep(.2f, 1.f, U);
+        const float Swing = FMath::Lerp(FMath::RadiansToDegrees(SwingLeapFromAngle), Pose * ChuckClipData::SwingMaxAngle, FMath::SmoothStep(0.f, .25f, U));
+        SetActorRotation(FRotator(0, SwingYawFrom + FMath::FindDeltaAngleDegrees(SwingYawFrom, SwingLeapYaw) * FMath::SmoothStep(0.f, .6f, U), 0));
+        const float Body = SwingRestTilt() + Swing;
+        SetActorLocation(SwingCentre(Paws, Body), false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->Velocity = FVector::ZeroVector;
+        BodyPitch = Body; BodyPitchAxis = FVector::CrossProduct(GetActorForwardVector().GetSafeNormal2D(), FVector::UpVector).GetSafeNormal(); bBodyPitchLive = true;
+        BaseTime = U * Length;
+        if (U >= 1.f) EnterSwing(SwingTarget, true);
+    }
+    else if (Gait == EGait::Swing || Gait == EGait::SwingLeap) LeaveSwing(FVector::ZeroVector, false);   // (the grips went away: a world reset)
     else if (Gait == EGait::WallSide)
     {
         // Along the wall on a low arc, following its surface (re-found every
@@ -1849,7 +2142,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const bool bLetGo = !bWallAuto && FVector::DotProduct(StickWorld(), -WallNormal) < -.3f;
         FVector Edge; bool bRoom = false;
         const FVector Face = Location - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f);
-        if (!bLetGo && FindLedge(WallNormal, Face, 5.f, 45.f, Edge, bRoom)) EnterHang(WallNormal, Edge, bRoom);
+        if (TrySwingCatch()) {}   // a lantern's ring beside him on the way up
+        else if (!bLetGo && FindLedge(WallNormal, Face, 5.f, 45.f, Edge, bRoom)) EnterHang(WallNormal, Edge, bRoom);
+        else if (!bLetGo && TryGrabEdge(-WallNormal)) {}   // an eave over his head
         else if (WallRunClock >= WallRunTime || !bWall || bLetGo) LeaveWall();
         else
         {
@@ -1906,6 +2201,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // Up: the stick anywhere toward the wall (within about 70 degrees), held briefly.
         HangHold = Toward > .35f ? HangHold + DeltaSeconds : 0.f;
         if (bAutoClimb && HangClock >= .7f) { bAutoClimb = false; StartClimb(false, HangNormal, HangEdge); }   // out of the water at the pier
+        else if (bHangClimbQueued && HangClock >= HangSnapTime) { bHangClimbQueued = false; StartClimb(false, HangNormal, HangEdge); }
         else if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();
     }
@@ -2001,7 +2297,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // A running jump that reaches a wall along or angled onto it catches it and runs it.
         if (Gait == EGait::Air && bRunJump && GetWorld()->GetTimeSeconds() - RunTakeoffAt < WallSideAirTime
             && GetVelocity().Z > -150.f && TryWallSideRun(true)) {}
-        else if (Gait == EGait::Hang || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
+        else if (Gait == EGait::Hang || TrySwingCatch() || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
         else if (bSprintLeap)
         {
             const float Progress = FMath::Clamp((SprintLeapVerticalSpeed - static_cast<float>(GetVelocity().Z)) / (2.f * SprintLeapVerticalSpeed), 0.f, 1.f);
@@ -2340,14 +2636,14 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
-    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb) P.bFootIK = false;
+    if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap) P.bFootIK = false;
     // Tucked in the roll, the paws follow the clip untouched.
     if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb;
+    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));
@@ -2360,6 +2656,15 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         GetMesh()->SetWorldRotation(FQuat::FindBetweenNormals(FVector::UpVector, Lean) * GetActorQuat());
     }
     else GetMesh()->SetRelativeRotation(FRotator::ZeroRotator);
+    // Swinging: the whole body pitched about his centre (about the ring, since
+    // his centre hangs from it); after letting go it eases back upright.
+    if (!bBodyPitchLive) BodyPitch = FMath::FInterpTo(BodyPitch, 0.f, DeltaSeconds, 9.f);
+    if (FMath::Abs(BodyPitch) > .05f)
+    {
+        const FQuat R(BodyPitchAxis, FMath::DegreesToRadians(BodyPitch));
+        GetMesh()->SetWorldLocationAndRotation(GetActorLocation() + R.RotateVector(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MeshDrop)), R * GetActorQuat());
+    }
+    else BodyPitch = 0;
     const FChuckAnimResult Last = Anim->GetResult();
     const float MeshZ = CapsuleBottom - MeshDrop;
     float Lowest = 0;

@@ -21,3 +21,17 @@ struct FChuckClimbable
 /** Register one (a world builder does this; the same one twice is ignored). */
 void AddChuckClimbable(const FChuckClimbable& Climbable);
 const TArray<FChuckClimbable>& GetChuckClimbables();
+
+/**
+ * Something he swings from by both paws, hand over hand to the next (user
+ * 2026-10-09: brachiation; the high wall lanterns' iron rings first, Chult's
+ * branches later). Caught in the air near it; AChuckCharacter's Swing gait.
+ */
+struct FChuckSwingGrip
+{
+    FVector Grip = FVector::ZeroVector;      // the bar his paws close round
+    FVector Along = FVector::ForwardVector;  // horizontal: the line he swings along (either way)
+};
+
+void AddChuckSwingGrip(const FChuckSwingGrip& Grip);
+const TArray<FChuckSwingGrip>& GetChuckSwingGrips();
