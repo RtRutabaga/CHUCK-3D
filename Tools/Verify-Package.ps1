@@ -28,7 +28,7 @@ if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: 
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
-$wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=4 grips=4 collision=0'
+$wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=12 grips=12 collision=0'
 $streetCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKSTREET_CHECK failures=0 floors=10 routes=9 buildings=8 boundary=1'
 $sideGateCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SIDEGATE_CHECK failures=0 gate_closed=1 grate_open=1 approach_clear=1'
 $courtPierCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_COURTPIER_CHECK failures=0 floors=10 routes=9'

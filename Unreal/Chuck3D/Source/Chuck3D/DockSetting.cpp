@@ -799,7 +799,7 @@ void BuildDockSetting(UWorld* World)
     BuildDockWeathering(World);
     BuildDockTavern(World);
 
-    // High service lanterns on opposed workshop walls. Geometry is dressing;
+    // High service lanterns on opposed pitched-roof Dock Street houses. Geometry is dressing;
     // the tagged, named arm tips are an explicit future brachiation contract.
     TArray<FVector> LampGrips;
     TArray<FVector> LampMounts;
@@ -851,10 +851,16 @@ void BuildDockSetting(UWorld* World)
         Grip->ComponentTags.Add(TEXT("DockLampGrip"));Grip->RegisterComponent();
         LampGrips.Add(P(32,0,0));LampMounts.Add(Mount);LampNormals.Add(Out);
     };
-    for(int32 I=0;I<2;++I)
+    // Four tall rear-row houses between the sewer gate and large northern pier.
+    // Three 120 cm lanes; mounts sit on clear upper wall panels below the eaves.
+    for(int32 Lane=0;Lane<3;++Lane) for(int32 I=0;I<2;++I)
     {
-        WallLamp(*FString::Printf(TEXT("WallLampGrip_Warehouse_%d"),I),FVector(-26,-852+I*144,218),FVector(1,0,0));
-        WallLamp(*FString::Printf(TEXT("WallLampGrip_SailLoft_%d"),I),FVector(66,-828+I*144,244),FVector(-1,0,0));
+        const float Left=-1450+Lane*680.f;
+        const float Y=2720+I*220.f, Z=530+I*60.f;
+        WallLamp(*FString::Printf(TEXT("WallLampGrip_Rear%d_East_%d"),Lane+1,I),
+            FVector(Left+294,Y,Z),FVector(1,0,0));
+        WallLamp(*FString::Printf(TEXT("WallLampGrip_Rear%d_West_%d"),Lane+2,I),
+            FVector(Left+386,Y+24,Z+20),FVector(-1,0,0));
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     {
@@ -864,17 +870,17 @@ void BuildDockSetting(UWorld* World)
             FHitResult Hit;
             // Mounts must touch a real solid wall; arm tips remain unobstructed.
             if(!World->LineTraceSingleByChannel(Hit,LampMounts[I]+LampNormals[I]*10,
-                LampMounts[I]-LampNormals[I]*12,ECC_Visibility)) ++Failures;
+                LampMounts[I]-LampNormals[I]*22,ECC_Visibility)) ++Failures;
             if(World->LineTraceSingleByChannel(Hit,LampGrips[I]+FVector(0,0,5),
-                LampGrips[I]-FVector(0,0,5),ECC_Visibility) || LampGrips[I].Z<160) ++Failures;
+                LampGrips[I]-FVector(0,0,5),ECC_Visibility) || LampGrips[I].Z<500) ++Failures;
         }
         UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLLAMPS_CHECK failures=%d lamps=%d grips=%d collision=0"),Failures,LampMounts.Num(),LampGrips.Num());
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWallLampCapture")))
     {
         auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(65);
-        const FVector Views[]={FVector(20,-990,85),FVector(16,-950,248),FVector(30,-875,208)};
-        const FVector Targets[]={FVector(20,-765,210),FVector(12,-755,202),FVector(3,-852,188)};
+        const FVector Views[]={FVector(-1110,2490,90),FVector(-1110,2535,620),FVector(-455,2840,630)};
+        const FVector Targets[]={FVector(-1110,2800,550),FVector(-1110,2825,560),FVector(-453,2940,575)};
         for(int32 I=0;I<3;++I)
         {
             FTimerHandle View,Shot;
