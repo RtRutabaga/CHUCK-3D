@@ -1,5 +1,16 @@
 # Handoff — 2026-09-27
 
+## October 9 — speaker titles removed; GitHub publication approved
+
+User explicitly approved pushing the subtitle work to GitHub and requested removal of speaker titles. Runtime **`9227ee4`** removes the name draw from the shared direct/ambient subtitle HUD. Sentence text, font, wrapping, timing, smith ellipsis and F / Y hint retained. No dependencies or binary assets changed. Source and prior subtitle commits successfully pushed to verified origin **https://github.com/RtRutabaga/CHUCK-3D.git**, main `745de5e..9227ee4`; the earlier publication approval block is resolved.
+
+- Build succeeded, **92.87 s**, one-worker source-only skip-cook, existing UE **5.7.4** / VS2022 **14.44.35229** / SDK **10.0.26100.0** (`Local/subtitles-no-names-build.log`). Existing cooked cache reused.
+- Actual blacksmith conversation captured at **1280x720** (`Local/subtitles-no-names-review.log`): all four cue transitions fit; inspected `Blacksmith/talk_03.png`, title absent and spoken sentence/F / Y visible. Earlier multi-resolution/night reviews remain recorded below; no new listening or physical-controller claim.
+- Final default verifier passed **180 checks, zero failures, all required gates**, first run (`Local/verify-package-20261009-091728.log`, `Local/subtitles-no-names-verification.log`). No thresholds changed.
+- Root **Launch-Prototype.cmd** now runs **Builds/Windows / `9227ee4`**. Receipt/hash and **CheckOnly** passed. Previous `9270874` package retained at **Builds/Windows-Previous-20261009-SpeakerNames**. All **40** unfinished inputs remain hash-identical and unstaged. Generated output stays ignored; no new LFS uploads; original 2D repository untouched.
+
+Next part of the work can be done here.
+
 ## October 9 — background-free sentence subtitles
 
 Runtime **`9270874`**, on `745de5e` / previous launcher `3fd9930`. User requested the supplied Fable 1 subtitle presentation, shorter sentence cues for long NPC recordings, and the smith's opening `... `.
