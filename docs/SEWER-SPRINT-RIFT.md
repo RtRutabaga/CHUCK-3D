@@ -1,5 +1,7 @@
 # Late sewer sprint-leap rupture
 
+October 9 visual revision: Astral side walls now block the camera channel, so the existing spring arm retracts as it does at solid walls. They still ignore pawn movement and Visibility traversal probes. The panels are planar along the opening, removing the folded fin shown in the user's screenshot. The user explicitly requested limited visual/camera checks and accepts a possible wall-run bypass; the full sprint-only traversal suite is not rerun for this revision. The focused receipt records that scope.
+
 The October 9 request adds a second full-width Astral break after the wide zombie chamber, farther along the tunnel and before the end. The earlier narrow wall-run rupture remains. Zombies, rats, the sewer checkpoint, the slide and the character/controller are unchanged.
 
 The new opening occupies route samples 306–310, about **2.60 m** along the route. Both banks and the stream are interrupted. The lower side walls are torn away across the break and about 3.25 m on each approach, preventing a continuous wall-run crossing. The upper cave arch remains; noncolliding recessed purple Astral veils fill the side tears. Existing materials and lighting are reused. The floor lips are flattened across the spline bend so curved bank geometry cannot fold into the hole. NPC-only invisible floor still spans the opening; Chuck falls through it.

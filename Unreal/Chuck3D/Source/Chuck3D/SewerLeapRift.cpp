@@ -41,7 +41,17 @@ void StartSewerLeapRiftReview(UWorld* World)
                 FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
             },6.f+I*4.f,false);
         }
-        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},18.f,false);
+        FTimerHandle Follow,FollowShot;
+        World->GetTimerManager().SetTimer(Follow,[World,Near,Along](){
+            auto* PC=World->GetFirstPlayerController();auto* Chuck=Cast<AChuckCharacter>(PC->GetPawn());
+            const FVector Across(-Along.Y,Along.X,0);
+            Chuck->ResetAtLocation(Near-Along*60+FVector(0,0,35));
+            Chuck->SetActorRotation((-Across).Rotation());Chuck->Recenter();PC->SetViewTarget(Chuck);
+        },16.f,false);
+        World->GetTimerManager().SetTimer(FollowShot,[](){
+            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("LeapRift/CameraWall.png"),false,false);
+        },18.f,false);
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},20.f,false);
         return;
     }
     struct FRun

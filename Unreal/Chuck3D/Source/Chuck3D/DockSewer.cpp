@@ -232,10 +232,16 @@ void BuildDockSewer(UWorld* World)
     // Running water (Claude, Tools/create_sewer_water_material.py); the older painted stream is the fallback.
     auto* Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerWater.M_SewerWater"));
     if(!Stream) Stream=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_SewerStream.M_SewerStream"));
-    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true)
+    auto MakeMesh=[&](const TArray<FVector>& V,const TArray<int32>& T,const TArray<FVector>& N,const TArray<FVector2D>& UV,UMaterialInterface* Mat,bool Solid,bool ReverseFaces=true,bool CameraOnly=false)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner); Mesh->SetupAttachment(Root);
         Mesh->bUseComplexAsSimpleCollision=true; Mesh->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
+        if(CameraOnly)
+        {
+            Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+            Mesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+            Mesh->SetCollisionResponseToChannel(ECC_Camera,ECR_Block);
+        }
         Mesh->SetLightingChannels(false,true,false);
         Mesh->RegisterComponent();
         // Render the enclosing shell from either side without changing the
@@ -251,8 +257,9 @@ void BuildDockSewer(UWorld* World)
             Normals[A]+=Face;Normals[B]+=Face;Normals[C]+=Face;
         }
         for(int32 I=0;I<Normals.Num();++I) Normals[I]=Normals[I].IsNearlyZero()?N[I]:Normals[I].GetSafeNormal();
-        Mesh->CreateMeshSection_LinearColor(0,V,Faces,Normals,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid);
+        Mesh->CreateMeshSection_LinearColor(0,V,Faces,Normals,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),Solid || CameraOnly);
         Mesh->SetMaterial(0,Mat);
+        return Mesh;
     };
     // A continuous eroded rock shell: broad asymmetry and stratified ledges,
     // with collision on the same surface. No attached spherical decorations.
@@ -467,28 +474,52 @@ void BuildDockSewer(UWorld* World)
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
-    // Noncolliding Astral depths fill the missing low cave walls. The visible
-    // break and real collision agree, rather than an invisible traversal ban.
+    // Astral walls stop the spring-arm camera while ignoring movement probes.
+    int32 AstralCameraFailures=0,AstralCameraSamples=0;
+    const FVector LeapAcross(-LeapAlong.Y,LeapAlong.X,0);
     for(float Side : {-1.f,1.f})
     {
         V.Reset();N.Reset();T.Reset();UV.Reset();
         for(int32 I=LeapRiftStart-LeapWallCutPadding-3;I<=LeapRiftStart+LeapRiftSpan+LeapWallCutPadding+3;++I)
         {
-            const FVector P=Route[I]+Right[I]*(Side*(Width(I)+28.f));
+            // Keep the tear planar: spline-offset panels fold into fins here.
+            const FVector P=LeapNear+LeapAlong*FVector::DotProduct(Route[I]-LeapNear,LeapAlong)+LeapAcross*(Side*185.f);
             for(float Z : {-300.f,370.f})
             { V.Add(P+FVector(0,0,Z));N.Add(-Right[I]*Side);UV.Add(FVector2D(I*.17f,(Z+300)/670)); }
             if(I>LeapRiftStart-LeapWallCutPadding-3)
             { const int32 A=V.Num()-4;T.Append({A,A+1,A+2,A+1,A+3,A+2}); }
         }
-        MakeMesh(V,T,N,UV,Astral,false);
+        auto* Wall=MakeMesh(V,T,N,UV,Astral,false,true,true);
+        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLeapRiftCapture")))
+        {
+            for(int32 I=LeapRiftStart;I<LeapRiftStart+3;++I)
+            {
+                const int32 A=(I-(LeapRiftStart-LeapWallCutPadding-3))*2;
+                const FVector P=(V[A]+V[A+2])*.5f+FVector(0,0,400);
+                const FVector Normal=-LeapAcross*Side;
+                FHitResult Hit;
+                if(!World->SweepSingleByChannel(Hit,P+Normal*15,P-Normal*15,FQuat::Identity,ECC_Camera,FCollisionShape::MakeSphere(3)) || Hit.GetComponent()!=Wall) ++AstralCameraFailures;
+                ++AstralCameraSamples;
+            }
+            if(Wall->GetCollisionResponseToChannel(ECC_Pawn)!=ECR_Ignore || Wall->GetCollisionResponseToChannel(ECC_Visibility)!=ECR_Ignore) ++AstralCameraFailures;
+        }
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLeapRiftCapture")))
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_CAMERA_CHECK failures=%d walls=2 camera_samples=%d"),AstralCameraFailures,AstralCameraSamples);
     // A recessed depth behind the torn lips closes views of the outdoor sky
     // beneath the floor; it never supplies a walking or wall-running surface.
     V.Reset();N.Reset();T.Reset();UV.Reset();
-    const FVector LeapAcross(-LeapAlong.Y,LeapAlong.X,0);
     for(float End : {-650.f,LeapLength+650.f}) for(float Side : {-650.f,650.f})
     {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,-300));N.Add(FVector::UpVector);UV.Add(FVector2D(End/500,Side/500));}
     T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
+    // Back the straight tear with distant depths behind the bent rock ends.
+    for(float End : {-650.f,LeapLength+650.f})
+    {
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(float Side : {-650.f,650.f}) for(float Z : {-300.f,500.f})
+        {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,Z));N.Add(LeapAlong);UV.Add(FVector2D(Side/500,Z/500));}
+        T.Append({0,1,2,1,3,2});MakeMesh(V,T,N,UV,Astral,false);
+    }
     for(float End : {-10.f,LeapLength+10.f})
     {
         V.Reset();N.Reset();T.Reset();UV.Reset();
