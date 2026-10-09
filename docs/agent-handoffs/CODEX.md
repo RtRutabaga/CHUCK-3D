@@ -1,5 +1,18 @@
 # Codex movement handoff — 2026-09-26
 
+## October 9 — high wall lanterns on the tall houses by the large pier
+
+Runtime **`c3f603a`**. User clarified that "pier" means the large northern pier near the sewer, and rejected lanterns on the flat-roof timber workshops. The earlier `c612754` placement was removed before any launcher promotion. Twelve lanterns now occupy the opposed side walls of the four tall pitched-roof rear-row houses (Y2830), two per side across three alleys. Arm tops **530–610 cm** above paving, staggered along/vertically across the alleys; below eaves and clear of shutters. Iron plates/rivets, diagonal and curled braces, open cages, rain caps/vent necks, animated warm flames and existing flicker. Existing materials reused; no installations, imports or binary assets.
+
+- `docs/WALL-LAMPS.md` records twelve named `DockLampGrip` scene components and coordinates for Claude. Decorative geometry has no collision; character/controller and structural roofs/walls unchanged. Ground jumps cannot reach these heights. Brachiation, hand fit and a manual climb to each lamp remain untested/unimplemented; no claim of final art fidelity.
+- Corrected source-only, one-worker skip-cook build succeeded in **119.08 s**, `Local/high-wall-lamps-build.log`, existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**. Existing cooked assets reused; no pristine-checkout reproduction claim.
+- Actual **1280x720** daytime and evening `-ChuckWallLampCapture` reviews: low alley view, elevated view and close-up (`Local/high-wall-lamps-{day,night}-review.log`). Day PNGs retained in `Local/HighWallLamps-Day`; evening PNGs in the candidate `Saved/Screenshots/Windows/WallLamps`. Inspected tall plaster/timber walls, high lamps, clear arm/cage presentation and evening warmth. Night log confirms evening return state. `CHUCK_WALLLAMPS_CHECK failures=0 lamps=12 grips=12 collision=0`; default verifier now requires this gate. No manual-input, MotionCapture or performance claim.
+- Full corrected default package verification passed **181 checks, zero failures and all required gates**, first run (`Local/verify-package-20261009-115522.log`, `Local/high-wall-lamps-verification.log`). No existing thresholds changed. Root **Launch-Prototype.cmd** now runs **Builds/Windows / c3f603a**; receipt/hash and **CheckOnly** pass. Prior **35c8d90** package preserved at **Builds/Windows-Previous-20261009-HighWallLamps**. Evening review PNGs moved with the verified package. Earlier rejected-placement trial had a keeper rag-reach sample failure (8.5 cm); its fresh unchanged verifier passed 181 checks, but those are not acceptance evidence for this corrected package.
+- All 40 pre-existing unfinished inputs hash-identical to `Local/wall-lamps-preserved-inputs.json`; generated output ignored, no new LFS binaries/storage/uploads, original 2D repository untouched.
+
+Next part of the work can only be done by Claude (brachiation).
+
+
 ## October 9 — slower reading through grouped short subtitle phrases
 
 Runtime **`35c8d90`**, on `b63782c` / prior launcher `9227ee4`. User liked the subtitle style but requested combining fleeting phrases with their next sentence, stacked on screen, for the alchemist, dockworker/keeper, elder and wherever needed.
