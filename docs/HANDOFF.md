@@ -1,5 +1,20 @@
 # Handoff — 2026-09-27
 
+## October 9 — contextual PC tutorials and PC-only instruction labels
+
+Runtime **ab0ddaa**. Added ten contextual lessons via DockTutorial.cpp/.h and HUD state: run at the starting quay between Bobert and tavern; jump at crate stairs; wall jumping at cargo/workshop facing walls and the three high-lamp alleys; scratch near daytime surface rats; exact first-sewer-rat and first-zombie warnings; dodge/roll/side jump in the wide chamber; side wall run at the post-chamber rupture; sprint and leap before the late gap, including the one-metre run-up. “Walk jump” was interpreted as wall jumping at the facing-wall locations; an optional clarification was offered without an answer. See TUTORIALS.md for wording and trigger boundaries.
+
+Text reuses the NPC Regular face at 30 pt / 1080p, warm-white color, outline and shadow, centred at 10.5% screen height with **no background**. NPC F / Y labels are now **F** and **F Talk**; the proximity prompt is centred lower down to avoid tutorial overlap. Current playtest controls and setting instruction documents now show PC keys only. Historical test records are preserved. Controller bindings, character/controller, NPC speech and traversal geometry are unchanged.
+
+Lessons last up to ten seconds inside their area and appear once per loaded world; leaving, returning or death does not replay them. Menus/pause do not consume them. Only the first sewer rat group has its warning; later sewer groups and evening/night surface rats receive none. A fresh game resets tutorial state.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**; final single-worker source-only skip-cook build **96.45 s**, Local/tutorials-build.log. Existing cooked assets reused; no dependencies, imports, new binary assets or clean-checkout reproduction claim.
+- Final focused **1280x720** review process exited zero, Local/tutorials-review.log: **ten actual HUD prompts rendered, all fit; CHUCK_TUTORIAL_TEST_COMPLETE failures=0 prompts=10 run_once=1 later_sewer_rats=0 night_rats=0**. Starting lesson leave/return suppression and three later sewer group/night exclusions checked. Review-only masks isolate overlapping lessons for the ten captures. Inspected starting run, lamp-alley wall jump, chamber dodge and sprint/leap frames. Initial review passed candidate/exclusion checks but lacked a distinct draw log for the identical lamp-alley text; clearing the review's prior text corrected that logging issue before acceptance. No physical-input, comfort or performance claim.
+- **No full 181-check regression or sprint-gap rerun** for this text/UI change, consistent with the user's usage-efficiency preference. Tools/Write-PrototypeReceipt.ps1 now supports an explicit -TutorialReview scope, requiring the completion gate and all ten fit logs. Default full verification remains intact. Root **Launch-Prototype.cmd** runs **Builds/Windows / ab0ddaa**; receipt/hash and **CheckOnly** passed. Prior **df04ba2** package preserved at **Builds/Windows-Previous-20261009-Tutorials**. Captures retained under Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Tutorials.
+- All **40** unfinished inputs hash-identical to Local/leap-rift-preserved-inputs.json and unstaged; generated output ignored, original 2D repository untouched. Source committed on main; publication follows standing workflow approval.
+
+Next part of the work can be done here.
+
 ## October 9 — Astral camera collision and folded-panel cleanup
 
 Runtime **df04ba2**. User requested Astral side walls to stop the camera like solid walls and removal of the folded fin circled in the screenshot. The two side meshes now cook query collision blocking **Camera only**, ignoring Pawn and Visibility. The existing spring-arm controller is unchanged. Planar sides along the opening replace the folding spline offsets; recessed background caps cover the bent tunnel ends. Floor lips, gap length and movement settings are unchanged. See SEWER-SPRINT-RIFT.md.
