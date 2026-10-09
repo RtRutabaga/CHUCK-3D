@@ -1412,7 +1412,7 @@ bool AChuckCharacter::GetDialogue(FString& Speaker, FString& Text) const
 {
     const ADockNPC* NPC = TalkingTo.Get();
     if (!NPC || !NPC->Lines.IsValidIndex(TalkLine)) return false;
-    Speaker = NPC->DisplayName; Text = NPC->Lines[TalkLine];
+    Speaker = NPC->DisplayName; Text = NPC->GetTalkSubtitle(TalkLine);
     return true;
 }
 void AChuckCharacter::Interact()

@@ -51,6 +51,7 @@ public:
     static const TArray<TWeakObjectPtr<ADockNPC>>& All();
     FString DisplayName;
     TArray<FString> Lines;
+    FString GetTalkSubtitle(int32 Index) const;
     /** Not while an ambient line is running (the tavern at night): those aren't conversations. */
     bool CanTalk() const { return Lines.Num() > 0 && AmbientLine < 0 && !IsAmbientSpeaking(); }
     static constexpr float TalkRadius = 120.f;     // cm from Chuck's centre to the NPC's

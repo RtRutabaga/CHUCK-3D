@@ -1,4 +1,5 @@
 #include "DockNPC.h"
+#include "DockSubtitles.h"
 #include "ChuckCharacter.h"
 #include "CigarettePickup.h"
 #include "Components/CapsuleComponent.h"
@@ -2116,6 +2117,19 @@ void ADockNPC::StopAmbient(float Delay, float Fade)
     AmbientStopIn = FMath::Max(Delay, 0.f); AmbientFade = Fade;
 }
 
+FString ADockNPC::GetTalkSubtitle(int32 Index) const
+{
+    if (!Lines.IsValidIndex(Index)) return FString();
+    if (!VoiceLines.IsValidIndex(Index)) return Lines[Index];
+    const NPCVoiceData::FLine& L = NPCVoiceData::Lines[VoiceLines[Index]];
+    // The smith rests his hammer, then the recording has a sigh and a pause
+    // before his first words at about 1.8 s. Show the ellipsis through both.
+    const float Pause = IsSmith() ? 1.8f : 0.f;
+    const float Elapsed = HeardLine != Index || PendingVoice >= 0 ? 0.f
+        : VoiceLine == Index && VoiceTime >= 0.f ? VoiceTime : L.Seconds;
+    return DockSubtitles::At(L.Text, L.Seconds, Elapsed, Pause);
+}
+
 bool ADockNPC::GetAmbientSubtitle(const FVector& At, FString& Speaker, FString& Text)
 {
     if (!InTavern(At)) return false;
@@ -2125,24 +2139,7 @@ bool ADockNPC::GetAmbientSubtitle(const FVector& At, FString& Speaker, FString& 
         if (Entry.IsValid() && Entry->IsAmbientSpeaking() && (!Who || Entry->VoiceTime < Who->VoiceTime)) Who = Entry.Get();
     if (!Who) return false;
     const NPCVoiceData::FLine& L = NPCVoiceData::Lines[Who->VoiceLines[Who->VoiceLine]];
-    // Sentences, gathered into parts of a readable length, each shown for its share of the line by length.
-    TArray<FString> Parts;
-    FString Part;
-    const FString Whole(L.Text);
-    for (int32 I = 0; I < Whole.Len(); ++I)
-    {
-        Part.AppendChar(Whole[I]);
-        const bool bEnd = FString(TEXT(".!?\u2026")).Contains(FString::Chr(Whole[I])) && (I + 1 == Whole.Len() || Whole[I + 1] == TEXT(' '));
-        if ((bEnd && Part.TrimStartAndEnd().Len() >= 45) || I + 1 == Whole.Len()) { Parts.Add(Part.TrimStartAndEnd()); Part.Reset(); }
-    }
-    int32 Total = 0;
-    for (const FString& P : Parts) Total += P.Len();
-    float Into = Who->VoiceTime / FMath::Max(L.Seconds, .1f) * Total;
-    for (const FString& P : Parts)
-    {
-        Text = P;
-        if ((Into -= P.Len()) < 0.f) break;
-    }
+    Text = DockSubtitles::At(L.Text, L.Seconds, Who->VoiceTime);
     Speaker = Who->DisplayName;
     return true;
 }

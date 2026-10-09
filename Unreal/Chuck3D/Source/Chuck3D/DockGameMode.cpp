@@ -48,6 +48,11 @@
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Canvas.h"
 #include "CanvasItem.h"
+#include "Engine/Font.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Rendering/SlateRenderer.h"
+#include "Fonts/FontMeasure.h"
+#include "Styling/CoreStyle.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
 #include "Materials/MaterialInterface.h"
@@ -757,9 +762,10 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
     const FVector Feet=Dwarf->GetActorLocation()-FVector(0,0,Dwarf->GetSimpleCollisionHalfHeight());
     if(Step>=UE_ARRAY_COUNT(Angles))
     {
+        const bool Subtitles=FParse::Param(FCommandLine::Get(),TEXT("ChuckSubtitleCapture"));
         // Then he speaks his line to the rat in front of him: a face close-up every 0.25 s (Dwarf/talk_##.png).
         const float Talk=DwarfCaptureTime-Settle-(TalkCaptureTag.IsEmpty() ? UE_ARRAY_COUNT(Angles)*Hold : 0.f);
-        if(Talk>8.f) { FPlatformMisc::RequestExit(false); return; }
+        if(Talk>(Subtitles ? 20.f : 8.f)) { FPlatformMisc::RequestExit(false); return; }
         if(DwarfShot!=100)
         {
             DwarfShot=100; DwarfFrame=0;
@@ -770,16 +776,19 @@ void ADockGameMode::TickDwarfCapture(float DeltaSeconds)
         }
         if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();   // talk-only runs skip the angle shots that make it
         PC->SetViewTarget(NPCCamera.Get());
-        if(Talk>=1.f && DwarfFrame==0) { Dwarf->StartVoiceLine(0); }
+        if(Talk>=1.f && DwarfFrame==0)
+        {
+            if(Subtitles) Chuck->Interact(); else Dwarf->StartVoiceLine(0);
+        }
         const FVector Eye=Feet+FVector(0,0,Dwarf->GetEyeHeight()-12.f);
         // From the side away from the pole in his or her hand (+ is to their right).
         const float Side=Dwarf->HasSpear() && Dwarf->GetPoleSide()==0 ? 30.f : -30.f;
         const FVector From=Eye+Dwarf->GetActorForwardVector().RotateAngleAxis(Side,FVector::UpVector)*85.f-FVector(0,0,22.f);
         NPCCamera->SetActorLocationAndRotation(From,(Eye-From).Rotation());
         NPCCamera->GetCameraComponent()->SetFieldOfView(38.f);
-        if(Talk>=1.f+DwarfFrame*.25f && Talk<7.2f)
+        if(Talk>=1.f+DwarfFrame*(Subtitles ? 1.f : .25f) && Talk<(Subtitles ? 19.f : 7.2f))
         {
-            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/talk_%02d.png"),TalkCaptureTag.IsEmpty() ? TEXT("Dwarf") : *TalkCaptureTag,DwarfFrame),false,false);
+            FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/%s/talk_%02d.png"),TalkCaptureTag.IsEmpty() ? TEXT("Dwarf") : *TalkCaptureTag,DwarfFrame),Subtitles,false);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DWARF_TALK_FRAME %02d t=%.2f speaking=%d jaw_deg=%.1f blinks=%d look=(%.1f,%.1f)"),DwarfFrame,Talk-1.f,
                 Dwarf->IsSpeaking() ? 1 : 0,Dwarf->GetJawOpen(),Dwarf->GetBlinks(),Dwarf->GetLookAngles().X,Dwarf->GetLookAngles().Y);
             ++DwarfFrame;
@@ -3658,29 +3667,64 @@ void ADockHUD::DrawHUD()
     DrawRect(FLinearColor(FColor(236,236,228)),CountX-12*Px,CigY+Px,7*Px,3*Px);
     DrawRect(FLinearColor(FColor(214,168,110)),CountX-12*Px,CigY+Px,2*Px,3*Px);
     DrawStamina(Chuck,Px,CigY+FMath::Max(CountH,5*Px)+2*Px);
-    // Talk: a quiet prompt near the top in reach (as in the 2D game), and a
-    // plain dialogue box near the bottom while someone's speaking.
-    // Overheard talk (the tavern at night: nobody to press F to) gets the same box, without the prompt.
+    // Sentence cues, centred like the reference, with no panel behind them.
     FString Speaker, Line;
     const bool bTalk=Chuck->GetDialogue(Speaker,Line);
     if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line))
     {
-        const float BoxW=FMath::Min(900.f,Canvas->SizeX-80.f), BoxX=(Canvas->SizeX-BoxW)*.5f;
-        // The line wrapped to the box (long voiced lines ran off its edge).
+        const float UiScale=FMath::Clamp(Canvas->SizeY/1080.f,.5f,2.f);
+        // Canvas requires a UFont even when the glyph face comes from Slate.
+        if(!SubtitleFont) { SubtitleFont=NewObject<UFont>(this); SubtitleFont->FontCacheType=EFontCacheType::Runtime; }
+        FSlateFontInfo Font=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(30.f*UiScale));
+        const auto Measure=FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+        const float MaxWidth=Canvas->SizeX*.8f;
+        const auto Width=[&](const FString& Text){return static_cast<float>(Measure->Measure(Text,Font).X);};
         TArray<FString> Rows; FString Row;
-        TArray<FString> Words; Line.ParseIntoArray(Words,TEXT(" "));
+        TArray<FString> Words; Line.ParseIntoArrayWS(Words);
         for(const FString& Word : Words)
         {
             const FString Try=Row.IsEmpty() ? Word : Row+TEXT(" ")+Word;
-            float W=0,H=0; GetTextSize(Try,W,H,GEngine->GetSmallFont(),1.3f);
-            if(W>BoxW-40 && !Row.IsEmpty()) { Rows.Add(Row); Row=Word; } else Row=Try;
+            if(Width(Try)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row.Reset(); }
+            // Also handle an unusually long unbroken word, rather than clipping it.
+            for(int32 I=0;I<Word.Len();++I)
+            {
+                const FString Next=Row+(I==0 && !Row.IsEmpty() ? TEXT(" ") : TEXT(""))+FString::Chr(Word[I]);
+                if(Width(Next)>MaxWidth && !Row.IsEmpty()) { Rows.Add(Row); Row=FString::Chr(Word[I]); }
+                else Row=Next;
+            }
         }
         if(!Row.IsEmpty()) Rows.Add(Row);
-        const float RowH=24.f, BoxH=FMath::Max(108.f,64.f+Rows.Num()*RowH), BoxY=Canvas->SizeY-82-BoxH;
-        DrawRect(FLinearColor(0.035f,0.04f,0.045f,0.92f),BoxX,BoxY,BoxW,BoxH);
-        DrawText(Speaker.ToUpper(),FLinearColor(.77f,.67f,.94f),BoxX+20,BoxY+12,GEngine->GetSmallFont(),1.05f);
-        for(int32 I=0;I<Rows.Num();++I) DrawText(Rows[I],FLinearColor(.95f,.93f,.9f),BoxX+20,BoxY+40+I*RowH,GEngine->GetSmallFont(),1.3f);
-        if(bTalk) DrawText(TEXT("F / Y"),FLinearColor(.6f,.62f,.66f),BoxX+BoxW-70,BoxY+BoxH-24,GEngine->GetSmallFont(),.9f);
+        float RowH=Measure->GetMaxCharacterHeight(Font)*1.12f;
+        // A fallback for future text-only paragraphs and unusually narrow windows:
+        // fit the measured block inside the bottom third of the screen.
+        if(Rows.Num()*RowH>Canvas->SizeY*.3f)
+        {
+            Font.Size=FMath::Max(1.f,Font.Size*(Canvas->SizeY*.3f)/(Rows.Num()*RowH));
+            RowH=Measure->GetMaxCharacterHeight(Font)*1.12f;
+        }
+        const float Bottom=Canvas->SizeY-Canvas->SizeY*.105f;
+        const auto Centre=[&](const FString& Text,float Y,const FSlateFontInfo& Face,FLinearColor Colour)
+        {
+            const float W=Measure->Measure(Text,Face).X;
+            FCanvasTextItem Item(FVector2D((Canvas->SizeX-W)*.5f,Y),FText::FromString(Text),Face,Colour);
+            Item.Font=SubtitleFont;
+            Item.bOutlined=true; Item.OutlineColor=FLinearColor(0.f,0.f,0.f,.8f);
+            Item.EnableShadow(FLinearColor(0.f,0.f,0.f,.65f),FVector2D(1.f,2.f)*UiScale);
+            Canvas->DrawItem(Item);
+        };
+        const float Top=Bottom-Rows.Num()*RowH;
+        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSubtitleCapture")) && SubtitleReviewLine!=Line)
+        {
+            SubtitleReviewLine=Line;
+            bool Fits=Top>=0.f && Bottom+40.f*UiScale<Canvas->SizeY;
+            for(const FString& R : Rows) Fits &= Width(R)<=MaxWidth+.5f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SUBTITLE_CUE t=%.2f speaker=%s rows=%d fits=%d text=%s"),GetWorld()->GetTimeSeconds(),*Speaker,Rows.Num(),Fits,*Line);
+        }
+        for(int32 I=0;I<Rows.Num();++I) Centre(Rows[I],Top+I*RowH,Font,FLinearColor(.97f,.95f,.90f));
+        // Speaker and close control remain small; the spoken sentence leads.
+        const FSlateFontInfo Small=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(16.f*UiScale));
+        Centre(Speaker,Top-24.f*UiScale,Small,FLinearColor(.85f,.81f,.93f,.9f));
+        if(bTalk) Centre(TEXT("F / Y"),Bottom+12.f*UiScale,Small,FLinearColor(.8f,.8f,.8f,.8f));
     }
     else if(Chuck->GetTalkPrompt())
     {

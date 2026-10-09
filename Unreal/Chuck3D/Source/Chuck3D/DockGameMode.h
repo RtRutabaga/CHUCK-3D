@@ -189,4 +189,6 @@ private:
     /** The stamina ring under the cigarette count (user 2026-10-08). */
     void DrawStamina(const class AChuckCharacter* Chuck, float Px, float Top);
     UPROPERTY() class UTexture2D* StaminaEmblem = nullptr;
+    FString SubtitleReviewLine;
+    UPROPERTY() class UFont* SubtitleFont = nullptr;
 };
