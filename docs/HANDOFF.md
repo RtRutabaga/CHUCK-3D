@@ -1,5 +1,18 @@
 # Handoff — 2026-09-27
 
+## October 9 — slower reading through grouped short subtitle phrases
+
+Runtime **`35c8d90`**, on `b63782c` / prior launcher `9227ee4`. User liked the subtitle style but requested combining fleeting phrases with their next sentence, stacked on screen, for the alchemist, dockworker/keeper, elder and wherever needed.
+
+`DockSubtitles::Group` combines any cue estimated under **2.25 s** with its successor, gathering consecutive short phrases until the group has enough time; a short final phrase stays with its predecessor. Applies across all recorded NPC dialogue. Hard line breaks place the short phrase above the next sentence, and HUD wraps each line independently. Original words/punctuation and summed timing weights are retained, so later boundaries do not drift. A whole recording shorter than 2.25 s stays one cue. The smith's explicit opening `... ` stays separate; his short last sentence now shares the previous cue. Speaker names remain absent, no background/font/control/audio changes. Timing remains proportional, not manually transcribed audio timestamps. See SUBTITLES.md.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**; one-worker source-only skip-cook build succeeded in **100.08 s** (`Local/subtitles-reading-build.log`). Cooked cache reused; no new dependencies, imports or binary assets.
+- Actual captures: alchemist **640x360**, elder and daytime worker **1280x720**, night worker/keeper **1280x720** (`Local/subtitles-reading-{alchemist,elder,worker,night}.log`). **20 observed cue transitions, zero fit failures**. Inspected stacked alchemist opening (three rows with small-window wrapping), elder/worker two-row openings and keeper three-row grouping. Alchemist opening group displayed about **6.59 s**; elder opening group about **4.14 s**. Night scene **failures=0**, interruption/quiet/resumption retained. No manual listening, physical-controller, MotionCapture or performance claim.
+- New smoke regression checks all **31** generated cues for minimum estimated reading duration (except single-cue short recordings), preserved words and timing weights; explicit alchemist/elder stacked openings and smith ellipsis. `CHUCK_SUBTITLE_READABILITY cues=31 readable=1 alchemist=1 elder=1`. Final default verifier passed **181 checks, zero failures, all required gates**, first run (`Local/verify-package-20261009-093206.log`, `Local/subtitles-reading-verification.log`). No existing thresholds changed; whitespace check passed.
+- Root **Launch-Prototype.cmd** now runs **Builds/Windows / `35c8d90`**; receipt/hash and **CheckOnly** pass. Prior `9227ee4` package retained at **Builds/Windows-Previous-20261009-ReadingPace**. All **40** pre-existing unfinished inputs remain hash-identical and unstaged. Generated output ignored, no new LFS uploads, original 2D repository untouched. Source committed on main; publication follows the user's continuing GitHub approval.
+
+Next part of the work can be done here.
+
 ## October 9 — speaker titles removed; GitHub publication approved
 
 User explicitly approved pushing the subtitle work to GitHub and requested removal of speaker titles. Runtime **`9227ee4`** removes the name draw from the shared direct/ambient subtitle HUD. Sentence text, font, wrapping, timing, smith ellipsis and F / Y hint retained. No dependencies or binary assets changed. Source and prior subtitle commits successfully pushed to verified origin **https://github.com/RtRutabaga/CHUCK-3D.git**, main `745de5e..9227ee4`; the earlier publication approval block is resolved.
