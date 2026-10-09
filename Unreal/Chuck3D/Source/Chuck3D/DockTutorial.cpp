@@ -67,7 +67,7 @@ FString FDockTutorial::Text(EDockTutorial Id)
     case EDockTutorial::Scratch:return TEXT("Left-click to scratch nearby enemies.");
     case EDockTutorial::SmallEnemy:return TEXT("Small enemies are easy to defeat");
     case EDockTutorial::LargeEnemy:return TEXT("Larger enemies are best to avoid");
-    case EDockTutorial::Dodge:return TEXT("Dodge attacks: press C to roll.\nHold A or D and press C to side jump.");
+    case EDockTutorial::Dodge:return TEXT("Dodge attacks: press C to roll.\nHold Q (left) or E (right) to strafe; press Space to side jump.");
     case EDockTutorial::WallRun:return TEXT("Tap Left Shift to run beside the wall, then press Space to wall run.\nKeep moving along the wall to cross the gap.");
     case EDockTutorial::Swing:return TEXT("Wall jump up to a lantern's ring and Chuck grabs it.\nPress Space to swing to the next ring, W, A, S, D to aim. C lets go.");
     case EDockTutorial::Leap:return TEXT("While running, press Left Ctrl to sprint on all fours.\nSprint straight for at least a metre, then press Space near the edge to leap across.");

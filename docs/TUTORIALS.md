@@ -11,7 +11,7 @@ Tutorials use the NPC subtitle's Regular font, warm white text, outline and shad
 | Within 3.5 m of living daytime surface rats on Chuck's level | Left-click to scratch nearby enemies. |
 | First sewer rat group (sample 36) | Small enemies are easy to defeat |
 | First sewer zombie approach (samples 90–108) | Larger enemies are best to avoid |
-| Wide zombie chamber | Dodge attacks: press C to roll. Hold A or D and press C to side jump. |
+| Wide zombie chamber | Dodge attacks: press C to roll. Hold Q (left) or E (right) to strafe; press Space to side jump. |
 | Narrow post-chamber wall-run crossing | Tap Left Shift to run beside the wall, then press Space to wall run. Keep moving along the wall to cross the gap. |
 | Approach to the late 2.6 m gap | While running, press Left Ctrl to sprint on all fours. Sprint straight for at least a metre, then press Space near the edge to leap across. |
 
