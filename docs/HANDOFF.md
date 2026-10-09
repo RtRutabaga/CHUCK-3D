@@ -1,5 +1,16 @@
 # Handoff — 2026-09-27
 
+## October 9 — brachiation on the lamp-alley rings; eave grabs in chimney climbs
+
+Runtime **e357438** (Claude). User asked for brachiation on the high wall lamps between the tall houses by the sewer ("look hard, be easy"), and for chimney climbs in those alleys to catch the slanted roof's edge automatically and pull up easily. Lanterns rebuilt as five per alley (fifteen), alternating walls, flush plates, each with a forged ring whose bottom bar is the grip (543-557 cm, reached only by wall jumping). Chuck catches a ring automatically near his raised paws, swings from it, and flies ring to ring on Space (toward the stick, straight on with it let go); held toward no ring, Space kicks off like a wall jump, so a chimney climb carries on; C lets go. Roof eaves are now caught at the lip, including when the eave stops his head, and a jump pulls him up onto the slope. New Swing/SwingLeap clips. Details: BRACHIATION.md, WALL-LAMPS.md, agent-handoffs/CLAUDE.md.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**, Blender **4.5.14**. Cooked one-worker candidate build 356 s, `Local/brachiation-build.log`. Only the two new clip uassets were imported. No installations.
+- `-ChuckLampSwingTest` **7/7, failures=0** (`Local/lamp-swing-run4.log`): three chimney climbs onto each alley's roof, a wall-jump ring catch, four leaps down the alley and four back, and a ring kick-off to the roof. It is now a required gate in Verify-Package. Full default verification passed **181 checks, zero failures, all gates**, first run (`Local/verify-package-20261009-145911.log`). Tutorial review: **11 prompts fit, failures=0** (new ring lesson; the wall-jump lesson now covers the three real lamp alleys).
+- Inspected capture frames of the hang, leap, chimney pull-up and lantern close-up. Not played by hand. No feel, comfort or performance claim.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / e357438**; receipt/hash and **CheckOnly** passed. Prior **ab0ddaa** package preserved at **Builds/Windows-Previous-20261009-Brachiation**. All **40** unfinished inputs hash-identical and unstaged; original 2D repository untouched.
+
+Next part of the work can be done here.
+
 ## October 9 — contextual PC tutorials and PC-only instruction labels
 
 Runtime **ab0ddaa**. Added ten contextual lessons via DockTutorial.cpp/.h and HUD state: run at the starting quay between Bobert and tavern; jump at crate stairs; wall jumping at cargo/workshop facing walls and the three high-lamp alleys; scratch near daytime surface rats; exact first-sewer-rat and first-zombie warnings; dodge/roll/side jump in the wide chamber; side wall run at the post-chamber rupture; sprint and leap before the late gap, including the one-metre run-up. “Walk jump” was interpreted as wall jumping at the facing-wall locations; an optional clarification was offered without an answer. See TUTORIALS.md for wording and trigger boundaries.

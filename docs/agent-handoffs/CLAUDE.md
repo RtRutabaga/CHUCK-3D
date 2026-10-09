@@ -2540,3 +2540,45 @@ Next part of the work can be done here.
 - **Remaining:** the attempts cover the obvious straight lines (8 headings × crate top / island floor, 4 side jumps), not every curve or stamina/latch combination. Nothing in the pantry ceiling or walls was checked for a wall-run route back (the sky hole's outer edge is ≥2 m from any wall). Not played by hand.
 
 Next part of the work can be done here.
+
+## Brachiation on the lamp rings; eave grabs in chimney climbs (user 2026-10-09)
+
+- **Ask:** brachiation on the wall lamps between the tall houses by the sewer. This is a demo/test area now and a major Chult mechanic later. The rule is "look hard, be easy": a wall jump up to a lantern grabs it seamlessly, and swinging lantern to lantern is easy. Lanterns could be moved or changed (a ring was suggested) but must stay high. Also, a chimney climb between the walls should catch the slanted roof's edge automatically and pull up easily.
+- **Source:** `e357438` on main, base `ee25ee8`. Changed: `ChuckCharacter.{h,cpp}`, `ChuckClimbable.{h,cpp}` (new `FChuckSwingGrip` registry), `DockSetting.cpp` (lantern rebuild; Codex's world file, lantern block only), `DockTutorial.{h,cpp}`, new `LampSwing.{h,cpp}`, `ChuckClipData.h` (generated), `Tools/{build_chuck_v1.py, gen_chuck_clip_data.py, Verify-Package.ps1, Write-PrototypeReceipt.ps1}`, the new `SourceAssets/Chuck/V1/Animations/AS_Chuck_Swing{,Leap}.fbx` plus `manifest.json` and `Chuck_V1.blend`, the new `/Game/Characters/Chuck/V1/Animations/AS_Chuck_Swing{,Leap}`, and `docs/{BRACHIATION.md, WALL-LAMPS.md}`. Details: `docs/BRACHIATION.md`.
+- **Lanterns:** fifteen (five per alley, alternating walls, y 2570-3090), plates now flush on the plaster, arm tops 612-626 cm. A forged ring hangs under each cage; its bottom bar is the grip, at 543-557 cm. Grips are registered for the controller; the named `DockLampGrip` components remain.
+- **Chuck:**
+  - Gaits Swing and SwingLeap. Auto-catch within 45 cm of his raised paws. Space flies to the nearest ring toward the stick; with the stick let go, straight on, or back at the end of a line. Toward no ring, Space kicks off like a wall jump. C lets go; the stick pumps.
+  - The swing is a pendulum with the mesh pitched about the grip. The leap follows a ballistic paw arc and is always caught.
+  - `TryGrabEdge` handles head-height faces, eave cut ends and eaves overhanging his head.
+  - `FindLedge` holds an overhang's outer lip and rejects tops buried in a roof.
+  - A buffered jump pulls up as soon as he hangs. A stick held away no longer drops him.
+- **Clips:** `Swing` (21 frames, posed by pendulum angle +/-40 deg) and `SwingLeap` (16 frames, posed by flight progress) in `build_chuck_v1.py`, with an `author(..., ground=False)` flag so the hanging tail can drop below the feet.
+  - Blender 4.5.14 rebuild; review sheets in `Local/SwingReview`. One fix round: the head pitch sign and the leap legs.
+  - The exporter rewrites every FBX with new IDs. Only the two new clips, the manifest and the `.blend` were kept; the other exports were restored byte-for-byte from HEAD.
+  - `Import-ChuckV1.ps1 -Clips Swing,SwingLeap` (36.9 s) added only the two new uassets.
+- **Verified** (UE 5.7.4, VS2022 14.44.35229, SDK 10.0.26100.0, one worker):
+  - Cooked candidate build 356 s (`Local/brachiation-build.log`), then skip-cook code rebuilds.
+  - `-ChuckLampSwingTest` final run **7/7, failures=0** (`Local/lamp-swing-run4.log`):
+    - three chimney climbs, one per alley, onto the lower roof in 7.0-8.7 s
+    - a wall-jump catch of the first ring
+    - four leaps down the alley with the stick let go
+    - four leaps back with the stick held back
+    - a kick toward the far wall, then up onto the roof in 3.4 s
+  - Two earlier runs failed only brachiation. The cause was jump pressed on the catch frame plus "straight on" taken from his facing; it now uses the swing line, else back.
+  - Full `Tools/Verify-Package.ps1` on the candidate passed **181 checks, 0 failures, all gates**, first run, including the new lamp-swing gate and `CHUCK_WALLLAMPS_CHECK failures=0 lamps=15 grips=15 swing_grips=15 clear_swings=12` (`Local/verify-package-20261009-145911.log`, `Local/brachiation-verification.log`). The existing roof/eave, ledge, hang and wall-run checks are unchanged and passing.
+  - `-ChuckTutorialReview`: **11 prompts, failures=0**, all fit (`Local/brachiation-tutorial-review.log`).
+- **Visual review:** frames in `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/LampSwing`, contact sheets `Local/sheet_trial{0,3,4,6}.png`, lantern close-ups in `.../WallLamps`.
+  - Inspected: the hang with paws on the ring bar, mid-leap arms thrown to the next ring, the hang from behind, a full chimney climb to the eave pull-up and standing on the roof, the zig-zag lantern line, and the ring close-up.
+  - The ring first read as a tyre tread; it is now thinner with 32 segments. Its box segments still show faint facets up close.
+  - The lesson text was first three lines; it is now two.
+- **Launcher:** `Builds/Windows` = `e357438`, receipt (full verification) written, `-CheckOnly` passes. The previous `ab0ddaa` package is at `Builds/Windows-Previous-20261009-Brachiation`.
+- **Preserved:** all 40 pre-existing unfinished inputs are hash-identical to `Local/leap-rift-preserved-inputs.json` and unstaged. Two stale `.git/index.lock` files (no git process, unchanged for minutes, left by the app's polling) were removed.
+- **Remaining:**
+  - Not played by hand: all evidence is scripted input and captures. Feel, camera comfort and keyboard timing are unjudged.
+  - Swing motion is procedural (pendulum plus posed clip). There is no hand IK onto the bar beyond the clip's fixed grip.
+  - Catches from a chimney pick the swing line from the camera.
+  - Wall jumping under a lantern always catches it, by design. To pass a lantern going up, kick off toward a wall or climb between lanterns.
+  - Lanterns have no collision.
+  - The Chult version needs branches registered as `FChuckSwingGrip` and nothing else.
+
+Next part of the work can be done here.
