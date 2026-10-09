@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 9 — corrected zombie-chamber strafe and side-jump keys
+
+Runtime **7adb7c3**. Wide-chamber lesson now says: “Dodge attacks: press C to roll. Hold Q (left) or E (right) to strafe; press Space to side jump.” Verified against DefaultInput.ini StrafeKeys Q/E, Jump Space and Dodge C, and ChuckCharacter::DoJump's live Q/E key read. Previous A/D + C advice was conditional: with forward input equally held, DodgeToward selects a roll, while Q/E + Space explicitly chooses the sideways jump. Only tutorial text and TUTORIALS.md changed; controller/bindings remain unchanged.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**. Single-worker skip-cook build **45.78 s**, `Local/tutorial-keys-build.log`; existing cooked assets, no dependencies or imports.
+- Focused **1280x720** tutorial review passed **11 prompts, failures=0**, run-once and later-rat/night exclusions passed, `Local/tutorial-keys-review.log`. Corrected id=7 renders in **two rows, fits=1**; inspected Prompt7.png. No full 181-check traversal rerun for this text-only correction and no physical-input test claim. Receipt explicitly records focused tutorial scope.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / 7adb7c3**; receipt/hash and **CheckOnly** passed. Prior **d356d53** package preserved at **Builds/Windows-Previous-20261009-TutorialKeys**. All **40** unfinished inputs hash-identical and unstaged; original 2D repository untouched. Publication follows standing workflow permission.
+
+Next part of the work can be done here.
+
 ## October 9 — floor-only Astral jump, stone side walls restored
 
 Runtime **d356d53**. Removed the late sprint gap's two Astral wall panels, vertical backdrops and upright oil veils. Restored its continuous solid stone cave sides and their normal camera collision; removed the obsolete camera-only mesh path. Kept the **2.60 m** floor opening, Astral well, purple lighting and straight floor lips. Stone trim now follows those lips; a noncolliding horizontal depth 30 cm below the floor covers daylight seams exposed by removing the backdrops. Other sewer ruptures retain their existing dressing. Wall-run and other bypasses are explicitly allowed. No controller, animation, enemy or camera tuning; Claude's **e357438** brachiation and eave work preserved.
