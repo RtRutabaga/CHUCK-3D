@@ -1,5 +1,18 @@
 # Codex movement handoff — 2026-09-26
 
+## October 9 — Astral camera collision and folded-panel cleanup
+
+Runtime **df04ba2**. User requested Astral side walls to stop the camera like solid walls and removal of the folded fin circled in the screenshot. The two side meshes now cook query collision blocking **Camera only**, ignoring Pawn and Visibility. The existing spring-arm controller is unchanged. Planar sides along the opening replace the folding spline offsets; recessed background caps cover the bent tunnel ends. Floor lips, gap length and movement settings are unchanged. See SEWER-SPRINT-RIFT.md.
+
+User explicitly requested minimal verification/usage and accepts a possible wall-run bypass. **No full regression, whole-route or six-trial sprint-only rerun for this revision.** The receipt has an explicit focused scope; the prior build's 181 checks are not claimed for this binary. Tools/Write-PrototypeReceipt.ps1 accepts -AstralCameraReview only with the new six-probe camera gate; its default still requires full package verification.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**. Final single-worker skip-cook build **58.23 s**, Local/astral-camera-build.log; existing cooked assets reused. No dependencies, imports or binary assets. Brief visual iterations corrected a curved panel projecting into the passage and a background seam exposed by flattening it.
+- Final short **1280x720** capture process exited zero; **CHUCK_ASTRAL_CAMERA_CHECK failures=0 walls=2 camera_samples=6**, Local/astral-camera-review.log. Three probes on each wall use the spring arm's Camera channel and 3 cm sphere; Pawn/Visibility responses checked. Inspected the reference-angle view with fin absent and the actual follow-camera view with Chuck visible rather than hidden behind the Astral wall. Fixed views and CameraWall.png remain under Builds/Windows/Chuck3D/Saved/Screenshots/Windows/LeapRift. No physical-controller or performance test claim.
+- Root **Launch-Prototype.cmd** now opens **Builds/Windows / df04ba2**; focused receipt/hash and **CheckOnly** passed. Prior fully tested **20f1b3c** package preserved at **Builds/Windows-Previous-20261009-AstralCamera**.
+- All **40** unfinished inputs hash-identical to Local/leap-rift-preserved-inputs.json, unstaged. Generated output ignored, original 2D repository untouched. Source committed on main; publication follows standing workflow approval.
+
+Next part of the work can be done here.
+
 ## October 9 — sprint-only Astral jump late in the sewer
 
 Runtime **20f1b3c**. Added a separate **2.60 m full-width** Astral rupture at route samples 306–310, after the wide zombie chamber and before the end. The earlier narrow wall-run rupture remains. The lower side walls are torn away across the gap and about 3.25 m on either approach, preventing a continuous wall-run bypass. Upper arch retained; recessed noncolliding Astral side veils and depths cover the torn walls and views beneath the lips. Floor lips are flattened onto end planes so the spline bend cannot fold a bank into the opening. Existing materials reused; NPC-only floor spans the new hole. Total **33** openings (13 large, 20 small). Zombies, rats, checkpoint, slide and character/controller unchanged. See SEWER-SPRINT-RIFT.md for placement and controls.
