@@ -799,6 +799,100 @@ void BuildDockSetting(UWorld* World)
     BuildDockWeathering(World);
     BuildDockTavern(World);
 
+    // High service lanterns on opposed workshop walls. Geometry is dressing;
+    // the tagged, named arm tips are an explicit future brachiation contract.
+    TArray<FVector> LampGrips;
+    TArray<FVector> LampMounts;
+    TArray<FVector> LampNormals;
+    auto WallLamp=[&](const TCHAR* Name,FVector Mount,FVector Out)
+    {
+        const FVector Along(-Out.Y,Out.X,0);
+        auto P=[&](float Reach,float Side,float Z){return Mount+Out*Reach+Along*Side+FVector(0,0,Z);};
+        const FRotator Yaw=Out.Rotation();
+        Box(P(3,0,-17),FVector(5,12,43),TEXT("Dark"),false,Yaw);
+        for(float Z : {-34.f,0.f}) for(float Side : {-4.f,4.f})
+            Box(P(6,Side,Z),FVector(2,2.5f,2.5f),TEXT("Metal"),false,Yaw);
+        Beam(P(5,0,0),P(34,0,0),3.5f,TEXT("Dark"));
+        Beam(P(6,0,-33),P(29,0,-3),2.7f,TEXT("Dark"));
+        // A small curled forge-work brace, in the same vertical plane as the arm.
+        for(int32 I=0;I<18;++I)
+        {
+            const float A=I*PI*1.65f/18, B=(I+1)*PI*1.65f/18;
+            const float R0=7.f-I*.22f,R1=7.f-(I+1)*.22f;
+            Beam(P(15+FMath::Cos(A)*R0,0,-12+FMath::Sin(A)*R0),
+                 P(15+FMath::Cos(B)*R1,0,-12+FMath::Sin(B)*R1),1.8f,TEXT("Dark"));
+        }
+        Beam(P(29,0,-2),P(29,0,-10),2,TEXT("Dark"));
+        // Open iron cage: flame remains visible, with a rain cap and vent neck.
+        for(float Z : {-48.f,-18.f})
+            Box(P(29,0,Z),FVector(19,19,3),TEXT("Dark"),false,Yaw);
+        for(float X : {-8.f,8.f}) for(float Y : {-8.f,8.f})
+            Beam(P(29+X,Y,-46),P(29+X,Y,-20),1.5f,TEXT("Dark"));
+        for(float Z : {-39.f,-27.f})
+        {
+            for(float Side : {-8.f,8.f})
+            {
+                Beam(P(21,Side,Z),P(37,Side,Z),1,TEXT("Dark"));
+                Beam(P(29+Side,-8,Z),P(29+Side,8,Z),1,TEXT("Dark"));
+            }
+        }
+        Box(P(29,0,-14),FVector(12,12,5),TEXT("Dark"),false,Yaw);
+        Box(P(29,0,-10),FVector(6,6,3),TEXT("Metal"),false,Yaw);
+        for(float Side : {-1.f,1.f})
+            Box(P(29+Side*5.5f,0,-17),FVector(13,22,2),TEXT("Dark"),false,
+                FRotator(-Side*24,Yaw.Yaw,0));
+        AddDockFlame(Owner,P(29,0,-45),7,22);
+        auto* Light=NewObject<UPointLightComponent>(Owner);
+        Light->SetupAttachment(Root);Light->SetRelativeLocation(P(29,0,-32));
+        Light->SetLightColor(FLinearColor(1,.47f,.17f));Light->SetIntensity(650);
+        Light->SetAttenuationRadius(210);Light->SetCastShadows(false);Light->RegisterComponent();
+        auto* Grip=NewObject<USceneComponent>(Owner,FName(Name));
+        Grip->SetupAttachment(Root);Grip->SetRelativeLocation(P(32,0,0));
+        Grip->ComponentTags.Add(TEXT("DockLampGrip"));Grip->RegisterComponent();
+        LampGrips.Add(P(32,0,0));LampMounts.Add(Mount);LampNormals.Add(Out);
+    };
+    for(int32 I=0;I<2;++I)
+    {
+        WallLamp(*FString::Printf(TEXT("WallLampGrip_Warehouse_%d"),I),FVector(-26,-852+I*144,218),FVector(1,0,0));
+        WallLamp(*FString::Printf(TEXT("WallLampGrip_SailLoft_%d"),I),FVector(66,-828+I*144,244),FVector(-1,0,0));
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
+    {
+        int32 Failures=0;
+        for(int32 I=0;I<LampGrips.Num();++I)
+        {
+            FHitResult Hit;
+            // Mounts must touch a real solid wall; arm tips remain unobstructed.
+            if(!World->LineTraceSingleByChannel(Hit,LampMounts[I]+LampNormals[I]*10,
+                LampMounts[I]-LampNormals[I]*12,ECC_Visibility)) ++Failures;
+            if(World->LineTraceSingleByChannel(Hit,LampGrips[I]+FVector(0,0,5),
+                LampGrips[I]-FVector(0,0,5),ECC_Visibility) || LampGrips[I].Z<160) ++Failures;
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLLAMPS_CHECK failures=%d lamps=%d grips=%d collision=0"),Failures,LampMounts.Num(),LampGrips.Num());
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWallLampCapture")))
+    {
+        auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(65);
+        const FVector Views[]={FVector(20,-990,85),FVector(16,-950,248),FVector(30,-875,208)};
+        const FVector Targets[]={FVector(20,-765,210),FVector(12,-755,202),FVector(3,-852,188)};
+        for(int32 I=0;I<3;++I)
+        {
+            FTimerHandle View,Shot;
+            World->GetTimerManager().SetTimer(View,[World,Camera,P=Views[I],T=Targets[I]](){
+                Camera->SetActorLocationAndRotation(P,(T-P).Rotation());
+                if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);
+            },4.f+I*4.f,false);
+            World->GetTimerManager().SetTimer(Shot,[I](){
+                const FString Folder=FPaths::ScreenShotDir()/TEXT("WallLamps");
+                IFileManager::Get().MakeDirectory(*Folder,true);
+                FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);
+            },6.f+I*4.f,false);
+        }
+        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){
+            if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));
+        },18.f,false);
+    }
+
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
     {
         int32 Failed=0;
