@@ -64,6 +64,7 @@ void ADockHUD::ShowTitleMenu() { ShowMenu(FParse::Param(FCommandLine::Get(),TEXT
 void ADockHUD::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    UpdateTutorial();
 #if !UE_BUILD_SHIPPING
     // Exercise real Slate button delegates, including page changes and the
     // paused-world -> gameplay transition that direct map-option tests missed.

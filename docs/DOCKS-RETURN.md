@@ -6,7 +6,7 @@ Start a fresh launch in morning light. The rusty hatch beside the side gate is o
 
 The closed hatch has matching bars and a hidden collision plate under them so Chuck can walk over it without falling between narrow gaps. Fold-out hatch stays are hidden and lose collision when closed. The same furnished tavern room becomes accessible; there is no new dialogue, bartender, upstairs, pantry or campaign transition.
 
-R / Xbox View returns Chuck to dock spawn but keeps evening, the closed hatch and open tavern. Falling or losing sanity does not undo the session state. Quit and relaunch to begin in morning again. No disk save system is introduced. Sewer fill/ruptures remain at the last approved grey-blue settings; restoring outdoor light applies the evening values after the exit.
+R returns Chuck to dock spawn but keeps evening, the closed hatch and open tavern. Falling or losing sanity does not undo the session state. Quit and relaunch to begin in morning again. No disk save system is introduced. Sewer fill/ruptures remain at the last approved grey-blue settings; restoring outdoor light applies the evening values after the exit.
 
 Implementation: `DockReturn.cpp/.h` observes `HasExitedDockSewer()`. `DockSetting` owns the movable hatch; `DockGameMode` owns the movable tavern door. The sky material has a default-white `SkyTint` parameter, darkened only on return. `Tools/create_plaza_materials.py` accepts Unreal command-line `-ChuckSkyOnly` to regenerate only this owned material, preserving fountain/flame graphs. No new dependency.
 

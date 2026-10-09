@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/HUD.h"
+#include "DockTutorial.h"
 #include "DockGameMode.generated.h"
 
 UCLASS()
@@ -177,7 +178,12 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaSeconds) override;
     virtual void DrawHUD() override;
+    void ReviewTutorial(uint32 Suppressed) {Tutorial=FDockTutorial();Tutorial.Seen=Suppressed;TutorialLine.Reset();TutorialReviewLine.Reset();}
 private:
+    FDockTutorial Tutorial;
+    FString TutorialLine,TutorialReviewLine;
+    void UpdateTutorial();
+    void DrawTutorial();
     TSharedPtr<class SWidget> MenuWidget;
     TMap<FString,TWeakPtr<class SButton>> MenuButtons;
     FString MenuTestPoint;

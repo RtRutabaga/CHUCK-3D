@@ -590,6 +590,7 @@ void ADockGameMode::StartPlay()
     BuildDockSewer(World);
     BuildDockReturn(World);
     SpawnSewerLife(World);   // its rats and moss (Claude)
+    StartDockTutorialReview(World);
     FinishDockFire(World);
     FinishDockTimber(World);
     ReviewDockTradeSigns(World);
@@ -3672,6 +3673,7 @@ void ADockHUD::DrawHUD()
     Super::DrawHUD();
     auto* Chuck = Cast<AChuckCharacter>(GetOwningPawn());
     if(!Chuck || !Canvas) return;
+    DrawTutorial();
     // Sanity is one cigarette, as in the 2D game (CHUCK-game src/ui/hud.py):
     // the paper left is the Sanity left, burning down toward the filter with
     // the ember at the burn line; a faint ash line marks what's gone. No
@@ -3756,11 +3758,12 @@ void ADockHUD::DrawHUD()
         for(int32 I=0;I<Rows.Num();++I) Centre(Rows[I],Top+I*RowH,Font,FLinearColor(.97f,.95f,.90f));
         // Only the spoken sentence and the small close control are displayed.
         const FSlateFontInfo Small=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(16.f*UiScale));
-        if(bTalk) Centre(TEXT("F / Y"),Bottom+12.f*UiScale,Small,FLinearColor(.8f,.8f,.8f,.8f));
+        if(bTalk) Centre(TEXT("F"),Bottom+12.f*UiScale,Small,FLinearColor(.8f,.8f,.8f,.8f));
     }
     else if(Chuck->GetTalkPrompt())
     {
-        const FString Prompt=TEXT("F / Y   Talk");
-        DrawText(Prompt,FLinearColor(.95f,.95f,.95f),Canvas->SizeX*.5f-60,120,GEngine->GetSmallFont(),1.2f);
+        const FString Prompt=TEXT("F   Talk");
+        float W=0,H=0;GetTextSize(Prompt,W,H,GEngine->GetSmallFont(),1.2f);
+        DrawText(Prompt,FLinearColor(.95f,.95f,.95f),(Canvas->SizeX-W)*.5f,Canvas->SizeY*.8f,GEngine->GetSmallFont(),1.2f);
     }
 }

@@ -1,6 +1,6 @@
 # Tavern interior foundation
 
-October 3 basement addition: the structural/decorative floor now has a real opening behind the right half of the bar, leading down to a stocked stone pantry. Ladder geometry is a placeholder; Claude owns its climb implementation. Current inspection route drops in and uses R / View to exit. See TAVERN-PANTRY.md; this supersedes the unbroken-floor description below.
+October 3 basement addition: the structural/decorative floor now has a real opening behind the right half of the bar, leading down to a stocked stone pantry. Ladder geometry is a placeholder; Claude owns its climb implementation. Current inspection route drops in and uses R to exit. See TAVERN-PANTRY.md; this supersedes the unbroken-floor description below.
 
 The user authorized tavern-interior work on October 3. This supersedes earlier exterior-only descriptions. The enlarged 6.6 x 6.6 m building now has a structural floor and enclosing walls around a 1.2 m nominal front doorway. The timber leaf stands open inward; walk through directly, with no loading screen or interaction prompt.
 

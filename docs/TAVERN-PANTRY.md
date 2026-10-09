@@ -11,7 +11,7 @@ A roughly 5.5 x 5m usable stone cellar beneath the existing tavern, floor z=-320
 - Clear shaft bounds: world x20..130, y875..955cm (110 x 80cm), centre (75,915). Tavern floor z=0, ceiling underside=-110, cellar floor=-320.
 - Ladder placeholder rails: x124, y891/939, z=-315..15. Rungs every28cm, in Y direction; ladder faces toward -X. Rails/rungs have no collision or climb logic yet. Upright hatch lid sits on the west edge; landing beneath the centre is clear.
 - Recommended lower alignment near (90,915,-285.35), upper dismount near (175,915,34.65), facing +X while climbing. Confirm capsule and animation clearance when implementing; these are design targets, not tested ladder poses.
-- Keep controller/rig ownership with Claude. There is no temporary bespoke climbing mechanic. R / View is the current way out. Keep the single root launcher; rebuild, verify and promote after ladder integration.
+- Keep controller/rig ownership with Claude. There is no temporary bespoke climbing mechanic. R is the current way out. Keep the single root launcher; rebuild, verify and promote after ladder integration.
 
 ## Checks
 

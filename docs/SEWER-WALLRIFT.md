@@ -10,7 +10,7 @@ The prior large rupture at 215 moves to 199, and small bank ruptures 228/235 mov
 
 ## Controls and testing
 
-Approach along either wall. Tap run (Shift / Xbox LB), keep moving parallel to the wall, and press jump (Space / Xbox A) shortly before the broken floor. Keep moving forward to reach the landing. A jump directed into a wall still uses the existing upward climb. A walking jump stays an ordinary jump. Falling returns Chuck to the sewer entrance.
+Approach along either wall. Tap run (Left Shift), keep moving parallel to the wall, and press jump (Space) shortly before the broken floor. Keep moving forward to reach the landing. A jump directed into a wall still uses the existing upward climb. A walking jump stays an ordinary jump. Falling returns Chuck to the sewer entrance.
 
 Use the root Launch-Prototype.cmd for the verified published build. Enter through the side-gate grate, follow the winding sewer past its wide chamber and look for the narrowed purple-lit break.
 
