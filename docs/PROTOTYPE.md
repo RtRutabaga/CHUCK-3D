@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 9: farther past the wide sewer zombie chamber, a new 2.60 m full-width Astral gap requires the four-legged sprint leap. Lower side walls are interrupted to prevent wall-run bypasses. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for verified package evidence.
+
 Square timber shops: five existing workshops now have staggered weathered shake cladding and flat plank roofs with overhanging eaves/fascia. Roof collision follows the new top, 5 cm above the previous landing; doors, windows and parkour routes remain. See WEATHERED-TIMBER.md and HANDOFF for verified launcher evidence.
 
 October 5 timber update: the verified launcher includes 2K CC0 weathered-plank/rough-wood scans on existing timber buildings and props, with board-aligned crate UVs. No route or collision changes. Inspect with New Game / Waterdeep and compare Waterdeep Night; see WEATHERED-TIMBER.md and HANDOFF for provenance, pipeline and actual checks.

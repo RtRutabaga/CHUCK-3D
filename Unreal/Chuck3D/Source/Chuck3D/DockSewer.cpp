@@ -1,4 +1,5 @@
 #include "DockSewer.h"
+#include "SewerLeapRift.h"
 #include "ChuckCharacter.h"
 #include "SewerSlide.h"
 #include "Engine/World.h"
@@ -37,6 +38,9 @@ float Chamber(int32 I)
     return U*U*(3.f-2.f*U);
 }
 constexpr int32 WallRiftStart=222, WallRiftSpan=3, NarrowCentre=224;
+constexpr int32 LeapRiftStart=306, LeapRiftSpan=4, LeapWallCutPadding=5;
+bool LeapRiftSegment(int32 I) { return I>=LeapRiftStart && I<LeapRiftStart+LeapRiftSpan; }
+bool LeapWallCut(int32 I) { return I>=LeapRiftStart-LeapWallCutPadding && I<LeapRiftStart+LeapRiftSpan+LeapWallCutPadding; }
 bool WallRiftSegment(int32 I) { return I>=WallRiftStart && I<WallRiftStart+WallRiftSpan; }
 float Narrow(int32 I) { return 1.f-FMath::SmoothStep(5.f,10.f,FMath::Abs(float(I-NarrowCentre))); }
 float Width(int32 I) { return FMath::Lerp((I<6?230.f-12.f*I:158.f+12.f*FMath::Sin(I*.19f))+315.f*Chamber(I),70.f,Narrow(I)); }
@@ -62,11 +66,11 @@ float WallWidth(int32 I,float Side)
 }
 const int32 Rifts[]={26,54,84,114,146,180,199,249,282,316,346};
 const int32 SmallRifts[]={12,18,22,37,43,66,73,128,135,158,165,237,242,256,274,294,302,337,357,364};
-TArray<int32> AllRifts() { TArray<int32> Result;Result.Add(WallRiftStart);Result.Append(Rifts,UE_ARRAY_COUNT(Rifts));Result.Append(SmallRifts,UE_ARRAY_COUNT(SmallRifts));return Result; }
-int32 RiftSpan(int32 Start) { if(Start==WallRiftStart) return WallRiftSpan; for(int32 S : SmallRifts) if(S==Start) return 2;return 4; }
-bool RiftSegment(int32 I) { if(WallRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;for(int32 S : SmallRifts) if(I>=S && I<S+2) return true;return false; }
+TArray<int32> AllRifts() { TArray<int32> Result;Result.Add(WallRiftStart);Result.Add(LeapRiftStart);Result.Append(Rifts,UE_ARRAY_COUNT(Rifts));Result.Append(SmallRifts,UE_ARRAY_COUNT(SmallRifts));return Result; }
+int32 RiftSpan(int32 Start) { if(Start==WallRiftStart) return WallRiftSpan; if(Start==LeapRiftStart) return LeapRiftSpan; for(int32 S : SmallRifts) if(S==Start) return 2;return 4; }
+bool RiftSegment(int32 I) { if(WallRiftSegment(I) || LeapRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;for(int32 S : SmallRifts) if(I>=S && I<S+2) return true;return false; }
 float RiftOffset(int32 I) { return 18.f*FMath::Sin(I*.7f); }
-bool LargeRiftSegment(int32 I) { if(WallRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
+bool LargeRiftSegment(int32 I) { if(WallRiftSegment(I) || LeapRiftSegment(I)) return true; for(int32 S : Rifts) if(I>=S && I<S+4) return true;return false; }
 int32 SmallRiftAt(float Sample) { for(int32 S : SmallRifts) if(Sample>=S && Sample<=S+2) return S;return INDEX_NONE; }
 float SmallRiftSide(int32 Start)
 {
@@ -92,6 +96,8 @@ float RiftEdge(float Sample,float Side)
 {
     // The new break reaches under both cave walls: no walkable lip beside it.
     if(Sample>=WallRiftStart && Sample<=WallRiftStart+WallRiftSpan)
+        return Width(FMath::RoundToInt(Sample))+40.f+6.f*FMath::Sin(Sample*7.3f+Side);
+    if(Sample>=LeapRiftStart && Sample<=LeapRiftStart+LeapRiftSpan)
         return Width(FMath::RoundToInt(Sample))+40.f+6.f*FMath::Sin(Sample*7.3f+Side);
     for(int32 S : AllRifts()) if(Sample>=S && Sample<=S+RiftSpan(S))
     {
@@ -132,6 +138,8 @@ FVector DockSewerSide(int32 I) { return RouteRight.IsValidIndex(I) ? RouteRight[
 float DockSewerHalfWidth(int32 I) { return Route.IsValidIndex(I) ? FMath::Min(WallWidth(I,1.f),WallWidth(I,-1.f)) : 0.f; }
 int32 DockSewerWallRiftStart() { return WallRiftStart; }
 int32 DockSewerWallRiftEnd() { return WallRiftStart+WallRiftSpan; }
+int32 DockSewerLeapRiftStart() { return LeapRiftStart; }
+int32 DockSewerLeapRiftEnd() { return LeapRiftStart+LeapRiftSpan; }
 bool DockSewerIsGap(int32 I) { return RiftSegment(I); }
 // Nine samples (~5.9 m) of run-up on the right bank, clear of the chamber's last break.
 int32 DockSewerCheckpointSample() { return WallRiftStart-9; }
@@ -272,12 +280,17 @@ void BuildDockSewer(UWorld* World)
         // Leave the entry shaft unroofed over its landing chamber.
         const FVector Mid=(V[A]+V[B]+V[C]+V[D])*.25f;
         if(FVector::Dist2D(Mid,Shaft)<150 && Mid.Z>FloorZ+220) continue;
+        // The tear eats the low side walls on both approaches: no wall-run bypass.
+        if(LeapWallCut(I) && (J<8 || J>=Arc-8)) continue;
         T.Append({A,B,C,B,D,C});
     }
     MakeMesh(V,T,N,UV,Stone,true);
     RouteRight=Right;
     V.Reset();N.Reset();T.Reset();UV.Reset();
     constexpr int32 FloorSteps=4,FloorColumns=12;
+    const FVector LeapNear=Route[LeapRiftStart],LeapFar=Route[LeapRiftStart+LeapRiftSpan];
+    const FVector LeapAlong=(LeapFar-LeapNear).GetSafeNormal2D();
+    const float LeapLength=FVector::Dist2D(LeapNear,LeapFar);
     for(int32 Row=0;Row<=(Count-1)*FloorSteps;++Row) for(int32 Column=0;Column<FloorColumns;++Column)
     {
         const float Sample=Row/float(FloorSteps);const int32 I=FMath::Min(Count-2,FMath::FloorToInt(Sample));const float F=Sample-I;
@@ -293,7 +306,13 @@ void BuildDockSewer(UWorld* World)
         const float RightOuter=Side>0?Q+SR:FMath::Lerp(O+R,W+35,.65f);
         const float Offsets[]={-W-35,LeftOuter,LeftInner,-L+O,-L*.82f+O,-L*.58f+O,R*.58f+O,R*.82f+O,R+O,RightInner,RightOuter,W+35};
         const float Depth=(I<Count-4 && (Column==5 || Column==6))?-8.f:0.f;
-        V.Add(FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth));N.Add(FVector::UpVector);
+        FVector FloorPoint=FMath::Lerp(Route[I],Route[I+1],F)+FMath::Lerp(Right[I],Right[I+1],F)*Offsets[Column]+FVector(0,0,Depth);
+        // Flatten each lip onto the gap's end plane. At this spline bend,
+        // an inner-bank strip would otherwise fold back into the opening.
+        const float Along=FVector::DotProduct(FloorPoint-LeapNear,LeapAlong);
+        if(Sample>=LeapRiftStart-6 && Sample<=LeapRiftStart && Along>0) FloorPoint-=LeapAlong*Along;
+        if(Sample>=LeapRiftStart+LeapRiftSpan && Sample<=LeapRiftStart+LeapRiftSpan+6 && Along<LeapLength) FloorPoint+=LeapAlong*(LeapLength-Along);
+        V.Add(FloorPoint);N.Add(FVector::UpVector);
         UV.Add(FVector2D(Offsets[Column]/100,Sample*.65f));
     }
     TArray<int32> Open;   // the openings' cells, for the NPC-only floor below
@@ -304,6 +323,7 @@ void BuildDockSewer(UWorld* World)
         // Slightly stagger the two broken floor ends; the whole width is open.
         const float Jagged=.18f*FMath::Sin(C*2.3f);
         const bool bOpen=(Sample>=WallRiftStart+Jagged && Sample<WallRiftStart+WallRiftSpan+Jagged)
+            || (Sample>=LeapRiftStart && Sample<LeapRiftStart+LeapRiftSpan)
             || (C>=3 && C<=7 && LargeRiftSegment(Row/FloorSteps))
             || (Small!=INDEX_NONE && ((C==1 && SmallRiftSide(Small)<0) || (C==9 && SmallRiftSide(Small)>0)));
         (bOpen?Open:T).Append({A,A+1,A+FloorColumns,A+1,A+FloorColumns+1,A+FloorColumns});
@@ -367,7 +387,7 @@ void BuildDockSewer(UWorld* World)
         }
         const TArray<FVector> LongEdges=Edges;
         TArray<FVector> BrokenCaps;
-        if(StartIndex==WallRiftStart)
+        if(StartIndex==WallRiftStart || StartIndex==LeapRiftStart)
         {
             // Follow the cut floor's transverse notches, rather than closing
             // this wall-to-wall opening with a straight rectangular space plane.
@@ -447,6 +467,35 @@ void BuildDockSewer(UWorld* World)
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
+    // Noncolliding Astral depths fill the missing low cave walls. The visible
+    // break and real collision agree, rather than an invisible traversal ban.
+    for(float Side : {-1.f,1.f})
+    {
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(int32 I=LeapRiftStart-LeapWallCutPadding-3;I<=LeapRiftStart+LeapRiftSpan+LeapWallCutPadding+3;++I)
+        {
+            const FVector P=Route[I]+Right[I]*(Side*(Width(I)+28.f));
+            for(float Z : {-300.f,370.f})
+            { V.Add(P+FVector(0,0,Z));N.Add(-Right[I]*Side);UV.Add(FVector2D(I*.17f,(Z+300)/670)); }
+            if(I>LeapRiftStart-LeapWallCutPadding-3)
+            { const int32 A=V.Num()-4;T.Append({A,A+1,A+2,A+1,A+3,A+2}); }
+        }
+        MakeMesh(V,T,N,UV,Astral,false);
+    }
+    // A recessed depth behind the torn lips closes views of the outdoor sky
+    // beneath the floor; it never supplies a walking or wall-running surface.
+    V.Reset();N.Reset();T.Reset();UV.Reset();
+    const FVector LeapAcross(-LeapAlong.Y,LeapAlong.X,0);
+    for(float End : {-650.f,LeapLength+650.f}) for(float Side : {-650.f,650.f})
+    {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,-300));N.Add(FVector::UpVector);UV.Add(FVector2D(End/500,Side/500));}
+    T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
+    for(float End : {-10.f,LeapLength+10.f})
+    {
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(float Side : {-500.f,500.f}) for(float Z : {-300.f,0.f})
+        {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,Z));N.Add(LeapAlong);UV.Add(FVector2D(Side/500,Z/300));}
+        T.Append({0,1,2,1,3,2});MakeMesh(V,T,N,UV,Astral,false);
+    }
     // Soft cinematic night fill, without visible lamps or hot spots. Purple
     // remains the only light visibly emanating from an object in the cave.
     int32 FillLights=0;
@@ -492,6 +541,7 @@ void BuildDockSewer(UWorld* World)
         {
             // This deliberate missing floor is checked separately, with real traversal.
             if(I>=WallRiftStart-1 && I<=WallRiftStart+WallRiftSpan+1) continue;
+            if(I>=LeapRiftStart-1 && I<=LeapRiftStart+LeapRiftSpan+1) continue;
             FHitResult Hit;
             const FVector P=SafePoint(I,Right),Previous=SafePoint(I-1,Right);
             if(!World->LineTraceSingleByChannel(Hit,P+FVector(0,0,80),P-FVector(0,0,80),ECC_Visibility)
@@ -510,7 +560,7 @@ void BuildDockSewer(UWorld* World)
             if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,50),P-FVector(0,0,160),ECC_Visibility))
             {++HazardFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_BLOCKED start=%d point=%s component=%s"),S,*Hit.ImpactPoint.ToString(),*GetNameSafe(Hit.GetComponent()));}
         }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=32 purple_lights=32 torches=0 large=12 small=20"),HazardFailures);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_ASTRAL_HAZARDS failures=%d holes=33 purple_lights=33 torches=0 large=13 small=20"),HazardFailures);
         int32 StreamFailures=0;
         for(int32 S : SmallRifts)
         {
@@ -527,6 +577,7 @@ void BuildDockSewer(UWorld* World)
         int32 CaveFailures=0,WallChecks=0;
         for(int32 I=12;I<Count-12;I+=12) for(float Side : {-1.f,1.f})
         {
+            if(LeapWallCut(I)) continue;
             FHitResult Hit;const FVector P=Route[I]+FVector(0,0,75);
             if(!World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+70)),ECC_Visibility))
             {++CaveFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_CAVE_WALL_MISS sample=%d side=%.0f"),I,Side);}
@@ -562,9 +613,22 @@ void BuildDockSewer(UWorld* World)
         }
         if(WallRiftStart<=Count/2+24) ++RiftFailures;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_WALLRIFT_GEOMETRY failures=%d after_chamber=1 floor_holes=6 length_cm=195 width_cm=140"),RiftFailures);
+        int32 LeapFailures=0;
+        for(int32 I=LeapRiftStart+1;I<LeapRiftStart+LeapRiftSpan;++I) for(float Side : {-1.f,0.f,1.f})
+        {
+            FHitResult Hit;const FVector P=Route[I]+Right[I]*(Side*(Width(I)-20));
+            if(World->LineTraceSingleByChannel(Hit,P+FVector(0,0,30),P-FVector(0,0,160),ECC_Visibility)) { ++LeapFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_FLOOR_HIT sample=%d side=%.0f p=%s hit=%s normal=%s"),I,Side,*P.ToString(),*Hit.ImpactPoint.ToString(),*Hit.ImpactNormal.ToString()); }
+        }
+        for(int32 I=LeapRiftStart-4;I<=LeapRiftStart+LeapRiftSpan+4;++I) for(float Side : {-1.f,1.f})
+        {
+            FHitResult Hit;const FVector P=Route[I]+FVector(0,0,100);
+            if(World->LineTraceSingleByChannel(Hit,P,P+Right[I]*(Side*(Width(I)+65)),ECC_Visibility)) { ++LeapFailures;UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_WALL_HIT sample=%d side=%.0f p=%s hit=%s normal=%s"),I,Side,*P.ToString(),*Hit.ImpactPoint.ToString(),*Hit.ImpactNormal.ToString()); }
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAPRIFT_GEOMETRY failures=%d floor_holes=9 wall_clearance_samples=18 length_cm=260 after_chamber=1"),LeapFailures);
         if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerGeometryOnly")))
         {FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},1.f,false);}
     }
+    StartSewerLeapRiftReview(World);
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckStreamTest")))
     {
         struct FRun { float Time=0; int32 Target=4, Phase=0, Wet=0, DrySteps=0, Before=0; FTimerHandle Timer; };
@@ -598,17 +662,18 @@ void BuildDockSewer(UWorld* World)
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest")))
     {
-        struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;bool WallCross=false;FTimerHandle Timer; };
+        struct FRun { int32 Target=5;int32 DeathsBefore=0;float Time=0;float StartTime=0;float LastTime=-1;float HazardAt=-1;float ResetAt=-1;float ExitAt=-1;bool HazardReset=false;bool SanityReset=false;bool Landed=false;bool Finished=false;bool Completed=false;bool WallCross=false;bool LeapStarted=false;bool LeapCross=false;FTimerHandle Timer; };
         auto Run=MakeShared<FRun>();
         FTimerHandle Start;
         World->GetTimerManager().SetTimer(Start,[World,Run,Right,Under](){
             auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
+            Chuck->DisableInput(World->GetFirstPlayerController());Run->StartTime=World->GetTimeSeconds();
             Chuck->ResetToDock();Chuck->SetActorLocation(Shaft+FVector(0,0,70),false,nullptr,ETeleportType::TeleportPhysics);
             Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
             Chuck->SetRunHeld(true);
             World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run,Right,Under](){
                 if(Run->Completed) return;
-                Run->Time+=.02f;
+                const float Now=World->GetTimeSeconds();if(Now==Run->LastTime) return;Run->LastTime=Now;Run->Time=Now-Run->StartTime;
                 if(!Run->Landed && Chuck->GetCharacterMovement()->IsMovingOnGround() && Chuck->GetActorLocation().Z<-800)
                 {Run->Landed=true;UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_FALL landed=1 elapsed=%.2f z=%.2f"),Run->Time,Chuck->GetActorLocation().Z);}
                 if(Run->Landed && !Run->Finished)
@@ -620,6 +685,7 @@ void BuildDockSewer(UWorld* World)
                         ++Run->Target;
                         if(Run->Target%50==0) UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_PROGRESS reached=%d elapsed=%.2f"),Run->Target,Run->Time);
                     }
+                    Chuck->SetTestStickWorld((Goal-Chuck->GetActorLocation()).GetSafeNormal2D());
                     if(!Chuck->IsWallSideRunning()) Chuck->AddMovementInput((Goal-Chuck->GetActorLocation()).GetSafeNormal2D(),1);
                     // Target can advance above while Goal still names the preceding
                     // waypoint. Probe the actual break, never that stale Goal.
@@ -628,6 +694,11 @@ void BuildDockSewer(UWorld* World)
                         Chuck->JumpPressed();Run->WallCross=Chuck->IsWallSideRunning();
                         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_ROUTE_WALLRUN entered=%d gait=%s speed=%.0f p=%s"),Run->WallCross,Chuck->GetGaitName(),Chuck->GetVelocity().Size2D(),*Chuck->GetActorLocation().ToString());
                     }
+                    if(Run->Target>=LeapRiftStart-5 && Run->Target<LeapRiftStart && !Run->LeapStarted)
+                    { Chuck->SetTestStickWorld((Route[LeapRiftStart]-Chuck->GetActorLocation()).GetSafeNormal2D());Run->LeapStarted=Chuck->TrySprint(); }
+                    const FVector LeapAlong=(Route[LeapRiftStart+LeapRiftSpan]-Route[LeapRiftStart]).GetSafeNormal2D();
+                    if(Run->LeapStarted && !Run->LeapCross && FVector::DotProduct(Route[LeapRiftStart]-Chuck->GetActorLocation(),LeapAlong)<12)
+                    { Chuck->JumpPressed();Run->LeapCross=Chuck->IsSprintLeaping();if(Run->LeapCross) Run->Target=LeapRiftStart+LeapRiftSpan+1; }
                     if(FMath::FloorToInt(Run->Time*50)%500==0)
                     {
                         UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_POSITION target=%d p=%s goal=%s mode=%d"),Run->Target,*Chuck->GetActorLocation().ToString(),*Goal.ToString(),int32(Chuck->GetCharacterMovement()->MovementMode));
@@ -666,13 +737,13 @@ void BuildDockSewer(UWorld* World)
                     && FVector::Dist(Chuck->GetAreaStartLocation(),AChuckCharacter::StartLocation())<1;
                 if(Restored || Run->Time>240 || (Run->HazardAt>=0 && Run->Time>Run->HazardAt+22) || (Run->Time>4 && !Run->Landed) || (Run->Landed && !Run->Finished && Chuck->GetActorLocation().Z>-100))
                 {
-                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->WallCross)+(!Run->HazardReset)+(!Run->SanityReset)+(!Restored);
+                    const int32 Failures=(!Run->Landed)+(!Run->Finished)+(!Run->WallCross)+(!Run->LeapCross)+(!Run->HazardReset)+(!Run->SanityReset)+(!Restored);
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_TEST_COMPLETE failures=%d fall=%d walked=%d hazard_reset=%d sanity_reset=%d reached=%d elapsed=%.2f surface_restored=%d"),Failures,Run->Landed,Run->Finished,Run->HazardReset,Run->SanityReset,Run->Target,Run->Time,Restored);
                     Run->Completed=true;
                     // Do not destroy this captured delegate before using World.
                     World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
                 }
-            },.02f,true);
+            },.001f,true);
         },3.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSideRiftCapture")))

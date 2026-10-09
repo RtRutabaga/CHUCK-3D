@@ -1,3 +1,4 @@
+#include "DockSigns.h"
 #include "EngineUtils.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -8,7 +9,6 @@
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
 #include "TimerManager.h"
-#include "DockSigns.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "ProceduralMeshComponent.h"

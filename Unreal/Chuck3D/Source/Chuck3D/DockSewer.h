@@ -19,6 +19,9 @@ bool DockSewerIsChamber(int32 Index);
 // Full-width wall-run challenge immediately after the midpoint chamber.
 int32 DockSewerWallRiftStart();
 int32 DockSewerWallRiftEnd();
+// Separate sprint-leap-only rupture farther along, before the final descent.
+int32 DockSewerLeapRiftStart();
+int32 DockSewerLeapRiftEnd();
 
 // Checkpoint shortly before the wall-run rupture (user 2026-10-04): a fall or
 // sanity loss at or beyond it returns Chuck here rather than to the entrance.

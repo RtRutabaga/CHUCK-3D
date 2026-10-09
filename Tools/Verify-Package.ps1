@@ -23,10 +23,18 @@ if ($MotionCapture) {
         }
     }
 }
+$leapLog=Join-Path $evidence ('verify-leap-rift-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$leapArguments=@('-ChuckLeapRiftTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$leapLog+'"'))
+if (!$NoCapture) { $leapArguments+='-ChuckLeapRiftMotionCapture' }
+$leapProcess=Start-Process -FilePath $game -ArgumentList $leapArguments -WindowStyle Hidden -Wait -PassThru
+if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CHUCK_LEAPRIFT_TEST_COMPLETE failures=0 trials=6 sprint=1 ordinary=3 wall_assisted=2' -Quiet)) {
+    throw "Sprint-only Astral gap traversal verification failed. Inspect $leapLog"
+}
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
+$leapGeometry=Select-String -LiteralPath $log -Pattern 'CHUCK_LEAPRIFT_GEOMETRY failures=0 floor_holes=9 wall_clearance_samples=18 length_cm=260 after_chamber=1'
 $worldCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WORLD_CHECK_COMPLETE failures=0 '
 $wallLampsCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_WALLLAMPS_CHECK failures=0 lamps=12 grips=12 collision=0'
 $streetCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_DOCKSTREET_CHECK failures=0 floors=10 routes=9 buildings=8 boundary=1'
@@ -40,7 +48,7 @@ $musicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_MUSIC_CHECK fail
 $chimneyCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CHIMNEY_COLLISION failures=0 checked=[1-9]'
 $hatchCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_OPENHATCH_CHECK failures=0 shaft=3 surrounds=3 raised_lid=1'
 $sewerCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SEWER_GEOMETRY failures=0 samples=[1-9]'
-$astralCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_ASTRAL_HAZARDS failures=0 holes=32 purple_lights=32 torches=0 large=12 small=20'
+$astralCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_ASTRAL_HAZARDS failures=0 holes=33 purple_lights=33 torches=0 large=13 small=20'
 $nightMusicCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_NIGHT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1'
 $smallStreamCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_SMALL_RIFT_STREAM failures=0 checked=20 clearance_cm=10'
 $caveCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_CAVE_CHECK failures=0 wall_traces=[1-9]'
@@ -68,6 +76,7 @@ $smithVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE Blacksmith
 $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED body=1 barrel=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {178} else {179}
+if (!$leapGeometry) { throw "Sprint-only gap geometry verification failed. Inspect $log" }
 if (!$wallLampsCompleted) { throw "Wall lamp geometry verification failed. Inspect $log" }
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$guardVoice -or !$plazaGuardVoice -or !$sideGuardVoice -or !$sailorVoice -or !$workerVoice -or !$elfVoice -or !$marketVoice -or !$alchemistVoice -or !$smithVoice -or !$keeperCompleted -or !$sailorCompleted -or !$bobertCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }

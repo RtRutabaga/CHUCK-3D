@@ -1,5 +1,7 @@
 # Winding sewer prototype
 
+October 9: a separate full-width sprint-leap rupture at samples 306–310 sits between the wide zombie chamber and the end. Its lower side walls are interrupted; the earlier wall-run break, zombies and checkpoint remain. Current total: 33 openings (13 large, 20 small). See SEWER-SPRINT-RIFT.md and latest HANDOFF.
+
 October 4 slight dimming: neutral-grey fill3000→2700 and chute-mouth fill1100→990 (10% lower). Colour, radius, ambient material tint and all purple rupture lights are unchanged. See the latest HANDOFF for actual rendered checks and the root launcher build.
 
 October 4 user revision: the narrow section is now after the wide chamber, with a full-width Astral rupture crossed using the existing side wall run; the former zombie is removed. This supersedes older zombie/pinch-point descriptions below. See SEWER-WALLRIFT.md and the latest HANDOFF for actual checks and launcher status.

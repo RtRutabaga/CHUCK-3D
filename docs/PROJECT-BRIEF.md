@@ -1,5 +1,7 @@
 # Project brief
 
+October 9 sewer addition: a full-width Astral gap farther past the wide zombie chamber, before the end, requires the existing four-legged sprint leap. Its lower side walls are interrupted to prevent wall-running across. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for actual validation.
+
 October 4 wall-run revision: the user replaced the narrow-tunnel zombie obstacle with a full-width Astral rupture in a short narrow passage after the wide sewer chamber. Use the existing lateral wall run to cross it. See SEWER-WALLRIFT.md and HANDOFF for current layout and actual tests.
 
 October 3 pantry authorization: the user requested a basement pantry entered through a ladder hole behind the tavern bar. Codex owns the cellar/hatch foundation; Claude will implement ladder climbing. This extends the connected tavern only, without new campaign destinations or item systems. See TAVERN-PANTRY.md and latest HANDOFF.

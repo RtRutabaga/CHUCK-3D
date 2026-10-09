@@ -1,5 +1,7 @@
 # Post-chamber wall-run rupture
 
+October 9: a separate sprint-only rupture now sits farther along the tunnel at samples 306–310. This earlier wall-run crossing is retained. See SEWER-SPRINT-RIFT.md; the current total is 33 openings.
+
 The October 4 user request replaces the earlier wallrun-plan zombie obstacle with a short narrow passage and an Astral floor rupture **after** the wide midpoint chamber. Historical wall-run planning remains a reference, not the current enemy layout.
 
 The existing route is retained. The former pinch at samples 96–106 returns to ordinary cave width; a nominal 1.4 m wide, 6.5 m long core at samples 219–229 has smooth narrowing shoulders and the existing steep rounded rock arch. A roughly 1.95 m long jagged floor break at 222–225 spans the passage, interrupts the stream, and uses existing recessed nebula/oil veil/purple light materials. Both cave walls provide the wall-run surface. Solid takeoff/landing banks remain before and after, with no walking ledge beside the break. The zombie is no longer spawned. Rats elsewhere remain.
