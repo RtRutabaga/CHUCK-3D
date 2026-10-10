@@ -25,6 +25,7 @@ public:
     /** Snap the orbit to the other framing preset (tests and captures; players orbit freely). */
     void ToggleCamera();
     void ResetToDock();
+    bool HasDemoEnded() const { return bDemoEnded; }
     /** Begin at an explicit checkpoint with fresh traversal, fall and camera state. */
     void ResetAtLocation(const FVector& Location);
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
@@ -300,6 +301,7 @@ public:
 protected:
     virtual void BeginPlay() override;
 private:
+    bool bDemoEnded = false;
     bool bSewerRespawn = false;
     bool bIgnoringAstralFloor = false;
     static float AreaStartYaw(const FVector& Location);

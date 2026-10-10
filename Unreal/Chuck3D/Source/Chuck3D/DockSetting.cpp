@@ -281,14 +281,10 @@ void BuildDockSetting(UWorld* World)
                     // them over. Their surrounds sit proud of the repaired skin.
                     bool Opening=false;
                     if(W==0 && AcrossX && Side<0) Opening=FMath::Abs(Mid)<55 && Bottom<145;
-                    if(W==0 && AcrossX && Side>0)
-                        for(float Window : {-100.f,0.f,100.f}) Opening|=FMath::Abs(Mid-Window)<27 && Bottom<218 && Top>172;
                     if(W==1 && AcrossX && Side>0) Opening=FMath::Abs(Mid)<43 && Bottom<210 && Top>91;
                     if(W>=2 && !AcrossX && Side>0)
                     {
                         Opening=FMath::Abs(Mid)<36 && Bottom<114;
-                        for(float Z=60;Z<P.Z-40;Z+=80)
-                            Opening|=(FMath::Abs(FMath::Abs(Mid)-Size.Y*.25f)<22 && Bottom<Z+19 && Top>Z-19);
                     }
                     if(!Opening && Top>Bottom)
                     {

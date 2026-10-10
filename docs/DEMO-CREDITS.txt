@@ -1,0 +1,25 @@
+CHUCK 3D prototype credits
+
+Unreal Engine. Unreal is a trademark or registered trademark of Epic Games,
+Inc. in the United States of America and elsewhere.
+Unreal Engine, Copyright 1998-2026, Epic Games, Inc. All rights reserved.
+
+Environment surface scans: Poly Haven, CC0-1.0.
+https://polyhaven.com/license
+Weathered Brown Planks: https://polyhaven.com/a/weathered_brown_planks
+Rough Wood: https://polyhaven.com/a/rough_wood
+
+Human base meshes and source textures: MakeHuman CC0 assets, via MPFB.
+https://www.makehumancommunity.org/content/license.html
+
+Human motion-capture sources: CMU Graphics Lab Motion Capture Database;
+BVH conversion by B. Hahne / cgspeed.
+https://mocap.cs.cmu.edu/
+https://sites.google.com/a/cgspeed.com/cgspeed/motion-capture
+
+Music was supplied by the project owner. Character assets, authored animations,
+environment dressing and procedural effects are project work. Exact surface
+and motion provenance is retained in the source repository's SourceAssets.
+
+Microsoft Visual C++ Redistributable installer: Microsoft Corporation.
+Its own installer presents its applicable license terms.

@@ -1,5 +1,7 @@
 # Waterdeep movement and camera milestone
 
+October 9 friends demo: timber-shop orange placeholder window panes are removed, with their cladding patches filled. Player falls into the cellar's open sky now end on a black "End of demo / Press Esc to exit" screen. Astral holes still use normal recovery. This is a temporary endpoint before the future Fall to Chult cutscene. See DEMO-RELEASE.md and HANDOFF for the packaged download and actual tests.
+
 October 9: farther past the wide sewer zombie chamber, a new 2.60 m full-width Astral gap encourages the four-legged sprint leap. Only the Astral floor opening remains there; stone side walls are restored and bypasses are allowed. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for verified package evidence.
 
 Square timber shops: five existing workshops now have staggered weathered shake cladding and flat plank roofs with overhanging eaves/fascia. Roof collision follows the new top, 5 cm above the previous landing; doors, windows and parkour routes remain. See WEATHERED-TIMBER.md and HANDOFF for verified launcher evidence.

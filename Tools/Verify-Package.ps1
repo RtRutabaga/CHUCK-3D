@@ -23,6 +23,13 @@ if ($MotionCapture) {
         }
     }
 }
+$demoLog=Join-Path $evidence ('verify-demo-end-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$demoProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckDemoEndTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$demoLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($demoProcess.ExitCode -or !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_END_TEST failures=0 sky_ends=1 floor_and_astral_continue=1 reset_blocked=1' -Quiet) -or
+   !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_EXIT escape=1' -Quiet) -or
+   (Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_EXIT_TEST failures=1|Fatal error:' -Quiet)) {
+    throw "Demo ending or Escape verification failed. Inspect $demoLog"
+}
 $pantryLog=Join-Path $evidence ('verify-pantry-adjustments-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $pantryArguments=@('-ChuckPantryAdjustmentsTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pantryLog+'"'))
 $pantryProcess=Start-Process -FilePath $game -ArgumentList $pantryArguments -WindowStyle Hidden -Wait -PassThru

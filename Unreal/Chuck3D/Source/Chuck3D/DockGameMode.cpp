@@ -360,7 +360,6 @@ void ADockGameMode::StartPlay()
     for(const float X : {-280.f,-180.f,-80.f})
     {
         Shape(TEXT("WarehouseWindowFrame"),FVector(X,-679.5f,195),FVector(42,2,40),TEXT("Wood"),nullptr,false);
-        Shape(TEXT("WarehouseWindow"),FVector(X,-679,195),FVector(34,2,32),TEXT("Amber"),nullptr,false);
     }
     Shape(TEXT("WarehouseDoor"),FVector(-180,-900.5f,70),FVector(90,2,140),TEXT("Wood"),nullptr,false);
     if(RopeMesh) Prop(TEXT("WharfRopeArt"),FVector(-100,-660,115),RopeMesh);
@@ -399,11 +398,6 @@ void ADockGameMode::StartPlay()
         Shape(TEXT("HouseRoofTrim"),Center+FVector(0,0,Size.Z+1),Size+FVector(6,6,-Size.Z+4),TEXT("Dark"),nullptr,false);
         for(const float SX : {-1.f,1.f}) for(const float SY : {-1.f,1.f})
             Shape(TEXT("HouseTimber"),Center+FVector(SX*(Size.X*.5f-2),SY*(Size.Y*.5f-2),Size.Z*.5f),FVector(8,8,Size.Z),TEXT("Wood"),nullptr,false);
-        for(float Z=60; Z<Size.Z-40; Z+=80)
-        {
-            Shape(TEXT("HouseWindow"),Center+FVector(Size.X*.5f+.5f,-Size.Y*.25f,Z),FVector(2,34,30),TEXT("Amber"),nullptr,false);
-            Shape(TEXT("HouseWindow"),Center+FVector(Size.X*.5f+.5f,Size.Y*.25f,Z),FVector(2,34,30),TEXT("Amber"),nullptr,false);
-        }
         Shape(TEXT("HouseDoor"),Center+FVector(Size.X*.5f+.5f,0,55),FVector(2,60,110),TEXT("Wood"),nullptr,false);
     };
     // A rooftop row stepping up south: leap the 70 cm gaps, catch the next roof.
@@ -3673,6 +3667,22 @@ void ADockHUD::DrawHUD()
     Super::DrawHUD();
     auto* Chuck = Cast<AChuckCharacter>(GetOwningPawn());
     if(!Chuck || !Canvas) return;
+    if(Chuck->HasDemoEnded())
+    {
+        DrawRect(FLinearColor::Black,0,0,Canvas->SizeX,Canvas->SizeY);
+        const float Scale=FMath::Clamp(Canvas->SizeY/1080.f,.5f,2.f);
+        if(!SubtitleFont) {SubtitleFont=NewObject<UFont>(this);SubtitleFont->FontCacheType=EFontCacheType::Runtime;}
+        const FSlateFontInfo Font=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(30.f*Scale));
+        const auto Measure=FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+        int32 Row=0;
+        for(const FString Line : {FString(TEXT("End of demo")),FString(TEXT("Press Esc to exit"))})
+        {
+            const float W=Measure->Measure(Line,Font).X;
+            FCanvasTextItem Item(FVector2D((Canvas->SizeX-W)*.5f,Canvas->SizeY*.45f+Row++*48.f*Scale),FText::FromString(Line),Font,FLinearColor(.94f,.94f,.9f));
+            Item.Font=SubtitleFont;Canvas->DrawItem(Item);
+        }
+        return;
+    }
     DrawTutorial();
     // Sanity is one cigarette, as in the 2D game (CHUCK-game src/ui/hud.py):
     // the paper left is the Sanity left, burning down toward the filter with

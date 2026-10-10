@@ -17,6 +17,7 @@ public:
     bool StartFromMenu(const FString& Point);
     /** The score's current duck (1 full, MusicDuckLevel under speech or by the tavern at night). */
     float GetMusicDuck() const { return MusicDuck; }
+    bool IsRunningVerification() const { return bSmokeTest; }
 private:
     bool bSmokeTest = false;
     // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,

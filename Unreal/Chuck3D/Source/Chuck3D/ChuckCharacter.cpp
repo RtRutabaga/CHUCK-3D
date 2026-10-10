@@ -1,6 +1,7 @@
 #include "ChuckCharacter.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
+#include "DockGameMode.h"
 #include "SewerSlide.h"
 #include "ChuckClimbable.h"
 #include "ChuckAnimInstance.h"
@@ -364,6 +365,7 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 }
 void AChuckCharacter::ResetToDock()
 {
+    if(bDemoEnded) return;
     bSewerRespawn = bPantryRespawn = false;
     ResetAtLocation(StartLocation());
 }
@@ -2706,10 +2708,35 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.PelvisOffset = FMath::Max(Lowest, -4.f);
 }
 
-void AChuckCharacter::Quit() { UKismetSystemLibrary::QuitGame(this, Cast<APlayerController>(Controller), EQuitPreference::Quit, false); }
+void AChuckCharacter::Quit()
+{
+    if(bDemoEnded) UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_EXIT escape=1"));
+    UKismetSystemLibrary::QuitGame(this, Cast<APlayerController>(Controller), EQuitPreference::Quit, false);
+}
 void AChuckCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    auto* PC=Cast<APlayerController>(Controller);
+    if(bDemoEnded)
+    {
+        if(PC && PC->WasInputKeyJustPressed(EKeys::Escape)) Quit();
+        return;
+    }
+    const FVector DemoPosition=GetActorLocation();
+    const auto* Mode=GetWorld()->GetAuthGameMode<ADockGameMode>();
+    // Preserve legacy traversal verification; the isolated demo test uses
+    // the real player path, including an actual sky fall and Escape input.
+    if((!Mode || !Mode->IsRunningVerification()) && IsWithinDockPantry(DemoPosition)
+        && DemoPosition.Z<-440.f && DockPantryHoleAt(FVector2D(DemoPosition.X,DemoPosition.Y))==2
+        && GetCharacterMovement()->IsFalling())
+    {
+        bDemoEnded=true;
+        GetCharacterMovement()->StopMovementImmediately();
+        GetCharacterMovement()->DisableMovement();
+        if(PC) DisableInput(PC);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END sky=1 at=%s"),*DemoPosition.ToString());
+        return;
+    }
     // The sewer's NPC-only floor over the Astral openings is not there for him.
     if (!bIgnoringAstralFloor)
         if (UPrimitiveComponent* AstralFloor = DockSewerAstralFloor())

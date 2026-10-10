@@ -23,6 +23,7 @@
 #include "HAL/FileManager.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
+#include "InputKeyEventArgs.h"
 
 namespace
 {
@@ -382,6 +383,38 @@ void BuildDockPantry(UWorld* World)
             UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_ADJUSTMENTS_CHECK failures=%d oil_rims=%d noncolliding=1 cheese_blocks=%d cellar_talk=%d surface_talk=%d"),Failures,OilRims,Solid,!CellarSilent,SurfaceTalk);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
         },3.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckDemoEndTest")))
+    {
+        auto Failures=MakeShared<int32>(0);
+        FTimerHandle FloorTest,RiftTest,SkyTest,Check,Shot,Escape,Watchdog;
+        const auto Player=[World](){return Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());};
+        World->GetTimerManager().SetTimer(FloorTest,[Player](){Player()->ResetAtLocation(DockPantryStartLocation());},2.f,false);
+        World->GetTimerManager().SetTimer(RiftTest,[Player,Failures](){
+            *Failures+=Player()->HasDemoEnded();
+            Player()->ResetAtLocation(FVector(240,520,Floor+35));
+            Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        },3.f,false);
+        World->GetTimerManager().SetTimer(SkyTest,[Player,Failures](){
+            *Failures+=Player()->HasDemoEnded();
+            Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
+            Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        },4.f,false);
+        World->GetTimerManager().SetTimer(Check,[Player,Failures](){
+            auto* Chuck=Player();const bool Ended=Chuck->HasDemoEnded();
+            *Failures+=!Ended || Chuck->GetCharacterMovement()->MovementMode!=MOVE_None;
+            const FVector At=Chuck->GetActorLocation();Chuck->ResetToDock();
+            *Failures+=!Chuck->GetActorLocation().Equals(At,1.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END_TEST failures=%d sky_ends=%d floor_and_astral_continue=1 reset_blocked=1"),*Failures,Ended);
+        },6.f,false);
+        World->GetTimerManager().SetTimer(Shot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},6.5f,false);
+        World->GetTimerManager().SetTimer(Escape,[World](){
+            World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
+        },8.f,false);
+        World->GetTimerManager().SetTimer(Watchdog,[World](){
+            UE_LOG(LogTemp,Error,TEXT("CHUCK_DEMO_EXIT_TEST failures=1 escape_did_not_exit=1"));
+            World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+        },10.f,false);
     }
     // A walking circuit round the room that stays on whole floor.
     const TArray<FVector> Walk={FVector(75,915,Floor),FVector(75,800,Floor),FVector(230,640,Floor),FVector(10,1000,Floor),FVector(75,915,Floor)};
