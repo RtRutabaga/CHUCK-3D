@@ -2606,3 +2606,29 @@ Next part of the work can be done here.
   - At 0.15 s capture spacing each 0.43-0.46 s leap gets about three frames, so the intermediate poses were judged mainly from the Blender sheets.
 
 Next part of the work can be done here.
+
+## Climbing and brachiation in the stamina system; golden-leaf lock hook (user 2026-10-09)
+
+- **Ask:** work wall climbing and brachiation into stamina, mostly for flavour, with small drops only; he must still wall jump up the tallest buildings by the sewer. Keep in mind the later Chult power-up (golden "Premium Buhetian Halfling Leaf" cigarettes): stamina locked at max for a duration, continuous sprint, continuous wall climb past the three steps, and a considerably longer wall-run arc.
+- **Source:** `4ccffaf` on main, base `7fd37d8` (Codex's cellar fixes included in the build). Changed: `ChuckCharacter.{h,cpp}`, `LampSwing.cpp`, `Tools/Verify-Package.ps1` (lamp gate now `trials=8 ... locked=1`), `docs/BRACHIATION.md`.
+  - Costs, via `SpendStamina`: wall run .006, wall jump .004, side wall run .03, ring leap .012.
+  - `IsClimbing()` (wall run, side run, swing, ring leap, wall-jump flight) pauses the refill. Hanging and ground refill as before.
+  - Never a gate: nothing checks stamina to climb or swing.
+  - `LockStamina(Seconds)` / `IsStaminaLocked()`: stamina pinned at 1 and no sprint drain. The wall run ignores `WallRunTime` and rises at least `LockedWallRunSpeed` 120 cm/s until a top, ring, edge or jump. The side wall run uses `LockedWallSideTime` 2.2 s and `LockedWallSideGravity` 235. `ResetAtLocation` clears the lock.
+- **Verified** (UE 5.7.4, one worker, skip-cook candidate reusing the cooked reach clips):
+  - Lamp-swing **8/8, failures=0** (`Local/lamp-swing-stamina2.log`).
+    - An empty-ring chimney climbs to the 790 cm roof exactly as before (8.55 s, 22 wall jumps).
+    - Full-ring chimneys cost **18% / 17%** (660 cm roofs).
+    - The wall-jump catch cost 13%; the four leaps each way cost **4.8%**; the kick-to-roof cost 7%.
+    - Locked: **one wall run, 0 wall jumps**, ground to the 790 cm eave and pull-up in 7.0 s, ring 1.000 throughout.
+  - A first tuning (.012/.008) cost 36% on the 660 cm chimney; it was halved as too much for "small".
+  - Full `Verify-Package.ps1` **181 checks, 0 failures, all gates** (`Local/verify-package-20261009-184742.log`, `Local/stamina-climb-verification.log`), including the existing sprint/stamina checks.
+- **Launcher:** `Builds/Windows` = `4ccffaf`, receipt and `-CheckOnly` pass. The previous `dfdebf7` package is at `Builds/Windows-Previous-20261009-ClimbStamina`. The user's own launcher game was running during the build; the build went to a separate candidate and promotion waited until it closed.
+- **Preserved:** 40 inputs hash-identical and unstaged.
+- **Remaining:**
+  - The locked side wall run is untested (only the parameters changed).
+  - There is no pickup, HUD gold tint or lock timer; the golden leaf is for Chult.
+  - A long climb delays the next sprint (a sprint still needs a full ring), by about 1.8 s after a 660 cm chimney.
+  - Not played by hand.
+
+Next part of the work can be done here.

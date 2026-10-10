@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 9 — climbing and brachiation take small sips of stamina
+
+Runtime **4ccffaf** (Claude). User asked to work wall climbing and brachiation into the stamina ring, for flavour only, while he can still wall jump up the tallest sewer-side buildings. Wall runs, wall jumps, side wall runs and ring leaps take small amounts, with no refill while on the walls or swinging. An empty ring never stops a climb. A 660 cm chimney costs about 18%; four ring leaps about 5%. Added `LockStamina(Seconds)` for the later Chult golden-leaf power-up: full and frozen stamina, endless sprint, a wall run that keeps climbing past three steps, and a longer side wall-run arc. No pickup or HUD for it yet. See BRACHIATION.md.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**; skip-cook one-worker candidate build, `Local/brachiation-build-stamina2.log`. No imports or assets.
+- Lamp-swing trials **8/8, failures=0** (`Local/lamp-swing-stamina2.log`): an empty-ring chimney still reaches the 790 cm roof; cost bounds on a chimney and swing run; a locked single wall run reaches the 790 cm eave with no wall jumps. Full default verification **181 checks, zero failures, all gates** (`Local/verify-package-20261009-184742.log`). The locked side wall run is not tested. Not played by hand.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / 4ccffaf**; receipt/hash and **CheckOnly** passed. Prior **dfdebf7** package preserved at **Builds/Windows-Previous-20261009-ClimbStamina**. All **40** unfinished inputs hash-identical and unstaged.
+
+Next part of the work can be done here.
+
 ## October 9 — cellar dialogue isolation, vertical fracture rims and solid cheese
 
 Runtime **dfdebf7**. NPC talk selection now rejects a vertical separation over **100 cm**, so F and its talk prompt cannot reach the keeper through the cellar ceiling. Normal same-floor keeper dialogue remains. Four cellar Astral holes now use shaped upright oil rims instead of flat haze sheets; the sky opening's outer perimeter and island edge have matching rims. Six noncolliding procedural ribbons follow the jagged hole outlines and reuse the sewer's animated **M_AstralOilMist**, with vertical UVs for its fade. Sky/cloud well, openings and lights retained. Cheese body and top piece now use BlockAll collision. Other world/traversal geometry and Claude's **3d873ba** one-arm brachiation clips are preserved.
