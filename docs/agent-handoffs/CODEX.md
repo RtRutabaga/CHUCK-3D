@@ -1,5 +1,15 @@
 # Codex movement handoff — 2026-09-26
 
+## October 9 — recessed chasm oil film and suspended cellar island
+
+Runtime **274db33** (Codex). Following Claude's **e05d468** chasm rebuild, a wavy translucent horizontal oil film sits about **30.5 cm below the banks**, reusing the animated oil material. Deep rock faces, waterfall and distant Astral glow remain. The film does not collide; gap width, camera walls and traversal tuning are unchanged. Beneath the cellar cheese crate, the long stone cylinder is replaced by a compact broken foundation and a smaller earth layer. The existing floor hangs impossibly above the sky, with its underside ending roughly **85 cm below the floor**. Floor/crate/cheese collision and vertical oil rims are preserved.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**; single-worker skip-cook build **74.60 s**, `Local/chasm-film-island-build.log`. Reused existing cooked materials; no imports, installs or binary-asset changes.
+- Reviewed packaged fixed views `Saved/Screenshots/Windows/Pantry/View3.png`, `View4.png` and `LeapRift/View0.png`: shallow floating fragment, open sky beneath it and recessed rippling film visible. Not played by hand; art remains provisional.
+- Full verification **181 passes, zero failures, all gates**, `Local/verify-package-20261009-200921.log`; sewer leap **6/6**, lamp traversal **8/8**. New pantry island gate verifies floor support and clear space below; existing cheese and dialogue checks pass. New film gate verifies loaded material and no collision. First run `Local/verify-package-20261009-200201.log` had two marginal unrelated movement failures (short sprint jump speed 236.4 cm/s; workshop roof landing 2.6 cm past its test boundary). The unchanged full repeat passed both; no test/controller tuning.
+- Root **Launch-Prototype.cmd** updated to **Builds/Windows / 274db33**; receipt/hash and **CheckOnly** passed. Previous **e05d468** package retained at **Builds/Windows-Previous-20261009-ChasmFilmIsland**. All **40** pre-existing unfinished inputs hash-identical and unstaged; original CHUCK-game untouched.
+
+Next part of the work can be done here.
 ## October 9 — cellar dialogue isolation, vertical fracture rims and solid cheese
 
 Runtime **dfdebf7**. NPC talk selection now rejects a vertical separation over **100 cm**, so F and its talk prompt cannot reach the keeper through the cellar ceiling. Normal same-floor keeper dialogue remains. Four cellar Astral holes now use shaped upright oil rims instead of flat haze sheets; the sky opening's outer perimeter and island edge have matching rims. Six noncolliding procedural ribbons follow the jagged hole outlines and reuse the sewer's animated **M_AstralOilMist**, with vertical UVs for its fade. Sky/cloud well, openings and lights retained. Cheese body and top piece now use BlockAll collision. Other world/traversal geometry and Claude's **3d873ba** one-arm brachiation clips are preserved.
