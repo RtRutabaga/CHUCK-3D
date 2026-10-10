@@ -1,5 +1,17 @@
 # Handoff — 2026-09-27
 
+## October 9 — cellar dialogue isolation, vertical fracture rims and solid cheese
+
+Runtime **dfdebf7**. NPC talk selection now rejects a vertical separation over **100 cm**, so F and its talk prompt cannot reach the keeper through the cellar ceiling. Normal same-floor keeper dialogue remains. Four cellar Astral holes now use shaped upright oil rims instead of flat haze sheets; the sky opening's outer perimeter and island edge have matching rims. Six noncolliding procedural ribbons follow the jagged hole outlines and reuse the sewer's animated **M_AstralOilMist**, with vertical UVs for its fade. Sky/cloud well, openings and lights retained. Cheese body and top piece now use BlockAll collision. Other world/traversal geometry and Claude's **3d873ba** one-arm brachiation clips are preserved.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**. Final one-worker skip-cook build **32.68 s**, `Local/cellar-adjustments-build.log`; existing cooked materials/assets reused, no imports/dependencies/binary assets or clean-checkout reproduction claim.
+- Focused gate **failures=0**, `Local/cellar-adjustments-focused.log`: six rims have no collision; a pawn-channel sphere sweep hits the cheese component; cellar prompt/interaction absent both by the ladder and beneath the keeper; upstairs prompt and interaction still select him. Added `-ChuckPantryAdjustmentsTest` and included it in default Verify-Package. Initial focused checks caught a guard placed in the wrong NPC loop and a collision probe intersecting the supporting crate; both corrected before acceptance. Scratch behavior is unchanged in the final diff.
+- Final **1280x720** capture process exited zero, `Local/cellar-adjustments-visual.log`. Inspected wide cellar and cheese-island views: upright iridescent rims fade into the room above the Astral/sky edges. PNGs in `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/Pantry`. Not played by hand; no comfort/performance claim.
+- Full default verification **181 checks, failures=0, all gates**, `Local/verify-package-20261009-182802.log` and `Local/cellar-adjustments-verification.log`, including the new isolated cellar gate, six long-jump trials and seven lamp/eave/brachiation trials. Existing pantry ladder, fall/recovery and cheese-island movement checks passed.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / dfdebf7**; full receipt/hash and **CheckOnly** passed. Prior **3d873ba** package preserved at **Builds/Windows-Previous-20261009-CellarAdjustments**. All **40** unfinished inputs hash-identical and unstaged; original 2D repository untouched. Publication follows standing workflow permission.
+
+Next part of the work can be done here.
+
 ## October 9 — brachiation leap reaches with one arm
 
 Runtime **3d873ba** (Claude). User asked that Chuck reach an arm out while leaping to grab the next ring rather than holding both arms up together. New SwingLeapLeft/Right clips: the paw on the next ring's side stretches out to it, open; the other swings back and down for balance; the lead paw takes the bar and the other joins it as the swing begins. The side is chosen from where the target ring lies (the rings alternate walls). The old two-handed SwingLeap clip was removed. No world, tutorial or control changes; Codex's long-jump spawn work is preserved.
