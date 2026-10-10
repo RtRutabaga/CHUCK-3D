@@ -23,6 +23,12 @@ if ($MotionCapture) {
         }
     }
 }
+$pantryLog=Join-Path $evidence ('verify-pantry-adjustments-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$pantryArguments=@('-ChuckPantryAdjustmentsTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pantryLog+'"'))
+$pantryProcess=Start-Process -FilePath $game -ArgumentList $pantryArguments -WindowStyle Hidden -Wait -PassThru
+if($pantryProcess.ExitCode -or !(Select-String -LiteralPath $pantryLog -Pattern 'CHUCK_PANTRY_ADJUSTMENTS_CHECK failures=0 oil_rims=6 noncolliding=1 cheese_blocks=1 cellar_talk=0 surface_talk=1' -Quiet)) {
+    throw "Cellar talk, oil rims or cheese collision verification failed. Inspect $pantryLog"
+}
 $leapLog=Join-Path $evidence ('verify-leap-rift-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $leapArguments=@('-ChuckLeapRiftTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$leapLog+'"'))
 if (!$NoCapture) { $leapArguments+='-ChuckLeapRiftMotionCapture' }

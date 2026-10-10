@@ -1654,6 +1654,7 @@ ADockNPC* AChuckCharacter::GetTalkPrompt() const
         ADockNPC* NPC = Entry.Get();
         if (!NPC || !NPC->CanTalk()) continue;
         const FVector To = NPC->GetActorLocation() - Location;
+        if(FMath::Abs(To.Z)>100.f) continue; // no talking through floors or ceilings
         const float Distance = static_cast<float>(To.Size2D());
         // In reach and roughly in front (or right up against him).
         if (Distance < BestDistance && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) > .2f || Distance < 45.f)) { Best = NPC; BestDistance = Distance; }

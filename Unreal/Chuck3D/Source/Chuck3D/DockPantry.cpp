@@ -4,6 +4,9 @@
 #include "ClayJar.h"
 #include "SewerSlide.h"
 #include "DockFire.h"
+#include "DockNPC.h"
+#include "ProceduralMeshComponent.h"
+#include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -103,6 +106,7 @@ void BuildDockPantry(UWorld* World)
             auto* Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Surface,Surface));
             if(!Material) Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Surface,Surface));
             Batch->SetMaterial(0,Material);Batch->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
+            if(Solid && FCString::Strcmp(Surface,TEXT("Cheese"))==0) Batch->ComponentTags.Add(TEXT("PantryCheese"));
             if(!Solid) Batch->SetCastShadow(FCString::Strcmp(Surface,TEXT("PantrySky"))!=0 && FCString::Strcmp(Surface,TEXT("PantryCloud"))!=0 && FCString::Strcmp(Surface,TEXT("AstralDepth"))!=0);
             Batch->RegisterComponent();
         }
@@ -162,6 +166,28 @@ void BuildDockPantry(UWorld* World)
     FRandomStream Chips(20261003);
     auto Chip=[&](float X,float Y){ Shape(FVector(X,Y,Floor+1.5f),FVector(Chips.FRandRange(6,14),Chips.FRandRange(5,11),Chips.FRandRange(2,4)),Chips.FRand()<.3f?TEXT("Dark"):TEXT("Stone"),false,0,FRotator(Chips.FRandRange(-8,8),Chips.FRandRange(0,180),Chips.FRandRange(-8,8))); };
     // The Astral ruptures: the sewer's depth below each, its oil haze over it, its purple light.
+    auto* Oil=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
+    int32 OilRims=0;
+    TArray<UProceduralMeshComponent*> OilMeshes;
+    auto OilRim=[&](const TArray<FVector>& Edges,float Height,const FVector2D& Centre,bool Inner)
+    {
+        TArray<FVector> V,N;TArray<FVector2D> UV;TArray<int32> T;
+        constexpr int32 Levels=8;
+        for(int32 I=0;I<=Edges.Num();++I) for(int32 J=0;J<=Levels;++J)
+        {
+            const float U=I/float(Edges.Num()),H=J/float(Levels);
+            const FVector Edge=Edges[I%Edges.Num()];
+            const FVector In=(FVector(Centre.X,Centre.Y,Floor)-Edge).GetSafeNormal2D()*(Inner?-1.f:1.f);
+            V.Add(Edge+In*(H*H*4*FMath::Sin(U*UE_TWO_PI*3))+FVector(0,0,3+H*Height*(.9f+.1f*FMath::Sin(U*UE_TWO_PI*5))));
+            N.Add(In);UV.Add(FVector2D(U,H));
+        }
+        for(int32 I=0;I<Edges.Num();++I) for(int32 J=0;J<Levels;++J)
+        {const int32 A=I*(Levels+1)+J;T.Append({A,A+1,A+Levels+1,A+1,A+Levels+2,A+Levels+1});}
+        auto* Mesh=NewObject<UProceduralMeshComponent>(Owner);Mesh->SetupAttachment(Root);
+        Mesh->SetCollisionProfileName(TEXT("NoCollision"));Mesh->SetCastShadow(false);Mesh->RegisterComponent();
+        Mesh->CreateMeshSection_LinearColor(0,V,T,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),false);
+        Mesh->SetMaterial(0,Oil);OilMeshes.Add(Mesh);++OilRims;
+    };
     for(const FRift& Rift : Rifts)
     {
         const float W=Rift.RX*2+30, D=Rift.RY*2+30, Z0=Floor-30, Z1=Floor-330;
@@ -171,7 +197,13 @@ void BuildDockPantry(UWorld* World)
             Shape(FVector(Rift.X+S*W*.5f,Rift.Y,(Z0+Z1)*.5f),FVector(4,D,Z0-Z1),TEXT("AstralDepth"));
             Shape(FVector(Rift.X,Rift.Y+S*D*.5f,(Z0+Z1)*.5f),FVector(W,4,Z0-Z1),TEXT("AstralDepth"));
         }
-        Shape(FVector(Rift.X,Rift.Y,Floor+22),FVector(Rift.RX*1.7f,Rift.RY*1.7f,1),TEXT("AstralOilMist"));
+        TArray<FVector> Rim;
+        for(int32 I=0;I<48;++I)
+        {
+            const float A=I*UE_TWO_PI/48.f,Jag=1.f+.14f*FMath::Sin(6.f*A+Rift.X*.1f);
+            Rim.Add(FVector(Rift.X+Rift.RX*FMath::Cos(A)/Jag,Rift.Y+Rift.RY*FMath::Sin(A)/Jag,Floor));
+        }
+        OilRim(Rim,70,FVector2D(Rift.X,Rift.Y),false);
         auto* Glow=NewObject<UPointLightComponent>(Owner);Glow->SetupAttachment(Root);Glow->SetRelativeLocation(FVector(Rift.X,Rift.Y,Floor-25));
         Glow->SetIntensity(1800);Glow->SetAttenuationRadius(420);Glow->SetLightColor(FLinearColor(.48f,.035f,1));Glow->SetCastShadows(false);Glow->RegisterComponent();
         for(int32 I=0;I<7;++I){ const float A=I*.9f+Rift.X; Chip(Rift.X+FMath::Cos(A)*(Rift.RX+9),Rift.Y+FMath::Sin(A)*(Rift.RY+9)); }
@@ -181,6 +213,18 @@ void BuildDockPantry(UWorld* World)
     // pillar of masonry out of it.
     {
         const float S=SkyRadius*2+40, Z0=Floor-30, Z1=-1150;
+        for(bool Inner : {false,true})
+        {
+            TArray<FVector> Rim;
+            for(int32 I=0;I<128;++I)
+            {
+                const float A=I*UE_TWO_PI/128.f;
+                const float R=Inner ? IslandRadius+4.f*FMath::Sin(7.f*A) : SkyRadius+10.f*FMath::Sin(5.f*A)+6.f*FMath::Sin(11.f*A+1.f);
+                const FVector P(SkyCentre.X+R*FMath::Cos(A),SkyCentre.Y+R*FMath::Sin(A),Floor);
+                Rim.Add(P);
+            }
+            OilRim(Rim,Inner?50.f:100.f,SkyCentre,Inner);
+        }
         Shape(FVector(SkyCentre.X,SkyCentre.Y,Z1),FVector(S,S,4),TEXT("PantrySky"));
         for(float D : {-1.f,1.f})
         {
@@ -203,8 +247,8 @@ void BuildDockPantry(UWorld* World)
             Shape(Crate+FVector(D*29,0,Z),FVector(2,58,7),TEXT("WoodLight"));
             Shape(Crate+FVector(0,D*29,Z),FVector(58,2,7),TEXT("WoodLight"));
         }
-        Shape(Crate+FVector(0,0,36),FVector(34,34,15),TEXT("Cheese"),false,1);
-        Shape(Crate+FVector(4,-3,44),FVector(16,4,2),TEXT("Cheese"),false,0,FRotator(0,35,0));
+        Shape(Crate+FVector(0,0,36),FVector(34,34,15),TEXT("Cheese"),true,1);
+        Shape(Crate+FVector(4,-3,44),FVector(16,4,2),TEXT("Cheese"),true,0,FRotator(0,35,0));
     }
     // Stocked racks against the walls (Codex's), their lowest shelf's jars
     // breakable (as the 2D pantry's shelf jars): each spills cigarettes.
@@ -274,6 +318,39 @@ void BuildDockPantry(UWorld* World)
         Lamp->SetIntensity(650);Lamp->SetAttenuationRadius(480);Lamp->SetLightColor(FLinearColor(1,.69f,.4f));Lamp->SetSourceRadius(12);Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
     UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_BUILT size=%.0fx%.0f rifts=%d sky_ring_cm=%.0f jars=%d ladders=%d"),Span.X,Span.Y,UE_ARRAY_COUNT(Rifts),SkyRadius-IslandRadius,JarsPlaced,GetChuckClimbables().Num());
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPantryAdjustmentsTest")))
+    {
+        FTimerHandle Test;
+        World->GetTimerManager().SetTimer(Test,[World,Oil,OilRims,OilMeshes](){
+            int32 Failures=!Oil || OilRims!=6;
+            for(auto* Mesh : OilMeshes) if(Mesh->GetCollisionEnabled()!=ECollisionEnabled::NoCollision) ++Failures;
+            FHitResult Hit;const FVector Cheese(SkyCentre.X,SkyCentre.Y,Floor+64);
+            // Keep the sweep above the supporting crate so it tests the cheese.
+            const bool Solid=World->SweepSingleByChannel(Hit,Cheese-FVector(50,0,0),Cheese+FVector(50,0,0),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(3)) &&
+                Hit.GetComponent() && Hit.GetComponent()->ComponentHasTag(TEXT("PantryCheese"));
+            if(!Solid) UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_CHEESE_COLLISION_MISS component=%s point=%s"),*GetNameSafe(Hit.GetComponent()),*Hit.ImpactPoint.ToString());
+            Failures+=!Solid;
+            auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
+            ADockNPC* Keeper=nullptr;for(TActorIterator<ADockNPC> NPC(World);NPC;++NPC) if(NPC->IsKeeper()) Keeper=*NPC;
+            bool CellarSilent=true,SurfaceTalk=false;
+            if(Chuck && Keeper)
+            {
+                for(const FVector P : {DockPantryStartLocation(),FVector(Keeper->GetActorLocation().X,Keeper->GetActorLocation().Y,Floor+34.65f)})
+                {
+                    Chuck->ResetAtLocation(P);Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+                    CellarSilent&=Chuck->GetTalkPrompt()==nullptr;Chuck->Interact();CellarSilent&=!Chuck->IsTalking();
+                }
+                Chuck->ResetAtLocation(Keeper->GetActorLocation()+FVector(35,0,34.65f));
+                Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+                SurfaceTalk=Chuck->GetTalkPrompt()==Keeper;Chuck->Interact();SurfaceTalk&=Chuck->GetTalkingTo()==Keeper;
+                Chuck->ResetToDock();
+            }
+            else ++Failures;
+            Failures+=!CellarSilent || !SurfaceTalk;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_ADJUSTMENTS_CHECK failures=%d oil_rims=%d noncolliding=1 cheese_blocks=%d cellar_talk=%d surface_talk=%d"),Failures,OilRims,Solid,!CellarSilent,SurfaceTalk);
+            World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+        },3.f,false);
+    }
     // A walking circuit round the room that stays on whole floor.
     const TArray<FVector> Walk={FVector(75,915,Floor),FVector(75,800,Floor),FVector(230,640,Floor),FVector(10,1000,Floor),FVector(75,915,Floor)};
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")) || FParse::Param(FCommandLine::Get(),TEXT("ChuckPantryTest")))
