@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 9 — chasm oil seam masking and vertical fade
+
+Runtime **48d28d8** (Codex). User reported a triangular gap at the long sewer jump and requested masking plus vertical fading oil. Replaced the horizontal film's radial fan with a regular wavy grid, overlapping beneath the banks/walls. Added a curved vertical oil veil following the broken perimeter, overlapping the recessed film and fading above the lip. Packaged comparison views show the large triangular film seams removed and remaining angular edges softened. No collision, solid Astral panels, movement/camera tuning, new assets or imports added. Deep rock, waterfall and cellar island remain intact.
+
+- Existing UE **5.7.4**, VS **14.44.35229**, SDK **10.0.26100.0**; single-worker skip-cook build **50.21 s**, `Local/chasm-veil-build.log`. Inspected packaged `LeapRift/View0.png`, `View1.png`, `View2.png` after `Local/chasm-veil-capture.log`; not played by hand.
+- Captured standard suite `Local/verify-package-20261009-202324.log`: **180/181 passes**, one known intermittent keeper rag-reach failure (**8.5 cm**, same prior Claude diagnostic). Oil loaded/noncolliding/vertical-fade gate passed, all 6 leap and 8 lamp trials passed. Unchanged `-NoCapture` repeat `Local/verify-package-20261009-203210.log`: **151 passes, zero runtime failures**, keeper rag reach **1.4 cm**. The wrapper rejected this repeat because its no-capture minimum is stale (expects 178; runtime exits after 151 without capture stages). Compared exact pass/fail names across both logs: **181 unique passes, no unresolved failures**. No tolerances or controller edits. This is combined verification, not a single all-green default run. Receipt explicitly records both logs and this limitation; the NoCapture count mismatch remains for later tooling work.
+- Root **Launch-Prototype.cmd** updated to **Builds/Windows / 48d28d8**; receipt/hash and **CheckOnly** passed. Previous **274db33** package retained at **Builds/Windows-Previous-20261009-ChasmVeil**. All **40** pre-existing unfinished inputs hash-identical and unstaged. Original CHUCK-game untouched.
+
+Next part of the work can be done here.
+
 ## October 9 — recessed chasm oil film and suspended cellar island
 
 Runtime **274db33** (Codex). Following Claude's **e05d468** chasm rebuild, a wavy translucent horizontal oil film sits about **30.5 cm below the banks**, reusing the animated oil material. Deep rock faces, waterfall and distant Astral glow remain. The film does not collide; gap width, camera walls and traversal tuning are unchanged. Beneath the cellar cheese crate, the long stone cylinder is replaced by a compact broken foundation and a smaller earth layer. The existing floor hangs impossibly above the sky, with its underside ending roughly **85 cm below the floor**. Floor/crate/cheese collision and vertical oil rims are preserved.
