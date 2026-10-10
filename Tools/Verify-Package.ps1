@@ -29,6 +29,9 @@ $pantryProcess=Start-Process -FilePath $game -ArgumentList $pantryArguments -Win
 if($pantryProcess.ExitCode -or !(Select-String -LiteralPath $pantryLog -Pattern 'CHUCK_PANTRY_ADJUSTMENTS_CHECK failures=0 oil_rims=6 noncolliding=1 cheese_blocks=1 cellar_talk=0 surface_talk=1' -Quiet)) {
     throw "Cellar talk, oil rims or cheese collision verification failed. Inspect $pantryLog"
 }
+if(!(Select-String -LiteralPath $pantryLog -Pattern 'CHUCK_PANTRY_ISLAND_CHECK failures=0 floor=1 underfloor_clear=1' -Quiet)) {
+    throw "Suspended cellar floor verification failed. Inspect $pantryLog"
+}
 $leapLog=Join-Path $evidence ('verify-leap-rift-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $leapArguments=@('-ChuckLeapRiftTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$leapLog+'"'))
 if (!$NoCapture) { $leapArguments+='-ChuckLeapRiftMotionCapture' }
@@ -92,6 +95,9 @@ $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED 
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {178} else {179}
 if (!$leapGeometry) { throw "Astral floor gap geometry verification failed. Inspect $log" }
+if(!(Select-String -LiteralPath $log -Pattern 'CHUCK_LEAP_OIL_CHECK failures=0 depth_cm=30.5 noncolliding=1' -Quiet)) {
+    throw "Sewer oil film verification failed. Inspect $log"
+}
 if (!$wallLampsCompleted) { throw "Wall lamp geometry verification failed. Inspect $log" }
 if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$streetCompleted -or !$sideGateCompleted -or !$courtPierCompleted -or !$dockPropsCompleted -or !$plazaCompleted -or !$harborWaterCompleted -or !$surfaceWaterCompleted -or !$musicCompleted -or !$nightMusicCompleted -or !$chimneyCompleted -or !$hatchCompleted -or !$sewerCompleted -or !$astralCompleted -or !$smallStreamCompleted -or !$caveCompleted -or !$tavernCompleted -or !$pantryCompleted -or !$streamAudio -or !$fireCompleted -or !$narrowCompleted -or !$wallRiftCompleted -or !$rubbleCompleted -or !$forgeCompleted -or !$smithCompleted -or !$dwarfVoice -or !$guardVoice -or !$plazaGuardVoice -or !$sideGuardVoice -or !$sailorVoice -or !$workerVoice -or !$elfVoice -or !$marketVoice -or !$alchemistVoice -or !$smithVoice -or !$keeperCompleted -or !$sailorCompleted -or !$bobertCompleted -or $passed -lt $expected) {
     if($failed) { $failed | ForEach-Object {$_.Line} }

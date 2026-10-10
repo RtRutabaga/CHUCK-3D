@@ -209,8 +209,8 @@ void BuildDockPantry(UWorld* World)
         for(int32 I=0;I<7;++I){ const float A=I*.9f+Rift.X; Chip(Rift.X+FMath::Cos(A)*(Rift.RX+9),Rift.Y+FMath::Sin(A)*(Rift.RY+9)); }
     }
     // The sky: a well of open sky under the middle of the floor, clouds drifting
-    // in it, its daylight coming up through the hole; the island stands on a
-    // pillar of masonry out of it.
+    // in it, its daylight coming up through the hole. A broken floor fragment,
+    // its foundation and a little earth hang impossibly above the clouds.
     {
         const float S=SkyRadius*2+40, Z0=Floor-30, Z1=-1150;
         for(bool Inner : {false,true})
@@ -231,7 +231,33 @@ void BuildDockPantry(UWorld* World)
             Shape(FVector(SkyCentre.X+D*S*.5f,SkyCentre.Y,(Z0+Z1)*.5f),FVector(4,S,Z0-Z1),TEXT("PantrySky"));
             Shape(FVector(SkyCentre.X,SkyCentre.Y+D*S*.5f,(Z0+Z1)*.5f),FVector(S,4,Z0-Z1),TEXT("PantrySky"));
         }
-        Shape(FVector(SkyCentre.X,SkyCentre.Y,(Floor-30+Z1)*.5f),FVector(IslandRadius*1.7f,IslandRadius*1.7f,Floor-30-Z1),TEXT("Stone"),true,1);
+        auto IslandLayer=[&](float Top,float Bottom,float TopRadius,float BottomRadius,bool Earth)
+        {
+            constexpr int32 Points=24;
+            TArray<FVector> V,N;TArray<int32> T;TArray<FVector2D> UV;TArray<FLinearColor> Colors;
+            for(int32 L=0;L<2;++L) for(int32 I=0;I<Points;++I)
+            {
+                const float A=I*UE_TWO_PI/Points,Jag=1.f+.08f*FMath::Sin(5*A)+.04f*FMath::Cos(9*A);
+                const float R=(L?BottomRadius:TopRadius)*Jag;
+                V.Add(FVector(SkyCentre.X+R*FMath::Cos(A),SkyCentre.Y+R*FMath::Sin(A),(L?Bottom:Top)+(L?4.f:2.f)*FMath::Sin(7*A)));
+                N.Add(FVector(FMath::Cos(A),FMath::Sin(A),-.2f).GetSafeNormal());UV.Add(FVector2D(I*.24f,L*.7f));
+                Colors.Add(Earth?FLinearColor(.16f,.085f,.038f)*( .9f+.1f*FMath::Sin(11*A)):FLinearColor::White);
+            }
+            V.Add(FVector(SkyCentre.X,SkyCentre.Y,Top));V.Add(FVector(SkyCentre.X,SkyCentre.Y,Bottom-3));
+            N.Add(FVector::UpVector);N.Add(-FVector::UpVector);UV.Add(FVector2D(.5f,.5f));UV.Add(FVector2D(.5f,.5f));
+            Colors.Add(Earth?FLinearColor(.16f,.085f,.038f):FLinearColor::White);Colors.Add(Earth?FLinearColor(.12f,.065f,.028f):FLinearColor::White);
+            for(int32 I=0;I<Points;++I)
+            {
+                const int32 Next=(I+1)%Points;
+                T.Append({I,I+Points,Next,Next,I+Points,Next+Points,2*Points,I,Next,2*Points+1,Next+Points,I+Points});
+            }
+            auto* Mesh=NewObject<UProceduralMeshComponent>(Owner);Mesh->SetupAttachment(Root);
+            Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);Mesh->RegisterComponent();
+            Mesh->CreateMeshSection_LinearColor(0,V,T,N,UV,Colors,TArray<FProcMeshTangent>(),false);
+            Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,Earth?TEXT("/Game/Art/Materials/M_VistaTerrain.M_VistaTerrain"):TEXT("/Game/Art/Materials/M_Stone.M_Stone")));
+        };
+        IslandLayer(Floor-27,Floor-56,50,43,false);
+        IslandLayer(Floor-54,Floor-82,43,27,true);
         const FVector Puffs[]={FVector(-260,620,-520),FVector(-90,770,-610),FVector(-210,815,-470),FVector(-115,575,-760),FVector(-300,740,-830),FVector(-40,660,-900)};
         for(int32 I=0;I<UE_ARRAY_COUNT(Puffs);++I)
             for(int32 K=0;K<3;++K)
@@ -330,6 +356,12 @@ void BuildDockPantry(UWorld* World)
                 Hit.GetComponent() && Hit.GetComponent()->ComponentHasTag(TEXT("PantryCheese"));
             if(!Solid) UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_CHEESE_COLLISION_MISS component=%s point=%s"),*GetNameSafe(Hit.GetComponent()),*Hit.ImpactPoint.ToString());
             Failures+=!Solid;
+            const FVector FloorEdge(SkyCentre.X+40,SkyCentre.Y,Floor);
+            const bool IslandFloor=World->LineTraceSingleByChannel(Hit,FloorEdge+FVector(0,0,20),FloorEdge-FVector(0,0,100),ECC_Visibility);
+            const FVector Under(SkyCentre.X+20,SkyCentre.Y,Floor-130);
+            const bool UnderClear=!World->LineTraceSingleByChannel(Hit,Under,Under-FVector(0,0,570),ECC_Visibility);
+            Failures+=!IslandFloor || !UnderClear;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_PANTRY_ISLAND_CHECK failures=%d floor=%d underfloor_clear=%d"),!IslandFloor || !UnderClear,IslandFloor,UnderClear);
             auto* Chuck=Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());
             ADockNPC* Keeper=nullptr;for(TActorIterator<ADockNPC> NPC(World);NPC;++NPC) if(NPC->IsKeeper()) Keeper=*NPC;
             bool CellarSilent=true,SurfaceTalk=false;

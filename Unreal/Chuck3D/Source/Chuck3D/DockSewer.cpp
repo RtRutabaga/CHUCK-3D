@@ -557,6 +557,30 @@ void BuildDockSewer(UWorld* World)
         for(float X : {-700.f,700.f}) for(float Y : {-700.f,700.f})
         {V.Add(Centre+FVector(X,Y,-Deep-60));N.Add(FVector::UpVector);UV.Add(FVector2D(X/500,Y/500));}
         T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
+        // A translucent, rippling oil film floats one foot below the lip.
+        // The deep rock and falling stream remain visible through it.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        const FVector FilmAcross(-LeapAlong.Y,LeapAlong.X,0);
+        auto FilmPoint=[&](FVector P)
+        {
+            P.Z=FloorZ-30.48f+3.f*FMath::Sin(P.X*.045f+P.Y*.027f)+2.f*FMath::Cos(P.Y*.055f-P.X*.018f);
+            V.Add(P);N.Add(FVector::UpVector);
+            UV.Add(FVector2D(FVector::DotProduct(P-LeapNear,LeapAlong)/LeapLength,.5f+FVector::DotProduct(P-Centre,FilmAcross)/420.f));
+        };
+        FilmPoint(Centre);
+        constexpr int32 FilmRings=8;
+        const int32 FilmPoints=LeapOutline.Num();
+        for(int32 R=1;R<=FilmRings;++R) for(const FVector& E : LeapOutline)
+            FilmPoint(FMath::Lerp(Centre,E+(Centre-E).GetSafeNormal2D()*4.f,R/float(FilmRings)));
+        for(int32 I=0;I<FilmPoints;++I) T.Append({0,1+I,1+(I+1)%FilmPoints});
+        for(int32 R=1;R<FilmRings;++R) for(int32 I=0;I<FilmPoints;++I)
+        {
+            const int32 A=1+(R-1)*FilmPoints+I,B=1+(R-1)*FilmPoints+(I+1)%FilmPoints;
+            T.Append({A,A+FilmPoints,B,B,A+FilmPoints,B+FilmPoints});
+        }
+        auto* Film=MakeMesh(V,T,N,UV,Oil,false);
+        if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAP_OIL_CHECK failures=%d depth_cm=30.5 noncolliding=1"),!Oil || Film->GetCollisionEnabled()!=ECollisionEnabled::NoCollision);
         // The stream pours over the near lip, arcing out and thinning as it falls.
         V.Reset();N.Reset();T.Reset();UV.Reset();
         {
