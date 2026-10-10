@@ -1878,25 +1878,40 @@ author('SprintLeap', SPRINT_LEAP_FRAMES, sprint_leap, False, {
 # and reaching, legs stretched long behind, then the paws close on the next
 # ring overhead with the body behind it (SWING_CATCH), the pose Swing has at
 # that angle, so the catch carries straight on into the swing.
+# User 2026-10-09 follow-up: the leap reaches with ONE arm. The lead paw lets
+# go first and stretches forward and out toward the next ring (the rings
+# alternate walls, so SwingLeapLeft/Right lead with the paw on its side),
+# open, then closes on the bar; the other drops back for balance, the
+# shoulders twisting into the reach, and rises toward the bar at the catch
+# (the runtime's longer cross-fade into Swing brings it onto the bar).
 SWING_GRIP = Vector((5.5, 0., 63.5))   # the ring's bottom bar in mesh space (origin = capsule bottom)
 SWING_MAX = 40.                        # deg: the pendulum angle at either end of Swing
 SWING_RELEASE, SWING_CATCH = .75, -.625   # SwingLeap starts and ends at these Swing poses (fraction of SWING_MAX)
 SWING_FRAMES, SWING_LEAP_FRAMES = 21, 16
 
-def swing_pose(s, reach=0.):
-    """s -1 (back of the arc) .. 1 (front). reach 0..1: the leap's throw, arms
-    forward off the ring and legs stretched long behind."""
+def swing_pose(s, reach=0., lead=None, u=0.):
+    """s -1 (back of the arc) .. 1 (front). reach 0..1: the leap's throw, legs
+    stretched long behind. lead 'L'/'R': the leap's reaching paw, at flight
+    progress u (both paws stay on the bar when None)."""
     front, back = max(0., s), max(0., -s)
+    lead_sign = 1 if lead == 'L' else -1
+    out = smoothstep(u, .03, .3) * (1 - smoothstep(u, .72, 1.)) if lead else 0.   # the lead arm out at full stretch
     stay = 1. - reach
     poser.translate('pelvis', (0., 0., 1.5 * stay))
     poser.rotate('pelvis', 'Y', 8 * front - 10 * back - 6 * reach)
     poser.rotate('spine_01', 'Y', 3 + 8 * front - 7 * back - 4 * reach)
     poser.rotate('spine_02', 'Y', 3 * front - 4 * back)
     poser.rotate('chest', 'Y', -5 - 2 * reach)              # chest open under the raised arms
+    # Shoulders turned into the reach (+Z swings the left shoulder back), the
+    # body leaning a little after the lead arm.
+    poser.rotate('spine_02', 'Z', -lead_sign * 7 * out)
+    poser.rotate('chest', 'Z', -lead_sign * 12 * out)
+    poser.rotate('chest', 'X', lead_sign * 6 * out)
     poser.rotate('neck', 'Y', -4)
     # The whole body pitches with the arc; the head takes back part of it so his
     # eyes stay on where he's going (and on the next ring as he flies).
     poser.rotate('head', 'Y', 4 - 12 * s + 8 * reach)   # (+: chin up)
+    poser.rotate('head', 'Z', lead_sign * 9 * out)     # eyes on the ring he's reaching for
     for side in 'LR':
         poser.rotate(f'ear_{side}', 'Y', 10 * reach + 6 * front)   # ears laid back by the air
     # Tail: hanging below him, swept against the swing; streams out behind in the leap.
@@ -1911,10 +1926,25 @@ def swing_pose(s, reach=0.):
     # the leap thrown forward and up toward the next ring.
     for side, sign in (('L', 1), ('R', -1)):
         held = Vector((SWING_GRIP.x - .5, sign * 3.4, SWING_GRIP.z - 2.))
-        thrown = Vector((15., sign * 6.5, 55.))
-        fk = held.lerp(thrown, reach)
-        poser.arm(side, fk, pole=(-.2, sign * 1., -.1))
-        curl(side, 70 * stay + 25 * reach)
+        if lead is None:
+            poser.arm(side, held, pole=(-.2, sign * 1., -.1))
+            curl(side, 70)
+        elif side == lead:
+            # Off the bar, forward, up and out toward the next ring at full
+            # stretch, paw open; back onto the bar for the catch, closing.
+            grab = smoothstep(u, .72, 1.)
+            fk = held.lerp(Vector((17., sign * 9.5, 55.5)), smoothstep(u, .03, .3)).lerp(held, grab)
+            poser.arm(side, fk, pole=(-.2, sign * 1., -.3))
+            curl(side, 70 * (1 - smoothstep(u, 0., .15)) + 70 * grab)
+        else:
+            # Let go a beat after, swung down and back for balance, then
+            # reaching up toward the bar as the lead paw takes it.
+            drop = smoothstep(u, .08, .32)
+            rise = smoothstep(u, .68, 1.)
+            back_low = Vector((-12., sign * 12.5, 28.5))   # nearly straight, back and down
+            up = Vector((SWING_GRIP.x - 2., sign * 6., SWING_GRIP.z - 11.))
+            poser.arm(side, held.lerp(back_low, drop).lerp(up, rise), pole=(.6, sign * .6, -.2))
+            curl(side, 70 * (1 - drop) + 25 * drop * (1 - rise) + 45 * rise)
     # Legs: dangling at rest, knees up at the front, trailing at the back,
     # stretched long behind in the leap (the left a little ahead of the right).
     for side in 'LR':
@@ -1933,22 +1963,26 @@ def swing_pose(s, reach=0.):
 def swing(phase, f):
     return swing_pose(-1. + 2. * f / (SWING_FRAMES - 1))
 
-def swing_leap(phase, f):
-    u = f / (SWING_LEAP_FRAMES - 1)
-    throw = smoothstep(u, 0., .25) * (1 - smoothstep(u, .62, 1.))
-    s = SWING_RELEASE + (SWING_CATCH - SWING_RELEASE) * smoothstep(u, .2, 1.)
-    return swing_pose(s, throw)
+def swing_leap_clip(lead):
+    def pose(phase, f):
+        u = f / (SWING_LEAP_FRAMES - 1)
+        throw = smoothstep(u, 0., .25) * (1 - smoothstep(u, .62, 1.))
+        s = SWING_RELEASE + (SWING_CATCH - SWING_RELEASE) * smoothstep(u, .2, 1.)
+        return swing_pose(s, throw, lead, u)
+    return pose
 
 author('Swing', SWING_FRAMES, swing, False, {
     'grip_cm': [SWING_GRIP.x, SWING_GRIP.z], 'swing_max_deg': SWING_MAX,
     'time_mapping': 'clip time = (pendulum angle / swing_max_deg + 1) / 2 x duration (positive: body ahead of the grip)',
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'notes': 'Hanging from a ring overhead by both paws; the runtime pitches the mesh about the grip by the pendulum angle and poses the clip by it.'}, ground=False)
-author('SwingLeap', SWING_LEAP_FRAMES, swing_leap, False, {
-    'grip_cm': [SWING_GRIP.x, SWING_GRIP.z], 'release_swing': SWING_RELEASE, 'catch_swing': SWING_CATCH,
-    'time_mapping': 'clip time = flight progress x duration; first/last frames = Swing at release_swing / catch_swing x swing_max_deg',
-    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
-    'notes': 'Ring to ring: off at the front of the arc, arms thrown forward, legs long behind, paws closing on the next ring with the body behind it.'}, ground=False)
+for name, lead in (('SwingLeapLeft', 'L'), ('SwingLeapRight', 'R')):
+    author(name, SWING_LEAP_FRAMES, swing_leap_clip(lead), False, {
+        'grip_cm': [SWING_GRIP.x, SWING_GRIP.z], 'release_swing': SWING_RELEASE, 'catch_swing': SWING_CATCH,
+        'lead_paw': f'hand_{lead}',
+        'time_mapping': 'clip time = flight progress x duration; first/last frames = Swing at release_swing / catch_swing x swing_max_deg (the trailing paw just short of the bar)',
+        'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+        'notes': 'Ring to ring, reaching with one paw: the lead paw lets go and stretches out toward the next ring, the other swings back for balance; the lead paw takes the bar with the body behind it, the other rising to it.'}, ground=False)
 
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,

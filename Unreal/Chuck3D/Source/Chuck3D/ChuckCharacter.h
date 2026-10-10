@@ -315,7 +315,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeap, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap };
     EGait Gait = EGait::Idle;

@@ -70,7 +70,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeap")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -1165,7 +1165,7 @@ void AChuckCharacter::EnterSwing(int32 Index, bool bFromLeap)
         if (bSwingJumpQueued) AirJumpPressedAt = -1e3f;
     }
     ++SwingCatches;
-    SetClip(EClip::Swing, (FMath::Clamp(FMath::RadiansToDegrees(SwingAngle) / ChuckClipData::SwingMaxAngle, -1.f, 1.f) + 1.f) * .5f * Clips[static_cast<int32>(EClip::Swing)]->GetPlayLength(), bFromLeap ? .06f : .12f);
+    SetClip(EClip::Swing, (FMath::Clamp(FMath::RadiansToDegrees(SwingAngle) / ChuckClipData::SwingMaxAngle, -1.f, 1.f) + 1.f) * .5f * Clips[static_cast<int32>(EClip::Swing)]->GetPlayLength(), bFromLeap ? .22f : .12f);   // (after a leap: time for the trailing paw to join the lead one on the bar)
     if (!bFromLeap) PlaySfx(LandSounds, ESfx::Land, LandVolume * .45f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_CATCH grip=%d leap=%d catches=%d angle=%.1f at=%s"), Index, bFromLeap ? 1 : 0, SwingCatches, FMath::RadiansToDegrees(SwingAngle), *GetActorLocation().ToString());
 }
@@ -1232,7 +1232,9 @@ void AChuckCharacter::SwingJump()
     bSwingJumpQueued = false;
     Gait = EGait::SwingLeap;
     ++SwingLeapCount;
-    SetClip(EClip::SwingLeap, 0, .1f);
+    // Reaching for it with the paw on its side (the rings alternate walls).
+    const FVector Right = FRotationMatrix(FRotator(0, SwingLeapYaw, 0)).GetUnitAxis(EAxis::Y);
+    SetClip(FVector::DotProduct(SwingLeapDir, Right) > 0.f ? EClip::SwingLeapRight : EClip::SwingLeapLeft, 0, .1f);
     PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * .8f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_LEAP from=%d to=%d leaps=%d dist=%.1f time=%.2f"), SwingLeft, Target, SwingLeapCount, Delta.Size(), SwingLeapTime);
 }
