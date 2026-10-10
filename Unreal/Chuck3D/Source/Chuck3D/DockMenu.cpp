@@ -28,10 +28,11 @@
 bool ADockGameMode::StartFromMenu(const FString& Point)
 {
     auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
-    if(!C || (Point!=TEXT("Waterdeep") && Point!=TEXT("Sewer") && Point!=TEXT("SewerJump") &&
+    if(!C || (Point!=TEXT("Waterdeep") && Point!=TEXT("Sewer") && Point!=TEXT("SewerJump") && Point!=TEXT("SewerLongJump") &&
               Point!=TEXT("Night") && Point!=TEXT("Pantry"))) return false;
     const FVector Location=Point==TEXT("Sewer")?DockSewerStartLocation():
         Point==TEXT("SewerJump")?DockSewerCheckpointLocation():
+        Point==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
         Point==TEXT("Pantry")?DockPantryStartLocation():AChuckCharacter::StartLocation();
     C->ResetAtLocation(Location);
     if(Point==TEXT("Night") || Point==TEXT("Pantry")) MarkDockSewerExited();
@@ -89,7 +90,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==6 && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7 && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         Click(TEXT("Back"));
     }
     else if(MenuTestStage==2)
@@ -100,7 +101,8 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==3)
     {
-        const TCHAR* Label=MenuTestPoint==TEXT("SewerJump")?TEXT("Sewer Jump"):
+        const TCHAR* Label=MenuTestPoint==TEXT("SewerLongJump")?TEXT("Sewer Long Jump"):
+            MenuTestPoint==TEXT("SewerJump")?TEXT("Sewer Jump"):
             MenuTestPoint==TEXT("Night")?TEXT("Waterdeep Night"):
             MenuTestPoint==TEXT("Pantry")?TEXT("Tavern Pantry"):*MenuTestPoint;
         Click(Label);
@@ -116,6 +118,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         auto* C=Cast<AChuckCharacter>(GetOwningPawn());
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
+            MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
             MenuTestPoint==TEXT("Pantry")?DockPantryStartLocation():AChuckCharacter::StartLocation();
         if(C) UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_SPAWN point=%s actual=%s expected=%s distance=%.2f movement=%d possessed=%d"),
             *MenuTestPoint,*C->GetActorLocation().ToString(),*Expected.ToString(),FVector::Dist(C->GetActorLocation(),Expected),
@@ -128,12 +131,31 @@ void ADockHUD::Tick(float DeltaSeconds)
         Check(HasExitedDockSewer()==(MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("destination has the expected morning or evening progression state"));
         // Outdoor sun/sky are intentionally disabled while the camera is in the
         // sewer, so the surface-lighting assertion is only valid above ground.
-        if(MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump"))
+        if(MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump") && MenuTestPoint!=TEXT("SewerLongJump"))
             Check(CheckDockReturn(GetWorld(),MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("surface doors, hatch and lighting match the destination"));
         const FString Folder=FPaths::ScreenShotDir()/TEXT("MenuStarts");
         IFileManager::Get().MakeDirectory(*Folder,true);
         FScreenshotRequest::RequestScreenshot(Folder/MenuTestPoint+TEXT(".png"),true,false);
         MenuTestNext=FPlatformTime::Seconds()+.5;
+    }
+    else if(MenuTestStage==6 && MenuTestPoint==TEXT("SewerLongJump"))
+    {
+        auto* C=Cast<AChuckCharacter>(GetOwningPawn());
+        if(C)
+        {
+            MenuTestFalls=C->GetFallDeaths();MenuTestRespawns=C->GetRespawns();
+            C->ResetAtLocation(DockSewerPoint(DockSewerLeapRiftStart()+2)+FVector(0,0,35));
+            C->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        }
+        MenuTestNext=FPlatformTime::Seconds()+12.;
+    }
+    else if(MenuTestStage==7 && MenuTestPoint==TEXT("SewerLongJump"))
+    {
+        auto* C=Cast<AChuckCharacter>(GetOwningPawn());
+        Check(C && C->GetFallDeaths()>MenuTestFalls && C->GetRespawns()>MenuTestRespawns &&
+            C->GetCharacterMovement()->IsMovingOnGround() && !C->IsAstral() &&
+            FVector::Dist(C->GetActorLocation(),DockSewerLeapCheckpointLocation())<45.f,
+            TEXT("falling into the long jump returns to its local checkpoint"));
     }
     else
     {
@@ -196,6 +218,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         Add(TEXT("Waterdeep"),[Start](){return Start(TEXT("Waterdeep"));});
         Add(TEXT("Sewer"),[Start](){return Start(TEXT("Sewer"));});
         Add(TEXT("Sewer Jump"),[Start](){return Start(TEXT("SewerJump"));});
+        Add(TEXT("Sewer Long Jump"),[Start](){return Start(TEXT("SewerLongJump"));});
         Add(TEXT("Waterdeep Night"),[Start](){return Start(TEXT("Night"));});
         Add(TEXT("Tavern Pantry"),[Start](){return Start(TEXT("Pantry"));});
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});

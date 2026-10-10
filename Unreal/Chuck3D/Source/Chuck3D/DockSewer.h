@@ -19,7 +19,7 @@ bool DockSewerIsChamber(int32 Index);
 // Full-width wall-run challenge immediately after the midpoint chamber.
 int32 DockSewerWallRiftStart();
 int32 DockSewerWallRiftEnd();
-// Separate sprint-leap-only rupture farther along, before the final descent.
+// Separate sprint-leap rupture farther along, before the final descent.
 int32 DockSewerLeapRiftStart();
 int32 DockSewerLeapRiftEnd();
 
@@ -28,6 +28,10 @@ int32 DockSewerLeapRiftEnd();
 int32 DockSewerCheckpointSample();
 FVector DockSewerCheckpointLocation();
 float DockSewerCheckpointYaw();
+// Local recovery/start point on the bank before the long sprint jump.
+int32 DockSewerLeapCheckpointSample();
+FVector DockSewerLeapCheckpointLocation();
+float DockSewerLeapCheckpointYaw();
 // Nearest route sample to a point inside the sewer, or INDEX_NONE.
 int32 DockSewerNearestSample(const FVector& Position);
 // Invisible floor over every Astral opening that only non-Chuck pawns stand

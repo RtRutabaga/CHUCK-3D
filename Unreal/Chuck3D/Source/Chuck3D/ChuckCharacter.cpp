@@ -374,11 +374,13 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     if (!Sewer) return StartLocation();
     // At or beyond the checkpoint before the wall-run rupture: back to it, not the entrance.
     const int32 Sample=DockSewerNearestSample(GetActorLocation());
+    if(Sample!=INDEX_NONE && Sample>=DockSewerLeapCheckpointSample()) return DockSewerLeapCheckpointLocation();
     return Sample!=INDEX_NONE && Sample>=DockSewerCheckpointSample() ? DockSewerCheckpointLocation() : DockSewerStartLocation();
 }
 float AChuckCharacter::AreaStartYaw(const FVector& Location)
 {
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
+    if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
 }
 void AChuckCharacter::RespawnAtAreaStart()

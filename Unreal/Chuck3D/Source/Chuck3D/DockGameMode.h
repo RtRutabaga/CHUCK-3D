@@ -188,6 +188,7 @@ private:
     TMap<FString,TWeakPtr<class SButton>> MenuButtons;
     FString MenuTestPoint;
     int32 MenuTestStage = 0, MenuTestFailures = 0;
+    int32 MenuTestFalls = 0, MenuTestRespawns = 0;
     double MenuTestNext = 0;
     TWeakObjectPtr<UWorld> MenuTestWorld;
     void ShowTitleMenu();

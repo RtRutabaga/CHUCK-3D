@@ -152,6 +152,17 @@ float DockSewerCheckpointYaw()
     const int32 I=DockSewerCheckpointSample();
     return Route.IsValidIndex(I+2) ? static_cast<float>((Route[I+2]-Route[I]).Rotation().Yaw) : 90.f;
 }
+int32 DockSewerLeapCheckpointSample() { return LeapRiftStart-7; }
+FVector DockSewerLeapCheckpointLocation()
+{
+    const int32 I=DockSewerLeapCheckpointSample();
+    return Route.IsValidIndex(I) && RouteRight.IsValidIndex(I) ? Route[I]+RouteRight[I]*(StreamOffset(I)+65.f)+FVector(0,0,34.65f) : DockSewerStartLocation();
+}
+float DockSewerLeapCheckpointYaw()
+{
+    const int32 I=DockSewerLeapCheckpointSample();
+    return Route.IsValidIndex(I+2) ? static_cast<float>((Route[I+2]-Route[I]).Rotation().Yaw) : 90.f;
+}
 int32 DockSewerNearestSample(const FVector& P)
 {
     int32 Best=INDEX_NONE;double BestD=1e12;
