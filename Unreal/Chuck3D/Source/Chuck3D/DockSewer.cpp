@@ -268,6 +268,7 @@ void BuildDockSewer(UWorld* World)
     // A continuous eroded rock shell: broad asymmetry and stratified ledges,
     // with collision on the same surface. No attached spherical decorations.
     TArray<FVector> V,N; TArray<int32> T; TArray<FVector2D> UV;
+    TArray<FVector> ShellBottom[2];   // the shell's foot on each side (left, right), for the long jump's chasm
     constexpr int32 Arc=32;
     for(int32 I=0;I<Count;++I) for(int32 J=0;J<=Arc;++J)
     {
@@ -282,6 +283,7 @@ void BuildDockSewer(UWorld* World)
         const float X=(Lateral+Relief*(Lateral/Width(I)))*Arch+14*FMath::Sin(A)*FMath::Sin(I*.17f)*(1.f-Narrow(I));
         const float Z=(Height(I)+Relief*1.5f+12*FMath::Sin(I*.09f))*FMath::Sin(A);
         V.Add(Route[I]+Right[I]*X+FVector(0,0,Z));
+        if(J==0) ShellBottom[1].Add(V.Last()); else if(J==Arc) ShellBottom[0].Add(V.Last());
         N.Add((-Right[I]*FMath::Cos(A)-FVector::UpVector*FMath::Sin(A)).GetSafeNormal());
         UV.Add(FVector2D(I*.65f,J*.24f));
     }
@@ -381,6 +383,7 @@ void BuildDockSewer(UWorld* World)
     for(float Y : {-101.f,101.f}) Box(Shaft+FVector(0,Y,-400),FVector(214,8,600),Stone,true);
     auto* Astral=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth"));
     auto* Oil=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
+    TArray<FVector> LeapOutline;FVector LeapCentre=FVector::ZeroVector;
     for(int32 StartIndex : AllRifts())
     {
         const int32 Span=RiftSpan(StartIndex),Rows=Span*4;constexpr int32 Levels=8;
@@ -420,6 +423,8 @@ void BuildDockSewer(UWorld* World)
         }
         const int32 Middle=StartIndex+Span/2;
         const FVector Centre=Route[Middle]+Right[Middle]*RuptureOffset(Middle);
+        // The long jump gets its own chasm below (no shallow well or lip ribbon).
+        if(StartIndex==LeapRiftStart) { LeapOutline=Edges;LeapCentre=Centre;continue; }
         // Broken stone lip follows the real collision hole, tapering at both ends.
         V.Reset();N.Reset();T.Reset();UV.Reset();
         for(int32 I=0;I<Edges.Num();++I)
@@ -483,13 +488,99 @@ void BuildDockSewer(UWorld* World)
         Lamp->SetLightingChannels(false,true,false);
         Lamp->SetCastShadows(false);Lamp->RegisterComponent();
     }
-    // A horizontal depth beneath the floor closes seams between the straight
-    // jump lips and curved banks. No upright Astral panels or collision.
-    const FVector LeapAcross(-LeapAlong.Y,LeapAlong.X,0);
-    V.Reset();N.Reset();T.Reset();UV.Reset();
-    for(float End : {-650.f,LeapLength+650.f}) for(float Side : {-650.f,650.f})
-    {V.Add(LeapNear+LeapAlong*End+LeapAcross*Side+FVector(0,0,-30));N.Add(FVector::UpVector);UV.Add(FVector2D(End/500,Side/500));}
-    T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
+    // The long jump (user 2026-10-09, "looks a bit jenky, make this look
+    // better"): a real chasm instead of starry sheets just under its lips.
+    // Broken rock faces drop from both lips and from the cave walls' feet,
+    // narrowing into a crevice lit purple by the Astral glowing far below,
+    // in stepped strata; the stream pours over the near lip. All noncolliding: the floor, its 2.6 m gap and the fall that ends
+    // in an Astral death are unchanged.
+    if(LeapOutline.Num()>2)
+    {
+        const FVector Centre=LeapCentre;
+        constexpr int32 Levels=24;constexpr float Deep=640.f;
+        // Broken rock: broad bulges, a coarse grain and stepped strata (each
+        // band juts out at its top and slopes back under), all fading in below
+        // the lip so the walking edge stays where the floor ends.
+        const auto Rough=[](float A,float B,float H)
+        {
+            const float Band=FMath::Frac(H*5.5f+.25f*FMath::PerlinNoise2D(FVector2D(A*.11f,3.f)));
+            return (FMath::PerlinNoise2D(FVector2D(A*.13f,H*2.2f))*26.f+FMath::PerlinNoise2D(FVector2D(A*.55f+7,H*9.f))*9.f
+                + (Band<.18f?-11.f*(1.f-Band/.18f):6.f*(Band-.18f)))*FMath::SmoothStep(0.f,.08f,H);
+        };
+        // A face falling from a line of top points, receding under the lip a
+        // little, then closing in toward Toward as it goes down.
+        const auto Face=[&](const TArray<FVector>& Line,const FVector& Toward,float Seed,float Close,bool bLoop)
+        {
+            V.Reset();N.Reset();T.Reset();UV.Reset();
+            // Three points per outline step, for a rock face rather than drapes.
+            TArray<FVector> Top;
+            for(int32 I=0;I<(bLoop?Line.Num():Line.Num()-1);++I) for(int32 K=0;K<3;++K) Top.Add(FMath::Lerp(Line[I],Line[(I+1)%Line.Num()],K/3.f));
+            if(!bLoop) Top.Add(Line.Last());
+            const int32 Points=Top.Num();
+            for(int32 L=0;L<=Levels;++L) for(int32 I=0;I<Points;++I)
+            {
+                const float H=L/float(Levels);
+                const FVector E=Top[I],In=FVector(Toward.X-E.X,Toward.Y-E.Y,0);
+                const float Pull=-.05f*FMath::Sin(PI*FMath::Clamp((H-.06f)*3.f,0.f,1.f))+Close*FMath::Pow(H,1.6f);
+                const float R=Rough(I+Seed*3.f,L,H);
+                V.Add(E+In*Pull+In.GetSafeNormal()*R+FVector(0,0,-Deep*H*(1.f+.08f*FMath::Sin(I*.45f+Seed))-FMath::Abs(R)*.4f));
+                N.Add(In.GetSafeNormal());UV.Add(FVector2D(I*.11f,H*Deep/90.f));
+            }
+            for(int32 L=0;L<Levels;++L) for(int32 I=0;I<(bLoop?Points:Points-1);++I)
+            {
+                const int32 A=L*Points+I,B=L*Points+(I+1)%Points;
+                T.Append({A,B,A+Points,B,B+Points,A+Points});
+            }
+            MakeMesh(V,T,N,UV,Stone,false);
+        };
+        Face(LeapOutline,Centre,0.f,.3f,true);
+        // The cave walls carry on down into it (no edge hanging over nothing).
+        for(int32 Side=0;Side<2;++Side)
+        {
+            TArray<FVector> Foot;
+            for(int32 I=LeapRiftStart-1;I<=LeapRiftStart+LeapRiftSpan+1;++I) if(ShellBottom[Side].IsValidIndex(I)) Foot.Add(ShellBottom[Side][I]);
+            if(Foot.Num()>1) Face(Foot,Centre,17.f+Side*29.f,.24f,false);
+        }
+        // Dark rock closes the seams round the opening (the banks' curved
+        // edges against its straight lips), in place of a starry sheet.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(int32 I=0;I<LeapOutline.Num();++I)
+        {
+            const FVector E=LeapOutline[I],Out=FVector(E.X-Centre.X,E.Y-Centre.Y,0).GetSafeNormal();
+            V.Add(E+Out*30+FVector(0,0,-34));V.Add(E+Out*650+FVector(0,0,-34));   // (set back behind the rough faces)
+            N.Add(FVector::UpVector);N.Add(FVector::UpVector);UV.Add(FVector2D(I*.3f,0));UV.Add(FVector2D(I*.3f,6.5f));
+            const int32 A=I*2,B=((I+1)%LeapOutline.Num())*2;T.Append({A,B,A+1,B,B+1,A+1});
+        }
+        MakeMesh(V,T,N,UV,Stone,false);
+        // The Astral far below: a broad emissive floor seen through the crevice.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        for(float X : {-700.f,700.f}) for(float Y : {-700.f,700.f})
+        {V.Add(Centre+FVector(X,Y,-Deep-60));N.Add(FVector::UpVector);UV.Add(FVector2D(X/500,Y/500));}
+        T.Append({0,2,1,1,2,3});MakeMesh(V,T,N,UV,Astral,false);
+        // The stream pours over the near lip, arcing out and thinning as it falls.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        {
+            const float O=StreamOffset(LeapRiftStart);
+            constexpr int32 Drops=12;
+            for(int32 L=0;L<=Drops;++L) for(float Across : {-38.f,-13.f,13.f,38.f})
+            {
+                const float H=L/float(Drops);
+                FVector Lip=Route[LeapRiftStart]+Right[LeapRiftStart]*(O+Across*(1.f-.35f*H));
+                Lip+=LeapAlong*(-FVector::DotProduct(Lip-LeapNear,LeapAlong));
+                V.Add(Lip+LeapAlong*(4.f+26.f*FMath::Sqrt(H))+FVector(0,0,-2.5f-430.f*H*H-60.f*H));
+                N.Add(-LeapAlong);UV.Add(FVector2D((Across+41.5f)/83.f,H*5.f));
+            }
+            for(int32 L=0;L<Drops;++L) for(int32 C=0;C<3;++C) {const int32 A=L*4+C;T.Append({A,A+1,A+4,A+1,A+5,A+4});}
+            MakeMesh(V,T,N,UV,Stream,false);
+        }
+        // Purple from below: a glow just under the lips and a deep one lighting the crevice walls.
+        for(const TPair<float,float>& Glow : {TPair<float,float>(-60.f,1500.f),TPair<float,float>(-330.f,4200.f)})
+        {
+            auto* Lamp=NewObject<UPointLightComponent>(Owner);Lamp->SetupAttachment(Root);Lamp->SetRelativeLocation(Centre+FVector(0,0,Glow.Key));
+            Lamp->SetIntensity(Glow.Value);Lamp->SetAttenuationRadius(Glow.Key<-100.f?620.f:420.f);Lamp->SetLightColor(FLinearColor(.48f,.035f,1));
+            Lamp->SetLightingChannels(false,true,false);Lamp->SetCastShadows(false);Lamp->RegisterComponent();
+        }
+    }
     // Soft cinematic night fill, without visible lamps or hot spots. Purple
     // remains the only light visibly emanating from an object in the cave.
     int32 FillLights=0;
