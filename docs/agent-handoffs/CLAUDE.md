@@ -2632,3 +2632,35 @@ Next part of the work can be done here.
   - Not played by hand.
 
 Next part of the work can be done here.
+
+## Sewer long jump: a real chasm (user 2026-10-09)
+
+- **Ask:** Codex's sprint-jump Astral rupture in the cavern "looks a bit jenky, make this look better". It is a big jump that teaches the long leap; a wall-run route through it is acceptable.
+- **Found:**
+  - The opening showed two flat starry sheets right under the floor: an 18 cm well lid and a 13 m plane 30 cm down. They read as painted floor.
+  - The ruler-straight lips had flat purple-lit ribbons.
+  - The cave walls ended in a hanging edge, with a spike over the hole.
+- **Source:** `e05d468` on main, base `ac0611d`. `DockSewer.cpp` (Codex's world file; only the long-jump rupture's visuals plus shell-foot bookkeeping) and `docs/SEWER-SPRINT-RIFT.md`.
+  - The leap rupture skips the shared shallow well and lip ribbon. The 13 m sheet is replaced by a dark rock annulus set 30 cm back and 34 cm down.
+  - New noncolliding chasm faces fall about 6.4 m from the opening outline and from the shell's feet on both sides: 24 levels, triple-density points, Perlin bulges and grain, and stepped strata. They narrow toward the centre.
+  - An emissive Astral floor sits 7 m down, with two purple lights (just under the lips, and deep).
+  - A stream waterfall pours off the near lip.
+  - Floor, lips, gap length, NPC floor, camera walls and death height are unchanged.
+- **Iterations:**
+  - Stone "teeth" along the lips looked like dice and were removed.
+  - The first faces looked like drapes; they were densified and given strata, and the crevice was opened (close .42 to .30).
+  - A dark sliver at the far lip came from the seam annulus poking through the rough face; the annulus is now set back.
+- **Verified** (UE 5.7.4, one-worker skip-cook candidate, no assets):
+  - Inspected `-ChuckLeapRiftCapture` views before and after (`Local/chasm_sheet2.png`, `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/LeapRift`) and the follow-camera sprint-leap frames (`Local/chasm_leap_sheet.png`).
+  - Final full `Verify-Package.ps1` **181 checks, 0 failures, all gates** (`Local/verify-package-20261009-192816.log`, `Local/chasm-verification3.log`).
+  - Six gap trials: the sprint leap crosses; three ordinary jumps and both scripted side wall runs fall. Lamp 8/8.
+  - One earlier full run on the previous iteration failed two unrelated samples (the known intermittent keeper rag reach of 8.5 cm, and the first of several sewer-music boundary samples). The unchanged rerun passed 181; neither touches this code.
+- **Launcher:** `Builds/Windows` = `e05d468`, receipt and `-CheckOnly` pass. The previous `4ccffaf` package is at `Builds/Windows-Previous-20261009-LeapChasm`.
+- **Preserved:** 40 inputs hash-identical and unstaged.
+- **Remaining:**
+  - Not played by hand.
+  - A faint vertical crease remains where a chasm side face meets the cave wall.
+  - The other 32 ruptures keep their original shallow look.
+  - No wall-run bypass was found by the scripted attempts; it stays allowed.
+
+Next part of the work can be done here.

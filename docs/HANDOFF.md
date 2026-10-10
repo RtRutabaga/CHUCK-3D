@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 9 — sewer long jump rebuilt as a real chasm
+
+Runtime **e05d468** (Claude). User asked to make Codex's sprint-jump Astral rupture look less janky. The two flat starry sheets just under the floor, the flat lip ribbons and the hanging cave-wall edges are replaced by a deep stratified rock chasm (about 6.4 m), purple-lit from below with the Astral glowing far beneath, and the stream pours over the near lip. All additions are noncolliding: floor, 2.6 m gap, NPC floor, camera walls and fall-death are unchanged. A wall-run route stays allowed. See SEWER-SPRINT-RIFT.md.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**; one-worker skip-cook candidate, `Local/chasm-build3.log`. No assets or imports.
+- Inspected before/after fixed views and follow-camera leap frames. Final full verification **181 checks, zero failures, all gates** (`Local/verify-package-20261009-192816.log`): the sprint leap crosses, the ordinary jumps and scripted wall runs fall, lamp trials 8/8. An earlier iteration's run had two unrelated intermittent samples (keeper rag reach 8.5 cm, a first sewer-music boundary sample); its unchanged rerun passed. Not played by hand.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / e05d468**; receipt/hash and **CheckOnly** passed. Prior **4ccffaf** package preserved at **Builds/Windows-Previous-20261009-LeapChasm**. All **40** unfinished inputs hash-identical and unstaged.
+
+Next part of the work can be done here.
+
 ## October 9 — climbing and brachiation take small sips of stamina
 
 Runtime **4ccffaf** (Claude). User asked to work wall climbing and brachiation into the stamina ring, for flavour only, while he can still wall jump up the tallest sewer-side buildings. Wall runs, wall jumps, side wall runs and ring leaps take small amounts, with no refill while on the walls or swinging. An empty ring never stops a climb. A 660 cm chimney costs about 18%; four ring leaps about 5%. Added `LockStamina(Seconds)` for the later Chult golden-leaf power-up: full and frozen stamina, endless sprint, a wall run that keeps climbing past three steps, and a longer side wall-run arc. No pickup or HUD for it yet. See BRACHIATION.md.
