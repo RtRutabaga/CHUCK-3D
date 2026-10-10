@@ -1,5 +1,7 @@
 # Late sewer sprint-leap rupture
 
+October 9 edge refinement: replace the horizontal oil film's radial triangle fan with a regular wavy grid, extended beneath the banks and cave walls to hide its edges. Add a noncolliding vertical oil veil around the broken chasm perimeter, overlapping the recessed film and fading above the lip using the existing oil material. This supersedes the older exclusion of upright oil veils at this jump; solid Astral wall panels remain absent. Deep rock, waterfall, floor collision and traversal tuning remain unchanged.
+
 October 9, after Claude's deep-chasm rebuild: a translucent horizontal oil film follows the opening about 30.5 cm below the banks. Tessellated waves and the existing animated oil material make it ripple; deep rock, the falling stream and distant Astral glow remain underneath. The film has no collision and does not change the gap or traversal tuning. Default package verification requires its loaded material and noncolliding mesh check.
 
 October 9 final layout: remove all Astral wall panels, recessed vertical backdrops and upright oil veils at the late sprint gap. Only its Astral floor opening and purple glow remain. Continuous solid cave walls are restored, including their normal camera collision. Wall runs and other bypasses are allowed; this obstacle encourages learning the sprint leap rather than enforcing one route. Earlier sewer ruptures retain their existing presentation.

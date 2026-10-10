@@ -95,7 +95,7 @@ $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED 
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
 $expected=if($NoCapture) {178} else {179}
 if (!$leapGeometry) { throw "Astral floor gap geometry verification failed. Inspect $log" }
-if(!(Select-String -LiteralPath $log -Pattern 'CHUCK_LEAP_OIL_CHECK failures=0 depth_cm=30.5 noncolliding=1' -Quiet)) {
+if(!(Select-String -LiteralPath $log -Pattern 'CHUCK_LEAP_OIL_CHECK failures=0 depth_cm=30.5 noncolliding=1 vertical_fade=1' -Quiet)) {
     throw "Sewer oil film verification failed. Inspect $log"
 }
 if (!$wallLampsCompleted) { throw "Wall lamp geometry verification failed. Inspect $log" }

@@ -567,20 +567,44 @@ void BuildDockSewer(UWorld* World)
             V.Add(P);N.Add(FVector::UpVector);
             UV.Add(FVector2D(FVector::DotProduct(P-LeapNear,LeapAlong)/LeapLength,.5f+FVector::DotProduct(P-Centre,FilmAcross)/420.f));
         };
-        FilmPoint(Centre);
-        constexpr int32 FilmRings=8;
-        const int32 FilmPoints=LeapOutline.Num();
-        for(int32 R=1;R<=FilmRings;++R) for(const FVector& E : LeapOutline)
-            FilmPoint(FMath::Lerp(Centre,E+(Centre-E).GetSafeNormal2D()*4.f,R/float(FilmRings)));
-        for(int32 I=0;I<FilmPoints;++I) T.Append({0,1+I,1+(I+1)%FilmPoints});
-        for(int32 R=1;R<FilmRings;++R) for(int32 I=0;I<FilmPoints;++I)
+        // Regular grid avoids radial triangles crossing the bent outline.
+        // Overlap beneath the banks and walls conceals the animated edges.
+        constexpr int32 FilmRows=20,FilmColumns=28;
+        const float FilmHalfWidth=FMath::Max(Width(LeapRiftStart),Width(LeapRiftStart+LeapRiftSpan))+100.f;
+        for(int32 R=0;R<=FilmRows;++R) for(int32 C=0;C<=FilmColumns;++C)
         {
-            const int32 A=1+(R-1)*FilmPoints+I,B=1+(R-1)*FilmPoints+(I+1)%FilmPoints;
-            T.Append({A,A+FilmPoints,B,B,A+FilmPoints,B+FilmPoints});
+            FilmPoint(LeapNear+LeapAlong*FMath::Lerp(-12.f,LeapLength+12.f,R/float(FilmRows))
+                +FilmAcross*FMath::Lerp(-FilmHalfWidth,FilmHalfWidth,C/float(FilmColumns)));
+            UV.Last()=FVector2D(R/float(FilmRows),C/float(FilmColumns));
+        }
+        for(int32 R=0;R<FilmRows;++R) for(int32 C=0;C<FilmColumns;++C)
+        {
+            const int32 A=R*(FilmColumns+1)+C,B=A+FilmColumns+1;
+            T.Append({A,B,A+1,A+1,B,B+1});
         }
         auto* Film=MakeMesh(V,T,N,UV,Oil,false);
+        // The vertical veil follows the broken rim and fades above the lip.
+        V.Reset();N.Reset();T.Reset();UV.Reset();
+        constexpr int32 VeilLevels=10,VeilSteps=3;
+        const int32 VeilPoints=LeapOutline.Num()*VeilSteps;
+        for(int32 I=0;I<=VeilPoints;++I) for(int32 L=0;L<=VeilLevels;++L)
+        {
+            const int32 Segment=(I/VeilSteps)%LeapOutline.Num();
+            const float U=I/float(VeilPoints),H=L/float(VeilLevels);
+            const FVector E=FMath::Lerp(LeapOutline[Segment],LeapOutline[(Segment+1)%LeapOutline.Num()],(I%VeilSteps)/float(VeilSteps));
+            const FVector In=(Centre-E).GetSafeNormal2D();
+            V.Add(E+In*(4.f+H*H*9.f*FMath::Sin(U*37.f))+FVector(0,0,-38.f+H*(130.f+12.f*FMath::Sin(U*29.f))));
+            N.Add(In);UV.Add(FVector2D(U,H));
+        }
+        for(int32 I=0;I<VeilPoints;++I) for(int32 L=0;L<VeilLevels;++L)
+        {
+            const int32 A=I*(VeilLevels+1)+L,B=A+VeilLevels+1;
+            T.Append({A,A+1,B,A+1,B+1,B});
+        }
+        auto* Veil=MakeMesh(V,T,N,UV,Oil,false,false);
         if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest")))
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAP_OIL_CHECK failures=%d depth_cm=30.5 noncolliding=1"),!Oil || Film->GetCollisionEnabled()!=ECollisionEnabled::NoCollision);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_LEAP_OIL_CHECK failures=%d depth_cm=30.5 noncolliding=1 vertical_fade=1"),
+                !Oil || Film->GetCollisionEnabled()!=ECollisionEnabled::NoCollision || Veil->GetCollisionEnabled()!=ECollisionEnabled::NoCollision);
         // The stream pours over the near lip, arcing out and thinning as it falls.
         V.Reset();N.Reset();T.Reset();UV.Reset();
         {
