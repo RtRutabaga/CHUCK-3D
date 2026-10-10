@@ -1,5 +1,16 @@
 # Handoff — 2026-09-27
 
+## October 9 — local spawn and recovery before the sewer long jump
+
+Runtime **94ef00f**. Added **Dev Checkpoints → Sewer Long Jump**, starting on the solid right bank at route sample **299**, about **4.55 m** before the late sprint gap, facing onward. Death recovery at or beyond that approach uses this new point. The earlier **Sewer Jump** checkpoint remains at sample 213 for the wall-run obstacle; sewer entrance and other destinations are preserved. No traversal tuning, rig or asset changes.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**. One-worker skip-cook build **116.23 s**, `Local/leap-checkpoint-build.log`; existing cooked assets reused, no dependencies/imports or clean-checkout reproduction claim.
+- **Seven menu starts passed**, `Local/leap-checkpoint-menu.log`, individual logs `Local/verify-menu-20261009-170512-*.log`. Uses real Slate delegates; checks pause/unpause, single map load, possession, ground settling, death recovery and destination state. New point settled exactly at **(2492.955, 6735.247, -865.350)**. Its extra actual fall into the long gap completed a real death/summon and returned to this local point, grounded and outside Astral state, failures=0. Inspected `MenuStarts/SewerLongJump.png` for the solid-bank placement and onward view. Not played by hand.
+- Full default package verification **181 checks, failures=0, all gates**, `Local/verify-package-20261009-170649.log` and `Local/leap-checkpoint-verification.log`. Six gap trials and seven lamp/eave/brachiation trials passed; floor/camera-wall geometry passed. No optional whole-route walkthrough or performance/comfort claim.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / 94ef00f**; full receipt/hash and **CheckOnly** passed. Prior **7adb7c3** package preserved at **Builds/Windows-Previous-20261009-LeapCheckpoint**. All **40** unfinished inputs hash-identical and unstaged; original 2D repository untouched. Publication follows standing workflow permission.
+
+Next part of the work can be done here.
+
 ## October 9 — corrected zombie-chamber strafe and side-jump keys
 
 Runtime **7adb7c3**. Wide-chamber lesson now says: “Dodge attacks: press C to roll. Hold Q (left) or E (right) to strafe; press Space to side jump.” Verified against DefaultInput.ini StrafeKeys Q/E, Jump Space and Dodge C, and ChuckCharacter::DoJump's live Q/E key read. Previous A/D + C advice was conditional: with forward input equally held, DodgeToward selects a roll, while Q/E + Space explicitly chooses the sideways jump. Only tutorial text and TUTORIALS.md changed; controller/bindings remain unchanged.
