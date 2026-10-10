@@ -42,7 +42,7 @@ if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CH
 $swingLog=Join-Path $evidence ('verify-lamp-swing-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $swingArguments=@('-ChuckLampSwingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$swingLog+'"'))
 $swingProcess=Start-Process -FilePath $game -ArgumentList $swingArguments -WindowStyle Hidden -Wait -PassThru
-if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern 'CHUCK_LAMPSWING_TEST_COMPLETE failures=0 trials=7 chimneys=3 catch=1 swings=2 kick=1' -Quiet)) {
+if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern 'CHUCK_LAMPSWING_TEST_COMPLETE failures=0 trials=8 chimneys=3 catch=1 swings=2 kick=1 locked=1' -Quiet)) {
     throw "Lamp-alley climb and brachiation verification failed. Inspect $swingLog"
 }
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru

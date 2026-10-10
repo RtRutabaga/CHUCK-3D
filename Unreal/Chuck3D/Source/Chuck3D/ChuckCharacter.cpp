@@ -413,6 +413,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
+    StaminaLockUntil = -1.f;
     SwingGrip = SwingTarget = SwingLeft = -1; SwingRegrabAt = -1; bSwingJumpQueued = bHangClimbQueued = bBodyPitchLive = false; BodyPitch = 0;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
@@ -628,6 +629,21 @@ void AChuckCharacter::EndSprint(bool bShed)
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s at=%s air_s=%.2f stamina=%.3f"), Sprints, bShed ? 1 : 0, GetGaitName(), *GetActorLocation().ToString(), SprintAirTime, Stamina);
 }
+void AChuckCharacter::LockStamina(float Seconds)
+{
+    StaminaLockUntil = FMath::Max(StaminaLockUntil, GetWorld()->GetTimeSeconds() + Seconds);
+    Stamina = 1.f;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_STAMINA_LOCK seconds=%.1f"), Seconds);
+}
+bool AChuckCharacter::IsStaminaLocked() const { return GetWorld() && GetWorld()->GetTimeSeconds() < StaminaLockUntil; }
+void AChuckCharacter::SpendStamina(float Cost)
+{
+    if (!IsStaminaLocked()) Stamina = FMath::Max(0.f, Stamina - Cost);
+}
+bool AChuckCharacter::IsClimbing() const
+{
+    return Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Swing || Gait == EGait::SwingLeap || (Gait == EGait::Air && bWallJumpFlight);
+}
 float AChuckCharacter::GetSprintCooldownLeft() const
 {
     return IsSprinting() ? SprintCooldown : (1.f - Stamina) * SprintCooldown;
@@ -776,6 +792,7 @@ void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
             && FVector::DotProduct(FVector(Behind.ImpactNormal.X, Behind.ImpactNormal.Y, 0).GetSafeNormal(), -Normal) > .8f;
     }
     ++WallRuns;
+    SpendStamina(WallRunStaminaCost);
     SetClip(EClip::WallRun, 0, .08f);
     if (GetWorld()->GetTimeSeconds() - AirJumpPressedAt < WallBuffer) { AirJumpPressedAt = -1e3f; WallJump(); }
 }
@@ -1232,6 +1249,7 @@ void AChuckCharacter::SwingJump()
     bSwingJumpQueued = false;
     Gait = EGait::SwingLeap;
     ++SwingLeapCount;
+    SpendStamina(SwingLeapStaminaCost);
     // Reaching for it with the paw on its side (the rings alternate walls).
     const FVector Right = FRotationMatrix(FRotator(0, SwingLeapYaw, 0)).GetUnitAxis(EAxis::Y);
     SetClip(FVector::DotProduct(SwingLeapDir, Right) > 0.f ? EClip::SwingLeapRight : EClip::SwingLeapLeft, 0, .1f);
@@ -1323,6 +1341,7 @@ bool AChuckCharacter::TryWallSideRun(bool bInAir)
     if (Base != EClip::WalkLoop) SetClip(EClip::WalkLoop, WalkPhase * Period(EClip::WalkLoop), .08f);
     RunWeight = 1.f;
     ++WallSideRuns;
+    SpendStamina(WallSideStaminaCost);
     if (bInAir) ++WallSideAirCatches;
     else PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
     return true;
@@ -1515,6 +1534,7 @@ void AChuckCharacter::WallJump()
     bWallJumpFlight = true; bRunJump = bSprintLeap = false;
     Gait = EGait::Air;
     ++WallJumps;
+    SpendStamina(WallJumpStaminaCost);
     SetClip(EClip::WallKick, 0, .05f);
     PlaySfx(JumpSounds, ESfx::Jump, JumpVolume);
 }
@@ -2114,7 +2134,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             WallSideGap = FMath::Max(0.f, static_cast<float>(FVector::DotProduct(Location - P, N)) - Radius - 1.f);
         }
         WallSideAlong = (WallSideAlong - WallNormal * FVector::DotProduct(WallSideAlong, WallNormal)).GetSafeNormal2D();
-        const float Up = WallSideUp - WallSideGravity * WallSideClock;
+        const bool bLocked = IsStaminaLocked();
+        const float Up = WallSideUp - (bLocked ? LockedWallSideGravity : WallSideGravity) * WallSideClock;
         const float Moved = Travel;
         WallSideTravel += Moved;
         WallSideRise = FMath::Max(WallSideRise, static_cast<float>(Location.Z) - WallSideStartZ);
@@ -2128,7 +2149,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
         const bool bFloor = Up < 0.f && GetWorld()->LineTraceSingleByChannel(Floor, Location, Location - FVector(0, 0, Half + 4.f), ECC_Visibility, Query);
         const bool bStalled = WallSideClock > .15f && Moved < WallSideSpeed * DeltaSeconds * .3f;
-        if (!bWall || WallSideClock >= WallSideTime || bFloor || bStalled) LeaveWallSide();
+        if (!bWall || WallSideClock >= (bLocked ? LockedWallSideTime : WallSideTime) || bFloor || bStalled) LeaveWallSide();
         else Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, Up) - WallNormal * (40.f + FMath::Min(WallSideGap * 12.f, 500.f));
     }
     else if (Gait == EGait::WallRun)
@@ -2150,10 +2171,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (TrySwingCatch()) {}   // a lantern's ring beside him on the way up
         else if (!bLetGo && FindLedge(WallNormal, Face, 5.f, 45.f, Edge, bRoom)) EnterHang(WallNormal, Edge, bRoom);
         else if (!bLetGo && TryGrabEdge(-WallNormal)) {}   // an eave over his head
-        else if (WallRunClock >= WallRunTime || !bWall || bLetGo) LeaveWall();
+        else if ((WallRunClock >= WallRunTime && !IsStaminaLocked()) || !bWall || bLetGo) LeaveWall();
         else
         {
-            const float Up = 2.f * WallRunRise / WallRunTime * (1.f - WallRunClock / WallRunTime);
+            // Locked stamina: past the three steps he keeps climbing, steadily.
+            float Up = 2.f * WallRunRise / WallRunTime * FMath::Max(0.f, 1.f - WallRunClock / WallRunTime);
+            if (IsStaminaLocked()) Up = FMath::Max(Up, LockedWallRunSpeed);
             Movement->Velocity = FVector(0, 0, Up) - WallNormal * 30.f;
         }
     }
@@ -2525,6 +2548,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // The fall's apex: the ground (or wall, or ledge) height until airborne.
     AirApexZ = Movement->IsFalling() ? FMath::Max(AirApexZ, static_cast<float>(GetActorLocation().Z)) : static_cast<float>(GetActorLocation().Z);
     // The sprint runs out, or ends with anything but the plain stride.
+    if (IsStaminaLocked()) Stamina = 1.f;   // (the golden leaf: full whatever he does)
     if (IsSprinting())
     {
         const bool bLeaping = Gait == EGait::Air && bSprintLeap;
@@ -2547,8 +2571,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else if (Movement->IsFalling()) { if (SprintAirTime > SprintDropGrace) EndSprint(true); }
         else if (Gait != EGait::Loop || bStrafe || !bInput || IsTalking()) EndSprint(false);   // let go of the stick: over
     }
-    // Not sprinting, whatever he's doing: stamina refills.
-    else if (Stamina < 1.f)
+    // Not sprinting, whatever he's doing but climbing or swinging: stamina refills.
+    else if (Stamina < 1.f && !IsClimbing())
     {
         Stamina = FMath::Min(1.f, Stamina + DeltaSeconds / SprintCooldown);
         if (Stamina >= 1.f) StaminaFullAt = GetWorld()->GetTimeSeconds();

@@ -36,3 +36,17 @@ Five lanterns per alley, fifteen in total. They alternate walls, 125–135 cm ap
 6. Kick off the ring toward the far wall, then wall jumps on up onto the roof.
 
 The default smoke check `CHUCK_WALLLAMPS_CHECK` also sweeps Chuck's capsule along all twelve ring-to-ring flights. See HANDOFF for the actual results.
+
+## Stamina (user 2026-10-09)
+
+Climbing is mostly for flavour and takes small sips of the sprint stamina ring: 0.6% per wall run, 0.4% per wall jump, 3% per side wall run and 1.2% per ring-to-ring leap. The ring doesn't refill while he is wall running, side wall running, swinging or in a wall jump's flight; it refills as before everywhere else, hanging on a ledge included. Stamina never stops a climb: with an empty ring he wall jumps, climbs and swings exactly as with a full one. Measured: a 660 cm chimney climb costs about 18%, four leaps about 5%. Since a sprint still needs a full ring, a long climb delays the next sprint by a couple of seconds.
+
+**Golden leaf hook (Chult, later):** `AChuckCharacter::LockStamina(Seconds)` / `IsStaminaLocked()`. While it is locked:
+
+- stamina stays full and the sprint never runs down
+- a wall run carries on past its three steps at 120 cm/s until it reaches a top (caught as usual), a ring or he jumps off
+- the side wall run lasts 2.2 s instead of 1.1 s under half the gravity, a much longer arc
+
+There is no pickup, HUD tint or timer display yet; `IsStaminaLocked()` is there for the HUD.
+
+Tests: lamp-swing trial 0 now climbs with an empty ring, trial 1 requires a full-ring chimney to cost 5–30%, trial 4 requires the swing run to cost something but under 15%, and new trial 7 locks stamina and requires one wall run (no wall jumps) to reach the eave and pull up, with the ring full throughout. The locked side wall run is not covered by a test.

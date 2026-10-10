@@ -24,8 +24,13 @@ namespace
     // 3: a chimney climb under the first lantern catches its ring. 4: brachiation
     // down the alley, ring to ring, the stick let go. 5: back, stick held back.
     // 6: kicked off the ring toward the far wall, wall jumps on up onto the roof.
+    // Stamina (user 2026-10-09: climbing is flavour, small sips): 0 climbs with an
+    // empty ring; 1 measures a full-ring chimney's cost (small); 4 a swing run's.
+    // 7: locked stamina (the golden leaf): one wall run climbs the whole wall to
+    // the eave, no wall jumps, the ring full throughout.
     const FTrial Trials[] = {{0, 2637.f, TEXT("chimney_lane1")}, {2, 3022.f, TEXT("chimney_lane3")}, {1, 2767.f, TEXT("chimney_lane2")},
-        {0, 2570.f, TEXT("wall_jump_catch")}, {0, 0.f, TEXT("swing_forward")}, {0, 0.f, TEXT("swing_back")}, {0, 0.f, TEXT("kick_to_roof")}};
+        {0, 2570.f, TEXT("wall_jump_catch")}, {0, 0.f, TEXT("swing_forward")}, {0, 0.f, TEXT("swing_back")}, {0, 0.f, TEXT("kick_to_roof")},
+        {0, 2637.f, TEXT("locked_wall_run")}};
     constexpr int32 TrialCount = UE_ARRAY_COUNT(Trials);
 }
 
@@ -35,7 +40,8 @@ void StartLampSwingReview(UWorld* World)
     const bool bCapture = FParse::Param(FCommandLine::Get(), TEXT("ChuckLampSwingCapture"));
     struct FRun
     {
-        int32 Trial = 0, Failures = 0, Deaths = 0, PullUps = 0, Catches = 0, Leaps = 0, Kicks = 0, Eaves = 0, Jumps = 0;
+        int32 Trial = 0, Failures = 0, Deaths = 0, PullUps = 0, Catches = 0, Leaps = 0, Kicks = 0, Eaves = 0, Jumps = 0, WallJumps = 0;
+        float StartStamina = 1, MinStamina = 1;
         float Time = 0, StartTime = 0, TickTime = -1, NextShot = 0, LastJump = -1, MaxZ = 0;
         bool Started = false, WallSeen = false, OnRoof = false;
         FString Detail;
@@ -70,7 +76,11 @@ void StartLampSwingReview(UWorld* World)
                 Run->Leaps = Chuck->GetSwingLeaps(); Run->Kicks = Chuck->GetSwingDismounts(); Run->Eaves = Chuck->GetEaveGrabs();
                 Run->Time = 0; Run->StartTime = Now; Run->NextShot = 0; Run->LastJump = -1; Run->Jumps = 0; Run->MaxZ = 0;
                 Run->WallSeen = Run->OnRoof = false; Run->Started = true;
+                if (Run->Trial == 0) Chuck->SetStamina(0.f);          // an empty ring still climbs
+                if (Run->Trial == 7) Chuck->LockStamina(30.f);
+                Run->StartStamina = Run->MinStamina = Chuck->GetStamina(); Run->WallJumps = Chuck->GetWallJumps();
             }
+            Run->MinStamina = FMath::Min(Run->MinStamina, Chuck->GetStamina());
             Run->Time = Now - Run->StartTime;
             const FVector P = Chuck->GetActorLocation();
             Run->MaxZ = FMath::Max(Run->MaxZ, static_cast<float>(P.Z));
@@ -79,7 +89,7 @@ void StartLampSwingReview(UWorld* World)
             const bool bRoof = bGround && P.Z > LaneEaves[T.Lane] + 20.f;
             auto Press = [&]() { Chuck->JumpPressed(); Run->LastJump = Run->Time; ++Run->Jumps; };
             bool bDone = false, bPass = false;
-            if (Run->Trial <= 2 || Run->Trial == 3 || Run->Trial == 6)
+            if (Run->Trial <= 3 || Run->Trial >= 6)
             {
                 // Chimney: the stick toward the west wall for the first jump, then let go; a
                 // jump on each wall a moment after reaching it, and on the edge once caught.
@@ -94,7 +104,8 @@ void StartLampSwingReview(UWorld* World)
                     if (Run->Time > .3f && Run->Jumps == 0 && bGround) Press();
                 }
                 if (Chuck->IsWallRunning()) { if (!Run->WallSeen) Chuck->SetTestStick(FVector2D::ZeroVector); Run->WallSeen = true; }
-                if (Run->WallSeen && Run->Time - Run->LastJump > .12f && ((Chuck->IsWallRunning() && Run->Time - Run->LastJump > .2f) || Chuck->IsHanging())) Press();
+                // (Locked: no jumps on the wall - the one run should carry him up it.)
+                if (Run->WallSeen && Run->Time - Run->LastJump > .12f && ((Chuck->IsWallRunning() && Run->Trial != 7 && Run->Time - Run->LastJump > .2f) || Chuck->IsHanging())) Press();
                 if (Run->Trial == 3)
                 {
                     bPass = Chuck->GetSwingGrip() == First && Chuck->GetSwingCatches() > Run->Catches;
@@ -104,6 +115,8 @@ void StartLampSwingReview(UWorld* World)
                 {
                     bPass = bRoof && Chuck->GetPullUps() > Run->PullUps && (Run->Trial != 6 || Chuck->GetSwingDismounts() > Run->Kicks)
                         && (Run->Trial == 6 || Chuck->GetSwingCatches() == Run->Catches);
+                    if (Run->Trial == 1) bPass = bPass && Run->StartStamina > .99f && 1.f - Run->MinStamina > .05f && 1.f - Run->MinStamina < .3f;
+                    if (Run->Trial == 7) bPass = bPass && Chuck->GetWallJumps() == Run->WallJumps && Run->MinStamina > .999f;
                     bDone = bPass && Run->Time - Run->LastJump > .6f;
                     if (bPass && !Run->OnRoof) { Run->OnRoof = true; Chuck->SetTestStick(FVector2D::ZeroVector); }
                 }
@@ -116,6 +129,7 @@ void StartLampSwingReview(UWorld* World)
                 if (Run->Trial == 5) Chuck->SetTestStickWorld(FVector(0, -1, 0)); else Chuck->SetTestStick(FVector2D::ZeroVector);
                 if (Chuck->IsSwinging() && Chuck->GetSwingGrip() != Goal && Run->Time - Run->LastJump > .45f) Press();
                 bPass = Chuck->GetSwingGrip() == Goal && Chuck->GetSwingLeaps() - Run->Leaps == 4;
+                if (Run->Trial == 4) bPass = bPass && Run->StartStamina - Run->MinStamina > 0.f && Run->StartStamina - Run->MinStamina < .15f;
                 bDone = (bPass && Run->Time - Run->LastJump > .8f) || (!Chuck->IsSwinging() && !Chuck->IsSwingLeaping());
             }
             if (bCapture && Run->Time >= Run->NextShot && Run->NextShot < 12.f)
@@ -136,16 +150,16 @@ void StartLampSwingReview(UWorld* World)
             {
                 bPass = bPass && !bFell;
                 Run->Failures += !bPass;
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_LAMPSWING_TRIAL trial=%d name=%s pass=%d time=%.2f jumps=%d gait=%s grip=%d catches=%d leaps=%d kicks=%d hangs_eave=%d pullups=%d max_z=%.0f p=%s"),
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_LAMPSWING_TRIAL trial=%d name=%s pass=%d time=%.2f jumps=%d gait=%s grip=%d catches=%d leaps=%d kicks=%d hangs_eave=%d pullups=%d wall_jumps=%d stamina_start=%.3f stamina_min=%.3f max_z=%.0f p=%s"),
                     Run->Trial, T.Name, bPass ? 1 : 0, Run->Time, Run->Jumps, *Gait, Chuck->GetSwingGrip(), Chuck->GetSwingCatches() - Run->Catches, Chuck->GetSwingLeaps() - Run->Leaps,
-                    Chuck->GetSwingDismounts() - Run->Kicks, Chuck->GetEaveGrabs() - Run->Eaves, Chuck->GetPullUps() - Run->PullUps, Run->MaxZ, *P.ToString());
+                    Chuck->GetSwingDismounts() - Run->Kicks, Chuck->GetEaveGrabs() - Run->Eaves, Chuck->GetPullUps() - Run->PullUps, Chuck->GetWallJumps() - Run->WallJumps, Run->StartStamina, Run->MinStamina, Run->MaxZ, *P.ToString());
                 // A failed swing leaves nothing to carry on from: the later swing trials start from a fresh catch.
                 if (!bPass && Run->Trial >= 3 && Run->Trial <= 5) { Run->Failures += TrialCount - 1 - Run->Trial; Run->Trial = TrialCount; }
                 else ++Run->Trial;
                 Run->Started = false;
                 if (Run->Trial >= TrialCount)
                 {
-                    UE_LOG(LogTemp, Display, TEXT("CHUCK_LAMPSWING_TEST_COMPLETE failures=%d trials=%d chimneys=3 catch=1 swings=2 kick=1"), Run->Failures, TrialCount);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_LAMPSWING_TEST_COMPLETE failures=%d trials=%d chimneys=3 catch=1 swings=2 kick=1 locked=1"), Run->Failures, TrialCount);
                     PC->ConsoleCommand(TEXT("quit"));
                 }
             }

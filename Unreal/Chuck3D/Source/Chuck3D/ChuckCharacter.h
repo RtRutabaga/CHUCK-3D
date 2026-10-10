@@ -208,6 +208,24 @@ public:
     float GetStaminaFullAt() const { return StaminaFullAt; }
     /** Tests: set the stamina directly. */
     void SetStamina(float Value) { Stamina = FMath::Clamp(Value, 0.f, 1.f); }
+    // Climbing effort (user 2026-10-09): flavour only. Each wall run, wall
+    // jump, side wall run and ring-to-ring leap takes a small sip of stamina,
+    // and it doesn't refill while he's on the walls or swinging; it never
+    // stops a climb (empty, he climbs and swings just the same). The tallest
+    // chimney by the sewer costs about a quarter of the ring.
+    static constexpr float WallRunStaminaCost = .006f;
+    static constexpr float WallJumpStaminaCost = .004f;
+    static constexpr float WallSideStaminaCost = .03f;
+    static constexpr float SwingLeapStaminaCost = .012f;
+    // Stamina lock (later, Chult: the golden "Premium Buhetian Halfling Leaf"
+    // cigarettes): full and frozen for a while - the sprint never runs down,
+    // a wall run climbs on past its three steps at this speed until the top
+    // or he jumps off, and the side wall run holds a longer, flatter arc.
+    static constexpr float LockedWallRunSpeed = 120.f;   // cm/s up
+    static constexpr float LockedWallSideTime = 2.2f;    // s (unlocked: WallSideTime)
+    static constexpr float LockedWallSideGravity = 235.f;   // cm/s2 (unlocked: WallSideGravity)
+    void LockStamina(float Seconds);
+    bool IsStaminaLocked() const;
     /** Run -> four-legged sprint pose blend (0..1). */
     float GetSprintWeight() const { return SprintWeight; }
     /** Seconds until stamina is full again (0: ready; a full refill while sprinting). */
@@ -356,6 +374,10 @@ private:
     float SprintAirTime = 0;   // off the ground at a sprint, not leaping
     int32 SprintLeaps = 0;
     void SprintPressed() { TrySprint(); }
+    float StaminaLockUntil = -1.f;
+    void SpendStamina(float Cost);
+    /** On the walls or swinging (wall jump flights included): stamina doesn't refill. */
+    bool IsClimbing() const;
     void StartSprintLeap();
     /** Ends the sprint and starts the recovery; bShed: back down to run speed at once (jumps). */
     void EndSprint(bool bShed);
