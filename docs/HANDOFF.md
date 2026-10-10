@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 9 — brachiation leap reaches with one arm
+
+Runtime **3d873ba** (Claude). User asked that Chuck reach an arm out while leaping to grab the next ring rather than holding both arms up together. New SwingLeapLeft/Right clips: the paw on the next ring's side stretches out to it, open; the other swings back and down for balance; the lead paw takes the bar and the other joins it as the swing begins. The side is chosen from where the target ring lies (the rings alternate walls). The old two-handed SwingLeap clip was removed. No world, tutorial or control changes; Codex's long-jump spawn work is preserved.
+
+- Existing UE **5.7.4**, VS2022 **14.44.35229**, SDK **10.0.26100.0**, Blender **4.5.14**. Only the two new clips were imported; cooked one-worker candidate 278 s, `Local/reach-build.log`.
+- Lamp-alley climb/brachiation trials **7/7, failures=0** (`Local/reach-lamp-swing.log`). In-game leap frames inspected (`Local/reach_sheet.png`). Full default verification **181 checks, zero failures, all gates**, first run (`Local/verify-package-20261009-174252.log`). Not played by hand.
+- Root **Launch-Prototype.cmd** runs **Builds/Windows / 3d873ba**; receipt/hash and **CheckOnly** passed. Prior **94ef00f** package preserved at **Builds/Windows-Previous-20261009-BrachiationReach**. All **40** unfinished inputs hash-identical and unstaged.
+
+Next part of the work can be done here.
+
 ## October 9 — local spawn and recovery before the sewer long jump
 
 Runtime **94ef00f**. Added **Dev Checkpoints → Sewer Long Jump**, starting on the solid right bank at route sample **299**, about **4.55 m** before the late sprint gap, facing onward. Death recovery at or beyond that approach uses this new point. The earlier **Sewer Jump** checkpoint remains at sample 213 for the wall-run obstacle; sewer entrance and other destinations are preserved. No traversal tuning, rig or asset changes.

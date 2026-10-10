@@ -2582,3 +2582,27 @@ Next part of the work can be done here.
   - The Chult version needs branches registered as `FChuckSwingGrip` and nothing else.
 
 Next part of the work can be done here.
+
+## Brachiation leap: one-arm reach (user 2026-10-09 follow-up)
+
+- **Ask:** after Codex's long-jump spawn work, reach one arm out while leaping to the next ring instead of holding both arms up together.
+- **Source:** `3d873ba` on main, base `ff38344`.
+  - `Tools/build_chuck_v1.py`: `swing_pose(..., lead, u)`. The lead paw goes off the bar to (17, +/-9.5, 55.5) at full stretch with the paw open, then back onto the bar closing. The trailing paw drops back and down to (-12, +/-12.5, 28.5) for balance and rises toward the bar at the end. The chest, spine and head turn into the reach.
+  - Clips `SwingLeapLeft` / `SwingLeapRight` (16 frames each) replace `SwingLeap`; its FBX and uasset were deleted.
+  - `gen_chuck_clip_data.py` reads the release/catch constants from `SwingLeapLeft`; `ChuckClipData.h` is unchanged.
+  - `ChuckCharacter`: picks Left/Right by the side of his new facing the target ring is on. The cross-fade from leap to Swing is 0.22 s, so the trailing paw joins the bar.
+  - `docs/BRACHIATION.md` updated.
+- **Pipeline:** Blender 4.5.14 rebuild; sheets in `Local/ReachReview`. One fix round: the trailing arm first folded onto the hip; it is now nearly straight, back and down. Other exports were restored from HEAD; `Import-ChuckV1.ps1 -Clips SwingLeapLeft,SwingLeapRight` added only the two uassets.
+- **Verified** (UE 5.7.4, one worker):
+  - Cooked candidate 278 s (`Local/reach-build.log`).
+  - `-ChuckLampSwingTest` **7/7, failures=0** with capture (`Local/reach-lamp-swing.log`).
+  - Inspected in-game leap frames (`Local/reach_sheet.png`, `Builds/Windows/Chuck3D/Saved/Screenshots/Windows/LampSwing`): one arm up toward the next ring on its own side, the other low behind; the side flips with the alternating walls.
+  - Full `Verify-Package.ps1` **181 checks, 0 failures, all gates**, first run (`Local/verify-package-20261009-174252.log`, `Local/reach-verification.log`).
+- **Launcher:** `Builds/Windows` = `3d873ba`, receipt and `-CheckOnly` pass. The previous `94ef00f` package is at `Builds/Windows-Previous-20261009-BrachiationReach`.
+- **Preserved:** 40 inputs hash-identical and unstaged. A stale `.git/index.lock` (no git process, 17 minutes old) was removed.
+- **Remaining:**
+  - Not played by hand.
+  - The trailing paw joins the bar through a blend, not a placed IK reach.
+  - At 0.15 s capture spacing each 0.43-0.46 s leap gets about three frames, so the intermediate poses were judged mainly from the Blender sheets.
+
+Next part of the work can be done here.
