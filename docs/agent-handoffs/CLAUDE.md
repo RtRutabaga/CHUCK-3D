@@ -2664,3 +2664,36 @@ Next part of the work can be done here.
   - No wall-run bypass was found by the scripted attempts; it stays allowed.
 
 Next part of the work can be done here.
+
+## Continuous tavern pier; NPC hairlines without the wig look (user 2026-10-11)
+
+- **Ask:** close the gap in the small dock by the tavern; fix NPC hairlines that read as wigs, especially the gnome's receding grey hair with no grey stubble where it has receded.
+- **Found:**
+  - The pier skipped board 13 on purpose (the original 24 cm gap-jump test), and three smoke checks required the hole.
+  - Every haired NPC (gnome, elf: `make_hair` cap; smith, keeper: MakeHuman `short01`) ended in a hard, opaque hem directly on skin. The caps stood about 4.5 mm off the forehead with a solidify rim. The receded dome was the skin texture's bare pink.
+- **Source:** `137aad9` on main, base `e174d47`.
+  - `DockGameMode.cpp`: row 13 restored. The gap check now requires a board ("the pier is continuous: no missing board"), `DockPlankArt` expects 26, and the two camera pier-jump checks are renamed but keep the same run-and-jump. The check count is unchanged.
+  - `Tools/build_npc_humans.py`:
+    - `make_scalp`: a scalp shell (head faces subdivided twice, snapped 0.7 mm off the skin, body weights) carrying `stubble_texture()` (generated `Textures/scalp_stubble.png`). Its stubble density is in the vertex colour: full under the hair (raycast against the hair objects), fading `fade` past the edge (`^.6`), never on the ears, and deleted deep under the hair. The gnome also gets `recede.density` 0.8 above an older hairline (brow + 3 cm), clamped above the brows.
+    - `make_hair`: the hem lift drops from 12% to 4%, and solidify now tapers to 15% at the hem. Up to 90 fine hairline strands are added on their own RNG.
+    - `front_hairline` helper; proxy hair uses the dithered `hair` type. FBX `colors_type='LINEAR'`.
+  - `Tools/import_npc_humans.py`: new master `M_HumanStubble` (texture alpha × VertexColor.R, dithered, clip .25), slot type `stubble`, explicit vertex-colour REPLACE.
+  - `humans.json`: `scalp` for GnomeAlchemist (tint .46 grey, fade 1.8 cm, recede), ElfElder (fade 1.4 cm), Blacksmith and TavernKeeper (dark, fade 2 cm). Rebuilt/re-imported those four only.
+- **Pitfalls hit:**
+  - Per-vertex density indexed by `v.index` after bmesh deletes was scrambled into blocks. It is now written to a colour layer before any deletion.
+  - The importer reuses an existing texture asset, so a regenerated PNG needs its `T_` asset deleted first.
+  - The thinner hem changes which cap vertices qualify for wild tufts. The gnome's mouth marker moved 85.7 → 86.1 cm and the elf's 153.2 → 153.0, and neither is used at runtime.
+- **Verified** (UE 5.7.4, Blender 4.5.14, one heavy process at a time):
+  - Full cooked candidate; `Verify-Package.ps1` **181 passes, 0 failures** (`Local/verify-package-20261011-211635.log`). Pier: continuous-board trace, adjacent board, 26 plank art, jump in both cameras all passed.
+  - `-ChuckNPCCapture` per NPC: `SourceAssets/NPCs/Humans/Review/runtime_{GnomeAlchemist,ElfElder,TavernKeeper}_hairline.png`, before: `runtime_GnomeAlchemist_hairline_before.png`. Density renders: `Local/hairline-review/*_scalp_density_*.png`.
+- **Launcher:** `Builds/Windows` = `137aad9`, receipt and `-CheckOnly` pass. The previous `03e0b92` package is at `Builds/Windows-Previous-20261011-Hairline`. The published friends-demo ZIP is unchanged.
+- **Preserved:** the 38 pre-existing modified binaries are hash-identical (backup `Local/preexisting-backup-20261011`), and they and `eyebrow001.png`/`short02_diffuse.png` stay unstaged.
+- **Remaining:**
+  - Not played by hand.
+  - The elf's cap edge is softer but still the most visible of the four.
+  - The gnome's dome still shows some pink skin under the grey stubble.
+  - The Blacksmith's Face capture catches him turned away mid-work, so his hairline was only judged from the keeper (same hair).
+  - Bobert/Sailor fringe and the MarketWoman's ponytail are untouched.
+  - The review render paths resolved relative to `C:\` (a pre-existing `C:\Local` folder), so copies live in `Local/hairline-review`.
+
+Next part of the work can be done here.

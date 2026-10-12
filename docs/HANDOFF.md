@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 11 — continuous tavern pier and NPC hairlines
+
+Runtime **137aad9** (Claude). The small pier by the tavern is now continuous: the missing board 13 (the old gap-jump test) is restored, and its checks now require the board. Gnome, elf, blacksmith and tavern keeper get a scalp stubble layer. It is full under their hair and fades past the hairline, so the hair no longer ends in a wig-like hem. The gnome's receded dome now carries grey stubble. The elf's and gnome's hair caps thin at the hem and gain fine hairline strands.
+
+- UE **5.7.4**, Blender **4.5.14**; cooked candidate, full `Verify-Package.ps1` **181 passes, zero failures**, `Local/verify-package-20261011-211635.log` (pier checks included). NPC captures: `SourceAssets/NPCs/Humans/Review/runtime_*_hairline*.png`. Not played by hand.
+- Root **Launch-Prototype.cmd** updated to **Builds/Windows / 137aad9**; receipt and **CheckOnly** passed. Prior **03e0b92** package retained at **Builds/Windows-Previous-20261011-Hairline**. The published friends-demo ZIP is not updated.
+- 38 pre-existing modified binaries hash-identical and unstaged; plus the two untracked textures. Details and remaining flaws in `docs/agent-handoffs/CLAUDE.md`.
+
+Next part of the work can be done here.
+
 ## October 9 — downloadable friends demo and cellar sky ending
 
 Runtime **03e0b92** (Codex), release tag **demo-2026-10-09**. Removed orange placeholder panes from the timber warehouse and row workshops; their cladding now fills the former window patches. Player falls into the cellar's sky ring stop about 120 cm below the floor on a black screen: **End of demo / Press Esc to exit**. Movement/reset input is disabled and Escape exits. Astral holes still recover normally. No Fall to Chult cutscene implemented. Existing smoke traversal tests bypass only this temporary endpoint; the isolated ending gate exercises the real player path.
