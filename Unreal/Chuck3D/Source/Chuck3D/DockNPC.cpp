@@ -137,6 +137,66 @@ namespace
     constexpr float TankardBody = 7.1f, TankardMouth = 5.6f, TankardRadius = 5.f;
     // A round: the rag inside the rim, then over the outside; every third round he holds it up to look it over.
     constexpr float PolishInside = 6.f, PolishOutside = 5.f, PolishInspect = 4.f, PolishBlend = .6f;
+    // The rag (Tools/build_keeper_props.py rag(), cm, Unreal axes): a bunch about
+    // 4.8 x 4.0 x 3.6 cm round his fist and a tail falling from its -Y side. Shown
+    // at RagScale, a fist-sized bunch, so it fits on the tankard's mouth (user
+    // 2026-10-11: "the rag moves through his mug").
+    constexpr float RagScale = .85f;
+    constexpr float RagOverRim = 3.5f;      // the fist above the mouth: the bunch pressed into it, not through the wall
+    constexpr float RagOffSide = 4.5f;      // the fist out from the side it rubs: the bunch's half-depth
+    // The rag turned so its tail falls toward Away (horizontal), its top tipped TiltDeg away from it.
+    FQuat RagFacing(const FVector& Away, float TiltDeg)
+    {
+        const FVector H = FVector(Away.X, Away.Y, 0.f).GetSafeNormal();
+        const float T = FMath::DegreesToRadians(TiltDeg);
+        const FVector Z = FVector::UpVector * FMath::Cos(T) - H * FMath::Sin(T);
+        const FVector Y = -(H * FMath::Cos(T) + FVector::UpVector * FMath::Sin(T));
+        return FRotationMatrix::MakeFromYZ(Y, Z).ToQuat();
+    }
+    // How many lines through the rag (its bunch from the fist out, and its tail
+    // down) cross the tankard's outer wall below the rim, in the tankard's own
+    // frame (origin at the handle, body +X, up +Z: base 7.5 cm down, 13 cm tall,
+    // 5.2 cm round at the foot and 4.4 cm at the rim). 0: the rag stays on the
+    // pewter or in the mouth.
+    int32 RagThroughTankard(const FTransform& RagT, const FTransform& TankardT)
+    {
+        static TArray<TPair<FVector, FVector>> Lines;
+        if (Lines.IsEmpty())
+        {
+            for (int32 I = 1; I < 8; ++I) for (int32 J = 0; J < 12; ++J)
+            {
+                const float Th = PI * I / 8.f, Ph = 2.f * PI * J / 12.f;
+                Lines.Add({FVector::ZeroVector, FVector(4.83f * FMath::Sin(Th) * FMath::Cos(Ph), 3.99f * FMath::Sin(Th) * FMath::Sin(Ph), 3.57f * FMath::Cos(Th)) * 1.1f});
+            }
+            const auto Tail = [](float T, float U)
+            {
+                return FVector(U * 7.5f * (1.f + .25f * T) + .6f * FMath::Sin(T * 7.f + U * 4.f), -(2.8f + 1.2f * FMath::Sin(U * 6.f + T * 5.f) + 2.f * T), -2.f - 15.f * T);
+            };
+            for (int32 I = 0; I < 8; ++I) for (int32 J = 0; J < 5; ++J)
+                Lines.Add({Tail(I / 8.f, J / 4.f - .5f), Tail((I + 1) / 8.f, J / 4.f - .5f)});
+        }
+        const auto Outside = [](const FVector& Q, float& Gap)
+        {
+            if (Q.Z < -7.5f || Q.Z > 5.5f) return false;
+            Gap = FVector2D(Q.X - 7.1f, Q.Y).Size() - (5.2f - .8f * (Q.Z + 7.5f) / 13.f);
+            return true;
+        };
+        int32 Crossings = 0;
+        for (const TPair<FVector, FVector>& L : Lines)
+        {
+            const FVector A = TankardT.InverseTransformPosition(RagT.TransformPosition(L.Key));
+            const FVector B = TankardT.InverseTransformPosition(RagT.TransformPosition(L.Value));
+            bool bHave = false; float Last = 0.f;
+            for (int32 K = 0; K <= 11; ++K)
+            {
+                float Gap;
+                if (!Outside(FMath::Lerp(A, B, K / 11.f), Gap)) { bHave = false; continue; }
+                if (bHave && (Gap < 0.f) != (Last < 0.f)) { ++Crossings; break; }
+                bHave = true; Last = Gap;
+            }
+        }
+        return Crossings;
+    }
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
     enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
@@ -1852,7 +1912,7 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
     const int32 Now = PhaseAt(T, Into);
     if (Now != PolishPhase) { if (Now < 2 && PolishPhase >= 0) ++PolishPasses; PolishPhase = Now; }
     const float Right = -ArmOut;
-    struct FPose { FVector Grip, Along, Up, Fist, FistAlong, FistThumb; float Look = 0.f; };
+    struct FPose { FVector Grip, Along, Up, Fist, FistAlong, FistThumb, RagAway; float Look = 0.f, RagTilt = 0.f; };
     const auto Pose = [&](int32 Which, float U) -> FPose
     {
         FPose P;
@@ -1878,7 +1938,8 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
         {
             // The rag pushed into the rim, small circles and a twist of the wrist.
             const float W = UE_TWO_PI / .85f * PolishClock;
-            P.Fist = Mouth + P.Up * 2.5f + (P.Along * FMath::Cos(W) + Across * FMath::Sin(W)) * 1.6f;
+            P.Fist = Mouth + P.Up * RagOverRim + (P.Along * FMath::Cos(W) + Across * FMath::Sin(W)) * 1.6f;
+            P.RagAway = FVector(-1.f, 0.f, 0.f); P.RagTilt = 45.f;   // the tail over the near rim, toward him, not down through the pewter
             P.FistAlong = -P.Up;
             P.FistThumb = FQuat(P.Up, FMath::DegreesToRadians(30.f * FMath::Sin(W))).RotateVector(-P.Along);
         }
@@ -1887,7 +1948,8 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
             // Rubbing the outside, the palm to the pewter, round the side nearest his
             // free hand (his right, toward him: the far side is out of his reach) and up and down.
             const FVector Out = FQuat(P.Up, FMath::DegreesToRadians(Right * (25.f + 30.f * FMath::Sin(PolishClock * 1.4f)))).RotateVector(P.Along);
-            P.Fist = Centre + Out * (TankardRadius + 3.5f) + P.Up * (.5f + 2.5f * FMath::Sin(PolishClock * 2.6f));
+            P.Fist = Centre + Out * (TankardRadius + RagOffSide) + P.Up * (.5f + 2.5f * FMath::Sin(PolishClock * 2.6f));
+            P.RagAway = Out; P.RagTilt = 15.f;   // the tail hanging off the far side of his hand, away from the tankard
             P.FistAlong = P.Up;
             P.FistThumb = FVector::CrossProduct(P.FistAlong, Out) * PalmSign[1];   // so the palm faces the tankard
         }
@@ -1896,6 +1958,7 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
             P.Fist = FVector(10.f, 24.f * Right, 98.f);
             P.FistAlong = FVector(.15f, 0.f, -1.f).GetSafeNormal();
             P.FistThumb = FVector(1.f, 0.f, .15f).GetSafeNormal();
+            P.RagAway = FVector(-1.f, 0.f, 0.f);   // hanging at his side
         }
         return P;
     };
@@ -1907,9 +1970,19 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
         const int32 Last = PhaseAt(FMath::Fmod(T - Into - .001f + Cycle, Cycle), Back);
         const FPose L = Pose(Last, Back);
         const float A = FMath::SmoothStep(0.f, PolishBlend, Into);
-        P.Grip = FMath::Lerp(L.Grip, P.Grip, A); P.Fist = FMath::Lerp(L.Fist, P.Fist, A); P.Look = FMath::Lerp(L.Look, P.Look, A);
+        // Into the mouth the rag hand rises above the rim first and then moves in; out
+        // of it, it moves out first and then down: never straight through the pewter.
+        const float Lin = Into / PolishBlend;
+        float Ah = A, Ax = A;
+        if (Now == 0 && Last != 0) { Ah = FMath::SmoothStep(0.f, .45f, Lin); Ax = FMath::SmoothStep(.35f, 1.f, Lin); }
+        else if (Last == 0 && Now != 0) { Ax = FMath::SmoothStep(0.f, .55f, Lin); Ah = FMath::SmoothStep(.45f, 1.f, Lin); }
+        const FVector U = FMath::Lerp(L.Up, P.Up, A).GetSafeNormal();
+        const FVector From = L.Fist - U * FVector::DotProduct(L.Fist, U), To = P.Fist - U * FVector::DotProduct(P.Fist, U);
+        P.Fist = FMath::Lerp(From, To, Ax) + U * FMath::Lerp(FVector::DotProduct(L.Fist, U), FVector::DotProduct(P.Fist, U), Ah);
+        P.Grip = FMath::Lerp(L.Grip, P.Grip, A); P.Look = FMath::Lerp(L.Look, P.Look, A);
         P.Along = FMath::Lerp(L.Along, P.Along, A).GetSafeNormal(); P.Up = FMath::Lerp(L.Up, P.Up, A).GetSafeNormal();
         P.FistAlong = FMath::Lerp(L.FistAlong, P.FistAlong, A).GetSafeNormal(); P.FistThumb = FMath::Lerp(L.FistThumb, P.FistThumb, A).GetSafeNormal();
+        P.RagAway = FMath::Lerp(L.RagAway, P.RagAway, A).GetSafeNormal(); P.RagTilt = FMath::Lerp(L.RagTilt, P.RagTilt, A);
     }
     Inspect = P.Look;
     // The left fist closes on the handle, knuckles toward the body, thumb on top.
@@ -1920,13 +1993,21 @@ void ADockNPC::PoseKeeper(TArray<FTransform>& Space)
     const float GripError = static_cast<float>(FVector::Dist(F, P.Grip));
     if (GetWorld()->GetTimeSeconds() > 8.f) WorstTankardGrip = FMath::Max(WorstTankardGrip, GripError);
     if (GripError > 2.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_GRIP phase=%d into=%.2f grip_cm=%.1f grip=%s"), Now, Into, GripError, *P.Grip.ToString());
-    if (Tankard) Tankard->SetRelativeTransform(FTransform(FRotationMatrix::MakeFromXZ(P.Along, P.Up).ToQuat(), F));
+    const FTransform TankardT(FRotationMatrix::MakeFromXZ(P.Along, P.Up).ToQuat(), F);
+    if (Tankard) Tankard->SetRelativeTransform(TankardT);
     HandFrame(Space, 1, F, A, Th);
     const float RagError = static_cast<float>(FVector::Dist(F, P.Fist));
     if (GetWorld()->GetTimeSeconds() > 8.f) WorstRagReach = FMath::Max(WorstRagReach, RagError);
     if (RagError > 3.f) UE_LOG(LogTemp, Verbose, TEXT("CHUCK_KEEPER_REACH phase=%d into=%.2f rag_cm=%.1f fist=%s"), Now, Into, RagError, *P.Fist.ToString());
-    // The rag bunched in his fist, its tail falling toward him.
-    if (Rag) Rag->SetRelativeTransform(FTransform(FRotator(0.f, 90.f, 0.f), F));
+    // The rag bunched in his fist, its tail falling clear of the tankard.
+    const FTransform RagT(RagFacing(P.RagAway, P.RagTilt), F, FVector(RagScale));
+    if (Rag) Rag->SetRelativeTransform(RagT);
+    const int32 Through = RagThroughTankard(RagT, TankardT);
+    if (GetWorld()->GetTimeSeconds() > 8.f && Through > WorstRagThrough)
+    {
+        WorstRagThrough = Through;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_KEEPER_RAG_THROUGH phase=%d into=%.2f lines=%d fist=%s grip=%s"), Now, Into, Through, *P.Fist.ToString(), *P.Grip.ToString());
+    }
 }
 
 float ADockNPC::GetSeatHeight() const

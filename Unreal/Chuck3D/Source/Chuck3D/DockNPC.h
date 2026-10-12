@@ -214,6 +214,8 @@ public:
     /** Worst distance (cm, any frame after he settles) of his left fist from the tankard's handle, and of the rag fist from where the polishing wants it. */
     float GetTankardGripError() const { return WorstTankardGrip; }
     float GetRagReachError() const { return WorstRagReach; }
+    /** Most rag lines crossing the tankard's wall below its rim in any frame after he settles (0: it never goes through the pewter). */
+    int32 GetRagThroughTankard() const { return WorstRagThrough; }
     /** Polishing passes (inside or outside) begun, for tests. */
     int32 GetPolishPasses() const { return PolishPasses; }
     /**
@@ -498,7 +500,7 @@ private:
     UPROPERTY() UStaticMeshComponent* Rag = nullptr;
     UPROPERTY() TObjectPtr<UStaticMesh> KeeperMeshes[2];          // tankard, rag
     float PolishClock = 0, WorstTankardGrip = 0, WorstRagReach = 0;
-    int32 PolishPasses = 0, PolishPhase = -1;
+    int32 PolishPasses = 0, PolishPhase = -1, WorstRagThrough = 0;
     void PoseKeeper(TArray<FTransform>& Space);
     // The sailor.
     UPROPERTY() UStaticMeshComponent* Pipe = nullptr;

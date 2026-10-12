@@ -2218,12 +2218,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("TavernKeeper"),KeeperFound);
             const auto* Keeper=KeeperFound.Num()==1 ? Cast<ADockNPC>(KeeperFound[0]) : nullptr;
             const FVector KeeperAt=Keeper ? Keeper->GetActorLocation() : FVector(1e4f);
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_KEEPER_MEASURE present=%d at=(%.0f,%.0f) tankard_grip_cm=%.1f rag_reach_cm=%.1f passes=%d lines=%d"),
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_KEEPER_MEASURE present=%d at=(%.0f,%.0f) tankard_grip_cm=%.1f rag_reach_cm=%.1f rag_through=%d passes=%d lines=%d"),
                 Keeper ? 1 : 0,KeeperAt.X,KeeperAt.Y,Keeper ? Keeper->GetTankardGripError() : 1e3f,Keeper ? Keeper->GetRagReachError() : 1e3f,
-                Keeper ? Keeper->GetPolishPasses() : 0,Keeper ? Keeper->Lines.Num() : 0);
+                Keeper ? Keeper->GetRagThroughTankard() : -1,Keeper ? Keeper->GetPolishPasses() : 0,Keeper ? Keeper->Lines.Num() : 0);
             Check(Keeper && KeeperAt.X>-119.f+24.f && KeeperAt.X<14.f-24.f && KeeperAt.Y>878.f && KeeperAt.Y<941.f
                 && Keeper->GetTankardGripError()<3.f && Keeper->GetRagReachError()<4.f && Keeper->GetPolishPasses()>=2 && Keeper->CanTalk(),
                 TEXT("the tavern keeper stands behind the counter between the barrels and the cellar hatch, polishing a tankard in his hands"));
+            Check(Keeper && Keeper->GetRagThroughTankard()==0,TEXT("the keeper's rag never passes through the tankard's wall"));
             // The old sailor on the court pier, pipe in his mouth, drawing on it and breathing smoke.
             TArray<AActor*> SailorFound;
             UGameplayStatics::GetAllActorsWithTag(this,TEXT("Sailor"),SailorFound);

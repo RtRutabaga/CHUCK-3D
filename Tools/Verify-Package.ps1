@@ -100,7 +100,7 @@ $alchemistVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE GnomeA
 $smithVoice=Select-String -LiteralPath $log -Pattern 'CHUCK_NPC_VOICE Blacksmith lines=1 sounds=1'
 $bobertCompleted=Select-String -LiteralPath $log -Pattern 'CHUCK_BOBERT_SPAWNED body=1 barrel=1'
 $passed=@(Select-String -LiteralPath $log -Pattern 'CHUCK_TEST PASS:').Count
-$expected=if($NoCapture) {178} else {179}
+$expected=if($NoCapture) {179} else {180}
 if (!$leapGeometry) { throw "Astral floor gap geometry verification failed. Inspect $log" }
 if(!(Select-String -LiteralPath $log -Pattern 'CHUCK_LEAP_OIL_CHECK failures=0 depth_cm=30.5 noncolliding=1 vertical_fade=1' -Quiet)) {
     throw "Sewer oil film verification failed. Inspect $log"
