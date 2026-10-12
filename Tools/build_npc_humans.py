@@ -42,7 +42,8 @@ ARMOR = ROOT / 'SourceAssets/Surfaces/Armor'   # generated mail (Tools/build_dwa
 TILE_CM = {r['asset']: r['size_cm'] for d in (CLOTH, ARMOR) if (d / 'manifest.json').exists()
            for r in json.loads((d / 'manifest.json').read_text(encoding='utf-8'))['assets']}
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False, primary_bone_axis='Y',
-           secondary_bone_axis='X', use_armature_deform_only=True, mesh_smooth_type='FACE', bake_anim=False)
+           secondary_bone_axis='X', use_armature_deform_only=True, mesh_smooth_type='FACE', bake_anim=False,
+           colors_type='LINEAR')   # vertex colour is data (the scalp's stubble density), not a colour to gamma-encode
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 REVIEW = argv[argv.index('--review') + 1] if '--review' in argv else None
 ONLY = [a for a in argv if a in SPEC]
@@ -1143,6 +1144,14 @@ def make_ponytail(info, spec, slots):
     return [braid, strands]
 
 
+def front_hairline(info, c, hairline, root):
+    """Height of a hairline `hairline` above the brows at the middle of the
+    forehead, sweeping down to `root` (just above the ear root) at the temples."""
+    side = min(1., max(0., (abs(c.x) - .03) / .04))
+    top = info.brow_z + hairline
+    return top - (top - root) * side
+
+
 def make_hair(info, spec, slots):
     """Long hair combed straight back and braided (the old elf: MakeHuman's
     braid01 hides the ears under its cap and sweeps a fringe over one eye).
@@ -1169,8 +1178,7 @@ def make_hair(info, spec, slots):
     # pointed tips reach nearly to her crown).
     root = info.eye_z + spec.get('ear_root', .005)
     def line(c):
-        side = clamp((abs(c.x) - .03) / .04)
-        front = info.brow_z + spec.get('hairline', .042) - (info.brow_z + spec.get('hairline', .042) - root) * side   # down to the temples
+        front = front_hairline(info, c, spec.get('hairline', .042), root)   # down to the temples
         behind = step(ear_back + .002, ear_back + .03, c.y)
         return front * (1 - behind) + (info.neck.z + .035) * behind
     from mathutils.kdtree import KDTree
@@ -1201,13 +1209,19 @@ def make_hair(info, spec, slots):
     for v in bm.verts:
         a, _ = merid(v.co)
         groove = math.sin(a * 38) * .5 + math.sin(a * 83 + 1.3) * .3
-        v.co += v.normal * (lift * (.12 + .88 * step(0., .045, v.co.z - line(v.co))) + groove * .0012 * step(0., .01, v.co.z - line(v.co)))
+        v.co += v.normal * (lift * (.04 + .96 * step(0., .045, v.co.z - line(v.co))) + groove * .0012 * step(0., .01, v.co.z - line(v.co)))
     bm.to_mesh(cap.data); bm.free()
     activate(cap)
     sm = cap.modifiers.new('Ease', 'CORRECTIVE_SMOOTH'); sm.factor = .5; sm.iterations = 6; sm.use_only_smooth = True; sm.use_pin_boundary = True
     bpy.ops.object.modifier_move_to_index(modifier=sm.name, index=0); bpy.ops.object.modifier_apply(modifier=sm.name)
+    # Thick over the head, thinning to almost nothing at the hairline: no step
+    # of hair standing off the forehead like a wig's edge (user 2026-10-11).
+    hem = cap.vertex_groups.new(name='HairHem')
+    for v in cap.data.vertices: hem.add([v.index], step(0., .02, v.co.z - line(v.co)), 'REPLACE')
     sol = cap.modifiers.new('Hair', 'SOLIDIFY'); sol.thickness = .0025; sol.offset = 1.; sol.use_rim = True
+    sol.vertex_group = hem.name; sol.thickness_vertex_group = .15
     bpy.ops.object.modifier_move_to_index(modifier=sol.name, index=0); bpy.ops.object.modifier_apply(modifier=sol.name)
+    if cap.vertex_groups.get('HairHem'): cap.vertex_groups.remove(cap.vertex_groups['HairHem'])
     me = cap.data
     while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
     uv = me.uv_layers.new(name='UVMap')
@@ -1260,6 +1274,28 @@ def make_hair(info, spec, slots):
             pts.append((hit + n * (.0015 + .001 * k), n.cross(ahead).normalized()))
             p = hit + ahead * length / 3
         if len(pts) == 4 and min(kd.find(q)[2] for q, _ in pts) > .025: card(pts, rnd.uniform(.008, .014), rnd.uniform(0, .85))   # none trailing over an ear
+    # Fine strands along the hairline, rooted on the skin just in front of the
+    # cap's edge and lying back over it, so the edge is hair, not a hem.
+    scalp = BVHTree.FromObject(info.obj, bpy.context.evaluated_depsgraph_get())
+    Mb = info.obj.matrix_world; Mbi = Mb.inverted()
+    hrnd = random.Random(23)   # its own stream: the strays and wild tufts stay as they were
+    edge = [v.co.copy() for v in cap.data.vertices if v.normal.z > -.3 and 0. <= v.co.z - line(v.co) < .005 and kd.find(v.co)[2] > .02]
+    hrnd.shuffle(edge)
+    for co in edge[:spec.get('hem_cards', 90)]:
+        r = (co - centre).normalized()
+        ahead = (axis - r * axis.dot(r)).normalized()
+        hit, n, _, _ = scalp.find_nearest(Mbi @ (co - ahead * hrnd.uniform(.003, .006)))
+        if hit is None: continue
+        n = (Mb.to_3x3() @ n).normalized()
+        p, length, pts = Mb @ hit + n * .0008, hrnd.uniform(.012, .025), []
+        pts.append((p, n.cross(ahead).normalized()))
+        for k in range(1, 4):
+            p = p + ahead * length / 3
+            hit, n2, _, _ = bvh.find_nearest(p)
+            if hit is None: break
+            p = hit + n2 * (.0006 + .0006 * k)
+            pts.append((p, n2.cross(ahead).normalized()))
+        if len(pts) == 4: card(pts, hrnd.uniform(.004, .008), hrnd.uniform(0, .85))
     # Wild hair (the gnome's): tufts standing out from the sides and back at odd angles, none over the face or an ear.
     wild = [(v.co.copy(), v.normal.copy()) for v in cap.data.vertices
             if v.normal.y > -.35 and v.normal.z < .8 and v.co.z - line(v.co) > .004 and kd.find(v.co)[2] > .02]
@@ -1376,6 +1412,134 @@ def make_fringe(info, spec, slots):
     return [obj]
 
 
+def stubble_texture():
+    """Textures/scalp_stubble.png: short hairs on a clear ground, tiling, all
+    running along V (on the scalp shell: out from the crown). White, so the
+    slot's tint is the hair's colour; alpha is the hair. Deterministic."""
+    path = TEX / 'scalp_stubble.png'
+    if path.exists(): return 'Textures/scalp_stubble.png'
+    import numpy as np
+    N, rng = 512, np.random.default_rng(7)
+    rgb, a = np.full((N, N), .85), np.zeros((N, N))
+    for _ in range(11000):
+        x0, y0 = rng.uniform(0, N, 2)
+        ang, L, w = math.pi / 2 + rng.normal(0, .3), rng.uniform(9, 20), rng.uniform(1., 1.8)
+        dx, dy = math.cos(ang), math.sin(ang)
+        xs = np.arange(int(min(x0, x0 + dx * L)) - 3, int(max(x0, x0 + dx * L)) + 4)
+        ys = np.arange(int(min(y0, y0 + dy * L)) - 3, int(max(y0, y0 + dy * L)) + 4)
+        X, Y = np.meshgrid(xs, ys)
+        px, py = X - x0, Y - y0
+        t = np.clip((px * dx + py * dy) / L, 0, 1)
+        cov = np.clip(w / 2 + .5 - np.hypot(px - t * dx * L, py - t * dy * L), 0, 1) * (1 - .45 * t)   # thinning to the tip
+        Yi, Xi = Y % N, X % N
+        shade = rng.uniform(.7, 1.)
+        rgb[Yi, Xi] = rgb[Yi, Xi] * (1 - cov) + shade * cov
+        a[Yi, Xi] = np.maximum(a[Yi, Xi], cov)
+    img = bpy.data.images.new('scalp_stubble', N, N, alpha=True)
+    img.pixels.foreach_set(np.dstack([rgb, rgb, rgb, a]).astype(np.float32).ravel())
+    TEX.mkdir(parents=True, exist_ok=True)
+    img.filepath_raw = str(path); img.file_format = 'PNG'; img.save()
+    print('CHUCK_STUBBLE_TEXTURE', f'coverage={a.mean():.2f}')
+    return 'Textures/scalp_stubble.png'
+
+
+def make_scalp(info, spec, slots, hair, natural=None):
+    """Hair on the scalp itself (user 2026-10-11: hair that ends in a hard hem on
+    bare skin reads as a wig; the gnome's receding hair needs grey stubble where
+    it has receded). A shell just off the scalp, carrying the body's weights,
+    with short hairs (stubble_texture) whose density is the vertex colour: full
+    under the hair objects `hair`, fading to nothing `fade` past their edge, and
+    where the hair has receded (`natural`: + above the hairline it once had)
+    `recede.density` of it. Slot Scalp (type stubble), tinted."""
+    from mathutils.kdtree import KDTree
+    clamp = lambda x: min(1., max(0., x))
+    step = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(clamp((x - a) / (b - a)))
+    M = info.obj.matrix_world; Mi, R = M.inverted(), M.to_3x3()
+    dg = bpy.context.evaluated_depsgraph_get()
+    g = info.obj.vertex_groups['ears'].index
+    ears = [info.co[v.index] for v in info.obj.data.vertices if any(x.group == g and x.weight > .5 for x in v.groups)]
+    ear_kd = KDTree(len(ears))
+    for k, c in enumerate(ears): ear_kd.insert(c, k)
+    ear_kd.balance()
+    ear_back = max(c.y for c in ears)
+    # The scalp's faces (head and neck, the forehead up and the nape), subdivided: the body's are too coarse for a 1 cm fade.
+    bm = bmesh.new(); bm.from_mesh(info.obj.data); bm.verts.ensure_lookup_table()
+    def scalp_face(f):
+        if not all(info.bone[v.index] in (Body.HEAD, Body.NECK) for v in f.verts): return False
+        return any(info.co[v.index].z > info.brow_z - .01 or (info.co[v.index].y > ear_back - .03 and info.co[v.index].z > info.neck.z) for v in f.verts)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not scalp_face(f)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    bm.transform(M)
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=2, use_grid_fill=True)
+    body = BVHTree.FromObject(info.obj, dg)
+    trees = [(BVHTree.FromObject(o, dg), o.matrix_world.inverted()) for o in hair]
+    bm.verts.ensure_lookup_table()
+    pos, nrm, covered = [], [], []
+    for v in bm.verts:
+        hit, n, _, _ = body.find_nearest(Mi @ v.co)
+        p, n = M @ hit, (R @ n).normalized()
+        pos.append(p); nrm.append(n)
+        hit_any = False
+        for tree, Ti in trees:   # any of the hair straight out from here (or just under the skin)
+            o, d = Ti @ (p - n * .003), Ti.to_3x3() @ n
+            if tree.ray_cast(o, d.normalized(), .053 * d.length)[0] is not None: hit_any = True; break
+        covered.append(hit_any)
+    def tree_of(flag):
+        idx = [i for i, c in enumerate(covered) if c == flag]
+        kd = KDTree(max(1, len(idx)))
+        for k, i in enumerate(idx): kd.insert(pos[i], k)
+        kd.balance()
+        return kd, bool(idx)
+    (in_kd, any_in), (out_kd, any_out) = tree_of(True), tree_of(False)
+    fade, inner, deep = spec.get('fade', .012), spec.get('inner', .004), spec.get('deep', .025)
+    recede = spec.get('recede')
+    dens = []
+    for i, p in enumerate(pos):
+        if covered[i]: sd = out_kd.find(p)[2] if any_out else 1.
+        else: sd = -in_kd.find(p)[2] if any_in else -1.
+        d = step(-fade, inner, sd) ** .6   # thick soon after the edge, thinning out over the last of the fade
+        if recede and natural:   # never down to the brows, where the old hairline sweeps to the temples
+            d = max(d, recede['density'] * step(-.006, .008, natural(p)) * step(info.brow_z + .006, info.brow_z + .018, p.z))
+        d *= step(.004, .012, ear_kd.find(p)[2])   # never on the ears
+        dens.append(d if sd < deep else -1.)     # -1: deep under the hair, unseen
+    off = spec.get('offset', .0007)
+    col = bm.verts.layers.float_color.new('Col')   # set before any deletion renumbers the vertices
+    gone = set()
+    for v, p, n, d in zip(bm.verts, pos, nrm, dens):
+        v.co = p + n * off
+        v[col] = (max(0., d), max(0., d), max(0., d), 1.) if d >= 0 else (1., 1., 1., 1.)
+        if d <= .002: gone.add(v)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v in gone for v in f.verts)], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    # UVs: round an axis from the crown (up and back) to the chin, the hairs
+    # running out from the crown; the seam behind, at the nape, under the hair.
+    _, _, head_y = face_marks(info)
+    centre = Vector((0, head_y, info.eye_z + .01))
+    axis = Vector((0, .6, .8)).normalized()
+    ref = (Vector((0, -1, 0)) - axis * Vector((0, -1, 0)).dot(axis)).normalized()
+    ref2 = axis.cross(ref)
+    tile = spec.get('tile', .04)
+    span = 2 * math.pi * .09 / tile
+    uvl = bm.loops.layers.uv.new('UVMap')
+    for f in bm.faces:
+        uvs = []
+        for loop in f.loops:
+            d = (loop.vert.co - centre).normalized()
+            uvs.append([math.atan2(d.dot(ref2), d.dot(ref)) * .09 / tile, math.acos(max(-1., min(1., d.dot(axis)))) * .09 / tile])
+        if max(u for u, _ in uvs) - min(u for u, _ in uvs) > span / 2:
+            for uv in uvs:
+                if uv[0] < 0: uv[0] += span
+        for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
+    faces = len(bm.faces)
+    obj = new_object('scalp', bm)
+    obj.data.materials.append(slot_material('Scalp'))
+    for poly in obj.data.polygons: poly.use_smooth = True
+    skin_from_body(obj, info)
+    slots['Scalp'] = {'type': 'stubble', 'texture': stubble_texture(), 'tint': spec['tint']}
+    print('CHUCK_SCALP', f'faces={faces}', f'covered={sum(covered)}/{len(covered)}', f'receded={bool(recede and natural)}')
+    return [obj]
+
+
 def make_earring(info, spec, slots):
     """A plain metal ring through one ear lobe (`side`: 'right' or 'left'), hanging
     in the plane of the ear. Slot Earring."""
@@ -1482,12 +1646,20 @@ def build(name, spec):
         hide = [h or (info.bone[i] or '').startswith(HANDS) for i, h in enumerate(hide)]
     if spec.get('beard'):
         meshes += make_beard(info, dict(spec['beard'], _outfit=spec['outfit']), slots)
+    hair = [parts['Hair']] if parts.get('Hair') else []   # what covers the scalp: MakeHuman's hair, or make_hair's cap
     if spec.get('braided_hair'):
-        meshes += make_hair(info, spec['braided_hair'], slots)
+        made = make_hair(info, spec['braided_hair'], slots)
+        meshes += made; hair.append(made[0])
     if spec.get('ponytail'):
         meshes += make_ponytail(info, spec['ponytail'], slots)
     if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
     if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
+    if spec.get('scalp'):
+        natural = None
+        if spec['scalp'].get('recede'):   # the hairline he once had, below the receded one
+            root = info.eye_z + spec.get('braided_hair', {}).get('ear_root', .005)
+            natural = lambda p: p.z - front_hairline(info, p, spec['scalp']['recede']['hairline'], root)
+        meshes += make_scalp(info, spec['scalp'], slots, hair, natural)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -1515,7 +1687,8 @@ def build(name, spec):
     assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
     if 'Hair' in parts:
         hair_dir = DATA / f"hair/{spec['hair']}"
-        assign(parts['Hair'], 'Hair'); slots['Hair'] = {'type': 'card', 'texture': keep_texture(next(hair_dir.glob('*diffuse*.png')))}
+        # Dithered like the beard locks: a hard-clipped hairline reads as a wig's edge.
+        assign(parts['Hair'], 'Hair'); slots['Hair'] = {'type': 'hair','texture': keep_texture(next(hair_dir.glob('*diffuse*.png')))}
     # Face +X and stand exactly spec height tall (cap included), feet on the ground.
     lo = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
     hi = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)

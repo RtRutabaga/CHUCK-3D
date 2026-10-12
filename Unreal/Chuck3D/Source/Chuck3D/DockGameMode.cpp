@@ -259,10 +259,10 @@ void ADockGameMode::StartPlay()
         if(Count!=7) ++Failures;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_HARBOR_WATER_CHECK failures=%d sheets=%d collision=0 open_shafts=2 single_surface_samples=6"),Failures,Count);
     }
-    // Short pier with a 24 cm missing board. Chuck's jump travels about 41 cm.
+    // Short pier, continuous boards (the old 24 cm missing-board test gap was
+    // filled at the user's request, 2026-10-11).
     for(int32 Row=0;Row<26;++Row)
     {
-        if(Row==13) continue;
         auto* Collision=Shape(TEXT("DockPlank"),FVector(212+Row*24,0,-6),FVector(23,180,12),Row%2 ? TEXT("Wood") : TEXT("WoodLight"));
         if(PlankMesh) { Collision->SetActorHiddenInGame(true); Prop(TEXT("DockPlankArt"),Collision->GetActorLocation(),PlankMesh); }
     }
@@ -946,7 +946,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         {
             TArray<AActor*> Props;
             UGameplayStatics::GetAllActorsWithTag(this,FName(Tag),Props);
-            const int32 Expected=FString(Tag)==TEXT("DockPlankArt") ? 25 : (FString(Tag)==TEXT("TavernWindowArt") ? 2 : 1);
+            const int32 Expected=FString(Tag)==TEXT("DockPlankArt") ? 26 : (FString(Tag)==TEXT("TavernWindowArt") ? 2 : 1);
             bool bValid=Props.Num()==Expected;
             for(AActor* Actor:Props)
             {
@@ -1094,7 +1094,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Check(FVector::Dist2D(Chuck->GetActorLocation(),AChuckCharacter::StartLocation())<5 && Chuck->GetFallDeaths()>=1 && !Chuck->IsAstral(),TEXT("fall resets to dock"));
         FHitResult Hit;
         const bool HitGap=GetWorld()->LineTraceSingleByChannel(Hit,FVector(524,0,50),FVector(524,0,-30),ECC_Visibility);
-        Check(!HitGap,TEXT("missing pier board is a real gap"));
+        Check(HitGap,TEXT("the pier is continuous: no missing board"));
         const bool HitBoard=GetWorld()->LineTraceSingleByChannel(Hit,FVector(500,0,50),FVector(500,0,-30),ECC_Visibility);
         Check(HitBoard,TEXT("adjacent pier board has collision"));
         Chuck->ResetToDock();
@@ -1173,7 +1173,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
         Chuck->AddMovementInput(FVector(1,0,0),1);
         if(StageTime>1)
         {
-            Check(Chuck->GetActorLocation().X>550 && Chuck->GetCharacterMovement()->IsMovingOnGround(),GapRuns==0 ? TEXT("pier gap crossed in elevated camera") : TEXT("pier gap crossed in rat-height camera"));
+            Check(Chuck->GetActorLocation().X>550 && Chuck->GetCharacterMovement()->IsMovingOnGround(),GapRuns==0 ? TEXT("pier jump lands in elevated camera") : TEXT("pier jump lands in rat-height camera"));
             ++GapRuns;
             if(GapRuns==1)
             { Chuck->ResetToDock(); Chuck->ToggleCamera(); Chuck->SetActorLocation(FVector(465,0,36)); TestStage=8; StageTime=0; }

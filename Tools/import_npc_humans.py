@@ -9,6 +9,8 @@ from SourceAssets/NPCs/Humans/manifest.json:
   M_HumanEye     MakeHuman eye texture, glossy
   M_HumanCard    brows, lashes, hair: masked by the texture's alpha, two-sided
   M_HumanHair    beard locks (slot type "hair"): M_HumanCard with a dithered mask
+  M_HumanStubble scalp stubble (slot type "stubble"): the card graph, its mask
+                 times the vertex colour (the hair's density), dithered
   M_HumanFabric  Poly Haven cloth: weave = greyed colour map x Gain (brightness
                  normalised), coloured by Tint; AO/roughness, DirectX normal;
                  the mesh UVs are already in texture repeats (real size)
@@ -112,6 +114,22 @@ def build_card(mat, default):
     constant(mat, .75, unreal.MaterialProperty.MP_ROUGHNESS, 300)
 
 
+def build_stubble(mat, default):
+    """The card graph with its opacity scaled by the vertex colour: the scalp
+    shell's stubble density (build_npc_humans.make_scalp), full under the hair,
+    fading out past the hairline."""
+    t = tex_param(mat, 'Diffuse', default, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -600, 0)
+    tint = node(mat, unreal.MaterialExpressionVectorParameter, -600, 250, parameter_name='Tint', default_value=unreal.LinearColor(1, 1, 1, 1))
+    mul = node(mat, unreal.MaterialExpressionMultiply, -300, 0)
+    LIB.connect_material_expressions(t, 'RGB', mul, 'A'); LIB.connect_material_expressions(tint, '', mul, 'B')
+    LIB.connect_material_property(mul, '', unreal.MaterialProperty.MP_BASE_COLOR)
+    vc = node(mat, unreal.MaterialExpressionVertexColor, -600, 450)
+    mask = node(mat, unreal.MaterialExpressionMultiply, -300, 300)
+    LIB.connect_material_expressions(t, 'A', mask, 'A'); LIB.connect_material_expressions(vc, 'R', mask, 'B')
+    LIB.connect_material_property(mask, '', unreal.MaterialProperty.MP_OPACITY_MASK)
+    constant(mat, .8, unreal.MaterialProperty.MP_ROUGHNESS, 600)
+
+
 def build_fabric(mat, diff, arm, nor):
     d = tex_param(mat, 'Diffuse', diff, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -700, -200)
     a = tex_param(mat, 'ARM', arm, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, -700, 100)
@@ -171,6 +189,9 @@ def slot_material(npc, folder, slot, info):
     elif info['type'] == 'hair':   # beard locks: the card graph, its alpha edges dithered (soft under TAA), not cut hard
         parent = master('M_HumanHair', lambda m: build_card(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED, two_sided=True,
                         dither_opacity_mask=True, opacity_mask_clip_value=.25)
+    elif info['type'] == 'stubble':   # scalp stubble: density from the vertex colour, dithered so it fades, not cuts
+        parent = master('M_HumanStubble', lambda m: build_stubble(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED,
+                        dither_opacity_mask=True, opacity_mask_clip_value=.25)
     else:
         raise RuntimeError(f'Unknown slot type {info["type"]}')
     return instance(f'MI_{npc}_{slot}', folder, parent, {'Diffuse': tex}, info.get('tint'))
@@ -190,6 +211,7 @@ def import_mesh(npc, info):
     data = options.skeletal_mesh_import_data
     data.set_editor_property('update_skeleton_reference_pose', False)
     data.set_editor_property('normal_import_method', unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS)
+    data.set_editor_property('vertex_color_import_option', unreal.VertexColorImportOption.REPLACE)   # the scalp's stubble density
     task = unreal.AssetImportTask()
     task.filename = str(SOURCE / info['fbx']); task.destination_path = folder; task.destination_name = f'SK_{npc}'
     task.automated = True; task.replace_existing = True; task.save = True; task.options = options

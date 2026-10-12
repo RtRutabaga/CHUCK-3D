@@ -537,7 +537,7 @@
   "Blacksmith": {
    "fbx": "Blacksmith/SK_Blacksmith.fbx",
    "height_cm": 184,
-   "tris": 57154,
+   "tris": 62778,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -605,6 +605,15 @@
      "tile_cm": 40.0,
      "gain": 26.931
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.045,
+      0.035,
+      0.028
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -622,7 +631,7 @@
      "texture": "Textures/eyelashes02.png"
     },
     "Hair": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/short01_diffuse.png"
     }
    },
@@ -786,7 +795,7 @@
   "TavernKeeper": {
    "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
    "height_cm": 181,
-   "tris": 74838,
+   "tris": 80344,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -872,6 +881,15 @@
       0.18
      ]
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.045,
+      0.035,
+      0.028
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -889,7 +907,7 @@
      "texture": "Textures/eyelashes02.png"
     },
     "Hair": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/short01_diffuse.png"
     }
    },
@@ -902,7 +920,7 @@
   "ElfElder": {
    "fbx": "ElfElder/SK_ElfElder.fbx",
    "height_cm": 171,
-   "tris": 88990,
+   "tris": 95130,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -977,6 +995,15 @@
       0.98
      ]
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.8,
+      0.78,
+      0.74
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_female_diffuse.png"
@@ -997,13 +1024,13 @@
    "mouth_cm": [
     17.9,
     0.0,
-    153.2
+    153.0
    ]
   },
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
    "height_cm": 100,
-   "tris": 47476,
+   "tris": 53722,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -1085,6 +1112,15 @@
       1.02
      ]
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.46,
+      0.45,
+      0.43
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png",
@@ -1115,7 +1151,7 @@
    "mouth_cm": [
     11.0,
     0.0,
-    85.7
+    86.1
    ]
   },
   "Sailor": {
