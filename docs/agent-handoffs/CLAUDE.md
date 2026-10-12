@@ -2697,3 +2697,31 @@ Next part of the work can be done here.
   - The review render paths resolved relative to `C:\` (a pre-existing `C:\Local` folder), so copies live in `Local/hairline-review`.
 
 Next part of the work can be done here.
+
+## The keeper's rag stays out of his tankard (user 2026-10-11)
+
+- **Ask:** "The bar keeper's rag moves through his mug."
+- **Found** (film `Local/rag-before`):
+  - The rag had one fixed facing (yaw 90). Its tail always fell forward, straight down through the tankard while he worked the rim.
+  - Its bunch (about 4.8 cm half-width, mug-sized) overlapped the wall while he rubbed the outside, with the fist only 3.5 cm off the side.
+  - The 0.6 s blends moved his fist in a straight line from the side to the mouth, through the pewter.
+- **Source:** `3a4e567` on main, base `14d6dd8`. `DockNPC.cpp/.h`, `DockGameMode.cpp`, `Verify-Package.ps1` (floor 180/179).
+  - Rag shown at `RagScale` .85 and turned per phase by `RagFacing(Away, Tilt)`:
+    - inside: fist `RagOverRim` 3.5 cm over the mouth, tail back over the near rim at 45°;
+    - outside: fist `RagOffSide` 4.5 cm off the side, tail away from the tankard at 15°;
+    - inspect: hanging at his side.
+  - The blend splits along the tankard's up: into the mouth it rises first and then moves in; out of it, it moves out first and then drops.
+  - `RagThroughTankard` models the rag (bunch and tail, from `build_keeper_props.py rag()`) and the tankard (5.2→4.4 cm, 13 cm tall), and counts rag lines that cross the wall below the rim. `GetRagThroughTankard` returns the worst frame after 8 s. A new smoke check, "the keeper's rag never passes through the tankard's wall", requires 0. Each new worst case logs `CHUCK_KEEPER_RAG_THROUGH`.
+  - The tuning was found offline first (Blender-Python model of the same geometry: the old setup gave 7 crossings).
+- **Verified** (UE 5.7.4, skip-cook, no asset changes):
+  - The first full run failed the new check (51 lines). The log placed it in the 0.16–0.32 s blend into the mouth, which led to the blend arc.
+  - Final smoke `rag_through=0` over 20 passes. Full `Verify-Package.ps1` **182 passes, 0 failures** (`Local/verify-package-20261011-222505.log`), `rag_reach_cm=1.2`, `tankard_grip_cm=0.0`.
+  - Film `Local/rag-after`. Review: `SourceAssets/NPCs/Humans/Review/runtime_TavernKeeper_rag_{before,after,sheet}.png`.
+- **Launcher:** `Builds/Windows` = `3a4e567` (promoted after the user closed their game), receipt and `-CheckOnly` pass. The previous `137aad9` package is at `Builds/Windows-Previous-20261011-KeeperRag`.
+- **Remaining:**
+  - The measure models the rag analytically (from the generator), not from its render mesh.
+  - The hand and fingers themselves are not tested against the tankard.
+  - The tail is rigid (it rotates, but does not drape on the pewter).
+  - Not played by hand.
+
+Next part of the work can be done here.

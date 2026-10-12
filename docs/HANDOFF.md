@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 11 — the tavern keeper's rag stays out of his tankard
+
+Runtime **3a4e567** (Claude). The keeper's rag is smaller and turns with the work. Inside the rim, it sits on the mouth with its tail draped back over the near rim. Rubbing the outside, it sits just off the side with its tail hanging away. Moving into the mouth, his hand rises over the rim rather than cutting through the pewter. A new smoke check counts rag lines crossing the tankard's wall each frame and requires zero.
+
+- UE **5.7.4**, skip-cook candidate. Full `Verify-Package.ps1` **182 passes, zero failures**, `Local/verify-package-20261011-222505.log` (`rag_through=0` over 20 passes). The first run failed the new check during the blend into the mouth, which led to the fix. Film: `SourceAssets/NPCs/Humans/Review/runtime_TavernKeeper_rag_*.png`. Not played by hand.
+- Root **Launch-Prototype.cmd** updated to **Builds/Windows / 3a4e567**; receipt and **CheckOnly** passed. Prior **137aad9** package retained at **Builds/Windows-Previous-20261011-KeeperRag**.
+- Pre-existing unfinished inputs unchanged and unstaged.
+
+Next part of the work can be done here.
+
 ## October 11 — continuous tavern pier and NPC hairlines
 
 Runtime **137aad9** (Claude). The small pier by the tavern is now continuous: the missing board 13 (the old gap-jump test) is restored, and its checks now require the board. Gnome, elf, blacksmith and tavern keeper get a scalp stubble layer. It is full under their hair and fades past the hairline, so the hair no longer ends in a wig-like hem. The gnome's receded dome now carries grey stubble. The elf's and gnome's hair caps thin at the hem and gain fine hairline strands.
