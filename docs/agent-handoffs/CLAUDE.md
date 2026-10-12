@@ -2725,3 +2725,30 @@ Next part of the work can be done here.
   - Not played by hand.
 
 Next part of the work can be done here.
+
+## Costlier wall climbing; faster flow between parkour moves (user 2026-10-12)
+
+- **Ask:**
+  - Increase stamina drain from wall climbing "some".
+  - Transitions too slow: a barrel, the ramp, then a roll down it; and a side jump, then running forward.
+- **Found:**
+  - A dodge pressed while airborne, mid pull-up/mantle or finishing another dodge was silently dropped, so it had to be pressed again after landing.
+  - A side jump stopped him dead at touchdown, held 0.15 s even with the stick pushed, then restarted from a standstill (walk start ramps over 0.5 s).
+  - Pull-ups ended through their settling frames into a standing walk start.
+- **Source:** `8d9c5d2` on main, base `790adae`. `ChuckCharacter.cpp/.h`, `DockGameMode.cpp` (`-ChuckFlowTest`), `LampSwing.cpp` (trial 1 ceiling).
+  - Stamina: wall run .006→.01, wall jump .004→.0065, side wall run .03→.04.
+  - `DodgeBuffer` .35 s (`DodgeBufferedAt`, `CanDodgeNow`, fires in `UpdateMotion` with the current stick if pushed).
+  - `RunOn()`: into Loop at walk/run pace along the stick. Used by the side jump at `SideLand + SideRunOn` (.05) and by the climb finish.
+  - `ClimbRate` 1.15; the climb ends with the stick held at the path's end (pull-up frame 18, mantle frame 9).
+  - `LandRunOn` .08.
+- **Verified** (UE 5.7.4, skip-cook):
+  - `-ChuckFlowTest` (`Local/flow-test.log`): side jump → 90% walking pace forward **0.10 s** after touchdown (the old path was about 0.52 s by its timings; not measured on the old build). A roll pressed about 0.2 s before landing went off **on the touchdown frame** (`buffered=1`).
+  - Full `Verify-Package.ps1` **182 passes, 0 failures** (`Local/verify-package-20261012-102556.log`). Lamp trial 1 chimney now costs **30%** of the ring (was 18%), all 8 trials pass.
+- **Launcher:** `Builds/Windows` = `8d9c5d2`, receipt and `-CheckOnly` pass. The previous `3a4e567` package is at `Builds/Windows-Previous-20261012-Flow`.
+- **Remaining:**
+  - Not played by hand; the feel needs the user's judgement.
+  - The barrel-and-ramp spot itself wasn't scripted; it's covered by the general buffer, pull-up and landing changes.
+  - Running on at pace snaps speed (no ramp) and relies on the 540°/s turn rate for facing.
+  - `-ChuckFlowTest` isn't part of `Verify-Package.ps1`.
+
+Next part of the work can be done here.

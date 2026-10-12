@@ -1,5 +1,14 @@
 # Handoff — 2026-09-27
 
+## October 12 — costlier wall climbing, faster flow between parkour moves
+
+Runtime **8d9c5d2** (Claude). Wall runs, wall jumps and side wall runs cost about 1.65× the stamina; the tall chimney now takes 30% of the ring (was 18%). A dodge pressed a moment too soon (in the air, mid pull-up, finishing a dodge) now goes off as soon as he can, instead of being dropped. With the stick held, a side jump runs straight on 0.05 s after touchdown at pace, and pull-ups and mantles (now 15% quicker) stride off once he's on top. Slow landings stride on after 0.08 s.
+
+- UE **5.7.4**, skip-cook. `-ChuckFlowTest`: side jump → forward at pace **0.10 s** after touchdown; a roll pressed in the air fires on the touchdown frame. Full `Verify-Package.ps1` **182 passes, zero failures**, `Local/verify-package-20261012-102556.log`. Not played by hand.
+- Root **Launch-Prototype.cmd** updated to **Builds/Windows / 8d9c5d2**; receipt and **CheckOnly** passed. Prior **3a4e567** package retained at **Builds/Windows-Previous-20261012-Flow**.
+
+Next part of the work can be done here.
+
 ## October 11 — the tavern keeper's rag stays out of his tankard
 
 Runtime **3a4e567** (Claude). The keeper's rag is smaller and turns with the work. Inside the rim, it sits on the mouth with its tail draped back over the near rim. Rubbing the outside, it sits just off the side with its tail hanging away. Moving into the mouth, his hand rises over the rim rather than cutting through the pewter. A new smoke check counts rag lines crossing the tankard's wall each frame and requires zero.
