@@ -2752,3 +2752,10 @@ Next part of the work can be done here.
   - `-ChuckFlowTest` isn't part of `Verify-Package.ps1`.
 
 Next part of the work can be done here.
+
+## Build promotion script (October 12)
+
+- **Source:** base `fe1ee3d`. New `Tools/Promote-Build.ps1`; `docs/AGENT-WORKFLOW.md`, `CLAUDE.md`, `docs/HANDOFF.md` updated. No runtime, asset or contract change.
+- **Why:** keeping every prior package left 293 build folders (~197 GB) in `Builds`. The user deleted all but `Windows`, `Releases` and the two newest backups.
+- **Tested:** scratch build tree only (failing log, normal promotion with pruning, running-game guard), all as intended. Real launcher `-CheckOnly` passes on `8d9c5d2`. First real use will be the next playable milestone.
+- **Flaws:** pruning sorts by folder creation time (the package's build time), not the date in the name; leftover candidate folders are only warned about.

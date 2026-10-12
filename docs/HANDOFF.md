@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 12 — build promotion script; old builds pruned
+
+Tooling only, no runtime change (Claude). The user deleted about 290 old candidate and `Windows-Previous-*` packages (~195 GB) to free disk space; `Builds` now holds `Windows` (**8d9c5d2**), `Releases` and the two newest backups (`-20261011-KeeperRag`, `-20261012-Flow`). C: free space went from 40 GB to 231 GB.
+
+- New `Tools/Promote-Build.ps1 -Candidate <dir> -Label <Name> -VerificationLog <log>` replaces the manual folder moves. It writes the receipt on the candidate first (a failing log stops it before anything moves), refuses while the game runs from the launcher build, renames the old package to `Windows-Previous-<date>-<Label>`, moves the candidate in (restoring the old build if that fails), runs `Launch-Prototype.ps1 -CheckOnly`, then deletes all but the newest two backups (`-Keep`). It warns about other leftover build folders but does not delete them. `-AstralCameraReview`/`-TutorialReview` pass through to the receipt.
+- Tested on a throwaway build tree in scratch space: failing log (nothing moved), normal promotion (receipt written, two oldest of four backups pruned), and a fake running `Chuck3D*` process (refused, nothing moved). Not yet used on a real Unreal package.
+- `docs/AGENT-WORKFLOW.md` v3 and `CLAUDE.md` now point to the script instead of "preserve the previous package". Root launcher **CheckOnly** passes on **8d9c5d2**. The 38 pre-existing modified binaries and 2 untracked textures are unchanged and unstaged.
+
+Next part of the work can be done here.
+
 ## October 12 — costlier wall climbing, faster flow between parkour moves
 
 Runtime **8d9c5d2** (Claude). Wall runs, wall jumps and side wall runs cost about 1.65× the stamina; the tall chimney now takes 30% of the ring (was 18%). A dodge pressed a moment too soon (in the air, mid pull-up, finishing a dodge) now goes off as soon as he can, instead of being dropped. With the stick held, a side jump runs straight on 0.05 s after touchdown at pace, and pull-ups and mantles (now 15% quicker) stride off once he's on top. Slow landings stride on after 0.08 s.
