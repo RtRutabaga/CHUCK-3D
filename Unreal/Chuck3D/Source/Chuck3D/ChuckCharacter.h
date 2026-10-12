@@ -148,6 +148,16 @@ public:
     static constexpr float VaultReach = 85.f;      // cm in front of him the face may be when he jumps
     static constexpr float LadderStride = 30.f;    // cm climbed per cycle of the climb clip
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
+    // Flow between moves (user 2026-10-12: "too much pause between movements"):
+    // a dodge pressed while he can't yet (in the air, pulling up, finishing a
+    // dodge) goes off as soon as he can, within DodgeBuffer; a side jump, a
+    // pull-up or mantle with the stick held runs straight on at pace; pull-ups
+    // and mantles play ClimbRate faster.
+    static constexpr float DodgeBuffer = .35f;     // s
+    static constexpr float SideRunOn = .05f;       // s after a side jump's touchdown the stick runs on (was .15)
+    static constexpr float ClimbRate = 1.15f;
+    static constexpr float LandRunOn = .08f;       // s into a slow landing before the stick strides on (was .15)
+    int32 GetBufferedDodges() const { return BufferedDodges; }
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
      *  Returns whether it landed. (No health yet: the user's call.) */
@@ -214,9 +224,11 @@ public:
     // and it doesn't refill while he's on the walls or swinging; it never
     // stops a climb (empty, he climbs and swings just the same). The tallest
     // chimney by the sewer costs about a quarter of the ring.
-    static constexpr float WallRunStaminaCost = .006f;
-    static constexpr float WallJumpStaminaCost = .004f;
-    static constexpr float WallSideStaminaCost = .03f;
+    // User 2026-10-12: climbing walls drains more (about 1.65x; the tallest
+    // chimney now costs nearly a third of the ring).
+    static constexpr float WallRunStaminaCost = .01f;
+    static constexpr float WallJumpStaminaCost = .0065f;
+    static constexpr float WallSideStaminaCost = .04f;
     static constexpr float SwingLeapStaminaCost = .012f;
     // Stamina lock (later, Chult: the golden "Premium Buhetian Halfling Leaf"
     // cigarettes): full and frozen for a while - the sprint never runs down,
@@ -359,6 +371,13 @@ private:
     float InputRight = 0;
     FVector DodgeDirection = FVector::ForwardVector;
     bool bDodgeLaunched = false;
+    float DodgeBufferedAt = -1e3f;
+    FVector2D DodgeBufferedStick = FVector2D::ZeroVector;
+    int32 BufferedDodges = 0;
+    /** Whether a dodge can start right now (the checks DodgeToward makes). */
+    bool CanDodgeNow() const;
+    /** Out of a move with the stick held: straight into the stride at walking or running pace; otherwise FinishDodge. */
+    void RunOn();
     bool bDodgeLanded = false;
     float RollDone = 0;  // capsule distance actually covered in this roll
     bool bRunHeld = false;

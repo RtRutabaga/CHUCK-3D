@@ -540,7 +540,14 @@ void AChuckCharacter::DodgeToward(FVector2D Stick)
     if (Gait == EGait::Hang) { DropFromHang(); return; }  // dodge while hanging: let go
     if (Gait == EGait::Swing) { LeaveSwing(SwingDir * 30.f, false); return; }
     if (Gait == EGait::SwingLeap) return;
-    if (IsDodging() || Movement->IsFalling() || Gait == EGait::WallRun || Gait == EGait::Climb) return;
+    if (IsDodging() || Movement->IsFalling() || Gait == EGait::Climb)
+    {
+        // Too soon: held for a moment and done as soon as he can.
+        DodgeBufferedAt = GetWorld()->GetTimeSeconds(); DodgeBufferedStick = Stick;
+        return;
+    }
+    if (Gait == EGait::WallRun) return;
+    DodgeBufferedAt = -1e3f;
     // A dodge cuts a turn in place short (pressing a direction from standstill
     // starts one).
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -1973,6 +1980,22 @@ void AChuckCharacter::UpdateSlashLayer(float DeltaSeconds)
     }
     else if (LayerTime >= LayerLength) { LayerTime = -1; bSlashQueued = false; }
 }
+bool AChuckCharacter::CanDodgeNow() const
+{
+    return !IsAstral() && !IsTalking() && !IsDodging() && !GetCharacterMovement()->IsFalling()
+        && Gait != EGait::Hang && Gait != EGait::Swing && Gait != EGait::SwingLeap && Gait != EGait::WallRun && Gait != EGait::Climb
+        && Gait != EGait::WallSide && Gait != EGait::Ladder && Gait != EGait::Vault;
+}
+void AChuckCharacter::RunOn()
+{
+    const FVector Dir = StickWorld().GetSafeNormal2D();
+    if (StrafeHeld() || Dir.IsNearlyZero()) { FinishDodge(); return; }
+    auto* Movement = GetCharacterMovement();
+    const float Pace = bRunHeld ? RunSpeed : WalkSpeed;
+    Movement->Velocity = FVector(Dir.X * Pace, Dir.Y * Pace, Movement->Velocity.Z);
+    Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f);
+    RunWeight = RunBlendAt(Pace);
+}
 void AChuckCharacter::FinishDodge()
 {
     // Back to the aplomb stance the clips end on; saunter on if the stick is held.
@@ -1995,6 +2018,13 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     PreviousMotionLocation = Location;
     StateTime += DeltaSeconds;
     FadeWeight = FMath::Max(0.f, FadeWeight - FadeRate * DeltaSeconds);
+    // A dodge pressed a moment too soon goes off now (the stick as it is now, if pushed).
+    if (GetWorld()->GetTimeSeconds() - DodgeBufferedAt < DodgeBuffer && CanDodgeNow())
+    {
+        const FVector2D Now(SideInput(), InputForward);
+        ++BufferedDodges;
+        DodgeToward(Now.SizeSquared() > .04f ? Now : DodgeBufferedStick);
+    }
     const EGait GaitBefore = Gait;
     bBodyPitchLive = false;
     const bool bStrafe = StrafeHeld();
@@ -2237,7 +2267,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     }
     else if (Gait == EGait::Climb)
     {
-        BaseTime = bClimbReverse ? FMath::Max(0.f, BaseTime - DeltaSeconds) : BaseTime + DeltaSeconds;
+        BaseTime = bClimbReverse ? FMath::Max(0.f, BaseTime - DeltaSeconds) : BaseTime + DeltaSeconds * ClimbRate;
         const FVector2D Path = bClimbMantle ? PathAt(MantlePath, MantleFrames, BaseTime) : PathAt(PullUpPath, PullUpFrames, BaseTime);
         const float Forward = Path.X * ClimbAdvance / (bClimbMantle ? MantleAdvance : PullUpAdvance);
         const float Up = Path.Y * ClimbRise / (bClimbMantle ? MantleRefStep : PullUpRise);
@@ -2250,7 +2280,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             bClimbReverse = false;
             if (GetChuckClimbables().IsValidIndex(LadderIndex)) EnterLadder(LadderIndex);
         }
-        else if (!bClimbReverse && BaseTime >= Length)
+        else if (!bClimbReverse && (BaseTime >= Length
+            // On top with the stick held: off at once (the clip's last frames only settle his stance).
+            || (BaseTime >= ((bClimbMantle ? MantleFrames - 1 : PullUpFrames - 3) / 30.f) && StickWorld().SizeSquared2D() > .04f)))
         {
             // Never left inside anything (a roof, an attic): nudge out to the nearest clear spot.
             FVector Spot = GetActorLocation(); const FRotator Facing = GetActorRotation();
@@ -2262,7 +2294,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             Movement->SetMovementMode(MOVE_Walking);
             LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false;
             PreviousMotionLocation = GetActorLocation();
-            FinishDodge();
+            RunOn();
         }
     }
     else if (Gait == EGait::SideJump)
@@ -2294,7 +2326,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         }
         // Stick held: walk or run on as soon as the landing has settled a little.
         const bool bStick = FVector2D(SideInput(), InputForward).SizeSquared() > .04f;
-        if (bDodgeLanded && (BaseTime >= Length || (bStick && BaseTime >= SideLand + .15f))) FinishDodge();
+        if (bDodgeLanded && bStick && BaseTime >= SideLand + SideRunOn) RunOn();
+        else if (bDodgeLanded && BaseTime >= Length) FinishDodge();
     }
     else if (bAirborne)
     {
@@ -2466,7 +2499,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         BaseTime += DeltaSeconds;
         // Landing at a run carries straight on into the stride.
-        if (bInput && Speed > 10.f && (StateTime > .15f || Speed > WalkSpeed * 1.2f)) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f); RunWeight = RunBlendAt(Speed); }
+        if (bInput && Speed > 10.f && (StateTime > LandRunOn || Speed > WalkSpeed * 1.2f)) { Gait = EGait::Loop; WalkPhase = 0; SetClip(EClip::WalkLoop, 0, .12f); RunWeight = RunBlendAt(Speed); }
         else if (BaseTime >= Length) { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .2f); }
     }
     else if (Gait == EGait::Idle)

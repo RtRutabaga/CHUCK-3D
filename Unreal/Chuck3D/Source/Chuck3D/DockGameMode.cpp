@@ -657,6 +657,69 @@ void ADockGameMode::StartPlay()
     if(bCheeseOnly) { bSmokeTest=true; TestStage=133; CheeseSub=0; }
     // -ChuckRoofSurvey: a top-down height map of what Chuck can stand on (20 cm
     // grid, Pawn channel) to Saved/RoofSurvey.csv, for planning roof routes; then quit.
+    // -ChuckFlowTest (user 2026-10-12: pauses between moves): A) a side jump,
+    // then the stick forward: seconds from touchdown until he moves forward at
+    // 90% of walking pace; B) a roll pressed 0.12 s before he lands from a
+    // drop: whether it goes off, and seconds from touchdown until it does.
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckFlowTest")))
+    {
+        struct FFlow { int32 Stage=0; float T=0, Touch=-1, Result=-1, Pressed=-1; FVector From; bool bAir=false; };
+        TSharedPtr<FFlow> F=MakeShared<FFlow>();
+        FTimerHandle Flow;
+        GetWorldTimerManager().SetTimer(Flow,[this,F]()
+        {
+            auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+            if(!Chuck) return;
+            const float Dt=GetWorld()->GetDeltaSeconds(); F->T+=Dt;
+            auto* PC=Cast<APlayerController>(Chuck->GetController());
+            const FString Gait=Chuck->GetGaitName();
+            const bool bGround=Chuck->GetCharacterMovement()->IsMovingOnGround();
+            if(F->Stage==0 && F->T>2.f)
+            {
+                if(PC) Chuck->DisableInput(PC);
+                Chuck->ResetToDock(); Chuck->SetRunHeld(false); Chuck->SetTestStick(FVector2D::ZeroVector);
+                F->Stage=1; F->T=0;
+            }
+            else if(F->Stage==1 && F->T>.5f)
+            {
+                Chuck->DodgeToward(FVector2D(1,0)); F->Stage=2; F->T=0; F->bAir=false; F->Touch=-1;
+            }
+            else if(F->Stage==2)
+            {
+                // The stick goes forward as soon as he is off the ground, and stays.
+                if(!bGround) { F->bAir=true; Chuck->SetTestStickWorld(Chuck->GetActorForwardVector()); }
+                if(F->bAir && bGround && F->Touch<0) { F->Touch=F->T; F->From=Chuck->GetActorLocation(); }
+                const float Ahead=F->Touch<0 ? 0.f : static_cast<float>(FVector::DotProduct(Chuck->GetVelocity(),Chuck->GetActorForwardVector()));
+                if(F->Touch>=0 && Ahead>.9f*ChuckClipData::WalkSpeed && F->Result<0) F->Result=F->T-F->Touch;
+                if(F->T>3.f)
+                {
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_FLOW_SIDEJUMP_RUNON seconds=%.3f touch=%.3f gait=%s"),F->Result,F->Touch,*Gait);
+                    Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->ResetToDock();
+                    Chuck->SetActorLocation(Chuck->GetActorLocation()+FVector(0,0,70)); Chuck->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+                    F->Stage=3; F->T=0; F->Touch=-1; F->Result=-1; F->Pressed=-1;
+                }
+            }
+            else if(F->Stage==3)
+            {
+                // Falling; press the roll when the floor is about 0.12 s away.
+                FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckFlow),false,Chuck);
+                const float Half=Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+                const FVector At=Chuck->GetActorLocation();
+                const float Fall=-static_cast<float>(Chuck->GetVelocity().Z);
+                if(F->Pressed<0 && !bGround && Fall>0 && GetWorld()->LineTraceSingleByChannel(Hit,At,At-FVector(0,0,300),ECC_Visibility,Q)
+                    && (static_cast<float>(At.Z-Hit.ImpactPoint.Z)-Half)/Fall<.12f)
+                { F->Pressed=F->T; Chuck->DodgeToward(FVector2D(0,1)); }
+                if(F->Pressed>=0 && bGround && F->Touch<0) F->Touch=F->T;
+                if(F->Touch>=0 && F->Result<0 && Gait==TEXT("Roll")) F->Result=F->T-F->Touch;
+                if(F->T>3.f)
+                {
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_FLOW_AIR_ROLL pressed=%.3f touch=%.3f rolled_after=%.3f buffered=%d"),F->Pressed,F->Touch,F->Result,Chuck->GetBufferedDodges());
+                    FPlatformMisc::RequestExitWithStatus(false,0);
+                    F->Stage=4;
+                }
+            }
+        },1.f/120.f,true);
+    }
     // -ChuckRoofSurvey=x0,x1,y0,y1,step narrows it (and names what each trace hits).
     FString SurveyArea;
     const bool bSurveyArea=FParse::Value(FCommandLine::Get(),TEXT("ChuckRoofSurvey="),SurveyArea,false);

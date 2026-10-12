@@ -115,7 +115,7 @@ void StartLampSwingReview(UWorld* World)
                 {
                     bPass = bRoof && Chuck->GetPullUps() > Run->PullUps && (Run->Trial != 6 || Chuck->GetSwingDismounts() > Run->Kicks)
                         && (Run->Trial == 6 || Chuck->GetSwingCatches() == Run->Catches);
-                    if (Run->Trial == 1) bPass = bPass && Run->StartStamina > .99f && 1.f - Run->MinStamina > .05f && 1.f - Run->MinStamina < .3f;
+                    if (Run->Trial == 1) bPass = bPass && Run->StartStamina > .99f && 1.f - Run->MinStamina > .05f && 1.f - Run->MinStamina < .45f;   // user 2026-10-12: climbing drains more
                     if (Run->Trial == 7) bPass = bPass && Chuck->GetWallJumps() == Run->WallJumps && Run->MinStamina > .999f;
                     bDone = bPass && Run->Time - Run->LastJump > .6f;
                     if (bPass && !Run->OnRoof) { Run->OnRoof = true; Chuck->SetTestStick(FVector2D::ZeroVector); }
