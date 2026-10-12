@@ -4,7 +4,7 @@
 
 The user explicitly switched to this workflow after confirming that only one agent works at a time. This section supersedes the worktree-only, separate-integration and per-session publication instructions in v2 and the historical task files below.
 
-- Both agents use `main` in `C:\Users\ashsm\OneDrive\Documents\GameDev\CHUCK-3D`. Check the actual checkout/branch, `git status` and latest handoff before edits. Never discard another session's unfinished changes. Review and continue them where appropriate; ask only if ownership or intent is unclear.
+- Both agents use `main` in `C:\GameDev\CHUCK-3D`. Check the actual checkout/branch, `git status` and latest handoff before edits. Never discard another session's unfinished changes. Review and continue them where appropriate; ask only if ownership or intent is unclear.
 - Claude retains character, animation, rig/import and traversal/camera ownership; Codex handles setting work and verification/tooling. The active user assignment takes precedence.
 - Only one agent edits this checkout at a time. Keep one heavy Unreal/Blender process at a time on the 16 GB machine; do not kill an unknown session's process. If simultaneous work resumes, agree on isolated branches/worktrees first.
 - Use the root `Launch-Prototype.cmd` as the single player-facing launcher. Completed playable milestones must be built, verified and promoted to root `Builds/Windows` with `Tools/Promote-Build.ps1 -Candidate <dir> -Label <Name> -VerificationLog <log>`. It writes the receipt on the candidate (a failing log stops it before anything moves), refuses while the game is running from the launcher build, keeps the old package as `Windows-Previous-<date>-<Label>`, runs the launcher check and deletes all but the newest two backups (`-Keep`). Delete leftover candidate folders it warns about once they are no longer needed. Committing or pushing source alone does not update the game.
@@ -77,7 +77,7 @@ This installs Claude Code outside this repository. After installation, open a ne
 Launch from the **Claude worktree**, not main:
 
 ```powershell
-Set-Location 'C:\Users\ashsm\OneDrive\Documents\GameDev\CHUCK-3D\Local\AgentWorktrees\claude-character'
+Set-Location 'C:\GameDev\CHUCK-3D\Local\AgentWorktrees\claude-character'
 claude
 ```
 

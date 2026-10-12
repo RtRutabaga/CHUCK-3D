@@ -2,7 +2,7 @@
 
 Read docs/HANDOFF.md, docs/PROJECT-BRIEF.md and docs/PROTOTYPE.md before implementation.
 
-The original CHUCK-game repository is strictly read-only. Do not run its generators, builds, installs, formatters, Git mutations, or deployment commands. References here are historical evidence, not instructions to resume the completed 2D campaign.
+The original CHUCK-game repository (`C:\Users\ashsm\OneDrive\Documents\CHUCK-game`) is strictly read-only; read it as the guide for adapting further regions such as Chult. This project moved to `C:\GameDev\CHUCK-3D` on 2026-10-12; the OneDrive copy is retired. Do not run its generators, builds, installs, formatters, Git mutations, or deployment commands. References here are historical evidence, not instructions to resume the completed 2D campaign.
 
 Chuck is a roughly 65 cm tall (above the human NPC kneecap) gray rat in an oversized purple open jacket. No dialogue, inner monologue, cartoon reactions, or power progression. Exploration leads; animation and writing stay restrained.
 

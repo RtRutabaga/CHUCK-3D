@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:/Users/ashsm/OneDrive/Documents/CHUCK-game"
+    ],
+    "deny": [
+      "Edit(//c/Users/ashsm/OneDrive/Documents/CHUCK-game/**)",
+      "Write(//c/Users/ashsm/OneDrive/Documents/CHUCK-game/**)",
+      "NotebookEdit(//c/Users/ashsm/OneDrive/Documents/CHUCK-game/**)"
+    ]
+  }
+}

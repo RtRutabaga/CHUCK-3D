@@ -2,7 +2,9 @@
 
 Read docs/AGENT-WORKFLOW.md (the **v3 sequential workflow** at the top is current), docs/HANDOFF.md and docs/CHARACTER-PLAN.md. Follow the user's actual assignment when it differs from any task file.
 
-Work directly on `main` in `C:\Users\ashsm\OneDrive\Documents\GameDev\CHUCK-3D`. The user runs only one agent at a time; do not start in an old Claude worktree or create a fresh one by default. Check `git status`, branch and the latest handoff before editing; never reset, discard or overwrite unfinished work to make the checkout clean. If your app session is restricted to an old worktree, tell the user to reopen the root project rather than claiming to work on main or replacing worktree files blindly.
+Work directly on `main` in `C:\GameDev\CHUCK-3D`. The user runs only one agent at a time; do not start in an old Claude worktree or create a fresh one by default. Check `git status`, branch and the latest handoff before editing; never reset, discard or overwrite unfinished work to make the checkout clean. If your app session is restricted to an old worktree, tell the user to reopen the root project rather than claiming to work on main or replacing worktree files blindly.
+
+The original 2D game at `C:\Users\ashsm\OneDrive\Documents\CHUCK-game` is readable from this project (see `.claude/settings.json`) as the guide for adapting regions such as Chult; it stays strictly read-only.
 
 Claude retains character, rig, animation, groom, import and traversal/camera ownership; Codex handles the docks setting. World work was resumed by the user. Use the supplied reference JPGs as the visual target. The single player-facing launcher is the root `Launch-Prototype.cmd`; worktree builds do not update it.
 

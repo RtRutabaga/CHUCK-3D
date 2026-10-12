@@ -1,5 +1,15 @@
 # Handoff — 2026-09-27
 
+## October 12 — project moved out of OneDrive
+
+The working checkout is now **`C:\GameDev\CHUCK-3D`** (user request, to stop OneDrive syncing Unreal binaries). Copied with `robocopy` (16,796 files, 23.98 GB, 0 failures); `git worktree repair` fixed both `Local/AgentWorktrees` links; `git status` matched the old checkout line for line (same 40 pre-existing unfinished inputs, still unstaged); `git lfs fsck` OK; root launcher **CheckOnly** passes from the new path on **8d9c5d2**. The old OneDrive checkout was renamed `CHUCK-3D-OLD` and must not be used; delete it once the new location has been in use for a while.
+
+- Paths updated in `CLAUDE.md`, `AGENTS.md`, `docs/AGENT-WORKFLOW.md`, `docs/SETUP.md`. Tools resolve their own location and needed no change. Uasset files still record old import-source paths as metadata; import scripts pass explicit paths, so nothing depends on them.
+- New `.claude/settings.json` lets Claude read the original 2D game at `C:\Users\ashsm\OneDrive\Documents\CHUCK-game` and denies edits there. It stays in OneDrive.
+- Claude's per-project memory was copied to the new location's project folder. Codex and the Claude desktop app must be pointed at `C:\GameDev\CHUCK-3D`; open sessions in the old folder are stale.
+
+Next part of the work can be done here.
+
 ## October 12 — build promotion script; old builds pruned
 
 Tooling only, no runtime change (Claude). The user deleted about 290 old candidate and `Windows-Previous-*` packages (~195 GB) to free disk space; `Builds` now holds `Windows` (**8d9c5d2**), `Releases` and the two newest backups (`-20261011-KeeperRag`, `-20261012-Flow`). C: free space went from 40 GB to 231 GB.

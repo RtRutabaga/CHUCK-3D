@@ -2759,3 +2759,10 @@ Next part of the work can be done here.
 - **Why:** keeping every prior package left 293 build folders (~197 GB) in `Builds`. The user deleted all but `Windows`, `Releases` and the two newest backups.
 - **Tested:** scratch build tree only (failing log, normal promotion with pruning, running-game guard), all as intended. Real launcher `-CheckOnly` passes on `8d9c5d2`. First real use will be the next playable milestone.
 - **Flaws:** pruning sorts by folder creation time (the package's build time), not the date in the name; leftover candidate folders are only warned about.
+
+## Project moved to C:\GameDev\CHUCK-3D (October 12)
+
+- **Source:** base `fc55f2a`. Path updates in `CLAUDE.md`, `AGENTS.md`, `docs/AGENT-WORKFLOW.md`, `docs/SETUP.md`; new `.claude/settings.json` (read access to the 2D game, edits denied). No runtime change.
+- **Tested:** robocopy 0 failures; worktree repair; identical `git status`; `git lfs fsck` OK; launcher `-CheckOnly` passes from the new path. No Unreal build run from the new path yet: the first build will regenerate Intermediate paths, which is expected.
+- **Not verified:** the deny rules on the 2D game folder were not exercised; they take effect in sessions opened at the new path.
+

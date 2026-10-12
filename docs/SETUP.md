@@ -50,7 +50,7 @@ Source checked: [Epic hardware/software requirements](https://dev.epicgames.com/
 
 Planning allowance, not vendor download sizes: reserve 100–150 GiB for editor, caches, project growth and packaging, keeping at least 100 GiB free. Recheck the launcher's actual selection size and disk space before installation. Store installations and caches outside the repository.
 
-The workspace is under OneDrive. Avoid concurrent sync/edit of Unreal binary assets; Git is the history source. If synchronization causes locks, arrange a separate nonsynced checkout rather than moving this project or the original without discussion.
+Since 2026-10-12 the project lives at `C:\GameDev\CHUCK-3D`, outside OneDrive (the user approved the move to avoid sync locks on Unreal binaries; Git and GitHub are the history source). The old OneDrive copy was renamed `CHUCK-3D-OLD` and is not a working checkout. The original 2D game stays at `C:\Users\ashsm\OneDrive\Documents\CHUCK-game`, read-only.
 
 ## Git, binary assets, and deployment
 
