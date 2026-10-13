@@ -1,4 +1,6 @@
 #include "ChultLanding.h"
+#include "ChultRootProfiles.h"
+#include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
 #include "ChuckCharacter.h"
@@ -104,17 +106,19 @@ void AChultLanding::Build()
     Attach(Sun,FVector::ZeroVector,FRotator(-30,20,0));
     auto* Fill=NewObject<USkyLightComponent>(this);
     Fill->SetMobility(EComponentMobility::Movable); Fill->bRealTimeCapture=true;
-    Fill->SetIntensity(.7f); Attach(Fill);
+    Fill->SetIntensity(.35f); Attach(Fill);
     auto* Fog=NewObject<UExponentialHeightFogComponent>(this);
-    Fog->SetFogDensity(.05f); Fog->SetFogHeightFalloff(20); Fog->SetVolumetricFog(true);
-    Fog->SetVolumetricFogDistance(7000); Fog->SetFogInscatteringColor(FLinearColor(.12f,.2f,.16f)); Attach(Fog);
+    Fog->SetFogDensity(.035f); Fog->SetFogHeightFalloff(.18f); Fog->SetVolumetricFog(true);
+    Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.12f,.23f,.21f)); Attach(Fog);
     auto* Post=NewObject<UPostProcessComponent>(this);
     Post->bUnbound=true; Post->Priority=100;
     auto& P=Post->Settings;
     P.bOverride_AutoExposureMethod=true; P.AutoExposureMethod=AEM_Histogram;
     P.bOverride_AutoExposureMinBrightness=true; P.AutoExposureMinBrightness=-2;
     P.bOverride_AutoExposureMaxBrightness=true; P.AutoExposureMaxBrightness=10;
-    P.bOverride_AutoExposureBias=true; P.AutoExposureBias=-.7f;
+    P.bOverride_AutoExposureBias=true; P.AutoExposureBias=-1.7f;
+    P.bOverride_ColorSaturation=true; P.ColorSaturation=FVector4(.82f,.9f,.82f,1);
+    P.bOverride_ColorGain=true; P.ColorGain=FVector4(.88f,.97f,.91f,1);
     P.bOverride_BloomIntensity=true; P.BloomIntensity=.4f;
     P.bOverride_AmbientOcclusionIntensity=true; P.AmbientOcclusionIntensity=.6f;
     Attach(Post);
@@ -123,6 +127,51 @@ void AChultLanding::Build()
     Floor->SetStaticMesh(Cube); Floor->SetMaterial(0,JungleMaterial(TEXT("M_FallGround")));
     Floor->SetCollisionProfileName(TEXT("BlockAll")); Floor->SetCastShadow(false);
     Floor->SetWorldScale3D(FVector(260,260,1)); Attach(Floor,FVector(0,0,-50));
+
+    // One query mesh follows the existing art's buttress fins, without turning
+    // broad foliage into collision or allocating thousands of root actors.
+    TArray<FVector> RootVertices; TArray<int32> RootTriangles;
+    auto Solid=[&](const TArray<FVector>& V)
+    {
+        const int32 Base=RootVertices.Num(); RootVertices.Append(V);
+        const int32 Faces[]={0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7};
+        for(int32 I=0;I<UE_ARRAY_COUNT(Faces);I+=3)
+            if(FVector::CrossProduct(V[Faces[I+1]]-V[Faces[I]],V[Faces[I+2]]-V[Faces[I]]).SizeSquared()>1.e-4f)
+                for(int32 J=0;J<3;++J) RootTriangles.Add(Base+Faces[I+J]);
+    };
+    auto Roots=[&](FVector At,float Yaw,float Scale,bool TypeA)
+    {
+        const auto* Profiles=TypeA?ChultRoots::A:ChultRoots::B;
+        const int32 Count=TypeA?UE_ARRAY_COUNT(ChultRoots::A):UE_ARRAY_COUNT(ChultRoots::B);
+        const float BaseRadius=TypeA?78.f:62.f;
+        const FTransform Transform(FRotator(0,Yaw,0),At,FVector(Scale));
+        for(int32 K=0;K<Count;++K) for(int32 J=0;J<8;++J)
+        {
+            const auto& R=Profiles[K];
+            const FVector Out=FRotator(0,R.Angle,0).Vector(),Side(-Out.Y,Out.X,0);
+            TArray<FVector> V;
+            for(int32 End=0;End<2;++End)
+            {
+                const float T=(J+End)/8.f, Radius=FMath::Lerp(BaseRadius*.7f,R.Reach,T);
+                const float Z=R.Top*FMath::Pow(1.f-T,2.2f)-6;
+                for(const FVector Local : {Out*Radius-Side*R.Width+FVector(0,0,-10),Out*Radius+Side*R.Width+FVector(0,0,-10),
+                    Out*Radius+Side*R.Width+FVector(0,0,Z),Out*Radius-Side*R.Width+FVector(0,0,Z)})
+                    V.Add(Transform.TransformPosition(Local));
+            }
+            Solid(V);
+        }
+        // The trunk flares to 2.1 times its nominal radius at ground level.
+        // Match that base with a tapered twelve-sided collar below the capsule.
+        for(int32 K=0;K<12;++K)
+        {
+            const FVector A=FRotator(0,K*30.f,0).Vector(),B=FRotator(0,(K+1)*30.f,0).Vector();
+            TArray<FVector> V;
+            for(const FVector Local : {FVector(0,0,-10),A*BaseRadius*2.1f+FVector(0,0,-10),B*BaseRadius*2.1f+FVector(0,0,-10),FVector(0,0,-10),
+                FVector(0,0,360),A*BaseRadius+FVector(0,0,360),B*BaseRadius+FVector(0,0,360),FVector(0,0,360)})
+                V.Add(Transform.TransformPosition(Local));
+            Solid(V);
+        }
+    };
 
     TMap<FString,UHierarchicalInstancedStaticMeshComponent*> Sets;
     auto Place=[&](const TCHAR* Name,FVector At,float Yaw,float Scale)
@@ -159,7 +208,8 @@ void AChultLanding::Build()
     for(const auto& T:Trees)
     {
         const FVector At(T.X,T.Y,0); Place(T.Name,At,T.Yaw,T.Scale);
-        if(FString(T.Name).Contains(TEXT("Tree"))) Trunk(At,70*T.Scale,2700*T.Scale);
+        if(FString(T.Name).Contains(TEXT("Tree")))
+        { const bool A=FString(T.Name).EndsWith(TEXT("_A")); Trunk(At,(A?78:62)*T.Scale,2700*T.Scale); Roots(At,T.Yaw,T.Scale,A); }
         else if(FString(T.Name).Contains(TEXT("Palm"))) Trunk(At,14*T.Scale,700*T.Scale);
     }
     FRandomStream R(1994);
@@ -170,8 +220,9 @@ void AChultLanding::Build()
         FVector At(X+R.FRandRange(-260,260),Y+R.FRandRange(-260,260),0);
         if(At.Size2D()<3000 || At.Size2D()>9000 || OnRoute(At,400)) continue;
         float Scale=R.FRandRange(.75f,1.3f);
-        Place(R.FRand()<.5f?TEXT("SM_FallTree_A"):TEXT("SM_FallTree_B"),At,R.FRandRange(0,360),Scale);
-        Trunk(At,70*Scale,2700*Scale); ++TreeCount;
+        const bool A=R.FRand()<.5f; const float Yaw=R.FRandRange(0,360);
+        Place(A?TEXT("SM_FallTree_A"):TEXT("SM_FallTree_B"),At,Yaw,Scale);
+        Trunk(At,(A?78:62)*Scale,2700*Scale); Roots(At,Yaw,Scale,A); ++TreeCount;
     }
     Place(TEXT("SM_FallCrown"),FVector(60,-40,3300),40,.7f);
     Place(TEXT("SM_FallCrown"),FVector(-90,30,2250),160,.5f);
@@ -180,7 +231,9 @@ void AChultLanding::Build()
     {
         FVector At(R.FRandRange(-8000,8000),R.FRandRange(-8000,8000),0);
         if(At.Size2D()>8500 || OnRoute(At,230)) continue;
-        Place(Under[R.RandRange(0,3)],At,R.FRandRange(0,360),R.FRandRange(.65f,1.3f));
+        const int32 Type=R.RandRange(0,3); const float Yaw=R.FRandRange(0,360),Scale=R.FRandRange(.65f,1.3f);
+        Place(Under[Type],At,Yaw,Scale);
+        if(Type==3) Trunk(At,14*Scale,700*Scale);
     }
     Place(TEXT("SM_FallFern"),FVector(330,210,0),40,1.1f);
     // Layered foliage at the route edges: keep the playable centre unobscured.
@@ -197,6 +250,11 @@ void AChultLanding::Build()
     auto* Timber=NewObject<UBoxComponent>(this);
     Timber->SetBoxExtent(FVector(420,45,48)); Timber->SetCollisionProfileName(TEXT("BlockAll"));
     Attach(Timber,FVector(3350,950,58),FRotator(0,15,0));
+    auto* RootCollision=NewObject<UProceduralMeshComponent>(this,TEXT("ChultRootCollision"));
+    RootCollision->bUseComplexAsSimpleCollision=true;
+    RootCollision->CreateMeshSection(0,RootVertices,RootTriangles,TArray<FVector>(),TArray<FVector2D>(),TArray<FColor>(),TArray<FProcMeshTangent>(),true);
+    RootCollision->SetCollisionProfileName(TEXT("BlockAll")); RootCollision->SetHiddenInGame(true); RootCollision->SetCastShadow(false); Attach(RootCollision);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOTS triangles=%d trees=%d"),RootTriangles.Num()/3,TreeCount);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -211,6 +269,23 @@ void AChultLanding::VerifyAndCapture()
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
+    int32 RootFailures=0;
+    const FTransform Tree(FRotator(0,30,0),FloorOrigin()+FVector(-760,200,0),FVector(1.4f));
+    for(const auto& Root : ChultRoots::A)
+    {
+        const FVector Out=FRotator(0,Root.Angle,0).Vector(),Side(-Out.Y,Out.X,0);
+        const FVector At=Out*FMath::Lerp(78.f*.7f,Root.Reach,.6f)+FVector(0,0,(Root.Top*FMath::Pow(.4f,2.2f)-6)*.5f);
+        FHitResult Hit;
+        const bool RayBlocked=GetWorld()->LineTraceSingleByChannel(Hit,Tree.TransformPosition(At+Side*60),Tree.TransformPosition(At-Side*60),ECC_Pawn,Q)
+            && Hit.GetComponent() && Hit.GetComponent()->GetFName()==TEXT("ChultRootCollision");
+        FVector Body=Tree.TransformPosition(At); Body.Z=FloorOrigin().Z+Half+3;
+        const FVector Across=Tree.TransformVectorNoScale(Side)*90.f;
+        const bool BodyBlocked=GetWorld()->SweepSingleByChannel(Hit,Body+Across,Body-Across,FQuat::Identity,ECC_Pawn,FCollisionShape::MakeCapsule(Radius,Half),Q)
+            && Hit.GetComponent() && Hit.GetComponent()->GetFName()==TEXT("ChultRootCollision");
+        RootFailures+=!RayBlocked || !BodyBlocked;
+    }
+    Failures+=RootFailures;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOT_CHECK failures=%d outer_roots=%d"),RootFailures,UE_ARRAY_COUNT(ChultRoots::A));
     for(int32 I=1;I<UE_ARRAY_COUNT(Route);++I)
     {
         const FVector A=FloorOrigin()+Route[I-1],B=FloorOrigin()+Route[I];

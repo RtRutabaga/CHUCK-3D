@@ -1,5 +1,6 @@
 #include "DockPantry.h"
 #include "ChuckCharacter.h"
+#include "ChultLanding.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
 #include "SewerSlide.h"
@@ -387,8 +388,7 @@ void BuildDockPantry(UWorld* World)
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckDemoEndTest")))
     {
         // The sky hole starts the fall to Chult (FallCutscene.h); the floor and
-        // the Astral ruptures don't. Esc skips the cutscene to the end card,
-        // and Esc there exits.
+        // the Astral ruptures don't. Esc skips to playable Chult.
         auto Failures=MakeShared<int32>(0);
         FTimerHandle FloorTest,RiftTest,SkyTest,Check,Shot,Skip,EndCheck,EndShot,Escape,Watchdog;
         const auto Player=[World](){return Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());};
@@ -401,6 +401,7 @@ void BuildDockPantry(UWorld* World)
         World->GetTimerManager().SetTimer(SkyTest,[Player,Failures](){
             *Failures+=Player()->HasDemoEnded() || Player()->IsInFallCutscene();
             Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
+            Player()->SetSanity(3); Player()->SetStamina(.4f);
             Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
         },4.f,false);
         World->GetTimerManager().SetTimer(Check,[Player,Failures](){
@@ -415,14 +416,25 @@ void BuildDockPantry(UWorld* World)
             World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
         },8.f,false);
         World->GetTimerManager().SetTimer(EndCheck,[Player](){
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_SKIP_TEST failures=%d card=%d"),!Player()->HasDemoEnded(),Player()->HasDemoEnded());
+            auto* C=Player(); auto* PC=Cast<APlayerController>(C->GetController());
+            const bool Playable=!C->HasDemoEnded() && !C->IsInFallCutscene() && C->GetActorEnableCollision()
+                && C->GetCharacterMovement()->IsMovingOnGround() && C->InputEnabled() && PC->GetViewTarget()==C
+                && C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f) && C->GetSanity()==3;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_SKIP_TEST failures=%d landing=%d"),!Playable,Playable);
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
         },9.f,false);
         World->GetTimerManager().SetTimer(EndShot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},9.3f,false);
         World->GetTimerManager().SetTimer(Escape,[World](){
-            World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
+            auto* PC=World->GetFirstPlayerController(); auto* C=Cast<AChuckCharacter>(PC->GetPawn());
+            const bool Moved=C->GetActorLocation().X>AChultLanding::Entrance().X+20;
+            PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Released,0));
+            C->RespawnAtAreaStart();
+            const bool Local=C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_INPUT_TEST failures=%d moved=%d local_reset=%d"),!Moved+!Local,Moved,Local);
+            PC->ConsoleCommand(TEXT("quit"));
         },10.f,false);
         World->GetTimerManager().SetTimer(Watchdog,[World](){
-            UE_LOG(LogTemp,Error,TEXT("CHUCK_DEMO_EXIT_TEST failures=1 escape_did_not_exit=1"));
+            UE_LOG(LogTemp,Error,TEXT("CHUCK_CHULT_INPUT_TEST failures=1 watchdog=1"));
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
         },13.f,false);
     }
@@ -436,10 +448,15 @@ void BuildDockPantry(UWorld* World)
             Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
             Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
         },2.f,false);
-        World->GetTimerManager().SetTimer(Card,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("FallCutscene/EndCard.png"),true,false);},52.f,false);
+        World->GetTimerManager().SetTimer(Card,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("FallCutscene/PlayableLanding.png"),true,false);},52.f,false);
         World->GetTimerManager().SetTimer(Done,[World,Player](){
-            const bool Ended=Player()->HasDemoEnded();
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_CUTSCENE_TEST failures=%d card=%d"),!Ended,Ended);
+            auto* C=Player(); auto* PC=World->GetFirstPlayerController();
+            FHitResult FloorHit;
+            const bool Supported=World->LineTraceSingleByChannel(FloorHit,C->GetActorLocation(),C->GetActorLocation()-FVector(0,0,100),ECC_Visibility);
+            const bool Landed=!C->HasDemoEnded() && !C->IsInFallCutscene() && C->InputEnabled()
+                && C->GetActorEnableCollision() && C->GetCharacterMovement()->IsMovingOnGround()
+                && C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f) && Supported && PC->GetViewTarget()==C;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_CUTSCENE_TEST failures=%d landing=%d"),!Landed,Landed);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
         },53.f,false);
     }

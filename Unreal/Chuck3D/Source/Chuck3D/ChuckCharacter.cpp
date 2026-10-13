@@ -2766,9 +2766,25 @@ void AChuckCharacter::BeginFallCutscene()
 }
 void AChuckCharacter::EndFallCutscene()
 {
+    // The cinematic is finished before the preview helper hides its stage.
+    // Reuse its isolated-world setup, then restore gameplay without refilling state.
+    const int32 KeptSanity=Sanity;
+    const float KeptStamina=Stamina, KeptLock=StaminaLockUntil;
+    AChultLanding::EnterPreview(GetWorld());
     bCutscene=false;
-    bDemoEnded=true;
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END_CARD"));
+    bDemoEnded=false;
+    SetActorEnableCollision(true);
+    ResetAtLocation(AChultLanding::Entrance());
+    Sanity=KeptSanity; Stamina=KeptStamina; StaminaLockUntil=KeptLock;
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    NextExhaleAt=GetWorld()->GetTimeSeconds()+8.f;
+    if(auto* PC=Cast<APlayerController>(Controller))
+    {
+        EnableInput(PC);
+        PC->SetViewTarget(this);
+    }
+    FallScene.Reset();
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_HANDOFF playable=1 at=%s sanity=%d stamina=%.3f"),*GetActorLocation().ToString(),Sanity,Stamina);
 }
 void AChuckCharacter::UpdateCutscenePose(float DeltaSeconds)
 {

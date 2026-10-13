@@ -35,19 +35,19 @@ if ($MotionCapture) {
 $demoLog=Join-Path $evidence ('verify-demo-end-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $demoProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckDemoEndTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$demoLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($demoProcess.ExitCode -or !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_END_TEST failures=0 sky_ends=1 floor_and_astral_continue=1 reset_blocked=1' -Quiet) -or
-   !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_SKIP_TEST failures=0 card=1' -Quiet) -or
-   !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_EXIT escape=1' -Quiet) -or
-   (Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_EXIT_TEST failures=1|Fatal error:' -Quiet)) {
-    throw "Demo ending, cutscene skip or Escape verification failed. Inspect $demoLog"
+   !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_SKIP_TEST failures=0 landing=1' -Quiet) -or
+   !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_CHULT_INPUT_TEST failures=0 moved=1 local_reset=1' -Quiet) -or
+   (Select-String -LiteralPath $demoLog -Pattern 'CHUCK_CHULT_INPUT_TEST failures=1|Fatal error:' -Quiet)) {
+    throw "Cutscene skip, playable landing or local reset verification failed. Inspect $demoLog"
 }
 # The fall to Chult played through (Claude, FallCutscene.h): music and cloud,
-# the crash, the astral death and return, two drags, then the end card.
+# the crash, the astral death and return, two drags, then playable Chult.
 $fallLog=Join-Path $evidence ('verify-fall-cutscene-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $fallProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckFallCutsceneTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fallLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_START .* music=1 wind=1 crashes=3' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_MUSIC playing=1' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_END at=4[0-9.]+ skipped=0 landed=1 vanished=1 summoned=1 exhales=2' -Quiet) -or
-   !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_TEST failures=0 card=1' -Quiet) -or
+   !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_TEST failures=0 landing=1' -Quiet) -or
    (Select-String -LiteralPath $fallLog -Pattern 'Fatal error:' -Quiet)) {
     throw "Fall-to-Chult cutscene verification failed. Inspect $fallLog"
 }

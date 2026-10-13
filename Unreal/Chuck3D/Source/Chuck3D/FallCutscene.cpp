@@ -652,6 +652,8 @@ void AFallCutscene::Finish()
     if (Music) Music->Stop();
     if (Wind) Wind->Stop();
     if (AChuckCharacter* C = Chuck.Get()) C->EndFallCutscene();
+    if (Camera) Camera->Destroy();
+    Destroy();
 }
 
 void AFallCutscene::Tick(float DeltaSeconds)

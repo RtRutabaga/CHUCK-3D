@@ -25,8 +25,8 @@ class UExponentialHeightFogComponent;
  * The clock is song time; bar lines at 0.55 + 1.879 k s (128 bpm).
  *
  * No player control: Esc skips to the end. The jungle here is the cutscene's
- * own set (Tools/build_fall_jungle.py) on a stage far from the docks; the
- * playable Chult landing is not built yet, so the end is still the demo card.
+ * own set (Tools/build_fall_jungle.py) on a stage far from the docks. Completion
+ * and Esc-skip both restore gameplay in the matching Chult landing setting.
  */
 UCLASS()
 class CHUCK3D_API AFallCutscene : public AActor

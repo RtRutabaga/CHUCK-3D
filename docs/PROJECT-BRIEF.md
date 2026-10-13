@@ -45,8 +45,8 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 2D phase | Region | 3D status |
 | --- | --- | --- |
 | 2 | Waterdeep docks, fountain plaza, sewer tutorial | Done (the prototype) |
-| 3 | Tavern, pantry, fall to Chult | Done: the sky-hole fall plays the fall-to-Chult cutscene, which ends on the "End of demo" card until Chult's landing exists |
-| 4 | Chult jungle | Started: verified landing setting preview via Dev Checkpoints; production cutscene handoff and farther jungle remain |
+| 3 | Tavern, pantry, fall to Chult | Done: full cutscene and Escape-skip both enter playable Chult landing |
+| 4 | Chult jungle | Started: verified playable landing, local respawn and ground loop; farther jungle remains |
 | 5 | Deeper into Chult | — |
 | 6 | The jungle temple | — |
 | 7 | The pirate ship | — |

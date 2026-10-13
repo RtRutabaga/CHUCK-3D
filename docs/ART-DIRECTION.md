@@ -1,5 +1,13 @@
 # Art direction
 
+## Chult jungle references — October 12, 2026
+
+The user's four supplied reference images are preserved in `References/ArtDirection/Chult/1-Photo-1.jpg` through `4-Photo-4.jpg`. Use them for Chult's overall visual direction: monumental irregular trees and broad buttress roots; overlapping dark green understory; damp earth, moss and restrained wet reflections; cool green/teal atmospheric depth with localized warm canopy light. Keep Chuck and traversal surfaces readable at rat height. Leaves move gently; bark, trunks and solid roots remain rigid. Solid outer trunks and roots need collision matching their visible forms, while broad decorative leaves remain noncolliding.
+
+The images' ruined stone, abandoned expedition remnants and mist-obscured undead guide later region dressing. They are inspiration, not instructions to reproduce their characters or add all their scenery to the landing at once. The current procedural tree kit is provisional; lighting/material adjustments do not establish that this target has been reached.
+
+## Character and Waterdeep references
+
 The user supplied two character images on 2026-09-24 and requested Baldur's Gate 3 quality as the long-term graphics target. These images take precedence over the procedural model for future visual development. They are reference only, not game-ready assets.
 
 - Chuck: believable upright rat anatomy, a defined muzzle and whiskers, rounded translucent ears, small paws/claws, a long segmented tail, and layered natural gray-brown fur with a lighter chest. Preserve his quiet, observant characterization; do not derive exaggerated reactions or combat behavior from the dynamic pose.

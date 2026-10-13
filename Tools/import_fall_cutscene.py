@@ -136,7 +136,7 @@ def leaves(tex):
         mat.set_editor_property('opacity_mask_clip_value', .4)
         vc = node(mat, unreal.MaterialExpressionVertexColor)
         s = sample(mat, tex)
-        bright = lerp(mat, const(mat, .55), const(mat, 1.0), vc, 'R')
+        bright = lerp(mat, const(mat, .44), const(mat, .8), vc, 'R')
         hue = lerp(mat, colour(mat, .9, 1.0, .7), colour(mat, .7, .95, .8), vc, 'G')
         base = mul(mat, mul(mat, s, hue, 'RGB'), bright)
         dried = base   # (a vertex-blue dryness tint read as flat cream on some leaves; dropped)
@@ -146,7 +146,7 @@ def leaves(tex):
         out(mat, const(mat, .7), unreal.MaterialProperty.MP_ROUGHNESS)
         out(mat, const(mat, .2), unreal.MaterialProperty.MP_SPECULAR)
         weight = mul(mat, vc, vc, 'A', 'A')
-        out(mat, wind(mat, 6., weight), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+        out(mat, wind(mat, 1.5, weight), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
     return build
 
 
@@ -159,7 +159,7 @@ def canopy(mat):
     out(mat, mul(mat, g, lerp(mat, const(mat, .75), const(mat, 1.2), vc, 'R')), unreal.MaterialProperty.MP_BASE_COLOR)
     out(mat, const(mat, .85), unreal.MaterialProperty.MP_ROUGHNESS)
     out(mat, const(mat, .3), unreal.MaterialProperty.MP_SPECULAR)
-    out(mat, wind(mat, 3., mul(mat, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+    out(mat, wind(mat, .75, mul(mat, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
 
 def bark(tex, nrm):
@@ -167,7 +167,7 @@ def bark(tex, nrm):
         vc = node(mat, unreal.MaterialExpressionVertexColor)
         uv = node(mat, unreal.MaterialExpressionTextureCoordinate, u_tiling=1., v_tiling=1.)
         s = sample(mat, tex, uv)
-        base = mul(mat, s, lerp(mat, const(mat, .7), const(mat, 1.2), vc, 'R'), 'RGB')
+        base = mul(mat, mul(mat, s, lerp(mat, const(mat, .7), const(mat, 1.2), vc, 'R'), 'RGB'), colour(mat, .7, .8, .65))
         up = mask(mat, node(mat, unreal.MaterialExpressionVertexNormalWS), b=True)
         upward = node(mat, unreal.MaterialExpressionClamp); link(add(mat, mul(mat, up, const(mat, 1.5)), const(mat, .3)), upward, '')
         moss = mul(mat, mul(mat, mul(mat, s, vc, 'A', 'G'), upward), const(mat, 1.4))
@@ -176,7 +176,8 @@ def bark(tex, nrm):
         out(mat, sample(mat, nrm, uv, normal=True), unreal.MaterialProperty.MP_NORMAL, 'RGB')
         out(mat, const(mat, .9), unreal.MaterialProperty.MP_ROUGHNESS)
         out(mat, const(mat, .25), unreal.MaterialProperty.MP_SPECULAR)
-        out(mat, wind(mat, 4., mul(mat, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+        # Wood stays rigid, including branches/lianas with nonzero vertex alpha.
+        out(mat, colour(mat, 0., 0., 0.), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
     return build
 
 
@@ -189,9 +190,9 @@ def ground(tex, nrm):
         s = sample(mat, tex, uv)
         m = sample(mat, tex, macro_uv)
         base = mul(mat, mul(mat, s, add(mat, mul(mat, m, const(mat, .8), 'G'), const(mat, .65)), 'RGB'), const(mat, 1.))
-        out(mat, base, unreal.MaterialProperty.MP_BASE_COLOR)
+        out(mat, mul(mat, base, colour(mat, .6, .75, .55)), unreal.MaterialProperty.MP_BASE_COLOR)
         out(mat, sample(mat, nrm, uv, normal=True), unreal.MaterialProperty.MP_NORMAL, 'RGB')
-        out(mat, const(mat, .88), unreal.MaterialProperty.MP_ROUGHNESS)
+        out(mat, const(mat, .68), unreal.MaterialProperty.MP_ROUGHNESS)
         out(mat, const(mat, .3), unreal.MaterialProperty.MP_SPECULAR)
     return build
 
