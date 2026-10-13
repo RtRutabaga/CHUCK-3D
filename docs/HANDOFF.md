@@ -26,6 +26,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - `Verify-Package` gave **182 passes, 0 failures**, identical to the previous launcher build's run (`Local/verify-package-20261012-174110.log` vs `-102556.log`).
   - `Verify-Menu` passed **7/7** destinations (`Local/verify-menu-20261012-174835-*.log`).
   - The `Harbor_Elevated` capture is identical to the previous build's.
+- **Launcher:** promoted with `Promote-Build.ps1 -Label Rename`. `Builds/Windows` is now **a0ea6c6**, with the receipt `chuck-build.json`, and `Launch-Chuck.ps1 -CheckOnly` passes. The previous build is kept as `Windows-Previous-20261012-Rename`, and `KeeperRag` was pruned. The launcher opened the game once during checking (I closed it).
 - **Not tested:** physical Xbox play. The legacy `SK_ChuckBody` meshes are no longer used by the game; they were only re-saved.
 
 Next part of the work could be done by either — preference: the user reviews regions/CHULT.md first, then Claude does the fall to Chult.
