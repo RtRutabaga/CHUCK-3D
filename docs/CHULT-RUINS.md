@@ -46,3 +46,28 @@ remain manual playtest work; Claude owns any subsequent traversal/camera fixes
 and activation of the canopy's proposed brachiation grips.
 
 Next part of the work can be done here: implement and verify these ruins.
+
+## October 13 — gray mossy ruin finish (user-approved)
+
+The user approved Rock Wall 08 as the gray base, Mossy Stone Wall for heavier
+moss/aged joints, and Rabdentse Ruins Wall for worn dark stone, with rounded
+stone geometry. This updates the existing grove ruins only; cliffs stay deferred.
+
+Material contract: the existing two-section procedural mesh keeps section 0 for
+structural gray stone and section 1 for mossier stone/recessed backing. New
+isolated materials are `/Game/Art/ChultRuins/M_RuinStone` and
+`/Game/Art/ChultRuins/M_RuinMoss`; their nine verified 2K scan maps live in the
+same folder. Existing shared stone, rock, jungle and character materials are
+not rebuilt. Maps are Poly Haven CC0, with original URLs and provider MD5 plus
+local SHA-256 in `SourceAssets/Setting/ChultRuins/manifest.json`.
+
+Blocks get rounded corners and curved upper/lower edge bands, with seeded
+variation in corner wear. Preserve nominal extents, standing heights, mantle
+steps, 100 cm terrace gap, 120 cm stairwell and the fork stone landing. The
+rendered surfaces continue to supply collision. Flat centres remain usable for
+standing/climbing. No shader displacement or decorative hidden collision.
+Gray stone and moss use world-aligned mapping; moss is heavier in joints,
+damp lower areas and irregular surface patches, with brighter moss on ledges.
+All five real-character ruin trials and the ground/top checks must pass after
+the shape change. Review cooked views and promote a verified candidate through
+the root launcher; record actual results, not planned checks.

@@ -203,3 +203,9 @@ replace continuous impossible branches with separate natural reaching boughs and
 jump gaps, and add broader realistic roots. Preserve the ruin connection and
 ground lanes. Boundary cliffs remain explicitly deferred. The revised setting
 contract is in CHULT-CANOPY.md; active traversal integration remains Claude's work.
+
+October 13 approval: implement the researched free gray stone wall scans and
+heavier moss on the existing grove ruins, and round/erode the stone blocks.
+Rock Wall 08, Mossy Stone Wall and Rabdentse Ruins Wall are the selected CC0
+sources. Preserve parkour routes and the stone-to-tree connection. Cliffs remain
+deferred; material/geometry contract is recorded in CHULT-RUINS.md.
