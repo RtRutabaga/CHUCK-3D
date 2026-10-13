@@ -22,6 +22,13 @@ def asset(path):
 
 def old(name): return asset(scope['DEST'] + '/' + name)
 
+def scan(name): return asset('/Game/Art/ChultNature/T_' + name + '_2k')
+
+def packed(m, tex, uv):
+    s = sample(m, tex, uv)
+    s.set_editor_property('sampler_type', unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    return s
+
 def noise(m, scale, levels=2):
     n = node(m, unreal.MaterialExpressionNoise, scale=scale, levels=levels,
              quality=1, output_min=0., output_max=1.)
@@ -74,10 +81,18 @@ def ground(m):
     s = sample(m, old('T_FallGround'), uv)
     damp = noise(m, .008, 3)
     moss = custom(m, 'return smoothstep(.65,.84,N);', {'N': noise(m, .0035, 3)}, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
-    litter = mul(m, s, colour(m, .37, .43, .28), 'RGB')
+    scan_uv = mul(m, mask(m, pos, r=True, g=True), const(m, 1/320.))
+    soil = sample(m, scan('forest_ground_04_diff'), scan_uv)
+    soil_mix = custom(m, 'return smoothstep(.25,.75,N)*.65;', {'N': damp}, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    litter = lerp(m, mul(m, s, colour(m, .37, .43, .28), 'RGB'),
+                  mul(m, soil, colour(m, .60, .65, .51), 'RGB'), soil_mix)
     patch = lerp(m, colour(m, .024, .037, .011), colour(m, .065, .079, .024), noise(m, .05))
     out(m, lerp(m, litter, patch, moss), unreal.MaterialProperty.MP_BASE_COLOR)
-    out(m, sample(m, old('T_FallGround_N'), uv, normal=True), unreal.MaterialProperty.MP_NORMAL, 'RGB')
+    n = lerp(m, sample(m, old('T_FallGround_N'), uv, normal=True),
+             sample(m, scan('forest_ground_04_nor_dx'), scan_uv, normal=True), soil_mix)
+    normalized = node(m, unreal.MaterialExpressionNormalize); scope['link'](n, normalized, '')
+    out(m, normalized, unreal.MaterialProperty.MP_NORMAL)
+    out(m, packed(m, scan('forest_ground_04_arm'), scan_uv), unreal.MaterialProperty.MP_AMBIENT_OCCLUSION, 'R')
     out(m, lerp(m, lerp(m, const(m, .30), const(m, .72), damp), const(m, .87), moss), unreal.MaterialProperty.MP_ROUGHNESS)
     out(m, const(m, .38), unreal.MaterialProperty.MP_SPECULAR)
 
@@ -99,19 +114,23 @@ return normalize(N+float3(sin(P.y*.17),cos(P.x*.19),v)*.13);''', {'Base': node(m
     out(m, const(m, .30), unreal.MaterialProperty.MP_SPECULAR)
 
 def bark(m):
-    tex, nrm = old('T_FallBark'), old('T_FallBark_N')
+    tex, nrm = scan('tree_bark_03_diff'), scan('tree_bark_03_nor_dx')
     vc = node(m, unreal.MaterialExpressionVertexColor)
     uv = node(m, unreal.MaterialExpressionTextureCoordinate)
     s = sample(m, tex, uv)
     variation = noise(m, .013, 3)
-    wood = mul(m, s, colour(m, .48, .54, .39), 'RGB')
-    wood = mul(m, wood, lerp(m, const(m, .55), const(m, 1.15), variation))
-    moss = custom(m, 'return saturate(smoothstep(.46,.79,N)*(.35+M));',
-                  {'N': variation, 'M': mask(m, vc, g=True)}, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    wood = mul(m, s, colour(m, .34, .40, .33), 'RGB')
+    wood = mul(m, wood, lerp(m, const(m, .78), const(m, 1.08), variation))
+    # The scan already contains lichen/moss. A sparse, broad additional layer
+    # keeps the fissures visible instead of covering them with noise blotches.
+    moss = custom(m, 'return smoothstep(.52,.82,N)*(.12+.25*M);',
+                  {'N': noise(m, .003, 3), 'M': mask(m, vc, g=True)}, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
     col = lerp(m, colour(m, .022, .031, .010), colour(m, .051, .061, .021), noise(m, .12))
     out(m, lerp(m, wood, col, moss), unreal.MaterialProperty.MP_BASE_COLOR)
     out(m, sample(m, nrm, uv, normal=True), unreal.MaterialProperty.MP_NORMAL, 'RGB')
-    out(m, lerp(m, const(m, .48), const(m, .89), moss), unreal.MaterialProperty.MP_ROUGHNESS)
+    arm = packed(m, scan('tree_bark_03_arm'), uv)
+    out(m, arm, unreal.MaterialProperty.MP_AMBIENT_OCCLUSION, 'R')
+    out(m, lerp(m, mul(m, arm, const(m, .82), 'G'), const(m, .89), moss), unreal.MaterialProperty.MP_ROUGHNESS)
     out(m, const(m, .35), unreal.MaterialProperty.MP_SPECULAR)
     out(m, colour(m, 0, 0, 0), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
@@ -152,5 +171,6 @@ def puddle(m):
 
 for name, builder in [('M_FallLeaves', leaves), ('M_FallGround', ground), ('M_FallBark', bark),
                       ('M_ChultRock', rock), ('M_ChultHangingMoss', hanging), ('M_ChultPuddle', puddle)]:
-    material(name, builder)
-unreal.log('CHUCK_CHULT_WET_MATERIALS_READY materials=6 texture_imports=0 mesh_imports=0')
+    if 'CHULT_MATERIAL_NAMES' not in globals() or name in CHULT_MATERIAL_NAMES:
+        material(name, builder)
+unreal.log('CHUCK_CHULT_WET_MATERIALS_READY materials='+str(len(globals().get('CHULT_MATERIAL_NAMES',range(6))))+' texture_imports=0 mesh_imports=0')

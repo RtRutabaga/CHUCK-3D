@@ -59,7 +59,11 @@ namespace
         return false;
     }
     UStaticMesh* JungleMesh(const TCHAR* Name)
-    { return LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("/Game/Art/Cutscenes/FallToChult/%s.%s"),Name,Name)); }
+    {
+        const TCHAR* Directory=FString(Name).StartsWith(TEXT("SM_Chult"))?
+            TEXT("/Game/Art/ChultNature"):TEXT("/Game/Art/Cutscenes/FallToChult");
+        return LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("%s/%s.%s"),Directory,Name,Name));
+    }
     UMaterialInterface* JungleMaterial(const TCHAR* Name)
     { return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Cutscenes/FallToChult/%s.%s"),Name,Name)); }
 }
@@ -208,6 +212,11 @@ void AChultLanding::BuildSet()
         {
             H=NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
             H->SetStaticMesh(JungleMesh(Name)); H->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            if(FString(Name)==TEXT("SM_ChultIslandTrunkCollision"))
+            {
+                H->SetCollisionProfileName(TEXT("BlockAll"));H->SetHiddenInGame(true);H->SetCastShadow(false);
+            }
+            if(FString(Name).StartsWith(TEXT("SM_ChultFern"))) H->SetCullDistances(4500,6500);
             Attach(H);
         }
         H->AddInstance(FTransform(FRotator(0,Yaw,0),G+At,FVector(Scale)),true);
@@ -259,10 +268,12 @@ void AChultLanding::BuildSet()
         FVector At(R.FRandRange(-8000,8000),R.FRandRange(-8000,8000),0);
         if(At.Size2D()>8500 || OnRoute(At,230)) continue;
         const int32 Type=R.RandRange(0,InChultCanopyReserve(At)?2:3); const float Yaw=R.FRandRange(0,360),Scale=R.FRandRange(.65f,1.3f);
-        Place(Under[Type],At,Yaw,Scale);
+        if(Type==0)
+            Place(*FString::Printf(TEXT("SM_ChultFern%d"),I%4),At,Yaw,Scale*1.8f);
+        else Place(Under[Type],At,Yaw,Scale);
         if(Type==3) Trunk(At,14*Scale,700*Scale);
     }
-    Place(TEXT("SM_FallFern"),FVector(330,210,0),40,1.1f);
+    Place(TEXT("SM_ChultFern1"),FVector(330,210,0),40,1.7f);
     // Layered foliage at the route edges: keep the playable centre unobscured.
     for(int32 I=1;I<UE_ARRAY_COUNT(Route);++I)
     {
@@ -270,7 +281,22 @@ void AChultLanding::BuildSet()
         const FVector Side(-Along.Y,Along.X,0);
         for(float D=0;D<FVector::Dist(Route[I],Route[I-1]);D+=190)
             for(float Sign:{-1.f,1.f})
-                Place(TEXT("SM_FallFern"),Route[I-1]+Along*D+Side*Sign*R.FRandRange(280,370),R.FRandRange(0,360),R.FRandRange(.7f,1.1f));
+                Place(*FString::Printf(TEXT("SM_ChultFern%d"),(I+FMath::RoundToInt(D/190)+(Sign>0?1:0))%4),
+                    Route[I-1]+Along*D+Side*Sign*R.FRandRange(280,370),R.FRandRange(0,360),R.FRandRange(1.4f,2.1f));
+    }
+    // A limited mid-story layer adds natural branching silhouettes behind the
+    // routes. No imported tree enters the paired climb/grove reserve.
+    FRandomStream Nature(73114);
+    int32 NaturalTrees=0;
+    for(int32 I=0;I<120 && NaturalTrees<18;++I)
+    {
+        FVector At(Nature.FRandRange(-7600,7600),Nature.FRandRange(-7600,7600),-8);
+        if(At.Size2D()<3600 || At.Size2D()>7800 || OnRoute(At,700) || InChultCanopyReserve(At,650)) continue;
+        const float Yaw=Nature.FRandRange(0,360),Scale=Nature.FRandRange(1.6f,2.3f);
+        Place(TEXT("SM_ChultIslandTree"),At,Yaw,Scale);
+        Place(TEXT("SM_ChultIslandTrunkCollision"),At,Yaw,Scale);
+        if(NaturalTrees==0) Attach(NewObject<USceneComponent>(this,TEXT("ChultNatureTreeReview")),At);
+        ++NaturalTrees;
     }
     // A fallen timber beside the loop is a small climbable exploration surface.
     Place(TEXT("SM_FallLog"),FVector(3350,950,0),15,1.2f);
@@ -287,6 +313,9 @@ void AChultLanding::BuildSet()
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
+    int32 NaturalFerns=0;
+    for(auto& Set:Sets) if(Set.Key.StartsWith(TEXT("SM_ChultFern"))) NaturalFerns+=Set.Value->GetInstanceCount();
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_NATURE ferns=%d fern_variants=4 background_trees=%d tree_collision=1 foliage_collision=0 missing_assets=%d"),NaturalFerns,NaturalTrees,Missing);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_LANDING trees=%d instances=%d missing_assets=%d origin=%s grips=0"),TreeCount,Instances,Missing,*G.ToString());
 }
 
@@ -397,6 +426,30 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==13) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Fork.png"),true,false);
         else if(Run->Phase==14)
+        {
+            auto* Camera=GetWorld()->SpawnActor<ACameraActor>();Run->DetailCamera=Camera;
+            const FVector From=FloorOrigin()+FVector(200,70,95),At=FloorOrigin()+FVector(330,210,40);
+            Camera->SetActorLocationAndRotation(From,(At-From).Rotation());Camera->GetCameraComponent()->SetFieldOfView(65);
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(Camera);
+            C->SetActorHiddenInGame(true);
+        }
+        else if(Run->Phase==15) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Nature_Ferns.png"),true,false);
+        else if(Run->Phase==16)
+        {
+            const FVector From=FloorOrigin()+FVector(440,290,165),At=FloorOrigin()+FVector(680,510,55);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==17) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Nature_Rocks.png"),true,false);
+        else if(Run->Phase==18)
+        {
+            if(auto* Marker=FindObjectFast<USceneComponent>(this,TEXT("ChultNatureTreeReview")))
+            {
+                const FVector At=Marker->GetComponentLocation()+FVector(0,0,270),From=At+FVector(-620,-460,80);
+                if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+            }
+        }
+        else if(Run->Phase==19) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Nature_Background.png"),true,false);
+        else if(Run->Phase==20)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

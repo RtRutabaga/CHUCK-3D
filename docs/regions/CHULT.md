@@ -6,6 +6,13 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Free-resource art pass authorized by the user, October 13, 2026:** implement
+the researched Poly Haven bark, soil, four ferns and six mossy rocks, plus a
+limited optimized island-tree background layer. Improve the existing landing
+and grove setting, preserving the cinematic clearing, walking routes, paired
+climb faces and named canopy proposals. No new encounters or grip activation.
+Provenance/pipeline: `SourceAssets/Setting/ChultNature/README.md`.
+
 Adapt the original Chult journey into a dense, layered jungle where brachiation is a major part of exploration. Ground routes, roots, branches and the shipwreck form one readable environment at Chuck's established 65 cm scale. Exploration leads; height and apparent danger can look demanding while the existing forgiving traversal makes movement approachable.
 
 Read-only source root: `C:\Users\ashsm\OneDrive\Documents\CHUCK-game`.

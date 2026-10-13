@@ -1,0 +1,149 @@
+{
+  "blender": "4.5.14 / 62c1db4208e8",
+  "assets": [
+    {
+      "file": "SM_ChultFern0.fbx",
+      "source": "fern_02",
+      "source_object": "fern_02_a",
+      "triangles": 784,
+      "dimensions_cm": [
+        55.194,
+        61.342,
+        28.68
+      ],
+      "sha256": "E055EEC0B3EFF9D480CAB41433BFF6FBB07C4B18354F13F62B4C8C29E90F34B6"
+    },
+    {
+      "file": "SM_ChultFern1.fbx",
+      "source": "fern_02",
+      "source_object": "fern_02_b",
+      "triangles": 2384,
+      "dimensions_cm": [
+        98.975,
+        89.369,
+        42.769
+      ],
+      "sha256": "0D92CD84FB3C346C59C75D1399C0292757BB0E93318366086E461F10A513CFA8"
+    },
+    {
+      "file": "SM_ChultFern2.fbx",
+      "source": "fern_02",
+      "source_object": "fern_02_c",
+      "triangles": 2248,
+      "dimensions_cm": [
+        87.433,
+        76.523,
+        34.902
+      ],
+      "sha256": "7ED829F87BFED14CF7C7E2842799F6EFCC983997A1B24039B3EF999C5154161C"
+    },
+    {
+      "file": "SM_ChultFern3.fbx",
+      "source": "fern_02",
+      "source_object": "fern_02_d",
+      "triangles": 816,
+      "dimensions_cm": [
+        57.278,
+        59.328,
+        21.309
+      ],
+      "sha256": "0A7AB843051EE1F4F9708F5C429CACE9A3DAC550C74159F4990E1819E80CDFDB"
+    },
+    {
+      "file": "SM_ChultRock0.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock01",
+      "triangles": 4950,
+      "dimensions_cm": [
+        223.732,
+        336.915,
+        147.166
+      ],
+      "sha256": "D23C24FEFFF4E2C186C82955E4E98CEAA364A9FEB0CDD8B8F4D3836CBAEC8F2B"
+    },
+    {
+      "file": "SM_ChultRock1.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock02",
+      "triangles": 4948,
+      "dimensions_cm": [
+        265.393,
+        326.435,
+        126.604
+      ],
+      "sha256": "B06FEF1D0A76459C264EFE4435EB3D45AA77F1C5D4BB62E317A5657858FF0495"
+    },
+    {
+      "file": "SM_ChultRock2.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock03",
+      "triangles": 2250,
+      "dimensions_cm": [
+        210.578,
+        207.431,
+        109.907
+      ],
+      "sha256": "3960F45340574C101E079DAE0AF6F6D1E08ACB212C4B99F1E50934519FC362C1"
+    },
+    {
+      "file": "SM_ChultRock3.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock04",
+      "triangles": 4765,
+      "dimensions_cm": [
+        212.638,
+        196.339,
+        176.847
+      ],
+      "sha256": "0651B460992BB4B5A1F4C1B8E1A4216EC5E803BA5947CE8AA0AA9939329CD8C7"
+    },
+    {
+      "file": "SM_ChultRock4.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock05",
+      "triangles": 7446,
+      "dimensions_cm": [
+        181.716,
+        299.866,
+        120.647
+      ],
+      "sha256": "16898FF5E550DE55072DADBD361C1A8D75468F3C3213A66C21286E53EB4389C2"
+    },
+    {
+      "file": "SM_ChultRock5.fbx",
+      "source": "rock_moss_set_01",
+      "source_object": "rock_moss_set_01_rock06",
+      "triangles": 4046,
+      "dimensions_cm": [
+        212.486,
+        275.709,
+        125.999
+      ],
+      "sha256": "F6B44E06DD7B40D48907A6D6380EC522F435E5394774D3EC9725A920A77093F5"
+    },
+    {
+      "file": "SM_ChultIslandTree.fbx",
+      "source": "island_tree_02",
+      "source_object": "island_tree_02_LOD1",
+      "triangles": 24153,
+      "dimensions_cm": [
+        395.006,
+        406.439,
+        340.539
+      ],
+      "sha256": "0C16745C1BFF8571B6EFDBB3B326BADD8C80B7DE643678E7A08A48B396DD2B6E"
+    },
+    {
+      "file": "SM_ChultIslandTrunkCollision.fbx",
+      "source": "island_tree_02",
+      "source_object": "island_tree_02_LOD1 bark faces only",
+      "triangles": 671,
+      "dimensions_cm": [
+        235.487,
+        271.955,
+        261.727
+      ],
+      "sha256": "32A04F1A35C2611F15AD53E9701D5CB7DCB2DA7E841DC1D62B527818FC3A6C4F"
+    }
+  ]
+}

@@ -12,7 +12,7 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 **New Game** starts the morning docks. **Dev Checkpoints** offers Waterdeep, Sewer, Sewer Jump, Sewer Long Jump, Waterdeep Night, Tavern Pantry and **Chult Landing**. Each starts a fresh world; there is no persistent save yet. Esc exits.
 
-**Chult Landing** is the first jungle setting pass: the cutscene's landing clearing, tall trees and a winding ground loop. Brachiation starts in a later setting section. The normal fall's connection to this playable setting is still Claude's next task; use the checkpoint to explore it now. See [CHULT-LANDING.md](CHULT-LANDING.md).
+**Chult Landing** shares the fall cutscene's clearing, tall trees and winding ground loop. The October 13 nature pass adds scanned bark/soil, four fern shapes, six rock shapes and a limited background-tree layer. The connected canopy grove is a setting preview awaiting Claude's climb/brachiation integration and tests. Enter through the normal fall or this checkpoint. See [CHULT-LANDING.md](CHULT-LANDING.md) and [CHULT-CANOPY.md](CHULT-CANOPY.md).
 
 Falling through the sky hole in the tavern cellar plays the fall-to-Chult cutscene (about 53 s: a few seconds of falling with only the wind, then the score; letterboxed, no control). Esc skips it. It ends in playable Chult.
 

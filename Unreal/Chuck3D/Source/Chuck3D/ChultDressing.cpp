@@ -2,6 +2,7 @@
 #include "ChultLanding.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 
@@ -31,7 +32,7 @@ void BuildChultWetDressing(AActor* Owner, bool SolidRocks)
         P->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Cutscenes/FallToChult/%s.%s"),Material,Material)));
         return P;
     };
-    FSurface Wood,Moss,Rocks,Water,Gravel;
+    FSurface Wood,Moss,Water,Gravel;
     auto Tube=[&](FVector A,FVector B,float Radius)
     {
         const FVector D=(B-A).GetSafeNormal();
@@ -134,25 +135,31 @@ void BuildChultWetDressing(AActor* Owner, bool SolidRocks)
     // verified walking centre and landing/cinematic camera lane.
     const FVector RockAt[]={FVector(680,510,0),FVector(1400,-540,0),FVector(1970,1070,0),FVector(2940,-700,0),
         FVector(3250,780,0),FVector(4300,2500,0),FVector(2500,3150,0),FVector(250,1700,0),FVector(-640,-620,0)};
+    UHierarchicalInstancedStaticMeshComponent* RockSets[6]={};
+    int32 ScanRocks=0,MissingRocks=0;
     for(FVector At:RockAt) for(int32 Cluster=0;Cluster<3;++Cluster)
     {
         float Size=R.FRandRange(40,110);
-        FVector Center=At+FVector(R.FRandRange(-100,100),R.FRandRange(-100,100),Size*.35);
+        FVector Center=At+FVector(R.FRandRange(-100,100),R.FRandRange(-100,100),-8);
         FVector Scale(R.FRandRange(.9f,1.5f),R.FRandRange(.7f,1.2f),R.FRandRange(.6f,1.f));
-        int32 Base=Rocks.V.Num();
-        for(int32 Y=0;Y<=12;++Y) for(int32 X=0;X<=20;++X)
+        const int32 Variant=ScanRocks%6;
+        auto*& H=RockSets[Variant];
+        if(!H)
         {
-            float Lat=Y*PI/12,Lon=X*2*PI/20;
-            FVector N(FMath::Sin(Lat)*FMath::Cos(Lon),FMath::Sin(Lat)*FMath::Sin(Lon),FMath::Cos(Lat));
-            float Ridge=1+.12f*FMath::Sin(Lon*3+Lat*5+Cluster)+.06f*FMath::Cos(Lon*7-Lat*3);
-            Rocks.Add(Center+N*Scale*Size*Ridge,(N/Scale).GetSafeNormal(),FVector2D(X/20.f,Y/12.f));
-            if(Y<12 && X<20) {int32 K=Base+Y*21+X;Rocks.Tri(K,K+1,K+21);Rocks.Tri(K+1,K+22,K+21);}
+            H=NewObject<UHierarchicalInstancedStaticMeshComponent>(Owner,*FString::Printf(TEXT("ChultScanRocks%d"),Variant));
+            const FString Name=FString::Printf(TEXT("SM_ChultRock%d"),Variant);
+            H->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("/Game/Art/ChultNature/%s.%s"),*Name,*Name)));
+            H->SetupAttachment(Owner->GetRootComponent());H->SetWorldLocation(G);H->RegisterComponent();
+            H->SetCollisionEnabled(SolidRocks?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
+            if(SolidRocks) H->SetCollisionProfileName(TEXT("BlockAll"));
+            MissingRocks+=H->GetStaticMesh()==nullptr;
         }
+        H->AddInstance(FTransform(FRotator(0,ScanRocks*137.5f,0),G+Center,Scale*(Size/150.f)),true);
+        ++ScanRocks;
     }
     Finish(TEXT("ChultMossBranches"),Wood,TEXT("M_FallBark"),false);
     auto* M=Finish(TEXT("ChultHangingMoss"),Moss,TEXT("M_ChultHangingMoss"),false);
     auto* W=Finish(TEXT("ChultPuddles"),Water,TEXT("M_ChultPuddle"),false); W->SetCastShadow(false);
-    auto* B=Finish(TEXT("ChultMossRocks"),Rocks,TEXT("M_ChultRock"),SolidRocks);
     Finish(TEXT("ChultPuddleGravel"),Gravel,TEXT("M_ChultRock"),false);
     // A broad-leaf foreground plant supplies the close reference's scale and
     // surface detail. Its stem stays beyond the walking centre, in both sets.
@@ -161,7 +168,8 @@ void BuildChultWetDressing(AActor* Owner, bool SolidRocks)
     Leaf->SetCollisionEnabled(ECollisionEnabled::NoCollision); Leaf->SetupAttachment(Owner->GetRootComponent());
     Leaf->SetWorldLocationAndRotation(G+FVector(250,310,0),FRotator(0,215,0));
     Leaf->SetWorldScale3D(FVector(1.1f)); Leaf->RegisterComponent();
-    const bool Ready=M->GetMaterial(0) && W->GetMaterial(0) && B->GetMaterial(0);
+    const bool Ready=M->GetMaterial(0) && W->GetMaterial(0) && MissingRocks==0;
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WET_DRESSING materials=%d moss_strands=%d puddles=%d rocks=27 pebbles=108 triangles=%d foliage_collision=0 water_collision=0"),
-        Ready && Leaf->GetStaticMesh()!=nullptr,Strands,UE_ARRAY_COUNT(Puddles),(Wood.T.Num()+Moss.T.Num()+Water.T.Num()+Rocks.T.Num()+Gravel.T.Num())/3);
+        Ready && Leaf->GetStaticMesh()!=nullptr,Strands,UE_ARRAY_COUNT(Puddles),(Wood.T.Num()+Moss.T.Num()+Water.T.Num()+Gravel.T.Num())/3);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_SCAN_ROCKS instances=%d variants=6 missing_assets=%d visible_mesh_collision=%d"),ScanRocks,MissingRocks,SolidRocks);
 }

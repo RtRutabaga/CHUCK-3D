@@ -2,6 +2,54 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 13 — imported free nature kit for Chult
+
+User approved implementing the Poly Haven shortlist. `Fetch-ChultNature.ps1`
+preserves 26 source files with provider MD5, SHA-256, URLs and CC0 provenance.
+`prepare_chult_nature.py` derives only the new kit: four ferns, six reduced rocks,
+one reduced island tree and its 671-triangle bark-only collision subset. Source
+and derivative manifests include bounds and hashes. Existing manually authored
+jungle/character Blender files were not regenerated. `import_chult_nature.py`
+imports 23 2K textures/12 meshes into `/Game/Art/ChultNature`, checks dimensions
+and hashes, assigns masked two-sided foliage/linear masks/DirectX normals, and
+refreshes only the shared bark/ground graphs through the wet script's new
+`CHULT_MATERIAL_NAMES` selector. Other existing material binaries were restored
+after the first broad refresh; their graphs did not change.
+
+Runtime: 539 fern instances with 45–65 m culling; 27 visible-mesh colliding rocks
+across six shapes; 18 reduced background trees outside routes and the grove
+reserve, with matching bark-only query instances and noncolliding leaf/cards.
+Background trees remain stationary. Preserve paired climb faces, forks,
+proposed paws and crown components/tags. No active grips, new mechanics,
+character/controller changes, encounters or original-game mutations.
+
+Versions: UE 5.7.4 / CL 51494982, Blender 4.5.14 / 62c1db4208e8, MSVC
+14.44.35229, SDK 10.0.26100.0, bundled .NET 8.0.412. No new installation.
+Final import: `Local/chult-nature-final-import.log`, marker `meshes=12 textures=23`.
+Build/cook: `Local/chult-nature-verified-build.log`, UAT 63.62 s, zero cook
+errors/warnings. Chult: `verify-chult-20261013-131607.log`, original 127 floors /
+12 route segments / 5 roots plus grove floors / 11 capsule segments, inventory,
+respawn and clean exit all pass. Final landing, fern/rock details and canopy
+captures reviewed; the background-tree capture is partly blocked by an existing
+trunk. Preserved three cooked review PNGs in `SourceAssets/Setting/Review`.
+Full fall/skip pass; floor cutscene 57.3 fps average / 128.0 ms worst frame at
+720p does not establish gameplay performance. Final full package suite **182 passes / 0 failures**, `verify-package-20261013-131607.log`; pantry/leap/lamp regressions pass. No menu/startup changes; real menu automation not separately rerun. Promotion pending.
+
+LFS assessment: 83 new/changed binaries, 190,419,166 bytes / 181.60 MiB, existing
+attributes and established GitHub LFS remote; quota not exposed. Do not commit
+engine-generated output or packages. Tall primary tree/crown shapes, simple grove
+junctions and flat terrain remain provisional. No actual Chult canopy traversal,
+camera-comfort, physical Xbox or manual full-loop acceptance test.
+
+First Python commandlet import asserted in Slate; use editor
+`-ExecutePythonScript` with a successful marker/error audit, not exit code alone.
+Initial C++ format literal error corrected. First candidate smoke stopped on
+purpose after its setting/fall checks to revise bark, add trunk collision and
+focused captures; it is not final acceptance evidence.
+
+Next part of the work can only be done by Claude: integrate/test the authored
+canopy traversal; setting art can continue here afterward.
+
 ## October 13 — canopy grove setting, traversal reserved for Claude
 
 User authorized expanding Chult for paired-tree cat-to-cat climbing into a branch/vine canopy, with tentative future raptor evasion. Claude owns mechanics and their tests. Partial treetop fading is conditional; the future golden-cigarette-only introduction tree is deferred entirely. Region authorization recorded in CHULT.md; concrete coordinates, markers, foliage tags and collision choices in [CHULT-CANOPY.md](../CHULT-CANOPY.md).

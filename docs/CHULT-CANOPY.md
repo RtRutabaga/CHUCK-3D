@@ -8,6 +8,12 @@ The grove connects to the original landing loop at local **(4200,500,0)**, then 
 
 `ChultCanopy.cpp` owns the authored grove. Random forest trunks and colliding understory palms are excluded from its reserved footprint: X=5000–8800, Y=250–3000. Preserve this exclusion when adding foliage: imported trees carry broad crowns and unpredictable branches that can obscure the authored routes. Noncolliding ferns, shrubs and elephant ears dress the ground away from the open lanes. The existing wet-forest materials and crown mesh are reused; no binary assets or Blender sources are regenerated.
 
+The later October 13 user-authorized Poly Haven art pass adds four scanned fern
+variants, scanned rocks and bark/soil textures. Optimized island trees stay
+outside this reserve with a 650 cm margin. Only the new imported CC0 sources are
+derived; authored Blender jungle sources, climb surfaces, crown meshes and named
+proposals remain unchanged.
+
 ## Climb and standing surfaces
 
 | Fork marker | Local standing reference | Intended use |
