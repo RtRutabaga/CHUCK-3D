@@ -2,6 +2,16 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 12 — playable Chult handoff and jungle corrections
+
+Runtime **c527d68**. Full fall and Escape-skip restore the playable landing, follow camera, input/collision and local respawn, retaining sanity/stamina/cigarettes. Completed stage/camera destroyed. Shared foliage/canopy sway reduced 75%; bark displacement zero. Added solid buttress/base collision from original seeded profiles and understory palm trunks; five outer roots checked with rays and Chuck's real capsule. No mesh/Blender regeneration. Four materials updated by `update_chult_wind.py`; source importer matches. User references preserved under References/ArtDirection/Chult, with an initial darker/greener damp-material and subdued-lighting pass. Art remains provisional.
+
+UE **5.7.4**, existing VS **14.44.35229** / SDK **10.0.26100.0**, one-worker cooked candidate. `Local/chult-handoff-final-build.log`: UAT **62.29 s**; `verify-package-20261012-221535.log`: **182 passes, zero failures**. Final Chult geometry/root checks, full fall and skip/input/local recovery all pass. `Local/chult-handoff-menu.log`: **8/8** destinations. Inspected final Chult/post-cutscene captures. No manual whole-loop or physical Xbox test. Shadowed-variable compile error corrected; superseded smoke run stopped at 175 passes for final art changes, not claimed as verification.
+
+Four material binaries and four user JPGs add about **0.47 MiB** in existing GitHub LFS; fsck OK. No generated Unreal output committed or dependencies installed. Promoted via `Local/chult-handoff-promotion.log`; root launcher receipt/hash and CheckOnly pass on **c527d68**. Previous package retained as `Windows-Previous-20261012-ChultHandoff`, two backups kept; no candidate folder remains. See main HANDOFF for limits and future setting work.
+
+Next part of the work can be done here.
+
 ## October 12 — Chult landing setting preview
 
 The user authorized starting the map at the cutscene landing, matching the supplied contact sheet, with brachiation better supported farther in. `ChultLanding.h/.cpp` reuses the existing fall-set meshes/materials without imports, Blender runs or binary changes. The near tree/palm placements, floor origin/material and facing match the cutscene. A ground loop reaches about 46 m into the jungle and returns through a second lane. Simple capsule trunk collision, a box under the additional fallen timber, noncolliding foliage and a solid floor support this first pass. The ambient light/exposure were reduced after capture review.

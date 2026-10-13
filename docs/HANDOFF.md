@@ -7,7 +7,17 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's first landing setting pass; later milestone detail remains proposed ([regions/CHULT.md](regions/CHULT.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
-- **Next work:** Claude connects the finished fall cutscene to the verified landing; Codex extends the jungle with brachiation farther in.
+- **Next work:** the fall now enters playable Chult; Codex extends the jungle with brachiation farther in under the region plan.
+
+## October 12 — playable Chult handoff, rigid bark and root collision (Codex)
+
+- **Built (`c527d68`):** full fall playback and Escape-skip enter playable Chult instead of the demo card. Restore collision, movement/input and follow camera; preserve sanity/stamina/cigarettes, set local respawn, destroy the completed stage/camera. Leaves/canopy use one quarter of their former wind amplitude; bark has zero displacement. Added solid buttress/base collision from original seeded profiles and understory palm trunks. No meshes/Blender sources regenerated; the narrow material updater changes four materials without importing meshes/audio.
+- **Art:** darker/greener bark and damp ground, subdued exposure/fill and cooler atmospheric depth begin adapting the four user reference JPGs saved under `References/ArtDirection/Chult`. Art direction, landing contract and brief updated. Repeated procedural tree forms and flat terrain remain below the target; this is an initial palette/lighting pass.
+- **Tested:** UE **5.7.4**, VS **14.44.35229**, SDK **10.0.26100.0**, single-worker cooked package (`Local/chult-handoff-final-build.log`, UAT **62.29 s**). Full suite **182 passes / 0 failures**, `Local/verify-package-20261012-221535.log`; Chult **127 floor samples / 12 capsule route sweeps / five outer-root ray-and-real-capsule checks**, local respawn; real menu **8/8**, `Local/chult-handoff-menu.log`. Full playback and skip both report playable landing; skip preserves damaged sanity and tests actual simulated movement/local reset. Reviewed final Chult and post-cutscene captures. No physical Xbox or manual whole-loop playtest. First compile's shadowed variable corrected; an earlier superseded smoke run was deliberately stopped at 175 passes for the final art pass and is not acceptance evidence.
+- **Storage:** four material assets and four reference JPGs total about **0.47 MiB** in the existing GitHub LFS endpoint; `git lfs fsck` passed. No generated engine/build output committed, installations or new dependencies.
+- **Launcher:** promoted through `Promote-Build.ps1 -Label ChultHandoff`, `Local/chult-handoff-promotion.log`. Root `Builds/Windows` is **c527d68**; receipt/hash and CheckOnly pass. Prior package retained as `Windows-Previous-20261012-ChultHandoff`, two backups kept; empty candidate folder removed. Landing still has no onward route, ambience, brachiation, encounters or golden pickups; these remain later region work.
+
+Next part of the work can be done here.
 
 ## October 12 — Chult landing preview (Codex)
 
