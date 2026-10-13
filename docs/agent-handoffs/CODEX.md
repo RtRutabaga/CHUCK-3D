@@ -33,10 +33,10 @@ respawn and clean exit all pass. Final landing, fern/rock details and canopy
 captures reviewed; the background-tree capture is partly blocked by an existing
 trunk. Preserved three cooked review PNGs in `SourceAssets/Setting/Review`.
 Full fall/skip pass; floor cutscene 57.3 fps average / 128.0 ms worst frame at
-720p does not establish gameplay performance. Final full package suite **182 passes / 0 failures**, `verify-package-20261013-131607.log`; pantry/leap/lamp regressions pass. No menu/startup changes; real menu automation not separately rerun. Promotion pending.
+720p does not establish gameplay performance. Final full package suite **182 passes / 0 failures**, `verify-package-20261013-131607.log`; pantry/leap/lamp regressions pass. No menu/startup changes; real menu automation not separately rerun. Launcher: promoted **af8da74** with `Promote-Build.ps1 -Label ChultNature` (`Local/chult-nature-promotion.log`); receipt/hash and launcher CheckOnly pass. Root `Launch-Chuck.cmd` -> **Dev Checkpoints -> Chult Landing** includes this art pass. Previous runtime retained as `Windows-Previous-20261013-ChultNature`; two backups kept, FallCrash backup pruned, no candidate left. Source published to `origin/main` under standing project permission (`Local/chult-nature-source-push.log`).
 
 LFS assessment: 83 new/changed binaries, 190,419,166 bytes / 181.60 MiB, existing
-attributes and established GitHub LFS remote; quota not exposed. Do not commit
+attributes and established GitHub LFS remote; quota not exposed. Postcommit LFS fsck passed; remote dry run listed 83 objects (`Local/chult-nature-lfs-dry-run.log`). Do not commit
 engine-generated output or packages. Tall primary tree/crown shapes, simple grove
 junctions and flat terrain remain provisional. No actual Chult canopy traversal,
 camera-comfort, physical Xbox or manual full-loop acceptance test.
