@@ -2766,3 +2766,13 @@ Next part of the work can be done here.
 - **Tested:** robocopy 0 failures; worktree repair; identical `git status`; `git lfs fsck` OK; launcher `-CheckOnly` passes from the new path. No Unreal build run from the new path yet: the first build will regenerate Intermediate paths, which is expected.
 - **Not verified:** the deny rules on the 2D game folder were not exercised; they take effect in sessions opened at the new path.
 
+## Full-game scope rewrite (October 12)
+
+- **Source:** base `cf0f9c3`. Changed `AGENTS.md`, `CLAUDE.md`, `README.md`, `docs/HANDOFF.md`. Rewrote `docs/PROJECT-BRIEF.md`; the old brief moved to `docs/archive/PROJECT-BRIEF-PROTOTYPE.md`. No runtime, asset or contract change.
+- **Why:** the prototype is done. The old rules ("do not expand into the campaign") would have blocked Chult.
+- **2D game access:** confirmed readable. The game bible, phase list and dialogue data layout were read. A relative `mkdir` was blocked by the deny rule (it resolved inside the 2D folder), and `git status` there was clean afterwards. The new AGENTS.md says to use absolute paths for this reason.
+- **Tested:** documentation only. The launcher is not stale.
+- **Next:** step 2 (archive prototype docs and slim HANDOFF), step 3 (rename "Prototype" tooling), and a decision on the 40 unstaged uassets.
+
+Next part of the work can be done here.
+

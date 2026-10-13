@@ -1,47 +1,74 @@
-# Project brief
+# Project brief — CHUCK 3D
 
-October 9 sewer addition: a full-width Astral gap farther past the wide zombie chamber, before the end, encourages the existing four-legged sprint leap. Astral walls and upright veils are removed from this gap; continuous stone side walls are restored, and wall-run or other bypasses are allowed. The earlier wall-run rupture remains. See SEWER-SPRINT-RIFT.md and HANDOFF for actual validation.
+Rewritten 2026-10-12, when the user declared the Waterdeep prototype done and started the full game. The prototype-era brief, with its dated authorizations, is kept as [archive/PROJECT-BRIEF-PROTOTYPE.md](archive/PROJECT-BRIEF-PROTOTYPE.md); it is history, not scope.
 
-October 4 wall-run revision: the user replaced the narrow-tunnel zombie obstacle with a full-width Astral rupture in a short narrow passage after the wide sewer chamber. Use the existing lateral wall run to cross it. See SEWER-WALLRIFT.md and HANDOFF for current layout and actual tests.
+## What this is
 
-October 3 pantry authorization: the user requested a basement pantry entered through a ladder hole behind the tavern bar. Codex owns the cellar/hatch foundation; Claude will implement ladder climbing. This extends the connected tavern only, without new campaign destinations or item systems. See TAVERN-PANTRY.md and latest HANDOFF.
+CHUCK 3D is a Windows PC adaptation of the completed 2D game CHUCK, rebuilt as a third-person 3D exploration game in Unreal Engine 5.7.4, with Blender 4.5.14 for custom assets. It follows the 2D campaign region by region, from the Waterdeep docks to the return to Waterdeep.
 
-October 3 return-state authorization: continuing Claude's sewer handoff implements the remaining user-assigned setting step: morning starts with the tavern closed, the completed sewer slide returns Chuck to early-evening docks, closes the hatch and opens the furnished tavern. This supersedes always-open tavern wording below; no new campaign destination or persistent save. See DOCKS-RETURN.md and latest HANDOFF.
+The 2D game (`C:\Users\ashsm\OneDrive\Documents\CHUCK-game`, strictly read-only) is the direction for each region: its order, places, people, obstacles, dialogue and story beats. Its `docs/design/GAME-BIBLE.md` is the authority on character and tone. Its `docs/development/PHASE-*.md` documents describe each region as it was built in 2D. Its `chuck/chuck/data` holds the dialogue.
 
-October 3 tavern interior authorization: the user requested work on the enlarged tavern's interior. A connected walk-in room with furnishings, warm lighting and an open door now supersedes historical exterior-only/closed-tavern exclusions. Keep it within the current docks prototype; see TAVERN-INTERIOR.md and HANDOFF for implementation and verified build status.
+The adaptation is loose where 3D asks for it. Layouts are reinterpreted at human scale, and the 2D game's obstacles become traversal. It is faithful in character, tone, story order and dialogue.
 
-October 2 cave refinement: user requested local sewer-entrance respawns for all tunnel deaths, readable blue night fill around the purple astral sources, nebula views at floor level, continuous natural rock walls with matching collision, a shallow flowing stream and a wider chamber midway along the existing route. This supersedes the prior purple-only illumination and dock-respawn behavior underground. R remains an explicit dock return. See SEWER-PROTOTYPE.md and the latest HANDOFF.
+## Chuck
 
-October 2 sewer atmosphere authorization: use the supplied Sewer.wav underground. Remove warm lamps; purple Astral Sea floor ruptures supply the only underground lighting, with translucent warped oil-slick films above genuine fall hazards. Keep a traversable stone bank and existing surface lighting/music. See SEWER-PROTOTYPE.md for implementation and HANDOFF for verification.
+- A gray rat about 65 cm tall, just above the kneecap of a 180 cm human, in an oversized purple open jacket. This 3D size supersedes the 2D game's one foot. The world stays built for humans, and his size shapes level design rather than being cosmetic.
+- He is quiet, patient, fearless, compassionate, observant and persistent, with a thousand-yard stare and quiet exhaustion. He never speaks, has no inner monologue and never behaves like a cartoon. The world is funny; Chuck is not.
+- He is a fey spirit who cannot die. At zero Sanity he vanishes into astral light and is summoned back. He never becomes more powerful. New traversal moves are how a small, persistent body gets around, not upgrades.
+- The supplied character images (see [ART-DIRECTION.md](ART-DIRECTION.md)) are the visual target. Do not claim they have been reached.
 
-October 2 sewer authorization: build a connected, much longer winding underground passage entered by falling through the side-gate grate, without a question/prompt. Rounded knobbly stone tunnel walls, north first then across and winding south. This supersedes earlier sewer-interior exclusions for this prototype; no full campaign or copied dialogue. See SEWER-PROTOTYPE.md and HANDOFF for actual implementation/testing.
+## Rules carried over from the 2D game
 
-October 2 hatch update: the user requested the side-gate sewer grate widened, rusty and hinged open over black depths. It is now a visual open shaft with a real paving gap and the existing below-quay reset behavior; no sewer map, transition or exploration interior is included. This supersedes the closed-ground-grate presentation below; the plaza drain and city gate stay closed.
+- Exploration leads, with environmental storytelling over exposition. The world never explains itself directly, and the truth about the joined realities arrives slowly.
+- Tone: cozy exploration, melancholy, mystery, deadpan comedy. Never cynical or overly dark; the world stays worth caring about.
+- Campaign references are mostly environmental. Bobert stays asleep, unnamed and noninteractive. The opening area's only other reference is the HEROD COVER BAND / TONIGHT ONLY poster.
+- NPC lines come from the 2D game or the user, never AI-written. Conversations contain NPC speech only, never replies from Chuck. Inspect text is external observation, not Chuck's thoughts.
+- Combat is light. Exploration always matters more.
 
-October 2 sewer-location correction: stage the future sewer entrance at the ground grate beside a modest side gate on the city-facing wall of far Dock Street, opposite the bench. The existing plaza arch remains drain dressing. Sewer access/interior is still deferred.
+## Decisions already made in 3D (these override the 2D game)
 
-October 1: the user requested a larger inaccessible coastal-city vista, connecting the opposite waterfront to the town around a sheltered harbor, with further roof districts and low-detail surrounding country visible from the highest playable roof. See COASTAL-VISTA.md. This expands scenery, not campaign or playable area.
+- **Traversal** replaces top-down movement: jump, climb (with stamina), ledge pull-up, wall-run, four-legged sprint leap, brachiation and ladders. Each region should give these moves meaningful use.
+- **Camera:** one continuous orbit that runs from elevated down to rat height. The prototype never formally closed the camera decision, so retuning per region is allowed.
+- **Sanity and cigarettes:** damage lowers Sanity, shown as a bar of cigarettes. Cigarettes refill it, and beyond a full bar they count as currency.
+- **Breakables:** Chuck shreds grass tufts and breaks clay jars, and later urns, to collect cigarettes. He never breaks crates or barrels, because he is not strong.
+- **Respawn:** the map spawn or a local region entrance is the respawn point. There are no Astral Anchors and no ashtray checkpoints.
+- **Transitions:** use fades or physical falls between areas, never loading-question prompts.
+- **Hardware:** Windows PC with keyboard/mouse and Xbox controller. No browser, mobile or console builds.
 
-September 30 update: the user authorized an additive, loose 3D adaptation of the original Waterdeep exterior and fountain plaza. Preserve all existing docks/parkour additions, extend the same map with walls, a blocked sewer entrance, fountain plaza and contextual shops/stalls, and use readable dawn/dusk ambient light with lit torches and lamps. This supersedes the earlier fountain-plaza exclusion; sewer interiors and campaign expansion remain excluded.
+## Regions
 
-September 29 update: the user has explicitly reopened setting work following Claude's character and parkour progress. Expand the same docks map with connected walkable streets, more buildings and dressing that explains the existing obstacles; preserve those routes. This supersedes the earlier world-work pause below. See DOCKS-SETTING.md and the latest HANDOFF for implementation and verified build status.
+The order follows the 2D phases. "Done" means a playable, verified build exists.
 
-CHUCK 3D explores whether the completed game's intimate exploration works in a human-scale 3D world. First deliverable: a small Windows PC Waterdeep docks prototype in Unreal Engine; Blender supplies custom assets after the graybox proves scale and camera.
+| 2D phase | Region | 3D status |
+| --- | --- | --- |
+| 2 | Waterdeep docks, fountain plaza, sewer tutorial | Done (the prototype) |
+| 3 | Tavern, pantry, fall to Chult | Tavern and pantry done; the fall is a temporary "End of demo" screen |
+| 4 | Chult jungle | Next |
+| 5 | Deeper into Chult | — |
+| 6 | The jungle temple | — |
+| 7 | The pirate ship | — |
+| 8 | Phlegethos | — |
+| 9 | The Feywild | — |
+| 10 | Zephyros' tower | — |
+| 11 | The rainy city | — |
+| 12 | The cabin | — |
+| 13 | The collided desert | — |
+| 14 | Return to Waterdeep | Partly anticipated by the evening docks state |
 
-Chuck is a gray rat approximately 65 cm tall, above the human NPC kneecap, wearing an oversized purple open jacket. His quiet exhaustion and thousand-yard stare coexist with patience, fearlessness, compassion, observation, and persistence. He never speaks or has an internal monologue. Behavior, restrained animation, and others' reactions communicate his character.
+## How a region gets built
 
-Build for humans and navigate as a rat: boots, barrel rims, ropes, boards, and crates are meaningful terrain. Use a 65 cm visual height reference and a roughly 180 cm human beside it. Do not silently retain a human-sized template collision capsule or movement tuning.
+1. **Plan first.** Before any region work, read its 2D phase document and data, then write `docs/regions/<REGION>.md`. It covers the 3D layout, the traversal and obstacles, the NPCs and their source dialogue, the entry and exit transitions, and what the region needs from each agent. The user approves the plan before building starts.
+2. **Ownership.** Codex builds the setting. Claude builds the character, creatures, animation, traversal, camera and imports. See [AGENT-WORKFLOW.md](AGENT-WORKFLOW.md).
+3. **Milestones.** A region, or a meaningful part of one, is a playable milestone: build, verify and promote it with `Tools/Promote-Build.ps1`, then record the actual tests in the handoff.
+4. **Scope control.** Build only the approved region plan. Changes to Chuck's identity, controls, scale, tone or the rules above are the user's decision.
 
-Exploration and environmental storytelling lead. Preserve warmth, melancholy, mystery, and deadpan understatement; the world remains worth caring about. Chuck is neither a cartoon nor a conventional hero accumulating power. Translate readability and warm colors into 3D without committing to a final rendering style.
+## Open questions for the user
 
-Begin in an ordinary, quiet morning at the docks: one pier, a short warehouse frontage, a barrel nook, and a small exploration loop. Bobert, if represented, stays asleep, unnamed in the game, and noninteractive. No additional campaign cameos; the optional HEROD COVER BAND / TONIGHT ONLY poster is the bible's sole other opening reference.
+- **Saving.** The prototype has no persistent save. The 2D game used twelve-character save codes. A multi-region game needs a decision.
+- **Cutscenes.** The 2D game moves between regions with scripted cutscenes (the fall to Chult, the pirate escape, and others). Their 3D form is not yet decided.
+- **Combat depth.** Small enemies (rats, a zombie) exist. Combat in later regions follows each region plan.
+- **Naming.** The launcher, scripts and the Unreal `Content/Prototype` folder still use "Prototype". Renaming them is planned cleanup.
 
-The current milestone is walking, jumping, collision, keyboard/Xbox controls, and two switchable cameras in a dock/tavern/human-scale scene. The user deferred combat, dialogue, pickups and finished art until those fundamentals are tested. Scratching, one NPC conversation, one inspectable object, one breakable, and one cigarette pickup remain later prototype goals, not requirements of this camera build. Breakables and cigarettes (user direction 2026-09-30): shredding grass tufts and breaking jars to collect the cigarettes inside, like Zelda's rupees, is a key loop, with a small counter and no power progression. Chuck is not strong. He breaks grass and jars (and urns in later, post-prototype maps), never crates or barrels. Small enemies (largish ordinary rats) come later; low targets get the automatic low rake. Sanity (user 2026-09-30, following GAME-BIBLE.md): damage lowers it, and it's shown as a bar of cigarettes. Cigarettes refill it, and beyond a full bar they count as currency. At zero Chuck, a fey summon who cannot die, quietly vanishes into astral light and is summoned back at the map's spawn point, with no game over. The user doesn't want Astral Anchors: the map spawn is the respawn point. Human NPCs (2026-09-30): built in Blender on the user's go-ahead for my recommendation (no installs or sign-ins; MetaHuman stays an option, since the NPC code doesn't depend on the body). They're procedurally posed and sized to the 180 cm dock worker (the 2D game's human-scale rule), with F to talk. The worker has no dialogue yet (user's call); NPC lines come from the 2D game or the user, never AI-written. When implemented, conversations contain NPC speech, never authored replies from Chuck; inspect text is external observation, not Chuck's thoughts.
+## Technical rules
 
-Evaluate an elevated camera and a camera following at rat height using identical geometry and movement before choosing either. Placeholder Chuck must already communicate small scale and the purple jacket.
-
-Excluded: full Waterdeep, sewer/tavern interiors, fountain plaza reconstruction, returning midday state, other regions, campaign progression, combat encounters, shops, inventory, quests, equipment, multiplayer, and original browser deployment. Older phase documents describe completed 2D work, not this prototype's backlog. In particular, do not restore obsolete ashtray checkpoints from historical material.
-
-The user's 2026-09-24 size correction supersedes the original one-foot reference: the current prototype target is 65 cm, just above the knee of the 180 cm human. Original reference snapshots remain unchanged historical evidence. The supplied character images and requested Baldur's Gate 3 level of visual quality guide future art; see ART-DIRECTION.md. This is a target, not a claim that the procedural prototype achieves that quality.
-
-2026-09-26 priority: finish the in-flight tavern pass, then pause world work and focus on Chuck's reference fidelity, continuous jacket construction and natural foot placement. Prepare separate Codex movement and Claude Code character-art worktrees. The eventual rig must accommodate run, roll, side-jump, climb and mouth-held smoking as well as walk/jump; these remain staged future capabilities, not a campaign expansion. See CHARACTER-PLAN.md.
+Explain dependencies before installation and record exact versions. Keep generated Unreal output and packaged builds out of Git, and assess LFS before committing binary assets. Never put engine installations in this repository. Run only one Unreal or Blender heavy process at a time on this 16 GB machine.

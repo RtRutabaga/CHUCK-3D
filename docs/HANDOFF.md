@@ -1,5 +1,18 @@
 # Handoff — 2026-09-27
 
+## October 12 — full game begins; scope rules rewritten
+
+The user declared the Waterdeep prototype done and started the full game. This is cleanup step 1 of 5: the scope rules.
+
+- `docs/PROJECT-BRIEF.md` is rewritten as the full-game brief. It covers the region table following the 2D phases (Chult is next), the 2D rules carried over, the 3D decisions that override the 2D game, how a region gets built (an approved `docs/regions/<REGION>.md` plan first) and open questions for the user: saving, cutscenes, combat depth and naming.
+- The old brief is kept verbatim at `docs/archive/PROJECT-BRIEF-PROTOTYPE.md` (moved with `git mv`).
+- `AGENTS.md` no longer limits work to the prototype. The dated assignment paragraphs are removed, and the brief governs instead. It also says to read the 2D game with absolute paths.
+- `CLAUDE.md` and the `README.md` intro and status lines are updated to match.
+- **Still stale (steps 2–3):** this file, PROTOTYPE.md, PLAYTEST.md, the per-feature docs and agent-tasks still describe prototype scope. The launcher, scripts and `Content/Prototype` keep their names for now. The 40 uncommitted Human/Zombie/Prototype-material uassets and 2 PNGs from earlier sessions are untouched and still unstaged.
+- **Tested:** documentation only, so there was no build. The launcher is unchanged and not stale.
+
+Next part of the work can be done here.
+
 ## October 12 — project moved out of OneDrive
 
 The working checkout is now **`C:\GameDev\CHUCK-3D`** (user request, to stop OneDrive syncing Unreal binaries). Copied with `robocopy` (16,796 files, 23.98 GB, 0 failures); `git worktree repair` fixed both `Local/AgentWorktrees` links; `git status` matched the old checkout line for line (same 40 pre-existing unfinished inputs, still unstaged); `git lfs fsck` OK; root launcher **CheckOnly** passes from the new path on **8d9c5d2**. The old OneDrive checkout was renamed `CHUCK-3D-OLD` and must not be used; delete it once the new location has been in use for a while.

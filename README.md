@@ -1,6 +1,6 @@
 # CHUCK 3D
 
-A separate Windows PC adaptation prototype in Unreal Engine, with Blender for custom assets. The first milestone is one small Waterdeep docks slice built from placeholders.
+A Windows PC 3D adaptation of the completed 2D game CHUCK, built in Unreal Engine with Blender for custom assets. The Waterdeep prototype is done (2026-10-12), and the full game now follows the 2D campaign region by region; see the project brief.
 
 - [Project brief](docs/PROJECT-BRIEF.md)
 - [Character references and art direction](docs/ART-DIRECTION.md)
@@ -14,6 +14,6 @@ A separate Windows PC adaptation prototype in Unreal Engine, with Blender for cu
 - [Character-first rework plan](docs/CHARACTER-PLAN.md)
 - [Codex + Claude Code setup and ownership](docs/AGENT-WORKFLOW.md)
 
-Status: playable Windows prototype using Unreal 5.7.4 and Blender 4.5.14, with two switchable cameras. Double-click `Launch-Prototype.cmd` for the local build. See [controls and camera comparison route](docs/PLAYTEST.md). All 42 rendered packaged runtime checks passed; physical Xbox testing and the camera decision remain open. Chuck's model and procedural motion remain far from the supplied visual goal: foot sliding, anatomy and jacket-edge continuity are the next priorities. World improvements are paused. The future rig must support walk/run/roll/side-jump/climb and mouth-held smoking, but those actions are not all implemented. Source and LFS assets are published to the separate public GitHub repository; packaged builds stay local and excluded from Git.
+Status: the Waterdeep docks, plaza, sewer, tavern and pantry are playable in Unreal 5.7.4 (Blender 4.5.14 assets). Double-click `Launch-Prototype.cmd` for the local build. Chult is the next region. The supplied character images remain the visual target and have not been reached. Source and LFS assets are published to the separate public GitHub repository; packaged builds stay local and excluded from Git.
 
 The original `C:\Users\ashsm\OneDrive\Documents\CHUCK-game` is read-only reference. This repository has its own history and public remote at [RtRutabaga/CHUCK-3D](https://github.com/RtRutabaga/CHUCK-3D). No deployment is configured. Never reuse the original game's remote, Pages workflow, save locations, or release destination.
