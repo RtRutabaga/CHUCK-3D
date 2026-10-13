@@ -7,17 +7,17 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's first landing setting pass; later milestone detail remains proposed ([regions/CHULT.md](regions/CHULT.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
-- **Next work:** promote the verified Chult landing preview. Claude then connects the finished fall cutscene; Codex extends the jungle with brachiation farther in.
+- **Next work:** Claude connects the finished fall cutscene to the verified landing; Codex extends the jungle with brachiation farther in.
 
-## October 12 — Chult landing preview (Codex; verified candidate)
+## October 12 — Chult landing preview (Codex)
 
 - **Built:** `ChultLanding.h/.cpp` reuses the fall-set art and exact near tree/palm placements, floor origin and material. A winding ground loop runs about 46 m into the jungle and returns to the clearing. No landing grips; brachiation moves farther in under the user's new instruction. `Dev Checkpoints → Chult Landing` enters this setting with local respawn. Production fall-to-control handoff remains Claude's work; the ordinary pantry fall still ends on the demo card.
 - **Tested:** editor geometry/captures; corrected packaged Chult run `Local/verify-chult-20261012-213439.log`: assets present, 127 floor samples, 12 real-capsule segment sweeps, local recovery, clean exit. Low/elevated landing and farther-jungle captures reviewed. Full package suite **182 passes / 0 failures** (`verify-package-20261012-213439.log`); real menu **8/8** (`verify-menu-20261012-214404-*.log`), including Chult's actual input, floor, possession and local recovery point.
 - **Tooling:** `Build-Game.ps1 -SkipBaseAssets` preserves existing binary assets, disables stale UBT makefile environment restoration and avoids recompiling the editor during packaging. Standard corrected build/package/verification command succeeded (`Local/chult-final-build.log`). The first packaged Chult test crashed during timer cleanup; its executing lambda no longer deletes itself, and the corrected run exits cleanly.
 - **Limits:** flat ground, procedural/repetitive foliage, simple trunk/timber collision; visual buttress roots/lianas and the original scenic log have no collision. No outer boundary, onward transition, Chult ambience/music, grips, encounters or pickups yet. No physical Xbox or complete walking-loop playtest.
-- **Launcher:** previous verified FallCutscene build remains installed until the candidate passes the remaining checks.
+- **Launcher:** promoted with `Promote-Build.ps1 -Label ChultLanding` (`Local/chult-promotion.log`). `Builds/Windows` is **fb51039**, and launcher `-CheckOnly` passed. Select **Dev Checkpoints → Chult Landing**. The previous package is retained as `Windows-Previous-20261012-ChultLanding`; two backups kept, Rename pruned, no candidate folder left. The first test's crash evidence moved to ignored `Local/chult-first-test-crash` before promotion. No binary assets changed.
 
-Next part of the work can be done here: promote the verified candidate; then Claude connects the cutscene and Codex continues the jungle.
+Next part of the work could be done by either — preference: Claude connects the cutscene to the landing under CHULT-LANDING.md; Codex then builds brachiation farther into Chult.
 
 ## October 12 — the fall-to-Chult cutscene (Claude)
 
