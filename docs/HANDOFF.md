@@ -19,6 +19,8 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 Next part of the work can be done here.
 
+Publication for this pass remains local: automatic approval review rejected the GitHub push because remote ownership/trust was not established by trusted user content. The playable launcher is updated; explicit user authorization is needed before retrying publication.
+
 ## October 12 — Chult landing preview (Codex)
 
 - **Built:** `ChultLanding.h/.cpp` reuses the fall-set art and exact near tree/palm placements, floor origin and material. A winding ground loop runs about 46 m into the jungle and returns to the clearing. No landing grips; brachiation moves farther in under the user's new instruction. `Dev Checkpoints → Chult Landing` enters this setting with local respawn. Production fall-to-control handoff remains Claude's work; the ordinary pantry fall still ends on the demo card.
