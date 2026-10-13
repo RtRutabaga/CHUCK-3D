@@ -1,4 +1,5 @@
 #include "ChuckCharacter.h"
+#include "ChultLanding.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockGameMode.h"
@@ -372,6 +373,7 @@ void AChuckCharacter::ResetToDock()
 }
 FVector AChuckCharacter::GetAreaStartLocation() const
 {
+    if(bChultRespawn) return AChultLanding::Entrance();
     const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
     if (bPantryRespawn) return DockPantryStartLocation();
     if (!Sewer) return StartLocation();
@@ -397,6 +399,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     // A checkpoint teleport is not a fall from the previous area's elevation.
     AirApexZ = static_cast<float>(Location.Z);
     bPantryRespawn=IsWithinDockPantry(Location);
+    bChultRespawn=AChultLanding::Contains(Location);
     bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
     ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;
     LadderIndex = -1; bClimbReverse = false;

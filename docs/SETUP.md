@@ -12,6 +12,8 @@
 
 ## Installed for the movement prototype
 
+October 12, 2026: `Build-Game.ps1` disables UBT makefile caching with `-NoUBTMakefiles`. Unreal's cached makefile restores its saved process environment, including an expired sandbox TEMP/TMP path, which caused MSVC D8050 on subsequent builds. The packaging step skips recompiling the editor already built by the script and builds the game with fresh UBT actions. This changes no installed tool versions.
+
 2026-09-24: Unreal Engine **5.7.4**, changelist **51494982**, at `C:\Program Files\Epic Games\UE_5.7`; Visual Studio Build Tools **2022 17.14.41**, MSVC compiler **14.44.35229** (tools folder 14.44.35207), Windows SDK **10.0.26100.0**, and .NET Framework **4.8 SDK/targeting pack**. Unreal uses its bundled .NET **8.0.412**. Epic Games Launcher was installed through winget; the user completed sign-in and licensing. Blender was subsequently added for the custom character form study; see below.
 
 The project uses a small C++ module rather than the initially suggested Blueprint-only setup to make the geometry and control logic reproducible from source. First editor compilation succeeded, but Unreal's header precompile encountered memory pressure. The build script now limits compilation to one action and disables Unreal Build Accelerator. Close the editor before building to avoid Live Coding conflicts. No unrelated user applications were closed.

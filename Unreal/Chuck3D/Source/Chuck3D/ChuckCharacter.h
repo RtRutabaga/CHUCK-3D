@@ -328,6 +328,7 @@ private:
     bool bIgnoringAstralFloor = false;
     static float AreaStartYaw(const FVector& Location);
     bool bPantryRespawn = false;   // came down into the tavern pantry: deaths there return to its ladder
+    bool bChultRespawn = false;    // landing preview uses its local entrance
     UPROPERTY() USpringArmComponent* Boom;
     UPROPERTY() UCameraComponent* Camera;
     UPROPERTY() TArray<UGroomComponent*> Grooms;

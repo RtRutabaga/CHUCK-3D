@@ -1,6 +1,6 @@
 # Chult — 3D adaptation plan
 
-Written 2026-10-12 (Codex). **Planning only; no Chult geometry, imports, runtime changes or playable tests have been completed in this pass.** The user's changes below are confirmed direction. Layout, quantities and milestone boundaries are proposals for review before implementation.
+Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:** start Chult at the cutscene landing and match the supplied contact sheet; brachiation can have a better layout farther into the map. This approves the first setting pass, with a ground exploration clearing and jungle loop, deferring the first grip chains. Later milestone detail remains proposed. Actual implementation and test evidence are recorded in HANDOFF.
 
 ## Direction and sources
 
@@ -44,7 +44,7 @@ Include a waterfall cove near the respite as a visible, reachable exploration sp
 
 | Space | Main experience | Brachiation and grounded exploration |
 | --- | --- | --- |
-| Landing clearing | Recover control after Claude's fall; see a route into humid jungle | Safe footing, a low first grip chain and a reachable rest branch. No enemy at the handoff point. |
+| Landing clearing | Recover control after Claude's fall; see a route into humid jungle | Safe footing matching the cutscene, ground exploration first. Grip chains start farther into the jungle. No enemy at the handoff point. |
 | Root-and-branch jungle | Discover layered routes and signs of a failed expedition | Multiple short swing chains, root ramps, logs, a rat-sized passage and an optional branch loop overlooking the path. First avoidable zombies below. |
 | Wreck basin | Gradually reveal a large broken vessel among trees | Approach from ground or branches; climb aboard, explore the deck and hull interior, then exit back into jungle. Rigging connects to nearby branches. |
 | Tangled jungle | Retain distinct raptor territory, thorn navigation and zombie escape sections | Repeated canopy chains above dangerous ground, short standing sections and a narrow escape route. Give the two raptors their own space beyond the wreck. Thorn patches shape ground navigation without enclosing every path. |
@@ -147,6 +147,8 @@ This is a proposed integration contract, not a claim that a destination API or C
 
 ## Delivery order and ownership
 
+The user's October 12 landing instruction starts with a **playable setting preview** before the full milestone below: match the cutscene clearing and add a winding ground loop, available through Dev Checkpoints. The first brachiation sample moves beyond that clearing. Claude's production cutscene handoff remains separate. See [../CHULT-LANDING.md](../CHULT-LANDING.md) for the concrete floor/entrance contract and current limits.
+
 | Milestone | Codex setting/verification work | Claude work | Acceptance before promotion |
 | --- | --- | --- | --- |
 | 1: landing and jungle traversal sample | Safe landing, small dense jungle loop, low entry chain, raised branch chain, fork, dismounts and ground recovery | Cutscene connection; any required camera/traversal fixes | Complete fall-to-control handoff, forward/reverse chains, fork selection, safe release/recovery, both camera heights and keyboard/controller routes reviewed. |
@@ -173,4 +175,4 @@ Before each playable milestone, inspect the current handoff and unfinished asset
 - Waterfall cove is visibly reachable, has no treasure chest and does not depend on a chest or power-up reward system.
 - Measure performance in a representative foliage/encounter view and retain timings; no performance or comfort claim before measurement and human play.
 
-Current evidence is limited to source/document review. Existing docks brachiation is a reusable baseline, not proof that jungle branches, the wreck or transitions pass these checks.
+The checks above cover later milestones as well as the landing. Consult HANDOFF for checks actually run; they are not all acceptance claims for the first setting preview. Existing docks brachiation is a reusable baseline, not proof that jungle branches, the wreck or transitions pass these checks.

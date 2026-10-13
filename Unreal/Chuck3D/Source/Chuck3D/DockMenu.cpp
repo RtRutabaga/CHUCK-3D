@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "ChuckCharacter.h"
+#include "ChultLanding.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockReturn.h"
@@ -29,11 +30,16 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
 {
     auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     if(!C || (Point!=TEXT("Waterdeep") && Point!=TEXT("Sewer") && Point!=TEXT("SewerJump") && Point!=TEXT("SewerLongJump") &&
-              Point!=TEXT("Night") && Point!=TEXT("Pantry"))) return false;
+              Point!=TEXT("Night") && Point!=TEXT("Pantry") && Point!=TEXT("Chult"))) return false;
+    if(Point==TEXT("Chult"))
+    {
+        FadeOutMusic(.1f);
+        AChultLanding::EnterPreview(GetWorld());
+    }
     const FVector Location=Point==TEXT("Sewer")?DockSewerStartLocation():
         Point==TEXT("SewerJump")?DockSewerCheckpointLocation():
         Point==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
-        Point==TEXT("Pantry")?DockPantryStartLocation():AChuckCharacter::StartLocation();
+        Point==TEXT("Pantry")?DockPantryStartLocation():Point==TEXT("Chult")?AChultLanding::Entrance():AChuckCharacter::StartLocation();
     C->ResetAtLocation(Location);
     if(Point==TEXT("Night") || Point==TEXT("Pantry")) MarkDockSewerExited();
     UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
@@ -90,7 +96,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7 && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==8 && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         Click(TEXT("Back"));
     }
     else if(MenuTestStage==2)
@@ -104,7 +110,8 @@ void ADockHUD::Tick(float DeltaSeconds)
         const TCHAR* Label=MenuTestPoint==TEXT("SewerLongJump")?TEXT("Sewer Long Jump"):
             MenuTestPoint==TEXT("SewerJump")?TEXT("Sewer Jump"):
             MenuTestPoint==TEXT("Night")?TEXT("Waterdeep Night"):
-            MenuTestPoint==TEXT("Pantry")?TEXT("Tavern Pantry"):*MenuTestPoint;
+            MenuTestPoint==TEXT("Pantry")?TEXT("Tavern Pantry"):
+            MenuTestPoint==TEXT("Chult")?TEXT("Chult Landing"):*MenuTestPoint;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -119,7 +126,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
             MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
-            MenuTestPoint==TEXT("Pantry")?DockPantryStartLocation():AChuckCharacter::StartLocation();
+            MenuTestPoint==TEXT("Pantry")?DockPantryStartLocation():MenuTestPoint==TEXT("Chult")?AChultLanding::Entrance():AChuckCharacter::StartLocation();
         if(C) UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_SPAWN point=%s actual=%s expected=%s distance=%.2f movement=%d possessed=%d"),
             *MenuTestPoint,*C->GetActorLocation().ToString(),*Expected.ToString(),FVector::Dist(C->GetActorLocation(),Expected),
             int32(C->GetCharacterMovement()->MovementMode),PC && PC->GetPawn()==C);
@@ -131,7 +138,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         Check(HasExitedDockSewer()==(MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("destination has the expected morning or evening progression state"));
         // Outdoor sun/sky are intentionally disabled while the camera is in the
         // sewer, so the surface-lighting assertion is only valid above ground.
-        if(MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump") && MenuTestPoint!=TEXT("SewerLongJump"))
+        if(MenuTestPoint!=TEXT("Chult") && MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump") && MenuTestPoint!=TEXT("SewerLongJump"))
             Check(CheckDockReturn(GetWorld(),MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("surface doors, hatch and lighting match the destination"));
         const FString Folder=FPaths::ScreenShotDir()/TEXT("MenuStarts");
         IFileManager::Get().MakeDirectory(*Folder,true);
@@ -221,6 +228,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         Add(TEXT("Sewer Long Jump"),[Start](){return Start(TEXT("SewerLongJump"));});
         Add(TEXT("Waterdeep Night"),[Start](){return Start(TEXT("Night"));});
         Add(TEXT("Tavern Pantry"),[Start](){return Start(TEXT("Pantry"));});
+        Add(TEXT("Chult Landing"),[Start](){return Start(TEXT("Chult"));});
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
     GEngine->GameViewport->AddViewportWidgetContent(MenuWidget.ToSharedRef(),100);

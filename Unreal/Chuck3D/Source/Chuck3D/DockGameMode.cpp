@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "ChultLanding.h"
 #include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
@@ -598,6 +599,14 @@ void ADockGameMode::StartPlay()
     UE_LOG(LogTemp,Display,TEXT("CHUCK: docks ready; Chuck 65 cm, human 180 cm; two cameras available."));
     const FString MenuStart=UGameplayStatics::ParseOption(OptionsString,TEXT("ChuckStart"));
     if(!MenuStart.IsEmpty()) StartFromMenu(MenuStart);
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckChultTest")))
+    {
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle ChultCheck;
+        World->GetTimerManager().SetTimer(ChultCheck,[World](){
+            for(TActorIterator<AChultLanding> It(World);It;++It) It->VerifyAndCapture();
+        },4.f,false);
+    }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     if(bSmokeTest)
     {

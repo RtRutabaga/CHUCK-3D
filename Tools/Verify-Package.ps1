@@ -10,6 +10,15 @@ $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
+$chultLog=Join-Path $evidence ('verify-chult-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$chultProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$chultLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_LANDING .* missing_assets=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
+   (Select-String -LiteralPath $chultLog -Pattern 'Fatal error:|Failed to compile Material|Default Material will be used in game' -Quiet)) {
+    throw "Chult landing verification failed. Inspect $chultLog"
+}
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }
 if ($MotionCapture) {
