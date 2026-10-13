@@ -1,63 +1,122 @@
 # Chult canopy grove — setting contract
 
-User-authorized October 13, 2026. Codex owns this expansion's setting. Claude owns the actual cat-to-cat climb/brachiation integration, camera behavior and traversal tests. This is a setting preview awaiting those tests, not a completed brachiation milestone.
+User-authorized October 13, 2026: the original grove and later revision to make
+its trees more natural, rounded, rooted and suitable for jumps between separate
+branches. This contract supersedes the first straight branch/static-vine layout.
+Codex owns setting and verification; Claude owns actual cat-to-cat climbing,
+brachiation, stamina and camera integration. This remains an inactive traversal
+setting preview, not a completed brachiation milestone.
 
-## Location and ground access
+## Location and access
 
-The grove connects to the original landing loop at local **(4200,500,0)**, then follows an open ground approach to **(5600,900,0)**. A second ground lane winds beneath the forks and returns to the original loop at **(4600,1350,0)**. All coordinates are centimetres relative to `AChultLanding::FloorOrigin()`, currently **(400000,2500000,0)**. The floor, cinematic clearing, entrance and local recovery point are unchanged.
+Coordinates are centimetres relative to `AChultLanding::FloorOrigin()`:
+(400000,2500000,0). The grove connects to the original landing loop at
+(4200,500,0), approaches fork 0 through (5300,900,0), and returns through
+(4600,1350,0). The floor, cinematic clearing and recovery point remain intact.
 
-`ChultCanopy.cpp` owns the authored grove. Random forest trunks and colliding understory palms are excluded from its reserved footprint: X=5000–8800, Y=250–3000. Preserve this exclusion when adding foliage: imported trees carry broad crowns and unpredictable branches that can obscure the authored routes. Noncolliding ferns, shrubs and elephant ears dress the ground away from the open lanes. The existing wet-forest materials and crown mesh are reused; no binary assets or Blender sources are regenerated.
+`ChultCanopy.cpp` authors the grove. Random trunks and colliding understory are
+excluded from X=5000–8800, Y=250–3000. Imported island trees remain outside this
+reserve with a 650 cm margin; noncolliding scanned ferns dress its ground.
+Preserve the ground lanes when expanding roots or foliage. The Poly Haven kit
+and existing bark/leaf meshes/materials are reused; no binary source regenerated.
 
-The later October 13 user-authorized Poly Haven art pass adds four scanned fern
-variants, scanned rocks and bark/soil textures. Optimized island trees stay
-outside this reserve with a 650 cm margin. Only the new imported CC0 sources are
-derived; authored Blender jungle sources, climb surfaces, crown meshes and named
-proposals remain unchanged.
-
-## Climb and standing surfaces
-
-October 13 ruins addition: the stone causeway meets fork 0 from the south. A
-360 x 360 cm landing centred at (5530,820), top Z=670, sits 20 cm above the
-existing wood, covering the narrow round standing limb along this approach.
-The existing fork marker at Z=650 and all tree/grip geometry remain unchanged;
-use Z=670 for this stone standing surface. Approach along X=5460 to Y=900,
-then east into the fork to avoid the south trunk's leaning continuation.
-See [CHULT-RUINS.md](CHULT-RUINS.md).
-
-| Fork marker | Local standing reference | Intended use |
+| Fork marker | Local standing reference | Route |
 | --- | --- | --- |
-| `ChultCanopyFork0` | (5600,900,650) | First cat-to-cat climb and choice of two branch routes |
-| `ChultCanopyFork1` | (7200,900,650) | Level first chain, standing pause and onward branch |
-| `ChultCanopyFork2` | (8200,1800,760) | Higher overlook and vine return section |
-| `ChultCanopyFork3` | (6800,2400,650) | Return loop and another climb/recovery point |
+| `ChultCanopyFork0` | (5600,900,650) | First entry and two branch choices |
+| `ChultCanopyFork1` | (7200,900,650) | Standing pause and onward branch |
+| `ChultCanopyFork2` | (8200,1800,760) | Higher overlook |
+| `ChultCanopyFork3` | (6800,2400,650) | Return loop and recovery |
 
-Each fork uses two bevelled trunks at Y ±160 cm from its centre. Their broad inner faces lie at Y ±60, giving **120 cm clear separation**, with **140 cm flat face width** along X. Visible procedural bark also supplies query/physics collision. Trunk tops terminate at the fork reference height (6.5–7.6 m); thinner continuation trunks grow outside the gap. Buttress roots point away from the climbing gap. Broad solid limbs cross and extend beside the tops for resting/dismount surfaces; their round profile is part of the art, not a rectangular hidden platform. The standing marker references the limb's highest surface, not a guaranteed capsule resting transform. Actual climb, mantle and comfortable standing coverage need Claude's tests.
+The adjacent stone causeway joins fork 0 from the south. Its 360 x 360 cm landing
+is centred at (5530,820), top Z=670, 20 cm above the wood. Approach along X=5460
+to Y=900, then east, around the south trunk. See [CHULT-RUINS.md](CHULT-RUINS.md).
+The user explicitly deferred impassable boundary cliffs.
 
-## Branch and vine proposals
+## Rounded trunks, standing wood and roots
 
-`ChultCanopyChains()` returns four named chains, each with **local paw coordinates** and a `bVine` flag. Consecutive proposals are evenly spaced at no more than 150 cm horizontally, with gradual height changes. `BuildChultCanopy()` creates named scene components `<ChainName>_PawNN`; their +X axis is the horizontal chain direction. All carry `ChultCanopyGripProposal`. They **do not call `AddChuckSwingGrip`** and cannot be caught yet.
+Each fork has paired trunks with centres Y +/-160 from the hub. Their inner
+climbing strips remain at Y +/-60: **120 cm clear separation**. Trunk exteriors
+now use 32-sided, 24-ring tapered/flared bark. The inner strip is intentionally
+flat; its exact width varies with the rounded section, superseding the original
+fixed 140 cm face width. Continuation boughs curve outward from the tops rather
+than beginning as thin poles on square stumps.
 
-| Chain | Direction | Surface |
-| --- | --- | --- |
-| `ChultCanopyChain0` | Fork 0 → 1 | Nearly level branch |
-| `ChultCanopyChain1` | Fork 1 → 2 | Gradually rising branch |
-| `ChultCanopyChain2` | Fork 2 → 3 | Static vine with 35 cm sag |
-| `ChultCanopyChain3` | Fork 3 → 0 | Returning branch |
+Broad round limbs cross and extend beside the tops for resting/dismounts. The
+standing marker names the highest limb surface, not a guaranteed resting capsule
+transform. Rendered solid bark supplies query/physics collision; there are no
+hidden rectangular platforms. Claude still needs actual climbing/standing tests.
 
-Proposal endpoints are 300 cm horizontally out from the fork centre, 115 cm above its standing reference. The thin branch's underside or vine's underside meets the proposal's Z. Parent limbs rise away from these corridors. Thin hand branches, parent branches and vine are currently **noncolliding**, while climb trunks and standing limbs collide. This avoids declaring the existing leap arc valid before Claude assesses natural continuous branch contact. The vine is stationary scenery; it implies hand-over-hand traversal, not a swinging rope or physics pendulum.
+Outward buttress ribs broaden from the bases, taper along curved 3.5–5.3 m
+surface roots, and split into smaller toes. Root tips sink into the ground.
+Candidate roots near the ground recovery route are omitted. Inner climbing gaps
+stay open. The visible root surface supplies collision.
 
-Claude should integrate world-space grip registration, audit lifetime/respawn/re-entry, and adjust paws/endpoints/collision as needed for actual catches and exits. At a fork, aim and climb/dismount need explicit verification: current no-input chain-end behavior can select the previous grip. The 300 cm transition through each fork is a standing break, not an automatic connection between endpoint grips. No control or movement-code change has been made by Codex.
+## Separate reaching branches and paw proposals
 
-## Foliage visibility and future encounters
+`ChultCanopyChains()` returns four named chains with local paw positions,
+`bVine=false` and `BranchBreak`, the first paw on the neighbouring tree. Each
+chain comprises **two independently supported curved boughs**; wood never spans
+the branch break. Chain 2 is now a branch pair, replacing the earlier static vine.
 
-The eight individual crown components are named `ChultCanopyCrown<I>_<Side>` and tagged **`ChultCanopyFoliage`**. They sit to the sides and above the branches to leave open camera space. If traversal play reveals obstruction, Claude can use these components for selective partial fading, with per-component material instances and restoration on exit. No fade is implemented or promised unnecessary: actual orbit, paw visibility and elevated camera behavior must be checked in play.
+| Chain | Direction |
+| --- | --- |
+| `ChultCanopyChain0` | Fork 0 → 1 |
+| `ChultCanopyChain1` | Fork 1 → 2 |
+| `ChultCanopyChain2` | Fork 2 → 3 |
+| `ChultCanopyChain3` | Fork 3 → 0 |
 
-The grove is provisional procedural setting art: repeated crowns, bevelled climb faces, simple limb junctions and the existing flat forest floor. It does not reach the supplied art references. Refining the exterior tree silhouettes must preserve the paired inner climbing faces and named route contract until the traversal is verified.
+Endpoint paws remain 300 cm out and 115 cm above their standing fork. Proposals
+arc up 45 cm and bend sideways 35 cm. Along each bough they are spaced at most
+about 140 cm apart; the two jump paws are **180 cm apart**, leaving nominal
+**140 cm of air** between tapered wooden tips. Boughs taper from 67 cm radius
+at a supporting crotch, through 28 cm at the initial paw, to about 15 cm near the
+jump and a 2 cm rounded tip. Swept curves create continuous surfaces within each
+individual branch, avoiding a series of capped straight tubes.
 
-This grove offers a future elevated refuge above open ground. No raptors, enemy boundaries, encounter trigger or claim of raptor safety exists yet. Their territory/pacing remains a later approved region step. The isolated buff-only teaching tree is deferred entirely; ordinary paired-trunk climbs are intended to work without the golden cigarette, subject to Claude's traversal verification. Do not place the future pickup above its teaching climb or silently gate this main grove behind it.
+`BuildChultCanopy()` creates `<ChainName>_PawNN` scene components with forward
+horizontal tangent and `ChultCanopyGripProposal`. The first paw after each jump
+also has `ChultCanopyBranchJump`. **No `AddChuckSwingGrip` calls occur.** These
+branches cannot be caught yet. High hand boughs stay noncolliding until actual
+leap/contact checks; solid trunks, roots and standing limbs collide.
+
+Claude must integrate the revised coordinates, audit registry lifetime/local
+respawn/re-entry, test forward/reverse leaps and catches, and adjust contact as
+needed. Old cached paw arrays are stale. Fork choice/dismount requires explicit
+verification; chain-end no-input selection can otherwise choose the previous
+grip. The 300 cm fork transitions are standing breaks, not automatic grip links.
+No character/controller, control mapping, stamina or camera code changed here.
+
+## Leaf crowns and camera ownership
+
+Eight components keep `ChultCanopyCrown<I>_<Side>` names and the
+`ChultCanopyFoliage` tag. They now contain hierarchical instances of the existing
+individual leaf mesh, with five asymmetric lobes on curved smaller boughs per
+crown. Air between leaves replaces the old opaque mushroom core. Crowns are
+noncolliding and sit above/to the sides of the hand routes.
+
+If camera play needs partial fading, handle these instanced components and
+restore their material instances on exit. No fade is implemented. Manual orbit,
+elevated framing, paw visibility and camera comfort must be checked in play.
+
+The grove still uses procedural junctions, paired climbing strips and the flat
+forest floor. It does not reach the supplied art references. No raptors,
+encounter territory, raptor-safety claim, buff-only teaching tree or golden pickup
+is added. Ordinary paired climbs should work without a buff, subject to Claude's
+integration and tests.
 
 ## Verification boundaries
 
-Codex's setting checks extend `-ChuckChultTest` with 11 real-capsule ground segment sweeps and metre-spaced floor samples. Captures add `Canopy_Entry`, `Canopy_Overview` and `Canopy_Fork`. These establish setting access and visual evidence only. Actual cat-to-cat climbs, forward/reverse brachiation, fork choice, dismounts, missed catches, empty stamina, physical Xbox and camera/fading tests are Claude's next task. The package verifier's `registered_grips=0` inventory expectation must be updated when Claude activates the chains.
+`-ChuckChultTest` retains 11 real-capsule grove ground sweeps and metre-spaced
+floor samples, the original landing checks and five real-character ruin trials,
+including the stone-to-fork join. The layout marker checks consecutive proposed
+reach against 40–240 cm horizontal and at most 70 cm vertical in either direction;
+asset inventory checks bark and the reused leaf mesh. Cooked review captures are
+`Canopy_Entry`, `Canopy_Overview`, `Canopy_Fork`, `Canopy_BranchGap`, `Canopy_Roots`.
 
-Next part of the work can only be done by Claude: integrate and test canopy traversal on this setting, then decide whether selective crown fading is necessary.
+These prove setting access/layout and visual evidence only. Actual cat-to-cat
+climbing, brachiation catches, fork choices, dismounts, missed catches, empty
+stamina, physical Xbox and camera/fading remain Claude's next work. Update the
+verifier's `registered_grips=0` expectation when activating the chains.
+
+Next part of the work can only be done by Claude: integrate and test canopy
+traversal on the revised setting, then assess selective crown fading.

@@ -454,6 +454,18 @@ void AChultLanding::VerifyAndCapture()
         else if(Run->Phase==19) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Nature_Background.png"),true,false);
         else if(Run->Phase==20)
         {
+            const FVector From=FloorOrigin()+FVector(6100,570,965),At=FloorOrigin()+FVector(6390,900,800);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==21) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_BranchGap.png"),true,false);
+        else if(Run->Phase==22)
+        {
+            const FVector From=FloorOrigin()+FVector(5200,1490,175),At=FloorOrigin()+FVector(5600,1270,95);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==23) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Roots.png"),true,false);
+        else if(Run->Phase==24)
+        {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
             if(Run->DetailCamera.IsValid()) Run->DetailCamera->Destroy();

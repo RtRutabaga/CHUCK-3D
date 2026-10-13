@@ -197,3 +197,9 @@ Before each playable milestone, inspect the current handoff and unfinished asset
 - Measure performance in a representative foliage/encounter view and retain timings; no performance or comfort claim before measurement and human play.
 
 The checks above cover later milestones as well as the landing. Consult HANDOFF for checks actually run; they are not all acceptance claims for the first setting preview. Existing docks brachiation is a reusable baseline, not proof that jungle branches, the wreck or transitions pass these checks.
+
+October 13 follow-up authorization: round/refine the existing brachiation grove,
+replace continuous impossible branches with separate natural reaching boughs and
+jump gaps, and add broader realistic roots. Preserve the ruin connection and
+ground lanes. Boundary cliffs remain explicitly deferred. The revised setting
+contract is in CHULT-CANOPY.md; active traversal integration remains Claude's work.

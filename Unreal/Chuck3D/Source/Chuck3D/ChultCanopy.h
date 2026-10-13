@@ -10,6 +10,8 @@ struct FChultCanopyChain
     FName Name;
     TArray<FVector> Paws;
     bool bVine = false;
+    // First paw on the neighbouring tree: no wood spans this transition.
+    int32 BranchBreak = INDEX_NONE;
 };
 const TArray<FChultCanopyChain>& ChultCanopyChains();
 bool InChultCanopyReserve(const FVector& LocalPosition, float Margin = 0);
