@@ -24,7 +24,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - Cooked captures reviewed; contact sheet at `Local/fall-cutscene-contact-sheet-2.png`.
 - **Pending:** three CC0 BigSoundBank recordings the user approved (wind #0595, flag #1633 for the jacket, whistle #0155). The site's anti-bot download step means the user downloads them by hand, so the pre-roll still uses the generated wind. A `Flap` slot with volume curves is ready (see `SourceAssets/Audio/README.md`).
 - **Flaws:** the prone pose is the hang clip laid flat, not an authored crash or ragdoll (the tail stays raised). The cellar cloud sea is procedural noise, not volumetric. Not tested: Xbox, speakers, other resolutions.
-- **Launcher:** LAUNCHER_STATUS
+- **Launcher:** promoted with `Promote-Build.ps1 -Label FallCrash`. `Builds/Windows` is **c8f01d8**, with the receipt and launcher check passing. The previous build is kept as `Windows-Previous-20261013-FallCrash` (plus `-ChultWetForest`), and `-ChultHandoff` was pruned. No candidate is left.
 
 Next part of the work can be done here: integrate the three downloaded sounds once they are in Downloads.
 
