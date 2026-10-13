@@ -23,7 +23,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Changed shared tooling:** `Tools/Verify-Package.ps1` now runs `-ChuckFallCutsceneTest` and checks the skip. `-ChuckDemoEndTest` expects the cutscene.
 - **Gotcha:** a stale editor `Makefile.bin` made editor builds compile the old OneDrive copy (deleted; see the Claude handoff).
 - **Flaws:** the procedural jungle is flat and bright up close; the distant trunks are repetitive; there are no visible light shafts; the haze under the deck hides the jungle; the fall uses the jump loop pose. Not tested: Xbox, speakers, other resolutions.
-- **Launcher:** LAUNCHER_STATUS
+- **Launcher:** promoted with `Promote-Build.ps1 -Label FallCutscene`. `Builds/Windows` is **c6f2631** and `Launch-Chuck.ps1 -CheckOnly` passes. The previous build is kept as `Windows-Previous-20261012-FallCutscene` (plus `-Rename`), and `-Flow` was pruned. No candidate folder is left.
 
 Next part of the work can only be done by Codex: the Chult landing setting, after the user approves regions/CHULT.md. Claude then connects the cutscene to it.
 
