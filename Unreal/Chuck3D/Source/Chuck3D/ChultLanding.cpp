@@ -1,6 +1,7 @@
 #include "ChultLanding.h"
 #include "ChultRootProfiles.h"
 #include "ChultDressing.h"
+#include "ChultCanopy.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -38,6 +39,9 @@ namespace
     const FVector Route[] = {{0,0,0},{700,0,0},{1600,500,0},{2450,300,0},
         {3300,-150,0},{4200,500,0},{4600,1350,0},{3900,2200,0},
         {2800,2450,0},{1700,1900,0},{900,1500,0},{100,1100,0},{0,0,0}};
+    const FVector GroveRoute[]={{4200,500,0},{4900,500,0},{5300,900,0},{5600,900,0},
+        {6200,900,0},{6500,1600,0},{7400,2200,0},{7800,3200,0},{6800,3300,0},
+        {6000,2900,0},{5100,1800,0},{4600,1350,0}};
     float SegmentDistance(FVector P, FVector A, FVector B)
     {
         P.Z=A.Z=B.Z=0;
@@ -50,6 +54,8 @@ namespace
         if(P.Size2D()<300 || (P.X>-40 && P.X<1300 && FMath::Abs(P.Y+.27f*FMath::Max(0.,P.X-170))<290+P.X*.2f)) return true;
         for(int32 I=1;I<UE_ARRAY_COUNT(Route);++I)
             if(SegmentDistance(P,Route[I-1],Route[I])<Margin) return true;
+        for(int32 I=1;I<UE_ARRAY_COUNT(GroveRoute);++I)
+            if(SegmentDistance(P,GroveRoute[I-1],GroveRoute[I])<Margin) return true;
         return false;
     }
     UStaticMesh* JungleMesh(const TCHAR* Name)
@@ -239,7 +245,7 @@ void AChultLanding::BuildSet()
     for(float Y=-8500;Y<=8500;Y+=720) for(float X=-8500;X<=8500;X+=720)
     {
         FVector At(X+R.FRandRange(-260,260),Y+R.FRandRange(-260,260),0);
-        if(At.Size2D()<3000 || At.Size2D()>9000 || OnRoute(At,400)) continue;
+        if(At.Size2D()<3000 || At.Size2D()>9000 || OnRoute(At,400) || InChultCanopyReserve(At,300)) continue;
         float Scale=R.FRandRange(.75f,1.3f);
         const bool A=R.FRand()<.5f; const float Yaw=R.FRandRange(0,360);
         Place(A?TEXT("SM_FallTree_A"):TEXT("SM_FallTree_B"),At,Yaw,Scale);
@@ -252,7 +258,7 @@ void AChultLanding::BuildSet()
     {
         FVector At(R.FRandRange(-8000,8000),R.FRandRange(-8000,8000),0);
         if(At.Size2D()>8500 || OnRoute(At,230)) continue;
-        const int32 Type=R.RandRange(0,3); const float Yaw=R.FRandRange(0,360),Scale=R.FRandRange(.65f,1.3f);
+        const int32 Type=R.RandRange(0,InChultCanopyReserve(At)?2:3); const float Yaw=R.FRandRange(0,360),Scale=R.FRandRange(.65f,1.3f);
         Place(Under[Type],At,Yaw,Scale);
         if(Type==3) Trunk(At,14*Scale,700*Scale);
     }
@@ -277,6 +283,7 @@ void AChultLanding::BuildSet()
     RootCollision->SetCollisionProfileName(TEXT("BlockAll")); RootCollision->SetHiddenInGame(true); RootCollision->SetCastShadow(false); Attach(RootCollision);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOTS triangles=%d trees=%d"),RootTriangles.Num()/3,TreeCount);
     BuildChultWetDressing(this,true);
+    BuildChultCanopy(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -321,6 +328,25 @@ void AChultLanding::VerifyAndCapture()
         }
     }
     Failures+=!Contains(C->GetAreaStartLocation());
+    // Setting checks only: real-capsule ground access/recovery below the canopy.
+    // Brachiation and the actual cat-to-cat climb trials belong to Claude.
+    int32 GroveFailures=0;
+    for(int32 I=1;I<UE_ARRAY_COUNT(GroveRoute);++I)
+    {
+        FHitResult Hit;
+        const FVector A=FloorOrigin()+GroveRoute[I-1],B=FloorOrigin()+GroveRoute[I];
+        const bool Blocked=GetWorld()->SweepSingleByChannel(Hit,A+FVector(0,0,Half+3),B+FVector(0,0,Half+3),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeCapsule(Radius,Half),Q);
+        GroveFailures+=Blocked;
+        if(Blocked) UE_LOG(LogTemp,Warning,TEXT("CHUCK_CHULT_GROVE_BLOCK segment=%d component=%s at=%s"),I,*GetNameSafe(Hit.GetComponent()),*(Hit.ImpactPoint-FloorOrigin()).ToString());
+        for(float D=0;D<=FVector::Dist(A,B);D+=100)
+        {
+            const FVector At=FMath::Lerp(A,B,D/FVector::Dist(A,B));
+            const bool Ground=GetWorld()->LineTraceSingleByChannel(Hit,At+FVector(0,0,150),At-FVector(0,0,30),ECC_Visibility,Q);
+            GroveFailures+=!(Ground && FMath::Abs(Hit.ImpactPoint.Z-FloorOrigin().Z)<1);
+        }
+    }
+    Failures+=GroveFailures;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_GROVE_GROUND failures=%d capsule_segments=%d"),GroveFailures,UE_ARRAY_COUNT(GroveRoute)-1);
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();
@@ -348,6 +374,29 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==7) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Surface_Detail.png"),true,false);
         else if(Run->Phase==8)
+        {
+            C->SetActorHiddenInGame(false);
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->Destroy();
+            C->ResetAtLocation(FloorOrigin()+FVector(5300,900,34.65f));C->SetActorRotation(FRotator(0,0,0));C->SetOrbitPitch(-12);
+        }
+        else if(Run->Phase==9) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Entry.png"),true,false);
+        else if(Run->Phase==10)
+        {
+            auto* Camera=GetWorld()->SpawnActor<ACameraActor>();Run->DetailCamera=Camera;
+            const FVector From=FloorOrigin()+FVector(5950,-550,1150),At=FloorOrigin()+FVector(6900,1600,800);
+            Camera->SetActorLocationAndRotation(From,(At-From).Rotation());Camera->GetCameraComponent()->SetFieldOfView(72);
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(Camera);
+        }
+        else if(Run->Phase==11) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Overview.png"),true,false);
+        else if(Run->Phase==12)
+        {
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->Destroy();
+            C->ResetAtLocation(FloorOrigin()+FVector(5800,900,685));C->SetActorRotation(FRotator(0,0,0));C->SetOrbitPitch(-10);
+        }
+        else if(Run->Phase==13) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Fork.png"),true,false);
+        else if(Run->Phase==14)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

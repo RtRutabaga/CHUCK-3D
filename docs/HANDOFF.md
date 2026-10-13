@@ -4,10 +4,20 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 ## Current state
 
-- **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's first landing setting pass; later milestone detail remains proposed ([regions/CHULT.md](regions/CHULT.md)).
+- **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing and October 13 canopy-grove setting expansion; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
-- **Next work:** refine Chult's natural tree/leaf/rock forms and ground relief; extend the jungle with brachiation farther in under the region plan. Claude can address the inherited alchemist pose/check separately.
+- **Next work:** Claude integrates/tests cat-to-cat climbing and brachiation on the authored Chult grove under [CHULT-CANOPY.md](CHULT-CANOPY.md), including crown visibility/fading if needed. Raptors and the buff-only teaching tree remain deferred. Natural tree/leaf/rock forms and ground relief still need refinement. Claude can address the inherited alchemist pose/check separately.
+
+## October 13 — Chult canopy grove setting for Claude's traversal work (Codex)
+
+- **Built:** an open ground approach from the outer landing loop, four paired-trunk entries with 120 cm between flat bark faces, standing forks at 6.5–7.6 m, three branch chains and one sagging static vine forming a canopy loop. Solid bark/standing limbs use the visible procedural mesh for collision. Thin hand branches/vine remain noncolliding. **32 named paw proposals**, spaced about 132–149 cm, are inactive: no gameplay grips or character/controller changes. Eight individual crown components carry `ChultCanopyFoliage` for Claude's possible partial-fade integration. The shared cinematic clearing, origin and recovery point remain intact. Contract: [CHULT-CANOPY.md](CHULT-CANOPY.md).
+- **Verified setting:** final cooked Chult checks pass (`Local/verify-chult-20261013-120332.log`): original **127** floor samples / **12** capsule segments / **5** outer roots, plus the new grove's metre-spaced floor samples / **11** ground capsule segments, local recovery and clean exit. Reviewed final cooked entry, overhead grove and standing-fork captures. Final full package suite **182 passes / 0 failures** (`Local/verify-package-20261013-120332.log`), including full fall, skip/playable handoff, pantry, leap and existing lamp traversal regressions. No new menu/startup changes; real menu automation was not separately rerun.
+- **Build/storage:** UE **5.7.4 / CL 51494982**, MSVC **14.44.35229**, SDK **10.0.26100.0**, bundled .NET **8.0.412**; one-worker source build/cook (`Local/chult-canopy-verified-build.log`, UAT **40.22 s**). New authored geometry: **2,928 triangles** plus eight instances of the existing crown mesh. Existing art/materials reused; no installs, new dependencies, mesh imports, Blender regeneration or binary/LFS changes. Original game read only.
+- **Limits:** provisional bevelled trunks, repeated crowns, simple junctions and flat terrain; below the art references. Actual cat-to-cat climbing, catches/leaps, fork/dismount selection, empty-stamina traversal, camera comfort and physical Xbox are **untested here and assigned to Claude**. No foliage fade, raptors, buff-only tree or golden pickup added. The first candidate had one blocked ground recovery sweep; a wider return lane passes. A later superseded verification was deliberately stopped for a trunk-winding/shading correction and is not acceptance evidence.
+- **Launcher:** final candidate passed verification; promotion follows this source commit. Root launcher currently uses the previous FallCrash package.
+
+Next part of the work can only be done by Claude: integrate/test the canopy traversal under CHULT-CANOPY.md and assess selective crown fading in play.
 
 ## October 13 — fall cutscene: sky-hole fix, pre-roll, crash landing, matched to Chult (Claude)
 

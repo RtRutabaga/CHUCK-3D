@@ -2,6 +2,8 @@
 
 Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:** start Chult at the cutscene landing and match the supplied contact sheet; brachiation can have a better layout farther into the map. This approves the first setting pass, with a ground exploration clearing and jungle loop, deferring the first grip chains. Later milestone detail remains proposed. Actual implementation and test evidence are recorded in HANDOFF.
 
+**Canopy setting expansion authorized by the user, 2026-10-13:** extend the map with closely spaced trees for existing cat-to-cat climbing, standing canopy forks and branch/vine routes for brachiation. Codex builds this setting; Claude implements and tests the traversal. Raptors are a tentative future reason to use the canopy, not part of this pass. Assess partial treetop vision fading if foliage obstructs the player; camera/material integration follows Claude's traversal work. A later tree will require Premium Buhetian Halfling Leaf to introduce the stamina lock, but neither that tree nor the pickup is authorized for this pass. See [../CHULT-CANOPY.md](../CHULT-CANOPY.md) for the authored setting contract.
+
 ## Direction and sources
 
 Adapt the original Chult journey into a dense, layered jungle where brachiation is a major part of exploration. Ground routes, roots, branches and the shipwreck form one readable environment at Chuck's established 65 cm scale. Exploration leads; height and apparent danger can look demanding while the existing forgiving traversal makes movement approachable.
