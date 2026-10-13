@@ -1,11 +1,12 @@
 """Run once with UnrealEditor-Cmd -run=pythonscript -script=<this file>.
 
-Creates only this project's named prototype assets. Re-running updates materials
+Creates only this project's base materials and the Waterdeep docks map. Re-running updates materials
 and creates the level only if absent, preserving any subsequent map editing.
 """
 import unreal
 
-ROOT = "/Game/Prototype"
+MATERIALS = "/Game/Common/Materials"
+LEVEL = "/Game/Maps/WaterdeepDocks"
 COLORS = {
     "Gray": (0.30, 0.32, 0.34), "Purple": (0.28, 0.085, 0.43),
     "Pink": (0.50, 0.29, 0.28), "Dark": (0.065, 0.075, 0.08),
@@ -17,10 +18,10 @@ COLORS = {
 }
 tools = unreal.AssetToolsHelpers.get_asset_tools()
 for name, color in COLORS.items():
-    path = f"{ROOT}/Materials/M_{name}"
+    path = f"{MATERIALS}/M_{name}"
     material = unreal.load_asset(path)
     if material is None:
-        material = tools.create_asset(f"M_{name}", f"{ROOT}/Materials", unreal.Material, unreal.MaterialFactoryNew())
+        material = tools.create_asset(f"M_{name}", MATERIALS, unreal.Material, unreal.MaterialFactoryNew())
     unreal.MaterialEditingLibrary.delete_all_material_expressions(material)
     expression = unreal.MaterialEditingLibrary.create_material_expression(material, unreal.MaterialExpressionConstant3Vector)
     expression.set_editor_property("constant", unreal.LinearColor(*color, 1.0))
@@ -37,7 +38,7 @@ for name, color in COLORS.items():
     unreal.MaterialEditingLibrary.recompile_material(material)
     unreal.EditorAssetLibrary.save_loaded_asset(material)
 
-level_path = f"{ROOT}/WaterdeepDocks"
+level_path = LEVEL
 if not unreal.EditorAssetLibrary.does_asset_exist(level_path):
     level_system = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     if not level_system.new_level(level_path):

@@ -25,7 +25,7 @@ $target=Join-Path $BuildsRoot 'Windows'
 if($source -eq $target) { throw 'The candidate is already the launcher build.' }
 
 # Write the receipt on the candidate first: a failing log stops the promotion before anything moves.
-& (Join-Path $PSScriptRoot 'Write-PrototypeReceipt.ps1') -PackageRoot $source -VerificationLog $VerificationLog -AstralCameraReview:$AstralCameraReview -TutorialReview:$TutorialReview
+& (Join-Path $PSScriptRoot 'Write-BuildReceipt.ps1') -PackageRoot $source -VerificationLog $VerificationLog -AstralCameraReview:$AstralCameraReview -TutorialReview:$TutorialReview
 
 $running=Get-Process -Name 'Chuck3D*' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($target,[StringComparison]::OrdinalIgnoreCase) }
 if($running) { throw 'The launcher build is running. Close the game and promote again; nothing was moved.' }
@@ -45,7 +45,7 @@ catch {
 $sourceParent=Split-Path $source -Parent
 if($sourceParent -ne $BuildsRoot -and !(Get-ChildItem -LiteralPath $sourceParent -Force)) { Remove-Item -LiteralPath $sourceParent }
 
-if($defaultRoot) { & (Join-Path $PSScriptRoot 'Launch-Prototype.ps1') -CheckOnly }
+if($defaultRoot) { & (Join-Path $PSScriptRoot 'Launch-Chuck.ps1') -CheckOnly }
 
 # Newest backups by when their package was built; renaming a folder keeps its creation time.
 $backups=@(Get-ChildItem -LiteralPath $BuildsRoot -Directory -Filter 'Windows-Previous-*' | Sort-Object CreationTimeUtc -Descending)

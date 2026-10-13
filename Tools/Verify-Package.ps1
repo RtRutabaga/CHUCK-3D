@@ -5,7 +5,7 @@ $projectRoot=Split-Path $PSScriptRoot -Parent
 if(!$PackageRoot) { $PackageRoot=Join-Path $projectRoot 'Builds\Windows' }
 $PackageRoot=(Resolve-Path -LiteralPath $PackageRoot).Path
 $game=Join-Path $PackageRoot 'Chuck3D\Binaries\Win64\Chuck3D.exe'
-if (!(Test-Path -LiteralPath $game)) { throw 'No packaged game. Build Windows first; see docs/PLAYTEST.md.' }
+if (!(Test-Path -LiteralPath $game)) { throw 'No packaged game. Build Windows first; see docs/PLAYING.md.' }
 $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')

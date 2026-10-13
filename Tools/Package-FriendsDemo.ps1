@@ -2,7 +2,7 @@ param([Parameter(Mandatory=$true)][string]$PackageRoot,[string]$Name='CHUCK-3D-W
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $package=(Resolve-Path -LiteralPath $PackageRoot).Path
-$receipt=Get-Content -LiteralPath (Join-Path $package 'prototype-build.json') -Raw | ConvertFrom-Json
+$receipt=Get-Content -LiteralPath (Join-Path $package 'chuck-build.json') -Raw | ConvertFrom-Json
 $game=Join-Path $package 'Chuck3D/Binaries/Win64/Chuck3D.exe'
 if((Get-FileHash -LiteralPath $game).Hash -ne $receipt.executableSha256) {throw 'Package executable does not match its verified receipt.'}
 if($Name -notmatch '^[A-Za-z0-9-]+$') {throw 'Use a simple distribution name.'}
@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Path $folder -Force | Out-Null
 foreach($file in Get-ChildItem -LiteralPath $package -File -Recurse) {
     $relative=[IO.Path]::GetRelativePath($package,$file.FullName)
     if($relative -match '(^|[\\/])Saved([\\/]|$)' -or $file.Extension -in '.pdb','.lib','.exp' -or
-       $file.Name -like 'Manifest_*' -or $file.Name -eq 'prototype-build.json') {continue}
+       $file.Name -like 'Manifest_*' -or $file.Name -eq 'chuck-build.json') {continue}
     $target=Join-Path $folder $relative
     New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
     Copy-Item -LiteralPath $file.FullName -Destination $target

@@ -33,7 +33,7 @@ for index, slot in enumerate(slots):
     name = str(slot.material_slot_name).split('.')[0]
     if name not in mapping: raise RuntimeError(f'Unknown material slot {name}')
     color = mapping[name]
-    material = unreal.load_asset(f'/Game/Prototype/Materials/M_{color}')
+    material = unreal.load_asset(f'/Game/Common/Materials/M_{color}')
     if not material: raise RuntimeError(f'Missing material {color}')
     # Static form-study materials must also compile their skeletal permutation.
     unreal.MaterialEditingLibrary.set_material_usage(material,unreal.MaterialUsage.MATUSAGE_SKELETAL_MESH)
@@ -43,6 +43,6 @@ for index, slot in enumerate(slots):
 asset.set_editor_property('materials',slots)
 unreal.EditorAssetLibrary.save_loaded_asset(asset,only_if_is_dirty=False)
 for slot in asset.get_editor_property('materials'):
-    if not slot.material_interface or not slot.material_interface.get_path_name().startswith('/Game/Prototype/Materials/'):
+    if not slot.material_interface or not slot.material_interface.get_path_name().startswith('/Game/Common/Materials/'):
         raise RuntimeError(f'Material assignment did not persist: {slot.material_slot_name}')
 unreal.log(f'CHUCK_RIG_READY {task.imported_object_paths}')

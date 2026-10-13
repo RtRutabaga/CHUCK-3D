@@ -28,5 +28,5 @@ $receipt=[ordered]@{
     verificationLog=[IO.Path]::GetFullPath($VerificationLog)
     verificationScope=$(if($TutorialReview) {'Focused tutorial triggers, one-time behavior, exclusions, and eleven HUD layout checks; full traversal suite not rerun'} elseif($AstralCameraReview) {'Focused Astral camera collision and visual review; full traversal suite not rerun at user request'} else {'Full package verification'})
 }
-$receipt | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PackageRoot 'prototype-build.json') -Encoding UTF8
+$receipt | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PackageRoot 'chuck-build.json') -Encoding UTF8
 Write-Output "CHUCK_BUILD_RECEIPT $revision"

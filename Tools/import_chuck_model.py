@@ -5,17 +5,17 @@ ROOT=Path(__file__).resolve().parents[1]
 DEST='/Game/Characters/Chuck'
 tools=unreal.AssetToolsHelpers.get_asset_tools()
 materials={
-    'Fur':unreal.load_asset('/Game/Prototype/Materials/M_Gray.M_Gray'),
-    'Chest':unreal.load_asset('/Game/Prototype/Materials/M_Gray.M_Gray'),
-    'Jacket':unreal.load_asset('/Game/Prototype/Materials/M_Purple.M_Purple'),
-    'Seam':unreal.load_asset('/Game/Prototype/Materials/M_Dark.M_Dark'),
-    'Skin':unreal.load_asset('/Game/Prototype/Materials/M_Pink.M_Pink'),
-    'Eye':unreal.load_asset('/Game/Prototype/Materials/M_Dark.M_Dark'),
-    'Claw':unreal.load_asset('/Game/Prototype/Materials/M_Pink.M_Pink'),
-    'Metal':unreal.load_asset('/Game/Prototype/Materials/M_Dark.M_Dark'),
-    'Whisker':unreal.load_asset('/Game/Prototype/Materials/M_Gray.M_Gray')}
+    'Fur':unreal.load_asset('/Game/Common/Materials/M_Gray.M_Gray'),
+    'Chest':unreal.load_asset('/Game/Common/Materials/M_Gray.M_Gray'),
+    'Jacket':unreal.load_asset('/Game/Common/Materials/M_Purple.M_Purple'),
+    'Seam':unreal.load_asset('/Game/Common/Materials/M_Dark.M_Dark'),
+    'Skin':unreal.load_asset('/Game/Common/Materials/M_Pink.M_Pink'),
+    'Eye':unreal.load_asset('/Game/Common/Materials/M_Dark.M_Dark'),
+    'Claw':unreal.load_asset('/Game/Common/Materials/M_Pink.M_Pink'),
+    'Metal':unreal.load_asset('/Game/Common/Materials/M_Dark.M_Dark'),
+    'Whisker':unreal.load_asset('/Game/Common/Materials/M_Gray.M_Gray')}
 if not all(materials.values()):
-    raise RuntimeError('Prototype materials are missing; run the normal asset generator first.')
+    raise RuntimeError('Base materials are missing; run the normal asset generator first.')
 for name in ('SM_ChuckBody','SM_ChuckFoot'):
     task=unreal.AssetImportTask()
     task.filename=str(ROOT/'SourceAssets'/'Chuck'/f'{name}.fbx')

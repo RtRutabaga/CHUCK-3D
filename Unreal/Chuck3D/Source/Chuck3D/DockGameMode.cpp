@@ -175,7 +175,7 @@ void ADockGameMode::StartPlay()
     };
     auto Material = [](const TCHAR* Name) {
         if(auto* Art=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Name,Name))) return Art;
-        return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Name,Name));
+        return LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Common/Materials/M_%s.M_%s"),Name,Name));
     };
     auto Shape = [&](const TCHAR* Name,FVector Position,FVector Size,const TCHAR* Color,UStaticMesh* Mesh=nullptr,bool Collision=true) {
         auto* Actor = World->SpawnActor<AStaticMeshActor>(Position,FRotator::ZeroRotator);

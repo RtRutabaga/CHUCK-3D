@@ -35,7 +35,7 @@ void BuildDockTavern(UWorld* World)
             Batch=NewObject<UInstancedStaticMeshComponent>(Owner);Batch->SetupAttachment(Root);
             Batch->SetStaticMesh(Round?Cylinder:Cube);
             auto* Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Surface,Surface));
-            if(!Material) Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Surface,Surface));
+            if(!Material) Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Common/Materials/M_%s.M_%s"),Surface,Surface));
             Batch->SetMaterial(0,Material);Batch->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));Batch->RegisterComponent();
         }
         Batch->AddInstance(FTransform(Rotation,P,Size/100.f));

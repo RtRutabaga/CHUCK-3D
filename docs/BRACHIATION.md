@@ -35,7 +35,7 @@ Five lanterns per alley, fifteen in total. They alternate walls, 125–135 cm ap
 5. Brachiation back with the stick held back (four leaps).
 6. Kick off the ring toward the far wall, then wall jumps on up onto the roof.
 
-The default smoke check `CHUCK_WALLLAMPS_CHECK` also sweeps Chuck's capsule along all twelve ring-to-ring flights. See HANDOFF for the actual results.
+The default smoke check `CHUCK_WALLLAMPS_CHECK` also sweeps Chuck's capsule along all twelve ring-to-ring flights. See archive/HANDOFF-PROTOTYPE.md for the actual results.
 
 ## Stamina (user 2026-10-09)
 

@@ -5,7 +5,7 @@ for name in ("Stone", "Plaster", "Wood", "WoodLight", "Roof", "Dark", "Amber"):
     path = f"/Game/Art/Materials/M_{name}"
     material = unreal.load_asset(path)
     if not material:
-        path = f"/Game/Prototype/Materials/M_{name}"
+        path = f"/Game/Common/Materials/M_{name}"
         material = unreal.load_asset(path)
     if not material:
         raise RuntimeError(f"Missing setting material: {name}")

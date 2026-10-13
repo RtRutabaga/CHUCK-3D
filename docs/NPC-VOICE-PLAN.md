@@ -123,7 +123,7 @@ Bones, not shape keys, because the runtime poses with `UPoseableMeshComponent`, 
 - **Captures:** face close-ups per NPC at a few times in a line (open and closed mouth, blink), and a short frame sequence of one talk.
 - **Verification:** package verification as usual. Listening and the subjective lip-sync check are the user's.
 
-## Phases (each its own session; see the session note in HANDOFF)
+## Phases (each its own session; see the session notes in archive/HANDOFF-PROTOTYPE.md)
 
 1. **Face rig:** bones, skinning, teeth/tongue, re-import. Check the poseable mesh drives them; neutral-pose captures. *Biggest piece.*
 2. **Rhubarb:** install and record it; `build_npc_visemes.py`; a test line (a placeholder voice is fine) to tune the mouth poses and timing.

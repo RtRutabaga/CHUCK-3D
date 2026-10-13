@@ -3,9 +3,9 @@ $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
 $package=Join-Path $projectRoot 'Builds\Windows'
 $game=Join-Path $package 'Chuck3D\Binaries\Win64\Chuck3D.exe'
-$receiptPath=Join-Path $package 'prototype-build.json'
+$receiptPath=Join-Path $package 'chuck-build.json'
 if(!(Test-Path -LiteralPath $game) -or !(Test-Path -LiteralPath $receiptPath)) {
-    throw 'No verified launcher build is installed. See docs/PLAYTEST.md; importing assets or building in an agent worktree does not update this launcher.'
+    throw 'No verified launcher build is installed. See docs/PLAYING.md; importing assets or building in an agent worktree does not update this launcher.'
 }
 $receipt=Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
 $hashAlgorithm=[Security.Cryptography.SHA256]::Create()

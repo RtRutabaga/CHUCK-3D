@@ -105,7 +105,7 @@ void BuildDockPantry(UWorld* World)
             Batch=NewObject<UInstancedStaticMeshComponent>(Owner);Batch->SetupAttachment(Root);
             Batch->SetStaticMesh(Form==1?Cylinder:Form==2?Sphere:Cube);
             auto* Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Surface,Surface));
-            if(!Material) Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Surface,Surface));
+            if(!Material) Material=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Common/Materials/M_%s.M_%s"),Surface,Surface));
             Batch->SetMaterial(0,Material);Batch->SetCollisionProfileName(Solid?TEXT("BlockAll"):TEXT("NoCollision"));
             if(Solid && FCString::Strcmp(Surface,TEXT("Cheese"))==0) Batch->ComponentTags.Add(TEXT("PantryCheese"));
             if(!Solid) Batch->SetCastShadow(FCString::Strcmp(Surface,TEXT("PantrySky"))!=0 && FCString::Strcmp(Surface,TEXT("PantryCloud"))!=0 && FCString::Strcmp(Surface,TEXT("AstralDepth"))!=0);

@@ -45,7 +45,7 @@ void BuildDockSetting(UWorld* World)
             Batch->SetupAttachment(Root);
             Batch->SetStaticMesh(Cube);
             auto* Mat=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Materials/M_%s.M_%s"),Surface,Surface));
-            if(!Mat) Mat=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Prototype/Materials/M_%s.M_%s"),Surface,Surface));
+            if(!Mat) Mat=LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Common/Materials/M_%s.M_%s"),Surface,Surface));
             Batch->SetMaterial(0,Mat);
             Batch->SetCollisionProfileName(Collision?TEXT("BlockAll"):TEXT("NoCollision"));
             Batch->SetVisibility(Visible);
