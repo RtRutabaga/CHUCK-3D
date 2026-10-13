@@ -1,8 +1,11 @@
 #include "ChultLanding.h"
 #include "ChultRootProfiles.h"
+#include "ChultDressing.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "ChuckCharacter.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
@@ -101,24 +104,24 @@ void AChultLanding::Build()
     Sky->SetRayleighScattering(FLinearColor(.13f,.43f,.66f)); Attach(Sky);
     auto* Sun=NewObject<UDirectionalLightComponent>(this);
     Sun->SetMobility(EComponentMobility::Movable); Sun->SetAtmosphereSunLight(true);
-    Sun->SetIntensity(4.5f); Sun->SetLightColor(FLinearColor(1,.76f,.52f));
+    Sun->SetIntensity(4.5f); Sun->SetLightColor(FLinearColor(1,.91f,.73f));
     Sun->DynamicShadowDistanceMovableLight=9000; Sun->DynamicShadowCascades=3;
     Attach(Sun,FVector::ZeroVector,FRotator(-30,20,0));
     auto* Fill=NewObject<USkyLightComponent>(this);
     Fill->SetMobility(EComponentMobility::Movable); Fill->bRealTimeCapture=true;
-    Fill->SetIntensity(.35f); Attach(Fill);
+    Fill->SetIntensity(.45f); Attach(Fill);
     auto* Fog=NewObject<UExponentialHeightFogComponent>(this);
     Fog->SetFogDensity(.035f); Fog->SetFogHeightFalloff(.18f); Fog->SetVolumetricFog(true);
-    Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.12f,.23f,.21f)); Attach(Fog);
+    Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.21f,.235f,.22f)); Attach(Fog);
     auto* Post=NewObject<UPostProcessComponent>(this);
     Post->bUnbound=true; Post->Priority=100;
     auto& P=Post->Settings;
     P.bOverride_AutoExposureMethod=true; P.AutoExposureMethod=AEM_Histogram;
     P.bOverride_AutoExposureMinBrightness=true; P.AutoExposureMinBrightness=-2;
     P.bOverride_AutoExposureMaxBrightness=true; P.AutoExposureMaxBrightness=10;
-    P.bOverride_AutoExposureBias=true; P.AutoExposureBias=-1.7f;
-    P.bOverride_ColorSaturation=true; P.ColorSaturation=FVector4(.82f,.9f,.82f,1);
-    P.bOverride_ColorGain=true; P.ColorGain=FVector4(.88f,.97f,.91f,1);
+    P.bOverride_AutoExposureBias=true; P.AutoExposureBias=-1.3f;
+    P.bOverride_ColorSaturation=true; P.ColorSaturation=FVector4(.93f,.93f,.9f,1);
+    P.bOverride_ColorGain=true; P.ColorGain=FVector4(1,1,1,1);
     P.bOverride_BloomIntensity=true; P.BloomIntensity=.4f;
     P.bOverride_AmbientOcclusionIntensity=true; P.AmbientOcclusionIntensity=.6f;
     Attach(Post);
@@ -255,6 +258,7 @@ void AChultLanding::Build()
     RootCollision->CreateMeshSection(0,RootVertices,RootTriangles,TArray<FVector>(),TArray<FVector2D>(),TArray<FColor>(),TArray<FProcMeshTangent>(),true);
     RootCollision->SetCollisionProfileName(TEXT("BlockAll")); RootCollision->SetHiddenInGame(true); RootCollision->SetCastShadow(false); Attach(RootCollision);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOTS triangles=%d trees=%d"),RootTriangles.Num()/3,TreeCount);
+    BuildChultWetDressing(this,true);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -301,7 +305,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=!Contains(C->GetAreaStartLocation());
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
-    struct FRun {int32 Phase=0;FTimerHandle Timer;}; auto Run=MakeShared<FRun>();
+    struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();
     GetWorldTimerManager().SetTimer(Run->Timer,[this,C,Run](){
         if(Run->Phase==0) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Landing_Rat.png"),true,false);
         else if(Run->Phase==1) C->SetOrbitPitch(-48);
@@ -316,6 +320,20 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==6)
         {
+            auto* Camera=GetWorld()->SpawnActor<ACameraActor>();
+            Run->DetailCamera=Camera;
+            const FVector From=FloorOrigin()+FVector(145,170,100),At=FloorOrigin()+FVector(320,440,110);
+            Camera->SetActorLocationAndRotation(From,(At-From).Rotation());
+            Camera->GetCameraComponent()->SetFieldOfView(58);
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(Camera);
+            C->SetActorHiddenInGame(true);
+        }
+        else if(Run->Phase==7) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Surface_Detail.png"),true,false);
+        else if(Run->Phase==8)
+        {
+            C->SetActorHiddenInGame(false);
+            if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->Destroy();
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEST_COMPLETE"));
             // Clearing this timer destroys the executing lambda (and its last
             // shared Run reference). Leave it alive until world shutdown.

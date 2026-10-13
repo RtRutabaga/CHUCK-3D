@@ -1,5 +1,14 @@
 # Art direction
 
+## Chult wet forest and leaf references — October 13, 2026
+
+The user requests hanging moss, puddles, moss-covered surfaces, and leaf colour/texture closer to the two new images: `References/ArtDirection/Chult/Moss-WetForest-Wide.jpg` and `Moss-WetForest-LeafDetail.jpg`. Use subdued olive/deep green leaves, visible veins and restrained waxy wet highlights; patchy moss on rough bark and stones; irregular shallow water with soft muddy margins; hanging moss draped from branches; cool, fairly neutral atmospheric depth with localized warm light. Keep the established landing and walking routes readable. This is direction for improving the setting, not evidence that the reference's terrain, tree forms or fidelity have been achieved.
+
+Both JPGs are byte-for-byte copies from the user's attachment group `67850772-CE86-4195-82C1-239F05DB2BC2`, supplied as Photo 1 and Photo 2. Combined size **630,164 bytes**, covered by existing JPG Git LFS policy. SHA-256:
+
+- Wide: `A4CE6C49694F5CE65FEB5416A23B9AF51B20102B9C76F51EEFB4140D5C4D92E8`.
+- Leaf detail: `FC867C9569C02CCEB377FD859CCD37EF68F653957D9F63821BC1D1B94A17D48D`.
+
 ## Chult jungle references — October 12, 2026
 
 The user's four supplied reference images are preserved in `References/ArtDirection/Chult/1-Photo-1.jpg` through `4-Photo-4.jpg`. Use them for Chult's overall visual direction: monumental irregular trees and broad buttress roots; overlapping dark green understory; damp earth, moss and restrained wet reflections; cool green/teal atmospheric depth with localized warm canopy light. Keep Chuck and traversal surfaces readable at rat height. Leaves move gently; bark, trunks and solid roots remain rigid. Solid outer trunks and roots need collision matching their visible forms, while broad decorative leaves remain noncolliding.

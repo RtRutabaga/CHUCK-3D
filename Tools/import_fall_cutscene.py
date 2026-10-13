@@ -7,8 +7,10 @@ unmodified) and SourceAssets/Cutscenes/FallToChult (Tools/build_fall_jungle.py).
 Destination /Game/Art/Cutscenes/FallToChult and /Game/Art/Audio/SW_FallToChult,
 both under the /Game/Art cooking rule.
 
-The materials here belong to this script alone, so each run rebuilds their
-graphs in place (meshes keep their references):
+Base materials are defined here. The current wet-forest finish is owned by
+create_chult_wet_materials.py; run it after a deliberate full set reimport.
+For surface-only work use that narrow script, not this mesh/audio importer.
+The base graphs (meshes keep their references):
   M_FallLeaves     masked two-sided foliage on the leaf atlas, vertex-colour
                    tint (r brightness, g deep/yellow green) and wind
                    in world position offset by vertex alpha

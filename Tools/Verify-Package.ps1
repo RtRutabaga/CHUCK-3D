@@ -16,6 +16,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WET_DRESSING materials=1 moss_strands=735 puddles=9 rocks=27 .*foliage_collision=0 water_collision=0' -Quiet) -or
    (Select-String -LiteralPath $chultLog -Pattern 'Fatal error:|Failed to compile Material|Default Material will be used in game' -Quiet)) {
     throw "Chult landing verification failed. Inspect $chultLog"
 }

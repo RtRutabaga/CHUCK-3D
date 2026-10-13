@@ -1,4 +1,5 @@
 #include "FallCutscene.h"
+#include "ChultDressing.h"
 #include "AstralSummon.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckCharacter.h"
@@ -308,6 +309,7 @@ void AFallCutscene::BuildStage()
     }
     // Framing at the edge of the floor camera's lane.
     Place(TEXT("SM_FallFern"), G + FVector(330, 210, 0), 40, 1.1f);
+    BuildChultWetDressing(this,false);
     // Leaves shaken loose by his fall.
     FallingLeaves = NewObject<UInstancedStaticMeshComponent>(this);
     FallingLeaves->SetStaticMesh(Mesh(TEXT("SM_FallLeafCard")));
