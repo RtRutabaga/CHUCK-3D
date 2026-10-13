@@ -4,6 +4,8 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 
 ## October 12 — playable Chult handoff and jungle corrections
 
+Publication update, October 13: user enabled full access and authorized proceeding. Chult fixes/handoffs pushed to `origin/main`; **8/8 LFS objects, 496 KB**, uploaded successfully. Earlier publication block resolved. Launcher runtime remains **c527d68**; no new build/gameplay test needed for this publication-only step.
+
 Runtime **c527d68**. Full fall and Escape-skip restore the playable landing, follow camera, input/collision and local respawn, retaining sanity/stamina/cigarettes. Completed stage/camera destroyed. Shared foliage/canopy sway reduced 75%; bark displacement zero. Added solid buttress/base collision from original seeded profiles and understory palm trunks; five outer roots checked with rays and Chuck's real capsule. No mesh/Blender regeneration. Four materials updated by `update_chult_wind.py`; source importer matches. User references preserved under References/ArtDirection/Chult, with an initial darker/greener damp-material and subdued-lighting pass. Art remains provisional.
 
 UE **5.7.4**, existing VS **14.44.35229** / SDK **10.0.26100.0**, one-worker cooked candidate. `Local/chult-handoff-final-build.log`: UAT **62.29 s**; `verify-package-20261012-221535.log`: **182 passes, zero failures**. Final Chult geometry/root checks, full fall and skip/input/local recovery all pass. `Local/chult-handoff-menu.log`: **8/8** destinations. Inspected final Chult/post-cutscene captures. No manual whole-loop or physical Xbox test. Shadowed-variable compile error corrected; superseded smoke run stopped at 175 passes for final art changes, not claimed as verification.

@@ -19,7 +19,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 Next part of the work can be done here.
 
-Publication for this pass remains local: automatic approval review rejected the GitHub push because remote ownership/trust was not established by trusted user content. The playable launcher is updated; explicit user authorization is needed before retrying publication.
+Publication completed October 13 after the user enabled full access and instructed Codex to proceed. Pushed the Chult fixes and handoff commits to `origin/main`; all eight LFS objects uploaded successfully (**496 KB**). The earlier automatic approval block is resolved. Launcher runtime remains **c527d68**; no rebuild or gameplay tests were repeated for publication.
 
 ## October 12 — Chult landing preview (Codex)
 
