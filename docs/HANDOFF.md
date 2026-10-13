@@ -6,8 +6,26 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The Chult plan is awaiting the user's review ([regions/CHULT.md](regions/CHULT.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
-- **Open user decisions:** saving, the 3D form of cutscenes, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief.
-- **Next work:** user review of the Chult plan. Then Claude does the Phase 3 fall-to-Chult transition and Codex the first jungle setting milestone.
+- **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
+- **Next work:** user review of the Chult plan, then Codex's first jungle setting milestone (the landing). Claude then connects the finished fall cutscene to it.
+
+## October 12 — the fall-to-Chult cutscene (Claude)
+
+- **Built:** falling through the cellar's sky hole plays a 47.5 s cutscene on the user's "Fall Cutscene theme" instead of the instant end card:
+  - It runs from open sky over a volumetric cloud deck, through the deck, out over the jungle, a crash down through the canopy, his astral death and return on the jungle floor, a look round and a drag, to a pull-back.
+  - The music is cut at the end of its second section, fading over the last two bars (43.8–47.5 s), and the shots cut on the bars.
+  - Letterboxed, no control; Esc skips. It still ends on the "End of demo" card.
+  - Code is in `FallCutscene.h/.cpp`, the set in `SourceAssets/Cutscenes/FallToChult` (procedural), and the audio in `SourceAssets/Audio/README.md`. Details are in `agent-handoffs/CLAUDE.md`.
+- **Tested:**
+  - Packaged candidate: `Verify-Package` **182 passes** plus the new skip and full-cutscene checks (`Local/verify-package-20261012-203529.log`, `verify-demo-end-*`, `verify-fall-cutscene-*`).
+  - About 58 fps at 720p in every part of the cutscene.
+  - Cooked captures reviewed.
+- **Changed shared tooling:** `Tools/Verify-Package.ps1` now runs `-ChuckFallCutsceneTest` and checks the skip. `-ChuckDemoEndTest` expects the cutscene.
+- **Gotcha:** a stale editor `Makefile.bin` made editor builds compile the old OneDrive copy (deleted; see the Claude handoff).
+- **Flaws:** the procedural jungle is flat and bright up close; the distant trunks are repetitive; there are no visible light shafts; the haze under the deck hides the jungle; the fall uses the jump loop pose. Not tested: Xbox, speakers, other resolutions.
+- **Launcher:** LAUNCHER_STATUS
+
+Next part of the work can only be done by Codex: the Chult landing setting, after the user approves regions/CHULT.md. Claude then connects the cutscene to it.
 
 ## October 12 — prototype cleanup: docs archived, "Prototype" renamed, stale assets resolved (Claude)
 

@@ -26,6 +26,10 @@ public:
     void ToggleCamera();
     void ResetToDock();
     bool HasDemoEnded() const { return bDemoEnded; }
+    /** Falling to Chult (FallCutscene.h): no control, Esc skips to the end. */
+    bool IsInFallCutscene() const { return bCutscene; }
+    /** The cutscene is over: the demo's end card. */
+    void EndFallCutscene();
     /** Begin at an explicit checkpoint with fresh traversal, fall and camera state. */
     void ResetAtLocation(const FVector& Location);
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
@@ -313,7 +317,13 @@ public:
 protected:
     virtual void BeginPlay() override;
 private:
+    friend class AFallCutscene;
     bool bDemoEnded = false;
+    bool bCutscene = false;
+    TWeakObjectPtr<class AFallCutscene> FallScene;
+    void BeginFallCutscene();
+    /** In the cutscene the pose is the clip it sets (Base/BaseTime), with no gait logic or foot IK. */
+    void UpdateCutscenePose(float DeltaSeconds);
     bool bSewerRespawn = false;
     bool bIgnoringAstralFloor = false;
     static float AreaStartYaw(const FVector& Location);

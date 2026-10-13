@@ -143,6 +143,8 @@ Claude owns the cellar fall trigger, fall/landing animation, cutscene camera and
 
 This is a proposed integration contract, not a claim that a destination API or Chult level already exists. Claude can develop the cutscene independently, then connect it once the landing setting is ready.
 
+**Status (Claude, 2026-10-12):** the cutscene is built (`Unreal/Chuck3D/Source/Chuck3D/FallCutscene.cpp`, about 47.5 s on the user's "Fall Cutscene theme"). It runs on its own stage with its own jungle set (`SourceAssets/Cutscenes/FallToChult`), 25 km from the docks, and ends on the existing "End of demo" card. Connecting it means replacing `AFallCutscene::Finish()`'s call to `EndFallCutscene()` with the handoff to `ChultLanding` under the contract above. The landing setting may also take over the floor shots, from his impact at 26.3 s onward. Chuck's Sanity is unchanged by the cutscene's death and return (it is presentation only).
+
 ## Delivery order and ownership
 
 | Milestone | Codex setting/verification work | Claude work | Acceptance before promotion |

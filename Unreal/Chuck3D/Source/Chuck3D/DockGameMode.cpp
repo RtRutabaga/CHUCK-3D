@@ -115,6 +115,7 @@ void ADockGameMode::StartPlay()
     World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),SewerScore,NightScore,TestMusic](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
+        if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
         const int32 Mode=Below?1:HasExitedDockSewer()?2:0;
         if(Mode==Region->Mode) return;
@@ -971,6 +972,11 @@ void ADockGameMode::ProbeLockedPaws(AChuckCharacter* Chuck,float DeltaSeconds)
     LocoEvaluations=Pose.Evaluations;
 }
 
+void ADockGameMode::FadeOutMusic(float Seconds)
+{
+    for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
+        if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(Seconds,0.f);
+}
 void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
 {
     constexpr float MusicDuckLevel = .35f;            // about -9 dB under a speaking NPC
@@ -3731,6 +3737,14 @@ void ADockHUD::DrawHUD()
     Super::DrawHUD();
     auto* Chuck = Cast<AChuckCharacter>(GetOwningPawn());
     if(!Chuck || !Canvas) return;
+    if(Chuck->IsInFallCutscene())
+    {
+        // Letterboxed, as the 2D cutscene: no HUD, bars to about 2.2:1.
+        const float Bar=FMath::Max(0.f,(Canvas->SizeY-Canvas->SizeX/2.2f)*.5f);
+        DrawRect(FLinearColor::Black,0,0,Canvas->SizeX,Bar);
+        DrawRect(FLinearColor::Black,0,Canvas->SizeY-Bar,Canvas->SizeX,Bar+1);
+        return;
+    }
     if(Chuck->HasDemoEnded())
     {
         DrawRect(FLinearColor::Black,0,0,Canvas->SizeX,Canvas->SizeY);

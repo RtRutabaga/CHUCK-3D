@@ -10,6 +10,7 @@
 #include "EnemyRat.h"
 #include "AstralSummon.h"
 #include "DockNPC.h"
+#include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
@@ -365,7 +366,7 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 }
 void AChuckCharacter::ResetToDock()
 {
-    if(bDemoEnded) return;
+    if(bDemoEnded || bCutscene) return;
     bSewerRespawn = bPantryRespawn = false;
     ResetAtLocation(StartLocation());
 }
@@ -2741,6 +2742,42 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.PelvisOffset = FMath::Max(Lowest, -4.f);
 }
 
+void AChuckCharacter::BeginFallCutscene()
+{
+    // Through the sky hole: out of his control from here to Chult.
+    bCutscene=true;
+    auto* Movement=GetCharacterMovement();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    if(auto* PC=Cast<APlayerController>(Controller)) DisableInput(PC);
+    TalkingTo.Reset(); TalkLine=0;
+    LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
+    bSlideCamera=false; BodyPitch=0; WallSideTilt=0;
+    Gait=EGait::Air; AstralPhase=EAstral::None;
+    NextExhaleAt=1e9f;   // he breathes out when the cutscene says
+    SetClip(EClip::JumpLoop,0,.2f);
+    GetMesh()->SetVisibility(true,true);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    FallScene=AFallCutscene::Start(this);
+}
+void AChuckCharacter::EndFallCutscene()
+{
+    bCutscene=false;
+    bDemoEnded=true;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END_CARD"));
+}
+void AChuckCharacter::UpdateCutscenePose(float DeltaSeconds)
+{
+    auto* Anim=GetChuckAnim();
+    if(!Anim || Clips.Contains(nullptr)) return;
+    FadeWeight=FMath::Max(0.f,FadeWeight-FadeRate*DeltaSeconds);
+    FChuckAnimParams& P=Anim->Params;
+    P=FChuckAnimParams();
+    P.ClipA=Clips[static_cast<int32>(Base)]; P.TimeA=BaseTime; P.PeriodA=Period(Base);
+    P.ClipB=FadeWeight>0 ? Clips[static_cast<int32>(Fading)] : nullptr; P.TimeB=FadingTime; P.PeriodB=Period(Fading); P.WeightB=FadeWeight;
+    // No paw locks or foot IK: he is carried across kilometres, and the floor he lands on is flat.
+}
 void AChuckCharacter::Quit()
 {
     if(bDemoEnded) UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_EXIT escape=1"));
@@ -2755,6 +2792,13 @@ void AChuckCharacter::Tick(float DeltaSeconds)
         if(PC && PC->WasInputKeyJustPressed(EKeys::Escape)) Quit();
         return;
     }
+    if(bCutscene)
+    {
+        if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && FallScene.IsValid()) FallScene->Skip();
+        UpdateCutscenePose(DeltaSeconds);
+        UpdateExhale(DeltaSeconds);
+        return;
+    }
     const FVector DemoPosition=GetActorLocation();
     const auto* Mode=GetWorld()->GetAuthGameMode<ADockGameMode>();
     // Preserve legacy traversal verification; the isolated demo test uses
@@ -2763,11 +2807,8 @@ void AChuckCharacter::Tick(float DeltaSeconds)
         && DemoPosition.Z<-440.f && DockPantryHoleAt(FVector2D(DemoPosition.X,DemoPosition.Y))==2
         && GetCharacterMovement()->IsFalling())
     {
-        bDemoEnded=true;
-        GetCharacterMovement()->StopMovementImmediately();
-        GetCharacterMovement()->DisableMovement();
-        if(PC) DisableInput(PC);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END sky=1 at=%s"),*DemoPosition.ToString());
+        BeginFallCutscene();
         return;
     }
     // The sewer's NPC-only floor over the Astral openings is not there for him.

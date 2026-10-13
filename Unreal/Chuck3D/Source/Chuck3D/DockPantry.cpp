@@ -386,35 +386,62 @@ void BuildDockPantry(UWorld* World)
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckDemoEndTest")))
     {
+        // The sky hole starts the fall to Chult (FallCutscene.h); the floor and
+        // the Astral ruptures don't. Esc skips the cutscene to the end card,
+        // and Esc there exits.
         auto Failures=MakeShared<int32>(0);
-        FTimerHandle FloorTest,RiftTest,SkyTest,Check,Shot,Escape,Watchdog;
+        FTimerHandle FloorTest,RiftTest,SkyTest,Check,Shot,Skip,EndCheck,EndShot,Escape,Watchdog;
         const auto Player=[World](){return Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());};
         World->GetTimerManager().SetTimer(FloorTest,[Player](){Player()->ResetAtLocation(DockPantryStartLocation());},2.f,false);
         World->GetTimerManager().SetTimer(RiftTest,[Player,Failures](){
-            *Failures+=Player()->HasDemoEnded();
+            *Failures+=Player()->HasDemoEnded() || Player()->IsInFallCutscene();
             Player()->ResetAtLocation(FVector(240,520,Floor+35));
             Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
         },3.f,false);
         World->GetTimerManager().SetTimer(SkyTest,[Player,Failures](){
-            *Failures+=Player()->HasDemoEnded();
+            *Failures+=Player()->HasDemoEnded() || Player()->IsInFallCutscene();
             Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
             Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
         },4.f,false);
         World->GetTimerManager().SetTimer(Check,[Player,Failures](){
-            auto* Chuck=Player();const bool Ended=Chuck->HasDemoEnded();
+            auto* Chuck=Player();const bool Ended=Chuck->IsInFallCutscene();
             *Failures+=!Ended || Chuck->GetCharacterMovement()->MovementMode!=MOVE_None;
             const FVector At=Chuck->GetActorLocation();Chuck->ResetToDock();
             *Failures+=!Chuck->GetActorLocation().Equals(At,1.f);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END_TEST failures=%d sky_ends=%d floor_and_astral_continue=1 reset_blocked=1"),*Failures,Ended);
         },6.f,false);
-        World->GetTimerManager().SetTimer(Shot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},6.5f,false);
-        World->GetTimerManager().SetTimer(Escape,[World](){
+        World->GetTimerManager().SetTimer(Shot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/Cutscene.png"),true,false);},6.5f,false);
+        World->GetTimerManager().SetTimer(Skip,[World](){
             World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
         },8.f,false);
+        World->GetTimerManager().SetTimer(EndCheck,[Player](){
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_SKIP_TEST failures=%d card=%d"),!Player()->HasDemoEnded(),Player()->HasDemoEnded());
+        },9.f,false);
+        World->GetTimerManager().SetTimer(EndShot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},9.3f,false);
+        World->GetTimerManager().SetTimer(Escape,[World](){
+            World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
+        },10.f,false);
         World->GetTimerManager().SetTimer(Watchdog,[World](){
             UE_LOG(LogTemp,Error,TEXT("CHUCK_DEMO_EXIT_TEST failures=1 escape_did_not_exit=1"));
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-        },10.f,false);
+        },13.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckFallCutsceneTest")))
+    {
+        // The whole fall, played out from a real drop through the sky hole;
+        // the cutscene captures Saved/Screenshots/Windows/FallCutscene/*.png.
+        FTimerHandle Drop,Card,Done;
+        const auto Player=[World](){return Cast<AChuckCharacter>(World->GetFirstPlayerController()->GetPawn());};
+        World->GetTimerManager().SetTimer(Drop,[Player](){
+            Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
+            Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        },2.f,false);
+        World->GetTimerManager().SetTimer(Card,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("FallCutscene/EndCard.png"),true,false);},52.f,false);
+        World->GetTimerManager().SetTimer(Done,[World,Player](){
+            const bool Ended=Player()->HasDemoEnded();
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_CUTSCENE_TEST failures=%d card=%d"),!Ended,Ended);
+            World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
+        },53.f,false);
     }
     // A walking circuit round the room that stays on whole floor.
     const TArray<FVector> Walk={FVector(75,915,Floor),FVector(75,800,Floor),FVector(230,640,Floor),FVector(10,1000,Floor),FVector(75,915,Floor)};

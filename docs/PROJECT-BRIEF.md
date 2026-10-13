@@ -35,6 +35,7 @@ The adaptation is loose where 3D asks for it. Layouts are reinterpreted at human
 - **Chult adaptation:** retain dinosaurs, including the original raptors, alongside jungle zombies; skeletons first appear in the temple. The jungle ship is an accessible abandoned wreck without crew. Keep a reachable waterfall cove without a treasure chest or chest system. Dense jungle brachiation is a major traversal focus. See [regions/CHULT.md](regions/CHULT.md).
 - **Respawn:** the map spawn or a local region entrance is the respawn point. There are no Astral Anchors and no ashtray checkpoints.
 - **Transitions:** use fades or physical falls between areas, never loading-question prompts.
+- **Cutscenes (user, 2026-10-12):** each 2D cutscene becomes an authored sequence in the engine's own 3D. It keeps the 2D scene's beats and uses the music the user supplies, which may be cut short or faded at a musical phrase. There is no player control; Esc skips. The first is the fall to Chult (`FallCutscene.cpp`).
 - **Hardware:** Windows PC with keyboard/mouse and Xbox controller. No browser, mobile or console builds.
 
 ## Regions
@@ -44,7 +45,7 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 2D phase | Region | 3D status |
 | --- | --- | --- |
 | 2 | Waterdeep docks, fountain plaza, sewer tutorial | Done (the prototype) |
-| 3 | Tavern, pantry, fall to Chult | Tavern and pantry done; the fall is a temporary "End of demo" screen |
+| 3 | Tavern, pantry, fall to Chult | Done: the sky-hole fall plays the fall-to-Chult cutscene, which ends on the "End of demo" card until Chult's landing exists |
 | 4 | Chult jungle | Next |
 | 5 | Deeper into Chult | — |
 | 6 | The jungle temple | — |
@@ -67,7 +68,6 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 ## Open questions for the user
 
 - **Saving.** The prototype has no persistent save. The 2D game used twelve-character save codes. A multi-region game needs a decision.
-- **Cutscenes.** The 2D game moves between regions with scripted cutscenes (the fall to Chult, the pirate escape, and others). Their 3D form is not yet decided.
 - **Combat depth.** Small enemies (rats, a zombie) exist. Combat in later regions follows each region plan.
 - **Naming.** The launcher, scripts and the Unreal `Content/Prototype` folder still use "Prototype". Renaming them is planned cleanup.
 

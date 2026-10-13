@@ -18,6 +18,8 @@ public:
     /** The score's current duck (1 full, MusicDuckLevel under speech or by the tavern at night). */
     float GetMusicDuck() const { return MusicDuck; }
     bool IsRunningVerification() const { return bSmokeTest; }
+    /** Every Waterdeep score fades out (the fall to Chult brings its own). */
+    void FadeOutMusic(float Seconds);
 private:
     bool bSmokeTest = false;
     // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,

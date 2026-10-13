@@ -12,6 +12,8 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 **New Game** starts the morning docks. **Dev Checkpoints** offers Waterdeep, Sewer, Sewer Jump, Sewer Long Jump, Waterdeep Night and Tavern Pantry. Each starts a fresh world; there is no persistent save yet. Esc exits.
 
+Falling through the sky hole in the tavern cellar plays the fall-to-Chult cutscene (about 48 s, letterboxed, no control). Esc skips it. It ends on the "End of demo" card, where Esc exits.
+
 ## HUD
 
 One burning cigarette at the top left is Sanity. The cigarette count is at the top right, with the stamina ring beneath it. The talk prompt, dialogue subtitles and first-time tutorial hints appear only when needed.

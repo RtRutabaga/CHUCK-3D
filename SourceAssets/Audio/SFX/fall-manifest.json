@@ -1,0 +1,33 @@
+{
+  "provenance": "Original deterministic synthetic wind and leaf crashes; Tools/gen_fall_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_FallWind_00",
+      "file": "SFX_FallWind_00.wav",
+      "duration": 16.0,
+      "sha256": "5ed71792d60c011c0ad4e4531ed3e5260693d1ee229159b367aa364c8341578b",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_LeafCrash_00",
+      "file": "SFX_LeafCrash_00.wav",
+      "duration": 0.55,
+      "sha256": "6bd08c3f8a91b5168d71df1fbc71425b73e350c78978479f871df6ff4e75d135",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_LeafCrash_01",
+      "file": "SFX_LeafCrash_01.wav",
+      "duration": 0.61,
+      "sha256": "00bfc35ae43a1e0ce7118c376c2d85ab14e764cba332f6f63deb56d8573319ba",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_LeafCrash_02",
+      "file": "SFX_LeafCrash_02.wav",
+      "duration": 0.67,
+      "sha256": "54aa05de404675c8b07f1c024925d903d81581c9511e915f4108e0a245573e9c",
+      "peak_dbfs": -3.0
+    }
+  ]
+}
