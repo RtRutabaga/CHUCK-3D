@@ -45,7 +45,7 @@ Two preserved review PNGs total 2,788,313 bytes / 2.66 MiB, existing LFS rules /
 GitHub remote; allowance not exposed. Generated engine output/packages ignored.
 Repeated courses/square silhouettes and sparse overgrowth remain provisional;
 the art target is not reached. Tests are isolated routes; manual whole-loop,
-free camera comfort and physical Xbox untested. Promotion/publication pending.
+free camera comfort and physical Xbox untested. Promoted **a4ed0ec** with `Promote-Build.ps1 -Label ChultRuins` (`Local/chult-ruins-promotion.log`); receipt/hash and launcher CheckOnly pass. Root `Launch-Chuck.cmd` -> **Dev Checkpoints -> Chult Landing** includes the ruins. Previous runtime retained as `Windows-Previous-20261013-ChultRuins`; two backups kept, older ChultCanopy backup pruned, no candidate remains. LFS fsck passed and remote dry run listed only the two review PNGs. Source published to `origin/main` under standing permission (`Local/chult-ruins-source-push.log`).
 
 Next part of the work can only be done by Claude: integrate/test canopy
 traversal; further setting art can continue here.
