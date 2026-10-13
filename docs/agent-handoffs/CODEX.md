@@ -2,6 +2,54 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 13 — parkour ruins beside the tree grove
+
+User authorized stone ruins by the canopy area and explicitly deferred boundary
+cliffs. Original Phase 4/5 documents read with absolute paths, read only; region
+authorization and setting contract recorded in CHULT.md / CHULT-RUINS.md before
+implementation. `ChultRuins.h/.cpp` owns 544 closed bevelled ashlar/mortar pieces,
+34,816 triangles, two sections using existing M_Stone/M_ChultRock, with visible
+mesh collision. It adds three 30 cm approach rises, a genuine 100 cm terrace gap,
+separate 6.5 m stairwell cornices, an upper causeway, a broken gateway and rubble.
+The 360 x 360 cm fork landing at (5530,820), top Z=670, has a 20 cm mantle;
+approach along X=5460 to Y=900 then east to avoid the leaning south trunk.
+Tree/fork/grip geometry and character/controller code stay intact. The existing
+fork marker is still Z=650; use Z=670 for the new stone standing surface.
+Random forest/palms/understory clear the new reserve; fixed cinematic trees,
+entrance, recovery, ground lanes and grip proposals remain intact. BuildSet
+shares the ruins with the fall cutscene. No cliff, encounter, dialogue, pickup,
+active grip, source Blender regeneration or new binary Unreal asset.
+
+Final single-worker build/cook: `Local/chult-ruins-route-build.log`, UAT 46.39 s,
+zero cook errors/warnings. UE 5.7.4 / CL 51494982, MSVC 14.44.35229, SDK
+10.0.26100.0, bundled .NET 8.0.412; no installs/downloads/imports or Blender run.
+Final Chult: `verify-chult-20261013-142640.log`, 12 standing tops, causeway/join
+capsule sweeps, original 127 floors / 12 route segments / 5 roots, grove floors /
+11 segments, inventory/local respawn/clean exit all pass. Five real-character
+trials pass through existing test-stick and movement hooks: three mantles, a
+running gap jump with assisted mantle, stairwell climb/pull-up (15 wall runs,
+17 jump presses), causeway walk and a 20 cm mantle/western approach into fork 0.
+Final full package suite **182 passes / 0 failures**,
+`verify-package-20261013-142640.log`, including fall, skip/playable handoff,
+pantry/leap/lamp regressions. No menu/startup change; real menu not separately
+rerun. Reviewed final cooked ruins overview/upper and canopy entry/fork.
+
+Initial harness mistakes restarted the review and omitted ordinary movement
+input; both corrected. The original fork approach ended in a hang. A first
+landing fixture spawned inside its geometry; the proper 20 cm step worked, but
+the south continuation trunk blocked the straight line. The final wider landing
+and west-then-east path have static and actual-character acceptance. Superseded
+failed logs are not acceptance evidence. No movement threshold/tuning changed.
+
+Two preserved review PNGs total 2,788,313 bytes / 2.66 MiB, existing LFS rules /
+GitHub remote; allowance not exposed. Generated engine output/packages ignored.
+Repeated courses/square silhouettes and sparse overgrowth remain provisional;
+the art target is not reached. Tests are isolated routes; manual whole-loop,
+free camera comfort and physical Xbox untested. Promotion/publication pending.
+
+Next part of the work can only be done by Claude: integrate/test canopy
+traversal; further setting art can continue here.
+
 ## October 13 — imported free nature kit for Chult
 
 User approved implementing the Poly Haven shortlist. `Fetch-ChultNature.ps1`

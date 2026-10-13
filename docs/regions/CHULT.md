@@ -6,6 +6,16 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Ruins beside the tree parkour area authorized by the user, October 13, 2026:**
+add an optional ancient stone courtyard south of the canopy grove, with broken
+terraces for short running jumps, low mantle steps, a paired-wall stairwell and
+a standing causeway to the first tree fork. Reuse existing movement and stone/
+moss materials. Keep the landing, existing ground loop, tree climbing faces,
+named grip proposals and later temple sequence intact. No NPCs/dialogue,
+encounters or region transitions are part of this addition. User explicitly
+defers impassable Green Hell-inspired boundary cliffs: do not implement them.
+Layout and verification contract: [../CHULT-RUINS.md](../CHULT-RUINS.md).
+
 **Free-resource art pass authorized by the user, October 13, 2026:** implement
 the researched Poly Haven bark, soil, four ferns and six mossy rocks, plus a
 limited optimized island-tree background layer. Improve the existing landing

@@ -16,6 +16,14 @@ proposals remain unchanged.
 
 ## Climb and standing surfaces
 
+October 13 ruins addition: the stone causeway meets fork 0 from the south. A
+360 x 360 cm landing centred at (5530,820), top Z=670, sits 20 cm above the
+existing wood, covering the narrow round standing limb along this approach.
+The existing fork marker at Z=650 and all tree/grip geometry remain unchanged;
+use Z=670 for this stone standing surface. Approach along X=5460 to Y=900,
+then east into the fork to avoid the south trunk's leaning continuation.
+See [CHULT-RUINS.md](CHULT-RUINS.md).
+
 | Fork marker | Local standing reference | Intended use |
 | --- | --- | --- |
 | `ChultCanopyFork0` | (5600,900,650) | First cat-to-cat climb and choice of two branch routes |

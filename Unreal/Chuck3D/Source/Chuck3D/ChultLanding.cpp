@@ -2,6 +2,7 @@
 #include "ChultRootProfiles.h"
 #include "ChultDressing.h"
 #include "ChultCanopy.h"
+#include "ChultRuins.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -254,7 +255,7 @@ void AChultLanding::BuildSet()
     for(float Y=-8500;Y<=8500;Y+=720) for(float X=-8500;X<=8500;X+=720)
     {
         FVector At(X+R.FRandRange(-260,260),Y+R.FRandRange(-260,260),0);
-        if(At.Size2D()<3000 || At.Size2D()>9000 || OnRoute(At,400) || InChultCanopyReserve(At,300)) continue;
+        if(At.Size2D()<3000 || At.Size2D()>9000 || OnRoute(At,400) || InChultCanopyReserve(At,300) || InChultRuinsReserve(At,300)) continue;
         float Scale=R.FRandRange(.75f,1.3f);
         const bool A=R.FRand()<.5f; const float Yaw=R.FRandRange(0,360);
         Place(A?TEXT("SM_FallTree_A"):TEXT("SM_FallTree_B"),At,Yaw,Scale);
@@ -266,7 +267,7 @@ void AChultLanding::BuildSet()
     for(int32 I=0;I<1900;++I)
     {
         FVector At(R.FRandRange(-8000,8000),R.FRandRange(-8000,8000),0);
-        if(At.Size2D()>8500 || OnRoute(At,230)) continue;
+        if(At.Size2D()>8500 || OnRoute(At,230) || InChultRuinsReserve(At)) continue;
         const int32 Type=R.RandRange(0,InChultCanopyReserve(At)?2:3); const float Yaw=R.FRandRange(0,360),Scale=R.FRandRange(.65f,1.3f);
         if(Type==0)
             Place(*FString::Printf(TEXT("SM_ChultFern%d"),I%4),At,Yaw,Scale*1.8f);
@@ -291,7 +292,7 @@ void AChultLanding::BuildSet()
     for(int32 I=0;I<120 && NaturalTrees<18;++I)
     {
         FVector At(Nature.FRandRange(-7600,7600),Nature.FRandRange(-7600,7600),-8);
-        if(At.Size2D()<3600 || At.Size2D()>7800 || OnRoute(At,700) || InChultCanopyReserve(At,650)) continue;
+        if(At.Size2D()<3600 || At.Size2D()>7800 || OnRoute(At,700) || InChultCanopyReserve(At,650) || InChultRuinsReserve(At,500)) continue;
         const float Yaw=Nature.FRandRange(0,360),Scale=Nature.FRandRange(1.6f,2.3f);
         Place(TEXT("SM_ChultIslandTree"),At,Yaw,Scale);
         Place(TEXT("SM_ChultIslandTrunkCollision"),At,Yaw,Scale);
@@ -310,6 +311,7 @@ void AChultLanding::BuildSet()
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOTS triangles=%d trees=%d"),RootTriangles.Num()/3,TreeCount);
     BuildChultWetDressing(this,true);
     BuildChultCanopy(this);
+    BuildChultRuins(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -324,6 +326,7 @@ void AChultLanding::VerifyAndCapture()
     auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     if(!C) return;
     int32 Failures=0,Samples=0;
+    Failures+=CheckChultRuins(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -457,7 +460,8 @@ void AChultLanding::VerifyAndCapture()
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEST_COMPLETE"));
             // Clearing this timer destroys the executing lambda (and its last
             // shared Run reference). Leave it alive until world shutdown.
-            FPlatformMisc::RequestExit(false);
+            ++Run->Phase;
+            StartChultRuinsReview(this,C);
             return;
         }
         ++Run->Phase;

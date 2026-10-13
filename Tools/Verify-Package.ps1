@@ -21,6 +21,9 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WET_DRESSING materials=1 moss_strands=735 puddles=9 rocks=27 .*foliage_collision=0 water_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_NATURE ferns=[1-9][0-9]* fern_variants=4 background_trees=18 tree_collision=1 foliage_collision=0 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_SCAN_ROCKS instances=27 variants=6 missing_assets=0 visible_mesh_collision=1' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RUINS .* missing_materials=0 climb_gap=120 jump_gap=100 causeway_top=650 cliffs=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RUINS_GEOMETRY failures=0 standing_tops=12' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RUINS_TEST_COMPLETE failures=0 trials=5' -Quiet) -or
    (Select-String -LiteralPath $chultLog -Pattern 'Fatal error:|Failed to compile Material|Default Material will be used in game' -Quiet)) {
     throw "Chult landing verification failed. Inspect $chultLog"
 }
