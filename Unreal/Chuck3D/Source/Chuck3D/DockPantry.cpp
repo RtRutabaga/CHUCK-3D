@@ -210,8 +210,9 @@ void BuildDockPantry(UWorld* World)
         Glow->SetIntensity(1800);Glow->SetAttenuationRadius(420);Glow->SetLightColor(FLinearColor(.48f,.035f,1));Glow->SetCastShadows(false);Glow->RegisterComponent();
         for(int32 I=0;I<7;++I){ const float A=I*.9f+Rift.X; Chip(Rift.X+FMath::Cos(A)*(Rift.RX+9),Rift.Y+FMath::Sin(A)*(Rift.RY+9)); }
     }
-    // The sky: a well of open sky under the middle of the floor, clouds drifting
-    // in it, its daylight coming up through the hole. A broken floor fragment,
+    // The sky: a well of open sky under the middle of the floor (its box drawn
+    // by view direction, Tools/create_pantry_deep_sky.py, so no walls show),
+    // its daylight coming up through the hole. A broken floor fragment,
     // its foundation and a little earth hang impossibly above the clouds.
     {
         const float S=SkyRadius*2+40, Z0=Floor-30, Z1=-1150;
@@ -260,10 +261,8 @@ void BuildDockPantry(UWorld* World)
         };
         IslandLayer(Floor-27,Floor-56,50,43,false);
         IslandLayer(Floor-54,Floor-82,43,27,true);
-        const FVector Puffs[]={FVector(-260,620,-520),FVector(-90,770,-610),FVector(-210,815,-470),FVector(-115,575,-760),FVector(-300,740,-830),FVector(-40,660,-900)};
-        for(int32 I=0;I<UE_ARRAY_COUNT(Puffs);++I)
-            for(int32 K=0;K<3;++K)
-                Shape(Puffs[I]+FVector(K*38-38,(K%2)*22,K==1?14:0),FVector(95+I*9,70+K*8,46+K*6),TEXT("PantryCloud"),false,2);
+        // (The cotton-ball cloud puffs once here went with the 2026-10-13 deep
+        // sky: M_PantrySky now shows the open sky and cloud sea along the view.)
         auto* Day=NewObject<UPointLightComponent>(Owner);Day->SetupAttachment(Root);Day->SetRelativeLocation(FVector(SkyCentre.X,SkyCentre.Y,Floor-170));
         Day->SetIntensity(5200);Day->SetAttenuationRadius(760);Day->SetLightColor(FLinearColor(.72f,.86f,1));Day->SetSourceRadius(160);Day->SetCastShadows(false);Day->RegisterComponent();
         for(int32 I=0;I<26;++I){ const float A=I*.2417f*UE_TWO_PI; Chip(SkyCentre.X+FMath::Cos(A)*(SkyRadius+12),SkyCentre.Y+FMath::Sin(A)*(SkyRadius+12)); }
@@ -448,7 +447,7 @@ void BuildDockPantry(UWorld* World)
             Player()->ResetAtLocation(FVector(SkyCentre.X+180,SkyCentre.Y,Floor+35));
             Player()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
         },2.f,false);
-        World->GetTimerManager().SetTimer(Card,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("FallCutscene/PlayableLanding.png"),true,false);},52.f,false);
+        World->GetTimerManager().SetTimer(Card,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("FallCutscene/PlayableLanding.png"),true,false);},57.f,false);   // the 5 s pre-roll before the score
         World->GetTimerManager().SetTimer(Done,[World,Player](){
             auto* C=Player(); auto* PC=World->GetFirstPlayerController();
             FHitResult FloorHit;
@@ -458,7 +457,7 @@ void BuildDockPantry(UWorld* World)
                 && C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f) && Supported && PC->GetViewTarget()==C;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_FALL_CUTSCENE_TEST failures=%d landing=%d"),!Landed,Landed);
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));
-        },53.f,false);
+        },58.f,false);
     }
     // A walking circuit round the room that stays on whole floor.
     const TArray<FVector> Walk={FVector(75,915,Floor),FVector(75,800,Floor),FVector(230,640,Floor),FVector(10,1000,Floor),FVector(75,915,Floor)};

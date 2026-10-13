@@ -47,6 +47,7 @@ $fallLog=Join-Path $evidence ('verify-fall-cutscene-'+(Get-Date -Format 'yyyyMMd
 $fallProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckFallCutsceneTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fallLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_START .* music=1 wind=1 crashes=3' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_MUSIC playing=1' -Quiet) -or
+   !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_SCORE at=0\.0' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_END at=4[0-9.]+ skipped=0 landed=1 vanished=1 summoned=1 exhales=2' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_TEST failures=0 landing=1' -Quiet) -or
    (Select-String -LiteralPath $fallLog -Pattern 'Fatal error:' -Quiet)) {

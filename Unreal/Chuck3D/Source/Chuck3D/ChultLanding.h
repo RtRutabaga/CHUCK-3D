@@ -15,6 +15,13 @@ public:
     static FVector Entrance();
     static bool Contains(const FVector& Position);
     static AChultLanding* EnterPreview(UWorld* World);
+    /** Environment plus set (the checkpoint and the end of the fall). */
     void Build();
+    /** The fall cutscene builds the set early (its floor shots happen here) and
+     *  brings in this lighting when he crashes through the canopy. Idempotent. */
+    void BuildSet();
+    void BuildEnvironment();
     void VerifyAndCapture();
+private:
+    bool bSetBuilt=false, bEnvironmentBuilt=false;
 };

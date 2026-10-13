@@ -1,5 +1,5 @@
 #include "FallCutscene.h"
-#include "ChultDressing.h"
+#include "ChultLanding.h"
 #include "AstralSummon.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckCharacter.h"
@@ -37,13 +37,13 @@ namespace
     // Bar lines of the score, for the test's report.
     const TCHAR* ShotName(float T)
     {
-        return T < AFallCutscene::Switch ? TEXT("Pantry") : T < AFallCutscene::CloseUp ? TEXT("OpenSky") : T < AFallCutscene::Down ? TEXT("Face")
+        return T < AFallCutscene::Switch ? TEXT("Pantry") : T < AFallCutscene::Reveal ? TEXT("Tumble") : T < AFallCutscene::CloseUp ? TEXT("OpenSky") : T < AFallCutscene::Down ? TEXT("Face")
             : T < AFallCutscene::Below ? TEXT("CloudDeck") : T < AFallCutscene::Canopy ? TEXT("UnderCloud") : T < AFallCutscene::Crash ? TEXT("FromCanopy")
             : T < AFallCutscene::Impact ? TEXT("Crash") : T < AFallCutscene::Look ? TEXT("Floor") : T < AFallCutscene::Drag ? TEXT("Look")
             : T < AFallCutscene::PullBack ? TEXT("Drag") : TEXT("PullBack");
     }
     // Test captures (-ChuckFallCutsceneTest), song time.
-    const float ShotTimes[] = {.6f, 3.f, 6.5f, 10.f, 15.f, 16.9f, 18.6f, 20.3f, 22.6f, 24.6f, 25.4f, 26.6f, 27.4f, 30.4f, 33.1f, 35.f, 37.2f, 41.f, 44.f, 46.2f};
+    const float ShotTimes[] = {-4.75f, -2.6f, -.6f, 3.f, 6.5f, 10.f, 15.f, 16.9f, 18.6f, 20.3f, 22.6f, 24.6f, 25.4f, 26.38f, 26.6f, 27.4f, 29.f, 29.5f, 30.4f, 33.1f, 35.f, 37.2f, 41.f, 44.f, 46.2f};
     const FLinearColor SkyWhite(.80f, .92f, .95f);
 }
 
@@ -74,7 +74,6 @@ AFallCutscene* AFallCutscene::Start(AChuckCharacter* Chuck)
     if (auto* Song = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SW_FallToChult.SW_FallToChult")))
     {
         Scene->Music = UGameplayStatics::CreateSound2D(World, Song, .6f, 1.f, 0.f, nullptr, false, false);
-        if (Scene->Music) Scene->Music->Play();
     }
     if (auto* Air = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_FallWind_00.SFX_FallWind_00")))
         Scene->Wind = UGameplayStatics::CreateSound2D(World, Air, 0.f, 1.f, 0.f, nullptr, false, false);
@@ -90,12 +89,13 @@ bool AFallCutscene::IsMusicPlaying() const { return Music && Music->IsPlaying();
 
 void AFallCutscene::Skip()
 {
-    if (SkipAt >= 0 || bFinished) return;
-    SkipAt = Clock;
+    if (bSkipping || bFinished) return;
+    SkipAt = Clock; bSkipping = true;
     if (auto* PC = Chuck.IsValid() ? Cast<APlayerController>(Chuck->GetController()) : nullptr)
         if (PC->PlayerCameraManager) PC->PlayerCameraManager->StartCameraFade(0.f, 1.f, .45f, FLinearColor::Black, false, true);
     if (Music) Music->FadeOut(.5f, 0.f);
     if (Wind) Wind->FadeOut(.3f, 0.f);
+    if (Flap) Flap->FadeOut(.3f, 0.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_SKIP at=%.2f"), Clock);
 }
 
@@ -104,8 +104,8 @@ float AFallCutscene::Altitude(float T)
     // Monotone cubic (Fritsch-Carlson) through the descent's keys: slow and
     // vast above the clouds, fast through and under them, then the canopy
     // coming up at him. Cloud deck 2.0-3.1 km.
-    static const float Ts[] = {Switch, CloseUp, Down, 16.5f, 19.3f, Canopy, Crash};
-    static const float Hs[] = {520000.f, 455000.f, 385000.f, 318000.f, 200000.f, 26000.f, 4300.f};
+    static const float Ts[] = {Switch, Reveal, CloseUp, Down, 16.5f, 19.3f, Canopy, Crash};
+    static const float Hs[] = {585000.f, 548000.f, 455000.f, 385000.f, 318000.f, 200000.f, 26000.f, 4300.f};
     constexpr int32 N = UE_ARRAY_COUNT(Ts);
     if (T <= Ts[0]) return Hs[0];
     if (T >= Ts[N - 1]) return Hs[N - 1];
@@ -131,6 +131,7 @@ void AFallCutscene::BuildStage()
     const FVector G = LandingSpot();
     auto Attach = [this](USceneComponent* C, const FVector& At, const FRotator& Rot = FRotator::ZeroRotator)
     {
+        SkyParts.Add(C);   // the open sky's environment, handed over to Chult's at the crash
         C->SetupAttachment(RootComponent);
         C->SetWorldLocationAndRotation(At, Rot);
         C->RegisterComponent();
@@ -233,7 +234,6 @@ void AFallCutscene::BuildStage()
         C->SetWorldTransform(At);
         C->RegisterComponent();
     };
-    Plain(Cube, Material(TEXT("M_FallGround")), FTransform(FRotator::ZeroRotator, G - FVector(0, 0, 50), FVector(260, 260, 1)));
     Plain(Cube, Material(TEXT("M_FallJungleFar")), FTransform(FRotator::ZeroRotator, G - FVector(0, 0, 80), FVector(400000, 400000, 1)));
     FRandomStream R(1994);
     // Through the deck: soft puffs of mist packed round his column, rushing
@@ -247,12 +247,8 @@ void AFallCutscene::BuildStage()
             Puffs->AddInstance(FTransform(FRotator(0, R.FRandRange(0, 360), 0), G + FVector(FMath::Cos(A) * D, FMath::Sin(A) * D, Z), FVector(Size, Size * R.FRandRange(.7f, 1.3f), Size * R.FRandRange(.45f, .7f))), true);
         }
     }
-    // The lane the floor cameras look down (+X of him) and pull back along.
-    auto Clear = [](float X, float Y) { return FVector2D(X, Y).Size() < 140.f || (X > -40 && X < 1300 && FMath::Abs(Y + .27f * FMath::Max(0.f, X - 170.f)) < 290 + X * .2f); };   // wide enough that big leaves from either side stay out
-    // Canopy: crowns on trunks out to 150 m (where the floor camera might see
-    // them), crowns alone beyond, thinning to the far material at 600 m. Over
-    // the clearing they close in too, for shade and shafts, but leave the
-    // hole he comes down through.
+    // The canopy seen from the air beyond the landing's own 90 m of forest:
+    // crowns, on trunks out to 150 m, thinning into the far material at 600 m.
     auto* Crowns = Set(Mesh(TEXT("SM_FallCrown")));
     auto* Trunks = Set(Cylinder, Material(TEXT("M_FallBark")));
     for (float Y = -60000; Y <= 60000; Y += 750)
@@ -260,56 +256,21 @@ void AFallCutscene::BuildStage()
         {
             const FVector2D At(X + R.FRandRange(-300, 300), Y + R.FRandRange(-300, 300));
             const float D = At.Size();
-            // Thinning from 300 m so the canopy's edge melts into the far material.
-            if (D < 900 || D > 60000 || R.FRand() < FMath::Clamp((D - 30000.f) / 30000.f, 0.f, .9f)) continue;
+            if (D < 9200 || D > 60000 || R.FRand() < FMath::Clamp((D - 30000.f) / 30000.f, 0.f, .9f)) continue;
             const float Scale = (D > 15000 ? 1.35f : 1.f) * R.FRandRange(.8f, 1.25f), Top = R.FRandRange(3000, 4100);
             Crowns->AddInstance(FTransform(FRotator(0, R.FRandRange(0, 360), 0), G + FVector(At.X, At.Y, Top), FVector(Scale)), true);
-            if (D < 15000 && !Clear(At.X, At.Y) && D > 1500)
+            if (D < 15000)
             {
                 const float Girth = FMath::Pow(R.FRandRange(.35f, 1.f), 2.f) * 2.f + .5f;
                 Trunks->AddInstance(FTransform(FRotator(R.FRandRange(-2, 2), R.FRandRange(0, 360), R.FRandRange(-2, 2)), G + FVector(At.X, At.Y, Top * .5f - 100), FVector(Girth, Girth * R.FRandRange(.85f, 1.15f), Top / 100.f)), true);
             }
         }
-    // Over the landing: two lower crowns for him to come down through.
-    Crowns->AddInstance(FTransform(FRotator(0, 40, 0), G + FVector(60, -40, 3300), FVector(.7f)), true);
-    Crowns->AddInstance(FTransform(FRotator(0, 160, 0), G + FVector(-90, 30, 2250), FVector(.5f)), true);
-    // The clearing: giant buttressed trees round him, the old one behind.
-    struct FPlace { const TCHAR* Mesh; float X, Y, Yaw, Scale; };
-    const FPlace Trees[] = {
-        {TEXT("SM_FallTree_A"), -760, 200, 30, 1.4f}, {TEXT("SM_FallTree_B"), 320, -950, 100, 1.05f}, {TEXT("SM_FallTree_A"), 950, 760, 210, .85f},
-        {TEXT("SM_FallTree_B"), -350, -1350, 250, .95f}, {TEXT("SM_FallTree_B"), -1500, 950, 15, 1.1f}, {TEXT("SM_FallTree_A"), 1600, -320, 140, .9f},
-        {TEXT("SM_FallTree_A"), -1900, -800, 300, 1.15f}, {TEXT("SM_FallTree_B"), 2200, 1500, 75, 1.f}, {TEXT("SM_FallTree_A"), 400, 2300, 190, 1.05f},
-        {TEXT("SM_FallTree_B"), -2600, 200, 120, .9f}, {TEXT("SM_FallTree_A"), 2700, -1900, 45, 1.1f}, {TEXT("SM_FallTree_B"), -800, 2900, 280, 1.f},
-        {TEXT("SM_FallPalm"), -260, 620, 200, 1.f}, {TEXT("SM_FallPalm"), 760, 420, 20, .9f}, {TEXT("SM_FallPalm"), -1100, -420, 110, 1.1f}, {TEXT("SM_FallPalm"), 1300, 300, 290, .95f},
-        {TEXT("SM_FallLog"), -380, -1050, 10, 1.f},
-    };
-    TMap<FString, UHierarchicalInstancedStaticMeshComponent*> Sets;
-    auto Place = [&](const TCHAR* Name, const FVector& At, float Yaw, float Scale)
-    {
-        UHierarchicalInstancedStaticMeshComponent*& H = Sets.FindOrAdd(Name);
-        if (!H) H = Set(Mesh(Name));
-        H->AddInstance(FTransform(FRotator(0, Yaw, 0), At, FVector(Scale)), true);
-    };
-    for (const FPlace& T : Trees) Place(T.Mesh, G + FVector(T.X, T.Y, 0), T.Yaw, T.Scale);
-    // A ring of further trees to 34 m, then the trunked crowns take over.
-    for (int32 I = 0; I < 26; ++I)
-    {
-        const float A = R.FRandRange(0, 2 * PI), D = R.FRandRange(3000, 3600);
-        Place(R.FRand() < .5f ? TEXT("SM_FallTree_A") : TEXT("SM_FallTree_B"), G + FVector(FMath::Cos(A) * D, FMath::Sin(A) * D, 0), R.FRandRange(0, 360), R.FRandRange(.85f, 1.15f));
-    }
-    // Understory: ferns, elephant ears and shrubs, kept off him and out of
-    // the lane the floor cameras look down (+X of him).
-    const TCHAR* Under[] = {TEXT("SM_FallFern"), TEXT("SM_FallFern"), TEXT("SM_FallElephantEar"), TEXT("SM_FallShrub")};
-    for (int32 I = 0; I < 340; ++I)
-    {
-        const float D = 140 + FMath::Pow(R.FRand(), 1.6f) * 2900, A = R.FRandRange(0, 2 * PI);
-        const float X = FMath::Cos(A) * D, Y = FMath::Sin(A) * D;
-        if (Clear(X, Y)) continue;
-        Place(Under[R.RandRange(0, 3)], G + FVector(X, Y, 0), R.FRandRange(0, 360), R.FRandRange(.7f, 1.3f));
-    }
-    // Framing at the edge of the floor camera's lane.
-    Place(TEXT("SM_FallFern"), G + FVector(330, 210, 0), 40, 1.1f);
-    BuildChultWetDressing(this,false);
+    // The clearing he lands in is playable Chult itself (Codex's ChultLanding:
+    // the same trees, understory, wet dressing and floor), so the end of the
+    // cutscene and the start of play are one place. Its lighting comes in as
+    // he crashes into the canopy.
+    Landing = GetWorld()->SpawnActor<AChultLanding>();
+    Landing->BuildSet();
     // Leaves shaken loose by his fall.
     FallingLeaves = NewObject<UInstancedStaticMeshComponent>(this);
     FallingLeaves->SetStaticMesh(Mesh(TEXT("SM_FallLeafCard")));
@@ -319,7 +280,7 @@ void AFallCutscene::BuildStage()
     FallingLeaves->RegisterComponent();
     int32 Instances = 0;
     for (auto* H : Jungle) Instances += H->GetInstanceCount();
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_STAGE sets=%d instances=%d crowns=%d trunks=%d"), Jungle.Num(), Instances, Crowns->GetInstanceCount(), Trunks->GetInstanceCount());
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_STAGE sets=%d instances=%d crowns=%d trunks=%d landing=%d"), Jungle.Num(), Instances, Crowns->GetInstanceCount(), Trunks->GetInstanceCount(), Landing != nullptr);
 }
 
 void AFallCutscene::HideDocks()
@@ -410,7 +371,8 @@ void AFallCutscene::UpdateChuck(float DeltaSeconds)
     if (T < Switch)
     {
         // Down the cellar's sky well, tipping forward as he goes.
-        C->SetActorLocationAndRotation(PantryStart - FVector(0, 0, 250.f * T + 250.f * T * T), FRotator(-55.f * Ease(T / Switch), PantryYaw + 20.f * T, 0));
+        const float U = T + Lead;   // seconds since he dropped through the hole
+        C->SetActorLocationAndRotation(PantryStart - FVector(0, 0, 250.f * U + 250.f * U * U), FRotator(-55.f * Ease(U / (Switch + Lead)), PantryYaw + 20.f * U, 0));
         C->BaseTime += DeltaSeconds * .6f;
         return;
     }
@@ -420,7 +382,9 @@ void AFallCutscene::UpdateChuck(float DeltaSeconds)
         // drifting a little until the canopy.
         const float Drift = 1.f - Ease(Span(T, 19.f, Crash));
         const FVector Off(FMath::Sin(T * .41f) * 420.f * Drift, FMath::Cos(T * .33f) * 380.f * Drift, Altitude(T) + Half);
-        const FRotator Body(-80.f + 8.f * FMath::Sin(T * 1.1f), 40.f + 11.f * T, 9.f * FMath::Sin(T * .8f));
+        // Out of the hole he tumbles, then spreads and steadies before the score.
+        const float Wild = 1.f - Ease(Span(T, Switch + .6f, Reveal - .4f));
+        const FRotator Body(-80.f + 8.f * FMath::Sin(T * 1.1f) + Wild * 150.f * FMath::Sin(T * 2.3f), 40.f + 11.f * T + Wild * 60.f * T, 9.f * FMath::Sin(T * .8f) + Wild * 100.f * FMath::Sin(T * 1.7f + 1.f));
         C->SetActorLocationAndRotation(G + Off, Body);
         C->BaseTime += DeltaSeconds * .5f;
         return;
@@ -438,14 +402,33 @@ void AFallCutscene::UpdateChuck(float DeltaSeconds)
         const float Z = FMath::Lerp(Heights[K], Heights[K + 1], FMath::Clamp(Fall, 0.f, 1.f));
         const FVector Jolt(FMath::Sin(K * 2.1f + U * 2.f) * 45.f * (1.f - U), FMath::Cos(K * 1.7f) * 35.f * (1.f - U), 0);
         const float Spin = Span(T, Crash, Impact);
-        const FRotator Body = FMath::Lerp(FRotator(-80.f + 220.f * Spin, 40.f + 11.f * Crash + 160.f * Spin, 40.f * FMath::Sin(Spin * 9.f)), FRotator(0, 0, 0), Ease(Span(T, 25.95f, Impact)));
-        C->SetActorLocationAndRotation(G + Jolt * (1.f - Ease(Span(T, 25.9f, Impact))) + FVector(0, 0, Z + Half), Body);
+        // Out of the last branch face down, spread, for the ground.
+        const FRotator Body = FMath::Lerp(FRotator(-80.f + 220.f * Spin, 40.f + 11.f * Crash + 160.f * Spin, 40.f * FMath::Sin(Spin * 9.f)), FRotator(-80.f, ProneYaw, 25.f), Ease(Span(T, 25.9f, Impact)));
+        const FVector Touchdown = FRotator(0, ProneYaw, 0).Vector() * -38.f * Span(T, 25.9f, Impact);   // where the skid starts
+        C->SetActorLocationAndRotation(G + Touchdown + Jolt * (1.f - Ease(Span(T, 25.9f, Impact))) + FVector(0, 0, Z + FMath::Lerp(Half, ProneHeight, Span(T, 25.9f, Impact))), Body);
         C->BaseTime += DeltaSeconds * 1.2f;
         return;
     }
     // On the jungle floor.
     const float Clip = C->Clips[static_cast<int32>(EClip::Summon)]->GetPlayLength();
     const float Rise = Summon + AAstralSummon::SummonPeak;
+    if (T < Rise - SwapLead)
+    {
+        // The impact from that height: flat on his front, a hard bounce and a
+        // short skid, a smaller second bounce, then nothing. He lies where he
+        // fell, spread as he fell, until the light comes for him.
+        const float Since = T - Impact;
+        const float Lift = Since < .3f ? 24.f * FMath::Sin(PI * Since / .3f) : Since < .46f ? 6.f * FMath::Sin(PI * (Since - .3f) / .16f) : 0.f;
+        // (He skids to a stop on the spot he will rise from.)
+        const FVector Skid = FRotator(0, ProneYaw, 0).Vector() * -38.f * FMath::Exp(-Since * 7.f);
+        // Sprawled: the hanging pose (arms overhead, legs straight) laid face down.
+        if (C->Base != EClip::Hang) C->SetClip(EClip::Hang, 0, .06f);
+        C->BaseTime = 0;
+        const float Settle = FMath::Exp(-Since * 4.5f);
+        const FRotator Body(-90.f + 10.f * Settle * FMath::Sin(Since * 22.f), ProneYaw + 12.f * (1.f - Settle), 14.f + 20.f * Settle * FMath::Cos(Since * 17.f));
+        C->SetActorLocationAndRotation(G + Skid + FVector(0, 0, ProneHeight + Lift), Body);
+        return;   // the spread pose is held: no breath, no twitch
+    }
     float Yaw = 0;
     const float TurnLength = C->Clips[static_cast<int32>(EClip::TurnLeft90)]->GetPlayLength();
     auto Turn = [&](float From, float Start, float Delta)
@@ -459,7 +442,8 @@ void AFallCutscene::UpdateChuck(float DeltaSeconds)
     if (T >= LookBack) Yaw = Turn(-70.f, LookBack, 70.f);
     else if (T >= LookLeft) Yaw = Turn(0.f, LookLeft, -70.f);
     C->SetActorLocationAndRotation(G + FVector(0, 0, Half), FRotator(0, Yaw, 0));
-    if (T < Rise) { if (C->Base != EClip::Summon) C->SetClip(EClip::Summon, 0, .1f); C->BaseTime = 0; }
+    // At the light's peak he is curled where he lay, and rises out of it.
+    if (T < Rise) { if (C->Base != EClip::Summon) C->SetClip(EClip::Summon, 0, 0.f); C->BaseTime = 0; }
     else if (T < Rise + Clip) { C->BaseTime = T - Rise; }
     else if (T >= LookLeft && T < LookLeft + TurnLength) { if (C->Base != EClip::TurnLeft90) C->SetClip(EClip::TurnLeft90, 0, .15f); C->BaseTime = T - LookLeft; }
     else if (T >= LookBack && T < LookBack + TurnLength) { if (C->Base != EClip::TurnRight90) C->SetClip(EClip::TurnRight90, 0, .15f); C->BaseTime = T - LookBack; }
@@ -480,10 +464,18 @@ void AFallCutscene::UpdateCamera()
         From = FVector(Hole.X - 40.f, Hole.Y - 70.f, PantryStart.Z + 170.f);
         Focal = 28.f; Stop = 8.f;
     }
+    else if (T < Reveal)
+    {
+        // Out of the white: tumbling, close, before the score; the camera
+        // buffeted with him.
+        const float U = Span(T, Switch, Reveal);
+        From = C + Orbit(200.f + 25.f * U, 14.f, FMath::Lerp(240.f, 300.f, U)) + FVector(FMath::Sin(T * 13.f), FMath::Sin(T * 11.f + 1.f), FMath::Sin(T * 17.f + 2.f)) * 4.f;
+        Focal = 32.f; Stop = 4.f;
+    }
     else if (T < CloseUp)
     {
-        // Small in a vast sky over the cloud deck, the sun on him.
-        const float U = Ease(Span(T, Switch, CloseUp));
+        // The score's first hit: small in a vast sky over the cloud deck, the sun on him.
+        const float U = Ease(Span(T, Reveal, CloseUp));
         From = C + Orbit(192.f + 16.f * U, 4.f, FMath::Lerp(620.f, 430.f, U));
         At = C + FVector(0, 0, 40.f);
         Focal = 24.f; Stop = 11.f;
@@ -531,7 +523,7 @@ void AFallCutscene::UpdateCamera()
         // The floor at his height: the light, the giants behind him.
         const float U = Ease(Span(T, Impact + .3f, Look));
         const FVector Settle = FMath::Lerp(C + FVector(150.f, -130.f, 70.f), G + FVector(300.f, -110.f, 32.f), Ease(Span(T, Impact, Impact + .35f)));
-        From = FMath::Lerp(Settle, G + FVector(235.f, -85.f, 36.f), U);
+        From = FMath::Lerp(Settle, G + FVector(200.f, -75.f, 30.f), U);
         At = G + FVector(0, 0, 26.f);
         Focal = 24.f; Stop = 4.f;
     }
@@ -562,15 +554,15 @@ void AFallCutscene::UpdateCamera()
     }
     if (T < ShakeUntil)
     {
-        const float K = (ShakeUntil - T) / .35f;
-        From += FVector(FMath::Sin(T * 91.f), FMath::Sin(T * 77.f + 1.f), FMath::Sin(T * 113.f + 2.f)) * 6.f * K;
+        const float K = FMath::Square((ShakeUntil - T) / ShakeTime);
+        From += FVector(FMath::Sin(T * 91.f), FMath::Sin(T * 77.f + 1.f), FMath::Sin(T * 113.f + 2.f)) * 14.f * K;
     }
     Aim(From, At, Focal, Stop);
 }
 
 void AFallCutscene::UpdateLight()
 {
-    if (!Sun) return;
+    if (!Sun || Clock >= Crash) return;
     // Toward evening as he nears Chult (the 2D sky darkens to dusk).
     const float Dusk = Ease(Span(Clock, 17.f, Crash));
     Sun->SetLightColor(FMath::Lerp(FLinearColor(1.f, .9f, .78f), FLinearColor(1.f, .76f, .52f), Dusk));
@@ -579,8 +571,9 @@ void AFallCutscene::UpdateLight()
     if (Wind && Clock < Crash)
     {
         // The rush of air rises with his speed, under the score.
-        const float Rush = Clock < CloseUp ? .25f : Clock < Down ? .4f : Clock < Below ? .7f : Clock < Canopy ? .9f : FMath::Lerp(.35f, .8f, Span(Clock, Canopy, Crash));
+        const float Rush = Clock < Reveal ? .95f : Clock < CloseUp ? .25f : Clock < Down ? .4f : Clock < Below ? .7f : Clock < Canopy ? .9f : FMath::Lerp(.35f, .8f, Span(Clock, Canopy, Crash));
         Wind->SetVolumeMultiplier(FMath::FInterpTo(Wind->VolumeMultiplier, Rush, GetWorld()->GetDeltaSeconds(), 2.f));
+        if (Flap) Flap->SetVolumeMultiplier(FMath::FInterpTo(Flap->VolumeMultiplier, Clock < Reveal ? .8f : Clock < CloseUp ? .2f : Clock < Down ? .35f : .55f, GetWorld()->GetDeltaSeconds(), 2.f));
     }
 }
 
@@ -590,18 +583,21 @@ void AFallCutscene::Events(float From, float To)
     APlayerController* PC = Chuck.IsValid() ? Cast<APlayerController>(Chuck->GetController()) : nullptr;
     APlayerCameraManager* Lens = PC ? PC->PlayerCameraManager : nullptr;
     auto Cut = [Lens]() { if (Lens) Lens->SetGameCameraCutThisFrame(); };
-    if (From <= 0.f && Lens) { Lens->StartCameraFade(0.f, 0.f, .01f, SkyWhite, false, false); Cut(); }
-    if (Crossed(.55f) && Lens) Lens->StartCameraFade(0.f, 1.f, .6f, SkyWhite, false, true);
+    if (From <= -Lead && Lens) { Lens->StartCameraFade(0.f, 0.f, .01f, SkyWhite, false, false); Cut(); }
+    if (Crossed(-Lead + .55f) && Lens) Lens->StartCameraFade(0.f, 1.f, .6f, SkyWhite, false, true);
+    // A few seconds of falling with only the air; then the score.
+    if (Crossed(0.f) && Music) { Music->Play(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_SCORE at=%.2f"), To); }
     if (Crossed(Switch))
     {
         HideDocks();
         BuildStage();
         bStage = true;
-        if (Wind) Wind->FadeIn(2.f, .25f);
+        if (Wind) Wind->FadeIn(.6f, .95f);
+        if (Flap) Flap->FadeIn(.6f, .8f);
         Cut();
     }
     if (Crossed(Switch + .15f) && Lens) Lens->StartCameraFade(1.f, 0.f, 1.1f, SkyWhite, false, false);
-    for (float At : {CloseUp, Down, Below, Canopy, Crash, Impact, Look, Drag, PullBack}) if (Crossed(At)) Cut();
+    for (float At : {Reveal, CloseUp, Down, Below, Canopy, Crash, Impact, Look, Drag, PullBack}) if (Crossed(At)) Cut();
     // The mist was for the passage through the deck; from below it would be dots.
     if (Crossed(Canopy) && Puffs) Puffs->SetVisibility(false);
     const FVector G = LandingSpot();
@@ -610,21 +606,34 @@ void AFallCutscene::Events(float From, float To)
         const float Z = Crossed(Crash) ? 4300.f : Crossed(25.35f) ? 3000.f : 1750.f;
         Burst(G + FVector(0, 0, Z), 70, 500.f);
         if (LeafCrashes.Num()) UGameplayStatics::PlaySound2D(this, LeafCrashes[Crashes++ % LeafCrashes.Num()], .7f, FMath::FRandRange(.92f, 1.05f));
-        if (Wind && Crossed(Crash)) Wind->FadeOut(.4f, 0.f);
+        if (Crossed(Crash))
+        {
+            if (Wind) Wind->FadeOut(.4f, 0.f);
+            if (Flap) Flap->FadeOut(.3f, 0.f);
+            // Into the canopy and under Chult's own light, fog and exposure.
+            for (USceneComponent* Part : SkyParts) if (Part) Part->SetVisibility(false);
+            if (Landing) Landing->BuildEnvironment();
+        }
     }
     if (Crossed(Impact))
     {
-        Burst(G + FVector(0, 0, 30), 30, 220.f);
-        if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, .9f, .8f);
-        ShakeUntil = Impact + .35f;
+        // A body hitting the ground from the sky: litter thrown up, a heavy
+        // thud, the camera jarred.
+        Burst(G + FVector(0, 0, 20), 70, 380.f);
+        if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, 1.f, .62f);
+        if (LeafCrashes.Num()) UGameplayStatics::PlaySound2D(this, LeafCrashes[0], .5f, .7f);
+        ShakeUntil = Impact + ShakeTime;
         bLanded = true;
         UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_IMPACT at=%.2f"), To);
     }
     AChuckCharacter* C = Chuck.Get();
-    const FVector Feet = G + FVector(0, 0, 1.f);
+    if (Crossed(Impact + .3f) && LandSound) UGameplayStatics::PlaySound2D(this, LandSound, .55f, .75f);   // the bounce coming down
+    // The light gathers round him where he lies, not where he'd stand.
+    const FVector Body = ChuckTarget();
+    const FVector Feet(Body.X, Body.Y, G.Z + 1.f);
     // His quiet death on the jungle floor, and his return out of the light.
-    if (Crossed(Vanish)) { AAstralSummon::Start(GetWorld(), Feet, false); bVanished = true; }
-    if (C && Crossed(Vanish + AAstralSummon::VanishPeak)) C->SetAstralHidden(true);
+    // At the column's peak the light takes him (the quiet death) and gives him back curled.
+    if (C && Crossed(Summon + AAstralSummon::SummonPeak - SwapLead)) { C->SetAstralHidden(true); bVanished = true; }
     if (Crossed(Summon)) { AAstralSummon::Start(GetWorld(), Feet, true); bSummoned = true; }
     if (C && Crossed(Summon + AAstralSummon::SummonPeak)) C->SetAstralHidden(false);
     if (C && (Crossed(Drag + .55f) || Crossed(Drag + 3.0f))) { C->Exhale(); ++Exhales; }
@@ -647,12 +656,13 @@ void AFallCutscene::Finish()
     if (bFinished) return;
     bFinished = true;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_END at=%.2f skipped=%d landed=%d vanished=%d summoned=%d exhales=%d music_playing=%d"),
-        Clock, SkipAt >= 0, bLanded, bVanished, bSummoned, Exhales, IsMusicPlaying());
+        Clock, bSkipping, bLanded, bVanished, bSummoned, Exhales, IsMusicPlaying());
     for (int32 I = 0; I < 3; ++I)
         UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_FPS part=%s average=%.1f worst_frame_ms=%.1f"), I == 0 ? TEXT("sky") : I == 1 ? TEXT("canopy") : TEXT("floor"),
             PartTime[I] > 0 ? PartFrames[I] / PartTime[I] : 0.f, PartWorst[I] * 1000.f);
     if (Music) Music->Stop();
     if (Wind) Wind->Stop();
+    if (Flap) Flap->Stop();
     if (AChuckCharacter* C = Chuck.Get()) C->EndFallCutscene();
     if (Camera) Camera->Destroy();
     Destroy();
@@ -667,7 +677,7 @@ void AFallCutscene::Tick(float DeltaSeconds)
     const float Before = Clock;
     Clock += DeltaSeconds;
     Events(Before, Clock);
-    if (SkipAt >= 0 && Clock - SkipAt >= .5f) { Finish(); return; }
+    if (bSkipping && Clock - SkipAt >= .5f) { Finish(); return; }
     if (Clock >= End) { Finish(); return; }
     // Frame rate per part, for the test report (sky, canopy, floor).
     const int32 Part = Clock < Canopy ? 0 : Clock < Impact ? 1 : 2;

@@ -14,7 +14,7 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 **Chult Landing** is the first jungle setting pass: the cutscene's landing clearing, tall trees and a winding ground loop. Brachiation starts in a later setting section. The normal fall's connection to this playable setting is still Claude's next task; use the checkpoint to explore it now. See [CHULT-LANDING.md](CHULT-LANDING.md).
 
-Falling through the sky hole in the tavern cellar plays the fall-to-Chult cutscene (about 48 s, letterboxed, no control). Esc skips it. It ends on the "End of demo" card, where Esc exits.
+Falling through the sky hole in the tavern cellar plays the fall-to-Chult cutscene (about 53 s: a few seconds of falling with only the wind, then the score; letterboxed, no control). Esc skips it. It ends in playable Chult.
 
 ## HUD
 

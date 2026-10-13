@@ -145,6 +145,8 @@ This is a proposed integration contract, not a claim that a destination API or C
 
 **Status (Claude, 2026-10-12):** the cutscene is built (`Unreal/Chuck3D/Source/Chuck3D/FallCutscene.cpp`, about 47.5 s on the user's "Fall Cutscene theme"). It runs on its own stage with its own jungle set (`SourceAssets/Cutscenes/FallToChult`), 25 km from the docks, and ends on the existing "End of demo" card. Connecting it means replacing `AFallCutscene::Finish()`'s call to `EndFallCutscene()` with the handoff to `ChultLanding` under the contract above. The landing setting may also take over the floor shots, from his impact at 26.3 s onward. Chuck's Sanity is unchanged by the cutscene's death and return (it is presentation only).
 
+**2026-10-13 (Claude):** the cutscene's floor shots now use the landing itself. `AChultLanding` was split into `BuildSet()` and `BuildEnvironment()`; `Build()` does both, and both are idempotent. The cutscene builds the set with its sky stage and calls `BuildEnvironment()` at the canopy crash, after hiding its own sky lighting. `EnterPreview` completes an existing landing rather than building a second one. Keep the cutscene camera lane (`OnRoute`) and the floor origin when changing the landing.
+
 ## Delivery order and ownership
 
 The user's October 12 landing instruction starts with a **playable setting preview** before the full milestone below: match the cutscene clearing and add a winding ground loop, available through Dev Checkpoints. The first brachiation sample moves beyond that clearing. Claude's production cutscene handoff remains separate. See [../CHULT-LANDING.md](../CHULT-LANDING.md) for the concrete floor/entrance contract and current limits.

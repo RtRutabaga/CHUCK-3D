@@ -71,7 +71,8 @@ bool AChultLanding::Contains(const FVector& P)
 AChultLanding* AChultLanding::EnterPreview(UWorld* World)
 {
     if(!World) return nullptr;
-    for(TActorIterator<AChultLanding> It(World);It;++It) return *It;
+    // Already standing (the fall cutscene built it): add its own light and go.
+    for(TActorIterator<AChultLanding> It(World);It;++It) { It->Build(); return *It; }
     auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
     // A checkpoint selection enters a fresh paused world. Keep its timers alive,
     // but disable Waterdeep rendering, collision and global environment effects.
@@ -97,6 +98,14 @@ AChultLanding* AChultLanding::EnterPreview(UWorld* World)
 
 void AChultLanding::Build()
 {
+    BuildEnvironment();
+    BuildSet();
+}
+
+void AChultLanding::BuildEnvironment()
+{
+    if(bEnvironmentBuilt) return;
+    bEnvironmentBuilt=true;
     const FVector G=FloorOrigin();
     auto Attach=[this,G](USceneComponent* C, FVector P=FVector::ZeroVector, FRotator R=FRotator::ZeroRotator)
     { C->SetupAttachment(RootComponent); C->SetWorldLocationAndRotation(G+P,R); C->RegisterComponent(); };
@@ -125,6 +134,15 @@ void AChultLanding::Build()
     P.bOverride_BloomIntensity=true; P.BloomIntensity=.4f;
     P.bOverride_AmbientOcclusionIntensity=true; P.AmbientOcclusionIntensity=.6f;
     Attach(Post);
+}
+
+void AChultLanding::BuildSet()
+{
+    if(bSetBuilt) return;
+    bSetBuilt=true;
+    const FVector G=FloorOrigin();
+    auto Attach=[this,G](USceneComponent* C, FVector P=FVector::ZeroVector, FRotator R=FRotator::ZeroRotator)
+    { C->SetupAttachment(RootComponent); C->SetWorldLocationAndRotation(G+P,R); C->RegisterComponent(); };
     auto* Cube=LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube"));
     auto* Floor=NewObject<UStaticMeshComponent>(this);
     Floor->SetStaticMesh(Cube); Floor->SetMaterial(0,JungleMaterial(TEXT("M_FallGround")));

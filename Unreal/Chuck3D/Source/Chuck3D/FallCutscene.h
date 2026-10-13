@@ -41,15 +41,20 @@ public:
     float GetClock() const { return Clock; }
     bool IsMusicPlaying() const;
     // Song-time beats of the sequence.
-    static constexpr float Switch = 1.2f;        // white: the pantry gives way to open sky
+    static constexpr float Lead = 5.f;           // s of falling with only the air before the score (clock starts at -Lead)
+    static constexpr float Switch = -3.8f;       // white: the pantry gives way to open sky
+    static constexpr float Reveal = .55f;        // the score's first hit: the wide sky
     static constexpr float CloseUp = 8.07f;      // the score lifts: his face
     static constexpr float Down = 13.70f;        // looking down past him at the cloud deck
     static constexpr float Below = 17.46f;       // in the cloud, out under it over the jungle
     static constexpr float Canopy = 21.22f;      // from the canopy, looking up at him coming
     static constexpr float Crash = 24.98f;       // the breakdown: into the leaves
     static constexpr float Impact = 26.30f;
-    static constexpr float Vanish = 26.86f;
-    static constexpr float Summon = 28.73f;
+    static constexpr float Summon = 28.73f;      // the light gathers round him where he lies
+    static constexpr float SwapLead = .11f;      // s before the column's peak that it takes him
+    static constexpr float ProneYaw = 70.f;      // lying across the floor camera's view
+    static constexpr float ProneHeight = 14.f;   // capsule centre above the floor when flat on his front
+    static constexpr float ShakeTime = .6f;
     static constexpr float Look = 32.49f;
     static constexpr float Drag = 36.25f;
     static constexpr float PullBack = 40.01f;
@@ -66,6 +71,9 @@ private:
     UPROPERTY() ACameraActor* Camera;
     UPROPERTY() UAudioComponent* Music;
     UPROPERTY() UAudioComponent* Wind;
+    UPROPERTY() UAudioComponent* Flap;   // his jacket in the rushing air
+    UPROPERTY() TArray<USceneComponent*> SkyParts;
+    UPROPERTY() class AChultLanding* Landing;
     UPROPERTY() TArray<USoundBase*> LeafCrashes;
     UPROPERTY() USoundBase* LandSound;
     UPROPERTY() UDirectionalLightComponent* Sun;
@@ -74,15 +82,16 @@ private:
     UPROPERTY() UInstancedStaticMeshComponent* FallingLeaves;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> Jungle;
     UPROPERTY() UHierarchicalInstancedStaticMeshComponent* Puffs;
-    float Clock = 0;
-    float SkipAt = -1;
+    float Clock = -Lead;
+    float SkipAt = 0;
+    bool bSkipping = false;
     bool bStage = false, bLanded = false, bVanished = false, bSummoned = false, bFinished = false;
     int32 Exhales = 0, Crashes = 0;
     FVector PantryStart = FVector::ZeroVector;
     float PantryYaw = 0;
     struct FLeaf { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Age; float Life; };
     TArray<FLeaf> Leaves;
-    float ShakeUntil = -1;
+    float ShakeUntil = -1e9f;   // (the clock starts negative: no shake until set)
     int32 PartFrames[3] = {0, 0, 0};
     float PartTime[3] = {0, 0, 0}, PartWorst[3] = {0, 0, 0};
     void BuildStage();

@@ -1,6 +1,6 @@
 # Fall to Chult — cutscene set (Claude, 2026-10-12)
 
-The jungle seen in the fall-to-Chult cutscene (`Unreal/Chuck3D/Source/Chuck3D/FallCutscene.cpp`): the canopy he crashes through and the clearing where he lands, dies his quiet astral death, returns and takes a drag. It is the cutscene's own set dressing on a stage 25 km from the docks, **not** the playable Chult setting, which is Codex's (docs/regions/CHULT.md). When the landing setting exists, the cutscene's last shots can move to it or this set can be retired.
+The jungle seen in the fall-to-Chult cutscene (`Unreal/Chuck3D/Source/Chuck3D/FallCutscene.cpp`): the canopy he crashes through and the clearing where he lands, dies his quiet astral death, returns and takes a drag. It is the cutscene's own set dressing on a stage 25 km from the docks, **not** the playable Chult setting, which is Codex's (docs/regions/CHULT.md). Since 2026-10-13 the cutscene's clearing **is** Codex's playable `AChultLanding` set: the same trees, understory, wet dressing and floor, built when the sky stage is built, with its lighting brought in at the canopy crash. Only the sky, the cloud deck and puffs, and the far canopy beyond the landing's 90 m forest remain the cutscene's own.
 
 Everything here is procedural and seeded; no downloads or third-party art.
 

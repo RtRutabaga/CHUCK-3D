@@ -2,6 +2,19 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 13 — fall cutscene follow-ups
+
+- **Base:** `360fa4c` (after Codex's Chult work). Details are in the HANDOFF entry of the same date.
+- **Changed:**
+  - `FallCutscene.h/.cpp`: pre-roll (`Lead`, `Reveal`), the landing set and environment handover, the prone crash, the summon from prone, a `Flap` slot, and the sentinel fixes.
+  - `ChultLanding.h/.cpp` (Codex's file): Build split into `BuildSet`/`BuildEnvironment`; `EnterPreview` completes an existing landing.
+  - `DockPantry.cpp`: puffs removed; the test timers moved +5 s.
+  - `Tools/create_pantry_deep_sky.py` (new) and `M_PantrySky.uasset`.
+  - `Tools/Verify-Package.ps1`: score-start check.
+- **Contracts:** the cutscene now depends on `AChultLanding::BuildSet()`/`BuildEnvironment()` and on the landing keeping the cutscene camera lane. No rig or socket change.
+- **Commands run:** the deep-sky script three times, about 7 uncooked `-ChuckFallCutsceneTest` capture runs, and `Build-Game.ps1 -Package -SkipBaseAssets -ArchiveDirectory Builds/FallCrashCandidate`.
+- **Downloads:** the user approved three BigSoundBank CC0 files. The download step uses an anti-bot token and Cloudflare check, so I did not script it. Two blocked form POSTs returned HTML only; those pages were deleted. The user will download the files by hand.
+
 ## October 12 — the fall-to-Chult cutscene
 
 - **Owner, task, branch:** Claude, the Phase 3 fall-to-Chult cutscene on the user's "Fall Cutscene theme", on `main` at `C:\GameDev\CHUCK-3D`. Base `c589b8f`.

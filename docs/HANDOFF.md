@@ -9,6 +9,25 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** refine Chult's natural tree/leaf/rock forms and ground relief; extend the jungle with brachiation farther in under the region plan. Claude can address the inherited alchemist pose/check separately.
 
+## October 13 — fall cutscene: sky-hole fix, pre-roll, crash landing, matched to Chult (Claude)
+
+- **User asks:** the "square of different sky" as he falls; a few seconds of falling with only sound before the score; match Codex's improved Chult; a heavy crash landing and a summon from where he lies.
+- **Built:**
+  - **Cellar sky:** `M_PantrySky` is rebuilt by the new `Tools/create_pantry_deep_sky.py`. It now draws the open sky along the view ray: teal haze and a cumulus sea 2.5 km below, so the well's box walls and corners disappear. The cotton-ball cloud puffs in the well were removed.
+  - **Pre-roll:** the cutscene clock starts at -5 s. He drops through the hole, the white flash comes, and he tumbles close to camera in open sky with only the wind. The score starts at 0, and its first hit (0.55 s) cuts to the wide sky shot. All later beats are unchanged.
+  - **Crash:** he hits face down in a sprawled pose (the Hang clip laid flat), with a hard bounce and skid, a second bounce thud, a bigger leaf burst and a 0.6 s camera jolt. He lies still through the breakdown. The astral light then gathers on his body; at its peak it takes him, and he rises curled out of it on the same spot. This replaces the old stand-up, vanish and reappear.
+  - **Match to Chult:** the cutscene floor is now Codex's `AChultLanding` itself. The landing is split into idempotent `BuildSet()` and `BuildEnvironment()`; the cutscene builds the set early and swaps its sky lighting for the landing's at the canopy crash. The cutscene's own clearing, understory, ground and dressing calls were removed; its canopy crowns now start beyond the landing's 90 m forest.
+  - **Fixed:** the camera-shake and skip sentinels assumed the clock starts at 0, which shook the camera through the whole pre-roll.
+- **Tested:** packaged `Builds/FallCrashCandidate` with `Build-Game.ps1 -Package -SkipBaseAssets`; `Verify-Package` **182 passes** (`Local/verify-package-20261013-101745.log`).
+  - Fall test: `CHUCK_FALL_CUTSCENE_SCORE at=0.00` (new check), `END ... landed=1 vanished=1 summoned=1 exhales=2` and `TEST failures=0 landing=1`; about 58/57/58 fps (`verify-fall-cutscene-20261013-101820.log`).
+  - Skip test: `CHUCK_DEMO_SKIP_TEST failures=0 landing=1`.
+  - Cooked captures reviewed; contact sheet at `Local/fall-cutscene-contact-sheet-2.png`.
+- **Pending:** three CC0 BigSoundBank recordings the user approved (wind #0595, flag #1633 for the jacket, whistle #0155). The site's anti-bot download step means the user downloads them by hand, so the pre-roll still uses the generated wind. A `Flap` slot with volume curves is ready (see `SourceAssets/Audio/README.md`).
+- **Flaws:** the prone pose is the hang clip laid flat, not an authored crash or ragdoll (the tail stays raised). The cellar cloud sea is procedural noise, not volumetric. Not tested: Xbox, speakers, other resolutions.
+- **Launcher:** LAUNCHER_STATUS
+
+Next part of the work can be done here: integrate the three downloaded sounds once they are in Downloads.
+
 ## October 13 — Chult hanging moss and wet-forest look (Codex)
 
 - **Built:** shared `ChultDressing.cpp` gives the cinematic floor and playable landing identical seeded low branches/hanging moss, nine shallow puddles, 27 mossy colliding rocks, 108 embedded gravel pieces and a broad-leaf foreground plant. Moss, foliage, low decorative branches, gravel and puddles are noncolliding. Landing transform and the walking loop remain intact. Added dressing: **54,444 triangles**.
