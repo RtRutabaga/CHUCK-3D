@@ -1,5 +1,17 @@
 # Handoff — 2026-09-27
 
+## October 12 — Chult adaptation plan (Codex; documentation only)
+
+Added `docs/regions/CHULT.md` for user review. Confirmed direction, including subsequent user corrections: dense jungle brachiation using the existing swing capability/clips; retain jungle zombies and dinosaurs (original two raptors), with no skeletons until the temple; the jungle ship becomes a substantial accessible abandoned wreck with no crew. Claude owns the fall-to-Chult cutscene.
+
+- Proposed route: safe landing, layered root/branch jungle, explorable wreck, zombie escape, respite and temple approach. Includes grip-spacing/collision constraints from current code, camera/foliage requirements, wreck hold/deck/interior access, a proposed cutscene landing contract and staged ownership/acceptance checks.
+- Corrected the initial overly restrictive enemy reading: raptors remain, and the original snake chamber/adventurer-beholder tableau remain source direction for the later temple plan. Only jungle skeletons are removed; no new story replacement invented.
+- User removed the waterfall chest: plan retains a visible reachable waterfall cove without a chest system. Added occasional individual golden cigarettes, Premium Buhetian Halfling Leaf, starting in Chult and recurring game-wide. They grant a temporary max-stamina lock and continuous wall climbing using the existing hook; duration/lifecycle/UI remain proposals. Current PROJECT-BRIEF records this direction as well.
+- Reviewed current brief/workflow/handoff, original 2D bible and Phases 3–6, original map/dialogue references and current grip/swing code. Plan quantities/layouts remain proposals, not implementation or tested claims.
+- No runtime/asset changes, installs, builds, imports, packaging or gameplay tests. Root launcher/package remain unchanged; the 38 pre-existing modified assets and two untracked textures are preserved. Normal Git status invokes an LFS subprocess that fails under this sandbox; read-only status with LFS filters disabled succeeds. No LFS configuration changed.
+
+Next part of the work could be done by either — preference: Claude continues the fall cutscene; Codex implements the first jungle setting milestone after plan review and landing-contract agreement.
+
 ## October 12 — full game begins; scope rules rewritten
 
 The user declared the Waterdeep prototype done and started the full game. This is cleanup step 1 of 5: the scope rules.
