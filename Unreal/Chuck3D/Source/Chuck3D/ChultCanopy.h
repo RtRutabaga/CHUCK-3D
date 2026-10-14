@@ -17,6 +17,7 @@ struct FChultCanopyChain
     // First paw on the neighbouring tree: no wood spans this transition.
     int32 BranchBreak = INDEX_NONE;
     int32 From = 0, To = 0;
+    int32 LimbA = 0, LimbB = 1;   // the walking limb each end grip hangs over (index into that tree's Limbs)
 };
 struct FChultCanopyTree
 {

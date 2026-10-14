@@ -2,6 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — a staggered line of canopy trees into the open ground (Claude)
+
+- **Request:** more brachiation trees in a staggered line leading away into the blank part of the map. Base `15826c5`.
+- **Where:** past 90 m from the landing the forest ring stops and the floor is bare out to its edge at 130 m. An oblique overview (`Review_8`) showed the empty strip running north-east from the grove past tree 2.
+- **Built (`ChultCanopy.cpp/.h`):**
+  - Trees 4–7 at (9050,3250), (10350,4200), (10650,5750) and (11700,6600). They alternate either side of the line, 13.5–16 m apart, with crotches at 6.9–7.6 m and varied girth and leader height.
+  - Chains 4–7 (2→4→5→6→7) work like the loop's.
+  - Each new tree has a liana and spurs; the end tree has only one chain limb, so it gets four spur tries and its standing point sits at that limb's base.
+  - Totals: 8 trees, 8 chains, 14 spurs, 127 grips.
+  - Trees take limbs from a `Neighbours` list, and chains record `LimbA/LimbB`. The loop is unchanged: same limb order and random draws. Tree 2 gains a limb, so its spurs moved.
+  - `InChultCanopyReserve` covers a 10 m corridor along the line (the landing keeps its random placements out of it). Spur grips stay within 132 m of the landing.
+- **Test changes:** `-ChuckCanopyTest` adds 13 line trials: reset at tree 2's crotch, then catch, chain and step down for chains 4–7, then the end tree's liana down. Spur trials cover the new spurs, for 45 trials in all. The capture's final still no longer switches the camera in the frame it renders (it had been capturing Chuck's view). `Verify-Package` counts are updated.
+- **Tests:** uncooked canopy 45/45 with 0 static failures (`Local/canopy-line-2.log`). Uncooked Chult: grove ground 11/11, root check, ruins 5/5, landing counts unchanged (`Local/chult-line.log`). Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-075851.log`); canopy 45/45 with 0 static failures (`verify-canopy-20261014-080440.log`); Chult grove ground 11/11 and ruins 5/5; fall cutscene and lamp swing 8/8 pass.
+- **Reviewed:** the overview and a view along the line, kept as `SourceAssets/Setting/Review/Canopy_LineOverview.png` and `Canopy_LineView.png`.
+- **Known flaws:**
+  - The ground under the line is bare: no understory, roots or forest beyond the trees themselves.
+  - The canopy now has about 232k procedural triangles and 15.9k leaves; frame rate not measured.
+  - No crown fading, no hands-on play, no Xbox test.
+- **Launcher:** promoted as `CanopyLine` (`Local/line-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review would help most); Codex could dress the open ground along the line (understory, relief) as setting work.
+
 ## October 13 — canopy spurs in all directions; smooth buttresses on every tree (Claude)
 
 - **Request:** branches out in all directions like real trees, all brachiatable the same way, with natural variety in size and position; and fix the sharp angles where root structures go up trunks, on these trees, all trees and in the cutscene. Base `5d2b753`.

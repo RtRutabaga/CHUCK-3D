@@ -7,7 +7,19 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove and adjacent parkour ruins; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Impassable boundary cliffs are explicitly deferred.
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
-- **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 71 grips on chains and spurs, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+- **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 14 — a line of canopy trees into the open ground (Claude)
+
+- **Changed:**
+  - Four more canopy trees run in a staggered line from tree 2 north-east into the bare strip beyond the forest ring, each linked to the next by a chain like the loop's.
+  - Each new tree has a liana and spurs: 8 trees, 8 chains, 14 spurs and 127 grips in all.
+  - The loop is unchanged. Contract: [CHULT-CANOPY.md](CHULT-CANOPY.md).
+- **Tested:** uncooked, all 45 canopy trials pass, including the whole line and the end tree's liana; Codex's Chult and ruin checks pass. Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-075851.log`); canopy 45/45 with 0 static failures (`verify-canopy-20261014-080440.log`); Chult grove ground 11/11 and ruins 5/5; fall cutscene and lamp swing 8/8 pass.
+- **Not tested / missing:** bare ground under the line; frame rate; a person playing it; Xbox.
+- **Launcher:** promoted as `CanopyLine` (`Local/line-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review would help most); Codex could dress the open ground along the line.
 
 ## October 13 — canopy branches in all directions; smooth buttresses on all trees (Claude)
 

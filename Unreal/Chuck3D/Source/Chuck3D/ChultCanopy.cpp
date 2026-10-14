@@ -28,7 +28,17 @@ namespace
     // point straight at its neighbours; tree 0 has a third under the ruin's
     // landing slab; spurs fill the other directions (CanopyData below).
     struct FTreeDef { FVector2D At; float Top; float Scale; float LeaderHeight; };
-    const FTreeDef Defs[]={{{5560,1230},650,1.f,900},{{7250,760},650,1.08f,1010},{{8350,1800},760,.93f,840},{{6750,2600},650,1.04f,960}};
+    // 0-3: the loop by the ruins. 4-7 (user 2026-10-14): a staggered line leading
+    // away from tree 2 north-east into the open ground beyond the forest ring.
+    const FTreeDef Defs[]={{{5560,1230},650,1.f,900},{{7250,760},650,1.08f,1010},{{8350,1800},760,.93f,840},{{6750,2600},650,1.04f,960},
+        {{9050,3250},700,.97f,920},{{10350,4200},760,1.06f,1000},{{10650,5750},690,.95f,880},{{11700,6600},740,1.02f,950}};
+    constexpr int32 TreeCount=UE_ARRAY_COUNT(Defs);
+    // Each tree's neighbours, in limb order (tree 0 adds the ruin-slab limb after them).
+    const TArray<TArray<int32>> Neighbours={{1,3},{2,0},{3,1,4},{0,2},{5,2},{6,4},{7,5},{6}};
+    struct FChainDef {int32 A,B;};
+    const FChainDef ChainDefs[]={{0,1},{1,2},{2,3},{3,0},{2,4},{4,5},{5,6},{6,7}};
+    // The line's corridor (part of the canopy reserve).
+    const FVector LinePath[]={{8350,1800,0},{9050,3250,0},{10350,4200,0},{10650,5750,0},{11700,6600,0}};
     const FVector2D SlabAt(5530,820);
     constexpr float GripOver=98;      // grip above the walking limb: a standing hop (18 cm) catches it; hanging feet clear the bark by 34
     constexpr float FirstGrip=300;    // first/last grip of a chain, out from the trunk axis
@@ -249,23 +259,23 @@ namespace
         static const FCanopy Data=[]()
         {
             FCanopy R;
-            for(int32 I=0;I<4;++I)
+            for(int32 I=0;I<TreeCount;++I)
             {
                 FChultCanopyTree T;T.Trunk=Flat(Defs[I].At);T.Top=Defs[I].Top;T.TrunkScale=Defs[I].Scale;
                 FRandomStream Rng(3301+I*71);
                 auto AddLimb=[&](FVector D,float Len,float Rise,float Scale,float Away)
                 {T.Limbs.Add(D);T.LimbLength.Add(Len);T.LimbRise.Add(Rise);T.LimbScale.Add(Scale);T.LimbAway.Add(Away);};
-                AddLimb(Flat(Defs[(I+1)%4].At-Defs[I].At).GetSafeNormal2D(),Rng.FRandRange(405,460),0,1,-BoughSide(I,0));
-                AddLimb(Flat(Defs[(I+3)%4].At-Defs[I].At).GetSafeNormal2D(),Rng.FRandRange(405,460),0,1,-BoughSide(I,1));
+                for(int32 N:Neighbours[I]) AddLimb(Flat(Defs[N].At-Defs[I].At).GetSafeNormal2D(),Rng.FRandRange(405,460),0,1,-BoughSide(I,T.Limbs.Num()));
                 if(I==0) AddLimb(Flat(SlabAt-Defs[I].At).GetSafeNormal2D(),SlabLimbLength,0,1,0);
-                FVector Bisect=(T.Limbs[0]+T.Limbs[1]).GetSafeNormal2D();
+                // (One chain limb, at the end of the line: stand at its base, away from the leader behind.)
+                FVector Bisect=T.Limbs.Num()>1?(T.Limbs[0]+T.Limbs[1]).GetSafeNormal2D():T.Limbs[0];
                 if(Bisect.IsNearlyZero()) Bisect=Across(T.Limbs[0]);
                 T.Fork=T.Trunk+Bisect*45+FVector(0,0,T.Top);
                 R.Trees.Add(T);
             }
             // The main leader rises from the back of the crotch, in the widest gap
             // between the fixed limbs; the second branches off it higher up.
-            for(int32 I=0;I<4;++I)
+            for(int32 I=0;I<TreeCount;++I)
             {
                 TArray<float> Yaws;
                 for(const FVector& L:R.Trees[I].Limbs) Yaws.Add(FMath::Atan2(L.Y,L.X));
@@ -280,7 +290,7 @@ namespace
                 R.LimbLeaders.Add({Mid,static_cast<float>(Mid+PI+FMath::DegreesToRadians(Rng.FRandRange(-45.f,45.f)))});
             }
             // Lianas: one per tree, off the outgoing limb, on the side away from its hand bough.
-            for(int32 I=0;I<4;++I)
+            for(int32 I=0;I<TreeCount;++I)
             {
                 FChultCanopyTree& T=R.Trees[I];
                 const FVector D=T.Limbs[0],Out=Across(D)*-BoughSide(I,0);
@@ -290,12 +300,13 @@ namespace
                 T.LianaFoot=FVector(Axis.X,Axis.Y,0)+Out*(Rad+21);
                 T.LianaLip=Axis+Out*(Rad*.55f)+FVector(0,0,Rad*.83f);
             }
-            for(int32 E=0;E<4;++E)
+            for(int32 E=0;E<UE_ARRAY_COUNT(ChainDefs);++E)
             {
-                const int32 A=E,B=(E+1)%4;
+                const int32 A=ChainDefs[E].A,B=ChainDefs[E].B;
                 FChultCanopyChain Chain;Chain.Name=FName(*FString::Printf(TEXT("ChultCanopyChain%d"),E));Chain.From=A;Chain.To=B;
-                const FVector GA=LimbTopAt(R.Trees[A],A,0,FirstGrip)+FVector(0,0,GripOver);
-                const FVector GB=LimbTopAt(R.Trees[B],B,1,FirstGrip)+FVector(0,0,GripOver);
+                Chain.LimbA=Neighbours[A].IndexOfByKey(B);Chain.LimbB=Neighbours[B].IndexOfByKey(A);
+                const FVector GA=LimbTopAt(R.Trees[A],A,Chain.LimbA,FirstGrip)+FVector(0,0,GripOver);
+                const FVector GB=LimbTopAt(R.Trees[B],B,Chain.LimbB,FirstGrip)+FVector(0,0,GripOver);
                 const FVector Side=Across((GB-GA).GetSafeNormal2D())*(E%2?1.f:-1.f);
                 const float Span=FVector::Dist2D(GA,GB),Gap=HalfGap/Span;
                 // A gentle arch and sideways bow, with the small irregular wander of a real
@@ -320,12 +331,13 @@ namespace
             // more than 2.4 m apart, beyond a leap, so no line steals another's
             // grips) and 50 from the main leader; and its grips must stay clear of
             // the chains, the other trees and the ruins.
-            for(int32 I=0;I<4;++I)
+            for(int32 I=0;I<TreeCount;++I)
             {
                 FChultCanopyTree& T=R.Trees[I];
                 FRandomStream Rng(9001+I*53);
                 TArray<float> Banned;
-                for(int32 Try=0;Try<3;++Try)
+                // (The line's last tree has only one chain limb: it grows more spurs.)
+                for(int32 Try=0;Try<(T.Limbs.Num()==1?4:3);++Try)
                 {
                     float BestYaw=0,BestScore=-1;
                     for(int32 Deg=0;Deg<360;Deg+=2)
@@ -360,8 +372,8 @@ namespace
                     bool Clear=true;
                     for(const FVector& P:Spur.Paws)
                     {
-                        Clear&=InChultCanopyReserve(P,250) && !(P.X>5290 && P.X<5770 && P.Y>580 && P.Y<1060);
-                        for(int32 J=0;J<4;++J) if(J!=I) Clear&=FVector::Dist2D(P,R.Trees[J].Trunk)>330;
+                        Clear&=InChultCanopyReserve(P,250) && !(P.X>5290 && P.X<5770 && P.Y>580 && P.Y<1060) && P.Size2D()<13200;
+                        for(int32 J=0;J<TreeCount;++J) if(J!=I) Clear&=FVector::Dist2D(P,R.Trees[J].Trunk)>330;
                         for(const auto& Chain:R.Chains) for(const FVector& Q:Chain.Paws) Clear&=FVector::Dist2D(P,Q)>250;
                         for(const auto& Other:R.Spurs) for(const FVector& Q:Other.Paws) Clear&=FVector::Dist2D(P,Q)>250;
                     }
@@ -387,7 +399,12 @@ namespace
 }
 
 bool InChultCanopyReserve(const FVector& P,float Margin)
-{ return P.X>5000-Margin && P.X<8800+Margin && P.Y>250-Margin && P.Y<3000+Margin; }
+{
+    if(P.X>5000-Margin && P.X<8800+Margin && P.Y>250-Margin && P.Y<3000+Margin) return true;
+    for(int32 I=1;I<UE_ARRAY_COUNT(LinePath);++I)
+        if(FVector::Dist2D(P,FMath::ClosestPointOnSegment(FVector(P.X,P.Y,0),LinePath[I-1],LinePath[I]))<1000+Margin) return true;
+    return false;
+}
 
 const TArray<FChultCanopyChain>& ChultCanopyChains() {return Canopy().Chains;}
 const TArray<FChultCanopySpur>& ChultCanopySpurs() {return Canopy().Spurs;}
@@ -428,7 +445,7 @@ void BuildChultCanopy(AActor* Owner)
     auto LeafClear=[&](const FVector& P)
     {
         if(InLane(P,75)) return false;
-        for(int32 I=0;I<4;++I)
+        for(int32 I=0;I<Data.Trees.Num();++I)
         {
             const auto& T=Data.Trees[I];
             if(FVector::Dist2D(P,T.Fork)<170 && P.Z<T.Top+230) return false;
@@ -441,7 +458,7 @@ void BuildChultCanopy(AActor* Owner)
         return true;
     };
     FSurface Solid,Branches,Vines;int32 Fins=0,Roots=0,LeafCount=0,Rejected=0,CrownBoughs=0;
-    for(int32 I=0;I<4;++I)
+    for(int32 I=0;I<Data.Trees.Num();++I)
     {
         const FChultCanopyTree& T=Data.Trees[I];
         const float Seed=I*1.7f;
@@ -709,12 +726,12 @@ void BuildChultCanopy(AActor* Owner)
             TArray<FVector> Grips;
             if(Half) for(int32 K=Paws.Num()-1;K>=Chain.BranchBreak;--K) Grips.Add(Paws[K]);
             else for(int32 K=0;K<Chain.BranchBreak;++K) Grips.Add(Paws[K]);
-            HandBough(Half?Chain.To:Chain.From,Half?1:0,Grips,E*2+Half,1.f+.08f*FMath::Sin(E*2.1f+Half*1.3f));
+            HandBough(Half?Chain.To:Chain.From,Half?Chain.LimbB:Chain.LimbA,Grips,E*2+Half,1.f+.08f*FMath::Sin(E*2.1f+Half*1.3f));
         }
         Register(Paws,Chain.Name,Chain.BranchBreak);
         // End grips hang GripOver above their walking limbs.
-        Failures+=!FMath::IsNearlyEqual(Paws[0].Z-ChultCanopyLimbTop(Chain.From,0,FirstGrip).Z,GripOver,1.f);
-        Failures+=!FMath::IsNearlyEqual(Paws.Last().Z-ChultCanopyLimbTop(Chain.To,1,FirstGrip).Z,GripOver,1.f);
+        Failures+=!FMath::IsNearlyEqual(Paws[0].Z-ChultCanopyLimbTop(Chain.From,Chain.LimbA,FirstGrip).Z,GripOver,1.f);
+        Failures+=!FMath::IsNearlyEqual(Paws.Last().Z-ChultCanopyLimbTop(Chain.To,Chain.LimbB,FirstGrip).Z,GripOver,1.f);
     }
     int32 SpurGrips=0;
     for(int32 E=0;E<Data.Spurs.Num();++E)
@@ -726,10 +743,10 @@ void BuildChultCanopy(AActor* Owner)
     }
     Finish(TEXT("ChultCanopySolidBark"),Solid,true);Finish(TEXT("ChultCanopyHandBranches"),Branches,false);Finish(TEXT("ChultCanopyVines"),Vines,false);
     int32 Grips=0;for(const auto& Chain:Data.Chains) Grips+=Chain.Paws.Num();
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY trees=4 chains=%d grips=%d spurs=%d spur_grips=%d registered_grips=%d lianas=4 triangles=%d"),
-        Data.Chains.Num(),Grips,Data.Spurs.Num(),SpurGrips,Registered,(Solid.T.Num()+Branches.T.Num()+Vines.T.Num())/3);
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_LAYOUT failures=%d branch_jumps=4 hand_gap=%.0f grip_over=%.0f min_step=%.1f max_step=%.1f max_rise=%.1f fins=%d roots=%d crown_boughs=%d leaves=%d leaves_cleared=%d missing_assets=%d"),
-        Failures,2*HalfGap,GripOver,MinStep,MaxStep,MaxRise,Fins,Roots,CrownBoughs,LeafCount,Rejected,(!Bark)+(!Leaf));
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY trees=%d chains=%d grips=%d spurs=%d spur_grips=%d registered_grips=%d lianas=%d triangles=%d"),
+        Data.Trees.Num(),Data.Chains.Num(),Grips,Data.Spurs.Num(),SpurGrips,Registered,Data.Trees.Num(),(Solid.T.Num()+Branches.T.Num()+Vines.T.Num())/3);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_LAYOUT failures=%d branch_jumps=%d hand_gap=%.0f grip_over=%.0f min_step=%.1f max_step=%.1f max_rise=%.1f fins=%d roots=%d crown_boughs=%d leaves=%d leaves_cleared=%d missing_assets=%d"),
+        Failures,Data.Chains.Num(),2*HalfGap,GripOver,MinStep,MaxStep,MaxRise,Fins,Roots,CrownBoughs,LeafCount,Rejected,(!Bark)+(!Leaf));
 }
 
 int32 CheckChultCanopy(AActor* Owner,AChuckCharacter* C)
@@ -779,10 +796,15 @@ int32 CheckChultCanopy(AActor* Owner,AChuckCharacter* C)
         const FVector Tip=G+Spur.Paws.Last()+(Spur.Paws.Last()-Spur.Paws[Spur.Paws.Num()-2]).GetSafeNormal2D()*40;
         if(World->LineTraceSingleByChannel(Hit,Tip,Tip-FVector(0,0,170),ECC_Visibility,Q)) Fail(TEXT("spur_tip_floor"),Spur.Paws.Last());
     }
-    for(int32 I=0;I<4;++I)
+    for(int32 I=0;I<Data.Trees.Num();++I)
     {
         const auto& T=Data.Trees[I];
-        TArray<TPair<int32,float>> Walks={{0,330.f},{1,330.f}};
+        TArray<TPair<int32,float>> Walks;
+        for(const auto& Chain:Data.Chains)
+        {
+            if(Chain.From==I) Walks.Add({Chain.LimbA,330.f});
+            if(Chain.To==I) Walks.Add({Chain.LimbB,330.f});
+        }
         for(const auto& Spur:Data.Spurs) if(Spur.Tree==I) Walks.Add({Spur.Limb,FVector::Dist2D(Spur.Paws[0],T.Trunk)+20});
         for(const auto& Walk:Walks)
             for(float S=90;S<=Walk.Value;S+=30)
@@ -802,7 +824,7 @@ int32 CheckChultCanopy(AActor* Owner,AChuckCharacter* C)
         const FVector In=G+T.LianaLip-T.LianaOut*18.5f;
         if(!World->LineTraceSingleByChannel(Hit,In+FVector(0,0,50),In-FVector(0,0,30),ECC_Visibility,Q) || Hit.ImpactNormal.Z<.7f) Fail(TEXT("liana_lip"),T.LianaLip);
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_CHECK failures=%d grips=%d leaps=%d limb_samples=%d forks=4 lianas=4 spurs=%d"),Failures,Grips,Leaps,LimbSamples,Data.Spurs.Num());
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_CHECK failures=%d grips=%d leaps=%d limb_samples=%d forks=%d lianas=%d spurs=%d"),Failures,Grips,Leaps,LimbSamples,Data.Trees.Num(),Data.Trees.Num(),Data.Spurs.Num());
     return Failures;
 }
 
@@ -814,7 +836,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
     const int32 StaticFailures=CheckChultCanopy(Owner,C);
     // Trials in order; each starts where the last left him except where noted.
     enum EKind {KLianaUp,KCatch,KChain,KDismount,KReverse,KLetGo,KLianaDown,KSlabCatch,KSpur};
-    struct FTrial {EKind Kind;int32 Chain;FString Name;};
+    struct FTrial {EKind Kind;int32 Chain;FString Name;bool bReset=false;};
     TArray<FTrial> Trials={
         {KLianaUp,0,TEXT("liana_up")},{KCatch,0,TEXT("catch_0")},{KChain,0,TEXT("chain_0")},{KDismount,0,TEXT("dismount_0")},
         {KCatch,1,TEXT("catch_1")},{KChain,1,TEXT("chain_1")},{KDismount,1,TEXT("dismount_1")},
@@ -822,6 +844,15 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
         {KCatch,3,TEXT("catch_3")},{KChain,3,TEXT("chain_3")},{KDismount,3,TEXT("dismount_3")},
         {KCatch,0,TEXT("catch_again_0")},{KReverse,0,TEXT("out_and_back_0")},{KLetGo,0,TEXT("let_go_0")},{KLianaDown,0,TEXT("liana_down")},
         {KSlabCatch,0,TEXT("ruin_slab_to_catch_0")}};
+    // The line (2026-10-14): from tree 2's crotch along every chain to the last
+    // tree, stepping down at each, then down that tree's liana.
+    for(int32 E=4;E<Canopy().Chains.Num();++E)
+    {
+        Trials.Add({KCatch,E,FString::Printf(TEXT("line_catch_%d"),E),E==4});
+        Trials.Add({KChain,E,FString::Printf(TEXT("line_chain_%d"),E)});
+        Trials.Add({KDismount,E,FString::Printf(TEXT("line_dismount_%d"),E)});
+    }
+    Trials.Add({KLianaDown,Canopy().Chains.Last().To,TEXT("line_liana_down")});
     // Every spur: walked out from its crotch, caught, swung out to its tip and
     // back, then stepped down onto its limb.
     for(int32 S=0;S<Canopy().Spurs.Num();++S) Trials.Add({KSpur,S,Canopy().Spurs[S].Name.ToString()});
@@ -844,7 +875,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
         if(bCapture && !Run->Camera) {Run->Camera=World->SpawnActor<ACameraActor>();Run->Camera->GetCameraComponent()->SetFieldOfView(70);}
         // Review stills from fixed cameras before the trials: overview, a tree in profile,
         // a crotch, buttresses and the liana, the branch gap.
-        if(bCapture && Run->Shot<16)
+        if(bCapture && Run->Shot<20)
         {
             const auto& T0=Shots.Trees[0];const auto& T1=Shots.Trees[1];const auto& Ch=Shots.Chains[0];
             const FVector Gap=(Ch.Paws[Ch.BranchBreak-1]+Ch.Paws[Ch.BranchBreak])*.5f;
@@ -852,7 +883,8 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             const FVector Views[][2]={{{4800,-700,2000},{6900,1700,700}},{{7250,-700,700},T1.Trunk+FVector(0,0,700)},
                 {T0.Fork+Front*350+FVector(0,0,280),T0.Fork+FVector(0,0,30)},{T0.LianaFoot+T0.LianaOut*420+FVector(0,0,250),T0.Trunk+FVector(0,0,160)},
                 {Gap+Across((Ch.Paws.Last()-Ch.Paws[0]).GetSafeNormal2D())*900+FVector(0,0,150),Gap},{{9400,1800,950},Shots.Trees[2].Trunk+FVector(0,0,800)},
-                {{-180,-260,260},{-760,200,200}},{T1.Trunk+FVector(-720,-520,230),T1.Trunk+FVector(0,0,190)}};
+                {{-180,-260,260},{-760,200,200}},{T1.Trunk+FVector(-720,-520,230),T1.Trunk+FVector(0,0,190)},
+                {{6500,-1500,5600},{10500,4500,0}},{Shots.Trees[2].Trunk+FVector(-700,-1300,1000),Shots.Trees[5].Trunk+FVector(0,0,600)}};
             const int32 View=Run->Shot/2;
             if(Run->Start<0)
             {
@@ -872,7 +904,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
                 const FString Folder=FPaths::ScreenShotDir()/TEXT("Canopy");IFileManager::Get().MakeDirectory(*Folder,true);
                 FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("Review_%d.png"),View),false,false);
                 ++Run->Shot;Run->Start=-1;
-                if(Run->Shot==16) PC->SetViewTarget(C);
+                // (Back to his camera when the first trial captures, not now: the shot renders this frame.)
             }
             return;
         }
@@ -888,6 +920,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             Run->Deaths=C->GetFallDeaths();Run->PullUps=C->GetPullUps();Run->Catches=C->GetSwingCatches();Run->Leaps=C->GetSwingLeaps();Run->Ladders=C->GetLadderMounts();
             C->SetTestStick(FVector2D::ZeroVector);C->SetRunHeld(false);
             const FChultCanopyTree& T0=Data.Trees[0];
+            const FChultCanopyTree& TL=Data.Trees[Trial.Kind==KLianaDown?Trial.Chain:0];
             if(Trial.Kind==KLianaUp)
             {
                 C->ResetAtLocation(G+T0.LianaFoot+T0.LianaOut*25+FVector(0,0,34.65f));Movement->StopMovementImmediately();Movement->SetMovementMode(MOVE_Walking);
@@ -895,8 +928,8 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             }
             else if(Trial.Kind==KLianaDown)
             {
-                C->ResetAtLocation(G+T0.LianaLip-T0.LianaOut*28+FVector(0,0,40));Movement->StopMovementImmediately();Movement->SetMovementMode(MOVE_Falling);
-                C->SetActorRotation(T0.LianaOut.Rotation());C->Recenter();
+                C->ResetAtLocation(G+TL.LianaLip-TL.LianaOut*28+FVector(0,0,40));Movement->StopMovementImmediately();Movement->SetMovementMode(MOVE_Falling);
+                C->SetActorRotation(TL.LianaOut.Rotation());C->Recenter();
             }
             else if(Trial.Kind==KSlabCatch)
             {
@@ -919,11 +952,22 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             {
                 // From wherever he stands on this tree: into the crotch, out along the next limb, under the first grip.
                 const int32 Tree=Chain.From;const auto& T=Data.Trees[Tree];
+                if(Trial.bReset)
+                {
+                    C->ResetAtLocation(G+T.Fork+FVector(0,0,40));Movement->StopMovementImmediately();Movement->SetMovementMode(MOVE_Falling);
+                    C->SetActorRotation(T.Limbs[Chain.LimbA].Rotation());C->Recenter();
+                }
                 const FVector P=C->GetActorLocation()-G;
-                if(FVector::Dist2D(P,T.Trunk)<160 || Run->Trial==1) {}
-                else {Run->Path.Add(ChultCanopyLimbTop(Tree,1,150));}
+                if(FVector::Dist2D(P,T.Trunk)<160 || Run->Trial==1 || Trial.bReset) {}
+                else
+                {
+                    // Back along whichever limb he stands on.
+                    int32 On=0;float Best=-2;
+                    for(int32 L=0;L<T.Limbs.Num();++L) {const float Dot=FVector::DotProduct((P-T.Trunk).GetSafeNormal2D(),T.Limbs[L]);if(Dot>Best){Best=Dot;On=L;}}
+                    Run->Path.Add(ChultCanopyLimbTop(Tree,On,150));
+                }
                 if(Run->Trial!=1) Run->Path.Add(T.Fork);
-                Run->Path.Add(ChultCanopyLimbTop(Tree,0,180));Run->Path.Add(ChultCanopyLimbTop(Tree,0,FirstGrip));
+                Run->Path.Add(ChultCanopyLimbTop(Tree,Chain.LimbA,180));Run->Path.Add(ChultCanopyLimbTop(Tree,Chain.LimbA,FirstGrip));
             }
         }
         const float Time=Now-Run->Start;const FVector P=C->GetActorLocation()-G;
@@ -945,7 +989,8 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
         case KCatch:
         case KSlabCatch:
         {
-            if(Run->Waypoint<Run->Path.Num())
+            if(Trial.bReset && Time<.6f) {}
+            else if(Run->Waypoint<Run->Path.Num())
             {
                 const FVector To=Run->Path[Run->Waypoint];
                 const bool Last=Run->Waypoint==Run->Path.Num()-1;
@@ -1040,7 +1085,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
         }
         case KLianaDown:
         {
-            const auto& T=Data.Trees[0];
+            const auto& T=Data.Trees[Trial.Chain];
             if(Time>.4f) Move(T.LianaOut);
             Pass=C->GetLadderMounts()>Run->Ladders && bGround && P.Z<40;
             Done=Pass;

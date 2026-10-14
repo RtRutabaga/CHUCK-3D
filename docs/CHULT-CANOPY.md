@@ -59,9 +59,31 @@ Collision: trunk, saddle, walking limbs, leaders, buttresses and roots are one v
 procedural mesh (`ChultCanopySolidBark`, BlockAll, complex as simple). Hand boughs, crown boughs,
 twigs (`ChultCanopyHandBranches`) and lianas (`ChultCanopyVines`) have none.
 
+## The line into the open ground (2026-10-14)
+
+User request: more brachiation trees in a staggered line leading away into the blank part of the
+map. Beyond 90 m from the landing the forest ring stops and the floor is bare out to its edge;
+the line runs north-east from tree 2 into that strip. Four more canopy giants, built like the
+others (lobed buttresses, crotch, walking limbs, leaders and crown, liana, spurs):
+
+| Tree | Trunk axis (local) | Crotch Z | Girth | Linked to |
+| --- | --- | --- | --- | --- |
+| 4 | (9050,3250) | 700 | 0.97 | tree 2 (chain 4), tree 5 |
+| 5 | (10350,4200) | 760 | 1.06 | tree 4, tree 6 |
+| 6 | (10650,5750) | 690 | 0.95 | tree 5, tree 7 |
+| 7 | (11700,6600) | 740 | 1.02 | tree 6 (end of the line; four spur tries) |
+
+The trees alternate either side of the line (13.5–16 m apart). Chains 4–7 (2→4→5→6→7) are like the
+loop's: end grips 98 cm over the limbs, a 180 cm branch gap. Trees take their limbs from
+`Neighbours`; each chain records the limb it uses at either end (`LimbA`, `LimbB`). The loop's
+trees keep their limb order and random draws; tree 2 gains a limb toward tree 4 and its spurs
+moved to suit. `InChultCanopyReserve` now also covers a 10 m corridor along the line; spur grips
+stay within 132 m of the landing (Chult's area is 140 m). The open ground under the line has no
+understory yet.
+
 ## Spurs (side branches, all brachiatable)
 
-`ChultCanopySpurs()`: nine side limbs out of the crotches, in every direction left free, each its
+`ChultCanopySpurs()`: side limbs out of the crotches (14 with the line), in every direction left free, each its
 own length (3.3–4.2 m), girth (0.78–0.95), pitch (−5 to +8 %), sideways bend and droop. Each has its
 own hand bough with 3–5 grips (33 in all), the first 98 cm over the limb 2.7–3.1 m out, then
 1.18–1.38 m apart. A spur is a dead end, used the same way as a chain: walk out, jump to the first
