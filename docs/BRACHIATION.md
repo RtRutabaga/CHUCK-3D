@@ -9,6 +9,7 @@ User request, 2026-10-09: a brachiation feature on the high wall lanterns betwee
 - **Pump:** hold the stick along the swing.
 - **Kick off:** press Space with no ring that way, for example toward a wall. He launches like a wall jump, so a wall in reach is run up automatically, and the chimney climb continues.
 - **Let go:** press C (dodge).
+- **Step down at a chain's end (Chult, 2026-10-13):** press Space with the stick released at the last grip of a line. If there is something to stand on within 170 cm below, just ahead along the swing (a tree's walking limb), he hops down onto it (`CHUCK_SWING_STEP_DOWN`). Otherwise (the lamp alleys) he goes back along the line as before.
 - **Roof edge:** in a chimney climb he catches the eave on his own, including when the eave stops his head below it. Press Space (or hold toward the wall) to pull up. A Space pressed on the way up, before he has hold, pulls him up as soon as he hangs. A stick still held away from the wall from the last kick no longer drops him off the edge.
 
 ## World (DockSetting.cpp)
@@ -50,3 +51,7 @@ Climbing is mostly for flavour and takes small sips of the sprint stamina ring: 
 There is no pickup, HUD tint or timer display yet; `IsStaminaLocked()` is there for the HUD.
 
 Tests: lamp-swing trial 0 now climbs with an empty ring, trial 1 requires a full-ring chimney to cost 5–30%, trial 4 requires the swing run to cost something but under 15%, and new trial 7 locks stamina and requires one wall run (no wall jumps) to reach the eave and pull up, with the ring full throughout. The locked side wall run is not covered by a test.
+
+## Chult canopy (2026-10-13)
+
+The same Swing/SwingLeap gaits on Chult's four canopy trees: 38 branch grips in four chains, with a 180 cm leap across each gap between two trees' boughs, lianas registered as climbables, and the step-down above. Layout, contract and tests: [CHULT-CANOPY.md](CHULT-CANOPY.md). `-ChuckCanopyTest` runs 18 real-character trials; the lamp-swing test still passes 8/8 with the step-down in place.

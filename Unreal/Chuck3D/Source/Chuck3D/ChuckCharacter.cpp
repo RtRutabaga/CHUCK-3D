@@ -1236,6 +1236,20 @@ void AChuckCharacter::SwingJump()
     const bool bAimed = Stick.SizeSquared2D() > .12f;
     const FVector Want = bAimed ? Stick.GetSafeNormal2D() : SwingDir;
     int32 Target = FindSwingTarget(Want);
+    if (Target < 0 && !bAimed && Grips.IsValidIndex(SwingGrip))
+    {
+        // The end of a line of grips over something to stand on (Chult: the
+        // last branch grip above a tree's limb): a small hop down onto it.
+        FHitResult Floor;
+        FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSwingStepDown), false, this);
+        const FVector Ahead = Grips[SwingGrip].Grip + SwingDir * 40.f;
+        if (GetWorld()->LineTraceSingleByChannel(Floor, Ahead, Ahead - FVector(0, 0, 170.f), ECC_Visibility, Query) && Floor.ImpactNormal.Z > .7f)
+        {
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_STEP_DOWN grip=%d drop=%.0f"), SwingGrip, Grips[SwingGrip].Grip.Z - Floor.ImpactPoint.Z);
+            LeaveSwing(SwingDir * 90.f + FVector(0, 0, 140.f), false);
+            return;
+        }
+    }
     // Let go of the stick at the end of a line of rings: back along it (only a
     // direction held toward no ring kicks him off).
     if (Target < 0 && !bAimed) Target = FindSwingTarget(-SwingDir);

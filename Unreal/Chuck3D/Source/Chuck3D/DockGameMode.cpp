@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "ChultLanding.h"
+#include "ChultCanopy.h"
 #include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
@@ -632,6 +633,16 @@ void ADockGameMode::StartPlay()
         FTimerHandle ChultCheck;
         World->GetTimerManager().SetTimer(ChultCheck,[World](){
             for(TActorIterator<AChultLanding> It(World);It;++It) It->VerifyAndCapture();
+        },4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyTest")))
+    {
+        // Claude's canopy traversal trials (ChultCanopy.h): the real character, the whole loop.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle CanopyCheck;
+        World->GetTimerManager().SetTimer(CanopyCheck,[World](){
+            auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
+            for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultCanopyReview(*It,Chuck);break;}
         },4.f,false);
     }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));

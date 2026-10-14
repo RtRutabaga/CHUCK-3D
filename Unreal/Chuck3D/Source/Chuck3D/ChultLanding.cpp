@@ -378,6 +378,7 @@ void AChultLanding::VerifyAndCapture()
         }
     }
     Failures+=GroveFailures;
+    Failures+=CheckChultCanopy(this,C);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_GROVE_GROUND failures=%d capsule_segments=%d"),GroveFailures,UE_ARRAY_COUNT(GroveRoute)-1);
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
@@ -425,7 +426,7 @@ void AChultLanding::VerifyAndCapture()
         {
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
             if(Run->DetailCamera.IsValid()) Run->DetailCamera->Destroy();
-            C->ResetAtLocation(FloorOrigin()+FVector(5800,900,685));C->SetActorRotation(FRotator(0,0,0));C->SetOrbitPitch(-10);
+            const auto& Tree=ChultCanopyTrees()[0];C->ResetAtLocation(FloorOrigin()+Tree.Fork+FVector(0,0,40));C->SetActorRotation(Tree.Limbs[0].Rotation());C->SetOrbitPitch(-10);
         }
         else if(Run->Phase==13) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Fork.png"),true,false);
         else if(Run->Phase==14)
@@ -454,7 +455,9 @@ void AChultLanding::VerifyAndCapture()
         else if(Run->Phase==19) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Nature_Background.png"),true,false);
         else if(Run->Phase==20)
         {
-            const FVector From=FloorOrigin()+FVector(6100,570,965),At=FloorOrigin()+FVector(6390,900,800);
+            const auto& Chain=ChultCanopyChains()[0];
+            const FVector Gap=(Chain.Paws[Chain.BranchBreak-1]+Chain.Paws[Chain.BranchBreak])*.5f;
+            const FVector From=FloorOrigin()+Gap+FVector(-120,-520,170),At=FloorOrigin()+Gap-FVector(0,0,40);
             if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
         }
         else if(Run->Phase==21) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_BranchGap.png"),true,false);
