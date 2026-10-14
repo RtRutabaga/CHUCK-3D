@@ -1,5 +1,6 @@
 #include "ChuckCharacter.h"
 #include "ChultLanding.h"
+#include "ChultCanopy.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockGameMode.h"
@@ -373,7 +374,8 @@ void AChuckCharacter::ResetToDock()
 }
 FVector AChuckCharacter::GetAreaStartLocation() const
 {
-    if(bChultRespawn) return AChultLanding::Entrance();
+    // In Chult: around the brachiation trees, back on the ruin top that leads onto them (user 2026-10-14).
+    if(bChultRespawn) return InChultCanopyDeathArea(GetActorLocation())?ChultCanopyRespawn():AChultLanding::Entrance();
     const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
     if (bPantryRespawn) return DockPantryStartLocation();
     if (!Sewer) return StartLocation();
@@ -384,6 +386,7 @@ FVector AChuckCharacter::GetAreaStartLocation() const
 }
 float AChuckCharacter::AreaStartYaw(const FVector& Location)
 {
+    if (FVector::Dist(Location, ChultCanopyRespawn()) < 1.f) return ChultCanopyRespawnYaw();   // facing the first tree
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;

@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — respawn on the ruin top after dying near the trees (Claude)
+
+- **Request:** if Chuck dies in the area around the brachiation trees, his spawn point is the top of the ruins where the trees are reached from. Base `d5d66f8`.
+- **Changed:**
+  - `ChuckCharacter.cpp`: `GetAreaStartLocation()` in Chult returns `ChultCanopyRespawn()` when he dies inside `InChultCanopyDeathArea()`, and the landing entrance otherwise. `AreaStartYaw` turns him to face tree 0 there. This covers fall and astral deaths, which both read the area start at the moment of death.
+  - `ChultCanopy.h/.cpp`: the death area is the canopy reserve (the loop's rectangle and the line's corridor) plus 5 m. The spot is Codex's landing slab top at (5600,885,670), a checked standing top. A static check asserts it is stone with room to stand.
+  - Three death trials were added to `-ChuckCanopyTest` (48 in all). `Verify-Package` is updated. No rig, animation or tuning change.
+- **Tests (uncooked):**
+  - `Local/canopy-respawn-1.log`: dying on a line tree and on the ground under the line both return him to (5600,885,704.65) facing tree 0, standing; dying on the landing loop returns him to the entrance. 48/48 pass, 0 static failures.
+  - `Local/chult-respawn.log`: Codex's landing respawn check still passes (entrance=1).
+  - Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-085721.log`); canopy 48/48 including the three deaths (`verify-canopy-20261014-090308.log`); Chult respawn and ruins checks pass.
+- **Notes:** nothing in Chult can kill him yet except an empty sanity bar or leaving the floor; the trials kill him with a bite. Dying on the ruins' own north end (within 5 m of the reserve) also returns to the slab, since it is part of the margin.
+- **Launcher:** promoted as `CanopyRespawn` (`Local/respawn-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review would help most).
+
 ## October 14 — a staggered line of canopy trees into the open ground (Claude)
 
 - **Request:** more brachiation trees in a staggered line leading away into the blank part of the map. Base `15826c5`.

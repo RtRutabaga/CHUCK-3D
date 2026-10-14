@@ -45,6 +45,12 @@ const TArray<FChultCanopyTree>& ChultCanopyTrees();
 // Top of walking limb Limb of tree Tree, S cm out from the trunk axis (local).
 FVector ChultCanopyLimbTop(int32 Tree, int32 Limb, float S);
 bool InChultCanopyReserve(const FVector& LocalPosition, float Margin = 0);
+// Where he comes back after dying (user 2026-10-14): anywhere around the
+// brachiation trees, on the top of the ruin's landing slab that leads onto
+// tree 0, facing it; elsewhere in Chult, the landing entrance. World space.
+bool InChultCanopyDeathArea(const FVector& WorldPosition);
+FVector ChultCanopyRespawn();
+float ChultCanopyRespawnYaw();
 void BuildChultCanopy(AActor* Owner);
 // Static traversal checks (grip clearance, leap sweeps, standing limbs, lianas).
 int32 CheckChultCanopy(AActor* Owner, AChuckCharacter* Chuck);

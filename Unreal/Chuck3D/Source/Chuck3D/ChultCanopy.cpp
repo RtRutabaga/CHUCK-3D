@@ -398,6 +398,15 @@ namespace
     }
 }
 
+namespace
+{
+    // On Codex's landing slab (top Z=670, a checked standing top), by its north
+    // edge where it steps down onto tree 0's limb.
+    const FVector RespawnTop(5600,885,670);
+}
+bool InChultCanopyDeathArea(const FVector& World) {return InChultCanopyReserve(World-AChultLanding::FloorOrigin(),500);}
+FVector ChultCanopyRespawn() {return AChultLanding::FloorOrigin()+RespawnTop+FVector(0,0,34.65f);}
+float ChultCanopyRespawnYaw() {return (Canopy().Trees[0].Trunk-RespawnTop).GetSafeNormal2D().Rotation().Yaw;}
 bool InChultCanopyReserve(const FVector& P,float Margin)
 {
     if(P.X>5000-Margin && P.X<8800+Margin && P.Y>250-Margin && P.Y<3000+Margin) return true;
@@ -824,6 +833,13 @@ int32 CheckChultCanopy(AActor* Owner,AChuckCharacter* C)
         const FVector In=G+T.LianaLip-T.LianaOut*18.5f;
         if(!World->LineTraceSingleByChannel(Hit,In+FVector(0,0,50),In-FVector(0,0,30),ECC_Visibility,Q) || Hit.ImpactNormal.Z<.7f) Fail(TEXT("liana_lip"),T.LianaLip);
     }
+    {
+        // The canopy respawn: on stone, with room to stand.
+        const FVector Spawn=ChultCanopyRespawn();
+        const bool Floor=World->LineTraceSingleByChannel(Hit,Spawn+FVector(0,0,40),Spawn-FVector(0,0,Half+20),ECC_Visibility,Q);
+        if(!Floor || FMath::Abs(Hit.ImpactPoint.Z-(Spawn.Z-34.65f))>6 || Hit.ImpactNormal.Z<.85f
+            || World->OverlapBlockingTestByChannel(Spawn+FVector(0,0,1),FQuat::Identity,ECC_Pawn,Body,Q)) Fail(TEXT("respawn_stand"),Spawn-G);
+    }
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_CHECK failures=%d grips=%d leaps=%d limb_samples=%d forks=%d lianas=%d spurs=%d"),Failures,Grips,Leaps,LimbSamples,Data.Trees.Num(),Data.Trees.Num(),Data.Spurs.Num());
     return Failures;
 }
@@ -835,7 +851,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
     const bool bCapture=FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyCapture"));
     const int32 StaticFailures=CheckChultCanopy(Owner,C);
     // Trials in order; each starts where the last left him except where noted.
-    enum EKind {KLianaUp,KCatch,KChain,KDismount,KReverse,KLetGo,KLianaDown,KSlabCatch,KSpur};
+    enum EKind {KLianaUp,KCatch,KChain,KDismount,KReverse,KLetGo,KLianaDown,KSlabCatch,KSpur,KDeath};
     struct FTrial {EKind Kind;int32 Chain;FString Name;bool bReset=false;};
     TArray<FTrial> Trials={
         {KLianaUp,0,TEXT("liana_up")},{KCatch,0,TEXT("catch_0")},{KChain,0,TEXT("chain_0")},{KDismount,0,TEXT("dismount_0")},
@@ -853,6 +869,12 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
         Trials.Add({KDismount,E,FString::Printf(TEXT("line_dismount_%d"),E)});
     }
     Trials.Add({KLianaDown,Canopy().Chains.Last().To,TEXT("line_liana_down")});
+    // Deaths (user 2026-10-14): around the trees he comes back on the ruin top that
+    // leads onto them; elsewhere in Chult, at the landing entrance. (Chain: 0 on a
+    // line tree's crotch, 1 on the ground under the line, 2 on the landing's loop.)
+    Trials.Add({KDeath,0,TEXT("death_in_tree")});
+    Trials.Add({KDeath,1,TEXT("death_under_line")});
+    Trials.Add({KDeath,2,TEXT("death_landing_loop")});
     // Every spur: walked out from its crotch, caught, swung out to its tip and
     // back, then stepped down onto its limb.
     for(int32 S=0;S<Canopy().Spurs.Num();++S) Trials.Add({KSpur,S,Canopy().Spurs[S].Name.ToString()});
@@ -939,6 +961,14 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
                 C->SetActorRotation(FRotator(0,90,0));C->Recenter();
                 Run->Path={ChultCanopyLimbTop(0,2,190),T0.Fork,ChultCanopyLimbTop(0,0,180),ChultCanopyLimbTop(0,0,FirstGrip)};
             }
+            else if(Trial.Kind==KDeath)
+            {
+                const auto& T5=Data.Trees[5],&T6=Data.Trees[6];
+                const FVector Where=Trial.Chain==0?G+T5.Fork+FVector(0,0,40):Trial.Chain==1?G+(T5.Trunk+T6.Trunk)*.5f+FVector(0,0,34.65f)
+                    :AChultLanding::Entrance()+FVector(700,0,0);
+                C->ResetAtLocation(Where);Movement->StopMovementImmediately();Movement->SetMovementMode(MOVE_Falling);C->Recenter();
+                C->SetSanity(1);
+            }
             else if(Trial.Kind==KSpur)
             {
                 // From the crotch: out along the spur's limb to under its first grip.
@@ -1005,6 +1035,20 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             Pass=C->IsSwinging() && C->GetSwingGrip()==Grip(0);
             Done=Pass && Time-Run->LastJump>.5f;
             Limit=30;
+            break;
+        }
+        case KDeath:
+        {
+            // A bite that empties his sanity once he stands there; then his astral return.
+            C->SetTestStick(FVector2D::ZeroVector);
+            if(Run->Phase==0 && Time>.8f && Movement->IsMovingOnGround()) {C->TakeBite(C->GetActorLocation()+C->GetActorForwardVector()*20,99);Run->Phase=1;Run->LastJump=Time;}
+            if(Run->Phase==1 && C->IsAstral()) Run->Phase=2;
+            const FVector Want=Trial.Chain<2?ChultCanopyRespawn():AChultLanding::Entrance();
+            const FVector At=C->GetActorLocation();
+            Pass=Run->Phase==2 && !C->IsAstral() && Movement->IsMovingOnGround() && FVector::Dist2D(At,Want)<30 && FMath::Abs(At.Z-Want.Z)<15
+                && (Trial.Chain==2 || FMath::Abs(FMath::FindDeltaAngleDegrees(C->GetActorRotation().Yaw,ChultCanopyRespawnYaw()))<20);
+            Done=Pass && Time-Run->LastJump>4.f;
+            Limit=20;
             break;
         }
         case KSpur:
@@ -1105,7 +1149,7 @@ void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C)
             FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("T%02d_%s_%03d.png"),Run->Trial,*Trial.Name,Run->ShotIndex++),false,false);
             Run->NextShot+=Trial.Kind==KChain?.5f:1.f;
         }
-        const bool Fell=C->GetFallDeaths()>Run->Deaths || C->IsAstral();
+        const bool Fell=Trial.Kind!=KDeath && (C->GetFallDeaths()>Run->Deaths || C->IsAstral());
         if(!Done && !Fell && Time<Limit) return;
         Pass=Pass && !Fell;Run->Failures+=!Pass;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CANOPY_TRIAL trial=%d name=%s pass=%d time=%.2f jumps=%d gait=%s grip=%d catches=%d leaps=%d ladders=%d pullups=%d at=%s"),

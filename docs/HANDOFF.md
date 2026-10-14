@@ -9,6 +9,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 14 — respawn on the ruin top after dying near the trees (Claude)
+
+- **Changed:** a death anywhere around the brachiation trees (the loop and the line, plus 5 m) now returns Chuck to the top of the ruin landing slab that leads onto tree 0, facing the tree. Elsewhere in Chult he still returns to the landing entrance. Details: [CHULT-CANOPY.md](CHULT-CANOPY.md).
+- **Tested:** uncooked, real deaths in a tree, under the line and on the landing loop each return to the right place (48/48 canopy trials); Codex's Chult checks pass. Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-085721.log`); canopy 48/48 including the three deaths (`verify-canopy-20261014-090308.log`); Chult respawn and ruins checks pass.
+- **Launcher:** promoted as `CanopyRespawn` (`Local/respawn-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review would help most).
+
 ## October 14 — a line of canopy trees into the open ground (Claude)
 
 - **Changed:**

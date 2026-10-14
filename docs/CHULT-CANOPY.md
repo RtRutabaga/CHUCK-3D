@@ -59,6 +59,17 @@ Collision: trunk, saddle, walking limbs, leaders, buttresses and roots are one v
 procedural mesh (`ChultCanopySolidBark`, BlockAll, complex as simple). Hand boughs, crown boughs,
 twigs (`ChultCanopyHandBranches`) and lianas (`ChultCanopyVines`) have none.
 
+## Dying near the trees (2026-10-14)
+
+User request: if Chuck dies in the area around the brachiation trees, he comes back on the top of
+the ruins where the trees are reached from. `AChuckCharacter::GetAreaStartLocation()` asks
+`InChultCanopyDeathArea()`, which is the canopy reserve (the loop's rectangle and the line's 10 m
+corridor) plus 5 m. Inside it, after a fall or astral death, he returns to `ChultCanopyRespawn()`:
+Codex's landing slab top at (5600,885,670), a checked standing top by its north edge, facing tree 0
+(`ChultCanopyRespawnYaw`). Anywhere else in Chult he still returns to the landing entrance. The
+static check asserts the spot is stone with room to stand; three test trials die in a line tree,
+on the ground under the line and on the landing loop.
+
 ## The line into the open ground (2026-10-14)
 
 User request: more brachiation trees in a staggered line leading away into the blank part of the

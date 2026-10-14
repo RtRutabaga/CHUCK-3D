@@ -97,10 +97,11 @@ if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern '
 # and brachiates all four chains tree to tree (branch-gap leaps, step-down
 # dismounts, crotch crossings), reverses, lets go to the ground, climbs down,
 # swings out to the tip of every side branch (spur) and back, and follows the
-# line of trees into the open ground to its last tree and down its liana.
+# line of trees into the open ground to its last tree and down its liana; dies
+# in a tree, under the line and on the landing loop and comes back in the right place.
 $canopyLog=Join-Path $evidence ('verify-canopy-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $canopyProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$canopyLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=45 static_failures=0' -Quiet)) {
+if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=48 static_failures=0' -Quiet)) {
     throw "Chult canopy brachiation verification failed. Inspect $canopyLog"
 }
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
