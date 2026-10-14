@@ -14,7 +14,7 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 **Chult Landing** shares the fall cutscene's clearing, tall trees and winding ground loop. The October 13 nature pass adds scanned bark/soil, four fern shapes, six rock shapes and a limited background-tree layer. The connected canopy grove has rounded trunks, leafy crowns, broad buttress roots and separate reaching branches with jump gaps. It remains a setting preview awaiting Claude's climb/brachiation integration and tests. Enter through the normal fall or this checkpoint. See [CHULT-LANDING.md](CHULT-LANDING.md) and [CHULT-CANOPY.md](CHULT-CANOPY.md).
 
-Stone ruins sit south of the canopy grove. Low steps lead to broken terraces
+Rounded, gray stone ruins with heavier moss sit south of the canopy grove. Low steps lead to broken terraces
 for short running jumps; a narrow stairwell supports alternating wall jumps to
 the upper cornice. Follow its stone causeway toward the first tree fork and
 mantle onto the mossy landing. See [CHULT-RUINS.md](CHULT-RUINS.md).

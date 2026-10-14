@@ -1,0 +1,97 @@
+{
+    "provider":  "Poly Haven",
+    "license_url":  "https://polyhaven.com/license",
+    "resolution":  2048,
+    "assets":  [
+                   {
+                       "asset":  "rock_wall_08",
+                       "role":  "Diffuse",
+                       "file":  "rock_wall_08_diff_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_wall_08/rock_wall_08_diff_2k.jpg",
+                       "bytes":  3086496,
+                       "md5":  "b4411a3f1ef5d0c1754b7a877f24a6cb",
+                       "sha256":  "D01A1CBADD402CA039A76D5905B0334ED5FB3E471B0547FE7BA2BB185C7C5F9F",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "rock_wall_08",
+                       "role":  "arm",
+                       "file":  "rock_wall_08_arm_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_wall_08/rock_wall_08_arm_2k.jpg",
+                       "bytes":  2343626,
+                       "md5":  "ee7ab40bf939bba36cffa7d06b2ff497",
+                       "sha256":  "91489A16465996BEEFDEB868D66A56E9F780458F60950A659BD2376AC35D0EDB",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "rock_wall_08",
+                       "role":  "nor_dx",
+                       "file":  "rock_wall_08_nor_dx_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_wall_08/rock_wall_08_nor_dx_2k.jpg",
+                       "bytes":  4899943,
+                       "md5":  "72f89e295af7b5c1508d86462adf4646",
+                       "sha256":  "6502CACC7B09A9C232A4351CC1B0ACEB0DCD755240157EE0FC6EC0319C0925BD",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "mossy_stone_wall",
+                       "role":  "Diffuse",
+                       "file":  "mossy_stone_wall_diff_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_diff_2k.jpg",
+                       "bytes":  3808852,
+                       "md5":  "1f0ff600e455874379c78ab97c7680b4",
+                       "sha256":  "4C41E62E3C6B0AF73B89BD3C9C46C55F3723A36789475D3FF76FE112D89D45E2",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "mossy_stone_wall",
+                       "role":  "arm",
+                       "file":  "mossy_stone_wall_arm_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_arm_2k.jpg",
+                       "bytes":  2772458,
+                       "md5":  "106e0815da1a746ee9e464a90fb26645",
+                       "sha256":  "ED51F92E22C19515FB0EBCA4F7BA12CF0F3C4E601CD0993755F165E9208DAD50",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "mossy_stone_wall",
+                       "role":  "nor_dx",
+                       "file":  "mossy_stone_wall_nor_dx_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_nor_dx_2k.jpg",
+                       "bytes":  5142899,
+                       "md5":  "67f026aa870cf2627f81391d0f1b0ac0",
+                       "sha256":  "837C64A4EC2C7AE43EAD3086383D15B188A69A959B5188958793B81AD7387470",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "rabdentse_ruins_wall",
+                       "role":  "Diffuse",
+                       "file":  "rabdentse_ruins_wall_diff_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rabdentse_ruins_wall/rabdentse_ruins_wall_diff_2k.jpg",
+                       "bytes":  3333733,
+                       "md5":  "1bcb2b20d219a7476f246dc33dc8bd2f",
+                       "sha256":  "47D03E4FEF1AC5C57A35CADFDF1C4CE00A09C000C9DFCA6D9AE90C7CADCB17D0",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "rabdentse_ruins_wall",
+                       "role":  "arm",
+                       "file":  "rabdentse_ruins_wall_arm_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rabdentse_ruins_wall/rabdentse_ruins_wall_arm_2k.jpg",
+                       "bytes":  2978836,
+                       "md5":  "ca06afddb9b195bde3b3589b04bbb419",
+                       "sha256":  "99C4ABF935A874FB16C436E17B5148FA762D9A58041954E11603C88DA3C5BB6F",
+                       "license":  "CC0-1.0"
+                   },
+                   {
+                       "asset":  "rabdentse_ruins_wall",
+                       "role":  "nor_dx",
+                       "file":  "rabdentse_ruins_wall_nor_dx_2k.jpg",
+                       "source":  "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rabdentse_ruins_wall/rabdentse_ruins_wall_nor_dx_2k.jpg",
+                       "bytes":  5194602,
+                       "md5":  "c7c048c70d8807a64dce5f750e55b99f",
+                       "sha256":  "D46170A8F5AF42B98815E644B50A2914928511D229D23CAB9F356B48A04F6E90",
+                       "license":  "CC0-1.0"
+                   }
+               ]
+}

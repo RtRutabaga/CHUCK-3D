@@ -26,14 +26,13 @@ vegetation from the stone footprints and preserve the existing recovery lanes.
   this stays clear of the south trunk's leaning continuation.
   The paired trees, inner climb faces, branches and grip proposals are unchanged.
   Support piers keep the grove's existing ground approach clear.
-- A broken gateway, incomplete walls, offset ashlar courses, eroded/chipped
-  corners and restrained moss provide a recognisable ruin rather than a bare
+- A broken gateway, incomplete walls, varied ashlar corners, rounded/eroded
+  edges and heavier moss provide a recognisable ruin rather than a bare
   obstacle course. Stone is human scale; Chuck's 65 cm scale makes it substantial.
 
 `ChultRuins.cpp` owns seeded procedural masonry, visible mortar backings and
 collision using the same rendered geometry. Structural stone/caps collide;
-decorative moss is existing material detail. No downloads, installs, Blender
-regeneration, character/controller edits or new active swing grips are needed.
+the finish uses the dedicated scanned gray stone/moss materials below. No software installs, Blender regeneration, character/controller edits or new active swing grips are needed.
 The cutscene and playable setting share the addition through `BuildSet()`.
 
 Codex builds and checks the setting, including floor/top traces, capsule
@@ -45,7 +44,7 @@ actual evidence in HANDOFF. Full freeform camera comfort and physical Xbox
 remain manual playtest work; Claude owns any subsequent traversal/camera fixes
 and activation of the canopy's proposed brachiation grips.
 
-Next part of the work can be done here: implement and verify these ruins.
+Further setting refinement can be done here; Claude owns subsequent traversal/camera changes.
 
 ## October 13 — gray mossy ruin finish (user-approved)
 

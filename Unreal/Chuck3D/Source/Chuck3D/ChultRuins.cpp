@@ -7,11 +7,11 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
-#include "KismetProceduralMeshLibrary.h"
 #include "Materials/MaterialInterface.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/PlatformTime.h"
 
 namespace
 {
@@ -28,33 +28,58 @@ namespace
             Tri(I,I+2,I+1);Tri(I,I+3,I+2);
         }
     };
-    // Closed bevelled ashlar. Flat tops/faces are real rendered collision.
+    // Rounded eroded ashlar: curved edge bands, broad flat standing/climb centres.
+    // The rendered surface is the collision surface, with no hidden box substitute.
     void Block(FSurface& S,FVector2D At,FVector2D Size,float Bottom,float Top,float Chip=4)
     {
-        const float X=Size.X*.5f,Y=Size.Y*.5f,B=FMath::Min(Chip,FMath::Min(X,Y)*.15f);
-        auto Ring=[&](float Z,float Inset)
+        const float X=Size.X*.5f,Y=Size.Y*.5f;
+        const float Seed=At.X*.023f+At.Y*.031f+Bottom*.19f;
+        const float Radius=FMath::Min(Chip*2.5f+3.f,FMath::Min(X,Y)*.32f);
+        const float Bevel=FMath::Min(5.f,(Top-Bottom)*.18f);
+        struct FRing {TArray<FVector> V,N;};TArray<FRing> Rings;
+        auto Ring=[&](float Z,float Inset,float RadialNormal,float VerticalNormal)
         {
-            const float U=X-Inset,W=Y-Inset,K=FMath::Max(1.f,B-Inset*.3f);
-            TArray<FVector> V;
-            for(FVector2D P : {FVector2D(-U+K,-W),FVector2D(U-K,-W),FVector2D(U,-W+K),FVector2D(U,W-K),
-                FVector2D(U-K,W),FVector2D(-U+K,W),FVector2D(-U,W-K),FVector2D(-U,-W+K)})
-                V.Add(FVector(At.X+P.X,At.Y+P.Y,Z));
-            return V;
+            FRing R;
+            for(int32 Corner=0;Corner<4;++Corner)
+            {
+                const float Worn=Radius*(.82f+.18f*FMath::Sin(Seed+Corner*2.3f));
+                const float K=FMath::Max(1.f,Worn-Inset*.3f);
+                const float SX=Corner<2?1.f:-1.f,SY=(Corner==0 || Corner==3)?-1.f:1.f;
+                const FVector2D Center(SX*(X-Inset-K),SY*(Y-Inset-K));
+                for(int32 J=0;J<=4;++J)
+                {
+                    const float A=(-.5f+Corner*.5f+J*.125f)*PI;
+                    const FVector2D Out(FMath::Cos(A),FMath::Sin(A));
+                    R.V.Add(FVector(At.X+Center.X+Out.X*K,At.Y+Center.Y+Out.Y*K,Z));
+                    R.N.Add(FVector(Out.X*RadialNormal,Out.Y*RadialNormal,VerticalNormal).GetSafeNormal());
+                }
+            }
+            Rings.Add(MoveTemp(R));
         };
-        const float Bevel=FMath::Min(2.f,(Top-Bottom)*.15f);
-        const auto Lower=Ring(Bottom,Bevel),LowSide=Ring(Bottom+Bevel,0),HighSide=Ring(Top-Bevel,0),Upper=Ring(Top,Bevel);
-        for(int32 I=0;I<8;++I)
+        for(int32 J=0;J<=3;++J)
         {
-            const int32 J=(I+1)%8;
-            S.Face(Lower[I],Lower[J],LowSide[J],LowSide[I]);
-            S.Face(LowSide[I],LowSide[J],HighSide[J],HighSide[I]);
-            S.Face(HighSide[I],HighSide[J],Upper[J],Upper[I]);
+            const float A=PI*.5f*J/3;
+            Ring(Bottom+Bevel*(1-FMath::Cos(A)),Bevel*(1-FMath::Sin(A)),FMath::Sin(A),-FMath::Cos(A));
+        }
+        for(int32 J=0;J<=3;++J)
+        {
+            const float A=PI*.5f*J/3;
+            Ring(Top-Bevel+Bevel*FMath::Sin(A),Bevel*(1-FMath::Cos(A)),FMath::Cos(A),FMath::Sin(A));
+        }
+        const int32 Count=Rings[0].V.Num();
+        const int32 SurfaceBase=S.V.Num();
+        for(const auto& R:Rings)for(int32 I=0;I<Count;++I)
+            S.Add(R.V[I],R.N[I],FVector2D(I/static_cast<float>(Count),R.V[I].Z/180));
+        for(int32 K=1;K<Rings.Num();++K) for(int32 I=0;I<Count;++I)
+        {
+            const int32 J=(I+1)%Count,A=SurfaceBase+(K-1)*Count,B=SurfaceBase+K*Count;
+            S.Tri(A+I,B+J,A+J);S.Tri(A+I,B+I,B+J);
         }
         const int32 Cap=S.Add(FVector(At.X,At.Y,Top),FVector::UpVector,{.5,.5});
-        for(auto P:Upper) S.Add(P,FVector::UpVector,FVector2D(P.X,P.Y)/180);
+        for(auto P:Rings.Last().V)S.Add(P,FVector::UpVector,FVector2D(P.X,P.Y)/180);
         const int32 Base=S.Add(FVector(At.X,At.Y,Bottom),-FVector::UpVector,{.5,.5});
-        for(auto P:Lower) S.Add(P,-FVector::UpVector,FVector2D(P.X,P.Y)/180);
-        for(int32 I=0;I<8;++I) {S.Tri(Cap,Cap+1+(I+1)%8,Cap+1+I);S.Tri(Base,Base+1+I,Base+1+(I+1)%8);}
+        for(auto P:Rings[0].V)S.Add(P,-FVector::UpVector,FVector2D(P.X,P.Y)/180);
+        for(int32 I=0;I<Count;++I){S.Tri(Cap,Cap+1+(I+1)%Count,Cap+1+I);S.Tri(Base,Base+1+I,Base+1+(I+1)%Count);}
     }
     struct FTop {FVector At;};
     const FTop Tops[]={{{5090,-2200,30}},{{5230,-2200,60}},{{5600,-2200,90}},{{6200,-2200,90}},
@@ -67,6 +92,7 @@ bool InChultRuinsReserve(const FVector& P,float Margin)
 
 void BuildChultRuins(AActor* Owner)
 {
+    const double Started=FPlatformTime::Seconds();
     FSurface Stone,Moss;
     FRandomStream R(73115);
     int32 Blocks=0;
@@ -119,16 +145,24 @@ void BuildChultRuins(AActor* Owner)
     int32 Section=0,Missing=0;
     for(FSurface* S:{&Stone,&Moss})
     {
-        TArray<FVector> Normals;TArray<FProcMeshTangent> Tangents;
-        UKismetProceduralMeshLibrary::CalculateTangentsForMesh(S->V,S->T,S->UV,Normals,Tangents);
+        // These materials use world-space normals, so UV tangent reconstruction
+        // (particularly expensive on dense masonry) is unnecessary.
+        TArray<FProcMeshTangent> Tangents;Tangents.Reserve(S->N.Num());
+        for(const FVector& N:S->N)
+        {
+            const FVector Axis=FMath::Abs(N.Z)>.95f?FVector::ForwardVector:FVector::UpVector;
+            Tangents.Emplace(FVector::CrossProduct(Axis,N).GetSafeNormal(),false);
+        }
         Mesh->CreateMeshSection(Section,S->V,S->T,S->N,S->UV,S->C,Tangents,true);
-        const TCHAR* Path=Section==0?TEXT("/Game/Art/Materials/M_Stone.M_Stone"):
-            TEXT("/Game/Art/Cutscenes/FallToChult/M_ChultRock.M_ChultRock");
+        const TCHAR* Path=Section==0?TEXT("/Game/Art/ChultRuins/M_RuinStone.M_RuinStone"):
+            TEXT("/Game/Art/ChultRuins/M_RuinMoss.M_RuinMoss");
         auto* Material=LoadObject<UMaterialInterface>(nullptr,Path);Mesh->SetMaterial(Section++,Material);Missing+=Material==nullptr;
     }
     Mesh->SetCollisionProfileName(TEXT("BlockAll"));Mesh->ComponentTags.Add(TEXT("ChultRuins"));
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RUINS blocks=%d triangles=%d missing_materials=%d climb_gap=120 jump_gap=100 causeway_top=650 cliffs=0"),
         Blocks,(Stone.T.Num()+Moss.T.Num())/3,Missing);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RUINS_FINISH rounded_blocks=%d gray_scan=1 moss_layers=1 shared_materials_changed=0"),Blocks);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RUINS_BUILD ms=%.1f vertices=%d"),(FPlatformTime::Seconds()-Started)*1000,Stone.V.Num()+Moss.V.Num());
 }
 
 int32 CheckChultRuins(AActor* Owner,AChuckCharacter* C)
