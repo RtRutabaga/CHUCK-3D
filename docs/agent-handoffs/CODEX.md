@@ -2,6 +2,38 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 14 — additive Chult overgrowth and low mist
+
+User authorized adding toward the artist's Fantasy Tropical Forest while removing
+no scene elements. [CHULT-OVERGROWTH.md](../CHULT-OVERGROWTH.md) owns the separate
+seeded layer and fog contract. Existing scene builder seeds/placements, shared
+materials and Claude's character/canopy assets remain intact. Added 7,825 ferns,
+5,649 broad-leaf/shrub instances in 959 colonies, 263 scanned rocks with mesh
+collision, 24 island trees with existing trunk collision, 14 noncolliding outer
+gateway creepers (2,800 triangles), and 12 low mist pools. Cooler sun/inscattering.
+No new game assets/dependencies/imports or original-game mutations.
+
+Final cooked Chult `Local/verify-chult-20261014-143014.log`: all original ground,
+root, grove, static canopy, expansion/ford and cliff checks pass; actual ruin
+trials 5/5, terrain walks 3/3 and cliff movement 3/3. Walk fps 59.9/60.0/59.7 at
+720p; worst frames 29.1/16.7/33.3 ms. Fall/skip/input/reset, leap 6/6 and lamps 8/8
+pass. Canopy 48/48 (static failures 0) and raptor 8/8 pass; full smoke suite 182/182 passes without a smoke retry (`verify-package-20261014-143014.log`). Reviewed final cooked landing,
+close mist, stream/ford, canopy, ruin and cinematic pullback captures.
+
+Fog iteration: UE's local fog default near exclusion is 20 m. Its shader
+multiplies radial/height coverage, so zero radial coverage suppresses height
+fog. Both corrected; final density reduced after the first visible bank hid
+too much from inside. Early candidates deliberately stopped for art refinement,
+not acceptance evidence. UE 5.7.4 / CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0,
+.NET 8.0.412; final single-worker UAT 50.02 s (`chult-fog-final-balanced-build.log`).
+
+Promoted runtime **03aa1bb** as ChultOvergrowth (`Local/chult-overgrowth-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the additions. Previous build retained as Windows-Previous-20261014-ChultOvergrowth, two backups kept, older ChultRaptor pruned; promoted candidate removed. Source committed, publication follows this handoff update. Real menu automation not rerun (no menu/startup change). Four superseded
+candidate folders remain after automatic approval review blocked deletion,
+without a specific reason. Repeated inherited forest/ruins remain below target;
+manual whole-area/camera play and Xbox untested. No binary additions/LFS transfer.
+
+Next part of the work can be done here: human play-review/refine the denser jungle and mist.
+
 ## October 14 — partial western/southern treeline cliffs (Codex)
 
 - **Built:** user-authorized Green Hell-inspired rock boundaries behind the old forest, around bearings **100–325 degrees** at roughly **102 m** from the landing. Uneven crests, deep folds and continuous undercut faces; **7,848 triangles**, closed visible-mesh collision, existing triplanar scanned gray rock/moss `M_RuinStone`. The northeast beyond the brachiation trees and stream stays open. No character, controls, tree/grip, stream, ruin or raptor changes. Contract: [CHULT-CLIFFS.md](../CHULT-CLIFFS.md); region plan records that the new request supersedes earlier cliff deferrals.
