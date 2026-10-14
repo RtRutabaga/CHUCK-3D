@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 14 — northeast forest, relief and shallow stream
+
+User approved expansion toward Claude's canopy line with starting vegetation, mild elevation and a small stream. Authorization/contract: CHULT.md and [CHULT-EXPANSION.md](../CHULT-EXPANSION.md). Clean main inspected; original Phase 4 read by absolute path, no mutations. Claude's canopy/character/binary meshes remain intact.
+
+`ChultExpansion.cpp/.h` owns X=7000–22000, Y=2000–15500. Two new floor strips extend 90 m east and 25 m north; the 50 cm terrain mesh (145,818 triangles) supplies relief up to 165.9 cm and a graded creek bed. Original forest radius 90 m and canopy reserve +350 cm stay flat, fading over 600 cm; all eight liana feet remain Z=0. Contains includes new floor. Catmull-Rom stream descends 140→24 cm southwest, ~3 m across, ~14 cm deep, rounded endpoints; UV-scrolling normal, no water collision or swimming/current system. A ground loop crosses it and returns toward the grove.
+
+Seeded dressing: 166 existing forest trees, 16 scanned island trees/collision instances, 842 ferns, 229 palms, 69 scanned rocks, 660 moss strands, plus broad leaves/shrubs. Trunks/current root-profile collision and rocks clear walking/stream/canopy lanes; noncolliding foliage clears liana feet. Distance culling follows existing fern ranges. Only new binary: M_ChultStream (10,062 bytes); existing LFS filter/remote assessed, quota unavailable. `create_chult_stream_material.py` edits only that graph, with a fail-closed helper-boundary guard; existing water normal reused. No downloads/installations, Blender regeneration, binary mesh import or shared material edits.
+
+UE 5.7.4 / CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412, UE Python 3.11.8. Final editor geometry (`chult-expansion-editor-final-check.log`) and cooked geometry pass 1,004 floors / 976 sweeps / 93 ford samples / eight feet / far extent, alongside original Chult/static canopy checks. Cooked five ruin trials and three actual character walks pass (`verify-chult-20261014-095630.log`): 720p 59.8/60.0/59.7 fps, worst 33.4/16.7/33.2 ms. Build/cook `chult-expansion-package-build.log`, UAT 91.07 s. Full suite **182/182 first run**, `verify-package-20261014-095630.log`, plus canopy **48/48**, static failures 0 (`verify-canopy-20261014-100304.log`); full fall/skip, pantry and lamp regressions pass. Real menu automation not separately rerun. Reviewed final cooked/editor Expansion_Stream, Expansion_CanopyLine, Expansion_Ford captures.
+
+Initial editor found a lane crossing tree 7 roots and coarse bed interpolation: rerouted lane, refined grid 100→50 cm, tightened height tolerance 8→6 cm. A second test attempt supplied raw stick without ordinary AddMovementInput and stood still; fixed using the same two-call approach as existing ruin tests. Ruin timer now guards its completed state and hands off to the terrain walks; ruin geometry/control behavior unchanged. Material commandlet first-create missing-package probes are expected, no shader errors.
+
+Launcher promotion/publication follows this verified source commit. No manual whole-area exploration, Xbox, stream audio or full performance audit. Repeated inherited art/open outer edges remain provisional; no cliff, encounter, pickup, region transition or character movement-code change.
+
+Next part of the work can be done here: refine after a play review; Claude retains traversal/camera ownership.
+
 ## October 13 — gray mossy rounded ruin walls (Codex)
 
 - **Built:** user-approved Rock Wall 08, Mossy Stone Wall and Rabdentse Ruins Wall CC0 scans: nine verified 2K maps and two dedicated `/Game/Art/ChultRuins` materials. Cooler gray stone, dark eroded detail and heavier irregular moss replace the tan finish. All **544** masonry/backing pieces now have curved edge bands and varied rounded corners; flat standing/climbing centres and nominal routes remain. Visible masonry supplies collision, with no shader displacement or hidden box substitute. Final masonry **174,080 triangles / 109,888 vertices**. Shared stone/jungle/character materials, canopy proposals and controls stay intact; cliffs remain deferred. Contract and region approval recorded before implementation; provenance/reproduction in `SourceAssets/Setting/ChultRuins/README.md`.

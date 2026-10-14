@@ -6,6 +6,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Northeast jungle extension authorized October 14, 2026:** expand the floor beyond Claude's new canopy line, continue the starting clearing's tree/palm/fern/broad-leaf/moss/rock vegetation, add mild rolling elevation and a shallow flowing stream. Preserve all eight canopy trees, grips, lianas, ruin access and canopy respawn. Keep their tested ground feet level; place relief and the stream around that corridor, with walkable banks and ground recovery/exploration loops. This is setting work, not a new swimming/current mechanic, encounter, cliff boundary, pickup or region transition. See [../CHULT-EXPANSION.md](../CHULT-EXPANSION.md).
+
 **Ruins beside the tree parkour area authorized by the user, October 13, 2026:**
 add an optional ancient stone courtyard south of the canopy grove, with broken
 terraces for short running jumps, low mantle steps, a paired-wall stairwell and

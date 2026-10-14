@@ -3,6 +3,7 @@
 #include "ChultDressing.h"
 #include "ChultCanopy.h"
 #include "ChultRuins.h"
+#include "ChultExpansion.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -77,7 +78,7 @@ AChultLanding::AChultLanding()
 FVector AChultLanding::FloorOrigin() { return AFallCutscene::LandingSpot(); }
 FVector AChultLanding::Entrance() { return FloorOrigin()+FVector(0,0,34.65f); }
 bool AChultLanding::Contains(const FVector& P)
-{ return FVector::Dist2D(P,FloorOrigin())<14000; }
+{ return FVector::Dist2D(P,FloorOrigin())<14000 || InChultExpansion(P-FloorOrigin()); }
 
 AChultLanding* AChultLanding::EnterPreview(UWorld* World)
 {
@@ -312,6 +313,7 @@ void AChultLanding::BuildSet()
     BuildChultWetDressing(this,true);
     BuildChultCanopy(this);
     BuildChultRuins(this);
+    BuildChultExpansion(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -327,6 +329,7 @@ void AChultLanding::VerifyAndCapture()
     if(!C) return;
     int32 Failures=0,Samples=0;
     Failures+=CheckChultRuins(this,C);
+    Failures+=CheckChultExpansion(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -469,6 +472,24 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==23) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canopy_Roots.png"),true,false);
         else if(Run->Phase==24)
+        {
+            const FVector From=FloorOrigin()+FVector(12100,9100,720),At=FloorOrigin()+FVector(15100,10100,100);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==25) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Expansion_Stream.png"),true,false);
+        else if(Run->Phase==26)
+        {
+            const FVector From=FloorOrigin()+FVector(11200,6000,900),At=FloorOrigin()+FVector(14800,6500,180);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==27) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Expansion_CanopyLine.png"),true,false);
+        else if(Run->Phase==28)
+        {
+            const FVector At=FloorOrigin()+FVector(16800,11000,100),From=FloorOrigin()+FVector(16600,10500,ChultExpansionGroundZ(FVector(16600,10500,0))+110);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==29) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Expansion_Ford.png"),true,false);
+        else if(Run->Phase==30)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

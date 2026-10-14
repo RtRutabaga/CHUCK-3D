@@ -1,4 +1,5 @@
 #include "ChultRuins.h"
+#include "ChultExpansion.h"
 #include "ChultLanding.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
@@ -203,8 +204,9 @@ void StartChultRuinsReview(AActor* Owner,AChuckCharacter* C)
     const FVector G=AChultLanding::FloorOrigin();
     Run->Camera->SetActorLocationAndRotation(G+FVector(4350,-3300,1400),(FVector(5900,-950,390)-FVector(4350,-3300,1400)).Rotation());
     Run->Camera->GetCameraComponent()->SetFieldOfView(70);PC->SetViewTarget(Run->Camera);
-    World->GetTimerManager().SetTimer(Run->Timer,[World,C,PC,Run,G]()
+    World->GetTimerManager().SetTimer(Run->Timer,[World,C,PC,Run,G,Owner]()
     {
+        if(Run->Trial>=6) return;
         if(Run->Trial>=6) return;
         const float Now=World->GetTimeSeconds();auto* Movement=C->GetCharacterMovement();
         if(Run->Start<0)
@@ -274,7 +276,8 @@ void StartChultRuinsReview(AActor* Owner,AChuckCharacter* C)
         if(Run->Trial==6)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RUINS_TEST_COMPLETE failures=%d trials=5 mantle=1 gap_jump=1 chimney=1 causeway=1 fork=1"),Run->Failures);
-            FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);
+            if(Run->Failures) FPlatformMisc::RequestExitWithStatus(false,1);
+            else {PC->SetViewTarget(C);if(Run->Camera) Run->Camera->Destroy();StartChultExpansionReview(Owner,C);}
         }
     },.016f,true);
 }

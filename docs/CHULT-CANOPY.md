@@ -89,8 +89,10 @@ loop's: end grips 98 cm over the limbs, a 180 cm branch gap. Trees take their li
 `Neighbours`; each chain records the limb it uses at either end (`LimbA`, `LimbB`). The loop's
 trees keep their limb order and random draws; tree 2 gains a limb toward tree 4 and its spurs
 moved to suit. `InChultCanopyReserve` now also covers a 10 m corridor along the line; spur grips
-stay within 132 m of the landing (Chult's area is 140 m). The open ground under the line has no
-understory yet.
+stay within the original 132 m reach from the landing. **October 14, Codex:** the map now extends
+beyond the line with starting-area vegetation, mild relief and a shallow flowing stream; see
+[CHULT-EXPANSION.md](CHULT-EXPANSION.md). The canopy corridor and liana feet remain level at Z=0,
+and all eight trees/grips/respawn locations stay unchanged.
 
 ## Spurs (side branches, all brachiatable)
 
