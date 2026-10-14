@@ -1,6 +1,7 @@
 #include "DockGameMode.h"
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
+#include "ChultRaptor.h"
 #include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
@@ -634,6 +635,13 @@ void ADockGameMode::StartPlay()
         World->GetTimerManager().SetTimer(ChultCheck,[World](){
             for(TActorIterator<AChultLanding> It(World);It;++It) It->VerifyAndCapture();
         },4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRaptorTest")))
+    {
+        // Claude's raptor trials (ChultRaptor.h).
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle RaptorCheck;
+        World->GetTimerManager().SetTimer(RaptorCheck,[World](){StartChultRaptorReview(World);},4.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyTest")))
     {

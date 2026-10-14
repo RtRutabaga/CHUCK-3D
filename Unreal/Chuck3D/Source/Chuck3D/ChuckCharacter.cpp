@@ -1,6 +1,7 @@
 #include "ChuckCharacter.h"
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
+#include "ChultRaptor.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockGameMode.h"
@@ -1653,6 +1654,19 @@ void AChuckCharacter::SlashHit()
         if (Reach > SlashReach || FMath::Abs(To.Z) > 45.f) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
         Rat->TakeSlash(Swing);
+        ++SlashRatHits;
+    }
+    // The raptor: a scratch at its legs (it stands far taller than his reach).
+    for (const TWeakObjectPtr<AChultRaptor>& Entry : AChultRaptor::All())
+    {
+        AChultRaptor* Raptor = Entry.Get();
+        if (!Raptor || Raptor->IsDead()) continue;
+        const FVector To = Raptor->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - AChultRaptor::HitRadius;
+        const float RaptorFeet = static_cast<float>(Raptor->GetActorLocation().Z) - Raptor->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        if (Reach > SlashReach || FMath::Abs(RaptorFeet - Feet) > 45.f) continue;
+        if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
+        Raptor->TakeSlash(Swing);
         ++SlashRatHits;
     }
     // People: a scratch at the shins of anyone in reach. Nothing breaks; they react.

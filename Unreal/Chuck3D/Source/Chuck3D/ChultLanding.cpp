@@ -3,6 +3,7 @@
 #include "ChultDressing.h"
 #include "ChultCanopy.h"
 #include "ChultRuins.h"
+#include "ChultRaptor.h"
 #include "ChultExpansion.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
@@ -112,6 +113,8 @@ void AChultLanding::Build()
 {
     BuildEnvironment();
     BuildSet();
+    // Playable now (after the fall, or from the checkpoint): the raptor goes on its round.
+    AChultRaptor::SpawnCanopyRaptor(GetWorld());
 }
 
 void AChultLanding::BuildEnvironment()

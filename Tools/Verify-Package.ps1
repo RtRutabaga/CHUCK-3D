@@ -107,6 +107,17 @@ $canopyProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckCanopyTest',
 if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=48 static_failures=0' -Quiet)) {
     throw "Chult canopy brachiation verification failed. Inspect $canopyLog"
 }
+# The canopy raptor (Claude, 2026-10-14): its round, noticing him, the chase, tell
+# and bite, a roll through the tell, escaping up a tree and across a chain over it,
+# its territory, a death and the ruin-top return, ten scratches, and its sounds.
+$raptorLog=Join-Path $evidence ('verify-raptor-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$raptorProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRaptorTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$raptorLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($raptorProcess.ExitCode -or !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_TEST_COMPLETE failures=0 trials=8' -Quiet) -or
+    !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_ROUTE failures=0 segments=8' -Quiet) -or
+    !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SOUNDS steps=3 hiss=1 snap=2 call=1 death=1' -Quiet) -or
+    !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SPAWN .* clips=6 mesh=1' -Quiet)) {
+    throw "Chult raptor verification failed. Inspect $raptorLog"
+}
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'

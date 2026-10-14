@@ -12,6 +12,10 @@ Rough Wood: https://polyhaven.com/a/rough_wood
 Human base meshes and source textures: MakeHuman CC0 assets, via MPFB.
 https://www.makehumancommunity.org/content/license.html
 
+Chult raptor model and animations: "Velociraptor" by Quaternius, CC0-1.0
+(smoothed, rescaled and re-textured for this game).
+https://poly.pizza/m/cnlGH2UcDd  https://quaternius.com
+
 Human motion-capture sources: CMU Graphics Lab Motion Capture Database;
 BVH conversion by B. Hahne / cgspeed.
 https://mocap.cs.cmu.edu/

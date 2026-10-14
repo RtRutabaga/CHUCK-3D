@@ -1,0 +1,14 @@
+{
+  "file": "Quaternius_Velociraptor.glb",
+  "title": "Velociraptor",
+  "author": "Quaternius",
+  "license": "CC0 1.0 (Public Domain), as stated on the source page",
+  "page": "https://poly.pizza/m/cnlGH2UcDd",
+  "download": "https://static.poly.pizza/c1f0c4cb-c84f-415c-8323-d8cb871a2126.glb",
+  "pack": "Also in Quaternius's 'Animated LowPoly Dinosaurs' (https://quaternius.itch.io/animated-lowpoly-dinosaurs, CC0)",
+  "downloaded": "2026-10-14, with the user's approval",
+  "bytes": 285828,
+  "sha256": "1d9ecad0a65c0c858a216ff25f224d02b18ce86fa0ed4df8f9ecece43f3a745c",
+  "contents": "29-bone armature; 1,248-triangle mesh with three flat colour materials; actions Attack, Death, Idle, Jump, Run, Walk",
+  "modified": false
+}

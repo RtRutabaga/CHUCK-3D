@@ -1,0 +1,62 @@
+{
+  "generator": "Tools/gen_raptor_sfx.py",
+  "license": "original, synthetic (Claude for CHUCK 3D)",
+  "sounds": [
+    {
+      "name": "SFX_RaptorStep_00",
+      "file": "SFX_RaptorStep_00.wav",
+      "duration": 0.3,
+      "sha256": "86e4e6524edad702f948cbb33aa59f2578713c0229df663500d34e330febbd30",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorStep_01",
+      "file": "SFX_RaptorStep_01.wav",
+      "duration": 0.3,
+      "sha256": "88578c0a12406a7a183093f79663915b0389563b2fcc6c3cbda5701d351bbcb4",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorStep_02",
+      "file": "SFX_RaptorStep_02.wav",
+      "duration": 0.3,
+      "sha256": "6072586d504dc8e84da47297e3c12cbe8fb2fe36fcad84996a9584dbe2ec5990",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorHiss_00",
+      "file": "SFX_RaptorHiss_00.wav",
+      "duration": 0.5,
+      "sha256": "cb763c1f540af59fa5833338a3a4b7f3c2a64d05020829e642d483ef99ed5004",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorSnap_00",
+      "file": "SFX_RaptorSnap_00.wav",
+      "duration": 0.2,
+      "sha256": "ca76cb54df8cd4248f25c7dc129dcd17c15dfe97feacc0131ac06d2c42beaf41",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorSnap_01",
+      "file": "SFX_RaptorSnap_01.wav",
+      "duration": 0.2,
+      "sha256": "7ca092f429ef8fb86ea33d157222349bdca0eaec12cfafa75efc2391e8df4550",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorCall_00",
+      "file": "SFX_RaptorCall_00.wav",
+      "duration": 0.9,
+      "sha256": "4586d5c29ab1439c014e0a345d263dbb525dcbe1b1491d9dfc498124f8563d46",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_RaptorDeath_00",
+      "file": "SFX_RaptorDeath_00.wav",
+      "duration": 1.4,
+      "sha256": "d09f97d0b6863fd0fdc085e29755d3cb67d34e48c9045e1623621574cc5afabc",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

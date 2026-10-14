@@ -21,6 +21,20 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 Next part of the work can be done here: review/refine the expanded setting; Claude retains traversal/camera ownership.
 
+## October 14 — the fast raptor around the brachiation trees (Claude)
+
+- **Changed:**
+  - A large, fast raptor patrols the ground round the brachiation trees and along the line. It is Quaternius's CC0 Velociraptor (user-approved download), smoothed, rescaled to 4.1 m and re-skinned, with synthetic sounds.
+  - On the ground it notices Chuck, outruns his run (not his sprint), and bites after a clear tell; a roll beats it.
+  - Up in the trees, on the branches or on the ruin top it can't reach him. It prowls and snaps below, then gives up, so crossing the area by brachiation is the way through.
+  - Ten scratches kill it; dying to it returns him to the ruin top.
+  - Details: [CHULT-RAPTOR.md](CHULT-RAPTOR.md).
+- **Tested:** uncooked, all 8 raptor trials with the real character pass, repeatedly. Cooked: the first package lacked the clips (loaded by path, so not cooked; caught by the verifier's `clips=6`), so they are now hard references. The rebuilt candidate scored 181/182 (`verify-package-20261014-114001.log`): the only failure was the known-intermittent roll side drift, 2.69 cm against a 2 cm limit, historically 1.8–1.9 with a 3.27 outlier on Oct 6, in Waterdeep where nothing changed. The unchanged candidate then passed **182/182** (`verify-package-20261014-120006.log`), with the raptor 8/8 and all 6 clips (`verify-raptor-20261014-121156.log`) and the canopy 48/48.
+- **Not tested:** a person playing it, speakers, Xbox.
+- **Launcher:** promoted as `ChultRaptor` (`Local/raptor-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review of the raptor would help most).
+
 ## October 14 — respawn on the ruin top after dying near the trees (Claude)
 
 - **Changed:** a death anywhere around the brachiation trees (the loop and the line, plus 5 m) now returns Chuck to the top of the ruin landing slab that leads onto tree 0, facing the tree. Elsewhere in Chult he still returns to the landing entrance. Details: [CHULT-CANOPY.md](CHULT-CANOPY.md).

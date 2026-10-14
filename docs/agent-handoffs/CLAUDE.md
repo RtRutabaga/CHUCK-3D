@@ -2,6 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — the fast raptor around the brachiation trees (Claude)
+
+- **Request:** create the fast raptor, patrolling around the brachiation trees and encouraging climbing/evading through by brachiation; use free resources if they help. Base `f1657f6` (after Codex's northeast forest and stream).
+- **Free resource (approved by the user):** Quaternius's CC0 "Velociraptor", 286 KB GLB from poly.pizza, with a 29-bone rig and six clips. It is kept unmodified with a manifest and credited in DEMO-CREDITS. No other download or installation.
+- **Built:**
+  - `Tools/build_raptor.py`:
+    - Scaled to 4.1 m, with hips at 98 cm and head at 1.56 m. The clip translations are rescaled with the rig and verified against the source jump.
+    - The source is flat-shaded with every face's corners split. The build welds them (2,576 → 626 vertices) and turns inward faces out by ray parity before subdividing. The first import was see-through until the weld.
+    - It adds body-following UVs with a generated pattern and scale textures, exports the mesh and six clip FBXs, and writes `RaptorClipData.h` with measured speeds and the bite moment.
+  - `Tools/import_raptor.py`: imports into `/Game/Characters/Raptor`. The material graph is built once, because rebuilding it trips an engine assertion in DeleteAllMaterialExpressions.
+  - `Tools/gen_raptor_sfx.py` and `import_raptor_sfx.py`: eight synthetic sounds.
+  - `ChultRaptor.h/.cpp` (`AChultRaptor`):
+    - It patrols a 9-point round that weaves round the trunks. It notices Chuck, chases at 330 cm/s (he runs 225 and sprints 380), and gives a 0.32 s tell before a lunge costing 2 of his 5 sanity.
+    - It can't reach him up a tree, on the branches or on the ruin top. There it prowls and snaps, then gives up after 9 s.
+    - It keeps to its territory, and 10 scratches kill it.
+    - It spawns from `AChultLanding::Build` (playable Chult only) and is kept out of the Chult and canopy traversal tests.
+  - `ChuckCharacter.cpp`: the slash scratches the raptor.
+  - `ChultRaptorTest.cpp` adds `-ChuckRaptorTest`; `DockGameMode` hooks it up. Contract: [CHULT-RAPTOR.md](../CHULT-RAPTOR.md); dated notes added in regions/CHULT.md and CHULT-CANOPY.md.
+- **Tests (uncooked):** `-ChuckRaptorTest` 8/8, repeated (`Local/raptor-test-4..7.log`), with route sweeps 0 failures and 70–85 sounds. Earlier runs failed and were fixed: route too near tree 4's trunk; limb hid him from sight; scratch trial swung out of reach. Cooked: the first package lacked the clips (loaded by path, so not cooked; caught by the verifier's `clips=6`), so they are now hard references. The rebuilt candidate scored 181/182 (`verify-package-20261014-114001.log`): the only failure was the known-intermittent roll side drift, 2.69 cm against a 2 cm limit, historically 1.8–1.9 with a 3.27 outlier on Oct 6, in Waterdeep where nothing changed. The unchanged candidate then passed **182/182** (`verify-package-20261014-120006.log`), with the raptor 8/8 and all 6 clips (`verify-raptor-20261014-121156.log`) and the canopy 48/48.
+- **Reviewed:** portrait, chase, the tree-escape still (in `SourceAssets/Setting/Review/Raptor_*.png`).
+- **Known flaws:**
+  - Clips switch without blending and there is no foot IK.
+  - Low-poly forms remain under the smoothing; synthetic sounds not heard on speakers.
+  - One raptor only, and no navmesh: it steers with sweeps.
+  - Not played by a person; no Xbox test.
+- **Launcher:** promoted as `ChultRaptor` (`Local/raptor-promotion.log`); older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (play review of the raptor's pressure and fairness would help most).
+
 ## October 14 — respawn on the ruin top after dying near the trees (Claude)
 
 - **Request:** if Chuck dies in the area around the brachiation trees, his spawn point is the top of the ruins where the trees are reached from. Base `d5d66f8`.

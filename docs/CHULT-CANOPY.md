@@ -59,6 +59,10 @@ Collision: trunk, saddle, walking limbs, leaders, buttresses and roots are one v
 procedural mesh (`ChultCanopySolidBark`, BlockAll, complex as simple). Hand boughs, crown boughs,
 twigs (`ChultCanopyHandBranches`) and lianas (`ChultCanopyVines`) have none.
 
+## The raptor (2026-10-14)
+
+A fast raptor patrols the ground round the trees and the line; up in them Chuck is out of its reach. See [CHULT-RAPTOR.md](CHULT-RAPTOR.md).
+
 ## Dying near the trees (2026-10-14)
 
 User request: if Chuck dies in the area around the brachiation trees, he comes back on the top of
