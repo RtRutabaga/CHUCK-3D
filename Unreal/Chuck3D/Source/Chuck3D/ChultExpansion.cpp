@@ -92,6 +92,8 @@ namespace
 }
 
 bool InChultExpansion(const FVector& P) {return P.X>=MinX && P.X<=MaxX && P.Y>=MinY && P.Y<=MaxY;}
+bool ChultExpansionDressingAllowed(const FVector& P,float Margin)
+{return !OnLane(P,Margin) && StreamAt(P).Distance>200+Margin;}
 float ChultExpansionGroundZ(const FVector& P)
 {
     if(!InChultExpansion(P)) return 0;

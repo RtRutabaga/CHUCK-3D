@@ -6,6 +6,7 @@
 #include "ChultRaptor.h"
 #include "ChultExpansion.h"
 #include "ChultCliffs.h"
+#include "ChultOvergrowth.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -81,6 +82,7 @@ FVector AChultLanding::FloorOrigin() { return AFallCutscene::LandingSpot(); }
 FVector AChultLanding::Entrance() { return FloorOrigin()+FVector(0,0,34.65f); }
 bool AChultLanding::Contains(const FVector& P)
 { return FVector::Dist2D(P,FloorOrigin())<14000 || InChultExpansion(P-FloorOrigin()); }
+bool AChultLanding::OnGroundRoute(const FVector& P,float Margin) {return OnRoute(P,Margin);}
 
 AChultLanding* AChultLanding::EnterPreview(UWorld* World)
 {
@@ -129,7 +131,7 @@ void AChultLanding::BuildEnvironment()
     Sky->SetRayleighScattering(FLinearColor(.13f,.43f,.66f)); Attach(Sky);
     auto* Sun=NewObject<UDirectionalLightComponent>(this);
     Sun->SetMobility(EComponentMobility::Movable); Sun->SetAtmosphereSunLight(true);
-    Sun->SetIntensity(4.5f); Sun->SetLightColor(FLinearColor(1,.91f,.73f));
+    Sun->SetIntensity(4.1f); Sun->SetLightColor(FLinearColor(.92f,.97f,1));
     Sun->DynamicShadowDistanceMovableLight=9000; Sun->DynamicShadowCascades=3;
     Attach(Sun,FVector::ZeroVector,FRotator(-30,20,0));
     auto* Fill=NewObject<USkyLightComponent>(this);
@@ -137,7 +139,12 @@ void AChultLanding::BuildEnvironment()
     Fill->SetIntensity(.45f); Attach(Fill);
     auto* Fog=NewObject<UExponentialHeightFogComponent>(this);
     Fog->SetFogDensity(.035f); Fog->SetFogHeightFalloff(.18f); Fog->SetVolumetricFog(true);
-    Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.21f,.235f,.22f)); Attach(Fog);
+    Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.18f,.225f,.25f));
+    Fog->SecondFogData.FogDensity=.045f;
+    Fog->SecondFogData.FogHeightFalloff=2.f;
+    Fog->SecondFogData.FogHeightOffset=-90.f;
+    Attach(Fog);
+    BuildChultLowMist(this);
     auto* Post=NewObject<UPostProcessComponent>(this);
     Post->bUnbound=true; Post->Priority=100;
     auto& P=Post->Settings;
@@ -319,6 +326,7 @@ void AChultLanding::BuildSet()
     BuildChultRuins(this);
     BuildChultExpansion(this);
     BuildChultCliffs(this);
+    BuildChultOvergrowth(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -508,6 +516,12 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==33) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Boundary_Cliffs_Wide.png"),true,false);
         else if(Run->Phase==34)
+        {
+            const FVector From=FloorOrigin()+FVector(1400,1400,90),At=FloorOrigin()+FVector(2300,500,90);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==35) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Overgrowth_LowMist.png"),true,false);
+        else if(Run->Phase==36)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

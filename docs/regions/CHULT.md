@@ -8,6 +8,14 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Additive vegetation/dressing and low fog authorized October 14, 2026:**
+densify the currently built jungle toward Muhammed Haroon Neyyathoor's
+[Fantasy Tropical Forest](https://kunjonart.artstation.com/projects/1Ne1JX),
+using layered fern/broad-leaf colonies, mossy outcrops and ruin creepers.
+Remove no existing scene elements. Preserve walking/cinematic lanes, canopy
+grips/feet, ruin traversal and the stream. Add low mist and assess cooler light
+in cooked views. No character, controls, encounters or onward region changes.
+
 **Northeast jungle extension authorized October 14, 2026:** expand the floor beyond Claude's new canopy line, continue the starting clearing's tree/palm/fern/broad-leaf/moss/rock vegetation, add mild rolling elevation and a shallow flowing stream. Preserve all eight canopy trees, grips, lianas, ruin access and canopy respawn. Keep their tested ground feet level; place relief and the stream around that corridor, with walkable banks and ground recovery/exploration loops. This is setting work, not a new swimming/current mechanic, encounter, cliff boundary, pickup or region transition. See [../CHULT-EXPANSION.md](../CHULT-EXPANSION.md).
 
 **Ruins beside the tree parkour area authorized by the user, October 13, 2026:**

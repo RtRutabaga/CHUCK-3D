@@ -14,6 +14,7 @@ public:
     static FVector FloorOrigin();
     static FVector Entrance();
     static bool Contains(const FVector& Position);
+    static bool OnGroundRoute(const FVector& LocalPosition, float Margin);
     static AChultLanding* EnterPreview(UWorld* World);
     /** Environment plus set (the checkpoint and the end of the fall). */
     void Build();
