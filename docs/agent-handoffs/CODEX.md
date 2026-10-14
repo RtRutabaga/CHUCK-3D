@@ -27,7 +27,7 @@ too much from inside. Early candidates deliberately stopped for art refinement,
 not acceptance evidence. UE 5.7.4 / CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0,
 .NET 8.0.412; final single-worker UAT 50.02 s (`chult-fog-final-balanced-build.log`).
 
-Promoted runtime **03aa1bb** as ChultOvergrowth (`Local/chult-overgrowth-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the additions. Previous build retained as Windows-Previous-20261014-ChultOvergrowth, two backups kept, older ChultRaptor pruned; promoted candidate removed. Source committed, publication follows this handoff update. Real menu automation not rerun (no menu/startup change). Four superseded
+Promoted runtime **03aa1bb** as ChultOvergrowth (`Local/chult-overgrowth-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the additions. Previous build retained as Windows-Previous-20261014-ChultOvergrowth, two backups kept, older ChultRaptor pruned; promoted candidate removed. Source and handoff published to origin/main (`Local/chult-overgrowth-source-push.log`). Real menu automation not rerun (no menu/startup change). Four superseded
 candidate folders remain after automatic approval review blocked deletion,
 without a specific reason. Repeated inherited forest/ruins remain below target;
 manual whole-area/camera play and Xbox untested. No binary additions/LFS transfer.
