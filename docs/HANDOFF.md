@@ -20,7 +20,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - Uncooked: canopy 27/27 real-character trials (including all nine spurs), static check 0 failures; Chult and ruin checks pass; the fall cutscene passes.
   - Cooked: full suite **182/182** on the first run (`Local/verify-package-20261013-221047.log`); canopy 27/27 with 0 static failures (`verify-canopy-20261013-221522.log`); Chult grove ground 11/11, root check 5/5 and ruins 5/5 (`verify-chult-20261013-221047.log`); fall cutscene and lamp swing 8/8 pass.
 - **Not tested:** a person playing it, Xbox, frame rate with the denser trunks.
-- **Launcher:** promoted as `CanopySpurs` (see the commit after the source commit); previous build kept as `Windows-Previous-20261013-CanopySpurs`, older backups pruned to two, no candidate left.
+- **Launcher:** promoted **b96c37a** as `CanopySpurs` (`Local/spurs-promotion.log`; receipt and launcher check pass); previous build kept as `Windows-Previous-20261013-CanopySpurs`, older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review by the user would help most); Codex can continue Chult setting art.
 
