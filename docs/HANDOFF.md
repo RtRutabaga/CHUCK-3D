@@ -27,7 +27,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - `Verify-Package` additionally requires `flap=1 whistle=1 thud=1` and `CHUCK_CHULT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1`.
 - **Tested:** `Builds/FallSoundCandidate` passed **182** (`Local/verify-package-20261013-181829.log`), including the duck check with `tracks=4` and three clean sewer checks. The fall test ran end to end into playable Chult with `MUSIC_REGION chult=1`, and the packaged Chult test confirmed the Chult loop.
 - **Mix:** measured, not listened to. The scores are about −24 dB RMS, and the pre-roll rush is −18.6 dB, falling to about −30 under music. Not heard on speakers; Xbox and other resolutions not tested.
-- **Launcher:** LAUNCHER_STATUS
+- **Launcher:** promoted with `Promote-Build.ps1 -Label FallSound`. `Builds/Windows` is **ce62b9e**, with the receipt and launcher check passing. The previous build is kept as `Windows-Previous-20261013-FallSound` (plus `-MossyRuins`), and `-NaturalCanopy` was pruned. No candidate is left.
 
 Next part of the work can be done here (or by Codex for Chult setting work).
 
