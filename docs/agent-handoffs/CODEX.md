@@ -14,7 +14,7 @@ UE 5.7.4 / CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412, UE Pyt
 
 Initial editor found a lane crossing tree 7 roots and coarse bed interpolation: rerouted lane, refined grid 100→50 cm, tightened height tolerance 8→6 cm. A second test attempt supplied raw stick without ordinary AddMovementInput and stood still; fixed using the same two-call approach as existing ruin tests. Ruin timer now guards its completed state and hands off to the terrain walks; ruin geometry/control behavior unchanged. Material commandlet first-create missing-package probes are expected, no shader errors.
 
-Launcher promotion/publication follows this verified source commit. No manual whole-area exploration, Xbox, stream audio or full performance audit. Repeated inherited art/open outer edges remain provisional; no cliff, encounter, pickup, region transition or character movement-code change.
+Promoted runtime **1a6c4c3** as `ChultStream` (`Local/chult-expansion-promotion.log`), receipt/hash and launcher CheckOnly pass. Previous build retained as `Windows-Previous-20261014-ChultStream`; two backups kept, older CanopyLine backup pruned, no candidate left. Postcommit LFS fsck passed; source/handoff plus the 10 KB material published to origin/main under standing permission. No manual whole-area exploration, Xbox, stream audio or full performance audit. Repeated inherited art/open outer edges remain provisional; no cliff, encounter, pickup, region transition or character movement-code change.
 
 Next part of the work can be done here: refine after a play review; Claude retains traversal/camera ownership.
 
