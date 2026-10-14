@@ -20,6 +20,7 @@ Leaf atlas T_FallLeaves (2x2 tiles, u right, v up):
 """
 import math
 import random
+import sys
 from pathlib import Path
 
 import bpy
@@ -356,6 +357,75 @@ def crown(b, centre, radius, rng, cards=70, squash=.7, card_size=(120, 170), sub
         b.card(p, normal, up, s, s, 3, leaf_colour(rng), cup=.15)
 
 
+def trunk_radius(base_radius, height, z):
+    """The trunk's radius at height z: tapering, flaring to 2.1x at the ground."""
+    t = max(z, 0.) / (height * .86)
+    return base_radius * (1 - .62 * t) * (1 + 1.1 * max(0., .12 - t) / .12)
+
+
+def buttress_extent(base_radius, height, reach, top, z):
+    """How far a buttress stands out from the trunk at height z (0 above its top).
+    Its outer edge leaves the bark tangentially at the top and swings out to
+    reach at the ground. Mirrored by ChultRoots::FinEdge."""
+    if z >= top: return 0.
+    t = 1 - (max(z, 0.) / top) ** (1 / 2.2)
+    return (reach - trunk_radius(base_radius, height, z)) * t ** 1.6
+
+
+def buttressed_trunk(b, pts, height, base_radius, buttresses, seed):
+    """The trunk and its buttresses as one surface (user 2026-10-13: no sharp
+    corners where the roots meet the trunk). Each buttress is a smooth lobe of
+    the trunk's own radius - broad and filleted where it joins, a thin rounded
+    plank further out, fading into the bark at its top - so there is no seam,
+    crease or spike where root meets trunk. Angles are sampled densely across
+    each lobe and sparsely elsewhere."""
+    angles = [k / 20 * 2 * math.pi for k in range(20)]
+    for a, reach, top, th in buttresses:
+        w = th * 1.25 / (trunk_radius(base_radius, height, 0) + .5 * buttress_extent(base_radius, height, reach, top, 0))
+        angles += [a + o * w for o in (-4, -2.6, -1.7, -1.1, -.65, -.3, 0, .3, .65, 1.1, 1.7, 2.6, 4)]
+    angles = sorted(x % (2 * math.pi) for x in angles)
+    keep = [angles[0]]
+    for x in angles[1:]:
+        if x - keep[-1] > .004: keep.append(x)
+    if keep[-1] - keep[0] > 2 * math.pi - .004: keep.pop()
+    angles = keep
+    top_z = max(t for _, _, t, _ in buttresses) + 40
+    zs = [-12 + (top_z + 12) * (i / 15) ** 1.5 for i in range(16)] + [top_z + (pts[-1].z - top_z) * i / 10 for i in range(1, 11)]
+    span = height * .86
+
+    def centre(z):
+        f = min(max(z, 0.) / span * 14, 14.)
+        i = min(int(f), 13)
+        c = pts[i].lerp(pts[i + 1], f - i)
+        return Vector((c.x, c.y, z))
+
+    rings = []
+    for z in zs:
+        c = centre(z); R = trunk_radius(base_radius, height, z)
+        ring = []
+        for th_ in angles:
+            r = R * (1 + .025 * math.sin(5 * th_ + z / 70 + seed) + .015 * math.sin(11 * th_ - z / 45))
+            moss = 0.
+            for k, (a, reach, top, th) in enumerate(buttresses):
+                B = buttress_extent(base_radius, height, reach, top, z)
+                if B <= 0: continue
+                w = th * 1.25 / (R + .5 * B)
+                d = (th_ - a + math.pi) % (2 * math.pi) - math.pi
+                lobe = B * math.exp(-(d / w) ** 2)
+                r += lobe; moss = max(moss, min(1., lobe / 40))
+            ring.append((b.add(c + Vector((math.cos(th_), math.sin(th_), 0)) * r), (z + .6 * (r - R)) / 260, moss))
+        rings.append(ring)
+    n = len(angles)
+    for i in range(len(rings) - 1):
+        for q in range(n):
+            q1 = (q + 1) % n
+            u0 = angles[q] / math.pi; u1 = (angles[q1] if q1 else 2 * math.pi) / math.pi
+            (a0, v00, m00), (b0, v01, m01) = rings[i][q], rings[i][q1]
+            (a1, v10, m10), (b1, v11, m11) = rings[i + 1][q], rings[i + 1][q1]
+            col = lambda m: (.8, .25 + .12 * m, 0, 0)
+            b.face([a0, b0, b1, a1], [(u0, v00), (u1, v01), (u1, v11), (u0, v10)], [col(m00), col(m01), col(m11), col(m10)], 0)
+
+
 def tree(name, seed, height, base_radius, lianas):
     rng = random.Random(seed)
     b = Builder()
@@ -368,33 +438,18 @@ def tree(name, seed, height, base_radius, lianas):
         wob = Vector((math.sin(t * 5 + seed) * 18, math.cos(t * 4 + seed) * 18, 0))
         pts.append(Vector((lean.x * z, lean.y * z, z)) + wob * t)
         radii.append(base_radius * (1 - .62 * t) * (1 + 1.1 * max(0, .12 - t) / .12))
-    b.tube(pts, radii, sides=14, vscale=260, colour=(.8, .25, 0, 0), rng=rng, rough=.05)
-    # Buttress roots: thin tall fins running out from the trunk to the ground.
+    # (The trunk used to be a rough tube: keep its random draws so every later
+    # draw - buttresses, branches, crowns, lianas - is unchanged.)
+    for _ in range(15 * 14): rng.uniform(-.05, .05)
+    # Buttress roots: thin tall fins running out from the trunk to the ground,
+    # built with the trunk as one surface (buttressed_trunk).
     fins = rng.randint(5, 6)
+    buttresses = []
     for k in range(fins):
         a = k / fins * 2 * math.pi + rng.uniform(-.25, .25)
-        out = Vector((math.cos(a), math.sin(a), 0))
         reach = base_radius * rng.uniform(3.2, 4.4); top = base_radius * rng.uniform(4, 6.5); th = rng.uniform(9, 14)
-        side = Vector((-out.y, out.x, 0))
-        # Profile: from high on the trunk curving down to the ground far out.
-        prof = []
-        for i in range(9):
-            t = i / 8
-            r = base_radius * .7 + (reach - base_radius * .7) * t
-            z = top * (1 - t) ** 2.2 - 6
-            prof.append((r, z))
-        rows = []
-        for r, z in prof:
-            c = out * r + Vector((0, 0, z))
-            rows.append((b.add(c - side * th), b.add(c + side * th)))
-        for i in range(len(rows) - 1):
-            a0, b0 = rows[i]; a1, b1 = rows[i + 1]
-            g0 = b.add(out * prof[i][0] + Vector((0, 0, -10))); g1 = b.add(out * prof[i + 1][0] + Vector((0, 0, -10)))
-            col = (.8, .5, 0, 0)
-            v0 = prof[i][1] / 260; v1 = prof[i + 1][1] / 260
-            b.face([g0, g1, a1, a0], [(0, -.05), (.4, -.05), (.4, v1), (0, v0)], [col] * 4, 0)
-            b.face([b0, b1, g1, g0], [(.6, v0), (1, v1), (1, -.05), (.6, -.05)], [col] * 4, 0)
-            b.face([a0, a1, b1, b0], [(0, v0), (0, v1), (.08, v1), (.08, v0)], [col] * 4, 0)
+        buttresses.append((a, reach, top, th))
+    buttressed_trunk(b, pts, height, base_radius, buttresses, seed)
     # Branches and crowns near the top.
     top = pts[-1]
     branch_ends = []
@@ -505,16 +560,26 @@ def leaf_card():
     b.write('SM_FallLeafCard')
 
 
-leaf_atlas()
-bark_texture()
-ground_texture()
-tree('SM_FallTree_A', 3, 3600, 78, lianas=4)
-tree('SM_FallTree_B', 8, 2900, 62, lianas=6)
-palm()
-fern()
-elephant_ear()
-shrub()
-log()
-far_crown()
-leaf_card()
+# blender --background --python Tools/build_fall_jungle.py -- --only SM_FallTree_A,SM_FallTree_B
+# writes just those meshes (their seeds and draws are independent of the rest).
+ONLY = set(sys.argv[sys.argv.index('--only') + 1].split(',')) if '--only' in sys.argv else None
+
+
+def want(name):
+    return ONLY is None or name in ONLY
+
+
+if ONLY is None:
+    leaf_atlas()
+    bark_texture()
+    ground_texture()
+if want('SM_FallTree_A'): tree('SM_FallTree_A', 3, 3600, 78, lianas=4)
+if want('SM_FallTree_B'): tree('SM_FallTree_B', 8, 2900, 62, lianas=6)
+if want('SM_FallPalm'): palm()
+if want('SM_FallFern'): fern()
+if want('SM_FallElephantEar'): elephant_ear()
+if want('SM_FallShrub'): shrub()
+if want('SM_FallLog'): log()
+if want('SM_FallCrown'): far_crown()
+if want('SM_FallLeafCard'): leaf_card()
 print('CHUCK_FALL_JUNGLE_READY')

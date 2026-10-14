@@ -1,6 +1,8 @@
 # Chult canopy grove — traversal and setting contract
 
-**Status (2026-10-13, Claude):** active brachiation. The user asked Claude to "make this work" on Codex's
+**Status (2026-10-13, Claude):** active brachiation. **Follow-up the same day (user):** branches in all
+directions, all brachiatable the same way, with natural variety; and no sharp angles where roots go up
+trunks, on every tree including the cutscene's. See *Spurs* and *Buttresses* below. The user asked Claude to "make this work" on Codex's
 brachiation grove and allowed the trees to be changed to look more natural. The paired climbing
 trunks and inactive paw proposals of Codex's two earlier passes are replaced by four single-trunk
 canopy giants with real, registered grips. `ChultCanopy.cpp` owns the trees, grips, lianas and the
@@ -22,28 +24,32 @@ Ways up:
 
 ## Trees
 
-| Tree | Trunk axis (local) | Crotch / limb top Z | Limbs toward |
-| --- | --- | --- | --- |
-| 0 | (5560,1230) | 650 | tree 1, tree 3, the ruin slab (top 645, under the stone) |
-| 1 | (7250,760) | 650 | tree 2, tree 0 |
-| 2 | (8350,1800) | 760 | tree 3, tree 1 |
-| 3 | (6750,2600) | 650 | tree 0, tree 2 |
+| Tree | Trunk axis (local) | Crotch / limb top Z | Girth | Limbs toward |
+| --- | --- | --- | --- | --- |
+| 0 | (5560,1230) | 650 | 1.00 | tree 1, tree 3, the ruin slab (top 645, under the stone), 2 spurs |
+| 1 | (7250,760) | 650 | 1.08 | tree 2, tree 0, 3 spurs |
+| 2 | (8350,1800) | 760 | 0.93 | tree 3, tree 1, 2 spurs |
+| 3 | (6750,2600) | 650 | 1.04 | tree 0, tree 2, 2 spurs |
 
 Each tree (`ChultCanopyTrees()`):
 
-- **Trunk:** one fluted, flared, slightly leaning trunk, about 3.5 m wide at the ground and 1.7 m
-  at the crotch, with plank buttresses (concave-topped fins running out 2.7–3.9 m and sinking into
-  the ground) and low snaking surface roots. No buttress or root crosses a ground lane or the
-  liana's foot.
+- **Trunk and buttresses:** one fluted, flared, slightly leaning trunk, about 3.5 m wide at the
+  ground and 1.7 m at the crotch (girth varies per tree). **Buttresses are lobes of the trunk's own
+  surface** (`ButtressedTrunk`): broad and filleted where they join it, a thin rounded plank further
+  out, fading tangentially into the bark at their top (1.7–3.2 m up), reaching 2.5–4.2 m out; 5–8
+  per tree. There is no separate piece, so no seam, crease or spike where root meets trunk. Low
+  snaking surface roots run between them. No buttress or root crosses a ground lane or a liana's foot
+  (checked along their real curves).
 - **Crotch:** the trunk's top is a shallow standing bowl with a low saddle toward the front;
   `ChultCanopyFork<I>` (tag `ChultCanopyStanding`) marks a standing point in it.
-- **Walking limbs:** one straight at each neighbour, 62 cm radius at the trunk, 34 cm at the first
-  grip (300 cm out), level to there, then a slight droop. Past 430 cm each bends away from under the
+- **Walking limbs:** one straight at each neighbour (each 4.05–4.6 m long), 62 cm radius at the trunk,
+  34 cm at the first grip (300 cm out), level to there, then a slight droop. Past 430 cm each bends away from under the
   grips and tapers up into a leafy end. Their tops are walkable bark (checked every 30 cm).
-- **Leaders and crown:** two leaders rise from the back of the crotch (the widest gap between
-  limbs) to about 9 m above it, with five spreading boughs each and leaf clusters (the existing
-  `SM_FallLeafCard`, about 7,100 instances in four `ChultCanopyCrown<I>` components, tag
-  `ChultCanopyFoliage`, no collision). Leaves are kept out of the swing lanes, off the walking limbs
+- **Leaders and crown:** a main leader rises from the back of the crotch (the widest gap between the
+  fixed limbs) to 8.4–10 m above it; a second branches off it above head height toward its own side.
+  Boughs spread off both all round (golden-angle turns, each its own reach and rise; 44 in all), with
+  leaf clusters (the existing `SM_FallLeafCard`, about 8,100 instances in four `ChultCanopyCrown<I>`
+  components, tag `ChultCanopyFoliage`, no collision). Leaves are kept out of the swing lanes, off the walking limbs
   and clear of the crotches.
 - **Hand boughs:** from the nearer leader, each arcs over its walking limb well above head height
   and runs out along the chain, thinning from 12 to 6 cm radius toward the gap, with small twigs and
@@ -52,6 +58,20 @@ Each tree (`ChultCanopyTrees()`):
 Collision: trunk, saddle, walking limbs, leaders, buttresses and roots are one visible
 procedural mesh (`ChultCanopySolidBark`, BlockAll, complex as simple). Hand boughs, crown boughs,
 twigs (`ChultCanopyHandBranches`) and lianas (`ChultCanopyVines`) have none.
+
+## Spurs (side branches, all brachiatable)
+
+`ChultCanopySpurs()`: nine side limbs out of the crotches, in every direction left free, each its
+own length (3.3–4.2 m), girth (0.78–0.95), pitch (−5 to +8 %), sideways bend and droop. Each has its
+own hand bough with 3–5 grips (33 in all), the first 98 cm over the limb 2.7–3.1 m out, then
+1.18–1.38 m apart. A spur is a dead end, used the same way as a chain: walk out, jump to the first
+grip, swing out to the tip; at the tip a jump with the stick released comes back (nothing below to
+step down to, which the static check asserts); at the first grip it steps down onto the limb.
+
+Placement rules: at least 52 degrees from every other limb (first grips more than 2.4 m apart, so
+no line steals another's grips), 54 from the main leader (walking room in the crotch), all grips
+inside the reserve, more than 2.5 m from any chain or other spur grip, 3.3 m from other trunks and
+clear of the ruin slab. Names: `ChultCanopySpur<Tree>_<Limb>`.
 
 ## Chains and grips
 
@@ -79,16 +99,17 @@ registered with `AddChuckSwingGrip` (its `Along` is the chain's tangent) and mar
   170 cm (the lamp alleys), the old behaviour stands: back along the chain.
 - **Let go:** C, anywhere; over open ground it is a long fall with the landing roll, no death.
 
-## Verification
+## Verification (counts as of the spur follow-up)
 
 - Every Chult run (`-ChuckChultTest`) logs `CHUCK_CHULT_CANOPY`, `CHUCK_CHULT_CANOPY_LAYOUT` and the
-  static `CHUCK_CHULT_CANOPY_CHECK`: every grip registered and clear to hang from; every one of the
-  34 leaps clear by the same line trace and capsule sweep `FindSwingTarget` uses; bark 98 cm under
+  static `CHUCK_CHULT_CANOPY_CHECK`: all 71 grips (38 chain, 33 spur) registered and clear to hang
+  from; every one of the 58 leaps clear by the same line trace and capsule sweep `FindSwingTarget` uses; bark 98 cm under
   every end grip; walkable, unobstructed limb tops; standable forks; open liana feet, climb paths
   and lips.
-- `-ChuckCanopyTest` (also run by `Verify-Package`) drives the real character through 18 trials:
+- `-ChuckCanopyTest` (also run by `Verify-Package`) drives the real character through 27 trials:
   liana up; catch; all four chains in a loop with step-down dismounts and crotch crossings; out and
-  back with the stick held back; let go over open ground; liana down; ruin slab to the first catch.
+  back with the stick held back; let go over open ground; liana down; ruin slab to the first catch;
+  and each of the nine spurs from its crotch out to the tip, back and down onto its limb.
   `-ChuckCanopyCapture` adds review stills and side views in `Saved/Screenshots/.../Canopy/`.
 
 ## Not done

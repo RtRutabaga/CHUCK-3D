@@ -14,9 +14,9 @@ $chultLog=Join-Path $evidence ('verify-chult-'+(Get-Date -Format 'yyyyMMdd-HHmms
 $chultProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$chultLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_LANDING .* missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GROVE_GROUND failures=0 capsule_segments=11' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY trees=4 chains=4 grips=38 registered_grips=38 lianas=4' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY trees=4 chains=4 grips=38 spurs=9 spur_grips=33 registered_grips=71 lianas=4' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY_LAYOUT failures=0 branch_jumps=4 hand_gap=180 grip_over=98 .* missing_assets=0' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY_CHECK failures=0 grips=38 leaps=34 limb_samples=72 forks=4 lianas=4' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY_CHECK failures=0 grips=71 leaps=58 limb_samples=142 forks=4 lianas=4 spurs=9' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
@@ -95,10 +95,11 @@ if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern '
 }
 # Chult canopy (Claude, 2026-10-13): the real character climbs a liana, catches
 # and brachiates all four chains tree to tree (branch-gap leaps, step-down
-# dismounts, crotch crossings), reverses, lets go to the ground and climbs down.
+# dismounts, crotch crossings), reverses, lets go to the ground, climbs down,
+# and swings out to the tip of every side branch (spur) and back.
 $canopyLog=Join-Path $evidence ('verify-canopy-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $canopyProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$canopyLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=18 static_failures=0' -Quiet)) {
+if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=27 static_failures=0' -Quiet)) {
     throw "Chult canopy brachiation verification failed. Inspect $canopyLog"
 }
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru

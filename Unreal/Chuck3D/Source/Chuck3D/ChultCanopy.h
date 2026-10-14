@@ -22,11 +22,24 @@ struct FChultCanopyTree
 {
     FVector Trunk;              // trunk axis at the ground
     float Top = 0;              // crotch and walking-limb top height
+    float TrunkScale = 1;       // girth (natural variety between the trees)
     FVector Fork;               // a standing point in the crotch (z: the bark top)
-    TArray<FVector> Limbs;      // horizontal walking-limb directions (next tree, previous tree, extras)
+    // Walking limbs: next tree, previous tree, (tree 0) the ruin slab, then spurs.
+    TArray<FVector> Limbs;      // horizontal directions
+    TArray<float> LimbLength, LimbRise, LimbScale, LimbAway;   // walking length, top rise per cm, girth, side its tip bends to
     FVector LianaFoot, LianaOut, LianaLip;
 };
+// A side branch (2026-10-13 user follow-up: branches in all directions, all
+// brachiatable): a walking limb out of the crotch with its own hand bough and
+// grips, a dead end - out along it and back, stepping down onto the limb.
+struct FChultCanopySpur
+{
+    FName Name;
+    int32 Tree = 0, Limb = 0;
+    TArray<FVector> Paws;       // from over the limb outward
+};
 const TArray<FChultCanopyChain>& ChultCanopyChains();
+const TArray<FChultCanopySpur>& ChultCanopySpurs();
 const TArray<FChultCanopyTree>& ChultCanopyTrees();
 // Top of walking limb Limb of tree Tree, S cm out from the trunk axis (local).
 FVector ChultCanopyLimbTop(int32 Tree, int32 Limb, float S);

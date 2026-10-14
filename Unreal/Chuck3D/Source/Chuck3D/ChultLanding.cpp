@@ -175,7 +175,7 @@ void AChultLanding::BuildSet()
     {
         const auto* Profiles=TypeA?ChultRoots::A:ChultRoots::B;
         const int32 Count=TypeA?UE_ARRAY_COUNT(ChultRoots::A):UE_ARRAY_COUNT(ChultRoots::B);
-        const float BaseRadius=TypeA?78.f:62.f;
+        const float BaseRadius=TypeA?78.f:62.f,Height=TypeA?ChultRoots::HeightA:ChultRoots::HeightB;
         const FTransform Transform(FRotator(0,Yaw,0),At,FVector(Scale));
         for(int32 K=0;K<Count;++K) for(int32 J=0;J<8;++J)
         {
@@ -184,10 +184,10 @@ void AChultLanding::BuildSet()
             TArray<FVector> V;
             for(int32 End=0;End<2;++End)
             {
-                const float T=(J+End)/8.f, Radius=FMath::Lerp(BaseRadius*.7f,R.Reach,T);
-                const float Z=R.Top*FMath::Pow(1.f-T,2.2f)-6;
-                for(const FVector Local : {Out*Radius-Side*R.Width+FVector(0,0,-10),Out*Radius+Side*R.Width+FVector(0,0,-10),
-                    Out*Radius+Side*R.Width+FVector(0,0,Z),Out*Radius-Side*R.Width+FVector(0,0,Z)})
+                // The art's fin (ChultRoots::FinEdge): it leaves the trunk tangentially and thins there.
+                float Radius,Z,Width;ChultRoots::FinEdge(R,BaseRadius,Height,(J+End)/8.f,Radius,Z,Width);
+                for(const FVector Local : {Out*Radius-Side*Width+FVector(0,0,-10),Out*Radius+Side*Width+FVector(0,0,-10),
+                    Out*Radius+Side*Width+FVector(0,0,Z),Out*Radius-Side*Width+FVector(0,0,Z)})
                     V.Add(Transform.TransformPosition(Local));
             }
             Solid(V);
@@ -335,7 +335,8 @@ void AChultLanding::VerifyAndCapture()
     for(const auto& Root : ChultRoots::A)
     {
         const FVector Out=FRotator(0,Root.Angle,0).Vector(),Side(-Out.Y,Out.X,0);
-        const FVector At=Out*FMath::Lerp(78.f*.7f,Root.Reach,.6f)+FVector(0,0,(Root.Top*FMath::Pow(.4f,2.2f)-6)*.5f);
+        float FinR,FinZ,FinW;ChultRoots::FinEdge(Root,78.f,ChultRoots::HeightA,.6f,FinR,FinZ,FinW);
+        const FVector At=Out*FinR+FVector(0,0,FinZ*.5f);
         FHitResult Hit;
         const bool RayBlocked=GetWorld()->LineTraceSingleByChannel(Hit,Tree.TransformPosition(At+Side*60),Tree.TransformPosition(At-Side*60),ECC_Pawn,Q)
             && Hit.GetComponent() && Hit.GetComponent()->GetFName()==TEXT("ChultRootCollision");

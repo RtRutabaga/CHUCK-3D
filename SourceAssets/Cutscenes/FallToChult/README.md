@@ -14,6 +14,13 @@ Everything here is procedural and seeded; no downloads or third-party art.
   - `M_FallCloudPuff`: mist puffs in the cloud deck.
   - `MI_FallClouds`: a project instance of the engine's `m_SimpleVolumetricCloud_Inst`, so the cooker takes it. The base material's textures are black placeholders, so it must parent the `_Inst`.
 
+**Trees only (2026-10-13):** the trees' buttresses are now lobes of the trunk surface itself (`buttressed_trunk`): broad where they join the trunk, a thin rounded plank further out, fading into the bark at the top, with no seam or spike. The random draws are unchanged, so branches, crowns, lianas and `ChultRootProfiles.h` (the landing's root collision, `Tools/export_chult_root_profiles.py`, whose `FinEdge` mirrors the outer edge) still match. To rebuild just the trees without touching the textures, the other meshes or the materials (Codex's wet-forest finish lives in them):
+
+```
+blender --background --python Tools/build_fall_jungle.py -- --only SM_FallTree_A,SM_FallTree_B
+UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_fall_trees.py -unattended -nosplash -NoLiveCoding
+```
+
 Material slots come from the Blender material names (`M_FallBark`, `M_FallLeaves`, `M_FallCanopy`). Vertex colour r is brightness, g is the deep/yellow-green blend and a is the wind weight. The generator still writes a dryness value in b, but it arrived non-zero on some leaves after FBX import (flat cream leaves), so the leaf material ignores it.
 
 Size: about 5 MB of FBX/PNG here, plus the imported assets; covered by the LFS rules for `.fbx`, `.png` and `.uasset`.

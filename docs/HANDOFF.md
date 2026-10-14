@@ -7,7 +7,22 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove and adjacent parkour ruins; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Impassable boundary cliffs are explicitly deferred.
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
-- **Next work:** the Chult canopy brachiation works on four redesigned trees ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 38 grips, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+- **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 71 grips on chains and spurs, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 13 — canopy branches in all directions; smooth buttresses on all trees (Claude)
+
+- **Changed:**
+  - The four canopy trees now branch all round. Nine side limbs (spurs) in every free direction, each a different length, thickness, pitch and bend, carry their own hand boughs with 33 more catchable grips (71 in all). They are used like the chains: out to the tip, back, and down onto the limb.
+  - Girth and crown height vary by tree; boughs spread all round.
+  - Buttress roots on every tree are now part of the trunk surface: smooth filleted flanges instead of separate planks with a hard join and a spike up the trunk. This covers the canopy trees and `SM_FallTree_A/B`, which fill the landing forest and the cutscene clearing. The trees were regenerated and reimported alone with `Tools/import_fall_trees.py`, and the landing's root collision follows the same edge.
+  - Contract: [CHULT-CANOPY.md](CHULT-CANOPY.md).
+- **Tested:**
+  - Uncooked: canopy 27/27 real-character trials (including all nine spurs), static check 0 failures; Chult and ruin checks pass; the fall cutscene passes.
+  - Cooked: full suite **182/182** on the first run (`Local/verify-package-20261013-221047.log`); canopy 27/27 with 0 static failures (`verify-canopy-20261013-221522.log`); Chult grove ground 11/11, root check 5/5 and ruins 5/5 (`verify-chult-20261013-221047.log`); fall cutscene and lamp swing 8/8 pass.
+- **Not tested:** a person playing it, Xbox, frame rate with the denser trunks.
+- **Launcher:** promoted as `CanopySpurs` (see the commit after the source commit); previous build kept as `Windows-Previous-20261013-CanopySpurs`, older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review by the user would help most); Codex can continue Chult setting art.
 
 ## October 13 — Chult canopy brachiation works; natural trees (Claude)
 

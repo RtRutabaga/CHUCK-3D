@@ -2,6 +2,29 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 13 — canopy spurs in all directions; smooth buttresses on every tree (Claude)
+
+- **Request:** branches out in all directions like real trees, all brachiatable the same way, with natural variety in size and position; and fix the sharp angles where root structures go up trunks, on these trees, all trees and in the cutscene. Base `5d2b753`.
+- **Canopy (`ChultCanopy.cpp/.h`):**
+  - Nine **spurs**: side walking limbs in every free direction, each with its own length, girth, pitch, bend and droop. Each carries a hand bough with 3–5 registered grips (33 new; 71 in all). They are used like a chain: walk out, jump, swing to the tip, come back, step down.
+  - Placement rules keep lines from stealing each other's grips (at least 52° between limbs, first grips more than 2.4 m apart) and keep walking room in the crotch.
+  - Per-tree girth and leader height; a main leader plus a second branching above head height; crown boughs spread all round (golden angle); per-limb lengths.
+  - `FChultCanopyTree` gains `TrunkScale` and per-limb `LimbLength/LimbRise/LimbScale/LimbAway`; new `FChultCanopySpur`/`ChultCanopySpurs()`.
+  - Lianas moved 30 cm further out (s=240) to clear the thicker trunks.
+- **Buttresses, everywhere:**
+  - The old fins were separate planks with a hard 90° join and a spike up the trunk. They are now lobes of the trunk's own surface: Gaussian bumps in its radius, broad and filleted at the join, a thin rounded plank further out, fading tangentially into the bark at their top. The C++ is `ButtressedTrunk`; the Blender equivalent is `buttressed_trunk` in `Tools/build_fall_jungle.py`.
+  - `SM_FallTree_A/B` were regenerated with `-- --only` (new), keeping their random draws, so branches, crowns, lianas and collision profiles are unchanged. They were reimported with the new narrow `Tools/import_fall_trees.py`; no material, texture or other mesh changed, so Codex's wet finish is intact.
+  - Triangle count is 9,976 for A (was 7,608) and 12,134 for B (was 9,716).
+  - The landing's hidden root collision (Codex's `ChultLanding.cpp`) and its root check now follow `ChultRoots::FinEdge`, which `export_chult_root_profiles.py` writes into `ChultRootProfiles.h`; the profile values are unchanged.
+  - These trees fill the landing forest and the cutscene's clearing.
+- **Bug found on the way:** `sin(π)` is a hair below zero, so a crest vertex became NaN. The poisoned collision made phantom ground-lane blocks 7 m from any trunk. Clamped, and the canopy check now logs the hit component and point.
+- **Tests:** uncooked `-ChuckCanopyTest` 27/27 (`Local/canopy-lobes-2.log`), static check 0 failures (71 grips, 58 leaps, 142 limb samples). `-ChuckChultTest` passes: grove ground 11/11, root check 5/5, ruins 12 tops and 5/5 trials. `-ChuckFallCutsceneTest` passes (`Local/fall-cutscene-roots.log`), and its pull-back shot shows the smooth buttresses. Cooked results: full suite **182/182** on the first run (`Local/verify-package-20261013-221047.log`); canopy 27/27 with 0 static failures (`verify-canopy-20261013-221522.log`); Chult grove ground 11/11, root check 5/5 and ruins 5/5 (`verify-chult-20261013-221047.log`); fall cutscene and lamp swing 8/8 pass.
+- **Reviewed:** overview, tree profile, landing tree base and canopy tree base, player view, cutscene pull-back. Four stills replaced or added in `SourceAssets/Setting/Review/` (`Canopy_Overview`, `Canopy_RootsLanding`, `Canopy_RootsCanopy`, `Canopy_SpurWalk`).
+- **Known flaws:** procedural trees below the art target; limbs seen side-on can read as a "T"; lobe UVs stretch a little on the flattest ground runs; no crown fading; a person has not played it. No Xbox test. The extra trunk triangles (about 30% per landing tree) were not profiled for frame rate.
+- **Launcher:** promoted as `CanopySpurs` (see the commit after the source commit); previous build kept as `Windows-Previous-20261013-CanopySpurs`, older backups pruned to two, no candidate left.
+
+Next part of the work can be done here (a play review by the user would help most); Codex can continue Chult setting art.
+
 ## October 13 — Chult canopy brachiation made to work; natural trees (Claude)
 
 - **Owner, task, branch:** Claude, the user's "make Codex's brachiation tree section work; change the trees as needed, more natural if possible", on `main` in `C:\GameDev\CHUCK-3D`. Base `5ab3919`.
