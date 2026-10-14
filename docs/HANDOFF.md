@@ -17,7 +17,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - The loop is unchanged. Contract: [CHULT-CANOPY.md](CHULT-CANOPY.md).
 - **Tested:** uncooked, all 45 canopy trials pass, including the whole line and the end tree's liana; Codex's Chult and ruin checks pass. Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-075851.log`); canopy 45/45 with 0 static failures (`verify-canopy-20261014-080440.log`); Chult grove ground 11/11 and ruins 5/5; fall cutscene and lamp swing 8/8 pass.
 - **Not tested / missing:** bare ground under the line; frame rate; a person playing it; Xbox.
-- **Launcher:** promoted as `CanopyLine` (`Local/line-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **6bfa5a6** as `CanopyLine` (`Local/line-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review would help most); Codex could dress the open ground along the line.
 

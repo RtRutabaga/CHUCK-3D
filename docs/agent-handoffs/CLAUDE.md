@@ -20,7 +20,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - The ground under the line is bare: no understory, roots or forest beyond the trees themselves.
   - The canopy now has about 232k procedural triangles and 15.9k leaves; frame rate not measured.
   - No crown fading, no hands-on play, no Xbox test.
-- **Launcher:** promoted as `CanopyLine` (`Local/line-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **6bfa5a6** as `CanopyLine` (`Local/line-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review would help most); Codex could dress the open ground along the line (understory, relief) as setting work.
 
