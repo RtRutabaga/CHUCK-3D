@@ -9,6 +9,28 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** Claude integrates/tests cat-to-cat climbing and brachiation on the authored Chult grove under [CHULT-CANOPY.md](CHULT-CANOPY.md), including crown visibility/fading if needed. Raptors and the buff-only teaching tree remain deferred. The grove forms are now refined; primary forest tree/crown forms and ground relief still need refinement. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 13 — fall sounds recorded, Chult score, ground thud (Claude)
+
+- **Built:**
+  - **Fall sounds:** the user downloaded five CC0 BigSoundBank recordings (Joseph Sardin). They are kept unmodified in `SourceAssets/Audio/SFX/BigSoundBank/` with hashes in `manifest.json`. `Tools/make_fall_sounds.py` cuts four sounds from them:
+    - `SFX_FallRush_00`: a seamless rush loop, which replaces the generated wind.
+    - `SFX_FallFlap_00`: a loop for his jacket.
+    - `SFX_FallWhistle_00`: a whistle loop.
+    - `SFX_FallThud_00`: a body fall slowed and low-passed into a soft-earth thud, under a dirt impact.
+
+    In the cutscene the air loops follow his speed and closeness (loudest in the sound-only pre-roll) and stop at the canopy. The thud lands with the impact, with a lighter copy on the bounce.
+  - **Chult score:** the user's `chult.wav` is copied unmodified to `SourceAssets/Audio/Chult.wav` and imported as `SW_Chult` (looping). `DockGameMode` gives Chult its own music region: in Chult, after the fall or from the checkpoint, the Waterdeep scores fade out and Chult's fades in at 45%.
+  - **Import:** the narrow `Tools/import_fall_chult_audio.py` imports only these sounds (no meshes or materials).
+- **Tests adjusted:**
+  - The NPC ducking check now expects 4 score tracks (it asserted 3, the only regression found).
+  - The sewer score's loop check skips when the run has already left the sewer, the same guard the night score uses. The first candidate run failed on exactly that (`verify-package-20261013-180621.log`, 181/182).
+  - `Verify-Package` additionally requires `flap=1 whistle=1 thud=1` and `CHUCK_CHULT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1`.
+- **Tested:** `Builds/FallSoundCandidate` passed **182** (`Local/verify-package-20261013-181829.log`), including the duck check with `tracks=4` and three clean sewer checks. The fall test ran end to end into playable Chult with `MUSIC_REGION chult=1`, and the packaged Chult test confirmed the Chult loop.
+- **Mix:** measured, not listened to. The scores are about −24 dB RMS, and the pre-roll rush is −18.6 dB, falling to about −30 under music. Not heard on speakers; Xbox and other resolutions not tested.
+- **Launcher:** LAUNCHER_STATUS
+
+Next part of the work can be done here (or by Codex for Chult setting work).
+
 ## October 13 — gray mossy rounded ruin walls (Codex)
 
 - **Built:** user-approved Rock Wall 08, Mossy Stone Wall and Rabdentse Ruins Wall CC0 scans: nine verified 2K maps and two dedicated `/Game/Art/ChultRuins` materials. Cooler gray stone, dark eroded detail and heavier irregular moss replace the tan finish. All **544** masonry/backing pieces now have curved edge bands and varied rounded corners; flat standing/climbing centres and nominal routes remain. Visible masonry supplies collision, with no shader displacement or hidden box substitute. Final masonry **174,080 triangles / 109,888 vertices**. Shared stone/jungle/character materials, canopy proposals and controls stay intact; cliffs remain deferred. Contract and region approval recorded before implementation; provenance/reproduction in `SourceAssets/Setting/ChultRuins/README.md`.

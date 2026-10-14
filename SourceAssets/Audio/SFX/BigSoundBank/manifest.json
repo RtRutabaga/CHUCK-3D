@@ -1,0 +1,53 @@
+{
+  "license": "CC0 1.0 (public domain), as stated on each sound page; author Joseph Sardin; downloaded by the user 2026-10-13 and copied byte-for-byte (except the decoded WAV)",
+  "files": [
+    {
+      "file": "BSB_0595_Wind.wav",
+      "original": "WINDDsgn_Wind (ID 0595)_BigSoundBank.com.wav",
+      "title": "Wind",
+      "page": "https://bigsoundbank.com/wind-s0595.html",
+      "bytes": 8586182,
+      "sha256": "38452331ec079f5cc67e98d154642deeab13629ebf0e0ffd971bd4fdc25a2f71"
+    },
+    {
+      "file": "BSB_1633_FlagInTheWind2.flac",
+      "original": "CLOTHFlp_Flag in the wind 2 (ID 1633)_BigSoundBank.com.flac",
+      "title": "Flag in the Wind #2",
+      "page": "https://bigsoundbank.com/flag-in-the-wind-2-s1633.html",
+      "bytes": 6746792,
+      "sha256": "ec7b286541b1e2f07d025b25174686515daa52edec7fe5d504f44a3b416e0866"
+    },
+    {
+      "file": "BSB_1633_FlagInTheWind2_decoded.wav",
+      "original": "(decoded from BSB_1633_FlagInTheWind2.flac by ffmpeg n7.1-184-gdc07f98934: -c:a pcm_s16le, no gain)",
+      "title": "Flag in the Wind #2",
+      "page": "https://bigsoundbank.com/flag-in-the-wind-2-s1633.html",
+      "bytes": 6086748,
+      "sha256": "fcd309058db0dfda1161fb7e53d25948217f7473fa8a611c96ac36012b449bb7"
+    },
+    {
+      "file": "BSB_0155_WhistlingOfTheWind2.wav",
+      "original": "WINDInt_Whistling of the wind 2 (ID 0155)_BigSoundBank.com.wav",
+      "title": "Whistling of the Wind #2",
+      "page": "https://bigsoundbank.com/whistling-of-the-wind-2-s0155.html",
+      "bytes": 3814574,
+      "sha256": "1de928c282f3c306b93b167c184ab7d2df32ebf88aae3387c60bb2d9c6e3f0f8"
+    },
+    {
+      "file": "BSB_2456_BodyFall5.wav",
+      "original": "FGHTBf_Body fall 5 (ID 2456)_BigSoundBank.com.wav",
+      "title": "Body fall #5",
+      "page": "https://bigsoundbank.com/body-fall-5-s2456.html",
+      "bytes": 297938,
+      "sha256": "e5935eea0693dcc41bf749fd0f51d3049e9e1e37e9f10d4de65b85baea20172b"
+    },
+    {
+      "file": "BSB_1837_JumpingOnDirtRoad1.wav",
+      "original": "FEETHmn_Jumping on dirt road 1 (ID 1837)_BigSoundBank.com.wav",
+      "title": "Jumping on dirt road #1",
+      "page": "https://bigsoundbank.com/jumping-on-dirt-road-1-s1837.html",
+      "bytes": 166508,
+      "sha256": "3dabe48cab1b7b63f66ecf9f61859c4abba41a9fcab8c4fb7ff8dcf6230db0bf"
+    }
+  ]
+}

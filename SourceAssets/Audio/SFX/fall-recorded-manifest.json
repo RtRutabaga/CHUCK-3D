@@ -1,0 +1,37 @@
+{
+  "provenance": "Loops and layers cut by Tools/make_fall_sounds.py from CC0 BigSoundBank recordings (Joseph Sardin); originals in BigSoundBank/",
+  "sounds": [
+    {
+      "name": "SFX_FallRush_00",
+      "file": "SFX_FallRush_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "c84cc9f46a83409393f686b8e4275df3d41aae72f4b2429be8dc45eb248e2084",
+      "note": "BSB #0595 Wind, 10-40 s loop"
+    },
+    {
+      "name": "SFX_FallFlap_00",
+      "file": "SFX_FallFlap_00.wav",
+      "duration": 42.0,
+      "rate": 48000,
+      "sha256": "4228d3c329c33d052c989d515c301f0b3e0444ab2cceeef868267a8b77e7331e",
+      "note": "BSB #1633 Flag in the Wind #2, 3-45 s loop"
+    },
+    {
+      "name": "SFX_FallWhistle_00",
+      "file": "SFX_FallWhistle_00.wav",
+      "duration": 36.0,
+      "rate": 44100,
+      "sha256": "af56883b81eaf1b083358333bda841957f53933f32f49ca7a4bab290c31320c1",
+      "note": "BSB #0155 Whistling of the Wind #2, 2-38 s loop"
+    },
+    {
+      "name": "SFX_FallThud_00",
+      "file": "SFX_FallThud_00.wav",
+      "duration": 1.83,
+      "rate": 48000,
+      "sha256": "5841684119ec378d294add8c00643490ed5860f837d5bce48683708dec1e18a9",
+      "note": "BSB #2456 Body fall #5 (x1.5 slower, 900 Hz low-pass) + 0.45 x BSB #1837 Jumping on dirt road #1, aligned on their hits"
+    }
+  ]
+}

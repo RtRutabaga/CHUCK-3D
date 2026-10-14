@@ -75,13 +75,23 @@ AFallCutscene* AFallCutscene::Start(AChuckCharacter* Chuck)
     {
         Scene->Music = UGameplayStatics::CreateSound2D(World, Song, .6f, 1.f, 0.f, nullptr, false, false);
     }
-    if (auto* Air = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_FallWind_00.SFX_FallWind_00")))
-        Scene->Wind = UGameplayStatics::CreateSound2D(World, Air, 0.f, 1.f, 0.f, nullptr, false, false);
+    // The air (CC0 BigSoundBank recordings, Tools/make_fall_sounds.py): the rush,
+    // his jacket flapping, a whistle; the generated wind only if they're missing.
+    auto Loop = [World](const TCHAR* Name) -> UAudioComponent*
+    {
+        auto* Wave = LoadObject<USoundWave>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name));
+        return Wave ? UGameplayStatics::CreateSound2D(World, Wave, 0.f, 1.f, 0.f, nullptr, false, false) : nullptr;
+    };
+    Scene->Wind = Loop(TEXT("SFX_FallRush_00"));
+    if (!Scene->Wind) Scene->Wind = Loop(TEXT("SFX_FallWind_00"));
+    Scene->Flap = Loop(TEXT("SFX_FallFlap_00"));
+    Scene->Whistle = Loop(TEXT("SFX_FallWhistle_00"));
+    Scene->ThudSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_FallThud_00.SFX_FallThud_00"));
     for (int32 I = 0; I < 3; ++I)
         if (auto* Leafy = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/SFX_LeafCrash_%02d.SFX_LeafCrash_%02d"), I, I)))
             Scene->LeafCrashes.Add(Leafy);
     Scene->LandSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_Land_02.SFX_Land_02"));
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_START at=%s music=%d wind=%d crashes=%d"), *Scene->PantryStart.ToString(), Scene->Music != nullptr, Scene->Wind != nullptr, Scene->LeafCrashes.Num());
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_START at=%s music=%d wind=%d crashes=%d flap=%d whistle=%d thud=%d"), *Scene->PantryStart.ToString(), Scene->Music != nullptr, Scene->Wind != nullptr, Scene->LeafCrashes.Num(), Scene->Flap != nullptr, Scene->Whistle != nullptr, Scene->ThudSound != nullptr);
     return Scene;
 }
 
@@ -96,6 +106,7 @@ void AFallCutscene::Skip()
     if (Music) Music->FadeOut(.5f, 0.f);
     if (Wind) Wind->FadeOut(.3f, 0.f);
     if (Flap) Flap->FadeOut(.3f, 0.f);
+    if (Whistle) Whistle->FadeOut(.3f, 0.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_SKIP at=%.2f"), Clock);
 }
 
@@ -573,7 +584,10 @@ void AFallCutscene::UpdateLight()
         // The rush of air rises with his speed, under the score.
         const float Rush = Clock < Reveal ? .95f : Clock < CloseUp ? .25f : Clock < Down ? .4f : Clock < Below ? .7f : Clock < Canopy ? .9f : FMath::Lerp(.35f, .8f, Span(Clock, Canopy, Crash));
         Wind->SetVolumeMultiplier(FMath::FInterpTo(Wind->VolumeMultiplier, Rush, GetWorld()->GetDeltaSeconds(), 2.f));
-        if (Flap) Flap->SetVolumeMultiplier(FMath::FInterpTo(Flap->VolumeMultiplier, Clock < Reveal ? .8f : Clock < CloseUp ? .2f : Clock < Down ? .35f : .55f, GetWorld()->GetDeltaSeconds(), 2.f));
+        // Jacket loudest close to him (the tumble, his face); whistle with the speed.
+        const float Dt = GetWorld()->GetDeltaSeconds();
+        if (Flap) Flap->SetVolumeMultiplier(FMath::FInterpTo(Flap->VolumeMultiplier, Clock < Reveal ? 1.f : Clock < CloseUp ? .2f : Clock < Down ? .6f : Clock < Below ? .55f : Clock < Canopy ? .65f : FMath::Lerp(.4f, .8f, Span(Clock, Canopy, Crash)), Dt, 2.f));
+        if (Whistle) Whistle->SetVolumeMultiplier(FMath::FInterpTo(Whistle->VolumeMultiplier, Clock < Reveal ? .4f : Clock < CloseUp ? .08f : Clock < Down ? .15f : Clock < Below ? .35f : Clock < Canopy ? .5f : FMath::Lerp(.2f, .6f, Span(Clock, Canopy, Crash)), Dt, 2.f));
     }
 }
 
@@ -593,7 +607,8 @@ void AFallCutscene::Events(float From, float To)
         BuildStage();
         bStage = true;
         if (Wind) Wind->FadeIn(.6f, .95f);
-        if (Flap) Flap->FadeIn(.6f, .8f);
+        if (Flap) Flap->FadeIn(.6f, 1.f);
+        if (Whistle) Whistle->FadeIn(.6f, .4f);
         Cut();
     }
     if (Crossed(Switch + .15f) && Lens) Lens->StartCameraFade(1.f, 0.f, 1.1f, SkyWhite, false, false);
@@ -610,6 +625,7 @@ void AFallCutscene::Events(float From, float To)
         {
             if (Wind) Wind->FadeOut(.4f, 0.f);
             if (Flap) Flap->FadeOut(.3f, 0.f);
+            if (Whistle) Whistle->FadeOut(.3f, 0.f);
             // Into the canopy and under Chult's own light, fog and exposure.
             for (USceneComponent* Part : SkyParts) if (Part) Part->SetVisibility(false);
             if (Landing) Landing->BuildEnvironment();
@@ -620,14 +636,16 @@ void AFallCutscene::Events(float From, float To)
         // A body hitting the ground from the sky: litter thrown up, a heavy
         // thud, the camera jarred.
         Burst(G + FVector(0, 0, 20), 70, 380.f);
-        if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, 1.f, .62f);
+        if (ThudSound) UGameplayStatics::PlaySound2D(this, ThudSound, 1.f);
+        if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, ThudSound ? .5f : 1.f, .62f);
         if (LeafCrashes.Num()) UGameplayStatics::PlaySound2D(this, LeafCrashes[0], .5f, .7f);
         ShakeUntil = Impact + ShakeTime;
         bLanded = true;
         UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_IMPACT at=%.2f"), To);
     }
     AChuckCharacter* C = Chuck.Get();
-    if (Crossed(Impact + .3f) && LandSound) UGameplayStatics::PlaySound2D(this, LandSound, .55f, .75f);   // the bounce coming down
+    // The bounce coming down: the same body, lighter.
+    if (Crossed(Impact + .3f)) { if (ThudSound) UGameplayStatics::PlaySound2D(this, ThudSound, .4f, 1.12f); else if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, .55f, .75f); }
     // The light gathers round him where he lies, not where he'd stand.
     const FVector Body = ChuckTarget();
     const FVector Feet(Body.X, Body.Y, G.Z + 1.f);
@@ -663,6 +681,7 @@ void AFallCutscene::Finish()
     if (Music) Music->Stop();
     if (Wind) Wind->Stop();
     if (Flap) Flap->Stop();
+    if (Whistle) Whistle->Stop();
     if (AChuckCharacter* C = Chuck.Get()) C->EndFallCutscene();
     if (Camera) Camera->Destroy();
     Destroy();

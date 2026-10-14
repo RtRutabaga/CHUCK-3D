@@ -19,6 +19,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WET_DRESSING materials=1 moss_strands=735 puddles=9 rocks=27 .*foliage_collision=0 water_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_NATURE ferns=[1-9][0-9]* fern_variants=4 background_trees=18 tree_collision=1 foliage_collision=0 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_SCAN_ROCKS instances=27 variants=6 missing_assets=0 visible_mesh_collision=1' -Quiet) -or
@@ -58,7 +59,7 @@ if($demoProcess.ExitCode -or !(Select-String -LiteralPath $demoLog -Pattern 'CHU
 # the crash, the astral death and return, two drags, then playable Chult.
 $fallLog=Join-Path $evidence ('verify-fall-cutscene-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $fallProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckFallCutsceneTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fallLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_START .* music=1 wind=1 crashes=3' -Quiet) -or
+if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_START .* music=1 wind=1 crashes=3 flap=1 whistle=1 thud=1' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_MUSIC playing=1' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_SCORE at=0\.0' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_END at=4[0-9.]+ skipped=0 landed=1 vanished=1 summoned=1 exhales=2' -Quiet) -or

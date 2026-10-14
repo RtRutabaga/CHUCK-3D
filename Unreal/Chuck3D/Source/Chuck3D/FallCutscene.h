@@ -72,6 +72,8 @@ private:
     UPROPERTY() UAudioComponent* Music;
     UPROPERTY() UAudioComponent* Wind;
     UPROPERTY() UAudioComponent* Flap;   // his jacket in the rushing air
+    UPROPERTY() UAudioComponent* Whistle;   // high air on the fastest stretches
+    UPROPERTY() USoundBase* ThudSound;      // his body hitting the jungle floor
     UPROPERTY() TArray<USceneComponent*> SkyParts;
     UPROPERTY() class AChultLanding* Landing;
     UPROPERTY() TArray<USoundBase*> LeafCrashes;

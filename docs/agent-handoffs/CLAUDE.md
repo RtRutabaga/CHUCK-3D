@@ -2,6 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 13 — fall sounds recorded, Chult score, ground thud (Claude)
+
+- **Built:**
+  - **Fall sounds:** the user downloaded five CC0 BigSoundBank recordings (Joseph Sardin). They are kept unmodified in `SourceAssets/Audio/SFX/BigSoundBank/` with hashes in `manifest.json`. `Tools/make_fall_sounds.py` cuts four sounds from them:
+    - `SFX_FallRush_00`: a seamless rush loop, which replaces the generated wind.
+    - `SFX_FallFlap_00`: a loop for his jacket.
+    - `SFX_FallWhistle_00`: a whistle loop.
+    - `SFX_FallThud_00`: a body fall slowed and low-passed into a soft-earth thud, under a dirt impact.
+
+    In the cutscene the air loops follow his speed and closeness (loudest in the sound-only pre-roll) and stop at the canopy. The thud lands with the impact, with a lighter copy on the bounce.
+  - **Chult score:** the user's `chult.wav` is copied unmodified to `SourceAssets/Audio/Chult.wav` and imported as `SW_Chult` (looping). `DockGameMode` gives Chult its own music region: in Chult, after the fall or from the checkpoint, the Waterdeep scores fade out and Chult's fades in at 45%.
+  - **Import:** the narrow `Tools/import_fall_chult_audio.py` imports only these sounds (no meshes or materials).
+- **Tests adjusted:**
+  - The NPC ducking check now expects 4 score tracks (it asserted 3, the only regression found).
+  - The sewer score's loop check skips when the run has already left the sewer, the same guard the night score uses. The first candidate run failed on exactly that (`verify-package-20261013-180621.log`, 181/182).
+  - `Verify-Package` additionally requires `flap=1 whistle=1 thud=1` and `CHUCK_CHULT_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1`.
+- **Tested:** `Builds/FallSoundCandidate` passed **182** (`Local/verify-package-20261013-181829.log`), including the duck check with `tracks=4` and three clean sewer checks. The fall test ran end to end into playable Chult with `MUSIC_REGION chult=1`, and the packaged Chult test confirmed the Chult loop.
+- **Mix:** measured, not listened to. The scores are about −24 dB RMS, and the pre-roll rush is −18.6 dB, falling to about −30 under music. Not heard on speakers; Xbox and other resolutions not tested.
+- **Launcher:** LAUNCHER_STATUS
+
+Next part of the work can be done here (or by Codex for Chult setting work).
+
 ## October 13 — fall cutscene follow-ups
 
 - **Base:** `360fa4c` (after Codex's Chult work). Details are in the HANDOFF entry of the same date.

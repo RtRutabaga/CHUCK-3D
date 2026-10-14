@@ -91,7 +91,10 @@ void ADockGameMode::StartPlay()
     auto* SewerScoreComponent=SewerScore ? UGameplayStatics::CreateSound2D(World,SewerScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     auto* NightScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_WaterdeepNight.SW_WaterdeepNight"));
     auto* NightComponent=NightScore ? UGameplayStatics::CreateSound2D(World,NightScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent};
+    // Chult's own score (the user's track), from the end of the fall on.
+    auto* ChultScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Chult.SW_Chult"));
+    auto* ChultComponent=ChultScore ? UGameplayStatics::CreateSound2D(World,ChultScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -113,10 +116,31 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),SewerScore,NightScore,TestMusic](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),SewerScore,NightScore,ChultScore,TestMusic](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
+        // In Chult (after the fall, or from its checkpoint): Waterdeep's scores
+        // go and Chult's comes in, looping. There is no way back yet.
+        if(Chuck && AChultLanding::Contains(Chuck->GetActorLocation()))
+        {
+            if(Region->Mode==3) return;
+            Region->Mode=3; Region->Underground=false;
+            for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night})
+                if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
+            if(Chult.IsValid())
+            {
+                const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckChultTest"));
+                Chult->FadeIn(3.f,.45f,Test && ChultScore?FMath::Max(0.f,ChultScore->Duration-2.f):0.f);
+                FTimerHandle Check;
+                World->GetTimerManager().SetTimer(Check,[Chult,ChultScore](){
+                    const bool Loop=ChultScore && ChultScore->bLooping,Playing=Chult.IsValid() && Chult->IsPlaying();
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                },6.f,false);
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 score=%d"),Chult.IsValid());
+            return;
+        }
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
         const int32 Mode=Below?1:HasExitedDockSewer()?2:0;
         if(Mode==Region->Mode) return;
@@ -145,7 +169,10 @@ void ADockGameMode::StartPlay()
                 const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckSewerTest"));
                 Sewer->FadeIn(1.25f,.45f,Test && SewerScore?FMath::Max(0.f,SewerScore->Duration-2.f):0.f);
                 FTimerHandle Check;
-                World->GetTimerManager().SetTimer(Check,[Sewer,SewerScore](){
+                World->GetTimerManager().SetTimer(Check,[Sewer,SewerScore,Region](){
+                    // As for the night score: back up top before the check, the
+                    // score was faded out on purpose, which is not a loop failure.
+                    if(!Region->Underground) return;
                     const bool Loop=SewerScore && SewerScore->bLooping;
                     const bool Playing=Sewer.IsValid() && Sewer->IsPlaying();
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SEWER_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
@@ -2426,7 +2453,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==3 && MusicTracks[0].IsValid(),
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==4 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),
