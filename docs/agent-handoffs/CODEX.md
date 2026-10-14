@@ -2,6 +2,16 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 14 — zombie sounds and grounded impact feedback
+
+User directly assigned zombie combat/character work, overriding the normal ownership split. Base `23c4c55`, clean `main` (launcher runtime `8958107`). Added deterministic standard-library synthesis/import scripts for 12 spatial zombie sounds, connected actual accepted contact and death in `DockNPC`, and retained existing damage/tells/health. Chuck gets a zombie-specific decaying horizontal root-motion force (210 cm/s, 0.22 s), preserved gravity and facing, and a 0.2 s camera jolt; reset cancels the transient. Rat/raptor bite behavior unchanged, Chuck silent, no rig/clip changes.
+
+New `ZombieImpactTest.cpp` / `-ChuckZombieImpactTest` is required by `Verify-Package.ps1`. Final cooked test `Local/verify-zombie-impact-20261014-163238.log` passes 4/4 and exits cleanly: front and side with held-forward input 24.87 cm / no upward rise, wall stops at 9.95 cm, sanity 5→3 and immunity, 12 sounds loaded, scratch sound event and real lunge swish/contact events. Initial cook's null-world camera query fixed; initial harness's self-deleting timer callback fixed. Do not use those failed runs as acceptance evidence. Final build log `Local/zombie-impact-final-build.log`, UAT 51.60 s; UE 5.7.4 CL 51494982 / MSVC 14.44.35229 / SDK 10.0.26100.0 / .NET 8.0.412. Python 3.14.6 synthesis, no installs. New WAV/uassets 1,156,903 bytes under existing LFS rules/remote; no original-game access or unrelated binary changes.
+
+Full final package passes **182/182** (`Local/verify-package-20261014-163238.log`); Chult ground/recovery/ruins/terrain/cliffs/canyon, fall/skip/input reset, pantry, leap 6/6, lamp swing 8/8, canopy **48/48**, zero static failures (`verify-canopy-20261014-164006.log`), and raptor **8/8** (`verify-raptor-20261014-164531.log`). No separate real-menu run (no menu/startup changes). LFS integrity passes. Initial harness crash preserved outside the package in ignored `Local/zombie-impact-initial-crash`. Verified candidate ready for promotion. Synthetic sounds and existing flinch/locomotion need human play/mix review; no Xbox test or authored Chuck hit clip.
+
+Next part of the work can be done here.
+
 ## October 14 — northeast canyon and broken rope bridge setting
 
 User requested extending beyond the canopy/stream to a deep canyon with a bridge

@@ -27,6 +27,8 @@
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/RootMotionSource.h"
+#include "Curves/CurveFloat.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GroomAsset.h"
@@ -365,6 +367,13 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     const FRotator TargetRotation(BoomPitch, ViewYaw, 0);
     Boom->SetWorldRotation(DeltaSeconds > 0 ? FMath::RInterpTo(Boom->GetComponentRotation(),TargetRotation,DeltaSeconds,18.f) : TargetRotation);
     Camera->SetRelativeRotation(FRotator(SmoothLook - BoomPitch,0,0));
+    const float HitAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ImpactAt : -1.f;
+    if (ImpactAt >= 0 && HitAge >= 0 && HitAge < .2f)
+    {
+        const float Envelope = FMath::Square(1.f - HitAge / .2f);
+        Camera->AddLocalRotation(FRotator(-.9f * Envelope * FMath::Cos(HitAge * 35.f), 0,
+            .35f * Envelope * FMath::Sin(HitAge * 32.f)));
+    }
     Camera->FieldOfView = FMath::Lerp(78.f,65.f,CameraBlend);
 }
 void AChuckCharacter::ResetToDock()
@@ -398,6 +407,8 @@ void AChuckCharacter::RespawnAtAreaStart()
 }
 void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
+    GetCharacterMovement()->RemoveRootMotionSource(TEXT("ZombieImpact"));
+    ImpactAt = -1;
     GetCharacterMovement()->StopMovementImmediately();
     SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
     // A checkpoint teleport is not a fall from the previous area's elevation.
@@ -1681,7 +1692,7 @@ void AChuckCharacter::SlashHit()
         ++SlashNPCHits;
     }
 }
-bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount)
+bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount, bool bZombieHit)
 {
     const float Now = GetWorld()->GetTimeSeconds();
     if (Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
@@ -1695,7 +1706,31 @@ bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount)
     // A stumble back out of reach: a short hop away, the slash layer dropped.
     LayerTime = -1; bSlashQueued = false; SlashHitAt = -1;
     if (Gait == EGait::Slash || Gait == EGait::Turn) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-    LaunchCharacter(Away * BiteKnockback + FVector(0, 0, 110.f), true, true);
+    if (bZombieHit)
+    {
+        // A human-sized blow pushes this small body back ~23 cm over .22 s.
+        // CharacterMovement sweeps the force against walls and follows the floor;
+        // no artificial upward launch. Airborne hits retain gravity/vertical speed.
+        ImpactAt = Now;
+        Gait = GetCharacterMovement()->IsFalling() ? EGait::Air : EGait::Idle;
+        if (!HitForceCurve)
+        {
+            HitForceCurve = NewObject<UCurveFloat>(this);
+            HitForceCurve->FloatCurve.AddKey(0.f, 1.f);
+            HitForceCurve->FloatCurve.AddKey(1.f, 0.f);
+        }
+        auto Force = MakeShared<FRootMotionSource_ConstantForce>();
+        Force->InstanceName = TEXT("ZombieImpact");
+        Force->Priority = 1000;
+        Force->AccumulateMode = ERootMotionAccumulateMode::Override;
+        Force->Settings.SetFlag(ERootMotionSourceSettingsFlags::IgnoreZAccumulate);
+        Force->Force = Away * 210.f;
+        Force->Duration = .22f;
+        Force->StrengthOverTime = HitForceCurve;
+        GetCharacterMovement()->ApplyRootMotionSource(Force);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_ZOMBIE_IMPACT sanity=%d direction=%s"), Sanity, *Away.ToString());
+    }
+    else LaunchCharacter(Away * BiteKnockback + FVector(0, 0, 110.f), true, true);
     return true;
 }
 void AChuckCharacter::AddCigarettes(int32 Count)
@@ -2068,7 +2103,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Strafing: the facing is held down the camera (Counter-Strike style)
     // instead of turning toward the movement.
     const bool bHoldFacing = bStrafe && !OwnsCapsule() && Gait != EGait::Turn;
-    Movement->bOrientRotationToMovement = !bHoldFacing;
+    Movement->bOrientRotationToMovement = !bHoldFacing && GetWorld()->GetTimeSeconds() >= ImpactAt + .22f;
     if (bHoldFacing) SetActorRotation(FRotator(0, FMath::FixedTurn(static_cast<float>(GetActorRotation().Yaw), ViewYaw, 720.f * DeltaSeconds), 0));
     if (bStrafe && bInput && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Land))
     {

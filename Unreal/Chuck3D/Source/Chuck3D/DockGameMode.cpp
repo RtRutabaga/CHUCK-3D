@@ -643,6 +643,12 @@ void ADockGameMode::StartPlay()
         FTimerHandle RaptorCheck;
         World->GetTimerManager().SetTimer(RaptorCheck,[World](){StartChultRaptorReview(World);},4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))
+    {
+        extern void StartZombieImpactReview(UWorld*);
+        FTimerHandle ImpactCheck;
+        World->GetTimerManager().SetTimer(ImpactCheck,[World](){StartZombieImpactReview(World);},2.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyTest")))
     {
         // Claude's canopy traversal trials (ChultCanopy.h): the real character, the whole loop.

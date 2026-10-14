@@ -11,6 +11,7 @@ class UChuckAnimInstance;
 class USkeletalMesh;
 class UStaticMeshComponent;
 class USoundBase;
+class UCurveFloat;
 class UInstancedStaticMeshComponent;
 class ADockNPC;
 
@@ -165,7 +166,7 @@ public:
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
      *  Returns whether it landed. (No health yet: the user's call.) */
-    bool TakeBite(const FVector& From, int32 Amount = 1);
+    bool TakeBite(const FVector& From, int32 Amount = 1, bool bZombieHit = false);
     // Sanity (the 2D game, GAME-BIBLE.md): damage lowers it, cigarettes
     // restore it; at zero Chuck - a fey summon who can't die - quietly
     // vanishes into astral light and is summoned back at the spawn point.
@@ -450,6 +451,8 @@ private:
     void SetAstralHidden(bool bHide);
     void CameraFade(float From, float To, float Seconds, const FLinearColor& Colour = FLinearColor(.015f, .015f, .05f));
     float BiteImmuneUntil = -1;
+    float ImpactAt = -1;
+    UPROPERTY() TObjectPtr<UCurveFloat> HitForceCurve;
     /** Something low and breakable is in the strike's reach: rake low (user 2026-09-30). */
     bool LowTargetInReach() const;
     float SlashHitAt = -1;   // world time of the pending strike's cut

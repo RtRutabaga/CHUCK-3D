@@ -1,5 +1,27 @@
 # Docks soundtrack
 
+## Zombie combat — October 14, 2026
+
+Twelve original, seeded synthetic sounds from `Tools/gen_zombie_sfx.py`:
+three breathy zombie rasps, two attack swishes, three claw/body contacts,
+three heavier cloth/body contacts when Chuck is struck, and a dying rasp.
+No recordings, third-party samples, dialogue or Chuck vocalizations.
+Mono 48 kHz, 16-bit PCM, peaks -3 dBFS; source WAVs total 641,808 bytes.
+Hashes and durations: `SFX/zombie-manifest.json`. Python **3.14.6** standard
+library; no installation. `Tools/import_zombie_sfx.py` narrowly imports these
+into `/Game/Art/Audio/SFX` using UE **5.7.4**, with `-AllowCommandletAudio`.
+
+Zombies own distance-attenuated, spatial sounds (160 cm inner radius, 14 m
+falloff). Rasps are randomized at 4–7 s intervals within 12 m; swishes occur
+at the committed lunge, contacts only after accepted damage. Hits received
+by Chuck use 0.85 volume, his claws 0.72, swishes 0.5, rasps 0.38 and death
+0.5, with ±5% pitch. Corpse scratches are silent. Speaker balance and
+subjective realism still need a person's play review.
+
+WAV/uasset pairs use the repository's existing Git LFS rules and GitHub
+endpoint. Added storage is small (1,156,903 bytes total); account allowance is
+not exposed. No paid storage or dependency was added.
+
 `waterdeep_docks.wav` was supplied by the user from `C:/Users/ashsm/Downloads/waterdeep_docks.wav` for this prototype. Copied without modification. No original CHUCK-game repository files were accessed or changed. This is user-provided music, not a claim of a third-party stock license.
 
 SHA-256: `2D856346F46EF5F1830A427E91B3C8848CFE332AE4EA9FBDACEC65B47CDE9DEA`.

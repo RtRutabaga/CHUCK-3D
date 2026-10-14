@@ -123,6 +123,8 @@ public:
     bool IsDead() const { return ZState == EZombie::Dead; }
     int32 GetHitsTaken() const { return Hits; }
     int32 GetBitesLanded() const { return Bites; }
+    int32 GetZombieSoundCount() const { return ZombieSounds.Num(); }
+    int32 GetZombieSoundsPlayed() const { return ZombieSoundsPlayed; }
     int32 GetLunges() const { return Lunges; }
     const TCHAR* GetZombieStateName() const;
     /** Shamble speed (cm/s): the walk clip's own, at this body's scale. */
@@ -450,6 +452,11 @@ private:
     int32 Hits = 0, Bites = 0, Lunges = 0;
     void SetZombie(EZombie State) { ZState = State; ZTime = 0; }
     void TickZombie(float DeltaSeconds);
+    void PlayZombieSound(const TCHAR* Stem, int32 Count, const FVector& At, float Volume);
+    UPROPERTY() TMap<FString, TObjectPtr<USoundBase>> ZombieSounds;
+    UPROPERTY() TObjectPtr<USoundAttenuation> ZombieAttenuation;
+    float NextZombieRasp = 0;
+    int32 ZombieSoundsPlayed = 0;
     bool StepZombie(const FVector& Direction, float Distance);
     void TurnZombie(const FVector& Toward, float DeltaSeconds, float Rate);
     // The smith.

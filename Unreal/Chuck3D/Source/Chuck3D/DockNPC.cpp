@@ -366,7 +366,33 @@ ADockNPC* ADockNPC::SpawnZombie(UWorld* World, const FVector& Feet, float Yaw)
     if (!NPC) return nullptr;
     NPC->Tags.Add(TEXT("SewerZombie"));
     NPC->DisplayName = TEXT("Zombie");
+    for (const auto& Set : { TPair<const TCHAR*, int32>(TEXT("Rasp"), 3), {TEXT("Swing"), 2},
+        {TEXT("ClawHit"), 3}, {TEXT("ChuckHit"), 3}, {TEXT("Death"), 1} })
+        for (int32 I = 0; I < Set.Value; ++I)
+        {
+            const FString Name = FString::Printf(TEXT("SFX_Zombie%s_%02d"), Set.Key, I);
+            if (auto* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), *Name, *Name)))
+                NPC->ZombieSounds.Add(Name, Sound);
+        }
+    NPC->ZombieAttenuation = NewObject<USoundAttenuation>(NPC);
+    auto& Attenuation = NPC->ZombieAttenuation->Attenuation;
+    Attenuation.bAttenuate = true;
+    Attenuation.bSpatialize = true;
+    Attenuation.AttenuationShapeExtents = FVector(160.f);
+    Attenuation.FalloffDistance = 1400.f;
+    NPC->NextZombieRasp = World->GetTimeSeconds() + FMath::FRandRange(1.f, 3.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_ZOMBIE_AUDIO loaded=%d"), NPC->ZombieSounds.Num());
     return NPC;
+}
+
+void ADockNPC::PlayZombieSound(const TCHAR* Stem, int32 Count, const FVector& At, float Volume)
+{
+    const FString Key = FString::Printf(TEXT("SFX_Zombie%s_%02d"), Stem, FMath::RandRange(0, Count - 1));
+    if (const auto* Sound = ZombieSounds.Find(Key))
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, Sound->Get(), At, Volume, FMath::FRandRange(.95f, 1.05f), 0.f, ZombieAttenuation);
+        ++ZombieSoundsPlayed;
+    }
 }
 
 const TCHAR* ADockNPC::GetZombieStateName() const
@@ -427,6 +453,11 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     // A rat it could reach: on its level, not gone into the light, near its place.
     const bool bThere = Chuck && !Chuck->IsAstral() && Rise < 80.f && FVector::Dist2D(Chuck->GetActorLocation(), ZHome) < ZombieLeash;
     const bool bSees = bThere && (Distance < ZombieNotice || (Distance < ZombieSight && Facing < 70.f));
+    if (ZState != EZombie::Dead && Distance < 1200.f && GetWorld()->GetTimeSeconds() >= NextZombieRasp)
+    {
+        PlayZombieSound(TEXT("Rasp"), 3, Location + FVector(0, 0, 45), .38f);
+        NextZombieRasp = GetWorld()->GetTimeSeconds() + FMath::FRandRange(4.f, 7.f);
+    }
     float Moved = 0.f;
     switch (ZState)
     {
@@ -451,7 +482,7 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     case EZombie::Windup:
         // The tell: it stops and rears up, arms lifting, turning to the rat.
         if (Chuck) TurnZombie(Chuck->GetActorLocation(), DeltaSeconds, 45.f);
-        if (ZTime >= ZombieWindup) { LungeDir = GetActorForwardVector().GetSafeNormal2D(); bBit = false; ++Lunges; SetZombie(EZombie::Lunge); }
+        if (ZTime >= ZombieWindup) { LungeDir = GetActorForwardVector().GetSafeNormal2D(); bBit = false; ++Lunges; SetZombie(EZombie::Lunge); PlayZombieSound(TEXT("Swing"), 2, Location, .5f); }
         break;
     case EZombie::Lunge:
         // Down and forward at him; one bite, hit or miss.
@@ -460,7 +491,11 @@ void ADockNPC::TickZombie(float DeltaSeconds)
         {
             bBit = true;
             if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .25f
-                && Chuck->TakeBite(Location, ZombieBite)) ++Bites;
+                && Chuck->TakeBite(Location, ZombieBite, true))
+            {
+                ++Bites;
+                PlayZombieSound(TEXT("ChuckHit"), 3, Chuck->GetActorLocation(), .85f);
+            }
         }
         if (ZTime >= ZombieLungeTime) SetZombie(EZombie::Recover);
         break;
@@ -1086,10 +1121,12 @@ void ADockNPC::TakeScratch(const FVector& From)
         // It barely notices each one: a jolt, nothing that stops it coming.
         if (ZState == EZombie::Dead) return;
         ++Scratches; ++Hits;
+        PlayZombieSound(TEXT("ClawHit"), 3, From + (GetActorLocation() - From).GetSafeNormal2D() * 24.f, .72f);
         FlinchTime = 0.f;
         if (Hits >= ZombieHealth)
         {
             SetZombie(EZombie::Dead); DeathTime = 0.f;
+            PlayZombieSound(TEXT("Death"), 1, GetActorLocation(), .5f);
             Blocker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
             return;
         }

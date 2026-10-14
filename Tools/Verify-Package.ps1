@@ -10,6 +10,11 @@ $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
+$impactLog=Join-Path $evidence ('verify-zombie-impact-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$impactProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckZombieImpactTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$impactLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($impactProcess.ExitCode -or !(Select-String -LiteralPath $impactLog -Pattern 'CHUCK_ZOMBIE_IMPACT_TEST failures=0 trials=4 sounds=12' -Quiet)) {
+    throw "Zombie impact verification failed. Inspect $impactLog"
+}
 $chultLog=Join-Path $evidence ('verify-chult-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $chultProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$chultLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_LANDING .* missing_assets=0' -Quiet) -or
