@@ -2,6 +2,41 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 14 — northeast canyon and broken rope bridge setting
+
+User requested extending beyond the canopy/stream to a deep canyon with a bridge
+crossed by swinging from surviving planks, reserving actual brachiation for
+Claude. Source Phase 4/5 and jungle map read by absolute read-only paths; clean
+main/ownership inspected. Contract: [CHULT-CANYON.md](../CHULT-CANYON.md).
+
+`ChultCanyon.cpp/.h`: frame origin (24500,15500), along (.8,.6), across (-.6,.8),
+S=-6500–11500/T=±4500. Old floor excluded from new terrain; canyon S=0–4500, bank
+Z≈350, bottom -4700. 33 noncolliding steeply dangling planks with real-edge paw
+proposals (140/180 spacing, 90 cm sag); no registration. Sagging ropes/attached
+lashings/frays, solid posts, hanging vines, 156 scanned trees/trunk collision,
+3,878 plants, 51 rocks and six mist pools. 44,574 procedural triangles. Original
+trees/grips/stream/ruins/cliffs/raptor/material graphs untouched. Contains accepts
+the extension; existing fall recovery returns him to Chult entrance.
+
+Corrected cooked setting `verify-chult-20261014-155540.log`: 12 bank floors,
+153 void probes, 33 hanging-body capsules, six rock-face traces, 120 approach/
+exit sweeps pass. Actual approach/far-bank walks and fall/return 3/3; all original
+setting checks, ruins 5/5, expansion 3/3 and cliffs 3/3 pass. Full fall/skip/input-reset, leap 6/6, lamps 8/8, canopy 48/48 (static failures 0), raptor 8/8 and smoke 182/182 pass without a smoke retry (`verify-package-20261014-155540.log`). Real menu automation not rerun (no menu/startup change). Reviewed four corrected cooked views. First candidate
+refined for foliage-obscured camera/cable endpoint gaps; second for clockwise
+rendering winding (collision had already passed), then planar soil UV mapping. Interrupted candidates are
+not final acceptance. Single worker final UAT 55.58 s, UE 5.7.4/CL 51494982,
+MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412.
+
+Promoted runtime **8958107** as ChultCanyon (`Local/chult-canyon-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the extension; follow the canopy/stream northeast. Previous package kept as Windows-Previous-20261014-ChultCanyon, two backups retained, older ChultCliffs pruned; promoted candidate removed. Source committed on main; publication follows this handoff update. No binary
+assets/imports/dependencies/LFS transfers or original-game writes. No character/
+controller edits, new NPCs/encounters/dialogue/checkpoint or region transition.
+No Xbox/manual whole-area/camera review, and **no actual bridge crossing**.
+Claude must audit active grip inventories and replace inactive-canyon acceptance
+markers with actual crossing tests; preserve all existing canopy identities.
+
+Next part of the work can only be done by Claude: activate/test the bridge
+brachiation with the user; the setting is verified and promoted.
+
 ## October 14 — additive Chult overgrowth and low mist
 
 User authorized adding toward the artist's Fantasy Tropical Forest while removing
