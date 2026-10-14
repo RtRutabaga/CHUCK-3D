@@ -31,7 +31,7 @@ Next part of the work can be done here: review/refine the expanded setting; Clau
   - Details: [CHULT-RAPTOR.md](CHULT-RAPTOR.md).
 - **Tested:** uncooked, all 8 raptor trials with the real character pass, repeatedly. Cooked: the first package lacked the clips (loaded by path, so not cooked; caught by the verifier's `clips=6`), so they are now hard references. The rebuilt candidate scored 181/182 (`verify-package-20261014-114001.log`): the only failure was the known-intermittent roll side drift, 2.69 cm against a 2 cm limit, historically 1.8–1.9 with a 3.27 outlier on Oct 6, in Waterdeep where nothing changed. The unchanged candidate then passed **182/182** (`verify-package-20261014-120006.log`), with the raptor 8/8 and all 6 clips (`verify-raptor-20261014-121156.log`) and the canopy 48/48.
 - **Not tested:** a person playing it, speakers, Xbox.
-- **Launcher:** promoted as `ChultRaptor` (`Local/raptor-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **93f1652** as `ChultRaptor` (`Local/raptor-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review of the raptor would help most).
 

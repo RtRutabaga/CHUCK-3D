@@ -27,7 +27,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - Low-poly forms remain under the smoothing; synthetic sounds not heard on speakers.
   - One raptor only, and no navmesh: it steers with sweeps.
   - Not played by a person; no Xbox test.
-- **Launcher:** promoted as `ChultRaptor` (`Local/raptor-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **93f1652** as `ChultRaptor` (`Local/raptor-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (play review of the raptor's pressure and fairness would help most).
 
