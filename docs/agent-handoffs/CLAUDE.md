@@ -2,6 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 13 — Chult canopy brachiation made to work; natural trees (Claude)
+
+- **Owner, task, branch:** Claude, the user's "make Codex's brachiation tree section work; change the trees as needed, more natural if possible", on `main` in `C:\GameDev\CHUCK-3D`. Base `5ab3919`.
+- **What was wrong:** Codex's grove had 36 inactive paw proposals (no grips registered), first grips 115 cm above the forks (a standing hop reaches about 112 cm, so they could not be caught from the forks), paired twin trunks with flat chimney strips (the region plan says not to copy the docks' chimney entry), and at a chain's end a jump with the stick released swung back along the chain.
+- **Built (`ChultCanopy.cpp/.h` rewritten):**
+  - Four single-trunk canopy giants: fluted flared trunks, plank buttresses and surface roots kept off the ground lanes, a crotch bowl and saddle, a walking limb toward each neighbour (tree 0 also under the ruin slab, which now rests on it), two leaders into a leafy crown, and hand boughs from a leader out over each limb toward the gap. About 83.5k triangles, 7,155 leaf instances.
+  - 38 registered grips in four chains, end grips 98 cm over the limbs, 122–129 cm spacing and a 180 cm branch gap.
+  - A climbable liana on every tree (`AddChuckClimbable`).
+  - Layout and contract: [CHULT-CANOPY.md](../CHULT-CANOPY.md), rewritten.
+- **Character (`ChuckCharacter.cpp`, `SwingJump`):** at a line's end with the stick released, if there is something to stand on within 170 cm below just ahead, he hops down onto it (`CHUCK_SWING_STEP_DOWN`); otherwise the old reverse. No rig, clip, control-mapping or tuning change.
+- **Tests:** `CheckChultCanopy` (static: grips, all 34 leap sweeps, end-grip bark, 72 limb samples, forks, lianas) runs in `-ChuckChultTest`; new `-ChuckCanopyTest` (18 real-character trials) and `-ChuckCanopyCapture`; `DockGameMode` hook; `ChultLanding.cpp` capture phases moved onto the new fork/gap; `Verify-Package` patterns updated and the canopy test added.
+- **Outside my usual ownership:** Codex's `ChultCanopy.cpp` setting (rewritten at the user's request), two capture phases in `ChultLanding.cpp`, and `Tools/Verify-Package.ps1`. Ruins code untouched.
+- **Commands run:** `Build.bat Chuck3DEditor` (about 8 times); uncooked `-game -ChuckCanopyTest [-ChuckCanopyCapture]` 7 runs (`Local/canopy-test-1..7.log`, all passing; the shapes changed between runs); uncooked `-ChuckLampSwingTest` (8/8) and `-ChuckChultTest` (all Chult/ruins checks and 5 ruin trials pass); `Build-Game.ps1 -Package -SkipBaseAssets -ArchiveDirectory Builds/CanopyCandidate` (`Local/canopy-build.log`).
+- **Cooked results:** `verify-canopy-20261013-201123.log` 18/18; `verify-chult-20261013-200710.log` canopy check 0 failures, grove ground 11/11, Chult check, ruins 5/5; `verify-lamp-swing-20261013-201038.log` 8/8. Full suite: first run 181/182 (`verify-package-20261013-200710.log`); the one failure was the known intermittent alchemist wrist-gap snapshot (8.2 cm against <8 cm, idle phase randomized; no NPC code touched). The unchanged candidate then passed **182/182** (`verify-package-20261013-201906.log`).
+- **Reviewed visually:** cooked-equivalent editor captures; four kept in `SourceAssets/Setting/Review/Canopy_*.png` (overview, tree profile, player view on the first limb, swinging past the branch gap). The trees read as spreading jungle trees now, not twin pillars with stubs.
+- **Known flaws:** procedural trees with the shared bark and leaf card, below the art target; hand boughs still a little straight and pole-like from some angles; the crotch from directly above shows the limb junction; hand-bough roots arch over the crotch; no crown fading, and camera comfort in the canopy not judged by a person; leaves lit from below can look pale; Xbox controller not tested. Swinging is kinematic: nothing stops a body clipping a twig.
+- **Binaries:** four review PNGs, about 6.4 MB, LFS. No Unreal assets changed.
+- **Launcher:** promoted **d0fa3c5** as `CanopySwing` (receipt and launcher check pass; `-MossyRuins` backup pruned; no candidate left).
+- **Heavy tools running:** none at hand-off.
+
+Next part of the work can be done here (a play review by the user would help most); Codex can continue Chult setting art around the new trees.
+
 ## October 13 — fall sounds recorded, Chult score, ground thud (Claude)
 
 - **Built:**
