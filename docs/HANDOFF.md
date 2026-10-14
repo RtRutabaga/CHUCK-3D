@@ -13,7 +13,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Changed:** a death anywhere around the brachiation trees (the loop and the line, plus 5 m) now returns Chuck to the top of the ruin landing slab that leads onto tree 0, facing the tree. Elsewhere in Chult he still returns to the landing entrance. Details: [CHULT-CANOPY.md](CHULT-CANOPY.md).
 - **Tested:** uncooked, real deaths in a tree, under the line and on the landing loop each return to the right place (48/48 canopy trials); Codex's Chult checks pass. Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-085721.log`); canopy 48/48 including the three deaths (`verify-canopy-20261014-090308.log`); Chult respawn and ruins checks pass.
-- **Launcher:** promoted as `CanopyRespawn` (`Local/respawn-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **569951a** as `CanopyRespawn` (`Local/respawn-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review would help most).
 

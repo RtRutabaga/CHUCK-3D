@@ -14,7 +14,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - `Local/chult-respawn.log`: Codex's landing respawn check still passes (entrance=1).
   - Cooked: full suite **182/182** on the first run (`Local/verify-package-20261014-085721.log`); canopy 48/48 including the three deaths (`verify-canopy-20261014-090308.log`); Chult respawn and ruins checks pass.
 - **Notes:** nothing in Chult can kill him yet except an empty sanity bar or leaving the floor; the trials kill him with a bite. Dying on the ruins' own north end (within 5 m of the reserve) also returns to the slab, since it is part of the margin.
-- **Launcher:** promoted as `CanopyRespawn` (`Local/respawn-promotion.log`); older backups pruned to two, no candidate left.
+- **Launcher:** promoted **569951a** as `CanopyRespawn` (`Local/respawn-promotion.log`; receipt and launcher check pass); older backups pruned to two, no candidate left.
 
 Next part of the work can be done here (a play review would help most).
 
