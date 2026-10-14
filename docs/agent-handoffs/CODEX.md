@@ -27,7 +27,7 @@ rendering winding (collision had already passed), then planar soil UV mapping. I
 not final acceptance. Single worker final UAT 55.58 s, UE 5.7.4/CL 51494982,
 MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412.
 
-Promoted runtime **8958107** as ChultCanyon (`Local/chult-canyon-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the extension; follow the canopy/stream northeast. Previous package kept as Windows-Previous-20261014-ChultCanyon, two backups retained, older ChultCliffs pruned; promoted candidate removed. Source committed on main; publication follows this handoff update. No binary
+Promoted runtime **8958107** as ChultCanyon (`Local/chult-canyon-promotion.log`); receipt/hash and launcher CheckOnly pass. Root launcher → Dev Checkpoints → Chult Landing includes the extension; follow the canopy/stream northeast. Previous package kept as Windows-Previous-20261014-ChultCanyon, two backups retained, older ChultCliffs pruned; promoted candidate removed. Source and handoff published to origin/main (`Local/chult-canyon-source-push.log`). No binary
 assets/imports/dependencies/LFS transfers or original-game writes. No character/
 controller edits, new NPCs/encounters/dialogue/checkpoint or region transition.
 No Xbox/manual whole-area/camera review, and **no actual bridge crossing**.
