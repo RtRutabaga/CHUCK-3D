@@ -7,6 +7,7 @@
 #include "ChultExpansion.h"
 #include "ChultCliffs.h"
 #include "ChultOvergrowth.h"
+#include "ChultCanyon.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -81,7 +82,7 @@ AChultLanding::AChultLanding()
 FVector AChultLanding::FloorOrigin() { return AFallCutscene::LandingSpot(); }
 FVector AChultLanding::Entrance() { return FloorOrigin()+FVector(0,0,34.65f); }
 bool AChultLanding::Contains(const FVector& P)
-{ return FVector::Dist2D(P,FloorOrigin())<14000 || InChultExpansion(P-FloorOrigin()); }
+{ return FVector::Dist2D(P,FloorOrigin())<14000 || InChultExpansion(P-FloorOrigin()) || InChultCanyon(P-FloorOrigin()); }
 bool AChultLanding::OnGroundRoute(const FVector& P,float Margin) {return OnRoute(P,Margin);}
 
 AChultLanding* AChultLanding::EnterPreview(UWorld* World)
@@ -327,6 +328,7 @@ void AChultLanding::BuildSet()
     BuildChultExpansion(this);
     BuildChultCliffs(this);
     BuildChultOvergrowth(this);
+    BuildChultCanyon(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -343,6 +345,7 @@ void AChultLanding::VerifyAndCapture()
     int32 Failures=0,Samples=0;
     Failures+=CheckChultRuins(this,C);
     Failures+=CheckChultExpansion(this,C);
+    Failures+=CheckChultCanyon(this,C);
     Failures+=CheckChultCliffs(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -522,6 +525,30 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==35) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Overgrowth_LowMist.png"),true,false);
         else if(Run->Phase==36)
+        {
+            const FVector From=FloorOrigin()+ChultCanyonFrame(-450,0,550),At=FloorOrigin()+ChultCanyonFrame(2800,0,370);
+            if(Run->DetailCamera.IsValid())Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==37)FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canyon_Bridge.png"),true,false);
+        else if(Run->Phase==38)
+        {
+            const FVector From=FloorOrigin()+ChultCanyonFrame(2250,-6500,2600),At=FloorOrigin()+ChultCanyonFrame(2250,0,0);
+            if(Run->DetailCamera.IsValid())Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==39)FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canyon_Overview.png"),true,false);
+        else if(Run->Phase==40)
+        {
+            const FVector From=FloorOrigin()+ChultCanyonFrame(600,-380,390),At=FloorOrigin()+ChultBridgePlanks()[6].Grip;
+            if(Run->DetailCamera.IsValid())Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==41)FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canyon_Planks.png"),true,false);
+        else if(Run->Phase==42)
+        {
+            const FVector From=FloorOrigin()+ChultCanyonFrame(2200,-1800,220),At=FloorOrigin()+ChultCanyonFrame(350,0,-900);
+            if(Run->DetailCamera.IsValid())Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==43)FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Canyon_Depth.png"),true,false);
+        else if(Run->Phase==44)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

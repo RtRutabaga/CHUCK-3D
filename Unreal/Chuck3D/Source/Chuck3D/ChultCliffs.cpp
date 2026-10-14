@@ -1,5 +1,6 @@
 #include "ChultCliffs.h"
 #include "ChultLanding.h"
+#include "ChultCanyon.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -146,7 +147,8 @@ void StartChultCliffReview(AActor* Owner,AChuckCharacter* Chuck,int32 PreviousFa
         if(Run->Trial==3)
         {
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CLIFF_TEST_COMPLETE failures=%d trials=3"),Run->Failures);
-            FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);
+            if(Run->Failures)FPlatformMisc::RequestExitWithStatus(false,1);
+            else StartChultCanyonReview(Owner,Chuck);
         }
     },.016f,true);
 }

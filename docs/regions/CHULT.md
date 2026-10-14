@@ -8,6 +8,16 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Northeast canyon and broken rope bridge authorized October 14, 2026:**
+extend the current open jungle beyond the brachiation line and stream. Build a
+deep canyon with jungle banks and a decrepit rope bridge whose surviving planks
+are the proposed handholds across missing-board gaps. No usable walking deck,
+rope walkway or ground bypass crosses the canyon. Codex owns the setting and
+inactive hand-position contract; the user will work with Claude on registration,
+brachiation, camera, entry/dismount and actual crossing tests. Existing Chult
+setting/encounters and the current canopy remain intact. Layout and division of
+work: [../CHULT-CANYON.md](../CHULT-CANYON.md).
+
 **Additive vegetation/dressing and low fog authorized October 14, 2026:**
 densify the currently built jungle toward Muhammed Haroon Neyyathoor's
 [Fantasy Tropical Forest](https://kunjonart.artstation.com/projects/1Ne1JX),
