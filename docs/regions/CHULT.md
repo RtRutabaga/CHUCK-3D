@@ -213,3 +213,7 @@ heavier moss on the existing grove ruins, and round/erode the stone blocks.
 Rock Wall 08, Mossy Stone Wall and Rabdentse Ruins Wall are the selected CC0
 sources. Preserve parkour routes and the stone-to-tree connection. Cliffs remain
 deferred; material/geometry contract is recorded in CHULT-RUINS.md.
+
+## October 14 — partial boundary cliffs (authorized)
+
+The user now requests impassable cliffs at parts of the treeline, inspired by Green Hell, and explicitly keeps the next expansion beyond the brachiation trees and stream open. This supersedes the earlier cliff deferrals above. Build a broken-height, weathered mossy rock escarpment behind the western/southern old forest, spanning bearings 100–325 degrees at roughly 102 m from the landing. Leave the northeast extension and its onward ground/stream corridors clear. Use existing rock materials and procedural visible-mesh collision; no downloads, binary imports or character changes. Continuous undercut faces exclude existing wall-climb/mantle surface acceptance; no reachable intermediate ledges or registered grips. Verify face normals, capsule blocking, preserved routes/canopy and cooked views before launcher promotion. This authorizes boundary setting only, not a new region or transition.

@@ -5,6 +5,7 @@
 #include "ChultRuins.h"
 #include "ChultRaptor.h"
 #include "ChultExpansion.h"
+#include "ChultCliffs.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -317,6 +318,7 @@ void AChultLanding::BuildSet()
     BuildChultCanopy(this);
     BuildChultRuins(this);
     BuildChultExpansion(this);
+    BuildChultCliffs(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -333,6 +335,7 @@ void AChultLanding::VerifyAndCapture()
     int32 Failures=0,Samples=0;
     Failures+=CheckChultRuins(this,C);
     Failures+=CheckChultExpansion(this,C);
+    Failures+=CheckChultCliffs(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -493,6 +496,18 @@ void AChultLanding::VerifyAndCapture()
         }
         else if(Run->Phase==29) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Expansion_Ford.png"),true,false);
         else if(Run->Phase==30)
+        {
+            const FVector From=FloorOrigin()+FVector(-6900,-6900,180),At=FloorOrigin()+FVector(-7440,-7440,160);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==31) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Boundary_Cliffs.png"),true,false);
+        else if(Run->Phase==32)
+        {
+            const FVector From=FloorOrigin()+FVector(0,-9500,200),At=FloorOrigin()+FVector(-5000,-8000,1500);
+            if(Run->DetailCamera.IsValid()) Run->DetailCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        }
+        else if(Run->Phase==33) FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult/Boundary_Cliffs_Wide.png"),true,false);
+        else if(Run->Phase==34)
         {
             C->SetActorHiddenInGame(false);
             if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);

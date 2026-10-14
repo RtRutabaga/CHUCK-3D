@@ -17,3 +17,5 @@ Verification covers floor extent, real-capsule route sweeps following the terrai
 The forest and terrain remain a setting pass below the supplied art target. Human camera/play-feel, Xbox, stream audio and larger-region encounter pacing remain separate follow-ups.
 
 Next part of the work can be done here: refine the expanded setting after a play review. Claude retains traversal/camera ownership.
+
+October 14 follow-up: the user subsequently authorized partial western/southern treeline cliffs. The northeast beyond the brachiation trees and stream remains open for the next expansion. See [CHULT-CLIFFS.md](CHULT-CLIFFS.md); this supersedes the earlier cliff deferral, not the extension's protected ground/canopy/stream contract.

@@ -1,4 +1,5 @@
 #include "ChultExpansion.h"
+#include "ChultCliffs.h"
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
 #include "ChultRootProfiles.h"
@@ -333,6 +334,6 @@ void StartChultExpansionReview(AActor* Owner,AChuckCharacter* C)
         const bool Pass=Distance<45 && C->GetCharacterMovement()->IsMovingOnGround();Run->Failures+=!Pass;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_EXPANSION_WALK trial=%d pass=%d distance=%.1f seconds=%.2f ground=%d fps=%.1f worst_frame_ms=%.1f"),Run->Trial,Pass,Distance,Time,C->GetCharacterMovement()->IsMovingOnGround(),Run->Frames/FMath::Max(.001,Run->FrameTime),Run->Worst*1000);
         ++Run->Trial;Run->Start=-1;
-        if(Run->Trial==Starts.Num()) {UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_EXPANSION_TEST_COMPLETE failures=%d trials=3"),Run->Failures);FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);}
+        if(Run->Trial==Starts.Num()) {UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_EXPANSION_TEST_COMPLETE failures=%d trials=3"),Run->Failures);StartChultCliffReview(Owner,C,Run->Failures);}
     },.016f,true);
 }
