@@ -4,6 +4,7 @@
 #include "ChultCanyon.h"
 #include "ChultRiver.h"
 #include "ChultRuins.h"
+#include "ChultGorge.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -19,12 +20,9 @@
 
 namespace
 {
-    FVector Outfall(float U)
-    {
-        const float Z=FMath::Lerp(50.f,-4650.f,U),Top=ChultCanyonGroundZ(ChultCanyonFrame(0,-1800));
-        const float F=FMath::Clamp((Top-Z)/(Top+4700),0.f,1.f);
-        return ChultCanyonFrame(2000*F+90*FMath::Sin(-7.2f)*FMath::Sin(F*PI)+25*FMath::Min(U*10,1.f),-1800+FMath::Sin(U*13)*12,Z);
-    }
+    // The outfall is now a free plunge from the same lip into the gorge mist
+    // (ChultGorge.cpp, fall 0); U runs from the lip to where it fades.
+    FVector Outfall(float U){return ChultGorgeFall(0,U*ChultGorgeFallDrop(0),0);}
 }
 
 void BuildChultWatercourse(AActor* Owner)
@@ -35,14 +33,7 @@ void BuildChultWatercourse(AActor* Owner)
     Rock.Rock(FVector(22200,6000,450),FVector(300,200,500),0,9);
     Rock.Rock(FVector(21900,7050,350),FVector(650,450,450),25,7);
     Rock.Rock(FVector(21850,5000,150),FVector(650,600,350),-35,11);
-    // Side shelves break up the gorge, well below the fall-recovery threshold.
-    for(int32 I=0;I<36;++I)
-    {
-        const float T=-4300+(I%18)*480.f,Z=I<18?-1350.f:-3050.f;
-        if(FMath::Abs(T+1800)<600)continue;
-        const float F=(350-Z)/5050,S=2000*F+90*FMath::Sin(T*.004f)*FMath::Sin(F*PI);
-        Rock.Rock(ChultCanyonFrame(S-100,T,Z),FVector(310+(I%3)*70,390,430+(I%5)*50),37,I*3.2f);
-    }
+    // The gorge's own weathered benches replaced the old side shelves.
     auto Ribbon=[&](TFunction<FVector(float)> At,int32 Steps,float Width,FVector Side)
     {
         for(int32 I=0;I<Steps;++I)
@@ -66,11 +57,7 @@ void BuildChultWatercourse(AActor* Owner)
     };
     Ribbon([](float U){return FMath::Lerp(FVector(22050,6000,470),FVector(21700,6000,470),U);},5,65,FVector(0,1,0));
     Ribbon([](float U){return FMath::Lerp(FVector(21700,6000,470),FVector(21500,6000,170),U)+FVector(0,FMath::Sin(U*8)*4,0);},16,85,FVector(0,1,0));
-    Ribbon([](float U){return Outfall(U);},100,125,FVector(-.6,.8,0));
-    // Short broken secondary filaments, rather than an opaque white curtain.
-    for(int32 I=0;I<6;++I)
-        Ribbon([I](float U){return Outfall(.12f+I*.13f+U*.12f)+FVector(-.6,.8,0)*(I%2?65:-65);},12,26,FVector(-.6,.8,0));
-    for(FVector Center:{FVector(21500,6000,172),Outfall(1)+FVector(0,0,8),ChultCanyonFrame(-70,-1800,52)})
+    for(FVector Center:{FVector(21500,6000,172),ChultCanyonFrame(-70,-1800,52)})
     {
         for(int32 I=0;I<28;++I)
         {
@@ -105,18 +92,11 @@ void BuildChultWatercourse(AActor* Owner)
         Plant(TEXT("SM_FallPalm"),At,1.2f);
         for(int32 J=0;J<20;++J)Plant(J%2?TEXT("SM_FallShrub"):TEXT("SM_ChultFern2"),At+FVector(R.FRandRange(-130,130),R.FRandRange(-130,130),-15),J%2?1.3f:2.2f);
     }
-    for(int32 I=0;I<36;++I)
-    {
-        const float T=-4300+(I%18)*480.f,Z=I<18?-1350.f:-3050.f,F=(350-Z)/5050;
-        if(FMath::Abs(T+1800)<600)continue;
-        FVector At=ChultCanyonFrame(2000*F+90*FMath::Sin(T*.004f)*FMath::Sin(F*PI)-100,T,Z+430+(I%5)*50-15);
-        for(int32 J=0;J<5;++J)Plant(J%2?TEXT("SM_FallShrub"):TEXT("SM_ChultFern1"),At+FVector(J*25-50,0,0),J%2?1.1f:2.f);
-    }
-    for(FVector At:{FVector(21500,6000,185),Outfall(1)+FVector(0,0,60)})
+    for(FVector At:{FVector(21500,6000,185)})
     {
         auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+At);Fog->SetWorldScale3D(FVector(At.Z>0?.38f:.8f));Fog->RadialFogExtinction=.35f;Fog->HeightFogExtinction=.22f;Fog->HeightFogFalloff=1600;Fog->HeightFogOffset=.6f;Fog->FogAlbedo=FLinearColor(.7f,.79f,.74f);Fog->RegisterComponent();
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WATERCOURSE source_fall_cm=300 gorge_drop_cm=4700 plants=%d missing_assets=%d falls_collision=0 triangles=%d"),Plants,Missing,(Rock.T.Num()+Water.T.Num())/3);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WATERCOURSE source_fall_cm=300 gorge_drop=plunge plants=%d missing_assets=%d falls_collision=0 triangles=%d"),Plants,Missing,(Rock.T.Num()+Water.T.Num())/3);
 }
 
 int32 CheckChultWatercourse(AActor* Owner,AChuckCharacter* Chuck)

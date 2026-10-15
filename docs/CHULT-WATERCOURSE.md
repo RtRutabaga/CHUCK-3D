@@ -13,3 +13,5 @@ Verification checks every sampled bed position and monotonic water height, exact
 Source and waterfalls are not a completed art target, fluid simulation or explorable gorge floor. Existing fall recovery remains. Claude still owns activating/testing the broken bridge's brachiation contract.
 
 Next part of the work can be done here.
+
+> **2026-10-15 (Claude):** the gorge walls, the plunge of this water into the gorge and the gorge mist are now [CHULT-GORGE.md](CHULT-GORGE.md). Floors, bridge and checks of the banks are unchanged.

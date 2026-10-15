@@ -3,6 +3,7 @@
 #include "ChultRiver.h"
 #include "ChultLanding.h"
 #include "ChultExpansion.h"
+#include "ChultGorge.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -64,7 +65,7 @@ float ChultCanyonGroundZ(const FVector& P)
 }
 void BuildChultCanyon(AActor* Owner)
 {
-    FSurface Ground,Stone,Vines;
+    FSurface Ground,Vines;
     FRandomStream R(2026101407);
     // Two independent banks. No cube/backing floor bridges the cleft.
     for(int32 Bank=0;Bank<2;++Bank)
@@ -77,15 +78,7 @@ void BuildChultCanyon(AActor* Owner)
             for(FVector* P:{&A,&B,&D,&E})P->Z=ChultCanyonGroundZ(*P);
             Ground.Quad(A,B,D,E);
         }
-        // Tall folded faces narrow toward the dark bottom, beyond fall recovery.
-        auto Point=[&](float T,float U){const float Top=ChultCanyonGroundZ(ChultCanyonFrame(Bank==0?0:4500,T));
-            float S=(Bank==0?0:4500)+(Bank==0?1:-1)*(2000*U+90*FMath::Sin(T*.004f)*FMath::Sin(U*PI));
-            return ChultCanyonFrame(S,T,FMath::Lerp(Top,-4700.f,U));};
-        for(float T=-4500;T<4500;T+=100)for(int32 J=0;J<20;++J)
-        {
-            FVector A=Point(T,J/20.f),B=Point(T,(J+1)/20.f),D=Point(T+100,(J+1)/20.f),E=Point(T+100,J/20.f);
-            if(Bank==0)Stone.Quad(A,B,D,E);else Stone.Quad(A,E,D,B);
-        }
+        // The gorge walls below each bank are ChultGorge.cpp (Claude, 2026-10-15).
     }
     // Ground uses both horizontal coordinates like the existing extension;
     // vertical face mapping would stretch flat soil into stripes.
@@ -94,8 +87,6 @@ void BuildChultCanyon(AActor* Owner)
         Ground.UV[I]=FVector2D(Ground.V[I].X/260,Ground.V[I].Y/260);
         Ground.Tangent[I]=FProcMeshTangent(FVector(1,0,-Ground.N[I].X/Ground.N[I].Z).GetSafeNormal(),false);
     }
-    // Jagged bottom and scattered rubble are scenery below the existing death line.
-    for(float T=-4500;T<4500;T+=150)Stone.Quad(ChultCanyonFrame(1850,T,-4700),ChultCanyonFrame(2650,T,-4700),ChultCanyonFrame(2650,T+150,-4700),ChultCanyonFrame(1850,T+150,-4700));
     // The bridge is ChultBridge.cpp (Claude, 2026-10-14). The anchor posts'
     // old rope ends drew 56 numbers here; keep drawing them so the vegetation
     // below lands exactly where it was checked.
@@ -107,12 +98,12 @@ void BuildChultCanyon(AActor* Owner)
     for(float Edge:{0.f,4500.f})for(int32 I=0;I<30;++I)
     {
         float T=R.FRandRange(-4300,4300);if(FMath::Abs(T)<450)continue;
-        float Length=R.FRandRange(400,1900);FVector Previous=ChultCanyonFrame(Edge,T,340);
-        for(int32 J=1;J<=20;++J){float U=J/20.f,Z=340-Length*U;float S=Edge+(Edge==0?1:-1)*((350-Z)*2000/5050+90*FMath::Sin(T*.004f)*FMath::Sin((350-Z)/5050*PI)+14);FVector Next=ChultCanyonFrame(S,T+FMath::Sin(U*7+I)*18,Z);Vines.Tube(Previous,Next,5*(1-.7f*U));Previous=Next;}
+        // Same draws as before; the strands now follow the new gorge faces.
+        const int32 Side=Edge==0?0:1;const float Sg=Side==0?1.f:-1.f,Top=ChultGorgeTop(Side,T);
+        float Length=R.FRandRange(400,1900);FVector Previous=ChultCanyonFrame(ChultGorgeWallS(Side,T,Top-10)+Sg*14,T,Top-10);
+        for(int32 J=1;J<=20;++J){float U=J/20.f,Z=Top-10-Length*U,Tj=T+FMath::Sin(U*7+I)*18;FVector Next=ChultCanyonFrame(ChultGorgeWallS(Side,Tj,Z)+Sg*14,Tj,Z);Vines.Tube(Previous,Next,5*(1-.7f*U));Previous=Next;}
     }
-    const TCHAR* RockMat=TEXT("/Game/Art/ChultTerrain/M_ChultCliff.M_ChultCliff");
     Missing+=!Finish(Owner,TEXT("ChultCanyonBanks"),Ground,TEXT("/Game/Art/Cutscenes/FallToChult/M_FallGround.M_FallGround"),true)->GetMaterial(0);
-    Missing+=!Finish(Owner,TEXT("ChultCanyonRock"),Stone,RockMat,true)->GetMaterial(0);
     Missing+=!Finish(Owner,TEXT("ChultCanyonHangingVines"),Vines,TEXT("/Game/Art/Cutscenes/FallToChult/M_ChultHangingMoss.M_ChultHangingMoss"),false)->GetMaterial(0);
     TMap<FString,UHierarchicalInstancedStaticMeshComponent*> Sets;int32 Trees=0,Plants=0,Rocks=0;
     auto Place=[&](FString Name,FVector At,float Scale,bool Solid=false,bool Hidden=false)
@@ -136,12 +127,9 @@ void BuildChultCanyon(AActor* Owner)
         const int32 Type=I%6;Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type==4?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),At,R.FRandRange(1.4f,2.4f)*(Type<4?1:.6f));++Plants;
         if(I%65==0&&FMath::Abs(T)>650){Place(FString::Printf(TEXT("SM_ChultRock%d"),I%6),At-FVector(0,0,22),R.FRandRange(.5f,1.f),true);++Rocks;}
     }
-    for(int32 I=0;I<6;++I)
-    {
-        const float S=I<3?-500.f:5000.f,T=(I%3-1)*1900.f;auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);
-        Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(AChultLanding::FloorOrigin()+ChultCanyonFrame(S,T,-400));Fog->SetWorldScale3D(FVector(2.6));Fog->RadialFogExtinction=T<0?.25f:.8f;Fog->HeightFogExtinction=T<0?.08f:.22f;Fog->HeightFogFalloff=2400;Fog->HeightFogOffset=.61f;Fog->FogAlbedo=FLinearColor(.64f,.74f,.8f);Fog->FogEmissive=FLinearColor(.03f,.045f,.055f);Fog->RegisterComponent();
-    }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANYON span_cm=4500 depth_cm=5050 trees=%d plants=%d rocks=%d missing_assets=%d deck_collision=0 rope_collision=0 triangles=%d"),Trees,Plants,Rocks,Missing,(Ground.T.Num()+Stone.T.Num()+Vines.T.Num())/3);
+    // The six lip mist pools read as white spheres from the bridge; the
+    // gorge's own mist sea replaced them (Claude, 2026-10-15).
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANYON span_cm=4500 depth_cm=mist trees=%d plants=%d rocks=%d missing_assets=%d deck_collision=0 rope_collision=0 triangles=%d"),Trees,Plants,Rocks,Missing,(Ground.T.Num()+Vines.T.Num())/3);
     BuildChultRiver(Owner);
 }
 int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* C)
@@ -160,11 +148,11 @@ int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* C)
         if(Found)UE_LOG(LogTemp,Warning,TEXT("CHUCK_CANYON_VOID_FAIL s=%.0f t=%.0f component=%s"),S,T,*GetNameSafe(Hit.GetComponent()));
         Failures+=Found;++Voids;
     }
-    auto* Rock=FindObjectFast<UProceduralMeshComponent>(Owner,TEXT("ChultCanyonRock"));
+    // Both gorge faces stand beside the crossing (ChultGorge.cpp walls).
     for(float T:{-3000.f,0.f,3000.f})for(float S:{0.f,4500.f})
     {
-        const float Z=-2000;FHitResult Hit;bool Found=Rock&&Rock->LineTraceComponent(Hit,G+ChultCanyonFrame(2250,T,Z),G+ChultCanyonFrame(S==0?-1000:5500,T,Z),Q);
-        Failures+=!Found||FMath::Abs(Hit.ImpactNormal.Z)<.3f;++Faces;
+        const float Z=-2000;FHitResult Hit;bool Found=W->LineTraceSingleByChannel(Hit,G+ChultCanyonFrame(2250,T,Z),G+ChultCanyonFrame(S==0?-1000:5500,T,Z),ECC_Visibility,Q);
+        Failures+=!Found||!Hit.GetComponent()||!Hit.GetComponent()->ComponentHasTag(TEXT("ChultGorgeWall"));++Faces;
     }
     for(float Start:{-2800.f,4800.f})for(int32 I=0;I<60;++I)
     {

@@ -1,6 +1,7 @@
 #include "ChultRiver.h"
 #include "ChultCanyon.h"
 #include "ChultLandform.h"
+#include "ChultGorge.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -19,14 +20,9 @@ namespace
     float Width(float S){return 460+90*FMath::Sin((S-4500)*.0007f);}
     float WaterZ(float S){return 280+(S-4500)*.022f;}
     FVector Surface(float S,float Offset=0){return ChultCanyonFrame(S,Center(S)+Offset,WaterZ(S));}
-    FVector Fall(float U,float Offset=0)
-    {
-        const float Z=FMath::Lerp(280.f,-4650.f,U),T=2200+Offset+FMath::Sin(U*16)*18;
-        const float Top=ChultCanyonGroundZ(ChultCanyonFrame(4500,T)),F=FMath::Clamp((Top-Z)/(Top+4700),0.f,1.f);
-        // The folded face varies across the full width. Follow each filament's
-        // own rock profile so the broad sheet never disappears behind the wall.
-        return ChultCanyonFrame(4500-2000*F-90*FMath::Sin(T*.004f)*FMath::Sin(F*PI)-35*FMath::Min(U*10,1.f),T,Z);
-    }
+    // The broad fall itself is ChultGorge.cpp's fall 1 (Claude, 2026-10-15):
+    // the river now leaves the lip and plunges free into the gorge mist.
+    FVector Fall(float U,float Offset=0){return ChultGorgeFall(1,U*ChultGorgeFallDrop(1),Offset/920.f);}
     void FlowQuad(FChultLandform& M,FVector A,FVector B,FVector C,FVector D,float V0,float V1,float L,float H)
     {
         int32 Start=M.V.Num();M.Quad(A,B,C,D);
@@ -47,7 +43,7 @@ float ChultRiverGroundZ(const FVector& P,float Base)
 }
 void BuildChultRiver(AActor* Owner)
 {
-    FChultLandform Ground,Water,Falls,Rock;const FVector G=AChultLanding::FloorOrigin();
+    FChultLandform Ground,Water,Rock;const FVector G=AChultLanding::FloorOrigin();
     // Shared edge at S=11500: both banks use ChultCanyonGroundZ exactly.
     for(float S=4500;S<28000;S+=100)for(float T=-6500;T<6500;T+=100)
     {
@@ -62,22 +58,19 @@ void BuildChultRiver(AActor* Owner)
         const float L=K/8.f,H=(K+1)/8.f;
         FlowQuad(Water,Surface(S,(L*2-1)*Width(S)),Surface(S,(H*2-1)*Width(S)),Surface(S-50,(H*2-1)*Width(S-50)),Surface(S-50,(L*2-1)*Width(S-50)),(S-28000)/480,(S-28050)/480,L,H);
     }
-    for(int32 I=0;I<120;++I)for(int32 K=0;K<12;++K)
-    {
-        const float U=I/120.f,V=(I+1)/120.f,L=K/12.f,H=(K+1)/12.f;
-        FlowQuad(Falls,Fall(U,(L*2-1)*460),Fall(U,(H*2-1)*460),Fall(V,(H*2-1)*460),Fall(V,(L*2-1)*460),U*12,V*12,L,H);
-    }
     // Shoulders frame the broad fall without plugging its channel or overlook.
     for(int32 I=0;I<16;++I)
     {
-        float U=I/16.f;for(float Side:{-1.f,1.f})Rock.Rock(Fall(U,Side*(650+120*FMath::Sin(I*2.f)))+FVector(.8,.6,0)*350-FVector(0,0,130),FVector(230,240,360),I*37,I+Side);
+        // Only the shoulders on the bank itself remain; the old ones down the
+        // face sat on the previous wall profile.
+        const float U=I/16.f,Z=FMath::Lerp(280.f,-4650.f,U);if(Z<150)continue;
+        for(float Side:{-1.f,1.f})Rock.Rock(ChultCanyonFrame(4500-35*FMath::Min(U*10,1.f),2200+Side*(650+120*FMath::Sin(I*2.f)),Z)+FVector(.8,.6,0)*350-FVector(0,0,130),FVector(230,240,360),I*37,I+Side);
     }
     auto* Floor=Ground.Finish(Owner,TEXT("ChultRiverValley"),TEXT("/Game/Art/Cutscenes/FallToChult/M_FallGround.M_FallGround"));
     auto* River=Water.Finish(Owner,TEXT("ChultBroadRiver"),TEXT("/Game/Art/ChultTerrain/M_ChultStream.M_ChultStream"),false);
-    auto* Cascade=Falls.Finish(Owner,TEXT("ChultBroadWaterfall"),TEXT("/Game/Art/ChultTerrain/M_ChultWaterfall.M_ChultWaterfall"),false);
     auto* Shoulders=Rock.Finish(Owner,TEXT("ChultBroadFallsRock"),TEXT("/Game/Art/ChultTerrain/M_ChultCliff.M_ChultCliff"));
-    River->SetCastShadow(false);Cascade->SetCastShadow(false);
-    int32 Missing=!Floor->GetMaterial(0)+!River->GetMaterial(0)+!Cascade->GetMaterial(0)+!Shoulders->GetMaterial(0),Trees=0,Plants=0;
+    River->SetCastShadow(false);
+    int32 Missing=!Floor->GetMaterial(0)+!River->GetMaterial(0)+!Shoulders->GetMaterial(0),Trees=0,Plants=0;
     FRandomStream R(2026101501);TMap<FString,UHierarchicalInstancedStaticMeshComponent*> Sets;
     auto Place=[&](FString Name,FVector P,float Scale,float Yaw,bool Solid=false,bool Hidden=false)
     {
@@ -103,11 +96,12 @@ void BuildChultRiver(AActor* Owner)
         }
         else {int32 Type=I%6;Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type==4?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),P,R.FRandRange(1.5,2.6)*(Type<4?1:.65f),Yaw);++Plants;}
     }
-    for(FVector P:{Fall(.96f),Fall(.04f)})
     {
+        // Spray at the lip; the plunge's own mist is in the gorge.
+        const FVector P=Fall(.03f);
         auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+P);Fog->SetWorldScale3D(FVector(1.1));Fog->RadialFogExtinction=.38;Fog->HeightFogExtinction=.16;Fog->HeightFogFalloff=1800;Fog->HeightFogOffset=.6;Fog->FogAlbedo=FLinearColor(.66,.78,.73);Fog->RegisterComponent();
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RIVER extension_m=165 width_cm=920 fall_cm=4930 trees=%d plants=%d missing_assets=%d water_collision=0 triangles=%d"),Trees,Plants,Missing,(Ground.T.Num()+Water.T.Num()+Falls.T.Num()+Rock.T.Num())/3);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_RIVER extension_m=165 width_cm=920 fall_cm=4930 trees=%d plants=%d missing_assets=%d water_collision=0 triangles=%d"),Trees,Plants,Missing,(Ground.T.Num()+Water.T.Num()+Rock.T.Num())/3);
 }
 int32 CheckChultRiver(AActor* Owner,AChuckCharacter* Chuck)
 {
@@ -127,11 +121,12 @@ int32 CheckChultRiver(AActor* Owner,AChuckCharacter* Chuck)
             }
         }
     }
-    auto* Wall=FindObjectFast<UProceduralMeshComponent>(Owner,TEXT("ChultCanyonRock"));int32 FallProbes=0;
+    // The broad fall stays clear of its wall and in front of it, all the way down.
+    int32 FallProbes=0;
     for(float U:{.05f,.2f,.4f,.65f,.85f})for(float Offset:{-400.f,-200.f,0.f,200.f,400.f})
     {
         const FVector P=G+Fall(U,Offset),Along(.8,.6,0);FHitResult Hit;
-        const bool Found=Wall&&Wall->LineTraceComponent(Hit,P-Along*150,P+Along*200,Q);
+        const bool Found=W->LineTraceSingleByChannel(Hit,P-Along*20,P+Along*4000,ECC_Visibility,Q)&&Hit.GetComponent()&&Hit.GetComponent()->ComponentHasTag(TEXT("ChultGorgeWall"));
         const float Behind=FVector::DotProduct(Hit.ImpactPoint-P,Along);
         if(!Found||Behind<5){++Failures;UE_LOG(LogTemp,Warning,TEXT("CHUCK_RIVER_FALL_OCCLUDED u=%.2f offset=%.0f found=%d behind=%.1f"),U,Offset,Found,Behind);}++FallProbes;
     }

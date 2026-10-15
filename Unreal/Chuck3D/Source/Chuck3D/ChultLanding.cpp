@@ -140,14 +140,29 @@ void AChultLanding::BuildEnvironment()
     Sun->SetIntensity(4.1f); Sun->SetLightColor(FLinearColor(.92f,.97f,1));
     Sun->DynamicShadowDistanceMovableLight=9000; Sun->DynamicShadowCascades=3;
     Attach(Sun,FVector::ZeroVector,FRotator(-30,20,0));
+    Sun->SetVolumetricScatteringIntensity(1.6f); Sun->SetForwardShadingPriority(1);
+    // Without dynamic GI (r.DynamicGlobalIlluminationMethod=0) shade received
+    // only the sky. As games without GI do: a stronger sky term with a lower
+    // hemisphere of ground-bounce colour, and one unshadowed fill opposite the
+    // sun, from below, standing in for light thrown back off sunlit rock and
+    // canopy. Specular-free, so it adds no second highlight (Claude, 2026-10-15).
     auto* Fill=NewObject<USkyLightComponent>(this);
     Fill->SetMobility(EComponentMobility::Movable); Fill->bRealTimeCapture=true;
-    Fill->SetIntensity(.45f); Attach(Fill);
+    Fill->bLowerHemisphereIsBlack=true; Fill->SetLowerHemisphereColor(FLinearColor(.12f,.13f,.075f));
+    Fill->SetIntensity(1.f); Attach(Fill);
+    auto* Bounce=NewObject<UDirectionalLightComponent>(this);
+    Bounce->SetMobility(EComponentMobility::Movable); Bounce->SetAtmosphereSunLight(false);
+    Bounce->SetIntensity(.7f); Bounce->SetForwardShadingPriority(0); Bounce->SetLightColor(FLinearColor(.9f,.9f,.83f));
+    Bounce->SetCastShadows(false); Bounce->SetSpecularScale(0.f); Bounce->SetVolumetricScatteringIntensity(0.f);
+    Attach(Bounce,FVector::ZeroVector,FRotator(28,200,0));
     auto* Fog=NewObject<UExponentialHeightFogComponent>(this);
     Fog->SetFogDensity(.035f); Fog->SetFogHeightFalloff(.18f); Fog->SetVolumetricFog(true);
     Fog->SetVolumetricFogDistance(9000); Fog->SetFogInscatteringColor(FLinearColor(.18f,.225f,.25f));
-    Fog->SecondFogData.FogDensity=.045f;
-    Fog->SecondFogData.FogHeightFalloff=2.f;
+    // The low layer keeps the jungle floor's haze but thickens more slowly
+    // with depth, so the gorge walls read for fifty metres before the mist
+    // (ChultGorge.h) swallows them; it once went opaque about ten metres down.
+    Fog->SecondFogData.FogDensity=.04f;
+    Fog->SecondFogData.FogHeightFalloff=1.f;
     Fog->SecondFogData.FogHeightOffset=-90.f;
     Attach(Fog);
     BuildChultLowMist(this);
@@ -162,6 +177,10 @@ void AChultLanding::BuildEnvironment()
     P.bOverride_ColorGain=true; P.ColorGain=FVector4(1,1,1,1);
     P.bOverride_BloomIntensity=true; P.BloomIntensity=.4f;
     P.bOverride_AmbientOcclusionIntensity=true; P.AmbientOcclusionIntensity=.6f;
+    // Local tone mapping: keep the sun/shade contrast, but compress the
+    // darkest shade and the hottest highlights rather than the whole image.
+    P.bOverride_LocalExposureShadowContrastScale=true; P.LocalExposureShadowContrastScale=.66f;
+    P.bOverride_LocalExposureHighlightContrastScale=true; P.LocalExposureHighlightContrastScale=.85f;
     Attach(Post);
 }
 

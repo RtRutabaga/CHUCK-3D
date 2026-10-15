@@ -8,6 +8,9 @@ Environment surface scans: Poly Haven, CC0-1.0.
 https://polyhaven.com/license
 Weathered Brown Planks: https://polyhaven.com/a/weathered_brown_planks
 Rough Wood: https://polyhaven.com/a/rough_wood
+Cliff Side: https://polyhaven.com/a/cliff_side
+Aerial Rocks 02: https://polyhaven.com/a/aerial_rocks_02
+Aerial Grass Rock: https://polyhaven.com/a/aerial_grass_rock
 
 Human base meshes and source textures: MakeHuman CC0 assets, via MPFB.
 https://www.makehumancommunity.org/content/license.html

@@ -1,5 +1,7 @@
 # Chult — starting-side topography and canyon vista
 
+> **Superseded 2026-10-15 (Claude):** the user asked for this vista and its cliffs and waterfalls to be rebuilt; see [CHULT-GORGE.md](CHULT-GORGE.md). `BuildChultVista` now lays both rims from the gorge functions. The text below records Codex's earlier version.
+
 Authorized by the user's October 15, 2026 request: fill the starting side of the bridge with realistic additional cliffs and a distant landscape vista, with the canyon as the main reveal. Leave the far side for later walkable expansion. This is scenery within the approved Chult region, informed by the read-only Phase 4 jungle terrain/exploration direction.
 
 Use the established canyon frame. All added geometry, tree bounds and localized haze stay on the starting half-plane, S<=0. Preserve the existing playable floor, creek, canopy, ruins, encounter positions, bridge and both waterfalls. No far-bank terrain, river, dressing, lighting or route changes. No new encounters, dialogue, controls or region transitions.

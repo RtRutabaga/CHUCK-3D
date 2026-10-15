@@ -43,3 +43,5 @@ Chult/canopy/raptor/fall/package regressions. Handoff records actual results,
 launcher state and unimplemented Claude traversal explicitly.
 
 The broken-plank crossing is active and tested (CHULT-BRIDGE.md).
+
+> **2026-10-15 (Claude):** the gorge walls, the plunge of this water into the gorge and the gorge mist are now [CHULT-GORGE.md](CHULT-GORGE.md). Floors, bridge and checks of the banks are unchanged.
