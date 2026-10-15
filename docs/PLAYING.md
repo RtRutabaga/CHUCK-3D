@@ -12,7 +12,9 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 **New Game** starts the morning docks. **Dev Checkpoints** offers Waterdeep, Sewer, Sewer Jump, Sewer Long Jump, Waterdeep Night, Tavern Pantry and **Chult Landing**. Each starts a fresh world; there is no persistent save yet. Esc exits.
 
-**Chult Landing** shares the fall cutscene's clearing, tall trees and winding ground loop. The October 13 nature pass adds scanned bark/soil, four fern shapes, six rock shapes and a limited background-tree layer. The connected canopy grove has rounded trunks, leafy crowns, broad buttress roots and separate reaching branches with jump gaps. It remains a setting preview awaiting Claude's climb/brachiation integration and tests. Enter through the normal fall or this checkpoint. See [CHULT-LANDING.md](CHULT-LANDING.md) and [CHULT-CANOPY.md](CHULT-CANOPY.md).
+**Chult Landing** shares the fall cutscene's clearing, tall trees and winding ground loop. The October 13 nature pass adds scanned bark/soil, four fern shapes, six rock shapes and a limited background-tree layer. The connected canopy grove has rounded trunks, leafy crowns, broad buttress roots and separate reaching branches with jump gaps. The canopy climbing and brachiation are active. Enter through the normal fall or this checkpoint. See [CHULT-LANDING.md](CHULT-LANDING.md) and [CHULT-CANOPY.md](CHULT-CANOPY.md).
+
+Follow the canopy line and stream northeast to the broken rope bridge. Cross by brachiating between its surviving planks. Beyond the far bank, follow the broader river upstream through the new dense jungle; downstream it drops as a wide waterfall into the bridge canyon. See [CHULT-RIVER.md](CHULT-RIVER.md).
 
 Rounded, gray stone ruins with heavier moss sit south of the canopy grove. Low steps lead to broken terraces
 for short running jumps; a narrow stairwell supports alternating wall jumps to

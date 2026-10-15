@@ -6,6 +6,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Canopy setting expansion authorized by the user, 2026-10-13:** extend the map with closely spaced trees for existing cat-to-cat climbing, standing canopy forks and branch/vine routes for brachiation. Codex builds this setting; Claude implements and tests the traversal. Raptors are a tentative future reason to use the canopy, not part of this pass. Assess partial treetop vision fading if foliage obstructs the player; camera/material integration follows Claude's traversal work. A later tree will require Premium Buhetian Halfling Leaf to introduce the stamina lock, but neither that tree nor the pickup is authorized for this pass. See [../CHULT-CANOPY.md](../CHULT-CANOPY.md) for the authored setting contract.
 
+**Far-bank jungle river authorized October 15, 2026:** the user's request extends beyond the bridge into dense jungle alongside a wider, faster meandering river ending in a broad waterfall into the bridge canyon. This is setting work within Chult; preserve the active crossing and earlier areas. Layout and checks: [../CHULT-RIVER.md](../CHULT-RIVER.md).
+
 ## Direction and sources
 
 **Northeast canyon and broken rope bridge authorized October 14, 2026:**

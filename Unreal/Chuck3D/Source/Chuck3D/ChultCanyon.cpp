@@ -1,5 +1,6 @@
 #include "ChultCanyon.h"
 #include "ChultWatercourse.h"
+#include "ChultRiver.h"
 #include "ChultLanding.h"
 #include "ChultExpansion.h"
 #include "ChuckCharacter.h"
@@ -52,14 +53,14 @@ namespace
     }
 }
 FVector ChultCanyonFrame(float S,float T,float Z) {return Origin+Along*S+Across*T+FVector(0,0,Z);}
-bool InChultCanyon(const FVector& P) {FVector F=Frame(P);return F.X>=-6500 && F.X<=11500 && FMath::Abs(F.Y)<=4500;}
+bool InChultCanyon(const FVector& P) {FVector F=Frame(P);return (F.X>=-6500 && F.X<=11500 && FMath::Abs(F.Y)<=4500)||InChultRiverExtension(P);}
 float ChultCanyonGroundZ(const FVector& P)
 {
     if(OldFloor(P))return ChultExpansionGroundZ(P);
     const FVector F=Frame(P);
     const float Fade=Ease(FMath::Max(static_cast<float>(P.X)-22000.f,static_cast<float>(P.Y)-15500.f)/2300.f);
     const float Relief=Ease((FMath::Abs(static_cast<float>(F.Y))-600)/1400)*(55*FMath::Sin(F.X*.0011f)+40*FMath::Sin(F.Y*.0017f));
-    return ChultWatercourseGroundZ(P,Fade*(350+Relief));
+    return ChultRiverGroundZ(P,ChultWatercourseGroundZ(P,Fade*(350+Relief)+FMath::Max(0.f,static_cast<float>(F.X)-5000.f)*.022f));
 }
 void BuildChultCanyon(AActor* Owner)
 {
@@ -123,7 +124,7 @@ void BuildChultCanyon(AActor* Owner)
     for(int32 I=0;I<240;++I)
     {
         const float S=I%2==0?R.FRandRange(-5000,-700):R.FRandRange(5300,11000),T=R.FRandRange(-4300,4300);FVector At=ChultCanyonFrame(S,T,-6);
-        if(OldFloor(At)||ChultWatercourseDistance(At)<850 || FMath::Abs(T)<1100 || ((S>-1800&&S<0 || S>4500&&S<6500)&&FMath::Abs(T)<1700))continue;
+        if(OldFloor(At)||ChultRiverDistance(At)<1800||ChultWatercourseDistance(At)<850 || FMath::Abs(T)<1100 || ((S>-1800&&S<0 || S>4500&&S<6500)&&FMath::Abs(T)<1700))continue;
         const float Scale=R.FRandRange(1.7f,2.4f);
         // Both halves of a scanned tree use precisely the same transform.
         const int32 Seed=R.GetCurrentSeed();Place(TEXT("SM_ChultIslandTree"),At,Scale);R.Initialize(Seed);Place(TEXT("SM_ChultIslandTrunkCollision"),At,Scale,true,true);++Trees;
@@ -131,7 +132,7 @@ void BuildChultCanyon(AActor* Owner)
     for(int32 I=0;I<4800;++I)
     {
         const float S=I%2==0?R.FRandRange(-5600,-140):R.FRandRange(4680,11200),T=R.FRandRange(-4400,4400);FVector At=ChultCanyonFrame(S,T,-2);
-        if(OldFloor(At)||FMath::Abs(T)<260||ChultWatercourseDistance(At)<380)continue;
+        if(OldFloor(At)||ChultRiverDistance(At)<1450||FMath::Abs(T)<260||ChultWatercourseDistance(At)<380)continue;
         const int32 Type=I%6;Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type==4?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),At,R.FRandRange(1.4f,2.4f)*(Type<4?1:.6f));++Plants;
         if(I%65==0&&FMath::Abs(T)>650){Place(FString::Printf(TEXT("SM_ChultRock%d"),I%6),At-FVector(0,0,22),R.FRandRange(.5f,1.f),true);++Rocks;}
     }
@@ -141,6 +142,7 @@ void BuildChultCanyon(AActor* Owner)
         Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(AChultLanding::FloorOrigin()+ChultCanyonFrame(S,T,-400));Fog->SetWorldScale3D(FVector(2.6));Fog->RadialFogExtinction=T<0?.25f:.8f;Fog->HeightFogExtinction=T<0?.08f:.22f;Fog->HeightFogFalloff=2400;Fog->HeightFogOffset=.61f;Fog->FogAlbedo=FLinearColor(.64f,.74f,.8f);Fog->FogEmissive=FLinearColor(.03f,.045f,.055f);Fog->RegisterComponent();
     }
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANYON span_cm=4500 depth_cm=5050 trees=%d plants=%d rocks=%d missing_assets=%d deck_collision=0 rope_collision=0 triangles=%d"),Trees,Plants,Rocks,Missing,(Ground.T.Num()+Stone.T.Num()+Vines.T.Num())/3);
+    BuildChultRiver(Owner);
 }
 int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* C)
 {
@@ -155,6 +157,7 @@ int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* C)
     for(float S=200;S<=4300;S+=250)for(float T=-4000;T<=4000;T+=1000)
     {
         FHitResult Hit;bool Found=W->LineTraceSingleByChannel(Hit,G+ChultCanyonFrame(S,T,650),G+ChultCanyonFrame(S,T,-80),ECC_Visibility,Q);
+        if(Found)UE_LOG(LogTemp,Warning,TEXT("CHUCK_CANYON_VOID_FAIL s=%.0f t=%.0f component=%s"),S,T,*GetNameSafe(Hit.GetComponent()));
         Failures+=Found;++Voids;
     }
     auto* Rock=FindObjectFast<UProceduralMeshComponent>(Owner,TEXT("ChultCanyonRock"));
@@ -168,6 +171,7 @@ int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* C)
         float A=Start+I*30,B=A+30;FVector P=ChultCanyonFrame(A,0),End=ChultCanyonFrame(B,0);P.Z=ChultCanyonGroundZ(P)+Half+5;End.Z=ChultCanyonGroundZ(End)+Half+5;FHitResult Hit;Failures+=W->SweepSingleByChannel(Hit,G+P,G+End,FQuat::Identity,ECC_Pawn,Capsule,Q);
     }
     const int32 Bridge=CheckChultBridge(Owner,C);Failures+=Bridge;
+    Failures+=CheckChultRiver(Owner,C);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANYON_CHECK failures=%d bank_floors=%d void_samples=%d cliff_faces=%d approach_sweeps=120 bridge_failures=%d active_crossing=1"),Failures,Floors,Voids,Faces,Bridge);return Failures;
 }
 void StartChultCanyonReview(AActor* Owner,AChuckCharacter* C)

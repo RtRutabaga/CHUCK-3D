@@ -2,6 +2,7 @@
 #include "ChultLandform.h"
 #include "ChultExpansion.h"
 #include "ChultCanyon.h"
+#include "ChultRiver.h"
 #include "ChultRuins.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraActor.h"
@@ -152,7 +153,9 @@ void ReviewChultWatercourse(AActor* Owner,AChuckCharacter* Chuck,int32 Failures,
         if(Cliff->LineTraceComponent(Face,G+Out*6000+FVector(0,0,750),G+Out*12000+FVector(0,0,750),Q))
         {Eyes[0]=Face.ImpactPoint-G-Out*650;Aims[0]=Face.ImpactPoint-G+FVector(0,0,550);}
     }
-    const TArray<FString> Names={TEXT("JungleCliffs"),TEXT("SourceWaterfall"),TEXT("HeadwaterStream"),TEXT("CanyonWaterfallLip"),TEXT("CanyonWaterfall"),TEXT("JungleCliffsWide")};
+    Eyes.Append({ChultCanyonFrame(8200,-200,1100),ChultCanyonFrame(18400,900,1250),ChultCanyonFrame(1700,600,-600)});
+    Aims.Append({ChultCanyonFrame(10500,3000,400),ChultCanyonFrame(19500,2200,700),ChultCanyonFrame(4000,2200,-1400)});
+    const TArray<FString> Names={TEXT("JungleCliffs"),TEXT("SourceWaterfall"),TEXT("HeadwaterStream"),TEXT("CanyonWaterfallLip"),TEXT("CanyonWaterfall"),TEXT("JungleCliffsWide"),TEXT("FarBankRiver"),TEXT("RiverMeanders"),TEXT("BroadWaterfall")};
     Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,Chuck,Run,Eyes,Aims,Names,Failures,ContinueTests]()
     {
         const int32 I=Run->Phase/2;if(I>=Eyes.Num())
@@ -190,6 +193,6 @@ void StartChultWatercourseWalks(AActor* Owner,AChuckCharacter* Chuck)
         const bool Pass=Distance<45 && Chuck->GetCharacterMovement()->IsMovingOnGround();Run->Failures+=!Pass;Chuck->SetTestStick(FVector2D::ZeroVector);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WATERCOURSE_WALK trial=%d pass=%d distance=%.1f time=%.2f"),Run->Trial,Pass,Distance,Time);
         ++Run->Trial;Run->Start=-1;
-        if(Run->Trial==3){UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WATERCOURSE_TEST failures=%d trials=3"),Run->Failures);FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);}
+        if(Run->Trial==3){UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WATERCOURSE_TEST failures=%d trials=3"),Run->Failures);if(Run->Failures)FPlatformMisc::RequestExitWithStatus(false,1);else StartChultRiverWalks(Owner,Chuck);}
     },.016f,true);
 }
