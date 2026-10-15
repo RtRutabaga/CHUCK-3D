@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — the white screen before the fall cutscene (Claude)
+
+- **Request:** the long white screen between the cellar fall and the fall cutscene; then "do 1": fix its cause. Base `3fa5f6f`.
+- **Cause:** not a map load. At `AFallCutscene::Switch` the whole of Chult is built in one frame (`BuildStage` → `AChultLanding::BuildSet`), behind the designed white flash. In the previous package the build took **37.4 s**, of which **36.6 s** was `BuildChultCanopy`'s `UKismetProceduralMeshLibrary::CalculateTangentsForMesh`. Its `FindVertOverlaps` compares every vertex with every other one (UE 5.7 source), and the canopy has 124k vertices. Every other builder supplies its own tangents.
+- **Changed:** only `ChultCanopy.cpp`. A local `CalculateTangents` gives the same tangents in linear time: the same per-face UV gradients, summed over each vertex's own faces, and the flip test against the face normals smoothed per position. The engine's overlap search only fed the normals, and the canopy discards those because it passes its own. The `KismetProceduralMeshLibrary` include is gone. A new `CHUCK_CHULT_CANOPY_TANGENTS` log line gives the time per mesh. No geometry, collision, grip, rig or tuning change.
+- **Tested (cooked):**
+  - The fall stage now builds in **1.07 s** (`DOCKS_HIDDEN` → `FALL_STAGE`, `Local/verify-fall-cutscene-20261014-182340.log`). The tangents take 29–35 ms, 7–9 ms and ~1 ms for the bark, branches and vines.
+  - Full suite **182/182** on the first run (`Local/verify-package-20261014-182021.log`). Canopy **48/48**, static failures 0 (`verify-canopy-20261014-182558.log`); Chult checks pass; raptor **8/8**; fall/skip, leap 6/6 and lamp 8/8 pass.
+  - The cutscene's worst frames are 98–120 ms (previously up to 289 ms).
+  - `SEWER_MUSIC_CHECK failures=1` in the fall/demo-end logs is identical in the previous run's logs. Those tests leave the sewer, and the suite does not grade that line there.
+  - The bark's normal-map look was not compared by eye against the previous build. The maths is meant to match, but nobody has looked.
+- **Remaining:** the ~1 s build still happens in one frame, inside the white. Pre-building Chult while Chuck is in the cellar, spread over frames, would leave only the designed beat. Shader/PSO hitches of about 100 ms remain in the cutscene.
+- **Launcher:** promoted as `CanopyTangents` (`Local/canopy-tangent-promotion.log`; receipt and launcher check pass). The package was built from `3fa5f6f` plus this uncommitted change, committed immediately after, so the receipt names `3fa5f6f`. Backups kept: two. Four older unpromoted folders from earlier sessions remain (`ChultDressing`, `ChultMist`, `ChultOvergrowth`, `ChultOvergrowthFinal` candidates); they were left untouched.
+
+Next part of the work can be done here (pre-building Chult in the cellar is mine; either agent could do it, but here is better since the fall is mine).
+
 ## October 14 — the fast raptor around the brachiation trees (Claude)
 
 - **Request:** create the fast raptor, patrolling around the brachiation trees and encouraging climbing/evading through by brachiation; use free resources if they help. Base `f1657f6` (after Codex's northeast forest and stream).

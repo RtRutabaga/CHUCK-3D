@@ -3,7 +3,6 @@
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ProceduralMeshComponent.h"
-#include "KismetProceduralMeshLibrary.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -82,6 +81,39 @@ namespace
         { V.Add(P); N.Add(Normal); UV.Add(Tex); C.Add(FColor(190,180,0,0)); }
         void Tri(int32 A,int32 B,int32 D) { T.Append({A,B,D}); }
     };
+    // UKismetProceduralMeshLibrary::CalculateTangentsForMesh's tangents in linear
+    // time. Its all-pairs vertex search (36 s of a white screen at the fall,
+    // 2026-10-14) only smooths normals, which the canopy supplies itself; the
+    // per-face UV gradients, summed over each vertex's own faces, are the same.
+    void CalculateTangents(const FSurface& S,TArray<FProcMeshTangent>& Out)
+    {
+        const int32 NumVerts=S.V.Num();
+        TArray<FVector> SumX,SumY,SumZ;
+        SumX.SetNumZeroed(NumVerts);SumY.SetNumZeroed(NumVerts);SumZ.SetNumZeroed(NumVerts);
+        TMap<FVector,FVector> NormalAt;   // face normals per position, across UV seams
+        TArray<FVector> FaceZ;FaceZ.SetNumUninitialized(S.T.Num()/3);
+        for(int32 F=0;F+2<S.T.Num();F+=3)
+        {
+            const int32 A=S.T[F],B=S.T[F+1],C=S.T[F+2];
+            const FVector E1=S.V[B]-S.V[A],E2=S.V[C]-S.V[A];
+            const FVector Z=FVector::CrossProduct(S.V[B]-S.V[C],S.V[A]-S.V[C]).GetSafeNormal();
+            const FVector2D T1=S.UV[B]-S.UV[A],T2=S.UV[C]-S.UV[A];
+            const double Det=T1.X*T2.Y-T2.X*T1.Y;
+            FVector X=FVector::ZeroVector,Y=FVector::ZeroVector;
+            if(FMath::Abs(Det)>UE_SMALL_NUMBER)
+            { X=((E1*T2.Y-E2*T1.Y)/Det).GetSafeNormal(); Y=((E2*T1.X-E1*T2.X)/Det).GetSafeNormal(); }
+            FaceZ[F/3]=Z;
+            for(const int32 I:{A,B,C}) { SumX[I]+=X; SumY[I]+=Y; NormalAt.FindOrAdd(S.V[I])+=Z; }
+        }
+        Out.SetNumUninitialized(NumVerts);
+        for(int32 I=0;I<NumVerts;++I)
+        {
+            const FVector Z=NormalAt.FindRef(S.V[I]).GetSafeNormal();
+            FVector X=SumX[I].GetSafeNormal();
+            X=(X-Z*FVector::DotProduct(Z,X)).GetSafeNormal();
+            Out[I]=FProcMeshTangent(X,FVector::DotProduct(FVector::CrossProduct(Z,X),SumY[I])<0);
+        }
+    }
     // A continuous swept surface with parallel-transported frames (no twisting
     // where a branch turns upright), an elliptical section (RS across, RU up)
     // and an optional radial modulation for fluting and lumps.
@@ -430,8 +462,10 @@ void BuildChultCanopy(AActor* Owner)
     {
         auto* P=NewObject<UProceduralMeshComponent>(Owner,FName(Name));
         P->SetupAttachment(Owner->GetRootComponent());P->SetWorldLocation(G);P->RegisterComponent();P->bUseComplexAsSimpleCollision=true;
-        TArray<FVector> Normals;TArray<FProcMeshTangent> Tangents;
-        UKismetProceduralMeshLibrary::CalculateTangentsForMesh(S.V,S.T,S.UV,Normals,Tangents);
+        TArray<FProcMeshTangent> Tangents;
+        const double Start=FPlatformTime::Seconds();
+        CalculateTangents(S,Tangents);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_TANGENTS mesh=%s vertices=%d ms=%.1f"),Name,S.V.Num(),(FPlatformTime::Seconds()-Start)*1000);
         P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,Tangents,Solid);
         P->SetMaterial(0,Bark);P->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(Solid)P->SetCollisionProfileName(TEXT("BlockAll"));P->ComponentTags.Add(TEXT("ChultCanopy"));
