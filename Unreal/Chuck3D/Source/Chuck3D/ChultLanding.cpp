@@ -10,6 +10,7 @@
 #include "ChultOvergrowth.h"
 #include "ChultCanyon.h"
 #include "ChultWatercourse.h"
+#include "ChultVista.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -334,6 +335,7 @@ void AChultLanding::BuildSet()
     BuildChultOvergrowth(this);
     BuildChultCanyon(this);
     BuildChultWatercourse(this);
+    BuildChultVista(this);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -353,6 +355,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultCanyon(this,C);
     Failures+=CheckChultWatercourse(this,C);
     Failures+=CheckChultCliffs(this,C);
+    Failures+=CheckChultVista(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -409,6 +412,7 @@ void AChultLanding::VerifyAndCapture()
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_GROVE_GROUND failures=%d capsule_segments=%d"),GroveFailures,UE_ARRAY_COUNT(GroveRoute)-1);
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();
     GetWorldTimerManager().SetTimer(Run->Timer,[this,C,Run](){
@@ -564,7 +568,7 @@ void AChultLanding::VerifyAndCapture()
             // Clearing this timer destroys the executing lambda (and its last
             // shared Run reference). Leave it alive until world shutdown.
             ++Run->Phase;
-            ReviewChultWatercourse(this,C,0,true);
+            ReviewChultVista(this,C,0,true);
             return;
         }
         ++Run->Phase;

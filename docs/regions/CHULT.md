@@ -8,6 +8,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Far-bank jungle river authorized October 15, 2026:** the user's request extends beyond the bridge into dense jungle alongside a wider, faster meandering river ending in a broad waterfall into the bridge canyon. This is setting work within Chult; preserve the active crossing and earlier areas. Layout and checks: [../CHULT-RIVER.md](../CHULT-RIVER.md).
 
+**Starting-side topography and canyon vista authorized October 15, 2026:** add realistic cliffs and distant landscape around the starting side, composing the canyon as the main reveal. Leave all far-side setting and future expansion space unchanged. Contract: [../CHULT-VISTA.md](../CHULT-VISTA.md).
+
 ## Direction and sources
 
 **Northeast canyon and broken rope bridge authorized October 14, 2026:**

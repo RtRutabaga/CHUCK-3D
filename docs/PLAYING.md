@@ -16,6 +16,8 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 Follow the canopy line and stream northeast to the broken rope bridge. Cross by brachiating between its surviving planks. Beyond the far bank, follow the broader river upstream through the new dense jungle; downstream it drops as a wide waterfall into the bridge canyon. See [CHULT-RIVER.md](CHULT-RIVER.md).
 
+The starting side is framed by additional eroded cliffs, forested uplands and distant ridges. The near canyon wall recedes into valley haze around the bridge reveal. This vista stays on the starting side; the far side remains available for later walkable expansion. See [CHULT-VISTA.md](CHULT-VISTA.md).
+
 Rounded, gray stone ruins with heavier moss sit south of the canopy grove. Low steps lead to broken terraces
 for short running jumps; a narrow stairwell supports alternating wall jumps to
 the upper cornice. Follow its stone causeway toward the first tree fork and
