@@ -2,6 +2,17 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — the broken rope bridge, crossed by brachiation (Claude)
+
+- **Request:** fix the look of Codex's decrepit bridge (horizontal planks, not vertical; nubs, missing gaps, split thin planks; ropes properly connected), make it crossable only by brachiating plank to plank without ever standing on it, and switch the score to the user's "Chult 2" on the bridge and far side. Base `bf059e3`.
+- **Built:** new `ChultBridge.h/.cpp`, called from `BuildChultCanyon` (Codex's plank/rope/post code removed; the canyon's vegetation random stream is drawn exactly as before). 166 slots at 30 cm pitch on a deck sagging 1 m; 31 surviving planks (4 split thin) 120–185 cm apart registered as swing grips; 57 nub slots, 74 missing (39 lashing remnants), 4 hanging by one lashing; nothing broken nearer than 33 cm to the centre line. Laid three-strand foot and hand ropes, the +T hand rope snapped and hanging, 67 suspenders (12 snapped), three-turn cord lashings at every plank end, ropes wound round solid posts. Planks/ropes have no collision. Gorge falls return him beside the bridge (`ChuckCharacter::GetAreaStartLocation`). `DockGameMode` cross-fades `SW_Chult` and the new `SW_Chult2` (user WAV unmodified, `Tools/import_chult_bridge_audio.py`); `GetMusicRegion()` added. Contract: [CHULT-BRIDGE.md](../CHULT-BRIDGE.md); CHULT-CANYON.md updated.
+- **Tests:** uncooked `-ChuckBridgeTest` 6/6 with 0 static failures (`Local/bridge-test-3.log`, `-4.log`; runs 1–2 found a test timing bug and an over-strict void check). Cooked candidate: full suite **182/182** (`Local/verify-package-20261014-213856.log`); bridge **6/6**, static 0, music far/back and loop check pass (`verify-bridge-20261014-215113.log`); canyon check `bridge_failures=0`, walk-off now returns beside the bridge 3/3 (`verify-chult-20261014-213908.log`); canopy **48/48**, raptor **8/8**.
+- **Reviewed stills:** `SourceAssets/Setting/Review/Bridge_NearBank.png`, `Bridge_Side.png`, `Bridge_Lashings.png`, `Bridge_Crossing.png`.
+- **Flaws:** bridge mesh is ~147k triangles (laid ropes), no LOD. Dangling planks read as dark slabs from the side. Paws close on a plank's centre and sink into it slightly; the leap arc lifts the paws above the deck mid-flight. Music not heard on speakers; loop seam unverified. Not played by a person; no Xbox test.
+- **Launcher:** promoted **c98f251** as `ChultBridge` (`Local/chult-bridge-promotion.log`; receipt and launcher check pass); CanopyTangents backup pruned, two kept; own candidate removed by promotion; four older inherited candidates untouched.
+
+Next part of the work can be done here (a play review of the crossing's feel and the music change would help most).
+
 ## October 14 — the white screen before the fall cutscene (Claude)
 
 - **Request:** the long white screen between the cellar fall and the fall cutscene; then "do 1": fix its cause. Base `3fa5f6f`.

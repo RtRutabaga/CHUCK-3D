@@ -4,13 +4,22 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 ## Current state
 
-- **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream extension; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the new northeast canyon/broken bridge setting is verified, with actual bridge brachiation reserved for Claude ([CHULT-CANYON.md](CHULT-CANYON.md)).
+- **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream extension; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
 - **Vegetation/mist:** additive fern/broad-leaf colonies, mossy outcrops, trees and ruin creepers plus low mist and cooler sunlight are in the verified launcher build ([CHULT-OVERGROWTH.md](CHULT-OVERGROWTH.md)). Existing setting elements remain; art is still below the reference.
 - **Cliffs/watercourse:** varied rock shoulders, forest-to-rock planting and a 3 m source cascade now feed a continuous shallow creek to a roughly 47 m canyon cascade ([CHULT-CLIFFS.md](CHULT-CLIFFS.md), [CHULT-WATERCOURSE.md](CHULT-WATERCOURSE.md)). Authored canopy/ruin/bridge coordinates remain; scenery is still below the references and needs human play/camera review.
-- **Canyon/bridge:** verified northeast setting beyond the stream; 33 inactive plank hand proposals await Claude's actual crossing implementation ([CHULT-CANYON.md](CHULT-CANYON.md)).
+- **Canyon/bridge:** the broken horizontal-plank rope bridge is crossed hanging from 31 surviving planks, both ways, with its own score ("Chult 2") on the bridge and far side ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Open user decisions:** saving, combat depth, and the duration and lifecycle of the golden cigarettes. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, raptors and the buff-only teaching tree (deferred), primary forest tree/crown forms and ground relief. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 14 — the broken rope bridge, crossed by brachiation (Claude)
+
+- **Built:** Codex's steep hanging planks replaced by a normal horizontal-plank rope bridge in ruins (`ChultBridge.cpp`): 31 surviving planks (4 split thin) are the only grips, 120–185 cm apart; nubs, missing stretches, hanging planks, lashing remnants, a snapped hand rope; laid ropes and cord lashings. No deck or rope collision, so he hangs and never stands on it. Gorge falls return him beside the bridge. The bridge and far side play the user's "Chult 2" (`SW_Chult2`), cross-fading with Chult's score. [CHULT-BRIDGE.md](CHULT-BRIDGE.md).
+- **Tested (cooked):** full suite 182/182 (`Local/verify-package-20261014-213856.log`); new `-ChuckBridgeTest` 6/6 with 0 static failures — catch, cross 30 leaps, step down, cross back, let go and return, can't stand (`verify-bridge-20261014-215113.log`); canyon, canopy 48/48 and raptor 8/8 pass.
+- **Limits:** ~147k bridge triangles without LOD; dangling planks look dark from the side; music unheard on speakers; no person's play or Xbox test.
+- **Launcher:** promoted **c98f251** as `ChultBridge`; receipt and launcher check pass; two backups kept.
+
+Next part of the work can be done here (a play review of the crossing and music would help most).
 
 ## October 14 — varied vegetated cliffs and source-to-canyon creek (Codex)
 
