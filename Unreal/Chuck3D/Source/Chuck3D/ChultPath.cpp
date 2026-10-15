@@ -240,7 +240,15 @@ namespace
             }
             C->SetTestStick(FVector2D::ZeroVector);Movement->StopMovementImmediately();const bool Pass=Distance<=30&&Movement->IsMovingOnGround();Run->Failures+=!Pass;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_WALK trial=%d pass=%d distance=%.1f seconds=%.2f"),Run->Trial,Pass,Distance,Elapsed);++Run->Trial;Run->Start=-1;
-            if(Run->Trial==6){Owner->GetWorldTimerManager().ClearTimer(Run->Timer);UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_TEST failures=%d trials=6"),Run->Failures);FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);}
+            if(Run->Trial==6)
+            {
+                const int32 Status=Run->Failures?1:0;FTimerHandle Done=Run->Timer;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_TEST failures=%d trials=6"),Run->Failures);
+                // Clearing the active timer destroys this lambda's captures.
+                // Copy everything needed afterwards before removing it.
+                Owner->GetWorldTimerManager().ClearTimer(Done);
+                FPlatformMisc::RequestExitWithStatus(false,Status);
+            }
         },.016f,true);
     }
 }
@@ -255,7 +263,14 @@ void ReviewChultPath(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
     struct FRun{int32 Phase=0;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
     Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,Chuck,Camera,Run,Eyes,Aims,Names,Failures]()
     {
-        const int32 I=Run->Phase/2;if(I>=Eyes.Num()){Owner->GetWorldTimerManager().ClearTimer(Run->Timer);UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=%d views=6"),Failures);Camera->Destroy();WalkChultPath(Owner,Chuck,Failures);return;}
+        const int32 I=Run->Phase/2;if(I>=Eyes.Num())
+        {
+            FTimerHandle Done=Run->Timer;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=%d views=6"),Failures);
+            Camera->Destroy();WalkChultPath(Owner,Chuck,Failures);
+            // Last access to any capture: removing our active delegate frees it.
+            Owner->GetWorldTimerManager().ClearTimer(Done);return;
+        }
         if(Run->Phase%2==0)Camera->SetActorLocationAndRotation(AChultLanding::FloorOrigin()+Eyes[I],(Aims[I]-Eyes[I]).Rotation());
         else FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult")/(Names[I]+TEXT(".png")),true,false);
         ++Run->Phase;
