@@ -21,6 +21,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "NPCVoiceData.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 namespace
 {
@@ -397,7 +399,7 @@ void ADockNPC::PlayZombieSound(const TCHAR* Stem, int32 Count, const FVector& At
 
 const TCHAR* ADockNPC::GetZombieStateName() const
 {
-    static const TCHAR* Names[] = { TEXT("Idle"), TEXT("Shamble"), TEXT("Windup"), TEXT("Lunge"), TEXT("Recover"), TEXT("Hurt"), TEXT("Dead") };
+    static const TCHAR* Names[] = { TEXT("Idle"), TEXT("Shamble"), TEXT("Windup"), TEXT("Lunge"), TEXT("Recover"), TEXT("Hurt"), TEXT("Dead"), TEXT("Grab") };
     return Names[static_cast<int32>(ZState)];
 }
 
@@ -490,17 +492,33 @@ void ADockNPC::TickZombie(float DeltaSeconds)
         if (!bBit && ZTime >= .22f)
         {
             bBit = true;
-            if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .25f
-                && Chuck->TakeBite(Location, ZombieBite, true))
+            if (Chuck && Distance <= ZombieBiteRange && Rise < 60.f && FVector::DotProduct(LungeDir, ToChuck.GetSafeNormal2D()) > .25f)
             {
-                ++Bites;
-                PlayZombieSound(TEXT("ChuckHit"), 3, Chuck->GetActorLocation(), .85f);
+                // One hit in four, its hands close on him instead (user 2026-10-14).
+                if (FMath::FRand() < GetZombieGrabChance() && Chuck->BeginHeld(this))
+                {
+                    Seized = Chuck; GrabFrom = Chuck->GetActorLocation() + FVector(0, 0, 5.5f);
+                    HoldPoint = Body->GetComponentTransform().InverseTransformPosition(GrabFrom);
+                    bGrabBit = false; ReleaseTime = -1.f; ++Grabs;
+                    PlayZombieSound(TEXT("Rasp"), 3, Location + FVector(0, 0, 45), .7f);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_ZOMBIE_GRAB grabs=%d distance=%.0f"), Grabs, Distance);
+                    SetZombie(EZombie::Grab);
+                    break;
+                }
+                if (Chuck->TakeBite(Location, ZombieBite, true))
+                {
+                    ++Bites;
+                    PlayZombieSound(TEXT("ChuckHit"), 3, Chuck->GetActorLocation(), .85f);
+                }
             }
         }
         if (ZTime >= ZombieLungeTime) SetZombie(EZombie::Recover);
         break;
     case EZombie::Recover:
         if (ZTime >= ZombieRecover) SetZombie(EZombie::Shamble);
+        break;
+    case EZombie::Grab:
+        TickGrab(DeltaSeconds, Chuck);
         break;
     case EZombie::Hurt:
         if (ZTime >= .35f) SetZombie(EZombie::Shamble);
@@ -522,6 +540,12 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     Ease(Reach, ZState == EZombie::Lunge ? 1.f : 0.f, ZState == EZombie::Lunge ? 14.f : 2.5f);
     if (FlinchTime >= 0.f && (FlinchTime += DeltaSeconds) > .5f) FlinchTime = -1.f;
     Ease(Flinch, FlinchTime >= 0.f && FlinchTime < .2f ? 1.f : 0.f, 16.f);
+    if (ZState != EZombie::Grab)
+    {
+        Ease(GrabStoop, 0.f, 4.f); Ease(GrabHead, 0.f, 4.f); Ease(ZJaw, 0.f, 6.f); GrabShake = 0.f;
+        GrabArms = FMath::Max(0.f, GrabArms - DeltaSeconds / .5f);
+        if (GrabArms <= 0.f) { Grip[0] = Grip[1] = 0.f; }
+    }
     // It watches the rat it's after, down at the floor.
     FVector2D Target(0.f, 12.f);
     if (bThere && ZState != EZombie::Idle && ZState != EZombie::Dead)
@@ -533,6 +557,137 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, 2.5f);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, 2.5f);
     bWatching = bThere && ZState != EZombie::Idle;
+}
+
+float ADockNPC::GetZombieGrabChance()
+{
+    static const float Chance = []()
+    {
+        const TCHAR* Cmd = FCommandLine::Get();
+        if (FParse::Param(Cmd, TEXT("ChuckZombieGrabTest"))) return 1.f;
+        TArray<FString> Words; FString(Cmd).ParseIntoArrayWS(Words);
+        for (const FString& Word : Words)
+            if (Word.StartsWith(TEXT("-Chuck")) && (Word.Contains(TEXT("Test")) || Word.Contains(TEXT("Capture")) || Word.Contains(TEXT("Review")))) return 0.f;
+        return .25f;
+    }();
+    return Chance;
+}
+
+void ADockNPC::TickGrab(float DeltaSeconds, AChuckCharacter* Chuck)
+{
+    // Seize (0-0.4 s): down into a deep stoop, hands closing on him where he
+    // stands. Lift (0.4-1.1): straightening, up to its face. Draw in (1.1-1.45):
+    // head back, jaw open. Bite (1.5): all his sanity; it worries him; he goes
+    // limp and the astral light takes him from its hands. Then it lets its arms fall.
+    const float T = ZTime;
+    const auto Smooth = [](float A, float B, float X) { return FMath::SmoothStep(A, B, X); };
+    const FTransform BodyX = Body->GetComponentTransform();
+    const bool bHolding = Chuck && Seized.Get() == Chuck && Chuck->IsInGrip() && !Chuck->IsBodyHidden();
+    if (ReleaseTime < 0.f && (!bHolding || T > 4.5f)) ReleaseTime = 0.f;
+    if (ReleaseTime >= 0.f)
+    {
+        ReleaseTime += DeltaSeconds;
+        GrabArms = FMath::Max(0.f, 1.f - ReleaseTime / .5f);
+        Grip[0] = Grip[1] = .5f * GrabArms;
+        GrabStoop = FMath::FInterpTo(GrabStoop, 0.f, DeltaSeconds, 4.f);
+        GrabHead = FMath::FInterpTo(GrabHead, 0.f, DeltaSeconds, 4.f);
+        ZJaw = FMath::FInterpTo(ZJaw, 0.f, DeltaSeconds, 6.f);
+        GrabShake = 0.f;
+        if (ReleaseTime >= .6f) { Seized.Reset(); SetZombie(EZombie::Recover); }
+        return;
+    }
+    // Square on to him, closing the last of the gap as it bends.
+    if (T < .4f)
+    {
+        TurnZombie(GrabFrom, DeltaSeconds, 160.f);
+        const float Gap = static_cast<float>(FVector::Dist2D(GetActorLocation(), GrabFrom));
+        if (Gap > 62.f) StepZombie((GrabFrom - GetActorLocation()).GetSafeNormal2D(), FMath::Min(Gap - 62.f, 220.f * DeltaSeconds));
+    }
+    // How well the hands hold him: last frame's pose against last frame's hold (a long frame moves the hold a long way).
+    if (T > .45f && T - DeltaSeconds > .45f)
+    {
+        const FName L = Body->GetBoneName(BoneIndex[HandL]), R = Body->GetBoneName(BoneIndex[HandR]);
+        const FVector Mid = (Body->GetBoneLocation(L) + Body->GetBoneLocation(R)) * .5;
+        const float Gap = static_cast<float>(FVector::Dist(Mid, BodyX.TransformPosition(LastHold + FVector(-5.f, 0.f, 3.f))));
+        WorstHoldGap = FMath::Max(WorstHoldGap, Gap);
+        if (FMath::FloorToInt(T * 4.f) != FMath::FloorToInt((T - DeltaSeconds) * 4.f))
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_ZOMBIE_HOLD t=%.2f gap=%.1f hold=%s hand_l=%s hand_r=%s"), T, Gap, *LastHold.ToString(),
+                *BodyX.InverseTransformPosition(Body->GetBoneLocation(L)).ToString(), *BodyX.InverseTransformPosition(Body->GetBoneLocation(R)).ToString());
+    }
+    GrabStoop = T < .4f ? Smooth(0.f, .35f, T) : 1.f - Smooth(.4f, 1.f, T);
+    GrabArms = FMath::Min(1.f, T / .3f);
+    const float Close = Smooth(.28f, .42f, T);
+    Grip[0] = Grip[1] = .3f + .6f * Close;
+    const FVector From = BodyX.InverseTransformPosition(GrabFrom);
+    const FVector Carry(44.f, 0.f, 112.f), Mouth(40.f, 0.f, 117.f);
+    if (T < .4f) HoldPoint = From;
+    else if (T < 1.1f) HoldPoint = FMath::Lerp(From, Carry, static_cast<double>(Smooth(.4f, 1.1f, T)));
+    else HoldPoint = FMath::Lerp(Carry, Mouth, static_cast<double>(Smooth(1.1f, 1.45f, T)));
+    // The head: down to him in the stoop, back as the jaw opens, then the bite.
+    const float Back = Smooth(1.05f, 1.4f, T) * (1.f - Smooth(1.45f, 1.52f, T));
+    const float Down = Smooth(1.45f, 1.52f, T);
+    GrabHead = 14.f * GrabStoop - 16.f * Back + 24.f * Down;
+    ZJaw = 26.f * Smooth(1.1f, 1.42f, T) * (1.f - .8f * Down);
+    if (!bGrabBit && T >= 1.5f)
+    {
+        bGrabBit = true; ++Bites;
+        Chuck->HeldBitten();
+        PlayZombieSound(TEXT("ChuckHit"), 3, Chuck->GetActorLocation(), 1.f);
+        PlayZombieSound(TEXT("Rasp"), 3, GetActorLocation() + FVector(0, 0, 60), .6f);
+    }
+    // It worries him, a few hard shakes of the head, dying away.
+    GrabShake = bGrabBit ? FMath::Exp(-(T - 1.5f) / .35f) * FMath::Sin((T - 1.5f) * UE_TWO_PI * 5.5f) : 0.f;
+    HoldPoint += FVector(0.f, 2.5f * GrabShake, 0.f);
+    Chuck->SetHeldPose(BodyX.TransformPosition(HoldPoint), static_cast<float>(GetActorRotation().Yaw) + 180.f);
+    LastHold = HoldPoint;
+}
+
+void ADockNPC::PoseZombieGrab(TArray<FTransform>& Space) const
+{
+    // Both hands on his body at HoldPoint: the wrists either side of his chest,
+    // the fingers round its front, by two-bone IK (elbows out and down), eased in by GrabArms.
+    const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
+    const int32 Count = Space.Num();
+    TArray<FTransform> Local; Local.SetNum(Count);
+    for (int32 B = 0; B < Count; ++B)
+    {
+        const int32 P = Ref.GetParentIndex(B);
+        Local[B] = P >= 0 ? Space[B].GetRelativeTransform(Space[P]) : Space[B];
+    }
+    const auto Descends = [&](int32 B, int32 From) { for (; B != INDEX_NONE; B = Ref.GetParentIndex(B)) if (B == From) return true; return false; };
+    const auto Rotate = [&](int32 Bone, const FQuat& Q)
+    {
+        Space[Bone].SetRotation(Q * Space[Bone].GetRotation());
+        for (int32 B = Bone + 1; B < Count; ++B)
+            if (Descends(B, Bone)) Space[B] = Local[B] * Space[Ref.GetParentIndex(B)];
+    };
+    const float W = FMath::Clamp(GrabArms, 0.f, 1.f);
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const int32 Upper = BoneIndex[Of(UpperL, Side)], Lower = BoneIndex[Of(LowerL, Side)], Hand = BoneIndex[Of(HandL, Side)];
+        const int32 Thumb = BoneIndex[Of(ThumbL, Side)], Middle = BoneIndex[Of(MiddleL, Side)];
+        const float Out = Side == 1 ? -ArmOut : ArmOut;
+        const FVector S = Space[Upper].GetLocation();
+        const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
+        const float Bl = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[Hand].GetLocation()));
+        const FVector Wrist = FMath::Lerp(Space[Hand].GetLocation(), HoldPoint + FVector(-5.f, Out * 13.f, 3.f), static_cast<double>(W));
+        const FVector ToWrist = Wrist - S;
+        const float D = FMath::Clamp(static_cast<float>(ToWrist.Size()), FMath::Abs(A - Bl) + 1.f, A + Bl - .5f);
+        const FVector Along = ToWrist.GetSafeNormal();
+        const float CosA = FMath::Clamp((A * A + D * D - Bl * Bl) / (2.f * A * D), -1.f, 1.f);
+        const FVector Pole = FVector::VectorPlaneProject(FVector(-.3f, Out, -.6f), Along).GetSafeNormal();
+        const FVector Elbow = S + Along * (A * CosA) + Pole * (A * FMath::Sqrt(1.f - CosA * CosA));
+        Rotate(Upper, FQuat::FindBetweenNormals((Space[Lower].GetLocation() - S).GetSafeNormal(), (Elbow - S).GetSafeNormal()));
+        Rotate(Lower, FQuat::FindBetweenNormals((Space[Hand].GetLocation() - Space[Lower].GetLocation()).GetSafeNormal(), (S + Along * D - Space[Lower].GetLocation()).GetSafeNormal()));
+        // The fingers forward and in round the front of his chest, the palm to him, thumb up.
+        const FVector HandDir = (HoldPoint + FVector(9.f, -Out * 3.f, 0.f) - Space[Hand].GetLocation()).GetSafeNormal();
+        const FQuat Point = FQuat::FindBetweenNormals((Space[Middle].GetLocation() - Space[Hand].GetLocation()).GetSafeNormal(), HandDir);
+        Rotate(Hand, FQuat::Slerp(FQuat::Identity, Point, W));
+        const FVector ThumbSide = FVector::VectorPlaneProject(Space[Thumb].GetLocation() - Space[Hand].GetLocation(), HandDir).GetSafeNormal();
+        const FVector Up = FVector::VectorPlaneProject(FVector::UpVector, HandDir).GetSafeNormal();
+        const float Twist = FMath::Atan2(static_cast<float>(FVector::DotProduct(HandDir, FVector::CrossProduct(ThumbSide, Up))), static_cast<float>(FVector::DotProduct(ThumbSide, Up)));
+        Rotate(Hand, FQuat(HandDir, Twist * W));
+    }
 }
 
 ADockNPC* ADockNPC::SpawnDockWorker(UWorld* World, const FVector& Feet, float Yaw)
@@ -1462,7 +1617,7 @@ void ADockNPC::PoseFace(TArray<FTransform>& Space) const
     {
         if (B != INDEX_NONE && Space.IsValidIndex(B)) Space[B].SetRotation(FQuat(Across, FMath::DegreesToRadians(Degrees)) * Space[B].GetRotation());
     };
-    Turn(FaceBone[0], JawOpen);
+    Turn(FaceBone[0], JawOpen + ZJaw);
     Turn(FaceBone[1], 38.f * Blink); Turn(FaceBone[2], 38.f * Blink);
     for (int32 I = 3; I < 5; ++I)
         if (FaceBone[I] != INDEX_NONE && Space.IsValidIndex(FaceBone[I])) Space[FaceBone[I]].AddToTranslation(Up * BrowLift);
@@ -1520,10 +1675,22 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             const float Alive = DeathTime < 0.f ? 1.f : FMath::Clamp(1.f - DeathTime / .2f, 0.f, 1.f);
             const float R = Rear * Alive, L = Reach * Alive, F = Flinch * Alive;
             // A deeper stoop than the clip's old man, the head hung forward.
-            Delta[Spine2] = Pitch(5.f * Alive - 6.f * R + 16.f * L - 8.f * F);
-            Delta[Chest] = Pitch(6.f * Alive - 8.f * R + 14.f * L - 6.f * F) * Yaw(9.f * F);
-            Delta[Neck] = Pitch(8.f * Alive) * Delta[Neck];
-            Delta[Head] = Pitch(-6.f * F) * Delta[Head];
+            // The grab: down from the hips with the knees bent to reach him on the
+            // ground, the head following; the bite's worry shakes the head.
+            const float G = GrabStoop * Alive;
+            Delta[Pelvis] = Pitch(34.f * G);
+            Delta[Spine1] = Pitch(14.f * G);
+            Delta[Spine2] = Pitch(5.f * Alive - 6.f * R + 16.f * L - 8.f * F + 14.f * G);
+            Delta[Chest] = Pitch(6.f * Alive - 8.f * R + 14.f * L - 6.f * F + 10.f * G) * Yaw(9.f * F);
+            Delta[Neck] = Pitch(8.f * Alive + .4f * GrabHead) * Delta[Neck];
+            Delta[Head] = Yaw(8.f * GrabShake) * Pitch(-6.f * F + .6f * GrabHead) * Delta[Head];
+            for (int32 Side = 0; Side < 2; ++Side)
+            {
+                Delta[Of(ThighL, Side)] = Pitch(-34.f * G - 26.f * G);
+                Delta[Of(CalfL, Side)] = Pitch(46.f * G);
+                Delta[Of(FootL, Side)] = Pitch(-20.f * G);
+            }
+            HipsOffset.Z -= 16.f * G;
             for (int32 Side = 0; Side < 2; ++Side)
             {
                 const float S = Side == 0 ? ArmOut : -ArmOut;
@@ -1573,6 +1740,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
+        if (Kind == EDockHuman::Zombie && GrabArms > 0.f) PoseZombieGrab(Space);
         if (bSpear) HoldSpear(Space);
         if (IsSmith()) PoseSmith(Space);
         if (IsKeeper()) PoseKeeper(Space);

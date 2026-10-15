@@ -4,6 +4,7 @@
 #include "ChultCanopy.h"
 #include "ChultRuins.h"
 #include "ChultRaptor.h"
+#include "ChultLife.h"
 #include "ChultExpansion.h"
 #include "ChultCliffs.h"
 #include "ChultOvergrowth.h"
@@ -120,6 +121,8 @@ void AChultLanding::Build()
     BuildSet();
     // Playable now (after the fall, or from the checkpoint): the raptor goes on its round.
     AChultRaptor::SpawnCanopyRaptor(GetWorld());
+    // And the rest of its hostile life: four more raptors, fifteen zombies (ChultLife.h).
+    SpawnChultLife(GetWorld());
 }
 
 void AChultLanding::BuildEnvironment()

@@ -16,6 +16,7 @@
 ## Behaviour (`AChultRaptor`, ChultRaptor.h/.cpp)
 
 - **Spawn:** one raptor appears when Chult becomes playable (`AChultLanding::Build`, after the fall or from the checkpoint). There is none in the cutscene. It is kept out of `-ChuckChultTest` and `-ChuckCanopyTest`, whose traversal trials assume nothing hunts Chuck.
+- **The pack (user 2026-10-14):** `SpawnChultLife` (ChultLife.h/.cpp) adds four more on the same round, starting at points 0, 3, 5 and 8, two of them walking it the other way (five in all). It also places fifteen zombies off either side of the landing's ground loop: at least 20 m from the landing, and 14 m beyond the trees' reserve, so their 11 m leash keeps them away from the brachiation trees. The zombies are placed 0.5 s after the build, because collision built in the same frame cannot be traced yet. The pack and the zombies are left out of every automated `-Chuck…Test/Capture/Review` run except `-ChuckJungleLifeTest`, so the existing tests keep their worlds (the raptor test still has one raptor).
 - **Patrol:** a ping-pong round of 9 points between the loop's trees and out along the staggered line. Every leg stays at least 5.2 m from every trunk. It walks at 115 cm/s and pauses at each point.
 - **Notice:** it notices Chuck within 16 m in view, or within 5.5 m all round, with a call. It then chases at 330 cm/s: faster than his run (225 cm/s), slower than his sprint (380 cm/s).
 - **Bite:** at 2.3 m it gives a 0.32 s tell (a hiss, crouching into the strike), then lunges. The bite costs 2 of his 5 sanity. A roll or side jump through the tell beats it.
@@ -44,5 +45,5 @@ It also does a static sweep of the patrol route (8 segments) and requires at lea
 - The source's low-poly forms remain under the smoothing, below the art target.
 - The sounds are synthetic and have not been heard on speakers.
 - No navmesh: it steers round obstacles with sweeps.
-- Only one raptor; the second 2D raptor is not placed.
+- Five raptors share one round and pass through one another's sweeps (each ignores the others when steering), so two can overlap while chasing.
 - Not played by a person; no Xbox test.

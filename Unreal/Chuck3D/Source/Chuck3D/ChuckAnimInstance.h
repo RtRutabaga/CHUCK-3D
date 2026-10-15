@@ -52,6 +52,12 @@ struct FChuckAnimParams
     /** Pelvis correction (cm, <= 0) so a paw on lower ground stays reachable. */
     float PelvisOffset = 0.f;
     bool bFootIK = false;
+    /** In a zombie's grip (ChuckAnimInstance.cpp): the struggle over the clip by HeldWeight,
+     *  HeldTime into it; HeldBite s since the bite (<0 before); HeldLimp 0..1 after it. */
+    float HeldWeight = 0.f;
+    float HeldTime = 0.f;
+    float HeldBite = -1.f;
+    float HeldLimp = 0.f;
 };
 
 /** Measured output of the last evaluation, for tests and captures. */

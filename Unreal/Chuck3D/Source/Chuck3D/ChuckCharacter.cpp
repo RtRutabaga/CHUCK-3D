@@ -251,7 +251,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -436,12 +436,13 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     bSlashQueued = bSlashHeld = false; LayerTime = FadingLayerTime = -1; FadingLayerWeight = 0; SlashHitAt = -1; BiteImmuneUntil = -1;
     RestoreSlideCamera(); bAutoClimb = false;
     Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
+    bHeldVanish = false; HeldBy.Reset(); HeldLimp = 0; HeldBiteAt = -1;
     TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     StaminaLockUntil = -1.f;
     SwingGrip = SwingTarget = SwingLeft = -1; SwingRegrabAt = -1; bSwingJumpQueued = bHangClimbQueued = bBodyPitchLive = false; BodyPitch = 0;
-    if (GetCharacterMovement()->MovementMode == MOVE_Flying) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    if (GetCharacterMovement()->MovementMode == MOVE_Flying || GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
     if (GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     PreviousMotionLocation = GetActorLocation();
@@ -1738,6 +1739,57 @@ bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount, bool bZombieHi
     else LaunchCharacter(Away * BiteKnockback + FVector(0, 0, 110.f), true, true);
     return true;
 }
+bool AChuckCharacter::BeginHeld(AActor* By)
+{
+    // What saves him from a bite saves him from the hands.
+    const float Now = GetWorld()->GetTimeSeconds();
+    if (!By || Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
+    auto* Movement = GetCharacterMovement();
+    HeldBy = By; HeldClock = 0; HeldBiteAt = -1; HeldLimp = 0; ++TimesHeld;
+    TalkingTo.Reset();
+    if (IsSprinting()) EndSprint(false);
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = SprintWeight = 0;
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    Gait = EGait::Held;
+    SetClip(EClip::JumpLoop, 0, .12f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HELD by=%s sanity=%d"), *GetNameSafe(By), Sanity);
+    return true;
+}
+void AChuckCharacter::SetHeldPose(const FVector& Chest, float Yaw)
+{
+    if (!IsInGrip()) return;
+    // His chest sits 5.5 cm above the capsule's centre (feet 32.5 below it).
+    SetActorLocationAndRotation(Chest - FVector(0, 0, 5.5f), FRotator(0, Yaw, 0), false, nullptr, ETeleportType::TeleportPhysics);
+}
+void AChuckCharacter::HeldBitten()
+{
+    if (Gait != EGait::Held) return;
+    ++BitesTaken;
+    Sanity = 0;
+    HeldBiteAt = HeldClock;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HELD_BITE sanity=%d after=%.2f"), Sanity, HeldClock);
+}
+void AChuckCharacter::UpdateHeld(float DeltaSeconds)
+{
+    HeldClock += DeltaSeconds;
+    // The jump's loose hang under the struggle layer (ChuckAnimInstance), looping.
+    BaseTime += DeltaSeconds;
+    if (HeldBiteAt >= 0) HeldLimp = FMath::Min(1.f, HeldLimp + DeltaSeconds / .35f);
+    // Dropped (the zombie gone): back on his feet's way down.
+    if (!HeldBy.IsValid())
+    {
+        Gait = EGait::Air; bRunJump = bSprintLeap = false;
+        GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+        return;
+    }
+    // A moment limp in its hands after the bite, then the astral light takes him from them.
+    if (HeldBiteAt >= 0 && HeldClock >= HeldBiteAt + .65f)
+    {
+        bHeldVanish = true;
+        BeginVanish();
+    }
+}
 void AChuckCharacter::AddCigarettes(int32 Count)
 {
     for (int32 I = 0; I < Count; ++I)
@@ -1914,8 +1966,9 @@ void AChuckCharacter::BeginVanish()
     Movement->StopMovementImmediately();
     Movement->DisableMovement();
     LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
-    // He sinks down into the light: the summon played backward from standing.
-    SetClip(EClip::Summon, Clips[static_cast<int32>(EClip::Summon)]->GetPlayLength(), .2f);
+    // He sinks down into the light: the summon played backward from standing
+    // (or, limp in a zombie's hands, he fades from them as he hangs).
+    if (!bHeldVanish) SetClip(EClip::Summon, Clips[static_cast<int32>(EClip::Summon)]->GetPlayLength(), .2f);
     const FVector Feet = GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
     AAstralSummon::Start(GetWorld(), Feet, false);
 }
@@ -1926,13 +1979,15 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
     switch (AstralPhase)
     {
     case EAstral::Vanishing:
-        BaseTime = FMath::Max(0.f, Length - AstralClock * 2.2f);
+        if (bHeldVanish) BaseTime += DeltaSeconds;
+        else BaseTime = FMath::Max(0.f, Length - AstralClock * 2.2f);
         if (AstralClock >= AAstralSummon::VanishPeak && !bAstralHidden) SetAstralHidden(true);
         if (AstralClock >= .8f && !bAstralFaded) { CameraFade(0.f, 1.f, .6f); bAstralFaded = true; }
         if (AstralClock >= 1.45f)
         {
             // Return to this area's entrance, whole again.
             AstralPhase = EAstral::Away; AstralClock = 0;
+            bHeldVanish = false; HeldBy.Reset(); HeldLimp = 0; HeldBiteAt = -1;
             const FVector Return=GetAreaStartLocation();
             ViewYaw = AreaStartYaw(Return);
             SetActorLocationAndRotation(Return, FRotator(0,ViewYaw,0), false, nullptr, ETeleportType::TeleportPhysics);
@@ -2131,7 +2186,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const float Into = DockSewerSlideEntry(GetActorLocation());
         if (Into > 35.f) BeginSlide(Into);
     }
-    if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
+    if (Gait == EGait::Held) UpdateHeld(DeltaSeconds);
+    else if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
     else if (Gait == EGait::Vault)
     {
         // Forward evenly, up onto a plateau clear of the top while he's over
@@ -2735,6 +2791,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.TimeUpper[1] = LayerTime;
     P.WeightUpper[1] = LayerTime >= 0 ? LayerWeightAt(LayerTime, Clips[static_cast<int32>(LayerClip)]->GetPlayLength()) : 0.f;
     P.bFootIK = !bAirborne && AstralPhase != EAstral::SlideDown;   // nothing to plant on the way down the slide
+    // In a zombie's grip: the struggle, the bite's jolt, limp after it.
+    P.HeldWeight = IsInGrip() ? FMath::Min(1.f, (bHeldVanish ? 1.f : HeldClock / .15f)) : 0.f;
+    P.HeldTime = HeldClock;
+    P.HeldBite = HeldBiteAt >= 0 ? HeldClock - HeldBiteAt + (bHeldVanish ? AstralClock : 0.f) : -1.f;
+    P.HeldLimp = HeldLimp;
+    if (IsInGrip()) P.bFootIK = false;
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
     // generated from the manifest (ChuckClipData.h), trimmed likewise.
@@ -2782,7 +2844,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const bool bOffGround = bAirborne || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
+    const bool bOffGround = bAirborne || IsInGrip() || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));

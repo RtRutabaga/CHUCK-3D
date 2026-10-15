@@ -3,6 +3,7 @@
 #include "ChultBridge.h"
 #include "ChultCanopy.h"
 #include "ChultRaptor.h"
+#include "ChultLife.h"
 #include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
 #include "DockSetting.h"
@@ -658,6 +659,20 @@ void ADockGameMode::StartPlay()
         StartFromMenu(TEXT("Chult"));
         FTimerHandle RaptorCheck;
         World->GetTimerManager().SetTimer(RaptorCheck,[World](){StartChultRaptorReview(World);},4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckJungleLifeTest")))
+    {
+        // Claude's jungle zombies and raptors (ChultLife.h).
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle LifeCheck;
+        World->GetTimerManager().SetTimer(LifeCheck,[World](){StartChultLifeReview(World);},4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieGrabTest")))
+    {
+        // Claude's zombie grab (ChultLife.h), in the jungle.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle GrabCheck;
+        World->GetTimerManager().SetTimer(GrabCheck,[World](){StartZombieGrabReview(World);},4.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))
     {

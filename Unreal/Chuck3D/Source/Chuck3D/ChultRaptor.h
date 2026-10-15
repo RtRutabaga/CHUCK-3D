@@ -45,6 +45,8 @@ public:
     void TakeSlash(const FVector& Swing);
     /** Tests: stand here facing Yaw, on its round, unhurt. */
     void ResetTo(const FVector& At, float Yaw);
+    /** Its round's direction from here (+1 out along the points, -1 back). */
+    void SetRoundStep(int32 Step) { WaypointStep = Step < 0 ? -1 : 1; }
     /** Can it reach him where he is (on the ground or low on a liana, not up a tree)? */
     bool CanReach(const AChuckCharacter* Chuck) const;
 

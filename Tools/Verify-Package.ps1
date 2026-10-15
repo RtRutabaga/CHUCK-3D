@@ -146,6 +146,22 @@ if ($bridgeProcess.ExitCode -or !(Select-String -LiteralPath $bridgeLog -Pattern
     !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_CHULT_BRIDGE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Chult bridge brachiation verification failed. Inspect $bridgeLog"
 }
+# Chult's hostile life (Claude, 2026-10-14): fifteen zombies on the landing's side,
+# clear of the brachiation trees, idle until he comes near; five raptors on the trees' round.
+$lifeLog=Join-Path $evidence ('verify-jungle-life-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$lifeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckJungleLifeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$lifeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($lifeProcess.ExitCode -or !(Select-String -LiteralPath $lifeLog -Pattern 'CHUCK_CHULT_LIFE_TEST_COMPLETE failures=0' -Quiet) -or
+    !(Select-String -LiteralPath $lifeLog -Pattern 'CHUCK_CHULT_LIFE zombies=15 ' -Quiet)) {
+    throw "Chult jungle life verification failed. Inspect $lifeLog"
+}
+# The zombie grab (Claude, 2026-10-14; forced every time here, 1 in 4 in play): seized,
+# lifted to its face with both hands on him, bitten to zero sanity, gone from its hands,
+# summoned back whole at the landing, and it lets go.
+$grabLog=Join-Path $evidence ('verify-zombie-grab-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$grabProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckZombieGrabTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$grabLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($grabProcess.ExitCode -or !(Select-String -LiteralPath $grabLog -Pattern 'CHUCK_ZOMBIE_GRAB_TEST_COMPLETE failures=0' -Quiet)) {
+    throw "Zombie grab verification failed. Inspect $grabLog"
+}
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'

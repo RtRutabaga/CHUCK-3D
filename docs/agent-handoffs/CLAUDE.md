@@ -2,6 +2,44 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 14 — jungle zombies and raptors, and the zombie grab (Claude)
+
+- **Requests:**
+  1. "Add 15 zombies around the starting side of the jungle, but not around the brachiation trees, and add 4 more raptors around the brachiation trees."
+  2. "Give the zombies a 25% chance on hitting to actually pick Chuck up and bite him instantly taking all his hp, do the new animation for this."
+
+  Base `e66a573`. Contract: [CHULT-LIFE.md](../CHULT-LIFE.md); CHULT-RAPTOR.md updated.
+- **Built:**
+  - New `ChultLife.h/.cpp`. `SpawnChultLife` is called from `AChultLanding::Build`.
+    - Four more raptors on the canopy round (five in all), two walking it backward; `AChultRaptor::SetRoundStep` added.
+    - Fifteen zombies off either side of the landing loop. They keep 14 m beyond the brachiation reserve, so even at the end of their 11 m leash they never reach the trees. They are placed 0.5 s after the build, because same-frame collision cannot be traced yet (first runs placed 9 and 6).
+    - Both are skipped in automated runs except their own tests.
+  - The grab: a new `EZombie::Grab` (`TickGrab`, `PoseZombieGrab`: a deep stoop, a two-hand IK lift to its face, head back with the jaw open, the bite, a worry, then its arms falling).
+    - Chuck gets a new `EGait::Held` (`BeginHeld`/`SetHeldPose`/`HeldBitten`/`UpdateHeld`) and counts as astral while held.
+    - A procedural struggle layer in `ChuckAnimInstance` (kicks, arms pushing, back twist, head away, tail lash), a bite jolt, then limp. He vanishes from its hands, then the normal fade and return.
+    - `GetZombieGrabChance()` is 0.25 in play, 0 in other automated runs and 1 in the grab test.
+  - New tests: `-ChuckJungleLifeTest` and `-ChuckZombieGrabTest` (`DockGameMode` hooks). `Tools/Verify-Package.ps1` runs both.
+- **Contract compatibility:** no rig, clip, asset or bone-name change. The existing tests' worlds are unchanged, because both the extra creatures and the grab are off under their flags. `IsAstral()` now includes Held (no input, bites, raptors or zombie notice).
+- **Tests:**
+  - **Uncooked:**
+    - Jungle life 9/9 checks (`Local/jungle-life-5.log`).
+    - Grab 9/9 (`Local/zombie-grab-3.log`): lift 77 cm, worst hand gap 0.0–2.8 cm.
+    - Earlier grab runs failed and were fixed. The lift was measured from the zombie's height. Chuck was carried above its head, so the carry point was lowered to 44/112 cm. A hitch frame read as a 29 cm gap, so the gap is now measured against the previous frame's target.
+  - **First cooked jungle candidate:** passed every check, then hung and was killed on exit. My test cleared its own timer from inside the timer's callback; Codex hit the same with the impact harness. Fixed with a done flag.
+  - **Cooked JungleLife candidate:** **182/182** (`Local/verify-package-20261014-224644.log`). Jungle life 0 failures with a clean exit, 16.7 ms average frames.
+  - **Cooked ZombieGrab candidate:** **182/182** (`Local/verify-package-20261014-231456.log`).
+    - Grab 9/9 (`verify-zombie-grab-20261014-232834.log`) and jungle life 0 failures.
+    - Zombie impact 4/4, raptor 8/8, canopy 48/48 (static 0) and bridge 6/6.
+- **Reviewed stills:** `SourceAssets/Setting/Review/ZombieGrab_Seize.png`, `ZombieGrab_Lift.png`, `ZombieGrab_Bite.png`. The jungle-life stills were poorly framed (foliage, a raptor leg) and were not kept.
+- **Flaws:**
+  - The grab and struggle are procedural, not keyframed. The bite slightly interpenetrates his neck. There is no camera treatment and no way to break free, and nothing like a cooldown between grabs.
+  - Zombies are hard to see in the undergrowth. Five raptors make the trees' ground very dangerous; the balance is unreviewed.
+  - The 25% chance is not measured statistically.
+  - Not played by a person; no Xbox test.
+- **Launcher:** promoted `JungleLife`, then `ZombieGrab` (`Local/jungle-life-promotion.log`, `Local/zombie-grab-promotion.log`), with the receipt and launcher check passing. Both packages were built from **e66a573 plus this uncommitted work**, committed right after, so the receipt names e66a573. Backups kept: two (`-JungleLife`, `-ZombieGrab`); ChultJungleWater and ChultBridge were pruned. My candidates were removed by promotion. The four older inherited candidates are untouched.
+
+Next part of the work can be done here (a play review of the grab's frequency and the raptor pack's pressure would help most).
+
 ## October 14 — the broken rope bridge, crossed by brachiation (Claude)
 
 - **Request:** fix the look of Codex's decrepit bridge (horizontal planks, not vertical; nubs, missing gaps, split thin planks; ropes properly connected), make it crossable only by brachiating plank to plank without ever standing on it, and switch the score to the user's "Chult 2" on the bridge and far side. Base `bf059e3`.

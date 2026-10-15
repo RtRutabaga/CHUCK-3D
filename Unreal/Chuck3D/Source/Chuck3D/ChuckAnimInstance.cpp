@@ -180,6 +180,73 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
     CS.Pose.InitPose(Output.Pose);
     ++Result.Evaluations;
 
+    if (Params.HeldWeight > KINDA_SMALL_NUMBER)
+    {
+        // In a zombie's grip (user 2026-10-14), over the jump's loose hang: he
+        // fights it - legs kicking, arms pushing at its hands, back twisting,
+        // head turned away, tail lashing. The bite jolts him; then he hangs limp.
+        // Turns are about the component axes (X toward the zombie, Z up), parent first.
+        const float W = FMath::Clamp(Params.HeldWeight, 0.f, 1.f), T = Params.HeldTime;
+        const float Limp = Params.HeldLimp * W, Fight = W * (1.f - Params.HeldLimp);
+        const float Jolt = Params.HeldBite >= 0.f ? W * FMath::Exp(-Params.HeldBite / .12f) : 0.f;
+        const float Kick = UE_TWO_PI * 2.4f * T, Writhe = UE_TWO_PI * 1.7f * T;
+        const auto Turn = [&](const TCHAR* Name, const FVector& Axis, float Degrees)
+        {
+            const FCompactPoseBoneIndex I = Find(Bones, Name);
+            if (I == INDEX_NONE || FMath::IsNearlyZero(Degrees)) return;
+            FTransform X = CS.Pose.GetComponentSpaceTransform(I);
+            X.SetRotation(FQuat(Axis, FMath::DegreesToRadians(Degrees)) * X.GetRotation());
+            const FBoneTransform Moved[] = {FBoneTransform(I, X)};
+            CS.Pose.LocalBlendCSBoneTransforms(Moved, 1.f);
+        };
+        const auto Side = [&](const TCHAR* Name)
+        {
+            const FCompactPoseBoneIndex I = Find(Bones, Name);
+            return I == INDEX_NONE ? 1.f : (CS.Pose.GetComponentSpaceTransform(I).GetLocation().Y >= 0.f ? 1.f : -1.f);
+        };
+        const FVector AX = FVector::XAxisVector, AY = FVector::YAxisVector, AZ = FVector::ZAxisVector;
+        // (About Y: + curls forward/down, - arches back; a limb hanging down swings forward with -.)
+        Turn(TEXT("spine_01"), AZ, 9.f * FMath::Sin(Writhe) * Fight);
+        Turn(TEXT("spine_01"), AY, -6.f * Fight + 18.f * Jolt + 14.f * Limp);
+        Turn(TEXT("chest"), AZ, 7.f * FMath::Sin(Writhe + 1.f) * Fight);
+        Turn(TEXT("chest"), AY, -4.f * Fight + 10.f * Jolt);
+        Turn(TEXT("head"), AZ, 22.f * FMath::Sin(Writhe * .6f + .5f) * Fight);
+        Turn(TEXT("head"), AY, -14.f * Fight - 18.f * Jolt + 24.f * Limp);
+        Turn(TEXT("jaw"), AY, 10.f * Fight + 18.f * Jolt);
+        static const TCHAR* Upper[] = {TEXT("upperarm_L"), TEXT("upperarm_R")};
+        static const TCHAR* Lower[] = {TEXT("lowerarm_L"), TEXT("lowerarm_R")};
+        static const TCHAR* Thighs[] = {TEXT("thigh_L"), TEXT("thigh_R")};
+        static const TCHAR* Calves[] = {TEXT("calf_L"), TEXT("calf_R")};
+        static const TCHAR* Feet[] = {TEXT("foot_L"), TEXT("foot_R")};
+        for (int32 S = 0; S < 2; ++S)
+        {
+            const float Half = S * PI, Out = Side(Upper[S]), LegOut = Side(Thighs[S]);
+            Turn(Upper[S], AY, -(55.f + 18.f * FMath::Sin(Kick * .8f + Half)) * Fight - 10.f * Limp);
+            Turn(Upper[S], AX, Out * (20.f * Fight + 10.f * Limp));
+            Turn(Lower[S], AY, -(25.f + 15.f * FMath::Sin(Kick * .8f + Half + 1.f)) * Fight);
+            Turn(Thighs[S], AY, -(25.f + 32.f * FMath::Sin(Kick + Half)) * Fight - 6.f * Limp);
+            Turn(Thighs[S], AX, LegOut * 8.f * Fight);
+            Turn(Calves[S], AY, (20.f + 22.f * FMath::Sin(Kick + Half + 1.2f)) * Fight);
+            Turn(Feet[S], AY, 15.f * FMath::Sin(Kick + Half + 2.f) * Fight);
+        }
+        static const TCHAR* Tail[] = {TEXT("tail_0"), TEXT("tail_1"), TEXT("tail_2"), TEXT("tail_3"), TEXT("tail_4"), TEXT("tail_5")};
+        for (int32 I = 0; I < 6; ++I)
+        {
+            Turn(Tail[I], AZ, ((12.f + 1.2f * I) * Fight + 25.f * Jolt) * FMath::Sin(Writhe * 1.3f - I * .7f));
+            Turn(Tail[I], AY, -6.f * Limp);
+        }
+        for (int32 S = 0; S < 2; ++S)
+        {
+            Locks[S] = FFootLock();
+            Result.LockAlpha[S] = 0.f; Result.Shortfall[S] = 0.f; Result.bSettling[S] = false;
+            const FCompactPoseBoneIndex I3 = Find(Bones, Toes[S]);
+            if (I3 != INDEX_NONE) Result.BallWorld[S] = ToWorld.TransformPosition(CS.Pose.GetComponentSpaceTransform(I3).GetLocation());
+        }
+        bHasResult = true;
+        FCSPose<FCompactPose>::ConvertComponentPosesToLocalPoses(MoveTemp(CS.Pose), Output.Pose);
+        return true;
+    }
+
     if (!Params.bFootIK)
     {
         for (int32 Side = 0; Side < 2; ++Side)

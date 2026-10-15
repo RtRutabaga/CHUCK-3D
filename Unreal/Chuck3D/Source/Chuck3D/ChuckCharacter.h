@@ -174,8 +174,23 @@ public:
     int32 GetSanity() const { return Sanity; }
     /** Tests. */
     void SetSanity(int32 Value) { Sanity = FMath::Clamp(Value, 0, MaxSanity); }
-    /** Vanishing, away or being summoned back. */
-    bool IsAstral() const { return Gait == EGait::Astral || bPendingVanish; }
+    /** Vanishing, away or being summoned back (or in a zombie's hands: out of play). */
+    bool IsAstral() const { return Gait == EGait::Astral || bPendingVanish || Gait == EGait::Held; }
+    // Seized by a zombie (user 2026-10-14: a quarter of its hits pick him up and
+    // bite, taking all his sanity). The zombie carries him: each tick it sets
+    // where his chest is and which way he faces. He struggles, the bite takes
+    // everything, he goes limp and vanishes from its hands into the astral light.
+    /** Seized by By (the same dodges and walls as a bite save him). Returns whether it held. */
+    bool BeginHeld(AActor* By);
+    /** The zombie's hands: his chest at Chest (world), facing Yaw. */
+    void SetHeldPose(const FVector& Chest, float Yaw);
+    /** The bite: all his sanity; limp, then the vanish from its hands. */
+    void HeldBitten();
+    bool IsHeld() const { return Gait == EGait::Held; }
+    /** Held, or vanishing out of a zombie's hands (still drawn in its grip). */
+    bool IsInGrip() const { return Gait == EGait::Held || bHeldVanish; }
+    bool IsBodyHidden() const { return bAstralHidden; }
+    int32 GetTimesHeld() const { return TimesHeld; }
     const TCHAR* GetAstralName() const;
     int32 GetRespawns() const { return Respawns; }
     /** Every cigarette picked up (refilling Sanity or counted). */
@@ -361,7 +376,7 @@ private:
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
     enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -434,6 +449,12 @@ private:
     float PendingVanishAt = 0;
     bool bAstralHidden = false;
     bool bAstralFaded = false;
+    // In a zombie's grip.
+    TWeakObjectPtr<AActor> HeldBy;
+    float HeldClock = 0, HeldBiteAt = -1, HeldLimp = 0;
+    bool bHeldVanish = false;
+    int32 TimesHeld = 0;
+    void UpdateHeld(float DeltaSeconds);
     // The sewer's water slide (SewerSlide.cpp): carried down, out at the pier.
     void BeginSlide(float Into);
     bool FindPierExit();
@@ -465,7 +486,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap || Gait == EGait::Held; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face

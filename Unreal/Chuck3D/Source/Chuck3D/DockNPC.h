@@ -15,6 +15,7 @@ class USoundBase;
 class USoundAttenuation;
 class UAudioComponent;
 class UMaterialInterface;
+class AChuckCharacter;
 
 /**
  * A human NPC on the docks (user 2026-09-30: start with the dock worker by the
@@ -124,6 +125,13 @@ public:
     int32 GetHitsTaken() const { return Hits; }
     int32 GetBitesLanded() const { return Bites; }
     int32 GetZombieSoundCount() const { return ZombieSounds.Num(); }
+    /** Its grabs so far, and the widest gap between its hands and his chest while he was held (cm). */
+    int32 GetGrabs() const { return Grabs; }
+    float GetWorstHoldGap() const { return WorstHoldGap; }
+    bool IsGrabbing() const { return ZState == EZombie::Grab; }
+    /** The chance a landed hit becomes the grab: 0.25 in play; 0 in automated
+     *  runs (they keep their worlds), 1 in -ChuckZombieGrabTest. */
+    static float GetZombieGrabChance();
     int32 GetZombieSoundsPlayed() const { return ZombieSoundsPlayed; }
     int32 GetLunges() const { return Lunges; }
     const TCHAR* GetZombieStateName() const;
@@ -444,7 +452,7 @@ private:
     void Solve(const TArray<FQuat>& Delta, TArray<FTransform>& Space, const TArray<FQuat>* BoneDelta = nullptr, const FVector& HipsOffset = FVector::ZeroVector) const;
     void UpdatePose(float DeltaSeconds);
     // The zombie.
-    enum class EZombie : uint8 { Idle, Shamble, Windup, Lunge, Recover, Hurt, Dead };
+    enum class EZombie : uint8 { Idle, Shamble, Windup, Lunge, Recover, Hurt, Dead, Grab };
     EZombie ZState = EZombie::Idle;
     float ZTime = 0, WalkTime = 0, WalkBlend = 0, Rear = 0, Reach = 0, Flinch = 0, FlinchTime = -1, DeathTime = -1;
     FVector ZHome = FVector::ZeroVector, LungeDir = FVector::ForwardVector;
@@ -459,6 +467,18 @@ private:
     int32 ZombieSoundsPlayed = 0;
     bool StepZombie(const FVector& Direction, float Distance);
     void TurnZombie(const FVector& Toward, float DeltaSeconds, float Rate);
+    // The grab (user 2026-10-14): a quarter of its hits seize him instead,
+    // lift him to its mouth and bite (DockNPC.cpp, TickZombie and PoseZombieGrab).
+    TWeakObjectPtr<AChuckCharacter> Seized;
+    FVector GrabFrom = FVector::ZeroVector;       // his chest where it seized him (world)
+    FVector HoldPoint = FVector::ZeroVector;      // his chest in its hands now (component space)
+    FVector LastHold = FVector::ZeroVector;       // ... last frame
+    float GrabStoop = 0, GrabArms = 0, GrabHead = 0, GrabShake = 0, ZJaw = 0, ReleaseTime = -1;
+    bool bGrabBit = false;
+    int32 Grabs = 0;
+    float WorstHoldGap = 0;
+    void TickGrab(float DeltaSeconds, AChuckCharacter* Chuck);
+    void PoseZombieGrab(TArray<FTransform>& Space) const;
     // The smith.
     UPROPERTY() UStaticMeshComponent* Hammer = nullptr;
     UPROPERTY() UStaticMeshComponent* Tongs = nullptr;
