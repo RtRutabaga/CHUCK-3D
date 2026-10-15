@@ -23,8 +23,9 @@ namespace
         {15700,9750,0},{16800,11100,0},{18100,11800,0},{19200,12700,0},{19900,11700,0},
         {19100,10500,0},{17800,9400,0},{16200,8500,0},{15100,7400,0},{13300,6000,0},
         {12300,5050,0},{11600,4000,0},{10500,3150,0},{9600,2600,0},{8350,2300,0},{7800,3200,0}};
-    const FVector StreamKnots[]={{8200,5500,24},{9300,7800,34},{11300,8900,48},
-        {13400,9200,62},{15500,10400,86},{17800,11600,112},{20700,14300,140}};
+    const FVector StreamKnots[]={{21500,6000,170},{19000,7000,153},{15500,7800,130},
+        {12800,8600,114},{13400,9200,106},{15500,10400,94},{17800,11600,82},
+        {20700,13700,68},{22400,12300,58},{24000,12875,53},{25580,14060,50}};
     float Ease(float T) {T=FMath::Clamp(T,0.f,1.f);return T*T*(3-2*T);}
     float SegmentDistance(FVector P,FVector A,FVector B)
     {P.Z=A.Z=B.Z=0;return FVector::Dist2D(P,FMath::ClosestPointOnSegment(P,A,B));}
@@ -94,20 +95,26 @@ namespace
 bool InChultExpansion(const FVector& P) {return P.X>=MinX && P.X<=MaxX && P.Y>=MinY && P.Y<=MaxY;}
 bool ChultExpansionDressingAllowed(const FVector& P,float Margin)
 {return !OnLane(P,Margin) && StreamAt(P).Distance>200+Margin;}
+const TArray<FVector>& ChultWatercoursePath(){return StreamPath();}
+float ChultWatercourseDistance(const FVector& P){return StreamAt(P).Distance;}
+float ChultWatercourseGroundZ(const FVector& P,float BaseZ)
+{
+    const auto S=StreamAt(P);const float Bank=S.Distance-S.Width;
+    if(Bank<20)return S.Water-14;
+    if(Bank<200)return FMath::Lerp(S.Water-14,S.Water+26,Ease((Bank-20)/180));
+    if(Bank<600)return FMath::Lerp(S.Water+26,BaseZ,Ease((Bank-200)/400));
+    return BaseZ;
+}
 float ChultExpansionGroundZ(const FVector& P)
 {
     if(!InChultExpansion(P)) return 0;
     if(InChultCanopyReserve(P,350)) return 0;
     const float Fade=Ease((P.X-MinX)/1000)*Ease((P.Y-MinY)/800)*Ease((MaxX-P.X)/800)*Ease((MaxY-P.Y)/800)
         *Ease((P.Size2D()-9000)/600)*Ease(CanopyDistance(P)/600);
-    if(Fade<=0) return 0;
+    if(Fade<=0) return ChultWatercourseGroundZ(P,0);
     const float Hill=70*FMath::Exp(-FVector::DistSquared2D(P,FVector(14800,6000,0))/(1800.f*1800.f));
     float Z=70+35*FMath::Sin(P.X*.00063f+P.Y*.00021f)+28*FMath::Sin(P.Y*.00082f-P.X*.00014f)+Hill;
-    const auto Stream=StreamAt(P);const float Bank=Stream.Distance-Stream.Width;
-    if(Bank<20) Z=Stream.Water-14;
-    else if(Bank<200) Z=FMath::Lerp(Stream.Water-14,Stream.Water+26,Ease((Bank-20)/180));
-    else if(Bank<500) Z=FMath::Lerp(Stream.Water+26,Z,Ease((Bank-200)/300));
-    return FMath::Max(0.f,Z*Fade);
+    return ChultWatercourseGroundZ(P,FMath::Max(0.f,Z*Fade));
 }
 
 void BuildChultExpansion(AActor* Owner)
@@ -149,13 +156,13 @@ void BuildChultExpansion(AActor* Owner)
         {
             const float U=K/4.f,Across=(U*2-1)*Width;
             const uint8 Alpha=K==0 || K==4?0:220;
-            Water.Add(Path[I]+Side*Across+FVector(0,0,.5f),FVector::UpVector,FVector2D(U,Length/230),FColor(255,255,255,Alpha));
+            Water.Add(Path[I]+Side*Across+FVector(0,0,.5f),FVector::UpVector,FVector2D(U,-Length/230),FColor(255,255,255,Alpha));
             Water.Tangents.Last()=FProcMeshTangent(Side,true);
             if(I>0 && K<4) {int32 A=(I-1)*5+K;Water.Tri(A,A+1,A+5);Water.Tri(A+1,A+6,A+5);}
         }
     }
     // Rounded source/outlet pools follow the bed's endpoint distance field.
-    for(int32 End:{0,Path.Num()-1})
+    for(int32 End:{0})
     {
         const FVector D=End==0?(Path[0]-Path[1]).GetSafeNormal2D():(Path.Last()-Path[Path.Num()-2]).GetSafeNormal2D(),Side(-D.Y,D.X,0);
         const float Width=62+15*FMath::Sin((End==0?0:Length)*.0013f)+100;
@@ -300,7 +307,7 @@ int32 CheckChultExpansion(AActor* Owner,AChuckCharacter* C)
     }
     for(const auto& T:ChultCanopyTrees()) Failures+=FMath::Abs(ChultExpansionGroundZ(T.LianaFoot))>.01f;
     for(const FVector At:{FVector(18000,5000,0),FVector(20000,13500,0),FVector(12000,14500,0)}) {Sample(At);Failures+=!AChultLanding::Contains(G+At);}
-    for(const FVector P:StreamPath()) {const float Depth=P.Z-ChultExpansionGroundZ(P);Failures+=Depth<8 || Depth>25;}
+    for(const FVector P:StreamPath()) if(InChultExpansion(P)) {const float Depth=P.Z-ChultExpansionGroundZ(P);Failures+=Depth<8 || Depth>25;}
     Failures+=Fords==0;
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_EXPANSION_CHECK failures=%d floor_samples=%d capsule_sweeps=%d ford_samples=%d canopy_feet=8 extent=1"),Failures,Samples,Sweeps,Fords);return Failures;
 }
@@ -308,7 +315,7 @@ int32 CheckChultExpansion(AActor* Owner,AChuckCharacter* C)
 void StartChultExpansionReview(AActor* Owner,AChuckCharacter* C)
 {
     // Three short real-character walks: rolling ground, a shallow ford, and the far floor.
-    struct FRun {int32 Trial=0,Failures=0,Frames=0;float Start=-1,Worst=0;double FrameTime=0;uint64 LastFrame=MAX_uint64;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
+    struct FRun {int32 Trial=0,Failures=0,Frames=0;float Start=-1,Arrived=-1,Worst=0;double FrameTime=0;uint64 LastFrame=MAX_uint64;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
     const FVector G=AChultLanding::FloorOrigin();
     const TArray<FVector> Starts={{14300,6500,0},{16600,10700,0},{18300,11800,0}};
     const TArray<FVector> Ends={{15100,7000,0},{16800,11300,0},{19000,12200,0}};
@@ -321,7 +328,7 @@ void StartChultExpansionReview(AActor* Owner,AChuckCharacter* C)
             FVector Spawn=G+A+FVector(0,0,ChultExpansionGroundZ(A)+C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+4);
             C->ResetAtLocation(Spawn);C->GetCharacterMovement()->StopMovementImmediately();Run->Start=Now;
             C->SetActorRotation((B-A).Rotation());C->Recenter();C->SetOrbitPitch(-12);
-            Run->Frames=0;Run->FrameTime=0;Run->Worst=0;
+            Run->Frames=0;Run->FrameTime=0;Run->Worst=0;Run->Arrived=-1;
         }
         if(Run->LastFrame!=GFrameCounter) {const float DT=Owner->GetWorld()->GetDeltaSeconds();++Run->Frames;Run->FrameTime+=DT;Run->Worst=FMath::Max(Run->Worst,DT);Run->LastFrame=GFrameCounter;}
         const float Distance=FVector::Dist2D(C->GetActorLocation(),G+B),Time=Now-Run->Start;
@@ -333,6 +340,14 @@ void StartChultExpansionReview(AActor* Owner,AChuckCharacter* C)
             C->SetTestStickWorld(Direction);C->AddMovementInput(Direction,1.f,true);return;
         }
         C->SetTestStick(FVector2D::ZeroVector);
+        // A descending bank can put the capsule briefly in the air exactly as
+        // it crosses the arrival radius. Require a grounded stop, not that one
+        // timer frame. Destination distance and grounding remain mandatory.
+        if(Distance<45)
+        {
+            if(Run->Arrived<0)Run->Arrived=Now;
+            if(Now-Run->Arrived<.5f)return;
+        }
         const bool Pass=Distance<45 && C->GetCharacterMovement()->IsMovingOnGround();Run->Failures+=!Pass;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_EXPANSION_WALK trial=%d pass=%d distance=%.1f seconds=%.2f ground=%d fps=%.1f worst_frame_ms=%.1f"),Run->Trial,Pass,Distance,Time,C->GetCharacterMovement()->IsMovingOnGround(),Run->Frames/FMath::Max(.001,Run->FrameTime),Run->Worst*1000);
         ++Run->Trial;Run->Start=-1;

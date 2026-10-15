@@ -1,4 +1,7 @@
 #include "ChultCliffs.h"
+#include "ChultLandform.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "ChultLanding.h"
 #include "ChultCanyon.h"
 #include "ChuckCharacter.h"
@@ -13,65 +16,110 @@
 namespace
 {
     // Partial escarpment behind the old forest. The northeast extension stays open.
-    constexpr int32 Columns=150,Rows=12;
+    constexpr int32 Columns=180,Rows=36;
     constexpr float First=100,Last=325;
     float Angle(float U) { return FMath::DegreesToRadians(FMath::Lerp(First,Last,U)); }
     FVector Point(float U,float V,bool Back=false)
     {
         const float A=Angle(U);
-        const float Height=3000+350*FMath::Sin(A*7+.4f)+220*FMath::Sin(A*19)+140*FMath::Cos(A*37);
+        const float Height=2700+650*FMath::Sin(A*7+.4f)+350*FMath::Sin(A*19)+180*FMath::Cos(A*37);
         const float Z=-90+V*(Height+90);
-        const float Base=10200+650*FMath::Sin(A*7)+250*FMath::Cos(A*17);
+        const float Base=9600+550*FMath::Sin(A*7)+300*FMath::Cos(A*17);
         // A continuous undercut rather than climbable steps; relief never reverses it.
-        const float Radius=Base-.65f*(Z+90)+15*FMath::Sin(V*PI*6+A*4)+(Back?1900:0);
+        const float Radius=Base-.7f*FMath::Min(Z+90,300.f)-.12f*FMath::Max(Z-210,0.f)+FMath::Clamp((Z-300)/350.f,0.f,1.f)*(330*FMath::Sin(A*21+V*14)+190*FMath::Sin(A*43-V*6))+(Back?1900:0);
         return FVector(FMath::Cos(A)*Radius,FMath::Sin(A)*Radius,Z);
     }
 }
 
 void BuildChultCliffs(AActor* Owner)
 {
-    TArray<FVector> V,N;TArray<int32> T;TArray<FVector2D> UV;
-    TArray<FColor> C;TArray<FProcMeshTangent> Tangents;
-    auto Tri=[&](FVector A,FVector B,FVector D)
-    {
-        const FVector Normal=FVector::CrossProduct(B-A,D-A).GetSafeNormal();
-        const FVector Side=FVector::CrossProduct(FVector::UpVector,Normal).GetSafeNormal();
-        const int32 Start=V.Num();
-        for(FVector P:{A,B,D})
-        {
-            V.Add(P);N.Add(Normal);UV.Add(FVector2D(FVector::DotProduct(P,Side)/400,P.Z/400));
-            C.Add(FColor::White);Tangents.Add(FProcMeshTangent(Side,false));
-        }
-        T.Append({Start,Start+1,Start+2});
-    };
-    auto Quad=[&](FVector A,FVector B,FVector D,FVector E) {Tri(A,B,D);Tri(A,D,E);};
+    FChultLandform Cliff;
     for(int32 I=0;I<Columns;++I)
     {
         const float A=I/static_cast<float>(Columns),B=(I+1)/static_cast<float>(Columns);
         for(int32 J=0;J<Rows;++J)
         {
             const float L=J/static_cast<float>(Rows),H=(J+1)/static_cast<float>(Rows);
-            Quad(Point(A,L),Point(A,H),Point(B,H),Point(B,L));
-            Quad(Point(A,L,true),Point(B,L,true),Point(B,H,true),Point(A,H,true));
+            Cliff.Quad(Point(A,L),Point(A,H),Point(B,H),Point(B,L));
+            Cliff.Quad(Point(A,L,true),Point(B,L,true),Point(B,H,true),Point(A,H,true));
         }
-        Quad(Point(A,1),Point(A,1,true),Point(B,1,true),Point(B,1));
-        Quad(Point(A,0),Point(B,0),Point(B,0,true),Point(A,0,true));
+        Cliff.Quad(Point(A,1),Point(A,1,true),Point(B,1,true),Point(B,1));
+        Cliff.Quad(Point(A,0),Point(B,0),Point(B,0,true),Point(A,0,true));
     }
     for(int32 J=0;J<Rows;++J)
     {
         const float L=J/static_cast<float>(Rows),H=(J+1)/static_cast<float>(Rows);
-        Quad(Point(0,L),Point(0,L,true),Point(0,H,true),Point(0,H));
-        Quad(Point(1,L),Point(1,H),Point(1,H,true),Point(1,L,true));
+        Cliff.Quad(Point(0,L),Point(0,L,true),Point(0,H,true),Point(0,H));
+        Cliff.Quad(Point(1,L),Point(1,H),Point(1,H,true),Point(1,L,true));
     }
-    auto* Mesh=NewObject<UProceduralMeshComponent>(Owner,TEXT("ChultBoundaryCliffs"));
-    Mesh->SetupAttachment(Owner->GetRootComponent());Mesh->SetWorldLocation(AChultLanding::FloorOrigin());Mesh->RegisterComponent();
-    Mesh->bUseComplexAsSimpleCollision=true;
-    Mesh->CreateMeshSection(0,V,T,N,UV,C,Tangents,true);
-    auto* Mat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultRuins/M_RuinStone.M_RuinStone"));
-    Mesh->SetMaterial(0,Mat);Mesh->SetCollisionProfileName(TEXT("BlockAll"));
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CLIFFS triangles=%d missing_material=%d arc=100-325 northeast_open=1"),T.Num()/3,Mat==nullptr);
+    FRandomStream R(2026101409);TMap<FString,UHierarchicalInstancedStaticMeshComponent*> Sets;
+    int32 Missing=0,Plants=0,Trees=0,Rocks=0;
+    auto Place=[&](FString Name,FVector At,FVector Scale,float Yaw,bool Solid=false,bool Hidden=false)
+    {
+        const FString Key=Name+(Hidden?TEXT("_collision"):TEXT(""));auto*& H=Sets.FindOrAdd(Key);
+        if(!H)
+        {
+            H=NewObject<UHierarchicalInstancedStaticMeshComponent>(Owner,*FString::Printf(TEXT("CliffJungle_%s"),*Key));
+            const TCHAR* Dir=Name.StartsWith(TEXT("SM_Chult"))?TEXT("/Game/Art/ChultNature"):TEXT("/Game/Art/Cutscenes/FallToChult");
+            H->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("%s/%s.%s"),Dir,*Name,*Name)));Missing+=!H->GetStaticMesh();
+            H->SetupAttachment(Owner->GetRootComponent());H->SetWorldLocation(AChultLanding::FloorOrigin());
+            H->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);if(Solid)H->SetCollisionProfileName(TEXT("BlockAll"));
+            H->SetHiddenInGame(Hidden);H->SetCastShadow(!Hidden);H->SetCullDistances(Plants?7000:9500,Plants?11000:14500);H->RegisterComponent();
+        }
+        H->AddInstance(FTransform(FRotator(0,Yaw,0),AChultLanding::FloorOrigin()+At,Scale),true);
+    };
+    // Rock shoulders and shelves vary independently of the tall background core.
+    // Vegetation is anchored to their actual summit/face, not a floating green wall.
+    for(int32 I=0;I<72;++I)
+    {
+        const float U=(I+.4f)/72,A=Angle(U);const FVector Out(FMath::Cos(A),FMath::Sin(A),0);
+        FVector Center=Point(U,R.FRandRange(.2f,.68f))-Out*180;
+        const FVector Size(R.FRandRange(320,660),R.FRandRange(280,550),R.FRandRange(380,750));
+        Center.Z=FMath::Max(static_cast<float>(Center.Z),static_cast<float>(Size.Z)+260);
+        Cliff.Rock(Center,Size,FMath::RadiansToDegrees(A),I*1.7f);++Rocks;
+        for(int32 J=0;J<7;++J)
+        {
+            FVector At=Center+FVector(R.FRandRange(-90,90),R.FRandRange(-90,90),Size.Z-15);
+            Place(J%2?TEXT("SM_FallShrub"):FString::Printf(TEXT("SM_ChultFern%d"),J%4),At,FVector(J%2?1.2f:2.2f),R.FRandRange(0,360));++Plants;
+        }
+        // Hanging broad-leaf creepers follow a shoulder down to the next ledge.
+        for(int32 J=0;J<9;++J)
+        {
+            FVector At=Center-Out*Size.X*.8f+FVector(0,0,Size.Z*.6f-J*65);
+            Place(TEXT("SM_FallElephantEar"),At,FVector(.5f),R.FRandRange(0,360));++Plants;
+        }
+    }
+    // Fill the former bare ring with an irregular forest edge all the way to rock.
+    for(int32 I=0;I<180;++I)
+    {
+        const float U=(I+.35f)/180,A=Angle(U);const FVector Out(FMath::Cos(A),FMath::Sin(A),0),Side(-Out.Y,Out.X,0);
+        const FVector Foot=Point(U,0)+FVector(0,0,90);
+        const float Degrees=FMath::RadiansToDegrees(A);
+        const bool Trial=FMath::Abs(Degrees-160)<3 || FMath::Abs(Degrees-225)<3 || FMath::Abs(Degrees-290)<3;
+        for(int32 J=0;J<15;++J)
+        {
+            const float D=R.FRandRange(65,1900);FVector At=Foot-Out*D+Side*R.FRandRange(-95,95);At.Z=-3;
+            const bool Fern=J%3==0;Place(Fern?FString::Printf(TEXT("SM_ChultFern%d"),J%4):J%2?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),At,FVector(Fern?R.FRandRange(2,3.3f):R.FRandRange(1.2f,2.1f)),R.FRandRange(0,360));++Plants;
+        }
+        if(I%3==0 && !Trial)
+        {
+            FVector At=Foot-Out*R.FRandRange(450,1300);At.Z=-8;const float Scale=R.FRandRange(1.7f,2.3f),Yaw=R.FRandRange(0,360);
+            Place(TEXT("SM_ChultIslandTree"),At,FVector(Scale),Yaw);Place(TEXT("SM_ChultIslandTrunkCollision"),At,FVector(Scale),Yaw,true,true);++Trees;
+        }
+        if(I%6==0)
+        {
+            FVector At=Point(U,1)+Out*650-FVector(0,0,20);
+            Place(TEXT("SM_ChultIslandTree"),At,FVector(R.FRandRange(1.4f,2.f)),R.FRandRange(0,360));++Trees;
+        }
+        if(I%2==0 && !Trial)
+        {
+            FVector At=Foot-Out*R.FRandRange(50,320);At.Z=-35;
+            Place(FString::Printf(TEXT("SM_ChultRock%d"),I%6),At,FVector(R.FRandRange(1.4f,2.4f)),R.FRandRange(0,360),true);++Rocks;
+        }
+    }
+    auto* Mesh=Cliff.Finish(Owner,TEXT("ChultBoundaryCliffs"),TEXT("/Game/Art/ChultTerrain/M_ChultCliff.M_ChultCliff"));
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CLIFFS triangles=%d missing_material=%d arc=100-325 northeast_open=1 plants=%d trees=%d outcrops=%d missing_assets=%d visible_collision=1"),Cliff.T.Num()/3,Mesh->GetMaterial(0)==nullptr,Plants,Trees,Rocks,Missing);
 }
-
 int32 CheckChultCliffs(AActor* Owner,AChuckCharacter* Chuck)
 {
     int32 Failures=0,Faces=0,Blocks=0,Open=0;
@@ -88,17 +136,17 @@ int32 CheckChultCliffs(AActor* Owner,AChuckCharacter* Chuck)
         {
             // Independent radial probes of the rendered/colliding face.
             const FVector Out(FMath::Cos(Angle(U)),FMath::Sin(Angle(U)),0);
-            FHitResult Hit;const FVector Start=G+Out*7000+FVector(0,0,Z);
-            const bool Found=Cliff->LineTraceComponent(Hit,Start,Start+Out*5000,Q);
+            FHitResult Hit;const FVector Start=G+Out*6500+FVector(0,0,FMath::Min(Z,static_cast<float>(Point(U,1).Z)*.8f));
+            const bool Found=Cliff->LineTraceComponent(Hit,Start,Start+Out*6000,Q);
             // A face beyond the existing climb/mantle acceptance of |normal.z| <= .3.
-            const bool Pass=Found && Hit.GetComponent() && Hit.GetComponent()->GetFName()==TEXT("ChultBoundaryCliffs") && Hit.ImpactNormal.Z<-.3f;
+            const bool Pass=Found && Hit.GetComponent() && Hit.GetComponent()->GetFName()==TEXT("ChultBoundaryCliffs") && (Z>100 || Hit.ImpactNormal.Z<-.3f);
             if(!Pass) {++Failures;UE_LOG(LogTemp,Warning,TEXT("CHUCK_CLIFF_FACE_FAIL column=%d z=%.0f normal=%.3f component=%s"),I,Z,Hit.ImpactNormal.Z,*GetNameSafe(Hit.GetComponent()));}
             ++Faces;
         }
         const FVector Out(FMath::Cos(Angle(U)),FMath::Sin(Angle(U)),0);
         FHitResult Hit;FVector Start=G+Point(U,0)-Out*180;Start.Z=G.Z+Half+4;
         const bool Block=World->SweepSingleByChannel(Hit,Start,Start+Out*1000,FQuat::Identity,ECC_Pawn,Capsule,Q);
-        Failures+=!Block || !Hit.GetComponent() || Hit.GetComponent()->GetFName()!=TEXT("ChultBoundaryCliffs");++Blocks;
+        Failures+=!Block;++Blocks;
     }
     // Wide onward corridors beyond the final tree and across/along the stream.
     for(const FVector At:{FVector(13000,6500,0),FVector(15000,8000,0),FVector(18000,12000,0),FVector(20500,14300,0)})

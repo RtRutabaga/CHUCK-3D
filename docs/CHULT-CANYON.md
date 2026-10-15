@@ -10,7 +10,7 @@ The canyon frame has origin **(24500,15500,0)**, forward **(.8,.6,0)** and acros
 **(-.6,.8,0)**. The new footprint is S=-6500–11500, T=-4500–4500: an 180 × 90 m
 extension overlapping the old northeast edge. Emit new terrain only outside the
 existing floor. Approach follows the old stream's far end to the near bank.
-The old stream, terrain, eight canopy trees, 127 grips, ruins and raptor remain.
+The eight canopy trees, 127 grips, ruins and raptor remain. The later user-authorized watercourse pass now continues the creek through a side drainage notch at T=-1800 to a narrow canyon waterfall; it preserves bridge coordinates and the T=0 approach. See [CHULT-WATERCOURSE.md](CHULT-WATERCOURSE.md).
 
 Near lip S=0 and far lip S=4500: **45 m** of unsupported crossing, with banks
 around Z=350 and a roughly **50 m** cleft below. The cleft spans the entire new
