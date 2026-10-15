@@ -22,8 +22,10 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WATERCOURSE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WATERCOURSE_TEST failures=0 trials=3' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANYON .*missing_assets=0 deck_collision=0 rope_collision=0' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANYON_CHECK failures=0 .*active_crossing=0' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANYON_TEST_COMPLETE failures=0 trials=3 bridge_crossing_not_implemented=1' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANYON_CHECK failures=0 .*bridge_failures=0 active_crossing=1' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANYON_TEST_COMPLETE failures=0 trials=3 gorge_return=bridge' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_BRIDGE slots=166 grips=31 .*missing_assets=0 deck_collision=0 rope_collision=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_BRIDGE_CHECK failures=0 grips=31 registered=31 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_OVERGROWTH .*missing_assets=0 foliage_collision=0 rock_collision=1 existing_removed=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_LOW_MIST pools=12 height_layer=1 cool_sun=1 collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CLIFFS .* missing_material=0 .*northeast_open=1' -Quiet) -or
@@ -133,6 +135,16 @@ if ($raptorProcess.ExitCode -or !(Select-String -LiteralPath $raptorLog -Pattern
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SOUNDS steps=3 hiss=1 snap=2 call=1 death=1' -Quiet) -or
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult raptor verification failed. Inspect $raptorLog"
+}
+# The canyon's broken rope bridge (Claude, 2026-10-14): the real character catches
+# the first surviving plank, brachiates plank to plank to the far bank and steps
+# down, comes back steering with the stick, lets go over the gorge and returns
+# to the near bank, and can't stand on a plank; its own score over the bridge.
+$bridgeLog=Join-Path $evidence ('verify-bridge-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$bridgeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckBridgeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$bridgeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($bridgeProcess.ExitCode -or !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_BRIDGE_TEST_COMPLETE failures=0 trials=6 static_failures=0 grips=31 music_far=1 music_back=1' -Quiet) -or
+    !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_CHULT_BRIDGE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
+    throw "Chult bridge brachiation verification failed. Inspect $bridgeLog"
 }
 $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }

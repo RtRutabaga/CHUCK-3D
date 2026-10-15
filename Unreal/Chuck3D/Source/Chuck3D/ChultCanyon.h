@@ -1,16 +1,11 @@
 #pragma once
 #include "CoreMinimal.h"
+#include "ChultBridge.h"
 class AActor;
 class AChuckCharacter;
-struct FChultBridgePlank
-{
-    FName Name;
-    FVector Grip;
-    float Width=190, Tilt=75;
-};
-// All setting data is local to Chult FloorOrigin; proposals are NOT registered.
+// All setting data is local to Chult FloorOrigin. The bridge itself (planks,
+// ropes, posts and its brachiation grips) is Claude's ChultBridge.h.
 FVector ChultCanyonFrame(float S,float T,float Z=0);
-const TArray<FChultBridgePlank>& ChultBridgePlanks();
 bool InChultCanyon(const FVector& Local);
 float ChultCanyonGroundZ(const FVector& Local);
 void BuildChultCanyon(AActor* Owner);

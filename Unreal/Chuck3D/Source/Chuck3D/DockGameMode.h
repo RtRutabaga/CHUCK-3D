@@ -17,6 +17,8 @@ public:
     bool StartFromMenu(const FString& Point);
     /** The score's current duck (1 full, MusicDuckLevel under speech or by the tavern at night). */
     float GetMusicDuck() const { return MusicDuck; }
+    /** Which score the region timer has on: 0 docks, 1 sewer, 2 night, 3 Chult, 4 Chult's bridge and far side. */
+    int32 GetMusicRegion() const { return MusicRegion; }
     bool IsRunningVerification() const { return bSmokeTest; }
     /** Every Waterdeep score fades out (the fall to Chult brings its own). */
     void FadeOutMusic(float Seconds);
@@ -36,6 +38,7 @@ private:
     // tracks' own region fades, which use AdjustVolume/FadeIn.
     TArray<TWeakObjectPtr<class UAudioComponent>> MusicTracks;
     float MusicDuck = 1.f, DuckLowest = 1.f, DuckQuiet = 0.f;
+    int32 MusicRegion = 0;
     bool bDuckRecovered = false;
     void UpdateMusicDuck(float DeltaSeconds);
     // -ChuckSmithCapture: the blacksmith at work, a frame every 60 ms from a fixed three-quarter view.

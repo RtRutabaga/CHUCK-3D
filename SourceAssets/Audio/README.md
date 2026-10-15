@@ -94,3 +94,9 @@ The only processing is equal-power loop crossfades, the thud's filter, pitch and
 The user supplied `C:/Users/ashsm/Downloads/chult.wav`. It is copied byte-for-byte to `SourceAssets/Audio/Chult.wav` (25,434,640 bytes), SHA-256 `802DAB4F0CD1EDFF6863EE8579F628AF7AB44489696F1A5FA105B5E9B7A257EE`: stereo 16-bit 48 kHz, 132.4 s. No edits and no invented attribution.
 
 It is imported by `Tools/import_fall_chult_audio.py` as `/Game/Art/Audio/SW_Chult`, looping the whole recording. `DockGameMode` treats Chult as its own music region: once Chuck is in Chult (after the fall cutscene, or from the Dev Checkpoint) the Waterdeep scores fade out over 1.5 s and this one fades in over 3 s at 45%, the same level as the other scores. `-ChuckChultTest` starts it 2 s before its end and logs `CHUCK_CHULT_MUSIC_CHECK` after the loop boundary. The seamlessness of the loop on speakers is unverified.
+
+## Chult bridge score ("Chult 2") — October 14, 2026 (Claude)
+
+The user supplied `C:/Users/ashsm/Downloads/Chult 2.wav` for the canyon's broken rope bridge and its far side. It is copied byte-for-byte to `SourceAssets/Audio/Chult2.wav` (41,055,772 bytes), SHA-256 `312D41F5E99E380B33E2B9AB2AA8B8AEB100A63ECE807C08A32D519C37828FB8`, identical to the original: stereo 16-bit 48 kHz, 213.8 s. No edits and no invented attribution.
+
+`Tools/import_chult_bridge_audio.py` imports it as `/Game/Art/Audio/SW_Chult2`, looping the whole recording. In Chult, `DockGameMode` switches to it once Chuck is past S=-40 of the canyon frame (on the first plank and beyond, the gorge and the whole far side) and back to `SW_Chult` only when he is back past S=-220 on the near bank (or respawns there). The two cross-fade over 2.5 s at 45%; each keeps its place while silent. `-ChuckBridgeTest` starts it 2 s before its end and logs `CHUCK_CHULT_BRIDGE_MUSIC_CHECK` after the loop boundary. Not heard on speakers by the agent.

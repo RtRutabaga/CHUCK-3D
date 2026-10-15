@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "ChultLanding.h"
+#include "ChultBridge.h"
 #include "ChultCanopy.h"
 #include "ChultRaptor.h"
 #include "DockSigns.h"
@@ -96,7 +97,10 @@ void ADockGameMode::StartPlay()
     // Chult's own score (the user's track), from the end of the fall on.
     auto* ChultScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Chult.SW_Chult"));
     auto* ChultComponent=ChultScore ? UGameplayStatics::CreateSound2D(World,ChultScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent};
+    // Over the canyon bridge and beyond it, the user's second Chult track (2026-10-14).
+    auto* BridgeScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Chult2.SW_Chult2"));
+    auto* BridgeComponent=BridgeScore ? UGameplayStatics::CreateSound2D(World,BridgeScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -118,34 +122,46 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),SewerScore,NightScore,ChultScore,TestMusic](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),SewerScore,NightScore,ChultScore,BridgeScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         // In Chult (after the fall, or from its checkpoint): Waterdeep's scores
-        // go and Chult's comes in, looping. There is no way back yet.
+        // go and Chult's comes in, looping. There is no way back yet. Over the
+        // canyon bridge and on its far side the second Chult score takes over;
+        // the two cross-fade, each keeping its place while the other plays.
         if(Chuck && AChultLanding::Contains(Chuck->GetActorLocation()))
         {
-            if(Region->Mode==3) return;
-            Region->Mode=3; Region->Underground=false;
-            for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night})
-                if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
-            if(Chult.IsValid())
+            const int32 Want=InChultBridgeMusicZone(Chuck->GetActorLocation(),Region->Mode==4)?4:3;
+            if(Region->Mode==Want) return;
+            if(Region->Mode<3)
+                for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night})
+                    if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
+            const bool First=Region->Mode<3;
+            Region->Mode=Want; Region->Underground=false;
+            if(Self.IsValid()) Self->MusicRegion=Want;
+            auto Bring=[World,Region,Want,First](const TWeakObjectPtr<UAudioComponent>& Track,USoundWave* Score,const TCHAR* Param,const TCHAR* Name)
             {
-                const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckChultTest"));
-                Chult->FadeIn(3.f,.45f,Test && ChultScore?FMath::Max(0.f,ChultScore->Duration-2.f):0.f);
+                if(!Track.IsValid()) return;
+                if(Track->IsPlaying()) {Track->AdjustVolume(2.5f,.45f);return;}
+                const bool Test=FParse::Param(FCommandLine::Get(),Param);
+                Track->FadeIn(First?3.f:2.5f,.45f,Test && Score?FMath::Max(0.f,Score->Duration-2.f):0.f);
                 FTimerHandle Check;
-                World->GetTimerManager().SetTimer(Check,[Chult,ChultScore](){
-                    const bool Loop=ChultScore && ChultScore->bLooping,Playing=Chult.IsValid() && Chult->IsPlaying();
-                    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                World->GetTimerManager().SetTimer(Check,[Track,Score,Region,Want,Name](){
+                    if(Region->Mode!=Want) return;   // left again before the check: faded on purpose
+                    const bool Loop=Score && Score->bLooping,Playing=Track.IsValid() && Track->IsPlaying();
+                    UE_LOG(LogTemp,Display,TEXT("%s failures=%d looping=%d playing_after_boundary=%d"),Name,!(Loop&&Playing),Loop,Playing);
                 },6.f,false);
-            }
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 score=%d"),Chult.IsValid());
+            };
+            if(Want==4) {Bring(Bridge,BridgeScore,TEXT("ChuckBridgeTest"),TEXT("CHUCK_CHULT_BRIDGE_MUSIC_CHECK"));if(Chult.IsValid() && Chult->IsPlaying()) Chult->AdjustVolume(2.5f,0.f);}
+            else {Bring(Chult,ChultScore,TEXT("ChuckChultTest"),TEXT("CHUCK_CHULT_MUSIC_CHECK"));if(Bridge.IsValid() && Bridge->IsPlaying()) Bridge->AdjustVolume(2.5f,0.f);}
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 bridge=%d score=%d"),Want==4,(Want==4?Bridge:Chult).IsValid());
             return;
         }
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
         const int32 Mode=Below?1:HasExitedDockSewer()?2:0;
         if(Mode==Region->Mode) return;
+        if(Self.IsValid()) Self->MusicRegion=Mode;
         const bool ChangedArea=Below!=Region->Underground;Region->Mode=Mode;
         Region->Underground=Below;
         if(Docks.IsValid()) Docks->AdjustVolume(1.25f,Mode==0?.45f:0.f);
@@ -648,6 +664,16 @@ void ADockGameMode::StartPlay()
         extern void StartZombieImpactReview(UWorld*);
         FTimerHandle ImpactCheck;
         World->GetTimerManager().SetTimer(ImpactCheck,[World](){StartZombieImpactReview(World);},2.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBridgeTest")))
+    {
+        // Claude's canyon bridge trials (ChultBridge.h): across and back hanging from the planks.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle BridgeCheck;
+        World->GetTimerManager().SetTimer(BridgeCheck,[World](){
+            auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
+            for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultBridgeReview(*It,Chuck);break;}
+        },4.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyTest")))
     {
@@ -2478,7 +2504,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==4 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==5 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

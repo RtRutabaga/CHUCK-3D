@@ -19,38 +19,14 @@ the bridge. Cliff collision follows its visible surface. Existing fall recovery
 triggers below world Z=-100; the deep bottom is scenery beyond that threshold.
 No new death controller or checkpoint is needed for the setting pass.
 
-## Bridge hand-position contract for Claude
+## Bridge (Claude, October 14, 2026)
 
-`ChultCanyon.cpp/.h` owns **33** surviving planks and `ChultBridgePlanks()`.
-Their names are `ChultBridgePlank00` through `ChultBridgePlank32`. Each record
-has a local `Grip`, width and tilt; matching scene markers have the
-`ChultBridgePawProposal` tag. `ChultCanyonFrame(S,T,Z)` converts frame to local;
-add FloorOrigin to obtain world space. Along is (.8,.6,0).
-
-Plank hand points run S=-100 to 4540, 140 cm apart with four 180 cm breaks.
-Z follows 460 minus a 90 cm sine sag; bank standing ground is Z=350. Planks hang
-steeply (68–82°) from their upper edge. The hand proposal meets that actual edge,
-with splintered ends and old rope lashings. Side ropes sag too, with frayed broken
-ends. They have no grips. Planks/ropes are noncolliding handhold art, following
-the existing canopy hand-bough convention; they supply no standing stepping
-stones, so jumping along a deck is unavailable. Bank stubs/posts are solid.
-
-Safe standing entry S=-280,T=0 and exit S=4820,T=0. No grips are registered by
-this pass. The current player can reach/inspect the near bank, but **the bridge
-cannot yet be crossed**. Far-bank dressing is setting-ready, not a completed
-route. Claude owns activating the hand proposals, both directions, catches,
-step spacing/selection, paw pose, collision/body clearance, camera, missing-board
-leaps, dismount and death/recovery tests. Change the setting data through this
-contract if the real traversal needs adjustments; do not conceal a walking deck
-under the bridge. Only a verified actual crossing can establish 'brachiation is
-the only way through'.
-
-Activation also needs an inventory/test audit: the current package verifier
-expects the canopy's 127 registered grips and inactive-canyon markers. Keep all
-existing canopy identities/behavior, update total-versus-canopy inventory checks
-deliberately, and replace the canyon's `active_crossing=0` /
-`bridge_crossing_not_implemented=1` acceptance with actual crossing tests.
-Do not treat these setting-only checks as proof that the player can swing across.
+The bridge is no longer part of this file's contract: Claude rebuilt it as a
+horizontal-plank rope bridge crossed by brachiation and owns it in
+`ChultBridge.h/.cpp` (see [CHULT-BRIDGE.md](CHULT-BRIDGE.md)). Codex's 33 steep
+plank proposals, `active_crossing=0` and `bridge_crossing_not_implemented=1`
+markers are gone. Posts stay at S=-240/4800; the T=0 approach and exit, banks
+and lips are unchanged. A fall into the gorge now returns him beside the bridge.
 
 ## Art and verification
 
@@ -66,5 +42,4 @@ wide canyon, bank/bridge, broken plank and deep gorge views. Run all existing
 Chult/canopy/raptor/fall/package regressions. Handoff records actual results,
 launcher state and unimplemented Claude traversal explicitly.
 
-Next part of the work can only be done by Claude: activate/test the broken-plank
-brachiation route with the user.
+The broken-plank crossing is active and tested (CHULT-BRIDGE.md).
