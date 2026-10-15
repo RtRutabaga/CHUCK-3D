@@ -2,6 +2,18 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 15 — the gorge, its rims and softer light (Claude)
+
+- **Request:** "the lighting is very dark in parts with the one sun light source. look up how other games handle this ... i do like the current contrast, just want a less dramatic contrast. Then, take what codex did for cliffs and waterfalls and landscape vista and make it much much better" (start side; far canyon wall allowed), "visually stunning ... waterfalls cresting down into the fog"; free resources allowed. Base `a635b95`.
+- **Lighting research:** without dynamic GI, games fake bounce with a hemispherical sky term plus fill lights opposite the sun, and compress shade with local tone mapping. Applied: sky light 1.0 with a ground-coloured lower hemisphere, an unshadowed specular-free fill (0.7, near-neutral, sun keeps forward-shading priority), local exposure shadow 0.66 / highlight 0.85, and a low fog layer that keeps the floor haze but thickens half as fast with depth.
+- **Built:** see HANDOFF and [CHULT-GORGE.md](../CHULT-GORGE.md). The per-quad green/rock material split (the "triangles of green") is replaced by per-vertex weights blended in one material.
+- **Contract compatibility:** no rig, clip, socket, grip or bridge change. The creek's lip point and every floor are unchanged; the canyon's vegetation keeps its random draws (the vines now follow the new faces). Codex-owned files changed: `ChultVista.cpp` (rewritten), `ChultCanyon/Watercourse/River.cpp` (walls/falls/fog moved to the gorge, checks retargeted), `Tools/Verify-Package.ps1` (vista patterns, new gorge patterns, views=7). The canyon's six lip fog pools are gone (white spheres from the bridge).
+- **Iterations:** five uncooked review rounds (`Local/gorge-review-1..5.log`, `gorge-chult-full-4.log`). The first found valley falls clipping rock and two river-fall probes inside the wall; walls are now clamped behind every fall. Later rounds desaturated the rock, varied the strata, smoothed the ranges, added wall mats, springs and rim undergrowth.
+- **Tests and launcher:** as in HANDOFF: 182/182 first run, all Chult/gorge checks 0, canopy 48/48, bridge 6/6, raptor 8/8; promoted **0dd3f6f** as `ChultGorge`.
+- **Flaws:** as in HANDOFF.
+
+Next part of the work can be done here (a play review from the bridge would help most).
+
 ## October 14 — jungle zombies and raptors, and the zombie grab (Claude)
 
 - **Requests:**
