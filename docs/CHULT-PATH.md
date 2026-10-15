@@ -9,3 +9,26 @@ Use Amal Kumar's CC0 Stone Pathway scan from Poly Haven, https://polyhaven.com/a
 The road is roughly 2–3 m wide, surviving as separate embedded, chipped slab clusters with missing sections, soil-filled joints and moss. It is not an intact stone ribbon. Ground conformity and sparse coverage preserve the old terrain/collision contracts. Existing vegetation and encounters remain; route planning takes solid obstacles into account. No water crossings, new bridge deck, traversal, characters, dialogue or pickups.
 
 Verify actual terrain support, the entire route's water clearance and real capsule clearance, paving vertices against terrain, bridge alignment and the gorge gap. Review landing, raptor area, approach, departure and river views. Build/cook, run existing package regression suites, promote with the standard tool and record actual evidence in HANDOFF.
+
+## Implementation
+
+`ChultPath.cpp` builds two independent road centre lines after terrain registration.
+Authored guide points follow the existing clearing/grove lanes, loop west and
+north of the creek, and meet the canyon frame at T=0. A bounded local A* search
+detours around existing solid roots and trees; rounded corners and every shortcut
+are rechecked against terrain, water and capsule clearance. No vegetation is removed.
+The bridge's land ends stop at S=-380 and begin at S=5000; the far road then
+follows the negative-T riverbank to S=27600, before the current floor's S=28000 limit.
+
+Irregular chipped flagstones survive in three staggered lanes with long reclaimed
+sections and individually missing slabs. The final cooked build has 991 slabs,
+7,928 triangles and 305 reclaimed rows. Moss varies across and between fragments.
+Their edges follow actual ground triangles, with tops 1.2–2.8 cm above the soil.
+These thin visual remnants have no collision; the existing terrain remains the
+walking surface and strict earlier floor-height contracts remain valid.
+
+`CheckChultPath` is included in the ordinary Chult test. `-ChuckChultTest
+-ChuckPathReview` adds six captures and six actual character walks. The package
+verifier requires both the ordinary checks and this focused suite. Final actual
+results, promotion and limitations are recorded in HANDOFF rather than implied
+by the existence of these checks.
