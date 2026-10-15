@@ -11,6 +11,7 @@
 #include "ChultCanyon.h"
 #include "ChultWatercourse.h"
 #include "ChultVista.h"
+#include "ChultPath.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -355,6 +356,9 @@ void AChultLanding::BuildSet()
     BuildChultCanyon(this);
     BuildChultWatercourse(this);
     BuildChultVista(this);
+    // Let the registered terrain/solid foliage enter the physics scene first.
+    FTimerHandle PathTimer;
+    GetWorldTimerManager().SetTimer(PathTimer,FTimerDelegate::CreateWeakLambda(this,[this](){BuildChultPath(this);}),.6f,false);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -375,6 +379,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultWatercourse(this,C);
     Failures+=CheckChultCliffs(this,C);
     Failures+=CheckChultVista(this,C);
+    Failures+=CheckChultPath(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -431,6 +436,7 @@ void AChultLanding::VerifyAndCapture()
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_GROVE_GROUND failures=%d capsule_segments=%d"),GroveFailures,UE_ARRAY_COUNT(GroveRoute)-1);
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();

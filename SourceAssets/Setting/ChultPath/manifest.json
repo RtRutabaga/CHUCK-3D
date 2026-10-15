@@ -1,0 +1,37 @@
+{
+  "provider": "Poly Haven",
+  "license_url": "https://polyhaven.com/license",
+  "resolution": 2048,
+  "assets": [
+    {
+      "asset": "stone_pathway",
+      "role": "Diffuse",
+      "file": "stone_pathway_diff_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/stone_pathway/stone_pathway_diff_2k.jpg",
+      "md5": "f174b498b663f2bec5e116da4e786847",
+      "bytes": 2776151,
+      "license": "CC0-1.0",
+      "sha256": "54A1BD75DC946EF04315D30A49498762AB0F5766FD9248E1D8DBB03BE40AE492"
+    },
+    {
+      "asset": "stone_pathway",
+      "role": "nor_dx",
+      "file": "stone_pathway_nor_dx_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/stone_pathway/stone_pathway_nor_dx_2k.jpg",
+      "md5": "6710cc8bc0147e251a1d1cd7aa26afdd",
+      "bytes": 3708729,
+      "license": "CC0-1.0",
+      "sha256": "B01A9A4C292669906262617BF11CA67F031EFFAB9A2E142EBE17D63E9A18A9B0"
+    },
+    {
+      "asset": "stone_pathway",
+      "role": "arm",
+      "file": "stone_pathway_arm_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/stone_pathway/stone_pathway_arm_2k.jpg",
+      "md5": "e4d05a5045086d12f2164ef96656c22d",
+      "bytes": 2470184,
+      "license": "CC0-1.0",
+      "sha256": "1CE3BB89DDE20E0846B7A81D113F8CB78B6B6E4771D01FE04F3FEAB93D271438"
+    }
+  ]
+}

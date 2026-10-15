@@ -12,6 +12,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Ancient jungle path remnants authorized October 15, 2026:** the user requests a free resource for an overgrown ancient road from the cliffs behind the landing, through the landing and raptor territory, aligned to both ends of the bridge, then following the far river to its current end. Keep the road on dry banks; preserve the bridge crossing and future upstream expansion. Contract: [../CHULT-PATH.md](../CHULT-PATH.md).
+
 **Northeast canyon and broken rope bridge authorized October 14, 2026:**
 extend the current open jungle beyond the brachiation line and stream. Build a
 deep canyon with jungle banks and a decrepit rope bridge whose surviving planks

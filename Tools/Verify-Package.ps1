@@ -21,6 +21,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WATERCOURSE .*missing_assets=0 falls_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RIVER .*missing_assets=0 water_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RIVER_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_PATH .*missing_material=0 route_failures=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_PATH_CHECK failures=0 .*dry_routes=2 bridge_alignment=1 paving_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GORGE .*missing_assets=0 falls_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GORGE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_VISTA .*missing_assets=0 far_floor_changed=0' -Quiet) -or
@@ -63,6 +65,13 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
 $ruinSetup=Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RUINS_BUILD ms=([0-9.]+) vertices=109888'
 if(!$ruinSetup -or [double]::Parse($ruinSetup.Matches[0].Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture) -gt 10000) {
     throw "Rounded ruin setup exceeded its 10-second budget. Inspect $chultLog"
+}
+$pathLog=Join-Path $evidence ('verify-chult-path-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$pathProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPathReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pathLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($pathProcess.ExitCode -or !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=0 views=6' -Quiet) -or
+   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=6' -Quiet)) {
+    throw "Ancient jungle road verification failed. Inspect $pathLog"
 }
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }

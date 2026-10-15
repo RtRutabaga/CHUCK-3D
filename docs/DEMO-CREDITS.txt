@@ -11,6 +11,7 @@ Rough Wood: https://polyhaven.com/a/rough_wood
 Cliff Side: https://polyhaven.com/a/cliff_side
 Aerial Rocks 02: https://polyhaven.com/a/aerial_rocks_02
 Aerial Grass Rock: https://polyhaven.com/a/aerial_grass_rock
+Stone Pathway (Amal Kumar): https://polyhaven.com/a/stone_pathway
 
 Human base meshes and source textures: MakeHuman CC0 assets, via MPFB.
 https://www.makehumancommunity.org/content/license.html
