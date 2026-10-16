@@ -60,13 +60,13 @@ bool AChultTRex::InTerritory(const FVector& World)
 const TArray<FVector>& AChultTRex::PatrolPoints()
 {
     // A loop round the giants: up the road's side of their line 12.5 m off it,
-    // across beyond the last tree, back down the far side, across before the
-    // first. Every point lies between two trees, 8.7 m or more from any trunk.
+    // across between the last two trees (its stretch ends before the last
+    // tree's liana), back down the far side, across before the first.
     static const TArray<FVector> Points=[]()
     {
         TArray<FVector> P;P.Add(Ground(35700,ChultGiantLineT(35700)));
         for(int32 I=0;I<11;++I){const float S=36600+1300*I+650;P.Add(Ground(S,ChultGiantLineT(S)-1250));}
-        P.Add(Ground(51900,ChultGiantLineT(51900)));
+        P.Add(Ground(50250,ChultGiantLineT(50250)));
         for(int32 I=10;I>=0;--I){const float S=36600+1300*I+650;P.Add(Ground(S,ChultGiantLineT(S)+1250));}
         return P;
     }();
@@ -425,7 +425,10 @@ void StartChultTRexReview(UWorld* World)
             const bool Blocked = World->SweepSingleByChannel(Hit, A, B, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius, HalfHeight - 40), Q);
             if (Blocked) { ++RouteFailures; UE_LOG(LogTemp, Warning, TEXT("CHUCK_TREX_ROUTE_BLOCK leg=%d by=%s at=%s"), I, *GetNameSafe(Hit.GetComponent()), *(Hit.ImpactPoint - G).ToString()); }
         }
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_TREX_ROUTE failures=%d segments=%d"), RouteFailures, P.Num());
+        // The canopy's way down (the last giant's liana) lands outside its stretch.
+        const bool bExitSafe = !AChultTRex::InTerritory(G + ChultGiantTrees().Last().LianaFoot);
+        RouteFailures += !bExitSafe;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_TREX_ROUTE failures=%d segments=%d liana_exit_safe=%d"), RouteFailures, P.Num(), bExitSafe);
     }
     struct FRun { int32 Trial = 0, Failures = 0, Bites = 0, Respawns = 0, Shots = 0; float Start = -1, MinS = 1e9f, Moved = 0; bool bStalked = false, bDone = false; FVector Last; TWeakObjectPtr<ACameraActor> Camera; FTimerHandle Timer; };
     auto Run = MakeShared<FRun>(); Run->Failures = RouteFailures;

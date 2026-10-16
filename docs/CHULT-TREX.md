@@ -17,8 +17,8 @@
 
 It is built like the raptor: there is no AI controller, it drives its own movement and steers round trunks and rocks with sweeps. Its capsule (1.5 m radius, 5.8 m tall) is its legs and belly; the head and tail have no collision.
 
-- **Its stretch:** S 35600–52300 of the upriver valley (the giants stand at S 36600–50900). It never leaves it. The far bank, the river's head, the deep jungle and the temple are safe.
-- **Patrol:** a 24-point loop at 1.8 m/s. It goes up the road's side of the giants' line 12.5 m off it, crosses beyond the last tree, comes back down the far side and crosses before the first. Every point lies between two trees, at least 8.7 m from any trunk.
+- **Its stretch:** S 35600–50400 of the upriver valley (the giants stand at S 36600–50900). It never leaves it. The far bank, the river's head, the last giant's liana down, the deep jungle and the temple are safe.
+- **Patrol:** a 24-point loop at 1.8 m/s. It goes up the road's side of the giants' line 12.5 m off it, crosses between the last two trees, comes back down the far side and crosses before the first. Every point lies between two trees, at least 8.7 m from any trunk.
 - **Notice:** within 32 m in view, or 13 m all round (the ground shakes). It turns on him and roars, rearing, for 1.3 s.
 - **Chase:** 4.2 m/s, faster than his sprint (3.8 m/s), striding with its walk clip at its natural pace. On the ground he cannot outrun it. The way through is the canopy.
 - **Bite:** at 6 m from him, a 0.45 s tell (it stops and rears back), then a lunge. One bite empties his sanity and kills him. A roll or side jump through the tell should beat a single bite (not yet tested).
@@ -27,13 +27,13 @@ It is built like the raptor: there is no AI controller, it drives its own moveme
 - **Death:** dying to it returns him to the **Chult Giant Trees** spawn. That spawn has moved back to S=34600, 10 m short of its stretch, so the return is safe; the Dev Checkpoint goes there too.
 - **Spawning:** one T-rex appears when Chult becomes playable (`AChultLanding::Build`). It is left out of every automated `-Chuck…Test/Capture/Review` run except its own, so the other tests keep their worlds. The menu checkpoints do include it.
 
-Until the golden cigarette's stamina lock exists, nothing climbs to the giants. In ordinary play the stretch is then impassable on foot past a T-rex that notices him, and the deep jungle and temple are reached by their Dev Checkpoints. **Chult Giant Canopy (dev)** puts him up in the first giant.
+**The way past:** Codex's golden cigarette ([CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md), added the same evening) lies at the first giant's trunk, about 10 m inside the T-rex's stretch. He slips in, takes it and climbs the trunk on the stamina lock; above 3.3 m he is out of its reach. Then he crosses the canopy to the last giant and climbs down its liana, which lands just outside its stretch (checked by the test). **Chult Giant Canopy (dev)** still puts him straight up in the first giant.
 
 ## Test
 
 `-ChuckTRexTest`, also run by `Verify-Package`:
 
-- A static sweep of its whole loop (24 legs, 0 blocked).
+- A static sweep of its whole loop (24 legs, 0 blocked), and a check that the last giant's liana lands outside its stretch.
 - Four trials with the real character:
   - **Patrol:** it walks its loop.
   - **Chase and kill:** in its view on the road, it roars, chases, bites once, and he dies and returns whole at Giant Trees.

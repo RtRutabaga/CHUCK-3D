@@ -57,6 +57,6 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 
 ## Later
 
-- The T-rex: added the same day ([CHULT-TREX.md](CHULT-TREX.md)); its stretch is S 35600–52300.
+- The T-rex: added the same day ([CHULT-TREX.md](CHULT-TREX.md)); its stretch is S 35600–50400, ending before the last giant's liana.
 - The golden cigarette now provides the way up the first giant: [CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md).
 - The temple: built the same day beyond S=64500 ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); the floor now ends at S=92000 and the road runs up its avenue.

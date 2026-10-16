@@ -187,7 +187,7 @@ if ($giantProcess.ExitCode -or !(Select-String -LiteralPath $giantLog -Pattern '
 $trexLog=Join-Path $evidence ('verify-trex-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $trexProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckTRexTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$trexLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if ($trexProcess.ExitCode -or !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_TEST_COMPLETE failures=0 trials=4' -Quiet) -or
-    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=24' -Quiet) -or
+    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=24 liana_exit_safe=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SOUNDS steps=3 roar=2 snap=1 growl=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult T-rex verification failed. Inspect $trexLog"
