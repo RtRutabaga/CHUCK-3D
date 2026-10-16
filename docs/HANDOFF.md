@@ -31,6 +31,22 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 Next part of the work can be done here.
 
+## October 16 — climbing sounds (Claude)
+
+- **Built (67c612f):** user request "when Chuck climbs the tall brachiation tree on the power up golden leaf, it's silent, add climbing sound effect while he's climbing".
+  - Six original synthetic claw-on-bark sounds, `SFX_ClimbBark_00..05` (~0.16–0.20 s each): a soft pad knock, a claw click, a short dragging scrape that catches on the fibres, and a few crumbs. They are made by `Tools/gen_climb_sfx.py` (seeded, hashes in `SourceAssets/Audio/SFX/climb-manifest.json`) and imported by `Tools/import_climb_sfx.py`.
+  - `ChuckCharacter` plays one as each wall climb starts and at every paw contact (two per 30 cm wall-run cycle, volume 0.26–0.32). That is about 7 a second on the golden climb.
+  - This applies to every wall run, so the ordinary three-step wall run now scrabbles too.
+  - New `ESfx::Climb` count. The golden test logs `climb_sounds` and fails below one per 30 cm.
+- **Cooked checks (`Builds/ClimbSoundCandidate`):** package **182/182** (`Local/verify-package-20261016-074720.log`). Golden climb, tree 0: **100** sounds over 14.2 s, 0 failures. Tree 1: **105** sounds over 15.3 s, 0 failures. Build log `Local/climb-sfx-package-build.log`.
+- **Launcher:** promoted **67c612f** as `ClimbSound` (`Local/climb-sfx-promotion.log`); the receipt passes. Kept `-GoldenAura` and `-ClimbSound`; `-ChultTRex` pruned.
+- **Limits:**
+  - The sounds have not been heard on speakers. They were checked only by loudness envelope (quick bite, 60–80 ms scrape tail).
+  - They play in 2D, the same on every surface (bark, stone or plaster walls alike).
+  - No person has reviewed the mix against the music and jungle ambience.
+
+Next part of the work can be done here.
+
 ## October 15 — golden cigarettes: gold aura, trails round the first two giants (Claude)
 
 - **Built (a950552):** user request "have the gold leaf cigarettes look like our normal cigarettes but with a glowing golden ethereal light around them ... have a few around the bases of the first two large brachiation trees so that they stand out to a first time player". The golden pickup now uses the ordinary pickup cigarette (paper, scale 1.6) inside an aura: a breathing halo, a wide haze, a 2.4 m wisp that thins upward, 9 rising motes and a 6 cd warm light. New additive `M_GoldenLeafAura` (14 KB, LFS), made only by `Tools/create_golden_leaf_aura_material.py`; Codex's `M_GoldenLeaf` is now unused but kept. Eight pickups: four per giant, one 6.2 m out on the road side, one 6.2 m round the trunk, one 4.3 m and one 2.7 m out on the climb side (both climbs face away from the road). Giant 1 now has the same buttress-free climb sector as giant 0, and both sectors are free of surface roots. `-ChuckGoldenLeafTree=1` runs the golden test up giant 1. In phase 2 the test now walks onto the walking limb before the grip, not straight over the crotch's rim, and gets 14 s instead of 8. `-ChuckGoldenAuraReview` takes the stills. `Verify-Package.ps1` runs both trees.

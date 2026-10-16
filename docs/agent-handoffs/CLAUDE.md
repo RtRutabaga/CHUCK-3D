@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 16 — climbing sounds (Claude)
+
+- **Request:** "Currently when Chuck climbs the tall brachiation tree on the power up golden leaf, it's silent, add climbing sound effect while he's climbing". Base `0c734a2`, delivered `67c612f` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF.
+- **Contract compatibility:** no rig, clip, socket or asset rename. `ESfx` gained `Climb` before `Num`. `GetSfxLoaded()` is unchanged (36). Every wall run now plays claw sounds, not only the golden climb. 6 new SoundWaves (LFS), 6 source WAVs.
+- **Tools:** Python (stdlib only) generator; UnrealEditor-Cmd import ×1, Build.bat ×1, Build-Game.ps1 -Package ×1, Promote-Build ×1. No installations, no downloads.
+
+Next part of the work can be done here.
+
 ## October 15 — golden cigarettes' aura and trails (Claude)
 
 - **Request:** "have the gold leaf cigarettes look like our normal cigarettes but with a glowing golden ethereal light around them that makes them stand out, have a few around the bases of the first two large brachiation trees so that they stand out to a first time player". Base `e251f2c`, delivered `a950552` (+ this handoff commit).
