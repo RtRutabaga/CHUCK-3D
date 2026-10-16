@@ -41,7 +41,7 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 | Chult Canopy Ruins | `ChultCanopyRespawn` (ruin slab) | the same |
 | Chult Bridge | near-bank gorge return (`ChultBridgeSpawn(false)`) | the landing (as before) |
 | Chult Far Bank | far-bank gorge return (`ChultBridgeSpawn(true)`) | the same |
-| Chult Giant Trees | on the road at S=35400, facing up it | the same |
+| Chult Giant Trees | on the road at S=34600 (moved from 35400 with the T-rex, 10 m short of its stretch), facing up it | the same |
 | Chult Giant Canopy (dev) | the first giant's crotch | Chult Giant Trees |
 | Chult Deep Jungle | on the road at S=52900, facing up it | the same |
 
@@ -57,6 +57,6 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 
 ## Later
 
-- The T-rex: its territory is the giant stretch (S 35500–52000, `InChultGiantReserve` is the canopy's corridor). The road and open floor give it room; the canopy is out of reach.
+- The T-rex: added the same day ([CHULT-TREX.md](CHULT-TREX.md)); its stretch is S 35600–52300.
 - The golden cigarette now provides the way up the first giant: [CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md).
 - The temple: built the same day beyond S=64500 ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); the floor now ends at S=92000 and the road runs up its avenue.

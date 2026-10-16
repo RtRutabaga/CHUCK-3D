@@ -20,6 +20,10 @@ Chult raptor model and animations: "Velociraptor" by Quaternius, CC0-1.0
 (smoothed, rescaled and re-textured for this game).
 https://poly.pizza/m/cnlGH2UcDd  https://quaternius.com
 
+Chult T-rex model and animations: "T-Rex" by Quaternius, CC0-1.0
+(smoothed, rescaled and re-textured for this game).
+https://poly.pizza/m/UYtneO5FpF  https://quaternius.com
+
 Human motion-capture sources: CMU Graphics Lab Motion Capture Database;
 BVH conversion by B. Hahne / cgspeed.
 https://mocap.cs.cmu.edu/

@@ -3,6 +3,7 @@
 #include "ChultBridge.h"
 #include "ChultCanopy.h"
 #include "ChultRaptor.h"
+#include "ChultTRex.h"
 #include "ChultLife.h"
 #include "DockSigns.h"
 #include "ProceduralMeshComponent.h"
@@ -699,6 +700,13 @@ void ADockGameMode::StartPlay()
             auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
             for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultCanopyReview(*It,Chuck);break;}
         },4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTRexTest")))
+    {
+        // Claude's T-rex under the giant trees (ChultTRex.h, 2026-10-15).
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle TRexCheck;
+        World->GetTimerManager().SetTimer(TRexCheck,[World](){StartChultTRexReview(World);},4.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckGiantCanopyTest")))
     {

@@ -32,7 +32,8 @@ namespace
     float Ease(float U){U=FMath::Clamp(U,0.f,1.f);return U*U*(3-2*U);}
     FVector Frame(FVector P){P-=ChultCanyonFrame(0,0);return FVector(FVector::DotProduct(P,Along),FVector::DotProduct(P,Across),P.Z);}
     constexpr float GiantsFrom=35500,JungleFrom=52000;
-    constexpr float GiantsSpawnS=35400,JungleSpawnS=52900,TempleSpawnS=65200;
+    // Giant Trees: 10 m short of the T-rex's stretch (S>=35600, ChultTRex.h), so a return there is safe.
+    constexpr float GiantsSpawnS=34600,JungleSpawnS=52900,TempleSpawnS=65200;
     // The upriver jungle's own scatter ends where the temple's plaza begins.
     constexpr float JungleTo=64000;
     // The source fall: off a bedrock shelf on the valley's +T side, into the river's head pool.
@@ -56,11 +57,9 @@ namespace
     }
 }
 
-namespace
-{
-    // The giants' line: trunk I stands at S=36600+1300*I, either side of this.
-    float GiantLineT(float S){return 900*FMath::Sin(.45f*(S-36600)/1300+.3f);}
-}
+// The giants' line: trunk I stands at S=36600+1300*I, either side of this.
+float ChultGiantLineT(float S){return 900*FMath::Sin(.45f*(S-36600)/1300+.3f);}
+namespace{float GiantLineT(float S){return ChultGiantLineT(S);}}
 float ChultUpriverRoadT(float S)
 {
     // From the riverbank the road ran beside (ChultPath.cpp, to S=27600), it

@@ -181,6 +181,17 @@ $giantProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGiantCanopyTe
 if ($giantProcess.ExitCode -or !(Select-String -LiteralPath $giantLog -Pattern 'CHUCK_GIANT_CANOPY_TEST_COMPLETE failures=0 .*static_failures=0 chains=11' -Quiet)) {
     throw "Giant canopy brachiation verification failed. Inspect $giantLog"
 }
+# The giants' T-rex (Claude, 2026-10-15): its loop clear of the trunks, its patrol,
+# a roar, chase and the one killing bite with the return to the Giant Trees spawn,
+# safe up in a giant while it stalks below, and it staying in its stretch.
+$trexLog=Join-Path $evidence ('verify-trex-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$trexProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckTRexTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$trexLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($trexProcess.ExitCode -or !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_TEST_COMPLETE failures=0 trials=4' -Quiet) -or
+    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=24' -Quiet) -or
+    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SOUNDS steps=3 roar=2 snap=1 growl=1' -Quiet) -or
+    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SPAWN .* clips=6 mesh=1' -Quiet)) {
+    throw "Chult T-rex verification failed. Inspect $trexLog"
+}
 # The canopy raptor (Claude, 2026-10-14): its round, noticing him, the chase, tell
 # and bite, a roll through the tell, escaping up a tree and across a chain over it,
 # its territory, a death and the ruin-top return, ten scratches, and its sounds.

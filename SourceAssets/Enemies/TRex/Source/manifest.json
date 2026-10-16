@@ -1,0 +1,14 @@
+{
+  "file": "Quaternius_TRex.glb",
+  "title": "T-Rex",
+  "author": "Quaternius",
+  "license": "CC0 1.0 (Public Domain), as stated on the source page (\"Public Domain (CC0)\")",
+  "page": "https://poly.pizza/m/UYtneO5FpF",
+  "download": "https://static.poly.pizza/34eed102-48f0-43dd-bc6f-ef7a6dfddfbb.glb",
+  "pack": "Also in Quaternius's 'Animated LowPoly Dinosaurs' (https://quaternius.itch.io/animated-lowpoly-dinosaurs, CC0)",
+  "downloaded": "2026-10-15, with the user's approval",
+  "bytes": 336568,
+  "sha256": "e1c9862deef89f096c7d85dacf62aa9ce48089e5867d2bf632ed1e1733013349",
+  "contents": "29-bone armature (the raptor's rig, bone for bone); 1,820-triangle mesh with five flat colour materials; actions Attack, Death, Idle, Jump, Run, Walk",
+  "modified": false
+}

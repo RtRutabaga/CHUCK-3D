@@ -23,6 +23,8 @@ bool IsChultUpriverSpawn(const FVector& World,float& OutYaw);
 
 // The old road's centre line upriver (T at S), for the road and its clearings.
 float ChultUpriverRoadT(float S);
+// The giants' winding line (T at S): trunk I stands 3.8 m either side of it at S=36600+1300*I.
+float ChultGiantLineT(float S);
 // The giant grove's trunk axes (local XY), its corridor, and the ground levelled under each trunk.
 const TArray<FVector2D>& ChultGiantTrunkSpots();
 bool InChultGiantReserve(const FVector& Local,float Margin=0);

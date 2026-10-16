@@ -1,0 +1,62 @@
+{
+  "generator": "Tools/gen_trex_sfx.py",
+  "license": "original, synthetic (Claude for CHUCK 3D)",
+  "sounds": [
+    {
+      "name": "SFX_TRexStep_00",
+      "file": "SFX_TRexStep_00.wav",
+      "duration": 0.9,
+      "sha256": "27df6b87012484b39bbb777ee233dd7145724585f563eadfb6c40b01a0047a72",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexStep_01",
+      "file": "SFX_TRexStep_01.wav",
+      "duration": 0.9,
+      "sha256": "a3771763f8c30d59cc8acec28bb803adb946a65e8ecafb60f767d1af65f5121f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexStep_02",
+      "file": "SFX_TRexStep_02.wav",
+      "duration": 0.9,
+      "sha256": "d2304c4d9fe08a13471dd00359c1136849179f1a55e5bc0fb27737f5b38fc50f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexRoar_00",
+      "file": "SFX_TRexRoar_00.wav",
+      "duration": 2.4,
+      "sha256": "3d5a7965c9044f79dc6245710ad513dc156caee22e7a602ac1e28626ee8ebf30",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexRoar_01",
+      "file": "SFX_TRexRoar_01.wav",
+      "duration": 2.0,
+      "sha256": "ee07b7255a6a712993b9e54fea0977ee6ee89fa23405794890b60129243e88de",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexSnap_00",
+      "file": "SFX_TRexSnap_00.wav",
+      "duration": 0.35,
+      "sha256": "689e7b3c4cc969cca91c0fe79d9797309d3754a49591dd3c3d2d0170c093b99a",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexGrowl_00",
+      "file": "SFX_TRexGrowl_00.wav",
+      "duration": 1.8,
+      "sha256": "7494b77b3610f92e2bd726a8ff7e7792b191237719940ba5252e3ae5e89b4760",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_TRexDeath_00",
+      "file": "SFX_TRexDeath_00.wav",
+      "duration": 2.6,
+      "sha256": "391d313907b84484d2494b69680d00711e35cb29e2783500252aa3c3ac51c388",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

@@ -12,6 +12,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Upriver expansion requested October 15, 2026 (Claude):** extend the playable far bank beyond the old path end with the ancient road, push the vista back, and add taller brachiation trees for a later T-rex that can only be avoided in the canopy (reached later with the golden cigarette's stamina lock), then dense jungle before the later temple (not built). New areas get spawn points; every spawn point gets a Dev Checkpoint. Layout and checks: [../CHULT-UPRIVER.md](../CHULT-UPRIVER.md).
 
+**T-rex requested October 15, 2026 (Claude):** "Add the t-Rex to the tall brachiation trees before section, use free resource the help": Quaternius's CC0 T-Rex, downloaded with approval; it rules the giants' ground. [../CHULT-TREX.md](../CHULT-TREX.md).
+
 **Temple exterior requested October 15, 2026 (Claude):** "build the temple exterior, similar to 2d game", after the 2D Chult map 5. Exterior only; the interior waits. Layout and checks: [../CHULT-TEMPLE.md](../CHULT-TEMPLE.md).
 
 ## Direction and sources

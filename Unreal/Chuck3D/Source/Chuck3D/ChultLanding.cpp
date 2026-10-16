@@ -5,6 +5,7 @@
 #include "ChultRuins.h"
 #include "ChultRaptor.h"
 #include "ChultLife.h"
+#include "ChultTRex.h"
 #include "ChultExpansion.h"
 #include "ChultCliffs.h"
 #include "ChultOvergrowth.h"
@@ -127,6 +128,7 @@ void AChultLanding::Build()
     AChultRaptor::SpawnCanopyRaptor(GetWorld());
     // And the rest of its hostile life: four more raptors, fifteen zombies (ChultLife.h).
     SpawnChultLife(GetWorld());
+    AChultTRex::SpawnUpriver(GetWorld());   // the giants' T-rex (2026-10-15)
 }
 
 void AChultLanding::BuildEnvironment()

@@ -1,0 +1,56 @@
+{
+  "size": {
+    "length_cm": 1195.9,
+    "width_cm": 304.9,
+    "height_cm": 582.5,
+    "snout_x_cm": 557.7,
+    "tail_x_cm": -638.1,
+    "hips_z_cm": 369.0,
+    "head_z_cm": 506.4,
+    "tris": 10884
+  },
+  "clips": {
+    "Idle": {
+      "length_s": 2.5,
+      "ground_speed": 0.0,
+      "reach_moment_s": 0.0,
+      "head_reach_cm": 0.0,
+      "loop": true
+    },
+    "Walk": {
+      "length_s": 1.375,
+      "ground_speed": 430.2,
+      "reach_moment_s": 0.5,
+      "head_reach_cm": 11.5,
+      "loop": true
+    },
+    "Run": {
+      "length_s": 0.9166666666666666,
+      "ground_speed": 998.7,
+      "reach_moment_s": 0.0,
+      "head_reach_cm": 0.0,
+      "loop": true
+    },
+    "Attack": {
+      "length_s": 1.1666666666666667,
+      "ground_speed": 480.1,
+      "reach_moment_s": 0.5,
+      "head_reach_cm": 101.4,
+      "loop": false
+    },
+    "Jump": {
+      "length_s": 1.4583333333333333,
+      "ground_speed": 0.0,
+      "reach_moment_s": 1.417,
+      "head_reach_cm": 0.0,
+      "loop": false
+    },
+    "Death": {
+      "length_s": 1.5833333333333333,
+      "ground_speed": 49.1,
+      "reach_moment_s": 0.0,
+      "head_reach_cm": 0.0,
+      "loop": false
+    }
+  }
+}
