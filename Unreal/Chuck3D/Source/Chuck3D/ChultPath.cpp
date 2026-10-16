@@ -7,6 +7,8 @@
 #include "ChultLandform.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Camera/CameraActor.h"
@@ -23,6 +25,17 @@ namespace
     TWeakObjectPtr<AActor> BuiltOwner;
     TArray<TArray<FVector>> Roads;
     int32 BuildFailures=0,Stones=0,Gaps=0;
+    float RoadDistance(FVector P)
+    {
+        P.Z=0;float Distance=1.e9f;
+        for(const auto& Road:Roads)for(int32 I=1;I<Road.Num();++I)
+        {
+            FVector A=Road[I-1],B=Road[I];A.Z=B.Z=0;const FVector D=B-A;
+            const FVector Closest=A+D*FMath::Clamp(FVector::DotProduct(P-A,D)/FMath::Max(1.,D.SizeSquared()),0.,1.);
+            Distance=FMath::Min(Distance,static_cast<float>(FVector::Dist2D(P,Closest)));
+        }
+        return Distance;
+    }
     FVector Frame(FVector P){P-=ChultCanyonFrame(0,0);return FVector(P.X*.8+P.Y*.6,-P.X*.6+P.Y*.8,P.Z);}
     // The river's own shape (ChultRiver.cpp), which since 2026-10-15 rises upstream at its head.
     float RiverWidth(float S){return ChultRiverWidth(S);}
@@ -36,6 +49,49 @@ namespace
         return true;
     }
     float Height(FVector P){return ChultCanyonGroundZ(P);}
+    void FillBridgeExit(AActor* Owner)
+    {
+        // The original T=0 clearing continued long after the road turned toward
+        // the river. Reclaim that false lead, reserving the actual built road.
+        FRandomStream R(2026101601);TMap<FString,UHierarchicalInstancedStaticMeshComponent*> Sets;
+        const FVector G=AChultLanding::FloorOrigin();int32 Trees=0,Plants=0,Missing=0;
+        auto Place=[&](const FString& Name,FVector P,float Scale,float Yaw,bool Solid=false)
+        {
+            auto*& H=Sets.FindOrAdd(Name);
+            if(!H)
+            {
+                H=NewObject<UHierarchicalInstancedStaticMeshComponent>(Owner,*FString::Printf(TEXT("ChultBridgeExit_%s"),*Name));
+                const TCHAR* Dir=Name.StartsWith(TEXT("SM_Chult"))?TEXT("/Game/Art/ChultNature"):TEXT("/Game/Art/Cutscenes/FallToChult");
+                H->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("%s/%s.%s"),Dir,*Name,*Name)));Missing+=!H->GetStaticMesh();
+                H->SetupAttachment(Owner->GetRootComponent());H->SetWorldLocation(G);H->ComponentTags.Add(TEXT("ChultBridgeExitJungle"));
+                H->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
+                if(Solid)H->SetCollisionProfileName(TEXT("BlockAll"));
+                H->SetHiddenInGame(Solid);H->SetCastShadow(!Solid);H->SetCullDistances(9000,16000);H->RegisterComponent();
+            }
+            P.Z=Height(P)-3;H->AddInstance(FTransform(FRotator(0,Yaw,0),G+P,FVector(Scale)),true);
+        };
+        TArray<FVector2D> TreeCenters;
+        for(float S=7400;S<=14600;S+=800)for(float T:{-1450.f,-750.f,750.f,1450.f})TreeCenters.Add(FVector2D(S,T));
+        TreeCenters.Append({FVector2D(8700,0),FVector2D(11100,50),FVector2D(12900,-150)});
+        for(const FVector2D Center:TreeCenters)
+        {
+            const FVector P=ChultCanyonFrame(Center.X+R.FRandRange(-140,140),Center.Y+R.FRandRange(-100,100));const FVector F=Frame(P);
+            if(RoadDistance(P)<800||ChultRiverDistance(P)<RiverWidth(F.X)+1300)continue;
+            const float Scale=R.FRandRange(1.65,2.15),Yaw=R.FRandRange(0,360);
+            Place(TEXT("SM_ChultIslandTree"),P,Scale,Yaw);
+            Place(TEXT("SM_ChultIslandTrunkCollision"),P,Scale,Yaw,true);++Trees;
+        }
+        // Dense colonies, with a soft irregular edge rather than a hedge.
+        for(float S=6750;S<=14900;S+=115)for(float T=-1800;T<=1450;T+=120)
+        {
+            const FVector P=ChultCanyonFrame(S+R.FRandRange(-45,45),T+R.FRandRange(-50,50));const FVector F=Frame(P);
+            if(RoadDistance(P)<R.FRandRange(270,390)||ChultRiverDistance(P)<RiverWidth(F.X)+260||R.FRand()<.12f)continue;
+            const int32 Type=R.RandRange(0,6);const FString Name=Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type<6?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub");
+            Place(Name,P,R.FRandRange(1.65,2.65)*(Type==6?.65f:1.f),R.FRandRange(0,360));++Plants;
+        }
+        BuildFailures+=Missing;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_BRIDGE_EXIT_JUNGLE trees=%d plants=%d missing_assets=%d actual_path_reserved=1 landing_clear=1"),Trees,Plants,Missing);
+    }
     bool Support(AActor* Owner,FVector P,FHitResult& Hit)
     {
         const FVector G=AChultLanding::FloorOrigin();const float Z=Height(P);
@@ -137,6 +193,7 @@ void BuildChultPath(AActor* Owner)
         }
         Rounded.Add(Road.Last());Roads.Add(MoveTemp(Rounded));
     }
+    FillBridgeExit(Owner);
     FChultLandform Mesh;FRandomStream R(2026101516);const FVector G=AChultLanding::FloorOrigin();
     for(const auto& Road:Roads)
     {

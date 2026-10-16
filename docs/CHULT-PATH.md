@@ -2,6 +2,13 @@
 
 Authorized by the user's October 15, 2026 request. Setting work within the approved Chult region, owned by Codex.
 
+**October 16, user-authorized bridge exit guidance:** reclaim the misleading
+straight clearing beyond the far bridge landing with existing jungle assets.
+Layer scanned trees, ferns, broad leaves and shrubs around the actual road bend,
+keeping its walking/camera space, the bridge landing and riverbanks clear. No
+new boundaries, encounters, assets, controls or changes to the onward road.
+Placement runs after the road is resolved so its actual centre line is reserved.
+
 The old road starts at the escarpment behind the crash clearing, passes through the landing and existing grove/raptor territory, goes around the western bend of the creek, then follows its northern bank to the bridge. Its last approach and first departure align with the bridge's axis. There is an explicit gap across the gorge: the active broken bridge remains the sole crossing. Beyond it the road turns onto the broad river's negative-T bank and follows its meanders to the current upstream limit, leaving future expansion open.
 
 Use Amal Kumar's CC0 Stone Pathway scan from Poly Haven, https://polyhaven.com/a/stone_pathway (license: https://polyhaven.com/license). Import only three 2K JPG maps and one dedicated material. Existing Git LFS rules cover JPG/uasset; the configured GitHub LFS remote is in use, although account quota is not exposed. Record bytes and hashes before committing. No installation or existing asset regeneration.
