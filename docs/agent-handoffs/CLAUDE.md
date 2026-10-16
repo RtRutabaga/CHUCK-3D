@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 15 — the temple exterior (Claude)
+
+- **Request:** "build the temple exterior, similar to 2d game". Base `14e0c43`, delivered `70aac53` (+ this handoff commit). Region-setting work done by Claude at the user's direct request.
+- **Built, tests, launcher, flaws:** see HANDOFF and [CHULT-TEMPLE.md](../CHULT-TEMPLE.md).
+- **Contract compatibility:** no rig/clip/socket/asset change, no new binaries besides 4 review PNGs (~LFS). `ChultFarFloorEnd` 64000→92000 moves the far floor box, vista limits and rim land outward; the upriver jungle up to S=64000 keeps its draws.
+- **Tools:** UE 5.7.4, `Build.bat` ×3, `Build-Game.ps1 -Package -SkipBaseAssets`, `Verify-Menu.ps1`, `Promote-Build.ps1`. No installations.
+
+Next part of the work can be done here (the temple interior, Phase 6, needs its region plan first).
+
 ## October 15 — upriver: giant trees, deep jungle, checkpoints (Claude)
 
 - **Request:** "expand the playable area beyond where the path currently ends on the far side beyond the bridge. extend the ruined ancient path ... adjust/pushback distant landscape vista ... add brachiation trees but taller than our existing brachiation trees ... later add a t-rex that can only be avoided through brachiation in the high tree canopy ... golden cigarette ... (so currently its ok if there's no way to reach the brachiation trees). beyond the t-rex canopy zone we'll have some dense jungle and then our ancient temple (dont do the temple yet). ... new spawn points and all spawn points should have Dev Checkpoints". Base `c23e406`, delivered `a522a3f` (+ this handoff commit).
