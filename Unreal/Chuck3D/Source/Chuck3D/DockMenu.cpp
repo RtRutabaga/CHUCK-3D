@@ -1,6 +1,9 @@
 #include "DockGameMode.h"
 #include "ChuckCharacter.h"
 #include "ChultLanding.h"
+#include "ChultCanopy.h"
+#include "ChultBridge.h"
+#include "ChultUpriver.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockReturn.h"
@@ -26,21 +29,51 @@
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
 
+namespace
+{
+    // Every Chult spawn point has a dev checkpoint (user 2026-10-15). Recovery
+    // is where a death there returns him; Yaw<-900 keeps the default facing.
+    struct FChultPoint {const TCHAR* Point;const TCHAR* Label;};
+    const FChultPoint ChultPoints[]={{TEXT("Chult"),TEXT("Chult Landing")},{TEXT("ChultCanopy"),TEXT("Chult Canopy Ruins")},
+        {TEXT("ChultBridge"),TEXT("Chult Bridge")},{TEXT("ChultFarBank"),TEXT("Chult Far Bank")},{TEXT("ChultGiants"),TEXT("Chult Giant Trees")},
+        {TEXT("ChultGiantCanopy"),TEXT("Chult Giant Canopy (dev)")},{TEXT("ChultDeepJungle"),TEXT("Chult Deep Jungle")}};
+    bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
+    {
+        Yaw=-1000;
+        if(Point==TEXT("Chult")){Location=Recovery=AChultLanding::Entrance();return true;}
+        if(Point==TEXT("ChultCanopy")){Location=Recovery=ChultCanopyRespawn();Yaw=ChultCanopyRespawnYaw();return true;}
+        // By the bridge on the near bank: a death there (not in the gorge) is the landing's.
+        if(Point==TEXT("ChultBridge")){Location=ChultBridgeSpawn(false);Recovery=AChultLanding::Entrance();Yaw=ChultBridgeRespawnYaw();return true;}
+        const EChultUpriverSpawn Spawn=Point==TEXT("ChultFarBank")?EChultUpriverSpawn::FarBank:Point==TEXT("ChultGiants")?EChultUpriverSpawn::Giants:
+            Point==TEXT("ChultGiantCanopy")?EChultUpriverSpawn::GiantCanopy:EChultUpriverSpawn::DeepJungle;
+        if(Point!=TEXT("ChultFarBank")&&Point!=TEXT("ChultGiants")&&Point!=TEXT("ChultGiantCanopy")&&Point!=TEXT("ChultDeepJungle"))return false;
+        Location=ChultUpriverSpawn(Spawn);Yaw=ChultUpriverSpawnYaw(Spawn);
+        // Up in the first giant (no way up there yet but the dev checkpoint): a death returns him below.
+        Recovery=Spawn==EChultUpriverSpawn::GiantCanopy?ChultUpriverSpawn(EChultUpriverSpawn::Giants):Location;
+        return true;
+    }
+}
+
 bool ADockGameMode::StartFromMenu(const FString& Point)
 {
     auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
+    const bool bChult=Point.StartsWith(TEXT("Chult"));
     if(!C || (Point!=TEXT("Waterdeep") && Point!=TEXT("Sewer") && Point!=TEXT("SewerJump") && Point!=TEXT("SewerLongJump") &&
-              Point!=TEXT("Night") && Point!=TEXT("Pantry") && Point!=TEXT("Chult"))) return false;
-    if(Point==TEXT("Chult"))
+              Point!=TEXT("Night") && Point!=TEXT("Pantry") && !(bChult && ChultPoint(Point,ChultAt,ChultYaw,ChultRecovery)))) return false;
+    if(bChult)
     {
         FadeOutMusic(.1f);
         AChultLanding::EnterPreview(GetWorld());
+        // Upriver spawns depend on the built grove; read them once it stands.
+        ChultPoint(Point,ChultAt,ChultYaw,ChultRecovery);
     }
     const FVector Location=Point==TEXT("Sewer")?DockSewerStartLocation():
         Point==TEXT("SewerJump")?DockSewerCheckpointLocation():
         Point==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
-        Point==TEXT("Pantry")?DockPantryStartLocation():Point==TEXT("Chult")?AChultLanding::Entrance():AChuckCharacter::StartLocation();
+        Point==TEXT("Pantry")?DockPantryStartLocation():bChult?ChultAt:AChuckCharacter::StartLocation();
     C->ResetAtLocation(Location);
+    if(bChult && ChultYaw>-900) {C->SetActorRotation(FRotator(0,ChultYaw,0));C->Recenter();}
     if(Point==TEXT("Night") || Point==TEXT("Pantry")) MarkDockSewerExited();
     UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
     return true;
@@ -96,7 +129,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==8 && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         Click(TEXT("Back"));
     }
     else if(MenuTestStage==2)
@@ -111,7 +144,8 @@ void ADockHUD::Tick(float DeltaSeconds)
             MenuTestPoint==TEXT("SewerJump")?TEXT("Sewer Jump"):
             MenuTestPoint==TEXT("Night")?TEXT("Waterdeep Night"):
             MenuTestPoint==TEXT("Pantry")?TEXT("Tavern Pantry"):
-            MenuTestPoint==TEXT("Chult")?TEXT("Chult Landing"):*MenuTestPoint;
+            *MenuTestPoint;
+        for(const FChultPoint& Point:ChultPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -123,22 +157,26 @@ void ADockHUD::Tick(float DeltaSeconds)
     else if(MenuTestStage==5)
     {
         auto* C=Cast<AChuckCharacter>(GetOwningPawn());
+        FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=0;
+        const bool bChult=ChultPoint(MenuTestPoint,ChultAt,ChultYaw,ChultRecovery);
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
             MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
-            MenuTestPoint==TEXT("Pantry")?DockPantryStartLocation():MenuTestPoint==TEXT("Chult")?AChultLanding::Entrance():AChuckCharacter::StartLocation();
+            MenuTestPoint==TEXT("Pantry")?DockPantryStartLocation():bChult?ChultAt:AChuckCharacter::StartLocation();
+        const FVector Recovery=bChult?ChultRecovery:Expected;
         if(C) UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_SPAWN point=%s actual=%s expected=%s distance=%.2f movement=%d possessed=%d"),
             *MenuTestPoint,*C->GetActorLocation().ToString(),*Expected.ToString(),FVector::Dist(C->GetActorLocation(),Expected),
             int32(C->GetCharacterMovement()->MovementMode),PC && PC->GetPawn()==C);
         Check(C && PC && PC->GetPawn()==C && C->GetCharacterMovement()->IsMovingOnGround() &&
             FVector::Dist(C->GetActorLocation(),Expected)<45.f,TEXT("chosen spawn settles on its floor and stays possessed"));
         Check(C && C->GetLandingRolls()==0,TEXT("checkpoint placement does not trigger a long-fall landing roll"));
-        Check(C && FVector::Dist(C->GetAreaStartLocation(),Expected)<1.f,TEXT("chosen location has the correct death recovery point"));
+        Check(C && FVector::Dist(C->GetAreaStartLocation(),Recovery)<1.f,TEXT("chosen location has the correct death recovery point"));
+        if(bChult && ChultYaw>-900) Check(C && FMath::Abs(FMath::FindDeltaAngleDegrees(C->GetActorRotation().Yaw,ChultYaw))<25.f,TEXT("chosen Chult spawn faces its way on"));
         Check(GetWorld()->GetTimeSeconds()>5.f && MenuTestWorld.Get()==GetWorld(),TEXT("gameplay and region timers run after selection without reloading"));
         Check(HasExitedDockSewer()==(MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("destination has the expected morning or evening progression state"));
         // Outdoor sun/sky are intentionally disabled while the camera is in the
         // sewer, so the surface-lighting assertion is only valid above ground.
-        if(MenuTestPoint!=TEXT("Chult") && MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump") && MenuTestPoint!=TEXT("SewerLongJump"))
+        if(!bChult && MenuTestPoint!=TEXT("Sewer") && MenuTestPoint!=TEXT("SewerJump") && MenuTestPoint!=TEXT("SewerLongJump"))
             Check(CheckDockReturn(GetWorld(),MenuTestPoint==TEXT("Night") || MenuTestPoint==TEXT("Pantry")),TEXT("surface doors, hatch and lighting match the destination"));
         const FString Folder=FPaths::ScreenShotDir()/TEXT("MenuStarts");
         IFileManager::Get().MakeDirectory(*Folder,true);
@@ -184,7 +222,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     TSharedPtr<SVerticalBox> Rows;
     MenuWidget=SNew(SBorder).BorderBackgroundColor(FLinearColor(.018f,.014f,.027f,1.f))
         .HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(360.f)
+        [SNew(SBox).WidthOverride(Checkpoints?780.f:360.f)
             [SAssignNew(Rows,SVerticalBox)]];
     Rows->AddSlot().AutoHeight().Padding(0,0,0,32)
         [SNew(STextBlock).Text(FText::FromString(TEXT("CHUCK 3D")))
@@ -192,10 +230,16 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     if(Checkpoints) Rows->AddSlot().AutoHeight().Padding(0,0,0,20)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
+    // The checkpoint page has two columns: Waterdeep and Chult.
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right;
+    if(Checkpoints) Rows->AddSlot().AutoHeight()
+        [SNew(SHorizontalBox)
+        +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Right,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
-        Rows->AddSlot().AutoHeight().Padding(0,6)
+        Target->AddSlot().AutoHeight().Padding(0,6)
             [SAssignNew(Button,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(20,14))
             .OnClicked_Lambda(MoveTemp(Action))
             [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",20))]];
@@ -222,13 +266,16 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     }
     else
     {
+        Target=Left;
         Add(TEXT("Waterdeep"),[Start](){return Start(TEXT("Waterdeep"));});
         Add(TEXT("Sewer"),[Start](){return Start(TEXT("Sewer"));});
         Add(TEXT("Sewer Jump"),[Start](){return Start(TEXT("SewerJump"));});
         Add(TEXT("Sewer Long Jump"),[Start](){return Start(TEXT("SewerLongJump"));});
         Add(TEXT("Waterdeep Night"),[Start](){return Start(TEXT("Night"));});
         Add(TEXT("Tavern Pantry"),[Start](){return Start(TEXT("Pantry"));});
-        Add(TEXT("Chult Landing"),[Start](){return Start(TEXT("Chult"));});
+        Target=Right;
+        for(const FChultPoint& Point:ChultPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
+        Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
     GEngine->GameViewport->AddViewportWidgetContent(MenuWidget.ToSharedRef(),100);

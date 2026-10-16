@@ -2,6 +2,7 @@
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
 #include "ChultBridge.h"
+#include "ChultUpriver.h"
 #include "ChultRaptor.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
@@ -389,6 +390,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     // Fallen into the canyon's gorge: back on the bank by the bridge (2026-10-14).
     FVector Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
+    // On the far bank (user 2026-10-15): the spawn point of the stretch he died in.
+    if(bChultRespawn && ChultUpriverRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn) return InChultCanopyDeathArea(GetActorLocation())?ChultCanopyRespawn():AChultLanding::Entrance();
     const bool Sewer=bSewerRespawn || (GetActorLocation().Z<-150 && IsWithinDockSewer(GetActorLocation()));
     if (bPantryRespawn) return DockPantryStartLocation();
@@ -402,6 +405,8 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
 {
     if (FVector::Dist(Location, ChultCanopyRespawn()) < 1.f) return ChultCanopyRespawnYaw();   // facing the first tree
     if (IsChultBridgeRespawn(Location)) return ChultBridgeRespawnYaw();   // facing along the bridge
+    float UpriverYaw = 0.f;
+    if (IsChultUpriverSpawn(Location, UpriverYaw)) return UpriverYaw;     // facing up the road
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;

@@ -5,7 +5,8 @@ if(!$PackageRoot) { $PackageRoot=Join-Path $projectRoot 'Builds\Windows' }
 $game=Join-Path (Resolve-Path -LiteralPath $PackageRoot).Path 'Chuck3D\Binaries\Win64\Chuck3D.exe'
 New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot 'Local') | Out-Null
 $run=Get-Date -Format 'yyyyMMdd-HHmmss'
-foreach($point in @('NewGame','Waterdeep','Sewer','SewerJump','SewerLongJump','Night','Pantry','Chult')) {
+$points=@('NewGame','Waterdeep','Sewer','SewerJump','SewerLongJump','Night','Pantry','Chult','ChultCanopy','ChultBridge','ChultFarBank','ChultGiants','ChultGiantCanopy','ChultDeepJungle')
+foreach($point in $points) {
     $log=Join-Path $projectRoot "Local\verify-menu-$run-$point.log"
     $arguments=@("-MenuTest=$point",'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
     $process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -PassThru
@@ -23,4 +24,4 @@ foreach($point in @('NewGame','Waterdeep','Sewer','SewerJump','SewerLongJump','N
     if($loads -ne 1) { throw "Menu selection reloaded the world: $point ($loads loads)" }
     Write-Output "CHUCK_MENU_VERIFIED point=$point log=$log"
 }
-Write-Output 'CHUCK_MENU_SUITE_COMPLETE passed=8'
+Write-Output "CHUCK_MENU_SUITE_COMPLETE passed=$($points.Count)"

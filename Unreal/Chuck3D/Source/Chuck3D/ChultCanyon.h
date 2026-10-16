@@ -8,6 +8,8 @@ class AChuckCharacter;
 FVector ChultCanyonFrame(float S,float T,float Z=0);
 bool InChultCanyon(const FVector& Local);
 float ChultCanyonGroundZ(const FVector& Local);
+// The far terrain before local shaping (no creek, river or upriver levelling).
+float ChultCanyonBaseZ(const FVector& Local);
 void BuildChultCanyon(AActor* Owner);
 int32 CheckChultCanyon(AActor* Owner,AChuckCharacter* Chuck);
 void StartChultCanyonReview(AActor* Owner,AChuckCharacter* Chuck);

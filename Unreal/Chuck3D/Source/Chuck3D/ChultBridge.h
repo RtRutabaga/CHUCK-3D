@@ -31,6 +31,8 @@ int32 CheckChultBridge(AActor* Owner, AChuckCharacter* Chuck);
 bool ChultBridgeRespawn(const FVector& DeathWorld, FVector& OutWorld);
 bool IsChultBridgeRespawn(const FVector& World);
 float ChultBridgeRespawnYaw();
+// Those two gorge-return spots by the bridge (world), near or far bank: dev checkpoints too.
+FVector ChultBridgeSpawn(bool bFar);
 // The bridge and the far side have their own score (user 2026-10-14, "Chult 2").
 // Hysteresis: once in, he leaves only well back on the near bank.
 bool InChultBridgeMusicZone(const FVector& World, bool bWasInside);

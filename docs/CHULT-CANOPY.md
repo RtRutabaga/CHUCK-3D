@@ -156,3 +156,7 @@ registered with `AddChuckSwingGrip` (its `Along` is the chain's tangent) and mar
 No crown fading (foliage is kept off the routes instead; camera comfort not assessed by a person).
 No raptors, buff-only teaching tree or golden pickup. The trees are procedural: bark is the shared
 `M_FallBark`, leaves the shared card; not at the art target. Physical Xbox play untested.
+
+## The giant trees upriver (2026-10-15)
+
+User request: taller brachiation trees beyond the bridge, for a later T-rex zone, reached later with the stamina lock. `ChultCanopy.cpp` now builds groves; this grove (0) is unchanged and the giants are grove 1, built by the same code. See [CHULT-UPRIVER.md](CHULT-UPRIVER.md).

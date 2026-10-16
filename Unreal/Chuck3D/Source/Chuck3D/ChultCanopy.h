@@ -29,6 +29,7 @@ struct FChultCanopyTree
     TArray<FVector> Limbs;      // horizontal directions
     TArray<float> LimbLength, LimbRise, LimbScale, LimbAway;   // walking length, top rise per cm, girth, side its tip bends to
     FVector LianaFoot, LianaOut, LianaLip;
+    bool bLiana = true;         // the giants upriver: only the last one has a liana
 };
 // A side branch (2026-10-13 user follow-up: branches in all directions, all
 // brachiatable): a walking limb out of the crotch with its own hand bough and
@@ -57,3 +58,15 @@ int32 CheckChultCanopy(AActor* Owner, AChuckCharacter* Chuck);
 // -ChuckCanopyTest: the real character climbs a liana, brachiates the whole loop
 // tree to tree, reverses, lets go and climbs back down; then quits.
 void StartChultCanopyReview(AActor* Owner, AChuckCharacter* Chuck);
+// The giants upriver (user 2026-10-15; docs/CHULT-UPRIVER.md): a second grove
+// built by the same code, its crotches 15-17 m up (reached later with the
+// golden cigarette's stamina lock), a line of chains along the T-rex zone and
+// spurs, with a liana only on its last tree. Its trunks stand on the far
+// bank's ground (FChultCanopyTree::Trunk.Z). The functions above stay grove 0.
+void BuildChultGiantCanopy(AActor* Owner);
+int32 CheckChultGiantCanopy(AActor* Owner, AChuckCharacter* Chuck);
+// -ChuckGiantCanopyTest: from the first giant's crotch along every chain, down
+// the last liana, deaths up there and below, every spur; then quits.
+void StartChultGiantCanopyReview(AActor* Owner, AChuckCharacter* Chuck);
+// The giants' trees, chains and spurs (local), for spawn points and views.
+const TArray<FChultCanopyTree>& ChultGiantTrees();

@@ -4,6 +4,7 @@
 #include "ChultLandform.h"
 #include "ChultCanyon.h"
 #include "ChultWatercourse.h"
+#include "ChultRiver.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -49,7 +50,8 @@ void BuildChultVista(AActor* Owner)
     // finer where the player can see detail. Far inland a coarse sheet follows.
     for(int32 Side=0;Side<2;++Side)
     {
-        const float Sg=Side==0?1.f:-1.f;const float Limit=Side==0?50000:24000;
+        // The far side's detailed land now reaches 120 m past the upriver floor's end (2026-10-15).
+        const float Sg=Side==0?1.f:-1.f;const float Limit=Side==0?50000:ChultFarFloorEnd-4500+12000;
         for(int32 Band=0;Band<3;++Band)
         {
             // Band 0: |T|<=50000 at 2.5 m; bands 1, 2: either end, coarser.
@@ -164,6 +166,23 @@ void BuildChultVista(AActor* Owner)
             if(Slope>.75f)continue;const FVector P=ChultCanyonFrame(S,T,Z);
             if(U<9000&&FMath::Abs(T)<36000&&I%3==0){Tree(P,R.FRandRange(2.6f,4.6f),R.FRandRange(0,360),R.FRandRange(-4,4),Side,Distance<4000);if(I%9==0)Place(TEXT("SM_FallPalm"),P+FVector(R.FRandRange(-300,300),R.FRandRange(-300,300),-20),FQuat(FVector::UpVector,R.FRandRange(0,2*PI)),R.FRandRange(1.4f,2.2f),30000,60000);}
             else if(U>7000&&U<(Side==0?47000:21000)&&FMath::Abs(T)<48000){Place(TEXT("SM_FallCrown"),P+FVector(0,0,R.FRandRange(100,350)),FQuat(FVector::UpVector,R.FRandRange(0,2*PI)),R.FRandRange(1.8f,3.f),90000,160000);++Crowns;}
+        }
+        // Beside the upriver valley and beyond its end (2026-10-15): the same
+        // forest and crowns over the far plateau, from its own random stream so
+        // the scenery seen from the bridge keeps every earlier draw.
+        if(Side==1)
+        {
+            FRandomStream Up(2026101571);
+            for(int32 I=0;I<9000;++I)
+            {
+                const float T=Up.FRandRange(-60000,60000),U=Up.FRandRange(22000,ChultFarFloorEnd+30000),S=ChultGorgeLip(Side,T)-Sg*U;
+                const float Distance=ChultGorgeFloorDistance(S,T);if(Distance<850)continue;
+                const float Z=ChultGorgeLandZ(S,T,Side),Slope=FMath::Max(FMath::Abs(ChultGorgeLandZ(S+200,T,Side)-ChultGorgeLandZ(S-200,T,Side)),FMath::Abs(ChultGorgeLandZ(S,T+200,Side)-Z)*2)/400;
+                if(Slope>.75f)continue;const FVector P=ChultCanyonFrame(S,T,Z);
+                // Full trees on the valley's own slopes, crowns over the distance.
+                if(Distance<9000&&I%2==0){Tree(P,Up.FRandRange(2.6f,4.6f),Up.FRandRange(0,360),Up.FRandRange(-4,4),Side,Distance<4000);if(I%8==0)Place(TEXT("SM_FallPalm"),P+FVector(Up.FRandRange(-300,300),Up.FRandRange(-300,300),-20),FQuat(FVector::UpVector,Up.FRandRange(0,2*PI)),Up.FRandRange(1.4f,2.2f),30000,60000);}
+                else if(Distance>=6000){Place(TEXT("SM_FallCrown"),P+FVector(0,0,Up.FRandRange(100,350)),FQuat(FVector::UpVector,Up.FRandRange(0,2*PI)),Up.FRandRange(1.8f,3.f),90000,160000);++Crowns;}
+            }
         }
         // The walls' soft benches carry ferns, shrubs and the odd clinging tree.
         for(float T=-24000;T<24000;T+=FMath::Abs(T)<9000?110:240)

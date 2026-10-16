@@ -3,6 +3,7 @@
 #include "ChultLandform.h"
 #include "ChultCanyon.h"
 #include "ChultExpansion.h"
+#include "ChultRiver.h"
 #include "ChultLanding.h"
 #include "ChuckCharacter.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -56,23 +57,26 @@ namespace
         if(D<E.Distance){FVector Q(FMath::Clamp(P.X,7000.,22000.),FMath::Clamp(P.Y,2000.,15500.),0);E={D,ChultExpansionGroundZ(Q)};}
         D=BoxDistance(FVector2D(F.X,F.Y),FVector2D(-3250,0),FVector2D(3250,4500));
         if(D<E.Distance){E={D,ChultCanyonGroundZ(ChultCanyonFrame(FMath::Clamp(F.X,-6500.,0.),FMath::Clamp(F.Y,-4500.,4500.)))};}
-        D=BoxDistance(FVector2D(F.X,F.Y),FVector2D(16250,0),FVector2D(11750,6500));
-        if(D<E.Distance){E={D,ChultCanyonGroundZ(ChultCanyonFrame(FMath::Clamp(F.X,4500.,28000.),FMath::Clamp(F.Y,-6500.,6500.)))};}
+        // The far bank, to its upstream end (S=64000 since 2026-10-15).
+        D=BoxDistance(FVector2D(F.X,F.Y),FVector2D((4500+ChultFarFloorEnd)*.5f,0),FVector2D((ChultFarFloorEnd-4500)*.5f,6500));
+        if(D<E.Distance){E={D,ChultCanyonGroundZ(ChultCanyonFrame(FMath::Clamp(F.X,4500.,static_cast<double>(ChultFarFloorEnd)),FMath::Clamp(F.Y,-6500.,6500.)))};}
         return E;
     }
 
     float Rim(int32 Side,float T)
     {return 950+1500*Ease((FMath::Abs(T)-6000)/30000)+650*Noise(T,Side*91.f,11000,1)+300*Noise(T,Side*37.f,3700,2);}
-    float Upland(int32 Side,float S,float T,float U)
+    float Upland(int32 Side,float S,float T,float U,float Ur)
     {
         // A plateau climbing gently away from the rim, rolling hills (calmer
-        // right at the edge), then ridged ranges far inland.
-        float H=Rim(Side,T)+.045f*FMath::Min(U,30000.f)+.02f*FMath::Max(U-30000.f,0.f);
+        // right at the edge), then ridged ranges far inland. Ur is U for the
+        // plateau and ranges: on the far side it is held to the distance from
+        // the playable floor, so they stand back from its upstream valley.
+        float H=Rim(Side,T)+.045f*FMath::Min(Ur,30000.f)+.02f*FMath::Max(Ur-30000.f,0.f);
         const float W=Noise(S,T,13000,3)*3200;
         H+=(1100*Noise(S+W,T,8200,4)+420*Noise(S,T+W,2900,5)+140*Noise(S,T,950,6)+45*Noise(S,T,330,7))*(.3f+.7f*Ease(U/2500));
         // Forested ranges: broad ridged masses, softened, never knife-edged.
         const float R1=1-FMath::Abs(Noise(S+W,T-W,26000,8)),R2=1-FMath::Abs(Noise(S-W,T,14000,9));
-        H+=(10500*R1*R1+2600*R1*R2*R2)*Ease((U-14000)/50000);
+        H+=(10500*R1*R1+2600*R1*R2*R2)*Ease((Ur-14000)/50000);
         for(const FValley& V:Valleys)
         {
             if(V.Side!=Side)continue;const float Fade=1-Ease((U-V.Length)/7000);if(Fade<=0)continue;
@@ -214,7 +218,8 @@ float ChultGorgeLandZ(float S,float T,int32 Side)
     if(Side<0)Side=S<(ChultGorgeLip(0,T)+ChultGorgeLip(1,T))*.5f?0:1;
     const float U=FMath::Max(Side==0?ChultGorgeLip(0,T)-S:S-ChultGorgeLip(1,T),0.f);
     // The existing boundary rule: eleven metres up within seventeen of a floor.
-    return FMath::Lerp(E.Base,FMath::Max(Upland(Side,S,T,U),E.Base+1100),Ease(E.Distance/1700));
+    const float Ur=Side==1?FMath::Min(U,E.Distance+6000):U;
+    return FMath::Lerp(E.Base,FMath::Max(Upland(Side,S,T,U,Ur),E.Base+1100),Ease(E.Distance/1700));
 }
 float ChultGorgeTop(int32 Side,float T){return ChultGorgeLandZ(ChultGorgeLip(Side,T),T,Side);}
 float ChultGorgeBench(int32 Side,float T,float Z){return Wall(Side,T,Z,ChultGorgeTop(Side,T),ChultGorgeLip(Side,T)).Bench;}

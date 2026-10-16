@@ -10,7 +10,9 @@ Only a build promoted with `Tools/Promote-Build.ps1` reaches the launcher. Commi
 
 ## Title menu
 
-**New Game** starts the morning docks. **Dev Checkpoints** offers Waterdeep, Sewer, Sewer Jump, Sewer Long Jump, Waterdeep Night, Tavern Pantry and **Chult Landing**. Each starts a fresh world; there is no persistent save yet. Esc exits.
+**New Game** starts the morning docks. **Dev Checkpoints** offers, in two columns, Waterdeep, Sewer, Sewer Jump, Sewer Long Jump, Waterdeep Night and Tavern Pantry, and every Chult spawn point: **Chult Landing**, **Chult Canopy Ruins** (the canopy's death return on the ruin slab), **Chult Bridge** and **Chult Far Bank** (the gorge returns either side of the bridge), **Chult Giant Trees** and **Chult Deep Jungle** (upriver), plus **Chult Giant Canopy (dev)**, which stands you in the first giant tree's crotch because nothing reaches it yet. Each starts a fresh world; there is no persistent save yet. Esc exits.
+
+**Upriver** (October 15): past the bridge the far bank now carries on 360 m beyond the river's old end. The river rises at a spring-fed fall out of a rock face; then twelve giant brachiation trees (crotches 15-17 m up) line the valley over open ground, where a T-rex will later keep you in the canopy; then dense jungle up to the space kept for the temple. The old road continues through all of it. Nothing yet climbs to the giants (the golden cigarette's stamina lock will); the last giant has a liana down. A death on the far bank returns you to that stretch's spawn point. See [CHULT-UPRIVER.md](CHULT-UPRIVER.md).
 
 **Chult Landing** shares the fall cutscene's clearing, tall trees and winding ground loop. The October 13 nature pass adds scanned bark/soil, four fern shapes, six rock shapes and a limited background-tree layer. The connected canopy grove has rounded trunks, leafy crowns, broad buttress roots and separate reaching branches with jump gaps. The canopy climbing and brachiation are active. Enter through the normal fall or this checkpoint. See [CHULT-LANDING.md](CHULT-LANDING.md) and [CHULT-CANOPY.md](CHULT-CANOPY.md).
 

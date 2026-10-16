@@ -10,6 +10,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Starting-side topography and canyon vista authorized October 15, 2026:** add realistic cliffs and distant landscape around the starting side, composing the canyon as the main reveal. Leave all far-side setting and future expansion space unchanged. Contract: [../CHULT-VISTA.md](../CHULT-VISTA.md).
 
+**Upriver expansion requested October 15, 2026 (Claude):** extend the playable far bank beyond the old path end with the ancient road, push the vista back, and add taller brachiation trees for a later T-rex that can only be avoided in the canopy (reached later with the golden cigarette's stamina lock), then dense jungle before the later temple (not built). New areas get spawn points; every spawn point gets a Dev Checkpoint. Layout and checks: [../CHULT-UPRIVER.md](../CHULT-UPRIVER.md).
+
 ## Direction and sources
 
 **Ancient jungle path remnants authorized October 15, 2026:** the user requests a free resource for an overgrown ancient road from the cliffs behind the landing, through the landing and raptor territory, aligned to both ends of the bridge, then following the far river to its current end. Keep the road on dry banks; preserve the bridge crossing and future upstream expansion. Contract: [../CHULT-PATH.md](../CHULT-PATH.md).

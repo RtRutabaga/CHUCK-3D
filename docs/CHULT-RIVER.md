@@ -13,3 +13,5 @@ Implementation: `ChultRiver.cpp/.h` shares the canyon ground-height function, ca
 The broad waterfall samples the folded cliff profile independently across its width. Twenty-five component traces check that the actual canyon face remains behind the water. Terrain checks cover 693 channel/bank floors and 462 capsule sweeps; three real-character walks cover the inherited/new seam, an upstream bend and the downstream bank. Static checks and all three walks are required by `Verify-Package.ps1`. Cooked review views are `FarBankRiver.png`, `RiverMeanders.png` and `BroadWaterfall.png` under the package's Chult screenshot folder.
 
 > **2026-10-15 (Claude):** the gorge walls, the plunge of this water into the gorge and the gorge mist are now [CHULT-GORGE.md](CHULT-GORGE.md). Floors, bridge and checks of the banks are unchanged.
+
+> **2026-10-15 (Claude), upriver:** the far bank now runs on to S=64000 and the river no longer ends at the floor's edge: from S=28000 it swings toward +T and rises at a pool under a spring-fed fall at S=33800 ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Below S=28000 its course, width, water and checks are unchanged.

@@ -16,10 +16,14 @@ namespace
 {
     FVector Frame(FVector P){P-=ChultCanyonFrame(0,0);return FVector(P.X*.8+P.Y*.6,-P.X*.6+P.Y*.8,P.Z);}
     float Ease(float U){U=FMath::Clamp(U,0.f,1.f);return U*U*(3-2*U);}
-    float Center(float S){float U=FMath::Clamp((S-4500)/23500,0.f,1.f);return 2200+1650*FMath::Sin(U*3*PI)*FMath::Sin(U*PI);}
-    float Width(float S){return 460+90*FMath::Sin((S-4500)*.0007f);}
+    // Upstream of S=28000 (Claude, 2026-10-15) it swings toward +T to its head:
+    // a pool under the source falls (ChultUpriver.cpp) at S=ChultRiverHead.
+    float Center(float S){float U=FMath::Clamp((S-4500)/23500,0.f,1.f);return 2200+1650*FMath::Sin(U*3*PI)*FMath::Sin(U*PI)+3000*Ease((S-28000)/(ChultRiverHead-28000));}
+    float Width(float S){return 460+90*FMath::Sin((S-4500)*.0007f)+260*Ease((S-ChultRiverHead+1400)/1400);}
     float WaterZ(float S){return 280+(S-4500)*.022f;}
     FVector Surface(float S,float Offset=0){return ChultCanyonFrame(S,Center(S)+Offset,WaterZ(S));}
+    FVector Along(){return FVector(.8,.6,0);}
+    FVector AcrossDir(){return FVector(-.6,.8,0);}
     // The broad fall itself is ChultGorge.cpp's fall 1 (Claude, 2026-10-15):
     // the river now leaves the lip and plunges free into the gorge mist.
     FVector Fall(float U,float Offset=0){return ChultGorgeFall(1,U*ChultGorgeFallDrop(1),Offset/920.f);}
@@ -31,15 +35,24 @@ namespace
         for(int32 I=0;I<6;++I){M.UV[Start+I]=UVs[I];float U=UVs[I].X;M.C[Start+I]=FColor(255,255,255,U<=0||U>=1?0:225);}
     }
 }
-bool InChultRiverExtension(const FVector& P){const FVector F=Frame(P);return F.X>=4500 && F.X<=28000 && FMath::Abs(F.Y)<=6500;}
-float ChultRiverDistance(const FVector& P){const FVector F=Frame(P);return F.X<4500||F.X>28000?1.e9f:FMath::Abs(static_cast<float>(F.Y)-Center(F.X));}
+bool InChultRiverExtension(const FVector& P){const FVector F=Frame(P);return F.X>=4500 && F.X<=ChultFarFloorEnd && FMath::Abs(F.Y)<=6500;}
+float ChultRiverDistance(const FVector& P)
+{
+    const FVector F=Frame(P);if(F.X<4500)return 1.e9f;
+    // Past its head the distance is to the head itself: a rounded pool.
+    if(F.X>ChultRiverHead)return FVector2D(F.X-ChultRiverHead,F.Y-Center(ChultRiverHead)).Size();
+    return FMath::Abs(static_cast<float>(F.Y)-Center(F.X));
+}
+float ChultRiverCenter(float S){return Center(S);}
+float ChultRiverWidth(float S){return Width(FMath::Min(S,ChultRiverHead));}
+float ChultRiverWaterZ(float S){return WaterZ(FMath::Min(S,ChultRiverHead));}
 float ChultRiverGroundZ(const FVector& P,float Base)
 {
-    const FVector F=Frame(P);if(F.X<4500||F.X>28000)return Base;
-    const float D=ChultRiverDistance(P),W=Width(F.X);
+    const FVector F=Frame(P);if(F.X<4500||F.X>ChultRiverHead+3000)return Base;
+    const float S=FMath::Min(static_cast<float>(F.X),ChultRiverHead),D=ChultRiverDistance(P),W=Width(S);
     // Keep both banks above the water even where the broad terrain relief dips.
-    Base=FMath::Lerp(Base,FMath::Max(Base,WaterZ(F.X)+70),1-Ease((D-W-900)/900));
-    return FMath::Lerp(WaterZ(F.X)-20,Base,Ease((D-W+75)/420));
+    Base=FMath::Lerp(Base,FMath::Max(Base,WaterZ(S)+70),1-Ease((D-W-900)/900));
+    return FMath::Lerp(WaterZ(S)-20,Base,Ease((D-W+75)/420));
 }
 void BuildChultRiver(AActor* Owner)
 {
@@ -53,10 +66,19 @@ void BuildChultRiver(AActor* Owner)
     }
     for(int32 I=0;I<Ground.V.Num();++I)Ground.UV[I]=FVector2D(Ground.V[I].X/260,Ground.V[I].Y/260);
     // Dense cross-sections follow both bends and the downhill water profile.
-    for(float S=28000;S>4500;S-=50)for(int32 K=0;K<8;++K)
+    for(float S=ChultRiverHead;S>4500;S-=50)for(int32 K=0;K<8;++K)
     {
         const float L=K/8.f,H=(K+1)/8.f;
         FlowQuad(Water,Surface(S,(L*2-1)*Width(S)),Surface(S,(H*2-1)*Width(S)),Surface(S-50,(H*2-1)*Width(S-50)),Surface(S-50,(L*2-1)*Width(S-50)),(S-28000)/480,(S-28050)/480,L,H);
+    }
+    // The head: a rounded pool end under the source falls.
+    for(int32 K=0;K<16;++K)
+    {
+        const float A=-PI*.5f+K*PI/16,B=-PI*.5f+(K+1)*PI/16,W=Width(ChultRiverHead);
+        const FVector C=Surface(ChultRiverHead);
+        auto Rim=[&](float Angle){return C+(Along()*FMath::Cos(Angle)+AcrossDir()*FMath::Sin(Angle))*W;};
+        const int32 Start=Water.V.Num();Water.Tri(C,Rim(A),Rim(B));
+        for(int32 J=Start;J<Water.V.Num();++J){Water.UV[J]=FVector2D(.5f+FVector::DotProduct(Water.V[J]-C,AcrossDir())/(2*W),(ChultRiverHead-28000+FVector::DotProduct(Water.V[J]-C,Along()))/-480);Water.C[J]=FColor(255,255,255,J==Start?225:0);}
     }
     // Shoulders frame the broad fall without plugging its channel or overlook.
     for(int32 I=0;I<16;++I)

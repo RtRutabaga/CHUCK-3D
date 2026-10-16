@@ -12,6 +12,7 @@
 #include "ChultWatercourse.h"
 #include "ChultVista.h"
 #include "ChultPath.h"
+#include "ChultUpriver.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -356,6 +357,7 @@ void AChultLanding::BuildSet()
     BuildChultCanyon(this);
     BuildChultWatercourse(this);
     BuildChultVista(this);
+    BuildChultUpriver(this);   // beyond the river's old end (Claude, 2026-10-15)
     // Let the registered terrain/solid foliage enter the physics scene first.
     FTimerHandle PathTimer;
     GetWorldTimerManager().SetTimer(PathTimer,FTimerDelegate::CreateWeakLambda(this,[this](){BuildChultPath(this);}),.6f,false);
@@ -380,6 +382,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultCliffs(this,C);
     Failures+=CheckChultVista(this,C);
     Failures+=CheckChultPath(this,C);
+    Failures+=CheckChultUpriver(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -437,6 +440,7 @@ void AChultLanding::VerifyAndCapture()
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();

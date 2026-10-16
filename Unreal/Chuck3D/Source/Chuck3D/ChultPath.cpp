@@ -2,6 +2,7 @@
 #include "ChultCanyon.h"
 #include "ChultExpansion.h"
 #include "ChultRiver.h"
+#include "ChultUpriver.h"
 #include "ChultLandform.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -22,8 +23,9 @@ namespace
     TArray<TArray<FVector>> Roads;
     int32 BuildFailures=0,Stones=0,Gaps=0;
     FVector Frame(FVector P){P-=ChultCanyonFrame(0,0);return FVector(P.X*.8+P.Y*.6,-P.X*.6+P.Y*.8,P.Z);}
-    float RiverWidth(float S){return 460+90*FMath::Sin((S-4500)*.0007f);}
-    float RiverCenter(float S){const float U=FMath::Clamp((S-4500)/23500,0.f,1.f);return 2200+1650*FMath::Sin(U*3*PI)*FMath::Sin(U*PI);}
+    // The river's own shape (ChultRiver.cpp), which since 2026-10-15 rises upstream at its head.
+    float RiverWidth(float S){return ChultRiverWidth(S);}
+    float RiverCenter(float S){return ChultRiverCenter(S);}
     bool Dry(FVector P,float Margin=380)
     {
         const FVector F=Frame(P);
@@ -103,6 +105,9 @@ void BuildChultPath(AActor* Owner)
         {17800,14250,0},{19500,15100,0},{21000,15300,0},{22000,14700,0},ChultCanyonFrame(-2300,0),ChultCanyonFrame(-1000,0),ChultCanyonFrame(-380,0)};
     TArray<FVector> Far={ChultCanyonFrame(5000,0),ChultCanyonFrame(6200,0),ChultCanyonFrame(7100,300)};
     for(float S=8000;S<=27600;S+=200)Far.Add(ChultCanyonFrame(S,RiverCenter(S)-RiverWidth(S)-650));
+    // Upriver (Claude, 2026-10-15): on past the river's head, under the giant
+    // trees and through the deep jungle to where the temple will stand.
+    for(float S=28000;S<=ChultFarFloorEnd-600;S+=400)Far.Add(ChultCanyonFrame(S,ChultUpriverRoadT(S)));
     for(auto Guide:{Near,Far})
     {
         // Guide points describe the old road's direction, not a mandate to pave
@@ -224,7 +229,9 @@ namespace
     {
         struct FWalk{int32 Trial=0,Failures=0;float Start=-1,Progress=0;FTimerHandle Timer;};auto Run=MakeShared<FWalk>();Run->Failures=PreviousFailures;
         float NearLength=0;for(int32 I=1;I<Roads[0].Num();++I)NearLength+=FVector::Dist2D(Roads[0][I-1],Roads[0][I]);
-        const TArray<float> Starts={1000,8200,16500,NearLength-1800,850,13000};
+        // Upriver (2026-10-15): across the old floor's end, among the giants, in the deep jungle.
+        auto FarAt=[](float S){float L=0;const auto& Road=Roads[1];for(int32 I=1;I<Road.Num();++I){if(Frame(Road[I]).X>=S)return L;L+=FVector::Dist2D(Road[I-1],Road[I]);}return L;};
+        const TArray<float> Starts={1000,8200,16500,NearLength-1800,850,13000,FarAt(27700),FarAt(43000),FarAt(58000)};
         C->SetActorHiddenInGame(false);if(auto* PC=Cast<APlayerController>(C->GetController()))PC->SetViewTarget(C);
         Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,C,Run,Starts]()
         {
@@ -240,10 +247,10 @@ namespace
             }
             C->SetTestStick(FVector2D::ZeroVector);Movement->StopMovementImmediately();const bool Pass=Distance<=30&&Movement->IsMovingOnGround();Run->Failures+=!Pass;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_WALK trial=%d pass=%d distance=%.1f seconds=%.2f"),Run->Trial,Pass,Distance,Elapsed);++Run->Trial;Run->Start=-1;
-            if(Run->Trial==6)
+            if(Run->Trial==Starts.Num())
             {
                 const int32 Status=Run->Failures?1:0;FTimerHandle Done=Run->Timer;
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_TEST failures=%d trials=6"),Run->Failures);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_PATH_TEST failures=%d trials=%d"),Run->Failures,Starts.Num());
                 // Clearing the active timer destroys this lambda's captures.
                 // Copy everything needed afterwards before removing it.
                 Owner->GetWorldTimerManager().ClearTimer(Done);

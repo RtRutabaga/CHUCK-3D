@@ -4,6 +4,7 @@
 #include "ChultLanding.h"
 #include "ChultExpansion.h"
 #include "ChultGorge.h"
+#include "ChultUpriver.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -55,13 +56,18 @@ namespace
 }
 FVector ChultCanyonFrame(float S,float T,float Z) {return Origin+Along*S+Across*T+FVector(0,0,Z);}
 bool InChultCanyon(const FVector& P) {FVector F=Frame(P);return (F.X>=-6500 && F.X<=11500 && FMath::Abs(F.Y)<=4500)||InChultRiverExtension(P);}
-float ChultCanyonGroundZ(const FVector& P)
+float ChultCanyonBaseZ(const FVector& P)
 {
-    if(OldFloor(P))return ChultExpansionGroundZ(P);
     const FVector F=Frame(P);
     const float Fade=Ease(FMath::Max(static_cast<float>(P.X)-22000.f,static_cast<float>(P.Y)-15500.f)/2300.f);
     const float Relief=Ease((FMath::Abs(static_cast<float>(F.Y))-600)/1400)*(55*FMath::Sin(F.X*.0011f)+40*FMath::Sin(F.Y*.0017f));
-    return ChultRiverGroundZ(P,ChultWatercourseGroundZ(P,Fade*(350+Relief)+FMath::Max(0.f,static_cast<float>(F.X)-5000.f)*.022f));
+    return Fade*(350+Relief)+FMath::Max(0.f,static_cast<float>(F.X)-5000.f)*.022f;
+}
+float ChultCanyonGroundZ(const FVector& P)
+{
+    if(OldFloor(P))return ChultExpansionGroundZ(P);
+    // Upriver (2026-10-15), the ground is level under each giant canopy tree.
+    return ChultRiverGroundZ(P,ChultWatercourseGroundZ(P,ChultUpriverGroundZ(P,ChultCanyonBaseZ(P))));
 }
 void BuildChultCanyon(AActor* Owner)
 {

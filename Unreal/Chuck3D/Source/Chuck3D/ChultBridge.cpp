@@ -490,6 +490,7 @@ bool ChultBridgeRespawn(const FVector& DeathWorld,FVector& OutWorld)
 }
 bool IsChultBridgeRespawn(const FVector& World) {return FVector::Dist(World,BridgeSpot(-300))<1||FVector::Dist(World,BridgeSpot(4820))<1;}
 float ChultBridgeRespawnYaw() {return AlongDir().Rotation().Yaw;}
+FVector ChultBridgeSpawn(bool bFar) {return BridgeSpot(bFar?4820.f:-300.f);}
 bool InChultBridgeMusicZone(const FVector& World,bool bWasInside)
 {
     const FVector Local=World-AChultLanding::FloorOrigin();

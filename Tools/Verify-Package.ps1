@@ -48,6 +48,11 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY trees=8 chains=8 grips=74 spurs=14 spur_grips=53 registered_grips=127 lianas=8' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY_LAYOUT failures=0 branch_jumps=8 hand_gap=180 grip_over=98 .* missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CANOPY_CHECK failures=0 grips=127 leaps=105 limb_samples=253 forks=8 lianas=8 spurs=14' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_UPRIVER .*missing_assets=0 water_collision=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_UPRIVER_CHECK failures=0 .*respawn_map=4 giant_failures=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS trees=12 chains=11 .*lianas=1 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_LAYOUT failures=0 .* missing_assets=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
@@ -70,8 +75,15 @@ $pathLog=Join-Path $evidence ('verify-chult-path-'+(Get-Date -Format 'yyyyMMdd-H
 $pathProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPathReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pathLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($pathProcess.ExitCode -or !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=0 views=6' -Quiet) -or
-   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=6' -Quiet)) {
+   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=9' -Quiet)) {
     throw "Ancient jungle road verification failed. Inspect $pathLog"
+}
+# Upriver (Claude, 2026-10-15): the extended far bank, source fall, giant trees and deep jungle in cooked views.
+$upriverLog=Join-Path $evidence ('verify-chult-upriver-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$upriverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckUpriverReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$upriverLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_REVIEW_COMPLETE failures=0 views=6' -Quiet)) {
+    throw "Upriver verification failed. Inspect $upriverLog"
 }
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }
@@ -141,6 +153,14 @@ $canopyLog=Join-Path $evidence ('verify-canopy-'+(Get-Date -Format 'yyyyMMdd-HHm
 $canopyProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$canopyLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=48 static_failures=0' -Quiet)) {
     throw "Chult canopy brachiation verification failed. Inspect $canopyLog"
+}
+# The giant trees upriver (Claude, 2026-10-15): from the first giant's crotch along
+# every chain to the last, stepping down at each, down its liana, deaths in a tree
+# and under them returning to the giants' spawn, and out to every spur's tip and back.
+$giantLog=Join-Path $evidence ('verify-giant-canopy-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$giantProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGiantCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$giantLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($giantProcess.ExitCode -or !(Select-String -LiteralPath $giantLog -Pattern 'CHUCK_GIANT_CANOPY_TEST_COMPLETE failures=0 .*static_failures=0 chains=11' -Quiet)) {
+    throw "Giant canopy brachiation verification failed. Inspect $giantLog"
 }
 # The canopy raptor (Claude, 2026-10-14): its round, noticing him, the chase, tell
 # and bite, a roll through the tell, escaping up a tree and across a chain over it,

@@ -700,6 +700,16 @@ void ADockGameMode::StartPlay()
             for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultCanopyReview(*It,Chuck);break;}
         },4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckGiantCanopyTest")))
+    {
+        // Claude's giant trees upriver (ChultCanopy.h, 2026-10-15): the same trials on the taller grove.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle GiantCheck;
+        World->GetTimerManager().SetTimer(GiantCheck,[World](){
+            auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
+            for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultGiantCanopyReview(*It,Chuck);break;}
+        },4.f,false);
+    }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     if(bSmokeTest)
     {
