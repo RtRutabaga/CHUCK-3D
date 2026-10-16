@@ -1,4 +1,5 @@
 #include "ChultRaptor.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ChultCanopy.h"
@@ -94,6 +95,9 @@ void StartChultRaptorReview(UWorld* World)
             case KPatrol:
                 Ground(AChultLanding::Entrance() - FVector(0, 0, 34.65f), FVector::ForwardVector);
                 Raptor->ResetTo(P1 + FVector(0, 0, 80), Along.Rotation().Yaw);
+                // Off camera its pose is not evaluated; keep it so its feet can be measured.
+                Raptor->GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+                Raptor->ResetFootGap();
                 break;
             case KChase: case KDeath: case KKill:
                 Raptor->ResetTo(P1 + FVector(0, 0, 80), Along.Rotation().Yaw);
@@ -139,8 +143,9 @@ void StartChultRaptorReview(UWorld* World)
         switch (Trial.Kind)
         {
         case KPatrol:
+            // ... its feet on the ground all the way (the planted sole within 6 cm of the ground under it).
             Pass = FVector::Dist2D(Raptor->GetActorLocation(), Run->From) > 400.f && !Run->bSawChase
-                && (State == AChultRaptor::EState::Patrol);
+                && (State == AChultRaptor::EState::Patrol) && Raptor->GetFootGapSamples() > 30 && Raptor->GetMaxFootGap() < 6.f;
             Done = T > 9.f;
             break;
         case KChase:
@@ -214,7 +219,7 @@ void StartChultRaptorReview(UWorld* World)
             const bool bHigh = Chuck->GetActorLocation().Z - Raptor->GetActorLocation().Z > 200.f;
             if (bHigh && FMath::Abs(FVector::DotProduct(Side, FVector::UpVector)) < .1f && (Raptor->GetActorLocation() - Chuck->GetActorLocation()).Size2D() < 80.f)
                 Side = FVector::CrossProduct(Raptor->GetActorForwardVector(), FVector::UpVector);
-            const FVector Eye = Mid + Side * (bPortrait ? 380.f : bHigh ? 1100.f : 650.f) + Raptor->GetActorForwardVector() * (bPortrait ? 120.f : 0.f) + FVector(0, 0, bPortrait ? 60 : bHigh ? -60 : 160);
+            const FVector Eye = Mid + Side * (bPortrait ? 560.f : bHigh ? 1100.f : 650.f) + Raptor->GetActorForwardVector() * (bPortrait ? 120.f : 0.f) + FVector(0, 0, bPortrait ? 10 : bHigh ? -60 : 160);
             Run->Camera->SetActorLocationAndRotation(Eye, (Mid - Eye).Rotation()); PC->SetViewTarget(Run->Camera);
             const FString Folder = FPaths::ScreenShotDir() / TEXT("Raptor"); IFileManager::Get().MakeDirectory(*Folder, true);
             FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("T%d_%s_%03d.png"), Run->Trial, Trial.Name, Run->Shot++), false, false);
@@ -222,6 +227,7 @@ void StartChultRaptorReview(UWorld* World)
         }
         if (!Done && T < Limit) return;
         Run->Failures += !Pass;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_RAPTOR_FEET trial=%d max_gap=%.1f gap=%.1f samples=%d"), Run->Trial, Raptor->GetMaxFootGap(), Raptor->GetFootGap(), Raptor->GetFootGapSamples());
         UE_LOG(LogTemp, Display, TEXT("CHUCK_RAPTOR_TRIAL trial=%d name=%s pass=%d time=%.2f state=%s bites=%d lunges=%d snaps=%d hits=%d windup=%.2f top_speed=%.0f sanity=%d chuck=%s raptor=%s"),
             Run->Trial, Trial.Name, Pass ? 1 : 0, T, Raptor->GetStateName(), Raptor->GetBites() - Run->Bites, Raptor->GetLunges() - Run->Lunges, Raptor->GetSnaps() - Run->Snaps,
             Raptor->GetHitsTaken(), Raptor->GetLastWindupSeconds(), Raptor->GetTopSpeed(), Chuck->GetSanity(),

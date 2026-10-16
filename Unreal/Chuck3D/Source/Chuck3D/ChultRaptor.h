@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "DinoAnim.h"
 #include "ChultRaptor.generated.h"
 
 class UAnimSequence;
@@ -41,6 +42,11 @@ public:
     float GetLastWindupSeconds() const { return LastWindup; }
     float GetTopSpeed() const { return TopSpeed; }
     int32 GetSoundsPlayed() const { return SoundsPlayed; }
+    /** The planted foot's sole above the ground under it (cm), and the most since the last reset. */
+    float GetFootGap() const { return Animator.FootGap(); }
+    float GetMaxFootGap() const { return Animator.MaxFootGap(); }
+    int32 GetFootGapSamples() const { return Animator.FootGapSamples(); }
+    void ResetFootGap() { Animator.ResetFootGap(); }
     /** Struck by Chuck's slash sweeping along Swing: it flinches, or dies on the tenth. */
     void TakeSlash(const FVector& Swing);
     /** Tests: stand here facing Yaw, on its round, unhurt. */
@@ -100,7 +106,7 @@ private:
     int32 Waypoint = 1, WaypointStep = 1, HitsTaken = 0, Bites = 0, Lunges = 0, Snaps = 0;
     bool bBit = false, bSnapping = false;
     FVector LungeDir = FVector::ForwardVector, Knock = FVector::ZeroVector;
-    FName Playing;
+    FDinoAnimator Animator;
     void SetState(EState To);
     void Play(FName Clip, bool bLoop, float Rate, bool bRestart = false);
     void Locomotion();

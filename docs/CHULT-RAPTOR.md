@@ -13,6 +13,20 @@
 - **Import:** `Tools/import_raptor.py` brings these into `/Game/Characters/Raptor`. `M_Raptor` is two-sided, with one instance per source region.
 - **Sounds:** `Tools/gen_raptor_sfx.py` synthesizes original sounds (footfalls, the tell's hiss, jaw snaps, a call, a death cry). `Tools/import_raptor_sfx.py` imports them into `/Game/Art/Audio/SFX`.
 
+## Animation and skin (user 2026-10-16)
+
+"The raptors kind of float sometimes, make their walking look better, also apply to t-rex if needed; then make both look better, less glossy and fake."
+
+- **Why they floated:** measured in the engine, the imported Idle clip holds both back feet about 48 cm off the ground (the T-rex's about 3 m), so every pause, alert, recovery and flinch floated. The Walk clip is one stride (frames 0-28) followed by a second of standing, so looped at patrol speed the raptor glided with its feet planted half the time.
+- **`DinoAnim.h/.cpp`** (shared with the T-rex) replaces direct clip switching with a native animation instance:
+  - loops trimmed to their real cycle;
+  - the stride's phase advances with the distance covered (168 cm a walk cycle, 254 cm a run cycle), so planted feet move back exactly as fast as the body goes on; walk blends into run between 170 and 300 cm/s at the same phase;
+  - 0.2 s cross-fades between clips;
+  - Idle's legs come from the rest stance (Attack's first frame);
+  - foot IK: each back foot traced to the ground under it, the body lowered for the lower foot (and further if a leg cannot otherwise reach), two-bone IK per leg, the foot tilted to the slope (up to 25 degrees).
+- **Skin:** the instances now hang from the shared `M_DinoSkin` (`Tools/build_dino_skin.py`, textures by `Tools/build_dino_skin_textures.py`): rough (0.84) and low-specular hide, uneven blotched and earth-tinted colour, a network of skin plates and creases with darker crevices, and mud up the legs. `M_Raptor` is kept, unused. Re-running `import_raptor.py` keeps M_DinoSkin as the parent but resets the region values; run `build_dino_skin.py` after it.
+- **Test:** the patrol trial now also requires the planted foot's sole within 6 cm of the ground (`CHUCK_RAPTOR_FEET`, at least 30 measured frames).
+
 ## Behaviour (`AChultRaptor`, ChultRaptor.h/.cpp)
 
 - **Spawn:** one raptor appears when Chult becomes playable (`AChultLanding::Build`, after the fall or from the checkpoint). There is none in the cutscene. It is kept out of `-ChuckChultTest` and `-ChuckCanopyTest`, whose traversal trials assume nothing hunts Chuck.
@@ -41,7 +55,7 @@ It also does a static sweep of the patrol route (8 segments) and requires at lea
 
 ## Not done
 
-- No hand-made animation, blending or foot IK: clips switch directly. Play rates follow the measured clip speeds.
+- No hand-made animation; the source clips are blended and grounded (above), not re-animated. No stance locking: on sharp turns a planted foot can slide a little.
 - The source's low-poly forms remain under the smoothing, below the art target.
 - The sounds are synthetic and have not been heard on speakers.
 - No navmesh: it steers round obstacles with sweeps.

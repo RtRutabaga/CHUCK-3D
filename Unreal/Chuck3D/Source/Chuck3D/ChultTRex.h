@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "DinoAnim.h"
 #include "ChultTRex.generated.h"
 
 class UAnimSequence;
@@ -37,6 +38,11 @@ public:
     int32 GetSnaps() const { return Snaps; }
     int32 GetRoars() const { return Roars; }
     int32 GetSoundsPlayed() const { return SoundsPlayed; }
+    /** The planted foot's sole above the ground under it (cm), and the most since the last reset. */
+    float GetFootGap() const { return Animator.FootGap(); }
+    float GetMaxFootGap() const { return Animator.MaxFootGap(); }
+    int32 GetFootGapSamples() const { return Animator.FootGapSamples(); }
+    void ResetFootGap() { Animator.ResetFootGap(); }
     float GetTopSpeed() const { return TopSpeed; }
     /** Tests: stand here facing Yaw, on its loop. */
     void ResetTo(const FVector& At, float Yaw);
@@ -84,7 +90,7 @@ private:
     int32 Waypoint = 0, Bites = 0, Snaps = 0, Roars = 0, SoundsPlayed = 0;
     bool bBit = false, bSnapping = false;
     FVector LungeDir = FVector::ForwardVector;
-    FName Playing;
+    FDinoAnimator Animator;
     EState State = EState::Patrol;
     void Sound(const TArray<USoundBase*>& Set, float Volume);
     void SetState(EState To);

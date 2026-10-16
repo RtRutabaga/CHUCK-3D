@@ -5,6 +5,7 @@
 #include "ChultLanding.h"
 #include "ChultUpriver.h"
 #include "TRexClipData.h"
+#include "DinoAnim.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -87,7 +88,7 @@ AChultTRex::AChultTRex()
     bUseControllerRotationYaw = false;
     GetMesh()->SetRelativeLocation(FVector(0, 0, -HalfHeight));
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    GetMesh()->SetAnimInstanceClass(UDinoAnimInstance::StaticClass());
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> TRexMesh(TEXT("/Game/Characters/TRex/SK_TRex.SK_TRex"));
     GetMesh()->SetSkinnedAssetAndUpdate(TRexMesh.Object);
     static ConstructorHelpers::FObjectFinder<UAnimSequence> Idle(TEXT("/Game/Characters/TRex/Animations/AS_TRex_Idle.AS_TRex_Idle"));
@@ -104,6 +105,14 @@ void AChultTRex::BeginPlay()
 {
     Super::BeginPlay();
     TRexRegistry.Add(this);
+    // Its walk cycle, measured in the engine: the whole clip (33 frames at
+    // 24 fps), each foot planted about 3.1 m, 6.3 m a cycle. It never runs
+    // (its chase is a long walk).
+    FDinoGait Gait;
+    Gait.IdlePeriod = TRexClipData::IdleLength;
+    Gait.WalkEnd = Gait.WalkPeriod = TRexClipData::WalkLength; Gait.WalkStride = 634.f;
+    Gait.FadeTime = .35f; Gait.IKUp = 70.f; Gait.IKDown = 110.f; Gait.FootRestZ = 10.f; Gait.TraceUp = 200.f;
+    Animator.Init(GetMesh(), Clips, Gait);
     Play(TEXT("Idle"), true, 1.f, true);
     // Synthetic sounds (Tools/gen_trex_sfx.py), heard far across the valley.
     auto Load = [](TArray<USoundBase*>& Set, const TCHAR* Stem, int32 Count)
@@ -174,19 +183,13 @@ void AChultTRex::Sound(const TArray<USoundBase*>& Set, float Volume)
 
 void AChultTRex::Play(FName Clip, bool bLoop, float Rate, bool bRestart)
 {
-    UAnimSequence** Anim = Clips.Find(Clip);
-    if (!Anim || !*Anim) return;
-    if (Playing != Clip || bRestart) { GetMesh()->PlayAnimation(*Anim, bLoop); Playing = Clip; }
-    GetMesh()->SetPlayRate(Rate);
+    Animator.Play(Clip, bLoop, Rate, bRestart);
 }
 
 void AChultTRex::Locomotion()
 {
-    // Its long stride: the walk carries it up to its chase, feet planted (4.3 m/s natural).
-    const float Speed = static_cast<float>(GetVelocity().Size2D());
-    if (Speed < 15.f) Play(TEXT("Idle"), true, 1.f);
-    else if (Speed < 600.f) Play(TEXT("Walk"), true, FMath::Clamp(Speed / TRexClipData::WalkGroundSpeed, .3f, 1.3f));
-    else Play(TEXT("Run"), true, FMath::Clamp(Speed / TRexClipData::RunGroundSpeed, .5f, 1.2f));
+    // Its long stride carries it up to its chase, the phase kept by the distance covered (DinoAnim).
+    Animator.Locomote(static_cast<float>(GetVelocity().Size2D()));
 }
 
 void AChultTRex::Face(const FVector& Dir, float DegPerSecond, float DeltaSeconds)
@@ -257,6 +260,7 @@ void AChultTRex::ResetTo(const FVector& At, float Yaw)
 void AChultTRex::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    Animator.Tick(DeltaSeconds, GetVelocity(), GetCharacterMovement()->IsMovingOnGround());
     StateTime += DeltaSeconds;
     NoticeCooldown = FMath::Max(0.f, NoticeCooldown - DeltaSeconds);
     auto* Move = GetCharacterMovement();
@@ -430,7 +434,7 @@ void StartChultTRexReview(UWorld* World)
         RouteFailures += !bExitSafe;
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TREX_ROUTE failures=%d segments=%d liana_exit_safe=%d"), RouteFailures, P.Num(), bExitSafe);
     }
-    struct FRun { int32 Trial = 0, Failures = 0, Bites = 0, Respawns = 0, Shots = 0; float Start = -1, MinS = 1e9f, Moved = 0; bool bStalked = false, bDone = false; FVector Last; TWeakObjectPtr<ACameraActor> Camera; FTimerHandle Timer; };
+    struct FRun { int32 Trial = 0, Failures = 0, Bites = 0, Respawns = 0, Shots = 0, WalkShot = 0; float Start = -1, MinS = 1e9f, Moved = 0; bool bStalked = false, bDone = false; FVector Last; TWeakObjectPtr<ACameraActor> Camera; FTimerHandle Timer; };
     auto Run = MakeShared<FRun>(); Run->Failures = RouteFailures;
     const TArray<FString> Names = { TEXT("patrol"), TEXT("chase_and_kill"), TEXT("safe_in_the_giants"), TEXT("stays_in_its_stretch") };
     World->GetTimerManager().SetTimer(Run->Timer, [World, Chuck, Rex, Run, Names, G]()
@@ -448,6 +452,8 @@ void StartChultTRexReview(UWorld* World)
             case 0:   // its loop, him well away outside its stretch
                 Chuck->ResetAtLocation(ChultUpriverSpawn(EChultUpriverSpawn::Giants));
                 Rex->ResetTo(G + AChultTRex::PatrolPoints()[3] + FVector(0, 0, HalfHeight + 40), Along.Rotation().Yaw);
+                Rex->GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;   // measured off camera too
+                Rex->ResetFootGap();
                 break;
             case 1:   // on the ground in its stretch, in its view 22 m off
                 Chuck->ResetAtLocation(Road(44000, 34.65f));
@@ -486,8 +492,14 @@ void StartChultTRexReview(UWorld* World)
                 if (PC) PC->SetViewTarget(Cam);
                 Run->Shots = 1;
             }
-            else if (Run->Trial == 0 && Run->Shots == 1 && Time > 4.3f) { Shot = TEXT("TRex_Patrol"); Run->Shots = 2; }
-            else if (Run->Trial == 0 && Run->Shots == 2 && Time > 4.6f) { if (PC) PC->SetViewTarget(Chuck); if (Run->Camera.IsValid()) Run->Camera->Destroy(); Run->Shots = 3; }
+            else if (Run->Trial == 0 && Run->Shots == 1 && Time > 4.3f) { Shot = TEXT("TRex_Patrol"); Run->Shots = 2; Run->WalkShot = 0; }
+            else if (Run->Trial == 0 && Run->Shots == 2 && Run->WalkShot < 6 && Time > 4.6f + .25f * Run->WalkShot)
+            {
+                // Its stride from the side, a still every quarter second (gait review).
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Chult") / FString::Printf(TEXT("TRex_Walk_%d.png"), Run->WalkShot), true, false);
+                ++Run->WalkShot;
+            }
+            else if (Run->Trial == 0 && Run->Shots == 2 && Time > 6.3f) { if (PC) PC->SetViewTarget(Chuck); if (Run->Camera.IsValid()) Run->Camera->Destroy(); Run->Shots = 3; }
             else if (Run->Trial == 1 && Run->Shots == 3 && Rex->GetState() == AChultTRex::EState::Chase) { Shot = TEXT("TRex_Chase"); Run->Shots = 4; }
             else if (Run->Trial == 1 && Run->Shots == 4 && Rex->GetState() == AChultTRex::EState::Lunge) { Shot = TEXT("TRex_Bite"); Run->Shots = 5; }
             else if (Run->Trial == 2 && Run->Shots == 5 && Time > 7.f) { Shot = TEXT("TRex_FromTheGiant"); Run->Shots = 6; }
@@ -498,7 +510,8 @@ void StartChultTRexReview(UWorld* World)
         {
         case 0:
             Done = Time > 9.f;
-            Pass = Run->Moved > 600.f && Rex->GetState() == AChultTRex::EState::Patrol && Rex->GetBites() == Run->Bites;
+            // ... its feet on the ground all the way (the planted sole within 15 cm of the ground under it).
+            Pass = Run->Moved > 600.f && Rex->GetState() == AChultTRex::EState::Patrol && Rex->GetBites() == Run->Bites && Rex->GetFootGapSamples() > 30 && Rex->GetMaxFootGap() < 15.f;
             break;
         case 1:
         {
@@ -526,6 +539,7 @@ void StartChultTRexReview(UWorld* World)
         }
         if (!Done) return;
         Run->Failures += !Pass;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_TREX_FEET trial=%d max_gap=%.1f gap=%.1f samples=%d"), Run->Trial, Rex->GetMaxFootGap(), Rex->GetFootGap(), Rex->GetFootGapSamples());
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TREX_TRIAL trial=%d name=%s pass=%d time=%.1f state=%s bites=%d snaps=%d roars=%d moved=%.0f min_s=%.0f stalked=%d top_speed=%.0f"),
             Run->Trial, *Names[Run->Trial], Pass, Time, Rex->GetStateName(), Rex->GetBites(), Rex->GetSnaps(), Rex->GetRoars(), Run->Moved, Run->MinS, Run->bStalked, Rex->GetTopSpeed());
         Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->SetRunHeld(false);

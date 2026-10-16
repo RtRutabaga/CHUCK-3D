@@ -13,6 +13,10 @@
 - **Import:** `Tools/import_trex.py` imports into `/Game/Characters/TRex`. `M_TRex` has one instance for each of the five source regions: hide, pale, belly, dark and mouth.
 - **Sounds:** `Tools/gen_trex_sfx.py` synthesizes original sounds: ground-shaking footfalls, two roars, a jaw snap, a stalking growl and a death roar (not used yet). `Tools/import_trex_sfx.py` imports them into `/Game/Art/Audio/SFX`.
 
+## Animation and skin (user 2026-10-16)
+
+As the raptor ([CHULT-RAPTOR.md](CHULT-RAPTOR.md), `DinoAnim.h/.cpp`): its imported Idle held its feet about 3 m up, so it floated whenever it stood to roar, snap or wind up; Idle's legs now come from the rest stance. The walk's phase follows the distance covered (634 cm a cycle), clips cross-fade over 0.35 s, and the feet are put on the ground under them by IK (lowering the body up to 1.1 m). The patrol trial requires the planted sole within 15 cm of the ground. Its skin is the shared `M_DinoSkin` with larger blotches and plates and mud up to 1.1 m; the mouth stays wetter (roughness 0.45).
+
 ## Behaviour (`AChultTRex`, ChultTRex.h/.cpp)
 
 It is built like the raptor: there is no AI controller, it drives its own movement and steers round trunks and rocks with sweeps. Its capsule (1.5 m radius, 5.8 m tall) is its legs and belly; the head and tail have no collision.
@@ -45,7 +49,7 @@ Stills are saved to `Screenshots/.../Chult/TRex_*.png`.
 
 ## Not done
 
-- There is no hand-made animation, blending or foot IK; clips switch directly. Its turns are slow, but its 12 m body can swing its head or tail through a trunk while it turns.
+- No hand-made animation (the source clips, blended and grounded). Its turns are slow, but its 12 m body can swing its head or tail through a trunk while it turns.
 - There is no camera shake on its footfalls and no hearing/occlusion model. The sounds are synthetic and have not been heard on speakers.
 - There is no navmesh, only sweeps. A chase into the trunks can wedge it for a moment.
 - It has not been played by a person, and there is no Xbox test.

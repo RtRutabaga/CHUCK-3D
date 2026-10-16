@@ -116,7 +116,8 @@ instances = {}
 for region, params in REGIONS.items():
     name = 'MI_' + region
     mi = unreal.load_asset(f'{DEST}/{name}') or TOOLS.create_asset(name, DEST, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
-    mi.set_editor_property('parent', mat)
+    # Since 2026-10-16 the instances hang from the shared M_DinoSkin (Tools/build_dino_skin.py), when it exists.
+    mi.set_editor_property('parent', unreal.load_asset('/Game/Characters/Dinos/M_DinoSkin') or mat)
     for k, v in params.items():
         if isinstance(v, tuple):
             LIB.set_material_instance_vector_parameter_value(mi, k, unreal.LinearColor(*v, 1))

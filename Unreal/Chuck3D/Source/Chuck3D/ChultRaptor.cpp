@@ -3,6 +3,7 @@
 #include "ChultCanopy.h"
 #include "ChultLanding.h"
 #include "RaptorClipData.h"
+#include "DinoAnim.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -49,7 +50,7 @@ AChultRaptor::AChultRaptor()
     bUseControllerRotationYaw = false;
     GetMesh()->SetRelativeLocation(FVector(0, 0, -HalfHeight));
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    GetMesh()->SetAnimInstanceClass(UDinoAnimInstance::StaticClass());
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> RaptorMesh(TEXT("/Game/Characters/Raptor/SK_Raptor.SK_Raptor"));
     GetMesh()->SetSkinnedAssetAndUpdate(RaptorMesh.Object);
     // The clips by hard reference: loaded by path alone, a packaged game would not contain them.
@@ -67,6 +68,16 @@ void AChultRaptor::BeginPlay()
 {
     Super::BeginPlay();
     RaptorRegistry.Add(this);
+    // Its cycles, measured in the engine (24 fps): the walk is one stride
+    // (frames 0-28: each foot planted 81-87 cm) and then a second of standing,
+    // which looped made it glide; the run is frames 0-13. Strides: ground covered per cycle.
+    FDinoGait Gait;
+    Gait.IdlePeriod = RaptorClipData::IdleLength;
+    Gait.WalkEnd = Gait.WalkPeriod = 28.f / 24.f; Gait.WalkStride = 168.f;
+    Gait.RunEnd = Gait.RunPeriod = RaptorClipData::RunLength; Gait.RunStride = RaptorClipData::RunGroundSpeed * Gait.RunPeriod;
+    Gait.RunFrom = 170.f; Gait.RunTo = 300.f;
+    Gait.FadeTime = .2f; Gait.IKUp = 25.f; Gait.IKDown = 35.f; Gait.FootRestZ = 2.6f; Gait.TraceUp = 60.f;
+    Animator.Init(GetMesh(), Clips, Gait);
     Play(TEXT("Idle"), true, 1.f, true);
     // Synthetic sounds (Tools/gen_raptor_sfx.py), heard well across the trees.
     auto Load = [](TArray<USoundBase*>& Set, const TCHAR* Stem, int32 Count)
@@ -146,19 +157,13 @@ void AChultRaptor::Sound(const TArray<USoundBase*>& Set, float Volume)
 
 void AChultRaptor::Play(FName Clip, bool bLoop, float Rate, bool bRestart)
 {
-    UAnimSequence** Anim = Clips.Find(Clip);
-    if (!Anim || !*Anim) return;
-    if (Playing != Clip || bRestart) { GetMesh()->PlayAnimation(*Anim, bLoop); Playing = Clip; }
-    GetMesh()->SetPlayRate(Rate);
+    Animator.Play(Clip, bLoop, Rate, bRestart);
 }
 
 void AChultRaptor::Locomotion()
 {
-    // The clip by its speed, played at the rate that keeps its feet planted.
-    const float Speed = static_cast<float>(GetVelocity().Size2D());
-    if (Speed < 15.f) Play(TEXT("Idle"), true, 1.f);
-    else if (Speed < 230.f) Play(TEXT("Walk"), true, FMath::Clamp(Speed / RaptorClipData::WalkGroundSpeed, .5f, 2.3f));
-    else Play(TEXT("Run"), true, FMath::Clamp(Speed / RaptorClipData::RunGroundSpeed, .55f, 1.3f));
+    // Walk blending into run by speed, the stride's phase kept by the distance covered (DinoAnim).
+    Animator.Locomote(static_cast<float>(GetVelocity().Size2D()));
 }
 
 void AChultRaptor::Face(const FVector& Dir, float DegPerSecond, float DeltaSeconds)
@@ -249,6 +254,7 @@ void AChultRaptor::TakeSlash(const FVector& Swing)
 void AChultRaptor::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    Animator.Tick(DeltaSeconds, GetVelocity(), GetCharacterMovement()->IsMovingOnGround() && State != EState::Dead);
     if (State == EState::Dead) return;
     StateTime += DeltaSeconds;
     NoticeCooldown = FMath::Max(0.f, NoticeCooldown - DeltaSeconds);
