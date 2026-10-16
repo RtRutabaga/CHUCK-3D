@@ -2,6 +2,17 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 15 — upriver: giant trees, deep jungle, checkpoints (Claude)
+
+- **Request:** "expand the playable area beyond where the path currently ends on the far side beyond the bridge. extend the ruined ancient path ... adjust/pushback distant landscape vista ... add brachiation trees but taller than our existing brachiation trees ... later add a t-rex that can only be avoided through brachiation in the high tree canopy ... golden cigarette ... (so currently its ok if there's no way to reach the brachiation trees). beyond the t-rex canopy zone we'll have some dense jungle and then our ancient temple (dont do the temple yet). ... new spawn points and all spawn points should have Dev Checkpoints". Base `c23e406`, delivered `a522a3f` (+ this handoff commit).
+- **Built:** see HANDOFF and [CHULT-UPRIVER.md](../CHULT-UPRIVER.md).
+- **Contract compatibility:** no rig, clip, socket or asset change; no new binary assets. Grove 0 of the canopy keeps its data, draws, names, logs and 48 trials (`FChultCanopyTree` gained `bLiana`; trunks may stand at `Trunk.Z`). Codex-owned setting files changed: `ChultRiver`, `ChultGorge` (far floor box, far-side `Ur`), `ChultVista` (far limit, extra forest stream), `ChultPath` (guides, walks 6→9), `ChultCanyon` (`ChultCanyonBaseZ` split out); verifier patterns updated. Behaviour change: far-bank deaths (not gorge falls) return to the far bank/giants/deep-jungle spawn instead of the landing.
+- **Iterations (uncooked):** road ran into giant trunks (5 route failures) → road keeps 12.5 m to the line's −T side; one fall probe missed its rock → rock lowered; liana-down trial indexed a chain with a tree index (crash) → fixed; two review cameras inside foliage → moved over the river. Logs `Local/upriver-*.log`.
+- **Tools:** UE 5.7.4, `Build.bat` Chuck3DEditor ×6, `Build-Game.ps1 -Package -SkipBaseAssets`, `Verify-Menu.ps1`, `Promote-Build.ps1`. No installations.
+- **Evidence and flaws:** as in HANDOFF. Review images `SourceAssets/Setting/Review/Upriver*.png` (4, ~6.2 MB, LFS).
+
+Next part of the work can be done here (a play review up there from the Giant Canopy dev checkpoint would help most).
+
 ## October 15 — the gorge, its rims and softer light (Claude)
 
 - **Request:** "the lighting is very dark in parts with the one sun light source. look up how other games handle this ... i do like the current contrast, just want a less dramatic contrast. Then, take what codex did for cliffs and waterfalls and landscape vista and make it much much better" (start side; far canyon wall allowed), "visually stunning ... waterfalls cresting down into the fog"; free resources allowed. Base `a635b95`.
