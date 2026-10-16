@@ -2,6 +2,20 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 15 — golden cigarettes' aura and trails (Claude)
+
+- **Request:** "have the gold leaf cigarettes look like our normal cigarettes but with a glowing golden ethereal light around them that makes them stand out, have a few around the bases of the first two large brachiation trees so that they stand out to a first time player". Base `e251f2c`, delivered `a950552` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and [CHULT-GOLDEN-LEAF.md](../CHULT-GOLDEN-LEAF.md).
+- **Contract compatibility:**
+  - No rig, clip, socket or grip change.
+  - Giant 1 loses the buttresses and surface roots in its climb sector (giant layout still 0 failures, 72/72).
+  - Codex's golden-leaf code was changed: placement, the look, the test's tree parameter and walking route, and the reset count of 8.
+  - `ChultGoldenClimbOut`/`ChultGoldenLeafPosition` now take a tree index (default 0); `ChultGoldenLeafPositions()` is new.
+  - Codex's `M_GoldenLeaf` is now unused but kept.
+- **Tools:** UE 5.7.4, UnrealEditor-Cmd Python material runs (×4, one crash fixed), Build.bat ×7, Build-Game.ps1 -Package ×1, Promote-Build ×1. No installations, no downloads.
+
+Next part of the work can be done here.
+
 ## October 15 — the T-rex under the giant trees (Claude)
 
 - **Request:** "Add the t-Rex to the tall brachiation trees before section, use free resource the help". Base `9f24f70` (plus Codex's 05afef6/3642047 landing mid-session), delivered `8355a32`, `17f3de3` (+ this handoff).
