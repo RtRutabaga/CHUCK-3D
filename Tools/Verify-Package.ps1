@@ -10,14 +10,18 @@ $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
-$goldenLog=Join-Path $evidence ('verify-golden-leaf-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$goldenProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGoldenLeafTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$goldenLog+'"')) -WindowStyle Hidden -Wait -PassThru
+# The golden cigarettes: the run up the first giant, then the same up the second (trail round both feet).
+foreach($goldenTree in 0,1) {
+$goldenLog=Join-Path $evidence ('verify-golden-leaf-tree'+$goldenTree+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$goldenProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGoldenLeafTest',('-ChuckGoldenLeafTree='+$goldenTree),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$goldenLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($goldenProcess.ExitCode -or !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_TEST failures=0 duration=45' -Quiet) -or
+   !(Select-String -LiteralPath $goldenLog -Pattern ('CHUCK_GOLDEN_SETUP tree='+$goldenTree+' pickups=8') -Quiet) -or
    !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_CLIMB ' -Quiet) -or
    !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_FIRST_GRIP ' -Quiet) -or
    !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_RECOLLECT ' -Quiet) -or
-   (Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_FAIL|Fatal error:' -Quiet)) {
+   (Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_FAIL|Fatal error:|bUsedWithInstancedStaticMeshes' -Quiet)) {
     throw "Golden cigarette verification failed. Inspect $goldenLog"
+}
 }
 $impactLog=Join-Path $evidence ('verify-zombie-impact-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $impactProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckZombieImpactTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$impactLog+'"')) -WindowStyle Hidden -Wait -PassThru

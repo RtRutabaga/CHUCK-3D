@@ -71,6 +71,12 @@ void StartChultGiantCanopyReview(AActor* Owner, AChuckCharacter* Chuck);
 // The giants' trees, chains and spurs (local), for spawn points and views.
 const TArray<FChultCanopyTree>& ChultGiantTrees();
 
-FVector ChultGoldenLeafPosition();
-FVector ChultGoldenClimbOut();
+// Golden cigarettes (docs/CHULT-GOLDEN-LEAF.md) round the first giants' feet;
+// each of these trees keeps a buttress- and root-free climb out of ClimbOut.
+constexpr int32 ChultGoldenTrees = 2;
+FVector ChultGoldenLeafPosition(int32 Tree = 0);   // the one at the foot of Tree's climb
+TArray<FVector> ChultGoldenLeafPositions();       // all of them
+FVector ChultGoldenClimbOut(int32 Tree = 0);
 void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* Chuck);
+// -ChuckGoldenAuraReview: stills of the golden cigarettes' aura; then quits.
+void StartChultGoldenAuraReview(AActor* Owner, AChuckCharacter* Chuck);

@@ -3,7 +3,11 @@
 #include "GameFramework/Actor.h"
 #include "CigarettePickup.generated.h"
 
+class UStaticMesh;
 class UStaticMeshComponent;
+class UInstancedStaticMeshComponent;
+class UPointLightComponent;
+class UMaterialInstanceDynamic;
 class USoundBase;
 
 /**
@@ -11,6 +15,8 @@ class USoundBase;
  * and break jars to collect the cigarettes inside, like Zelda's rupees). It
  * pops out of what broke, lands and lies on the ground - a fresh, unlit
  * cigarette, no glow or spin - and Chuck pockets it by walking over it.
+ * The golden one (Premium Buhetian Halfling Leaf) is placed, looks the same,
+ * and wears a soft gold aura.
  */
 UCLASS()
 class CHUCK3D_API ACigarettePickup : public AActor
@@ -42,4 +48,19 @@ private:
     bool bLanded = false;
     bool bGolden = false, bCollected = false;
     uint32 CollectedGeneration = 0;
+    // Golden: an ordinary cigarette inside a soft gold aura (halo, rising motes, light).
+    void AddGoldenAura();
+    void TickGoldenAura();
+    UPROPERTY() UStaticMeshComponent* Halo = nullptr;
+    UPROPERTY() UStaticMeshComponent* OuterHalo = nullptr;
+    UPROPERTY() UStaticMeshComponent* Wisp = nullptr;
+    UPROPERTY() UInstancedStaticMeshComponent* Motes = nullptr;
+    UPROPERTY() UPointLightComponent* Glow = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* HaloMaterial = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* OuterMaterial = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* WispMaterial = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* MoteMaterial = nullptr;
+    UPROPERTY() UStaticMesh* AuraSphere = nullptr;
+    UPROPERTY() UStaticMesh* AuraMote = nullptr;
+    float AuraPhase = 0;
 };

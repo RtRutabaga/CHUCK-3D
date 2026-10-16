@@ -594,7 +594,7 @@ void BuildGrove(AActor* Owner)
             for(int32 F=0;F<Count;++F)
             {
                 FButtress B{static_cast<float>(F*2*PI/Count+Seed+Rng.FRandRange(-.25f,.25f)),Rng.FRandRange(250,420)*T.TrunkScale,Rng.FRandRange(170,320)*Gv().ButtressHeight,Rng.FRandRange(11,18)};
-                if(ActiveGrove==1 && I==0 && FVector::DotProduct(YawDir(B.Yaw),ChultGoldenClimbOut())>.7f) continue;
+                if(ActiveGrove==1 && I<ChultGoldenTrees && FVector::DotProduct(YawDir(B.Yaw),ChultGoldenClimbOut(I))>.7f) continue;
                 if(FMath::Abs(FMath::FindDeltaAngleRadians(B.Yaw,LianaYaw))<FMath::DegreesToRadians(30.f)) continue;
                 bool Clear=true;
                 for(int32 K=1;K<=20;++K)
@@ -683,6 +683,8 @@ void BuildGrove(AActor* Owner)
         {
             const float Yaw=(K+.5f)*2*PI/4+Seed*1.3f;
             if(FMath::Abs(FMath::FindDeltaAngleRadians(Yaw,LianaYaw))<FMath::DegreesToRadians(30.f)) continue;
+            // The golden cigarettes' trail up to the climb stays clear of roots.
+            if(ActiveGrove==1 && I<ChultGoldenTrees && FVector::DotProduct(YawDir(Yaw),ChultGoldenClimbOut(I))>.6f) continue;
             const FVector Out=YawDir(Yaw),Side=Across(Out);
             const float Reach=Rng.FRandRange(230,340);
             bool Clear=true;
@@ -863,9 +865,9 @@ void BuildGrove(AActor* Owner)
 }
 }
 void BuildChultCanopy(AActor* Owner) {TGuardValue<int32> Guard(ActiveGrove,0);BuildGrove(Owner);}
-FVector ChultGoldenClimbOut()
+FVector ChultGoldenClimbOut(int32 Tree)
 {
-    const auto& T=ChultGiantTrees()[0];
+    const auto& T=ChultGiantTrees()[Tree];
     // Between branch roots, away from the main leader behind the fork.
     FVector Best=FVector::ZeroVector;float Score=-1;
     for(int32 Deg=0;Deg<360;Deg+=2)
@@ -877,16 +879,47 @@ FVector ChultGoldenClimbOut()
     }
     return Best;
 }
-FVector ChultGoldenLeafPosition()
+FVector ChultGoldenLeafPosition(int32 Tree)
 {
-    const auto& T=ChultGiantTrees()[0];
-    return AChultLanding::FloorOrigin()+T.Trunk+ChultGoldenClimbOut()*270.f+FVector(0,0,1.5f);
+    const auto& T=ChultGiantTrees()[Tree];
+    return AChultLanding::FloorOrigin()+T.Trunk+ChultGoldenClimbOut(Tree)*270.f+FVector(0,0,1.5f);
+}
+TArray<FVector> ChultGoldenLeafPositions()
+{
+    // User 2026-10-15: a few round the feet of the first two giants, so a
+    // first-time player sees them. Each climb faces away from the road, so
+    // each tree has a short trail: one in sight of the road, one round the
+    // trunk (both beyond the buttresses' reach), then two on the climb side
+    // in the sector kept clear of buttresses and roots, the last at its foot.
+    TArray<FVector> Out;
+    for(int32 Tree=0;Tree<ChultGoldenTrees;++Tree)
+    {
+        const auto& T=ChultGiantTrees()[Tree];const FVector Climb=ChultGoldenClimbOut(Tree);
+        float RoadS=0,Best=MAX_flt;
+        for(float S=30000;S<=50000;S+=50)
+        {
+            const float D=FVector::Dist2D(ChultCanyonFrame(S,ChultUpriverRoadT(S)),T.Trunk);
+            if(D<Best){Best=D;RoadS=S;}
+        }
+        const FVector Road=(ChultCanyonFrame(RoadS-500,ChultUpriverRoadT(RoadS-500))-T.Trunk).GetSafeNormal2D();
+        const float Turn=FMath::RadiansToDegrees(FMath::Atan2(FVector::CrossProduct(Road,Climb).Z,FVector::DotProduct(Road,Climb)));
+        auto At=[&](const FVector& D,float Radius)
+        {
+            const FVector P=T.Trunk+D*Radius;
+            return AChultLanding::FloorOrigin()+FVector(P.X,P.Y,ChultCanyonGroundZ(P)+1.5f);
+        };
+        Out.Add(At(Road,620));
+        Out.Add(At(Road.RotateAngleAxis(Turn*.5f,FVector::UpVector),620));
+        Out.Add(At(Climb.RotateAngleAxis(FMath::Sign(Turn)*-22.f,FVector::UpVector),430));
+        Out.Add(ChultGoldenLeafPosition(Tree));
+    }
+    return Out;
 }
 void BuildChultGiantCanopy(AActor* Owner)
 {
     TGuardValue<int32> Guard(ActiveGrove,1);BuildGrove(Owner);
-    auto* Pickup=ACigarettePickup::SpawnGolden(Owner->GetWorld(),ChultGoldenLeafPosition());
-    if(Pickup) Pickup->SetOwner(Owner);
+    for(const FVector& At:ChultGoldenLeafPositions())
+        if(auto* Pickup=ACigarettePickup::SpawnGolden(Owner->GetWorld(),At)) Pickup->SetOwner(Owner);
 }
 const TArray<FChultCanopyTree>& ChultGiantTrees() {TGuardValue<int32> Guard(ActiveGrove,1);return Canopy().Trees;}
 
@@ -1348,12 +1381,15 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
     UWorld* W=Owner->GetWorld();
     auto* PC=Cast<APlayerController>(C->GetController());
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
-    struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0;bool Shot=false,Jumped=false;};
+    struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0;bool Shot=false,Jumped=false,AtFork=false;};
     auto R=MakeShared<FRun>();R->Start=R->PhaseAt=W->GetTimeSeconds();
-    const auto T=ChultGiantTrees()[0];const FVector G=AChultLanding::FloorOrigin(),Out=ChultGoldenClimbOut();
-    C->ResetAtLocation(ChultGoldenLeafPosition()+Out*55+FVector(0,0,34));
+    // -ChuckGoldenLeafTree=1: the same run up the second giant.
+    int32 Tree=0;FParse::Value(FCommandLine::Get(),TEXT("ChuckGoldenLeafTree="),Tree);Tree=FMath::Clamp(Tree,0,ChultGoldenTrees-1);
+    const auto T=ChultGiantTrees()[Tree];const FVector G=AChultLanding::FloorOrigin(),Out=ChultGoldenClimbOut(Tree);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_SETUP tree=%d pickups=%d"),Tree,ChultGoldenLeafPositions().Num());
+    C->ResetAtLocation(ChultGoldenLeafPosition(Tree)+Out*55+FVector(0,0,34));
     C->SetActorRotation((-Out).Rotation());C->Recenter();C->SetStamina(.2f);
-    W->GetTimerManager().SetTimer(R->Timer,[W,C,R,T,G,Out]()
+    W->GetTimerManager().SetTimer(R->Timer,[W,C,R,T,G,Out,Tree]()
     {
         const float Now=W->GetTimeSeconds(),Age=Now-R->Start,Step=Now-R->PhaseAt;
         const FVector P=C->GetActorLocation()-G;
@@ -1396,8 +1432,12 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
         else if(R->Phase==2)
         {
             TGuardValue<int32> Selected(ActiveGrove,1);
-            const FVector Target=G+Canopy().Chains[0].Paws[0];
-            Move(Target-C->GetActorLocation());
+            const FVector Target=G+Canopy().Chains[Tree].Paws[0];
+            // Onto the walking limb under the chain first, not straight over the crotch's rim.
+            const auto& Chain=Canopy().Chains[Tree];
+            const FVector OnLimb=G+ChultCanopyLimbTop(Chain.From,Chain.LimbA,150);
+            R->AtFork|=FVector::Dist2D(OnLimb,C->GetActorLocation())<40;
+            Move((R->AtFork?Target:OnLimb)-C->GetActorLocation());
             if(FVector::Dist2D(Target,C->GetActorLocation())<35 && Step>.3f && !R->Jumped) {R->Jumped=true;C->JumpPressed();}
             if(C->GetSwingCatches()>R->Catches)
             {
@@ -1406,7 +1446,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_FIRST_GRIP remaining=%.2f"),C->GetStaminaLockRemaining());
                 R->Phase=3;R->PhaseAt=Now;R->Shot=false;
             }
-            else if(Step>8) {Fail(TEXT("first_grip"));R->Phase=99;}
+            else if(Step>14) {Fail(TEXT("first_grip"));R->Phase=99;}
         }
         else if(R->Phase==3 && Step>.7f && !R->Shot)
         {
@@ -1418,7 +1458,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
             // Expiry restores the ordinary stamina drain. A second lock refreshes, never stacks.
             C->SetStamina(.3f);C->LockStamina(2.f);C->LockStamina(1.f);
             if(C->GetStamina()<.999f || C->GetStaminaLockRemaining()>2.01f || C->GetStaminaLockRemaining()<1.99f) Fail(TEXT("refresh"));
-            C->ResetAtLocation(ChultGoldenLeafPosition()+Out*70+FVector(0,0,34));
+            C->ResetAtLocation(ChultGoldenLeafPosition(Tree)+Out*70+FVector(0,0,34));
             C->SetTestStick(FVector2D::ZeroVector);
             if(C->IsStaminaLocked()) Fail(TEXT("reset_lock"));
             R->Phase=4;R->PhaseAt=Now;
@@ -1427,7 +1467,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
         {
             int32 Available=0;
             for(TActorIterator<ACigarettePickup> It(W);It;++It) Available+=It->IsGoldenAvailable();
-            if(Available!=1) Fail(TEXT("pickup_reset"));
+            if(Available!=ChultGoldenLeafPositions().Num()) Fail(TEXT("pickup_reset"));
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("GoldenLeaf_PickupRestored.png"),true,false);
             Move(-Out);R->Phase=5;R->PhaseAt=Now;
         }
@@ -1444,4 +1484,39 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
             FTimerHandle Quit;W->GetTimerManager().SetTimer(Quit,[W](){if(auto* PC=W->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},.5f,false);
         }
     },.025f,true);
+}
+
+void StartChultGoldenAuraReview(AActor* Owner, AChuckCharacter* C)
+{
+    // Stills of the golden cigarettes: close, as a first-time player meets each
+    // giant's foot, and from the road. Counts the placed pickups, then quits.
+    UWorld* W=Owner->GetWorld();
+    int32 Placed=0;
+    for(TActorIterator<ACigarettePickup> It(W);It;++It) Placed+=It->IsGoldenAvailable();
+    const int32 Failures=Placed!=ChultGoldenLeafPositions().Num();
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_AURA placed=%d expected=%d"),Placed,ChultGoldenLeafPositions().Num());
+    auto* Camera=W->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(72);
+    C->SetActorHiddenInGame(true);if(auto* PC=Cast<APlayerController>(C->GetController())) PC->SetViewTarget(Camera);
+    const FVector G=AChultLanding::FloorOrigin();
+    const FVector Leaf0=ChultGoldenLeafPosition(0),Leaf1=ChultGoldenLeafPosition(1);
+    const FVector Out0=ChultGoldenClimbOut(0),Out1=ChultGoldenClimbOut(1);
+    const FVector Road=ChultCanyonFrame(35300,ChultUpriverRoadT(35300));
+    const TArray<FVector> Eyes={Leaf0+Out0.RotateAngleAxis(40,FVector::UpVector)*110+FVector(0,0,45),Leaf0+Out0*1100+FVector(0,0,170),
+        Leaf1+Out1*1100+FVector(0,0,170),G+Road+FVector(0,0,ChultCanyonGroundZ(Road)+170)};
+    const TArray<FVector> Aims={Leaf0,Leaf0+FVector(0,0,60),Leaf1+FVector(0,0,60),G+ChultGiantTrees()[0].Trunk+FVector(0,0,120)};
+    const TArray<FString> Names={TEXT("GoldenAura_Close"),TEXT("GoldenAura_Giant0"),TEXT("GoldenAura_Giant1"),TEXT("GoldenAura_FromRoad")};
+    struct FRun{int32 Phase=0;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
+    W->GetTimerManager().SetTimer(Run->Timer,[W,Camera,Run,Eyes,Aims,Names,Failures]()
+    {
+        const int32 I=Run->Phase/2;
+        if(I>=Eyes.Num())
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_AURA_REVIEW failures=%d views=%d"),Failures,Eyes.Num());
+            FTimerHandle Done=Run->Timer;W->GetTimerManager().ClearTimer(Done);
+            FPlatformMisc::RequestExitWithStatus(false,Failures?1:0);return;
+        }
+        if(Run->Phase%2==0) Camera->SetActorLocationAndRotation(Eyes[I],(Aims[I]-Eyes[I]).Rotation());
+        else FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult")/(Names[I]+TEXT(".png")),true,false);
+        ++Run->Phase;
+    },2.f,true);
 }

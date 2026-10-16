@@ -727,6 +727,15 @@ void ADockGameMode::StartPlay()
             for(TActorIterator<AChultLanding> It(World);It && C;++It) {StartChultGoldenLeafReview(*It,C);break;}
         },4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckGoldenAuraReview")))
+    {
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle AuraReview;
+        World->GetTimerManager().SetTimer(AuraReview,[World](){
+            auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
+            for(TActorIterator<AChultLanding> It(World);It && C;++It) {StartChultGoldenAuraReview(*It,C);break;}
+        },4.f,false);
+    }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     if(bSmokeTest)
     {
