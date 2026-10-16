@@ -11,7 +11,7 @@ class AChuckCharacter;
 // S and T are the canyon frame (ChultCanyonFrame).
 
 // Spawn points beyond the gorge. FarBank is the bridge's far-bank spot.
-enum class EChultUpriverSpawn : uint8 { FarBank, Giants, GiantCanopy, DeepJungle };
+enum class EChultUpriverSpawn : uint8 { FarBank, Giants, GiantCanopy, DeepJungle, Temple };
 // Standing location (world, capsule centre) and facing of a spawn point.
 FVector ChultUpriverSpawn(EChultUpriverSpawn Spawn);
 float ChultUpriverSpawnYaw(EChultUpriverSpawn Spawn);

@@ -36,7 +36,7 @@ namespace
     struct FChultPoint {const TCHAR* Point;const TCHAR* Label;};
     const FChultPoint ChultPoints[]={{TEXT("Chult"),TEXT("Chult Landing")},{TEXT("ChultCanopy"),TEXT("Chult Canopy Ruins")},
         {TEXT("ChultBridge"),TEXT("Chult Bridge")},{TEXT("ChultFarBank"),TEXT("Chult Far Bank")},{TEXT("ChultGiants"),TEXT("Chult Giant Trees")},
-        {TEXT("ChultGiantCanopy"),TEXT("Chult Giant Canopy (dev)")},{TEXT("ChultDeepJungle"),TEXT("Chult Deep Jungle")}};
+        {TEXT("ChultGiantCanopy"),TEXT("Chult Giant Canopy (dev)")},{TEXT("ChultDeepJungle"),TEXT("Chult Deep Jungle")},{TEXT("ChultTemple"),TEXT("Chult Temple")}};
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
     {
         Yaw=-1000;
@@ -45,8 +45,8 @@ namespace
         // By the bridge on the near bank: a death there (not in the gorge) is the landing's.
         if(Point==TEXT("ChultBridge")){Location=ChultBridgeSpawn(false);Recovery=AChultLanding::Entrance();Yaw=ChultBridgeRespawnYaw();return true;}
         const EChultUpriverSpawn Spawn=Point==TEXT("ChultFarBank")?EChultUpriverSpawn::FarBank:Point==TEXT("ChultGiants")?EChultUpriverSpawn::Giants:
-            Point==TEXT("ChultGiantCanopy")?EChultUpriverSpawn::GiantCanopy:EChultUpriverSpawn::DeepJungle;
-        if(Point!=TEXT("ChultFarBank")&&Point!=TEXT("ChultGiants")&&Point!=TEXT("ChultGiantCanopy")&&Point!=TEXT("ChultDeepJungle"))return false;
+            Point==TEXT("ChultGiantCanopy")?EChultUpriverSpawn::GiantCanopy:Point==TEXT("ChultTemple")?EChultUpriverSpawn::Temple:EChultUpriverSpawn::DeepJungle;
+        if(Point!=TEXT("ChultFarBank")&&Point!=TEXT("ChultGiants")&&Point!=TEXT("ChultGiantCanopy")&&Point!=TEXT("ChultDeepJungle")&&Point!=TEXT("ChultTemple"))return false;
         Location=ChultUpriverSpawn(Spawn);Yaw=ChultUpriverSpawnYaw(Spawn);
         // Up in the first giant (no way up there yet but the dev checkpoint): a death returns him below.
         Recovery=Spawn==EChultUpriverSpawn::GiantCanopy?ChultUpriverSpawn(EChultUpriverSpawn::Giants):Location;

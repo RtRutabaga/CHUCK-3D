@@ -53,6 +53,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS trees=12 chains=11 .*lianas=1 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_LAYOUT failures=0 .* missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 .*stakes=8 serpents=2 stelae=4 .*missing_assets=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
@@ -75,7 +77,7 @@ $pathLog=Join-Path $evidence ('verify-chult-path-'+(Get-Date -Format 'yyyyMMdd-H
 $pathProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPathReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pathLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($pathProcess.ExitCode -or !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=0 views=6' -Quiet) -or
-   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=9' -Quiet)) {
+   !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=10' -Quiet)) {
     throw "Ancient jungle road verification failed. Inspect $pathLog"
 }
 # Upriver (Claude, 2026-10-15): the extended far bank, source fall, giant trees and deep jungle in cooked views.
@@ -84,6 +86,14 @@ $upriverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest',
 if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_REVIEW_COMPLETE failures=0 views=6' -Quiet)) {
     throw "Upriver verification failed. Inspect $upriverLog"
+}
+# The temple exterior (Claude, 2026-10-15): cooked views, then the real character
+# runs up the pyramid's stair to the summit and steps into the doorway.
+$templeLog=Join-Path $evidence ('verify-chult-temple-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$templeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3' -Quiet)) {
+    throw "Temple verification failed. Inspect $templeLog"
 }
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }

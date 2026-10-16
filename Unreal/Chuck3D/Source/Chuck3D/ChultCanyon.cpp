@@ -5,6 +5,7 @@
 #include "ChultExpansion.h"
 #include "ChultGorge.h"
 #include "ChultUpriver.h"
+#include "ChultTemple.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -67,7 +68,8 @@ float ChultCanyonGroundZ(const FVector& P)
 {
     if(OldFloor(P))return ChultExpansionGroundZ(P);
     // Upriver (2026-10-15), the ground is level under each giant canopy tree.
-    return ChultRiverGroundZ(P,ChultWatercourseGroundZ(P,ChultUpriverGroundZ(P,ChultCanyonBaseZ(P))));
+    // The temple plaza (2026-10-15) is level.
+    return ChultRiverGroundZ(P,ChultWatercourseGroundZ(P,ChultTempleGroundZ(P,ChultUpriverGroundZ(P,ChultCanyonBaseZ(P)))));
 }
 void BuildChultCanyon(AActor* Owner)
 {

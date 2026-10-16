@@ -59,4 +59,4 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 
 - The T-rex: its territory is the giant stretch (S 35500–52000, `InChultGiantReserve` is the canopy's corridor). The road and open floor give it room; the canopy is out of reach.
 - The golden cigarette (stamina lock): place it so the lock carries a climb up the first giant's trunk; then the dev checkpoint stops being the only way up.
-- The temple beyond S≈63400: the floor ends at 64000 with the old boundary rise; extend `ChultFarFloorEnd` and the road when it is built.
+- The temple: built the same day beyond S=64500 ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); the floor now ends at S=92000 and the road runs up its avenue.

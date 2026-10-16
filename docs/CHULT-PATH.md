@@ -34,3 +34,5 @@ results, promotion and limitations are recorded in HANDOFF rather than implied
 by the existence of these checks.
 
 > **2026-10-15 (Claude), upriver:** the far road continues from S=27600 to S=63400 along `ChultUpriverRoadT`, past the river's head, beside the giant trees and through the deep jungle, with three more real walks ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Its rules and the near road are unchanged.
+
+> **2026-10-15 (Claude), temple:** the far road now ends at the foot of the temple's stair, straight up the avenue between the skull stakes ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); one more walk there.

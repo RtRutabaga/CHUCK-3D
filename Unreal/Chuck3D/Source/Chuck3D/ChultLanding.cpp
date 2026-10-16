@@ -13,6 +13,7 @@
 #include "ChultVista.h"
 #include "ChultPath.h"
 #include "ChultUpriver.h"
+#include "ChultTemple.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -383,6 +384,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultVista(this,C);
     Failures+=CheckChultPath(this,C);
     Failures+=CheckChultUpriver(this,C);
+    Failures+=CheckChultTemple(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -441,6 +443,7 @@ void AChultLanding::VerifyAndCapture()
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleReview"))){ReviewChultTemple(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();

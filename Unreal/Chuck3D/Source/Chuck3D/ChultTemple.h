@@ -1,0 +1,27 @@
+#pragma once
+#include "CoreMinimal.h"
+class AActor;
+class AChuckCharacter;
+
+// The ancient temple's exterior (Claude, 2026-10-15; docs/CHULT-TEMPLE.md),
+// after the 2D game's Chult map 5 (chult_temple.txt): a Mesoamerican stepped
+// pyramid of four talud-tablero terraces, a broad stair walled in by
+// balustrades that end in serpent heads at plaza level, a summit house with
+// a dark doorway (the interior, Phase 6, is not built) and a roof comb, eight
+// skull stakes lining the avenue to it, stelae and fallen carved blocks on a
+// plaza framed by the deep jungle. It stands at the upriver valley's end.
+// Coordinates are local to Chult's FloorOrigin; S and T the canyon frame.
+
+// The plaza's level ground and the road's end at the stair's foot.
+float ChultTempleGroundZ(const FVector& Local,float Base);
+bool InChultTempleReserve(const FVector& Local,float Margin=0);
+float ChultTempleRoadEndS();
+// Standing at the head of the avenue facing the pyramid (world, capsule centre).
+FVector ChultTempleSpawn();
+float ChultTempleSpawnYaw();
+
+void BuildChultTemple(AActor* Owner);
+int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck);
+// -ChuckChultTest -ChuckTempleReview: cooked views, then the real character
+// walks the avenue, climbs the stair and steps into the doorway; then quits.
+void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures);

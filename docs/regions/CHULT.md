@@ -12,6 +12,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Upriver expansion requested October 15, 2026 (Claude):** extend the playable far bank beyond the old path end with the ancient road, push the vista back, and add taller brachiation trees for a later T-rex that can only be avoided in the canopy (reached later with the golden cigarette's stamina lock), then dense jungle before the later temple (not built). New areas get spawn points; every spawn point gets a Dev Checkpoint. Layout and checks: [../CHULT-UPRIVER.md](../CHULT-UPRIVER.md).
 
+**Temple exterior requested October 15, 2026 (Claude):** "build the temple exterior, similar to 2d game", after the 2D Chult map 5. Exterior only; the interior waits. Layout and checks: [../CHULT-TEMPLE.md](../CHULT-TEMPLE.md).
+
 ## Direction and sources
 
 **Ancient jungle path remnants authorized October 15, 2026:** the user requests a free resource for an overgrown ancient road from the cliffs behind the landing, through the landing and raptor territory, aligned to both ends of the bridge, then following the far river to its current end. Keep the road on dry banks; preserve the bridge crossing and future upstream expansion. Contract: [../CHULT-PATH.md](../CHULT-PATH.md).

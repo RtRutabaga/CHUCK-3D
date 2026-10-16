@@ -1,0 +1,43 @@
+# Chult — the temple exterior
+
+User request, October 15, 2026 (Claude): "build the temple exterior, similar to 2d game". Only the exterior: the interior (the 2D game's Phase 6 dungeon) is not built.
+
+## The 2D direction
+
+Read-only sources: `docs/development/PHASE-5.md` §11–12 (Chult Map 5, temple exterior) and `chuck/chuck/assets/maps/chult_temple.txt` with its legend in `src/world/tilemap.py`. The map is a Mesoamerican stepped pyramid: four talud-tablero terraces, a broad stair walled in by sloping balustrades that end in serpent heads at plaza level, a house with a dark doorway on the summit (the Phase 6 boundary) and a roof comb over it, eight skull stakes lining the approach avenue, four stelae, fallen ruin fragments, ferns and leaf litter, the plaza closed in by dense jungle. The phase notes ask for it to feel very large relative to Chuck, weathered and overgrown, with an obvious, accessible dark entrance, and a drop in pressure: no combat there.
+
+## Layout (`ChultTemple.cpp`)
+
+At the end of the upriver valley ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)); the far bank's floor (`ChultFarFloorEnd`) now runs to S=92000. Canyon frame S toward the pyramid, T across.
+
+| S (cm) | What is there |
+| --- | --- |
+| 64500 | The deep jungle opens onto a level plaza (S 64500–91500, |T| ≤ 56 m, blended over 15 m into the ground round it). The **Chult Temple** spawn stands at S=65200 on the avenue, facing the pyramid. |
+| 66500–71900 | The avenue: the old road runs up its middle; four pairs of skull stakes 10.4 m apart, the skulls looking across it; two pairs of carved stelae with altars 15 m off it. |
+| 72000–76800 | Plaza with fallen carved blocks and ferns thickening toward the jungle. |
+| 74550–74750 | The two serpent heads at the balustrades' feet, jaws open toward the avenue. |
+| 74812–77312 | The stair: 125 steps (16 cm risers, 20 cm treads, 6 m wide, 39°) between balustrades 1 m above its noses. |
+| 76000–80400 | The pyramid: 44 m square, four terraces of 5 m (a 3.5 m sloping talud, then a 1.5 m tablero: a plastered panel divided into framed bays by stone ribs between two stone bands; the band's mossy top is a 2.9 m walkable ledge). The summit platform is 17.8 m across, 20 m up. |
+| 77750–78850 | The summit house: a dark doorway (2.4 × 2.6 m) into a dark vestibule, a corniced roof with a plaster frieze, a pierced roof comb behind; glyphs over the lintel. Top of the comb about 30 m above the plaza. |
+
+Growth: ferns and shrubs on every ledge (the summit mostly bare), small trees clinging to two upper corners, hanging moss over the tablero edges, mist round the foot. The jungle round the plaza and behind the pyramid is `ChultUpriver.cpp`'s, from its own random stream (the earlier jungle keeps its draws); `InChultTempleReserve` keeps it off the avenue, plaza and pyramid.
+
+Materials, all existing: the ruins' world-aligned `M_RuinStone`/`M_RuinMoss`, `M_WeatheredPlaster` (panels, frieze, glyphs, fangs), `M_Plaster` (skulls), `M_Dark` (doorway, throats, eyes), `M_FallBark` (stakes), `M_ChultHangingMoss`. No new assets or installations.
+
+## Walking
+
+The pyramid, balustrades, house, stakes, stelae and blocks are solid. Chuck steps only 4 cm, so the visible steps have no collision; a hidden ramp through the middle of each tread is the walking surface (39°, within his 45° limit), flush with the plaza at the foot and the platform at the top. The terraces' ledges and the balustrades' tops are walkable too. The doorway admits him into the vestibule (3 m deep); nothing lies beyond yet.
+
+## Spawn, deaths, checkpoint
+
+`EChultUpriverSpawn::Temple` / `ChultTempleSpawn()`. A death on the far bank from S≈64400 on returns him to it (before it, the deep jungle's). Dev Checkpoints has **Chult Temple**; `Verify-Menu.ps1` drives all 15 points.
+
+## Verification
+
+- `-ChuckChultTest`: `CHUCK_CHULT_TEMPLE` (build: 4 tiers, 125 steps, 8 stakes, 2 serpents, 4 stelae, missing assets 0) and `CHUCK_CHULT_TEMPLE_CHECK`: the plaza level at 207 probes, the stair's surface under each tread line and a capsule sweep up it (69 probes), the vestibule's standing room, an open avenue and summit-to-door path, the spawn.
+- `-ChuckChultTest -ChuckTempleReview`: six cooked views (`Chult/Temple*.png`), then the real character runs from the plaza up the stair to the summit and into the doorway (`CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3`).
+- The road gains a walk along the avenue (10 walks).
+
+## Later
+
+The interior (Phase 6) begins at the vestibule's dark back wall. The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.

@@ -3,6 +3,7 @@
 #include "ChultExpansion.h"
 #include "ChultRiver.h"
 #include "ChultUpriver.h"
+#include "ChultTemple.h"
 #include "ChultLandform.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -107,7 +108,7 @@ void BuildChultPath(AActor* Owner)
     for(float S=8000;S<=27600;S+=200)Far.Add(ChultCanyonFrame(S,RiverCenter(S)-RiverWidth(S)-650));
     // Upriver (Claude, 2026-10-15): on past the river's head, under the giant
     // trees and through the deep jungle to where the temple will stand.
-    for(float S=28000;S<=ChultFarFloorEnd-600;S+=400)Far.Add(ChultCanyonFrame(S,ChultUpriverRoadT(S)));
+    for(float S=28000;S<=ChultTempleRoadEndS();S+=400)Far.Add(ChultCanyonFrame(S,ChultUpriverRoadT(S)));
     for(auto Guide:{Near,Far})
     {
         // Guide points describe the old road's direction, not a mandate to pave
@@ -231,7 +232,7 @@ namespace
         float NearLength=0;for(int32 I=1;I<Roads[0].Num();++I)NearLength+=FVector::Dist2D(Roads[0][I-1],Roads[0][I]);
         // Upriver (2026-10-15): across the old floor's end, among the giants, in the deep jungle.
         auto FarAt=[](float S){float L=0;const auto& Road=Roads[1];for(int32 I=1;I<Road.Num();++I){if(Frame(Road[I]).X>=S)return L;L+=FVector::Dist2D(Road[I-1],Road[I]);}return L;};
-        const TArray<float> Starts={1000,8200,16500,NearLength-1800,850,13000,FarAt(27700),FarAt(43000),FarAt(58000)};
+        const TArray<float> Starts={1000,8200,16500,NearLength-1800,850,13000,FarAt(27700),FarAt(43000),FarAt(58000),FarAt(68000)};
         C->SetActorHiddenInGame(false);if(auto* PC=Cast<APlayerController>(C->GetController()))PC->SetViewTarget(C);
         Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,C,Run,Starts]()
         {

@@ -5,6 +5,7 @@
 #include "ChultRiver.h"
 #include "ChultLandform.h"
 #include "ChultLanding.h"
+#include "ChultTemple.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -31,7 +32,9 @@ namespace
     float Ease(float U){U=FMath::Clamp(U,0.f,1.f);return U*U*(3-2*U);}
     FVector Frame(FVector P){P-=ChultCanyonFrame(0,0);return FVector(FVector::DotProduct(P,Along),FVector::DotProduct(P,Across),P.Z);}
     constexpr float GiantsFrom=35500,JungleFrom=52000;
-    constexpr float GiantsSpawnS=35400,JungleSpawnS=52900;
+    constexpr float GiantsSpawnS=35400,JungleSpawnS=52900,TempleSpawnS=65200;
+    // The upriver jungle's own scatter ends where the temple's plaza begins.
+    constexpr float JungleTo=64000;
     // The source fall: off a bedrock shelf on the valley's +T side, into the river's head pool.
     constexpr float FallS=ChultRiverHead,LipT=6190,FootT=5900,FallWidth=520;
     float FallTop(){return ChultRiverWaterZ(ChultRiverHead)+1370;}
@@ -68,7 +71,8 @@ float ChultUpriverRoadT(float S)
     const float Wander=-650+850*FMath::Sin((S-27600)/5200.f-.9f)+180*FMath::Sin((S-27600)/1700.f);
     const float Beside=GiantLineT(S)-1250+150*FMath::Sin(S/1700.f);
     const float Grove=Ease((S-34000)/1500)*(1-Ease((S-51800)/1500));
-    return FMath::Lerp(Bank,FMath::Lerp(Wander,Beside,Grove),Ease((S-27600)/2600));
+    // Then onto the temple's avenue, straight up its middle (2026-10-15).
+    return FMath::Lerp(FMath::Lerp(Bank,FMath::Lerp(Wander,Beside,Grove),Ease((S-27600)/2600)),0.f,Ease((S-62000)/2500));
 }
 
 const TArray<FVector2D>& ChultGiantTrunkSpots()
@@ -114,11 +118,13 @@ float ChultUpriverGroundZ(const FVector& P,float Base)
 FVector ChultUpriverSpawn(EChultUpriverSpawn Spawn)
 {
     if(Spawn==EChultUpriverSpawn::FarBank)return ChultBridgeSpawn(true);
+    if(Spawn==EChultUpriverSpawn::Temple)return ChultTempleSpawn();
     return AChultLanding::FloorOrigin()+SpawnLocal(Spawn);
 }
 float ChultUpriverSpawnYaw(EChultUpriverSpawn Spawn)
 {
     if(Spawn==EChultUpriverSpawn::FarBank)return ChultBridgeRespawnYaw();
+    if(Spawn==EChultUpriverSpawn::Temple)return ChultTempleSpawnYaw();
     if(Spawn==EChultUpriverSpawn::GiantCanopy){const auto& T=ChultGiantTrees()[0];return T.Limbs[0].Rotation().Yaw;}
     const float S=Spawn==EChultUpriverSpawn::Giants?GiantsSpawnS:JungleSpawnS;
     return (RoadPoint(S+300)-RoadPoint(S)).GetSafeNormal2D().Rotation().Yaw;
@@ -130,12 +136,13 @@ bool ChultUpriverRespawn(const FVector& DeathWorld,FVector& OutWorld)
     const FVector Local=DeathWorld-AChultLanding::FloorOrigin();
     if(!InChultRiverExtension(Local))return false;
     const float S=Frame(Local).X;if(S<4560)return false;
-    OutWorld=ChultUpriverSpawn(S<GiantsSpawnS-600?EChultUpriverSpawn::FarBank:S<JungleSpawnS-600?EChultUpriverSpawn::Giants:EChultUpriverSpawn::DeepJungle);
+    OutWorld=ChultUpriverSpawn(S<GiantsSpawnS-600?EChultUpriverSpawn::FarBank:S<JungleSpawnS-600?EChultUpriverSpawn::Giants:
+        S<TempleSpawnS-800?EChultUpriverSpawn::DeepJungle:EChultUpriverSpawn::Temple);
     return true;
 }
 bool IsChultUpriverSpawn(const FVector& World,float& OutYaw)
 {
-    for(EChultUpriverSpawn Spawn:{EChultUpriverSpawn::Giants,EChultUpriverSpawn::DeepJungle})
+    for(EChultUpriverSpawn Spawn:{EChultUpriverSpawn::Giants,EChultUpriverSpawn::DeepJungle,EChultUpriverSpawn::Temple})
         if(FVector::Dist(World,ChultUpriverSpawn(Spawn))<1){OutYaw=ChultUpriverSpawnYaw(Spawn);return true;}
     return false;
 }
@@ -180,7 +187,7 @@ void BuildChultUpriver(AActor* Owner)
     FRandomStream R(2026101561);int32 Outcrops=0;
     for(int32 I=0;I<46;++I)
     {
-        const float S=R.FRandRange(GiantsFrom,ChultFarFloorEnd-300),T=R.FRandRange(-6000,6000);const FVector P=ChultCanyonFrame(S,T);
+        const float S=R.FRandRange(GiantsFrom,JungleTo-300),T=R.FRandRange(-6000,6000);const FVector P=ChultCanyonFrame(S,T);
         if(FMath::Abs(T-ChultUpriverRoadT(S))<700||InChultGiantReserve(P,700))continue;
         const float Size=R.FRandRange(120,320);
         Rock.Rock(P+FVector(0,0,ChultCanyonGroundZ(P)+Size*.25f),FVector(Size*R.FRandRange(1,1.8f),Size*R.FRandRange(.8f,1.4f),Size*R.FRandRange(.5f,.9f)),R.FRandRange(0,360),I*1.3f);++Outcrops;
@@ -240,7 +247,7 @@ void BuildChultUpriver(AActor* Owner)
     const auto& Giants=ChultGiantTrees();
     for(int32 I=0;I<30000;++I)
     {
-        const float S=R.FRandRange(28000,ChultFarFloorEnd-100),T=R.FRandRange(-6400,6400);FVector P=ChultCanyonFrame(S,T);
+        const float S=R.FRandRange(28000,JungleTo-100),T=R.FRandRange(-6400,6400);FVector P=ChultCanyonFrame(S,T);
         const float River=ChultRiverDistance(P),W=ChultRiverWidth(S),Road=FMath::Abs(T-ChultUpriverRoadT(S));
         if(River<W+160||Road<150||InRocks(P,0))continue;
         bool Clear=true;for(const FVector& Spawn:Spawns)Clear&=FVector::Dist2D(P,Spawn)>450;
@@ -263,6 +270,28 @@ void BuildChultUpriver(AActor* Owner)
         const int32 Type=I%7;
         Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type<6?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),P,R.FRandRange(1.5,Deep?3.f:2.6f)*(Type<4?1:.65f),Yaw);++Plants;
     }
+    // The deep jungle round the temple's plaza and behind the pyramid (2026-10-15),
+    // from its own stream so the earlier jungle keeps every draw.
+    {
+        FRandomStream Up(2026101592);
+        for(int32 I=0;I<24000;++I)
+        {
+            const float S=Up.FRandRange(JungleTo,ChultFarFloorEnd-100),T=Up.FRandRange(-6400,6400);FVector P=ChultCanyonFrame(S,T);
+            if(InChultTempleReserve(P,0)||(FMath::Abs(T-ChultUpriverRoadT(S))<150&&S<JungleTo+800))continue;
+            P.Z=ChultCanyonGroundZ(P)-3;const float Yaw=Up.FRandRange(0,360);
+            if(I%5==0&&!InChultTempleReserve(P,700))
+            {
+                const float Scale=Up.FRandRange(2.f,3.1f);
+                Place(TEXT("SM_ChultIslandTree"),P,Scale,Yaw);Place(TEXT("SM_ChultIslandTrunkCollision"),P,Scale,Yaw,true,true);++Trees;
+                if(I%15==0){Place(TEXT("SM_FallPalm"),P+FVector(150,40,0),Up.FRandRange(1.3f,1.9f),Yaw);++Palms;}
+                continue;
+            }
+            const int32 Type=I%7;
+            Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type<6?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),P,Up.FRandRange(1.5f,3.f)*(Type<4?1:.65f),Yaw);++Plants;
+        }
+    }
+    // The temple (ChultTemple.cpp).
+    BuildChultTemple(Owner);
     // Spray at the pool, and the deep jungle's low mist.
     TArray<TPair<FVector,float>> Mists={{FallPoint(.95f),1.2f},{ChultCanyonFrame(55000,-3000,1500),9},{ChultCanyonFrame(60000,2500,1600),9},{ChultCanyonFrame(44000,4500,1200),7}};
     for(const auto& Mist:Mists)
