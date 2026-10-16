@@ -2,6 +2,16 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 16 — dinosaurs: feet, gait, hide, sound links (Claude)
+
+- **Request:** "currently the raptors kind of float sometimes, make their walking look better, also apply to t-rex if needed. then make both raptors and the t-rex look better, less glossy and fake. then look up and paste links for download sounds for the dinosaur effects to use". Base `7d153f2`, delivered `1640622` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF, CHULT-RAPTOR.md, CHULT-TREX.md, CHULT-DINO-SOUNDS.md.
+- **Contract compatibility:** no rig, clip, socket or asset rename; the clips are unchanged. The raptor and T-rex meshes now use `UDinoAnimInstance` instead of single-node playback. `Play()`/`Locomotion()` keep their signatures. New test getters `GetFootGap`/`GetMaxFootGap`/`GetFootGapSamples`/`ResetFootGap`. MI_Raptor*/MI_TRex* now have M_DinoSkin as parent. `import_raptor.py`/`import_trex.py` keep that parent, but they reset the region values, so run `build_dino_skin.py` after them.
+- **Lesson:** my first Blender re-import measurements of the clips were wrong (foot positions and gait symmetry); the engine dump was right. Measure clips in-engine.
+- **Tools:** Blender 4.5.14 (one read-only measurement script and the texture generator), UnrealEditor-Cmd Python ×3 (material rebuilt twice: a vertex-only node, then a parameter), Build.bat ×~12, about 14 uncooked test runs, Build-Game.ps1 -Package ×2, Promote-Build ×1. Web searches on freesound.org and opengameart.org; nothing downloaded or installed. One mistake: I started Verify-Package while Build-Game.ps1 was already verifying, so two runs overlapped; I discarded both and rebuilt.
+
+Next part of the work can be done here.
+
 ## October 16 — climbing sounds (Claude)
 
 - **Request:** "Currently when Chuck climbs the tall brachiation tree on the power up golden leaf, it's silent, add climbing sound effect while he's climbing". Base `0c734a2`, delivered `67c612f` (+ this handoff commit).
