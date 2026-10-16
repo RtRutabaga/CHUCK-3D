@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 15 — the T-rex under the giant trees (Claude)
+
+- **Request:** "Add the t-Rex to the tall brachiation trees before section, use free resource the help". Base `9f24f70` (plus Codex's 05afef6/3642047 landing mid-session), delivered `8355a32`, `17f3de3` (+ this handoff).
+- **Approval:** the single GLB download was approved by the user in chat (filename, source, size given). No installations.
+- **Built, tests, launcher, open state:** see HANDOFF. The exit-liana fix is built as `Builds/ChultTRexExitCandidate` but unverified/unpromoted because the golden-leaf test failed under contention with the user's running game; the launcher holds 8355a32.
+- **Tools:** Blender 4.5.14 (`build_trex.py`), UnrealEditor-Cmd Python imports (logs in `Saved/Logs`, copy `Local/trex-import-assets.log`), Build.bat ×4, Build-Game.ps1 ×2, Verify-Menu, Promote-Build ×1.
+
+Next part of the work can be done here.
+
 ## October 15 — the temple exterior (Claude)
 
 - **Request:** "build the temple exterior, similar to 2d game". Base `14e0c43`, delivered `70aac53` (+ this handoff commit). Region-setting work done by Claude at the user's direct request.
