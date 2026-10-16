@@ -55,6 +55,18 @@ ACigarettePickup* ACigarettePickup::Spawn(UWorld* World, const FVector& From, co
     return Pickup;
 }
 
+ACigarettePickup* ACigarettePickup::SpawnGolden(UWorld* World, const FVector& At)
+{
+    auto* Pickup = Spawn(World, At, FVector::ZeroVector, At.Z - .8f);
+    if (!Pickup) return nullptr;
+    Pickup->bGolden = true;
+    Pickup->SetActorRotation(FRotator(0, 35.f, 0)); // a placed cigarette lies flat, never pitched into the soil
+    auto* Gold = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Pickups/M_GoldenLeaf.M_GoldenLeaf"));
+    for (int32 I = 0; I < Pickup->Mesh->GetNumMaterials(); ++I) Pickup->Mesh->SetMaterial(I, Gold);
+    Pickup->SetActorScale3D(FVector(2.4f));
+    return Pickup;
+}
+
 void ACigarettePickup::Burst(UWorld* World, const FVector& Base, int32 Count, float Ground)
 {
     const float Start = FMath::FRandRange(0.f, 360.f);
@@ -67,7 +79,7 @@ void ACigarettePickup::Burst(UWorld* World, const FVector& Base, int32 Count, fl
 int32 ACigarettePickup::CountInWorld(UWorld* World)
 {
     int32 Count = 0;
-    for (TActorIterator<ACigarettePickup> It(World); It; ++It) if (!It->IsActorBeingDestroyed()) ++Count;
+    for (TActorIterator<ACigarettePickup> It(World); It; ++It) if (!It->IsActorBeingDestroyed() && !It->bGolden) ++Count;
     return Count;
 }
 
@@ -91,11 +103,24 @@ void ACigarettePickup::Tick(float DeltaSeconds)
     if (Age < CollectDelay) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Chuck) return;
+    if (bCollected)
+    {
+        if (Chuck->GetResetGeneration() == CollectedGeneration) return;
+        bCollected = false;
+        SetActorHiddenInGame(false);
+    }
     const FVector To = Chuck->GetActorLocation() - GetActorLocation();
     if (To.Size2D() <= CollectRadius && FMath::Abs(To.Z) < 60.f)
     {
-        Chuck->AddCigarettes(1);
+        if (bGolden)
+        {
+            Chuck->LockStamina(AChuckCharacter::GoldenLeafDuration);
+            bCollected = true; CollectedGeneration = Chuck->GetResetGeneration();
+            SetActorHiddenInGame(true);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_GOLDEN_LEAF collected=1 duration=%.0f"), AChuckCharacter::GoldenLeafDuration);
+        }
+        else Chuck->AddCigarettes(1);
         if (PickupSounds.Num()) UGameplayStatics::PlaySound2D(this, PickupSounds[FMath::RandRange(0, PickupSounds.Num() - 1)], PickupVolume, FMath::FRandRange(.95f, 1.05f));
-        Destroy();
+        if (!bGolden) Destroy();
     }
 }

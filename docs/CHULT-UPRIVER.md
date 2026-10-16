@@ -20,7 +20,7 @@ Ground is `ChultCanyonGroundZ` everywhere (the old base terrain, now `ChultCanyo
 
 - 12 trees at S=36600+1300·I, alternating 3.8 m either side of a gently winding line (13.5–17 m apart), crotches **15.1–16.9 m** up (the old grove: 6.5–7.6 m), girth 1.24–1.40, leaders 11.3–13.7 m above the crotch, buttresses 1.8 times as tall.
 - 11 chains tree to tree (94 grips, the same 98 cm grip height over the limbs, 1.35 m spacing and 1.8 m branch gaps), 36 spurs (146 grips): 240 registered grips.
-- Only the **last** tree has a liana (the way down at the far end). The first has none and the trunks are far beyond a wall run's three steps: up there is for the stamina lock, later. The canopy can be tested now from the **Chult Giant Canopy (dev)** checkpoint.
+- Only the **last** tree has a liana (the way down at the far end). The first has none and the trunks are far beyond a wall run's three steps: the golden cigarette now provides the way up ([CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md)). The canopy can be tested now from the **Chult Giant Canopy (dev)** checkpoint.
 - `InChultGiantReserve` is the line's 10 m corridor: tall trees and outcrops keep out of it, and understory keeps 6.5 m from every trunk.
 
 ## The road (`ChultPath.cpp`)
@@ -58,5 +58,5 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 ## Later
 
 - The T-rex: its territory is the giant stretch (S 35500–52000, `InChultGiantReserve` is the canopy's corridor). The road and open floor give it room; the canopy is out of reach.
-- The golden cigarette (stamina lock): place it so the lock carries a climb up the first giant's trunk; then the dev checkpoint stops being the only way up.
+- The golden cigarette now provides the way up the first giant: [CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md).
 - The temple: built the same day beyond S=64500 ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); the floor now ends at S=92000 and the road runs up its avenue.

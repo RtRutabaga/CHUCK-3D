@@ -166,20 +166,11 @@ Preserve the original final-chamber adventurer/beholder tableau, scripted Fireba
 
 Confirmed user direction: occasional **individual golden cigarettes**, named **Premium Buhetian Halfling Leaf**, appear starting in Chult and continue throughout the game. For their duration they lock stamina at maximum and allow continuous wall climbing. This is a temporary power-up, not permanent character progression.
 
-Reuse `AChuckCharacter::LockStamina(Seconds)` and `IsStaminaLocked()`. The existing hook already holds stamina full, allows continuous upward wall running and extends the side wall-run arc. Keep ordinary traversal and animation; the pickup does not unlock a new move. Controller behavior and any changes to the hook remain Claude's scope.
+**October 15 implementation, assigned by the user to the active agent:** one placed golden cigarette at the first upriver giant tree, automatic collection, a **45-second gameplay timer**, maximum-stamina lock through the existing `AChuckCharacter::LockStamina` hook, and a gold stamina ring/paw halo with the supplied name and countdown. Repeat pickups refresh rather than add time; death/reset clears the effect and restores the placed pickup. It grants no ordinary sanity/currency reward. The normal ground route remains available. No persistent save system exists yet.
 
-Proposed pickup design for later implementation:
+The first giant's approach lies between its branch roots, with intersecting buttresses omitted. The locked climb follows the trunk's changing surface normal and taper, then uses the existing ledge pull-up and brachiation catch. See [../CHULT-GOLDEN-LEAF.md](../CHULT-GOLDEN-LEAF.md) for the implementation contract and HANDOFF for actual verification.
 
-- A visibly golden single cigarette in the world, distinct from ordinary cigarette grass/jar rewards. Proposed activation is immediate on collection, following the existing pickup interaction; no inventory or equip step is required.
-- Occasional authored placements near inviting climbing surfaces or optional vertical shortcuts, including later regions. The first placement should sit on safe reachable ground with a clear climb nearby. Do not require a pickup already above the climb it is meant to assist.
-- The golden pickup grants the timed effect separately from ordinary sanity/currency rewards. No additional sanity, currency or damage benefit is proposed.
-- Show a restrained gold stamina-ring treatment and readable remaining duration; this UI is proposed, not implemented. Duration is not yet chosen. Select it through a representative climb trial, with enough time to understand the effect and reach stable footing.
-- Inspect current repeat-pickup behavior before adopting refresh/extension semantics. Do not assume effects stack. Define expiry during a climb, respawn/reset and later save/load behavior before implementation; expiry must not cause an unavoidable fall or softlock.
-- Leave the main route traversable without the effect. Golden cigarettes can make climbs continuous, improve flow and open shortcuts without turning pickup collection into a permanent progression gate.
-
-The waterfall cove does not require a golden cigarette and is not its dedicated reward location. These are independently useful parts of the exploration plan.
-
-Codex handles placement and pickup/tooling integration within agreed ownership; Claude handles character effect, presentation/animation and HUD changes. Add the first golden pickup to the first-jungle milestone once its duration and lifecycle are specified. No pickup asset, HUD or new timed-effect test has been implemented in this documentation pass.
+Later regions can place occasional cigarettes near reachable climbing surfaces or optional vertical shortcuts; their plans still require user approval. The waterfall cove remains independent of this reward and requires no golden cigarette.
 
 ## Cutscene-to-setting handoff for Claude
 
@@ -255,3 +246,7 @@ Replace the uniform overhanging ring with fractured buttresses, varied strata, o
 Place a small cleft-fed waterfall at the eastern edge near (21500,6000). Its pool feeds a shallow descending meander west toward the outer canopy, then northeast along the established creek corridor. Continue across the canyon's near bank to a side notch at T=-1800, away from the bridge's entry at T=0. Lower only that local drainage channel so water descends continuously into the gorge; do not move bridge planks/grips or add a crossing. A narrow broken water ribbon, lip foam and restrained mist represent the larger drop. The next expansion/bridge corridor remains open. No swimming, water force, NPC/dialogue, checkpoint, pickup or character changes.
 
 Verify water/bed alignment and monotonic fall, exact source/outlet continuity, ford/ground/bridge/canopy clearances, physical cliff blocking and real walks. Review cooked close and wide vegetation/rock, source falls, stream and canyon outfall views before the final package suite and launcher promotion. Actual results belong in HANDOFF.
+
+## October 15 — golden leaf (authorized)
+
+The user now authorizes individual Premium Buhetian Halfling Leaf golden cigarettes, a timed maximum-stamina lock, continuous wall climbing and a golden stamina display, with one pickup by the first giant tree before the temple. This supersedes the earlier pickup deferral. Contract and lifecycle: [CHULT-GOLDEN-LEAF.md](../CHULT-GOLDEN-LEAF.md).

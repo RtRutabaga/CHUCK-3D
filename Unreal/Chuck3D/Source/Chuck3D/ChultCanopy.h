@@ -70,3 +70,7 @@ int32 CheckChultGiantCanopy(AActor* Owner, AChuckCharacter* Chuck);
 void StartChultGiantCanopyReview(AActor* Owner, AChuckCharacter* Chuck);
 // The giants' trees, chains and spurs (local), for spawn points and views.
 const TArray<FChultCanopyTree>& ChultGiantTrees();
+
+FVector ChultGoldenLeafPosition();
+FVector ChultGoldenClimbOut();
+void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* Chuck);

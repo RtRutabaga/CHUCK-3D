@@ -710,6 +710,15 @@ void ADockGameMode::StartPlay()
             for(TActorIterator<AChultLanding> It(World);It && Chuck;++It) {StartChultGiantCanopyReview(*It,Chuck);break;}
         },4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckGoldenLeafTest")))
+    {
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle GoldenCheck;
+        World->GetTimerManager().SetTimer(GoldenCheck,[World](){
+            auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
+            for(TActorIterator<AChultLanding> It(World);It && C;++It) {StartChultGoldenLeafReview(*It,C);break;}
+        },4.f,false);
+    }
     bSmokeTest = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmokeTest"));
     if(bSmokeTest)
     {
@@ -3784,6 +3793,7 @@ void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
     // shines purple for a moment; charging: the emblem is dimmed.
     if(!StaminaEmblem) StaminaEmblem=LoadObject<UTexture2D>(nullptr,TEXT("/Game/Art/UI/T_StaminaEmblem.T_StaminaEmblem"));
     const float Stamina=Chuck->GetStamina();
+    const bool Golden=Chuck->IsStaminaLocked();
     const float Outer=6.f*Px;
     const FVector2D Centre(Canvas->SizeX-4*Px-Outer,Top+Outer);
     constexpr float Start=2.f, End=341.f;
@@ -3793,8 +3803,9 @@ void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
         const float A=FMath::DegreesToRadians(Start+(End-Start)*T);
         return FVector2D(Centre.X+R*FMath::Sin(A),Centre.Y-R*FMath::Cos(A));
     };
-    const auto Colour=[](float T)
+    const auto Colour=[Golden](float T)
     {
+        if(Golden) return FMath::Lerp(FLinearColor(1.f,.72f,.08f),FLinearColor(1.f,.38f,.015f),T);
         const FLinearColor Head(FColor(217,61,254)), Mid(FColor(150,32,252)), Tail(FColor(172,36,254));
         return T<.5f ? FMath::Lerp(Head,Mid,T*2.f) : FMath::Lerp(Mid,Tail,(T-.5f)*2.f);
     };
@@ -3831,6 +3842,17 @@ void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
     // A faint track for the part that's spent, then what's left.
     Band(1.f,0.f,[](float){ return FLinearColor(.24f,.08f,.36f,.22f); },SE_BLEND_Translucent);
     Band(Stamina,0.f,[&](float T){ return Colour(T); },SE_BLEND_Translucent);
+    if(Golden)
+    {
+        const float Pulse=.65f+.15f*FMath::Sin(GetWorld()->GetTimeSeconds()*3.f);
+        Band(1.f,.7f*Px,[&](float T){FLinearColor C=Colour(T)*Pulse;C.A=1;return C;},SE_BLEND_Additive);
+    }
+    if(Golden)
+    {
+        const FString Label=FString::Printf(TEXT("Premium Buhetian Halfling Leaf  %.0fs"),FMath::CeilToFloat(Chuck->GetStaminaLockRemaining()));
+        float W=0,H=0;Canvas->StrLen(GEngine->GetSmallFont(),Label,W,H);
+        DrawText(Label,FLinearColor(1.f,.8f,.3f),Canvas->SizeX-W*.85f-4*Px,Top+2*Outer+2*Px,GEngine->GetSmallFont(),.85f);
+    }
     // Just full again: a brief purple shine over the ring and the emblem.
     const float Since=GetWorld()->GetTimeSeconds()-Chuck->GetStaminaFullAt();
     const float Shine=Stamina>=1.f && Since>=0.f && Since<.9f ? FMath::Sin(PI*Since/.9f) : 0.f;
@@ -3838,7 +3860,7 @@ void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
     if(StaminaEmblem)
     {
         const float Size=Outer*1.6f;   // the emblem fills the ring's inner disc (320 of 400 in the icon)
-        const FLinearColor Ready=FMath::Lerp(FLinearColor::White,FLinearColor(FColor(226,150,255)),.4f*Shine);
+        const FLinearColor Ready=Golden ? FLinearColor(1.f,.8f,.3f) : FMath::Lerp(FLinearColor::White,FLinearColor(FColor(226,150,255)),.4f*Shine);
         const FLinearColor Tint=Stamina>=1.f ? Ready : FLinearColor(.85f,.85f,.88f,.55f);
         DrawTexture(StaminaEmblem,Centre.X-Size*.5f,Centre.Y-Size*.5f,Size,Size,0,0,1,1,Tint,BLEND_Translucent);
     }

@@ -257,6 +257,10 @@ public:
     static constexpr float LockedWallRunSpeed = 120.f;   // cm/s up
     static constexpr float LockedWallSideTime = 2.2f;    // s (unlocked: WallSideTime)
     static constexpr float LockedWallSideGravity = 235.f;   // cm/s2 (unlocked: WallSideGravity)
+    static constexpr float GoldenLeafDuration = 45.f;
+    uint32 GetResetGeneration() const { return ResetGeneration; }
+    float GetStaminaLockRemaining() const { return IsStaminaLocked() ? StaminaLockUntil - GetWorldTime() : 0.f; }
+    float GetWorldTime() const;
     void LockStamina(float Seconds);
     bool IsStaminaLocked() const;
     /** Run -> four-legged sprint pose blend (0..1). */
@@ -422,6 +426,7 @@ private:
     float SprintAirTime = 0;   // off the ground at a sprint, not leaping
     int32 SprintLeaps = 0;
     void SprintPressed() { TrySprint(); }
+    uint32 ResetGeneration = 0;
     float StaminaLockUntil = -1.f;
     void SpendStamina(float Cost);
     /** On the walls or swinging (wall jump flights included): stamina doesn't refill. */

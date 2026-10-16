@@ -21,6 +21,8 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     /** Spawn one flying out of a broken thing at From (Launch: initial velocity). */
     static ACigarettePickup* Spawn(UWorld* World, const FVector& From, const FVector& Launch, float GroundZ);
+    static ACigarettePickup* SpawnGolden(UWorld* World, const FVector& At);
+    bool IsGoldenAvailable() const { return bGolden && !bCollected; }
     // Pocketed when Chuck's centre comes this close (horizontal, cm), once it can be.
     static constexpr float CollectRadius = 26.f;
     static constexpr float CollectDelay = .35f;   // it visibly pops out first
@@ -38,4 +40,6 @@ private:
     float Ground = 0;
     float Age = 0;
     bool bLanded = false;
+    bool bGolden = false, bCollected = false;
+    uint32 CollectedGeneration = 0;
 };

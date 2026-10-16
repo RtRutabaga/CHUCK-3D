@@ -1,4 +1,5 @@
 #include "ChultCanopy.h"
+#include "CigarettePickup.h"
 #include "ChultLanding.h"
 #include "ChultCanyon.h"
 #include "ChultUpriver.h"
@@ -14,6 +15,7 @@
 #include "Camera/CameraComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Materials/MaterialInterface.h"
 #include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
@@ -592,6 +594,7 @@ void BuildGrove(AActor* Owner)
             for(int32 F=0;F<Count;++F)
             {
                 FButtress B{static_cast<float>(F*2*PI/Count+Seed+Rng.FRandRange(-.25f,.25f)),Rng.FRandRange(250,420)*T.TrunkScale,Rng.FRandRange(170,320)*Gv().ButtressHeight,Rng.FRandRange(11,18)};
+                if(ActiveGrove==1 && I==0 && FVector::DotProduct(YawDir(B.Yaw),ChultGoldenClimbOut())>.7f) continue;
                 if(FMath::Abs(FMath::FindDeltaAngleRadians(B.Yaw,LianaYaw))<FMath::DegreesToRadians(30.f)) continue;
                 bool Clear=true;
                 for(int32 K=1;K<=20;++K)
@@ -860,7 +863,31 @@ void BuildGrove(AActor* Owner)
 }
 }
 void BuildChultCanopy(AActor* Owner) {TGuardValue<int32> Guard(ActiveGrove,0);BuildGrove(Owner);}
-void BuildChultGiantCanopy(AActor* Owner) {TGuardValue<int32> Guard(ActiveGrove,1);BuildGrove(Owner);}
+FVector ChultGoldenClimbOut()
+{
+    const auto& T=ChultGiantTrees()[0];
+    // Between branch roots, away from the main leader behind the fork.
+    FVector Best=FVector::ZeroVector;float Score=-1;
+    for(int32 Deg=0;Deg<360;Deg+=2)
+    {
+        const FVector D=FRotator(0,Deg,0).Vector();float Clearance=1.f;
+        for(const FVector& Limb:T.Limbs) Clearance=FMath::Min(Clearance,1.f-static_cast<float>(FVector::DotProduct(D,Limb)));
+        Clearance=FMath::Min(Clearance,1.f+static_cast<float>(FVector::DotProduct(D,T.Limbs[0])));
+        if(Clearance>Score){Score=Clearance;Best=D;}
+    }
+    return Best;
+}
+FVector ChultGoldenLeafPosition()
+{
+    const auto& T=ChultGiantTrees()[0];
+    return AChultLanding::FloorOrigin()+T.Trunk+ChultGoldenClimbOut()*270.f+FVector(0,0,1.5f);
+}
+void BuildChultGiantCanopy(AActor* Owner)
+{
+    TGuardValue<int32> Guard(ActiveGrove,1);BuildGrove(Owner);
+    auto* Pickup=ACigarettePickup::SpawnGolden(Owner->GetWorld(),ChultGoldenLeafPosition());
+    if(Pickup) Pickup->SetOwner(Owner);
+}
 const TArray<FChultCanopyTree>& ChultGiantTrees() {TGuardValue<int32> Guard(ActiveGrove,1);return Canopy().Trees;}
 
 namespace
@@ -1314,3 +1341,107 @@ void StartGroveReview(AActor* Owner,AChuckCharacter* C,const int32 Grove)
 }
 void StartChultCanopyReview(AActor* Owner,AChuckCharacter* C) {StartGroveReview(Owner,C,0);}
 void StartChultGiantCanopyReview(AActor* Owner,AChuckCharacter* C) {StartGroveReview(Owner,C,1);}
+
+
+void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
+{
+    UWorld* W=Owner->GetWorld();
+    auto* PC=Cast<APlayerController>(C->GetController());
+    C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
+    struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0;bool Shot=false,Jumped=false;};
+    auto R=MakeShared<FRun>();R->Start=R->PhaseAt=W->GetTimeSeconds();
+    const auto T=ChultGiantTrees()[0];const FVector G=AChultLanding::FloorOrigin(),Out=ChultGoldenClimbOut();
+    C->ResetAtLocation(ChultGoldenLeafPosition()+Out*55+FVector(0,0,34));
+    C->SetActorRotation((-Out).Rotation());C->Recenter();C->SetStamina(.2f);
+    W->GetTimerManager().SetTimer(R->Timer,[W,C,R,T,G,Out]()
+    {
+        const float Now=W->GetTimeSeconds(),Age=Now-R->Start,Step=Now-R->PhaseAt;
+        const FVector P=C->GetActorLocation()-G;
+        if(Age>=R->NextLog && R->Phase<3)
+        {
+            R->NextLog=Age+1.f;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_PROGRESS t=%.1f phase=%d p=%s gait=%s v=%s out=%s fork=%s"),Age,R->Phase,*P.ToString(),C->GetGaitName(),*C->GetVelocity().ToString(),*Out.ToString(),*T.Fork.ToString());
+        }
+        auto Move=[&](FVector D){D=D.GetSafeNormal2D();C->SetTestStickWorld(D);C->AddMovementInput(D,1.f,true);};
+        if(R->Phase==5) Move(-Out);
+        auto Fail=[&](const TCHAR* Why){++R->Failures;UE_LOG(LogTemp,Error,TEXT("CHUCK_GOLDEN_FAIL %s phase=%d at=%s gait=%s"),Why,R->Phase,*P.ToString(),C->GetGaitName());};
+        if(R->Phase==0)
+        {
+            Move(-Out);
+            if(C->IsStaminaLocked())
+            {
+                if(C->GetStamina()<.999f || C->GetStaminaLockRemaining()<44.f) Fail(TEXT("activation"));
+                R->Phase=1;R->PhaseAt=Now;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_ACTIVATED remaining=%.2f"),C->GetStaminaLockRemaining());
+            }
+            else if(Step>4) {Fail(TEXT("collect"));R->Phase=99;}
+        }
+        else if(R->Phase==1)
+        {
+            Move(-Out);
+            if(Step>.45f && !R->Jumped) {R->Jumped=true;C->JumpPressed();}
+            R->Min=FMath::Min(R->Min,C->GetStamina());
+            if(!R->Shot && P.Z>T.Trunk.Z+650)
+            {
+                R->Shot=true;FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("GoldenLeaf_Climbing.png"),true,false);
+            }
+            if(P.Z>T.Fork.Z+30 && C->GetCharacterMovement()->IsMovingOnGround())
+            {
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_CLIMB seconds=%.2f height=%.1f stamina=%.3f remaining=%.2f"),Step,P.Z-T.Trunk.Z,R->Min,C->GetStaminaLockRemaining());
+                if(R->Min<.999f) Fail(TEXT("stamina"));
+                R->Phase=2;R->PhaseAt=Now;R->Jumped=false;R->Catches=C->GetSwingCatches();
+            }
+            else if(Step>25) {Fail(TEXT("climb_timeout"));R->Phase=99;}
+        }
+        else if(R->Phase==2)
+        {
+            TGuardValue<int32> Selected(ActiveGrove,1);
+            const FVector Target=G+Canopy().Chains[0].Paws[0];
+            Move(Target-C->GetActorLocation());
+            if(FVector::Dist2D(Target,C->GetActorLocation())<35 && Step>.3f && !R->Jumped) {R->Jumped=true;C->JumpPressed();}
+            if(C->GetSwingCatches()>R->Catches)
+            {
+                C->SetTestStick(FVector2D::ZeroVector);
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("GoldenLeaf_FirstGrip.png"),true,false);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_FIRST_GRIP remaining=%.2f"),C->GetStaminaLockRemaining());
+                R->Phase=3;R->PhaseAt=Now;R->Shot=false;
+            }
+            else if(Step>8) {Fail(TEXT("first_grip"));R->Phase=99;}
+        }
+        else if(R->Phase==3 && Step>.7f && !R->Shot)
+        {
+            R->Shot=true;
+            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("GoldenLeaf_FirstGrip.png"),true,false);
+        }
+        else if(R->Phase==3 && !C->IsStaminaLocked())
+        {
+            // Expiry restores the ordinary stamina drain. A second lock refreshes, never stacks.
+            C->SetStamina(.3f);C->LockStamina(2.f);C->LockStamina(1.f);
+            if(C->GetStamina()<.999f || C->GetStaminaLockRemaining()>2.01f || C->GetStaminaLockRemaining()<1.99f) Fail(TEXT("refresh"));
+            C->ResetAtLocation(ChultGoldenLeafPosition()+Out*70+FVector(0,0,34));
+            C->SetTestStick(FVector2D::ZeroVector);
+            if(C->IsStaminaLocked()) Fail(TEXT("reset_lock"));
+            R->Phase=4;R->PhaseAt=Now;
+        }
+        else if(R->Phase==4 && Step>.3f)
+        {
+            int32 Available=0;
+            for(TActorIterator<ACigarettePickup> It(W);It;++It) Available+=It->IsGoldenAvailable();
+            if(Available!=1) Fail(TEXT("pickup_reset"));
+            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("GoldenLeaf_PickupRestored.png"),true,false);
+            Move(-Out);R->Phase=5;R->PhaseAt=Now;
+        }
+        else if(R->Phase==5 && C->IsStaminaLocked())
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_RECOLLECT remaining=%.2f"),C->GetStaminaLockRemaining());R->Phase=99;
+        }
+        else if(R->Phase==5 && Step>4) {Fail(TEXT("recollect"));R->Phase=99;}
+        if(Age>65 && R->Phase!=99) {Fail(TEXT("suite_timeout"));R->Phase=99;}
+        if(R->Phase==99)
+        {
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_TEST failures=%d duration=45"),R->Failures);
+            R->Phase=100;
+            FTimerHandle Quit;W->GetTimerManager().SetTimer(Quit,[W](){if(auto* PC=W->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},.5f,false);
+        }
+    },.025f,true);
+}

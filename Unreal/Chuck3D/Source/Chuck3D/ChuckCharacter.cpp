@@ -417,6 +417,7 @@ void AChuckCharacter::RespawnAtAreaStart()
 }
 void AChuckCharacter::ResetAtLocation(const FVector& Location)
 {
+    ++ResetGeneration;
     GetCharacterMovement()->RemoveRootMotionSource(TEXT("ZombieImpact"));
     ImpactAt = -1;
     GetCharacterMovement()->StopMovementImmediately();
@@ -668,6 +669,8 @@ void AChuckCharacter::EndSprint(bool bShed)
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SPRINT end=%d shed=%d gait=%s at=%s air_s=%.2f stamina=%.3f"), Sprints, bShed ? 1 : 0, GetGaitName(), *GetActorLocation().ToString(), SprintAirTime, Stamina);
 }
+float AChuckCharacter::GetWorldTime() const { return GetWorld()->GetTimeSeconds(); }
+
 void AChuckCharacter::LockStamina(float Seconds)
 {
     StaminaLockUntil = FMath::Max(StaminaLockUntil, GetWorld()->GetTimeSeconds() + Seconds);
@@ -777,7 +780,7 @@ bool AChuckCharacter::TryEnterWallRun()
     {
         const FVector From = GetActorLocation() + FVector(0, 0, Height);
         bHit = GetWorld()->SweepSingleByChannel(Hit, From, From + Probe * (Reach - 4.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(4.f), Query)
-            && FMath::Abs(Hit.ImpactNormal.Z) <= .3f;
+            && Hit.ImpactNormal.Z >= -.3f && Hit.ImpactNormal.Z <= (IsStaminaLocked() ? .85f : .3f);
         if (bHit) { bFeetOnly = Height < -20.f; break; }
     }
     if (!bHit) return TryGrabEdge(Probe);
@@ -2332,7 +2335,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         FHitResult Hit;
         FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWallHold), false, this);
         const FVector Chest = Location + FVector(0, 0, 15);
-        const bool bWall = GetWorld()->LineTraceSingleByChannel(Hit, Chest, Chest - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 8.f), ECC_Visibility, Query);
+        const bool bWall = GetWorld()->LineTraceSingleByChannel(Hit, Chest, Chest - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + (IsStaminaLocked() ? 100.f : 8.f)), ECC_Visibility, Query);
+        if(bWall && IsStaminaLocked()) WallNormal=FVector(Hit.ImpactNormal.X,Hit.ImpactNormal.Y,0).GetSafeNormal();
         const bool bLetGo = !bWallAuto && FVector::DotProduct(StickWorld(), -WallNormal) < -.3f;
         FVector Edge; bool bRoom = false;
         const FVector Face = Location - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f);
@@ -2345,7 +2349,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             // Locked stamina: past the three steps he keeps climbing, steadily.
             float Up = 2.f * WallRunRise / WallRunTime * FMath::Max(0.f, 1.f - WallRunClock / WallRunTime);
             if (IsStaminaLocked()) Up = FMath::Max(Up, LockedWallRunSpeed);
-            Movement->Velocity = FVector(0, 0, Up) - WallNormal * 30.f;
+            const float Inward = IsStaminaLocked() ? FMath::Clamp(30.f + 12.f * (static_cast<float>(FVector::DotProduct(Chest-Hit.ImpactPoint,WallNormal)) - GetCapsuleComponent()->GetScaledCapsuleRadius() - .5f),30.f,240.f) : 30.f;
+            Movement->Velocity = FVector(0, 0, Up) - WallNormal * Inward;
         }
     }
     else if (Gait == EGait::Hang)
