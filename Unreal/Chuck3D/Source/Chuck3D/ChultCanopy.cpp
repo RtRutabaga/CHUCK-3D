@@ -1381,7 +1381,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
     UWorld* W=Owner->GetWorld();
     auto* PC=Cast<APlayerController>(C->GetController());
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
-    struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0;bool Shot=false,Jumped=false,AtFork=false;};
+    struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0,ClimbSounds=0;bool Shot=false,Jumped=false,AtFork=false;};
     auto R=MakeShared<FRun>();R->Start=R->PhaseAt=W->GetTimeSeconds();
     // -ChuckGoldenLeafTree=1: the same run up the second giant.
     int32 Tree=0;FParse::Value(FCommandLine::Get(),TEXT("ChuckGoldenLeafTree="),Tree);Tree=FMath::Clamp(Tree,0,ChultGoldenTrees-1);
@@ -1407,7 +1407,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
             if(C->IsStaminaLocked())
             {
                 if(C->GetStamina()<.999f || C->GetStaminaLockRemaining()<44.f) Fail(TEXT("activation"));
-                R->Phase=1;R->PhaseAt=Now;
+                R->Phase=1;R->PhaseAt=Now;R->ClimbSounds=C->GetSfxCount(AChuckCharacter::ESfx::Climb);
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_ACTIVATED remaining=%.2f"),C->GetStaminaLockRemaining());
             }
             else if(Step>4) {Fail(TEXT("collect"));R->Phase=99;}
@@ -1423,8 +1423,11 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
             }
             if(P.Z>T.Fork.Z+30 && C->GetCharacterMovement()->IsMovingOnGround())
             {
-                UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_CLIMB seconds=%.2f height=%.1f stamina=%.3f remaining=%.2f"),Step,P.Z-T.Trunk.Z,R->Min,C->GetStaminaLockRemaining());
+                // Claws on bark at every paw contact: two per 30 cm wall-run cycle.
+                const int32 Sounds=C->GetSfxCount(AChuckCharacter::ESfx::Climb)-R->ClimbSounds;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_GOLDEN_CLIMB seconds=%.2f height=%.1f stamina=%.3f remaining=%.2f climb_sounds=%d"),Step,P.Z-T.Trunk.Z,R->Min,C->GetStaminaLockRemaining(),Sounds);
                 if(R->Min<.999f) Fail(TEXT("stamina"));
+                if(Sounds<(P.Z-T.Trunk.Z)/30.f) Fail(TEXT("climb_sounds"));
                 R->Phase=2;R->PhaseAt=Now;R->Jumped=false;R->Catches=C->GetSwingCatches();
             }
             else if(Step>25) {Fail(TEXT("climb_timeout"));R->Phase=99;}

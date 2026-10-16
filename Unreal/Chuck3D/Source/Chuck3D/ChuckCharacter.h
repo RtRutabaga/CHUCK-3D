@@ -111,7 +111,7 @@ public:
     /** Tests: hold strafe mode without a key. */
     void SetStrafeHeld(bool bHeld) { bTestStrafe = bHeld; }
     /** Movement sound effects fired so far, by kind (tests): steps, jump, land, slash, roll. */
-    enum class ESfx : uint8 { Step, Jump, Land, Slash, Roll, Num };
+    enum class ESfx : uint8 { Step, Jump, Land, Slash, Roll, Climb, Num };
     int32 GetSfxCount(ESfx Kind) const { return SfxCounts[static_cast<int32>(Kind)]; }
     int32 GetSfxLoaded() const;
     int32 GetStreamStepCount() const { return StreamStepCount; }
@@ -357,6 +357,7 @@ private:
     UPROPERTY() UStaticMeshComponent* Smoke;
     UPROPERTY() UInstancedStaticMeshComponent* ExhaleSmoke;
     UPROPERTY() TArray<USoundBase*> ExhaleSounds;
+    UPROPERTY() TArray<USoundBase*> ClimbSounds;   // claws on bark, each paw contact up a wall
     struct FSmokePuff { FVector Position; FVector Velocity; float Age; float Life; float Size; };
     TArray<FSmokePuff> SmokePuffs;
     float NextExhaleAt = 5.f;

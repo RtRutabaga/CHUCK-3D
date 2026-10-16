@@ -193,6 +193,7 @@ void AChuckCharacter::BeginPlay()
     Load(JumpSounds, TEXT("SFX_Jump"), 3); Load(LandSounds, TEXT("SFX_Land"), 3);
     Load(SlashSounds, TEXT("SFX_Slash"), 4); Load(RollSounds, TEXT("SFX_Roll"), 2);
     Load(ExhaleSounds, TEXT("SFX_Exhale"), 2);
+    Load(ClimbSounds, TEXT("SFX_ClimbBark"), 6);
     Load(StreamSplashSounds, TEXT("SFX_StreamSplash"), 6);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_STREAM_AUDIO loaded=%d"), StreamSplashSounds.Num());
     NextExhaleAt = GetWorld()->GetTimeSeconds() + FMath::FRandRange(3.f, 6.f);
@@ -218,7 +219,7 @@ int32 AChuckCharacter::GetSfxLoaded() const
 namespace
 {
     // Mix under the soundtrack (music plays at 0.45); files peak at -3 dBFS.
-    constexpr float WalkStepVolume = .3f, RunStepVolume = .4f, JumpVolume = .4f, LandVolume = .5f, SlashVolume = .45f, RollVolume = .45f;
+    constexpr float ClimbVolume = .32f, WalkStepVolume = .3f, RunStepVolume = .4f, JumpVolume = .4f, LandVolume = .5f, SlashVolume = .45f, RollVolume = .45f;
 }
 void AChuckCharacter::PlaySfx(const TArray<USoundBase*>& Set, ESfx Kind, float Volume, float StartTime)
 {
@@ -825,6 +826,7 @@ void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
     Movement->BrakingDecelerationFlying = 0;
     Gait = EGait::WallRun;
     WallRunClock = 0; WallPhase = 0; WallPrevZ = static_cast<float>(GetActorLocation().Z);
+    PlaySfx(ClimbSounds, ESfx::Climb, ClimbVolume);   // the first paw bites
     bWallAuto = bWallJumpFlight || bFromSideJump; bWallJumpFlight = false; bRunJump = bSprintLeap = false;
     {
         FHitResult Behind;
@@ -2330,8 +2332,12 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         WallRunClock += DeltaSeconds;
         const float Rise = static_cast<float>(Location.Z) - WallPrevZ;
         WallPrevZ = static_cast<float>(Location.Z);
+        const float PrevPhase = WallPhase;
         WallPhase = FMath::Frac(WallPhase + FMath::Max(0.f, Rise) / WallRunStride);
         BaseTime = WallPhase * Period(EClip::WallRun);
+        // A scrabble of claws at each paw contact (two per cycle); the golden
+        // leaf's long climbs are no longer silent.
+        if ((PrevPhase < .5f) != (WallPhase < .5f)) PlaySfx(ClimbSounds, ESfx::Climb, ClimbVolume * FMath::FRandRange(.8f, 1.f));
         FHitResult Hit;
         FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWallHold), false, this);
         const FVector Chest = Location + FVector(0, 0, 15);

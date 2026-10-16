@@ -1,0 +1,49 @@
+{
+ "generator": "Tools/gen_climb_sfx.py",
+ "sample_rate": 48000,
+ "license": "original synthetic (Claude, CHUCK 3D)",
+ "sounds": [
+  {
+   "name": "SFX_ClimbBark_00",
+   "file": "SFX_ClimbBark_00.wav",
+   "duration": 0.16,
+   "sha256": "efe6fd1b8c12479528cae28826cd282a2f3e0661e6dc64430ac3ffe975838871",
+   "peak_dbfs": -3.0
+  },
+  {
+   "name": "SFX_ClimbBark_01",
+   "file": "SFX_ClimbBark_01.wav",
+   "duration": 0.18,
+   "sha256": "c4dcbcdbfd7fa3efd0299fbb42ce12b1688229addd0f16c63afdd5654f98c161",
+   "peak_dbfs": -3.0
+  },
+  {
+   "name": "SFX_ClimbBark_02",
+   "file": "SFX_ClimbBark_02.wav",
+   "duration": 0.2,
+   "sha256": "6c3c40bd4a1d7a3ede7f5df39d6ee5e8b94140911ddc880a972efcd60369b925",
+   "peak_dbfs": -3.0
+  },
+  {
+   "name": "SFX_ClimbBark_03",
+   "file": "SFX_ClimbBark_03.wav",
+   "duration": 0.16,
+   "sha256": "aeae5e1b076f8b2e13ebe3dc1ab57f079f74eec51925a422f9699582f5ee243f",
+   "peak_dbfs": -3.0
+  },
+  {
+   "name": "SFX_ClimbBark_04",
+   "file": "SFX_ClimbBark_04.wav",
+   "duration": 0.18,
+   "sha256": "a27a410fcd7f57a92fc1b21cc48eacde1d4ed36f0476b00289b104fa16e82af6",
+   "peak_dbfs": -3.0
+  },
+  {
+   "name": "SFX_ClimbBark_05",
+   "file": "SFX_ClimbBark_05.wav",
+   "duration": 0.2,
+   "sha256": "49cf34860055e8a36b1d0196ce47b2d931a740a4607f18602a189609fc00cabd",
+   "peak_dbfs": -3.0
+  }
+ ]
+}
