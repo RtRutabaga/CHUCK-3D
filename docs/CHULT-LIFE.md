@@ -56,8 +56,6 @@ User requests, 2026-10-14:
 
   Package verification runs it.
 
-## Not done / flaws
-
 ## Far-bank river population (Codex, October 16)
 
 User requests many zombies along the later half of the far-bank river, with
@@ -68,7 +66,8 @@ and 24 inland sentries, in eight stations from canyon-frame S=19000 to 32300
 arrival and the giant-tree/T-rex approach remain outside this population.
 
 Placement waits until the ancient road resolves around solid trees, then uses
-that actual centre line. Road zombies stand 2.1–5.6 m beside it; inland groups
+that actual centre line. Road zombies stand 7–9.5 m beside it, facing along the
+route so they do not all spot him head-on at once; inland groups
 stay at least 13 m from any road, beyond their existing 11 m player/home pursuit
 limit. Water, terrain height, body clearance and inter-zombie spacing are
 checked before spawning. Normal zombie attacks, speed, grab odds and recovery
@@ -83,6 +82,8 @@ odds use the existing zero-grab test behavior; the dedicated grab suite still
 tests the lethal grab separately. The package verifier requires this check.
 Human play feel, random grab outcomes and whole-population performance still
 need player review; automated geometry checks alone cannot settle difficulty.
+
+## Not done / flaws
 
 - Neither the grab nor the struggle is a captured or keyframed clip: both are procedural layers over existing clips. The head-to-neck bite interpenetrates a little by design; there is no contact solve.
 - No camera treatment: the orbit simply follows his capsule up.

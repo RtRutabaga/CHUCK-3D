@@ -64,16 +64,16 @@ void SpawnChultRiverZombies(UWorld* World)
         {
             const float S=19000+1900*Station+R.FRandRange(-160,160);
             const FVector Road=RoadAt(S);
-            const float Offset=Near ? (Station%2 ? -280.f : 420.f) : 1450.f+(Band-1)*950.f;
+            const float Offset=Near ? 850.f : 1450.f+(Band-1)*950.f+(Try/20)*150.f;
             const FVector P=Road+Inland*(Offset+R.FRandRange(-90,90))+FVector(.8,.6,0)*R.FRandRange(-160,160);
             const FVector F=Frame(P);const float D=ChultPathDistance(P);
-            if(!InChultRiverExtension(P)||F.Y<-6100||F.Y>ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-210
-                ||D<(Near?210.f:1300.f)||D>(Near?560.f:3700.f))continue;
+            if(!InChultRiverExtension(P)||F.X<18500||F.X>32800||F.Y<-6100||F.Y>ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-210
+                ||D<(Near?700.f:1300.f)||D>(Near?950.f:3700.f))continue;
             bool Spaced=true;
             for(const auto& H:Homes)if(FVector::Dist2D(H.Feet-G,P)<(Near&&H.NearRoad?1450:650))Spaced=false;
             if(!Spaced)continue;
             FVector Feet;if(!OpenFloor(World,P,Feet))continue;
-            const float Yaw=(Road-P).Rotation().Yaw+R.FRandRange(-25,25);
+            const float Yaw=Near ? (RoadAt(S+100)-RoadAt(S-100)).Rotation().Yaw : (Road-P).Rotation().Yaw+R.FRandRange(-25,25);
             if(auto* Z=ADockNPC::SpawnZombie(World,Feet,Yaw))
             {
                 Z->Tags.Add(TEXT("ChultRiverZombie"));
@@ -100,7 +100,7 @@ void StartChultRiverZombieReview(UWorld* World)
     {
         Near+=H.NearRoad;Flanks+=!H.NearRoad;
         const FVector P=H.Feet-G,F=Frame(P);FVector Feet;
-        Clear+=ChultPathDistance(P)>(H.NearRoad?210:ADockNPC::ZombieLeash+180);
+        Clear+=ChultPathDistance(P)>(H.NearRoad?700:ADockNPC::ZombieLeash+180);
         Dry+=F.X>18500&&F.X<32800&&F.Y<ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-200;
         Supported+=OpenFloor(World,P,Feet)&&FVector::Dist(Feet,H.Feet)<2;
     }
@@ -129,7 +129,7 @@ void StartChultRiverZombieReview(UWorld* World)
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/FString::Printf(TEXT("Chult/RiverZombies%d.png"),Run->Trial),true,false);
             Run->Shot=true;
         }
-        if(Distance>35&&Elapsed<24&&!Chuck->IsAstral())
+        if(Distance>35&&Elapsed<30&&!Chuck->IsAstral())
         {
             const FVector Target=G+RoadAt(S+FMath::Min(1500.f,Run->Progress+80));
             if(FVector::Dist2D(Chuck->GetActorLocation(),Target)<40)Run->Progress+=40;
