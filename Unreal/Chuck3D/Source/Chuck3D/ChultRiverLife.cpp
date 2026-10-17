@@ -64,7 +64,7 @@ void SpawnChultRiverZombies(UWorld* World)
         {
             const float S=19000+1900*Station+R.FRandRange(-160,160);
             const FVector Road=RoadAt(S);
-            const float Offset=Near ? 850.f : 1450.f+(Band-1)*950.f+(Try/20)*150.f;
+            const float Offset=Near ? 850.f+(Try/20)*90.f : 1450.f+(Band-1)*950.f+(Try/20)*150.f;
             const FVector P=Road+Inland*(Offset+R.FRandRange(-90,90))+FVector(.8,.6,0)*R.FRandRange(-160,160);
             const FVector F=Frame(P);const float D=ChultPathDistance(P);
             if(!InChultRiverExtension(P)||F.X<18500||F.X>32800||F.Y<-6100||F.Y>ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-210
