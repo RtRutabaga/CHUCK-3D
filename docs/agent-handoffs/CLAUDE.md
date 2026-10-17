@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 17 — temple score; closed temple masonry (Claude)
+
+- **Request:** the user's `Chult 3.wav` on the approach and round the temple, its swell meeting the temple's reveal on a straight run; then the temple's partly invisible spots and floorless overhangs. Base `766eb97`, delivered `cf7708b` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF, CHULT-TEMPLE.md and the Audio README.
+- **Contract compatibility:** no rig/clip/socket change. `DockGameMode` has a sixth score track (`MusicTracks.Num()==6`); music region 5 is the temple (`GetMusicRegion`); the bridge zone's hysteresis now applies from region 4 or 5. New `ChultTemple.h` API: `ChultTempleMusicSwell`, `InChultTempleMusicZone`, `ChultTempleMusicRunIn`, `ChultTempleRevealS`, `ChultTempleMusicFromS`. `Box()` lost its `Bottom` flag (always closed). Temple check `sweeps=24`. `Verify-Package` runs the temple review with `-ChuckTempleMusicTest` and requires the approach and loop checks. New LFS binaries: `Chult3.wav` (39.4 MB) and `SW_Chult3.uasset` (25.2 MB).
+- **Tools:** UE 5.7.4, UnrealEditor-Cmd import ×1, Build.bat ×7, uncooked temple reviews ×8 (two before/after pairs with a temporary switch, since removed), Build-Game.ps1 -Package -SkipBaseAssets ×1, Promote-Build ×1; Python stdlib for the audio analysis. No installations, no downloads.
+
+Next part of the work can be done here.
+
 ## October 17 — temple tall trees; scanned-leaf crowns (Claude)
 
 - **Requests:** tall landing trees round the temple; then less round, less plastic tree tops "both here and everywhere on Chult", free resources welcome. Base `07021be`, delivered `badfe8e`, `986671e` (+ this handoff commit).
