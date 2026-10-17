@@ -2,6 +2,16 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 16 — zombie sounds from recordings (Claude)
+
+- **Request:** "Find download and implement better noises for the zombies". Base `3adcd2a` (after Codex's river zombies), delivered `6f7c63f` (+ this handoff commit).
+- **Approval:** the 8 downloads (filenames, sources and sizes) were approved by the user in chat. No installations.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-LIFE.md.
+- **Contract compatibility:** the same 12 `SFX_Zombie*` names (the impact test checks 12); no code changed. `gen_zombie_sfx.py` would overwrite them (now noted in it). A new LFS rule covers FLAC files under `SourceAssets/Audio/SFX/Zombies/` only.
+- **Tools:** curl ×8, Blender 4.5.14 (analysis, spectrograms, `build_zombie_sfx.py`), UnrealEditor-Cmd import ×1, Build-Game.ps1 -Package ×1, Promote-Build ×1.
+
+Next part of the work can be done here.
+
 ## October 16 — dinosaur sounds from recordings (Claude)
 
 - **Request:** find no-account sound sources ("especially if you can just download yourself"), plus the user's `t-rex_calls.mp3`. Base `f345ae9` (on top of Codex's bridge-exit jungle), delivered `d7ac6d4` (+ this handoff commit).

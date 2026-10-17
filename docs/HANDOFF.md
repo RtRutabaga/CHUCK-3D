@@ -38,6 +38,22 @@ Next part of the work can be done here.
 
 Next part of the work can be done here.
 
+## October 16 — zombie sounds from recordings (Claude)
+
+- **Built (6f7c63f):** user request "Find download and implement better noises for the zombies". All 12 zombie sounds keep their names, now cut from CC0 recordings by `Tools/build_zombie_sfx.py`; no code changed.
+  - **Sources (no accounts):** Claude downloaded 8 files (about 10.7 MB) after the user approved the exact list. These were BigSoundBank's studio "Zombie #1-#7" by Joseph Sardin (lossless FLAC) and artisticdude's Zombies Sound Pack (OpenGameArt). The hits and the whoosh reuse the Kenney and rubberduck packs from the dinosaur pass.
+  - **Storage and credits:** only the 19 clips used are kept, in `SourceAssets/Audio/SFX/Zombies/Source/` (5.2 MB, LFS), with a provenance manifest. Credited in DEMO-CREDITS.txt. Slot-by-slot sources are in [CHULT-LIFE.md](CHULT-LIFE.md).
+  - **LFS rule:** `.gitattributes` gains an LFS rule for FLAC files in that folder only. A repo-wide rule would have converted Codex's existing `BSB_1633_FlagInTheWind2.flac`.
+  - The same sounds play for every zombie, in the jungle and the sewer.
+- **Cooked checks (`Builds/ZombieSoundCandidate`):** package **182/182** (`Local/verify-package-20261016-215446.log`). Zombie impact **4/4**, 12 sounds (`Local/verify-zombie-impact-20261016-215806.log`). Jungle life and zombie grab pass (`Local/verify-jungle-life-20261016-222547.log`, `verify-zombie-grab-20261016-222615.log`).
+- **Launcher:** promoted **6f7c63f** as `ZombieSound` (`Local/zombie-sfx-promotion.log`); receipt passes.
+- **Limits:**
+  - No one has listened to the new sounds.
+  - The groans (1.2–1.4 s) and death (1.9 s) are longer than the synthetic ones.
+  - Fifteen jungle zombies groaning every 4–7 s may need their volume or interval tuned after a listen.
+
+Next part of the work can be done here (a listening pass).
+
 ## October 16 — dinosaur sounds from recordings (Claude)
 
 - **Built (d7ac6d4):** user: Freesound would not accept their email, "can you find other sources for sounds? especially if you can just download yourself but if not then something that doesnt need an account"; they supplied `t-rex_calls.mp3`.
