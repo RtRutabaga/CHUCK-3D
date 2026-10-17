@@ -57,3 +57,20 @@ Checks (`CHUCK_CHULT_TEMPLE_CHECK`): plaza level at 345 probes; all three stairs
 ## Later
 
 The interior (Phase 6) begins at the sanctuary vestibule's dark back wall (the pyramids' summit vestibules could serve as side ways in). The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
+
+## The temple score; closed undersides (October 17)
+
+User request, October 17, 2026 (Claude): the user's `Chult 3.wav` "for sound track on approach to temple and around temple exterior", timed "so that a character running straight towards temple will arrive in view of the temple as the music swells"; then "clean up the temple some": spots "partially invisible when you're next to them like the side of the main stair case when looked down on from the top", and "spots that jut out but have no floors".
+
+**The score.** The track (204.9 s) builds from near-silence; its swell is the full arrangement's entry at **10.7 s** (the low band jumps about 11 dB between 10.6 and 11.0 s; analysis in `SourceAssets/Audio/README.md`). Running up the road (225 cm/s), the temple glimpses through the trunks from about S=63000 and the central spire comes clear in the jungle's opening at about **S=63500** (`ChultTempleRevealS`, judged from a frame every 0.5 s of the real character's run, `-ChuckTempleApproachShots`). `ChultTempleMusicFromS` walks back along the road's line by 10.7 s of running: the score starts at **S=61250** and plays over the rest of the road and the whole precinct (`InChultTempleMusicZone`, 15 m hysteresis). It cross-fades with the bridge score ("Chult 2") over 2.5 s, which takes over again back down the road.
+
+- Arriving on the road (within 10 m of the start), it plays from the top with a 0.25 s fade. Arriving any other way (the **Chult Temple** checkpoint, a respawn after a long absence), it fades in over 1.5 s from 1.5 s before the swell.
+- Leaving and coming back within a minute, it carries on where it was; after longer it starts again.
+- Measured: the run reaches the reveal 10.67–10.73 s after the score starts (`CHUCK_CHULT_TEMPLE_APPROACH lead=…`, required within 1 s of 10.7). The swell itself was not heard by the agent.
+
+**Hollow masonry.** Two gaps in the builder (`Box`, the balustrades), both confirmed by a before/after pair (`Local/temple-faces/`) and a new camera-sweep check:
+- Every box was open underneath, so each band, cornice, roof overhang, spire band, plinth and serpent snout was hollow seen from below (Chuck, 65 cm tall, mostly looks up at them), and the camera could rise into them. All boxes are now closed below.
+- Each stair's balustrades had no top end, and that end stands a metre proud of the platform: from the top of a stair the balustrade vanished, and the camera could slip inside it. The ends are now closed.
+- `CHUCK_CHULT_TEMPLE_CHECK` now sweeps a 12 cm camera sphere into all six balustrade ends and up into both summit-house roofs (24 sweeps in all). With the old faces 8 of them got in; now none.
+
+The review adds three views (`TempleStairSideCentral`, a balustrade's end from the platform; `TempleStairSidePyramid`; `TempleRoofBelow`) and the approach run before the climb.

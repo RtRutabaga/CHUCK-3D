@@ -20,8 +20,22 @@ float ChultTempleRoadEndS();
 FVector ChultTempleSpawn();
 float ChultTempleSpawnYaw();
 
+// The temple's score (the user's "Chult 3", 2026-10-17): its swell, a full
+// entry after a quiet build, comes ChultTempleMusicSwell seconds in. The zone
+// starts that long a run (at RunSpeed) up the road before the temple comes
+// into view, and covers the precinct; bWasInside widens it (hysteresis).
+constexpr float ChultTempleMusicSwell=10.7f;
+bool InChultTempleMusicZone(const FVector& World,bool bWasInside);
+// Just inside the zone on the road: arrived by running up it, so play from the top.
+bool ChultTempleMusicRunIn(const FVector& World);
+// Where the temple comes into view on the road, and where its score starts (S).
+float ChultTempleRevealS();
+float ChultTempleMusicFromS();
+
 void BuildChultTemple(AActor* Owner);
 int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck);
 // -ChuckChultTest -ChuckTempleReview: cooked views, then the real character
-// walks the avenue, climbs the stair and steps into the doorway; then quits.
+// runs up the road past the reveal (the score's swell must meet it; with
+// -ChuckTempleApproachShots a frame every 0.5 s), walks the avenue, climbs
+// the stair and steps into the doorway; then quits.
 void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures);

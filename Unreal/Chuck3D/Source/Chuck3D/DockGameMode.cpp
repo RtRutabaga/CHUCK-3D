@@ -1,6 +1,7 @@
 #include "DockGameMode.h"
 #include "ChultLanding.h"
 #include "ChultBridge.h"
+#include "ChultTemple.h"
 #include "ChultCanopy.h"
 #include "ChultRaptor.h"
 #include "ChultTRex.h"
@@ -102,7 +103,10 @@ void ADockGameMode::StartPlay()
     // Over the canyon bridge and beyond it, the user's second Chult track (2026-10-14).
     auto* BridgeScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Chult2.SW_Chult2"));
     auto* BridgeComponent=BridgeScore ? UGameplayStatics::CreateSound2D(World,BridgeScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent};
+    // On the last stretch of road to the temple and round it, the user's third (2026-10-17).
+    auto* TempleScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Chult3.SW_Chult3"));
+    auto* TempleComponent=TempleScore ? UGameplayStatics::CreateSound2D(World,TempleScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -121,10 +125,10 @@ void ADockGameMode::StartPlay()
                 LoopConfigured && Playing ? 0 : 1,LoopConfigured,Playing);
         },6.f,false);
     }
-    struct FMusicRegion { bool Underground=false; int32 Mode=0; };
+    struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),SewerScore,NightScore,ChultScore,BridgeScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
@@ -134,20 +138,24 @@ void ADockGameMode::StartPlay()
         // the two cross-fade, each keeping its place while the other plays.
         if(Chuck && AChultLanding::Contains(Chuck->GetActorLocation()))
         {
-            const int32 Want=InChultBridgeMusicZone(Chuck->GetActorLocation(),Region->Mode==4)?4:3;
+            // Beyond the bridge, the temple's score from the road's last stretch on (ChultTemple.h).
+            const FVector At=Chuck->GetActorLocation();
+            const int32 Want=InChultBridgeMusicZone(At,Region->Mode>=4)?(InChultTempleMusicZone(At,Region->Mode==5)?5:4):3;
             if(Region->Mode==Want) return;
             if(Region->Mode<3)
                 for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night})
                     if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
             const bool First=Region->Mode<3;
+            const double Now=World->GetTimeSeconds();
+            if(Region->Mode==5) Region->TempleLeft=Now;
             Region->Mode=Want; Region->Underground=false;
             if(Self.IsValid()) Self->MusicRegion=Want;
-            auto Bring=[World,Region,Want,First](const TWeakObjectPtr<UAudioComponent>& Track,USoundWave* Score,const TCHAR* Param,const TCHAR* Name)
+            auto Bring=[World,Region,Want,First](const TWeakObjectPtr<UAudioComponent>& Track,USoundWave* Score,const TCHAR* Param,const TCHAR* Name,float From=0.f,float Fade=0.f)
             {
                 if(!Track.IsValid()) return;
-                if(Track->IsPlaying()) {Track->AdjustVolume(2.5f,.45f);return;}
+                if(Track->IsPlaying()) {Track->AdjustVolume(Fade>0?Fade:2.5f,.45f);return;}
                 const bool Test=FParse::Param(FCommandLine::Get(),Param);
-                Track->FadeIn(First?3.f:2.5f,.45f,Test && Score?FMath::Max(0.f,Score->Duration-2.f):0.f);
+                Track->FadeIn(Fade>0?Fade:First?3.f:2.5f,.45f,Test && Score?FMath::Max(0.f,Score->Duration-2.f):From);
                 FTimerHandle Check;
                 World->GetTimerManager().SetTimer(Check,[Track,Score,Region,Want,Name](){
                     if(Region->Mode!=Want) return;   // left again before the check: faded on purpose
@@ -155,9 +163,23 @@ void ADockGameMode::StartPlay()
                     UE_LOG(LogTemp,Display,TEXT("%s failures=%d looping=%d playing_after_boundary=%d"),Name,!(Loop&&Playing),Loop,Playing);
                 },6.f,false);
             };
-            if(Want==4) {Bring(Bridge,BridgeScore,TEXT("ChuckBridgeTest"),TEXT("CHUCK_CHULT_BRIDGE_MUSIC_CHECK"));if(Chult.IsValid() && Chult->IsPlaying()) Chult->AdjustVolume(2.5f,0.f);}
-            else {Bring(Chult,ChultScore,TEXT("ChuckChultTest"),TEXT("CHUCK_CHULT_MUSIC_CHECK"));if(Bridge.IsValid() && Bridge->IsPlaying()) Bridge->AdjustVolume(2.5f,0.f);}
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 bridge=%d score=%d"),Want==4,(Want==4?Bridge:Chult).IsValid());
+            if(Want==5)
+            {
+                // Timed for the run up the road: from the top, its swell comes as
+                // the temple comes into view. Back within a minute, it carries on
+                // where it was; arriving any other way (a checkpoint, a long
+                // absence), it starts again, from just before the swell if he is
+                // already in sight of the temple.
+                if(Temple.IsValid() && Temple->IsPlaying() && Now-Region->TempleLeft>60) Temple->Stop();
+                const bool OnRoad=ChultTempleMusicRunIn(At);
+                Bring(Temple,TempleScore,TEXT("ChuckTempleMusicTest"),TEXT("CHUCK_CHULT_TEMPLE_MUSIC_CHECK"),OnRoad?0.f:ChultTempleMusicSwell-1.5f,OnRoad?.25f:1.5f);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_TEMPLE_START time=%.2f on_road=%d"),Now,OnRoad);
+            }
+            else if(Want==4) Bring(Bridge,BridgeScore,TEXT("ChuckBridgeTest"),TEXT("CHUCK_CHULT_BRIDGE_MUSIC_CHECK"));
+            else Bring(Chult,ChultScore,TEXT("ChuckChultTest"),TEXT("CHUCK_CHULT_MUSIC_CHECK"));
+            const TWeakObjectPtr<UAudioComponent> Scores[]={Chult,Bridge,Temple};
+            for(int32 I=0;I<3;++I) if(I+3!=Want && Scores[I].IsValid() && Scores[I]->IsPlaying()) Scores[I]->AdjustVolume(2.5f,0.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 bridge=%d temple=%d score=%d"),Want==4,Want==5,(Want==5?Temple:Want==4?Bridge:Chult).IsValid());
             return;
         }
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
@@ -2561,7 +2583,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==5 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==6 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

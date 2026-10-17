@@ -2,6 +2,9 @@
 #include "ChultCanyon.h"
 #include "ChultRiver.h"
 #include "ChultLanding.h"
+#include "ChultUpriver.h"
+#include "ChuckClipData.h"
+#include "DockGameMode.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Camera/CameraActor.h"
@@ -98,11 +101,13 @@ namespace
     };
     struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Bone,Bark,Vines,Block;};
     // A box in the frame (S0<S1, T0<T1, Z above the plaza). Inward reverses every face.
-    void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1,bool Inward=false,bool Bottom=false)
+    // Always closed underneath (2026-10-17): Chuck looks up at every band,
+    // cornice and overhang, which were hollow from below without it.
+    void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1,bool Inward=false)
     {
         auto Q=[&](FVector A,FVector B,FVector Cc,FVector D){if(Inward)M.Quad(A,D,Cc,B);else M.Quad(A,B,Cc,D);};
         Q(At(S0,T0,Z1),At(S1,T0,Z1),At(S1,T1,Z1),At(S0,T1,Z1));
-        if(Bottom||Inward)Q(At(S0,T0,Z0),At(S0,T1,Z0),At(S1,T1,Z0),At(S1,T0,Z0));
+        Q(At(S0,T0,Z0),At(S0,T1,Z0),At(S1,T1,Z0),At(S1,T0,Z0));
         Q(At(S0,T0,Z0),At(S1,T0,Z0),At(S1,T0,Z1),At(S0,T0,Z1));
         Q(At(S1,T0,Z0),At(S1,T1,Z0),At(S1,T1,Z1),At(S1,T0,Z1));
         Q(At(S1,T1,Z0),At(S0,T1,Z0),At(S0,T1,Z1),At(S1,T1,Z1));
@@ -220,6 +225,9 @@ namespace
             P.Stone.Quad(Q(Bp,T1),Q(A,T1),Q(D,T1),Q(Cp,T1));
             P.Moss.Quad(Q(D,T0),Q(Cp,T0),Q(Cp,T1),Q(D,T1));
             P.Stone.Quad(Q(A,T1),Q(A,T0),Q(D,T0),Q(D,T1));
+            // Its top end stands a metre proud of the platform: closed (2026-10-17;
+            // open, the balustrade vanished when seen from the top of the stair).
+            P.Stone.Quad(Q(Bp,T0),Q(Bp,T1),Q(Cp,T1),Q(Cp,T0));
             // The serpent: blocky head on the plaza, jaws open.
             const float Tc=Sg*(St.Half+St.Out)*.5f,Sa=BalusterFoot;
             Box(P.Stone,Sa-150,Sa+10,Tc-65,Tc+65,45,125);          // head
@@ -392,6 +400,30 @@ bool InChultTempleReserve(const FVector& P,float Margin)
     const FVector F=Frame(P);return F.X>PlazaFrom-Margin&&F.X<BackTo+Margin&&FMath::Abs(F.Y)<ChultTemplePrecinctHalf+Margin;
 }
 float ChultTempleRoadEndS(){return CStairFoot-150;}
+// Running up the road, the central spire comes clear between the trees here
+// (glimpses from S~63000; judged from the approach run's frames, -ChuckTempleApproachShots).
+float ChultTempleRevealS(){return 63500;}
+float ChultTempleMusicFromS()
+{
+    // The swell's lead time at run speed, measured back along the road's line.
+    static const float From=[]()
+    {
+        float S=ChultTempleRevealS(),Left=ChultTempleMusicSwell*ChuckClipData::RunSpeed;
+        while(Left>0){const float Back=S-10;Left-=FVector2D(10,ChultUpriverRoadT(S)-ChultUpriverRoadT(Back)).Size();S=Back;}
+        return S;
+    }();
+    return From;
+}
+bool InChultTempleMusicZone(const FVector& World,bool bWasInside)
+{
+    const FVector F=Frame(World-AChultLanding::FloorOrigin());
+    return F.X>ChultTempleMusicFromS()-(bWasInside?1500:0)&&FMath::Abs(F.Y)<ChultTemplePrecinctHalf+3000;
+}
+bool ChultTempleMusicRunIn(const FVector& World)
+{
+    const FVector F=Frame(World-AChultLanding::FloorOrigin());
+    return F.X<ChultTempleMusicFromS()+1000&&FMath::Abs(F.Y-ChultUpriverRoadT(F.X))<1500;
+}
 FVector ChultTempleSpawn(){return AChultLanding::FloorOrigin()+Flat(SpawnS,0,34.65f);}
 float ChultTempleSpawnYaw(){return Along.Rotation().Yaw;}
 
@@ -696,6 +728,20 @@ int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck)
         FHitResult Hit;++Sweeps;const float Z=FMath::Abs(T)<100?CTop:0;const float From=FMath::Abs(T)<100?Sc+LevelS[2]-150:Sc;
         if(!World->SweepSingleByChannel(Hit,G+Flat(From,T,Z+Half+20),G+Flat(BackTo+600,T,Z+Half+20),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("back_open"),Flat(From,T,Z));
     }
+    // The camera cannot slip inside the masonry (2026-10-17): from the platform
+    // into each balustrade's top end, and from below up into the summit
+    // houses' overhanging roofs. Inside, every face is culled and the stone vanishes.
+    {
+        const auto Probe=FCollisionShape::MakeSphere(12);
+        auto Shut=[&](const TCHAR* What,const FVector& A,const FVector& B){FHitResult Hit;++Sweeps;if(!World->SweepSingleByChannel(Hit,G+A,G+B,FQuat::Identity,ECC_Camera,Probe,Q))Fail(What,A);};
+        for(const TPair<const FStair*,float>& S:TArray<TPair<const FStair*,float>>{{&CentralStair,0.f},{&PyramidStair,-PyramidT},{&PyramidStair,PyramidT}})
+            for(float Sg:{-1.f,1.f})
+            {
+                const FStair& St=*S.Key;const float T=S.Value+Sg*(St.Half+St.Out)*.5f;
+                Shut(TEXT("balustrade_end_open"),Flat(St.TopS+150,T,St.Height+40),Flat(St.TopS-50,T,St.Height+40));
+            }
+        for(float Side:{-1.f,1.f})Shut(TEXT("roof_open_below"),Flat(HouseFront-30,Side*PyramidT+300,Top+WallTop-60),Flat(HouseFront-30,Side*PyramidT+300,Top+WallTop+40));
+    }
     // The spawn: on the floor with room to stand.
     {
         FHitResult Hit;const FVector P=ChultTempleSpawn();
@@ -714,12 +760,16 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
     auto* Camera=Owner->GetWorld()->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(72);
     Chuck->SetActorHiddenInGame(true);if(auto* PC=Cast<APlayerController>(Chuck->GetController()))PC->SetViewTarget(Camera);
     const TArray<FVector> Eyes={Flat(SpawnS-300,0,180),Flat(70500,-500,140),Flat(CStairFoot-650,-900,90),Flat(CStairTop+200,-500,CTop+170),
-        Flat(Sc-Base-6500,-1500,2600),Flat(69300,-150,95),Flat(Sc-LevelS[0]+Band+150,-900,Tier+120),Flat(Sc+LevelS[2]-200,600,CTop+180),Flat(64300,0,260)};
+        Flat(Sc-Base-6500,-1500,2600),Flat(69300,-150,95),Flat(Sc-LevelS[0]+Band+150,-900,Tier+120),Flat(Sc+LevelS[2]-200,600,CTop+180),Flat(64300,0,260),
+        // 2026-10-17: a central balustrade's top end from the platform, a pyramid stair's side from its top, up under a summit house's roof.
+        Flat(CStairTop+260,(CStairHalf+CBalusterOut)*.5f+90,CTop+70),Flat(StairTop+180,PyramidT-BalusterOut-260,Top+120),Flat(HouseFront-260,-PyramidT-420,Top+45)};
     const TArray<FVector> Aims={Flat(Sc,0,1600),Flat(Sc,0,1500),Flat(CStairFoot-100,-460,80),Flat(TowerFront,0,CTop+200),
-        Flat(Sc,0,1500),Flat(68300,-StakeT,180),Flat(Sc-LevelS[0],-PyramidT,Tier+200),Flat(BackTo,3500,200),Flat(Sc,0,1800)};
+        Flat(Sc,0,1500),Flat(68300,-StakeT,180),Flat(Sc-LevelS[0],-PyramidT,Tier+200),Flat(BackTo,3500,200),Flat(Sc,0,1800),
+        Flat(CStairTop-300,(CStairHalf+CBalusterOut)*.5f,CTop-120),Flat(StairTop-700,PyramidT-StairHalf-60,Top-420),Flat(HouseFront+40,-PyramidT-150,Top+WallTop+110)};
     const TArray<FString> Names={TEXT("TempleAvenue"),TEXT("TemplePlaza"),TEXT("TempleSerpent"),TEXT("TempleDoorway"),TEXT("TempleOverview"),
-        TEXT("TempleSkullStake"),TEXT("TempleLedgeJoin"),TEXT("TempleBackJungle"),TEXT("TempleApproach")};
-    struct FRun{int32 Phase=0,Walk=0,Failures=0;double Next=0,Start=-1;bool bDone=false;TWeakObjectPtr<ACameraActor> Camera;FTimerHandle Timer;};
+        TEXT("TempleSkullStake"),TEXT("TempleLedgeJoin"),TEXT("TempleBackJungle"),TEXT("TempleApproach"),
+        TEXT("TempleStairSideCentral"),TEXT("TempleStairSidePyramid"),TEXT("TempleRoofBelow")};
+    struct FRun{int32 Phase=0,Walk=0,Failures=0,Shot=0;double Next=0,ShotNext=0,Start=-1,RunStart=-1,MusicAt=-1,RevealAt=-1;bool bDone=false,bRan=false;TWeakObjectPtr<ACameraActor> Camera;FTimerHandle Timer;};
     auto Run=MakeShared<FRun>();Run->Failures=Failures;Run->Camera=Camera;
     // One timer throughout: views every 2.5 s, then the real character's climb.
     Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,Chuck,Run,Eyes,Aims,Names]()
@@ -735,6 +785,51 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
             ++Run->Phase;return;
         }
         auto* M=Chuck->GetCharacterMovement();
+        if(!Run->bRan)
+        {
+            // The approach: the real character runs up the road from before the
+            // score's start to past the reveal; the score's swell should come
+            // as he reaches the reveal (ChultTempleMusicSwell after its start).
+            if(Now<Run->Next)return;
+            const float From=ChultTempleMusicFromS()-1200;
+            if(Run->RunStart<0)
+            {
+                Chuck->SetActorHiddenInGame(false);
+                const bool Shots=FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleApproachShots"));
+                if(auto* PC=Cast<APlayerController>(Chuck->GetController()))PC->SetViewTarget(Shots&&Run->Camera.IsValid()?static_cast<AActor*>(Run->Camera.Get()):Chuck);
+                if(!Shots&&Run->Camera.IsValid())Run->Camera->Destroy();
+                const FVector Foot=ChultCanyonFrame(From,ChultUpriverRoadT(From));
+                Chuck->ResetAtLocation(G+Foot+FVector(0,0,ChultCanyonGroundZ(Foot)-Foot.Z+40));
+                Chuck->SetActorRotation(FRotator(0,(ChultCanyonFrame(From+500,ChultUpriverRoadT(From+500))-Foot).Rotation().Yaw,0));
+                Chuck->SetOrbitPitch(-8);Chuck->SetRunHeld(true);Run->RunStart=Now;Run->Next=Now;return;
+            }
+            const FVector F=Frame(Chuck->GetActorLocation()-G);const float RunTime=Now-Run->RunStart;
+            auto* Mode=Owner->GetWorld()->GetAuthGameMode<ADockGameMode>();
+            if(Run->MusicAt<0&&Mode&&Mode->GetMusicRegion()==5){Run->MusicAt=Now;UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_APPROACH music_start s=%.0f seconds=%.2f"),F.X,RunTime);}
+            if(Run->RevealAt<0&&F.X>=ChultTempleRevealS()){Run->RevealAt=Now;UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_APPROACH reveal s=%.0f seconds=%.2f"),F.X,RunTime);}
+            if(Run->Camera.IsValid())
+            {
+                // A player's eye on the run: 3 m behind him, 1.4 m above, looking up the road.
+                const FVector Dir=Chuck->GetVelocity().GetSafeNormal2D(),Eye=Chuck->GetActorLocation()-(Dir.IsNearlyZero()?Along:Dir)*300+FVector(0,0,140);
+                Run->Camera->SetActorLocationAndRotation(Eye,FRotator(-4,(Dir.IsNearlyZero()?Along:Dir).Rotation().Yaw,0));
+            }
+            if(Run->Camera.IsValid()&&Now>=Run->ShotNext)
+            {
+                Run->ShotNext=Now+.5;const FString Name=FString::Printf(TEXT("TempleRun_%02d"),Run->Shot++);
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult")/(Name+TEXT(".png")),true,false);
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_RUN_SHOT name=%s s=%.0f t=%.0f seconds=%.2f music=%d speed=%.0f max=%.0f"),*Name,F.X,F.Y,RunTime,Mode?Mode->GetMusicRegion():-1,Chuck->GetVelocity().Size2D(),M->MaxWalkSpeed);
+            }
+            if(F.X<ChultTempleRevealS()+300&&RunTime<60)
+            {
+                const FVector Ahead=G+ChultCanyonFrame(F.X+500,ChultUpriverRoadT(F.X+500));
+                const FVector D=(Ahead-Chuck->GetActorLocation()).GetSafeNormal2D();Chuck->SetRunHeld(true);Chuck->SetTestStickWorld(D);Chuck->AddMovementInput(D,1,true);return;
+            }
+            const float Lead=Run->MusicAt>0&&Run->RevealAt>0?Run->RevealAt-Run->MusicAt:-1;
+            const bool Timed=FMath::Abs(Lead-ChultTempleMusicSwell)<1.f;Run->Failures+=!Timed;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_APPROACH failures=%d lead=%.2f swell=%.2f music_from=%.0f reveal=%.0f"),!Timed,Lead,ChultTempleMusicSwell,ChultTempleMusicFromS(),ChultTempleRevealS());
+            Chuck->SetTestStick(FVector2D::ZeroVector);Run->bRan=true;Run->Next=Now+.5;
+            if(Run->Camera.IsValid())Run->Camera->Destroy();if(auto* PC=Cast<APlayerController>(Chuck->GetController()))PC->SetViewTarget(Chuck);return;
+        }
         if(Run->Start<0)
         {
             if(Now<Run->Next)return;

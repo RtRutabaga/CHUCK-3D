@@ -107,10 +107,13 @@ if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Patter
     throw "Upriver verification failed. Inspect $upriverLog"
 }
 # The temple exterior (Claude, 2026-10-15): cooked views, then the real character
-# runs up the pyramid's stair to the summit and steps into the doorway.
+# runs up the road (the temple score's swell must meet the reveal, 2026-10-17;
+# its loop is exercised from 2 s before the end) and climbs into the sanctuary.
 $templeLog=Join-Path $evidence ('verify-chult-temple-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$templeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$templeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleReview','-ChuckTempleMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_APPROACH failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3' -Quiet)) {
     throw "Temple verification failed. Inspect $templeLog"
 }
