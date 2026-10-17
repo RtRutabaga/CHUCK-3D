@@ -9,6 +9,8 @@ class UWorld;
 // Not in the automated traversal tests (their worlds stay as they were), only
 // in play and in -ChuckJungleLifeTest.
 void SpawnChultLife(UWorld* World);
+void SpawnChultRiverZombies(UWorld* World);
+void StartChultRiverZombieReview(UWorld* World);
 // Local (to the Chult floor origin) homes of the jungle zombies; filled by SpawnChultLife.
 const TArray<FVector>& ChultZombieHomes();
 

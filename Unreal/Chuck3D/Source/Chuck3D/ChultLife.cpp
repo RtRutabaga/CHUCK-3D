@@ -34,7 +34,7 @@ namespace
     bool Suppressed()
     {
         const TCHAR* Cmd = FCommandLine::Get();
-        if (FParse::Param(Cmd, TEXT("ChuckJungleLifeTest")) || FParse::Param(Cmd, TEXT("ChuckZombieGrabTest"))) return false;
+        if (FParse::Param(Cmd, TEXT("ChuckJungleLifeTest")) || FParse::Param(Cmd, TEXT("ChuckZombieGrabTest")) || FParse::Param(Cmd, TEXT("ChuckRiverZombieTest"))) return false;
         const FString Line(Cmd);
         TArray<FString> Words; Line.ParseIntoArrayWS(Words);
         for (const FString& Word : Words)
@@ -130,6 +130,9 @@ void SpawnChultLife(UWorld* World)
     // The zombies once the set's collision can be queried (it was built this frame).
     FTimerHandle Later;
     World->GetTimerManager().SetTimer(Later, FTimerDelegate::CreateStatic(&PlaceChultZombies, TWeakObjectPtr<UWorld>(World)), .5f, false);
+    // After the road resolves at .6 s and its infill enters the physics scene.
+    FTimerHandle RiverLater;
+    World->GetTimerManager().SetTimer(RiverLater, FTimerDelegate::CreateStatic(&SpawnChultRiverZombies, World), 1.2f, false);
 }
 
 namespace

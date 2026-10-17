@@ -661,6 +661,12 @@ void ADockGameMode::StartPlay()
         FTimerHandle RaptorCheck;
         World->GetTimerManager().SetTimer(RaptorCheck,[World](){StartChultRaptorReview(World);},4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRiverZombieTest")))
+    {
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle RiverLifeCheck;
+        World->GetTimerManager().SetTimer(RiverLifeCheck,[World](){StartChultRiverZombieReview(World);},4.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckJungleLifeTest")))
     {
         // Claude's jungle zombies and raptors (ChultLife.h).

@@ -152,6 +152,13 @@ namespace
     }
 }
 
+const TArray<FVector>& ChultFarRoad()
+{
+    static const TArray<FVector> Empty;
+    return Roads.Num()==2 ? Roads[1] : Empty;
+}
+float ChultPathDistance(const FVector& Local) { return RoadDistance(Local); }
+
 void BuildChultPath(AActor* Owner)
 {
     if(BuiltOwner==Owner)return;BuiltOwner=Owner;Roads.Reset();BuildFailures=Stones=Gaps=0;

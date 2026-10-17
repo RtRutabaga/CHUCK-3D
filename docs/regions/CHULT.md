@@ -18,6 +18,14 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Far-bank river zombies requested October 16, 2026:** populate the later half
+of the river with many existing jungle zombies, keeping the path interesting
+but manageable and adding heavier pressure beside it. Eight separated singles
+near the resolved road and 24 farther into the inland jungle, S≈19000–32600.
+Keep the bridge arrival, giant-tree approach and existing dinosaurs unchanged.
+Use existing zombie behavior/assets; no mandatory combat. Verification and
+placement contract: [../CHULT-LIFE.md](../CHULT-LIFE.md).
+
 **Ancient jungle path remnants authorized October 15, 2026:** the user requests a free resource for an overgrown ancient road from the cliffs behind the landing, through the landing and raptor territory, aligned to both ends of the bridge, then following the far river to its current end. Keep the road on dry banks; preserve the bridge crossing and future upstream expansion. Contract: [../CHULT-PATH.md](../CHULT-PATH.md).
 
 **Northeast canyon and broken rope bridge authorized October 14, 2026:**
