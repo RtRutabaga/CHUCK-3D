@@ -2,6 +2,16 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 16 — dinosaur sounds from recordings (Claude)
+
+- **Request:** find no-account sound sources ("especially if you can just download yourself"), plus the user's `t-rex_calls.mp3`. Base `c0450e5`, delivered `d7ac6d4` (+ this handoff commit).
+- **Approval:** the user approved the 13 listed downloads (filenames, sources and sizes given) in chat. Nothing was installed.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-DINO-SOUNDS.md.
+- **Contract compatibility:** the same 16 SoundWave names and counts; no code changed. `gen_raptor_sfx.py`/`gen_trex_sfx.py` would overwrite the WAVs (now noted in them).
+- **Tools:** curl ×14, Blender 4.5.14 (analysis, spectrograms, `build_dino_sfx.py` ×2), UnrealEditor-Cmd sound imports ×2, Build-Game.ps1 -Package ×1, Promote-Build ×1.
+
+Next part of the work can be done here.
+
 ## October 16 — dinosaurs: feet, gait, hide, sound links (Claude)
 
 - **Request:** "currently the raptors kind of float sometimes, make their walking look better, also apply to t-rex if needed. then make both raptors and the t-rex look better, less glossy and fake. then look up and paste links for download sounds for the dinosaur effects to use". Base `7d153f2`, delivered `1640622` (+ this handoff commit).

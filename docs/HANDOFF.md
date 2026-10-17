@@ -29,6 +29,20 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 Next part of the work can be done here.
 
+## October 16 — dinosaur sounds from recordings (Claude)
+
+- **Built (d7ac6d4):** user: Freesound would not accept their email, "can you find other sources for sounds? especially if you can just download yourself but if not then something that doesnt need an account"; they supplied `t-rex_calls.mp3`.
+  - **Sources:** no-account CC0 sites, OpenGameArt and Kenney.nl. Claude downloaded 13 files (about 7.4 MB) after the user approved the exact list. Only the 28 clips used are kept, in `SourceAssets/Audio/SFX/Dinos/Source/` (2.4 MB, LFS), with URL, author, licence and SHA-256 in `manifest.json`. Credited in DEMO-CREDITS.txt. The raw downloads stay in `Local/dino-sfx-downloads/` (ignored).
+  - **`Tools/build_dino_sfx.py`** (Blender 4.5.14, using its bundled audio decoder) builds all 16 raptor/T-rex slots under their old names: mono, 48 kHz, peak −3 dBFS. No code changed. It supersedes the synthetic generators.
+  - **What each slot is made of:** see [CHULT-DINO-SOUNDS.md](CHULT-DINO-SOUNDS.md). Cuts were chosen from spectrograms; one roar was re-cut so it hits at once.
+- **Cooked checks (`Builds/DinoSoundCandidate`):** package **182/182** (`Local/verify-package-20261016-201219.log`). Raptor **8/8**, all 8 sounds loaded, 85 played. T-rex **4/4**, all 7 loaded, 32 played (`Local/verify-raptor-20261016-203954.log`, `verify-trex-20261016-203855.log`).
+- **Launcher:** promoted **d7ac6d4** as `DinoSound` (`Local/dino-sfx-promotion.log`); receipt and launcher check pass.
+- **Limits:**
+  - Claude cannot hear: no one has listened to the new sounds. The mix, the levels against music and ambience, and how well the cuts fit are all unreviewed.
+  - The roars (3.7–4 s) and growl (3.4 s) are longer than the placeholders; the growl may overlap itself when it repeats every 3.5–6 s.
+
+Next part of the work can be done here (a listening pass, then retuning cuts or levels in build_dino_sfx.py).
+
 ## October 16 — dinosaurs: grounded feet, real gait, matte hide (Claude)
 
 - **Built (1640622):** user request "currently the raptors kind of float sometimes, make their walking look better, also apply to t-rex if needed. then make both raptors and the t-rex look better, less glossy and fake. then look up and paste links for download sounds for the dinosaur effects".
