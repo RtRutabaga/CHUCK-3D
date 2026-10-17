@@ -18,6 +18,13 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**River attack encounters requested October 17, 2026:** add 16 staggered
+attackers close to the far-river paving so passing players must dodge attacks,
+and 24 zombies on the opposite bank to discourage going around. Retain the
+32 earlier river zombies. Reuse existing combat/dodge behavior and assets;
+verify actual lunges, timed dodges and opposite-bank response. This supersedes
+the October 16 requirement that an unguarded path walk remain unharmed.
+
 **Far-bank river zombies requested October 16, 2026:** populate the later half
 of the river with many existing jungle zombies, keeping the path interesting
 but manageable and adding heavier pressure beside it. Eight separated singles

@@ -12,8 +12,8 @@ $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
 $riverZombieLog=Join-Path $evidence ('verify-river-zombies-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $riverZombieProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=3' -Quiet) -or
-   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIES total=32 road=8 flanks=24' -Quiet)) {
+if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=5' -Quiet) -or
+   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIES total=72 road=8 flanks=24 path_attackers=16 opposite=24' -Quiet)) {
     throw "Far-bank zombies verification failed. Inspect $riverZombieLog"
 }
 # The golden cigarettes: the run up the first giant, then the same up the second (trail round both feet).

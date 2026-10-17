@@ -17,7 +17,7 @@
 
 namespace
 {
-    struct FRiverHome { FVector Feet; bool NearRoad; TWeakObjectPtr<ADockNPC> Zombie; };
+    struct FRiverHome { FVector Feet; bool NearRoad; TWeakObjectPtr<ADockNPC> Zombie; bool Path=false,Opposite=false; };
     TArray<FRiverHome> Homes;
     FVector Frame(FVector P)
     {
@@ -84,71 +84,150 @@ void SpawnChultRiverZombies(UWorld* World)
             break;
         }
     }
-    int32 Near=0;for(const auto& H:Homes)Near+=H.NearRoad;
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d"),Homes.Num(),Near,Homes.Num()-Near);
+    auto Add=[&](FVector P,bool Opposite)
+    {
+        const FVector F=Frame(P);const float D=ChultPathDistance(P);
+        if(!InChultRiverExtension(P)||F.X<18200||F.X>32900||F.Y>6400||F.Y<-6100)return false;
+        const float Bank=ChultRiverCenter(F.X),Width=ChultRiverWidth(F.X);
+        if(Opposite ? F.Y<Bank+Width+210||D<1300 : F.Y>Bank-Width-210||D<80||D>270)return false;
+        for(const auto& H:Homes)if(FVector::Dist2D(H.Feet-G,P)<(Opposite?600:440))return false;
+        FVector Feet;if(!OpenFloor(World,P,Feet))return false;
+        const FVector Facing=Opposite ? -FVector(.8,.6,0) : RoadAt(F.X-500)-P;
+        if(auto* Z=ADockNPC::SpawnZombie(World,Feet,Facing.Rotation().Yaw))
+        {
+            Z->Tags.Add(TEXT("ChultRiverZombie"));
+            Z->Tags.Add(Opposite?TEXT("ChultRiverOppositeZombie"):TEXT("ChultRiverPathAttacker"));
+            Homes.Add({Feet,false,Z,!Opposite,Opposite});
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ADDED opposite=%d s=%.0f road_distance=%.0f feet=%s"),Opposite,F.X,D,*(Feet-G).ToString());
+            return true;
+        }
+        return false;
+    };
+    // A staggered attacker every nine metres, facing the incoming player.
+    // Alternate shoulders; leave the paving physically passable for a dodge.
+    for(int32 I=0;I<16;++I)for(int32 Try=0;Try<240;++Try)
+    {
+        const float S=18800+900*I+R.FRandRange(-100,100);
+        const FVector Road=RoadAt(S),Along=(RoadAt(S+80)-RoadAt(S-80)).GetSafeNormal2D();
+        const FVector Side(-Along.Y,Along.X,0);
+        if(Add(Road+Side*((I%2?1.f:-1.f)*R.FRandRange(110,240)),false))break;
+    }
+    // The opposite bank is real terrain, not a decorative crowd in the water.
+    // Three sentries per station, spread along and back from its shoreline.
+    for(int32 Station=0;Station<8;++Station)for(int32 I=0;I<3;++I)for(int32 Try=0;Try<600;++Try)
+    {
+        const float S=19000+1900*Station+R.FRandRange(-500,500);
+        const float Shore=ChultRiverCenter(S)+ChultRiverWidth(S);
+        const float Outer=FMath::Min(2300.f,6380-Shore);
+        if(Outer<300)continue;
+        if(Add(ChultCanyonFrame(S,Shore+R.FRandRange(280,Outer)),true))break;
+    }
+    int32 Near=0,Flanks=0,Path=0,Opposite=0;
+    for(const auto& H:Homes){Near+=H.NearRoad;Path+=H.Path;Opposite+=H.Opposite;Flanks+=!H.NearRoad&&!H.Path&&!H.Opposite;}
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d path_attackers=%d opposite=%d"),Homes.Num(),Near,Flanks,Path,Opposite);
 }
 
 void StartChultRiverZombieReview(UWorld* World)
 {
     auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
     if(!Chuck||ChultFarRoad().IsEmpty()) { FPlatformMisc::RequestExitWithStatus(false,1);return; }
-    struct FRun { int32 Failures=0,Trial=0;float Start=-1,Progress=0;bool Shot=false;FTimerHandle Timer; };
+    struct FRun
+    {
+        int32 Failures=0,Trial=0,RollsBefore=0,LungesBefore=0;
+        float Start=-1,LastDodge=-10,WindupAt=0;bool Shot=false;
+        TWeakObjectPtr<ADockNPC> Windup,Target;FTimerHandle Timer;
+    };
     auto Run=MakeShared<FRun>();
-    int32 Near=0,Flanks=0,Clear=0,Dry=0,Supported=0;
+    int32 Near=0,Flanks=0,Path=0,Opposite=0,Clear=0,Dry=0,Supported=0;
     const FVector G=AChultLanding::FloorOrigin();
     for(const auto& H:Homes)
     {
-        Near+=H.NearRoad;Flanks+=!H.NearRoad;
+        Near+=H.NearRoad;Path+=H.Path;Opposite+=H.Opposite;Flanks+=!H.NearRoad&&!H.Path&&!H.Opposite;
         const FVector P=H.Feet-G,F=Frame(P);FVector Feet;
-        Clear+=ChultPathDistance(P)>(H.NearRoad?700:ADockNPC::ZombieLeash+180);
-        Dry+=F.X>18500&&F.X<32800&&F.Y<ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-200;
+        const float D=ChultPathDistance(P);
+        Clear+=H.Path ? D>=80&&D<=270 : D>(H.NearRoad?700:ADockNPC::ZombieLeash+180);
+        Dry+=F.X>18200&&F.X<32900&&(H.Opposite ? F.Y>ChultRiverCenter(F.X)+ChultRiverWidth(F.X)+200 : F.Y<ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-200);
         Supported+=OpenFloor(World,P,Feet)&&FVector::Dist(Feet,H.Feet)<2;
     }
-    Run->Failures+=(Near!=8)+(Flanks!=24)+(Clear!=32)+(Dry!=32)+(Supported!=32);
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_LAYOUT failures=%d road=%d flanks=%d clear=%d dry=%d supported=%d"),Run->Failures,Near,Flanks,Clear,Dry,Supported);
+    Run->Failures+=(Near!=8)+(Flanks!=24)+(Path!=16)+(Opposite!=24)+(Clear!=72)+(Dry!=72)+(Supported!=72);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_LAYOUT failures=%d road=%d flanks=%d path_attackers=%d opposite=%d clear=%d dry=%d supported=%d"),Run->Failures,Near,Flanks,Path,Opposite,Clear,Dry,Supported);
     Chuck->DisableInput(Cast<APlayerController>(Chuck->GetController()));Chuck->SetLookLocked(true);
-    // Walk three actual encounter stretches with the complete population live.
-    // No sanity refill during a trial: at most one ordinary hit is acceptable.
+    // Three live dodge routes, an unguarded control and an opposite-bank approach.
+    // No sanity refill during a trial; no combat, enemy freezing or stat changes.
     World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run,G]()
     {
         const float S=Run->Trial==0?18200:Run->Trial==1?23900:29600;
         auto* Move=Chuck->GetCharacterMovement();const float Now=World->GetTimeSeconds();
+        auto Lunges=[](){int32 N=0;for(const auto& H:Homes)if(H.Path&&H.Zombie.IsValid())N+=H.Zombie->GetLunges();return N;};
+        if(Run->Trial>=3)
+        {
+            const bool OppositeTrial=Run->Trial==4;
+            if(Run->Start<0)
+            {
+                Run->Target.Reset();
+                for(const auto& H:Homes)if((OppositeTrial?H.Opposite:H.Path)&&H.Zombie.IsValid())
+                {
+                    FVector Feet;const FVector P=H.Feet-G+FVector(.8,.6,0)*(OppositeTrial?280.f:-90.f);
+                    if(!OpenFloor(World,P,Feet)||FMath::Abs(Feet.Z-H.Feet.Z)>40)continue;
+                    if(OppositeTrial&&Frame(P).Y<ChultRiverCenter(Frame(P).X)+ChultRiverWidth(Frame(P).X)+150)continue;
+                    Chuck->ResetAtLocation(Feet+FVector(0,0,40));Chuck->SetSanity(5);
+                    Chuck->SetActorRotation((H.Feet-Feet).GetSafeNormal2D().Rotation());Chuck->Recenter();
+                    Chuck->SetTestStick(FVector2D::ZeroVector);Run->Target=H.Zombie;
+                    Run->LungesBefore=H.Zombie->GetLunges();break;
+                }
+                Run->Start=Now;
+            }
+            auto* Z=Run->Target.Get();
+            const bool Responded=Z&&(OppositeTrial ? FCString::Strcmp(Z->GetZombieStateName(),TEXT("Idle"))!=0 : Chuck->GetSanity()<5&&Z->GetLunges()>Run->LungesBefore);
+            if(!Responded&&Now-Run->Start<6)return;
+            Run->Failures+=!Responded;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_CONTROL opposite=%d pass=%d sanity=%d state=%s"),OppositeTrial,Responded,Chuck->GetSanity(),Z?Z->GetZombieStateName():TEXT("missing"));
+            ++Run->Trial;Run->Start=-1;
+            if(Run->Trial==5)
+            {
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_TEST failures=%d trials=5"),Run->Failures);
+                FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);World->GetTimerManager().PauseTimer(Run->Timer);
+            }
+            return;
+        }
         if(Run->Start<0)
         {
             const FVector P=RoadAt(S);Move->StopMovementImmediately();
-            Chuck->SetActorLocation(G+P+FVector(0,0,40),false,nullptr,ETeleportType::TeleportPhysics);
+            Chuck->ResetAtLocation(G+P+FVector(0,0,40));
             Move->SetMovementMode(MOVE_Walking);Chuck->SetSanity(AChuckCharacter::MaxSanity);
             Chuck->SetActorRotation(FVector(.8,.6,0).Rotation());Chuck->Recenter();Chuck->SetOrbitPitch(-12);
-            Run->Start=Now;Run->Progress=0;Run->Shot=false;
+            Run->Start=Now;Run->Shot=false;Run->RollsBefore=Chuck->GetSfxCount(AChuckCharacter::ESfx::Roll);Run->LungesBefore=Lunges();Run->Windup.Reset();
         }
         const float Elapsed=Now-Run->Start;
-        const FVector Goal=G+RoadAt(S+1500);
+        const FVector Goal=G+RoadAt(S+1800);
         const float Distance=FVector::Dist2D(Chuck->GetActorLocation(),Goal);
-        if(Elapsed>3&&!Run->Shot)
+        if(Elapsed>12&&!Run->Shot)
         {
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/FString::Printf(TEXT("Chult/RiverZombies%d.png"),Run->Trial),true,false);
             Run->Shot=true;
         }
-        if(Distance>35&&Elapsed<30&&!Chuck->IsAstral())
+        if(Distance>35&&Elapsed<40&&!Chuck->IsAstral())
         {
-            const FVector Target=G+RoadAt(S+FMath::Min(1500.f,Run->Progress+80));
-            if(FVector::Dist2D(Chuck->GetActorLocation(),Target)<40)Run->Progress+=40;
+            const float At=Frame(Chuck->GetActorLocation()-G).X;
+            const FVector Target=G+RoadAt(FMath::Clamp(At+100,S,S+1800));
             const FVector D=(Target-Chuck->GetActorLocation()).GetSafeNormal2D();
+            ADockNPC* Threat=nullptr;
+            for(const auto& H:Homes)if(H.Path&&H.Zombie.IsValid()&&FVector::Dist2D(H.Zombie->GetActorLocation(),Chuck->GetActorLocation())<230
+                &&FCString::Strcmp(H.Zombie->GetZombieStateName(),TEXT("Windup"))==0){Threat=H.Zombie.Get();break;}
+            if(Threat!=Run->Windup.Get()){Run->Windup=Threat;Run->WindupAt=Now;}
+            if(Threat&&Now-Run->WindupAt>.18f&&Now-Run->LastDodge>.85f&&FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))!=0)
+            {
+                Chuck->SetActorRotation(D.Rotation());Chuck->Recenter();Chuck->DodgeToward(FVector2D(0,1));Run->LastDodge=Now;
+            }
             Chuck->SetTestStickWorld(D);Chuck->AddMovementInput(D,1,true);return;
         }
         Chuck->SetTestStick(FVector2D::ZeroVector);Move->StopMovementImmediately();
         int32 FlanksActive=0;
-        for(const auto& H:Homes)if(!H.NearRoad&&H.Zombie.IsValid())FlanksActive+=FCString::Strcmp(H.Zombie->GetZombieStateName(),TEXT("Idle"))!=0;
-        const bool Pass=Distance<=35&&Move->IsMovingOnGround()&&Chuck->GetSanity()>=3&&!Chuck->IsAstral()&&FlanksActive==0;
+        for(const auto& H:Homes)if(!H.NearRoad&&!H.Path&&!H.Opposite&&H.Zombie.IsValid())FlanksActive+=FCString::Strcmp(H.Zombie->GetZombieStateName(),TEXT("Idle"))!=0;
+        const int32 Rolls=Chuck->GetSfxCount(AChuckCharacter::ESfx::Roll)-Run->RollsBefore,Attacks=Lunges()-Run->LungesBefore;
+        const bool Pass=Distance<=35&&Move->IsMovingOnGround()&&Chuck->GetSanity()>=3&&!Chuck->IsAstral()&&FlanksActive==0&&Rolls>=1&&Attacks>=1;
         Run->Failures+=!Pass;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_WALK trial=%d pass=%d distance=%.1f sanity=%d flank_active=%d seconds=%.1f"),Run->Trial,Pass,Distance,Chuck->GetSanity(),FlanksActive,Elapsed);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_DODGE trial=%d pass=%d distance=%.1f sanity=%d flank_active=%d rolls=%d attacks=%d seconds=%.1f"),Run->Trial,Pass,Distance,Chuck->GetSanity(),FlanksActive,Rolls,Attacks,Elapsed);
         ++Run->Trial;Run->Start=-1;
-        if(Run->Trial==3)
-        {
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_TEST failures=%d trials=3"),Run->Failures);
-            FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);
-            // Leave this delegate alive until process exit (no freed captures).
-            World->GetTimerManager().PauseTimer(Run->Timer);
-        }
     },.016f,true);
 }
