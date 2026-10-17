@@ -1,4 +1,5 @@
 """Original synthetic sounds for the Chult raptor (Claude, 2026-10-14); no recordings or dependencies.
+Superseded 2026-10-16 by Tools/build_dino_sfx.py (recorded CC0 sources); running this overwrites those WAVs.
 
 python -I Tools/gen_raptor_sfx.py   (then Tools/import_raptor_sfx.py imports them)
 

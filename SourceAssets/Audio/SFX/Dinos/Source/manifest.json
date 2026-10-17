@@ -1,0 +1,285 @@
+{
+  "note": "Unmodified CC0 source clips used by Tools/build_dino_sfx.py (only the clips used are kept).",
+  "files": [
+    {
+      "file": "CaveboyTup/small_dino_raspy_calls.mp3",
+      "work": "Small Dino Raspy Calls",
+      "url": "https://opengameart.org/content/small-dino-raspy-calls",
+      "author": "CaveboyTup",
+      "license": "CC0 1.0",
+      "bytes": 14400,
+      "sha256": "344b1aa510e52c282ef7e0fbac1531fddcb2d8d03f700310cc4d4cab48cde74e",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "CaveboyTup/t-rex_calls.mp3",
+      "work": "t rex calls",
+      "url": "https://opengameart.org/content/t-rex-calls",
+      "author": "CaveboyTup",
+      "license": "CC0 1.0",
+      "bytes": 740352,
+      "sha256": "2465991ee2e6fc6b8a1275c08f6ca8eb5a60c9c09a9e43102f3eb8531be9c7a5",
+      "obtained": "downloaded by the user"
+    },
+    {
+      "file": "Darsycho/tiny-vicious-creature.ogg",
+      "work": "Tiny vicious creature",
+      "url": "https://opengameart.org/content/tiny-vicious-creature",
+      "author": "Darsycho",
+      "license": "CC0 1.0",
+      "bytes": 126390,
+      "sha256": "45248dd0f6e18049637575550624b629872bcfd927514cab94f8a7d86a869e34",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/footstep_grass_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8290,
+      "sha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/footstep_grass_001.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8313,
+      "sha256": "fb28781bd22b2eefdc14077f1adf5c94d7fe9c3a130194633b55f3e0d39d9f04",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/footstep_grass_002.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8278,
+      "sha256": "73a520139f5be716a403bfe9c80e0e94d1e61d8e9de04a354b336392164b53dc",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/footstep_grass_003.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8129,
+      "sha256": "0546e1d8ab2def714425701a18bd34c5ee2794b12e858e5b595aabcf38a34137",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/footstep_grass_004.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 7800,
+      "sha256": "086fd4ab3546a507ea5f5c759a9a10e535c95ade13705c238bc0eeffd7d4e8ba",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_002.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 9025,
+      "sha256": "7993dd4c156b9979ad69f17be5ebe31850b16039a3857f8477141be54dfee1b3",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_heavy_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6570,
+      "sha256": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_heavy_002.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6749,
+      "sha256": "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_heavy_004.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6478,
+      "sha256": "e008f0b6b14f62339c8fe9f9b45cbd6317ba4f66604c4899053b8017020a36f0",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_medium_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 5351,
+      "sha256": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_medium_001.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 5506,
+      "sha256": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_medium_002.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 5358,
+      "sha256": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactWood_heavy_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6233,
+      "sha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactWood_heavy_002.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6146,
+      "sha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactWood_heavy_004.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6253,
+      "sha256": "2c647ae6bd29c72ae2523f7e16e325d8d331b75cc99ab4f637c48a0e11c34677",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature/breath.ogg",
+      "work": "80 CC0 creature SFX (80-CC0-creature-SFX_0.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creature-sfx",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 28273,
+      "sha256": "d6ecfd092c261059701fe81581957ce6e67c1737978449bbd98ec6d4f30abb7f",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature/scream_02.ogg",
+      "work": "80 CC0 creature SFX (80-CC0-creature-SFX_0.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creature-sfx",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 37049,
+      "sha256": "73aedfbcc7e5b3004507d5a79e95ae53954026036bf8d6f65aa0a4ca298dd372",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/attack_01.ogg",
+      "work": "80 CC0 creture SFX #2 (80-CC0-creature-sfx-2.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 12126,
+      "sha256": "14ec0f8ab007d4641f4f2e214ea170182690005f40409a4e8bdd1ae1b58abd30",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/attack_05.ogg",
+      "work": "80 CC0 creture SFX #2 (80-CC0-creature-sfx-2.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 9265,
+      "sha256": "f363f8c4e3c62b0fb5c19a476a264e9073cf773cd901eb83cc246e67f2baa49f",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/breath_02.ogg",
+      "work": "80 CC0 creture SFX #2 (80-CC0-creature-sfx-2.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 15575,
+      "sha256": "5b32729394cc36667bb8052508115941f21d85804f84ecda4c492d19883cd15e",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/die_03.ogg",
+      "work": "80 CC0 creture SFX #2 (80-CC0-creature-sfx-2.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 21582,
+      "sha256": "59f9188919b50d40da3c9dd94e00c2d1c0db915ecc5b2eddfbf574743651c836",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/stomp_01.ogg",
+      "work": "80 CC0 creture SFX #2 (80-CC0-creature-sfx-2.zip)",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 20185,
+      "sha256": "3524b2f6d6927480942a03f2db54da0b517f0a1dff00eebcc5e1bca8e81bb428",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "StarNinjas-crunch/crunch.5.ogg",
+      "work": "7 Eating Crunches (crunch_-_tito.zip)",
+      "url": "https://opengameart.org/content/7-eating-crunches",
+      "author": "StarNinjas",
+      "license": "CC0 1.0",
+      "bytes": 17398,
+      "sha256": "b015b7e1091d20e75404b52b4d90aee1d5c9942e4e361ee62ba7599c2bf9a973",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "StarNinjas-crunch/crunch.6.ogg",
+      "work": "7 Eating Crunches (crunch_-_tito.zip)",
+      "url": "https://opengameart.org/content/7-eating-crunches",
+      "author": "StarNinjas",
+      "license": "CC0 1.0",
+      "bytes": 16389,
+      "sha256": "7c2cdcc7645471e9623c2da9ef48af527c4c95f9d91e3e8453e4d9fbb6facd24",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "trazzz123/monster_roar.wav",
+      "work": "CC0 Deep Monster Roar",
+      "url": "https://opengameart.org/content/cc0-deep-monster-roar",
+      "author": "trazzz123",
+      "license": "CC0 1.0",
+      "bytes": 1273958,
+      "sha256": "040d2841619c732098c30a638731317d13d7647e5ce1a75a3246219ce4b162ff",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    }
+  ]
+}

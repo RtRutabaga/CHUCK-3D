@@ -1,0 +1,103 @@
+{
+  "generator": "Tools/build_dino_sfx.py",
+  "sources": "Dinos/Source/manifest.json",
+  "license": "CC0 sources, cut and mixed for CHUCK 3D",
+  "sounds": [
+    {
+      "name": "SFX_TRexRoar_00",
+      "file": "SFX_TRexRoar_00.wav",
+      "duration": 4.05,
+      "sha256": "c855ba91c77500d29c8be32bdbf7a47781486129bfb17909d54f668278a6eb6d"
+    },
+    {
+      "name": "SFX_TRexRoar_01",
+      "file": "SFX_TRexRoar_01.wav",
+      "duration": 3.7,
+      "sha256": "03a25d9617216177bd8c6c8e2bb44da74b5aa522d1e549380706ed14ed26cb93"
+    },
+    {
+      "name": "SFX_TRexGrowl_00",
+      "file": "SFX_TRexGrowl_00.wav",
+      "duration": 3.444,
+      "sha256": "ea23dc3273f9a62e259a3485226e9fdff8af55f58b4d639c99ea25f0a8bad774"
+    },
+    {
+      "name": "SFX_TRexDeath_00",
+      "file": "SFX_TRexDeath_00.wav",
+      "duration": 5.176,
+      "sha256": "f71e9ff5317007b471ec92bddf31fb9b2280748bb55a91148751d5e6b28e286d"
+    },
+    {
+      "name": "SFX_TRexSnap_00",
+      "file": "SFX_TRexSnap_00.wav",
+      "duration": 0.45,
+      "sha256": "0597ab8becfb35f67f893d8cfa46cc297a4fe1ee3241b0a39b1e1b123dbfb97e"
+    },
+    {
+      "name": "SFX_TRexStep_00",
+      "file": "SFX_TRexStep_00.wav",
+      "duration": 0.9,
+      "sha256": "a98d7a2f295ee0e404056065a67a1cc9f2aacc23657606852550299c00f458b5"
+    },
+    {
+      "name": "SFX_TRexStep_01",
+      "file": "SFX_TRexStep_01.wav",
+      "duration": 0.9,
+      "sha256": "984e8b8f7cc02a94b71c5f568f0bf1d3524bdbaa84fb6d697c91f57ec419baab"
+    },
+    {
+      "name": "SFX_TRexStep_02",
+      "file": "SFX_TRexStep_02.wav",
+      "duration": 0.9,
+      "sha256": "cc048679336676c677cf8e833a1d4e334f89fde1504779ed6ebcfc96dd8a6ece"
+    },
+    {
+      "name": "SFX_RaptorCall_00",
+      "file": "SFX_RaptorCall_00.wav",
+      "duration": 1.079,
+      "sha256": "7e1f0b1bb9020d1b7840f41a1b7fb37cf89986d6754833a1c692870e2b104498"
+    },
+    {
+      "name": "SFX_RaptorHiss_00",
+      "file": "SFX_RaptorHiss_00.wav",
+      "duration": 0.52,
+      "sha256": "d18a64038b9eef714627ff21bf4cfb83924cdd3f001952bb2ab42937ddb613cd"
+    },
+    {
+      "name": "SFX_RaptorDeath_00",
+      "file": "SFX_RaptorDeath_00.wav",
+      "duration": 1.372,
+      "sha256": "20a1f02f7909ea661ad4bd86e9ac20c00842fe26d76e0ea28732fb22241fa1e4"
+    },
+    {
+      "name": "SFX_RaptorSnap_00",
+      "file": "SFX_RaptorSnap_00.wav",
+      "duration": 0.239,
+      "sha256": "1f36ce03c14a8ad119901b2ff39c261e725ddc983ef0fb804c4d676905f6eb0f"
+    },
+    {
+      "name": "SFX_RaptorSnap_01",
+      "file": "SFX_RaptorSnap_01.wav",
+      "duration": 0.239,
+      "sha256": "dc9e96d61d8cc43b0c31300941879672d579d47ecebe5e62329cb87b9ab7e6f9"
+    },
+    {
+      "name": "SFX_RaptorStep_00",
+      "file": "SFX_RaptorStep_00.wav",
+      "duration": 0.35,
+      "sha256": "300f99c96845fe9d991ffa860044713bf9f4c52a135fb60eda1aabd4ce958467"
+    },
+    {
+      "name": "SFX_RaptorStep_01",
+      "file": "SFX_RaptorStep_01.wav",
+      "duration": 0.35,
+      "sha256": "cc0c8fea17c1ba5484fd4a93b2ae5423335607910dd8e9fa39a1a131bdc630cf"
+    },
+    {
+      "name": "SFX_RaptorStep_02",
+      "file": "SFX_RaptorStep_02.wav",
+      "duration": 0.35,
+      "sha256": "fb3ea6b3f3bef2e99c3803a768204c9e886c758d75fff43fb6be2661d3cffa2a"
+    }
+  ]
+}

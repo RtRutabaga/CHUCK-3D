@@ -1,4 +1,5 @@
 """Original synthetic sounds for the Chult T-rex (Claude, 2026-10-15); no recordings or dependencies.
+Superseded 2026-10-16 by Tools/build_dino_sfx.py (recorded CC0 sources); running this overwrites those WAVs.
 After gen_raptor_sfx.py, an octave and more lower and far heavier.
 
 python -I Tools/gen_trex_sfx.py   (then Tools/import_trex_sfx.py imports them)

@@ -6,6 +6,27 @@ The raptor and T-rex use synthetic placeholder sounds (`Tools/gen_raptor_sfx.py`
 
 Next pass: put the files in `SourceAssets/Audio/SFX/Incoming/` (any names), say which slot each is for, and Claude cuts, levels and imports them into the existing slots (no code change needed for the slots below).
 
+## Done (2026-10-16, second pass)
+
+Freesound would not let the user register, so the sounds come from sites that need no account. The user downloaded `t-rex_calls.mp3`. With the user's approval, Claude downloaded 13 more CC0 files (about 7.4 MB) from OpenGameArt and Kenney.nl. `Tools/build_dino_sfx.py` cuts and mixes them into all 16 slots below and imports them under the old names, so no code changed. It supersedes `gen_raptor_sfx.py`/`gen_trex_sfx.py`. Only the clips actually used are kept: `SourceAssets/Audio/SFX/Dinos/Source/` (28 files, 2.4 MB, LFS), with their URLs, authors and SHA-256 in its `manifest.json`. They are credited in DEMO-CREDITS.txt.
+
+| Slot | Made from |
+|---|---|
+| T-rex roar 00 / 01 | the two tonal bellows that end t-rex_calls (slowed 10%), a deep monster roar (trazzz123) under them |
+| T-rex growl | the raspy middle of t-rex_calls |
+| T-rex death (unused) | its first bellow, slowed |
+| T-rex snap | heavy wood knock and punch slowed, a teeth crunch click |
+| T-rex steps | Kenney soft heavy impacts slowed, leaf crunch, a synthetic sub-bass shake |
+| Raptor call | a screech from Darsycho's tiny vicious creature over CaveboyTup's raspy small-dino call, both slowed |
+| Raptor hiss | rubberduck breath noises |
+| Raptor death | rubberduck scream and die sounds, slowed |
+| Raptor snaps | wood knock, crunch click, an attack whoosh |
+| Raptor steps | Kenney grass footsteps and soft thuds, slowed |
+
+The cuts were chosen from spectrograms. Claude cannot hear them, so they have not been auditioned. Change any cut in `build_dino_sfx.py` and re-run it and the two import scripts.
+
+The candidate list below (Freesound) is kept for reference only.
+
 ## Slots in the game
 
 | Creature | Slot (asset stem) | Count used | When it plays |

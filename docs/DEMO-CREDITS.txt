@@ -24,6 +24,11 @@ Chult T-rex model and animations: "T-Rex" by Quaternius, CC0-1.0
 (smoothed, rescaled and re-textured for this game).
 https://poly.pizza/m/UYtneO5FpF  https://quaternius.com
 
+Chult raptor and T-rex sounds: cut and mixed from CC0-1.0 recordings:
+"t rex calls" and "Small Dino Raspy Calls" by CaveboyTup, "CC0 Deep Monster Roar" by trazzz123,
+"Tiny vicious creature" by Darsycho, "80 CC0 creature SFX" (1 and 2) by rubberduck,
+"7 Eating Crunches" by StarNinjas (all opengameart.org), "Impact Sounds" by Kenney (kenney.nl)
+
 Human motion-capture sources: CMU Graphics Lab Motion Capture Database;
 BVH conversion by B. Hahne / cgspeed.
 https://mocap.cs.cmu.edu/
