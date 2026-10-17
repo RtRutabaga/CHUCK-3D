@@ -4,7 +4,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 
 ## October 16 — dinosaur sounds from recordings (Claude)
 
-- **Request:** find no-account sound sources ("especially if you can just download yourself"), plus the user's `t-rex_calls.mp3`. Base `c0450e5`, delivered `d7ac6d4` (+ this handoff commit).
+- **Request:** find no-account sound sources ("especially if you can just download yourself"), plus the user's `t-rex_calls.mp3`. Base `f345ae9` (on top of Codex's bridge-exit jungle), delivered `d7ac6d4` (+ this handoff commit).
 - **Approval:** the user approved the 13 listed downloads (filenames, sources and sizes given) in chat. Nothing was installed.
 - **Built, tests, launcher, flaws:** see HANDOFF and CHULT-DINO-SOUNDS.md.
 - **Contract compatibility:** the same 16 SoundWave names and counts; no code changed. `gen_raptor_sfx.py`/`gen_trex_sfx.py` would overwrite the WAVs (now noted in them).
