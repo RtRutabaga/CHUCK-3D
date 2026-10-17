@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 17 — temple tall trees; scanned-leaf crowns (Claude)
+
+- **Requests:** tall landing trees round the temple; then less round, less plastic tree tops "both here and everywhere on Chult", free resources welcome. Base `07021be`, delivered `badfe8e`, `986671e` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and the FallToChult README.
+- **Contract compatibility:** no rig/socket change. `SM_FallTree_A/B` and `SM_FallCrown` gained a material slot (`M_FallCrownLeaves`); `import_fall_trees.py` and `import_fall_cutscene.py` map it, longest slot name first. Buttress draws and `ChultRootProfiles.h` unchanged. Codex's wet `M_FallLeaves` changed only in roughness/specular (`create_chult_wet_materials.py`). New LFS binaries: two 2K PNGs and their uassets plus the three reimported meshes.
+- **Tools:** UE 5.7.4, Build.bat ×1, Blender 4.5.14 (atlas ×1, trees ×2), UnrealEditor-Cmd imports ×3, uncooked runs ×5, Build-Game.ps1 -Package ×3, Verify-Package ×1, Promote-Build ×2. No installations, no downloads.
+
+Next part of the work can be done here.
+
 ## October 16 — the mega temple (Claude)
 
 - **Request:** double the pyramid, join both to a SE Asian central temple after the user's reference, jungle reclaiming it, back closed by vegetation, a clear path remnant in. Base `b5defa6`, delivered `9099808` (+ this handoff commit). Region-setting work done by Claude at the user's direct request.

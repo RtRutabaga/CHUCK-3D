@@ -19,6 +19,24 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 17 — tall trees at the temple; scanned-leaf crowns, matte leaves (Claude)
+
+- **Tall trees (badfe8e):** user: "add some of the tall trees from the starting area around the temple to give it a more reclaimed by the jungle look". 79 `SM_FallTree_A/B` from their own stream ring the precinct, stand out on the plaza clear of the ways in, tower behind the temple and root on its back terraces; solid trunks where reachable. Uncooked temple check/climb passed; package **182/182** (`Local/verify-package-20261017-110955.log`); promoted as `TempleTrees`.
+- **Crowns and leaves (986671e):** user: the tree tops looked "fake overly round" and "glossy like plastic in some lights", "using free resources if helpful". Details in `SourceAssets/Cutscenes/FallToChult/README.md`.
+  - Each crown was one opaque lumpy ball in an even card shell. Now five to eight irregular clumps on a broad umbrella, each a small dark core under leaf-spray cards.
+  - The sprays (`T_FallCrownLeaves` +`_N`, new `M_FallCrownLeaves`) are composited by `Tools/build_crown_leaves.py` from the real leaves of Poly Haven's CC0 `island_tree_02` scan already in the project (already credited). Nothing downloaded or installed.
+  - `M_FallLeaves` (shared by ferns, shrubs, palms and lianas) went from roughness .28–.55 / specular .42 to .78–.9 / .22: its white glints in sun are gone in the landing pull-back. `M_FallCanopy` is darker and matte.
+  - It applies to `SM_FallTree_A/B` and `SM_FallCrown` wherever they stand (the landing, expansion, temple, the cutscene, the vista's 11,865 far crowns). Trees went from about 13k to 16–20k triangles.
+  - Uncooked: temple review ×3, fall-cutscene capture ×1. Package **182/182** (`Local/verify-package-20261017-125041.log`; a first run was cut short when the temple test's game window was closed, with no check failing, `Local/verify-chult-temple-20261017-120838.log`). Promoted as `TreeCrowns`.
+- **Launcher:** **986671e** (`Local/treecrowns-promotion.log`); receipt and launcher check pass.
+- **Limits:**
+  - The scanned island trees (`SM_ChultIslandTree`) were not changed.
+  - No person has looked at the crowns in play or in full daylight from below.
+  - Frame-rate cost of the denser crowns is unmeasured.
+  - The lianas' leaf positions changed with the crowns' draws.
+
+Next part of the work can be done here.
+
 ## October 16 — the mega temple (Claude)
 
 - **Built (9099808):** user request, with a reference image: "double the current pyramid temple and have both connected to this more SE Asian styled temple to create one mega temple like this reference image. Have the area with the temple being reclaimed by the jungle, the back of the temple completely inaccessible due to vegetation, but still a clear path remnant leading to the temple". Details in [CHULT-TEMPLE.md](CHULT-TEMPLE.md#the-mega-temple-october-16).
