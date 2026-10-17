@@ -83,6 +83,13 @@ tests the lethal grab separately. The package verifier requires this check.
 Human play feel, random grab outcomes and whole-population performance still
 need player review; automated geometry checks alone cannot settle difficulty.
 
+Cooked candidate evidence: `Local/verify-river-zombies-20261016-210518.log`:
+32/32 dry, supported, separated placements; all three upstream walks finished
+at full Sanity (24.1, 21.1 and 21.0 seconds), with zero inland sentries active.
+An earlier closer layout failed the walking trials and was replaced. The three
+normal follow-camera captures were reviewed, but start before reaching each
+zombie; they do not establish how readable every enemy is in the undergrowth.
+
 ## Not done / flaws
 
 - Neither the grab nor the struggle is a captured or keyframed clip: both are procedural layers over existing clips. The head-to-neck bite interpenetrates a little by design; there is no contact solve.

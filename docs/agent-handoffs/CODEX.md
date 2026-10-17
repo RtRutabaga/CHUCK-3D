@@ -2,6 +2,36 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 16 — later far-bank river zombies
+
+32 added zombies: eight road-shoulder singles, 24 inland sentries, S≈19000–32600.
+Runtime **7b57242**, final source contents identical to **6399101**. Placement
+and three upstream live-enemy walks pass at full Sanity in
+`Local/verify-river-zombies-20261016-210518.log`. First closer layout failed;
+retuned to 7–9.5 m from the actual road for singles, over 13 m for inland groups.
+`ChultRiverLife.cpp` owns this setting population; the original 15 landing
+zombies, five raptors, T-rex and zombie combat/animation remain unchanged.
+
+`Build-Game.ps1 -Package -SkipBaseAssets -ArchiveDirectory Builds/RiverZombieCandidate`
+build/package succeeded (UAT 56.92 s); full validator passed in
+`Local/river-zombies-final-build.log`: **182/182** smoke checks, no retry
+(`Local/verify-package-20261016-210518.log`). All required Chult/road/upriver/
+temple, golden climbs, fall/skip/reset, pantry, leap, lamp, canopy 48/48,
+giants 72/72, T-rex 4/4, raptor 8/8, bridge 6/6 and life/impact/grab suites pass.
+
+Promoted runtime **7b57242** with `Promote-Build.ps1 -Label RiverZombies`;
+receipt/hash and root launcher CheckOnly pass (`Local/river-zombies-promotion.log`).
+Previous **1533eb2** is `Windows-Previous-20261016-RiverZombies`, two backups
+kept, older BridgeExitJungle backup pruned. Own candidate removed automatically;
+five inherited candidates left in place. Source and handoff committed on main
+under standing publication permission.
+No binary assets, downloads, imports or installations. UE 5.7.4 / CL 51494982,
+MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412. No human play, physical Xbox,
+whole-population performance or all-enemy visibility acceptance; target walks
+use the existing zero-grab test behavior.
+
+Next part of the work can be done here.
+
 ## October 16 — bridge-exit jungle guidance (Codex)
 
 - **Built (1533eb2):** the user identified a misleading open route straight after the bridge. `FillBridgeExit` in `ChultPath.cpp` runs after both road centre lines resolve, placing 25 existing scanned trees/matching solid trunk proxies and 1,399 ferns, broad leaves and shrubs in the former S≈6750–14900 clearing. Trees reserve 8 m from the real centre line; understory reserves an irregular 2.7–3.9 m. Water and the bridge landing remain clear. The paving/route, floor, earlier art, onward areas, enemies, traversal and controls are unchanged. No invisible wall. Authorization in [CHULT-PATH.md](../CHULT-PATH.md).
