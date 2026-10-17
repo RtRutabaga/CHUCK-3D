@@ -38,6 +38,21 @@ The pyramid, balustrades, house, stakes, stelae and blocks are solid. Chuck step
 - `-ChuckChultTest -ChuckTempleReview`: six cooked views (`Chult/Temple*.png`), then the real character runs from the plaza up the stair to the summit and into the doorway (`CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3`).
 - The road gains a walk along the avenue (10 walks).
 
+## The mega temple (October 16)
+
+User request, October 16, 2026 (Claude), with a reference image: "double the current pyramid temple and have both connected to this more SE Asian styled temple to create one mega temple like this reference image. Have the area with the temple being reclaimed by the jungle, the back of the temple completely inaccessible due to vegetation, but still a clear path remnant leading to the temple".
+
+This supersedes the single-pyramid layout above where they differ; the avenue, stakes, stelae, spawn and Phase 6 notes still hold.
+
+- **Twin pyramids:** the October 15 pyramid, unchanged in form, now stands twice, centred at T=±52 m, fronts in line at S=76000. Each keeps its 125-step stair, serpent balustrades, summit house, dark vestibule and roof comb; both stairs are climbable.
+- **Central temple (Khmer style):** three talud-tablero terraces (5 m each, 15 m total) between them. The lowest (65 m wide) runs into both pyramids' sides so that its top meets their first ledges: one joined, walkable mass. A 94-step stair, 8 m wide with serpent (naga) balustrades, climbs the middle to the sanctuary: a 9 m square cella whose real doorway opens into a dark vestibule (the Phase 6 way in is now this one) under a nine-storey stepped conical spire, 44 m above the plaza. Four corner towers stand on the top terrace and four on the second; two squat gate pavilions flank the stair's foot. Every spire storey has a pale plaster band and corner/face antefixes; there are false doors on the towers and the sanctuary's sides.
+- **Wider precinct:** from S=62000 the far floor widens to |T|≤105 m (`ChultTemplePrecinctFrom`/`ChultTemplePrecinctHalf` in `ChultRiver.h`; `InChultRiverExtension`, the gorge's floor reservation and the upriver floor chunks follow). The level plaza is now |T|≤90 m.
+- **Reclaimed by the jungle:** trees (with trunk collision) on the plaza, thickening toward the sides and back, ferns, elephant ears and shrubs over most of the ground; growth on every ledge, heavier on the backs; trees clinging to upper corners; hanging moss over 210 tablero edges; 26 fallen carved blocks.
+- **The ways in:** the old road stays clear up the avenue to the central stair (no plants within 8 m of its line), with the forecourt between the gates and a tree-free corridor from the road to each pyramid's stair.
+- **The closed back:** from S=79500 to 82500 a hidden wall (ground to 52 m, camera passes through it) spans the precinct, so nothing behind the front halves of the ledges, the summit platforms or the plaza can be reached; it is dressed with a dense band of trees and heavy growth, and the existing upriver jungle continues beyond it. The top terraces and both summits stay walkable up to it.
+
+Checks (`CHUCK_CHULT_TEMPLE_CHECK`): plaza level at 345 probes; all three stairs' surfaces and capsule sweeps (192 probes); the sanctuary and both pyramid vestibules have standing room and open doorways; the central first ledge joins both pyramids' first ledges; the plaza reaches both pyramid stairs; the avenue is open; the back is closed at five places across the precinct; the spawn; the widened floor counts as the far bank. `-ChuckTempleReview` writes nine views (adds `TempleLedgeJoin`, `TempleBackJungle`, `TempleApproach`) and the real character now climbs the central stair into the sanctuary (`CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3`).
+
 ## Later
 
-The interior (Phase 6) begins at the vestibule's dark back wall. The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
+The interior (Phase 6) begins at the sanctuary vestibule's dark back wall (the pyramids' summit vestibules could serve as side ways in). The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.

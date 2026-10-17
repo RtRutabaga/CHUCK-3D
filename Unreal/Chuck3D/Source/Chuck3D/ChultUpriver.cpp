@@ -155,7 +155,9 @@ void BuildChultUpriver(AActor* Owner)
     for(float S0=28000;S0<ChultFarFloorEnd;S0+=2000)
     {
         FChultLandform Ground;
-        for(float S=S0;S<S0+2000;S+=100)for(float T=-6500;T<6500;T+=100)
+        // From the temple precinct on, wider (2026-10-16).
+        const float Wide=S0>=ChultTemplePrecinctFrom?ChultTemplePrecinctHalf:6500;
+        for(float S=S0;S<S0+2000;S+=100)for(float T=-Wide;T<Wide;T+=100)
         {
             FVector A=ChultCanyonFrame(S,T),B=ChultCanyonFrame(S+100,T),C=ChultCanyonFrame(S+100,T+100),D=ChultCanyonFrame(S,T+100);
             for(FVector* P:{&A,&B,&C,&D})P->Z=ChultCanyonGroundZ(*P);Ground.Quad(A,B,C,D);

@@ -7,6 +7,9 @@ class AChuckCharacter;
 // rises at a pool under the source falls at S=ChultRiverHead.
 // Since the temple (2026-10-15, docs/CHULT-TEMPLE.md) it runs on to S=92000.
 constexpr float ChultFarFloorEnd=92000.f;
+// The temple precinct (2026-10-16): from S=62000 to the floor's end the floor
+// widens to |T|<=10500 for the mega temple's twin pyramids and the jungle round them.
+constexpr float ChultTemplePrecinctFrom=62000.f,ChultTemplePrecinctHalf=10500.f;
 constexpr float ChultRiverHead=33800.f;
 bool InChultRiverExtension(const FVector& P);
 float ChultRiverCenter(float S);

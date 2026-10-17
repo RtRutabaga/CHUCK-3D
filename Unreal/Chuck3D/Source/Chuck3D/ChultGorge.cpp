@@ -60,6 +60,9 @@ namespace
         // The far bank, to its upstream end (S=64000 since 2026-10-15).
         D=BoxDistance(FVector2D(F.X,F.Y),FVector2D((4500+ChultFarFloorEnd)*.5f,0),FVector2D((ChultFarFloorEnd-4500)*.5f,6500));
         if(D<E.Distance){E={D,ChultCanyonGroundZ(ChultCanyonFrame(FMath::Clamp(F.X,4500.,static_cast<double>(ChultFarFloorEnd)),FMath::Clamp(F.Y,-6500.,6500.)))};}
+        // The temple precinct, wider (2026-10-16).
+        D=BoxDistance(FVector2D(F.X,F.Y),FVector2D((ChultTemplePrecinctFrom+ChultFarFloorEnd)*.5f,0),FVector2D((ChultFarFloorEnd-ChultTemplePrecinctFrom)*.5f,ChultTemplePrecinctHalf));
+        if(D<E.Distance){E={D,ChultCanyonGroundZ(ChultCanyonFrame(FMath::Clamp(F.X,static_cast<double>(ChultTemplePrecinctFrom),static_cast<double>(ChultFarFloorEnd)),FMath::Clamp(F.Y,-static_cast<double>(ChultTemplePrecinctHalf),static_cast<double>(ChultTemplePrecinctHalf))))};}
         return E;
     }
 

@@ -35,7 +35,11 @@ namespace
         for(int32 I=0;I<6;++I){M.UV[Start+I]=UVs[I];float U=UVs[I].X;M.C[Start+I]=FColor(255,255,255,U<=0||U>=1?0:225);}
     }
 }
-bool InChultRiverExtension(const FVector& P){const FVector F=Frame(P);return F.X>=4500 && F.X<=ChultFarFloorEnd && FMath::Abs(F.Y)<=6500;}
+bool InChultRiverExtension(const FVector& P)
+{
+    const FVector F=Frame(P);
+    return F.X>=4500 && F.X<=ChultFarFloorEnd && (FMath::Abs(F.Y)<=6500 || (F.X>=ChultTemplePrecinctFrom && FMath::Abs(F.Y)<=ChultTemplePrecinctHalf));
+}
 float ChultRiverDistance(const FVector& P)
 {
     const FVector F=Frame(P);if(F.X<4500)return 1.e9f;
