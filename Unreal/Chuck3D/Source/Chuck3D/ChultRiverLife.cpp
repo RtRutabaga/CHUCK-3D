@@ -14,11 +14,26 @@
 #include "HAL/PlatformMisc.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#include "Components/CapsuleComponent.h"
 
 namespace
 {
     struct FRiverHome { FVector Feet; bool NearRoad; TWeakObjectPtr<ADockNPC> Zombie; bool Path=false,Opposite=false; };
     TArray<FRiverHome> Homes;
+    void ProtectRiverCamera(ADockNPC* Zombie)
+    {
+        // Only the river encounters: keep a pursuing torso out of the orbit.
+        // Separate camera-only geometry leaves pawn/traversal queries unchanged.
+        auto* Guard=NewObject<UCapsuleComponent>(Zombie,TEXT("RiverZombieCamera"));
+        Guard->InitCapsuleSize(43,98);
+        Guard->SetupAttachment(Zombie->GetRootComponent());
+        Guard->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        Guard->SetCollisionObjectType(ECC_WorldDynamic);
+        Guard->SetCollisionResponseToAllChannels(ECR_Ignore);
+        Guard->SetCollisionResponseToChannel(ECC_Camera,ECR_Block);
+        Guard->ComponentTags.Add(TEXT("RiverZombieCamera"));
+        Guard->SetCanEverAffectNavigation(false);Guard->RegisterComponent();
+    }
     FVector Frame(FVector P)
     {
         P-=ChultCanyonFrame(0,0);return FVector(P.X*.8+P.Y*.6,-P.X*.6+P.Y*.8,P.Z);
@@ -78,6 +93,7 @@ void SpawnChultRiverZombies(UWorld* World)
             {
                 Z->Tags.Add(TEXT("ChultRiverZombie"));
                 Z->Tags.Add(Near?TEXT("ChultRiverRoadZombie"):TEXT("ChultRiverFlankZombie"));
+                ProtectRiverCamera(Z);
                 Homes.Add({Feet,Near,Z});
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE station=%d road=%d s=%.0f road_distance=%.0f feet=%s"),Station,Near,F.X,D,*(Feet-G).ToString());
             }
@@ -97,6 +113,7 @@ void SpawnChultRiverZombies(UWorld* World)
         {
             Z->Tags.Add(TEXT("ChultRiverZombie"));
             Z->Tags.Add(Opposite?TEXT("ChultRiverOppositeZombie"):TEXT("ChultRiverPathAttacker"));
+            ProtectRiverCamera(Z);
             Homes.Add({Feet,false,Z,!Opposite,Opposite});
             UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ADDED opposite=%d s=%.0f road_distance=%.0f feet=%s"),Opposite,F.X,D,*(Feet-G).ToString());
             return true;
@@ -138,7 +155,7 @@ void StartChultRiverZombieReview(UWorld* World)
         TWeakObjectPtr<ADockNPC> Windup,Target;FTimerHandle Timer;
     };
     auto Run=MakeShared<FRun>();
-    int32 Near=0,Flanks=0,Path=0,Opposite=0,Clear=0,Dry=0,Supported=0;
+    int32 Near=0,Flanks=0,Path=0,Opposite=0,Clear=0,Dry=0,Supported=0,CameraGuards=0;
     const FVector G=AChultLanding::FloorOrigin();
     for(const auto& H:Homes)
     {
@@ -148,9 +165,13 @@ void StartChultRiverZombieReview(UWorld* World)
         Clear+=H.Path ? D>=80&&D<=270 : D>(H.NearRoad?700:ADockNPC::ZombieLeash+180);
         Dry+=F.X>18200&&F.X<32900&&(H.Opposite ? F.Y>ChultRiverCenter(F.X)+ChultRiverWidth(F.X)+200 : F.Y<ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-200);
         Supported+=OpenFloor(World,P,Feet)&&FVector::Dist(Feet,H.Feet)<2;
+        if(H.Zombie.IsValid())for(auto* C:H.Zombie->GetComponents())
+            if(auto* Guard=Cast<UCapsuleComponent>(C);Guard&&Guard->ComponentHasTag(TEXT("RiverZombieCamera")))
+                CameraGuards+=Guard->GetCollisionResponseToChannel(ECC_Camera)==ECR_Block&&Guard->GetCollisionResponseToChannel(ECC_Pawn)==ECR_Ignore
+                    &&Guard->GetCollisionResponseToChannel(ECC_Visibility)==ECR_Ignore;
     }
-    Run->Failures+=(Near!=8)+(Flanks!=24)+(Path!=16)+(Opposite!=24)+(Clear!=72)+(Dry!=72)+(Supported!=72);
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_LAYOUT failures=%d road=%d flanks=%d path_attackers=%d opposite=%d clear=%d dry=%d supported=%d"),Run->Failures,Near,Flanks,Path,Opposite,Clear,Dry,Supported);
+    Run->Failures+=(Near!=8)+(Flanks!=24)+(Path!=16)+(Opposite!=24)+(Clear!=72)+(Dry!=72)+(Supported!=72)+(CameraGuards!=72);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_LAYOUT failures=%d road=%d flanks=%d path_attackers=%d opposite=%d clear=%d dry=%d supported=%d camera_guards=%d"),Run->Failures,Near,Flanks,Path,Opposite,Clear,Dry,Supported,CameraGuards);
     Chuck->DisableInput(Cast<APlayerController>(Chuck->GetController()));Chuck->SetLookLocked(true);
     // Three live dodge routes, an unguarded control and an opposite-bank approach.
     // No sanity refill during a trial; no combat, enemy freezing or stat changes.
