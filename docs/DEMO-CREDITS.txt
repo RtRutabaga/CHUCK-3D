@@ -29,6 +29,10 @@ Chult raptor and T-rex sounds: cut and mixed from CC0-1.0 recordings:
 "Tiny vicious creature" by Darsycho, "80 CC0 creature SFX" (1 and 2) by rubberduck,
 "7 Eating Crunches" by StarNinjas (all opengameart.org), "Impact Sounds" by Kenney (kenney.nl)
 
+Zombie sounds: cut and mixed from CC0-1.0 recordings: "Zombie #2"-"#6" by Joseph Sardin (bigsoundbank.com),
+"Zombies Sound Pack" by artisticdude and "80 CC0 creature SFX #2" by rubberduck (opengameart.org),
+"Impact Sounds" by Kenney (kenney.nl)
+
 Human motion-capture sources: CMU Graphics Lab Motion Capture Database;
 BVH conversion by B. Hahne / cgspeed.
 https://mocap.cs.cmu.edu/

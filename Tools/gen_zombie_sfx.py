@@ -1,4 +1,5 @@
 """Original seeded zombie/body-contact synthesis; Python standard library only.
+Superseded 2026-10-16 by Tools/build_zombie_sfx.py (recorded CC0 sources); running this overwrites those WAVs.
 
 No voice for Chuck, recordings, samples, or third-party dependencies.
 """

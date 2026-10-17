@@ -1,0 +1,195 @@
+{
+  "note": "Unmodified CC0 source clips used by Tools/build_zombie_sfx.py (only the clips used are kept).",
+  "files": [
+    {
+      "file": "artisticdude-zombies/zombie-16.wav",
+      "work": "Zombies Sound Pack (zombies.zip)",
+      "url": "https://opengameart.org/content/zombies-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 381606,
+      "sha256": "637f8d26b186005246a279fb19def56c81eebcf144c2346460ac1e4fc0075fc7",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "artisticdude-zombies/zombie-24.wav",
+      "work": "Zombies Sound Pack (zombies.zip)",
+      "url": "https://opengameart.org/content/zombies-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 89062,
+      "sha256": "3776a39a471c215f26115290837012084fc07f37e20b4808ce76f5dafe98f2fb",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "artisticdude-zombies/zombie-5.wav",
+      "work": "Zombies Sound Pack (zombies.zip)",
+      "url": "https://opengameart.org/content/zombies-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 133220,
+      "sha256": "6920b559f953d19737f65a9da5b31f7bb3e1421c48552f52d7a57399d507574b",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "artisticdude-zombies/zombie-6.wav",
+      "work": "Zombies Sound Pack (zombies.zip)",
+      "url": "https://opengameart.org/content/zombies-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 144256,
+      "sha256": "2ad9acaccc9bc29f77f89581767699c3ed8d9630c19a11a8bbf6332ce89686a2",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_zombie_2106.flac",
+      "work": "\"Zombie #2-#6\" by Joseph Sardin (sound nos. 2107-2111 are #2-#6; 2106 is #1)",
+      "url": "https://bigsoundbank.com/zombie-1-s2106.html (and -2..-6), files https://bigsoundbank.com/UPLOAD/flac/<no>.flac",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 2016294,
+      "sha256": "baeeaf21c48cb232ebb10649ad3dc56d0b8f60f19c441490d829e5aac646a5d2",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_zombie_2108.flac",
+      "work": "\"Zombie #2-#6\" by Joseph Sardin (sound nos. 2107-2111 are #2-#6; 2106 is #1)",
+      "url": "https://bigsoundbank.com/zombie-1-s2106.html (and -2..-6), files https://bigsoundbank.com/UPLOAD/flac/<no>.flac",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 1269205,
+      "sha256": "c23fed5dc2f6484e86b15f3e52986992f7085f7614dd0ed705976099296edfdb",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_zombie_2109.flac",
+      "work": "\"Zombie #2-#6\" by Joseph Sardin (sound nos. 2107-2111 are #2-#6; 2106 is #1)",
+      "url": "https://bigsoundbank.com/zombie-1-s2106.html (and -2..-6), files https://bigsoundbank.com/UPLOAD/flac/<no>.flac",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 559761,
+      "sha256": "6f46ff7cb28872b59016c838909366c757f93edeec4e48eff80c7fe4078626c8",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_zombie_2110.flac",
+      "work": "\"Zombie #2-#6\" by Joseph Sardin (sound nos. 2107-2111 are #2-#6; 2106 is #1)",
+      "url": "https://bigsoundbank.com/zombie-1-s2106.html (and -2..-6), files https://bigsoundbank.com/UPLOAD/flac/<no>.flac",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 492343,
+      "sha256": "227dffdddfc7382ca31ae1cf44295201f97beb328bc016327ad5884a32938724",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_zombie_2111.flac",
+      "work": "\"Zombie #2-#6\" by Joseph Sardin (sound nos. 2107-2111 are #2-#6; 2106 is #1)",
+      "url": "https://bigsoundbank.com/zombie-1-s2106.html (and -2..-6), files https://bigsoundbank.com/UPLOAD/flac/<no>.flac",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 137342,
+      "sha256": "6b6354cfc25fb3bcf0414a2dfde44d8264b3c8c9b905bee1bf5f2f37797624f4",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 11617,
+      "sha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_001.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 10861,
+      "sha256": "f92f5cb6ba4ff2766497292ffd90865654317eeca976f5652e0708dbdcdc0dd9",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_004.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 10452,
+      "sha256": "f4c0c3eb8ab6517583b8218ed03f28923d1b687379aab4c1d5a6d4c10cf8e500",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_medium_000.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8800,
+      "sha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_medium_001.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 8701,
+      "sha256": "e71d23abcc3f10d9d6bc9615b2a431fff70b12333a5fcdd9964457564ace4349",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_medium_003.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 9509,
+      "sha256": "2d7c719c05999e0532f4384e1018e04cd916db715140bf16dee2dff3f820e908",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_heavy_001.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6689,
+      "sha256": "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "Kenney-impact/impactSoft_heavy_003.ogg",
+      "work": "Impact Sounds 1.0 (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6665,
+      "sha256": "d00286a2dc62ee5cb4d42bf56120e7050a855f69e655fc1294410aadd337eba3",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/attack_01.ogg",
+      "work": "80 CC0 creture SFX #2",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 12126,
+      "sha256": "14ec0f8ab007d4641f4f2e214ea170182690005f40409a4e8bdd1ae1b58abd30",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "rubberduck-80-creature-2/attack_05.ogg",
+      "work": "80 CC0 creture SFX #2",
+      "url": "https://opengameart.org/content/80-cc0-creture-sfx-2",
+      "author": "rubberduck",
+      "license": "CC0 1.0",
+      "bytes": 9265,
+      "sha256": "f363f8c4e3c62b0fb5c19a476a264e9073cf773cd901eb83cc246e67f2baa49f",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    }
+  ]
+}

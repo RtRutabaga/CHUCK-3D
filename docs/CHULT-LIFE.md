@@ -98,3 +98,18 @@ zombie; they do not establish how readable every enemy is in the undergrowth.
 - The jungle zombies are hard to see in the thick undergrowth.
 - Five raptors share one round and ignore one another when steering.
 - Not played by a person, and no Xbox test.
+
+## Zombie sounds (user 2026-10-16)
+
+"Find download and implement better noises for the zombies." The 12 synthetic zombie sounds (`gen_zombie_sfx.py`) are replaced, under the same names, by recordings. They are used by every zombie, in the jungle and the sewer. With the user's approval, Claude downloaded 8 CC0 files (about 10.7 MB, no accounts needed): BigSoundBank's studio zombie recordings "Zombie #1"-"#7" by Joseph Sardin (lossless FLAC), and artisticdude's Zombies Sound Pack (OpenGameArt). The hits reuse Kenney's Impact Sounds, and the lunge whoosh a rubberduck clip, both downloaded earlier for the dinosaurs. `Tools/build_zombie_sfx.py` cuts and mixes the clips:
+
+| Slot | When | Made from |
+|---|---|---|
+| Rasp ×3 | idle groan every 4-7 s; the grab | breathy moans from Zombie #4 and #5 |
+| Swing ×2 | its lunge | the loudest snarls of #2 and #3 over a whoosh |
+| ClawHit ×3 | Chuck's scratch lands | a fleshy punch and a short grunt |
+| ChuckHit ×3 | its blow or bite lands on Chuck | a heavy punch and a body thump |
+| Death ×1 | the killing scratch | #6's burst-and-fade over a slow low groan |
+
+The used clips (19, 5.2 MB, LFS; `*.flac` is now LFS-tracked) and their provenance are in `SourceAssets/Audio/SFX/Zombies/Source/`. They are credited in DEMO-CREDITS.txt. The cuts were chosen from spectrograms and have not been auditioned.
+

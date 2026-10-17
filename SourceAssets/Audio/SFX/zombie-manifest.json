@@ -1,65 +1,65 @@
 {
-  "provenance": "Original deterministic synthesis; no samples",
+  "provenance": "CC0 recordings (SFX/Zombies/Source/manifest.json) cut and mixed by Tools/build_zombie_sfx.py",
   "sounds": [
     {
       "name": "SFX_ZombieRasp_00",
-      "duration": 1.05,
-      "sha256": "80a6be590488ad23267ca5e4a1112be7eb560c7f34287faf2407b9c06013b102"
+      "duration": 1.24,
+      "sha256": "5f337319f3b2427659cc35dd9e1f783cd8bf2b6cb3c291bbbcb87b860d5aa13d"
     },
     {
       "name": "SFX_ZombieRasp_01",
-      "duration": 1.05,
-      "sha256": "23b4bbc6b9e12410ac971f945dad1321623831931d90b20d32d18ef1319b3623"
+      "duration": 1.43,
+      "sha256": "133a1f456cd3f5d2297e4341ed463ef3ada40d8418f3ad6de69b642c4559df91"
     },
     {
       "name": "SFX_ZombieRasp_02",
-      "duration": 1.05,
-      "sha256": "c0226c5f8524c23fdf91274e140803055c389f9374189de2814d014afe3d5f47"
+      "duration": 1.19,
+      "sha256": "430e4f9862a01117a3dd505ab49062bc729d76c5c63f49bb365619590adf881c"
     },
     {
       "name": "SFX_ZombieSwing_00",
-      "duration": 0.32,
-      "sha256": "c133438355b7adaa450b67d78a141787a0ecff1eeacf37ec1666dba0e92b82df"
+      "duration": 0.64,
+      "sha256": "db6faa7d1f5af92867743711dc1c9d3d2340d58d9ca28a09b1a263aa1f090a85"
     },
     {
       "name": "SFX_ZombieSwing_01",
-      "duration": 0.32,
-      "sha256": "f195f99634fc9c78ca70fdc4ba5c5d486ced0ccb609b59804c5a5d03c11c1de3"
+      "duration": 0.62,
+      "sha256": "6f09d24e33425a67477889c0596ec5a1531765254322dce49349b514cb522c6d"
     },
     {
       "name": "SFX_ZombieClawHit_00",
-      "duration": 0.23,
-      "sha256": "f2390f97761857b3c301026928e7aad62622c473691dd2521144cc5f8ee522ba"
+      "duration": 0.42,
+      "sha256": "ce1b0c259d5163990343e4b207a3eeabaaaa81db10a6a090ccaa6ea4b1966691"
     },
     {
       "name": "SFX_ZombieClawHit_01",
-      "duration": 0.23,
-      "sha256": "276f58ac7ed4f4de9c67d4d351451550ebbf5c9a1c65d02d016fdb166b624664"
+      "duration": 0.42,
+      "sha256": "87e6025ef99305ccd0de60539feb9c4f27d2b1df72a0cdc6394d7143ec0326f3"
     },
     {
       "name": "SFX_ZombieClawHit_02",
-      "duration": 0.23,
-      "sha256": "190586a4ef8bcf3f97b0d2d1345491eddea50946aa204646fa38afbf76426307"
+      "duration": 0.42,
+      "sha256": "977e7cc97e1b3aa0a81be6846e195bef228aac8f4adf9a565a68627c03c9c8d1"
     },
     {
       "name": "SFX_ZombieChuckHit_00",
-      "duration": 0.3,
-      "sha256": "f46bf861ce8384cf28ad875c69a84a404193b03b949f7db40fd140f9004a4d34"
+      "duration": 0.42,
+      "sha256": "f5d70376b054f706914959489fdbcea2e6f86c993a041371da9cb74fb9a31263"
     },
     {
       "name": "SFX_ZombieChuckHit_01",
-      "duration": 0.3,
-      "sha256": "70b2911fa888b8e923e736d7c50839bc74ef55a6d7d2c64c140f668c846c4c89"
+      "duration": 0.42,
+      "sha256": "b8c2fb440494a1950cd7154aeee1bebc25d43c71ad6ff1ca5c8dbd2de8e2d397"
     },
     {
       "name": "SFX_ZombieChuckHit_02",
-      "duration": 0.3,
-      "sha256": "22cb08e41b35b4251db7eb502ac8b71f6afda829a1410b23ae17f5a93f84d028"
+      "duration": 0.42,
+      "sha256": "944f9a9b1a6351ed0951ac09db42fd3d066b8f86af3f04d71e2cc4eb15649927"
     },
     {
       "name": "SFX_ZombieDeath_00",
-      "duration": 1.3,
-      "sha256": "0d7294aa9243a991a8251bf6e797b4dca0eca46c4af7fdfc91715b47c9b430bc"
+      "duration": 1.941,
+      "sha256": "5f33f8a39fd0b61268207432d0c9d4369bbacc44f3ea3689f1ed8d23661e62b2"
     }
   ]
 }
