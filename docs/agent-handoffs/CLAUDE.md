@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 16 — the mega temple (Claude)
+
+- **Request:** double the pyramid, join both to a SE Asian central temple after the user's reference, jungle reclaiming it, back closed by vegetation, a clear path remnant in. Base `b5defa6`, delivered `9099808` (+ this handoff commit). Region-setting work done by Claude at the user's direct request.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE.md.
+- **Contract compatibility:** no rig/clip/socket/asset change, no new binaries. Codex-owned setting files changed: `ChultRiver.h/.cpp` (precinct constants, `InChultRiverExtension` widened), `ChultGorge.cpp` (FloorEdge precinct box), `ChultUpriver.cpp` (wider floor chunks from S=62000). `InChultTempleReserve` now covers the whole precinct to S=82500, so the upriver jungle's second stream places nothing there (ChultTemple.cpp plants it). The temple build log line and its Verify-Package pattern changed (`pyramids=2 levels=3 ... serpents=6`). The Phase 6 entrance is now the central sanctuary's doorway.
+- **Tools:** UE 5.7.4, Build.bat ×2, uncooked review ×2, Build-Game.ps1 -Package -SkipBaseAssets ×1, Promote-Build ×1. No installations, no downloads.
+
+Next part of the work can be done here.
+
 ## October 16 — zombie sounds from recordings (Claude)
 
 - **Request:** "Find download and implement better noises for the zombies". Base `3adcd2a` (after Codex's river zombies), delivered `6f7c63f` (+ this handoff commit).
