@@ -492,7 +492,9 @@ void BuildChultTemple(AActor* Owner)
             H->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,*FString::Printf(TEXT("%s/%s.%s"),Dir,*Name,*Name)));Missing+=!H->GetStaticMesh();
             H->SetupAttachment(Owner->GetRootComponent());H->SetWorldLocation(G);H->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
             if(Solid)H->SetCollisionProfileName(TEXT("BlockAll"));H->SetHiddenInGame(Hidden);H->SetCastShadow(!Hidden);
-            H->SetCullDistances(Solid?12000:9000,Solid?20000:16000);H->RegisterComponent();
+            // The tall trees stand over the whole precinct: seen from the avenue's start.
+            const bool Tall=Name.StartsWith(TEXT("SM_FallTree"));
+            H->SetCullDistances(Tall?30000:Solid?12000:9000,Tall?42000:Solid?20000:16000);H->RegisterComponent();
         }
         H->AddInstance(FTransform(FRotator(0,Yaw,0),G+Local,FVector(Scale)),true);
     };
@@ -574,14 +576,67 @@ void BuildChultTemple(AActor* Owner)
         if(I%4==0&&!OnStructure(S,T,250)){Tree(Ground,R.FRandRange(2.f,3.2f),R.FRandRange(0,360),false);if(I%16==0)Place(TEXT("SM_FallPalm"),Ground+Across*150,R.FRandRange(1.4f,2.f),R.FRandRange(0,360));continue;}
         Plant(Ground,4+I%3,R.FRandRange(2.f,3.4f),R.FRandRange(0,360));
     }
+    // The landing's tall trees (SM_FallTree_A/B, about 27 m at scale 1, 2026-10-17),
+    // from their own stream so the growth above keeps its draws: a ring of
+    // giants round the precinct, a few out on the plaza, more towering
+    // behind the temple and some rooted on its back terraces. Where he can
+    // reach them their trunks are solid, as at the landing.
+    int32 TallTrees=0;
+    {
+        FRandomStream Tall(2026101701);
+        auto TallTree=[&](float S,float T,float Z,float Scale,bool Solid)
+        {
+            const bool A=Tall.FRand()<.5f;const float Yaw=Tall.FRandRange(0,360);
+            Place(A?TEXT("SM_FallTree_A"):TEXT("SM_FallTree_B"),Flat(S,T,Z-5),Scale,Yaw);++TallTrees;
+            if(!Solid)return;
+            const float Radius=(A?78:62)*Scale,Height=2700*Scale;
+            auto* C=NewObject<UCapsuleComponent>(Owner);C->SetupAttachment(Owner->GetRootComponent());
+            C->InitCapsuleSize(Radius,Height*.5f);C->SetCollisionProfileName(TEXT("BlockAll"));C->SetHiddenInGame(true);
+            C->SetWorldLocation(G+Flat(S,T,Z+Height*.5f-Radius));C->RegisterComponent();C->ComponentTags.Add(TEXT("ChultTemple"));
+        };
+        auto GroundAt=[&](float S,float T){return ChultCanyonGroundZ(ChultCanyonFrame(S,T))-PlazaZ();};
+        // The ring: both sides of the precinct, from the jungle's edge to the back.
+        for(float S=PlazaFrom-1200;S<BackFrom+200;S+=Tall.FRandRange(900,1500))for(float Side:{-1.f,1.f})
+        {
+            const float T=Side*Tall.FRandRange(7900,10100);
+            if(OnStructure(S,T,500))continue;
+            TallTree(S,T,GroundAt(S,T),Tall.FRandRange(1.f,1.55f),true);
+        }
+        // Out on the plaza: scattered giants clear of the ways in, the avenue's stakes and stelae.
+        for(int32 I=0,Made=0;I<200&&Made<14;++I)
+        {
+            const float S=Tall.FRandRange(65500,76500),A=Tall.FRandRange(2200,7600),T=A*(Tall.FRand()<.5f?-1:1);
+            if(OnStructure(S,T,500)||OnWayIn(S,T,450))continue;
+            bool Clear=true;for(float St:StelaS)Clear&=FVector2D(S-St,A-1500).Size()>700;if(!Clear)continue;
+            TallTree(S,T,GroundAt(S,T),Tall.FRandRange(.95f,1.4f),true);++Made;
+        }
+        // Behind the temple: the tallest, rising over its back and between its towers.
+        for(int32 I=0;I<34;++I)
+        {
+            const float S=Tall.FRandRange(BackFrom+300,BackTo+2500),T=Tall.FRandRange(-ChultTemplePrecinctHalf+300,ChultTemplePrecinctHalf-300);
+            if(OnStructure(S,T,200))continue;
+            TallTree(S,T,GroundAt(S,T),Tall.FRandRange(1.25f,1.7f),false);
+        }
+        // Rooted on the back terraces: two on each pyramid, two on the central temple.
+        for(float Side:{-1.f,1.f})
+        {
+            for(int32 Tr:{0,1})
+            {
+                const float H=TierHalf(Tr)-Band-110,In=Tr+1<Tiers?TierHalf(Tr+1):0;
+                const float S=Sc+(H+In)*.5f,T=Side*(PyramidT+Tall.FRandRange(-.6f,.6f)*H);
+                TallTree(S,T,(Tr+1)*Tier,Tall.FRandRange(.7f,.9f),false);
+            }
+            TallTree(Sc+(LevelS[1]-Band+LevelS[2])*.5f,Side*Tall.FRandRange(600,1500),2*Tier,Tall.FRandRange(.65f,.8f),true);
+        }
+    }
     // Mist pooled round the temple's foot.
     for(const FVector& L:{Flat(Sc-Base-700,-PyramidT-1800,150),Flat(Sc-Base-700,PyramidT+1800,150),Flat(Sc+Base+800,0,150),Flat(Sc+Base+600,-8000,150),Flat(Sc+Base+600,8000,150)})
     {
         auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+L);Fog->SetWorldScale3D(FVector(8));
         Fog->RadialFogExtinction=.05f;Fog->HeightFogExtinction=.05f;Fog->HeightFogFalloff=700;Fog->HeightFogOffset=.25f;Fog->FogAlbedo=FLinearColor(.6,.7,.66);Fog->RegisterComponent();
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE tiers=%d pyramids=2 levels=%d towers=%d height_cm=%.0f steps=%d stakes=%d serpents=6 stelae=%d fragments=%d vines=%d plants=%d trees=%d missing_assets=%d triangles=%d build_ms=%.1f"),
-        Tiers,Levels,Towers,CTop+TowerBody+42+TowerSpire*.9f+TowerSpire*.05f,Steps,Stakes,Stelae,Fragments,Strand,Plants,Trees,Missing,Triangles,(FPlatformTime::Seconds()-Started)*1000);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE tiers=%d pyramids=2 levels=%d towers=%d height_cm=%.0f steps=%d stakes=%d serpents=6 stelae=%d fragments=%d vines=%d plants=%d trees=%d tall_trees=%d missing_assets=%d triangles=%d build_ms=%.1f"),
+        Tiers,Levels,Towers,CTop+TowerBody+42+TowerSpire*.9f+TowerSpire*.05f,Steps,Stakes,Stelae,Fragments,Strand,Plants,Trees,TallTrees,Missing,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }
 
 int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck)
@@ -658,7 +713,7 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
 {
     auto* Camera=Owner->GetWorld()->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(72);
     Chuck->SetActorHiddenInGame(true);if(auto* PC=Cast<APlayerController>(Chuck->GetController()))PC->SetViewTarget(Camera);
-    const TArray<FVector> Eyes={Flat(SpawnS-300,0,180),Flat(70500,-900,140),Flat(CStairFoot-650,-900,90),Flat(CStairTop+200,-500,CTop+170),
+    const TArray<FVector> Eyes={Flat(SpawnS-300,0,180),Flat(70500,-500,140),Flat(CStairFoot-650,-900,90),Flat(CStairTop+200,-500,CTop+170),
         Flat(Sc-Base-6500,-1500,2600),Flat(69300,-150,95),Flat(Sc-LevelS[0]+Band+150,-900,Tier+120),Flat(Sc+LevelS[2]-200,600,CTop+180),Flat(64300,0,260)};
     const TArray<FVector> Aims={Flat(Sc,0,1600),Flat(Sc,0,1500),Flat(CStairFoot-100,-460,80),Flat(TowerFront,0,CTop+200),
         Flat(Sc,0,1500),Flat(68300,-StakeT,180),Flat(Sc-LevelS[0],-PyramidT,Tier+200),Flat(BackTo,3500,200),Flat(Sc,0,1800)};
