@@ -58,6 +58,9 @@ User requests, 2026-10-14:
 
 ## Far-bank river population (Codex, October 16)
 
+The original layout below is historical; October 17 adds close attackers and
+opposite-bank groups, replacing the harmless-walk acceptance check.
+
 User requests many zombies along the later half of the far-bank river, with
 manageable encounters on the path and more beside it to discourage shortcuts.
 `ChultRiverLife.cpp` adds 32 existing zombies: eight separated road encounters
@@ -89,6 +92,39 @@ at full Sanity (24.1, 21.1 and 21.0 seconds), with zero inland sentries active.
 An earlier closer layout failed the walking trials and was replaced. The three
 normal follow-camera captures were reviewed, but start before reaching each
 zombie; they do not establish how readable every enemy is in the undergrowth.
+
+## River attack route and opposite bank (Codex, October 17)
+
+User: "Add more zombies along the path by the far river, player should need to
+dodge attacks while they go this way, add more on the other side of the river
+also to discourage them going around."
+
+The earlier 32 zombies remain. Sixteen new attackers alternate beside the
+resolved road, about nine metres apart, 0.8–2.7 m from its centre line, facing
+the incoming player. Twenty-four more stand on supported dry ground across the
+river, in scattered groups of three along its later half. Total river population:
+72. Bridge arrival and the giant-tree/T-rex stretch remain outside this layout.
+No enemy statistics, attacks, grab odds, animation or player controls change.
+
+`-ChuckRiverZombieTest` now requires all 72 placements, three live route trials
+with actual lunges and timed player rolls (at least 3 Sanity left, no refills
+during a trial), an unguarded attacker causing damage, and an opposite-bank
+zombie noticing the approaching player. These are five trials. The package
+verifier requires their new counts and completion. Actual results are recorded
+in HANDOFF after running; the prior harmless-walk evidence does not apply.
+
+Camera-only capsules on the 72 river zombies stop the follow camera passing
+through pursuing torsos. They ignore pawn and visibility queries, so movement,
+climbing and attacks keep the original collision behavior. Close limbs can
+still occlude parts of the view; no general NPC camera or material change.
+
+Cooked target checks pass in `Local/verify-river-zombies-20261017-161301.log`:
+72 supported dry positions and camera guards; three 18 m routes each trigger
+two lunges and two rolls, finish at 3 Sanity, and wake no inland sentries. The
+unguarded control is hit; an opposite-bank zombie starts shambling toward him.
+As before, automated tests disable random grabs; ordinary play retains the 25%
+lethal grab on a landed attack. These walking/forward-roll trials do not prove
+whole-route difficulty or human camera comfort.
 
 ## Not done / flaws
 

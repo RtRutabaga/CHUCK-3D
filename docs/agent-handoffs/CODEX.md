@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 17 — river-path attacks and opposite-bank deterrents
+
+- **Runtime acb2d86:** 16 added attackers alternating close beside the paving, about 9 m apart, facing the incoming player; 24 added opposite-bank zombies, three per station, checked against that bank's actual shoreline/floor. Previous 32 remain; total 72. No zombie stat/animation, character/control, asset or earlier-region changes. River-only camera capsules block Camera and ignore Pawn/Visibility; torso occlusion is improved, close arms can still cross the view.
+- **Actual target evidence:** `Local/verify-river-zombies-20261017-161301.log`, five trials pass. All 72 positions dry/supported/clear with camera guards. Three 18 m walking/forward-roll encounters: two lunges, two rolls, final Sanity 3 in each; zero inland sentries active. Undodged control takes a hit; opposite-bank zombie notices and shambling pursuit starts. Tests disable grabs as before; gameplay retains 25% lethal grabs on hits. This is not human whole-route or camera-comfort acceptance.
+- **Build/verification:** final UAT 63.40 s, full validator passes (`Local/river-attacks-camera-build.log`). **182/182** smoke checks, no retry (`Local/verify-package-20261017-161301.log`). Required golden, Chult/ground/road/upriver/temple, fall/skip/reset, pantry, leap, lamp, canopy 48/48, giant 72/72, T-rex 4/4, raptor 8/8, bridge 6/6 and life/impact/grab suites pass. Earlier build's five target trials passed, but its first golden test was stopped deliberately to fix captured camera occlusion. Initial private-test-method compile error corrected before packaging. UE 5.7.4 CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412. No installs/downloads, Blender, binary assets or imports.
+- **Launcher/publication:** promoted **acb2d86** as `RiverAttacks`; receipt/hash and launcher CheckOnly pass (`Local/river-attacks-promotion.log`). Previous **cf7708b** is `Windows-Previous-20261017-RiverAttacks`; two backups kept, old TreeCrowns backup pruned. Own candidate removed automatically, five inherited candidates preserved. Source and handoff committed on main under standing publication permission. No human play/Xbox/audio or full-population performance audit; near limbs can still occlude the camera.
+
+Next part of the work can be done here.
+
 ## October 16 — later far-bank river zombies
 
 32 added zombies: eight road-shoulder singles, 24 inland sentries, S≈19000–32600.
