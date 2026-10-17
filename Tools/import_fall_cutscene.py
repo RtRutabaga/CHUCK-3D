@@ -157,11 +157,38 @@ def canopy(mat):
     pos = node(mat, unreal.MaterialExpressionWorldPosition)
     n = node(mat, unreal.MaterialExpressionNoise, scale=.02, levels=3, output_min=0., output_max=1., quality=1)
     link(pos, n, '')
-    g = lerp(mat, colour(mat, .035, .085, .02), colour(mat, .07, .15, .035), n)
+    # (2026-10-17) darker and matte: the crowns' cores sit in their leaves' shade.
+    g = lerp(mat, colour(mat, .022, .05, .013), colour(mat, .045, .09, .022), n)
     out(mat, mul(mat, g, lerp(mat, const(mat, .75), const(mat, 1.2), vc, 'R')), unreal.MaterialProperty.MP_BASE_COLOR)
-    out(mat, const(mat, .85), unreal.MaterialProperty.MP_ROUGHNESS)
-    out(mat, const(mat, .3), unreal.MaterialProperty.MP_SPECULAR)
+    out(mat, const(mat, .95), unreal.MaterialProperty.MP_ROUGHNESS)
+    out(mat, const(mat, .15), unreal.MaterialProperty.MP_SPECULAR)
     out(mat, wind(mat, .75, mul(mat, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+
+
+def crown_leaves(tex, nrm):
+    """M_FallCrownLeaves (2026-10-17): the crowns' leaf sprays, scanned leaves
+    (T_FallCrownLeaves), matte, tinted toward jungle green by vertex colour."""
+    def build(mat):
+        mat.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED)
+        mat.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
+        mat.set_editor_property('two_sided', True)
+        mat.set_editor_property('opacity_mask_clip_value', .45)
+        vc = node(mat, unreal.MaterialExpressionVertexColor)
+        s = sample(mat, tex)
+        pos = node(mat, unreal.MaterialExpressionWorldPosition)
+        n = node(mat, unreal.MaterialExpressionNoise, scale=.012, levels=3, output_min=0., output_max=1., quality=1)
+        link(pos, n, '')
+        hue = lerp(mat, colour(mat, .92, .98, .7), colour(mat, .55, .86, .52), vc, 'G')
+        bright = lerp(mat, const(mat, .5), const(mat, .9), vc, 'R')
+        base = mul(mat, mul(mat, mul(mat, s, hue, 'RGB'), bright), lerp(mat, const(mat, .75), const(mat, 1.08), n))
+        out(mat, base, unreal.MaterialProperty.MP_BASE_COLOR)
+        out(mat, s, unreal.MaterialProperty.MP_OPACITY_MASK, 'A')
+        out(mat, mul(mat, base, colour(mat, .3, .42, .12)), unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+        out(mat, sample(mat, nrm, normal=True), unreal.MaterialProperty.MP_NORMAL, 'RGB')
+        out(mat, const(mat, .8), unreal.MaterialProperty.MP_ROUGHNESS)
+        out(mat, const(mat, .25), unreal.MaterialProperty.MP_SPECULAR)
+        out(mat, wind(mat, 1.2, mul(mat, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+    return build
 
 
 def bark(tex, nrm):
@@ -288,6 +315,7 @@ mats = {
     'M_FallLeaves': material('M_FallLeaves', leaves(leaf_tex)),
     'M_FallCanopy': material('M_FallCanopy', canopy),
     'M_FallBark': material('M_FallBark', bark(bark_tex, bark_n)),
+    'M_FallCrownLeaves': material('M_FallCrownLeaves', crown_leaves(texture('T_FallCrownLeaves'), texture('T_FallCrownLeaves_N', True))),
 }
 material('M_FallGround', ground(ground_tex, ground_n))
 material('M_FallJungleFar', jungle_far)
@@ -316,7 +344,7 @@ for name in names:
     slots = mesh.get_editor_property('static_materials')
     for i, slot in enumerate(slots):
         slot_name = str(slot.get_editor_property('material_slot_name'))
-        key = next((k for k in mats if slot_name.startswith(k)), None)
+        key = next((k for k in sorted(mats, key=len, reverse=True) if slot_name.startswith(k)), None)
         if key is None: raise RuntimeError(f'{name}: unexpected slot {slot_name}')
         mesh.set_material(i, mats[key])
     ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)

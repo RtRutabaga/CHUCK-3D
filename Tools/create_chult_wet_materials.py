@@ -71,8 +71,10 @@ float dx=dot(Texture2DSample(Tex,TexSampler,UV+e).rgb-Texture2DSample(Tex,TexSam
 float dy=dot(Texture2DSample(Tex,TexSampler,UV+e.yx).rgb-Texture2DSample(Tex,TexSampler,UV-e.yx).rgb,float3(.25,.6,.15));
 return normalize(float3(-dx*1.6,dy*1.6,1));''', {'Tex': obj, 'UV': uv})
     out(m, norm, unreal.MaterialProperty.MP_NORMAL)
-    out(m, lerp(m, const(m, .28), const(m, .55), fine), unreal.MaterialProperty.MP_ROUGHNESS)
-    out(m, const(m, .42), unreal.MaterialProperty.MP_SPECULAR)
+    # Matte leaves (2026-10-17): .28-.55 / .42 read as glossy plastic, and
+    # even .6-.8 / .3 flared white at grazing sun.
+    out(m, lerp(m, const(m, .78), const(m, .9), fine), unreal.MaterialProperty.MP_ROUGHNESS)
+    out(m, const(m, .22), unreal.MaterialProperty.MP_SPECULAR)
     out(m, scope['wind'](m, 1.5, mul(m, vc, vc, 'A', 'A')), unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
 def ground(m):

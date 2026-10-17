@@ -17,7 +17,7 @@ DEST = '/Game/Art/Cutscenes/FallToChult'
 TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 ASSETS = unreal.EditorAssetLibrary
 
-mats = {k: unreal.load_asset(f'{DEST}/{k}') for k in ('M_FallBark', 'M_FallLeaves', 'M_FallCanopy')}
+mats = {k: unreal.load_asset(f'{DEST}/{k}') for k in ('M_FallBark', 'M_FallLeaves', 'M_FallCanopy', 'M_FallCrownLeaves')}
 for k, m in mats.items():
     if not m: raise RuntimeError(f'Missing material {k}')
 
@@ -41,7 +41,7 @@ for name in ('SM_FallTree_A', 'SM_FallTree_B'):
     slots = mesh.get_editor_property('static_materials')
     for i, slot in enumerate(slots):
         slot_name = str(slot.get_editor_property('material_slot_name'))
-        key = next((k for k in mats if slot_name.startswith(k)), None)
+        key = next((k for k in sorted(mats, key=len, reverse=True) if slot_name.startswith(k)), None)
         if key is None: raise RuntimeError(f'{name}: unexpected slot {slot_name}')
         mesh.set_material(i, mats[key])
     ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)

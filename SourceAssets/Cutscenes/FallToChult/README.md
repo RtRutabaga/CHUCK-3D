@@ -23,4 +23,12 @@ UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_fall_trees.py -una
 
 Material slots come from the Blender material names (`M_FallBark`, `M_FallLeaves`, `M_FallCanopy`). Vertex colour r is brightness, g is the deep/yellow-green blend and a is the wind weight. The generator still writes a dryness value in b, but it arrived non-zero on some leaves after FBX import (flat cream leaves), so the leaf material ignores it.
 
+**Crowns (2026-10-17, user: the tree tops looked "fake overly round" and "glossy like plastic"):** a crown was one lumpy opaque ball inside an even shell of square procedural-leaf cards. `crown()` now builds five to eight irregular clumps over a broad, flattish umbrella, each a small dark core under leaf-spray cards that lie mostly up and out, with sprays hanging at the rims. The sprays are `T_FallCrownLeaves` (+`_N`), composited by `Tools/build_crown_leaves.py` (Blender, numpy) from the real leaves of Poly Haven's CC0 `island_tree_02` scan already in `SourceAssets/Setting/ChultNature` (nothing downloaded). They use a fourth slot, `M_FallCrownLeaves` (matte two-sided foliage, roughness .8). `M_FallCanopy` is darker and matte (.95), and the wet-forest `M_FallLeaves` (ferns, shrubs, palms, lianas) went from roughness .28–.55 / specular .42 (it glinted white in sun) to .78–.9 / .22. Each crown takes one draw from the tree's stream and uses its own, so the buttresses and `ChultRootProfiles.h` still match; the lianas' draws changed. Rebuild:
+
+```
+blender --background --python Tools/build_crown_leaves.py
+blender --background --python Tools/build_fall_jungle.py -- --only SM_FallTree_A,SM_FallTree_B,SM_FallCrown
+UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_fall_crowns.py -unattended -nosplash -NoLiveCoding
+```
+
 Size: about 5 MB of FBX/PNG here, plus the imported assets; covered by the LFS rules for `.fbx`, `.png` and `.uasset`.

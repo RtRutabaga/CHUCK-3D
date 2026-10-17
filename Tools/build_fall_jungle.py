@@ -12,7 +12,9 @@ generators. Vertex colour carries the material variation:
   leaves  r brightness, g deep (1) or yellow (0) green, b dryness, a wind weight
   bark    r brightness, g moss, b unused, a wind weight (0 on trunks)
 Material slots: M_FallBark, M_FallLeaves (masked atlas), M_FallCanopy (the
-opaque core of a crown, so it reads as a solid mass from above).
+opaque core of a crown, so it reads as a solid mass from above) and, since
+2026-10-17, M_FallCrownLeaves (the crowns' leaf sprays: T_FallCrownLeaves from
+Tools/build_crown_leaves.py).
 
 Leaf atlas T_FallLeaves (2x2 tiles, u right, v up):
   0 bottom-left  broad tropical leaf, tip up      1 bottom-right pinnate frond
@@ -204,7 +206,7 @@ def ground_texture():
 # Mesh builder
 # ---------------------------------------------------------------------------
 TILE = {0: (0., 0.), 1: (.5, 0.), 2: (0., .5), 3: (.5, .5)}
-SLOTS = ['M_FallBark', 'M_FallLeaves', 'M_FallCanopy']
+SLOTS = ['M_FallBark', 'M_FallLeaves', 'M_FallCanopy', 'M_FallCrownLeaves']
 
 
 class Builder:
@@ -262,11 +264,11 @@ class Builder:
                   (du + .5 * u_span[1], dv + .5 * v1), (du + .5 * u_span[0], dv + .5 * v1)]
             self.face([left[i], right[i], right[i + 1], left[i + 1]], uv, [c0, c0, c1, c1], mat)
 
-    def card(self, centre, normal, up, w, h, tile, colour, cup=0.):
+    def card(self, centre, normal, up, w, h, tile, colour, cup=0., mat=1):
         """A flat (or slightly cupped) leaf card centred on centre, its stem toward -up."""
         normal = Vector(normal).normalized(); up = (Vector(up) - normal * Vector(up).dot(normal)).normalized()
         pts = [Vector(centre) + up * (h * (i / 3 - .5)) - normal * (cup * h * (i / 3 - .5) ** 2) for i in range(4)]
-        self.strip(pts, [w * .5] * 4, [normal] * 4, tile, colour)
+        self.strip(pts, [w * .5] * 4, [normal] * 4, tile, colour, mat=mat)
 
     def blob(self, centre, radius, rng, colour, squash=.75, subdiv=2):
         """The opaque core of a canopy crown: a lumpy, flattened icosphere."""
@@ -343,18 +345,45 @@ def frond(b, base, direction, length, droop, width, tile, rng, segments=6, colou
 # The set
 # ---------------------------------------------------------------------------
 def crown(b, centre, radius, rng, cards=70, squash=.7, card_size=(120, 170), subdiv=3):
-    """A tree crown: an opaque lumpy core (it reads as a mass from the air)
-    inside a shell of leaf-cluster cards, underside included, so up close it
-    is leaves, not the core."""
-    core = (rng.uniform(.75, 1.), rng.uniform(.5, 1.), 0., .15)
-    b.blob(centre, radius * .68, rng, core, squash, subdiv)
-    for _ in range(cards):
-        d = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-.75, 1.))).normalized()
-        p = Vector(centre) + Vector((d.x * radius, d.y * radius, d.z * radius * squash)) * rng.uniform(.82, 1.05)
-        normal = (d + Vector((rng.uniform(-.4, .4), rng.uniform(-.4, .4), .3))).normalized()
-        up = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-.2, 1)))
-        s = rng.uniform(*card_size)
-        b.card(p, normal, up, s, s, 3, leaf_colour(rng), cup=.15)
+    """A tropical crown (2026-10-17; it was one round lumpy ball in an even
+    shell of square cards): five to eight irregular clumps over a broad,
+    flattish umbrella, each a small dark core under leaf-spray cards
+    (T_FallCrownLeaves, built from scanned leaves by build_crown_leaves.py)
+    lying mostly up and out, with sprays hanging at the rims. It takes one
+    draw from rng and uses its own stream, so the caller's later draws keep
+    their count. subdiv is kept for the callers' signature."""
+    r = random.Random(rng.random())
+    clumps = r.randint(5, 8)
+    per = max(18, int(cards * 3.3 / clumps))
+    centres = []
+    for k in range(clumps):
+        a = k / clumps * 2 * math.pi + r.uniform(-.45, .45)
+        d = 0. if k == 0 else r.uniform(.3, .78)
+        c = Vector(centre) + Vector((math.cos(a) * d * radius, math.sin(a) * d * radius,
+                                     (r.uniform(-.2, .35) - .35 * d * d) * radius * squash))
+        centres.append((c, radius * r.uniform(.36, .52) * (1.2 if k == 0 else 1.)))
+    for c, cr in centres:
+        b.blob(c, cr * .5, r, (r.uniform(.4, .65), r.uniform(.5, 1.), 0., .15), squash=.55, subdiv=1)
+        scale = cr / (radius * .44)
+        for _ in range(per):
+            d = Vector((r.uniform(-1, 1), r.uniform(-1, 1), r.uniform(-.45, 1.))).normalized()
+            p = c + Vector((d.x * cr, d.y * cr, d.z * cr * .85)) * r.uniform(.45, 1.08)
+            flat = Vector((d.x, d.y, 0))
+            outward = flat.normalized() if flat.length > .05 else Vector((math.cos(r.uniform(0, 6.3)), math.sin(r.uniform(0, 6.3)), 0))
+            # The spray runs out from the clump (stem in, tip out), rising on
+            # top and drooping at the rim; it faces the sky more than the side.
+            up = (outward * r.uniform(.6, 1.) + Vector((0, 0, .9 * d.z + r.uniform(-.35, .3)))).normalized()
+            w = r.uniform(.2, .7)
+            normal = (Vector((0, 0, 1)) * w + d * (1 - w) + Vector((r.uniform(-.25, .25), r.uniform(-.25, .25), 0))).normalized()
+            s = r.uniform(*card_size) * scale * 1.1
+            tile = 3 if d.z > .7 and r.random() < .45 else r.randint(0, 2)
+            b.card(p + up * s * .35, normal, up, s, s, tile, leaf_colour(r), cup=.22, mat=3)
+        for _ in range(max(3, per // 5)):
+            a = r.uniform(0, 2 * math.pi); out = Vector((math.cos(a), math.sin(a), 0))
+            p = c + out * cr * r.uniform(.75, 1.05) - Vector((0, 0, cr * .15))
+            up = (out * r.uniform(.4, .7) + Vector((0, 0, -1))).normalized()
+            s = r.uniform(*card_size) * scale * r.uniform(.8, 1.)
+            b.card(p + up * s * .4, (out + Vector((0, 0, .25))).normalized(), up, s, s, r.randint(0, 2), leaf_colour(r), cup=.18, mat=3)
 
 
 def trunk_radius(base_radius, height, z):
