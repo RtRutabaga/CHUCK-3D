@@ -6,6 +6,7 @@
 #include "ChultGorge.h"
 #include "ChultUpriver.h"
 #include "ChultTemple.h"
+#include "ChultWreck.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -83,6 +84,8 @@ void BuildChultCanyon(AActor* Owner)
         {
             FVector A=ChultCanyonFrame(S,T),B=ChultCanyonFrame(S+100,T),D=ChultCanyonFrame(S+100,T+100),E=ChultCanyonFrame(S,T+100);
             if(OldFloor(A)&&OldFloor(B)&&OldFloor(D)&&OldFloor(E))continue;
+            // The wreck (Claude, 2026-10-18) lays these cells itself, without its cuts.
+            if(Bank==1&&ChultWreckCutsCell(S,T))continue;
             for(FVector* P:{&A,&B,&D,&E})P->Z=ChultCanyonGroundZ(*P);
             Ground.Quad(A,B,D,E);
         }

@@ -3,6 +3,7 @@
 #include "ChultCanopy.h"
 #include "ChultBridge.h"
 #include "ChultUpriver.h"
+#include "ChultWreck.h"
 #include "ChultRaptor.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
@@ -2999,4 +3000,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
     if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) FallToDeath();
+    // Down into one of the Astral ruptures round the jungle wreck (2026-10-18): an Astral death.
+    else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
 }

@@ -74,6 +74,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RESPAWN failures=0 entrance=1' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEST_COMPLETE' -Quiet) -or
@@ -116,6 +118,14 @@ if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3' -Quiet)) {
     throw "Temple verification failed. Inspect $templeLog"
+}
+# The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
+# past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.
+$wreckLog=Join-Path $evidence ('verify-chult-wreck-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$wreckProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckWreckReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$wreckLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($wreckProcess.ExitCode -or !(Select-String -LiteralPath $wreckLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $wreckLog -Pattern 'CHUCK_CHULT_WRECK_TEST failures=0 legs=4 road=1 hold_loop=1 cabin=1 rupture=1' -Quiet)) {
+    throw "Jungle wreck verification failed. Inspect $wreckLog"
 }
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }

@@ -15,6 +15,7 @@
 #include "ChultPath.h"
 #include "ChultUpriver.h"
 #include "ChultTemple.h"
+#include "ChultWreck.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -361,6 +362,7 @@ void AChultLanding::BuildSet()
     BuildChultWatercourse(this);
     BuildChultVista(this);
     BuildChultUpriver(this);   // beyond the river's old end (Claude, 2026-10-15)
+    BuildChultWreck(this);     // the cog wrecked beyond the bridge (Claude, 2026-10-18)
     // Let the registered terrain/solid foliage enter the physics scene first.
     FTimerHandle PathTimer;
     GetWorldTimerManager().SetTimer(PathTimer,FTimerDelegate::CreateWeakLambda(this,[this](){BuildChultPath(this);}),.6f,false);
@@ -387,6 +389,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultPath(this,C);
     Failures+=CheckChultUpriver(this,C);
     Failures+=CheckChultTemple(this,C);
+    Failures+=CheckChultWreck(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
     const float Radius=C->GetCapsuleComponent()->GetScaledCapsuleRadius();
@@ -446,6 +449,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleReview"))){ReviewChultTemple(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();
