@@ -13,6 +13,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/LocalFogVolumeComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -103,6 +104,15 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
+    // Modelled statues placed as static meshes (2026-10-18; Tools/build_temple_statues.py):
+    // the skull stakes, the balustrades' serpent heads and the rooms' serpent idols.
+    // Local is relative to FloorOrigin (At()), Rotation in the canyon frame.
+    struct FStatue{const TCHAR* Mesh;FVector Local;FRotator Rotation;float Scale;bool bIndoors;};
+    TArray<FStatue> Statues;
+    const TCHAR* SerpentHeadMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSerpentHead.SM_TempleSerpentHead");
+    const TCHAR* SerpentIdolMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSerpentIdol.SM_TempleSerpentIdol");
+    const TCHAR* StakeMesh=TEXT("/Game/Art/ChultTemple/SM_SkullStake.SM_SkullStake");
+    const TCHAR* SkullMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull");
     // In* are the rooms' insides (2026-10-18): lit by their torches on lighting channel 1 only.
     struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Bone,Bark,Vines,Block,InStone,InMoss,InPlaster,InDark;};
     // A box in the frame (S0<S1, T0<T1, Z above the plaza). Inward reverses every face.
@@ -154,9 +164,7 @@ namespace
     const TCHAR* StoneMat=TEXT("/Game/Art/ChultRuins/M_RuinStone.M_RuinStone");
     const TCHAR* MossMat=TEXT("/Game/Art/ChultRuins/M_RuinMoss.M_RuinMoss");
     const TCHAR* PlasterMat=TEXT("/Game/Art/Materials/M_WeatheredPlaster.M_WeatheredPlaster");
-    const TCHAR* BoneMat=TEXT("/Game/Art/Materials/M_Plaster.M_Plaster");
     const TCHAR* DarkMat=TEXT("/Game/Art/Materials/M_Dark.M_Dark");
-    const TCHAR* BarkMat=TEXT("/Game/Art/Cutscenes/FallToChult/M_FallBark.M_FallBark");
     const TCHAR* VineMat=TEXT("/Game/Art/Cutscenes/FallToChult/M_ChultHangingMoss.M_ChultHangingMoss");
 
     // One talud-tablero terrace centred on Sc: a sloping talud, then a framed
@@ -233,22 +241,10 @@ namespace
             // Its top end stands a metre proud of the platform: closed (2026-10-17;
             // open, the balustrade vanished when seen from the top of the stair).
             P.Stone.Quad(Q(Bp,T0),Q(Bp,T1),Q(Cp,T1),Q(Cp,T0));
-            // The serpent: blocky head on the plaza, jaws open.
+            // The serpent's carved head on the plaza (2026-10-18; it was boxes): its back
+            // against the balustrade's foot, jaws open down the avenue, tongue on the ground.
             const float Tc=Sg*(St.Half+St.Out)*.5f,Sa=BalusterFoot;
-            Box(P.Stone,Sa-150,Sa+10,Tc-65,Tc+65,45,125);          // head
-            Box(P.Stone,Sa-195,Sa-140,Tc-52,Tc+52,70,122);         // snout
-            Box(P.Stone,Sa-185,Sa-20,Tc-56,Tc+56,0,35);            // lower jaw
-            Box(P.Dark,Sa-178,Sa-30,Tc-46,Tc+46,35,70);            // the throat
-            for(float F:{-1.f,1.f})
-            {
-                Box(P.Plaster,Sa-192,Sa-180,Tc+F*30-6,Tc+F*30+6,45,70);   // fangs
-                Box(P.Plaster,Sa-182,Sa-172,Tc+F*42-5,Tc+F*42+5,35,52);
-                Box(P.Stone,Sa-125,Sa-80,Tc+F*52-10,Tc+F*52+12,108,135);  // brow
-                Box(P.Dark,Sa-118,Sa-92,Tc+F*62-4,Tc+F*62+6,96,116);      // eye
-            }
-            Box(P.Stone,Sa-192,Sa-160,Tc-26,Tc+26,120,146);         // nose curl
-            Box(P.Moss,Sa-80,Sa+20,Tc-74,Tc+74,125,160);           // feathered crest
-            for(int32 K=0;K<4;++K)Box(P.Moss,Sa-60+K*22,Sa-48+K*22,Tc-80,Tc+80,150,176+K*6);
+            Statues.Add({SerpentHeadMesh,At(Sa+10,Tc,0),FRotator(0,180,0),1.f,false});
         }
         return StepCount;
     }
@@ -521,20 +517,8 @@ namespace
     // three turns round its base, the head reared above it, jaws open.
     void SerpentIdol(FParts& P,const FVector& Foot,float R,float Yaw)
     {
-        TArray<FVector> Coil;const float Turns=2.6f,Climb=R*1.5f,Thick=R*.32f;
-        for(int32 I=0;I<=60;++I)
-        {
-            const float U=I/60.f,A=FMath::DegreesToRadians(Yaw)+U*Turns*2*PI,Rr=R*(1-.55f*U);
-            Coil.Add(Foot+FVector(FMath::Cos(A)*Rr,FMath::Sin(A)*Rr,Thick+U*Climb));
-        }
-        // The neck rears up from the coil's top to the head.
-        const FVector Top_=Coil.Last(),Head=Foot+FVector(0,0,Thick+Climb+R*1.1f);
-        for(int32 I=1;I<=8;++I){const float U=I/8.f;Coil.Add(FMath::Lerp(Top_,Head,U)+FVector(0,0,FMath::Sin(U*PI)*R*.15f));}
-        PathTube(P.InPlaster,Coil,Thick,Thick*.6f,8);
-        const FVector Fwd(FMath::Cos(FMath::DegreesToRadians(Yaw)),FMath::Sin(FMath::DegreesToRadians(Yaw)),0);
-        Ellipsoid(P.InPlaster,Head+Fwd*R*.25f,Fwd,FVector(R*.5f,R*.32f,R*.24f),10);
-        Ellipsoid(P.InPlaster,Head+Fwd*R*.3f-FVector(0,0,R*.22f),Fwd,FVector(R*.42f,R*.26f,R*.1f),8);   // lower jaw
-        for(float E:{-1.f,1.f})Ellipsoid(P.InDark,Head+Fwd*R*.45f+FVector(-Fwd.Y,Fwd.X,0)*E*R*.2f+FVector(0,0,R*.1f),Fwd,FVector(R*.07f,R*.07f,R*.07f),6);
+        // The modelled idol is 25 cm in coil radius (2026-10-18; it was tubes and ellipsoids).
+        Statues.Add({SerpentIdolMesh,At(Foot.X,Foot.Y,Foot.Z),FRotator(0,Yaw,0),R/25,true});
     }
     // A glyph frieze on a wall (at X, standing out against Dir): rows of carved
     // stone cartouches, each with a number in the bars and dots of the old
@@ -687,7 +671,7 @@ float ChultTempleSpawnYaw(){return Along.Rotation().Yaw;}
 void BuildChultTemple(AActor* Owner)
 {
     const double Started=FPlatformTime::Seconds();const FVector G=AChultLanding::FloorOrigin();
-    FParts P;FRandomStream R(2026101591);int32 Steps=0,Strand=0;
+    FParts P;FRandomStream R(2026101591);int32 Steps=0,Strand=0;Statues.Reset();
     // The twin pyramids, each the October 15 pyramid: terraces, stair, summit house.
     for(float Side:{-1.f,1.f})
     {
@@ -736,23 +720,21 @@ void BuildChultTemple(AActor* Owner)
         ++Fragments;
     }
     // Skull stakes: eight, in pairs down the avenue, the skulls looking across it.
+    // Since 2026-10-18 a hewn, lashed stake (Tools/build_temple_statues.py) with
+    // the CC0 skull on its point; the two lean draws are kept, so nothing else moves.
     int32 Stakes=0;
-    for(float S:StakeS)for(float Sg:{-1.f,1.f})
     {
-        const float T=Sg*StakeT,Lean=R.FRandRange(-4,4);const FVector Foot(S,T,-10),Head(S+Lean,T+R.FRandRange(-3,3),178);
-        for(int32 K=0;K<8;++K)
+        FRandomStream Bones(2026101802);
+        for(float S:StakeS)for(float Sg:{-1.f,1.f})
         {
-            const float A=K*PI/4,B=(K+1)*PI/4;
-            const FVector Oa(FMath::Cos(A),FMath::Sin(A),0),Ob(FMath::Cos(B),FMath::Sin(B),0);
-            auto Q=[&](const FVector& C,const FVector& O,float Rr){const FVector L=C+O*Rr;return At(L.X,L.Y,L.Z);};
-            P.Bark.Quad(Q(Foot,Oa,6),Q(Foot,Ob,6),Q(Head,Ob,4),Q(Head,Oa,4));
+            const float T=Sg*StakeT,Lean=R.FRandRange(-4,4),Sway=R.FRandRange(-3,3);
+            const FRotator Tilt(Lean*.9f,Bones.FRandRange(0,360),Sway*.9f);
+            Statues.Add({StakeMesh,At(S,T,0),Tilt,1.f,false});
+            // The skull sits on the stake's point, its face across the avenue, a little askew.
+            const FVector Point=At(S,T,0)+FRotator(0,Along.Rotation().Yaw,0).RotateVector(Tilt.RotateVector(FVector(1.8f,0,184)));
+            Statues.Add({SkullMesh,Point,FRotator(Bones.FRandRange(-12,8),-90*Sg+Bones.FRandRange(-25,25),Bones.FRandRange(-10,10)),1.f,false});
+            ++Stakes;
         }
-        const FVector Fwd(0,-Sg,0),Side(FVector::CrossProduct(FVector::UpVector,Fwd)),Skull=Head+FVector(0,0,10);
-        Ellipsoid(P.Bone,Skull,Fwd,FVector(11,8.5f,9.5f));
-        Ellipsoid(P.Bone,Skull+Fwd*5-FVector(0,0,8),Fwd,FVector(6,6.5f,3.5f),8);
-        for(float E:{-1.f,1.f})Ellipsoid(P.Dark,Skull+Fwd*9.2f+Side*E*3.6f+FVector(0,0,1.2f),Fwd,FVector(1.8f,2.4f,2.4f),8);
-        Ellipsoid(P.Dark,Skull+Fwd*10.2f-FVector(0,0,3.2f),Fwd,FVector(1.2f,1.2f,1.6f),6);
-        ++Stakes;
     }
     // The closed back: a hidden wall across the whole precinct, ground to above
     // every roof comb, behind which the jungle has taken the temple. Dressed below.
@@ -768,8 +750,20 @@ void BuildChultTemple(AActor* Owner)
     Emit(Owner,TEXT("ChultTempleSteps"),{{&P.Steps,StoneMat},{&P.StepMoss,MossMat}},false,Missing,Triangles);
     auto* RampMesh=Emit(Owner,TEXT("ChultTempleStairRamp"),{{&P.Ramp,StoneMat}},true,Missing,Triangles);RampMesh->SetHiddenInGame(true);RampMesh->SetCastShadow(false);
     Emit(Owner,TEXT("ChultTempleDark"),{{&P.Dark,DarkMat}},false,Missing,Triangles);
-    Emit(Owner,TEXT("ChultTempleSkulls"),{{&P.Bone,BoneMat}},false,Missing,Triangles);
-    Emit(Owner,TEXT("ChultTempleStakes"),{{&P.Bark,BarkMat}},true,Missing,Triangles);
+    // The statues: frame rotations turned into the world (the frame's S axis is Along).
+    int32 StatueCount=0;
+    for(const FStatue& St:Statues)
+    {
+        auto* Mesh=NewObject<UStaticMeshComponent>(Owner);Mesh->SetupAttachment(Owner->GetRootComponent());
+        UStaticMesh* Asset=LoadObject<UStaticMesh>(nullptr,St.Mesh);Missing+=!Asset;Mesh->SetStaticMesh(Asset);
+        Mesh->SetWorldLocationAndRotation(G+St.Local,FRotator(St.Rotation.Pitch,St.Rotation.Yaw+Along.Rotation().Yaw,St.Rotation.Roll));
+        Mesh->SetWorldScale3D(FVector(St.Scale));
+        const bool Solid=St.Mesh!=SkullMesh;
+        Mesh->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
+        if(Solid)Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+        if(St.bIndoors)Mesh->SetLightingChannels(false,true,false);
+        Mesh->ComponentTags.Add(TEXT("ChultTemple"));Mesh->ComponentTags.Add(TEXT("ChultTempleStatue"));Mesh->RegisterComponent();++StatueCount;
+    }
     Emit(Owner,TEXT("ChultTempleVines"),{{&P.Vines,VineMat}},false,Missing,Triangles)->SetCastShadow(false);
     auto* Wall=Emit(Owner,TEXT("ChultTempleJungleWall"),{{&P.Block,StoneMat}},true,Missing,Triangles);
     Wall->SetHiddenInGame(true);Wall->SetCastShadow(false);Wall->SetCollisionResponseToChannel(ECC_Camera,ECR_Ignore);
@@ -907,6 +901,9 @@ void BuildChultTemple(AActor* Owner)
         bool Clear=true;for(float St:StelaS)Clear&=FVector2D(S-St,A-1500).Size()>260;
         const FVector Ground=Flat(S,T,ChultCanyonGroundZ(ChultCanyonFrame(S,T))-3-PlazaZ());
         Suppress=FMath::Abs(S-GateS)<580&&FMath::Abs(A-GateT)<580;   // the gate pavilions' rooms
+        // The carved serpent heads' tongues reach 3.3 m out from the balustrades' feet.
+        for(const TPair<const FStair*,float>& K:TArray<TPair<const FStair*,float>>{{&CentralStair,0.f},{&PyramidStair,PyramidT}})
+            Suppress|=S>K.Key->Foot-420&&S<K.Key->Foot&&FMath::Abs(FMath::Abs(A-K.Value)-(K.Key->Half+K.Key->Out)*.5f)<120;
         // Wilder toward the sides and the back; the ways in stay open.
         const float Wild=FMath::Max(Ease((A-1600)/5500),Ease((S-76500)/2500)*.6f);
         if(I%4==0&&Clear&&!OnWayIn(S,T,250)&&A>1500&&!OnStructure(S,T,350)&&R.FRand()<.08f+.7f*Wild)
@@ -988,8 +985,8 @@ void BuildChultTemple(AActor* Owner)
         auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+L);Fog->SetWorldScale3D(FVector(8));
         Fog->RadialFogExtinction=.05f;Fog->HeightFogExtinction=.05f;Fog->HeightFogFalloff=700;Fog->HeightFogOffset=.25f;Fog->FogAlbedo=FLinearColor(.6,.7,.66);Fog->RegisterComponent();
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE tiers=%d pyramids=2 levels=%d towers=%d height_cm=%.0f steps=%d stakes=%d serpents=6 stelae=%d fragments=%d vines=%d plants=%d trees=%d tall_trees=%d missing_assets=%d triangles=%d build_ms=%.1f"),
-        Tiers,Levels,Towers,CTop+TowerBody+42+TowerSpire*.9f+TowerSpire*.05f,Steps,Stakes,Stelae,Fragments,Strand,Plants,Trees,TallTrees,Missing,Triangles,(FPlatformTime::Seconds()-Started)*1000);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE tiers=%d pyramids=2 levels=%d towers=%d height_cm=%.0f steps=%d stakes=%d serpents=6 stelae=%d fragments=%d vines=%d plants=%d trees=%d tall_trees=%d statues=%d missing_assets=%d triangles=%d build_ms=%.1f"),
+        Tiers,Levels,Towers,CTop+TowerBody+42+TowerSpire*.9f+TowerSpire*.05f,Steps,Stakes,Stelae,Fragments,Strand,Plants,Trees,TallTrees,StatueCount,Missing,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }
 
 int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck)
@@ -1125,15 +1122,19 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
         // 2026-10-17: a central balustrade's top end from the platform, a pyramid stair's side from its top, up under a summit house's roof.
         Flat(CStairTop+260,(CStairHalf+CBalusterOut)*.5f+90,CTop+70),Flat(StairTop+180,PyramidT-BalusterOut-260,Top+120),Flat(HouseFront-260,-PyramidT-420,Top+45),
         // 2026-10-18: inside a summit chamber, a gate pavilion and a shrine; a gate's open door from the plaza.
-        RoomEye(0,-.85f,-200,150),RoomEye(2,-.7f,110,120),RoomEye(5,-.75f,60,115),Flat(GateS-900,-GateT+420,150),RoomEye(0,-.45f,-330,75)};
+        RoomEye(0,-.85f,-200,150),RoomEye(2,-.7f,110,120),RoomEye(5,-.75f,60,115),Flat(GateS-900,-GateT+420,150),RoomEye(0,-.45f,-330,75),
+        // The modelled statues, close.
+        Flat(StakeS[1]-170,-StakeT+150,165),Flat(CStairFoot-560,-(CStairHalf+CBalusterOut)*.5f-330,140),RoomEye(0,.4f,-90,135)};
     const TArray<FVector> Aims={Flat(Sc,0,1600),Flat(Sc,0,1500),Flat(CStairFoot-100,-460,80),Flat(TowerFront,0,CTop+200),
         Flat(Sc,0,1500),Flat(68300,-StakeT,180),Flat(Sc-LevelS[0],-PyramidT,Tier+200),Flat(BackTo,3500,200),Flat(Sc,0,1800),
         Flat(CStairTop-300,(CStairHalf+CBalusterOut)*.5f,CTop-120),Flat(StairTop-700,PyramidT-StairHalf-60,Top-420),Flat(HouseFront+40,-PyramidT-150,Top+WallTop+110),
-        RoomEye(0,.79f,60,90),RoomEye(2,.6f,-20,80),RoomEye(5,.77f,-10,70),Flat(GateS-260,-GateT,110),RoomEye(0,-.88f,-500,12)};
+        RoomEye(0,.79f,60,90),RoomEye(2,.6f,-20,80),RoomEye(5,.77f,-10,70),Flat(GateS-260,-GateT,110),RoomEye(0,-.88f,-500,12),
+        Flat(StakeS[1],-StakeT,178),Flat(CStairFoot-200,-(CStairHalf+CBalusterOut)*.5f,75),RoomEye(0,.79f,0,140)};
     const TArray<FString> Names={TEXT("TempleAvenue"),TEXT("TemplePlaza"),TEXT("TempleSerpent"),TEXT("TempleDoorway"),TEXT("TempleOverview"),
         TEXT("TempleSkullStake"),TEXT("TempleLedgeJoin"),TEXT("TempleBackJungle"),TEXT("TempleApproach"),
         TEXT("TempleStairSideCentral"),TEXT("TempleStairSidePyramid"),TEXT("TempleRoofBelow"),
-        TEXT("TempleRoomSummit"),TEXT("TempleRoomGate"),TEXT("TempleRoomShrine"),TEXT("TempleGateDoor"),TEXT("TempleRoomJars")};
+        TEXT("TempleRoomSummit"),TEXT("TempleRoomGate"),TEXT("TempleRoomShrine"),TEXT("TempleGateDoor"),TEXT("TempleRoomJars"),
+        TEXT("TempleSkullClose"),TEXT("TempleSerpentClose"),TEXT("TempleIdolClose")};
     struct FRun{int32 Phase=0,Walk=0,Failures=0,Shot=0;double Next=0,ShotNext=0,Start=-1,RunStart=-1,MusicAt=-1,RevealAt=-1;bool bDone=false,bRan=false;TWeakObjectPtr<ACameraActor> Camera;FTimerHandle Timer;};
     auto Run=MakeShared<FRun>();Run->Failures=Failures;Run->Camera=Camera;
     // One timer throughout: views every 2.5 s, then the real character's climb.
