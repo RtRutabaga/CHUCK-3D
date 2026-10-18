@@ -7,14 +7,19 @@ M_ClayJar: vertex-colour tint squared (the FBX colours arrive a gamma step
 bright, as for M_Grass); vertex alpha marks the glaze, which is glossier than
 the bare fired clay. An existing material is kept (delete it to rebuild).
 No collision on the meshes: the jar actor carries its own pawn-only blocker.
+
+CHUCK_JAR_VARIANTS (default "jar") picks what to import, comma-separated:
+jar -> /Game/Art/Props/Jar, tan -> /Game/Art/Props/TempleJar, urn ->
+/Game/Art/Props/Urn (the Chult temple's, 2026-10-18), all on M_ClayJar.
 """
 import json
+import os
 from pathlib import Path
 import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'SourceAssets/Props/Jar'
 DEST = '/Game/Art/Props/Jar'
+FOLDERS = {'jar': ('Jar', 'SM_ClayJar'), 'tan': ('TempleJar', 'SM_TempleJar'), 'urn': ('Urn', 'SM_ClayUrn')}
 TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 LIB = unreal.MaterialEditingLibrary
 ASSETS = unreal.EditorAssetLibrary
@@ -66,18 +71,21 @@ data.set_editor_property('combine_meshes', True)
 data.set_editor_property('auto_generate_collision', False)
 data.set_editor_property('vertex_color_import_option', unreal.VertexColorImportOption.REPLACE)
 material = clay_material()
-shards = json.loads((SOURCE / 'shards.json').read_text(encoding='utf-8'))['shards']
-names = ['SM_ClayJar'] + [s['name'] for s in shards]
-for name in names:
-    task = unreal.AssetImportTask()
-    task.filename = str(SOURCE / f'{name}.fbx'); task.destination_path = DEST; task.destination_name = name
-    task.automated = True; task.replace_existing = True; task.save = True; task.options = options
-    TOOLS.import_asset_tasks([task])
-    mesh = unreal.load_asset(f'{DEST}/{name}')
-    if not isinstance(mesh, unreal.StaticMesh):
-        raise RuntimeError(f'Missing jar mesh {name}')
-    for i in range(len(mesh.get_editor_property('static_materials'))):
-        mesh.set_material(i, material)
-    ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
-box = unreal.load_asset(f'{DEST}/SM_ClayJar').get_bounding_box()
-print(f'CHUCK_JAR_IMPORTED meshes={len(names)} height_cm={box.max.z - box.min.z:.1f}')
+for variant in os.environ.get('CHUCK_JAR_VARIANTS', 'jar').split(','):
+    folder, body = FOLDERS[variant.strip()]
+    source, dest = ROOT / 'SourceAssets/Props' / folder, f'/Game/Art/Props/{folder}'
+    shards = json.loads((source / 'shards.json').read_text(encoding='utf-8'))['shards']
+    names = [body] + [s['name'] for s in shards]
+    for name in names:
+        task = unreal.AssetImportTask()
+        task.filename = str(source / f'{name}.fbx'); task.destination_path = dest; task.destination_name = name
+        task.automated = True; task.replace_existing = True; task.save = True; task.options = options
+        TOOLS.import_asset_tasks([task])
+        mesh = unreal.load_asset(f'{dest}/{name}')
+        if not isinstance(mesh, unreal.StaticMesh):
+            raise RuntimeError(f'Missing jar mesh {name}')
+        for i in range(len(mesh.get_editor_property('static_materials'))):
+            mesh.set_material(i, material)
+        ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
+    box = unreal.load_asset(f'{dest}/{body}').get_bounding_box()
+    print(f'CHUCK_JAR_IMPORTED variant={variant} meshes={len(names)} height_cm={box.max.z - box.min.z:.1f}')

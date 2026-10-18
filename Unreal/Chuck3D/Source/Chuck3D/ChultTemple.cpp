@@ -6,12 +6,16 @@
 #include "ChuckClipData.h"
 #include "DockGameMode.h"
 #include "ChuckCharacter.h"
+#include "ClayJar.h"
+#include "DockFire.h"
 #include "ProceduralMeshComponent.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/LocalFogVolumeComponent.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -43,7 +47,7 @@ namespace
     constexpr float Top=Tiers*Tier;
     constexpr float StairTop=Sc-(Base-(Tiers-1)*Inset-Band),StairFoot=StairTop-Top/Rise*Tread;
     // The summit house: a dark doorway in its front wall, a roof comb behind.
-    constexpr float HouseFront=Sc-450,HouseBack=Sc+650,HouseHalf=650,DoorHalf=120,DoorTop=260,WallTop=420,Vestibule=300;
+    constexpr float HouseFront=Sc-450,HouseBack=Sc+650,HouseHalf=650,DoorHalf=120,DoorTop=260,WallTop=420;
     // The two pyramids stand either side of the central temple, their fronts in line with it.
     constexpr float PyramidT=5200;
     // The central temple: three terraces 5 m high in the same talud-tablero,
@@ -99,7 +103,8 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
-    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Bone,Bark,Vines,Block;};
+    // In* are the rooms' insides (2026-10-18): lit by their torches on lighting channel 1 only.
+    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Bone,Bark,Vines,Block,InStone,InMoss,InPlaster,InDark;};
     // A box in the frame (S0<S1, T0<T1, Z above the plaza). Inward reverses every face.
     // Always closed underneath (2026-10-17): Chuck looks up at every band,
     // cornice and overhang, which were hollow from below without it.
@@ -247,23 +252,21 @@ namespace
         }
         return StepCount;
     }
-    // A pyramid's summit house: a dark doorway into a shallow vestibule, a
-    // corniced roof and a pierced roof comb.
+    // A pyramid's summit house: its doorway opens into a ceremonial chamber
+    // (2026-10-18; it was a shallow dark vestibule), under a corniced roof and
+    // a pierced roof comb. The chamber's walls are 60 cm, its ceiling 3.4 m up.
+    constexpr float HouseWall=60,HouseRoom=340;
     void SummitHouse(FParts& P,FRandomStream& R)
     {
-        const float Z=Top;
-        Box(P.Stone,Sc-90,HouseBack,-HouseHalf,HouseHalf,Z,Z+WallTop);
+        const float Z=Top,In0=HouseFront+HouseWall,In1=HouseBack-HouseWall,IH=HouseHalf-HouseWall;
+        Box(P.Stone,In1,HouseBack,-HouseHalf,HouseHalf,Z,Z+WallTop);
         for(float Sg:{-1.f,1.f})
         {
-            const float A=Sg<0?-HouseHalf:Vestibule,B=Sg<0?-Vestibule:HouseHalf;
-            Box(P.Stone,HouseFront,Sc-90,A,B,Z,Z+WallTop);
-            const float A2=Sg<0?-Vestibule:DoorHalf,B2=Sg<0?-DoorHalf:Vestibule;
-            Box(P.Stone,HouseFront,HouseFront+60,A2,B2,Z,Z+WallTop);
+            Box(P.Stone,In0,In1,Sg<0?-HouseHalf:IH,Sg<0?-IH:HouseHalf,Z,Z+WallTop);
+            Box(P.Stone,HouseFront,In0,Sg<0?-HouseHalf:DoorHalf,Sg<0?-DoorHalf:HouseHalf,Z,Z+WallTop);
         }
-        Box(P.Stone,HouseFront,HouseFront+60,-DoorHalf,DoorHalf,Z+DoorTop,Z+WallTop);
-        Box(P.Stone,HouseFront+60,Sc-90,-Vestibule,Vestibule,Z+300,Z+WallTop);
-        Box(P.Dark,HouseFront+60.5f,Sc-90.5f,-Vestibule+.5f,Vestibule-.5f,Z+.5f,Z+299.5f,true);
-        Box(P.Dark,HouseFront-1,HouseFront+61,-DoorHalf+.5f,DoorHalf-.5f,Z+.5f,Z+DoorTop-.5f,true);
+        Box(P.Stone,HouseFront,In0,-DoorHalf,DoorHalf,Z+DoorTop,Z+WallTop);
+        Box(P.Stone,In0,In1,-IH,IH,Z+HouseRoom,Z+WallTop);
         Box(P.Moss,HouseFront-60,HouseBack+60,-HouseHalf-60,HouseHalf+60,Z+WallTop,Z+WallTop+80);
         Box(P.Plaster,HouseFront-40,HouseBack+40,-HouseHalf-40,HouseHalf+40,Z+WallTop+80,Z+WallTop+140);
         Box(P.Moss,HouseFront-50,HouseBack+50,-HouseHalf-50,HouseHalf+50,Z+WallTop+140,Z+WallTop+160);
@@ -303,14 +306,54 @@ namespace
     }
     // A small prasat (corner tower or gate pavilion): a plinth, a solid cella
     // with dark false doors on each face, and a spire.
-    void Prasat(FParts& P,float S,float T,float Z,float Half,float Body,float SpireHeight)
+    // DoorFace (0 -S, 1 +S, 2 -T, 3 +T; 2026-10-18) makes that false door a real
+    // one: the cella is hollow (45 cm walls, ceiling 55 cm below its top) and
+    // three steps climb the plinth to the threshold.
+    constexpr float CellaWall=45,CellaRoof=55;
+    void Prasat(FParts& P,float S,float T,float Z,float Half,float Body,float SpireHeight,int32 DoorFace=-1)
     {
         Box(P.Stone,S-Half-35,S+Half+35,T-Half-35,T+Half+35,Z,Z+30);
         Box(P.Moss,S-Half-20,S+Half+20,T-Half-20,T+Half+20,Z+30,Z+45);
-        Box(P.Stone,S-Half,S+Half,T-Half,T+Half,Z+45,Z+Body);
         const float W=Half*.38f,D=(Body-45)*.62f,Zd=Z+45;
-        Box(P.Dark,S-Half-3,S-Half,T-W,T+W,Zd,Zd+D);Box(P.Dark,S+Half,S+Half+3,T-W,T+W,Zd,Zd+D);
-        Box(P.Dark,S-W,S+W,T-Half-3,T-Half,Zd,Zd+D);Box(P.Dark,S-W,S+W,T+Half,T+Half+3,Zd,Zd+D);
+        if(DoorFace<0)Box(P.Stone,S-Half,S+Half,T-Half,T+Half,Z+45,Z+Body);
+        else
+        {
+            const float I=Half-CellaWall,Z1=Z+Body;
+            // A wall along face F between U0 and U1 (across it) from Za to Zb.
+            auto Wall=[&](int32 F,float U0,float U1,float Za,float Zb)
+            {
+                if(F==0)Box(P.Stone,S-Half,S-I,T+U0,T+U1,Za,Zb);else if(F==1)Box(P.Stone,S+I,S+Half,T+U0,T+U1,Za,Zb);
+                else if(F==2)Box(P.Stone,S+U0,S+U1,T-Half,T-I,Za,Zb);else Box(P.Stone,S+U0,S+U1,T+I,T+Half,Za,Zb);
+            };
+            for(int32 F=0;F<4;++F)
+            {
+                const float U=F<2?Half:I;
+                if(F!=DoorFace){Wall(F,-U,U,Zd,Z1);continue;}
+                Wall(F,-U,-W,Zd,Z1);Wall(F,W,U,Zd,Z1);Wall(F,-W,W,Zd+D,Z1);
+            }
+            Box(P.Stone,S-I,S+I,T-I,T+I,Z1-CellaRoof,Z1);
+            // Three 15 cm steps up the plinth to the threshold, over a hidden ramp.
+            const FVector2D Out=DoorFace==0?FVector2D(-1,0):DoorFace==1?FVector2D(1,0):DoorFace==2?FVector2D(0,-1):FVector2D(0,1),Side(-Out.Y,Out.X);
+            auto Pt=[&](float O,float Y){return FVector2D(S,T)+Out*O+Side*Y;};
+            const float Face=Half+35,SW=W+12;
+            for(int32 K=0;K<3;++K)
+            {
+                const FVector2D A=Pt(Face-2,-SW),B=Pt(Face+90-30*K,SW);
+                Box(K?P.Steps:P.StepMoss,FMath::Min(A.X,B.X),FMath::Max(A.X,B.X),FMath::Min(A.Y,B.Y),FMath::Max(A.Y,B.Y),Z,Z+15*(K+1));
+            }
+            // Through the treads' middles (26.6 degrees), then level onto the plinth.
+            auto Up=[&](float O0,float Z0,float O1,float Z1_)
+            {
+                const FVector2D A=Pt(O0,-SW),B=Pt(O0,SW),C=Pt(O1,SW),E=Pt(O1,-SW);
+                const FVector V[]={At(A.X,A.Y,Z+Z0),At(B.X,B.Y,Z+Z0),At(C.X,C.Y,Z+Z1_),At(E.X,E.Y,Z+Z1_)};
+                if(FVector::CrossProduct(V[1]-V[0],V[2]-V[0]).Z>0)P.Ramp.Quad(V[0],V[1],V[2],V[3]);else P.Ramp.Quad(V[0],V[3],V[2],V[1]);
+            };
+            Up(Face+105,0,Face+15,45);Up(Face+15,45,Face-5,45);
+        }
+        if(DoorFace!=0)Box(P.Dark,S-Half-3,S-Half,T-W,T+W,Zd,Zd+D);
+        if(DoorFace!=1)Box(P.Dark,S+Half,S+Half+3,T-W,T+W,Zd,Zd+D);
+        if(DoorFace!=2)Box(P.Dark,S-W,S+W,T-Half-3,T-Half,Zd,Zd+D);
+        if(DoorFace!=3)Box(P.Dark,S-W,S+W,T+Half,T+Half+3,Zd,Zd+D);
         Box(P.Plaster,S-Half-8,S-Half,T-W-18,T+W+18,Zd+D,Zd+D+28);Box(P.Plaster,S+Half,S+Half+8,T-W-18,T+W+18,Zd+D,Zd+D+28);
         Box(P.Plaster,S-W-18,S+W+18,T-Half-8,T-Half,Zd+D,Zd+D+28);Box(P.Plaster,S-W-18,S+W+18,T+Half,T+Half+8,Zd+D,Zd+D+28);
         Spire(P,S,T,Z+Body,Half,SpireHeight);
@@ -387,6 +430,220 @@ namespace
         if(S>72500&&A<GateT+450+Margin)return true;
         return FMath::PointDistToSegment(FVector(S,A,0),FVector(71500,1000,0),FVector(StairFoot-150,PyramidT,0))<500+Margin;
     }
+
+    // The rooms (user 2026-10-18): the pyramids' summit houses, the gate
+    // pavilions and the top terrace's corner towers open into small ceremonial
+    // interiors (the sanctuary's doorway stays the future temple interior's).
+    // A room in the unshifted frame: centre C, In from its door toward its
+    // back wall, half depth HD along In and half width HW across, floor Z0 and
+    // ceiling Z1 above the plaza; its door is centred in the near wall.
+    enum class ERoom:uint8{Summit,Gate,Shrine};
+    struct FRoom{ERoom Kind;FVector2D C,In;float HD,HW,Z0,Z1,DoorHalf,DoorTop;};
+    TArray<FRoom> Rooms()
+    {
+        TArray<FRoom> Out;
+        const float In0=HouseFront+HouseWall,In1=HouseBack-HouseWall;
+        for(float Side:{-1.f,1.f})Out.Add({ERoom::Summit,FVector2D((In0+In1)*.5f,Side*PyramidT),FVector2D(1,0),(In1-In0)*.5f,HouseHalf-HouseWall,Top,Top+HouseRoom,DoorHalf,DoorTop});
+        for(float Side:{-1.f,1.f})Out.Add({ERoom::Gate,FVector2D(GateS,Side*GateT),FVector2D(1,0),260-CellaWall,260-CellaWall,45,400-CellaRoof,260*.38f,(400-45)*.62f});
+        for(float X:{-1.f,1.f})for(float Y:{-1.f,1.f})
+            Out.Add({ERoom::Shrine,FVector2D(Sc+X*(LevelS[2]-240),Y*(LevelT[2]-240)),FVector2D(0,Y),190-CellaWall,190-CellaWall,CTop+45,CTop+330-CellaRoof,190*.38f,(330-45)*.62f});
+        return Out;
+    }
+    // Which face of a frame-aligned box the door is in (0 -S, 1 +S, 2 -T, 3 +T).
+    int32 DoorFaceOf(const FRoom& Rm){return Rm.In.X>.5f?0:Rm.In.X<-.5f?1:Rm.In.Y>.5f?2:3;}
+    FVector2D SideOf(const FRoom& Rm){return FVector2D(-Rm.In.Y,Rm.In.X);}
+    // A room-local point: X along In from the centre, Y across, Z above its floor.
+    FVector RL(const FRoom& Rm,float X,float Y,float Z){const FVector2D P=Rm.C+Rm.In*X+SideOf(Rm)*Y;return FVector(P.X,P.Y,Rm.Z0+Z);}
+    // A box in room-local coordinates (rooms are frame-aligned, so it stays a box).
+    void RBox(FSurf& M,const FRoom& Rm,float X0,float X1,float Y0,float Y1,float Z0,float Z1)
+    {
+        const FVector A=RL(Rm,X0,Y0,Z0),B=RL(Rm,X1,Y1,Z1);
+        Box(M,FMath::Min(A.X,B.X),FMath::Max(A.X,B.X),FMath::Min(A.Y,B.Y),FMath::Max(A.Y,B.Y),A.Z,B.Z);
+    }
+    // A quad facing Toward (all in frame coordinates).
+    void QuadToward(FSurf& M,const FVector& A,const FVector& B,const FVector& C,const FVector& D,const FVector& Toward)
+    {
+        const FVector a=At(A.X,A.Y,A.Z),b=At(B.X,B.Y,B.Z),c=At(C.X,C.Y,C.Z),d=At(D.X,D.Y,D.Z),t=At(Toward.X,Toward.Y,Toward.Z);
+        if(FVector::DotProduct(FVector::CrossProduct(b-a,c-a),t-a)>=0)M.Quad(a,b,c,d);else M.Quad(d,c,b,a);
+    }
+    // The room's inside faces, a centimetre in from the masonry, with the door
+    // left open: a stone floor and ceiling, plastered walls over a stone dado.
+    constexpr float Dado=55;
+    void Lining(FParts& Parts,const FRoom& Rm)
+    {
+        FSurf& M=Parts.InStone;
+        const FVector A=RL(Rm,-Rm.HD,-Rm.HW,0),B=RL(Rm,Rm.HD,Rm.HW,0);
+        const float S0=FMath::Min(A.X,B.X)+1,S1=FMath::Max(A.X,B.X)-1,T0=FMath::Min(A.Y,B.Y)+1,T1=FMath::Max(A.Y,B.Y)-1,Z0=Rm.Z0+1,Z1=Rm.Z1-1;
+        const FVector Mid((S0+S1)*.5f,(T0+T1)*.5f,(Z0+Z1)*.5f);
+        for(float Z:{Z0,Z1})QuadToward(M,{S0,T0,Z},{S1,T0,Z},{S1,T1,Z},{S0,T1,Z},Mid);
+        const FVector2D Ends[4][2]={{{S0,T0},{S0,T1}},{{S1,T0},{S1,T1}},{{S0,T0},{S1,T0}},{{S0,T1},{S1,T1}}};
+        const int32 Door=DoorFaceOf(Rm);
+        for(int32 F=0;F<4;++F)
+        {
+            const FVector2D E0=Ends[F][0],E1=Ends[F][1];
+            auto Piece=[&](float U0,float U1,float Za,float Zb)
+            {
+                const FVector2D P=FMath::Lerp(E0,E1,U0),Q=FMath::Lerp(E0,E1,U1);const float Zd=Rm.Z0+Dado;
+                if(Za<Zd)QuadToward(M,{P.X,P.Y,Za},{Q.X,Q.Y,Za},{Q.X,Q.Y,FMath::Min(Zb,Zd)},{P.X,P.Y,FMath::Min(Zb,Zd)},Mid);
+                if(Zb>Zd)QuadToward(Parts.InPlaster,{P.X,P.Y,FMath::Max(Za,Zd)},{Q.X,Q.Y,FMath::Max(Za,Zd)},{Q.X,Q.Y,Zb},{P.X,P.Y,Zb},Mid);
+            };
+            if(F!=Door){Piece(0,1,Z0,Z1);continue;}
+            const float W=(Rm.DoorHalf+1)/FVector2D::Distance(E0,E1);
+            Piece(0,.5f-W,Z0,Z1);Piece(.5f+W,1,Z0,Z1);Piece(.5f-W,.5f+W,Rm.Z0+Rm.DoorTop-1,Z1);
+        }
+    }
+    // A tube along Path (frame coordinates), radius from R0 to R1, capped.
+    void PathTube(FSurf& M,const TArray<FVector>& Path,float R0,float R1,int32 Seg=8)
+    {
+        TArray<TArray<FVector>> Rings;
+        for(int32 I=0;I<Path.Num();++I)
+        {
+            const FVector D=(Path[FMath::Min(I+1,Path.Num()-1)]-Path[FMath::Max(I-1,0)]).GetSafeNormal();
+            const FVector X=FMath::Abs(D.Z)>.9f?FVector::CrossProduct(D,FVector::ForwardVector).GetSafeNormal():FVector::CrossProduct(D,FVector::UpVector).GetSafeNormal(),Y=FVector::CrossProduct(D,X);
+            const float Rr=FMath::Lerp(R0,R1,I/float(FMath::Max(Path.Num()-1,1)));
+            TArray<FVector>& Ring=Rings.AddDefaulted_GetRef();
+            for(int32 K=0;K<Seg;++K){const float A=K*2*PI/Seg;Ring.Add(Path[I]+(X*FMath::Cos(A)+Y*FMath::Sin(A))*Rr);}
+        }
+        auto P=[&](const FVector& V){return At(V.X,V.Y,V.Z);};
+        for(int32 I=0;I+1<Rings.Num();++I)for(int32 K=0;K<Seg;++K)
+        {
+            const int32 L=(K+1)%Seg;const FVector Mid=(Path[I]+Path[I+1])*.5f;
+            QuadToward(M,Rings[I][K],Rings[I+1][K],Rings[I+1][L],Rings[I][L],Mid+(Mid-(Rings[I][K]+Rings[I+1][L])*.5f)*-50);
+        }
+        for(int32 End:{0,Rings.Num()-1})
+        {
+            const FVector Out=Path[End]+(End?1:-1)*(Path.Last()-Path[0]).GetSafeNormal()*100;
+            for(int32 K=1;K+1<Seg;++K)QuadToward(M,Rings[End][0],Rings[End][K],Rings[End][K+1],Rings[End][0],Out);
+        }
+    }
+    void Drum(FSurf& M,const FVector& A,const FVector& B,float R,int32 Seg=12){PathTube(M,{A,B},R,R,Seg);}
+    // A coiled serpent idol (the 2D temple's dressing): a tapering coil rising
+    // three turns round its base, the head reared above it, jaws open.
+    void SerpentIdol(FParts& P,const FVector& Foot,float R,float Yaw)
+    {
+        TArray<FVector> Coil;const float Turns=2.6f,Climb=R*1.5f,Thick=R*.32f;
+        for(int32 I=0;I<=60;++I)
+        {
+            const float U=I/60.f,A=FMath::DegreesToRadians(Yaw)+U*Turns*2*PI,Rr=R*(1-.55f*U);
+            Coil.Add(Foot+FVector(FMath::Cos(A)*Rr,FMath::Sin(A)*Rr,Thick+U*Climb));
+        }
+        // The neck rears up from the coil's top to the head.
+        const FVector Top_=Coil.Last(),Head=Foot+FVector(0,0,Thick+Climb+R*1.1f);
+        for(int32 I=1;I<=8;++I){const float U=I/8.f;Coil.Add(FMath::Lerp(Top_,Head,U)+FVector(0,0,FMath::Sin(U*PI)*R*.15f));}
+        PathTube(P.InPlaster,Coil,Thick,Thick*.6f,8);
+        const FVector Fwd(FMath::Cos(FMath::DegreesToRadians(Yaw)),FMath::Sin(FMath::DegreesToRadians(Yaw)),0);
+        Ellipsoid(P.InPlaster,Head+Fwd*R*.25f,Fwd,FVector(R*.5f,R*.32f,R*.24f),10);
+        Ellipsoid(P.InPlaster,Head+Fwd*R*.3f-FVector(0,0,R*.22f),Fwd,FVector(R*.42f,R*.26f,R*.1f),8);   // lower jaw
+        for(float E:{-1.f,1.f})Ellipsoid(P.InDark,Head+Fwd*R*.45f+FVector(-Fwd.Y,Fwd.X,0)*E*R*.2f+FVector(0,0,R*.1f),Fwd,FVector(R*.07f,R*.07f,R*.07f),6);
+    }
+    // A glyph frieze on a wall (at X, standing out against Dir): rows of carved
+    // stone cartouches, each with a number in the bars and dots of the old
+    // count, cut dark into its face.
+    void Glyphs(FParts& P,FRandomStream& R,const FRoom& Rm,float X,float Dir,float Y0,float Y1,float Z0,float Z1,bool bBackWall)
+    {
+        // A box on the wall: across it Y0..Y1, up it Za..Zb, standing D0..D1 out from it.
+        auto On=[&](FSurf& M,float A0,float A1,float Za,float Zb,float D0,float D1)
+        {if(bBackWall)RBox(M,Rm,X-D1*Dir,X-D0*Dir,A0,A1,Za,Zb);else RBox(M,Rm,A0,A1,X-D1*Dir,X-D0*Dir,Za,Zb);};
+        On(P.InStone,Y0-6,Y1+6,Z0-6,Z0-1,0,2.5f);On(P.InStone,Y0-6,Y1+6,Z1+1,Z1+6,0,2.5f);
+        for(float Z=Z0+17;Z<Z1-12;Z+=36)for(float Y=Y0+15;Y<Y1-10;Y+=31)
+        {
+            const float H=R.FRandRange(13,16),W=R.FRandRange(11,13.5f);const int32 N=R.RandRange(1,19);
+            On(P.InStone,Y-W,Y+W,Z-H,Z+H,0,2.5f);
+            // Bars (fives) from the bottom up, then the dots (ones) above them.
+            float Zm=Z-H+4;
+            for(int32 B=0;B<N/5;++B){On(P.InDark,Y-W*.75f,Y+W*.75f,Zm,Zm+2.6f,2.5f,3.2f);Zm+=4.6f;}
+            const int32 Dots=N%5;
+            for(int32 K=0;K<Dots;++K){const float Yd=Y+(K-(Dots-1)*.5f)*5.2f;On(P.InDark,Yd-1.6f,Yd+1.6f,Zm+.4f,Zm+3.6f,2.5f,3.2f);}
+        }
+    }
+    // A fire (frame coordinates of its flame's base) and where its light hangs.
+    struct FFire{FVector Flame,Light;float Width,Height,Intensity,Radius;};
+    struct FJarSpot{FVector At;float Yaw;bool bUrn;int32 Cigarettes;};
+    // An iron wall torch: a bracket out from the wall at room-local (X,Y),
+    // pointing along (DX,DY) into the room, its cup's rim at Z.
+    void WallTorch(FParts& P,TArray<FFire>& Fires,const FRoom& Rm,float X,float Y,float DX,float DY,float Z)
+    {
+        auto L=[&](float O,float Zz){return RL(Rm,X+DX*O,Y+DY*O,Zz);};
+        const FVector A=L(0,Z-26),B=L(22,Z-22);
+        RBox(P.InDark,Rm,FMath::Min(X,X+DX*22)-(DX?0:2.5f),FMath::Max(X,X+DX*22)+(DX?0:2.5f),FMath::Min(Y,Y+DY*22)-(DY?0:2.5f),FMath::Max(Y,Y+DY*22)+(DY?0:2.5f),Z-26,Z-21);
+        RBox(P.InDark,Rm,FMath::Min(X,X+DX*4)-(DX?0:6),FMath::Max(X,X+DX*4)+(DX?0:6),FMath::Min(Y,Y+DY*4)-(DY?0:6),FMath::Max(Y,Y+DY*4)+(DY?0:6),Z-46,Z-14);  // wall plate
+        Drum(P.InDark,L(24,Z-15),L(24,Z-1),7.5f,10);
+        Drum(P.InDark,L(24,Z-24),L(24,Z-15),3.5f,8);
+        Fires.Add({L(24,Z-2),L(34,Z+18),18,30,4200,620});
+    }
+    // A standing brazier: a stone stem and a wide bowl, its fire at Z+84.
+    void Brazier(FParts& P,TArray<FFire>& Fires,const FRoom& Rm,float X,float Y,float Z)
+    {
+        Drum(P.InStone,RL(Rm,X,Y,Z),RL(Rm,X,Y,Z+10),17,12);
+        Drum(P.InStone,RL(Rm,X,Y,Z+10),RL(Rm,X,Y,Z+66),8,10);
+        Drum(P.InStone,RL(Rm,X,Y,Z+66),RL(Rm,X,Y,Z+82),24,14);
+        Drum(P.InDark,RL(Rm,X,Y,Z+82),RL(Rm,X,Y,Z+83),20,14);
+        Fires.Add({RL(Rm,X,Y,Z+80),RL(Rm,X,Y,Z+125),30,42,5200,700});
+    }
+    // What each room holds: the 2D temple's dressing (serpent idols, glyphs,
+    // urns, column drums) round an altar, its torches, and jars.
+    void Furnish(FParts& P,FRandomStream& R,const FRoom& Rm,TArray<FFire>& Fires,TArray<FJarSpot>& Jars)
+    {
+        const float HD=Rm.HD,HW=Rm.HW,Yaw=FMath::RadiansToDegrees(FMath::Atan2(-Rm.In.Y,-Rm.In.X)),H=Rm.Z1-Rm.Z0;
+        auto Jar=[&](float X,float Y,float Z,bool Urn){Jars.Add({RL(Rm,X,Y,Z),float(R.FRandRange(0,360)),Urn,Urn?R.RandRange(2,4):R.RandRange(1,2)});};
+        if(Rm.Kind==ERoom::Summit)
+        {
+            // A dais across the back with the altar and the coiled serpent on it, braziers either side.
+            RBox(P.InStone,Rm,250,HD,-300,300,0,18);RBox(P.InMoss,Rm,246,250,-300,300,0,14);
+            RBox(P.InStone,Rm,330,440,-110,110,18,95);RBox(P.InStone,Rm,322,448,-120,120,95,105);
+            Glyphs(P,R,Rm,330,1,-100,100,22,92,true);
+            SerpentIdol(P,RL(Rm,385,0,105),25,Yaw);
+            for(float Sg:{-1.f,1.f}){Brazier(P,Fires,Rm,300,Sg*205,18);Jar(430,Sg*235,18,true);}
+            // Square piers carrying the corbelled ceiling; one has fallen, its drums on the floor.
+            for(float X:{-150.f,130.f})for(float Y:{-330.f,330.f})
+            {
+                const bool Broken=X>0&&Y<0;
+                RBox(P.InMoss,Rm,X-34,X+34,Y-34,Y+34,0,12);RBox(P.InStone,Rm,X-28,X+28,Y-28,Y+28,12,Broken?150:H);
+                if(!Broken){RBox(P.InPlaster,Rm,X-36,X+36,Y-36,Y+36,H-46,H-30);RBox(P.InStone,Rm,X-40,X+40,Y-40,Y+40,H-30,H);}
+            }
+            Drum(P.InStone,RL(Rm,20,-420,26),RL(Rm,92,-455,26),26,12);
+            Drum(P.InStone,RL(Rm,-15,-300,24),RL(Rm,-15,-300,72),24,12);
+            for(float Sg:{-1.f,1.f})
+            {
+                RBox(P.InStone,Rm,-HD,HD,Sg<0?-HW:HW-28,Sg<0?-HW+28:HW,H-40,H);
+                RBox(P.InStone,Rm,-HD,HD,Sg<0?-HW:HW-52,Sg<0?-HW+52:HW,H-18,H);
+                // Glyph panels between the torches, dark niches in the back wall with jars before them.
+                Glyphs(P,R,Rm,Sg*HW,Sg,-130,130,105,255,false);
+                WallTorch(P,Fires,Rm,-260,Sg*HW,0,-Sg,180);WallTorch(P,Fires,Rm,260,Sg*HW,0,-Sg,180);
+                RBox(P.InDark,Rm,HD-1.5f,HD,Sg*380-45,Sg*380+45,40,190);RBox(P.InPlaster,Rm,HD-4,HD,Sg*380-60,Sg*380+60,190,204);
+                Jar(HD-30,Sg*380,0,false);
+                Jar(-HD+40,Sg*(HW-40),0,false);Jar(-HD+38,Sg*(HW-82),0,false);Jar(-HD+80,Sg*(HW-45),0,false);
+            }
+            Glyphs(P,R,Rm,HD,1,-260,260,205,H-60,true);
+        }
+        else if(Rm.Kind==ERoom::Gate)
+        {
+            RBox(P.InStone,Rm,90,170,-45,45,0,70);RBox(P.InStone,Rm,84,176,-52,52,70,78);RBox(P.InMoss,Rm,86,174,-50,50,0,8);
+            SerpentIdol(P,RL(Rm,130,0,78),15,Yaw);
+            Glyphs(P,R,Rm,HD,1,-160,160,110,H-30,true);
+            for(float Sg:{-1.f,1.f})WallTorch(P,Fires,Rm,30,Sg*HW,0,-Sg,170);
+            Jar(-HD+35,-(HW-35),0,false);Jar(-HD+35,HW-35,0,false);Jar(HD-38,-(HW-38),0,true);Jar(HD-35,HW-35,0,false);
+        }
+        else
+        {
+            RBox(P.InStone,Rm,80,HD,-46,46,0,55);RBox(P.InStone,Rm,74,HD,-52,52,55,62);
+            SerpentIdol(P,RL(Rm,112,0,62),12,Yaw);
+            Glyphs(P,R,Rm,HD,1,-110,110,100,H-20,true);
+            WallTorch(P,Fires,Rm,10,HW,0,-1,150);
+            Jar(-HD+32,-(HW-32),0,false);Jar(-HD+32,HW-32,0,false);Jar(HD-36,-(HW-36),0,true);
+        }
+    }
+    // Inside a room (or its doorway), world location.
+    bool InRoom(const FVector& World,float Margin)
+    {
+        const FVector F=Frame(World-AChultLanding::FloorOrigin());const float Z=F.Z-PlazaZ();
+        for(const FRoom& Rm:Rooms())
+        {
+            const FVector2D D=FVector2D(F.X,F.Y)-Rm.C;const float X=FVector2D::DotProduct(D,Rm.In),Y=FVector2D::DotProduct(D,SideOf(Rm));
+            if(X>-Rm.HD-Margin&&X<Rm.HD&&FMath::Abs(Y)<Rm.HW&&Z>Rm.Z0-30&&Z<Rm.Z1)return true;
+        }
+        return false;
+    }
 }
 
 float ChultTempleGroundZ(const FVector& P,float Base_)
@@ -447,10 +704,11 @@ void BuildChultTemple(AActor* Owner)
     Sanctuary(P);int32 Towers=1;
     for(float X:{-1.f,1.f})for(float Y:{-1.f,1.f})
     {
-        Prasat(P,Sc+X*(LevelS[2]-240),Y*(LevelT[2]-240),CTop,190,330,1250);
+        // The top terrace's four open toward the middle: small shrines (2026-10-18).
+        Prasat(P,Sc+X*(LevelS[2]-240),Y*(LevelT[2]-240),CTop,190,330,1250,Y>0?2:3);
         Prasat(P,Sc+X*(LevelS[1]-330),Y*(LevelT[1]-330),2*Tier,165,290,800);Towers+=2;
     }
-    for(float Y:{-1.f,1.f}){Prasat(P,GateS,Y*GateT,0,260,400,380);++Towers;}
+    for(float Y:{-1.f,1.f}){Prasat(P,GateS,Y*GateT,0,260,400,380,0);++Towers;}
     // Stelae beside the avenue, carved toward it, each with a low altar.
     int32 Stelae=0;
     for(float S:StelaS)for(float Sg:{-1.f,1.f})
@@ -499,6 +757,12 @@ void BuildChultTemple(AActor* Owner)
     // The closed back: a hidden wall across the whole precinct, ground to above
     // every roof comb, behind which the jungle has taken the temple. Dressed below.
     Box(P.Block,BackFrom,BackTo,-ChultTemplePrecinctHalf-100,ChultTemplePrecinctHalf+100,-300,5200);
+    // The rooms' insides, from their own stream (the growth below keeps its draws).
+    TArray<FFire> Fires;TArray<FJarSpot> JarSpots;const TArray<FRoom> RoomList=Rooms();
+    {
+        FRandomStream Inside(2026101801);
+        for(const FRoom& Rm:RoomList){Lining(P,Rm);Furnish(P,Inside,Rm,Fires,JarSpots);}
+    }
     int32 Missing=0,Triangles=0;
     Emit(Owner,TEXT("ChultTempleMasonry"),{{&P.Stone,StoneMat},{&P.Moss,MossMat},{&P.Plaster,PlasterMat}},true,Missing,Triangles);
     Emit(Owner,TEXT("ChultTempleSteps"),{{&P.Steps,StoneMat},{&P.StepMoss,MossMat}},false,Missing,Triangles);
@@ -509,6 +773,50 @@ void BuildChultTemple(AActor* Owner)
     Emit(Owner,TEXT("ChultTempleVines"),{{&P.Vines,VineMat}},false,Missing,Triangles)->SetCastShadow(false);
     auto* Wall=Emit(Owner,TEXT("ChultTempleJungleWall"),{{&P.Block,StoneMat}},true,Missing,Triangles);
     Wall->SetHiddenInGame(true);Wall->SetCastShadow(false);Wall->SetCollisionResponseToChannel(ECC_Camera,ECR_Ignore);
+    // Inside, only the torches light the stone (lighting channel 1); the sky is dimmed while the camera is in.
+    for(auto* Inner:{Emit(Owner,TEXT("ChultTempleRooms"),{{&P.InStone,StoneMat},{&P.InMoss,MossMat},{&P.InPlaster,PlasterMat}},true,Missing,Triangles),
+        Emit(Owner,TEXT("ChultTempleRoomsDark"),{{&P.InDark,DarkMat}},false,Missing,Triangles)})
+        Inner->SetLightingChannels(false,true,false);
+    TArray<TPair<TWeakObjectPtr<UPointLightComponent>,float>> RoomLights;
+    for(const FFire& F:Fires)
+    {
+        AddDockFlame(Owner,G+At(F.Flame.X,F.Flame.Y,F.Flame.Z),F.Width,F.Height);
+        auto* L=NewObject<UPointLightComponent>(Owner);L->SetupAttachment(Owner->GetRootComponent());L->SetMobility(EComponentMobility::Movable);
+        L->SetWorldLocation(G+At(F.Light.X,F.Light.Y,F.Light.Z));L->SetIntensity(F.Intensity);L->SetAttenuationRadius(F.Radius);
+        L->SetLightColor(FLinearColor(1.f,.56f,.27f));L->SetCastShadows(false);L->SetLightingChannels(false,true,false);L->RegisterComponent();
+        L->ComponentTags.Add(TEXT("ChultTempleTorch"));RoomLights.Add({L,F.Intensity});
+    }
+    int32 TempleJars=0,TempleUrns=0;
+    for(const FJarSpot& J:JarSpots)
+        if(AClayJar* Jar=AClayJar::PlaceKind(Owner->GetWorld(),J.bUrn?AClayUrn::StaticClass():ATempleJar::StaticClass(),G+At(J.At.X,J.At.Y,J.At.Z+1),J.Yaw,J.Cigarettes))
+        {Jar->SetIndoors();Jar->Tags.Add(TEXT("ChultTempleJar"));(J.bUrn?TempleUrns:TempleJars)++;}
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_ROOMS rooms=%d fires=%d jars=%d urns=%d"),RoomList.Num(),Fires.Num(),TempleJars,TempleUrns);
+    // While the camera is in a room: the sky dims, Chuck joins the rooms' light (the sewer's pattern), the fires flicker.
+    {
+        struct FInside{float Blend=0;bool bChuckIn=false;TArray<TPair<TWeakObjectPtr<USkyLightComponent>,float>> Skies;bool bFound=false;};
+        auto State=MakeShared<FInside>();TWeakObjectPtr<AActor> Weak(Owner);
+        FTimerHandle Timer;
+        Owner->GetWorldTimerManager().SetTimer(Timer,[Weak,State,RoomLights]()
+        {
+            if(!Weak.IsValid())return;UWorld* World=Weak->GetWorld();
+            if(!State->bFound){TArray<USkyLightComponent*> Found;Weak->GetComponents(Found);for(auto* K:Found)State->Skies.Add({K,K->Intensity});State->bFound=true;}
+            auto* PC=World->GetFirstPlayerController();if(!PC||!PC->PlayerCameraManager)return;
+            const bool In=InRoom(PC->PlayerCameraManager->GetCameraLocation(),40);
+            const float Was=State->Blend;State->Blend=FMath::Clamp(State->Blend+(In?.125f:-.125f),0.f,1.f);
+            if(State->Blend!=Was)for(const auto& K:State->Skies)if(K.Key.IsValid())K.Key->SetIntensity(K.Value*(1-.85f*State->Blend));
+            if(APawn* Pawn=PC->GetPawn())if((State->Blend>.5f)!=State->bChuckIn)
+            {
+                State->bChuckIn=State->Blend>.5f;TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);
+                for(auto* Part:Parts)Part->SetLightingChannels(!State->bChuckIn,State->bChuckIn,false);
+            }
+            const float Time=World->GetTimeSeconds();int32 I=0;
+            for(const auto& L:RoomLights)
+            {
+                const float Ph=I++*1.37f;
+                if(L.Key.IsValid())L.Key->SetIntensity(L.Value*(.93f+.06f*FMath::Sin(Time*6.3f+Ph)+.04f*FMath::Sin(Time*10.7f+Ph*1.7f)));
+            }
+        },.05f,true);
+    }
 
     // Growth. The jungle is taking the precinct back: trees on the plaza and
     // its sides, thickening outward, the old road kept clear up the middle;
@@ -530,12 +838,16 @@ void BuildChultTemple(AActor* Owner)
         }
         H->AddInstance(FTransform(FRotator(0,Yaw,0),G+Local,FVector(Scale)),true);
     };
+    // Suppress keeps a spot bare without changing any draw (the shrines' doorways, 2026-10-18).
+    bool Suppress=false;
     auto Plant=[&](const FVector& L,int32 Type,float Scale,float Yaw)
     {
+        if(Suppress)return;
         Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type<6?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),L,Scale*(Type<4?1:.65f),Yaw);++Plants;
     };
     auto Tree=[&](const FVector& L,float Scale,float Yaw,bool Solid)
     {
+        if(Suppress)return;
         Place(TEXT("SM_ChultIslandTree"),L,Scale,Yaw);if(Solid)Place(TEXT("SM_ChultIslandTrunkCollision"),L,Scale,Yaw,true,true);++Trees;
     };
     // Ledges: each terrace's top between its edge and the next terrace in.
@@ -564,12 +876,19 @@ void BuildChultTemple(AActor* Owner)
                 if(!Back&&R.FRand()<.6f)continue;
             }
             if(L.Off==0&&L.Z==2*Tier&&FMath::Abs(FMath::Abs(S)-(LevelS[1]-330))<230&&FMath::Abs(FMath::Abs(T)-(LevelT[1]-330))<230)continue;
+            // Before each top-terrace shrine's door (its steps and the way to them),
+            // and round every room, whose leaves would poke through its walls.
+            {
+                const float DS=FMath::Abs(FMath::Abs(S)-(LevelS[2]-240)),DT=FMath::Abs(FMath::Abs(T)-(LevelT[2]-240));
+                Suppress=L.Off==0&&L.Summit&&((DS<200&&FMath::Abs(T)>LevelT[2]-240-700&&FMath::Abs(T)<LevelT[2]-240)||FMath::Max(DS,DT)<520);
+                Suppress|=L.Off!=0&&L.Summit&&Sc+S>HouseFront-400&&Sc+S<HouseBack+400&&FMath::Abs(T)<HouseHalf+400;
+            }
             const FVector At_=At(Sc+S,T,L.Z-2);
             if(Rear&&R.FRand()<.06f){Tree(At_,R.FRandRange(.7f,1.1f),R.FRandRange(0,360),false);continue;}
             Plant(At_,R.RandRange(0,6),R.FRandRange(1.2f,Back?2.8f:2.f),R.FRandRange(0,360));
         }
     }
-    OffT=0;
+    OffT=0;Suppress=false;
     // A few trees clinging to the pyramids' outer upper corners and the central temple's back corners.
     for(float Side:{-1.f,1.f})for(int32 Tr:{1,2})
     {
@@ -587,6 +906,7 @@ void BuildChultTemple(AActor* Owner)
         if(S<CStairFoot&&A<800)continue;                                // the road
         bool Clear=true;for(float St:StelaS)Clear&=FVector2D(S-St,A-1500).Size()>260;
         const FVector Ground=Flat(S,T,ChultCanyonGroundZ(ChultCanyonFrame(S,T))-3-PlazaZ());
+        Suppress=FMath::Abs(S-GateS)<580&&FMath::Abs(A-GateT)<580;   // the gate pavilions' rooms
         // Wilder toward the sides and the back; the ways in stay open.
         const float Wild=FMath::Max(Ease((A-1600)/5500),Ease((S-76500)/2500)*.6f);
         if(I%4==0&&Clear&&!OnWayIn(S,T,250)&&A>1500&&!OnStructure(S,T,350)&&R.FRand()<.08f+.7f*Wild)
@@ -598,6 +918,7 @@ void BuildChultTemple(AActor* Owner)
         if(!Clear||R.FRand()>.55f+.45f*Ease((A-800)/2500))continue;
         Plant(Ground,I%7,R.FRandRange(1.4f,2.8f),R.FRandRange(0,360));
     }
+    Suppress=false;
     // Behind the temple the jungle closes: a dense band of trees and thick
     // growth along the hidden wall and up against the masonry's backs.
     for(int32 I=0;I<9000;++I)
@@ -742,6 +1063,44 @@ int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck)
             }
         for(float Side:{-1.f,1.f})Shut(TEXT("roof_open_below"),Flat(HouseFront-30,Side*PyramidT+300,Top+WallTop-60),Flat(HouseFront-30,Side*PyramidT+300,Top+WallTop+40));
     }
+    // The rooms (2026-10-18): room to stand inside, the doorway open from the
+    // threshold, the prasats' steps walkable, the jars and urns all there and
+    // whole; one of each new pot broken on the plaza to see it shatter.
+    int32 RoomFailures=0,JarCount=0,UrnCount=0,ShardsOk=0;
+    {
+        const int32 Before=Failures;
+        for(const FRoom& Rm:Rooms())
+        {
+            const FVector Mid=RL(Rm,-Rm.HD*.35f,0,Half+4);
+            Room(TEXT("room_blocked"),Flat(Mid.X,Mid.Y,Mid.Z));
+            const float Out=Rm.Kind==ERoom::Summit?HouseWall+90:CellaWall+30;
+            const FVector A=RL(Rm,-Rm.HD-Out,0,Half+4);
+            Open(TEXT("room_door_blocked"),Flat(A.X,A.Y,A.Z),Flat(Mid.X,Mid.Y,Mid.Z));
+            if(Rm.Kind==ERoom::Summit)continue;
+            // The steps' hidden ramp, through the treads' middles, from the ground to the plinth.
+            const float Face=Rm.HD+CellaWall+35;
+            for(float O:{95.f,75.f,45.f,15.f})
+            {
+                const FVector At_=RL(Rm,-Face-O,0,0),Want=At_+FVector(0,0,FMath::Clamp(45*(105-O)/90,0.f,45.f)-45);
+                FHitResult Hit;const FVector W=G+Flat(Want.X,Want.Y,Want.Z);
+                const bool Found=World->LineTraceSingleByChannel(Hit,W+FVector(0,0,60),W-FVector(0,0,30),ECC_Visibility,Q);
+                if(!Found||FMath::Abs(Hit.ImpactPoint.Z-W.Z)>4||Hit.ImpactNormal.Z<.85f)Fail(TEXT("room_steps"),Want);
+                ++Sweeps;
+            }
+        }
+        for(const TWeakObjectPtr<AChuckBreakable>& B:AChuckBreakable::All())
+            if(B.IsValid()&&B->ActorHasTag(TEXT("ChultTempleJar"))&&!B->IsBroken())(B->IsA<AClayUrn>()?UrnCount:JarCount)++;
+        if(JarCount!=30||UrnCount!=10)Fail(TEXT("room_jars"),FVector(JarCount,UrnCount,0));
+        for(const TPair<UClass*,int32>& K:TArray<TPair<UClass*,int32>>{{ATempleJar::StaticClass(),12},{AClayUrn::StaticClass(),19}})
+        {
+            AClayJar* Pot=AClayJar::PlaceKind(World,K.Key,G+Flat(69000,-7000-K.Value*20,0),0,2);
+            if(!Pot){Fail(TEXT("room_pot_spawn"),FVector::ZeroVector);continue;}
+            Pot->Break(FVector(1,0,0));
+            if(Pot->GetShardsFlying()==K.Value&&Pot->PlayedBreakSound()&&Pot->Cigarettes==0)++ShardsOk;else Fail(TEXT("room_pot_break"),FVector(K.Value,Pot->GetShardsFlying(),Pot->PlayedBreakSound()));
+        }
+        RoomFailures=Failures-Before;
+    }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=%d rooms=%d jars=%d urns=%d breaks=%d"),RoomFailures,Rooms().Num(),JarCount,UrnCount,ShardsOk);
     // The spawn: on the floor with room to stand.
     {
         FHitResult Hit;const FVector P=ChultTempleSpawn();
@@ -757,18 +1116,24 @@ int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck)
 
 void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
 {
+    // A point in room I: X as a fraction of its half depth (from the door, -1, to the back, +1), Y across, Z above its floor.
+    auto RoomEye=[](int32 I,float X,float Y,float Z){const FRoom Rm=Rooms()[I];const FVector V=RL(Rm,X*Rm.HD,Y,Z);return Flat(V.X,V.Y,V.Z);};
     auto* Camera=Owner->GetWorld()->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(72);
     Chuck->SetActorHiddenInGame(true);if(auto* PC=Cast<APlayerController>(Chuck->GetController()))PC->SetViewTarget(Camera);
     const TArray<FVector> Eyes={Flat(SpawnS-300,0,180),Flat(70500,-500,140),Flat(CStairFoot-650,-900,90),Flat(CStairTop+200,-500,CTop+170),
         Flat(Sc-Base-6500,-1500,2600),Flat(69300,-150,95),Flat(Sc-LevelS[0]+Band+150,-900,Tier+120),Flat(Sc+LevelS[2]-200,600,CTop+180),Flat(64300,0,260),
         // 2026-10-17: a central balustrade's top end from the platform, a pyramid stair's side from its top, up under a summit house's roof.
-        Flat(CStairTop+260,(CStairHalf+CBalusterOut)*.5f+90,CTop+70),Flat(StairTop+180,PyramidT-BalusterOut-260,Top+120),Flat(HouseFront-260,-PyramidT-420,Top+45)};
+        Flat(CStairTop+260,(CStairHalf+CBalusterOut)*.5f+90,CTop+70),Flat(StairTop+180,PyramidT-BalusterOut-260,Top+120),Flat(HouseFront-260,-PyramidT-420,Top+45),
+        // 2026-10-18: inside a summit chamber, a gate pavilion and a shrine; a gate's open door from the plaza.
+        RoomEye(0,-.85f,-200,150),RoomEye(2,-.7f,110,120),RoomEye(5,-.75f,60,115),Flat(GateS-900,-GateT+420,150),RoomEye(0,-.45f,-330,75)};
     const TArray<FVector> Aims={Flat(Sc,0,1600),Flat(Sc,0,1500),Flat(CStairFoot-100,-460,80),Flat(TowerFront,0,CTop+200),
         Flat(Sc,0,1500),Flat(68300,-StakeT,180),Flat(Sc-LevelS[0],-PyramidT,Tier+200),Flat(BackTo,3500,200),Flat(Sc,0,1800),
-        Flat(CStairTop-300,(CStairHalf+CBalusterOut)*.5f,CTop-120),Flat(StairTop-700,PyramidT-StairHalf-60,Top-420),Flat(HouseFront+40,-PyramidT-150,Top+WallTop+110)};
+        Flat(CStairTop-300,(CStairHalf+CBalusterOut)*.5f,CTop-120),Flat(StairTop-700,PyramidT-StairHalf-60,Top-420),Flat(HouseFront+40,-PyramidT-150,Top+WallTop+110),
+        RoomEye(0,.79f,60,90),RoomEye(2,.6f,-20,80),RoomEye(5,.77f,-10,70),Flat(GateS-260,-GateT,110),RoomEye(0,-.88f,-500,12)};
     const TArray<FString> Names={TEXT("TempleAvenue"),TEXT("TemplePlaza"),TEXT("TempleSerpent"),TEXT("TempleDoorway"),TEXT("TempleOverview"),
         TEXT("TempleSkullStake"),TEXT("TempleLedgeJoin"),TEXT("TempleBackJungle"),TEXT("TempleApproach"),
-        TEXT("TempleStairSideCentral"),TEXT("TempleStairSidePyramid"),TEXT("TempleRoofBelow")};
+        TEXT("TempleStairSideCentral"),TEXT("TempleStairSidePyramid"),TEXT("TempleRoofBelow"),
+        TEXT("TempleRoomSummit"),TEXT("TempleRoomGate"),TEXT("TempleRoomShrine"),TEXT("TempleGateDoor"),TEXT("TempleRoomJars")};
     struct FRun{int32 Phase=0,Walk=0,Failures=0,Shot=0;double Next=0,ShotNext=0,Start=-1,RunStart=-1,MusicAt=-1,RevealAt=-1;bool bDone=false,bRan=false;TWeakObjectPtr<ACameraActor> Camera;FTimerHandle Timer;};
     auto Run=MakeShared<FRun>();Run->Failures=Failures;Run->Camera=Camera;
     // One timer throughout: views every 2.5 s, then the real character's climb.
@@ -839,7 +1204,10 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
             Chuck->ResetAtLocation(G+Flat(72600,0,34.65f));Chuck->SetActorRotation(FRotator(0,ChultTempleSpawnYaw(),0));Chuck->SetRunHeld(true);
             Run->Start=Now;return;
         }
-        const TArray<FVector> Way={Flat(CStairFoot-200,0,0),Flat(CStairTop+100,0,CTop),Flat(TowerFront+170,0,CTop)};
+        // 2026-10-18: then back out, across the top terrace and up the steps into a shrine.
+        const FVector Shrine=RL(Rooms()[5],0,0,0),Steps=RL(Rooms()[5],-Rooms()[5].HD-CellaWall-35-160,0,0);
+        const TArray<FVector> Way={Flat(CStairFoot-200,0,0),Flat(CStairTop+100,0,CTop),Flat(TowerFront+170,0,CTop),Flat(TowerFront-150,0,CTop),
+            Flat(Steps.X,Steps.Y,CTop),Flat(Shrine.X,Shrine.Y,Shrine.Z)};
         const float Time=Now-Run->Start;const FVector P=Chuck->GetActorLocation()-G;
         if(Run->Walk<Way.Num())
         {
@@ -848,7 +1216,7 @@ void ReviewChultTemple(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
             else if(Time<150){const FVector D=(To-P).GetSafeNormal2D();Chuck->SetTestStickWorld(D);Chuck->AddMovementInput(D,1,true);return;}
         }
         Chuck->SetTestStick(FVector2D::ZeroVector);Chuck->SetRunHeld(false);
-        const bool Pass=Run->Walk==Way.Num()&&M->IsMovingOnGround()&&FMath::Abs(P.Z-34.65f-PlazaZ()-CTop)<20&&Chuck->GetFallDeaths()==0;
+        const bool Pass=Run->Walk==Way.Num()&&M->IsMovingOnGround()&&FMath::Abs(P.Z-34.65f-PlazaZ()-Shrine.Z)<20&&InRoom(Chuck->GetActorLocation(),0)&&Chuck->GetFallDeaths()==0;
         Run->bDone=true;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_TEST failures=%d climb=%d legs=%d seconds=%.1f"),Run->Failures+!Pass,Pass,Run->Walk,Time);
         FPlatformMisc::RequestExitWithStatus(false,(Run->Failures||!Pass)?1:0);

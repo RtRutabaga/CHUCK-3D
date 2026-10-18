@@ -1,9 +1,11 @@
 """Blender 4.5.14: breakable clay jar (user 2026-09-30: Chuck breaks grass and
 jars for the cigarettes inside - never crates or barrels; urns in later maps).
 
-blender --background --python Tools/build_clay_jar.py
-  -> SourceAssets/Props/Jar/SM_ClayJar.fbx, SM_JarShard_00..11.fbx, shards.json
-  -> Unreal/Chuck3D/Source/Chuck3D/ClayJarData.h (shard rest offsets)
+blender --background --python Tools/build_clay_jar.py [-- --variant jar|tan|urn]
+  jar (default) -> SourceAssets/Props/Jar/SM_ClayJar.fbx, SM_JarShard_00..11.fbx, shards.json
+                -> Unreal/Chuck3D/Source/Chuck3D/ClayJarData.h (shard rest offsets)
+  tan           -> SourceAssets/Props/TempleJar/SM_TempleJar.fbx, SM_TempleJarShard_*, TempleJarData.h
+  urn           -> SourceAssets/Props/Urn/SM_ClayUrn.fbx, SM_UrnShard_*, ClayUrnData.h
 
 A small dockside storage jar, 25.5 cm tall (knee to hip on 65 cm Chuck):
 terracotta body with a dark glaze over the shoulder and neck, ending in an
@@ -14,18 +16,31 @@ its own centre, and its rest offset from the jar origin goes to
 ClayJarData.h so the runtime can put the pieces exactly where the jar stood
 before they fly. Vertex colour carries the tint (M_Grass's gamma-squared
 convention); alpha marks glaze (glossier). Centimetres, origin at the base.
+
+Chult temple variants (Claude, 2026-10-18; docs/CHULT-TEMPLE.md): 'tan' is the
+same jar in tan ceramic under a slightly deeper glossy tan glaze; 'urn' is a 44 cm temple
+urn (to Chuck's chest), buff slip painted with red bands and a black stepped
+fret round the shoulder, in 19 shards. The default 'jar' output is unchanged.
 """
 from pathlib import Path
 import json
 import math
 import random
+import sys
 import bpy
 from mathutils import Vector
 
+ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+VARIANT = ARGS[ARGS.index('--variant') + 1] if '--variant' in ARGS else 'jar'
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'SourceAssets' / 'Props' / 'Jar'
+VARIANTS = {
+    'jar': dict(folder='Jar', body='SM_ClayJar', shard='SM_JarShard_', header='ClayJarData', seed=5150),
+    'tan': dict(folder='TempleJar', body='SM_TempleJar', shard='SM_TempleJarShard_', header='TempleJarData', seed=5150),
+    'urn': dict(folder='Urn', body='SM_ClayUrn', shard='SM_UrnShard_', header='ClayUrnData', seed=181018),
+}[VARIANT]
+OUT = ROOT / 'SourceAssets' / 'Props' / VARIANTS['folder']
 OUT.mkdir(parents=True, exist_ok=True)
-HEADER = ROOT / 'Unreal' / 'Chuck3D' / 'Source' / 'Chuck3D' / 'ClayJarData.h'
+HEADER = ROOT / 'Unreal' / 'Chuck3D' / 'Source' / 'Chuck3D' / f"{VARIANTS['header']}.h"
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 scene = bpy.context.scene
 scene.unit_settings.system = 'METRIC'; scene.unit_settings.scale_length = .01
@@ -35,10 +50,23 @@ MAT = bpy.data.materials.new('Clay')
 PROFILE = [(0., 5.6), (.8, 6.2), (4., 8.4), (9., 9.6), (13., 9.3), (17., 7.6), (20., 5.2), (22., 4.3), (24.2, 4.6), (25.5, 5.1)]
 WALL = .7
 SEGMENTS = 36
-HEIGHT = PROFILE[-1][0]
 TERRACOTTA = (.30, .115, .05)
 GLAZE = (.055, .06, .035)
 INSIDE = (.12, .05, .025)
+if VARIANT == 'tan':
+    TERRACOTTA = (.5, .38, .22)
+    GLAZE = (.4, .28, .145)
+    INSIDE = (.2, .14, .075)
+if VARIANT == 'urn':
+    PROFILE = [(0., 7.5), (1.2, 8.2), (6., 12.), (14., 15.), (22., 15.2), (28., 13.5), (33., 9.5), (36., 6.8), (39., 6.2), (42., 7.), (44., 8.)]
+    WALL = 1.
+    SEGMENTS = 96
+    TERRACOTTA = (.36, .2, .09)    # buff-orange slip
+    INSIDE = (.16, .08, .035)
+HEIGHT = PROFILE[-1][0]
+FOOT = PROFILE[1][0]
+MAX_RADIUS = max(r for _, r in PROFILE)
+URN_CREAM, URN_RED, URN_BLACK = (.5, .4, .26), (.24, .06, .03), (.035, .03, .025)
 
 
 def radius_at(z):
@@ -55,9 +83,27 @@ def glaze_line(a):
     return 15.2 + 1.1 * math.sin(3 * a + .7) + .7 * math.sin(7 * a + 2.1) + .9 * max(0., math.sin(11 * a)) ** 6 * -3
 
 
+def urn_colour(z, a):
+    """Painted bands: red rules, a cream shoulder band with a black stepped
+    fret (the step-pyramid motif) twelve times round, a red rim; burnished."""
+    h = z / HEIGHT
+    m = 1 + .06 * math.sin(a * 5 + z * .5) + .04 * math.sin(a * 11 - z * .9)
+    def c(base, alpha=.25): return (*(x * m for x in base), alpha)
+    if h > .93 or .2 < h < .235 or .515 < h < .545 or .735 < h < .765: return c(URN_RED)
+    if .545 <= h <= .735:
+        u = (h - .545) / .19
+        x = (a * 12 / math.tau) % 1.
+        step = math.floor(min(x, 1. - x) * 2 * 4) / 4   # 0 .. .75 in four stairs
+        if u < .1 or u > .9 or (u < .1 + .8 * step and .08 < x < .92): return c(URN_BLACK)
+        return c(URN_CREAM)
+    return c(TERRACOTTA)
+
+
 def colour(z, a, outer, rng=None):
     if not outer:
         return (*INSIDE, 0.)
+    if VARIANT == 'urn':
+        return urn_colour(z, a)
     glazed = z >= glaze_line(a)
     base = GLAZE if glazed else TERRACOTTA
     # A little mottling in the fired clay.
@@ -67,7 +113,7 @@ def colour(z, a, outer, rng=None):
 
 def point(z, a, inner=False):
     r = radius_at(z) - (WALL if inner else 0.)
-    return Vector((r * math.cos(a), r * math.sin(a), z if not inner or z > .8 else .8))
+    return Vector((r * math.cos(a), r * math.sin(a), z if not inner or z > FOOT else FOOT))
 
 
 def build_patch(name, z0, z1, a0, a1, jitter, rows=6, cols=6):
@@ -108,7 +154,8 @@ def build_patch(name, z0, z1, a0, a1, jitter, rows=6, cols=6):
 def base_disc(name):
     """The jar's floor with its foot ring: the one piece that stays put."""
     verts, faces, cols_ = [], [], []
-    rings = [(0., 0.), (0., 5.6), (.8, 6.2), (.8, 6.2 - WALL), (.8, 0.)]
+    (_, r0), (zf, rf) = PROFILE[0], PROFILE[1]
+    rings = [(0., 0.), (0., r0), (zf, rf), (zf, rf - WALL), (zf, 0.)]
     for z, r in rings:
         for j in range(SEGMENTS):
             a = math.tau * j / SEGMENTS
@@ -143,8 +190,8 @@ def export(obj):
                              mesh_smooth_type='FACE', colors_type='LINEAR')
 
 
-rng = random.Random(5150)
-cut_z = {k: [rng.uniform(-1.2, 1.2) for _ in range(8)] for k in ('b1', 'b2')}
+rng = random.Random(VARIANTS['seed'])
+cut_z = {k: [rng.uniform(-1.2, 1.2) for _ in range(8)] for k in (('b1', 'b2') if VARIANT != 'urn' else ('b1', 'b2', 'b3'))}
 cut_a = [rng.uniform(-.12, .12) for _ in range(16)]
 
 
@@ -162,6 +209,8 @@ def make_jitter(band_lo, band_hi):
 
 # The whole jar: the three bands' patches spanning the full circle, plus the floor.
 BANDS = [(.8, 8., 4, 'b0', 'b1'), (8., 16.5, 5, 'b1', 'b2'), (16.5, HEIGHT, 3, 'b2', 'top')]
+if VARIANT == 'urn':
+    BANDS = [(FOOT, 12., 5, 'b0', 'b1'), (12., 24., 6, 'b1', 'b2'), (24., 34., 5, 'b2', 'b3'), (34., HEIGHT, 3, 'b3', 'top')]
 jar_v, jar_f, jar_c = base_disc('floor')
 shards = []
 index = 0
@@ -170,11 +219,13 @@ for z0, z1, count, lo, hi in BANDS:
     for k in range(count):
         a0 = offset + math.tau * k / count
         a1 = offset + math.tau * (k + 1) / count
-        v, f, c = build_patch(f'SM_JarShard_{index:02d}', z0, z1, a0, a1, make_jitter(lo, hi), rows=5, cols=max(4, 24 // count))
+        name = f"{VARIANTS['shard']}{index:02d}"
+        rows, cols = (5, max(4, 24 // count)) if VARIANT != 'urn' else (12, 96 // count)
+        v, f, c = build_patch(name, z0, z1, a0, a1, make_jitter(lo, hi), rows=rows, cols=cols)
         base = len(jar_v)
         jar_v += v; jar_c += c; jar_f += [tuple(i + base for i in face) for face in f]
         centre = sum(v, Vector()) / len(v)
-        obj = make(f'SM_JarShard_{index:02d}', v, f, c, origin=centre)
+        obj = make(name, v, f, c, origin=centre)
         export(obj)
         shards.append({'name': obj.name, 'offset_cm': [round(centre.x, 3), round(centre.y, 3), round(centre.z, 3)],
                        'outward': [round(x, 4) for x in Vector((centre.x, centre.y, 0)).normalized()]})
@@ -182,11 +233,11 @@ for z0, z1, count, lo, hi in BANDS:
 # The intact jar is its own seamless lathe (patches would show their cuts).
 def lathe():
     verts, faces, cols_ = [], [], []
-    rows = 40
+    rows = 40 if VARIANT != 'urn' else 120
     zs = [HEIGHT * i / rows for i in range(rows + 1)]
     outer = [(z, radius_at(z), True) for z in zs]
-    inner = [(z, radius_at(z) - WALL, False) for z in reversed(zs) if z >= .8]
-    profile = [(0., 0., True)] + outer + inner + [(.8, 0., False)]
+    inner = [(z, radius_at(z) - WALL, False) for z in reversed(zs) if z >= FOOT]
+    profile = [(0., 0., True)] + outer + inner + [(FOOT, 0., False)]
     for z, r, out in profile:
         for j in range(SEGMENTS):
             a = math.tau * j / SEGMENTS
@@ -196,16 +247,16 @@ def lathe():
             j2 = (j + 1) % SEGMENTS
             faces.append((k * SEGMENTS + j, k * SEGMENTS + j2, (k + 1) * SEGMENTS + j2, (k + 1) * SEGMENTS + j))
     return verts, faces, cols_
-jar = make('SM_ClayJar', *lathe())
+jar = make(VARIANTS['body'], *lathe())
 bpy.ops.object.select_all(action='DESELECT'); jar.select_set(True); bpy.context.view_layer.objects.active = jar
 bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); bpy.ops.mesh.remove_doubles(threshold=.001)
 bpy.ops.mesh.normals_make_consistent(inside=False); bpy.ops.object.mode_set(mode='OBJECT')
 export(jar)
-(OUT / 'shards.json').write_text(json.dumps({'height_cm': HEIGHT, 'max_radius_cm': 9.6, 'shards': shards}, indent=1) + '\n', encoding='utf-8')
+(OUT / 'shards.json').write_text(json.dumps({'height_cm': HEIGHT, 'max_radius_cm': MAX_RADIUS, 'shards': shards}, indent=1) + '\n', encoding='utf-8')
 lines = ['// Generated by Tools/build_clay_jar.py. Do not edit by hand.', '#pragma once', '',
-         'namespace ClayJarData', '{',
+         f"namespace {VARIANTS['header']}", '{',
          f'    constexpr float Height = {HEIGHT:.4f}f;',
-         '    constexpr float Radius = 9.6000f;   // widest (the belly)',
+         f'    constexpr float Radius = {MAX_RADIUS:.4f}f;   // widest (the belly)',
          f'    constexpr int ShardCount = {len(shards)};',
          '    // Each shard mesh\'s rest offset from the jar origin (its centre), cm.',
          '    constexpr float ShardOffset[][3] = {' + ', '.join('{' + ', '.join(f'{x:.4f}f' for x in s['offset_cm']) + '}' for s in shards) + '};',
@@ -213,13 +264,12 @@ lines = ['// Generated by Tools/build_clay_jar.py. Do not edit by hand.', '#prag
 text = '\n'.join(lines)
 if not HEADER.exists() or HEADER.read_text(encoding='utf-8') != text:
     HEADER.write_text(text, encoding='utf-8', newline='\n')
-print('CHUCK_JAR_READY', f'tris={sum(len(p.vertices) - 2 for p in jar.data.polygons)}', f'shards={len(shards)}', f'size=({jar.dimensions.x:.1f},{jar.dimensions.y:.1f},{jar.dimensions.z:.1f})')
+print('CHUCK_JAR_READY', VARIANT, f'tris={sum(len(p.vertices) - 2 for p in jar.data.polygons)}', f'shards={len(shards)}', f'size=({jar.dimensions.x:.1f},{jar.dimensions.y:.1f},{jar.dimensions.z:.1f})')
 
-import sys
 if '--review' in sys.argv:
     review = sys.argv[sys.argv.index('--review') + 1]
     for s in bpy.data.objects:
-        if s.name.startswith('SM_JarShard_'):
+        if s.name.startswith(VARIANTS['shard']):
             i = int(s.name[-2:]); d = Vector(shards[i]['offset_cm'])
             s.location = Vector((0, 30, 0)) + d + Vector((d.x, d.y, 0)).normalized() * 6
     bpy.ops.mesh.primitive_plane_add(size=400)

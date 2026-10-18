@@ -1,5 +1,7 @@
 #include "ClayJar.h"
 #include "ClayJarData.h"
+#include "TempleJarData.h"
+#include "ClayUrnData.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -22,7 +24,6 @@ AClayJar::AClayJar()
     PrimaryActorTick.bStartWithTickEnabled = false;   // only while shards are out
     Blocker = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Blocker"));
     SetRootComponent(Blocker);
-    Blocker->InitCapsuleSize(ClayJarData::Radius - .5f, ClayJarData::Height * .5f);
     // Solid to Chuck only: his paw, ledge, mantle and camera traces ignore it.
     Blocker->SetCollisionProfileName(TEXT("Custom"));
     Blocker->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -32,16 +33,42 @@ AClayJar::AClayJar()
     Blocker->SetCanEverAffectNavigation(false);
     Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
     Body->SetupAttachment(Blocker);
-    Body->SetRelativeLocation(FVector(0, 0, -ClayJarData::Height * .5f));   // mesh origin at its base
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Jar(TEXT("/Game/Art/Props/Jar/SM_ClayJar.SM_ClayJar"));
+    Configure(TEXT("/Game/Art/Props/Jar"), TEXT("SM_ClayJar"), TEXT("SM_JarShard_"), ClayJarData::Height, ClayJarData::Radius, ClayJarData::ShardCount, ClayJarData::ShardOffset);
+}
+
+void AClayJar::Configure(const TCHAR* Dir, const TCHAR* BodyName, const TCHAR* ShardPrefix, float Height, float Radius, int32 ShardCount, const float (*Offsets)[3])
+{
+    JarHeight = Height;
+    Blocker->InitCapsuleSize(Radius - .5f, Height * .5f);
+    Body->SetRelativeLocation(FVector(0, 0, -Height * .5f));   // mesh origin at its base
+    ConstructorHelpers::FObjectFinder<UStaticMesh> Jar(*FString::Printf(TEXT("%s/%s.%s"), Dir, BodyName, BodyName));
     Body->SetStaticMesh(Jar.Object);
-    for (int32 I = 0; I < ClayJarData::ShardCount; ++I)
+    ShardMeshes.Reset(); ShardOffsets.Reset();
+    for (int32 I = 0; I < ShardCount; ++I)
     {
-        ConstructorHelpers::FObjectFinder<UStaticMesh> Shard(*FString::Printf(TEXT("/Game/Art/Props/Jar/SM_JarShard_%02d.SM_JarShard_%02d"), I, I));
+        ConstructorHelpers::FObjectFinder<UStaticMesh> Shard(*FString::Printf(TEXT("%s/%s%02d.%s%02d"), Dir, ShardPrefix, I, ShardPrefix, I));
         ShardMeshes.Add(Shard.Object);
+        ShardOffsets.Add(FVector(Offsets[I][0], Offsets[I][1], Offsets[I][2]));
     }
-    HitRadius = ClayJarData::Radius; HitHeight = ClayJarData::Height; bCentred = true;
+    HitRadius = Radius; HitHeight = Height; bCentred = true;
+}
+
+ATempleJar::ATempleJar()
+{
+    Configure(TEXT("/Game/Art/Props/TempleJar"), TEXT("SM_TempleJar"), TEXT("SM_TempleJarShard_"), TempleJarData::Height, TempleJarData::Radius, TempleJarData::ShardCount, TempleJarData::ShardOffset);
+}
+
+AClayUrn::AClayUrn()
+{
+    Configure(TEXT("/Game/Art/Props/Urn"), TEXT("SM_ClayUrn"), TEXT("SM_UrnShard_"), ClayUrnData::Height, ClayUrnData::Radius, ClayUrnData::ShardCount, ClayUrnData::ShardOffset);
+    BreakPitch = .78f;   // a bigger pot: a deeper crack
+}
+
+void AClayJar::SetIndoors()
+{
+    Body->SetLightingChannels(false, true, false);
+    for (UStaticMeshComponent* Part : ShardParts) Part->SetLightingChannels(false, true, false);
 }
 
 void AClayJar::BeginPlay()
@@ -62,13 +89,13 @@ void AClayJar::Break(const FVector& Swing)
     // The pieces start exactly where they sat in the jar, then burst outward
     // (and on along the swing), tumbling, bounce once and settle.
     const FTransform Jar = Body->GetComponentTransform();
-    for (int32 I = 0; I < ClayJarData::ShardCount; ++I)
+    for (int32 I = 0; I < ShardMeshes.Num(); ++I)
     {
-        const FVector Local(ClayJarData::ShardOffset[I][0], ClayJarData::ShardOffset[I][1], ClayJarData::ShardOffset[I][2]);
+        const FVector Local = ShardOffsets[I];
         FShard Shard;
         Shard.Position = Jar.TransformPosition(Local);
         const FVector Out = Jar.TransformVector(FVector(Local.X, Local.Y, 0)).GetSafeNormal();
-        Shard.Velocity = Out * FMath::FRandRange(50.f, 130.f) + Swing * FMath::FRandRange(40.f, 110.f) + FVector(0, 0, FMath::FRandRange(40.f, 160.f) * (Local.Z / ClayJarData::Height + .3f));
+        Shard.Velocity = Out * FMath::FRandRange(50.f, 130.f) + Swing * FMath::FRandRange(40.f, 110.f) + FVector(0, 0, FMath::FRandRange(40.f, 160.f) * (Local.Z / JarHeight + .3f));
         Shard.Rotation = Jar.Rotator();
         Shard.Spin = FRotator(FMath::FRandRange(-400.f, 400.f), FMath::FRandRange(-300.f, 300.f), FMath::FRandRange(-400.f, 400.f));
         Shard.Bounces = 0; Shard.bLanded = false;
@@ -78,6 +105,7 @@ void AClayJar::Break(const FVector& Swing)
         Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Part->SetUsingAbsoluteLocation(true); Part->SetUsingAbsoluteRotation(true);
         Part->SetupAttachment(Blocker);
+        Part->SetLightingChannels(Body->LightingChannels.bChannel0, Body->LightingChannels.bChannel1, false);
         Part->RegisterComponent();
         Part->SetWorldLocationAndRotation(Shard.Position, Shard.Rotation);
         ShardParts.Add(Part);
@@ -86,7 +114,7 @@ void AClayJar::Break(const FVector& Swing)
     SetActorTickEnabled(true);
     if (BreakSounds.Num())
     {
-        UGameplayStatics::PlaySound2D(this, BreakSounds[FMath::RandRange(0, BreakSounds.Num() - 1)], BreakVolume, FMath::FRandRange(.95f, 1.05f));
+        UGameplayStatics::PlaySound2D(this, BreakSounds[FMath::RandRange(0, BreakSounds.Num() - 1)], BreakVolume, BreakPitch * FMath::FRandRange(.95f, 1.05f));
         bSoundPlayed = true;
     }
     DropContents();
@@ -96,7 +124,7 @@ void AClayJar::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     BrokenTime += DeltaSeconds;
-    const float Ground = static_cast<float>(GetActorLocation().Z) - ClayJarData::Height * .5f + 1.f;
+    const float Ground = static_cast<float>(GetActorLocation().Z) - JarHeight * .5f + 1.f;
     const float Sink = FMath::Clamp((BrokenTime - ShardRest) / ShardFade, 0.f, 1.f);
     for (int32 I = 0; I < Shards.Num(); ++I)
     {
@@ -150,6 +178,14 @@ AClayJar* AClayJar::PlaceAt(UWorld* World, const FVector& Ground, float Yaw, int
     FHitResult Hit;
     const bool bHit = World->LineTraceSingleByChannel(Hit, Ground + FVector(0, 0, 20.f), Ground - FVector(0, 0, 40.f), ECC_Visibility) && Hit.ImpactNormal.Z >= .9f;
     auto* Jar = World->SpawnActor<AClayJar>((bHit ? Hit.ImpactPoint : Ground) + FVector(0, 0, ClayJarData::Height * .5f), FRotator(0, Yaw, 0));
+    if (Jar) Jar->Cigarettes = Cigarettes;
+    return Jar;
+}
+
+AClayJar* AClayJar::PlaceKind(UWorld* World, TSubclassOf<AClayJar> Class, const FVector& Ground, float Yaw, int32 Cigarettes)
+{
+    const float Half = Class ? Class->GetDefaultObject<AClayJar>()->JarHeight * .5f : 0.f;
+    auto* Jar = World->SpawnActor<AClayJar>(Class, Ground + FVector(0, 0, Half), FRotator(0, Yaw, 0));
     if (Jar) Jar->Cigarettes = Cigarettes;
     return Jar;
 }

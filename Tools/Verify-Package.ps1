@@ -74,6 +74,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
@@ -110,13 +111,15 @@ if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Patter
 }
 # The temple exterior (Claude, 2026-10-15): cooked views, then the real character
 # runs up the road (the temple score's swell must meet the reveal, 2026-10-17;
-# its loop is exercised from 2 s before the end) and climbs into the sanctuary.
+# its loop is exercised from 2 s before the end) and climbs into the sanctuary,
+# then walks across the top terrace up the steps into a shrine (2026-10-18).
 $templeLog=Join-Path $evidence ('verify-chult-temple-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $templeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleReview','-ChuckTempleMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_APPROACH failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
-   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=3' -Quiet)) {
+   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
+   !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=6' -Quiet)) {
     throw "Temple verification failed. Inspect $templeLog"
 }
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road

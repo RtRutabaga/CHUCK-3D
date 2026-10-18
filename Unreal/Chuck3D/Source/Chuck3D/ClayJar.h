@@ -30,10 +30,18 @@ public:
     static AClayJar* Place(UWorld* World, const FVector2D& At, float Yaw, int32 Cigarettes, float MaxZ = 10.f);
     /** On the surface just under Ground (a shelf, a cellar floor: traced from 20 cm above). */
     static AClayJar* PlaceAt(UWorld* World, const FVector& Ground, float Yaw, int32 Cigarettes);
+    /** As PlaceAt, for a jar of class Class (the temple's tan jar or urn); the ground is taken as given. */
+    static AClayJar* PlaceKind(UWorld* World, TSubclassOf<AClayJar> Class, const FVector& Ground, float Yaw, int32 Cigarettes);
+    float GetJarHeight() const { return JarHeight; }
+    /** Indoors (the temple's rooms): lit by lighting channel 1 only, as the rooms are. */
+    void SetIndoors();
     /** The docks' jars: by the tavern door, the warehouse, the market stalls, the timber yard. */
     static void SpawnDockJars(UWorld* World);
 protected:
     virtual void BeginPlay() override;
+    /** Which jar: its body and shard meshes (Dir/Body, Dir/ShardPrefixNN) and its generated sizes. */
+    void Configure(const TCHAR* Dir, const TCHAR* BodyName, const TCHAR* ShardPrefix, float Height, float Radius, int32 ShardCount, const float (*Offsets)[3]);
+    float BreakPitch = 1.f;
 private:
     UPROPERTY() UCapsuleComponent* Blocker;
     UPROPERTY() UStaticMeshComponent* Body;
@@ -44,4 +52,28 @@ private:
     struct FShard { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; int32 Bounces; bool bLanded; };
     TArray<FShard> Shards;
     float BrokenTime = 0;
+    float JarHeight = 0;
+    TArray<FVector> ShardOffsets;
+};
+
+/** The Chult temple's storage jar (Claude, 2026-10-18): the docks' jar in tan ceramic under a honey-brown glaze. */
+UCLASS()
+class CHUCK3D_API ATempleJar : public AClayJar
+{
+    GENERATED_BODY()
+public:
+    ATempleJar();
+};
+
+/**
+ * The Chult temple's clay urn (Claude, 2026-10-18; Tools/build_clay_jar.py
+ * --variant urn): 44 cm, to Chuck's chest, buff slip painted with red bands
+ * and a black stepped fret. Breaks into 19 shards, a deeper crack; holds more.
+ */
+UCLASS()
+class CHUCK3D_API AClayUrn : public AClayJar
+{
+    GENERATED_BODY()
+public:
+    AClayUrn();
 };
