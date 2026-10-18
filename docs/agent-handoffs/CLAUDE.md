@@ -2,6 +2,19 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 18 — temple rooms; tan jars and a clay urn (Claude)
+
+- **Request:** "for the door up the stairs up the central temple staircase we'll later make that the entrance to the interior temple so leave it be for now, but for the other side temple entrances and for other parts of the temple that looks like they should allow access inside, build the insides as small limited interiors that look ceremonial in nature, with torches where appropriate and some other setting objects. also include our waterdeep clay jars but with the color changes to be tan ceramic. and create a new clay urn breakable (also lootable for cigarettes)". Base `954936a`, delivered `4c46eea` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE.md.
+- **Contract compatibility:** no rig, clip or socket change.
+  - `AClayJar` gained `Configure`/`PlaceKind`/`SetIndoors`/`GetJarHeight` and two subclasses, `ATempleJar` and `AClayUrn`. `Place`/`PlaceAt`/`SpawnDockJars` and `ClayJarData.h` are unchanged; the shards now use per-instance offsets.
+  - New generated headers: `TempleJarData.h` and `ClayUrnData.h`. New LFS binaries: `SourceAssets/Props/{TempleJar,Urn}` (FBX) and `Content/Art/Props/{TempleJar,Urn}` (33 meshes on the existing `M_ClayJar`).
+  - In `ChultTemple.cpp`, `Prasat` takes a door face, the summit house is a hollow chamber (no dark vestibule), and `FParts` gained `In*` surfaces.
+  - Verify-Package: the temple run now requires `legs=6` and the rooms check (in both the Chult and temple logs).
+- **Tools:** UE 5.7.4, Blender 4.5.14 (`build_clay_jar.py` ×4: the jar once to confirm its output was unchanged, then restored; tan ×2; urn ×1), UnrealEditor-Cmd imports ×2, Build.bat ×7, uncooked temple reviews ×4, Build-Game.ps1 -Package -SkipBaseAssets ×1, Promote-Build ×1. No installations or downloads.
+
+Next part of the work can be done here.
+
 ## October 18 — the jungle wreck (Claude)
 
 - **Request:** a recently wrecked cog beyond the bridge in an unavoidable spot, with no crew, minimal growth, and natural sewer-style Astral ruptures round it. Base `17b3f66`, delivered `20ce9a4` (+ this handoff commit).

@@ -56,7 +56,7 @@ Checks (`CHUCK_CHULT_TEMPLE_CHECK`): plaza level at 345 probes; all three stairs
 
 ## Later
 
-The interior (Phase 6) begins at the sanctuary vestibule's dark back wall (the pyramids' summit vestibules could serve as side ways in). The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
+The interior (Phase 6) begins at the sanctuary vestibule's dark back wall. (The pyramids' summit vestibules, once suggested as side ways in, are now closed ceremonial chambers: see October 18.) The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
 
 ## The temple score; closed undersides (October 17)
 
@@ -74,3 +74,28 @@ User request, October 17, 2026 (Claude): the user's `Chult 3.wav` "for sound tra
 - `CHUCK_CHULT_TEMPLE_CHECK` now sweeps a 12 cm camera sphere into all six balustrade ends and up into both summit-house roofs (24 sweeps in all). With the old faces 8 of them got in; now none.
 
 The review adds three views (`TempleStairSideCentral`, a balustrade's end from the platform; `TempleStairSidePyramid`; `TempleRoofBelow`) and the approach run before the climb.
+
+## The rooms; tan jars and clay urns (October 18)
+
+User request, October 18, 2026 (Claude): leave the central stair's doorway alone (it will be the temple interior's entrance), but give "the other side temple entrances and other parts of the temple that look like they should allow access inside" small, limited, ceremonial interiors, with torches and setting objects; the Waterdeep clay jars in tan ceramic; and a new breakable clay urn, lootable for cigarettes.
+
+**Eight rooms** (`Rooms()` in `ChultTemple.cpp`), each frame-aligned, door centred in its near wall:
+
+| Room | Where | Inside (m) | What is in it |
+| --- | --- | --- | --- |
+| Summit chamber ×2 | each pyramid's summit house (its old 3 m dark vestibule) | 9.8 × 11.8, 3.4 high | a dais with an altar, a coiled serpent idol and two braziers; four piers carrying a corbelled ceiling, one fallen with its drums on the floor; glyph panels between four wall torches; a glyph frieze and two dark niches in the back wall; 8 tan jars, 2 urns |
+| Gate shrine ×2 | the gate pavilions either side of the central stair's foot, door facing the avenue | 4.3 square, 3.0 high | a pedestal with a serpent idol, a glyph frieze, two wall torches; 3 jars, 1 urn |
+| Corner shrine ×4 | the central temple's top-terrace corner towers, doors facing the middle | 2.9 square, 2.3 high | an altar with a small serpent idol, a glyph frieze, one wall torch; 2 jars, 1 urn |
+
+The second terrace's towers (out of reach) and the sanctuary's side false doors stay false. The rest of the sanctuary is untouched.
+
+- **Dressing** follows the 2D temple's kit (PHASE-6: coiled serpent idols, glyph stelae, terracotta urns, fallen column drums, recurring wall torches). The walls are plastered over a 55 cm stone dado; the glyphs are carved stone cartouches, each with a number in bars and dots cut dark into it; the idols are pale stucco.
+- **Light:** the insides (`ChultTempleRooms`, `ChultTempleRoomsDark`) and the jars are on lighting channel 1 only, so the sun and the unshadowed bounce fill cannot reach them and the 20 fires (unshadowed point lights, channel 1, flickering) cannot leak onto the outside masonry. While the camera is in a room the sky light fades to 15% over 0.4 s and Chuck's components join channel 1 (the sewer's pattern); the histogram auto exposure does the rest.
+- **Ways in:** the summit chambers open off the summit platform. Each prasat door has three 15 cm steps up its 45 cm plinth over a hidden ramp (26.6°, through the treads' middles). Growth is kept off the doorways and away from the room walls (leaves poked through the gate's walls) by a `Suppress` flag that keeps every random draw, so the rest of the precinct's growth is unchanged.
+
+**The pots** (`Tools/build_clay_jar.py --variant tan|urn`, imported by `import_clay_jar.py` with `CHUCK_JAR_VARIANTS=tan,urn` onto the existing `M_ClayJar`):
+- `ATempleJar` (`/Game/Art/Props/TempleJar`): the docks' jar, same shape and 12 shards, in tan ceramic under a slightly deeper glossy tan glaze. 1–2 cigarettes each.
+- `AClayUrn` (`/Game/Art/Props/Urn`): 44 cm (to Chuck's chest), 30 cm across, buff slip with red bands and a black stepped fret round the shoulder; 19 shards and a lower-pitched break. 2–4 cigarettes each.
+- `AClayJar` is now configurable (`Configure`, `PlaceKind`, `SetIndoors`); the docks' jar and its generated `ClayJarData.h` are unchanged (re-running the default variant reproduces them).
+
+**Checks:** `CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2`: standing room in each room, its doorway open from outside, four probes of each prasat's step ramp, all 40 pots present and whole, and one tan jar and one urn broken on the plaza (12 and 19 shards, sound played, cigarettes released). `-ChuckTempleReview` adds five views (`TempleRoomSummit`, `TempleRoomGate`, `TempleRoomShrine`, `TempleGateDoor`, `TempleRoomJars`), and the real character, after the sanctuary, walks back out across the top terrace, up a corner shrine's steps and into it (`CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=6`).
