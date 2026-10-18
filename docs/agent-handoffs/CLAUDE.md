@@ -2,6 +2,19 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 18 — the jungle wreck (Claude)
+
+- **Request:** a recently wrecked cog beyond the bridge in an unavoidable spot, with no crew, minimal growth, and natural sewer-style Astral ruptures round it. Base `17b3f66`, delivered `20ce9a4` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-WRECK.md.
+- **Contract compatibility:** no rig, clip, socket or asset change, and no new binaries.
+  - New `ChultWreck.h` API: `ChultWreckCutsCell` (used by `ChultCanyon.cpp`'s far-bank ground loop, a Codex-owned file), `ChultWreckRuptureSwallows` (called in `AChuckCharacter::Tick`, which calls `FallToDeath`), and `BuildChultWreck` / `CheckChultWreck` / `ReviewChultWreck`.
+  - `ChultCanyonBanks` no longer contains the cut cells; `ChultWreckGround` lays them.
+  - The wreck removes HISM vegetation instances in its clearing, twice: at build time and after the road's bridge-exit planting.
+  - Verify-Package adds two Chult log patterns and a `-ChuckWreckReview` run.
+- **Tools:** UE 5.7.4, Build.bat ×5, uncooked wreck reviews ×5, Build-Game.ps1 -Package -SkipBaseAssets ×1, Promote-Build ×1. No installations, downloads or imports.
+
+Next part of the work can be done here.
+
 ## October 17 — temple score; closed temple masonry (Claude)
 
 - **Request:** the user's `Chult 3.wav` on the approach and round the temple, its swell meeting the temple's reveal on a straight run; then the temple's partly invisible spots and floorless overhangs. Base `766eb97`, delivered `cf7708b` (+ this handoff commit).

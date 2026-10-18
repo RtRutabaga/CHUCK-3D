@@ -19,6 +19,29 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 18 — the jungle wreck (Claude)
+
+- **Built (20ce9a4):** user: "add the mysterious shipwreck in the jungle, place it beyond the bridge in a spot unavoidable by the player". They asked for a wrecked cog that looks recent rather than ancient, with minimal jungle growth and no crew, surrounded by Astral ruptures with the sewer's natural look rather than the pantry's blocky one. Details: [CHULT-WRECK.md](CHULT-WRECK.md).
+  - **Placement:** the cog lies 21 m beyond the bridge's far end, facing the landing, beside the road every crossing takes. It is 23 m long, clinker-built, heeled 18°, with no crew.
+  - **Damage and growth:** the mast is broken over the low side and the sail is spread on the ground. Only five creepers grow on it.
+  - **Ruptures:** nine sewer-form ruptures surround it, with real holes in the ground. Walking into one is an Astral death, back at the far bank's spawn.
+  - **Access:** Chuck can walk in through the breach, up the hold ramp to the deck, into the cabin, and out down the torn bulwark.
+- **Checks:** existing Chult checks and setting code were changed only to leave out the cut ground cells (`ChultCanyon.cpp`) and to add the rupture fall (`AChuckCharacter::Tick`).
+  - Uncooked review runs 1–5: `Local/wreck-review-*.log`. The first runs found a crate blocking the breach, a slow road leg, a blocky sail and the sail covering a rupture; all were fixed.
+  - Cooked wreck review (`Local/verify-chult-wreck-20261018-125342.log`): check failures=0, 9/9 ruptures open; road, hold loop, cabin and rupture legs all pass. The eleven views are `Wreck*.png` in the package's Chult screenshot folder.
+- **Package:** **182/182** (`Local/verify-package-20261018-124032.log`), with every Chult suite also passing. Promoted as `Wreck`.
+- **Launcher:** **20ce9a4** (`Local/wreck-promotion.log`); the receipt and launcher check pass. The previous build, **acb2d86**, is kept as `Windows-Previous-20261018-Wreck`, and the TempleMusic backup was pruned.
+- **Limits:**
+  - No person has played it or reviewed it by camera.
+  - Seen head-on from the bridge, the bow reads a little boxy.
+  - The rupture veils are shorter than the sewer's in daylight.
+  - The castle roof and forecastle cannot be reached.
+  - The breach is a one-way drop.
+  - No sound has been added: the ruptures are silent, and the wreck adds no music.
+  - Five old candidate folders are still in `Builds/`.
+
+Next part of the work can be done here.
+
 ## October 17 — far-river attack encounters and opposite-bank zombies (Codex)
 
 - **Built (acb2d86):** user asks for attacks to dodge along the river path and more zombies across the water. Added 16 staggered path attackers and 24 opposite-bank zombies, retaining the earlier 32: **72 river zombies**. Actual road/shoreline, supported floor, body spacing and water clearance are checked. Existing combat, stats, grab odds, player controls and assets reused. Camera-only capsules keep the new river crowds' torsos out of the orbit; close limbs can still occlude it. Contract: [CHULT-LIFE.md](CHULT-LIFE.md).
