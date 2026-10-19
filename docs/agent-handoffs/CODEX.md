@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries are in [../archive/agent-handoffs/CODEX-PROTOTYPE.md](../archive/agent-handoffs/CODEX-PROTOTYPE.md).
 
+## October 18 — far-bank fog and milling
+
+- **Runtime 1808d9a:** 16 additional low fog pools on both banks, lighter over the road; 24 close/shoulder zombies get small collision-checked milling loops (usually 90 cm, hard ambient bound 115 cm), 35% shamble speed, slow turns and 2.5–5 s staggered pauses. `DockNPC` opt-in API leaves all other zombies unchanged. Detection interrupts idle milling; normal pursuit/combat, fixed home leash and post-pursuit return are retained. No character/rig/controls, imported asset, material or terrain changes.
+- **Actual cooked target checks:** `Local/verify-river-zombies-20261018-190504.log`: 24 configured/moving/bounded, 48 stationary, 16 fog pools, five encounter trials pass; each dodge route still two attacks/two rolls/final Sanity 3. Review captures in `Local/RiverMistPatrolReview/` show low fog bands with road and upper bodies readable. No human full-route, Xbox or full performance acceptance; automated grabs remain disabled, gameplay remains 25% lethal grabs on hits.
+- **Build/verification:** final UAT 63.53 s; full validator passes (`Local/river-mist-patrol-acceptance-build.log`). **182/182**, no smoke retry (`Local/verify-package-20261018-190504.log`). Required golden, Chult/ground/road/upriver, temple rooms/statues/score, wreck, fall/skip/reset, pantry, leap, lamps, canopy 48/48, giants 72/72, T-rex 4/4, raptor 8/8, bridge 6/6 and life/impact/grab checks pass. First layout fitted 22 routes; oriented alternatives fit all 24. A shadowed local compile error was corrected before the final build; inherited ChuckCharacter C4701 warnings for Normal/N remain. UE 5.7.4 CL 51494982, MSVC 14.44.35229, SDK 10.0.26100.0, .NET 8.0.412; no installs/downloads, Blender, binary edits or imports.
+- **Launcher/publication:** promoted **1808d9a** as `RiverMistPatrol`; receipt/hash and root launcher CheckOnly pass (`Local/river-mist-patrol-promotion.log`). Previous **c504d94** retained as `Windows-Previous-20261018-RiverMistPatrol`; two backups kept, old TempleRooms backup pruned. Own candidate removed automatically, five inherited candidates preserved. Source and final handoff committed on main under standing publication permission.
+
+Next part of the work can be done here.
+
 ## October 17 — river-path attacks and opposite-bank deterrents
 
 - **Runtime acb2d86:** 16 added attackers alternating close beside the paving, about 9 m apart, facing the incoming player; 24 added opposite-bank zombies, three per station, checked against that bank's actual shoreline/floor. Previous 32 remain; total 72. No zombie stat/animation, character/control, asset or earlier-region changes. River-only camera capsules block Camera and ignore Pawn/Visibility; torso occlusion is improved, close arms can still cross the view.

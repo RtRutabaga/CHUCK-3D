@@ -126,6 +126,34 @@ As before, automated tests disable random grabs; ordinary play retains the 25%
 lethal grab on a landed attack. These walking/forward-roll trials do not prove
 whole-route difficulty or human camera comfort.
 
+## Low fog and local milling (Codex, October 18)
+
+The 16 close attackers and eight road-shoulder zombies now mill about near
+their homes: short collision-checked loops, typically 90 cm, slow turns,
+35% of their normal shamble speed, staggered initial phases and 2.5–5 s pauses.
+Tight spots use a differently oriented loop. A 115 cm home bound and the existing
+ground/obstacle stepping keep ambient motion local. Detection immediately takes
+priority; normal chase, wind-up, lunge and grab remain unchanged. After returning
+home they pause and resume milling. The original home still anchors the 11 m
+pursuit limit. Only these 24 zombies opt in through `SetZombieMilling`; the
+48 inland/opposite-bank river zombies and earlier landing/sewer enemies retain
+their existing behavior. Walk phase follows distance as before.
+
+Sixteen additional local fog pools lie along both banks' zombie stretches.
+They use the existing UE local-fog system, uniformly scaled to 1.6 with their
+centres 4.3 m below terrain; a steep height profile gives low ground bands.
+Density is lighter on the road side. Fog is built with the setting, even in
+review runs without enemies; it has no collision and changes no shared lighting
+or material. Captures reviewed and retained in `Local/RiverMistPatrolReview/`.
+
+Cooked `Local/verify-river-zombies-20261018-190504.log`: all 24 configured
+patrols actually move and remain near home over a 12 s observation, while the
+other 48 remain still. All 16 fog pools exist. All five existing live encounter
+trials still pass (two lunges/two rolls and final Sanity 3 on each route).
+An initial straight-loop layout fitted only 22; alternate orientations corrected
+the two tight spots. Whole-route human feel, physical Xbox and a full performance
+audit remain untested; normal gameplay retains its 25% grab chance on hits.
+
 ## Not done / flaws
 
 - Neither the grab nor the struggle is a captured or keyframed clip: both are procedural layers over existing clips. The head-to-neck bite interpenetrates a little by design; there is no contact solve.
