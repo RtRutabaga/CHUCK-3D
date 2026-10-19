@@ -165,7 +165,7 @@ void SpawnChultRiverZombies(UWorld* World)
     {
         const auto& H=Homes[I];if(!H.NearRoad&&!H.Path)continue;
         const FVector P=H.Feet-G;const float S=Frame(P).X;
-        const FVector Along=(RoadAt(S+100)-RoadAt(S-100)).GetSafeNormal2D(),Side(-Along.Y,Along.X,0);
+        const FVector Along=(RoadAt(S+100)-RoadAt(S-100)).GetSafeNormal2D();
         for(float Radius:{90.f,65.f,40.f,25.f})
         {
           for(int32 Orientation=0;Orientation<9;++Orientation)
