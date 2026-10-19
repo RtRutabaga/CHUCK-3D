@@ -168,8 +168,12 @@ void SpawnChultRiverZombies(UWorld* World)
         const FVector Along=(RoadAt(S+100)-RoadAt(S-100)).GetSafeNormal2D(),Side(-Along.Y,Along.X,0);
         for(float Radius:{90.f,65.f,40.f,25.f})
         {
+          for(int32 Orientation=0;Orientation<9;++Orientation)
+          {
+            const FVector D=Orientation==0?Along:Along.RotateAngleAxis((Orientation-1)*45.f,FVector::UpVector),Side(-D.Y,D.X,0);
             TArray<FVector> Points;bool Clear=true;
-            for(FVector Offset:{FVector::ZeroVector,Along*Radius+Side*(Radius*.25f),-Along*Radius+Side*(Radius*.25f)})
+            for(FVector Offset:{FVector::ZeroVector,D*Radius+Side*(Radius*.25f),
+                (Orientation==0?-D:D*.5f)*Radius+Side*(Radius*(Orientation==0?.25f:-.25f))})
             {
                 const FVector At=P+Offset,F=Frame(At);FVector Feet;
                 if(F.Y>ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-180||!OpenFloor(World,At,Feet)){Clear=false;break;}
@@ -183,10 +187,16 @@ void SpawnChultRiverZombies(UWorld* World)
                     FCollisionObjectQueryParams(ECC_WorldStatic),FCollisionShape::MakeCapsule(35,60),Q);
                 for(int32 K=1;K<5&&Clear;++K){FVector Feet;Clear=OpenFloor(World,FMath::Lerp(A,B,K/5.f)-G,Feet);}
             }
-            if(Clear&&H.Zombie.IsValid()){H.Zombie->SetZombieMilling(Points,20261018+I*71);++Milling;break;}
+            if(Clear&&H.Zombie.IsValid())
+            {
+                H.Zombie->SetZombieMilling(Points,20261018+I*71);++Milling;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILL_ROUTE home=%d radius=%.0f orientation=%d"),I,Radius,Orientation);break;
+            }
+          }
+          if(H.Zombie.IsValid()&&H.Zombie->HasZombieMilling())break;
         }
     }
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILLING configured=%d radius_max=100 speed_fraction=0.35"),Milling);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILLING configured=%d route_radius_cm=100 travel_bound_cm=115 speed_fraction=0.35"),Milling);
     int32 Near=0,Flanks=0,Path=0,Opposite=0;
     for(const auto& H:Homes){Near+=H.NearRoad;Path+=H.Path;Opposite+=H.Opposite;Flanks+=!H.NearRoad&&!H.Path&&!H.Opposite;}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d path_attackers=%d opposite=%d"),Homes.Num(),Near,Flanks,Path,Opposite);
