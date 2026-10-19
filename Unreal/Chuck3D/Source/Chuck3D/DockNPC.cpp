@@ -438,6 +438,16 @@ bool ADockNPC::StepZombie(const FVector& Direction, float Distance)
     return true;
 }
 
+void ADockNPC::SetZombieMilling(const TArray<FVector>& FloorPoints,uint32 Seed)
+{
+    if(!IsHostile()||FloorPoints.Num()<2)return;
+    ZMillPoints=FloorPoints;
+    for(auto& P:ZMillPoints)P.Z+=HalfHeight;
+    ZMillRandom.Initialize(Seed);ZMillIndex=ZMillRandom.RandRange(0,ZMillPoints.Num()-1);
+    ZMillWaitUntil=GetWorld()->GetTimeSeconds()+ZMillRandom.FRandRange(.5f,4.5f);
+    ZMillBlocked=ZMillTravel=0;
+}
+
 void ADockNPC::TickZombie(float DeltaSeconds)
 {
     ZTime += DeltaSeconds;
@@ -465,13 +475,36 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     {
     case EZombie::Idle:
         if (bSees) SetZombie(EZombie::Shamble);
+        else if(HasZombieMilling()&&GetWorld()->GetTimeSeconds()>=ZMillWaitUntil)
+        {
+            const FVector Goal=ZMillPoints[ZMillIndex];
+            if(FVector::Dist2D(Location,Goal)<12||ZMillBlocked>.8f)
+            {
+                ZMillIndex=(ZMillIndex+1)%ZMillPoints.Num();ZMillBlocked=0;
+                ZMillWaitUntil=GetWorld()->GetTimeSeconds()+ZMillRandom.FRandRange(2.5f,5.f);
+            }
+            else
+            {
+                TurnZombie(Goal,DeltaSeconds,40.f);
+                const float Ahead=FVector::DotProduct(GetActorForwardVector().GetSafeNormal2D(),(Goal-Location).GetSafeNormal2D());
+                const float Step=GetZombieWalkSpeed()*.35f*FMath::Clamp((Ahead-.3f)/.5f,0.f,1.f)*DeltaSeconds;
+                const bool InBounds=FVector::Dist2D(Location+GetActorForwardVector()*Step,ZHome)<115.f;
+                if(Step>0&&InBounds&&StepZombie(GetActorForwardVector(),Step)){Moved=Step;ZMillTravel+=Step;ZMillBlocked=0;}
+                else if(Step>0)ZMillBlocked+=DeltaSeconds;
+            }
+        }
         break;
     case EZombie::Shamble:
     {
         // After the rat while it's there, otherwise back to its place.
         const bool bChase = bThere && (bSees || ZTime < 6.f || Distance < ZombieSight);
         const FVector Goal = bChase ? Chuck->GetActorLocation() : ZHome;
-        if (!bChase && FVector::Dist2D(Location, ZHome) < 40.f) { SetZombie(EZombie::Idle); break; }
+        if (!bChase && FVector::Dist2D(Location, ZHome) < 40.f)
+        {
+            SetZombie(EZombie::Idle);
+            if(HasZombieMilling())ZMillWaitUntil=GetWorld()->GetTimeSeconds()+ZMillRandom.FRandRange(2.5f,5.f);
+            break;
+        }
         TurnZombie(Goal, DeltaSeconds, ZombieTurnRate);
         const FVector To = (Goal - Location).GetSafeNormal2D();
         const float Ahead = static_cast<float>(FVector::DotProduct(GetActorForwardVector().GetSafeNormal2D(), To));

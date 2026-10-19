@@ -20,6 +20,12 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 ## Direction and sources
 
+**Far-bank low fog and milling requested October 18, 2026:** sixteen additional
+low fog pools around the zombie stretches on both banks; small, slow, staggered
+patrols for the 16 close path attackers and eight road-shoulder zombies. Keep
+the 72-zombie population, normal attacks, home leashes, terrain and controls.
+Patrols stop for pursuit and resume locally afterward. No new assets or imports.
+
 **River attack encounters requested October 17, 2026:** add 16 staggered
 attackers close to the far-river paving so passing players must dodge attacks,
 and 24 zombies on the opposite bank to discourage going around. Retain the

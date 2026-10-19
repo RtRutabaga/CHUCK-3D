@@ -1,4 +1,5 @@
 #include "ChultPath.h"
+#include "ChultLife.h"
 #include "ChultCanyon.h"
 #include "ChultExpansion.h"
 #include "ChultRiver.h"
@@ -201,6 +202,7 @@ void BuildChultPath(AActor* Owner)
         Rounded.Add(Road.Last());Roads.Add(MoveTemp(Rounded));
     }
     FillBridgeExit(Owner);
+    BuildChultRiverEncounterMist(Owner);
     FChultLandform Mesh;FRandomStream R(2026101516);const FVector G=AChultLanding::FloorOrigin();
     for(const auto& Road:Roads)
     {

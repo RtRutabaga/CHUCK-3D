@@ -134,6 +134,10 @@ public:
     static float GetZombieGrabChance();
     int32 GetZombieSoundsPlayed() const { return ZombieSoundsPlayed; }
     int32 GetLunges() const { return Lunges; }
+    // Opt-in ambient movement; the original home remains the pursuit anchor.
+    void SetZombieMilling(const TArray<FVector>& FloorPoints,uint32 Seed);
+    bool HasZombieMilling() const { return ZMillPoints.Num()>1; }
+    float GetZombieMillingTravel() const { return ZMillTravel; }
     const TCHAR* GetZombieStateName() const;
     /** Shamble speed (cm/s): the walk clip's own, at this body's scale. */
     float GetZombieWalkSpeed() const;
@@ -456,6 +460,10 @@ private:
     EZombie ZState = EZombie::Idle;
     float ZTime = 0, WalkTime = 0, WalkBlend = 0, Rear = 0, Reach = 0, Flinch = 0, FlinchTime = -1, DeathTime = -1;
     FVector ZHome = FVector::ZeroVector, LungeDir = FVector::ForwardVector;
+    TArray<FVector> ZMillPoints;
+    FRandomStream ZMillRandom;
+    int32 ZMillIndex=0;
+    float ZMillWaitUntil=0,ZMillBlocked=0,ZMillTravel=0;
     bool bBit = false, bDropped = false;
     int32 Hits = 0, Bites = 0, Lunges = 0;
     void SetZombie(EZombie State) { ZState = State; ZTime = 0; }

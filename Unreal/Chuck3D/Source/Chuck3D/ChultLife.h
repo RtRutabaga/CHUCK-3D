@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 
 class UWorld;
+class AActor;
 
 // Chult's hostile life (user 2026-10-14): fifteen zombies scattered through
 // the forest on the landing's side of the jungle, none near the brachiation
@@ -11,6 +12,7 @@ class UWorld;
 void SpawnChultLife(UWorld* World);
 void SpawnChultRiverZombies(UWorld* World);
 void StartChultRiverZombieReview(UWorld* World);
+void BuildChultRiverEncounterMist(AActor* Owner);
 // Local (to the Chult floor origin) homes of the jungle zombies; filled by SpawnChultLife.
 const TArray<FVector>& ChultZombieHomes();
 

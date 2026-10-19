@@ -15,6 +15,7 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/LocalFogVolumeComponent.h"
 
 namespace
 {
@@ -62,6 +63,26 @@ namespace
         Feet=Hit.ImpactPoint;
         return !World->OverlapAnyTestByObjectType(Feet+FVector(0,0,100),FQuat::Identity,Static,FCollisionShape::MakeCapsule(35,60),Q);
     }
+}
+
+void BuildChultRiverEncounterMist(AActor* Owner)
+{
+    for(auto* C:Owner->GetComponents())if(C->ComponentHasTag(TEXT("RiverEncounterMist")))return;
+    const FVector G=AChultLanding::FloorOrigin();
+    for(int32 I=0;I<8;++I)for(int32 Bank=0;Bank<2;++Bank)
+    {
+        const float S=18900+1900*I;
+        FVector P=Bank ? ChultCanyonFrame(S,FMath::Min(6100.f,ChultRiverCenter(S)+ChultRiverWidth(S)+650)) : RoadAt(S)+FVector(.6,-.8,0)*350;
+        P.Z=ChultCanyonGroundZ(P)-430;
+        auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner,*FString::Printf(TEXT("RiverEncounterMist%d_%d"),I,Bank));
+        Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+P);
+        Fog->SetWorldScale3D(FVector(1.6f));Fog->ComponentTags.Add(TEXT("RiverEncounterMist"));
+        Fog->RadialFogExtinction=.85f;Fog->HeightFogExtinction=Bank?.3f:.2f;
+        Fog->HeightFogFalloff=2600;Fog->HeightFogOffset=.61f;
+        Fog->FogAlbedo=FLinearColor(.64,.74,.75);Fog->FogPhaseG=.1f;
+        Fog->RegisterComponent();Fog->SetFogEmissive(FLinearColor(.018,.027,.029));
+    }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ENCOUNTER_MIST pools=16 banks=2 collision=0"));
 }
 
 void SpawnChultRiverZombies(UWorld* World)
@@ -139,6 +160,33 @@ void SpawnChultRiverZombies(UWorld* World)
         if(Outer<300)continue;
         if(Add(ChultCanyonFrame(S,Shore+R.FRandRange(280,Outer)),true))break;
     }
+    int32 Milling=0;
+    for(int32 I=0;I<Homes.Num();++I)
+    {
+        const auto& H=Homes[I];if(!H.NearRoad&&!H.Path)continue;
+        const FVector P=H.Feet-G;const float S=Frame(P).X;
+        const FVector Along=(RoadAt(S+100)-RoadAt(S-100)).GetSafeNormal2D(),Side(-Along.Y,Along.X,0);
+        for(float Radius:{90.f,65.f,40.f,25.f})
+        {
+            TArray<FVector> Points;bool Clear=true;
+            for(FVector Offset:{FVector::ZeroVector,Along*Radius+Side*(Radius*.25f),-Along*Radius+Side*(Radius*.25f)})
+            {
+                const FVector At=P+Offset,F=Frame(At);FVector Feet;
+                if(F.Y>ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-180||!OpenFloor(World,At,Feet)){Clear=false;break;}
+                Points.Add(Feet);
+            }
+            FCollisionQueryParams Q(SCENE_QUERY_STAT(RiverZombieMill),false);
+            for(int32 J=0;J<Points.Num()&&Clear;++J)
+            {
+                const FVector A=Points[J],B=Points[(J+1)%Points.Num()];FHitResult Hit;
+                Clear=!World->SweepSingleByObjectType(Hit,A+FVector(0,0,100),B+FVector(0,0,100),FQuat::Identity,
+                    FCollisionObjectQueryParams(ECC_WorldStatic),FCollisionShape::MakeCapsule(35,60),Q);
+                for(int32 K=1;K<5&&Clear;++K){FVector Feet;Clear=OpenFloor(World,FMath::Lerp(A,B,K/5.f)-G,Feet);}
+            }
+            if(Clear&&H.Zombie.IsValid()){H.Zombie->SetZombieMilling(Points,20261018+I*71);++Milling;break;}
+        }
+    }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILLING configured=%d radius_max=100 speed_fraction=0.35"),Milling);
     int32 Near=0,Flanks=0,Path=0,Opposite=0;
     for(const auto& H:Homes){Near+=H.NearRoad;Path+=H.Path;Opposite+=H.Opposite;Flanks+=!H.NearRoad&&!H.Path&&!H.Opposite;}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d path_attackers=%d opposite=%d"),Homes.Num(),Near,Flanks,Path,Opposite);
@@ -150,11 +198,16 @@ void StartChultRiverZombieReview(UWorld* World)
     if(!Chuck||ChultFarRoad().IsEmpty()) { FPlatformMisc::RequestExitWithStatus(false,1);return; }
     struct FRun
     {
-        int32 Failures=0,Trial=0,RollsBefore=0,LungesBefore=0;
+        int32 Failures=0,Trial=-1,RollsBefore=0,LungesBefore=0;
         float Start=-1,LastDodge=-10,WindupAt=0;bool Shot=false;
         TWeakObjectPtr<ADockNPC> Windup,Target;FTimerHandle Timer;
     };
     auto Run=MakeShared<FRun>();
+    int32 FogPools=0;
+    for(TActorIterator<AChultLanding> It(World);It;++It)for(auto* C:It->GetComponents())
+        if(C->ComponentHasTag(TEXT("RiverEncounterMist")))++FogPools;
+    Run->Failures+=FogPools!=16;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MIST_CHECK pools=%d pass=%d"),FogPools,FogPools==16);
     int32 Near=0,Flanks=0,Path=0,Opposite=0,Clear=0,Dry=0,Supported=0,CameraGuards=0;
     const FVector G=AChultLanding::FloorOrigin();
     for(const auto& H:Homes)
@@ -179,6 +232,26 @@ void StartChultRiverZombieReview(UWorld* World)
     {
         const float S=Run->Trial==0?18200:Run->Trial==1?23900:29600;
         auto* Move=Chuck->GetCharacterMovement();const float Now=World->GetTimeSeconds();
+        if(Run->Trial==-1)
+        {
+            if(Run->Start<0)Run->Start=Now;
+            if(Now-Run->Start<12)return;
+            int32 Configured=0,Moved=0,Bounded=0,Stationary=0;
+            for(const auto& H:Homes)if(H.Zombie.IsValid())
+            {
+                auto* Z=H.Zombie.Get();
+                if(H.Path||H.NearRoad)
+                {
+                    Configured+=Z->HasZombieMilling();Moved+=Z->GetZombieMillingTravel()>10;
+                    Bounded+=FVector::Dist2D(Z->GetActorLocation(),H.Feet)<125;
+                }
+                else Stationary+=FVector::Dist2D(Z->GetActorLocation(),H.Feet)<2;
+            }
+            const bool Pass=Configured==24&&Moved==24&&Bounded==24&&Stationary==48;
+            Run->Failures+=!Pass;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILL_TEST pass=%d configured=%d moved=%d bounded=%d stationary=%d"),Pass,Configured,Moved,Bounded,Stationary);
+            Run->Trial=0;Run->Start=-1;return;
+        }
         auto Lunges=[](){int32 N=0;for(const auto& H:Homes)if(H.Path&&H.Zombie.IsValid())N+=H.Zombie->GetLunges();return N;};
         if(Run->Trial>=3)
         {
