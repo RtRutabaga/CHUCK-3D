@@ -2,6 +2,19 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 18 — modelled skull stakes and serpent statues (Claude)
+
+- **Request:** "Find and implement free resources to make the skull stakes and the serpent statues look better, if you can't find a good resource for serpent statue feel free to change it"; then "By serpent statues I also mean the ones in the interiors". Base `2e00f14`, delivered `c504d94` (+ this handoff commit).
+- **Approval:** the user approved the one download in chat: `skull-fbx.zip` (9.7 MB, CC0, from OpenGameArt, by CDmir). It was unpacked outside the repo and its four used files copied to `SourceAssets/Props/TempleStatues/Skull/source` with CREDITS.md. Nothing was installed.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE.md.
+- **Contract compatibility:** no rig, clip or socket change.
+  - New LFS binaries: `/Game/Art/ChultTemple` (4 meshes, `M_TempleSkull`, 2 textures) and `SourceAssets/Props/TempleStatues` (FBX/PNG, about 8 MB).
+  - `ChultTemple.cpp` no longer emits the `ChultTempleSkulls`/`ChultTempleStakes` procedural meshes; the stair serpents' boxes are gone.
+  - `SerpentIdol()` now records a statue. The build log gains `statues=`, which Verify-Package requires to be 30.
+- **Tools:** WebSearch ×5, WebFetch ×2, curl ×1. Blender 4.5.14: one inspection script, plus `build_temple_statues.py` ×5. UnrealEditor-Cmd imports ×2, Build.bat ×1, uncooked temple reviews ×2, Build-Game.ps1 -Package -SkipBaseAssets ×1, Promote-Build ×1.
+
+Next part of the work can be done here.
+
 ## October 18 — temple rooms; tan jars and a clay urn (Claude)
 
 - **Request:** "for the door up the stairs up the central temple staircase we'll later make that the entrance to the interior temple so leave it be for now, but for the other side temple entrances and for other parts of the temple that looks like they should allow access inside, build the insides as small limited interiors that look ceremonial in nature, with torches where appropriate and some other setting objects. also include our waterdeep clay jars but with the color changes to be tan ceramic. and create a new clay urn breakable (also lootable for cigarettes)". Base `954936a`, delivered `4c46eea` (+ this handoff commit).
