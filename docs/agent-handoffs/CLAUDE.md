@@ -2,6 +2,20 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 19 — temple screen and far canopy (Claude)
+
+- **Request:** tall canopy trees at the end of the T-rex stretch to hide the temple; then the distant jungle visible from the pyramid stairs without heavy cost. Base `b295ae2`, delivered `f9eb6df` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-UPRIVER.md.
+- **Contract compatibility:** no rig, clip, socket or grip change.
+  - **Canopy grove 2:** `FGrove::bScenery` skips spurs. New API: `BuildChultScreenCanopy`, `ChultScreenTrees` and `ChultScreenTrunkSpots`. Grove 0 and 1 data and logs are unchanged.
+  - **Upriver review:** 12 views, logging `avg_ms`. The review sets `r.VSync 0` and `t.MaxFPS 0` while it runs.
+  - **New switch:** `-ChuckNoFarCanopy`.
+  - **New LFS binaries:** two materials in `/Game/Art/ChultNature`.
+  - **Verify-Package:** requires the screen and far-canopy lines and `views=12`.
+- **Tools:** UE 5.7.4. UnrealEditor-Cmd ×3 (one asset inspection, material script ×2). Build.bat ×7, uncooked upriver reviews ×8, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×2, Promote-Build ×2 (the first refused, folder in use). No installs or downloads.
+
+Next part of the work can be done here.
+
 ## October 19 — Chult's flying jungle birds (Claude)
 
 - **Request:** "add some flying jungle birds to chult, in particular i want some birds to fly past player while crossing bridge and i want birds flying above temple in a cinematic wonderous way". Base `967977b`, delivered `e4ca747` (+ this handoff commit).
