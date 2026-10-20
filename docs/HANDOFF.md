@@ -9,6 +9,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Golden leaf (October 15, Codex):** Premium Buhetian Halfling Leaf gives a 45-second maximum-stamina lock, continuous wall climb and gold stamina glow/countdown. Since a950552 the pickups look like ordinary cigarettes in a glowing gold aura, with four round each of the first two giants (a trail from the road side to each climb); both climbs reach the fork and first grip; death/reset restores them ([CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md)). Verified and in the launcher.
 - **T-rex (October 15, Claude):** Quaternius's CC0 T-Rex (downloaded with approval), 12 m, rules the giants' ground: patrols, roars, outstrides his sprint, one bite kills; safe up in the giants; never leaves S 35600–50400 ([CHULT-TREX.md](CHULT-TREX.md)). Since 1640622 the raptors and T-rex keep their feet on the ground (idle and walking) and have a matte, weathered hide; verified and in the launcher.
 - **Temple exterior (October 15–17, Claude):** since October 16 a mega temple after the user's reference: the 2D map 5 pyramid twice over, joined to a Khmer-style central temple (three terraces, naga stair to the sanctuary's dark doorway, now the Phase 6 way in, a 44 m conical spire, eight corner towers, two gate pavilions); the precinct floor widens to |T|≤105 m; jungle retakes the plaza and ledges, the old road stays clear up the middle, and the back is closed by dense growth over a hidden wall; skull-stake avenue, stelae and **Chult Temple** spawn/checkpoint as before ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)). Since cf7708b the user's "Chult 3" scores the last stretch of road and the precinct, its swell timed to the reveal, and the masonry's hollow undersides and balustrade ends are closed. Since 4c46eea the summit houses, gate pavilions and top-terrace corner towers open into eight small torch-lit ceremonial rooms holding 30 tan jars and 10 new clay urns, all breakable for cigarettes; since c504d94 the skull stakes carry a CC0 skull on lashed bark poles and the serpent heads and idols are modelled statues. Verified and in the launcher.
+- **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
 - **Upriver (October 15, Claude):** the far bank now runs 360 m past the river's old end: a spring-fed source fall, twelve giant brachiation trees (crotches 15–17 m, the later T-rex zone, now reached using the golden cigarette, plus a dev checkpoint), then dense jungle to the temple's space; the road continues; far-bank deaths return to their stretch's spawn; every Chult spawn point has a Dev Checkpoint ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Ancient road:** dry-bank, overgrown paving remnants now run from the cliffs behind the landing through the grove/raptor territory, align with both bridge ends, then follow the far river to its current upstream limit ([CHULT-PATH.md](CHULT-PATH.md)). Verified in the root launcher, including route/geometry checks and six actual walks.
 - **Gorge and light:** Claude rebuilt the bridge gorge, both walls, both rims, the falls and the vista: stratified walls with rolled rims, benches, undercuts and plunge alcoves, hanging valleys, 18 falls plunging into a mist sea, and one blended rock/jungle material ([CHULT-GORGE.md](CHULT-GORGE.md), superseding the geometry in CHULT-VISTA.md). Shade is lifted by a stronger sky term, an unshadowed bounce fill and local exposure. The far bank's floors are unchanged and its land beyond them is scenery, available for the later walkable expansion.
@@ -18,6 +19,49 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 19 — Chult's flying jungle birds (Claude)
+
+- **Built (e4ca747):** user: "add some flying jungle birds to chult, in particular i want some birds to fly past player while crossing bridge and i want birds flying above temple in a cinematic wonderous way". Details: [CHULT-BIRDS.md](CHULT-BIRDS.md).
+  - **Birds:** 48 macaws, scarlet and blue-and-gold, built as lofts by `Tools/build_chult_birds.py` (no downloads), with vertex-colour plumage (`M_ChultBird`). `AChultBirds` flies them: each wing is two parts rolled about its joints, and the body banks into turns and pitches with climbs.
+  - **Bridge:** while he swings plank to plank, a 7-bird flock crosses a few metres ahead of where he'll be. Later a pair comes from behind, passes about 2 m over his head and peels off down the gorge. Each fires once per crossing.
+  - **Temple:**
+    - a high wheel of 8 pairs round the spire;
+    - a low wheel of 6 pairs over the avenue;
+    - 2 pairs on a figure of eight round the pyramids;
+    - in the precinct, a low-wheel pair swooping through his view every 15-24 s (alternately overtaking him up the avenue, or across in front);
+    - at the reveal, 7 birds burst from the undergrowth and fly up the road's sky strip into the wheel.
+- **Checks:** uncooked bird reviews 1-8 (`Local/chult-birds-review-*.log`). Fixes found that way:
+  - birds rendering black (the material's vertex-colour pin);
+  - the flock crossing behind him (his speed is now predicted);
+  - flights grazing the gorge walls;
+  - the wheel too high and small;
+  - the reveal hidden by the undergrowth.
+
+  His follow camera looks down, so close, low passes are what reads. Cooked bird run (`Local/verify-chult-birds-20261019-172538.log`):
+  - clearance hits 0 (static check);
+  - bridge: flock on screen 3.4 s, pair passing 2.3 m from him;
+  - reveal: 7 in view for 4.3 s, all in the wheel;
+  - 3 swoops, 7.8 s on screen.
+
+  Frames: `Birds*.png` in the package's Chult screenshot folder.
+- **Package:** **182/182** plus the bird run (`Local/verify-package-20261019-170907.log`), promoted as `Birds`.
+  - Two earlier verification attempts stopped on intermittent failures that are not bird-related (birds are off in those tests), and the old launcher build showed both too:
+    - **River zombies:** `-ChuckRiverZombieTest` dodge trial 0 sometimes ends on Sanity 1 instead of 3. On the candidate it passed 3 of 9 times, on the old build 4 of 6 times.
+    - **Bridge test:** a standing hop under a plank was sometimes lost. The bridge test now presses again after 1 s.
+- **Launcher:** `Local/chult-birds-promotion.log`; receipt and launcher check pass.
+  - The receipt names **967977b**: the build was made from it plus these then-uncommitted changes, which are now e4ca747.
+  - Previous build kept as `Windows-Previous-20261019-Birds`, with `-RiverMistPatrol`; `-TempleStatues` pruned. Five inherited candidate folders are untouched.
+- **Limits:**
+  - No person has played it.
+  - "On screen" is a projection, and foliage doesn't collide: leaves can hide birds the test counts. On the reveal road they often do.
+  - The default elevated camera sees little sky; the wheels show when he looks up.
+  - No calls or wing sounds.
+  - Simple models: the primaries read as separate blades up close.
+  - Birds may pass through tree crowns.
+  - The river dodge trial's flakiness is Codex's to judge (left unchanged).
+
+Next part of the work can be done here.
 
 ## October 18 — far-bank low fog and zombie milling (Codex)
 

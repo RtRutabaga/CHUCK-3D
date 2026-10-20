@@ -2,6 +2,23 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 19 — Chult's flying jungle birds (Claude)
+
+- **Request:** "add some flying jungle birds to chult, in particular i want some birds to fly past player while crossing bridge and i want birds flying above temple in a cinematic wonderous way". Base `967977b`, delivered `e4ca747` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-BIRDS.md.
+- **Contract compatibility:** no rig, clip or socket change.
+  - New `AChultBirds` actor (`ChultBirds.h/.cpp`), spawned from `AChultLanding::Build`; `-ChuckBirdReview` is dispatched from `VerifyAndCapture`.
+  - Birds are suppressed in every other `-Chuck…Test/Capture/Review` run.
+  - New `ChultTemple.h` helpers: `ChultTempleSpireTop`, `ChultTemplePyramidTop`, `ChultTemplePlazaZ`.
+  - The bridge test re-presses a lost standing hop.
+  - Verify-Package adds the bird run.
+  - New LFS binaries: `/Game/Art/ChultBirds` (10 meshes and `M_ChultBird`, 0.9 MB) and `SourceAssets/Props/ChultBirds` (10 FBX, 0.3 MB).
+- **Tools:** UE 5.7.4, Blender 4.5.14 (`build_chult_birds.py` ×5 with review renders), UnrealEditor-Cmd imports ×2, Build.bat ×9, uncooked bird reviews ×8.
+  - Build-Game.ps1 -Package -SkipBaseAssets ×2 and Verify-Package ×3 (two failed on the flaky tests above), plus bridge and river reruns on both builds.
+  - Promote-Build ×1. No installations or downloads.
+
+Next part of the work can be done here.
+
 ## October 18 — modelled skull stakes and serpent statues (Claude)
 
 - **Request:** "Find and implement free resources to make the skull stakes and the serpent statues look better, if you can't find a good resource for serpent statue feel free to change it"; then "By serpent statues I also mean the ones in the interiors". Base `2e00f14`, delivered `c504d94` (+ this handoff commit).
