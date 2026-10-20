@@ -47,7 +47,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   Frames: `Birds*.png` in the package's Chult screenshot folder.
 - **Package:** **182/182** plus the bird run (`Local/verify-package-20261019-170907.log`), promoted as `Birds`.
   - Two earlier verification attempts stopped on intermittent failures that are not bird-related (birds are off in those tests), and the old launcher build showed both too:
-    - **River zombies:** `-ChuckRiverZombieTest` dodge trial 0 sometimes ends on Sanity 1 instead of 3. On the candidate it passed 3 of 9 times, on the old build 4 of 6 times.
+    - **River zombies:** `-ChuckRiverZombieTest` dodge trial 0 sometimes ends on Sanity 1 instead of 3. On the candidate it passed 3 of 8 times today, on the old build 3 of 4 times.
     - **Bridge test:** a standing hop under a plank was sometimes lost. The bridge test now presses again after 1 s.
 - **Launcher:** `Local/chult-birds-promotion.log`; receipt and launcher check pass.
   - The receipt names **967977b**: the build was made from it plus these then-uncommitted changes, which are now e4ca747.
