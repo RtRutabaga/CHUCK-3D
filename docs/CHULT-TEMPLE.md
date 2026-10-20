@@ -87,6 +87,8 @@ User request, October 18, 2026 (Claude): leave the central stair's doorway alone
 | Gate shrine ×2 | the gate pavilions either side of the central stair's foot, door facing the avenue | 4.3 square, 3.0 high | a pedestal with a serpent idol, a glyph frieze, two wall torches; 3 jars, 1 urn |
 | Corner shrine ×4 | the central temple's top-terrace corner towers, doors facing the middle | 2.9 square, 2.3 high | an altar with a small serpent idol, a glyph frieze, one wall torch; 2 jars, 1 urn |
 
+Since October 20 the corner shrines stand 3.77 m in from the top terrace's edges (`ShrineIn`; they were 2.4 m in): their 4.5 m plinths had overhung the ledge by about 1 m on two sides and the tablero face beneath by 1.1 m. They now stand on the ledge, 40 cm clear of its moss band, with walkable terrace round their outer sides. The rooms, steps, growth clearances and the walk-in test all follow the constant.
+
 The second terrace's towers (out of reach) and the sanctuary's side false doors stay false. The rest of the sanctuary is untouched.
 
 - **Dressing** follows the 2D temple's kit (PHASE-6: coiled serpent idols, glyph stelae, terracotta urns, fallen column drums, recurring wall torches). The walls are plastered over a 55 cm stone dado; the glyphs are carved stone cartouches, each with a number in bars and dots cut dark into it; the idols are pale stucco.

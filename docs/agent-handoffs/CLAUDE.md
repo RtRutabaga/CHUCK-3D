@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 20 — temple corner shrines (Claude)
+
+- **Request:** the central temple's ceremonial side spaces jut out over their platform; make them architecturally sound. Base `ca31ccb`, delivered `232487b` (+ this handoff commit).
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE.md.
+- **Contract compatibility:** no rig, clip, socket or grip change. Only the four top-terrace shrine positions moved (`ShrineIn`); `Rooms()` indices and log lines unchanged.
+- **Tools:** UE 5.7.4. Build.bat ×1 (DLL timestamp checked), uncooked temple review ×1, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×3 (all stopped on the river-zombie dodge flake). No installs or downloads. Candidate removed; launcher not promoted.
+
+Next part of the work can be done here.
+
 ## October 19 — temple screen and far canopy (Claude)
 
 - **Request:** tall canopy trees at the end of the T-rex stretch to hide the temple; then the distant jungle visible from the pyramid stairs without heavy cost. Base `b295ae2`, delivered `f9eb6df` (+ this handoff commit).
