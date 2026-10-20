@@ -565,13 +565,16 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         const float Time=Now-Run->Start;const FVector P=C->GetActorLocation()-G;const FVector F=ToFrame(P);
         auto Press=[&](){C->JumpPressed();Run->LastJump=Time;++Run->Jumps;};
         const bool bGround=Movement->IsMovingOnGround();
+        // A hop from standing that left him standing (the press is intermittently lost;
+        // seen 2026-10-19 in the old launcher build too): press again, as a player would.
+        auto Retry=[&](){return Run->Jumps>0 && Run->Jumps<4 && bGround && !C->IsSwinging() && Time-Run->LastJump>1.f;};
         const int32 Grip=C->GetSwingGrip();
         bool Pass=false,Done=false;float Limit=30;
         C->SetTestStick(FVector2D::ZeroVector);
         switch(Trial.Kind)
         {
         case KCatch:
-            if(Run->Jumps==0 && Time>.6f && bGround) Press();
+            if((Run->Jumps==0 && Time>.6f && bGround) || Retry()) Press();
             Pass=C->IsSwinging() && Grip==GripIndex(0);
             Done=Pass && Time-Run->LastJump>.5f;Limit=6;
             break;
@@ -589,7 +592,7 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             break;
         case KBack:
             // Facing home: caught, then steered back with the stick, then stepped down.
-            if(Run->Phase==0) {if(Run->Jumps==0 && Time>.6f && bGround) Press();if(C->IsSwinging() && Grip==GripIndex(Last)) Run->Phase=1;}
+            if(Run->Phase==0) {if((Run->Jumps==0 && Time>.6f && bGround) || Retry()) Press();if(C->IsSwinging() && Grip==GripIndex(Last)) Run->Phase=1;}
             else if(Run->Phase==1)
             {
                 C->SetTestStickWorld(-AlongDir());
@@ -602,7 +605,7 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             break;
         case KLetGo:
             // Out four planks, then let go over the gorge: back on the near bank, its score back.
-            if(Run->Phase==0) {if(Run->Jumps==0 && Time>.6f && bGround) Press();if(C->IsSwinging()) Run->Phase=1;}
+            if(Run->Phase==0) {if((Run->Jumps==0 && Time>.6f && bGround) || Retry()) Press();if(C->IsSwinging()) Run->Phase=1;}
             else if(Run->Phase==1)
             {
                 if(C->IsSwinging() && Grip==GripIndex(4) && Time-Run->LastJump>.5f) {C->DodgeToward(FVector2D::ZeroVector);Run->Phase=2;Run->LastJump=Time;}

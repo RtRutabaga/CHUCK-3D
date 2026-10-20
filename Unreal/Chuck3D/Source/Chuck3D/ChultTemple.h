@@ -32,6 +32,12 @@ bool ChultTempleMusicRunIn(const FVector& World);
 float ChultTempleRevealS();
 float ChultTempleMusicFromS();
 
+// The central spire's tip and a pyramid summit house's roof (+T or -T side;
+// local, above the plaza): what the birds circle and must clear (ChultBirds.h).
+FVector ChultTempleSpireTop();
+FVector ChultTemplePyramidTop(bool bPlusT);
+float ChultTemplePlazaZ();
+
 void BuildChultTemple(AActor* Owner);
 int32 CheckChultTemple(AActor* Owner,AChuckCharacter* Chuck);
 // -ChuckChultTest -ChuckTempleReview: cooked views, then the real character

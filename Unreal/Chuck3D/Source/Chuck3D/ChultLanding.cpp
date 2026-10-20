@@ -16,6 +16,7 @@
 #include "ChultUpriver.h"
 #include "ChultTemple.h"
 #include "ChultWreck.h"
+#include "ChultBirds.h"
 #include "ProceduralMeshComponent.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
@@ -130,6 +131,7 @@ void AChultLanding::Build()
     // And the rest of its hostile life: four more raptors, fifteen zombies (ChultLife.h).
     SpawnChultLife(GetWorld());
     AChultTRex::SpawnUpriver(GetWorld());   // the giants' T-rex (2026-10-15)
+    AChultBirds::Spawn(GetWorld());          // macaws over the bridge and the temple (2026-10-19)
 }
 
 void AChultLanding::BuildEnvironment()
@@ -450,6 +452,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleReview"))){ReviewChultTemple(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBirdReview"))){ReviewChultBirds(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckLandscapeReview"))){ReviewChultWatercourse(this,C,Failures);return;}
     struct FRun {int32 Phase=0;FTimerHandle Timer;TWeakObjectPtr<ACameraActor> DetailCamera;}; auto Run=MakeShared<FRun>();

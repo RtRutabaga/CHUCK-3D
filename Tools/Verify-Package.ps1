@@ -132,6 +132,18 @@ if($wreckProcess.ExitCode -or !(Select-String -LiteralPath $wreckLog -Pattern 'C
    !(Select-String -LiteralPath $wreckLog -Pattern 'CHUCK_CHULT_WRECK_TEST failures=0 legs=4 road=1 hold_loop=1 cabin=1 rupture=1' -Quiet)) {
     throw "Jungle wreck verification failed. Inspect $wreckLog"
 }
+# The macaws (Claude, 2026-10-19): clearance of every flight, stills, then the real character
+# crosses the bridge (the flock crosses in view, the pair passes close), runs up to the temple's
+# reveal (the flock goes up into the gyre) and stands on the avenue (pairs swoop across his view).
+$birdLog=Join-Path $evidence ('verify-chult-birds-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$birdProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckBirdReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$birdLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($birdProcess.ExitCode -or !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_CHECK failures=0 birds=48 missing_meshes=0 clearance_hits=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_BRIDGE failures=0 crossed=1 ' -Quiet) -or
+   !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_REVEAL failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_SWOOPS failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_TEST failures=0' -Quiet)) {
+    throw "Chult bird verification failed. Inspect $birdLog"
+}
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }
 if ($MotionCapture) {

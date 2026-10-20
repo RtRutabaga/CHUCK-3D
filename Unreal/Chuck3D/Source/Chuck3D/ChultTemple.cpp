@@ -665,6 +665,9 @@ bool ChultTempleMusicRunIn(const FVector& World)
     const FVector F=Frame(World-AChultLanding::FloorOrigin());
     return F.X<ChultTempleMusicFromS()+1000&&FMath::Abs(F.Y-ChultUpriverRoadT(F.X))<1500;
 }
+float ChultTemplePlazaZ(){return PlazaZ();}
+FVector ChultTempleSpireTop(){return Flat(Sc,0,CTop+TowerBody+TowerSpire);}
+FVector ChultTemplePyramidTop(bool bPlusT){return Flat((HouseFront+HouseBack)*.5f,bPlusT?PyramidT:-PyramidT,Top+WallTop);}
 FVector ChultTempleSpawn(){return AChultLanding::FloorOrigin()+Flat(SpawnS,0,34.65f);}
 float ChultTempleSpawnYaw(){return Along.Rotation().Yaw;}
 
