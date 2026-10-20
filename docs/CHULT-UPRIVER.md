@@ -60,3 +60,38 @@ The far road's guide now continues from S=27600 along `ChultUpriverRoadT` to S=6
 - The T-rex: added the same day ([CHULT-TREX.md](CHULT-TREX.md)); its stretch is S 35600–50400, ending before the last giant's liana.
 - The golden cigarette now provides the way up the first giant: [CHULT-GOLDEN-LEAF.md](CHULT-GOLDEN-LEAF.md).
 - The temple: built the same day beyond S=64500 ([CHULT-TEMPLE.md](CHULT-TEMPLE.md)); the floor now ends at S=92000 and the road runs up its avenue.
+
+## The screen of giants and the far canopy (Claude, 2026-10-19)
+
+User requests, October 19: "Add some of our tall canopy trees at the end of the
+t-Rex bit to hide the temple from sticking out here". Then: "I'd like the
+distant jungle depth to be visible while standing on top of the pyramid stairs
+and looking back where you came from, possible to do somehow without making the
+game run too heavy?"
+
+**The screen** (`ChultScreenTrunkSpots`, `ChultCanopy.cpp` grove 2, `BuildChultScreenCanopy`):
+
+- **Trees:** 15 giants in three staggered rows across the valley, at S≈53900, 56300 and 58700.
+  - They are built with the giants' own trunk, buttress, limb, leader and crown code.
+  - Crotches are 16-19 m up, crowns reach about 33 m, and trunks are 1.3-1.46 thick.
+  - A tree that would stand on the road moves to 11.5 m off it. None stands within 12 m of the Deep Jungle spawn.
+- **Nothing to climb:** the grove has no chains, spurs or lianas and registers no grips.
+- **Crowns:** they are full from the crotch to the top, which is the band the temple showed through. Each has three rings of leaf clusters plus five solid `SM_FallCrown` masses (`ChultScreenCrownMass`, 75 in all).
+- **Ground and clearing:** each trunk stands on the lowest ground round its foot. The jungle's trees, palms and plants are removed from round the trunks after planting, so every earlier random draw is kept.
+- **Result:** from the last giant's crown and from giant 9, the temple no longer shows (`UpriverTRexEndCrown`, `UpriverTRexEndGiant9`).
+
+**The far canopy:**
+
+- **The problem:** the jungle's scanned trees (`SM_ChultIslandTree`, 24k triangles, one LOD) stop drawing at 100 m. From any height the far jungle was bare ground.
+- **What replaces them:** one `SM_FallCrown` (1.1k triangles) is shaped as a tree top over each 14 m patch of far-bank trees: 427 crowns, no shadows.
+- **The fade:** its two materials are copies (`Tools/create_far_canopy_materials.py` makes `M_ChultFarCrownLeaves` and `M_ChultFarCanopy`) that dither in with camera distance from 75 to 100 m. Near him there are none.
+- **Comparison switch:** `-ChuckNoFarCanopy` leaves them out.
+- **Cost:** measured uncooked with vsync off, the 12 upriver views are all within ±0.3 ms with and without them (`Local/trex-end-screen-review-3*.log`).
+
+**Limits:**
+
+- Lines of sight run both ways. The screen that hides the temple from the T-rex's trees also hides those trees from the stair tops. Looking back from there, the jungle ends at the line of giants with the mountains above.
+- The valley's low height fog hazes everything beyond about 150 m. With fog off (`-ExecCmds="r.Fog 0"`) the far canopy reads clearly.
+- The two views from the temple's stair tops take 47-49 ms a frame uncooked, with or without these changes. The temple area was already the heaviest place in Chult.
+
+**Reviews:** `-ChuckUpriverReview` now writes 12 views. The new ones are `UpriverTRexEndCrown`, `UpriverTRexEndRoad`, `UpriverTRexEndGiant9`, `UpriverFromPyramidTop`, `UpriverFromCentralStair` and `UpriverScreenFromAbove`. Each view logs `avg_ms`, the frame time unthrottled.

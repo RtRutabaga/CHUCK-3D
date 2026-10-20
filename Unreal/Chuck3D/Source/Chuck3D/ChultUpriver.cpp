@@ -13,6 +13,8 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/LocalFogVolumeComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
@@ -84,6 +86,31 @@ const TArray<FVector2D>& ChultGiantTrunkSpots()
         {
             const float S=36600+1300*I;const FVector P=ChultCanyonFrame(S,GiantLineT(S)+(I%2?380.f:-380.f));
             Out.Add(FVector2D(P.X,P.Y));
+        }
+        return Out;
+    }();
+    return Spots;
+}
+const TArray<FVector2D>& ChultScreenTrunkSpots()
+{
+    static const TArray<FVector2D> Spots=[]()
+    {
+        // Two staggered rows across the valley at the deep jungle's start, clear
+        // of the road (11 m), the deep jungle's spawn point and the valley's sides.
+        TArray<FVector2D> Out;
+        const FVector Spawn=SpawnLocal(EChultUpriverSpawn::DeepJungle);
+        for(int32 Row=0;Row<3;++Row)
+        {
+            const float S=Row==2?58700:Row?56300:53900;
+            for(float T=-5700+(Row%2)*1250;T<=5800;T+=2500)
+            {
+                // One near the road moves to its edge (11.5 m off) rather than leave a gap.
+                const float Road=ChultUpriverRoadT(S);
+                const float At=FMath::Abs(T-Road)<1100?Road+(T>Road?1150.f:-1150.f):T;
+                const FVector P=ChultCanyonFrame(S+(FMath::Frac(At*.00037f)-.5f)*500,At);
+                if(FVector::Dist2D(P,Spawn)<1200)continue;
+                Out.Add(FVector2D(P.X,P.Y));
+            }
         }
         return Out;
     }();
@@ -291,6 +318,87 @@ void BuildChultUpriver(AActor* Owner)
             Place(Type<4?FString::Printf(TEXT("SM_ChultFern%d"),Type):Type<6?TEXT("SM_FallElephantEar"):TEXT("SM_FallShrub"),P,Up.FRandRange(1.5f,3.f)*(Type<4?1:.65f),Yaw);++Plants;
         }
     }
+    // The screen of giants (ChultCanopy.cpp, grove 2): the jungle's trees and
+    // plants are taken out from round its trunks after planting, so every
+    // earlier random draw is kept.
+    BuildChultScreenCanopy(Owner);
+    // Solid crown masses (SM_FallCrown, its own materials) inside each screen
+    // tree's crown, through the band the temple showed through: leaf cards alone
+    // let it show between them.
+    int32 Masses=0;
+    {
+        auto* Mass=NewObject<UHierarchicalInstancedStaticMeshComponent>(Owner,TEXT("ChultScreenCrownMass"));
+        Mass->SetupAttachment(Owner->GetRootComponent());Mass->SetWorldLocation(G);
+        Mass->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Cutscenes/FallToChult/SM_FallCrown.SM_FallCrown")));Missing+=!Mass->GetStaticMesh();
+        Mass->SetCollisionEnabled(ECollisionEnabled::NoCollision);Mass->RegisterComponent();
+        const auto& Screen=ChultScreenTrees();
+        for(int32 I=0;I<Screen.Num();++I)
+        {
+            const auto& Tree=Screen[I];FRandomStream Rng(5150+I*37);
+            for(int32 K=0;K<5;++K)
+            {
+                const float Yaw=(K*2*PI/5)+I;const float Out=K==4?0:Rng.FRandRange(350,550);
+                const FVector Pos=Tree.Trunk+FVector(FMath::Cos(Yaw)*Out,FMath::Sin(Yaw)*Out,Tree.Top+(K==4?900:Rng.FRandRange(-250,450)));
+                Mass->AddInstance(FTransform(FRotator(0,Rng.FRandRange(0,360),0),G+Pos,FVector(Rng.FRandRange(.85f,1.1f))),true);++Masses;
+            }
+        }
+    }
+    int32 Cleared=0;
+    for(auto& Set:Sets)
+        for(int32 I=Set.Value->GetInstanceCount()-1;I>=0;--I)
+        {
+            FTransform X;Set.Value->GetInstanceTransform(I,X,true);
+            for(const FVector2D& Spot:ChultScreenTrunkSpots())
+                if(FVector2D::Distance(FVector2D(X.GetLocation()-G),Spot)<(Set.Key.StartsWith(TEXT("SM_ChultIsland"))||Set.Key==TEXT("SM_FallPalm")?900.f:420.f))
+                {Set.Value->RemoveInstance(I);++Cleared;break;}
+        }
+    FString Where;for(const FVector2D& Spot:ChultScreenTrunkSpots()){const FVector D=FVector(Spot,0)-ChultCanyonFrame(0,0);Where+=FString::Printf(TEXT(" %.0f/%.0f"),FVector::DotProduct(D,(ChultCanyonFrame(1,0)-ChultCanyonFrame(0,0)).GetSafeNormal()),FVector::DotProduct(D,(ChultCanyonFrame(0,1)-ChultCanyonFrame(0,0)).GetSafeNormal()));}
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_SCREEN_CLEARING trees=%d crown_masses=%d removed_instances=%d road_t=%.0f/%.0f at(s/t)=%s"),ChultScreenTrunkSpots().Num(),Masses,Cleared,ChultUpriverRoadT(53900),ChultUpriverRoadT(56300),*Where);
+    // The far canopy (user 2026-10-19: "the distant jungle depth to be visible while
+    // standing on top of the pyramid stairs and looking back ... without making the
+    // game run too heavy"). The jungle's scanned trees (24k triangles, no LODs) stop
+    // drawing at 100 m; one light crown (SM_FallCrown, 1.1k triangles) stands over
+    // each 14 m patch of far-bank trees in their place. Their materials dither them
+    // in from 75 to 100 m from the camera (Tools/create_far_canopy_materials.py), so
+    // near him there are none. -ChuckNoFarCanopy leaves them out (for comparison).
+    int32 FarCrowns=0;
+    if(!FParse::Param(FCommandLine::Get(),TEXT("ChuckNoFarCanopy")))
+    {
+        struct FCell{FVector Sum=FVector::ZeroVector;float Top=0;int32 N=0;};
+        TMap<FIntPoint,FCell> Cells;
+        const FVector AlongS=(ChultCanyonFrame(1,0)-ChultCanyonFrame(0,0)).GetSafeNormal();
+        TArray<UHierarchicalInstancedStaticMeshComponent*> All;Owner->GetComponents(All);
+        for(auto* H:All)
+        {
+            if(!H->GetStaticMesh()||H->GetStaticMesh()->GetName()!=TEXT("SM_ChultIslandTree")||H->bHiddenInGame||H->InstanceEndCullDistance>20000)continue;
+            const float Height=H->GetStaticMesh()->GetBoundingBox().Max.Z;
+            for(int32 I=0;I<H->GetInstanceCount();++I)
+            {
+                FTransform X;H->GetInstanceTransform(I,X,true);const FVector L=X.GetLocation()-G;
+                if(FVector::DotProduct(L-ChultCanyonFrame(0,0),AlongS)<4300)continue;   // the far bank only
+                FCell& C=Cells.FindOrAdd(FIntPoint(FMath::FloorToInt(L.X/1400),FMath::FloorToInt(L.Y/1400)));
+                C.Sum+=L;C.Top+=L.Z+Height*X.GetScale3D().Z;++C.N;
+            }
+        }
+        auto* Far=NewObject<UHierarchicalInstancedStaticMeshComponent>(Owner,TEXT("ChultFarCanopy"));
+        Far->SetupAttachment(Owner->GetRootComponent());Far->SetWorldLocation(G);
+        Far->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Art/Cutscenes/FallToChult/SM_FallCrown.SM_FallCrown")));Missing+=!Far->GetStaticMesh();
+        Far->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultNature/M_ChultFarCrownLeaves.M_ChultFarCrownLeaves")));
+        Far->SetMaterial(1,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultNature/M_ChultFarCanopy.M_ChultFarCanopy")));
+        Missing+=!Far->GetMaterial(0)||!Far->GetMaterial(1)||!Far->GetMaterial(0)->GetName().Contains(TEXT("Far"));
+        Far->SetCollisionEnabled(ECollisionEnabled::NoCollision);Far->SetCastShadow(false);Far->SetCullDistances(0,150000);Far->bReceivesDecals=false;
+        Far->RegisterComponent();
+        for(const auto& Cell:Cells)
+        {
+            const FCell& C=Cell.Value;const FVector Mid=C.Sum/C.N;const float Top=C.Top/C.N;
+            // A tree top's size (6-10 m across, 3.6 m deep), its top just over the
+            // trees' tops: from afar a crown on an unseen trunk, not a mound.
+            const float Wide=.55f+.08f*FMath::Min(C.N,4)+.06f*FMath::Frac(Mid.X*.0013f+Mid.Y*.0007f),Deep=.5f;
+            const float CrownTop=Far->GetStaticMesh()?Far->GetStaticMesh()->GetBoundingBox().Max.Z:700;
+            Far->AddInstance(FTransform(FRotator(0,FMath::Frac(Mid.X*.00091f)*360,0),G+FVector(Mid.X,Mid.Y,Top+50-CrownTop*Deep),FVector(Wide,Wide,Deep)),true);++FarCrowns;
+        }
+    }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_FAR_CANOPY crowns=%d fade_from=7500 fade_to=10000"),FarCrowns);
     // The temple (ChultTemple.cpp).
     BuildChultTemple(Owner);
     // Spray at the pool, and the deep jungle's low mist.
@@ -376,11 +484,22 @@ void ReviewChultUpriver(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
     // Along the open river channel for the two river views: its banks are wooded.
     auto OverRiver=[](float S,float Up){return ChultCanyonFrame(S,ChultRiverCenter(S),ChultRiverWaterZ(S)+Up);};
     const TArray<FVector> Eyes={OverRiver(21500,700),OverRiver(31300,260),Ground(35300,ChultUpriverRoadT(35300),170),
-        Giants[4].Fork+Side*1500+FVector(0,0,250),Ground(52700,ChultUpriverRoadT(52700),170),Ground(46000,-5600,3200)};
+        Giants[4].Fork+Side*1500+FVector(0,0,250),Ground(52700,ChultUpriverRoadT(52700),170),Ground(46000,-5600,3200),
+        // 2026-10-19: from the end of the T-rex's stretch toward the temple (the screen of giants hides it).
+        Giants.Last().Fork+FVector(0,0,170),Ground(50400,ChultUpriverRoadT(50400),170),Giants[9].Fork+FVector(0,0,170),
+        // 2026-10-19: from the head of a pyramid's stair and the central stair, looking back down the valley.
+        ChultTemplePyramidTop(false)-(ChultCanyonFrame(1300,0,0)-ChultCanyonFrame(0,0,0))+FVector(0,0,-250),
+        ChultTempleSpireTop()-(ChultCanyonFrame(1200,0,0)-ChultCanyonFrame(0,0,0))+FVector(0,0,-(ChultTempleSpireTop().Z-ChultTemplePlazaZ())+1500+170),
+        Ground(47500,0,9000)};
     const TArray<FVector> Aims={OverRiver(30500,500),FallPoint(.45f),Ground(41000,0,1500),
-        Giants[6].Fork+FVector(0,0,150),Ground(57000,ChultUpriverRoadT(57000),220),ChultCanyonFrame(110000,0,4000)};
-    const TArray<FString> Names={TEXT("UpriverFromFarBank"),TEXT("UpriverSourceFall"),TEXT("UpriverGiantsFromRoad"),TEXT("UpriverGiantCanopy"),TEXT("UpriverDeepJungle"),TEXT("UpriverValleyEnd")};
-    struct FRun{int32 Phase=0;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
+        Giants[6].Fork+FVector(0,0,150),Ground(57000,ChultUpriverRoadT(57000),220),ChultCanyonFrame(110000,0,4000),
+        ChultTempleSpireTop()-FVector(0,0,900),ChultTempleSpireTop()-FVector(0,0,900),ChultTempleSpireTop()-FVector(0,0,900),
+        ChultCanyonFrame(30000,-2500,ChultTemplePlazaZ()-1500),ChultCanyonFrame(30000,0,ChultTemplePlazaZ()-1500),Ground(55500,0,0)};
+    const TArray<FString> Names={TEXT("UpriverFromFarBank"),TEXT("UpriverSourceFall"),TEXT("UpriverGiantsFromRoad"),TEXT("UpriverGiantCanopy"),TEXT("UpriverDeepJungle"),TEXT("UpriverValleyEnd"),
+        TEXT("UpriverTRexEndCrown"),TEXT("UpriverTRexEndRoad"),TEXT("UpriverTRexEndGiant9"),TEXT("UpriverFromPyramidTop"),TEXT("UpriverFromCentralStair"),TEXT("UpriverScreenFromAbove")};
+    // Frame time unthrottled (no vsync or cap), averaged over each view's hold.
+    if(auto* PC=Cast<APlayerController>(Chuck->GetController())){PC->ConsoleCommand(TEXT("r.VSync 0"));PC->ConsoleCommand(TEXT("t.MaxFPS 0"));}
+    struct FRun{int32 Phase=0;uint64 Frames=0;double At=0;FTimerHandle Timer;};auto Run=MakeShared<FRun>();
     Owner->GetWorldTimerManager().SetTimer(Run->Timer,[Owner,Chuck,Camera,Run,Eyes,Aims,Names,Failures]()
     {
         const int32 I=Run->Phase/2;
@@ -393,11 +512,16 @@ void ReviewChultUpriver(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
             Owner->GetWorldTimerManager().ClearTimer(Done);
             FPlatformMisc::RequestExitWithStatus(false,Status);return;
         }
-        if(Run->Phase%2==0)Camera->SetActorLocationAndRotation(AChultLanding::FloorOrigin()+Eyes[I],(Aims[I]-Eyes[I]).Rotation());
+        if(Run->Phase%2==0)
+        {
+            Camera->SetActorLocationAndRotation(AChultLanding::FloorOrigin()+Eyes[I],(Aims[I]-Eyes[I]).Rotation());
+            Run->Frames=GFrameCounter;Run->At=FPlatformTime::Seconds();
+        }
         else
         {
+            const double Held=FPlatformTime::Seconds()-Run->At;const uint64 Frames=FMath::Max<uint64>(GFrameCounter-Run->Frames,1);
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Chult")/(Names[I]+TEXT(".png")),true,false);
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_UPRIVER_VIEW name=%s frame_ms=%.1f"),*Names[I],FApp::GetDeltaTime()*1000);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_UPRIVER_VIEW name=%s frame_ms=%.1f avg_ms=%.2f"),*Names[I],FApp::GetDeltaTime()*1000,Held*1000/Frames);
         }
         ++Run->Phase;
     },2.5f,true);

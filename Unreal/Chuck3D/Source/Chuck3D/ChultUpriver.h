@@ -28,6 +28,9 @@ float ChultGiantLineT(float S);
 // The giant grove's trunk axes (local XY), its corridor, and the ground levelled under each trunk.
 const TArray<FVector2D>& ChultGiantTrunkSpots();
 bool InChultGiantReserve(const FVector& Local,float Margin=0);
+// A screen of giants across the valley just past the T-rex's stretch (user
+// 2026-10-19: hide the temple from the end of it). Scenery only: no grips.
+const TArray<FVector2D>& ChultScreenTrunkSpots();
 float ChultUpriverGroundZ(const FVector& Local,float Base);
 
 void BuildChultUpriver(AActor* Owner);

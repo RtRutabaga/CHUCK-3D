@@ -64,6 +64,9 @@ void StartChultCanopyReview(AActor* Owner, AChuckCharacter* Chuck);
 // spurs, with a liana only on its last tree. Its trunks stand on the far
 // bank's ground (FChultCanopyTree::Trunk.Z). The functions above stay grove 0.
 void BuildChultGiantCanopy(AActor* Owner);
+// The screen of scenery giants past the T-rex's stretch (grove 2; ChultScreenTrunkSpots).
+void BuildChultScreenCanopy(AActor* Owner);
+const TArray<FChultCanopyTree>& ChultScreenTrees();
 int32 CheckChultGiantCanopy(AActor* Owner, AChuckCharacter* Chuck);
 // -ChuckGiantCanopyTest: from the first giant's crotch along every chain, down
 // the last liana, deaths up there and below, every spur; then quits.

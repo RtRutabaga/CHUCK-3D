@@ -43,6 +43,7 @@ namespace
     {
         TArray<FTreeDef> Defs;TArray<TArray<int32>> Neighbours;TArray<FChainDef> Chains;
         float ButtressHeight=1;const TCHAR* Prefix=TEXT("ChultCanopy");
+        bool bScenery=false;   // no chains, spurs or lianas: nothing to climb (the screen, grove 2)
     };
     int32 ActiveGrove=0;
     const FGrove& GroveData(int32 Index)
@@ -78,7 +79,24 @@ namespace
             }
             return G;
         }();
-        return Index?Giants:Loop;
+        // Grove 2 (user 2026-10-19): "Add some of our tall canopy trees at the end
+        // of the t-Rex bit to hide the temple from sticking out here". Taller still
+        // and full-crowned; each has one limb toward its neighbour in the row.
+        static const FGrove Screen=[]()
+        {
+            FGrove G;G.ButtressHeight=1.8f;G.Prefix=TEXT("ChultScreen");G.bScenery=true;
+            const auto& Spots=ChultScreenTrunkSpots();
+            for(int32 I=0;I<Spots.Num();++I)
+                G.Defs.Add({Spots[I],1750+120*FMath::Sin(I*1.9f),1.38f+.08f*FMath::Sin(I*1.3f),1500+150*FMath::Sin(I*2.7f),false});
+            for(int32 I=0;I<Spots.Num();++I)
+            {
+                int32 Best=-1;float Near=1e12f;
+                for(int32 J=0;J<Spots.Num();++J)if(J!=I&&FVector2D::DistSquared(Spots[I],Spots[J])<Near){Near=FVector2D::DistSquared(Spots[I],Spots[J]);Best=J;}
+                G.Neighbours.Add({Best});
+            }
+            return G;
+        }();
+        return Index==2?Screen:Index?Giants:Loop;
     }
     const FGrove& Gv() {return GroveData(ActiveGrove);}
     // The line's corridor (part of the canopy reserve).
@@ -344,6 +362,8 @@ namespace
                 FChultCanopyTree T;T.Trunk=Flat(Defs[I].At);T.Top=Defs[I].Top;T.TrunkScale=Defs[I].Scale;T.bLiana=Defs[I].bLiana;
                 // Grove 1 stands on the far bank's ground, levelled under each trunk.
                 if(ActiveGrove) T.Trunk.Z=ChultCanyonGroundZ(T.Trunk);
+                // The screen's ground isn't levelled: stand on its lowest point round the foot.
+                if(ActiveGrove==2) for(int32 K=0;K<12;++K) T.Trunk.Z=FMath::Min(T.Trunk.Z,ChultCanyonGroundZ(T.Trunk+YawDir(K*PI/6)*450)-8);
                 FRandomStream Rng(3301+I*71);
                 auto AddLimb=[&](FVector D,float Len,float Rise,float Scale,float Away)
                 {T.Limbs.Add(D);T.LimbLength.Add(Len);T.LimbRise.Add(Rise);T.LimbScale.Add(Scale);T.LimbAway.Add(Away);};
@@ -413,7 +433,7 @@ namespace
             // more than 2.4 m apart, beyond a leap, so no line steals another's
             // grips) and 50 from the main leader; and its grips must stay clear of
             // the chains, the other trees and the ruins.
-            for(int32 I=0;I<TreeCount;++I)
+            for(int32 I=0;I<TreeCount && !Grove.bScenery;++I)
             {
                 FChultCanopyTree& T=R.Trees[I];
                 FRandomStream Rng(9001+I*53);
@@ -477,7 +497,8 @@ namespace
         if(ActiveGrove)
         {
             static const FCanopy Giants=[](){TGuardValue<int32> Guard(ActiveGrove,1);return MakeCanopy();}();
-            return Giants;
+            static const FCanopy Screen=[](){TGuardValue<int32> Guard(ActiveGrove,2);return MakeCanopy();}();
+            return ActiveGrove==2?Screen:Giants;
         }
         static const FCanopy Loop=[](){TGuardValue<int32> Guard(ActiveGrove,0);return MakeCanopy();}();
         return Loop;
@@ -677,6 +698,16 @@ void BuildGrove(AActor* Owner)
                 Cluster(From+Dir*Reach*.6f+FVector(0,0,Rise*.9f+25),Rng.FRandRange(70,100),Rng.RandRange(35,65),.6f);
             }
         }
+        // The screen's crowns are full from the crotch to the top (16-33 m, the
+        // band the temple showed through): three rings of leaf masses.
+        if(Gv().bScenery)
+            for(int32 Ring=0;Ring<3;++Ring)
+                for(int32 K=0;K<7;++K)
+                {
+                    const FVector Out=YawDir((K+Ring*.5f)*2*PI/7+Seed);
+                    const float Z=T.Top+Gv().Defs[I].LeaderHeight*(Ring*.42f-.05f)+Rng.FRandRange(-100,100);
+                    Cluster(T.Trunk+Out*Rng.FRandRange(Ring==1?420.f:300.f,Ring==1?700.f:540.f)+FVector(0,0,Z),Rng.FRandRange(260,340),230,.55f);
+                }
         const float LianaYaw=FMath::Atan2(T.LianaFoot.Y-T.Trunk.Y,T.LianaFoot.X-T.Trunk.X);
         // Low surface roots snake between the fins.
         for(int32 K=0;K<4;++K)
@@ -857,7 +888,7 @@ void BuildGrove(AActor* Owner)
     Finish(*Named(TEXT("SolidBark")),Solid,true);Finish(*Named(TEXT("HandBranches")),Branches,false);Finish(*Named(TEXT("Vines")),Vines,false);
     int32 Grips=0,Lianas=0;for(const auto& Chain:Data.Chains) Grips+=Chain.Paws.Num();
     for(const auto& T:Data.Trees) Lianas+=T.bLiana;
-    const TCHAR* Tag=ActiveGrove?TEXT("CHUCK_CHULT_GIANTS"):TEXT("CHUCK_CHULT_CANOPY");
+    const TCHAR* Tag=ActiveGrove==2?TEXT("CHUCK_CHULT_SCREEN"):ActiveGrove?TEXT("CHUCK_CHULT_GIANTS"):TEXT("CHUCK_CHULT_CANOPY");
     UE_LOG(LogTemp,Display,TEXT("%s trees=%d chains=%d grips=%d spurs=%d spur_grips=%d registered_grips=%d lianas=%d triangles=%d"),
         Tag,Data.Trees.Num(),Data.Chains.Num(),Grips,Data.Spurs.Num(),SpurGrips,Registered,Lianas,(Solid.T.Num()+Branches.T.Num()+Vines.T.Num())/3);
     UE_LOG(LogTemp,Display,TEXT("%s_LAYOUT failures=%d branch_jumps=%d hand_gap=%.0f grip_over=%.0f min_step=%.1f max_step=%.1f max_rise=%.1f fins=%d roots=%d crown_boughs=%d leaves=%d leaves_cleared=%d missing_assets=%d"),
@@ -915,6 +946,8 @@ TArray<FVector> ChultGoldenLeafPositions()
     }
     return Out;
 }
+void BuildChultScreenCanopy(AActor* Owner) {TGuardValue<int32> Guard(ActiveGrove,2);BuildGrove(Owner);}
+const TArray<FChultCanopyTree>& ChultScreenTrees() {TGuardValue<int32> Guard(ActiveGrove,2);return Canopy().Trees;}
 void BuildChultGiantCanopy(AActor* Owner)
 {
     TGuardValue<int32> Guard(ActiveGrove,1);BuildGrove(Owner);

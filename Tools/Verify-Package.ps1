@@ -74,6 +74,10 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS trees=12 chains=11 .*lianas=1 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_LAYOUT failures=0 .* missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_GIANTS_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_SCREEN trees=15 chains=0 grips=0 spurs=0 spur_grips=0 registered_grips=0 lianas=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_SCREEN_LAYOUT failures=0 .* missing_assets=0' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_SCREEN_CLEARING trees=15 crown_masses=75 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_FAR_CANOPY crowns=[1-9][0-9][0-9] ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
@@ -108,7 +112,7 @@ if($pathProcess.ExitCode -or !(Select-String -LiteralPath $pathLog -Pattern 'CHU
 $upriverLog=Join-Path $evidence ('verify-chult-upriver-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $upriverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckUpriverReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$upriverLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_CHECK failures=0 ' -Quiet) -or
-   !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_REVIEW_COMPLETE failures=0 views=6' -Quiet)) {
+   !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_REVIEW_COMPLETE failures=0 views=12' -Quiet)) {
     throw "Upriver verification failed. Inspect $upriverLog"
 }
 # The temple exterior (Claude, 2026-10-15): cooked views, then the real character
