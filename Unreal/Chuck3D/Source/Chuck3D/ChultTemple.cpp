@@ -58,6 +58,10 @@ namespace
     constexpr float LevelS[Levels]={2150,1600,1000},LevelT[Levels]={3260,2500,1800};
     constexpr float CTop=Levels*Tier,CStairHalf=400,CBalusterOut=520;
     constexpr float CStairTop=Sc-(LevelS[Levels-1]-Band),CStairFoot=CStairTop-CTop/Rise*Tread;
+    // The top terrace's corner shrines: centres this far in from its edges, so that
+    // their plinths (1.9 m cella + 35 cm) stand on the ledge, 40 cm clear of its
+    // moss band, rather than over the tablero below (2026-10-20; they were 240 in).
+    constexpr float ShrineIn=190+35+Band+40;
     // The sanctuary: a square cella with a walk-in dark vestibule under a curved spire.
     constexpr float TowerHalf=450,TowerFront=Sc-TowerHalf,TowerBody=620,TowerSpire=2400,CellHalf=260,CellDepth=300;
     // Gate pavilions either side of the central stair's foot.
@@ -442,7 +446,7 @@ namespace
         for(float Side:{-1.f,1.f})Out.Add({ERoom::Summit,FVector2D((In0+In1)*.5f,Side*PyramidT),FVector2D(1,0),(In1-In0)*.5f,HouseHalf-HouseWall,Top,Top+HouseRoom,DoorHalf,DoorTop});
         for(float Side:{-1.f,1.f})Out.Add({ERoom::Gate,FVector2D(GateS,Side*GateT),FVector2D(1,0),260-CellaWall,260-CellaWall,45,400-CellaRoof,260*.38f,(400-45)*.62f});
         for(float X:{-1.f,1.f})for(float Y:{-1.f,1.f})
-            Out.Add({ERoom::Shrine,FVector2D(Sc+X*(LevelS[2]-240),Y*(LevelT[2]-240)),FVector2D(0,Y),190-CellaWall,190-CellaWall,CTop+45,CTop+330-CellaRoof,190*.38f,(330-45)*.62f});
+            Out.Add({ERoom::Shrine,FVector2D(Sc+X*(LevelS[2]-ShrineIn),Y*(LevelT[2]-ShrineIn)),FVector2D(0,Y),190-CellaWall,190-CellaWall,CTop+45,CTop+330-CellaRoof,190*.38f,(330-45)*.62f});
         return Out;
     }
     // Which face of a frame-aligned box the door is in (0 -S, 1 +S, 2 -T, 3 +T).
@@ -692,7 +696,7 @@ void BuildChultTemple(AActor* Owner)
     for(float X:{-1.f,1.f})for(float Y:{-1.f,1.f})
     {
         // The top terrace's four open toward the middle: small shrines (2026-10-18).
-        Prasat(P,Sc+X*(LevelS[2]-240),Y*(LevelT[2]-240),CTop,190,330,1250,Y>0?2:3);
+        Prasat(P,Sc+X*(LevelS[2]-ShrineIn),Y*(LevelT[2]-ShrineIn),CTop,190,330,1250,Y>0?2:3);
         Prasat(P,Sc+X*(LevelS[1]-330),Y*(LevelT[1]-330),2*Tier,165,290,800);Towers+=2;
     }
     for(float Y:{-1.f,1.f}){Prasat(P,GateS,Y*GateT,0,260,400,380,0);++Towers;}
@@ -869,15 +873,15 @@ void BuildChultTemple(AActor* Owner)
             {
                 if(L.Off!=0&&Sc+S>HouseFront-150&&Sc+S<HouseBack+150&&FMath::Abs(T)<HouseHalf+150)continue;
                 if(L.Off==0&&(FMath::Max(FMath::Abs(S),FMath::Abs(T))<TowerHalf+150||(S<0&&FMath::Abs(T)<DoorHalf+250)))continue;
-                if(L.Off==0&&FMath::Abs(FMath::Abs(S)-(LevelS[2]-240))<260&&FMath::Abs(FMath::Abs(T)-(LevelT[2]-240))<260)continue;
+                if(L.Off==0&&FMath::Abs(FMath::Abs(S)-(LevelS[2]-ShrineIn))<260&&FMath::Abs(FMath::Abs(T)-(LevelT[2]-ShrineIn))<260)continue;
                 if(!Back&&R.FRand()<.6f)continue;
             }
             if(L.Off==0&&L.Z==2*Tier&&FMath::Abs(FMath::Abs(S)-(LevelS[1]-330))<230&&FMath::Abs(FMath::Abs(T)-(LevelT[1]-330))<230)continue;
             // Before each top-terrace shrine's door (its steps and the way to them),
             // and round every room, whose leaves would poke through its walls.
             {
-                const float DS=FMath::Abs(FMath::Abs(S)-(LevelS[2]-240)),DT=FMath::Abs(FMath::Abs(T)-(LevelT[2]-240));
-                Suppress=L.Off==0&&L.Summit&&((DS<200&&FMath::Abs(T)>LevelT[2]-240-700&&FMath::Abs(T)<LevelT[2]-240)||FMath::Max(DS,DT)<520);
+                const float DS=FMath::Abs(FMath::Abs(S)-(LevelS[2]-ShrineIn)),DT=FMath::Abs(FMath::Abs(T)-(LevelT[2]-ShrineIn));
+                Suppress=L.Off==0&&L.Summit&&((DS<200&&FMath::Abs(T)>LevelT[2]-ShrineIn-700&&FMath::Abs(T)<LevelT[2]-ShrineIn)||FMath::Max(DS,DT)<520);
                 Suppress|=L.Off!=0&&L.Summit&&Sc+S>HouseFront-400&&Sc+S<HouseBack+400&&FMath::Abs(T)<HouseHalf+400;
             }
             const FVector At_=At(Sc+S,T,L.Z-2);
