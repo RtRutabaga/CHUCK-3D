@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "TempleSkeleton.h"
+#include "TempleSnake.h"
 #include "ChultLanding.h"
 #include "ChultBridge.h"
 #include "ChultTemple.h"
@@ -696,6 +697,13 @@ void ADockGameMode::StartPlay()
         StartFromMenu(TEXT("Chult"));
         FTimerHandle SkeletonCheck;
         World->GetTimerManager().SetTimer(SkeletonCheck,[World](){StartTempleSkeletonReview(World);},5.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSnakeTest"))||FParse::Param(FCommandLine::Get(),TEXT("ChuckSnakeCapture")))
+    {
+        // Claude's temple snakes (TempleSnake.h): Chult, then the chamber's snakes once spawned.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle SnakeCheck;
+        World->GetTimerManager().SetTimer(SnakeCheck,[World](){StartTempleSnakeReview(World);},5.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRiverZombieTest")))
     {

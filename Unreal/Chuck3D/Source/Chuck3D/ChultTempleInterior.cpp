@@ -1,6 +1,7 @@
 #include "ChultTempleInterior.h"
 #include "ChultTempleTraps.h"
 #include "TempleSkeleton.h"
+#include "TempleSnake.h"
 #include "ChultTemple.h"
 #include "ChultCanyon.h"
 #include "ChultLanding.h"
@@ -74,6 +75,11 @@ namespace
     const float RingS[]={68030,67890,67750,67610,67470};
     // The dart gallery (map 4), turning west (-T), and the choked way on.
     constexpr float DS0=66720,DS1=67080,DT1=-360,DT0=-5560,DTop=-1060,ChokeT=-5160;
+    // The snake chamber (2D map 5, October 21): through the gallery's arch (no longer choked), broad, its lanes
+    // looping round five piers; its way on (map 6) through an arch in the +S wall, choked.
+    constexpr float NS0=65900,NS1=67900,NT0=-8360,NT1=DT0,NTop=-660,ExitT=-7950,ExitHalf=110,ExitDeep=380;
+    const FVector2D SnakePiers[]={{66400,-6300},{67400,-6300},{66900,-7050},{66350,-7750},{67450,-7650}};
+    constexpr float SnakePierHalf=70;
     constexpr int32 Launchers=8;
     float LauncherT(int32 K){return -1100-540*K;}
     // The cracked slabs (2026-10-20, moved from the rift): three across a pit in the
@@ -99,7 +105,10 @@ namespace
             {TEXT("SpikeDoor"),PS1,KS0,KT0,KT1,Floor,Floor+PassH,ETempleInteriorSpawn::Piers,false,false,0,0,0},
             {TEXT("Piers"),PS0,PS1,PT0,PT1,WellDeep-200,PTop,ETempleInteriorSpawn::Piers,false,false,0,0,0},
             {TEXT("PierDoor"),DS0,DS1,DT1,PT0,Floor,Floor+PassH,ETempleInteriorSpawn::Darts,false,false,0,0,0},
-            {TEXT("Darts"),DS0,DS1,DT0,DT1,WellDeep-200,DTop,ETempleInteriorSpawn::Darts,false,false,0,0,0}};
+            {TEXT("Darts"),DS0,DS1,ChokeT,DT1,WellDeep-200,DTop,ETempleInteriorSpawn::Darts,false,false,0,0,0},
+            {TEXT("SnakeArch"),DS0,DS1,DT0,ChokeT,Floor,DTop,ETempleInteriorSpawn::Snakes,false,false,0,0,0},   // the gallery's last 4 m, past its arch: the snake chamber's threshold
+            {TEXT("Snakes"),NS0,NS1,NT0,NT1,Floor,NTop,ETempleInteriorSpawn::Snakes,false,false,0,0,0},
+            {TEXT("SnakeExit"),NS1,NS1+ExitDeep,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH,ETempleInteriorSpawn::Snakes,false,false,0,0,0}};
         return List;
     }
     // A flight's floor line at S.
@@ -125,7 +134,8 @@ namespace
         case ETempleInteriorSpawn::Hall:return {HallS1-220,AxisT,Floor,-1,0,TEXT("Temple Hall")};
         case ETempleInteriorSpawn::Spikes:return {KS1-150,AxisT,Floor,-1,0,TEXT("Temple Spikes")};
         case ETempleInteriorSpawn::Piers:return {PS1-150,AxisT,Floor,-1,0,TEXT("Temple Piers")};
-        default:return {(DS0+DS1)*.5f,DT1-70,Floor,0,-1,TEXT("Temple Darts")};
+        case ETempleInteriorSpawn::Darts:return {(DS0+DS1)*.5f,DT1-70,Floor,0,-1,TEXT("Temple Darts")};
+        default:return {(DS0+DS1)*.5f,ChokeT-130,Floor,0,-1,TEXT("Temple Snakes")};   // between the arch and the chamber, out of the snakes' sense
         }
     }
 
@@ -539,6 +549,35 @@ void ChultTempleSkeletonPosts(TArray<FTempleSkeletonPost>& Out)
     Post(67250,-120,-1,1,true,Far,TEXT("Piers"));
 }
 
+void ChultTempleSnakeObstacles(TArray<FBox2D>& Out)
+{
+    Out.Reset();
+    for(const FVector2D& Pr:SnakePiers)Out.Add(FBox2D(Pr-FVector2D(SnakePierHalf+14,SnakePierHalf+14),Pr+FVector2D(SnakePierHalf+14,SnakePierHalf+14)));
+    for(float Sg:{-1.f,1.f})Out.Add(FBox2D(FVector2D(66900+Sg*300-52,NT0),FVector2D(66900+Sg*300+52,NT0+142)));
+    Out.Add(FBox2D(FVector2D(66900-24,NT0+106),FVector2D(66900+24,NT0+154)));   // the brazier
+}
+
+void ChultTempleSnakePosts(TArray<FTempleSnakePost>& Out)
+{
+    // Twenty, as in the 2D map: spread through the lanes, clear of the piers, the idols, the way in (its
+    // first 4 m: the respawn) and the way on, at least 1.8 m apart. Seeded, so always the same.
+    Out.Reset();
+    TArray<FBox2D> Obstacles;ChultTempleSnakeObstacles(Obstacles);
+    const FBox2D Leash(FVector2D(NS0+60,NT0+60),FVector2D(NS1-60,NT1-60));
+    FRandomStream R(2026102103);
+    TArray<FVector2D> Placed;
+    for(int32 Try=0;Try<4000&&Placed.Num()<20;++Try)
+    {
+        const FVector2D C(R.FRandRange(NS0+110,NS1-110),R.FRandRange(NT0+130,NT1-400));
+        bool Ok=FVector2D::Distance(C,FVector2D(NS1,ExitT))>260&&FVector2D::Distance(C,FVector2D((DS0+DS1)*.5f,NT1))>400;
+        for(const FBox2D& B:Obstacles)Ok&=B.ComputeSquaredDistanceToPoint(C)>110*110;
+        for(const FVector2D& O:Placed)Ok&=FVector2D::Distance(C,O)>180;
+        if(!Ok)continue;
+        Placed.Add(C);
+        FTempleSnakePost P;P.Feet=WorldAt(C.X,C.Y,Floor);P.Yaw=R.FRandRange(0,360);P.bWander=Placed.Num()%3==0;P.Leash=Leash;Out.Add(P);
+    }
+}
+
 void BuildChultTempleInterior(AActor* Owner)
 {
     const double Started=FPlatformTime::Seconds();const FVector G=AChultLanding::FloorOrigin();UWorld* World=Owner->GetWorld();
@@ -768,7 +807,7 @@ void BuildChultTempleInterior(AActor* Owner)
     {
         Line(P,DS0,DS1,DT1,PT0,Floor,Floor+PassH,{{2,DS0,DS1,Floor,Floor+PassH},{3,DS0,DS1,Floor,Floor+PassH}},Plain);
         FLining L;L.Dado=0;L.FloorHoles={FBox2D(FVector2D(DS0,PitG0),FVector2D(DS1,PitG1))};
-        Line(P,DS0,DS1,DT0,DT1,Floor,DTop,{{3,DS0,DS1,Floor,Floor+PassH}},L);
+        Line(P,DS0,DS1,DT0,DT1,Floor,DTop,{{3,DS0,DS1,Floor,Floor+PassH},{2,DS0,DS1,Floor,DTop}},L);   // its far end open onto the snake chamber
         // The slab pit: its walls down to the Astral, and three cracked slabs across it.
         FLining PitL;PitL.bFloor=false;PitL.bCeiling=false;PitL.Dado=0;
         Line(P,DS0,DS1,PitG0,PitG1,WellDeep,Floor,{},PitL);
@@ -812,24 +851,63 @@ void BuildChultTempleInterior(AActor* Owner)
             const bool Plus=FMath::RoundToInt((DT1-300-T)/600)%2==0;
             Torch(P,Fires,0,Plus?DS1:DS0,Plus?-1:1,T-280,Floor+215,3800,620);
         }
-        // The arch, and the collapse behind it filling the passage to the vault.
+        // The arch (October 21: the collapse behind it cleared, the way on to the snake chamber).
         for(float Sg:{-1.f,1.f})Box(P.Stone,Sg<0?DS0:DS1-40,Sg<0?DS0+40:DS1,ChokeT-30,ChokeT+30,Floor,Floor+PassH);
         Box(P.Stone,DS0,DS1,ChokeT-30,ChokeT+30,Floor+PassH,DTop);
         Box(P.Plaster,DS0+40,DS1-40,ChokeT+24,ChokeT+30,Floor+PassH-20,Floor+PassH);
-        for(int32 I=0;I<40;++I)
-        {
-            const float T=R.FRandRange(DT0+40,ChokeT-25),H=R.FRandRange(25,70);
-            const float Z=Floor+FMath::Clamp((ChokeT-T)/400.f,.15f,1.f)*R.FRandRange(0,260);
-            TurnedBox(R.FRand()<.3f?P.Moss:P.Stone,FVector(R.FRandRange(DS0+30,DS1-30),T,Z+H*.5f),FVector(R.FRandRange(30,80),R.FRandRange(30,70),H),FRotator(R.FRandRange(-20,20),R.FRandRange(0,360),R.FRandRange(-20,20)));
-        }
-        // Behind the arch the passage is full: a hidden wall stops him squeezing between the blocks.
-        Box(P.Block,DS0,DS1,ChokeT-60,ChokeT-30,Floor,DTop);
-        for(int32 I=0;I<9;++I)
-        {
-            const float T=ChokeT+R.FRandRange(10,160);
-            TurnedBox(P.Stone,FVector(R.FRandRange(DS0+30,DS1-30),T,Floor+R.FRandRange(8,20)),FVector(R.FRandRange(12,30),R.FRandRange(12,30),R.FRandRange(8,20)),FRotator(R.FRandRange(-20,20),R.FRandRange(0,360),R.FRandRange(-20,20)));
-        }
         Jar(DS0+40,DT1-60,Floor,false);
+    }
+
+    // ---- The snake chamber (2D map 5, October 21): broad, torch-lit, its lanes looping round five piers;
+    //      two serpent idols and a brazier under a glyph panel at the far end; the way on choked.
+    {
+        Line(P,NS0,NS1,NT0,NT1,Floor,NTop,{{3,DS0,DS1,Floor,DTop},{1,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH}},Hall_);
+        // The way on: an arch in the +S wall, the passage behind it fallen in, a hidden wall in the rubble.
+        Line(P,NS1,NS1+ExitDeep,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH,{{0,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH}},Plain);
+        for(float Sg:{-1.f,1.f})Box(P.Stone,NS1-30,NS1+30,Sg<0?ExitT-ExitHalf:ExitT+ExitHalf-36,Sg<0?ExitT-ExitHalf+36:ExitT+ExitHalf,Floor,Floor+PassH);
+        Box(P.Plaster,NS1-36,NS1-30,ExitT-ExitHalf+36,ExitT+ExitHalf-36,Floor+PassH-20,Floor+PassH);
+        for(int32 I=0;I<30;++I)
+        {
+            const float S=R.FRandRange(NS1+50,NS1+ExitDeep-20),H=R.FRandRange(25,70);
+            const float Z=Floor+FMath::Clamp((S-NS1)/250.f,.15f,1.f)*R.FRandRange(0,200);
+            TurnedBox(R.FRand()<.3f?P.Moss:P.Stone,FVector(S,R.FRandRange(ExitT-ExitHalf+30,ExitT+ExitHalf-30),Z+H*.5f),FVector(R.FRandRange(30,80),R.FRandRange(30,70),H),FRotator(R.FRandRange(-20,20),R.FRandRange(0,360),R.FRandRange(-20,20)));
+        }
+        Box(P.Block,NS1+40,NS1+70,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH);
+        // Beams across the vault.
+        for(float T:{-6150.f,-7150.f,-8000.f})Box(P.Stone,NS0,NS1,T-60,T+60,NTop-50,NTop);
+        // The piers, a torch on each toward the chamber's middle.
+        for(const FVector2D& Pr:SnakePiers)
+        {
+            Pier(P,Pr.X,Pr.Y,SnakePierHalf,Floor,NTop);
+            const bool Inward=Pr.X<66900;
+            if(FMath::Abs(Pr.X-66900)>100)Torch(P,Fires,0,Pr.X+(Inward?SnakePierHalf:-SnakePierHalf),Inward?1:-1,Pr.Y,Floor+210,3800,620);
+            else for(float Sg:{-1.f,1.f})Torch(P,Fires,1,Pr.Y+Sg*SnakePierHalf,Sg,Pr.X,Floor+210,3800,620);
+        }
+        // Serpent idols on plinths at the far wall, facing the way in; a brazier between them, a glyph panel over.
+        for(float Sg:{-1.f,1.f})
+        {
+            const float S=66900+Sg*300,T=NT0+90;
+            Box(P.Stone,S-45,S+45,T-45,T+45,Floor,Floor+85);Box(P.Stone,S-52,S+52,T-52,T+52,Floor+85,Floor+93);
+            Idols.Add({FVector(S,T,Floor+93),YawOf(0,1),20});
+        }
+        Brazier(P,Fires,66900,NT0+130,Floor);
+        Glyphs(P,R,1,NT0,1,66500,67300,Floor+330,Floor+620);
+        // Wall torches: both long walls, the far wall's corners, either side of the way in and the way on.
+        for(float T=-5900;T>NT0+150;T-=550)
+        {
+            Torch(P,Fires,0,NS0,1,T,Floor+230);
+            if(FMath::Abs(T-ExitT)>220)Torch(P,Fires,0,NS1,-1,T,Floor+230);
+        }
+        for(float S:{66150.f,67650.f})Torch(P,Fires,1,NT0,1,S,Floor+230);
+        for(float S:{DS0-260,DS1+260})Torch(P,Fires,1,NT1,-1,S,Floor+230);
+        for(float Sg:{-1.f,1.f})Torch(P,Fires,0,NS1,-1,ExitT+Sg*200,Floor+230);
+        // Fallen column drums, pots along the walls, old skulls.
+        Drum(P.Stone,{66080,-6900,Floor+30},{66140,-7010,Floor+30},30,12);
+        Drum(P.Stone,{67720,-6650,Floor},{67720,-6650,Floor+56},30,12);
+        Jar(NS0+45,NT1-80,Floor,false);Jar(NS0+45,NT0+60,Floor,true);Jar(NS1-45,NT0+60,Floor,false);Jar(NS1-45,-6250,Floor,true);
+        Jar(NS0+45,-7300,Floor,false);Jar(NS1-45,NT1-90,Floor,true);Jar(66550,NT0+45,Floor,false);
+        FRandomStream Bones(2026102102);
+        for(int32 I=0;I<5;++I)Skulls.Add({FVector(Bones.FRandRange(NS0+80,NS1-80),Bones.FRandRange(NT0+300,NT1-400),Floor+6),FRotator(Bones.FRandRange(-15,25),Bones.FRandRange(0,360),Bones.FRandRange(-80,80))});
     }
 
     // ---- Emit.
@@ -950,7 +1028,7 @@ void BuildChultTempleInterior(AActor* Owner)
         if(AClayJar* Pot=AClayJar::PlaceKind(World,J.bUrn?AClayUrn::StaticClass():ATempleJar::StaticClass(),G+AtV(J.At+FVector(0,0,1)),J.Yaw,J.Cigarettes))
         {Pot->SetIndoors();Pot->Tags.Add(TEXT("ChultTempleInteriorJar"));(J.bUrn?Built.Urns:Built.Jars)++;}
     // The skeletons (TempleSkeleton.h), once the floors' collision can be stood on.
-    {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid())SpawnTempleSkeletons(W.Get());},.5f,false);}
+    {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid()){SpawnTempleSkeletons(W.Get());SpawnTempleSnakes(W.Get());}},.5f,false);}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d idols=%d jars=%d urns=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
         Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Idols,Built.Jars,Built.Urns,Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }
@@ -993,7 +1071,9 @@ namespace
         Add(KS0-30,AxisT,Floor);Add(PS1-100,AxisT,Floor);Add(68600,AxisT,Floor);Add(RiftS1+100,AxisT,Floor);
         R.Last().bGapAfter=true;   // over the rift only by the rings
         Add(RiftS0-100,AxisT,Floor);Add((DS0+DS1)*.5f,AxisT,Floor);Add((DS0+DS1)*.5f,PT0+100,Floor);Add((DS0+DS1)*.5f,PT0-30,Floor);
-        for(float T=DT1-125;T>=ChokeT+150;T-=150)Add((DS0+DS1)*.5f,T,Floor);
+        for(float T=DT1-125;T>=DT0-100;T-=150)Add((DS0+DS1)*.5f,T,Floor);
+        // On through the snake chamber, round its middle pier, to the choked way on.
+        Add(66900,-6000,Floor);Add(67100,-6650,Floor);Add(67650,-7050,Floor);Add(67700,-7600,Floor);Add(67700,ExitT,Floor);Add(NS1-60,ExitT,Floor);
         return R;
     }
 }
@@ -1021,9 +1101,9 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
             {Fail(TEXT("route_blocked"),F);UE_LOG(LogTemp,Warning,TEXT("CHUCK_TEMPLE_INTERIOR_BLOCKED_BY %s %s"),*GetNameSafe(Hit.GetComponent()),*GetNameSafe(Hit.GetActor()));}
             Prev=Body;++Sweeps;
         }
-        // The choked arch is closed.
+        // The snake chamber's way on is choked.
         FHitResult Hit;++Sweeps;
-        if(!World->SweepSingleByChannel(Hit,WorldAt((DS0+DS1)*.5f,ChokeT+150,Floor+Half+4),WorldAt((DS0+DS1)*.5f,DT0+100,Floor+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("choke_open"),FVector(0,ChokeT,0));
+        if(!World->SweepSingleByChannel(Hit,WorldAt(NS1-60,ExitT,Floor+Half+4),WorldAt(NS1+ExitDeep-30,ExitT,Floor+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("choke_open"),FVector(NS1,ExitT,0));
     }
     // 2. Nothing of the exterior (masonry, floor, trunks) inside any space: spheres on a grid.
     {
@@ -1077,7 +1157,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         // Deaths in the pit, the hall, the corridor, the rift and the gallery.
         struct FMap{FVector F;ETempleInteriorSpawn Want;};
         const FMap Maps[]={{FVector(78000,1100,-1800),ETempleInteriorSpawn::Well},{FVector(78300,240,900),ETempleInteriorSpawn::Well},{FVector(75000,AxisT,Floor+40),ETempleInteriorSpawn::Hall},
-            {FVector(71300,AxisT,Floor+40),ETempleInteriorSpawn::Spikes},{FVector(67800,AxisT,Floor-500),ETempleInteriorSpawn::Piers},{FVector(66900,-3000,Floor+40),ETempleInteriorSpawn::Darts}};
+            {FVector(71300,AxisT,Floor+40),ETempleInteriorSpawn::Spikes},{FVector(67800,AxisT,Floor-500),ETempleInteriorSpawn::Piers},{FVector(66900,-3000,Floor+40),ETempleInteriorSpawn::Darts},{FVector(66900,-7000,Floor+40),ETempleInteriorSpawn::Snakes},{FVector(66900,-5400,Floor+40),ETempleInteriorSpawn::Snakes}};
         for(const FMap& M:Maps){FVector Back;if(!ChultTempleInteriorRespawn(WorldAt(M.F.X,M.F.Y,M.F.Z),Back)||FVector::Dist(Back,ChultTempleInteriorSpawn(M.Want))>1)Fail(TEXT("death_map"),M.F);}
         // Outside it a death is the far bank's as before.
         FVector Back;if(ChultTempleInteriorRespawn(WorldAt(70000,4000,40),Back)||ChultTempleInteriorRespawn(WorldAt(77300,0,1500+40),Back))Fail(TEXT("death_map_outside"),FVector::ZeroVector);
@@ -1159,7 +1239,9 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
         {TEXT("InteriorSlabPit"),FVector((DS0+DS1)*.5f+60,DT1-40,Floor+100),FVector((DS0+DS1)*.5f,PitG0-80,Floor-40)},
         {TEXT("InteriorRings"),FVector(RiftS1+420,RingT-330,Floor+150),FVector(RiftS0-60,RingT+60,RingZ+40)},
         {TEXT("InteriorDarts"),FVector((DS0+DS1)*.5f,DT1-60,Floor+110),FVector((DS0+DS1)*.5f,-3000,Floor+40)},
-        {TEXT("InteriorChoke"),FVector((DS0+DS1)*.5f,ChokeT+420,Floor+110),FVector((DS0+DS1)*.5f,ChokeT-200,Floor+120)}};
+        {TEXT("InteriorSnakeArch"),FVector((DS0+DS1)*.5f,ChokeT+420,Floor+110),FVector((DS0+DS1)*.5f,-6600,Floor+120)},
+        {TEXT("InteriorSnakes"),FVector(NS0+120,NT1-120,Floor+260),FVector(67300,-7700,Floor+40)},
+        {TEXT("InteriorSnakeIdols"),FVector(66420,-7350,Floor+110),FVector(66900,NT0,Floor+170)}};
     auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);if(auto* PC=Cast<APlayerController>(Chuck->GetController())){PC->SetViewTarget(Camera);PC->ConsoleCommand(TEXT("r.VSync 0"));PC->ConsoleCommand(TEXT("t.MaxFPS 0"));}
     // Under the camera while it looks: the light and fog follow the camera (ChultTemple.cpp), Chuck stays out of shot.
@@ -1410,12 +1492,12 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             }
             else if(Run->Sub==5)
             {
-                // On to the choked arch: pushing into the rubble gets him no further.
-                Steer(SM,ChokeT-400);
-                if(Now-Run->LastJump>6)
+                // On through the arch into the snake chamber (it was choked until October 21).
+                Chuck->SetRunHeld(true);Steer(SM,DT0-300);
+                if(P.Y<DT0-150||Now-Run->LastJump>10)
                 {
                     Done=true;Stop();
-                    Run->bPass=Run->Timed==0&&Run->bHit&&P.Y>ChokeT-75&&NewDeaths==0;
+                    Run->bPass=Run->Timed==0&&Run->bHit&&P.Y<DT0-150&&NewDeaths==0;
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_INTERIOR_DARTS lines=%d timed_hits=%d deliberate_hit=%d fired=%d furthest_t=%.0f sanity=%d"),Run->Band,Run->Timed,Run->bHit,Traps->DartsFired,P.Y,Chuck->GetSanity());
                 }
             }

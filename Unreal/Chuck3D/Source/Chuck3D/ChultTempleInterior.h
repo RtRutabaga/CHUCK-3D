@@ -12,8 +12,8 @@ class AChuckCharacter;
 // above the temple plaza.
 
 // The spaces a death returns him to the start of (each has a Dev Checkpoint).
-enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts };
-constexpr int32 TempleInteriorSpawnCount = 5;
+enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes };
+constexpr int32 TempleInteriorSpawnCount = 6;
 FVector ChultTempleInteriorSpawn(ETempleInteriorSpawn Spawn);   // world, capsule centre
 float ChultTempleInteriorSpawnYaw(ETempleInteriorSpawn Spawn);
 const TCHAR* ChultTempleInteriorSpawnName(ETempleInteriorSpawn Spawn);
@@ -48,6 +48,18 @@ struct FTempleSkeletonPost
     const TCHAR* Space = TEXT("");
 };
 void ChultTempleSkeletonPosts(TArray<FTempleSkeletonPost>& Out);
+// The snake chamber's twenty snakes (October 21; docs/CHULT-TEMPLE-SNAKES.md): each lies coiled at its
+// post in the lanes round the piers; some wander their lane. All keep to the chamber (Leash, frame S/T).
+struct FTempleSnakePost
+{
+    FVector Feet = FVector::ZeroVector;   // world, the coil's centre on the floor
+    float Yaw = 0;
+    bool bWander = false;
+    FBox2D Leash = FBox2D(ForceInit);
+};
+void ChultTempleSnakePosts(TArray<FTempleSnakePost>& Out);
+// Frame (S,T) rectangles of the chamber's piers, idol plinths and brazier (the snakes steer round them).
+void ChultTempleSnakeObstacles(TArray<FBox2D>& Out);
 // World position to the canyon frame (S, T, Z above the plaza), and its floor height (world Z) in the halls.
 FVector ChultTempleInteriorFrameOf(const FVector& World);
 FVector ChultTempleInteriorWorldOf(const FVector& Frame);

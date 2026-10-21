@@ -12,7 +12,7 @@ Read-only sources: `docs/development/PHASE-6.md` and the temple maps in `chuck/c
 | 2 Spike corridor | Long connector, five spike bands, five skeletons | The spike corridor: five timed spike bands |
 | 3 Skeleton hall | Broad, twelve durable skeletons round monumental piers | The pier hall, with an Astral rift crossed by collapsing slabs or hanging rings |
 | 4 Dart corridor | Long connector turning west, eight dart walls | The dart gallery, turning west: eight serpent-mouth launchers |
-| 5 Snake chamber | Twenty one-hit snakes | Next milestone |
+| 5 Snake chamber | Twenty one-hit snakes | Built October 21: the snake chamber ([CHULT-TEMPLE-SNAKES.md](CHULT-TEMPLE-SNAKES.md)) |
 | 6 Astral wind | Very narrow, winding, Astral fall cuts needing committed jumps | Next milestone |
 | 7 Shrine hall | Twelve skeletons, guardian monument rows | Later |
 | 8 Gauntlet | Spike bands, darts and Astral cells together | Later |
@@ -38,7 +38,7 @@ Canyon frame as in [CHULT-TEMPLE.md](CHULT-TEMPLE.md): S toward the temple, T ac
 | Spike corridor (map 2) | S 69400–73400, T 900–1300 (40 × 4 m) | Five iron spike bands across the floor, each thrusting up for about a second in a 3 s cycle, alternating so the player stops between them |
 | Pier hall (map 3) | S 66340–69340, T −300–2500 (30 × 28 m), ceiling −660 (8 m) | Eight piers; an Astral rift (5.5 m since October 20) across the whole hall, crossed only by five hanging iron rings (brachiation) |
 | Dart gallery (map 4) | S 66720–67080, T −360 → −5160 (48 × 3.6 m), turning west | First a 2.7 m pit bridged by three cracked slabs that fall 0.6 s after he steps on each (run across); then eight serpent-mouth launchers alternating walls, each firing a dart across on its own rhythm with a click first; a dodge roll goes through a dart |
-| The way on | T −5160 | An arch choked by fallen masonry: the snake chamber's threshold, for the next milestone |
+| The way on | T −5160 | Since October 21 an open arch into the snake chamber (S 65900–67900, T −5560 → −8360); its own way on, an arch in its +S wall, is choked ([CHULT-TEMPLE-SNAKES.md](CHULT-TEMPLE-SNAKES.md)) |
 
 All of it is under the precinct or inside the temple's masonry. Underground ceilings stay at least 5.6 m below the plaza, under the trees' hidden trunk capsules and the plaza floor.
 
@@ -49,7 +49,7 @@ All of it is under the precinct or inside the temple's masonry. Underground ceil
 - **Respawn:** a death returns Chuck to the start of the space he died in: the well's gallery, the Great Hall, the spike corridor, the pier hall or the dart gallery. Each has a Dev Checkpoint.
 - **Light:** interiors are on lighting channel 1, lit only by their torches, as the exterior rooms are. While the camera is inside, the sky light dims and the jungle's height fog thins, so the dungeon's air is clear and dark.
 - **Music:** since October 20 the user's "temple" plays inside, from the cella down (music region 6); "Chult 3" stays the exterior's.
-- **Creatures:** since October 21 the skeletons: five in the spike corridor and twelve in the pier hall ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)). The snake chamber comes next.
+- **Creatures:** since October 21 the skeletons: five in the spike corridor and twelve in the pier hall ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)); and the snake chamber's twenty snakes ([CHULT-TEMPLE-SNAKES.md](CHULT-TEMPLE-SNAKES.md)).
 
 ## Integration with the exterior
 
@@ -103,7 +103,7 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 ## Next
 
 1. ~~Skeletons~~: done October 21 ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)).
-2. The snake chamber (map 5) beyond the choked arch, then the Astral wind (map 6), the shrine hall (map 7) and the gauntlet (map 8).
+2. ~~The snake chamber (map 5)~~: done October 21. Next the Astral wind (map 6) through the chamber's choked arch, the shrine hall (map 7) and the gauntlet (map 8).
 3. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
 4. A temple interior score, if the user supplies one ("Chult 3" plays for now).
 

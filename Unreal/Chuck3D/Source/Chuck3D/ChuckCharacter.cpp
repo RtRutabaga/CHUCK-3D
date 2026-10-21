@@ -7,6 +7,7 @@
 #include "ChultTempleInterior.h"
 #include "ChultRaptor.h"
 #include "TempleSkeleton.h"
+#include "TempleSnake.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockGameMode.h"
@@ -1702,6 +1703,10 @@ void AChuckCharacter::SlashHit()
         Raptor->TakeSlash(Swing);
         ++SlashRatHits;
     }
+    // The temple snakes: one scratch anywhere along one kills it (2026-10-21).
+    for (const TWeakObjectPtr<ATempleSnake>& Entry : ATempleSnake::All())
+        if (ATempleSnake* Snake = Entry.Get())
+            if (Snake->Scratch(Location, Ahead, SlashReach, Swing, true)) ++SlashRatHits;
     // The temple skeletons: a scratch at their shin bones (2026-10-21).
     for (const TWeakObjectPtr<ATempleSkeleton>& Entry : ATempleSkeleton::All())
     {
@@ -2111,6 +2116,10 @@ bool AChuckCharacter::LowTargetInReach() const
         const float Reach = static_cast<float>(To.Size2D()) - AEnemyRat::HitRadius;
         if (Reach <= SlashReach + 10.f && (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) >= .3f || Reach <= 5.f) && FMath::Abs(To.Z) < 45.f) return true;
     }
+    // The temple snakes lie on the floor: the low rake.
+    for (const TWeakObjectPtr<ATempleSnake>& Entry : ATempleSnake::All())
+        if (ATempleSnake* Snake = Entry.Get())
+            if (Snake->Scratch(Location, Ahead, SlashReach + 10.f, FVector::ZeroVector, false)) return true;
     return false;
 }
 const TCHAR* AChuckCharacter::GetSlashName() const

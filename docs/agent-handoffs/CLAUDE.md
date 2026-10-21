@@ -2,6 +2,27 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 21 — the snake chamber and its snakes (Claude)
+
+- **Request:** "Create and add the snakes enemies". Base `eb5fac8`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-SNAKES.md.
+- **Contract compatibility:**
+  - New: `SK_TempleSnake` on its own skeleton, posed at runtime by `UPoseableMeshComponent`. No change to Chuck's rig.
+  - `ETempleInteriorSpawn` gains `Snakes`; `TempleInteriorSpawnCount` is 6.
+  - `ChultTempleInterior.h` gains `FTempleSnakePost`, `ChultTempleSnakePosts` and `ChultTempleSnakeObstacles`.
+  - The `Darts` space now ends at the arch (T −5160); new spaces `SnakeArch`, `Snakes`, `SnakeExit`.
+  - The interior check's route goes on into the chamber; its choke check moved to the chamber's way on. The darts trial ends inside the chamber; the `InteriorChoke` still became three snake views.
+  - `ChuckCharacter::SlashHit` kills snakes and `LowTargetInReach` counts them. `DockMenu` has a 21st checkpoint; Verify-Menu has 21 points.
+  - Verify-Package interior patterns: `spaces=18`, `spawns=6`, plus the snake run.
+  - New LFS binaries: `/Game/Characters/Snake`, `SourceAssets/Enemies/Snake` (FBX and textures), 12 `SFX_Snake*` sounds and WAVs.
+- **Tools:** UE 5.7.4, Blender 4.5.14, Python 3.14.
+  - Blender: snake build ×4.
+  - Unreal: UnrealEditor-Cmd imports ×2, Build.bat ×8, uncooked runs ×7.
+  - Packaging: Build-Game -Package -SkipBaseAssets ×3 (the first two failed: the snake deadlock, then the menu's spawn check), Verify-Menu ×2, Promote-Build ×1.
+  - No downloads, no installations.
+
+Next part of the work can be done here.
+
 ## October 21 — temple skeletons (Claude)
 
 - **Request:** "create the skeleton enemies in temple, use free resources where helpful, make them look good and have realistic attack motions". Base `87c19bb`.

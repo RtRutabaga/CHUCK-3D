@@ -1,0 +1,89 @@
+{
+  "provenance": "Original deterministic synthetic snake sounds; Tools/gen_snake_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_SnakeHiss_00",
+      "file": "SFX_SnakeHiss_00.wav",
+      "duration": 1.718,
+      "sha256": "3017ff9468cffe4f8b857925ecf1bda32a55f67b3ce632088afc859eae48065f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeHiss_01",
+      "file": "SFX_SnakeHiss_01.wav",
+      "duration": 1.649,
+      "sha256": "ff26b5ff9ebdcac8a288108339a015de67c19698b587966d33d4a01272cdcb6b",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeHiss_02",
+      "file": "SFX_SnakeHiss_02.wav",
+      "duration": 1.725,
+      "sha256": "11cfa7a39008c947e4d5c03cc7f6eb1d9628f98d72e7ea3ed0c67cf311835b8e",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeStrike_00",
+      "file": "SFX_SnakeStrike_00.wav",
+      "duration": 1.15,
+      "sha256": "83371cc25b8ba2ac0637c85ad8464977078a5a7c4a756b6c91f6de7c7b214f5d",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeStrike_01",
+      "file": "SFX_SnakeStrike_01.wav",
+      "duration": 1.15,
+      "sha256": "62fea5c45db1ff2545b838fb9ba70124c98535899f5e1186c714338460736cbf",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeStrike_02",
+      "file": "SFX_SnakeStrike_02.wav",
+      "duration": 1.15,
+      "sha256": "949ce60ddc6c78ab5c80a7b8034df5d50a0ce9f00aeb18b7919cbcadde4b9a7a",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeSlither_00",
+      "file": "SFX_SnakeSlither_00.wav",
+      "duration": 1.201,
+      "sha256": "f24ad4b3078cf42bc36d32f46353fd2a2a2709a8f689127bdaf98ce00fa9e1e1",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeSlither_01",
+      "file": "SFX_SnakeSlither_01.wav",
+      "duration": 1.035,
+      "sha256": "8036ee848519a2ebe5bdf2277ccc338d8714e22da5916ababdb9451c43e4f867",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeSlither_02",
+      "file": "SFX_SnakeSlither_02.wav",
+      "duration": 1.049,
+      "sha256": "1f9f456078ca94fe3290b60b7b601c8259cbbfa8500d14893d5eef7e715594ea",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeSlither_03",
+      "file": "SFX_SnakeSlither_03.wav",
+      "duration": 1.089,
+      "sha256": "97d11db51b1375d9cee27e9b14ddab65a73f45ed49e8018017611f37e8b86948",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeDeath_00",
+      "file": "SFX_SnakeDeath_00.wav",
+      "duration": 2.5,
+      "sha256": "f712356b953d5fb7261aab3e40ff23bc311d3b0710e943936238a1aac267fb5c",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SnakeDeath_01",
+      "file": "SFX_SnakeDeath_01.wav",
+      "duration": 2.5,
+      "sha256": "5739364a1fd074c835659bd5449cb708548510443c0ff73bb1c1c3f6fe7fa009",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

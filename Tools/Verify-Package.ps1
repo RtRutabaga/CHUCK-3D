@@ -81,8 +81,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=15 .*spike_bands=5 launchers=8 slabs=3 grips=5 .*missing_assets=0 missing_sounds=0 ' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=5 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=18 .*spike_bands=5 launchers=8 slabs=3 grips=5 .*missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=6 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
@@ -269,6 +269,16 @@ if ($skeletonProcess.ExitCode -or !(Select-String -LiteralPath $skeletonLog -Pat
     !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETONS spawned=17 of=17 lying=11' -Quiet) -or
     !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_SPAWN .* clips=7 mesh=1 sounds=16' -Quiet)) {
     throw "Temple skeleton verification failed. Inspect $skeletonLog"
+}
+# The temple snakes (Claude, 2026-10-21; docs/CHULT-TEMPLE-SNAKES.md): twenty coiled in the snake chamber,
+# the chase and the crawl keeping to its track, a strike landing, a roll and a step aside beating it,
+# one scratch killing, the chamber keeping them.
+$snakeLog=Join-Path $evidence ('verify-snakes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$snakeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSnakeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$snakeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($snakeProcess.ExitCode -or !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKE_TEST_COMPLETE failures=0 trials=7' -Quiet) -or
+    !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKES spawned=20 of=20' -Quiet) -or
+    !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKE_SPAWN bones=33 .* sounds=12 mesh=1' -Quiet)) {
+    throw "Temple snake verification failed. Inspect $snakeLog"
 }
 # The canyon's broken rope bridge (Claude, 2026-10-14): the real character catches
 # the first surviving plank, brachiates plank to plank to the far bank and steps

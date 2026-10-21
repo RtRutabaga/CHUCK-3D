@@ -40,7 +40,7 @@ namespace
         {TEXT("ChultGiantCanopy"),TEXT("Chult Giant Canopy (dev)")},{TEXT("ChultDeepJungle"),TEXT("Chult Deep Jungle")},{TEXT("ChultTemple"),TEXT("Chult Temple")}};
     // The temple interior's spaces (2026-10-20), in a third column.
     const FChultPoint TemplePoints[]={{TEXT("ChultTempleWell"),TEXT("Temple Well")},{TEXT("ChultTempleHall"),TEXT("Temple Hall")},
-        {TEXT("ChultTempleSpikes"),TEXT("Temple Spikes")},{TEXT("ChultTemplePiers"),TEXT("Temple Piers")},{TEXT("ChultTempleDarts"),TEXT("Temple Darts")}};
+        {TEXT("ChultTempleSpikes"),TEXT("Temple Spikes")},{TEXT("ChultTemplePiers"),TEXT("Temple Piers")},{TEXT("ChultTempleDarts"),TEXT("Temple Darts")},{TEXT("ChultTempleSnakes"),TEXT("Temple Snakes")}};
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
     {
         Yaw=-1000;
