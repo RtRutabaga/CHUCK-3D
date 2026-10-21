@@ -39,7 +39,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Checks:**
   - Uncooked `-ChuckSkeletonCapture`: ten trials pass (`Local/skeleton-test.log`), with frames in `Saved/Screenshots/WindowsEditor/Skeleton`.
   - Package `Builds/TempleSkeletonCandidate`: Verify-Package **182/182** (`Local/verify-package-20261021-094228.log`). That includes the new skeleton run, `failures=0 trials=10` (`Local/verify-skeletons-20261021-102525.log`). The interior review is unchanged (`failures=0`); skeletons stay out of every other automated run.
-- **Launcher:** see the agent handoff.
+- **Launcher:** promoted as `TempleSkeletons` (`Local/temple-skeletons-promotion.log`). The receipt names **2f06669**, launcher check passes, two backups kept. Five older candidate folders from earlier sessions remain in `Builds/`. Try **Dev Checkpoints → Temple Spikes / Temple Piers**.
 - **Limits:**
   - No person has played against them.
   - The sounds have not been listened to.
