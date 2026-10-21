@@ -40,7 +40,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - **Two failures fixed on the way:**
     - A packaged run deadlocked a snake whose winding approach left its S's base out of range; it now rears when its snout is on him.
     - The menu test caught the first spawn, 2 m inside the chamber, starting a chase at once. It moved into the gallery.
-- **Launcher:** see the agent handoff.
+- **Launcher:** promoted as `TempleSnakes` (`Local/temple-snakes-promotion.log`). The receipt names **9499ca8**, two backups kept. Try **Dev Checkpoints → Temple Snakes**.
 - **Limits:**
   - No person has played it.
   - The sounds have not been listened to.
