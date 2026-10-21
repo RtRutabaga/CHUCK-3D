@@ -1,53 +1,101 @@
 {
-    "provider":  "CMU Graphics Lab Motion Capture Database, Motionbuilder-friendly BVH release 2010",
-    "takes":  [
-                  {
-                      "file":  "111_28.bvh",
-                      "description":  "Standing still",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/111/111_28.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "B44410BE23D5895756B97960E0E40E78365F71A00CA4400EDEC6EA806D1A085D",
-                      "bytes":  1457989
-                  },
-                  {
-                      "file":  "77_02.bvh",
-                      "description":  "standing",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/077/77_02.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "D6EEF8F4AB182BEF1BB5DB0C46CBEC0261B81A63CE1720B8A19777B7E79887A9",
-                      "bytes":  705155
-                  },
-                  {
-                      "file":  "18_08.bvh",
-                      "description":  "conversation - explain with hand gestures",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/018/18_08.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "B57E6BA15CF2BDE4E6E4233DA53425DDE6D91952FB2BFF17A89C5FCE18A1A0CE",
-                      "bytes":  1567012
-                  },
-                  {
-                      "file":  "79_73.bvh",
-                      "description":  "scared",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/079/79_73.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "78F51B188603E2EB33212929FA67C43D68B99209B4D70515AEAA7DCDE56F9230",
-                      "bytes":  672852
-                  },
-                  {
-                      "file":  "137_33.bvh",
-                      "description":  "Old Man Walk",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_33.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "2FF32B96491CDEE7A3FDF6686B648A507C60D893FCB0213B933FDFDEA5A82CA0",
-                      "bytes":  2329146
-                  },
-                  {
-                      "file":  "113_08.bvh",
-                      "description":  "Lay down and get up",
-                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/113/113_08.bvh",
-                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
-                      "sha256":  "4A5B6784C5D8074E503CBDD64987C4899BC433572E51D77F1D14BA321CF16A94",
-                      "bytes":  1404746
-                  }
-              ]
+  "provider": "CMU Graphics Lab Motion Capture Database, Motionbuilder-friendly BVH release 2010",
+  "takes": [
+    {
+      "file": "111_28.bvh",
+      "description": "Standing still",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/111/111_28.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "B44410BE23D5895756B97960E0E40E78365F71A00CA4400EDEC6EA806D1A085D",
+      "bytes": 1457989
+    },
+    {
+      "file": "77_02.bvh",
+      "description": "standing",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/077/77_02.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "D6EEF8F4AB182BEF1BB5DB0C46CBEC0261B81A63CE1720B8A19777B7E79887A9",
+      "bytes": 705155
+    },
+    {
+      "file": "18_08.bvh",
+      "description": "conversation - explain with hand gestures",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/018/18_08.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "B57E6BA15CF2BDE4E6E4233DA53425DDE6D91952FB2BFF17A89C5FCE18A1A0CE",
+      "bytes": 1567012
+    },
+    {
+      "file": "79_73.bvh",
+      "description": "scared",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/079/79_73.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "78F51B188603E2EB33212929FA67C43D68B99209B4D70515AEAA7DCDE56F9230",
+      "bytes": 672852
+    },
+    {
+      "file": "137_33.bvh",
+      "description": "Old Man Walk",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_33.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "2FF32B96491CDEE7A3FDF6686B648A507C60D893FCB0213B933FDFDEA5A82CA0",
+      "bytes": 2329146
+    },
+    {
+      "file": "113_08.bvh",
+      "description": "Lay down and get up",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/113/113_08.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "4A5B6784C5D8074E503CBDD64987C4899BC433572E51D77F1D14BA321CF16A94",
+      "bytes": 1404746
+    },
+    {
+      "file": "140_06.bvh",
+      "description": "Idle",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/140/140_06.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "A4035318459AC8313C822FA8B6FBFC9FB873308A052EA410A67B26C679B16407",
+      "bytes": 2692800
+    },
+    {
+      "file": "74_01.bvh",
+      "description": "stiff walk",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/074/74_01.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "3161B093CAC595AEF44764F51029D072D762B6515726E04859F2520D00EE09B3",
+      "bytes": 354493
+    },
+    {
+      "file": "74_03.bvh",
+      "description": "kick",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/074/74_03.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "1FC940453860B15DE51A6841A461D6CCD02B9EDD7A5DB07442DE2A04FE13443C",
+      "bytes": 302921
+    },
+    {
+      "file": "139_06.bvh",
+      "description": "Poking Around On The Ground",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/139/139_06.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "177C0BE505AF13E40D787A948E19E85DC38B9D51D562AB7A29923072D50ECEA8",
+      "bytes": 1040522
+    },
+    {
+      "file": "76_05.bvh",
+      "description": "swatting at pesky bug",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/076/76_05.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "A2E47B6B296D3F2004E20CFA898F806FBA989684547DE5072432F7199A4F2039",
+      "bytes": 666021
+    },
+    {
+      "file": "140_08.bvh",
+      "description": "Get Up From Ground Laying on Back",
+      "source": "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/140/140_08.bvh",
+      "license": "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+      "sha256": "70E80D6DA7ACBBF840EEB0B149715E5668DFF0D18B15168D2A1AD82D3DE8D30C",
+      "bytes": 679448
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 #include "ChultTempleInterior.h"
 #include "ChultTempleTraps.h"
+#include "TempleSkeleton.h"
 #include "ChultTemple.h"
 #include "ChultCanyon.h"
 #include "ChultLanding.h"
@@ -497,6 +498,47 @@ void ChultTempleInteriorCutsAt(float Z,TArray<FBox2D>& Out)
 bool ChultTempleInteriorCutsGround(float S,float T){return S>WellS0-120&&S<WellS1+120&&T>WellT0-120&&T<WellT1+120;}
 
 // ---------------------------------------------------------------- build
+FVector ChultTempleInteriorFrameOf(const FVector& World){return WorldFrame(World);}
+FVector ChultTempleInteriorWorldOf(const FVector& Frame){return WorldAt(Frame.X,Frame.Y,Frame.Z);}
+float ChultTempleInteriorFloorZ(){return static_cast<float>(WorldAt(HallS0,AxisT,Floor).Z);}
+
+void ChultTempleSkeletonPosts(TArray<FTempleSkeletonPost>& Out)
+{
+    Out.Reset();
+    auto Post=[&](float S,float T,float DS,float DT,bool bDormant,const FBox2D& Leash,const TCHAR* Space)
+    {
+        FTempleSkeletonPost P;P.Feet=WorldAt(S,T,Floor);P.Yaw=YawOf(DS,DT);P.bDormant=bDormant;P.Leash=Leash;P.Space=Space;Out.Add(P);
+    };
+    // The spike corridor: one in each gap after the first band (the entry gap holds the respawn),
+    // lying along a wall, the last on its feet by the door into the pier hall. Kept 30 cm off the
+    // bands' edges and the walls (the leash holds the capsule's centre: its body is 34 cm round).
+    const float In=64;
+    for(int32 B=0;B+1<UE_ARRAY_COUNT(SpikeS);++B)
+    {
+        const float S0=SpikeS[B+1]+SpikeHalfDepth,S1=SpikeS[B]-SpikeHalfDepth;
+        Post((S0+S1)*.5f+(B%2?60:-60),B%2?KT0+70:KT1-70,B%2?1:-1,0,true,FBox2D(FVector2D(S0+In,KT0+In),FVector2D(S1-In,KT1-In)),TEXT("Spikes"));
+    }
+    {
+        const float S0=KS0,S1=SpikeS[UE_ARRAY_COUNT(SpikeS)-1]-SpikeHalfDepth;
+        Post((S0+S1)*.5f+40,AxisT+90,1,0,false,FBox2D(FVector2D(S0+In,KT0+In),FVector2D(S1-In,KT1-In)),TEXT("Spikes"));
+    }
+    // The pier hall: seven before the rift (from 5 m of the respawn by its door), five beyond it.
+    // Each side's leash stops 60 cm short of the rift's lip.
+    const FBox2D Near(FVector2D(RiftS1+60,PT0+40),FVector2D(PS1-40,PT1-40)),Far(FVector2D(PS0+40,PT0+40),FVector2D(RiftS0-60,PT1-40));
+    Post(68700,2250,-1,-1,true,Near,TEXT("Piers"));     // by the wall the rings hang along
+    Post(68250,2350,-1,-.3f,false,Near,TEXT("Piers"));  // before the first ring, watching them
+    Post(68250,1150,1,0,false,Near,TEXT("Piers"));      // on the axis, before the lip
+    Post(68650,1100,0,1,true,Near,TEXT("Piers"));
+    Post(68700,0,-1,1,true,Near,TEXT("Piers"));
+    Post(68200,-120,1,.5f,false,Near,TEXT("Piers"));
+    Post(69050,-150,0,1,true,Near,TEXT("Piers"));
+    Post(66900,2250,1,-1,true,Far,TEXT("Piers"));       // where he steps down off the last ring
+    Post(67000,1100,1,.3f,false,Far,TEXT("Piers"));
+    Post(66550,1150,0,-1,true,Far,TEXT("Piers"));
+    Post(66900,60,1,-.6f,false,Far,TEXT("Piers"));      // before the way on
+    Post(67250,-120,-1,1,true,Far,TEXT("Piers"));
+}
+
 void BuildChultTempleInterior(AActor* Owner)
 {
     const double Started=FPlatformTime::Seconds();const FVector G=AChultLanding::FloorOrigin();UWorld* World=Owner->GetWorld();
@@ -907,6 +949,8 @@ void BuildChultTempleInterior(AActor* Owner)
     for(const FJarSpot& J:Jars)
         if(AClayJar* Pot=AClayJar::PlaceKind(World,J.bUrn?AClayUrn::StaticClass():ATempleJar::StaticClass(),G+AtV(J.At+FVector(0,0,1)),J.Yaw,J.Cigarettes))
         {Pot->SetIndoors();Pot->Tags.Add(TEXT("ChultTempleInteriorJar"));(J.bUrn?Built.Urns:Built.Jars)++;}
+    // The skeletons (TempleSkeleton.h), once the floors' collision can be stood on.
+    {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid())SpawnTempleSkeletons(W.Get());},.5f,false);}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d idols=%d jars=%d urns=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
         Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Idols,Built.Jars,Built.Urns,Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }

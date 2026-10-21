@@ -1,0 +1,117 @@
+{
+  "provenance": "Original deterministic synthetic skeleton sounds; Tools/gen_skeleton_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_SkeletonStep_00",
+      "file": "SFX_SkeletonStep_00.wav",
+      "duration": 1.0,
+      "sha256": "a461f977b155aa8ff475740b1abfdc80501e6a405b4115dcaf5e60e8ae2d8b30",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonStep_01",
+      "file": "SFX_SkeletonStep_01.wav",
+      "duration": 1.0,
+      "sha256": "be16a4b5ff36985849a0d386302c7fc7837613f153cb560da663b315e5dc7eba",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonStep_02",
+      "file": "SFX_SkeletonStep_02.wav",
+      "duration": 1.0,
+      "sha256": "224a409479ecd99725903fe458c6b3c3e2e9c7fbcf16c2da989dd145ddd751c3",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonStep_03",
+      "file": "SFX_SkeletonStep_03.wav",
+      "duration": 1.0,
+      "sha256": "c7ca82336c3c6cf59c3561e5453607e4839dcbb0e188b1d98b16afb4dee3daea",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonRattle_00",
+      "file": "SFX_SkeletonRattle_00.wav",
+      "duration": 1.45,
+      "sha256": "0eb84a3d720a1def3e163ad9395dd2d7b5ccb88a7802bd647527891a2800dfb1",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonRattle_01",
+      "file": "SFX_SkeletonRattle_01.wav",
+      "duration": 1.45,
+      "sha256": "543caf483e6dfa27c2e3291ff364822026fe956da606cfd87d87fe2c399298db",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonSwing_00",
+      "file": "SFX_SkeletonSwing_00.wav",
+      "duration": 0.82,
+      "sha256": "7f8ea2316d2c6cf1cbc62a5a1d4b2b20571971e6c3d24b2be279095f95bfd27f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonSwing_01",
+      "file": "SFX_SkeletonSwing_01.wav",
+      "duration": 0.82,
+      "sha256": "5bf78ea82a6479290b3c380469258981394a7d261fcf61f6597ca055fa62e18c",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonSwing_02",
+      "file": "SFX_SkeletonSwing_02.wav",
+      "duration": 0.82,
+      "sha256": "1627982f453a917cf8483970b350564d2342cca199ab9e9c28d2df80513acbfc",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonHit_00",
+      "file": "SFX_SkeletonHit_00.wav",
+      "duration": 1.05,
+      "sha256": "245b8e66c3bb979d8af44128d2ae27d965f65263a9a86271c3fc9eb6940c1afb",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonHit_01",
+      "file": "SFX_SkeletonHit_01.wav",
+      "duration": 1.05,
+      "sha256": "35c8c6275058e30cd192f9d74e54275b6c533c8bd751d6d2dde7c4d34e99aafc",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonHit_02",
+      "file": "SFX_SkeletonHit_02.wav",
+      "duration": 1.05,
+      "sha256": "79634aced886a21b829584a6eed4156706750dd72a72dd3e222900ec4869bbab",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonCollapse_00",
+      "file": "SFX_SkeletonCollapse_00.wav",
+      "duration": 2.8,
+      "sha256": "20050615bb6bfa74afe6203ac52cd56f2f961c3d3b1f4b1ed6dc4fcab9e4b133",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonCollapse_01",
+      "file": "SFX_SkeletonCollapse_01.wav",
+      "duration": 2.8,
+      "sha256": "bbcf8e7724223449c44df959e6ce2c4cc4877e5a71cf9b360055e93f11c20cf7",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonRise_00",
+      "file": "SFX_SkeletonRise_00.wav",
+      "duration": 2.7,
+      "sha256": "b1327cfa3d028ca4bfe795631f08aa3395d0e86861e4564158a97d1e97420898",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SkeletonRise_01",
+      "file": "SFX_SkeletonRise_01.wav",
+      "duration": 2.7,
+      "sha256": "cbf639eb4a6ad37c57aa0ea664a370d91b50dec0c59f68a6d6948730bdea7716",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

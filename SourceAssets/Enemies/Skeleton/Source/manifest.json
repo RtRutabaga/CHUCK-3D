@@ -1,0 +1,15 @@
+{
+  "file": "skeleton_realistic.blend",
+  "title": "Skeleton - Realistic (collection of the Human Base Meshes bundle)",
+  "author": "Blender Studio and community contributions; skeleton originally contributed by 1d_inc, cleaned up and UV-unwrapped by Julien Kaspar",
+  "license": "CC0 1.0 (as listed for the bundle on blender.org's asset-bundle page)",
+  "page": "https://www.blender.org/download/demo-files/  (Asset Bundles: Human Base Meshes v1.4.1)",
+  "download": "https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip",
+  "bundle_bytes": 50643039,
+  "bundle_sha256": "811f43accbb31a88266d932f8f5563b2d13586fca0ba2693aad1f5fe582b3515",
+  "downloaded": "2026-10-21, with the user's approval",
+  "extracted_by": "Tools/build_temple_skeleton.py --extract <bundle>/human_base_meshes_bundle.blend (the 'Skeleton - Realistic' collection only, written unmodified)",
+  "sha256": "c7abd5965d8818bb13c56a88daee13aa422060861e0ce2c22b0f8721189024cf",
+  "contents": "135 bone pieces in an FK hierarchy (pivots on the joints), each with its own UVs and mirror/subdivision modifiers; no materials or textures",
+  "modified": false
+}

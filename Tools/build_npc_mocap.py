@@ -29,6 +29,10 @@ RIG_FBX = ROOT / 'SourceAssets/NPCs/Humans/DockWorker/SK_DockWorker.fbx'
 FPS = 30
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 REVIEW = argv[argv.index('--review') + 1] if '--review' in argv else None
+# Tools/build_temple_skeleton.py imports this module and points these at its own rig and folder.
+PREFIX = 'AS_Human_'
+GROUND = ()      # bones whose lowest point over a clip is put back at their rest height (takes whose T-pose stood higher)
+AFTER = None     # called as AFTER(clip, rig, frames) while the clip is on the rig (measurements)
 LOOP = 30            # frames blended across the loop seam (1 s)
 CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to keep or None, loops)
     'StandHip': ('111_28', 1.0, None, True),     # weight on one leg, a hand to the hip
@@ -193,7 +197,7 @@ def retarget(rig, clip, take, skip, keep, loops=True):
     # Keyframe the rig: world rotations -> each bone's own (basis) rotation.
     _, qobj, sobj = rig.matrix_world.decompose()
     rig.animation_data_create()
-    action = bpy.data.actions.new(f'AS_Human_{clip}'); rig.animation_data.action = action
+    action = bpy.data.actions.new(f'{PREFIX}{clip}'); rig.animation_data.action = action
     for p in rig.pose.bones:
         p.rotation_mode = 'QUATERNION'
     for i, (pose, hips) in enumerate(looped):
@@ -211,20 +215,37 @@ def retarget(rig, clip, take, skip, keep, loops=True):
             p.rotation_quaternion = basis
             p.keyframe_insert('rotation_quaternion', frame=i + 1)
     scene.frame_start, scene.frame_end = 1, len(looped)
+    if GROUND:
+        mw = rig.matrix_world
+        lows = []
+        for i in range(len(looped)):
+            scene.frame_set(i + 1)
+            lows.append(min((mw @ rig.pose.bones[b].head).z for b in GROUND))
+        low = min(lows)
+        rest = min((mw @ rig.data.bones[b].head_local).z for b in GROUND)
+        if abs(rest - low) > .005:
+            root = next(p for p in rig.pose.bones if not p.parent)
+            shift = root.bone.matrix_local.to_quaternion().inverted() @ (qobj.inverted() @ Vector((0, 0, (rest - low) / sobj.z)))
+            for fc in action.fcurves:
+                if fc.data_path == f'pose.bones["{root.name}"].location':
+                    for k in fc.keyframe_points:
+                        k.co[1] += shift[fc.array_index]; k.handle_left[1] += shift[fc.array_index]; k.handle_right[1] += shift[fc.array_index]
+            print('CHUCK_CLIP_GROUNDED', clip, f'shift_cm={(rest - low) * 100:.1f}')
     OUT.mkdir(parents=True, exist_ok=True)
     # Exported with the worker's skinned meshes: without a skin there is no bind
     # pose and importers take the pose at export time as the rest.
     bpy.ops.object.select_all(action='DESELECT')
     for o in [rig] + [c for c in rig.children if c.type == 'MESH']: o.select_set(True)
     bpy.context.view_layer.objects.active = rig
-    path = OUT / f'AS_Human_{clip}.fbx'
+    path = OUT / f'{PREFIX}{clip}.fbx'
     bpy.ops.export_scene.fbx(filepath=str(path), use_selection=True, object_types={'ARMATURE', 'MESH'}, **FBX)
     if REVIEW: review(clip, len(looped))
+    if AFTER: AFTER(clip, rig, len(looped))
     rig.animation_data.action = None
     for p in rig.pose.bones:
         p.rotation_quaternion = Quaternion(); p.location = Vector()
     print('CHUCK_CLIP', clip, take, f'frames={len(looped)}', f'seconds={len(looped) / FPS:.1f}', f'scale={scale:.4f}')
-    return {'fbx': f'Anim/AS_Human_{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS, 'loops': bool(loops), 'speed_cm_s': round(speed, 1)}
+    return {'fbx': f'Anim/{PREFIX}{clip}.fbx', 'take': take, 'frames': len(looped), 'fps': FPS, 'loops': bool(loops), 'speed_cm_s': round(speed, 1)}
 
 
 def review(clip, frames):
@@ -241,11 +262,13 @@ def review(clip, frames):
         s.frame_set(f); s.render.filepath = os.path.join(REVIEW, f'{clip}_{k}.png'); bpy.ops.render.render(write_still=True)
 
 
-clear()
-rig = load_rig()
-bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = FPS, 1.   # after the import, which sets the file's rate
-manifest = {'generator': 'Tools/build_npc_mocap.py', 'source': 'SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)', 'clips': {}}
-for clip, (take, skip, keep, loops) in CLIPS.items():
-    manifest['clips'][clip] = retarget(rig, clip, take, skip, keep, loops)
-(OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
-print('CHUCK_CLIPS_READY', sorted(manifest['clips']))
+
+if __name__ == '__main__':
+    clear()
+    rig = load_rig()
+    bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = FPS, 1.   # after the import, which sets the file's rate
+    manifest = {'generator': 'Tools/build_npc_mocap.py', 'source': 'SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)', 'clips': {}}
+    for clip, (take, skip, keep, loops) in CLIPS.items():
+        manifest['clips'][clip] = retarget(rig, clip, take, skip, keep, loops)
+    (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
+    print('CHUCK_CLIPS_READY', sorted(manifest['clips']))

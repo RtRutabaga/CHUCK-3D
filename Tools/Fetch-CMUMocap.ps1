@@ -17,7 +17,12 @@ $takes=[ordered]@{
     # The sewer zombie (user 2026-10-03): standing, its shamble, and its collapse. Tried and
     # dropped for it: 104_41 "ZombieWalk" (arms held out, the film cliche), 91_24 "HurtLegWalk"
     # (upright, a 6 s cycle), 104_13 "StumbleWalk" (acrobatic), 90_16 "fall on face" (a dive).
-    '137_33'='Old Man Walk'; '113_08'='Lay down and get up'
+    '137_33'='Old Man Walk'; '113_08'='Lay down and get up';
+    # The temple skeletons (Claude, 2026-10-21; Tools/build_temple_skeleton.py). Also tried there and
+    # dropped: 139_29/31 "Sneaking" (staggered), 136_09 "Walk Crouched" (too low), 76_01/02 punches (high,
+    # over the rat), 139_07, 74_04/05 (shorter kicks), 56_02 "smash against wall", 139_16 "Get Up".
+    '140_06'='Idle'; '74_01'='stiff walk'; '74_03'='kick'; '139_06'='Poking Around On The Ground';
+    '76_05'='swatting at pesky bug'; '140_08'='Get Up From Ground Laying on Back'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

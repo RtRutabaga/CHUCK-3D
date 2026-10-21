@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "TempleSkeleton.h"
 #include "ChultLanding.h"
 #include "ChultBridge.h"
 #include "ChultTemple.h"
@@ -688,6 +689,13 @@ void ADockGameMode::StartPlay()
         StartFromMenu(TEXT("Chult"));
         FTimerHandle RaptorCheck;
         World->GetTimerManager().SetTimer(RaptorCheck,[World](){StartChultRaptorReview(World);},4.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSkeletonTest"))||FParse::Param(FCommandLine::Get(),TEXT("ChuckSkeletonCapture")))
+    {
+        // Claude's temple skeletons (TempleSkeleton.h): Chult, then the interior's skeletons once spawned.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle SkeletonCheck;
+        World->GetTimerManager().SetTimer(SkeletonCheck,[World](){StartTempleSkeletonReview(World);},5.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckRiverZombieTest")))
     {

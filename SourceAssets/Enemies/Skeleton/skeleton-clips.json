@@ -1,0 +1,87 @@
+{
+ "generator": "Tools/build_temple_skeleton.py",
+ "source": "SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)",
+ "clips": {
+  "Idle": {
+   "fbx": "Anim/AS_Skeleton_Idle.fbx",
+   "take": "140_06",
+   "frames": 151,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 0.0,
+   "seconds": 5.0333
+  },
+  "Walk": {
+   "fbx": "Anim/AS_Skeleton_Walk.fbx",
+   "take": "74_01",
+   "frames": 84,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 87.3,
+   "seconds": 2.8
+  },
+  "Kick": {
+   "fbx": "Anim/AS_Skeleton_Kick.fbx",
+   "take": "74_03",
+   "frames": 35,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 1.1667,
+   "strike": 0.4667,
+   "reach_cm": 77.8324,
+   "height_cm": 53.2038,
+   "side_cm": -0.5221,
+   "aim_deg": -0.3843,
+   "effector": "ball_r"
+  },
+  "Grab": {
+   "fbx": "Anim/AS_Skeleton_Grab.fbx",
+   "take": "139_06",
+   "frames": 58,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 1.9333,
+   "strike": 1.0,
+   "reach_cm": 77.4935,
+   "height_cm": 23.0444,
+   "side_cm": -23.7729,
+   "aim_deg": -17.0546,
+   "effector": "middle_03_r"
+  },
+  "Swat": {
+   "fbx": "Anim/AS_Skeleton_Swat.fbx",
+   "take": "76_05",
+   "frames": 55,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 1.8333,
+   "strike": 1.2,
+   "reach_cm": 14.6811,
+   "height_cm": 29.6638,
+   "side_cm": 15.2923,
+   "aim_deg": 46.1682,
+   "effector": "middle_03_l"
+  },
+  "Rise": {
+   "fbx": "Anim/AS_Skeleton_Rise.fbx",
+   "take": "140_08",
+   "frames": 127,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 4.2333
+  },
+  "Collapse": {
+   "fbx": "Anim/AS_Skeleton_Collapse.fbx",
+   "take": "113_08",
+   "frames": 136,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 4.5333
+  }
+ }
+}

@@ -49,7 +49,7 @@ All of it is under the precinct or inside the temple's masonry. Underground ceil
 - **Respawn:** a death returns Chuck to the start of the space he died in: the well's gallery, the Great Hall, the spike corridor, the pier hall or the dart gallery. Each has a Dev Checkpoint.
 - **Light:** interiors are on lighting channel 1, lit only by their torches, as the exterior rooms are. While the camera is inside, the sky light dims and the jungle's height fog thins, so the dungeon's air is clear and dark.
 - **Music:** since October 20 the user's "temple" plays inside, from the cella down (music region 6); "Chult 3" stays the exterior's.
-- **Creatures:** none yet. Skeletons (pier hall, spike corridor) and the snake chamber come next.
+- **Creatures:** since October 21 the skeletons: five in the spike corridor and twelve in the pier hall ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)). The snake chamber comes next.
 
 ## Integration with the exterior
 
@@ -102,7 +102,7 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 
 ## Next
 
-1. Skeletons (the 2D game's durable primary enemy, first seen in the temple): a creature and its animation (Claude), then placed in the spike corridor and the pier hall's lanes.
+1. ~~Skeletons~~: done October 21 ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)).
 2. The snake chamber (map 5) beyond the choked arch, then the Astral wind (map 6), the shrine hall (map 7) and the gauntlet (map 8).
 3. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
 4. A temple interior score, if the user supplies one ("Chult 3" plays for now).

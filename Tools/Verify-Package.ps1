@@ -260,6 +260,16 @@ if ($raptorProcess.ExitCode -or !(Select-String -LiteralPath $raptorLog -Pattern
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult raptor verification failed. Inspect $raptorLog"
 }
+# The temple skeletons (Claude, 2026-10-21; docs/CHULT-TEMPLE-SKELETONS.md): the seventeen posts,
+# waking and the chase, each attack landing by its bones, a step back and a roll beating the kick,
+# a corridor skeleton kept to its gap, none reaching him on the rings, ten scratches and the fall.
+$skeletonLog=Join-Path $evidence ('verify-skeletons-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$skeletonProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSkeletonTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$skeletonLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if ($skeletonProcess.ExitCode -or !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_TEST_COMPLETE failures=0 trials=10' -Quiet) -or
+    !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETONS spawned=17 of=17 lying=11' -Quiet) -or
+    !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_SPAWN .* clips=7 mesh=1 sounds=16' -Quiet)) {
+    throw "Temple skeleton verification failed. Inspect $skeletonLog"
+}
 # The canyon's broken rope bridge (Claude, 2026-10-14): the real character catches
 # the first surviving plank, brachiates plank to plank to the far bank and steps
 # down, comes back steering with the stick, lets go over the gorge and returns

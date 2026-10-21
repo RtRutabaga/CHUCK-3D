@@ -6,6 +6,7 @@
 #include "ChultWreck.h"
 #include "ChultTempleInterior.h"
 #include "ChultRaptor.h"
+#include "TempleSkeleton.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockGameMode.h"
@@ -1699,6 +1700,19 @@ void AChuckCharacter::SlashHit()
         if (Reach > SlashReach || FMath::Abs(RaptorFeet - Feet) > 45.f) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
         Raptor->TakeSlash(Swing);
+        ++SlashRatHits;
+    }
+    // The temple skeletons: a scratch at their shin bones (2026-10-21).
+    for (const TWeakObjectPtr<ATempleSkeleton>& Entry : ATempleSkeleton::All())
+    {
+        ATempleSkeleton* Skeleton = Entry.Get();
+        if (!Skeleton || Skeleton->IsDead()) continue;
+        const FVector To = Skeleton->GetActorLocation() - Location;
+        const float Reach = static_cast<float>(To.Size2D()) - ATempleSkeleton::Radius;
+        const float SkeletonFeet = static_cast<float>(Skeleton->GetActorLocation().Z) - ATempleSkeleton::HalfHeight;
+        if (Reach > SlashReach || FMath::Abs(SkeletonFeet - Feet) > 45.f) continue;
+        if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
+        Skeleton->TakeSlash(Swing);
         ++SlashRatHits;
     }
     // People: a scratch at the shins of anyone in reach. Nothing breaks; they react.

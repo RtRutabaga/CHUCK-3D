@@ -2,6 +2,24 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 21 — temple skeletons (Claude)
+
+- **Request:** "create the skeleton enemies in temple, use free resources where helpful, make them look good and have realistic attack motions". Base `87c19bb`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-SKELETONS.md.
+- **Contract compatibility:**
+  - New: `SK_TempleSkeleton` on its own skeleton asset (54 bones, the humans' names plus `jaw`, under a Blender armature node). No change to Chuck's or the humans' rigs.
+  - `Tools/build_npc_mocap.py` gained module settings `PREFIX`, `GROUND`, `AFTER` and a `__main__` guard; the humans' defaults are unchanged.
+  - `ChultTempleInterior.h` gains `FTempleSkeletonPost`, `ChultTempleSkeletonPosts`, `ChultTempleInteriorFrameOf/WorldOf` and `ChultTempleInteriorFloorZ`.
+  - `ChuckCharacter::SlashHit` scratches skeletons. `DockGameMode` dispatches `-ChuckSkeletonTest/-ChuckSkeletonCapture`. Verify-Package adds the skeleton run.
+  - New LFS binaries: `/Game/Characters/Skeleton` (29 MB), `SourceAssets/Enemies/Skeleton` (36 MB), 16 `SFX_Skeleton*` sounds and WAVs (3.3 MB). Six BVH takes (5.5 MB, text).
+- **Tools:** UE 5.7.4, Blender 4.5.14, Python 3.14.
+  - Downloads (approved): the Human Base Meshes bundle and sixteen CMU takes.
+  - Blender: about twelve builds, evaluations and inspections.
+  - Unreal: about twelve UnrealEditor-Cmd imports, about twenty Build.bat runs, about sixteen uncooked skeleton runs, then Build-Game -Package -SkipBaseAssets ×1 with Verify-Package ×1, and Promote-Build ×1.
+  - No installations.
+
+Next part of the work can be done here.
+
 ## October 20 — temple interior score, quiet traps, rings-only rift (Claude)
 
 - **Request:** the user's `temple (1).wav` as the temple soundtrack; no trap sounds heard from outside; the rings the only way across their rift. Base `2fbc425`.

@@ -34,6 +34,25 @@ void ChultTempleInteriorCutsAt(float Z, TArray<FBox2D>& Out);
 // For the precinct floor: no ground over the well (frame S,T of a cell's centre).
 bool ChultTempleInteriorCutsGround(float S, float T);
 
+// The temple skeletons' posts (Claude, 2026-10-21; docs/CHULT-TEMPLE-SKELETONS.md):
+// five in the spike corridor (one to each gap between the bands after the first,
+// kept to it), twelve in the pier hall (seven before the rift, five beyond it,
+// each kept to its side). Leash: the frame rectangle (S in X, T in Y) its body
+// keeps inside: never into a spike band, the rift or another space.
+struct FTempleSkeletonPost
+{
+    FVector Feet = FVector::ZeroVector;   // world
+    float Yaw = 0;
+    bool bDormant = false;                // lying among the bones until he comes near
+    FBox2D Leash = FBox2D(ForceInit);
+    const TCHAR* Space = TEXT("");
+};
+void ChultTempleSkeletonPosts(TArray<FTempleSkeletonPost>& Out);
+// World position to the canyon frame (S, T, Z above the plaza), and its floor height (world Z) in the halls.
+FVector ChultTempleInteriorFrameOf(const FVector& World);
+FVector ChultTempleInteriorWorldOf(const FVector& Frame);
+float ChultTempleInteriorFloorZ();
+
 void BuildChultTempleInterior(AActor* Owner);
 int32 CheckChultTempleInterior(AActor* Owner, AChuckCharacter* Chuck);
 // -ChuckChultTest -ChuckTempleInteriorReview: cooked views, then the real
