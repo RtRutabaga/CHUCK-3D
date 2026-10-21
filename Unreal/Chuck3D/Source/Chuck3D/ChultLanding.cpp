@@ -15,6 +15,7 @@
 #include "ChultPath.h"
 #include "ChultUpriver.h"
 #include "ChultTemple.h"
+#include "ChultTempleInterior.h"
 #include "ChultWreck.h"
 #include "ChultBirds.h"
 #include "ProceduralMeshComponent.h"
@@ -391,6 +392,7 @@ void AChultLanding::VerifyAndCapture()
     Failures+=CheckChultPath(this,C);
     Failures+=CheckChultUpriver(this,C);
     Failures+=CheckChultTemple(this,C);
+    Failures+=CheckChultTempleInterior(this,C);
     Failures+=CheckChultWreck(this,C);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ChultLanding),false,C);
     const float Half=C->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -451,6 +453,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleReview"))){ReviewChultTemple(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleInteriorReview"))){ReviewChultTempleInterior(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBirdReview"))){ReviewChultBirds(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}

@@ -4,6 +4,7 @@
 #include "ChultCanopy.h"
 #include "ChultBridge.h"
 #include "ChultUpriver.h"
+#include "ChultTempleInterior.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
 #include "DockReturn.h"
@@ -37,11 +38,16 @@ namespace
     const FChultPoint ChultPoints[]={{TEXT("Chult"),TEXT("Chult Landing")},{TEXT("ChultCanopy"),TEXT("Chult Canopy Ruins")},
         {TEXT("ChultBridge"),TEXT("Chult Bridge")},{TEXT("ChultFarBank"),TEXT("Chult Far Bank")},{TEXT("ChultGiants"),TEXT("Chult Giant Trees")},
         {TEXT("ChultGiantCanopy"),TEXT("Chult Giant Canopy (dev)")},{TEXT("ChultDeepJungle"),TEXT("Chult Deep Jungle")},{TEXT("ChultTemple"),TEXT("Chult Temple")}};
+    // The temple interior's spaces (2026-10-20), in a third column.
+    const FChultPoint TemplePoints[]={{TEXT("ChultTempleWell"),TEXT("Temple Well")},{TEXT("ChultTempleHall"),TEXT("Temple Hall")},
+        {TEXT("ChultTempleSpikes"),TEXT("Temple Spikes")},{TEXT("ChultTemplePiers"),TEXT("Temple Piers")},{TEXT("ChultTempleDarts"),TEXT("Temple Darts")}};
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
     {
         Yaw=-1000;
         if(Point==TEXT("Chult")){Location=Recovery=AChultLanding::Entrance();return true;}
         if(Point==TEXT("ChultCanopy")){Location=Recovery=ChultCanopyRespawn();Yaw=ChultCanopyRespawnYaw();return true;}
+        for(int32 I=0;I<UE_ARRAY_COUNT(TemplePoints);++I)
+            if(Point==TemplePoints[I].Point){const auto S=ETempleInteriorSpawn(I);Location=Recovery=ChultTempleInteriorSpawn(S);Yaw=ChultTempleInteriorSpawnYaw(S);return true;}
         // By the bridge on the near bank: a death there (not in the gorge) is the landing's.
         if(Point==TEXT("ChultBridge")){Location=ChultBridgeSpawn(false);Recovery=AChultLanding::Entrance();Yaw=ChultBridgeRespawnYaw();return true;}
         const EChultUpriverSpawn Spawn=Point==TEXT("ChultFarBank")?EChultUpriverSpawn::FarBank:Point==TEXT("ChultGiants")?EChultUpriverSpawn::Giants:
@@ -129,7 +135,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         Click(TEXT("Back"));
     }
     else if(MenuTestStage==2)
@@ -146,6 +152,7 @@ void ADockHUD::Tick(float DeltaSeconds)
             MenuTestPoint==TEXT("Pantry")?TEXT("Tavern Pantry"):
             *MenuTestPoint;
         for(const FChultPoint& Point:ChultPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
+        for(const FChultPoint& Point:TemplePoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -222,7 +229,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     TSharedPtr<SVerticalBox> Rows;
     MenuWidget=SNew(SBorder).BorderBackgroundColor(FLinearColor(.018f,.014f,.027f,1.f))
         .HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(Checkpoints?780.f:360.f)
+        [SNew(SBox).WidthOverride(Checkpoints?1100.f:360.f)
             [SAssignNew(Rows,SVerticalBox)]];
     Rows->AddSlot().AutoHeight().Padding(0,0,0,32)
         [SNew(STextBlock).Text(FText::FromString(TEXT("CHUCK 3D")))
@@ -230,12 +237,13 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     if(Checkpoints) Rows->AddSlot().AutoHeight().Padding(0,0,0,20)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
-    // The checkpoint page has two columns: Waterdeep and Chult.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right;
+    // The checkpoint page has three columns: Waterdeep, Chult and the temple interior.
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Right,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Right,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Third,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
@@ -275,6 +283,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         Add(TEXT("Tavern Pantry"),[Start](){return Start(TEXT("Pantry"));});
         Target=Right;
         for(const FChultPoint& Point:ChultPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
+        Target=Third;
+        for(const FChultPoint& Point:TemplePoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }

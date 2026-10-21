@@ -17,6 +17,10 @@
 #include "Components/LocalFogVolumeComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkyLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/PostProcessComponent.h"
+#include "Misc/CommandLine.h"
+#include "ChultTempleInterior.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -122,11 +126,41 @@ namespace
     // A box in the frame (S0<S1, T0<T1, Z above the plaza). Inward reverses every face.
     // Always closed underneath (2026-10-17): Chuck looks up at every band,
     // cornice and overhang, which were hollow from below without it.
+    // Its top and bottom are left open where the temple interior passes
+    // through them (2026-10-20; ChultTempleInterior.h), all inside the masonry.
     void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1,bool Inward=false)
     {
         auto Q=[&](FVector A,FVector B,FVector Cc,FVector D){if(Inward)M.Quad(A,D,Cc,B);else M.Quad(A,B,Cc,D);};
-        Q(At(S0,T0,Z1),At(S1,T0,Z1),At(S1,T1,Z1),At(S0,T1,Z1));
-        Q(At(S0,T0,Z0),At(S0,T1,Z0),At(S1,T1,Z0),At(S1,T0,Z0));
+        for(int32 Upper=0;Upper<2;++Upper)
+        {
+            const float Z=Upper?Z1:Z0;
+            TArray<FBox2D> Pieces={FBox2D(FVector2D(S0,T0+OffT),FVector2D(S1,T1+OffT))};
+            // Only near the interior's way down (the central temple's middle) is anything cut.
+            if(S1>76000&&S0<80000&&T1+OffT>-1000&&T0+OffT<2500&&Z<2000)
+            {
+                TArray<FBox2D> Cuts;ChultTempleInteriorCutsAt(Z,Cuts);
+                for(const FBox2D& Cut:Cuts)
+                {
+                    TArray<FBox2D> Out;
+                    for(const FBox2D& Pc:Pieces)
+                    {
+                        if(Cut.Min.X>=Pc.Max.X||Cut.Max.X<=Pc.Min.X||Cut.Min.Y>=Pc.Max.Y||Cut.Max.Y<=Pc.Min.Y){Out.Add(Pc);continue;}
+                        if(Cut.Min.X>Pc.Min.X)Out.Add(FBox2D(Pc.Min,FVector2D(Cut.Min.X,Pc.Max.Y)));
+                        if(Cut.Max.X<Pc.Max.X)Out.Add(FBox2D(FVector2D(Cut.Max.X,Pc.Min.Y),Pc.Max));
+                        const float X0=FMath::Max(Pc.Min.X,Cut.Min.X),X1=FMath::Min(Pc.Max.X,Cut.Max.X);
+                        if(Cut.Min.Y>Pc.Min.Y)Out.Add(FBox2D(FVector2D(X0,Pc.Min.Y),FVector2D(X1,Cut.Min.Y)));
+                        if(Cut.Max.Y<Pc.Max.Y)Out.Add(FBox2D(FVector2D(X0,Cut.Max.Y),FVector2D(X1,Pc.Max.Y)));
+                    }
+                    Pieces=MoveTemp(Out);
+                }
+            }
+            for(const FBox2D& Pc:Pieces)
+            {
+                const float A0=Pc.Min.X,A1=Pc.Max.X,B0=Pc.Min.Y-OffT,B1=Pc.Max.Y-OffT;
+                if(A1-A0<.5f||B1-B0<.5f)continue;
+                if(Upper)Q(At(A0,B0,Z),At(A1,B0,Z),At(A1,B1,Z),At(A0,B1,Z));else Q(At(A0,B0,Z),At(A0,B1,Z),At(A1,B1,Z),At(A1,B0,Z));
+            }
+        }
         Q(At(S0,T0,Z0),At(S1,T0,Z0),At(S1,T0,Z1),At(S0,T0,Z1));
         Q(At(S1,T0,Z0),At(S1,T1,Z0),At(S1,T1,Z1),At(S1,T0,Z1));
         Q(At(S1,T1,Z0),At(S0,T1,Z0),At(S0,T1,Z1),At(S1,T1,Z1));
@@ -358,12 +392,16 @@ namespace
         Box(P.Plaster,S-W-18,S+W+18,T-Half-8,T-Half,Zd+D,Zd+D+28);Box(P.Plaster,S-W-18,S+W+18,T+Half,T+Half+8,Zd+D,Zd+D+28);
         Spire(P,S,T,Z+Body,Half,SpireHeight);
     }
-    // The sanctuary on the central temple's top: its real doorway (the way in
-    // will be the temple interior) into a dark vestibule, then the great spire.
+    // The sanctuary on the central temple's top: its real doorway into the
+    // cella, then the great spire. Since 2026-10-20 the cella is the start of
+    // the temple interior (ChultTempleInterior.cpp lines and lights it): its
+    // back wall has a doorway 2 m wide and 2.4 m high to the hidden stair, and
+    // its old dark lining is gone. The wall's sides of that passage stand a
+    // centimetre outside the interior's own lining.
     void Sanctuary(FParts& P)
     {
         const float Z=CTop,F=TowerFront,B=Sc+TowerHalf,H=TowerHalf,In=F+60,Back=In+CellDepth;
-        Box(P.Stone,Back,B,-H,H,Z,Z+TowerBody);
+        Box(P.Stone,Back,B,-H,-101,Z,Z+TowerBody);Box(P.Stone,Back,B,101,H,Z,Z+TowerBody);Box(P.Stone,Back,B,-101,101,Z+241,Z+TowerBody);
         for(float Sg:{-1.f,1.f})
         {
             Box(P.Stone,In,Back,Sg<0?-H:CellHalf,Sg<0?-CellHalf:H,Z,Z+TowerBody);
@@ -376,8 +414,6 @@ namespace
         }
         Box(P.Stone,F,In,-DoorHalf,DoorHalf,Z+DoorTop,Z+TowerBody);
         Box(P.Stone,In,Back,-CellHalf,CellHalf,Z+300,Z+TowerBody);
-        Box(P.Dark,In+.5f,Back-.5f,-CellHalf+.5f,CellHalf-.5f,Z+.5f,Z+299.5f,true);
-        Box(P.Dark,F-1,In+1,-DoorHalf+.5f,DoorHalf-.5f,Z+.5f,Z+DoorTop-.5f,true);
         Box(P.Plaster,F-8,F,-DoorHalf-35,DoorHalf+35,Z+DoorTop,Z+DoorTop+32);
         for(int32 K=-3;K<=3;++K)Box(P.Plaster,F-6,F,K*34-12,K*34+12,Z+DoorTop+50,Z+DoorTop+50+(K%2?45:75));
         Spire(P,Sc,0,Z+TowerBody,TowerHalf,TowerSpire);
@@ -793,18 +829,48 @@ void BuildChultTemple(AActor* Owner)
         {Jar->SetIndoors();Jar->Tags.Add(TEXT("ChultTempleJar"));(J.bUrn?TempleUrns:TempleJars)++;}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_ROOMS rooms=%d fires=%d jars=%d urns=%d"),RoomList.Num(),Fires.Num(),TempleJars,TempleUrns);
     // While the camera is in a room: the sky dims, Chuck joins the rooms' light (the sewer's pattern), the fires flicker.
+    // The temple interior (2026-10-20) counts as a room, and in it the jungle's height fog thins
+    // too: deep below the plaza it would otherwise fill the dark with grey-blue haze.
     {
-        struct FInside{float Blend=0;bool bChuckIn=false;TArray<TPair<TWeakObjectPtr<USkyLightComponent>,float>> Skies;bool bFound=false;};
+        // Deep in the interior there is no daylight at all: the sky's share of the ambient
+        // drops further (to ~4%) and the auto exposure may not lift the dark above
+        // InteriorMinEV, so the torches make pools of light in real darkness.
+        struct FFog{TWeakObjectPtr<UExponentialHeightFogComponent> Fog;float First=0,Second=0;};
+        struct FPost{TWeakObjectPtr<UPostProcessComponent> Post;float MinEV=0;};
+        // The mist pools round the temple's foot reach down under the plaza: they fade too.
+        struct FMist{TWeakObjectPtr<ULocalFogVolumeComponent> Fog;float Radial=0,Height=0;};
+        struct FInside{float Blend=0,FogBlend=0;bool bChuckIn=false;TArray<TPair<TWeakObjectPtr<USkyLightComponent>,float>> Skies;TArray<FFog> Fogs;TArray<FPost> Posts;TArray<FMist> Mists;bool bFound=false;double NextLook=0;};
         auto State=MakeShared<FInside>();TWeakObjectPtr<AActor> Weak(Owner);
+        float InteriorMinEV=-.5f;FParse::Value(FCommandLine::Get(),TEXT("ChuckInteriorMinEV="),InteriorMinEV);
         FTimerHandle Timer;
-        Owner->GetWorldTimerManager().SetTimer(Timer,[Weak,State,RoomLights]()
+        Owner->GetWorldTimerManager().SetTimer(Timer,[Weak,State,RoomLights,InteriorMinEV]()
         {
             if(!Weak.IsValid())return;UWorld* World=Weak->GetWorld();
-            if(!State->bFound){TArray<USkyLightComponent*> Found;Weak->GetComponents(Found);for(auto* K:Found)State->Skies.Add({K,K->Intensity});State->bFound=true;}
+            // The sky and fog arrive with the landing's environment, which the fall cutscene
+            // builds later than the set: look again until they are there.
+            if(!State->bFound&&World->GetTimeSeconds()>=State->NextLook)
+            {
+                State->NextLook=World->GetTimeSeconds()+1;State->Skies.Reset();State->Fogs.Reset();State->Posts.Reset();State->Mists.Reset();
+                TArray<USkyLightComponent*> Found;Weak->GetComponents(Found);for(auto* K:Found)State->Skies.Add({K,K->Intensity});
+                TArray<UExponentialHeightFogComponent*> Fogs;Weak->GetComponents(Fogs);for(auto* F:Fogs)State->Fogs.Add({F,F->FogDensity,F->SecondFogData.FogDensity});
+                TArray<UPostProcessComponent*> Posts;Weak->GetComponents(Posts);for(auto* P:Posts)if(P->bUnbound)State->Posts.Add({P,P->Settings.AutoExposureMinBrightness});
+                TArray<ULocalFogVolumeComponent*> Mists;Weak->GetComponents(Mists);for(auto* M:Mists)State->Mists.Add({M,M->RadialFogExtinction,M->HeightFogExtinction});
+                State->bFound=State->Skies.Num()>0;
+            }
             auto* PC=World->GetFirstPlayerController();if(!PC||!PC->PlayerCameraManager)return;
-            const bool In=InRoom(PC->PlayerCameraManager->GetCameraLocation(),40);
-            const float Was=State->Blend;State->Blend=FMath::Clamp(State->Blend+(In?.125f:-.125f),0.f,1.f);
-            if(State->Blend!=Was)for(const auto& K:State->Skies)if(K.Key.IsValid())K.Key->SetIntensity(K.Value*(1-.85f*State->Blend));
+            const FVector Eye=PC->PlayerCameraManager->GetCameraLocation();
+            const bool Deep=InChultTempleInterior(Eye,40),In=Deep||InRoom(Eye,40);
+            const float Was=State->Blend,FogWas=State->FogBlend;
+            State->Blend=FMath::Clamp(State->Blend+(In?.125f:-.125f),0.f,1.f);
+            State->FogBlend=FMath::Clamp(State->FogBlend+(Deep?.125f:-.125f),0.f,1.f);
+            if(State->Blend!=Was||State->FogBlend!=FogWas)
+                for(const auto& K:State->Skies)if(K.Key.IsValid())K.Key->SetIntensity(K.Value*(1-.85f*State->Blend)*(1-.72f*State->FogBlend));
+            if(State->FogBlend!=FogWas)
+            {
+                for(const FFog& F:State->Fogs)if(F.Fog.IsValid()){F.Fog->SetFogDensity(F.First*(1-.93f*State->FogBlend));F.Fog->SetSecondFogDensity(F.Second*(1-.93f*State->FogBlend));}
+                for(const FPost& P:State->Posts)if(P.Post.IsValid())P.Post->Settings.AutoExposureMinBrightness=FMath::Lerp(P.MinEV,InteriorMinEV,State->FogBlend);
+                for(const FMist& M:State->Mists)if(M.Fog.IsValid()){M.Fog->SetRadialFogExtinction(M.Radial*(1-State->FogBlend));M.Fog->SetHeightFogExtinction(M.Height*(1-State->FogBlend));}
+            }
             if(APawn* Pawn=PC->GetPawn())if((State->Blend>.5f)!=State->bChuckIn)
             {
                 State->bChuckIn=State->Blend>.5f;TArray<UPrimitiveComponent*> Parts;Pawn->GetComponents(Parts);
@@ -992,6 +1058,8 @@ void BuildChultTemple(AActor* Owner)
         auto* Fog=NewObject<ULocalFogVolumeComponent>(Owner);Fog->SetupAttachment(Owner->GetRootComponent());Fog->SetWorldLocation(G+L);Fog->SetWorldScale3D(FVector(8));
         Fog->RadialFogExtinction=.05f;Fog->HeightFogExtinction=.05f;Fog->HeightFogFalloff=700;Fog->HeightFogOffset=.25f;Fog->FogAlbedo=FLinearColor(.6,.7,.66);Fog->RegisterComponent();
     }
+    // The interior below (2026-10-20).
+    BuildChultTempleInterior(Owner);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE tiers=%d pyramids=2 levels=%d towers=%d height_cm=%.0f steps=%d stakes=%d serpents=6 stelae=%d fragments=%d vines=%d plants=%d trees=%d tall_trees=%d statues=%d missing_assets=%d triangles=%d build_ms=%.1f"),
         Tiers,Levels,Towers,CTop+TowerBody+42+TowerSpire*.9f+TowerSpire*.05f,Steps,Stakes,Stelae,Fragments,Strand,Plants,Trees,TallTrees,StatueCount,Missing,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }

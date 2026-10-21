@@ -166,7 +166,8 @@ public:
     /** Bitten by a rat at From: knocked back a step, then briefly safe from
      *  bites. Rolling or side-jumping dodges it; no bite reaches him on a wall.
      *  Returns whether it landed. (No health yet: the user's call.) */
-    bool TakeBite(const FVector& From, int32 Amount = 1, bool bZombieHit = false);
+    // bThroughDodge (the temple's spikes, 2026-10-20): a dodge roll gives no immunity.
+    bool TakeBite(const FVector& From, int32 Amount = 1, bool bZombieHit = false, bool bThroughDodge = false);
     // Sanity (the 2D game, GAME-BIBLE.md): damage lowers it, cigarettes
     // restore it; at zero Chuck - a fey summon who can't die - quietly
     // vanishes into astral light and is summoned back at the spawn point.

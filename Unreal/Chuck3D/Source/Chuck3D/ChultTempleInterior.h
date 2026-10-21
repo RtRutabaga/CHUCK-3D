@@ -1,0 +1,41 @@
+#pragma once
+#include "CoreMinimal.h"
+class AActor;
+class AChuckCharacter;
+
+// The temple interior (Claude, 2026-10-20; docs/CHULT-TEMPLE-INTERIOR.md),
+// after the 2D game's Phase 6 dungeon: through the sanctuary's doorway, a
+// hidden stair inside the masonry, a great well sunk under the temple with a
+// stair round its walls, then under the forecourt the Great Hall, the spike
+// corridor, the pier hall with its Astral rift and the dart gallery.
+// Coordinates are local to Chult's FloorOrigin; S and T the canyon frame, Z
+// above the temple plaza.
+
+// The spaces a death returns him to the start of (each has a Dev Checkpoint).
+enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts };
+constexpr int32 TempleInteriorSpawnCount = 5;
+FVector ChultTempleInteriorSpawn(ETempleInteriorSpawn Spawn);   // world, capsule centre
+float ChultTempleInteriorSpawnYaw(ETempleInteriorSpawn Spawn);
+const TCHAR* ChultTempleInteriorSpawnName(ETempleInteriorSpawn Spawn);
+// After a death inside: the start of the space he died in. False elsewhere.
+bool ChultTempleInteriorRespawn(const FVector& DeathWorld, FVector& OutWorld);
+bool IsChultTempleInteriorSpawn(const FVector& World, float& OutYaw);
+
+// Inside the interior (world), Margin widening every space: the light and fog
+// change while the camera is in, and the bird swoops keep out.
+bool InChultTempleInterior(const FVector& World, float Margin = 0);
+// Below the walkway into the well's pit or the pier hall's rift: an Astral death.
+bool ChultTempleInteriorSwallows(const FVector& FeetWorld);
+
+// For the exterior's builder: the parts of the horizontal plane Z (above the
+// plaza) the interior passes through, as frame rectangles (S in X, T in Y);
+// the masonry's faces are left open there.
+void ChultTempleInteriorCutsAt(float Z, TArray<FBox2D>& Out);
+// For the precinct floor: no ground over the well (frame S,T of a cell's centre).
+bool ChultTempleInteriorCutsGround(float S, float T);
+
+void BuildChultTempleInterior(AActor* Owner);
+int32 CheckChultTempleInterior(AActor* Owner, AChuckCharacter* Chuck);
+// -ChuckChultTest -ChuckTempleInteriorReview: cooked views, then the real
+// character walks down from the sanctuary to the Great Hall and through each trap.
+void ReviewChultTempleInterior(AActor* Owner, AChuckCharacter* Chuck, int32 Failures);

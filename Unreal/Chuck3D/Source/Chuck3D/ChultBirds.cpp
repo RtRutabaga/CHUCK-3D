@@ -3,6 +3,7 @@
 #include "ChultCanyon.h"
 #include "ChultLanding.h"
 #include "ChultTemple.h"
+#include "ChultTempleInterior.h"
 #include "ChultUpriver.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
@@ -359,7 +360,8 @@ void AChultBirds::Watch(double Now)
         else if(bPassArmed&&!bCrossArmed&&Progress>.4f&&Progress<.56f){bPassArmed=false;LaunchBridge(true,S+Dir*Ahead*1.7f,Local.Z,Dir,Side,Now);}
     }
     // In the precinct, every 15-25 s a pair from the low wheel swoops across in front of him.
-    if(S>64000&&S<82000&&FMath::Abs(F.Y)<10500)
+    // Not underground in the temple interior (2026-10-20).
+    if(S>64000&&S<82000&&FMath::Abs(F.Y)<10500&&!InChultTempleInterior(C->GetActorLocation(),200))
     {
         if(NextSwoop<0)NextSwoop=Now+6;
         else if(Now>=NextSwoop)

@@ -6,6 +6,7 @@
 #include "ChultLandform.h"
 #include "ChultLanding.h"
 #include "ChultTemple.h"
+#include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -186,6 +187,8 @@ void BuildChultUpriver(AActor* Owner)
         const float Wide=S0>=ChultTemplePrecinctFrom?ChultTemplePrecinctHalf:6500;
         for(float S=S0;S<S0+2000;S+=100)for(float T=-Wide;T<Wide;T+=100)
         {
+            // Not over the temple interior's well (inside the temple's masonry, 2026-10-20).
+            if(ChultTempleInteriorCutsGround(S+50,T+50))continue;
             FVector A=ChultCanyonFrame(S,T),B=ChultCanyonFrame(S+100,T),C=ChultCanyonFrame(S+100,T+100),D=ChultCanyonFrame(S,T+100);
             for(FVector* P:{&A,&B,&C,&D})P->Z=ChultCanyonGroundZ(*P);Ground.Quad(A,B,C,D);
         }
@@ -424,6 +427,7 @@ int32 CheckChultUpriver(AActor* Owner,AChuckCharacter* Chuck)
     for(float S=27900;S<ChultFarFloorEnd;S+=S<28200?100:400)for(float T=-6300;T<=6300;T+=1050)
     {
         const FVector P=ChultCanyonFrame(S,T);if(ChultRiverDistance(P)<ChultRiverWidth(S)+200||InRocks(P,200))continue;
+        if(ChultTempleInteriorCutsGround(S,T))continue;   // the temple interior's well, under the temple's masonry
         const float Z=ChultCanyonGroundZ(P);FHitResult Hit;++Floors;
         if(!World->LineTraceSingleByChannel(Hit,G+P+FVector(0,0,Z+900),G+P+FVector(0,0,Z-400),ECC_Visibility,Q)){Fail(TEXT("floor_hole"),P);continue;}
         const bool Ground=Hit.GetComponent()&&(Hit.GetComponent()->ComponentHasTag(TEXT("ChultUpriverGround"))||Hit.GetComponent()->GetName().StartsWith(TEXT("ChultRiverValley")));

@@ -4,6 +4,7 @@
 #include "ChultBridge.h"
 #include "ChultUpriver.h"
 #include "ChultWreck.h"
+#include "ChultTempleInterior.h"
 #include "ChultRaptor.h"
 #include "DockSewer.h"
 #include "DockPantry.h"
@@ -392,6 +393,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     // Fallen into the canyon's gorge: back on the bank by the bridge (2026-10-14).
     FVector Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
+    // In the temple interior (2026-10-20): the start of the space he died in.
+    if(bChultRespawn && ChultTempleInteriorRespawn(GetActorLocation(),Bridge)) return Bridge;
     // On the far bank (user 2026-10-15): the spawn point of the stretch he died in.
     if(bChultRespawn && ChultUpriverRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn) return InChultCanopyDeathArea(GetActorLocation())?ChultCanopyRespawn():AChultLanding::Entrance();
@@ -409,6 +412,7 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
     if (IsChultBridgeRespawn(Location)) return ChultBridgeRespawnYaw();   // facing along the bridge
     float UpriverYaw = 0.f;
     if (IsChultUpriverSpawn(Location, UpriverYaw)) return UpriverYaw;     // facing up the road
+    if (IsChultTempleInteriorSpawn(Location, UpriverYaw)) return UpriverYaw;   // facing on into the temple
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
@@ -1709,10 +1713,10 @@ void AChuckCharacter::SlashHit()
         ++SlashNPCHits;
     }
 }
-bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount, bool bZombieHit)
+bool AChuckCharacter::TakeBite(const FVector& From, int32 Amount, bool bZombieHit, bool bThroughDodge)
 {
     const float Now = GetWorld()->GetTimeSeconds();
-    if (Now < BiteImmuneUntil || IsAstral() || IsDodging() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
+    if (Now < BiteImmuneUntil || IsAstral() || (IsDodging() && !bThroughDodge) || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun) return false;
     BiteImmuneUntil = Now + BiteImmunity;
     ++BitesTaken;
     TalkingTo.Reset();
@@ -3002,4 +3006,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) FallToDeath();
     // Down into one of the Astral ruptures round the jungle wreck (2026-10-18): an Astral death.
     else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
+    // Off the temple well's stair into its pit, or into the pier hall's rift (2026-10-20): Astral.
+    else if (bChultRespawn && ChultTempleInteriorSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
 }

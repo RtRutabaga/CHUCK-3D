@@ -56,7 +56,7 @@ Checks (`CHUCK_CHULT_TEMPLE_CHECK`): plaza level at 345 probes; all three stairs
 
 ## Later
 
-The interior (Phase 6) begins at the sanctuary vestibule's dark back wall. (The pyramids' summit vestibules, once suggested as side ways in, are now closed ceremonial chambers: see October 18.) The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
+The interior (Phase 6) begins at the sanctuary vestibule's dark back wall. Since October 20 it is built: the cella is lined and lit, a doorway in its back wall leads down a hidden stair into the temple interior ([CHULT-TEMPLE-INTERIOR.md](CHULT-TEMPLE-INTERIOR.md)); `Box()` leaves the masonry's horizontal faces open where the interior passes through them. (The pyramids' summit vestibules, once suggested as side ways in, are now closed ceremonial chambers: see October 18.) The 2D map also returns the player onto the stair from the interior (`arrival:from_temple_interior`): a stair spawn is the natural return point when the interior exists.
 
 ## The temple score; closed undersides (October 17)
 

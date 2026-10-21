@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 20 — the temple interior (Claude)
+
+- **Request:** "start creating the temple interior, accessible from the central staircase door ... a large trap-laden fantasy temple dungeon ... handle this as you see best fit". Base `4531ce8`, delivered in the commit after this entry's base.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-INTERIOR.md.
+- **Contract compatibility:** no rig, clip or socket change.
+  - `AChuckCharacter::TakeBite` gains a defaulted `bThroughDodge`; existing callers unchanged.
+  - New API in `ChultTempleInterior.h` (spawns, respawn, `InChultTempleInterior`, `ChultTempleInteriorSwallows`, masonry/floor cuts) and the `AChultTempleTraps` actor.
+  - `ChultTemple.cpp`: `Box()` cuts horizontal faces; `Sanctuary()` lost its dark lining and split its back wall; the room timer also drives fog, mist, sky and exposure. Exterior checks unchanged and passing.
+  - Codex-owned `ChultUpriver.cpp`: one skip in the floor loop and one in its floor-hole probe (the well).
+  - `ChultRiverLife.cpp`: dodge trials retry up to three times.
+  - Verify-Package adds the interior lines and run; Verify-Menu adds five points (20).
+  - New LFS binaries: two materials (`/Game/Art/ChultTemple`), 17 sound waves and their WAVs (about 2.3 MB).
+- **Tools:** UE 5.7.4. Build.bat ×12, uncooked interior reviews ×13, exterior temple review ×1, UnrealEditor-Cmd material script ×2 and audio import ×1, Python 3.14.6 (stdlib) SFX generation ×1, Build-Game -Package -SkipBaseAssets ×2, Verify-Package ×2 (first failed in the interior trials), Verify-Menu ×1, Promote-Build ×1. No installations or downloads.
+
+Next part of the work can be done here.
+
 ## October 20 — temple corner shrines (Claude)
 
 - **Request:** the central temple's ceremonial side spaces jut out over their platform; make them architecturally sound. Base `ca31ccb`, delivered `232487b` (+ this handoff commit).

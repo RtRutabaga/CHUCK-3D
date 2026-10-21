@@ -48,7 +48,7 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 3 | Tavern, pantry, fall to Chult | Done: full cutscene and Escape-skip both enter playable Chult landing |
 | 4 | Chult jungle | Started: verified playable landing, local respawn and ground loop; farther jungle remains |
 | 5 | Deeper into Chult | — |
-| 6 | The jungle temple | — |
+| 6 | The jungle temple | Started: the exterior, and the interior's first four maps (hidden stair, well, Great Hall, spike corridor, pier hall, dart gallery); creatures and later maps remain |
 | 7 | The pirate ship | — |
 | 8 | Phlegethos | — |
 | 9 | The Feywild | — |

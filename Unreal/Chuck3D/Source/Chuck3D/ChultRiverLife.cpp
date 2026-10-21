@@ -208,7 +208,7 @@ void StartChultRiverZombieReview(UWorld* World)
     if(!Chuck||ChultFarRoad().IsEmpty()) { FPlatformMisc::RequestExitWithStatus(false,1);return; }
     struct FRun
     {
-        int32 Failures=0,Trial=-1,RollsBefore=0,LungesBefore=0;
+        int32 Failures=0,Trial=-1,RollsBefore=0,LungesBefore=0,Attempt=0;
         float Start=-1,LastDodge=-10,WindupAt=0;bool Shot=false;
         TWeakObjectPtr<ADockNPC> Windup,Target;FTimerHandle Timer;
     };
@@ -330,8 +330,12 @@ void StartChultRiverZombieReview(UWorld* World)
         for(const auto& H:Homes)if(!H.NearRoad&&!H.Path&&!H.Opposite&&H.Zombie.IsValid())FlanksActive+=FCString::Strcmp(H.Zombie->GetZombieStateName(),TEXT("Idle"))!=0;
         const int32 Rolls=Chuck->GetSfxCount(AChuckCharacter::ESfx::Roll)-Run->RollsBefore,Attacks=Lunges()-Run->LungesBefore;
         const bool Pass=Distance<=35&&Move->IsMovingOnGround()&&Chuck->GetSanity()>=3&&!Chuck->IsAstral()&&FlanksActive==0&&Rolls>=1&&Attacks>=1;
-        Run->Failures+=!Pass;
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_DODGE trial=%d pass=%d distance=%.1f sanity=%d flank_active=%d rolls=%d attacks=%d seconds=%.1f"),Run->Trial,Pass,Distance,Chuck->GetSanity(),FlanksActive,Rolls,Attacks,Elapsed);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_DODGE trial=%d pass=%d distance=%.1f sanity=%d flank_active=%d rolls=%d attacks=%d seconds=%.1f attempt=%d"),Run->Trial,Pass,Distance,Chuck->GetSanity(),FlanksActive,Rolls,Attacks,Elapsed,Run->Attempt+1);
+        // A bite costs two Sanity and one hit in four is a random grab, so the bot's
+        // outcome varies; the route must be passable at the same bar within three tries
+        // (2026-10-20: one try in three failed intermittently, in the old build too).
+        if(!Pass&&++Run->Attempt<3){Run->Start=-1;return;}
+        Run->Failures+=!Pass;Run->Attempt=0;
         ++Run->Trial;Run->Start=-1;
     },.016f,true);
 }

@@ -18,6 +18,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Temple exterior requested October 15, 2026 (Claude):** "build the temple exterior, similar to 2d game", after the 2D Chult map 5. Exterior only; the interior waits. Layout and checks: [../CHULT-TEMPLE.md](../CHULT-TEMPLE.md).
 
+**Temple interior requested October 20, 2026 (Claude):** "start creating the temple interior, accessible from the central staircase door. this is going to be a large trap-laden fantasy temple dungeon, so the player will likely need to travel in and down into an inferred underground for it's scale to make sense with the temple exterior, but overall handle this as you see best fit". The user left the plan to the agent; it starts milestone 5. The sanctuary's doorway leads down a hidden stair and a great well under the temple to the 2D maps 1-4 adapted beneath the precinct: the Great Hall, the spike corridor, the pier hall with an Astral rift (collapsing slabs or brachiation rings) and the dart gallery, ending at a choked arch where the snake chamber will follow. Skeletons and the later maps are next. Plan, layout and checks: [../CHULT-TEMPLE-INTERIOR.md](../CHULT-TEMPLE-INTERIOR.md).
+
 ## Direction and sources
 
 **Far-bank low fog and milling requested October 18, 2026:** sixteen additional
