@@ -66,13 +66,18 @@ namespace
     const float SpikePhase[]={0.f,1.5f,.4f,1.9f,.8f};
     constexpr float SpikeHalfDepth=80;
     // The pier hall (map 3) and its rift.
-    constexpr float PS0=66400,PS1=69400,PT0=-300,PT1=2500,PTop=-660,RiftS0=67600,RiftS1=68000;
-    constexpr float SlabT0=920,SlabT1=1280,RingT=2100,RingZ=Floor+100;
-    const float RingS[]={68030,67890,67750,67610};
+    // The rift is 5.5 m: too far for a sprint leap or a run along a side wall, so
+    // the rings are the only way over (user 2026-10-20; it had a slab bridge too).
+    constexpr float PS0=66400,PS1=69400,PT0=-300,PT1=2500,PTop=-660,RiftS0=67450,RiftS1=68000;
+    constexpr float RingT=2100,RingZ=Floor+100;
+    const float RingS[]={68030,67890,67750,67610,67470};
     // The dart gallery (map 4), turning west (-T), and the choked way on.
     constexpr float DS0=66720,DS1=67080,DT1=-360,DT0=-5560,DTop=-1060,ChokeT=-5160;
     constexpr int32 Launchers=8;
-    float LauncherT(int32 K){return -950-560*K;}
+    float LauncherT(int32 K){return -1100-540*K;}
+    // The cracked slabs (2026-10-20, moved from the rift): three across a pit in the
+    // dart gallery's floor before its first launcher.
+    constexpr float PitG0=-830,PitG1=-560,SlabW=90;
 
     // A space: a frame-aligned box, or a flight along S whose floor runs from ZA at S0 to ZB at S1.
     struct FSpace{const TCHAR* Name;float S0,S1,T0,T1,Z0,Z1;ETempleInteriorSpawn Spawn;bool bCuts;bool bFlight;float ZA,ZB,H;};
@@ -93,7 +98,7 @@ namespace
             {TEXT("SpikeDoor"),PS1,KS0,KT0,KT1,Floor,Floor+PassH,ETempleInteriorSpawn::Piers,false,false,0,0,0},
             {TEXT("Piers"),PS0,PS1,PT0,PT1,WellDeep-200,PTop,ETempleInteriorSpawn::Piers,false,false,0,0,0},
             {TEXT("PierDoor"),DS0,DS1,DT1,PT0,Floor,Floor+PassH,ETempleInteriorSpawn::Darts,false,false,0,0,0},
-            {TEXT("Darts"),DS0,DS1,DT0,DT1,Floor,DTop,ETempleInteriorSpawn::Darts,false,false,0,0,0}};
+            {TEXT("Darts"),DS0,DS1,DT0,DT1,WellDeep-200,DTop,ETempleInteriorSpawn::Darts,false,false,0,0,0}};
         return List;
     }
     // A flight's floor line at S.
@@ -119,7 +124,7 @@ namespace
         case ETempleInteriorSpawn::Hall:return {HallS1-220,AxisT,Floor,-1,0,TEXT("Temple Hall")};
         case ETempleInteriorSpawn::Spikes:return {KS1-150,AxisT,Floor,-1,0,TEXT("Temple Spikes")};
         case ETempleInteriorSpawn::Piers:return {PS1-150,AxisT,Floor,-1,0,TEXT("Temple Piers")};
-        default:return {(DS0+DS1)*.5f,DT1-130,Floor,0,-1,TEXT("Temple Darts")};
+        default:return {(DS0+DS1)*.5f,DT1-70,Floor,0,-1,TEXT("Temple Darts")};
         }
     }
 
@@ -474,6 +479,7 @@ bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
 {
     const FVector F=WorldFrame(FeetWorld);
     if(F.X>PitS0&&F.X<PitS1&&F.Y>PitT0&&F.Y<PitT1&&F.Z<WellRingZ-60&&F.Z>WellDeep-600)return true;
+    if(F.X>DS0&&F.X<DS1&&F.Y>PitG0&&F.Y<PitG1&&F.Z<Floor-60&&F.Z>WellDeep-600)return true;
     return F.X>RiftS0&&F.X<RiftS1&&F.Y>PT0&&F.Y<PT1&&F.Z<Floor-60&&F.Z>WellDeep-600;
 }
 void ChultTempleInteriorCutsAt(float Z,TArray<FBox2D>& Out)
@@ -683,8 +689,8 @@ void BuildChultTempleInterior(AActor* Owner)
         // Broken edges: a few chipped blocks along both lips.
         for(int32 I=0;I<14;++I)
         {
-            const float T=R.FRandRange(PT0+60,PT1-60);if(T>SlabT0-60&&T<SlabT1+60)continue;if(FMath::Abs(T-RingT)<120)continue;
-            const bool Near=I%2==0;const float S=Near?RiftS1+R.FRandRange(10,40):RiftS0-R.FRandRange(10,40);
+            const float T=R.FRandRange(PT0+60,PT1-60);if(FMath::Abs(T-RingT)<120)continue;
+            const bool Near=I%2==0;const float S=Near?RiftS1+R.FRandRange(32,60):RiftS0-R.FRandRange(32,60);   // clear of the lip: nothing to stand on over the rift
             TurnedBox(R.FRand()<.4f?P.Moss:P.Stone,FVector(S,T,Floor+R.FRandRange(6,12)),FVector(R.FRandRange(14,26),R.FRandRange(18,40),R.FRandRange(8,14)),FRotator(R.FRandRange(-8,8),R.FRandRange(0,360),R.FRandRange(-6,6)));
         }
         // The piers, clear of the rift and the ways across.
@@ -698,34 +704,6 @@ void BuildChultTempleInterior(AActor* Owner)
         for(float S:{69050.f,68350.f,67250.f,66650.f}){Torch(P,Fires,1,PT1,-1,S,Floor+230);if(S>RiftS1||S<DS0-200||S>DS1+200)Torch(P,Fires,1,PT0,1,S,Floor+230);}
         Torch(P,Fires,0,PS0,1,AxisT,Floor+230);Torch(P,Fires,0,PS1,-1,AxisT+420,Floor+220);Torch(P,Fires,0,PS1,-1,AxisT-420,Floor+220);
         Glyphs(P,R,0,PS0,1,AxisT-260,AxisT+260,Floor+320,Floor+600);
-        // The slab bridge: four cracked slabs across the rift.
-        for(int32 K=0;K<4;++K)
-        {
-            const float S0=RiftS0+K*100+1,S1=S0+98;
-            FSurf Slab;const FVector Home=At((S0+S1)*.5f,(SlabT0+SlabT1)*.5f,Floor);
-            auto B=[&](FSurf& M,float a0,float a1,float b0,float b1,float z0,float z1){const int32 Before=M.V.Num();Box(M,a0,a1,b0,b1,z0,z1);for(int32 I=Before;I<M.V.Num();++I)M.V[I]-=Home;};
-            B(Slab,S0,S1,SlabT0,SlabT1,Floor-34,Floor);
-            SlabMeshes.Add(Slab);
-            // Cracks drawn in dark across its top (part of the slab, so they fall with it):
-            // wandering lines from one long edge toward the other.
-            FSurf Cracks;
-            for(int32 C=0;C<3;++C)
-            {
-                FVector2D A(FMath::Lerp(S0,S1,R.FRandRange(.15f,.85f)),C%2?SlabT0+2:SlabT1-2);
-                const float Dir=C%2?1.f:-1.f;
-                for(int32 J=0;J<6;++J)
-                {
-                    const FVector2D Bp(FMath::Clamp(A.X+R.FRandRange(-14,14),S0+3,S1-3),FMath::Clamp(A.Y+Dir*R.FRandRange(30,60),SlabT0+2,SlabT1-2));
-                    const FVector2D D=(Bp-A).GetSafeNormal(),N(-D.Y*.9f,D.X*.9f);
-                    const FVector Q[4]={At(A.X-N.X,A.Y-N.Y,Floor+.3f),At(Bp.X-N.X,Bp.Y-N.Y,Floor+.3f),At(Bp.X+N.X,Bp.Y+N.Y,Floor+.3f),At(A.X+N.X,A.Y+N.Y,Floor+.3f)};
-                    const FVector Up=At(A.X,A.Y,Floor+100);
-                    if(FVector::DotProduct(FVector::CrossProduct(Q[1]-Q[0],Q[2]-Q[0]),Up-Q[0])>=0)Cracks.Quad(Q[0]-Home,Q[1]-Home,Q[2]-Home,Q[3]-Home);
-                    else Cracks.Quad(Q[3]-Home,Q[2]-Home,Q[1]-Home,Q[0]-Home);
-                    A=Bp;
-                }
-            }
-            SlabMeshes.Add(Cracks);
-        }
         // Iron rings hung on chains from the vault over the rift, by the +T wall (brachiation).
         for(float S:RingS)
         {
@@ -747,8 +725,40 @@ void BuildChultTempleInterior(AActor* Owner)
     // ---- The dart gallery (2D map 4): eight serpent mouths, turning west; the choked way on.
     {
         Line(P,DS0,DS1,DT1,PT0,Floor,Floor+PassH,{{2,DS0,DS1,Floor,Floor+PassH},{3,DS0,DS1,Floor,Floor+PassH}},Plain);
-        FLining L;L.Dado=0;
+        FLining L;L.Dado=0;L.FloorHoles={FBox2D(FVector2D(DS0,PitG0),FVector2D(DS1,PitG1))};
         Line(P,DS0,DS1,DT0,DT1,Floor,DTop,{{3,DS0,DS1,Floor,Floor+PassH}},L);
+        // The slab pit: its walls down to the Astral, and three cracked slabs across it.
+        FLining PitL;PitL.bFloor=false;PitL.bCeiling=false;PitL.Dado=0;
+        Line(P,DS0,DS1,PitG0,PitG1,WellDeep,Floor,{},PitL);
+        QuadToward(P.Astral,{DS0,PitG0,WellDeep},{DS1,PitG0,WellDeep},{DS1,PitG1,WellDeep},{DS0,PitG1,WellDeep},{(DS0+DS1)*.5f,(PitG0+PitG1)*.5f,WellDeep+100});
+        for(int32 K=0;K<3;++K)
+        {
+            const float T1=PitG1-K*SlabW-1,T0=T1-SlabW+2,S0=DS0+1,S1=DS1-1;
+            FSurf Slab;const FVector Home=At((S0+S1)*.5f,(T0+T1)*.5f,Floor);
+            auto B=[&](FSurf& M,float a0,float a1,float b0,float b1,float z0,float z1){const int32 Before=M.V.Num();Box(M,a0,a1,b0,b1,z0,z1);for(int32 I=Before;I<M.V.Num();++I)M.V[I]-=Home;};
+            B(Slab,S0,S1,T0,T1,Floor-34,Floor);
+            SlabMeshes.Add(Slab);
+            // Cracks drawn in black across its top (part of the slab, so they fall with it):
+            // wandering lines in from either end.
+            FSurf Cracks;
+            for(int32 C=0;C<3;++C)
+            {
+                FVector2D A(C%2?S0+2:S1-2,FMath::Lerp(T0,T1,R.FRandRange(.15f,.85f)));
+                const float Dir=C%2?1.f:-1.f;
+                for(int32 J=0;J<5;++J)
+                {
+                    const FVector2D Bp(FMath::Clamp(A.X+Dir*R.FRandRange(25,50),S0+2,S1-2),FMath::Clamp(A.Y+R.FRandRange(-14,14),T0+3,T1-3));
+                    if(FVector2D::Distance(A,Bp)<2)break;
+                    const FVector2D D=(Bp-A).GetSafeNormal(),N(-D.Y*.9f,D.X*.9f);
+                    const FVector Q[4]={At(A.X-N.X,A.Y-N.Y,Floor+.3f),At(Bp.X-N.X,Bp.Y-N.Y,Floor+.3f),At(Bp.X+N.X,Bp.Y+N.Y,Floor+.3f),At(A.X+N.X,A.Y+N.Y,Floor+.3f)};
+                    const FVector Up=At(A.X,A.Y,Floor+100);
+                    if(FVector::DotProduct(FVector::CrossProduct(Q[1]-Q[0],Q[2]-Q[0]),Up-Q[0])>=0)Cracks.Quad(Q[0]-Home,Q[1]-Home,Q[2]-Home,Q[3]-Home);
+                    else Cracks.Quad(Q[3]-Home,Q[2]-Home,Q[1]-Home,Q[0]-Home);
+                    A=Bp;
+                }
+            }
+            SlabMeshes.Add(Cracks);
+        }
         Corbel(P,1,DS0,DS1,DT0,DT1,DTop,4,22,30);
         for(int32 K=0;K<Launchers;++K)
         {
@@ -814,13 +824,14 @@ void BuildChultTempleInterior(AActor* Owner)
             Mesh->SetCastShadow(false);
             Traps->AddSpikeBand(Mesh,BandMeshes[B].Value,-Along,SpikeHalfDepth,(KT1-KT0)*.5f,SpikePhase[B]);++Built.Bands;
         }
-        for(int32 K=0;K<4;++K)
+        for(int32 K=0;K<3;++K)
         {
-            const FVector Home=G+At(RiftS0+K*100+50,(SlabT0+SlabT1)*.5f,Floor);
+            const FVector Home=G+At((DS0+DS1)*.5f,PitG1-K*SlabW-SlabW*.5f,Floor);
             auto* Mesh=MakeMesh(FString::Printf(TEXT("ChultTempleSlab%d"),K),SlabMeshes[K*2],Stone,Home,true,&SlabMeshes[K*2+1],DarkM);
             Traps->AddSlab(Mesh);++Built.Slabs;
         }
-        Traps->RiftCentre=G+At((RiftS0+RiftS1)*.5f,AxisT,Floor);Traps->RiftClear=700;
+        Traps->RiftCentre=G+At((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor);Traps->RiftAxisA=Along;Traps->RiftAxisB=Across;
+        Traps->RiftHalfA=(DS1-DS0)*.5f+20;Traps->RiftHalfB=(PitG1-PitG0)*.5f+20;
         for(int32 K=0;K<Launchers;++K)
         {
             const bool PlusWall=K%2==0;const float W=PlusWall?DS1:DS0;
@@ -876,6 +887,7 @@ void BuildChultTempleInterior(AActor* Owner)
     };
     Glow(FVector((PitS0+PitS1)*.5f,(PitT0+PitT1)*.5f,WellRingZ-380),12000,1500);
     for(float T:{300.f,1100.f,2000.f})Glow(FVector((RiftS0+RiftS1)*.5f,T,Floor-420),9000,1100);
+    Glow(FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-380),6000,800);
     // Idols and pots.
     for(const FIdol& I:Idols)
     {
@@ -910,7 +922,7 @@ namespace
         return FMath::Clamp(ZFoot+Rr*.5f+Uf*Rr/Tread,ZFoot,ZTop);
     }
     // The way through, from the cella to the choked arch: frame points on the walking surface.
-    struct FRoutePt{FVector F;bool bSlope;};
+    struct FRoutePt{FVector F;bool bSlope;bool bGapAfter=false;};
     TArray<FRoutePt> Route()
     {
         TArray<FRoutePt> R;
@@ -935,9 +947,9 @@ namespace
         Add(HallS0-30,AxisT,Floor);
         for(float S=KS1-140;S>=KS0+100;S-=300)Add(S,AxisT,Floor);
         Add(KS0-30,AxisT,Floor);Add(PS1-100,AxisT,Floor);Add(68600,AxisT,Floor);Add(RiftS1+100,AxisT,Floor);
-        for(float S=RiftS1-50;S>RiftS0;S-=100)Add(S,AxisT,Floor);
+        R.Last().bGapAfter=true;   // over the rift only by the rings
         Add(RiftS0-100,AxisT,Floor);Add((DS0+DS1)*.5f,AxisT,Floor);Add((DS0+DS1)*.5f,PT0+100,Floor);Add((DS0+DS1)*.5f,PT0-30,Floor);
-        for(float T=DT1-140;T>=ChokeT+150;T-=300)Add((DS0+DS1)*.5f,T,Floor);
+        for(float T=DT1-125;T>=ChokeT+150;T-=150)Add((DS0+DS1)*.5f,T,Floor);
         return R;
     }
 }
@@ -961,7 +973,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
             if(!Found||FMath::Abs(Hit.ImpactPoint.Z-W.Z)>12||Hit.ImpactNormal.Z<.7f)
             {Fail(TEXT("route_floor"),FVector(F.X,F.Y,Found?Hit.ImpactPoint.Z-W.Z:-999.f));if(Found)UE_LOG(LogTemp,Warning,TEXT("CHUCK_TEMPLE_INTERIOR_FLOOR_HIT %s"),*GetNameSafe(Hit.GetComponent()));}
             const FVector Body=(Found?FVector(W.X,W.Y,Hit.ImpactPoint.Z):W)+FVector(0,0,Half+(R[I].bSlope?18:4));
-            if(I>0&&World->SweepSingleByChannel(Hit,Prev,Body,FQuat::Identity,ECC_Pawn,Capsule,Q))
+            if(I>0&&!R[I-1].bGapAfter&&World->SweepSingleByChannel(Hit,Prev,Body,FQuat::Identity,ECC_Pawn,Capsule,Q))
             {Fail(TEXT("route_blocked"),F);UE_LOG(LogTemp,Warning,TEXT("CHUCK_TEMPLE_INTERIOR_BLOCKED_BY %s %s"),*GetNameSafe(Hit.GetComponent()),*GetNameSafe(Hit.GetActor()));}
             Prev=Body;++Sweeps;
         }
@@ -988,7 +1000,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         };
         for(const FSpace& Sp:Spaces())
         {
-            const bool Deep=FCString::Strcmp(Sp.Name,TEXT("Well"))==0||FCString::Strcmp(Sp.Name,TEXT("Piers"))==0;
+            const bool Deep=FCString::Strcmp(Sp.Name,TEXT("Well"))==0||FCString::Strcmp(Sp.Name,TEXT("Piers"))==0||FCString::Strcmp(Sp.Name,TEXT("Darts"))==0;
             const float Z0=Deep?WellBottom+50:Sp.Z0+50,Z1=Sp.Z1-50;
             for(float S=Sp.S0+50;S<=Sp.S1-50;S+=80)for(float T=Sp.T0+50;T<=Sp.T1-50;T+=80)
             {
@@ -1026,10 +1038,16 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         // Outside it a death is the far bank's as before.
         FVector Back;if(ChultTempleInteriorRespawn(WorldAt(70000,4000,40),Back)||ChultTempleInteriorRespawn(WorldAt(77300,0,1500+40),Back))Fail(TEXT("death_map_outside"),FVector::ZeroVector);
         // The pit and the rift swallow; their lips and the slabs don't.
-        for(const FVector& F:{FVector(78000,1100,-1700),FVector(67800,AxisT,Floor-200),FVector(67800,300,Floor-120)})
+        for(const FVector& F:{FVector(78000,1100,-1700),FVector(67800,AxisT,Floor-200),FVector(67800,300,Floor-120),FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-150)})
             if(!ChultTempleInteriorSwallows(WorldAt(F.X,F.Y,F.Z)))Fail(TEXT("no_swallow"),F);
         for(const FVector& F:{FVector(WellS0+100,1100,WellRingZ+1),FVector(67800,AxisT,Floor+1),FVector(68100,AxisT,Floor+1),FVector(78000,1100,500)})
             if(ChultTempleInteriorSwallows(WorldAt(F.X,F.Y,F.Z)))Fail(TEXT("swallow_safe"),F);
+    }
+    // The rift has no way across but the rings: no floor anywhere over it.
+    for(float S=RiftS0+20;S<RiftS1-10;S+=50)for(float T=PT0+20;T<PT1-10;T+=100)
+    {
+        FHitResult Hit;const FVector W=WorldAt(S,T,Floor+60);++Sweeps;
+        if(World->SweepSingleByChannel(Hit,W,W-FVector(0,0,180),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(14),Q))Fail(TEXT("rift_floor"),FVector(S,T,Hit.ImpactPoint.Z));
     }
     // 5. The rings: where they hang, the first caught from a standing jump, the body clear between them.
     int32 Grips=0;
@@ -1055,7 +1073,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
     if(AChultTempleTraps* Traps=AChultTempleTraps::Find(World))
     {
         Bands=Traps->Spikes.Num();Launch=Traps->Launchers.Num();Slabs=Traps->Slabs.Num();Torches=Traps->TorchCount();
-        if(Bands!=5||Launch!=Launchers||Slabs!=4||Traps->Darts.Num()<16)Fail(TEXT("traps"),FVector(Bands,Launch,Slabs));
+        if(Bands!=5||Launch!=Launchers||Slabs!=3||Traps->Darts.Num()<16)Fail(TEXT("traps"),FVector(Bands,Launch,Slabs));
         // Each band is dangerous for about a second of its three.
         for(int32 B=0;B<Bands;++B)
         {
@@ -1094,6 +1112,7 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
         {TEXT("InteriorSpikesClose"),FVector(SpikeS[0]+260,KT1-60,Floor+70),FVector(SpikeS[0],AxisT,Floor+10)},
         {TEXT("InteriorPierHall"),FVector(PS1-120,2380,Floor+260),FVector(66800,300,Floor+60)},
         {TEXT("InteriorRift"),FVector(RiftS1+330,1460,Floor+190),FVector(RiftS0-100,AxisT-60,Floor-80)},
+        {TEXT("InteriorSlabPit"),FVector((DS0+DS1)*.5f+60,DT1-40,Floor+100),FVector((DS0+DS1)*.5f,PitG0-80,Floor-40)},
         {TEXT("InteriorRings"),FVector(RiftS1+420,RingT-330,Floor+150),FVector(RiftS0-60,RingT+60,RingZ+40)},
         {TEXT("InteriorDarts"),FVector((DS0+DS1)*.5f,DT1-60,Floor+110),FVector((DS0+DS1)*.5f,-3000,Floor+40)},
         {TEXT("InteriorChoke"),FVector((DS0+DS1)*.5f,ChokeT+420,Floor+110),FVector((DS0+DS1)*.5f,ChokeT-200,Floor+120)}};
@@ -1102,9 +1121,9 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
     // Under the camera while it looks: the light and fog follow the camera (ChultTemple.cpp), Chuck stays out of shot.
     Chuck->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Hall));
 
-    enum class ET:uint8{Descent,Spikes,SlabRun,SlabFall,Rings,Darts,WellFall};
-    const ET Trials[]={ET::Descent,ET::Spikes,ET::SlabRun,ET::SlabFall,ET::Rings,ET::Darts,ET::WellFall};
-    const TCHAR* TrialNames[]={TEXT("descent"),TEXT("spikes"),TEXT("slab_run"),TEXT("slab_fall"),TEXT("rings"),TEXT("darts"),TEXT("well_fall")};
+    enum class ET:uint8{Descent,Spikes,SlabRun,SlabFall,Rings,Darts,WellFall,Hearing};
+    const ET Trials[]={ET::Descent,ET::Spikes,ET::SlabRun,ET::SlabFall,ET::Rings,ET::Darts,ET::WellFall,ET::Hearing};
+    const TCHAR* TrialNames[]={TEXT("descent"),TEXT("spikes"),TEXT("slab_run"),TEXT("slab_fall"),TEXT("rings"),TEXT("darts"),TEXT("well_fall"),TEXT("hearing")};
     struct FRun{int32 Phase=0,Trial=-1,Leg=0,Sub=0,Band=0,Failures=0,Jumps=0,Deaths=0,Hits=0,DartHits=0,Fallen=0,Restored=0,Leaps=0,Timed=0;bool bHit=false;
         int32 TraceSub=-1,TraceBand=-1;double Next=0,Start=0,LastJump=-100,Mark=-1,ViewClock=0,StallAt=-1;FVector StallFrom=FVector::ZeroVector;uint64 ViewFrame=0;bool bDone=false,bStarted=false,bPass=false;TArray<int32> Results;TWeakObjectPtr<ACameraActor> Camera;FTimerHandle Timer;};
     auto Run=MakeShared<FRun>();Run->Failures=Failures;Run->Camera=Camera;
@@ -1189,10 +1208,12 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             {
             case ET::Descent:Reset(WorldAt(SanctuaryFront-200,0,CellaZ+34.65f),YawOf(1,0));Chuck->SetRunHeld(true);break;
             case ET::Spikes:Spawn(ETempleInteriorSpawn::Spikes);break;
-            case ET::SlabRun:case ET::SlabFall:Spawn(ETempleInteriorSpawn::Piers);break;
+            case ET::SlabRun:case ET::SlabFall:Spawn(ETempleInteriorSpawn::Darts);break;
             case ET::Rings:Reset(WorldAt(RingS[0]+15,RingT,Floor+34.65f),YawOf(-1,0));break;
             case ET::Darts:Spawn(ETempleInteriorSpawn::Darts);break;
             case ET::WellFall:Spawn(ETempleInteriorSpawn::Well);break;
+            // On the avenue right over the spike corridor (the plaza, 14.6 m above it).
+            case ET::Hearing:Reset(WorldAt(SpikeS[1],AxisT,34.65f),YawOf(1,0));Run->Hits=Traps?Traps->SoundsPlayed:0;break;
             }
             Chuck->SetOrbitPitch(-12);Chuck->Recenter();
             Run->Start=Now;Run->bStarted=true;return;
@@ -1263,9 +1284,10 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             // Run straight across the cracked slabs: they fall behind him, he reaches the far side; then they come back.
             Limit=40;
             if(!Traps){Done=true;break;}
-            if(Run->Sub==0){if(Steer(RiftS1+170,AxisT)){Run->Sub=1;Chuck->SetRunHeld(true);}}
-            else if(Run->Sub==1){if(Steer(RiftS0-160,AxisT)){Run->Sub=2;Run->Mark=Now;}}
-            else if(Run->Sub==2){Chuck->SetRunHeld(false);if(Steer(PS0+250,AxisT)){Stop();Run->Sub=3;}}
+            const float SM=(DS0+DS1)*.5f;
+            if(Run->Sub==0){Chuck->SetRunHeld(true);Run->Sub=1;}
+            else if(Run->Sub==1){if(Steer(SM,PitG0-90)){Stop();Run->Sub=2;Run->Mark=Now;}}
+            else if(Run->Sub==2){Chuck->SetRunHeld(false);Run->Sub=3;}
             else
             {
                 const int32 Fell=Traps->SlabsFallen-Run->Fallen,Back=Traps->SlabsRestored-Run->Restored;
@@ -1283,13 +1305,13 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             // Walk onto the first slab and stop: it gives way, he falls into the rift (an Astral
             // death) and comes back at the pier hall's door.
             Limit=25;
-            // (On the first slab he can catch the near lip as it drops and hang there; the middle is out of reach.)
-            if(Run->Sub==0){if(Steer(RiftS1+160,AxisT)){Run->Sub=1;Chuck->SetRunHeld(true);}}
-            else if(Run->Sub==1){if(Steer(RiftS1-170,AxisT)){Stop();Chuck->SetRunHeld(false);Run->Sub=2;}}
+            // (On an end slab he can catch the lip as it drops and hang there; the middle one is out of reach.)
+            if(Run->Sub==0){Chuck->SetRunHeld(true);Run->Sub=1;}
+            else if(Run->Sub==1){if(Steer((DS0+DS1)*.5f,(PitG0+PitG1)*.5f+25)){Stop();Chuck->SetRunHeld(false);Run->Sub=2;}}
             else if(Run->Sub==2){Stop();if(NewDeaths>0){Run->Sub=3;Run->Mark=Now;}}
             else if(Now-Run->Mark>1)
             {
-                const bool Home=FVector::Dist(Chuck->GetActorLocation(),ChultTempleInteriorSpawn(ETempleInteriorSpawn::Piers))<40&&Ground&&!Chuck->IsAstral();
+                const bool Home=FVector::Dist(Chuck->GetActorLocation(),ChultTempleInteriorSpawn(ETempleInteriorSpawn::Darts))<40&&Ground&&!Chuck->IsAstral();
                 if(Home||Now-Run->Mark>10)
                 {
                     Done=true;Run->bPass=Home&&NewDeaths==1;
@@ -1312,7 +1334,7 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             }
             else if(Ground&&Now-Run->LastJump>.6f)
             {
-                Done=true;Run->bPass=P.X<RiftS0-5&&NewDeaths==0&&Chuck->GetSwingLeaps()-Run->Leaps==3;
+                Done=true;Run->bPass=P.X<RiftS0-5&&NewDeaths==0&&Chuck->GetSwingLeaps()-Run->Leaps==int32(UE_ARRAY_COUNT(RingS))-1;
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_INTERIOR_RINGS leaps=%d at=%s seconds=%.1f"),Chuck->GetSwingLeaps()-Run->Leaps,*P.ToString(),Time);
             }
             if(NewDeaths){Done=true;UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_INTERIOR_RINGS fell grip=%d sub=%d"),Grip,Run->Sub);}
@@ -1327,7 +1349,8 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             if(Run->Band<Launchers)
             {
                 const float Line=LauncherT(Run->Band);
-                if(Run->Sub==0){Chuck->SetRunHeld(false);if(Steer(SM,Line+80)){Stop();Run->Sub=1;}}
+                // The first leg crosses the slab pit: run it.
+                if(Run->Sub==0){Chuck->SetRunHeld(Run->Band==0);if(Steer(SM,Line+80)){Stop();Run->Sub=1;}}
                 else if(Run->Sub==1){if(!Traps->DartLineDanger(Run->Band,Now,1.f)){Run->Sub=2;Chuck->SetRunHeld(true);}}
                 else if(Steer(SM,Line-80)){Run->Sub=0;++Run->Band;}
             }
@@ -1335,6 +1358,9 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
             else if(Run->Sub==3){if(Steer(SM,LauncherT(Launchers-1))){Stop();Run->Sub=4;Run->LastJump=Now;}}
             else if(Run->Sub==4)
             {
+                // Onto the line itself (the arrival tolerance can leave him beside it).
+                const float Off=P.Y-LauncherT(Launchers-1);
+                if(FMath::Abs(Off)>5){const FVector D=(Off>0?-Across:Across);Chuck->SetTestStickWorld(D);Chuck->AddMovementInput(D,.3f,true);}else Stop();
                 const bool Hit=Traps->DartHits>Run->DartHits;
                 if(Hit||Now-Run->LastJump>6){Run->Sub=5;Run->LastJump=Now;Run->bHit=Hit;}
             }
@@ -1348,6 +1374,20 @@ void ReviewChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck,int32 Failur
                     Run->bPass=Run->Timed==0&&Run->bHit&&P.Y>ChokeT-75&&NewDeaths==0;
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_INTERIOR_DARTS lines=%d timed_hits=%d deliberate_hit=%d fired=%d furthest_t=%.0f sanity=%d"),Run->Band,Run->Timed,Run->bHit,Traps->DartsFired,P.Y,Chuck->GetSanity());
                 }
+            }
+            break;
+        }
+        case ET::Hearing:
+        {
+            // Over the corridor no trap is heard; down in it the spikes are (2026-10-20: their
+            // thrusts carried up through the ground to the avenue).
+            Limit=20;
+            if(!Traps){Done=true;break;}
+            if(Run->Sub==0&&Time>7){Run->Timed=Traps->SoundsPlayed-Run->Hits;Spawn(ETempleInteriorSpawn::Spikes);Run->Hits=Traps->SoundsPlayed;Run->Sub=1;}
+            else if(Run->Sub==1&&Time>14)
+            {
+                const int32 Below=Traps->SoundsPlayed-Run->Hits;Done=true;Run->bPass=Run->Timed==0&&Below>0;
+                UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_INTERIOR_HEARING above=%d below=%d"),Run->Timed,Below);
             }
             break;
         }

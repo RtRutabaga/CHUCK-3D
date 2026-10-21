@@ -22,6 +22,19 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 20 — temple interior score, quiet traps, rings-only rift (Claude)
+
+- **Built:** user: "add this as temple soundtrack, then fix how when you're walking towards temple exterior you can hear the grinding of either darts or spikes. then, make it so the chain brachiation in the temple in the part its in is the only way to cross that part don't make it so you can walk around". Details: [CHULT-TEMPLE-INTERIOR.md](CHULT-TEMPLE-INTERIOR.md#october-20-follow-up-score-sounds-the-rift).
+  - **Score:** the user's `temple (1).wav` (132 s, unmodified) plays inside the interior as music region 6, cross-fading with "Chult 3" at the sanctuary doorway. Read as the interior's score, since "Chult 3" already scores the exterior.
+  - **Trap sounds:** the spike corridor runs 14.6 m under the avenue and its sounds reached the road; trap sounds now play only while Chuck is inside.
+  - **Rift:** the cracked-slab bridge gave a second way across. The rift is now 5.5 m with five rings and no floor over it. The slabs moved to their own 2.7 m pit at the start of the dart gallery; the launchers shifted along.
+- **Checks:** uncooked hidden runs `Local/interior-review-14..16.log`. New: `rift_floor` sweeps, the `hearing` trial (`above=0 below=18`), the interior music loop check.
+- **Package:** `Builds/TempleScoreCandidate`. The first Verify-Package run failed six Waterdeep smoke checks unrelated to this work (stop, chimney camera, tavern keeper ×2, sewer side wall runs; `Local/verify-package-20261020-214904.log`); the rerun on the same build passed **182/182** (`Local/verify-package-20261020-224017.log`), interior `failures=0 ... hearing=1`, menu 20/20.
+- **Launcher:** promoted as `TempleScore` (`Local/temple-score-promotion.log`); receipt names **2fbc425** (that plus these changes, committed after).
+- **Limits:** the score was checked by measurement and its loop, not listened to by the agent. Whether a person can cross 5.5 m some unforeseen way (only sprint leap and side wall run were ruled out by distance) needs play. The six smoke failures look like a one-off; worth watching.
+
+Next part of the work can be done here: skeletons for the temple, then the snake chamber.
+
 ## October 20 — the temple interior, first milestone (Claude)
 
 - **Built:** user: "start creating the temple interior, accessible from the central staircase door. this is going to be a large trap-laden fantasy temple dungeon, so the player will likely need to travel in and down into an inferred underground for it's scale to make sense with the temple exterior, but overall handle this as you see best fit". Plan and details: [CHULT-TEMPLE-INTERIOR.md](CHULT-TEMPLE-INTERIOR.md).

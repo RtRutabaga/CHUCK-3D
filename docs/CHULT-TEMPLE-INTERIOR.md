@@ -36,8 +36,8 @@ Canyon frame as in [CHULT-TEMPLE.md](CHULT-TEMPLE.md): S toward the temple, T ac
 | The well | Inside S 77420–78620, T 500–1700 (12 m square), Z 960 down to the Astral at −2300 | A gallery along one wall at Z 540; a stair winds down the walls (five flights, corner landings, no rail) to a ring walkway at −1460 round an open pit; the Astral glows far below |
 | Great Hall (map 1) | S 73400–77360, T 300–1900 (40 × 16 m), floor −1460, ceiling −560 (9 m) | Two rows of six piers, a processional way, idols, stelae, braziers, jars and urns; safe |
 | Spike corridor (map 2) | S 69400–73400, T 900–1300 (40 × 4 m) | Five iron spike bands across the floor, each thrusting up for about a second in a 3 s cycle, alternating so the player stops between them |
-| Pier hall (map 3) | S 66340–69340, T −300–2500 (30 × 28 m), ceiling −660 (8 m) | Eight piers; an Astral rift (4 m) across the whole hall, crossed either by a bridge of four cracked slabs that fall 0.6 s after he steps on each (run across) or by four hanging iron rings (brachiation) |
-| Dart gallery (map 4) | S 66720–67080, T −360 → −5160 (48 × 3.6 m), turning west | Eight serpent-mouth launchers alternating walls, each firing a dart across on its own rhythm with a click first; a dodge roll goes through a dart |
+| Pier hall (map 3) | S 66340–69340, T −300–2500 (30 × 28 m), ceiling −660 (8 m) | Eight piers; an Astral rift (5.5 m since October 20) across the whole hall, crossed only by five hanging iron rings (brachiation) |
+| Dart gallery (map 4) | S 66720–67080, T −360 → −5160 (48 × 3.6 m), turning west | First a 2.7 m pit bridged by three cracked slabs that fall 0.6 s after he steps on each (run across); then eight serpent-mouth launchers alternating walls, each firing a dart across on its own rhythm with a click first; a dodge roll goes through a dart |
 | The way on | T −5160 | An arch choked by fallen masonry: the snake chamber's threshold, for the next milestone |
 
 All of it is under the precinct or inside the temple's masonry. Underground ceilings stay at least 5.6 m below the plaza, under the trees' hidden trunk capsules and the plaza floor.
@@ -48,7 +48,7 @@ All of it is under the precinct or inside the temple's masonry. Underground ceil
 - **Hazards** use existing Sanity damage (`TakeBite`, one Sanity per hit, a knock back out of the trap). Spikes cannot be rolled through; darts can (the dodge's immunity). Falling into the well's pit or the rift is an Astral death, as in the 2D Astral cuts.
 - **Respawn:** a death returns Chuck to the start of the space he died in: the well's gallery, the Great Hall, the spike corridor, the pier hall or the dart gallery. Each has a Dev Checkpoint.
 - **Light:** interiors are on lighting channel 1, lit only by their torches, as the exterior rooms are. While the camera is inside, the sky light dims and the jungle's height fog thins, so the dungeon's air is clear and dark.
-- **Music:** the temple's score ("Chult 3") carries on inside. The 2D game had a separate temple track; the user can supply one.
+- **Music:** since October 20 the user's "temple" plays inside, from the cella down (music region 6); "Chult 3" stays the exterior's.
 - **Creatures:** none yet. Skeletons (pier hall, spike corridor) and the snake chamber come next.
 
 ## Integration with the exterior
@@ -106,3 +106,11 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 2. The snake chamber (map 5) beyond the choked arch, then the Astral wind (map 6), the shrine hall (map 7) and the gauntlet (map 8).
 3. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
 4. A temple interior score, if the user supplies one ("Chult 3" plays for now).
+
+## October 20 follow-up: score, sounds, the rift
+
+User: "add this as temple soundtrack, then fix how when you're walking towards temple exterior you can hear the grinding of either darts or spikes. then, make it so the chain brachiation in the temple in the part its in is the only way to cross that part don't make it so you can walk around".
+
+- **Score:** the user's `temple (1).wav` (stereo 16-bit 48 kHz, 132.0 s, natural fade at the end) is copied unmodified to `SourceAssets/Audio/TempleInterior.wav` and imported looping as `SW_ChultTempleInterior` (`Tools/import_chult_temple_interior_audio.py`). `DockGameMode` plays it while Chuck is inside the interior (`InChultTempleInterior`, 1.5 m hysteresis), cross-fading with "Chult 3" at the sanctuary doorway. `-ChuckTempleInteriorMusicTest` starts it 2 s before its end; `CHUCK_CHULT_TEMPLE_INTERIOR_MUSIC_CHECK` confirms the loop.
+- **Trap sounds:** they played to anyone within about 25 m, and the spike corridor runs 14.6 m under the avenue. `AChultTempleTraps` now plays them only while Chuck is inside the interior. The review's `hearing` trial stands him on the avenue over the corridor (no trap sound may start) and then in it (they must).
+- **The rift:** it had a cracked-slab bridge beside the rings. The rift is now 5.5 m (S 67450–68000; too far for a sprint leap of about 2.8 m or a side wall run) with five rings 1.4 m apart, and nothing else across it; a check sweeps for any floor over it. The cracked slabs moved to a 2.7 m pit at the start of the dart gallery (T −560 to −830, three slabs), and the launchers moved on to T −1100 − 540k. The Temple Darts spawn is now just inside the gallery.

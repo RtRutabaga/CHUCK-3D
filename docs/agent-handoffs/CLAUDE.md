@@ -2,6 +2,15 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 20 — temple interior score, quiet traps, rings-only rift (Claude)
+
+- **Request:** the user's `temple (1).wav` as the temple soundtrack; no trap sounds heard from outside; the rings the only way across their rift. Base `2fbc425`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-INTERIOR.md.
+- **Contract compatibility:** no rig, clip or socket change. `DockGameMode` has a seventh score track (`MusicTracks.Num()==7`, music region 6 = the interior). `AChultTempleTraps` slab "clear" test is now a box (`RiftAxisA/B`, `RiftHalfA/B`) and it counts `SoundsPlayed`. Verify-Package's interior run adds `-ChuckTempleInteriorMusicTest`, `hearing=1`, the music check, and `slabs=3 grips=5`. New LFS binaries: `TempleInterior.wav` (25.4 MB) and `SW_ChultTempleInterior`.
+- **Tools:** UE 5.7.4. UnrealEditor-Cmd audio import ×1, Build.bat ×3, uncooked hidden reviews ×3, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×2, Verify-Menu ×1, Promote-Build ×1. No installations or downloads.
+
+Next part of the work can be done here.
+
 ## October 20 — the temple interior (Claude)
 
 - **Request:** "start creating the temple interior, accessible from the central staircase door ... a large trap-laden fantasy temple dungeon ... handle this as you see best fit". Base `4531ce8`, delivered in the commit after this entry's base.

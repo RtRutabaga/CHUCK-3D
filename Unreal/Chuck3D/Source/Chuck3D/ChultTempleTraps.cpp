@@ -1,5 +1,6 @@
 #include "ChultTempleTraps.h"
 #include "ChuckCharacter.h"
+#include "ChultTempleInterior.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
@@ -52,7 +53,8 @@ void AChultTempleTraps::LoadSounds()
 
 void AChultTempleTraps::Play(const TArray<USoundBase*>& Set, const FVector& At, float Volume)
 {
-    if (Set.Num() == 0) return;
+    if (Set.Num() == 0 || !bHearing) return;
+    ++SoundsPlayed;
     UGameplayStatics::PlaySoundAtLocation(this, Set[FMath::RandRange(0, Set.Num() - 1)], At, Volume, FMath::FRandRange(.95f, 1.05f), 0.f, Attenuation);
 }
 
@@ -134,6 +136,9 @@ void AChultTempleTraps::Tick(float DeltaSeconds)
     UWorld* World = GetWorld();
     const double Now = World->GetTimeSeconds();
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    // The traps are heard only from inside the temple (2026-10-20: the spike corridor
+    // runs 14 m under the avenue, and its thrusts carried up to the road).
+    bHearing = Chuck && InChultTempleInterior(Chuck->GetActorLocation(), 100.f);
     TickSpikes(Chuck, Now);
     TickDarts(Chuck, Now, DeltaSeconds);
     TickSlabs(Chuck, Now, DeltaSeconds);
@@ -250,7 +255,12 @@ void AChultTempleTraps::TickSlabs(AChuckCharacter* Chuck, double Now, float Dt)
 {
     UPrimitiveComponent* Floor = nullptr;
     if (Chuck && Chuck->GetCharacterMovement()->IsMovingOnGround()) Floor = Chuck->GetCharacterMovement()->CurrentFloor.HitResult.GetComponent();
-    const bool Clear = !Chuck || FVector::Dist2D(Chuck->GetActorLocation(), RiftCentre) > RiftClear || Chuck->IsAstral();
+    bool Clear = !Chuck || Chuck->IsAstral();
+    if (!Clear)
+    {
+        const FVector D = Chuck->GetActorLocation() - RiftCentre;
+        Clear = FMath::Abs(FVector::DotProduct(D, RiftAxisA)) > RiftHalfA || FMath::Abs(FVector::DotProduct(D, RiftAxisB)) > RiftHalfB;
+    }
     for (FSlab& S : Slabs)
     {
         UProceduralMeshComponent* M = S.Mesh.Get();

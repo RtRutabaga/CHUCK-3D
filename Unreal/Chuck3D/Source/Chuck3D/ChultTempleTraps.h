@@ -90,13 +90,16 @@ public:
         FVector Velocity = FVector::ZeroVector; FRotator Spin = FRotator::ZeroRotator;
     };
     TArray<FSlab> Slabs;
-    FVector RiftCentre = FVector::ZeroVector; float RiftClear = 600.f;
+    // The slabs' pit: they come back only once he is off it (centre, axes, half extents with a margin).
+    FVector RiftCentre = FVector::ZeroVector, RiftAxisA = FVector::ForwardVector, RiftAxisB = FVector::RightVector;
+    float RiftHalfA = 200.f, RiftHalfB = 200.f;
     void AddSlab(UProceduralMeshComponent* Mesh);
 
     // ---- Torches.
     void AddTorch(UPointLightComponent* Light, float Intensity);
 
     // Counters for the checks.
+    int32 SoundsPlayed = 0;   // trap sounds actually started (only heard inside)
     int32 SpikeHits = 0, DartHits = 0, DartsFired = 0, DartDodges = 0, SlabsFallen = 0, SlabsRestored = 0, MissingSounds = 0, Thrusts = 0;
     int32 TorchCount() const { return Torches.Num(); }
 
@@ -104,6 +107,7 @@ private:
     struct FTorch { TWeakObjectPtr<UPointLightComponent> Light; float Intensity = 0, Phase = 0; };
     TArray<FTorch> Torches;
     double NextFlicker = 0;
+    bool bHearing = false;   // Chuck is inside the interior
     TArray<USoundBase*> SpikeRattle, SpikeThrust, DartClick, DartShot, DartHit, SlabCrack, SlabFall;
     UPROPERTY() TArray<TObjectPtr<USoundBase>> Held;
     UPROPERTY() TObjectPtr<USoundAttenuation> Attenuation;
