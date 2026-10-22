@@ -55,7 +55,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - flat grey blades, now a dedicated steel material;
   - spiky-looking fire;
   - the clipped labels on the four-column checkpoint page (wider, 18 pt).
-- **Launcher:** see the promotion line below.
+- **Launcher:** promoted as `TempleRun` (`Local/temple-run-promotion.log`). The receipt names **6f3de29**, the launcher check passes, two backups kept. Five older candidate folders from earlier sessions remain in `Builds/`. Try **Dev Checkpoints → Temple Climb** (or any trap-run checkpoint).
 - **Limits:**
   - No person has played it: the difficulty, the flow and the chimney's camera are unreviewed.
   - The sounds have not been listened to.
