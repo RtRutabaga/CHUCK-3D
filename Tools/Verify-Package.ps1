@@ -81,7 +81,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=28 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=37 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=24 missing_assets=0 missing_sounds=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=12 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
@@ -151,6 +151,17 @@ if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK
    !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_TEST failures=0 climb=1 pit_single=1 pit_chain=1 pit_twist=1 pit_fall=1 leap_short=1 side_short=1 axes=1 axe_hit=1 fire=1 fire_strip=1 fire_hit=1 saws=1 saw_hit=1 gauntlet=1 gauntlet_flow=1' -Quiet) -or
    !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_FLOW_RESULT leg=4 deaths=0 axe_hits=0 jet_hits=0 saw_hits=0 ' -Quiet)) {
     throw "Temple trap run verification failed. Inspect $runLog"
+}
+# The Astral wind and the sanctum (Claude, 2026-10-22; docs/CHULT-TEMPLE-WIND.md): stills, then the real character over
+# each spike pit on wall runs kicked back and forth (one kick fewer falls short; leg 3 started on its broken wall falls),
+# into a rupture (an Astral death, back at its bend's start), round every bend's ruptures, down the sanctum's stair onto
+# its dais, and the whole way from the antechamber to the sanctum's gallery.
+$windLog=Join-Path $evidence ('verify-temple-wind-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$windProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleWindTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_CHECK lanes=8 ' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 full=1' -Quiet)) {
+    throw "Temple Astral wind verification failed. Inspect $windLog"
 }
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.

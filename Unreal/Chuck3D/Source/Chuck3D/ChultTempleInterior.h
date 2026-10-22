@@ -14,8 +14,11 @@ class AChuckCharacter;
 // The spaces a death returns him to the start of (each has a Dev Checkpoint).
 // Since October 22 the trap run's sections too (ChultTempleRun.h): the rubble's foot, the pits,
 // the axes, the fire, the saws and the gauntlet.
-enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes, Climb, Pits, Axes, Fire, Saws, Gauntlet };
-constexpr int32 TempleInteriorSpawnCount = 12;
+// Since October 22 the Astral wind's too (ChultTempleWind.h): each leg's and each bend's start, and the
+// sanctum's gallery.
+enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes, Climb, Pits, Axes, Fire, Saws, Gauntlet,
+    Wind1, Wind2, Wind3, Wind4, Wind5, Wind6, Wind7, Sanctum };
+constexpr int32 TempleInteriorSpawnCount = 20;
 FVector ChultTempleInteriorSpawn(ETempleInteriorSpawn Spawn);   // world, capsule centre
 float ChultTempleInteriorSpawnYaw(ETempleInteriorSpawn Spawn);
 const TCHAR* ChultTempleInteriorSpawnName(ETempleInteriorSpawn Spawn);

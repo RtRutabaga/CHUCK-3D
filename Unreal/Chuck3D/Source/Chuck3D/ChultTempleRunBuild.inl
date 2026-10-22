@@ -319,20 +319,22 @@ namespace TempleRunBuild
             Torch(P, Fires, 0, FS1, -1, -4650, UZ + 220, 3800, 640);
             Torch(P, Fires, 0, FS0, 1, -3950, UZ + 220, 3800, 640);
         }
-        // The antechamber: rest, pots, two serpent idols, the way on (choked, for the next part).
+        // The antechamber: rest, pots, two serpent idols, the way on. Choked until the Astral wind
+        // (October 22, ChultTempleWindBuild.inl): its fall is cleared to heaps against the walls.
         {
             FLining L; L.Dado = 160; L.Frieze = 100; L.Top = &P.Plaster;
             Line(P, AnteS0, AnteS1, AnteT0, AnteT1, UZ, AnteTop, {{2, FS0, FS1, UZ, FTop}, {3, FS0, FS1, UZ, UZ + 280}}, L);
-            Line(P, FS0, FS1, AnteT1, AnteT1 + 380, UZ, UZ + 280, {{2, FS0, FS1, UZ, UZ + 280}}, FLining());
+            Line(P, FS0, FS1, AnteT1, AnteT1 + 380, UZ, UZ + 280, {{2, FS0, FS1, UZ, UZ + 280}, {3, FS0, FS1, UZ, UZ + 280}}, FLining());
             for (float Sg : {-1.f, 1.f}) Box(P.Stone, Sg < 0 ? FS0 : FS1 - 30, Sg < 0 ? FS0 + 30 : FS1, AnteT1 - 30, AnteT1 + 30, UZ, UZ + 280);
             Box(P.Plaster, FS0 + 30, FS1 - 30, AnteT1 - 36, AnteT1 - 30, UZ + 260, UZ + 280);
-            for (int32 I = 0; I < 26; ++I)
+            // What is left of the fall: low heaps along both walls (visual only), a broken lintel.
+            for (int32 I = 0; I < 14; ++I)
             {
-                const float T = R.FRandRange(AnteT1 + 40, AnteT1 + 360), H = R.FRandRange(25, 70);
-                const float Z = UZ + FMath::Clamp((T - AnteT1) / 250.f, .15f, 1.f) * R.FRandRange(0, 200);
-                TurnedBox(R.FRand() < .3f ? P.Moss : P.Stone, FVector(R.FRandRange(FS0 + 30, FS1 - 30), T, Z + H * .5f), FVector(R.FRandRange(30, 70), R.FRandRange(30, 70), H), FRotator(R.FRandRange(-20, 20), R.FRandRange(0, 360), R.FRandRange(-20, 20)));
+                const float Sg = I % 2 ? 1.f : -1.f, T = R.FRandRange(AnteT1 + 50, AnteT1 + 350), H = R.FRandRange(10, 26);
+                const float S = Sg < 0 ? R.FRandRange(FS0 + 12, FS0 + 34) : R.FRandRange(FS1 - 34, FS1 - 12);
+                TurnedBox(R.FRand() < .3f ? P.StepMoss : P.Steps, FVector(S, T, UZ + H * .45f), FVector(R.FRandRange(14, 26), R.FRandRange(14, 30), H * .5f), FRotator(R.FRandRange(-20, 20), R.FRandRange(0, 360), R.FRandRange(-20, 20)));
             }
-            Box(P.Block, FS0, FS1, AnteT1 + 40, AnteT1 + 70, UZ, UZ + 280);
+            TurnedBox(P.Steps, FVector(FS0 + 30, AnteT1 + 200, UZ + 16), FVector(18, 110, 14), FRotator(4, 3, -9));
             for (float Sg : {-1.f, 1.f})
             {
                 const float S = Mid + Sg * 160, T = AnteT1 - 90;

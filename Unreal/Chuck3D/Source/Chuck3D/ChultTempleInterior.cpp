@@ -1,6 +1,7 @@
 #include "ChultTempleInterior.h"
 #include "ChultTempleTraps.h"
 #include "ChultTempleRun.h"
+#include "ChultTempleWind.h"
 #include "TempleSkeleton.h"
 #include "TempleSnake.h"
 #include "ChultTemple.h"
@@ -121,7 +122,18 @@ namespace
             {TEXT("RunGauntlet"),TempleRun::FS0,TempleRun::FS1,TempleRun::FT0,TempleRun::FT1,TempleRun::UZ-TempleRun::PitDepth-200,TempleRun::FTop,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
             {TEXT("RunGauntletAxes"),TempleRun::GAxeS0,TempleRun::GAxeS1,TempleRun::GAxeT0,TempleRun::GAxeT1,TempleRun::UZ-TempleRun::TrenchDepth-200,TempleRun::UZ+420,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
             {TEXT("RunAnte"),TempleRun::AnteS0,TempleRun::AnteS1,TempleRun::AnteT0,TempleRun::AnteT1,TempleRun::UZ,TempleRun::AnteTop,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
-            {TEXT("RunAnteExit"),TempleRun::FS0,TempleRun::FS1,TempleRun::AnteT1,TempleRun::AnteT1+380,TempleRun::UZ,TempleRun::UZ+280,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0}};
+            // The Astral wind (October 22, ChultTempleWind.h): the bends first (their corners hold the respawns), then the
+            // legs (leg 1 from the antechamber's old choke), leg 3's two alcoves, then the sanctum.
+            {TEXT("WindBend1"),TempleWind::Bends[0].S0,TempleWind::Bends[0].S1,TempleWind::Bends[0].T0,TempleWind::Bends[0].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind2,false,false,0,0,0},
+            {TEXT("WindBend2"),TempleWind::Bends[1].S0,TempleWind::Bends[1].S1,TempleWind::Bends[1].T0,TempleWind::Bends[1].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind4,false,false,0,0,0},
+            {TEXT("WindBend3"),TempleWind::Bends[2].S0,TempleWind::Bends[2].S1,TempleWind::Bends[2].T0,TempleWind::Bends[2].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind6,false,false,0,0,0},
+            {TEXT("WindLeg1"),TempleRun::FS0,TempleRun::FS1,TempleRun::AnteT1,TempleWind::Legs[0].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind1,false,false,0,0,0},
+            {TEXT("WindLeg2"),TempleWind::Legs[1].S0,TempleWind::Legs[1].S1,TempleWind::Legs[1].T0,TempleWind::Legs[1].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind3,false,false,0,0,0},
+            {TEXT("WindLeg3"),TempleWind::Legs[2].S0,TempleWind::Legs[2].S1,TempleWind::Legs[2].T0,TempleWind::Legs[2].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind5,false,false,0,0,0},
+            {TEXT("WindLeg3MinusAlcove"),TempleWind::Legs[2].S0-TempleWind::BreakDeep,TempleWind::Legs[2].S0,TempleWind::BreakMinusT0,TempleWind::BreakMinusT1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind5,false,false,0,0,0},
+            {TEXT("WindLeg3PlusAlcove"),TempleWind::Legs[2].S1,TempleWind::Legs[2].S1+TempleWind::BreakDeep,TempleWind::BreakPlusT0,TempleWind::BreakPlusT1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind5,false,false,0,0,0},
+            {TEXT("WindLeg4"),TempleWind::Legs[3].S0,TempleWind::Legs[3].S1,TempleWind::Legs[3].T0,TempleWind::Legs[3].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind7,false,false,0,0,0},
+            {TEXT("Sanctum"),TempleWind::HS0,TempleWind::HS1,TempleWind::HT0,TempleWind::HT1,TempleWind::HZ,TempleWind::HTop,ETempleInteriorSpawn::Sanctum,false,false,0,0,0}};
         return List;
     }
     // A flight's floor line at S.
@@ -155,7 +167,16 @@ namespace
         case ETempleInteriorSpawn::Axes:return {68650,(TempleRun::CausewayT0+TempleRun::CausewayT1)*.5f,TempleRun::UZ,1,0,TEXT("Temple Axes")};
         case ETempleInteriorSpawn::Fire:return {(TempleRun::DS0+TempleRun::DS1)*.5f,-4900,TempleRun::UZ,0,-1,TEXT("Temple Fire")};
         case ETempleInteriorSpawn::Saws:return {(TempleRun::DS0+TempleRun::DS1)*.5f,(TempleRun::ET0+TempleRun::ET1)*.5f,TempleRun::UZ,1,0,TEXT("Temple Saws")};
-        default:return {(TempleRun::FS0+TempleRun::FS1)*.5f,-7580,TempleRun::UZ,0,1,TEXT("Temple Gauntlet")};
+        case ETempleInteriorSpawn::Gauntlet:return {(TempleRun::FS0+TempleRun::FS1)*.5f,-7580,TempleRun::UZ,0,1,TEXT("Temple Gauntlet")};
+        // The Astral wind (October 22): each leg's start and each bend's (a corner), then the sanctum's gallery.
+        case ETempleInteriorSpawn::Wind1:return {(TempleRun::FS0+TempleRun::FS1)*.5f,-3000,TempleWind::UZ,0,1,TEXT("Astral Wind 1")};
+        case ETempleInteriorSpawn::Wind2:return {(TempleRun::FS0+TempleRun::FS1)*.5f,-710,TempleWind::UZ,1,0,TEXT("Astral Wind 2")};
+        case ETempleInteriorSpawn::Wind3:return {(TempleWind::Legs[1].S0+TempleWind::Legs[1].S1)*.5f,-1000,TempleWind::UZ,0,-1,TEXT("Astral Wind 3")};
+        case ETempleInteriorSpawn::Wind4:return {(TempleWind::Legs[1].S0+TempleWind::Legs[1].S1)*.5f,-3150,TempleWind::UZ,1,0,TEXT("Astral Wind 4")};
+        case ETempleInteriorSpawn::Wind5:return {(TempleWind::Legs[2].S0+TempleWind::Legs[2].S1)*.5f,-2860,TempleWind::UZ,0,1,TEXT("Astral Wind 5")};
+        case ETempleInteriorSpawn::Wind6:return {(TempleWind::Legs[2].S0+TempleWind::Legs[2].S1)*.5f,-710,TempleWind::UZ,1,0,TEXT("Astral Wind 6")};
+        case ETempleInteriorSpawn::Wind7:return {(TempleWind::Legs[3].S0+TempleWind::Legs[3].S1)*.5f,-1000,TempleWind::UZ,0,-1,TEXT("Astral Wind 7")};
+        default:return {TempleWind::HallMid,TempleWind::HT1-220,TempleWind::UZ,0,-1,TEXT("Temple Sanctum")};
         }
     }
 
@@ -177,7 +198,7 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
-    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block;};
+    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil;};
     // A box in the frame (closed, faces outward).
     void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1)
     {
@@ -478,6 +499,7 @@ namespace
     const TCHAR* IronMat=TEXT("/Game/Art/Materials/M_RustIron.M_RustIron");
     const TCHAR* WoodMat=TEXT("/Game/Art/Materials/M_Wood.M_Wood");
     const TCHAR* AstralMat=TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth");
+    const TCHAR* OilMat=TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist");   // the ruptures' veils (the sewer's)
     const TCHAR* IdolMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSerpentIdol.SM_TempleSerpentIdol");
     const TCHAR* SkullMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull");
 
@@ -485,6 +507,7 @@ namespace
     struct FBuilt{int32 Steps=0,Fires=0,Jars=0,Urns=0,Idols=0,Grips=0,FirstGrip=-1,Slabs=0,Bands=0,Launchers=0,Axes=0,Jets=0,Saws=0;};
     FBuilt Built;
     #include "ChultTempleRunBuild.inl"
+    #include "ChultTempleWindBuild.inl"
 }
 
 // ---------------------------------------------------------------- public helpers
@@ -522,6 +545,14 @@ bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
         for(const FPit& Pt:GPits)if(In(FS0,FS1,Pt.T0,Pt.T1,PitDepth))return true;
         const float Mid=(FS0+FS1)*.5f;
         if(In(GAxeS0,Mid-80,GAxeT0+50,GAxeT1-50,TrenchDepth)||In(Mid+80,GAxeS1,GAxeT0+50,GAxeT1-50,TrenchDepth))return true;
+    }
+    // The Astral wind (October 22): its spike pits and leg 3's alcoves as the run's, its ruptures 40 cm down.
+    {
+        using namespace TempleWind;
+        auto In=[&](float S0,float S1,float T0,float T1){return F.X>S0&&F.X<S1&&F.Y>FMath::Min(T0,T1)&&F.Y<FMath::Max(T0,T1)&&F.Z<UZ-80&&F.Z>UZ-PitDepth-300;};
+        for(int32 L=0;L<4;++L)if(In(Legs[L].S0,Legs[L].S1,Pits[L].From,Pits[L].To))return true;
+        if(In(Legs[2].S0-BreakDeep,Legs[2].S0,BreakMinusT0,BreakMinusT1)||In(Legs[2].S1,Legs[2].S1+BreakDeep,BreakPlusT0,BreakPlusT1))return true;
+        if(F.Z<UZ-40&&F.Z>UZ-500&&F.X>TempleRun::FS0-100&&F.X<Bends[2].S1+100&&F.Y>Legs[3].T0-100&&F.Y<Bends[0].T1+100&&ChultTempleWindTearAt(FVector2D(F.X,F.Y)))return true;
     }
     return F.X>RiftS0&&F.X<RiftS1&&F.Y>PT0&&F.Y<PT1&&F.Z<Floor-60&&F.Z>WellDeep-600;
 }
@@ -938,6 +969,9 @@ void BuildChultTempleInterior(AActor* Owner)
     // ---- The trap run (October 22; ChultTempleRunBuild.inl).
     FRunMovers Movers;
     TempleRunBuild::BuildRun(P,Fires,Jars,Skulls,Idols,Movers);
+    // ---- The Astral wind and the sanctum (October 22; ChultTempleWindBuild.inl).
+    TArray<FGlow> Glows;
+    Built.Steps+=TempleWindBuild::BuildWind(P,Fires,Jars,Skulls,Idols,Glows);
 
     // ---- Emit.
     int32 Missing=0,Triangles=0;
@@ -947,6 +981,7 @@ void BuildChultTempleInterior(AActor* Owner)
     Emit(Owner,TEXT("ChultTempleInteriorDark"),{{&P.Dark,DarkMat}},false,Missing,Triangles);
     Emit(Owner,TEXT("ChultTempleInteriorIron"),{{&P.Iron,IronMat}},false,Missing,Triangles);
     auto* Astral=Emit(Owner,TEXT("ChultTempleInteriorAstral"),{{&P.Astral,AstralMat}},false,Missing,Triangles,false);Astral->SetCastShadow(false);
+    auto* Veils=Emit(Owner,TEXT("ChultTempleInteriorVeils"),{{&P.Veil,OilMat}},false,Missing,Triangles);Veils->SetCastShadow(false);
     auto* Block=Emit(Owner,TEXT("ChultTempleInteriorBlock"),{{&P.Block,StoneMat}},true,Missing,Triangles);Block->SetHiddenInGame(true);Block->SetCastShadow(false);
     // The traps' moving parts.
     FActorSpawnParameters Params;Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -1108,6 +1143,7 @@ void BuildChultTempleInterior(AActor* Owner)
     Glow(FVector((PitS0+PitS1)*.5f,(PitT0+PitT1)*.5f,WellRingZ-380),12000,1500);
     for(float T:{300.f,1100.f,2000.f})Glow(FVector((RiftS0+RiftS1)*.5f,T,Floor-420),9000,1100);
     Glow(FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-380),6000,800);
+    for(const FGlow& Gl:Glows)Glow(Gl.At,Gl.Intensity,Gl.Radius);   // the Astral wind's ruptures
     // Idols and pots.
     for(const FIdol& I:Idols)
     {
@@ -1129,8 +1165,8 @@ void BuildChultTempleInterior(AActor* Owner)
         {Pot->SetIndoors();Pot->Tags.Add(TEXT("ChultTempleInteriorJar"));(J.bUrn?Built.Urns:Built.Jars)++;}
     // The skeletons (TempleSkeleton.h), once the floors' collision can be stood on.
     {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid()){SpawnTempleSkeletons(W.Get());SpawnTempleSnakes(W.Get());}},.5f,false);}
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d axes=%d jets=%d saws=%d idols=%d jars=%d urns=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
-        Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Axes,Built.Jets,Built.Saws,Built.Idols,Built.Jars,Built.Urns,Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d axes=%d jets=%d saws=%d idols=%d jars=%d urns=%d wind_tears=%d wind_glows=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
+        Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Axes,Built.Jets,Built.Saws,Built.Idols,Built.Jars,Built.Urns,ChultTempleWindTears().Num(),Glows.Num(),Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }
 
 // ---------------------------------------------------------------- checks
@@ -1143,7 +1179,19 @@ namespace
         const float Uf=(U-UFoot)*FMath::Sign(UTop-UFoot);
         return FMath::Clamp(ZFoot+Rr*.5f+Uf*Rr/Tread,ZFoot,ZTop);
     }
-    // The way through, from the cella to the choked arch: frame points on the walking surface.
+    // The Astral wind: at Along on a leg (Axis 1, along T) or a bend (Axis 0, along S) centred at Centre
+    // across, the walkable point nearest its middle, 28 cm clear of every rupture. False if none.
+    bool WindLane(float Centre,float At_,int32 Axis,float& Out)
+    {
+        const float Half=(Axis==1?TempleWind::Narrow:TempleWind::Wide)*.5f-28;
+        for(float D=0;D<=Half;D+=10)for(float Sg:{1.f,-1.f})
+        {
+            const float C=Centre+Sg*D;
+            if(!ChultTempleWindTearAt(Axis==1?FVector2D(C,At_):FVector2D(At_,C),28)){Out=C;return true;}
+        }
+        return false;
+    }
+    // The way through, from the cella to the sanctum's dais: frame points on the walking surface.
     struct FRoutePt{FVector F;bool bSlope;bool bGapAfter=false;};
     TArray<FRoutePt> Route()
     {
@@ -1199,6 +1247,37 @@ namespace
             Add(FM,GPits[1].T0-60,UZ);R.Last().bGapAfter=true;
             Add(FM,GPits[1].T1+60,UZ);Add(FM,AnteT0+100,UZ);Add(FM,AnteT1-60,UZ);
         }
+        // The Astral wind (October 22): through the old choke, along each leg and bend round its ruptures
+        // (WindLane), over each spike pit only on the walls, onto the sanctum's gallery, down its -S stair, to the dais.
+        {
+            using namespace TempleWind;
+            for(int32 L=0;L<4;++L)
+            {
+                const FSeg& G=Legs[L];const float Mid=(G.S0+G.S1)*.5f,Start=L==0?TempleRun::AnteT1+20:(G.Dir>0?G.T0-150:G.T1+150),End=G.Dir>0?G.T1+150:G.T0-150;
+                const float Near=Pits[L].From-G.Dir*60,Far=Pits[L].To+G.Dir*60;
+                bool Gapped=false;
+                for(float T=Start;G.Dir>0?T<=End:T>=End;T+=G.Dir*40)
+                {
+                    if((T-Near)*G.Dir>0&&(T-Far)*G.Dir<0)
+                    {
+                        if(!Gapped&&R.Num()){Add(Mid,Near,UZ);R.Last().bGapAfter=true;Add(Mid,Far,UZ);Gapped=true;}
+                        continue;
+                    }
+                    float S;if(!WindLane(Mid,T,1,S))continue;
+                    Add(S,T,UZ);
+                }
+                if(L<3)
+                {
+                    const FSeg& B=Bends[L];const float BM=(B.T0+B.T1)*.5f;
+                    for(float S=B.S0+90;S<=B.S1-90;S+=40){float T;if(WindLane(BM,S,0,T))Add(S,T,UZ);}
+                }
+            }
+            Add(HallMid,HT1-60,UZ);Add(HS0+StairW+40,GalleryT+60,UZ);Add(HS0+80,GalleryT+60,UZ);
+            AlongT(GalleryT-20,StairFoot+20,HS0+80,StairFoot,GalleryT,HZ,UZ);
+            Add(HS0+80,StairFoot-80,HZ);Add(77900,StairFoot-80,HZ);Add(77900,StairFoot+65,HZ);Add(HallMid,StairFoot+65,HZ);
+            for(float T=StairFoot-300;T>=DaisT1+300;T-=400)Add(HallMid,T,HZ);
+            Add(HallMid,DaisT1+200,HZ);Add(HallMid,DaisT1+80,HZ+49,true);Add(HallMid,DaisT1+10,HZ+90,true);Add(HallMid,DaisT1-120,HZ+DaisH);
+        }
         return R;
     }
 }
@@ -1227,11 +1306,10 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
             Prev=Body;++Sweeps;
         }
         // The snake chamber's way on is climbed, not walked (October 22: the rubble's first block stops the capsule),
-        // and the trap run's way on, beyond its antechamber, is choked.
+        // (the trap run's antechamber opens on the Astral wind since October 22).
         FHitResult Hit;++Sweeps;
         if(!World->SweepSingleByChannel(Hit,WorldAt(NS1-60,ExitT,Floor+Half+4),WorldAt(TempleRun::CollapseS1-30,ExitT,Floor+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("rubble_open"),FVector(NS1,ExitT,0));
-        const float FM=(TempleRun::FS0+TempleRun::FS1)*.5f;++Sweeps;
-        if(!World->SweepSingleByChannel(Hit,WorldAt(FM,TempleRun::AnteT1-60,TempleRun::UZ+Half+4),WorldAt(FM,TempleRun::AnteT1+350,TempleRun::UZ+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("choke_open"),FVector(FM,TempleRun::AnteT1,0));
+        // (The antechamber's way on was choked until the Astral wind, October 22: the route goes on through it now.)
     }
     // 2. Nothing of the exterior (masonry, floor, trunks) inside any space: spheres on a grid.
     {
@@ -1306,6 +1384,111 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         FHitResult Hit;const FVector W=WorldAt(S,T,Floor+60);++Sweeps;
         if(World->SweepSingleByChannel(Hit,W,W-FVector(0,0,180),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(14),Q))Fail(TEXT("rift_floor"),FVector(S,T,Hit.ImpactPoint.Z));
     }
+    // 4b. The Astral wind (October 22): every rupture open, a way round them all, each pit's run-up clear, deaths.
+    int32 WindLanes=0,WindCells=0;
+    {
+        using namespace TempleWind;
+        const TArray<FTempleWindTear>& Tears=ChultTempleWindTears();
+        for(const FTempleWindTear& Tr:Tears)
+        {
+            // Open: nothing to stand on in it down to 2 m (its Astral surface has no collision); its rim is floor.
+            FHitResult Hit;const FVector W=WorldAt(Tr.Mid.X,Tr.Mid.Y,UZ+60);++Sweeps;
+            if(World->SweepSingleByChannel(Hit,W,W-FVector(0,0,260),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(6),Q))Fail(TEXT("tear_floor"),FVector(Tr.Mid.X,Tr.Mid.Y,Hit.ImpactPoint.Z-WorldAt(0,0,UZ).Z));
+            if(!ChultTempleInteriorSwallows(WorldAt(Tr.Mid.X,Tr.Mid.Y,UZ-80)))Fail(TEXT("tear_no_swallow"),FVector(Tr.Mid.X,Tr.Mid.Y,0));
+            const FSeg& Sg=Tr.Seg<4?Legs[Tr.Seg]:Bends[Tr.Seg-4];const FBox2D On(FVector2D(Sg.S0+8,Sg.T0+8),FVector2D(Sg.S1-8,Sg.T1-8));
+            FVector2D Rim=Tr.Edge[0]+(Tr.Edge[0]-Tr.Mid).GetSafeNormal()*30;
+            for(const int32 E:{0,18,9,27})if(Tr.Edge.IsValidIndex(E)){const FVector2D Cand=Tr.Edge[E]+(Tr.Edge[E]-Tr.Mid).GetSafeNormal()*30;if(On.IsInside(Cand)&&!ChultTempleWindTearAt(Cand,4)){Rim=Cand;break;}}
+            if(ChultTempleInteriorSwallows(WorldAt(Rim.X,Rim.Y,UZ+1)))Fail(TEXT("tear_rim_swallows"),FVector(Rim.X,Rim.Y,0));
+            const FVector R0=WorldAt(Rim.X,Rim.Y,UZ+40);
+            if(!World->LineTraceSingleByChannel(Hit,R0,R0-FVector(0,0,80),ECC_Visibility,Q)||FMath::Abs(Hit.ImpactPoint.Z-WorldAt(0,0,UZ).Z)>4)Fail(TEXT("tear_rim"),FVector(Rim.X,Rim.Y,0));
+        }
+        // A way round: a 10 cm grid of the tunnels' floors where his capsule (18 cm round) stands clear of every
+        // rupture and pit, flooded from each start (the wind's respawn, each pit's far side) to the next goal.
+        const FBox2D Area(FVector2D(TempleRun::FS0-20,FMath::Min(Bends[1].T0,Legs[3].T0)-20),FVector2D(Bends[2].S1+20,Bends[0].T1+20));
+        const int32 NX=FMath::CeilToInt((Area.Max.X-Area.Min.X)/10),NY=FMath::CeilToInt((Area.Max.Y-Area.Min.Y)/10);
+        TArray<FBox2D> Floors={FBox2D(FVector2D(TempleRun::FS0,TempleRun::AnteT1),FVector2D(TempleRun::FS1,ExitT1))};
+        for(const FSeg& G:Legs)Floors.Add(FBox2D(FVector2D(G.S0,G.T0),FVector2D(G.S1,G.T1)));
+        for(const FSeg& G:Bends)Floors.Add(FBox2D(FVector2D(G.S0,G.T0),FVector2D(G.S1,G.T1)));
+        TArray<FBox2D> PitBoxes;for(int32 L=0;L<4;++L)PitBoxes.Add(FBox2D(FVector2D(Legs[L].S0,FMath::Min(Pits[L].From,Pits[L].To)),FVector2D(Legs[L].S1,FMath::Max(Pits[L].From,Pits[L].To))));
+        auto Stand=[&](const FVector2D& C)
+        {
+            for(int32 K=0;K<9;++K)
+            {
+                const FVector2D P=K==8?C:C+FVector2D(FMath::Cos(K*PI/4),FMath::Sin(K*PI/4))*18;
+                bool On=false;for(const FBox2D& B:Floors)On|=B.IsInside(P);
+                if(!On)return false;
+                for(const FBox2D& B:PitBoxes)if(B.IsInside(P))return false;
+            }
+            return !ChultTempleWindTearAt(C,18);
+        };
+        TArray<uint8> Free;Free.SetNumZeroed(NX*NY);
+        for(int32 X=0;X<NX;++X)for(int32 Y=0;Y<NY;++Y){Free[X*NY+Y]=Stand(Area.Min+FVector2D(X*10+5,Y*10+5));WindCells+=Free[X*NY+Y];}
+        auto Cell=[&](float S,float T){return FIntPoint(FMath::FloorToInt((S-Area.Min.X)/10),FMath::FloorToInt((T-Area.Min.Y)/10));};
+        auto Reaches=[&](const FVector2D& From,const FVector2D& To)
+        {
+            const FIntPoint A=Cell(From.X,From.Y),B=Cell(To.X,To.Y);
+            if(!Free[A.X*NY+A.Y]||!Free[B.X*NY+B.Y])return false;
+            TArray<uint8> Seen;Seen.SetNumZeroed(NX*NY);TArray<FIntPoint> Open={A};Seen[A.X*NY+A.Y]=1;
+            for(int32 I=0;I<Open.Num();++I)
+            {
+                const FIntPoint C=Open[I];if(C==B)return true;
+                for(const FIntPoint D:{FIntPoint(1,0),FIntPoint(-1,0),FIntPoint(0,1),FIntPoint(0,-1)})
+                {
+                    const FIntPoint N=C+D;if(N.X<0||N.Y<0||N.X>=NX||N.Y>=NY)continue;
+                    const int32 Id=N.X*NY+N.Y;if(!Free[Id]||Seen[Id])continue;Seen[Id]=1;Open.Add(N);
+                }
+            }
+            return false;
+        };
+        const FVector2D Wind1(TempleRun::FS0+90,-3000);
+        FVector2D From=Wind1;
+        for(int32 L=0;L<=4;++L)
+        {
+            const FVector2D Goal=L<4?FVector2D((Legs[L].S0+Legs[L].S1)*.5f,Pits[L].From-Legs[L].Dir*50):FVector2D((Legs[3].S0+Legs[3].S1)*.5f,Legs[3].T0+40);
+            if(Reaches(From,Goal))++WindLanes;else Fail(TEXT("wind_lane"),FVector(From.X,From.Y,L));
+            if(L<4)From=FVector2D((Legs[L].S0+Legs[L].S1)*.5f,Pits[L].To+Legs[L].Dir*60);
+        }
+        // Each bend from its respawn to the next leg's start.
+        for(int32 B=0;B<3;++B)
+        {
+            const FVector2D A((Legs[B].S0+Legs[B].S1)*.5f,(Bends[B].T0+Bends[B].T1)*.5f),C((Legs[B+1].S0+Legs[B+1].S1)*.5f,(Bends[B].T0+Bends[B].T1)*.5f);
+            if(Reaches(A,C))++WindLanes;else Fail(TEXT("wind_bend_lane"),FVector(B,0,0));
+        }
+        // Each pit's run-up: 2.5 m along a wall (32 cm off it) to its lip, clear of ruptures; leg 3's on its +S wall.
+        for(int32 L=0;L<4;++L)
+        {
+            int32 ClearSides=0;
+            for(int32 Sg:{0,1})
+            {
+                if(L==2&&Sg==0)continue;
+                const float S=Sg?Legs[L].S1-32:Legs[L].S0+32;bool Ok=true;
+                for(float U=0;U<=250;U+=10)Ok&=!ChultTempleWindTearAt(FVector2D(S,Pits[L].From-Legs[L].Dir*U),20);
+                ClearSides+=Ok;
+            }
+            if(!ClearSides)Fail(TEXT("wind_runup"),FVector(L,0,0));
+        }
+        // Deaths in each part map to its own respawn; the pits and alcoves swallow, their lips do not.
+        struct FMap{FVector F;ETempleInteriorSpawn Want;};
+        const FMap Maps[]={{FVector(TempleRun::FS0+90,-2500,UZ+40),ETempleInteriorSpawn::Wind1},{FVector(74600,-710,UZ+40),ETempleInteriorSpawn::Wind2},
+            {FVector(75510,-2000,UZ-100),ETempleInteriorSpawn::Wind3},{FVector(76300,-3150,UZ+40),ETempleInteriorSpawn::Wind4},{FVector(77210,-2000,UZ-100),ETempleInteriorSpawn::Wind5},
+            {FVector(77120-60,-2300,UZ-100),ETempleInteriorSpawn::Wind5},{FVector(78000,-710,UZ+40),ETempleInteriorSpawn::Wind6},{FVector(78710,-2000,UZ-100),ETempleInteriorSpawn::Wind7},
+            {FVector(HallMid,-5400,HZ+40),ETempleInteriorSpawn::Sanctum},{FVector(HallMid,GalleryT+200,UZ+40),ETempleInteriorSpawn::Sanctum}};
+        for(const FMap& M:Maps){FVector Back;if(!ChultTempleInteriorRespawn(WorldAt(M.F.X,M.F.Y,M.F.Z),Back)||FVector::Dist(Back,ChultTempleInteriorSpawn(M.Want))>1)Fail(TEXT("wind_death_map"),M.F);}
+        for(int32 L=0;L<4;++L)
+        {
+            const float Mid=(Legs[L].S0+Legs[L].S1)*.5f,T=(Pits[L].From+Pits[L].To)*.5f;
+            if(!ChultTempleInteriorSwallows(WorldAt(Mid,T,UZ-100)))Fail(TEXT("wind_pit_swallow"),FVector(Mid,T,0));
+            if(ChultTempleInteriorSwallows(WorldAt(Mid,Pits[L].From-Legs[L].Dir*40,UZ+1)))Fail(TEXT("wind_lip_swallows"),FVector(Mid,T,0));
+        }
+        if(!ChultTempleInteriorSwallows(WorldAt(Legs[2].S0-60,(BreakMinusT0+BreakMinusT1)*.5f,UZ-100))||!ChultTempleInteriorSwallows(WorldAt(Legs[2].S1+60,(BreakPlusT0+BreakPlusT1)*.5f,UZ-100)))Fail(TEXT("wind_alcove_swallow"),FVector::ZeroVector);
+        if(ChultTempleInteriorSwallows(WorldAt(HallMid,-5400,HZ+1))||ChultTempleInteriorSwallows(WorldAt(HallMid,GalleryT+200,UZ+1)))Fail(TEXT("sanctum_swallows"),FVector::ZeroVector);
+        // The sanctum's gallery holds him; nothing blocks the hall's floor along the processional.
+        {
+            FHitResult Hit;const FVector A=WorldAt(HallMid,GalleryT+100,UZ+40);
+            if(!World->LineTraceSingleByChannel(Hit,A,A-FVector(0,0,80),ECC_Visibility,Q)||FMath::Abs(Hit.ImpactPoint.Z-WorldAt(0,0,UZ).Z)>4)Fail(TEXT("gallery_floor"),FVector::ZeroVector);
+        }
+    }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_WIND_CHECK lanes=%d cells=%d tears=%d"),WindLanes,WindCells,ChultTempleWindTears().Num());
     // 5. The rings: where they hang, the first caught from a standing jump, the body clear between them.
     int32 Grips=0;
     if(Built.FirstGrip>=0&&GetChuckSwingGrips().Num()>=Built.FirstGrip+int32(UE_ARRAY_COUNT(RingS)))

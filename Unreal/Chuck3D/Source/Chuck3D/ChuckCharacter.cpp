@@ -2365,7 +2365,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckSideFloor), false, this);
         const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
         const bool bFloor = Up < 0.f && GetWorld()->LineTraceSingleByChannel(Floor, Location, Location - FVector(0, 0, Half + 4.f), ECC_Visibility, Query);
-        const bool bStalled = WallSideClock > .15f && Moved < WallSideSpeed * DeltaSeconds * .3f;
+        // (Not on a hitch: a long frame's travel reads as a teleport and is dropped, which looked like a stall.)
+        const bool bStalled = WallSideClock > .15f && DeltaSeconds < .1f && Moved < WallSideSpeed * DeltaSeconds * .3f;
         if (!bWall || WallSideClock >= (bLocked ? LockedWallSideTime : WallSideTime) || bFloor || bStalled) LeaveWallSide();
         else Movement->Velocity = WallSideAlong * WallSideSpeed + FVector(0, 0, Up) - WallNormal * (40.f + FMath::Min(WallSideGap * 12.f, 500.f));
     }
