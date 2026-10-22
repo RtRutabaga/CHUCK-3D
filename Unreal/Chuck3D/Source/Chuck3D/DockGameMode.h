@@ -196,6 +196,7 @@ private:
     int32 MenuTestStage = 0, MenuTestFailures = 0;
     int32 MenuTestFalls = 0, MenuTestRespawns = 0;
     double MenuTestNext = 0;
+    bool bMenuShot = false;
     TWeakObjectPtr<UWorld> MenuTestWorld;
     void ShowTitleMenu();
     void ShowMenu(bool Checkpoints);

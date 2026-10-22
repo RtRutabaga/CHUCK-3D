@@ -81,8 +81,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=18 .*spike_bands=5 launchers=8 slabs=3 grips=5 .*missing_assets=0 missing_sounds=0 ' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=6 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=28 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=12 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
@@ -140,6 +140,17 @@ if($interiorProcess.ExitCode -or !(Select-String -LiteralPath $interiorLog -Patt
    !(Select-String -LiteralPath $interiorLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_TEST failures=0 descent=1 spikes=1 slab_run=1 slab_fall=1 rings=1 darts=1 well_fall=1 hearing=1' -Quiet) -or
    !(Select-String -LiteralPath $interiorLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Temple interior verification failed. Inspect $interiorLog"
+}
+# The temple trap run (Claude, 2026-10-22; docs/CHULT-TEMPLE-RUN.md): stills, then the real character up the
+# rubble and the wall-jump chimney, side and chained wall runs over the spike pits (a sprint leap and a single
+# side run fall short), the axes and the fire read and run, rolls under the saws, a deliberate hit from each,
+# the gauntlet in one go, and once more on its beat without a stop.
+$runLog=Join-Path $evidence ('verify-temple-run-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$runProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleRunTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$runLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_TEST failures=0 climb=1 pit_single=1 pit_chain=1 pit_twist=1 pit_fall=1 leap_short=1 side_short=1 axes=1 axe_hit=1 fire=1 fire_strip=1 fire_hit=1 saws=1 saw_hit=1 gauntlet=1 gauntlet_flow=1' -Quiet) -or
+   !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_FLOW_RESULT leg=4 deaths=0 axe_hits=0 jet_hits=0 saw_hits=0 ' -Quiet)) {
+    throw "Temple trap run verification failed. Inspect $runLog"
 }
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.

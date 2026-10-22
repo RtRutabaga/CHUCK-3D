@@ -76,7 +76,7 @@ Built in `ChultTempleInterior.cpp`, in the same frame as the rest (S toward the 
 | --- | --- | --- |
 | The way in | the dart gallery's arch at T −5160 | The rubble behind the arch is cleared; the gallery runs on 4 m to its open end |
 | Chamber | S 65900–67900, T −5560 → −8360 (20 × 28 m), floor −1460, ceiling −660 | Five piers in lanes, each with a torch. Three beams across the vault. Torches every 5.5 m along both long walls and at the corners. Two serpent idols on plinths with a brazier between them under a glyph panel at the far end. Two fallen drums, seven pots, five old skulls |
-| The way on (map 6) | an arch in the +S wall at T −7950 | The passage behind it has fallen in (rubble, a hidden wall): reserved for the Astral wind connector |
+| The way on | an arch in the +S wall at T −7950 | The passage behind it has fallen in. Since October 22 the rubble is climbed (no hidden wall) to a chimney up to the trap run ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)) |
 
 - **Spawn / Dev Checkpoint:** **Temple Snakes**, in the gallery's last 4 m between its arch and the chamber (its own space, `SnakeArch`). That is out of the snakes' sense: a first spawn 2 m inside the chamber put him in a chase at once, which the menu test caught. A death in the chamber returns him there.
 - **Checks** (`CHUCK_CHULT_TEMPLE_INTERIOR_CHECK`):

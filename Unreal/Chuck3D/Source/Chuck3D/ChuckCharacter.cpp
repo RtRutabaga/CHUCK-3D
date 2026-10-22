@@ -1569,6 +1569,7 @@ void AChuckCharacter::LeaveWallSide()
     Movement->Velocity = FVector(V.X, V.Y, FMath::Min(static_cast<float>(V.Z), 0.f)) * FVector(.92f, .92f, 1.f) + WallNormal * 50.f;
     LastWallNormal = WallNormal;
     WallCoyoteUntil = GetWorld()->GetTimeSeconds() + WallCoyote;
+    SideLeftAt = GetWorld()->GetTimeSeconds();
     Gait = EGait::Air; bRunJump = bSprintLeap = false;
     SetClip(EClip::JumpLoop, 0, .15f);
 }
@@ -1588,12 +1589,27 @@ void AChuckCharacter::WallJump()
     // Kick away from the wall; the stick along the wall angles it. He turns to
     // face where he's going, so the next wall is in front of him.
     auto* Movement = GetCharacterMovement();
+    const float Now = GetWorld()->GetTimeSeconds();
+    // Off a side wall run (or just after its end): the chained run's kick keeps
+    // his speed along the wall, so an opposite wall is met at a glancing angle
+    // and run along rather than climbed.
+    const bool bFromSide = Gait == EGait::WallSide || (Gait == EGait::Air && Now < WallCoyoteUntil && Now - SideLeftAt < WallCoyote + .02f);
     const FVector Stick = StickWorld();
     const FVector Along = Stick - WallNormal * FVector::DotProduct(Stick, WallNormal);
     const FVector Direction = (WallNormal + Along * .6f).GetSafeNormal2D();
     Movement->SetMovementMode(MOVE_Falling);
-    Movement->Velocity = Direction * WallJumpOut + FVector(0, 0, WallJumpUp);
-    SetActorRotation(Direction.Rotation());
+    if (bFromSide)
+    {
+        const FVector Run = WallSideAlong.GetSafeNormal2D() * FMath::Max(WallSideSpeed, static_cast<float>(ChuckClipData::RunSpeed));
+        Movement->Velocity = Run + WallNormal * WallChainOut + FVector(0, 0, WallChainUp);
+        SetActorRotation(Movement->Velocity.GetSafeNormal2D().Rotation());
+    }
+    else
+    {
+        Movement->Velocity = Direction * WallJumpOut + FVector(0, 0, WallJumpUp);
+        SetActorRotation(Direction.Rotation());
+    }
+    bWallChainFlight = bFromSide; WallChainAt = Now;
     LastWallNormal = WallNormal;
     WallCoyoteUntil = -1;
     bWallJumpFlight = true; bRunJump = bSprintLeap = false;
@@ -2535,6 +2551,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // A running jump that reaches a wall along or angled onto it catches it and runs it.
         if (Gait == EGait::Air && bRunJump && GetWorld()->GetTimeSeconds() - RunTakeoffAt < WallSideAirTime
             && GetVelocity().Z > -150.f && TryWallSideRun(true)) {}
+        // So does the chained run's kick off one side wall onto the opposite one.
+        else if (Gait == EGait::Air && bWallJumpFlight && bWallChainFlight && GetWorld()->GetTimeSeconds() - WallChainAt < WallChainAirTime
+            && GetVelocity().Z > -260.f && TryWallSideRun(true)) { ++WallChains; bWallChainFlight = false; }
         else if (Gait == EGait::Hang || TrySwingCatch() || TryEnterWallRun()) {}  // (a drop-hang just caught the edge)
         else if (bSprintLeap)
         {

@@ -103,9 +103,10 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 ## Next
 
 1. ~~Skeletons~~: done October 21 ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)).
-2. ~~The snake chamber (map 5)~~: done October 21. Next the Astral wind (map 6) through the chamber's choked arch, the shrine hall (map 7) and the gauntlet (map 8).
-3. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
-4. A temple interior score, if the user supplies one ("Chult 3" plays for now).
+2. ~~The snake chamber (map 5)~~: done October 21.
+3. ~~The trap run~~: done October 22 at the user's direction ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). The chamber's choked arch is now climbed (rubble, then a chimney) to an upper level of spike pits, axes, fire and saws, ending in a gauntlet and an antechamber whose way on is choked. Next from there: the Astral wind (map 6), the shrine hall (map 7) and the 2D gauntlet (map 8).
+4. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
+5. ~~A temple interior score~~: the user's, since October 20.
 
 ## October 20 follow-up: score, sounds, the rift
 

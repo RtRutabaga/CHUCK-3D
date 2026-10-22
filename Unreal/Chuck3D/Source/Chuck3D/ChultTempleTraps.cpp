@@ -49,6 +49,14 @@ void AChultTempleTraps::LoadSounds()
     Load(DartHit, TEXT("SFX_TempleDartHit"), 3);
     Load(SlabCrack, TEXT("SFX_TempleSlabCrack"), 2);
     Load(SlabFall, TEXT("SFX_TempleSlabFall"), 2);
+    // The trap run (2026-10-22; Tools/gen_temple_run_sfx.py).
+    Load(AxeSwoosh, TEXT("SFX_TempleRunAxeSwoosh"), 3);
+    Load(AxeCreak, TEXT("SFX_TempleRunAxeCreak"), 2);
+    Load(FireHiss, TEXT("SFX_TempleRunFireHiss"), 2);
+    Load(FireRoar, TEXT("SFX_TempleRunFireRoar"), 2);
+    Load(SawSpin, TEXT("SFX_TempleRunSawSpin"), 2);
+    Load(SawDrop, TEXT("SFX_TempleRunSawDrop"), 2);
+    Load(TrapHit, TEXT("SFX_TempleRunHit"), 2);
 }
 
 void AChultTempleTraps::Play(const TArray<USoundBase*>& Set, const FVector& At, float Volume)
@@ -142,6 +150,9 @@ void AChultTempleTraps::Tick(float DeltaSeconds)
     TickSpikes(Chuck, Now);
     TickDarts(Chuck, Now, DeltaSeconds);
     TickSlabs(Chuck, Now, DeltaSeconds);
+    TickAxes(Chuck, Now);
+    TickJets(Chuck, Now);
+    TickSaws(Chuck, Now, DeltaSeconds);
     if (Now >= NextFlicker)
     {
         NextFlicker = Now + .05;

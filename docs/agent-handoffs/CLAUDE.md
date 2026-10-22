@@ -2,6 +2,34 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 22 — the temple trap run (Claude)
+
+- **Request:** expand the temple run past the rubble: climb it and a wall-jump climb, then a flow-focused parkour run of spike pits, swinging axes, wall flamethrowers and saws, researched against other media. Base `eb630ce`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-RUN.md.
+- **Contract compatibility:**
+  - No rig, clip or socket change.
+  - `ChuckCharacter`:
+    - new `WallChainOut/Up/AirTime`, `GetWallChains()` and `IsRolling()`;
+    - `WallJump()` out of a side run (or its coyote time) keeps the run's speed;
+    - a chained catch is tried before the head-on climb.
+  - `ETempleInteriorSpawn` gains `Climb, Pits, Axes, Fire, Saws, Gauntlet` (`TempleInteriorSpawnCount` 12).
+  - Spaces:
+    - `SnakeExit` became `Collapse` (Climb spawn), listed before `Snakes`;
+    - nine more run spaces.
+  - The snake chamber's hidden choke wall is gone.
+  - `AChultTempleTraps` gains axes, jets and saws.
+  - `DockMenu` has a fourth column, a 1400-wide page and `-MenuTestShot`; `DockGameMode.h` has `bMenuShot`.
+  - Verify-Package: interior `spaces=28 ... axes=6 jets=11 saws=16`, `spawns=12`, plus the trap-run step. Verify-Menu has 27 points.
+  - New LFS binaries: 15 `SFX_TempleRun*` sounds and WAVs, and `M_TempleBlade`.
+- **Tools:** UE 5.7.4, Python 3.14 (stdlib sound generator).
+  - Build.bat ×8.
+  - UnrealEditor-Cmd: audio import ×1, material ×2.
+  - Uncooked runs ×6, plus menu runs ×3.
+  - Build-Game -Package -SkipBaseAssets ×1 with Verify-Package, Verify-Menu ×1, Promote-Build ×1.
+  - Web searches for the research. No downloads or installations.
+
+Next part of the work can be done here.
+
 ## October 21 — the snake chamber and its snakes (Claude)
 
 - **Request:** "Create and add the snakes enemies". Base `eb5fac8`.

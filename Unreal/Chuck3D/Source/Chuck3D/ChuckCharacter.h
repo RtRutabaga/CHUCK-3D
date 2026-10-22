@@ -144,6 +144,16 @@ public:
     static constexpr float WallSideUp = 260.f;     // cm/s up at the start of the arc
     static constexpr float WallSideGravity = 470.f;   // cm/s2: a lighter fall than his own while he runs it
     static constexpr float WallSideLean = 24.f;    // deg his body leans out from the wall
+    // The chained wall run (user 2026-10-22, the temple trap run): a jump in a
+    // side wall run kicks off across the corridor keeping his speed along it;
+    // an opposite wall reached within WallChainAirTime is caught and run too
+    // (left wall, kick, right wall). With no wall there it is just a leap off.
+    static constexpr float WallChainOut = 230.f;      // cm/s away from the wall
+    static constexpr float WallChainUp = 190.f;       // cm/s up
+    static constexpr float WallChainAirTime = .7f;    // s after the kick the next wall can still be caught
+    int32 GetWallChains() const { return WallChains; }
+    /** In a dodge roll (low: the temple's saws pass over him). */
+    bool IsRolling() const { return Gait == EGait::Roll; }
     static constexpr float LadderSpeed = 75.f;     // cm/s up or down a ladder
     // The speed vault (user 2026-10-04): a running jump at something low and
     // thin with floor beyond (a bench, a low wall) goes over it in stride.
@@ -610,6 +620,10 @@ private:
     float RunTakeoffAt = -1;   // when the current running jump left the ground
     float WallSideSpeed = 0, WallSideClock = 0, WallSideStartZ = 0, WallSideTravel = 0, WallSideRise = 0, WallSideTilt = 0;
     int32 WallSideRuns = 0, WallSideAirCatches = 0;
+    bool bWallChainFlight = false;   // the wall jump left a side wall run: the next wall is run along, not up
+    float WallChainAt = -1;
+    float SideLeftAt = -1e3f;        // when the last side wall run ended (its coyote kick chains too)
+    int32 WallChains = 0;
     // Ladders (ChuckClimbable).
     int32 LadderIndex = -1, LadderMounts = 0, FallDeaths = 0;
     float LadderPhase = 0, LadderClock = 0, LadderCooldownUntil = -1;

@@ -12,8 +12,10 @@ class AChuckCharacter;
 // above the temple plaza.
 
 // The spaces a death returns him to the start of (each has a Dev Checkpoint).
-enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes };
-constexpr int32 TempleInteriorSpawnCount = 6;
+// Since October 22 the trap run's sections too (ChultTempleRun.h): the rubble's foot, the pits,
+// the axes, the fire, the saws and the gauntlet.
+enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes, Climb, Pits, Axes, Fire, Saws, Gauntlet };
+constexpr int32 TempleInteriorSpawnCount = 12;
 FVector ChultTempleInteriorSpawn(ETempleInteriorSpawn Spawn);   // world, capsule centre
 float ChultTempleInteriorSpawnYaw(ETempleInteriorSpawn Spawn);
 const TCHAR* ChultTempleInteriorSpawnName(ETempleInteriorSpawn Spawn);

@@ -1,5 +1,6 @@
 #include "ChultTempleInterior.h"
 #include "ChultTempleTraps.h"
+#include "ChultTempleRun.h"
 #include "TempleSkeleton.h"
 #include "TempleSnake.h"
 #include "ChultTemple.h"
@@ -107,8 +108,20 @@ namespace
             {TEXT("PierDoor"),DS0,DS1,DT1,PT0,Floor,Floor+PassH,ETempleInteriorSpawn::Darts,false,false,0,0,0},
             {TEXT("Darts"),DS0,DS1,ChokeT,DT1,WellDeep-200,DTop,ETempleInteriorSpawn::Darts,false,false,0,0,0},
             {TEXT("SnakeArch"),DS0,DS1,DT0,ChokeT,Floor,DTop,ETempleInteriorSpawn::Snakes,false,false,0,0,0},   // the gallery's last 4 m, past its arch: the snake chamber's threshold
+            // (The collapse beyond the chamber's +S arch comes first: a death within its margin is the climb's.)
+            {TEXT("Collapse"),NS1,TempleRun::CollapseS1,ExitT-ExitHalf,ExitT+ExitHalf,Floor,TempleRun::CollapseTop,ETempleInteriorSpawn::Climb,false,false,0,0,0},
             {TEXT("Snakes"),NS0,NS1,NT0,NT1,Floor,NTop,ETempleInteriorSpawn::Snakes,false,false,0,0,0},
-            {TEXT("SnakeExit"),NS1,NS1+ExitDeep,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH,ETempleInteriorSpawn::Snakes,false,false,0,0,0}};
+            // The trap run (October 22, ChultTempleRun.h): the chimney, then each section its own respawn.
+            {TEXT("Shaft"),TempleRun::BS0,TempleRun::BS1,TempleRun::ShaftT0,TempleRun::ShaftT1,TempleRun::RubbleTop,TempleRun::UZ,ETempleInteriorSpawn::Climb,false,false,0,0,0},
+            {TEXT("RunPits"),TempleRun::BS0,TempleRun::BS1,TempleRun::ShaftT1,TempleRun::BT1,TempleRun::UZ-TempleRun::PitDepth-200,TempleRun::Top,ETempleInteriorSpawn::Pits,false,false,0,0,0},
+            {TEXT("RunPitAlcove"),TempleRun::BS0-TempleRun::BreakDeep,TempleRun::BS0,TempleRun::BreakT0,TempleRun::BreakT1,TempleRun::UZ-TempleRun::PitDepth-200,TempleRun::Top,ETempleInteriorSpawn::Pits,false,false,0,0,0},
+            {TEXT("RunAxes"),TempleRun::CS0,TempleRun::CS1,TempleRun::CT0,TempleRun::CT1,TempleRun::UZ-TempleRun::TrenchDepth-200,TempleRun::CTop,ETempleInteriorSpawn::Axes,false,false,0,0,0},
+            {TEXT("RunFire"),TempleRun::DS0,TempleRun::DS1,TempleRun::DT0,TempleRun::DT1,TempleRun::UZ,TempleRun::UZ+400,ETempleInteriorSpawn::Fire,false,false,0,0,0},
+            {TEXT("RunSaws"),TempleRun::ES0,TempleRun::ES1,TempleRun::ET0,TempleRun::ET1,TempleRun::UZ,TempleRun::ETop,ETempleInteriorSpawn::Saws,false,false,0,0,0},
+            {TEXT("RunGauntlet"),TempleRun::FS0,TempleRun::FS1,TempleRun::FT0,TempleRun::FT1,TempleRun::UZ-TempleRun::PitDepth-200,TempleRun::FTop,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
+            {TEXT("RunGauntletAxes"),TempleRun::GAxeS0,TempleRun::GAxeS1,TempleRun::GAxeT0,TempleRun::GAxeT1,TempleRun::UZ-TempleRun::TrenchDepth-200,TempleRun::UZ+420,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
+            {TEXT("RunAnte"),TempleRun::AnteS0,TempleRun::AnteS1,TempleRun::AnteT0,TempleRun::AnteT1,TempleRun::UZ,TempleRun::AnteTop,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0},
+            {TEXT("RunAnteExit"),TempleRun::FS0,TempleRun::FS1,TempleRun::AnteT1,TempleRun::AnteT1+380,TempleRun::UZ,TempleRun::UZ+280,ETempleInteriorSpawn::Gauntlet,false,false,0,0,0}};
         return List;
     }
     // A flight's floor line at S.
@@ -135,7 +148,14 @@ namespace
         case ETempleInteriorSpawn::Spikes:return {KS1-150,AxisT,Floor,-1,0,TEXT("Temple Spikes")};
         case ETempleInteriorSpawn::Piers:return {PS1-150,AxisT,Floor,-1,0,TEXT("Temple Piers")};
         case ETempleInteriorSpawn::Darts:return {(DS0+DS1)*.5f,DT1-70,Floor,0,-1,TEXT("Temple Darts")};
-        default:return {(DS0+DS1)*.5f,ChokeT-130,Floor,0,-1,TEXT("Temple Snakes")};   // between the arch and the chamber, out of the snakes' sense
+        case ETempleInteriorSpawn::Snakes:return {(DS0+DS1)*.5f,ChokeT-130,Floor,0,-1,TEXT("Temple Snakes")};   // between the arch and the chamber, out of the snakes' sense
+        // The trap run (October 22): the rubble's foot, then the start of each section.
+        case ETempleInteriorSpawn::Climb:return {NS1+52,ExitT,Floor,1,0,TEXT("Temple Climb")};
+        case ETempleInteriorSpawn::Pits:return {(TempleRun::BS0+TempleRun::BS1)*.5f,-7650,TempleRun::UZ,0,1,TEXT("Temple Pits")};
+        case ETempleInteriorSpawn::Axes:return {68650,(TempleRun::CausewayT0+TempleRun::CausewayT1)*.5f,TempleRun::UZ,1,0,TEXT("Temple Axes")};
+        case ETempleInteriorSpawn::Fire:return {(TempleRun::DS0+TempleRun::DS1)*.5f,-4900,TempleRun::UZ,0,-1,TEXT("Temple Fire")};
+        case ETempleInteriorSpawn::Saws:return {(TempleRun::DS0+TempleRun::DS1)*.5f,(TempleRun::ET0+TempleRun::ET1)*.5f,TempleRun::UZ,1,0,TEXT("Temple Saws")};
+        default:return {(TempleRun::FS0+TempleRun::FS1)*.5f,-7580,TempleRun::UZ,0,1,TEXT("Temple Gauntlet")};
         }
     }
 
@@ -462,8 +482,9 @@ namespace
     const TCHAR* SkullMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull");
 
     // Built once per world (the checks read these).
-    struct FBuilt{int32 Steps=0,Fires=0,Jars=0,Urns=0,Idols=0,Grips=0,FirstGrip=-1,Slabs=0,Bands=0,Launchers=0;};
+    struct FBuilt{int32 Steps=0,Fires=0,Jars=0,Urns=0,Idols=0,Grips=0,FirstGrip=-1,Slabs=0,Bands=0,Launchers=0,Axes=0,Jets=0,Saws=0;};
     FBuilt Built;
+    #include "ChultTempleRunBuild.inl"
 }
 
 // ---------------------------------------------------------------- public helpers
@@ -491,6 +512,17 @@ bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
     const FVector F=WorldFrame(FeetWorld);
     if(F.X>PitS0&&F.X<PitS1&&F.Y>PitT0&&F.Y<PitT1&&F.Z<WellRingZ-60&&F.Z>WellDeep-600)return true;
     if(F.X>DS0&&F.X<DS1&&F.Y>PitG0&&F.Y<PitG1&&F.Z<Floor-60&&F.Z>WellDeep-600)return true;
+    // The trap run's spike pits and trenches (October 22): below 80 cm under the floor he is on the spikes.
+    {
+        using namespace TempleRun;
+        auto In=[&](float S0,float S1,float T0,float T1,float Depth){return F.X>S0&&F.X<S1&&F.Y>T0&&F.Y<T1&&F.Z<UZ-80&&F.Z>UZ-Depth-300;};
+        for(const FPit& Pt:Pits)if(In(BS0,BS1,Pt.T0,Pt.T1,PitDepth))return true;
+        if(In(BS0-BreakDeep,BS0,BreakT0,BreakT1,PitDepth))return true;
+        if(In(CausewayS0,CausewayS1,CT0,CausewayT0,TrenchDepth)||In(CausewayS0,CausewayS1,CausewayT1,CT1,TrenchDepth))return true;
+        for(const FPit& Pt:GPits)if(In(FS0,FS1,Pt.T0,Pt.T1,PitDepth))return true;
+        const float Mid=(FS0+FS1)*.5f;
+        if(In(GAxeS0,Mid-80,GAxeT0+50,GAxeT1-50,TrenchDepth)||In(Mid+80,GAxeS1,GAxeT0+50,GAxeT1-50,TrenchDepth))return true;
+    }
     return F.X>RiftS0&&F.X<RiftS1&&F.Y>PT0&&F.Y<PT1&&F.Z<Floor-60&&F.Z>WellDeep-600;
 }
 void ChultTempleInteriorCutsAt(float Z,TArray<FBox2D>& Out)
@@ -862,17 +894,10 @@ void BuildChultTempleInterior(AActor* Owner)
     //      two serpent idols and a brazier under a glyph panel at the far end; the way on choked.
     {
         Line(P,NS0,NS1,NT0,NT1,Floor,NTop,{{3,DS0,DS1,Floor,DTop},{1,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH}},Hall_);
-        // The way on: an arch in the +S wall, the passage behind it fallen in, a hidden wall in the rubble.
-        Line(P,NS1,NS1+ExitDeep,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH,{{0,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH}},Plain);
+        // The way on: an arch in the +S wall. Since October 22 the rubble heaped behind it is
+        // climbed, to a chimney up to the trap run (TempleRunBuild::Collapse).
         for(float Sg:{-1.f,1.f})Box(P.Stone,NS1-30,NS1+30,Sg<0?ExitT-ExitHalf:ExitT+ExitHalf-36,Sg<0?ExitT-ExitHalf+36:ExitT+ExitHalf,Floor,Floor+PassH);
         Box(P.Plaster,NS1-36,NS1-30,ExitT-ExitHalf+36,ExitT+ExitHalf-36,Floor+PassH-20,Floor+PassH);
-        for(int32 I=0;I<30;++I)
-        {
-            const float S=R.FRandRange(NS1+50,NS1+ExitDeep-20),H=R.FRandRange(25,70);
-            const float Z=Floor+FMath::Clamp((S-NS1)/250.f,.15f,1.f)*R.FRandRange(0,200);
-            TurnedBox(R.FRand()<.3f?P.Moss:P.Stone,FVector(S,R.FRandRange(ExitT-ExitHalf+30,ExitT+ExitHalf-30),Z+H*.5f),FVector(R.FRandRange(30,80),R.FRandRange(30,70),H),FRotator(R.FRandRange(-20,20),R.FRandRange(0,360),R.FRandRange(-20,20)));
-        }
-        Box(P.Block,NS1+40,NS1+70,ExitT-ExitHalf,ExitT+ExitHalf,Floor,Floor+PassH);
         // Beams across the vault.
         for(float T:{-6150.f,-7150.f,-8000.f})Box(P.Stone,NS0,NS1,T-60,T+60,NTop-50,NTop);
         // The piers, a torch on each toward the chamber's middle.
@@ -909,6 +934,10 @@ void BuildChultTempleInterior(AActor* Owner)
         FRandomStream Bones(2026102102);
         for(int32 I=0;I<5;++I)Skulls.Add({FVector(Bones.FRandRange(NS0+80,NS1-80),Bones.FRandRange(NT0+300,NT1-400),Floor+6),FRotator(Bones.FRandRange(-15,25),Bones.FRandRange(0,360),Bones.FRandRange(-80,80))});
     }
+
+    // ---- The trap run (October 22; ChultTempleRunBuild.inl).
+    FRunMovers Movers;
+    TempleRunBuild::BuildRun(P,Fires,Jars,Skulls,Idols,Movers);
 
     // ---- Emit.
     int32 Missing=0,Triangles=0;
@@ -986,6 +1015,77 @@ void BuildChultTempleInterior(AActor* Owner)
             auto* Mesh=MakeMesh(FString::Printf(TEXT("ChultTempleDart%d"),I),Shaft,Wood,G,false,&Head,Iron);
             Mesh->SetCastShadow(false);Traps->AddDart(Mesh);
         }
+        // The trap run's moving parts (October 22; ChultTempleRunTraps.cpp): axes, fire jets, saws.
+        // Blades and discs in dark forged steel on their own UVs (Tools/create_temple_run_materials.py: it
+        // catches the torchlight and doesn't slide over a moving blade); hangers in rusty iron.
+        auto* BladeIron=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultTemple/M_TempleBlade.M_TempleBlade"));Missing+=!BladeIron;
+        auto Dir=[&](const FVector& F){return (Along*F.X+Across*F.Y+FVector(0,0,F.Z)).GetSafeNormal();};
+        for(int32 I=0;I<Movers.Axes.Num();++I)
+        {
+            const FRunAxe& A=Movers.Axes[I];FSurf Blade,Haft;TempleRunBuild::AxeMesh(Blade,Haft,A.Arm);
+            for(FSurf* Sf:{&Blade,&Haft})for(FVector2D& Uv:Sf->UV)Uv*=8.f;   // the iron's rust at a blade's scale
+            auto* Mesh=MakeMesh(FString::Printf(TEXT("ChultTempleAxe%d"),I),Blade,BladeIron,G+AtV(A.Pivot),false,&Haft,Wood);
+            Traps->AddAxe(Mesh,G+AtV(A.Pivot),Dir(A.Route),A.Arm,A.Amplitude,A.Period,A.Phase);++Built.Axes;
+        }
+        auto* FlameMat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame"));Missing+=!FlameMat;
+        // A jet of flame along its local X, from the torches' flame: a few tongues streaming out along
+        // the jet, and a row of flames rising off it, taller toward its end (burning gas climbs).
+        auto FlameMesh=[&](const FString& Name,const FVector& Mouth,const FVector& D,float Reach,bool bEmber)
+        {
+            auto* Mesh=NewObject<UProceduralMeshComponent>(Traps,*Name);Mesh->SetupAttachment(Traps->GetRootComponent());
+            Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);Mesh->SetCastShadow(false);Mesh->RegisterComponent();
+            Mesh->SetWorldLocationAndRotation(Mouth,D.Rotation());
+            TArray<FVector> V,N;TArray<int32> Tri;TArray<FVector2D> UV;
+            FRandomStream FR(GetTypeHash(Name));
+            // A flame: three crossed quads round Axis, base at Base, Length along Axis.
+            auto Tongue=[&](const FVector& Base,const FVector& Axis,float Length,float Width,float Turn)
+            {
+                const FVector Ax=Axis.GetSafeNormal(),X0=FVector::CrossProduct(Ax,FMath::Abs(Ax.Z)>.9f?FVector::ForwardVector:FVector::UpVector).GetSafeNormal(),Y0=FVector::CrossProduct(Ax,X0);
+                for(int32 K=0;K<3;++K)
+                {
+                    const float A=K*PI/3+Turn;const FVector Side=X0*FMath::Cos(A)+Y0*FMath::Sin(A);const int32 B=V.Num();
+                    V.Append({Base-Side*Width*.5f,Base+Side*Width*.5f,Base+Ax*Length+Side*Width*.5f,Base+Ax*Length-Side*Width*.5f});
+                    UV.Append({FVector2D(0,0),FVector2D(1,0),FVector2D(1,1),FVector2D(0,1)});
+                    const FVector Nn=FVector::CrossProduct(Ax,Side);for(int32 J=0;J<4;++J)N.Add(Nn);
+                    Tri.Append({B,B+1,B+2,B,B+2,B+3});
+                }
+            };
+            if(bEmber){Tongue(FVector(4,0,-10),FVector(.25f,0,1),24,30,0);Tongue(FVector(-2,0,0),FVector(1,0,.15f),26,28,.4f);}
+            else
+            {
+                for(int32 K=0;K<4;++K)Tongue(FVector(-6+K*Reach*.18f,0,FR.FRandRange(-4,4)),FVector(1,0,FR.FRandRange(.02f,.12f)),Reach*(.45f+.1f*K),46+18*K,FR.FRandRange(0,PI));
+                // Broad, overlapping flames rising off the jet (the torch flame fills about half its quad's width).
+                const int32 Rising=FMath::Max(6,FMath::RoundToInt(Reach/13));
+                for(int32 K=0;K<Rising;++K)
+                {
+                    const float U=(K+FR.FRandRange(.2f,.8f))/Rising;
+                    Tongue(FVector(Reach*(.04f+.94f*U),FR.FRandRange(-12,12),-26+FR.FRandRange(-4,4)),FVector(FR.FRandRange(.15f,.45f),FR.FRandRange(-.2f,.2f),1),32+30*U+FR.FRandRange(-6,8),62+34*U+FR.FRandRange(-8,8),FR.FRandRange(0,PI));
+                }
+            }
+            Mesh->CreateMeshSection_LinearColor(0,V,Tri,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),false);
+            Mesh->SetMaterial(0,FlameMat);Mesh->ComponentTags.Add(TEXT("ChultTempleRunFlame"));
+            return Mesh;
+        };
+        for(int32 I=0;I<Movers.Jets.Num();++I)
+        {
+            const FRunJet& J=Movers.Jets[I];const FVector Mouth=G+AtV(J.Mouth),D=Dir(J.Dir);
+            auto* Light=NewObject<UPointLightComponent>(Traps);Light->SetupAttachment(Traps->GetRootComponent());Light->SetMobility(EComponentMobility::Movable);
+            Light->SetWorldLocation(Mouth+D*J.Reach*.4f+FVector(0,0,30));Light->SetAttenuationRadius(650);Light->SetLightColor(FLinearColor(1.f,.5f,.2f));
+            Light->SetCastShadows(false);Light->SetLightingChannels(false,true,false);Light->SetIntensity(0);Light->RegisterComponent();
+            Traps->AddJet(FlameMesh(FString::Printf(TEXT("ChultTempleJet%d"),I),Mouth,D,J.Reach,false),FlameMesh(FString::Printf(TEXT("ChultTempleJetEmber%d"),I),Mouth,D,J.Reach,true),
+                Light,Mouth,D,Dir(J.Route),J.Reach,J.Period,J.Phase,J.Warn,J.Burn);
+            ++Built.Jets;
+        }
+        for(int32 I=0;I<Movers.Saws.Num();++I)
+        {
+            const FRunSaw& S=Movers.Saws[I];FSurf DiscS,ArmS;
+            TempleRunBuild::SawMesh(DiscS,S.Radius);TempleRunBuild::SawHanger(ArmS,S.Ceiling-S.Axle.Z+S.Lift+6);
+            for(FSurf* Sf:{&DiscS,&ArmS})for(FVector2D& Uv:Sf->UV)Uv*=8.f;
+            const FVector Axle=G+AtV(S.Axle),Route=Dir(S.Route);
+            auto* Disc=MakeMesh(FString::Printf(TEXT("ChultTempleSaw%d"),I),DiscS,BladeIron,Axle,false);Disc->SetWorldRotation(Route.Rotation());
+            auto* ArmM=MakeMesh(FString::Printf(TEXT("ChultTempleSawArm%d"),I),ArmS,Iron,Axle,false);ArmM->SetWorldRotation(Route.Rotation());
+            Traps->AddSaw(Disc,ArmM,Axle,Route,S.Radius,S.bDrops,S.Lift,S.Period,S.Phase);++Built.Saws;
+        }
     }
     // Fires: a flame and a flickering light on the interior's channel.
     for(const FFire& F:Fires)
@@ -1029,8 +1129,8 @@ void BuildChultTempleInterior(AActor* Owner)
         {Pot->SetIndoors();Pot->Tags.Add(TEXT("ChultTempleInteriorJar"));(J.bUrn?Built.Urns:Built.Jars)++;}
     // The skeletons (TempleSkeleton.h), once the floors' collision can be stood on.
     {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid()){SpawnTempleSkeletons(W.Get());SpawnTempleSnakes(W.Get());}},.5f,false);}
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d idols=%d jars=%d urns=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
-        Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Idols,Built.Jars,Built.Urns,Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d axes=%d jets=%d saws=%d idols=%d jars=%d urns=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
+        Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Axes,Built.Jets,Built.Saws,Built.Idols,Built.Jars,Built.Urns,Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }
 
 // ---------------------------------------------------------------- checks
@@ -1074,6 +1174,31 @@ namespace
         for(float T=DT1-125;T>=DT0-100;T-=150)Add((DS0+DS1)*.5f,T,Floor);
         // On through the snake chamber, round its middle pier, to the choked way on.
         Add(66900,-6000,Floor);Add(67100,-6650,Floor);Add(67650,-7050,Floor);Add(67700,-7600,Floor);Add(67700,ExitT,Floor);Add(NS1-60,ExitT,Floor);
+        // The trap run (October 22): the rubble's foot (climbed), then along each section's floor; over the pits only on the walls.
+        {
+            using namespace TempleRun;
+            Add(NS1+52,ExitT,Floor);R.Last().bGapAfter=true;
+            const float BM=(BS0+BS1)*.5f;
+            Add(BM,-7850,UZ);
+            for(int32 K=0;K<3;++K)
+            {
+                Add(BM,Pits[K].T0-60,UZ);R.Last().bGapAfter=true;
+                Add(BM,Pits[K].T1+60,UZ);
+            }
+            Add(BM,-4800,UZ);Add(BM,-4600,UZ);
+            const float CM=(CausewayT0+CausewayT1)*.5f;
+            for(float S=68700;S<=71000;S+=160)Add(S,CM,UZ);
+            const float DM=(TempleRun::DS0+TempleRun::DS1)*.5f;   // (the dart gallery has a DS0 of its own)
+            Add(DM,-4600,UZ);
+            for(float T=-4800;T>=-7600;T-=150)Add(DM,T,UZ);
+            const float EM=(ET0+ET1)*.5f;
+            for(float S=DM;S<=73640;S+=150)Add(S,EM,UZ);
+            const float FM=(FS0+FS1)*.5f;
+            Add(FM,EM,UZ);Add(FM,GPits[0].T0-60,UZ);R.Last().bGapAfter=true;
+            for(float T=GPits[0].T1+60;T<GPits[1].T0-50;T+=150)Add(FM,T,UZ);
+            Add(FM,GPits[1].T0-60,UZ);R.Last().bGapAfter=true;
+            Add(FM,GPits[1].T1+60,UZ);Add(FM,AnteT0+100,UZ);Add(FM,AnteT1-60,UZ);
+        }
         return R;
     }
 }
@@ -1101,9 +1226,12 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
             {Fail(TEXT("route_blocked"),F);UE_LOG(LogTemp,Warning,TEXT("CHUCK_TEMPLE_INTERIOR_BLOCKED_BY %s %s"),*GetNameSafe(Hit.GetComponent()),*GetNameSafe(Hit.GetActor()));}
             Prev=Body;++Sweeps;
         }
-        // The snake chamber's way on is choked.
+        // The snake chamber's way on is climbed, not walked (October 22: the rubble's first block stops the capsule),
+        // and the trap run's way on, beyond its antechamber, is choked.
         FHitResult Hit;++Sweeps;
-        if(!World->SweepSingleByChannel(Hit,WorldAt(NS1-60,ExitT,Floor+Half+4),WorldAt(NS1+ExitDeep-30,ExitT,Floor+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("choke_open"),FVector(NS1,ExitT,0));
+        if(!World->SweepSingleByChannel(Hit,WorldAt(NS1-60,ExitT,Floor+Half+4),WorldAt(TempleRun::CollapseS1-30,ExitT,Floor+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("rubble_open"),FVector(NS1,ExitT,0));
+        const float FM=(TempleRun::FS0+TempleRun::FS1)*.5f;++Sweeps;
+        if(!World->SweepSingleByChannel(Hit,WorldAt(FM,TempleRun::AnteT1-60,TempleRun::UZ+Half+4),WorldAt(FM,TempleRun::AnteT1+350,TempleRun::UZ+Half+4),FQuat::Identity,ECC_Pawn,Capsule,Q))Fail(TEXT("choke_open"),FVector(FM,TempleRun::AnteT1,0));
     }
     // 2. Nothing of the exterior (masonry, floor, trunks) inside any space: spheres on a grid.
     {
@@ -1157,14 +1285,19 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         // Deaths in the pit, the hall, the corridor, the rift and the gallery.
         struct FMap{FVector F;ETempleInteriorSpawn Want;};
         const FMap Maps[]={{FVector(78000,1100,-1800),ETempleInteriorSpawn::Well},{FVector(78300,240,900),ETempleInteriorSpawn::Well},{FVector(75000,AxisT,Floor+40),ETempleInteriorSpawn::Hall},
-            {FVector(71300,AxisT,Floor+40),ETempleInteriorSpawn::Spikes},{FVector(67800,AxisT,Floor-500),ETempleInteriorSpawn::Piers},{FVector(66900,-3000,Floor+40),ETempleInteriorSpawn::Darts},{FVector(66900,-7000,Floor+40),ETempleInteriorSpawn::Snakes},{FVector(66900,-5400,Floor+40),ETempleInteriorSpawn::Snakes}};
+            {FVector(71300,AxisT,Floor+40),ETempleInteriorSpawn::Spikes},{FVector(67800,AxisT,Floor-500),ETempleInteriorSpawn::Piers},{FVector(66900,-3000,Floor+40),ETempleInteriorSpawn::Darts},{FVector(66900,-7000,Floor+40),ETempleInteriorSpawn::Snakes},{FVector(66900,-5400,Floor+40),ETempleInteriorSpawn::Snakes},
+            {FVector(68100,ExitT,Floor+150),ETempleInteriorSpawn::Climb},{FVector(68400,-6300,TempleRun::UZ-100),ETempleInteriorSpawn::Pits},{FVector(70000,-4460,TempleRun::UZ+40),ETempleInteriorSpawn::Axes},
+            {FVector(70000,-4650,TempleRun::UZ-100),ETempleInteriorSpawn::Axes},{FVector(71230,-6000,TempleRun::UZ+40),ETempleInteriorSpawn::Fire},{FVector(72500,-7820,TempleRun::UZ+40),ETempleInteriorSpawn::Saws},
+            {FVector(73650,-5000,TempleRun::UZ+40),ETempleInteriorSpawn::Gauntlet},{FVector(73650,-4300,TempleRun::UZ-100),ETempleInteriorSpawn::Gauntlet},{FVector(73650,-3500,TempleRun::UZ+40),ETempleInteriorSpawn::Gauntlet}};
         for(const FMap& M:Maps){FVector Back;if(!ChultTempleInteriorRespawn(WorldAt(M.F.X,M.F.Y,M.F.Z),Back)||FVector::Dist(Back,ChultTempleInteriorSpawn(M.Want))>1)Fail(TEXT("death_map"),M.F);}
         // Outside it a death is the far bank's as before.
         FVector Back;if(ChultTempleInteriorRespawn(WorldAt(70000,4000,40),Back)||ChultTempleInteriorRespawn(WorldAt(77300,0,1500+40),Back))Fail(TEXT("death_map_outside"),FVector::ZeroVector);
         // The pit and the rift swallow; their lips and the slabs don't.
-        for(const FVector& F:{FVector(78000,1100,-1700),FVector(67800,AxisT,Floor-200),FVector(67800,300,Floor-120),FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-150)})
+        for(const FVector& F:{FVector(78000,1100,-1700),FVector(67800,AxisT,Floor-200),FVector(67800,300,Floor-120),FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-150),
+            FVector(68400,-6300,TempleRun::UZ-100),FVector(68280,-5400,TempleRun::UZ-100),FVector(70000,-4650,TempleRun::UZ-100),FVector(73650,-4300,TempleRun::UZ-100),FVector(73480,-6450,TempleRun::UZ-100)})
             if(!ChultTempleInteriorSwallows(WorldAt(F.X,F.Y,F.Z)))Fail(TEXT("no_swallow"),F);
-        for(const FVector& F:{FVector(WellS0+100,1100,WellRingZ+1),FVector(67800,AxisT,Floor+1),FVector(68100,AxisT,Floor+1),FVector(78000,1100,500)})
+        for(const FVector& F:{FVector(WellS0+100,1100,WellRingZ+1),FVector(67800,AxisT,Floor+1),FVector(68100,AxisT,Floor+1),FVector(78000,1100,500),
+            FVector(68400,-6300,TempleRun::UZ-60),FVector(68400,-6800,TempleRun::UZ+1),FVector(70000,-4460,TempleRun::UZ+1),FVector(68400,-7950,TempleRun::RubbleTop+1)})
             if(ChultTempleInteriorSwallows(WorldAt(F.X,F.Y,F.Z)))Fail(TEXT("swallow_safe"),F);
     }
     // The rift has no way across but the rings: no floor anywhere over it.
@@ -1198,6 +1331,8 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
     {
         Bands=Traps->Spikes.Num();Launch=Traps->Launchers.Num();Slabs=Traps->Slabs.Num();Torches=Traps->TorchCount();
         if(Bands!=5||Launch!=Launchers||Slabs!=3||Traps->Darts.Num()<16)Fail(TEXT("traps"),FVector(Bands,Launch,Slabs));
+        // The trap run: 4 + 2 axes, 9 + 2 fire jets, 6 + 2 saw rows of two discs.
+        if(Traps->Axes.Num()!=6||Traps->Jets.Num()!=11||Traps->Saws.Num()!=16)Fail(TEXT("run_traps"),FVector(Traps->Axes.Num(),Traps->Jets.Num(),Traps->Saws.Num()));
         // Each band is dangerous for about a second of its three.
         for(int32 B=0;B<Bands;++B)
         {

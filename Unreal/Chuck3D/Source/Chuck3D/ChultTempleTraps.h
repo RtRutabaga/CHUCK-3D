@@ -95,6 +95,76 @@ public:
     float RiftHalfA = 200.f, RiftHalfB = 200.f;
     void AddSlab(UProceduralMeshComponent* Mesh);
 
+    // ---- The trap run (2026-10-22; ChultTempleRun.h, docs/CHULT-TEMPLE-RUN.md). Each trap's
+    // cycle is Period long from Phase; Back points along the run toward its start (a hit
+    // knocks him that way, never sideways into a pit).
+    // Great axes: a crescent blade on an arm from a pivot, swinging across the route
+    // (Across) about the route's axis, Theta = Amplitude * sin(2 pi U / Period).
+    struct FAxe
+    {
+        TWeakObjectPtr<UProceduralMeshComponent> Mesh;
+        FVector Pivot = FVector::ZeroVector, Route = FVector::ForwardVector, Across = FVector::RightVector;
+        float Arm = 330, Amplitude = 36, Period = 2.2f, Phase = 0;
+        float LastTheta = 0;
+        FRotator Base = FRotator::ZeroRotator;
+    };
+    TArray<FAxe> Axes;
+    static constexpr float AxeBladeHalf = 55.f;    // cm along the arc either side of the arm
+    static constexpr float AxeBladeIn = 30.f;    // cm inside the arm's end (the blade's back)
+    static constexpr float AxeBladeOut = 42.f;   // cm outside it (the edge)
+    // The crescent's back and edge radii from the pivot at U (-1..1 across the blade): widest in
+    // the middle, tapering to points at the horns. The mesh and the hit test share it.
+    static void AxeBladeRadii(float U, float Arm, float& OutBack, float& OutEdge)
+    {
+        OutEdge = Arm + 6.f + (AxeBladeOut - 6.f) * (1.f - U * U);
+        OutBack = OutEdge - (3.f + (AxeBladeIn + AxeBladeOut - 6.f) * FMath::Pow(FMath::Max(0.f, 1.f - U * U), .7f));
+    }
+    void AddAxe(UProceduralMeshComponent* Mesh, const FVector& Pivot, const FVector& Route, float Arm, float Amplitude, float Period, float Phase);
+    float AxeTheta(int32 I, double Time) const;   // degrees
+    // Points on the blade (edge, middle, back) and the arm's lower half at Time (world).
+    void AxePoints(int32 I, double Time, TArray<FVector>& Out) const;
+    // Whether the blade meets a capsule at Location (half height, radius) at Time.
+    bool AxeMeets(int32 I, double Time, const FVector& Location, float Half, float Radius) const;
+
+    // Fire jets: a carved mouth in the wall glows and hisses (Warn), then burns for Burn,
+    // a jet Reach long straight out at chest height.
+    struct FJet
+    {
+        TWeakObjectPtr<UProceduralMeshComponent> Flame, Ember;
+        TWeakObjectPtr<UPointLightComponent> Light;
+        FVector Mouth = FVector::ZeroVector, Dir = FVector::ForwardVector, Route = FVector::ForwardVector;
+        float Reach = 200, Period = 3.f, Phase = 0, Warn = .7f, Burn = 1.3f;
+        int32 Stage = -1;
+    };
+    TArray<FJet> Jets;
+    static constexpr float JetHalfWidth = 30.f;   // cm along the route either side of the jet's line that burns
+    void AddJet(UProceduralMeshComponent* Flame, UProceduralMeshComponent* Ember, UPointLightComponent* Light, const FVector& Mouth, const FVector& Dir, const FVector& Route, float Reach, float Period, float Phase, float Warn, float Burn);
+    // 0 off, 1 the warning glow, 2 burning (and how far out the flame is, 0..1).
+    int32 JetStage(int32 I, double Time, float* OutExtent = nullptr) const;
+    bool JetMeets(int32 I, double Time, const FVector& Location, float Half, float Radius) const;
+
+    // Saws: discs spinning across the route (their axle along it), their lowest edge
+    // at knee height; a dropping saw rises Lift above that between drops. Only a roll passes under one that is down.
+    struct FSaw
+    {
+        TWeakObjectPtr<UProceduralMeshComponent> Disc, Arm;
+        FVector Axle = FVector::ZeroVector, Route = FVector::ForwardVector, Across = FVector::RightVector;
+        float Radius = 62, Lift = 0, Period = 2.4f, Phase = 0, Spin = 0;
+        bool bDrops = false;
+        int32 Stage = -1;
+        FVector DiscBase = FVector::ZeroVector, ArmBase = FVector::ZeroVector;
+    };
+    TArray<FSaw> Saws;
+    // A dropping saw's cycle: up (safe to run under), lowering its teeth (the tell), dropped, rising again.
+    static constexpr float SawUp = .8f;     // s
+    static constexpr float SawTell = .4f;
+    static constexpr float SawRise = .3f;
+    void AddSaw(UProceduralMeshComponent* Disc, UProceduralMeshComponent* Arm, const FVector& Axle, const FVector& Route, float Radius, bool bDrops, float Lift, float Period, float Phase);
+    float SawHeight(int32 I, double Time) const;   // cm above its lowest position
+    bool SawMeets(int32 I, double Time, const FVector& Location, float Half, float Radius) const;
+
+    int32 AxeHits = 0, JetHits = 0, SawHits = 0, SawRollUnders = 0, JetsFired = 0, SawDrops = 0;
+
     // ---- Torches.
     void AddTorch(UPointLightComponent* Light, float Intensity);
 
@@ -109,6 +179,13 @@ private:
     double NextFlicker = 0;
     bool bHearing = false;   // Chuck is inside the interior
     TArray<USoundBase*> SpikeRattle, SpikeThrust, DartClick, DartShot, DartHit, SlabCrack, SlabFall;
+    TArray<USoundBase*> AxeSwoosh, AxeCreak, FireHiss, FireRoar, SawSpin, SawDrop, TrapHit;
+    TSet<int32> SawRolled;   // saws he is rolling under right now (counted once each pass)
+    double NextSawSpin = 0;
+    void TickAxes(AChuckCharacter* Chuck, double Now);
+    void TickJets(AChuckCharacter* Chuck, double Now);
+    void TickSaws(AChuckCharacter* Chuck, double Now, float Dt);
+    void HitBack(AChuckCharacter* Chuck, const FVector& Route, int32& Counter, const TCHAR* What, int32 Index);
     UPROPERTY() TArray<TObjectPtr<USoundBase>> Held;
     UPROPERTY() TObjectPtr<USoundAttenuation> Attenuation;
     void LoadSounds();

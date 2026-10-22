@@ -5,7 +5,7 @@ if(!$PackageRoot) { $PackageRoot=Join-Path $projectRoot 'Builds\Windows' }
 $game=Join-Path (Resolve-Path -LiteralPath $PackageRoot).Path 'Chuck3D\Binaries\Win64\Chuck3D.exe'
 New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot 'Local') | Out-Null
 $run=Get-Date -Format 'yyyyMMdd-HHmmss'
-$points=@('NewGame','Waterdeep','Sewer','SewerJump','SewerLongJump','Night','Pantry','Chult','ChultCanopy','ChultBridge','ChultFarBank','ChultGiants','ChultGiantCanopy','ChultDeepJungle','ChultTemple','ChultTempleWell','ChultTempleHall','ChultTempleSpikes','ChultTemplePiers','ChultTempleDarts','ChultTempleSnakes')
+$points=@('NewGame','Waterdeep','Sewer','SewerJump','SewerLongJump','Night','Pantry','Chult','ChultCanopy','ChultBridge','ChultFarBank','ChultGiants','ChultGiantCanopy','ChultDeepJungle','ChultTemple','ChultTempleWell','ChultTempleHall','ChultTempleSpikes','ChultTemplePiers','ChultTempleDarts','ChultTempleSnakes','ChultTempleClimb','ChultTemplePits','ChultTempleAxes','ChultTempleFire','ChultTempleSaws','ChultTempleGauntlet')
 foreach($point in $points) {
     $log=Join-Path $projectRoot "Local\verify-menu-$run-$point.log"
     $arguments=@("-MenuTest=$point",'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))

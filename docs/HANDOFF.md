@@ -12,6 +12,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Temple interior (October 20, Claude):** the sanctuary's doorway leads down a hidden stair in the masonry and round a 12 m well (an Astral pit at its foot) to 2D maps 1-4 rebuilt under the precinct: the Great Hall, a spike-band corridor, a pier hall split by an Astral rift (collapsing slabs or brachiation rings) and a serpent-mouth dart gallery, ending at a choked arch. Torch-lit on its own light channel with its own exposure; 17 synthesised trap sounds; five new spawns/Dev Checkpoints. Skeletons, the snake chamber and later maps are next ([CHULT-TEMPLE-INTERIOR.md](CHULT-TEMPLE-INTERIOR.md)). Verified and in the launcher.
 - **Temple skeletons (October 21, Claude):** 17 realistic human skeletons (Blender Studio's CC0 model, CMU motion capture) in the spike corridor and pier hall, as the 2D maps place them: some stand guard, most lie among the bones and get up when he comes near; a stiff walk a little over his walking pace; a low kick, a floor grab and a swat, each landing only where its bones meet him; kept to their own gap or side of the rift; ten scratches and they fall flat ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)). Verified and in the launcher.
 - **Temple snakes and snake chamber (October 21, Claude):** the dart gallery's arch now opens into the 2D map 5 snake chamber: 28 × 20 m, five piers in lanes, serpent idols, a choked arch on to map 6, a **Temple Snakes** checkpoint. Twenty procedural 1.8 m pit vipers lie coiled through it. Each crawls by real lateral undulation (the body follows the head's track), rears into an S, strikes with jaws wide (a bite only where the snout reaches), and dies to one scratch ([CHULT-TEMPLE-SNAKES.md](CHULT-TEMPLE-SNAKES.md)). Verified and in the launcher.
+- **Temple trap run (October 22, Claude):** the snake chamber's choked arch is now climbed: the rubble by mantles, then a 4 m wall-jump chimney to an upper level. There a parkour run follows:
+  - spike pits crossed on the walls, with the new chained wall run;
+  - an axe causeway, a fire hall and a saw passage (roll under);
+  - a gauntlet of all four on one beat, then an antechamber whose way on is choked.
+
+  Six new checkpoints ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). Verified and in the launcher.
 - **Temple screen and far canopy (October 19, Claude):** 15 scenery giants (no grips) across the valley at the deep jungle's start hide the temple from the T-rex's trees. A light far canopy stands in for jungle trees beyond their 100 m draw distance ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
 - **Upriver (October 15, Claude):** the far bank now runs 360 m past the river's old end: a spring-fed source fall, twelve giant brachiation trees (crotches 15–17 m, the later T-rex zone, now reached using the golden cigarette, plus a dev checkpoint), then dense jungle to the temple's space; the road continues; far-bank deaths return to their stretch's spawn; every Chult spawn point has a Dev Checkpoint ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
@@ -23,6 +29,39 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 22 — the temple trap run (Claude)
+
+- **Built:** user: "expand the temple dungeon run ... keep the rubble there and make it so chuck can climb up the rubble then wall jump climb ... spike pits to wall run over, swinging axe sections ..., wall flamethrower traps to doge, and overhead circular saw blades to roll under ... look up how other media have depicted temple trap runs ... conducive to a feeling of flow". Research, layout and as-built details: [CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md).
+  - **Research applied:** each trap is introduced alone before they combine (Mario's kishōtenketsu). Every trap telegraphs (Raiders, Prince of Persia). Runs of traps are phased as waves at Chuck's run pace, and the gauntlet is on one beat (Rayman Legends' music levels). Sections are short, each with its own respawn (Celeste). The saws are rolled under (Last Crusade's "penitent man").
+  - **Layout:**
+    - The rubble climb (six mantles) and the chimney.
+    - A 1.8 m pit gallery: a 2.2 m pit, then two 4.6 m pits; the last starts at a broken wall.
+    - An axe causeway: one axe, then a wave of three.
+    - A fire hall: one mouth, a slalom of four, two full-width pairs.
+    - A low saw passage: a fixed row, a pair, then three dropping rows.
+    - The gauntlet, then an antechamber.
+  - **New move (Chuck):** the chained wall run. A jump in or just after a side wall run keeps his speed along the wall and catches an opposite wall as another side run. Head-on wall jumps are unchanged; leaping off a side run now carries its forward speed.
+  - **Assets:** 15 synthesised trap sounds (`Tools/gen_temple_run_sfx.py`, `Tools/import_temple_run_sfx.py`) and `M_TempleBlade` (`Tools/create_temple_run_materials.py`).
+  - **Checkpoints:** a fourth column, with Temple Climb, Pits, Axes, Fire, Saws and Gauntlet.
+- **Checks:**
+  - Uncooked `-ChuckChultTest -ChuckTempleRunTest`: 16/16 trials, interior check `failures=0` (`Local/temple-run-test-3.log`).
+  - Package `Builds/TempleRunCandidate`: Verify-Package **182/182** (`Local/verify-package-20261022-112012.log`). Its new trap-run step passed 16/16, including the climb and the non-stop gauntlet with no hits (`Local/verify-temple-run-20261022-114041.log`). The interior review, snakes and skeletons are unchanged and passing.
+  - Menu suite **27/27** (`Local/temple-run-menu-suite.log`).
+- **Fixed on the way:**
+  - the test bot's stick being zeroed by live input (the chimney trial);
+  - a name clash between the dart gallery's and the fire hall's constants in the route check;
+  - plaster friezes blowing out by torchlight;
+  - flat grey blades, now a dedicated steel material;
+  - spiky-looking fire;
+  - the clipped labels on the four-column checkpoint page (wider, 18 pt).
+- **Launcher:** see the promotion line below.
+- **Limits:**
+  - No person has played it: the difficulty, the flow and the chimney's camera are unreviewed.
+  - The sounds have not been listened to.
+  - The fire is billboarded flame and jagged up close; the axes and saws are simple shapes.
+
+Next part of the work can be done here: the 2D maps 6–9 from the trap run's antechamber, after the user has played the run.
 
 ## October 21 — the snake chamber and its snakes (Claude)
 
