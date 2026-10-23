@@ -1,0 +1,193 @@
+{
+ "generator": "Tools/build_hero_anims.py",
+ "clips": {
+  "CutDown": {
+   "fbx": "Anim/AS_HeroFighter_CutDown.fbx",
+   "frames": 45,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 28.37,
+   "contact_s": 0.433,
+   "contact_frame": 13,
+   "contact_point_cm": [
+    93.4,
+    7.7,
+    137.4
+   ],
+   "contact_tip_cm": [
+    121.6,
+    9.7,
+    135.6
+   ],
+   "contact_speed_m_s": 28.37
+  },
+  "Guard": {
+   "fbx": "Anim/AS_HeroFighter_Guard.fbx",
+   "frames": 192,
+   "fps": 30,
+   "loops": true,
+   "tip_speed_peak_m_s": 0.01
+  },
+  "CutFlat": {
+   "fbx": "Anim/AS_HeroFighter_CutFlat.fbx",
+   "frames": 43,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 30.19,
+   "contact_s": 0.433,
+   "contact_frame": 13,
+   "contact_point_cm": [
+    89.9,
+    -14.2,
+    154.2
+   ],
+   "contact_tip_cm": [
+    115.1,
+    -26.8,
+    152.8
+   ],
+   "contact_speed_m_s": 30.19
+  },
+  "CutRise": {
+   "fbx": "Anim/AS_HeroFighter_CutRise.fbx",
+   "frames": 46,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 30.42,
+   "contact_s": 0.4,
+   "contact_frame": 12,
+   "contact_point_cm": [
+    77.2,
+    4.3,
+    199.0
+   ],
+   "contact_tip_cm": [
+    97.5,
+    0.0,
+    218.3
+   ],
+   "contact_speed_m_s": 30.42
+  },
+  "Overhead": {
+   "fbx": "Anim/AS_HeroFighter_Overhead.fbx",
+   "frames": 53,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 30.35,
+   "contact_s": 0.5,
+   "contact_frame": 15,
+   "contact_point_cm": [
+    92.2,
+    14.0,
+    150.7
+   ],
+   "contact_tip_cm": [
+    120.4,
+    14.3,
+    148.1
+   ],
+   "contact_speed_m_s": 29.25
+  },
+  "Bash": {
+   "fbx": "Anim/AS_HeroFighter_Bash.fbx",
+   "frames": 34,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 0.64,
+   "contact_s": 0.3,
+   "contact_frame": 9
+  },
+  "BlockHit": {
+   "fbx": "Anim/AS_HeroFighter_BlockHit.fbx",
+   "frames": 28,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 0.39,
+   "hit_s": 0.0
+  },
+  "HitLight": {
+   "fbx": "Anim/AS_HeroFighter_HitLight.fbx",
+   "frames": 31,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 1.06,
+   "hit_s": 0.0
+  },
+  "HitHeavy": {
+   "fbx": "Anim/AS_HeroFighter_HitHeavy.fbx",
+   "frames": 58,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 7.03,
+   "hit_s": 0.0
+  },
+  "Advance": {
+   "fbx": "Anim/AS_HeroFighter_Advance.fbx",
+   "frames": 25,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 0.0,
+   "root_x_cm": [
+    0.0,
+    0.0,
+    0.12,
+    1.04,
+    2.75,
+    5.09,
+    7.92,
+    11.09,
+    14.46,
+    17.88,
+    21.21,
+    24.3,
+    27.0,
+    29.68,
+    32.66,
+    35.73,
+    38.68,
+    41.29,
+    43.35,
+    44.65,
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+   ]
+  },
+  "Retreat": {
+   "fbx": "Anim/AS_HeroFighter_Retreat.fbx",
+   "frames": 25,
+   "fps": 30,
+   "loops": false,
+   "tip_speed_peak_m_s": 0.0,
+   "root_x_cm": [
+    -0.0,
+    -0.0,
+    -0.11,
+    -0.93,
+    -2.44,
+    -4.52,
+    -7.04,
+    -9.86,
+    -12.85,
+    -15.9,
+    -18.85,
+    -21.6,
+    -24.0,
+    -26.38,
+    -29.03,
+    -31.76,
+    -34.38,
+    -36.7,
+    -38.54,
+    -39.69,
+    -40.0,
+    -40.0,
+    -40.0,
+    -40.0,
+    -40.0
+   ]
+  }
+ }
+}

@@ -16,6 +16,13 @@ Stone Pathway (Amal Kumar): https://polyhaven.com/a/stone_pathway
 Human base meshes and source textures: MakeHuman CC0 assets, via MPFB.
 https://www.makehumancommunity.org/content/license.html
 
+Temple heroes' cloth and leather: Poly Haven, CC0-1.0 (Velour Velvet, Poly Wool Herringbone,
+Fabric Leather 02, Scuba Suede, Hessian 230). https://polyhaven.com/license
+Temple heroes' steel: ambientCG, CC0-1.0 (Metal 054 A, Metal 038). https://ambientcg.com
+
+Temple fire and the wizard's bolt: Unity Labs' free VFX image sequences (Houdini flipbooks), CC0-1.0.
+https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks
+
 Chult raptor model and animations: "Velociraptor" by Quaternius, CC0-1.0
 (smoothed, rescaled and re-textured for this game).
 https://poly.pizza/m/cnlGH2UcDd  https://quaternius.com

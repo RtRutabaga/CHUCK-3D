@@ -89,7 +89,7 @@ From the gallery the hall reads end to end:
 - **Torches** down both long walls, on the end walls and at the gallery.
 - **Pots:** two on the gallery, two in the hall.
 
-The gallery is where Chuck will watch the battle; the floor and dais are its stage. The hall has no other way out, as in 2D, where the scripted Fireball is the way on. It is empty for now: no adventurers, beholder, skeletons, battle or music of its own (the temple interior's score plays).
+The gallery is where Chuck will watch the battle; the floor and dais are its stage. The hall has no other way out, as in 2D, where the scripted Fireball is the way on. It is empty for now: no adventurers, beholder, skeletons, battle or music of its own (the temple interior's score plays). Since October 23 the three adventurers stand on its floor before the dais, fighting skeletons that rise from the bones round the dais end ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)); the beholder is still to come.
 
 ## Respawns and checkpoints
 

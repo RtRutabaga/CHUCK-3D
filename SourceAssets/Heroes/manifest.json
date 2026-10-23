@@ -1,0 +1,659 @@
+{
+ "heroes": {
+  "Fighter": {
+   "fbx": "HeroFighter/SK_HeroFighter.fbx",
+   "height_cm": 187,
+   "tris": 162520,
+   "slots": {
+    "Gambeson": {
+     "type": "fabric",
+     "fabric": "hessian_230",
+     "tint": [
+      0.11,
+      0.035,
+      0.03
+     ],
+     "tile_cm": 26.8,
+     "gain": 4.918,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.028,
+      0.026
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.034,
+      0.022
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Mail": {
+     "type": "fabric",
+     "fabric": "chainmail",
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ],
+     "tile_cm": 14.4,
+     "gain": 3.468,
+     "folder": "SourceAssets/Surfaces/Armor"
+    },
+    "Mailskirt": {
+     "type": "fabric",
+     "fabric": "chainmail",
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ],
+     "tile_cm": 14.4,
+     "gain": 3.468,
+     "folder": "SourceAssets/Surfaces/Armor"
+    },
+    "Beard": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      0.1,
+      0.07,
+      0.05
+     ]
+    },
+    "BeardStrands": {
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
+     "tint": [
+      0.16,
+      0.11,
+      0.075
+     ]
+    },
+    "Hero_steel": {
+     "type": "pbr",
+     "set": "metal054a",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.34,
+      0.335,
+      0.33
+     ],
+     "rough": 1.4,
+     "metal": 1.0,
+     "tile_cm": 60.0
+    },
+    "Hero_steel_dark": {
+     "type": "pbr",
+     "set": "metal038",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.7,
+      0.7,
+      0.7
+     ],
+     "rough": 1.15,
+     "metal": 1.0,
+     "tile_cm": 50.0
+    },
+    "Hero_suede": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.11,
+      0.075,
+      0.045
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "Hero_leather": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.032
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_leather_dk": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.035,
+      0.024,
+      0.016
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_gilt": {
+     "type": "pbr",
+     "set": "metal054a",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      1.0,
+      0.72,
+      0.32
+     ],
+     "rough": 0.8,
+     "metal": 1.0,
+     "tile_cm": 40.0
+    },
+    "Hero_paint": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.05,
+      0.1,
+      0.2
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_wood_dark": {
+     "type": "pbr",
+     "set": "rough_wood",
+     "folder": "SourceAssets/Surfaces/WeatheredTimber",
+     "tint": [
+      0.28,
+      0.2,
+      0.14
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 7.752
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brownlight_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow001.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02.png"
+    }
+   },
+   "mouth_cm": [
+    16.2,
+    0.0,
+    169.5
+   ],
+   "props": {
+    "sword_grip": [
+     -0.6196433305740356,
+     -0.3267239034175873,
+     1.2923189401626587
+    ],
+    "sword_tip": [
+     -0.4659695625305176,
+     -1.155677080154419,
+     1.4719438552856445
+    ],
+    "shield_centre": [
+     0.5938891768455505,
+     -0.10665298998355865,
+     1.4529725313186646
+    ]
+   },
+   "bones_extra": [
+    "shield_l",
+    "weapon_r",
+    "weapon_tip"
+   ]
+  },
+  "Wizard": {
+   "fbx": "HeroWizard/SK_HeroWizard.fbx",
+   "height_cm": 179,
+   "tris": 97320,
+   "slots": {
+    "Robe": {
+     "type": "fabric",
+     "fabric": "velour_velvet",
+     "tint": [
+      0.018,
+      0.026,
+      0.085
+     ],
+     "tile_cm": 27.9,
+     "gain": 8.846,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "Skirt": {
+     "type": "fabric",
+     "fabric": "velour_velvet",
+     "tint": [
+      0.016,
+      0.023,
+      0.078
+     ],
+     "tile_cm": 27.9,
+     "gain": 8.846,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Beard": {
+     "type": "card",
+     "texture": "Textures/beard_mass.png",
+     "tint": [
+      0.78,
+      0.74,
+      0.68
+     ]
+    },
+    "BeardStrands": {
+     "type": "hair",
+     "texture": "Textures/beard_locks.png",
+     "tint": [
+      0.95,
+      0.92,
+      0.86
+     ]
+    },
+    "Hero_velvet": {
+     "type": "pbr",
+     "set": "velour_velvet",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.02,
+      0.028,
+      0.09
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 27.9,
+     "gain": 8.846
+    },
+    "Hero_gold_cloth": {
+     "type": "pbr",
+     "set": "poly_wool_herringbone",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.6,
+      0.38,
+      0.08
+     ],
+     "rough": 0.7,
+     "metal": 0.0,
+     "tile_cm": 27.3,
+     "gain": 5.524
+    },
+    "Hero_rope": {
+     "type": "pbr",
+     "set": "hessian_230",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.32,
+      0.25,
+      0.16
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 26.8,
+     "gain": 4.918
+    },
+    "Hero_leather": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.032
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_wood": {
+     "type": "pbr",
+     "set": "rough_wood",
+     "folder": "SourceAssets/Surfaces/WeatheredTimber",
+     "tint": [
+      0.5,
+      0.38,
+      0.26
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 7.752
+    },
+    "Hero_gem": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.12,
+      0.75,
+      0.58
+     ],
+     "rough": 0.08,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "emissive": [
+      0.2,
+      2.2,
+      1.6
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/grey_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow007.png",
+     "tint": [
+      1.9,
+      1.9,
+      1.9
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01.png"
+    },
+    "Hair": {
+     "type": "hair",
+     "texture": "Textures/long01_diffuse_grey.png",
+     "tint": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   },
+   "mouth_cm": [
+    14.8,
+    0.0,
+    160.0
+   ],
+   "props": {
+    "staff_grip": [
+     -0.5479426383972168,
+     -0.28292739391326904,
+     1.2121230363845825
+    ],
+    "gem": [
+     -0.23536120355129242,
+     -0.8574883341789246,
+     1.483249306678772
+    ]
+   },
+   "bones_extra": [
+    "weapon_r",
+    "weapon_tip"
+   ]
+  },
+  "Ranger": {
+   "fbx": "HeroRanger/SK_HeroRanger.fbx",
+   "height_cm": 172,
+   "tris": 74874,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.09,
+      0.12,
+      0.065
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.032,
+      0.026
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.03,
+      0.019
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "fabric_leather_02",
+     "tint": [
+      0.09,
+      0.055,
+      0.03
+     ],
+     "tile_cm": 50.0,
+     "gain": 9.762,
+     "folder": "SourceAssets/Surfaces/Heroes"
+    },
+    "Hero_wool_green": {
+     "type": "pbr",
+     "set": "poly_wool_herringbone",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.045,
+      0.07,
+      0.04
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 27.3,
+     "gain": 5.524
+    },
+    "Hero_leather": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.032
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_leather_dk": {
+     "type": "pbr",
+     "set": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.035,
+      0.024,
+      0.016
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 9.762
+    },
+    "Hero_wood": {
+     "type": "pbr",
+     "set": "rough_wood",
+     "folder": "SourceAssets/Surfaces/WeatheredTimber",
+     "tint": [
+      0.5,
+      0.38,
+      0.26
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 50.0,
+     "gain": 7.752
+    },
+    "Hero_steel_dark": {
+     "type": "pbr",
+     "set": "metal038",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.7,
+      0.7,
+      0.7
+     ],
+     "rough": 1.15,
+     "metal": 1.0,
+     "tile_cm": 50.0
+    },
+    "Hero_feather": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.42,
+      0.38,
+      0.33
+     ],
+     "rough": 0.8,
+     "metal": 0.0,
+     "tile_cm": 50.0
+    },
+    "Hero_suede": {
+     "type": "pbr",
+     "set": "scuba_suede",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.11,
+      0.075,
+      0.045
+     ],
+     "rough": 1.0,
+     "metal": 0.0,
+     "tile_cm": 28.2,
+     "gain": 10.699
+    },
+    "Hero_string": {
+     "type": "pbr",
+     "set": null,
+     "folder": null,
+     "tint": [
+      0.6,
+      0.58,
+      0.52
+     ],
+     "rough": 0.7,
+     "metal": 0.0,
+     "tile_cm": 50.0
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/young_lightskinned_female_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/green_eye.png"
+    },
+    "Brow": {
+     "type": "card",
+     "texture": "Textures/eyebrow010.png",
+     "tint": [
+      0.55,
+      0.32,
+      0.2
+     ]
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes03.png"
+    },
+    "Hair": {
+     "type": "hair",
+     "texture": "Textures/ponytail01_diffuse.png",
+     "tint": [
+      0.62,
+      0.3,
+      0.14
+     ]
+    }
+   },
+   "mouth_cm": [
+    15.4,
+    0.0,
+    155.0
+   ],
+   "props": {
+    "bow_grip": [
+     0.47664329409599304,
+     -0.23505206406116486,
+     1.01679527759552
+    ],
+    "nock": [
+     0.3639959692955017,
+     -0.22930428385734558,
+     0.9179137945175171
+    ],
+    "arrow_nock": [
+     -0.4852179288864136,
+     -0.2496715933084488,
+     1.0061770677566528
+    ]
+   },
+   "bones_extra": [
+    "weapon_l",
+    "bowstring",
+    "arrow_r"
+   ],
+   "arrow_fbx": "Props/SM_HeroArrow.fbx"
+  }
+ },
+ "generator": "Tools/build_temple_heroes.py",
+ "mpfb": "2.0.17"
+}

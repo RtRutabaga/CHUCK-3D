@@ -1,0 +1,45 @@
+{
+ "generator": "Tools/build_hero_anims.py",
+ "clips": {
+  "Idle": {
+   "fbx": "Anim/AS_HeroWizard_Idle.fbx",
+   "frames": 216,
+   "fps": 30,
+   "loops": true
+  },
+  "Channel": {
+   "fbx": "Anim/AS_HeroWizard_Channel.fbx",
+   "frames": 144,
+   "fps": 30,
+   "loops": true
+  },
+  "Cast": {
+   "fbx": "Anim/AS_HeroWizard_Cast.fbx",
+   "frames": 34,
+   "fps": 30,
+   "loops": false,
+   "fire_s": 0.34,
+   "fire_frame": 10,
+   "fire_bone": "hand_l",
+   "fire_cm": [
+    57.5,
+    -9.2,
+    145.6
+   ]
+  },
+  "HitLight": {
+   "fbx": "Anim/AS_HeroWizard_HitLight.fbx",
+   "frames": 31,
+   "fps": 30,
+   "loops": false,
+   "hit_s": 0.0
+  },
+  "HitHeavy": {
+   "fbx": "Anim/AS_HeroWizard_HitHeavy.fbx",
+   "frames": 55,
+   "fps": 30,
+   "loops": false,
+   "hit_s": 0.0
+  }
+ }
+}

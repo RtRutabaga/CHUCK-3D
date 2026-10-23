@@ -1,0 +1,297 @@
+{
+ "notes": "The three adventurers of the 2D game's final temple chamber (CHUCK-game docs/development/PHASE-6.md: a male fighter, a wizard, a clearly female ranger; tools/generate_adventurer_sprites.py: the fighter in dented plate with a helm, sword with a gold crossguard and leather grip, and a shield; the wizard in deep blue robes, grey beard, pointed hat, crooked staff with a sea-green gem; the ranger in forest greens, a long auburn ponytail, a longbow). User 2026-10-22: much more detailed than the NPCs so far. Bodies: MPFB 2.0.17 (CC0 MakeHuman); the kit pieces (shirt, gambeson, mail ...) are Tools/build_npc_humans.py's; everything else is Tools/build_temple_heroes.py's. Macro sliders are MakeHuman's 0..1 (age 0.5 = 25 years, 1 = 90).",
+ "heroes": {
+  "Fighter": {
+   "height_cm": 187,
+   "macro": {
+    "gender": 1.0,
+    "age": 0.6,
+    "muscle": 0.85,
+    "weight": 0.62,
+    "height": 0.8,
+    "proportions": 0.7,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.0,
+     "asian": 0.0,
+     "caucasian": 1.0
+    }
+   },
+   "targets": {
+    "chin-width-incr": 0.35,
+    "chin-prominent-incr": 0.25,
+    "neck-scale-horiz-incr": 0.35,
+    "nose-hump-incr": 0.3,
+    "l-cheek-bones-incr": 0.2,
+    "r-cheek-bones-incr": 0.2
+   },
+   "skin": "middleage_caucasian_male",
+   "eyes": "brownlight",
+   "eyebrows": "eyebrow001",
+   "eyelashes": "eyelashes02",
+   "hair": null,
+   "face": true,
+   "beard": {
+    "length": 0.012,
+    "width": 0.062,
+    "clear": 0.03,
+    "braids": false,
+    "cheek": 0.032,
+    "cards": 10,
+    "lying_cards": 300,
+    "sideburn_cards": 24,
+    "tint": [
+     0.1,
+     0.07,
+     0.05
+    ],
+    "strand_tint": [
+     0.16,
+     0.11,
+     0.075
+    ],
+    "card_scale": 0.3
+   },
+   "outfit": [
+    {
+     "piece": "gambeson",
+     "fabric": "hessian_230",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.11,
+      0.035,
+      0.03
+     ],
+     "offset": 0.011
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.028,
+      0.026
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.2,
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.034,
+      0.022
+     ]
+    },
+    {
+     "piece": "mail",
+     "offset": 0.024,
+     "sleeve": 0.55,
+     "fabric": "chainmail",
+     "folder": "SourceAssets/Surfaces/Armor",
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ]
+    },
+    {
+     "piece": "mailskirt",
+     "offset": 0.026,
+     "bottom": 0.34,
+     "fabric": "chainmail",
+     "folder": "SourceAssets/Surfaces/Armor",
+     "tint": [
+      0.3,
+      0.3,
+      0.31
+     ]
+    }
+   ],
+   "gear": "fighter"
+  },
+  "Wizard": {
+   "height_cm": 179,
+   "macro": {
+    "gender": 1.0,
+    "age": 0.93,
+    "muscle": 0.32,
+    "weight": 0.42,
+    "height": 0.7,
+    "proportions": 0.6,
+    "cupsize": 0.5,
+    "firmness": 0.3,
+    "race": {
+     "african": 0.0,
+     "asian": 0.05,
+     "caucasian": 0.95
+    }
+   },
+   "targets": {
+    "nose-scale-vert-incr": 0.35,
+    "nose-hump-incr": 0.5,
+    "l-cheek-bones-incr": 0.4,
+    "r-cheek-bones-incr": 0.4,
+    "head-oval": 0.4
+   },
+   "skin": "old_caucasian_male",
+   "eyes": "grey",
+   "eyebrows": "eyebrow007",
+   "brow_tint": [
+    1.9,
+    1.9,
+    1.9
+   ],
+   "eyelashes": "eyelashes01",
+   "hair": "long01",
+   "hair_tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "face": true,
+   "beard": {
+    "length": 0.34,
+    "width": 0.1,
+    "clear": 0.04,
+    "braids": false,
+    "cheek": 0.05,
+    "bushy": false,
+    "depth": 0.06,
+    "cards": 70,
+    "lying_cards": 320,
+    "fluff_cards": 260,
+    "sideburn_cards": 50,
+    "tint": [
+     0.78,
+     0.74,
+     0.68
+    ],
+    "strand_tint": [
+     0.95,
+     0.92,
+     0.86
+    ]
+   },
+   "outfit": [
+    {
+     "piece": "robe",
+     "flare": 0.07,
+     "cuff": 0.03,
+     "collar": 0.025,
+     "fabric": "velour_velvet",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.018,
+      0.026,
+      0.085
+     ]
+    },
+    {
+     "piece": "skirt",
+     "fabric": "velour_velvet",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.016,
+      0.023,
+      0.078
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.08,
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ]
+    }
+   ],
+   "gear": "wizard",
+   "hair_grey": 0.62
+  },
+  "Ranger": {
+   "height_cm": 172,
+   "macro": {
+    "gender": 0.0,
+    "age": 0.53,
+    "muscle": 0.62,
+    "weight": 0.42,
+    "height": 0.62,
+    "proportions": 0.85,
+    "cupsize": 0.45,
+    "firmness": 0.65,
+    "race": {
+     "african": 0.0,
+     "asian": 0.05,
+     "caucasian": 0.95
+    }
+   },
+   "targets": {
+    "l-cheek-bones-incr": 0.35,
+    "r-cheek-bones-incr": 0.35,
+    "chin-width-decr": 0.15,
+    "nose-scale-horiz-decr": 0.2
+   },
+   "skin": "young_caucasian_female",
+   "eyes": "green",
+   "eyebrows": "eyebrow010",
+   "brow_tint": [
+    0.55,
+    0.32,
+    0.2
+   ],
+   "eyelashes": "eyelashes03",
+   "hair": "ponytail01",
+   "hair_tint": [
+    0.62,
+    0.3,
+    0.14
+   ],
+   "face": true,
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.09,
+      0.12,
+      0.065
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.032,
+      0.026
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.36,
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.03,
+      0.019
+     ]
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "fabric_leather_02",
+     "folder": "SourceAssets/Surfaces/Heroes",
+     "tint": [
+      0.09,
+      0.055,
+      0.03
+     ]
+    }
+   ],
+   "gear": "ranger"
+  }
+ }
+}

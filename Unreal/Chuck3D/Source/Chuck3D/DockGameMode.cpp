@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "TempleSkeleton.h"
+#include "TempleSanctumBattle.h"
 #include "TempleSnake.h"
 #include "ChultLanding.h"
 #include "ChultBridge.h"
@@ -697,6 +698,13 @@ void ADockGameMode::StartPlay()
         StartFromMenu(TEXT("Chult"));
         FTimerHandle SkeletonCheck;
         World->GetTimerManager().SetTimer(SkeletonCheck,[World](){StartTempleSkeletonReview(World);},5.f,false);
+    }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSanctumTest"))||FParse::Param(FCommandLine::Get(),TEXT("ChuckSanctumCapture")))
+    {
+        // Claude's temple heroes (TempleSanctumBattle.h): Chult, then the sanctum's battle once spawned.
+        StartFromMenu(TEXT("Chult"));
+        FTimerHandle SanctumCheck;
+        World->GetTimerManager().SetTimer(SanctumCheck,[World](){StartTempleSanctumReview(World);},7.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSnakeTest"))||FParse::Param(FCommandLine::Get(),TEXT("ChuckSnakeCapture")))
     {

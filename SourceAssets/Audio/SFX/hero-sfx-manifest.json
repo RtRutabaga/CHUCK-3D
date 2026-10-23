@@ -1,0 +1,301 @@
+{
+  "provenance": "Original deterministic synthetic hero sounds; Tools/gen_hero_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_HeroSwordWhoosh_00",
+      "file": "SFX_HeroSwordWhoosh_00.wav",
+      "duration": 1.1,
+      "sha256": "2b20b06648374f76a808c770def4b3c2c851b1698d9839c7fcc0276de60cca0d",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordWhoosh_01",
+      "file": "SFX_HeroSwordWhoosh_01.wav",
+      "duration": 1.1,
+      "sha256": "087d60d5efcace1b821e33bcc53b0bad1b26a8da710e4d202116901306b1a469",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordWhoosh_02",
+      "file": "SFX_HeroSwordWhoosh_02.wav",
+      "duration": 1.1,
+      "sha256": "d7985429855000ad94958ec23cf1b97bb0ecbb2e84fcdacf4142453bffcf49d5",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordWhoosh_03",
+      "file": "SFX_HeroSwordWhoosh_03.wav",
+      "duration": 1.1,
+      "sha256": "8556baf7e119b793928c96ea1f52e163e672c747b19fa5d9135282d58b5f571e",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordHitBone_00",
+      "file": "SFX_HeroSwordHitBone_00.wav",
+      "duration": 1.4,
+      "sha256": "4cfabbcd5a2b3fb193b727108e8c85f012238040616905cd64e1eae4d82e3381",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordHitBone_01",
+      "file": "SFX_HeroSwordHitBone_01.wav",
+      "duration": 1.4,
+      "sha256": "be99e20b13b1e136a60ce9de2554183fd0460ea8b97f68e02524592d85597b14",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordHitBone_02",
+      "file": "SFX_HeroSwordHitBone_02.wav",
+      "duration": 1.4,
+      "sha256": "dc142c6323335ecbc76c8421687bca95c0648b2132d671becf8c80f3827967de",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSwordHitBone_03",
+      "file": "SFX_HeroSwordHitBone_03.wav",
+      "duration": 1.4,
+      "sha256": "18b27a324edfd9a7f5b6d79d28eaee1cf4b20acb4e9d0917a6ba7f0a33fc16af",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroShieldBlock_00",
+      "file": "SFX_HeroShieldBlock_00.wav",
+      "duration": 1.5,
+      "sha256": "a1821e84fd9dfe736dda8e89a68acd5de7b022c64b26a44deb03f16b6c9789f9",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroShieldBlock_01",
+      "file": "SFX_HeroShieldBlock_01.wav",
+      "duration": 1.5,
+      "sha256": "db8d259de8081a50d68420a1be2020f394341c1171eefe1ecadc22ae1c967233",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroShieldBlock_02",
+      "file": "SFX_HeroShieldBlock_02.wav",
+      "duration": 1.5,
+      "sha256": "da858b830ee62a0f74edcedcf15bd44645007c5c95b21817d2ba95c0359d9ef4",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourHit_00",
+      "file": "SFX_HeroArmourHit_00.wav",
+      "duration": 1.8,
+      "sha256": "73a2f11990d4ba4c36c65b66b2d74a0e8b08f5b2368ef41de6132d4b84298f96",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourHit_01",
+      "file": "SFX_HeroArmourHit_01.wav",
+      "duration": 1.8,
+      "sha256": "b98f4b60f541037863919c6a8d97235b743fb3958e3336ff9fb943a22118c0d3",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourHit_02",
+      "file": "SFX_HeroArmourHit_02.wav",
+      "duration": 1.8,
+      "sha256": "281fb9f7202c0196774f95ae963de34cd07c90e55f47a518e3721adb785ec210",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourStep_00",
+      "file": "SFX_HeroArmourStep_00.wav",
+      "duration": 1.1,
+      "sha256": "912aebc74fe23d0c0a292c4f12503a9ad4389d3bf133485d6a4ebff2d9474a6a",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourStep_01",
+      "file": "SFX_HeroArmourStep_01.wav",
+      "duration": 1.1,
+      "sha256": "74449c54ff59f7ab7dbd5fb6765cc88f3cd42ffb7153851fe970be2a1825f67c",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourStep_02",
+      "file": "SFX_HeroArmourStep_02.wav",
+      "duration": 1.1,
+      "sha256": "efdfcf8ff86285b9ef77b3ddcb39d134195deae8d856cfe3b5285794724f986f",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArmourStep_03",
+      "file": "SFX_HeroArmourStep_03.wav",
+      "duration": 1.1,
+      "sha256": "b8bc3546561659798f47e64fa1ecbdb1cba095aba97d1bce36c6c39757a52151",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroShieldBash_00",
+      "file": "SFX_HeroShieldBash_00.wav",
+      "duration": 1.9,
+      "sha256": "023360039c08bcb79a24eeed1c8e0c401fdc83e6350a8c5c74c14fb2a44d6c9a",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroShieldBash_01",
+      "file": "SFX_HeroShieldBash_01.wav",
+      "duration": 1.9,
+      "sha256": "418681dd2a866c818f4aa635732a7fe5b7faf9f97996722d20e1ae86ae9fddba",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBowDraw_00",
+      "file": "SFX_HeroBowDraw_00.wav",
+      "duration": 1.15,
+      "sha256": "9c2a60540eb214a91f649715333a022dab0b2f2b4f02446e1e092f2e4a75c727",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBowRelease_00",
+      "file": "SFX_HeroBowRelease_00.wav",
+      "duration": 1.1,
+      "sha256": "b92f622ff7030f29945482de37a6435427624c7943c1141d031c54ef0840c283",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBowRelease_01",
+      "file": "SFX_HeroBowRelease_01.wav",
+      "duration": 1.1,
+      "sha256": "688a5f18d285df5619dfb26b541d9ca43f24cbf7d023e1f643ad2eade2a6479c",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBowRelease_02",
+      "file": "SFX_HeroBowRelease_02.wav",
+      "duration": 1.1,
+      "sha256": "16e44ec5c81b1e4607eb9691dca63201a4b0e45937905ab5c85ddec932a3c329",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArrowFlight_00",
+      "file": "SFX_HeroArrowFlight_00.wav",
+      "duration": 0.75,
+      "sha256": "624914231821f51d50bbf3c9dddabe124400bbcc7f01960181a4d60a934f4665",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArrowFlight_01",
+      "file": "SFX_HeroArrowFlight_01.wav",
+      "duration": 0.75,
+      "sha256": "2dbcb864aee8141b6ae24ac29e0701033b44ac644714870e274d17d9eb6b2063",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArrowHit_00",
+      "file": "SFX_HeroArrowHit_00.wav",
+      "duration": 1.2,
+      "sha256": "c54983706334237ccc1c845bccf8e87d05e6815e15f88f0375f6b2f1e2694677",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArrowHit_01",
+      "file": "SFX_HeroArrowHit_01.wav",
+      "duration": 1.2,
+      "sha256": "03bb4a8888f6a7e73da4d8f0b65dbb802fdd64d42da395280e09b6b9dd290de5",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroArrowHit_02",
+      "file": "SFX_HeroArrowHit_02.wav",
+      "duration": 1.2,
+      "sha256": "597846577b935c2831c920b301aa6ec45f664916c49dd9f5d4d615063038c520",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBoltCast_00",
+      "file": "SFX_HeroBoltCast_00.wav",
+      "duration": 1.7,
+      "sha256": "434541a5c96ec3edafbb320743f39b9400850d460caba4f859b2a45f5e155096",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBoltCast_01",
+      "file": "SFX_HeroBoltCast_01.wav",
+      "duration": 1.7,
+      "sha256": "49695117055ffd58437493dee0e409ef9026107c8be0e3f5b188d56ac5beb813",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBoltImpact_00",
+      "file": "SFX_HeroBoltImpact_00.wav",
+      "duration": 2.7,
+      "sha256": "6ffc97cd5f39cdb9b60ff8bddd71a269ef0d6b801e1a08240aec0812d02706dc",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroBoltImpact_01",
+      "file": "SFX_HeroBoltImpact_01.wav",
+      "duration": 2.7,
+      "sha256": "a98b5cc00e84eb9b068458257c118a06e18f112eeb0ba4443a3d6aa1dcf6ac09",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSkullBounce_00",
+      "file": "SFX_HeroSkullBounce_00.wav",
+      "duration": 1.9,
+      "sha256": "31737668dec2374cf273338a4ff2b092ebeba93171aacd8433dc374708f36534",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSkullBounce_01",
+      "file": "SFX_HeroSkullBounce_01.wav",
+      "duration": 1.9,
+      "sha256": "6fa468281ef303eb9a5997938c93c755ac7fc1643cdf9d7c1f689b0c63823790",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroSkullBounce_02",
+      "file": "SFX_HeroSkullBounce_02.wav",
+      "duration": 1.9,
+      "sha256": "a61f603f6a5fd6fdd6879a1566da47acc46028f7f64320d0d728ad8eb37acf2f",
+      "peak_dbfs": -3.0,
+      "loop": false
+    },
+    {
+      "name": "SFX_HeroChannel_00",
+      "file": "SFX_HeroChannel_00.wav",
+      "duration": 4.0,
+      "sha256": "25d2e6b5d520f5b92bdc45c2b40eaa47a54e8fee0d9d329581ce3618a63d18d9",
+      "peak_dbfs": -3.0,
+      "loop": true
+    }
+  ]
+}

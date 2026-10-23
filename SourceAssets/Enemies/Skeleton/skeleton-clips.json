@@ -82,6 +82,21 @@
    "loops": false,
    "speed_cm_s": 0.0,
    "seconds": 4.5333
+  },
+  "Strike": {
+   "fbx": "Anim/AS_Skeleton_Strike.fbx",
+   "take": "02_05",
+   "frames": 40,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 1.3333,
+   "strike": 0.4667,
+   "reach_cm": 62.852,
+   "height_cm": 156.7269,
+   "side_cm": 52.6477,
+   "aim_deg": 39.951,
+   "effector": "middle_03_r"
   }
  }
 }

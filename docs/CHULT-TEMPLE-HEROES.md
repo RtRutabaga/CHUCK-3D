@@ -1,0 +1,263 @@
+# Chult — the temple heroes
+
+User request, October 22, 2026 (Claude): "create the three heroes from the 2d game and add them to the grand temple room at the end. we'll add the beholder later. these three adventurers will be much more detailed and visually impressive than our NPCs so far, and they will have movements for attacking and taking hits that are much more involved than our existing NPCs, especially the fighter, one thing I want to emphasize is the feeling of a good hit, the fighter will have a sword and a shield and when he swings his sword to cut off the beholder's eye or to take down a skeleton I want the movement of the swing and hit to be realistic and satisfying to watch. download and install whatever you see fits best."
+
+They stand in the [sanctum](CHULT-TEMPLE-WIND.md#the-sanctum), the hall at the end of the Astral wind, and fight skeletons that keep getting up out of the bones. The beholder is not built yet.
+
+## The 2D direction
+
+Read-only sources: `docs/development/PHASE-6.md`, `tools/generate_adventurer_sprites.py`, `data/dialogue/temple_sanctum.json`, `PROJECT_STATUS.md` (sessions 130-131 and the battle notes).
+
+- **The cast:** a male fighter, a wizard and a clearly female ranger, battling a beholder and skeletons. It is their battle, not Chuck's: he only witnesses it. Do not explain who they are; they return much later.
+- **The fighter:** dented plate with a helm, a sword with a gold crossguard and leather grip, a shield. He "occupies skeletons".
+- **The wizard:** deep blue robes, grey beard, a pointed hat, a crooked staff with a sea-green gem. He is "working, rather than fighting" (the binding), and casts the Fireball later.
+- **The ranger:** forest greens, a long auburn ponytail, a longbow. She fires arrows.
+
+Not built here: the entrance lines, the beholder, the battle's hazards for Chuck, the Fireball and the escape.
+
+## What was downloaded, and what was used
+
+The user's "download and install whatever you see fits best" covered these downloads. Nothing was installed. The tools are the ones already in the project (Blender 4.5.14 + MPFB 2.0.17, UE 5.7.4).
+
+| Source | What | Used? |
+|---|---|---|
+| ambientCG (CC0) | Metal054A (hand-worked iron) and Metal038 (dark scratched steel), 2K | Yes: the plate, rims, rivets, blade, gilt (tinted) |
+| Poly Haven (CC0) | velour_velvet, poly_wool_herringbone, fabric_leather_02, scuba_suede, hessian_230, 2K | Yes: the robe, hat, mantles, leather, gloves, gambeson |
+| CMU motion capture (free for any use) | 17 candidate takes into `Local/HeroMocapCandidates` | Only 02_05 "punch/strike", as the skeletons' blow at a hero |
+| Quaternius Universal Animation Library 1 and 2 (CC0), 15.9 and 18.7 MB | Sword combos, shield block and impact, hit reactions | No (below); kept in `Local/HeroQuaternius`, not committed |
+
+Fetch scripts:
+- `Tools/Fetch-HeroSurfaces.ps1` fetches the surfaces: 23 files, 69.6 MB, `SourceAssets/Surfaces/Heroes/manifest.json` with URLs, real-world sizes and hashes.
+- `Tools/Fetch-CMUMocap.ps1` fetches 02_05, which is recorded in the CMU manifest.
+
+**Why the fighter's motion is authored rather than downloaded.** No free, usable motion library has a realistic sword-and-shield fighter:
+- Quaternius's sword clips are leaping, spinning action-game moves.
+- CMU's "swordplay" (subject 2) is casual two-handed play-acting.
+- Mixamo's sword-and-shield pack needs your Adobe sign-in, and its terms forbid redistributing the raw files, which this public repository would do.
+- MoCap Online's free pack needs a store checkout with your email and has a custom licence.
+- The paid packs (ActorCore and others) were not bought.
+
+So the motion is made in Blender by `Tools/build_hero_anims.py` as physical motion, not posed keys (below).
+
+## The heroes (`Tools/build_temple_heroes.py`, `SourceAssets/Heroes/heroes.json`)
+
+Each body is an MPFB human made with the human kit (`Tools/build_npc_humans.py`, now importable as a module with an `extra` hook; its NPC output is unchanged). Everything else is built over that body.
+
+### Plate
+Plate is a shell of the body region, pushed out over the layers under it. It is then smoothed until it is a plate's simple convex form, with no pecs and no navel, while holding a set clearance off the body. Then it gets:
+- thickness;
+- a rolled rim swept round every edge;
+- rivets set in from the rim.
+
+Each piece rides one bone, or a fixed blend of two, as real plate does. Lames are separate pieces, each on its own blend, so they slide over one another.
+
+### What each wears and carries
+- **Fighter (187 cm, 162,520 triangles):**
+  - an arming gambeson and mail hauberk with a mail skirt (kit pieces);
+  - a keeled breastplate and backplate, four fauld lames, two-lame tassets;
+  - four-lame pauldrons, rerebraces, winged couters, vambraces;
+  - suede gloves with flared cuffs and back-of-hand plates;
+  - cuisses, winged poleyns and greaves;
+  - an open-faced bascinet with a rolled face opening and a mail aventail;
+  - a sword belt with a scabbard and gilt chape;
+  - a short, full beard.
+- **Wizard (179 cm, 97,320 triangles):**
+  - a deep-blue velvet robe with bell sleeves, falling to the floor;
+  - a mantle with a broad gilt-thread band, a rope girdle with tasselled ends, a leather pouch;
+  - a tall hat with a drooping brim, its crown leaning and bent over, with a band;
+  - long white hair (MakeHuman's long01, greyed) and a long beard;
+  - a 1.85 m crooked, knotted staff whose roots claw round a glowing sea-green gem.
+- **Ranger (172 cm, 74,874 triangles):**
+  - a linen tunic and leather jerkin;
+  - a hooded wool mantle with the hood down;
+  - a baldric, and a quiver with nine fletched arrows;
+  - a belt and knife sheath, a bracer on her bow arm, fingerless gloves, tall boots;
+  - an auburn ponytail;
+  - a 1.78 m D-section longbow with a bound grip and a string, and an arrow at her fingers.
+
+### The props and their bones
+The props are skinned into each hero's mesh on extra bones (`docs/RIG-CONTRACT-V1.md` is not affected: heroes have their own skeletons):
+- `weapon_r` and `weapon_tip`: the sword or staff, and the blade's point (the game reads the cut from it);
+- `shield_l`;
+- `weapon_l`: the bow;
+- `bowstring`: its nocking point, drawn by the clips;
+- `arrow_r`: the nocked arrow, hidden once loosed.
+
+The sword:
+- a 79 cm blade with a diamond section, a fuller and distal taper;
+- a 20 cm gilt cruciform guard, a cord-bound leather grip and a wheel pommel.
+
+The shield is a curved heater: painted leather over boards, with a steel rim, rim nails and enarmes.
+
+### Surfaces (`Tools/import_temple_heroes.py`, `/Game/Characters/Heroes`)
+Every hero piece has a vertex colour baked by Cycles: R is ambient occlusion, G is edge wear (convexity), B is grime. The masters use it:
+
+| Master | For | How it uses the vertex colour |
+|---|---|---|
+| `M_HeroMetal` | Plate, rims, rivets, blade, gilt | Brighter and more polished at the edges, duller in the hollows |
+| `M_HeroCloth` | Leather, velvet, wool, rope, wood | Poly Haven weave; paler at the edges, grime in the hollows |
+| `M_HeroSolid` | The gem, string and fletching | Occlusion only; the gem is emissive |
+| `M_HeroSkin` | Skin | Subsurface (light through the ears and nose) |
+
+The project's reflections fall back to the outdoor sky (`r.ReflectionMethod` 2), so in this hall the metal's sky term is occluded (`SkyOcclusion` 0.16) and the plate shows the torches, not blue sky. The steel's albedo is 0.34. The first in-game passes at 1.0 and 0.5 read chalk-white, then chrome.
+
+Each hero has its own skeleton (`SKEL_Hero<Name>`) and four LODs:
+
+| Hero | LOD vertices |
+|---|---|
+| Fighter | 119,575 / 37,128 / 21,440 / 12,690 |
+| Wizard | 68,490 / 26,633 / 15,666 / 8,023 |
+| Ranger | 47,330 / 15,137 / 8,870 / 5,211 |
+
+`Tools/Import-TempleHeroes.ps1 [-Clean] [-Only Fighter,fx]` imports them. The FX materials are kept once made: a `-Clean` run rebuilds them, because the running game module holds them.
+
+## The motion (`Tools/build_hero_anims.py`)
+
+### How it is made
+Twenty clips at 30 fps, keyed on every frame:
+- **The weapon leads.** A cut is the sword's path: grip positions and blade directions keyed in time and joined by Catmull-Rom curves on time knots.
+  - The blade is slow in the wind-up, fastest at contact and decelerating through the follow-through.
+  - The cutting edge always faces the way the blade moves (taken from the tip's velocity), so every cut lands edge first.
+- **The body drives it.** The hips turn first, the chest a few frames after, the arm last. The front foot steps and plants just before contact. The weight goes back in the wind-up and forward through the cut, and the knees sink as it lands.
+- **Analytic two-bone IK** works from joint positions, because the FBX bones' tails are not reliable:
+  - elbows and knees bend as hinges;
+  - the forearm takes the hand's twist (a wrist cannot twist);
+  - the clavicles lift and reach with the hand.
+- **The hand follows the weapon.** It is placed from where the sword (or shield, or bow) must be.
+- **Hits taken are springs.** A blow is an impulse through three damped springs: the hips go first, the chest whips after them, the head snaps last. Big ones add reactive steps and arms thrown out for balance.
+
+### Measured results
+Measured from the solved rig and written to `Unreal/Chuck3D/Source/Chuck3D/HeroClipData.h`. Contact points are relative to the fighter: ahead, to his right (− his left), and height.
+
+| Clip | What | Contact | Contact point (cm) | Blade tip |
+|---|---|---|---|---|
+| CutDown | Forehand descending diagonal, step in | 0.433 s | 93 / 8 / 137 | 28 m/s |
+| CutFlat | Level forehand at the throat (takes a skull off) | 0.433 s | 90 / −14 / 154 | 30 m/s |
+| Overhead | Heavy blow from behind the head, long step, deep crouch | 0.5 s | 92 / 14 / 151 | 29 m/s |
+| CutRise | Low right to high left, up on the toes (for the beholder's eye stalks; not drawn against skeletons) | 0.4 s | 77 / 4 / 199 (tip 218) | 30 m/s |
+| Bash | Shield punched out with a step | 0.3 s | — | — |
+
+Tip speeds of 26-32 m/s are in the range measured for real sword cuts.
+
+The other clips:
+- **Fighter:** Guard (a breathing 6.4 s loop), BlockHit, HitLight, HitHeavy (two steps back), Advance and Retreat (in place; the game moves him by their travel).
+- **Wizard:** Idle (leaning on the staff), Channel (the binding: braced, the staff thrust at the dais, the left hand reaching out and trembling), Cast (the bolt leaves his left palm at 0.34 s), HitLight, HitHeavy.
+- **Ranger:** Idle (arrow nocked, bow low), Shoot (below), HitLight, HitHeavy.
+
+The ranger's Shoot runs 2.6 s:
+1. Raise and draw to the corner of her jaw; the string follows her fingers.
+2. Hold, then loose at 1.0 s. The string snaps forward with a damped twang, the hand flies back past her ear, and the arrow is gone.
+3. Reach over her right shoulder to the quiver; an arrow appears in her fingers.
+4. Bring it round, nock it, and return to ready.
+
+Contact sheets and key-frame strips are in `Local/HeroReview` (anim1-4).
+
+## The fight
+
+The fight is run by `ATempleSanctumBattle` (TempleSanctumBattle.h/.cpp), `ATempleHero` (TempleHero.h/.cpp) and `ATempleSkeleton`'s sanctum mode. The heroes use the skeletons' clip player (`FSkeletonAnimator`), which gained a twisting flinch, a hideable head and a time scale for hit-stop. The existing skeletons are unchanged.
+
+### The staging
+Three heroes stand on the hall floor before the dais, facing the beholder's spot over its front: the fighter in front, the wizard behind him on his left and the ranger behind him on his right (the 2D arc).
+
+Twelve skeletons lie in reserve among the bones round the dais end. While Chuck is in the sanctum (the hall, the gallery or the end of leg 4), three are on their feet at a time:
+- each goes for a hero, mostly the fighter (two at him at most);
+- each punches at its hero from about a metre (its fist reaches 63 cm ahead of its hips);
+- each strikes again after 1.6-3 s.
+
+The fallen lie where they fell for 14 s, then go back into reserve where Chuck is not looking.
+
+Bones are evaluated every frame only while the fight is on.
+
+### The fighter
+He holds his ground and faces the nearest skeleton on its feet. When it is 64-118 cm off, he cuts:
+- the descending diagonal, the level cut or the overhead (1 : 1 : 0.6);
+- or a shield bash if it is about to strike and close.
+
+**The hit test.** A cut lands only if the blade itself meets the bones. The blade's cutting length is swept from the frame before to this one in five segments, against the skeleton's spine (16 cm round), throat and skull, inside 0.1 s before to 0.12 s after the measured contact. The test uses the clip time the bones actually show: the mesh evaluates after the hero's tick. A frame hitch therefore cannot make a cut miss, which it did in the first trials.
+
+**What a hit does:**
+1. Hit-stop: both freeze for 75-110 ms (the overhead longest).
+2. The bone crack plays on the frame of contact.
+3. 22-34 bone splinters fly the blade's way, with dust.
+4. The level cut, if it passed the throat or skull, takes the head off. The skull flies, tumbles, bounces and rolls; the headless body takes a breath before its knees go.
+5. A faint smear of the blade's passage hangs for 0.11 s.
+
+The bash knocks a skeleton back about 60 cm and does not kill.
+
+**Blows on him:**
+- In guard and facing the blow, he takes it on the shield (BlockHit), and the striker recoils.
+- In his wind-up, the shield takes it with a jolt and the cut goes on.
+- Past contact, or turned away, he is hit and reels: the twist turns him the way the blow came from.
+
+### The ranger and the wizard
+The ranger shoots skeletons going for her or the wizard, and the fighter's only while they are still more than 3.2 m from him. Her arrows fly ballistically at 50 m/s, led for the target's movement, stand in the bone they hit, and drop it on the third. She pauses 1.2-3 s between shots.
+
+The wizard works the binding at the dais. A sea-green light and a hum come from his gem. Every 7-12 s he turns a bolt on a skeleton going for him or the ranger. The bolt homes in at 15 m/s, trailing sea-green fire (the Unity Labs flipbooks, recoloured), and bursts in a flash that blasts the skeleton down.
+
+### Sounds
+`Tools/gen_hero_sfx.py` makes 37 stdlib-synthesised originals (`SFX_Hero*`):
+- a sword whoosh (its Doppler sweep peaking at contact) and the blade going into bone;
+- a blow on the shield, a fist on plate, armoured steps, the shield bash;
+- the bow's creak and twang, an arrow's flight and its impact in bone;
+- the bolt's cast and burst;
+- a seamless 4 s channelling hum;
+- skull bounces.
+
+`Tools/import_hero_sfx.py` imports them.
+
+### Chuck
+None of it is aimed at him. The heroes ignore him, the sanctum skeletons ignore him, and no blow, arrow or bolt hurts him yet. That is the battle's work, with the beholder.
+
+## Tests
+
+`-ChuckSanctumTest` runs ten trials, and `-ChuckSanctumCapture` adds stills to `Saved/Screenshots/.../Sanctum`. `-ChuckSanctumOnly=<trial>` runs a single trial.
+
+1. Each blow on a fresh skeleton placed in his measure: `cut_down`, `cut_flat` (it must take the skull), `overhead`, `bash`.
+2. `block`: a blow on the shield.
+3. `hit_behind`: a blow on his back.
+4. `arrows`: three arrows drop a skeleton.
+5. `bolt`.
+6. `portraits`: stills.
+7. `battle`: 45 s of the battle running.
+
+`Tools/Verify-Package.ps1` now runs it in the packaged build.
+
+## Evidence (October 23)
+
+- **Uncooked, `-ChuckSanctumCapture`:** all ten trials pass, in four consecutive full runs after the last behaviour change (`Local/sanctum-test-10.log` to `-14.log`).
+  - Every forced cut lands; the level cut decapitates.
+  - Blade speeds at contact are 28-32 m/s without screenshot hitches.
+  - In the free battle, 8-12 skeletons fall in 45 s, the fighter landing 4-10 cuts, with 105-131 sounds.
+- **Stills:** `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Sanctum` (not committed).
+  - Each cut from the side, from 0.24 s before contact to 1.2 s after: the decapitation's skull is in the air at +0.16 s.
+  - Portraits, head and figure, of each hero.
+- **Packaged:** see HANDOFF for the candidate's verification.
+
+## What was tried and dropped
+
+- **The motion sources above:** the Quaternius libraries, CMU swordplay, Mixamo and MoCap Online.
+- **Steel at full albedo, then at half:** it read chalk-white, then chrome, under the torches with the sky in its reflections.
+- **Skeletons stopping at 78 cm:** they crowded into his shield. They stand off at about a metre now (their measured reach).
+- **The level cut at chest height (1.42 m):** it took collarbones, never a head. It is at the throat now (1.54 m).
+- **The descending cut's contact at 1.56 m:** it passed over a crouched skeleton's head. It is at 1.37 m, centred.
+- **A block that cancelled his own cut** when struck in the wind-up.
+- **Arrows dropping a skeleton on the second:** the ranger took nearly all of them before they reached the fighter. Now three arrows, and she leaves his foes to him.
+- **Clip FBX files carrying the whole armoured mesh:** about 170 MB. They now carry the body and the prop pieces, 26 MB.
+- **Re-imported copies of the human kit's fabrics:** now reused from `/Game/Characters/Humans/Fabrics`.
+
+## Not done, and known flaws
+
+- **The beholder**, the 2D entrance lines, the battle's hazards for Chuck, the Fireball and the escape.
+- **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".
+- **Hair and beards** are cards (the kit's), not strand grooms.
+- **Clipping:**
+  - Plate can intersect at extreme poses (the pauldrons in the overhead's wind-up), and the ranger's mantle clips her arm at full draw.
+  - A striking skeleton's arm passes into the fighter's helmet or shield at close range.
+- **Movement:**
+  - The fighter only steps forward and back along his facing. He turns on the spot by rotating, with his feet sliding a little.
+  - Heroes do not walk.
+- **Flying things:**
+  - Arrows and bolts ignore walls and pillars.
+  - Splinters and skulls bounce only on the floor plane, so a skull can roll through a plinth.
+- **The rising cut** is authored for the beholder and is not yet used.
+- **Sound:** no music of its own for the battle (the temple interior's score plays).

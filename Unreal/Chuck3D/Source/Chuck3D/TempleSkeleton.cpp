@@ -1,6 +1,10 @@
 #include "TempleSkeleton.h"
 #include "ChuckCharacter.h"
 #include "SkeletonClipData.h"
+#include "TempleHero.h"
+#include "TempleSanctumBattle.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Animation/AnimSequence.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -29,8 +33,10 @@ namespace
         static const FAttackSpec Specs[] = {
             {TEXT("Kick"), 1.f, SkeletonClipData::KickStrike, SkeletonClipData::KickAim, .14f, .16f, TEXT("ball_r"), TEXT("foot_r"), 7.f, ATempleSkeleton::KickDamage},
             {TEXT("Grab"), 1.25f, SkeletonClipData::GrabStrike, SkeletonClipData::GrabAim, .2f, .35f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, ATempleSkeleton::GrabDamage},
-            {TEXT("Swat"), 1.3f, SkeletonClipData::SwatStrike, SkeletonClipData::SwatAim, .25f, .12f, TEXT("middle_03_l"), TEXT("middle_02_l"), 2.f, ATempleSkeleton::SwatDamage}};
-        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 2)];
+            {TEXT("Swat"), 1.3f, SkeletonClipData::SwatStrike, SkeletonClipData::SwatAim, .25f, .12f, TEXT("middle_03_l"), TEXT("middle_02_l"), 2.f, ATempleSkeleton::SwatDamage},
+            // The sanctum's blow at a hero: a fist driven out at chest height (CMU 02_05).
+            {TEXT("Strike"), 1.f, SkeletonClipData::StrikeStrike, SkeletonClipData::StrikeAim, .1f, .12f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, 1}};
+        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 3)];
     }
 
     // Spawned in play and in its own test only: the other automated runs keep the worlds their checks were written against.
@@ -79,6 +85,8 @@ ATempleSkeleton::ATempleSkeleton()
     static ConstructorHelpers::FObjectFinder<UAnimSequence> Swat(TEXT("/Game/Characters/Skeleton/Animations/AS_Skeleton_Swat.AS_Skeleton_Swat"));
     static ConstructorHelpers::FObjectFinder<UAnimSequence> Rise(TEXT("/Game/Characters/Skeleton/Animations/AS_Skeleton_Rise.AS_Skeleton_Rise"));
     static ConstructorHelpers::FObjectFinder<UAnimSequence> Collapse(TEXT("/Game/Characters/Skeleton/Animations/AS_Skeleton_Collapse.AS_Skeleton_Collapse"));
+    static ConstructorHelpers::FObjectFinder<UAnimSequence> Strike(TEXT("/Game/Characters/Skeleton/Animations/AS_Skeleton_Strike.AS_Skeleton_Strike"));
+    Clips.Add(TEXT("Strike"), Strike.Object);
     Clips.Add(TEXT("Idle"), Idle.Object); Clips.Add(TEXT("Walk"), Walk.Object); Clips.Add(TEXT("Kick"), Kick.Object);
     Clips.Add(TEXT("Grab"), Grab.Object); Clips.Add(TEXT("Swat"), Swat.Object); Clips.Add(TEXT("Rise"), Rise.Object); Clips.Add(TEXT("Collapse"), Collapse.Object);
 }
@@ -159,7 +167,7 @@ int32 ATempleSkeleton::GetAnimEvaluations() const
 
 const TCHAR* ATempleSkeleton::AttackName(EAttack A)
 {
-    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); default: return TEXT("None"); }
+    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); default: return TEXT("None"); }
 }
 
 const TCHAR* ATempleSkeleton::GetStateName() const
@@ -313,7 +321,9 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     const FVector Here = GetActorLocation();
     const float Travelled = static_cast<float>(FVector::Dist2D(Here, LastLocation));
     LastLocation = Here;
+    Animator.SetTimeScale(GetWorld()->GetTimeSeconds() < HitStopUntil ? .03f : 1.f);
     Animator.Tick(DeltaSeconds, State == EState::Chase || State == EState::Return ? Travelled : 0.f);
+    if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
     if (State == EState::Dead)
     {
         // Down: the skull rolls aside and the jaw falls open as it settles.
@@ -478,5 +488,222 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         if (Animator.Finished()) SetState(EState::Dormant);
         break;
     default: break;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The sanctum (docs/CHULT-TEMPLE-HEROES.md): the heroes' foes, not Chuck's.
+
+void ATempleSkeleton::SetFoe(ATempleHero* Hero)
+{
+    Foe = Hero;
+    SlotAngle = Random.FRandRange(-60.f, 60.f);   // where round its hero it means to stand (+ to the hero's left)
+}
+
+ATempleHero* ATempleSkeleton::GetFoe() const { return Foe.Get(); }
+
+void ATempleSkeleton::SetSanctum(ATempleSanctumBattle* InBattle) { Battle = InBattle; }
+
+void ATempleSkeleton::Wake()
+{
+    if (State == EState::Dormant || State == EState::Settle) SetState(EState::Rise);
+}
+
+float ATempleSkeleton::StrikeIn() const
+{
+    if (State != EState::Attack) return 1e6f;
+    return FMath::Max(0.f, (Spec(Attack).Strike - Animator.Time()) / FMath::Max(.1f, Spec(Attack).Rate));
+}
+
+void ATempleSkeleton::HitStop(float Seconds)
+{
+    HitStopUntil = FMath::Max(HitStopUntil, static_cast<float>(GetWorld()->GetTimeSeconds()) + Seconds);
+}
+
+FTransform ATempleSkeleton::SkullTransform() const
+{
+    const int32 B = GetMesh()->GetBoneIndex(TEXT("head"));
+    return B == INDEX_NONE ? GetActorTransform() : GetMesh()->GetBoneTransform(B);
+}
+
+bool ATempleSkeleton::TakeHeroBlow(EBlow Kind, const FVector& From, const FVector& At)
+{
+    if (State == EState::Dead) return false;
+    const FVector Push = (At - From).GetSafeNormal2D();
+    const FVector Local = GetActorTransform().InverseTransformVectorNoScale(Push);
+    // Turned by a blow from its side (+ twist: to its left; a push from its left turns it right).
+    const float Twist = FMath::Clamp(static_cast<float>(-Local.Y) * 18.f, -18.f, 18.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BLOW kind=%d state=%s arrows=%d"), static_cast<int32>(Kind), GetStateName(), ArrowsIn);
+    switch (Kind)
+    {
+    case EBlow::Bash:
+        // Knocked back off its line: it staggers back and comes on again.
+        Animator.Flinch(22.f, Twist);
+        StaggerVel = Push * 260.f; StaggerTime = .45f;
+        if (State == EState::Attack) { Animator.Play(TEXT("Idle"), true, 1.f, false, .15f); SetState(EState::Recover); }
+        AttackReadyAt = GetWorld()->GetTimeSeconds() + 1.4f;
+        return false;
+    case EBlow::Arrow:
+        if (++ArrowsIn < 3 && State != EState::Dormant)   // the third arrow drops it
+        {
+            Animator.Flinch(14.f, Twist * .6f);
+            StaggerVel = Push * 90.f; StaggerTime = .25f;
+            return false;
+        }
+        break;
+    default: break;
+    }
+    Fall(Kind, From);
+    return true;
+}
+
+void ATempleSkeleton::Fall(EBlow Kind, const FVector& From)
+{
+    Sound(CollapseSounds, 1.f);
+    if (Kind == EBlow::Decapitate) { bHeadless = true; Animator.SetHeadScale(.001f); }
+    const FVector Push = (GetActorLocation() - From).GetSafeNormal2D();
+    // Struck down where it stands, thrown a little the blow's way: the knees go and it drops.
+    Animator.Flinch(Kind == EBlow::Cleave ? 30.f : 18.f);
+    StaggerVel = Push * (Kind == EBlow::Bolt ? 220.f : Kind == EBlow::Cleave ? 60.f : 110.f); StaggerTime = .3f;
+    SetState(EState::Dead);
+    GetCharacterMovement()->StopMovementImmediately();
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    // Headless, it stands a breath before it goes (the body does not yet know).
+    const float Rate = Kind == EBlow::Cleave ? CollapseRate * 1.25f : CollapseRate;
+    Animator.Play(TEXT("Collapse"), false, Rate, true, Kind == EBlow::Decapitate ? .35f : .12f);
+    Animator.SetLook(0, 0);
+}
+
+void ATempleSkeleton::ResetToReserve(const FTempleSkeletonPost& InPost)
+{
+    Post = InPost; Post.bDormant = true;
+    for (UStaticMeshComponent* A : StuckArrows) if (A) A->DestroyComponent();
+    StuckArrows.Reset();
+    ArrowsIn = 0; bHeadless = false; Animator.SetHeadScale(1.f);
+    StaggerVel = FVector::ZeroVector; StaggerTime = 0; HitStopUntil = 0;
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    ResetToPost();
+}
+
+void ATempleSkeleton::StickArrow(UStaticMesh* Arrow, const FVector& At, const FVector& Dir)
+{
+    if (!Arrow) return;
+    // In the bone nearest where it struck, along its flight, sunk a third of its length.
+    static const TCHAR* Bones[] = {TEXT("spine_03"), TEXT("spine_02"), TEXT("pelvis"), TEXT("head"), TEXT("upperarm_l"), TEXT("upperarm_r"), TEXT("thigh_l"), TEXT("thigh_r")};
+    FName Best = NAME_None; float BestD = 1e9f;
+    for (const TCHAR* B : Bones)
+    {
+        const float D = static_cast<float>(FVector::Dist(GetMesh()->GetBoneLocation(B), At));
+        if (D < BestD) { BestD = D; Best = B; }
+    }
+    auto* C = NewObject<UStaticMeshComponent>(this);
+    C->SetStaticMesh(Arrow);
+    C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    C->SetLightingChannels(false, true, false);
+    C->RegisterComponent();
+    C->SetWorldLocationAndRotation(At - Dir.GetSafeNormal() * 52.f, Dir.Rotation());
+    C->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, Best);
+    StuckArrows.Add(C);
+}
+
+void ATempleSkeleton::TickSanctum(float DeltaSeconds)
+{
+    StateTime += DeltaSeconds;
+    auto* Move = GetCharacterMovement();
+    const FVector Here = GetActorLocation();
+    const bool bFrozen = GetWorld()->GetTimeSeconds() < HitStopUntil;
+    // A blow's push carries it (a stagger, or the fall's lurch), easing off.
+    if (StaggerTime > 0.f && !bFrozen)
+    {
+        StaggerTime -= DeltaSeconds;
+        FHitResult Hit;
+        AddActorWorldOffset(StaggerVel * DeltaSeconds, true, &Hit);
+        StaggerVel *= FMath::Exp(-6.f * DeltaSeconds);
+    }
+    if (State == EState::Dead)
+    {
+        if (Animator.Finished()) { Animator.SetJaw(bHeadless ? 0.f : 20.f); if (!bHeadless) Animator.SetLook(28.f, -8.f); }
+        return;
+    }
+    const float Speed = static_cast<float>(GetVelocity().Size2D());
+    StepDistance += Speed * DeltaSeconds;
+    if (Speed > 15.f && StepDistance > SkeletonClipData::WalkSpeed * SkeletonClipData::WalkLength * .5f) { StepDistance = 0; Sound(StepSounds, .5f); }
+    ATempleHero* Hero = Foe.Get();
+    const FVector HeroAt = Hero ? Hero->GetActorLocation() : Here;
+    const FVector ToHero = HeroAt - Here;
+    const float Dist = static_cast<float>(ToHero.Size2D());
+    // It watches its hero.
+    if (Hero && (State == EState::Chase || State == EState::Recover || (State == EState::Attack && Animator.Time() < Spec(Attack).Strike - .3f)))
+    {
+        const FVector Local = GetActorTransform().InverseTransformVectorNoScale(Hero->HeadLocation() - GetMesh()->GetBoneLocation(TEXT("head")));
+        Animator.SetLook(FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -60.f, 60.f) * -1.f,
+                         FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(-Local.Z), static_cast<float>(Local.Size2D()))), -25.f, 25.f));
+        if (State != EState::Attack) Animator.SetJaw(4.f);
+    }
+    switch (State)
+    {
+    case EState::Dormant: Move->MaxWalkSpeed = 0; break;
+    case EState::Rise:
+        Move->MaxWalkSpeed = 0;
+        if (Animator.Finished()) { Animator.Play(TEXT("Idle"), true, 1.f, false, .4f); SetState(EState::Chase); Sound(RattleSounds, .8f); }
+        break;
+    case EState::Chase:
+    {
+        if (!Hero) { Move->MaxWalkSpeed = 0; Animator.Locomote(Speed); break; }
+        // To its place beside its hero: round toward the hero's front, by its slot.
+        const FVector HeroFwd = Hero->GetActorForwardVector().GetSafeNormal2D();
+        const FVector Slot = HeroAt + HeroFwd.RotateAngleAxis(-SlotAngle, FVector::UpVector) * 100.f;
+        const float Facing = FVector::DotProduct(ToHero.GetSafeNormal2D(), GetActorForwardVector());
+        // Its fist reaches 63 cm ahead of its hips (SkeletonClipData::StrikeReach): it strikes from about a metre.
+        if (Dist < 110.f && Facing > .4f && GetWorld()->GetTimeSeconds() >= AttackReadyAt && !bFrozen) { StartAttack(EAttack::Strike); break; }
+        const FVector Goal = Dist < 150.f ? Here + ToHero.GetSafeNormal2D() * (Dist - 98.f) : Slot;
+        Move->MaxWalkSpeed = ChaseSpeed * 1.1f;
+        const FVector Want = Goal - Here;
+        if (Want.Size2D() < 10.f || bFrozen) { Move->MaxWalkSpeed = 0; Face(ToHero, 200.f, DeltaSeconds); Animator.Locomote(Speed); break; }
+        const FVector Dir = Steer(Want, Hero);
+        AddMovementInput(Dir, FMath::Clamp(static_cast<float>(Want.Size2D()) / 40.f, .25f, 1.f));
+        Face(Dist < 160.f ? ToHero : (Speed > 15.f ? GetVelocity() : Dir), 170.f, DeltaSeconds);
+        Animator.Locomote(Speed);
+        break;
+    }
+    case EState::Attack:
+    {
+        Move->MaxWalkSpeed = 0;
+        const FAttackSpec& S = Spec(Attack);
+        const float T = Animator.Time();
+        if (T < S.Strike - .2f && Hero && !bFrozen)
+            Face(ToHero.GetSafeNormal2D().RotateAngleAxis(S.Aim, FVector::UpVector), 260.f, DeltaSeconds);
+        Animator.SetJaw(T < S.Strike - .1f ? (FMath::Fmod(StateTime * 14.f, 1.f) < .5f ? 11.f : 2.f) : T < S.Strike + .25f ? 24.f : 5.f);
+        if (!bSwung && T >= S.Strike - .14f) { bSwung = true; Sound(SwingSounds, .8f); }
+        if (!bStruck && Hero && T >= S.Strike - S.Before && T <= S.Strike + S.After)
+        {
+            const FVector Tip = StrikingTip(Attack);
+            const float Gap = Hero->GapTo(Tip);
+            LastStrikeGap = FMath::Min(LastStrikeGap, Gap);
+            if (Gap < 16.f)
+            {
+                bStruck = true; ++Landed[static_cast<int32>(Attack)];
+                const bool bBlocked = Hero->TakeSkeletonBlow(this, Tip, Random.FRand() < .3f);
+                HitStop(bBlocked ? .07f : .05f);
+                if (bBlocked) { Animator.Flinch(12.f, Random.FRandRange(-8.f, 8.f)); AttackReadyAt = GetWorld()->GetTimeSeconds() + .6f; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_STRIKE hero=%s blocked=%d gap=%.1f"), Hero->GetRoleName(), bBlocked ? 1 : 0, Gap);
+            }
+        }
+        if (T > S.Strike + S.After) bStruck = true;
+        if (T >= Animator.Length() - .2f)
+        {
+            ++Strikes;
+            AttackReadyAt = FMath::Max(AttackReadyAt, static_cast<float>(GetWorld()->GetTimeSeconds()) + Random.FRandRange(1.6f, 3.f));
+            Animator.Play(TEXT("Idle"), true, 1.f, false, .3f);
+            SetState(EState::Recover);
+        }
+        break;
+    }
+    case EState::Recover:
+        Move->MaxWalkSpeed = 0;
+        if (Hero) Face(ToHero, 120.f, DeltaSeconds);
+        if (StateTime > .5f) SetState(EState::Chase);
+        break;
+    default: Move->MaxWalkSpeed = 0; break;
     }
 }

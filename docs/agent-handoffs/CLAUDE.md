@@ -2,6 +2,33 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 23 — the temple heroes (Claude)
+
+- **Request:** the three 2D heroes in the sanctum, much more detailed, with involved attack and hit motion, the fighter's swing and hit realistic and satisfying; beholder later. Base `bce75b8`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-HEROES.md.
+- **Contract compatibility:**
+  - Chuck's rig and the human NPCs are unchanged. `build_npc_humans.build()` gains an optional `extra` hook and sizes by the kit's meshes (identical output for existing NPCs), and its main loop is under `__main__`.
+  - Heroes have their own skeletons (`SKEL_Hero*`: the human rig plus `weapon_r`, `weapon_tip`, `shield_l`, `weapon_l`, `bowstring`, `arrow_r`).
+  - `ATempleSkeleton`:
+    - `EAttack` gains `Strike` (before `None`), and the attack/landed arrays grow to 4;
+    - new sanctum API (`SetSanctum`, `SetFoe`, `Wake`, `TakeHeroBlow`, `HitStop`, `ResetToReserve`, `StickArrow`, `IsStanding`);
+    - an 8th clip `AS_Skeleton_Strike`; `SkeletonClipData.h` gains `Strike*`;
+    - corridor/pier behaviour unchanged (its 10-trial test passes cooked).
+  - `FSkeletonAnimator` gains a twisting flinch, `SetHeadScale` and `SetTimeScale` (defaults leave the skeletons as they were).
+  - `DefaultGame.ini` always cooks `/Game/Characters/Heroes`.
+- **Binary assets:** all LFS.
+  - Sources: `SourceAssets/Heroes` (~85 MB), `SourceAssets/Surfaces/Heroes` (70 MB), 37 WAVs, `02_05.bvh`, `AS_Skeleton_Strike.fbx`.
+  - Content: `/Game/Characters/Heroes` (~204 MB), 37 sounds, the Strike clip.
+  - The skeleton re-import re-saved its existing assets (~30 MB, same content).
+  - LFS at HEAD was ~2 GB before this; remote quota not checked.
+- **Tools:**
+  - Blender 4.5.14: hero builds ×7, anim builds ×9, skeleton build ×1, review sheets.
+  - UE 5.7.4: Build.bat ×14, hero imports ×10, skeleton and SFX imports ×1 each, uncooked sanctum runs ×15, Build-Game -Package ×3 (one stopped), Verify-Package ×6 (2 passed, 3 stopped on the zombie flake, 1 interrupted), A/B river-zombie runs ×4.
+  - Downloads: ambientCG Metal054A/038 and five Poly Haven sets (`Tools/Fetch-HeroSurfaces.ps1`), 17 CMU takes (`Local/HeroMocapCandidates`, one kept), the Quaternius UAL 1/2 Standard zips (`Local/HeroQuaternius`, not used).
+  - No installations.
+
+Next part of the work can be done here.
+
 ## October 22 — realistic fire for the temple flamethrowers (Claude)
 
 - **Request:** find and integrate a free resource for the temple flamethrowers, with realistic flame behaviour. Base `adbd2b9`; source commit `3ce14ca`.

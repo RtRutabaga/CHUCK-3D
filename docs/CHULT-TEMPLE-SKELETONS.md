@@ -24,6 +24,7 @@ Read-only sources: `docs/development/PHASE-4.md` and `PHASE-6.md`, `src/entities
 | Swat | 76_05 "swatting at pesky bug" | bent double, a hand slapped down at its own feet |
 | Rise | 140_08 "Get Up From Ground Laying on Back" | from lying flat, onto an elbow, a knee, up |
 | Collapse | 113_08 "Lay down and get up" (already in the project: the zombie's fall) | knees go, down onto the floor, flat on its back |
+| Strike | 02_05 "punch/strike" (added October 23 for the sanctum: [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)) | weight onto the front foot, a fist driven out at chest height; its fingertips 63 cm ahead and 157 cm up at 0.47 s. Only the sanctum's skeletons use it, against the heroes |
 
   Dropped: "Sneaking" (staggered), "Walk Crouched" (too low), punches (they pass over a 65 cm rat), shorter kicks, "smash against wall", a second get-up.
 

@@ -1579,7 +1579,10 @@ def slot_material(name):
     return m
 
 
-def build(name, spec):
+def build(name, spec, extra=None):
+    """extra(info, slots, hide) -> [meshes]: more pieces after the outfit and hair, skinned to
+    info.rig (Tools/build_temple_heroes.py's armour, robes and gear); it may set hide[i] for skin
+    it covers. Output goes to OUT/<name> (the heroes point OUT at their own folder)."""
     reset_scene()
     body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
     # Proportion targets on top of the macro sliders (the dwarf: short legs, broad torso, big hands and head),
@@ -1660,6 +1663,8 @@ def build(name, spec):
             root = info.eye_z + spec.get('braided_hair', {}).get('ear_root', .005)
             natural = lambda p: p.z - front_hairline(info, p, spec['scalp']['recede']['hairline'], root)
         meshes += make_scalp(info, spec['scalp'], slots, hair, natural)
+    sized = list(meshes)   # what sets the height: the body and the kit's outfit (not a hero's helmet, hat or props)
+    if extra: meshes += extra(info, slots, hide)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -1690,8 +1695,8 @@ def build(name, spec):
         # Dithered like the beard locks: a hard-clipped hairline reads as a wig's edge.
         assign(parts['Hair'], 'Hair'); slots['Hair'] = {'type': 'hair','texture': keep_texture(next(hair_dir.glob('*diffuse*.png')))}
     # Face +X and stand exactly spec height tall (cap included), feet on the ground.
-    lo = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
-    hi = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
+    lo = min((o.matrix_world @ v.co).z for o in sized for v in o.data.vertices)
+    hi = max((o.matrix_world @ v.co).z for o in sized for v in o.data.vertices)
     scale = spec['height_cm'] / 100. / (hi - lo)
     M = Matrix.Translation((0, 0, 0)) @ Matrix.Rotation(math.radians(90), 4, 'Z') @ Matrix.Scale(scale, 4) @ Matrix.Translation((0, 0, -lo))
     for o in meshes:
@@ -1751,14 +1756,15 @@ def render_review(name, meshes, slots, k=1.):
         s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)
 
 
-manifest_path = OUT / 'manifest.json'
-manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {'npcs': {}}
-manifest['generator'] = 'Tools/build_npc_humans.py'
-manifest['mpfb'] = '2.0.17'
-manifest['skeleton'] = 'game_engine (MPFB): 53 bones, Unreal mannequin names, three bones per finger'
-for name, spec in SPEC.items():
-    if ONLY and name not in ONLY: continue
-    manifest['npcs'][name] = build(name, spec)
-OUT.mkdir(parents=True, exist_ok=True)
-manifest_path.write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
-print('CHUCK_HUMANS_READY', sorted(manifest['npcs']))
+if __name__ == '__main__':   # Tools/build_temple_heroes.py imports this module for its kit
+    manifest_path = OUT / 'manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {'npcs': {}}
+    manifest['generator'] = 'Tools/build_npc_humans.py'
+    manifest['mpfb'] = '2.0.17'
+    manifest['skeleton'] = 'game_engine (MPFB): 53 bones, Unreal mannequin names, three bones per finger'
+    for name, spec in SPEC.items():
+        if ONLY and name not in ONLY: continue
+        manifest['npcs'][name] = build(name, spec)
+    OUT.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
+    print('CHUCK_HUMANS_READY', sorted(manifest['npcs']))

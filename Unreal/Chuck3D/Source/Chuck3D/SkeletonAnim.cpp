@@ -77,7 +77,7 @@ bool FSkeletonAnimProxy::Evaluate(FPoseContext& Output)
     ++Evaluations;
 
     const bool bLook = !FMath::IsNearlyZero(Params.LookYaw, .05f) || !FMath::IsNearlyZero(Params.LookPitch, .05f);
-    if (!bLook && Params.Jaw < .05f && Params.Flinch < .05f) return true;
+    if (!bLook && Params.Jaw < .05f && Params.Flinch < .05f && FMath::Abs(Params.Twist) < .05f && Params.HeadScale > .999f) return true;
     // The layers, about the body's own axes: Up, and Side (its left), so that a
     // turn of + about Side tips the facing down.
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
@@ -102,6 +102,24 @@ bool FSkeletonAnimProxy::Evaluate(FPoseContext& Output)
         }
     }
     if (Params.Jaw > .05f) Turn(CS.Pose, Find(Bones, TEXT("jaw")), Side, Params.Jaw);
+    if (FMath::Abs(Params.Twist) > .05f)
+    {
+        // A blow from the side turns the chest about the spine, the head snapping a little further.
+        Turn(CS.Pose, Find(Bones, TEXT("spine_02")), Up, Params.Twist * .35f);
+        Turn(CS.Pose, Find(Bones, TEXT("spine_03")), Up, Params.Twist * .45f);
+        Turn(CS.Pose, Find(Bones, TEXT("head")), Up, Params.Twist * .3f);
+    }
+    if (Params.HeadScale < .999f)
+    {
+        const FCompactPoseBoneIndex H = Find(Bones, TEXT("head"));
+        if (H != INDEX_NONE)
+        {
+            FTransform T = CS.Pose.GetComponentSpaceTransform(H);
+            T.SetScale3D(FVector(FMath::Max(.001f, Params.HeadScale)));
+            const FBoneTransform Moved[] = {FBoneTransform(H, T)};
+            CS.Pose.LocalBlendCSBoneTransforms(Moved, 1.f);
+        }
+    }
     FCSPose<FCompactPose>::ConvertComponentPosesToLocalPoses(MoveTemp(CS.Pose), Output.Pose);
     return true;
 }
@@ -168,8 +186,9 @@ void FSkeletonAnimator::Tick(float DeltaSeconds, float Travelled)
     if (!M) return;
     // The stride's phase by the ground covered: a planted foot goes back exactly as fast as the body goes on.
     Phase = FMath::Fmod(Phase + Travelled / WalkStride, 1.f);
-    Cur.Time += DeltaSeconds * Cur.Rate;
-    Prev.Time += DeltaSeconds * Prev.Rate;
+    const float ClipDt = DeltaSeconds * TimeScale;   // hit-stop freezes the clips, not the springs' clock
+    Cur.Time += ClipDt * Cur.Rate;
+    Prev.Time += ClipDt * Prev.Rate;
     Fade = FMath::Min(1.f, Fade + DeltaSeconds / FMath::Max(.01f, FadeTime));
     LookNow.X = FMath::FInterpTo(LookNow.X, Look.X, DeltaSeconds, 5.f);
     LookNow.Y = FMath::FInterpTo(LookNow.Y, Look.Y, DeltaSeconds, 5.f);
@@ -178,6 +197,9 @@ void FSkeletonAnimator::Tick(float DeltaSeconds, float Travelled)
     if (FlinchKick > 0.f) { FlinchVel += FlinchKick * 28.f; FlinchKick = 0.f; }
     FlinchVel += (-FlinchNow * 220.f - FlinchVel * 18.f) * DeltaSeconds;
     FlinchNow = FMath::Max(0.f, FlinchNow + FlinchVel * DeltaSeconds);
+    if (!FMath::IsNearlyZero(TwistKick)) { TwistVel += TwistKick * 28.f; TwistKick = 0.f; }
+    TwistVel += (-TwistNow * 220.f - TwistVel * 18.f) * DeltaSeconds;
+    TwistNow += TwistVel * DeltaSeconds;
     if (auto* Anim = Cast<USkeletonAnimInstance>(M->GetAnimInstance()))
     {
         FSkeletonAnimParams& P = Anim->Params;
@@ -185,6 +207,7 @@ void FSkeletonAnimator::Tick(float DeltaSeconds, float Travelled)
         P.From = Fade < 1.f ? Source(Prev) : FSkeletonTrack();
         P.Fade = Fade;
         P.LookYaw = LookNow.X; P.LookPitch = LookNow.Y; P.Jaw = Jaw; P.Flinch = FlinchNow;
+        P.Twist = TwistNow; P.HeadScale = HeadScale;
         P.Forward = Forward; P.Up = FVector::UpVector;
     }
 }

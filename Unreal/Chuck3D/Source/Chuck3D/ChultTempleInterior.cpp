@@ -3,6 +3,7 @@
 #include "ChultTempleRun.h"
 #include "ChultTempleWind.h"
 #include "TempleSkeleton.h"
+#include "TempleSanctumBattle.h"
 #include "TempleSnake.h"
 #include "ChultTemple.h"
 #include "ChultCanyon.h"
@@ -1142,7 +1143,7 @@ void BuildChultTempleInterior(AActor* Owner)
         if(AClayJar* Pot=AClayJar::PlaceKind(World,J.bUrn?AClayUrn::StaticClass():ATempleJar::StaticClass(),G+AtV(J.At+FVector(0,0,1)),J.Yaw,J.Cigarettes))
         {Pot->SetIndoors();Pot->Tags.Add(TEXT("ChultTempleInteriorJar"));(J.bUrn?Built.Urns:Built.Jars)++;}
     // The skeletons (TempleSkeleton.h), once the floors' collision can be stood on.
-    {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid()){SpawnTempleSkeletons(W.Get());SpawnTempleSnakes(W.Get());}},.5f,false);}
+    {FTimerHandle SkeletonTimer;TWeakObjectPtr<UWorld> W=World;World->GetTimerManager().SetTimer(SkeletonTimer,[W](){if(W.IsValid()){SpawnTempleSkeletons(W.Get());SpawnTempleSnakes(W.Get());SpawnTempleSanctumBattle(W.Get());}},.5f,false);}
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_TEMPLE_INTERIOR spaces=%d steps=%d torches=%d spike_bands=%d launchers=%d slabs=%d grips=%d axes=%d jets=%d saws=%d idols=%d jars=%d urns=%d wind_tears=%d wind_glows=%d missing_assets=%d missing_sounds=%d triangles=%d build_ms=%.1f"),
         Spaces().Num(),Built.Steps,Built.Fires,Built.Bands,Built.Launchers,Built.Slabs,Built.Grips,Built.Axes,Built.Jets,Built.Saws,Built.Idols,Built.Jars,Built.Urns,ChultTempleWindTears().Num(),Glows.Num(),Missing,Traps?Traps->MissingSounds:-1,Triangles,(FPlatformTime::Seconds()-Started)*1000);
 }

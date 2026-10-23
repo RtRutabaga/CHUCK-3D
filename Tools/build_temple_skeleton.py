@@ -104,11 +104,13 @@ CLIPS = {
     'Swat': ('76_05', 3.4, 1.8, False),      # "swatting at pesky bug": bent double, a hand sweeps down at the ground
     'Rise': ('140_08', 1.6, 4.2, False),     # "Get Up From Ground Laying on Back": from lying flat to standing
     'Collapse': ('113_08', 1.0, 4.5, False), # "Lay down and get up" (the zombie's fall): knees go, down onto the floor, flat on its back; played fast
+    # The sanctum's skeletons fight the heroes (2026-10-22, docs/CHULT-TEMPLE-HEROES.md): a blow at a standing man.
+    'Strike': ('02_05', .9, 1.3, False),     # "punch/strike": weight onto the front foot, an arm driven out at chest height
 }
 # Each attack's striking end (tips of the middle fingers and of the toes) and
 # how each one's moment of contact is found (measure).
-EFFECTORS = {'Kick': ('ball_l', 'ball_r'), 'Grab': ('middle_03_l', 'middle_03_r'), 'Swat': ('middle_03_l', 'middle_03_r')}
-STRIKE = {'Kick': 'reach', 'Grab': 'low', 'Swat': 'low'}
+EFFECTORS = {'Kick': ('ball_l', 'ball_r'), 'Grab': ('middle_03_l', 'middle_03_r'), 'Swat': ('middle_03_l', 'middle_03_r'), 'Strike': ('middle_03_l', 'middle_03_r')}
+STRIKE = {'Kick': 'reach', 'Grab': 'low', 'Swat': 'low', 'Strike': 'far'}
 MEASURED = {}
 
 
@@ -124,8 +126,8 @@ def measure(clip, rig, frames):
         scene.frame_set(f)
         for b in EFFECTORS[clip]:
             tip = (mw @ rig.pose.bones[b].tail).copy()
-            if tip.z < .6 and tip.x > .05: track.append((f, b, tip))
-    if STRIKE[clip] == 'reach':
+            if (tip.z < .6 or STRIKE[clip] == 'far') and tip.x > .05: track.append((f, b, tip))
+    if STRIKE[clip] in ('reach', 'far'):
         f, b, tip = max(track, key=lambda t: t[2].x)
     else:
         low = min(t[2].z for t in track)

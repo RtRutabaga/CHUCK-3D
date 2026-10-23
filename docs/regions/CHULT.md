@@ -24,6 +24,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Astral wind and sanctum requested October 22, 2026 (Claude):** "build a winding narrow section of tunnels with some spike pits and quite a lot of astral ruptures (do these ruptures like the sewer ...) the challenge of this part will be back & forth wall running to make it across the spike jumps ... after this section we'll have a grand temple hall which will be our staging area for the beholder fight against the three heroes (we'll save this for later, just the empty hall for now)". The 2D map 6 connector and the map 9 hall, beyond the trap run's antechamber. Layout, measured pit lengths and checks: [../CHULT-TEMPLE-WIND.md](../CHULT-TEMPLE-WIND.md).
 
+**Temple heroes requested October 22, 2026 (Claude):** "create the three heroes from the 2d game and add them to the grand temple room at the end. we'll add the beholder later ... especially the fighter, one thing I want to emphasize is the feeling of a good hit". The 2D fighter, wizard and ranger on the sanctum floor before the dais, fighting skeletons out of the bones (not Chuck's fight; nothing hurts him yet). The beholder, the entrance lines, the battle's hazards for Chuck and the Fireball remain for the battle. Details: [../CHULT-TEMPLE-HEROES.md](../CHULT-TEMPLE-HEROES.md).
+
 ## Direction and sources
 
 **Far-bank low fog and milling requested October 18, 2026:** sixteen additional

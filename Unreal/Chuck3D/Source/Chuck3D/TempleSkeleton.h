@@ -9,6 +9,10 @@ class UAnimSequence;
 class USoundBase;
 class USoundAttenuation;
 class AChuckCharacter;
+class ATempleHero;
+class ATempleSanctumBattle;
+class UStaticMeshComponent;
+class UStaticMesh;
 
 /**
  * The temple skeletons (user 2026-10-21: "create the skeleton enemies in temple,
@@ -40,7 +44,9 @@ public:
     ATempleSkeleton();
     virtual void Tick(float DeltaSeconds) override;
     enum class EState : uint8 { Dormant, Rise, Guard, Chase, Attack, Recover, Return, Settle, Dead };
-    enum class EAttack : uint8 { Kick, Grab, Swat, None };
+    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, None };
+    /** How a hero's blow lands (docs/CHULT-TEMPLE-HEROES.md). */
+    enum class EBlow : uint8 { Cut, Cleave, Decapitate, Bash, Arrow, Bolt };
     EState GetState() const { return State; }
     const TCHAR* GetStateName() const;
     static const TCHAR* AttackName(EAttack Kind);
@@ -64,6 +70,38 @@ public:
     int32 GetHitsTaken() const { return HitsTaken; }
     int32 GetAttacks(EAttack Kind) const { return Attacks[static_cast<int32>(Kind)]; }
     int32 GetLanded(EAttack Kind) const { return Landed[static_cast<int32>(Kind)]; }
+
+    // ---- The sanctum (2026-10-22): skeletons that fight the three heroes, not Chuck. They lie in
+    // reserve among the bones until the battle wakes them, go for the hero it gives them, strike at
+    // him with a fist (Strike), and go down to the heroes' blows: a cut or a cleave drops them, a
+    // level cut takes the skull off first, the shield knocks them back, the second arrow or one bolt
+    // drops them. The battle puts the fallen back in reserve, out of sight, for the next wave.
+    void SetSanctum(ATempleSanctumBattle* InBattle);
+    bool IsSanctum() const { return Battle.IsValid(); }
+    void SetFoe(ATempleHero* Hero);
+    ATempleHero* GetFoe() const;
+    /** A dormant sanctum skeleton gets up and goes for its foe. */
+    void Wake();
+    bool IsUp() const { return State != EState::Dormant && State != EState::Dead && State != EState::Settle; }
+    /** On its feet (not still getting up off the floor): what the heroes fight. */
+    bool IsStanding() const { return State == EState::Chase || State == EState::Attack || State == EState::Recover; }
+    bool IsStriking() const { return State == EState::Attack; }
+    float StrikeIn() const;   // seconds to its blow landing (attacking), else a large number
+    /** A hero's blow: From is where it came from, At where it landed. True if it fell. */
+    bool TakeHeroBlow(EBlow Kind, const FVector& From, const FVector& At);
+    /** The hero's blow (or a block) has frozen it: hit-stop for Seconds. */
+    void HitStop(float Seconds);
+    float GetDeadTime() const { return State == EState::Dead ? StateTime : 0.f; }
+    bool IsHeadless() const { return bHeadless; }
+    int32 GetArrowsIn() const { return ArrowsIn; }
+    /** Back to a reserve post, lying among the bones, whole (its skull back, the arrows out). */
+    void ResetToReserve(const FTempleSkeletonPost& InPost);
+    /** The striking hand's world position (the Strike). */
+    FVector FistTip() const { return StrikingTip(EAttack::Strike); }
+    /** Its skull's world transform (for the struck-off skull to fly from). */
+    FTransform SkullTransform() const;
+    /** An arrow that struck it, left standing in the nearest bone. */
+    void StickArrow(UStaticMesh* Arrow, const FVector& At, const FVector& Dir);
     int32 GetStrikes() const { return Strikes; }
     int32 GetRises() const { return Rises; }
     int32 GetSettles() const { return Settles; }
@@ -120,7 +158,16 @@ private:
     float AttackReadyAt = 0;   // world time it may strike again (a pause after each attack)
     float StateTime = 0, Lost = 0, OutOfReach = 0, StepDistance = 0, TopSpeed = 0, WorstLeash = 0, LastStrikeGap = 1e9f, StuckTime = 0;
     int32 HitsTaken = 0, Strikes = 0, Rises = 0, Settles = 0, SoundsPlayed = 0;
-    int32 Attacks[3] = {0, 0, 0}, Landed[3] = {0, 0, 0};
+    int32 Attacks[4] = {0, 0, 0, 0}, Landed[4] = {0, 0, 0, 0};
+    TWeakObjectPtr<ATempleSanctumBattle> Battle;
+    TWeakObjectPtr<ATempleHero> Foe;
+    UPROPERTY() TArray<UStaticMeshComponent*> StuckArrows;
+    bool bHeadless = false;
+    int32 ArrowsIn = 0;
+    float HitStopUntil = 0.f, StaggerTime = 0.f, SlotAngle = 0.f;
+    FVector StaggerVel = FVector::ZeroVector;
+    void TickSanctum(float DeltaSeconds);
+    void Fall(EBlow Kind, const FVector& From);
     bool bStruck = false, bSwung = false, bHeld = false;
     FRandomStream Random;
     FVector LastLocation = FVector::ZeroVector;

@@ -1,0 +1,39 @@
+{
+ "generator": "Tools/build_hero_anims.py",
+ "clips": {
+  "Idle": {
+   "fbx": "Anim/AS_HeroRanger_Idle.fbx",
+   "frames": 180,
+   "fps": 30,
+   "loops": true
+  },
+  "Shoot": {
+   "fbx": "Anim/AS_HeroRanger_Shoot.fbx",
+   "frames": 79,
+   "fps": 30,
+   "loops": true,
+   "fire_s": 1.0,
+   "fire_frame": 30,
+   "fire_bone": "arrow_r",
+   "fire_cm": [
+    12.4,
+    6.8,
+    149.2
+   ]
+  },
+  "HitLight": {
+   "fbx": "Anim/AS_HeroRanger_HitLight.fbx",
+   "frames": 28,
+   "fps": 30,
+   "loops": false,
+   "hit_s": 0.0
+  },
+  "HitHeavy": {
+   "fbx": "Anim/AS_HeroRanger_HitHeavy.fbx",
+   "frames": 49,
+   "fps": 30,
+   "loops": false,
+   "hit_s": 0.0
+  }
+ }
+}

@@ -22,7 +22,9 @@ $takes=[ordered]@{
     # dropped: 139_29/31 "Sneaking" (staggered), 136_09 "Walk Crouched" (too low), 76_01/02 punches (high,
     # over the rat), 139_07, 74_04/05 (shorter kicks), 56_02 "smash against wall", 139_16 "Get Up".
     '140_06'='Idle'; '74_01'='stiff walk'; '74_03'='kick'; '139_06'='Poking Around On The Ground';
-    '76_05'='swatting at pesky bug'; '140_08'='Get Up From Ground Laying on Back'
+    '76_05'='swatting at pesky bug'; '140_08'='Get Up From Ground Laying on Back';
+    # The sanctum skeletons' blow at the heroes (Claude, 2026-10-22; docs/CHULT-TEMPLE-HEROES.md).
+    '02_05'='punch/strike'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

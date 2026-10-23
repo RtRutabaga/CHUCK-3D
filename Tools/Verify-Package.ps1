@@ -163,6 +163,17 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 full=1' -Quiet)) {
     throw "Temple Astral wind verification failed. Inspect $windLog"
 }
+# The temple heroes (Claude, 2026-10-23; docs/CHULT-TEMPLE-HEROES.md): cooked, the battle spawns with every
+# asset, each of the fighter's blows lands on a skeleton (and the level cut takes its skull), a blow on his
+# shield and one on his back, the ranger's arrows and the wizard's bolt, then the battle runs.
+$heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TEST_COMPLETE failures=0' -Quiet) -or
+   (Select-String -LiteralPath $heroLog -Pattern 'Fatal error:|bUsedWithInstancedStaticMeshes|bUsedWithSkeletalMesh' -Quiet)) {
+    throw "Temple heroes verification failed. Inspect $heroLog"
+}
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.
 $wreckLog=Join-Path $evidence ('verify-chult-wreck-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
@@ -289,7 +300,7 @@ $skeletonLog=Join-Path $evidence ('verify-skeletons-'+(Get-Date -Format 'yyyyMMd
 $skeletonProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSkeletonTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$skeletonLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if ($skeletonProcess.ExitCode -or !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_TEST_COMPLETE failures=0 trials=10' -Quiet) -or
     !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETONS spawned=17 of=17 lying=11' -Quiet) -or
-    !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_SPAWN .* clips=7 mesh=1 sounds=16' -Quiet)) {
+    !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_SPAWN .* clips=8 mesh=1 sounds=16' -Quiet)) {
     throw "Temple skeleton verification failed. Inspect $skeletonLog"
 }
 # The temple snakes (Claude, 2026-10-21; docs/CHULT-TEMPLE-SNAKES.md): twenty coiled in the snake chamber,

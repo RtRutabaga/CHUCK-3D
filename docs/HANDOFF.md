@@ -19,6 +19,11 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
   Six new checkpoints ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). Since 3ce14ca the wall flamethrowers are a particle sim with Unity Labs' CC0 Houdini fire, flame and smoke flipbooks. Verified and in the launcher.
 - **Astral wind and sanctum (October 22, Claude):** the trap run's antechamber now opens on winding tunnels (2D map 6): four 1.8 m legs and three 3 m bends. Each leg has a spike pit crossed only by wall runs kicked back and forth: one kick (4.6 m), two (9 m), two past broken walls (9 m), three (15 m). There are 24 sewer-style Astral ruptures in the floors, always walked round. Leg 4 opens onto the gallery of the sanctum (2D map 9): a 46 × 22 m hall with twin stairs, colonnades, idols, braziers and a dais. It is empty for now, the stage for the adventurers' beholder battle. Eight new checkpoints in a fifth column ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)). Verified and in the launcher.
+- **Temple heroes (October 23, Claude):** the 2D game's fighter, wizard and ranger now stand on the sanctum floor before the dais, fighting skeletons that rise out of the bones (three at a time while Chuck is in the hall; it is their fight, nothing hurts him yet).
+  - New, much more detailed MPFB-based models: articulated plate with rolled edges and rivets on the fighter (sword, heater shield); robes, hat and gem staff on the wizard; mantle, quiver and longbow on the ranger.
+  - Authored, physically driven combat motion: blade-led cuts at 26-32 m/s, the hips leading the chest leading the arm. The blade's actual sweep must meet the bones. A hit freezes both for 75-110 ms with a bone crack, splinters and dust; the level cut takes the skull off.
+  - Shield blocks, spring-driven hit reactions, arrows that stand in the bone, the wizard's homing bolt.
+  - Beholder still to come ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)). Verified and in the launcher.
 - **Temple screen and far canopy (October 19, Claude):** 15 scenery giants (no grips) across the valley at the deep jungle's start hide the temple from the T-rex's trees. A light far canopy stands in for jungle trees beyond their 100 m draw distance ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
 - **Upriver (October 15, Claude):** the far bank now runs 360 m past the river's old end: a spring-fed source fall, twelve giant brachiation trees (crotches 15–17 m, the later T-rex zone, now reached using the golden cigarette, plus a dev checkpoint), then dense jungle to the temple's space; the road continues; far-bank deaths return to their stretch's spawn; every Chult spawn point has a Dev Checkpoint ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
@@ -30,6 +35,40 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 23 — the temple heroes (Claude)
+
+- **Built:** user: "create the three heroes from the 2d game and add them to the grand temple room at the end. we'll add the beholder later ... much more detailed and visually impressive than our NPCs ... especially the fighter ... the feeling of a good hit ... download and install whatever you see fits best". Details: [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md).
+  - **Models** (`Tools/build_temple_heroes.py`, `SourceAssets/Heroes`):
+    - MPFB bodies through the human kit, plus plate built as smoothed, clear-of-body shells with rims, rivets and sliding lames;
+    - props skinned on extra bones;
+    - CC0 ambientCG steel and Poly Haven cloth with baked occlusion, edge wear and grime;
+    - own skeletons and four LODs each.
+    - Fighter 162k triangles, wizard 97k, ranger 75k.
+  - **Motion** (`Tools/build_hero_anims.py`, 20 clips):
+    - authored, because no free mocap had a usable sword-and-shield fighter (Quaternius CC0 was downloaded and dropped; CMU swordplay, Mixamo and MoCap Online were not suitable);
+    - the weapon's path leads, with edge-first cuts, analytic IK and a hips → chest → arm kinetic chain;
+    - hit reactions are spring impulses;
+    - contacts are measured into `HeroClipData.h`.
+  - **Runtime:** `ATempleHero` and `ATempleSanctumBattle`, plus a sanctum mode for `ATempleSkeleton` (a new CMU 02_05 Strike clip; deaths by cut, cleave, decapitation, arrow or bolt; a bash knock-back).
+    - The hit test sweeps the blade against the bones at the time the bones show.
+    - Hit-stop, 37 new synthesised sounds, splinters, dust, flying skulls, a blade trail, arrows and bolts.
+    - The battle's assets stream in within 150 m of the hall.
+- **Checks:**
+  - Uncooked `-ChuckSanctumCapture`: 10/10 trials in each of the last five runs (`Local/sanctum-test-10.log` to `-15.log`); stills in `Saved/Screenshots/WindowsEditor/Sanctum`.
+  - Candidate `Builds/HeroesCandidate`: **Verify-Package passed 182/182 twice** (`Local/verify-package-20261023-113838.log`, `-124208.log`), its new heroes check 10/10 in all four packaged runs.
+  - Earlier attempts stopped on the far-bank zombie dodge test. Run alternately, the current launcher build failed it as often as the candidate (2 of 2 each, `Local/ab-river-zombies-*.log`), so it is the known flake, not this change.
+  - `Verify-Package` now expects 8 skeleton clips.
+- **Launcher:** see below.
+- **Limits:**
+  - Faces are MakeHuman's baseline (soft, young); hair and beards are cards.
+  - Plate and mantle clip at extreme poses.
+  - The fighter only steps along his facing.
+  - Arrows, bolts and skulls ignore walls.
+  - No battle music.
+  - Judged from stills and logs, not watched in motion by a person.
+
+Next part of the work can be done here.
 
 ## October 22 — realistic fire for the temple flamethrowers (Claude)
 
