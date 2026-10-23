@@ -18,6 +18,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h"
@@ -1062,44 +1063,21 @@ void BuildChultTempleInterior(AActor* Owner)
             auto* Mesh=MakeMesh(FString::Printf(TEXT("ChultTempleAxe%d"),I),Blade,BladeIron,G+AtV(A.Pivot),false,&Haft,Wood);
             Traps->AddAxe(Mesh,G+AtV(A.Pivot),Dir(A.Route),A.Arm,A.Amplitude,A.Period,A.Phase);++Built.Axes;
         }
-        auto* FlameMat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame"));Missing+=!FlameMat;
-        // A jet of flame along its local X, from the torches' flame: a few tongues streaming out along
-        // the jet, and a row of flames rising off it, taller toward its end (burning gas climbs).
-        auto FlameMesh=[&](const FString& Name,const FVector& Mouth,const FVector& D,float Reach,bool bEmber)
+        // The jets' flame (ChultTempleJetFire.cpp): a particle sim on camera-facing quads with Unity Labs'
+        // CC0 Houdini flipbooks (Tools/import_temple_fire.py): rolling fire puffs, a pilot flame for the
+        // tell and the smoke they leave. Three instance pools a jet, all hidden until it fires.
+        UStaticMesh* Quad=Traps->JetQuad;Missing+=!Quad;
+        auto* JetFireMat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultTemple/Fire/M_TempleJetFire.M_TempleJetFire"));Missing+=!JetFireMat;
+        auto* JetSmokeMat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultTemple/Fire/M_TempleJetSmoke.M_TempleJetSmoke"));Missing+=!JetSmokeMat;
+        auto* JetPilotMat=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultTemple/Fire/M_TempleJetPilot.M_TempleJetPilot"));Missing+=!JetPilotMat;
+        auto FxPool=[&](const FString& Name,UMaterialInterface* Mat,int32 SortPriority)
         {
-            auto* Mesh=NewObject<UProceduralMeshComponent>(Traps,*Name);Mesh->SetupAttachment(Traps->GetRootComponent());
-            Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);Mesh->SetCastShadow(false);Mesh->RegisterComponent();
-            Mesh->SetWorldLocationAndRotation(Mouth,D.Rotation());
-            TArray<FVector> V,N;TArray<int32> Tri;TArray<FVector2D> UV;
-            FRandomStream FR(GetTypeHash(Name));
-            // A flame: three crossed quads round Axis, base at Base, Length along Axis.
-            auto Tongue=[&](const FVector& Base,const FVector& Axis,float Length,float Width,float Turn)
-            {
-                const FVector Ax=Axis.GetSafeNormal(),X0=FVector::CrossProduct(Ax,FMath::Abs(Ax.Z)>.9f?FVector::ForwardVector:FVector::UpVector).GetSafeNormal(),Y0=FVector::CrossProduct(Ax,X0);
-                for(int32 K=0;K<3;++K)
-                {
-                    const float A=K*PI/3+Turn;const FVector Side=X0*FMath::Cos(A)+Y0*FMath::Sin(A);const int32 B=V.Num();
-                    V.Append({Base-Side*Width*.5f,Base+Side*Width*.5f,Base+Ax*Length+Side*Width*.5f,Base+Ax*Length-Side*Width*.5f});
-                    UV.Append({FVector2D(0,0),FVector2D(1,0),FVector2D(1,1),FVector2D(0,1)});
-                    const FVector Nn=FVector::CrossProduct(Ax,Side);for(int32 J=0;J<4;++J)N.Add(Nn);
-                    Tri.Append({B,B+1,B+2,B,B+2,B+3});
-                }
-            };
-            if(bEmber){Tongue(FVector(4,0,-10),FVector(.25f,0,1),24,30,0);Tongue(FVector(-2,0,0),FVector(1,0,.15f),26,28,.4f);}
-            else
-            {
-                for(int32 K=0;K<4;++K)Tongue(FVector(-6+K*Reach*.18f,0,FR.FRandRange(-4,4)),FVector(1,0,FR.FRandRange(.02f,.12f)),Reach*(.45f+.1f*K),46+18*K,FR.FRandRange(0,PI));
-                // Broad, overlapping flames rising off the jet (the torch flame fills about half its quad's width).
-                const int32 Rising=FMath::Max(6,FMath::RoundToInt(Reach/13));
-                for(int32 K=0;K<Rising;++K)
-                {
-                    const float U=(K+FR.FRandRange(.2f,.8f))/Rising;
-                    Tongue(FVector(Reach*(.04f+.94f*U),FR.FRandRange(-12,12),-26+FR.FRandRange(-4,4)),FVector(FR.FRandRange(.15f,.45f),FR.FRandRange(-.2f,.2f),1),32+30*U+FR.FRandRange(-6,8),62+34*U+FR.FRandRange(-8,8),FR.FRandRange(0,PI));
-                }
-            }
-            Mesh->CreateMeshSection_LinearColor(0,V,Tri,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),false);
-            Mesh->SetMaterial(0,FlameMat);Mesh->ComponentTags.Add(TEXT("ChultTempleRunFlame"));
-            return Mesh;
+            auto* C=NewObject<UInstancedStaticMeshComponent>(Traps,*Name);C->SetupAttachment(Traps->GetRootComponent());
+            C->SetMobility(EComponentMobility::Movable);C->SetStaticMesh(Quad);C->SetMaterial(0,Mat);
+            C->SetCollisionEnabled(ECollisionEnabled::NoCollision);C->SetCanEverAffectNavigation(false);
+            C->SetCastShadow(false);C->bReceivesDecals=false;C->SetTranslucentSortPriority(SortPriority);
+            C->RegisterComponent();C->SetWorldTransform(FTransform::Identity);C->ComponentTags.Add(TEXT("ChultTempleRunFlame"));
+            return C;
         };
         for(int32 I=0;I<Movers.Jets.Num();++I)
         {
@@ -1107,8 +1085,8 @@ void BuildChultTempleInterior(AActor* Owner)
             auto* Light=NewObject<UPointLightComponent>(Traps);Light->SetupAttachment(Traps->GetRootComponent());Light->SetMobility(EComponentMobility::Movable);
             Light->SetWorldLocation(Mouth+D*J.Reach*.4f+FVector(0,0,30));Light->SetAttenuationRadius(650);Light->SetLightColor(FLinearColor(1.f,.5f,.2f));
             Light->SetCastShadows(false);Light->SetLightingChannels(false,true,false);Light->SetIntensity(0);Light->RegisterComponent();
-            Traps->AddJet(FlameMesh(FString::Printf(TEXT("ChultTempleJet%d"),I),Mouth,D,J.Reach,false),FlameMesh(FString::Printf(TEXT("ChultTempleJetEmber%d"),I),Mouth,D,J.Reach,true),
-                Light,Mouth,D,Dir(J.Route),J.Reach,J.Period,J.Phase,J.Warn,J.Burn);
+            Traps->AddJet(FxPool(FString::Printf(TEXT("ChultTempleJetFire%d"),I),JetFireMat,3),FxPool(FString::Printf(TEXT("ChultTempleJetSmoke%d"),I),JetSmokeMat,1),
+                FxPool(FString::Printf(TEXT("ChultTempleJetPilot%d"),I),JetPilotMat,2),Light,Mouth,D,Dir(J.Route),J.Reach,J.Period,J.Phase,J.Warn,J.Burn);
             ++Built.Jets;
         }
         for(int32 I=0;I<Movers.Saws.Num();++I)

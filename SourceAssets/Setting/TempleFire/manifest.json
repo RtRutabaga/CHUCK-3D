@@ -1,0 +1,37 @@
+{
+  "provider": "Unity Labs (Unity Technologies), free VFX image sequences and flipbooks",
+  "page": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "assets": [
+    {
+      "asset": "FireBall01",
+      "file": "FireBall01_8x8.tga",
+      "grid": "8x8",
+      "role": "the jet's rolling fire puffs (additive)",
+      "source": "https://unity3d.com/files/labs/downloads/vfx/assets01/FireBall01/FireBall01-flipbooks.zip",
+      "zip_sha256": "f60de3f2ce56f941d6f089ea4ea93e3ae51c63fac84c1aa0d6615022f8647010",
+      "sha256": "74eaf8aea246368edc30abd5fdc29db3e12b0275a0de7490020ea004d1b23d43",
+      "license": "CC0-1.0"
+    },
+    {
+      "asset": "Flame02",
+      "file": "Flame02_16x4.tga",
+      "grid": "16x4",
+      "role": "the pilot flame licking at the mouth (the tell)",
+      "source": "https://unity3d.com/files/labs/downloads/vfx/assets01/Flame02/Flame02-flipbooks.zip",
+      "zip_sha256": "f37b12cdae090591d537ed3bb50396f03833a49864362bf665d6817b7282c954",
+      "sha256": "6ae2158bc06e0b035196db2695c19e7cb29a23f59b345d4c5c2764c6c10ce3a6",
+      "license": "CC0-1.0"
+    },
+    {
+      "asset": "WispySmoke01",
+      "file": "WispySmoke01_8x8.tga",
+      "grid": "8x8",
+      "role": "smoke left by the burnt-out puffs",
+      "source": "https://unity3d.com/files/labs/downloads/vfx/assets01/WispySmoke01/WispySmoke01-flipbooks.zip",
+      "zip_sha256": "f9bdc88948ff18a7d3e6332b68f2f2ff17e9a64c6feb821e05388f4f23dbcff0",
+      "sha256": "c3f5d3be66882f05bad5b22d300fa0c9bfbac0340ed5dc48977f91d95f842143",
+      "license": "CC0-1.0"
+    }
+  ]
+}

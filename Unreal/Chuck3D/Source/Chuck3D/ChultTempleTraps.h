@@ -4,6 +4,8 @@
 #include "ChultTempleTraps.generated.h"
 
 class UProceduralMeshComponent;
+class UInstancedStaticMeshComponent;
+class UStaticMesh;
 class UPointLightComponent;
 class UMaterialInterface;
 class USoundBase;
@@ -128,17 +130,39 @@ public:
 
     // Fire jets: a carved mouth in the wall glows and hisses (Warn), then burns for Burn,
     // a jet Reach long straight out at chest height.
+    // Drawn by a small particle sim (October 22, ChultTempleJetFire.cpp) on camera-facing
+    // instanced quads with Unity Labs' CC0 Houdini flipbooks (Tools/import_temple_fire.py):
+    // puffs leave the nozzle white-hot and fast, slow under drag, swell, roll, rise as they cool,
+    // spread along a wall they reach and leave smoke; a pilot flame licks at the mouth in the tell.
+    struct FJetPuff
+    {
+        FVector P = FVector::ZeroVector, V = FVector::ZeroVector;
+        float Age = 0, Life = 1, Size0 = 10, Size1 = 60, Frame = 0, FrameRate = 40, Spin = 0, SpinRate = 0, Heat0 = 1, Seed = 0;
+        bool bCut = false;
+    };
     struct FJet
     {
-        TWeakObjectPtr<UProceduralMeshComponent> Flame, Ember;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> FireFx, SmokeFx, PilotFx;
         TWeakObjectPtr<UPointLightComponent> Light;
         FVector Mouth = FVector::ZeroVector, Dir = FVector::ForwardVector, Route = FVector::ForwardVector;
         float Reach = 200, Period = 3.f, Phase = 0, Warn = .7f, Burn = 1.3f;
         int32 Stage = -1;
+        // The sim's state.
+        TArray<FJetPuff> Fire, Smoke;
+        float FireCarry = 0, SmokeCarry = 0, PilotFrame = 0;
+        float WallAt = -1, CeilingAt = -1;   // cm from the mouth along Dir / above it (traced once)
+        FVector LightAt = FVector::ZeroVector;
+        bool bDrawn = false;
+        FRandomStream Rand;
     };
     TArray<FJet> Jets;
     static constexpr float JetHalfWidth = 30.f;   // cm along the route either side of the jet's line that burns
-    void AddJet(UProceduralMeshComponent* Flame, UProceduralMeshComponent* Ember, UPointLightComponent* Light, const FVector& Mouth, const FVector& Dir, const FVector& Route, float Reach, float Period, float Phase, float Warn, float Burn);
+    static constexpr int32 JetFirePool = 80;   // instances a jet draws its fire, smoke and pilot flames with
+    static constexpr int32 JetSmokePool = 64;
+    static constexpr int32 JetPilots = 2;
+    void AddJet(UInstancedStaticMeshComponent* FireFx, UInstancedStaticMeshComponent* SmokeFx, UInstancedStaticMeshComponent* PilotFx, UPointLightComponent* Light, const FVector& Mouth, const FVector& Dir, const FVector& Route, float Reach, float Period, float Phase, float Warn, float Burn);
+    int32 JetPuffsLive() const;   // fire puffs alive across the jets (for the checks)
+    UPROPERTY() TObjectPtr<UStaticMesh> JetQuad;   // /Engine/BasicShapes/Plane, the sprites' quad
     // 0 off, 1 the warning glow, 2 burning (and how far out the flame is, 0..1).
     int32 JetStage(int32 I, double Time, float* OutExtent = nullptr) const;
     bool JetMeets(int32 I, double Time, const FVector& Location, float Half, float Radius) const;
@@ -183,7 +207,10 @@ private:
     TSet<int32> SawRolled;   // saws he is rolling under right now (counted once each pass)
     double NextSawSpin = 0;
     void TickAxes(AChuckCharacter* Chuck, double Now);
-    void TickJets(AChuckCharacter* Chuck, double Now);
+    void TickJets(AChuckCharacter* Chuck, double Now, float Dt);
+    // The flame sim for jet I this frame (Stage/Extent from JetStage, U its place in the cycle).
+    void SimJetFire(int32 I, int32 Stage, float U, float Dt, const FVector& Eye, bool bNear);
+    void DrawJetFire(FJet& J, const FVector& Eye);
     void TickSaws(AChuckCharacter* Chuck, double Now, float Dt);
     void HitBack(AChuckCharacter* Chuck, const FVector& Route, int32& Counter, const TCHAR* What, int32 Index);
     UPROPERTY() TArray<TObjectPtr<USoundBase>> Held;

@@ -96,6 +96,29 @@ void ReviewChultTempleRun(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUN_VIEW name=%s ready=%d"), *Name, Ready);
             ++Run->Phase; return;
         }
+        // -ChuckTempleFireFrames: after the stills, a sequence through one fire cycle from the close
+        // view (the pilot flame in the tell, the stream reaching out, the fuel cut, the smoke), then exit.
+        if (FParse::Param(FCommandLine::Get(), TEXT("ChuckTempleFireFrames")) && Traps)
+        {
+            static const float Marks[] = {.2f, .5f, .74f, .8f, .9f, 1.1f, 1.6f, 1.95f, 2.15f, 2.6f};
+            const int32 K = Run->Phase - 2 * Views.Num();
+            if (K == 0)
+            {
+                // Wait for jet 1's tell to start, from the close view.
+                const FView& V = Views[9];
+                if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(ChultTempleInteriorWorldOf(V.Eye), (ChultTempleInteriorWorldOf(V.Aim) - ChultTempleInteriorWorldOf(V.Eye)).Rotation());
+                if (Traps->JetStage(1, Now) == 1 && Traps->JetStage(1, Now - .05) == 0) { Run->At = Now; ++Run->Phase; }
+                return;
+            }
+            if (K - 1 < UE_ARRAY_COUNT(Marks))
+            {
+                if (Now - Run->At < Marks[K - 1]) return;
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Chult") / FString::Printf(TEXT("RunFireFrame_%02d.png"), K - 1), true, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_FIRE_FRAME k=%d t=%.2f stage=%d puffs=%d"), K - 1, Now - Run->At, Traps->JetStage(1, Now), Traps->JetPuffsLive());
+                ++Run->Phase; return;
+            }
+            Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUN_TEST fire_frames=1")); FPlatformMisc::RequestExitWithStatus(false, 0); return;
+        }
         if (FParse::Param(FCommandLine::Get(), TEXT("ChuckTempleRunViewsOnly"))) { Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUN_TEST views_only=1")); FPlatformMisc::RequestExitWithStatus(false, 0); return; }
         if (!Traps) { Run->bDone = true; UE_LOG(LogTemp, Error, TEXT("CHUCK_TEMPLE_RUN_TEST failures=1 traps_missing=1")); FPlatformMisc::RequestExitWithStatus(false, 1); return; }
         auto* M = Chuck->GetCharacterMovement();

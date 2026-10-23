@@ -83,7 +83,7 @@ Code: `ChultTempleRun.h` (the layout), `ChultTempleRunBuild.inl` (masonry and tr
 - four in a slalom, alternating walls 2.5 m apart. Each reaches 2 m of the 3 m, and they fire as a wave at run pace. Start as the first flares and weave with the wave, or start as it dies and run straight down the middle behind it;
 - two pairs of opposed mouths 1.6 m each, meeting in the middle, 3 m apart and a beat apart.
 
-Each mouth's cycle is 3 s: a 0.7 s tell (a flame licking at the mouth, a hiss, a growing glow), a 1.3 s burst, then 1 s out. The jet is drawn from the torches' flame material: four tongues streaming out and a row of broad flames rising off it, its own light flaring with it.
+Each mouth's cycle is 3 s: a 0.7 s tell (a flame licking at the mouth, a hiss, a growing glow), a 1.3 s burst, then 1 s out. The jet is a simulated flame (see "The fire jets' flame" below), its own light flaring with it.
 
 **The saw passage** (2.4 m wide, a 2.4 m ceiling). Six rows of two discs 1.24 m across, their teeth 30 cm off the floor, spinning on hangers out of a slot in the ceiling, with iron track straps on the walls:
 - one row that stays down;
@@ -163,6 +163,28 @@ Measured in the gallery (1.8 m wide):
 
 Verify-Package runs it (and the interior's own review, the snake and skeleton runs and the rest of the suite) on the packaged candidate. The menu suite has 27 points.
 
+## The fire jets' flame (October 22, later)
+
+User request: "find and integrate free resource for the flamethrowers in the temple, i want realistic flame behavior for these not just the right colors".
+
+**The resource.** Three CC0 Houdini-simulated flipbooks from [Unity Labs' free VFX image sequences](https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks): FireBall01 (rolling fire), Flame02 (a licking flame) and WispySmoke01. They are kept unmodified in `SourceAssets/Setting/TempleFire` with a hash manifest (`Tools/Fetch-TempleFire.ps1`). `Tools/import_temple_fire.py` imports them into `/Game/Art/ChultTemple/Fire` and builds three materials.
+- Considered and not used: Epic's free *Niagara Examples Pack* on Fab (UE 5.7, with fire and smoke). It needs a Fab sign-in, its listing is marked "Allows usage with AI: No", and Niagara systems can't be placed from this project's runtime-built C++ world without editor work.
+
+**The behaviour** (`ChultTempleJetFire.cpp`): a small particle sim per jet, drawn on camera-facing instanced quads (pools of 80 fire, 64 smoke and 2 pilot quads; `/Engine/BasicShapes/Plane`, hard-referenced by `AChultTempleTraps` so it cooks):
+- Puffs leave the nozzle at about 95 a second in a narrow cone. Heavy drag (exp(−9t)) makes a thin, fast stream near the mouth that slows and billows toward the end. Each puff's speed is set so it comes to rest at the jet's Reach (or just short of the wall the jet faces, traced once).
+- Each puff swells from about 20 cm to 72–96 cm, rolls (its own flipbook frame rate and a spin) and cools. It leaves white-hot and drops toward a dull red as it ages; the thin edges redden first.
+- Buoyancy grows with age, so the end of the jet rises. Turbulence also grows with age, so the end breaks up and curls.
+- A puff that reaches the wall flattens against it and spreads along it and upward. Puffs stop at the ceiling.
+- When the fuel cuts (0.1 s before the burst ends, when the hit test starts drawing back), no more puffs leave, and those in the air burn out within about 0.2 s, cooling as they go.
+- About 45% of burnt-out puffs leave dark smoke that rises, spreads under the ceiling and fades over 1.2–1.8 s.
+- In the tell, two pilot flames (Flame02) lick up from the mouth's lip, growing toward the burst, and the mouth sputters small slow licks of fire.
+- The jet's light follows the sim: its intensity is the burning puffs' heat, and it moves to their centre.
+- The materials blend between flipbook frames, fade where a quad meets a wall (depth fade) and fade close to the camera.
+
+**Gameplay is unchanged.** `JetStage`/`JetMeets` and every timing are as before. The stream's front reaches about 0.75 of Reach at 0.12 s (when the hit test reaches full length) and all of it by about 0.2 s.
+
+**Checked** (uncooked, `Local/temple-fire-test-5.log`): the 16 trials pass as before (`fire` no hits, `fire_strip` no hits, `fire_hit` one hit, gauntlet and flow no hits), and the interior check passes (`failures=0`). `-ChuckTempleFireFrames` adds a 10-frame sequence through one cycle of the slalom's first jet from the close view (`Local/temple-fire-frames-1.log`; contact sheet `Local/temple-fire-cycle.png`): the pilot flame in the tell, the stream shooting out, the billow, the collapse at the cut and the smoke.
+
 ## Not done
 
 - No person has played it. Untested by a human:
@@ -172,7 +194,7 @@ Verify-Package runs it (and the interior's own review, the snake and skeleton ru
 
   A gamepad has not been tried.
 - The sounds have not been listened to.
-- The fire is billboarded flame (the torches' material), not a particle effect. It reads as a burst of flame, but its edges are jagged up close.
+- The fire's look has been checked in still frames only, not watched in motion by a person. Where many puffs overlap, the core saturates to a pale yellow-white (as a real jet does on camera). It has no heat haze.
 - The axes and saws are simple procedural shapes.
 - The gauntlet's beat is tuned for his run pace. A walking player has to read each trap instead (always possible).
 - The golden cigarette's stamina lock would make side runs longer and the pits easier; there are none in the temple.

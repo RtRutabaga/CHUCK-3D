@@ -10,11 +10,16 @@
 #include "Sound/SoundAttenuation.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
+#include "Engine/StaticMesh.h"
+#include "UObject/ConstructorHelpers.h"
 
 AChultTempleTraps::AChultTempleTraps()
 {
     PrimaryActorTick.bCanEverTick = true;
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+    // The fire jets' sprite quad: a hard reference, so the cook keeps this engine mesh.
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> Quad(TEXT("/Engine/BasicShapes/Plane.Plane"));
+    JetQuad = Quad.Object;
 }
 
 AChultTempleTraps* AChultTempleTraps::Find(UWorld* World)
@@ -151,7 +156,7 @@ void AChultTempleTraps::Tick(float DeltaSeconds)
     TickDarts(Chuck, Now, DeltaSeconds);
     TickSlabs(Chuck, Now, DeltaSeconds);
     TickAxes(Chuck, Now);
-    TickJets(Chuck, Now);
+    TickJets(Chuck, Now, DeltaSeconds);
     TickSaws(Chuck, Now, DeltaSeconds);
     if (Now >= NextFlicker)
     {

@@ -7,7 +7,10 @@
 #include "ProceduralMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
 
 namespace
 {
@@ -97,15 +100,31 @@ void AChultTempleTraps::TickAxes(AChuckCharacter* Chuck, double Now)
 }
 
 // ---------------------------------------------------------------- fire jets
-void AChultTempleTraps::AddJet(UProceduralMeshComponent* Flame, UProceduralMeshComponent* Ember, UPointLightComponent* Light, const FVector& Mouth, const FVector& Dir, const FVector& Route, float Reach, float Period, float Phase, float Warn, float Burn)
+void AChultTempleTraps::AddJet(UInstancedStaticMeshComponent* FireFx, UInstancedStaticMeshComponent* SmokeFx, UInstancedStaticMeshComponent* PilotFx, UPointLightComponent* Light, const FVector& Mouth, const FVector& Dir, const FVector& Route, float Reach, float Period, float Phase, float Warn, float Burn)
 {
     LoadSounds();
-    FJet J; J.Flame = Flame; J.Ember = Ember; J.Light = Light; J.Mouth = Mouth; J.Dir = Dir.GetSafeNormal(); J.Route = Route.GetSafeNormal2D();
+    FJet J; J.FireFx = FireFx; J.SmokeFx = SmokeFx; J.PilotFx = PilotFx; J.Light = Light; J.Mouth = Mouth; J.Dir = Dir.GetSafeNormal(); J.Route = Route.GetSafeNormal2D();
     J.Reach = Reach; J.Period = Period; J.Phase = Phase; J.Warn = Warn; J.Burn = Burn;
-    if (Flame) Flame->SetVisibility(false);
-    if (Ember) Ember->SetVisibility(false);
+    J.Rand.Initialize(Jets.Num() * 7919 + 17);
+    J.LightAt = Mouth + J.Dir * Reach * .4f + FVector(0, 0, 30);
+    // Each pool is a fixed set of instances; a dead puff is drawn at zero scale.
+    auto Pool = [&](UInstancedStaticMeshComponent* C, int32 N)
+    {
+        if (!C) return;
+        C->SetNumCustomDataFloats(3);
+        TArray<FTransform> Hidden; Hidden.Init(FTransform(FQuat::Identity, Mouth, FVector::ZeroVector), N);
+        C->AddInstances(Hidden, false, true, false);
+    };
+    Pool(FireFx, JetFirePool); Pool(SmokeFx, JetSmokePool); Pool(PilotFx, JetPilots);
     if (Light) Light->SetIntensity(0.f);
-    Jets.Add(J);
+    Jets.Add(MoveTemp(J));
+}
+
+int32 AChultTempleTraps::JetPuffsLive() const
+{
+    int32 N = 0;
+    for (const FJet& J : Jets) N += J.Fire.Num();
+    return N;
 }
 
 int32 AChultTempleTraps::JetStage(int32 I, double Time, float* OutExtent) const
@@ -135,33 +154,23 @@ bool AChultTempleTraps::JetMeets(int32 I, double Time, const FVector& Location, 
     return Location.Z - Half < J.Mouth.Z + 35.f && Location.Z + Half > J.Mouth.Z - 35.f;
 }
 
-void AChultTempleTraps::TickJets(AChuckCharacter* Chuck, double Now)
+void AChultTempleTraps::TickJets(AChuckCharacter* Chuck, double Now, float Dt)
 {
     const FVector At = Chuck ? Chuck->GetActorLocation() : FVector::ZeroVector;
     const float Half = Chuck ? Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 0.f;
     const float Radius = Chuck ? Chuck->GetCapsuleComponent()->GetScaledCapsuleRadius() : 0.f;
-    const float T = static_cast<float>(Now);
+    FVector Eye = At;
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+        if (PC->PlayerCameraManager) Eye = PC->PlayerCameraManager->GetCameraLocation();
     for (int32 I = 0; I < Jets.Num(); ++I)
     {
         FJet& J = Jets[I];
         float Extent = 0;
         const int32 Stage = JetStage(I, Now, &Extent);
         const float U = CycleU(Now, J.Phase, J.Period);
-        const float Flick = .88f + .08f * FMath::Sin(T * 23.f + I * 1.7f) + .06f * FMath::Sin(T * 37.f + I);
-        if (UProceduralMeshComponent* F = J.Flame.Get())
-        {
-            F->SetVisibility(Stage == 2);
-            if (Stage == 2) F->SetRelativeScale3D(FVector(Extent, Flick, Flick));
-        }
-        if (UProceduralMeshComponent* E = J.Ember.Get())
-        {
-            // The tell: a flame licking at the mouth, growing toward the burst.
-            E->SetVisibility(Stage != 0);
-            const float G = Stage == 1 ? .35f + .65f * U / J.Warn : 1.f;
-            E->SetRelativeScale3D(FVector(G * Flick, G, G));
-        }
-        if (UPointLightComponent* L = J.Light.Get())
-            L->SetIntensity(Stage == 2 ? 9000.f * Extent * Flick : Stage == 1 ? 1600.f * U / J.Warn : 0.f);
+        // The fire is simulated and drawn only where it can be seen (a jet more than 40 m off is
+        // behind several walls); its light follows the sim.
+        SimJetFire(I, Stage, U, Dt, Eye, Chuck && FVector::Dist(Eye, J.Mouth) < 4000.f);
         const bool Near = Chuck && FVector::Dist(At, J.Mouth) < 2200.f;
         if (Stage != J.Stage)
         {
