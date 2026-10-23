@@ -59,7 +59,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - Candidate `Builds/HeroesCandidate`: **Verify-Package passed 182/182 twice** (`Local/verify-package-20261023-113838.log`, `-124208.log`), its new heroes check 10/10 in all four packaged runs.
   - Earlier attempts stopped on the far-bank zombie dodge test. Run alternately, the current launcher build failed it as often as the candidate (2 of 2 each, `Local/ab-river-zombies-*.log`), so it is the known flake, not this change.
   - `Verify-Package` now expects 8 skeleton clips.
-- **Launcher:** see below.
+- **Launcher:** promoted as `Heroes` (`Local/heroes-promotion.log`). The receipt names **c43ab11**, the launcher check passes, two backups kept. Five older candidate folders from earlier sessions remain in `Builds/`. Try **Dev Checkpoints → Temple Sanctum**, then take either stair down to the floor.
 - **Limits:**
   - Faces are MakeHuman's baseline (soft, young); hair and beards are cards.
   - Plate and mantle clip at extreme poses.
