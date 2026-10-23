@@ -2,6 +2,29 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 22 — realistic fire for the temple flamethrowers (Claude)
+
+- **Request:** find and integrate a free resource for the temple flamethrowers, with realistic flame behaviour. Base `adbd2b9`; source commit `3ce14ca`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-RUN.md ("The fire jets' flame").
+- **Contract compatibility:**
+  - No rig, clip, socket, spawn, space or menu change.
+  - `AChultTempleTraps`:
+    - `FJet` swaps its procedural `Flame`/`Ember` meshes for three instanced pools (`FireFx`, `SmokeFx`, `PilotFx`) plus sim state;
+    - `AddJet` takes the pools;
+    - new `JetPuffsLive()`, `SimJetFire`, `DrawJetFire`, and `JetQuad` (a hard reference to `/Engine/BasicShapes/Plane` so it cooks);
+    - `TickJets` takes the frame time.
+  - `JetStage` and `JetMeets` are unchanged.
+  - New `ChultTempleJetFire.cpp`; `ChultTempleRunTest.cpp` gains `-ChuckTempleFireFrames`.
+  - New binary assets (LFS): `/Game/Art/ChultTemple/Fire` (3 textures, 3 materials).
+  - New source images: `SourceAssets/Setting/TempleFire/*.tga`, 15 MB, plain git like the Poly Haven scans.
+- **Tools:**
+  - UE 5.7.4: UnrealEditor-Cmd ×5 (asset inspection ×1, fire import/material script ×4), Build.bat ×7, uncooked trap-run runs ×6, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×2, Promote-Build ×1.
+  - Python with Pillow (already installed) for previews and the contact sheet.
+  - Downloads: eight Unity Labs CC0 flipbook zips (2–9 MB each) into `Local/UnityLabsFlipbooks`, to choose from; three are used.
+  - No installations.
+
+Next part of the work can be done here.
+
 ## October 22 — the Astral wind and the sanctum (Claude)
 
 - **Request:** winding narrow tunnels with spike pits crossed by back-and-forth wall runs, many sewer-style Astral ruptures walked round, then an empty grand hall for the later beholder battle. Base `fb3dd74`; source commit `f3ac0d9`.

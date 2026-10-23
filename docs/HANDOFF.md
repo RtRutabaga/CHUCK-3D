@@ -17,7 +17,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - an axe causeway, a fire hall and a saw passage (roll under);
   - a gauntlet of all four on one beat, then an antechamber whose way on is choked.
 
-  Six new checkpoints ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). Verified and in the launcher.
+  Six new checkpoints ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). Since 3ce14ca the wall flamethrowers are a particle sim with Unity Labs' CC0 Houdini fire, flame and smoke flipbooks. Verified and in the launcher.
 - **Astral wind and sanctum (October 22, Claude):** the trap run's antechamber now opens on winding tunnels (2D map 6): four 1.8 m legs and three 3 m bends. Each leg has a spike pit crossed only by wall runs kicked back and forth: one kick (4.6 m), two (9 m), two past broken walls (9 m), three (15 m). There are 24 sewer-style Astral ruptures in the floors, always walked round. Leg 4 opens onto the gallery of the sanctum (2D map 9): a 46 × 22 m hall with twin stairs, colonnades, idols, braziers and a dais. It is empty for now, the stage for the adventurers' beholder battle. Eight new checkpoints in a fifth column ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)). Verified and in the launcher.
 - **Temple screen and far canopy (October 19, Claude):** 15 scenery giants (no grips) across the valley at the deep jungle's start hide the temple from the T-rex's trees. A light far canopy stands in for jungle trees beyond their 100 m draw distance ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
@@ -30,6 +30,33 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 22 — realistic fire for the temple flamethrowers (Claude)
+
+- **Built:** user: "find and integrate free resource for the flamethrowers in the temple, i want realistic flame behavior for these not just the right colors". Details: [CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md), "The fire jets' flame".
+  - **Resource:** three CC0 Houdini-simulated flipbooks from Unity Labs' free VFX image sequences (FireBall01, Flame02, WispySmoke01). Kept unmodified in `SourceAssets/Setting/TempleFire` with a hash manifest; `Tools/Fetch-TempleFire.ps1` reproduces them; `Tools/import_temple_fire.py` imports them and builds `M_TempleJetFire/Pilot/Smoke`.
+  - Considered and not used: Epic's free Niagara Examples Pack on Fab (needs a Fab sign-in, its listing says "Allows usage with AI: No", and Niagara doesn't fit the runtime-built world without editor work).
+  - **Behaviour** (`ChultTempleJetFire.cpp`): a particle sim per jet on camera-facing instanced quads:
+    - a fast stream slowed by drag, so it billows toward its end;
+    - puffs that swell, roll, cool from white-hot to dull red and rise;
+    - turbulence that breaks up the end;
+    - spreading along the wall it hits;
+    - a quick burn-out at the fuel cut, then smoke;
+    - a pilot flame and sputter in the tell;
+    - the light follows the burning puffs.
+  - **Gameplay unchanged:** hit tests and timings are as before.
+- **Checks:**
+  - Uncooked `-ChuckChultTest -ChuckTempleRunTest`: 16/16, interior check `failures=0` (`Local/temple-fire-test-5.log`).
+  - `-ChuckTempleFireFrames`: a 10-frame cycle (`Local/temple-fire-frames-1.log`, sheet `Local/temple-fire-cycle.png`).
+  - Package `Builds/TempleFireCandidate`: the first Verify-Package stopped on the known far-bank zombie dodge flake (trial 1 ended on Sanity 1; `Local/verify-river-zombies-20261022-193443.log`). The re-run passed **182/182** (`Local/verify-package-20261022-193731.log`). In the package: trap run 16/16, interior `missing_assets=0`, and the fire stills show the new flame.
+- **Launcher:** promoted as `TempleFire` (`Local/temple-fire-promotion.log`). The receipt names **3ce14ca**, the launcher check passes, two backups kept. Five older candidate folders from earlier sessions remain in `Builds/`. Try **Dev Checkpoints → Temple Fire**.
+- **Limits:**
+  - Judged from stills and a frame sequence, not watched in motion by a person.
+  - Overlapping puffs saturate to a pale yellow-white core.
+  - No heat haze.
+  - The fire's sounds are unchanged.
+
+Next part of the work can be done here.
 
 ## October 22 — the Astral wind and the sanctum (Claude)
 
