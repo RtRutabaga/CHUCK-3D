@@ -2,6 +2,31 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 22 — the Astral wind and the sanctum (Claude)
+
+- **Request:** winding narrow tunnels with spike pits crossed by back-and-forth wall runs, many sewer-style Astral ruptures walked round, then an empty grand hall for the later beholder battle. Base `fb3dd74`; source commit `f3ac0d9`.
+- **Built, tests, launcher, flaws:** see HANDOFF and CHULT-TEMPLE-WIND.md.
+- **Contract compatibility:**
+  - No rig, clip or socket change.
+  - `ChuckCharacter`: the side wall run's stall test skips frames over 0.1 s. Nothing else changed.
+  - `ETempleInteriorSpawn` gains `Wind1..Wind7, Sanctum` (`TempleInteriorSpawnCount` 20).
+  - Spaces:
+    - `RunAnteExit` became `WindLeg1`;
+    - nine more: three bends, three legs, two alcoves, `Sanctum`; 37 in all.
+  - The antechamber's hidden choke wall is gone; the interior check's `choke_open` sweep is removed.
+  - New files: `ChultTempleWind.h/.cpp` (layout, ruptures, `ChultTempleWindTearAt`, `ChultTempleWindPath`), `ChultTempleWindBuild.inl` (included into `ChultTempleInterior.cpp`) and `ChultTempleWindTest.cpp` (`-ChuckTempleWindTest`, `-ChuckWindMeasure`).
+  - `FParts` gains `Veil` (`M_AstralOilMist`, a new `ChultTempleInteriorVeils` mesh). The interior summary logs `wind_tears` and `wind_glows`.
+  - `DockMenu` has a fifth column and a 1700-wide page.
+  - Verify-Menu has 35 points. Verify-Package checks `spaces=37 ... wind_tears=24 wind_glows=24` and adds the wind step.
+  - No new binary assets.
+- **Tools:** UE 5.7.4.
+  - Build.bat ×8.
+  - Uncooked runs ×7: reach and wind trials ×6, trap-run regression ×1.
+  - Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×3 (a stale pattern, then a far-bank zombie trial that has passed before and after), Verify-Menu ×1, Promote-Build ×1.
+  - No downloads, no installations.
+
+Next part of the work can be done here.
+
 ## October 22 — the temple trap run (Claude)
 
 - **Request:** expand the temple run past the rubble: climb it and a wall-jump climb, then a flow-focused parkour run of spike pits, swinging axes, wall flamethrowers and saws, researched against other media. Base `eb630ce`.

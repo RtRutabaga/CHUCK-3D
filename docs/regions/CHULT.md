@@ -22,6 +22,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Temple trap run requested October 22, 2026 (Claude):** "expand the temple dungeon run ... keep the rubble there and make it so chuck can climb up the rubble then wall jump climb to get to the next part of the temple. from there i want this to be heavily parkour focused, with a combination of spike pits to wall run over, swinging axe sections to quickly get through, wall flamethrower traps to doge, and overhead circular saw blades to roll under ... conducive to a feeling of flow". An original 3D section beyond the snake chamber, in place of the planned map 6 connector (the 2D maps 6–9 follow later from its antechamber). It adds a chained wall run to Chuck's moves. Research, layout and checks: [../CHULT-TEMPLE-RUN.md](../CHULT-TEMPLE-RUN.md).
 
+**Astral wind and sanctum requested October 22, 2026 (Claude):** "build a winding narrow section of tunnels with some spike pits and quite a lot of astral ruptures (do these ruptures like the sewer ...) the challenge of this part will be back & forth wall running to make it across the spike jumps ... after this section we'll have a grand temple hall which will be our staging area for the beholder fight against the three heroes (we'll save this for later, just the empty hall for now)". The 2D map 6 connector and the map 9 hall, beyond the trap run's antechamber. Layout, measured pit lengths and checks: [../CHULT-TEMPLE-WIND.md](../CHULT-TEMPLE-WIND.md).
+
 ## Direction and sources
 
 **Far-bank low fog and milling requested October 18, 2026:** sixteen additional

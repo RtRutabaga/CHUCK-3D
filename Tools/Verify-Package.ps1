@@ -82,7 +82,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=37 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=24 missing_assets=0 missing_sounds=0 ' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=12 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=20 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or

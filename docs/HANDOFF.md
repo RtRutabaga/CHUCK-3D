@@ -18,6 +18,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - a gauntlet of all four on one beat, then an antechamber whose way on is choked.
 
   Six new checkpoints ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). Verified and in the launcher.
+- **Astral wind and sanctum (October 22, Claude):** the trap run's antechamber now opens on winding tunnels (2D map 6): four 1.8 m legs and three 3 m bends. Each leg has a spike pit crossed only by wall runs kicked back and forth: one kick (4.6 m), two (9 m), two past broken walls (9 m), three (15 m). There are 24 sewer-style Astral ruptures in the floors, always walked round. Leg 4 opens onto the gallery of the sanctum (2D map 9): a 46 × 22 m hall with twin stairs, colonnades, idols, braziers and a dais. It is empty for now, the stage for the adventurers' beholder battle. Eight new checkpoints in a fifth column ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)). Verified; launcher promotion follows.
 - **Temple screen and far canopy (October 19, Claude):** 15 scenery giants (no grips) across the valley at the deep jungle's start hide the temple from the T-rex's trees. A light far canopy stands in for jungle trees beyond their 100 m draw distance ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
 - **Upriver (October 15, Claude):** the far bank now runs 360 m past the river's old end: a spring-fed source fall, twelve giant brachiation trees (crotches 15–17 m, the later T-rex zone, now reached using the golden cigarette, plus a dev checkpoint), then dense jungle to the temple's space; the road continues; far-bank deaths return to their stretch's spawn; every Chult spawn point has a Dev Checkpoint ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
@@ -29,6 +30,24 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 22 — the Astral wind and the sanctum (Claude)
+
+- **Built:** user: "build a winding narrow section of tunnels with some spike pits and quite a lot of astral ruptures (do these ruptures like the sewer ...) the challenge of this part will be back & forth wall running ... after this section we'll have a grand temple hall ... (we'll save this for later, just the empty hall for now)". Details: [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md).
+  - **Tunnels:** the antechamber's choke cleared; four narrow corbelled legs and three bends, zig-zagging S 73560–78800.
+  - **Pits:** lengths set from Chuck's measured reach (one kick 7.7–8.4 m, two 13.4–13.7 m, three about 17 m). Each needs exactly its kicks; pit 3's walls are broken so that a kick made too early meets a gap. The 5 m past each pit, where he lands, are kept clear of ruptures.
+  - **Ruptures:** 24, the wreck's/sewer's torn form in stone: broken lip, Astral glow, oil-film veils, purple light, cracks and lifted flakes. Real holes in the floor; an Astral death, back at the start of that leg or bend.
+  - **Sanctum:** an empty grand hall 10 m high: a gallery 6 m up on pillars, twin stairs, a processional between colonnades with torches, six guardian idols, six braziers, a dais with an altar and two great idols.
+  - **Checkpoints:** Astral Wind 1–7 and Temple Sanctum, in a fifth column (1700 wide).
+  - **Fix (ChuckCharacter):** a frame hitch no longer ends a side wall run as stalled.
+- **Checks:**
+  - Uncooked `-ChuckChultTest -ChuckTempleWindTest`: 11/11 trials, interior check `failures=0`, `lanes=8` (`Local/wind-test-6.log`); reach trials `Local/wind-test-1.log`.
+  - Uncooked trap run regression: 16/16 (`Local/wind-regress-run.log`).
+  - Package `Builds/TempleWindCandidate`: Verify-Package **182/182** (`Local/verify-package-20261022-164736.log`), with the new wind step 11/11 (`Local/verify-temple-wind-20261022-171137.log`). The first verification stopped on a stale `spawns=12` pattern (fixed). The second failed a far-bank zombie roll-dodge trial that the same package had passed an hour before (`Local/verify-river-zombies-20261022-164451.log`). It passed on the third run. These changes don't touch that trial.
+  - Menu suite **35/35** (`Local/temple-wind-menu-suite.log`).
+- **Limits:** no person has played it (difficulty, above all pit 4's three kicks; the camera in 1.8 m legs; whether the ruptures read as torn ground). The beholder battle, adventurers, Fireball and boss music are later. Ruptures are silent. Maps 7 and 8 are unbuilt.
+
+Next part of the work can be done here.
 
 ## October 22 — the temple trap run (Claude)
 

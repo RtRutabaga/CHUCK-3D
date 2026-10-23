@@ -13,10 +13,10 @@ Read-only sources: `docs/development/PHASE-6.md` and the temple maps in `chuck/c
 | 3 Skeleton hall | Broad, twelve durable skeletons round monumental piers | The pier hall, with an Astral rift crossed by collapsing slabs or hanging rings |
 | 4 Dart corridor | Long connector turning west, eight dart walls | The dart gallery, turning west: eight serpent-mouth launchers |
 | 5 Snake chamber | Twenty one-hit snakes | Built October 21: the snake chamber ([CHULT-TEMPLE-SNAKES.md](CHULT-TEMPLE-SNAKES.md)) |
-| 6 Astral wind | Very narrow, winding, Astral fall cuts needing committed jumps | Next milestone |
+| 6 Astral wind | Very narrow, winding, Astral fall cuts needing committed jumps | Built October 22 at the user's direction ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)): four narrow legs and three bends beyond the trap run, a spike pit in each leg crossed by wall runs kicked back and forth, 24 Astral ruptures walked round |
 | 7 Shrine hall | Twelve skeletons, guardian monument rows | Later |
 | 8 Gauntlet | Spike bands, darts and Astral cells together | Later |
-| 9 Final chamber | Fighter, wizard, ranger, beholder, skeletons; scripted Fireball | Later, staged as the 2D beats (not a boss fight for Chuck) |
+| 9 Final chamber | Fighter, wizard, ranger, beholder, skeletons; scripted Fireball | The hall is built, empty (October 22: the sanctum, [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)). The battle is later, staged as the 2D beats (not a boss fight for Chuck) |
 | Rubble map, crawl, escape | Astral rubble, a crawlspace, the cutscene onto the ship | Later; the cutscene follows [cutscene direction](regions/CHULT.md) |
 
 Skeletons first appear in the temple (PROJECT-BRIEF). They are creatures (Claude) and are the next step after this milestone: the pier hall and the spike corridor are laid out for them.
@@ -104,7 +104,8 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 
 1. ~~Skeletons~~: done October 21 ([CHULT-TEMPLE-SKELETONS.md](CHULT-TEMPLE-SKELETONS.md)).
 2. ~~The snake chamber (map 5)~~: done October 21.
-3. ~~The trap run~~: done October 22 at the user's direction ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). The chamber's choked arch is now climbed (rubble, then a chimney) to an upper level of spike pits, axes, fire and saws, ending in a gauntlet and an antechamber whose way on is choked. Next from there: the Astral wind (map 6), the shrine hall (map 7) and the 2D gauntlet (map 8).
+3. ~~The trap run~~: done October 22 at the user's direction ([CHULT-TEMPLE-RUN.md](CHULT-TEMPLE-RUN.md)). The chamber's choked arch is now climbed (rubble, then a chimney) to an upper level of spike pits, axes, fire and saws, ending in a gauntlet and an antechamber.
+4. ~~The Astral wind and the sanctum~~: done October 22 at the user's direction ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)). The antechamber's arch opens on the winding tunnels (wall-run spike pits, Astral ruptures), which end on the gallery of the empty sanctum. Next: the adventurers' battle with the beholder there (staging, characters, the Fireball). The shrine hall (map 7) and the 2D gauntlet (map 8) remain unbuilt; whether they come is the user's call.
 4. The final chamber's tableau, Fireball, rubble map, crawl and escape cutscene, from the 2D beats and the user's music.
 5. ~~A temple interior score~~: the user's, since October 20.
 
