@@ -70,7 +70,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
     - the game's "fell off the world" line at world Z −100 killed Chuck on the new stairs; the sanctum is now exempt down to 3 m under its floor;
     - the sanctum test's forced cut could go at a leftover skeleton; each blow trial now clears them.
   - **Packaged:** candidate `Builds/GrandHallCandidate` passed **Verify-Package 182/182** (`Local/verify-package-20261023-221808.log`), which now also requires both new scores' loop checks. The first candidate stopped on that sanctum-test flaw.
-- **Launcher:** see the promotion note below.
+- **Launcher:** promoted as `GrandHall` (`Local/grand-hall-promotion.log`). The receipt names **b094a39**, the launcher check passes, two backups are kept, and the candidate folder was consumed. Five older candidate folders from earlier sessions remain in `Builds/`. Try **Dev Checkpoints → Temple Pits** (the new score) and **Temple Sanctum** (the boss score, the hall, the fighter).
 - **Limits:**
   - Nobody has heard the music on speakers or watched the fighter in motion; judged from logs, renders and stills (`Local/HeroReview/shield`, `Saved/Screenshots/WindowsEditor/Chult/Sanctum*.png`).
   - The sword's crossguard grazes his own right arm in 12 frames.

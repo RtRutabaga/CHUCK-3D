@@ -26,6 +26,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - Shotcut's ffmpeg n7.1 (existing) to decode the MP3.
   - No downloads, no installations.
 - **Interrupted:** the PC shut down during the first uncooked wind run; nothing was lost, and the run was repeated.
+- **Launcher:** promoted as `GrandHall`. The receipt names b094a39.
 
 Next part of the work can be done here.
 
