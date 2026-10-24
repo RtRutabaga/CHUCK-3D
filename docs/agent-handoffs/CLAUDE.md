@@ -2,6 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 24 — the beholder after the user's references (Claude)
+
+- **Request:** "Make the beholder look more like this, here also is a clay render as a reference, use free resources where helpful". Base `e54c8ed`; source commit `a766960`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-BEHOLDER.md.
+- **Tested:**
+  - Blender reviews against the references: quick ×3, full ×3 (`Local/BeholderReview/r1-r3`, `f1-f3`, including clay views at the reference's angle).
+  - Uncooked beholder trials ×3, all passing (`Local/beholder-trial-5..7.log`).
+  - Packaged: Verify-Package passed on the first run, beholder trial `poses=4218 stalk_travel_cm=41.1 blinks=14 snarls=7 saccades=33`.
+- **Contract compatibility:**
+  - Chuck, the NPCs and the heroes are unchanged.
+  - `SK_Beholder` is a new mesh and rig with the same bone naming scheme. `tongue_0/1` became `tongue_0..3`, so there are 80 bones, or 81 in Unreal.
+  - `ATempleBeholder`: eye radius 33, blink 62°, a tongue wave over four bones, the jaw breathing round an open rest pose, a paler eye light.
+  - The Eye material's glow mask follows the 32° iris.
+  - Verify-Package expects `bones=81`.
+  - New `Tools/sdf_kit.py`. `build_beholder.py` imports it.
+- **Binary assets:** all LFS.
+  - Beholder sources: 58 MB, 8-bit textures now.
+  - `/Game/Characters/Beholder`: re-imported.
+  - Leather037 maps: 8.8 MB, plain git like the other CC0 surface JPGs. Check: `git check-attr`.
+  - LFS remote quota not checked.
+- **Tools:**
+  - Blender 4.5.14: beholder builds ×6.
+  - UE 5.7.4: imports ×3, Build.bat ×2, uncooked runs ×3, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - Downloads: ambientCG thumbnails for choosing (scratch, not kept), and Leather037_2K-JPG.zip (`Local/BeholderSurfaces`).
+  - No installations.
+- **Launcher:** promoted as `BeholderRef` (a766960).
+
+Next part of the work can be done here.
+
 ## October 23–24 — the ranger's bow, the beholder (Claude)
 
 - **Request:** "the archer's bow is backwards, fix that. then, start creating the beholder, it should look really cool and detailed". Base `904fba6`; the bow fix is `4ce02d5`.

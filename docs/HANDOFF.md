@@ -28,6 +28,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **The beholder rebuilt after the user's references (October 24, Claude):** the user supplied a colour concept and a clay render and asked for "free resources where helpful". The beholder now has:
+  - a lumpy cranium tapering to a chin;
+  - a green slit-pupilled eye under a massive brow and stacked bags;
+  - a huge open maw with rows of long fangs and a tongue lolling out;
+  - ten thick question-mark eyestalks with big green eyes;
+  - wet maroon skin. Its grain is ambientCG's CC0 Leather037 (`Tools/Fetch-BeholderSkin.ps1`).
+  The modelling code is now `Tools/sdf_kit.py`; details in [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md). Verify-Package passed on the first run (`Local/verify-package-20261024-135941.log`). Promoted as `BeholderRef`; the receipt names a766960.
 - **Ranger's bow and the beholder (October 23–24, Claude):**
   - The ranger's longbow was strung inside-out (limbs curving away from the string). It is now braced properly: limbs toward her, string straight at 15 cm.
   - A beholder now hangs over the sanctum's dais where the heroes look: a 2.1 m mauve orb with a bulging red-irised eye under a scowling brow, heavy blinking lids, a fanged grin that snarls, chitin plates down its back, and ten ringed eyestalks that writhe and each watch someone. It is built procedurally in Blender (sculpt-detail bake) and posed live in code. It does not fight yet ([CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)).
