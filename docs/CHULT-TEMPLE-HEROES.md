@@ -2,7 +2,7 @@
 
 User request, October 22, 2026 (Claude): "create the three heroes from the 2d game and add them to the grand temple room at the end. we'll add the beholder later. these three adventurers will be much more detailed and visually impressive than our NPCs so far, and they will have movements for attacking and taking hits that are much more involved than our existing NPCs, especially the fighter, one thing I want to emphasize is the feeling of a good hit, the fighter will have a sword and a shield and when he swings his sword to cut off the beholder's eye or to take down a skeleton I want the movement of the swing and hit to be realistic and satisfying to watch. download and install whatever you see fits best."
 
-They stand in the [sanctum](CHULT-TEMPLE-WIND.md#the-sanctum), the hall at the end of the Astral wind, and fight skeletons that keep getting up out of the bones. The beholder is not built yet.
+They stand in the [sanctum](CHULT-TEMPLE-WIND.md#the-sanctum), the hall at the end of the Astral wind, and fight skeletons that keep getting up out of the bones. Since October 23 the beholder hangs over the dais before them, alive but not yet fighting ([CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)).
 
 ## The 2D direction
 
@@ -13,7 +13,7 @@ Read-only sources: `docs/development/PHASE-6.md`, `tools/generate_adventurer_spr
 - **The wizard:** deep blue robes, grey beard, a pointed hat, a crooked staff with a sea-green gem. He is "working, rather than fighting" (the binding), and casts the Fireball later.
 - **The ranger:** forest greens, a long auburn ponytail, a longbow. She fires arrows.
 
-Not built here: the entrance lines, the beholder, the battle's hazards for Chuck, the Fireball and the escape.
+Not built here: the entrance lines, the beholder (since built: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the battle's hazards for Chuck, the Fireball and the escape.
 
 ## What was downloaded, and what was used
 
@@ -276,7 +276,7 @@ Clip changes made for this:
 
 ## Not done, and known flaws
 
-- **The beholder**, the 2D entrance lines, the battle's hazards for Chuck, the Fireball and the escape.
+- **The beholder's part in the battle** (it is built and hangs there: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the 2D entrance lines, the battle's hazards for Chuck, the Fireball and the escape.
 - **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".
 - **Hair and beards** are cards (the kit's), not strand grooms.
 - **Clipping:**

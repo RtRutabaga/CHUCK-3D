@@ -2,6 +2,32 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 23–24 — the ranger's bow, the beholder (Claude)
+
+- **Request:** "the archer's bow is backwards, fix that. then, start creating the beholder, it should look really cool and detailed". Base `904fba6`; the bow fix is `4ce02d5`.
+- **Built:** see HANDOFF, CHULT-TEMPLE-HEROES.md (the bow) and CHULT-TEMPLE-BEHOLDER.md.
+- **Tested:**
+  - Bow: the ranger rebuilt and re-imported; uncooked `portraits` stills show the braced bow. An uncooked `arrows` run alone reported pass=0 because its summary read a different skeleton (its log shows three arrows in and the skeleton down); the full packaged sanctum test has not run since.
+  - Beholder: four uncooked `-ChuckSanctumCapture -ChuckSanctumOnly=beholder` runs, the last passing (`Local/beholder-trial-4.log`), stills reviewed after each fix.
+  - Packaged: `Builds/BeholderCandidate` packaged; Verify-Package ×4 all stopped at the far-bank zombie dodge step (see HANDOFF). The baseline promoted build: 1 pass, 1 identical failure in two runs.
+- **Contract compatibility:**
+  - Chuck's rig, the NPCs and the heroes' skeletons are unchanged. The ranger's mesh changed only in the bow's shape (the `bowstring` nock and her clips are unchanged).
+  - New `ATempleBeholder` (TempleBeholder.h/.cpp). `ATempleSanctumBattle` loads `/Game/Characters/Beholder/SK_Beholder`, spawns it at `BeholderSpot()`, gains `GetBeholder()`, and its `CHUCK_SANCTUM_BATTLE` line gains `beholder=`.
+  - The sanctum test gains a `beholder` trial (Kind 7) before `battle`. Verify-Package requires the spawn line, `beholder=1` and that trial.
+  - `DefaultGame.ini` always cooks `/Game/Characters/Beholder`.
+- **Binary assets:** all LFS.
+  - `SourceAssets/Enemies/Beholder`: 92 MB. The 4K normal and ORM PNGs are 16-bit (47 + 31 MB); 8-bit would do.
+  - `/Game/Characters/Beholder`: 114 MB.
+  - The ranger's FBX and `/Game/Characters/Heroes/Ranger` were re-saved by the import (as in earlier sessions).
+  - LFS remote quota not checked.
+- **Tools:**
+  - Blender 4.5.14: ranger build ×1, beholder builds ×9 (5 quick, 4 full).
+  - UE 5.7.4: hero import ×1, beholder imports ×5 (one failed on a property name), Build.bat ×4, uncooked sanctum runs ×6, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×4, baseline zombie test ×2.
+  - No downloads, no installations.
+- **Launcher:** not updated; it is still `GrandHall` (b094a39), without the bow fix or the beholder. `Builds/BeholderCandidate` is kept for promotion once verification passes.
+
+Next part of the work can be done here.
+
 ## October 23 — temple music, the fighter's shield, a grander sanctum (Claude)
 
 - **Request:** temple 2 from Temple Pits, boss_battle in the grand hall, fix the fighter's shield-arm angle, a bigger and grander hall; after a power cut mid-session, make sure the shield never goes through him. Base `059b79f`.

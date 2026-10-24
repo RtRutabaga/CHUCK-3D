@@ -15,6 +15,7 @@ class USoundBase;
 class UStaticMesh;
 class UStaticMeshComponent;
 class ATempleHero;
+class ATempleBeholder;
 
 /**
  * The sanctum's battle, before the beholder (user 2026-10-22: "add them to the grand temple room at the
@@ -39,6 +40,8 @@ public:
     ATempleHero* GetHero(int32 Index) const { return Heroes.IsValidIndex(Index) ? Heroes[Index].Get() : nullptr; }
     /** Where the beholder will hang (the heroes face it): over the front of the dais. */
     FVector BeholderSpot() const { return Beholder; }
+    /** The beholder hanging there (docs/CHULT-TEMPLE-BEHOLDER.md): alive, not yet fighting. */
+    ATempleBeholder* GetBeholder() const { return TheBeholder.Get(); }
     float FloorZ() const { return Floor; }
     bool IsActive() const { return bActive; }
     /** Its assets are in and the cast is on the floor. */
@@ -79,6 +82,7 @@ private:
     // Assets, hard-referenced so they cook.
     UPROPERTY() TArray<USkeletalMesh*> HeroMeshes;
     UPROPERTY() TArray<UAnimSequence*> HeroClipList;
+    UPROPERTY() USkeletalMesh* BeholderMesh = nullptr;
     TArray<TMap<FName, UAnimSequence*>> HeroClips;
     UPROPERTY() UStaticMesh* ArrowMesh = nullptr;
     UPROPERTY() UStaticMesh* SkullMesh = nullptr;
@@ -104,6 +108,7 @@ private:
     UPROPERTY() TArray<UStaticMeshComponent*> SkullComps;
 
     TArray<TWeakObjectPtr<ATempleHero>> Heroes;
+    TWeakObjectPtr<ATempleBeholder> TheBeholder;
     TArray<TWeakObjectPtr<ATempleSkeleton>> Pool;
     TArray<FTempleSkeletonPost> Reserve;
     FVector Beholder = FVector::ZeroVector;

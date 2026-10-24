@@ -26,6 +26,8 @@ Written 2026-10-12 (Codex). **Landing work authorized by the user, 2026-10-12:**
 
 **Temple heroes requested October 22, 2026 (Claude):** "create the three heroes from the 2d game and add them to the grand temple room at the end. we'll add the beholder later ... especially the fighter, one thing I want to emphasize is the feeling of a good hit". The 2D fighter, wizard and ranger on the sanctum floor before the dais, fighting skeletons out of the bones (not Chuck's fight; nothing hurts him yet). The beholder, the entrance lines, the battle's hazards for Chuck and the Fireball remain for the battle. Details: [../CHULT-TEMPLE-HEROES.md](../CHULT-TEMPLE-HEROES.md).
 
+**Beholder requested October 23, 2026 (Claude):** "start creating the beholder, it should look really cool and detailed". The 2D mauve orb with one great red-irised eye, a toothed grin and eyes on stalks, built procedurally in Blender and hung alive over the sanctum's dais where the heroes look; its part in the battle (eye rays, the cone, the heroes fighting it) is still to come. Details: [../CHULT-TEMPLE-BEHOLDER.md](../CHULT-TEMPLE-BEHOLDER.md).
+
 ## Direction and sources
 
 **Far-bank low fog and milling requested October 18, 2026:** sixteen additional

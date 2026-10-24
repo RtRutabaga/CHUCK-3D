@@ -167,10 +167,13 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 }
 # The temple heroes (Claude, 2026-10-23; docs/CHULT-TEMPLE-HEROES.md): cooked, the battle spawns with every
 # asset, each of the fighter's blows lands on a skeleton (and the level cut takes its skull), a blow on his
-# shield and one on his back, the ranger's arrows and the wizard's bolt, then the battle runs.
+# shield and one on his back, the ranger's arrows and the wizard's bolt, then the battle runs. Since
+# 2026-10-23 the beholder hangs over the dais (docs/CHULT-TEMPLE-BEHOLDER.md): it must spawn whole and live.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5' -Quiet) -or
+if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=79 stalks=10 eye_mat=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TEST_COMPLETE failures=0' -Quiet) -or
    (Select-String -LiteralPath $heroLog -Pattern 'Fatal error:|bUsedWithInstancedStaticMeshes|bUsedWithSkeletalMesh' -Quiet)) {

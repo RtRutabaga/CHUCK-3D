@@ -3,6 +3,7 @@
 #include "ChultTempleWind.h"
 #include "HeroClipData.h"
 #include "TempleHero.h"
+#include "TempleBeholder.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -135,6 +136,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
         for (const TCHAR* Clip : HeroClipNames(R))
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Characters/Heroes/%s/Anim/AS_Hero%s_%s.AS_Hero%s_%s"), *Name, *Name, Clip, *Name, Clip)));
     }
+    P.Add(FSoftObjectPath(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
     for (const TCHAR* A : {TEXT("/Game/Characters/Heroes/Props/SM_HeroArrow.SM_HeroArrow"), TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull"),
                            TEXT("/Game/Characters/Heroes/FX/M_HeroDust.M_HeroDust"), TEXT("/Game/Characters/Heroes/FX/M_HeroBoltFire.M_HeroBoltFire"),
                            TEXT("/Game/Characters/Heroes/FX/M_HeroGlow.M_HeroGlow"), TEXT("/Game/Characters/Heroes/FX/M_HeroTrail.M_HeroTrail"),
@@ -172,6 +174,7 @@ void ATempleSanctumBattle::FinishLoading()
         }
         HeroClips.Add(Map);
     }
+    BeholderMesh = Cast<USkeletalMesh>(Find(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
     ArrowMesh = Cast<UStaticMesh>(Find(TEXT("/Game/Characters/Heroes/Props/SM_HeroArrow.SM_HeroArrow")));
     SkullMesh = Cast<UStaticMesh>(Find(TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull")));
     DustMat = Cast<UMaterialInterface>(Find(TEXT("/Game/Characters/Heroes/FX/M_HeroDust.M_HeroDust")));
@@ -240,6 +243,13 @@ void ATempleSanctumBattle::SpawnCast()
         H->SetHome(Feet, Yaw);
         Heroes.Add(H);
     }
+    // The beholder over the front of the dais, facing them (2026-10-23).
+    if (BeholderMesh)
+    {
+        FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        const float Yaw = Heroes.Num() && Heroes[0].IsValid() ? (Heroes[0]->GetActorLocation() - Beholder).Rotation().Yaw : 0.f;
+        if (auto* Bh = World->SpawnActor<ATempleBeholder>(Beholder, FRotator(0, Yaw, 0), P)) { Bh->Setup(BeholderMesh, this, Beholder); TheBeholder = Bh; }
+    }
     // The reserve: skeletons lying among the bones round the dais end of the hall (clear of the pillars,
     // idols, braziers and the heroes' ground).
     // In the enlarged hall (2026-10-23): in the nave before the dais and in the aisles, clear of the piers,
@@ -262,8 +272,8 @@ void ATempleSanctumBattle::SpawnCast()
             Pool.Add(S);
         }
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d"),
-        Heroes.Num(), Pool.Num(), HeroMeshes.FilterByPredicate([](USkeletalMesh* M) { return M != nullptr; }).Num(),
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d"),
+        Heroes.Num(), TheBeholder.IsValid(), Pool.Num(), HeroMeshes.FilterByPredicate([](USkeletalMesh* M) { return M != nullptr; }).Num(),
         HeroClipList.FilterByPredicate([](UAnimSequence* A) { return A != nullptr; }).Num(), SoundList.Num(), ArrowMesh != nullptr, SkullMesh != nullptr,
         (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr));
 }
@@ -690,10 +700,10 @@ void StartTempleSanctumReview(UWorld* World)
     B->SetForcedActive(true); B->SetWaves(false);
     ATempleHero* F = B->GetHero(0); ATempleHero* Wz = B->GetHero(1); ATempleHero* Rg = B->GetHero(2);
     Wz->SetHeld(true); Rg->SetHeld(true);
-    struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };   // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle
+    struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };   // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder
     static const FTrial Trials[] = {{TEXT("cut_down"), TEXT("CutDown"), 0}, {TEXT("cut_flat"), TEXT("CutFlat"), 0}, {TEXT("overhead"), TEXT("Overhead"), 0},
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
-        {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
@@ -738,7 +748,7 @@ void StartTempleSanctumReview(UWorld* World)
             F->SetHeld(T.Kind == 3 || T.Kind == 4);
             Wz->SetHeld(T.Kind != 4 && T.Kind != 5); Rg->SetHeld(T.Kind != 3 && T.Kind != 5);
             if (T.Kind == 5) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
-            else if (T.Kind == 6)
+            else if (T.Kind == 6 || T.Kind == 7)
             {
                 // Each hero still, in its rest clip, the fallen cleared away.
                 for (const TWeakObjectPtr<ATempleSkeleton>& K : B->Foes()) if (K.IsValid() && !K->IsDead()) { FTempleSkeletonPost P = K->GetPost(); K->ResetToReserve(P); }
@@ -783,6 +793,32 @@ void StartTempleSanctumReview(UWorld* World)
                 ++Run->Phase;
             }
         }
+        else if (T.Kind == 7)
+        {
+            // The beholder: from the fighter's place, close before it, its side, the great eye, a snarl, and the hall from behind the heroes.
+            if (ATempleBeholder* Bh = B->GetBeholder())
+            {
+                const int32 V = FMath::Clamp(static_cast<int32>(Age / 2.f), 0, 5);
+                const FVector Bc = Bh->GetActorLocation(), Bf = Bh->GetActorForwardVector(), Br = FVector::CrossProduct(FVector::UpVector, Bf);
+                if (V == 4 && Run->Phase == 4 && Run->Beat == 0) { Bh->Snarl(); Run->Beat = 1; }
+                Bh->HoldGaze(V == 3 || V == 4 ? Camera->GetActorLocation() : FVector::ZeroVector);
+                switch (V)
+                {
+                case 0: View(FAt + FVector(0, 0, 150) - Fw * 120.f + Rt * 60.f, Bc); break;
+                case 1: View(Bc + Bf * 430.f + Br * 160.f - FVector(0, 0, 60), Bc + FVector(0, 0, 40)); break;
+                case 2: View(Bc + Br * 520.f + FVector(0, 0, 40), Bc + FVector(0, 0, 50)); break;
+                case 3: View(Bh->GetEyeLocation() + Bf * 170.f + Br * 30.f - FVector(0, 0, 15), Bh->GetEyeLocation()); break;
+                case 4: View(Bc + Bf * 240.f - Br * 70.f - FVector(0, 0, 90), Bc - FVector(0, 0, 55)); break;
+                default: View(FAt - Fw * 900.f + Rt * 250.f + FVector(0, 0, 330), Bc - FVector(0, 0, 100)); break;
+                }
+                if (bCapture && Age > 1.2f + V * 2.f && Run->Phase == V && !FScreenshotRequest::IsScreenshotRequested())
+                {
+                    static const TCHAR* Names[] = {TEXT("from_fighter"), TEXT("front"), TEXT("side"), TEXT("eye"), TEXT("snarl"), TEXT("hall")};
+                    Shot(FString::Printf(TEXT("Sanctum_beholder_%s"), Names[V]));
+                    ++Run->Phase;
+                }
+            }
+        }
         else if (T.Kind == 4) View(Wz->GetActorLocation() + FVector(0, 0, 160) - Wz->GetActorForwardVector() * 200.f + FVector::CrossProduct(FVector::UpVector, Wz->GetActorForwardVector()) * -180.f, Wz->GetActorLocation() + Wz->GetActorForwardVector() * 400.f);
         else View(FAt - Fw * 650.f + Rt * 350.f + FVector(0, 0, 260), FAt + Fw * 150.f);
         // Stills through each blow: before, at and after its moment of contact.
@@ -796,7 +832,7 @@ void StartTempleSanctumReview(UWorld* World)
                 ++Run->Beat;
             }
         }
-        if (bCapture && T.Kind > 0 && T.Kind != 6 && Age > 3.f && Now >= Run->NextShot && Run->Phase < 6)
+        if (bCapture && T.Kind > 0 && T.Kind != 6 && T.Kind != 7 && Age > 3.f && Now >= Run->NextShot && Run->Phase < 6)
         {
             Run->NextShot = Now + (T.Kind == 5 ? 2.f : .25f);
             ++Run->Phase;
@@ -842,6 +878,16 @@ void StartTempleSanctumReview(UWorld* World)
             bDone = Age > 10.f; bPass = true;
             Note = TEXT("stills");
             break;
+        case 7:
+        {
+            // It is there, posed every frame, its stalks moving, its eye and lids and jaw working.
+            ATempleBeholder* Bh = B->GetBeholder();
+            bDone = Age > 12.5f || !Bh;
+            bPass = Bh && Bh->GetPoses() > 200 && Bh->GetStalkTravel() > 8.f && Bh->GetBlinks() >= 1 && Bh->GetSnarls() >= 1 && Bh->GetSaccades() >= 3;
+            Note = Bh ? FString::Printf(TEXT("poses=%d stalk_travel_cm=%.1f blinks=%d snarls=%d saccades=%d jaw=%.1f"), Bh->GetPoses(), Bh->GetStalkTravel(), Bh->GetBlinks(), Bh->GetSnarls(), Bh->GetSaccades(), Bh->GetJawAngle()) : FString(TEXT("no beholder"));
+            if (bDone && Bh) Bh->HoldGaze(FVector::ZeroVector);
+            break;
+        }
         default:
             bDone = Age > 45.f;
             bPass = B->GetFallen() - Run->Fallen0 >= 3 && F->GetCleanHits() > Run->Hits0;
