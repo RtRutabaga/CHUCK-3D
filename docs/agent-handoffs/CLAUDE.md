@@ -20,7 +20,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 - **Binary assets:** all LFS.
   - Beholder sources: 58 MB, 8-bit textures now.
   - `/Game/Characters/Beholder`: re-imported.
-  - Leather037 maps: 8.8 MB, plain git like the other CC0 surface JPGs. Check: `git check-attr`.
+  - Leather037 maps: 8.8 MB, LFS (the repository's JPG rule).
   - LFS remote quota not checked.
 - **Tools:**
   - Blender 4.5.14: beholder builds ×6.
