@@ -613,13 +613,14 @@ def make_bow(frame, slots, centre, axis, toward):
     wood, leather, string = pbr_slot(slots, 'wood'), pbr_slot(slots, 'leather_dk'), pbr_slot(slots, 'string')
     axis = axis.normalized(); toward = (toward - axis * toward.dot(axis)).normalized(); side = axis.cross(toward)
     half = .89
+    BRACE = .155                      # how far the tips stand toward the string
     bm = bmesh.new()
     rows = []
     n = 60
     for k in range(n + 1):
         t = -half + 2 * half * k / n
         u = abs(t) / half
-        bend = -.14 * u ** 1.7        # braced: the limbs curve away from the string
+        bend = BRACE * u ** 1.7       # braced: the limbs curve toward the string (2026-10-23: they curved away, a bow strung inside-out)
         w = .0165 * (1 - .55 * u ** 1.3) if abs(t) > .07 else .019
         d = .019 * (1 - .5 * u ** 1.2) if abs(t) > .07 else .022
         c = centre + axis * t + toward * bend
@@ -640,8 +641,8 @@ def make_bow(frame, slots, centre, axis, toward):
     lathe(gb, [(-.075, .021), (-.07, .0235), (.07, .0235), (.075, .021)], centre + toward * 0., axis, side, seg=14, scale_xy=(.9, 1.2))
     grip = kit.new_object('bow_grip', gb); grip.data.materials.append(leather)
     wrap_uv(grip, centre, axis, side, 1., .05); WRAPPED.add(grip.name)
-    ends = [centre + axis * s * (half - .025) + toward * (-.14 * ((half - .025) / half) ** 1.7) for s in (1, -1)]
-    nock = centre + toward * .15
+    ends = [centre + axis * s * (half - .025) + toward * (BRACE * ((half - .025) / half) ** 1.7) for s in (1, -1)]
+    nock = centre + toward * .15      # the brace height: the string runs straight from tip to tip past it
     sb = bmesh.new()
     path = [ends[0], nock, ends[1]]
     for a, b in zip(path, path[1:]):

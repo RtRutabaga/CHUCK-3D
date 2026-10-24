@@ -74,6 +74,7 @@ Each piece rides one bone, or a fixed blend of two, as real plate does. Lames ar
   - a belt and knife sheath, a bracer on her bow arm, fingerless gloves, tall boots;
   - an auburn ponytail;
   - a 1.78 m D-section longbow with a bound grip and a string, and an arrow at her fingers.
+  - The bow was strung inside-out until October 23 (user: "the archer's bow is backwards"): its limbs curved away from the string, which ran in a V to her side. Now the limbs curve toward her, their tips 15 cm out, and the string runs straight from tip to tip at the 15 cm brace height. The nocking point and her clips are unchanged.
 
 ### The props and their bones
 The props are skinned into each hero's mesh on extra bones (`docs/RIG-CONTRACT-V1.md` is not affected: heroes have their own skeletons):
