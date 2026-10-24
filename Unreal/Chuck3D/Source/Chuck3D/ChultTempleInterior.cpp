@@ -532,6 +532,19 @@ bool IsChultTempleInteriorSpawn(const FVector& World,float& OutYaw)
     return false;
 }
 bool InChultTempleInterior(const FVector& World,float Margin){return SpaceAt(WorldFrame(World),Margin)!=nullptr;}
+bool InChultTempleSanctum(const FVector& World)
+{
+    using namespace TempleWind;
+    const FVector F=WorldFrame(World);
+    return F.X>HS0&&F.X<HS1&&F.Y>HT0&&F.Y<HT1&&F.Z>HZ-300&&F.Z<HTop;
+}
+int32 ChultTempleInteriorMusicPart(const FVector& World,int32 Current)
+{
+    const FSpace* Sp=SpaceAt(WorldFrame(World),0);
+    if(!Sp)return Current;   // between spaces (a doorway's jamb, a wall): keep what is playing
+    const ETempleInteriorSpawn K=Sp->Spawn;
+    return K==ETempleInteriorSpawn::Sanctum?2:K>=ETempleInteriorSpawn::Pits?1:0;
+}
 bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
 {
     const FVector F=WorldFrame(FeetWorld);
@@ -1253,8 +1266,9 @@ namespace
             }
             Add(HallMid,HT1-60,UZ);Add(HS0+StairW+40,GalleryT+60,UZ);Add(HS0+80,GalleryT+60,UZ);
             AlongT(GalleryT-20,StairFoot+20,HS0+80,StairFoot,GalleryT,HZ,UZ);
-            Add(HS0+80,StairFoot-80,HZ);Add(77900,StairFoot-80,HZ);Add(77900,StairFoot+65,HZ);Add(HallMid,StairFoot+65,HZ);
-            for(float T=StairFoot-300;T>=DaisT1+300;T-=400)Add(HallMid,T,HZ);
+            // off the stair's foot, across through the colonnade's lane to the processional (the enlarged hall, 2026-10-23)
+            Add(HS0+80,StairFoot-90,HZ);Add(HS0+StairW+120,StairFoot-90,HZ);for(float S=HS0+StairW+520;S<HallMid;S+=400)Add(S,StairFoot-90,HZ);Add(HallMid,StairFoot-90,HZ);
+            for(float T=StairFoot-400;T>=DaisT1+300;T-=400)Add(HallMid,T,HZ);
             Add(HallMid,DaisT1+200,HZ);Add(HallMid,DaisT1+80,HZ+49,true);Add(HallMid,DaisT1+10,HZ+90,true);Add(HallMid,DaisT1-120,HZ+DaisH);
         }
         return R;
@@ -1451,7 +1465,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         const FMap Maps[]={{FVector(TempleRun::FS0+90,-2500,UZ+40),ETempleInteriorSpawn::Wind1},{FVector(74600,-710,UZ+40),ETempleInteriorSpawn::Wind2},
             {FVector(75510,-2000,UZ-100),ETempleInteriorSpawn::Wind3},{FVector(76300,-3150,UZ+40),ETempleInteriorSpawn::Wind4},{FVector(77210,-2000,UZ-100),ETempleInteriorSpawn::Wind5},
             {FVector(77120-60,-2300,UZ-100),ETempleInteriorSpawn::Wind5},{FVector(78000,-710,UZ+40),ETempleInteriorSpawn::Wind6},{FVector(78710,-2000,UZ-100),ETempleInteriorSpawn::Wind7},
-            {FVector(HallMid,-5400,HZ+40),ETempleInteriorSpawn::Sanctum},{FVector(HallMid,GalleryT+200,UZ+40),ETempleInteriorSpawn::Sanctum}};
+            {FVector(HallMid,DaisT1+1800,HZ+40),ETempleInteriorSpawn::Sanctum},{FVector(HallMid,GalleryT+200,UZ+40),ETempleInteriorSpawn::Sanctum}};
         for(const FMap& M:Maps){FVector Back;if(!ChultTempleInteriorRespawn(WorldAt(M.F.X,M.F.Y,M.F.Z),Back)||FVector::Dist(Back,ChultTempleInteriorSpawn(M.Want))>1)Fail(TEXT("wind_death_map"),M.F);}
         for(int32 L=0;L<4;++L)
         {
@@ -1460,7 +1474,7 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
             if(ChultTempleInteriorSwallows(WorldAt(Mid,Pits[L].From-Legs[L].Dir*40,UZ+1)))Fail(TEXT("wind_lip_swallows"),FVector(Mid,T,0));
         }
         if(!ChultTempleInteriorSwallows(WorldAt(Legs[2].S0-60,(BreakMinusT0+BreakMinusT1)*.5f,UZ-100))||!ChultTempleInteriorSwallows(WorldAt(Legs[2].S1+60,(BreakPlusT0+BreakPlusT1)*.5f,UZ-100)))Fail(TEXT("wind_alcove_swallow"),FVector::ZeroVector);
-        if(ChultTempleInteriorSwallows(WorldAt(HallMid,-5400,HZ+1))||ChultTempleInteriorSwallows(WorldAt(HallMid,GalleryT+200,UZ+1)))Fail(TEXT("sanctum_swallows"),FVector::ZeroVector);
+        if(ChultTempleInteriorSwallows(WorldAt(HallMid,DaisT1+1800,HZ+1))||ChultTempleInteriorSwallows(WorldAt(HallMid,GalleryT+200,UZ+1)))Fail(TEXT("sanctum_swallows"),FVector::ZeroVector);
         // The sanctum's gallery holds him; nothing blocks the hall's floor along the processional.
         {
             FHitResult Hit;const FVector A=WorldAt(HallMid,GalleryT+100,UZ+40);

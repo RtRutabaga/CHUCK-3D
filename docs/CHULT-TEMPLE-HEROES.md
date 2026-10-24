@@ -89,6 +89,12 @@ The sword:
 
 The shield is a curved heater: painted leather over boards, with a steel rim, rim nails and enarmes.
 
+**How it is carried (October 23).** The user: "the fighter's arm is in the shield in an unrealistic impractical angle". It had been mounted with the forearm running up its length, the elbow at its top edge and the hand at its point, so the elbow stood high behind it and the forearm hung vertical. It is now carried as a heater was:
+- the forearm lies across its back a little above the middle, rising 12 degrees to the fist, its top on the thumb's side;
+- the fist is on the grip by the middle, and the elbow strap is by the outer edge;
+- the enarmes are bands from the boards round the arm (the forearm strap over the vambrace, the grip in the fist) with a leather pad under the forearm;
+- the boards are 15 cm out from the forearm's axis and bow 6 cm to the rim (it was 11), so the rim is clear of the elbow's couter.
+
 ### Surfaces (`Tools/import_temple_heroes.py`, `/Game/Characters/Heroes`)
 Every hero piece has a vertex colour baked by Cycles: R is ambient occlusion, G is edge wear (convexity), B is grime. The masters use it:
 
@@ -124,6 +130,12 @@ Twenty clips at 30 fps, keyed on every frame:
   - the forearm takes the hand's twist (a wrist cannot twist);
   - the clavicles lift and reach with the hand.
 - **The hand follows the weapon.** It is placed from where the sword (or shield, or bow) must be.
+- **The shield goes where his arm can hold it, clear of him** (October 23). The keys give its centre and facing; the solver then moves it, keeping the facing, until:
+  - the elbow is exactly the upper arm's length from the shoulder (else the forearm, and the shield on it, would come out turned);
+  - the elbow bends at least 60 degrees;
+  - its boards are clear of his torso, hips, thighs, left shoulder, head and his own blade (capsules from that frame's joints).
+  Each frame starts from most of the last frame's move, so it is smooth and eases back to the keys once clear. The keyed facings turn up to 30 degrees to his left (fully when facing his foe), so the forearm points forward across his body; in guard the elbow is forward of his ribs and bent about 60-65 degrees, the shield's top at his eyes.
+- **The sword is kept out of him too** (October 23), except from 0.1 s before contact to 0.13 s after, where the cut keeps its measured path. The hand stays 30 cm from his spine and 27 cm from his head, and the blade turns about the grip, as little as will do, to clear his torso, hips, thighs and head.
 - **Hits taken are springs.** A blow is an impulse through three damped springs: the hips go first, the chest whips after them, the head snaps last. Big ones add reactive steps and arms thrown out for balance.
 
 ### Measured results
@@ -210,9 +222,25 @@ None of it is aimed at him. The heroes ignore him, the sanctum skeletons ignore 
 
 ## Tests
 
+**The shield and sword check** (October 23): `blender --background --python Tools/check_hero_shield.py [-- Clip,Clip]`. It solves every fighter clip as the builder does and tests every frame's skinned meshes triangle against triangle:
+- the shield's face and rim against everything else he wears or holds, including the left forearm under it and the sword;
+- the sword's blade, guard and pommel against his body, less contacts within 15 cm of the sword hand (the grip).
+It also reports the shield's largest move between frames.
+
+Results after the changes (all 11 clips, every frame):
+- **Shield:** no contact in any frame of any clip (`CHUCK_SHIELD_CHECK failures=0`). Before them, every frame of every clip had its rim through the left elbow and upper arm; in the cuts it also went through the chest plate, shoulder plates, beard, helmet and thighs.
+- **Sword:** no contact in eight clips. In 12 frames of three recoveries, the crossguard grazes his own right shoulder plate or sleeve: CutFlat 31-34, CutRise 4-6 and 34-37, Overhead 12. Before, it went through his chest, thigh, mail skirt and helmet in the four cuts' wind-ups and recoveries.
+- **Smoothness:** the shield's largest step is 16 cm and 20 degrees per frame, during the cuts' swings. In guard it moves 1 mm.
+
+Clip changes made for this:
+- **CutFlat:** the follow-through rises over his left shoulder instead of wrapping round at shoulder height, and the shield drops low by his left hip, tipped out. Its contact moved 0.6 cm (1.536 m) and its speed is 30.22 m/s.
+- **CutDown:** the shield rises high on his left while he cuts low. The recovery comes back low across his front to his right.
+- **CutDown, Overhead, CutRise:** the shield returns to guard only once the sword is back on his right.
+- **The other contact points, times and speeds are unchanged.**
+
 `-ChuckSanctumTest` runs ten trials, and `-ChuckSanctumCapture` adds stills to `Saved/Screenshots/.../Sanctum`. `-ChuckSanctumOnly=<trial>` runs a single trial.
 
-1. Each blow on a fresh skeleton placed in his measure: `cut_down`, `cut_flat` (it must take the skull), `overhead`, `bash`.
+1. Each blow on a fresh skeleton placed in his measure: `cut_down`, `cut_flat` (it must take the skull), `overhead`, `bash`. Since October 23 every skeleton left from the trial before goes back to reserve first. The forced cut is the fighter's next swing, and a leftover still chasing him had drawn it out of range, so the level cut's skull was taken only when a later swing happened to be a level cut.
 2. `block`: a blow on the shield.
 3. `hit_behind`: a blow on his back.
 4. `arrows`: three arrows drop a skeleton.
@@ -253,6 +281,7 @@ None of it is aimed at him. The heroes ignore him, the sanctum skeletons ignore 
 - **Clipping:**
   - Plate can intersect at extreme poses (the pauldrons in the overhead's wind-up), and the ranger's mantle clips her arm at full draw.
   - A striking skeleton's arm passes into the fighter's helmet or shield at close range.
+  - The crossguard grazes his own right shoulder plate or sleeve in 12 frames of three recoveries (above). Clearing the blade off his arm drove it into his forearm, so it was left.
 - **Movement:**
   - The fighter only steps forward and back along his facing. He turns on the spot by rotating, with his feet sliding a little.
   - Heroes do not walk.
@@ -260,4 +289,4 @@ None of it is aimed at him. The heroes ignore him, the sanctum skeletons ignore 
   - Arrows and bolts ignore walls and pillars.
   - Splinters and skulls bounce only on the floor plane, so a skull can roll through a plinth.
 - **The rising cut** is authored for the beholder and is not yet used.
-- **Sound:** no music of its own for the battle (the temple interior's score plays).
+- **Sound:** since October 23 the sanctum plays the user's "boss_battle" score, from the moment Chuck enters, not tied to the fight's events.

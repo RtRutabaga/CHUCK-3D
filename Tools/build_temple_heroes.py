@@ -479,9 +479,11 @@ def make_sword(frame, slots, centre, axis, flat):
     return out, tip_at
 
 
-def make_shield(frame, slots, centre, out_dir, up, width=.6, height=.78, curve=.11):
+def make_shield(frame, slots, centre, out_dir, up, width=.6, height=.78, curve=.06, arm=None):
     """A heater shield: lime-wood boards under painted leather, curved across, a steel rim, and
-    the enarmes (forearm strap and grip) behind. centre: its middle, out_dir: the face's way, up: its top."""
+    the enarmes (forearm strap and grip) behind. centre: its middle, out_dir: the face's way, up: its top.
+    arm: (elbow, wrist, grip) of the forearm carrying it (2026-10-23): it lies across the shield's back,
+    the strap round it by the elbow and the grip in the fist."""
     out_dir = out_dir.normalized(); up = (up - out_dir * up.dot(out_dir)).normalized(); across = up.cross(out_dir)
     paint, wood, steel, leather = pbr_slot(slots, 'paint'), pbr_slot(slots, 'wood_dark'), pbr_slot(slots, 'steel'), pbr_slot(slots, 'leather_dk')
     def outline(v):   # half width at height v (-1 bottom point .. 1 top)
@@ -526,14 +528,31 @@ def make_shield(frame, slots, centre, out_dir, up, width=.6, height=.78, curve=.
     nb = bmesh.new()
     for p, n in resample(clean, .06): dome(nb, p + out_dir * .0095, out_dir, .005, .004)
     nails = kit.new_object('shield_nails', nb); nails.data.materials.append(steel)
-    # Enarmes: two straps on the back, across the forearm.
+    # Enarmes: the forearm strap by the elbow and the grip at the fist, each a band from the boards
+    # round the arm (a rectangle in the plane across the forearm), and a pad under the forearm.
     eb = bmesh.new()
-    for v0, length in ((.18, .2), (-.18, .13)):
-        c = pos(0., v0, -.03)
-        for k in range(2):
-            pass
-        verts = [eb.verts.new(c + across * x + up * y - out_dir * z) for x, y, z in (( -length / 2, -.02, 0.), (length / 2, -.02, 0.), (length / 2, .02, 0.), (-length / 2, .02, 0.))]
-        eb.faces.new(verts)
+    E, W, G = arm
+    fa = (W - E).normalized(); fp = out_dir.cross(fa).normalized()
+    def board_depth(p):   # the boards' back behind p, along out_dir
+        rel = p - centre; x = rel.dot(across); v = rel.dot(up) / (height / 2)
+        return (centre + out_dir * (curve * (1 - (x / (width / 2)) ** 2) - curve - .02 * (v - .2) ** 2 - .016)).dot(out_dir)
+    def band(c, half, r_arm, w):
+        # c: a point on the forearm's axis; the band runs from the boards round the arm's far side.
+        back = board_depth(c) - c.dot(out_dir)            # (negative of) the gap from the axis to the boards
+        corners = [c + out_dir * back + fp * half, c - out_dir * r_arm + fp * half, c - out_dir * r_arm - fp * half, c + out_dir * back - fp * half]
+        for i in range(3):
+            a, b = corners[i], corners[i + 1]
+            vs = [eb.verts.new(p) for p in (a - fa * w / 2, b - fa * w / 2, b + fa * w / 2, a + fa * w / 2)]
+            eb.faces.new(vs)
+    ga = E + fa * (G - E).dot(fa)
+    band(E.lerp(W, .22), .05, .052, .045)      # the forearm strap, over the vambrace
+    band(ga, .042, .03, .034)                   # the grip, in the fist
+    # the pad the forearm rests on: a leather block from the boards to the arm's back
+    for t in (.3, .55, .8):
+        c = E.lerp(W, t); back = board_depth(c) - c.dot(out_dir)
+        vs = [eb.verts.new(p) for p in (c + out_dir * back + fp * .035 - fa * .05, c + out_dir * back - fp * .035 - fa * .05,
+                                         c + out_dir * back - fp * .035 + fa * .05, c + out_dir * back + fp * .035 + fa * .05)]
+        eb.faces.new(vs)
     straps = kit.new_object('shield_straps', eb); straps.data.materials.append(leather)
     thicken(straps, .006)
     return [face, rim, nails, straps]
@@ -855,15 +874,28 @@ def fighter_gear(info, slots, hide):
     add_bone(rig, 'weapon_r', 'hand_r', gc, gc + blade_dir * .2, roll_toward=palm)
     add_bone(rig, 'weapon_tip', 'weapon_r', tip, tip + blade_dir * .05, roll_toward=palm)
     for o in sw: rigid(o, {'weapon_r': 1.}); parts.append(o)
+    # The shield is carried as a heater was (user 2026-10-23: the arm stood up its length, elbow at the
+    # top, at an impractical angle): the forearm across its back a little above the middle, rising 12
+    # degrees to the fist, the fist on the grip just off the middle, the elbow by the outer edge.
     E, W = el['l'], wr['l']
     fa = (W - E).normalized()
     out_dir = Vector((L, 0, 0)) - fa * fa.dot(Vector((L, 0, 0)))   # out from his left forearm (A-pose: the arm hangs outward)
     out_dir.normalize()
-    sc = E.lerp(W, .5) + out_dir * .085
-    sh_parts = make_shield(F, slots, sc, out_dir, -fa)
-    add_bone(rig, 'shield_l', 'lowerarm_l', sc, sc - fa * .2, roll_toward=out_dir)
+    lg, _, _, _ = grip_frame(F, 'l')
+    thumb = F.j('thumb_01', 'l') - W
+    fp = out_dir.cross(fa).normalized()
+    if fp.dot(thumb) < 0: fp = -fp                 # the shield's top on the thumb's side: the fist upright behind it
+    tilt = math.radians(12.)
+    up = (fa * math.sin(tilt) + fp * math.cos(tilt)).normalized()
+    toward_elbow = (-fa - up * (-fa).dot(up)).normalized()
+    ga = E + fa * (lg - E).dot(fa)                 # the grip on the forearm's axis
+    # (the elbow 12 cm inside the rim and the boards 9 cm clear of its plate: 2026-10-23, an intersection check
+    # found the rim through the elbow and upper arm at .08 / .12 / curve .08)
+    sc = ga + out_dir * .15 + toward_elbow * .02 - up * .1
+    sh_parts = make_shield(F, slots, sc, out_dir, up, arm=(E, W, lg))
+    add_bone(rig, 'shield_l', 'lowerarm_l', sc, sc + up * .2, roll_toward=out_dir)
     for o in sh_parts: rigid(o, {'shield_l': 1.}); parts.append(o)
-    HERO['props'] = {'sword_grip': list(gc), 'sword_tip': list(tip), 'shield_centre': list(sc)}
+    HERO['props'] = {'sword_grip': list(gc), 'sword_tip': list(tip), 'shield_centre': list(sc), 'shield_up': list(up), 'shield_out': list(out_dir)}
     return parts
 
 

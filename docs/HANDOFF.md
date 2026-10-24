@@ -24,6 +24,10 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - Authored, physically driven combat motion: blade-led cuts at 26-32 m/s, the hips leading the chest leading the arm. The blade's actual sweep must meet the bones. A hit freezes both for 75-110 ms with a bone crack, splinters and dust; the level cut takes the skull off.
   - Shield blocks, spring-driven hit reactions, arrows that stand in the bone, the wizard's homing bolt.
   - Beholder still to come ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)). Verified and in the launcher.
+- **Temple music, shield, grander sanctum (October 23, Claude):**
+  - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
+  - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
+  - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
 - **Temple screen and far canopy (October 19, Claude):** 15 scenery giants (no grips) across the valley at the deep jungle's start hide the temple from the T-rex's trees. A light far canopy stands in for jungle trees beyond their 100 m draw distance ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
 - **Jungle birds (October 19, Claude):** scarlet and blue-and-gold macaws, modelled in Blender and flown in code (flapping two-part wings, banking, gliding). On the bridge a flock crosses just ahead of Chuck and a pair overtakes him low over his head, once each per crossing. Over the temple two wheels of pairs circle, two pairs fly a figure of eight, a pair swoops through his view every 15-24 s in the precinct, and a flock rises up the road at the reveal ([CHULT-BIRDS.md](CHULT-BIRDS.md)). Verified and in the launcher.
 - **Upriver (October 15, Claude):** the far bank now runs 360 m past the river's old end: a spring-fed source fall, twelve giant brachiation trees (crotches 15–17 m, the later T-rex zone, now reached using the golden cigarette, plus a dev checkpoint), then dense jungle to the temple's space; the road continues; far-bank deaths return to their stretch's spawn; every Chult spawn point has a Dev Checkpoint ([CHULT-UPRIVER.md](CHULT-UPRIVER.md)). Verified and in the launcher.
@@ -35,6 +39,45 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 23 — temple music, the fighter's shield, a grander sanctum (Claude)
+
+- **Built:** user: "add the temple 2 sound track starting with Temple Pits. add boss_battle soundtrack in grand hall. currently the fighter's arm is in the shield in an unrealistic impractical angle, fix this. Make the grand hall bigger and grander"; after a power cut: "make sure the new shield position doesnt result in the shield going through the fighters body or anything weird/impossible looking like that".
+  - **Music** ([SourceAssets/Audio/README.md](../SourceAssets/Audio/README.md)):
+    - "temple 2" (copied unmodified) plays from the trap run's pit gallery (the Temple Pits space) through the gauntlet, the antechamber and the whole Astral wind;
+    - "boss_battle" (the MP3 kept, decoded to WAV with no edits) plays in the sanctum;
+    - both loop and cross-fade with the interior's "temple" score, which still plays from the cella to the rubble climb (`ChultTempleInteriorMusicPart`).
+  - **Shield** ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)):
+    - It had been mounted with the forearm up its length and the elbow at its top edge. It is now carried as a heater was: the forearm across its back, the fist on a grip by the middle, the elbow strap by the rim, with modelled enarmes and pad.
+    - The clip solver keeps it where the arm can hold it (the elbow at the upper arm's true length, at least a 60 degree bend) and clear of his torso, hips, thighs, shoulder, head and blade. It also keeps his sword hand and blade out of his body except around contact.
+    - Four cuts were re-keyed where the shield and blade shared space. The level cut's follow-through now rises over his shoulder.
+  - **Sanctum** ([CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md)):
+    - 54 × 34 m and 17.5 m high (it was 46 × 22 × 10). The floor went 7 m down, as the plaza sits above the ceiling.
+    - The gallery is now 13 m up, with 25 m stairs down the side walls.
+    - Two colonnades of five great piers, with architraves below the gallery's sightline and an upper colonnade to the ceiling.
+    - A 22 m dais with two 5 m serpent colossi and a 6.6 m carved disc over an 18 m glyph wall, guardian idols, four great fire bowls, more torches.
+    - The battle's staging moved with the dais.
+- **Checks:**
+  - **`Tools/check_hero_shield.py`** (new; triangle-against-triangle on the skinned meshes, every frame of all 11 fighter clips):
+    - Shield: no contact anywhere. Before the fix, every frame of every clip had its rim through the left elbow and upper arm; in the cuts it also went through his chest plate, shoulder plates, beard, helmet and thighs.
+    - Sword: clean in 8 clips. The crossguard grazes his own right shoulder plate or sleeve in 12 frames of three recoveries (left; see limits).
+    - Contacts are unchanged except the level cut's, 0.6 cm lower.
+  - **Uncooked:**
+    - wind test 11/11 with the 33 s stairs walk onto the dais (`Local/wind-hall-3.log`);
+    - interior check 0 failures (the first try failed 504 sampled cells: the ceiling was 3.6 m under the plaza; it now meets the 4 m rule);
+    - sanctum test 10/10 (`Local/sanctum-shield-2.log`).
+  - **Two bugs found and fixed:**
+    - the game's "fell off the world" line at world Z −100 killed Chuck on the new stairs; the sanctum is now exempt down to 3 m under its floor;
+    - the sanctum test's forced cut could go at a leftover skeleton; each blow trial now clears them.
+  - **Packaged:** candidate `Builds/GrandHallCandidate` passed **Verify-Package 182/182** (`Local/verify-package-20261023-221808.log`), which now also requires both new scores' loop checks. The first candidate stopped on that sanctum-test flaw.
+- **Launcher:** see the promotion note below.
+- **Limits:**
+  - Nobody has heard the music on speakers or watched the fighter in motion; judged from logs, renders and stills (`Local/HeroReview/shield`, `Saved/Screenshots/WindowsEditor/Chult/Sanctum*.png`).
+  - The sword's crossguard grazes his own right arm in 12 frames.
+  - The hall is dim and hazy at its far end; the glyph friezes on the architraves read stark white.
+  - The boss track plays on entering the hall, not on the battle's events.
+
+Next part of the work can be done here.
 
 ## October 23 — the temple heroes (Claude)
 

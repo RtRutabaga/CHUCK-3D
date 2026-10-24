@@ -2,6 +2,33 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 23 — temple music, the fighter's shield, a grander sanctum (Claude)
+
+- **Request:** temple 2 from Temple Pits, boss_battle in the grand hall, fix the fighter's shield-arm angle, a bigger and grander hall; after a power cut mid-session, make sure the shield never goes through him. Base `059b79f`.
+- **Built, tests, launcher, flaws:** see HANDOFF, CHULT-TEMPLE-HEROES.md, CHULT-TEMPLE-WIND.md and SourceAssets/Audio/README.md.
+- **Contract compatibility:**
+  - Chuck's rig and the NPCs are unchanged.
+  - The fighter's skeleton keeps its bones. `shield_l` now has its tail along the shield's top and its roll out of its face, and the shield mesh is remounted across the forearm. All 11 fighter clips were rebuilt.
+  - `HeroClipData.h`: only the level cut's contact changed (153.6 cm, 30.22 m/s).
+  - `TempleWind` constants: the sanctum is bigger and lower (`HZ` = Floor − 700, `HTop` = HZ + 1750, new `NaveHalf`, `PierHalf`, `PierT`, `StairW` 200, `DaisT1` −7600). Spawns and space counts are unchanged.
+  - New `InChultTempleSanctum` and `ChultTempleInteriorMusicPart`.
+  - `ChuckCharacter`: the world-Z −100 fall death skips the sanctum, and a Chult teleport never sets the sewer respawn.
+  - `DockGameMode`: nine music tracks (`MusicRegion` 7 = temple 2, 8 = boss), and new `-ChuckTempleRunMusicTest` / `-ChuckSanctumMusicTest`.
+  - The sanctum test's blow trials clear leftover skeletons.
+  - `Verify-Package`: the wind step runs both music tests and requires their checks.
+- **Binary assets:** all LFS.
+  - Audio: `Temple2.wav` 22 MB, `BossBattle.wav` 32 MB, `boss_battle.mp3` 4 MB, two SoundWaves 36 MB.
+  - Heroes: the fighter's SK and 11 clip FBXs, and `/Game/Characters/Heroes` re-saved by the import (~60 files, mostly identical content, as last session).
+  - LFS remote quota not checked.
+- **Tools:**
+  - Blender 4.5.14: fighter builds ×2, fighter anim builds ×5, check/review/diagnostic runs ×~30.
+  - UE 5.7.4: Build.bat ×6, music import ×1, fighter imports ×2, uncooked wind runs ×3 (one cut short by the shutdown), uncooked sanctum runs ×5, Build-Game -Package -SkipBaseAssets ×2 (verification failed, then passed 182/182).
+  - Shotcut's ffmpeg n7.1 (existing) to decode the MP3.
+  - No downloads, no installations.
+- **Interrupted:** the PC shut down during the first uncooked wind run; nothing was lost, and the run was repeated.
+
+Next part of the work can be done here.
+
 ## October 23 — the temple heroes (Claude)
 
 - **Request:** the three 2D heroes in the sanctum, much more detailed, with involved attack and hit motion, the fighter's swing and hit realistic and satisfying; beholder later. Base `bce75b8`.

@@ -434,7 +434,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     AirApexZ = static_cast<float>(Location.Z);
     bPantryRespawn=IsWithinDockPantry(Location);
     bChultRespawn=AChultLanding::Contains(Location);
-    bSewerRespawn=Location.Z<-150 && !bPantryRespawn;
+    bSewerRespawn=Location.Z<-150 && !bPantryRespawn && !bChultRespawn;   // (the temple's sanctum floor is below -150 too)
     ViewYaw = bSewerRespawn ? AreaStartYaw(Location) : 0.f;
     LadderIndex = -1; bClimbReverse = false;
     bSprinting = false; SprintWeight = 0; Stamina = 1.f; RunupLength = 0; RunupDir = FVector::ZeroVector;   // a fresh start is a rested rat
@@ -3046,7 +3046,8 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation())) FallToDeath();
+    // (The temple's sanctum, enlarged on 2026-10-23, has its floor below this line: it is not off the world.)
+    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation()) && !InChultTempleSanctum(GetActorLocation())) FallToDeath();
     // Down into one of the Astral ruptures round the jungle wreck (2026-10-18): an Astral death.
     else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Off the temple well's stair into its pit, or into the pier hall's rift (2026-10-20): Astral.

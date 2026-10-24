@@ -10,7 +10,7 @@ The 2D maps 7 and 8 (the shrine hall and the 2D gauntlet) are not built. The tra
 
 ## Layout
 
-The frame is the interior's: S toward the temple, T across, Z above the plaza. The tunnels are at the trap run's upper level (−860); the sanctum's floor is the halls' (−1460).
+The frame is the interior's: S toward the temple, T across, Z above the plaza. The tunnels are at the trap run's upper level (−860). The sanctum's floor was the halls' (−1460); since October 23 it is at −2160.
 
 | Part | Where | What |
 |---|---|---|
@@ -21,7 +21,7 @@ The frame is the interior's: S toward the temple, T across, Z above the plaza. T
 | Leg 3 (+T) | S 77120–77300, T −3000 → −860 | One rupture, **pit 3** (9 m, broken walls), one more |
 | Bend 3 (+S) | S 77120–78800, T −860 → −560 | Five ruptures, a long one down the middle |
 | Leg 4 (−T) | S 78620–78800, T −860 → −3400 | One rupture, **pit 4** (15 m), then an arch onto the gallery |
-| The sanctum | S 77600–79800, T −8000 → −3400, 10 m high | Gallery, twin stairs, colonnades, idols, braziers, dais |
+| The sanctum | S 77000–80400, T −8800 → −3400, 17.5 m high (October 23; it was S 77600–79800, T −8000, 10 m) | Gallery, twin stairs, colonnades, idols, colossi, fire bowls, dais |
 
 The legs are 1.8 m wide, like the trap run's pit gallery, so the far wall is in reach of the chained wall run. They are corbel-vaulted, 4 m high, with mossy lower courses: older and rougher than the trap run. The bends are 3 m wide. Every ceiling is at least 4.6 m under the plaza.
 
@@ -76,20 +76,32 @@ The spike pits are the opposite: square, dressed and lined.
 
 ## The sanctum
 
-A hall 46 × 22 m and 10 m high, corbel-vaulted, its frieze in the ruins' mossy stone. Leg 4 enters it through an arch with a plaster lintel, onto a **gallery** 6 m above the floor. The gallery:
-- runs across the hall's end on four square pillars;
-- has a low balustrade between the heads of the twin **stairs**, which run down its side walls (38 risers each, a hidden ramp under visible steps, as in the well).
+**Made bigger and grander on October 23** (user: "Make the grand hall bigger and grander"). It was 46 × 22 m and 10 m high. It is now 54 × 34 m and 17.5 m high, corbel-vaulted (six courses), its frieze in the ruins' mossy stone.
+- **The floor went down, not the roof up:** the plaza is 4.6 m above the old ceiling and the interior check keeps every ceiling 4 m under the ground (its trees' roots). The floor is 7 m below the halls', at −2160, and the ceiling is at −410.
+- **The gallery:** leg 4 still enters through an arch with a plaster lintel onto it, now **13 m** above the floor. It runs across the hall's end on six square piers, with a balustrade and finials between the stairs' heads.
+- **The stairs:** two 2 m wide flights down the side walls, 25 m long with 81 risers each, a hidden ramp under visible steps as in the well. Torches follow their line.
 
 From the gallery the hall reads end to end:
-- **The processional:** a paved way of ruin stone with kerbs.
-- **The colonnades:** two rows of four great square pillars, base and capital, each with a torch on its face toward the processional.
-- **The guardians:** six serpent idols on plinths between the pillars, facing the way.
-- **The braziers:** four by the processional, two before the dais.
-- **The dais:** risen 96 cm with five steps, an altar, two great serpent idols and a glyph wall behind.
-- **Torches** down both long walls, on the end walls and at the gallery.
-- **Pots:** two on the gallery, two in the hall.
+- **The processional:** a paved way of ruin stone, 3.8 m wide, with kerbs.
+- **The colonnades:** two rows of five great square piers either side of the nave, 9 m off its axis. Each pier has a base, a moss band, a banded capital and a torch on its nave face.
+  - The piers carry an architrave along each row at 11 m, below the gallery, so nothing crosses the view from the gallery to the dais.
+  - An upper colonnade of pilasters rises over them to a beam under the ceiling, and glyph friezes run on the architraves.
+  - A lane is left between the third and fourth piers at the stairs' foot.
+- **The guardians:** four serpent idols on plinths along the processional's first half.
+- **The fires:** four braziers by the processional and four great fire bowls (2 m, on stepped plinths), two flanking the dais and two in the aisles before it.
+- **The dais:** 22 m wide and 12 m deep, risen 96 cm with five steps. On it:
+  - an altar on a stepped base;
+  - two **colossal serpent idols**, about 5 m, on 2.5 m plinths carved with glyphs;
+  - behind them, a 6.6 m **carved disc** with sixteen rays in the end wall, over an 18 m glyph wall between stone bands.
+- **Torches** down both long walls, on the end wall, on the gallery and its back wall, and pilasters on the side walls beyond the stairs.
+- **Pots:** two on the gallery, two in the hall's far corners.
 
-The gallery is where Chuck will watch the battle; the floor and dais are its stage. The hall has no other way out, as in 2D, where the scripted Fireball is the way on. It is empty for now: no adventurers, beholder, skeletons, battle or music of its own (the temple interior's score plays). Since October 23 the three adventurers stand on its floor before the dais, fighting skeletons that rise from the bones round the dais end ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)); the beholder is still to come.
+**Moved with it:**
+- The battle's heroes, skeleton posts and leash are placed relative to the dais's front (the reserve posts avoid the piers and fire bowls).
+- The battle's sounds carry 36 m.
+- The interior check's route and the stairs trial cross to the processional through the colonnade's lane.
+
+The gallery is where Chuck will watch the battle; the floor and dais are its stage. The hall has no other way out, as in 2D, where the scripted Fireball is the way on. Since October 23 its music is the user's "boss_battle", and the tunnels before it play their "temple 2" from the trap run's pits on (SourceAssets/Audio/README.md). The three adventurers stand on its floor before the dais, fighting skeletons that rise from the bones round the dais end ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)); the beholder is still to come.
 
 ## Respawns and checkpoints
 

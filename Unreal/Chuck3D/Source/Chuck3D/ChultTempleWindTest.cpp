@@ -199,7 +199,7 @@ void ReviewChultTempleWind(AActor* Owner, AChuckCharacter* Chuck, int32 Failures
                 ChultTempleWindPath(FVector2D(S.X, S.Y), FVector2D(LegMid(1), (Bends[0].T0 + Bends[0].T1) * .5f), 26, Run->Points);
                 break;
             }
-            case ET::Stairs: Reset(HallMid, HT1 - 220, UZ, 0, -1); Run->Points = {{HallMid, GalleryT + 80}, {HS0 + 80, GalleryT + 80}, {HS0 + 80, StairFoot - 60}, {77900, StairFoot - 60}, {77900, StairFoot + 65}, {HallMid, StairFoot + 65}, {HallMid, DaisT1 + 300}, {HallMid, DaisT1 - 200}}; break;
+            case ET::Stairs: Reset(HallMid, HT1 - 220, UZ, 0, -1); Run->Points = {{HallMid, GalleryT + 80}, {HS0 + 80, GalleryT + 80}, {HS0 + 80, StairFoot - 90}, {HallMid, StairFoot - 90}, {HallMid, DaisT1 + 300}, {HallMid, DaisT1 - 200}}; break;
             case ET::Full:
             {
                 Reset(LegMid(0), -3000, UZ, 0, 1);

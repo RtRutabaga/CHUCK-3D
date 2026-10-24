@@ -476,6 +476,24 @@ class Fighter:
         self.sw_rest = frame_from(H['weapon_tip'] - H['weapon_r'], self._edge_rest())
         self.grip_off = H['weapon_r'] - H['hand_r']
         self.sh_rest_c = H['shield_l']
+        # The shield's mount (2026-10-23): build_temple_heroes carries it with the forearm across its back,
+        # rising 12 degrees to the fist, its top on the thumb's side. The same rule on this rest skeleton
+        # (his left is +Y here) gives its face's and top's ways; it must put the centre on the bone.
+        E, W = H['lowerarm_l'], H['hand_l']
+        fa = (W - E).normalized()
+        out = (V((0, 1, 0)) - fa * fa.y).normalized()
+        fp = out.cross(fa).normalized()
+        if fp.dot(H['thumb_01_l'] - W) < 0: fp = -fp
+        up = (fa * math.sin(math.radians(12.)) + fp * math.cos(math.radians(12.))).normalized()
+        # the bone carries it: its tail along the top, its roll axis out of the face (checked against the rule)
+        bone = rig.obj.data.bones['shield_l']; m3 = rig.obj.matrix_world.to_3x3() @ bone.matrix_local.to_3x3()
+        b_up, b_out = (m3 @ V((0, 1, 0))).normalized(), (m3 @ V((0, 0, 1))).normalized()
+        assert b_up.angle(up) < math.radians(1.) and b_out.angle(out) < math.radians(1.), ('shield mount mismatch', b_up, up, b_out, out)
+        up, out = b_up, b_out
+        self.sh_up, self.sh_out = up, out
+        self.upper_len = (H['lowerarm_l'] - H['upperarm_l']).length
+        fore_len = (H['hand_l'] - H['lowerarm_l']).length
+        self.fold_min = math.sqrt(self.upper_len ** 2 + fore_len ** 2 - 2 * self.upper_len * fore_len * math.cos(math.radians(60.)))
 
     def _edge_rest(self):
         # build_temple_heroes.make_sword: the blade's flat is the palm's way, so the edge is along x flat
@@ -492,32 +510,135 @@ class Fighter:
     # -- the shield: centre, its face's way, its top's way -> left forearm delta and wrist
     def shield_arm(self, pose_h, centre, face, top):
         R = self.R; H = R.rest_h
-        # the shield's rest frame: its face out = the bone's roll axis, as built (out_dir), its top toward the elbow
-        fa = (H['hand_l'] - H['lowerarm_l']).normalized()
-        out_rest = (H['shield_l'] - (H['lowerarm_l'] + H['hand_l']) * .5).normalized()
-        q = frame_from(face, top) @ frame_from(out_rest, -fa).inverted()
+        # the shield's rest frame as built: its face out, its top up, the forearm across its back
+        q = frame_from(face, top) @ frame_from(self.sh_out, self.sh_up).inverted()
         elbow = centre - q @ (H['shield_l'] - H['lowerarm_l'])
         wrist = elbow + q @ (H['hand_l'] - H['lowerarm_l'])
         return wrist, q, elbow
+
+    # The shield as a slab: the boards' extent across and up, and their depth behind the face (they bow back to
+    # the rim), with 2 cm of margin all round.
+    SH_HALF_U, SH_HALF_V, SH_DEPTH = .32, .41, .08
+
+    def keep_out(self, H, centre, q, blade=None):
+        """How far to move the shield so its slab keeps clear of his body: capsules round the torso (spine to neck),
+        hips, thighs, the left shoulder and the head, from this pose's joints, and round his own sword's blade. Each sample point is pushed off along
+        the line to its nearest point on the slab (or straight out of the face if it is inside); the deepest wins."""
+        ac = q @ self.sh_up.cross(self.sh_out); up = q @ self.sh_up; out = q @ self.sh_out
+        head_up = (H['head'] - H['neck_01']).normalized()
+        parts = [(H['spine_01'], H['neck_01'], .2), (H['pelvis'], H['spine_01'], .21),
+                 (H['thigh_l'], H['calf_l'], .13), (H['thigh_r'], H['calf_r'], .13),
+                 (H['upperarm_l'], H['upperarm_l'], .12), (H['head'] + head_up * .1, H['head'] + head_up * .1, .17)]
+        if blade: parts.append((blade[0], blade[1], .08))
+        best, push = 0., V()
+        for a, b, r in parts:
+            for k in range(9):
+                p = a.lerp(b, k / 8); rel = p - centre
+                u = max(-self.SH_HALF_U, min(self.SH_HALF_U, rel.dot(ac))); v = max(-self.SH_HALF_V, min(self.SH_HALF_V, rel.dot(up)))
+                d = max(-self.SH_DEPTH, min(0., rel.dot(out)))
+                near = centre + ac * u + up * v + out * d
+                gap = near - p
+                inside = gap.length < 1e-4
+                deficit = r - (0. if inside else gap.length)
+                if deficit > best:
+                    best = deficit
+                    push = (out if rel.dot(out) < -self.SH_DEPTH * .5 else -out) * deficit if inside else gap.normalized() * deficit
+        return push
 
     def stance(self):
         """The guard's feet: left foot leading, the back foot turned out."""
         a = self.ank
         return {'l': V((.2, .13, a)), 'r': V((-.24, -.16, a))}
 
-    def body(self, t, hips, yaw, chest, feet, grip, blade, edge, shield_c, shield_face, shield_top, look=None, curl_l=.85, pitch=6., roll=0., rpole=None):
+    def clear_grip(self, H, grip):
+        """The sword hand kept far enough from his torso, hips and head that the crossguard (20 cm wide) and the
+        blade's root do not go into his plate and mail when he draws the sword in."""
+        head_up = (H['head'] - H['neck_01']).normalized()
+        caps = [(H['spine_01'], H['neck_01'], .3), (H['pelvis'], H['spine_01'], .3), (H['head'] + head_up * .1, H['head'] + head_up * .1, .27)]
+        for it in range(4):
+            moved = False
+            for a, b, r in caps:
+                ab = b - a; w = 0. if ab.length < 1e-6 else max(0., min(1., (grip - a).dot(ab) / ab.length_squared))
+                away = grip - (a + ab * w)
+                if away.length < r:
+                    grip = grip + (away.normalized() if away.length > 1e-4 else V((1, 0, 0))) * (r - away.length); moved = True
+            if not moved: break
+        return grip
+
+    def clear_blade(self, H, grip, d):
+        """The blade turned about the grip, as little as will do, until it is clear of his torso, hips, thighs and head
+        (2026-10-23: an intersection check found it through his chest plate, thigh and helmet in wind-ups and
+        recoveries)."""
+        head_up = (H['head'] - H['neck_01']).normalized()
+        caps = [(H['spine_01'], H['neck_01'], .19), (H['pelvis'], H['spine_01'], .2), (H['thigh_l'], H['calf_l'], .15),
+                (H['thigh_r'], H['calf_r'], .15), (H['head'] + head_up * .1, H['head'] + head_up * .1, .17)]
+        for it in range(8):
+            worst, fix = 0., None
+            for k in range(10):
+                l = .18 + .86 * k / 9; p = grip + d * l
+                for a, b, r in caps:
+                    ab = b - a; w = 0. if ab.length < 1e-6 else max(0., min(1., (p - a).dot(ab) / ab.length_squared))
+                    q = a + ab * w; away = p - q
+                    deficit = r - away.length
+                    if deficit > worst:
+                        side = away - d * away.dot(d)
+                        if side.length < 1e-4: side = d.orthogonal()
+                        worst, fix = deficit, (side.normalized(), math.atan2(deficit + .01, l))
+            if not fix: break
+            side, ang = fix
+            d = (d * math.cos(ang) + side * math.sin(ang)).normalized()
+        return d
+
+    def body(self, t, hips, yaw, chest, feet, grip, blade, edge, shield_c, shield_face, shield_top, look=None, curl_l=.85, pitch=6., roll=0., rpole=None, clear_sword=True):
+        if clear_sword:
+            # his joints in this frame (the arms do not move them), for the blade's clearance
+            b0 = {'hips': hips, 'yaw': yaw, 'pitch': pitch, 'roll': roll, 'chest': chest, 'feet': feet, 'look': look or self.target,
+                  'arms': {s: {'wrist': V((0, .3 if s == 'l' else -.3, 1.)), 'pole': V((0, 0, -1))} for s in 'lr'}}
+            H0 = body_pose(self.R, b0).H
+            grip = self.clear_grip(H0, grip)
+            blade = self.clear_blade(H0, grip, blade.normalized())
         wrist_r, q_r = self.sword_hand(grip, blade, edge)
         # a first pose for the shoulder positions
         b = {'hips': hips, 'yaw': yaw, 'pitch': pitch, 'roll': roll, 'chest': chest, 'feet': feet, 'look': look or self.target, 'arms': {}}
-        wrist_l, q_l, elbow_l = self.shield_arm(None, shield_c, shield_face, shield_top)
+        # The keyed facing turned left by SHIELD_YAW where it faces his foe (less as it swings aside).
+        turn = rot(Z, SHIELD_YAW * clamp(shield_face.x))
+        shield_face, shield_top = turn @ shield_face, turn @ shield_top
         b['arms']['r'] = {'wrist': wrist_r, 'pole': rpole if rpole is not None else V((-.3, -1., -.6)), 'hand': q_r, 'curl': 1., 'thumb': .9}
-        b['arms']['l'] = {'wrist': wrist_l, 'pole': V((-.2, .6, -1.)), 'hand': q_l, 'curl': curl_l, 'thumb': .6}
-        pose = body_pose(self.R, b)
+        b['arms']['l'] = {'pole': V((-.2, .6, -1.)), 'curl': curl_l, 'thumb': .6}
+        # The shield goes where the keys say, then is moved (its facing unchanged) until the arm can hold it and it
+        # is clear of his body (2026-10-23):
+        #  * the elbow exactly the upper arm's length from the shoulder (else the forearm, and the shield on it, would
+        #    come out turned from its keyed facing);
+        #  * the wrist no nearer the shoulder than a 60 degree bend allows (the arm never folds shut);
+        #  * the shield's boards clear of his torso, head, left shoulder, hips and thighs (keep_out).
+        # Each frame starts from most of the last frame's move (smooth in time, easing back to the keys once clear), the
+        # keep-out pushes are damped, and the
+        # last passes apply only the arm's limits, so the shield is always where the forearm can really hold it.
+        off = self._off * .8 if t > 0 and getattr(self, '_off', None) is not None else V()   # easing back to the keys once clear
+        for it in range(14):
+            wrist_l, q_l, elbow_l = self.shield_arm(None, shield_c + off, shield_face, shield_top)
+            b['arms']['l'].update(wrist=wrist_l, hand=q_l)
+            pose = body_pose(self.R, b); H = pose.H
+            corr = V()
+            reach = elbow_l - H['upperarm_l']
+            corr -= reach.normalized() * (reach.length - self.upper_len)   # the upper arm is rigid: exactly its length
+            span = wrist_l - H['upperarm_l']
+            if span.length < self.fold_min: corr += (span.normalized() if span.length > 1e-4 else V((1, 0, 0))) * (self.fold_min - span.length)
+            if it < 11: corr += self.keep_out(H, shield_c + off, q_l, blade=(grip + blade.normalized() * .12, grip + blade.normalized() * 1.02)) * .6
+            if corr.length < .001 and it >= 11: break
+            off += corr
+        self._off = off.copy()
         # the left elbow: re-aim the pole at where the shield needs it
-        H = pose.H
         pole = elbow_l - (H['upperarm_l'] + wrist_l) * .5
         b['arms']['l']['pole'] = pole
         return body_pose(self.R, b)
+
+
+# 2026-10-23: the shield's keys were laid out for the old mount (the forearm up its length, the elbow at its top
+# edge). With the forearm across its back they are all moved by this, toward his middle: in guard the elbow is
+# forward of his ribs, bent about 75 degrees, the forearm across in front of his chest, the shield's top at his eyes.
+SHIELD_SHIFT = V((.02, -.15, .01))
+SHIELD_YAW = 30.   # and every facing turned this far to his left: the forearm then points forward across his body
 
 
 def fighter_guard_state(F, t, breath=True):
@@ -529,13 +650,14 @@ def fighter_guard_state(F, t, breath=True):
         hips=V((-.02 + .006 * sway, .01, -.07 + .006 * br)), yaw=-27. + 1.5 * sway, chest=(-6. + 1. * sway, 8. + .8 * br, 0.),
         feet={'l': (V((.21, .12, a)), 8., 0., 0.), 'r': (V((-.25, -.14, a)), -42., 0., 0.)},
         grip=V((.08, -.33, 1.43 + .006 * br)), blade=V((.32, .02, .95)).normalized(), edge=V((1., 0., -.3)),
-        shield_c=V((.46, .07, 1.25 + .008 * br)), shield_face=V((1., -.25, .05)).normalized(), shield_top=V((.05, .1, 1.)),
+        shield_c=V((.46, .07, 1.25 + .008 * br)) + SHIELD_SHIFT, shield_face=V((1., -.25, .05)).normalized(), shield_top=V((.05, .1, 1.)),
     )
 
 
-def fighter_clip(F, keys, dur, extra=None):
+def fighter_clip(F, keys, dur, extra=None, protect=None):
     """keys: {channel: [(t, value)]} -> poses for every frame. Channels: hips, yaw, chest(3 floats as Vector),
-    lfoot, rfoot (Vector ankle), lfoot_yaw, rfoot_yaw, lfoot_pitch..., grip, blade, shield_c, shield_face, shield_top."""
+    lfoot, rfoot (Vector ankle), lfoot_yaw, rfoot_yaw, lfoot_pitch..., grip, blade, shield_c, shield_face, shield_top.
+    protect: (t0, t1) of the cut around its contact, where the blade keeps exactly its keyed path (no clearing)."""
     tr = {k: Track(v) for k, v in keys.items()}
     n = int(round(dur * FPS)) + 1
     poses, prev_tip, edge = [], None, None
@@ -566,7 +688,8 @@ def fighter_clip(F, keys, dur, extra=None):
         pose = F.body(t, tr['hips'](t), tr['yaw'](t), (ch.x, ch.y, ch.z), feet, g, d, edge,
                       tr['shield_c'](t), tr['shield_face'](t).normalized(), tr['shield_top'](t).normalized(),
                       look=tr['look'](t) if 'look' in tr else None, pitch=tr['pitch'](t) if 'pitch' in tr else 6.,
-                      roll=tr['roll'](t) if 'roll' in tr else 0., rpole=tr['rpole'](t) if 'rpole' in tr else None)
+                      roll=tr['roll'](t) if 'roll' in tr else 0., rpole=tr['rpole'](t) if 'rpole' in tr else None,
+                      clear_sword=not (protect and protect[0] <= t <= protect[1]))
         poses.append(pose)
     return poses
 
@@ -617,12 +740,15 @@ def F_CutDown(F):
     add(k, 'rfoot_yaw', (.3, -42.), (.5, -30.), (1.1, -42.))
     # 2026-10-23 in-game: it must come down through a crouched skeleton's collarbones (neck 1.28 m), so its
     # contact is at about 1.3 m (it was 1.56, over their heads).
-    add(k, 'grip', (.26, V((-.06, -.3, 1.72))), (.34, V((.04, -.34, 1.8))), (.40, V((.32, -.2, 1.6))), (.45, V((.53, .03, 1.3))), (.50, V((.55, .17, 1.03))), (.6, V((.38, .24, .92))), (.75, V((.34, .2, .98))), (1.1, V((.1, -.3, 1.38))))
-    add(k, 'blade', (.26, V((-.8, .05, .6))), (.34, V((-.35, -.5, .8))), (.40, V((.6, -.42, .62))), (.45, V((.86, .14, -.36))), (.50, V((.48, .6, -.62))), (.6, V((-.2, .7, -.7))), (.75, V((-.1, .55, -.8))), (1.1, V((.32, .02, .95))))
+    add(k, 'grip', (.26, V((-.06, -.3, 1.72))), (.34, V((.04, -.34, 1.8))), (.40, V((.32, -.2, 1.6))), (.45, V((.53, .03, 1.3))), (.50, V((.55, .17, 1.03))), (.6, V((.38, .24, .92))), (.75, V((.34, .2, .98))), (.92, V((.3, -.08, 1.08))), (1.1, V((.1, -.3, 1.38))))
+    add(k, 'blade', (.26, V((-.8, .05, .6))), (.34, V((-.35, -.5, .8))), (.40, V((.6, -.42, .62))), (.45, V((.86, .14, -.36))), (.50, V((.48, .6, -.62))), (.6, V((-.2, .7, -.7))), (.75, V((-.1, .55, -.8))), (.92, V((.5, -.4, -.77))), (1.1, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.26, V((-.4, -1., .5))), (.38, V((-.2, -1., .4))), (.46, V((.1, -1., -.3))), (.6, V((-.2, -.6, -1.))), (1.1, V((-.3, -1., -.6))), (1.45, V((-.3, -1., -.6))))
-    add(k, 'shield_c', (.26, V((.4, .1, 1.22))), (.44, V((.42, .26, 1.2))), (.56, V((.34, .36, 1.16))), (.9, V((.42, .18, 1.22))))
-    add(k, 'shield_face', (.26, V((1., -.15, .05))), (.44, V((.9, .5, 0.))), (.56, V((.6, .8, 0.))), (.9, V((1., 0., .05))))
-    return fighter_clip(F, k, 1.45), {'contact': (.38, .52, 1.3)}
+    # 2026-10-23 (an intersection check): the shield rises high on his left, over his head's side, while the blade cuts
+    # down to low left, and only comes back to guard once the sword is back on his right.
+    # The sword's recovery comes back low across his front to his right before it rises (not up through his left).
+    add(k, 'shield_c', (.26, V((.4, .1, 1.22)) + SHIELD_SHIFT), (.40, V((.32, .34, 1.3))), (.56, V((.24, .48, 1.32))), (.98, V((.24, .48, 1.32))), (1.28, V((.42, .18, 1.22)) + SHIELD_SHIFT))
+    add(k, 'shield_face', (.26, V((1., -.15, .05))), (.40, V((.55, .83, .1))), (.56, V((.4, .92, .1))), (.98, V((.4, .92, .1))), (1.28, V((1., 0., .05))))
+    return fighter_clip(F, k, 1.45, protect=(.33, .56)), {'contact': (.38, .52, 1.3)}
 
 
 def F_CutFlat(F):
@@ -638,12 +764,16 @@ def F_CutFlat(F):
     add(k, 'lfoot_yaw', (.3, 8.), (.4, 2.), (1.08, 8.))
     add(k, 'rfoot_yaw', (.3, -42.), (.52, -24.), (1.1, -42.))
     # at a skeleton's throat (1.76 m tall: about 1.53 m; 2026-10-23 in-game, 1.42 took its collarbones)
-    add(k, 'grip', (.24, V((-.06, -.42, 1.62))), (.32, V((.03, -.47, 1.61))), (.38, V((.28, -.4, 1.59))), (.42, V((.47, -.15, 1.57))), (.47, V((.46, .14, 1.55))), (.56, V((.26, .3, 1.48))), (.72, V((.24, .26, 1.4))), (1.05, V((.08, -.3, 1.42))))
-    add(k, 'blade', (.24, V((-.7, -.55, .45))), (.32, V((-.6, -.78, .12))), (.38, V((.15, -.99, 0.))), (.42, V((.97, .2, -.04))), (.47, V((.42, .9, -.08))), (.56, V((-.45, .88, -.15))), (.72, V((-.5, .8, -.2))), (1.05, V((.32, .02, .95))))
+    add(k, 'grip', (.24, V((-.06, -.42, 1.62))), (.32, V((.03, -.47, 1.61))), (.38, V((.28, -.4, 1.59))), (.42, V((.47, -.15, 1.57))), (.47, V((.46, .14, 1.55))), (.56, V((.28, .3, 1.54))), (.72, V((.24, .26, 1.5))), (1.05, V((.08, -.3, 1.42))))
+    add(k, 'blade', (.24, V((-.7, -.55, .45))), (.32, V((-.6, -.78, .12))), (.38, V((.15, -.99, 0.))), (.42, V((.97, .2, -.04))), (.47, V((.42, .9, -.08))), (.56, V((-.3, .85, .42))), (.72, V((-.38, .78, .5))), (1.05, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.24, V((-.5, -1., .1))), (.38, V((-.3, -1., -.2))), (.44, V((-.1, -.5, -1.))), (.56, V((.2, .2, -1.))), (.75, V((.2, .1, -1.))), (1.05, V((-.3, -1., -.6))), (1.4, V((-.3, -1., -.6))))
-    add(k, 'shield_c', (.24, V((.4, .1, 1.22))), (.44, V((.26, .38, 1.22))), (.56, V((.16, .42, 1.18))), (.9, V((.4, .18, 1.22))))
-    add(k, 'shield_face', (.24, V((1., -.15, .05))), (.44, V((.35, .94, 0.))), (.56, V((.1, 1., 0.))), (.9, V((1., 0., .05))))
-    return fighter_clip(F, k, 1.4), {'contact': (.34, .5, 1.55)}
+    # 2026-10-23 (an intersection check found the blade through the shield): the follow-through rises over his left
+    # shoulder into a recovery rather than wrapping round at shoulder height, and the shield drops low by his left hip,
+    # its top tipped out, under the blade's sweep.
+    add(k, 'shield_c', (.24, V((.4, .1, 1.22)) + SHIELD_SHIFT), (.38, V((.26, .3, 1.06))), (.46, V((.16, .38, .98))), (.72, V((.16, .38, .98))), (1.0, V((.4, .18, 1.22)) + SHIELD_SHIFT))
+    add(k, 'shield_face', (.24, V((1., -.15, .05))), (.38, V((.3, .95, -.1))), (.46, V((.05, 1., -.25))), (.72, V((.05, 1., -.25))), (1.0, V((1., 0., .05))))
+    add(k, 'shield_top', (.24, V((.05, .1, 1.))), (.38, V((.05, .25, 1.))), (.46, V((.05, .45, 1.))), (.72, V((.05, .45, 1.))), (1.0, V((.05, .1, 1.))))
+    return fighter_clip(F, k, 1.4, protect=(.33, .56)), {'contact': (.34, .5, 1.55)}
 
 
 def F_CutRise(F):
@@ -665,9 +795,9 @@ def F_CutRise(F):
     add(k, 'grip', (.22, V((-.08, -.4, 1.0))), (.30, V((.02, -.44, 1.02))), (.36, V((.28, -.34, 1.36))), (.41, V((.46, -.06, 1.74))), (.47, V((.38, .18, 1.96))), (.58, V((.18, .3, 1.96))), (.8, V((.2, .26, 1.86))), (1.15, V((.08, -.3, 1.42))))
     add(k, 'blade', (.22, V((-.6, -.4, -.7))), (.30, V((-.15, -.62, -.77))), (.36, V((.75, -.55, -.05))), (.41, V((.6, .28, .75))), (.47, V((.0, .55, .84))), (.58, V((-.55, .45, .7))), (.8, V((-.45, .4, .78))), (1.15, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.22, V((-.4, -1., -.3))), (.36, V((-.2, -1., -.6))), (.42, V((.1, -1., -.5))), (.55, V((.4, -.3, -1.))), (.85, V((.3, -.3, -1.))), (1.15, V((-.3, -1., -.6))), (1.5, V((-.3, -1., -.6))))
-    add(k, 'shield_c', (.22, V((.36, .14, 1.12))), (.42, V((.28, .3, 1.06))), (.6, V((.24, .34, 1.08))), (1.0, V((.42, .14, 1.2))))
-    add(k, 'shield_face', (.22, V((1., .1, .05))), (.42, V((.5, .86, -.1))), (.6, V((.4, .9, -.1))), (1.0, V((1., -.1, .05))))
-    return fighter_clip(F, k, 1.5), {'contact': (.32, .48, 2.1)}
+    add(k, 'shield_c', (.22, V((.36, .14, 1.12)) + SHIELD_SHIFT), (.42, V((.28, .3, 1.06)) + SHIELD_SHIFT), (.6, V((.24, .34, 1.08)) + SHIELD_SHIFT), (.95, V((.24, .34, 1.08)) + SHIELD_SHIFT), (1.3, V((.42, .14, 1.2)) + SHIELD_SHIFT))
+    add(k, 'shield_face', (.22, V((1., .1, .05))), (.42, V((.5, .86, -.1))), (.6, V((.4, .9, -.1))), (.95, V((.4, .9, -.1))), (1.3, V((1., -.1, .05))))
+    return fighter_clip(F, k, 1.5, protect=(.3, .52)), {'contact': (.32, .48, 2.1)}
 
 
 def F_Overhead(F):
@@ -684,9 +814,9 @@ def F_Overhead(F):
     add(k, 'grip', (.20, V((-.04, -.26, 1.76))), (.34, V((-.1, -.22, 1.86))), (.43, V((.0, -.24, 1.96))), (.475, V((.3, -.18, 1.8))), (.51, V((.5, -.12, 1.45))), (.56, V((.47, -.06, 1.1))), (.66, V((.36, .0, .86))), (.95, V((.36, .0, .9))), (1.32, V((.08, -.3, 1.42))))
     add(k, 'blade', (.20, V((-.6, .0, .8))), (.34, V((-.88, .1, -.3))), (.43, V((-.3, -.05, .95))), (.475, V((.85, -.03, .5))), (.51, V((.95, 0., -.3))), (.56, V((.42, .05, -.9))), (.66, V((.12, .06, -.99))), (.95, V((.15, .05, -.98))), (1.32, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.34, V((-.2, -.8, 1.))), (.45, V((-.1, -.9, .6))), (.52, V((-.1, -1., -.4))), (.66, V((-.2, -.6, -1.))), (1.32, V((-.3, -1., -.6))), (1.75, V((-.3, -1., -.6))))
-    add(k, 'shield_c', (.34, V((.36, .16, 1.24))), (.52, V((.24, .34, 1.08))), (.7, V((.22, .36, 1.02))), (1.2, V((.42, .14, 1.2))))
-    add(k, 'shield_face', (.34, V((1., .1, .05))), (.52, V((.45, .9, -.1))), (.7, V((.35, .93, -.1))), (1.2, V((1., -.1, .05))))
-    return fighter_clip(F, k, 1.75), {'contact': (.44, .6, 1.55)}
+    add(k, 'shield_c', (.34, V((.36, .16, 1.24)) + SHIELD_SHIFT), (.52, V((.24, .34, 1.08)) + SHIELD_SHIFT), (.7, V((.22, .36, 1.02)) + SHIELD_SHIFT), (1.15, V((.22, .36, 1.02)) + SHIELD_SHIFT), (1.5, V((.42, .14, 1.2)) + SHIELD_SHIFT))
+    add(k, 'shield_face', (.34, V((1., .1, .05))), (.52, V((.45, .9, -.1))), (.7, V((.35, .93, -.1))), (1.15, V((.35, .93, -.1))), (1.5, V((1., -.1, .05))))
+    return fighter_clip(F, k, 1.75, protect=(.4, .62)), {'contact': (.44, .6, 1.55)}
 
 
 def F_Bash(F):
@@ -698,7 +828,7 @@ def F_Bash(F):
     add(k, 'yaw', (.18, -40.), (.3, -20.), (.5, -24.), (.85, -27.))
     add(k, 'chest', (.18, V((-10., 6., 0.))), (.3, V((-14., 14., 0.))), (.55, V((-8., 11., 0.))), (.85, V((-6., 8., 0.))))
     add(k, 'lfoot', (.16, V((.21, .12, a))), (.22, V((.3, .12, a + .06))), (.29, V((.38, .11, a))), (.6, V((.38, .11, a))), (.7, V((.3, .12, a + .04))), (.8, V((.21, .12, a))))
-    add(k, 'shield_c', (.18, V((.3, .08, 1.24))), (.3, V((.76, .02, 1.26))), (.4, V((.7, .03, 1.26))), (.75, V((.46, .07, 1.25))))
+    add(k, 'shield_c', (.18, V((.3, .08, 1.24)) + SHIELD_SHIFT), (.3, V((.76, .02, 1.26)) + SHIELD_SHIFT), (.4, V((.7, .03, 1.26)) + SHIELD_SHIFT), (.75, V((.46, .07, 1.25)) + SHIELD_SHIFT))
     add(k, 'shield_face', (.18, V((1., -.3, .05))), (.3, V((1., 0., .02))), (.75, V((1., -.25, .05))))
     add(k, 'grip', (.18, V((.0, -.34, 1.5))), (.3, V((-.04, -.36, 1.5))), (.8, V((.08, -.33, 1.43))))
     return fighter_clip(F, k, 1.1), {'contact_fixed': .3}

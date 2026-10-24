@@ -113,7 +113,13 @@ void ADockGameMode::StartPlay()
     // Inside the temple, from the sanctuary's cella down, the user's "temple" (2026-10-20).
     auto* InteriorScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ChultTempleInterior.SW_ChultTempleInterior"));
     auto* InteriorComponent=InteriorScore ? UGameplayStatics::CreateSound2D(World,InteriorScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent};
+    // From the trap run's pits (Temple Pits) through the Astral wind, the user's "temple 2"; in the sanctum,
+    // their boss battle (2026-10-23; ChultTempleInteriorMusicPart).
+    auto* RunScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ChultTemple2.SW_ChultTemple2"));
+    auto* RunComponent=RunScore ? UGameplayStatics::CreateSound2D(World,RunScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    auto* BossScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ChultTempleBoss.SW_ChultTempleBoss"));
+    auto* BossComponent=BossScore ? UGameplayStatics::CreateSound2D(World,BossScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -135,7 +141,7 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
@@ -147,7 +153,8 @@ void ADockGameMode::StartPlay()
         {
             // Beyond the bridge, the temple's score from the road's last stretch on (ChultTemple.h).
             const FVector At=Chuck->GetActorLocation();
-            const int32 Want=InChultTempleInterior(At,Region->Mode==6?150.f:0.f)?6:
+            // Inside: the interior's own score, "temple 2" from the pits on (7), the boss battle in the sanctum (8).
+            const int32 Want=InChultTempleInterior(At,Region->Mode>=6?150.f:0.f)?6+ChultTempleInteriorMusicPart(At,Region->Mode>=6?Region->Mode-6:0):
                 InChultBridgeMusicZone(At,Region->Mode>=4)?(InChultTempleMusicZone(At,Region->Mode==5)?5:4):3;
             if(Region->Mode==Want) return;
             if(Region->Mode<3)
@@ -184,11 +191,13 @@ void ADockGameMode::StartPlay()
                 UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_TEMPLE_START time=%.2f on_road=%d"),Now,OnRoad);
             }
             else if(Want==6) Bring(Interior,InteriorScore,TEXT("ChuckTempleInteriorMusicTest"),TEXT("CHUCK_CHULT_TEMPLE_INTERIOR_MUSIC_CHECK"));
+            else if(Want==7) Bring(Run,RunScore,TEXT("ChuckTempleRunMusicTest"),TEXT("CHUCK_CHULT_TEMPLE_RUN_MUSIC_CHECK"));
+            else if(Want==8) Bring(Boss,BossScore,TEXT("ChuckSanctumMusicTest"),TEXT("CHUCK_CHULT_TEMPLE_BOSS_MUSIC_CHECK"));
             else if(Want==4) Bring(Bridge,BridgeScore,TEXT("ChuckBridgeTest"),TEXT("CHUCK_CHULT_BRIDGE_MUSIC_CHECK"));
             else Bring(Chult,ChultScore,TEXT("ChuckChultTest"),TEXT("CHUCK_CHULT_MUSIC_CHECK"));
-            const TWeakObjectPtr<UAudioComponent> Scores[]={Chult,Bridge,Temple,Interior};
-            for(int32 I=0;I<4;++I) if(I+3!=Want && Scores[I].IsValid() && Scores[I]->IsPlaying()) Scores[I]->AdjustVolume(2.5f,0.f);
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 bridge=%d temple=%d interior=%d score=%d"),Want==4,Want==5,Want==6,(Want==6?Interior:Want==5?Temple:Want==4?Bridge:Chult).IsValid());
+            const TWeakObjectPtr<UAudioComponent> Scores[]={Chult,Bridge,Temple,Interior,Run,Boss};
+            for(int32 I=0;I<6;++I) if(I+3!=Want && Scores[I].IsValid() && Scores[I]->IsPlaying()) Scores[I]->AdjustVolume(2.5f,0.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION chult=1 bridge=%d temple=%d interior=%d run=%d boss=%d score=%d"),Want==4,Want==5,Want==6,Want==7,Want==8,Scores[Want-3].IsValid());
             return;
         }
         const bool Below=Chuck && Chuck->GetAreaStartLocation().Z<-150;
@@ -2613,7 +2622,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==7 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==9 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

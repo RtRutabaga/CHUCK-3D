@@ -120,7 +120,7 @@ void ATempleSanctumBattle::BeginPlay()
     Super::BeginPlay();
     TheBattle = this;
     Random.Initialize(20261022);
-    Floor = static_cast<float>(W(HallMid, -6500, HZ).Z);
+    Floor = static_cast<float>(W(HallMid, DaisT1 + 700, HZ).Z);
     Beholder = W(HallMid, DaisT1 - 150, HZ + DaisH + 260);
     // The rest waits for its assets (Tick: StartLoading, then FinishLoading).
 }
@@ -209,7 +209,7 @@ void ATempleSanctumBattle::FinishLoading()
     Attenuation->Attenuation.bSpatialize = true;
     Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     Attenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
-    Attenuation->Attenuation.FalloffDistance = 2600.f;   // heard across the hall (46 m) and from the gallery
+    Attenuation->Attenuation.FalloffDistance = 3600.f;   // heard across the hall (54 m) and from the gallery
     bReady = true; bLoading = false;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LOADED seconds=%.2f"), FPlatformTime::Seconds() - LoadStart);
     SpawnCast();
@@ -227,7 +227,8 @@ void ATempleSanctumBattle::SpawnCast()
     // The heroes on the floor before the dais, facing where the beholder will hang: the fighter in front,
     // the wizard behind on his left and the ranger behind on his right (the 2D tableau's arc).
     struct FPlace { float S, T; };
-    const FPlace Places[] = {{HallMid, -6650}, {HallMid - 380, -6230}, {HallMid + 390, -6250}};
+    // (Relative to the dais' front since the hall was enlarged, 2026-10-23.)
+    const FPlace Places[] = {{HallMid, DaisT1 + 550}, {HallMid - 380, DaisT1 + 970}, {HallMid + 390, DaisT1 + 950}};
     for (int32 R = 0; R < 3; ++R)
     {
         const FVector Feet = W(Places[R].S, Places[R].T, HZ);
@@ -241,14 +242,17 @@ void ATempleSanctumBattle::SpawnCast()
     }
     // The reserve: skeletons lying among the bones round the dais end of the hall (clear of the pillars,
     // idols, braziers and the heroes' ground).
-    const FPlace Posts[] = {{78000, -6960}, {79400, -6960}, {78520, -6990}, {78880, -6990}, {77850, -6450}, {79550, -6450},
-                            {77850, -5750}, {79550, -5750}, {78000, -6560}, {79400, -6560}, {77900, -5050}, {79500, -5050}};
-    const FBox2D Leash(FVector2D(HS0 + 60, HT0 + 900), FVector2D(HS1 - 60, GalleryT - 300));
+    // In the enlarged hall (2026-10-23): in the nave before the dais and in the aisles, clear of the piers,
+    // the great fire bowls and the heroes' ground.
+    const FPlace Posts[] = {{HallMid - 250, DaisT1 + 200}, {HallMid + 250, DaisT1 + 200}, {HallMid - 650, DaisT1 + 650}, {HallMid + 650, DaisT1 + 650},
+                            {HallMid - 200, DaisT1 + 1550}, {HallMid + 200, DaisT1 + 1550}, {HallMid - 1180, DaisT1 + 330}, {HallMid + 1180, DaisT1 + 330},
+                            {HallMid - 1180, DaisT1 + 1150}, {HallMid + 1180, DaisT1 + 1150}, {HallMid - 650, DaisT1 + 1500}, {HallMid + 650, DaisT1 + 1500}};
+    const FBox2D Leash(FVector2D(HS0 + 60, DaisT1 + 100), FVector2D(HS1 - 60, GalleryT - 300));
     for (const FPlace& Pl : Posts)
     {
         FTempleSkeletonPost Post;
         Post.Feet = W(Pl.S, Pl.T, HZ);
-        Post.Yaw = YawToward(Post.Feet, W(HallMid, -6500, HZ)) + Random.FRandRange(-40.f, 40.f);
+        Post.Yaw = YawToward(Post.Feet, W(HallMid, DaisT1 + 700, HZ)) + Random.FRandRange(-40.f, 40.f);
         Post.bDormant = true; Post.Leash = Leash; Post.Space = TEXT("sanctum");
         Reserve.Add(Post);
         if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(World, Post))
@@ -725,7 +729,10 @@ void StartTempleSanctumReview(UWorld* World)
             Run->Swings0 = F->GetSwings(); Run->Hits0 = F->GetCleanHits(); Run->Blocks0 = F->GetBlocks(); Run->Taken0 = F->GetHitsTaken();
             Run->Fallen0 = B->GetFallen(); Run->Decap0 = B->GetDecapitations(); Run->Shots0 = Rg->GetShots() + Wz->GetShots(); Run->Up0 = B->GetUp();
             // A fresh skeleton for the trial: the nearest in reserve, woken and set before the fighter (or behind him).
-            for (const TWeakObjectPtr<ATempleSkeleton>& S : B->Foes()) if (S.IsValid() && S->IsDead()) { FTempleSkeletonPost P = S->GetPost(); S->ResetToReserve(P); }
+            // For a blow (2026-10-23), those left standing from the last trial go back too: its forced cut is the fighter's
+            // next swing, and it must meet only the trial's own skeleton (one still chasing him took it out of range).
+            for (const TWeakObjectPtr<ATempleSkeleton>& S : B->Foes())
+                if (S.IsValid() && (S->IsDead() || T.Kind <= 2)) { FTempleSkeletonPost P = S->GetPost(); S->ResetToReserve(P); }
             B->ClearFlying();
             F->SetActorLocation(FHome); F->SetActorRotation(FRotator(0, (B->BeholderSpot() - FHome).Rotation().Yaw, 0)); F->Rest();
             F->SetHeld(T.Kind == 3 || T.Kind == 4);

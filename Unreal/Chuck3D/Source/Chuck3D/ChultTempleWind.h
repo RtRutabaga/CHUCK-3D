@@ -42,13 +42,18 @@ namespace TempleWind
     // made too early (the catch would come in the gap); kicked 1.2-2 m into each run he meets wall both times.
     constexpr float BreakMinusT0 = -2450, BreakMinusT1 = -2250, BreakPlusT0 = -2100, BreakPlusT1 = -1900, BreakDeep = 110;
 
-    // The sanctum: a hall 46 x 22 m, 10 m high, its floor the halls' (-1460). Entered from leg 4 on a gallery
-    // across its +T end, twin stairs down its side walls, a processional between colonnades to a dais.
-    constexpr float HS0 = 77600, HS1 = 79800, HT0 = -8000, HT1 = -3400, HZ = TempleRun::Floor, HTop = HZ + 1000;
-    constexpr float GalleryT = HT1 - 400;            // the gallery's front edge (it is at UZ)
-    constexpr float StairW = 160, StairFoot = GalleryT - 1140;
+    // The sanctum: a hall entered from leg 4 on a gallery across its +T end, twin stairs down its side walls, a
+    // processional between colonnades to a dais. Made bigger and grander on 2026-10-23 (user): 54 x 34 m and 17.5 m
+    // high (it was 46 x 22 x 10), its floor 7 m below the halls' (the plaza is above its ceiling), so the gallery,
+    // at the tunnels' level, is 13 m up and the stairs run 25 m down the walls.
+    constexpr float HS0 = 77000, HS1 = 80400, HT0 = -8800, HT1 = -3400, HZ = TempleRun::Floor - 700, HTop = HZ + 1750;   // 4 m under the plaza (the roots)
+    constexpr float GalleryT = HT1 - 500;            // the gallery's front edge (it is at UZ)
+    constexpr float StairW = 200, StairFoot = GalleryT - (UZ - HZ) * 1.9f;
     constexpr float HallMid = (HS0 + HS1) * .5f;
-    constexpr float DaisT0 = HT0, DaisT1 = -7200, DaisS0 = 77900, DaisS1 = 79500, DaisH = 96;
+    constexpr float DaisT0 = HT0, DaisT1 = -7600, DaisS0 = 77600, DaisS1 = 79800, DaisH = 96;
+    // The colonnades: two rows of piers either side of the nave, at these T (the gap at the stairs' foot is a lane).
+    constexpr float NaveHalf = 900, PierHalf = 95;
+    constexpr float PierT[] = {-4600, -5150, -5700, -6750, -7300};
 }
 
 // Its Astral ruptures (frame, around a centre: tear outline points), for the build, the deaths and the checks.

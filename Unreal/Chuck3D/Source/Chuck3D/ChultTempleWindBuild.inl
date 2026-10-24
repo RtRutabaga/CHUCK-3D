@@ -235,59 +235,95 @@ namespace TempleWindBuild
         Jars.Add({FVector(G.S1 - 50, B == 1 ? G.T0 + 40 : G.T1 - 40, UZ), float(R.FRandRange(0, 360)), B != 1, 2 + B % 2});
     }
 
-    // ---- The sanctum: a grand hall, the gallery he enters on, twin stairs down its side walls, a
-    //      processional between colonnades and guardian idols to a dais. Empty for now.
+    // A standing fire bowl on a stepped plinth, taller and wider than a brazier (the sanctum's great fires).
+    void GreatBrazier(FParts& P, TArray<FFire>& Fires, float S, float T, float Z)
+    {
+        Box(P.Stone, S - 70, S + 70, T - 70, T + 70, Z, Z + 24); Box(P.Stone, S - 56, S + 56, T - 56, T + 56, Z + 24, Z + 44);
+        Drum(P.Stone, {S, T, Z + 44}, {S, T, Z + 150}, 20, 12); Drum(P.Stone, {S, T, Z + 150}, {S, T, Z + 162}, 34, 14);
+        Drum(P.Stone, {S, T, Z + 162}, {S, T, Z + 196}, 52, 16); Drum(P.Dark, {S, T, Z + 196}, {S, T, Z + 197}, 46, 16);
+        Fires.Add({{S, T, Z + 194}, {S, T, Z + 270}, 58, 84, 9000, 1500});
+    }
+
+    // ---- The sanctum: a grand hall, the gallery he enters on, twin stairs down its side walls, a nave
+    //      between two colonnades of great piers to a broad dais, two colossi over it. Bigger and grander
+    //      on 2026-10-23 (user): 54 x 34 m, 17.5 m high. Empty of foes until the battle (TempleSanctumBattle).
     int32 Sanctum(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FIdol>& Idols, FRandomStream& R)
     {
         int32 Steps = 0;
-        const float Sh = HT1 + 3000;   // (laid out with the gallery's wall at -3000; the hall was moved 4 m back)
-        FLining L; L.Dado = 200; L.Frieze = 140; L.Top = &P.Moss;
+        FLining L; L.Dado = 260; L.Frieze = 180; L.Top = &P.Moss;
         Line(P, HS0, HS1, HT0, HT1, HZ, HTop, {{3, Legs[3].S0, Legs[3].S1, UZ, UZ + 280}}, L);
-        Corbel(P, 1, HS0, HS1, HT0, HT1, HTop, 5, 36, 44);
+        constexpr int32 Courses = 6; constexpr float CourseH = 46;
+        Corbel(P, 1, HS0, HS1, HT0, HT1, HTop, Courses, 40, CourseH);
+        const float VaultZ = HTop - Courses * CourseH;
         // The arch he comes in by: jambs and a lintel on the hall's side.
         for (float S : {Legs[3].S0, Legs[3].S1}) Box(P.Stone, S - 22, S + 22, HT1 - 24, HT1, UZ, UZ + 300);
         Box(P.Plaster, Legs[3].S0 - 30, Legs[3].S1 + 30, HT1 - 26, HT1, UZ + 280, UZ + 312);
-        // The gallery: a slab across the hall's +T end on four square pillars, a balustrade between the stairs' heads.
-        Box(P.Stone, HS0, HS1, GalleryT, HT1, UZ - 50, UZ);
-        Box(P.Plaster, HS0, HS1, GalleryT - 4, GalleryT, UZ - 58, UZ - 42);
-        for (float S : {78050.f, 78450.f, 78970.f, 79370.f})
+        // The gallery: a slab across the hall's +T end on six square piers, a balustrade with finials between the stairs' heads.
+        Box(P.Stone, HS0, HS1, GalleryT, HT1, UZ - 60, UZ);
+        Box(P.Plaster, HS0, HS1, GalleryT - 4, GalleryT, UZ - 70, UZ - 50);
+        for (float S : {77550.f, 78150.f, 78430.f, 78970.f, 79250.f, 79850.f})
         {
-            Box(P.Stone, S - 30, S + 30, GalleryT + 10, GalleryT + 70, HZ, UZ - 50);
-            Box(P.Stone, S - 40, S + 40, GalleryT, GalleryT + 80, HZ, HZ + 30);
-            Box(P.Stone, S - 38, S + 38, GalleryT + 2, GalleryT + 78, UZ - 90, UZ - 50);
+            Box(P.Stone, S - 40, S + 40, GalleryT + 10, GalleryT + 90, HZ, UZ - 60);
+            Box(P.Stone, S - 52, S + 52, GalleryT, GalleryT + 100, HZ, HZ + 36);
+            Box(P.Stone, S - 50, S + 50, GalleryT + 2, GalleryT + 98, UZ - 110, UZ - 60);
         }
         Box(P.Stone, HS0 + StairW, HS1 - StairW, GalleryT, GalleryT + 26, UZ, UZ + 82);
         Box(P.Plaster, HS0 + StairW - 4, HS1 - StairW + 4, GalleryT - 4, GalleryT + 30, UZ + 82, UZ + 92);
-        // The stairs down the side walls, from the gallery's ends to the floor.
+        for (float S = HS0 + StairW + 250; S < HS1 - StairW - 100; S += 500) Box(P.Stone, S - 18, S + 18, GalleryT - 2, GalleryT + 28, UZ + 92, UZ + 118);
+        // The stairs down the side walls, from the gallery's ends to the floor (13 m down, 25 m long).
         Steps += Run(P, 1, StairFoot, GalleryT, HS0, HS0 + StairW, HS0 + StairW, HZ, UZ, HZ, R);
         Steps += Run(P, 1, StairFoot, GalleryT, HS1 - StairW, HS1, HS1 - StairW, HZ, UZ, HZ, R);
         // The processional: a paved way with pale kerbs from under the gallery to the dais (visual over the floor).
-        const float PW = 150;
-        QuadToward(P.Moss, {HallMid - PW, GalleryT, HZ + .6f}, {HallMid + PW, GalleryT, HZ + .6f}, {HallMid + PW, DaisT1, HZ + .6f}, {HallMid - PW, DaisT1, HZ + .6f}, {HallMid, (-5000 + Sh), HZ + 100});
-        for (float S : {HallMid - PW - 14, HallMid + PW}) Box(P.Steps, S, S + 14, GalleryT, DaisT1, HZ, HZ + 3);
-        // The colonnades: two rows of tall square pillars, base and capital.
-        for (float S : {78100.f, 79300.f}) for (float T : {(-4300.f + Sh), (-5000.f + Sh), (-5700.f + Sh), (-6400.f + Sh)})
-        {
-            Box(P.Stone, S - 80, S + 80, T - 80, T + 80, HZ, HZ + 40);
-            Box(P.Stone, S - 70, S + 70, T - 70, T + 70, HZ + 40, HZ + 56);
-            Box(P.Stone, S - 56, S + 56, T - 56, T + 56, HZ + 56, HTop - 70);
-            Box(P.Moss, S - 64, S + 64, T - 64, T + 64, HTop - 260, HTop - 230);
-            // A torch on its face toward the processional.
-            Torch(P, Fires, 0, S < HallMid ? S + 56 : S - 56, S < HallMid ? 1.f : -1.f, T, HZ + 330, 3600, 700);
-            Box(P.Stone, S - 78, S + 78, T - 78, T + 78, HTop - 70, HTop);
-        }
-        // Guardian idols on plinths facing the processional, between the pillars.
-        for (float Sg : {-1.f, 1.f}) for (float T : {(-4650.f + Sh), (-5350.f + Sh), (-6050.f + Sh)})
-        {
-            const float S = HallMid + Sg * 330;
-            Box(P.Stone, S - 42, S + 42, T - 42, T + 42, HZ, HZ + 90); Box(P.Plaster, S - 48, S + 48, T - 48, T + 48, HZ + 90, HZ + 98);
-            Idols.Add({FVector(S, T, HZ + 98), YawOf(-Sg, 0), 28});
-        }
-        // Braziers by the processional, at the first and last pillars, and flanking the dais.
+        const float PW = 190;
+        QuadToward(P.Moss, {HallMid - PW, GalleryT, HZ + .6f}, {HallMid + PW, GalleryT, HZ + .6f}, {HallMid + PW, DaisT1, HZ + .6f}, {HallMid - PW, DaisT1, HZ + .6f}, {HallMid, -5400, HZ + 100});
+        for (float S : {HallMid - PW - 16, HallMid + PW}) Box(P.Steps, S, S + 16, GalleryT, DaisT1, HZ, HZ + 3);
+        // The colonnades: two rows of great piers (base, shaft, a moss band, banded capital) carrying an architrave
+        // along each row at 11 m, under the gallery (13 m: nothing crosses the view from it to the dais), and an
+        // upper colonnade of pilasters over them to a beam under the ceiling. A torch on each pier's nave face.
+        const float ArchZ = HZ + 1100;
         for (float Sg : {-1.f, 1.f})
         {
-            for (float T : {(-4300.f + Sh), (-6400.f + Sh)}) Brazier(P, Fires, HallMid + Sg * 330, T, HZ);
-            Brazier(P, Fires, HallMid + Sg * 520, DaisT1 + 260, HZ);
+            const float S = HallMid + Sg * NaveHalf;
+            for (float T : PierT)
+            {
+                Box(P.Stone, S - PierHalf - 26, S + PierHalf + 26, T - PierHalf - 26, T + PierHalf + 26, HZ, HZ + 30);
+                Box(P.Stone, S - PierHalf - 14, S + PierHalf + 14, T - PierHalf - 14, T + PierHalf + 14, HZ + 30, HZ + 70);
+                Box(P.Stone, S - PierHalf, S + PierHalf, T - PierHalf, T + PierHalf, HZ + 70, ArchZ - 120);
+                Box(P.Moss, S - PierHalf - 6, S + PierHalf + 6, T - PierHalf - 6, T + PierHalf + 6, HZ + 520, HZ + 548);
+                Box(P.Plaster, S - PierHalf - 8, S + PierHalf + 8, T - PierHalf - 8, T + PierHalf + 8, ArchZ - 120, ArchZ - 90);
+                Box(P.Stone, S - PierHalf - 22, S + PierHalf + 22, T - PierHalf - 22, T + PierHalf + 22, ArchZ - 90, ArchZ - 40);
+                Box(P.Stone, S - PierHalf - 36, S + PierHalf + 36, T - PierHalf - 36, T + PierHalf + 36, ArchZ - 40, ArchZ);
+                Torch(P, Fires, 0, S - Sg * PierHalf, -Sg, T, HZ + 380, 4400, 1000);
+                // the upper colonnade: a pilaster over the pier up to the ceiling's beam
+                Box(P.Stone, S - 50, S + 50, T - 70, T + 70, ArchZ + 70, HTop - 60);
+            }
+            // the architrave along the row, and a glyph frieze on its nave face over the lane
+            const float A0 = PierT[UE_ARRAY_COUNT(PierT) - 1] - PierHalf - 36, A1 = PierT[0] + PierHalf + 36;
+            Box(P.Stone, S - PierHalf - 36, S + PierHalf + 36, A0, A1, ArchZ, ArchZ + 70);
+            Box(P.Stone, S - 70, S + 70, A0, A1, HTop - 60, HTop);   // the beam along the row under the ceiling
+            Glyphs(P, R, 0, S - Sg * (PierHalf + 36), -Sg, -6500, -5850, ArchZ - 180, ArchZ - 16);
+        }
+        // Pilasters on the side walls opposite the piers beyond the stairs, from the floor to the corbels.
+        for (float Sg : {-1.f, 1.f}) for (float T : PierT) if (T < StairFoot - 150)
+        {
+            const float W = Sg < 0 ? HS0 : HS1, In = -Sg;
+            Box(P.Stone, FMath::Min(W, W + In * 50), FMath::Max(W, W + In * 50), T - 80, T + 80, HZ, VaultZ);
+            Box(P.Stone, FMath::Min(W, W + In * 70), FMath::Max(W, W + In * 70), T - 96, T + 96, HZ, HZ + 60);
+        }
+        // Guardian idols on plinths along the processional's first half, facing it.
+        for (float Sg : {-1.f, 1.f}) for (float T : {-4875.f, -5425.f})
+        {
+            const float S = HallMid + Sg * 420;
+            Box(P.Stone, S - 52, S + 52, T - 52, T + 52, HZ, HZ + 110); Box(P.Plaster, S - 58, S + 58, T - 58, T + 58, HZ + 110, HZ + 120);
+            Idols.Add({FVector(S, T, HZ + 120), YawOf(-Sg, 0), 36});
+        }
+        // Fires: braziers along the processional, great fire bowls flanking the dais and in the aisles before it.
+        for (float Sg : {-1.f, 1.f})
+        {
+            Brazier(P, Fires, HallMid + Sg * 420, -4300, HZ);
+            Brazier(P, Fires, HallMid + Sg * 420, -5975, HZ);
+            GreatBrazier(P, Fires, HallMid + Sg * 600, DaisT1 + 260, HZ);
+            GreatBrazier(P, Fires, HallMid + Sg * 1450, DaisT1 + 420, HZ);
         }
         // The dais across the -T end: risen 96 cm, five steps down its front (visual) over a hidden ramp.
         Box(P.Stone, DaisS0, DaisS1, DaisT0, DaisT1, HZ, HZ + DaisH);
@@ -303,30 +339,58 @@ namespace TempleWindBuild
             QuadToward(P.Ramp, {DaisS0 + 22, T0, HZ}, {DaisS1 - 22, T0, HZ}, {DaisS1 - 22, T1, HZ + DaisH}, {DaisS0 + 22, T1, HZ + DaisH}, {HallMid, (T0 + T1) * .5f, HZ + 200});
             QuadToward(P.Ramp, {DaisS0 + 22, T1, HZ + DaisH}, {DaisS1 - 22, T1, HZ + DaisH}, {DaisS1 - 22, T2, HZ + DaisH}, {DaisS0 + 22, T2, HZ + DaisH}, {HallMid, T1, HZ + 200});
         }
-        // On the dais: an altar, two great idols, a glyph wall behind.
-        const float DZ = HZ + DaisH;
-        Box(P.Stone, HallMid - 180, HallMid + 180, (-7330 + Sh), (-7130 + Sh), DZ, DZ + 92);
-        Box(P.Plaster, HallMid - 196, HallMid + 196, (-7346 + Sh), (-7114 + Sh), DZ + 92, DZ + 104);
-        Box(P.Stone, HallMid - 210, HallMid + 210, (-7360 + Sh), (-7100 + Sh), DZ, DZ + 14);
+        // On the dais: an altar on a stepped base, two colossal serpent idols on tall plinths, a great carved disc
+        // in the end wall over a broad glyph wall between stone bands.
+        const float DZ = HZ + DaisH, AT = DaisT1 - 560;
+        Box(P.Stone, HallMid - 300, HallMid + 300, AT - 160, AT + 160, DZ, DZ + 18);
+        Box(P.Stone, HallMid - 250, HallMid + 250, AT - 125, AT + 125, DZ + 18, DZ + 36);
+        Box(P.Stone, HallMid - 190, HallMid + 190, AT - 100, AT + 100, DZ + 36, DZ + 128);
+        Box(P.Plaster, HallMid - 206, HallMid + 206, AT - 116, AT + 116, DZ + 128, DZ + 140);
         for (float Sg : {-1.f, 1.f})
         {
-            const float S = HallMid + Sg * 520;
-            Box(P.Stone, S - 60, S + 60, (-7360 + Sh), (-7240 + Sh), DZ, DZ + 110); Box(P.Plaster, S - 66, S + 66, (-7366 + Sh), (-7234 + Sh), DZ + 110, DZ + 118);
-            Idols.Add({FVector(S, (-7300 + Sh), DZ + 118), YawOf(0, 1), 42});
+            const float S = HallMid + Sg * 760, T = DaisT0 + 330;
+            Box(P.Stone, S - 160, S + 160, T - 160, T + 160, DZ, DZ + 40);
+            Box(P.Stone, S - 140, S + 140, T - 140, T + 140, DZ + 40, DZ + 230);
+            Box(P.Plaster, S - 150, S + 150, T - 150, T + 150, DZ + 230, DZ + 246);
+            Glyphs(P, R, 1, T + 140, 1, S - 110, S + 110, DZ + 70, DZ + 200);
+            Idols.Add({FVector(S, T, DZ + 246), YawOf(0, 1), 125});
         }
-        Glyphs(P, R, 1, HT0, 1, HallMid - 330, HallMid + 330, HZ + 300, HZ + 560);
-        // Light: torches down both long walls below the corbels (beyond the stairs), on the end walls and the gallery.
-        for (float T : {(-4800.f + Sh), (-5400.f + Sh), (-6000.f + Sh), (-6600.f + Sh), (-7200.f + Sh)}) for (float Sg : {-1.f, 1.f})
-            Torch(P, Fires, 0, Sg < 0 ? HS0 : HS1, -Sg, T, HZ + 280, 4200, 760);
-        for (float S : {77850.f, 78350.f, 79070.f, 79570.f}) Torch(P, Fires, 1, HT1, -1, S, UZ + 230, 3600, 640);
-        for (float Sg : {-1.f, 1.f}) Torch(P, Fires, 0, Sg < 0 ? HS0 : HS1, -Sg, (-3200 + Sh), UZ + 230, 3600, 640);
-        for (float Sg : {-1.f, 1.f}) Torch(P, Fires, 1, HT0, 1, HallMid + Sg * 760, HZ + 320, 4200, 760);
-        for (float T : {(-5100.f + Sh), (-6300.f + Sh)}) for (float Sg : {-1.f, 1.f}) Glyphs(P, R, 0, Sg < 0 ? HS0 : HS1, -Sg, T - 120, T + 120, HZ + 360, HZ + 470);
+        {
+            const float Cz = DZ + 950;
+            Drum(P.Stone, {HallMid, HT0, Cz}, {HallMid, HT0 + 26, Cz}, 330, 40);
+            Drum(P.Plaster, {HallMid, HT0 + 26, Cz}, {HallMid, HT0 + 34, Cz}, 300, 40);
+            Drum(P.Stone, {HallMid, HT0 + 34, Cz}, {HallMid, HT0 + 52, Cz}, 230, 36);
+            Drum(P.Moss, {HallMid, HT0 + 52, Cz}, {HallMid, HT0 + 58, Cz}, 150, 32);
+            Drum(P.Dark, {HallMid, HT0 + 58, Cz}, {HallMid, HT0 + 62, Cz}, 64, 24);
+            for (int32 K = 0; K < 16; ++K)
+            {
+                const float A = K * 2 * PI / 16;
+                TurnedBox(P.Stone, FVector(HallMid + FMath::Cos(A) * 268, HT0 + 40, Cz + FMath::Sin(A) * 268), FVector(14, 14, 40), FRotator(FMath::RadiansToDegrees(A) - 90, 0, 0));
+            }
+            Glyphs(P, R, 1, HT0, 1, HallMid - 900, HallMid + 900, DZ + 260, DZ + 560);
+            for (float Z : {DZ + 240.f, DZ + 580.f}) Box(P.Stone, HallMid - 940, HallMid + 940, HT0, HT0 + 14, Z - 10, Z + 10);
+        }
+        // Light: torches down both long walls (beyond the stairs, and over the stairs along their line), on the end
+        // wall, the gallery and its back wall.
+        for (float Sg : {-1.f, 1.f})
+        {
+            const float W = Sg < 0 ? HS0 : HS1;
+            for (float T : {-7025.f, -7700.f, -8400.f}) Torch(P, Fires, 0, W, -Sg, T, HZ + 360, 4400, 1000);
+            for (float K : {.25f, .55f, .85f})
+            {
+                const float T = FMath::Lerp(GalleryT, StairFoot, K), Zs = FMath::Lerp(UZ, HZ, K);
+                Torch(P, Fires, 0, W, -Sg, T, Zs + 280, 3800, 800);
+            }
+            Torch(P, Fires, 0, W, -Sg, HT1 - 250, UZ + 230, 3600, 700);
+            Torch(P, Fires, 1, HT0, 1, HallMid + Sg * 1250, HZ + 420, 5200, 1100);
+        }
+        for (float S : {77500.f, 78150.f, 79250.f, 79900.f}) Torch(P, Fires, 1, HT1, -1, S, UZ + 230, 3600, 700);
+        for (float Sg : {-1.f, 1.f}) for (float T : {-8050.f}) Glyphs(P, R, 0, Sg < 0 ? HS0 : HS1, -Sg, T - 160, T + 160, HZ + 420, HZ + 560);
         // Pots: on the gallery and in the hall's far corners.
         Jars.Add({FVector(HS0 + StairW + 40, HT1 - 40, UZ), float(R.FRandRange(0, 360)), true, 3});
         Jars.Add({FVector(HS1 - StairW - 40, HT1 - 40, UZ), float(R.FRandRange(0, 360)), false, 2});
-        Jars.Add({FVector(HS0 + StairW + 50, HT0 + 1300, HZ), float(R.FRandRange(0, 360)), true, 3});
-        Jars.Add({FVector(HS1 - StairW - 50, HT0 + 1300, HZ), float(R.FRandRange(0, 360)), false, 2});
+        Jars.Add({FVector(HS0 + 90, HT0 + 700, HZ), float(R.FRandRange(0, 360)), true, 3});
+        Jars.Add({FVector(HS1 - 90, HT0 + 700, HZ), float(R.FRandRange(0, 360)), false, 2});
         return Steps;
     }
 

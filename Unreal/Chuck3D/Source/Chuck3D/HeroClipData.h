@@ -12,8 +12,8 @@ namespace HeroClipData
         constexpr float GuardLength = 6.3667f;
         constexpr float CutFlatLength = 1.4000f;
         constexpr float CutFlatContact = 0.4330f;
-        constexpr float CutFlatContactX = 89.9f, CutFlatContactY = -14.2f, CutFlatContactZ = 154.2f;
-        constexpr float CutFlatSpeed = 30.19f;   // m/s at the blade tip
+        constexpr float CutFlatContactX = 89.8f, CutFlatContactY = -14.2f, CutFlatContactZ = 153.6f;
+        constexpr float CutFlatSpeed = 30.22f;   // m/s at the blade tip
         constexpr float CutRiseLength = 1.5000f;
         constexpr float CutRiseContact = 0.4000f;
         constexpr float CutRiseContactX = 77.2f, CutRiseContactY = 4.3f, CutRiseContactZ = 199.0f;

@@ -157,10 +157,12 @@ if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK
 # into a rupture (an Astral death, back at its bend's start), round every bend's ruptures, down the sanctum's stair onto
 # its dais, and the whole way from the antechamber to the sanctum's gallery.
 $windLog=Join-Path $evidence ('verify-temple-wind-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$windProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleWindTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$windProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleWindTest','-ChuckTempleRunMusicTest','-ChuckSanctumMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_CHECK lanes=8 ' -Quiet) -or
-   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 full=1' -Quiet)) {
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 full=1' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_RUN_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_BOSS_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Temple Astral wind verification failed. Inspect $windLog"
 }
 # The temple heroes (Claude, 2026-10-23; docs/CHULT-TEMPLE-HEROES.md): cooked, the battle spawns with every
