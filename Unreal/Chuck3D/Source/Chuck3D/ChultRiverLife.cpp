@@ -319,7 +319,11 @@ void StartChultRiverZombieReview(UWorld* World)
             for(const auto& H:Homes)if(H.Path&&H.Zombie.IsValid()&&FVector::Dist2D(H.Zombie->GetActorLocation(),Chuck->GetActorLocation())<230
                 &&FCString::Strcmp(H.Zombie->GetZombieStateName(),TEXT("Windup"))==0){Threat=H.Zombie.Get();break;}
             if(Threat!=Run->Windup.Get()){Run->Windup=Threat;Run->WindupAt=Now;}
-            if(Threat&&Now-Run->WindupAt>.18f&&Now-Run->LastDodge>.85f&&FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))!=0)
+            // Roll .34 s into the .5 s windup: the bite comes .22 s into the lunge (.72 s), and a roll with the
+            // stick held carries out into a stride at .56 s, so the bite lands mid-roll with ~.18 s either side.
+            // (Rolling at .18 s ended the roll's immunity .02 s after the bite: a frame's hitch failed the trial,
+            // 2026-10-24.)
+            if(Threat&&Now-Run->WindupAt>.34f&&Now-Run->LastDodge>.85f&&FCString::Strcmp(Chuck->GetGaitName(),TEXT("Roll"))!=0)
             {
                 Chuck->SetActorRotation(D.Rotation());Chuck->Recenter();Chuck->DodgeToward(FVector2D(0,1));Run->LastDodge=Now;
             }
@@ -331,9 +335,8 @@ void StartChultRiverZombieReview(UWorld* World)
         const int32 Rolls=Chuck->GetSfxCount(AChuckCharacter::ESfx::Roll)-Run->RollsBefore,Attacks=Lunges()-Run->LungesBefore;
         const bool Pass=Distance<=35&&Move->IsMovingOnGround()&&Chuck->GetSanity()>=3&&!Chuck->IsAstral()&&FlanksActive==0&&Rolls>=1&&Attacks>=1;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_DODGE trial=%d pass=%d distance=%.1f sanity=%d flank_active=%d rolls=%d attacks=%d seconds=%.1f attempt=%d"),Run->Trial,Pass,Distance,Chuck->GetSanity(),FlanksActive,Rolls,Attacks,Elapsed,Run->Attempt+1);
-        // A bite costs two Sanity and one hit in four is a random grab, so the bot's
-        // outcome varies; the route must be passable at the same bar within three tries
-        // (2026-10-20: one try in three failed intermittently, in the old build too).
+        // A bite costs two Sanity. Tests turn grabs off (ADockNPC::GetZombieGrabChance), so the
+        // outcome depends only on frame timing; the route must pass at the same bar within three tries.
         if(!Pass&&++Run->Attempt<3){Run->Start=-1;return;}
         Run->Failures+=!Pass;Run->Attempt=0;
         ++Run->Trial;Run->Start=-1;
