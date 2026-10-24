@@ -1,0 +1,29 @@
+{
+  "providers": [
+    "ambientCG (https://ambientcg.com, CC0)"
+  ],
+  "assets": [
+    {
+      "file": "leather037_disp_2k.jpg",
+      "asset": "leather037",
+      "map": "disp",
+      "resolution": 2048,
+      "source": "https://ambientcg.com/get?file=Leather037_2K-JPG.zip",
+      "provider": "ambientCG",
+      "license": "CC0-1.0",
+      "sha256": "FCF5EE41611953B781DBAF1D6661666AE8893471B2CD1F7A0AAB2BBC977C36E5",
+      "bytes": 2716273
+    },
+    {
+      "file": "leather037_nor_gl_2k.jpg",
+      "asset": "leather037",
+      "map": "nor_gl",
+      "resolution": 2048,
+      "source": "https://ambientcg.com/get?file=Leather037_2K-JPG.zip",
+      "provider": "ambientCG",
+      "license": "CC0-1.0",
+      "sha256": "04B01B79FDB46470AF38E1F1EA82BB53B607D6235AA8137B93A5FB41A56C5293",
+      "bytes": 6084857
+    }
+  ]
+}

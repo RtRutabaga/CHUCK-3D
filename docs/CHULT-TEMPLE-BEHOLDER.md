@@ -1,138 +1,174 @@
 # Chult — the beholder of the sanctum
 
-User request, October 23, 2026 (Claude): "start creating the beholder, it should look really cool and detailed".
+User requests (Claude):
+- October 23, 2026: "start creating the beholder, it should look really cool and detailed".
+- October 24, 2026: "Make the beholder look more like this, here also is a clay render as a reference, use free resources where helpful". The user supplied a colour concept and a clay render.
 
-The 2D game's Phase 6 final chamber has three adventurers fighting a beholder and skeletons; Chuck only witnesses it (see [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)). The 2D beholder (`assets/sprites/npcs/beholder.png`) is:
-- a mauve-purple orb;
-- one great eye with a red iris;
-- a toothed grin;
-- eyes on stalks;
-- a hover above its shadow.
+The 2D game's Phase 6 final chamber has three adventurers fighting a beholder and skeletons; Chuck only witnesses it ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)). The 2D sprite (`assets/sprites/npcs/beholder.png`) gave the first pass its direction: a mauve orb with one red-irised eye, a toothed grin and eyes on stalks.
 
-In 2D it fires eye rays down the adventurers' lanes and sometimes a cone of force across the hall.
+Since October 24 the user's references lead instead. The second pass has:
+- a lumpy, brain-like cranium tapering to a chin;
+- one great green eye with a slit pupil, deep under a massive brow, with stacked bags beneath;
+- a huge gaping maw filling the lower face, with thick lips, ridged red gums, rows of long ivory fangs and a broad tongue lolling out over the lower teeth;
+- thick, wrinkled eyestalks hooking forward like question marks, each cupping a big slit-pupilled eye;
+- wet maroon skin, tan-pink on its ridges and dark in its folds.
 
-This first pass builds the creature and hangs it, alive, where the heroes already look. It does not fight yet.
+It hangs alive where the heroes look. It does not fight yet.
 
-## The model (`Tools/build_beholder.py`, Blender 4.5.14, no downloads)
+## The model (`Tools/build_beholder.py` with `Tools/sdf_kit.py`, Blender 4.5.14)
 
 `blender --background --factory-startup --python Tools/build_beholder.py [-- --review DIR] [--quick]` writes `SourceAssets/Enemies/Beholder/`:
 - `SK_Beholder.fbx`: skinned, no clips;
 - textures: `T_Beholder_D`, `_N` and `_ORM` (4096²), and `T_BeholderEye` (2048²);
-- `beholder.json`: sizes, bones, and where the eyes are.
+- `beholder.json`.
 
-A full build takes about 6 minutes. `--quick` (coarser, 1K textures) takes 3.
+A full build takes about 9 minutes; `--quick` takes about 5.
 
-### Proportions
-- **Orb:** 2.08 m across (radii 104 / 102 / 97 cm). The heroes are 1.72–1.79 m and Chuck is 65 cm.
-- **Great eye:** 84 cm. It bulges 10 cm out of the orb, a little above its middle.
-- **Grin:** 140 degrees wide, low on the front, corners turned up.
-- **Eyestalks:** ten, 1.3–1.6 m long, rising from the crown. The 2D sprite shows five, a pixel-art simplification; ten is the creature's classic count. Changing it is one list in the builder.
+### Free resource
+The skin's finest detail is ambientCG's **Leather037** (CC0): a pebbled leather grain with a fine wrinkle network.
+- `Tools/Fetch-BeholderSkin.ps1` puts its displacement and normal maps (2K JPG, 2.7 and 6.1 MB) in `SourceAssets/Surfaces/Beholder`, with a manifest of source URL and hashes.
+- The displacement map, box-projected at 70 cm a tile so its cells are about a centimetre, is the bump in the bake, and it darkens its own pits a little.
+- It replaced a procedural cell pattern that read as cracked glaze.
 
-Facing +X, centimetres, the orb's centre at the origin.
+Other free resources were considered:
+- **Fan beholder models:** they need sign-ins, and their licences and quality vary.
+- **3D-print sculpts:** they have no textures or rig, and are often non-commercial.
+
+The creature itself is modelled here.
+
+### Proportions (cm; facing +X, Z up)
+- **Head:** about 2.0 m wide and 2.4 m tall.
+  - The cranium (centre z 44) rises well above the eye and carries 11 sunk lobes and five big lumps.
+  - A jaw mass and a chin taper it downward.
+  - A forehead mass bulges over the brow.
+- **Great eye:** radius 33, centre (66, 0, 28), about a third of the face across and 37% down. It bulges past the face under the brow.
+  - Lids: an almond, upper margin 30 degrees and lower −32 at the middle.
+  - Iris: 32 degrees, with a vertical slit pupil.
+- **Maw:** open at rest, 140 cm across at its corners (z −18).
+  - Its upper edge dips to −24 in the middle; its lower edge drops to −90.
+  - A cavity behind it, roofed clear of the eye's socket.
+- **Eyestalks:** ten.
+  - Placement: from the cranium's upper sides, sides and top, at azimuths ±14 to ±118 degrees.
+  - Length: 86–102 cm.
+  - Thickness: about 20 cm across, with fleshy collars where they meet the head.
+  - Ends: a 15.5 cm bulb holding a 13 cm eye.
 
 ### How it is made
-The creature is a signed distance field, meshed by surface nets. The vertices are then moved onto the true surface by Newton steps. The field is built from:
-- **Body:** an ellipsoid with low lumps.
-- **The eye's socket:** a fleshy mound round it, with a heavy brow ridge overhanging the eye and an under-eye bag.
-- **The grin:** rolled lips, a slit through to a mouth cavity, gums, and cheeks at the corners.
-- **Skin features:** 150 warts, and five old scars cut as grooves.
-- **Armour:** several dozen broad, irregular chitin plates shingled over the crown and down the back. The face and flanks stay bare.
-- **Spine:** a ridge of bony knobs down it.
-- **Stalks:** ten ringed eyestalks fused into the crown with fleshy collars. Each rises, sways to one side and back, and turns its tip out and down to look. Each ends in a bulb with an eye hole.
-- **Eyelids:** two separate fields, each a thick shell with a rolled margin and fold creases. The upper lid is low in the middle, a scowl; the lower rises to the corners.
-- **Tongue:** a third field, grooved, on the mouth's floor.
+`sdf_kit.py` is the reusable part:
+- signed-distance-field operations (union, subtraction, intersection, and since this pass a displacement);
+- block-culled evaluation;
+- surface-nets meshing over sparse blocks;
+- Newton projection onto the surface.
 
-Each field is meshed twice:
-- **0.75 cm:** only for baking. Colour, roughness, wrinkle strength and distance-field ambient occlusion are computed on it per vertex.
-- **3 cm** (1.8 cm for the lids and tongue): the game mesh, even quads that skin well.
+`build_beholder.py` defines the creature:
+- **Base:** ellipsoids for the cranium, jaw, chin and forehead.
+- **Face features:** laid in front view and snapped onto the plain head's surface (`on_face`):
+  - the brow ridge, thickest over the eye and overhanging it;
+  - three stacked bags under the eye;
+  - folds from the eye's corners down to the maw's;
+  - furrows over the brow;
+  - thick rolled lips;
+  - folds round the chin.
+- **Additions:** cheek masses at the maw's corners, 140 small warts, and five spikes along each side of the jaw.
+- **Stalks:** each leaves the head along the surface's normal, swells up and out in an arc, then hooks forward and down. Its direction blends along a cubic Bezier, so it has no kinks. Its eye faces the front.
+- **Carved out:** the eye's socket, the maw's opening and its cavity. Gums are added inside the lips, and each stalk's bulb gets an eye hole.
+- **Fine mesh only:** a displacement of wrinkle folds round the eye and maw, furrows across the middle of the forehead, vertical ridges on the gums, soft lumps and toad-like pebbles.
+- **Separate fields:** the two lids (thick shells with rolled margins and fold creases) and the tongue (a broad, grooved chain of ellipsoids curling out to one side).
 
-Cycles bakes the fine mesh onto the game mesh's UVs (Smart UV Project):
-- **Colour:** mauve, darker on the back and paler underneath, mottled and blotched. Darker glossy plates, paler warts and scars. The socket's rim and the stalks' eye holes wet and inflamed. Dark veins round the eye. Darker lips, a deep-red mouth and pink gums.
-- **Normal:** includes procedural bump: cell-edge creases (cracked, leathery hide) and pores. The bump is strongest round the eye and mouth and weakest on the plates.
-- **ORM map:** occlusion, roughness and the wrinkle mask.
+Each part is meshed twice:
+- **0.75 cm:** for baking.
+- **3 cm** (1.8 cm for the lids and tongue): the game mesh.
+
+The fine mesh carries vertex colour, roughness and the bump mask:
+- **Colour:** maroon, with stalks a little more magenta. It is tan-pink on the brow and cheeks, and paler on fold-scale ridges and darker in folds, from the field's Laplacian at 4 cm. (At the pebbles' scale that read as camouflage.)
+- **Wet places:** the socket's rim and the stalks' eye holes are wet and pink.
+- **The maw:** deep red, with red gums and darker lips.
+- **Other marks:** veins near the eye and paler warts.
+- **Occlusion:** from the distance field. It is lifted inside the maw, which is lit only from outside in play.
+
+Cycles bakes colour, normal and ORM onto the game mesh's Smart UV Project atlas.
 
 Built directly, not baked:
-- **Eyeballs:** spheres with polar UVs. The iris texture is made in numpy: a fibrous crimson iris with a faint gold collarette, a dark limbal ring, a round black pupil, and a yellowed sclera with branching blood vessels.
-- **Cornea:** a 1 cm dome over the great eye's iris.
-- **Teeth:** about thirty curved, uneven fangs in two interleaved rows, with longer fangs at about 30 degrees either side of the middle. They are short near the corners, and a few are broken. Their vertex colour runs from stained roots to ivory tips.
+- **Teeth:** 50 curved conical fangs in four rows.
+  - Outer rows, upper and lower: long fangs, with great canines at ±34 cm (38 cm long) and ±30 cm (30 cm long).
+  - Inner rows: shorter.
+  - A few are broken.
+  - Vertex colour runs from stained roots to ivory tips.
+- **Eyes:** spheres with polar UVs. The iris texture is made in numpy:
+  - gold round the slit, then yellow-green, then green, fibrous, with a dark limbal ring;
+  - a yellowed sclera with branching blood vessels.
+- **Cornea:** a 1.1 cm dome on the great eye.
 
 ### Result
-- **Triangles:** 137,352 (the heroes are 75–97k). Unreal's LODs: 92.6k / 37.2k / 21.4k / 11.4k vertices.
+- **Triangles:** 144,724; Unreal's LODs: 100.5k / 42.9k / 25.9k / 14.5k vertices.
 - **Materials:** Skin, Eye, Cornea, Teeth.
-- **Bones:** 78 (79 in Unreal, which adds the armature as a root).
-- **Review renders:** `Local/BeholderReview/full4` (front, three-quarter, side, back, top, below, eye, mouth, posed).
+- **Bones:** 80 (81 in Unreal, which adds the armature as a root).
+- **Review renders:** `Local/BeholderReview/f3`:
+  - clay and textured views matching the reference's angle;
+  - front, side, back, below;
+  - eye, maw, posed.
 
 ### Bones
 | Bone | Role |
 |---|---|
 | `root`, `body` | Hover, pitch and roll |
-| `jaw` | Hinged through the mouth corners. Everything below the slit follows it, fading out behind and under the chin |
-| `tongue_0`, `tongue_1` | The tongue |
+| `jaw` | Hinged at the maw's corners. Everything below the opening's middle follows it, fading out behind and to the sides. The maw is open at rest |
+| `tongue_0..3` | Along the tongue, from the cavity's floor to its tip outside |
 | `lid_upper`, `lid_lower`, `eye` | All pivot on the eye's centre |
-| `stalk{k}_0..5` | Six bones along each stalk, k = 0..9 |
-| `stalk{k}_eye` | Each stalk's eyeball, at its centre |
-
-Each stalk's bulb belongs wholly to its last bone. It had been weighted only within the stalk's own radius, so half of every bulb stayed with the body and tore open when the stalk moved.
+| `stalk{k}_0..5`, `stalk{k}_eye` | Six bones along each stalk, and its eye at its centre. Each bulb belongs wholly to its stalk's last bone |
 
 ## Import (`Tools/Import-Beholder.ps1` → `Tools/import_beholder.py`)
 The import creates `/Game/Characters/Beholder`: the textures, `SK_Beholder` with 4 LODs, and four materials, rebuilt on each run.
 - **`M_BeholderSkin`:**
-  - Inputs: the colour times a `Tint` parameter, the creases darkened by the baked occlusion, the normal, roughness from ORM.
-  - The normal map's green channel is flipped, because Blender bakes OpenGL normals.
-  - The `Tint` is cool (0.74, 0.70, 0.95) because the torches are warm. Untinted, and with a subsurface model, the skin rendered flat bright pink in the hall.
-- **`M_BeholderEye`:** the iris texture, glossy. The iris ring (not the pupil or the white) glows by a `Glow` parameter.
-- **`M_BeholderCornea`:** black, translucent and lit per pixel: only its highlights show. A white base had hazed the pupil grey.
-- **`M_BeholderTeeth`:** the vertex colour times old ivory, satin.
+  - Inputs: the colour times a `Tint` parameter (0.92, 0.84, 0.92), creases darkened a little by the baked occlusion, the normal (green flipped: Blender bakes OpenGL normals), roughness from ORM.
+  - Stronger occlusion darkening made every pebble's pit a dark speck.
+  - A subsurface model, in the first pass, turned the skin flat pink.
+- **`M_BeholderEye`:** the iris texture, glossy. The iris glows faintly by a `Glow` parameter.
+- **`M_BeholderCornea`:** black, translucent and lit per pixel: only highlights.
+- **`M_BeholderTeeth`:** vertex colour times old ivory.
 
-`DefaultGame.ini` always cooks `/Game/Characters/Beholder`, because the sanctum loads it asynchronously.
+`DefaultGame.ini` always cooks `/Game/Characters/Beholder`.
 
 ## In the sanctum (`ATempleBeholder`, TempleBeholder.h/.cpp)
-`ATempleSanctumBattle` loads `SK_Beholder` with its other assets and spawns the beholder at its `BeholderSpot()`: 2.6 m over the dais, 1.5 m in front of it, facing the fighter. A `UPoseableMeshComponent` is posed in component space each frame by a small forward pass over the rig. Each bone's own turn is set in its rest frame and carried by its parent's. Nothing is keyed.
-- **Hover:** it bobs about 7 cm, drifts about 20 cm, and pitches and rolls a little. It pitches toward what it looks at.
-- **Turn:** it turns to face the fighter at 10 degrees a second, swaying ±9 degrees.
-- **Great eye:**
-  - It picks someone to look at every 1.1–3.4 s: mostly the fighter, else the wizard, the ranger, a standing skeleton, or Chuck when he is within 22 m and before it.
-  - It snaps there in a quick saccade, turning up to 30 degrees in its socket.
-  - The lids follow its gaze down and up.
-- **Blinks:** every 2.4–6.5 s, sometimes double. The upper lid travels 42 degrees to meet the lower.
-- **Stalks:** they writhe, each segment about two axes at its own slow rates, more toward the tip. Each eye picks its own target every 1.5–4.5 s and turns up to 60 degrees to it.
-- **Jaw:** it breathes 2–3.5 degrees. Every 7–13 s it snarls: the jaw drops 16–22 degrees, the lids squint, the tongue draws back, and the iris flares.
-- **Eye's glow:** the iris smoulders; a dim red point light before the eye catches the lids and brightens in a snarl.
+`ATempleSanctumBattle` loads `SK_Beholder` with its other assets and spawns the beholder at `BeholderSpot()`: 2.6 m over the dais, 1.5 m in front of it, facing the fighter. A `UPoseableMeshComponent` is posed each frame by a forward pass over the rig; each bone's own turn is set in its rest frame and carried by its parent's.
+- **Hover:** it bobs about 7 cm, drifts about 20 cm, and pitches and rolls a little toward what it watches.
+- **Turn:** it turns to face the fighter, swaying.
+- **Great eye:** it darts between the heroes, a standing skeleton, and Chuck when he is near and before it (1.1–3.4 s each). The lids follow its gaze.
+- **Blinks:** every 2.4–6.5 s; the upper lid travels 62 degrees.
+- **Stalks:** they writhe; each eye watches its own target.
+- **Maw:** it breathes a little shut and open around its rest gape. Every 7–13 s it snarls, gaping 10–14 degrees wider.
+- **Tongue:** it sways and curls.
+- **Eye light:** the iris glows faintly, and a dim pale-green light before the eye brightens in a snarl.
 
-Its lighting is channel 1, like the interior. It casts shadows and has no collision. Nothing it does touches Chuck or the heroes yet.
+Lighting channel 1, shadows, no collision. Nothing it does touches Chuck or the heroes yet.
 
 ## Test
-`-ChuckSanctumTest` / `-ChuckSanctumCapture` gains a `beholder` trial, between `portraits` and `battle`. `-ChuckSanctumOnly=beholder` runs it alone.
+The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when the beholder has:
+- posed over 200 frames;
+- moved a stalk eye over 8 cm;
+- blinked and snarled;
+- made three saccades.
 
-It passes when the beholder has posed over 200 frames, a stalk eye has moved over 8 cm, it has blinked, snarled and made three saccades. The capture takes six stills into `Saved/Screenshots/.../Sanctum/Sanctum_beholder_*.png`: from the fighter's place, before it, its side, the great eye, a snarl, and the hall from behind the heroes.
+`-ChuckSanctumOnly=beholder` runs it alone, with six stills in `Saved/Screenshots/.../Sanctum/Sanctum_beholder_*.png`.
 
 `Verify-Package` requires:
-- the spawn line (`mesh=1 bones=79 stalks=10 eye_mat=1`);
+- `CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1`;
 - `beholder=1` in the battle line;
 - the trial's pass.
 
-## Evidence (October 23–24)
-- **Uncooked runs:** four runs of the trial; the last passed with `poses=696 stalk_travel_cm=60.5 blinks=3 snarls=2 saccades=4` (`Local/beholder-trial-4.log`).
-- **Fixed between runs:**
-  - the pink skin;
-  - the torn bulbs;
-  - the grey pupil;
-  - the snarl re-triggered every frame by the test;
-  - teeth through the corners' cheeks.
-- **Stills:** `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Sanctum` (not committed).
-- **Packaged:** see HANDOFF.
+## Evidence
+- **October 23:** the first pass. Packaged and promoted after `Verify-Package` (`Local/verify-package-20261024-113915.log`).
+- **October 24:** the second pass, reviewed against the references in quick and full Blender renders (`Local/BeholderReview/r1`–`r3`, `f1`–`f3`) and in uncooked trials (`Local/beholder-trial-5.log` onward). Packaged: see HANDOFF.
 
 ## Not done, and known flaws
-- **The battle:**
-  - eye rays and the cone of force (the 2D hazards);
-  - the heroes fighting it (the fighter's rising cut was authored for its stalks, but it hangs out of his reach);
-  - being hit;
-  - its death, if any;
-  - the Fireball;
-  - sounds: it is silent.
-- **Stalks** pass through each other and through the crown's plates when they sway into them. There is no collision between them.
-- **Lids:** the full blink has not been checked close up for gaps at the socket's corners.
-- **Skin:** the wrinkles are procedural cell creases, read as cracked leather, not hand sculpting. Smart UV Project's seams may show at close range.
-- **Weight:** 137k triangles at LOD 0 is heavier than the heroes.
-- **Texture size:** the 4K normal and ORM PNGs are 16-bit (47 and 31 MB). 8-bit would do.
-- **Not yet played or seen by a person** in motion. No Xbox test.
+- **The battle:** eye rays and the cone of force (the 2D hazards), the heroes fighting it, being hit, its death, the Fireball, and sounds. It is silent.
+- **Stalks** can pass through each other.
+- **The maw's interior** is a plain red cavity with a dark throat.
+- **Close-up flaws:**
+  - Teeth are smooth cones without wear.
+  - The tongue's underside can show a dark band.
+  - Smart UV seams may show up close.
+- **Sculpting:** the wrinkles are procedural folds, not hand sculpting. The reference has more, deeper folds across the whole face.
+- **Weight:** 145k triangles at LOD 0, heavier than the heroes.
+- **Texture size:** the bakes are 8-bit PNGs since the second pass (58 MB for the four maps).
+- **Not yet seen by a person** in motion. No Xbox test.

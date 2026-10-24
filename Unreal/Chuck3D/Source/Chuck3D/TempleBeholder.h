@@ -51,7 +51,7 @@ private:
     enum class EKind : uint8 { Root, Body, Jaw, Tongue, LidUpper, LidLower, Eye, Stalk, StalkEye, Other };
     struct FBone
     {
-        FName Name; int32 Parent = INDEX_NONE; EKind Kind = EKind::Other; int32 Stalk = -1, Seg = 0;
+        FName Name; int32 Parent = INDEX_NONE; EKind Kind = EKind::Other; int32 Stalk = -1, Seg = 0;   // Seg: a stalk's or the tongue's segment
         FVector RefPos = FVector::ZeroVector, RefScale = FVector::OneVector; FQuat RefRot = FQuat::Identity;
         FVector Dir = FVector::ForwardVector, Axis1 = FVector::RightVector, Axis2 = FVector::UpVector;
     };

@@ -11,8 +11,8 @@
 
 namespace
 {
-    constexpr float EyeRadius = 42.f;      // Tools/build_beholder.py: R_EYE
-    constexpr float LidClose = 42.f;       // degrees the upper lid travels to meet the lower
+    constexpr float EyeRadius = 33.f;      // Tools/build_beholder.py: R_EYE
+    constexpr float LidClose = 62.f;       // degrees the upper lid travels to meet the lower (beholder.json lid_close_deg)
 
     FTransform RefComponentSpace(const FReferenceSkeleton& Ref, int32 Index)
     {
@@ -45,7 +45,7 @@ ATempleBeholder::ATempleBeholder()
     Body->bCastDynamicShadow = true;
     EyeLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("EyeLight"));
     EyeLight->SetupAttachment(RootComponent);
-    EyeLight->SetLightColor(FLinearColor(1.f, .16f, .1f));
+    EyeLight->SetLightColor(FLinearColor(.8f, 1.f, .7f));
     EyeLight->SetIntensity(0.f); EyeLight->SetAttenuationRadius(650.f); EyeLight->SetCastShadows(false);
     EyeLight->SetLightingChannels(false, true, false);
 }
@@ -86,7 +86,7 @@ void ATempleBeholder::ReadRig()
         if (N == TEXT("root")) B.Kind = EKind::Root;
         else if (N == TEXT("body")) B.Kind = EKind::Body;
         else if (N == TEXT("jaw")) B.Kind = EKind::Jaw;
-        else if (N.StartsWith(TEXT("tongue"))) B.Kind = EKind::Tongue;
+        else if (N.StartsWith(TEXT("tongue"))) { B.Kind = EKind::Tongue; B.Seg = FCString::Atoi(*N.Mid(7)); }
         else if (N == TEXT("lid_upper")) B.Kind = EKind::LidUpper;
         else if (N == TEXT("lid_lower")) B.Kind = EKind::LidLower;
         else if (N == TEXT("eye")) { B.Kind = EKind::Eye; EyeRest = B.RefPos; }
@@ -172,7 +172,7 @@ void ATempleBeholder::PickGaze()
 
 void ATempleBeholder::Snarl()
 {
-    SnarlStart = T; SnarlLen = Random.FRandRange(1.f, 1.6f); SnarlOpen = Random.FRandRange(16.f, 22.f); ++Snarls;
+    SnarlStart = T; SnarlLen = Random.FRandRange(1.f, 1.6f); SnarlOpen = Random.FRandRange(10.f, 14.f); ++Snarls;
 }
 
 void ATempleBeholder::Tick(float Dt)
@@ -207,7 +207,8 @@ void ATempleBeholder::Pose(float Dt)
     const float Snarling = Sa < 0.f ? 0.f : Sa < .3f ? Ease(Sa / .3f) : Sa < .3f + SnarlLen ? 1.f : 1.f - Ease((Sa - .3f - SnarlLen) / .5f);
     const float Ba = T - BlinkStart;
     const float Blink = Ba < 0.f ? 0.f : Ba < .08f ? Ease(Ba / .08f) : Ba < .13f ? 1.f : 1.f - Ease((Ba - .13f) / .19f);
-    JawNow = 2.f + 1.5f * FMath::Sin(T * .9f) + SnarlOpen * Snarling;
+    // The maw is open at rest (the model): it breathes a little shut and open, and gapes in a snarl.
+    JawNow = -1.5f + 2.5f * FMath::Sin(T * .9f) + SnarlOpen * Snarling;
     const float Bob = 7.f * FMath::Sin(T * 1.7f) + 2.5f * FMath::Sin(T * .63f + 1.f);
     const float Elev = FMath::RadiansToDegrees(FMath::Atan2(GazeC.Z, FVector2D(GazeC.X, GazeC.Y).Size()));
     float EyeDown = 0.f;
@@ -225,7 +226,11 @@ void ATempleBeholder::Pose(float Dt)
             Offset = FVector(0, 0, Bob);
             break;
         case EKind::Jaw: Own = DownAboutY(JawNow); break;
-        case EKind::Tongue: Own = DownAboutY((B.Name == FName(TEXT("tongue_0")) ? -1.f : 3.f) * FMath::Sin(T * 1.3f + 0.7f) - 4.f * Snarling); break;
+        case EKind::Tongue:
+            // It lolls out over the lower teeth: sways and curls, more toward the tip, and draws in a snarl.
+            Own = FQuat(FVector::ZAxisVector, FMath::DegreesToRadians((2.f + 2.5f * B.Seg) * FMath::Sin(T * 1.1f + B.Seg * .8f)))
+                * DownAboutY((1.5f + 1.5f * B.Seg) * FMath::Sin(T * .8f + B.Seg * .6f) - 3.f * Snarling);
+            break;
         case EKind::Eye:
         {
             const FVector Dir = DP.Inverse().RotateVector((GazeC - (Pos[P] + DP.RotateVector(B.RefPos - Bones[P].RefPos))).GetSafeNormal());
@@ -270,12 +275,12 @@ void ATempleBeholder::Pose(float Dt)
     Body->MarkRefreshTransformDirty();
     for (const FStalk& S : Stalks) if (S.Eye != INDEX_NONE) StalkTravel = FMath::Max(StalkTravel, static_cast<float>(FVector::Dist(Pos[S.Eye], S.RestEye)));
     // The iris smoulders, and flares in a snarl; a red light off it on the lids and the floor before it.
-    const float Glow = .5f + .2f * FMath::Sin(T * 1.3f) + 1.2f * Snarling;
+    const float Glow = .3f + .1f * FMath::Sin(T * 1.3f) + .9f * Snarling;
     if (EyeMat) EyeMat->SetScalarParameterValue(TEXT("Glow"), Glow);
     if (EyeLight)
     {
         EyeLight->SetWorldLocation(GetEyeLocation() + GetActorForwardVector() * 25.f);
-        EyeLight->SetIntensity((1.f - .8f * Blink) * (150.f + 450.f * Snarling + 40.f * FMath::Sin(T * 1.3f)));
+        EyeLight->SetIntensity((1.f - .8f * Blink) * (50.f + 120.f * Snarling + 15.f * FMath::Sin(T * 1.3f)));
     }
     ++Poses;
 }

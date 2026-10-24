@@ -172,7 +172,7 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5' -Quiet) -or
-   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=79 stalks=10 eye_mat=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TEST_COMPLETE failures=0' -Quiet) -or

@@ -5,11 +5,11 @@ UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_beholder.py -unatt
 
 SK_Beholder with its own skeleton and no clips (ATempleBeholder poses it), LODs, the baked textures
 and four materials on its slots:
-- M_BeholderSkin: the baked colour (cooled by a Tint parameter: the torches are warm), darkened in its
-  creases by the baked occlusion; the baked normal (green flipped: Blender bakes OpenGL normals);
+- M_BeholderSkin: the baked colour (a slightly cooled Tint parameter: the torches are warm), darkened a
+  little in its creases by the baked occlusion (more turned every pebble's pit into a dark speck); the baked normal (green flipped: Blender bakes OpenGL normals);
   roughness from the ORM map. (A subsurface model turned it flat pink in the torchlight, 2026-10-23.)
-- M_BeholderEye: the iris texture, glossy; the iris (not the pupil or the white) glows by the
-  "Glow" parameter (ATempleBeholder: smoulders, flares in a snarl).
+- M_BeholderEye: the iris texture (green, a slit pupil), glossy; the iris (not the white) glows faintly
+  by the "Glow" parameter (ATempleBeholder: a little, more in a snarl).
 - M_BeholderCornea: a clear, wet shell over the iris (translucent, lit per pixel for its highlights).
 - M_BeholderTeeth: the vertex colour (stained roots, ivory tips), satin.
 Materials are rebuilt on every run (they are generated, not hand-edited).
@@ -80,14 +80,14 @@ def material(name, build):
 def skin(mat):
     d0 = node(mat, unreal.MaterialExpressionTextureSample, -1300, -200, texture=tex_d)
     # cooler in the game's warm torchlight, which turned the mauve pink (a parameter, to tune per instance)
-    tint = node(mat, unreal.MaterialExpressionVectorParameter, -1300, -380, parameter_name='Tint', default_value=unreal.LinearColor(.74, .7, .95, 1))
+    tint = node(mat, unreal.MaterialExpressionVectorParameter, -1300, -380, parameter_name='Tint', default_value=unreal.LinearColor(.92, .84, .92, 1))
     d = node(mat, unreal.MaterialExpressionMultiply, -1100, -200); link(d0, d, 'A'); link(tint, d, 'B')
     n = node(mat, unreal.MaterialExpressionTextureSample, -1100, 150, texture=tex_n, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
     orm = node(mat, unreal.MaterialExpressionTextureSample, -1100, 500, texture=tex_orm, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
     # the creases darker in the colour too (Lumen's occlusion is broad; the baked one is the crease scale)
-    ao = node(mat, unreal.MaterialExpressionPower, -800, 0); link(orm, ao, 'Base', 'R'); link(const(mat, 1.6, -950, 60), ao, 'Exp')
+    ao = node(mat, unreal.MaterialExpressionPower, -800, 0); link(orm, ao, 'Base', 'R'); link(const(mat, 1., -950, 60), ao, 'Exp')
     lerp = node(mat, unreal.MaterialExpressionLinearInterpolate, -650, 0)
-    link(const(mat, 1., -800, 100), lerp, 'A'); link(ao, lerp, 'B'); link(const(mat, .75, -800, 160), lerp, 'Alpha')
+    link(const(mat, 1., -800, 100), lerp, 'A'); link(ao, lerp, 'B'); link(const(mat, .45, -800, 160), lerp, 'Alpha')
     col = node(mat, unreal.MaterialExpressionMultiply, -450, -150); link(d, col, 'A'); link(lerp, col, 'B')
     out(col, MP.MP_BASE_COLOR)
     out(n, MP.MP_NORMAL)
@@ -101,16 +101,14 @@ def eye(mat):
     out(t, MP.MP_BASE_COLOR)
     out(const(mat, .12, -400, 200), MP.MP_ROUGHNESS)
     out(const(mat, .7, -400, 260), MP.MP_SPECULAR)
-    # the iris ring from the polar UVs: pupil inside 0.086, iris to 0.2 (Tools/build_beholder.py: 12 and 28 of 70 degrees)
+    # the iris from the polar UVs: out to 0.229 (Tools/build_beholder.py: IRIS 32 of 70 degrees); the slit pupil is black in the texture
     uv = node(mat, unreal.MaterialExpressionTextureCoordinate, -1500, 400)
     c = node(mat, unreal.MaterialExpressionConstant2Vector, -1500, 500, r=.5, g=.5)
     sub = node(mat, unreal.MaterialExpressionSubtract, -1300, 450); link(uv, sub, 'A'); link(c, sub, 'B')
     ln = node(mat, unreal.MaterialExpressionLength, -1150, 450); link(sub, ln, '')
-    outer = node(mat, unreal.MaterialExpressionSmoothStep, -950, 400, const_min=.19, const_max=.205); link(ln, outer, 'Value')
-    inner = node(mat, unreal.MaterialExpressionSmoothStep, -950, 520, const_min=.08, const_max=.095); link(ln, inner, 'Value')
-    om = node(mat, unreal.MaterialExpressionOneMinus, -800, 400); link(outer, om, '')
-    ring = node(mat, unreal.MaterialExpressionMultiply, -650, 450); link(om, ring, 'A'); link(inner, ring, 'B')
-    glow = node(mat, unreal.MaterialExpressionScalarParameter, -650, 600, parameter_name='Glow', default_value=.5)
+    outer = node(mat, unreal.MaterialExpressionSmoothStep, -950, 400, const_min=.212, const_max=.229); link(ln, outer, 'Value')
+    ring = node(mat, unreal.MaterialExpressionOneMinus, -800, 400); link(outer, ring, '')
+    glow = node(mat, unreal.MaterialExpressionScalarParameter, -650, 600, parameter_name='Glow', default_value=.3)
     k = node(mat, unreal.MaterialExpressionMultiply, -500, 500); link(ring, k, 'A'); link(glow, k, 'B')
     e = node(mat, unreal.MaterialExpressionMultiply, -350, 400); link(t, e, 'A'); link(k, e, 'B')
     e2 = node(mat, unreal.MaterialExpressionMultiply, -200, 400); link(e, e2, 'A'); link(const(mat, 1.1, -350, 520), e2, 'B')
