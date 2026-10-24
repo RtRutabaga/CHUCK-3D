@@ -9,7 +9,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 - **Tested:**
   - Bow: the ranger rebuilt and re-imported; uncooked `portraits` stills show the braced bow. An uncooked `arrows` run alone reported pass=0 because its summary read a different skeleton (its log shows three arrows in and the skeleton down); the full packaged sanctum test has not run since.
   - Beholder: four uncooked `-ChuckSanctumCapture -ChuckSanctumOnly=beholder` runs, the last passing (`Local/beholder-trial-4.log`), stills reviewed after each fix.
-  - Packaged: `Builds/BeholderCandidate` packaged; Verify-Package ×4 all stopped at the far-bank zombie dodge step (see HANDOFF). The baseline promoted build: 1 pass, 1 identical failure in two runs.
+  - Packaged: the first `Builds/BeholderCandidate` stopped Verify-Package ×4 at the far-bank zombie dodge step. The baseline launcher build gave 1 pass and 1 identical failure in two runs. That test's bot was fixed (see HANDOFF; `ChultRiverLife.cpp` only): 5/5 uncooked runs passed (`Local/river-zombie-fix-1..5.log`). The repackaged candidate passed Verify-Package (`Local/verify-package-20261024-113915.log`); its sanctum step passed the beholder trial (`poses=4280 stalk_travel_cm=62.0 blinks=18 snarls=6 saccades=32`).
 - **Contract compatibility:**
   - Chuck's rig, the NPCs and the heroes' skeletons are unchanged. The ranger's mesh changed only in the bow's shape (the `bowstring` nock and her clips are unchanged).
   - New `ATempleBeholder` (TempleBeholder.h/.cpp). `ATempleSanctumBattle` loads `/Game/Characters/Beholder/SK_Beholder`, spawns it at `BeholderSpot()`, gains `GetBeholder()`, and its `CHUCK_SANCTUM_BATTLE` line gains `beholder=`.
@@ -22,9 +22,9 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - LFS remote quota not checked.
 - **Tools:**
   - Blender 4.5.14: ranger build ×1, beholder builds ×9 (5 quick, 4 full).
-  - UE 5.7.4: hero import ×1, beholder imports ×5 (one failed on a property name), Build.bat ×4, uncooked sanctum runs ×6, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×4, baseline zombie test ×2.
+  - UE 5.7.4: hero import ×1, beholder imports ×5 (one failed on a property name), Build.bat ×5, uncooked sanctum runs ×6, uncooked zombie runs ×5, Build-Game -Package -SkipBaseAssets ×2, Verify-Package ×5, baseline zombie test ×2, Promote-Build ×1.
   - No downloads, no installations.
-- **Launcher:** not updated; it is still `GrandHall` (b094a39), without the bow fix or the beholder. `Builds/BeholderCandidate` is kept for promotion once verification passes.
+- **Launcher:** promoted as `Beholder`; the receipt names 6374473. Promote-Build's backups are now `Windows-Previous-20261024-Beholder` (the GrandHall build it replaced) and `-20261023-GrandHall`. Five older candidate folders from October 14–15 (not this session's) remain in `Builds`.
 
 Next part of the work can be done here.
 
