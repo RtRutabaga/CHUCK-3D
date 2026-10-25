@@ -2,6 +2,24 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 24 — Chult's Astral made to match the sewer's (Claude)
+
+- **Request:** the Astral in Chult/the temple looks worse than the sewer's (missing stars). Base `b7107c9`.
+- **Built:** see HANDOFF (precision and exposure causes).
+- **Tested:**
+  - uncooked temple views ×4 and sewer captures ×2;
+  - packaged Verify-Package passed (`Local/verify-package-20261024-213751.log`).
+- **Contract compatibility:**
+  - `M_AstralDepth` only, still unlit and two-sided; no code changes.
+  - `create_sewer_cave_materials.py` gains `-ChuckAstralOnly`.
+- **Binary assets:** `M_AstralDepth.uasset` re-saved (LFS).
+- **Tools:**
+  - UE 5.7.4: pythonscript ×4, uncooked runs ×6, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - No downloads, no installations.
+- **Launcher:** promoted as `AstralLocal`.
+
+Next part of the work can be done here.
+
 ## October 24 — floating islands round the sanctum's piers (Claude)
 
 - **Request:** floor round the pillars like the floor under the cellar's cheese crate; a landing from the balcony is allowed. Base `9e30b06`.

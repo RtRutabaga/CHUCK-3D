@@ -28,6 +28,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **Chult's Astral matches the sewer's (October 24, Claude):** the Astral in Chult's ruptures (temple, tunnels, jungle wreck) lacked the sewer's stars and looked pale.
+  - Two causes, both fixed in `M_AstralDepth` (`Tools/create_sewer_cave_materials.py -ChuckAstralOnly`):
+    - Chult lies 25 km from the world origin, where the shader's floats lost the stars. Its position is now taken relative to Chult's landing spot first.
+    - Chult's auto exposure brightened the self-lit Astral. It is now held at the sewer's fixed exposure.
+  - Seen from far off, the stars hand over to larger cells, so they don't crowd into speckle.
+  - Waterdeep is unchanged. Verified and in the launcher.
 - **The sanctum's broken floor (October 24, Claude):**
   - Both stairs now stand on solid masonry, with a string course and plinth.
   - The floor between them, from under the gallery to 15 m out, is a cellar-style Astral rupture: a ragged hole with the Astral's well and an oil haze. The piers in it stand on broad floating islands of floor, each with a rubble clod hanging under it like the cellar's cheese island. A sprint leap off the stair's head dies in it; the same leap from 5 m down the stair clears it.
@@ -57,6 +63,26 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 24 — Chult's Astral made to match the sewer's (Claude)
+
+- **Request:** "All of the Astral stuff in Chult/temple looks different/less good than in Waterdeep sewer ... missing the stars I think? Find what's different ... and fix".
+- **Found:**
+  - **Precision:** `M_AstralDepth` builds its clouds and stars from absolute world position. Chult is at (400000, 2500000) cm, where a 32-bit star cell's fraction steps by about .03 against a .012 dot: the stars vanished and the clouds coarsened.
+  - **Exposure:** Waterdeep has a fixed exposure (`r.DefaultFeature.AutoExposure=False`). Chult has histogram auto exposure (ChultLanding; the temple interior's floor is −0.5 EV), so the self-lit Astral was scaled up to pale lavender in the dark temple.
+- **Fixed** in `Tools/create_sewer_cave_materials.py`. The new `-ChuckAstralOnly` flag rebuilds only `M_AstralDepth`.
+  - In Chult (world Y > 12 km) the landing spot is subtracted in the graph's large-world maths before the shader.
+  - In Chult the colour is multiplied by `EyeAdaptationInverse` (×`ASTRAL_EXPOSURE`, 1.0), holding it at the sewer's fixed level.
+  - Star cells that shrink below a few pixels hand over to cells four times larger.
+  - The finest dust noise softens where it would alias.
+  - Waterdeep's close views are unchanged: sewer capture `Local/astral-sewer-capture-1.log` and `-2.log`, `Saved/Screenshots/WindowsEditor/Sewer`.
+- **Tests:**
+  - Uncooked temple views ×4 (`Local/astral-local-views-1..4.log`) compared with the sewer captures.
+  - Packaged: Verify-Package passed on the first run (`Local/verify-package-20261024-213751.log`). Its wreck still shows the nebula in daylight.
+- **Flaws:**
+  - Seen from far, the cloud field still shows faint square value-noise structure. The sewer is never seen that far.
+  - The rupture veils (`M_AstralOilMist`) were left as they are.
+- **Launcher:** promoted as `AstralLocal`.
 
 ## October 24 — floating islands round the sanctum's piers (Claude)
 
