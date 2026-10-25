@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 24 — floating islands round the sanctum's piers (Claude)
+
+- **Request:** floor round the pillars like the floor under the cellar's cheese crate; a landing from the balcony is allowed. Base `9e30b06`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-WIND.md#the-sanctums-ruptures.
+- **Tested:** uncooked sanctum trials ×2 and views ×2; packaged Verify-Package passed (`Local/verify-package-20261024-200846.log`).
+- **Contract compatibility:**
+  - `ChultTempleSanctumIslands()` boxes are now round islands (half-width = mean radius); new `ChultTempleSanctumIslandRadius`.
+  - Nothing else changed.
+- **Binary assets:** none.
+- **Tools:**
+  - UE 5.7.4: Build.bat ×2, uncooked runs ×3, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - No downloads, no installations.
+- **Launcher:** promoted as `SanctumIslands`.
+
+Next part of the work can be done here.
+
 ## October 24 — the sanctum's stair masonry, ruptures and sea tear (Claude)
 
 - **Request:** stone under the sanctum's stairs; cellar-style Astral ruptures, a rectangle at the stairs' base so he can't jump from the balcony or a stair's top; a smaller other-world tear onto the open sea to the wizard's left (a fall death). Base `c4b1539`.

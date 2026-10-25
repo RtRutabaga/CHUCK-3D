@@ -59,7 +59,8 @@ namespace TempleWind
     // kind of Astral rupture (a ragged hole, the Astral's well under it, an oil haze round its rim), not the tunnels' slits:
     // - the pool: the whole floor between the stairs, from under the gallery to PoolT (ragged by PoolJag), so a jump off
     //   the gallery or the stairs' top lands in the Astral. A sprint leap from the stair's head carries about 9 m out from
-    //   13 m up (420 cm/s, 2.2 s); about 4 m down the stair it clears the pool. The piers inside stand on islands of floor.
+    //   13 m up (420 cm/s, 2.2 s); about 4 m down the stair it clears the pool. The piers inside stand on islands of floor,
+//   broad enough that a well-judged drop from the gallery can land on one (allowed: user, 2026-10-24).
     // - a few smaller ruptures in the aisles;
     // - the sea tear: to the wizard's left, torn open on another world's open sea (a fall death for now).
     constexpr float PoolS0 = HS0 + StairW, PoolS1 = HS1 - StairW, PoolT = -4975, PoolJag = 25;
@@ -71,8 +72,11 @@ namespace TempleWind
 // What the sanctum's floor is at a frame point: 0 floor, 1 the Astral (the pool or a rupture), 2 the sea tear. Grow
 // widens each hole (for keeping feet and bodies clear of it).
 int32 ChultTempleSanctumHoleAt(const FVector2D& Frame, float Grow = 0);
-// The islands of floor the pool's piers stand on (frame boxes round their footings).
+// The islands of floor the pool's piers stand on (2026-10-24, user: "similar to the floor under the cheese crate in
+// the cellar"): ragged round slabs, each a square box round its centre whose half-width is its mean radius.
 const TArray<FBox2D>& ChultTempleSanctumIslands();
+// Island I's rim radius at an angle round its centre (radians).
+float ChultTempleSanctumIslandRadius(int32 I, float Angle);
 // The sea tear's rim radius at an angle round its centre (radians).
 float ChultTempleSanctumSeaRadius(float Angle);
 

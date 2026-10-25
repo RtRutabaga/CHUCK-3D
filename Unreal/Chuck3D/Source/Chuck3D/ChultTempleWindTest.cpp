@@ -69,6 +69,8 @@ void ReviewChultTempleWind(AActor* Owner, AChuckCharacter* Chuck, int32 Failures
         {TEXT("SanctumPoolEdge"), FVector(HallMid - 200, PoolT - 600, HZ + 170), FVector(HallMid - 500, -4300, HZ - 40)},
         {TEXT("SanctumRift"), FVector(SanctumRifts[0].S + 260, SanctumRifts[0].T - 220, HZ + 120), FVector(SanctumRifts[0].S, SanctumRifts[0].T, HZ - 30)},
         {TEXT("SanctumSea"), FVector(SeaS + 330, SeaT + 260, HZ + 170), FVector(SeaS, SeaT, HZ - 60)},
+        {TEXT("SanctumIsland"), FVector(HallMid - 380, PierT[0] - 160, HZ + 70), FVector(HallMid - NaveHalf, PierT[0], HZ - 160)},
+        {TEXT("SanctumIslandHigh"), FVector(HallMid - 300, GalleryT - 40, UZ + 120), FVector(HallMid - NaveHalf + 60, PierT[0] + 120, HZ)},
         {TEXT("SanctumSeaDown"), FVector(SeaS + 60, SeaT + 40, HZ + 260), FVector(SeaS - 20, SeaT - 10, HZ - 400)}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);

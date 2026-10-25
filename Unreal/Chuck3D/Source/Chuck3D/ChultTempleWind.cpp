@@ -118,12 +118,20 @@ const TArray<FBox2D>& ChultTempleSanctumIslands()
     static const TArray<FBox2D> List = []
     {
         TArray<FBox2D> Out;
-        // The gallery's six piers (their bases 104 cm square at GalleryT..+100) and the colonnades' first pair (242 cm).
-        for (float S : {77550.f, 78150.f, 78430.f, 78970.f, 79250.f, 79850.f}) Out.Add(FBox2D(FVector2D(S - 78, GalleryT - 26), FVector2D(S + 78, GalleryT + 126)));
-        for (float Sg : {-1.f, 1.f}) { const float S = HallMid + Sg * NaveHalf; Out.Add(FBox2D(FVector2D(S - 150, PierT[0] - 150), FVector2D(S + 150, PierT[0] + 150))); }
+        // Ragged round slabs (the cellar's cheese island's kind): 1.2 m round each of the gallery's six piers (their bases
+        // 104 cm square at GalleryT..+100; the closest pair stands 2.8 m apart), 2.3 m round the colonnades' first pair (242 cm).
+        auto Round = [&](float S, float T, float R) { Out.Add(FBox2D(FVector2D(S - R, T - R), FVector2D(S + R, T + R))); };
+        for (float S : {77550.f, 78150.f, 78430.f, 78970.f, 79250.f, 79850.f}) Round(S, GalleryT + 50, 120);
+        for (float Sg : {-1.f, 1.f}) Round(HallMid + Sg * NaveHalf, PierT[0], 230);
         return Out;
     }();
     return List;
+}
+
+float ChultTempleSanctumIslandRadius(int32 I, float A)
+{
+    const float R = static_cast<float>(ChultTempleSanctumIslands()[I].GetExtent().X), C = I * 1.7f;
+    return R * (1.f + .07f * FMath::Sin(5.f * A + C) + .04f * FMath::Sin(9.f * A + C * 2.3f) + .025f * FMath::Sin(17.f * A + C));
 }
 
 float ChultTempleSanctumSeaRadius(float A)
@@ -134,14 +142,11 @@ float ChultTempleSanctumSeaRadius(float A)
 namespace
 {
     float PoolEdgeT(float S) { return PoolT - PoolJag * .5f + PoolJag * .5f * (.6f * FMath::Sin(S * .0113f) + .4f * FMath::Sin(S * .031f + 1.3f)); }
-    // An island: its box, rounded at the corners and a little ragged.
-    bool OnIsland(const FBox2D& B, const FVector2D& P, float Grow)
+    // On island I (Grow shrinks it).
+    bool OnIsland(int32 I, const FVector2D& P, float Grow)
     {
-        const FVector2D C = B.GetCenter(), H = B.GetExtent() - FVector2D(Grow, Grow), D = P - C;
-        if (H.X <= 0 || H.Y <= 0) return false;
-        const float A = FMath::Atan2(float(D.Y), float(D.X)), Jag = 1.f + .05f * FMath::Sin(7.f * A + C.X * .01f);
-        const float X = FMath::Abs(float(D.X)) / H.X * Jag, Y = FMath::Abs(float(D.Y)) / H.Y * Jag;
-        return FMath::Pow(X, 4.f) + FMath::Pow(Y, 4.f) < 1.f;
+        const FVector2D D = P - ChultTempleSanctumIslands()[I].GetCenter();
+        return D.Size() < ChultTempleSanctumIslandRadius(I, FMath::Atan2(float(D.Y), float(D.X))) - Grow;
     }
 }
 
@@ -150,7 +155,7 @@ int32 ChultTempleSanctumHoleAt(const FVector2D& F, float Grow)
     if (F.X > PoolS0 - Grow && F.X < PoolS1 + Grow && F.Y < HT1 + Grow && F.Y > PoolEdgeT(F.X) - Grow)
     {
         bool Island = false;
-        for (const FBox2D& B : ChultTempleSanctumIslands()) Island |= OnIsland(B, F, Grow);
+        for (int32 I = 0; I < ChultTempleSanctumIslands().Num(); ++I) Island |= OnIsland(I, F, Grow);
         if (!Island) return 1;
     }
     for (const FSanctumRift& R : SanctumRifts)

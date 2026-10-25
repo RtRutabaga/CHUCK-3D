@@ -116,8 +116,11 @@ User request, October 24, 2026 (Claude): fill in under the staircases with stone
 - **How far it reaches.** The longest jump off the high end is a sprint leap: 420 cm/s with 250 cm/s lift. From the stair's head (13 m up) that is about 2.2 s in the air, so about 9 m. The pool's edge is set beyond that.
 - **The gallery's balustrade** allows no run-up for a sprint leap. A standing jump off it falls shorter.
 - **About 5 m down the stair** (about 9.5 m up) the same leap clears the pool. The `mid_leap` trial shows it.
-- **The piers inside it** (the gallery's six and the colonnades' first pair) stand on ragged islands of floor round their footings, each with its own haze.
-  - Landing on an island's ledge is a dead end: there is no run-up to leap off it. The only way off is into the Astral.
+- **The piers inside it** (the gallery's six and the colonnades' first pair) stand on islands of floor, each with its own haze. Since a later request the same day (user: "similar to the floor under the cheese crate in the cellar ... it's ok if this makes it possible to stick a landing just right from the balcony") they are broad ragged round slabs: 1.2 m round each gallery pier, 2.3 m round each colonnade pier.
+  - Under each hangs what hangs under the cellar's cheese island: the slab's stone and its broken underside, then a clod of rubble and moss with loose stones in it, tapering to a point about 2 m under the floor over the Astral (`IslandRoots`).
+  - A well-judged drop from the gallery can land on one, which the user allowed.
+  - Off a colonnade island, a sprint leap run along its pier's side (about 3.5 m of floor) should reach the pool's far edge, about 1.3 m away. This has not been tried.
+  - The gallery piers' islands are too narrow for a run-up, so they are dead ends: the only way off is into the Astral.
 - **Moved out of it:**
   - the processional's paving and kerbs now start at its far edge;
   - the first two braziers stand at that edge (T −5080; they were at −4300);
@@ -211,4 +214,4 @@ The trap run's test is unchanged at 16/16 (`Local/wind-regress-run.log`).
 - The ruptures make no sound of their own.
 - The veils are the sewer's oil film. Close up in torchlight they read as glassy panels.
 - The 2D maps 7 (shrine hall) and 8 (gauntlet) are not built.
-- The sanctum's ruptures (October 24): seen low from the floor, the sea tear reads pale, more like sky than water (seen from above it shows rows of waves and whitecaps). Landing on a pier island in the pool is a dead end. A wall run along a stair's wall has not been tried as a way past the pool. No person has played them.
+- The sanctum's ruptures (October 24): seen low from the floor, the sea tear reads pale, more like sky than water (seen from above it shows rows of waves and whitecaps). A drop onto a pier island and the leap off a colonnade island have not been tried in a trial; the gallery piers' islands are dead ends. A wall run along a stair's wall has not been tried as a way past the pool. No person has played them.

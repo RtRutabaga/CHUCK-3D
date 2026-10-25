@@ -389,6 +389,44 @@ namespace TempleWindBuild
         if (P1 > P0) Box(P.Stone, FMath::Min(Open, Open + Into * 9), FMath::Max(Open, Open + Into * 9), P0, P1, HZ, HZ + 34);
     }
 
+    // What hangs under an island of the pool (2026-10-24, user: like the floor under the cellar's cheese crate): the
+    // broken slab's foundation under its flags, then a rubble-and-root clod tapering to a point over the Astral.
+    void IslandRoots(FParts& P, int32 I)
+    {
+        constexpr int32 Seg = 40;
+        const FVector2D C = ChultTempleSanctumIslands()[I].GetCenter();
+        const float R = static_cast<float>(ChultTempleSanctumIslands()[I].GetExtent().X);
+        // Rings: depth under the floor, share of the rim's radius, wobble; the surface each band below a ring is in.
+        struct FRing { float Z, K, Wob; };
+        const FRing Rings[] = {{-28, .97f, 0}, {-62, .9f, .02f}, {-64, .86f, .05f}, {-105, .66f, .08f}, {-150, .38f, .1f}, {-185, .12f, .12f}};
+        auto Pt = [&](int32 K, int32 J)
+        {
+            const float A = J * UE_TWO_PI / Seg, Rr = ChultTempleSanctumIslandRadius(I, A) * Rings[K].K * (1 + Rings[K].Wob * FMath::Sin(A * 6 + I + K * 1.9f));
+            return FVector(C.X + FMath::Cos(A) * Rr, C.Y + FMath::Sin(A) * Rr, HZ + Rings[K].Z + Rings[K].Wob * 40 * FMath::Sin(A * 4 + I * 2.1f));
+        };
+        for (int32 K = 0; K + 1 < int32(UE_ARRAY_COUNT(Rings)); ++K)
+        {
+            FSurf& M = K < 1 ? P.Stone : K == 1 ? P.Steps : P.Moss;   // the slab's stone, its broken underside, the clod
+            for (int32 J = 0; J < Seg; ++J)
+            {
+                const FVector A = Pt(K, J), B = Pt(K, J + 1), Cc = Pt(K + 1, J + 1), D = Pt(K + 1, J);
+                const FVector Mid = (A + Cc) * .5f, Out(Mid.X - C.X, Mid.Y - C.Y, 0);
+                QuadToward(M, A, B, Cc, D, Mid + Out.GetSafeNormal() * 100 - FVector(0, 0, 30));
+            }
+        }
+        // Its point.
+        const int32 L = UE_ARRAY_COUNT(Rings) - 1; const FVector Tip(C.X + 6, C.Y - 4, HZ - 215 - I % 3 * 12);
+        for (int32 J = 0; J < Seg; ++J) QuadToward(P.Moss, Pt(L, J), Pt(L, J + 1), Tip, Tip, Tip - FVector(0, 0, 100));
+        // Loose stones clinging in the clod.
+        FRandomStream Rnd(31000 + I);
+        for (int32 K = 0; K < 7; ++K)
+        {
+            const float A = Rnd.FRandRange(0, UE_TWO_PI), Z = Rnd.FRandRange(-120, -70), Rr = ChultTempleSanctumIslandRadius(I, A) * FMath::GetMappedRangeValueClamped(FVector2D(-64, -150), FVector2D(.86f, .4f), Z);
+            TurnedBox(Rnd.FRand() < .5f ? P.Stone : P.Steps, FVector(C.X + FMath::Cos(A) * Rr, C.Y + FMath::Sin(A) * Rr, HZ + Z), FVector(Rnd.FRandRange(8, 18), Rnd.FRandRange(6, 14), Rnd.FRandRange(5, 11)) * (R / 180.f + .4f),
+                FRotator(Rnd.FRandRange(-30, 30), Rnd.FRandRange(0, 360), Rnd.FRandRange(-30, 30)));
+        }
+    }
+
     // The sanctum's ruptures (ChultTempleSanctumHoleAt): the pool before the gallery, the aisles' ruptures, the sea tear.
     // Boxes: the pool's, each rupture's, the sea tear's (the floor's holes, cut from the hall's floor).
     void SanctumHoles(FParts& P, TArray<FGlow>& Glows, const TArray<FBox2D>& Boxes, FRandomStream& R)
@@ -409,10 +447,12 @@ namespace TempleWindBuild
             OilRing(P, Rim, true, HZ, 100, FVector2D(HallMid, (PoolT + HT1) * .5f), false);
             TArray<FVector2D> Edge; for (float S = PoolS0 + 10; S <= PoolS1 - 10; S += 20) Edge.Add(EdgeAlong(FVector2D(S, PoolT - PoolJag - 8), FVector2D(0, 1), 60));
             Chips(P, R, Edge, FVector2D(HallMid, -3600), 70, HZ, false);
-            for (const FBox2D& Is : ChultTempleSanctumIslands())
+            for (int32 IsI = 0; IsI < ChultTempleSanctumIslands().Num(); ++IsI)
             {
+                const FBox2D& Is = ChultTempleSanctumIslands()[IsI];
+                IslandRoots(P, IsI);
                 TArray<FVector2D> Ring; const FVector2D C = Is.GetCenter();
-                for (int32 K = 0; K < 64; ++K) { const float A = K * UE_TWO_PI / 64; Ring.Add(EdgeAlong(C, FVector2D(FMath::Cos(A), FMath::Sin(A)), 260)); }
+                for (int32 K = 0; K < 64; ++K) { const float A = K * UE_TWO_PI / 64; Ring.Add(EdgeAlong(C, FVector2D(FMath::Cos(A), FMath::Sin(A)), 330)); }
                 OilRing(P, Ring, true, HZ, 50, C, true);
                 Chips(P, R, Ring, C, 8, HZ, true);
             }

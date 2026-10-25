@@ -30,7 +30,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
 - **The sanctum's broken floor (October 24, Claude):**
   - Both stairs now stand on solid masonry, with a string course and plinth.
-  - The floor between them, from under the gallery to 15 m out, is a cellar-style Astral rupture: a ragged hole with the Astral's well and an oil haze, the piers in it on islands. A sprint leap off the stair's head dies in it; the same leap from 5 m down the stair clears it.
+  - The floor between them, from under the gallery to 15 m out, is a cellar-style Astral rupture: a ragged hole with the Astral's well and an oil haze. The piers in it stand on broad floating islands of floor, each with a rubble clod hanging under it like the cellar's cheese island. A sprint leap off the stair's head dies in it; the same leap from 5 m down the stair clears it.
   - Four smaller cellar-style ruptures lie in the aisles.
   - To the wizard's left, a 1.1 m tear opens onto another world's open sea (the cellar's sky-hole kind, with its oil slick): a fall death.
   - Details in [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures). Verified (Verify-Package, 182 passes) and in the launcher.
@@ -58,6 +58,21 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 24 — floating islands round the sanctum's piers (Claude)
+
+- **Built:** user: "Add some section of floor around the pillars similar to the floor under the cheese crate in the cellar, it's ok if this makes it possible to stick a landing just right from the balcony".
+  - The pool's pier islands are now broad ragged round slabs: 1.2 m round each gallery pier, 2.3 m round each colonnade pier.
+  - Under each hangs the cellar island's kind of underside: stone slab, broken underside, then a moss-and-rubble clod with loose stones, tapering about 2 m down over the Astral.
+  - New stills `SanctumIsland` (the underside) and `SanctumIslandHigh`.
+  - See [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures).
+- **Tests:**
+  - Uncooked (`Local/sanctum-islands-1.log`, `-2.log`, views `-views-3.log`): interior check `failures=0`; `stairs`, `top_leap`, `mid_leap` and `sea_fall` pass, with landings unchanged.
+  - Packaged: Verify-Package passed on the first run (`Local/verify-package-20261024-200846.log`).
+- **Flaws:**
+  - A drop onto an island and the leap off a colonnade island (about 1.3 m to the far edge) are untried.
+  - The gallery piers' islands are dead ends.
+- **Launcher:** promoted as `SanctumIslands`.
+
 ## October 24 — the sanctum's stair masonry, Astral ruptures and sea tear (Claude)
 
 - **Built:** user: "fill in below the staircases on the temple sanctum with stone ... add some astral sea ruptures ... a rectangle of astral rupture at the base of the staircases ... like the pantry cellar ruptures ... to the wizard's left add a other-world-rupture ... waves of the open sea ... this is the astral tear that the wizard is attempting to seal". See [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures).
@@ -77,7 +92,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Flaws:**
   - Seen low from the floor, the sea tear reads pale, more like sky than water (seen from above it shows rows of waves and whitecaps).
   - The rupture rims' 10 cm steps read blocky up close, as the cellar's do.
-  - Landing on a pier island is a dead end: the only way off is into the Astral.
+  - The gallery piers' islands are dead ends: the only way off is into the Astral (the colonnade islands, enlarged later, are not; see the entry above).
   - A wall run along the stair's wall was not tried as a way past the pool.
   - Not played by a person.
 - **Launcher:** promoted as `SanctumRifts`.
