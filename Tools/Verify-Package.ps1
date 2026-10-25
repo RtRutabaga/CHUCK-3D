@@ -172,9 +172,17 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # asset, each of the fighter's blows lands on a skeleton (and the level cut takes its skull), a blow on his
 # shield and one on his back, the ranger's arrows and the wizard's bolt, then the battle runs. Since
 # 2026-10-23 the beholder hangs over the dais (docs/CHULT-TEMPLE-BEHOLDER.md): it must spawn whole and live.
+# 2026-10-25 it fights: its five rays (a skeleton disintegrated), a ray through Chuck, the bite, the cone (Chuck hit in its
+# path, missed off its line, sheltered behind a pier) and a minute of its own fight with every kind of move.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5 near_holes=0' -Quiet) -or
+if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=61 arrow=1 skull=1 fx=5 near_holes=0 beholder_fx=4' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_FX ready=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_rays pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_chuck pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_bite pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_cone pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_fight pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or

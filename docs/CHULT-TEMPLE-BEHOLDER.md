@@ -3,6 +3,7 @@
 User requests (Claude):
 - October 23, 2026: "start creating the beholder, it should look really cool and detailed".
 - October 24, 2026: "Make the beholder look more like this, here also is a clay render as a reference, use free resources where helpful". The user supplied a colour concept and a clay render.
+- October 25, 2026: "create the attacks and movements the beholder will use ... dont make the cut scenes yet but make the beholder attack animations that will work for this. they should look good, be varies and consistent with dnd 5e beholder attacks, and one of them should be an area of effect attack that can hurt Chuck if he's in the way". The cutscenes (a brief one on entering, the wizard's Fireball at the end) are planned, with a playable fight between them. See [The fight](#the-fight).
 
 The 2D game's Phase 6 final chamber has three adventurers fighting a beholder and skeletons; Chuck only witnesses it ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)). The 2D sprite (`assets/sprites/npcs/beholder.png`) gave the first pass its direction: a mauve orb with one red-irised eye, a toothed grin and eyes on stalks.
 
@@ -13,7 +14,7 @@ Since October 24 the user's references lead instead. The second pass has:
 - thick, wrinkled eyestalks hooking forward like question marks, each cupping a big slit-pupilled eye;
 - wet maroon skin, tan-pink on its ridges and dark in its folds.
 
-It hangs alive where the heroes look. It does not fight yet.
+It hangs alive where the heroes look, and since October 25 it fights them ([The fight](#the-fight)).
 
 ## The model (`Tools/build_beholder.py` with `Tools/sdf_kit.py`, Blender 4.5.14)
 
@@ -140,7 +141,107 @@ The import creates `/Game/Characters/Beholder`: the textures, `SK_Beholder` with
 - **Tongue:** it sways and curls.
 - **Eye light:** the iris glows faintly, and a dim pale-green light before the eye brightens in a snarl.
 
-Lighting channel 1, shadows, no collision. Nothing it does touches Chuck or the heroes yet.
+Lighting channel 1, shadows, no collision.
+
+## The fight
+
+Code: `TempleBeholderFight.cpp` (moves, rays, the bite, the cone, camera shakes) and `TempleBeholderFx.cpp` (effects), both on `ATempleBeholder`. The reactions are in `ATempleHero` and `ATempleSkeleton::Disintegrate`. The battle (`ATempleSanctumBattle`) loads the effects and sounds with its other assets, and lets the beholder fight while Chuck is in the hall (`SetFighting`).
+
+The 2D game's sanctum battle (`src/entities/battle_hazards.py`) has eye rays cycling the heroes' lanes and a charged, screen-shaking cone of force across the hall. Both are hazards to Chuck, but neither is ever aimed at him. This keeps that and follows the 5e beholder (Monster Manual): up to three eye rays a round at different targets, more as legendary actions; one bite; the central eye's antimagic cone.
+
+### Eye rays
+Each ray comes from a stalk:
+- The stalk curls toward its mark and its writhing stills.
+- Its eye turns on the mark and gathers the ray's light: motes are drawn in, with a rising whine.
+- The beam lances out (a white-hot core in a coloured sheath, two filaments, a crack of its own kind) and holds a moment, following what it struck.
+- The stalk is thrown back by it and the head jolted.
+- The hall is lit in the ray's colour along its length. Where it strikes there are sparks, a burst of tinted fire, and embers.
+
+| Ray (5e) | Colour, look | On a hero | On a skeleton |
+|---|---|---|---|
+| Disintegration | green, needle-straight, crackling | always evaded (the 2D heroes survive to the Fireball): he lunges out of its way | gone to dust: green ash from every bone, a cloud of bone dust and fragments |
+| Enervation | violet, twin threads twisting | withered: a heavy hit, violet seeping up from him | struck down |
+| Telekinetic | pale blue, rippling | seized and hurled back about 2 m | struck down |
+| Paralysing | gold, rigid, flickering | held rigid two seconds, gold crackling over him | struck down |
+| Fear | crimson, shuddering | driven back, turned half away | struck down |
+
+The fighter, in guard and turned to it, takes 60% of rays on his shield. Whether a ray strikes is drawn per ray (the saving throw). A ray that misses passes its mark and strikes the stone behind, or whatever stands there.
+
+**Chuck:** rays are never aimed at him. But a beam that passes through him costs a point of Sanity: anywhere along it, the whole time it holds, as the stalk sweeps. A dodge roll through it saves him.
+
+Volleys are 5e's round: two or three rays, each a different kind at a different hero, a third of a second apart. Single rays (legendary actions) come between them.
+
+### The bite
+1. **Wind-up** (0–0.55 s): it draws back and up, maw gaping, head tipped back, and roars. If the fighter has strayed it glides in toward him as it does, so the lunge stays under about 5.5 m.
+2. **Lunge** (to 0.9 s): gathering speed, level, maw first, onto his shield.
+3. **Snap:** the jaws shut on the shield with a crunch and worry at it for half a second.
+4. **Return** (to 2.45 s): it goes back up to its place.
+
+The fighter, turned to it, takes it on his shield and is driven back half a step. He answers with a rising cut at its face (`CutRise`), which lands if it is still in his reach. Caught turned away, he is hit and thrown back.
+
+### The central eye's cone (the area attack)
+The 2D game's "cone of force", as 5e's antimagic cone:
+1. **Loom** (0–0.9 s): it rises and draws back. Its stalks curl away behind it (its own rays fail in its cone), and its face tips down along the line.
+2. **Charge** (0.9–2.4 s):
+   - The great eye opens wide and blazes.
+   - Its gaze becomes a searchlight exactly the cone's shape (a spot light of its angle and reach). It swells, so the wedge of floor it will sweep stands out pale.
+   - Motes stream back along the floor into the eye.
+   - A swelling drone, air drawn in, a rising whine; the view trembles.
+3. **Blast** (2.4 s): a heavy boom and a white flash.
+   - A rim of force races out to 26 m in 0.6 s, a wall of dust and streaks thrown along the floor ahead of it.
+   - The view shakes hard (by distance). It recoils.
+4. **Recover** (to 4.4 s): the stalks uncurl.
+
+Its cone runs from the great eye along its axis, 26° to each side and 26 m long. From over the dais it reaches about 4 m short of the broken floor before the gallery stair. What the front passes:
+- **Chuck:** two Sanity, and he is flung back about 3 m. A dodge roll does not save him; being out of the wedge, or behind a pier or any stone (on a line from the eye to him), does. To a fey summon held here by magic, the antimagic is a blow.
+- **Heroes:** thrown back (the fighter braced behind his shield). A paralysis is undone. The wizard's binding is snuffed for four seconds: the gem goes dark, the hum stops, no bolts.
+- **Skeletons:** flattened.
+- **Bolts in flight:** gone in a gutter of sparks. Arrows drop.
+
+### Movement
+- **Between attacks** it shifts across the front of the dais (±4.3 m, up to a metre up or down) every 3–5.5 s on a damped spring.
+- **Banking:** a sideways drift rolls it; a surge pitches it.
+- **Facing:** it turns quickly to face its marks while fighting.
+- **Reeling:** a blow makes it reel on a spring (pitch, roll and turn); the eye blinks, the stalks flinch, and it bellows in pain. Blows come from the ranger's arrows (which stand in its hide, up to eight), the wizard's bolts and the fighter's counter.
+
+The heroes strike back:
+- With nothing coming at her or the wizard, the ranger looses at its face every few seconds.
+- The wizard turns a bolt on it every 8–13 s.
+
+### Its pattern
+The fight starts the same way each time, for the entrance cutscene: a three-ray volley, a ray, the bite, a ray, a two-ray volley, the cone. After that:
+- **The cone:** once 15 s have passed (a 30% chance each turn), and always by 24 s.
+- **The bite:** when the fighter is near the dais and 12 s have passed (half the time).
+- **Otherwise:** volleys (78%) or single rays, 1.3–3.4 s apart.
+
+### For the cutscenes
+Every move can be ordered:
+- `OrderRays` (kind, target or point, strike or miss, delay, stalk), `OrderBite`, `OrderCone`, `OrderHover`.
+- `SetFighting(false)` stops its own fight.
+- `GetMove`/`GetMoveTime` and the timing constants (`ConeChargeAt`, `ConeBlastAt`, `BiteSnapAt` …) let a cut land on a beat.
+- Camera shakes (`BeholderShake`) work with any view.
+
+### Effects and sounds
+- **Materials** (`Tools/create_beholder_fx.py`, `/Game/Art/ChultTemple/BeholderFX`). Rebuild with `CHUCK_BEHOLDER_FX_CLEAN=1` and no game running.
+  - `M_BeholderBeam`: camera-facing ribbons built each frame (core, sheath and filaments, energy flowing out in knots).
+  - `M_BeholderWave`: the blast's rim, brightest edge-on.
+  - `M_BeholderSpark`: instanced soft points (motes, sparks, embers, ash).
+  - `M_BeholderFlare`: Unity Labs' CC0 fireball flipbook (`T_JetFireBall`), tinted to the ray.
+- **Lights:**
+  - Five pooled point lights, for beams and flashes, on both lighting channels (some floor slabs are on the default one).
+  - The cone's spot light, shadowed.
+- **Sounds:** 22 original synthetic sounds. `Tools/gen_beholder_sfx.py` makes them (stdlib, seeded; about 13 minutes); `Tools/import_beholder_sfx.py` imports them with `-AllowCommandletAudio`.
+  - Rays: charge ×2, the five rays, impacts ×3, disintegration.
+  - The cone: its charge and its blast.
+  - Its voice: roar ×2, snap ×2, growl ×3 (its snarls while fighting), hurt ×2.
+
+### Tests
+Run with `-ChuckSanctumTest` or `-ChuckSanctumCapture`; `-ChuckSanctumOnly=a+b` runs several.
+- `beholder_rays`: one of each ray, scripted. A skeleton set before the fighter is disintegrated; the enervation, telekinetic and paralysing rays strike the heroes; the fear ray is evaded.
+- `beholder_chuck`: a ray through Chuck on the floor costs one Sanity.
+- `beholder_bite`: the lunge reaches the shield (closest gap under 60 cm), is blocked, and returns to its place.
+- `beholder_cone`: Chuck in its path beyond the fighter (two Sanity), well off its line (none), and behind a colonnade pier (sheltered, none).
+- `beholder_fight`: 52 s of its own fight with skeletons coming, with at least 10 rays, 2 volleys, a bite, a cone, and a hero's blow on it.
 
 ## Test
 The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when the beholder has:
@@ -154,14 +255,23 @@ The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when
 `Verify-Package` requires:
 - `CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1`;
 - `beholder=1` in the battle line;
-- the trial's pass.
+- the trial's pass;
+- since October 25: `sounds=61 ... beholder_fx=4`, `CHUCK_BEHOLDER_FX ready=1`, and passes of `beholder_rays`, `beholder_chuck`, `beholder_bite`, `beholder_cone` and `beholder_fight`.
 
 ## Evidence
 - **October 23:** the first pass. Packaged and promoted after `Verify-Package` (`Local/verify-package-20261024-113915.log`).
+- **October 25:** the fight. Packaged and promoted as `BeholderFight` after Verify-Package (`Local/verify-package-20261025-114925.log`).
 - **October 24:** the second pass, reviewed against the references in quick and full Blender renders (`Local/BeholderReview/r1`–`r3`, `f1`–`f3`) and in uncooked trials (`Local/beholder-trial-5.log` onward). Packaged: see HANDOFF.
 
 ## Not done, and known flaws
-- **The battle:** eye rays and the cone of force (the 2D hazards), the heroes fighting it, being hit, its death, the Fireball, and sounds. It is silent.
+- **Still to do in the battle:** the entrance and Fireball cutscenes, the heroes' lines and its death. The heroes have no health: they reel and recover.
+- **The fight is unplayed:**
+  - It has been reviewed only in stills and logs, not played by a person.
+  - Chuck's route through it is untried: its difficulty, and how readable the cone's searchlight is at play speed.
+  - The synthetic sounds have not been heard by a person.
+- **Flaws in the fight:**
+  - The blast's rim can show a hard edge, seen from outside the cone.
+  - The petrification, sleep, charm, slowing and death rays and the lair actions are not used.
 - **Stalks** can pass through each other.
 - **The maw's interior** is a plain red cavity with a dark throat.
 - **Close-up flaws:**

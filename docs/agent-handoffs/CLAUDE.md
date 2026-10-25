@@ -2,6 +2,33 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 25 — the beholder's attacks and movements (Claude)
+
+- **Request:** the beholder's attacks and movements for the coming battle (cutscenes later); 5e-consistent, varied, cinematic, with an area attack that can hurt Chuck. Base `2e06a88`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-BEHOLDER.md#the-fight.
+- **Tested:**
+  - Uncooked trials ×8 and full sanctum suites ×2; stills reviewed.
+  - Packaged: Verify-Package passed (`Local/verify-package-20261025-114925.log`).
+- **Contract compatibility:**
+  - The rigs and meshes are unchanged.
+  - `ATempleBeholder` gains `SetFx`, `SetFighting`, `Order*`, `TakeHit`, `InCone` and `GetCentre`.
+  - `ATempleHero` gains `TakeBeholderRay/Bite/Cone`, `EvadeBeholderRay` and `CounterBeholder`. `ATempleSkeleton` gains `Disintegrate`.
+  - `ATempleSanctumBattle::ESound` gains 14 beholder kinds. `Splinters`, `Dust` and `FirePuffs` are now public.
+  - `CHUCK_SANCTUM_BATTLE` reports `sounds=61` and gains `beholder_fx=4`.
+  - `-ChuckSanctumOnly` takes `a+b`.
+  - Verify-Package expects all of these and the five new trials.
+- **Binary assets (LFS):**
+  - 4 materials in `Content/Art/ChultTemple/BeholderFX`;
+  - 22 `SFX_Beholder*` sound assets and their WAVs (about 7 MB together).
+  - The LFS remote quota was not checked.
+- **Tools:**
+  - UE 5.7.4: Build.bat ×9, pythonscript ×7 (materials ×6, sound import ×1), uncooked runs ×9, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - Python 3.14.6 (stdlib) sound synthesis ×1; Pillow for contact sheets.
+  - No downloads, no installations.
+- **Launcher:** promoted as `BeholderFight`. The old unpromoted candidates from October 14–15 (`ChultDressing`, `ChultMist`, `ChultOvergrowth`, `ChultOvergrowthFinal`, `GoldenLeaf`) were left alone: they are not this session's.
+
+Next part of the work can be done here (the entrance and Fireball cutscenes).
+
 ## October 24 — Chult's Astral made to match the sewer's (Claude)
 
 - **Request:** the Astral in Chult/the temple looks worse than the sewer's (missing stars). Base `b7107c9`.

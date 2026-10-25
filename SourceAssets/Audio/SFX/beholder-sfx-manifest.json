@@ -1,0 +1,159 @@
+{
+  "provenance": "Original deterministic synthetic beholder sounds; Tools/gen_beholder_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_BeholderRayCharge_00",
+      "file": "SFX_BeholderRayCharge_00.wav",
+      "duration": 1.2,
+      "sha256": "f3928f5ba6621239b3860e11500f45bf3dd11782dc88f86fd33f5a13290647b0",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayCharge_01",
+      "file": "SFX_BeholderRayCharge_01.wav",
+      "duration": 1.2,
+      "sha256": "fc6835b7a7cccb7abd8f1d3758b8bb4663100c4f0c27efed8dcc2145b883b6ad",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayDisintegrate_00",
+      "file": "SFX_BeholderRayDisintegrate_00.wav",
+      "duration": 1.75,
+      "sha256": "98ae7f3b1d7dbc86a92fdb59749b250d9810ed970825a69796b813572fdeec36",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayEnervate_00",
+      "file": "SFX_BeholderRayEnervate_00.wav",
+      "duration": 1.85,
+      "sha256": "e5e6ce786d9808c0b95a815f9f5685c568c19b24d80285d6a548b3c83703fc51",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayTelekinetic_00",
+      "file": "SFX_BeholderRayTelekinetic_00.wav",
+      "duration": 1.85,
+      "sha256": "c8a71f813789ef5c6a6e10d06ecb305fc9534edc5f60f136b6355b0109188c68",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayParalyze_00",
+      "file": "SFX_BeholderRayParalyze_00.wav",
+      "duration": 1.75,
+      "sha256": "d620f1cfbba693c8ea486d21c71a80d3e3714e0d53792a62e5228a85edaeddc6",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayFear_00",
+      "file": "SFX_BeholderRayFear_00.wav",
+      "duration": 1.85,
+      "sha256": "49885d8095e73a9c7839dff2eb9cac08d3b767d2f3239fb84897aed5cfb42cdc",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayImpact_00",
+      "file": "SFX_BeholderRayImpact_00.wav",
+      "duration": 1.8,
+      "sha256": "dd8a60b294444f451e9c8dc146895322f3078842bed7b69bff9784f9ad4d6d63",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayImpact_01",
+      "file": "SFX_BeholderRayImpact_01.wav",
+      "duration": 1.8,
+      "sha256": "a713818d5ddd5718e7089c33bdfee514802e054d33d5d136dc40abeb8af86895",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRayImpact_02",
+      "file": "SFX_BeholderRayImpact_02.wav",
+      "duration": 1.8,
+      "sha256": "2a05b2be2368d75a1caf246936e7e72381ec98c07544335ccb456bca67590798",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderDisintegrate_00",
+      "file": "SFX_BeholderDisintegrate_00.wav",
+      "duration": 2.5,
+      "sha256": "9349fd0ce0c2e3ff35e5ad3762a7eeceea8bee59117dc31043f9d14d421d2d22",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderConeCharge_00",
+      "file": "SFX_BeholderConeCharge_00.wav",
+      "duration": 2.9,
+      "sha256": "f63d288a3eb33aaac15856443d28e2cfda7dc22309c32a8ad4752b42cc622c33",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderConeBlast_00",
+      "file": "SFX_BeholderConeBlast_00.wav",
+      "duration": 4.8,
+      "sha256": "f29040b9393cba31414587f47ed082e31f4065654696d2d5d41796142f7185e1",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRoar_00",
+      "file": "SFX_BeholderRoar_00.wav",
+      "duration": 2.95,
+      "sha256": "59a11ca999291d14c3f5160a0b84bd7dc65affe825ea045511bf76e0f968204a",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderRoar_01",
+      "file": "SFX_BeholderRoar_01.wav",
+      "duration": 2.95,
+      "sha256": "3d0b5279c3191f10367def15ea36edc21f5fac8b3032023ac0dc7f3e46675fce",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderSnap_00",
+      "file": "SFX_BeholderSnap_00.wav",
+      "duration": 1.45,
+      "sha256": "f1144730631511c849cfc58914e135f967ef45a9603ad619dc310251f20facc4",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderSnap_01",
+      "file": "SFX_BeholderSnap_01.wav",
+      "duration": 1.45,
+      "sha256": "9ad5c09c794fe3a3d1b00ee7477cc1456f94e41fc176519ae41ac96b741f8176",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderGrowl_00",
+      "file": "SFX_BeholderGrowl_00.wav",
+      "duration": 2.9,
+      "sha256": "a7fbfa0d0bcd224adfb4ccd9d346d4daf686238f5ab682af833b795c2d090d00",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderGrowl_01",
+      "file": "SFX_BeholderGrowl_01.wav",
+      "duration": 2.9,
+      "sha256": "4f1f524a602a5e5590cca27ccc6ed4b21d116719ce5562b3e244f37a9e148864",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderGrowl_02",
+      "file": "SFX_BeholderGrowl_02.wav",
+      "duration": 2.9,
+      "sha256": "99c34f7a088a3d78af26ed6fe4d380361e5e3ab44d381602602e36160664ae6c",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderHurt_00",
+      "file": "SFX_BeholderHurt_00.wav",
+      "duration": 2.15,
+      "sha256": "8132033775fe60039d0bb6ecb8da12449aac2f19c900cd225a6e3895499f6c0f",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_BeholderHurt_01",
+      "file": "SFX_BeholderHurt_01.wav",
+      "duration": 2.15,
+      "sha256": "08831f69b8289da3950405e5d4ed56c7e5e605b4ba5a598644b1a0cc9a3a3674",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

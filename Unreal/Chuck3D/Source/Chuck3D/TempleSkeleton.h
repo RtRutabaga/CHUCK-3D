@@ -96,6 +96,10 @@ public:
     int32 GetArrowsIn() const { return ArrowsIn; }
     /** Back to a reserve post, lying among the bones, whole (its skull back, the arrows out). */
     void ResetToReserve(const FTempleSkeletonPost& InPost);
+    /** The beholder's disintegration ray (docs/CHULT-TEMPLE-BEHOLDER.md): struck down and gone to dust (hidden until it is
+     *  back in reserve). */
+    void Disintegrate(const FVector& From);
+    bool IsDust() const { return bDust; }
     /** The striking hand's world position (the Strike). */
     FVector FistTip() const { return StrikingTip(EAttack::Strike); }
     /** Its skull's world transform (for the struck-off skull to fly from). */
@@ -162,7 +166,7 @@ private:
     TWeakObjectPtr<ATempleSanctumBattle> Battle;
     TWeakObjectPtr<ATempleHero> Foe;
     UPROPERTY() TArray<UStaticMeshComponent*> StuckArrows;
-    bool bHeadless = false;
+    bool bHeadless = false, bDust = false;
     int32 ArrowsIn = 0;
     float HitStopUntil = 0.f, StaggerTime = 0.f, SlotAngle = 0.f;
     FVector StaggerVel = FVector::ZeroVector;

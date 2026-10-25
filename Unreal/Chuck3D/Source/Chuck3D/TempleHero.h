@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "SkeletonAnim.h"
+#include "TempleBeholder.h"
 #include "TempleHero.generated.h"
 
 class UAnimSequence;
@@ -61,6 +62,20 @@ public:
     float GapTo(const FVector& Point) const;
     /** A skeleton's blow reaches him at At: blocked on the shield (true) or taken (false). */
     bool TakeSkeletonBlow(ATempleSkeleton* From, const FVector& At, bool bHeavy);
+    // The beholder's attacks on him (docs/CHULT-TEMPLE-BEHOLDER.md#the-fight).
+    /** An eye ray reaches him at InOutAt from From: true if it struck him; false if the fighter took it on his shield (InOutAt: the shield). */
+    bool TakeBeholderRay(EBeholderRay Kind, const FVector& From, FVector& InOutAt);
+    /** A ray loosed at him that he evades: he twists or lunges out of its way. */
+    void EvadeBeholderRay(const FVector& From, const FVector& Past);
+    /** The bite: true if it was caught on the shield. */
+    bool TakeBeholderBite(const FVector& From, const FVector& At);
+    /** The central eye's cone: thrown back; the wizard's binding is snuffed a while. */
+    void TakeBeholderCone(const FVector& Apex, const FVector& Axis);
+    /** The fighter answers a bite caught on his shield: a rising cut at its face. */
+    void CounterBeholder(ATempleBeholder* Beholder);
+    bool IsSuppressed() const;
+    bool IsParalysed() const;
+    int32 GetBeholderCuts() const { return BeholderCuts; }
     /** Tests: the next attack is this clip (the fighter), and hold still otherwise. */
     void ForceClip(FName Clip) { Forced = Clip; }
     void SetHeld(bool bInHeld) { bHeld = bInHeld; }
@@ -121,5 +136,14 @@ private:
     void FighterContact(float DeltaSeconds);
     void UpdateTrail(bool bLive);
     void BackToRest();
+    void Shove(const FVector& Velocity, float Seconds);
+    void TickShove(float DeltaSeconds);
+    void BeholderContact();
+    FVector ShoveVel = FVector::ZeroVector;
+    float ShoveStart = 0, ShoveUntil = 0, SuppressUntil = 0, ParalysedUntil = 0, NextBeholderShot = 0;
+    TWeakObjectPtr<ATempleBeholder> CounterOn;
+    bool bCounterHit = false;
+    float CounterAt = 0;
+    int32 BeholderCuts = 0;
     ATempleSkeleton* NearestFoe(float Within, float Cone) const;
 };

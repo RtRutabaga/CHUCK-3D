@@ -28,6 +28,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **The beholder fights (October 25, Claude):** its attacks and movements for the planned battle (an entrance cutscene, the playable fight, the wizard's Fireball cutscene; the cutscenes are not made yet). They follow the 5e beholder and the 2D game:
+  - Eye rays from curling stalks, singly or in volleys of 2–3: disintegration (a skeleton goes to dust), enervation, telekinetic (a hero thrown), paralysing (held), fear (driven back).
+  - The bite: a roaring lunge onto the fighter's shield; he answers with a rising cut.
+  - The central eye's cone, the area attack: it looms, its gaze lights the cone's wedge as a searchlight, then a blast shakes the hall. It throws the heroes, snuffs the wizard's magic and flattens skeletons. Chuck in it loses two Sanity and is flung, unless he is out of the wedge or behind a pier. A beam passing through him costs one.
+  - It drifts and banks between attacks and reels when the ranger's arrows (they stick), the wizard's bolts and the fighter's counter hit it.
+  - Every move can be ordered by a script for the cutscenes.
+
+  Details in [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md#the-fight). Verified and in the launcher.
 - **Chult's Astral matches the sewer's (October 24, Claude):** the Astral in Chult's ruptures (temple, tunnels, jungle wreck) lacked the sewer's stars and looked pale.
   - Two causes, both fixed in `M_AstralDepth` (`Tools/create_sewer_cave_materials.py -ChuckAstralOnly`):
     - Chult lies 25 km from the world origin, where the shader's floats lost the stars. Its position is now taken relative to Chult's landing spot first.
@@ -63,6 +71,25 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 25 — the beholder's attacks and movements (Claude)
+
+- **Request:** "create the attacks and movements the beholder will use ... dont make the cut scenes yet ... varied and consistent with dnd 5e beholder attacks, and one of them should be an area of effect attack that can hurt Chuck ... cinematic".
+- **Built:** see Current state and [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md#the-fight):
+  - new `TempleBeholderFight.cpp` and `TempleBeholderFx.cpp`;
+  - reactions in `TempleHero` and `TempleSkeleton`;
+  - 4 FX materials (`Tools/create_beholder_fx.py`) and 22 synthetic sounds (`Tools/gen_beholder_sfx.py`, `Tools/import_beholder_sfx.py`).
+- **Tests:**
+  - Uncooked: `Local/beholder-fight-r1..r6.log`, then full sanctum suites `Local/beholder-fight-full-1.log` (the free fight failed: no bite, fixed) and `-full-2.log` (all 17 trials pass).
+  - Stills reviewed after each change (contact sheets `Local/sheet-*.png`).
+  - Packaged: Verify-Package passed on the first run, 182 passes (`Local/verify-package-20261025-114925.log`). Its sanctum log, with the five new beholder trials, is `Local/verify-temple-heroes-20261025-122001.log`.
+- **Flaws:**
+  - Not yet played by a person: the difficulty of crossing the hall, and how the cone's searchlight reads at play speed, are untried.
+  - The sounds have not been heard by a person.
+  - The blast's rim can show a hard edge from outside the cone.
+  - The fighter's counter sometimes misses.
+  - The heroes have no health.
+- **Launcher:** promoted as `BeholderFight`. The receipt names 2e06a88, the base: the build was made from this work before its commit.
 
 ## October 24 — Chult's Astral made to match the sewer's (Claude)
 

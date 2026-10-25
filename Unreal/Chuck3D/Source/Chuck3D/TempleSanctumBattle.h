@@ -40,8 +40,10 @@ public:
     ATempleHero* GetHero(int32 Index) const { return Heroes.IsValidIndex(Index) ? Heroes[Index].Get() : nullptr; }
     /** Where the beholder will hang (the heroes face it): over the front of the dais. */
     FVector BeholderSpot() const { return Beholder; }
-    /** The beholder hanging there (docs/CHULT-TEMPLE-BEHOLDER.md): alive, not yet fighting. */
+    /** The beholder hanging there (docs/CHULT-TEMPLE-BEHOLDER.md): it fights while the battle is on. */
     ATempleBeholder* GetBeholder() const { return TheBeholder.Get(); }
+    /** Tests: let the beholder fight by itself while the battle is on (default), or hold it to scripted orders. */
+    void SetBeholderFights(bool b) { bBeholderFights = b; }
     float FloorZ() const { return Floor; }
     bool IsActive() const { return bActive; }
     /** Its assets are in and the cast is on the floor. */
@@ -49,7 +51,10 @@ public:
     UMaterialInterface* GetTrailMaterial() const { return TrailMat; }
     UStaticMesh* GetArrowMesh() const { return ArrowMesh; }
 
-    enum class ESound : uint8 { Whoosh, BladeBone, ShieldBlock, ArmourHit, ArmourStep, ShieldBash, BowDraw, BowRelease, ArrowFlight, ArrowHit, BoltCast, BoltImpact, SkullBounce, BodyHit, Count };
+    enum class ESound : uint8 { Whoosh, BladeBone, ShieldBlock, ArmourHit, ArmourStep, ShieldBash, BowDraw, BowRelease, ArrowFlight, ArrowHit, BoltCast, BoltImpact, SkullBounce, BodyHit,
+        // The beholder's (Tools/gen_beholder_sfx.py). Its five rays in EBeholderRay's order.
+        BeholderRayCharge, BeholderRayDisintegrate, BeholderRayEnervate, BeholderRayTelekinetic, BeholderRayParalyze, BeholderRayFear,
+        BeholderRayImpact, BeholderDisintegrate, BeholderConeCharge, BeholderConeBlast, BeholderRoar, BeholderSnap, BeholderGrowl, BeholderHurt, Count };
     void Sound(ESound Kind, const FVector& At, float Volume = 1.f, float Pitch = 1.f);
     USoundBase* HumSound() const { return Hum; }
     USoundAttenuation* GetAttenuation() const { return Attenuation; }
@@ -59,6 +64,13 @@ public:
     void OnBlocked(const FVector& At, const FVector& Normal);
     void FireArrow(const FVector& From, ATempleSkeleton* At, const FVector& Fallback);
     void FireBolt(const FVector& From, ATempleSkeleton* At);
+    // What flies, for the beholder too: bone splinters, dust, the bolts' fire.
+    void Splinters(const FVector& At, const FVector& Dir, int32 Count, float Speed);
+    void Dust(const FVector& At, const FVector& Dir, int32 Count, float Size);
+    void FirePuffs(const FVector& At, const FVector& Vel, int32 Count, float Size);
+    int32 GetBeholderArrows() const { return BeholderArrows; }
+    int32 GetBeholderBolts() const { return BeholderBolts; }
+    int32 GetFizzled() const { return Fizzled; }
 
     // Tests and captures.
     void SetForcedActive(bool b) { bForced = b; }
@@ -94,6 +106,7 @@ private:
     UPROPERTY() UMaterialInterface* BoltFireMat = nullptr;
     UPROPERTY() UMaterialInterface* GlowMat = nullptr;
     UPROPERTY() UMaterialInterface* TrailMat = nullptr;
+    UPROPERTY() TArray<UMaterialInterface*> BeholderFx;   // beam, wave, spark, flare (Tools/create_beholder_fx.py)
     UPROPERTY() USoundBase* Hum = nullptr;
     UPROPERTY() TArray<USoundBase*> SoundList;
     TArray<TArray<USoundBase*>> Sounds;
@@ -113,8 +126,8 @@ private:
     TArray<FTempleSkeletonPost> Reserve;
     FVector Beholder = FVector::ZeroVector;
     float Floor = 0, NextWake = 0, FlashTime = 0;
-    bool bActive = false, bForced = false, bWaves = true, bTickModeSet = false;
-    int32 Fallen = 0, Decapitations = 0, SoundsPlayed = 0, WakeCount = 0;
+    bool bActive = false, bForced = false, bWaves = true, bTickModeSet = false, bBeholderFights = true;
+    int32 Fallen = 0, Decapitations = 0, SoundsPlayed = 0, WakeCount = 0, BeholderArrows = 0, BeholderBolts = 0, Fizzled = 0;
     FRandomStream Random;
 
     struct FChip { FVector Pos, Vel; FQuat Rot; FVector Spin; float Size, Age, Life; bool bRest; };
@@ -135,9 +148,6 @@ private:
     TSharedPtr<struct FStreamableHandle> Loading;
     bool bLoading = false, bReady = false;
     double LoadStart = 0;
-    void Splinters(const FVector& At, const FVector& Dir, int32 Count, float Speed);
-    void Dust(const FVector& At, const FVector& Dir, int32 Count, float Size);
-    void FirePuffs(const FVector& At, const FVector& Vel, int32 Count, float Size);
     void TickFlying(float DeltaSeconds, const FVector& Eye);
     void Draw(const FVector& Eye);
     void Recycle();

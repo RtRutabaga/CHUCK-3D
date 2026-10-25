@@ -241,12 +241,14 @@ void ATempleHero::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
-    Animator.SetTimeScale(W < HitStopUntil ? .03f : 1.f);
+    Animator.SetTimeScale(W < HitStopUntil || W < ParalysedUntil ? .03f : 1.f);
     BonesClipT = Animator.Time();   // what the bones show now (evaluated after the last tick)
     BonesClip = Animator.Playing();
     Animator.Tick(DeltaSeconds, 0.f);
     if (W >= HitStopUntil) ActTime += DeltaSeconds;
     if (!Battle.IsValid()) return;
+    TickShove(DeltaSeconds);
+    if (W < ParalysedUntil) { UpdateTrail(false); return; }   // held rigid by the beholder's ray
     if (bHeld) { UpdateTrail(false); return; }
     switch (Role)
     {
@@ -280,13 +282,24 @@ void ATempleHero::TickFighter(float DeltaSeconds)
         if (!bWhoosh && T >= C->Contact - .18f && C->Blow != EBlow::Bash) { bWhoosh = true; Battle->Sound(ATempleSanctumBattle::ESound::Whoosh, BladeTip(), .9f, Random.FRandRange(.94f, 1.06f)); }
         if (!bStepSound[0] && T >= C->Contact - .04f) { bStepSound[0] = true; Battle->Sound(ATempleSanctumBattle::ESound::ArmourStep, Here - FVector(0, 0, HalfHeight - 5), .55f); }
         FighterContact(DeltaSeconds);
+        BeholderContact();
         UpdateTrail(C->Blow != EBlow::Bash && T > C->Contact - .2f && T < C->Contact + .12f);
-        if (T >= C->Length - .12f) { BackToRest(); NextAt = W + Random.FRandRange(.25f, .7f); }
+        if (T >= C->Length - .12f) { BackToRest(); CounterOn = nullptr; NextAt = W + Random.FRandRange(.25f, .7f); }
         break;
     }
     case EAct::React:
         UpdateTrail(false);
-        if (Animator.Finished() || Animator.Time() >= Animator.Length() - .1f) BackToRest();
+        if (Animator.Finished() || Animator.Time() >= Animator.Length() - .1f || (CounterOn.IsValid() && Animator.Time() > .22f))
+        {
+            BackToRest();
+            // A bite taken on the shield is answered at once: a rising cut at its face.
+            if (CounterOn.IsValid() && W - CounterAt > .9f) CounterOn = nullptr;   // too late: it is gone
+            if (CounterOn.IsValid())
+            {
+                Act = EAct::Attack; Play(TEXT("CutRise"), false, .08f); LastCut = TEXT("CutRise"); ++Swings; Target = nullptr; bCounterHit = false;
+                PrevBase = BladeBase(); PrevTip = BladeTip();
+            }
+        }
         break;
     case EAct::Step:
     {
@@ -470,8 +483,11 @@ void ATempleHero::TickWizard(float DeltaSeconds)
 {
     const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
     const FVector Here = GetActorLocation();
-    if (GemLight) GemLight->SetIntensity(700.f + 250.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 4000.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f));
-    const FVector LookAt = Act == EAct::Attack && Target.IsValid() ? Target->GetMesh()->GetBoneLocation(TEXT("head")) : Battle->BeholderSpot();
+    const float Snuffed = IsSuppressed() ? .04f + .12f * FMath::Abs(FMath::Sin(W * 23.f)) : 1.f;
+    if (Hum) Hum->SetVolumeMultiplier(.32f * (IsSuppressed() ? .05f : 1.f));
+    if (GemLight) GemLight->SetIntensity(Snuffed * (700.f + 250.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 4000.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f)));
+    const ATempleBeholder* Bh = Battle->GetBeholder();
+    const FVector LookAt = Act == EAct::Attack && Target.IsValid() ? Target->GetMesh()->GetBoneLocation(TEXT("head")) : Bh ? Bh->GetCentre() : Battle->BeholderSpot();
     {
         const FVector Local = GetActorTransform().InverseTransformVectorNoScale(LookAt - HeadLocation());
         Animator.SetLook(FMath::Clamp(-FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -45.f, 45.f) * .6f,
@@ -481,6 +497,7 @@ void ATempleHero::TickWizard(float DeltaSeconds)
     {
     case EAct::Attack:
         if (Target.IsValid()) Face(Target->GetActorLocation() - Here, 90.f, DeltaSeconds);
+        else if (Bh) Face(Bh->GetCentre() - Here, 90.f, DeltaSeconds);
         if (!bFired && Animator.Time() >= HeroClipData::Wizard::CastFire)
         {
             bFired = true; ++Shots;
@@ -494,8 +511,8 @@ void ATempleHero::TickWizard(float DeltaSeconds)
         break;
     default:
     {
-        Face(Battle->BeholderSpot() - Here, 50.f, DeltaSeconds);
-        if (W < NextAt) break;
+        Face((Bh ? Bh->GetCentre() : Battle->BeholderSpot()) - Here, 50.f, DeltaSeconds);
+        if (W < NextAt || IsSuppressed()) break;
         // The binding has his mind: he turns a bolt only on one that comes for him or the ranger.
         ATempleSkeleton* Foe = nullptr; float BestD = 1100.f;
         for (const TWeakObjectPtr<ATempleSkeleton>& Wk : Battle->Foes())
@@ -505,7 +522,18 @@ void ATempleHero::TickWizard(float DeltaSeconds)
             const float D = static_cast<float>(FVector::Dist2D(S->GetActorLocation(), Here));
             if (D < BestD) { BestD = D; Foe = S; }
         }
-        if (!Foe) { NextAt = W + 1.f; break; }
+        if (!Foe)
+        {
+            // With none coming, now and then he turns a bolt on the beholder itself.
+            if (Bh && Bh->IsFighting() && W >= NextBeholderShot)
+            {
+                NextBeholderShot = W + Random.FRandRange(8.f, 13.f);
+                Target = nullptr; Act = EAct::Attack; Play(TEXT("Cast"), false, .18f);
+                Battle->Sound(ATempleSanctumBattle::ESound::BoltCast, Mesh->GetBoneLocation(TEXT("hand_l")), .9f);
+                break;
+            }
+            NextAt = W + 1.f; break;
+        }
         Target = Foe; Act = EAct::Attack; Play(TEXT("Cast"), false, .18f);
         Battle->Sound(ATempleSanctumBattle::ESound::BoltCast, Mesh->GetBoneLocation(TEXT("hand_l")), .9f);
         break;
@@ -538,7 +566,8 @@ void ATempleHero::TickRanger(float DeltaSeconds)
         }
         Target = Best; T = Best;
     }
-    const FVector LookAt = T ? T->GetMesh()->GetBoneLocation(TEXT("spine_03")) : Battle->BeholderSpot();
+    const ATempleBeholder* Bh = Battle->GetBeholder();
+    const FVector LookAt = T ? T->GetMesh()->GetBoneLocation(TEXT("spine_03")) : Bh ? Bh->GetCentre() : Battle->BeholderSpot();
     {
         const FVector Local = GetActorTransform().InverseTransformVectorNoScale(LookAt - HeadLocation());
         Animator.SetLook(FMath::Clamp(-FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -30.f, 30.f) * .4f,
@@ -550,13 +579,21 @@ void ATempleHero::TickRanger(float DeltaSeconds)
     {
         const float Tt = Animator.Time();
         if (T) Face(T->GetActorLocation() - Here, 150.f, DeltaSeconds);
+        else if (Bh) Face(Bh->GetCentre() - Here, 150.f, DeltaSeconds);
         if (!bDrawSound && Tt >= .3f) { bDrawSound = true; Battle->Sound(ATempleSanctumBattle::ESound::BowDraw, Mesh->GetBoneLocation(TEXT("weapon_l")), .55f); }
         if (!bFired && Tt >= HeroClipData::Ranger::ShootFire)
         {
             bFired = true; ++Shots;
             const FVector From = Mesh->GetBoneLocation(TEXT("arrow_r"));
             Battle->Sound(ATempleSanctumBattle::ESound::BowRelease, Mesh->GetBoneLocation(TEXT("weapon_l")), .9f);
-            Battle->FireArrow(From, T, From + GetActorForwardVector() * 1500.f);
+            FVector Aim = From + GetActorForwardVector() * 1500.f;
+            if (!T && Bh)
+            {
+                // At the beholder's face, raised for the arrow's drop over the distance (about 50 m/s).
+                const float Tf = static_cast<float>(FVector::Dist(From, Bh->GetCentre())) / 5000.f;
+                Aim = Bh->GetCentre() + FVector(0, 0, .5f * 980.f * Tf * Tf);
+            }
+            Battle->FireArrow(From, T, Aim);
         }
         if (Tt >= HeroClipData::Ranger::ShootLength - .05f) { BackToRest(); NextAt = W + Random.FRandRange(1.2f, 3.f); }   // ready, the next arrow nocked: she picks her moment
         break;
@@ -570,7 +607,204 @@ void ATempleHero::TickRanger(float DeltaSeconds)
             Face(T->GetActorLocation() - Here, 150.f, DeltaSeconds);
             if (W >= NextAt) { Act = EAct::Attack; Play(TEXT("Shoot"), false, .25f); }
         }
-        else Face(Battle->BeholderSpot() - Here, 40.f, DeltaSeconds);
+        else
+        {
+            Face((Bh ? Bh->GetCentre() : Battle->BeholderSpot()) - Here, 60.f, DeltaSeconds);
+            // Nothing coming for them: she looses at the beholder.
+            const FVector ToB = Bh ? (Bh->GetCentre() - Here).GetSafeNormal2D() : FVector::ZeroVector;
+            if (Bh && Bh->IsFighting() && W >= NextAt && W >= NextBeholderShot && FVector::DotProduct(ToB, GetActorForwardVector()) > .9f)
+            {
+                NextBeholderShot = W + Random.FRandRange(2.5f, 5.f);
+                Act = EAct::Attack; Play(TEXT("Shoot"), false, .25f);
+            }
+        }
         break;
     }
+}
+
+// ---------------------------------------------------------------------------
+// The beholder's attacks on the heroes (docs/CHULT-TEMPLE-BEHOLDER.md#the-fight).
+
+bool ATempleHero::IsSuppressed() const { return GetWorld() && GetWorld()->GetTimeSeconds() < SuppressUntil; }
+bool ATempleHero::IsParalysed() const { return GetWorld() && GetWorld()->GetTimeSeconds() < ParalysedUntil; }
+
+void ATempleHero::Shove(const FVector& Velocity, float Seconds)
+{
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    ShoveVel = FVector(Velocity.X, Velocity.Y, 0); ShoveStart = W; ShoveUntil = W + Seconds;
+}
+
+void ATempleHero::TickShove(float Dt)
+{
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    const FVector Here = GetActorLocation();
+    FVector Step = FVector::ZeroVector;
+    if (W < ShoveUntil)
+    {
+        // Thrown: fast at first, dragging to a stop on the flags.
+        const float U = (W - ShoveStart) / FMath::Max(.01f, ShoveUntil - ShoveStart);
+        Step = ShoveVel * (2.f * (1.f - U)) * Dt;
+    }
+    else if (Role != ERole::Fighter && Act == EAct::Idle && W > ShoveUntil + 1.5f)
+    {
+        // The wizard and the ranger edge back to their ground (the fighter steps back to his).
+        const FVector ToHome = Home + FVector(0, 0, HalfHeight) - Here;
+        if (ToHome.Size2D() > 15.f) Step = ToHome.GetSafeNormal2D() * FMath::Min(25.f * Dt, static_cast<float>(ToHome.Size2D()));
+    }
+    if (Step.IsNearlyZero()) return;
+    // Never onto the broken floor, never far from his ground.
+    const FVector Next = Here + Step;
+    const FVector F = ChultTempleInteriorFrameOf(Next);
+    if (ChultTempleSanctumHoleAt(FVector2D(F.X, F.Y), 45.f)) { ShoveUntil = 0; return; }
+    const FVector Feet = Home + FVector(0, 0, HalfHeight);
+    if (FVector::Dist2D(Next, Feet) > (Role == ERole::Fighter ? 220.f : 130.f) && FVector::Dist2D(Next, Feet) > FVector::Dist2D(Here, Feet)) { ShoveUntil = 0; return; }
+    FHitResult Hit;
+    AddActorWorldOffset(Step, true, &Hit);
+}
+
+void ATempleHero::EvadeBeholderRay(const FVector& From, const FVector& Past)
+{
+    if (IsParalysed()) return;
+    // Out of its way: a lunge to the side it passes on, a twist away from it.
+    const FVector Side = (Past - GetActorLocation()).GetSafeNormal2D();
+    const FVector Local = GetActorTransform().InverseTransformVectorNoScale(-Side);
+    Animator.Flinch(7.f, static_cast<float>(Local.Y) * 14.f);
+    Shove(-Side * 260.f, .3f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_EVADE hero=%s"), GetRoleName());
+}
+
+bool ATempleHero::TakeBeholderRay(EBeholderRay Kind, const FVector& From, FVector& InOutAt)
+{
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    const FVector ToSrc = (From - GetActorLocation()).GetSafeNormal2D();
+    const float Facing = static_cast<float>(FVector::DotProduct(ToSrc, GetActorForwardVector()));
+    const FVector Local = GetActorTransform().InverseTransformVectorNoScale(-ToSrc);
+    // The fighter, in guard and turned to it, can take a ray on his shield (the telekinetic one still drives him back).
+    const bool bGuard = Role == ERole::Fighter && Facing > .3f && !IsParalysed() && (Act == EAct::Idle || Act == EAct::Step || (Act == EAct::React && Animator.Playing() == FName(TEXT("BlockHit"))));
+    if (bGuard && Random.FRand() < .6f)
+    {
+        ++Blocks;
+        Act = EAct::React; Play(TEXT("BlockHit"), false, .05f);
+        HitStopUntil = W + .07f;
+        InOutAt = Mesh->GetBoneLocation(TEXT("shield_l")) + ToSrc * 18.f;
+        Battle->OnBlocked(InOutAt, ToSrc);
+        if (Kind == EBeholderRay::Telekinetic) Shove(-ToSrc * 300.f, .4f);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_RAY_BLOCK hero=%s kind=%s"), GetRoleName(), ATempleBeholder::RayName(Kind));
+        return false;
+    }
+    ++HitsTaken;
+    UpdateTrail(false);
+    CounterOn = nullptr;
+    switch (Kind)
+    {
+    case EBeholderRay::Telekinetic:   // seized and hurled back
+        Animator.Flinch(22.f, static_cast<float>(Local.Y) * 16.f);
+        Act = EAct::React; Play(TEXT("HitHeavy"), false, .05f);
+        Shove(-ToSrc * 420.f, .5f);
+        break;
+    case EBeholderRay::Paralyze:      // held rigid where he stands, a little over two seconds
+        Animator.Flinch(6.f, static_cast<float>(Local.Y) * 5.f);
+        Act = EAct::React; Play(TEXT("HitLight"), false, .05f);
+        ParalysedUntil = W + 2.1f;
+        break;
+    case EBeholderRay::Fear:          // driven back, turned half away
+        Animator.Flinch(11.f, static_cast<float>(Local.Y) * 20.f);
+        Act = EAct::React; Play(TEXT("HitLight"), false, .05f);
+        Shove(-ToSrc * 200.f, .55f);
+        break;
+    default:                          // enervation (and disintegration, if it ever reached one): it withers him
+        Animator.Flinch(17.f, static_cast<float>(Local.Y) * 12.f);
+        Act = EAct::React; Play(TEXT("HitHeavy"), false, .05f);
+        HitStopUntil = W + .1f;
+        break;
+    }
+    Battle->Sound(Role == ERole::Fighter ? ATempleSanctumBattle::ESound::ArmourHit : ATempleSanctumBattle::ESound::BodyHit, InOutAt, .8f, .9f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_RAY_HIT hero=%s kind=%s"), GetRoleName(), ATempleBeholder::RayName(Kind));
+    return true;
+}
+
+bool ATempleHero::TakeBeholderBite(const FVector& From, const FVector& At)
+{
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    const FVector ToSrc = (From - GetActorLocation()).GetSafeNormal2D();
+    const float Facing = static_cast<float>(FVector::DotProduct(ToSrc, GetActorForwardVector()));
+    if (Role == ERole::Fighter && Facing > .1f && !IsParalysed())
+    {
+        // Braced behind the shield: the jaws close on it and drive him back a stride.
+        ++Blocks;
+        Act = EAct::React; Play(TEXT("BlockHit"), false, .04f);
+        Animator.Flinch(14.f, 0.f);
+        HitStopUntil = W + .09f;
+        Shove(-ToSrc * 120.f, .3f);   // a half step: he holds his ground, to answer it
+        Battle->OnBlocked(Mesh->GetBoneLocation(TEXT("shield_l")), ToSrc);
+        Battle->Sound(ATempleSanctumBattle::ESound::ShieldBash, At, 1.f, .8f);
+        return true;
+    }
+    ++HitsTaken;
+    Animator.Flinch(24.f, 0.f);
+    Act = EAct::React; Play(TEXT("HitHeavy"), false, .04f);
+    HitStopUntil = W + .08f;
+    Shove(-ToSrc * 340.f, .4f);
+    Battle->Sound(Role == ERole::Fighter ? ATempleSanctumBattle::ESound::ArmourHit : ATempleSanctumBattle::ESound::BodyHit, At, 1.f, .85f);
+    return false;
+}
+
+void ATempleHero::TakeBeholderCone(const FVector& Apex, const FVector& Axis)
+{
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    const FVector Away = Axis.GetSafeNormal2D();
+    const float Facing = static_cast<float>(FVector::DotProduct(-Away, GetActorForwardVector()));
+    CounterOn = nullptr;
+    ParalysedUntil = 0;   // the antimagic undoes the paralysis too
+    if (Role == ERole::Wizard) SuppressUntil = W + 4.f;   // his binding snuffed: the gem dark, the hum gone
+    if (Role == ERole::Fighter && Facing > .3f)
+    {
+        ++Blocks;
+        Act = EAct::React; Play(TEXT("BlockHit"), false, .04f);
+        Animator.Flinch(16.f, 0.f);
+        Shove(Away * 330.f, .45f);
+        Battle->OnBlocked(Mesh->GetBoneLocation(TEXT("shield_l")), -Away);
+    }
+    else
+    {
+        ++HitsTaken;
+        const FVector Local = GetActorTransform().InverseTransformVectorNoScale(Away);
+        Animator.Flinch(24.f, static_cast<float>(-Local.Y) * 18.f);
+        Act = EAct::React; Play(TEXT("HitHeavy"), false, .04f);
+        Shove(Away * 420.f, .5f);
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_CONE hero=%s suppressed=%d"), GetRoleName(), IsSuppressed() ? 1 : 0);
+}
+
+void ATempleHero::CounterBeholder(ATempleBeholder* Beholder)
+{
+    if (Role != ERole::Fighter || !Beholder) return;
+    CounterOn = Beholder; bCounterHit = false; CounterAt = static_cast<float>(GetWorld()->GetTimeSeconds());
+}
+
+void ATempleHero::BeholderContact()
+{
+    // The counter: the rising cut meets its face if it is still in his reach at the moment of contact.
+    ATempleBeholder* Bh = CounterOn.Get();
+    const FCut* C = FindCut(Animator.Playing());
+    if (!Bh || !C || bCounterHit || Animator.Playing() != FName(TEXT("CutRise"))) return;
+    const float T = Animator.Time();
+    if (T > C->Contact + .1f)
+    {
+        // Missed it (it was already drawing back): say how far, once.
+        bCounterHit = true;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_BEHOLDER_CUT_MISS gap=%.0f"), FVector::Dist(FMath::ClosestPointOnSegment(Bh->GetCentre(), BladeBase(), BladeTip()), Bh->GetCentre()));
+        return;
+    }
+    if (T < C->Contact - .05f) return;
+    const FVector Tip = BladeTip(), Base = BladeBase();
+    const FVector Q = FMath::ClosestPointOnSegment(Bh->GetCentre(), Base, Tip);
+    if (FVector::Dist(Q, Bh->GetCentre()) > ATempleBeholder::BodyRadius + 45.f) return;
+    bCounterHit = true; ++BeholderCuts;
+    const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
+    HitStopUntil = W + .08f;
+    Bh->TakeHit(Q, (FVector(0, 0, 1) + GetActorForwardVector()).GetSafeNormal(), 1.6f);
+    Battle->Sound(ATempleSanctumBattle::ESound::BodyHit, Q, 1.f, .7f);
+    Battle->Sound(ATempleSanctumBattle::ESound::Whoosh, Q, .6f, .9f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_BEHOLDER_CUT gap=%.0f"), FVector::Dist(Q, Bh->GetCentre()));
 }

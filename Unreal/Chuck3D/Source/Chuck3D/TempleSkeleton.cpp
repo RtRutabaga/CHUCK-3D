@@ -594,9 +594,23 @@ void ATempleSkeleton::ResetToReserve(const FTempleSkeletonPost& InPost)
     for (UStaticMeshComponent* A : StuckArrows) if (A) A->DestroyComponent();
     StuckArrows.Reset();
     ArrowsIn = 0; bHeadless = false; Animator.SetHeadScale(1.f);
+    if (bDust) { bDust = false; SetActorHiddenInGame(false); }
     StaggerVel = FVector::ZeroVector; StaggerTime = 0; HitStopUntil = 0;
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     ResetToPost();
+}
+
+void ATempleSkeleton::Disintegrate(const FVector& From)
+{
+    if (bDust) return;
+    if (State != EState::Dead) Fall(EBlow::Bolt, From);
+    bDust = true;
+    // Gone a moment after the beam's touch (the beholder throws the ash and bone dust).
+    FTimerHandle Gone;
+    TWeakObjectPtr<ATempleSkeleton> Self(this);
+    GetWorldTimerManager().SetTimer(Gone, [Self]() { if (Self.IsValid() && Self->bDust) Self->SetActorHiddenInGame(true); }, .12f, false);
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_DISINTEGRATED"));
 }
 
 void ATempleSkeleton::StickArrow(UStaticMesh* Arrow, const FVector& At, const FVector& Dir)

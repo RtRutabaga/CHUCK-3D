@@ -36,7 +36,7 @@ namespace
     using namespace TempleWind;
     TWeakObjectPtr<ATempleSanctumBattle> TheBattle;
 
-    constexpr int32 ChipPool = 220, DustPool = 90, FirePool = 140, ArrowPool = 14, CorePool = 3;
+    constexpr int32 ChipPool = 260, DustPool = 150, FirePool = 140, ArrowPool = 14, CorePool = 3;
     constexpr int32 WantUp = 3;               // skeletons on their feet at once while he is in the hall
     constexpr float RecycleAfter = 14.f;      // the fallen lie this long before going back to the bones
 
@@ -51,7 +51,13 @@ namespace
     struct FSoundSet { const TCHAR* Stem; int32 Count; };
     const FSoundSet SoundSets[] = {{TEXT("SFX_HeroSwordWhoosh"), 4}, {TEXT("SFX_HeroSwordHitBone"), 4}, {TEXT("SFX_HeroShieldBlock"), 3}, {TEXT("SFX_HeroArmourHit"), 3},
         {TEXT("SFX_HeroArmourStep"), 4}, {TEXT("SFX_HeroShieldBash"), 2}, {TEXT("SFX_HeroBowDraw"), 1}, {TEXT("SFX_HeroBowRelease"), 3}, {TEXT("SFX_HeroArrowFlight"), 2},
-        {TEXT("SFX_HeroArrowHit"), 3}, {TEXT("SFX_HeroBoltCast"), 2}, {TEXT("SFX_HeroBoltImpact"), 2}, {TEXT("SFX_HeroSkullBounce"), 3}, {TEXT("SFX_SkeletonHit"), 3}};
+        {TEXT("SFX_HeroArrowHit"), 3}, {TEXT("SFX_HeroBoltCast"), 2}, {TEXT("SFX_HeroBoltImpact"), 2}, {TEXT("SFX_HeroSkullBounce"), 3}, {TEXT("SFX_SkeletonHit"), 3},
+        {TEXT("SFX_BeholderRayCharge"), 2}, {TEXT("SFX_BeholderRayDisintegrate"), 1}, {TEXT("SFX_BeholderRayEnervate"), 1}, {TEXT("SFX_BeholderRayTelekinetic"), 1},
+        {TEXT("SFX_BeholderRayParalyze"), 1}, {TEXT("SFX_BeholderRayFear"), 1}, {TEXT("SFX_BeholderRayImpact"), 3}, {TEXT("SFX_BeholderDisintegrate"), 1},
+        {TEXT("SFX_BeholderConeCharge"), 1}, {TEXT("SFX_BeholderConeBlast"), 1}, {TEXT("SFX_BeholderRoar"), 2}, {TEXT("SFX_BeholderSnap"), 2},
+        {TEXT("SFX_BeholderGrowl"), 3}, {TEXT("SFX_BeholderHurt"), 2}};
+    const TCHAR* const BeholderFxPaths[] = {TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderBeam.M_BeholderBeam"), TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderWave.M_BeholderWave"),
+        TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderSpark.M_BeholderSpark"), TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderFlare.M_BeholderFlare")};
 
     bool Suppressed()
     {
@@ -146,6 +152,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
     for (const FSoundSet& Set : SoundSets)
         for (int32 I = 0; I < Set.Count; ++I)
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Set.Stem, I, Set.Stem, I)));
+    for (const TCHAR* Fx : BeholderFxPaths) P.Add(FSoftObjectPath(Fx));
     return P;
 }
 
@@ -183,6 +190,7 @@ void ATempleSanctumBattle::FinishLoading()
     GlowMat = Cast<UMaterialInterface>(Find(TEXT("/Game/Characters/Heroes/FX/M_HeroGlow.M_HeroGlow")));
     TrailMat = Cast<UMaterialInterface>(Find(TEXT("/Game/Characters/Heroes/FX/M_HeroTrail.M_HeroTrail")));
     Hum = Cast<USoundBase>(Find(TEXT("/Game/Art/Audio/SFX/SFX_HeroChannel_00.SFX_HeroChannel_00")));
+    for (const TCHAR* Fx : BeholderFxPaths) BeholderFx.Add(Cast<UMaterialInterface>(Find(Fx)));
     for (const FSoundSet& Set : SoundSets)
     {
         TArray<USoundBase*> List;
@@ -249,7 +257,11 @@ void ATempleSanctumBattle::SpawnCast()
     {
         FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
         const float Yaw = Heroes.Num() && Heroes[0].IsValid() ? (Heroes[0]->GetActorLocation() - Beholder).Rotation().Yaw : 0.f;
-        if (auto* Bh = World->SpawnActor<ATempleBeholder>(Beholder, FRotator(0, Yaw, 0), P)) { Bh->Setup(BeholderMesh, this, Beholder); TheBeholder = Bh; }
+        if (auto* Bh = World->SpawnActor<ATempleBeholder>(Beholder, FRotator(0, Yaw, 0), P))
+        {
+            Bh->Setup(BeholderMesh, this, Beholder); TheBeholder = Bh;
+            Bh->SetFx(BeholderFx[0], BeholderFx[1], BeholderFx[2], BeholderFx[3], Plane);
+        }
     }
     // The reserve: skeletons lying among the bones round the dais end of the hall (clear of the pillars,
     // idols, braziers and the heroes' ground).
@@ -278,10 +290,11 @@ void ATempleSanctumBattle::SpawnCast()
     int32 NearHoles = 0;
     for (const FPlace& Pl : Places) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
     for (const FPlace& Pl : Posts) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d near_holes=%d"),
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d near_holes=%d beholder_fx=%d"),
         Heroes.Num(), TheBeholder.IsValid(), Pool.Num(), HeroMeshes.FilterByPredicate([](USkeletalMesh* M) { return M != nullptr; }).Num(),
         HeroClipList.FilterByPredicate([](UAnimSequence* A) { return A != nullptr; }).Num(), SoundList.Num(), ArrowMesh != nullptr, SkullMesh != nullptr,
-        (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr), NearHoles);
+        (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr), NearHoles,
+        BeholderFx.FilterByPredicate([](UMaterialInterface* M) { return M != nullptr; }).Num());
 }
 
 int32 ATempleSanctumBattle::GetUp() const
@@ -449,7 +462,8 @@ void ATempleSanctumBattle::FireBolt(const FVector& From, ATempleSkeleton* At)
     if (Bolts.Num() >= CorePool) Bolts.RemoveAt(0);
     FBoltFlight B;
     B.Pos = From; B.Target = At; B.Age = 0;
-    const FVector Aim = At ? At->GetMesh()->GetBoneLocation(TEXT("spine_03")) : Beholder;
+    // At a skeleton, or (none given) at the beholder itself.
+    const FVector Aim = At ? At->GetMesh()->GetBoneLocation(TEXT("spine_03")) : TheBeholder.IsValid() ? TheBeholder->GetCentre() : Beholder;
     B.Vel = (Aim - From).GetSafeNormal() * 1500.f + FVector(0, 0, 150.f);
     Bolts.Add(B);
     Flash->SetWorldLocation(From); Flash->SetLightColor(FLinearColor(.35f, 1.f, .8f)); FlashTime = .18f;
@@ -493,6 +507,22 @@ void ATempleSanctumBattle::TickFlying(float Dt, const FVector& Eye)
         const FVector From = A.Pos;
         A.Vel.Z -= G * Dt; A.Pos += A.Vel * Dt;
         const FVector Tip0 = From + A.Vel.GetSafeNormal() * 76.f, Tip1 = A.Pos + A.Vel.GetSafeNormal() * 76.f;
+        if (ATempleBeholder* Bh = TheBeholder.Get())
+        {
+            // Its blast stops arrows in the air (they drop); its hide takes those that reach it.
+            if (Bh->IsConeBlasting() && Bh->InCone(A.Pos)) { A.Vel *= .08f; }
+            const FVector Q = FMath::ClosestPointOnSegment(Bh->GetCentre(), Tip0, Tip1);
+            if (FVector::Dist(Q, Bh->GetCentre()) < ATempleBeholder::BodyRadius)
+            {
+                A.bSpent = true; ++BeholderArrows;
+                const FVector Hide = Bh->GetCentre() + (Q - Bh->GetCentre()).GetSafeNormal() * ATempleBeholder::BodyRadius * .9f;
+                Sound(ESound::BodyHit, Hide, .9f, .75f);
+                Bh->StickArrowAt(Hide, A.Vel);
+                Bh->TakeHit(Hide, A.Vel, .7f);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_ARROW_BEHOLDER"));
+                continue;
+            }
+        }
         for (const TWeakObjectPtr<ATempleSkeleton>& Wk : Pool)
         {
             ATempleSkeleton* S = Wk.Get();
@@ -520,11 +550,35 @@ void ATempleSanctumBattle::TickFlying(float Dt, const FVector& Eye)
         FBoltFlight& B = Bolts[I];
         B.Age += Dt;
         ATempleSkeleton* S = B.Target.Get();
-        const FVector Aim = S && S->IsUp() ? S->GetMesh()->GetBoneLocation(TEXT("spine_03")) : B.Pos + B.Vel;
+        ATempleBeholder* Bh = TheBeholder.Get();
+        const bool bAtBeholder = !B.Target.IsValid() && Bh;
+        const FVector Aim = S && S->IsUp() ? S->GetMesh()->GetBoneLocation(TEXT("spine_03")) : bAtBeholder ? Bh->GetCentre() : B.Pos + B.Vel;
         const FVector Want = (Aim - B.Pos).GetSafeNormal() * 1500.f;
         B.Vel = FMath::Lerp(B.Vel, Want, FMath::Min(1.f, 5.f * Dt));
         B.Pos += B.Vel * Dt;
         FirePuffs(B.Pos, -B.Vel * .15f, 3, 18.f);
+        if (Bh && Bh->IsConeBlasting() && Bh->InCone(B.Pos))
+        {
+            // The antimagic cone: the spell is simply gone, a gutter of sparks where it was.
+            ++Fizzled;
+            FirePuffs(B.Pos, FVector::ZeroVector, 6, 14.f);
+            Splinters(B.Pos, B.Vel, 6, 120.f);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BOLT_FIZZLED"));
+            Bolts.RemoveAt(I);
+            continue;
+        }
+        if (bAtBeholder && FVector::Dist(B.Pos, Bh->GetCentre()) < ATempleBeholder::BodyRadius + 15.f)
+        {
+            ++BeholderBolts;
+            Sound(ESound::BoltImpact, B.Pos, 1.f);
+            FirePuffs(B.Pos, FVector::ZeroVector, 26, 46.f);
+            for (int32 K = 0; K < 18; ++K) FirePuffs(B.Pos, FMath::VRand() * 420.f, 1, 22.f);
+            Flash->SetWorldLocation(B.Pos); Flash->SetLightColor(FLinearColor(.35f, 1.f, .8f)); FlashTime = .35f;
+            Bh->TakeHit(B.Pos, B.Vel, 1.5f);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BOLT_BEHOLDER"));
+            Bolts.RemoveAt(I);
+            continue;
+        }
         if ((S && S->IsUp() && FVector::Dist(B.Pos, Aim) < 28.f) || B.Age > 2.5f || B.Pos.Z < Floor)
         {
             Sound(ESound::BoltImpact, B.Pos, 1.f);
@@ -650,6 +704,7 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
     }
     const bool bWas = bActive;
     bActive = bIn || bForced;
+    if (ATempleBeholder* Bh = TheBeholder.Get()) Bh->SetFighting(bActive && bBeholderFights);
     if (bActive != bWas || !bTickModeSet)
     {
         // Bones refreshed every frame only while the fight is on (its hit tests read them); otherwise only when seen.
@@ -706,14 +761,21 @@ void StartTempleSanctumReview(UWorld* World)
     B->SetForcedActive(true); B->SetWaves(false);
     ATempleHero* F = B->GetHero(0); ATempleHero* Wz = B->GetHero(1); ATempleHero* Rg = B->GetHero(2);
     Wz->SetHeld(true); Rg->SetHeld(true);
-    struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };   // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder
+    // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder; the beholder's fight
+    // (2026-10-25): 8 its five rays, 9 a ray through Chuck, 10 the bite, 11 the cone (Chuck in it, out of it, behind a pier), 12 it fighting by itself.
+    struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };
     static const FTrial Trials[] = {{TEXT("cut_down"), TEXT("CutDown"), 0}, {TEXT("cut_flat"), TEXT("CutFlat"), 0}, {TEXT("overhead"), TEXT("Overhead"), 0},
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
-        {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7},
+        {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11},
+        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
         float Start = -1, NextShot = 0, DeadAt = -1;
+        // The beholder's trials: counts at the start, the cone trial's three parts.
+        int32 Rays0 = 0, Dust0 = 0, HeroHits0 = 0, Chuck0 = 0, Bites0 = 0, Cones0 = 0, Volleys0 = 0, Struck0 = 0, Shelter0 = 0, Sub = -1, Seen = 0, Hits[3] = {-1, -1, -1};
+        float EventAt = -1;
         TWeakObjectPtr<ATempleSkeleton> Subject;
         FTimerHandle Timer;
     };
@@ -723,10 +785,13 @@ void StartTempleSanctumReview(UWorld* World)
     {
         constexpr int32 Count = UE_ARRAY_COUNT(Trials);
         if (Run->Trial >= Count) return;
-        // -ChuckSanctumOnly=<trial>: just that one.
+        // -ChuckSanctumOnly=<trial>[+<trial>...]: just those.
         FString OnlyTrial;
         if (FParse::Value(FCommandLine::Get(), TEXT("ChuckSanctumOnly="), OnlyTrial) && Run->Start < 0)
-            while (Run->Trial < Count && OnlyTrial != Trials[Run->Trial].Name) ++Run->Trial;
+        {
+            TArray<FString> Names; OnlyTrial.ParseIntoArray(Names, TEXT("+"));
+            while (Run->Trial < Count && !Names.Contains(Trials[Run->Trial].Name)) ++Run->Trial;
+        }
         if (Run->Trial >= Count) { UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_TEST_COMPLETE failures=%d"), Run->Failures); FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0); return; }
         const FTrial& T = Trials[Run->Trial];
         const float Now = static_cast<float>(World->GetTimeSeconds());
@@ -752,9 +817,16 @@ void StartTempleSanctumReview(UWorld* World)
             B->ClearFlying();
             F->SetActorLocation(FHome); F->SetActorRotation(FRotator(0, (B->BeholderSpot() - FHome).Rotation().Yaw, 0)); F->Rest();
             F->SetHeld(T.Kind == 3 || T.Kind == 4);
+            B->SetBeholderFights(T.Kind == 12 || T.Kind == 5);
+            if (ATempleBeholder* Bh0 = B->GetBeholder())
+            {
+                Run->Rays0 = Bh0->GetRaysFired(); Run->Dust0 = Bh0->GetDisintegrated(); Run->HeroHits0 = Bh0->GetHeroHits(); Run->Chuck0 = Bh0->GetChuckHits();
+                Run->Bites0 = Bh0->GetBites(); Run->Cones0 = Bh0->GetCones(); Run->Volleys0 = Bh0->GetVolleys(); Run->Struck0 = Bh0->GetHitsTaken(); Run->Shelter0 = Bh0->GetSheltered();
+                Run->Sub = -1; Run->Seen = Bh0->GetRaysFired(); Run->EventAt = -1; Run->Hits[0] = Run->Hits[1] = Run->Hits[2] = -1;
+            }
             Wz->SetHeld(T.Kind != 4 && T.Kind != 5); Rg->SetHeld(T.Kind != 3 && T.Kind != 5);
-            if (T.Kind == 5) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
-            else if (T.Kind == 6 || T.Kind == 7)
+            if (T.Kind == 5 || T.Kind == 12) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
+            else if (T.Kind >= 6)
             {
                 // Each hero still, in its rest clip, the fallen cleared away.
                 for (const TWeakObjectPtr<ATempleSkeleton>& K : B->Foes()) if (K.IsValid() && !K->IsDead()) { FTempleSkeletonPost P = K->GetPost(); K->ResetToReserve(P); }
@@ -825,6 +897,51 @@ void StartTempleSanctumReview(UWorld* World)
                 }
             }
         }
+        else if (T.Kind >= 8 && T.Kind <= 12 && B->GetBeholder())
+        {
+            ATempleBeholder* Bh = B->GetBeholder();
+            const FVector Bc = Bh->GetActorLocation();
+            const FVector In = (FAt - Bc).GetSafeNormal2D(), Ac = FVector::CrossProduct(FVector::UpVector, In);
+            AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (T.Kind == 8) View(FAt + In * 900.f - Ac * 650.f + FVector(0, 0, 160), (Bc + FAt) * .5f - FVector(0, 0, 40));
+            else if (T.Kind == 9 && Ch) View(Ch->GetActorLocation() + (Ch->GetActorLocation() - Bc).GetSafeNormal2D() * 260.f + Ac * 220.f + FVector(0, 0, 60), FMath::Lerp(Ch->GetActorLocation(), Bc, .35f));
+            else if (T.Kind == 10) { const FVector Mid = (Bc + FAt) * .5f; View(Mid - Ac * 760.f + In * 150.f + FVector(0, 0, 70), Mid + FVector(0, 0, 30)); }
+            else if (T.Kind == 11 && Ch)
+            {
+                const FVector Cp = Ch->GetActorLocation();
+                const FVector Out = (Cp - Bc).GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, Out);
+                View(Cp + Out * 520.f + Side * 380.f + FVector(0, 0, 260), FMath::Lerp(Bc, Cp, .55f) - FVector(0, 0, 80));
+            }
+            else if (T.Kind == 12)
+            {
+                // Four views in turn: behind the heroes, the aisle, the floor where Chuck would be, over the fighter's shoulder.
+                switch (static_cast<int32>(Age / 6.f) % 4)
+                {
+                case 0: View(FAt + In * 950.f + Ac * 260.f + FVector(0, 0, 330), Bc - FVector(0, 0, 120)); break;
+                case 1: View((Bc + FAt) * .5f + Ac * 1100.f + FVector(0, 0, 60), (Bc + FAt) * .5f + FVector(0, 0, 40)); break;
+                case 2: View(FAt + In * 1700.f - Ac * 300.f + FVector(0, 0, 60), Bc - FVector(0, 0, 60)); break;
+                default: View(FAt + In * 170.f - Ac * 90.f + FVector(0, 0, 165), Bc); break;
+                }
+            }
+            if (bCapture && !FScreenshotRequest::IsScreenshotRequested())
+            {
+                // On its events: each ray just after it fires, the bite's beats, the cone's charge, blast and front; and every 2.5 s in the free fight.
+                if (Bh->GetRaysFired() != Run->Seen) { Run->Seen = Bh->GetRaysFired(); Run->EventAt = Now + .07f; }
+                if (Run->EventAt > 0 && Now >= Run->EventAt) { Run->EventAt = -1; Shot(FString::Printf(TEXT("Sanctum_%s_ray%02d"), T.Name, Run->Seen - Run->Rays0)); }
+                const float Mt = Bh->GetMoveTime();
+                static const float BiteBeats[] = {.3f, .62f, .8f, .93f, 1.1f, 1.45f, 2.f};
+                static const float ConeBeats[] = {.6f, 1.6f, 2.3f, 2.47f, 2.62f, 2.8f, 3.2f};
+                const float* Beats = Bh->GetMove() == EBeholderMove::Bite ? BiteBeats : Bh->GetMove() == EBeholderMove::Cone ? ConeBeats : nullptr;
+                const int32 MoveId = Bh->GetBites() * 100 + Bh->GetCones();
+                if (MoveId != Run->Swing) { Run->Swing = MoveId; Run->Beat = 0; }
+                if (Beats && Run->Beat < 7 && Mt >= Beats[Run->Beat] && !FScreenshotRequest::IsScreenshotRequested())
+                {
+                    Shot(FString::Printf(TEXT("Sanctum_%s_%s%d_%d"), T.Name, Bh->GetMove() == EBeholderMove::Bite ? TEXT("bite") : TEXT("cone"), Bh->GetMove() == EBeholderMove::Bite ? Bh->GetBites() - Run->Bites0 : Bh->GetCones() - Run->Cones0, Run->Beat));
+                    ++Run->Beat;
+                }
+                if (T.Kind == 12 && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->NextShot = Now + 2.5f; Shot(FString::Printf(TEXT("Sanctum_%s_t%02d"), T.Name, static_cast<int32>(Age))); }
+            }
+        }
         else if (T.Kind == 4) View(Wz->GetActorLocation() + FVector(0, 0, 160) - Wz->GetActorForwardVector() * 200.f + FVector::CrossProduct(FVector::UpVector, Wz->GetActorForwardVector()) * -180.f, Wz->GetActorLocation() + Wz->GetActorForwardVector() * 400.f);
         else View(FAt - Fw * 650.f + Rt * 350.f + FVector(0, 0, 260), FAt + Fw * 150.f);
         // Stills through each blow: before, at and after its moment of contact.
@@ -838,7 +955,7 @@ void StartTempleSanctumReview(UWorld* World)
                 ++Run->Beat;
             }
         }
-        if (bCapture && T.Kind > 0 && T.Kind != 6 && T.Kind != 7 && Age > 3.f && Now >= Run->NextShot && Run->Phase < 6)
+        if (bCapture && T.Kind > 0 && T.Kind < 6 && Age > 3.f && Now >= Run->NextShot && Run->Phase < 6)
         {
             Run->NextShot = Now + (T.Kind == 5 ? 2.f : .25f);
             ++Run->Phase;
@@ -892,6 +1009,116 @@ void StartTempleSanctumReview(UWorld* World)
             bPass = Bh && Bh->GetPoses() > 200 && Bh->GetStalkTravel() > 8.f && Bh->GetBlinks() >= 1 && Bh->GetSnarls() >= 1 && Bh->GetSaccades() >= 3;
             Note = Bh ? FString::Printf(TEXT("poses=%d stalk_travel_cm=%.1f blinks=%d snarls=%d saccades=%d jaw=%.1f"), Bh->GetPoses(), Bh->GetStalkTravel(), Bh->GetBlinks(), Bh->GetSnarls(), Bh->GetSaccades(), Bh->GetJawAngle()) : FString(TEXT("no beholder"));
             if (bDone && Bh) Bh->HoldGaze(FVector::ZeroVector);
+            break;
+        }
+        case 8:
+        {
+            // Its five rays, one of each: dust a skeleton set before the fighter, then one at each hero (the last to be evaded).
+            ATempleBeholder* Bh = B->GetBeholder();
+            if (!Bh) { bDone = true; break; }
+            if (Run->Phase == 0 && Age > .2f)
+            {
+                Run->Phase = 1;
+                const FVector Place = FAt + (B->BeholderSpot() - FAt).GetSafeNormal2D() * 260.f + Rt * 60.f;
+                ATempleSkeleton* K = B->WakeOne(F, &Place);
+                if (K) { K->SetActorLocation(FVector(Place.X, Place.Y, K->GetActorLocation().Z)); K->SetActorRotation(FRotator(0, (FAt - Place).Rotation().Yaw, 0)); }
+                Run->Subject = K;
+                TArray<FBeholderRayOrder> O;
+                auto Add = [&O](EBeholderRay Kind, AActor* At, bool bStrike, float Delay) { FBeholderRayOrder R; R.Kind = Kind; R.Target = At; R.bStrike = bStrike; R.Delay = Delay; O.Add(R); };
+                Add(EBeholderRay::Disintegrate, K, true, .8f);
+                Add(EBeholderRay::Enervate, Wz, true, 1.9f);
+                Add(EBeholderRay::Telekinetic, Rg, true, 3.f);
+                Add(EBeholderRay::Paralyze, F, true, 4.1f);
+                Add(EBeholderRay::Fear, Wz, false, 5.2f);
+                Bh->OrderRays(O);
+            }
+            bDone = Age > 8.5f;
+            bPass = Bh->GetRaysFired() - Run->Rays0 == 5 && Bh->GetDisintegrated() > Run->Dust0 && Bh->GetHeroHits() - Run->HeroHits0 >= 2;
+            Note = FString::Printf(TEXT("rays=%d dust=%d hero_hits=%d"), Bh->GetRaysFired() - Run->Rays0, Bh->GetDisintegrated() - Run->Dust0, Bh->GetHeroHits() - Run->HeroHits0);
+            break;
+        }
+        case 9:
+        {
+            // A ray loosed through Chuck where he stands on the floor: a point of Sanity.
+            ATempleBeholder* Bh = B->GetBeholder();
+            auto* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (!Bh || !Ch) { bDone = true; break; }
+            if (Run->Phase == 0)
+            {
+                Run->Phase = 1;
+                Ch->SetActorHiddenInGame(false); Ch->SetSanity(AChuckCharacter::MaxSanity);
+                Ch->ResetAtLocation(FVector(FAt.X, FAt.Y, B->FloorZ() + 60.f) + Rt * 380.f - Fw * 250.f);
+            }
+            if (Run->Phase == 1 && Age > .8f)
+            {
+                Run->Phase = 2;
+                FBeholderRayOrder R; R.Kind = EBeholderRay::Fear; R.Target = Ch; R.bStrike = true;
+                Bh->OrderRays({R});
+            }
+            bDone = Age > 3.5f;
+            bPass = Ch->GetSanity() == AChuckCharacter::MaxSanity - 1 && Bh->GetChuckHits() - Run->Chuck0 == 1;
+            Note = FString::Printf(TEXT("sanity=%d chuck_hits=%d"), Ch->GetSanity(), Bh->GetChuckHits() - Run->Chuck0);
+            if (bDone) { Ch->SetSanity(AChuckCharacter::MaxSanity); Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true); }
+            break;
+        }
+        case 10:
+        {
+            // The bite on the fighter: the lunge reaches him, the jaws close on his shield, it goes back up to its place.
+            ATempleBeholder* Bh = B->GetBeholder();
+            if (!Bh) { bDone = true; break; }
+            if (Run->Phase == 0 && Age > .6f) { Run->Phase = 1; Bh->OrderBite(F); }
+            bDone = Age > 5.f;
+            bPass = Bh->GetBites() - Run->Bites0 == 1 && Bh->GetClosestBite() < 60.f && F->GetBlocks() > Run->Blocks0 && Bh->GetHomeGap() < 90.f && Bh->GetMove() == EBeholderMove::Hover;
+            Note = FString::Printf(TEXT("bites=%d closest_cm=%.0f blocks=%d counter_cuts=%d home_gap_cm=%.0f"), Bh->GetBites() - Run->Bites0, Bh->GetClosestBite(), F->GetBlocks() - Run->Blocks0, F->GetBeholderCuts(), Bh->GetHomeGap());
+            break;
+        }
+        case 11:
+        {
+            // The cone three times: Chuck in its path beyond the fighter (hit), well off its line (missed), and behind a pier (sheltered).
+            ATempleBeholder* Bh = B->GetBeholder();
+            auto* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (!Bh || !Ch) { bDone = true; break; }
+            const int32 Part = FMath::Min(2, static_cast<int32>(Age / 6.f));
+            if (Part != Run->Sub)
+            {
+                if (Run->Sub >= 0) Run->Hits[Run->Sub] = AChuckCharacter::MaxSanity - Ch->GetSanity();
+                Run->Sub = Part; Run->Phase = 0;
+                Ch->SetActorHiddenInGame(false); Ch->SetSanity(AChuckCharacter::MaxSanity);
+                const FVector Bc = Bh->GetActorLocation();
+                const FVector Dir = (FAt - Bc).GetSafeNormal2D();
+                FVector Spot, Toward;
+                if (Part == 0) { Toward = FAt - FVector(0, 0, ATempleHero::HalfHeight) + Dir * 500.f; Spot = Bc + Dir * 1750.f; }
+                else if (Part == 1) { Toward = FAt - FVector(0, 0, ATempleHero::HalfHeight) + Dir * 500.f; Spot = Bc + Dir.RotateAngleAxis(52.f, FVector::UpVector) * 1300.f; }
+                else
+                {
+                    const FVector Pier = W(HallMid - NaveHalf, PierT[3], HZ);
+                    Toward = Pier + FVector(0, 0, 60);
+                    Spot = Pier + (Pier - Bc).GetSafeNormal2D() * (PierHalf + 75.f);
+                }
+                Ch->ResetAtLocation(FVector(Spot.X, Spot.Y, B->FloorZ() + 60.f));
+                // The cone is ordered a moment later, once he has settled on the floor.
+                FTimerHandle Later;
+                TWeakObjectPtr<ATempleBeholder> WBh(Bh);
+                World->GetTimerManager().SetTimer(Later, [WBh, Toward]() { if (WBh.IsValid()) WBh->OrderCone(Toward); }, .5f, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_BEHOLDER_CONE_TRIAL part=%d chuck=%s"), Part, *Spot.ToCompactString());
+            }
+            bDone = Age > 17.5f;
+            if (bDone) Run->Hits[2] = AChuckCharacter::MaxSanity - Ch->GetSanity();
+            bPass = Run->Hits[0] == 2 && Run->Hits[1] == 0 && Run->Hits[2] == 0 && Bh->GetSheltered() > Run->Shelter0 && Bh->GetCones() - Run->Cones0 == 3;
+            Note = FString::Printf(TEXT("in_path_lost=%d off_line_lost=%d behind_pier_lost=%d sheltered=%d cones=%d"), Run->Hits[0], Run->Hits[1], Run->Hits[2], Bh->GetSheltered() - Run->Shelter0, Bh->GetCones() - Run->Cones0);
+            if (bDone) { Ch->SetSanity(AChuckCharacter::MaxSanity); Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true); }
+            break;
+        }
+        case 12:
+        {
+            // It fights by itself with the skeletons coming: every kind of move within the minute, the heroes striking back.
+            ATempleBeholder* Bh = B->GetBeholder();
+            if (!Bh) { bDone = true; break; }
+            bDone = Age > 52.f;
+            bPass = Bh->GetRaysFired() - Run->Rays0 >= 10 && Bh->GetVolleys() - Run->Volleys0 >= 2 && Bh->GetBites() - Run->Bites0 >= 1 && Bh->GetCones() - Run->Cones0 >= 1 && Bh->GetHitsTaken() > Run->Struck0;
+            Note = FString::Printf(TEXT("rays=%d volleys=%d bites=%d cones=%d struck=%d hero_hits=%d dust=%d arrows_in=%d bolts_in=%d fizzled=%d"), Bh->GetRaysFired() - Run->Rays0, Bh->GetVolleys() - Run->Volleys0,
+                Bh->GetBites() - Run->Bites0, Bh->GetCones() - Run->Cones0, Bh->GetHitsTaken() - Run->Struck0, Bh->GetHeroHits() - Run->HeroHits0, Bh->GetDisintegrated() - Run->Dust0,
+                B->GetBeholderArrows(), B->GetBeholderBolts(), B->GetFizzled());
             break;
         }
         default:

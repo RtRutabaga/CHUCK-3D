@@ -2,12 +2,16 @@
 #include "TempleHero.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSkeleton.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/SpotLightComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ProceduralMeshComponent.h"
 
 namespace
 {
@@ -48,6 +52,41 @@ ATempleBeholder::ATempleBeholder()
     EyeLight->SetLightColor(FLinearColor(.8f, 1.f, .7f));
     EyeLight->SetIntensity(0.f); EyeLight->SetAttenuationRadius(650.f); EyeLight->SetCastShadows(false);
     EyeLight->SetLightingChannels(false, true, false);
+    ConeLight = CreateDefaultSubobject<USpotLightComponent>(TEXT("ConeLight"));
+    ConeLight->SetupAttachment(RootComponent);
+    ConeLight->SetUsingAbsoluteRotation(true);
+    ConeLight->SetLightColor(FLinearColor(.72f, .84f, 1.f));
+    ConeLight->SetIntensity(0.f); ConeLight->SetCastShadows(true);
+    ConeLight->SetOuterConeAngle(ConeHalfDeg); ConeLight->SetInnerConeAngle(ConeHalfDeg - 2.5f);
+    ConeLight->SetAttenuationRadius(ConeRange + 400.f);
+    ConeLight->SetLightingChannels(true, true, false);
+    // The fight's effects (TempleBeholderFx.cpp): rebuilt or moved each frame, never colliding, never shadowing.
+    auto Proc = [this](const TCHAR* Name)
+    {
+        auto* P = CreateDefaultSubobject<UProceduralMeshComponent>(Name);
+        P->SetupAttachment(RootComponent);
+        P->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        P->SetCastShadow(false);
+        P->SetLightingChannels(false, true, false);
+        P->bUseAsyncCooking = false;
+        return P;
+    };
+    BeamMesh = Proc(TEXT("Beams"));
+    WaveMesh = Proc(TEXT("Wave"));
+    auto Inst = [this](const TCHAR* Name, int32 Floats)
+    {
+        auto* C = CreateDefaultSubobject<UInstancedStaticMeshComponent>(Name);
+        C->SetupAttachment(RootComponent);
+        C->SetUsingAbsoluteLocation(true); C->SetUsingAbsoluteRotation(true); C->SetUsingAbsoluteScale(true);
+        C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        C->SetCastShadow(false);
+        C->SetLightingChannels(false, true, false);
+        C->NumCustomDataFloats = Floats;
+        C->SetMobility(EComponentMobility::Movable);
+        return C;
+    };
+    SparkFx = Inst(TEXT("Sparks"), 4);
+    FlareFx = Inst(TEXT("Flares"), 5);
 }
 
 void ATempleBeholder::BeginPlay()
@@ -59,11 +98,12 @@ void ATempleBeholder::BeginPlay()
 void ATempleBeholder::Setup(USkeletalMesh* Mesh, ATempleSanctumBattle* InBattle, const FVector& InHome)
 {
     Battle = InBattle; Home = InHome;
+    HoverAt = Home; Place = Home;
     if (Mesh) Body->SetSkinnedAssetAndUpdate(Mesh);
     const int32 EyeSlot = Body->GetMaterialIndex(TEXT("Eye"));
     if (EyeSlot != INDEX_NONE) EyeMat = Body->CreateDynamicMaterialInstance(EyeSlot);
     ReadRig();
-    Yaw = GetActorRotation().Yaw;
+    Yaw = WantYaw = GetActorRotation().Yaw;
     // Which way the rig's rotations about Y turn the face down (FQuat is right-handed; the mesh faces +X).
     CloseSign = FQuat(FVector::YAxisVector, .3f).RotateVector(FVector::XAxisVector).Z < 0.f ? 1.f : -1.f;
     PickGaze();
@@ -96,6 +136,7 @@ void ATempleBeholder::ReadRig()
             B.Stalk = FCString::Atoi(*Num);
             if (Rest == TEXT("eye")) B.Kind = EKind::StalkEye; else { B.Kind = EKind::Stalk; B.Seg = FCString::Atoi(*Rest); }
             if (Stalks.Num() <= B.Stalk) Stalks.SetNum(B.Stalk + 1);
+            if (B.Kind == EKind::Stalk && B.Seg == 0) Stalks[B.Stalk].Root = I;
         }
         ByName.Add(B.Name, I);
         Bones.Add(B);
@@ -125,8 +166,9 @@ void ATempleBeholder::ReadRig()
         S.NextLook = Random.FRandRange(0.f, 2.f);
     }
     Delta.Init(FQuat::Identity, Bones.Num()); Pos.Init(FVector::ZeroVector, Bones.Num());
+    for (int32 I = 0; I < Bones.Num(); ++I) Pos[I] = Bones[I].RefPos;
     for (const FBone& B : Bones)
-        if (B.Parent == INDEX_NONE || B.Kind == EKind::Eye || B.Kind == EKind::LidUpper || B.Name == FName(TEXT("stalk0_eye")))
+        if (B.Parent == INDEX_NONE || B.Kind == EKind::Eye || B.Kind == EKind::LidUpper || B.Kind == EKind::Body || B.Name == FName(TEXT("stalk0_eye")))
             UE_LOG(LogTemp, Display, TEXT("CHUCK_BEHOLDER_BONE %s pos=%s rot=%s scale=%s"), *B.Name.ToString(), *B.RefPos.ToCompactString(), *B.RefRot.Rotator().ToCompactString(), *B.RefScale.ToCompactString());
 }
 
@@ -134,6 +176,14 @@ FVector ATempleBeholder::GetEyeLocation() const
 {
     for (int32 I = 0; I < Bones.Num(); ++I)
         if (Bones[I].Kind == EKind::Eye) return Body->GetComponentTransform().TransformPosition(Pos[I] + Delta[I].RotateVector(FVector(EyeRadius, 0, 0)));
+    return GetActorLocation();
+}
+
+FVector ATempleBeholder::GetCentre() const
+{
+    // The head's middle: the body bone's place (it carries the bob) raised to the cranium's mass.
+    for (int32 I = 0; I < Bones.Num(); ++I)
+        if (Bones[I].Kind == EKind::Body) return Body->GetComponentTransform().TransformPosition(Pos[I] - Bones[I].RefPos + FVector(0, 0, 10));
     return GetActorLocation();
 }
 
@@ -173,6 +223,7 @@ void ATempleBeholder::PickGaze()
 void ATempleBeholder::Snarl()
 {
     SnarlStart = T; SnarlLen = Random.FRandRange(1.f, 1.6f); SnarlOpen = Random.FRandRange(10.f, 14.f); ++Snarls;
+    if (bFighting && Move == EBeholderMove::Hover) Sound(static_cast<int32>(ATempleSanctumBattle::ESound::BeholderGrowl), GetCentre(), .8f, Random.FRandRange(.92f, 1.06f));
 }
 
 void ATempleBeholder::Tick(float Dt)
@@ -181,20 +232,34 @@ void ATempleBeholder::Tick(float Dt)
     if (!Bones.Num()) return;
     Dt = FMath::Min(Dt, .1f);
     T += Dt;
-    if (T >= NextGaze || !HeldGaze.IsZero()) { if (!HeldGaze.IsZero()) GazeAt = HeldGaze; else PickGaze(); }
-    if (T >= NextBlink)
+    if (APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0)) CamEye = Cam->GetCameraLocation();
+    // The fight moves the gaze itself while it aims and charges; otherwise it looks about.
+    const bool bGazeHeld = !HeldGaze.IsZero() || Move != EBeholderMove::Hover || Shots.Num() > 0;
+    if (!HeldGaze.IsZero()) GazeAt = HeldGaze;
+    else if (T >= NextGaze && !bGazeHeld) PickGaze();
+    if (T >= NextBlink && LidsWide < .3f)
     {
         BlinkStart = T; ++Blinks;
         NextBlink = T + (Random.FRand() < .15f ? .42f : Random.FRandRange(2.4f, 6.5f));
     }
-    if (T >= NextSnarl) { Snarl(); NextSnarl = T + Random.FRandRange(7.f, 13.f); }
-    // It turns to face the fight (the fighter, whom the others stand behind), slowly, swaying a little.
-    FVector Focus = GetActorLocation() + GetActorForwardVector() * 500.f;
-    if (const ATempleSanctumBattle* B = Battle.Get()) if (const ATempleHero* F = B->GetHero(0)) Focus = F->GetActorLocation();
-    const float Want = (Focus - GetActorLocation()).Rotation().Yaw + 9.f * FMath::Sin(T * .21f);
-    Yaw = FMath::FixedTurn(Yaw, Want, 10.f * Dt);
-    SetActorLocationAndRotation(Home + FVector(22.f * FMath::Sin(T * .17f), 18.f * FMath::Sin(T * .13f + 1.f), 0), FRotator(0, Yaw, 0));
+    if (T >= NextSnarl && Move == EBeholderMove::Hover) { Snarl(); NextSnarl = T + Random.FRandRange(7.f, 13.f); }
+    TickFight(Dt);
+    // Where it hangs: a spring toward its hover place (the bite drives Place itself), the slow drift on top.
+    if (Move != EBeholderMove::Bite)
+    {
+        const FVector Want = HoverAt;
+        const float K = 7.f, D = 2.f * FMath::Sqrt(K) * .95f;
+        PlaceVel += ((Want - Place) * K - PlaceVel * D) * Dt;
+        Place += PlaceVel * Dt;
+    }
+    // A blow's reel: a damped spring on pitch/roll/yaw (the bank into its motion is in Pose, on the body bone).
+    ReelVel += (-Reel * 60.f - ReelVel * 9.f) * Dt;
+    Reel += ReelVel * Dt;
+    Yaw = FMath::FixedTurn(Yaw, WantYaw + 9.f * FMath::Sin(T * .21f) * (Move == EBeholderMove::Hover ? 1.f : .2f), (Move == EBeholderMove::Hover ? (bFighting ? 30.f : 10.f) : 70.f) * Dt);
+    const FVector Sway(22.f * FMath::Sin(T * .17f), 18.f * FMath::Sin(T * .13f + 1.f), 0);
+    SetActorLocationAndRotation(Place + Sway * (Move == EBeholderMove::Bite ? .2f : 1.f), FRotator(0, Yaw + Reel.Z, 0));
     Pose(Dt);
+    TickFx(Dt);
 }
 
 void ATempleBeholder::Pose(float Dt)
@@ -206,11 +271,14 @@ void ATempleBeholder::Pose(float Dt)
     const float Sa = T - SnarlStart;
     const float Snarling = Sa < 0.f ? 0.f : Sa < .3f ? Ease(Sa / .3f) : Sa < .3f + SnarlLen ? 1.f : 1.f - Ease((Sa - .3f - SnarlLen) / .5f);
     const float Ba = T - BlinkStart;
-    const float Blink = Ba < 0.f ? 0.f : Ba < .08f ? Ease(Ba / .08f) : Ba < .13f ? 1.f : 1.f - Ease((Ba - .13f) / .19f);
-    // The maw is open at rest (the model): it breathes a little shut and open, and gapes in a snarl.
-    JawNow = -1.5f + 2.5f * FMath::Sin(T * .9f) + SnarlOpen * Snarling;
+    const float Blink = (Ba < 0.f ? 0.f : Ba < .08f ? Ease(Ba / .08f) : Ba < .13f ? 1.f : 1.f - Ease((Ba - .13f) / .19f)) * (1.f - LidsWide);
+    // The maw is open at rest (the model): it breathes a little shut and open, and gapes in a snarl or a bite.
+    JawNow = -1.5f + 2.5f * FMath::Sin(T * .9f) + SnarlOpen * Snarling + JawExtra;
     const float Bob = 7.f * FMath::Sin(T * 1.7f) + 2.5f * FMath::Sin(T * .63f + 1.f);
     const float Elev = FMath::RadiansToDegrees(FMath::Atan2(GazeC.Z, FVector2D(GazeC.X, GazeC.Y).Size()));
+    const FVector LocalVel = GetActorTransform().InverseTransformVectorNoScale(PlaceVel);
+    const float BankRoll = FMath::Clamp(static_cast<float>(-LocalVel.Y) * .05f, -14.f, 14.f);
+    const float BankPitch = (FMath::Clamp(static_cast<float>(LocalVel.X) * .02f, -8.f, 8.f) + FMath::Clamp(static_cast<float>(-LocalVel.Z) * .02f, -6.f, 6.f)) * (Move == EBeholderMove::Bite ? .15f : 1.f);
     float EyeDown = 0.f;
     for (int32 I = 0; I < Bones.Num(); ++I)
     {
@@ -222,14 +290,15 @@ void ATempleBeholder::Pose(float Dt)
         switch (B.Kind)
         {
         case EKind::Body:
-            Own = DownAboutY(FMath::Clamp(-Elev * .3f, -8.f, 12.f) + 1.5f * FMath::Sin(T * .5f)) * FQuat(FVector::XAxisVector, FMath::DegreesToRadians(2.5f * FMath::Sin(T * .6f)));
+            Own = DownAboutY(FMath::Clamp(-Elev * .3f, -8.f, Move == EBeholderMove::Bite ? 4.f : 12.f) + 1.5f * FMath::Sin(T * .5f) + PitchExtra + BankPitch + Reel.X)
+                * FQuat(FVector::XAxisVector, FMath::DegreesToRadians(2.5f * FMath::Sin(T * .6f) + BankRoll + Reel.Y));
             Offset = FVector(0, 0, Bob);
             break;
         case EKind::Jaw: Own = DownAboutY(JawNow); break;
         case EKind::Tongue:
-            // It lolls out over the lower teeth: sways and curls, more toward the tip, and draws in a snarl.
+            // It lolls out over the lower teeth: sways and curls, more toward the tip, and draws in a snarl or a bite.
             Own = FQuat(FVector::ZAxisVector, FMath::DegreesToRadians((2.f + 2.5f * B.Seg) * FMath::Sin(T * 1.1f + B.Seg * .8f)))
-                * DownAboutY((1.5f + 1.5f * B.Seg) * FMath::Sin(T * .8f + B.Seg * .6f) - 3.f * Snarling);
+                * DownAboutY((1.5f + 1.5f * B.Seg) * FMath::Sin(T * .8f + B.Seg * .6f) - 3.f * Snarling - .12f * JawExtra * B.Seg);
             break;
         case EKind::Eye:
         {
@@ -240,21 +309,25 @@ void ATempleBeholder::Pose(float Dt)
             EyeDown = -FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(EyeAim.RotateVector(FVector::XAxisVector).Z, -1.f, 1.f)));
             break;
         }
-        case EKind::LidUpper: Own = DownAboutY(Blink * LidClose + FMath::Clamp(EyeDown * .6f, -8.f, 14.f) + 5.f * Snarling); break;
-        case EKind::LidLower: Own = DownAboutY(-(Blink * 6.f + 4.f * Snarling) + FMath::Clamp(EyeDown * .3f, -4.f, 6.f)); break;
+        case EKind::LidUpper: Own = DownAboutY(Blink * LidClose + FMath::Clamp(EyeDown * .6f, -8.f, 14.f) * (1.f - LidsWide) + 5.f * Snarling - 16.f * LidsWide); break;
+        case EKind::LidLower: Own = DownAboutY(-(Blink * 6.f + 4.f * Snarling) + FMath::Clamp(EyeDown * .3f, -4.f, 6.f) + 9.f * LidsWide); break;
         case EKind::Stalk:
         {
             const FStalk& S = Stalks[B.Stalk];
-            const float A = 3.f + 1.7f * B.Seg;
+            // Writhing, less while it aims; the fight's curl (toward a ray's mark, or away from the cone) shared down its length.
+            const float A = (3.f + 1.7f * B.Seg) * Writhe * (1.f - .7f * S.CurlW);
             const float A1 = A * (FMath::Sin(T * S.Rate1 * 2.f * PI + S.Phase1 + B.Seg * .85f) + .35f * FMath::Sin(T * .8f + S.Phase2));
             const float A2 = .8f * A * FMath::Sin(T * S.Rate2 * 2.f * PI + S.Phase2 + B.Seg * 1.1f);
-            Own = FQuat(B.Axis1, FMath::DegreesToRadians(A1)) * FQuat(B.Axis2, FMath::DegreesToRadians(A2));
+            const FQuat Curl = FQuat::Slerp(FQuat::Identity, S.Curl, S.CurlW / 6.f);
+            // A ray's recoil: the stalk thrown back along its length a moment.
+            const FQuat Kick(B.Axis1, FMath::DegreesToRadians(-S.Kick * (1.f + .4f * B.Seg)));
+            Own = FQuat(B.Axis1, FMath::DegreesToRadians(A1)) * FQuat(B.Axis2, FMath::DegreesToRadians(A2)) * Curl * Kick;
             break;
         }
         case EKind::StalkEye:
         {
             FStalk& S = Stalks[B.Stalk];
-            if (T >= S.NextLook || S.Look.IsZero())
+            if (!S.bBusy && (T >= S.NextLook || S.Look.IsZero()))
             {
                 const float R = Random.FRand();
                 S.Look = Watchable(R < .3f ? 0 : R < .45f ? 1 : R < .6f ? 2 : R < .85f ? 3 : 4) + FVector(Random.FRandRange(-60, 60), Random.FRandRange(-60, 60), 0);
@@ -262,7 +335,7 @@ void ATempleBeholder::Pose(float Dt)
             }
             const FVector Here = Pos[P] + DP.RotateVector(B.RefPos - Bones[P].RefPos);
             const FVector Dir = DP.Inverse().RotateVector((Comp.InverseTransformPosition(S.Look) - Here).GetSafeNormal());
-            S.Aim = FQuat::Slerp(S.Aim, Toward(B.Dir, Dir, 60.f), 1.f - FMath::Exp(-Dt * 7.f));
+            S.Aim = FQuat::Slerp(S.Aim, Toward(B.Dir, Dir, 60.f), 1.f - FMath::Exp(-Dt * (S.bBusy ? 26.f : 7.f)));
             Own = S.Aim;
             break;
         }
@@ -274,13 +347,15 @@ void ATempleBeholder::Pose(float Dt)
     }
     Body->MarkRefreshTransformDirty();
     for (const FStalk& S : Stalks) if (S.Eye != INDEX_NONE) StalkTravel = FMath::Max(StalkTravel, static_cast<float>(FVector::Dist(Pos[S.Eye], S.RestEye)));
-    // The iris smoulders, and flares in a snarl; a red light off it on the lids and the floor before it.
-    const float Glow = .3f + .1f * FMath::Sin(T * 1.3f) + .9f * Snarling;
+    // The iris smoulders, flares in a snarl, and blazes as the central eye gathers its cone.
+    const float Glow = .3f + .1f * FMath::Sin(T * 1.3f) + .9f * Snarling + 5.f * EyeFlare;
     if (EyeMat) EyeMat->SetScalarParameterValue(TEXT("Glow"), Glow);
     if (EyeLight)
     {
         EyeLight->SetWorldLocation(GetEyeLocation() + GetActorForwardVector() * 25.f);
-        EyeLight->SetIntensity((1.f - .8f * Blink) * (50.f + 120.f * Snarling + 15.f * FMath::Sin(T * 1.3f)));
+        EyeLight->SetLightColor(FMath::Lerp(FLinearColor(.8f, 1.f, .7f), FLinearColor(.85f, .9f, 1.f), EyeFlare));
+        EyeLight->SetAttenuationRadius(650.f + 1600.f * EyeFlare);
+        EyeLight->SetIntensity((1.f - .8f * Blink) * (50.f + 120.f * Snarling + 15.f * FMath::Sin(T * 1.3f)) + 9000.f * EyeFlare * EyeFlare);
     }
     ++Poses;
 }
