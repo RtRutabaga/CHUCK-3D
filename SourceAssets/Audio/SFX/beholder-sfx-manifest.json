@@ -1,5 +1,5 @@
 {
-  "provenance": "Original deterministic synthetic beholder sounds; Tools/gen_beholder_sfx.py",
+  "provenance": "Original deterministic synthetic beholder and seal sounds; Tools/gen_beholder_sfx.py",
   "sounds": [
     {
       "name": "SFX_BeholderRayCharge_00",
@@ -153,6 +153,27 @@
       "file": "SFX_BeholderHurt_01.wav",
       "duration": 2.15,
       "sha256": "08831f69b8289da3950405e5d4ed56c7e5e605b4ba5a598644b1a0cc9a3a3674",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SealSurge_00",
+      "file": "SFX_SealSurge_00.wav",
+      "duration": 2.9,
+      "sha256": "59aeb091f568b63a0cd0ec5992e4aa524263a3388f4c02103f7be03df26118d5",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SealSurge_01",
+      "file": "SFX_SealSurge_01.wav",
+      "duration": 2.9,
+      "sha256": "0e126249bf30eba87e9c955916457adb29015b212550fa592719b5b8d78ad0ae",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_SealBreak_00",
+      "file": "SFX_SealBreak_00.wav",
+      "duration": 3.6,
+      "sha256": "6564a7085db56681473989b69071aa5e1a38708a242478a543f26de6e4eddf09",
       "peak_dbfs": -3.0
     }
   ]

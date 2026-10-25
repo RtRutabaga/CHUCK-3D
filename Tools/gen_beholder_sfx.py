@@ -18,8 +18,13 @@ python Tools/gen_beholder_sfx.py -> SourceAssets/Audio/SFX/SFX_Beholder*.wav (+ 
   SFX_BeholderSnap_00..01           the jaws snapping shut: a hard clack and a wet crunch.
   SFX_BeholderGrowl_00..02          a low rumbling growl (its snarls).
   SFX_BeholderHurt_00..01           struck by an arrow or a bolt: a pained bellow.
+  SFX_SealSurge_00..01              the sea tear surging against the wizard's seal: a wave's rushing swell and thump,
+                                    the web of light straining in a crackle, spray hissing.
+  SFX_SealBreak_00                  the seal shattering: a glassy, ringing burst, a whoosh, the sea's roar welling up.
+
+python Tools/gen_beholder_sfx.py [--only SFX_Seal] makes just the sets whose names start so.
 """
-import hashlib, json, math, random, struct, wave
+import hashlib, json, math, random, struct, sys, wave
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1] / 'SourceAssets/Audio/SFX'
@@ -299,6 +304,30 @@ def hurt(rng):
                  growl=37., rough=.45, breath=.3, shape=lambda m: env(m, .04, .3, .2))
 
 
+def seal_surge(rng):
+    dur = 1.7; n = int(dur * RATE)
+    rush = svf(noise(rng, n), [250 + 1300 * math.exp(-((i / RATE - .35) / .25) ** 2) for i in range(n)], 1.2)
+    e1, e2 = env(n, .25, .5, .15), env(n, .3, .4, .2)
+    out = [rush[i] * 1.3 * e1[i] for i in range(n)]
+    out = add(out, [math.sin(TAU * (48 * math.exp(-(i / RATE) * 2)) * i / RATE) * math.exp(-(i / RATE - .3) ** 2 / .02) * .9 for i in range(n)])
+    hiss = svf(noise(rng, n), 5200, 1.5)
+    out = add(out, [hiss[i] * .5 * e2[i] for i in range(n)])
+    return add(out, crackle(rng, n, 60, .9, .25, 1.0, .5))
+
+
+def seal_break(rng):
+    dur = 2.2; n = int(dur * RATE)
+    out = [0.] * n
+    for _ in range(40):   # shards of glassy light, ringing
+        f = rng.uniform(1800, 7200)
+        out = add(out, ring(int(.5 * RATE), 0., [(f, .4, rng.uniform(.05, .25)), (f * 1.53, .2, .08)], rng), rng.uniform(0., .3))
+    whoosh = svf(noise(rng, n), [3000 * math.exp(-(i / RATE) * 4) + 400 for i in range(n)], 1.3)
+    out = add(out, [whoosh[i] * 1.2 * math.exp(-(i / RATE) * 3) for i in range(n)])
+    roar = svf(noise(rng, n), 380, 1.6)
+    e = env(n, .5, .6, .4)
+    return add(out, [roar[i] * 1.4 * e[i] for i in range(n)])
+
+
 def write(name, samples):
     peak = max(abs(x) for x in samples) or 1.
     fade = int(.04 * RATE)
@@ -325,10 +354,18 @@ for name, make, count, seed, wet, tail in (
         ('SFX_BeholderRoar', roar, 2, 20261211, .4, 1.6),
         ('SFX_BeholderSnap', snap, 2, 20261212, .3, .9),
         ('SFX_BeholderGrowl', growl, 3, 20261213, .35, 1.2),
-        ('SFX_BeholderHurt', hurt, 2, 20261214, .35, 1.2)):
+        ('SFX_BeholderHurt', hurt, 2, 20261214, .35, 1.2),
+        ('SFX_SealSurge', seal_surge, 2, 20261215, .35, 1.2),
+        ('SFX_SealBreak', seal_break, 1, 20261216, .4, 1.4)):
+    if '--only' in sys.argv and not name.startswith(sys.argv[sys.argv.index('--only') + 1]): continue
     for v in range(count):
         rng = random.Random(seed * 10 + v)
         entries.append(write(f'{name}_{v:02d}', chamber(make(rng), rng, wet=wet, tail=tail)))
         print(entries[-1]['name'], entries[-1]['duration'], flush=True)
-(root / 'beholder-sfx-manifest.json').write_text(json.dumps(dict(provenance='Original deterministic synthetic beholder sounds; Tools/gen_beholder_sfx.py', sounds=entries), indent=2) + '\n')
+manifest = root / 'beholder-sfx-manifest.json'
+if '--only' in sys.argv and manifest.exists():
+    # Keep the other sets' entries.
+    old = [e for e in json.loads(manifest.read_text(encoding='utf-8'))['sounds'] if e['name'] not in {x['name'] for x in entries}]
+    entries = old + entries
+manifest.write_text(json.dumps(dict(provenance='Original deterministic synthetic beholder and seal sounds; Tools/gen_beholder_sfx.py', sounds=entries), indent=2) + '\n')
 print('CHUCK_BEHOLDER_WAV_GENERATED', len(entries))

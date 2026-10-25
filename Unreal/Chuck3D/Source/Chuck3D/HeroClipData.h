@@ -41,6 +41,8 @@ namespace HeroClipData
         constexpr float CastFireX = 57.5f, CastFireY = -9.2f, CastFireZ = 145.6f;
         constexpr float HitLightLength = 1.0000f;
         constexpr float HitHeavyLength = 1.8000f;
+        constexpr float SealLength = 5.9667f;
+        constexpr float SealStrainLength = 1.8000f;
     }
     namespace Ranger
     {

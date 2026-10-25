@@ -5,6 +5,7 @@
 #include "HeroClipData.h"
 #include "TempleHero.h"
 #include "TempleBeholder.h"
+#include "TempleSeal.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -44,7 +45,7 @@ namespace
     const TArray<const TCHAR*>& HeroClipNames(int32 R)
     {
         static const TArray<const TCHAR*> F = {TEXT("Guard"), TEXT("CutDown"), TEXT("CutFlat"), TEXT("CutRise"), TEXT("Overhead"), TEXT("Bash"), TEXT("BlockHit"), TEXT("HitLight"), TEXT("HitHeavy"), TEXT("Advance"), TEXT("Retreat")};
-        static const TArray<const TCHAR*> W = {TEXT("Idle"), TEXT("Channel"), TEXT("Cast"), TEXT("HitLight"), TEXT("HitHeavy")};
+        static const TArray<const TCHAR*> W = {TEXT("Idle"), TEXT("Channel"), TEXT("Cast"), TEXT("HitLight"), TEXT("HitHeavy"), TEXT("Seal"), TEXT("SealStrain")};
         static const TArray<const TCHAR*> Ra = {TEXT("Idle"), TEXT("Shoot"), TEXT("HitLight"), TEXT("HitHeavy")};
         return R == 0 ? F : R == 1 ? W : Ra;
     }
@@ -55,7 +56,8 @@ namespace
         {TEXT("SFX_BeholderRayCharge"), 2}, {TEXT("SFX_BeholderRayDisintegrate"), 1}, {TEXT("SFX_BeholderRayEnervate"), 1}, {TEXT("SFX_BeholderRayTelekinetic"), 1},
         {TEXT("SFX_BeholderRayParalyze"), 1}, {TEXT("SFX_BeholderRayFear"), 1}, {TEXT("SFX_BeholderRayImpact"), 3}, {TEXT("SFX_BeholderDisintegrate"), 1},
         {TEXT("SFX_BeholderConeCharge"), 1}, {TEXT("SFX_BeholderConeBlast"), 1}, {TEXT("SFX_BeholderRoar"), 2}, {TEXT("SFX_BeholderSnap"), 2},
-        {TEXT("SFX_BeholderGrowl"), 3}, {TEXT("SFX_BeholderHurt"), 2}};
+        {TEXT("SFX_BeholderGrowl"), 3}, {TEXT("SFX_BeholderHurt"), 2}, {TEXT("SFX_SealSurge"), 2}, {TEXT("SFX_SealBreak"), 1}};
+    const TCHAR* const SealWebPath = TEXT("/Game/Art/ChultTemple/BeholderFX/M_TempleSealWeb.M_TempleSealWeb");
     const TCHAR* const BeholderFxPaths[] = {TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderBeam.M_BeholderBeam"), TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderWave.M_BeholderWave"),
         TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderSpark.M_BeholderSpark"), TEXT("/Game/Art/ChultTemple/BeholderFX/M_BeholderFlare.M_BeholderFlare")};
 
@@ -153,6 +155,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
         for (int32 I = 0; I < Set.Count; ++I)
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Set.Stem, I, Set.Stem, I)));
     for (const TCHAR* Fx : BeholderFxPaths) P.Add(FSoftObjectPath(Fx));
+    P.Add(FSoftObjectPath(SealWebPath));
     return P;
 }
 
@@ -191,6 +194,7 @@ void ATempleSanctumBattle::FinishLoading()
     TrailMat = Cast<UMaterialInterface>(Find(TEXT("/Game/Characters/Heroes/FX/M_HeroTrail.M_HeroTrail")));
     Hum = Cast<USoundBase>(Find(TEXT("/Game/Art/Audio/SFX/SFX_HeroChannel_00.SFX_HeroChannel_00")));
     for (const TCHAR* Fx : BeholderFxPaths) BeholderFx.Add(Cast<UMaterialInterface>(Find(Fx)));
+    SealWebMat = Cast<UMaterialInterface>(Find(SealWebPath));
     for (const FSoundSet& Set : SoundSets)
     {
         TArray<USoundBase*> List;
@@ -252,6 +256,16 @@ void ATempleSanctumBattle::SpawnCast()
         H->SetHome(Feet, Yaw);
         Heroes.Add(H);
     }
+    // The wizard's seal over the sea tear to his left (2026-10-25): he works it, facing the tear, when nothing comes at him.
+    {
+        FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        if (auto* Seal = World->SpawnActor<ATempleSeal>(FVector::ZeroVector, FRotator::ZeroRotator, P))
+        {
+            Seal->Setup(this, SealWebMat, BeholderFx[0], BeholderFx[2], Plane);
+            TheSeal = Seal;
+            if (ATempleHero* Wz = GetHero(1)) { const FVector Feet = W(Places[1].S, Places[1].T, HZ); Wz->SetHome(Feet, YawToward(Feet, Seal->GetCentre())); Wz->SetActorRotation(FRotator(0, YawToward(Feet, Seal->GetCentre()), 0)); Wz->Rest(); }
+        }
+    }
     // The beholder over the front of the dais, facing them (2026-10-23).
     if (BeholderMesh)
     {
@@ -290,11 +304,11 @@ void ATempleSanctumBattle::SpawnCast()
     int32 NearHoles = 0;
     for (const FPlace& Pl : Places) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
     for (const FPlace& Pl : Posts) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d near_holes=%d beholder_fx=%d"),
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d near_holes=%d beholder_fx=%d seal=%d"),
         Heroes.Num(), TheBeholder.IsValid(), Pool.Num(), HeroMeshes.FilterByPredicate([](USkeletalMesh* M) { return M != nullptr; }).Num(),
         HeroClipList.FilterByPredicate([](UAnimSequence* A) { return A != nullptr; }).Num(), SoundList.Num(), ArrowMesh != nullptr, SkullMesh != nullptr,
         (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr), NearHoles,
-        BeholderFx.FilterByPredicate([](UMaterialInterface* M) { return M != nullptr; }).Num());
+        BeholderFx.FilterByPredicate([](UMaterialInterface* M) { return M != nullptr; }).Num(), TheSeal.IsValid() && SealWebMat ? 1 : 0);
 }
 
 int32 ATempleSanctumBattle::GetUp() const
@@ -762,18 +776,20 @@ void StartTempleSanctumReview(UWorld* World)
     ATempleHero* F = B->GetHero(0); ATempleHero* Wz = B->GetHero(1); ATempleHero* Rg = B->GetHero(2);
     Wz->SetHeld(true); Rg->SetHeld(true);
     // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder; the beholder's fight
-    // (2026-10-25): 8 its five rays, 9 a ray through Chuck, 10 the bite, 11 the cone (Chuck in it, out of it, behind a pier), 12 it fighting by itself.
+    // (2026-10-25): 8 its five rays, 9 a ray through Chuck, 10 the bite, 11 the cone (Chuck in it, out of it, behind a pier), 12 it fighting by itself;
+    // 13 the wizard sealing the sea tear (it knits, the tear surges and he strains, the beholder's cone shatters it).
     struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };
     static const FTrial Trials[] = {{TEXT("cut_down"), TEXT("CutDown"), 0}, {TEXT("cut_flat"), TEXT("CutFlat"), 0}, {TEXT("overhead"), TEXT("Overhead"), 0},
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
         {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7},
         {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11},
-        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
         float Start = -1, NextShot = 0, DeadAt = -1;
         // The beholder's trials: counts at the start, the cone trial's three parts.
+        float SealMax = 0; int32 Strains0 = 0, Surges0 = 0, Breaks0 = 0;
         int32 Rays0 = 0, Dust0 = 0, HeroHits0 = 0, Chuck0 = 0, Bites0 = 0, Cones0 = 0, Volleys0 = 0, Struck0 = 0, Shelter0 = 0, Sub = -1, Seen = 0, Hits[3] = {-1, -1, -1};
         float EventAt = -1;
         TWeakObjectPtr<ATempleSkeleton> Subject;
@@ -825,8 +841,13 @@ void StartTempleSanctumReview(UWorld* World)
                 Run->Sub = -1; Run->Seen = Bh0->GetRaysFired(); Run->EventAt = -1; Run->Hits[0] = Run->Hits[1] = Run->Hits[2] = -1;
             }
             Wz->SetHeld(T.Kind != 4 && T.Kind != 5); Rg->SetHeld(T.Kind != 3 && T.Kind != 5);
+            if (T.Kind == 13)
+            {
+                Wz->SetActorLocation(Wz->GetActorLocation()); Wz->Rest(); Wz->SetHeld(false);
+                if (ATempleSeal* Sl = B->GetSeal()) { Run->Strains0 = Wz->GetStrains(); Run->Surges0 = Sl->GetSurges(); Run->Breaks0 = Sl->GetBreaks(); Run->SealMax = 0; }
+            }
             if (T.Kind == 5 || T.Kind == 12) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
-            else if (T.Kind >= 6)
+            else if (T.Kind >= 6 && T.Kind != 13)
             {
                 // Each hero still, in its rest clip, the fallen cleared away.
                 for (const TWeakObjectPtr<ATempleSkeleton>& K : B->Foes()) if (K.IsValid() && !K->IsDead()) { FTempleSkeletonPost P = K->GetPost(); K->ResetToReserve(P); }
@@ -941,6 +962,20 @@ void StartTempleSanctumReview(UWorld* World)
                 }
                 if (T.Kind == 12 && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->NextShot = Now + 2.5f; Shot(FString::Printf(TEXT("Sanctum_%s_t%02d"), T.Name, static_cast<int32>(Age))); }
             }
+        }
+        else if (T.Kind == 13 && B->GetSeal())
+        {
+            // The wizard and the tear: from his left side, low; over his shoulder at the web; from across the tear at him; high above.
+            const FVector Sc = B->GetSeal()->GetCentre(), Wl = Wz->GetActorLocation();
+            const FVector To = (Sc - Wl).GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, To);
+            switch (FMath::Clamp(static_cast<int32>(Age / 4.5f), 0, 3))
+            {
+            case 0: View(FMath::Lerp(Wl, Sc, .45f) - Side * 460.f - To * 120.f + FVector(0, 0, 150), FMath::Lerp(Wl, Sc, .5f) - FVector(0, 0, 30)); break;
+            case 1: View(Wl - To * 170.f + Side * 70.f + FVector(0, 0, 110), Sc); break;
+            case 2: View(Sc + To * 180.f - Side * 260.f + FVector(0, 0, 120), FMath::Lerp(Sc, Wl, .6f) + FVector(0, 0, 20)); break;
+            default: View(FMath::Lerp(Wl, Sc, .5f) + Side * 250.f - To * 150.f + FVector(0, 0, 520), FMath::Lerp(Wl, Sc, .55f) - FVector(0, 0, 60)); break;
+            }
+            if (bCapture && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->NextShot = Now + .75f; Shot(FString::Printf(TEXT("Sanctum_wizard_seal_%02d"), static_cast<int32>(Age * 4.f))); }
         }
         else if (T.Kind == 4) View(Wz->GetActorLocation() + FVector(0, 0, 160) - Wz->GetActorForwardVector() * 200.f + FVector::CrossProduct(FVector::UpVector, Wz->GetActorForwardVector()) * -180.f, Wz->GetActorLocation() + Wz->GetActorForwardVector() * 400.f);
         else View(FAt - Fw * 650.f + Rt * 350.f + FVector(0, 0, 260), FAt + Fw * 150.f);
@@ -1119,6 +1154,21 @@ void StartTempleSanctumReview(UWorld* World)
             Note = FString::Printf(TEXT("rays=%d volleys=%d bites=%d cones=%d struck=%d hero_hits=%d dust=%d arrows_in=%d bolts_in=%d fizzled=%d"), Bh->GetRaysFired() - Run->Rays0, Bh->GetVolleys() - Run->Volleys0,
                 Bh->GetBites() - Run->Bites0, Bh->GetCones() - Run->Cones0, Bh->GetHitsTaken() - Run->Struck0, Bh->GetHeroHits() - Run->HeroHits0, Bh->GetDisintegrated() - Run->Dust0,
                 B->GetBeholderArrows(), B->GetBeholderBolts(), B->GetFizzled());
+            break;
+        }
+        case 13:
+        {
+            // He works the seal (it knits), the tear surges and he strains against it, then the beholder's cone shatters it.
+            ATempleSeal* Sl = B->GetSeal();
+            ATempleBeholder* Bh = B->GetBeholder();
+            if (!Sl) { bDone = true; break; }
+            Run->SealMax = FMath::Max(Run->SealMax, Sl->GetCoverage());
+            if (Run->Phase == 0 && Age > 10.f) { Run->Phase = 1; Sl->ForceSurge(); }
+            if (Run->Phase == 1 && Age > 13.f && Bh) { Run->Phase = 2; Bh->OrderCone(Wz->GetActorLocation() - FVector(0, 0, ATempleHero::HalfHeight) + (Wz->GetActorLocation() - Bh->GetActorLocation()).GetSafeNormal2D() * 300.f); }
+            bDone = Age > 18.5f;
+            bPass = Run->SealMax > .3f && Sl->GetSurges() > Run->Surges0 && Wz->GetStrains() > Run->Strains0 && Sl->GetBreaks() > Run->Breaks0 && Sl->GetCoverage() < .1f;
+            Note = FString::Printf(TEXT("max_coverage=%.2f surges=%d strains=%d breaks=%d coverage_now=%.2f clip=%s"), Run->SealMax, Sl->GetSurges() - Run->Surges0,
+                Wz->GetStrains() - Run->Strains0, Sl->GetBreaks() - Run->Breaks0, Sl->GetCoverage(), *Wz->GetClip().ToString());
             break;
         }
         default:

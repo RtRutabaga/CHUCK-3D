@@ -1118,7 +1118,84 @@ def W_Hit(Wz, heavy):
     return hero_clip(Wz, tracks, dur, st), {'hit': 0.}
 
 
-WIZARD_CLIPS = {'Idle': W_Idle, 'Channel': W_Channel, 'Cast': W_Cast, 'HitLight': lambda W: W_Hit(W, False), 'HitHeavy': lambda W: W_Hit(W, True)}
+# The sea tear he is sealing (user 2026-10-25: "Do the animation for the wizard attempting to seal the sea world
+# rupture"; docs/CHULT-TEMPLE-HEROES.md#sealing-the-sea-tear). In game he turns to face it: its centre is 2.5 m ahead on
+# the floor, its rim (1.1 m) about 1.4 m ahead.
+TEAR = V((2.5, 0., 0.))
+
+
+def seal_state(Wz, t, tremble=1., weave=1.):
+    """Sealing: braced in a wide stance leaning over the tear, the staff thrust out over it in his right hand (the gem
+    above its rim), the left arm out, palm down, fingers spread, weaving slow circles as if knitting threads of light,
+    trembling with the strain. Twice a loop (6 s) he grips the threads, draws them up and drives them down."""
+    a = Wz.ank
+    tr = lambda f, ph: (math.sin(t * f + ph) + .6 * math.sin(t * f * 2.3 + ph * 1.7)) * tremble
+    br = math.sin(t * 2 * math.pi / 3.)
+    # The press: twice a loop, a gather (up, the fist closing) and a drive (down, the palm opening). 0..1 envelopes.
+    ph = (t % 3.) / 3.
+    gather = smooth((ph - .45) / .17) * (1. - smooth((ph - .62) / .06))
+    drive = smooth((ph - .62) / .06) * (1. - smooth((ph - .74) / .2))
+    # The weave: the hand circling about its reach, 0.5 Hz, the circle tilted to the floor beneath it.
+    w = 2 * math.pi * t / 2. if weave else 0.
+    circle = V((.05 * math.sin(w), .09 * math.cos(w), .05 * math.sin(w))) * weave * (1. - gather - drive)
+    hips = V((.07, .0, -.09 - .045 * drive + .015 * gather))
+    lw = V((.6, .24, 1.24)) + circle + V((-.12 * gather, 0., .14 * gather)) + V((.12 * drive, 0., -.14 * drive))
+    lw += V((tr(13., .7), tr(10., .1), tr(12., 1.3))) * .004
+    return dict(hips=hips, yaw=4., chest=V((-6., 10. + 1.2 * br + 7. * drive - 4. * gather, 0.)), pitch=8. + 4. * drive,
+                lfoot=V((.27, .2, a)), rfoot=V((-.22, -.2, a)), lfoot_yaw=8., rfoot_yaw=-34.,
+                grip=V((.4, -.37, 1.28)) + V((.08 * drive - .03 * gather, 0., -.04 * drive + .04 * gather))
+                     + V((tr(9., .3), tr(11., 1.), tr(8., 2.))) * .003,
+                # The staff held up and out, the gem high and leaning over the tear; it stabs toward it in the drive.
+                axis=V((.42 + .3 * drive - .1 * gather, .04, .9 - .2 * drive)), spalm=V((-.3, .9, .2)),
+                lmode=1., lwrist=lw,
+                # The left palm pushed toward the tear, fingers up and spread; it turns down to grip in the gather.
+                lalong=V((.48 + .3 * gather, .06 + .08 * math.cos(w) * weave, .87 - .5 * gather)),
+                lpalm=V((.8 - .6 * gather, -.05, -.58 - .4 * gather)),
+                lcurl=.06 + .05 * math.sin(t * 3.1) + .75 * gather - .06 * drive,
+                look=TEAR + V((-.4, .1, .0)))
+
+
+def W_Seal(Wz):
+    """Sealing the sea tear: the loop he works in while nothing comes at him (6 s, two gathers and drives)."""
+    n = int(6. * FPS); poses = []
+    for i in range(n):
+        t = i / FPS
+        poses.append(body_pose(Wz.R, Wz.state(t, seal_state(Wz, t))))
+    return poses, {'loops': True}
+
+
+def W_SealStrain(Wz):
+    """The tear surges: he is wrenched toward it a stumbling step, the left hand dragged down, the staff dipping;
+    then he heaves back, the fist clenched to his chest, leaning away, the back foot braced, and works back into
+    the seal (1.8 s)."""
+    def st(t, v):
+        c = seal_state(Wz, t, tremble=1.6, weave=0.)
+        for k in v: c[k] = v[k]
+        return Wz.state(t, c)
+    c0 = seal_state(Wz, 0., tremble=0., weave=0.)
+    c1 = seal_state(Wz, 1.8, tremble=0., weave=0.)
+    lf = c0['lfoot']
+    tracks = {
+        'hips': [(0., c0['hips']), (.18, c0['hips'] + V((.13, .02, -.05))), (.34, c0['hips'] + V((.16, .02, -.06))), (.7, c0['hips'] + V((-.1, 0., -.04))),
+                 (1.05, c0['hips'] + V((-.12, 0., -.05))), (1.5, c0['hips'] + V((-.02, 0., -.01))), (1.8, c1['hips'])],
+        'chest': [(0., c0['chest']), (.18, V((-2., 24., 4.))), (.34, V((0., 26., 3.))), (.7, V((-14., -4., -3.))), (1.05, V((-16., -6., -2.))), (1.5, V((-8., 6., 0.))), (1.8, c1['chest'])],
+        'pitch': [(0., c0['pitch']), (.2, 18.), (.36, 19.), (.72, -3.), (1.05, -4.), (1.5, 5.), (1.8, c1['pitch'])],
+        'lwrist': [(0., c0['lwrist']), (.18, V((.86, .24, .86))), (.34, V((.9, .22, .8))), (.62, V((.42, .2, 1.18))), (.8, V((.24, .18, 1.3))),
+                   (1.05, V((.22, .18, 1.32))), (1.5, V((.5, .24, 1.16))), (1.8, c1['lwrist'])],
+        'lalong': [(0., c0['lalong']), (.18, V((.8, .1, -.6))), (.34, V((.75, .1, -.65))), (.7, V((.3, -.5, .3))), (1.05, V((.25, -.55, .3))), (1.5, V((.75, .05, -.4))), (1.8, c1['lalong'])],
+        'lpalm': [(0., c0['lpalm']), (.34, V((.3, 0., -1.))), (.7, V((-.2, -1., 0.))), (1.05, V((-.2, -1., 0.))), (1.5, V((.25, 0., -1.))), (1.8, c1['lpalm'])],
+        'lcurl': [(0., .15), (.16, .2), (.34, .3), (.55, .95), (1.1, .95), (1.4, .4), (1.8, c1['lcurl'])],
+        'grip': [(0., c0['grip']), (.2, c0['grip'] + V((.1, 0., -.12))), (.36, c0['grip'] + V((.12, 0., -.14))), (.75, c0['grip'] + V((-.12, 0., .06))),
+                 (1.05, c0['grip'] + V((-.14, 0., .07))), (1.5, c0['grip'] + V((-.03, 0., .01))), (1.8, c1['grip'])],
+        'axis': [(0., c0['axis']), (.3, V((.95, .05, .3))), (.75, V((.5, .05, .86))), (1.05, V((.48, .05, .88))), (1.8, c1['axis'])],
+        # The stumble: the left foot goes forward a short step, then back.
+        'lfoot': [(0., lf), (.14, lf), (.24, lf + V((.07, 0., .05))), (.32, lf + V((.13, 0., 0.))), (.85, lf + V((.13, 0., 0.))), (1.0, lf + V((.06, 0., .045))), (1.12, lf), (1.8, lf)],
+    }
+    return hero_clip(Wz, tracks, 1.8, st), {'hit': .18}
+
+
+WIZARD_CLIPS = {'Idle': W_Idle, 'Channel': W_Channel, 'Cast': W_Cast, 'HitLight': lambda W: W_Hit(W, False), 'HitHeavy': lambda W: W_Hit(W, True),
+                'Seal': W_Seal, 'SealStrain': W_SealStrain}
 
 
 # ------------------------------------------------------------------ the ranger
@@ -1314,6 +1391,11 @@ def run(name):
             if 'contact_frame' in m or 'fire_frame' in m:
                 c = m.get('contact_frame', m.get('fire_frame')) + 1
                 review_keys(rig, clip, [1, max(1, c - 7), max(1, c - 4), max(1, c - 2), c, c + 3, min(len(poses), c + 8)], view=((1.6, -3.4, 1.35), (86, 0, 22)))
+            else:
+                # Seven frames through it, larger, from his left front (where the sea tear is, ahead of him).
+                n = len(poses); fr = [1 + int(i * (n - 1) / 6) for i in range(7)]
+                review_keys(rig, clip, fr, view=((1.6, -3.4, 1.35), (86, 0, 22)))
+                review_keys(rig, clip, fr, tag='keys_left', view=((2.2, 3.2, 1.6), (80, 0, 146)))
         manifest['clips'][clip] = {'fbx': f'Anim/AS_Hero{name}_{clip}.fbx', 'frames': len(poses), 'fps': FPS, 'loops': info.get('loops', False),
                                    **{k: v for k, v in m.items() if k != 'tip_cm'}}
         print('CHUCK_HERO_CLIP', name, clip, f'frames={len(poses)}', {k: v for k, v in m.items() if k != 'tip_cm'})

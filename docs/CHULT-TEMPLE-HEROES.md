@@ -205,7 +205,46 @@ The bash knocks a skeleton back about 60 cm and does not kill.
 ### The ranger and the wizard
 The ranger shoots skeletons going for her or the wizard, and the fighter's only while they are still more than 3.2 m from him. Her arrows fly ballistically at 50 m/s, led for the target's movement, stand in the bone they hit, and drop it on the third. She pauses 1.2-3 s between shots.
 
-The wizard works the binding at the dais. A sea-green light and a hum come from his gem. Every 7-12 s he turns a bolt on a skeleton going for him or the ranger. The bolt homes in at 15 m/s, trailing sea-green fire (the Unity Labs flipbooks, recoloured), and bursts in a flash that blasts the skeleton down.
+The wizard works the seal over the sea tear (since October 25; [below](#sealing-the-sea-tear)), once the binding at the dais. A sea-green light and a hum come from his gem. Every 7-12 s he turns a bolt on a skeleton going for him or the ranger. The bolt homes in at 15 m/s, trailing sea-green fire (the Unity Labs flipbooks, recoloured), and bursts in a flash that blasts the skeleton down.
+
+### Sealing the sea tear
+User request, October 25, 2026: "Do the animation for the wizard attempting to seal the sea world rupture" (the tear to his left that the user named on October 24 as the one he is trying to seal; [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures)).
+
+His work is now the seal, not a binding at the dais. When nothing is coming at him or the ranger he turns to face the tear (its middle about 2.5 m ahead, its rim about 1.4 m) and works it.
+
+**Two new clips** (`Tools/build_hero_anims.py`, `W_Seal` and `W_SealStrain`; reviewed in Blender, `Local/SealReview/r3`):
+- `Seal`, a 6 s loop:
+  - A wide braced stance, left foot forward, leaning over the tear.
+  - The staff held up and out in his right hand, the gem high and leaning over the rim.
+  - The left arm pushed out toward the tear, palm to it, fingers spread, weaving slow circles (0.5 Hz) and trembling with the strain.
+  - Twice a loop he gathers the threads (the hand rises, turns down and closes) and drives them down: the palm opens and pushes, the body dips and the staff stabs toward the tear.
+  - His head looks down at the edge nearest him.
+- `SealStrain` (1.8 s), played when the tear surges:
+  - He is wrenched toward it a stumbling half step, the hand dragged down and the staff dipping.
+  - He heaves back, his fist clenched to his chest, leaning away on his braced back foot.
+  - He works back into the seal.
+
+**The seal** (`ATempleSeal`, TempleSeal.cpp; spawned by the battle over the tear):
+- **The threads:** while he works it, five threads of sea-green light arc from his gem and three from his open hand down to the knitting edge. They sway, and are plucked taut in a surge. Light runs down them.
+- **The web** (`M_TempleSealWeb`, `Tools/create_beholder_fx.py`): a disc that follows the tear's ragged rim. A woven lattice of light (rings, spokes, a crossed weave, a band of runes) knits inward from the rim at about 4.5% of the radius a second, its edge sparkling, to at most 82%. It never closes in the fight; the Fireball cutscene ends that.
+- **Fraying:** left alone (he casts, is struck or is snuffed), it frays back slowly.
+- **Surges:** the tear fights it every 6–10 s once there is web to fight (it first gathers itself for 5 s).
+  - The sea bursts up through it in spray, a light flash and a rushing roar (`SFX_SealSurge`).
+  - It tears back 12–24%.
+  - He strains (`SealStrain`).
+- **The beholder's cone** (antimagic) shatters the seal: the web flies apart in shards of light with a glassy crash (`SFX_SealBreak`), and his binding is snuffed for 4 s.
+- **His light:** a sea-green light over the tear grows with the web.
+
+**Other changes:**
+- He turns a bolt on the beholder less often (every 13–19 s): the seal has most of him.
+- Bolts at skeletons coming for him or the ranger, and his reactions, are unchanged.
+- The two sounds are in `Tools/gen_beholder_sfx.py` (`--only SFX_Seal`) and imported with `CHUCK_SFX_STEM=SFX_Seal Tools/import_beholder_sfx.py`.
+
+**Test:** `wizard_seal` in `-ChuckSanctumTest`:
+- He works the seal: it knits past 30%.
+- A forced surge: he strains.
+- The beholder's cone at him: it shatters, below 10% after.
+- Stills from four sides (`Sanctum_wizard_seal_*`).
 
 ### Sounds
 `Tools/gen_hero_sfx.py` makes 37 stdlib-synthesised originals (`SFX_Hero*`):
@@ -275,6 +314,12 @@ Clip changes made for this:
 - **Re-imported copies of the human kit's fabrics:** now reused from `/Game/Characters/Humans/Fabrics`.
 
 ## Not done, and known flaws
+- **The seal (October 25):**
+  - Reviewed in stills only; it has not been seen in motion by a person.
+  - The threads' cores read almost white, the sea-green mostly in their glow.
+  - The web's weave reads as a grid more than a woven net up close.
+  - The surge and break sounds are synthetic and unheard.
+  - No foot sliding was measured in `SealStrain`'s half step.
 
 - **The beholder's part in the battle** (it is built and hangs there: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the 2D entrance lines, the battle's hazards for Chuck, the Fireball and the escape.
 - **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".

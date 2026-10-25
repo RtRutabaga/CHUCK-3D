@@ -28,6 +28,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **The wizard seals the sea tear (October 25, Claude):** he turns to the tear on his left and works it:
+  - New authored clips: a braced, trembling 6 s sealing loop, with his palm pushed at the tear, the staff's gem high over it, and threads gathered and driven down twice a loop. A strain when the tear surges.
+  - Threads of sea-green light run from his gem and hand to a web of light that knits inward from the tear's rim.
+  - The tear surges back every 6–10 s in spray, tearing the web.
+  - The beholder's cone shatters it. It never closes in the fight.
+
+  Details in [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#sealing-the-sea-tear). Verified and in the launcher.
 - **The beholder fights (October 25, Claude):** its attacks and movements for the planned battle (an entrance cutscene, the playable fight, the wizard's Fireball cutscene; the cutscenes are not made yet). They follow the 5e beholder and the 2D game:
   - Eye rays from curling stalks, singly or in volleys of 2–3: disintegration (a skeleton goes to dust), enervation, telekinetic (a hero thrown), paralysing (held), fear (driven back).
   - The bite: a roaring lunge onto the fighter's shield; he answers with a rising cut.
@@ -71,6 +78,22 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 25 — the wizard sealing the sea tear (Claude)
+
+- **Request:** "Do the animation for the wizard attempting to seal the sea world rupture".
+- **Built:** see Current state and CHULT-TEMPLE-HEROES.md#sealing-the-sea-tear:
+  - clips `Seal` and `SealStrain` (`Tools/build_hero_anims.py`);
+  - `ATempleSeal` (new TempleSeal.h/.cpp);
+  - `M_TempleSealWeb`;
+  - 3 sounds.
+- **Tests:**
+  - Blender key-frame reviews `Local/SealReview/r1`–`r3`. The first pass read wrong (a lance-held staff, a limp hand) and was redone.
+  - Uncooked seal trials ×3 (`Local/beholder-fight-s1..s3.log`; the first failed: a surge came before the web had grown).
+  - Full sanctum suite, all 18 trials (`Local/seal-full-1.log`).
+  - Packaged: Verify-Package passed on the first run, 182 passes (`Local/verify-package-20261025-133208.log`). Its sanctum log is `Local/verify-temple-heroes-20261025-140253.log`, with `wizard_seal` passing.
+- **Flaws:** see CHULT-TEMPLE-HEROES.md (the threads' cores near white, the weave reads as a grid, unheard sounds, unplayed).
+- **Launcher:** promoted as `WizardSeal`. The receipt names 1c1f542, the base: the build was made from this work before its commit.
 
 ## October 25 — the beholder's attacks and movements (Claude)
 

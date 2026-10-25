@@ -16,6 +16,7 @@ class UStaticMesh;
 class UStaticMeshComponent;
 class ATempleHero;
 class ATempleBeholder;
+class ATempleSeal;
 
 /**
  * The sanctum's battle, before the beholder (user 2026-10-22: "add them to the grand temple room at the
@@ -44,6 +45,8 @@ public:
     ATempleBeholder* GetBeholder() const { return TheBeholder.Get(); }
     /** Tests: let the beholder fight by itself while the battle is on (default), or hold it to scripted orders. */
     void SetBeholderFights(bool b) { bBeholderFights = b; }
+    /** The wizard's seal over the sea tear (docs/CHULT-TEMPLE-HEROES.md#sealing-the-sea-tear). */
+    ATempleSeal* GetSeal() const { return TheSeal.Get(); }
     float FloorZ() const { return Floor; }
     bool IsActive() const { return bActive; }
     /** Its assets are in and the cast is on the floor. */
@@ -54,7 +57,9 @@ public:
     enum class ESound : uint8 { Whoosh, BladeBone, ShieldBlock, ArmourHit, ArmourStep, ShieldBash, BowDraw, BowRelease, ArrowFlight, ArrowHit, BoltCast, BoltImpact, SkullBounce, BodyHit,
         // The beholder's (Tools/gen_beholder_sfx.py). Its five rays in EBeholderRay's order.
         BeholderRayCharge, BeholderRayDisintegrate, BeholderRayEnervate, BeholderRayTelekinetic, BeholderRayParalyze, BeholderRayFear,
-        BeholderRayImpact, BeholderDisintegrate, BeholderConeCharge, BeholderConeBlast, BeholderRoar, BeholderSnap, BeholderGrowl, BeholderHurt, Count };
+        BeholderRayImpact, BeholderDisintegrate, BeholderConeCharge, BeholderConeBlast, BeholderRoar, BeholderSnap, BeholderGrowl, BeholderHurt,
+        // The wizard's seal over the sea tear (2026-10-25).
+        SealSurge, SealBreak, Count };
     void Sound(ESound Kind, const FVector& At, float Volume = 1.f, float Pitch = 1.f);
     USoundBase* HumSound() const { return Hum; }
     USoundAttenuation* GetAttenuation() const { return Attenuation; }
@@ -122,6 +127,8 @@ private:
 
     TArray<TWeakObjectPtr<ATempleHero>> Heroes;
     TWeakObjectPtr<ATempleBeholder> TheBeholder;
+    TWeakObjectPtr<ATempleSeal> TheSeal;
+    UPROPERTY() UMaterialInterface* SealWebMat = nullptr;
     TArray<TWeakObjectPtr<ATempleSkeleton>> Pool;
     TArray<FTempleSkeletonPost> Reserve;
     FVector Beholder = FVector::ZeroVector;

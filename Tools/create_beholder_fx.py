@@ -9,6 +9,9 @@ Writes /Game/Art/ChultTemple/BeholderFX (always cooked with /Game/Art):
   M_BeholderWave   the central eye's cone: a shell of light, brightest where it is seen edge-on, with a rippling
                    pattern streaming out along it. Vertex colour is its colour and strength. Unlit, additive.
   M_BeholderSpark  a soft point of light on an instanced billboard (custom data R, G, B, A): ray motes, sparks, embers.
+  M_TempleSealWeb  the wizard's seal over the sea tear (TempleSeal.cpp, 2026-10-25): a lattice of sea-green light (rings,
+                   woven spokes, a band of runes) knitted inward from the rim; vertex colour R the tear's surge flash,
+                   G how far it is knitted, A its strength; UV the disc's own plane. Unlit, additive.
   M_BeholderFlare  Unity Labs' CC0 fireball flipbook (T_JetFireBall, Tools/import_temple_fire.py) tinted per instance
                    (custom data frame, R, G, B, A): a ray's burst of energy where it strikes, coloured as the ray.
 The game holds these assets (the battle streams them in): an existing one is kept; pass -Clean as a script
@@ -98,6 +101,25 @@ g = g * g * (.35 + .65 * exp(-r * r * 12.));
 return float3(R, G, B) * A * g * GLOW;
 """
 
+WEB = r"""
+float2 p = UV * 2. - 1.;
+float r = length(p), a = atan2(p.y, p.x);
+float cov = VCol.g, fl = VCol.r;
+float front = 1. - cov;
+float knit = smoothstep(front - .025, front + .025, r) * step(.005, cov);
+float rings = pow(abs(sin(r * 31.4)), 24.);
+float spokes = pow(abs(sin(a * 9. + r * 4.)), 40.) + pow(abs(sin(a * 9. - r * 4. + 1.57)), 40.);
+float weave = pow(abs(sin((p.x + p.y) * 26. + Time * .9) * sin((p.x - p.y) * 26. - Time * .7)), 5.);
+float runes = step(.84, r) * step(r, .94) * pow(abs(sin(a * 24. + Time * .4)), 3.) * step(.5, frac(a * 3.82 + .3));
+float flow = .6 + .4 * sin(r * 20. - Time * 6. + a * 2.);
+float lattice = (rings * .9 + spokes * .7 + weave * .35) * flow + runes * 1.3;
+float edge = exp(-pow((r - front) / .035, 2.)) * step(.005, cov) * (1.6 + .6 * sin(Time * 11. + a * 7.));
+float3 col = float3(.2, 1., .74);
+float3 c = col * (knit * (lattice + .05) + edge) * VA;
+c += float3(.75, .92, 1.) * fl * knit * (lattice + .3);
+return c * GLOW;
+"""
+
 FLARE = r"""
 float n = COLS * ROWS;
 float f = fmod(max(Frame, 0.), n), f0 = floor(f), b = f - f0, f1 = fmod(f0 + 1., n);
@@ -156,5 +178,14 @@ def flare():
     finish(mat, 'M_BeholderFlare')
 
 
-beam(); wave(); spark(); flare()
+def web():
+    mat = fresh('M_TempleSealWeb')
+    if not mat: return
+    custom(mat, WEB, [('UV', node(mat, unreal.MaterialExpressionTextureCoordinate, -800, 0)),
+                      ('VCol', vc := node(mat, unreal.MaterialExpressionVertexColor, -800, 120)), ('VA', vc, 'A'),
+                      ('Time', node(mat, unreal.MaterialExpressionTime, -800, 260))], [('GLOW', '4.')])
+    finish(mat, 'M_TempleSealWeb')
+
+
+beam(); wave(); spark(); flare(); web()
 unreal.log('CHUCK_BEHOLDER_FX_READY')

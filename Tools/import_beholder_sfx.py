@@ -4,7 +4,9 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
 count = 0
-for path in sorted((ROOT / 'SourceAssets/Audio/SFX').glob('SFX_Beholder*.wav')):
+import os
+STEM = os.environ.get('CHUCK_SFX_STEM', 'SFX_Beholder')   # SFX_Seal: the seal's (2026-10-25)
+for path in sorted((ROOT / 'SourceAssets/Audio/SFX').glob(f'{STEM}*.wav')):
     task = unreal.AssetImportTask()
     task.filename = str(path)
     task.destination_path = '/Game/Art/Audio/SFX'

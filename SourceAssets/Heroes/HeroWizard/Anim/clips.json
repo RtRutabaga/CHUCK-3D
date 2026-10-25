@@ -40,6 +40,19 @@
    "fps": 30,
    "loops": false,
    "hit_s": 0.0
+  },
+  "Seal": {
+   "fbx": "Anim/AS_HeroWizard_Seal.fbx",
+   "frames": 180,
+   "fps": 30,
+   "loops": true
+  },
+  "SealStrain": {
+   "fbx": "Anim/AS_HeroWizard_SealStrain.fbx",
+   "frames": 55,
+   "fps": 30,
+   "loops": false,
+   "hit_s": 0.18
   }
  }
 }

@@ -2,6 +2,36 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 25 — the wizard sealing the sea tear (Claude)
+
+- **Request:** "Do the animation for the wizard attempting to seal the sea world rupture". Base `1c1f542`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-HEROES.md#sealing-the-sea-tear.
+- **Tested:**
+  - Blender reviews ×3, uncooked seal trials ×3, full sanctum suite ×1.
+  - Packaged: Verify-Package passed (`Local/verify-package-20261025-133208.log`).
+- **Contract compatibility:**
+  - The wizard's rig is unchanged. He has two more clips, so `CHUCK_SANCTUM_BATTLE` reports `clips=22` and `sounds=64`, and gains `seal=1`.
+  - His rest clip is `Seal` when the seal exists (else `Channel`).
+  - New `ATempleSeal`, and `ATempleSanctumBattle::GetSeal`.
+  - `ATempleHero` gains `SealSurge`, `IsSealing` and `GetStrains`.
+  - `ESound` gains `SealSurge` and `SealBreak`.
+  - New trial `wizard_seal`. Verify-Package expects it.
+- **Source of truth:**
+  - Clips: `Tools/build_hero_anims.py -- Wizard --only Seal,SealStrain`, then `Tools/Import-TempleHeroes.ps1 -Only Wizard`.
+  - The import re-saves unchanged textures and material instances: those were restored with git before committing. The re-saved `SK_`/`SKEL_HeroWizard` and the wizard's re-imported clips are kept.
+- **Binary assets (LFS):**
+  - 2 new clips and 5 re-imported ones, the wizard mesh and skeleton;
+  - `M_TempleSealWeb`;
+  - 3 sounds and their WAVs.
+- **Tools:**
+  - Blender 4.5.14 ×4.
+  - UE 5.7.4: Build.bat ×3, pythonscript ×3 (hero import, material, sounds), uncooked runs ×4, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - Python stdlib sound synthesis. The first run hung (a quadratic envelope) and was killed and fixed.
+  - No downloads or installations.
+- **Launcher:** promoted as `WizardSeal`.
+
+Next part of the work can be done here (the entrance and Fireball cutscenes).
+
 ## October 25 — the beholder's attacks and movements (Claude)
 
 - **Request:** the beholder's attacks and movements for the coming battle (cutscenes later); 5e-consistent, varied, cinematic, with an area attack that can hurt Chuck. Base `2e06a88`.

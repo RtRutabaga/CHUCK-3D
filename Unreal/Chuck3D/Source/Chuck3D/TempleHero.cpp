@@ -2,6 +2,7 @@
 #include "HeroClipData.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSkeleton.h"
+#include "TempleSeal.h"
 #include "ChultTempleInterior.h"
 #include "ChultTempleWind.h"
 #include "Animation/AnimSequence.h"
@@ -167,7 +168,9 @@ void ATempleHero::Play(FName Clip, bool bLoop, float Blend)
 void ATempleHero::BackToRest()
 {
     Act = EAct::Idle;
-    const FName Rest = Role == ERole::Fighter ? FName(TEXT("Guard")) : Role == ERole::Wizard ? FName(TEXT("Channel")) : FName(TEXT("Idle"));
+    // The wizard's work, since 2026-10-25, is sealing the sea tear (his Seal loop); before, the binding at the dais.
+    const bool bSeal = Role == ERole::Wizard && Battle.IsValid() && Battle->GetSeal() && Clips.Contains(TEXT("Seal")) && Clips[TEXT("Seal")];
+    const FName Rest = Role == ERole::Fighter ? FName(TEXT("Guard")) : Role == ERole::Wizard ? FName(bSeal ? TEXT("Seal") : TEXT("Channel")) : FName(TEXT("Idle"));
     if (Animator.Playing() != Rest) { Animator.Play(Rest, true, 1.f, true, .3f); }
     ActTime = 0;
 }
@@ -487,7 +490,14 @@ void ATempleHero::TickWizard(float DeltaSeconds)
     if (Hum) Hum->SetVolumeMultiplier(.32f * (IsSuppressed() ? .05f : 1.f));
     if (GemLight) GemLight->SetIntensity(Snuffed * (700.f + 250.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 4000.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f)));
     const ATempleBeholder* Bh = Battle->GetBeholder();
-    const FVector LookAt = Act == EAct::Attack && Target.IsValid() ? Target->GetMesh()->GetBoneLocation(TEXT("head")) : Bh ? Bh->GetCentre() : Battle->BeholderSpot();
+    ATempleSeal* Seal = Battle->GetSeal();
+    FVector LookAt = Act == EAct::Attack && Target.IsValid() ? Target->GetMesh()->GetBoneLocation(TEXT("head")) : Bh ? Bh->GetCentre() : Battle->BeholderSpot();
+    if (Seal && Act != EAct::Attack) LookAt = Seal->GetCentre() + (GetActorLocation() - Seal->GetCentre()).GetSafeNormal2D() * 40.f;   // the knitting edge nearest him
+    if (Seal && IsSealing())
+    {
+        // His gem and his open hand feed the threads.
+        Seal->Work(Mesh->GetBoneLocation(TEXT("weapon_tip")), Mesh->GetBoneLocation(TEXT("hand_l")) + GetActorForwardVector() * 12.f);
+    }
     {
         const FVector Local = GetActorTransform().InverseTransformVectorNoScale(LookAt - HeadLocation());
         Animator.SetLook(FMath::Clamp(-FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -45.f, 45.f) * .6f,
@@ -507,11 +517,12 @@ void ATempleHero::TickWizard(float DeltaSeconds)
         if (Animator.Time() >= HeroClipData::Wizard::CastLength - .1f) { BackToRest(); NextAt = W + Random.FRandRange(7.f, 12.f); }
         break;
     case EAct::React:
+        if (Seal && Animator.Playing() == FName(TEXT("SealStrain"))) Face(Seal->GetCentre() - Here, 40.f, DeltaSeconds);
         if (Animator.Time() >= Animator.Length() - .1f) BackToRest();
         break;
     default:
     {
-        Face((Bh ? Bh->GetCentre() : Battle->BeholderSpot()) - Here, 50.f, DeltaSeconds);
+        Face((Seal ? Seal->GetCentre() : Bh ? Bh->GetCentre() : Battle->BeholderSpot()) - Here, 50.f, DeltaSeconds);
         if (W < NextAt || IsSuppressed()) break;
         // The binding has his mind: he turns a bolt only on one that comes for him or the ranger.
         ATempleSkeleton* Foe = nullptr; float BestD = 1100.f;
@@ -527,7 +538,7 @@ void ATempleHero::TickWizard(float DeltaSeconds)
             // With none coming, now and then he turns a bolt on the beholder itself.
             if (Bh && Bh->IsFighting() && W >= NextBeholderShot)
             {
-                NextBeholderShot = W + Random.FRandRange(8.f, 13.f);
+                NextBeholderShot = W + Random.FRandRange(Seal ? 13.f : 8.f, Seal ? 19.f : 13.f);   // the seal has most of him
                 Target = nullptr; Act = EAct::Attack; Play(TEXT("Cast"), false, .18f);
                 Battle->Sound(ATempleSanctumBattle::ESound::BoltCast, Mesh->GetBoneLocation(TEXT("hand_l")), .9f);
                 break;
@@ -756,7 +767,11 @@ void ATempleHero::TakeBeholderCone(const FVector& Apex, const FVector& Axis)
     const float Facing = static_cast<float>(FVector::DotProduct(-Away, GetActorForwardVector()));
     CounterOn = nullptr;
     ParalysedUntil = 0;   // the antimagic undoes the paralysis too
-    if (Role == ERole::Wizard) SuppressUntil = W + 4.f;   // his binding snuffed: the gem dark, the hum gone
+    if (Role == ERole::Wizard)
+    {
+        SuppressUntil = W + 4.f;   // his binding snuffed: the gem dark, the hum gone
+        if (ATempleSeal* Seal = Battle->GetSeal()) Seal->Break(Apex);   // and the seal shattered
+    }
     if (Role == ERole::Fighter && Facing > .3f)
     {
         ++Blocks;
@@ -807,4 +822,19 @@ void ATempleHero::BeholderContact()
     Battle->Sound(ATempleSanctumBattle::ESound::BodyHit, Q, 1.f, .7f);
     Battle->Sound(ATempleSanctumBattle::ESound::Whoosh, Q, .6f, .9f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_BEHOLDER_CUT gap=%.0f"), FVector::Dist(Q, Bh->GetCentre()));
+}
+
+bool ATempleHero::IsSealing() const
+{
+    if (Role != ERole::Wizard || IsSuppressed() || IsParalysed()) return false;
+    const FName C = Animator.Playing();
+    return (Act == EAct::Idle && C == FName(TEXT("Seal"))) || C == FName(TEXT("SealStrain"));
+}
+
+void ATempleHero::SealSurge()
+{
+    if (!IsSealing() || Act != EAct::Idle) return;
+    ++Strains;
+    Act = EAct::React; Play(TEXT("SealStrain"), false, .06f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_SEAL_STRAIN strains=%d"), Strains);
 }
