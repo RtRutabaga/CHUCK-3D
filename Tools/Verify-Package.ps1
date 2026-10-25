@@ -81,7 +81,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=37 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=24 missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=37 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=37 missing_assets=0 missing_sounds=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=20 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
@@ -156,11 +156,14 @@ if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK
 # each spike pit on wall runs kicked back and forth (one kick fewer falls short; leg 3 started on its broken wall falls),
 # into a rupture (an Astral death, back at its bend's start), round every bend's ruptures, down the sanctum's stair onto
 # its dais, and the whole way from the antechamber to the sanctum's gallery.
+# Since 2026-10-24 the sanctum's floor is broken: a sprint leap off the stair's head lands in the pool and dies, the same
+# leap from 5 m down clears it, and the sea tear by the wizard is a fall death; every hole is open and its rim holds.
 $windLog=Join-Path $evidence ('verify-temple-wind-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $windProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleWindTest','-ChuckTempleRunMusicTest','-ChuckSanctumMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_CHECK lanes=8 ' -Quiet) -or
-   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 full=1' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 top_leap=1 mid_leap=1 sea_fall=1 full=1' -Quiet) -or
+   !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_SANCTUM_HOLES_CHECK holes=9 ' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_RUN_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_BOSS_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Temple Astral wind verification failed. Inspect $windLog"
@@ -171,7 +174,7 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # 2026-10-23 the beholder hangs over the dais (docs/CHULT-TEMPLE-BEHOLDER.md): it must spawn whole and live.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5' -Quiet) -or
+if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=20 sounds=39 arrow=1 skull=1 fx=5 near_holes=0' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or

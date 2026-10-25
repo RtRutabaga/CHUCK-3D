@@ -2,6 +2,8 @@
 #include "HeroClipData.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSkeleton.h"
+#include "ChultTempleInterior.h"
+#include "ChultTempleWind.h"
 #include "Animation/AnimSequence.h"
 #include "Components/AudioComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -294,7 +296,9 @@ void ATempleHero::TickFighter(float DeltaSeconds)
         const float T = Animator.Time();
         const float Now = RootAt(Root, N, T);
         FHitResult Hit;
-        AddActorWorldOffset(GetActorForwardVector() * (Now - StepStart), true, &Hit);
+        // (Never a step onto the sanctum's broken floor, 2026-10-24.)
+        const FVector Next = ChultTempleInteriorFrameOf(GetActorLocation() + GetActorForwardVector() * (Now - StepStart));
+        if (!ChultTempleSanctumHoleAt(FVector2D(Next.X, Next.Y), 45.f)) AddActorWorldOffset(GetActorForwardVector() * (Now - StepStart), true, &Hit);
         StepStart = Now;
         for (int32 K = 0; K < 2; ++K)
             if (!bStepSound[K] && T >= (K ? .6f : .32f)) { bStepSound[K] = true; Battle->Sound(ATempleSanctumBattle::ESound::ArmourStep, Here - FVector(0, 0, HalfHeight - 5), .6f); }

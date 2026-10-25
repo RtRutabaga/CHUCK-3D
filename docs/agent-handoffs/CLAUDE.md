@@ -2,6 +2,26 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 24 — the sanctum's stair masonry, ruptures and sea tear (Claude)
+
+- **Request:** stone under the sanctum's stairs; cellar-style Astral ruptures, a rectangle at the stairs' base so he can't jump from the balcony or a stair's top; a smaller other-world tear onto the open sea to the wizard's left (a fall death). Base `c4b1539`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-WIND.md#the-sanctums-ruptures.
+- **Tested:**
+  - uncooked wind test ×1 full (`Local/sanctum-holes-1.log`), views-only ×4, sanctum battle test ×1;
+  - packaged Verify-Package: the first run failed on the glow count only; the re-run passed (`Local/verify-package-20261024-183813.log`).
+- **Contract compatibility:**
+  - Chuck, the NPC rigs, heroes and beholder are unchanged.
+  - New public `ChultTempleSanctumHoleAt`, `ChultTempleSanctumIslands`, `ChultTempleSanctumSeaRadius`; new constants in `TempleWind`.
+  - `CHUCK_SANCTUM_BATTLE` gains `near_holes=`; the wind test gains `top_leap`, `mid_leap` and `sea_fall`; `CHUCK_CHULT_TEMPLE_INTERIOR` reports `wind_glows=37`. Verify-Package expects all of these.
+  - Skeletons in the sanctum: `bCanWalkOffLedges=false`, a leash to T −5300, steering away from holes.
+- **Binary assets:** `M_TempleRiftSea.uasset` (10 KB, LFS). LFS remote quota not checked.
+- **Tools:**
+  - UE 5.7.4: Build.bat ×4, pythonscript ×6 (the sea material), uncooked runs ×6, Build-Game -Package -SkipBaseAssets ×1 (with its Verify-Package), Verify-Package ×1, Promote-Build ×1.
+  - No downloads, no installations.
+- **Launcher:** promoted as `SanctumRifts`.
+
+Next part of the work can be done here.
+
 ## October 24 — the beholder after the user's references (Claude)
 
 - **Request:** "Make the beholder look more like this, here also is a clay render as a reference, use free resources where helpful". Base `e54c8ed`; source commit `a766960`.

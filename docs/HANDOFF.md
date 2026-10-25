@@ -28,6 +28,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **The sanctum's broken floor (October 24, Claude):**
+  - Both stairs now stand on solid masonry, with a string course and plinth.
+  - The floor between them, from under the gallery to 15 m out, is a cellar-style Astral rupture: a ragged hole with the Astral's well and an oil haze, the piers in it on islands. A sprint leap off the stair's head dies in it; the same leap from 5 m down the stair clears it.
+  - Four smaller cellar-style ruptures lie in the aisles.
+  - To the wizard's left, a 1.1 m tear opens onto another world's open sea (the cellar's sky-hole kind, with its oil slick): a fall death.
+  - Details in [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures). Verified (Verify-Package, 182 passes) and in the launcher.
 - **The beholder rebuilt after the user's references (October 24, Claude):** the user supplied a colour concept and a clay render and asked for "free resources where helpful". The beholder now has:
   - a lumpy cranium tapering to a chin;
   - a green slit-pupilled eye under a massive brow and stacked bags;
@@ -51,6 +57,30 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 24 — the sanctum's stair masonry, Astral ruptures and sea tear (Claude)
+
+- **Built:** user: "fill in below the staircases on the temple sanctum with stone ... add some astral sea ruptures ... a rectangle of astral rupture at the base of the staircases ... like the pantry cellar ruptures ... to the wizard's left add a other-world-rupture ... waves of the open sea ... this is the astral tear that the wizard is attempting to seal". See [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures).
+  - The stairs rest on solid stone (`StairMass`), closed underneath.
+  - The pool: T −3400 to about −4990 between the stairs. Its reach comes from Chuck's sprint leap (420 cm/s, 250 cm/s lift, about 9 m from 13 m up).
+    - The braziers, guardian idols and processional moved back from it.
+    - The gallery's piers and the first colonnade pair stand on islands.
+  - Four aisle ruptures and the sea tear (new `M_TempleRiftSea`, `Tools/create_temple_rift_sea.py`, view-ray sea 15 m down).
+  - Deaths in any of them return him to the gallery.
+  - In the sanctum the skeletons don't walk off ledges and steer round holes; their leash stops at T −5300. Heroes never step onto a hole. One skeleton post moved 0.9 m.
+- **Tests (uncooked):** `Local/sanctum-holes-1.log`:
+  - interior check `failures=0`, `CHUCK_SANCTUM_HOLES_CHECK holes=9`;
+  - every wind trial, plus `top_leap` (died 8.9 m out), `mid_leap` (landed 2.1 m beyond the pool) and `sea_fall`.
+  - Sanctum battle test `failures=0 near_holes=0` (`Local/sanctum-battle-holes-1.log`).
+  - Views-only re-runs while tuning the sea (`Local/sanctum-holes-views-2..5.log`).
+- **Packaged:** the first automatic Verify-Package stopped only on the expected light count (`wind_glows` 24 → 37, now expected). The re-run passed, 182 passes (`Local/verify-package-20261024-183813.log`), with the same leap results.
+- **Flaws:**
+  - Seen low from the floor, the sea tear reads pale, more like sky than water (seen from above it shows rows of waves and whitecaps).
+  - The rupture rims' 10 cm steps read blocky up close, as the cellar's do.
+  - Landing on a pier island is a dead end: the only way off is into the Astral.
+  - A wall run along the stair's wall was not tried as a way past the pool.
+  - Not played by a person.
+- **Launcher:** promoted as `SanctumRifts`.
 
 ## October 23 — temple music, the fighter's shield, a grander sanctum (Claude)
 

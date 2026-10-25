@@ -1,6 +1,7 @@
 #include "TempleSanctumBattle.h"
 #include "ChuckCharacter.h"
 #include "ChultTempleWind.h"
+#include "ChultTempleInterior.h"
 #include "HeroClipData.h"
 #include "TempleHero.h"
 #include "TempleBeholder.h"
@@ -254,10 +255,11 @@ void ATempleSanctumBattle::SpawnCast()
     // idols, braziers and the heroes' ground).
     // In the enlarged hall (2026-10-23): in the nave before the dais and in the aisles, clear of the piers,
     // the great fire bowls and the heroes' ground.
-    const FPlace Posts[] = {{HallMid - 250, DaisT1 + 200}, {HallMid + 250, DaisT1 + 200}, {HallMid - 650, DaisT1 + 650}, {HallMid + 650, DaisT1 + 650},
+    const FPlace Posts[] = {{HallMid - 250, DaisT1 + 200}, {HallMid + 250, DaisT1 + 200}, {HallMid - 650, DaisT1 + 560}, {HallMid + 650, DaisT1 + 650},
                             {HallMid - 200, DaisT1 + 1550}, {HallMid + 200, DaisT1 + 1550}, {HallMid - 1180, DaisT1 + 330}, {HallMid + 1180, DaisT1 + 330},
                             {HallMid - 1180, DaisT1 + 1150}, {HallMid + 1180, DaisT1 + 1150}, {HallMid - 650, DaisT1 + 1500}, {HallMid + 650, DaisT1 + 1500}};
-    const FBox2D Leash(FVector2D(HS0 + 60, DaisT1 + 100), FVector2D(HS1 - 60, GalleryT - 300));
+    // (Since 2026-10-24 short of the pool before the gallery: it was to GalleryT - 300.)
+    const FBox2D Leash(FVector2D(HS0 + 60, DaisT1 + 100), FVector2D(HS1 - 60, PoolT - PoolJag - 300));
     for (const FPlace& Pl : Posts)
     {
         FTempleSkeletonPost Post;
@@ -272,10 +274,14 @@ void ATempleSanctumBattle::SpawnCast()
             Pool.Add(S);
         }
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d"),
+    // Every hero's ground and every post stands a metre clear of the broken floor (2026-10-24).
+    int32 NearHoles = 0;
+    for (const FPlace& Pl : Places) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
+    for (const FPlace& Pl : Posts) NearHoles += ChultTempleSanctumHoleAt(FVector2D(Pl.S, Pl.T), 100) != 0;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_BATTLE heroes=%d beholder=%d skeletons=%d meshes=%d clips=%d sounds=%d arrow=%d skull=%d fx=%d near_holes=%d"),
         Heroes.Num(), TheBeholder.IsValid(), Pool.Num(), HeroMeshes.FilterByPredicate([](USkeletalMesh* M) { return M != nullptr; }).Num(),
         HeroClipList.FilterByPredicate([](UAnimSequence* A) { return A != nullptr; }).Num(), SoundList.Num(), ArrowMesh != nullptr, SkullMesh != nullptr,
-        (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr));
+        (DustMat != nullptr) + (BoltFireMat != nullptr) + (GlowMat != nullptr) + (TrailMat != nullptr) + (BoneMat != nullptr), NearHoles);
 }
 
 int32 ATempleSanctumBattle::GetUp() const

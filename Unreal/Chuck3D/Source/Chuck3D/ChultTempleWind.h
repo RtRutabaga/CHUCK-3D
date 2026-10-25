@@ -54,7 +54,27 @@ namespace TempleWind
     // The colonnades: two rows of piers either side of the nave, at these T (the gap at the stairs' foot is a lane).
     constexpr float NaveHalf = 900, PierHalf = 95;
     constexpr float PierT[] = {-4600, -5150, -5700, -6750, -7300};
+
+    // The sanctum's broken floor (2026-10-24, user; docs/CHULT-TEMPLE-WIND.md#the-sanctums-ruptures), the cellar's
+    // kind of Astral rupture (a ragged hole, the Astral's well under it, an oil haze round its rim), not the tunnels' slits:
+    // - the pool: the whole floor between the stairs, from under the gallery to PoolT (ragged by PoolJag), so a jump off
+    //   the gallery or the stairs' top lands in the Astral. A sprint leap from the stair's head carries about 9 m out from
+    //   13 m up (420 cm/s, 2.2 s); about 4 m down the stair it clears the pool. The piers inside stand on islands of floor.
+    // - a few smaller ruptures in the aisles;
+    // - the sea tear: to the wizard's left, torn open on another world's open sea (a fall death for now).
+    constexpr float PoolS0 = HS0 + StairW, PoolS1 = HS1 - StairW, PoolT = -4975, PoolJag = 25;
+    struct FSanctumRift { float S, T, RS, RT; };
+    constexpr FSanctumRift SanctumRifts[] = {{77450, -5950, 48, 62}, {79960, -5600, 52, 70}, {77350, -7950, 56, 72}, {80060, -8300, 50, 62}};
+    constexpr float SeaS = 78083, SeaT = -6710, SeaR = 110, SeaDepth = 820;
 }
+
+// What the sanctum's floor is at a frame point: 0 floor, 1 the Astral (the pool or a rupture), 2 the sea tear. Grow
+// widens each hole (for keeping feet and bodies clear of it).
+int32 ChultTempleSanctumHoleAt(const FVector2D& Frame, float Grow = 0);
+// The islands of floor the pool's piers stand on (frame boxes round their footings).
+const TArray<FBox2D>& ChultTempleSanctumIslands();
+// The sea tear's rim radius at an angle round its centre (radians).
+float ChultTempleSanctumSeaRadius(float Angle);
 
 // Its Astral ruptures (frame, around a centre: tear outline points), for the build, the deaths and the checks.
 // C is where it was placed; Mid the middle of its (bent) slit, always inside it.

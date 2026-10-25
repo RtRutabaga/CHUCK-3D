@@ -112,6 +112,58 @@ bool ChultTempleWindTearAt(const FVector2D& F, float Grow)
     return false;
 }
 
+// ---- The sanctum's broken floor (2026-10-24).
+const TArray<FBox2D>& ChultTempleSanctumIslands()
+{
+    static const TArray<FBox2D> List = []
+    {
+        TArray<FBox2D> Out;
+        // The gallery's six piers (their bases 104 cm square at GalleryT..+100) and the colonnades' first pair (242 cm).
+        for (float S : {77550.f, 78150.f, 78430.f, 78970.f, 79250.f, 79850.f}) Out.Add(FBox2D(FVector2D(S - 78, GalleryT - 26), FVector2D(S + 78, GalleryT + 126)));
+        for (float Sg : {-1.f, 1.f}) { const float S = HallMid + Sg * NaveHalf; Out.Add(FBox2D(FVector2D(S - 150, PierT[0] - 150), FVector2D(S + 150, PierT[0] + 150))); }
+        return Out;
+    }();
+    return List;
+}
+
+float ChultTempleSanctumSeaRadius(float A)
+{
+    return SeaR + 7.f * FMath::Sin(5.f * A) + 5.f * FMath::Sin(11.f * A + 1.f) + 3.f * FMath::Sin(3.f * A + 2.f);
+}
+
+namespace
+{
+    float PoolEdgeT(float S) { return PoolT - PoolJag * .5f + PoolJag * .5f * (.6f * FMath::Sin(S * .0113f) + .4f * FMath::Sin(S * .031f + 1.3f)); }
+    // An island: its box, rounded at the corners and a little ragged.
+    bool OnIsland(const FBox2D& B, const FVector2D& P, float Grow)
+    {
+        const FVector2D C = B.GetCenter(), H = B.GetExtent() - FVector2D(Grow, Grow), D = P - C;
+        if (H.X <= 0 || H.Y <= 0) return false;
+        const float A = FMath::Atan2(float(D.Y), float(D.X)), Jag = 1.f + .05f * FMath::Sin(7.f * A + C.X * .01f);
+        const float X = FMath::Abs(float(D.X)) / H.X * Jag, Y = FMath::Abs(float(D.Y)) / H.Y * Jag;
+        return FMath::Pow(X, 4.f) + FMath::Pow(Y, 4.f) < 1.f;
+    }
+}
+
+int32 ChultTempleSanctumHoleAt(const FVector2D& F, float Grow)
+{
+    if (F.X > PoolS0 - Grow && F.X < PoolS1 + Grow && F.Y < HT1 + Grow && F.Y > PoolEdgeT(F.X) - Grow)
+    {
+        bool Island = false;
+        for (const FBox2D& B : ChultTempleSanctumIslands()) Island |= OnIsland(B, F, Grow);
+        if (!Island) return 1;
+    }
+    for (const FSanctumRift& R : SanctumRifts)
+    {
+        const float DX = (F.X - R.S) / (R.RS + Grow), DY = (F.Y - R.T) / (R.RT + Grow);
+        const float Jag = 1.f + .14f * FMath::Sin(6.f * FMath::Atan2(DY, DX) + R.S * .1f);
+        if (FMath::Sqrt(DX * DX + DY * DY) * Jag < 1.f) return 1;
+    }
+    const FVector2D D = F - FVector2D(SeaS, SeaT);
+    if (D.Size() < ChultTempleSanctumSeaRadius(FMath::Atan2(float(D.Y), float(D.X))) + Grow) return 2;
+    return 0;
+}
+
 bool ChultTempleWindPath(const FVector2D& From, const FVector2D& To, float Clear, TArray<FVector2D>& Out)
 {
     // A 10 cm grid of the tunnels' floors (the exit passage, legs and bends; never a pit or a rupture),

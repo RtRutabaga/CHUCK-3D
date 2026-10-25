@@ -63,15 +63,21 @@ void ReviewChultTempleWind(AActor* Owner, AChuckCharacter* Chuck, int32 Failures
         {TEXT("SanctumFloor"), FVector(HallMid + 450, GalleryT - 200, HZ + 160), FVector(HallMid, DaisT1 - 500, HZ + 250)},
         {TEXT("SanctumStair"), FVector(HS0 + 500, StairFoot - 260, HZ + 120), FVector(HS0 + 80, GalleryT - 300, HZ + 380)},
         {TEXT("SanctumDais"), FVector(HallMid - 300, DaisT1 - 100, HZ + 260), FVector(HallMid, HT1 - 200, UZ + 100)},
-        {TEXT("SanctumHigh"), FVector(HS0 + 200, HT1 - 150, UZ + 300), FVector(HS1 - 600, DaisT1 + 300, HZ)}};
+        {TEXT("SanctumHigh"), FVector(HS0 + 200, HT1 - 150, UZ + 300), FVector(HS1 - 600, DaisT1 + 300, HZ)},
+        // The broken floor (2026-10-24): the pool from the stair's head and from its far edge, an aisle's rupture, the sea tear.
+        {TEXT("SanctumPool"), FVector(HS0 + 100, GalleryT - 120, UZ + 140), FVector(HallMid, PoolT + 300, HZ)},
+        {TEXT("SanctumPoolEdge"), FVector(HallMid - 200, PoolT - 600, HZ + 170), FVector(HallMid - 500, -4300, HZ - 40)},
+        {TEXT("SanctumRift"), FVector(SanctumRifts[0].S + 260, SanctumRifts[0].T - 220, HZ + 120), FVector(SanctumRifts[0].S, SanctumRifts[0].T, HZ - 30)},
+        {TEXT("SanctumSea"), FVector(SeaS + 330, SeaT + 260, HZ + 170), FVector(SeaS, SeaT, HZ - 60)},
+        {TEXT("SanctumSeaDown"), FVector(SeaS + 60, SeaT + 40, HZ + 260), FVector(SeaS - 20, SeaT - 10, HZ - 400)}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->SetViewTarget(Camera); PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
     Chuck->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum));
 
-    enum class ET : uint8 { Reach, Pit1, Pit2, Pit2One, Pit3, Pit3Wrong, Pit4, Pit4Short, TearFall, Bends, Stairs, Full };
-    static const ET Trials[] = {ET::Reach, ET::Pit1, ET::Pit2, ET::Pit2One, ET::Pit3, ET::Pit3Wrong, ET::Pit4, ET::Pit4Short, ET::TearFall, ET::Bends, ET::Stairs, ET::Full};
-    static const TCHAR* Names[] = {TEXT("reach"), TEXT("pit1"), TEXT("pit2"), TEXT("pit2_one_kick"), TEXT("pit3"), TEXT("pit3_wrong_wall"), TEXT("pit4"), TEXT("pit4_short"), TEXT("tear_fall"), TEXT("bends"), TEXT("stairs"), TEXT("full")};
+    enum class ET : uint8 { Reach, Pit1, Pit2, Pit2One, Pit3, Pit3Wrong, Pit4, Pit4Short, TearFall, Bends, Stairs, TopLeap, MidLeap, SeaFall, Full };
+    static const ET Trials[] = {ET::Reach, ET::Pit1, ET::Pit2, ET::Pit2One, ET::Pit3, ET::Pit3Wrong, ET::Pit4, ET::Pit4Short, ET::TearFall, ET::Bends, ET::Stairs, ET::TopLeap, ET::MidLeap, ET::SeaFall, ET::Full};
+    static const TCHAR* Names[] = {TEXT("reach"), TEXT("pit1"), TEXT("pit2"), TEXT("pit2_one_kick"), TEXT("pit3"), TEXT("pit3_wrong_wall"), TEXT("pit4"), TEXT("pit4_short"), TEXT("tear_fall"), TEXT("bends"), TEXT("stairs"), TEXT("top_leap"), TEXT("mid_leap"), TEXT("sea_fall"), TEXT("full")};
     struct FRun
     {
         int32 Phase = 0, Trial = -1, Sub = 0, Leg = 0, Failures = 0, Deaths = 0, Shots = 0, Kicks = 0, Chains = 0, SideRuns = 0, Point = 0, Probe = 0;
@@ -200,6 +206,11 @@ void ReviewChultTempleWind(AActor* Owner, AChuckCharacter* Chuck, int32 Failures
                 break;
             }
             case ET::Stairs: Reset(HallMid, HT1 - 220, UZ, 0, -1); Run->Points = {{HallMid, GalleryT + 80}, {HS0 + 80, GalleryT + 80}, {HS0 + 80, StairFoot - 90}, {HallMid, StairFoot - 90}, {HallMid, DaisT1 + 300}, {HallMid, DaisT1 - 200}}; break;
+            // The pool (2026-10-24): a sprint leap off the -S stair's head, out over the hall (it lands in the pool), and the
+            // same leap from 5 m down the stair (it clears the pool). Then a walk into the sea tear.
+            case ET::TopLeap: Reset(HS0 + 40, GalleryT + 330, UZ, .3f, -1); break;
+            case ET::MidLeap: { const float T0 = GalleryT - 50; Reset(HS0 + 30, T0, HZ + (T0 - StairFoot) * (UZ - HZ) / (GalleryT - StairFoot), .3f, -1); break; }
+            case ET::SeaFall: Reset(SeaS + 250, SeaT + 330, HZ, -1, -1.3f); break;
             case ET::Full:
             {
                 Reset(LegMid(0), -3000, UZ, 0, 1);
@@ -306,6 +317,50 @@ void ReviewChultTempleWind(AActor* Owner, AChuckCharacter* Chuck, int32 Failures
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_WIND_STAIRS at=%s deaths=%d seconds=%.1f"), *P.ToString(), NewDeaths, Time);
             }
             if (NewDeaths) Done = true;
+            break;
+        }
+        case ET::TopLeap: case ET::MidLeap:
+        {
+            // Sprint straight down and out along (+0.3 S, -1 T), leap at the take-off line, keep the stick on: where he comes down.
+            const bool bTop = Trials[Run->Trial] == ET::TopLeap;
+            const float TakeoffT = bTop ? GalleryT - 30 : GalleryT - 500;
+            Limit = 12;
+            if (Run->Sub == 0)
+            {
+                if (Time < .5f) break;
+                Chuck->SetRunHeld(true); Push(Dir(.3f, -1)); if (!Chuck->IsSprinting()) Chuck->TrySprint();
+                if (P.Y < TakeoffT && Ground)
+                {
+                    Chuck->JumpPressed(); Run->Sub = 1; Run->At = Now; Run->Takeoff = P.Y; Run->Rise = P.Z - Stand;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LEAP %s takeoff_t=%.0f takeoff_s=%.0f height=%.0f sprint=%d runup=%.0f speed=%.0f"), Names[Run->Trial], P.Y, P.X, P.Z - Stand - HZ, Chuck->IsSprinting(), Chuck->GetSprintRunup(), M->Velocity.Size2D());
+                }
+                break;
+            }
+            Push(Dir(.3f, -1));
+            if (NewDeaths)
+            {
+                Done = true; Run->bPass = bTop;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LEAP_END %s died=1 at_t=%.0f at_s=%.0f from_takeoff=%.0f leapt=%d"), Names[Run->Trial], P.Y, P.X, Run->Takeoff - P.Y, Chuck->GetSprintLeaps());
+                break;
+            }
+            if (Ground && Now - Run->At > .4f && P.Z - Stand < HZ + 20)
+            {
+                Done = true; Run->bPass = !bTop && !ChultTempleSanctumHoleAt(FVector2D(P.X, P.Y));
+                Shot(TEXT("MidLeapLanding"));
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LEAP_END %s died=0 at_t=%.0f at_s=%.0f from_takeoff=%.0f beyond_pool=%.0f"), Names[Run->Trial], P.Y, P.X, Run->Takeoff - P.Y, (PoolT - PoolJag) - P.Y);
+            }
+            break;
+        }
+        case ET::SeaFall:
+        {
+            // Walk into the sea tear by the wizard: a fall death, back on the gallery.
+            Limit = 14;
+            if (Run->Sub == 0) { Steer(SeaS, SeaT, 5); if (NewDeaths) { Run->Sub = 1; Run->At = Now; Stop(); } }
+            else if (Now - Run->At > 1.5f)
+            {
+                const bool Home = FVector::Dist(Chuck->GetActorLocation(), ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)) < 40 && Ground && !Chuck->IsAstral();
+                if (Home || Now - Run->At > 8) { Done = true; Run->bPass = Home && NewDeaths == 1; UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_SEA_FALL home=%d deaths=%d"), Home, NewDeaths); }
+            }
             break;
         }
         case ET::Full:

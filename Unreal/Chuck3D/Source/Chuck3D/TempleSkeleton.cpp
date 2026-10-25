@@ -3,6 +3,8 @@
 #include "SkeletonClipData.h"
 #include "TempleHero.h"
 #include "TempleSanctumBattle.h"
+#include "ChultTempleInterior.h"
+#include "ChultTempleWind.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Animation/AnimSequence.h"
@@ -250,6 +252,17 @@ FVector ATempleSkeleton::Steer(const FVector& Want, const AActor* Ignore) const
     for (const float Turn : {0.f, 30.f, -30.f, 60.f, -60.f, 95.f, -95.f})
     {
         const FVector Try = Dir.RotateAngleAxis(Turn, FVector::UpVector);
+        // The sanctum's broken floor: a heading that walks it into a hole is not clear.
+        if (Battle.IsValid())
+        {
+            bool bHole = false;
+            for (const float Ahead : {35.f, 80.f})
+            {
+                const FVector F = ChultTempleInteriorFrameOf(GetActorLocation() + Try * FMath::Min(Ahead, Look + 30.f));
+                bHole |= ChultTempleSanctumHoleAt(FVector2D(F.X, F.Y), Radius + 8.f) != 0;
+            }
+            if (bHole) continue;
+        }
         FHitResult Hit;
         if (!GetWorld()->SweepSingleByChannel(Hit, From, From + Try * Look, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(Radius - 4.f), Q)
             || Hit.ImpactNormal.Z > .7f) return Try;
@@ -502,7 +515,8 @@ void ATempleSkeleton::SetFoe(ATempleHero* Hero)
 
 ATempleHero* ATempleSkeleton::GetFoe() const { return Foe.Get(); }
 
-void ATempleSkeleton::SetSanctum(ATempleSanctumBattle* InBattle) { Battle = InBattle; }
+// In the sanctum it never walks off its floor into the broken floor's holes (2026-10-24).
+void ATempleSkeleton::SetSanctum(ATempleSanctumBattle* InBattle) { Battle = InBattle; GetCharacterMovement()->bCanWalkOffLedges = false; }
 
 void ATempleSkeleton::Wake()
 {

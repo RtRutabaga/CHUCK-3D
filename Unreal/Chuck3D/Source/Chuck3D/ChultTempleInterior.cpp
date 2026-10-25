@@ -26,6 +26,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "HAL/PlatformMisc.h"
@@ -200,7 +201,7 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
-    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil;};
+    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil,Sea;};
     // A box in the frame (closed, faces outward).
     void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1)
     {
@@ -502,6 +503,7 @@ namespace
     const TCHAR* WoodMat=TEXT("/Game/Art/Materials/M_Wood.M_Wood");
     const TCHAR* AstralMat=TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth");
     const TCHAR* OilMat=TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist");   // the ruptures' veils (the sewer's)
+    const TCHAR* SeaMat=TEXT("/Game/Art/ChultTemple/M_TempleRiftSea.M_TempleRiftSea");   // the sanctum's sea tear (Tools/create_temple_rift_sea.py)
     const TCHAR* IdolMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSerpentIdol.SM_TempleSerpentIdol");
     const TCHAR* SkullMesh=TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull");
 
@@ -568,6 +570,8 @@ bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
         for(int32 L=0;L<4;++L)if(In(Legs[L].S0,Legs[L].S1,Pits[L].From,Pits[L].To))return true;
         if(In(Legs[2].S0-BreakDeep,Legs[2].S0,BreakMinusT0,BreakMinusT1)||In(Legs[2].S1,Legs[2].S1+BreakDeep,BreakPlusT0,BreakPlusT1))return true;
         if(F.Z<UZ-40&&F.Z>UZ-500&&F.X>TempleRun::FS0-100&&F.X<Bends[2].S1+100&&F.Y>Legs[3].T0-100&&F.Y<Bends[0].T1+100&&ChultTempleWindTearAt(FVector2D(F.X,F.Y)))return true;
+        // The sanctum's broken floor (2026-10-24): 40 cm down in the pool, a rupture or the sea tear.
+        if(F.Z<HZ-40&&F.Z>HZ-SeaDepth-200&&F.X>HS0&&F.X<HS1&&F.Y>HT0&&F.Y<HT1&&ChultTempleSanctumHoleAt(FVector2D(F.X,F.Y)))return true;
     }
     return F.X>RiftS0&&F.X<RiftS1&&F.Y>PT0&&F.Y<PT1&&F.Z<Floor-60&&F.Z>WellDeep-600;
 }
@@ -997,6 +1001,14 @@ void BuildChultTempleInterior(AActor* Owner)
     Emit(Owner,TEXT("ChultTempleInteriorIron"),{{&P.Iron,IronMat}},false,Missing,Triangles);
     auto* Astral=Emit(Owner,TEXT("ChultTempleInteriorAstral"),{{&P.Astral,AstralMat}},false,Missing,Triangles,false);Astral->SetCastShadow(false);
     auto* Veils=Emit(Owner,TEXT("ChultTempleInteriorVeils"),{{&P.Veil,OilMat}},false,Missing,Triangles);Veils->SetCastShadow(false);
+    // The sea tear's well (2026-10-24): the open sea seen along the view, its surface 15 m under the hall's floor.
+    auto* Sea=Emit(Owner,TEXT("ChultTempleInteriorSea"),{{&P.Sea,SeaMat}},false,Missing,Triangles);Sea->SetCastShadow(false);
+    if(UMaterialInterface* SeaBase=Sea->GetMaterial(0))
+    {
+        UMaterialInstanceDynamic* Mid=UMaterialInstanceDynamic::Create(SeaBase,Sea);
+        Mid->SetScalarParameterValue(TEXT("SeaZ"),static_cast<float>((G+At(TempleWind::SeaS,TempleWind::SeaT,TempleWind::HZ-1500)).Z));
+        Sea->SetMaterial(0,Mid);
+    }
     auto* Block=Emit(Owner,TEXT("ChultTempleInteriorBlock"),{{&P.Block,StoneMat}},true,Missing,Triangles);Block->SetHiddenInGame(true);Block->SetCastShadow(false);
     // The traps' moving parts.
     FActorSpawnParameters Params;Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -1126,16 +1138,16 @@ void BuildChultTempleInterior(AActor* Owner)
     }
     Built.Fires=Fires.Num();
     // The Astral's glow up the well's pit and the rift.
-    auto Glow=[&](const FVector& F,float Intensity,float Radius)
+    auto Glow=[&](const FVector& F,float Intensity,float Radius,const FLinearColor& Colour=FLinearColor(.48f,.035f,1))
     {
         auto* L=NewObject<UPointLightComponent>(Owner);L->SetupAttachment(Owner->GetRootComponent());L->SetMobility(EComponentMobility::Movable);
-        L->SetWorldLocation(G+AtV(F));L->SetIntensity(Intensity);L->SetAttenuationRadius(Radius);L->SetLightColor(FLinearColor(.48f,.035f,1));
+        L->SetWorldLocation(G+AtV(F));L->SetIntensity(Intensity);L->SetAttenuationRadius(Radius);L->SetLightColor(Colour);
         L->SetCastShadows(false);L->SetLightingChannels(false,true,false);L->RegisterComponent();L->ComponentTags.Add(TEXT("ChultTempleInteriorTorch"));
     };
     Glow(FVector((PitS0+PitS1)*.5f,(PitT0+PitT1)*.5f,WellRingZ-380),12000,1500);
     for(float T:{300.f,1100.f,2000.f})Glow(FVector((RiftS0+RiftS1)*.5f,T,Floor-420),9000,1100);
     Glow(FVector((DS0+DS1)*.5f,(PitG0+PitG1)*.5f,Floor-380),6000,800);
-    for(const FGlow& Gl:Glows)Glow(Gl.At,Gl.Intensity,Gl.Radius);   // the Astral wind's ruptures
+    for(const FGlow& Gl:Glows)Glow(Gl.At,Gl.Intensity,Gl.Radius,Gl.Colour);   // the Astral wind's ruptures, the sanctum's (and its sea tear's daylight)
     // Idols and pots.
     for(const FIdol& I:Idols)
     {
@@ -1475,6 +1487,37 @@ int32 CheckChultTempleInterior(AActor* Owner,AChuckCharacter* Chuck)
         }
         if(!ChultTempleInteriorSwallows(WorldAt(Legs[2].S0-60,(BreakMinusT0+BreakMinusT1)*.5f,UZ-100))||!ChultTempleInteriorSwallows(WorldAt(Legs[2].S1+60,(BreakPlusT0+BreakPlusT1)*.5f,UZ-100)))Fail(TEXT("wind_alcove_swallow"),FVector::ZeroVector);
         if(ChultTempleInteriorSwallows(WorldAt(HallMid,DaisT1+1800,HZ+1))||ChultTempleInteriorSwallows(WorldAt(HallMid,GalleryT+200,UZ+1)))Fail(TEXT("sanctum_swallows"),FVector::ZeroVector);
+        // The sanctum's broken floor (2026-10-24): every hole open to 2 m and swallowing, the floor round it holding him
+        // and not swallowing, the stairs solid underneath, the route and the sanctum's spawn clear of the holes.
+        {
+            int32 Holes=0;
+            TArray<FVector2D> Open={{HallMid,-4300},{77400,-4000},{HallMid,HT1-300},{80000,-4600},{SeaS,SeaT}};
+            for(const FSanctumRift& Rf:SanctumRifts)Open.Add({Rf.S,Rf.T});
+            for(const FVector2D& O:Open)
+            {
+                ++Holes;FHitResult Hit;const FVector A=WorldAt(O.X,O.Y,HZ+60);++Sweeps;
+                if(!ChultTempleSanctumHoleAt(O))Fail(TEXT("sanctum_hole_missing"),FVector(O.X,O.Y,0));
+                if(World->SweepSingleByChannel(Hit,A,A-FVector(0,0,260),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(6),Q))Fail(TEXT("sanctum_hole_floor"),FVector(O.X,O.Y,Hit.ImpactPoint.Z-WorldAt(0,0,HZ).Z));
+                if(!ChultTempleInteriorSwallows(WorldAt(O.X,O.Y,HZ-80)))Fail(TEXT("sanctum_hole_no_swallow"),FVector(O.X,O.Y,0));
+            }
+            TArray<FVector2D> Rims={{HallMid,PoolT-PoolJag-25},{77400,PoolT-PoolJag-25},{SeaS,SeaT+SeaR+30},{SeaS-SeaR-30,SeaT}};
+            for(const FSanctumRift& Rf:SanctumRifts)Rims.Add({Rf.S,Rf.T-Rf.RT*1.2f-15});
+            for(const FVector2D& Rm:Rims)
+            {
+                FHitResult Hit;const FVector A=WorldAt(Rm.X,Rm.Y,HZ+40);
+                if(ChultTempleSanctumHoleAt(Rm)||ChultTempleInteriorSwallows(WorldAt(Rm.X,Rm.Y,HZ+1)))Fail(TEXT("sanctum_rim_swallows"),FVector(Rm.X,Rm.Y,0));
+                if(!World->LineTraceSingleByChannel(Hit,A,A-FVector(0,0,80),ECC_Visibility,Q)||FMath::Abs(Hit.ImpactPoint.Z-WorldAt(0,0,HZ).Z)>4)Fail(TEXT("sanctum_rim_floor"),FVector(Rm.X,Rm.Y,0));
+            }
+            // Under each stair is stone: nothing walks in under it from the aisle.
+            for(float Sg:{-1.f,1.f})
+            {
+                const float Open_=Sg<0?HS0+StairW:HS1-StairW;FHitResult Hit;++Sweeps;
+                if(!World->SweepSingleByChannel(Hit,WorldAt(Open_-Sg*60,-5800,HZ+40),WorldAt(Open_+Sg*120,-5800,HZ+40),FQuat::Identity,ECC_Pawn,FCollisionShape::MakeSphere(16),Q))Fail(TEXT("stair_open_beneath"),FVector(Open_,-5800,0));
+            }
+            // The interior route keeps its feet clear of every hole (his capsule's 18 cm and a margin).
+            for(const FRoutePt& Rp:Route())if(Rp.F.Z<HZ+5&&Rp.F.X>HS0&&Rp.F.X<HS1&&Rp.F.Y>HT0&&Rp.F.Y<HT1&&ChultTempleSanctumHoleAt(FVector2D(Rp.F.X,Rp.F.Y),40))Fail(TEXT("sanctum_route_hole"),Rp.F);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SANCTUM_HOLES_CHECK holes=%d rims=%d islands=%d"),Holes,Rims.Num(),ChultTempleSanctumIslands().Num());
+        }
         // The sanctum's gallery holds him; nothing blocks the hall's floor along the processional.
         {
             FHitResult Hit;const FVector A=WorldAt(HallMid,GalleryT+100,UZ+40);

@@ -103,6 +103,62 @@ From the gallery the hall reads end to end:
 
 The gallery is where Chuck will watch the battle; the floor and dais are its stage. The hall has no other way out, as in 2D, where the scripted Fireball is the way on. Since October 23 its music is the user's "boss_battle", and the tunnels before it play their "temple 2" from the trap run's pits on (SourceAssets/Audio/README.md). The three adventurers stand on its floor before the dais, fighting skeletons that rise from the bones round the dais end ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)); the beholder is still to come.
 
+## The sanctum's ruptures
+
+User request, October 24, 2026 (Claude): fill in under the staircases with stone, "like a real stone staircase of this height would be"; add Astral ruptures to the hall, "in particular a rectangle of astral rupture at the base of the staircases", so Chuck can't jump from the balcony or the very top of a stair without an Astral death and has to walk down at least part of the way; make them look like the pantry cellar's ruptures, not the sewer's; and to the wizard's left an other-world rupture like the cellar's fall to Chult, smaller, showing waves of the open sea with the cellar's oil slick round it: the tear the wizard is trying to seal, a fall death for now.
+
+**Under the stairs.** Each stair now rests on solid masonry (`StairMass` in `ChultTempleWindBuild.inl`).
+- Its open side is a stone wall from the floor up to the soffit, continued under the gallery to the back wall.
+- A string course (5 cm proud) runs along the stair's line under the fascia, and a plinth course runs along the foot where it stands on floor.
+- The wall has collision, so nothing walks in under a stair. The interior check sweeps in from each aisle (`stair_open_beneath`).
+
+**The pool.** The whole floor between the stairs is broken through from under the gallery to 15 m out (T −3400 to about −4990, its far edge ragged by 25 cm).
+- **How far it reaches.** The longest jump off the high end is a sprint leap: 420 cm/s with 250 cm/s lift. From the stair's head (13 m up) that is about 2.2 s in the air, so about 9 m. The pool's edge is set beyond that.
+- **The gallery's balustrade** allows no run-up for a sprint leap. A standing jump off it falls shorter.
+- **About 5 m down the stair** (about 9.5 m up) the same leap clears the pool. The `mid_leap` trial shows it.
+- **The piers inside it** (the gallery's six and the colonnades' first pair) stand on ragged islands of floor round their footings, each with its own haze.
+  - Landing on an island's ledge is a dead end: there is no run-up to leap off it. The only way off is into the Astral.
+- **Moved out of it:**
+  - the processional's paving and kerbs now start at its far edge;
+  - the first two braziers stand at that edge (T −5080; they were at −4300);
+  - the four guardian idols moved back to T −5250 and −5650 (they were at −4875 and −5425).
+
+**Four smaller ruptures** in the aisles: two beside the stairs, two beyond the dais' corners.
+
+**How they look.** All of these are the cellar's kind (`DockPantry.cpp`):
+- a ragged hole stepped in 10 cm cells;
+- the floor's 30 cm stone edge;
+- the Astral's well under it (`M_AstralDepth`);
+- the cellar's oil haze rising round the whole rim (`M_AstralOilMist`, in lengths of about 4 m along long rims so the pattern keeps its scale);
+- chips of flag round it;
+- purple light from below.
+
+The Astral wind's tunnels keep the sewer's slits.
+
+**The sea tear.** It lies to the wizard's left as he faces the beholder: centre S 78083, T −6710, radius about 1.1 m (the cellar's sky hole is 2.65 m).
+- The cellar's ragged round hole and its 1 m oil slick.
+- Its 8 m well is lined with `M_TempleRiftSea` (`Tools/create_temple_rift_sea.py`). Like the cellar's sky, that material ignores which face a pixel is on and colours it by the view ray alone. The ray meets a sea plane 15 m below the floor, where moderate travelling waves from one wind (3.8 m down to 0.25 m long) are shaded with sky reflection, light through the crests, a little glint and foam on the steepest crests.
+- Pale daylight comes up out of it.
+- It is a fall death, not a portal.
+- It is about 1.4 m from the wizard's ground. The skeleton post that lay beside it moved 0.9 m away.
+
+**Deaths and the battle.**
+- Feet 40 cm down in any of these holes is a death (`ChultTempleInteriorSwallows`), back on the gallery.
+- The skeletons' leash now stops 3 m short of the pool (T −5300; it reached T −4200).
+- In the sanctum the skeletons don't walk off ledges, and their steering refuses a heading into a hole.
+- A hero's step never ends on one.
+- `CHUCK_SANCTUM_BATTLE` reports `near_holes`: heroes' grounds or posts within 1 m of a hole (0).
+
+**Checks.**
+- Every hole is open to 2 m and swallows. Its rim holds him and doesn't swallow.
+- Each stair's underside is closed.
+- The interior route stays 40 cm clear of every hole (`CHUCK_SANCTUM_HOLES_CHECK`).
+- Wind-test trials:
+  - `top_leap`: a sprint leap off the −S stair's head dies in the pool.
+  - `mid_leap`: the same leap from 5 m down lands beyond it.
+  - `sea_fall`: walking into the sea tear dies, back on the gallery.
+- New stills: `SanctumPool`, `SanctumPoolEdge`, `SanctumRift`, `SanctumSea`, `SanctumSeaDown`.
+
 ## Respawns and checkpoints
 
 There are eight new spawns, each a Dev Checkpoint in a fifth column on the checkpoint page (1700 wide):
@@ -155,3 +211,4 @@ The trap run's test is unchanged at 16/16 (`Local/wind-regress-run.log`).
 - The ruptures make no sound of their own.
 - The veils are the sewer's oil film. Close up in torchlight they read as glassy panels.
 - The 2D maps 7 (shrine hall) and 8 (gauntlet) are not built.
+- The sanctum's ruptures (October 24): seen low from the floor, the sea tear reads pale, more like sky than water (seen from above it shows rows of waves and whitecaps). Landing on a pier island in the pool is a dead end. A wall run along a stair's wall has not been tried as a way past the pool. No person has played them.

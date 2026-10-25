@@ -8,7 +8,7 @@
 // angle and off the middle, with cracks run out from its points into the flags, so they read as the
 // floor torn open, not as cut pits. The spike pits are the opposite: square, dressed, deliberate.
 
-struct FGlow { FVector At; float Intensity, Radius; };
+struct FGlow { FVector At; float Intensity, Radius; FLinearColor Colour = FLinearColor(.48f, .035f, 1); };
 
 namespace TempleWindBuild
 {
@@ -244,13 +244,222 @@ namespace TempleWindBuild
         Fires.Add({{S, T, Z + 194}, {S, T, Z + 270}, 58, 84, 9000, 1500});
     }
 
+
+    // ---- The sanctum's broken floor (2026-10-24, user): the cellar's Astral ruptures (DockPantry.cpp) in the temple's
+    //      frame - a ragged hole stepped in 10 cm cells, the floor's 30 cm edge, the Astral's well under it, an oil haze
+    //      rising round its rim, chips of flag about it, a purple light - and the sea tear, the cellar's sky hole's kind.
+    constexpr float FloorThick = 30;
+    // The oil haze off a rim (the cellar's OilRim): eight rows up to Height, U along the rim, V up (the shader fades
+    // up V and at U's ends). A long rim goes in overlapping lengths of about 4 m, so the pattern keeps the cellar's scale.
+    void OilRing(FParts& P, const TArray<FVector2D>& Line, bool bClosed, float Z, float Height, const FVector2D& Centre, bool bInner)
+    {
+        // Resample at 10 cm.
+        TArray<FVector2D> Pts; TArray<FVector2D> L = Line; if (bClosed && Line.Num()) L.Add(Line[0]);
+        if (L.Num() < 2) return;
+        Pts.Add(L[0]); float Carry = 0;
+        for (int32 I = 1; I < L.Num(); ++I)
+        {
+            const FVector2D A = L[I - 1], B = L[I]; const float Len = FVector2D::Distance(A, B);
+            if (Len < .01f) continue;
+            float D = 10 - Carry;
+            for (; D <= Len; D += 10) Pts.Add(FMath::Lerp(A, B, D / Len));
+            Carry = Len - (D - 10);
+        }
+        const int32 N = Pts.Num();
+        if (N < 3) return;
+        constexpr int32 Levels = 8, Chunk = 40, Step = 34;
+        const bool bOne = N <= 46;
+        for (int32 C0 = 0; C0 < N - 1; C0 += Step)
+        {
+            const int32 C1 = bOne ? N - 1 : FMath::Min(C0 + Chunk, N - 1), Span = C1 - C0;
+            if (Span < 4) break;
+            auto Pt = [&](int32 I, int32 J)
+            {
+                const float U = I / float(Span), H = J / float(Levels);
+                const FVector2D E = Pts[C0 + I], In = (Centre - E).GetSafeNormal() * (bInner ? -1.f : 1.f);
+                const FVector2D Q = E + In * (H * H * 4 * FMath::Sin(U * UE_TWO_PI * 3));
+                return AtV(FVector(Q.X, Q.Y, Z + 3 + H * Height * (.9f + .1f * FMath::Sin(U * UE_TWO_PI * 5))));
+            };
+            for (int32 I = 0; I < Span; ++I) for (int32 J = 0; J < Levels; ++J)
+            {
+                const int32 First = P.Veil.V.Num();
+                P.Veil.Quad(Pt(I, J), Pt(I + 1, J), Pt(I + 1, J + 1), Pt(I, J + 1));
+                if (P.Veil.V.Num() == First) continue;
+                const float U0 = I / float(Span), U1 = (I + 1) / float(Span), V0 = J / float(Levels), V1 = (J + 1) / float(Levels);
+                P.Veil.UV[First] = {U0, V0}; P.Veil.UV[First + 1] = {U1, V0}; P.Veil.UV[First + 2] = {U1, V1}; P.Veil.UV[First + 3] = {U0, V1};
+            }
+            if (bOne || C1 == N - 1) break;
+        }
+    }
+
+    // The floor over Box in 10 cm cells with the sanctum's holes left out (ChultTempleSanctumHoleAt): each run's top, its
+    // underside (a camera falling past sees it), its 30 cm edge where it meets a hole. Outside Box counts as floor.
+    void BrokenFloor(FParts& P, const FBox2D& B, float Z)
+    {
+        constexpr float C = 10;
+        const int32 NS = FMath::RoundToInt((B.Max.X - B.Min.X) / C), NT = FMath::RoundToInt((B.Max.Y - B.Min.Y) / C);
+        TArray<uint8> Solid; Solid.SetNumZeroed(NS * NT);
+        for (int32 I = 0; I < NS; ++I) for (int32 J = 0; J < NT; ++J) Solid[I * NT + J] = ChultTempleSanctumHoleAt(B.Min + FVector2D(I * C + 5, J * C + 5)) == 0;
+        auto Floor_ = [&](int32 I, int32 J) { return I < 0 || J < 0 || I >= NS || J >= NT || Solid[I * NT + J] != 0; };
+        const float Lo = Z - FloorThick;
+        for (int32 I = 0; I < NS; ++I)
+        {
+            const float S0 = B.Min.X + I * C, S1 = S0 + C, SM = (S0 + S1) * .5f;
+            for (int32 J = 0; J < NT;)
+            {
+                if (!Solid[I * NT + J]) { ++J; continue; }
+                int32 K = J; while (K < NT && Solid[I * NT + K]) ++K;
+                const float T0 = B.Min.Y + J * C, T1 = B.Min.Y + K * C, TM = (T0 + T1) * .5f;
+                QuadToward(P.Stone, {S0, T0, Z}, {S1, T0, Z}, {S1, T1, Z}, {S0, T1, Z}, {SM, TM, Z + 100});
+                QuadToward(P.Steps, {S0, T0, Lo}, {S1, T0, Lo}, {S1, T1, Lo}, {S0, T1, Lo}, {SM, TM, Lo - 100});
+                if (!Floor_(I, J - 1)) QuadToward(P.Steps, {S0, T0, Lo}, {S1, T0, Lo}, {S1, T0, Z}, {S0, T0, Z}, {SM, T0 - 100, Z - 15});
+                if (!Floor_(I, K)) QuadToward(P.Steps, {S0, T1, Lo}, {S1, T1, Lo}, {S1, T1, Z}, {S0, T1, Z}, {SM, T1 + 100, Z - 15});
+                J = K;
+            }
+            for (int32 Side : {-1, 1})
+                for (int32 J = 0; J < NT;)
+                {
+                    if (!(Solid[I * NT + J] && !Floor_(I + Side, J))) { ++J; continue; }
+                    int32 K = J; while (K < NT && Solid[I * NT + K] && !Floor_(I + Side, K)) ++K;
+                    const float S = Side < 0 ? S0 : S1, T0 = B.Min.Y + J * C, T1 = B.Min.Y + K * C;
+                    QuadToward(P.Steps, {S, T0, Lo}, {S, T1, Lo}, {S, T1, Z}, {S, T0, Z}, {S + Side * 100, (T0 + T1) * .5f, Z - 15});
+                    J = K;
+                }
+        }
+    }
+
+    // A well under a hole's box, lined in M facing in, from Top down to Bottom.
+    void Well(FSurf& M, const FBox2D& B, float Upper, float Bottom)
+    {
+        const FVector Mid(B.GetCenter().X, B.GetCenter().Y, (Upper + Bottom) * .5f);
+        const FVector2D A = B.Min, D = B.Max;
+        QuadToward(M, {A.X, A.Y, Upper}, {A.X, D.Y, Upper}, {A.X, D.Y, Bottom}, {A.X, A.Y, Bottom}, Mid);
+        QuadToward(M, {D.X, A.Y, Upper}, {D.X, D.Y, Upper}, {D.X, D.Y, Bottom}, {D.X, A.Y, Bottom}, Mid);
+        QuadToward(M, {A.X, A.Y, Upper}, {D.X, A.Y, Upper}, {D.X, A.Y, Bottom}, {A.X, A.Y, Bottom}, Mid);
+        QuadToward(M, {A.X, D.Y, Upper}, {D.X, D.Y, Upper}, {D.X, D.Y, Bottom}, {A.X, D.Y, Bottom}, Mid);
+        QuadToward(M, {A.X, A.Y, Bottom}, {D.X, A.Y, Bottom}, {D.X, D.Y, Bottom}, {A.X, D.Y, Bottom}, Mid);
+    }
+
+    // Where the floor's kind changes along a ray from From (in a hole or on floor) outward.
+    FVector2D EdgeAlong(const FVector2D& From, const FVector2D& Dir, float Max)
+    {
+        const bool Start = ChultTempleSanctumHoleAt(From) != 0;
+        float A = 0, B = Max;
+        for (float D = 5; D <= Max; D += 5) if ((ChultTempleSanctumHoleAt(From + Dir * D) != 0) != Start) { B = D; A = D - 5; break; }
+        for (int32 K = 0; K < 10; ++K) { const float M = (A + B) * .5f; if ((ChultTempleSanctumHoleAt(From + Dir * M) != 0) == Start) A = M; else B = M; }
+        return From + Dir * ((A + B) * .5f);
+    }
+
+    // Chips of broken flag round a rim (visual, no collision).
+    void Chips(FParts& P, FRandomStream& R, const TArray<FVector2D>& Rim, const FVector2D& Centre, int32 Count, float Z, bool bInner)
+    {
+        for (int32 I = 0; I < Count && Rim.Num(); ++I)
+        {
+            const FVector2D E = Rim[R.RandRange(0, Rim.Num() - 1)], Out = (E - Centre).GetSafeNormal() * (bInner ? -1.f : 1.f);
+            const FVector2D At_ = E + Out * R.FRandRange(9, 22);
+            if (ChultTempleSanctumHoleAt(At_, 6)) continue;
+            TurnedBox(R.FRand() < .3f ? P.Dark : P.Steps, FVector(At_.X, At_.Y, Z + 1.5f), FVector(R.FRandRange(3, 7), R.FRandRange(2.5f, 5.5f), R.FRandRange(1, 2)), FRotator(R.FRandRange(-8, 8), R.FRandRange(0, 180), R.FRandRange(-8, 8)));
+        }
+    }
+
+    // The masonry under a stair (2026-10-24, user: "like a real stone staircase of this height"): the stair rests on
+    // solid stone to the floor, its open side a wall from the floor up to the soffit and on under the gallery to the
+    // back wall, with a plinth course where it stands on floor and a string course along the stair's line.
+    void StairMass(FParts& P, float Open, float Into)
+    {
+        const float Rr = (UZ - HZ) / (GalleryT - StairFoot);
+        auto Soffit = [&](float T) { return FMath::Max(HZ + (T - StairFoot) * Rr - 50, HZ); };
+        constexpr int32 Pieces = 16;
+        for (int32 I = 0; I < Pieces; ++I)
+        {
+            const float T0 = FMath::Lerp(StairFoot, GalleryT, I / float(Pieces)), T1 = FMath::Lerp(StairFoot, GalleryT, (I + 1) / float(Pieces));
+            if (Soffit(T1) <= HZ + .5f) continue;
+            QuadToward(P.Stone, {Open, T0, HZ}, {Open, T1, HZ}, {Open, T1, Soffit(T1)}, {Open, T0, Soffit(T0)}, {Open + Into * 100, (T0 + T1) * .5f, HZ + 100});
+            // The string course: a band 12 cm deep, 5 cm proud, just under the stair's fascia.
+            const float A0 = Soffit(T0) - 14, A1 = Soffit(T1) - 14, B0 = Soffit(T0) - 2, B1 = Soffit(T1) - 2;
+            if (A0 < HZ + 60) continue;
+            const float O = Open + Into * 5;
+            QuadToward(P.Stone, {O, T0, A0}, {O, T1, A1}, {O, T1, B1}, {O, T0, B0}, {O + Into * 100, (T0 + T1) * .5f, (A0 + B1) * .5f});
+            QuadToward(P.Stone, {Open, T0, B0}, {Open, T1, B1}, {O, T1, B1}, {O, T0, B0}, {O, (T0 + T1) * .5f, B1 + 100});
+            QuadToward(P.Stone, {Open, T0, A0}, {Open, T1, A1}, {O, T1, A1}, {O, T0, A0}, {O, (T0 + T1) * .5f, A0 - 100});
+        }
+        QuadToward(P.Stone, {Open, GalleryT, HZ}, {Open, HT1, HZ}, {Open, HT1, UZ - 60}, {Open, GalleryT, UZ - 60}, {Open + Into * 100, (GalleryT + HT1) * .5f, HZ + 100});
+        // The plinth where the mass stands on floor: from where it is 90 cm tall to the pool's edge.
+        const float P0 = StairFoot + 140 / Rr, P1 = PoolT - PoolJag - 10;
+        if (P1 > P0) Box(P.Stone, FMath::Min(Open, Open + Into * 9), FMath::Max(Open, Open + Into * 9), P0, P1, HZ, HZ + 34);
+    }
+
+    // The sanctum's ruptures (ChultTempleSanctumHoleAt): the pool before the gallery, the aisles' ruptures, the sea tear.
+    // Boxes: the pool's, each rupture's, the sea tear's (the floor's holes, cut from the hall's floor).
+    void SanctumHoles(FParts& P, TArray<FGlow>& Glows, const TArray<FBox2D>& Boxes, FRandomStream& R)
+    {
+        for (const FBox2D& B : Boxes) BrokenFloor(P, B, HZ);
+        const float Under = HZ - FloorThick;
+        // The pool: the Astral's well under it, the floor's edge down the stairs' masonry and the back wall, its haze.
+        {
+            const FBox2D& B = Boxes[0];
+            Well(P.Astral, B, Under, HZ - 330);
+            for (float S : {PoolS0, PoolS1}) QuadToward(P.Steps, {S, B.Min.Y, Under}, {S, HT1, Under}, {S, HT1, HZ}, {S, B.Min.Y, HZ}, {HallMid, (B.Min.Y + HT1) * .5f, HZ - 15});
+            QuadToward(P.Steps, {PoolS0, HT1, Under}, {PoolS1, HT1, Under}, {PoolS1, HT1, HZ}, {PoolS0, HT1, HZ}, {HallMid, HT1 - 100, HZ - 15});
+            TArray<FVector2D> Rim;
+            for (float T = HT1 - 3; T > PoolT; T -= 40) Rim.Add({PoolS0 + 3, T});
+            for (float S = PoolS0 + 3; S <= PoolS1 - 3; S += 20) Rim.Add(EdgeAlong(FVector2D(S, PoolT - PoolJag - 8), FVector2D(0, 1), 60));
+            for (float T = PoolT; T < HT1 - 3; T += 40) Rim.Add({PoolS1 - 3, T});
+            for (float S = PoolS1 - 3; S >= PoolS0 + 3; S -= 40) Rim.Add({S, HT1 - 3});
+            OilRing(P, Rim, true, HZ, 100, FVector2D(HallMid, (PoolT + HT1) * .5f), false);
+            TArray<FVector2D> Edge; for (float S = PoolS0 + 10; S <= PoolS1 - 10; S += 20) Edge.Add(EdgeAlong(FVector2D(S, PoolT - PoolJag - 8), FVector2D(0, 1), 60));
+            Chips(P, R, Edge, FVector2D(HallMid, -3600), 70, HZ, false);
+            for (const FBox2D& Is : ChultTempleSanctumIslands())
+            {
+                TArray<FVector2D> Ring; const FVector2D C = Is.GetCenter();
+                for (int32 K = 0; K < 64; ++K) { const float A = K * UE_TWO_PI / 64; Ring.Add(EdgeAlong(C, FVector2D(FMath::Cos(A), FMath::Sin(A)), 260)); }
+                OilRing(P, Ring, true, HZ, 50, C, true);
+                Chips(P, R, Ring, C, 8, HZ, true);
+            }
+            for (float S : {77650.f, 78700.f, 79750.f}) for (float T : {-4800.f, -4150.f}) Glows.Add({FVector(S, T, HZ - 120), 5200.f, 900.f});
+            for (float S : {77900.f, 79500.f}) Glows.Add({FVector(S, -3650, HZ - 120), 2600.f, 600.f});
+        }
+        // The aisles' ruptures, as the cellar's.
+        for (int32 K = 0; K < int32(UE_ARRAY_COUNT(SanctumRifts)); ++K)
+        {
+            const FSanctumRift& Rf = SanctumRifts[K];
+            Well(P.Astral, Boxes[1 + K], Under, HZ - 330);
+            TArray<FVector2D> Ring; const FVector2D C(Rf.S, Rf.T);
+            for (int32 I = 0; I < 48; ++I) { const float A = I * UE_TWO_PI / 48; Ring.Add(EdgeAlong(C, FVector2D(FMath::Cos(A), FMath::Sin(A)), 160)); }
+            OilRing(P, Ring, true, HZ, 70, C, false);
+            Chips(P, R, Ring, C, 7, HZ, false);
+            Glows.Add({FVector(Rf.S, Rf.T, HZ - 110), 1500.f, 420.f});   // deep enough not to flood its stone edge
+        }
+        // The sea tear (the cellar's sky hole's kind): its well lined with the open sea seen along the view
+        // (M_TempleRiftSea), its oil slick, daylight coming up out of it.
+        {
+            const FBox2D& B = Boxes.Last();
+            Well(P.Sea, B, Under, HZ - SeaDepth);
+            TArray<FVector2D> Ring; const FVector2D C(SeaS, SeaT);
+            for (int32 I = 0; I < 96; ++I) { const float A = I * UE_TWO_PI / 96; Ring.Add(C + FVector2D(FMath::Cos(A), FMath::Sin(A)) * ChultTempleSanctumSeaRadius(A)); }
+            OilRing(P, Ring, true, HZ, 100, C, false);
+            Chips(P, R, Ring, C, 22, HZ, false);
+            Glows.Add({FVector(SeaS, SeaT, HZ - 170), 4200.f, 700.f, FLinearColor(.72f, .86f, 1)});
+        }
+    }
+    // The boxes SanctumHoles takes, snapped to the 10 cm grid.
+    TArray<FBox2D> SanctumHoleBoxes()
+    {
+        auto Snap = [](float S0, float S1, float T0, float T1) { return FBox2D(FVector2D(FMath::FloorToFloat(S0 / 10) * 10, FMath::FloorToFloat(T0 / 10) * 10), FVector2D(FMath::CeilToFloat(S1 / 10) * 10, FMath::CeilToFloat(T1 / 10) * 10)); };
+        TArray<FBox2D> Out = {Snap(PoolS0, PoolS1, PoolT - PoolJag - 10, HT1)};
+        for (const FSanctumRift& Rf : SanctumRifts) Out.Add(Snap(Rf.S - Rf.RS * 1.2f - 20, Rf.S + Rf.RS * 1.2f + 20, Rf.T - Rf.RT * 1.2f - 20, Rf.T + Rf.RT * 1.2f + 20));
+        Out.Add(Snap(SeaS - SeaR - 35, SeaS + SeaR + 35, SeaT - SeaR - 35, SeaT + SeaR + 35));
+        return Out;
+    }
+
     // ---- The sanctum: a grand hall, the gallery he enters on, twin stairs down its side walls, a nave
     //      between two colonnades of great piers to a broad dais, two colossi over it. Bigger and grander
     //      on 2026-10-23 (user): 54 x 34 m, 17.5 m high. Empty of foes until the battle (TempleSanctumBattle).
-    int32 Sanctum(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FIdol>& Idols, FRandomStream& R)
+    int32 Sanctum(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FIdol>& Idols, TArray<FGlow>& Glows, FRandomStream& R)
     {
         int32 Steps = 0;
         FLining L; L.Dado = 260; L.Frieze = 180; L.Top = &P.Moss;
+        const TArray<FBox2D> HoleBoxes = SanctumHoleBoxes(); L.FloorHoles = HoleBoxes;   // the broken floor (2026-10-24)
         Line(P, HS0, HS1, HT0, HT1, HZ, HTop, {{3, Legs[3].S0, Legs[3].S1, UZ, UZ + 280}}, L);
         constexpr int32 Courses = 6; constexpr float CourseH = 46;
         Corbel(P, 1, HS0, HS1, HT0, HT1, HTop, Courses, 40, CourseH);
@@ -273,10 +482,14 @@ namespace TempleWindBuild
         // The stairs down the side walls, from the gallery's ends to the floor (13 m down, 25 m long).
         Steps += Run(P, 1, StairFoot, GalleryT, HS0, HS0 + StairW, HS0 + StairW, HZ, UZ, HZ, R);
         Steps += Run(P, 1, StairFoot, GalleryT, HS1 - StairW, HS1, HS1 - StairW, HZ, UZ, HZ, R);
+        // Solid masonry under them (2026-10-24, user), and the floor's ruptures: the pool at their foot, the aisles', the sea tear.
+        StairMass(P, HS0 + StairW, 1); StairMass(P, HS1 - StairW, -1);
+        SanctumHoles(P, Glows, HoleBoxes, R);
         // The processional: a paved way with pale kerbs from under the gallery to the dais (visual over the floor).
         const float PW = 190;
-        QuadToward(P.Moss, {HallMid - PW, GalleryT, HZ + .6f}, {HallMid + PW, GalleryT, HZ + .6f}, {HallMid + PW, DaisT1, HZ + .6f}, {HallMid - PW, DaisT1, HZ + .6f}, {HallMid, -5400, HZ + 100});
-        for (float S : {HallMid - PW - 16, HallMid + PW}) Box(P.Steps, S, S + 16, GalleryT, DaisT1, HZ, HZ + 3);
+        const float ProcT = PoolT - PoolJag - 10;   // from beyond the pool (2026-10-24)
+        QuadToward(P.Moss, {HallMid - PW, ProcT, HZ + .6f}, {HallMid + PW, ProcT, HZ + .6f}, {HallMid + PW, DaisT1, HZ + .6f}, {HallMid - PW, DaisT1, HZ + .6f}, {HallMid, -5400, HZ + 100});
+        for (float S : {HallMid - PW - 16, HallMid + PW}) Box(P.Steps, S, S + 16, ProcT, DaisT1, HZ, HZ + 3);
         // The colonnades: two rows of great piers (base, shaft, a moss band, banded capital) carrying an architrave
         // along each row at 11 m, under the gallery (13 m: nothing crosses the view from it to the dais), and an
         // upper colonnade of pilasters over them to a beam under the ceiling. A torch on each pier's nave face.
@@ -311,7 +524,7 @@ namespace TempleWindBuild
             Box(P.Stone, FMath::Min(W, W + In * 70), FMath::Max(W, W + In * 70), T - 96, T + 96, HZ, HZ + 60);
         }
         // Guardian idols on plinths along the processional's first half, facing it.
-        for (float Sg : {-1.f, 1.f}) for (float T : {-4875.f, -5425.f})
+        for (float Sg : {-1.f, 1.f}) for (float T : {-5250.f, -5650.f})   // (back from the pool since 2026-10-24: -4875, -5425)
         {
             const float S = HallMid + Sg * 420;
             Box(P.Stone, S - 52, S + 52, T - 52, T + 52, HZ, HZ + 110); Box(P.Plaster, S - 58, S + 58, T - 58, T + 58, HZ + 110, HZ + 120);
@@ -320,7 +533,7 @@ namespace TempleWindBuild
         // Fires: braziers along the processional, great fire bowls flanking the dais and in the aisles before it.
         for (float Sg : {-1.f, 1.f})
         {
-            Brazier(P, Fires, HallMid + Sg * 420, -4300, HZ);
+            Brazier(P, Fires, HallMid + Sg * 420, -5080, HZ);   // at the pool's far edge (was -4300)
             Brazier(P, Fires, HallMid + Sg * 420, -5975, HZ);
             GreatBrazier(P, Fires, HallMid + Sg * 600, DaisT1 + 260, HZ);
             GreatBrazier(P, Fires, HallMid + Sg * 1450, DaisT1 + 420, HZ);
@@ -401,6 +614,6 @@ namespace TempleWindBuild
         for (int32 B = 0; B < 3; ++B) BendRoom(P, Fires, Jars, B, R);
         const TArray<FTempleWindTear>& Tears = ChultTempleWindTears();
         for (int32 K = 0; K < Tears.Num(); ++K) Tear(P, Glows, Tears[K], K);
-        return Sanctum(P, Fires, Jars, Idols, R);
+        return Sanctum(P, Fires, Jars, Idols, Glows, R);
     }
 }
