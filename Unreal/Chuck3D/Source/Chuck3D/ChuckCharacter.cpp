@@ -5,6 +5,7 @@
 #include "ChultUpriver.h"
 #include "ChultWreck.h"
 #include "ChultTempleInterior.h"
+#include "ChultTempleRubble.h"
 #include "ChultRaptor.h"
 #include "TempleSkeleton.h"
 #include "TempleSnake.h"
@@ -83,7 +84,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -257,7 +258,7 @@ UChuckAnimInstance* AChuckCharacter::GetChuckAnim() const { return Cast<UChuckAn
 int32 AChuckCharacter::GetGroomCount() const { return Grooms.Num(); }
 const TCHAR* AChuckCharacter::GetGaitName() const
 {
-    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held")};
+    static const TCHAR* Names[] = {TEXT("Idle"), TEXT("Start"), TEXT("Loop"), TEXT("Stop"), TEXT("Turn"), TEXT("Air"), TEXT("Land"), TEXT("Roll"), TEXT("SideJump"), TEXT("Slash"), TEXT("WallRun"), TEXT("Hang"), TEXT("Climb"), TEXT("Strafe"), TEXT("Astral"), TEXT("WallSide"), TEXT("Ladder"), TEXT("Vault"), TEXT("Swing"), TEXT("SwingLeap"), TEXT("Held"), TEXT("Crawl")};
     return Names[static_cast<int32>(Gait)];
 }
 void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
@@ -319,9 +320,13 @@ void AChuckCharacter::Recenter() { ViewYaw = GetActorRotation().Yaw; LookPitch =
 void AChuckCharacter::UpdateCamera(float DeltaSeconds)
 {
     SmoothLook = DeltaSeconds > 0 ? FMath::FInterpTo(SmoothLook, LookPitch, DeltaSeconds, 14.f) : LookPitch;
-    const float BoomPitch = FMath::Clamp(SmoothLook, HighestPitch, RatPitch);
-    const float CameraBlend = FMath::Clamp((BoomPitch - RatPitch) / (ElevatedPitch - RatPitch), 0.f, 1.f);
-    Boom->TargetArmLength = FMath::Lerp(220.f, 400.f, CameraBlend);
+    // On all fours in a crawl space (2026-10-26): close behind him and low, looking along the passage.
+    CrawlCam = DeltaSeconds > 0 ? FMath::FInterpTo(CrawlCam, Gait == EGait::Crawl ? 1.f : 0.f, DeltaSeconds, 3.f) : (Gait == EGait::Crawl ? 1.f : 0.f);
+    const float BoomPitch = FMath::Lerp(FMath::Clamp(SmoothLook, HighestPitch, RatPitch), -7.f, CrawlCam);
+    const float CameraBlend = FMath::Clamp((BoomPitch - RatPitch) / (ElevatedPitch - RatPitch), 0.f, 1.f) * (1.f - CrawlCam);
+    Boom->TargetArmLength = FMath::Lerp(FMath::Lerp(220.f, 400.f, CameraBlend), 95.f, CrawlCam);
+    if (DeltaSeconds > 0 && LookIdle > .3f && Gait == EGait::Crawl)
+        ViewYaw = FRotator::NormalizeAxis(ViewYaw + FMath::FindDeltaAngleDegrees(ViewYaw, GetActorRotation().Yaw) * FMath::Min(1.f, DeltaSeconds * 3.f));
     // GTA-style auto-follow: after a moment without look input the orbit eases
     // behind Chuck while he walks away from the camera. Strafing or walking
     // toward the lens leaves it alone.
@@ -370,10 +375,10 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
     // Rat-height end: chest-high pivot and a 5 degree tilt put the lens about
     // 75 cm up, just over the ears, so Chuck sits low in frame instead of
     // covering the view ahead. Looking further up turns the lens, not the boom.
-    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(22.f,16.f,CameraBlend) + FollowZ - ActorZ));
+    Boom->SetRelativeLocation(FVector(0,0,FMath::Lerp(FMath::Lerp(22.f,16.f,CameraBlend), 9.f, CrawlCam) + FollowZ - ActorZ));
     const FRotator TargetRotation(BoomPitch, ViewYaw, 0);
     Boom->SetWorldRotation(DeltaSeconds > 0 ? FMath::RInterpTo(Boom->GetComponentRotation(),TargetRotation,DeltaSeconds,18.f) : TargetRotation);
-    Camera->SetRelativeRotation(FRotator(SmoothLook - BoomPitch,0,0));
+    Camera->SetRelativeRotation(FRotator((SmoothLook - BoomPitch) * (1.f - CrawlCam),0,0));
     const float HitAge = GetWorld() ? GetWorld()->GetTimeSeconds() - ImpactAt : -1.f;
     if (ImpactAt >= 0 && HitAge >= 0 && HitAge < .2f)
     {
@@ -381,7 +386,7 @@ void AChuckCharacter::UpdateCamera(float DeltaSeconds)
         Camera->AddLocalRotation(FRotator(-.9f * Envelope * FMath::Cos(HitAge * 35.f), 0,
             .35f * Envelope * FMath::Sin(HitAge * 32.f)));
     }
-    Camera->FieldOfView = FMath::Lerp(78.f,65.f,CameraBlend);
+    Camera->FieldOfView = FMath::Lerp(FMath::Lerp(78.f,65.f,CameraBlend), 84.f, CrawlCam);
 }
 void AChuckCharacter::ResetToDock()
 {
@@ -429,6 +434,10 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     GetCharacterMovement()->RemoveRootMotionSource(TEXT("ZombieImpact"));
     ImpactAt = -1;
     GetCharacterMovement()->StopMovementImmediately();
+    // Out of a crawl: on his feet again wherever he's put (a respawn is always somewhere with room).
+    GetCharacterMovement()->bWantsToCrouch = false;
+    if (bIsCrouched) { GetCapsuleComponent()->SetCapsuleSize(15.f, 32.5f); bIsCrouched = false; }
+    CrawlPhase = 0;
     SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
     // A checkpoint teleport is not a fall from the previous area's elevation.
     AirApexZ = static_cast<float>(Location.Z);
@@ -464,12 +473,48 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     UpdateCamera();
 }
 
+namespace
+{
+    struct FCrawlSpace { TWeakObjectPtr<const UWorld> World; FTransform Box; FVector Half; };
+    TArray<FCrawlSpace>& CrawlSpaces() { static TArray<FCrawlSpace> List; return List; }
+}
+void AChuckCharacter::RegisterCrawlSpace(const UWorld* World, const FTransform& Box, const FVector& Half)
+{
+    CrawlSpaces().RemoveAll([](const FCrawlSpace& C) { return !C.World.IsValid(); });
+    CrawlSpaces().Add({World, Box, Half});
+}
+bool AChuckCharacter::InCrawlSpace(const UWorld* World, const FVector& Location)
+{
+    for (const FCrawlSpace& C : CrawlSpaces())
+    {
+        if (C.World.Get() != World) continue;
+        const FVector L = C.Box.InverseTransformPositionNoScale(Location);
+        if (FMath::Abs(L.X) <= C.Half.X && FMath::Abs(L.Y) <= C.Half.Y && FMath::Abs(L.Z) <= C.Half.Z) return true;
+    }
+    return false;
+}
+bool AChuckCharacter::IsCrawling() const { return Gait == EGait::Crawl; }
+void AChuckCharacter::EnterCrawl()
+{
+    // Low and slow (the clip's own pace), no sprint; the capsule is 34 cm tall instead of 65.
+    if (IsSprinting()) EndSprint(false);
+    auto* Movement = GetCharacterMovement();
+    if (Movement->MovementMode == MOVE_None) Movement->SetMovementMode(MOVE_Walking);   // (a turn in place holds it)
+    Movement->GetNavAgentPropertiesRef().bCanCrouch = true;
+    Movement->SetCrouchedHalfHeight(17.f);
+    Movement->MaxWalkSpeedCrouched = ChuckClipData::CrawlSpeed;
+    Crouch();
+    bRunHeld = false; bStopPending = false;
+    Gait = EGait::Crawl; CrawlPhase = 0; ++Crawls;
+    SetClip(EClip::Crawl, 0, .3f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_CRAWL_START n=%d at=%s"), Crawls, *GetActorLocation().ToString());
+}
 float AChuckCharacter::Period(EClip Clip) const
 {
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
     const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang || Clip == EClip::ShimmyLeft || Clip == EClip::ShimmyRight
-        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight;
+        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -702,7 +747,7 @@ void AChuckCharacter::JumpPressed()
 {
     auto* Movement = GetCharacterMovement();
     const float Now = GetWorld()->GetTimeSeconds();
-    if (Gait == EGait::Climb || IsAstral() || IsTalking()) return;
+    if (Gait == EGait::Climb || Gait == EGait::Crawl || IsAstral() || IsTalking()) return;
     if (Gait == EGait::Hang)
     {
         // From a hang: pulling away and jumping kicks off backward; otherwise
@@ -1651,7 +1696,7 @@ void AChuckCharacter::Slash()
         if ((bStandingSlash ? BaseTime : LayerTime) > .05f) bSlashQueued = true;
         return;
     }
-    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::Ladder || Gait == EGait::Vault) return;
+    if (IsDodging() || IsAstral() || IsTalking() || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Crawl) return;
     const EClip Clip = PickPaw(true, EClip::SlashRight);
     bSlashQueued = false;
     if (Gait == EGait::Turn) Movement->SetMovementMode(MOVE_Walking);
@@ -2168,7 +2213,7 @@ bool AChuckCharacter::CanDodgeNow() const
 {
     return !IsAstral() && !IsTalking() && !IsDodging() && !GetCharacterMovement()->IsFalling()
         && Gait != EGait::Hang && Gait != EGait::Swing && Gait != EGait::SwingLeap && Gait != EGait::WallRun && Gait != EGait::Climb
-        && Gait != EGait::WallSide && Gait != EGait::Ladder && Gait != EGait::Vault;
+        && Gait != EGait::WallSide && Gait != EGait::Ladder && Gait != EGait::Vault && Gait != EGait::Crawl;
 }
 void AChuckCharacter::RunOn()
 {
@@ -2211,6 +2256,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     }
     const EGait GaitBefore = Gait;
     bBodyPitchLive = false;
+    // Into a crawl space on the ground (2026-10-26, the temple rubble's crevice): down on all fours.
+    const bool bInCrawlSpace = InCrawlSpace(GetWorld(), Location);
+    if (bInCrawlSpace && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe || Gait == EGait::Land || Gait == EGait::Turn)) EnterCrawl();
     const bool bStrafe = StrafeHeld();
     if (!OwnsCapsule()) Movement->MaxWalkSpeed = IsSprinting() ? SprintSpeed : bStrafe ? (bRunHeld ? StrafeRunSpeed : StrafeSpeed) : (bRunHeld ? RunSpeed : WalkSpeed);
     Movement->MaxAcceleration = IsSprinting() ? SprintAcceleration : 550.f;
@@ -2598,6 +2646,24 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         else { Gait = EGait::Land; SetClip(EClip::JumpLand, 0, .06f); bHardLanding = bRunJump || bSprintLeap; }
         bRunJump = bSprintLeap = false;
     }
+    else if (Gait == EGait::Crawl)
+    {
+        // On all fours: the clip steps with the ground covered. Out of the crawl space he stands again as soon as
+        // there's room over him (the movement component keeps trying while it is low).
+        if (bInCrawlSpace) Crouch(); else UnCrouch();
+        if (!bIsCrouched && !bInCrawlSpace)
+        {
+            if (bInput && Speed > 3.f) { Gait = EGait::Start; StartDistance = 0; SetClip(EClip::WalkStart, 0, .3f); }
+            else { Gait = EGait::Idle; SetClip(EClip::Idle, 0, .35f); }
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_CRAWL_END at=%s"), *Location.ToString());
+        }
+        else if (bAirborne) { Gait = EGait::Air; SetClip(EClip::JumpLoop, 0, .2f); }
+        else
+        {
+            CrawlPhase = FMath::Frac(CrawlPhase + Travel / ChuckClipData::CrawlStride);
+            BaseTime = CrawlPhase * Period(EClip::Crawl);
+        }
+    }
     else if (Gait == EGait::Strafe)
     {
         // Sidestep / bounding shuffle while mostly sideways, phase from the
@@ -2902,6 +2968,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     }
     // On a wall the paws follow the clip (planted on the wall plane).
     if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap) P.bFootIK = false;
+    // On all fours the paws follow the clip (the crevice's floor is level).
+    if (Gait == EGait::Crawl) P.bFootIK = false;
     // Tucked in the roll, the paws follow the clip untouched.
     if (Gait == EGait::Roll && !P.bStance[0] && !P.bStance[1]) P.bFootIK = false;
 
@@ -2911,7 +2979,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     const bool bOffGround = bAirborne || IsInGrip() || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
-    GetMesh()->SetRelativeLocation(FVector(0, 0, -32.5f - MeshDrop));
+    GetMesh()->SetRelativeLocation(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MeshDrop));   // (shorter on all fours)
     // On a side wall run his body leans out from the wall, paws toward it.
     WallSideTilt = FMath::FInterpTo(WallSideTilt, Gait == EGait::WallSide ? 1.f : 0.f, DeltaSeconds, Gait == EGait::WallSide ? 14.f : 8.f);
     if (WallSideTilt > .001f && !WallNormal.IsNearlyZero())
@@ -3043,11 +3111,11 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     UpdateCamera(DeltaSeconds);
     if (bSlideCamera) HoldSlideCamera();
     // When collision pulls the lens inside Chuck, avoid an obstructing head/jacket.
-    GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > 70.f,true);
+    GetMesh()->SetVisibility(!bAstralHidden && FVector::Dist(Camera->GetComponentLocation(),GetActorLocation()) > FMath::Lerp(70.f, 30.f, CrawlCam),true);
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
     // (The temple's sanctum, enlarged on 2026-10-23, has its floor below this line: it is not off the world.)
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation()) && !InChultTempleSanctum(GetActorLocation())) FallToDeath();
+    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation()) && !InChultTempleSanctum(GetActorLocation()) && !InChultTempleRubble(GetActorLocation())) FallToDeath();
     // Down into one of the Astral ruptures round the jungle wreck (2026-10-18): an Astral death.
     else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Off the temple well's stair into its pit, or into the pier hall's rift (2026-10-20): Astral.

@@ -81,8 +81,8 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=37 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=37 missing_assets=0 missing_sounds=0 ' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=20 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=40 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=47 missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=21 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_CHECK failures=0 ' -Quiet) -or
@@ -177,6 +177,8 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # day the wizard seals the sea tear: the web knits, the tear surges and he strains, the beholder's cone shatters it.
 # The cone never throws Chuck into the rupture or onto a pier's island in it (cone_edge, user 2026-10-25: trapped on one).
 # Also 2026-10-25, the heroes' voiced lines (TempleHeroTalk.cpp): all eight cooked and heard in order, subtitled, jaws moving, the music ducked.
+# 2026-10-26, the cutscenes (TempleSanctumScene.h): the entrance's three shots and control back; the Fireball from the
+# argument to the blast, Chuck thrown into the rubble map at half Sanity with control back; the same skipped with Esc.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=22 sounds=64 arrow=1 skull=1 fx=5 near_holes=0 beholder_fx=4 seal=1' -Quiet) -or
@@ -190,12 +192,25 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=wizard_seal pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_HERO_TALK_READY lines=8 sounds=8' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=hero_talk pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_SCENE_READY fx=1 camera=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=entrance pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball_skip pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TEST_COMPLETE failures=0' -Quiet) -or
    (Select-String -LiteralPath $heroLog -Pattern 'Fatal error:|bUsedWithInstancedStaticMeshes|bUsedWithSkeletalMesh' -Quiet)) {
     throw "Temple heroes verification failed. Inspect $heroLog"
+}
+# The rubble map (Claude, 2026-10-26; docs/CHULT-TEMPLE-RUBBLE.md): stills, then the real character walks the lane from where
+# the Fireball throws him to the crevice, crawls the crevice on all fours to its end and back out (standing again), and
+# walks into a rupture (an Astral death, back where he came to).
+$rubbleLog=Join-Path $evidence ('verify-temple-rubble-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$rubbleProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleRubbleTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$rubbleLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .* spawns=21 ' -Quiet) -or
+   !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
+    throw "Temple rubble verification failed. Inspect $rubbleLog"
 }
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.

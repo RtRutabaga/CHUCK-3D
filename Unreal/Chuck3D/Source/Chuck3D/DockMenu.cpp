@@ -47,7 +47,7 @@ namespace
         // The Astral wind and the sanctum (2026-10-22), in a fifth column.
         {TEXT("ChultTempleWind1"),TEXT("Astral Wind 1")},{TEXT("ChultTempleWind2"),TEXT("Astral Wind 2")},{TEXT("ChultTempleWind3"),TEXT("Astral Wind 3")},
         {TEXT("ChultTempleWind4"),TEXT("Astral Wind 4")},{TEXT("ChultTempleWind5"),TEXT("Astral Wind 5")},{TEXT("ChultTempleWind6"),TEXT("Astral Wind 6")},
-        {TEXT("ChultTempleWind7"),TEXT("Astral Wind 7")},{TEXT("ChultTempleSanctum"),TEXT("Temple Sanctum")}};
+        {TEXT("ChultTempleWind7"),TEXT("Astral Wind 7")},{TEXT("ChultTempleSanctum"),TEXT("Temple Sanctum")},{TEXT("ChultTempleRubble"),TEXT("Temple Rubble")}};
     constexpr int32 TempleColumn=6,WindColumn=12;   // the interior's first six in the third column, the trap run's in the fourth, the wind's in the fifth
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
     {

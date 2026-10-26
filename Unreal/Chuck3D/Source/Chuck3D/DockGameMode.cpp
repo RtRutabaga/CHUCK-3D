@@ -145,6 +145,8 @@ void ADockGameMode::StartPlay()
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
+        // Held silent (the Fireball, 2026-10-26): when it lifts, whatever plays where he is comes back in.
+        if(Self.IsValid() && World->GetTimeSeconds()<Self->MusicHoldUntil){Region->Mode=-1;return;}
         // In Chult (after the fall, or from its checkpoint): Waterdeep's scores
         // go and Chult's comes in, looping. There is no way back yet. Over the
         // canyon bridge and on its far side the second Chult score takes over;
@@ -1181,6 +1183,11 @@ void ADockGameMode::FadeOutMusic(float Seconds)
 {
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
         if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(Seconds,0.f);
+}
+void ADockGameMode::HoldMusic(float Seconds)
+{
+    MusicHoldUntil = GetWorld()->GetTimeSeconds() + Seconds;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_HOLD seconds=%.1f"),Seconds);
 }
 void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
 {
@@ -3981,6 +3988,17 @@ void ADockHUD::DrawHUD()
         }
         return;
     }
+    // The sanctum's cutscenes (2026-10-26): letterboxed, no HUD, the heroes' subtitles still shown.
+    const ATempleSanctumBattle* SceneBattle=ATempleSanctumBattle::Get(GetWorld());
+    const bool bScene=SceneBattle && SceneBattle->IsScenePlaying();
+    if(bScene)
+    {
+        const float Bar=FMath::Max(0.f,(Canvas->SizeY-Canvas->SizeX/2.2f)*.5f);
+        DrawRect(FLinearColor::Black,0,0,Canvas->SizeX,Bar);
+        DrawRect(FLinearColor::Black,0,Canvas->SizeY-Bar,Canvas->SizeX,Bar+1);
+    }
+    else
+    {
     DrawTutorial();
     // Sanity is one cigarette, as in the 2D game (CHUCK-game src/ui/hud.py):
     // the paper left is the Sanity left, burning down toward the filter with
@@ -4005,6 +4023,7 @@ void ADockHUD::DrawHUD()
     DrawRect(FLinearColor(FColor(236,236,228)),CountX-12*Px,CigY+Px,7*Px,3*Px);
     DrawRect(FLinearColor(FColor(214,168,110)),CountX-12*Px,CigY+Px,2*Px,3*Px);
     DrawStamina(Chuck,Px,CigY+FMath::Max(CountH,5*Px)+2*Px);
+    }
     // Sentence cues, centred like the reference, with no panel behind them.
     FString Speaker, Line;
     const bool bTalk=Chuck->GetDialogue(Speaker,Line);

@@ -2,6 +2,7 @@
 #include "ChultTempleTraps.h"
 #include "ChultTempleRun.h"
 #include "ChultTempleWind.h"
+#include "ChultTempleRubble.h"
 #include "TempleSkeleton.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSnake.h"
@@ -136,7 +137,11 @@ namespace
             {TEXT("WindLeg3MinusAlcove"),TempleWind::Legs[2].S0-TempleWind::BreakDeep,TempleWind::Legs[2].S0,TempleWind::BreakMinusT0,TempleWind::BreakMinusT1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind5,false,false,0,0,0},
             {TEXT("WindLeg3PlusAlcove"),TempleWind::Legs[2].S1,TempleWind::Legs[2].S1+TempleWind::BreakDeep,TempleWind::BreakPlusT0,TempleWind::BreakPlusT1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind5,false,false,0,0,0},
             {TEXT("WindLeg4"),TempleWind::Legs[3].S0,TempleWind::Legs[3].S1,TempleWind::Legs[3].T0,TempleWind::Legs[3].T1,TempleWind::UZ-400,TempleWind::Top,ETempleInteriorSpawn::Wind7,false,false,0,0,0},
-            {TEXT("Sanctum"),TempleWind::HS0,TempleWind::HS1,TempleWind::HT0,TempleWind::HT1,TempleWind::HZ,TempleWind::HTop,ETempleInteriorSpawn::Sanctum,false,false,0,0,0}};
+            {TEXT("Sanctum"),TempleWind::HS0,TempleWind::HS1,TempleWind::HT0,TempleWind::HT1,TempleWind::HZ,TempleWind::HTop,ETempleInteriorSpawn::Sanctum,false,false,0,0,0},
+            // The rubble map (October 26, ChultTempleRubble.h): the chamber (its caved vault's cavity too) and the crevice's two runs.
+            {TEXT("Rubble"),TempleRubble::RS0,TempleRubble::RS1,TempleRubble::RT0,TempleRubble::RT1,TempleRubble::RZ-400,TempleRubble::RTop+600,ETempleInteriorSpawn::Rubble,false,false,0,0,0},
+            {TEXT("RubbleCrevice"),TempleRubble::CrawlBendS-TempleRubble::CrawlHalf,TempleRubble::RS0,TempleRubble::CrawlT-TempleRubble::CrawlHalf,TempleRubble::CrawlT+TempleRubble::CrawlHalf,TempleRubble::RZ-50,TempleRubble::RZ+TempleRubble::CrawlH+50,ETempleInteriorSpawn::Rubble,false,false,0,0,0},
+            {TEXT("RubbleCreviceEnd"),TempleRubble::CrawlBendS-TempleRubble::CrawlHalf,TempleRubble::CrawlBendS+TempleRubble::CrawlHalf,TempleRubble::CrawlEndT-80,TempleRubble::CrawlT+TempleRubble::CrawlHalf,TempleRubble::RZ-50,TempleRubble::RZ+TempleRubble::CrawlH+50,ETempleInteriorSpawn::Rubble,false,false,0,0,0}};
         return List;
     }
     // A flight's floor line at S.
@@ -179,6 +184,8 @@ namespace
         case ETempleInteriorSpawn::Wind5:return {(TempleWind::Legs[2].S0+TempleWind::Legs[2].S1)*.5f,-2860,TempleWind::UZ,0,1,TEXT("Astral Wind 5")};
         case ETempleInteriorSpawn::Wind6:return {(TempleWind::Legs[2].S0+TempleWind::Legs[2].S1)*.5f,-710,TempleWind::UZ,1,0,TEXT("Astral Wind 6")};
         case ETempleInteriorSpawn::Wind7:return {(TempleWind::Legs[3].S0+TempleWind::Legs[3].S1)*.5f,-1000,TempleWind::UZ,0,-1,TEXT("Astral Wind 7")};
+        // Where the Fireball throws him (October 26): the rubble lane's first corner, facing along it.
+        case ETempleInteriorSpawn::Rubble:return {TempleRubble::Lane[0].S,TempleRubble::Lane[0].T,TempleRubble::RZ,-1,0,TEXT("Temple Rubble")};
         default:return {TempleWind::HallMid,TempleWind::HT1-220,TempleWind::UZ,0,-1,TEXT("Temple Sanctum")};
         }
     }
@@ -512,6 +519,7 @@ namespace
     FBuilt Built;
     #include "ChultTempleRunBuild.inl"
     #include "ChultTempleWindBuild.inl"
+    #include "ChultTempleRubbleBuild.inl"
 }
 
 // ---------------------------------------------------------------- public helpers
@@ -545,7 +553,7 @@ int32 ChultTempleInteriorMusicPart(const FVector& World,int32 Current)
     const FSpace* Sp=SpaceAt(WorldFrame(World),0);
     if(!Sp)return Current;   // between spaces (a doorway's jamb, a wall): keep what is playing
     const ETempleInteriorSpawn K=Sp->Spawn;
-    return K==ETempleInteriorSpawn::Sanctum?2:K>=ETempleInteriorSpawn::Pits?1:0;
+    return K==ETempleInteriorSpawn::Rubble?0:K==ETempleInteriorSpawn::Sanctum?2:K>=ETempleInteriorSpawn::Pits?1:0;   // the rubble: the temple's own again
 }
 bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
 {
@@ -572,6 +580,11 @@ bool ChultTempleInteriorSwallows(const FVector& FeetWorld)
         if(F.Z<UZ-40&&F.Z>UZ-500&&F.X>TempleRun::FS0-100&&F.X<Bends[2].S1+100&&F.Y>Legs[3].T0-100&&F.Y<Bends[0].T1+100&&ChultTempleWindTearAt(FVector2D(F.X,F.Y)))return true;
         // The sanctum's broken floor (2026-10-24): 40 cm down in the pool, a rupture or the sea tear.
         if(F.Z<HZ-40&&F.Z>HZ-SeaDepth-200&&F.X>HS0&&F.X<HS1&&F.Y>HT0&&F.Y<HT1&&ChultTempleSanctumHoleAt(FVector2D(F.X,F.Y)))return true;
+    }
+    // The rubble map's ruptures (October 26): 40 cm down.
+    {
+        using namespace TempleRubble;
+        if(F.Z<RZ-40&&F.Z>RZ-700&&F.X>RS0&&F.X<RS1&&F.Y>RT0&&F.Y<RT1&&ChultTempleRubbleHoleAt(FVector2D(F.X,F.Y)))return true;
     }
     return F.X>RiftS0&&F.X<RiftS1&&F.Y>PT0&&F.Y<PT1&&F.Z<Floor-60&&F.Z>WellDeep-600;
 }
@@ -991,6 +1004,8 @@ void BuildChultTempleInterior(AActor* Owner)
     // ---- The Astral wind and the sanctum (October 22; ChultTempleWindBuild.inl).
     TArray<FGlow> Glows;
     Built.Steps+=TempleWindBuild::BuildWind(P,Fires,Jars,Skulls,Idols,Glows);
+    // ---- The rubble map (October 26; ChultTempleRubbleBuild.inl): where the Fireball throws him.
+    TempleRubbleBuild::BuildRubble(P,Fires,Jars,Skulls,Glows);
 
     // ---- Emit.
     int32 Missing=0,Triangles=0;
@@ -999,6 +1014,12 @@ void BuildChultTempleInterior(AActor* Owner)
     auto* Ramp=Emit(Owner,TEXT("ChultTempleInteriorRamp"),{{&P.Ramp,StoneMat}},true,Missing,Triangles);Ramp->SetHiddenInGame(true);Ramp->SetCastShadow(false);
     Emit(Owner,TEXT("ChultTempleInteriorDark"),{{&P.Dark,DarkMat}},false,Missing,Triangles);
     Emit(Owner,TEXT("ChultTempleInteriorIron"),{{&P.Iron,IronMat}},false,Missing,Triangles);
+    Emit(Owner,TEXT("ChultTempleInteriorWood"),{{&P.Wood,WoodMat}},false,Missing,Triangles);   // the timbers behind the rubble crevice's crack
+    // The crevice's crawl spaces (October 26): he goes down on all fours in them.
+    {
+        TArray<FBox> Crawl;ChultTempleRubbleCrawlSpaces(Crawl);
+        for(const FBox& B:Crawl)AChuckCharacter::RegisterCrawlSpace(World,FTransform(FRotator(0,YawOf(1,0),0),WorldAt(B.GetCenter().X,B.GetCenter().Y,B.GetCenter().Z)),B.GetExtent());
+    }
     auto* Astral=Emit(Owner,TEXT("ChultTempleInteriorAstral"),{{&P.Astral,AstralMat}},false,Missing,Triangles,false);Astral->SetCastShadow(false);
     auto* Veils=Emit(Owner,TEXT("ChultTempleInteriorVeils"),{{&P.Veil,OilMat}},false,Missing,Triangles);Veils->SetCastShadow(false);
     // The sea tear's well (2026-10-24): the open sea seen along the view, its surface 15 m under the hall's floor.

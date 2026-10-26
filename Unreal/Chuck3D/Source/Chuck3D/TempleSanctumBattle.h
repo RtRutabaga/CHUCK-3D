@@ -109,6 +109,19 @@ public:
     int32 GetTalkStep() const { return TalkStep; }
     int32 GetTalkSpoken() const { return TalkSpoken; }
     static int32 TalkLineCount();
+    float GetTalkElapsed() const { return TalkElapsed; }
+    /** The line that starts the argument before the Fireball (TempleHeroTalk.cpp's script). */
+    static constexpr int32 FireballFirstLine = 3;
+
+    // The cutscenes (TempleSanctumScene.h, 2026-10-26): a short one as he first comes in, and the Fireball at the argument.
+    class ATempleSanctumScene* GetScene() const { return TheScene.Get(); }
+    bool IsScenePlaying() const;
+    /** Tests: whether the argument plays the Fireball (on in play; the other sanctum trials keep the old fight going). */
+    void SetFireballScene(bool b) { bFireballScene = b; }
+    /** Tests: whether his first coming in plays the entrance (on in play). */
+    void SetEntranceScene(bool b) { bEntranceScene = b; }
+    UMaterialInterface* GetBeholderFxMaterial(int32 I) const { return BeholderFx.IsValidIndex(I) ? BeholderFx[I] : nullptr; }
+    UStaticMesh* GetPlaneMesh() const { return Plane; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -145,6 +158,8 @@ private:
     TArray<TWeakObjectPtr<ATempleHero>> Heroes;
     TWeakObjectPtr<ATempleBeholder> TheBeholder;
     TWeakObjectPtr<ATempleSeal> TheSeal;
+    TWeakObjectPtr<class ATempleSanctumScene> TheScene;
+    bool bFireballScene = true, bEntranceScene = true, bWasIn = false;
     UPROPERTY() UMaterialInterface* SealWebMat = nullptr;
     TArray<TWeakObjectPtr<ATempleSkeleton>> Pool;
     TArray<FTempleSkeletonPost> Reserve;

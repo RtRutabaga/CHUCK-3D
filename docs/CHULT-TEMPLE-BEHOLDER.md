@@ -16,6 +16,8 @@ Since October 24 the user's references lead instead. The second pass has:
 
 It hangs alive where the heroes look, and since October 25 it fights them ([The fight](#the-fight)).
 
+- October 26, 2026: "finish the beholder encounter, ending on the 'rubble map' with crawlable crevice, we'll do the entry to ship later". The entrance and Fireball cutscenes are built ([The cutscenes](#the-cutscenes)); the Fireball throws Chuck into the rubble map ([CHULT-TEMPLE-RUBBLE.md](CHULT-TEMPLE-RUBBLE.md)).
+
 ## The model (`Tools/build_beholder.py` with `Tools/sdf_kit.py`, Blender 4.5.14)
 
 `blender --background --factory-startup --python Tools/build_beholder.py [-- --review DIR] [--quick]` writes `SourceAssets/Enemies/Beholder/`:
@@ -244,6 +246,48 @@ Run with `-ChuckSanctumTest` or `-ChuckSanctumCapture`; `-ChuckSanctumOnly=a+b` 
 - `cone_edge` (October 25): the beholder brought 16 m off Chuck, who stands 2 m before the rupture's edge beside the second colonnade pier (the throw cut to 30%), then before open rupture (35%), then well back from it (the full throw, 3.5 m). He loses two Sanity each time, stays alive, and ends on the hall's solid floor every time.
 - `beholder_fight`: 52 s of its own fight with skeletons coming, with at least 10 rays, 2 volleys, a bite, a cone, and a hero's blow on it.
 
+## The cutscenes
+
+Code: `TempleSanctumScene.h/.cpp` (`ATempleSanctumScene`, spawned by the battle). It follows the 2D Phase 6 final chamber: the heroes' calls on entering, a fight Chuck only survives, then the scripted Fireball. The explosion leaves him at (at most) half Sanity and throws him into the rubble map. Both scenes:
+- take his control and the view, are letterboxed (no HUD; the heroes' subtitles stay), and Esc skips;
+- frame each shot from where the cast stands that frame, and keep the lens at least 3 m from the beholder's centre (it lunges).
+
+### The entrance (11.2 s, once a session)
+When he first comes out onto the gallery:
+1. **Over his shoulder** (0–3.4 s): rising to the balustrade, down into the hall at the beholder.
+2. **Low behind the heroes** (3.4–7.2 s): up at the beholder over the dais; its opening volley comes in this shot.
+3. **The fighter** (7.2–11.2 s): side-on, as he calls "Hold the line!": the first line, 8 s after Chuck comes in, as before.
+
+The view then blends back to him and the fight is his to survive. A death and respawn on the gallery does not replay it.
+
+### The Fireball
+When the heroes' argument is due (their fourth line, 24 s after their calls), and once the beholder is between attacks:
+- **The setup:** the beholder stops fighting and hovers in its place, its gaze held on the wizard. No new skeletons rise; the fighter and ranger go on with those standing. The wizard turns from the sea tear to the beholder (`ATempleHero::Script`, his `Channel` clip). Fiery sigils (`Sigils`) turn round him: two rings on the flags with twelve runes between them, and a small ring round his staff's head. They brighten through the argument.
+- **The argument, shot by who speaks:**
+  1. The ranger, over the wizard's shoulder: "Wait, I know those sigils, you can't cast that here!"
+  2. The fighter, in profile behind his shield: "...we're too close to an astral rip".
+  3. The wizard, close, from the beholder's side: "I have to try, we're out of options!"
+  4. "......": the view closes on his staff's head. A mote of fire swells there, sparks are drawn into it, his gem's light grows, and the cone's charging drone sounds low.
+- **"FIREBALL!!":** over his shoulder at the beholder. He throws (his `Cast` clip). The bead leaves his left hand at the clip's release (0.34 s) and streaks at 23 m/s, trailing fire and sparks.
+- **The blast**, when the bead reaches the beholder:
+  - 70 fire flares (Unity Labs' CC0 fireball flipbook, the beholder's `M_BeholderFlare`) and 120 sparks burst from it. A shell of fire races out to about 11 m in the first second. The Astral erupts purple out of the pool before the gallery.
+  - A heavy boom: the cone's blast pitched down, a bolt's impact and the beholder's bellow. A hard shake. The music stops (`ADockGameMode::HoldMusic`, 10 s).
+  - The beholder reels from it (`TakeHit`, 4×).
+  - Shown wide from the nave before the heroes for 1.15 s.
+- **At him:** behind him and low, a wall of fire rolls across the hall to him, with its own roar. White at 1.75 s.
+- **The throw** (2.1 s): Sanity becomes at most half (2 of 5); it never heals him. He is put at the rubble map's **Temple Rubble** spawn. The hall goes back to its fight and the lines restart, for whoever comes back to it (a checkpoint).
+- **Coming to:** the white lifts over 2.6 s from 3.1 s. Control returns at 3.7 s and the bars go. The temple's score comes back in about 10 s after the blast.
+
+Skipped with Esc, the view goes straight to white and on to the throw. If he were somehow killed before the blast, the scene would give up and restore everything. The beholder's own fate is left open: it is engulfed and reels; the heroes return much later in the 2D campaign.
+
+### Tests (sanctum trials)
+- `entrance`: its three shots, then control back. `CHUCK_SANCTUM_TRIAL trial=entrance pass=1 entrances=1 shots=3 control_back=1`.
+- `fireball`: the lines at shortened gaps, the scene's seven shots, the throw and blast, at most 240 fire flares, Sanity 2, in the rubble, control back.
+- `fireball_skip`: Esc 2 s in; Sanity 2, in the rubble, control back.
+- The other trials run with the cutscenes off (`SetFireballScene`/`SetEntranceScene`).
+
+Verify-Package requires all three and `CHUCK_SANCTUM_SCENE_READY fx=1 camera=1`. Stills: `Saved/Screenshots/.../Sanctum/Sanctum_entrance_*`, `Sanctum_fireball_*`.
+
 ## Test
 The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when the beholder has:
 - posed over 200 frames;
@@ -265,7 +309,13 @@ The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when
 - **October 24:** the second pass, reviewed against the references in quick and full Blender renders (`Local/BeholderReview/r1`–`r3`, `f1`–`f3`) and in uncooked trials (`Local/beholder-trial-5.log` onward). Packaged: see HANDOFF.
 
 ## Not done, and known flaws
-- **Still to do in the battle:** the entrance and Fireball cutscenes and its death. The heroes' lines are spoken since October 25 ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#their-lines)). The heroes have no health: they reel and recover.
+- **The battle:** the entrance and Fireball cutscenes are built since October 26 ([The cutscenes](#the-cutscenes)). The beholder has no death: the Fireball engulfs it and the white-out leaves its fate open. The heroes have no health: they reel and recover.
+- **The cutscenes are unplayed by a person:**
+  - Reviewed in stills and logs only (`Local/scene-trial-2.log`).
+  - The fireball is mostly white-hot at its heart, with orange only at its edges.
+  - The sigils are sparks, not drawn runes.
+  - No new sounds were made: the boom, roar and drone are the beholder's own, pitched down.
+  - The 2D game seals Chuck into the hall (the Astral breaks through behind him); here the pool before the gallery already cuts him off, and the 24 s count runs from the heroes' calls.
 - **The fight is unplayed:**
   - It has been reviewed only in stills and logs, not played by a person.
   - Chuck's route through it is untried: its difficulty, and how readable the cone's searchlight is at play speed.

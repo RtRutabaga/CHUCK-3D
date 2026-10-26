@@ -22,6 +22,9 @@ public:
     bool IsRunningVerification() const { return bSmokeTest; }
     /** Every Waterdeep score fades out (the fall to Chult brings its own). */
     void FadeOutMusic(float Seconds);
+    /** No score for Seconds (the Fireball's silence, 2026-10-26); then the place's own comes back in. */
+    void HoldMusic(float Seconds);
+    double MusicHoldUntil = -1;
 private:
     bool bSmokeTest = false;
     // -ChuckNPCCapture: portraits of each NPC (front, three-quarter, back,

@@ -7,6 +7,8 @@
 #include "TempleHero.h"
 #include "TempleBeholder.h"
 #include "TempleSeal.h"
+#include "TempleSanctumScene.h"
+#include "ChultTempleRubble.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
@@ -279,6 +281,11 @@ void ATempleSanctumBattle::SpawnCast()
             Bh->Setup(BeholderMesh, this, Beholder); TheBeholder = Bh;
             Bh->SetFx(BeholderFx[0], BeholderFx[1], BeholderFx[2], BeholderFx[3], Plane);
         }
+    }
+    // The cutscenes (2026-10-26): the entrance and the Fireball.
+    {
+        FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        if (auto* Scene = World->SpawnActor<ATempleSanctumScene>(Beholder, FRotator::ZeroRotator, P)) { Scene->Setup(this); TheScene = Scene; }
     }
     // The reserve: skeletons lying among the bones round the dais end of the hall (clear of the pillars,
     // idols, braziers and the heroes' ground).
@@ -734,6 +741,10 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
     const float Wt = static_cast<float>(GetWorld()->GetTimeSeconds());
     if (bActive && bWaves && GetUp() < WantUp && Wt >= NextWake) { WakeOne(nullptr); NextWake = Wt + Random.FRandRange(1.8f, 3.6f); }
     if (bWaves) Recycle();
+    // His first coming out onto the gallery this session: the entrance (TempleSanctumScene.h).
+    if (bIn && !bWasIn && bEntranceScene && Chuck && TheScene.IsValid() && TheScene->GetEntrances() == 0 && !bForced
+        && ChultTempleInteriorFrameOf(Chuck->GetActorLocation()).Z > UZ - 150) TheScene->StartEntrance();
+    bWasIn = bIn;
     TickTalk(DeltaSeconds, bIn, Chuck);
     TickFlying(DeltaSeconds, Eye);
     Draw(Eye);
@@ -777,6 +788,8 @@ void StartTempleSanctumReview(UWorld* World)
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(60);
     if (PC) { PC->SetViewTarget(Camera); PC->ConsoleCommand(TEXT("t.MaxFPS 60")); }
     B->SetForcedActive(true); B->SetWaves(false);
+    // The cutscenes only in their own trials (2026-10-26).
+    B->SetFireballScene(false); B->SetEntranceScene(false);
     ATempleHero* F = B->GetHero(0); ATempleHero* Wz = B->GetHero(1); ATempleHero* Rg = B->GetHero(2);
     Wz->SetHeld(true); Rg->SetHeld(true);
     // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder; the beholder's fight
@@ -789,7 +802,9 @@ void StartTempleSanctumReview(UWorld* World)
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
         {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7},
         {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11}, {TEXT("cone_edge"), NAME_None, 15},
-        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14},
+        // The cutscenes (2026-10-26, TempleSanctumScene.h): 16 the entrance; 17 the Fireball from the argument to the rubble; 18 the same skipped with Esc.
+        {TEXT("entrance"), NAME_None, 16}, {TEXT("fireball"), NAME_None, 17}, {TEXT("fireball_skip"), NAME_None, 18}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
@@ -801,6 +816,7 @@ void StartTempleSanctumReview(UWorld* World)
         float JawMax[3] = {0, 0, 0}, DuckMin = 1;
         int32 TalkLast = -1, TalkOrdered = 1, TalkSounds = 0, TalkSubs = 0;
         float EdgeMoved[3] = {0, 0, 0}; int32 EdgeSafe[3] = {0, 0, 0}, EdgeResp0 = 0; FVector EdgeFrom = FVector::ZeroVector;
+        int32 Scene0[4] = {0, 0, 0, 0}, SceneShots = 0; FString SceneShot; bool bSkipSent = false;
         TWeakObjectPtr<ATempleSkeleton> Subject;
         FTimerHandle Timer;
     };
@@ -860,7 +876,25 @@ void StartTempleSanctumReview(UWorld* World)
                 B->RestartTalk(.25f);
                 Run->JawMax[0] = Run->JawMax[1] = Run->JawMax[2] = 0; Run->DuckMin = 1; Run->TalkLast = -1; Run->TalkOrdered = 1; Run->TalkSounds = 0; Run->TalkSubs = 0;
             }
-            if (T.Kind == 5 || T.Kind == 12) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
+            if (T.Kind >= 16)
+            {
+                // The cutscenes: the battle as in play, Chuck there and seen (on the gallery for the entrance, on the hall's floor for the Fireball).
+                for (ATempleHero* H : {F, Wz, Rg}) { H->EndScript(); H->Rest(); H->SetHeld(false); }
+                B->SetWaves(true); B->SetBeholderFights(true);
+                if (ATempleSanctumScene* Sc = B->GetScene()) { Run->Scene0[0] = Sc->GetEntrances(); Run->Scene0[1] = Sc->GetFireballs(); Run->Scene0[2] = Sc->GetThrows(); Run->Scene0[3] = Sc->GetSkips(); }
+                Run->SceneShots = 0; Run->SceneShot.Reset(); Run->bSkipSent = false;
+                AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+                if (Ch)
+                {
+                    Ch->ResetAtLocation(T.Kind == 16 ? ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum) : W(HallMid + 650, DaisT1 + 1900, HZ + 34.65f));
+                    Ch->SetActorRotation(FRotator(0, YawToward(Ch->GetActorLocation(), B->BeholderSpot()), 0)); Ch->Recenter();
+                    Ch->SetActorHiddenInGame(false); Ch->SetSanity(AChuckCharacter::MaxSanity);
+                    if (auto* PCc = Cast<APlayerController>(Ch->GetController())) PCc->SetViewTarget(Ch);
+                }
+                if (T.Kind == 16) { if (ATempleSanctumScene* Sc = B->GetScene()) Sc->StartEntrance(); }
+                else { B->SetFireballScene(true); B->RestartTalk(.12f); }
+            }
+            else if (T.Kind == 5 || T.Kind == 12) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
             else if (T.Kind >= 6 && T.Kind != 13)
             {
                 // Each hero still, in its rest clip, the fallen cleared away.
@@ -1256,6 +1290,49 @@ void StartTempleSanctumReview(UWorld* World)
                 && Run->JawMax[0] > 3.f && Run->JawMax[1] > 3.f && Run->JawMax[2] > 3.f && Run->DuckMin < .5f;
             Note = FString::Printf(TEXT("spoken=%d/%d ordered=%d sounds=%d subtitles=%d jaw=%.1f/%.1f/%.1f duck_min=%.2f seconds=%.1f"), B->GetTalkSpoken(), N, Run->TalkOrdered,
                 Run->TalkSounds, Run->TalkSubs, Run->JawMax[0], Run->JawMax[1], Run->JawMax[2], Run->DuckMin, Age);
+            break;
+        }
+        case 16: case 17: case 18:
+        {
+            ATempleSanctumScene* Sc = B->GetScene();
+            AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (!Sc || !Ch) { bDone = true; Note = TEXT("no_scene"); break; }
+            const FString ShotNow = Sc->GetShotName();
+            if (!ShotNow.IsEmpty() && ShotNow != Run->SceneShot)
+            {
+                Run->SceneShot = ShotNow; ++Run->SceneShots;
+                Run->NextShot = Now + (T.Kind == 16 ? 1.2f : .5f);   // a still a moment into each shot
+                Run->Phase = 1;
+            }
+            if (bCapture && Run->Phase == 1 && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->Phase = 0; Shot(FString::Printf(TEXT("Sanctum_%s_%s"), T.Name, *Run->SceneShot)); }
+            if (bCapture && T.Kind == 17 && Sc->GetDetonations() > 0 && Sc->GetClock() - Sc->GetDetonateClock() > .35f && Run->EventAt < 0 && !FScreenshotRequest::IsScreenshotRequested()) { Run->EventAt = Now; Shot(TEXT("Sanctum_fireball_bloom")); }
+            if (bCapture && Sc->GetThrows() > Run->Scene0[2] && Run->DeadAt < 0 && Sc->IsPlaying() && Sc->GetClock() - Sc->GetDetonateClock() > ATempleSanctumScene::BlastFadeIn + 1.6f && !FScreenshotRequest::IsScreenshotRequested()) { Run->DeadAt = Now; Shot(FString::Printf(TEXT("Sanctum_%s_rubble"), T.Name)); }
+            if (T.Kind == 18 && !Run->bSkipSent && Sc->IsFireball() && Sc->GetClock() > 2.f) { Run->bSkipSent = true; Sc->Skip(); }
+            bDone = (Age > 2.f && !Sc->IsPlaying() && (T.Kind == 16 || Sc->GetFireballs() > Run->Scene0[1])) || Age > 100.f;
+            const bool bBack = Ch->InputEnabled() && !Sc->IsPlaying();
+            if (T.Kind == 16)
+            {
+                bPass = Sc->GetEntrances() == Run->Scene0[0] + 1 && Run->SceneShots >= 3 && bBack;
+                Note = FString::Printf(TEXT("entrances=%d shots=%d control_back=%d seconds=%.1f"), Sc->GetEntrances() - Run->Scene0[0], Run->SceneShots, bBack, Age);
+            }
+            else
+            {
+                const bool bRubble = InChultTempleRubble(Ch->GetActorLocation());
+                bPass = Sc->GetFireballs() == Run->Scene0[1] + 1 && Sc->GetThrows() == Run->Scene0[2] + 1 && Sc->GetSanityAfter() == AChuckCharacter::MaxSanity / 2
+                    && Ch->GetSanity() == AChuckCharacter::MaxSanity / 2 && bRubble && bBack
+                    && (T.Kind == 18 ? Sc->GetSkips() == Run->Scene0[3] + 1 : Sc->GetDetonations() > 0 && Run->SceneShots >= 6 && Sc->GetMostFlares() > 100);
+                Note = FString::Printf(TEXT("fireballs=%d detonations=%d throws=%d skips=%d sanity_after=%d sanity=%d in_rubble=%d control_back=%d shots=%d most_flares=%d detonate_clock=%.2f seconds=%.1f"),
+                    Sc->GetFireballs() - Run->Scene0[1], Sc->GetDetonations(), Sc->GetThrows() - Run->Scene0[2], Sc->GetSkips() - Run->Scene0[3], Sc->GetSanityAfter(), Ch->GetSanity(), bRubble, bBack,
+                    Run->SceneShots, Sc->GetMostFlares(), Sc->GetDetonateClock(), Age);
+            }
+            if (bDone)
+            {
+                // Back to the trials' own view and a hidden Chuck at the gallery.
+                B->SetFireballScene(false);
+                Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true);
+                if (auto* PCc = Cast<APlayerController>(Ch->GetController())) { PCc->SetViewTarget(Camera); Ch->DisableInput(PCc); }
+                Run->DeadAt = -1; Run->EventAt = -1;
+            }
             break;
         }
         default:

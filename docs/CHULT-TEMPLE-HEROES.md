@@ -13,7 +13,7 @@ Read-only sources: `docs/development/PHASE-6.md`, `tools/generate_adventurer_spr
 - **The wizard:** deep blue robes, grey beard, a pointed hat, a crooked staff with a sea-green gem. He is "working, rather than fighting" (the binding), and casts the Fireball later.
 - **The ranger:** forest greens, a long auburn ponytail, a longbow. She fires arrows.
 
-Not built here: the entrance lines, the beholder (since built: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the battle's hazards for Chuck, the Fireball and the escape.
+Not built here: the entrance lines, the beholder (since built: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the battle's hazards for Chuck, the Fireball (since October 26: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md#the-cutscenes)) and the escape.
 
 ## What was downloaded, and what was used
 
@@ -285,7 +285,7 @@ His work is now the seal, not a binding at the dais. When nothing is coming at h
 
 **The seal** (`ATempleSeal`, TempleSeal.cpp; spawned by the battle over the tear):
 - **The threads:** while he works it, five threads of sea-green light arc from his gem and three from his open hand down to the knitting edge. They sway, and are plucked taut in a surge. Light runs down them.
-- **The web** (`M_TempleSealWeb`, `Tools/create_beholder_fx.py`): a disc that follows the tear's ragged rim. A woven lattice of light (rings, spokes, a crossed weave, a band of runes) knits inward from the rim at about 4.5% of the radius a second, its edge sparkling, to at most 82%. It never closes in the fight; the Fireball cutscene ends that.
+- **The web** (`M_TempleSealWeb`, `Tools/create_beholder_fx.py`): a disc that follows the tear's ragged rim. A woven lattice of light (rings, spokes, a crossed weave, a band of runes) knits inward from the rim at about 4.5% of the radius a second, its edge sparkling, to at most 82%. It never closes in the fight. In the Fireball cutscene (October 26) he turns from it to the beholder.
 - **Fraying:** left alone (he casts, is struck or is snuffed), it frays back slowly.
 - **Surges:** the tear fights it every 6–10 s once there is web to fight (it first gathers itself for 5 s).
   - The sea bursts up through it in spray, a light flash and a rushing roar (`SFX_SealSurge`).
@@ -331,7 +331,7 @@ User request, October 25, 2026: the trio's ElevenLabs takes of their 2D lines (`
 - The subtitles are the NPCs' (one cue at a time, no speaker name). The boss music ducks under each line, as under the NPCs.
 - The speaker's jaw opens with the line's loudness, up to 9°. The ranger's lips part; the fighter's and wizard's beards hide most of it.
 - **Restarting:** if he is out of the sanctum for 4 s, or dies and respawns, the scene starts again from the top when he next comes in (as the 2D room reloads).
-- **Not built yet, as asked:** no Fireball, no casting, no cutscene. After "FIREBALL!!" the fight simply goes on. All the waits are in `Script` at the top of `TempleHeroTalk.cpp`.
+- **The Fireball (October 26):** the argument is now its cutscene ([CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md#the-cutscenes)). When the fourth line is due, `TickTalk` asks the scene to start, and holds the line until the beholder is between attacks. The lines then play with their own gaps, and the scene shoots whoever speaks. The first line now falls in the entrance cutscene's last shot. All the waits are in `Script` at the top of `TempleHeroTalk.cpp`.
 
 **Test:** `hero_talk` in `-ChuckSanctumTest`. It restarts the scene with the waits at a quarter, then checks that:
 - all eight lines play in order, each with its sound playing and a subtitle;
@@ -422,7 +422,7 @@ Clip changes made for this:
   - The surge and break sounds are synthetic and unheard.
   - No foot sliding was measured in `SealStrain`'s half step.
 
-- **The beholder's part in the battle** (it is built and hangs there: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the battle's hazards for Chuck, the Fireball and the escape.
+- The escape onto the ship. (The beholder's fight, its hazards for Chuck and the Fireball are built: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md).)
 - **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".
 - **Hair and beards** are cards (the kit's), not strand grooms.
 - **Clipping:**

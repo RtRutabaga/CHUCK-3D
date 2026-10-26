@@ -1765,6 +1765,58 @@
    "notes": "Leap out of the sprint: stretched out long in the air, forepaws reaching, hind legs trailing; lands on the forepaws into the gallop."
   },
   {
+   "name": "Crawl",
+   "file": "Animations/AS_Chuck_Crawl.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 19,
+   "frame_count": 20,
+   "duration_s": 0.6667,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.7193,
+   "reference_speed_cm_s": 40.0,
+   "stride_cycle_cm": 26.667,
+   "stance_fraction": 0.72,
+   "stance_intervals_s": {
+    "foot_L": [
+     [
+      0.0,
+      0.48
+     ]
+    ],
+    "foot_R": [
+     [
+      0.0,
+      0.1467
+     ],
+     [
+      0.3333,
+      0.6667
+     ]
+    ],
+    "hand_L": [
+     [
+      0.1667,
+      0.6467
+     ]
+    ],
+    "hand_R": [
+     [
+      0.0,
+      0.3133
+     ],
+     [
+      0.5,
+      0.6667
+     ]
+    ]
+   },
+   "phase_convention": "phase 0 = foot_L touchdown; hand_L at .25, foot_R at .5, hand_R at .75 (lateral sequence); the runtime advances the phase by travel over stride_cycle_cm",
+   "notes": "Creeping on all fours through a low crevice (under about 42 cm). In place (root fixed); planted paws move backward in component space at the reference speed. Forepaws are placed by the clip only."
+  },
+  {
    "name": "Swing",
    "file": "Animations/AS_Chuck_Swing.fbx",
    "fps": 30,

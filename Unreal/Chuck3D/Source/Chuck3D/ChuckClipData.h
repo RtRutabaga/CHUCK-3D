@@ -24,6 +24,11 @@ namespace ChuckClipData
     constexpr float SprintLeapVerticalSpeed = 250.0000f;  // leap out of the sprint
     constexpr float SprintLeapSpeed = 420.0000f;  // its push-off along the ground
     constexpr float SprintForeLand = 0.4400f;  // the leap lands on the forepaws here in the stride
+    // Crawl: on all fours through a low crevice; phase 0 = foot_L touchdown (lateral sequence).
+    constexpr float CrawlSpeed = 40.0000f;
+    constexpr float CrawlPeriod = 0.6667f;
+    constexpr float CrawlStride = 26.6670f;
+    constexpr float CrawlStanceFraction = 0.7200f;
     // WalkStart/WalkStop: smoothstep speed ramps over Duration covering Travel cm.
     constexpr float StartDuration = 0.5000f;
     constexpr float StartTravel = 18.0000f;

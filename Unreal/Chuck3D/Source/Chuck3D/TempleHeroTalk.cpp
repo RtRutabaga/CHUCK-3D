@@ -8,6 +8,7 @@
 #include "DockSubtitles.h"
 #include "NPCVoiceData.h"
 #include "TempleHero.h"
+#include "TempleSanctumScene.h"
 #include "Components/AudioComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -114,13 +115,16 @@ void ATempleSanctumBattle::TickTalk(float DeltaSeconds, bool bIn, const AChuckCh
             if (H) H->SetSpeech(0.f);
             UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_LINE_END step=%d npc=%s id=%s"), TalkPlaying, Script[TalkPlaying].Npc, Script[TalkPlaying].Id);
             TalkPlaying = -1; TalkWait = 0.f;
-            if (TalkStep >= ScriptCount) UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_TALK_DONE lines=%d (the Fireball is not made yet)"), TalkSpoken);
+            if (TalkStep >= ScriptCount) UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_TALK_DONE lines=%d"), TalkSpoken);
         }
         return;
     }
     if (!bIn || TalkStep >= ScriptCount) return;
     TalkWait += DeltaSeconds;
     if (TalkWait < Script[TalkStep].Gap * TalkGapScale) return;
+    // The argument is the Fireball's cutscene (TempleSanctumScene.h, 2026-10-26): it takes the view first, once the
+    // beholder is between attacks (and the entrance is over).
+    if (TalkStep == FireballFirstLine && bFireballScene && TheScene.IsValid() && !TheScene->IsFireball() && (TheScene->IsPlaying() || !TheScene->StartFireball())) return;
     // His line: from his head, the subtitles running with it.
     const int32 Step = TalkStep++;
     ATempleHero* H = Heroes.IsValidIndex(Script[Step].Hero) ? Heroes[Script[Step].Hero].Get() : nullptr;
@@ -133,6 +137,8 @@ void ATempleSanctumBattle::TickTalk(float DeltaSeconds, bool bIn, const AChuckCh
 }
 
 bool ATempleSanctumBattle::IsHeroSpeaking() const { return TalkPlaying >= 0; }
+
+bool ATempleSanctumBattle::IsScenePlaying() const { return TheScene.IsValid() && TheScene->IsLetterboxed(); }
 
 bool ATempleSanctumBattle::IsTalkSoundPlaying() const { return TalkPlaying >= 0 && VoiceAudio && VoiceAudio->IsPlaying(); }
 

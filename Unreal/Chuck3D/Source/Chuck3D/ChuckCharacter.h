@@ -36,6 +36,13 @@ public:
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
     void RespawnAtAreaStart();
     FVector GetAreaStartLocation() const;
+    /** Low passages he goes through on all fours (2026-10-26: the temple rubble's crevice). A world box his capsule's
+     *  centre enters to crawl (Box: the box's centre and turn in the world; Half its half-size along its own axes); out of
+     *  every box he stands again once there's room. Registered by the setting's builder. */
+    static void RegisterCrawlSpace(const UWorld* World, const FTransform& Box, const FVector& Half);
+    static bool InCrawlSpace(const UWorld* World, const FVector& Location);
+    bool IsCrawling() const;
+    int32 GetCrawls() const { return Crawls; }
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */
     void DodgeToward(FVector2D Stick);
     /** Claw slash (LMB / X) pressed: a stepping slash when standing, the upper
@@ -390,9 +397,9 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
@@ -527,6 +534,11 @@ private:
     float StrafeTrigger = 0;       // LT axis
     bool bTestStrafe = false;
     float StrafePhase = 0;
+    // Crawling (2026-10-26): the Crawl clip's phase, advanced by travel; how many crawls.
+    float CrawlPhase = 0;
+    float CrawlCam = 0;   // 0..1: the camera's crawl framing
+    int32 Crawls = 0;
+    void EnterCrawl();
     int32 StrafeJumps = 0;
     bool bSideLong = false;
     bool StrafeHeld() const { return StrafeKeys != 0 || StrafeTrigger > .3f || bTestStrafe; }

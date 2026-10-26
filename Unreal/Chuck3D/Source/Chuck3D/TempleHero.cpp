@@ -240,6 +240,19 @@ bool ATempleHero::TakeSkeletonBlow(ATempleSkeleton* From, const FVector& At, boo
     return false;
 }
 
+void ATempleHero::Script(FName Clip, bool bLoop, float Blend, const FVector& Toward)
+{
+    bScripted = true; ScriptFace = Toward; ParalysedUntil = 0.f; HitStopUntil = 0.f;
+    if (!Clip.IsNone()) Play(Clip, bLoop, Blend);
+}
+
+void ATempleHero::EndScript()
+{
+    if (!bScripted) return;
+    bScripted = false; ScriptFace = FVector::ZeroVector;
+    BackToRest();
+}
+
 void ATempleHero::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -251,6 +264,8 @@ void ATempleHero::Tick(float DeltaSeconds)
     if (W >= HitStopUntil) ActTime += DeltaSeconds;
     if (!Battle.IsValid()) return;
     TickShove(DeltaSeconds);
+    // In a cutscene's hold: the clip it set, turning to face what it asked.
+    if (bScripted) { if (!ScriptFace.IsZero()) Face(ScriptFace - GetActorLocation(), 120.f, DeltaSeconds); UpdateTrail(false); return; }
     if (W < ParalysedUntil) { UpdateTrail(false); return; }   // held rigid by the beholder's ray
     if (bHeld) { UpdateTrail(false); return; }
     switch (Role)

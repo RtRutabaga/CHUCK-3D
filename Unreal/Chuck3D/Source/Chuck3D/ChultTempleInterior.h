@@ -17,8 +17,8 @@ class AChuckCharacter;
 // Since October 22 the Astral wind's too (ChultTempleWind.h): each leg's and each bend's start, and the
 // sanctum's gallery.
 enum class ETempleInteriorSpawn : uint8 { Well, Hall, Spikes, Piers, Darts, Snakes, Climb, Pits, Axes, Fire, Saws, Gauntlet,
-    Wind1, Wind2, Wind3, Wind4, Wind5, Wind6, Wind7, Sanctum };
-constexpr int32 TempleInteriorSpawnCount = 20;
+    Wind1, Wind2, Wind3, Wind4, Wind5, Wind6, Wind7, Sanctum, Rubble };   // (Rubble since 2026-10-26: ChultTempleRubble.h)
+constexpr int32 TempleInteriorSpawnCount = 21;
 FVector ChultTempleInteriorSpawn(ETempleInteriorSpawn Spawn);   // world, capsule centre
 float ChultTempleInteriorSpawnYaw(ETempleInteriorSpawn Spawn);
 const TCHAR* ChultTempleInteriorSpawnName(ETempleInteriorSpawn Spawn);

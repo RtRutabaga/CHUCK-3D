@@ -87,6 +87,11 @@ public:
     /** Tests: the next attack is this clip (the fighter), and hold still otherwise. */
     void ForceClip(FName Clip) { Forced = Clip; }
     void SetHeld(bool bInHeld) { bHeld = bInHeld; }
+    /** A cutscene's hold (TempleSanctumScene.cpp): out of his fight, playing Clip, turning to face Toward (zero: as he is). */
+    void Script(FName Clip, bool bLoop, float Blend, const FVector& Toward);
+    /** Back to his fight. */
+    void EndScript();
+    bool IsScripted() const { return bScripted; }
     void SetHome(const FVector& Feet, float Yaw) { Home = Feet; HomeYaw = Yaw; }
     /** Tests: straight back into the rest clip (guard, channel, ready). */
     void Rest() { BackToRest(); }
@@ -124,6 +129,7 @@ private:
     FName Forced = NAME_None, LastCut = NAME_None;
     FVector Home = FVector::ZeroVector, BodyForward = FVector::ForwardVector;
     float HomeYaw = 0, ActTime = 0, NextAt = 0, HitStopUntil = 0, LastHitStop = 0, LastBladeSpeed = 0, StepStart = 0;
+    bool bScripted = false; FVector ScriptFace = FVector::ZeroVector;
     bool bHeld = false, bWhoosh = false, bContact = false, bFired = false, bDrawSound = false, bStepSound[3] = {false, false, false};
     int32 Swings = 0, CleanHits = 0, Blocks = 0, HitsTaken = 0, Shots = 0;
     TWeakObjectPtr<ATempleSkeleton> Target;

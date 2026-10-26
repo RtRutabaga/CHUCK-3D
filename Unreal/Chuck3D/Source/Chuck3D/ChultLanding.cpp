@@ -18,6 +18,7 @@
 #include "ChultTempleInterior.h"
 #include "ChultTempleRun.h"
 #include "ChultTempleWind.h"
+#include "ChultTempleRubble.h"
 #include "ChultWreck.h"
 #include "ChultBirds.h"
 #include "ProceduralMeshComponent.h"
@@ -458,6 +459,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleInteriorReview"))){ReviewChultTempleInterior(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleRunTest"))){ReviewChultTempleRun(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleWindTest"))){ReviewChultTempleWind(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleRubbleTest"))){ReviewChultTempleRubble(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBirdReview"))){ReviewChultBirds(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}

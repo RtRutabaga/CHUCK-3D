@@ -2,6 +2,26 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 26 — the beholder encounter finished: cutscenes, rubble map, crawl (Claude)
+
+- **Request:** "finish the beholder encounter, ending on the 'rubble map' with crawlable crevice, we'll do the entry to ship later". Base `35b8dcb`.
+- **Built:** see HANDOFF, CHULT-TEMPLE-BEHOLDER.md#the-cutscenes and CHULT-TEMPLE-RUBBLE.md.
+- **Tested:**
+  - Blender crawl reviews ×2 (`Local/CrawlReview/r1`, `r2`).
+  - Uncooked: rubble trials ×2, cutscene trials ×2, stills reviewed.
+  - Packaged: Verify-Package passed (`Local/verify-package-20261026-084217.log`), after one run that failed only on pinned counts.
+- **Contract compatibility:**
+  - Chuck's rig is unchanged. New clip `AS_Chuck_Crawl` (EClip::Crawl at the end), new `EGait::Crawl`, `RegisterCrawlSpace`/`InCrawlSpace`/`IsCrawling`/`GetCrawls`. The mesh offset now follows the capsule's half-height. `ChuckClipData.h` gains Crawl constants.
+  - `ETempleInteriorSpawn::Rubble`, `TempleInteriorSpawnCount` 21; three new interior spaces; new `ChultTempleRubble.h` API; `InChultTempleRubble` exempts the chamber from the world's fall-death line.
+  - `ATempleHero::Script/EndScript`; `ATempleSanctumBattle::GetScene/IsScenePlaying/SetFireballScene/SetEntranceScene/GetTalkElapsed/GetBeholderFxMaterial/GetPlaneMesh`; new `ATempleSanctumScene`; `ADockGameMode::HoldMusic`.
+  - New trials `entrance`, `fireball`, `fireball_skip` and `-ChuckTempleRubbleTest`; Verify-Package expects them and the new counts.
+- **Source of truth:** `Tools/build_chuck_v1.py` (then `Tools/Import-ChuckV1.ps1 -Clips Crawl`). The rebuild re-exports every clip and the meshes with new bytes; the unchanged ones were restored from HEAD with `git show | git lfs smudge`. `Chuck_V1.blend` is updated (it holds the new action).
+- **Binary assets (LFS):** `AS_Chuck_Crawl.fbx` and `.uasset`, `Chuck_V1.blend`. The LFS quota was not checked.
+- **Tools:** Blender 4.5.14 ×4 builds (one export failed on a transient file error and was rerun) and ×2 reviews; UE 5.7.4: clip import ×1, Build.bat ×6, uncooked runs ×4, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×1 (rerun), Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `BeholderEnd`. The October 14–15 candidates were left alone (not this session's).
+
+Next part of the work can be done here (the escape onto the ship).
+
 ## October 25 — the cone's throw kept off the rupture (Claude)
 
 - **Request:** the cone knocked Chuck into a pillar and trapped him on a stone platform. Base `d49debe`.

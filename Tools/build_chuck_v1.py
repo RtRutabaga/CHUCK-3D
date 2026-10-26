@@ -1865,6 +1865,95 @@ author('SprintLeap', SPRINT_LEAP_FRAMES, sprint_leap, False, {
     'ends_on': 'SprintLoop at fore_land_phase (forepaw R touchdown)',
     'notes': 'Leap out of the sprint: stretched out long in the air, forepaws reaching, hind legs trailing; lands on the forepaws into the gallop.'})
 
+# ---- crawl (user 2026-10-26: "ending on the rubble map with crawlable crevice").
+# Down on all four paws and low, belly a few cm off the stone, creeping through
+# a crevice too low to stand in (about 42 cm of headroom). A rat's walk: the
+# lateral sequence (left hind, left fore, right hind, right fore, a quarter of
+# a cycle apart), each paw on the ground for 72% of the cycle so three are
+# down at once. Slow and careful: 40 cm/s over a 20-frame cycle (27 cm). The
+# back is long and level, the spine bending a little toward each planted
+# forepaw; head low and forward, ears back, whiskers ahead; tail trailing low.
+CRAWL = {'speed_cm_s': 40.0, 'period_frames': 20, 'duty': .72, 'lift_cm': 2.6,
+         'hand': {'L': .25, 'R': .75}, 'foot': {'L': 0., 'R': .5}}
+CRAWL_PERIOD = CRAWL['period_frames'] / FPS
+CRAWL_STRIDE = CRAWL['speed_cm_s'] * CRAWL_PERIOD
+CRAWL_TRAVEL = CRAWL_STRIDE * CRAWL['duty']   # how far a planted paw moves back
+CRAWL_HIND_X = -1.5     # hind stance centre, forward of the neutral ball (cm)
+CRAWL_FORE_Y = .85      # forepaws under the shoulders (this share of their width)
+CRAWL_WRIST_Z = 2.2
+
+def crawl_paw(phase):
+    """(forward offset from the stance centre, lift, planted 0..1) for a paw at
+    this phase of its own cycle (0 = touchdown)."""
+    d = CRAWL['duty']; half = CRAWL_TRAVEL / 2
+    if phase < d:
+        return half - CRAWL_TRAVEL * (phase / d), 0., 1.
+    u = (phase - d) / (1 - d)
+    return -half + CRAWL_TRAVEL * smoothstep(u, 0., 1.), CRAWL['lift_cm'] * math.sin(math.pi * u) ** .8, 0.
+
+def crawl(phase, f):
+    w = TAU * phase
+    # The body rides low and level; it dips a little as each hind paw takes
+    # the weight (twice a cycle) and the spine bends toward the planted fore.
+    dip = .5 * (1 + math.cos(2 * (w - TAU * .08)))
+    bend = math.sin(w - TAU * .3)
+    poser.translate('pelvis', (3.5, 0, -7.5 - .7 * dip))
+    poser.rotate('pelvis', 'Y', 70)
+    poser.rotate('spine_01', 'Y', 9)
+    poser.rotate('spine_02', 'Y', 7)
+    poser.rotate('chest', 'Y', 2)
+    poser.rotate('pelvis', 'Z', 3.5 * bend)
+    poser.rotate('spine_02', 'Z', -3 * bend)
+    poser.rotate('chest', 'Z', -3.5 * bend)
+    poser.rotate('pelvis', 'X', 2. * math.sin(w))
+    # Head low and forward, looking down the passage, a little nod per step.
+    poser.rotate('neck', 'Y', -38)
+    poser.rotate('head', 'Y', -34 + 1.5 * math.cos(2 * w))
+    poser.rotate('head', 'Z', 2.5 * bend)
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 20)
+    # Tail low behind, a slow wave through it.
+    for i, (b, deg) in enumerate(zip(TAIL, (-52, -6, -3, 0, 2, 2))):
+        poser.rotate(b, 'Y', deg + 2 * math.sin(w - .9 * (i + 1)))
+        poser.rotate(b, 'Z', 6 * math.sin(w - .7 * (i + 1)))
+    poser.update()
+    # Forepaws: arm IK to a wrist target under the shoulder line, elbows back
+    # and a little out; palms flat, fingers forward on the ground, curled
+    # under in the swing.
+    for side, sign in (('L', 1), ('R', -1)):
+        x, lift, plant = crawl_paw((phase - CRAWL['hand'][side]) % 1)
+        poser.translate(f'clavicle_{side}', (.15 * x, 0, -1.5))
+        poser.update()
+        shoulder = poser.head(f'upperarm_{side}')
+        wrist = Vector((shoulder.x + 3. + x, shoulder.y * CRAWL_FORE_Y, CRAWL_WRIST_Z + lift))
+        poser.arm(side, wrist, pole=(-1., .2 * sign, .35))
+        curl_back = 1. - plant
+        poser.aim(f'hand_{side}', poser.head(f'hand_{side}'), Vector((1., .1 * sign, -.08)).lerp(Vector((-.2, 0., -1.)), .6 * curl_back * smoothstep(lift, 0., 2.)))
+        curl(side, 4 + 26 * curl_back)
+    r = 0.
+    for side in 'LR':
+        x, lift, plant = crawl_paw((phase - CRAWL['foot'][side]) % 1)
+        # Heel up on the push-off, toes trailing in the swing.
+        fp = 22 + 18 * (1 - plant) * smoothstep(lift, 0., 1.5) + 10 * plant * smoothstep(-x, 0., CRAWL_TRAVEL / 2)
+        tp = -fp * plant * .6 + 12 * (1 - plant)
+        ball = NEUTRAL_BALL[side] + Vector((CRAWL_HIND_X + x, -(1.2 if side == 'L' else -1.2), lift))
+        r = max(r, poser.leg(side, ball, fp, tp, heading=0.))
+    ik_goals()
+    return r
+
+def crawl_stance(start):
+    a, b = start % 1, (start + CRAWL['duty']) % 1
+    spans = [(a, b)] if a < b else [(a, 1.), (0., b)]
+    return [[round(x * CRAWL_PERIOD, 4), round(y * CRAWL_PERIOD, 4)] for x, y in sorted(spans)]
+
+author('Crawl', CRAWL['period_frames'], crawl, True, {
+    'reference_speed_cm_s': CRAWL['speed_cm_s'], 'stride_cycle_cm': round(CRAWL_STRIDE, 3),
+    'stance_fraction': CRAWL['duty'],
+    'stance_intervals_s': {'foot_L': crawl_stance(CRAWL['foot']['L']), 'foot_R': crawl_stance(CRAWL['foot']['R']),
+                           'hand_L': crawl_stance(CRAWL['hand']['L']), 'hand_R': crawl_stance(CRAWL['hand']['R'])},
+    'phase_convention': 'phase 0 = foot_L touchdown; hand_L at .25, foot_R at .5, hand_R at .75 (lateral sequence); the runtime advances the phase by travel over stride_cycle_cm',
+    'notes': 'Creeping on all fours through a low crevice (under about 42 cm). In place (root fixed); planted paws move backward in component space at the reference speed. Forepaws are placed by the clip only.'})
+
 # ---- brachiation (user 2026-10-09): swinging from the iron rings under the
 # high wall lanterns, ring to ring, "look hard, be easy". Swing: both paws
 # round the ring's bottom bar overhead, arms nearly straight, the body hanging
