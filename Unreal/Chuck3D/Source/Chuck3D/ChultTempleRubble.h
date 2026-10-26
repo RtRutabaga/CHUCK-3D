@@ -24,10 +24,15 @@ namespace TempleRubble
     struct FRift { float S, T, RS, RT; };
     constexpr FRift Rifts[] = {{74800, -5700, 200, 150}, {74650, -6600, 170, 240}, {75050, -6300, 120, 160}, {74750, -7300, 230, 160},
         {76250, -6150, 140, 110}, {75600, -8250, 260, 150}, {76350, -8300, 160, 230}, {75550, -7300, 170, 120}, {74550, -7850, 110, 110}};
-    // The vault's broken part: a ragged ellipse of the ceiling fallen in, earth and roots over it.
-    constexpr float CaveS = 75100, CaveT = -6700, CaveRS = 520, CaveRT = 760;
+    // Where the vault has come down: ragged ellipses of the ceiling fallen in, earth and roots over each, its fall heaped
+    // under it (four since 2026-10-26, user: "more ceiling collapses"). Their earth cavities (CaveRoom x the radii) never overlap.
+    struct FCave { float S, T, RS, RT; };
+    constexpr FCave Caves[] = {{75050, -6750, 480, 720}, {76050, -8150, 360, 340}, {76050, -6200, 280, 330}, {75100, -8250, 320, 260}};
+    constexpr float CaveRoom = 1.3f;
 }
 
+// The collapsed vault's hole a frame point (S, T) is under, or -1. Grow widens each.
+int32 ChultTempleRubbleCaveAt(float S, float T, float Grow = 0);
 // What the rubble map's floor is at a frame point: 0 floor, 1 the Astral. Grow widens each rupture.
 int32 ChultTempleRubbleHoleAt(const FVector2D& Frame, float Grow = 0);
 // Distance (frame, cm) from the lane's centre line.

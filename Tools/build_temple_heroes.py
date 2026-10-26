@@ -288,8 +288,11 @@ def rigid(obj, weights):
         obj.modifiers.new('Armature', 'ARMATURE').object = HERO['rig']
 
 
-def rim_and_rivets(frame, loops, mat_rim, mat_rivet, name, thickness, radius=.0042, rivet_every=None, inset=.014, rivet_r=.0045, skip=None):
-    """A rolled rim along each loop (on the plate's outer face) and rivets `inset` in from it."""
+def rim_and_rivets(frame, loops, mat_rim, mat_rivet, name, thickness, radius=.0042, rivet_every=None, inset=.014, rivet_r=.0045, skip=None, surface=None):
+    """A rolled rim along each loop (on the plate's outer face) and rivets `inset` in from it, on the plate.
+    surface (a BVHTree of the plate): each rivet goes to whichever side of the rim is on the plate. Without it,
+    toward the loop's centre, which puts them in the hole for an opening's rim (2026-10-26: the bascinet's face
+    opening put its rivets on the fighter's forehead)."""
     bm = bmesh.new()
     rbm = bmesh.new()
     for loop in loops:
@@ -302,7 +305,13 @@ def rim_and_rivets(frame, loops, mat_rim, mat_rivet, name, thickness, radius=.00
                 if skip and skip(p): continue
                 inward = (centre - p); inward -= n * inward.dot(n)
                 if inward.length < 1e-6: continue
-                dome(rbm, p + inward.normalized() * inset + n * thickness, n, rivet_r, rivet_r * .7)
+                d = inward.normalized()
+                if surface:
+                    def off(q):
+                        hit = surface.find_nearest(q)
+                        return (hit[0] - q).length if hit and hit[0] is not None else 1e9
+                    if off(p - d * inset) < off(p + d * inset): d = -d
+                dome(rbm, p + d * inset + n * thickness, n, rivet_r, rivet_r * .7)
     rim = kit.new_object(name + '_rim', bm); rim.data.materials.append(mat_rim)
     for p in rim.data.polygons: p.use_smooth = True
     out = [rim]
@@ -328,7 +337,12 @@ def plate(frame, name, margin, offset, weights, thickness=.0024, smooth=12, rim=
     if subdiv: subdivide(obj, subdiv)
     thicken(obj, thickness)
     parts = [obj]
-    if rim: parts += rim_and_rivets(frame, loops, mat, dark, name, thickness, radius=rim_r, rivet_every=rivet_every)
+    surface = None
+    if rim and rivet_every:
+        from mathutils.bvhtree import BVHTree
+        mw = obj.matrix_world
+        surface = BVHTree.FromPolygons([mw @ v.co for v in obj.data.vertices], [tuple(f.vertices) for f in obj.data.polygons])
+    if rim: parts += rim_and_rivets(frame, loops, mat, dark, name, thickness, radius=rim_r, rivet_every=rivet_every, surface=surface)
     for p in parts: rigid(p, weights)
     return parts
 

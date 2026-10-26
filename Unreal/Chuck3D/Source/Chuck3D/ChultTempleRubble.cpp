@@ -43,15 +43,18 @@ namespace
         FRandomStream R(2026102601);
         // Heaps: a few big blocks round a centre, smaller ones on and against them; bigger under the fallen vault.
         int32 Heaps = 0;
-        for (int32 Try = 0; Try < 4000 && Heaps < 46; ++Try)
+        // (2026-10-26, user: "add more rubble": 46 heaps became about 70, the first tries under the collapses.)
+        int32 CaveFirst = 0;
+        for (int32 Try = 0; Try < 6000 && Heaps < 72; ++Try)
         {
-            const FVector2D H(R.FRandRange(RS0 + 60, RS1 - 60), R.FRandRange(RT0 + 60, RT1 - 60));
+            FVector2D H(R.FRandRange(RS0 + 60, RS1 - 60), R.FRandRange(RT0 + 60, RT1 - 60));
+            if (CaveFirst < 40) { const FCave& Cv = Caves[CaveFirst % UE_ARRAY_COUNT(Caves)]; H = FVector2D(Cv.S + R.FRandRange(-1.f, 1.f) * Cv.RS, Cv.T + R.FRandRange(-1.f, 1.f) * Cv.RT); ++CaveFirst; }
             if (!Clear(H, 90)) continue;
             bool Near = false;
-            for (const FTempleRubbleBlock& B : Out.Blocks) Near |= FVector2D::Distance(FVector2D(B.Centre), H) < 160;
+            for (const FTempleRubbleBlock& B : Out.Blocks) Near |= FVector2D::Distance(FVector2D(B.Centre), H) < 140;
             if (Near) continue;
             ++Heaps;
-            const float CaveK = FMath::Square((H.X - CaveS) / CaveRS) + FMath::Square((H.Y - CaveT) / CaveRT) < 1.6f ? 1.4f : 1.f;
+            const float CaveK = ChultTempleRubbleCaveAt(H.X, H.Y, 150.f) >= 0 ? 1.4f : 1.f;
             const int32 Count = R.RandRange(4, 9) + (CaveK > 1.f ? 3 : 0);
             float Layer = 0;
             for (int32 K = 0; K < Count; ++K)
@@ -73,9 +76,10 @@ namespace
             }
         }
         // Slabs of the fallen vault, long and thin, leaning steeply where they came down.
-        for (int32 Try = 0, Made = 0; Try < 600 && Made < 7; ++Try)
+        for (int32 Try = 0, Made = 0; Try < 1600 && Made < 16; ++Try)
         {
-            const FVector2D At(CaveS + R.FRandRange(-1.f, 1.f) * CaveRS * 1.3f, CaveT + R.FRandRange(-1.f, 1.f) * CaveRT * 1.3f);
+            const FCave& Cv = Caves[Try % UE_ARRAY_COUNT(Caves)];
+            const FVector2D At(Cv.S + R.FRandRange(-1.f, 1.f) * Cv.RS * 1.3f, Cv.T + R.FRandRange(-1.f, 1.f) * Cv.RT * 1.3f);
             FTempleRubbleBlock B; B.Half = FVector(R.FRandRange(150, 230), R.FRandRange(90, 130), R.FRandRange(18, 26));
             if (!Clear(At, B.Half.X * .8f)) continue;
             B.Turn = FRotator(R.FRandRange(28, 52) * (R.FRand() < .5f ? -1.f : 1.f), R.FRandRange(0, 360), R.FRandRange(-8, 8));
@@ -84,7 +88,7 @@ namespace
             Out.Blocks.Add(B); ++Made;
         }
         // Fallen columns: drums lying where they rolled, in two or three pieces each.
-        for (int32 Try = 0, Made = 0; Try < 800 && Made < 6; ++Try)
+        for (int32 Try = 0, Made = 0; Try < 1600 && Made < 10; ++Try)
         {
             const FVector2D C(R.FRandRange(RS0 + 200, RS1 - 200), R.FRandRange(RT0 + 200, RT1 - 200));
             const float Yaw = R.FRandRange(0, UE_TWO_PI), Len = R.FRandRange(300, 480), Rad = R.FRandRange(40, 55);
@@ -107,6 +111,18 @@ namespace
         }
         return Out;
     }
+}
+
+int32 ChultTempleRubbleCaveAt(float S, float T, float Grow)
+{
+    for (int32 K = 0; K < int32(UE_ARRAY_COUNT(Caves)); ++K)
+    {
+        const FCave& C = Caves[K];
+        const float DX = (S - C.S) / (C.RS + Grow), DY = (T - C.T) / (C.RT + Grow);
+        const float Jag = 1.f + .12f * FMath::Sin(5.f * FMath::Atan2(DY, DX) + 1.3f + K) + .07f * FMath::Sin(13.f * FMath::Atan2(DY, DX) + 2.f * K);
+        if (FMath::Sqrt(DX * DX + DY * DY) * Jag < 1.f) return K;
+    }
+    return -1;
 }
 
 int32 ChultTempleRubbleHoleAt(const FVector2D& F, float Grow)

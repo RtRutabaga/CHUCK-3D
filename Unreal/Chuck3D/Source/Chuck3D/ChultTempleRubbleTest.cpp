@@ -39,7 +39,9 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
         {TEXT("RubbleSouth"), FVector(76200, -7900, RZ + 180), FVector(74800, -8250, RZ + 60)},
         {TEXT("RubbleMouth"), FVector(74900, -8250, RZ + 120), FVector(74300, -8250, RZ + 30)},
         {TEXT("RubbleMouthLow"), FVector(74520, -8180, RZ + 40), FVector(74300, -8250, RZ + 20)},
-        {TEXT("RubbleWest"), FVector(74450, -5300, RZ + 300), FVector(74800, -7400, RZ)}};
+        {TEXT("RubbleWest"), FVector(74450, -5300, RZ + 300), FVector(74800, -7400, RZ)},
+        {TEXT("RubbleCaves"), FVector(75500, -7500, RZ + 160), FVector(76050, -8150, RTop + 150)},
+        {TEXT("RubbleLong"), FVector(75600, -5250, RZ + 420), FVector(75500, -8500, RZ + 100)}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->SetViewTarget(Camera); PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }

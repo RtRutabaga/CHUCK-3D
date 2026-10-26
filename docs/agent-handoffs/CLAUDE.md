@@ -2,6 +2,18 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 26 — helmet rivets, more rubble and ceiling collapses (Claude)
+
+- **Request:** the fighter's helmet rivets read as on his forehead; more rubble and more ceiling collapses. Base `e588489`.
+- **Built:** see HANDOFF.
+- **Contract compatibility:** the fighter's rig, skeleton and clips are unchanged (mesh only). `TempleRubble::CaveS/T/RS/RT` became `Caves[]`; new `ChultTempleRubbleCaveAt`.
+- **Source of truth:** `Tools/build_temple_heroes.py -- Fighter`, then `Tools/Import-TempleHeroes.ps1 -Only Fighter`; re-saved clips and material instances restored from HEAD.
+- **Binary assets (LFS):** `SK_HeroFighter.fbx` and `.uasset`.
+- **Tools:** Blender 4.5.14 ×1; UE 5.7.4: hero import ×1, Build.bat ×1, uncooked runs ×2, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `RubbleMore`.
+
+Next part of the work can be done here (the escape onto the ship).
+
 ## October 26 — the beholder encounter finished: cutscenes, rubble map, crawl (Claude)
 
 - **Request:** "finish the beholder encounter, ending on the 'rubble map' with crawlable crevice, we'll do the entry to ship later". Base `35b8dcb`.

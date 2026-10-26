@@ -12,12 +12,7 @@ namespace TempleRubbleBuild
     using namespace TempleRubble;
     constexpr float FloorThick = 30;
 
-    bool CaveAt(float S, float T, float Grow = 0)
-    {
-        const float DX = (S - CaveS) / (CaveRS + Grow), DY = (T - CaveT) / (CaveRT + Grow);
-        const float Jag = 1.f + .12f * FMath::Sin(5.f * FMath::Atan2(DY, DX) + 1.3f) + .07f * FMath::Sin(13.f * FMath::Atan2(DY, DX));
-        return FMath::Sqrt(DX * DX + DY * DY) * Jag < 1.f;
-    }
+    bool CaveAt(float S, float T, float Grow = 0) { return ChultTempleRubbleCaveAt(S, T, Grow) >= 0; }
 
     // Where the floor's kind changes along a ray from From outward (the rubble's ruptures).
     FVector2D EdgeAlong(const FVector2D& From, const FVector2D& Dir, float Max)
@@ -64,8 +59,8 @@ namespace TempleRubbleBuild
         }
     }
 
-    // The broken vault: the ceiling between the corbels in 40 cm cells with the cave's hole left out, the hole's edge
-    // 40 cm thick; over it a cavity of earth (lined in the mossy stone) with roots hanging through.
+    // The broken vault: the ceiling between the corbels in 40 cm cells with the collapses' holes left out, each hole's edge
+    // 40 cm thick; over each a cavity of earth (lined in the mossy stone) with roots hanging through.
     void BrokenVault(FParts& P, float S0, float S1, float T0, float T1, float Z, FRandomStream& R)
     {
         constexpr float C = 40, Thick = 40;
@@ -93,45 +88,45 @@ namespace TempleRubbleBuild
                 if (!Solid(I + 1, J)) QuadToward(P.Steps, {A1, B0, Z}, {A1, B1, Z}, {A1, B1, Z + Thick}, {A1, B0, Z + Thick}, {A1 + 100, (B0 + B1) * .5f, Z + 20});
             }
         }
-        // Broken courses hanging at the rim (visual).
-        for (int32 K = 0; K < 22; ++K)
+        for (int32 K = 0; K < int32(UE_ARRAY_COUNT(Caves)); ++K)
         {
-            const float A = R.FRandRange(0, UE_TWO_PI);
-            FVector2D E(CaveS, CaveT);
-            for (float D = 0; D < 1200; D += 10) { const FVector2D Q(CaveS + FMath::Cos(A) * D, CaveT + FMath::Sin(A) * D); if (!CaveAt(Q.X, Q.Y)) { E = Q; break; } }
-            TurnedBox(P.Steps, FVector(E.X, E.Y, Z - R.FRandRange(10, 30)), FVector(R.FRandRange(20, 45), R.FRandRange(14, 30), R.FRandRange(10, 22)),
-                FRotator(R.FRandRange(-25, 25), FMath::RadiansToDegrees(A) + R.FRandRange(-30, 30), R.FRandRange(-25, 25)));
-        }
-        // The cavity over it: earth, lined in the mossy stone; roots hang down through the hole.
-        const float CZ = Z + 520;
-        FLining Earth; Earth.bFloor = false; Earth.bCeiling = false; Earth.Dado = 0; Earth.Low = &P.Moss; Earth.High = &P.Moss;
-        Line(P, CaveS - CaveRS * 1.35f, CaveS + CaveRS * 1.35f, CaveT - CaveRT * 1.35f, CaveT + CaveRT * 1.35f, Z + Thick, CZ, {}, Earth);
-        // Its top is lost in the dark (the unlit black): the hole reads as going up into the earth.
-        QuadToward(P.Dark, {CaveS - CaveRS * 1.35f, CaveT - CaveRT * 1.35f, CZ}, {CaveS + CaveRS * 1.35f, CaveT - CaveRT * 1.35f, CZ}, {CaveS + CaveRS * 1.35f, CaveT + CaveRT * 1.35f, CZ}, {CaveS - CaveRS * 1.35f, CaveT + CaveRT * 1.35f, CZ}, {CaveS, CaveT, CZ - 100});
-        // Its floor ring (from the vault's top to the cavity's walls), so nothing is seen through.
-        {
-            const float X0 = CaveS - CaveRS * 1.35f, X1 = CaveS + CaveRS * 1.35f, Y0 = CaveT - CaveRT * 1.35f, Y1 = CaveT + CaveRT * 1.35f;
+            const FCave& Cv = Caves[K];
+            const float X0 = Cv.S - Cv.RS * CaveRoom, X1 = Cv.S + Cv.RS * CaveRoom, Y0 = Cv.T - Cv.RT * CaveRoom, Y1 = Cv.T + Cv.RT * CaveRoom;
+            // Broken courses hanging at the rim (visual).
+            for (int32 Q = 0; Q < 10 + int32((Cv.RS + Cv.RT) / 60); ++Q)
+            {
+                const float A = R.FRandRange(0, UE_TWO_PI);
+                FVector2D E(Cv.S, Cv.T);
+                for (float D = 0; D < 1200; D += 10) { const FVector2D Q2(Cv.S + FMath::Cos(A) * D, Cv.T + FMath::Sin(A) * D); if (ChultTempleRubbleCaveAt(Q2.X, Q2.Y) != K) { E = Q2; break; } }
+                TurnedBox(P.Steps, FVector(E.X, E.Y, Z - R.FRandRange(10, 30)), FVector(R.FRandRange(20, 45), R.FRandRange(14, 30), R.FRandRange(10, 22)),
+                    FRotator(R.FRandRange(-25, 25), FMath::RadiansToDegrees(A) + R.FRandRange(-30, 30), R.FRandRange(-25, 25)));
+            }
+            // The cavity over it: earth, lined in the mossy stone, its top lost in the unlit black; roots hang through the hole.
+            const float CZ = Z + 420 + Cv.RS * .2f;
+            FLining Earth; Earth.bFloor = false; Earth.bCeiling = false; Earth.Dado = 0; Earth.Low = &P.Moss; Earth.High = &P.Moss;
+            Line(P, X0, X1, Y0, Y1, Z + Thick, CZ, {}, Earth);
+            QuadToward(P.Dark, {X0, Y0, CZ}, {X1, Y0, CZ}, {X1, Y1, CZ}, {X0, Y1, CZ}, {Cv.S, Cv.T, CZ - 100});
+            // Its floor ring (from the vault's top to the cavity's walls), so nothing is seen through.
             const int32 NX = FMath::CeilToInt((X1 - X0) / C), NY = FMath::CeilToInt((Y1 - Y0) / C);
             for (int32 I = 0; I < NX; ++I) for (int32 J = 0; J < NY; ++J)
             {
                 const float A0 = X0 + I * C, B0 = Y0 + J * C;
-                if (CaveAt(A0 + C * .5f, B0 + C * .5f)) continue;
+                if (ChultTempleRubbleCaveAt(A0 + C * .5f, B0 + C * .5f) == K) continue;
                 QuadToward(P.Moss, {A0, B0, Z + Thick}, {A0 + C, B0, Z + Thick}, {A0 + C, B0 + C, Z + Thick}, {A0, B0 + C, Z + Thick}, {A0 + C * .5f, B0 + C * .5f, Z + 200});
             }
-        }
-        for (int32 K = 0; K < 16; ++K)
-        {
-            const float A = R.FRandRange(0, UE_TWO_PI), D = R.FRandRange(.1f, .85f);
-            const FVector Top(CaveS + FMath::Cos(A) * CaveRS * D, CaveT + FMath::Sin(A) * CaveRT * D, CZ);
-            TArray<FVector> Path = {Top};
-            const float Len = R.FRandRange(500, 950);
-            FVector Dir(R.FRandRange(-.2f, .2f), R.FRandRange(-.2f, .2f), -1);
-            for (int32 I = 1; I <= 8; ++I)
+            for (int32 Q = 0; Q < 4 + int32((Cv.RS + Cv.RT) / 110); ++Q)
             {
-                Dir = (Dir + FVector(R.FRandRange(-.25f, .25f), R.FRandRange(-.25f, .25f), 0)).GetSafeNormal();
-                Path.Add(Path.Last() + Dir * (Len / 8));
+                const float A = R.FRandRange(0, UE_TWO_PI), D = R.FRandRange(.1f, .85f);
+                TArray<FVector> Path = {FVector(Cv.S + FMath::Cos(A) * Cv.RS * D, Cv.T + FMath::Sin(A) * Cv.RT * D, CZ)};
+                const float Len = R.FRandRange(400, 900);
+                FVector Dir(R.FRandRange(-.2f, .2f), R.FRandRange(-.2f, .2f), -1);
+                for (int32 I = 1; I <= 8; ++I)
+                {
+                    Dir = (Dir + FVector(R.FRandRange(-.25f, .25f), R.FRandRange(-.25f, .25f), 0)).GetSafeNormal();
+                    Path.Add(Path.Last() + Dir * (Len / 8));
+                }
+                PathTube(P.Moss, Path, R.FRandRange(4, 9), 1.f, 6);
             }
-            PathTube(P.Moss, Path, R.FRandRange(4, 9), 1.f, 6);
         }
     }
 

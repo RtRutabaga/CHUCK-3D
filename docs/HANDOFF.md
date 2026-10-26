@@ -95,6 +95,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 26 — the fighter's helmet rivets; more rubble and ceiling collapses (Claude)
+
+- **Request:** "The rivets of the fighters helmet read as being on his forehead, fix that, then add more rubble and more ceiling collapses". Base `e588489`.
+- **Rivets:** `rim_and_rivets` set rivets 1.4 cm in from each rim toward the rim loop's centre; for the bascinet's face opening that centre is in the opening, so they sat on his forehead. Each rivet now goes to whichever side of its rim lies on the plate. Only the fighter was rebuilt and re-imported (`SK_HeroFighter`; his clips and material instances, re-saved unchanged, were restored from HEAD). Reviewed in Blender (`C:\Local\HeroReview\rivets`: the review path resolved outside the repo) and in the cutscene stills.
+- **Rubble map:** four ceiling collapses instead of one, each with its earth cavity, roots and broken courses; about 70 heaps (221 blocks, 26 drum pieces, more vault slabs), heaped most under the collapses. The lane stays clear: lane, crawl and rift trials pass (`Local/rubble-trial-3.log`).
+- **Tested:** uncooked rubble ×1 and cutscene ×1 (`Local/scene-trial-3.log`). Packaged: Verify-Package passed (`Local/verify-package-20261026-101513.log`).
+- **Launcher:** promoted as `RubbleMore` (the receipt names base e588489: built from the working tree before this commit).
+
 ## October 26 — the beholder encounter finished: entrance, Fireball, rubble map and crevice (Claude)
 
 - **Request:** "finish the beholder encounter, ending on the 'rubble map' with crawlable crevice, we'll do the entry to ship later". Base `35b8dcb`.

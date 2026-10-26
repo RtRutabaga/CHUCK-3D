@@ -44,6 +44,9 @@ So the motion is made in Blender by `Tools/build_hero_anims.py` as physical moti
 Each body is an MPFB human made with the human kit (`Tools/build_npc_humans.py`, now importable as a module with an `extra` hook; its NPC output is unchanged). Everything else is built over that body.
 
 ### Plate
+
+Rivets (October 26): each sits on whichever side of its rim lies on the plate (`rim_and_rivets`, a BVH of the plate). Toward the rim loop's centre, as before, put the bascinet's face-opening rivets on the fighter's forehead.
+
 Plate is a shell of the body region, pushed out over the layers under it. It is then smoothed until it is a plate's simple convex form, with no pecs and no navel, while holding a set clearance off the body. Then it gets:
 - thickness;
 - a rolled rim swept round every edge;
