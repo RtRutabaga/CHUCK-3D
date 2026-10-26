@@ -96,6 +96,70 @@
    "rate": 44100,
    "peaks": 27,
    "gain_db": 12.44
+  },
+  "HeroFighter/entrance_00": {
+   "wav": "Voice/HeroFighter/entrance_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroFighter/VO_HeroFighter_entrance_00",
+   "seconds": 4.206,
+   "rate": 44100,
+   "peaks": 17,
+   "gain_db": -1.56
+  },
+  "HeroFighter/fireball_00": {
+   "wav": "Voice/HeroFighter/fireball_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroFighter/VO_HeroFighter_fireball_00",
+   "seconds": 4.206,
+   "rate": 44100,
+   "peaks": 18,
+   "gain_db": -2.77
+  },
+  "HeroWizard/entrance_00": {
+   "wav": "Voice/HeroWizard/entrance_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_entrance_00",
+   "seconds": 4.676,
+   "rate": 44100,
+   "peaks": 15,
+   "gain_db": -2.2
+  },
+  "HeroWizard/fireball_00": {
+   "wav": "Voice/HeroWizard/fireball_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_fireball_00",
+   "seconds": 3.161,
+   "rate": 44100,
+   "peaks": 11,
+   "gain_db": -2.2
+  },
+  "HeroWizard/fireball_01": {
+   "wav": "Voice/HeroWizard/fireball_01.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_fireball_01",
+   "seconds": 2.508,
+   "rate": 44100,
+   "peaks": 7,
+   "gain_db": 6.0
+  },
+  "HeroWizard/fireball_02": {
+   "wav": "Voice/HeroWizard/fireball_02.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_fireball_02",
+   "seconds": 1.881,
+   "rate": 44100,
+   "peaks": 10,
+   "gain_db": -6.95
+  },
+  "HeroRanger/entrance_00": {
+   "wav": "Voice/HeroRanger/entrance_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroRanger/VO_HeroRanger_entrance_00",
+   "seconds": 3.474,
+   "rate": 44100,
+   "peaks": 4,
+   "gain_db": -0.71
+  },
+  "HeroRanger/fireball_00": {
+   "wav": "Voice/HeroRanger/fireball_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroRanger/VO_HeroRanger_fireball_00",
+   "seconds": 4.127,
+   "rate": 44100,
+   "peaks": 11,
+   "gain_db": -1.51
   }
  }
 }

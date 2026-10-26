@@ -140,3 +140,7 @@ Bones, not shape keys, because the runtime poses with `UPoseableMeshComponent`, 
 ## Mix (2026-10-06)
 
 User: "make all npc dialogue louder in relation to the music". `build_npc_voice.py` levels every line to -18 dB speech RMS (peaks capped at -1 dBFS), and `ADockGameMode::UpdateMusicDuck` lowers the score to 0.35 of its level while any NPC speaks. New lines get both automatically.
+
+## The sanctum heroes (October 25)
+
+The fighter, wizard and ranger speak their 2D sanctum lines from the user's ElevenLabs takes. They are `scene` lines in `dialogue.json` (`HeroFighter`, `HeroWizard`, `HeroRanger`), played by a timed script, not by talking. A line can cap its levelling with `max_gain_db` (the wizard's quiet breath). See [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#their-lines).

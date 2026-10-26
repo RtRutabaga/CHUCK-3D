@@ -1,5 +1,6 @@
 #include "TempleSanctumBattle.h"
 #include "ChuckCharacter.h"
+#include "DockGameMode.h"
 #include "ChultTempleWind.h"
 #include "ChultTempleInterior.h"
 #include "HeroClipData.h"
@@ -156,6 +157,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Set.Stem, I, Set.Stem, I)));
     for (const TCHAR* Fx : BeholderFxPaths) P.Add(FSoftObjectPath(Fx));
     P.Add(FSoftObjectPath(SealWebPath));
+    TalkAssetPaths(P);
     return P;
 }
 
@@ -226,6 +228,7 @@ void ATempleSanctumBattle::FinishLoading()
     Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     Attenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
     Attenuation->Attenuation.FalloffDistance = 3600.f;   // heard across the hall (54 m) and from the gallery
+    FinishTalkLoading();
     bReady = true; bLoading = false;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LOADED seconds=%.2f"), FPlatformTime::Seconds() - LoadStart);
     SpawnCast();
@@ -731,6 +734,7 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
     const float Wt = static_cast<float>(GetWorld()->GetTimeSeconds());
     if (bActive && bWaves && GetUp() < WantUp && Wt >= NextWake) { WakeOne(nullptr); NextWake = Wt + Random.FRandRange(1.8f, 3.6f); }
     if (bWaves) Recycle();
+    TickTalk(DeltaSeconds, bIn, Chuck);
     TickFlying(DeltaSeconds, Eye);
     Draw(Eye);
 }
@@ -777,13 +781,14 @@ void StartTempleSanctumReview(UWorld* World)
     Wz->SetHeld(true); Rg->SetHeld(true);
     // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder; the beholder's fight
     // (2026-10-25): 8 its five rays, 9 a ray through Chuck, 10 the bite, 11 the cone (Chuck in it, out of it, behind a pier), 12 it fighting by itself;
-    // 13 the wizard sealing the sea tear (it knits, the tear surges and he strains, the beholder's cone shatters it).
+    // 13 the wizard sealing the sea tear (it knits, the tear surges and he strains, the beholder's cone shatters it);
+    // 14 the heroes' lines (TempleHeroTalk.cpp), the waits shortened: in order, each heard, subtitled, the speaker's jaw moving, the music ducked.
     struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };
     static const FTrial Trials[] = {{TEXT("cut_down"), TEXT("CutDown"), 0}, {TEXT("cut_flat"), TEXT("CutFlat"), 0}, {TEXT("overhead"), TEXT("Overhead"), 0},
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
         {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7},
         {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11},
-        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
@@ -792,6 +797,8 @@ void StartTempleSanctumReview(UWorld* World)
         float SealMax = 0; int32 Strains0 = 0, Surges0 = 0, Breaks0 = 0;
         int32 Rays0 = 0, Dust0 = 0, HeroHits0 = 0, Chuck0 = 0, Bites0 = 0, Cones0 = 0, Volleys0 = 0, Struck0 = 0, Shelter0 = 0, Sub = -1, Seen = 0, Hits[3] = {-1, -1, -1};
         float EventAt = -1;
+        float JawMax[3] = {0, 0, 0}, DuckMin = 1;
+        int32 TalkLast = -1, TalkOrdered = 1, TalkSounds = 0, TalkSubs = 0;
         TWeakObjectPtr<ATempleSkeleton> Subject;
         FTimerHandle Timer;
     };
@@ -845,6 +852,11 @@ void StartTempleSanctumReview(UWorld* World)
             {
                 Wz->SetActorLocation(Wz->GetActorLocation()); Wz->Rest(); Wz->SetHeld(false);
                 if (ATempleSeal* Sl = B->GetSeal()) { Run->Strains0 = Wz->GetStrains(); Run->Surges0 = Sl->GetSurges(); Run->Breaks0 = Sl->GetBreaks(); Run->SealMax = 0; }
+            }
+            if (T.Kind == 14)
+            {
+                B->RestartTalk(.25f);
+                Run->JawMax[0] = Run->JawMax[1] = Run->JawMax[2] = 0; Run->DuckMin = 1; Run->TalkLast = -1; Run->TalkOrdered = 1; Run->TalkSounds = 0; Run->TalkSubs = 0;
             }
             if (T.Kind == 5 || T.Kind == 12) { B->SetWaves(true); Wz->SetHeld(false); Rg->SetHeld(false); F->SetHeld(false); }
             else if (T.Kind >= 6 && T.Kind != 13)
@@ -962,6 +974,15 @@ void StartTempleSanctumReview(UWorld* World)
                 }
                 if (T.Kind == 12 && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->NextShot = Now + 2.5f; Shot(FString::Printf(TEXT("Sanctum_%s_t%02d"), T.Name, static_cast<int32>(Age))); }
             }
+        }
+        else if (T.Kind == 14)
+        {
+            // The one speaking, from before him at head height; between lines, the three together.
+            const int32 Pl = B->GetTalkPlaying();
+            ATempleHero* Who = Pl >= 0 ? B->GetHero(Pl == 0 || Pl == 4 ? 0 : Pl == 2 || Pl == 3 ? 2 : 1) : nullptr;
+            if (Who) View(Who->HeadLocation() + Who->GetActorForwardVector() * 140.f + FVector::CrossProduct(FVector::UpVector, Who->GetActorForwardVector()) * 40.f + FVector(0, 0, 5), Who->HeadLocation() - FVector(0, 0, 8));
+            else View(FAt - Fw * 300.f + Rt * 120.f + FVector(0, 0, 180), Wz->GetActorLocation() + FVector(0, 0, 60));
+            if (bCapture && Pl >= 0 && Now >= Run->NextShot && !FScreenshotRequest::IsScreenshotRequested()) { Run->NextShot = Now + .5f; Shot(FString::Printf(TEXT("Sanctum_hero_talk_%d_%02d"), Pl, static_cast<int32>(Age * 2.f))); }
         }
         else if (T.Kind == 13 && B->GetSeal())
         {
@@ -1169,6 +1190,28 @@ void StartTempleSanctumReview(UWorld* World)
             bPass = Run->SealMax > .3f && Sl->GetSurges() > Run->Surges0 && Wz->GetStrains() > Run->Strains0 && Sl->GetBreaks() > Run->Breaks0 && Sl->GetCoverage() < .1f;
             Note = FString::Printf(TEXT("max_coverage=%.2f surges=%d strains=%d breaks=%d coverage_now=%.2f clip=%s"), Run->SealMax, Sl->GetSurges() - Run->Surges0,
                 Wz->GetStrains() - Run->Strains0, Sl->GetBreaks() - Run->Breaks0, Sl->GetCoverage(), *Wz->GetClip().ToString());
+            break;
+        }
+        case 14:
+        {
+            const int32 Pl = B->GetTalkPlaying();
+            if (Pl >= 0 && Pl != Run->TalkLast)
+            {
+                Run->TalkOrdered &= Pl == Run->TalkLast + 1;
+                Run->TalkLast = Pl;
+                Run->TalkSounds += B->IsTalkSoundPlaying();
+                FString Who, Cue;
+                Run->TalkSubs += B->GetHeroSubtitle(Who, Cue) && !Cue.IsEmpty();
+            }
+            for (int32 H = 0; H < 3; ++H) Run->JawMax[H] = FMath::Max(Run->JawMax[H], B->GetHero(H)->GetJaw());
+            if (Pl >= 0 && B->IsTalkSoundPlaying())
+                if (const auto* Gm = Cast<ADockGameMode>(World->GetAuthGameMode())) Run->DuckMin = FMath::Min(Run->DuckMin, Gm->GetMusicDuck());
+            const int32 N = ATempleSanctumBattle::TalkLineCount();
+            bDone = (B->GetTalkStep() >= N && Pl < 0) || Age > 75.f;
+            bPass = B->GetTalkSpoken() == N && Run->TalkLast == N - 1 && Run->TalkOrdered && Run->TalkSounds == N && Run->TalkSubs == N
+                && Run->JawMax[0] > 3.f && Run->JawMax[1] > 3.f && Run->JawMax[2] > 3.f && Run->DuckMin < .5f;
+            Note = FString::Printf(TEXT("spoken=%d/%d ordered=%d sounds=%d subtitles=%d jaw=%.1f/%.1f/%.1f duck_min=%.2f seconds=%.1f"), B->GetTalkSpoken(), N, Run->TalkOrdered,
+                Run->TalkSounds, Run->TalkSubs, Run->JawMax[0], Run->JawMax[1], Run->JawMax[2], Run->DuckMin, Age);
             break;
         }
         default:

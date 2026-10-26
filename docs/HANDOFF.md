@@ -36,6 +36,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - A new checker measures both problems on every frame.
 
   Details in [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#arms-and-wrists). Verified and in the launcher.
+- **The heroes speak (October 25, Claude):** the fighter, wizard and ranger speak their 2D sanctum lines in the user's ElevenLabs takes, with subtitles; their jaws move and the boss music ducks.
+  - Their calls start 8 s after Chuck comes into the sanctum, 2.8 s apart.
+  - The argument before the Fireball starts 24 s after that, 1.2–2.2 s between its lines, and ends on "FIREBALL!!".
+  - As the user asked, there is no Fireball, casting or cutscene yet: the fight goes on.
+  - Leaving the sanctum for 4 s, or a respawn, restarts the scene.
+
+  Details in [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#their-lines). Verified and in the launcher.
 - **The wizard seals the sea tear (October 25, Claude):** he turns to the tear on his left and works it:
   - New authored clips: a braced, trembling 6 s sealing loop, with his palm pushed at the tear, the staff's gem high over it, and threads gathered and driven down twice a loop. A strain when the tear surges.
   - Threads of sea-green light run from his gem and hand to a web of light that knits inward from the tear's rim.
@@ -86,6 +93,20 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 25 — the heroes' voiced lines (Claude)
+
+- **Request:** the trio's eight audio takes and their lines; add their speaking, but no Fireball, casting or cutscene yet; room between lines that belong together, and a wait after Chuck enters.
+- **Built:** see CHULT-TEMPLE-HEROES.md#their-lines.
+  - The takes are in the NPC voice pipeline as `scene` lines for `HeroFighter`, `HeroWizard` and `HeroRanger`.
+  - `TempleHeroTalk.cpp` times them. Each plays from the speaker's head, with subtitles, the music ducked and the jaw moving.
+  - The wizard's "......" breath is capped at +6 dB (new `max_gain_db`).
+- **Tests:**
+  - `hero_talk` (the waits at a quarter): 8/8 lines in order with sound and subtitle, jaws 7–9°, music duck 0.35.
+  - Uncooked: `Local/hero-talk-1.log`, with stills reviewed.
+  - Packaged: Verify-Package passed, 182 passes (`Local/verify-package-20261025-192546.log`, sanctum `Local/verify-temple-heroes-*` at 19:56).
+  - Not tested: the restart on leaving the sanctum or on a respawn, and the full-length waits (only at a quarter). No person has listened to it in play.
+- **Launcher:** promoted as `HeroVoices`.
 
 ## October 25 — the heroes' arms and wrists (Claude)
 

@@ -305,6 +305,41 @@ His work is now the seal, not a binding at the dais. When nothing is coming at h
 - The beholder's cone at him: it shatters, below 10% after.
 - Stills from four sides (`Sanctum_wizard_seal_*`).
 
+### Their lines
+User request, October 25, 2026: the trio's ElevenLabs takes of their 2D lines (`data/dialogue/temple_sanctum.json`), "add their speaking to the game but hold off on making it the whole complete part yet (for instance dont do the fireball animation yet or the beginning to cast fireball or any cutscene scene etc). for gaps between lines that are clearly needed to be together, add a fair amount of time between the lines so that the player isnt rushed through this part, and wait awhile after player entrance to start."
+
+**The lines** go through the NPC voice pipeline ([NPC-VOICE-PLAN.md](NPC-VOICE-PLAN.md)) as three new speakers, `HeroFighter`, `HeroWizard` and `HeroRanger`:
+- Their takes are under `SourceAssets/NPCs/Voice/Hero*/source`; `dialogue.json` lists them as `scene` lines (spoken by the game, not by talking to them).
+- `Tools/build_npc_voice.py` levels them like every NPC line (-18 dB speech, peaks -1 dB). The wizard's "......" is a quiet breath: a new `max_gain_db` keeps it at +6 dB instead of the +14 dB the levelling wanted.
+- `CHUCK_VOICE_ONLY=HeroFighter,HeroWizard,HeroRanger Tools/import_npc_voice.py` imports them to `/Game/Art/Audio/Voice/Hero*/VO_Hero*_<id>`. They stream in with the battle's other assets.
+
+**The script** (`TempleHeroTalk.cpp`, owned by `ATempleSanctumBattle`). The clock runs only while Chuck is in the sanctum (the hall, its gallery, the end of the last leg). Each wait is counted from the end of the line before.
+
+| Wait | Who | Line | Length |
+|---|---|---|---|
+| 8 s after he comes in | Fighter | "Hold the line! It bleeds - I have seen it bleed!" | 4.2 s |
+| 2.8 s | Wizard | "Keep its eye off me! The binding needs another minute!" | 4.7 s |
+| 2.8 s | Ranger | "I'll cover you! We have to keep pushing forward!" | 3.5 s |
+| 24 s | Ranger | "Wait, I know those sigils, you can't cast that here!" | 4.1 s |
+| 2.2 s | Fighter | "... we're too close to an astral rip, we don't know what will happen" | 4.2 s |
+| 2.2 s | Wizard | "I have to try, we're out of options!" | 3.2 s |
+| 1.6 s | Wizard | "......" | 2.5 s |
+| 1.2 s | Wizard | "FIREBALL!!" | 1.9 s |
+
+- The calls start about 8 s after he enters, and the argument about 46 s after he enters. The 2D game starts the argument 24 s after Chuck is sealed into the hall. There is no seal here yet, so the 24 s count from the end of the calls.
+- Each line plays from its hero's head. It can be heard across the hall and from the gallery: full volume within 15 m, fading out over 50 m.
+- The subtitles are the NPCs' (one cue at a time, no speaker name). The boss music ducks under each line, as under the NPCs.
+- The speaker's jaw opens with the line's loudness, up to 9°. The ranger's lips part; the fighter's and wizard's beards hide most of it.
+- **Restarting:** if he is out of the sanctum for 4 s, or dies and respawns, the scene starts again from the top when he next comes in (as the 2D room reloads).
+- **Not built yet, as asked:** no Fireball, no casting, no cutscene. After "FIREBALL!!" the fight simply goes on. All the waits are in `Script` at the top of `TempleHeroTalk.cpp`.
+
+**Test:** `hero_talk` in `-ChuckSanctumTest`. It restarts the scene with the waits at a quarter, then checks that:
+- all eight lines play in order, each with its sound playing and a subtitle;
+- each hero's jaw moves (over 3°);
+- the music ducks under 0.5.
+
+`Local/hero-talk-1.log` (uncooked): `spoken=8/8 ordered=1 sounds=8 subtitles=8 jaw=9.0/9.0/7.3 duck_min=0.35`; stills `Sanctum_hero_talk_*`.
+
 ### Sounds
 `Tools/gen_hero_sfx.py` makes 37 stdlib-synthesised originals (`SFX_Hero*`):
 - a sword whoosh (its Doppler sweep peaking at contact) and the blade going into bone;
@@ -337,7 +372,7 @@ Clip changes made for this:
 - **CutDown, Overhead, CutRise:** the shield returns to guard only once the sword is back on his right.
 - **The other contact points, times and speeds are unchanged.**
 
-`-ChuckSanctumTest` runs ten trials, and `-ChuckSanctumCapture` adds stills to `Saved/Screenshots/.../Sanctum`. `-ChuckSanctumOnly=<trial>` runs a single trial.
+`-ChuckSanctumTest` runs its trials (the list is `Trials` in `TempleSanctumBattle.cpp`; `hero_talk` since October 25), and `-ChuckSanctumCapture` adds stills to `Saved/Screenshots/.../Sanctum`. `-ChuckSanctumOnly=<trial>` runs a single trial.
 
 1. Each blow on a fresh skeleton placed in his measure: `cut_down`, `cut_flat` (it must take the skull), `overhead`, `bash`. Since October 23 every skeleton left from the trial before goes back to reserve first. The forced cut is the fighter's next swing, and a leftover still chasing him had drawn it out of range, so the level cut's skull was taken only when a later swing happened to be a level cut.
 2. `block`: a blow on the shield.
@@ -373,6 +408,13 @@ Clip changes made for this:
 - **Re-imported copies of the human kit's fabrics:** now reused from `/Game/Characters/Humans/Fabrics`.
 
 ## Not done, and known flaws
+- **Their lines (October 25):**
+  - Heard only in automated runs. No person has played through the timing.
+  - Leaving the sanctum or respawning restarts the scene. This was reasoned through in the code, not tested.
+  - The jaw is loudness-driven, not lip shapes.
+  - Nobody turns to face whoever is speaking.
+  - The calls can overlap the beholder's roars.
+
 - **The seal (October 25):**
   - Reviewed in stills only; it has not been seen in motion by a person.
   - The threads' cores read almost white, the sea-green mostly in their glow.
@@ -380,7 +422,7 @@ Clip changes made for this:
   - The surge and break sounds are synthetic and unheard.
   - No foot sliding was measured in `SealStrain`'s half step.
 
-- **The beholder's part in the battle** (it is built and hangs there: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the 2D entrance lines, the battle's hazards for Chuck, the Fireball and the escape.
+- **The beholder's part in the battle** (it is built and hangs there: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md)), the battle's hazards for Chuck, the Fireball and the escape.
 - **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".
 - **Hair and beards** are cards (the kit's), not strand grooms.
 - **Clipping:**

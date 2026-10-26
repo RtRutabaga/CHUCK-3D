@@ -175,6 +175,7 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # 2026-10-25 it fights: its five rays (a skeleton disintegrated), a ray through Chuck, the bite, the cone (Chuck hit in its
 # path, missed off its line, sheltered behind a pier) and a minute of its own fight with every kind of move. The same
 # day the wizard seals the sea tear: the web knits, the tear surges and he strains, the beholder's cone shatters it.
+# Also 2026-10-25, the heroes' voiced lines (TempleHeroTalk.cpp): all eight cooked and heard in order, subtitled, jaws moving, the music ducked.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=22 sounds=64 arrow=1 skull=1 fx=5 near_holes=0 beholder_fx=4 seal=1' -Quiet) -or
@@ -185,6 +186,8 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_cone pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_fight pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=wizard_seal pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_HERO_TALK_READY lines=8 sounds=8' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=hero_talk pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or

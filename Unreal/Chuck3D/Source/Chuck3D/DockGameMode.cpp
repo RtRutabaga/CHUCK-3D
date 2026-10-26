@@ -1192,6 +1192,8 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     const APawn* Listener = UGameplayStatics::GetPlayerPawn(this,0);
     const bool bInTavern = Listener && ADockNPC::InTavern(Listener->GetActorLocation());
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking() && (!Entry->IsAmbientSpeaking() || bInTavern);
+    // The sanctum heroes' lines (TempleHeroTalk.cpp) duck the boss music the same way.
+    if(const ATempleSanctumBattle* Battle=ATempleSanctumBattle::Get(GetWorld())) bSpeech |= Battle->IsHeroSpeaking();
     DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
     // At night, from the crate staircase to the tavern, the music stays down under the tavern's talk.
     const bool bByTavern = Listener && ADockNPC::NearTavernAtNight(Listener->GetActorLocation());
@@ -4006,7 +4008,8 @@ void ADockHUD::DrawHUD()
     // Sentence cues, centred like the reference, with no panel behind them.
     FString Speaker, Line;
     const bool bTalk=Chuck->GetDialogue(Speaker,Line);
-    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line))
+    const ATempleSanctumBattle* SanctumBattle=ATempleSanctumBattle::Get(GetWorld());
+    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line) || (SanctumBattle && SanctumBattle->GetHeroSubtitle(Speaker,Line)))
     {
         const float UiScale=FMath::Clamp(Canvas->SizeY/1080.f,.5f,2.f);
         // Canvas requires a UFont even when the glyph face comes from Slate.

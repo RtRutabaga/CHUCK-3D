@@ -18,7 +18,8 @@ jaw, lifts the brows and nods with it while the line plays. (Rhubarb mouth
 shapes, phase 2 of the plan, can replace it for NPCs whose mouths show; the
 dwarf's beard hides his lips.)
 Lines are an NPC's 'talk' lines, then its 'ambient' ones (started by the game,
-not by talking: the tavern at night). A line without a 'source' (its audio not
+not by talking: the tavern at night), then its 'scene' ones (spoken in a scripted scene:
+the sanctum heroes' lines, user 2026-10-25, TempleHeroTalk.cpp). A line without a 'source' (its audio not
 supplied yet) is written text-only: no wav, no asset, an empty envelope and a
 length of TEXT_SECONDS_PER_WORD a word, so the game can run it on its subtitles.
 """
@@ -74,7 +75,7 @@ def envelope(x, rate):
 
 manifest, entries = {'generator': 'Tools/build_npc_voice.py', 'lines': {}}, []
 for npc, spec in SPEC.items():
-    for line in spec.get('talk', []) + spec.get('ambient', []):
+    for line in spec.get('talk', []) + spec.get('ambient', []) + spec.get('scene', []):
         if not line.get('source'):
             secs = len(line['text'].split()) * TEXT_SECONDS_PER_WORD
             entries.append((npc, line, '', np.zeros(0, dtype=int), secs))
@@ -85,6 +86,8 @@ for npc, spec in SPEC.items():
         fade = int(rate * .01)
         x[:fade] *= np.linspace(0, 1, fade); x[-fade:] *= np.linspace(1, 0, fade)
         gain_db = level(x, rate)
+        # A line meant to be quiet (the wizard's held breath before 'FIREBALL!!') keeps its quiet: 'max_gain_db' caps the levelling.
+        if 'max_gain_db' in line: gain_db = min(gain_db, line['max_gain_db'])
         x = x * 10 ** (gain_db / 20)
         # A deep voice (the smith's: 70% of its energy under 300 Hz) is peak-held well under the others
         # in the speech band; 'boost_db' raises it further, a limiter keeping the peaks (user 2026-10-06).

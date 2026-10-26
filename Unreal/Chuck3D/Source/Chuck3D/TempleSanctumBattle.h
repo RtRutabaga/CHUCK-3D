@@ -17,6 +17,8 @@ class UStaticMeshComponent;
 class ATempleHero;
 class ATempleBeholder;
 class ATempleSeal;
+class AChuckCharacter;
+class UAudioComponent;
 
 /**
  * The sanctum's battle, before the beholder (user 2026-10-22: "add them to the grand temple room at the
@@ -92,6 +94,21 @@ public:
     void ClearFlying();
 
     static ATempleSanctumBattle* Get(const UWorld* World);
+
+    // The heroes' lines (TempleHeroTalk.cpp, user 2026-10-25): their calls when Chuck comes in, then the argument before the Fireball.
+    /** A hero is speaking one of the scene's lines (the music ducks under it). */
+    bool IsHeroSpeaking() const;
+    /** Its sound is playing now. */
+    bool IsTalkSoundPlaying() const;
+    /** The line's current subtitle cue and who says it. */
+    bool GetHeroSubtitle(FString& Speaker, FString& Text) const;
+    /** Tests: from the start again, the waits before the lines scaled by GapScale. */
+    void RestartTalk(float GapScale = 1.f);
+    /** The line playing (index into the script), or -1; the next line's index; lines started since the restart. */
+    int32 GetTalkPlaying() const { return TalkPlaying; }
+    int32 GetTalkStep() const { return TalkStep; }
+    int32 GetTalkSpoken() const { return TalkSpoken; }
+    static int32 TalkLineCount();
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -158,6 +175,16 @@ private:
     void TickFlying(float DeltaSeconds, const FVector& Eye);
     void Draw(const FVector& Eye);
     void Recycle();
+
+    // The heroes' lines (TempleHeroTalk.cpp).
+    UPROPERTY() TArray<USoundBase*> VoiceSounds;
+    UPROPERTY() UAudioComponent* VoiceAudio = nullptr;
+    UPROPERTY() USoundAttenuation* VoiceAttenuation = nullptr;
+    int32 TalkStep = 0, TalkPlaying = -1, TalkSpoken = 0, TalkRespawns = -1;
+    float TalkWait = 0.f, TalkElapsed = 0.f, TalkOut = 0.f, TalkGapScale = 1.f;
+    static void TalkAssetPaths(TArray<FSoftObjectPath>& Paths);
+    void FinishTalkLoading();
+    void TickTalk(float DeltaSeconds, bool bIn, const AChuckCharacter* Chuck);
 };
 
 /** Spawns the battle once (not in other automated runs). Called with the temple skeletons. */

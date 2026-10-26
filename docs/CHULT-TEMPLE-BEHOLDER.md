@@ -264,7 +264,7 @@ The `beholder` trial of `-ChuckSanctumTest` / `-ChuckSanctumCapture` passes when
 - **October 24:** the second pass, reviewed against the references in quick and full Blender renders (`Local/BeholderReview/r1`–`r3`, `f1`–`f3`) and in uncooked trials (`Local/beholder-trial-5.log` onward). Packaged: see HANDOFF.
 
 ## Not done, and known flaws
-- **Still to do in the battle:** the entrance and Fireball cutscenes, the heroes' lines and its death. The heroes have no health: they reel and recover.
+- **Still to do in the battle:** the entrance and Fireball cutscenes and its death. The heroes' lines are spoken since October 25 ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#their-lines)). The heroes have no health: they reel and recover.
 - **The fight is unplayed:**
   - It has been reviewed only in stills and logs, not played by a person.
   - Chuck's route through it is untried: its difficulty, and how readable the cone's searchlight is at play speed.

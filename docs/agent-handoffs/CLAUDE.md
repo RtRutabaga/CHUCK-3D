@@ -2,6 +2,30 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 25 — the heroes' voiced lines (Claude)
+
+- **Request:** add the trio's supplied takes (2 fighter, 4 wizard, 2 ranger) as speech; nothing of the Fireball or cutscenes yet. Base `b7c2a0d`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-HEROES.md#their-lines.
+- **Tested:**
+  - Uncooked `hero_talk` ×1, with stills reviewed.
+  - Packaged: Verify-Package passed (`Local/verify-package-20261025-192546.log`).
+- **Contract compatibility:**
+  - Rigs, meshes and clips are unchanged.
+  - `ATempleSanctumBattle` gains `IsHeroSpeaking`, `IsTalkSoundPlaying`, `GetHeroSubtitle`, `RestartTalk`, `GetTalkPlaying/Step/Spoken` and `TalkLineCount` (new `TempleHeroTalk.cpp`).
+  - `ATempleHero` gains `SetSpeech` and `GetJaw`.
+  - `ADockGameMode` ducks music and shows subtitles for hero lines.
+  - `dialogue.json` gains a `scene` list and `max_gain_db`; `NPCVoiceData.h` has 20 lines (the 12 NPC lines' WAVs are unchanged).
+  - New trial `hero_talk`. Verify-Package expects it and `CHUCK_HERO_TALK_READY lines=8 sounds=8`.
+- **Source of truth:** `Tools/build_npc_voice.py` (Blender), then `CHUCK_VOICE_ONLY=HeroFighter,HeroWizard,HeroRanger` with `Tools/import_npc_voice.py`.
+- **Binary assets (LFS):** 8 source MP3s (about 0.6 MB), 8 WAVs and 8 `VO_Hero*` sound assets. The LFS quota was not checked.
+- **Tools:**
+  - Blender 4.5.14 ×2 (voice build).
+  - UE 5.7.4: voice import ×1, Build.bat ×1, uncooked runs ×1, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - No downloads or installations.
+- **Launcher:** promoted as `HeroVoices`.
+
+Next part of the work can be done here (the Fireball and the cutscenes).
+
 ## October 25 — the heroes' arms and wrists (Claude)
 
 - **Request:** the archer's arm through herself; the fighter's strangely bent sword wrist. Base `7fb3547`.

@@ -80,6 +80,9 @@ public:
     bool IsSealing() const;
     int32 GetStrains() const { return Strains; }
     bool IsParalysed() const;
+    /** Speaking: the jaw open this many degrees (the line's loudness, TempleHeroTalk.cpp). */
+    void SetSpeech(float JawDegrees) { Animator.SetJaw(JawDegrees); }
+    float GetJaw() const { return Animator.GetJaw(); }
     int32 GetBeholderCuts() const { return BeholderCuts; }
     /** Tests: the next attack is this clip (the fighter), and hold still otherwise. */
     void ForceClip(FName Clip) { Forced = Clip; }
