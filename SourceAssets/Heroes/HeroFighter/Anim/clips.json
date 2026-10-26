@@ -33,40 +33,40 @@
    "frames": 43,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 30.22,
+   "tip_speed_peak_m_s": 30.21,
    "contact_s": 0.433,
    "contact_frame": 13,
    "contact_point_cm": [
-    89.8,
+    89.5,
     -14.2,
-    153.6
+    153.8
    ],
    "contact_tip_cm": [
-    115.0,
+    114.8,
     -26.9,
-    151.9
+    152.1
    ],
-   "contact_speed_m_s": 30.22
+   "contact_speed_m_s": 30.21
   },
   "CutRise": {
    "fbx": "Anim/AS_HeroFighter_CutRise.fbx",
    "frames": 46,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 30.42,
+   "tip_speed_peak_m_s": 30.59,
    "contact_s": 0.4,
    "contact_frame": 12,
    "contact_point_cm": [
-    77.2,
-    4.3,
-    199.0
+    76.5,
+    4.2,
+    199.8
    ],
    "contact_tip_cm": [
-    97.5,
-    0.0,
-    218.3
+    96.8,
+    -0.1,
+    219.1
    ],
-   "contact_speed_m_s": 30.42
+   "contact_speed_m_s": 30.59
   },
   "Overhead": {
    "fbx": "Anim/AS_HeroFighter_Overhead.fbx",
@@ -77,23 +77,23 @@
    "contact_s": 0.5,
    "contact_frame": 15,
    "contact_point_cm": [
-    92.2,
+    91.9,
     14.0,
     150.7
    ],
    "contact_tip_cm": [
-    120.4,
+    120.1,
     14.3,
     148.1
    ],
-   "contact_speed_m_s": 29.25
+   "contact_speed_m_s": 29.22
   },
   "Bash": {
    "fbx": "Anim/AS_HeroFighter_Bash.fbx",
    "frames": 34,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 0.97,
+   "tip_speed_peak_m_s": 1.75,
    "contact_s": 0.3,
    "contact_frame": 9
   },
@@ -102,7 +102,7 @@
    "frames": 28,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 0.41,
+   "tip_speed_peak_m_s": 0.39,
    "hit_s": 0.0
   },
   "HitLight": {
@@ -110,7 +110,7 @@
    "frames": 31,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 0.9,
+   "tip_speed_peak_m_s": 1.06,
    "hit_s": 0.0
   },
   "HitHeavy": {
@@ -118,7 +118,7 @@
    "frames": 58,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 6.65,
+   "tip_speed_peak_m_s": 7.03,
    "hit_s": 0.0
   },
   "Advance": {
@@ -126,7 +126,7 @@
    "frames": 25,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 0.01,
+   "tip_speed_peak_m_s": 0.0,
    "root_x_cm": [
     0.0,
     0.0,
@@ -160,7 +160,7 @@
    "frames": 25,
    "fps": 30,
    "loops": false,
-   "tip_speed_peak_m_s": 0.01,
+   "tip_speed_peak_m_s": 0.0,
    "root_x_cm": [
     -0.0,
     -0.0,

@@ -207,6 +207,65 @@ The ranger shoots skeletons going for her or the wizard, and the fighter's only 
 
 The wizard works the seal over the sea tear (since October 25; [below](#sealing-the-sea-tear)), once the binding at the dais. A sea-green light and a hum come from his gem. Every 7-12 s he turns a bolt on a skeleton going for him or the ranger. The bolt homes in at 15 m/s, trailing sea-green fire (the Unity Labs flipbooks, recoloured), and bursts in a flash that blasts the skeleton down.
 
+### Arms and wrists
+User request, October 25, 2026: "The archer's arm goes through herself often, fix that, and the fighter often holds his sword in a way where his hand/wrist is strangely bent, also fix this".
+
+**Measured first** (`Tools/check_hero_limbs.py`, new). Each clip is solved as the generator solves it.
+- **Arms:** every frame's skinned forearm, hand and finger triangles are tested against the torso, head, hips and what is worn on them.
+  - Each vertex belongs to the bone weighting it most.
+  - Triangles sharing a vertex in one garment, a sleeve meeting its body, are not counted.
+- **Wrists:** the hand's turn relative to its own forearm, as flexion/extension and radial/ulnar deviation.
+  - Limits: flexion 62°, extension 55°, radial 20°, ulnar 32°.
+
+**What it found:**
+- **The fighter's guard** (the start and end of every clip): the fist sat at his shoulder with the sword upright. The grip leaves the blade 60° off the forearm, so the only straight-wrist forearm needed an elbow the arm couldn't reach. The solver's fixed elbow direction left the wrist bent about 90°, and up to 120–180° in cuts and the bash.
+- **The ranger's bow** was mounted with its string out of her palm. Aiming the string back at her turned her fingers across her: a wrist bent about 100° at every draw, and her bow arm folding into her chest after the loose.
+- **Her ready stance** held the drawing hand on the string 12 cm before her belly: the forearm in her torso and her sleeve in her jerkin.
+- **The reach for the next arrow** went through her neck and ponytail, because the quiver's mouth is right behind her head.
+
+**The fixes** (`Tools/build_hero_anims.py`; all three heroes):
+- **The elbow** (`choose_elbow`): with the shoulder and wrist fixed, the elbow can only lie on a circle. Each point on it is scored by:
+  - the wrist's bend, the forearm against the hand's own axis;
+  - the upper arm and forearm going into the torso, hips or head (each hero's girth: fighter 20 cm, wizard 17, ranger 19);
+  - a little for leaving the keyed elbow direction, and for jumping from the last frame.
+
+  The fighter's shield arm keeps its exact elbow (the shield's mount needs it).
+- **The fighter's sword:** its roll about its own blade is chosen with the elbow for a natural wrist. The blade still points exactly as keyed.
+  - Through each cut's contact window, it may turn at most 45° off the leading edge, either edge, since the sword is double-edged.
+  - The cuts' contact points moved under 1 cm.
+- **The fighter's keys:**
+  - The guard's fist is 8 cm further forward, off his pauldron.
+  - The bash carries the sword hand forward with his shoulder.
+  - The flat cut's follow-through crosses his chest, not his face, and its recovery lifts the blade upright first.
+  - The rising cut's wind-up goes round his right side (it swung through a reversal), and it finishes high in front of him rather than over his head.
+  - The overhead cut finishes out in front, not against his belly.
+- **The ranger's bow:**
+  - Her fist holds it as an archer does: the grip across the knuckles, the hand continuing her forearm, from where the elbow sits.
+  - The bow is turned on its grip separately (its bone, `weapon_l`, is keyed apart from the hand). Its tilt is squared to her forearm.
+  - Her ready stance holds it out before her middle, so both arms clear her jerkin.
+  - The drawing hand's way is set from her shoulder to the string.
+- **Her full draw:** the anchor sits a few centimetres off her jaw.
+- **Her quiver reach:** she takes an arrow by its fletching, above the quiver over her right shoulder, the hand continuing her arm, the path out past that shoulder.
+- **The wizard:**
+  - His left fist on the staff turns about the shaft to continue his forearm (it was bent about 115° in his idle).
+  - The bolt cast and the hit guard keep the hand off his robe and hat.
+  - The sealing palm is pushed less far back.
+
+**Results** (`Local/limb-check-final.log`, then the later key changes re-checked):
+- Wrists: the fighter's guard, blocks, hits, steps and bash are within ±10°. The ranger's bow hand is within about 10° through the whole shot; her drawing hand about 25–35° at full draw (relaxed fingers on the string).
+- Arms: the ranger's ready stance and hits have no arm in her body.
+- Shield and sword: `check_hero_shield.py` still finds no contact in any frame.
+- In game: every cut trial lands on its first swing, the flat cut takes the skull, and all 18 sanctum trials pass.
+
+**Still above the limits:**
+- **The fighter's cuts:** a few frames each, in fast wind-ups and follow-throughs: ulnar deviation up to about 60° (the down and flat cuts' finishes), radial about 50–65° (the flat and overhead wind-ups), and 78–80° for two frames at the rising cut's contact.
+- **His thumb** grazes his pauldron's rim for a few frames as cuts return to guard.
+- **The ranger:**
+  - Her sleeve brushes her mantle as she raises the bow (cloth on cloth).
+  - Her glove touches the quiver's arrows (meant to).
+  - Her drawing wrist bends to about 69° in the reach for the next arrow.
+- **The wizard's** sleeve brushes his beard when he casts. His unused Idle clip has his left arm through his beard.
+
 ### Sealing the sea tear
 User request, October 25, 2026: "Do the animation for the wizard attempting to seal the sea world rupture" (the tear to his left that the user named on October 24 as the one he is trying to seal; [CHULT-TEMPLE-WIND.md](CHULT-TEMPLE-WIND.md#the-sanctums-ruptures)).
 

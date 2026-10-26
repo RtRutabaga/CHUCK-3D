@@ -2,6 +2,27 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 25 — the heroes' arms and wrists (Claude)
+
+- **Request:** the archer's arm through herself; the fighter's strangely bent sword wrist. Base `7fb3547`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-HEROES.md#arms-and-wrists.
+- **Tested:** limb check, shield check, uncooked suites ×3, packaged Verify-Package passed (`Local/verify-package-20261025-180338.log`).
+- **Contract compatibility:**
+  - Rigs and meshes are unchanged; all clip names are unchanged.
+  - The ranger's `weapon_l` bone is now keyed apart from her hand (the bow turned on its grip).
+  - `HeroClipData.h`: contact points moved under 1 cm; the ranger's `ShootFire` point moved about 10 cm.
+- **Source of truth:**
+  - `Tools/build_hero_anims.py` (all three heroes), then `Tools/Import-TempleHeroes.ps1 -Only Fighter,Wizard,Ranger`.
+  - The textures and material instances it re-saves were restored from HEAD before committing. The desktop app's git refresh held `index.lock`, so they were restored with `git show HEAD:f | git lfs smudge f`.
+- **Binary assets (LFS):** the 22 hero clips (FBX and uasset) and the three `SK_Hero*` meshes. The LFS quota was not checked.
+- **Tools:**
+  - Blender 4.5.14 ×about 30 (checks, debug renders, the clip build).
+  - UE 5.7.4: hero import ×1, Build.bat ×1, uncooked runs ×2, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1.
+  - No downloads or installations.
+- **Launcher:** promoted as `HeroLimbs`.
+
+Next part of the work can be done here (the entrance and Fireball cutscenes).
+
 ## October 25 — the wizard sealing the sea tear (Claude)
 
 - **Request:** "Do the animation for the wizard attempting to seal the sea world rupture". Base `1c1f542`.

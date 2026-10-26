@@ -28,6 +28,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - "temple 2" plays from Temple Pits through the Astral wind, and "boss_battle" in the sanctum.
   - The fighter carries his heater shield across his forearm, and an intersection check finds no shield contact in any frame.
   - The sanctum is now 54 × 34 × 17.5 m: a 13 m gallery and 25 m stairs, great colonnades, colossi and a carved disc.
+- **The heroes' arms and wrists (October 25, Claude):** the ranger's arm no longer goes through her body, and the fighter's sword wrist is no longer bent.
+  - The arm solver now chooses each elbow for a natural wrist, clear of the body.
+  - The fighter's sword turns about its blade to suit his wrist; its path and contacts are unchanged.
+  - The ranger holds her bow as an archer does, the bow turned on its grip apart from her fist.
+  - Several keys are reworked.
+  - A new checker measures both problems on every frame.
+
+  Details in [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#arms-and-wrists). Verified and in the launcher.
 - **The wizard seals the sea tear (October 25, Claude):** he turns to the tear on his left and works it:
   - New authored clips: a braced, trembling 6 s sealing loop, with his palm pushed at the tear, the staff's gem high over it, and threads gathered and driven down twice a loop. A strain when the tear surges.
   - Threads of sea-green light run from his gem and hand to a web of light that knits inward from the tear's rim.
@@ -78,6 +86,25 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Jungle life:** fifteen landing-side zombies plus **72 river zombies** (16 close path attackers, eight road-shoulder singles, 24 inland and 24 across the river), five canopy raptors and the existing zombie grab-and-bite are in the verified launcher ([CHULT-LIFE.md](CHULT-LIFE.md)). The 24 path/shoulder zombies now mill slowly near home amid 16 additional low fog pools along both banks. Three live dodge routes produce attacks and finish at 3 Sanity; human whole-route difficulty/camera review remains.
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
+
+## October 25 — the heroes' arms and wrists (Claude)
+
+- **Request:** "The archer's arm goes through herself often, fix that, and the fighter often holds his sword in a way where his hand/wrist is strangely bent, also fix this".
+- **Found and fixed:** see CHULT-TEMPLE-HEROES.md#arms-and-wrists.
+  - The fighter's guard wrist was bent about 90°, and up to 120–180° in cuts; it is now within ±10° in guard.
+  - The ranger's bow wrist was bent about 100° at every draw; it is now within about 10°.
+  - Her ready stance put her forearm in her torso; her arms are now clear.
+- **Tests:**
+  - `Tools/check_hero_limbs.py`, every frame, all three heroes (`Local/limb-check-final.log` and re-checks).
+  - `check_hero_shield.py`: no shield or sword contact.
+  - Blender reviews `Local/HeroReview/limbs`.
+  - Uncooked sanctum suites: `Local/limbs-full-1.log` (capture mode; two cuts missed in capture hitches) and `Local/limbs-cuts-1.log` (every cut lands first swing).
+  - Packaged: Verify-Package passed, 182 passes (`Local/verify-package-20261025-180338.log`, sanctum `Local/verify-temple-heroes-20261025-183428.log`).
+- **Flaws still above the checker's limits:**
+  - The fighter: brief ulnar 60° / radial 50–65° in fast wind-ups and follow-throughs; 80° for two frames at the rising cut's contact; his thumb grazing his pauldron as cuts return to guard.
+  - The ranger: her sleeve on her mantle as she raises the bow; her drawing wrist about 69° in the arrow reach.
+  - The wizard: his sleeve brushes his beard in the cast.
+- **Launcher:** promoted as `HeroLimbs`. The receipt names 7fb3547, the base: the build was made from this work before its commit.
 
 ## October 25 — the wizard sealing the sea tear (Claude)
 

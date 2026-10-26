@@ -12,16 +12,16 @@ namespace HeroClipData
         constexpr float GuardLength = 6.3667f;
         constexpr float CutFlatLength = 1.4000f;
         constexpr float CutFlatContact = 0.4330f;
-        constexpr float CutFlatContactX = 89.8f, CutFlatContactY = -14.2f, CutFlatContactZ = 153.6f;
-        constexpr float CutFlatSpeed = 30.22f;   // m/s at the blade tip
+        constexpr float CutFlatContactX = 89.5f, CutFlatContactY = -14.2f, CutFlatContactZ = 153.8f;
+        constexpr float CutFlatSpeed = 30.21f;   // m/s at the blade tip
         constexpr float CutRiseLength = 1.5000f;
         constexpr float CutRiseContact = 0.4000f;
-        constexpr float CutRiseContactX = 77.2f, CutRiseContactY = 4.3f, CutRiseContactZ = 199.0f;
-        constexpr float CutRiseSpeed = 30.42f;   // m/s at the blade tip
+        constexpr float CutRiseContactX = 76.5f, CutRiseContactY = 4.2f, CutRiseContactZ = 199.8f;
+        constexpr float CutRiseSpeed = 30.59f;   // m/s at the blade tip
         constexpr float OverheadLength = 1.7333f;
         constexpr float OverheadContact = 0.5000f;
-        constexpr float OverheadContactX = 92.2f, OverheadContactY = 14.0f, OverheadContactZ = 150.7f;
-        constexpr float OverheadSpeed = 29.25f;   // m/s at the blade tip
+        constexpr float OverheadContactX = 91.9f, OverheadContactY = 14.0f, OverheadContactZ = 150.7f;
+        constexpr float OverheadSpeed = 29.22f;   // m/s at the blade tip
         constexpr float BashLength = 1.1000f;
         constexpr float BashContact = 0.3000f;
         constexpr float BlockHitLength = 0.9000f;
@@ -37,8 +37,8 @@ namespace HeroClipData
         constexpr float IdleLength = 7.1667f;
         constexpr float ChannelLength = 4.7667f;
         constexpr float CastLength = 1.1000f;
-        constexpr float CastFire = 0.3400f;   // hand_l at (57.5, -9.2, 145.6)
-        constexpr float CastFireX = 57.5f, CastFireY = -9.2f, CastFireZ = 145.6f;
+        constexpr float CastFire = 0.3400f;   // hand_l at (57.6, -9.6, 145.4)
+        constexpr float CastFireX = 57.6f, CastFireY = -9.6f, CastFireZ = 145.4f;
         constexpr float HitLightLength = 1.0000f;
         constexpr float HitHeavyLength = 1.8000f;
         constexpr float SealLength = 5.9667f;
@@ -48,8 +48,8 @@ namespace HeroClipData
     {
         constexpr float IdleLength = 5.9667f;
         constexpr float ShootLength = 2.6000f;
-        constexpr float ShootFire = 1.0000f;   // arrow_r at (12.4, 6.8, 149.2)
-        constexpr float ShootFireX = 12.4f, ShootFireY = 6.8f, ShootFireZ = 149.2f;
+        constexpr float ShootFire = 1.0000f;   // arrow_r at (7.4, 15.8, 146.2)
+        constexpr float ShootFireX = 7.4f, ShootFireY = 15.8f, ShootFireZ = 146.2f;
         constexpr float HitLightLength = 0.9000f;
         constexpr float HitHeavyLength = 1.6000f;
     }

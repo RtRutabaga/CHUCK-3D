@@ -16,9 +16,9 @@
    "fire_frame": 30,
    "fire_bone": "arrow_r",
    "fire_cm": [
-    12.4,
-    6.8,
-    149.2
+    7.4,
+    15.8,
+    146.2
    ]
   },
   "HitLight": {

@@ -22,9 +22,9 @@
    "fire_frame": 10,
    "fire_bone": "hand_l",
    "fire_cm": [
-    57.5,
-    -9.2,
-    145.6
+    57.6,
+    -9.6,
+    145.4
    ]
   },
   "HitLight": {

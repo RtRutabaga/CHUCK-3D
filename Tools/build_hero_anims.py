@@ -266,6 +266,55 @@ def curl(pose, s, amount, thumb=None, spread=0.):
         pose.turn(b, Quaternion(axis, math.radians(base * th)))
 
 
+# ------------------------------------------------------------------ the elbow
+def choose_elbow(rig, H, s, wrist, hand_q, pole, remember=True, cost_out=None):
+    """Where the elbow goes (2026-10-25; user: "The archer's arm goes through herself often ... the fighter often holds his
+    sword in a way where his hand/wrist is strangely bent"). With the shoulder and the wrist fixed the elbow can only be on
+    a circle; a fixed pole put it where the forearm ran into the body or met the hand at a broken angle. Each candidate
+    on the circle is scored by:
+      * the wrist's bend: the forearm against the hand's own long axis (the forearm's way for a straight wrist);
+      * the upper arm and forearm going into the torso, hips or head (capsules from this pose's joints, the hero's girth);
+      * a little for straying from the keyed pole (the animator's intent), and for jumping from the last frame's choice.
+    Returns a point to bend toward (two_bone projects it onto the circle)."""
+    R = rig
+    S = H[f'upperarm_{s}']
+    l1 = (R.rest_h[f'lowerarm_{s}'] - R.rest_h[f'upperarm_{s}']).length
+    l2 = (R.rest_h[f'hand_{s}'] - R.rest_h[f'lowerarm_{s}']).length
+    d = wrist - S; dist = clamp(d.length, abs(l1 - l2) + 1e-3, l1 + l2 - 1e-4); dn = d.normalized()
+    a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist); h = math.sqrt(max(0., l1 * l1 - a * a))
+    C = S + dn * a
+    u = (pole - dn * pole.dot(dn)); u = u.normalized() if u.length > 1e-6 else dn.orthogonal().normalized()
+    v = dn.cross(u)
+    want = (hand_q @ (R.rest_h[f'hand_{s}'] - R.rest_h[f'lowerarm_{s}'])).normalized() if hand_q is not None else None
+    girth = getattr(R, 'girth', .16)
+    head_up = (H['head'] - H['neck_01']).normalized()
+    caps = [(H['spine_01'], H['neck_01'], girth), (H['pelvis'], H['spine_01'], girth * 1.05),
+            (H['head'] + head_up * .09, H['head'] + head_up * .09, .12)]
+    last = getattr(R, '_elbow_last', {}).get(s)
+    best, best_k = None, 0.
+    for k in range(48):
+        ang = k / 48. * 2 * math.pi
+        E = C + (u * math.cos(ang) + v * math.sin(ang)) * h
+        cost = 0.
+        if want is not None: cost += math.degrees((wrist - E).angle(want, 0.))
+        for t0, t1, A, B in ((.35, 1., S, E), (0., .85, E, wrist)):   # (the elbow itself is the end of the first)
+            for j in range(5):
+                q = A.lerp(B, t0 + (t1 - t0) * j / 4)
+                for c0, c1, r in caps:
+                    ab = c1 - c0; w = 0. if ab.length < 1e-6 else max(0., min(1., (q - c0).dot(ab) / ab.length_squared))
+                    deficit = r + .05 - (q - (c0 + ab * w)).length
+                    if deficit > 0: cost += deficit * 2500.
+        cost += math.degrees(min(ang, 2 * math.pi - ang)) * .15                      # the keyed pole
+        if last is not None: cost += math.degrees(min(abs(ang - last), 2 * math.pi - abs(ang - last))) * .35
+        if best is None or cost < best:
+            best, best_k = cost, ang
+    if remember:
+        if not hasattr(R, '_elbow_last'): R._elbow_last = {}
+        R._elbow_last[s] = best_k
+    if cost_out is not None: cost_out.append(best)
+    return C + (u * math.cos(best_k) + v * math.sin(best_k)) * h
+
+
 # ------------------------------------------------------------------ a body spec at one time -> pose
 def body_pose(rig, b):
     """b: dict of the body's state at one instant (see FighterMoves.guard)."""
@@ -320,7 +369,14 @@ def body_pose(rig, b):
     # Arms.
     for s in 'lr':
         arm = b['arms'][s]
-        solve_limb(pose, f'upperarm_{s}', f'lowerarm_{s}', f'hand_{s}', arm['wrist'], arm['pole'], end_delta=arm.get('hand'))
+        pole = arm['pole']
+        if arm.get('auto', True):
+            # The elbow placed for a natural wrist and clear of the body (choose_elbow), unless the arm's elbow is exact
+            # (the fighter's shield arm).
+            H = pose.fk()
+            mid = (H[f'upperarm_{s}'] + arm['wrist']) * .5
+            pole = choose_elbow(rig, H, s, arm['wrist'], arm.get('hand'), pole) - mid
+        solve_limb(pose, f'upperarm_{s}', f'lowerarm_{s}', f'hand_{s}', arm['wrist'], pole, end_delta=arm.get('hand'))
         if arm.get('fore') is not None:   # the forearm's wanted delta (the shield): set it, and the hand with it
             cur = pose.D[f'lowerarm_{s}']
             fix = twist_about(arm['fore'] @ cur.inverted(), pose.D[f'lowerarm_{s}'] @ (R.rest_h[f'hand_{s}'] - R.rest_h[f'lowerarm_{s}']))
@@ -472,6 +528,7 @@ class Fighter:
         self.R = rig; H = rig.rest_h
         self.ank = rig.ankle_h
         self.target = V((2.2, 0., 1.55))       # where he looks: a foe's head two metres off
+        rig.girth = .2                         # his torso in plate over a gambeson (choose_elbow)
         # the sword's rest frame (weapon_r: grip -> tip), and where the grip sits on the hand
         self.sw_rest = frame_from(H['weapon_tip'] - H['weapon_r'], self._edge_rest())
         self.grip_off = H['weapon_r'] - H['hand_r']
@@ -545,6 +602,26 @@ class Fighter:
                     push = (out if rel.dot(out) < -self.SH_DEPTH * .5 else -out) * deficit if inside else gap.normalized() * deficit
         return push
 
+    def best_roll(self, t, H0, grip, d, edge, look, limit=180., weight=.12):
+        e0 = (edge - d * edge.dot(d)).normalized()
+        last = getattr(self, '_roll_last', None) if t > 0 else None
+        fa = self.R.rest_h['hand_r'] - self.R.rest_h['lowerarm_r']
+        best, best_e, best_phi = None, e0, 0.
+        for k in range(-12, 12):
+            phi = k * 15.
+            # (Either edge may lead: the sword is double-edged. The roll's distance from the keyed edge or its opposite.)
+            off = min(abs(phi), 180. - abs(phi))
+            if off > limit: continue
+            e = rot(d, phi) @ e0
+            wrist, q = self.sword_hand(grip, d, e)
+            costs = []
+            E = choose_elbow(self.R, H0, 'r', wrist, q, V((-.3, -1., -.6)), remember=False, cost_out=costs)
+            cost = costs[0] + off * weight + (3. if abs(phi) > 90. else 0.)
+            if last is not None: cost += min(abs(phi - last), 360. - abs(phi - last)) * .3
+            if best is None or cost < best: best, best_e, best_phi = cost, e, phi
+        self._roll_last = best_phi
+        return best_e
+
     def stance(self):
         """The guard's feet: left foot leading, the back foot turned out."""
         a = self.ank
@@ -590,13 +667,20 @@ class Fighter:
         return d
 
     def body(self, t, hips, yaw, chest, feet, grip, blade, edge, shield_c, shield_face, shield_top, look=None, curl_l=.85, pitch=6., roll=0., rpole=None, clear_sword=True):
+        # his joints in this frame (the arms do not move them), for the blade's clearance and the elbow
+        b0 = {'hips': hips, 'yaw': yaw, 'pitch': pitch, 'roll': roll, 'chest': chest, 'feet': feet, 'look': look or self.target,
+              'arms': {s: {'wrist': V((0, .3 if s == 'l' else -.3, 1.)), 'pole': V((0, 0, -1)), 'auto': False} for s in 'lr'}}
+        H0 = body_pose(self.R, b0).H
         if clear_sword:
-            # his joints in this frame (the arms do not move them), for the blade's clearance
-            b0 = {'hips': hips, 'yaw': yaw, 'pitch': pitch, 'roll': roll, 'chest': chest, 'feet': feet, 'look': look or self.target,
-                  'arms': {s: {'wrist': V((0, .3 if s == 'l' else -.3, 1.)), 'pole': V((0, 0, -1))} for s in 'lr'}}
-            H0 = body_pose(self.R, b0).H
             grip = self.clear_grip(H0, grip)
             blade = self.clear_blade(H0, grip, blade.normalized())
+        if True:
+            # The sword's roll about its blade (which way its flat faces) chosen with the elbow for a natural wrist
+            # (2026-10-25: the grip leaves the blade 60 degrees off the forearm, so a keyed edge could leave no elbow
+            # that kept the wrist straight: in his guard it was bent 90 degrees). The blade points where it was keyed;
+            # through each cut's contact window (protect) the edge is kept exactly, so cuts still land edge first.
+            # (Inside the window it may turn at most 45 degrees off the leading edge, and is held to it.)
+            edge = self.best_roll(t, H0, grip, blade.normalized(), edge, look, limit=180. if clear_sword else 45., weight=.12 if clear_sword else .7)
         wrist_r, q_r = self.sword_hand(grip, blade, edge)
         # a first pose for the shoulder positions
         b = {'hips': hips, 'yaw': yaw, 'pitch': pitch, 'roll': roll, 'chest': chest, 'feet': feet, 'look': look or self.target, 'arms': {}}
@@ -604,7 +688,7 @@ class Fighter:
         turn = rot(Z, SHIELD_YAW * clamp(shield_face.x))
         shield_face, shield_top = turn @ shield_face, turn @ shield_top
         b['arms']['r'] = {'wrist': wrist_r, 'pole': rpole if rpole is not None else V((-.3, -1., -.6)), 'hand': q_r, 'curl': 1., 'thumb': .9}
-        b['arms']['l'] = {'pole': V((-.2, .6, -1.)), 'curl': curl_l, 'thumb': .6}
+        b['arms']['l'] = {'pole': V((-.2, .6, -1.)), 'curl': curl_l, 'thumb': .6, 'auto': False}
         # The shield goes where the keys say, then is moved (its facing unchanged) until the arm can hold it and it
         # is clear of his body (2026-10-23):
         #  * the elbow exactly the upper arm's length from the shoulder (else the forearm, and the shield on it, would
@@ -649,7 +733,7 @@ def fighter_guard_state(F, t, breath=True):
     return dict(
         hips=V((-.02 + .006 * sway, .01, -.07 + .006 * br)), yaw=-27. + 1.5 * sway, chest=(-6. + 1. * sway, 8. + .8 * br, 0.),
         feet={'l': (V((.21, .12, a)), 8., 0., 0.), 'r': (V((-.25, -.14, a)), -42., 0., 0.)},
-        grip=V((.08, -.33, 1.43 + .006 * br)), blade=V((.32, .02, .95)).normalized(), edge=V((1., 0., -.3)),
+        grip=V((.16, -.34, 1.42 + .006 * br)), blade=V((.32, .02, .95)).normalized(), edge=V((1., 0., -.3)),   # (2026-10-25: 8 cm forward, off his pauldron)
         shield_c=V((.46, .07, 1.25 + .008 * br)) + SHIELD_SHIFT, shield_face=V((1., -.25, .05)).normalized(), shield_top=V((.05, .1, 1.)),
     )
 
@@ -764,8 +848,8 @@ def F_CutFlat(F):
     add(k, 'lfoot_yaw', (.3, 8.), (.4, 2.), (1.08, 8.))
     add(k, 'rfoot_yaw', (.3, -42.), (.52, -24.), (1.1, -42.))
     # at a skeleton's throat (1.76 m tall: about 1.53 m; 2026-10-23 in-game, 1.42 took its collarbones)
-    add(k, 'grip', (.24, V((-.06, -.42, 1.62))), (.32, V((.03, -.47, 1.61))), (.38, V((.28, -.4, 1.59))), (.42, V((.47, -.15, 1.57))), (.47, V((.46, .14, 1.55))), (.56, V((.28, .3, 1.54))), (.72, V((.24, .26, 1.5))), (1.05, V((.08, -.3, 1.42))))
-    add(k, 'blade', (.24, V((-.7, -.55, .45))), (.32, V((-.6, -.78, .12))), (.38, V((.15, -.99, 0.))), (.42, V((.97, .2, -.04))), (.47, V((.42, .9, -.08))), (.56, V((-.3, .85, .42))), (.72, V((-.38, .78, .5))), (1.05, V((.32, .02, .95))))
+    add(k, 'grip', (.24, V((-.06, -.42, 1.62))), (.32, V((.03, -.47, 1.61))), (.38, V((.28, -.4, 1.59))), (.42, V((.47, -.15, 1.57))), (.47, V((.46, .14, 1.55))), (.56, V((.4, .3, 1.46))), (.72, V((.36, .28, 1.42))), (.88, V((.3, .0, 1.56))), (1.05, V((.16, -.34, 1.42))))
+    add(k, 'blade', (.24, V((-.7, -.55, .45))), (.32, V((-.6, -.78, .12))), (.38, V((.15, -.99, 0.))), (.42, V((.97, .2, -.04))), (.47, V((.42, .9, -.08))), (.56, V((-.3, .85, .42))), (.72, V((-.38, .78, .5))), (.88, V((.05, .3, .95))), (1.05, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.24, V((-.5, -1., .1))), (.38, V((-.3, -1., -.2))), (.44, V((-.1, -.5, -1.))), (.56, V((.2, .2, -1.))), (.75, V((.2, .1, -1.))), (1.05, V((-.3, -1., -.6))), (1.4, V((-.3, -1., -.6))))
     # 2026-10-23 (an intersection check found the blade through the shield): the follow-through rises over his left
     # shoulder into a recovery rather than wrapping round at shoulder height, and the shield drops low by his left hip,
@@ -792,8 +876,8 @@ def F_CutRise(F):
     add(k, 'rfoot_yaw', (.3, -42.), (.5, -26.), (1.15, -42.))
     add(k, 'rtoe', (0., 0.), (.36, 0.), (.46, 28.), (.7, 20.), (.95, 0.), (1.5, 0.))
     add(k, 'rfoot_pitch', (0., 0.), (.36, 0.), (.46, -20.), (.7, -14.), (.95, 0.), (1.5, 0.))
-    add(k, 'grip', (.22, V((-.08, -.4, 1.0))), (.30, V((.02, -.44, 1.02))), (.36, V((.28, -.34, 1.36))), (.41, V((.46, -.06, 1.74))), (.47, V((.38, .18, 1.96))), (.58, V((.18, .3, 1.96))), (.8, V((.2, .26, 1.86))), (1.15, V((.08, -.3, 1.42))))
-    add(k, 'blade', (.22, V((-.6, -.4, -.7))), (.30, V((-.15, -.62, -.77))), (.36, V((.75, -.55, -.05))), (.41, V((.6, .28, .75))), (.47, V((.0, .55, .84))), (.58, V((-.55, .45, .7))), (.8, V((-.45, .4, .78))), (1.15, V((.32, .02, .95))))
+    add(k, 'grip', (.11, V((.02, -.46, 1.22))), (.22, V((-.08, -.4, 1.0))), (.30, V((.02, -.44, 1.02))), (.36, V((.28, -.34, 1.36))), (.41, V((.46, -.06, 1.74))), (.47, V((.5, .16, 1.82))), (.58, V((.42, .3, 1.76))), (.8, V((.38, .26, 1.7))), (1.15, V((.16, -.34, 1.42))))
+    add(k, 'blade', (.11, V((-.1, -.98, .15))), (.22, V((-.6, -.4, -.7))), (.30, V((-.15, -.62, -.77))), (.36, V((.75, -.55, -.05))), (.41, V((.6, .28, .75))), (.47, V((.0, .55, .84))), (.58, V((-.55, .45, .7))), (.8, V((-.45, .4, .78))), (1.15, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.22, V((-.4, -1., -.3))), (.36, V((-.2, -1., -.6))), (.42, V((.1, -1., -.5))), (.55, V((.4, -.3, -1.))), (.85, V((.3, -.3, -1.))), (1.15, V((-.3, -1., -.6))), (1.5, V((-.3, -1., -.6))))
     add(k, 'shield_c', (.22, V((.36, .14, 1.12)) + SHIELD_SHIFT), (.42, V((.28, .3, 1.06)) + SHIELD_SHIFT), (.6, V((.24, .34, 1.08)) + SHIELD_SHIFT), (.95, V((.24, .34, 1.08)) + SHIELD_SHIFT), (1.3, V((.42, .14, 1.2)) + SHIELD_SHIFT))
     add(k, 'shield_face', (.22, V((1., .1, .05))), (.42, V((.5, .86, -.1))), (.6, V((.4, .9, -.1))), (.95, V((.4, .9, -.1))), (1.3, V((1., -.1, .05))))
@@ -811,7 +895,7 @@ def F_Overhead(F):
     add(k, 'lfoot', (.36, V((.21, .12, a))), (.43, V((.34, .12, a + .08))), (.5, V((.5, .11, a))), (1.1, V((.5, .11, a))), (1.2, V((.36, .12, a + .06))), (1.32, V((.21, .12, a))))
     add(k, 'lfoot_yaw', (.36, 8.), (.5, 4.), (1.32, 8.))
     add(k, 'rfoot_yaw', (.36, -42.), (.6, -34.), (1.32, -42.))
-    add(k, 'grip', (.20, V((-.04, -.26, 1.76))), (.34, V((-.1, -.22, 1.86))), (.43, V((.0, -.24, 1.96))), (.475, V((.3, -.18, 1.8))), (.51, V((.5, -.12, 1.45))), (.56, V((.47, -.06, 1.1))), (.66, V((.36, .0, .86))), (.95, V((.36, .0, .9))), (1.32, V((.08, -.3, 1.42))))
+    add(k, 'grip', (.20, V((-.04, -.26, 1.76))), (.34, V((-.1, -.22, 1.86))), (.43, V((.0, -.24, 1.96))), (.475, V((.3, -.18, 1.8))), (.51, V((.5, -.12, 1.45))), (.56, V((.52, -.06, 1.1))), (.66, V((.5, .0, .9))), (.95, V((.48, .0, .94))), (1.32, V((.16, -.34, 1.42))))
     add(k, 'blade', (.20, V((-.6, .0, .8))), (.34, V((-.88, .1, -.3))), (.43, V((-.3, -.05, .95))), (.475, V((.85, -.03, .5))), (.51, V((.95, 0., -.3))), (.56, V((.42, .05, -.9))), (.66, V((.12, .06, -.99))), (.95, V((.15, .05, -.98))), (1.32, V((.32, .02, .95))))
     add(k, 'rpole', (0., V((-.3, -1., -.6))), (.34, V((-.2, -.8, 1.))), (.45, V((-.1, -.9, .6))), (.52, V((-.1, -1., -.4))), (.66, V((-.2, -.6, -1.))), (1.32, V((-.3, -1., -.6))), (1.75, V((-.3, -1., -.6))))
     add(k, 'shield_c', (.34, V((.36, .16, 1.24)) + SHIELD_SHIFT), (.52, V((.24, .34, 1.08)) + SHIELD_SHIFT), (.7, V((.22, .36, 1.02)) + SHIELD_SHIFT), (1.15, V((.22, .36, 1.02)) + SHIELD_SHIFT), (1.5, V((.42, .14, 1.2)) + SHIELD_SHIFT))
@@ -830,7 +914,8 @@ def F_Bash(F):
     add(k, 'lfoot', (.16, V((.21, .12, a))), (.22, V((.3, .12, a + .06))), (.29, V((.38, .11, a))), (.6, V((.38, .11, a))), (.7, V((.3, .12, a + .04))), (.8, V((.21, .12, a))))
     add(k, 'shield_c', (.18, V((.3, .08, 1.24)) + SHIELD_SHIFT), (.3, V((.76, .02, 1.26)) + SHIELD_SHIFT), (.4, V((.7, .03, 1.26)) + SHIELD_SHIFT), (.75, V((.46, .07, 1.25)) + SHIELD_SHIFT))
     add(k, 'shield_face', (.18, V((1., -.3, .05))), (.3, V((1., 0., .02))), (.75, V((1., -.25, .05))))
-    add(k, 'grip', (.18, V((.0, -.34, 1.5))), (.3, V((-.04, -.36, 1.5))), (.8, V((.08, -.33, 1.43))))
+    # (2026-10-25) The sword hand carried forward with his shoulder as he drives in (it stayed put, the arm folded back on it).
+    add(k, 'grip', (.18, V((.04, -.34, 1.5))), (.3, V((.2, -.32, 1.48))), (.45, V((.2, -.32, 1.48))), (.8, V((.16, -.34, 1.42))))
     return fighter_clip(F, k, 1.1), {'contact_fixed': .3}
 
 
@@ -1004,6 +1089,7 @@ class Wizard(Hero):
         super().__init__(rig)
         H = rig.rest_h
         self.target = V((6., 0., 2.6))     # the dais, where the beholder will hang
+        rig.girth = .17                    # in his robes
         self.palm_rest_r = rig.palm['r'][0]
 
     def staff(self, grip, axis, palm):
@@ -1024,8 +1110,22 @@ class Wizard(Hero):
         if v.get('lmode', 0.) < .5:
             # the left hand on the staff above the right
             p = v['grip'] + v['axis'].normalized() * .13
-            wl, ql = self.on_shaft('l', p, v['axis'].normalized(), V((.1, -1., 0.)))
-            arms['l'] = {'wrist': wl, 'pole': V((-.3, 1., -.6)), 'hand': ql, 'curl': .95, 'thumb': .8}
+            ax = v['axis'].normalized()
+            def fist(pose, p=p, ax=ax):
+                # (2026-10-25) Turned about the shaft so the hand continues the forearm, from where the elbow sits; a fixed
+                # palm bent his wrist back about 115 degrees.
+                w0, q0 = self.on_shaft('l', p, ax, V((.1, -1., 0.)))
+                E = choose_elbow(self.R, pose.H, 'l', w0, None, V((-.3, 1., -.6)), remember=False)
+                want = (p - E); want = (want - ax * want.dot(ax)).normalized()
+                best = None
+                for k in range(24):
+                    palm = rot(ax, k * 15.) @ (V((.1, -1., 0.)) - ax * V((.1, -1., 0.)).dot(ax))
+                    w, q = self.on_shaft('l', p, ax, palm)
+                    al = q @ self.R.palm['l'][1]
+                    score = al.dot(want)
+                    if best is None or score > best[0]: best = (score, w, q)
+                return best[1], best[2]
+            arms['l'] = {'wrist': lambda pose: fist(pose)[0], 'pole': V((-.3, 1., -.6)), 'hand': lambda pose: fist(pose)[1], 'curl': .95, 'thumb': .8}
         else:
             ql = self.hand_q('l', v['lalong'].normalized(), v['lpalm'].normalized())
             arms['l'] = {'wrist': v['lwrist'], 'pole': v.get('lpole', V((-.2, 1., -.8))), 'hand': ql, 'curl': v.get('lcurl', .2), 'thumb': .1}
@@ -1077,7 +1177,7 @@ def W_Cast(Wz):
         return Wz.state(t, c)
     c0 = channel_state(Wz, 0., tremble=0.)
     tracks = {
-        'lwrist': [(0., c0['lwrist']), (.22, V((.12, .12, 1.36))), (.34, V((.66, .08, 1.48))), (.42, V((.6, .1, 1.5))), (.75, c0['lwrist']), (1.1, c0['lwrist'])],
+        'lwrist': [(0., c0['lwrist']), (.22, V((.32, .2, 1.34))), (.34, V((.66, .08, 1.48))), (.42, V((.6, .1, 1.5))), (.75, c0['lwrist']), (1.1, c0['lwrist'])],
         'lalong': [(0., c0['lalong']), (.22, V((.2, -.3, .93))), (.34, V((.3, 0., .95))), (.75, c0['lalong']), (1.1, c0['lalong'])],
         'lpalm': [(0., c0['lpalm']), (.22, V((-.2, -1., 0.))), (.34, V((1., -.05, -.2))), (.75, c0['lpalm']), (1.1, c0['lpalm'])],
         'lcurl': [(0., .22), (.22, .7), (.3, .7), (.34, .05), (.6, .2), (1.1, .22)],
@@ -1105,7 +1205,7 @@ def W_Hit(Wz, heavy):
         c['pitch'] = 2. - 10. * P * x - 6. * P * h
         c['look'] = Wz.target + V((0., 0., -2.5 * P * h))
         guard = clamp(x * 2.)
-        c['lwrist'] = c['lwrist'].lerp(V((.2, .02, 1.6)), guard)
+        c['lwrist'] = c['lwrist'].lerp(V((.34, .04, 1.56)), guard)
         c['lalong'] = c['lalong'].lerp(V((0., -1., .3)), guard); c['lpalm'] = c['lpalm'].lerp(V((1., 0., 0.)), guard)
         c['grip'] = c['grip'] + V((-.12 * P * x, 0., -.04 * P * x))
         if heavy:
@@ -1149,8 +1249,8 @@ def seal_state(Wz, t, tremble=1., weave=1.):
                 axis=V((.42 + .3 * drive - .1 * gather, .04, .9 - .2 * drive)), spalm=V((-.3, .9, .2)),
                 lmode=1., lwrist=lw,
                 # The left palm pushed toward the tear, fingers up and spread; it turns down to grip in the gather.
-                lalong=V((.48 + .3 * gather, .06 + .08 * math.cos(w) * weave, .87 - .5 * gather)),
-                lpalm=V((.8 - .6 * gather, -.05, -.58 - .4 * gather)),
+                lalong=V((.64 + .2 * gather, .06 + .08 * math.cos(w) * weave, .76 - .4 * gather)),
+                lpalm=V((.76 - .5 * gather, -.05, -.65 - .3 * gather)),
                 lcurl=.06 + .05 * math.sin(t * 3.1) + .75 * gather - .06 * drive,
                 look=TEAR + V((-.4, .1, .0)))
 
@@ -1206,6 +1306,7 @@ class Ranger(Hero):
         super().__init__(rig)
         H = rig.rest_h
         self.target = V((9., 0., 1.4))
+        rig.girth = .19                 # her jerkin, shirt and baldric over her chest
         self.bow_toward_rest = (H['bowstring'] - H['weapon_l']).normalized()
         self.arrow_axis_rest = (H['index_01_r'] - H['pinky_01_r']).normalized()
         q = [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith('quiver')]
@@ -1219,13 +1320,40 @@ class Ranger(Hero):
     def bow(self, grip, axis, toward):
         return self.weapon('weapon_l', 'bowstring', grip, axis, toward, None)
 
-    def bow_hand(self, grip, axis, toward):
+    def bow_hand(self, grip, axis, toward, shoulder=None):
+        """The bow hand and the bow (2026-10-25). The bow is mounted with its string out of the palm, so turning the hand to
+        set the bow left her fingers pointing across her and the wrist bent about 100 degrees at full draw. Now the hand
+        holds it as an archer does (the grip across the knuckles, the hand continuing the forearm toward the string's
+        far side: its long axis away from the string), and the bow is turned on its grip to stand as keyed: the wrist,
+        the hand's delta, and the bow's own delta (weapon_l, set after the arm is solved)."""
         R = self.R; H = R.rest_h
         palm, along, across = R.palm['l']
         a0 = (across).normalized()                      # the bow's axis at rest (build_temple_heroes: across)
-        q = frame_from(axis, toward) @ frame_from(a0, self.bow_toward_rest).inverted()
-        wrist = grip - q @ (H['weapon_l'] - H['hand_l'])
-        return wrist, q
+        qb = frame_from(axis, toward) @ frame_from(a0, self.bow_toward_rest).inverted()
+        # The fist round the grip may turn freely about it (the bow is posed on its own): its long axis follows the arm,
+        # from her shoulder (as near as it can, square to the bow), else away from the string.
+        out = (grip - shoulder) if shoulder is not None else -toward
+        n = out.length
+        out = out - axis * out.dot(axis)
+        # Where the arm runs nearly along the bow the square part is small and wanders: lean it on "away from the string".
+        aw = -toward - axis * (-toward).dot(axis)
+        out = out + aw.normalized() * .12 * n
+        if out.length < 1e-4: out = -toward
+        qh = frame_from(axis, out.normalized()) @ frame_from(a0, along).inverted()
+        wrist = grip - qh @ (H['weapon_l'] - H['hand_l'])
+        return wrist, qh, qb
+
+    def bow_axis(self, v):
+        """The bow's keyed tilt squared to her bow arm (the arm from her shoulder to the grip), so the fist round it holds
+        a straight wrist (2026-10-25)."""
+        a = v['baxis'].normalized(); f = (v['bgrip'] - self.shoulder_l(v)).normalized()
+        a = a - f * a.dot(f)
+        return a.normalized() if a.length > 1e-4 else v['baxis'].normalized()
+
+    def shoulder_l(self, v, s='l'):
+        """About where her shoulder is for these hips and this yaw (the chest's turn is small beside them)."""
+        H = self.R.rest_h
+        return H['pelvis'] + v['hips'] + rot(Z, v['yaw'] + v['chest'].x) @ (H[f'upperarm_{s}'] - H['pelvis'])
 
     def quiver(self, pose):
         """Where the quiver's mouth is now (carried by her chest)."""
@@ -1234,22 +1362,46 @@ class Ranger(Hero):
 
     def state(self, t, v):
         a = self.ank
-        wl, ql = self.bow_hand(v['bgrip'], v['baxis'].normalized(), v['btoward'].normalized())
-        arms = {'l': {'wrist': wl, 'pole': V((-.2, .5, -1.)), 'hand': ql, 'curl': 1., 'thumb': .7}}
+        wl, ql, qb = self.bow_hand(v['bgrip'], self.bow_axis(v), v['btoward'].normalized(), self.shoulder_l(v))
+        # The fist's turn about the grip from her real shoulder in this pose (the estimate above sets the bow's tilt).
+        def bow_fist(pose, v=v):
+            # Where the elbow sits for the grip (clear of her, toward the keyed pole), then the fist along that forearm.
+            ax, tw = self.bow_axis(v), v['btoward'].normalized()
+            w0, q0, _ = self.bow_hand(v['bgrip'], ax, tw, pose.H['upperarm_l'])
+            E = choose_elbow(self.R, pose.H, 'l', w0, None, V((-.2, .5, -1.)), remember=False)
+            # and the bow's tilt squared to that forearm (the fist round it then needs no sideways bend)
+            f = (v['bgrip'] - E).normalized(); ax2 = ax - f * ax.dot(f)
+            ax = ax2.normalized() if ax2.length > .2 else ax
+            pose._bow = self.bow_hand(v['bgrip'], ax, tw, E)
+            return pose._bow
+        arms = {'l': {'wrist': lambda pose: bow_fist(pose)[0], 'pole': V((-.2, .5, -1.)), 'hand': lambda pose: bow_fist(pose)[1], 'curl': 1., 'thumb': .7}}
         R = self.R; H0 = R.rest_h
         qr = self.hand_q('r', v['ralong'].normalized(), v['rpalm'].normalized())
         nock_off = H0['arrow_r'] - H0['hand_r']
+        hq = qr
         if v.get('rquiver', 0.) > 0.:
             k = v['rquiver']
-            def wrist_q(pose, qr=qr, k=k, v=v):
-                at = self.quiver(pose) + V((0., 0., .06))
-                return v['rwrist'].lerp(at - qr @ nock_off, k)
-            rw = wrist_q
+            # (2026-10-25) The quiver's mouth is behind her head: she takes an arrow by its fletching, which stands above
+            # it over her right shoulder, the hand continuing her arm (it used to go through her neck and ponytail).
+            def reach(pose, k=k, v=v):
+                at = self.quiver(pose) + pose.D['spine_03'] @ V((0., -.1, .14))
+                al = v['ralong'].normalized().lerp((at - pose.H['upperarm_r']).normalized(), k).normalized()
+                q = self.hand_q('r', al, v['rpalm'].normalized())
+                return at, q
+            def wrist_q(pose, k=k, v=v):
+                at, q = reach(pose)
+                return v['rwrist'].lerp(at - q @ nock_off, k)
+            def hand_q(pose):
+                return reach(pose)[1]
+            rw, hq = wrist_q, hand_q
         else:
             rw = v['rwrist']
-        arms['r'] = {'wrist': rw, 'pole': v.get('rpole', V((-.6, -.6, -.2))), 'hand': qr, 'curl': v.get('rcurl', .55), 'thumb': .5}
+        arms['r'] = {'wrist': rw, 'pole': v.get('rpole', V((-.6, -.6, -.2))), 'hand': hq, 'curl': v.get('rcurl', .55), 'thumb': .5}
         drawn, arrow = v.get('drawn', 0.), v.get('arrow', 1.)
-        def post(pose, drawn=drawn, arrow=arrow, v=v):
+        def post(pose, drawn=drawn, arrow=arrow, v=v, qb=qb):
+            # The bow turned on its grip to stand as keyed (bow_hand), at the tilt the fist was set for.
+            qb = getattr(pose, '_bow', (None, None, qb))[2]
+            pose.turn('weapon_l', qb @ pose.D['weapon_l'].inverted()); pose.fk()
             H = pose.H
             if drawn > 0.:
                 pose.loc['bowstring'] = (H['arrow_r'] - H['bowstring']) * drawn
@@ -1270,8 +1422,8 @@ def ranger_ready(Rg, t=0., breath=True):
     br = math.sin(t * 2 * math.pi / 3.0) if breath else 0.
     return dict(hips=V((0., 0., -.03 + .004 * br)), yaw=-48., chest=V((-6., 6. + br, 0.)), pitch=4.,
                 lfoot=V((.12, .16, a)), rfoot=V((-.16, -.14, a)), lfoot_yaw=-20., rfoot_yaw=-80.,
-                bgrip=V((.3, .14, 1.04)), baxis=V((.45, .05, .9)), btoward=V((-.6, -.6, .2)),
-                rwrist=V((.12, -.04, 1.02)), ralong=V((.6, .3, -.5)), rpalm=V((-.5, .8, .2)), rcurl=.6,
+                bgrip=V((.34, -.34, 1.1)), baxis=V((.45, .05, .9)), btoward=V((-.6, -.6, .2)),   # out before her middle: both arms clear of her jerkin
+                rwrist=None, ralong=V((.6, .3, -.5)), rpalm=V((-.5, .8, .2)), rcurl=.6,   # rwrist on the string: ready_hands puts it at the nock
                 drawn=1., arrow=1., aim=1., look=Rg.target)
 
 
@@ -1290,8 +1442,11 @@ def R_Idle(Rg):
 def ready_hands(Rg, v):
     """With the arrow nocked, the right hand is wherever the string is: put it there."""
     if v.get('rwrist') is None:
-        wl, ql = Rg.bow_hand(v['bgrip'], v['baxis'].normalized(), v['btoward'].normalized())
-        nock = v['bgrip'] + ql @ (Rg.R.rest_h['bowstring'] - Rg.R.rest_h['weapon_l'])
+        wl, ql, qb = Rg.bow_hand(v['bgrip'], Rg.bow_axis(v), v['btoward'].normalized(), Rg.shoulder_l(v))
+        nock = v['bgrip'] + qb @ (Rg.R.rest_h['bowstring'] - Rg.R.rest_h['weapon_l'])
+        if v.get('ralong_auto', True):
+            # The hand on the string continues her arm from the shoulder (2026-10-25).
+            v['ralong'] = (nock - Rg.shoulder_l(v, 'r')).normalized()
         qr = Rg.hand_q('r', v['ralong'].normalized(), v['rpalm'].normalized())
         v['rwrist'] = nock - qr @ (Rg.R.rest_h['arrow_r'] - Rg.R.rest_h['hand_r'])
     return v
@@ -1302,22 +1457,25 @@ def R_Shoot(Rg):
     snaps forward, the drawing hand flies back past her ear), then over her shoulder to the quiver,
     the arrow brought round to the bow and nocked, back to ready (2.6 s; the loose at 1.0 s)."""
     a = Rg.ank
-    r0 = ranger_ready(Rg, 0., breath=False)
+    r0 = ready_hands(Rg, ranger_ready(Rg, 0., breath=False))
+    nock0 = r0['rwrist']
     full = dict(bgrip=V((.62, .04, 1.43)), baxis=V((.0, -.12, 1.)), btoward=V((-1., -.05, 0.)))
-    anchor = V((.04, -.1, 1.5))
+    anchor = V((-.01, -.19, 1.47))   # (2026-10-25: out from under her jaw; the hand had sunk into it)
     tracks = {
         'hips': [(0., r0['hips']), (.3, V((0., 0., -.02))), (2.2, V((0., 0., -.02))), (2.6, r0['hips'])],
         'yaw': [(0., r0['yaw']), (.3, -78.), (2.2, -78.), (2.6, r0['yaw'])],
         'chest': [(0., r0['chest']), (.3, V((-8., 2., 0.))), (.7, V((-10., -2., 0.))), (1.0, V((-10., -2., 0.))), (1.15, V((-12., -3., 0.))), (1.5, V((-14., 6., 0.))), (1.9, V((-6., 4., 0.))), (2.2, V((-8., 2., 0.))), (2.6, r0['chest'])],
-        'bgrip': [(0., r0['bgrip']), (.32, full['bgrip']), (1.0, full['bgrip']), (1.06, full['bgrip'] + V((.03, -.01, -.01))), (1.35, full['bgrip'] + V((.0, 0., -.04))), (1.8, V((.44, .08, 1.28))), (2.15, V((.44, .08, 1.28))), (2.6, r0['bgrip'])],
+        'bgrip': [(0., r0['bgrip']), (.32, full['bgrip']), (1.0, full['bgrip']), (1.06, full['bgrip'] + V((.03, -.01, -.01))), (1.35, full['bgrip'] + V((.0, 0., -.04))), (1.8, V((.56, .06, 1.3))), (2.15, V((.54, .06, 1.28))), (2.6, r0['bgrip'])],
         'baxis': [(0., r0['baxis']), (.32, full['baxis']), (1.35, full['baxis']), (1.8, V((.3, -.1, .95))), (2.15, V((.3, -.1, .95))), (2.6, r0['baxis'])],
         'btoward': [(0., r0['btoward']), (.32, full['btoward']), (1.35, full['btoward']), (1.8, V((-.8, -.5, 0.))), (2.6, r0['btoward'])],
         # the right hand: on the string (drawn), to the anchor, the loose, to the quiver, back to the bow
-        'rwrist': [(0., V((.3, -.05, 1.08))), (.32, V((.48, -.06, 1.4))), (.72, anchor), (1.0, anchor), (1.05, anchor + V((-.1, -.04, .0))), (1.3, anchor + V((-.13, -.06, -.02))),
-                   (1.5, V((-.05, -.18, 1.6))), (1.75, V((-.05, -.18, 1.6))), (2.1, V((.36, -.06, 1.26))), (2.6, V((.3, -.05, 1.08)))],
+        'rwrist': [(0., nock0), (.16, V((.4, -.38, 1.3))), (.32, V((.48, -.06, 1.4))), (.72, anchor), (1.0, anchor), (1.05, anchor + V((-.1, -.04, .0))), (1.3, anchor + V((-.13, -.06, -.02))),
+                   # out past her right shoulder to the quiver and back (2026-10-25: it went through her head and ponytail)
+                   # (side-on, her right is -X and her back +Y)
+                   (1.42, V((-.3, -.18, 1.56))), (1.5, V((-.28, -.1, 1.66))), (1.75, V((-.28, -.1, 1.66))), (1.9, V((-.26, -.3, 1.48))), (2.1, V((.26, -.44, 1.26))), (2.6, nock0)],
         'rquiver': [(0., 0.), (1.3, 0.), (1.55, 1.), (1.72, 1.), (1.95, 0.), (2.6, 0.)],
-        'ralong': [(0., r0['ralong']), (.32, V((1., .1, -.1))), (1.0, V((1., .1, -.1))), (1.05, V((.6, .2, .3))), (1.5, V((-.2, .2, .9))), (1.75, V((-.2, .2, .9))), (2.1, V((.8, .2, -.3))), (2.6, r0['ralong'])],
-        'rpalm': [(0., r0['rpalm']), (.32, V((0., 1., 0.))), (1.0, V((0., 1., 0.))), (1.5, V((-.3, .9, .3))), (2.1, V((-.4, .9, .2))), (2.6, r0['rpalm'])],
+        'ralong': [(0., r0['ralong']), (.32, V((1., .1, -.1))), (1.0, V((1., .1, -.1))), (1.05, V((.6, .2, .3))), (1.3, V((.1, .1, .99))), (1.5, V((-.25, .45, .85))), (1.75, V((-.25, .45, .85))), (1.95, V((.2, .1, .97))), (2.1, V((.8, .2, -.3))), (2.6, r0['ralong'])],
+        'rpalm': [(0., r0['rpalm']), (.32, V((0., 1., 0.))), (1.0, V((0., 1., 0.))), (1.5, V((-.95, .1, .2))), (1.75, V((-.95, .1, .2))), (2.1, V((-.4, .9, .2))), (2.6, r0['rpalm'])],
         'rcurl': [(0., .6), (.32, .62), (1.0, .62), (1.03, .15), (1.4, .2), (1.6, .9), (2.1, .8), (2.6, .6)],
         'rpole': [(0., V((-.6, -.6, -.2))), (.6, V((-1., -.3, .3))), (1.2, V((-1., -.3, .3))), (1.5, V((-.3, -.7, .8))), (1.8, V((-.3, -.7, .8))), (2.2, V((-.6, -.6, -.2))), (2.6, V((-.6, -.6, -.2)))],
         'drawn': [(0., 1.), (1.0, 1.), (1.001, 0.), (2.05, 0.), (2.1, 1.), (2.6, 1.)],
