@@ -94,6 +94,18 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 - **Open user decisions:** saving and combat depth. See the brief. Cutscenes are decided: 2D beats, authored in 3D, on the user's music.
 - **Next work:** the Chult canopy brachiation works on four redesigned trees branching all round ([CHULT-CANOPY.md](CHULT-CANOPY.md)): 127 grips on chains and spurs, a staggered line of four more trees into the open ground, branch-gap leaps, lianas, step-down dismounts, all exercised by `-ChuckCanopyTest`; buttresses on all trees are smooth parts of their trunks. Still to do: a person's play-feel and camera-comfort review in the canopy (crown fading if needed), Xbox controller, primary forest tree/crown forms and ground relief. The first giant now teaches the golden cigarette climb. Claude can address the inherited alchemist pose/check and intermittent keeper polishing separately.
 
+## October 25 — the cone no longer traps Chuck on a pier's island (Claude)
+
+- **Report:** in a test run, the beholder's cone knocked the user "inside of a pillar", trapped on a stone platform.
+- **Cause:** the rupture's edge before the gallery is only about 1.5 m from the islands round the first colonnade piers. The cone's 3–3.5 m throw, from near the edge (it reaches there when the beholder drifts forward), carried him over the gap onto a pier's ring of floor. A ring is about 1.1 m wide, with no run-up and no way back. Thrown over open rupture, he would have died.
+- **Fix:** `SafeFling` (`TempleBeholderFight.cpp`) traces his arc and slide over the floor before the throw. It shortens the throw, in 5% steps, until he lands at least his width plus 35 cm short of any rupture or island. On the gallery the throw is unchanged. New `ChultTempleSanctumOnIsland`.
+- **Tests:**
+  - `cone_edge`: beside the pier, the throw was cut to 30%; before open rupture, 35%; well back, the full 3.5 m.
+  - He loses two Sanity, stays alive and ends on solid floor every time.
+  - Uncooked `Local/cone-edge-4.log`. Packaged: Verify-Package passed, 182 passes (`Local/verify-package-20261025-213359.log`, sanctum `Local/verify-temple-heroes-20261025-220432.log`).
+  - The user's exact spot was not known, so it was not replayed. I assumed it was this island.
+- **Launcher:** promoted as `ConeEdge`.
+
 ## October 25 — the heroes' voiced lines (Claude)
 
 - **Request:** the trio's eight audio takes and their lines; add their speaking, but no Fireball, casting or cutscene yet; room between lines that belong together, and a wait after Chuck enters.

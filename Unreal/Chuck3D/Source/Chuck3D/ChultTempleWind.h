@@ -77,6 +77,8 @@ int32 ChultTempleSanctumHoleAt(const FVector2D& Frame, float Grow = 0);
 const TArray<FBox2D>& ChultTempleSanctumIslands();
 // Island I's rim radius at an angle round its centre (radians).
 float ChultTempleSanctumIslandRadius(int32 I, float Angle);
+/** Within Grow of one of the islands round the piers in the sanctum's rupture (Grow < 0: that far inside it). */
+bool ChultTempleSanctumOnIsland(const FVector2D& Frame, float Grow = 0);
 // The sea tear's rim radius at an angle round its centre (radians).
 float ChultTempleSanctumSeaRadius(float Angle);
 

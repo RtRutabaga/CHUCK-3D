@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 25 — the cone's throw kept off the rupture (Claude)
+
+- **Request:** the cone knocked Chuck into a pillar and trapped him on a stone platform. Base `d49debe`.
+- **Built:** see HANDOFF.
+- **Tested:** uncooked cone trials ×4 (the first three found test-setup faults: a spot inside a pier, the beholder out of reach); packaged Verify-Package passed (`Local/verify-package-20261025-213359.log`).
+- **Contract compatibility:**
+  - Rigs and assets are unchanged.
+  - The cone's throw on Chuck can now be shortened. It logs `CHUCK_BEHOLDER_CONE_FLING`.
+  - New public `ChultTempleSanctumOnIsland`.
+  - New trial `cone_edge`. Verify-Package expects it.
+- **Binary assets:** none.
+- **Tools:** UE 5.7.4: Build.bat ×4, uncooked runs ×4, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `ConeEdge`.
+
+Next part of the work can be done here (the Fireball and the cutscenes).
+
 ## October 25 — the heroes' voiced lines (Claude)
 
 - **Request:** add the trio's supplied takes (2 fighter, 4 wizard, 2 ranger) as speech; nothing of the Fireball or cutscenes yet. Base `b7c2a0d`.

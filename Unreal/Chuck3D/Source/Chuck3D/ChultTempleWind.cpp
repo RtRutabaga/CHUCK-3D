@@ -150,6 +150,12 @@ namespace
     }
 }
 
+bool ChultTempleSanctumOnIsland(const FVector2D& F, float Grow)
+{
+    for (int32 I = 0; I < ChultTempleSanctumIslands().Num(); ++I) if (OnIsland(I, F, Grow)) return true;
+    return false;
+}
+
 int32 ChultTempleSanctumHoleAt(const FVector2D& F, float Grow)
 {
     if (F.X > PoolS0 - Grow && F.X < PoolS1 + Grow && F.Y < HT1 + Grow && F.Y > PoolEdgeT(F.X) - Grow)

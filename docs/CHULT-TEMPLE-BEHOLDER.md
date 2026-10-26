@@ -192,8 +192,8 @@ The 2D game's "cone of force", as 5e's antimagic cone:
    - The view shakes hard (by distance). It recoils.
 4. **Recover** (to 4.4 s): the stalks uncurl.
 
-Its cone runs from the great eye along its axis, 26° to each side and 26 m long. From over the dais it reaches about 4 m short of the broken floor before the gallery stair. What the front passes:
-- **Chuck:** two Sanity, and he is flung back about 3 m. A dodge roll does not save him; being out of the wedge, or behind a pier or any stone (on a line from the eye to him), does. To a fey summon held here by magic, the antimagic is a blow.
+Its cone runs from the great eye along its axis, 26° to each side and 26 m long. From over the dais it reaches about to the edge of the broken floor before the gallery, depending on where the beholder has drifted. What the front passes:
+- **Chuck:** two Sanity, and he is flung back about 3 m (3.5 m measured). Since October 25 the throw is shortened when it would carry him into the rupture or onto a pier's island in it, so he lands at least his width plus 35 cm short of its edge. The user had been flung onto an island and trapped there. A dodge roll does not save him; being out of the wedge, or behind a pier or any stone (on a line from the eye to him), does. To a fey summon held here by magic, the antimagic is a blow.
 - **Heroes:** thrown back (the fighter braced behind his shield). A paralysis is undone. The wizard's binding is snuffed for four seconds: the gem goes dark, the hum stops, no bolts.
 - **Skeletons:** flattened.
 - **Bolts in flight:** gone in a gutter of sparks. Arrows drop.
@@ -241,6 +241,7 @@ Run with `-ChuckSanctumTest` or `-ChuckSanctumCapture`; `-ChuckSanctumOnly=a+b` 
 - `beholder_chuck`: a ray through Chuck on the floor costs one Sanity.
 - `beholder_bite`: the lunge reaches the shield (closest gap under 60 cm), is blocked, and returns to its place.
 - `beholder_cone`: Chuck in its path beyond the fighter (two Sanity), well off its line (none), and behind a colonnade pier (sheltered, none).
+- `cone_edge` (October 25): the beholder brought 16 m off Chuck, who stands 2 m before the rupture's edge beside the second colonnade pier (the throw cut to 30%), then before open rupture (35%), then well back from it (the full throw, 3.5 m). He loses two Sanity each time, stays alive, and ends on the hall's solid floor every time.
 - `beholder_fight`: 52 s of its own fight with skeletons coming, with at least 10 rays, 2 volleys, a bite, a cone, and a hero's blow on it.
 
 ## Test

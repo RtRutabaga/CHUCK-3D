@@ -7,7 +7,9 @@
 #include "TempleHero.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSkeleton.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -18,6 +20,43 @@
 namespace
 {
     using ESound = ATempleSanctumBattle::ESound;
+
+    /** How much of the cone's horizontal throw Chuck can take without landing in, or over, the sanctum's broken floor
+     *  (user 2026-10-25: flung onto a pier's island in the rupture, trapped there). His arc and his slide after it,
+     *  sampled every 10 cm, must keep his capsule plus a margin off every rupture and every island (an island is
+     *  floor, but there is no way back from one). The fraction of the throw (0..1), the reach it allows in Reach. */
+    float SafeFling(const AChuckCharacter* Chuck, const FVector& Vel, float& Reach)
+    {
+        const UCharacterMovementComponent* M = Chuck->GetCharacterMovement();
+        const float G = FMath::Max(100.f, -M->GetGravityZ());
+        const float Air = 2.f * FMath::Max(0.f, static_cast<float>(Vel.Z)) / G;
+        const FVector2D H(Vel.X, Vel.Y);
+        const float Speed = static_cast<float>(H.Size());
+        if (Speed < 1.f) { Reach = 0.f; return 1.f; }
+        const FVector2D Dir = H / Speed;
+        // After landing he skids on, braking at least at his walking stop rate.
+        const float Brake = FMath::Max(300.f, M->BrakingDecelerationWalking + M->GroundFriction * 100.f);
+        const float Grow = Chuck->GetCapsuleComponent()->GetScaledCapsuleRadius() + 35.f;
+        const FVector Start = Chuck->GetActorLocation();
+        // Only on the hall's floor: the gallery above overhangs the rupture, and a throw there stays on the gallery.
+        const float Feet = static_cast<float>(ChultTempleInteriorFrameOf(Start).Z) - Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        if (Feet > TempleWind::HZ + 150.f) { Reach = 0.f; return 1.f; }
+        auto OffFloor = [&](const FVector& At)
+        {
+            const FVector F = ChultTempleInteriorFrameOf(At);
+            return ChultTempleSanctumHoleAt(FVector2D(F.X, F.Y), Grow) != 0 || ChultTempleSanctumOnIsland(FVector2D(F.X, F.Y), -Grow);
+        };
+        for (float Frac = 1.f; Frac > .01f; Frac -= .05f)
+        {
+            const float V = Speed * Frac;
+            const float D = V * Air + V * V / (2.f * Brake);
+            bool bSafe = true;
+            for (float S = 0.f; S <= D + 1.f && bSafe; S += 10.f) bSafe = !OffFloor(Start + FVector(Dir.X, Dir.Y, 0.f) * S);
+            if (bSafe) { Reach = D; return Frac; }
+        }
+        Reach = 0.f;
+        return 0.f;
+    }
     float Ease(float X) { X = FMath::Clamp(X, 0.f, 1.f); return X * X * (3.f - 2.f * X); }
     float Approach(float From, float To, float Rate, float Dt) { return FMath::Lerp(From, To, 1.f - FMath::Exp(-Rate * Dt)); }
     FQuat Toward(const FVector& From, const FVector& To, float MaxDeg)
@@ -716,7 +755,13 @@ void ATempleBeholder::ConeStrike(AActor* Who, const FVector& At)
         if (Chuck->TakeBite(ConeApex, 2, false, true))
         {
             ++ConeChuckHits; ++ChuckHits;
-            Chuck->LaunchCharacter(ConeAxis.GetSafeNormal2D() * 470.f + FVector(0, 0, 330.f), true, true);
+            FVector Fling = ConeAxis.GetSafeNormal2D() * 470.f + FVector(0, 0, 330.f);
+            // Never into the rupture, nor over it onto a pier's island: thrown short of its edge instead.
+            float Reach = 0.f;
+            const float Frac = SafeFling(Chuck, Fling, Reach);
+            Fling.X *= Frac; Fling.Y *= Frac;
+            Chuck->LaunchCharacter(Fling, true, true);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_BEHOLDER_CONE_FLING fraction=%.2f reach=%.0f"), Frac, Reach);
             Burst(At, ConeAxis, FLinearColor(.65f, .8f, 1.f), 30, 600.f, 3.f);
             Afflict(Chuck, EBeholderRay::Telekinetic, .9f);
             UE_LOG(LogTemp, Display, TEXT("CHUCK_BEHOLDER_CONE_HIT_CHUCK sanity=%d"), Chuck->GetSanity());

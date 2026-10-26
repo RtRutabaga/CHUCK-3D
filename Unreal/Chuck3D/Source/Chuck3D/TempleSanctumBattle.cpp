@@ -782,12 +782,13 @@ void StartTempleSanctumReview(UWorld* World)
     // Kind 0 a cut, 1 a block, 2 a blow on his back, 3 arrows, 4 bolt, 5 the battle, 6 portraits, 7 the beholder; the beholder's fight
     // (2026-10-25): 8 its five rays, 9 a ray through Chuck, 10 the bite, 11 the cone (Chuck in it, out of it, behind a pier), 12 it fighting by itself;
     // 13 the wizard sealing the sea tear (it knits, the tear surges and he strains, the beholder's cone shatters it);
+    // 15 the cone at Chuck by the rupture's edge (user 2026-10-25: flung onto a pier's island and trapped): thrown short of it;
     // 14 the heroes' lines (TempleHeroTalk.cpp), the waits shortened: in order, each heard, subtitled, the speaker's jaw moving, the music ducked.
     struct FTrial { const TCHAR* Name; FName Clip; int32 Kind; };
     static const FTrial Trials[] = {{TEXT("cut_down"), TEXT("CutDown"), 0}, {TEXT("cut_flat"), TEXT("CutFlat"), 0}, {TEXT("overhead"), TEXT("Overhead"), 0},
         {TEXT("bash"), TEXT("Bash"), 0}, {TEXT("block"), NAME_None, 1}, {TEXT("hit_behind"), NAME_None, 2},
         {TEXT("arrows"), NAME_None, 3}, {TEXT("bolt"), NAME_None, 4}, {TEXT("portraits"), NAME_None, 6}, {TEXT("beholder"), NAME_None, 7},
-        {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11},
+        {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11}, {TEXT("cone_edge"), NAME_None, 15},
         {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
@@ -799,6 +800,7 @@ void StartTempleSanctumReview(UWorld* World)
         float EventAt = -1;
         float JawMax[3] = {0, 0, 0}, DuckMin = 1;
         int32 TalkLast = -1, TalkOrdered = 1, TalkSounds = 0, TalkSubs = 0;
+        float EdgeMoved[3] = {0, 0, 0}; int32 EdgeSafe[3] = {0, 0, 0}, EdgeResp0 = 0; FVector EdgeFrom = FVector::ZeroVector;
         TWeakObjectPtr<ATempleSkeleton> Subject;
         FTimerHandle Timer;
     };
@@ -930,7 +932,7 @@ void StartTempleSanctumReview(UWorld* World)
                 }
             }
         }
-        else if (T.Kind >= 8 && T.Kind <= 12 && B->GetBeholder())
+        else if (((T.Kind >= 8 && T.Kind <= 12) || T.Kind == 15) && B->GetBeholder())
         {
             ATempleBeholder* Bh = B->GetBeholder();
             const FVector Bc = Bh->GetActorLocation();
@@ -939,7 +941,7 @@ void StartTempleSanctumReview(UWorld* World)
             if (T.Kind == 8) View(FAt + In * 900.f - Ac * 650.f + FVector(0, 0, 160), (Bc + FAt) * .5f - FVector(0, 0, 40));
             else if (T.Kind == 9 && Ch) View(Ch->GetActorLocation() + (Ch->GetActorLocation() - Bc).GetSafeNormal2D() * 260.f + Ac * 220.f + FVector(0, 0, 60), FMath::Lerp(Ch->GetActorLocation(), Bc, .35f));
             else if (T.Kind == 10) { const FVector Mid = (Bc + FAt) * .5f; View(Mid - Ac * 760.f + In * 150.f + FVector(0, 0, 70), Mid + FVector(0, 0, 30)); }
-            else if (T.Kind == 11 && Ch)
+            else if ((T.Kind == 11 || T.Kind == 15) && Ch)
             {
                 const FVector Cp = Ch->GetActorLocation();
                 const FVector Out = (Cp - Bc).GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, Out);
@@ -1162,6 +1164,48 @@ void StartTempleSanctumReview(UWorld* World)
             if (bDone) Run->Hits[2] = AChuckCharacter::MaxSanity - Ch->GetSanity();
             bPass = Run->Hits[0] == 2 && Run->Hits[1] == 0 && Run->Hits[2] == 0 && Bh->GetSheltered() > Run->Shelter0 && Bh->GetCones() - Run->Cones0 == 3;
             Note = FString::Printf(TEXT("in_path_lost=%d off_line_lost=%d behind_pier_lost=%d sheltered=%d cones=%d"), Run->Hits[0], Run->Hits[1], Run->Hits[2], Bh->GetSheltered() - Run->Shelter0, Bh->GetCones() - Run->Cones0);
+            if (bDone) { Ch->SetSanity(AChuckCharacter::MaxSanity); Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true); }
+            break;
+        }
+        case 15:
+        {
+            // The cone at Chuck 2.25 m before the rupture's edge, in line with a colonnade pier's island, then before open rupture
+            // (a full throw would land him on the island or in the Astral), then well back from it (the full throw kept).
+            ATempleBeholder* Bh = B->GetBeholder();
+            auto* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (!Bh || !Ch) { bDone = true; break; }
+            auto Judge = [&](int32 K)
+            {
+                Run->Hits[K] = AChuckCharacter::MaxSanity - Ch->GetSanity();
+                const FVector Fr = ChultTempleInteriorFrameOf(Ch->GetActorLocation());
+                const FVector2D F2(Fr.X, Fr.Y);
+                Run->EdgeSafe[K] = ChultTempleSanctumHoleAt(F2) == 0 && !ChultTempleSanctumOnIsland(F2) && Fr.Y < PoolT - PoolJag && Ch->GetRespawns() == Run->EdgeResp0;
+                Run->EdgeMoved[K] = static_cast<float>(FVector::Dist2D(Ch->GetActorLocation(), Run->EdgeFrom));
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_CONE_EDGE part=%d lost=%d safe=%d moved=%.0f frame=%s"), K, Run->Hits[K], Run->EdgeSafe[K], Run->EdgeMoved[K], *Fr.ToCompactString());
+            };
+            const int32 Part = FMath::Min(2, static_cast<int32>(Age / 8.f));
+            // Beside the second colonnade pier on its inner side (a diagonal throw carries over the gap onto the first pier's island),
+            // before open rupture, and well back from it.
+            static const FVector2D Spots[] = {{HallMid - NaveHalf + 220, PoolT - 200}, {HallMid, PoolT - 225}, {HallMid + 700, PoolT - 925}};
+            const FVector Spot = W(Spots[Part].X, Spots[Part].Y, HZ);
+            if (Part != Run->Sub)
+            {
+                if (Run->Sub >= 0) Judge(Run->Sub);
+                Run->Sub = Part; Run->Phase = 0;
+                Ch->SetActorHiddenInGame(false); Ch->SetSanity(AChuckCharacter::MaxSanity);
+                Ch->ResetAtLocation(FVector(Spot.X, Spot.Y, B->FloorZ() + 60.f));
+                Run->EdgeFrom = Ch->GetActorLocation(); Run->EdgeResp0 = Ch->GetRespawns();
+                // It hangs over the dais, the edge at the cone's limit: brought 16 m off him, as the cutscenes can.
+                FVector Near = W(HallMid, Spots[Part].Y - 1600, HZ); Near.Z = Bh->GetActorLocation().Z;
+                Bh->OrderHover(Near);
+            }
+            // Ordered once he has settled and the beholder is free (a cone from the trial before may still be ending).
+            if (Run->Phase == 0 && Age - Part * 8.f > 2.5f && Bh->OrderCone(Spot + FVector(0, 0, 40))) Run->Phase = 1;
+            bDone = Age > 23.5f;
+            if (bDone) { Judge(2); Bh->OrderHover(FVector::ZeroVector); }
+            bPass = Run->Hits[0] == 2 && Run->Hits[1] == 2 && Run->Hits[2] == 2 && Run->EdgeSafe[0] && Run->EdgeSafe[1] && Run->EdgeSafe[2] && Run->EdgeMoved[2] > 250.f;
+            Note = FString::Printf(TEXT("lost=%d/%d/%d safe=%d/%d/%d moved=%.0f/%.0f/%.0f"), Run->Hits[0], Run->Hits[1], Run->Hits[2], Run->EdgeSafe[0], Run->EdgeSafe[1], Run->EdgeSafe[2],
+                Run->EdgeMoved[0], Run->EdgeMoved[1], Run->EdgeMoved[2]);
             if (bDone) { Ch->SetSanity(AChuckCharacter::MaxSanity); Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true); }
             break;
         }
