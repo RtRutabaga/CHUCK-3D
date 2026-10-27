@@ -5,6 +5,9 @@
 #include "ChultTempleRubble.h"
 #include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
+#include "ChultTempleTraps.h"
+#include "TempleSanctumBattle.h"
+#include "EngineUtils.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -37,8 +40,9 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
         {TEXT("RubbleCave"), FVector(75900, -7400, RZ + 200), FVector(75100, -6700, RTop + 300)},
         {TEXT("RubbleRift"), FVector(75900, -7700, RZ + 170), FVector(75600, -8250, RZ - 40)},
         {TEXT("RubbleSouth"), FVector(76200, -7900, RZ + 180), FVector(74800, -8250, RZ + 60)},
-        {TEXT("RubbleMouth"), FVector(74900, -8250, RZ + 120), FVector(74300, -8250, RZ + 30)},
-        {TEXT("RubbleMouthLow"), FVector(74520, -8180, RZ + 40), FVector(74300, -8250, RZ + 20)},
+        {TEXT("RubbleMouth"), FVector(75100, -8150, RZ + 140), FVector(PileS1, -8250, RZ + 40)},
+        {TEXT("RubbleMouthLow"), FVector(PileS1 + 220, -8170, RZ + 45), FVector(PileS1, -8250, RZ + 22)},
+        {TEXT("RubbleMouthFar"), FVector(76100, -7300, RZ + 170), FVector(PileS1, -8250, RZ + 40)},
         {TEXT("RubbleWest"), FVector(74450, -5300, RZ + 300), FVector(74800, -7400, RZ)},
         {TEXT("RubbleCaves"), FVector(75500, -7500, RZ + 160), FVector(76050, -8150, RTop + 150)},
         {TEXT("RubbleLong"), FVector(75600, -5250, RZ + 420), FVector(75500, -8500, RZ + 100)}};
@@ -52,6 +56,7 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
     static const TCHAR* Names[] = {TEXT("lane"), TEXT("crawl"), TEXT("rift_fall")};
     struct FRun
     {
+        int32 TrapSounds0 = -1, HallSounds0 = -1;
         int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths = 0, Shots = 0, Crawls0 = 0;
         double Next = 0, Start = 0, At = -1; float MinHalf = 99, MaxHalfIn = 0; int32 InFrames = 0, LowFrames = 0;
         bool bStarted = false, bPass = false, bDone = false, bEnd = false;
@@ -106,7 +111,13 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             while (Run->Trial < UE_ARRAY_COUNT(Trials) && FParse::Value(FCommandLine::Get(), TEXT("ChuckRubbleTrials="), Only) && !Only.Contains(Names[Run->Trial])) { Run->Results.Add(1); ++Run->Trial; }
             if (Run->Trial >= UE_ARRAY_COUNT(Trials))
             {
-                int32 Fails = Run->Failures; FString Line;
+                const int32 Floating = ChultTempleRubbleFloating();
+                // Nothing of the trap run or the hall is heard while he is here (user 2026-10-26).
+                int32 TrapSounds = 0, HallSounds = 0;
+                for (TActorIterator<AChultTempleTraps> It(World); It; ++It) TrapSounds += It->SoundsPlayed;
+                if (const ATempleSanctumBattle* Bt = ATempleSanctumBattle::Get(World)) HallSounds = Bt->GetSoundsPlayed();
+                const int32 Heard = (TrapSounds - Run->TrapSounds0) + (HallSounds - Run->HallSounds0);
+                int32 Fails = Run->Failures + (Floating > 0) + (Heard > 0); FString Line = FString::Printf(TEXT(" floating=%d heard=%d"), Floating, Heard);
                 for (int32 K = 0; K < Run->Results.Num(); ++K) { Fails += !Run->Results[K]; Line += FString::Printf(TEXT(" %s=%d"), Names[K], Run->Results[K]); }
                 Run->bDone = true; Stop();
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_TEST failures=%d%s blocks=%d drums=%d rifts=%d"), Fails, *Line, ChultTempleRubbleBlocks().Num(), ChultTempleRubbleDrums().Num(), int32(UE_ARRAY_COUNT(Rifts)));
@@ -121,10 +132,16 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             switch (Trials[Run->Trial])
             {
             case ET::Lane: Chuck->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Rubble)); Stop(); break;
-            case ET::Crawl: Reset(RS0 + 260, CrawlT, -1, 0); break;
+            case ET::Crawl: Reset(PileS1 + 230, CrawlT, -1, 0); break;
             case ET::RiftFall: Reset(76000, -5600, 0, -1); break;
             }
             Run->Start = Now; Run->bStarted = true; Run->Next = Now;
+            if (Run->TrapSounds0 < 0)
+            {
+                Run->TrapSounds0 = 0; Run->HallSounds0 = 0;
+                for (TActorIterator<AChultTempleTraps> It(World); It; ++It) Run->TrapSounds0 += It->SoundsPlayed;
+                if (const ATempleSanctumBattle* Bt = ATempleSanctumBattle::Get(World)) Run->HallSounds0 = Bt->GetSoundsPlayed();
+            }
             UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_TRIAL_START name=%s at=%s"), Names[Run->Trial], *ChultTempleInteriorFrameOf(Chuck->GetActorLocation()).ToString());
             return;
         }
@@ -139,8 +156,8 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             Limit = 90;
             if (Time < .6f) break;
             constexpr int32 N = UE_ARRAY_COUNT(Lane);
-            const FVector2D Goal = Run->Point < N - 1 ? FVector2D(Lane[Run->Point + 1].S, Lane[Run->Point + 1].T) : FVector2D(RS0 + 200, CrawlT);
-            if (Run->Point == N - 2 && Steer(RS0 + 200, CrawlT, 25)) { Done = true; Run->bPass = NewDeaths == 0 && !Chuck->IsCrawling(); }
+            const FVector2D Goal = Run->Point < N - 1 ? FVector2D(Lane[Run->Point + 1].S, Lane[Run->Point + 1].T) : FVector2D(PileS1 + 200, CrawlT);
+            if (Run->Point == N - 2 && Steer(PileS1 + 200, CrawlT, 25)) { Done = true; Run->bPass = NewDeaths == 0 && !Chuck->IsCrawling(); }
             else if (Run->Point < N - 2 && Steer(Goal.X, Goal.Y, 35)) { ++Run->Point; if (Run->Point == 3) Shot(TEXT("LaneMid")); }
             if (NewDeaths) Done = true;
             if (Done) { Shot(TEXT("LaneEnd")); UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_LANE corner=%d deaths=%d seconds=%.1f"), Run->Point, NewDeaths, Time); }
@@ -151,14 +168,14 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             // In at the mouth, along run A to the bend, along run B to the end; then back and out into the chamber.
             Limit = 90;
             if (Time < .6f) break;
-            const bool bInPassage = P.X < RS0 - 20;
+            const bool bInPassage = P.X < PileS1 - 40;
             if (bInPassage) { ++Run->InFrames; Run->MaxHalfIn = FMath::Max(Run->MaxHalfIn, Half); Run->LowFrames += Chuck->IsCrawling(); }
             Run->MinHalf = FMath::Min(Run->MinHalf, Half);
             if (Run->Sub == 0) { if (Steer(CrawlBendS, CrawlT, 12)) Run->Sub = 1; if (P.X < RS0 - 80 && Run->At < 0) { Run->At = Now; Shot(TEXT("CrawlIn")); } }
             else if (Run->Sub == 1) { if (Steer(CrawlBendS, CrawlEndT + 50, 12)) { Run->Sub = 2; Run->bEnd = AtChultTempleCreviceEnd(Chuck->GetActorLocation()); Shot(TEXT("CrawlEnd")); Run->At = Now; UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_CRAWL_END reached=%d seconds=%.1f half=%.1f"), Run->bEnd, Time, Half); } if (P.Y < CrawlT - 150 && P.Y > CrawlT - 200) Shot(TEXT("CrawlBend")); }
             else if (Run->Sub == 2) { Stop(); if (Now - Run->At > 1.5) Run->Sub = 3; }
             else if (Run->Sub == 3) { if (Steer(CrawlBendS, CrawlT, 12)) Run->Sub = 4; }
-            else if (Run->Sub == 4) { if (Steer(RS0 + 220, CrawlT, 20)) { Run->Sub = 5; Run->At = Now; } }
+            else if (Run->Sub == 4) { if (Steer(PileS1 + 220, CrawlT, 20)) { Run->Sub = 5; Run->At = Now; } }
             else { Stop(); if (Now - Run->At > 1.2) Done = true; }
             if (NewDeaths) Done = true;
             if (Done || Time > Limit - .1f)

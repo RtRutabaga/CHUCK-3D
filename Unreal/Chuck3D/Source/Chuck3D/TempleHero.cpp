@@ -264,6 +264,7 @@ void ATempleHero::Tick(float DeltaSeconds)
     if (W >= HitStopUntil) ActTime += DeltaSeconds;
     if (!Battle.IsValid()) return;
     TickShove(DeltaSeconds);
+    if (Hum && Battle.IsValid() && Battle->IsHushed()) Hum->SetVolumeMultiplier(0.f);   // (heard from the rubble map otherwise)
     // In a cutscene's hold: the clip it set, turning to face what it asked.
     if (bScripted) { if (!ScriptFace.IsZero()) Face(ScriptFace - GetActorLocation(), 120.f, DeltaSeconds); UpdateTrail(false); return; }
     if (W < ParalysedUntil) { UpdateTrail(false); return; }   // held rigid by the beholder's ray
@@ -502,7 +503,7 @@ void ATempleHero::TickWizard(float DeltaSeconds)
     const float W = static_cast<float>(GetWorld()->GetTimeSeconds());
     const FVector Here = GetActorLocation();
     const float Snuffed = IsSuppressed() ? .04f + .12f * FMath::Abs(FMath::Sin(W * 23.f)) : 1.f;
-    if (Hum) Hum->SetVolumeMultiplier(.32f * (IsSuppressed() ? .05f : 1.f));
+    if (Hum) Hum->SetVolumeMultiplier(.32f * (IsSuppressed() ? .05f : 1.f) * (Battle->IsHushed() ? 0.f : 1.f));
     if (GemLight) GemLight->SetIntensity(Snuffed * (700.f + 250.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 4000.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f)));
     const ATempleBeholder* Bh = Battle->GetBeholder();
     ATempleSeal* Seal = Battle->GetSeal();

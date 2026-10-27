@@ -2,6 +2,18 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 26 — lines wait for the floor; quiet rubble map; resting rubble; glowing crevice (Claude)
+
+- **Request:** wait for Chuck on the hall floor before the heroes' next lines; no trap sounds in the rubble map; no floating rubble; the crevice an opening in rubble that glows faintly gold like the golden cigarettes. Base `c4327ae`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-RUBBLE.md.
+- **Tested:** uncooked rubble trial (`Local/rubble-trial-11.log`: failures=0 floating=0 heard=0) and sanctum trials incl. new `talk_floor` (`Local/scene-trial-5.log`); packaged Verify-Package passed (`Local/verify-package-20261026-192956.log`). Not played by hand. The heard=0 check has no negative control.
+- **Contract compatibility:** new `AChultTempleRubbleGlow`, `ChultTempleRubbleFloating`, `TempleRubble::PileS1` (lane end and crawl apron moved out to it, a run through the pile added to `ChultTempleRubbleCrawlRuns`); `ATempleSanctumBattle::IsChuckOnFloor/IsHushed`; traps and battle sounds silent while `InChultTempleRubble`. Verify-Package now requires `floating=0 heard=0` and `talk_floor`. Chuck's rig and clips unchanged.
+- **Binary assets:** none.
+- **Tools:** UE 5.7.4: Build.bat (several), uncooked runs, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `RubbleRest`.
+
+Next part of the work can be done here (the escape onto the ship).
+
 ## October 26 — helmet rivets, more rubble and ceiling collapses (Claude)
 
 - **Request:** the fighter's helmet rivets read as on his forehead; more rubble and more ceiling collapses. Base `e588489`.

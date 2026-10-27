@@ -151,6 +151,7 @@ namespace TempleRubbleBuild
         FLining L; L.Dado = 0; L.Low = &P.Stone; L.High = &P.Stone;
         // Run A, from the mouth (+S, open on the chamber) to the bend (-S, open on run B).
         Line(P, A0, RS0, AT0, AT1, RZ, RZ + CrawlH, {{0, AT0, AT1, RZ, RZ + CrawlH}, {1, AT0, AT1, RZ, RZ + CrawlH}}, L);
+        // Through the pile before the wall (2026-10-26) the chamber's own floor runs on; the pile's blocks are its walls and roof.
         // Run B, from the bend (its +S wall open on run A) to its end: a crack in the end wall.
         Line(P, BS0, BS1, CrawlEndT, AT1, RZ, RZ + CrawlH, {{1, AT0, AT1, RZ, RZ + CrawlH}, {2, CrawlBendS - 7, CrawlBendS + 6, RZ + 5, RZ + 37}}, L);
         // Lumps and spalls on the walls and roof, a few pebbles on the floor (visual only).
@@ -172,14 +173,12 @@ namespace TempleRubbleBuild
         };
         Lumps(A0, RS0, AT0, AT1, 40);
         Lumps(BS0, BS1, CrawlEndT, AT0, 30);
-        // The mouth in the chamber: a cracked lintel over it, rough jambs either side, a spill of small stones.
-        Box(P.Stone, RS0, RS0 + 28, CrawlT - 85, CrawlT + 85, RZ + CrawlH, RZ + CrawlH + 38);
-        TurnedBox(P.Steps, FVector(RS0 + 22, CrawlT + 30, RZ + CrawlH + 42), FVector(30, 22, 10), FRotator(8, 15, -6));
-        for (float Sg : {-1.f, 1.f})
+        // The mouth: a spill of small stones and grit out of the gap in the pile (its blocks are the rubble's own).
+        for (int32 I = 0; I < 14; ++I)
         {
-            Box(P.Stone, RS0, RS0 + 18, CrawlT + Sg * (CrawlHalf + 4), CrawlT + Sg * (CrawlHalf + 45), RZ, RZ + CrawlH);
-            for (int32 I = 0; I < 6; ++I)
-                TurnedBox(P.Steps, FVector(RS0 + R.FRandRange(30, 110), CrawlT + Sg * R.FRandRange(55, 140), RZ + 2), FVector(R.FRandRange(3, 9), R.FRandRange(3, 7), R.FRandRange(2, 4)), FRotator(R.FRandRange(-10, 10), R.FRandRange(0, 360), R.FRandRange(-10, 10)));
+            const float T = CrawlT + R.FRandRange(-170.f, 170.f);
+            if (FMath::Abs(T - CrawlT) < 100) continue;   // (the apron he crawls in from stays clear)
+            TurnedBox(P.Steps, FVector(PileS1 + R.FRandRange(-10, 90), T, RZ + 2), FVector(R.FRandRange(3, 10), R.FRandRange(3, 8), R.FRandRange(2, 5)), FRotator(R.FRandRange(-12, 12), R.FRandRange(0, 360), R.FRandRange(-12, 12)));
         }
         // Behind the crack: a hollow of old planks (the ship's timbers, for later) lit warm.
         {
@@ -255,7 +254,6 @@ namespace TempleRubbleBuild
         for (float T : {-5750.f, -6950.f, -8000.f, -8500.f}) Torch(P, Fires, 0, RS0, 1, T, RZ + 230, 3800, 800);
         for (float S : {75100.f, 76100.f}) Torch(P, Fires, 1, RT0, 1, S, RZ + 260, 3800, 800);
         for (float S : {74900.f, 75900.f}) Torch(P, Fires, 1, RT1, -1, S, RZ + 260, 3800, 800);
-        Glyphs(P, R, 0, RS0, 1, CrawlT - 260, CrawlT + 260, RZ + 330, RZ + 470);
         // Pots by the lane (cigarettes), old skulls.
         for (const FVector2D& J : ChultTempleRubbleJars()) Jars.Add({FVector(J.X, J.Y, RZ), float(R.FRandRange(0, 360)), false, 2});
         for (int32 I = 0, Made = 0; I < 60 && Made < 7; ++I)

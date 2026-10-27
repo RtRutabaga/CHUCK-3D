@@ -200,6 +200,13 @@ private:
     static void TalkAssetPaths(TArray<FSoftObjectPath>& Paths);
     void FinishTalkLoading();
     void TickTalk(float DeltaSeconds, bool bIn, const AChuckCharacter* Chuck);
+    bool bOnFloor = false, bHushed = false;
+public:
+    /** He is down on the hall's floor (or the dais), not the gallery or the stairs: the heroes' later lines wait for it. */
+    bool IsChuckOnFloor() const { return bOnFloor; }
+    /** He is in the rubble map: the hall's sounds are not heard there (user 2026-10-26). */
+    bool IsHushed() const { return bHushed; }
+private:
 };
 
 /** Spawns the battle once (not in other automated runs). Called with the temple skeletons. */

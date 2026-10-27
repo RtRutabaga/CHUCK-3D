@@ -13,9 +13,12 @@ namespace TempleRubble
 {
     constexpr float RS0 = 74300, RS1 = 76700, RT0 = -8700, RT1 = -5100;   // 24 x 36 m, beside the sanctum (HS0 77000)
     constexpr float RZ = TempleWind::HZ, RTop = RZ + 1000;                // its floor at the sanctum's; a 10 m vault
+    // Since 2026-10-26 (user: "more like an opening in rubble"): the mouth is a gap at the foot of a pile of fallen blocks
+    // heaped against the wall, PileS1 out from it; the passage runs through the pile to the wall.
+    constexpr float PileS1 = RS0 + 170;
     // The lane's corners, from where he comes to (the first) to the crevice's mouth (the last, on the -S wall).
     struct FPt { float S, T; };
-    constexpr FPt Lane[] = {{76250, -5600}, {75550, -5600}, {75550, -6700}, {76150, -6700}, {76150, -7700}, {75000, -7700}, {75000, -8250}, {74300, -8250}};
+    constexpr FPt Lane[] = {{76250, -5600}, {75550, -5600}, {75550, -6700}, {76150, -6700}, {76150, -7700}, {75000, -7700}, {75000, -8250}, {PileS1 + 100, -8250}};
     constexpr float LaneHalf = 110;
     // The crevice: its mouth in the -S wall at CrawlT, along -S to the bend at CrawlBendS, then along -T to its end.
     // 80 cm wide and 44 cm high (he is 65 cm standing, 33 on all fours).
@@ -42,11 +45,13 @@ float ChultTempleRubbleLaneDistance(const FVector2D& Frame);
 struct FTempleRubbleBlock { FVector Centre, Half; FRotator Turn; bool bMoss = false; };
 struct FTempleRubbleDrum { FVector A, B; float Radius = 0; };
 const TArray<FTempleRubbleBlock>& ChultTempleRubbleBlocks();
+// Blocks resting on nothing: every point of the underside more than Tolerance cm above what is under it. 0 expected.
+int32 ChultTempleRubbleFloating(float Tolerance = 8.f);
 const TArray<FTempleRubbleDrum>& ChultTempleRubbleDrums();
 // The braziers along the lane and the pots by it (two cigarettes each: the Fireball halved his Sanity), frame, on the floor.
 const TArray<FVector2D>& ChultTempleRubbleBraziers();
 const TArray<FVector2D>& ChultTempleRubbleJars();
-// The crevice's two straight runs as frame boxes (S in X, T in Y) and the crawl spaces (frame, with Z) that put him
+// The crevice's straight runs (through the pile, along -S, along -T) as frame boxes (S in X, T in Y) and the crawl spaces (frame, with Z) that put him
 // on all fours: the runs, and 80 cm of the chamber's floor before the mouth.
 void ChultTempleRubbleCrawlRuns(TArray<FBox2D>& Out);
 void ChultTempleRubbleCrawlSpaces(TArray<FBox>& Out);

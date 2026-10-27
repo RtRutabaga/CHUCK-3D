@@ -1,4 +1,5 @@
 #include "ChultTempleTraps.h"
+#include "ChultTempleRubble.h"
 #include "ChuckCharacter.h"
 #include "ChultTempleInterior.h"
 #include "ProceduralMeshComponent.h"
@@ -151,7 +152,8 @@ void AChultTempleTraps::Tick(float DeltaSeconds)
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     // The traps are heard only from inside the temple (2026-10-20: the spike corridor
     // runs 14 m under the avenue, and its thrusts carried up to the road).
-    bHearing = Chuck && InChultTempleInterior(Chuck->GetActorLocation(), 100.f);
+    // (Not from the rubble map, 2026-10-26: the trap run's last sections are only metres away through the rock.)
+    bHearing = Chuck && InChultTempleInterior(Chuck->GetActorLocation(), 100.f) && !InChultTempleRubble(Chuck->GetActorLocation());
     TickSpikes(Chuck, Now);
     TickDarts(Chuck, Now, DeltaSeconds);
     TickSlabs(Chuck, Now, DeltaSeconds);

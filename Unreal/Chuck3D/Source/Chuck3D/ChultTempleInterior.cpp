@@ -3,6 +3,7 @@
 #include "ChultTempleRun.h"
 #include "ChultTempleWind.h"
 #include "ChultTempleRubble.h"
+#include "ChultTempleRubbleGlow.h"
 #include "TempleSkeleton.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSnake.h"
@@ -1019,6 +1020,12 @@ void BuildChultTempleInterior(AActor* Owner)
     {
         TArray<FBox> Crawl;ChultTempleRubbleCrawlSpaces(Crawl);
         for(const FBox& B:Crawl)AChuckCharacter::RegisterCrawlSpace(World,FTransform(FRotator(0,YawOf(1,0),0),WorldAt(B.GetCenter().X,B.GetCenter().Y,B.GetCenter().Z)),B.GetExtent());
+    }
+    // Its mouth glows faintly gold, as the golden cigarettes do (2026-10-26): it draws the eye across the chamber.
+    {
+        FActorSpawnParameters GP;GP.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        if(auto* Glow=World->SpawnActor<AChultTempleRubbleGlow>(WorldAt(TempleRubble::PileS1,TempleRubble::CrawlT,TempleRubble::RZ),FRotator::ZeroRotator,GP))
+            Glow->Setup(WorldAt(TempleRubble::PileS1,TempleRubble::CrawlT,TempleRubble::RZ),WorldAt(1,0,0)-WorldAt(0,0,0));
     }
     auto* Astral=Emit(Owner,TEXT("ChultTempleInteriorAstral"),{{&P.Astral,AstralMat}},false,Missing,Triangles,false);Astral->SetCastShadow(false);
     auto* Veils=Emit(Owner,TEXT("ChultTempleInteriorVeils"),{{&P.Veil,OilMat}},false,Missing,Triangles);Veils->SetCastShadow(false);

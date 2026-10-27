@@ -120,6 +120,10 @@ void ATempleSanctumBattle::TickTalk(float DeltaSeconds, bool bIn, const AChuckCh
         return;
     }
     if (!bIn || TalkStep >= ScriptCount) return;
+    // After the fighter's call (heard as he comes in, in the entrance), the rest wait for him to come down onto the hall's
+    // floor (user 2026-10-26: "wait until chuck is on the main floor before picking up the next lines"): the waits only
+    // run while he is there, so the argument's 24 s are 24 s of the fight on the floor, however long the stairs took.
+    if (TalkStep > 0 && !bOnFloor) return;
     TalkWait += DeltaSeconds;
     if (TalkWait < Script[TalkStep].Gap * TalkGapScale) return;
     // The argument is the Fireball's cutscene (TempleSanctumScene.h, 2026-10-26): it takes the view first, once the

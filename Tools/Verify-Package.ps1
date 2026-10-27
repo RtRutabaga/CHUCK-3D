@@ -196,6 +196,7 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=entrance pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball_skip pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=talk_floor pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_SPAWN mesh=1 bones=81 stalks=10 eye_mat=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=cut_flat pass=1 .* decap=1' -Quiet) -or
@@ -209,7 +210,7 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
 $rubbleLog=Join-Path $evidence ('verify-temple-rubble-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $rubbleProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleRubbleTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$rubbleLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .* spawns=21 ' -Quiet) -or
-   !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
+   !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 floating=0 heard=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
     throw "Temple rubble verification failed. Inspect $rubbleLog"
 }
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road

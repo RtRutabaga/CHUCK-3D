@@ -258,7 +258,7 @@ When he first comes out onto the gallery:
 2. **Low behind the heroes** (3.4–7.2 s): up at the beholder over the dais; its opening volley comes in this shot.
 3. **The fighter** (7.2–11.2 s): side-on, as he calls "Hold the line!": the first line, 8 s after Chuck comes in, as before.
 
-The view then blends back to him and the fight is his to survive. A death and respawn on the gallery does not replay it.
+The view then blends back to him and the fight is his to survive. A death and respawn on the gallery does not replay it. The heroes' later lines, and the count to the argument, wait until he is down on the hall's floor ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#their-lines)).
 
 ### The Fireball
 When the heroes' argument is due (their fourth line, 24 s after their calls), and once the beholder is between attacks:
@@ -284,6 +284,7 @@ Skipped with Esc, the view goes straight to white and on to the throw. If he wer
 - `entrance`: its three shots, then control back. `CHUCK_SANCTUM_TRIAL trial=entrance pass=1 entrances=1 shots=3 control_back=1`.
 - `fireball`: the lines at shortened gaps, the scene's seven shots, the throw and blast, at most 240 fire flares, Sanity 2, in the rubble, control back.
 - `fireball_skip`: Esc 2 s in; Sanity 2, in the rubble, control back.
+- `talk_floor`: the lines after the first wait for him on the floor.
 - The other trials run with the cutscenes off (`SetFireballScene`/`SetEntranceScene`).
 
 Verify-Package requires all three and `CHUCK_SANCTUM_SCENE_READY fx=1 camera=1`. Stills: `Saved/Screenshots/.../Sanctum/Sanctum_entrance_*`, `Sanctum_fireball_*`.

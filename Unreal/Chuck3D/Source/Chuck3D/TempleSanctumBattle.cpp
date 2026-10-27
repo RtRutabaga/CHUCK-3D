@@ -379,6 +379,7 @@ void ATempleSanctumBattle::Recycle()
 
 void ATempleSanctumBattle::Sound(ESound Kind, const FVector& At, float Volume, float Pitch)
 {
+    if (bHushed) return;   // (from the rubble map the hall is not heard)
     const int32 K = static_cast<int32>(Kind);
     if (!Sounds.IsValidIndex(K) || !Sounds[K].Num()) return;
     UGameplayStatics::PlaySoundAtLocation(this, Sounds[K][Random.RandRange(0, Sounds[K].Num() - 1)], At, Volume, Pitch * Random.FRandRange(.95f, 1.05f), 0.f, Attenuation);
@@ -741,6 +742,14 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
     const float Wt = static_cast<float>(GetWorld()->GetTimeSeconds());
     if (bActive && bWaves && GetUp() < WantUp && Wt >= NextWake) { WakeOne(nullptr); NextWake = Wt + Random.FRandRange(1.8f, 3.6f); }
     if (bWaves) Recycle();
+    // Down on the hall's floor: below the stairs' last metre, inside the hall (the islands in the pool count; the gallery does not).
+    bOnFloor = false; bHushed = false;
+    if (Chuck)
+    {
+        const FVector F = ChultTempleInteriorFrameOf(Chuck->GetActorLocation());
+        bOnFloor = bIn && F.Z < HZ + 200 && F.Y < GalleryT - 100;
+        bHushed = InChultTempleRubble(Chuck->GetActorLocation());
+    }
     // His first coming out onto the gallery this session: the entrance (TempleSanctumScene.h).
     if (bIn && !bWasIn && bEntranceScene && Chuck && TheScene.IsValid() && TheScene->GetEntrances() == 0 && !bForced
         && ChultTempleInteriorFrameOf(Chuck->GetActorLocation()).Z > UZ - 150) TheScene->StartEntrance();
@@ -804,7 +813,9 @@ void StartTempleSanctumReview(UWorld* World)
         {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11}, {TEXT("cone_edge"), NAME_None, 15},
         {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14},
         // The cutscenes (2026-10-26, TempleSanctumScene.h): 16 the entrance; 17 the Fireball from the argument to the rubble; 18 the same skipped with Esc.
-        {TEXT("entrance"), NAME_None, 16}, {TEXT("fireball"), NAME_None, 17}, {TEXT("fireball_skip"), NAME_None, 18}, {TEXT("battle"), NAME_None, 5}};
+        {TEXT("entrance"), NAME_None, 16}, {TEXT("fireball"), NAME_None, 17}, {TEXT("fireball_skip"), NAME_None, 18},
+        // 19: the lines after the first wait for him on the hall's floor (user 2026-10-26).
+        {TEXT("talk_floor"), NAME_None, 19}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
     {
         int32 Trial = 0, Failures = 0, Phase = 0, Shots = 0, Beat = 0, Swing = -1, Swings0 = 0, Hits0 = 0, Blocks0 = 0, Taken0 = 0, Fallen0 = 0, Decap0 = 0, Shots0 = 0, Up0 = 0;
@@ -871,12 +882,19 @@ void StartTempleSanctumReview(UWorld* World)
                 Wz->SetActorLocation(Wz->GetActorLocation()); Wz->Rest(); Wz->SetHeld(false);
                 if (ATempleSeal* Sl = B->GetSeal()) { Run->Strains0 = Wz->GetStrains(); Run->Surges0 = Sl->GetSurges(); Run->Breaks0 = Sl->GetBreaks(); Run->SealMax = 0; }
             }
+            if (T.Kind == 19)
+            {
+                if (AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0))) Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum));
+                B->RestartTalk(.25f); Run->Sub = 0; Run->TalkLast = -1;
+            }
             if (T.Kind == 14)
             {
+                // Down on the hall's floor (hidden): the lines after the first wait for him there (2026-10-26).
+                if (AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0))) Ch->ResetAtLocation(W(HallMid + 650, DaisT1 + 1900, HZ + 34.65f));
                 B->RestartTalk(.25f);
                 Run->JawMax[0] = Run->JawMax[1] = Run->JawMax[2] = 0; Run->DuckMin = 1; Run->TalkLast = -1; Run->TalkOrdered = 1; Run->TalkSounds = 0; Run->TalkSubs = 0;
             }
-            if (T.Kind >= 16)
+            if (T.Kind >= 16 && T.Kind <= 18)
             {
                 // The cutscenes: the battle as in play, Chuck there and seen (on the gallery for the entrance, on the hall's floor for the Fireball).
                 for (ATempleHero* H : {F, Wz, Rg}) { H->EndScript(); H->Rest(); H->SetHeld(false); }
@@ -1292,6 +1310,17 @@ void StartTempleSanctumReview(UWorld* World)
                 Run->TalkSounds, Run->TalkSubs, Run->JawMax[0], Run->JawMax[1], Run->JawMax[2], Run->DuckMin, Age);
             break;
         }
+        case 19:
+        {
+            // On the gallery: the fighter's call (2 s at this scale), then nothing for 12 s. Then on the floor: the rest come.
+            AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (Run->Sub == 0 && Age > 12.f) { Run->Sub = 1; Run->TalkLast = B->GetTalkSpoken(); if (Ch) Ch->ResetAtLocation(W(HallMid + 650, DaisT1 + 1900, HZ + 34.65f)); }
+            bDone = (Run->Sub == 1 && B->GetTalkSpoken() >= 3) || Age > 30.f;
+            bPass = Run->Sub == 1 && Run->TalkLast == 1 && B->GetTalkSpoken() >= 3;
+            Note = FString::Printf(TEXT("spoken_on_gallery=%d spoken_after=%d on_floor=%d seconds=%.1f"), Run->TalkLast, B->GetTalkSpoken(), B->IsChuckOnFloor(), Age);
+            if (bDone && Ch) Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum));
+            break;
+        }
         case 16: case 17: case 18:
         {
             ATempleSanctumScene* Sc = B->GetScene();
@@ -1347,6 +1376,7 @@ void StartTempleSanctumReview(UWorld* World)
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_TRIAL trial=%s pass=%d %s"), T.Name, bPass ? 1 : 0, *Note);
         ++Run->Trial; Run->Start = -1; Run->Phase = 0; Run->DeadAt = -1;
         F->SetHeld(false); F->ForceClip(NAME_None);
+        if (T.Kind == 14) if (AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0))) Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum));
         if (Run->Trial >= Count)
         {
             UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_TEST_COMPLETE failures=%d evaluations=%d/%d/%d"), Run->Failures, F->GetAnimEvaluations(), Wz->GetAnimEvaluations(), Rg->GetAnimEvaluations());
