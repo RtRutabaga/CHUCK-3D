@@ -430,7 +430,7 @@ Clip changes made for this:
 
 - The escape onto the ship. (The beholder's fight, its hazards for Chuck and the Fireball are built: [CHULT-TEMPLE-BEHOLDER.md](CHULT-TEMPLE-BEHOLDER.md).)
 - **Faces** are MakeHuman's baseline (the same as the NPCs'): soft and young for a veteran fighter, smooth for an old wizard. They need sculpted detail, skin normal maps and better brows. This is the largest remaining gap to "much more detailed".
-- **Hair and beards** are cards (the kit's), not strand grooms.
+- **Hair and beards** are strand grooms since October 28 (below). They are rigid on the head or jaw, with no simulation: the ranger's ponytail doesn't swing, and her hairline at the temples is thin.
 - **Clipping:**
   - Plate can intersect at extreme poses (the pauldrons in the overhead's wind-up), and the ranger's mantle clips her arm at full draw.
   - A striking skeleton's arm passes into the fighter's helmet or shield at close range.
@@ -453,3 +453,13 @@ The kit's face and beard pass covers the heroes too: see `SourceAssets/NPCs/READ
 
 The rigs, skeletons and clips are unchanged. The hero import re-saved the clips and PBR instances; they were restored from HEAD.
 
+## Strand hair (October 28)
+
+The kit's strand grooms cover the heroes too: see `SourceAssets/NPCs/README.md` ("Strand hair").
+- **Fighter:** a short dark beard and moustache, flat under his helmet. Beard below the lips rides the jaw: seen opening as he speaks in `hero_talk`.
+- **Wizard:** a long grey beard and moustache, and grey hair to the shoulder lying flat under his hat. MakeHuman's `long01` cards are gone.
+- **Ranger:**
+  - Hair combed back to her ponytail (`comb`) over an auburn scalp shell, with the pack's `short_ponnytail`. MakeHuman's `ponytail01` cards are gone.
+  - Her hairline at the temples is still thin.
+
+`Import-TempleHeroes.ps1` now deletes a hero's mesh before re-importing when it has lost a material slot: a re-import keeps the old slots. `Tools/Import-NPCGrooms.ps1 -Set heroes` imports the grooms; `ATempleHero::Setup` attaches them (`NPCGroom.h`).

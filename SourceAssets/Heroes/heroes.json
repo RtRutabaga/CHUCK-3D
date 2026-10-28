@@ -109,7 +109,39 @@
      ]
     }
    ],
-   "gear": "fighter"
+   "gear": "fighter",
+   "groom": [
+    {
+     "style": "wild_thick_beard",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.022,
+     "points": 10,
+     "colour": [
+      0.06,
+      0.04,
+      0.028
+     ],
+     "root": 0.4,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ]
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.025,
+     "bend": 0.012,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 220
+     }
+    }
+   ]
   },
   "Wizard": {
    "height_cm": 179,
@@ -144,7 +176,7 @@
     1.9
    ],
    "eyelashes": "eyelashes01",
-   "hair": "long01",
+   "hair": null,
    "hair_tint": [
     1.0,
     1.0,
@@ -210,7 +242,54 @@
     }
    ],
    "gear": "wizard",
-   "hair_grey": 0.62
+   "hair_grey": 0.62,
+   "groom": [
+    {
+     "style": "straight_hair_to_shoulder",
+     "group": "Hair",
+     "points": 16,
+     "colour": [
+      0.62,
+      0.6,
+      0.56
+     ],
+     "root": 0.2,
+     "grey": 0.5,
+     "grey_colour": [
+      0.82,
+      0.81,
+      0.78
+     ],
+     "under": 0.005
+    },
+    {
+     "style": "wild_thick_beard",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.36,
+     "points": 20,
+     "colour": [
+      0.62,
+      0.6,
+      0.56
+     ],
+     "root": 0.2,
+     "grey": 0.5,
+     "grey_colour": [
+      0.84,
+      0.83,
+      0.8
+     ]
+    },
+    {
+     "style": "wild_thick_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.06,
+     "bend": 0.012,
+     "points": 8
+    }
+   ]
   },
   "Ranger": {
    "height_cm": 172,
@@ -244,7 +323,7 @@
     0.2
    ],
    "eyelashes": "eyelashes03",
-   "hair": "ponytail01",
+   "hair": null,
    "hair_tint": [
     0.62,
     0.3,
@@ -291,7 +370,46 @@
      ]
     }
    ],
-   "gear": "ranger"
+   "gear": "ranger",
+   "groom": [
+    {
+     "style": "short_ponnytail",
+     "group": "Hair",
+     "points": 20,
+     "colour": [
+      0.3,
+      0.1,
+      0.035
+     ],
+     "root": 0.35,
+     "roughness": 0.45
+    },
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 14,
+     "comb": {
+      "lift": 0.0045
+     },
+     "set": {
+      "Duplicate Hair Curves/Amount": 420
+     },
+     "colour": [
+      0.3,
+      0.1,
+      0.035
+     ],
+     "width": 1.8
+    }
+   ],
+   "scalp": {
+    "tint": [
+     0.22,
+     0.075,
+     0.03
+    ],
+    "fade": 0.012
+   }
   }
  }
 }

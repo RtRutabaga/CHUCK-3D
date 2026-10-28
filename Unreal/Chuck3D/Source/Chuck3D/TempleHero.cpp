@@ -1,4 +1,5 @@
 #include "TempleHero.h"
+#include "NPCGroom.h"
 #include "HeroClipData.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSkeleton.h"
@@ -79,6 +80,7 @@ void ATempleHero::Setup(ERole InRole, ATempleSanctumBattle* InBattle, USkeletalM
     Role = InRole; Battle = InBattle; Clips = InClips;
     Random.Initialize(17 + static_cast<int32>(Role) * 101);
     Mesh->SetSkinnedAssetAndUpdate(InMesh);
+    if (!Grooms.Num()) ChuckGroom::Attach(this, Mesh, Grooms);   // strand hair and beards
     if (InMesh)
     {
         const FReferenceSkeleton& Ref = InMesh->GetRefSkeleton();

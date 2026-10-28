@@ -118,6 +118,7 @@ protected:
 private:
     UPROPERTY(VisibleAnywhere) UCapsuleComponent* Capsule = nullptr;
     UPROPERTY(VisibleAnywhere) USkeletalMeshComponent* Mesh = nullptr;
+    UPROPERTY() TArray<class UGroomComponent*> Grooms;   // strand hair on its bones (NPCGroom.h)
     UPROPERTY() UProceduralMeshComponent* Trail = nullptr;
     UPROPERTY() UPointLightComponent* GemLight = nullptr;
     UPROPERTY() UAudioComponent* Hum = nullptr;

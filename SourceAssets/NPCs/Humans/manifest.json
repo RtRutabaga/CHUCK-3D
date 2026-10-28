@@ -227,7 +227,7 @@
   "MarketWoman": {
    "fbx": "MarketWoman/SK_MarketWoman.fbx",
    "height_cm": 166,
-   "tris": 79940,
+   "tris": 51004,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -352,7 +352,44 @@
     15.8,
     0.0,
     148.8
-   ]
+   ],
+   "grooms": {
+    "BraidBack": {
+     "abc": "MarketWoman/GR_MarketWoman_BraidBack.abc",
+     "bone": "spine_03",
+     "strands": 1260,
+     "colour": [
+      0.62,
+      0.42,
+      0.18
+     ],
+     "root": 0.25,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       -3.61,
+       0.01,
+       147.16
+      ],
+      "min": [
+       -4.85,
+       -1.78,
+       146.37
+      ],
+      "max": [
+       -2.13,
+       1.99,
+       147.92
+      ]
+     }
+    }
+   }
   },
   "GuardWoman": {
    "fbx": "GuardWoman/SK_GuardWoman.fbx",
@@ -652,7 +689,7 @@
   "Blacksmith": {
    "fbx": "Blacksmith/SK_Blacksmith.fbx",
    "height_cm": 184,
-   "tris": 65425,
+   "tris": 62607,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -762,22 +799,55 @@
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes02.png"
-    },
-    "Hair": {
-     "type": "hair",
-     "texture": "Textures/short01_diffuse.png"
     }
    },
    "mouth_cm": [
-    15.5,
+    15.6,
     0.0,
-    164.7
-   ]
+    166.3
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "Blacksmith/GR_Blacksmith_Hair.abc",
+     "bone": "head",
+     "strands": 40496,
+     "colour": [
+      0.035,
+      0.026,
+      0.02
+     ],
+     "root": 0.6,
+     "grey": 0.06,
+     "grey_colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       2.17,
+       0.56,
+       178.58
+      ],
+      "min": [
+       -5.38,
+       -8.08,
+       167.45
+      ],
+      "max": [
+       14.73,
+       8.06,
+       184.81
+      ]
+     }
+    }
+   }
   },
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 112806,
+   "tris": 87280,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -868,24 +938,6 @@
      "tile_cm": 200.0,
      "gain": 14.226
     },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.3,
-      0.13,
-      0.055
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.36,
-      0.17,
-      0.075
-     ]
-    },
     "BeardRing": {
      "type": "fabric",
      "fabric": "metal_plate_02",
@@ -941,12 +993,84 @@
     14.6,
     0.0,
     115.8
-   ]
+   ],
+   "grooms": {
+    "Beard": {
+     "abc": "Dwarf/GR_Dwarf_Beard.abc",
+     "bone": "head",
+     "strands": 5193,
+     "colour": [
+      0.24,
+      0.09,
+      0.035
+     ],
+     "root": 0.5,
+     "grey": 0.02,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       8.73,
+       0.19,
+       116.78
+      ],
+      "min": [
+       5.51,
+       -7.16,
+       112.12
+      ],
+      "max": [
+       15.01,
+       7.14,
+       121.19
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "Dwarf/GR_Dwarf_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 13667,
+     "colour": [
+      0.24,
+      0.09,
+      0.035
+     ],
+     "root": 0.5,
+     "grey": 0.02,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       11.66,
+       -0.1,
+       112.59
+      ],
+      "min": [
+       7.13,
+       -6.16,
+       110.57
+      ],
+      "max": [
+       14.32,
+       6.04,
+       115.12
+      ]
+     }
+    }
+   }
   },
   "TavernKeeper": {
    "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
    "height_cm": 181,
-   "tris": 82266,
+   "tris": 64024,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1014,24 +1138,6 @@
      "tile_cm": 27.1,
      "gain": 2.523
     },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.13,
-      0.1,
-      0.075
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.24,
-      0.21,
-      0.18
-     ]
-    },
     "Scalp": {
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
@@ -1049,6 +1155,24 @@
      "type": "eye",
      "texture": "Textures/grey_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
      "type": "hair",
      "texture": "Textures/eyebrow009.png"
@@ -1056,22 +1180,125 @@
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes02.png"
-    },
-    "Hair": {
-     "type": "hair",
-     "texture": "Textures/short01_diffuse.png"
     }
    },
    "mouth_cm": [
-    15.3,
+    15.4,
     0.0,
-    161.9
-   ]
+    163.4
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "TavernKeeper/GR_TavernKeeper_Hair.abc",
+     "bone": "head",
+     "strands": 40486,
+     "colour": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "root": 0.6,
+     "grey": 0.12,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       2.1,
+       0.56,
+       175.62
+      ],
+      "min": [
+       -5.46,
+       -8.08,
+       164.93
+      ],
+      "max": [
+       14.64,
+       8.05,
+       181.82
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "TavernKeeper/GR_TavernKeeper_Beard.abc",
+     "bone": "head",
+     "strands": 4580,
+     "colour": [
+      0.07,
+      0.045,
+      0.028
+     ],
+     "root": 0.55,
+     "grey": 0.18,
+     "grey_colour": [
+      0.3,
+      0.28,
+      0.25
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       10.35,
+       0.07,
+       164.34
+      ],
+      "min": [
+       6.24,
+       -7.33,
+       160.05
+      ],
+      "max": [
+       15.48,
+       7.23,
+       168.65
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "TavernKeeper/GR_TavernKeeper_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 10056,
+     "colour": [
+      0.07,
+      0.045,
+      0.028
+     ],
+     "root": 0.55,
+     "grey": 0.18,
+     "grey_colour": [
+      0.3,
+      0.28,
+      0.25
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       12.16,
+       -0.1,
+       159.94
+      ],
+      "min": [
+       7.32,
+       -5.86,
+       157.87
+      ],
+      "max": [
+       14.87,
+       5.74,
+       162.77
+      ]
+     }
+    }
+   }
   },
   "ElfElder": {
    "fbx": "ElfElder/SK_ElfElder.fbx",
    "height_cm": 171,
-   "tris": 97777,
+   "tris": 58445,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1194,12 +1421,49 @@
     17.9,
     0.0,
     153.0
-   ]
+   ],
+   "grooms": {
+    "BraidBack": {
+     "abc": "ElfElder/GR_ElfElder_BraidBack.abc",
+     "bone": "spine_03",
+     "strands": 1350,
+     "colour": [
+      0.74,
+      0.72,
+      0.68
+     ],
+     "root": 0.1,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       -3.56,
+       0.01,
+       156.89
+      ],
+      "min": [
+       -4.67,
+       -1.78,
+       156.13
+      ],
+      "max": [
+       -2.15,
+       1.99,
+       157.66
+      ]
+     }
+    }
+   }
   },
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
    "height_cm": 100,
-   "tris": 57646,
+   "tris": 43418,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -1244,42 +1508,6 @@
      ],
      "tile_cm": 40.0,
      "gain": 26.931
-    },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.95,
-      0.93,
-      0.88
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      1.05,
-      1.03,
-      0.98
-     ]
-    },
-    "Hair": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      1.0,
-      0.98,
-      0.94
-     ]
-    },
-    "HairStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
-     "tint": [
-      1.1,
-      1.08,
-      1.02
-     ]
     },
     "Scalp": {
      "type": "stubble",
@@ -1338,13 +1566,120 @@
    "mouth_cm": [
     11.0,
     0.0,
-    86.1
-   ]
+    86.3
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "GnomeAlchemist/GR_GnomeAlchemist_Hair.abc",
+     "bone": "head",
+     "strands": 11184,
+     "colour": [
+      0.78,
+      0.77,
+      0.73
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.55,
+     "roots_cm": {
+      "mean": [
+       2.91,
+       0.69,
+       96.87
+      ],
+      "min": [
+       -2.23,
+       -6.06,
+       91.87
+      ],
+      "max": [
+       8.95,
+       6.06,
+       100.02
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "GnomeAlchemist/GR_GnomeAlchemist_Beard.abc",
+     "bone": "head",
+     "strands": 3434,
+     "colour": [
+      0.78,
+      0.76,
+      0.72
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       7.12,
+       0.36,
+       86.84
+      ],
+      "min": [
+       4.43,
+       -5.95,
+       83.84
+      ],
+      "max": [
+       11.16,
+       5.93,
+       90.76
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "GnomeAlchemist/GR_GnomeAlchemist_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 10069,
+     "colour": [
+      0.78,
+      0.76,
+      0.72
+     ],
+     "root": 0.15,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       8.81,
+       -0.07,
+       83.81
+      ],
+      "min": [
+       5.08,
+       -4.79,
+       82.2
+      ],
+      "max": [
+       10.9,
+       4.7,
+       85.87
+      ]
+     }
+    }
+   }
   },
   "Sailor": {
    "fbx": "Sailor/SK_Sailor.fbx",
    "height_cm": 176,
-   "tris": 69388,
+   "tris": 52524,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -1401,33 +1736,6 @@
      "tile_cm": 27.4,
      "gain": 4.437
     },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.28,
-      0.27,
-      0.255
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.5,
-      0.49,
-      0.46
-     ]
-    },
-    "Fringe": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.5,
-      0.49,
-      0.46
-     ]
-    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -1472,12 +1780,119 @@
     14.7,
     0.0,
     157.2
-   ]
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "Sailor/GR_Sailor_Hair.abc",
+     "bone": "head",
+     "strands": 8673,
+     "colour": [
+      0.32,
+      0.31,
+      0.29
+     ],
+     "root": 0.35,
+     "grey": 0.45,
+     "grey_colour": [
+      0.6,
+      0.59,
+      0.56
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       0.46,
+       0.95,
+       165.98
+      ],
+      "min": [
+       -5.68,
+       -8.0,
+       159.11
+      ],
+      "max": [
+       14.36,
+       7.93,
+       175.53
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "Sailor/GR_Sailor_Beard.abc",
+     "bone": "head",
+     "strands": 4862,
+     "colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "root": 0.35,
+     "grey": 0.5,
+     "grey_colour": [
+      0.62,
+      0.61,
+      0.58
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       9.94,
+       0.08,
+       158.11
+      ],
+      "min": [
+       6.01,
+       -7.18,
+       153.98
+      ],
+      "max": [
+       14.88,
+       7.3,
+       162.51
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "Sailor/GR_Sailor_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 9942,
+     "colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "root": 0.35,
+     "grey": 0.5,
+     "grey_colour": [
+      0.62,
+      0.61,
+      0.58
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       11.51,
+       -0.1,
+       153.84
+      ],
+      "min": [
+       6.97,
+       -5.8,
+       151.74
+      ],
+      "max": [
+       14.39,
+       5.66,
+       156.6
+      ]
+     }
+    }
+   }
   },
   "Bobert": {
    "fbx": "Bobert/SK_Bobert.fbx",
    "height_cm": 97,
-   "tris": 63568,
+   "tris": 60096,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1567,15 +1982,6 @@
      "tile_cm": 35.2,
      "gain": 4.937
     },
-    "Fringe": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
-     "tint": [
-      0.32,
-      0.29,
-      0.26
-     ]
-    },
     "Earring": {
      "type": "fabric",
      "fabric": "metal_plate_02",
@@ -1613,7 +2019,44 @@
     9.8,
     0.0,
     83.9
-   ]
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "Bobert/GR_Bobert_Hair.abc",
+     "bone": "head",
+     "strands": 12936,
+     "colour": [
+      0.22,
+      0.19,
+      0.16
+     ],
+     "root": 0.4,
+     "grey": 0.35,
+     "grey_colour": [
+      0.45,
+      0.43,
+      0.4
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       -1.31,
+       0.57,
+       89.7
+      ],
+      "min": [
+       -3.65,
+       -5.34,
+       85.46
+      ],
+      "max": [
+       3.18,
+       5.32,
+       94.26
+      ]
+     }
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

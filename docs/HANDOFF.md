@@ -6,6 +6,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Strand hair (October 28, Claude):** every haired human and hero has Unreal strand grooms (hair, beards, braids) from the CC0 MakeHuman hair editor pack, fitted by `Tools/npc_strands.py` and attached rigidly to the head, jaw or upper spine. The tavern keeper has a face rig. See SourceAssets/NPCs/README.md ("Strand hair").
 - **NPC faces and beards (October 28, Claude):** every human NPC and temple hero.
   - Bearded ones (dwarf, tavern keeper, gnome, sailor, fighter, wizard) show their lips through the beard: the moustache rests on the lip's border, and the hair under the lower lip is short and set back.
   - Beards are finer.

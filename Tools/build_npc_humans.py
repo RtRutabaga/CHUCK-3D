@@ -30,6 +30,10 @@ import bpy
 from mathutils import Matrix, Vector, kdtree
 from mathutils.bvhtree import BVHTree
 from bl_ext.user_default.mpfb.services import HumanService, TargetService, LocationService
+import importlib.util as _ilu
+import types as _types
+_ss = _ilu.spec_from_file_location('npc_strands', Path(__file__).resolve().parent / 'npc_strands.py')
+STRANDS = _ilu.module_from_spec(_ss); _ss.loader.exec_module(STRANDS)   # strand grooms (spec `groom`)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(LocationService.get_user_data())
@@ -1188,6 +1192,9 @@ def make_beard(info, spec, slots):
     return [beard, cards] + ([rings] if rings else [])
 
 
+BRAID_PATHS = []   # make_braid's plaits this build: (points, radii) each
+
+
 def make_braid(info, spec, top, L, r0, back_at, step):
     """make_hair's braid: three strands crossing over one another (each a
     figure of eight about the braid's line, a third of a turn apart), from the
@@ -1203,6 +1210,7 @@ def make_braid(info, spec, top, L, r0, back_at, step):
     period = spec.get('braid_period', .06)
     for strand in range(3):
         pts, radii = [], []
+        BRAID_PATHS.append((pts, radii))   # a groom's `braid` fills each plait with strands
         for k, c in enumerate(centres):
             s = top - c.z
             r = radius(s)
@@ -1599,14 +1607,14 @@ def make_scalp(info, spec, slots, hair, natural=None):
     bm.transform(M)
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=2, use_grid_fill=True)
     body = BVHTree.FromObject(info.obj, dg)
-    trees = [(BVHTree.FromObject(o, dg), o.matrix_world.inverted()) for o in hair]
+    trees = [] if callable(hair) else [(BVHTree.FromObject(o, dg), o.matrix_world.inverted()) for o in hair]
     bm.verts.ensure_lookup_table()
     pos, nrm, covered = [], [], []
     for v in bm.verts:
         hit, n, _, _ = body.find_nearest(Mi @ v.co)
         p, n = M @ hit, (R @ n).normalized()
         pos.append(p); nrm.append(n)
-        hit_any = False
+        hit_any = callable(hair) and hair(p)
         for tree, Ti in trees:   # any of the hair straight out from here (or just under the skin)
             o, d = Ti @ (p - n * .003), Ti.to_3x3() @ n
             if tree.ray_cast(o, d.normalized(), .053 * d.length)[0] is not None: hit_any = True; break
@@ -1711,6 +1719,7 @@ def build(name, spec, extra=None):
     info.rig (Tools/build_temple_heroes.py's armour, robes and gear); it may set hide[i] for skin
     it covers. Output goes to OUT/<name> (the heroes point OUT at their own folder)."""
     reset_scene()
+    BRAID_PATHS.clear()
     body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
     # Proportion targets on top of the macro sliders (the dwarf: short legs, broad torso, big hands and head),
     # before the rig, so the rig is fitted to the shape.
@@ -1732,6 +1741,7 @@ def build(name, spec, extra=None):
     asset('Eyelashes', DATA / f"eyelashes/{spec['eyelashes']}/{spec['eyelashes']}.mhclo")
     if spec.get('hair'): asset('Hair', DATA / f"hair/{spec['hair']}/{spec['hair']}.mhclo")
     # Bake the shape; keep the skirt helper if the outfit needs it, then drop the helpers.
+    STRANDS.store_rest(body)   # the base mesh's own shape: the hair pack's guides are carried from it
     TargetService.bake_targets(body)
     skirt_src = skirt_source(body) if any(it['piece'] in SKIRTED for it in spec['outfit']) else None
     joints = joint_positions(body) if spec.get('face') else {}   # MPFB's face joint markers live on helpers, about to go
@@ -1787,14 +1797,28 @@ def build(name, spec, extra=None):
         meshes += make_ponytail(info, spec['ponytail'], slots)
     if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
     if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
+    sized = list(meshes)   # what sets the height: the body and the kit's outfit (not a hero's helmet, hat or props)
+    if extra: meshes += extra(info, slots, hide)
+    grooms = {}
+    if spec.get('groom'):   # strand hair (Tools/npc_strands.py), after the hats it lies under
+        beard_obj = next((o for o in meshes if o.name.split('.')[0] == 'beard'), None)
+        kit = _types.SimpleNamespace(Body=Body, face_marks=face_marks, Mouth=Mouth, front_hairline=front_hairline)
+        grooms = STRANDS.make_grooms(kit, info, spec['groom'], meshes, beard_obj, BRAID_PATHS)
+        # The strands replace the beard's mass and cards (its volume only shaped them); the rings stay.
+        for o in [o for o in meshes if o.name.split('.')[0] in ('beard', 'beard_strands')]:
+            meshes.remove(o); sized.remove(o) if o in sized else None; bpy.data.objects.remove(o)
+        for slot in ('Beard', 'BeardStrands'): slots.pop(slot, None)
+        for o in [o for o in meshes if o.name.split('.')[0] == 'braid' and any(e.get('style') == 'braid' for e in spec['groom'])]:
+            meshes.remove(o); sized.remove(o) if o in sized else None; bpy.data.objects.remove(o)
+        if grooms and not hair:   # the scalp's stubble fades out past the strands' roots
+            kd, n = STRANDS.roots_tree(grooms, [g for g in grooms if g.startswith('Hair')])
+            if n > 1: hair = lambda p, kd=kd: kd.find(p)[2] < .007
     if spec.get('scalp'):
         natural = None
         if spec['scalp'].get('recede'):   # the hairline he once had, below the receded one
             root = info.eye_z + spec.get('braided_hair', {}).get('ear_root', .005)
             natural = lambda p: p.z - front_hairline(info, p, spec['scalp']['recede']['hairline'], root)
         meshes += make_scalp(info, spec['scalp'], slots, hair, natural)
-    sized = list(meshes)   # what sets the height: the body and the kit's outfit (not a hero's helmet, hat or props)
-    if extra: meshes += extra(info, slots, hide)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -1858,6 +1882,15 @@ def build(name, spec, extra=None):
     bpy.context.view_layer.objects.active = rig
     fbx = out / f'SK_{name}.fbx'
     bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'ARMATURE', 'MESH'}, **FBX)
+    groom_out = {}
+    for group, grp in grooms.items():
+        abc = out / f'GR_{name}_{group}.abc'
+        roots = STRANDS.export_groom(abc, grp['strands'], M, scale)
+        mat = next(e for e in spec['groom'] if e.get('material', e['group']) == grp['material'])
+        groom_out[group] = {'abc': f'{name}/{abc.name}', 'bone': grp['bone'], 'strands': len(grp['strands']),
+                            'colour': mat.get('colour', [.1, .07, .05]), 'root': mat.get('root', .6), 'grey': mat.get('grey', 0.),
+                            'grey_colour': mat.get('grey_colour', [.5, .5, .48]), 'roughness': mat.get('roughness', .5), 'roots_cm': roots}
+        print('CHUCK_GROOM_EXPORTED', name, group, grp['bone'], len(grp['strands']))
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
     lo2 = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
     hi2 = max((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)
@@ -1868,7 +1901,9 @@ def build(name, spec, extra=None):
     m = M @ mouth
     mouth_cm = [round(m.x * 100, 1), round(-m.y * 100, 1), round(m.z * 100, 1)]
     print('CHUCK_HUMAN_MOUTH', name, mouth_cm)
-    return {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots, 'mouth_cm': mouth_cm}
+    result = {'fbx': f'{name}/SK_{name}.fbx', 'height_cm': spec['height_cm'], 'tris': tris, 'slots': slots, 'mouth_cm': mouth_cm}
+    if groom_out: result['grooms'] = groom_out
+    return result
 
 
 def render_review(name, meshes, slots, k=1.):

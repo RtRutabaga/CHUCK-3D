@@ -148,6 +148,10 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
         P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Characters/Heroes/%s/SK_Hero%s.SK_Hero%s"), *Name, *Name, *Name)));
         for (const TCHAR* Clip : HeroClipNames(R))
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Characters/Heroes/%s/Anim/AS_Hero%s_%s.AS_Hero%s_%s"), *Name, *Name, Clip, *Name, Clip)));
+        // Their strand hair (SourceAssets/Heroes/manifest.json `grooms`), streamed with the rest so Setup's attach doesn't load it in a hitch.
+        static const TCHAR* const Grooms[3][3] = { {TEXT("Beard"), TEXT("BeardJaw"), nullptr}, {TEXT("Hair"), TEXT("Beard"), TEXT("BeardJaw")}, {TEXT("Hair"), nullptr, nullptr} };
+        for (const TCHAR* G : Grooms[FMath::Clamp(R, 0, 2)])
+            if (G) P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Characters/Heroes/%s/GR_%s_%s.GR_%s_%s"), *Name, *Name, G, *Name, G)));
     }
     P.Add(FSoftObjectPath(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
     for (const TCHAR* A : {TEXT("/Game/Characters/Heroes/Props/SM_HeroArrow.SM_HeroArrow"), TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull"),

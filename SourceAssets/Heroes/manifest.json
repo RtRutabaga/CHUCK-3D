@@ -3,7 +3,7 @@
   "Fighter": {
    "fbx": "HeroFighter/SK_HeroFighter.fbx",
    "height_cm": 187,
-   "tris": 164701,
+   "tris": 148481,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -62,24 +62,6 @@
      "tile_cm": 14.4,
      "gain": 3.468,
      "folder": "SourceAssets/Surfaces/Armor"
-    },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.1,
-      0.07,
-      0.05
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.16,
-      0.11,
-      0.075
-     ]
     },
     "Hero_steel": {
      "type": "pbr",
@@ -230,6 +212,78 @@
     0.0,
     169.5
    ],
+   "grooms": {
+    "Beard": {
+     "abc": "HeroFighter/GR_HeroFighter_Beard.abc",
+     "bone": "head",
+     "strands": 4225,
+     "colour": [
+      0.06,
+      0.04,
+      0.028
+     ],
+     "root": 0.4,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       11.55,
+       0.51,
+       170.22
+      ],
+      "min": [
+       6.98,
+       -6.88,
+       166.19
+      ],
+      "max": [
+       16.14,
+       6.93,
+       172.88
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "HeroFighter/GR_HeroFighter_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 10205,
+     "colour": [
+      0.06,
+      0.04,
+      0.028
+     ],
+     "root": 0.4,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.49,
+      0.46
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       12.9,
+       -0.07,
+       166.1
+      ],
+      "min": [
+       7.39,
+       -6.06,
+       164.01
+      ],
+      "max": [
+       15.78,
+       6.17,
+       169.15
+      ]
+     }
+    }
+   },
    "props": {
     "sword_grip": [
      -0.6196433305740356,
@@ -266,7 +320,7 @@
   "Wizard": {
    "fbx": "HeroWizard/SK_HeroWizard.fbx",
    "height_cm": 179,
-   "tris": 102015,
+   "tris": 70175,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -302,24 +356,6 @@
      ],
      "tile_cm": 40.0,
      "gain": 26.931
-    },
-    "Beard": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.78,
-      0.74,
-      0.68
-     ]
-    },
-    "BeardStrands": {
-     "type": "hair",
-     "texture": "Textures/beard_locks.png",
-     "tint": [
-      0.95,
-      0.92,
-      0.86
-     ]
     },
     "Hero_velvet": {
      "type": "pbr",
@@ -447,22 +483,120 @@
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes01.png"
-    },
-    "Hair": {
-     "type": "hair",
-     "texture": "Textures/long01_diffuse_grey.png",
-     "tint": [
-      1.0,
-      1.0,
-      1.0
-     ]
     }
    },
    "mouth_cm": [
-    14.8,
+    14.9,
     0.0,
-    160.0
+    161.1
    ],
+   "grooms": {
+    "Hair": {
+     "abc": "HeroWizard/GR_HeroWizard_Hair.abc",
+     "bone": "head",
+     "strands": 10186,
+     "colour": [
+      0.62,
+      0.6,
+      0.56
+     ],
+     "root": 0.2,
+     "grey": 0.5,
+     "grey_colour": [
+      0.82,
+      0.81,
+      0.78
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       1.39,
+       -0.07,
+       172.32
+      ],
+      "min": [
+       -5.89,
+       -8.41,
+       161.8
+      ],
+      "max": [
+       12.73,
+       8.44,
+       179.77
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "HeroWizard/GR_HeroWizard_Beard.abc",
+     "bone": "head",
+     "strands": 3953,
+     "colour": [
+      0.62,
+      0.6,
+      0.56
+     ],
+     "root": 0.2,
+     "grey": 0.5,
+     "grey_colour": [
+      0.84,
+      0.83,
+      0.8
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       9.26,
+       0.13,
+       162.15
+      ],
+      "min": [
+       5.95,
+       -7.58,
+       157.91
+      ],
+      "max": [
+       15.29,
+       7.6,
+       166.47
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "HeroWizard/GR_HeroWizard_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 10422,
+     "colour": [
+      0.62,
+      0.6,
+      0.56
+     ],
+     "root": 0.2,
+     "grey": 0.5,
+     "grey_colour": [
+      0.84,
+      0.83,
+      0.8
+     ],
+     "roughness": 0.5,
+     "roots_cm": {
+      "mean": [
+       11.77,
+       -0.12,
+       157.89
+      ],
+      "min": [
+       7.04,
+       -5.87,
+       155.77
+      ],
+      "max": [
+       14.32,
+       5.75,
+       160.61
+      ]
+     }
+    }
+   },
    "props": {
     "staff_grip": [
      -0.5479426383972168,
@@ -483,7 +617,7 @@
   "Ranger": {
    "fbx": "HeroRanger/SK_HeroRanger.fbx",
    "height_cm": 172,
-   "tris": 77522,
+   "tris": 77500,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -639,6 +773,15 @@
      "metal": 0.0,
      "tile_cm": 50.0
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.22,
+      0.075,
+      0.03
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/young_lightskinned_female_diffuse.png"
@@ -677,22 +820,50 @@
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes03.png"
-    },
-    "Hair": {
-     "type": "hair",
-     "texture": "Textures/ponytail01_diffuse.png",
-     "tint": [
-      0.62,
-      0.3,
-      0.14
-     ]
     }
    },
    "mouth_cm": [
     15.4,
     0.0,
-    155.0
+    155.7
    ],
+   "grooms": {
+    "Hair": {
+     "abc": "HeroRanger/GR_HeroRanger_Hair.abc",
+     "bone": "head",
+     "strands": 54594,
+     "colour": [
+      0.3,
+      0.1,
+      0.035
+     ],
+     "root": 0.35,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.45,
+     "roots_cm": {
+      "mean": [
+       1.93,
+       0.56,
+       166.21
+      ],
+      "min": [
+       -4.95,
+       -8.09,
+       155.43
+      ],
+      "max": [
+       13.69,
+       8.11,
+       172.88
+      ]
+     }
+    }
+   },
    "props": {
     "bow_grip": [
      0.47664329409599304,

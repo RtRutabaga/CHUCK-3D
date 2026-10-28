@@ -219,3 +219,51 @@ Budget: dock worker 54.9k, guards 57.3k / 52.1k, market woman 47.8k triangles, 1
 material slots each. Placement and lines: `ADockNPC::SpawnTownsfolk` (the
 guard at the closed city gate, the market woman by the red market stalls,
 lines from References/Original/PHASE-2.md).
+- Strand hair (user 2026-10-28: "for all haired, make hair and beard-hair look better",
+  free resources allowed). Every haired human and hero now has Unreal strand grooms
+  instead of card hair:
+  - **Styles** come from the MakeHuman community's hair editor pack (CC0, Tomas Klecer;
+    `Tools/Get-HairPack.ps1` downloads and checks it into `Local/HairPack`, not committed).
+    They are geometry-node hair curves on the MakeHuman base mesh. `Tools/npc_strands.py`
+    moves each style's guides to the same UV on this body, scaled with the head. MPFB's own
+    Surface Deform needs the base mesh's rest shape, which the kit stores as
+    `rest_position` before baking. The pack's nodes then interpolate, clump and frizz them.
+  - **Spec:** a `groom` list per NPC in `humans.json` / `heroes.json`. Each entry has:
+    - `style`, `group` (`Hair`, `Beard`, `Braid`) and `points`.
+    - `set` overrides a pack input, e.g. `"Duplicate Hair Curves/Amount"` or
+      `"Set Hair Curve Profile/Length"`.
+    - Material: `colour` (linear), `root` (root darkening), `grey` (share of grey
+      strands), `grey_colour` and `roughness`.
+    - Root filters: `fringe` (a bald man's band, thinning upward) and `hairline` (a
+      receding one).
+    - `under`: how flat hair lies under a cap, helmet, hat, kerchief or hood.
+  - **Beards** (`"fill": "beard"`) keep `make_beard`'s volume as their shape, its mouth
+    already cleared. Strands start as the pack grows them, then lengthen (`length`), hang
+    with a slow `wave`, rest on the chest or armour, and end where they leave the volume.
+    The volume and its cards are then dropped; the dwarf's rings stay. Strands reaching
+    the lips are cut (`Mouth.gap`).
+  - **Braids** (`"style": "braid"`): each of `make_braid`'s three plaits is filled with
+    strands (`per_plait`), and the tube braid is dropped.
+  - **Ponytail:** `comb` draws a style's roots back over the scalp to where the previous
+    style's strands gather tightest (the ranger's tie).
+  - **Bones:** each strand belongs to `jaw` (the body's jaw weight > 0.5, i.e. beard below
+    the lips), `head`, or `spine_03` (braids down the back). Groups become `<group>`,
+    `<group>Jaw` and `<group>Back`. The build writes
+    `SourceAssets/.../<Name>/GR_<Name>_<Group>.abc` (centimetres, the FBX's space) and
+    lists them under `grooms` in the manifest, with the roots' mean and bounds.
+  - **Import:** `Tools/Import-NPCGrooms.ps1 [-Set humans|heroes] [-Only ...]` runs after
+    the meshes. It makes `GR_<Name>_<Group>` and `MI_<Name>_<Group>` of `M_NPCHair` (hair
+    shading: per-strand shade, darker roots, grey strands). It checks the imported roots
+    against the build's to within 1.5 cm. Unreal reorders curves, so the check is not per
+    strand.
+  - **Runtime:** `NPCGroom.cpp` attaches each groom to its bone rigidly, undoing the bone's
+    rest transform. The NPCs are posed through a `PoseableMeshComponent`, which a groom
+    binding can't follow. No simulation. The keeper's beard opens with his jaw. `/Game/Characters/Humans`
+    is now always cooked, because the grooms are loaded by path.
+  - **The tavern keeper has a face rig** (`face`): jaw, lids, brows, teeth, tongue. He
+    blinks. His one voiced line (at night) drives the jaw like the others', but no
+    capture has shown him speaking yet. The fighter's beard was seen opening with his jaw.
+  - **Known gaps:**
+    - The ranger's hairline at the temples is thin, and the elf's cap is still the card cap.
+    - Braids and ponytails are rigid to their bone; nothing swings.
+    - Brows are still cards.

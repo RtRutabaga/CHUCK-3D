@@ -4,6 +4,7 @@
 #include "CigarettePickup.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
+#include "NPCGroom.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
@@ -1025,6 +1026,7 @@ void ADockNPC::BeginPlay()
     Phase = FMath::FRandRange(0.f, 30.f);
     NextGlance = FMath::FRandRange(1.f, 3.f);
     if (USkeletalMesh* Mesh = HumanMeshes[static_cast<int32>(Kind)]) Body->SetSkinnedAssetAndUpdate(Mesh);
+    ChuckGroom::Attach(this, Body, Grooms);   // strand hair and beards, where the NPC has them
     BoneIndex.Init(INDEX_NONE, BoneCount);
     Rest.Init(FQuat::Identity, BoneCount);
     if (const USkinnedAsset* Asset = Body->GetSkinnedAsset())

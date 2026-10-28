@@ -2,6 +2,54 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 28 — strand hair and beards for every haired human; tavern keeper face rig (Claude)
+
+- **Request:** build the tavern keeper's rig, and make hair and beard hair look better on every haired character, using any helpful free resources. Base `01ac7c2`.
+- **Built:** see SourceAssets/NPCs/README.md, "Strand hair".
+  - All card hair and beards are now Unreal strand grooms:
+    - Beards: dwarf, tavern keeper, gnome, sailor, fighter, wizard.
+    - Head hair: blacksmith, keeper, gnome, sailor (under his cap), Bobert's fringe, wizard (under his hat), ranger (combed to her ponytail).
+    - Braids of strands: the elf, the market woman.
+  - Styles come from the MakeHuman community hair editor pack (CC0, downloaded by `Tools/Get-HairPack.ps1`, checksummed, not committed). `Tools/npc_strands.py` fits them to each body.
+  - Beards fill the existing beard volumes, so their silhouettes and the clear mouths stay.
+  - The tavern keeper gained `face`: jaw, lid and brow bones, plus teeth and a tongue.
+- **Tested:**
+  - Groom root checks on import pass for all 22 grooms (`Local/grooms-import-*.log`).
+  - In-engine captures: `Local/HairReview/after` with `after_head.png`, `after_back.png` and `after_tq.png`; heroes in `Local/HairReview/heroes`, `heroes_sheet.png`, `heroes_talk.png`.
+  - The fighter's jaw beard opens with his mouth (`hero_talk`).
+  - The keeper's talk capture shows his face and mouth, but he was silent: his only line plays at night.
+  - Packaging: the first `Build-Game -Package` Verify-Package run failed one check, `wizard_seal` (`max_coverage=0.28` against 0.3), in `Local/verify-temple-heroes-20261028-132830.log`.
+    - The seal knits on a timer with random surges; earlier runs gave 0.34–0.41.
+    - Two reruns of the cooked `-ChuckSanctumTest` passed, at 0.46 and 0.76 (`Local/sanctum-retry-1.log`, `-2.log`).
+    - The hero grooms are now streamed with the sanctum's assets rather than loaded at Setup, and the second candidate's seal passed.
+    - Every groom now has a 25 m cull distance: before it, every haired NPC drew from anywhere on the map, which slowed frames.
+    - The third candidate failed one timing check once: the Chult birds bridge took 20.4 s against the usual 17.3. Two standalone reruns passed.
+    - A full `Verify-Package` rerun on that same candidate passed all 182 checks (`Local/verify-package-20261028-153227.log`).
+  - Not played by hand.
+- **Remaining flaws:**
+  - Grooms are rigid on their bone, with no simulation: braids and the ranger's ponytail don't swing.
+  - The ranger's hairline at the temples is thin, and the elf's scalp is still the card cap under her strand braid.
+  - Brows are still cards.
+  - Orphaned material instances from the old card slots (e.g. `MI_*_BeardStrands`) remain in the content folders.
+- **Contract compatibility:**
+  - The tavern keeper's mesh now has the shared face bones (as the other face-rigged NPCs do).
+  - New slots: `Scalp` on the ranger; `Teeth`/`Tongue` on the keeper. Removed slots: `Beard`/`BeardStrands`, MakeHuman `Hair` where replaced, `Fringe`.
+  - New runtime groom components on ADockNPC and ATempleHero (`NPCGroom.cpp`). No clip or skeleton changes.
+  - `/Game/Characters/Humans` is now always cooked.
+  - `Import-TempleHeroes` deletes a hero mesh before re-importing when it lost a slot.
+- **Source of truth:**
+  - Setup: `Tools/Get-HairPack.ps1`.
+  - Build: `build_npc_humans.py` with `groom` in `humans.json`; `build_temple_heroes.py` with `heroes.json`.
+  - Import: `Import-NPCHumans -Only <haired>`, `Import-TempleHeroes`, `Import-NPCGrooms -Set humans`, `Import-NPCGrooms -Set heroes`.
+  - The hero clips, surfaces and fabrics that the import re-saved were restored from HEAD.
+- **Binary assets (LFS):** 22 Alembic files (49 MB), 22 groom assets (39 MB), the updated FBXs, meshes and MIs, plus `M_NPCHair`.
+- **Tools:**
+  - Blender 4.5.14, about 20 runs.
+  - UE 5.7.4: editor builds ×2; human, hero and groom imports; about 10 uncooked captures; `Build-Game -Package` ×3; cooked sanctum test ×2, cooked birds test ×2, full Verify-Package ×4.
+  - Downloaded: `haireditor.zip` (18 MB, MakeHuman community, CC0) only.
+- **Launcher:** promoted as `Hair` with `Tools/Promote-Build.ps1`; the root `Launch-Chuck.cmd` runs this build.
+- **Next owner:** either agent can take the next part. Strand simulation, or the hairline and brow follow-ups, are better suited to Claude.
+
 ## October 28 — better NPC faces; mouths seen through beards (Claude)
 
 - **Request:** make all humanoid NPCs look better, in particular faces and beards; for bearded ones, mouths visible through the beard. Base `be02b3a`.

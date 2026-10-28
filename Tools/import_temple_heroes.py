@@ -348,6 +348,12 @@ def import_hero(name, info):
     data.set_editor_property('update_skeleton_reference_pose', True)
     data.set_editor_property('normal_import_method', unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS)
     data.set_editor_property('vertex_color_import_option', unreal.VertexColorImportOption.REPLACE)
+    # A re-import keeps the old mesh's material slots: when the hero lost one (the card beard and MakeHuman
+    # hair went to strand grooms, 2026-10-28) the old mesh goes first.
+    old = unreal.load_asset(f'{folder}/SK_Hero{name}')
+    if old and {str(m.get_editor_property('material_slot_name')).split('.')[0] for m in old.get_editor_property('materials')} - set(info['slots']):
+        print(f'CHUCK_HERO_MESH_REPLACED {name}')
+        ASSETS.delete_loaded_asset(old)
     task = unreal.AssetImportTask()
     task.filename = str(SOURCE / info['fbx']); task.destination_path = folder; task.destination_name = f'SK_Hero{name}'
     task.automated = True; task.replace_existing = True; task.save = True; task.options = options

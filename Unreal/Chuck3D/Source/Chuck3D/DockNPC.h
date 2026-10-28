@@ -387,6 +387,7 @@ protected:
 private:
     UPROPERTY() UCapsuleComponent* Blocker;
     UPROPERTY() UPoseableMeshComponent* Body;
+    UPROPERTY() TArray<class UGroomComponent*> Grooms;   // strand hair on its bones (NPCGroom.h)
     TArray<int32> BoneIndex;
     FVector2D Look = FVector2D::ZeroVector;       // yaw, pitch (deg) of the head
     FVector2D Glance = FVector2D::ZeroVector;     // idle target
