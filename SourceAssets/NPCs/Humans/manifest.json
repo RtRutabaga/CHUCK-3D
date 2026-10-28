@@ -3,7 +3,7 @@
   "DockWorker": {
    "fbx": "DockWorker/SK_DockWorker.fbx",
    "height_cm": 180,
-   "tris": 55824,
+   "tris": 58471,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -79,8 +79,26 @@
      "type": "eye",
      "texture": "Textures/brown_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow005.png"
     },
     "Lash": {
@@ -97,7 +115,7 @@
   "Guard": {
    "fbx": "Guard/SK_Guard.fbx",
    "height_cm": 183,
-   "tris": 57824,
+   "tris": 60471,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -173,20 +191,43 @@
      "type": "eye",
      "texture": "Textures/brown_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow002.png"
     },
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes02.png"
     }
-   }
+   },
+   "mouth_cm": [
+    16.4,
+    0.0,
+    164.3
+   ]
   },
   "MarketWoman": {
    "fbx": "MarketWoman/SK_MarketWoman.fbx",
    "height_cm": 166,
-   "tris": 77292,
+   "tris": 79940,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -280,8 +321,26 @@
      "type": "eye",
      "texture": "Textures/green_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow008.png"
     },
     "Lash": {
@@ -298,7 +357,7 @@
   "GuardWoman": {
    "fbx": "GuardWoman/SK_GuardWoman.fbx",
    "height_cm": 174,
-   "tris": 52084,
+   "tris": 54732,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -374,20 +433,43 @@
      "type": "eye",
      "texture": "Textures/bluegreen_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow007.png"
     },
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes04.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.4,
+    0.0,
+    155.6
+   ]
   },
   "SideGuard": {
    "fbx": "SideGuard/SK_SideGuard.fbx",
    "height_cm": 181,
-   "tris": 57692,
+   "tris": 60340,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -463,15 +545,38 @@
      "type": "eye",
      "texture": "Textures/grey_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow010.png"
     },
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes02.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.9,
+    0.0,
+    162.6
+   ]
   },
   "Zombie": {
    "fbx": "Zombie/SK_Zombie.fbx",
@@ -518,6 +623,11 @@
       0.9,
       0.92,
       0.86
+     ],
+     "subsurface": [
+      0.5,
+      0.5,
+      0.38
      ]
     },
     "Eye": {
@@ -525,19 +635,24 @@
      "texture": "Textures/zombie_eye.png"
     },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow008.png"
     },
     "Lash": {
      "type": "card",
      "texture": "Textures/eyelashes02.png"
     }
-   }
+   },
+   "mouth_cm": [
+    15.1,
+    0.0,
+    159.6
+   ]
   },
   "Blacksmith": {
    "fbx": "Blacksmith/SK_Blacksmith.fbx",
    "height_cm": 184,
-   "tris": 62778,
+   "tris": 65425,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -622,8 +737,26 @@
      "type": "eye",
      "texture": "Textures/grey_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow009.png"
     },
     "Lash": {
@@ -644,7 +777,7 @@
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 107876,
+   "tris": 112806,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -772,8 +905,26 @@
      "type": "eye",
      "texture": "Textures/brown_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow009.png",
      "tint": [
       8.0,
@@ -795,7 +946,7 @@
   "TavernKeeper": {
    "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
    "height_cm": 181,
-   "tris": 80344,
+   "tris": 82266,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -899,7 +1050,7 @@
      "texture": "Textures/grey_eye.png"
     },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow009.png"
     },
     "Lash": {
@@ -920,7 +1071,7 @@
   "ElfElder": {
    "fbx": "ElfElder/SK_ElfElder.fbx",
    "height_cm": 171,
-   "tris": 95130,
+   "tris": 97777,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1012,8 +1163,26 @@
      "type": "eye",
      "texture": "Textures/bluegreen_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow010_grey.png"
     },
     "Lash": {
@@ -1030,7 +1199,7 @@
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
    "height_cm": 100,
-   "tris": 53722,
+   "tris": 57646,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -1134,8 +1303,26 @@
      "type": "eye",
      "texture": "Textures/brownlight_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow010_grey.png",
      "tint": [
       1.25,
@@ -1157,7 +1344,7 @@
   "Sailor": {
    "fbx": "Sailor/SK_Sailor.fbx",
    "height_cm": 176,
-   "tris": 64748,
+   "tris": 69388,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -1249,8 +1436,26 @@
      "type": "eye",
      "texture": "Textures/grey_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow009_grey.png",
      "tint": [
       1.0,
@@ -1391,7 +1596,7 @@
      "texture": "Textures/bobert_eye_closed.png"
     },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow009.png",
      "tint": [
       0.55,

@@ -27,7 +27,7 @@ import shutil
 import sys
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, kdtree
 from mathutils.bvhtree import BVHTree
 from bl_ext.user_default.mpfb.services import HumanService, TargetService, LocationService
 
@@ -742,6 +742,45 @@ def add_face_rig(info, parts, joints=None):
                     if w <= 0: continue
                     b = next((e.weight for e in v.groups if e.group == brow_g.index), 0.)
                     brow_g.add([v.index], w + b, 'REPLACE'); lid.remove([v.index])
+    # Teeth and tongue: the upper teeth on the head, the lower teeth and the tongue on the jaw. The teeth are
+    # split by their pieces (MakeHuman's arches are separate islands), above or below the pieces' middle.
+    for kind in ('Teeth', 'Tongue'):
+        obj = parts.get(kind)
+        if not obj: continue
+        activate(obj)   # only glimpsed in an open mouth: a third of MakeHuman's high-poly teeth is plenty
+        dec = obj.modifiers.new('Light', 'DECIMATE'); dec.ratio = .35
+        bpy.ops.object.modifier_move_to_index(modifier=dec.name, index=0); bpy.ops.object.modifier_apply(modifier=dec.name)
+        for g in list(obj.vertex_groups): obj.vertex_groups.remove(g)
+        head_g, jaw_g = obj.vertex_groups.new(name='head'), obj.vertex_groups.new(name='jaw')
+        bm = bmesh.new(); bm.from_mesh(obj.data); bm.verts.ensure_lookup_table()
+        islands, seen = [], set()
+        for v in bm.verts:
+            if v.index in seen: continue
+            stack, isl = [v], []
+            seen.add(v.index)
+            while stack:
+                u = stack.pop(); isl.append(u.index)
+                for e in u.link_edges:
+                    w = e.other_vert(u)
+                    if w.index not in seen: seen.add(w.index); stack.append(w)
+            islands.append(isl)
+        bm.free()
+        cs = [sum((obj.matrix_world @ obj.data.vertices[i].co for i in isl), Vector()) / len(isl) for isl in islands]
+        # Upper and lower: either side of the bite, a plane z = a + b*y fitted through every piece's centre
+        # (the arches lie symmetrically about it; it tilts front to back, so height alone won't do).
+        n = len(cs); sy = sum(c.y for c in cs); sz = sum(c.z for c in cs)
+        syy = sum(c.y * c.y for c in cs); syz = sum(c.y * c.z for c in cs)
+        den = n * syy - sy * sy
+        b = (n * syz - sy * sz) / den if abs(den) > 1e-12 else 0.
+        a = (sz - b * sy) / n
+        zs = [c.z - (a + b * c.y) for c in cs]
+        split = 0.
+        lower = 0
+        for isl, z in zip(islands, zs):
+            on_jaw = kind == 'Tongue' or z < split
+            (jaw_g if on_jaw else head_g).add(isl, 1., 'REPLACE'); lower += on_jaw
+        if not any(m.type == 'ARMATURE' for m in obj.modifiers): obj.modifiers.new('Armature', 'ARMATURE').object = rig
+        print('CHUCK_MOUTH_PARTS', kind, f'islands={len(islands)}', f'on_jaw={lower}', f'nearest_bite_mm={min(abs(z) for z in zs) * 1000:.1f}' if kind == 'Teeth' else '')
     print('CHUCK_FACE_RIG', f'bones={len(FACE_BONES)}', f'skinned_verts={touched}', f'mouth_z={mouth_z:.3f}', f'lip_line_points={len(contact)}', f'hinge={tuple(round(x, 3) for x in hinge)}')
 
 
@@ -777,6 +816,46 @@ def face_marks(info):
     chin = min((c for c in mid if c.y < nose.y + .06), key=lambda c: c.z)
     back = max(c.y for c in head)
     return nose, chin, (nose.y + back) / 2
+
+
+class Mouth:
+    """The lips' outline, from MPFB's 'lips' group (its outer, forward-facing
+    surface): half-width to the corners, top of the upper lip, bottom of the
+    lower, the lips' front. `gap(p, grow)` < 1 inside the opening a beard keeps
+    clear (user 2026-10-28: "for ones with beards i want to see mouths through
+    beards"): the lips, a hair's breadth over the upper lip's border (the
+    moustache sits on it), a bare band under the lower lip, wider at its corners."""
+    UP, DOWN, SIDE = .0015, .0045, .004
+
+    def __init__(self, info):
+        nose, chin, _ = face_marks(info)
+        body = info.obj
+        g = body.vertex_groups.get('lips')
+        pts = []
+        if g:
+            for v in body.data.vertices:
+                if v.normal.y < -.25 and any(e.group == g.index and e.weight > .5 for e in v.groups):
+                    pts.append(info.co[v.index])
+        if len(pts) < 8:   # no group: estimated from the nose and chin
+            z = nose.z - .3 * (nose.z - chin.z)
+            self.cx, self.top, self.bottom, self.y = .024, z + .009, z - .011, nose.y + .02
+        else:
+            self.cx = max(abs(c.x) for c in pts)
+            mid = [c for c in pts if abs(c.x) < .006]
+            self.top = max(c.z for c in mid); self.bottom = min(c.z for c in mid)
+            self.y = min(c.y for c in pts)
+        self.mid = (self.top + self.bottom) / 2
+
+    def gap(self, p, grow=0.):
+        hx = self.cx + self.SIDE + grow
+        dz = p.z - self.mid
+        hz = (self.top - self.mid + self.UP if dz > 0 else self.mid - self.bottom + self.DOWN) + grow
+        # The bare band under the lower lip narrows downward (a chin, not a box).
+        if dz < 0: hx *= 1 - .3 * min(1., -dz / max(1e-4, hz))
+        return math.sqrt((p.x / hx) ** 2 + (dz / hz) ** 2)
+
+    def in_front(self, p):
+        return p.y < self.y + .03
 
 
 def nasal_guard(info, material):
@@ -885,14 +964,34 @@ def make_beard(info, spec, slots):
     def chest_front(z):
         near = [c.y for c in torso if abs(c.z - z) < .02]
         return min(near) if near else chin.y + .06
+    mouth = Mouth(info)
+    # The face's front at (x, z): the outer skin, not the mouth's inside behind it.
+    face_pts = [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD and c.y < head_y]
+    face_kd = kdtree.KDTree(len(face_pts))
+    for k, c in enumerate(face_pts): face_kd.insert((c.x, 0., c.z), k)
+    face_kd.balance()
+    def front_y(x, z):
+        near = face_kd.find_range((x, 0., z), .006) or [face_kd.find((x, 0., z))]
+        return min(face_pts[k].y for _, k, _ in near)
     bm = bmesh.new()
     # 1. The jaw: face below the cheekbones, in front of the ears, clear of the nose: a blob per vertex, united by the remesh.
     cheek_z = info.eye_z - spec.get('cheek', .045)
     jaw = [c for i, c in enumerate(info.co) if info.bone[i] in (Body.HEAD, Body.NECK) and c.z < cheek_z and c.y < head_y - .005
            and c.z > chin.z - .05 and not (abs(c.x) < .03 and c.z > nose.z - .016)]
+    # The upper lip's skin, from under the nose down to the lip: the moustache grows there.
+    jaw += [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD and abs(c.x) < .03 and mouth.top < c.z < nose.z - .008
+            and c.y < mouth.y + .02 and mouth.gap(c) > 1]
     for c in jaw:
         n = Vector((c.x, c.y - head_y, 0)).normalized()
         depth = (.011 + .022 * min(1., max(0., (cheek_z - c.z) / .05))) if bushy else (.004 + .019 * min(1., max(0., (cheek_z - c.z) / .06)) ** 1.3)
+        # Clear of the mouth: the hair round it is short, and none grows on the lips.
+        g = mouth.gap(c, depth)
+        if mouth.in_front(c) and g < 1: continue
+        if mouth.in_front(c) and g < 1.3 and c.z < mouth.mid: depth *= .6 + .4 * (g - 1) / .3
+        # Under the lower lip the hair starts short and thickens down the chin, so from below (Chuck's
+        # eye-line) the lip isn't hidden behind a shelf of beard.
+        if mouth.in_front(c) and c.z < mouth.mid and abs(c.x) < mouth.cx + Mouth.SIDE + .015:
+            depth = min(depth, .005 + .45 * max(0., mouth.bottom - Mouth.DOWN - c.z))
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=depth, matrix=Matrix.Translation(c + n * depth * (.55 if bushy else .3)))
     # Sideburns: a band in front of each ear from the jaw up under the helmet's rim (or to the temple bare-headed).
     burns = sideburns(info, cheek_z, spec)
@@ -904,30 +1003,40 @@ def make_beard(info, spec, slots):
     # deep through the middle, rounding off to a blunt bottom; no gap behind it to
     # show it bend. Otherwise a rounded spade down the chest, narrowing to the tip.
     steps = 9
+    # No higher than the bare band under the lower lip (its ellipsoids are 5 and 4.5 cm tall): the mouth shows.
+    cap = mouth.bottom - Mouth.DOWN - .004
     if bushy:
         D = spec.get('depth', .075)
         for k in range(13):
             t = k / 12
-            z = chin.z + .035 - (L + .035) * t
+            z = min(chin.z + .035 - (L + .035) * t, cap - .04)
             back = min(chest_front(z) - clear, chin.y + .02)
             depth = D * (.55 + .45 * math.sin(math.pi * min(1., t / .7) * .5 + .3)) * (1 - .5 * max(0., (t - .7) / .3) ** 2)
+            depth *= .3 + .7 * min(1., t / .4) ** .8   # set back at the top: the mouth sits in a notch, seen from below
             half = W * (.8 + .2 * math.sin(math.pi * min(1., t / .45) * .5)) * (1 - .55 * max(0., (t - .55) / .45) ** 1.5)
             for sx in (-1, -.5, 0, .5, 1):
                 bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=1.,
                     matrix=Matrix.Translation((sx * half * .55, back - depth * .9, z)) @ Matrix.Diagonal((half * .55, depth, .05, 1.)))
     for k in range(0 if bushy else steps + 1):
         t = k / steps
-        z = chin.z + .02 - (L + .02) * t
+        z = min(chin.z + .02 - (L + .02) * t, cap - .035)
         back = min(chest_front(z) - clear, chin.y + .03) if t > .15 else chin.y + .045
-        depth = .05 * (1 - .55 * t)
+        depth = .05 * (1 - .55 * t) * (.4 + .6 * min(1., t / .35) ** .8)   # set back at the top, as the bushy hang
         half = W * (1 - .6 * t ** 1.6)
         for sx in (-1, 0, 1):
             bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=1.,
                 matrix=Matrix.Translation((sx * half * .45, back - depth, z)) @ Matrix.Diagonal((half * (.6 if sx else .75), depth, .045, 1.)))
-    # 3. The moustache: from under the nose, out and down past the corners of the mouth.
+    # 3. The moustache: along the upper lip's border, resting on it, out past the corners of the
+    # mouth and drooping a little beside them, never over the lips.
+    hx = mouth.cx + Mouth.SIDE
+    rim = lambda x: mouth.mid + (mouth.top - mouth.mid + Mouth.UP) * math.sqrt(max(0., 1 - (x / hx) ** 2))
+    radii = [.0085, .0095, .009, .007, .0055]
     for sx in (-1, 1):
-        pts = [Vector((sx * x, nose.y + .012 + y, nose.z - .018 - zz)) for x, y, zz in ((.004, 0, 0), (.022, .006, .008), (.036, .016, .028), (.042, .022, .05))]
-        tube(bm, pts, [.009, .011, .009, .006], 8)
+        pts = []
+        for x, r in zip((.003, .45 * hx, .78 * hx, .97 * hx, hx + .007), radii):
+            z = rim(min(x, .97 * hx)) + r * .9 if x < hx else mouth.mid - .004
+            pts.append(Vector((sx * x, front_y(sx * x, z) - r * .45, z)))
+        tube(bm, pts, radii, 8)
     beard = new_object('beard', bm)
     voxel_merge(beard, .0055, 14)
     # Clumped strands: grooves running down, deeper toward the tip; a bushy beard
@@ -947,6 +1056,13 @@ def make_beard(info, spec, slots):
         activate(beard)
         dec = beard.modifiers.new('Light', 'DECIMATE'); dec.ratio = spec.get('decimate', .45)
         bpy.ops.object.modifier_apply(modifier=dec.name)
+    # Whatever the remesh's rounding still carries in front of the mouth goes back behind the skin
+    # there: the lips show through a clean opening in the hair.
+    cleared = 0
+    for v in beard.data.vertices:
+        if mouth.in_front(v.co) and mouth.gap(v.co) < 1:
+            v.co.y = max(v.co.y, front_y(v.co.x, v.co.z) + .004); cleared += 1
+    beard.data.update()
     # Braids from the tip, each ending in a brass ring (unless `braids` is false: the tavern keeper's plain beard).
     bm, rings_bm = bmesh.new(), bmesh.new()
     tip_z = chin.z - L
@@ -969,71 +1085,82 @@ def make_beard(info, spec, slots):
         bpy.ops.object.select_all(action='DESELECT'); braids.select_set(True); beard.select_set(True)
         bpy.context.view_layer.objects.active = beard; bpy.ops.object.join()
         rings = new_object('beard_rings', rings_bm)
-    # 4. Loose strands: cards hanging from points on the lower beard, a little proud, past its edge.
+    # 4. Strand cards. Since 2026-10-28 there are more of them, narrower, and none over the lips:
+    # a card that would cross the mouth's opening stops short of it (its lock rescaled to end there).
     bm, uv_cards = bmesh.new(), []
+    dense = spec.get('density', 1.6)
+    thin = spec.get('thin', .72)
+    count = lambda key, default: int(spec.get(key, default) * dense)
+    kept = {'cards': 0, 'trimmed': 0, 'dropped': 0}
+    def emit(qs, side, width, drop=False):
+        """A card down the points qs (root first); stopped before the mouth's opening."""
+        for k, q in enumerate(qs):
+            if mouth.in_front(q) and mouth.gap(q, .002) < 1:
+                if drop or k < 3: kept['dropped'] += 1; return
+                qs = qs[:k]; kept['trimmed'] += 1; break
+        u0, u1 = lock_uv(rnd)
+        n = len(qs) - 1
+        col = [(bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - k / n) for k, q in enumerate(qs)]
+        for a, b in zip(col, col[1:]):
+            f = bm.faces.new((a[0], a[1], b[1], b[0]))
+            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
+        kept['cards'] += 1
     pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.co.z < chin.z + .015 and v.normal.y < .2]
     rnd.shuffle(pts)
-    pts = pts[:spec.get('cards', 110)]
+    pts = pts[:count('cards', 110)]
     # And short tufts down the sideburns, so their edges are hair, not a rim.
     burn_top = max((c.z for c, _ in burns), default=chin.z)
     side_pts = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices
                 if chin.z + .03 < v.co.z < burn_top and abs(v.co.x) > .045 and abs(v.normal.x) > .5]
     rnd.shuffle(side_pts)
-    pts += [(co, n, True) for co, n in side_pts[:spec.get('sideburn_cards', 50)]]
+    pts += [(co, n, True) for co, n in side_pts[:count('sideburn_cards', 50)]]
     # Strands lying over the whole beard, following its surface, so it reads as hair rather than a sculpted mass.
     bvh = BVHTree.FromObject(beard, bpy.context.evaluated_depsgraph_get())
-    lying = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .3 and v.co.z < info.eye_z - .05]
-    rnd.shuffle(lying)
-    for co, n in lying[:spec.get('lying_cards', 220)]:
-        flat = Vector((n.x, n.y, 0))
-        side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length = rnd.uniform(.014, .024) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.035, .075) * spec.get('card_scale', 1.) ** .5
-        u0, u1 = lock_uv(rnd)
-        col, p = [], co.copy()
-        for k in range(5):
-            t = k / 4
+    def lie(co, n, step, k_max=5, lift=.0025):
+        qs, p = [], co.copy()
+        for k in range(k_max):
+            t = k / (k_max - 1)
             if k:
-                p = p - Vector((0, 0, length / 4))
+                p = p + step
                 hit, normal, _, _ = bvh.find_nearest(p)
                 if hit is not None: p, n = hit.copy(), normal.copy()
-            q = p + n * (.0025 + .002 * t)
-            col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
-        for a, b in zip(col, col[1:]):
-            f = bm.faces.new((a[0], a[1], b[1], b[0]))
-            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
+            qs.append(p + n * (lift + .002 * t))
+        return qs
+    lying = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .3 and v.co.z < info.eye_z - .05]
+    rnd.shuffle(lying)
+    for co, n in lying[:count('lying_cards', 220)]:
+        flat = Vector((n.x, n.y, 0))
+        side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
+        width, length = rnd.uniform(.014, .024) * thin * spec.get('card_scale', 1.) ** .5, rnd.uniform(.035, .075) * spec.get('card_scale', 1.) ** .5
+        emit(lie(co, n, Vector((0, 0, -length / 4))), side, width)
+    # The moustache: short strands combed out and down from the middle of the lip, ending on its border.
+    tache = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices
+             if v.co.z > mouth.mid and v.normal.y < 0 and abs(v.co.x) < mouth.cx + .012 and mouth.gap(v.co) < 1.9]
+    rnd.shuffle(tache)
+    for co, n in tache[:count('moustache_cards', 45)]:
+        sx = 1. if co.x >= 0 else -1.
+        out = min(1., abs(co.x) / max(.01, mouth.cx))
+        length = rnd.uniform(.012, .022) * spec.get('card_scale', 1.) ** .3
+        d = Vector((sx * (.35 + .35 * out), 0, -1.)).normalized() * (length / 3)
+        side = Vector((-d.z, 0, d.x)).normalized()
+        emit(lie(co, n, d, 4, .0015), side, rnd.uniform(.006, .011))
     # Bushy: short tufts standing out all over (outward and a little down), so its outline is fluff, not a shell.
     if bushy:
         fluff = [(v.co.copy(), v.normal.copy()) for v in beard.data.vertices if v.normal.y < .45 and v.co.z < info.eye_z - .045]
         rnd.shuffle(fluff)
-        for co, n in fluff[:spec.get('fluff_cards', 320)]:
+        for co, n in fluff[:count('fluff_cards', 320)]:
             out = (n * .75 - Vector((0, 0, .65))).normalized()
             side = n.cross(Vector((0, 0, 1)))
             side = side.normalized() if side.length > .1 else Vector((1, 0, 0))
-            width, length = rnd.uniform(.016, .028), rnd.uniform(.025, .05)
-            u0, u1 = lock_uv(rnd)
-            col = []
-            for k in range(4):
-                t = k / 3
-                q = co - n * .004 + out * length * t - Vector((0, 0, .01 * t * t))
-                col.append((bm.verts.new(q - side * width / 2), bm.verts.new(q + side * width / 2), 1 - t))
-            for a, b in zip(col, col[1:]):
-                f = bm.faces.new((a[0], a[1], b[1], b[0]))
-                uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
+            width, length = rnd.uniform(.016, .028) * thin, rnd.uniform(.025, .05)
+            emit([co - n * .004 + out * length * (k / 3) - Vector((0, 0, .01 * (k / 3) ** 2)) for k in range(4)], side, width, drop=True)
     for item in pts:
         co, n = item[0], item[1]
         short = len(item) > 2
         flat = Vector((n.x, n.y, 0))
         side = Vector((n.y, -n.x, 0)).normalized() if flat.length > .1 else Vector((1, 0, 0))
-        width, length = (rnd.uniform(.011, .018), rnd.uniform(.022, .04)) if short else (rnd.uniform(.016, .028) * spec.get('card_scale', 1.) ** .5, rnd.uniform(.05, .12) * spec.get('card_scale', 1.))   # the gnome's trimmed beard: short, fine
-        u0, u1 = lock_uv(rnd)
-        col = []
-        for k in range(5):
-            t = k / 4
-            p = co + n * (.002 + .004 * t + .01 * t * t) - Vector((0, 0, length * t))
-            col.append((bm.verts.new(p - side * width / 2), bm.verts.new(p + side * width / 2), 1 - t))
-        for a, b in zip(col, col[1:]):
-            f = bm.faces.new((a[0], a[1], b[1], b[0]))
-            uv_cards.append((f, ((u0, a[2]), (u1, a[2]), (u1, b[2]), (u0, b[2]))))
+        width, length = (rnd.uniform(.011, .018) * thin, rnd.uniform(.022, .04)) if short else (rnd.uniform(.016, .028) * thin * spec.get('card_scale', 1.) ** .5, rnd.uniform(.05, .12) * spec.get('card_scale', 1.))   # the gnome's trimmed beard: short, fine
+        emit([co + n * (.002 + .004 * t + .01 * t * t) - Vector((0, 0, length * t)) for t in (k / 4 for k in range(5))], side, width)
     uvl = bm.loops.layers.uv.new('UVMap')
     for f, uvs in uv_cards:
         for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
@@ -1057,7 +1184,7 @@ def make_beard(info, spec, slots):
     if rings:
         ring = spec.get('ring', {'fabric': 'metal_plate_02', 'tint': [.42, .27, .09]})
         slots['BeardRing'] = {'type': 'fabric', 'fabric': ring['fabric'], 'tint': ring['tint'], 'tile_cm': TILE_CM[ring['fabric']], 'gain': fabric_gain(ring['fabric'])}
-    print('CHUCK_BEARD', f'length_cm={L * 100:.0f}', f'mass_verts={len(beard.data.vertices)}', f'cards={len(uv_cards) // 4}')
+    print('CHUCK_BEARD', f'mouth_cleared={cleared}', f'mouth=({mouth.cx * 100:.1f},{(mouth.top - mouth.bottom) * 100:.1f}cm)', f'length_cm={L * 100:.0f}', f'mass_verts={len(beard.data.vertices)}', f'cards={kept["cards"]}', f'trimmed={kept["trimmed"]}', f'dropped={kept["dropped"]}')
     return [beard, cards] + ([rings] if rings else [])
 
 
@@ -1598,6 +1725,9 @@ def build(name, spec, extra=None):
         obj = HumanService.add_mhclo_asset(str(path), body, asset_type=kind, subdiv_levels=0)
         parts[kind] = obj
     asset('Eyes', DATA / 'eyes/high-poly/high-poly.mhclo')
+    if spec.get('face'):   # a speaking mouth opens: teeth and a tongue behind the lips (MakeHuman CC0), not a void
+        asset('Teeth', DATA / 'teeth/teeth_base/teeth_base.mhclo')
+        asset('Tongue', DATA / 'tongue/tongue01/tongue01.mhclo')
     asset('Eyebrows', DATA / f"eyebrows/{spec['eyebrows']}/{spec['eyebrows']}.mhclo")
     asset('Eyelashes', DATA / f"eyelashes/{spec['eyelashes']}/{spec['eyelashes']}.mhclo")
     if spec.get('hair'): asset('Hair', DATA / f"hair/{spec['hair']}/{spec['hair']}.mhclo")
@@ -1684,9 +1814,16 @@ def build(name, spec, extra=None):
         for poly in obj.data.polygons: poly.material_index = 0
     assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
     if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
+    if spec.get('skin_subsurface'): slots['Skin']['subsurface'] = spec['skin_subsurface']   # the zombie's dead flesh: no warm glow through it
     assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(ROOT / spec['eye_texture'] if spec.get('eye_texture') else DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
+    for kind, tex, tint in (('Teeth', DATA / 'teeth/teeth_base/teeth.png', spec.get('teeth_tint', [.62, .56, .47])),
+                            ('Tongue', DATA / 'tongue/tongue01/tongue01_diffuse.png', [.55, .4, .38])):
+        if kind in parts:   # in the mouth's shade: dimmed a little, glossy
+            assign(parts[kind], kind); slots[kind] = {'type': 'teeth', 'texture': keep_texture(tex), 'tint': tint}
     brow_png = ROOT / spec['brow_texture'] if spec.get('brow_texture') else next((DATA / f"eyebrows/{spec['eyebrows']}").glob('*.png'))   # the old elf's grey (Tools/build_elf_textures.py)
-    assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'card', 'texture': keep_texture(brow_png)}
+    # Brows dithered like the beard locks (2026-10-28): hard-clipped they read as painted lines. Lashes stay
+    # clipped: dithered, the lash texture's faint fringe showed as an orange smear on the lids.
+    assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'hair', 'texture': keep_texture(brow_png)}
     if spec.get('brow_tint'): slots['Brow']['tint'] = spec['brow_tint']   # the dwarf's auburn brows to match his beard
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
     assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}

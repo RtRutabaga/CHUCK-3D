@@ -49,7 +49,7 @@ def lock(w, h, strands):
         root = np.clip(RNG.normal(0, .21), -.44, .44) * w
         gather = RNG.uniform(.08, .35)
         tip = RNG.uniform(0, .75) ** 1.4
-        width = RNG.uniform(.6, 1.4)
+        width = RNG.uniform(.5, 1.05)
         bright = RNG.uniform(.35, 1.)
         wave_a, wave_f, wave_p = RNG.uniform(.3, 1.6), RNG.uniform(1., 3.), RNG.uniform(0, 6.28)
         rows = np.nonzero(v >= tip)[0]
@@ -64,15 +64,16 @@ def lock(w, h, strands):
             r, c, a, rv = rows[ok], col[ok], a[ok], vv[ok]
             better = a > cover[r, c]
             cover[r[better], c[better]] = a[better]
-            lum[r[better], c[better]] = bright * (.75 + .25 * rv[better])
+            # Darker toward the root, where the hair over it shades it (2026-10-28: it read as flat paint).
+            lum[r[better], c[better]] = bright * (1. - .38 * rv[better] ** 1.5)
     return lum, cover
 
 
-def build_locks(w=64, h=512):
+def build_locks(w=96, h=768):
     lum = np.zeros((h, w * LOCKS), np.float32)
     alpha = np.zeros_like(lum)
     for k in range(LOCKS):
-        l, c = lock(w, h, int(RNG.integers(70, 110)))
+        l, c = lock(w, h, int(RNG.integers(150, 220)))   # 2026-10-28: finer and denser (was 70-110 at 64 x 512)
         lum[:, k * w:(k + 1) * w] = l
         # The root fades in too (V 0.82..1), so a card lying on the beard has no hard top edge (in game they read as scales).
         root = np.clip((1 - np.arange(h, dtype=np.float32) / h) / .18, 0, 1)[:, None] ** .8

@@ -3,7 +3,7 @@
   "Fighter": {
    "fbx": "HeroFighter/SK_HeroFighter.fbx",
    "height_cm": 187,
-   "tris": 160486,
+   "tris": 164701,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -198,8 +198,26 @@
      "type": "eye",
      "texture": "Textures/brownlight_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow001.png"
     },
     "Lash": {
@@ -248,7 +266,7 @@
   "Wizard": {
    "fbx": "HeroWizard/SK_HeroWizard.fbx",
    "height_cm": 179,
-   "tris": 97320,
+   "tris": 102015,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -399,8 +417,26 @@
      "type": "eye",
      "texture": "Textures/grey_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow007.png",
      "tint": [
       1.9,
@@ -447,7 +483,7 @@
   "Ranger": {
    "fbx": "HeroRanger/SK_HeroRanger.fbx",
    "height_cm": 172,
-   "tris": 74874,
+   "tris": 77522,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -611,8 +647,26 @@
      "type": "eye",
      "texture": "Textures/green_eye.png"
     },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
     "Brow": {
-     "type": "card",
+     "type": "hair",
      "texture": "Textures/eyebrow010.png",
      "tint": [
       0.55,

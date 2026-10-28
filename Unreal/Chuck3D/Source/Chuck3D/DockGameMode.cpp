@@ -987,7 +987,9 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         {TEXT("Back"),190.f,180.f,100.f,92.f,80.f}, {TEXT("Face"),80.f,25.f,166.f,162.f,40.f},
         {TEXT("Scratched"),260.f,60.f,100.f,92.f,62.f},     // a scratch is triggered as this shot starts
         {TEXT("Wide"),420.f,-25.f,230.f,90.f,85.f},       // the place he stands in
-        {TEXT("Hands"),130.f,15.f,0.f,0.f,40.f} };        // close on the hands (heights from his eyes: the gnome's sleeves)
+        {TEXT("Hands"),130.f,15.f,0.f,0.f,40.f},          // close on the hands (heights from his eyes: the gnome's sleeves)
+        {TEXT("Head"),55.f,15.f,0.f,0.f,40.f},            // close on the head itself, wherever it is (2026-10-28 faces and beards)
+        {TEXT("RatEye"),95.f,10.f,0.f,0.f,40.f} };        // the face as Chuck sees it: from 55 cm up, a metre off
     constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
     constexpr float Settle=3.f, Each=1.2f;
     NPCCaptureTime+=DeltaSeconds;
@@ -1013,6 +1015,15 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const bool bHands=FCString::Strcmp(Shot.Name,TEXT("Hands"))==0;
         const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,bHands ? NPC->GetEyeHeight()*.75f : Shot.Height+Lift);
         NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bHands ? NPC->GetEyeHeight()*.6f : Shot.Aim+Lift)-At).Rotation());
+        const bool bHead=FCString::Strcmp(Shot.Name,TEXT("Head"))==0, bRat=FCString::Strcmp(Shot.Name,TEXT("RatEye"))==0;
+        if(bHead || bRat)
+        {
+            // Aimed at the head bone's own place (a turned head, a seated elf, a short dwarf), a little below the eyes.
+            const FVector HeadAt=NPC->GetHeadLocation()-FVector(0,0,4.f);
+            FVector From=HeadAt+Dir*Shot.Distance;
+            if(bRat) From.Z=Feet.Z+55.f;
+            NPCCamera->SetActorLocationAndRotation(From,(HeadAt-From).Rotation());
+        }
         if(NPC->IsBobert() && FCString::Strcmp(Shot.Name,TEXT("Wide"))!=0)
         {
             // He lies in his barrel (its mouth his forward): every shot but the wide one looks in at his face from
@@ -1026,7 +1037,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         SetReviewLamp(NPCCamera.Get(),NPC->IsHostile());   // the zombie stands in the dark
         NPCShot=Step; bNPCShotTaken=false;
         if(FCString::Strcmp(Shot.Name,TEXT("Scratched"))==0) NPC->TakeScratch(NPC->GetActorLocation()+NPC->GetActorForwardVector()*50.f);
-        if(FCString::Strcmp(Shot.Name,TEXT("Face"))==0) NPC->StartVoiceLine(0);   // voiced NPCs are caught mid-line
+        if(FCString::Strcmp(Shot.Name,TEXT("Face"))==0 || FCString::Strcmp(Shot.Name,TEXT("RatEye"))==0) NPC->StartVoiceLine(0);   // voiced NPCs are caught mid-line
     }
     else if(!bNPCShotTaken && NPCCaptureTime-Settle-Step*Each>.8f)
     {

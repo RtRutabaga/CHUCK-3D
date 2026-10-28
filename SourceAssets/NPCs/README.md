@@ -163,6 +163,46 @@ docs/SETUP.md), one heavy process at a time:
   Rebuild order: `build_bobert_textures.py`, `build_npc_humans.py -- Bobert`,
   `build_bobert_barrel.py`, then `Tools/Import-NPCHumans.ps1 -Only Bobert,prop:BobertBarrel`.
 
+- Faces and beards (user 2026-10-28: "make all huminoid npc's look better, in particular
+  faces and beard. for ones with beards i want to see mouths through beards"). Applies to
+  every human here and to the temple heroes (they use this kit):
+  - **Mouths through beards.** `Mouth` measures the lips (MPFB's `lips` group): corners,
+    upper and lower borders. `make_beard` keeps an opening clear: no jaw blob over the
+    lips; the hair just under the lower lip starts short and thickens down the chin; the
+    hang's top is capped below the lower lip and set back, so from Chuck's low eye-line
+    the lip isn't behind a shelf; the moustache is a tube along the upper lip's border,
+    resting on it and drooping past the corners; jaw blobs fill the skin between nose and
+    moustache. Whatever the remesh still leaves in front of the lips is pushed back behind
+    the skin. A strand card that would cross the opening stops short of it. Short
+    moustache cards are combed out and down to the lip's border. The build prints
+    `CHUCK_BEARD mouth_cleared=... trimmed=... dropped=...`.
+  - **Finer beards.** There are 1.6x the strand cards (`density`), 0.72x as wide (`thin`).
+    `beard_locks.png` is regenerated at 96 x 768 per lock with 150-220 thinner strands,
+    darker toward the root.
+  - **Teeth and tongue** (MakeHuman CC0 `teeth_base`, `tongue01`) on every NPC with a
+    `face` rig, decimated to 35%. The upper teeth are on `head`; the lower teeth and the
+    tongue are on `jaw`, split about a bite plane fitted through the pieces (16 up, 17 down
+    on every body). Slot type `teeth` (`M_HumanTeeth`: rough, little specular, shaded),
+    tinted.
+  - **Skin.** `M_HumanSkin` is now subsurface. Its subsurface colour is the skin's own
+    colour times `SubsurfaceColor` (a fixed red lightened the darker skins); the zombie
+    has `skin_subsurface`. It carries a tiling pore and fine-line normal,
+    `skin_detail_normal.png` (`Tools/build_skin_detail.py`, `DetailTile` 20,
+    `DetailStrength` 0.85). `M_HeroSkin` carries the same normal. The `Tint` parameter now
+    exists, so `skin_tint` takes effect (the gnome is a little warmer than before).
+  - **Brows** use the dithered hair material. Lashes stay clipped: dithered, they left an
+    orange smear on the lids.
+  - **Rebuild:** `build_skin_detail.py` and `build_beard_textures.py`, then
+    `build_npc_humans.py`, then `Import-NPCHumans.ps1 -Only <every NPC> -RebuildMasters M_HumanSkin,M_HumanTeeth`.
+    `-RebuildMasters` deletes those masters' files before the editor starts. Clearing a
+    loaded master's graph trips an engine assertion. The heroes follow:
+    `build_temple_heroes.py`, then `Import-TempleHeroes.ps1 -RebuildMasters M_HeroSkin`;
+    restore the re-saved clips and PBR instances from HEAD. A texture whose source is
+    newer than its asset is now re-imported.
+  - **Review:** `-ChuckNPCCapture` has two more shots. `Head` is aimed at the head bone.
+    `RatEye` is from 55 cm up and a metre off, mid-line. `python Tools/face_sheet.py <dir> RatEye <out.png>`
+    makes a contact sheet.
+
 - `build_spear.py`: the guard's 212 cm spear (ash shaft, leaf blade on a socket,
   leather grip wrap, iron butt), 492 tris, in the same fabric materials
   (`SourceAssets/NPCs/Props`, imported as `/Game/Characters/Humans/Props/SM_Spear`).

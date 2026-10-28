@@ -7,7 +7,7 @@ Each hero has its own skeleton (SKEL_Hero<Name>: the human rig plus its prop bon
 and its clips (AS_Hero<Name>_<Clip>, no root motion: the game moves them). Slots:
   * the human kit's types (skin, eye, card, hair, fabric) as Tools/import_npc_humans.py builds them,
     except the skin, which is M_HeroSkin here: subsurface (light through the ears and nose), a little
-    glossier where it should be;
+    glossier where it should be, with the humans' tiling skin relief (kit.skin_detail);
   * 'pbr' slots (the armour, props and gear): M_HeroMetal (ambientCG colour, roughness and metal maps:
     the plate, rims, rivets, the blade, the gilt), M_HeroCloth (Poly Haven colour/ARM/normal as weave:
     leather, velvet, wool, rope, wood) and M_HeroSolid (gem, bowstring, fletching). All three read the
@@ -149,6 +149,7 @@ def build_skin(mat, default):
     out(sca(mat, 'Specular', .42, -500, 300), MP.MP_SPECULAR)
     out(vec(mat, 'SubsurfaceColor', (.72, .2, .12), -500, 400), MP.MP_SUBSURFACE_COLOR)
     out(sca(mat, 'Scatter', .35, -500, 500), MP.MP_OPACITY)
+    out(kit.skin_detail(mat), MP.MP_NORMAL)   # the humans' tiling skin relief (2026-10-28)
 
 
 def master(name, build, **flags):

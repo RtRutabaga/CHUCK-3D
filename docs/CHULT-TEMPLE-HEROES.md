@@ -443,3 +443,13 @@ Clip changes made for this:
   - Splinters and skulls bounce only on the floor plane, so a skull can roll through a plinth.
 - **The rising cut** is authored for the beholder and is not yet used.
 - **Sound:** since October 23 the sanctum plays the user's "boss_battle" score, from the moment Chuck enters, not tied to the fight's events.
+
+## Faces (October 28)
+
+The kit's face and beard pass covers the heroes too: see `SourceAssets/NPCs/README.md` ("Faces and beards").
+- The fighter's and the wizard's beards keep their mouths clear.
+- All three have teeth and a tongue on the jaw.
+- `M_HeroSkin` carries the tiling pore normal.
+
+The rigs, skeletons and clips are unchanged. The hero import re-saved the clips and PBR instances; they were restored from HEAD.
+

@@ -5,8 +5,10 @@ UnrealEditor-Cmd <uproject> -ExecutePythonScript=Tools/import_npc_humans.py -una
 Every human shares one skeleton (SKEL_Human: MPFB's game_engine rig, Unreal
 mannequin bone names, three bones per finger) and four master materials; each NPC gets a material instance per slot
 from SourceAssets/NPCs/Humans/manifest.json:
-  M_HumanSkin    MakeHuman skin texture
+  M_HumanSkin    MakeHuman skin texture; subsurface (light through ears, nose and lips) and a tiling
+                 pore/fine-line normal (skin_detail_normal.png, Tools/build_skin_detail.py) since 2026-10-28
   M_HumanEye     MakeHuman eye texture, glossy
+  M_HumanTeeth   teeth and tongue (slot type "teeth", MakeHuman CC0): texture x Tint, glossy
   M_HumanCard    brows, lashes, hair: masked by the texture's alpha, two-sided
   M_HumanHair    beard locks (slot type "hair"): M_HumanCard with a dithered mask
   M_HumanStubble scalp stubble (slot type "stubble"): the card graph, its mask
@@ -16,7 +18,10 @@ from SourceAssets/NPCs/Humans/manifest.json:
                  the mesh UVs are already in texture repeats (real size)
 Everything under /Game/Characters/Humans is generated. Meshes, clips, textures
 and instances are re-imported in place and existing masters kept; for a clean
-rebuild (skeleton or master graph changes) use Tools/Import-NPCHumans.ps1 -Clean.
+rebuild (skeleton or master graph changes) use Tools/Import-NPCHumans.ps1 -Clean. A master
+alone can be rebuilt: Import-NPCHumans.ps1 -RebuildMasters M_HumanSkin deletes just that master's
+file before the editor starts (clearing its graph in a running editor trips an engine assertion);
+the import makes it again and re-parents the instances of the NPCs it imports, so import them all.
 To re-import only some of it (leaving the rest's assets untouched), set
 CHUCK_HUMANS_ONLY to a comma list of NPC names and/or "clips", "props" (all of
 them) or "prop:<Name>" (just that one, e.g. prop:Tankard)
@@ -43,7 +48,11 @@ def texture(path, folder, kind='color'):
     path = Path(path)
     asset = f'{folder}/T_{path.stem}'
     tex = unreal.load_asset(asset)
-    if not tex:
+    # Re-imported when its source is newer than the asset (a regenerated beard_locks.png, 2026-10-28).
+    on_disk = ROOT / 'Unreal/Chuck3D/Content' / (asset[len('/Game/'):] + '.uasset')
+    stale = tex and on_disk.exists() and path.stat().st_mtime > on_disk.stat().st_mtime
+    if stale: print(f'CHUCK_HUMAN_TEXTURE_REIMPORT {path.name}')
+    if not tex or stale:
         task = unreal.AssetImportTask()
         task.filename = str(path); task.destination_path = folder; task.destination_name = f'T_{path.stem}'
         task.automated = True; task.replace_existing = True; task.save = True
@@ -89,11 +98,61 @@ def constant(mat, value, prop, y):
     LIB.connect_material_property(node(mat, unreal.MaterialExpressionConstant, -250, y, r=value), '', prop)
 
 
+def skin_detail_texture():
+    return texture(ROOT / 'SourceAssets/NPCs/Humans/Textures/skin_detail_normal.png', '/Game/Characters/Humans/Textures', 'normal')
+
+
+def skin_detail(mat, x=-900, y=600):
+    """The tiling skin relief (Tools/build_skin_detail.py) as a normal: UV x DetailTile, eased toward flat
+    by DetailStrength. Returns the node for MP_NORMAL. Shared with M_HeroSkin (Tools/import_temple_heroes.py)."""
+    M = unreal.MaterialExpressionMultiply
+    uv = node(mat, unreal.MaterialExpressionTextureCoordinate, x - 400, y)
+    tile = node(mat, unreal.MaterialExpressionScalarParameter, x - 400, y + 120, parameter_name='DetailTile', default_value=20.)
+    scaled = node(mat, M, x - 250, y)
+    LIB.connect_material_expressions(uv, '', scaled, 'A'); LIB.connect_material_expressions(tile, '', scaled, 'B')
+    t = tex_param(mat, 'DetailNormal', skin_detail_texture(), unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, x - 100, y)
+    LIB.connect_material_expressions(scaled, '', t, 'UVs')
+    flat = node(mat, unreal.MaterialExpressionConstant3Vector, x - 100, y + 250, constant=unreal.LinearColor(0, 0, 1, 1))
+    k = node(mat, unreal.MaterialExpressionScalarParameter, x - 100, y + 350, parameter_name='DetailStrength', default_value=.85)
+    out = node(mat, unreal.MaterialExpressionLinearInterpolate, x + 150, y)
+    LIB.connect_material_expressions(flat, '', out, 'A'); LIB.connect_material_expressions(t, 'RGB', out, 'B')
+    LIB.connect_material_expressions(k, '', out, 'Alpha')
+    return out
+
+
 def build_skin(mat, default):
-    t = tex_param(mat, 'Diffuse', default, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -500, 0)
-    LIB.connect_material_property(t, 'RGB', unreal.MaterialProperty.MP_BASE_COLOR)
-    constant(mat, .55, unreal.MaterialProperty.MP_ROUGHNESS, 200)
-    constant(mat, .35, unreal.MaterialProperty.MP_SPECULAR, 300)
+    """Since 2026-10-28 ("make all huminoid npc's look better, in particular faces"): subsurface, as the
+    heroes' skin already was, with the skin relief; a touch glossier. Tint (the zombie's dead grey) and
+    SubsurfaceColor per instance."""
+    M = unreal.MaterialExpressionMultiply
+    t = tex_param(mat, 'Diffuse', default, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -800, 0)
+    tint = node(mat, unreal.MaterialExpressionVectorParameter, -800, 250, parameter_name='Tint', default_value=unreal.LinearColor(1, 1, 1, 1))
+    base = node(mat, M, -500, 0)
+    LIB.connect_material_expressions(t, 'RGB', base, 'A'); LIB.connect_material_expressions(tint, '', base, 'B')
+    LIB.connect_material_property(base, '', unreal.MaterialProperty.MP_BASE_COLOR)
+    # Scatter kept low and its colour deep: at the heroes' .35 and bright red the townsfolk read as pink wax in daylight.
+    for name, v, prop, y in (('Roughness', .48, unreal.MaterialProperty.MP_ROUGHNESS, 200), ('Specular', .42, unreal.MaterialProperty.MP_SPECULAR, 300),
+                             ('Scatter', .2, unreal.MaterialProperty.MP_OPACITY, 500)):
+        LIB.connect_material_property(node(mat, unreal.MaterialExpressionScalarParameter, -500, y, parameter_name=name, default_value=v), '', prop)
+    # The light through the skin is the skin's own colour, deepened toward red (a fixed red lightened the darker skins).
+    sss = node(mat, M, -300, 400)
+    LIB.connect_material_expressions(base, '', sss, 'A')
+    LIB.connect_material_expressions(node(mat, unreal.MaterialExpressionVectorParameter, -500, 450, parameter_name='SubsurfaceColor',
+                                          default_value=unreal.LinearColor(1.2, .45, .3, 1)), '', sss, 'B')
+    LIB.connect_material_property(sss, '', unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+    LIB.connect_material_property(skin_detail(mat), '', unreal.MaterialProperty.MP_NORMAL)
+
+
+def build_teeth(mat, default):
+    t = tex_param(mat, 'Diffuse', default, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -600, 0)
+    tint = node(mat, unreal.MaterialExpressionVectorParameter, -600, 250, parameter_name='Tint', default_value=unreal.LinearColor(1, 1, 1, 1))
+    mul = node(mat, unreal.MaterialExpressionMultiply, -300, 0)
+    LIB.connect_material_expressions(t, 'RGB', mul, 'A'); LIB.connect_material_expressions(tint, '', mul, 'B')
+    LIB.connect_material_property(mul, '', unreal.MaterialProperty.MP_BASE_COLOR)
+    # Inside the mouth: rough enough not to mirror the sky, little specular, shaded (the lips and cheeks hide the light).
+    constant(mat, .55, unreal.MaterialProperty.MP_ROUGHNESS, 300)
+    constant(mat, .25, unreal.MaterialProperty.MP_SPECULAR, 400)
+    constant(mat, .45, unreal.MaterialProperty.MP_AMBIENT_OCCLUSION, 500)
 
 
 def build_eye(mat, default):
@@ -159,7 +218,7 @@ def fabric_textures(name, source=CLOTH):
             texture(source / f'{name}_nor_dx_2k.jpg', folder, 'normal'))
 
 
-def instance(name, folder, parent, textures, tint=None, gain=None):
+def instance(name, folder, parent, textures, tint=None, gain=None, vectors=None):
     path = f'{folder}/{name}'
     mi = unreal.load_asset(path) or TOOLS.create_asset(name, folder, unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
     LIB.set_material_instance_parent(mi, parent)
@@ -169,6 +228,8 @@ def instance(name, folder, parent, textures, tint=None, gain=None):
         LIB.set_material_instance_vector_parameter_value(mi, 'Tint', unreal.LinearColor(*tint, 1))
     if gain is not None:
         LIB.set_material_instance_scalar_parameter_value(mi, 'Gain', gain)
+    for k, v in (vectors or {}).items():
+        LIB.set_material_instance_vector_parameter_value(mi, k, unreal.LinearColor(*v, 1))
     ASSETS.save_loaded_asset(mi, only_if_is_dirty=False)
     return mi
 
@@ -181,7 +242,11 @@ def slot_material(npc, folder, slot, info):
         return instance(f'MI_{npc}_{slot}', folder, parent, {'Diffuse': diff, 'ARM': arm, 'Normal': nor}, info['tint'], info['gain'])
     tex = texture(SOURCE / info['texture'], tex_folder)
     if info['type'] == 'skin':
-        parent = master('M_HumanSkin', lambda m: build_skin(m, tex))
+        parent = master('M_HumanSkin', lambda m: build_skin(m, tex), shading_model=unreal.MaterialShadingModel.MSM_SUBSURFACE)
+        return instance(f'MI_{npc}_{slot}', folder, parent, {'Diffuse': tex}, info.get('tint', (1, 1, 1)),
+                        vectors={'SubsurfaceColor': info.get('subsurface', (1.2, .45, .3))})
+    elif info['type'] == 'teeth':
+        parent = master('M_HumanTeeth', lambda m: build_teeth(m, tex))
     elif info['type'] == 'eye':
         parent = master('M_HumanEye', lambda m: build_eye(m, tex), blend_mode=unreal.BlendMode.BLEND_MASKED)
     elif info['type'] == 'card':

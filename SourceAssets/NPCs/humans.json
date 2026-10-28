@@ -485,6 +485,7 @@
      ]
     }
    ],
+   "skin_subsurface": [0.5, 0.5, 0.38],
    "skin_texture": "SourceAssets/NPCs/Humans/Textures/zombie_skin_diffuse.png",
    "eye_texture": "SourceAssets/NPCs/Humans/Textures/zombie_eye.png"
   },

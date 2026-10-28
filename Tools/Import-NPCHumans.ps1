@@ -7,6 +7,7 @@
 param(
     [switch]$Clean,
     [string[]]$Only = @(),
+    [string[]]$RebuildMasters = @(),   # e.g. M_HumanSkin: that master made again (its file deleted first; import every NPC)
     [string]$EngineRoot = 'C:\Program Files\Epic Games\UE_5.7'
 )
 $ErrorActionPreference='Stop'
@@ -18,6 +19,10 @@ $project=Join-Path $projectRoot 'Unreal\Chuck3D\Chuck3D.uproject'
 $log=Join-Path $projectRoot 'Local\humans-import.log'
 if ($Clean -and $Only) { throw '-Clean rebuilds everything; it cannot be combined with -Only.' }
 $env:CHUCK_HUMANS_ONLY=($Only -join ',')
+foreach ($m in $RebuildMasters) {   # made again by the import, which re-parents the instances it imports
+    $file=Join-Path $content "$m.uasset"
+    if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file -Force }
+}
 & (Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe') $project "-ExecutePythonScript=$(Join-Path $PSScriptRoot 'import_npc_humans.py')" -unattended -nosplash -NoLiveCoding "-abslog=$log" | Out-Null
 if (!(Select-String -LiteralPath $log -Pattern 'CHUCK_HUMANS_IMPORT_READY' -Quiet) -or (Select-String -LiteralPath $log -Pattern 'Traceback' -Quiet)) { throw "Human import failed; inspect $log" }
 Select-String -LiteralPath $log -Pattern 'CHUCK_HUMAN' | ForEach-Object { $_.Line.Substring($_.Line.IndexOf('CHUCK')) }

@@ -2,6 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 28 — better NPC faces; mouths seen through beards (Claude)
+
+- **Request:** make all humanoid NPCs look better, in particular faces and beards; for bearded ones, mouths visible through the beard. Base `be02b3a`.
+- **Built:** all 13 townsfolk and the three temple heroes (see SourceAssets/NPCs/README.md, "Faces and beards"):
+  - Beards keep the lips clear. The moustache rests on the upper lip's border, the hang is set back below the lower lip, and the strand cards stop short of the mouth.
+  - Beards are finer: more, narrower strand cards and a regenerated lock texture.
+  - Teeth and a tongue are on the jaw of every face-rigged NPC.
+  - Skin is subsurface, its colour following the skin's own, with a generated tiling pore normal (also on the hero skin).
+  - Brows are soft-edged.
+- **Tested:**
+  - Blender reviews: `Local/FaceReview/blender`, `Local/FaceReview/heroes`.
+  - In-engine portraits, before and after: `Local/FaceReview/before`, `final`, `final_rat.png`, `final_head.png`, `final_dwarf_talk.png`; heroes in `heroes_sheet.png`.
+  - Sanctum `portraits`+`hero_talk` passed (`Local/sanctum-faces.log`, jaws moving).
+  - Packaged Verify-Package passed, 182 checks (`Local/verify-package-20261028-084422.log`).
+  - Not played by hand.
+- **Remaining flaws:**
+  - From very close and low, the dwarf's bushy beard still hides much of his mouth; it shows from about a metre.
+  - The moustache tube's ends are a little lumpy.
+  - The teeth are MakeHuman's, dimmed, and only roughly fitted.
+  - The faces are still MakeHuman's and are not at the reference images' level.
+  - The tavern keeper has no face rig, so no teeth (his mouth never opens).
+  - The gnome is slightly warmer: his `skin_tint` now applies.
+- **Contract compatibility:** no rig, skeleton or clip changes (the teeth are skinned to the existing `head`/`jaw`). There are new mesh slots `Teeth` and `Tongue`, and a new `M_HumanTeeth`. `-ChuckNPCCapture` has two more shots (`Head`, `RatEye`); no test reads them. Import scripts gain `-RebuildMasters`.
+- **Source of truth:** `Tools/build_skin_detail.py`, `build_beard_textures.py`, `build_npc_humans.py`, `build_temple_heroes.py`, then `Import-NPCHumans.ps1 -Only <all> -RebuildMasters M_HumanSkin,M_HumanTeeth` and `Import-TempleHeroes.ps1 -RebuildMasters M_HeroSkin`. The hero clips and PBR instances that the import re-saved were restored from HEAD.
+- **Binary assets (LFS):** all NPC/hero FBXs, `skin_detail_normal.png` (2 MB), teeth/tongue textures (2.4 MB), `beard_locks.png`, the Humans/Heroes meshes, MIs and masters.
+- **Tools:** Blender 4.5.14 ×~12; UE 5.7.4: human import ×6, hero import ×1, Build.bat ×1, uncooked captures ×~8, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1. No downloads or installations (MakeHuman teeth/tongue were already in the installed CC0 pack).
+- **Launcher:** promoted as `Faces`.
+
+Next part of the work can be done here (the escape onto the ship, or further face work such as a better dwarf beard notch).
 ## October 27 — grounded trees, solid logs, jars out of stone, see-through undergrowth, flipbook fire (Claude)
 
 - **Request:** fix what is slightly off in Chult and the temple (floating trees, hollow walk-in logs, urns in fallen pillars); see-through Chult undergrowth; every other fire as good as the flame traps. Base `57f4458`.
