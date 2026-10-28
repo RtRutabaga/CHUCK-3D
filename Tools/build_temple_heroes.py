@@ -236,7 +236,38 @@ def keep_clear(bm, frame, clear, iterations=10, smooth=.5, pin_boundary=True, ta
             v.co = loc + (v.co - loc).normalized() * clear * 1.2
 
 
-def shell(frame, margin, offset, name, mat, smooth=0, clear=None, hem=24, keep_boundary=False):
+def fill_small_holes(bm, max_perimeter):
+    """Close every boundary loop shorter than max_perimeter (m) with a patch: an n-gon poked to its centre and
+    subdivided, so the smoothing that follows can round it into the plate (2026-10-27: the bascinet over the ears)."""
+    nxt = {}
+    for e in bm.edges:
+        if e.is_boundary:
+            a, b = e.verts; nxt.setdefault(a, []).append(b); nxt.setdefault(b, []).append(a)
+    seen, filled = set(), []
+    for start in list(nxt):
+        if start in seen or len(nxt[start]) != 2: continue
+        loop, prev, cur = [start], None, start
+        seen.add(start)
+        while True:
+            nb = next((n for n in nxt[cur] if n is not prev and len(nxt[n]) == 2), None)
+            if nb is None or nb in seen: break
+            loop.append(nb); seen.add(nb); prev, cur = cur, nb
+        if len(loop) < 3 or start not in nxt[loop[-1]]: continue
+        perim = sum((loop[k].co - loop[(k + 1) % len(loop)].co).length for k in range(len(loop)))
+        if perim > max_perimeter: continue
+        print('CHUCK_HERO_HOLE_FILL verts', len(loop), 'perimeter', round(perim, 3))
+        try: f = bm.faces.new(loop)
+        except ValueError as x: print('CHUCK_HOLE_FILL_FAILED', x); continue
+        filled.append(f)
+    if not filled: return 0
+    poked = bmesh.ops.poke(bm, faces=filled)['faces']
+    inner = list({e for f in poked for e in f.edges if not e.is_boundary})
+    bmesh.ops.subdivide_edges(bm, edges=inner, cuts=3, use_grid_fill=True)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return len(filled)
+
+
+def shell(frame, margin, offset, name, mat, smooth=0, clear=None, hem=24, keep_boundary=False, fill=0):
     """The body's surface where margin(c, bone) > 0, cut on its zero line, hems relaxed, pushed `offset`
     out and (smooth > 0) smoothed into a plate's form staying `clear` off the body. Keeps the body's
     skin weights. Returns (object, boundary loops of its outer surface before thickness)."""
@@ -255,6 +286,8 @@ def shell(frame, margin, offset, name, mat, smooth=0, clear=None, hem=24, keep_b
     bm.normal_update()
     for v in bm.verts: v.co += v.normal * offset
     if smooth: keep_clear(bm, frame, clear if clear is not None else offset * .85, smooth, pin_boundary=keep_boundary)
+    if fill:   # after the clearance pass, which would press the patch into the ear's shape; the caller's post rounds it
+        print('CHUCK_HERO_SHELL_FILLED', name, fill_small_holes(bm, fill)); bm.normal_update()
     loops = boundary_loops(bm)
     bm.to_mesh(obj.data); bm.free()
     obj.data.materials.clear(); obj.data.materials.append(mat)
@@ -323,14 +356,42 @@ def rim_and_rivets(frame, loops, mat_rim, mat_rivet, name, thickness, radius=.00
     return out
 
 
+def round_over(obj, frame, centre, clear, iterations=60, sink=.004, k=.5):
+    """Smooth a dome's radius about `centre` (Laplacian on the radius alone, its boundary held), so a swelling the body
+    pressed into it (an ear) spreads into a gentle round, while every vertex stays `clear` off the body and sinks at most
+    `sink` below where it was (2026-10-27: the bascinet showed the fighter's ear in its steel)."""
+    bm = bmesh.new(); bm.from_mesh(obj.data)
+    tree = frame.tree
+    verts = [v for v in bm.verts if not v.is_boundary and v.link_edges]
+    nbr = {v: [e.other_vert(v) for e in v.link_edges] for v in verts}
+    r0 = {v: (v.co - centre).length for v in bm.verts}
+    r = dict(r0)
+    for _ in range(iterations):
+        new = {v: r[v] + k * (sum(r[n] for n in nbr[v]) / len(nbr[v]) - r[v]) for v in verts}
+        for v, x in new.items():
+            r[v] = max(x, r0[v] - sink)
+            d = (v.co - centre).normalized()
+            v.co = centre + d * r[v]
+            loc, nor, _, dist = tree.find_nearest(v.co)
+            if loc is not None and (v.co - loc).dot(nor) < clear and dist < clear * 3:
+                # pushed back out along its own ray until clear
+                for _ in range(8):
+                    v.co += d * clear * .25
+                    loc, nor, _, dist = tree.find_nearest(v.co)
+                    if loc is None or (v.co - loc).dot(nor) >= clear or dist >= clear * 3: break
+                r[v] = (v.co - centre).length
+    bm.to_mesh(obj.data); bm.free()
+
+
 HERO = {}   # the hero being built: rig, frame, slots
 
 
-def plate(frame, name, margin, offset, weights, thickness=.0024, smooth=12, rim=True, rivet_every=None, subdiv=0, shape=None, kind='steel', clear=None, rim_r=.0042):
+def plate(frame, name, margin, offset, weights, thickness=.0024, smooth=12, rim=True, rivet_every=None, subdiv=0, shape=None, kind='steel', clear=None, rim_r=.0042, post=None, fill=0):
     """A steel plate: shell, form, optional shape(bm-less co edit), thickness, rim, rivets, rigid weights."""
     slots = HERO['slots']
     mat = pbr_slot(slots, kind); dark = pbr_slot(slots, 'steel_dark')
-    obj, loops = shell(frame, margin, offset, name, mat, smooth=smooth, clear=clear)
+    obj, loops = shell(frame, margin, offset, name, mat, smooth=smooth, clear=clear, fill=fill)
+    if post: post(obj)
     if shape:
         for v in obj.data.vertices: v.co = shape(v.co.copy())
         loops = [[(shape(p.copy()), n) for p, n in loop] for loop in loops]
@@ -839,11 +900,27 @@ def fighter_gear(info, slots, hide):
     #    and a mail aventail from its lower edge over the neck and the tops of the shoulders.
     nose, chin = F.nose, F.chin
     head_c = Vector((0, F.head_mid_y, info.eye_z + .01))
+    # The ears (2026-10-27): the plate built over them showed their folds, and leaving out their hollows cut holes with
+    # rims and rivets round them. A ball round each ear (its outermost point near eye height) is left out, and the hole
+    # filled and rounded into the dome (fill= below), clear of the ear.
+    ears = []
+    for side in (-1, 1):
+        pts = [c for c, b in zip(info.co, info.bone) if b == Body.HEAD and c.x * side > 0 and info.eye_z - .07 < c.z < info.eye_z + .03]
+        if pts: ears.append(max(pts, key=lambda c: c.x * side))
+    EAR_R = .044
+    ears = [e - Vector((0, 0, .012)) for e in ears]   # centred a little lower, to take in the lobe
+    print('CHUCK_HERO_EARS', [tuple(round(x, 3) for x in e) for e in ears], 'eye_z', round(info.eye_z, 3), 'mid_y', round(F.head_mid_y, 3), 'neck_z', round(neck.z, 3))
     def basc(c, b):
         if b not in (Body.HEAD, Body.NECK): return -1.
-        if F.normal[F.i].dot((c - head_c).normalized()) < .2: return -1.   # the outside of the head only (not the mouth, the ears' hollows)
+        for e in ears:
+            if (c - e).length < EAR_R: return -1.
+        # the inside of the mouth and throat (they reach back past the face opening)
+        if abs(c.x) < .06 and F.normal[F.i].dot((c - head_c).normalized()) < .2: return -1.
         back = clamp((c.y - F.head_mid_y + .02) / .06)
         low = (info.eye_z - .075) * (1 - back) + (neck.z + .03) * back
+        # its edge dropped under each ear, so the hole left round the ear closes and can be filled
+        for e in ears:
+            low -= .045 * clamp(1 - math.hypot(c.y - e.y, c.z - e.z) / .085)
         m = c.z - low
         if c.y < F.head_mid_y:   # the face opening
             open_ = min(.06 - abs(c.x), info.brow_z + .012 - c.z, c.z - (chin.z - .01))
@@ -853,7 +930,8 @@ def fighter_gear(info, slots, hide):
         a = Vector((0, F.head_mid_y + .02, info.top))
         t = clamp(1 - Vector((c.x, c.y - a.y, 0)).length / .1)
         return c + Vector((0, .012 * t * t, .035 * t * t))
-    parts += plate(F, 'helmet', basc, .024, {'head': 1.}, smooth=18, rivet_every=.045, shape=apex, thickness=.0032, rim_r=.005)
+    parts += plate(F, 'helmet', basc, .024, {'head': 1.}, smooth=18, rivet_every=.045, shape=apex, thickness=.0032, rim_r=.005,
+                   post=lambda o: round_over(o, F, head_c, .008, iterations=220, sink=.006), fill=.6)
     def aventail(c, b):
         if b not in (Body.HEAD, Body.NECK) and b not in T | A: return -1.
         back = clamp((c.y - F.head_mid_y + .02) / .06)
@@ -1216,7 +1294,7 @@ def review(name):
     sun.rotation_euler = (math.radians(50), 0, math.radians(30)); sun.data.energy = 3.5
     h = HEROES[name]['height_cm'] / 100.
     for tag, loc, rot, lens in (('front', (3.4, -1.1, h * .62), (84, 0, 72), 50), ('back', (-3.4, 1.1, h * .62), (84, 0, 252), 50),
-                                ('head', (.9, -.35, h * .93), (88, 0, 69), 50), ('three', (2.2, 2.2, h * .7), (82, 0, 135), 50)):
+                                ('head', (.9, -.35, h * .93), (88, 0, 69), 50), ('ear_r', (.02, -.75, h * .93), (88, 0, 0), 60), ('ear_l', (.02, .75, h * .93), (88, 0, 180), 60), ('three', (2.2, 2.2, h * .7), (82, 0, 135), 50)):
         cam = bpy.data.objects.new('Cam', bpy.data.cameras.new('Cam')); s.collection.objects.link(cam)
         cam.location = loc; cam.rotation_euler = tuple(math.radians(a) for a in rot); cam.data.lens = lens; s.camera = cam
         s.render.resolution_x, s.render.resolution_y = 900, 1100

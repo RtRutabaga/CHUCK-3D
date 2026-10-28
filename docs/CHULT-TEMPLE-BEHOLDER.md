@@ -253,7 +253,7 @@ Code: `TempleSanctumScene.h/.cpp` (`ATempleSanctumScene`, spawned by the battle)
 - frame each shot from where the cast stands that frame, and keep the lens at least 3 m from the beholder's centre (it lunges).
 
 ### The entrance (11.2 s, once a session)
-When he first comes out onto the gallery:
+When he first comes out onto the gallery and has been on his feet in the hall for 1.6 s (since October 27: it once fired at the end of leg 4, over its spike pit, even during a fall death, and under the tunnels' music). Time in the air pauses the count, and the sanctum's score must have taken over. Until it plays the beholder hovers without attacking (its scripted opening belongs to the scene), and the fighter's call waits for it:
 1. **Over his shoulder** (0–3.4 s): rising to the balustrade, down into the hall at the beholder.
 2. **Low behind the heroes** (3.4–7.2 s): up at the beholder over the dais; its opening volley comes in this shot.
 3. **The fighter** (7.2–11.2 s): side-on, as he calls "Hold the line!": the first line, 8 s after Chuck comes in, as before.
@@ -282,6 +282,7 @@ Skipped with Esc, the view goes straight to white and on to the throw. If he wer
 
 ### Tests (sanctum trials)
 - `entrance`: its three shots, then control back. `CHUCK_SANCTUM_TRIAL trial=entrance pass=1 entrances=1 shots=3 control_back=1`.
+- `entrance_wait` (October 27): Chuck walked in from leg 4's end with the battle unforced; the scene starts at least 1.55 s after he enters the hall, over 1 m in, with no beholder attack and no line before it.
 - `fireball`: the lines at shortened gaps, the scene's seven shots, the throw and blast, at most 240 fire flares, Sanity 2, in the rubble, control back.
 - `fireball_skip`: Esc 2 s in; Sanity 2, in the rubble, control back.
 - `talk_floor`: the lines after the first wait for him on the floor.

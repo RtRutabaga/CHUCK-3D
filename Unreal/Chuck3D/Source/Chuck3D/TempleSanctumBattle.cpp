@@ -21,6 +21,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
@@ -729,7 +730,9 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
     }
     const bool bWas = bActive;
     bActive = bIn || bForced;
-    if (ATempleBeholder* Bh = TheBeholder.Get()) Bh->SetFighting(bActive && bBeholderFights);
+    // Until the entrance has played, the beholder keeps its opening (the scene counts on it) and only hovers.
+    bEntrancePending = bEntranceScene && !bForced && TheScene.IsValid() && TheScene->GetEntrances() == EntranceBase;
+    if (ATempleBeholder* Bh = TheBeholder.Get()) Bh->SetFighting(bActive && bBeholderFights && !bEntrancePending);
     if (bActive != bWas || !bTickModeSet)
     {
         // Bones refreshed every frame only while the fight is on (its hit tests read them); otherwise only when seen.
@@ -750,13 +753,34 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
         bOnFloor = bIn && F.Z < HZ + 200 && F.Y < GalleryT - 100;
         bHushed = InChultTempleRubble(Chuck->GetActorLocation());
     }
-    // His first coming out onto the gallery this session: the entrance (TempleSanctumScene.h).
-    if (bIn && !bWasIn && bEntranceScene && Chuck && TheScene.IsValid() && TheScene->GetEntrances() == 0 && !bForced
-        && ChultTempleInteriorFrameOf(Chuck->GetActorLocation()).Z > UZ - 150) TheScene->StartEntrance();
+    // His first coming out onto the gallery this session: the entrance (TempleSanctumScene.h). Not at the hall's edge
+    // (user 2026-10-27): the last leg's wall run throws him in quickly, and the old trigger at the end of the leg could
+    // fire over its spike pit (during a fall death, or with the tunnels' score still up). It waits until he has been
+    // on his feet in the hall itself (the gallery, or wherever he has dropped to) and alive for EntranceSettle seconds
+    // (time in the air pauses it), and the sanctum's score has taken over.
+    if (bEntrancePending && Chuck)
+    {
+        const FVector F = ChultTempleInteriorFrameOf(Chuck->GetActorLocation());
+        const bool bInHall = F.X > HS0 && F.X < HS1 && F.Y < HT1 - 30 && F.Y > HT0 && F.Z > HZ - 100 && F.Z < HTop;
+        const UCharacterMovementComponent* Move = Chuck->GetCharacterMovement();
+        const bool bGrounded = Move && Move->IsMovingOnGround();
+        if (!bInHall || Chuck->IsAstral()) EntranceDwell = 0;
+        else if (bGrounded) EntranceDwell += DeltaSeconds;
+        const ADockGameMode* Mode = GetWorld()->GetAuthGameMode<ADockGameMode>();
+        const bool bScore = !Mode || Mode->GetMusicRegion() == 8;
+        if (EntranceDwell >= EntranceSettle && bGrounded && bScore && TheScene->StartEntrance()) { bEntrancePending = false; EntranceDwell = 0; }
+    }
+    else EntranceDwell = 0;
     bWasIn = bIn;
     TickTalk(DeltaSeconds, bIn, Chuck);
     TickFlying(DeltaSeconds, Eye);
     Draw(Eye);
+}
+
+void ATempleSanctumBattle::ReArmEntrance()
+{
+    EntranceBase = TheScene.IsValid() ? TheScene->GetEntrances() : 0;
+    EntranceDwell = 0;
 }
 
 void SpawnTempleSanctumBattle(UWorld* World)
@@ -813,7 +837,7 @@ void StartTempleSanctumReview(UWorld* World)
         {TEXT("beholder_rays"), NAME_None, 8}, {TEXT("beholder_chuck"), NAME_None, 9}, {TEXT("beholder_bite"), NAME_None, 10}, {TEXT("beholder_cone"), NAME_None, 11}, {TEXT("cone_edge"), NAME_None, 15},
         {TEXT("beholder_fight"), NAME_None, 12}, {TEXT("wizard_seal"), NAME_None, 13}, {TEXT("hero_talk"), NAME_None, 14},
         // The cutscenes (2026-10-26, TempleSanctumScene.h): 16 the entrance; 17 the Fireball from the argument to the rubble; 18 the same skipped with Esc.
-        {TEXT("entrance"), NAME_None, 16}, {TEXT("fireball"), NAME_None, 17}, {TEXT("fireball_skip"), NAME_None, 18},
+        {TEXT("entrance"), NAME_None, 16}, {TEXT("entrance_wait"), NAME_None, 20}, {TEXT("fireball"), NAME_None, 17}, {TEXT("fireball_skip"), NAME_None, 18},
         // 19: the lines after the first wait for him on the hall's floor (user 2026-10-26).
         {TEXT("talk_floor"), NAME_None, 19}, {TEXT("battle"), NAME_None, 5}};
     struct FRun
@@ -828,6 +852,7 @@ void StartTempleSanctumReview(UWorld* World)
         int32 TalkLast = -1, TalkOrdered = 1, TalkSounds = 0, TalkSubs = 0;
         float EdgeMoved[3] = {0, 0, 0}; int32 EdgeSafe[3] = {0, 0, 0}, EdgeResp0 = 0; FVector EdgeFrom = FVector::ZeroVector;
         int32 Scene0[4] = {0, 0, 0, 0}, SceneShots = 0; FString SceneShot; bool bSkipSent = false;
+        float HallAt = -1, SceneAt = -1; FVector SceneFrom = FVector::ZeroVector; bool bFoughtEarly = false, bTalkEarly = false; int32 Spoken0 = 0;
         TWeakObjectPtr<ATempleSkeleton> Subject;
         FTimerHandle Timer;
     };
@@ -893,6 +918,23 @@ void StartTempleSanctumReview(UWorld* World)
                 if (AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0))) Ch->ResetAtLocation(W(HallMid + 650, DaisT1 + 1900, HZ + 34.65f));
                 B->RestartTalk(.25f);
                 Run->JawMax[0] = Run->JawMax[1] = Run->JawMax[2] = 0; Run->DuckMin = 1; Run->TalkLast = -1; Run->TalkOrdered = 1; Run->TalkSounds = 0; Run->TalkSubs = 0;
+            }
+            if (T.Kind == 20)
+            {
+                // Walked in from the last leg's end (past its pit), the battle as in play and not forced: the entrance must
+                // wait until he is on his feet in the hall a while, and the beholder hold its opening until it plays.
+                for (ATempleHero* H : {F, Wz, Rg}) { H->EndScript(); H->Rest(); H->SetHeld(false); }
+                B->SetWaves(true); B->SetBeholderFights(true); B->RestartTalk(1.f);
+                B->SetForcedActive(false); B->SetEntranceScene(true); B->ReArmEntrance();
+                if (ATempleSanctumScene* Sc = B->GetScene()) Run->Scene0[0] = Sc->GetEntrances();
+                Run->Spoken0 = B->GetTalkSpoken(); Run->HallAt = Run->SceneAt = -1; Run->bFoughtEarly = Run->bTalkEarly = false; Run->SceneShots = 0; Run->SceneShot.Reset();
+                if (AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0)))
+                {
+                    Ch->ResetAtLocation(W(78710, HT1 + 450, UZ + 34.65f));
+                    Ch->SetActorRotation(FRotator(0, YawToward(Ch->GetActorLocation(), W(78710, HT0, UZ)), 0)); Ch->Recenter();
+                    Ch->SetActorHiddenInGame(false); Ch->SetSanity(AChuckCharacter::MaxSanity);
+                    if (auto* PCc = Cast<APlayerController>(Ch->GetController())) PCc->SetViewTarget(Ch);
+                }
             }
             if (T.Kind >= 16 && T.Kind <= 18)
             {
@@ -1319,6 +1361,40 @@ void StartTempleSanctumReview(UWorld* World)
             bPass = Run->Sub == 1 && Run->TalkLast == 1 && B->GetTalkSpoken() >= 3;
             Note = FString::Printf(TEXT("spoken_on_gallery=%d spoken_after=%d on_floor=%d seconds=%.1f"), Run->TalkLast, B->GetTalkSpoken(), B->IsChuckOnFloor(), Age);
             if (bDone && Ch) Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum));
+            break;
+        }
+        case 20:
+        {
+            ATempleSanctumScene* Sc = B->GetScene();
+            AChuckCharacter* Ch = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+            if (!Sc || !Ch) { bDone = true; Note = TEXT("no_scene"); break; }
+            const FVector Fr = ChultTempleInteriorFrameOf(Ch->GetActorLocation());
+            const bool bStarted = Sc->GetEntrances() > Run->Scene0[0];
+            if (!bStarted)
+            {
+                // On toward the hall's far end (the balustrade stops him on the gallery).
+                const FVector D = (W(78710, HT0, UZ) - W(78710, HT1, UZ)).GetSafeNormal2D();
+                Ch->SetTestStickWorld(D); Ch->AddMovementInput(D, 1.f, true);
+                if (Run->HallAt < 0 && Fr.Y < HT1 - 30) Run->HallAt = Now;
+                if (const ATempleBeholder* Bh = B->GetBeholder()) Run->bFoughtEarly |= Age > .3f && Bh->IsFighting();   // (the first frames still show the last trial's forced fight)
+                Run->bTalkEarly |= B->GetTalkSpoken() > Run->Spoken0;
+            }
+            else if (Run->SceneAt < 0) { Run->SceneAt = Now; Run->SceneFrom = Fr; }
+            const FString ShotNow = Sc->GetShotName();
+            if (!ShotNow.IsEmpty() && ShotNow != Run->SceneShot) { Run->SceneShot = ShotNow; ++Run->SceneShots; }
+            bDone = (Run->SceneAt > 0 && !Sc->IsPlaying()) || Age > 40.f;
+            const bool bBack = Ch->InputEnabled() && !Sc->IsPlaying();
+            const float Wait = Run->SceneAt > 0 && Run->HallAt > 0 ? Run->SceneAt - Run->HallAt : -1.f;
+            bPass = Run->SceneAt > 0 && Wait >= ATempleSanctumBattle::EntranceSettle - .05f && Run->SceneFrom.Y < HT1 - 100 && !Run->bFoughtEarly && !Run->bTalkEarly && Run->SceneShots >= 3 && bBack;
+            Note = FString::Printf(TEXT("entrances=%d wait=%.2f depth=%.0f fought_early=%d talk_early=%d shots=%d control_back=%d seconds=%.1f"),
+                Sc->GetEntrances() - Run->Scene0[0], Wait, HT1 - Run->SceneFrom.Y, Run->bFoughtEarly, Run->bTalkEarly, Run->SceneShots, bBack, Age);
+            if (bDone)
+            {
+                B->SetForcedActive(true); B->SetEntranceScene(false);
+                Ch->SetTestStick(FVector2D::ZeroVector);
+                Ch->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Sanctum)); Ch->SetActorHiddenInGame(true);
+                if (auto* PCc = Cast<APlayerController>(Ch->GetController())) { PCc->SetViewTarget(Camera); Ch->DisableInput(PCc); }
+            }
             break;
         }
         case 16: case 17: case 18:

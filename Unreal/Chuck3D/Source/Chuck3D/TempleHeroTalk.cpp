@@ -124,6 +124,8 @@ void ATempleSanctumBattle::TickTalk(float DeltaSeconds, bool bIn, const AChuckCh
     // floor (user 2026-10-26: "wait until chuck is on the main floor before picking up the next lines"): the waits only
     // run while he is there, so the argument's 24 s are 24 s of the fight on the floor, however long the stairs took.
     if (TalkStep > 0 && !bOnFloor) return;
+    // The fighter's call is timed to the entrance's last shot: its wait starts with the scene (2026-10-27).
+    if (TalkStep == 0 && bEntrancePending) return;
     TalkWait += DeltaSeconds;
     if (TalkWait < Script[TalkStep].Gap * TalkGapScale) return;
     // The argument is the Fireball's cutscene (TempleSanctumScene.h, 2026-10-26): it takes the view first, once the

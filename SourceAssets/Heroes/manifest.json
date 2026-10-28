@@ -3,7 +3,7 @@
   "Fighter": {
    "fbx": "HeroFighter/SK_HeroFighter.fbx",
    "height_cm": 187,
-   "tris": 162586,
+   "tris": 160486,
    "slots": {
     "Gambeson": {
      "type": "fabric",

@@ -45,6 +45,8 @@ Each body is an MPFB human made with the human kit (`Tools/build_npc_humans.py`,
 
 ### Plate
 
+Ears (October 27): the bascinet used to leave out the ears' hollows, which cut holes round each ear, each with its own rim and rivets; running the plate over the ears instead showed their folds in the steel. Now a ball round each ear (4.4 cm) is left out, its hole filled with a subdivided patch after the clearance pass (`fill_small_holes`), and the dome's radius smoothed about the head's centre (`round_over`), held 8 mm clear of the ear. Its lower edge dips under each ear so the hole stays closed. Reviews include side-on head views (`ear_r`, `ear_l`).
+
 Rivets (October 26): each sits on whichever side of its rim lies on the plate (`rim_and_rivets`, a BVH of the plate). Toward the rim loop's centre, as before, put the bascinet's face-opening rivets on the fighter's forehead.
 
 Plate is a shell of the body region, pushed out over the layers under it. It is then smoothed until it is a plate's simple convex form, with no pecs and no navel, while holding a set clearance off the body. Then it gets:
@@ -320,7 +322,7 @@ User request, October 25, 2026: the trio's ElevenLabs takes of their 2D lines (`
 
 | Wait | Who | Line | Length |
 |---|---|---|---|
-| 8 s after he comes in | Fighter | "Hold the line! It bleeds - I have seen it bleed!" | 4.2 s |
+| 8 s after the entrance cutscene starts | Fighter | "Hold the line! It bleeds - I have seen it bleed!" | 4.2 s |
 | 2.8 s | Wizard | "Keep its eye off me! The binding needs another minute!" | 4.7 s |
 | 2.8 s | Ranger | "I'll cover you! We have to keep pushing forward!" | 3.5 s |
 | 24 s | Ranger | "Wait, I know those sigils, you can't cast that here!" | 4.1 s |
@@ -329,7 +331,7 @@ User request, October 25, 2026: the trio's ElevenLabs takes of their 2D lines (`
 | 1.6 s | Wizard | "......" | 2.5 s |
 | 1.2 s | Wizard | "FIREBALL!!" | 1.9 s |
 
-- The calls start about 8 s after he enters, and the argument about 46 s after he enters. The 2D game starts the argument 24 s after Chuck is sealed into the hall. There is no seal here yet, so the 24 s count from the end of the calls.
+- The calls start about 8 s after the entrance cutscene starts (since October 27 that waits for him to settle in the hall; with the cutscenes off, 8 s after he enters), and the argument about 46 s after he enters. The 2D game starts the argument 24 s after Chuck is sealed into the hall. There is no seal here yet, so the 24 s count from the end of the calls.
 - Each line plays from its hero's head. It can be heard across the hall and from the gallery: full volume within 15 m, fading out over 50 m.
 - The subtitles are the NPCs' (one cue at a time, no speaker name). The boss music ducks under each line, as under the NPCs.
 - The speaker's jaw opens with the line's loudness, up to 9°. The ranger's lips part; the fighter's and wizard's beards hide most of it.

@@ -2,6 +2,18 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 27 — beholder entrance waits in the hall; fighter's helmet over the ears; dimmer crevice glow (Claude)
+
+- **Request:** the entrance cutscene pulled Chuck out of the Astral wind (wind audio stuck, could fire during a pit death); start it once Chuck is a little way into the sanctum, not instantly. Fix the fighter's helmet round his ears. Dim the gold crevice glow. Base `ba8859a`.
+- **Built:** see HANDOFF, CHULT-TEMPLE-BEHOLDER.md, CHULT-TEMPLE-HEROES.md (Plate), CHULT-TEMPLE-RUBBLE.md.
+- **Tested:** Blender reviews `Local/HeroReview/helm0`…`helm9`; uncooked sanctum trials (`Local/scene-trial-1027b.log`: entrance, entrance_wait, fireball, failures=0); crevice and portrait stills; packaged Verify-Package passed on the second run (`Local/verify-package-20261027-175307.log`; first run's 3 Waterdeep failures did not recur). Not played by hand; a pit death was not run as a trial.
+- **Contract compatibility:** `ATempleSanctumBattle::IsEntrancePending/ReArmEntrance/EntranceSettle` (1.6 s grounded in the hall, boss score playing, not Astral); the fighter's opening call waits for the cutscene; new trial `entrance_wait`, required by Verify-Package. The fighter's rig, skeleton and clips are unchanged (mesh only).
+- **Source of truth:** `Tools/build_temple_heroes.py -- Fighter`, then `Tools/Import-TempleHeroes.ps1 -Only Fighter`; re-saved clips and material instances restored from HEAD.
+- **Binary assets (LFS):** `SK_HeroFighter.fbx` and `.uasset`.
+- **Tools:** Blender 4.5.14 ×~10; UE 5.7.4: hero import ×1, Build.bat ×2, uncooked runs ×4, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×2, Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `EntranceWait`.
+
+Next part of the work can be done here (the escape onto the ship).
 ## October 26 — lines wait for the floor; quiet rubble map; resting rubble; glowing crevice (Claude)
 
 - **Request:** wait for Chuck on the hall floor before the heroes' next lines; no trap sounds in the rubble map; no floating rubble; the crevice an opening in rubble that glows faintly gold like the golden cigarettes. Base `c4327ae`.

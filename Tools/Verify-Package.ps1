@@ -179,6 +179,7 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # Also 2026-10-25, the heroes' voiced lines (TempleHeroTalk.cpp): all eight cooked and heard in order, subtitled, jaws moving, the music ducked.
 # 2026-10-26, the cutscenes (TempleSanctumScene.h): the entrance's three shots and control back; the Fireball from the
 # argument to the blast, Chuck thrown into the rubble map at half Sanity with control back; the same skipped with Esc.
+# 2026-10-27, entrance_wait: walked in from the last leg, the entrance waits until he has been on his feet in the hall a while.
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=22 sounds=64 arrow=1 skull=1 fx=5 near_holes=0 beholder_fx=4 seal=1' -Quiet) -or
@@ -194,6 +195,7 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=hero_talk pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_SCENE_READY fx=1 camera=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=entrance pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=entrance_wait pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=fireball_skip pass=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=talk_floor pass=1' -Quiet) -or

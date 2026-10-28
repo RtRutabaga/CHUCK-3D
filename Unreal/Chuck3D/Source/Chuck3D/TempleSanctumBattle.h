@@ -120,6 +120,10 @@ public:
     void SetFireballScene(bool b) { bFireballScene = b; }
     /** Tests: whether his first coming in plays the entrance (on in play). */
     void SetEntranceScene(bool b) { bEntranceScene = b; }
+    /** The entrance waits for him to settle in the hall (2026-10-27); trials re-arm it after it has played. */
+    bool IsEntrancePending() const { return bEntrancePending; }
+    static constexpr float EntranceSettle = 1.6f;   // seconds on his feet in the hall first
+    void ReArmEntrance();
     UMaterialInterface* GetBeholderFxMaterial(int32 I) const { return BeholderFx.IsValidIndex(I) ? BeholderFx[I] : nullptr; }
     UStaticMesh* GetPlaneMesh() const { return Plane; }
 protected:
@@ -159,7 +163,9 @@ private:
     TWeakObjectPtr<ATempleBeholder> TheBeholder;
     TWeakObjectPtr<ATempleSeal> TheSeal;
     TWeakObjectPtr<class ATempleSanctumScene> TheScene;
-    bool bFireballScene = true, bEntranceScene = true, bWasIn = false;
+    bool bFireballScene = true, bEntranceScene = true, bWasIn = false, bEntrancePending = false;
+    int32 EntranceBase = 0;    // the scene's entrance count when it was (re)armed
+    float EntranceDwell = 0;   // seconds on his feet in the hall itself (the entrance waits for EntranceSettle)
     UPROPERTY() UMaterialInterface* SealWebMat = nullptr;
     TArray<TWeakObjectPtr<ATempleSkeleton>> Pool;
     TArray<FTempleSkeletonPost> Reserve;
