@@ -1,4 +1,6 @@
-"""Original synthetic sounds for the temple trap run (Claude, 2026-10-22; docs/CHULT-TEMPLE-RUN.md).
+"""SUPERSEDED 2026-10-27 by Tools/build_temple_trap_sfx.py (recorded CC0 sounds); running this overwrites them.
+
+Original synthetic sounds for the temple trap run (Claude, 2026-10-22; docs/CHULT-TEMPLE-RUN.md).
 No recordings, no dependencies (stdlib only); seeded, so a re-run reproduces the same files.
 The helpers and the stone-chamber reverb follow Tools/gen_temple_trap_sfx.py (which this does not run or change).
 

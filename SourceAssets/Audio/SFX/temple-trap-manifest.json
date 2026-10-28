@@ -1,124 +1,107 @@
 {
-  "provenance": "Original deterministic synthetic temple trap sounds; Tools/gen_temple_trap_sfx.py",
+  "provenance": "CC0 recordings (SFX/Temple/Source/manifest.json) cut and mixed by Tools/build_temple_trap_sfx.py",
   "sounds": [
     {
       "name": "SFX_TempleSpikeRattle_00",
-      "file": "SFX_TempleSpikeRattle_00.wav",
-      "duration": 1.3,
-      "sha256": "685c016dbf5cfcf3b15bd3a2080ed798c7d7a4bc3d63ee012882271aa64ea5c0",
-      "peak_dbfs": -3.0
+      "duration": 0.6,
+      "loudness_db": -21.7,
+      "sha256": "dab9fac18e59a9e4261d7e214e71bab55f234bdc6c759ffb86a158d16c7ad395"
     },
     {
       "name": "SFX_TempleSpikeRattle_01",
-      "file": "SFX_TempleSpikeRattle_01.wav",
-      "duration": 1.3,
-      "sha256": "95d9878eb2cd01c39adf313d4a7fcd1d21bb512ec0e93f58103ac8f81db0b5aa",
-      "peak_dbfs": -3.0
+      "duration": 0.6,
+      "loudness_db": -21.7,
+      "sha256": "0006d0a1bc0651c056c165419c780ad1a6baa6073b8e54a438bcae300d601a06"
     },
     {
       "name": "SFX_TempleSpikeThrust_00",
-      "file": "SFX_TempleSpikeThrust_00.wav",
-      "duration": 1.7,
-      "sha256": "5ebfa877e0057ea708b637916f95b8e351dfecbe10784466aab27ff99fa9fec5",
-      "peak_dbfs": -3.0
+      "duration": 1.3,
+      "loudness_db": -24.5,
+      "sha256": "d8f97cfeb4c28db6105c0ef512b4609952f819d0700c9d791d1c7a2db314c5ef"
     },
     {
       "name": "SFX_TempleSpikeThrust_01",
-      "file": "SFX_TempleSpikeThrust_01.wav",
-      "duration": 1.7,
-      "sha256": "49ec4a1d823e292ab948f16a7ef71df23d13da3faadf9d8da60d7aba517e22bc",
-      "peak_dbfs": -3.0
+      "duration": 1.3,
+      "loudness_db": -24.5,
+      "sha256": "bf889f397452419b4e8b57350c0bdef859e3a69e46c18c0abb793ce534331e97"
     },
     {
       "name": "SFX_TempleSpikeThrust_02",
-      "file": "SFX_TempleSpikeThrust_02.wav",
-      "duration": 1.7,
-      "sha256": "abed68cbbddd762a8405778756032fed29d336819ee363938f560452b8bd8961",
-      "peak_dbfs": -3.0
+      "duration": 1.3,
+      "loudness_db": -24.5,
+      "sha256": "7d7c1bfc2e192c30aff3c6d51e58d54bf8d968b0e6999e1d1c5476873fe3f8f6"
     },
     {
       "name": "SFX_TempleDartClick_00",
-      "file": "SFX_TempleDartClick_00.wav",
-      "duration": 0.85,
-      "sha256": "f39c0e26ce3e41d2ac7dae7ee41f0d7191c0ec56e038cbcb95daf79f936a6690",
-      "peak_dbfs": -3.0
+      "duration": 0.7,
+      "loudness_db": -27.0,
+      "sha256": "0d9a2456b98390d5665bb74d714c842cb8e231912e68dcad4cf358afcc8d65e7"
     },
     {
       "name": "SFX_TempleDartClick_01",
-      "file": "SFX_TempleDartClick_01.wav",
-      "duration": 0.85,
-      "sha256": "22748079c9e7e1b6192e57f1cd7112f581682993e470a56f96b96e60f95a7e0b",
-      "peak_dbfs": -3.0
+      "duration": 0.7,
+      "loudness_db": -27.0,
+      "sha256": "cac0cf226a203404aad637435dcc37aa13021056e073f25dabb076b5b4200708"
     },
     {
       "name": "SFX_TempleDartShot_00",
-      "file": "SFX_TempleDartShot_00.wav",
       "duration": 0.9,
-      "sha256": "0a22b5e57ced4623c5bf111589b819312a9e84e3a28f1307376ddb978adcb4ef",
-      "peak_dbfs": -3.0
+      "loudness_db": -23.7,
+      "sha256": "a99ead93f4ff32dc007b38436753e856f7a981a1f51c2d686bfed3a489c52a01"
     },
     {
       "name": "SFX_TempleDartShot_01",
-      "file": "SFX_TempleDartShot_01.wav",
-      "duration": 0.9,
-      "sha256": "195f0cd870d7dd6437fb601a4905d977de9696173c14981aea23226c68ad8269",
-      "peak_dbfs": -3.0
+      "duration": 0.7,
+      "loudness_db": -23.1,
+      "sha256": "91a4c72b331557ad1eeda25af93d61253ef5449801fc762ea750d879c197095e"
     },
     {
       "name": "SFX_TempleDartShot_02",
-      "file": "SFX_TempleDartShot_02.wav",
-      "duration": 0.9,
-      "sha256": "1daa09853e2e67f1c638783c8675695dced1661bcd6cfc68cffa045b7c3fbd31",
-      "peak_dbfs": -3.0
+      "duration": 0.7,
+      "loudness_db": -23.1,
+      "sha256": "986b682e43ec65241058dcdd5244766eb2231f4c312b725c9c8c2bb6cc2f5a30"
     },
     {
       "name": "SFX_TempleDartHit_00",
-      "file": "SFX_TempleDartHit_00.wav",
-      "duration": 1.0,
-      "sha256": "eec4eb36883fad694bdd96d60fff9127cd72a27ec52fddf5ee5c9a01f63ebda8",
-      "peak_dbfs": -3.0
+      "duration": 0.8,
+      "loudness_db": -28.6,
+      "sha256": "0f81e8ce3b20b5b01ac09f893600f15bcac72f857a231675beb3e0129bca1d97"
     },
     {
       "name": "SFX_TempleDartHit_01",
-      "file": "SFX_TempleDartHit_01.wav",
-      "duration": 1.0,
-      "sha256": "ea07a14e1e6a9a732ee2d02db025a305af05d632be716a7df55313f4c7733cbc",
-      "peak_dbfs": -3.0
+      "duration": 0.8,
+      "loudness_db": -28.6,
+      "sha256": "324947870944d83f5676bfe159129dc7a60601630d6070adad2fdf0e6d73510c"
     },
     {
       "name": "SFX_TempleDartHit_02",
-      "file": "SFX_TempleDartHit_02.wav",
-      "duration": 1.0,
-      "sha256": "713015428a1014e8b04e5464a2e5eaaffd1d041268c0dcdfde1e9799741bbe99",
-      "peak_dbfs": -3.0
+      "duration": 0.8,
+      "loudness_db": -28.6,
+      "sha256": "48b18cc6bf2ab49b0be4f6ff01b1eca85673c1d7010cf9393a17600e83821a88"
     },
     {
       "name": "SFX_TempleSlabCrack_00",
-      "file": "SFX_TempleSlabCrack_00.wav",
       "duration": 1.4,
-      "sha256": "6e789f4803bc180f4c4a4cc28d3034e6bce11b05e95dfb1b19345906eab72774",
-      "peak_dbfs": -3.0
+      "loudness_db": -24.3,
+      "sha256": "5b6e6d832de215496d1a119817ff1b0a62f63644c17478c8e3f233b27b6e6b9a"
     },
     {
       "name": "SFX_TempleSlabCrack_01",
-      "file": "SFX_TempleSlabCrack_01.wav",
       "duration": 1.4,
-      "sha256": "68113436822e4f376a16df5021414c54d306f73fee9ae0c0f3223df1d6e6e3d2",
-      "peak_dbfs": -3.0
+      "loudness_db": -24.3,
+      "sha256": "206361464da7bcf92dfcdb29cca5b1bcf457700c9f91190b88d36c10947e63b4"
     },
     {
       "name": "SFX_TempleSlabFall_00",
-      "file": "SFX_TempleSlabFall_00.wav",
       "duration": 3.2,
-      "sha256": "2d8263df34bf904da54670b4454f9e2fc87f34fec184df935c6647f955ed8b21",
-      "peak_dbfs": -3.0
+      "loudness_db": -17.1,
+      "sha256": "df151a51bc63f8dcebcd5896f84c9a95365690cecb76eb50e894439d255a5c98"
     },
     {
       "name": "SFX_TempleSlabFall_01",
-      "file": "SFX_TempleSlabFall_01.wav",
       "duration": 3.2,
-      "sha256": "c25ea3d82bf6c8382706332c71f056127246f69a28654ebc44d96a47bb67e83e",
-      "peak_dbfs": -3.0
+      "loudness_db": -17.2,
+      "sha256": "d1abd6bc51f16e9f2718e91d7b42d03840aa520cb0d7abb91c700fea417d00f1"
     }
   ]
 }

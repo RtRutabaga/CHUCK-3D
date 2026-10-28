@@ -27,3 +27,4 @@ References/ai-dev-notes.md -text
 # Motion-capture takes are kept byte-exact (their SHA-256 is recorded in the manifest).
 *.bvh -text
 SourceAssets/Audio/SFX/Zombies/**/*.flac filter=lfs diff=lfs merge=lfs -text
+SourceAssets/Audio/SFX/Temple/**/*.flac filter=lfs diff=lfs merge=lfs -text

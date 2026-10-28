@@ -1,4 +1,6 @@
-"""Original synthetic sounds for the temple interior's traps (Claude, 2026-10-20;
+"""SUPERSEDED 2026-10-27 by Tools/build_temple_trap_sfx.py (recorded CC0 sounds); running this overwrites them.
+
+Original synthetic sounds for the temple interior's traps (Claude, 2026-10-20;
 docs/CHULT-TEMPLE-INTERIOR.md). No recordings, no dependencies (stdlib only); seeded,
 so a re-run reproduces the same files.
 

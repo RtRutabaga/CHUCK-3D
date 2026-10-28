@@ -55,7 +55,8 @@ void AChultTempleTraps::LoadSounds()
     Load(DartHit, TEXT("SFX_TempleDartHit"), 3);
     Load(SlabCrack, TEXT("SFX_TempleSlabCrack"), 2);
     Load(SlabFall, TEXT("SFX_TempleSlabFall"), 2);
-    // The trap run (2026-10-22; Tools/gen_temple_run_sfx.py).
+    // All recorded CC0 sounds since 2026-10-27 (Tools/build_temple_trap_sfx.py; were synthetic).
+    // The trap run's (2026-10-22):
     Load(AxeSwoosh, TEXT("SFX_TempleRunAxeSwoosh"), 3);
     Load(AxeCreak, TEXT("SFX_TempleRunAxeCreak"), 2);
     Load(FireHiss, TEXT("SFX_TempleRunFireHiss"), 2);
@@ -69,7 +70,7 @@ void AChultTempleTraps::Play(const TArray<USoundBase*>& Set, const FVector& At, 
 {
     if (Set.Num() == 0 || !bHearing) return;
     ++SoundsPlayed;
-    UGameplayStatics::PlaySoundAtLocation(this, Set[FMath::RandRange(0, Set.Num() - 1)], At, Volume, FMath::FRandRange(.95f, 1.05f), 0.f, Attenuation);
+    UGameplayStatics::PlaySoundAtLocation(this, Set[FMath::RandRange(0, Set.Num() - 1)], At, Volume * TrapVolume,FMath::FRandRange(.95f, 1.05f), 0.f, Attenuation);
 }
 
 void AChultTempleTraps::AddSpikeBand(UProceduralMeshComponent* Mesh, const FVector& Floor, const FVector& Along, float HalfDepth, float HalfWidth, float Phase)

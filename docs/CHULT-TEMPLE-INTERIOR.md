@@ -77,6 +77,14 @@ Code: `ChultTempleInterior.h/.cpp` (layout, building, checks, review) and `Chult
 
 **Sounds.** `Tools/gen_temple_trap_sfx.py` (stdlib, seeded) synthesises 17 originals with a stone-chamber reverb: spike rattle ×2 and thrust ×3, dart click ×2, shot ×3 and hit ×3, slab crack ×2 and fall ×2. `Tools/import_temple_trap_sfx.py` imports them to `/Game/Art/Audio/SFX`. Played spatialised (2.2 m falloff start, 22 m reach), only within earshot.
 
+**Recorded trap sounds (2026-10-27).** User request: free sounds for the traps, a bit quieter. `Tools/build_temple_trap_sfx.py` (Blender 4.5.14 for its decoder and numpy) cuts all 32 trap sounds, the trap run's included, from CC0 recordings and writes them under the old names, so no slot changed. It supersedes `gen_temple_trap_sfx.py` and `gen_temple_run_sfx.py`. The sources are in `SourceAssets/Audio/SFX/Temple/Source/` (36 unmodified clips, about 28 MB, LFS), with URL, author and SHA-256 for each in its `manifest.json`:
+- spike rattle: small chains shaken (BigSoundBank), a light iron tick (Kenney); spike thrust: a knife blade scraped on stone, an iron clank, a low thud;
+- dart click: two dry wood knocks; shot: a bow's release and swishes (artisticdude); hit: an arrow into a target;
+- slab crack: a tombstone pushed open (stone on stone) with grit; slab fall: a falling stone, slowed for weight;
+- axe: a whoosh slowed to 72%, a creaking metal door for the pivot; fire: LEGIT Audio's fire staff hiss and roar; saw: an empty table saw's whine, a heavy chain and an iron clank for the drop; hit: a heavy punch and metal.
+
+Each slot is levelled to the loudness of the synthetic sound it replaces (a 2 ms-block limiter keeps the peaks at -1 dBFS). The saw's whine is a further 5 dB down, the fire's hiss 3 dB, the axe's creak 3 dB, its roar and the slab fall 2 dB. `AChultTempleTraps::TrapVolume` (0.55, about -5 dB) then scales every trap sound. Each gets the same seeded stone-chamber reverb. Claude chose the cuts from envelope scans and cannot hear them, so none has been auditioned; change a cut or level in the script, re-run it, then run `Tools/import_temple_trap_sfx.py` (it imports every `SFX_Temple*.wav`) with `-AllowCommandletAudio`.
+
 **Death and respawn.** `ChultTempleInteriorSwallows` (below the ring walkway in the pit, below the hall floor in the rift) is an Astral death in `AChuckCharacter::Tick`. `GetAreaStartLocation` asks `ChultTempleInteriorRespawn` first: the start of the space he died in. The interior lies above the world's kill height (the hall floor is about 3 m above world zero), so nothing else changes.
 
 **Dev Checkpoints.** A third column: Temple Well, Temple Hall, Temple Spikes, Temple Piers, Temple Darts.

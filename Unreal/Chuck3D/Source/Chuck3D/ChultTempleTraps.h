@@ -217,6 +217,8 @@ private:
     UPROPERTY() TObjectPtr<USoundAttenuation> Attenuation;
     void LoadSounds();
     void Play(const TArray<USoundBase*>& Set, const FVector& At, float Volume);
+    // Every trap sound's volume is scaled by this (2026-10-27: they were too loud; about -5 dB).
+    static constexpr float TrapVolume = .55f;
     void TickSpikes(AChuckCharacter* Chuck, double Now);
     void TickDarts(AChuckCharacter* Chuck, double Now, float Dt);
     void TickSlabs(AChuckCharacter* Chuck, double Now, float Dt);

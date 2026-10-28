@@ -2,6 +2,19 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 27 — recorded CC0 trap sounds, quieter (Claude)
+
+- **Request:** free sounds for the temple traps, a bit quieter than now. Base `3897a24`.
+- **Built:** see HANDOFF and CHULT-TEMPLE-INTERIOR.md ("Recorded trap sounds").
+- **Tested:** uncooked interior test (missing_sounds=0, hearing=1); packaged Verify-Package passed (`Local/verify-package-20261027-194943.log`) after one run that failed a climb while the user's game was open fullscreen. Not auditioned by anyone.
+- **Contract compatibility:** same 32 `SFX_Temple*` asset names; new `AChultTempleTraps::TrapVolume`. No rig, clip or test-string changes.
+- **Source of truth:** `Tools/build_temple_trap_sfx.py` (Blender 4.5.14), then `Tools/import_temple_trap_sfx.py` with `-AllowCommandletAudio`. `gen_temple_trap_sfx.py` and `gen_temple_run_sfx.py` are marked superseded (running them overwrites the recorded sounds).
+- **Binary assets (LFS):** 36 source clips (about 28 MB; new `.gitattributes` rule for `SourceAssets/Audio/SFX/Temple/**/*.flac`), 32 WAVs, 32 `.uasset`s.
+- **Downloads:** 11 BigSoundBank recordings, `legit_audio_fire_staff_-_free.zip` (29 MB) and `swishes.zip` (385 KB) from OpenGameArt, all CC0, into `Local/trap-sfx-downloads`. Kenney's RPG audio link had expired, so it was not used. No installations.
+- **Tools:** Blender 4.5.14 ×4 (scans, builds); UE 5.7.4: sound import ×1, Build.bat ×1, uncooked runs ×2, Build-Game -Package -SkipBaseAssets ×1, Verify-Package ×2, Promote-Build ×1.
+- **Launcher:** promoted as `TrapSounds`.
+
+Next part of the work can be done here (the escape onto the ship).
 ## October 27 — beholder entrance waits in the hall; fighter's helmet over the ears; dimmer crevice glow (Claude)
 
 - **Request:** the entrance cutscene pulled Chuck out of the Astral wind (wind audio stuck, could fire during a pit death); start it once Chuck is a little way into the sanctum, not instantly. Fix the fighter's helmet round his ears. Dim the gold crevice glow. Base `ba8859a`.

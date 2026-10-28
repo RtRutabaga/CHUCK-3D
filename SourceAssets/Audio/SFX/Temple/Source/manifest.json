@@ -1,0 +1,365 @@
+{
+  "note": "Unmodified CC0 source clips used by Tools/build_temple_trap_sfx.py (only the clips used are kept).",
+  "files": [
+    {
+      "file": "artisticdude-swishes/swish-11.wav",
+      "work": "Swishes Sound Pack (swishes.zip)",
+      "url": "https://opengameart.org/content/swishes-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 28346,
+      "sha256": "9e81d548d8215fbb36f7a41b5771d4b52c2fd02fbb9b5ff9a4c65118fd88ee4d",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "artisticdude-swishes/swish-13.wav",
+      "work": "Swishes Sound Pack (swishes.zip)",
+      "url": "https://opengameart.org/content/swishes-sound-pack",
+      "author": "artisticdude",
+      "license": "CC0 1.0",
+      "bytes": 19516,
+      "sha256": "698230ba3fe05a68c18d68cd6b3a07fb98e6c1198bb1a4238592ee9912c02c77",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0327.wav",
+      "work": "Knife blade scraped on a stone #1",
+      "url": "https://bigsoundbank.com/knife-blade-scraped-on-a-stone-1-s0327.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0327.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 116200,
+      "sha256": "94a45de5794e9d954eb5c94f3d454343b02548d6f66cba32472b6d15a8f003ff",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0355.wav",
+      "work": "Small chain #1",
+      "url": "https://bigsoundbank.com/small-chain-1-s0355.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0355.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 317436,
+      "sha256": "f931be0acefddee5b75e92036f7ae742933b784b09307b0d7163f45aa70e8464",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0357.wav",
+      "work": "Small chain #3",
+      "url": "https://bigsoundbank.com/small-chain-3-s0357.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0357.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 298236,
+      "sha256": "a431c61d8bd3f572b63f5f1c517917c5ef0fb3040c44877e42ce064dd1619607",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0359.wav",
+      "work": "Heavy chain",
+      "url": "https://bigsoundbank.com/heavy-chain-s0359.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0359.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 737276,
+      "sha256": "48efcc0364bf98a47a622b7642254b3e885378f8a241b99885ba5781f3a6c41d",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0548.wav",
+      "work": "An arrow on a target",
+      "url": "https://bigsoundbank.com/an-arrow-on-a-target-s0548.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0548.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 466258,
+      "sha256": "fe7c1596c4c5763a75f7b3faa6cf8f7b2b28cfa65af7ed41e6ea7d503436d865",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0549.wav",
+      "work": "Archery",
+      "url": "https://bigsoundbank.com/archery-s0549.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0549.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 88464,
+      "sha256": "ff529bedf49025d21e48f06007e67a0cfc46acc4345abff32c7adad3806ca126",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0573.flac",
+      "work": "Whoosh #2",
+      "url": "https://bigsoundbank.com/whoosh-2-s0573.html (file https://bigsoundbank.com/UPLOAD/flac/0573.flac)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 153224,
+      "sha256": "4e497f50507f42b78c72db9f611366a83f90eea54a4adbb9ffce4b705849b068",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0580.wav",
+      "work": "Tombstone: Opening",
+      "url": "https://bigsoundbank.com/tombstone-opening-s0580.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0580.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 2301682,
+      "sha256": "2c79684618226838ea09ef55719dd4cd41aecb165536a2bf9be03972e1f81745",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_0616.wav",
+      "work": "Creaking metallic door",
+      "url": "https://bigsoundbank.com/creaking-metallic-door-s0616.html (file https://bigsoundbank.com/UPLOAD/bwf-en/0616.wav)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 7897468,
+      "sha256": "7095712d8a36ad71890eeac768ddc6dabcfd8894bef70dba20d430e8745c2bdd",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_1022.flac",
+      "work": "Fall of Stone",
+      "url": "https://bigsoundbank.com/fall-of-stone-s1022.html (file https://bigsoundbank.com/UPLOAD/flac/1022.flac)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 684198,
+      "sha256": "75c928ec65061439df4fdd5e44b3040a3950f42fb464d816b3168f03378be3c7",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "BigSoundBank/bsb_1135.flac",
+      "work": "Table saw, empty",
+      "url": "https://bigsoundbank.com/table-saw-empty-s1135.html (file https://bigsoundbank.com/UPLOAD/flac/1135.flac)",
+      "author": "Joseph Sardin",
+      "license": "CC0 1.0",
+      "bytes": 1287646,
+      "sha256": "2ade013258cdec4a7e4d899ae81f726ab85555549c42df2b522a5be7258acc3a",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_heavy_000.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6110,
+      "sha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_heavy_001.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 7279,
+      "sha256": "83554049f81f4db9209379e103c30bfa63f65c42189a03f300b045c2c82e23ae",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_heavy_002.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 5634,
+      "sha256": "b914c8f1eb7c0f34bb165d7c77f4be0351f6be0660c13c53e65424e262e2c093",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_heavy_003.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6209,
+      "sha256": "b0f2ba4dabde9a87eb9c188a19d31e0c2300fd321adeba08d3b9b8aa011d7037",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_heavy_004.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 5788,
+      "sha256": "6d65b463c0555dd5be16b8db6d2cbe23a94e07a4637779b8ad17d0db3e500a87",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_light_000.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 7651,
+      "sha256": "33b5e6e37c6e9d54e07bf5a89b12c76e879f40c1ea83cdd82714df1d6f9fec6d",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_light_001.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6967,
+      "sha256": "fba69c467ddd85da7b1d82e259f936b876d9ba6a3d6f1b24bdd10468e46bfe08",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_light_002.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6804,
+      "sha256": "25a96f90a9a1f88a531e824e126f0519504625e5635e65a72e4f31611428db29",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_light_004.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6675,
+      "sha256": "9b1c35820fba507081261f19ab5f461f69a5e2627a7d91acdb73ca3cfc997979",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_medium_001.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6151,
+      "sha256": "e8a9eaba7c4d27422e4eeb3e6c7100d5d7dc0f83e005efc98c960adcc5265337",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMetal_medium_003.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6964,
+      "sha256": "2a185e2e57211d02c1bdd33b872d6b6a2fe83e6c14f4e56f426a95e717acf08e",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMining_000.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 12035,
+      "sha256": "36b4ea107222d073c67ca64dde26944975609202d5090b2f2021213c1a7e35cd",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMining_001.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 11481,
+      "sha256": "61235a18de3f3d92118235398222dbf51d448f1be70b1c8bc962b10b86f2d9c6",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMining_002.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 11235,
+      "sha256": "059558ec751115ca6b1441e00f0adc837c1a3eeb0a066b109e0fd879fc5d0b0c",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMining_003.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 12160,
+      "sha256": "4237fa2cd80364ad81cd0af44f67d7497f1c5edcc7bdb02cd22be2ba4580c83d",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactMining_004.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 11668,
+      "sha256": "8ca3a99d85d845751ad8ce7b40509da58263a62e48cde70e5a30b5ccef4c9a3b",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_000.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 11617,
+      "sha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactPunch_heavy_002.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 9025,
+      "sha256": "7993dd4c156b9979ad69f17be5ebe31850b16039a3857f8477141be54dfee1b3",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactWood_light_001.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6373,
+      "sha256": "4b76bf3ccc8e60d19188f3165b778a7817786faa6887c55d9049bcbeef3b425f",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "Kenney-impact/impactWood_light_003.ogg",
+      "work": "Impact Sounds (kenney_impact-sounds.zip)",
+      "url": "https://kenney.nl/assets/impact-sounds",
+      "author": "Kenney",
+      "license": "CC0 1.0",
+      "bytes": 6381,
+      "sha256": "cdfbe8af2fe7ff9ee28f337a0a989deee0f327620da456c8413644880e9d0004",
+      "obtained": "downloaded by Claude with the user approval, 2026-10-16 (the dinosaur sounds)"
+    },
+    {
+      "file": "LEGIT-fire-staff/LEGIT_FIR_Fire_Staff 21-Audio.wav",
+      "work": "Fire Staff Sound Effects (legit_audio_fire_staff_-_free.zip)",
+      "url": "https://opengameart.org/content/fire-staff-sound-effects",
+      "author": "LEGIT Audio",
+      "license": "CC0 1.0",
+      "bytes": 4896044,
+      "sha256": "553bbf9bb6a3c574d1862f03d384f71a335706778e7877588397876dddf42af0",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "LEGIT-fire-staff/LEGIT_FIR_Fire_Staff 4-Audio.wav",
+      "work": "Fire Staff Sound Effects (legit_audio_fire_staff_-_free.zip)",
+      "url": "https://opengameart.org/content/fire-staff-sound-effects",
+      "author": "LEGIT Audio",
+      "license": "CC0 1.0",
+      "bytes": 4896044,
+      "sha256": "d991395b107fe2d910f56ac58bbea6788906d1a3b237d0f34eb1c49b885650f7",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    },
+    {
+      "file": "LEGIT-fire-staff/LEGIT_FIR_Fire_Staff 5-Audio.wav",
+      "work": "Fire Staff Sound Effects (legit_audio_fire_staff_-_free.zip)",
+      "url": "https://opengameart.org/content/fire-staff-sound-effects",
+      "author": "LEGIT Audio",
+      "license": "CC0 1.0",
+      "bytes": 4896044,
+      "sha256": "a414e615106206b6c1e68d805b21b9a3fa800e5749b90c6cf779fa5b3e29f9f7",
+      "obtained": "downloaded by Claude at the user request, 2026-10-27"
+    }
+  ]
+}

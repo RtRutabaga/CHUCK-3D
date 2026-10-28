@@ -118,7 +118,7 @@ All of it is on one 2.4 s beat. Each trap's phase is set from when a runner who 
 - the saw's whine and its drop clank;
 - a hit.
 
-`Tools/import_temple_run_sfx.py` imports them. As with the other traps, they are heard only inside the interior.
+`Tools/import_temple_run_sfx.py` imports them. As with the other traps, they are heard only inside the interior. **Since 2026-10-27 they are recorded CC0 sounds** (see [CHULT-TEMPLE-INTERIOR.md](CHULT-TEMPLE-INTERIOR.md), "Sounds"); the generator is kept only as history.
 
 **Spaces and respawns.** Ten new spaces (the chimney, the gallery and its alcove, the axe hall, the fire hall, the saw passage, the gauntlet and its axe chamber, the antechamber and its choked passage). The collapse replaced the old `SnakeExit` and is listed before the snake chamber. Six new spawns and Dev Checkpoints, in a fourth column on the checkpoint page (now 1400 wide, 18 pt): Temple Climb, Temple Pits, Temple Axes, Temple Fire, Temple Saws, Temple Gauntlet.
 
