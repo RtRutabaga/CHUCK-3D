@@ -994,7 +994,7 @@ void BuildChultTempleInterior(AActor* Owner)
         Drum(P.Stone,{66080,-6900,Floor+30},{66140,-7010,Floor+30},30,12);
         Drum(P.Stone,{67720,-6650,Floor},{67720,-6650,Floor+56},30,12);
         Jar(NS0+45,NT1-80,Floor,false);Jar(NS0+45,NT0+60,Floor,true);Jar(NS1-45,NT0+60,Floor,false);Jar(NS1-45,-6250,Floor,true);
-        Jar(NS0+45,-7300,Floor,false);Jar(NS1-45,NT1-90,Floor,true);Jar(66550,NT0+45,Floor,false);
+        Jar(NS0+45,-7300,Floor,false);Jar(NS1-45,NT1-90,Floor,true);Jar(66440,NT0+45,Floor,false);   // clear of the idol plinth (was 66550, 2026-10-27)
         FRandomStream Bones(2026102102);
         for(int32 I=0;I<5;++I)Skulls.Add({FVector(Bones.FRandRange(NS0+80,NS1-80),Bones.FRandRange(NT0+300,NT1-400),Floor+6),FRotator(Bones.FRandRange(-15,25),Bones.FRandRange(0,360),Bones.FRandRange(-80,80))});
     }

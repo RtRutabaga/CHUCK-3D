@@ -1,4 +1,6 @@
 #include "ChultLanding.h"
+#include "ChultPropAudit.h"
+#include "ChultFoliageFade.h"
 #include "ChultRootProfiles.h"
 #include "ChultDressing.h"
 #include "ChultCanopy.h"
@@ -289,8 +291,7 @@ void AChultLanding::BuildSet()
         {TEXT("SM_FallTree_A"),400,2300,190,1.05f},{TEXT("SM_FallTree_B"),-2600,200,120,.9f},
         {TEXT("SM_FallTree_A"),2700,-1900,45,1.1f},{TEXT("SM_FallTree_B"),-800,2900,280,1},
         {TEXT("SM_FallPalm"),-260,620,200,1},{TEXT("SM_FallPalm"),760,420,20,.9f},
-        {TEXT("SM_FallPalm"),-1100,-420,110,1.1f},{TEXT("SM_FallPalm"),1300,300,290,.95f},
-        {TEXT("SM_FallLog"),-380,-1050,10,1}};
+        {TEXT("SM_FallPalm"),-1100,-420,110,1.1f},{TEXT("SM_FallPalm"),1300,300,290,.95f}};
     for(const auto& T:Trees)
     {
         const FVector At(T.X,T.Y,0); Place(T.Name,At,T.Yaw,T.Scale);
@@ -348,11 +349,19 @@ void AChultLanding::BuildSet()
         if(NaturalTrees==0) Attach(NewObject<USceneComponent>(this,TEXT("ChultNatureTreeReview")),At);
         ++NaturalTrees;
     }
-    // A fallen timber beside the loop is a small climbable exploration surface.
-    Place(TEXT("SM_FallLog"),FVector(3350,950,0),15,1.2f);
-    auto* Timber=NewObject<UBoxComponent>(this);
-    Timber->SetBoxExtent(FVector(420,45,48)); Timber->SetCollisionProfileName(TEXT("BlockAll"));
-    Attach(Timber,FVector(3350,950,58),FRotator(0,15,0));
+    // Fallen logs: the one in the cutscene's clearing, and a timber beside the loop (a small climbable exploration
+    // surface). Since 2026-10-27 each lies a little into the ground (its underside had stood clear of it) and is solid
+    // (the clearing's had no collision, and its open ends could be walked into): a box along it, its top a little
+    // under the bark's crown.
+    auto FallenLog=[&](FVector At,float Yaw,float Scale)
+    {
+        Place(TEXT("SM_FallLog"),At-FVector(0,0,12*Scale),Yaw,Scale);
+        auto* Box=NewObject<UBoxComponent>(this);
+        Box->SetBoxExtent(FVector(350,42,42)*Scale); Box->SetCollisionProfileName(TEXT("BlockAll"));
+        Attach(Box,At+FVector(0,0,36*Scale),FRotator(0,Yaw,0));
+    };
+    FallenLog(FVector(-380,-1050,0),10,1);
+    FallenLog(FVector(3350,950,0),15,1.2f);
     auto* RootCollision=NewObject<UProceduralMeshComponent>(this,TEXT("ChultRootCollision"));
     RootCollision->bUseComplexAsSimpleCollision=true;
     RootCollision->CreateMeshSection(0,RootVertices,RootTriangles,TArray<FVector>(),TArray<FVector2D>(),TArray<FColor>(),TArray<FProcMeshTangent>(),true);
@@ -369,9 +378,13 @@ void AChultLanding::BuildSet()
     BuildChultVista(this);
     BuildChultUpriver(this);   // beyond the river's old end (Claude, 2026-10-15)
     BuildChultWreck(this);     // the cog wrecked beyond the bridge (Claude, 2026-10-18)
+    AChultFoliageFade::Spawn(GetWorld());   // see-through undergrowth (Claude, 2026-10-27)
     // Let the registered terrain/solid foliage enter the physics scene first.
     FTimerHandle PathTimer;
     GetWorldTimerManager().SetTimer(PathTimer,FTimerDelegate::CreateWeakLambda(this,[this](){BuildChultPath(this);}),.6f,false);
+    // Then let every tree's foot down onto the lowest ground under it (ChultPropAudit.h, 2026-10-27).
+    FTimerHandle GroundTimer;
+    GetWorldTimerManager().SetTimer(GroundTimer,FTimerDelegate::CreateWeakLambda(this,[this](){GroundChultTrees(GetWorld());}),1.1f,false);
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -453,6 +466,8 @@ void AChultLanding::VerifyAndCapture()
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_GROVE_GROUND failures=%d capsule_segments=%d"),GroveFailures,UE_ARRAY_COUNT(GroveRoute)-1);
     C->SetOrbitPitch(-5);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CHECK failures=%d floor_samples=%d capsule_segments=%d local_respawn=%d"),Failures,Samples,UE_ARRAY_COUNT(Route)-1,Contains(C->GetAreaStartLocation()));
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckFoliageFadeReview"))){ReviewChultFoliageFade(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPropAudit"))){ReviewChultProps(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPathReview"))){ReviewChultPath(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckUpriverReview"))){ReviewChultUpriver(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleReview"))){ReviewChultTemple(this,C,Failures);return;}

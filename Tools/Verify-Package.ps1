@@ -215,6 +215,20 @@ if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 
    !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 floating=0 heard=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
     throw "Temple rubble verification failed. Inspect $rubbleLog"
 }
+# Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
+# logs solid and on the ground, no jar or urn inside the masonry; then the see-through undergrowth round Chuck.
+$propLog=Join-Path $evidence ('verify-chult-props-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$propProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPropAudit','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$propLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($propProcess.ExitCode -or !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_CHULT_GROUNDING trees=[1-9]' -Quiet) -or
+   !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_PROP_AUDIT_COUNTS .*floating_trees=0 .*ledge_trees=0 logs=2 logs_walk_through=0 logs_floating=0 .*jars_in_stone=0 jars_floating=0 jars_touching=0' -Quiet) -or
+   !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_PROP_AUDIT failures=0 ' -Quiet)) {
+    throw "Chult prop audit failed. Inspect $propLog"
+}
+$fadeLog=Join-Path $evidence ('verify-foliage-fade-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$fadeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckFoliageFadeReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fadeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($fadeProcess.ExitCode -or !(Select-String -LiteralPath $fadeLog -Pattern 'CHUCK_FOLIAGE_FADE_REVIEW failures=0 collection=1 strength_on=1.00' -Quiet)) {
+    throw "Foliage fade verification failed. Inspect $fadeLog"
+}
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.
 $wreckLog=Join-Path $evidence ('verify-chult-wreck-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')

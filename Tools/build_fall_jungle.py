@@ -246,6 +246,7 @@ class Builder:
                 c0 = (*colour[:3], w0); c1 = (*colour[:3], w1)
                 # Wound so the faces point out of the tube.
                 self.face([a, d, c, b], [(u0 * 2, v0), (u0 * 2, v1), (u1 * 2, v1), (u1 * 2, v0)], [c0, c1, c1, c0], 0)
+        return rings
 
     def strip(self, pts, widths, normals, tile, colour, mat=1, wind=None, u_span=(0., 1.)):
         """A bent card along pts (leaf base first), across = widths, card faces along normals."""
@@ -563,13 +564,44 @@ def shrub():
     b.write('SM_FallShrub')
 
 
+def log_end(b, ring, centre, out, radius, rng):
+    """Closes a log's end (2026-10-27: the open tube could be seen through): a ragged broken rim, then the
+    weathered end grain sinking to a rotten, dark heart, all closed."""
+    rim = [b.v[i].copy() for i in ring[:-1]]
+    n = len(rim)
+    inner = []
+    for k, p in enumerate(rim):
+        d = (p - centre)
+        # The rim breaks unevenly: some splinters stand proud, some are bitten back.
+        inner.append(b.add(centre + d * rng.uniform(.62, .78) + out * rng.uniform(-9, 5)))
+    heart = b.add(centre - out * rng.uniform(10, 16))
+    grain = (.42, .05, 0, 0); dark = (.22, 0, 0, 0)
+
+    def put(idx, uvs, cols):
+        a, c, d = (b.v[i] for i in idx[:3])
+        if (c - a).cross(d - a).dot(out) < 0:
+            idx = list(reversed(idx)); uvs = list(reversed(uvs)); cols = list(reversed(cols))
+        b.face(idx, uvs, cols, 0)
+
+    def uv(p):
+        d = p - centre
+        return (.5 + d.dot(Vector((0, 1, 0))) / (radius * 2.2), .5 + d.dot(Vector((0, 0, 1))) / (radius * 2.2))
+    for k in range(n):
+        a, c = ring[k], ring[k + 1]
+        ia, ic = inner[k], inner[(k + 1) % n]
+        put([a, c, ic, ia], [uv(b.v[a]), uv(b.v[c]), uv(b.v[ic]), uv(b.v[ia])], [grain, grain, grain, grain])
+        put([ia, ic, heart], [uv(b.v[ia]), uv(b.v[ic]), uv(b.v[heart])], [grain, grain, dark])
+
+
 def log():
     rng = random.Random(17)
     b = Builder()
     pts = [Vector((-350 + 700 * i / 10, math.sin(i * .7) * 12, 48 + math.sin(i * .5) * 5)) for i in range(11)]
     radii = [55 * (1 - .25 * i / 10) for i in range(11)]
     # Moss on the top, more toward the old end.
-    b.tube(pts, radii, sides=16, vscale=240, colour=(.65, .9, 0, 0), rng=rng, rough=.06)
+    rings = b.tube(pts, radii, sides=16, vscale=240, colour=(.65, .9, 0, 0), rng=rng, rough=.06)
+    log_end(b, rings[0], pts[0], (pts[0] - pts[1]).normalized(), radii[0], rng)
+    log_end(b, rings[-1], pts[-1], (pts[-1] - pts[-2]).normalized(), radii[-1], rng)
     for _ in range(10):
         p = pts[rng.randint(1, 9)] + Vector((0, rng.uniform(-40, 40), 45))
         b.card(p, (0, 0, 1), (rng.uniform(-1, 1), rng.uniform(-1, 1), 0), rng.uniform(20, 32), rng.uniform(30, 44), 0, leaf_colour(rng, dry=.4), cup=-.1)

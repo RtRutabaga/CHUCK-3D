@@ -1,4 +1,5 @@
 #include "DockFire.h"
+#include "ChuckFlames.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "ProceduralMeshComponent.h"
@@ -18,35 +19,19 @@
 
 void AddDockFlame(AActor* Owner,FVector Base,float Width,float Height)
 {
-    auto* Mesh=NewObject<UProceduralMeshComponent>(Owner);Mesh->SetupAttachment(Owner->GetRootComponent());
-    Mesh->ComponentTags.Add(TEXT("DockFlame"));Mesh->SetCollisionProfileName(TEXT("NoCollision"));Mesh->SetCastShadow(false);
-    Mesh->RegisterComponent();Mesh->SetWorldLocation(Base);
-    TArray<FVector> V,N;TArray<int32> T;TArray<FVector2D> UV;
-    for(int32 I=0;I<3;++I)
-    {
-        const float Angle=I*PI/3;const FVector Side(FMath::Cos(Angle),FMath::Sin(Angle),0);const int32 A=V.Num();
-        V.Append({-Side*Width*.5f,Side*Width*.5f,Side*Width*.5f+FVector(0,0,Height),-Side*Width*.5f+FVector(0,0,Height)});
-        UV.Append({FVector2D(0,0),FVector2D(1,0),FVector2D(1,1),FVector2D(0,1)});
-        for(int32 J=0;J<4;++J) N.Add(FVector(-Side.Y,Side.X,0));
-        T.Append({A,A+1,A+2,A,A+2,A+3});
-    }
-    Mesh->CreateMeshSection_LinearColor(0,V,T,N,UV,TArray<FLinearColor>(),TArray<FProcMeshTangent>(),false);
-    Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame")));
+    // Since 2026-10-27 every fire is drawn by AChuckFlames (flipbook flame sheets, sparks and smoke; ChuckFlames.h),
+    // in place of three crossed cards of M_TorchFlame.
+    if(Owner) if(AChuckFlames* Flames=AChuckFlames::Get(Owner->GetWorld())) Flames->Add(Owner,Base,Width,Height);
 }
 
 void FinishDockFire(UWorld* World)
 {
     struct FLight {TWeakObjectPtr<UPointLightComponent> Component;float Intensity,Phase;};TArray<FLight> Lights;
     int32 Flames=0,Failures=0,Legacy=0;
+    if(AChuckFlames* Fire=AChuckFlames::Get(World)) {Flames=Fire->GetFlameCount();Failures+=Fire->GetMissingMaterials();}
+    else ++Failures;
     for(TActorIterator<AActor> It(World);It;++It)
     {
-        TArray<UProceduralMeshComponent*> Meshes;It->GetComponents(Meshes);
-        for(auto* M : Meshes) if(M->ComponentHasTag(TEXT("DockFlame")))
-        {
-            ++Flames;auto* Section=M->GetProcMeshSection(0);auto* Material=M->GetMaterial(0);
-            if(!Section || Section->ProcVertexBuffer.Num()!=12 || M->GetCollisionEnabled()!=ECollisionEnabled::NoCollision
-                || !Material || Material->GetBlendMode()!=BLEND_Translucent) ++Failures;
-        }
         TArray<UInstancedStaticMeshComponent*> Batches;It->GetComponents(Batches);
         for(auto* Batch : Batches) if(Batch->GetMaterial(0) && Batch->GetMaterial(0)->GetName()==TEXT("M_TorchFlame")) ++Legacy;
         if(It->ActorHasTag(TEXT("DockSetting")) || It->ActorHasTag(TEXT("DockTavernInterior")) || It->ActorHasTag(TEXT("WaterdeepPlaza")))

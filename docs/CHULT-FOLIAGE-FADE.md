@@ -1,0 +1,9 @@
+# See-through undergrowth (Claude, 2026-10-27)
+
+The user asked for Chult's vegetation to become partly transparent while Chuck walks through it, so he can find his way through thick undergrowth.
+
+- **What it does.** Leaves in two places are dithered out to about a third of their leaf (temporal anti-aliasing blends the dither into a soft see-through): within about 1.1–2.1 m of Chuck, and inside a 0.6–1.3 m tube along the line from the camera to him. Stems and bark stay solid. Only the undergrowth fades: nothing more than 2.2–4.2 m above him, so the crowns and canopy are unaffected. Shadows stay whole (the shadow pass skips the fade).
+- **Materials.** `Tools/chult_foliage_fade.py` creates `/Game/Art/ChultNature/MPC_ChultFoliageFade` (vector parameters `Chuck`: xyz plus strength in w, and `Eye`). It inserts a custom node (described `CHUCK_FOLIAGE_FADE`) into the opacity mask of `M_FallLeaves` (shrubs, elephant ears, palms, the landing trees' leaves) and `M_ChultFern`. The builders of those materials (`create_chult_wet_materials.py`, `import_chult_nature.py`) re-apply it at their end. Run on its own, the script leaves a material that already has the fade alone.
+- **Driver.** `AChultFoliageFade` (spawned with the Chult set) sets both parameters every frame after the camera moves. It eases in and out over a quarter second. It is off in the fall cutscene, while Chuck is hidden, and whenever the camera is not his (cutscene cameras, review stills).
+- **Check.** `-ChuckChultTest -ChuckFoliageFadeReview` takes stills with the fade on and off from the clearing's fern patch (`FoliageFade_*`) and logs `CHUCK_FOLIAGE_FADE_REVIEW`. `Verify-Package.ps1` requires failures=0 and strength 1.00.
+- **Not covered:** the scanned island tree's leaves and branches, the far canopy, grass tufts, and the temple's vines. These are not undergrowth, or they are not on these materials.

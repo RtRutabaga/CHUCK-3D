@@ -2,6 +2,18 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 27 — grounded trees, solid logs, jars out of stone, see-through undergrowth, flipbook fire (Claude)
+
+- **Request:** fix what is slightly off in Chult and the temple (floating trees, hollow walk-in logs, urns in fallen pillars); see-through Chult undergrowth; every other fire as good as the flame traps. Base `57f4458`.
+- **Built:** see HANDOFF, CHULT-PROP-AUDIT.md, CHULT-FOLIAGE-FADE.md, FIRE.md.
+- **Tested:** uncooked prop audit (`Local/prop-audit-final6.log`, failures=0), fade review and fire stills; packaged Verify-Package passed, 182 checks (`Local/verify-package-20261027-224410.log`, with `verify-chult-props-*` and `verify-foliage-fade-*`). Not played by hand. 1,538 trees found no ground and were left unmoved (not inspected individually). The editor smoke test fails 7 "imports render separately from collision" checks on unmodified HEAD as well.
+- **Contract compatibility:** new `GroundChultTrees`/`IsChultGroundingDone`/`CheckChultProps` (`ChultPropAudit.h`), `AChultFoliageFade`, `AChuckFlames` (`AddDockFlame` keeps its signature; `M_TorchFlame` unused). New switches `-ChuckPropAudit`, `-ChuckNoGrounding`, `-ChuckFoliageFadeReview`; Verify-Package requires the audit and fade lines. Bend-room jar placement keeps the RNG order. Chuck's rig and clips unchanged.
+- **Source of truth:** `Tools/build_fall_jungle.py -- --only SM_FallLog` then `Tools/import_fall_log.py`; `Tools/chult_foliage_fade.py` (also re-applied by `create_chult_wet_materials.py` and `import_chult_nature.py`); `Tools/create_flame_materials.py`.
+- **Binary assets (LFS):** `SM_FallLog.fbx`/`.uasset`, `M_FallLeaves`, `M_ChultFern`, `MPC_ChultFoliageFade`, `Materials/Fire/M_ChuckFlame`, `M_ChuckEmber`.
+- **Tools:** Blender 4.5.14 ×1; UE 5.7.4: Python material/import scripts ×~4, Build.bat ×~8, uncooked runs ×~15, Build-Game -Package -SkipBaseAssets ×1 (with Verify-Package), Promote-Build ×1. No downloads or installations.
+- **Launcher:** promoted as `PropsFire`. Old October 14–15 candidate folders in `Builds/` left in place.
+
+Next part of the work can be done here (the escape onto the ship).
 ## October 27 — recorded CC0 trap sounds, quieter (Claude)
 
 - **Request:** free sounds for the temple traps, a bit quieter than now. Base `3897a24`.

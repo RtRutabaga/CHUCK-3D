@@ -218,11 +218,14 @@ namespace TempleWindBuild
             TurnedBox(R.FRand() < .4f ? P.StepMoss : P.Steps, FVector(S, T, UZ + H * .45f), FVector(R.FRandRange(14, 30), R.FRandRange(10, 18), H * .5f), FRotator(R.FRandRange(-20, 20), R.FRandRange(0, 360), R.FRandRange(-20, 20)));
         }
         // A fallen column drum at its far end, along the wall opposite the legs' openings.
+        float JarS = G.S1 - 50;
         {
             const float W = B == 1 ? G.T0 + 30 : G.T1 - 30;
             bool Clear = true;
             for (float S = G.S1 - 170; S <= G.S1 - 40; S += 20) Clear &= !ChultTempleWindTearAt(FVector2D(S, W), 40);
             if (Clear) Drum(P.Moss, {G.S1 - 45, W, UZ + 24}, {G.S1 - 165, W + (B == 1 ? 8.f : -8.f), UZ + 24}, 24, 12);
+            // The room's pot stands beyond the drum's broken end (2026-10-27: it had stood inside the drum).
+            JarS = Clear && !ChultTempleWindTearAt(FVector2D(G.S1 - 215, W), 40) ? G.S1 - 215 : Clear ? G.S1 - 24 : G.S1 - 50;
         }
         // Light: torches along the walls between the tears, one at each end.
         for (float U = 420; U < G.S1 - G.S0 - 300; U += 520)
@@ -232,7 +235,7 @@ namespace TempleWindBuild
         }
         Torch(P, Fires, 0, G.S1, -1, (G.T0 + G.T1) * .5f, UZ + 230, 3200, 600);
         Glyphs(P, R, 0, G.S1, -1, (G.T0 + G.T1) * .5f - 60, (G.T0 + G.T1) * .5f + 60, UZ + 290, UZ + 330);
-        Jars.Add({FVector(G.S1 - 50, B == 1 ? G.T0 + 40 : G.T1 - 40, UZ), float(R.FRandRange(0, 360)), B != 1, 2 + B % 2});
+        Jars.Add({FVector(JarS, B == 1 ? G.T0 + 40 : G.T1 - 40, UZ), float(R.FRandRange(0, 360)), B != 1, 2 + B % 2});
     }
 
     // A standing fire bowl on a stepped plinth, taller and wider than a brazier (the sanctum's great fires).

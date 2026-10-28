@@ -175,4 +175,10 @@ for name, builder in [('M_FallLeaves', leaves), ('M_FallGround', ground), ('M_Fa
                       ('M_ChultRock', rock), ('M_ChultHangingMoss', hanging), ('M_ChultPuddle', puddle)]:
     if 'CHULT_MATERIAL_NAMES' not in globals() or name in CHULT_MATERIAL_NAMES:
         material(name, builder)
+# See-through undergrowth (2026-10-27): the fade goes back into the rebuilt leaves.
+if 'CHULT_MATERIAL_NAMES' not in globals() or 'M_FallLeaves' in CHULT_MATERIAL_NAMES:
+    fade_src = Path(__file__).with_name('chult_foliage_fade.py')
+    fade = {'__file__': str(fade_src), '__name__': 'chult_foliage_fade'}
+    exec(compile(fade_src.read_text(encoding='utf-8'), str(fade_src), 'exec'), fade)
+    fade['apply'](old('M_FallLeaves'))
 unreal.log('CHUCK_CHULT_WET_MATERIALS_READY materials='+str(len(globals().get('CHULT_MATERIAL_NAMES',range(6))))+' texture_imports=0 mesh_imports=0')

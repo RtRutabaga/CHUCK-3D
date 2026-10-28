@@ -63,6 +63,9 @@ materials={
     'island_tree_02_leaves':make('M_ChultIslandLeaves','island_tree_02','leaves_',True),
     'island_tree_02_branches':make('M_ChultIslandBranches','island_tree_02','branches_',True),
 }
+# See-through undergrowth (2026-10-27): the fade goes back into the rebuilt fern.
+fade_src=Path(__file__).with_name('chult_foliage_fade.py'); fade={'__file__':str(fade_src),'__name__':'chult_foliage_fade'}
+exec(compile(fade_src.read_text(encoding='utf-8'),str(fade_src),'exec'),fade); fade['apply'](materials['fern_02'])
 for rec in json.loads((SOURCE/'Derived/manifest.json').read_text())['assets']:
     file=SOURCE/'Derived'/rec['file']
     if hashlib.sha256(file.read_bytes()).hexdigest().upper()!=rec['sha256']: raise RuntimeError(file.name+' hash')
