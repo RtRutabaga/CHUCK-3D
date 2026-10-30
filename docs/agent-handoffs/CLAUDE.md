@@ -15,10 +15,10 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - Packaged: `Builds/EyesCandidate` (hair and eyes) was packaged. `Verify-Package` stopped at the temple trap run again (`Local/verify-temple-run-20261030-000342.log`), and found the cause of the October 29 failures:
     - The `CHUCK_TEMPLE_RUN_LIP` trace shows frames of about 260 ms (about 4 fps), so Chuck moved 60–180 cm in one frame and passed the lip before the test could press jump.
     - The Windows session was locked (`LogonUI` running) during these packaged runs. A locked desktop throttles the game. That is why yesterday's verified build fails the same way, and the editor runs passed.
-    - Rerun `Verify-Package -PackageRoot Builds\EyesCandidate\Windows` with the PC unlocked, then promote.
+    - Rerun October 30 with the PC unlocked: `Verify-Package` passed all 182 checks, the trap run with 0 failures (`Local/verify-package-20261030-153050.log`).
   - Not played by hand.
-- **Launcher:** not updated. It still runs the October 28 `Hair` build. `Builds/EyesCandidate` is kept for the verification rerun. Commits 8233c42 and this one are not pushed yet: they wait for a passing verification.
-- **Next owner:** Claude, to rerun the verification with the PC unlocked, then promote and push. After that, either agent.
+- **Launcher:** promoted as `Eyes` (hair fixes and eyes) with `Tools/Promote-Build.ps1`. The root `Launch-Chuck.cmd` runs this build.
+- **Next owner:** either agent can take the next part. Hair movement, the ranger's hairline or strand eyebrows are better suited to Claude.
 - **Remaining flaws:** the lashes are still MakeHuman cards (no strands). The wizard's eyes weren't seen (his hat hides them in the portrait).
 - **Contract compatibility:** no slot, bone or code changes. New textures only.
 - **Binary assets (LFS):** 15 generated PNGs and their textures, and the re-imported meshes and MIs. The clips, props, surfaces and fabrics the import re-saved were restored from HEAD, along with the zombie's files.
