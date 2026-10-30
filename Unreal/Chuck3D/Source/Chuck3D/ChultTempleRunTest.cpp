@@ -181,6 +181,9 @@ void ReviewChultTempleRun(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 1)
             {
                 Push(Dir(0, 1) + Dir(WallS - P.X, 0) * FMath::Clamp((WallS - P.X) / 40.f, -1.f, 1.f) * .5f);
+                if (P.Y > Lip - 90)   // the run-in's last metre (2026-10-29: some runs reached the lip without the jump)
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUN_LIP to_lip=%.0f ground=%d gait=%s speed=%.0f vz=%.0f z=%.1f mode=%d"),
+                        Lip - P.Y, Ground ? 1 : 0, Chuck->GetGaitName(), M->Velocity.Size2D(), M->Velocity.Z, P.Z, static_cast<int32>(M->MovementMode));
                 if (P.Y > Lip - 22 && Ground) { Chuck->JumpPressed(); Run->Sub = 2; Run->At = Now; Run->Travel = P.Y; }
                 return 0;
             }

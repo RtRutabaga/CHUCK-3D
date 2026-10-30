@@ -25,7 +25,7 @@ int32 ChuckGroom::Attach(AActor* Owner, USkinnedMeshComponent* Mesh, TArray<UGro
     const FString Folder = FPackageName::GetLongPackagePath(Asset->GetOutermost()->GetName());
     const FString Name = FPaths::GetCleanFilename(Folder);
     const FReferenceSkeleton& Ref = Asset->GetRefSkeleton();
-    static const TCHAR* Groups[] = { TEXT("Hair"), TEXT("Beard"), TEXT("BeardJaw"), TEXT("HairBack"), TEXT("BraidBack") };
+    static const TCHAR* Groups[] = { TEXT("Hair"), TEXT("Beard"), TEXT("BeardJaw"), TEXT("Braid"), TEXT("HairBack"), TEXT("BraidBack") };
     int32 Count = 0;
     for (const TCHAR* Group : Groups)
     {

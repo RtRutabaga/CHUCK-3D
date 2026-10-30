@@ -2,6 +2,48 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 29 — hair fixes: ponytails joined, nothing through hats, no red scalps; bushy dwarf beard (Claude)
+
+- **Asked:** the user's review of the strand hair. Fix: ponytails separate from the hair, hair through hats, red scalps under the hair, and other glaring issues. Then: the dwarf's big bushy beard back, mouth visible; the gnome's grey hair reading red from afar; the fighter's beard white/grey in cutscene light. Zombies: no changes.
+- **Source commit:** 757a782 (plus this session's commit).
+- **Built** (details in SourceAssets/NPCs/README.md, "Strand hair"):
+  - **Hats:** under headwear, strands stay below half the room between skin and headwear, measured from the skin. A cap's rolled trim counts as headwear. The sailor's and the wizard's hair now stays under their cap and hat.
+  - **Ponytails and braids:**
+    - The ranger's ponytail is grown from her combed hair: each strand runs over the scalp, through the tie and down the tail. Before, the tail and the head hair were separate pieces with a gap between them.
+    - The braids now hang from the head bone rather than the spine, so they no longer come away from a turning head. They end in a loose tuft.
+    - The elf's and the market woman's hair is combed back into the braid's top; the elf's card cap is gone.
+  - **Scalps:** every strand-haired head gets a scalp shell in its hair's colour. Deep in the hair it is painted solid, so no skin shows between strands, near or far. That is why the gnome's grey hair read red from afar.
+  - **Hairline:** the `hairline` limit now applies only in front of the ears. It had left the back of the gnome's and the elf's heads bare. The gnome also gets short grey hair round the back.
+  - **Beards:**
+    - A solid shade in the beard's colour is painted on the skin well inside every strand beard (slot `BeardShade`, on the jaw, clear of the lips). From a few metres away, pale skin showing through a dark beard had made the fighter's beard look grey.
+    - Dark hair is now less shiny (new `Specular` on `M_NPCHair`).
+    - The wizard's white hair and beard are toned down from near-white.
+  - **Dwarf:** `mass` beard. Each root sends two strands out through the whole beard volume, which gives the old bushy silhouette. His mouth shows.
+  - **Review shots:** `-ChuckNPCShots=` with new `HeadBack`, `HeadSide` and `Far` shots. The hero `portraits` trial adds a back-of-head view.
+  - **Alembic export:** writes beside the target and swaps it in, with retries. Overwriting an existing file sometimes failed with access denied.
+- **Tested:**
+  - All grooms import with their root checks passing.
+  - Captures (uncooked): before in `Local/HairReview2/before` and `heroes_before`; after in `after8`, `after9` and `heroes_after8`, plus `final_sheet.png` and `beards9.png`.
+  - The fireball cutscene: the fighter's beard reads dark (`heroes_after8/Sanctum_fireball_FireballFighter.png`).
+  - Packaged: `Builds/Hair2Candidate` was packaged, and `Verify-Package` stopped twice at the temple trap run. Different spike-pit jumps failed each time (`Local/verify-temple-run-20261029-221218.log`, `-230228.log`).
+    - In each failure Chuck runs into the pit before the test presses jump.
+    - Yesterday's promoted build (757a782, which had passed this check 25 times) fails the same way today: 4 failures, then a pass (`Local/temple-run-oldfull-1.log`, `-2.log`). So the hair is not the cause.
+    - Three full runs in the editor passed. A new trace (`CHUCK_TEMPLE_RUN_LIP`, the run-in's last metre) showed Chuck on the ground to the lip every time.
+    - The cause is still open: it shows only in the packaged game, today, on both builds.
+  - This work was committed unpromoted. The launcher still runs the October 28 `Hair` build. Packaging and promotion continue with the eye work below.
+  - Not played by hand.
+- **Remaining flaws:**
+  - Hair is still rigid on the head (no simulation). Braids and the ponytail don't swing, and turn with the head.
+  - The ranger's front hairline is a little patchy.
+  - The gnome's hair keeps a faint blue cast at its edges in shade.
+  - Brows are still cards.
+- **Contract compatibility:**
+  - New slots: `BeardShade` (bearded NPCs and heroes); `Scalp` on the sailor, Bobert, the market woman and the wizard.
+  - Removed: the elf's and market woman's `Hair`/`HairStrands` card slots, and the `BraidBack` grooms (now `Braid`, on the head).
+  - `NPCGroom.cpp` also looks for `Braid`. No clip or skeleton changes.
+- **Binary assets (LFS):** the haired NPCs' and heroes' FBXs, Alembics, meshes, grooms and MIs; the rebuilt `M_HumanStubble` (humans and heroes) and `M_NPCHair`. The hero clips, fabrics, surfaces and props that the import re-saved were restored from HEAD.
+- **Tools:** Blender 4.5.14 (about 20 runs); UE 5.7.4: editor builds ×3, human, hero and groom imports, uncooked captures ×10, `Build-Game -Package` ×1, `Verify-Package` ×1. No downloads or installations.
+
 ## October 28 — strand hair and beards for every haired human; tavern keeper face rig (Claude)
 
 - **Request:** build the tavern keeper's rig, and make hair and beard hair look better on every haired character, using any helpful free resources. Base `01ac7c2`.

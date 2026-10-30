@@ -992,15 +992,16 @@ void StartTempleSanctumReview(UWorld* World)
         else if (T.Kind == 3) View(Rg->GetActorLocation() - Rg->GetActorForwardVector() * 240.f + FVector(0, 0, 90) + FVector::CrossProduct(FVector::UpVector, Rg->GetActorForwardVector()) * 120.f, Rg->GetActorLocation() + Rg->GetActorForwardVector() * 300.f);
         else if (T.Kind == 6)
         {
-            // Six views, two of each: full figure three-quarter, then the head.
-            const int32 V = FMath::Clamp(static_cast<int32>(Age / 1.5f), 0, 5);
-            ATempleHero* H = V < 2 ? F : V < 4 ? Wz : Rg;
+            // Nine views, three of each: full figure three-quarter, the head, the back of the head (hair, 2026-10-29).
+            const int32 V = FMath::Clamp(static_cast<int32>(Age / 1.5f), 0, 8);
+            ATempleHero* H = V < 3 ? F : V < 6 ? Wz : Rg;
             const FVector Hf = H->GetActorForwardVector(), Hr = FVector::CrossProduct(FVector::UpVector, Hf), Ha = H->GetActorLocation();
-            if (V % 2 == 0) View(Ha + Hf * 260.f + Hr * 150.f + FVector(0, 0, 30), Ha + FVector(0, 0, 5));
+            if (V % 3 == 0) View(Ha + Hf * 260.f + Hr * 150.f + FVector(0, 0, 30), Ha + FVector(0, 0, 5));
+            else if (V % 3 == 2) View(H->HeadLocation() - Hf * 70.f + Hr * 30.f + FVector(0, 0, 8), H->HeadLocation() - FVector(0, 0, 8));
             else View(H->HeadLocation() + Hf * 75.f + Hr * 35.f + FVector(0, 0, 4), H->HeadLocation() - FVector(0, 0, 6));
             if (bCapture && Age > 1.f + V * 1.5f && Run->Phase == V && !FScreenshotRequest::IsScreenshotRequested())
             {
-                Shot(FString::Printf(TEXT("Sanctum_portrait_%s_%s"), H->GetRoleName(), V % 2 ? TEXT("head") : TEXT("figure")));
+                Shot(FString::Printf(TEXT("Sanctum_portrait_%s_%s"), H->GetRoleName(), V % 3 == 1 ? TEXT("head") : V % 3 == 2 ? TEXT("back") : TEXT("figure")));
                 ++Run->Phase;
             }
         }
@@ -1154,7 +1155,7 @@ void StartTempleSanctumReview(UWorld* World)
             Note = FString::Printf(TEXT("casts=%d dead=%d"), Wz->GetShots() + Rg->GetShots() - Run->Shots0, S && S->IsDead());
             break;
         case 6:
-            bDone = Age > 10.f; bPass = true;
+            bDone = Age > 14.5f; bPass = true;
             Note = TEXT("stills");
             break;
         case 7:

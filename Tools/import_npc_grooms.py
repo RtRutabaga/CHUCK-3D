@@ -58,6 +58,8 @@ def master():
     final = n(unreal.MaterialExpressionMultiply, -300, 0); link(mixed, final, 'A'); link(root, final, 'B')
     LIB.connect_material_property(final, '', unreal.MaterialProperty.MP_BASE_COLOR)
     LIB.connect_material_property(sca('Roughness', .5, -300, 250), '', unreal.MaterialProperty.MP_ROUGHNESS)
+    # Sheen (2026-10-29): dark hair at the full .5 caught rim light and read grey or white.
+    LIB.connect_material_property(sca('Specular', .5, -300, 350), '', unreal.MaterialProperty.MP_SPECULAR)
     LIB.recompile_material(mat)
     ASSETS.save_loaded_asset(mat, only_if_is_dirty=False)
     return mat
@@ -101,6 +103,7 @@ for npc, info in entries.items():
         LIB.set_material_instance_scalar_parameter_value(mi, 'Grey', g['grey'])
         LIB.set_material_instance_scalar_parameter_value(mi, 'RootDarken', g['root'])
         LIB.set_material_instance_scalar_parameter_value(mi, 'Roughness', g['roughness'])
+        LIB.set_material_instance_scalar_parameter_value(mi, 'Specular', g.get('specular', .5))
         LIB.update_material_instance(mi)
         ASSETS.save_loaded_asset(mi, only_if_is_dirty=False)
         if not unreal.ChuckReviewLibrary.configure_groom_material(groom, mi, 'Hair'):

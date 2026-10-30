@@ -227,7 +227,7 @@
   "MarketWoman": {
    "fbx": "MarketWoman/SK_MarketWoman.fbx",
    "height_cm": 166,
-   "tris": 51004,
+   "tris": 59158,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -295,22 +295,13 @@
      "tile_cm": 27.1,
      "gain": 2.523
     },
-    "Hair": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
      "tint": [
-      1.0,
-      0.78,
-      0.42
-     ]
-    },
-    "HairStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
-     "tint": [
-      1.1,
-      0.9,
-      0.52
+      0.496,
+      0.336,
+      0.144
      ]
     },
     "Skin": {
@@ -354,9 +345,45 @@
     148.8
    ],
    "grooms": {
-    "BraidBack": {
-     "abc": "MarketWoman/GR_MarketWoman_BraidBack.abc",
-     "bone": "spine_03",
+    "Hair": {
+     "abc": "MarketWoman/GR_MarketWoman_Hair.abc",
+     "bone": "head",
+     "strands": 17002,
+     "colour": [
+      0.62,
+      0.42,
+      0.18
+     ],
+     "root": 0.25,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       2.07,
+       0.53,
+       159.36
+      ],
+      "min": [
+       -4.45,
+       -8.11,
+       148.57
+      ],
+      "max": [
+       13.54,
+       8.07,
+       165.95
+      ]
+     }
+    },
+    "Braid": {
+     "abc": "MarketWoman/GR_MarketWoman_Braid.abc",
+     "bone": "head",
      "strands": 1260,
      "colour": [
       0.62,
@@ -371,21 +398,22 @@
       0.48
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        -3.61,
        0.01,
-       147.16
+       147.18
       ],
       "min": [
-       -4.85,
-       -1.78,
-       146.37
+       -4.83,
+       -1.76,
+       146.42
       ],
       "max": [
        -2.13,
        1.99,
-       147.92
+       147.96
       ]
      }
     }
@@ -689,7 +717,7 @@
   "Blacksmith": {
    "fbx": "Blacksmith/SK_Blacksmith.fbx",
    "height_cm": 184,
-   "tris": 62607,
+   "tris": 65027,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -824,6 +852,7 @@
       0.27
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        2.17,
@@ -847,7 +876,7 @@
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 87280,
+   "tris": 90234,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -949,6 +978,15 @@
      "tile_cm": 200.0,
      "gain": 14.226
     },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.216,
+      0.081,
+      0.03150000000000001
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -998,7 +1036,7 @@
     "Beard": {
      "abc": "Dwarf/GR_Dwarf_Beard.abc",
      "bone": "head",
-     "strands": 5193,
+     "strands": 9805,
      "colour": [
       0.24,
       0.09,
@@ -1011,12 +1049,13 @@
       0.49,
       0.46
      ],
-     "roughness": 0.5,
+     "roughness": 0.6,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
-       8.73,
-       0.19,
-       116.78
+       8.45,
+       0.24,
+       116.82
       ],
       "min": [
        5.51,
@@ -1033,7 +1072,7 @@
     "BeardJaw": {
      "abc": "Dwarf/GR_Dwarf_BeardJaw.abc",
      "bone": "jaw",
-     "strands": 13667,
+     "strands": 26971,
      "colour": [
       0.24,
       0.09,
@@ -1046,12 +1085,13 @@
       0.49,
       0.46
      ],
-     "roughness": 0.5,
+     "roughness": 0.6,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
-       11.66,
+       11.64,
        -0.1,
-       112.59
+       112.56
       ],
       "min": [
        7.13,
@@ -1070,7 +1110,7 @@
   "TavernKeeper": {
    "fbx": "TavernKeeper/SK_TavernKeeper.fbx",
    "height_cm": 181,
-   "tris": 64024,
+   "tris": 69272,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1147,6 +1187,15 @@
       0.028
      ]
     },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.06300000000000001,
+      0.0405,
+      0.0252
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -1205,6 +1254,7 @@
       0.28
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        2.1,
@@ -1240,6 +1290,7 @@
       0.25
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        10.35,
@@ -1275,6 +1326,7 @@
       0.25
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        12.16,
@@ -1298,7 +1350,7 @@
   "ElfElder": {
    "fbx": "ElfElder/SK_ElfElder.fbx",
    "height_cm": 171,
-   "tris": 58445,
+   "tris": 58547,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1355,24 +1407,6 @@
      "tile_cm": 40.0,
      "gain": 26.931
     },
-    "Hair": {
-     "type": "card",
-     "texture": "Textures/beard_mass.png",
-     "tint": [
-      0.95,
-      0.93,
-      0.88
-     ]
-    },
-    "HairStrands": {
-     "type": "card",
-     "texture": "Textures/beard_strands.png",
-     "tint": [
-      1.05,
-      1.03,
-      0.98
-     ]
-    },
     "Scalp": {
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
@@ -1418,14 +1452,50 @@
     }
    },
    "mouth_cm": [
-    17.9,
+    18.0,
     0.0,
-    153.0
+    154.0
    ],
    "grooms": {
-    "BraidBack": {
-     "abc": "ElfElder/GR_ElfElder_BraidBack.abc",
-     "bone": "spine_03",
+    "Hair": {
+     "abc": "ElfElder/GR_ElfElder_Hair.abc",
+     "bone": "head",
+     "strands": 23057,
+     "colour": [
+      0.74,
+      0.72,
+      0.68
+     ],
+     "root": 0.1,
+     "grey": 0.0,
+     "grey_colour": [
+      0.5,
+      0.5,
+      0.48
+     ],
+     "roughness": 0.5,
+     "specular": 0.5,
+     "roots_cm": {
+      "mean": [
+       4.68,
+       0.54,
+       165.25
+      ],
+      "min": [
+       -2.18,
+       -8.27,
+       154.16
+      ],
+      "max": [
+       16.29,
+       8.47,
+       171.87
+      ]
+     }
+    },
+    "Braid": {
+     "abc": "ElfElder/GR_ElfElder_Braid.abc",
+     "bone": "head",
      "strands": 1350,
      "colour": [
       0.74,
@@ -1440,21 +1510,22 @@
       0.48
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        -3.56,
-       0.01,
-       156.89
+       -0.01,
+       157.99
       ],
       "min": [
-       -4.67,
-       -1.78,
-       156.13
+       -4.7,
+       -1.8,
+       157.23
       ],
       "max": [
        -2.15,
-       1.99,
-       157.66
+       2.0,
+       158.74
       ]
      }
     }
@@ -1463,7 +1534,7 @@
   "GnomeAlchemist": {
    "fbx": "GnomeAlchemist/SK_GnomeAlchemist.fbx",
    "height_cm": 100,
-   "tris": 43418,
+   "tris": 49830,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -1513,9 +1584,18 @@
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
      "tint": [
-      0.46,
-      0.45,
-      0.43
+      0.66,
+      0.65,
+      0.62
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.7020000000000001,
+      0.684,
+      0.648
      ]
     },
     "Skin": {
@@ -1572,7 +1652,7 @@
     "Hair": {
      "abc": "GnomeAlchemist/GR_GnomeAlchemist_Hair.abc",
      "bone": "head",
-     "strands": 11184,
+     "strands": 53273,
      "colour": [
       0.78,
       0.77,
@@ -1586,21 +1666,22 @@
       0.48
      ],
      "roughness": 0.55,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
-       2.91,
-       0.69,
-       96.87
+       0.74,
+       0.47,
+       95.84
       ],
       "min": [
-       -2.23,
-       -6.06,
-       91.87
+       -4.67,
+       -6.58,
+       87.32
       ],
       "max": [
-       8.95,
-       6.06,
-       100.02
+       9.01,
+       6.56,
+       100.71
       ]
      }
     },
@@ -1621,6 +1702,7 @@
       0.46
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        7.12,
@@ -1656,6 +1738,7 @@
       0.46
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        8.81,
@@ -1679,7 +1762,7 @@
   "Sailor": {
    "fbx": "Sailor/SK_Sailor.fbx",
    "height_cm": 176,
-   "tris": 52524,
+   "tris": 59712,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -1736,6 +1819,24 @@
      "tile_cm": 27.4,
      "gain": 4.437
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.256,
+      0.248,
+      0.23199999999999998
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.27,
+      0.261,
+      0.24300000000000002
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -1785,7 +1886,7 @@
     "Hair": {
      "abc": "Sailor/GR_Sailor_Hair.abc",
      "bone": "head",
-     "strands": 8673,
+     "strands": 3480,
      "colour": [
       0.32,
       0.31,
@@ -1799,21 +1900,22 @@
       0.56
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
-       0.46,
-       0.95,
-       165.98
+       0.91,
+       0.58,
+       162.44
       ],
       "min": [
-       -5.68,
-       -8.0,
+       -4.5,
+       -7.62,
        159.11
       ],
       "max": [
-       14.36,
-       7.93,
-       175.53
+       9.78,
+       7.84,
+       168.22
       ]
      }
     },
@@ -1834,6 +1936,7 @@
       0.58
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        9.94,
@@ -1869,6 +1972,7 @@
       0.58
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        11.51,
@@ -1892,7 +1996,7 @@
   "Bobert": {
    "fbx": "Bobert/SK_Bobert.fbx",
    "height_cm": 97,
-   "tris": 60096,
+   "tris": 66218,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -1993,6 +2097,15 @@
      "tile_cm": 200.0,
      "gain": 14.226
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.17600000000000002,
+      0.15200000000000002,
+      0.128
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -2038,6 +2151,7 @@
       0.4
      ],
      "roughness": 0.5,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
        -1.31,

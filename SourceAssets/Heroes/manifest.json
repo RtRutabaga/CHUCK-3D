@@ -3,7 +3,7 @@
   "Fighter": {
    "fbx": "HeroFighter/SK_HeroFighter.fbx",
    "height_cm": 187,
-   "tris": 148481,
+   "tris": 151367,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -172,6 +172,15 @@
      "tile_cm": 50.0,
      "gain": 7.752
     },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.054,
+      0.036000000000000004,
+      0.0252
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/middleage_lightskinned_male_diffuse.png"
@@ -216,7 +225,7 @@
     "Beard": {
      "abc": "HeroFighter/GR_HeroFighter_Beard.abc",
      "bone": "head",
-     "strands": 4225,
+     "strands": 4406,
      "colour": [
       0.06,
       0.04,
@@ -229,22 +238,23 @@
       0.49,
       0.46
      ],
-     "roughness": 0.5,
+     "roughness": 0.65,
+     "specular": 0.2,
      "roots_cm": {
       "mean": [
-       11.55,
-       0.51,
-       170.22
+       11.42,
+       0.48,
+       170.3
       ],
       "min": [
        6.98,
-       -6.88,
+       -6.94,
        166.19
       ],
       "max": [
        16.14,
        6.93,
-       172.88
+       173.01
       ]
      }
     },
@@ -264,7 +274,8 @@
       0.49,
       0.46
      ],
-     "roughness": 0.5,
+     "roughness": 0.65,
+     "specular": 0.2,
      "roots_cm": {
       "mean": [
        12.9,
@@ -320,7 +331,7 @@
   "Wizard": {
    "fbx": "HeroWizard/SK_HeroWizard.fbx",
    "height_cm": 179,
-   "tris": 70175,
+   "tris": 81585,
    "slots": {
     "Robe": {
      "type": "fabric",
@@ -445,6 +456,24 @@
       1.6
      ]
     },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.36800000000000005,
+      0.36000000000000004,
+      0.336
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.432,
+      0.423,
+      0.396
+     ]
+    },
     "Skin": {
      "type": "skin",
      "texture": "Textures/old_lightskinned_male_diffuse.png"
@@ -496,18 +525,19 @@
      "bone": "head",
      "strands": 10186,
      "colour": [
-      0.62,
-      0.6,
-      0.56
+      0.46,
+      0.45,
+      0.42
      ],
-     "root": 0.2,
+     "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.82,
-      0.81,
-      0.78
+      0.62,
+      0.61,
+      0.58
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        1.39,
@@ -531,18 +561,19 @@
      "bone": "head",
      "strands": 3953,
      "colour": [
-      0.62,
-      0.6,
-      0.56
+      0.48,
+      0.47,
+      0.44
      ],
-     "root": 0.2,
+     "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.84,
-      0.83,
-      0.8
+      0.64,
+      0.63,
+      0.6
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        9.26,
@@ -566,18 +597,19 @@
      "bone": "jaw",
      "strands": 10422,
      "colour": [
-      0.62,
-      0.6,
-      0.56
+      0.48,
+      0.47,
+      0.44
      ],
-     "root": 0.2,
+     "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.84,
-      0.83,
-      0.8
+      0.64,
+      0.63,
+      0.6
      ],
      "roughness": 0.5,
+     "specular": 0.3,
      "roots_cm": {
       "mean": [
        11.77,
@@ -617,7 +649,7 @@
   "Ranger": {
    "fbx": "HeroRanger/SK_HeroRanger.fbx",
    "height_cm": 172,
-   "tris": 77500,
+   "tris": 80692,
    "slots": {
     "Shirt": {
      "type": "fabric",
@@ -777,9 +809,9 @@
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
      "tint": [
-      0.22,
-      0.075,
-      0.03
+      0.27,
+      0.09,
+      0.032
      ]
     },
     "Skin": {
@@ -831,7 +863,7 @@
     "Hair": {
      "abc": "HeroRanger/GR_HeroRanger_Hair.abc",
      "bone": "head",
-     "strands": 54594,
+     "strands": 43045,
      "colour": [
       0.3,
       0.1,
@@ -845,21 +877,22 @@
       0.48
      ],
      "roughness": 0.45,
+     "specular": 0.5,
      "roots_cm": {
       "mean": [
-       1.93,
-       0.56,
-       166.21
+       1.85,
+       0.58,
+       166.15
       ],
       "min": [
-       -4.95,
-       -8.09,
-       155.43
+       -4.91,
+       -8.03,
+       155.42
       ],
       "max": [
        13.69,
-       8.11,
-       172.88
+       8.08,
+       172.86
       ]
      }
     }

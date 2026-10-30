@@ -989,8 +989,19 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         {TEXT("Wide"),420.f,-25.f,230.f,90.f,85.f},       // the place he stands in
         {TEXT("Hands"),130.f,15.f,0.f,0.f,40.f},          // close on the hands (heights from his eyes: the gnome's sleeves)
         {TEXT("Head"),55.f,15.f,0.f,0.f,40.f},            // close on the head itself, wherever it is (2026-10-28 faces and beards)
-        {TEXT("RatEye"),95.f,10.f,0.f,0.f,40.f} };        // the face as Chuck sees it: from 55 cm up, a metre off
-    constexpr int32 ShotCount=UE_ARRAY_COUNT(Shots);
+        {TEXT("RatEye"),95.f,10.f,0.f,0.f,40.f},          // the face as Chuck sees it: from 55 cm up, a metre off
+        {TEXT("HeadBack"),60.f,150.f,0.f,0.f,40.f},       // hair: the back of the head (ponytails, braids, hats) (2026-10-29)
+        {TEXT("HeadSide"),60.f,90.f,0.f,0.f,40.f},
+        {TEXT("Far"),900.f,30.f,0.f,0.f,62.f} };          // the head as play sees it from across the square
+    // -ChuckNPCShots=Head,HeadBack films only those shots.
+    static TArray<int32> Pick;
+    if(!Pick.Num())
+    {
+        FString Only; TArray<FString> Names;
+        if(FParse::Value(FCommandLine::Get(),TEXT("ChuckNPCShots="),Only,false)) Only.ParseIntoArray(Names,TEXT(","));
+        for(int32 I=0;I<UE_ARRAY_COUNT(Shots);++I) if(!Names.Num() || Names.Contains(Shots[I].Name)) Pick.Add(I);
+    }
+    const int32 ShotCount=Pick.Num();
     constexpr float Settle=3.f, Each=1.2f;
     NPCCaptureTime+=DeltaSeconds;
     APlayerController* PC=GetWorld()->GetFirstPlayerController();
@@ -1003,7 +1014,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
     const int32 Step=FMath::FloorToInt((NPCCaptureTime-Settle)/Each);
     if(Step>=NPCs.Num()*ShotCount) { FPlatformMisc::RequestExit(false); return; }
     ADockNPC* NPC=NPCs[Step/ShotCount].Get();
-    const FShot& Shot=Shots[Step%ShotCount];
+    const FShot& Shot=Shots[Pick[Step%ShotCount]];
     if(!NPC) return;
     if(Step!=NPCShot)
     {
@@ -1015,7 +1026,7 @@ void ADockGameMode::TickNPCCapture(float DeltaSeconds)
         const bool bHands=FCString::Strcmp(Shot.Name,TEXT("Hands"))==0;
         const FVector At=Feet+Dir*Shot.Distance+FVector(0,0,bHands ? NPC->GetEyeHeight()*.75f : Shot.Height+Lift);
         NPCCamera->SetActorLocationAndRotation(At,(Feet+FVector(0,0,bHands ? NPC->GetEyeHeight()*.6f : Shot.Aim+Lift)-At).Rotation());
-        const bool bHead=FCString::Strcmp(Shot.Name,TEXT("Head"))==0, bRat=FCString::Strcmp(Shot.Name,TEXT("RatEye"))==0;
+        const bool bHead=FString(Shot.Name).StartsWith(TEXT("Head")) || FCString::Strcmp(Shot.Name,TEXT("Far"))==0, bRat=FCString::Strcmp(Shot.Name,TEXT("RatEye"))==0;
         if(bHead || bRat)
         {
             // Aimed at the head bone's own place (a turned head, a seated elf, a short dwarf), a little below the eyes.

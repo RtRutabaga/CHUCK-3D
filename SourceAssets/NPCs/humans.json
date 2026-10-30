@@ -262,6 +262,27 @@
    "face": true,
    "groom": [
     {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 16,
+     "comb": {
+      "to": "braid",
+      "lift": 0.003,
+      "gather": 0.01
+     },
+     "colour": [
+      0.62,
+      0.42,
+      0.18
+     ],
+     "root": 0.25,
+     "roughness": 0.5,
+     "hairline": 0.05,
+     "set": {
+      "Duplicate Hair Curves/Amount": 140
+     }
+    },
+    {
      "style": "braid",
      "group": "Braid",
      "per_plait": 420,
@@ -621,7 +642,8 @@
       0.3,
       0.29,
       0.27
-     ]
+     ],
+     "specular": 0.3
     }
    ]
   },
@@ -930,8 +952,8 @@
      "style": "wild_thick_beard",
      "group": "Beard",
      "fill": "beard",
-     "length": 0.3,
-     "points": 18,
+     "length": 0.34,
+     "points": 16,
      "colour": [
       0.24,
       0.09,
@@ -947,7 +969,12 @@
      "set": {
       "Duplicate Hair Curves/Amount": 3
      },
-     "wave": 0.5
+     "wave": 0.5,
+     "mass": true,
+     "copies": 2,
+     "bow": 0.45,
+     "specular": 0.3,
+     "roughness": 0.6
     },
     {
      "style": "wild_thick_moustache",
@@ -1092,7 +1119,8 @@
       0.32,
       0.3,
       0.28
-     ]
+     ],
+     "specular": 0.3
     },
     {
      "style": "wild_thick_beard",
@@ -1111,7 +1139,8 @@
       0.3,
       0.28,
       0.25
-     ]
+     ],
+     "specular": 0.3
     },
     {
      "style": "wild_moustache",
@@ -1247,6 +1276,28 @@
    "face": true,
    "groom": [
     {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 18,
+     "comb": {
+      "to": "braid",
+      "lift": 0.003,
+      "gather": 0.01
+     },
+     "colour": [
+      0.74,
+      0.72,
+      0.68
+     ],
+     "root": 0.1,
+     "roughness": 0.5,
+     "hairline": 0.042,
+     "ear_clear": 0.014,
+     "set": {
+      "Duplicate Hair Curves/Amount": 190
+     }
+    },
+    {
      "style": "braid",
      "group": "Braid",
      "per_plait": 450,
@@ -1332,9 +1383,9 @@
    "hair": null,
    "scalp": {
     "tint": [
-     0.46,
-     0.45,
-     0.43
+     0.66,
+     0.65,
+     0.62
     ],
     "fade": 0.018,
     "recede": {
@@ -1424,6 +1475,16 @@
      "root": 0.15,
      "grey": 0.0,
      "roughness": 0.55
+    },
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "hairline": 0.06,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300,
+      "Set Hair Curve Profile/Length": 0.5
+     }
     },
     {
      "style": "wild_thick_beard",

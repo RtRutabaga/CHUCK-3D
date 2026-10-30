@@ -1578,14 +1578,16 @@ def stubble_texture():
     return 'Textures/scalp_stubble.png'
 
 
-def make_scalp(info, spec, slots, hair, natural=None):
+def make_scalp(info, spec, slots, hair, natural=None, faces=None, name='scalp', slot='Scalp'):
     """Hair on the scalp itself (user 2026-10-11: hair that ends in a hard hem on
     bare skin reads as a wig; the gnome's receding hair needs grey stubble where
     it has receded). A shell just off the scalp, carrying the body's weights,
     with short hairs (stubble_texture) whose density is the vertex colour: full
     under the hair objects `hair`, fading to nothing `fade` past their edge, and
     where the hair has receded (`natural`: + above the hairline it once had)
-    `recede.density` of it. Slot Scalp (type stubble), tinted."""
+    `recede.density` of it. Slot Scalp (type stubble), tinted.
+    With `faces` (a test on the body's bmesh faces), `name` and `slot`, the same shell
+    elsewhere: the beard's shade under strand beards (make_beard_shade)."""
     from mathutils.kdtree import KDTree
     clamp = lambda x: min(1., max(0., x))
     step = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(clamp((x - a) / (b - a)))
@@ -1602,7 +1604,7 @@ def make_scalp(info, spec, slots, hair, natural=None):
     def scalp_face(f):
         if not all(info.bone[v.index] in (Body.HEAD, Body.NECK) for v in f.verts): return False
         return any(info.co[v.index].z > info.brow_z - .01 or (info.co[v.index].y > ear_back - .03 and info.co[v.index].z > info.neck.z) for v in f.verts)
-    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not scalp_face(f)], context='FACES')
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not (faces or scalp_face)(f)], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     bm.transform(M)
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=2, use_grid_fill=True)
@@ -1636,13 +1638,19 @@ def make_scalp(info, spec, slots, hair, natural=None):
         if recede and natural:   # never down to the brows, where the old hairline sweeps to the temples
             d = max(d, recede['density'] * step(-.006, .008, natural(p)) * step(info.brow_z + .006, info.brow_z + .018, p.z))
         d *= step(.004, .012, ear_kd.find(p)[2])   # never on the ears
-        dens.append(d if sd < deep else -1.)     # -1: deep under the hair, unseen
+        # -1: deep under the hair, unseen under a cap of cards; strands show it, so then it stays, solid.
+        dens.append(d if sd < deep or callable(hair) else -1.)
+    # Solid colour well inside the hair (green; 2026-10-29): the shell itself painted the hair's colour, not
+    # stubble on skin, so no skin shows between strands, near or far.
+    solid = [step(*spec.get('solid', (.01, .022)),(out_kd.find(p)[2] if any_out else 1.)) if covered[i] and spec.get('solid', True) else 0.
+             for i, p in enumerate(pos)]
     off = spec.get('offset', .0007)
     col = bm.verts.layers.float_color.new('Col')   # set before any deletion renumbers the vertices
     gone = set()
-    for v, p, n, d in zip(bm.verts, pos, nrm, dens):
+    for v, p, n, d, sl in zip(bm.verts, pos, nrm, dens, solid):
+        if spec.get('stubble') is False: d = sl   # solid only (the beard's shade): no speckled stubble round its edge
         v.co = p + n * off
-        v[col] = (max(0., d), max(0., d), max(0., d), 1.) if d >= 0 else (1., 1., 1., 1.)
+        v[col] = (max(0., d), sl, 0., 1.) if d >= 0 else (1., sl, 0., 1.)
         if d <= .002: gone.add(v)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(v in gone for v in f.verts)], context='FACES')
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
@@ -1665,14 +1673,37 @@ def make_scalp(info, spec, slots, hair, natural=None):
             for uv in uvs:
                 if uv[0] < 0: uv[0] += span
         for loop, uv in zip(f.loops, uvs): loop[uvl].uv = uv
-    faces = len(bm.faces)
-    obj = new_object('scalp', bm)
-    obj.data.materials.append(slot_material('Scalp'))
+    count = len(bm.faces)
+    obj = new_object(name, bm)
+    obj.data.materials.append(slot_material(slot))
     for poly in obj.data.polygons: poly.use_smooth = True
     skin_from_body(obj, info)
-    slots['Scalp'] = {'type': 'stubble', 'texture': stubble_texture(), 'tint': spec['tint']}
-    print('CHUCK_SCALP', f'faces={faces}', f'covered={sum(covered)}/{len(covered)}', f'receded={bool(recede and natural)}')
+    slots[slot] = {'type': 'stubble', 'texture': stubble_texture(), 'tint': spec['tint']}
+    print('CHUCK_SCALP', slot, f'faces={count}', f'covered={sum(covered)}/{len(covered)}', f'receded={bool(recede and natural)}')
     return [obj]
+
+
+def make_beard_shade(info, grooms, colour, slots):
+    """The skin under a strand beard painted the beard's colour (2026-10-29, user: the fighter's beard
+    "appears white/gray" in the cutscenes): a few metres off, strands are thinner than a pixel and Unreal
+    draws them part see-through, so pale skin under a dark beard turned it grey. make_scalp's shell over
+    the beard's roots (several within 12 mm), never on the lips; it carries the jaw's weights, so it opens
+    with the mouth. Slot BeardShade."""
+    from mathutils.kdtree import KDTree
+    roots = [P[0] for g, grp in grooms.items() if g.startswith('Beard') for P, _ in grp['strands']]
+    if len(roots) < 50: return []
+    kd = KDTree(len(roots))
+    for k, r in enumerate(roots): kd.insert(r, k)
+    kd.balance()
+    mouth = Mouth(info)
+    def faces(f):
+        return all(info.bone[v.index] in (Body.HEAD, Body.NECK) for v in f.verts) and \
+            any(kd.find(info.co[v.index])[2] < .015 for v in f.verts)
+    def covered(p):
+        if mouth.in_front(p) and mouth.gap(p, .01) < 1.: return False   # well clear of the lips
+        return len(kd.find_range(p, .01)) >= 10   # only well inside the beard: never an outline round it
+    spec = {'tint': [c * .9 for c in colour], 'fade': .001, 'inner': .001, 'solid': (.012, .024), 'stubble': False}
+    return make_scalp(info, spec, slots, covered, faces=faces, name='beard_shade', slot='BeardShade')
 
 
 def make_earring(info, spec, slots):
@@ -1810,15 +1841,31 @@ def build(name, spec, extra=None):
         for slot in ('Beard', 'BeardStrands'): slots.pop(slot, None)
         for o in [o for o in meshes if o.name.split('.')[0] == 'braid' and any(e.get('style') == 'braid' for e in spec['groom'])]:
             meshes.remove(o); sized.remove(o) if o in sized else None; bpy.data.objects.remove(o)
+        if any(e.get('comb', {}).get('to') == 'braid' for e in spec['groom']):   # strands combed into the braid replace make_hair's cap and its cards
+            for o in [o for o in meshes if o.name.split('.')[0] in ('hair', 'hair_strands')]:
+                if o in hair: hair.remove(o)
+                meshes.remove(o); sized.remove(o) if o in sized else None; bpy.data.objects.remove(o)
+            for slot in ('Hair', 'HairStrands'): slots.pop(slot, None)
         if grooms and not hair:   # the scalp's stubble fades out past the strands' roots
             kd, n = STRANDS.roots_tree(grooms, [g for g in grooms if g.startswith('Hair')])
-            if n > 1: hair = lambda p, kd=kd: kd.find(p)[2] < .007
-    if spec.get('scalp'):
+            # Inside the hair: several roots near (the pack's roots come in clumps; one root within 7 mm left holes).
+            if n > 1: hair = lambda p, kd=kd: len(kd.find_range(p, .012)) >= 4
+    scalp = spec.get('scalp')
+    head_hair = next((e for e in spec.get('groom') or [] if e['group'] == 'Hair'), None)
+    if scalp is None and head_hair and callable(hair):
+        # Every strand-haired head gets a scalp under its hair (2026-10-29: bare skin glowed red between the
+        # strands, and from afar, where strands thin to nothing, the head read as its skin): the hair's own colour.
+        scalp = {'tint': [c * .8 for c in head_hair.get('colour', [.1, .07, .05])], 'fade': .015}
+    if scalp:
+        spec = dict(spec, scalp=scalp)
         natural = None
         if spec['scalp'].get('recede'):   # the hairline he once had, below the receded one
             root = info.eye_z + spec.get('braided_hair', {}).get('ear_root', .005)
             natural = lambda p: p.z - front_hairline(info, p, spec['scalp']['recede']['hairline'], root)
         meshes += make_scalp(info, spec['scalp'], slots, hair, natural)
+    beard_entry = next((e for e in spec.get('groom') or [] if e['group'] == 'Beard'), None)
+    if grooms and beard_entry:   # the skin under a strand beard in its colour (seen through it from afar)
+        meshes += make_beard_shade(info, grooms, beard_entry.get('colour', [.1, .07, .05]), slots)
     # Skin fully under cloth goes (a face survives if any corner shows).
     bm = bmesh.new(); bm.from_mesh(body.data); bm.verts.ensure_lookup_table()
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(hide[v.index] for v in f.verts)], context='FACES')
@@ -1889,7 +1936,8 @@ def build(name, spec, extra=None):
         mat = next(e for e in spec['groom'] if e.get('material', e['group']) == grp['material'])
         groom_out[group] = {'abc': f'{name}/{abc.name}', 'bone': grp['bone'], 'strands': len(grp['strands']),
                             'colour': mat.get('colour', [.1, .07, .05]), 'root': mat.get('root', .6), 'grey': mat.get('grey', 0.),
-                            'grey_colour': mat.get('grey_colour', [.5, .5, .48]), 'roughness': mat.get('roughness', .5), 'roots_cm': roots}
+                            'grey_colour': mat.get('grey_colour', [.5, .5, .48]), 'roughness': mat.get('roughness', .5),
+                            'specular': mat.get('specular', .5), 'roots_cm': roots}
         print('CHUCK_GROOM_EXPORTED', name, group, grp['bone'], len(grp['strands']))
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes)
     lo2 = min((o.matrix_world @ v.co).z for o in meshes for v in o.data.vertices)

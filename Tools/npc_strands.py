@@ -16,8 +16,8 @@ strands then fitted to the character:
   - nothing crosses the mouth (Mouth.gap: cut at the lips);
   - hair under headwear (cap, helmet, hat, kerchief) is pressed flat under it;
   - nothing inside the body or the clothes.
-Each strand belongs to one bone: the jaw (a beard below the lips opens with the mouth), the
-head, or the upper spine (a braid down the back). The runtime attaches each group's groom to
+Each strand belongs to one bone: the jaw (a beard below the lips opens with the mouth) or the
+head (braids too, 2026-10-29: on the upper spine a braid came away from a turning head). The runtime attaches each group's groom to
 its bone rigidly (the NPCs are posed with a PoseableMeshComponent, which a groom binding
 cannot follow; Source/Chuck3D/NPCGroom.cpp).
 """
@@ -178,13 +178,17 @@ class Groomer:
         names = lambda o: o.name.split('.')[0]
         hair_like = ('beard', 'beard_strands', 'hair', 'hair_strands', 'braid', 'fringe', 'scalp', 'beard_rings')
         mouth_like = {'Eyes', 'Teeth', 'Tongue', 'Eyebrows', 'Eyelashes'}
-        self.covers = [o for o in meshes if any(k in names(o).lower() for k in ('cap', 'helmet', 'hat', 'kerchief', 'hood', 'nasal'))]
+        above_neck = lambda o: min((o.matrix_world @ Vector(c)).z for c in o.bound_box) > info.neck.z
+        self.covers = [o for o in meshes if any(k in names(o).lower() for k in ('cap', 'helmet', 'hat', 'kerchief', 'hood', 'nasal'))
+                       or (names(o) == 'trim' and above_neck(o))]   # a cap's rolled cuff
         solid = [o for o in meshes if o.type == 'MESH' and names(o) not in hair_like and o not in self.covers
                  and not any(o.name.startswith(k) for k in mouth_like)]
         self.solid = merged_bvh(solid)
         self.skin = merged_bvh([body])
         self.cover = merged_bvh(self.covers) if self.covers else None
         self.beard = merged_bvh([beard]) if beard else None
+        self.beard_obj = beard
+        self.cloud = None
         self.mouth = kit.Mouth(info)
         # Weights of each body vertex for the bone split.
         self.kd = KDTree(len(info.co))
@@ -202,6 +206,7 @@ class Groomer:
         for k, c in enumerate(ears): self.ears.insert(c, k)
         self.ears.balance()
         self.ear_front = min((c.y for c in ears), default=self.head_y)
+        self.ear_back = max((c.y for c in ears), default=self.head_y)
         self.has_ears = bool(ears)
         print('CHUCK_GROOM_CONTEXT', f'head_scale={self.head_scale:.3f}', f'covers={[o.name for o in self.covers]}', f'solid={len(solid)}', f'beard={bool(beard)}')
 
@@ -215,6 +220,30 @@ class Groomer:
         d = p - self.centre
         if d.length < 1e-4: return True
         return self.cover.ray_cast(p, d.normalized(), .12)[0] is not None
+
+    def cover_gap(self, p):
+        """The room between the skin and the headwear over p, measured out from the skin below it
+        (None where nothing covers it). From the skin, not from p: a point already through the cap
+        (strands grow longer than the room under it) is still under it."""
+        if not self.cover: return None
+        hit, n, _, _ = self.skin.find_nearest(p, .1)
+        if hit is None: return None
+        q = hit + n * .0005
+        d = q - self.centre
+        if d.length < 1e-4: return None
+        loc, _, _, dist = self.cover.ray_cast(q, d.normalized(), .08)
+        return dist if loc is not None else None
+
+    def snug(self, strands, gap):
+        """A ponytail's strands moved together so its tie sits `gap` off the skull: the pack's tails
+        are tied out where a full head of hair would end, which leaves a hollow over a close comb."""
+        if self.tie is None: return strands
+        hit, n, _, _ = self.skin.find_nearest(self.tie, .2)
+        if hit is None: return strands
+        shift = (hit + n * gap) - self.tie
+        self.tie = self.tie + shift
+        print('CHUCK_GROOM_SNUG', f'moved_mm={shift.length * 1000:.1f}')
+        return [([self.push_out(p + shift, .002) for p in P], rad) for P, rad in strands]
 
     def push_out(self, p, gap=.0015):
         for tree in (self.solid,):
@@ -232,7 +261,11 @@ class Groomer:
             top = (p.z - (info.eye_z - band['low'])) / (band['low'] + band['high'])
             if rnd.random() > 1.15 - top: return False      # thinning toward its top edge: no hard line round the head
         if 'hairline' in entry:   # no hair in front of this hairline (the gnome's receding one)
-            if p.z < kit.front_hairline(info, p, entry['hairline'], info.eye_z + .005): return False
+            # Behind the ears the hair goes down to the nape (make_hair's cap line; 2026-10-29: the front
+            # hairline alone, applied all round, left the back of the head bare below the eyes).
+            line = kit.front_hairline(info, p, entry['hairline'], info.eye_z + .005)
+            behind = smooth(self.ear_back + .002, self.ear_back + .03, p.y)
+            if p.z < line * (1 - behind) + (info.neck.z + .035) * behind: return False
         if entry.get('below_z') is not None and p.z > info.eye_z + entry['below_z']: return False
         return True
 
@@ -255,35 +288,46 @@ class Groomer:
         length = entry.get('length')        # beards: how far a strand may grow (it ends earlier where it leaves the beard)
         width = entry.get('width', 1.)
         out, stats = [], dict(kept=0, roots=0, mouth=0, covered=0, outside=0)
+        def finish(pts, rad):
+            """One grown strand: resampled, out of the skin and clothes, flat under headwear, clear of the mouth."""
+            pts, rad, L = resample(pts, rad, n_pts)
+            if pts is None: return
+            P = [Vector(p) for p in pts]
+            flat = entry.get('under', .004)
+            all_covered = True
+            for k in range(1, len(P)):
+                room = self.cover_gap(P[k])
+                if room is not None:   # under the headwear: no higher than half the room under it
+                    hit, n, _, d = self.skin.find_nearest(P[k], .1)
+                    if hit is not None: P[k] = hit + n * min(max(0., (P[k] - hit).dot(n)), flat, max(.0006, room * .45))
+                else: all_covered = False
+                P[k] = self.push_out(P[k], .0006 if room is not None else .0015)
+            if all_covered and self.cover_gap(P[0]) is not None: stats['covered'] += 1; return
+            # Never across the mouth: cut where a strand reaches the lips.
+            if entry.get('mouth', fill):
+                cut = next((k for k in range(1, len(P)) if self.mouth.in_front(P[k]) and self.mouth.gap(P[k], .001) < 1.), None)
+                if cut is not None:
+                    if cut < 3: stats['mouth'] += 1; return
+                    P, rad = P[:cut], rad[:cut]
+            out.append((P, rad * width))
+            stats['kept'] += 1
+
         for pts, rad in strands:
             root = Vector(pts[0])
             if not self.keep_root(root, entry, rnd): stats['roots'] += 1; continue
+            if fill and entry.get('mass'):   # a bushy beard: strands fanned out through the whole volume
+                copies = entry.get('copies', 1)
+                for _ in range(copies):
+                    g_pts, g_rad = self.fill_mass(pts, rad, length, entry, rnd)
+                    if g_pts is None: stats['outside'] += 1
+                    else: finish(g_pts, g_rad)
+                continue
             if fill:
                 pts, rad = self.fill_beard(pts, rad, length, entry, rnd)
                 if pts is None: stats['outside'] += 1; continue
             if entry.get('comb') and self.tie is not None:
                 pts, rad = self.comb(root, float(rad[0]), entry['comb'], rnd)
-            pts, rad, L = resample(pts, rad, n_pts)
-            if pts is None: continue
-            P = [Vector(p) for p in pts]
-            # Out of the skin and clothes; flat under headwear.
-            flat = entry.get('under', .004)
-            all_covered = True
-            for k in range(1, len(P)):
-                if self.covered(P[k]):
-                    hit, n, _, d = self.skin.find_nearest(P[k], .1)
-                    if hit is not None: P[k] = hit + n * min(max(0., (P[k] - hit).dot(n)), flat)
-                else: all_covered = False
-                P[k] = self.push_out(P[k])
-            if all_covered and self.covered(P[0]): stats['covered'] += 1; continue
-            # Never across the mouth: cut where a strand reaches the lips.
-            if entry.get('mouth', fill):
-                cut = next((k for k in range(1, len(P)) if self.mouth.in_front(P[k]) and self.mouth.gap(P[k], .001) < 1.), None)
-                if cut is not None:
-                    if cut < 3: stats['mouth'] += 1; continue
-                    P, rad = P[:cut], rad[:cut]
-            out.append((P, rad * width))
-            stats['kept'] += 1
+            finish(pts, rad)
         print('CHUCK_GROOM_STYLE', entry['style'], entry['group'], f'evaluated={len(strands)}',
               ' '.join(f'{k}={v}' for k, v in stats.items()))
         return out
@@ -301,15 +345,93 @@ class Groomer:
             hit, n, _, _ = self.skin.find_nearest(p, .1)
             if hit is None: break
             d = to - n * to.dot(n)
-            if d.length < 1e-5: break
+            if d.length < step:   # under the tie (it stands off the scalp): up into it
+                path.append(self.tie.copy()); break
             off = lift * (1 + .6 * math.sin(math.pi * min(1., k / 25))) * rnd.uniform(.7, 1.3)
             p = hit + d.normalized() * step + n * off
             q, n2, _, _ = self.skin.find_nearest(p, .1)
             if q is not None: p = q + n2 * off
             path.append(p)
         if len(path) < 3: return np.array([tuple(root), tuple(root + Vector((0, 0, .002)))], np.float32), np.array([r0, r0 * .5], np.float32)
+        if spec.get('tail'):   # on through the tie and down as the ponytail: the tail is the same hair (2026-10-29)
+            path += self.tail(spec['tail'], rnd)
         r = np.array([r0 * (1 - .4 * i / (len(path) - 1)) for i in range(len(path))], np.float32)
         return np.array([tuple(q) for q in path], np.float32), r
+
+    def tail(self, spec, rnd):
+        """A ponytail strand from the tie: out from the head a little, then down, in a bundle that fills
+        out below the tie and thins to the tip; each strand its own length and place in the bundle."""
+        hit, n, _, _ = self.skin.find_nearest(self.tie, .2)
+        flat = Vector((n.x, n.y, 0.)) if hit is not None else Vector((0., 1., 0.))
+        out = flat.normalized() if flat.length > .1 else Vector((0., 1., 0.))
+        side = out.cross(DOWN).normalized()
+        full = spec.get('length', .2)
+        L = full * rnd.uniform(.7, 1.)
+        th, rr = rnd.uniform(0, 2 * math.pi), math.sqrt(rnd.random())
+        wob = rnd.uniform(0, 6.28)
+        pts, step, k = [], .006, 1
+        while k * step <= L:
+            t = k * step
+            f = t / full
+            width = spec.get('tie_radius', .006) + spec.get('radius', .016) * math.sin(math.pi * min(1., f * 1.2) * .85)
+            q = th + .25 * math.sin(f * 5 + wob)
+            off = (out * math.cos(q) * .6 + side * math.sin(q)) * rr * width
+            c = self.tie + out * spec.get('lift', .02) * math.sin(min(1., t / .07) * math.pi / 2) + DOWN * t
+            pts.append(self.push_out(c + off, .004))
+            k += 1
+        return pts
+
+    def beard_cloud(self, rnd):
+        """Points filling the beard volume (`mass` strands end among them)."""
+        if self.cloud is None:
+            M = self.beard_obj.matrix_world
+            box = [M @ Vector(c) for c in self.beard_obj.bound_box]
+            lo = Vector([min(c[i] for c in box) for i in range(3)]); hi = Vector([max(c[i] for c in box) for i in range(3)])
+            pts = []
+            for _ in range(60000):
+                p = Vector([rnd.uniform(lo[i], hi[i]) for i in range(3)])
+                if self.inside_beard(p): pts.append(tuple(p))
+                if len(pts) >= 8000: break
+            self.cloud = np.array(pts, np.float32)
+            print('CHUCK_GROOM_BEARD_CLOUD', len(pts), f'box_cm={[round((hi[i] - lo[i]) * 100, 1) for i in range(3)]}')
+        return self.cloud
+
+    def fill_mass(self, pts, rad, length, entry, rnd):
+        """A bushy beard's strand (the dwarf, user 2026-10-29: "a big bushy beard like before"): from its
+        root out and down to a point somewhere in the beard volume, bowed outward, so the strands fill the
+        volume's depth rather than lying on the chest; a wave of its own, out of the body and clothes."""
+        P0, P1 = Vector(pts[0]), Vector(pts[1])
+        if not self.inside_beard(P0 + (P1 - P0).normalized() * .002): return None, None
+        C = self.beard_cloud(rnd)
+        drop = P0.z - C[:, 2]
+        flat = np.hypot(C[:, 0] - P0.x, C[:, 1] - P0.y)
+        ok = np.nonzero((drop > .012) & (flat < .025 + drop * entry.get('spread', .9)) &
+                        (np.sqrt(drop ** 2 + flat ** 2) < (length or .2)))[0]
+        if not len(ok): return None, None
+        picks = [ok[rnd.randrange(len(ok))] for _ in range(2)]
+        T = Vector(C[min(picks, key=lambda i: C[i, 2])] if rnd.random() < entry.get('low', .5) else C[picks[0]])
+        hit, n, _, _ = self.skin.find_nearest(P0, .05)
+        out = (n if hit is not None else (P1 - P0)).normalized()
+        L = (T - P0).length
+        c1 = P0 + (out * .7 + (P1 - P0).normalized() * .3).normalized() * L * entry.get('bow', .45)
+        steps = max(4, int(L / .004))
+        phase, freq, amp = rnd.uniform(0, 6.28), rnd.uniform(25., 60.), entry.get('wave', .35) * rnd.uniform(.4, 1.) * .006
+        side = (T - P0).cross(out)
+        side = side.normalized() if side.length > 1e-6 else Vector((1., 0., 0.))
+        path = [P0]
+        for k in range(1, steps + 1):
+            t = k / steps
+            b = P0 * (1 - t) ** 2 + c1 * 2 * t * (1 - t) + T * t * t
+            b = b + side * amp * math.sin(phase + t * L * freq) * min(1., t * 4)
+            p = self.push_out(b, .003)
+            path.append(p)
+        stray = rnd.uniform(0., entry.get('stray', .008))
+        if stray > .002:   # a little past its end, on the way it was going
+            d = (path[-1] - path[-2]).normalized()
+            path.append(self.push_out(path[-1] + d * stray, .003))
+        r0 = float(rad[0])
+        r = np.array([r0 * (1 - .7 * (i / (len(path) - 1)) ** 2) for i in range(len(path))], np.float32)
+        return np.array([tuple(p) for p in path], np.float32), r
 
     def fill_beard(self, pts, rad, length, entry, rnd):
         """A beard strand: the pack's start (how it grows from the skin), then on down under
@@ -368,6 +490,15 @@ class Groomer:
                     a, b = frames[k]
                     q = th + .15 * math.sin(k * .3 + wob)
                     strand.append(c + (a * math.cos(q) + b * math.sin(q)) * rr * r)
+                # Past the tie, a loose tuft: on down, spreading a little, each its own length.
+                tuft = entry.get('tuft', .045) * rnd.uniform(.6, 1.)
+                if tuft > 0:
+                    a, b = frames[-1]
+                    t = (P[-1] - P[-2]).normalized()
+                    end, r = strand[-1], radii[-1]
+                    for j in range(1, 6):
+                        f = j / 5
+                        strand.append(end + t * tuft * f + (a * math.cos(th) + b * math.sin(th)) * rr * r * 1.4 * f + DOWN * .004 * f * f)
                 pts_a = np.array([tuple(p) for p in strand], np.float32)
                 rad = np.full(len(strand), entry.get('radius', .00008), np.float32)
                 p2, r2, _ = resample(pts_a, rad, entry.get('points', 24))
@@ -381,13 +512,28 @@ def make_grooms(kit, info, spec_groom, meshes, beard=None, braids=None):
     rnd = random.Random(29)
     groups = {}
     for entry in spec_groom:
+        if entry.get('comb', {}).get('to') == 'braid' and braids:   # hair combed back into the braid's top
+            g.tie = sum((Vector(pts[0]) for pts, _ in braids), Vector()) / len(braids)
+        if entry.get('tie_only'):   # a style that only places the tie (its strands are left out): a later comb gathers there
+            got = g.grow(entry, rnd)
+            if got:
+                n = min(len(P) for P, _ in got)
+                best = None
+                for k in range(1, n):
+                    c = sum((P[k] for P, _ in got), Vector()) / len(got)
+                    spread = sum((P[k] - c).length for P, _ in got) / len(got)
+                    if best is None or spread < best[0]: best = (spread, c)
+                g.tie = best[1] if best else None
+                if entry.get('snug'): g.snug(got, entry['snug'])
+            continue
         if entry.get('style') == 'braid':
+            # On the head (2026-10-29): on the spine it stayed put as the head turned, and came away from it.
             got = g.braid(braids or [], entry, rnd)
-            bone_of = lambda root: entry.get('bone', 'spine_03')
+            bone_of = lambda root: entry.get('bone', 'head')
         else:
             got = g.grow(entry, rnd)
             bone_of = (lambda root: 'head') if entry.get('bone') == 'head' else g.bone_of
-        if got and entry.get('style') != 'braid':   # where its strands gather tightest (a ponytail's tie): a later `comb` entry draws hair to it
+        if got and entry.get('style') != 'braid' and not entry.get('comb'):   # where its strands gather tightest (a ponytail's tie): a later `comb` entry draws hair to it
             n = min(len(P) for P, _ in got)
             best = None
             for k in range(1, n):
@@ -395,6 +541,7 @@ def make_grooms(kit, info, spec_groom, meshes, beard=None, braids=None):
                 spread = sum((P[k] - c).length for P, _ in got) / len(got)
                 if best is None or spread < best[0]: best = (spread, c)
             g.tie = best[1] if best else None
+            if entry.get('snug'): got = g.snug(got, entry['snug'])
         for P, rad in got:
             bone = bone_of(P[0])
             name = entry['group'] + ('Jaw' if bone == 'jaw' else 'Back' if bone.startswith('spine') else '')
@@ -429,8 +576,22 @@ def export_groom(path, strands, M, scale):
     for o in bpy.context.scene.objects: o.select_set(False)
     obj.select_set(True); bpy.context.view_layer.objects.active = obj
     path.parent.mkdir(parents=True, exist_ok=True)
-    bpy.ops.wm.alembic_export(filepath=str(path), selected=True, start=0, end=0, export_hair=True, export_particles=False,
-                              uvs=False, normals=False, face_sets=False, global_scale=100.)
+    # Written beside it and swapped in, retried: overwriting a large .abc in place sometimes failed
+    # (another process briefly holding the old file), leaving the old one silently.
+    import os, time
+    tmp = path.with_name(path.stem + '.new.abc')
+    for attempt in range(6):
+        if tmp.exists(): tmp.unlink()
+        bpy.ops.wm.alembic_export(filepath=str(tmp), selected=True, start=0, end=0, export_hair=True, export_particles=False,
+                                  uvs=False, normals=False, face_sets=False, global_scale=100.)
+        try:
+            if tmp.exists() and tmp.stat().st_size > 0:
+                os.replace(tmp, path); break
+        except OSError as e:
+            print('CHUCK_GROOM_EXPORT_RETRY', path.name, e)
+        time.sleep(2.)
+    else:
+        raise RuntimeError(f'Could not write {path}')
     roots = [M @ P[0] for P, _ in strands]
     bpy.data.objects.remove(obj); bpy.data.hair_curves.remove(cv)
     # Unreal component space (cm; the FBX mirrors Y), for the importer's check: the roots' mean and box

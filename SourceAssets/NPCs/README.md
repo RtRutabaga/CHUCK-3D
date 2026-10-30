@@ -236,18 +236,39 @@ lines from References/Original/PHASE-2.md).
       strands), `grey_colour` and `roughness`.
     - Root filters: `fringe` (a bald man's band, thinning upward) and `hairline` (a
       receding one).
-    - `under`: how flat hair lies under a cap, helmet, hat, kerchief or hood.
+    - `under`: how flat hair lies under a cap, helmet, hat, kerchief or hood. Under headwear
+      a point is also kept below half the room between the skin and the headwear above it,
+      measured from the skin (2026-10-29: strands longer than the room under the sailor's
+      cap and the wizard's hat came through them). A cap's rolled `trim` counts as headwear.
+    - `specular` (default 0.5): dark hair is at 0.2–0.3, or it reads grey in rim light (the
+      fighter's beard in the cutscenes).
   - **Beards** (`"fill": "beard"`) keep `make_beard`'s volume as their shape, its mouth
     already cleared. Strands start as the pack grows them, then lengthen (`length`), hang
     with a slow `wave`, rest on the chest or armour, and end where they leave the volume.
     The volume and its cards are then dropped; the dwarf's rings stay. Strands reaching
     the lips are cut (`Mouth.gap`).
+    - `"mass": true` (the dwarf, user 2026-10-29: "a big bushy beard like before"): each
+      root sends `copies` strands, bowed out (`bow`) to points spread through the whole
+      volume, so the beard fills its depth instead of lying on the chest.
   - **Braids** (`"style": "braid"`): each of `make_braid`'s three plaits is filled with
-    strands (`per_plait`), and the tube braid is dropped.
+    strands (`per_plait`), ending in a loose `tuft`, and the tube braid is dropped. They
+    hang from the head bone: on the spine they stayed put as the head turned and came
+    away from it. A `comb` entry with `"to": "braid"` combs the head's hair back into the
+    braid's top (the elf's replaces her card cap; the market woman's lies under her kerchief).
   - **Ponytail:** `comb` draws a style's roots back over the scalp to where the previous
-    style's strands gather tightest (the ranger's tie).
+    style's strands gather tightest (the ranger's tie; that style is `tie_only`, its own
+    thin tail left out, `snug` moving the tie onto the skull). With `tail`, each combed
+    strand carries on through the tie and down as the ponytail, so the tail is the same
+    hair. A strand under a tie that stands off the scalp rises straight into it.
+  - **Hairline:** `hairline` applies in front of the ears; behind them hair goes down to the
+    nape (it used to leave the back of the gnome's and the elf's heads bare).
+  - **Scalp under strands:** every strand-haired head gets a scalp shell (`make_scalp`)
+    tinted from its hair if the spec has none. Its vertex colour is red for stubble density
+    and green for "solid": deep in the hair (several roots within 12 mm), the shell is
+    painted opaque in the hair's colour, a shade darker (`M_HumanStubble`). Bare skin glowed
+    red between strands, and from a distance, where strands thin out, the head read as skin.
   - **Bones:** each strand belongs to `jaw` (the body's jaw weight > 0.5, i.e. beard below
-    the lips), `head`, or `spine_03` (braids down the back). Groups become `<group>`,
+    the lips) or `head` (braids too); `spine_03` is still accepted. Groups become `<group>`,
     `<group>Jaw` and `<group>Back`. The build writes
     `SourceAssets/.../<Name>/GR_<Name>_<Group>.abc` (centimetres, the FBX's space) and
     lists them under `grooms` in the manifest, with the roots' mean and bounds.
@@ -263,7 +284,9 @@ lines from References/Original/PHASE-2.md).
   - **The tavern keeper has a face rig** (`face`): jaw, lids, brows, teeth, tongue. He
     blinks. His one voiced line (at night) drives the jaw like the others', but no
     capture has shown him speaking yet. The fighter's beard was seen opening with his jaw.
+  - **Review:** `-ChuckNPCCapture -ChuckNPCShots=Head,HeadBack,HeadSide,Far` films only those
+    shots (`HeadBack`, `HeadSide` and `Far` added for hair). The sanctum's `portraits`
+    trial now also films the back of each hero's head.
   - **Known gaps:**
-    - The ranger's hairline at the temples is thin, and the elf's cap is still the card cap.
-    - Braids and ponytails are rigid to their bone; nothing swings.
+    - Braids and ponytails are rigid to the head; nothing swings, and a braid turns with the head.
     - Brows are still cards.

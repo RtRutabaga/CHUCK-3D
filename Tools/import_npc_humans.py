@@ -181,11 +181,18 @@ def build_stubble(mat, default):
     tint = node(mat, unreal.MaterialExpressionVectorParameter, -600, 250, parameter_name='Tint', default_value=unreal.LinearColor(1, 1, 1, 1))
     mul = node(mat, unreal.MaterialExpressionMultiply, -300, 0)
     LIB.connect_material_expressions(t, 'RGB', mul, 'A'); LIB.connect_material_expressions(tint, '', mul, 'B')
-    LIB.connect_material_property(mul, '', unreal.MaterialProperty.MP_BASE_COLOR)
     vc = node(mat, unreal.MaterialExpressionVertexColor, -600, 450)
+    # Green: solid under the hair (2026-10-29), the shell painted the hair's colour, a shade darker (the roots).
+    deep = node(mat, unreal.MaterialExpressionLinearInterpolate, -150, 0, const_a=1., const_b=.85)
+    LIB.connect_material_expressions(vc, 'G', deep, 'Alpha')
+    base = node(mat, unreal.MaterialExpressionMultiply, 0, 0)
+    LIB.connect_material_expressions(mul, '', base, 'A'); LIB.connect_material_expressions(deep, '', base, 'B')
+    LIB.connect_material_property(base, '', unreal.MaterialProperty.MP_BASE_COLOR)
     mask = node(mat, unreal.MaterialExpressionMultiply, -300, 300)
     LIB.connect_material_expressions(t, 'A', mask, 'A'); LIB.connect_material_expressions(vc, 'R', mask, 'B')
-    LIB.connect_material_property(mask, '', unreal.MaterialProperty.MP_OPACITY_MASK)
+    full = node(mat, unreal.MaterialExpressionMax, -150, 300)
+    LIB.connect_material_expressions(mask, '', full, 'A'); LIB.connect_material_expressions(vc, 'G', full, 'B')
+    LIB.connect_material_property(full, '', unreal.MaterialProperty.MP_OPACITY_MASK)
     constant(mat, .8, unreal.MaterialProperty.MP_ROUGHNESS, 600)
 
 
