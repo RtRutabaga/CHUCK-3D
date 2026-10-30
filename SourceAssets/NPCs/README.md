@@ -163,6 +163,23 @@ docs/SETUP.md), one heavy process at a time:
   Rebuild order: `build_bobert_textures.py`, `build_npc_humans.py -- Bobert`,
   `build_bobert_barrel.py`, then `Tools/Import-NPCHumans.ps1 -Only Bobert,prop:BobertBarrel`.
 
+- Eyes (user 2026-10-29: "currently everyone looks like they have thick mascara on"; the
+  zombie stays as it was). For every human and hero except the zombie (any spec with a
+  `skin_texture`), the build generates two textures:
+  - **Lashes:** `fine_lash_texture` makes `Textures/<lashes>_fine.png` from the MakeHuman
+    lash sheet, which is a cosmetic set (dense, long, jet black, a full lower row).
+    - The strands are thinned to their cores (alpha through a high smoothstep).
+    - The lower lids' rows, the sheet's lower right, are kept at under half strength, so
+      only a few strands pass the card master's clip.
+    - The texture is white, and the `Lash` slot is tinted: the first groom's `colour` × 0.45
+      (lashes are darker than the hair on top), or a dark brown with no strand hair, or
+      `lash_tint`.
+  - **Eyeballs:** `soft_eye_texture` makes `Textures/<eyes>_eye_soft.png`. The whites are
+    taken down about a tenth and warmed, darkening toward the eyeball's edge as if in the
+    lids' shade. The iris and the cornea's clear corner are unchanged. Bobert's closed
+    eyes (`eye_texture`) are unchanged.
+  - Delete a generated PNG to regenerate it after changing its function; both are cached
+    by name.
 - Faces and beards (user 2026-10-28: "make all huminoid npc's look better, in particular
   faces and beard. for ones with beards i want to see mouths through beards"). Applies to
   every human here and to the temple heroes (they use this kit):

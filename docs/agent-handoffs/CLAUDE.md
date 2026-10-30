@@ -2,6 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 29 (later) — NPC eyes: no more "mascara" lashes, softer eye whites (Claude)
+
+- **Asked:** "start making the humanoid NPC eyes look better (aside from zombies they're fine as is), currently everyone looks like they have thick mascara on".
+- **Built** (SourceAssets/NPCs/README.md, "Eyes"):
+  - Generated lash textures (`<lashes>_fine.png`): strands thinned to their cores, the lower lash rows nearly gone, tinted from each character's hair (darker), dark brown for the rest.
+  - Eye textures (`<eyes>_eye_soft.png`): whites a little lower and warmer, shaded toward the eyeball's edge.
+  - Applies to every human and hero except the zombie (its slots and files are unchanged). Bobert's closed eyes are unchanged.
+- **Tested:**
+  - Uncooked captures: `Local/EyeReview/after1` (Head, RatEye and ThreeQuarter for every NPC) and `heroes1`.
+  - Compared with `Local/HairReview2/after8`: the market woman, the elf, the keeper, the guard, the smith, the fighter and the ranger now have fine, natural lashes.
+  - Packaged: `Builds/EyesCandidate` (hair and eyes) was packaged. `Verify-Package` stopped at the temple trap run again (`Local/verify-temple-run-20261030-000342.log`), and found the cause of the October 29 failures:
+    - The `CHUCK_TEMPLE_RUN_LIP` trace shows frames of about 260 ms (about 4 fps), so Chuck moved 60–180 cm in one frame and passed the lip before the test could press jump.
+    - The Windows session was locked (`LogonUI` running) during these packaged runs. A locked desktop throttles the game. That is why yesterday's verified build fails the same way, and the editor runs passed.
+    - Rerun `Verify-Package -PackageRoot Builds\EyesCandidate\Windows` with the PC unlocked, then promote.
+  - Not played by hand.
+- **Launcher:** not updated. It still runs the October 28 `Hair` build. `Builds/EyesCandidate` is kept for the verification rerun. Commits 8233c42 and this one are not pushed yet: they wait for a passing verification.
+- **Next owner:** Claude, to rerun the verification with the PC unlocked, then promote and push. After that, either agent.
+- **Remaining flaws:** the lashes are still MakeHuman cards (no strands). The wizard's eyes weren't seen (his hat hides them in the portrait).
+- **Contract compatibility:** no slot, bone or code changes. New textures only.
+- **Binary assets (LFS):** 15 generated PNGs and their textures, and the re-imported meshes and MIs. The clips, props, surfaces and fabrics the import re-saved were restored from HEAD, along with the zombie's files.
+- **Tools:** Blender 4.5.14 ×6; UE 5.7.4 human, hero and groom imports, captures ×2, `Build-Game -Package` ×1, `Verify-Package`.
+
 ## October 29 — hair fixes: ponytails joined, nothing through hats, no red scalps; bushy dwarf beard (Claude)
 
 - **Asked:** the user's review of the strand hair. Fix: ponytails separate from the hair, hair through hats, red scalps under the hair, and other glaring issues. Then: the dwarf's big bushy beard back, mouth visible; the gnome's grey hair reading red from afar; the fighter's beard white/grey in cutscene light. Zombies: no changes.
@@ -29,7 +51,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
     - In each failure Chuck runs into the pit before the test presses jump.
     - Yesterday's promoted build (757a782, which had passed this check 25 times) fails the same way today: 4 failures, then a pass (`Local/temple-run-oldfull-1.log`, `-2.log`). So the hair is not the cause.
     - Three full runs in the editor passed. A new trace (`CHUCK_TEMPLE_RUN_LIP`, the run-in's last metre) showed Chuck on the ground to the lip every time.
-    - The cause is still open: it shows only in the packaged game, today, on both builds.
+    - Cause, found later: the PC was locked during these packaged runs, and the game ran at about 4 fps. See the entry above.
   - This work was committed unpromoted. The launcher still runs the October 28 `Hair` build. Packaging and promotion continue with the eye work below.
   - Not played by hand.
 - **Remaining flaws:**

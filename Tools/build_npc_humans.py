@@ -1547,6 +1547,70 @@ def make_fringe(info, spec, slots):
     return [obj]
 
 
+def _image_array(src):
+    import numpy as np
+    img = bpy.data.images.load(str(src), check_existing=False)
+    w, h = img.size
+    px = np.empty(w * h * 4, np.float32); img.pixels.foreach_get(px)
+    bpy.data.images.remove(img)
+    return px.reshape(h, w, 4), w, h   # rows bottom-up (Blender), linear 0-1 as stored
+
+
+def _save_array(arr, name, w, h):
+    img = bpy.data.images.new(name, w, h, alpha=True)
+    img.pixels.foreach_set(arr.astype('float32').ravel())
+    path = TEX / f'{name}.png'
+    TEX.mkdir(parents=True, exist_ok=True)
+    img.filepath_raw = str(path); img.file_format = 'PNG'; img.save()
+    bpy.data.images.remove(img)
+    return path
+
+
+def fine_lash_texture(src):
+    """Textures/<lashes>_fine.png (user 2026-10-29: "everyone looks like they have thick mascara on"). The
+    MakeHuman lashes are a cosmetic set: dense, long, jet black, with a full lower row. Here the strands are
+    thinned to their cores (alpha through a high smoothstep) and the lower rows (the bottom half of the
+    sheet) all but gone, the few that stay short and faint; white, so the slot's tint is the lash colour."""
+    import numpy as np
+    path = TEX / f'{src.stem}_fine.png'
+    if path.exists(): return path
+    px, w, h = _image_array(src)
+    a = px[..., 3]
+    t = np.clip((a - .5) / .45, 0, 1); a2 = t * t * (3 - 2 * t)
+    y = 1 - np.arange(h)[:, None] / (h - 1) + np.zeros((1, w))   # 0 at the top of the sheet (Blender rows run up)
+    x = np.arange(w)[None, :] / (w - 1) + np.zeros((h, 1))
+    # The lower lids' rows: the sheet's lower right (the upper lids' two rows end left of x .74, above y .6).
+    lower = (y > .57) | ((x > .74) & (y > .5))
+    a2 = np.where(lower, a2 * .45, a2 * .9)   # the card master clips at a third: a lower lash keeps only its thickest cores
+    out = np.dstack([np.full_like(a, .85)] * 3 + [a2])
+    path = _save_array(out, f'{src.stem}_fine', w, h)
+    print('CHUCK_LASH_TEXTURE', path.name, f'cover_before={(a > .33).mean():.3f}', f'after={(a2 > .33).mean():.3f}')
+    return path
+
+
+def soft_eye_texture(src):
+    """Textures/<eyes>_eye_soft.png (2026-10-29): MakeHuman's eyeballs have flat, bright whites, which with
+    no shadow from the lids read as a doll's. The whites are taken down and warmed a little, darkening
+    toward the eyeball's edge (the lids' shade); the iris and the cornea's clear corner as they were."""
+    import numpy as np
+    path = TEX / f'{src.stem}_soft.png'
+    if path.exists(): return path
+    px, w, h = _image_array(src)
+    v, u = np.mgrid[0:h, 0:w]
+    u = (u + .5) / w; v = (v + .5) / h
+    sm = lambda a, b, x: (lambda t: t * t * (3 - 2 * t))(np.clip((x - a) / (b - a), 0, 1))
+    # The two eyeballs (the layout of every MakeHuman eye texture, v up): their irises' centres.
+    d = np.minimum(np.hypot(u - .707, v - .703), np.hypot(u - .293, v - .297))
+    white = sm(.122, .14, d)                                       # outside the iris and its dark ring
+    shade = .9 * (1 - .2 * sm(.16, .3, d))                         # whites down a little, more toward the edge
+    warm = np.array([1., .965, .93])
+    k = 1 - white[..., None] * (1 - shade[..., None] * warm)
+    out = px.copy(); out[..., :3] = px[..., :3] * k
+    path = _save_array(out, f'{src.stem}_soft', w, h)
+    print('CHUCK_EYE_TEXTURE', path.name)
+    return path
+
+
 def stubble_texture():
     """Textures/scalp_stubble.png: short hairs on a clear ground, tiling, all
     running along V (on the scalp shell: out from the crown). White, so the
@@ -1886,7 +1950,12 @@ def build(name, spec, extra=None):
     assign(body, 'Skin'); slots['Skin'] = {'type': 'skin', 'texture': keep_texture(skin_png)}
     if spec.get('skin_tint'): slots['Skin']['tint'] = spec['skin_tint']   # the zombie's dead grey
     if spec.get('skin_subsurface'): slots['Skin']['subsurface'] = spec['skin_subsurface']   # the zombie's dead flesh: no warm glow through it
-    assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(ROOT / spec['eye_texture'] if spec.get('eye_texture') else DATA / f"eyes/materials/{spec['eyes']}_eye.png")}
+    # The zombie keeps the old eyes and lashes (user 2026-10-29: "aside from zombies they're fine as is").
+    natural = not spec.get('skin_texture')
+    if spec.get('eye_texture'): eye_png = ROOT / spec['eye_texture']   # Bobert's closed eyes, the zombie's clouded ones
+    elif natural: eye_png = soft_eye_texture(DATA / f"eyes/materials/{spec['eyes']}_eye.png")
+    else: eye_png = DATA / f"eyes/materials/{spec['eyes']}_eye.png"
+    assign(parts['Eyes'], 'Eye'); slots['Eye'] = {'type': 'eye', 'texture': keep_texture(eye_png)}
     for kind, tex, tint in (('Teeth', DATA / 'teeth/teeth_base/teeth.png', spec.get('teeth_tint', [.62, .56, .47])),
                             ('Tongue', DATA / 'tongue/tongue01/tongue01_diffuse.png', [.55, .4, .38])):
         if kind in parts:   # in the mouth's shade: dimmed a little, glossy
@@ -1897,7 +1966,12 @@ def build(name, spec, extra=None):
     assign(parts['Eyebrows'], 'Brow'); slots['Brow'] = {'type': 'hair', 'texture': keep_texture(brow_png)}
     if spec.get('brow_tint'): slots['Brow']['tint'] = spec['brow_tint']   # the dwarf's auburn brows to match his beard
     lash_dir = DATA / f"eyelashes/{spec['eyelashes']}"
-    assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(next(lash_dir.glob('*.png')))}
+    lash_png = next(lash_dir.glob('*.png'))
+    assign(parts['Eyelashes'], 'Lash'); slots['Lash'] = {'type': 'card', 'texture': keep_texture(fine_lash_texture(lash_png) if natural else lash_png)}
+    if natural:   # coloured like the hair, a good deal darker (lashes are darker than the hair on top), never jet black
+        hair_col = next((e['colour'] for e in spec.get('groom') or [] if e.get('colour')), None) or spec.get('lash_colour')
+        slots['Lash']['tint'] = [max(.03, c * .45) for c in hair_col] if hair_col else [.05, .036, .027]
+        if spec.get('lash_tint'): slots['Lash']['tint'] = spec['lash_tint']
     if 'Hair' in parts:
         hair_dir = DATA / f"hair/{spec['hair']}"
         # Dithered like the beard locks: a hard-clipped hairline reads as a wig's edge.

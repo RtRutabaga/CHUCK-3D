@@ -187,7 +187,7 @@
     },
     "Eye": {
      "type": "eye",
-     "texture": "Textures/brownlight_eye.png"
+     "texture": "Textures/brownlight_eye_soft.png"
     },
     "Teeth": {
      "type": "teeth",
@@ -213,7 +213,12 @@
     },
     "Lash": {
      "type": "card",
-     "texture": "Textures/eyelashes02.png"
+     "texture": "Textures/eyelashes02_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
     }
    },
    "mouth_cm": [
@@ -480,7 +485,7 @@
     },
     "Eye": {
      "type": "eye",
-     "texture": "Textures/grey_eye.png"
+     "texture": "Textures/grey_eye_soft.png"
     },
     "Teeth": {
      "type": "teeth",
@@ -511,7 +516,12 @@
     },
     "Lash": {
      "type": "card",
-     "texture": "Textures/eyelashes01.png"
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.20700000000000002,
+      0.2025,
+      0.189
+     ]
     }
    },
    "mouth_cm": [
@@ -820,7 +830,7 @@
     },
     "Eye": {
      "type": "eye",
-     "texture": "Textures/green_eye.png"
+     "texture": "Textures/green_eye_soft.png"
     },
     "Teeth": {
      "type": "teeth",
@@ -851,7 +861,12 @@
     },
     "Lash": {
      "type": "card",
-     "texture": "Textures/eyelashes03.png"
+     "texture": "Textures/eyelashes03_fine.png",
+     "tint": [
+      0.135,
+      0.045000000000000005,
+      0.03
+     ]
     }
    },
    "mouth_cm": [
