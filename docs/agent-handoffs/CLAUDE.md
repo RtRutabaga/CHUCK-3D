@@ -17,10 +17,12 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - The perf modes and `-ChuckGroomCull` are documented in SourceAssets/NPCs/README.md.
 - **Tested:**
   - Editor `-game` timings and captures as above.
-  - Packaged result: in the Launcher line below.
+  - Packaged: `Verify-Package` passed all 182 checks (`Local/verify-package-20261030-224650.log`).
   - Not played by hand. The views are static, so moving through the town costs more than these numbers.
 - **Remaining flaws:** frame rate in motion wasn't measured. Hair shadows from local lights were left as they were, because limiting them saved nothing measurable.
 - **Contract compatibility:** one engine CVar; no slot, bone or clip changes.
+- **Launcher:** promoted as `Perf` with `Tools/Promote-Build.ps1`.
+- **Next owner:** either agent can take the next part. Chuck's eyes and his head-to-body join (discussed with the user, not started) are better suited to Claude.
 
 ## October 29 (later) — NPC eyes: no more "mascara" lashes, softer eye whites (Claude)
 
