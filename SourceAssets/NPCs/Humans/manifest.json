@@ -906,7 +906,7 @@
   "Dwarf": {
    "fbx": "Dwarf/SK_Dwarf.fbx",
    "height_cm": 134,
-   "tris": 90234,
+   "tris": 90252,
    "slots": {
     "Gambeson": {
      "type": "fabric",
@@ -1071,7 +1071,7 @@
     "Beard": {
      "abc": "Dwarf/GR_Dwarf_Beard.abc",
      "bone": "head",
-     "strands": 9805,
+     "strands": 16311,
      "colour": [
       0.24,
       0.09,
@@ -1088,9 +1088,9 @@
      "specular": 0.3,
      "roots_cm": {
       "mean": [
-       8.45,
-       0.24,
-       116.82
+       8.53,
+       0.12,
+       117.16
       ],
       "min": [
        5.51,
@@ -1098,7 +1098,7 @@
        112.12
       ],
       "max": [
-       15.01,
+       15.12,
        7.14,
        121.19
       ]
@@ -1107,7 +1107,7 @@
     "BeardJaw": {
      "abc": "Dwarf/GR_Dwarf_BeardJaw.abc",
      "bone": "jaw",
-     "strands": 26971,
+     "strands": 27500,
      "colour": [
       0.24,
       0.09,
@@ -1124,9 +1124,9 @@
      "specular": 0.3,
      "roots_cm": {
       "mean": [
-       11.64,
-       -0.1,
-       112.56
+       11.66,
+       -0.11,
+       112.6
       ],
       "min": [
        7.13,

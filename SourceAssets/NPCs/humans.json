@@ -977,12 +977,29 @@
      "roughness": 0.6
     },
     {
+     "style": "wild_thick_beard",
+     "group": "Beard",
+     "fill": "beard",
+     "mass": true,
+     "copies": 2,
+     "above_z": -0.06,
+     "length": 0.14,
+     "points": 12,
+     "bow": 0.6,
+     "wave": 0.5,
+     "set": {
+      "Duplicate Hair Curves/Amount": 3
+     }
+    },
+    {
      "style": "wild_thick_moustache",
      "group": "Beard",
      "fill": "beard",
-     "length": 0.05,
+     "copies": 3,
+     "length": 0.065,
      "bend": 0.012,
-     "points": 8
+     "wave": 0.45,
+     "points": 10
     }
    ]
   },

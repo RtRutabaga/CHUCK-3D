@@ -43,7 +43,8 @@ int32 ChuckGroom::Attach(AActor* Owner, USkinnedMeshComponent* Mesh, TArray<UGro
         Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         // Strands are costly: drawn only within 25 m (every haired NPC drew from anywhere on the map, which
         // slowed the temple's frames).
-        Hair->SetCullDistance(2500.f);
+        static const float Cull=[]{ float V=2500.f; FParse::Value(FCommandLine::Get(),TEXT("ChuckGroomCull="),V); return V; }();   // -ChuckGroomCull=<cm> to test
+        Hair->SetCullDistance(Cull);
         Hair->SetupAttachment(Mesh, Bone);
         // Authored in the mesh's rest pose: undo the bone's rest transform, then it rides on the bone.
         Hair->SetRelativeTransform(RefComponentSpace(Ref, Index).Inverse());

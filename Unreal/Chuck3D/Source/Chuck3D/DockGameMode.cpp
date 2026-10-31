@@ -30,6 +30,7 @@
 #include "EnemyRat.h"
 #include "AstralSummon.h"
 #include "DockNPC.h"
+#include "GroomComponent.h"
 #include "DockSubtitles.h"
 #include "NPCVoiceData.h"
 #include "Components/SkinnedMeshComponent.h"
@@ -833,6 +834,7 @@ void ADockGameMode::StartPlay()
         Check(Readable && Alchemist && Elder,TEXT("subtitles preserve words and timing weights, group quick phrases with adjacent sentences, and retain the smith opening pause"));
     }
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
+    bTownPerf = FParse::Param(FCommandLine::Get(),TEXT("ChuckTownPerf"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSailorCapture"))) { bSmithCapture=true; FilmTag=TEXT("Sailor"); }   // his pipe: head and shoulders
@@ -1233,6 +1235,93 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks) if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck);
 }
 
+void ADockGameMode::TickTownPerf(float DeltaSeconds)
+{
+    // Waterdeep's cost with the townsfolk's strand hair (2026-10-30, user: "waterdeep is a bit laggy now").
+    // For each haired NPC two views, as play sees them: close (3 m, Chuck's camera on a conversation) and
+    // across the square (12 m); each held 3 s, timed after a second to settle. Then every view again with
+    // all the grooms hidden. No vsync or frame cap, so the times are what the frame costs.
+    constexpr float Settle=4.f, Each=3.f, Skip=1.f;
+    static const float Dists[]={300.f,1200.f};
+    TownPerfTime+=DeltaSeconds;
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    // -ChuckTownPerfPlay: as play is: Chuck in front of each NPC, seen through his own camera, his fur on.
+    static const bool bPlay=FParse::Param(FCommandLine::Get(),TEXT("ChuckTownPerfPlay"));
+    APawn* Chuck=UGameplayStatics::GetPlayerPawn(this,0);
+    if(Chuck && !bPlay) Chuck->SetActorHiddenInGame(true);
+    TArray<TWeakObjectPtr<ADockNPC>> NPCs=ADockNPC::All();
+    NPCs.RemoveAll([](const TWeakObjectPtr<ADockNPC>& N){ TArray<UGroomComponent*> G; if(N.IsValid()) N->GetComponents(G); return !N.IsValid() || !G.Num(); });
+    if(TownPerfStep<0)
+    {
+        GEngine->Exec(GetWorld(),TEXT("r.VSync 0")); GEngine->Exec(GetWorld(),TEXT("t.MaxFPS 0"));
+        TownPerfStep=-2;
+    }
+    if(TownPerfTime<Settle || !PC || !NPCs.Num()) return;
+    const int32 Views=NPCs.Num()*UE_ARRAY_COUNT(Dists);
+    const int32 Step=FMath::FloorToInt((TownPerfTime-Settle)/Each);
+    auto Report=[&]()
+    {
+        if(TownPerfStep<0 || !TownPerfFrames) return;
+        const int32 View=TownPerfStep%Views; const bool bHair=TownPerfStep<Views;
+        const ADockNPC* N=NPCs[View/UE_ARRAY_COUNT(Dists)].Get();
+        const FString Name=N && N->Tags.Num() ? N->Tags[0].ToString() : TEXT("?");
+        const double Ms=TownPerfMs/TownPerfFrames, Gpu=TownPerfGpu/TownPerfFrames;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_PERF_VIEW hair=%d npc=%s dist_m=%.0f frame_ms=%.2f gpu_ms=%.2f worst_ms=%.1f frames=%d"),
+            bHair?1:0,*Name,Dists[View%UE_ARRAY_COUNT(Dists)]/100.f,Ms,Gpu,TownPerfWorst,TownPerfFrames);
+        if(TownPerfSums.Num()<4) TownPerfSums.SetNumZeroed(4);
+        TownPerfSums[bHair?0:2]+=Gpu; TownPerfSums[bHair?1:3]+=Ms;
+    };
+    if(Step>=2*Views)
+    {
+        Report();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_PERF views=%d hair_gpu_ms=%.2f hair_frame_ms=%.2f nohair_gpu_ms=%.2f nohair_frame_ms=%.2f"),Views,
+            TownPerfSums[0]/Views,TownPerfSums[1]/Views,TownPerfSums[2]/Views,TownPerfSums[3]/Views);
+        FPlatformMisc::RequestExit(false); return;
+    }
+    if(Step!=TownPerfStep)
+    {
+        Report();
+        TownPerfStep=Step; TownPerfFrames=0; TownPerfMs=TownPerfGpu=TownPerfWorst=0;
+        const bool bHair=Step<Views;
+        for(const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All())
+        {
+            TArray<UGroomComponent*> G; if(N.IsValid()) N->GetComponents(G);
+            for(UGroomComponent* C : G) C->SetVisibility(bHair);
+        }
+        const int32 View=Step%Views;
+        ADockNPC* NPC=NPCs[View/UE_ARRAY_COUNT(Dists)].Get();
+        if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
+        const FVector Head=NPC->GetHeadLocation();
+        const FVector Dir=NPC->GetActorForwardVector().RotateAngleAxis(25.f,FVector::UpVector);
+        const float D=Dists[View%UE_ARRAY_COUNT(Dists)];
+        const FVector From=Head+Dir*D+FVector(0,0,D*.12f);
+        if(bPlay && Chuck)
+        {
+            // Chuck on the ground D out, facing the NPC; his camera behind him.
+            FVector Feet=NPC->GetActorLocation()-FVector(0,0,NPC->GetSimpleCollisionHalfHeight())+Dir*D;
+            Feet.Z+=Chuck->GetSimpleCollisionHalfHeight()+2.f;
+            Chuck->TeleportTo(Feet,FRotator(0,(-Dir).Rotation().Yaw,0));
+            if(AController* C=Chuck->GetController()) C->SetControlRotation(FRotator(-10,(-Dir).Rotation().Yaw,0));
+            PC->SetViewTarget(Chuck);
+            return;
+        }
+        NPCCamera->SetActorLocationAndRotation(From,(Head-From).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(90.f);
+        PC->SetViewTarget(NPCCamera.Get());
+        return;
+    }
+    if(TownPerfTime-Settle-Step*Each<Skip) return;
+    static const bool bShots=FParse::Param(FCommandLine::Get(),TEXT("ChuckTownPerfShots"));
+    if(bShots && Step<Views && TownPerfFrames==30)   // one still of each hair-on view (a settings comparison)
+    {
+        const ADockNPC* N=NPCs[(Step%Views)/UE_ARRAY_COUNT(Dists)].Get();
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/TownPerf_%s_%.0f.png"),
+            N && N->Tags.Num() ? *N->Tags[0].ToString() : TEXT("NPC"),Dists[Step%UE_ARRAY_COUNT(Dists)]/100.f),false,false);
+    }
+    const double Gpu=FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+    TownPerfMs+=DeltaSeconds*1000.; TownPerfGpu+=Gpu; ++TownPerfFrames; TownPerfWorst=FMath::Max(TownPerfWorst,(double)DeltaSeconds*1000.);
+}
+
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -1240,6 +1329,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(bSmithCapture) { TickSmithCapture(DeltaSeconds); return; }
     if(bDwarfCapture) { TickDwarfCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
+    if(bTownPerf) { TickTownPerf(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     if(!Chuck) { Check(false,TEXT("player spawned")); FPlatformMisc::RequestExitWithStatus(false,1); return; }

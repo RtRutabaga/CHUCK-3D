@@ -301,6 +301,17 @@ lines from References/Original/PHASE-2.md).
   - **The tavern keeper has a face rig** (`face`): jaw, lids, brows, teeth, tongue. He
     blinks. His one voiced line (at night) drives the jaw like the others', but no
     capture has shown him speaking yet. The fighter's beard was seen opening with his jaw.
+  - **Cost (2026-10-30, user: "waterdeep is a bit laggy now"):** `-ChuckTownPerf` times fixed views of
+    each haired NPC (3 m and 12 m) with the grooms shown, then hidden. `-ChuckTownPerfPlay` uses Chuck's
+    own camera with Chuck in front of each NPC, `-ChuckTownPerfShots` saves a still of each view, and
+    `-ChuckGroomCull=<cm>` overrides the groom cull distance.
+    - At 2560×1440 with Chuck in view: 10.2 ms with all hair, 8.3 ms with the townsfolk's hair hidden.
+    - Hair Auto LOD (`r.HairStrands.LODMode 1`, the engine default) already thins distant grooms. A 15 m
+      cull saved nothing, so 25 m stays. MSAA samples, deep-shadow resolution and the compute
+      rasteriser changed nothing measurable.
+    - The cost was the voxel volume. `r.HairStrands.Voxelization=0` (DefaultEngine.ini) gives 7.9 ms with
+      all hair, so the townsfolk's hair now costs about 0.7 ms. It also removed the blue cast on grey and
+      white hair. Dark hair and Chuck's fur look unchanged (`Local/PerfReview/voxon` against `voxoff`).
   - **Review:** `-ChuckNPCCapture -ChuckNPCShots=Head,HeadBack,HeadSide,Far` films only those
     shots (`HeadBack`, `HeadSide` and `Far` added for hair). The sanctum's `portraits`
     trial now also films the back of each hero's head.

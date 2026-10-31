@@ -2,6 +2,26 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 30 — Waterdeep hair cost cut by a quarter; dwarf's fuller moustache and upper beard (Claude)
+
+- **Asked:**
+  - "waterdeep is a bit laggy now". Reduce it "without sacrificing too much quality".
+  - "i do want the dwarf to have bushier mustache and upper beard too".
+- **Found:**
+  - The user plays borderless at 2560×1440 on a 60 Hz monitor. Their October 30 session logs show about 40–53 fps in Waterdeep.
+  - New `-ChuckTownPerf` / `-ChuckTownPerfPlay` measurement, at 1440p with Chuck in view: 10.2 ms with all hair, 8.3 ms with the townsfolk's hair hidden.
+  - Hair Auto LOD was already on, and a shorter cull distance saved nothing. The hair's voxel volume was the cost (`Local/townperf-1440-*.log`).
+- **Built:**
+  - `r.HairStrands.Voxelization=0` in DefaultEngine.ini: 7.9 ms with all hair (−2.4 ms, about 23%). Grey and white hair lost its blue cast; dark hair and Chuck's fur look the same (`Local/PerfReview/voxon` against `voxoff`).
+  - The dwarf has a second dense pass over his cheeks and upper jaw (`above_z`, a new root filter). His moustache has three strands per root (`copies` now works for fill beards too). He goes from 9,805 to 16,311 upper-beard strands and his moustache from 852 to 2,583 strands. His mouth still shows (`Local/PerfReview/dwarf`).
+  - The perf modes and `-ChuckGroomCull` are documented in SourceAssets/NPCs/README.md.
+- **Tested:**
+  - Editor `-game` timings and captures as above.
+  - Packaged result: in the Launcher line below.
+  - Not played by hand. The views are static, so moving through the town costs more than these numbers.
+- **Remaining flaws:** frame rate in motion wasn't measured. Hair shadows from local lights were left as they were, because limiting them saved nothing measurable.
+- **Contract compatibility:** one engine CVar; no slot, bone or clip changes.
+
 ## October 29 (later) — NPC eyes: no more "mascara" lashes, softer eye whites (Claude)
 
 - **Asked:** "start making the humanoid NPC eyes look better (aside from zombies they're fine as is), currently everyone looks like they have thick mascara on".

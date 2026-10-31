@@ -35,6 +35,11 @@ private:
     bool bNPCShotTaken = false;
     TWeakObjectPtr<class ACameraActor> NPCCamera;
     void TickNPCCapture(float DeltaSeconds);
+    // -ChuckTownPerf: frame and GPU time from fixed views of the haired townsfolk, with and without their hair.
+    bool bTownPerf = false;
+    float TownPerfTime = 0; int32 TownPerfStep = -1; int32 TownPerfFrames = 0; double TownPerfMs = 0, TownPerfGpu = 0, TownPerfWorst = 0;
+    TArray<double> TownPerfSums;
+    void TickTownPerf(float DeltaSeconds);
     // NPC speech over the music (user 2026-10-06: "make all npc dialogue louder in relation to
     // the music"): while anyone speaks, every score track's volume multiplier eases down to
     // MusicDuckLevel (quickly), and back up once they've finished (slowly). Separate from the

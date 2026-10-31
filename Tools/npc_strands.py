@@ -267,6 +267,7 @@ class Groomer:
             behind = smooth(self.ear_back + .002, self.ear_back + .03, p.y)
             if p.z < line * (1 - behind) + (info.neck.z + .035) * behind: return False
         if entry.get('below_z') is not None and p.z > info.eye_z + entry['below_z']: return False
+        if entry.get('above_z') is not None and p.z < info.eye_z + entry['above_z']: return False   # the upper beard only (cheeks, sideburns)
         return True
 
     def bone_of(self, root):
@@ -322,9 +323,13 @@ class Groomer:
                     if g_pts is None: stats['outside'] += 1
                     else: finish(g_pts, g_rad)
                 continue
-            if fill:
-                pts, rad = self.fill_beard(pts, rad, length, entry, rnd)
-                if pts is None: stats['outside'] += 1; continue
+            if fill:   # `copies` strands from each root, the extra ones a millimetre or two to the side (2026-10-30: the dwarf's fuller moustache)
+                for k in range(entry.get('copies', 1)):
+                    shift = np.array([rnd.uniform(-.002, .002) for _ in range(3)], np.float32) if k else 0.
+                    f_pts, f_rad = self.fill_beard(pts + shift, rad, length, entry, rnd)
+                    if f_pts is None: stats['outside'] += 1
+                    else: finish(f_pts, f_rad)
+                continue
             if entry.get('comb') and self.tie is not None:
                 pts, rad = self.comb(root, float(rad[0]), entry['comb'], rnd)
             finish(pts, rad)
