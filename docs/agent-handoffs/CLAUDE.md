@@ -23,12 +23,14 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - Captures: `-ChuckPortrait` before, thick neck and slim neck (`Local/ChuckReview/before`, `after1`, `after2`), and Blender neutral and strong-pose renders (`Local/ChuckReview/blender2`, `neckposes2`).
   - `check_v1.py`: everything passes except "stays above ground" in 7 later clips (hands or tail tip below the ground; not the neck). There is no earlier record for those clips.
   - Groom import and root validation passed.
-  - Packaged result: in the Launcher line below.
+  - Package: `Verify-Package.ps1` passed 182 checks (`Local/verify-package-20261031-115351.log`). An earlier run failed once on the temple saws timing test (a saw hit during a roll); two standalone reruns and the full rerun passed.
   - Not played by hand.
 - **Remaining flaws:**
   - Seen bare in Blender, the neck has some faceting in front, under the fur.
   - The throat fur reads a little darker than the cream chest in the front view.
 - **Contract compatibility:** same 41 bones and nine slots. New part `Neck`; new material `M_ChuckEye` on the Eye slot. Clips re-exported unchanged.
+- **Launcher:** promoted as `Neck` with `Tools/Promote-Build.ps1`. The root `Launch-Chuck.cmd` runs this build.
+- **Next owner:** either agent can take the next part. More Chuck work (neck faceting, throat fur tone) is better suited to Claude.
 
 ## October 30 — Waterdeep hair cost cut by a quarter; dwarf's fuller moustache and upper beard (Claude)
 
