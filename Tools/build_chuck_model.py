@@ -321,25 +321,28 @@ for side in (-1,1):
 
 # Neck (2026-10-31, user: his head-to-body join "more naturally like a rat ... less like a felt doll";
 # References/ArtDirection/Chuck-Turnaround.png). The head was a separate ball on the torso's narrow top
-# (about 8 x 10 cm at 47 cm) inside a collar about 13 cm across, so every view showed a ball sitting loose
-# in the collar. This is a thick neck that fills the collar opening and runs up inside the cheeks, the
-# nape and under the chin: the jowls flow into the chest and shoulders. It starts inside the torso and
+# (about 8 x 10 cm at 47 cm), so every view showed a ball sitting loose in the collar. This is a slim
+# rat's neck that runs up inside the back of the skull, the jowls and under the chin, so the head grows
+# out of the body instead of resting on it. It starts inside the torso and
 # ends inside the head (both caps hidden); cream in front (the throat, between the chin and the chest),
 # coat colour round the sides and back. Rows: (z, back x, front x, half-width y), source cm. In the v1
 # build it maps like the torso (narrowed with it) and, in front, like the snout (Tools/chuck_v1_shape.py
 # kind 'neck'), then is kept inside the jacket shell (build_chuck_v1.py).
-NECK_ROWS=[(41.5,-4.4,5.6,5.4),(44.,-4.6,6.,6.2),(46.,-4.8,6.6,6.5),(47.6,-4.7,7.,6.3),
-           (49.,-4.5,7.2,5.8),(50.6,-4.,7.,5.),(52.4,-3.2,6.,4.1),(54.4,-1.6,3.6,2.7)]
+# 2026-10-31 (second pass, user: "too thick ... more like [the turnaround] so that he looks more naturally
+# like a rat standing on its hind legs"): a standing rat holds its cervical column near vertical; the neck
+# is about as wide as the back of the skull and narrower than the cheeks (half-width 3.3-4.2 cm against the
+# head's 4.6), the nape sloping straight from the skull into the back, the throat straight from the chin
+# down to the chest.
+NECK_ROWS=[(41.5,-3.6,4.4,4.2),(44.,-3.7,4.5,4.0),(46.,-3.7,4.9,3.75),(48.,-3.5,5.4,3.5),
+           (50.,-3.1,5.6,3.25),(52.,-2.3,4.8,2.8),(54.,-1.1,3.,2.)]
 NECK_SEG=40
 verts,faces=[],[]
 for z,back,front,half in NECK_ROWS:
     cx,rx=(back+front)/2,(front-back)/2
     for j in range(NECK_SEG):
         a=j*math.tau/NECK_SEG
-        # Fuller than an ellipse behind (jowls and nape), round in front (the throat).
-        c,s=math.cos(a),math.sin(a)
-        k=.95 if c>0 else .8
-        verts.append((cx+rx*math.copysign(abs(c)**k,c),half*math.copysign(abs(s)**k,s),z))
+        # An ellipse: round all the way round, like the body it grows out of.
+        verts.append((cx+rx*math.cos(a),half*math.sin(a),z))
 for row in range(len(NECK_ROWS)-1):
     for j in range(NECK_SEG):
         k=row*NECK_SEG+j; nxt=row*NECK_SEG+(j+1)%NECK_SEG
@@ -364,7 +367,8 @@ for poly in neck.data.polygons:
     i=max(0,min(len(zs)-2,sum(1 for z in zs if z<=c.z)-1))
     f=(c.z-zs[i])/(zs[i+1]-zs[i]) if zs[i+1]>zs[i] else 0.
     back=NECK_ROWS[i][1]*(1-f)+NECK_ROWS[i+1][1]*f; front=NECK_ROWS[i][2]*(1-f)+NECK_ROWS[i+1][2]*f
-    poly.material_index=1 if c.x>back+(front-back)*.62 and abs(c.y)<4.2 else 0
+    # The throat: the cream band the width of the chest bib's top, straight down from the chin.
+    poly.material_index=1 if c.x>back+(front-back)*.55 and abs(c.y)<2.9 else 0
 
 # Open jacket: one continuous garment surface. Every body row, the collar stand,
 # the fold and the collar/lapel fall share one grid and one front-edge function,

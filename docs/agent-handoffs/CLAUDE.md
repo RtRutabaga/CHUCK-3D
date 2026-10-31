@@ -6,10 +6,11 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 
 - **Asked:** "do Chuck's eyes and his head-to-body join". The goal: look "more naturally like a rat (albeit a slightly anthropomorphic fantasy rat), and less like a felt doll". No changes to the jacket, and not stocky like the inspiration image.
 - **Built** (SourceAssets/Chuck/V1/README.md, "Neck and eyes"):
-  - **Neck:** a thick neck (`Neck` part) from inside the torso up into the head. It fills the collar opening, runs inside the jowls, nape and chin, and is drawn onto the skull above the collar.
-    - Cream at the throat. Weighted chest/neck → head.
-    - Kept 0.35 cm inside the unchanged jacket.
-  - **Fur:** the direction now blends over the neck instead of parting at one height, with a fuller ruff on the jowls, nape and throat.
+  - **Neck:** a slim rat's neck (`Neck` part), from inside the torso up into the back of the skull, the jowls and under the chin.
+    - About as wide as the back of the skull and narrower than the cheeks; the nape slopes into the back, and the throat runs straight from the chin to the chest (turnaround; a standing rat holds its cervical column near vertical).
+    - A first, thick version was rejected by the user as "too thick" and replaced.
+    - Cream throat band. Weighted chest/neck → head. Kept inside the unchanged jacket.
+  - **Fur:** direction, length and lift change gradually over the neck instead of parting at one height. The cream runs unbroken from chin to chest.
   - **Eyes:** a little larger, rounder and more prominent, with a dark lid rim instead of an amber ring. A new `M_ChuckEye` is wet near-black with a camera-relative catchlight.
   - **Unchanged:** jacket, proportions and bones.
 - **Also fixed (blocked verification):**
@@ -19,7 +20,7 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - `CHUCK_RIVER_ZOMBIE_UNSUPPORTED` now logs any failing home and what is in the way.
   - Not Chuck-related. It showed up more often in this build, probably by chance of timing.
 - **Tested:**
-  - Captures: `-ChuckPortrait` before and after (`Local/ChuckReview/before`, `after1`), and Blender neutral and strong-pose renders (`Local/ChuckReview/blender`, `neckposes`).
+  - Captures: `-ChuckPortrait` before, thick neck and slim neck (`Local/ChuckReview/before`, `after1`, `after2`), and Blender neutral and strong-pose renders (`Local/ChuckReview/blender2`, `neckposes2`).
   - `check_v1.py`: everything passes except "stays above ground" in 7 later clips (hands or tail tip below the ground; not the neck). There is no earlier record for those clips.
   - Groom import and root validation passed.
   - Packaged result: in the Launcher line below.

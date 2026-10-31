@@ -165,14 +165,19 @@ User: make his head-to-body join "more naturally like a rat (albeit a slightly a
 
 - **Neck** (`Neck` part in `Tools/build_chuck_model.py`):
   - The head used to be a separate ball on the torso's narrow top, inside a collar about 13 cm across, so it read as a ball sitting loose in the collar.
-  - The neck is a thick, rounded tube from inside the torso (41.5 cm) up into the head. It fills the collar opening and runs inside the jowls, nape and chin. Above 48.5 cm it is pulled onto the skull, so it curves into the cheeks instead of standing proud of them.
-  - It is cream at the throat and coat colour round the sides and back.
+  - The neck is a slim tube, like a standing rat's (References/ArtDirection/Chuck-Turnaround.png). It runs from inside the torso (41.5 cm) up into the back of the skull, the jowls and under the chin.
+    - It is about as wide as the back of the skull and narrower than the cheeks (half-width 4.2 to 3.3 cm, against the head's 4.6).
+    - The nape slopes straight into the back, and the throat runs straight from the chin to the chest.
+    - Above 48.5 cm it is pulled onto the skull.
+    - User 2026-10-31: a first, thick version (filling the collar) was "too thick".
+  - It is cream at the throat, one band the width of the chest bib from the chin down, and coat colour round the sides and back.
   - In the v1 build it maps like the torso, with its throat set back like the snout (`chuck_v1_shape` kind `neck`), and is kept 0.35 cm inside the unchanged jacket shell (`keep_neck_inside`).
   - Weights: the spine chain (chest, neck) grades into `head` over 49–53 cm.
   - The jacket, the body proportions and the bone table are unchanged.
 - **Fur** (`build_groom.py`):
   - The fur direction turns from the head's (sleek, toward the tail) to the body's (down and back) over 46–51 cm. It used to change at one height, which left a line of parted fur round the neck.
-  - Fur on the jowls, nape and throat is about 12% longer, as a ruff.
+  - Fur length and lift change gradually over the neck, from the body coat to the shorter cheek fur, with no step or ruff.
+  - The throat is cream only. Coat-coloured hairs in the cream start above the jaw, so the cream runs unbroken from chin to chest.
   - The bare ring round each eye was narrowed (1.85 cm behind and below the eye, 2.3 cm in front), so the coat meets the lid.
 - **Eyes:**
   - Slightly larger and rounder, standing a little further out of the head.

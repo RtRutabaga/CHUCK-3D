@@ -81,10 +81,11 @@ def region_scale(p):
         return .45, .6                   # muzzle and snout
     if p.z > Z(55.):
         return .85, .85                  # crown: textured, a little tufty, no tall crest
-    if p.z > Z(51.5):
-        return .85, .8                   # cheeks
     if p.z > Z(45.):
-        return 1.12, .75                 # jowls, nape and throat: a fuller ruff where head meets body (2026-10-31)
+        # Cheeks down the neck into the body coat: length and lift change gradually over the neck (2026-10-31),
+        # so the coat runs on from the head to the shoulders and chest with no step or ruff.
+        f = smoothstep(p.z, Z(46.), Z(52.))
+        return 1. - .15 * f, 1. - .2 * f
     if p.z < Z(11.):
         return .55, .6                   # shins: short, sleek (the goal's slim lower legs)
     if p.z < Z(19.):
@@ -94,7 +95,9 @@ def region_scale(p):
 def group_of(tri, p, n):
     mat = mat_names[tri.material_index]
     if mat == 'Chest':
-        if p.z > Z(47.5) and tri.index % 3 == 0:
+        # A few coat-coloured hairs in the cream on the face only: the throat stays one cream band from the
+        # chin down into the chest bib (2026-10-31).
+        if p.z > Z(51.) and tri.index % 3 == 0:
             return 'Fur_Body'
         return 'Fur_Cream'
     if mat != 'Fur':
