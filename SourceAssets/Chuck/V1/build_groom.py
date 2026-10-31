@@ -27,6 +27,11 @@ V1 = Path(bpy.data.filepath).parent
 sys.path.insert(0, str(V1.parents[2] / 'Tools'))
 # Source heights below are v1.0 values mapped by the v1.1 shape amendment.
 from chuck_v1_shape import Z, X  # noqa: E402
+
+
+def smoothstep(x, lo, hi):
+    t = min(1., max(0., (x - lo) / (hi - lo)))
+    return t * t * (3 - 2 * t)
 OUT = V1 / 'Groom'; OUT.mkdir(exist_ok=True)
 scene = bpy.context.scene
 rng = random.Random(4217)
@@ -42,18 +47,20 @@ mesh.calc_loop_triangles()
 mat_names = [m.name.split('.')[0] for m in mesh.materials]
 tree = BVHTree.FromObject(mesh_obj, deps)
 poly_mat = [p.material_index for p in mesh.polygons]
-EYES = [Vector((X(7.15), s * 3.8, Z(55.0))) for s in (1, -1)]
+EYES = [Vector((X(7.1), s * 3.86, Z(55.0))) for s in (1, -1)]
 # Ear shells (cupped_ear in build_chuck_model.py) stay nearly bare; strands on
 # their furred backs would fringe past the rim.
 EARS = [Vector((1.1, s * 5.2, Z(60.8))) for s in (1, -1)]  # ear on the outer top corner of the skull (build_chuck_model.py)
 
 # Group definitions: strands, length range (cm), flow direction chooser.
 def flow_for(p):
-    if p.z > Z(47.5):                    # head and muzzle: sleek toward the tail
-        return Vector((-1., 0., -.25))
     if p.z < Z(19.):                     # legs: straight down
         return Vector((.1, 0., -1.))
-    return Vector((-.45, 0., -1.))       # body: down and back
+    # Head and muzzle sleek toward the tail, the body down and back. The change used to happen at one
+    # height (47.5 cm), a line of parted fur round the neck that drew the head as a separate ball
+    # (2026-10-31); now it turns over the jowls and neck, the cheek fur sweeping back and down onto it.
+    head = smoothstep(p.z, Z(46.), Z(51.))
+    return Vector((-1., 0., -.25)) * head + Vector((-.45, 0., -1.)) * (1 - head)
 
 GROUPS = {
     'Fur_Body':  {'count': 60000, 'length': (.9, 1.6)},
@@ -74,8 +81,10 @@ def region_scale(p):
         return .45, .6                   # muzzle and snout
     if p.z > Z(55.):
         return .85, .85                  # crown: textured, a little tufty, no tall crest
-    if p.z > Z(47.5):
-        return .8, .8                    # cheeks and nape
+    if p.z > Z(51.5):
+        return .85, .8                   # cheeks
+    if p.z > Z(45.):
+        return 1.12, .75                 # jowls, nape and throat: a fuller ruff where head meets body (2026-10-31)
     if p.z < Z(11.):
         return .55, .6                   # shins: short, sleek (the goal's slim lower legs)
     if p.z < Z(19.):
@@ -101,7 +110,9 @@ def covered(p, n):
     return hit is not None
 
 def near_eye(p):
-    return any((p - e).length < 2.3 for e in EYES) or any(
+    # Clear of the eye: 2.3 cm ahead of it (head fur lies back, over it), 1.85 cm elsewhere, so the coat
+    # meets the dark lid rim instead of leaving a ring of bare skin round it (2026-10-31).
+    return any((p - e).length < (2.3 if p.x > e.x + .3 else 1.85) for e in EYES) or any(
         (p - e).length < 4.8 and abs(p.y) > 3.3 and p.z > Z(57.5) for e in EARS)
 
 # Area-weighted candidate triangles per group.

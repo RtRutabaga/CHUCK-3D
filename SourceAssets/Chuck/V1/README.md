@@ -159,6 +159,30 @@ Peak thigh+calf reach ratio is at most 0.892 in every clip, so no leg is hyperex
 - **Ankle:** the leg/paw seam at the ankle is covered by the heel mound, not merged topology.
 - **Not done:** no LODs (the Unreal importer can generate them); no Unreal import. The UV seams are automatic.
 
+## Neck and eyes (2026-10-31)
+
+User: make his head-to-body join "more naturally like a rat (albeit a slightly anthropomorphic fantasy rat), and less like a felt doll", without changing the jacket or making him stocky; and make his eyes look like a real rat's.
+
+- **Neck** (`Neck` part in `Tools/build_chuck_model.py`):
+  - The head used to be a separate ball on the torso's narrow top, inside a collar about 13 cm across, so it read as a ball sitting loose in the collar.
+  - The neck is a thick, rounded tube from inside the torso (41.5 cm) up into the head. It fills the collar opening and runs inside the jowls, nape and chin. Above 48.5 cm it is pulled onto the skull, so it curves into the cheeks instead of standing proud of them.
+  - It is cream at the throat and coat colour round the sides and back.
+  - In the v1 build it maps like the torso, with its throat set back like the snout (`chuck_v1_shape` kind `neck`), and is kept 0.35 cm inside the unchanged jacket shell (`keep_neck_inside`).
+  - Weights: the spine chain (chest, neck) grades into `head` over 49–53 cm.
+  - The jacket, the body proportions and the bone table are unchanged.
+- **Fur** (`build_groom.py`):
+  - The fur direction turns from the head's (sleek, toward the tail) to the body's (down and back) over 46–51 cm. It used to change at one height, which left a line of parted fur round the neck.
+  - Fur on the jowls, nape and throat is about 12% longer, as a ruff.
+  - The bare ring round each eye was narrowed (1.85 cm behind and below the eye, 2.3 cm in front), so the coat meets the lid.
+- **Eyes:**
+  - Slightly larger and rounder, standing a little further out of the head.
+  - The lid is now a thin dark rim in the eye's own material; it was fur-coloured skin, which read as an amber ring.
+  - `M_ChuckEye` (`Tools/import_chuck_v1.py`, also used by `import_chuck_groom.py`) is near-black and wet (roughness 0.06, specular 0.9). It has a catchlight: a small emissive spot where the eye faces a direction up and left of the camera, so the eye always shows a highlight, as a portrait lamp gives.
+- **Review:** `-ChuckPortrait` films Chuck on the quay from ten fixed angles (`Saved/Screenshots/Windows/ChuckPortrait_*.png`).
+  - Before and after: `Local/ChuckReview/before`, `after1`.
+  - Strong head poses: `Local/ChuckReview/neckposes` (crawl, sprint leap, roll, pull-up, hang, turn).
+- **check_v1.py:** 7 clips fail "stays above ground": SpeedVault, SprintLoop, SprintLeap, Crawl, Swing, SwingLeapLeft and SwingLeapRight. The lowest points are a thumb, fingers and the tail tip, which the neck does not move. The last recorded check run (09-26) predates these clips.
+
 ## Cigarette
 
 Every goal image shows the cigarette held in the left mouth corner with a thin smoke wisp. It is a **separate prop**, not part of the skinned body, so a future pickup design can show or hide it (the `-ChuckNoCigarette` launch flag removes it).

@@ -835,6 +835,7 @@ void ADockGameMode::StartPlay()
     }
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bTownPerf = FParse::Param(FCommandLine::Get(),TEXT("ChuckTownPerf"));
+    bChuckPortrait = FParse::Param(FCommandLine::Get(),TEXT("ChuckPortrait"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSailorCapture"))) { bSmithCapture=true; FilmTag=TEXT("Sailor"); }   // his pipe: head and shoulders
@@ -1235,6 +1236,46 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks) if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck);
 }
 
+void ADockGameMode::TickChuckPortrait(float DeltaSeconds)
+{
+    // Chuck's head, eyes and neck (2026-10-31, user: "his head-to-body join ... more naturally like a rat ...
+    // less like a felt doll", and his eyes). Fixed views about him as he stands idle: yaw from his front,
+    // distance, aim height above his feet, field of view. Saved/Screenshots/Windows/ChuckPortrait_<Name>.png.
+    struct FShot { const TCHAR* Name; float Yaw, Distance, CamHeight, AimHeight, Fov; };
+    static const FShot Shots[] = {
+        {TEXT("Body"),0.f,190.f,40.f,34.f,40.f}, {TEXT("BodyQuarter"),35.f,190.f,40.f,34.f,40.f},
+        {TEXT("BodySide"),90.f,190.f,40.f,34.f,40.f}, {TEXT("BodyBack"),180.f,190.f,45.f,36.f,40.f},
+        {TEXT("Head"),0.f,85.f,56.f,52.f,30.f}, {TEXT("HeadQuarter"),35.f,85.f,56.f,52.f,30.f},
+        {TEXT("HeadSide"),90.f,85.f,55.f,51.f,30.f}, {TEXT("HeadBack"),150.f,85.f,60.f,50.f,30.f},
+        {TEXT("Eye"),30.f,45.f,58.f,57.f,22.f}, {TEXT("RatHeight"),20.f,150.f,35.f,45.f,50.f} };
+    constexpr float Settle=4.f, Each=1.2f;
+    PortraitTime+=DeltaSeconds;
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    if(!PC || !Chuck) return;
+    if(PortraitShot<0) { Chuck->DisableInput(PC); for(const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All()) if(N.IsValid()) N->SetActorHiddenInGame(true); PortraitShot=-2; }
+    if(PortraitTime<Settle) return;
+    const int32 Step=FMath::FloorToInt((PortraitTime-Settle)/Each);
+    if(Step>=UE_ARRAY_COUNT(Shots)) { FPlatformMisc::RequestExit(false); return; }
+    const FShot& Shot=Shots[Step];
+    if(Step!=PortraitShot)
+    {
+        if(!NPCCamera.IsValid()) NPCCamera=GetWorld()->SpawnActor<ACameraActor>();
+        const FVector Feet=Chuck->GetActorLocation()-FVector(0,0,Chuck->GetSimpleCollisionHalfHeight());
+        const FVector Dir=Chuck->GetActorForwardVector().RotateAngleAxis(Shot.Yaw,FVector::UpVector);
+        const FVector From=Feet+Dir*Shot.Distance+FVector(0,0,Shot.CamHeight), At=Feet+FVector(0,0,Shot.AimHeight);
+        NPCCamera->SetActorLocationAndRotation(From,(At-From).Rotation());
+        NPCCamera->GetCameraComponent()->SetFieldOfView(Shot.Fov);
+        PC->SetViewTarget(NPCCamera.Get());
+        PortraitShot=Step; bPortraitTaken=false;
+    }
+    else if(!bPortraitTaken && PortraitTime-Settle-Step*Each>.8f)
+    {
+        FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/FString::Printf(TEXT("Screenshots/Windows/ChuckPortrait_%s.png"),Shot.Name),false,false);
+        bPortraitTaken=true;
+    }
+}
+
 void ADockGameMode::TickTownPerf(float DeltaSeconds)
 {
     // Waterdeep's cost with the townsfolk's strand hair (2026-10-30, user: "waterdeep is a bit laggy now").
@@ -1330,6 +1371,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(bDwarfCapture) { TickDwarfCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
     if(bTownPerf) { TickTownPerf(DeltaSeconds); return; }
+    if(bChuckPortrait) { TickChuckPortrait(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     if(!Chuck) { Check(false,TEXT("player spawned")); FPlatformMisc::RequestExitWithStatus(false,1); return; }

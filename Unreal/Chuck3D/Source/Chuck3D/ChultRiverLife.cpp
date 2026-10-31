@@ -3,6 +3,7 @@
 #include "ChultCanyon.h"
 #include "ChultRiver.h"
 #include "ChultPath.h"
+#include "ChultPropAudit.h"
 #include "ChuckCharacter.h"
 #include "DockNPC.h"
 #include "Engine/World.h"
@@ -16,6 +17,7 @@
 #include "UnrealClient.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/LocalFogVolumeComponent.h"
+#include "Engine/OverlapResult.h"
 
 namespace
 {
@@ -88,6 +90,19 @@ void BuildChultRiverEncounterMist(AActor* Owner)
 void SpawnChultRiverZombies(UWorld* World)
 {
     if(!World)return;
+    // After the trees are let down onto the ground (GroundChultTrees, spread over several seconds): placed while
+    // it ran, a zombie's clear spot could later hold a lowered tree's trunk (2026-10-31, the far-bank test's
+    // "supported" count failing now and then). The river is far from where Chult starts, so the wait is unseen.
+    if(!IsChultGroundingDone())
+    {
+        static int32 Waits=0;
+        if(++Waits<120)   // at most 30 s, then place them anyway
+        {
+            FTimerHandle Again;
+            World->GetTimerManager().SetTimer(Again,FTimerDelegate::CreateStatic(&SpawnChultRiverZombies,World),.25f,false);
+            return;
+        }
+    }
     for(TActorIterator<ADockNPC> It(World);It;++It)if(It->ActorHasTag(TEXT("ChultRiverZombie")))return;
     Homes.Reset();FRandomStream R(20261016);
     const FVector G=AChultLanding::FloorOrigin(),Inland(.6,-.8,0);
@@ -206,6 +221,16 @@ void StartChultRiverZombieReview(UWorld* World)
 {
     auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
     if(!Chuck||ChultFarRoad().IsEmpty()) { FPlatformMisc::RequestExitWithStatus(false,1);return; }
+    if(Homes.Num()<72)   // the zombies wait for the trees' grounding (SpawnChultRiverZombies): so does their test
+    {
+        static int32 Waits=0;
+        if(++Waits<160)
+        {
+            FTimerHandle Again;
+            World->GetTimerManager().SetTimer(Again,FTimerDelegate::CreateStatic(&StartChultRiverZombieReview,World),.25f,false);
+            return;
+        }
+    }
     struct FRun
     {
         int32 Failures=0,Trial=-1,RollsBefore=0,LungesBefore=0,Attempt=0;
@@ -227,7 +252,20 @@ void StartChultRiverZombieReview(UWorld* World)
         const float D=ChultPathDistance(P);
         Clear+=H.Path ? D>=80&&D<=270 : D>(H.NearRoad?700:ADockNPC::ZombieLeash+180);
         Dry+=F.X>18200&&F.X<32900&&(H.Opposite ? F.Y>ChultRiverCenter(F.X)+ChultRiverWidth(F.X)+200 : F.Y<ChultRiverCenter(F.X)-ChultRiverWidth(F.X)-200);
-        Supported+=OpenFloor(World,P,Feet)&&FVector::Dist(Feet,H.Feet)<2;
+        const bool bFloor=OpenFloor(World,P,Feet);
+        Supported+=bFloor&&FVector::Dist(Feet,H.Feet)<2;
+        if(!bFloor||FVector::Dist(Feet,H.Feet)>=2)   // which home, and what is in the way (2026-10-31: one failing now and then)
+        {
+            FHitResult Hit;const float Z=ChultCanyonGroundZ(P);
+            World->LineTraceSingleByObjectType(Hit,G+FVector(P.X,P.Y,Z+200),G+FVector(P.X,P.Y,Z-50),FCollisionObjectQueryParams(ECC_WorldStatic),FCollisionQueryParams(SCENE_QUERY_STAT(RiverZombieFloorWhy),false));
+            TArray<FOverlapResult> Over;
+            World->OverlapMultiByObjectType(Over,(bFloor?Feet:H.Feet)+FVector(0,0,100),FQuat::Identity,FCollisionObjectQueryParams(ECC_WorldStatic),FCollisionShape::MakeCapsule(35,60));
+            FString Who;
+            for(const FOverlapResult& O:Over)Who+=TEXT(" ")+GetNameSafe(O.GetActor())+TEXT("/")+GetNameSafe(O.GetComponent());
+            const FString HitName=GetNameSafe(Hit.GetActor())+TEXT("/")+GetNameSafe(Hit.GetComponent());
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_UNSUPPORTED home=%s floor=%d hit=%s normal_z=%.2f moved_cm=%.1f overlaps=[%s]"),*H.Feet.ToString(),bFloor?1:0,
+                *HitName,Hit.ImpactNormal.Z,bFloor?FVector::Dist(Feet,H.Feet):-1.f,*Who);
+        }
         if(H.Zombie.IsValid())for(auto* C:H.Zombie->GetComponents())
             if(auto* Guard=Cast<UCapsuleComponent>(C);Guard&&Guard->ComponentHasTag(TEXT("RiverZombieCamera")))
                 CameraGuards+=Guard->GetCollisionResponseToChannel(ECC_Camera)==ECR_Block&&Guard->GetCollisionResponseToChannel(ECC_Pawn)==ECR_Ignore

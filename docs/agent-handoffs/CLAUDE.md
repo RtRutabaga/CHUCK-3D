@@ -2,6 +2,33 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 31 — Chuck's eyes and his head-to-body join (Claude)
+
+- **Asked:** "do Chuck's eyes and his head-to-body join". The goal: look "more naturally like a rat (albeit a slightly anthropomorphic fantasy rat), and less like a felt doll". No changes to the jacket, and not stocky like the inspiration image.
+- **Built** (SourceAssets/Chuck/V1/README.md, "Neck and eyes"):
+  - **Neck:** a thick neck (`Neck` part) from inside the torso up into the head. It fills the collar opening, runs inside the jowls, nape and chin, and is drawn onto the skull above the collar.
+    - Cream at the throat. Weighted chest/neck → head.
+    - Kept 0.35 cm inside the unchanged jacket.
+  - **Fur:** the direction now blends over the neck instead of parting at one height, with a fuller ruff on the jowls, nape and throat.
+  - **Eyes:** a little larger, rounder and more prominent, with a dark lid rim instead of an amber ring. A new `M_ChuckEye` is wet near-black with a camera-relative catchlight.
+  - **Unchanged:** jacket, proportions and bones.
+- **Also fixed (blocked verification):**
+  - The far-bank zombie test's layout check failed now and then (`supported=69–71/72`).
+  - Cause: `SpawnChultRiverZombies` ran at 1.2 s while `GroundChultTrees` was still lowering trees over about 8 s. A zombie's clear spot could later hold a lowered tree's trunk.
+  - The zombies, and their test, now wait for the grounding to finish. That gave 3/3 passes in the editor, against 0/6 before.
+  - `CHUCK_RIVER_ZOMBIE_UNSUPPORTED` now logs any failing home and what is in the way.
+  - Not Chuck-related. It showed up more often in this build, probably by chance of timing.
+- **Tested:**
+  - Captures: `-ChuckPortrait` before and after (`Local/ChuckReview/before`, `after1`), and Blender neutral and strong-pose renders (`Local/ChuckReview/blender`, `neckposes`).
+  - `check_v1.py`: everything passes except "stays above ground" in 7 later clips (hands or tail tip below the ground; not the neck). There is no earlier record for those clips.
+  - Groom import and root validation passed.
+  - Packaged result: in the Launcher line below.
+  - Not played by hand.
+- **Remaining flaws:**
+  - Seen bare in Blender, the neck has some faceting in front, under the fur.
+  - The throat fur reads a little darker than the cream chest in the front view.
+- **Contract compatibility:** same 41 bones and nine slots. New part `Neck`; new material `M_ChuckEye` on the Eye slot. Clips re-exported unchanged.
+
 ## October 30 — Waterdeep hair cost cut by a quarter; dwarf's fuller moustache and upper beard (Claude)
 
 - **Asked:**

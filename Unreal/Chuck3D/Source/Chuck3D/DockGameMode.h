@@ -40,6 +40,10 @@ private:
     float TownPerfTime = 0; int32 TownPerfStep = -1; int32 TownPerfFrames = 0; double TownPerfMs = 0, TownPerfGpu = 0, TownPerfWorst = 0;
     TArray<double> TownPerfSums;
     void TickTownPerf(float DeltaSeconds);
+    // -ChuckPortrait: Chuck standing on the quay in daylight, filmed from fixed angles (face, eyes, neck).
+    bool bChuckPortrait = false;
+    float PortraitTime = 0; int32 PortraitShot = -1; bool bPortraitTaken = false;
+    void TickChuckPortrait(float DeltaSeconds);
     // NPC speech over the music (user 2026-10-06: "make all npc dialogue louder in relation to
     // the music"): while anyone speaks, every score track's volume multiplier eases down to
     // MusicDuckLevel (quickly), and back up once they've finished (slowly). Separate from the

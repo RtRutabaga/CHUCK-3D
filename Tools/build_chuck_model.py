@@ -307,14 +307,64 @@ for e in ears:
         k=(65.-base.z)/(top-base.z)
         for v in e.data.vertices: v.co=base+(v.co-base)*k
 for side in (-1,1):
-    # Small, high rat eyes (face-proportion target).
-    ellipsoid('EyeLid',(6.7,side*3.6,54.9),(1.45,.62,1.1),'Fur')
-    ellipsoid('Eye',(7.15,side*3.8,55.0),(1.15,.62,.82),'Eye')
+    # Small, high rat eyes (face-proportion target). 2026-10-31 (user: "make his eyes look more like
+    # this", a glossy black rat eye): a little larger and rounder, bulging further out of the head; the
+    # lid is the eye's own dark material, a thin dark rim (it was bare fur-coloured skin, which read as
+    # an amber ring round a toy bead).
+    ellipsoid('EyeLid',(6.75,side*3.62,54.95),(1.55,.64,1.18),'Eye')
+    ellipsoid('Eye',(7.1,side*3.86,55.0),(1.26,.72,.96),'Eye')
     tube('Mouth',[head_surface(x,side*a,.3) for x,a in ((16.6,.35),(14.5,.8),(12,1.05),(9.8,1.15))],.05,'Fur')
     for i in range(7):
         # Rows on the whisker pad, fanning up/back to down/forward.
         root=(12.6+i*.45,side*(2.95-.17*i),51.0-i*.12)  # on the pad surface
         tube('Whisker',[root,(15+i*.5,side*(6.4-i*.15),51.6-i*.6),(14+i*1.4,side*(11+i*.3),52.6-i*1.1)],.028,'Whisker',1)
+
+# Neck (2026-10-31, user: his head-to-body join "more naturally like a rat ... less like a felt doll";
+# References/ArtDirection/Chuck-Turnaround.png). The head was a separate ball on the torso's narrow top
+# (about 8 x 10 cm at 47 cm) inside a collar about 13 cm across, so every view showed a ball sitting loose
+# in the collar. This is a thick neck that fills the collar opening and runs up inside the cheeks, the
+# nape and under the chin: the jowls flow into the chest and shoulders. It starts inside the torso and
+# ends inside the head (both caps hidden); cream in front (the throat, between the chin and the chest),
+# coat colour round the sides and back. Rows: (z, back x, front x, half-width y), source cm. In the v1
+# build it maps like the torso (narrowed with it) and, in front, like the snout (Tools/chuck_v1_shape.py
+# kind 'neck'), then is kept inside the jacket shell (build_chuck_v1.py).
+NECK_ROWS=[(41.5,-4.4,5.6,5.4),(44.,-4.6,6.,6.2),(46.,-4.8,6.6,6.5),(47.6,-4.7,7.,6.3),
+           (49.,-4.5,7.2,5.8),(50.6,-4.,7.,5.),(52.4,-3.2,6.,4.1),(54.4,-1.6,3.6,2.7)]
+NECK_SEG=40
+verts,faces=[],[]
+for z,back,front,half in NECK_ROWS:
+    cx,rx=(back+front)/2,(front-back)/2
+    for j in range(NECK_SEG):
+        a=j*math.tau/NECK_SEG
+        # Fuller than an ellipse behind (jowls and nape), round in front (the throat).
+        c,s=math.cos(a),math.sin(a)
+        k=.95 if c>0 else .8
+        verts.append((cx+rx*math.copysign(abs(c)**k,c),half*math.copysign(abs(s)**k,s),z))
+for row in range(len(NECK_ROWS)-1):
+    for j in range(NECK_SEG):
+        k=row*NECK_SEG+j; nxt=row*NECK_SEG+(j+1)%NECK_SEG
+        faces.append((k,nxt,nxt+NECK_SEG,k+NECK_SEG))
+faces+=[tuple(reversed(range(NECK_SEG))),tuple((len(NECK_ROWS)-1)*NECK_SEG+j for j in range(NECK_SEG))]
+neck=mesh('Neck',verts,faces,'Fur',2)
+# Above the collar the neck draws in to the head: from 48.5 cm up, a point outside the skull is pulled onto
+# it (just inside), so the neck curves into the jowls and under the chin rather than standing proud of the
+# cheeks as a slab with an edge where it meets them.
+for v in neck.data.vertices:
+    w=smoothstep(v.co.z,48.5,50.8)
+    if w<=0: continue
+    hit,normal,_,_=HEAD_TREE.find_nearest(Vector(v.co))
+    if hit is None or (Vector(v.co)-hit).dot(normal)<=0: continue   # already inside the head
+    v.co=Vector(v.co).lerp(hit-normal*.25,w)
+neck.data.update()
+neck.data.materials.append(MATS['Chest'])
+for poly in neck.data.polygons:
+    c=poly.center
+    # Throat: the front third below the chin, cream like the chest bib and the chin.
+    z0=NECK_ROWS[0][0]; zs=[r[0] for r in NECK_ROWS]
+    i=max(0,min(len(zs)-2,sum(1 for z in zs if z<=c.z)-1))
+    f=(c.z-zs[i])/(zs[i+1]-zs[i]) if zs[i+1]>zs[i] else 0.
+    back=NECK_ROWS[i][1]*(1-f)+NECK_ROWS[i+1][1]*f; front=NECK_ROWS[i][2]*(1-f)+NECK_ROWS[i+1][2]*f
+    poly.material_index=1 if c.x>back+(front-back)*.62 and abs(c.y)<4.2 else 0
 
 # Open jacket: one continuous garment surface. Every body row, the collar stand,
 # the fold and the collar/lapel fall share one grid and one front-edge function,

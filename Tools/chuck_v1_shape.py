@@ -73,9 +73,10 @@ def torso_scale(z):
 
 
 def kind_of(label):
-    """'arm', 'torso', 'head' or 'other' (legs, paws, tail)."""
+    """'arm', 'torso', 'head', 'neck' or 'other' (legs, paws, tail)."""
     if label in ARM_PARTS: return 'arm'
     if label in TORSO_PARTS: return 'torso'
+    if label == 'Neck': return 'neck'   # 2026-10-31: narrowed like the torso, its throat set back like the snout
     return 'head' if label in HEAD_PARTS else 'other'
 
 
@@ -92,8 +93,8 @@ def source_x(x):
 def point(p, kind='other'):
     """Map a source point (x, y, z) to v1.1."""
     x, y, z = p
-    scale = ARM_NARROW if kind == 'arm' else torso_scale(z) if kind == 'torso' else 1.
-    return (X(x) if kind == 'head' else x, y * scale, Z(z))
+    scale = ARM_NARROW if kind == 'arm' else torso_scale(z) if kind in ('torso', 'neck') else 1.
+    return (X(x) if kind in ('head', 'neck') else x, y * scale, Z(z))
 
 
 def is_arm_bone(name):

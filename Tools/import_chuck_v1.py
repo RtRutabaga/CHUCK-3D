@@ -33,6 +33,49 @@ def import_asset(file, name, folder, options=None):
     return asset
 
 
+def eye_material():
+    """M_ChuckEye (2026-10-31, user: Chuck's eyes "more like this", a glossy black rat eye with a bright
+    highlight). Near-black, wet (low roughness, strong specular), with a catchlight: a small bright spot
+    where the eye's surface faces a light above and left of the camera, as a portrait lamp gives, so it
+    shows whatever the scene's lights are doing. Built once; delete the asset to rebuild its graph.
+    Also used by Tools/import_chuck_groom.py for SK_Chuck_Groomed."""
+    path = DEST+'/M_ChuckEye'
+    mat = unreal.load_asset(path)
+    if mat: return mat
+    mat = TOOLS.create_asset('M_ChuckEye', DEST, unreal.Material, unreal.MaterialFactoryNew())
+    LIB.set_material_usage(mat, unreal.MaterialUsage.MATUSAGE_SKELETAL_MESH)
+    def n(cls, x, y, **props):
+        e = LIB.create_material_expression(mat, cls, x, y)
+        for k, v in props.items(): e.set_editor_property(k, v)
+        return e
+    def link(a, b, pin, pa=''):
+        if not LIB.connect_material_expressions(a, pa, b, pin): raise RuntimeError(f'M_ChuckEye link {pa}->{pin}')
+    def vec3(x, y, v):
+        return n(unreal.MaterialExpressionConstant3Vector, x, y, constant=unreal.LinearColor(*v, 1))
+    base = n(unreal.MaterialExpressionVectorParameter, -500, -300, parameter_name='EyeColour', default_value=unreal.LinearColor(.011, .008, .006, 1))
+    LIB.connect_material_property(base, '', unreal.MaterialProperty.MP_BASE_COLOR)
+    LIB.connect_material_property(n(unreal.MaterialExpressionScalarParameter, -500, -150, parameter_name='Roughness', default_value=.06), '', unreal.MaterialProperty.MP_ROUGHNESS)
+    LIB.connect_material_property(n(unreal.MaterialExpressionConstant, -500, -60, r=.9), '', unreal.MaterialProperty.MP_SPECULAR)
+    # Catchlight direction: toward the camera, tilted up and to the left in view space.
+    up = n(unreal.MaterialExpressionTransform, -1100, 100, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_VIEW,
+           transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    link(vec3(-1300, 100, (-.35, .55, 0.)), up, '')
+    cam = n(unreal.MaterialExpressionCameraVectorWS, -1100, 0)
+    add = n(unreal.MaterialExpressionAdd, -900, 50); link(cam, add, 'A'); link(up, add, 'B')
+    light = n(unreal.MaterialExpressionNormalize, -750, 50); link(add, light, 'VectorInput')
+    normal = n(unreal.MaterialExpressionVertexNormalWS, -750, 200)
+    dot = n(unreal.MaterialExpressionDotProduct, -600, 100); link(normal, dot, 'A'); link(light, dot, 'B')
+    sat = n(unreal.MaterialExpressionSaturate, -450, 100); link(dot, sat, '')
+    sharp = n(unreal.MaterialExpressionScalarParameter, -450, 250, parameter_name='CatchSharpness', default_value=70.)
+    pw = n(unreal.MaterialExpressionPower, -300, 100); link(sat, pw, 'Base'); link(sharp, pw, 'Exp')
+    bright = n(unreal.MaterialExpressionScalarParameter, -300, 250, parameter_name='CatchBrightness', default_value=3.)
+    em = n(unreal.MaterialExpressionMultiply, -150, 100); link(pw, em, 'A'); link(bright, em, 'B')
+    LIB.connect_material_property(em, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    LIB.recompile_material(mat)
+    unreal.EditorAssetLibrary.save_loaded_asset(mat, only_if_is_dirty=False)
+    return mat
+
+
 def import_mesh_and_material():
     options = unreal.FbxImportUI()
     options.import_mesh = True
@@ -103,12 +146,14 @@ def import_mesh_and_material():
     expected = {'Fur','Chest','Jacket','Seam','Skin','Eye','Claw','Metal','Whisker'}
     if {str(s.material_slot_name).split('.')[0] for s in slots} != expected:
         raise RuntimeError('V1 material slots differ from contract')
+    eye = eye_material()
     for index,slot in enumerate(slots):
-        slot.material_interface = material
+        slot.material_interface = eye if str(slot.material_slot_name).split('.')[0] == 'Eye' else material
         slots[index] = slot
     mesh.set_editor_property('materials', slots)
     unreal.EditorAssetLibrary.save_loaded_asset(mesh, only_if_is_dirty=False)
-    if any(slot.material_interface != material for slot in mesh.get_editor_property('materials')):
+    if any(slot.material_interface != (eye if str(slot.material_slot_name).split('.')[0] == 'Eye' else material)
+           for slot in mesh.get_editor_property('materials')):
         raise RuntimeError('V1 material assignments did not persist')
     return mesh, skeleton
 

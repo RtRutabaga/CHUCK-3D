@@ -38,7 +38,9 @@ options.skeletal_mesh_import_data.set_editor_property('update_skeleton_reference
 mesh=ingest(SOURCE/'SK_Chuck_Groomed.fbx','SK_Chuck_Groomed',options)
 slots=mesh.get_editor_property('materials')
 for i,slot in enumerate(slots):
-    slot.material_interface=unreal.load_asset(DEST+'/M_Chuck_V1')
+    # The eye slot takes M_ChuckEye (glossy, with a catchlight; Tools/import_chuck_v1.py makes it).
+    eye=str(slot.material_slot_name).split('.')[0]=='Eye' and unreal.load_asset(DEST+'/M_ChuckEye')
+    slot.material_interface=eye or unreal.load_asset(DEST+'/M_Chuck_V1')
     slots[i]=slot
 mesh.set_editor_property('materials',slots)
 unreal.EditorAssetLibrary.save_loaded_asset(mesh,only_if_is_dirty=False)

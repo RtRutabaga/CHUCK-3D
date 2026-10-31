@@ -213,7 +213,49 @@ FIELDS = {
     'paw': (('Foot', 'Heel', 'Toe', 'Claw'), lambda p, l: paw_weights(p)),
     'tail': (('Tail',), lambda p, l: chain_weights(p, TAIL, 3.)),
 }
+def neck_weights(p, lab):
+    """The neck (2026-10-31): the spine chain (chest, neck) where it rises out of the torso, grading into
+    the head over the jowls and under the skull, so a turned or nodding head bends it smoothly."""
+    up = smoothstep(p.z, Z(49.), Z(53.))
+    return mix((1 - up, torso_weights(p)), (up, {'head': 1.}))
+
+FIELDS['neck'] = (('Neck',), neck_weights)
 FIELD_OF = {lab: fn for labels, fn in FIELDS.values() for lab in labels}
+
+# The neck stays inside the (unchanged) jacket: every neck point below the collar top that a ray from the
+# neck's axis would meet the jacket shell before reaching is pulled in to 0.35 cm inside it.
+from mathutils.bvhtree import BVHTree as _BVH
+_dg = bpy.context.evaluated_depsgraph_get()
+_jackets = [o for o in scene.objects if label(o) == 'OpenJacket']
+_jacket_tree = None
+if _jackets:
+    import bmesh as _bm
+    _b = _bm.new()
+    for o in _jackets:
+        me = o.evaluated_get(_dg).to_mesh(); _p = _bm.new(); _p.from_mesh(me); _p.transform(o.matrix_world)
+        _off = len(_b.verts)
+        for v in _p.verts: _b.verts.new(v.co)
+        _b.verts.ensure_lookup_table()
+        for f in _p.faces:
+            try: _b.faces.new([_b.verts[_off + v.index] for v in f.verts])
+            except ValueError: pass
+        _p.free(); o.evaluated_get(_dg).to_mesh_clear()
+    _jacket_tree = _BVH.FromBMesh(_b); _b.free()
+
+def keep_neck_inside(part):
+    if _jacket_tree is None: return
+    moved = 0
+    for v in part.data.vertices:
+        p = part.matrix_world @ v.co
+        if p.z > Z(50.): continue
+        origin = Vector((1., 0., p.z))
+        d = p - origin
+        if d.length < 1e-4: continue
+        hit, _, _, dist = _jacket_tree.ray_cast(origin, d.normalized(), d.length + .35)
+        if hit is not None:
+            v.co = part.matrix_world.inverted() @ (origin + d.normalized() * max(0., dist - .35)); moved += 1
+    part.data.update()
+    print('CHUCK_NECK_INSIDE_JACKET moved', moved, 'of', len(part.data.vertices))
 
 parts = [o for o in scene.objects if o.type in ('MESH', 'CURVE')]
 unknown = sorted({label(o) for o in parts} - set(FIELD_OF))
@@ -225,6 +267,7 @@ for part in parts:
     bpy.context.view_layer.objects.active = part
     bpy.ops.object.convert(target='MESH')
     part = bpy.context.object
+    if lab == 'Neck': keep_neck_inside(part)
     strands = part.data.attributes.new('chuck_strand', 'BOOLEAN', 'FACE')
     # Strands and zipper teeth are sub-texel; they get a flat per-material island.
     is_strand = lab.endswith('Fur') or lab in ('Whisker', 'Zipper')
