@@ -39,6 +39,7 @@
 #include "Sound/SoundWave.h"
 #include "TimerManager.h"
 #include "ChuckCharacter.h"
+#include "RenderCore.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/CameraActor.h"
 #include "Components/PointLightComponent.h"
@@ -835,6 +836,7 @@ void ADockGameMode::StartPlay()
     }
     bNPCCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckNPCCapture"));
     bTownPerf = FParse::Param(FCommandLine::Get(),TEXT("ChuckTownPerf"));
+    bTownWalk = FParse::Param(FCommandLine::Get(),TEXT("ChuckTownWalk"));
     bChuckPortrait = FParse::Param(FCommandLine::Get(),TEXT("ChuckPortrait"));
     bSmithCapture = FParse::Param(FCommandLine::Get(),TEXT("ChuckSmithCapture"));
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckKeeperCapture"))) { bSmithCapture=true; FilmTag=TEXT("TavernKeeper"); }
@@ -1363,6 +1365,105 @@ void ADockGameMode::TickTownPerf(float DeltaSeconds)
     TownPerfMs+=DeltaSeconds*1000.; TownPerfGpu+=Gpu; ++TownPerfFrames; TownPerfWorst=FMath::Max(TownPerfWorst,(double)DeltaSeconds*1000.);
 }
 
+void ADockGameMode::TickTownWalk(float DeltaSeconds)
+{
+    // Waterdeep in motion (2026-10-31, user: "waterdeep is still laggy"). The fixed views of -ChuckTownPerf
+    // stood still; this walks Chuck from townsperson to townsperson (nearest first) at play settings (vsync
+    // and frame cap off, so the times are the cost). A leg that takes over 12 s (blocked) teleports on.
+    constexpr float Settle=5.f, MaxTime=150.f, LegLimit=12.f;
+    TownWalkTime+=DeltaSeconds;
+    ACharacter* Chuck=Cast<ACharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    APlayerController* PC=GetWorld()->GetFirstPlayerController();
+    if(TownWalkTarget<0)
+    {
+        GEngine->Exec(GetWorld(),TEXT("r.VSync 0")); GEngine->Exec(GetWorld(),TEXT("t.MaxFPS 0"));
+        TownWalkTarget=0;
+    }
+    if(!Chuck || !PC || TownWalkTime<Settle) return;
+    if(!TownWalkRoute.Num())
+    {
+        TArray<FVector> Left;
+        for(const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All())
+            if(N.IsValid()) Left.Add(N->GetActorLocation()+N->GetActorForwardVector()*160.f);
+        FVector From=Chuck->GetActorLocation();
+        while(Left.Num())
+        {
+            int32 Best=0;
+            for(int32 i=1;i<Left.Num();++i) if(FVector::DistSquared2D(From,Left[i])<FVector::DistSquared2D(From,Left[Best])) Best=i;
+            From=Left[Best]; TownWalkRoute.Add(From); Left.RemoveAt(Best);
+        }
+        // -ChuckTownWalkHide=chuck|npc|all hides that hair, to compare its cost.
+        FString Hide; FParse::Value(FCommandLine::Get(),TEXT("ChuckTownWalkHide="),Hide);
+        if(Hide==TEXT("chuck") || Hide==TEXT("all"))
+        { TArray<UGroomComponent*> G; Chuck->GetComponents(G); for(UGroomComponent* C : G) C->SetVisibility(false); }
+        if(Hide==TEXT("npc") || Hide==TEXT("all"))
+            for(const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All())
+            { TArray<UGroomComponent*> G; if(N.IsValid()) N->GetComponents(G); for(UGroomComponent* C : G) C->SetVisibility(false); }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_WALK_START stops=%d hide=%s"),TownWalkRoute.Num(),*Hide);
+        return;
+    }
+    // Frame costs: the frame, the game and render threads, the GPU.
+    const double Frame=DeltaSeconds*1000., Game=FPlatformTime::ToMilliseconds(GGameThreadTime),
+        Render=FPlatformTime::ToMilliseconds(GRenderThreadTime), Gpu=FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+    TownWalkFrame.Add(Frame); TownWalkGame.Add(Game); TownWalkRender.Add(Render); TownWalkGpu.Add(Gpu);
+    TownWalkSec[0]+=Frame; TownWalkSec[1]+=Game; TownWalkSec[2]+=Render; TownWalkSec[3]+=Gpu; TownWalkSec[4]=FMath::Max(TownWalkSec[4],Frame);
+    if(PC->PlayerCameraManager)   // the camera's nearest approach to Chuck this second
+    {
+        const double Cam=FVector::Dist(PC->PlayerCameraManager->GetCameraLocation(),Chuck->GetActorLocation());
+        TownWalkSec[5]=TownWalkSecFrames ? FMath::Min(TownWalkSec[5],Cam) : Cam;
+    }
+    ++TownWalkSecFrames; if(Frame>50.) ++TownWalkHitches;
+    // A pass-by-pass GPU breakdown of up to three slow frames (-ChuckTownWalkProfile), 8 s apart.
+    static const bool bProfile=FParse::Param(FCommandLine::Get(),TEXT("ChuckTownWalkProfile"));
+    static int32 Profiles=0; static float LastProfile=-100.f;
+    if(bProfile && Gpu>28. && Profiles<3 && TownWalkTime-LastProfile>8.f)
+    {
+        GEngine->Exec(GetWorld(),TEXT("profilegpu")); ++Profiles; LastProfile=TownWalkTime;
+        GEngine->Exec(GetWorld(),TEXT("rhi.DumpResourceMemory 25"));   // what fills video memory then
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_WALK_PROFILE n=%d gpu_ms=%.1f t=%.1f"),Profiles,Gpu,TownWalkTime-Settle);
+    }
+    TownWalkSecond+=DeltaSeconds;
+    if(TownWalkSecond>=1.f)
+    {
+        const double N=FMath::Max(1,TownWalkSecFrames);
+        const FVector P=Chuck->GetActorLocation();
+        FString Near=TEXT("-"); double NearCm=1e9;   // the nearest haired townsperson
+        for(const TWeakObjectPtr<ADockNPC>& NPC : ADockNPC::All())
+        {
+            TArray<UGroomComponent*> G; if(NPC.IsValid()) NPC->GetComponents(G);
+            if(!G.Num()) continue;
+            const double D=FVector::Dist(NPC->GetActorLocation(),PC->PlayerCameraManager ? PC->PlayerCameraManager->GetCameraLocation() : P);
+            if(D<NearCm) { NearCm=D; Near=NPC->Tags.Num() ? NPC->Tags[0].ToString() : NPC->GetName(); }
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_WALK_SECOND t=%.0f fps=%.1f frame_ms=%.1f game_ms=%.1f render_ms=%.1f gpu_ms=%.1f worst_ms=%.1f cam_cm=%.0f near=%s near_m=%.1f stop=%d at=%.0f,%.0f"),
+            TownWalkTime-Settle,TownWalkSecFrames/TownWalkSecond,TownWalkSec[0]/N,TownWalkSec[1]/N,TownWalkSec[2]/N,TownWalkSec[3]/N,TownWalkSec[4],TownWalkSec[5],*Near,NearCm/100.,TownWalkTarget,P.X,P.Y);
+        TownWalkSecond=0; TownWalkSecFrames=0; for(double& V : TownWalkSec) V=0;
+    }
+    auto Mean=[](const TArray<double>& A){ double S=0; for(double V : A) S+=V; return A.Num()? S/A.Num() : 0.; };
+    auto Pct=[](TArray<double> A, double Q){ if(!A.Num()) return 0.; A.Sort(); return A[FMath::Clamp((int32)(Q*A.Num()),0,A.Num()-1)]; };
+    if(TownWalkTarget>=TownWalkRoute.Num() || TownWalkTime-Settle>MaxTime)
+    {
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TOWN_WALK stops=%d/%d frames=%d fps=%.1f frame_ms=%.2f p95_ms=%.1f p99_ms=%.1f game_ms=%.2f render_ms=%.2f gpu_ms=%.2f hitches_over_50ms=%d"),
+            TownWalkTarget,TownWalkRoute.Num(),TownWalkFrame.Num(),1000./FMath::Max(.001,Mean(TownWalkFrame)),Mean(TownWalkFrame),Pct(TownWalkFrame,.95),Pct(TownWalkFrame,.99),
+            Mean(TownWalkGame),Mean(TownWalkRender),Mean(TownWalkGpu),TownWalkHitches);
+        bTownWalk=false;
+        FTimerHandle T; GetWorldTimerManager().SetTimer(T,[](){ FPlatformMisc::RequestExit(false); },1.f,false);
+        return;
+    }
+    const FVector Goal=TownWalkRoute[TownWalkTarget];
+    FVector To=Goal-Chuck->GetActorLocation(); To.Z=0;
+    TownWalkLeg+=DeltaSeconds;
+    if(To.Size()<90.f || TownWalkLeg>LegLimit)
+    {
+        if(TownWalkLeg>LegLimit) Chuck->TeleportTo(Goal+FVector(0,0,60.f),Chuck->GetActorRotation());
+        ++TownWalkTarget; TownWalkLeg=0; return;
+    }
+    Chuck->AddMovementInput(To.GetSafeNormal(),1.f);
+    // His camera follows behind him, as when the player steers.
+    const FRotator Want(-12.f,To.Rotation().Yaw,0);
+    PC->SetControlRotation(FMath::RInterpTo(PC->GetControlRotation(),Want,DeltaSeconds,3.f));
+}
+
 void ADockGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -1371,6 +1472,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
     if(bDwarfCapture) { TickDwarfCapture(DeltaSeconds); return; }
     if(bNPCCapture) { TickNPCCapture(DeltaSeconds); return; }
     if(bTownPerf) { TickTownPerf(DeltaSeconds); return; }
+    if(bTownWalk) { TickTownWalk(DeltaSeconds); return; }
     if(bChuckPortrait) { TickChuckPortrait(DeltaSeconds); return; }
     if(!bSmokeTest) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));

@@ -2,6 +2,43 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 31 (later) — Chuck's cream underside runs chin to belly; Waterdeep's hair stalls fixed (Claude)
+
+- **Asked:**
+  - The cream fur should continue "from neck to stomach in a natural way similar to coloration on actual rats and mice", not stop and restart as an oval.
+  - "waterdeep is still laggy can you make it less laggy?"
+- **Built — cream** (SourceAssets/Chuck/V1/README.md, "Cream underside"):
+  - The groom picks cream or coat per hair from which way the skin faces: one band from chin down the throat, broad over chest and belly, narrowing between the thighs and fading down the front-inner thighs.
+  - The edge is a soft, slightly wavy mix about 1 cm wide.
+  - The `LightChest` patch follows the same shape, and its top no longer tucks under the trunk. That had left a brown band between the chest and the throat.
+  - The head's extra hair density now rises gradually over the neck, so there is no line across the throat.
+  - Strand total: about 138,000 (was 136,000).
+- **Found — lag:**
+  - New `-ChuckTownWalk`: Chuck walks past every townsperson through his own camera, with per-second timings.
+  - At 1440p, walking gave 1–3 s bursts of 20–75 ms GPU frames near haired townsfolk. Static views never showed these.
+  - Hiding the townsfolk's hair removed most of them; Chuck's fur made no difference.
+  - `rhi.DumpResourceMemory` on a slow frame showed dozens of `Hair.CompactNodeData` buffers (~150 MB each). They are sized to the hair's screen rectangle, so each frame needs a new size, and the DX11 buffer pool keeps every size for 30 frames.
+  - Video memory went to 7.6 of the RTX 4060's 8 GB, and the base pass stalled.
+- **Built — lag:**
+  - `r.HairStrands.RectLightingOptim=0` (DefaultEngine.ini): the buffers are screen-sized and reused.
+  - Same walk: frames over 50 ms went from 149 to 0, the worst 1% from 49 ms to 9.9 ms, and the average from 106 to 129 fps (uncapped). Peak video memory went from 7.7 GB to 2.3 GB.
+  - Static close-up views: 9.1 ms a frame, against 12.1 ms with the old setting.
+  - Hair looks the same (`Local/PerfReview/rect0`).
+- **Tested:**
+  - Captures: `-ChuckPortrait` (`Local/ChuckReview/cream1`–`cream6`).
+  - Walk logs: `Local/townwalk-1.log` (before), `townwalk-hide-*.log`, `townwalk-vram*.log`, `townwalk-mem.log`, `townwalk-rect0.log` (after).
+  - `check_v1.py`: same 7 known "stays above ground" clip failures as before, nothing new.
+  - Groom import and root validation passed.
+  - Package: `Tools/Verify-Package.ps1` on `Builds/CreamCandidate` passed all 182 checks (`Local/verify-package-20261031-182314.log`). The first full run failed only the temple heroes `wizard_seal` timing check (max coverage 0.28 against 0.3, game-logic timing); it passed in two standalone reruns (0.82, 0.52; `Local/cream-heroes-rerun1.log`, `rerun2.log`) and in the second full run.
+  - Not played by hand.
+- **Remaining flaws:**
+  - The chin's cream reads warmer than the chest's under the quay's warm light.
+  - The walk measures the editor at 1440p; the packaged game wasn't walked.
+  - The cream ends with a soft edge but a fairly regular line along the flank.
+- **Contract compatibility:** same bones, slots and clips. New face attributes `chuck_ventral` and `chuck_leg` on the Blender mesh only. One engine CVar.
+- **Launcher:** promoted as `Cream` with `Tools/Promote-Build.ps1`. The root `Launch-Chuck.cmd` runs this build.
+- **Next owner:** either agent can take the next part. More Chuck work is better suited to Claude.
+
 ## October 31 — Chuck's eyes and his head-to-body join (Claude)
 
 - **Asked:** "do Chuck's eyes and his head-to-body join". The goal: look "more naturally like a rat (albeit a slightly anthropomorphic fantasy rat), and less like a felt doll". No changes to the jacket, and not stocky like the inspiration image.

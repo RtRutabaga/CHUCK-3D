@@ -312,6 +312,20 @@ lines from References/Original/PHASE-2.md).
     - The cost was the voxel volume. `r.HairStrands.Voxelization=0` (DefaultEngine.ini) gives 7.9 ms with
       all hair, so the townsfolk's hair now costs about 0.7 ms. It also removed the blue cast on grey and
       white hair. Dark hair and Chuck's fur look unchanged (`Local/PerfReview/voxon` against `voxoff`).
+    - **In motion (2026-10-31, user: "waterdeep is still laggy"):** `-ChuckTownWalk` walks Chuck past every
+      townsperson through his own camera and logs frame, game, render and GPU time each second
+      (`-ChuckTownWalkHide=chuck|npc|all` hides hair; `-ChuckTownWalkProfile` takes `profilegpu` and
+      `rhi.DumpResourceMemory` on slow frames).
+      - Walking showed 1–3 s bursts of 20–75 ms GPU frames whenever the camera came within a few metres
+        of a haired townsperson, not seen in the static views. Video memory swung from ~3 GB to 7.6 GB of
+        the RTX 4060's 8 GB.
+      - Cause: the hair visibility buffers (`Hair.CompactNodeData`, ~150 MB) are sized to the hair's screen
+        rectangle, so they change size every frame as the camera moves. On DX11 the buffer pool keeps each
+        size for 30 frames, so dozens piled up and the card ran out of memory.
+      - Fix: `r.HairStrands.RectLightingOptim=0` (DefaultEngine.ini) sizes them to the screen, so one is
+        reused. Walk at 1440p: frames over 50 ms 149 → 0, worst 1% 49 ms → 9.9 ms, average 106 → 129 fps,
+        peak video memory 7.7 → 2.3 GB (`Local/townwalk-1.log`, `townwalk-rect0.log`). Hair looks the same
+        (`Local/PerfReview/rect0`).
   - **Review:** `-ChuckNPCCapture -ChuckNPCShots=Head,HeadBack,HeadSide,Far` films only those
     shots (`HeadBack`, `HeadSide` and `Far` added for hair). The sanctum's `portraits`
     trial now also films the back of each hero's head.

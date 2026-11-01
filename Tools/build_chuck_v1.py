@@ -275,6 +275,11 @@ for part in parts:
     # Geometric fur tufts, removed in the groom variant (SK_Chuck_Groomed).
     tufts = part.data.attributes.new('chuck_tuft', 'BOOLEAN', 'FACE')
     for d in tufts.data: d.value = lab.endswith('Fur')
+    # Trunk and neck surfaces, where the groom colours the underside cream by facing (not the legs/arms).
+    ventral = part.data.attributes.new('chuck_ventral', 'BOOLEAN', 'FACE')
+    for d in ventral.data: d.value = lab in ('Torso', 'LightChest', 'Neck')
+    leg = part.data.attributes.new('chuck_leg', 'BOOLEAN', 'FACE')   # the cream runs down the inner thighs
+    for d in leg.data: d.value = lab == 'Leg'
     groups = {}
     for v in part.data.vertices:
         p = part.matrix_world @ v.co

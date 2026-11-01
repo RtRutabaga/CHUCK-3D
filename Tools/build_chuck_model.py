@@ -184,7 +184,48 @@ def conform_patch(name,source,material,a_half,z_lo,z_hi,rise,sink,cols=24,rows=2
             faces.append((k,k+1,k+1+cols,k+cols))
     return mesh(name,verts,faces,material,1)
 
-conform_patch('LightChest',torso,'Chest',1.3,15,45.8,.4,.25)
+def ventral_patch(name,source,material,width,z_lo,z_hi,rise,sink,cols=24,rows=34):
+    """Cream underside like a real rat's (2026-10-31, user: the light fur should run from the neck to
+    the stomach naturally, not stop and restart as an oval): at each height the patch reaches round the
+    body to where the surface faces width(z) radians off straight ahead, the same rule the groom uses
+    for its cream hairs (SourceAssets/Chuck/V1/build_groom.py, ventral_cream)."""
+    bpy.context.view_layer.update()
+    tree=BVHTree.FromObject(source,bpy.context.evaluated_depsgraph_get())
+    def cast(z,a):
+        return tree.ray_cast(Vector((0,0,z)),Vector((math.cos(a),math.sin(a),0)),40)
+    verts,faces=[],[]
+    for r in range(rows):
+        v=2*r/(rows-1)-1
+        z=z_lo+(z_hi-z_lo)*(v+1)/2
+        lo,hi=0.,1.5
+        for _ in range(18):   # ray angle whose surface normal faces width(z) off straight ahead
+            mid=(lo+hi)/2; _,n,_,_=cast(z,mid)
+            if n is not None and math.atan2(abs(n.y),n.x)<width(z): lo=mid
+            else: hi=mid
+        for c in range(cols):
+            u=2*c/(cols-1)-1
+            hit,normal,_,_=cast(z,u*lo)
+            # The top edge stays raised (no sink): it runs on under the neck's cream throat, and a sunk edge
+            # let a band of the brown trunk show between the two.
+            falloff=(1-u**4)*((1-v**4)**.5 if v<0 else 1.)
+            verts.append(hit+normal*(rise*falloff-sink*(1-falloff)))
+    for r in range(rows-1):
+        for c in range(cols-1):
+            k=r*cols+c
+            faces.append((k,k+1,k+1+cols,k+cols))
+    return mesh(name,verts,faces,material,1)
+
+# Half-width of the cream underside, as the angle the surface faces off straight ahead, by source height:
+# narrow between the thighs, broad over the belly and chest, and at the top as wide as the neck's cream throat
+# (about 1 rad), so the two run on with no pinch. A little narrower than the groom's cream (VENTRAL_WIDTH there), so cream hairs
+# cover the patch edge.
+def ventral_width(z):
+    table=[(12.5,.4),(16,.65),(19,.9),(24,1.08),(30,1.12),(36,1.08),(41,1.),(44,.92),(47,.88)]
+    if z<=table[0][0]: return table[0][1]
+    for (z0,w0),(z1,w1) in zip(table,table[1:]):
+        if z<=z1: return w0+(w1-w0)*(z-z0)/(z1-z0)
+    return table[-1][1]
+ventral_patch('LightChest',torso,'Chest',ventral_width,13,46.6,.4,.25)  # top: the neck comes out at about 46.3
 for side in (-1,1):
     # One continuous haunch/thigh/shin per leg on the runtime IK chain
     # (hip -> knee -> ankle, ChuckCharacter::SolveLeg). The domed end tucks

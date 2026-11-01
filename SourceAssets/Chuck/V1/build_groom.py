@@ -21,6 +21,7 @@ import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
+from mathutils.noise import noise as pnoise
 import sys
 
 V1 = Path(bpy.data.filepath).parent
@@ -92,8 +93,60 @@ def region_scale(p):
         return 1., 1.1                   # thighs
     return 1., 1.
 
+# Cream underside (2026-10-31, user: the light fur should continue "from neck to stomach in a natural way
+# similar to coloration on actual rats and mice", not stop under the throat and restart as an oval on the
+# belly). On the trunk and neck (faces tagged chuck_ventral by Tools/build_chuck_v1.py) a hair is cream
+# when the surface faces less than VENTRAL_WIDTH off straight ahead: one band from the chin down the
+# throat, broad over chest and belly, narrowing between the thighs. The edge is a soft, slightly wavy
+# mix of cream and coat hairs about a centimetre wide, as on a real rat, not a cut line.
+VENTRAL_TOP = Z(50.5)                    # above this the jowls/chin keep their material colours
+_vent = mesh.attributes.get('chuck_ventral')
+VENTRAL_FACE = [d.value for d in _vent.data] if _vent else [False] * len(mesh.polygons)
+_VW = [(Z(z), w) for z, w in ((12.5, .5), (16, .75), (19, 1.), (24, 1.18), (30, 1.22), (36, 1.18),
+                               (41, 1.1), (44, 1.02), (47, .98), (50.5, .98))]
+
+def ventral_width(z):
+    if z <= _VW[0][0]: return _VW[0][1]
+    for (z0, w0), (z1, w1) in zip(_VW, _VW[1:]):
+        if z <= z1: return w0 + (w1 - w0) * (z - z0) / (z1 - z0)
+    return _VW[-1][1]
+
+def facing(n, p=None):
+    """Angle (rad) the surface faces off straight ahead in plan. Where it faces up or down (the top of the
+    trunk round the neck, under the jaw) the direction from the body's axis stands in for it."""
+    h = math.hypot(n.x, n.y)
+    if h > .3: return math.atan2(abs(n.y), n.x)
+    if p is None: return None
+    return math.atan2(abs(p.y), p.x - .5)
+
+_leg = mesh.attributes.get('chuck_leg')
+LEG_FACE = [d.value for d in _leg.data] if _leg else [False] * len(mesh.polygons)
+
+def ventral(tri, p):
+    return (VENTRAL_FACE[tri.polygon_index] and p.z < VENTRAL_TOP) or LEG_FACE[tri.polygon_index]
+
+def cream_share(p, n, tri=None):
+    wobble = .07 * pnoise(p * .45) + .03 * pnoise(p * 1.7)
+    if tri is not None and LEG_FACE[tri.polygon_index]:
+        # The belly's cream carries on down the front-inner thigh and fades out above the knee, as on a
+        # real rat, so it does not stop in a hard U where the thighs overlap the belly.
+        inner = Vector((.45, -.89 if p.y > 0 else .89, 0.))
+        h = Vector((n.x, n.y, 0.))
+        if h.length < .3: return 0.
+        a = h.normalized().angle(inner)
+        w = (.95 + wobble) * smoothstep(p.z, Z(10.5), Z(17.5))
+        return 1. - smoothstep(a, w - .14, w + .14) if w > .05 else 0.
+    a = facing(n, p)
+    w = ventral_width(p.z) + wobble
+    return 1. - smoothstep(a, w - .11, w + .11)
+
 def group_of(tri, p, n):
     mat = mat_names[tri.material_index]
+    if ventral(tri, p):
+        c = cream_share(p, n, tri)
+        if c is not None:
+            # Edge triangles go to the cream pool; each root there is then cream or coat by its share.
+            return 'Fur_Cream' if c > .01 else coat_of(p, n)
     if mat == 'Chest':
         # A few coat-coloured hairs in the cream on the face only: the throat stays one cream band from the
         # chin down into the chest bib (2026-10-31).
@@ -102,14 +155,17 @@ def group_of(tri, p, n):
         return 'Fur_Cream'
     if mat != 'Fur':
         return None
+    return coat_of(p, n)
+
+def coat_of(p, n):
     # Darker coat along the back, crown and upper snout.
     back = n.dot(Vector((-1., 0., .35)).normalized()) > .3 or (p.z > Z(55.5) and n.z > .35)
     return 'Fur_Back' if back else 'Fur_Body'
 
-def covered(p, n):
+def covered(p, n, reach=2.2):
     """True if the surface is hidden under the jacket/sleeves (or inside
     another part): a short ray along the normal hits another surface."""
-    hit, _, index, dist = tree.ray_cast(p + n * .03, n, 2.2)
+    hit, _, index, dist = tree.ray_cast(p + n * .03, n, reach)
     return hit is not None
 
 def near_eye(p):
@@ -126,15 +182,37 @@ for tri in mesh.loop_triangles:
     if g and not near_eye(c):
         cands[g].append(tri)
 
+def weight_of(t, g=None):
+    # Denser on the head (seen close up, and the skin shows between strands). The cream on the trunk
+    # (the underside below the neck) at three quarters of the face cream's density: still about 1.5x
+    # the coat's, without adding strands for the larger cream area (2026-10-31).
+    # The head's extra density rises gradually over the neck: a step at one height showed as a line across
+    # the throat where the denser head cream met the thinner chest cream.
+    body = .75 if g == 'Fur_Cream' and ventral(t, t.center) else 1.
+    return t.area * (body + (3.2 - body) * smoothstep(t.center.z, Z(45.5), Z(49.5)))
+
+# The cream pool now covers the whole underside: every group's strand count follows its new area at the
+# density it had before the mask (cream twice the coat's: short hair, the skin must not show).
+_area = {g: sum(weight_of(t, g) for t in cands[g]) for g in GROUPS}
+# Counts were set when every Fur triangle was coat and every Chest triangle cream: keep those densities.
+_old = {g: 0. for g in GROUPS}
+for t in mesh.loop_triangles:
+    if mat_names[t.material_index] == 'Fur' and not near_eye(t.center):
+        _old[coat_of(t.center, t.normal)] += weight_of(t)
+    elif mat_names[t.material_index] == 'Chest' and not near_eye(t.center):
+        _old['Fur_Cream'] += weight_of(t)
+for g in GROUPS:
+    GROUPS[g]['count'] = round(GROUPS[g]['count'] * _area[g] / _old[g])
+print('CHUCK_GROOM_AREAS', {g: round(a, 1) for g, a in _area.items()}, {g: GROUPS[g]['count'] for g in GROUPS})
+
 strands = {g: [] for g in GROUPS}
 rejected = 0
 for g, spec in GROUPS.items():
     tris = cands[g]
     if not tris: continue
-    # Denser on the head (seen close up, and the skin shows between strands).
-    weights = [t.area * (3.2 if t.center.z > Z(47.5) else 1.) for t in tris]
-    tries = 0
-    while len(strands[g]) < spec['count'] and tries < spec['count'] * 4:
+    weights = [weight_of(t, g) for t in tris]
+    tries = made = 0
+    while made < spec['count'] and tries < spec['count'] * 4:
         tries += 1
         t = rng.choices(tris, weights=weights)[0]
         a, b, c = (mesh.vertices[i].co for i in t.vertices)
@@ -146,8 +224,17 @@ for g, spec in GROUPS.items():
         # lower hung over the paw tops in the Unreal review).
         # Whisker pads keep sparse fur so their follicle dots show (target image).
         pad = root.x > X(11.8) and Z(49.8) < root.z < Z(51.8) and abs(root.y) > .8
-        if root.z < Z(4.8) or near_eye(root) or covered(root, n) or (pad and rng.random() < .7):
+        # The top of the trunk round the front of the neck faces up at the chin 2-3 cm above; with the full
+        # reach it counted as covered and showed as a bare band across the throat (2026-10-31).
+        reach = .7 if g == 'Fur_Cream' and n.z > .45 and ventral(t, root) else 2.2
+        if root.z < Z(4.8) or near_eye(root) or covered(root, n, reach) or (pad and rng.random() < .7):
             rejected += 1; continue
+        target = g
+        if g == 'Fur_Cream' and ventral(t, root):
+            c = cream_share(root, n, t)
+            if c is not None and rng.random() > c:
+                target = coat_of(root, n)   # a coat hair in the soft edge of the cream
+        made += 1
         flow = flow_for(root)
         flow = flow - n * flow.dot(n)
         if flow.length < 1e-4:
@@ -157,10 +244,10 @@ for g, spec in GROUPS.items():
         jitter -= n * jitter.dot(n)
         flow = (flow + jitter).normalized()
         scale, lift_scale = region_scale(root)
-        length = rng.uniform(*spec['length']) * scale
+        length = rng.uniform(*GROUPS[target]['length']) * scale
         lift = rng.uniform(.45, .95) * lift_scale  # scruffy: about 25-55 degrees off the skin
         head = root.z > Z(47.5)
-        guard = g != 'Fur_Cream' and root.z > Z(11.) and rng.random() < (GUARD * .35 if head else GUARD)
+        guard = target != 'Fur_Cream' and root.z > Z(11.) and rng.random() < (GUARD * .35 if head else GUARD)
         if guard:
             length *= rng.uniform(1.2, 1.5) if head else rng.uniform(1.6, 2.3); lift *= 1.4
         pts = [root - n * .02]             # root slightly below the skin
@@ -174,8 +261,9 @@ for g, spec in GROUPS.items():
             frizz = Vector((rng.gauss(0, spread), rng.gauss(0, spread), rng.gauss(0, spread))) * f
             pos = pos + (d + frizz) * (length / (POINTS - 1))
             pts.append(pos.copy())
-        strands[g].append(pts)
+        strands[target].append(pts)
 
+for g in GROUPS:
     # Clumping: every strand's tip converges on the matching point of a nearby
     # guide strand, so the coat reads as wet-looking locks, not a velvet.
     curves = strands[g]

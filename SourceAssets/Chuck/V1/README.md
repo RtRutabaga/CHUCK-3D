@@ -188,6 +188,20 @@ User: make his head-to-body join "more naturally like a rat (albeit a slightly a
   - Strong head poses: `Local/ChuckReview/neckposes` (crawl, sprint leap, roll, pull-up, hang, turn).
 - **check_v1.py:** 7 clips fail "stays above ground": SpeedVault, SprintLoop, SprintLeap, Crawl, Swing, SwingLeapLeft and SwingLeapRight. The lowest points are a thumb, fingers and the tail tip, which the neck does not move. The last recorded check run (09-26) predates these clips.
 
+## Cream underside (2026-10-31, later)
+
+User: the lighter fur should continue "from neck to stomach in a natural way similar to coloration on actual rats and mice", not stop under the throat and restart as an oval on the belly.
+
+- **Groom** (`build_groom.py`, `ventral_cream`):
+  - On the trunk, neck and legs (faces tagged `chuck_ventral` and `chuck_leg` by `Tools/build_chuck_v1.py`), each hair is cream or coat by which way the skin faces.
+  - On the trunk and neck a hair is cream when the surface faces less than `ventral_width` off straight ahead. That gives one band from the chin down the throat, broad over chest and belly (about 1.2 rad) and narrowing between the thighs. Where the surface faces up or down, the direction from the body's axis stands in.
+  - On the legs the cream carries on down the front-inner thigh and fades out above the knee, so it does not end in a hard U where the thighs overlap the belly.
+  - The edge is a soft, slightly wavy mix of cream and coat hairs about a centimetre wide (noise on the width, dithered per root), not a cut line.
+  - Counts follow the new areas at the earlier densities: coat as before, face cream as before, trunk cream at three quarters of the face cream's (about 1.5× the coat). The total is about 138,000 strands, close to before.
+  - The head's extra density now rises gradually over the neck. A step at one height showed as a line across the throat.
+- **Mesh** (`Tools/build_chuck_model.py`, `ventral_patch`): the light `LightChest` patch follows the same rule (a little narrower), from between the thighs (13 cm) to where the neck leaves the trunk. Its top edge stays raised instead of tucking under the trunk; before, a band of brown trunk showed between it and the neck's cream throat.
+- **Review:** `Local/ChuckReview/cream6` (final), against `after2` (before).
+
 ## Cigarette
 
 Every goal image shows the cigarette held in the left mouth corner with a thin smoke wisp. It is a **separate prop**, not part of the skinned body, so a future pickup design can show or hide it (the `-ChuckNoCigarette` launch flag removes it).

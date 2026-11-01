@@ -40,6 +40,13 @@ private:
     float TownPerfTime = 0; int32 TownPerfStep = -1; int32 TownPerfFrames = 0; double TownPerfMs = 0, TownPerfGpu = 0, TownPerfWorst = 0;
     TArray<double> TownPerfSums;
     void TickTownPerf(float DeltaSeconds);
+    // -ChuckTownWalk: Chuck walks a tour past every townsperson through his own camera; per-second frame,
+    // game-thread, render-thread and GPU times show what limits the frame rate in motion.
+    bool bTownWalk = false;
+    float TownWalkTime = 0, TownWalkLeg = 0, TownWalkSecond = 0; int32 TownWalkTarget = -1;
+    TArray<FVector> TownWalkRoute; TArray<double> TownWalkFrame, TownWalkGame, TownWalkRender, TownWalkGpu;
+    double TownWalkSec[6] = {0,0,0,0,0,0}; int32 TownWalkSecFrames = 0, TownWalkHitches = 0;
+    void TickTownWalk(float DeltaSeconds);
     // -ChuckPortrait: Chuck standing on the quay in daylight, filmed from fixed angles (face, eyes, neck).
     bool bChuckPortrait = false;
     float PortraitTime = 0; int32 PortraitShot = -1; bool bPortraitTaken = false;
