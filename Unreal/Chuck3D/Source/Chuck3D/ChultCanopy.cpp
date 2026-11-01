@@ -1058,6 +1058,7 @@ void StartGroveReview(AActor* Owner,AChuckCharacter* C,const int32 Grove)
     TGuardValue<int32> Selected(ActiveGrove,Grove);
     UWorld* World=Owner->GetWorld();auto* PC=Cast<APlayerController>(C->GetController());
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
+    C->SetTestSwingPump(true);   // the 180 cm gaps between trees need a swing (the bridge test covers that)
     const bool bCapture=Grove==0 && FParse::Param(FCommandLine::Get(),TEXT("ChuckCanopyCapture"));
     const int32 StaticFailures=CheckGrove(Owner,C);
     // Trials in order; each starts where the last left him except where noted.
@@ -1414,6 +1415,7 @@ void StartChultGoldenLeafReview(AActor* Owner, AChuckCharacter* C)
     UWorld* W=Owner->GetWorld();
     auto* PC=Cast<APlayerController>(C->GetController());
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
+    C->SetTestSwingPump(true);
     struct FRun {FTimerHandle Timer;float Start=0,PhaseAt=0,Min=1,NextLog=0;int32 Phase=0,Failures=0,Catches=0,ClimbSounds=0;bool Shot=false,Jumped=false,AtFork=false;};
     auto R=MakeShared<FRun>();R->Start=R->PhaseAt=W->GetTimeSeconds();
     // -ChuckGoldenLeafTree=1: the same run up the second giant.

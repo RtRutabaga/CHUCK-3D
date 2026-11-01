@@ -17,6 +17,7 @@ struct FChultBridgePlank
     FVector Grip;          // local: the plank's centre line, mid-thickness, where his paws close
     float S = 0;           // along the canyon frame
     bool bSplit = false;   // split lengthwise: a thin surviving half
+    float Depth = 20;      // its width along the bridge (a split plank's surviving half)
 };
 // The surviving (grippable) planks, near bank to far bank.
 const TArray<FChultBridgePlank>& ChultBridgePlanks();

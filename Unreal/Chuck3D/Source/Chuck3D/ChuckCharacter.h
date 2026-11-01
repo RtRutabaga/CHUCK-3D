@@ -103,6 +103,19 @@ public:
     // the swing pumps it.
     static constexpr float SwingCatchReach = 45.f;   // cm sideways from his raised paws a ring is still caught
     static constexpr float SwingLeapRange = 240.f;   // cm to the next ring at most
+    // Big leaps need a swing going (user 2026-10-31: "a slight challenge", not
+    // hard): a leap longer than SwingEasyLeap needs the swing's amplitude (its
+    // energy, in degrees) to reach SwingNeedAt(distance). The stick toward the
+    // next grip pumps it there within a swing; a jump pressed short of it waits
+    // for the swing to build and, if it doesn't by the top of the forward
+    // swing, he lets go anyway and falls short of the grip.
+    static constexpr float SwingEasyLeap = 165.f;
+    static float SwingNeedAt(float Distance) { return Distance <= SwingEasyLeap ? 0.f : FMath::Min(46.f, 30.f + (Distance - SwingEasyLeap) * .4f); }
+    /** The swing's amplitude now (degrees, from its energy). */
+    float GetSwingAmplitude() const;
+    int32 GetSwingShorts() const { return SwingShorts; }
+    /** Tests that cross big gaps with the stick let go: the swing pumps itself along its line as if the stick were held. */
+    void SetTestSwingPump(bool bOn) { bTestSwingPump = bOn; }
     bool IsSwinging() const { return Gait == EGait::Swing; }
     bool IsSwingLeaping() const { return Gait == EGait::SwingLeap; }
     /** The grip he hangs from (GetChuckSwingGrips index), or -1. */
@@ -602,6 +615,15 @@ private:
     FVector SwingDir = FVector::ForwardVector, SwingFrom = FVector::ZeroVector, SwingLeapFrom = FVector::ZeroVector, SwingLeapDir = FVector::ForwardVector;
     bool bSwingJumpQueued = false;
     int32 SwingCatches = 0, SwingLeapCount = 0, SwingDismounts = 0;
+    // Where his paws hold the current grip (a board's near edge), and fly to.
+    FVector SwingHold = FVector::ZeroVector, SwingLeapTo = FVector::ZeroVector;
+    // A jump waiting for the swing to build (since when; whether it has swung toward the target yet).
+    float SwingWaitSince = -1; bool bSwingWaitToward = false;
+    // A leap without the swing for it: falls short (and that grip can't be caught on the way down).
+    bool bSwingLeapShort = false; int32 SwingMissed = -1; float SwingMissUntil = -1; int32 SwingShorts = 0;
+    bool bTestSwingPump = false;
+    float DuckBlend = 0;   // ears laid back, chin up: under a board
+    FVector SwingHoldPoint(int32 Index, const FVector& Facing) const;
     // The whole body pitched about the capsule centre (the swing), easing back upright after.
     float BodyPitch = 0;
     FVector BodyPitchAxis = FVector::RightVector;

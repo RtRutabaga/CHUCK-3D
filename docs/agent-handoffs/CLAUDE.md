@@ -2,6 +2,46 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## October 31 (night) — big brachiation gaps need a swing; Chuck's head stays out of the bridge planks (Claude)
+
+- **Asked:**
+  - Bigger brachiation leaps should need enough swing going ("a slight challenge", "a small amount of risk in things like the bridge crossing", not hard). Pumping had no effect on distance.
+  - On the bridge his ears and head passed through the planks: "just a little less impossible looking".
+- **Built — the swing a leap needs** (docs/BRACHIATION.md, "Big gaps need a swing; under a deck"):
+  - Leaps up to 165 cm (grip to grip) need nothing. Beyond that the swing's amplitude must reach 30° + 0.4°/cm, at most 46°. The amplitude comes from the pendulum's energy (`GetSwingAmplitude`).
+  - A leap's catch now carries the swing to 27° (was 35°). The pump is a little gentler (gain 6, was 9) and can start from a dead hang.
+  - A jump pressed short of the swing waits:
+    - With the stick held along the swing, he goes when there is enough swing, or after 2.5 s.
+    - With the stick let go, he lets go at the next top, falls short (the paws reach 60–88% of the way, 22 cm low) and drops. Over the gorge that means a fall death and a return to the bank.
+  - The bridge's 174–185 cm gaps and the canopy's 180 cm tree-to-tree gaps are affected; the lamp alleys and the temple rings are not.
+- **Built — under the bridge:**
+  - A plank is held at its near edge and underside (new `FChuckSwingGrip::Depth`).
+  - Plank-to-plank leaps dip under instead of arcing up.
+  - Under a deck the head and neck duck and level against the body's pitch, and the ears fold back (`DuckWeight`/`DuckLevel` in the anim layer).
+  - Ear, crown and snout probe points come from the mesh (`-ChuckHeadProbe`, editor only).
+- **Tested:**
+  - The bridge test measures the head every frame and now has 8 trials. The new ones are `big_gap_no_swing_falls_short` (falls short, respawns on the bank) and `big_gap_pumped` (pumps and makes it).
+  - Head through a plank: 246/1903 frames, 15.1 cm deep at worst (before), down to 37/2294 frames, 2.2 cm (after). Height over the deck mid-leap: 31.3 cm down to 5.4 cm.
+  - Uncooked: bridge 8/8, canopy 48/48, giant canopy 72/72, raptor 8/8 (route 8/8), birds bridge crossed, lamp swing 8/8 (`Local/brach-s1-*.log`).
+  - Package `Builds/SwingCandidate`:
+    - The first full Verify-Package run had 181 passes (`Local/verify-package-20261031-204705.log`). The only failure was the Waterdeep roof sprint leap: he landed on the roof at Y −1241, 1 cm past the test's −1240 window, after a one-frame-late takeoff. Normal runs land at −1235.6. This test has failed the same way before (10-08, 10-10), and the sprint leap was not changed.
+    - The rerun on the same package passed all 182 (`Local/verify-package-20261031-220248.log`; bridge `Local/verify-bridge-20261031-230928.log`, head ok=1, 8 trials).
+  - Review still: `SourceAssets/Setting/Review/Bridge_BrachiationUnder.png`.
+  - Not played by hand, and not tested with an Xbox pad.
+- **Remaining flaws:**
+  - The crown still grazes a plank by up to about 2 cm at the top of big swings.
+  - The duck and leap pose are procedural, not authored clips.
+  - The canopy/raptor/birds route tests use a pump assist (`SetTestSwingPump`) so their scripted routes keep working. They don't prove a player's pumping.
+  - The difficulty is tuned by numbers only and not tried by a person.
+- **Contract compatibility:** no bone, slot, clip or asset changes.
+  - New `FChuckSwingGrip::Depth` (defaults to 0, so existing grips behave as before) and `FChultBridgePlank::Depth`.
+  - New `FChuckAnimParams::DuckWeight`/`DuckLevel`.
+  - New `AChuckCharacter::SwingNeedAt`/`GetSwingAmplitude`/`GetSwingShorts`/`SetTestSwingPump`.
+  - In Codex's tooling: `Tools/Verify-Package.ps1` now expects the bridge's `trials=8`.
+- **Source:** base 086d39ca. Changed: ChuckCharacter.cpp/.h, ChuckAnimInstance.cpp/.h, ChuckClimbable.h, ChultBridge.cpp/.h, ChultCanopy.cpp, ChultRaptorTest.cpp, ChultBirds.cpp, Tools/Verify-Package.ps1, docs/BRACHIATION.md, docs/CHULT-BRIDGE.md, both handoffs, and the review PNG (LFS). The 14 Common/Materials re-saves from the package build were restored, not committed.
+- **Launcher:** promoted as `Swing` with `Tools/Promote-Build.ps1`. The root `Launch-Chuck.cmd` runs this build. No heavy tools are running.
+- **Next owner:** either agent can take the next part. Brachiation and Chuck changes are better suited to Claude.
+
 ## October 31 (later) — Chuck's cream underside runs chin to belly; Waterdeep's hair stalls fixed (Claude)
 
 - **Asked:**

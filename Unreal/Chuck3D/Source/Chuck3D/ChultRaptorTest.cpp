@@ -33,6 +33,7 @@ void StartChultRaptorReview(UWorld* World)
     }
     auto* PC = Cast<APlayerController>(Chuck->GetController());
     Chuck->DisableInput(PC); Chuck->SetLookLocked(true);
+    Chuck->SetTestSwingPump(true);   // its escape route crosses a 180 cm gap (the bridge test covers the swing itself)
     const FVector G = AChultLanding::FloorOrigin();
     const bool bCapture = FParse::Param(FCommandLine::Get(), TEXT("ChuckRaptorCapture"));
     const float Radius = Raptor->GetCapsuleComponent()->GetScaledCapsuleRadius(), Half = Raptor->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();

@@ -31,6 +31,10 @@ struct FChuckSwingGrip
 {
     FVector Grip = FVector::ZeroVector;      // the bar his paws close round
     FVector Along = FVector::ForwardVector;  // horizontal: the line he swings along (either way)
+    // A board's width along that line (Chult's bridge planks, 2026-10-31), or 0
+    // for a bar or ring: he holds a board by its near edge, his head clear of
+    // it in the gap he came from, and flies board to board low under the deck.
+    float Depth = 0.f;
 };
 
 void AddChuckSwingGrip(const FChuckSwingGrip& Grip);

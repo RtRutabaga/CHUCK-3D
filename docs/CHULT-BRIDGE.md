@@ -39,7 +39,10 @@ as before, so nothing else moved.
 The surviving planks are ordinary brachiation grips (`AddChuckSwingGrip`,
 along the canyon frame). From standing under plank 0 a hop catches it; jump
 (stick let go) goes on plank to plank; the stick steers back; at the last
-plank a jump with the stick let go steps down onto the bank. Letting go over
+plank a jump with the stick let go steps down onto the bank. Since 2026-10-31
+the 6–7-slot gaps (174–185 cm) need a swing going (stick held along the bridge);
+without one he falls short into the gorge. He holds each plank by its near
+edge with his ears laid back, and flies low under the deck (BRACHIATION.md). Letting go over
 the gorge is a fall death: he comes back on the near bank by the bridge
 (S=-300, facing along it), or on the far bank (S=4820) if he went over by the
 far lip. The canyon's own walk-off trial now expects that return.
@@ -58,5 +61,7 @@ grip, end planks over the banks at hop height, nubs clear of the centre line),
 then the real character: catch the first plank; cross all 30 leaps; step down
 on the far bank; cross back steering with the stick and step down; let go over
 the gorge and return to the near bank with Chult's score back; dropped onto a
-plank, he does not stand on it. `-ChuckBridgeCapture` saves review stills to
+plank, he does not stand on it; a big gap with the stick let go falls short;
+the same gap pumped is made. It also measures his head against the planks
+(`CHUCK_BRIDGE_HEAD`). `-ChuckBridgeCapture` saves review stills to
 `Saved/Screenshots/<platform>/Bridge`.

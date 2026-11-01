@@ -6,7 +6,7 @@ User request, 2026-10-09: a brachiation feature on the high wall lanterns betwee
 
 - **Catch:** wall jump up near a lantern. Chuck catches its ring automatically when his raised paws pass within 45 cm sideways of it (from 45 cm below to 30 cm above). No button press is needed.
 - **Swing to the next ring:** press Space. He flies to the nearest ring in the stick's direction (camera-relative W, A, S, D). With no direction held, he goes straight on along the swing. He catches it for you.
-- **Pump:** hold the stick along the swing.
+- **Pump:** hold the stick along the swing. Big gaps need it (see "Big gaps need a swing" below).
 - **Kick off:** press Space with no ring that way, for example toward a wall. He launches like a wall jump, so a wall in reach is run up automatically, and the chimney climb continues.
 - **Let go:** press C (dodge).
 - **Step down at a chain's end (Chult, 2026-10-13):** press Space with the stick released at the last grip of a line. If there is something to stand on within 170 cm below, just ahead along the swing (a tree's walking limb), he hops down onto it (`CHUCK_SWING_STEP_DOWN`). Otherwise (the lamp alleys) he goes back along the line as before.
@@ -55,3 +55,20 @@ Tests: lamp-swing trial 0 now climbs with an empty ring, trial 1 requires a full
 ## Chult canopy (2026-10-13)
 
 The same Swing/SwingLeap gaits on Chult's four canopy trees: 38 branch grips in four chains, with a 180 cm leap across each gap between two trees' boughs, lianas registered as climbables, and the step-down above. Layout, contract and tests: [CHULT-CANOPY.md](CHULT-CANOPY.md). `-ChuckCanopyTest` runs 18 real-character trials; the lamp-swing test still passes 8/8 with the step-down in place.
+
+## Big gaps need a swing; under a deck (2026-10-31)
+
+User request: pumping on a hold had no practical effect on the leap. For the larger jumps he should need enough swing going to make it — "a slight challenge", a little risk on the bridge, not hard. Also his head and ears passed through the bridge's planks.
+
+**The swing a leap needs** (`ChuckCharacter.h`): a leap of up to `SwingEasyLeap` (165 cm, grip centre to grip centre) needs nothing. Beyond it the swing's amplitude must reach `SwingNeedAt(d)` = 30° + 0.4°/cm past 165, at most 46° (175 cm: 34°, 180 cm: 36°, 185 cm: 38°). The amplitude is the pendulum's energy as the angle it would swing up to (`GetSwingAmplitude`), so it does not depend on the moment of release.
+
+- A catch at the end of a leap now carries the body to about 27° in front, not 35°, so chaining with the stick let go no longer carries enough for a big gap.
+- The pump is a little gentler (gain 9 → 6) and can start a swing from a dead hang. Held toward the next grip it builds the swing a big gap needs in about 0.2–0.3 s straight after a catch, and about 1.6–2.5 s from hanging still.
+- A jump pressed short of the swing waits. With the stick along the swing (pumping) it goes as soon as the swing is enough, or after 2.5 s at the next top of the swing. With the stick let go he lets go at the top of the swing toward the gap and **falls short**: the paws reach for it about 60–88% of the way (more swing, closer) and 22 cm low, then he drops (`CHUCK_SWING_SHORT`, `CHUCK_SWING_MISS`). That grip can't be caught for 1.5 s, so a near miss isn't saved by the catch reach. Over the bridge's gorge that is a fall death and the return to the bank.
+- Where this bites: the bridge's 6–7-slot gaps (174–185 cm, about half its leaps) and the canopy's 180 cm gaps between trees. The lamp alleys (125–146 cm) and the temple's rings (140 cm) are unchanged.
+
+**Under a board** (`FChuckSwingGrip::Depth`, set by the bridge for every plank): he holds a plank by its near edge going his way (paws under it, fingers over the edge: inset depth/2 − 2.5 cm, 1.6 cm below its mid-thickness) instead of its centre, so his head hangs in the gap he came from. The plank-to-plank flight dips (6–14 cm) instead of rising up to 30 cm over the deck. While under a board the anim lays both ears flat back (−62°), lifts the chin a little, and holds the head near level against the swing's body pitch (`FChuckAnimParams::DuckWeight`, `DuckLevel`). Rings and branches (no depth) are unchanged.
+
+**Measured** on the bridge test's two crossings (ear tips, crown and snout from the imported mesh, `-ChuckHeadProbe`; `CHUCK_BRIDGE_HEAD`): before, 246 of 1903 hanging/leaping frames had a point inside a plank, up to 15.1 cm, and mid-leap his head rose 31 cm above the deck's underside. After (final uncooked run, `Local/brach-s1-bridge.log`), 37 of 2294 frames, at most 2.2 cm (the crown, at the top of a big pumped swing), and at most 5.4 cm above the deck's underside in the gaps. Review still: `SourceAssets/Setting/Review/Bridge_BrachiationUnder.png`. The test fails if more than 5% of frames, 5 cm through or 10 cm above.
+
+**Tests:** `-ChuckBridgeTest` now has 8 trials. The crossings hold the stick along the bridge as a player would. New: `big_gap_no_swing_falls_short` (hanging still before a 180 cm gap, jump with the stick let go: he falls short and returns to the bank) and `big_gap_pumped` (the same with the stick held: the swing builds and he catches it). Route tests that cross 180 cm gaps with the stick let go (canopy, giant canopy, golden leaf, raptor, birds) call `SetTestSwingPump(true)`, which pumps the swing as if the stick were held; the bridge test covers the swing itself.

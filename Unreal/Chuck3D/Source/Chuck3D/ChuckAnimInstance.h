@@ -58,6 +58,10 @@ struct FChuckAnimParams
     float HeldTime = 0.f;
     float HeldBite = -1.f;
     float HeldLimp = 0.f;
+    /** Hanging under a board (the bridge's planks): ears laid flat back and the chin lifted, by this weight. */
+    float DuckWeight = 0.f;
+    /** And the head held near level against the swing's body pitch (degrees, + nose down), already weighted. */
+    float DuckLevel = 0.f;
 };
 
 /** Measured output of the last evaluation, for tests and captures. */

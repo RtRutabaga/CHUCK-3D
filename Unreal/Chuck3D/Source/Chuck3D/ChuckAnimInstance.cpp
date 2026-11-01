@@ -172,6 +172,28 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
 
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
     const FTransform& ToWorld = GetComponentTransform();
+    if (Params.DuckWeight > KINDA_SMALL_NUMBER)
+    {
+        // Under a board: a rat lays its ears flat back and lifts its chin to
+        // look along under it, which keeps the top of his head below the
+        // plank. About the component's Y (- tips the top of a bone backward).
+        FComponentSpacePoseContext Duck(this);
+        Duck.Pose.InitPose(Output.Pose);
+        const auto Turn = [&](const TCHAR* Name, float Degrees)
+        {
+            const FCompactPoseBoneIndex I = Find(Bones, Name);
+            if (I == INDEX_NONE) return;
+            FTransform X = Duck.Pose.GetComponentSpaceTransform(I);
+            X.SetRotation(FQuat(FVector::YAxisVector, FMath::DegreesToRadians(Degrees * Params.DuckWeight)) * X.GetRotation());
+            const FBoneTransform Moved[] = {FBoneTransform(I, X)};
+            Duck.Pose.LocalBlendCSBoneTransforms(Moved, 1.f);
+        };
+        Turn(TEXT("neck"), -4.f + .4f * Params.DuckLevel / FMath::Max(Params.DuckWeight, .01f));
+        Turn(TEXT("head"), -6.f + .6f * Params.DuckLevel / FMath::Max(Params.DuckWeight, .01f));
+        Turn(TEXT("ear_L"), -62.f);
+        Turn(TEXT("ear_R"), -62.f);
+        FCSPose<FCompactPose>::ConvertComponentPosesToLocalPoses(MoveTemp(Duck.Pose), Output.Pose);
+    }
     static const TCHAR* Thigh[] = {TEXT("thigh_L"), TEXT("thigh_R")};
     static const TCHAR* Calf[] = {TEXT("calf_L"), TEXT("calf_R")};
     static const TCHAR* Foot[] = {TEXT("foot_L"), TEXT("foot_R")};

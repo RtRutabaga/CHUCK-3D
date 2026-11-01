@@ -599,6 +599,7 @@ void ReviewChultBirds(AActor* Owner,AChuckCharacter* Chuck,int32 Failures)
     auto* PC=Cast<APlayerController>(Chuck->GetController());
     // No stray mouse or pad input moves him or his camera (as the bridge test).
     Chuck->DisableInput(PC);Chuck->SetLookLocked(true);
+    Chuck->SetTestSwingPump(true);   // it crosses the bridge's big gaps (the bridge test covers the swing itself)
     auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(70);
     const FString Folder=FPaths::ScreenShotDir()/TEXT("Chult");IFileManager::Get().MakeDirectory(*Folder,true);
     auto Shot=[Folder](const FString& Name){FScreenshotRequest::RequestScreenshot(Folder/(Name+TEXT(".png")),true,false);};
