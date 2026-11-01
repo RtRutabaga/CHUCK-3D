@@ -50,6 +50,48 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 
 Next part of the work could be done by either — preference: Claude (milestone 2, the weather deck, rigging traversal and sea; milestone 3's pirates and their animation are Claude's either way).
 
+## November 1 (later) — big brachiation leaps need a back-then-forward swing (Claude)
+
+- **Asked:** holding the stick forward got him across the bridge "no problem". A long leap should need a swing back then forward, with physics that make sense, "like a real person trying to make a big brachiation jump". The tree-to-tree gaps should need it too.
+- **Source:** `main` at f6496980 (the brachiation code is from 5de52e20).
+- **Built** (docs/BRACHIATION.md, "Big gaps need a real swing; under a deck"):
+  - **Pump:** the stick only adds energy near the bottom of the arc (within 30°, strongest at the bottom) and in the direction he is already moving. Pushing against the motion takes energy away, so holding the stick one way nets about nothing. A dead hang gets a small start kick.
+  - **Reach model:** for leaps over 165 cm, grip to grip, the leap's speed is a throw (140 along, 180 up) plus the swing's own speed at release (`SwingReachK` 2.4 × L × rate) along the arc's tangent. The reach is ballistic flight to the target grip's height. Short of the gap, he leaps 45–90% of the way and falls. `SwingNeedAt` is gone.
+  - **Timing:** pressing jump on a big gap waits for the forward stroke and releases him just past the bottom, at the stroke's best reach. If he isn't swinging, he lets go after 0.45 s (or 1 s at most).
+  - A leap's catch now carries 14° of swing (was 27°), so every big gap needs its own pumping.
+  - **Under the bridge:** the duck level eases off past 30° of mesh pitch (factor −1.35).
+- **Measured for a 180 cm bridge gap:**
+  - from a still hang, about 84 cm (short);
+  - with the stick held forward, about 83 cm (short);
+  - with a back-forward rhythm from a catch, 230–255 cm;
+  - in the test trial, 259.7 cm (amplitude 43.8°).
+- **Tested:**
+  - Uncooked (`Local/brach-s2-*.log`), all passing:
+    - bridge 9/9, with the two new trials `big_gap_stick_held_forward_falls_short` and `big_gap_swing_back_then_forward`;
+    - head through a plank on 3 of 4288 frames by more than 1 cm, worst 2.1 cm;
+    - canopy 48/48 and giant canopy 72/72;
+    - raptor 8/8 with its route 8/8;
+    - birds crossed=1;
+    - lamp 8/8.
+  - Packaged `Builds/SwingCandidate`:
+    - The first full Verify-Package failed only the temple heroes' `wizard_seal` (coverage 0.25 against 0.3). This is the known intermittent seen on 10-28, 10-31 and earlier today.
+    - The rerun on the same package passed with 182 passes (`Local/verify-package-20261101-142151.log`). Bridge `trials=9`, head ok=1 (`Local/verify-bridge-20261101-153129.log`).
+    - Promoted as `Swing2`. The receipt names f6496980 because the build was made from uncommitted changes, which are committed in this entry's commit.
+  - Not played by hand; no Xbox pad test.
+- **Contract compatibility:**
+  - No rig, slot, clip or socket changes.
+  - New public `GetSwingRate`, `GetSwingShorts` and `SwingReachNow`. `SetTestSwingPump` now pumps with the swing's motion, not toward the target.
+  - Verify-Package expects bridge `trials=9`.
+- **Remaining flaws:**
+  - Route tests (canopy, giant, raptor, birds) cross big gaps with the test pump assist, not a scripted player stick.
+  - Pressing jump while the stick points back aims the leap back. Players must be holding forward on the release stroke.
+  - From a dead hang a big gap takes about two full swings.
+  - The throw and whip are tuned constants, not a body simulation.
+  - The crown fur still grazes the planks by up to about 1 cm on a few frames.
+- **Launcher:** promoted (`Windows-Previous-20261101-Swing2` and `-Ship` kept, the 10-31 Swing backup pruned).
+
+Next part of the work could be done by either — preference: Claude (ship milestone 2 still waits; a hand-play of the bridge on the pad would confirm the swing feels right).
+
 ## October 31 (night) — big brachiation gaps need a swing; Chuck's head stays out of the bridge planks (Claude)
 
 - **Asked:**

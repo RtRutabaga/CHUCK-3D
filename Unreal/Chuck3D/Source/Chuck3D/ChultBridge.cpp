@@ -542,15 +542,15 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
     const bool bCapture=FParse::Param(FCommandLine::Get(),TEXT("ChuckBridgeCapture"));
     const int32 Static=CheckChultBridge(Owner,C);
-    enum EKind {KCatch,KCross,KStepDown,KBack,KLetGo,KNoStand,KShort,KPump};
+    enum EKind {KCatch,KCross,KStepDown,KBack,KLetGo,KNoStand,KShort,KHold,KRhythm};
     struct FTrial {EKind Kind;const TCHAR* Name;};
     const TArray<FTrial> Trials={{KCatch,TEXT("catch_first")},{KCross,TEXT("cross")},{KStepDown,TEXT("step_down_far")},{KBack,TEXT("cross_back")},{KLetGo,TEXT("let_go_fall")},{KNoStand,TEXT("no_standing")},
-        {KShort,TEXT("big_gap_no_swing_falls_short")},{KPump,TEXT("big_gap_pumped")}};
+        {KShort,TEXT("big_gap_no_swing_falls_short")},{KHold,TEXT("big_gap_stick_held_forward_falls_short")},{KRhythm,TEXT("big_gap_swing_back_then_forward")}};
     struct FRun
     {
         int32 Trial=0,Failures=0,Phase=0,Jumps=0,Leaps=0,Deaths=0,Shot=0,ShotIndex=0;
-        int32 HeadFrames=0,HeadThrough=0,HeadAbove=0;float HeadMaxPen=0,HeadMaxAbove=-1e3f;
-        int32 Shorts=0,Waits=0;float Settled=-1;
+        int32 HeadFrames=0,HeadThrough=0,HeadThrough1=0,HeadAbove=0;float HeadMaxPen=0,HeadMaxAbove=-1e3f;
+        int32 Shorts=0,Waits=0,Backs=0,AtGrip=-1;float Settled=-1;bool bBack=false;
         float Start=-1,LastJump=-1,NextShot=0,Tick=-1;bool bMusicFar=false,bMusicBack=false;
         ACameraActor* Camera=nullptr;FTimerHandle Timer;
     };
@@ -595,10 +595,10 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         const float Yaw=ChultBridgeRespawnYaw();
         if(Run->Start<0)
         {
-            Run->Start=Now;Run->Phase=0;Run->Jumps=0;Run->Leaps=C->GetSwingLeaps();Run->Deaths=C->GetFallDeaths();Run->LastJump=0;Run->Shorts=C->GetSwingShorts();Run->Settled=-1;
+            Run->Start=Now;Run->Phase=0;Run->Jumps=0;Run->Leaps=C->GetSwingLeaps();Run->Deaths=C->GetFallDeaths();Run->LastJump=0;Run->Shorts=C->GetSwingShorts();Run->Settled=-1;Run->Backs=0;Run->AtGrip=-1;Run->bBack=false;
             if(Trial.Kind==KCatch||Trial.Kind==KLetGo) Place(ChultBridgeNearStand(),Yaw);
             else if(Trial.Kind==KBack) Place(ChultBridgeFarStand(),Yaw+180);
-            else if(Trial.Kind==KShort||Trial.Kind==KPump)
+            else if(Trial.Kind==KShort||Trial.Kind==KHold||Trial.Kind==KRhythm)
             {
                 // Hanging still from the plank before a big gap (dropped onto it from below its paws' reach).
                 const FVector Paws=Planks[FMath::Max(BigGap,0)].Grip-FVector(0,0,5);
@@ -636,11 +636,24 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
                 }
             }
             if(Pen>2.f && Run->HeadThrough<400 && Run->HeadFrames%3==0) UE_LOG(LogTemp,Display,TEXT("CHUCK_BRIDGE_HEAD_THROUGH gait=%s cm=%.1f amp=%.1f point=%d along=%.1f pitch=%.1f"),C->GetGaitName(),Pen,C->GetSwingAmplitude(),Worst,WorstAlong,C->GetMesh()->GetComponentRotation().Pitch);
-            ++Run->HeadFrames;Run->HeadThrough+=Pen>0;Run->HeadAbove+=Above>0;
+            ++Run->HeadFrames;Run->HeadThrough+=Pen>0;Run->HeadThrough1+=Pen>1.f;Run->HeadAbove+=Above>0;
             Run->HeadMaxPen=FMath::Max(Run->HeadMaxPen,Pen);Run->HeadMaxAbove=FMath::Max(Run->HeadMaxAbove,Above);
         }
         bool Pass=false,Done=false;float Limit=30;
         C->SetTestStick(FVector2D::ZeroVector);
+        // A player pumping a big gap's swing: the stick back while he swings
+        // back, toward the gap while he swings toward it (Fwd: the way he
+        // faces along the bridge); the back strokes counted at each grip.
+        if(Grip!=Run->AtGrip) {Run->AtGrip=Grip;Run->Backs=0;Run->bBack=false;}
+        const float Rate=C->GetSwingRate();
+        if(C->IsSwinging() && Rate<-.5f && !Run->bBack) {Run->bBack=true;++Run->Backs;} else if(Rate>.3f) Run->bBack=false;
+        auto NextGap=[&](int32 Step){const int32 I=Planks.IndexOfByPredicate([&](const FChultBridgePlank& K){return GripIndex(&K-Planks.GetData())==Grip;});
+            return Planks.IsValidIndex(I) && Planks.IsValidIndex(I+Step) ? (float)FVector::Dist(Planks[I].Grip,Planks[I+Step].Grip) : 0.f;};
+        // (Before a short gap the stick just points on: no swing needed.)
+        auto PumpStick=[&](const FVector& Fwd,int32 Step=0){C->SetTestStickWorld(Rate>=0.f || (Step!=0 && NextGap(Step)<=AChuckCharacter::SwingEasyLeap) ? Fwd : -Fwd);};
+        // Ready for the next leap: a short one at once; a big one once he has
+        // swung back and is on his way forward again.
+        auto Ready=[&](int32 Step){return NextGap(Step)<=AChuckCharacter::SwingEasyLeap || (Run->Backs>=1 && Rate>.3f);};
         switch(Trial.Kind)
         {
         case KCatch:
@@ -649,9 +662,9 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             Done=Pass && Time-Run->LastJump>.5f;Limit=6;
             break;
         case KCross:
-            // Stick held on along the bridge (pumping the swing for the big gaps), a jump at each plank.
-            C->SetTestStickWorld(AlongDir());
-            if(C->IsSwinging() && Grip!=GripIndex(Last) && Time-Run->LastJump>.45f) Press();
+            // Plank to plank, a jump at each; the big gaps swung back, then forward, then jumped.
+            PumpStick(AlongDir(),1);
+            if(C->IsSwinging() && Grip!=GripIndex(Last) && Time-Run->LastJump>.45f && Ready(1)) Press();
             Run->bMusicFar|=Music==4;
             Pass=C->IsSwinging() && Grip==GripIndex(Last) && C->GetSwingLeaps()-Run->Leaps==Last && Run->bMusicFar;
             Done=(Pass && Time-Run->LastJump>.6f) || (!C->IsSwinging() && !C->IsSwingLeaping());Limit=40;
@@ -666,9 +679,9 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             if(Run->Phase==0) {if((Run->Jumps==0 && Time>.6f && bGround) || Retry()) Press();if(C->IsSwinging() && Grip==GripIndex(Last)) Run->Phase=1;}
             else if(Run->Phase==1)
             {
-                C->SetTestStickWorld(-AlongDir());
+                PumpStick(-AlongDir(),-1);
                 if(C->IsSwinging() && Grip==GripIndex(0)) {Run->Phase=2;C->SetTestStick(FVector2D::ZeroVector);}
-                else if(C->IsSwinging() && Time-Run->LastJump>.45f) Press();
+                else if(C->IsSwinging() && Time-Run->LastJump>.45f && Ready(-1)) Press();
             }
             else if(Run->Phase==2 && C->IsSwinging() && Time-Run->LastJump>.5f) {Press();Run->Phase=3;}
             Pass=Run->Phase==3 && bGround && F.X<0 && FMath::Abs(P.Z-34.65f-ChultCanyonGroundZ(P))<20 && C->GetSwingLeaps()-Run->Leaps==Last;
@@ -679,9 +692,9 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             if(Run->Phase==0) {if((Run->Jumps==0 && Time>.6f && bGround) || Retry()) Press();if(C->IsSwinging()) Run->Phase=1;}
             else if(Run->Phase==1)
             {
-                C->SetTestStickWorld(AlongDir());
+                PumpStick(AlongDir(),1);
                 if(C->IsSwinging() && Grip==GripIndex(4) && Time-Run->LastJump>.5f) {C->DodgeToward(FVector2D::ZeroVector);Run->Phase=2;Run->LastJump=Time;}
-                else if(C->IsSwinging() && Time-Run->LastJump>.45f) Press();
+                else if(C->IsSwinging() && Time-Run->LastJump>.45f && Ready(1)) Press();
             }
             Run->bMusicFar|=Music==4;
             if(Run->Phase==2 && C->GetFallDeaths()>Run->Deaths) Run->Phase=3;
@@ -690,30 +703,38 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             Done=Pass && Time-Run->LastJump>2.f;Limit=25;
             break;
         case KShort:
-        case KPump:
-            // A big gap from a still hang: the stick let go, he waits for a swing that
-            // never builds and falls short (back to the near bank); the stick held
-            // along the bridge pumps the swing up and he makes it.
+        case KHold:
+        case KRhythm:
+            // A big gap from a still hang, as three players might try it:
+            //  - the stick let go: no swing; he falls short (back to the near bank);
+            //  - the stick held toward it for 2.5 s: it gains on the forward stroke
+            //    what it loses on the back one; still short;
+            //  - pumped in time (back as he swings back, forward as he swings
+            //    forward), two swings back, jumped on the way forward: made.
             if(Run->Phase==0)
             {
-                if(C->IsSwinging() && C->GetSwingAmplitude()<6.f && Run->Settled<0) Run->Settled=Time;
-                if(Run->Settled>=0 && Time-Run->Settled>.4f)
+                if(C->IsSwinging() && C->GetSwingAmplitude()<6.f && Run->Settled<0) {Run->Settled=Time;Run->Backs=0;}   // (swings counted from here)
+                if(Run->Settled>=0)
                 {
-                    if(Trial.Kind==KPump) C->SetTestStickWorld(AlongDir());
-                    Press();Run->Phase=1;
+                    const float Since=Time-Run->Settled;
+                    if(Trial.Kind==KHold && Since>.4f) C->SetTestStickWorld(AlongDir());
+                    if(Trial.Kind==KRhythm) PumpStick(AlongDir());
+                    const bool bGo=Trial.Kind==KShort ? Since>.4f : Trial.Kind==KHold ? Since>2.9f : (Run->Backs>=2 && Rate>.3f);
+                    if(bGo) {Press();Run->Phase=1;}
                 }
             }
-            else if(Trial.Kind==KPump) C->SetTestStickWorld(AlongDir());
-            if(Trial.Kind==KShort)
+            else if(Trial.Kind==KHold) C->SetTestStickWorld(AlongDir());
+            else if(Trial.Kind==KRhythm) PumpStick(AlongDir());
+            if(Trial.Kind!=KRhythm)
             {
                 if(Run->Phase==1 && C->GetFallDeaths()>Run->Deaths) Run->Phase=2;
                 Pass=BigGap>=0 && Run->Phase==2 && C->GetSwingShorts()==Run->Shorts+1 && bGround && IsChultBridgeRespawn(C->GetActorLocation()) && C->GetSwingLeaps()-Run->Leaps==1;
-                Done=Pass && Time-Run->LastJump>2.f;Limit=14;
+                Done=Pass && Time-Run->LastJump>2.f;Limit=16;
             }
             else
             {
                 Pass=BigGap>=0 && Run->Phase==1 && C->IsSwinging() && Grip==GripIndex(BigGap+1) && C->GetSwingShorts()==Run->Shorts && C->GetSwingLeaps()-Run->Leaps==1;
-                Done=Pass && Time-Run->LastJump>.4f;Limit=10;
+                Done=Pass && Time-Run->LastJump>.4f;Limit=12;
             }
             break;
         case KNoStand:
@@ -730,7 +751,7 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
             FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("T%d_%s_%03d.png"),Run->Trial,Trial.Name,Run->ShotIndex++),false,false);
             Run->NextShot+=.6f;
         }
-        const bool Fell=Trial.Kind!=KLetGo && Trial.Kind!=KNoStand && Trial.Kind!=KShort && C->GetFallDeaths()>Run->Deaths;
+        const bool Fell=Trial.Kind!=KLetGo && Trial.Kind!=KNoStand && Trial.Kind!=KShort && Trial.Kind!=KHold && C->GetFallDeaths()>Run->Deaths;
         if(!Done && !Fell && Time<Limit)return;
         Pass=Pass && !Fell;Run->Failures+=!Pass;
         UE_LOG(LogTemp,Display,TEXT("CHUCK_BRIDGE_TRIAL trial=%d name=%s pass=%d time=%.2f jumps=%d gait=%s grip=%d leaps=%d shorts=%d music=%d fall_deaths=%d at=%s"),
@@ -741,9 +762,11 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         if(Run->Trial>=Trials.Num())
         {
             // (2026-10-31: was 246 of 1903 frames, 15.1 cm through and 31 cm above the deck mid-leap.)
-            const bool HeadOk=GHeadProbeSet && Run->HeadFrames>500 && Run->HeadThrough<Run->HeadFrames/20 && Run->HeadMaxPen<5.f && Run->HeadMaxAbove<10.f;
+            // (Through by more than 1 cm in under 1 frame in 20: a lighter graze, the
+            // crown's fur brushing the board at the top of a big swing, is allowed.)
+            const bool HeadOk=GHeadProbeSet && Run->HeadFrames>500 && Run->HeadThrough1<Run->HeadFrames/20 && Run->HeadMaxPen<5.f && Run->HeadMaxAbove<10.f;
             Run->Failures+=!HeadOk;
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_BRIDGE_HEAD ok=%d frames=%d through=%d max_through_cm=%.1f above_deck=%d max_above_cm=%.1f"),HeadOk,Run->HeadFrames,Run->HeadThrough,Run->HeadMaxPen,Run->HeadAbove,Run->HeadMaxAbove);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_BRIDGE_HEAD ok=%d frames=%d through=%d through_1cm=%d max_through_cm=%.1f above_deck=%d max_above_cm=%.1f"),HeadOk,Run->HeadFrames,Run->HeadThrough,Run->HeadThrough1,Run->HeadMaxPen,Run->HeadAbove,Run->HeadMaxAbove);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_BRIDGE_TEST_COMPLETE failures=%d trials=%d static_failures=%d grips=%d music_far=%d music_back=%d"),Run->Failures,Trials.Num(),Static,ChultBridgePlanks().Num(),Run->bMusicFar,Run->bMusicBack);
             FPlatformMisc::RequestExitWithStatus(false,Run->Failures?1:0);
         }

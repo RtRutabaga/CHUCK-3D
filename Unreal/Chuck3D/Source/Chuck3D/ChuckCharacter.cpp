@@ -1238,6 +1238,24 @@ float AChuckCharacter::GetSwingAmplitude() const
     const float C = FMath::Cos(SwingAngle) - SwingRate * SwingRate * SwingLength() / (2.f * SwingGravity);
     return FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(C, -1.f, 1.f)));
 }
+float AChuckCharacter::SwingReachNow(const FVector& Delta) const
+{
+    // His centre leaves on the swing's own velocity, L*rate along the arc
+    // (forward and up when he lets go on the way up in front), the legs' whip
+    // adding SwingReachK times it, plus a throw from the arms; flown to the
+    // next grip's height under his gravity. Let go on the back stroke, the
+    // swing takes from the throw.
+    if (Gait != EGait::Swing) return 0.f;
+    const FVector Dir = Delta.GetSafeNormal2D();
+    const float Toward = static_cast<float>(FVector::DotProduct(Dir, SwingDir));
+    const float Sign = Toward >= 0.f ? 1.f : -1.f, Along = FMath::Abs(Toward);
+    const float V = SwingLength() * SwingRate * Sign * SwingReachK, A = SwingAngle * Sign;
+    const float Forward = SwingThrowAlong + V * FMath::Cos(A) * Along, Up = SwingThrowUp + V * FMath::Sin(A);
+    if (Forward <= 0.f) return 0.f;
+    const float Root = Up * Up - 2.f * SwingGravity * static_cast<float>(Delta.Z);
+    if (Root < 0.f) return 0.f;
+    return Forward * (Up + FMath::Sqrt(Root)) / SwingGravity;
+}
 bool AChuckCharacter::TrySwingCatch()
 {
     // His paws, reaching up, find a ring near them: he takes it. Generous - a
@@ -1283,10 +1301,11 @@ void AChuckCharacter::EnterSwing(int32 Index, bool bFromLeap)
     if (bFromLeap)
     {
         // Caught with the body behind the ring, carrying on through: up to about
-        // 27 degrees in front before it swings back (2026-10-31: was 35; a
-        // chained leap no longer carries the swing a big gap needs).
+        // 14 degrees in front before it swings back (35 until 2026-10-31, 27
+        // until 11-01): a leap's momentum alone never carries a big gap; the
+        // next one needs its own swing back and forward.
         SwingAngle = FMath::DegreesToRadians(ChuckClipData::SwingCatch * ChuckClipData::SwingMaxAngle);
-        SwingRate = FMath::Sqrt(FMath::Max(0.f, 2.f * SwingGravity / L * (FMath::Cos(SwingAngle) - FMath::Cos(FMath::DegreesToRadians(27.f)))));
+        SwingRate = FMath::Sqrt(FMath::Max(0.f, 2.f * SwingGravity / L * (FMath::Cos(SwingAngle) - FMath::Cos(FMath::DegreesToRadians(14.f)))));
         SwingBlendTime = .02f;
     }
     else
@@ -1350,6 +1369,9 @@ void AChuckCharacter::SwingJump()
     const bool bAimed = Stick.SizeSquared2D() > .12f;
     const FVector Want = bAimed ? Stick.GetSafeNormal2D() : SwingDir;
     int32 Target = FindSwingTarget(Want);
+    // Waiting on the swing for a big leap: still that grip, whatever the
+    // stick does meanwhile (pumping back would otherwise aim him back).
+    if (SwingWaitSince >= 0 && Grips.IsValidIndex(SwingWaitTarget)) Target = SwingWaitTarget;
     if (Target < 0 && !bAimed && Grips.IsValidIndex(SwingGrip))
     {
         // The end of a line of grips over something to stand on (Chult: the
@@ -1373,33 +1395,37 @@ void AChuckCharacter::SwingJump()
         LeaveSwing(Want * WallJumpOut * .9f + FVector(0, 0, WallJumpUp), true);
         return;
     }
-    // A big gap needs the swing going. Short of it, the jump waits while the
-    // swing builds; at the top of the swing toward it (or after a while) he
-    // goes anyway, and falls short.
+    // A big gap goes as far as his release carries him (SwingReachNow). The
+    // jump waits for the swing toward it - pressed on the back stroke, until
+    // it turns - and he lets go at the best point of that forward stroke, where
+    // the reach stops growing. Short of the grip there, he falls short.
     const FVector Centres = Grips[Target].Grip - Grips[SwingGrip].Grip;
     const FVector To = SwingHoldPoint(Target, Centres.GetSafeNormal2D());
-    const float Need = SwingNeedAt(static_cast<float>(Centres.Size())), Have = GetSwingAmplitude();
+    const float Need = static_cast<float>(Centres.Size2D());
+    const float Have = SwingReachNow(Centres);
     bool bShort = false;
-    if (Have < Need)
+    if (Centres.Size() > SwingEasyLeap)
     {
         const float Now = GetWorld()->GetTimeSeconds();
         const float Toward = static_cast<float>(FVector::DotProduct(Centres.GetSafeNormal2D(), SwingDir));
-        const bool bAlong = FMath::Abs(Toward) >= .5f, bMovingToward = !bAlong || SwingRate * Toward > 0.f;
+        const float Sign = Toward >= 0.f ? 1.f : -1.f;
+        const bool bMovingToward = SwingRate * Sign > .05f, bInFront = SwingAngle * Sign > 0.f;
         if (SwingWaitSince < 0)
         {
-            SwingWaitSince = Now; bSwingWaitToward = false;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_WAIT grip=%d target=%d need=%.1f have=%.1f dist=%.1f"), SwingGrip, Target, Need, Have, Centres.Size());
+            SwingWaitSince = Now; bSwingWaitToward = false; SwingReachPrev = 0.f; SwingWaitTarget = Target;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_WAIT grip=%d target=%d need=%.1f have=%.1f amp=%.1f"), SwingGrip, Target, Need, Have, GetSwingAmplitude());
         }
-        // Pumping (the stick along the swing): it waits for the swing to build.
-        // Not: he lets go at the top of the swing toward it.
-        const bool bPumping = FMath::Abs(FVector::DotProduct(StickWorld(), SwingDir)) > .3f || (bTestSwingPump && StickWorld().SizeSquared2D() < .01f);
-        const bool bTop = bSwingWaitToward && !bMovingToward;
-        bSwingWaitToward |= bAlong && bMovingToward;
         const float Wait = Now - SwingWaitSince;
-        if (bPumping ? (Wait < 2.5f || !bTop) : (!bTop && Wait < (bAlong ? 1.6f : 1.f))) { bSwingJumpQueued = true; return; }
-        bShort = true;
+        bool bGo;
+        // (The stroke toward it is over; or there's no swing to wait for, or it never came.)
+        if (!bMovingToward) bGo = bSwingWaitToward || (!bTestSwingPump && ((Wait > .45f && GetSwingAmplitude() < 4.f) || Wait > 1.f));
+        else { bGo = bSwingWaitToward && bInFront && Have < SwingReachPrev - .5f; bSwingWaitToward = true; }   // (in front of the grip and past the stroke's best point)
+        if (bGo && Have < Need && bTestSwingPump && Wait < 6.f) { bGo = false; bSwingWaitToward = false; SwingReachPrev = 0.f; }   // (route tests: the next stroke)
+        SwingReachPrev = bMovingToward ? FMath::Max(SwingReachPrev, Have) : 0.f;   // (this stroke's best)
+        if (!bGo) { bSwingJumpQueued = true; return; }
+        bShort = Have < Need;
     }
-    if (SwingWaitSince >= 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_WAITED seconds=%.2f need=%.1f have=%.1f short=%d"), GetWorld()->GetTimeSeconds() - SwingWaitSince, Need, Have, bShort ? 1 : 0);
+    if (SwingWaitSince >= 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_WAITED seconds=%.2f need=%.1f have=%.1f amp=%.1f angle=%.1f short=%d"), GetWorld()->GetTimeSeconds() - SwingWaitSince, Need, Have, GetSwingAmplitude(), FMath::RadiansToDegrees(SwingAngle), bShort ? 1 : 0);
     SwingWaitSince = -1; bSwingWaitToward = false;
     const bool bDeck = Grips[SwingGrip].Depth > 0.f || Grips[Target].Depth > 0.f;
     SwingLeapFrom = SwingHold;
@@ -1409,7 +1435,7 @@ void AChuckCharacter::SwingJump()
     if (bShort)
     {
         // Not enough swing: his reach falls short and low of it.
-        SwingLeapTo = SwingLeapFrom + (To - SwingLeapFrom) * FMath::Lerp(.6f, .88f, FMath::Clamp(Have / Need, 0.f, 1.f)) - FVector(0, 0, 22.f);
+        SwingLeapTo = SwingLeapFrom + (To - SwingLeapFrom) * FMath::Clamp(Have / FMath::Max(Need, 1.f), .45f, .9f) - FVector(0, 0, 22.f);
         SwingMissed = Target; SwingMissUntil = GetWorld()->GetTimeSeconds() + 1.5f;
         ++SwingShorts;
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_SHORT grip=%d target=%d need=%.1f have=%.1f dist=%.1f shorts=%d"), SwingGrip, Target, Need, Have, Centres.Size(), SwingShorts);
@@ -1436,7 +1462,7 @@ void AChuckCharacter::SwingJump()
     const FVector Right = FRotationMatrix(FRotator(0, SwingLeapYaw, 0)).GetUnitAxis(EAxis::Y);
     SetClip(FVector::DotProduct(SwingLeapDir, Right) > 0.f ? EClip::SwingLeapRight : EClip::SwingLeapLeft, 0, .1f);
     PlaySfx(JumpSounds, ESfx::Jump, JumpVolume * .8f);
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_LEAP from=%d to=%d leaps=%d dist=%.1f time=%.2f need=%.1f have=%.1f"), SwingLeft, Target, SwingLeapCount, Centres.Size(), SwingLeapTime, Need, Have);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_LEAP from=%d to=%d leaps=%d dist=%.1f time=%.2f reach_need=%.1f reach=%.1f"), SwingLeft, Target, SwingLeapCount, Centres.Size(), SwingLeapTime, Need, Have);
 }
 void AChuckCharacter::LeaveSwing(const FVector& Velocity, bool bKick)
 {
@@ -2419,11 +2445,19 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const FVector Grip = SwingHold;
         const float L = SwingLength();
         float Push = static_cast<float>(FVector::DotProduct(StickWorld(), SwingDir));
-        if (bTestSwingPump && StickWorld().SizeSquared2D() < .01f) Push = 1.f;
+        if (bTestSwingPump) Push = SwingRate >= 0.f ? 1.f : -1.f;   // (in time, as a player pumps)
         float Accel = -SwingGravity / L * FMath::Sin(SwingAngle) - .9f * SwingRate;
-        // Pumped with the motion, or started from a still hang (2026-10-31: gain
-        // 9 -> 6, so a big gap's swing takes a moment to build).
-        if (FMath::Abs(Push) > .3f && (Push * SwingRate > 0.f || FMath::Abs(SwingRate) < .4f) && FMath::Abs(SwingAngle) < FMath::DegreesToRadians(50.f)) Accel += Push * 6.f;
+        // The pump (2026-11-01): the legs driven the way the stick holds,
+        // through the bottom of the swing (a kip). It adds to the swing only in
+        // time with it; held one way it gains on one stroke what it takes on
+        // the other, so swinging back and then forward is what builds it. From a
+        // still hang a push starts it.
+        const float SwingDeg = FMath::Abs(FMath::RadiansToDegrees(SwingAngle));
+        if (FMath::Abs(Push) > .3f && SwingDeg < 30.f)
+        {
+            const float Window = FMath::Square(FMath::Cos(SwingDeg / 30.f * HALF_PI));
+            Accel += FMath::Abs(SwingRate) < .4f && SwingDeg < 6.f ? SwingPumpGain * .5f * Push : SwingPumpGain * Push * Window * FMath::Min(1.f, FMath::Abs(SwingRate) / .6f);
+        }
         SwingRate += Accel * DeltaSeconds;
         SwingAngle = FMath::Clamp(SwingAngle + SwingRate * DeltaSeconds, -1.f, 1.f);
         const float Turn = FMath::SmoothStep(0.f, .2f, SwingClock);
@@ -3022,7 +3056,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         P.DuckWeight = DuckBlend < .01f ? 0.f : DuckBlend;
         // Swung feet-first his body tips back and would tip his snout up into
         // the board; he keeps his head near level (last frame's body pitch).
-        P.DuckLevel = P.DuckWeight * FMath::Clamp(static_cast<float>(GetMesh()->GetComponentRotation().Pitch) * .7f, -20.f, 30.f);
+        // (Levelled harder past 30 degrees: the bigger swings a big gap takes.)
+        const float MeshPitch = static_cast<float>(GetMesh()->GetComponentRotation().Pitch);
+        P.DuckLevel = P.DuckWeight * FMath::Clamp(MeshPitch * .7f - FMath::Max(0.f, MeshPitch - 30.f) * 1.35f, -20.f, 30.f);
     }
     P.bAllowSettle = Gait == EGait::Idle;
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
