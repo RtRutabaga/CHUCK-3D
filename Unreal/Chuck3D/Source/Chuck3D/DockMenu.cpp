@@ -9,6 +9,7 @@
 #include "DockPantry.h"
 #include "DockReturn.h"
 #include "SewerSlide.h"
+#include "ShipSetting.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/PlayerController.h"
@@ -48,7 +49,16 @@ namespace
         {TEXT("ChultTempleWind1"),TEXT("Astral Wind 1")},{TEXT("ChultTempleWind2"),TEXT("Astral Wind 2")},{TEXT("ChultTempleWind3"),TEXT("Astral Wind 3")},
         {TEXT("ChultTempleWind4"),TEXT("Astral Wind 4")},{TEXT("ChultTempleWind5"),TEXT("Astral Wind 5")},{TEXT("ChultTempleWind6"),TEXT("Astral Wind 6")},
         {TEXT("ChultTempleWind7"),TEXT("Astral Wind 7")},{TEXT("ChultTempleSanctum"),TEXT("Temple Sanctum")},{TEXT("ChultTempleRubble"),TEXT("Temple Rubble")}};
-    constexpr int32 TempleColumn=6,WindColumn=12;   // the interior's first six in the third column, the trap run's in the fourth, the wind's in the fifth
+    constexpr int32 TempleColumn=6,WindColumn=12;
+    // The pirate ship (2026-11-01; ShipSetting.h), in a sixth column, in EShipSpawn's order.
+    const FChultPoint ShipPoints[]={{TEXT("ShipArrival"),TEXT("Ship Arrival")},{TEXT("ShipHold"),TEXT("Ship Hold")},{TEXT("ShipQuarters"),TEXT("Ship Quarters")},
+        {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")}};
+    bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
+    {
+        for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
+            if(Point==ShipPoints[I].Point){Location=ShipSpawn(EShipSpawn(I));Yaw=ShipSpawnYaw(EShipSpawn(I));return true;}
+        return false;
+    }   // the interior's first six in the third column, the trap run's in the fourth, the wind's in the fifth
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
     {
         Yaw=-1000;
@@ -73,6 +83,15 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
+    FVector ShipAt;float ShipYaw=0;
+    if(C && ShipPoint(Point,ShipAt,ShipYaw))
+    {
+        FadeOutMusic(.1f);
+        AShipSetting::Enter(GetWorld());
+        C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
+        return true;
+    }
     if(!C || (Point!=TEXT("Waterdeep") && Point!=TEXT("Sewer") && Point!=TEXT("SewerJump") && Point!=TEXT("SewerLongJump") &&
               Point!=TEXT("Night") && Point!=TEXT("Pantry") && !(bChult && ChultPoint(Point,ChultAt,ChultYaw,ChultRecovery)))) return false;
     if(bChult)
@@ -143,7 +162,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         // -MenuTestShot: a picture of the page (its five columns), held a moment before Back.
         if(FParse::Param(FCommandLine::Get(),TEXT("MenuTestShot")) && !bMenuShot)
         {
@@ -166,6 +185,7 @@ void ADockHUD::Tick(float DeltaSeconds)
             *MenuTestPoint;
         for(const FChultPoint& Point:ChultPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:TemplePoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
+        for(const FChultPoint& Point:ShipPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -178,7 +198,9 @@ void ADockHUD::Tick(float DeltaSeconds)
     {
         auto* C=Cast<AChuckCharacter>(GetOwningPawn());
         FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=0;
-        const bool bChult=ChultPoint(MenuTestPoint,ChultAt,ChultYaw,ChultRecovery);
+        bool bChult=ChultPoint(MenuTestPoint,ChultAt,ChultYaw,ChultRecovery);
+        FVector ShipAt;float ShipYaw=0;
+        if(ShipPoint(MenuTestPoint,ShipAt,ShipYaw)){bChult=true;ChultAt=ChultRecovery=ShipAt;ChultYaw=ShipYaw;}   // (aboard, checked as Chult's points are)
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
             MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
@@ -242,7 +264,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     TSharedPtr<SVerticalBox> Rows;
     MenuWidget=SNew(SBorder).BorderBackgroundColor(FLinearColor(.018f,.014f,.027f,1.f))
         .HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(Checkpoints?1700.f:360.f)   // five columns of checkpoints since 2026-10-22
+        [SNew(SBox).WidthOverride(Checkpoints?1900.f:360.f)   // six columns of checkpoints since 2026-11-01
             [SAssignNew(Rows,SVerticalBox)]];
     Rows->AddSlot().AutoHeight().Padding(0,0,0,32)
         [SNew(STextBlock).Text(FText::FromString(TEXT("CHUCK 3D")))
@@ -251,14 +273,15 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
     // The checkpoint page has five columns: Waterdeep, Chult, the temple interior, its trap run, the Astral wind.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth;
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Right,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Third,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fourth,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Fifth,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fifth,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Sixth,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
@@ -303,6 +326,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
             Target=I<TempleColumn?Third:I<WindColumn?Fourth:Fifth;
             const TCHAR* Name=TemplePoints[I].Point;Add(TemplePoints[I].Label,[Start,Name](){return Start(Name);});
         }
+        Target=Sixth;
+        for(const FChultPoint& Point:ShipPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }

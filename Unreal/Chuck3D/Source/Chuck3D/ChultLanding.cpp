@@ -21,6 +21,8 @@
 #include "ChultTempleRun.h"
 #include "ChultTempleWind.h"
 #include "ChultTempleRubble.h"
+#include "ShipEscape.h"
+#include "ShipSetting.h"
 #include "ChultWreck.h"
 #include "ChultBirds.h"
 #include "ProceduralMeshComponent.h"
@@ -138,6 +140,7 @@ void AChultLanding::Build()
     SpawnChultLife(GetWorld());
     AChultTRex::SpawnUpriver(GetWorld());   // the giants' T-rex (2026-10-15)
     AChultBirds::Spawn(GetWorld());          // macaws over the bridge and the temple (2026-10-19)
+    AShipEscape::Watch(GetWorld());          // the rubble crevice's end leads onto the ship (2026-11-01)
 }
 
 void AChultLanding::BuildEnvironment()
@@ -475,6 +478,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleRunTest"))){ReviewChultTempleRun(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleWindTest"))){ReviewChultTempleWind(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleRubbleTest"))){ReviewChultTempleRubble(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckShipTest"))){ReviewShip(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBirdReview"))){ReviewChultBirds(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}

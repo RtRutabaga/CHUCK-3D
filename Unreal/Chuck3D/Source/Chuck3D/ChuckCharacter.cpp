@@ -6,6 +6,7 @@
 #include "ChultWreck.h"
 #include "ChultTempleInterior.h"
 #include "ChultTempleRubble.h"
+#include "ShipSetting.h"
 #include "ChultRaptor.h"
 #include "TempleSkeleton.h"
 #include "TempleSnake.h"
@@ -399,6 +400,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     // In Chult: around the brachiation trees, back on the ruin top that leads onto them (user 2026-10-14).
     // Fallen into the canyon's gorge: back on the bank by the bridge (2026-10-14).
     FVector Bridge;
+    // Aboard the ship (2026-11-01): the start of the space he was in.
+    if(ShipRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
     // In the temple interior (2026-10-20): the start of the space he died in.
     if(bChultRespawn && ChultTempleInteriorRespawn(GetActorLocation(),Bridge)) return Bridge;
@@ -420,6 +423,7 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
     float UpriverYaw = 0.f;
     if (IsChultUpriverSpawn(Location, UpriverYaw)) return UpriverYaw;     // facing up the road
     if (IsChultTempleInteriorSpawn(Location, UpriverYaw)) return UpriverYaw;   // facing on into the temple
+    if (IsShipSpawn(Location, UpriverYaw)) return UpriverYaw;                  // aboard, facing on into the space
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
@@ -495,6 +499,11 @@ bool AChuckCharacter::InCrawlSpace(const UWorld* World, const FVector& Location)
     return false;
 }
 bool AChuckCharacter::IsCrawling() const { return Gait == EGait::Crawl; }
+void AChuckCharacter::ResetCrawlingAt(const FVector& Location)
+{
+    ResetAtLocation(Location);
+    EnterCrawl();   // the capsule drops to its crawling height at once, before anything resolves it against the roof
+}
 void AChuckCharacter::EnterCrawl()
 {
     // Low and slow (the clip's own pace), no sprint; the capsule is 34 cm tall instead of 65.
@@ -3208,4 +3217,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Off the temple well's stair into its pit, or into the pier hall's rift (2026-10-20): Astral.
     else if (bChultRespawn && ChultTempleInteriorSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
+    // Over the ship's side into the sea (2026-11-01): Astral, back at the start of the space he went over from.
+    else if (ShipSeaSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
 }

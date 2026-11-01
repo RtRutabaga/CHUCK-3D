@@ -41,6 +41,9 @@ public:
      *  every box he stands again once there's room. Registered by the setting's builder. */
     static void RegisterCrawlSpace(const UWorld* World, const FTransform& Box, const FVector& Half);
     static bool InCrawlSpace(const UWorld* World, const FVector& Location);
+    /** Put him at Location (his standing capsule's centre) already down on all fours, in a crawl space too low to stand
+     *  in (2026-11-01: the ship escape begins inside the crawlway through the masonry, ShipEscape.h). */
+    void ResetCrawlingAt(const FVector& Location);
     bool IsCrawling() const;
     int32 GetCrawls() const { return Crawls; }
     /** Roll, or side jump when the stick (x right, y forward, camera-relative) is mostly sideways. */

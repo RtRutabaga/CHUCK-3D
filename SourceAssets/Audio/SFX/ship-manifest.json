@@ -1,0 +1,40 @@
+{
+  "provenance": "Original deterministic synthetic ship ambience; Tools/gen_ship_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_ShipWash_00",
+      "file": "SFX_ShipWash_00.wav",
+      "duration": 21.9,
+      "sha256": "d9f641129d3c6aab73f8f9a8291c74605c20a041318eec0a21f33effebfffe40",
+      "peak_dbfs": -6.0
+    },
+    {
+      "name": "SFX_ShipCreak_00",
+      "file": "SFX_ShipCreak_00.wav",
+      "duration": 0.7,
+      "sha256": "ba4e4648622cf8cbbbb53e79fae7f1b5f3fcbd44dbf4db61c185bc116f06f5bd",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_ShipCreak_01",
+      "file": "SFX_ShipCreak_01.wav",
+      "duration": 0.95,
+      "sha256": "4877c4486d4bc697ec0ed9e12b3e022fcf89ed02f6c8e486a629f6ac6a394aaf",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_ShipCreak_02",
+      "file": "SFX_ShipCreak_02.wav",
+      "duration": 1.2,
+      "sha256": "2d765a895e440174943ad201cf16bfdfb4570447ffcbebb280b7f9fe1b85d817",
+      "peak_dbfs": -3.0
+    },
+    {
+      "name": "SFX_ShipCreak_03",
+      "file": "SFX_ShipCreak_03.wav",
+      "duration": 1.45,
+      "sha256": "2943615365a3c594a9dda4573e32f179ec0f0a73a6a5d53e2ec6a58f8f021a5c",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

@@ -2,6 +2,54 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 1 — the pirate ship: plan, escape and below decks (Claude)
+
+- **Asked:** "start building the ship/next part of the game. base your approach on how we've handled the chult adaptation from 2d".
+- **Plan first, as with Chult:**
+  - Read the 2D Phase 6 escape, Phase 7, the six ship maps, the dialogue JSON and `pirate ship.png`, all read-only.
+  - Wrote [../regions/SHIP.md](../regions/SHIP.md): one continuous ship, the crew's exact lines, the seven-condition ending gate and four milestones.
+  - The user approved it with milestone 1 to start, and answered its questions:
+    - the chest gives 40 cigarettes plus the golden leaf's stamina lock;
+    - the sea rocks round a still hull;
+    - the user will supply the ship track and pirate voices later.
+- **Built (milestone 1; [../SHIP.md](../SHIP.md)):**
+  - `ShipSetting.cpp`: the hull, decks, rooms, furniture, ladder, lanterns, sea, light and sound, plus spawns, respawns and the sea death. Its stage is 8 km from Chult.
+  - `ShipEscape.cpp`: the escape cutscene from the rubble crevice's end.
+  - `ShipTest.cpp`: `-ChuckChultTest -ChuckShipTest`.
+  - New `AChuckCharacter::ResetCrawlingAt`.
+  - Respawn, sea-death and music hooks in `ChuckCharacter.cpp` and `DockGameMode.cpp`; the letterbox while the escape plays.
+  - A sixth Dev Checkpoint column (`DockMenu.cpp`); the crevice watcher spawned with Chult (`ChultLanding.cpp`).
+  - `Tools/gen_ship_sfx.py` and `import_ship_sfx.py`.
+  - `M_TempleRiftSea` gains a `Gain` parameter (default 1).
+  - Verify-Package runs the ship test; Verify-Menu covers the new checkpoints and Temple Rubble.
+- **Tested:**
+  - Uncooked (`Local/ship-test-final.log`):
+    - The escape plays from the real crawl to the crevice's end and hands control back facing the hole (pass, 24 s).
+    - `CHUCK_SHIP_CHECK failures=0`: 5 spawns on their floors with room, 3 doorways open to a 180 cm human, the hull solid below the waterline, no missing materials.
+    - 6/6 trials: galley, cabin, ladder down, ladder up, over the side into the sea and back, the crawlway in and out.
+    - 60,698 triangles.
+  - Packaged `Builds/ShipCandidate`:
+    - The first package's verification stopped at the temple heroes' `wizard_seal` (web coverage 0.29). It is a known intermittent: it failed the same way earlier the same day before any material change, and on October 28.
+    - The rerun found a real fault of mine: the rubble map's crawl trial reaches the crevice's end, and the new escape carried him off to the ship mid-test. The watcher now stands aside under `-ChuckTempleRubbleTest`.
+    - Verify-Menu then failed Ship Hold: he drifted 50 cm off the spawn in 7 s, likely a roaming rat. No rat home is within 4.5 m of the ladder's foot now.
+    - The final package passed Verify-Package with 182 passes (`Local/verify-package-20261101-035847.log`, ship `verify-ship-*`) and Verify-Menu 41/41 (`Local/ship-verify-menu2.log`). It was promoted as `Ship`.
+  - Stills: `SourceAssets/Setting/Review/Ship_*.png`.
+  - Not played by hand; no Xbox pad; no frame-time measurement.
+- **Found on the way:** `AShipSetting::Enter` at first left `AInfo` actors alone, and Waterdeep's harbour fog (an `AInfo`) turned every opening white. Their fog, light and sky parts are now switched off too.
+- **Remaining flaws:**
+  - The weather deck is closed (gratings only). The sea is a view-ray backdrop that only works seen from inside.
+  - No rocking yet beyond the swinging lamps and hammocks.
+  - Furniture is simple boxes and spars; the folded sails read as stacked boards.
+  - The masonry's faces are flat boxes.
+  - The gunport lids are plain slabs.
+  - The sea is pale through the ports.
+  - The rats can't reach the raised crates; that is intended, but the route is untested by a person.
+- **Contract compatibility:** no rig, slot, clip or socket changes. New public `ResetCrawlingAt`; new `Gain` parameter on `M_TempleRiftSea` (the sanctum is unchanged at 1).
+- **Binary/LFS:** 5 WAV + 5 uasset (4.3 MB), 7 review PNGs (9.5 MB) and the rebuilt material, all under the existing LFS rules.
+- **Launcher:** promoted (`Windows-Previous-20261101-Ship` kept, the Cream backup pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 2, the weather deck, rigging traversal and sea; milestone 3's pirates and their animation are Claude's either way).
+
 ## October 31 (night) — big brachiation gaps need a swing; Chuck's head stays out of the bridge planks (Claude)
 
 - **Asked:**

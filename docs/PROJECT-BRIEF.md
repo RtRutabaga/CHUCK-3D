@@ -49,7 +49,7 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 4 | Chult jungle | Started: verified playable landing, local respawn and ground loop; farther jungle remains |
 | 5 | Deeper into Chult | — |
 | 6 | The jungle temple | Started: the exterior, and the interior's first four maps (hidden stair, well, Great Hall, spike corridor, pier hall, dart gallery); creatures and later maps remain |
-| 7 | The pirate ship | — |
+| 7 | The pirate ship | Started: plan approved 2026-11-01 ([regions/SHIP.md](regions/SHIP.md)); milestone 1, the escape from the temple and the ship below decks ([SHIP.md](SHIP.md)); the deck, crew and ending remain |
 | 8 | Phlegethos | — |
 | 9 | The Feywild | — |
 | 10 | Zephyros' tower | — |

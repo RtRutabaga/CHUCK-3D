@@ -1,0 +1,265 @@
+// -ChuckChultTest -ChuckShipTest (Claude, 2026-11-01; docs/SHIP.md): the escape played for real from the rubble map's
+// crevice (crawled to its end by the real character) onto the ship; the ship's checks; stills of every space; then the
+// real character aboard: through the doorways to the galley, and through the crew quarters into the cabin; down the
+// ladder into the hold and back up it; over the side into the sea (an Astral death, back where he went over); the
+// escape skipped. -ChuckShipViewsOnly stops after the stills; -ChuckShipTrials=a+b runs some.
+#include "ShipSetting.h"
+#include "ShipEscape.h"
+#include "ChultTempleRubble.h"
+#include "ChultTempleInterior.h"
+#include "ChuckCharacter.h"
+#include "EnemyRat.h"
+#include "ClayJar.h"
+#include "EngineUtils.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
+#include "UnrealClient.h"
+#include "HAL/PlatformMisc.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+
+using namespace Ship;
+
+namespace
+{
+    FVector SW(float X, float Y, float Z) { return ShipWorld(FVector(X, Y, Z)); }
+    constexpr float Stand = 34.65f;
+}
+
+void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
+{
+    UWorld* World = Owner->GetWorld();
+    struct FView { const TCHAR* Name; FVector Eye, Aim; };
+    const TArray<FView> Views = {
+        {TEXT("ArrivalSeam"), {290, -120, LowerZ + 120}, {SeamX1, SeamY, LowerZ + 40}},
+        {TEXT("ArrivalHole"), {150, -150, LowerZ + 90}, {125, 420, LowerZ + 80}},
+        {TEXT("ArrivalHatch"), {-60, 200, LowerZ + 170}, {HatchX1, 0, LowerZ}},
+        {TEXT("ArrivalAft"), {300, 100, LowerZ + 110}, {-170, 0, LowerZ + 80}},
+        {TEXT("ArrivalLow"), {280, 180, LowerZ + 35}, {0, -200, LowerZ + 40}},
+        {TEXT("Galley"), {370, -250, LowerZ + 150}, {950, 100, LowerZ + 60}},
+        {TEXT("GalleyHearth"), {700, 250, LowerZ + 90}, {950, 0, LowerZ + 70}},
+        {TEXT("GalleyLow"), {400, 260, LowerZ + 30}, {900, 300, LowerZ + 50}},
+        {TEXT("Quarters"), {-200, 250, LowerZ + 160}, {-800, -100, LowerZ + 100}},
+        {TEXT("QuartersLow"), {-220, 120, LowerZ + 30}, {-700, 0, LowerZ + 120}},
+        {TEXT("QuartersTable"), {-180, -60, LowerZ + 110}, {-340, -175, LowerZ + 70}},
+        {TEXT("Cabin"), {-1110, 200, LowerZ + 170}, {-1550, -100, LowerZ + 90}},
+        {TEXT("CabinWindows"), {-1250, -40, LowerZ + 60}, {SternX, 0, LowerZ + 140}},
+        {TEXT("CabinChest"), {-1080, 60, LowerZ + 80}, {-1185, 178, LowerZ + 30}},
+        {TEXT("Hold"), {150, 150, HoldZ + 170}, {-700, -100, HoldZ + 40}},
+        {TEXT("HoldFore"), {0, -150, HoldZ + 170}, {900, 100, HoldZ + 40}},
+        {TEXT("HoldLadder"), {-60, 120, HoldZ + 80}, {HatchX1, 0, HoldZ + 160}},
+        {TEXT("HoldLow"), {-100, 100, HoldZ + 30}, {-600, -150, HoldZ + 40}}};
+    auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
+    if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
+
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam };
+    static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam};
+    static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam")};
+    struct FRun
+    {
+        int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths0 = 0, Mounts0 = 0, Crawls0 = 0, Shots = 0, ShipFailures = -1;
+        double Next = 0, Start = 0, At = -1, EscapeAt = -1;
+        bool bStarted = false, bPass = false, bDone = false, bEscaped = false, bViews = false, bMount = false;
+        TArray<int32> Results; TArray<ET> Trials; TWeakObjectPtr<ACameraActor> Camera; FTimerHandle Timer;
+        int32 EscapeOk = 0;
+    };
+    auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
+    FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
+    for (int32 I = 0; I < UE_ARRAY_COUNT(AllTrials); ++I) if (Only.IsEmpty() || Only.Contains(Names[I])) Run->Trials.Add(AllTrials[I]);
+
+    // ---- The escape: to the crevice's end on all fours, as a player would come.
+    {
+        using namespace TempleRubble;
+        Chuck->ResetCrawlingAt(ChultTempleInteriorWorldOf(FVector(CrawlBendS, CrawlEndT + 170, RZ + 32.5f)));
+        Run->Start = World->GetTimeSeconds();
+    }
+    Owner->GetWorldTimerManager().SetTimer(Run->Timer, [Owner, Chuck, Run, Views]()
+    {
+        if (Run->bDone) return;
+        UWorld* World = Owner->GetWorld();
+        const double Now = World->GetTimeSeconds();
+        auto Push = [&](const FVector& D, float Scale = 1.f) { Chuck->SetTestStickWorld(D * Scale); Chuck->AddMovementInput(D, Scale, true); };
+        auto Stop = [&]() { Chuck->SetTestStick(FVector2D::ZeroVector); };
+        auto Shot = [&](const TCHAR* Name) { if (Run->Shots < 40) { ++Run->Shots; FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / FString::Printf(TEXT("ShipPlay_%s.png"), Name), true, false); } };
+        AShipEscape* Escape = AShipEscape::Get(World);
+        // ---- 1. The escape, played through.
+        if (!Run->bEscaped)
+        {
+            const double T = Now - Run->Start;
+            if (!Escape || (!Escape->IsPlaying() && Escape->GetPlays() == 0))
+            {
+                Push((ChultTempleInteriorWorldOf(FVector(TempleRubble::CrawlBendS, TempleRubble::CrawlEndT, 0)) - ChultTempleInteriorWorldOf(FVector(TempleRubble::CrawlBendS, TempleRubble::CrawlEndT + 1, 0))).GetSafeNormal2D());
+                if (T > 20) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_ESCAPE_NO_START")); Run->bEscaped = true; ++Run->Failures; }
+                return;
+            }
+            // Pictures of its shots as it plays.
+            static const TCHAR* Seen[] = {TEXT("Passage"), TEXT("Mouth"), TEXT("Sea")};
+            for (int32 K = 0; K < 3; ++K)
+                if (FCString::Strcmp(Escape->GetShotName(), Seen[K]) == 0 && !(Run->EscapeOk & (1 << K)) && Escape->GetClock() > AShipEscape::StageAt + 1.5f + K * .3f)
+                { Run->EscapeOk |= 1 << K; Shot(*FString::Printf(TEXT("Escape_%s"), Seen[K])); }
+            if (Escape->IsPlaying() && Escape->HasCrawledOut() && !(Run->EscapeOk & 8)) { Run->EscapeOk |= 8; }
+            if (Escape->IsPlaying() || T < 3) { if (T > 60) { Run->bEscaped = true; ++Run->Failures; } return; }
+            Run->bEscaped = true; Run->EscapeAt = Now;
+            Shot(TEXT("Escape_Control"));
+            const int32 Space = ShipSpaceAt(Chuck->GetActorLocation());
+            const bool bPass = Escape->GetFinishes() == 1 && Escape->GetSkips() == 0 && Escape->HasCrawledOut() && Space == int32(EShipSpawn::Arrival) && !Chuck->IsCrawling()
+                && Chuck->GetCharacterMovement()->IsMovingOnGround() && FVector::Dist2D(Chuck->GetActorLocation(), ShipSpawn(EShipSpawn::Arrival)) < 60;
+            Run->Failures += !bPass;
+            if (const AShipSetting* S = AShipSetting::Get(World)) { Run->ShipFailures = S->Check(); Run->Failures += Run->ShipFailures; }
+            else ++Run->Failures;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_ESCAPE_TEST pass=%d plays=%d finishes=%d out=%d space=%s shots=%d seconds=%.1f"), bPass, Escape->GetPlays(), Escape->GetFinishes(),
+                Escape->HasCrawledOut(), ShipSpaceName(Space), FMath::CountBits(uint64(Run->EscapeOk & 7)), Now - Run->Start);
+            if (auto* PC = Cast<APlayerController>(Chuck->GetController())) Chuck->DisableInput(PC);
+            Run->Next = Now + 1;
+            return;
+        }
+        // ---- 2. The stills.
+        const int32 I = Run->Phase / 2;
+        if (I < Views.Num())
+        {
+            if (Now < Run->Next) return;
+            Run->Next = Now + 1.2;
+            if (Run->Phase % 2 == 0)
+            {
+                Chuck->SetActorHiddenInGame(true);
+                if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
+                if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z), (SW(Views[I].Aim.X, Views[I].Aim.Y, Views[I].Aim.Z) - SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z)).Rotation());
+                ++Run->Phase; return;
+            }
+            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / (FString(Views[I].Name) + TEXT(".png")), true, false);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_VIEW name=%s"), Views[I].Name);
+            ++Run->Phase;
+            if (Run->Phase / 2 >= Views.Num())
+            {
+                Chuck->SetActorHiddenInGame(false);
+                if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
+            }
+            return;
+        }
+        if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipViewsOnly"))) { Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST views_only=1 failures=%d"), Run->Failures); FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0); return; }
+        if (Now < Run->Next) return;
+
+        // ---- 3. The trials.
+        auto* M = Chuck->GetCharacterMovement();
+        const FVector L = ShipLocal(Chuck->GetActorLocation());
+        const bool Ground = M->IsMovingOnGround();
+        auto Reset = [&](EShipSpawn S) { Chuck->ResetAtLocation(ShipSpawn(S)); Chuck->SetActorRotation(FRotator(0, ShipSpawnYaw(S), 0)); Chuck->SetRunHeld(false); Stop(); Chuck->Recenter(); };
+        auto Steer = [&](float X, float Y, float Within = 28.f) -> bool
+        {
+            if (FVector2D::Distance(FVector2D(L.X, L.Y), FVector2D(X, Y)) < Within) return true;
+            Push((SW(X, Y, L.Z) - Chuck->GetActorLocation()).GetSafeNormal2D()); return false;
+        };
+        if (!Run->bStarted)
+        {
+            ++Run->Trial;
+            if (Run->Trial >= Run->Trials.Num())
+            {
+                int32 Passed = 0; for (int32 R : Run->Results) Passed += R;
+                const int32 Fails = Run->Failures + (Run->Results.Num() - Passed);
+                int32 LiveRats = 0; for (const auto& R : AEnemyRat::All()) if (R.IsValid() && !R->IsDead() && InShip(R->GetActorLocation())) ++LiveRats;
+                const AShipSetting* S = AShipSetting::Get(World);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST failures=%d trials=%d passed=%d ship_check=%d rats=%d jars=%d ladders=%d missing=%d tris=%d"), Fails, Run->Results.Num(), Passed, Run->ShipFailures,
+                    LiveRats, S ? S->GetJarsPlaced() : -1, S ? S->GetLadders() : -1, S ? S->GetMissingMaterials() : -1, S ? S->GetTriangles() : -1);
+                Run->bDone = true; FPlatformMisc::RequestExitWithStatus(false, Fails ? 1 : 0); return;
+            }
+            Run->bStarted = true; Run->Sub = 0; Run->Point = 0; Run->At = Now; Run->bPass = false; Run->bMount = false;
+            Run->Deaths0 = Chuck->GetFallDeaths(); Run->Mounts0 = Chuck->GetLadderMounts(); Run->Crawls0 = Chuck->GetCrawls();
+            switch (Run->Trials[Run->Trial])
+            {
+            case ET::Galley: case ET::Sea: case ET::Seam: Reset(EShipSpawn::Arrival); break;
+            case ET::Cabin: Reset(EShipSpawn::Quarters); break;
+            case ET::LadderDown: Reset(EShipSpawn::Arrival); break;
+            case ET::LadderUp: Reset(EShipSpawn::Hold); break;
+            }
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TRIAL_START name=%s"), Names[int32(Run->Trials[Run->Trial])]);
+            return;
+        }
+        const float Time = static_cast<float>(Now - Run->At);
+        const int32 NewDeaths = Chuck->GetFallDeaths() - Run->Deaths0;
+        bool Done = false; float Limit = 40;
+        const ET Trial = Run->Trials[Run->Trial];
+        switch (Trial)
+        {
+        case ET::Galley:
+        {
+            // Out of the arrival compartment by its fore door, round the work table to the hearth.
+            const FVector2D Pts[] = {{290, GalleyDoorY}, {420, GalleyDoorY}, {520, 140}, {840, 120}, {850, -40}};
+            if (Time < .5f) break;
+            if (Steer(Pts[Run->Point].X, Pts[Run->Point].Y)) { if (++Run->Point == UE_ARRAY_COUNT(Pts)) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Galley) && NewDeaths == 0; Shot(TEXT("Galley")); } }
+            break;
+        }
+        case ET::Cabin:
+        {
+            // Along the crew quarters past the mast, through the cabin's door, to the stern windows.
+            const FVector2D Pts[] = {{-420, 90}, {-560, 90}, {-900, 50}, {-1040, 0}, {-1130, 0}, {-1480, 30}};
+            if (Time < .5f) break;
+            if (Steer(Pts[Run->Point].X, Pts[Run->Point].Y)) { if (Run->Point == 2) Shot(TEXT("Quarters")); if (++Run->Point == UE_ARRAY_COUNT(Pts)) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Cabin) && NewDeaths == 0; Shot(TEXT("Cabin")); } }
+            break;
+        }
+        case ET::LadderDown:
+        {
+            // To the hatch's fore edge, then aft over its lip: he turns and lowers himself onto the ladder; down it; off.
+            if (Time < .5f) break;
+            if (Run->Sub == 0) { if (Steer(200, 0, 12)) Run->Sub = 1; }
+            else if (Run->Sub == 1)
+            {
+                if (!Chuck->IsOnLadder()) Push(FVector(-1, 0, 0), .6f);
+                if (Chuck->IsOnLadder()) { Run->Sub = 2; Run->bMount = true; Shot(TEXT("LadderTop")); }
+            }
+            else if (Run->Sub == 2)
+            {
+                if (Chuck->IsOnLadder()) Push(FVector(-1, 0, 0)); else Stop();
+                if (!Chuck->IsOnLadder() && Ground && L.Z < LowerZ - 100) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Hold) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0; Shot(TEXT("LadderFoot")); }
+            }
+            break;
+        }
+        case ET::LadderUp:
+        {
+            // Into the ladder's foot, up it (the stick toward it), over the lip onto the arrival compartment's floor.
+            if (Time < .5f) break;
+            if (Run->Sub == 0) { if (Steer(HatchX1 - 40, 0, 10)) Run->Sub = 1; }
+            else
+            {
+                Push(FVector(1, 0, 0));
+                if (Chuck->IsOnLadder() && L.Z > HoldZ + 150 && Run->Shots < 40 && !Run->bMount) { Run->bMount = true; Shot(TEXT("LadderClimb")); }
+                if (Ground && !Chuck->IsOnLadder() && L.Z > LowerZ) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Arrival) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0; }
+            }
+            break;
+        }
+        case ET::Sea:
+        {
+            // Put out over the side beside the hole: he falls into the sea - an Astral death - and is back at the compartment's spawn.
+            Limit = 20;
+            if (Run->Sub == 0) { Chuck->ResetAtLocation(SW(125, ShipOuterHalf(125, LowerZ) + 70, LowerZ + Stand + 20)); Run->Sub = 1; Run->At = Now; break; }
+            if (Run->Sub == 1 && NewDeaths) { Run->Sub = 2; Run->At = Now; }
+            if (Run->Sub == 2 && Time > 1.5f)
+            {
+                const bool Home = FVector::Dist(Chuck->GetActorLocation(), ShipSpawn(EShipSpawn::Arrival)) < 40 && Ground && !Chuck->IsAstral();
+                if (Home || Time > 10) { Done = true; Run->bPass = Home && NewDeaths == 1; }
+            }
+            break;
+        }
+        case ET::Seam:
+        {
+            // Back into the crawlway through the masonry (on all fours) to its blind end, and out again on his feet.
+            if (Time < .5f) break;
+            if (Run->Sub == 0) { if (Steer(SeamX1 + 80, SeamY, 15)) Run->Sub = 1; }
+            else if (Run->Sub == 1) { Push(FVector(-1, 0, 0)); if (L.X < SeamX0 + 40) { Run->Sub = 2; Shot(TEXT("SeamEnd")); } }
+            else { Push(FVector(1, 0, 0)); if (L.X > SeamX1 + 90 && !Chuck->IsCrawling()) { Done = true; Run->bPass = Chuck->GetCrawls() > Run->Crawls0 && NewDeaths == 0; } }
+            break;
+        }
+        }
+        if (!Done && Time < Limit) return;
+        Stop(); Chuck->SetRunHeld(false);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TRIAL name=%s pass=%d seconds=%.1f sub=%d point=%d deaths=%d mounts=%d gait=%s space=%s at=%s"),
+            Names[int32(Trial)], Run->bPass, Time, Run->Sub, Run->Point, NewDeaths, Chuck->GetLadderMounts() - Run->Mounts0, Chuck->GetGaitName(),
+            ShipSpaceName(ShipSpaceAt(Chuck->GetActorLocation())), *L.ToString());
+        Run->Results.Add(Run->bPass ? 1 : 0); Run->bStarted = false; Run->Next = Now + 1.0;
+    }, .016f, true);
+}

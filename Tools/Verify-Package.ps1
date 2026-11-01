@@ -215,6 +215,17 @@ if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 
    !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 floating=0 heard=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
     throw "Temple rubble verification failed. Inspect $rubbleLog"
 }
+# The pirate ship, milestone 1 (Claude, 2026-11-01; docs/SHIP.md): the real character crawls to the rubble crevice's end
+# and the escape plays onto the ship; the ship's checks; stills of every space; then aboard: through the doors to the
+# galley and through the crew quarters to the cabin, down the ladder into the hold and back up, over the side into the sea
+# (an Astral death, back in the compartment), and back into the crawlway through the masonry and out.
+$shipLog=Join-Path $evidence ('verify-ship-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$shipProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$shipLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_ESCAPE_TEST pass=1 plays=1 finishes=1 out=1 space=Arrival shots=3' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_CHECK failures=0 missing=0' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=6 passed=6 ship_check=0 rats=16 ' -Quiet)) {
+    throw "Ship verification failed. Inspect $shipLog"
+}
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
 # logs solid and on the ground, no jar or urn inside the masonry; then the see-through undergrowth round Chuck.
 $propLog=Join-Path $evidence ('verify-chult-props-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')

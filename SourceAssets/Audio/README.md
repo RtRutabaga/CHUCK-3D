@@ -1,5 +1,14 @@
 # Docks soundtrack
 
+## The ship's ambience — November 1, 2026 (Claude)
+
+Five original, seeded synthetic sounds from `Tools/gen_ship_sfx.py` (Python standard library; no recordings or third-party samples):
+`SFX_ShipWash_00`, a seamless 21.9 s loop of the sea against the hull heard from below decks (three 7.3 s swells, the
+period the ship's lamps and hammocks swing with), and `SFX_ShipCreak_00`–`03`, timbers working (0.7–1.45 s). Mono 48 kHz
+16-bit. Hashes and durations: `SFX/ship-manifest.json`. `Tools/import_ship_sfx.py` (UE 5.7.4, `-AllowCommandletAudio`)
+imports only these into `/Game/Art/Audio/SFX` and sets the wash to loop. `ShipSetting.cpp` plays the wash at half volume
+and a creak near Chuck every 3.5–8 s. WAV/uasset pairs use the existing Git LFS rules (about 4.3 MB together).
+
 ## Zombie combat — October 14, 2026
 
 Twelve original, seeded synthetic sounds from `Tools/gen_zombie_sfx.py`:

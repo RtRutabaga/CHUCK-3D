@@ -1,4 +1,6 @@
 #include "DockGameMode.h"
+#include "ShipSetting.h"
+#include "ShipEscape.h"
 #include "TempleSkeleton.h"
 #include "TempleSanctumBattle.h"
 #include "TempleSnake.h"
@@ -149,6 +151,18 @@ void ADockGameMode::StartPlay()
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         // Held silent (the Fireball, 2026-10-26): when it lifts, whatever plays where he is comes back in.
         if(Self.IsValid() && World->GetTimeSeconds()<Self->MusicHoldUntil){Region->Mode=-1;return;}
+        // Aboard the ship (2026-11-01; docs/regions/SHIP.md): no score until the user's ship track comes, only the sea and
+        // the timbers (ShipSetting.cpp). Every score fades out.
+        if(Chuck && InShip(Chuck->GetActorLocation()))
+        {
+            if(Region->Mode==30) return;
+            Region->Mode=30; Region->Underground=false;
+            if(Self.IsValid()) Self->MusicRegion=30;
+            for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss})
+                if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(2.f,0.f);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION ship=1"));
+            return;
+        }
         // In Chult (after the fall, or from its checkpoint): Waterdeep's scores
         // go and Chult's comes in, looping. There is no way back yet. Over the
         // canyon bridge and on its far side the second Chult score takes over;
@@ -4220,7 +4234,7 @@ void ADockHUD::DrawHUD()
     Super::DrawHUD();
     auto* Chuck = Cast<AChuckCharacter>(GetOwningPawn());
     if(!Chuck || !Canvas) return;
-    if(Chuck->IsInFallCutscene())
+    if(Chuck->IsInFallCutscene() || AShipEscape::IsLetterboxed(GetWorld()))
     {
         // Letterboxed, as the 2D cutscene: no HUD, bars to about 2.2:1.
         const float Bar=FMath::Max(0.f,(Canvas->SizeY-Canvas->SizeX/2.2f)*.5f);

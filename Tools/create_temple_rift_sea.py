@@ -34,9 +34,11 @@ view = node(unreal.MaterialExpressionCameraVectorWS)
 eye = node(unreal.MaterialExpressionCameraPositionWS)
 clock = node(unreal.MaterialExpressionTime)
 sea_z = node(unreal.MaterialExpressionScalarParameter, parameter_name='SeaZ', default_value=-3000.0)
+# Gain (2026-11-01): the ship's ports (ShipSetting.cpp) show this sea too, under a brighter interior's exposure.
+gain = node(unreal.MaterialExpressionScalarParameter, parameter_name='Gain', default_value=1.0)
 field = node(unreal.MaterialExpressionCustom)
 inputs = []
-for key in ('V', 'E', 'T', 'Z'):
+for key in ('V', 'E', 'T', 'Z', 'G'):
     i = unreal.CustomInput(); i.set_editor_property('input_name', key); inputs.append(i)
 field.set_editor_property('inputs', inputs)
 field.set_editor_property('output_type', unreal.CustomMaterialOutputType.CMOT_FLOAT3)
@@ -47,7 +49,7 @@ struct Sea {
   float3 sky(float3 d){float h=saturate(d.z);return lerp(float3(.66,.74,.78),float3(.24,.43,.62),pow(h,.55));}
 }; Sea s;
 float3 v=-normalize(V);                      // from the eye along the view
-if(v.z>-.015) return s.sky(v)*.7;
+if(v.z>-.015) return s.sky(v)*.7*G;
 float t=(Z-E.z)/v.z;                         // to the sea plane
 float2 p=E.xy+v.xy*t;
 // Travelling deep-water waves: height h and its slope g (cm/cm).
@@ -79,12 +81,13 @@ col=lerp(col,float3(.8,.86,.88),foam*.5);
 // haze with distance toward the horizon
 float haze=1-exp(-max(t-2500,0)/60000);
 col=lerp(col,s.sky(float3(v.xy,.03))*.8,saturate(haze+pow(1+v.z,10)*.5));
-return col*.7;   // (the dark hall's exposure brightens a small hole)
+return col*.7*G;   // (the dark hall's exposure brightens a small hole)
 ''')
 LIB.connect_material_expressions(view, '', field, 'V')
 LIB.connect_material_expressions(eye, '', field, 'E')
 LIB.connect_material_expressions(clock, '', field, 'T')
 LIB.connect_material_expressions(sea_z, '', field, 'Z')
+LIB.connect_material_expressions(gain, '', field, 'G')
 LIB.connect_material_property(field, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 LIB.recompile_material(m)
 if not unreal.EditorAssetLibrary.save_loaded_asset(m, only_if_is_dirty=False):
