@@ -86,6 +86,7 @@
 #include "UnrealClient.h"
 #include "Misc/Paths.h"
 #include "DynamicRHI.h"
+#include "ShipCrew.h"
 
 ADockGameMode::ADockGameMode()
 {
@@ -171,7 +172,9 @@ void ADockGameMode::StartPlay()
                 {
                     // (The ship test starts it just before its end, to hear it loop.)
                     const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckShipTest"));
-                    Ship->FadeIn(3.f,.45f,Test && ShipScore?FMath::Max(0.f,ShipScore->Duration-2.f):0.f);
+                    const float From=Test && ShipScore?FMath::Max(0.f,ShipScore->Duration-2.f):0.f;
+                    Ship->FadeIn(3.f,.45f,From);
+                    ::ShipScore::Started(World,From);   // the crew keep its beat (ShipCrew.h)
                     FTimerHandle Check;
                     World->GetTimerManager().SetTimer(Check,[Ship,ShipScore,Region](){
                         if(Region->Mode!=30) return;

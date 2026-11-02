@@ -162,6 +162,13 @@ class Body:
         if piece == 'belt':
             if b not in self.TORSO and b not in self.LEGS: return OUT
             return .026 - abs(c.z - (self.waist_z - .02 + opts.get('z', 0.)))
+        if piece == 'sash':   # a pirate's sash (2026-11-02): a broad band wound round the waist, its knotted end down one thigh
+            if b not in self.TORSO and b not in self.LEGS: return OUT
+            zc = self.waist_z - .01 + opts.get('z', 0.)
+            band = opts.get('width', .09) * .5 - abs(c.z - zc)
+            side = (1. if self.shoulder.x > 0 else -1.) * opts.get('side', 1.)   # +1: his left
+            tail = min(.028 - abs(c.x - side * .145), zc - c.z + .01, c.z - (zc - opts.get('hang', .24)), .03 - c.y, c.y + .07)   # on the hip's side-front
+            return max(band, tail)
         if piece == 'trousers':
             if b in self.LEGS | self.TORSO:   # waistband to the boots, tucked in
                 return min(self.waist_z + .01 - c.z, c.z - (self.boot_top() - .07))
@@ -289,6 +296,7 @@ PIECES = {
     'boots':    dict(offset=.011, thickness=.005, hides=True),
     'jerkin':   dict(offset=.015, thickness=.005, hides=False),
     'belt':     dict(offset=.027, thickness=.006, hides=False),
+    'sash':     dict(offset=.02, thickness=.005, hides=False),
     'cap':      dict(offset=.012, thickness=.006, hides=True),
     'helmet':   dict(offset=.018, thickness=.004, hides=True),
     'kerchief': dict(offset=.01, thickness=.003, hides=True),
@@ -884,6 +892,86 @@ def nasal_guard(info, material):
     return obj
 
 
+def make_tricorn(info, opts, material, trim_material=None):
+    """A pirate's tricorn (2026-11-02, docs/SHIP.md): a felt crown fitted to the head, sitting at the
+    brow in front and lower behind, and a brim cocked up on three sides into a triangle with a point
+    over the face and two behind. Each side folds up almost against the crown; the corners stay out
+    and only a little up, so the face shows under the front point from any side (Phase 7: a turned
+    head never hides the face). Rigid on the head. A braid edging along the brim with `trim_material`."""
+    head = [c for i, c in enumerate(info.co) if info.bone[i] == Body.HEAD]
+    _, _, mid_y = face_marks(info)
+    centre = Vector((0., mid_y, 0.))
+    N = 48
+    lift = opts.get('lift', .02)
+    def seat(a):   # the crown's foot at angle a (0 = front, -Y): just over the brow in front, lower behind
+        back = (1. - math.cos(a)) * .5
+        return info.brow_z + lift - opts.get('tilt', .035) * back
+    ring = []
+    for k in range(N):
+        a = 2 * math.pi * k / N
+        d = Vector((math.sin(a), -math.cos(a), 0.))
+        z = seat(a)
+        near = [c for c in head if abs(c.z - z) < .012]
+        r = max(((c - centre).dot(d) for c in near), default=.09) + opts.get('ease', .012)
+        ring.append((d, z, r))
+    H = opts.get('crown', .09)
+    bm = bmesh.new()
+    rows = []
+    # The brim, from its edge in to the crown's foot: at each angle a cocked width and fold.
+    corners = opts.get('corners', (0., 2 * math.pi / 3, 4 * math.pi / 3))
+    def corner(a):   # 1 at a corner, 0 midway between
+        return max(((1 + math.cos(3 * (a - corners[0]))) * .5) ** 4, 0.)
+    brim_rows = 5
+    for j in range(brim_rows, -1, -1):
+        s = j / brim_rows
+        row = []
+        for k, (d, z, r) in enumerate(ring):
+            a = 2 * math.pi * k / N
+            c = corner(a)
+            w = opts.get('brim', .066) + opts.get('point', .056) * c
+            fold = math.radians(84. - 64. * c)           # sides stand up, corners stay out
+            dip = -.012 * c * (1. if math.cos(a) > .5 else .4)   # the front point a touch down
+            out = w * s * math.cos(fold * min(1., s * 1.6))
+            up = w * s * math.sin(fold * min(1., s * 1.6)) + dip * s
+            row.append(centre + d * (r + out) + Vector((0, 0, z + up)))
+        rows.append(row)
+    # The crown: straight up, then rounded over to a low dome.
+    for j in range(1, 9):
+        u = j / 8
+        rs = 1. if u < .7 else math.cos((u - .7) / .3 * math.pi * .5) * .95 + .05
+        row = [centre + d * (r * (1. - .05 * u) * rs) + Vector((0, 0, z + H * min(u, .7) / .7 * .85 + (H * .15 * math.sin((u - .7) / .3 * math.pi * .5) if u > .7 else 0.)))
+               for d, z, r in ring]
+        rows.append(row)
+    vs = [[bm.verts.new(p) for p in row] for row in rows]
+    for a, b in zip(vs, vs[1:]):
+        for k in range(N): bm.faces.new((a[k], a[(k + 1) % N], b[(k + 1) % N], b[k]))
+    top = bm.verts.new(sum(rows[-1], Vector()) / N + Vector((0, 0, .004)))
+    for k in range(N): bm.faces.new((vs[-1][k], vs[-1][(k + 1) % N], top))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = new_object('tricorn_hat', bm)
+    for p in obj.data.polygons: p.use_smooth = True
+    obj.data.materials.append(material)
+    activate(obj)
+    so = obj.modifiers.new('Felt', 'SOLIDIFY'); so.thickness = .004; so.offset = 0.
+    bpy.ops.object.modifier_apply(modifier=so.name)
+    box_uv(obj, TILE_CM.get(opts.get('fabric', 'caban'), 50.))
+    for g in list(obj.vertex_groups): obj.vertex_groups.remove(g)
+    obj.vertex_groups.new(name='head').add([v.index for v in obj.data.vertices], 1., 'REPLACE')
+    obj.modifiers.new('Armature', 'ARMATURE').object = info.rig
+    made = [obj]
+    if trim_material is not None:
+        tb = bmesh.new()
+        edge = rows[0] + [rows[0][0]]
+        tube(tb, edge, [opts.get('trim_r', .0035)] * len(edge), sides=6)
+        trim = new_object('tricorn_hat_trim', tb)
+        for p in trim.data.polygons: p.use_smooth = True
+        trim.data.materials.append(trim_material); box_uv(trim, 20.)
+        trim.vertex_groups.new(name='head').add([v.index for v in trim.data.vertices], 1., 'REPLACE')
+        trim.modifiers.new('Armature', 'ARMATURE').object = info.rig
+        made.append(trim)
+    return made
+
+
 def tube(bm, centres, radii, sides=10):
     """Capped rings along a path (each perpendicular to it)."""
     loops = []
@@ -1034,13 +1122,22 @@ def make_beard(info, spec, slots):
     # mouth and drooping a little beside them, never over the lips.
     hx = mouth.cx + Mouth.SIDE
     rim = lambda x: mouth.mid + (mouth.top - mouth.mid + Mouth.UP) * math.sqrt(max(0., 1 - (x / hx) ** 2))
-    radii = [.0085, .0095, .009, .007, .0055]
+    # (The pirates, 2026-11-02, are "mustachioed": `moustache_size` scales it, and `moustache_droop` (m) carries its ends
+    # on down beside the mouth, a walrus or horseshoe; `moustache_out` (m) sweeps them out first.)
+    big = spec.get('moustache_size', 1.)
+    radii = [r * big for r in (.0085, .0095, .009, .007, .0055)]
+    droop, out = spec.get('moustache_droop', 0.), spec.get('moustache_out', 0.)
     for sx in (-1, 1):
         pts = []
         for x, r in zip((.003, .45 * hx, .78 * hx, .97 * hx, hx + .007), radii):
             z = rim(min(x, .97 * hx)) + r * .9 if x < hx else mouth.mid - .004
             pts.append(Vector((sx * x, front_y(sx * x, z) - r * .45, z)))
-        tube(bm, pts, radii, 8)
+        rr = list(radii)
+        if droop > 0.:
+            for k, (dx, dz, r) in enumerate(((.004 + out * .6, droop * .45, .0048 * big), (.005 + out, droop, .0036 * big))):
+                x, z = hx + .007 + dx, mouth.mid - .004 - dz
+                pts.append(Vector((sx * x, front_y(sx * x, z) - r * .45, z))); rr.append(r)
+        tube(bm, pts, rr, 8)
     beard = new_object('beard', bm)
     voxel_merge(beard, .0055, 14)
     # Clumped strands: grooves running down, deeper toward the tip; a bushy beard
@@ -1864,8 +1961,16 @@ def build(name, spec, extra=None):
             hide = [info.bone[i] in Body.LEGS | {'pelvis'} and info.floor + .16 < c.z < info.waist_z - .1 for i, c in enumerate(info.co)]
     meshes = [body] + [o for o in parts.values() if o]
     slots = {}
+    hats = []
     for item in spec['outfit']:
         piece = item['piece']; slot = item.get('slot', piece.capitalize())
+        if piece == 'tricorn':   # a built hat, not cut from the body; not counted in the height (as a hero's hat)
+            trim = item.get('trim')
+            if trim:
+                slots['TricornTrim'] = {'type': 'fabric', 'fabric': trim['fabric'], 'tint': trim['tint'], 'tile_cm': TILE_CM[trim['fabric']], 'gain': fabric_gain(trim['fabric'], CLOTH)}
+            hats += make_tricorn(info, item, slot_material(slot), slot_material('TricornTrim') if trim else None)
+            slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'], CLOTH)}
+            continue
         if piece == 'trim':
             item = dict(item, of_opts=next(it for it in spec['outfit'] if it.get('id', it['piece']) == item['of']))
         obj, keep = make_piece(skirt if piece in SKIRTED else info, piece, item, slot_material(slot))
@@ -1893,6 +1998,7 @@ def build(name, spec, extra=None):
     if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
     if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
     sized = list(meshes)   # what sets the height: the body and the kit's outfit (not a hero's helmet, hat or props)
+    meshes += hats
     if extra: meshes += extra(info, slots, hide)
     grooms = {}
     if spec.get('groom'):   # strand hair (Tools/npc_strands.py), after the hats it lies under

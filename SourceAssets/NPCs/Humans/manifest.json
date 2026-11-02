@@ -2231,6 +2231,1704 @@
      }
     }
    }
+  },
+  "PirateConcertina": {
+   "fbx": "PirateConcertina/SK_PirateConcertina.fbx",
+   "height_cm": 172,
+   "tris": 65323,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.4
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.07,
+      0.045,
+      0.03
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.2,
+      0.05
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.07,
+      0.07,
+      0.08
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "TricornTrim": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.44,
+      0.3
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Tricorn": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.022,
+      0.02,
+      0.018
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.012,
+      0.009600000000000001,
+      0.008
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.0162,
+      0.0126,
+      0.0108
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_darkskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    15.9,
+    0.0,
+    155.2
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateConcertina/GR_PirateConcertina_Hair.abc",
+     "bone": "head",
+     "strands": 12763,
+     "colour": [
+      0.015,
+      0.012,
+      0.01
+     ],
+     "root": 0.5,
+     "grey": 0.03,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       0.49,
+       0.48,
+       163.39
+      ],
+      "min": [
+       -5.03,
+       -7.71,
+       156.55
+      ],
+      "max": [
+       10.22,
+       7.63,
+       172.82
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateConcertina/GR_PirateConcertina_Beard.abc",
+     "bone": "head",
+     "strands": 2283,
+     "colour": [
+      0.018,
+      0.014,
+      0.012
+     ],
+     "root": 0.45,
+     "grey": 0.03,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       14.83,
+       0.8,
+       156.08
+      ],
+      "min": [
+       13.71,
+       -3.18,
+       155.11
+      ],
+      "max": [
+       15.82,
+       3.04,
+       156.8
+      ]
+     }
+    }
+   }
+  },
+  "PirateChef": {
+   "fbx": "PirateChef/SK_PirateChef.fbx",
+   "height_cm": 179,
+   "tris": 56896,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.39,
+      0.32
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.045,
+      0.04
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Apron": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.44,
+      0.41,
+      0.34
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.4,
+      0.37,
+      0.3
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Kerchief": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.46,
+      0.44,
+      0.39
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.036,
+      0.0256,
+      0.019200000000000002
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.045000000000000005,
+      0.03150000000000001,
+      0.022500000000000003
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    15.7,
+    0.0,
+    160.7
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateChef/GR_PirateChef_Hair.abc",
+     "bone": "head",
+     "strands": 2264,
+     "colour": [
+      0.045,
+      0.032,
+      0.024
+     ],
+     "root": 0.5,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       3.87,
+       0.21,
+       166.79
+      ],
+      "min": [
+       -3.15,
+       -7.54,
+       162.16
+      ],
+      "max": [
+       10.64,
+       7.8,
+       172.44
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateChef/GR_PirateChef_Beard.abc",
+     "bone": "head",
+     "strands": 3991,
+     "colour": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "root": 0.45,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       15.03,
+       0.47,
+       161.48
+      ],
+      "min": [
+       13.71,
+       -3.09,
+       160.58
+      ],
+      "max": [
+       15.91,
+       3.04,
+       162.42
+      ]
+     }
+    }
+   }
+  },
+  "PirateSeated": {
+   "fbx": "PirateSeated/SK_PirateSeated.fbx",
+   "height_cm": 175,
+   "tris": 63028,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.46,
+      0.42,
+      0.34
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.12,
+      0.03,
+      0.025
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.03,
+      0.05,
+      0.13
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.03,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Kerchief": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.045,
+      0.03
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.24,
+      0.23199999999999998,
+      0.21600000000000003
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.25200000000000006,
+      0.24300000000000002,
+      0.225
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/old_lightskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/grey_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow009.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes02_fine.png",
+     "tint": [
+      0.135,
+      0.1305,
+      0.12150000000000001
+     ]
+    }
+   },
+   "mouth_cm": [
+    15.3,
+    0.0,
+    156.8
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateSeated/GR_PirateSeated_Hair.abc",
+     "bone": "head",
+     "strands": 2402,
+     "colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "root": 0.5,
+     "grey": 0.4,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       4.12,
+       0.53,
+       163.25
+      ],
+      "min": [
+       -3.31,
+       -7.62,
+       158.34
+      ],
+      "max": [
+       13.98,
+       7.8,
+       168.88
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateSeated/GR_PirateSeated_Beard.abc",
+     "bone": "head",
+     "strands": 4381,
+     "colour": [
+      0.28,
+      0.27,
+      0.25
+     ],
+     "root": 0.45,
+     "grey": 0.45,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       14.67,
+       0.45,
+       157.44
+      ],
+      "min": [
+       13.43,
+       -3.18,
+       156.53
+      ],
+      "max": [
+       15.57,
+       3.08,
+       158.39
+      ]
+     }
+    }
+   }
+  },
+  "PirateCheering": {
+   "fbx": "PirateCheering/SK_PirateCheering.fbx",
+   "height_cm": 182,
+   "tris": 57139,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.48,
+      0.44,
+      0.36
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.36,
+      0.05,
+      0.03
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.05,
+      0.06
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.033,
+      0.022
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Kerchief": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.03,
+      0.045,
+      0.1
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.17600000000000002,
+      0.06,
+      0.020000000000000004
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.216,
+      0.07650000000000001,
+      0.0252
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/blue_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.099,
+      0.03375,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.5,
+    0.0,
+    163.7
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateCheering/GR_PirateCheering_Hair.abc",
+     "bone": "head",
+     "strands": 3130,
+     "colour": [
+      0.22,
+      0.075,
+      0.025
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       3.06,
+       0.4,
+       169.01
+      ],
+      "min": [
+       -3.15,
+       -7.79,
+       164.74
+      ],
+      "max": [
+       10.96,
+       7.9,
+       175.17
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateCheering/GR_PirateCheering_Beard.abc",
+     "bone": "head",
+     "strands": 4493,
+     "colour": [
+      0.24,
+      0.085,
+      0.028
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       15.69,
+       0.51,
+       164.49
+      ],
+      "min": [
+       14.43,
+       -3.17,
+       163.43
+      ],
+      "max": [
+       16.6,
+       3.12,
+       165.43
+      ]
+     }
+    }
+   }
+  },
+  "PirateDancer": {
+   "fbx": "PirateDancer/SK_PirateDancer.fbx",
+   "height_cm": 170,
+   "tris": 52111,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.45,
+      0.43,
+      0.38
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.04,
+      0.13,
+      0.06
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.09,
+      0.07,
+      0.05
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Kerchief": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.07,
+      0.05
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.009600000000000001,
+      0.008,
+      0.0072
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.0108,
+      0.009000000000000001,
+      0.0081
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/young_lightskinned_male_diffuse3.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.7,
+    0.0,
+    151.1
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateDancer/GR_PirateDancer_Hair.abc",
+     "bone": "head",
+     "strands": 2288,
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       5.04,
+       -0.08,
+       157.38
+      ],
+      "min": [
+       -3.09,
+       -8.35,
+       151.54
+      ],
+      "max": [
+       14.68,
+       8.56,
+       163.86
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateDancer/GR_PirateDancer_Beard.abc",
+     "bone": "head",
+     "strands": 3347,
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       15.8,
+       0.47,
+       151.54
+      ],
+      "min": [
+       14.56,
+       -3.5,
+       150.29
+      ],
+      "max": [
+       16.6,
+       3.38,
+       152.53
+      ]
+     }
+    },
+    "BeardJaw": {
+     "abc": "PirateDancer/GR_PirateDancer_BeardJaw.abc",
+     "bone": "jaw",
+     "strands": 81,
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       16.09,
+       -0.1,
+       151.01
+      ],
+      "min": [
+       15.11,
+       -2.76,
+       150.23
+      ],
+      "max": [
+       16.62,
+       3.03,
+       151.35
+      ]
+     }
+    }
+   }
+  },
+  "PirateFencerA": {
+   "fbx": "PirateFencerA/SK_PirateFencerA.fbx",
+   "height_cm": 180,
+   "tris": 66048,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.42
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Jerkin": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.025,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.12,
+      0.03,
+      0.12
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.04,
+      0.04,
+      0.045
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Tricorn": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.026,
+      0.022,
+      0.02
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.04000000000000001,
+      0.028000000000000004,
+      0.020000000000000004
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.0495,
+      0.0342,
+      0.0243
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/green_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.8,
+    0.0,
+    162.2
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateFencerA/GR_PirateFencerA_Hair.abc",
+     "bone": "head",
+     "strands": 14795,
+     "colour": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       0.95,
+       0.53,
+       171.39
+      ],
+      "min": [
+       -5.09,
+       -8.47,
+       163.31
+      ],
+      "max": [
+       11.26,
+       8.46,
+       180.84
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateFencerA/GR_PirateFencerA_Beard.abc",
+     "bone": "head",
+     "strands": 3318,
+     "colour": [
+      0.055,
+      0.038,
+      0.027
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       16.06,
+       0.53,
+       162.91
+      ],
+      "min": [
+       14.83,
+       -3.27,
+       161.91
+      ],
+      "max": [
+       16.95,
+       3.16,
+       163.91
+      ]
+     }
+    }
+   }
+  },
+  "PirateFencerB": {
+   "fbx": "PirateFencerB/SK_PirateFencerB.fbx",
+   "height_cm": 177,
+   "tris": 57159,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.38,
+      0.3
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Sash": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.16,
+      0.03
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Kerchief": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.48,
+      0.44
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.009600000000000001,
+      0.008,
+      0.0072
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.0135,
+      0.0108,
+      0.009000000000000001
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_darkskinned_male_diffuse.png",
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brown_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.1,
+    0.0,
+    159.4
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "PirateFencerB/GR_PirateFencerB_Hair.abc",
+     "bone": "head",
+     "strands": 2192,
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.5,
+     "grey": 0.02,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       4.67,
+       0.02,
+       165.39
+      ],
+      "min": [
+       -2.99,
+       -7.17,
+       160.72
+      ],
+      "max": [
+       13.59,
+       7.36,
+       170.85
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "PirateFencerB/GR_PirateFencerB_Beard.abc",
+     "bone": "head",
+     "strands": 2212,
+     "colour": [
+      0.015,
+      0.012,
+      0.01
+     ],
+     "root": 0.45,
+     "grey": 0.02,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       14.97,
+       0.8,
+       160.34
+      ],
+      "min": [
+       13.91,
+       -3.1,
+       159.47
+      ],
+      "max": [
+       16.06,
+       3.08,
+       160.97
+      ]
+     }
+    }
+   }
+  },
+  "Jeffries": {
+   "fbx": "Jeffries/SK_Jeffries.fbx",
+   "height_cm": 176,
+   "tris": 49834,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.4,
+      0.37,
+      0.3
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Belt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.25,
+      0.22,
+      0.16
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.11200000000000002,
+      0.08000000000000002,
+      0.052000000000000005
+     ]
+    },
+    "BeardShade": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.135,
+      0.0945,
+      0.06300000000000001
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/middleage_lightskinned_male_diffuse.png",
+     "tint": [
+      1.0,
+      0.86,
+      0.78
+     ],
+     "subsurface": [
+      0.62,
+      0.36,
+      0.28
+     ]
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/blue_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow005.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.06300000000000001,
+      0.045000000000000005,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.1,
+    0.0,
+    158.8
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "Jeffries/GR_Jeffries_Hair.abc",
+     "bone": "head",
+     "strands": 60232,
+     "colour": [
+      0.14,
+      0.1,
+      0.065
+     ],
+     "root": 0.4,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.6,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       2.36,
+       0.59,
+       170.45
+      ],
+      "min": [
+       -5.06,
+       -8.02,
+       159.45
+      ],
+      "max": [
+       14.73,
+       8.0,
+       176.88
+      ]
+     }
+    },
+    "Beard": {
+     "abc": "Jeffries/GR_Jeffries_Beard.abc",
+     "bone": "head",
+     "strands": 4084,
+     "colour": [
+      0.15,
+      0.105,
+      0.07
+     ],
+     "root": 0.45,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       15.33,
+       0.43,
+       159.54
+      ],
+      "min": [
+       14.02,
+       -3.14,
+       158.42
+      ],
+      "max": [
+       16.26,
+       3.08,
+       160.47
+      ]
+     }
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

@@ -6,6 +6,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The ship's crew (November 2, Claude):** milestone 3 of [regions/SHIP.md](regions/SHIP.md); details in [SHIP.md](SHIP.md#milestone-3-the-crew-november-2).
+  - Eight mustachioed pirates (the user: moustaches, no beards; all men for now), in tricorns, sashes and headscarves: the chef in the galley, the seated pirate at the mess table, and on deck the concertina player, the cheering pirate, the dancer, two fencers and Jeffries tied to the main mast.
+  - Each performs on the ship track's beat (136.12 bpm, measured from the track): squeezing the concertina, toasting and drinking, a jig, eight-beat fencing phrases, Jeffries heaving at his ropes.
+  - The 2D first and repeat lines, word for word, as subtitles; no voices yet.
+  - The chef sees the rat in the galley, calls out and chases it with his cleaver (one Sanity a blow); the rat outruns him and is safe under the tables. The fencers' feet and bodies cost one Sanity; their blades pass over his head.
+  - Verified (Verify-Package 182 passes, ship test 15/15 with the music check; Verify-Menu 42/42) and in the launcher as ShipCrew. Not played by hand.
 - **The ship's weather deck, rig and sea (November 2, Claude):** milestone 2 of [regions/SHIP.md](regions/SHIP.md); details in [SHIP.md](SHIP.md#milestone-2-the-weather-deck-the-rig-and-the-sea-november-2).
   - The weather deck is open to the sky: post-and-rail bulwarks, the quarterdeck with its break ladders, the companion ladder from the crew quarters, the helm, binnacle, skylight, capstan, bell, windlass, anchors and deck stores.
   - Two masts with tops, yards and full standing and running rigging. Eight canvas sails (two-sided, sunlit through) breathe with the swell; the main course is furled. A black flag.

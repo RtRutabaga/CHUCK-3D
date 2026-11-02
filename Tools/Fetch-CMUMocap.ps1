@@ -24,7 +24,11 @@ $takes=[ordered]@{
     '140_06'='Idle'; '74_01'='stiff walk'; '74_03'='kick'; '139_06'='Poking Around On The Ground';
     '76_05'='swatting at pesky bug'; '140_08'='Get Up From Ground Laying on Back';
     # The sanctum skeletons' blow at the heroes (Claude, 2026-10-22; docs/CHULT-TEMPLE-HEROES.md).
-    '02_05'='punch/strike'
+    '02_05'='punch/strike';
+    # The pirate crew (Claude, 2026-11-02; docs/SHIP.md, milestone 3): the deck hands' idle and the chef's jog.
+    # Also tried for them and dropped (see Tools/build_npc_mocap.py): 137_13, 137_16, 02_07-09, 93_06, 142_08,
+    # 79_69, 09_01, 13_09.
+    '137_15'='Drunk Wait'; '16_35'='run/jog'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

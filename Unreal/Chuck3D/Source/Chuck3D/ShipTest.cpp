@@ -8,6 +8,7 @@
 // -ChuckShipViewsOnly stops after the stills; -ChuckShipTrials=a+b runs some.
 #include "ShipSetting.h"
 #include "ShipEscape.h"
+#include "ShipCrew.h"
 #include "ChultTempleRubble.h"
 #include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
@@ -26,6 +27,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+
+extern ENGINE_API float GAverageMS;   // the engine's smoothed frame time (UnrealEngine.cpp)
 
 using namespace Ship;
 
@@ -76,14 +79,38 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("Stern"), {-3100, -700, 820}, {-1600, 0, 520}},
         {TEXT("Outside"), {2300, -3600, 1200}, {0, 0, 1000}},
         {TEXT("OutsideLow"), {-2600, 2400, 420}, {0, 0, 700}},
-        {TEXT("Horizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}}};
+        {TEXT("Horizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}},
+        // The crew (milestone 3, ShipCrew.cpp).
+        {TEXT("CrewDeck"), {-170, 260, DeckZ + 170}, {90, -40, DeckZ + 100}},
+        {TEXT("CrewRatEye"), {-80, 160, DeckZ + 55}, {100, -20, DeckZ + 120}},
+        {TEXT("CrewConcertina"), {335, -55, DeckZ + 150}, {215, -165, DeckZ + 125}},
+        {TEXT("CrewConcertinaFront"), {109, -59, DeckZ + 150}, {215, -165, DeckZ + 125}},
+        {TEXT("CrewDancerFace"), {-66, 44, DeckZ + 160}, {70, -20, DeckZ + 145}},
+        {TEXT("CrewCheering"), {50, 300, DeckZ + 150}, {150, 170, DeckZ + 150}},
+        {TEXT("CrewDancer"), {230, 60, DeckZ + 110}, {70, -20, DeckZ + 75}},
+        {TEXT("CrewDancerLow"), {180, 110, DeckZ + 35}, {70, -20, DeckZ + 60}},
+        {TEXT("CrewJeffries"), {-720, 90, DeckZ + 160}, {-534, 0, DeckZ + 130}},
+        {TEXT("CrewJeffriesRat"), {-660, 50, DeckZ + 45}, {-534, 0, DeckZ + 140}},
+        {TEXT("CrewJeffriesBack"), {-380, -150, DeckZ + 170}, {-534, 0, DeckZ + 120}},
+        {TEXT("CrewFencers"), {875, 340, DeckZ + 170}, {875, 0, DeckZ + 100}},
+        {TEXT("CrewFencersLow"), {680, -240, DeckZ + 45}, {880, 0, DeckZ + 120}},
+        {TEXT("CrewSeated"), {-300, -40, LowerZ + 140}, {-465, -139, LowerZ + 105}},
+        {TEXT("CrewChef"), {470, 140, LowerZ + 160}, {680, -115, LowerZ + 110}},
+        // Their faces close to (the mustaches, user 2026-11-02).
+        {TEXT("FaceConcertina"), {166, -116, DeckZ + 158}, {215, -165, DeckZ + 152}},
+        {TEXT("FaceCheering"), {95, 45, DeckZ + 165}, {150, 170, DeckZ + 160}},
+        {TEXT("FaceDancer"), {7, 10, DeckZ + 152}, {70, -20, DeckZ + 147}},
+        {TEXT("FaceJeffries"), {-604, 0, DeckZ + 158}, {-534, 0, DeckZ + 154}},
+        {TEXT("FaceSeated"), {-372, -166, LowerZ + 118}, {-465, -139, LowerZ + 112}},
+        {TEXT("FaceChef"), {690, 15, LowerZ + 150}, {680, -108, LowerZ + 146}}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail };
-    static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail};
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers };
+    static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
+        ET::CrewTalk, ET::ChefChase, ET::Fencers};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
-        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail")};
+        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers")};
     struct FRun
     {
         int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths0 = 0, Mounts0 = 0, Crawls0 = 0, Shots = 0, ShipFailures = -1, Catches0 = 0, Leaps0 = 0;
@@ -91,6 +118,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         bool bStarted = false, bPass = false, bDone = false, bEscaped = false, bViews = false, bMount = false, bTop = false;
         TArray<int32> Results; TArray<ET> Trials; TWeakObjectPtr<ACameraActor> Camera; FTimerHandle Timer;
         int32 EscapeOk = 0;
+        // The crew's trials (milestone 3): what he heard, and counts at the start of a stage.
+        TArray<FString> Heard; double Pressed = 0; int32 TalkOk = 0, TalkChecks = 0, Count0 = 0, Count1 = 0, Seen = 0;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -158,7 +187,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / (FString(Views[I].Name) + TEXT(".png")), true, false);
             {
                 const AShipSetting* S = AShipSetting::Get(World);
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_VIEW name=%s tilt_pitch=%.2f tilt_roll=%.2f"), Views[I].Name, S ? S->GetSeaTilt().X : 0.f, S ? S->GetSeaTilt().Y : 0.f);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_VIEW name=%s tilt_pitch=%.2f tilt_roll=%.2f frame_ms=%.1f"), Views[I].Name, S ? S->GetSeaTilt().X : 0.f, S ? S->GetSeaTilt().Y : 0.f, GAverageMS);
             }
             ++Run->Phase;
             return;
@@ -170,6 +199,16 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Run->bViews = true; Run->Next = Now + .5;
             Chuck->SetActorHiddenInGame(false);
             if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
+            if (const AShipCrew* Crew = AShipCrew::Get(World))
+            {
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW count=%d beat=%.1f score=%d phrases=%d fence_out=%.1f parry_gap=%.1f"), Crew->GetCount(), Crew->GetBeat(),
+                    ShipScore::IsPlaying(), Crew->GetFencePhrases(), Crew->GetWorstFenceOut(), Crew->GetLastParryGap());
+                for (const TWeakObjectPtr<ADockNPC>& E : ADockNPC::All())
+                    if (E.IsValid() && E->IsPirate())
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_PIRATE %s mocap=%d props=%d grip_cm=%.1f sink_cm=%.1f bellows=%.1f toast=%.2f dance=%.1f/%.1f strain=%.2f chef=%s lines=%d"),
+                            *E->DisplayName, E->HasMocap(), E->GetPirateProps(), E->GetWorstPropGrip(), E->GetWorstFootSink(), E->GetBellows(), E->GetToast(),
+                            E->GetDanceFeet().X, E->GetDanceFeet().Y, E->GetStrain(), E->GetChefStateName(), E->Lines.Num());
+            }
         }
         if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipViewsOnly"))) { Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST views_only=1 failures=%d"), Run->Failures); FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0); return; }
         if (Now < Run->Next) return;
@@ -209,7 +248,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::DeckUp: Reset(EShipSpawn::Quarters); break;
             case ET::DeckDown: case ET::Quarterdeck: case ET::Rigging: case ET::Rail: Reset(EShipSpawn::Deck); break;
             case ET::YardDrop: Reset(EShipSpawn::Deck); Chuck->ResetAtLocation(SW(MainYardX, 70, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0)); break;
+            case ET::CrewTalk: case ET::Fencers: Reset(EShipSpawn::Deck); break;
+            case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
             }
+            Run->Heard.Reset(); Run->TalkOk = Run->TalkChecks = Run->Count0 = Run->Count1 = Run->Seen = 0; Run->Pressed = 0;
+            Chuck->SetSanity(AChuckCharacter::MaxSanity);
             UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TRIAL_START name=%s"), Names[int32(Run->Trials[Run->Trial])]);
             return;
         }
@@ -414,6 +457,163 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Done = true;
                 Run->bPass = NewDeaths == 0 && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck) && FMath::Abs(L.Z - (DeckZ + Stand)) < 8;
                 Shot(TEXT("YardDropLanded"));
+            }
+            break;
+        }
+        case ET::CrewTalk:
+        {
+            // Each pirate with lines, talked to twice: the first conversation is the 2D game's *_first lines, word for
+            // word, the second its *_repeat lines (they stay the repeat ones after).
+            Limit = 90;
+            struct FTalker { EDockHuman Kind; TArray<FString> First, Repeat; };
+            static const TArray<FTalker> Talkers = {
+                {EDockHuman::PirateSeated, {TEXT("Well I'll be. Never seen a rat wearin' a coat before.")}, {TEXT("You seem like a good listener, I bet all of the crew would love to bend your ear")}},
+                {EDockHuman::PirateConcertina, {TEXT("Requests are considered in the order they are shouted.")}, {TEXT("Still considering it.")}},
+                {EDockHuman::PirateCheering, {TEXT("Don't mind Jeffries over there tied to the mast. He's gone mad. Too much sun, I think.")},
+                    {TEXT("You're not smoking the captain's cigarettes, are you!?"), TEXT("Don't let the captain catch you sniffing around in his quarters!")}},
+                {EDockHuman::PirateDancer, {TEXT("Deck's moving. Saves me half the work.")}, {TEXT("Other half's mine.")}},
+                {EDockHuman::Jeffries, {TEXT("The sea is wrong, the land is wrong. Open your eyes!"), TEXT("Half the crew is gone... lost to the purple. They don't even remember them.")},
+                    {TEXT("Don't go into the purple! DON'T GO INTO THE PURPLE!"), TEXT("Why don't they see!?")}}};
+            const AShipCrew* Crew = AShipCrew::Get(World);
+            if (!Crew || Run->Point >= Talkers.Num())
+            {
+                Done = true;
+                Run->bPass = Crew && Run->TalkChecks == Talkers.Num() * 2 && Run->TalkOk == Run->TalkChecks && NewDeaths == 0;
+                break;
+            }
+            const FTalker& T = Talkers[Run->Point];
+            ADockNPC* N = Crew->Find(T.Kind);
+            if (!N) { ++Run->TalkChecks; ++Run->Point; break; }
+            if (Run->Sub == 0)
+            {
+                // Before him (beside the seated one, who faces his table), turned to him.
+                const FVector To = T.Kind == EDockHuman::PirateSeated ? -N->GetActorRightVector() : N->GetActorForwardVector();
+                const FVector Feet = N->GetActorLocation() - FVector(0, 0, 90.f) + To * 85.f;
+                Chuck->ResetAtLocation(Feet + FVector(0, 0, Stand + 2.f));
+                Chuck->SetActorRotation(FRotator(0, (N->GetActorLocation() - Feet).Rotation().Yaw, 0));
+                Stop(); Run->Sub = 1; Run->At = Now; Run->Heard.Reset(); Run->Pressed = 0;
+                break;
+            }
+            if (Time < .6f || Now - Run->Pressed < .3) break;
+            if (Chuck->IsTalking())
+            {
+                FString Speaker, Text;
+                if (Chuck->GetDialogue(Speaker, Text) && (Run->Heard.IsEmpty() || Run->Heard.Last() != Text)) Run->Heard.Add(Text);
+                Chuck->Interact(); Run->Pressed = Now;
+            }
+            else if (Run->Heard.IsEmpty())
+            {
+                Chuck->Interact(); Run->Pressed = Now;
+                if (!Chuck->IsTalking() && Time > 3.f) { ++Run->TalkChecks; UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_CREW_TALK %s no_prompt=1"), *N->DisplayName); Run->Sub = 0; ++Run->Point; }
+            }
+            else
+            {
+                // A conversation over: what he heard against the lines it should have been.
+                const TArray<FString>& Want = Run->Sub == 1 ? T.First : T.Repeat;
+                const bool bOk = Run->Heard == Want && N->GetConversations() == Run->Sub;
+                ++Run->TalkChecks; Run->TalkOk += bOk;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_TALK %s %s ok=%d lines=%d conversations=%d first_heard=\"%s\""), *N->DisplayName, Run->Sub == 1 ? TEXT("first") : TEXT("repeat"),
+                    bOk, Run->Heard.Num(), N->GetConversations(), Run->Heard.Num() ? *Run->Heard[0] : TEXT(""));
+                if (Run->Sub == 1 && Run->Point == 0) Shot(TEXT("CrewTalk"));
+                Run->Heard.Reset();
+                if (Run->Sub == 1) { Run->Sub = 2; Run->At = Now; }
+                else { Run->Sub = 0; ++Run->Point; }
+            }
+            break;
+        }
+        case ET::ChefChase:
+        {
+            // Into the galley: the chef sees him, calls out, and comes after him with the cleaver. Under the work table he
+            // can't be reached; the chef gives up and goes back to his work; then out of the galley the way he came.
+            Limit = 60;
+            const AShipCrew* Crew = AShipCrew::Get(World);
+            ADockNPC* C = Crew ? Crew->Find(EDockHuman::PirateChef) : nullptr;
+            if (!C) { Done = true; break; }
+            if (Time < .5f) break;
+            const FString State = C->GetChefStateName();
+            if (Run->Sub == 0) { Run->Count0 = C->GetChefNotices(); Run->Sub = 1; Run->Point = 0; }
+            else if (Run->Sub == 1) { if (Route({{290, GalleyDoorY}, {450, 150}}, 14)) { Run->Sub = 2; Run->At = Now; } }
+            else if (Run->Sub == 2)
+            {
+                Stop();
+                if (C->IsShouting()) Run->Seen |= 1;
+                if (State == TEXT("Chase")) { Run->Seen |= 2; Run->Sub = 3; Run->Point = 0; Run->At = Now; Shot(TEXT("ChefChase")); }
+                else if (Time > 5) Done = true;
+            }
+            else if (Run->Sub == 3)
+            {
+                if (C->IsShouting()) Run->Seen |= 1;
+                Chuck->SetRunHeld(true);
+                if (Route({{520, 90}, {600, 40}, {680, 0}}, 12)) { Stop(); Chuck->SetRunHeld(false); Run->Sub = 4; Run->At = Now; Run->Count1 = C->GetChefHits(); }
+                else if (Time > 8) Done = true;
+            }
+            else if (Run->Sub == 4)
+            {
+                // Under the table: nothing reaches him; the chef gives up.
+                Stop();
+                if (Time > 1.f && Time < 1.1f) Shot(TEXT("ChefUnderTable"));
+                if (State == TEXT("Lost") || State == TEXT("Return") || State == TEXT("Work")) Run->Seen |= 4;
+                if (C->GetChefHits() != Run->Count1) Run->Seen |= 8;   // hit under the table: a failure
+                if (Run->Seen & 4 && Time > 9.f) { Run->Sub = 5; Run->Point = 0; Run->At = Now; }
+                else if (Time > 14) Done = true;
+            }
+            else
+            {
+                // Out from under, back through the galley door into the arrival compartment.
+                Chuck->SetRunHeld(true);
+                if (Route({{560, 120}, {450, 150}, {340, GalleyDoorY}, {250, 120}, {150, 60}}, 14))
+                {
+                    Done = true; Chuck->SetRunHeld(false);
+                    Run->bPass = C->GetChefNotices() >= 1 && (Run->Seen & 6) == 6 && !(Run->Seen & 8) && NewDeaths == 0 && !Chuck->IsAstral()
+                        && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Arrival);
+                }
+                else if (Time > 15) Done = true;
+            }
+            if (Done) UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHEF notices=%d swings=%d hits=%d seen=%d state=%s sanity=%d"), C->GetChefNotices(), C->GetChefSwings(), C->GetChefHits(), Run->Seen, *State, Chuck->GetSanity());
+            break;
+        }
+        case ET::Fencers:
+        {
+            // Stood in a fencer's stance he is trodden on (Sanity lost); well off their line nothing reaches him. Their ground
+            // and the crew's bodies stay inside the hull.
+            Limit = 30;
+            AShipCrew* Crew = AShipCrew::Get(World);
+            if (!Crew) { Done = true; break; }
+            if (Run->Sub == 0)
+            {
+                FVector Back, Front;
+                const ADockNPC* A = Crew->Find(EDockHuman::PirateFencerA);
+                // In front of his front foot, where it lands as he advances or lunges.
+                const FVector At = A && A->GetFeet(Back, Front) ? Front + A->GetActorForwardVector() * 28.f : Crew->GetFencePair();
+                Chuck->ResetAtLocation(FVector(At.X, At.Y, Crew->GetFencePair().Z) + FVector(0, 0, Stand + 2.f)); Stop();
+                Run->Count0 = Crew->GetFencerHits(); Run->Sub = 1; Run->At = Now;
+            }
+            else if (Run->Sub == 1)
+            {
+                Stop();
+                if (Chuck->GetSanity() < 2) Chuck->SetSanity(AChuckCharacter::MaxSanity);
+                if (Time > 1.f && Time < 1.1f) Shot(TEXT("Fencers"));
+                if (Time > 7.f)
+                {
+                    Run->Count1 = Crew->GetFencerHits() - Run->Count0;
+                    const FVector Pair = Crew->GetFencePair();
+                    const FVector Off = ShipWorld(FVector(ShipLocal(Pair).X, ShipLocal(Pair).Y > 0 ? -270.f : 270.f, DeckZ));
+                    Chuck->SetSanity(AChuckCharacter::MaxSanity);
+                    Chuck->ResetAtLocation(Off + FVector(0, 0, Stand + 2.f)); Stop();
+                    Run->Count0 = Crew->GetFencerHits(); Run->Sub = 2; Run->At = Now;
+                }
+            }
+            else
+            {
+                Stop();
+                if (Time > 7.f)
+                {
+                    const int32 Far = Crew->GetFencerHits() - Run->Count0;
+                    Done = true;
+                    Run->bPass = Run->Count1 >= 1 && Far == 0 && Crew->GetWorstFenceOut() < 5.f && Crew->GetWorstHullOut() <= 0.f && !Chuck->IsAstral();
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_FENCERS near_hits=%d far_hits=%d fence_out=%.1f hull_out=%.1f parry_gap=%.1f phrases=%d"), Run->Count1, Far,
+                        Crew->GetWorstFenceOut(), Crew->GetWorstHullOut(), Crew->GetLastParryGap(), Crew->GetFencePhrases());
+                }
             }
             break;
         }

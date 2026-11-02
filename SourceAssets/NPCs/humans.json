@@ -1884,6 +1884,1294 @@
      ]
     }
    ]
+  },
+  "PirateChef": {
+   "height_cm": 179,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The galley cook who chases Chuck with a cleaver: heavy, a grubby linen shirt with rolled sleeves, a long stained apron, a cloth cap (kerchief), a short dark beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.7,
+    "muscle": 0.55,
+    "weight": 1.0,
+    "height": 0.62,
+    "proportions": 0.3,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.02,
+     "caucasian": 0.96
+    }
+   },
+   "skin": "middleage_caucasian_male",
+   "eyes": "brown",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.05,
+     0.035,
+     0.025
+    ],
+    "strand_tint": [
+     0.09000000000000001,
+     0.06300000000000001,
+     0.045000000000000005
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.25,
+    "moustache_droop": 0.015,
+    "moustache_out": 0.0
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.39,
+      0.32
+     ],
+     "sleeves": "rolled",
+     "collar": -0.02
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.045,
+      0.04
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "height": 0.1
+    },
+    {
+     "piece": "apron",
+     "fabric": "rough_linen",
+     "tint": [
+      0.44,
+      0.41,
+      0.34
+     ],
+     "bottom": 0.5,
+     "width": 0.22
+    },
+    {
+     "piece": "belt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.4,
+      0.37,
+      0.3
+     ]
+    },
+    {
+     "piece": "kerchief",
+     "fabric": "rough_linen",
+     "tint": [
+      0.46,
+      0.44,
+      0.39
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 260,
+      "Set Hair Curve Profile/Length": 0.5
+     },
+     "colour": [
+      0.045,
+      0.032,
+      0.024
+     ],
+     "root": 0.5,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.004
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.05,
+     "bend": 0.016,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300
+     },
+     "colour": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "root": 0.45,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "PirateSeated": {
+   "height_cm": 175,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The seated pirate at the round mess table in the crew quarters, swaying with his mug: older, a red headscarf, an oxblood waistcoat over a full-sleeved shirt, a blue sash, a grey beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.78,
+    "muscle": 0.55,
+    "weight": 0.82,
+    "height": 0.56,
+    "proportions": 0.35,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.02,
+     "caucasian": 0.96
+    }
+   },
+   "skin": "old_caucasian_male",
+   "eyes": "grey",
+   "eyebrows": "eyebrow009",
+   "eyelashes": "eyelashes02",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.28,
+     0.27,
+     0.25
+    ],
+    "strand_tint": [
+     0.5040000000000001,
+     0.48600000000000004,
+     0.45
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.2,
+    "moustache_droop": 0.045,
+    "moustache_out": 0.003
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.46,
+      0.42,
+      0.34
+     ]
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "caban",
+     "tint": [
+      0.12,
+      0.03,
+      0.025
+     ]
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.03,
+      0.05,
+      0.13
+     ],
+     "width": 0.1
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.045,
+      0.03,
+      0.02
+     ],
+     "height": 0.2
+    },
+    {
+     "piece": "kerchief",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.045,
+      0.03
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 260,
+      "Set Hair Curve Profile/Length": 0.55
+     },
+     "colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "root": 0.5,
+     "grey": 0.4,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.004
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.08,
+     "bend": 0.024,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 320
+     },
+     "colour": [
+      0.28,
+      0.27,
+      0.25
+     ],
+     "root": 0.45,
+     "grey": 0.45,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "PirateConcertina": {
+   "height_cm": 172,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The concertina player on deck: lean, a black tricorn edged in braid, a leather waistcoat, an ochre sash, a moustache and short beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.55,
+    "muscle": 0.42,
+    "weight": 0.38,
+    "height": 0.5,
+    "proportions": 0.5,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.85,
+     "asian": 0.02,
+     "caucasian": 0.13
+    }
+   },
+   "skin": "middleage_african_male",
+   "eyes": "brown",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.018,
+     0.014,
+     0.012
+    ],
+    "strand_tint": [
+     0.0324,
+     0.0252,
+     0.0216
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.1,
+    "moustache_droop": 0.02,
+    "moustache_out": 0.0
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.4
+     ]
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "brown_leather",
+     "tint": [
+      0.07,
+      0.045,
+      0.03
+     ]
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.2,
+      0.05
+     ],
+     "width": 0.085,
+     "side": -1.0
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.07,
+      0.07,
+      0.08
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "height": 0.22
+    },
+    {
+     "piece": "tricorn",
+     "fabric": "caban",
+     "tint": [
+      0.022,
+      0.02,
+      0.018
+     ],
+     "trim": {
+      "fabric": "rough_linen",
+      "tint": [
+       0.5,
+       0.44,
+       0.3
+      ]
+     }
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 320,
+      "Set Hair Curve Profile/Length": 0.35
+     },
+     "colour": [
+      0.015,
+      0.012,
+      0.01
+     ],
+     "root": 0.5,
+     "grey": 0.03,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.003
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.055,
+     "bend": 0.012,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 280
+     },
+     "colour": [
+      0.018,
+      0.014,
+      0.012
+     ],
+     "root": 0.45,
+     "grey": 0.03,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "PirateCheering": {
+   "height_cm": 182,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The cheering pirate with his tankard on deck: burly, a navy headscarf, an open-collared linen shirt, a red sash, a bushy ginger beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.45,
+    "muscle": 0.82,
+    "weight": 0.75,
+    "height": 0.7,
+    "proportions": 0.4,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.02,
+     "caucasian": 0.96
+    }
+   },
+   "skin": "middleage_caucasian_male",
+   "eyes": "blue",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.24,
+     0.085,
+     0.028
+    ],
+    "strand_tint": [
+     0.432,
+     0.15300000000000002,
+     0.0504
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.45,
+    "moustache_droop": 0.03,
+    "moustache_out": 0.006
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.48,
+      0.44,
+      0.36
+     ],
+     "sleeves": "rolled",
+     "collar": -0.045
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.36,
+      0.05,
+      0.03
+     ],
+     "width": 0.1
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.05,
+      0.05,
+      0.06
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.033,
+      0.022
+     ],
+     "height": 0.22
+    },
+    {
+     "piece": "kerchief",
+     "fabric": "rough_linen",
+     "tint": [
+      0.03,
+      0.045,
+      0.1
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300,
+      "Set Hair Curve Profile/Length": 0.55
+     },
+     "colour": [
+      0.22,
+      0.075,
+      0.025
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.004
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.065,
+     "bend": 0.02,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 340
+     },
+     "colour": [
+      0.24,
+      0.085,
+      0.028
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "PirateDancer": {
+   "height_cm": 170,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The dancing pirate on deck, dancing a jig: young and wiry, a red headscarf, rolled sleeves, a green sash, low shoes, clean-shaven. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.3,
+    "muscle": 0.6,
+    "weight": 0.3,
+    "height": 0.48,
+    "proportions": 0.55,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.7,
+     "caucasian": 0.28
+    }
+   },
+   "skin": "young_asian_male",
+   "eyes": "brown",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.45,
+      0.43,
+      0.38
+     ],
+     "sleeves": "rolled"
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.04,
+      0.13,
+      0.06
+     ],
+     "width": 0.08
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.09,
+      0.07,
+      0.05
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "height": 0.06
+    },
+    {
+     "piece": "kerchief",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.07,
+      0.05
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300,
+      "Set Hair Curve Profile/Length": 0.45
+     },
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.004
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.035,
+     "bend": 0.01,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 240
+     },
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ],
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.012,
+     0.01,
+     0.009
+    ],
+    "strand_tint": [
+     0.0216,
+     0.018000000000000002,
+     0.0162
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.0,
+    "moustache_droop": 0.0,
+    "moustache_out": 0.0
+   }
+  },
+  "PirateFencerA": {
+   "height_cm": 180,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). One of the two fencing pirates on deck: a plain black tricorn, a black leather waistcoat, a purple sash, tall boots, a moustache and short beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.4,
+    "muscle": 0.66,
+    "weight": 0.5,
+    "height": 0.66,
+    "proportions": 0.5,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.02,
+     "caucasian": 0.96
+    }
+   },
+   "skin": "middleage_caucasian_male",
+   "eyes": "green",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.055,
+     0.038,
+     0.027
+    ],
+    "strand_tint": [
+     0.099,
+     0.0684,
+     0.0486
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.05,
+    "moustache_droop": 0.0,
+    "moustache_out": 0.0
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.47,
+      0.42
+     ]
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.025,
+      0.02
+     ]
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.12,
+      0.03,
+      0.12
+     ],
+     "width": 0.085
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.04,
+      0.04,
+      0.045
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ],
+     "height": 0.32
+    },
+    {
+     "piece": "tricorn",
+     "fabric": "caban",
+     "tint": [
+      0.026,
+      0.022,
+      0.02
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300,
+      "Set Hair Curve Profile/Length": 0.6
+     },
+     "colour": [
+      0.05,
+      0.035,
+      0.025
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.003
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.035,
+     "bend": 0.008,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 260
+     },
+     "colour": [
+      0.055,
+      0.038,
+      0.027
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "PirateFencerB": {
+   "height_cm": 177,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). The other fencing pirate: a white headscarf, rolled sleeves, an orange sash, a short black beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.5,
+    "muscle": 0.62,
+    "weight": 0.45,
+    "height": 0.6,
+    "proportions": 0.5,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.9,
+     "asian": 0.02,
+     "caucasian": 0.08
+    }
+   },
+   "skin": "middleage_african_male",
+   "eyes": "brown",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.015,
+     0.012,
+     0.01
+    ],
+    "strand_tint": [
+     0.027,
+     0.0216,
+     0.018000000000000002
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.15,
+    "moustache_droop": 0.025,
+    "moustache_out": 0.0
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.38,
+      0.3
+     ],
+     "sleeves": "rolled"
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.42,
+      0.16,
+      0.03
+     ],
+     "width": 0.09,
+     "side": -1.0
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ]
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.04,
+      0.028,
+      0.02
+     ],
+     "height": 0.26
+    },
+    {
+     "piece": "kerchief",
+     "fabric": "rough_linen",
+     "tint": [
+      0.5,
+      0.48,
+      0.44
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 320,
+      "Set Hair Curve Profile/Length": 0.35
+     },
+     "colour": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "root": 0.5,
+     "grey": 0.02,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.004
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.06,
+     "bend": 0.014,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 280
+     },
+     "colour": [
+      0.015,
+      0.012,
+      0.01
+     ],
+     "root": 0.45,
+     "grey": 0.02,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
+  },
+  "Jeffries": {
+   "height_cm": 176,
+   "note": "A pirate of the Phase 7 ship crew (Claude, 2026-11-02; docs/regions/SHIP.md, docs/SHIP.md milestone 3). Jeffries, tied to the main mast: gaunt and sunburnt, barefoot, in a torn shirt and trousers, wild uncut hair and beard. User 2026-11-02: the crew are mustachioed pirates: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.55,
+    "muscle": 0.38,
+    "weight": 0.2,
+    "height": 0.6,
+    "proportions": 0.5,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.02,
+     "asian": 0.02,
+     "caucasian": 0.96
+    }
+   },
+   "skin": "middleage_caucasian_male",
+   "skin_tint": [
+    1.0,
+    0.86,
+    0.78
+   ],
+   "eyes": "blue",
+   "eyebrows": "eyebrow005",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.15,
+     0.105,
+     0.07
+    ],
+    "strand_tint": [
+     0.27,
+     0.189,
+     0.12600000000000003
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.3,
+    "moustache_droop": 0.04,
+    "moustache_out": 0.002
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.4,
+      0.37,
+      0.3
+     ],
+     "sleeves": "rolled",
+     "ragged": 0.9,
+     "collar": -0.03
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.06,
+      0.05,
+      0.04
+     ],
+     "ragged": 0.8
+    },
+    {
+     "piece": "belt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.25,
+      0.22,
+      0.16
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "hedgehog",
+     "group": "Hair",
+     "points": 8,
+     "hairline": 0.04,
+     "set": {
+      "Duplicate Hair Curves/Amount": 280
+     },
+     "colour": [
+      0.14,
+      0.1,
+      0.065
+     ],
+     "root": 0.4,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "roughness": 0.6,
+     "specular": 0.3
+    },
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 320,
+      "Set Hair Curve Profile/Length": 0.9
+     },
+     "colour": [
+      0.14,
+      0.1,
+      0.065
+     ],
+     "root": 0.5,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3
+    },
+    {
+     "style": "wild_moustache",
+     "group": "Beard",
+     "fill": "beard",
+     "length": 0.075,
+     "bend": 0.02,
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 300
+     },
+     "colour": [
+      0.15,
+      0.105,
+      0.07
+     ],
+     "root": 0.45,
+     "grey": 0.05,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.3,
+     "copies": 2
+    }
+   ],
+   "skin_subsurface": [
+    0.62,
+    0.36,
+    0.28
+   ]
   }
  }
 }

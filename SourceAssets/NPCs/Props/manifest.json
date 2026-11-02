@@ -453,6 +453,225 @@
      "gain": 4.937
     }
    }
+  },
+  "Cutlass": {
+   "fbx": "SM_Cutlass.fbx",
+   "tris": 712,
+   "bounds_min_cm": [
+    -7.7,
+    -4.5,
+    -7.3
+   ],
+   "bounds_max_cm": [
+    70.7,
+    4.5,
+    5.0
+   ],
+   "blade_cm": [
+    6.7,
+    70.7
+   ],
+   "slots": {
+    "Steel": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.32,
+      0.32,
+      0.33
+     ],
+     "gain": 14.226
+    },
+    "Iron": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.09,
+      0.09,
+      0.095
+     ],
+     "gain": 14.226
+    },
+    "Cord": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 12.0,
+     "tint": [
+      0.07,
+      0.05,
+      0.035
+     ],
+     "gain": 2.523
+    }
+   }
+  },
+  "Cleaver": {
+   "fbx": "SM_Cleaver.fbx",
+   "tris": 452,
+   "bounds_min_cm": [
+    -6.4,
+    -1.7,
+    -8.9
+   ],
+   "bounds_max_cm": [
+    27.9,
+    1.7,
+    1.6
+   ],
+   "blade_cm": [
+    6.4,
+    27.5
+   ],
+   "slots": {
+    "Wood": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 60.0,
+     "tint": [
+      0.2,
+      0.12,
+      0.07
+     ],
+     "gain": 7.27
+    },
+    "Brass": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.42,
+      0.3,
+      0.1
+     ],
+     "gain": 14.226
+    },
+    "Steel": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 60.0,
+     "tint": [
+      0.32,
+      0.32,
+      0.33
+     ],
+     "gain": 14.226
+    }
+   }
+  },
+  "ConcertinaEnd": {
+   "fbx": "SM_ConcertinaEnd.fbx",
+   "tris": 992,
+   "bounds_min_cm": [
+    -5.4,
+    -8.6,
+    -8.7
+   ],
+   "bounds_max_cm": [
+    10.0,
+    8.6,
+    8.7
+   ],
+   "face_cm": 10.0,
+   "hex_r_cm": 8.0,
+   "slots": {
+    "Wood": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 60.0,
+     "tint": [
+      0.2,
+      0.12,
+      0.07
+     ],
+     "gain": 7.27
+    },
+    "Grille": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.035,
+      0.03,
+      0.025
+     ],
+     "gain": 14.226
+    },
+    "Ivory": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 50.0,
+     "tint": [
+      0.62,
+      0.58,
+      0.48
+     ],
+     "gain": 2.523
+    },
+    "Leather": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 30.0,
+     "tint": [
+      0.06,
+      0.03,
+      0.02
+     ],
+     "gain": 26.931
+    },
+    "Brass": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 40.0,
+     "tint": [
+      0.42,
+      0.3,
+      0.1
+     ],
+     "gain": 14.226
+    }
+   }
+  },
+  "ConcertinaBellows": {
+   "fbx": "SM_ConcertinaBellows.fbx",
+   "tris": 176,
+   "bounds_min_cm": [
+    0.0,
+    -7.3,
+    -8.4
+   ],
+   "bounds_max_cm": [
+    10.0,
+    7.3,
+    8.4
+   ],
+   "length_cm": 10.0,
+   "slots": {
+    "Bellows": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 30.0,
+     "tint": [
+      0.13,
+      0.02,
+      0.018
+     ],
+     "gain": 26.931
+    }
+   }
   }
  },
  "generators": {
@@ -463,6 +682,10 @@
   "Tankard": "Tools/build_keeper_props.py",
   "Rag": "Tools/build_keeper_props.py",
   "Pipe": "Tools/build_sailor_props.py",
-  "BobertBarrel": "Tools/build_bobert_barrel.py"
+  "BobertBarrel": "Tools/build_bobert_barrel.py",
+  "Cutlass": "Tools/build_pirate_props.py",
+  "Cleaver": "Tools/build_pirate_props.py",
+  "ConcertinaEnd": "Tools/build_pirate_props.py",
+  "ConcertinaBellows": "Tools/build_pirate_props.py"
  }
 }

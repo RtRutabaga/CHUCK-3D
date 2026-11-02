@@ -1,4 +1,5 @@
 #include "ShipSetting.h"
+#include "ShipCrew.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
@@ -1108,6 +1109,8 @@ void AShipSetting::Build()
     // ---- The hold's life: jars on the shelves and floor (a cigarette each), the rats.
     for (const FVector& J : ShipJars()) if (AClayJar::PlaceAt(World, ShipWorld(J + FVector(0, 0, 2)), J.X * 3.f, 1)) ++JarsPlaced;
     for (const FVector& R : ShipRats()) if (AEnemyRat::PlaceAt(World, ShipWorld(R + FVector(0, 0, 2)), R.Y * 2.f)) ++RatsPlaced;
+    // ---- The crew (milestone 3, ShipCrew.cpp).
+    AShipCrew::Spawn(World);
 
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_BUILT tris=%d missing=%d props=%d lamps=%d swingers=%d ladders=%d grips=%d sails=%d jars=%d rats=%d"),
         Triangles, Missing, Props, Lamps.Num(), Swingers.Num(), Ladders, Grips, Sails.Num(), JarsPlaced, RatsPlaced);

@@ -57,6 +57,22 @@
    "fps": 30,
    "loops": false,
    "speed_cm_s": 0.0
+  },
+  "DrunkSway": {
+   "fbx": "Anim/AS_Human_DrunkSway.fbx",
+   "take": "137_15",
+   "frames": 331,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 0.0
+  },
+  "Jog": {
+   "fbx": "Anim/AS_Human_Jog.fbx",
+   "take": "16_35",
+   "frames": 24,
+   "fps": 30,
+   "loops": true,
+   "speed_cm_s": 273.4
   }
  }
 }

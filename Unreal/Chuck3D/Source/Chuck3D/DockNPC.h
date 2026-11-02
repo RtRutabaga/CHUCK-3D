@@ -33,7 +33,20 @@ class AChuckCharacter;
  * NPC speech only - Chuck never speaks (AGENTS.md).
  */
 /** The human NPCs built by Tools/build_npc_humans.py (SourceAssets/NPCs/humans.json). */
-enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Sailor, Bobert, Count };
+enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Sailor, Bobert,
+    // The pirate ship's crew (Claude, 2026-11-02; docs/SHIP.md milestone 3; DockNPCPirate.inl, ShipCrew.cpp). Loaded only when
+    // the ship spawns them (the others are referenced by every NPC).
+    PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, Count };
+
+/** What the ship's crew tells a fencing pirate each frame (ShipCrew.cpp): where to stand and what his sword does. */
+struct FFenceCue
+{
+    FVector Centre = FVector::ZeroVector;   // world: the middle between his feet, on the deck
+    FVector Facing = FVector::ForwardVector;// world, level: toward his partner
+    FVector Target = FVector::ZeroVector;   // world: his partner's chest, where a thrust goes
+    float Thrust = 0, Parry = 0, Lunge = 0; // 0..1
+    float Stride = 0;                       // cm the front foot is ahead of the stance this moment (an advance's first step)
+};
 
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
@@ -381,6 +394,46 @@ public:
     int32 GetWorstReversals() const;
     /** The head's largest one-frame change of turning speed after 8 s (deg/s^2): a twitch. */
     float GetPeakHeadAccel() const { return PeakHeadAccel; }
+    // ---- The pirate crew (Claude, 2026-11-02; docs/SHIP.md milestone 3; DockNPCPirate.inl). Placed by AShipCrew.
+    bool IsPirate() const { return Kind >= EDockHuman::PirateChef && Kind < EDockHuman::Count; }
+    EDockHuman GetKind() const { return Kind; }
+    /** The 2D game's first and repeat lines: Lines are the first ones until a conversation through them ends, then the repeat ones. */
+    void SetPirateLines(const TArray<FString>& First, const TArray<FString>& Repeat);
+    int32 GetConversations() const { return Conversations; }
+    bool HasTalkedOnce() const { return Conversations > 0; }
+    /** The beat the deck keeps time to (beats since the ship score's first beat), set each frame by the crew. */
+    void SetBeat(float InBeat) { Beat = InBeat; }
+    /** The seated pirate on his stool at the mess table, his tankard by him on it (heights are the stool's and table's tops, world). */
+    void SitAtTable(const FVector& Hips, float Yaw, float StoolTop, float TableTop, const FVector& LookAt);
+    /** A fencer's stance and sword this frame (ShipCrew.cpp). */
+    void SetFenceCue(const FFenceCue& Cue) { Fence = Cue; bFenceCue = true; }
+    /** A fencer's blade now (world), base and tip; false if he has none. */
+    bool GetBlade(FVector& Base, FVector& Tip) const;
+    /** A fencer's planted feet (world ankles): his left behind, his right ahead; false before he has stood. */
+    bool GetFeet(FVector& Back, FVector& Front) const;
+    /** Jeffries at the main mast: his back to it (its centre, world) and the ropes round him and it. */
+    void TieToMast(const FVector& MastCentre, float MastRadius);
+    /** The chef: his place at the work table (feet, world) and the galley he keeps to (ship-frame box, X0 X1 Y0 Y1). */
+    void SetupChef(const FVector& WorkFeet, float WorkYaw, const FBox2D& Galley, float FloorZ);
+    const TCHAR* GetChefStateName() const;
+    int32 GetChefNotices() const { return ChefNotices; }
+    int32 GetChefSwings() const { return ChefSwings; }
+    int32 GetChefHits() const { return ChefHits; }
+    float GetChefSpeed() const { return ChefSpeed; }
+    /** The chef's line, and others the crew calls out: shown as a subtitle near him for its time. */
+    void Shout(const FString& Text, float Seconds);
+    bool IsShouting() const;
+    /** A pirate's performance this frame, for tests: the concertina's bellows (cm between the ends), the toast's lift (0..1),
+        the dancer's feet above the deck (cm), Jeffries' strain (0..1). */
+    float GetBellows() const { return BellowsGap; }
+    float GetToast() const { return ToastLift; }
+    FVector2D GetDanceFeet() const { return DanceFeet; }
+    float GetStrain() const { return Strain; }
+    /** The props a pirate holds (tests): count, and the worst fist-to-handle gap since he settled (cm). */
+    int32 GetPirateProps() const { return PirateProps.Num(); }
+    float GetWorstPropGrip() const { return WorstPropGrip; }
+    /** The lowest any of his feet went below the deck (cm), after settling. */
+    float GetWorstFootSink() const { return WorstFootSink; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -398,7 +451,7 @@ private:
     EDockHuman Kind = EDockHuman::Worker;
     UPROPERTY() TObjectPtr<USkeletalMesh> HumanMeshes[static_cast<int32>(EDockHuman::Count)];
     /** Motion-capture clips (CMU, Tools/build_npc_mocap.py) on the shared skeleton: idles and talk. */
-    UPROPERTY() TObjectPtr<UAnimSequence> Clips[7];
+    UPROPERTY() TObjectPtr<UAnimSequence> Clips[9];
     float ReactTime = -1.f;                       // since the rat scratched him (-1: not reacting)
     int32 Scratches = 0;
     int32 IdleClip = 0;
@@ -591,4 +644,54 @@ private:
     void PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole);
     /** A posed hand's fist centre and axes (component space). */
     void HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& Fist, FVector& Along, FVector& Thumb) const;
+    // ---- The pirate crew (DockNPCPirate.inl).
+    TArray<FString> RepeatLines;
+    int32 Conversations = 0;
+    bool bInConversation = false;
+    float Beat = 0.f;
+    FFenceCue Fence;
+    bool bFenceCue = false;
+    UPROPERTY() TArray<UStaticMeshComponent*> PirateProps;
+    UPROPERTY() class UProceduralMeshComponent* Ropes = nullptr;
+    FVector MastLocal = FVector::ZeroVector;     // Jeffries: the mast's centre in his component space
+    float MastR = 30.f;
+    FVector PirateMouth = FVector::ZeroVector;   // component space, from the manifest (a drinker's lips)
+    float DrinkTableTop = 0.f;                   // the table his tankard rests on (component space; the tavern's by default)
+    float BellowsGap = 0.f, ToastLift = 0.f, Strain = 0.f, StrainKick = 0.f, NextStrain = 2.f, WorstPropGrip = 0.f, WorstFootSink = 0.f;
+    int32 ToastCycle = -1;
+    FVector2D DanceFeet = FVector2D::ZeroVector;
+    FVector AnkleStand[2];                       // each ankle standing (component space, from the rest pose)
+    // Planted feet (the fencers): world ankles, the step under way.
+    FVector Plant[2], StepFrom[2], StepTo[2];
+    float StepT[2] = { -1.f, -1.f };
+    bool bPlanted = false;
+    // The chef.
+    enum class EChef : uint8 { Work, Notice, Chase, Swing, Lost, Return };
+    EChef Chef = EChef::Work;
+    float ChefTime = 0.f, ChefSpeed = 0.f, JogTime = 0.f, JogBlend = 0.f, ChopClock = 0.f, SwingDrive = 0.f, ShoutUntil = -1.f;
+    FVector ChefHome = FVector::ZeroVector, ChefAim = FVector::ZeroVector;
+    float ChefHomeYaw = 0.f, ChefFloor = 0.f, UnreachableFor = 0.f;
+    FBox2D ChefBox = FBox2D(ForceInit);
+    int32 ChefNotices = 0, ChefSwings = 0, ChefHits = 0;
+    bool bChefStruck = false, bChefSaidLine = false, bChefHitPause = false;
+    FString ShoutText;
+    FVector BladeBaseW = FVector::ZeroVector, BladeTipW = FVector::ZeroVector;
+    float StrainT = 99.f, PirateDip = 0.f, ChefTableTop = 86.f;
+    int32 ChefRespawnsSeen = -1;
+    // Where the rat last appeared (a spawn, respawn or checkpoint): until he moves from there the chef doesn't see him.
+    FVector ChefRatArrival = FVector::ZeroVector, ChefRatLast = FVector(1e9f);
+    bool bChefRatStill = false;
+    bool PirateTurns() const { return !IsPirate() || Kind == EDockHuman::PirateConcertina || Kind == EDockHuman::PirateCheering || Kind == EDockHuman::PirateDancer; }
+    bool ChefCanReach(const class AChuckCharacter* Chuck) const;
+    void SetupPirate();
+    void TickPirate(float DeltaSeconds);
+    void TickChef(float DeltaSeconds);
+    bool ChefStep(const FVector& Direction, float Distance);
+    void PirateDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVector& HipsOffset);
+    void PosePirate(TArray<FTransform>& Space, float DeltaSeconds);
+    void KeepFeetOn(TArray<FTransform>& Space, const FVector Ankles[2], const FQuat Feet[2], const FVector& KneeAhead);
+    UStaticMeshComponent* AddPirateProp(const TCHAR* Path, const TCHAR* Name);
+    void PlaceProp(int32 Index, const FTransform& At);
+    void HoldTankard(TArray<FTransform>& Space, int32 Side, const FVector& Handle, const FVector& Along, const FVector& Up, const FVector& Pole);
+    void UpdateRopes(const TArray<FTransform>& Space);
 };

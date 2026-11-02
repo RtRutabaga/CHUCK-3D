@@ -69,7 +69,13 @@ namespace
         TEXT("/Game/Characters/Humans/Dwarf/SK_Dwarf.SK_Dwarf"), TEXT("/Game/Characters/Humans/TavernKeeper/SK_TavernKeeper.SK_TavernKeeper"),
         TEXT("/Game/Characters/Humans/ElfElder/SK_ElfElder.SK_ElfElder"), TEXT("/Game/Characters/Humans/GnomeAlchemist/SK_GnomeAlchemist.SK_GnomeAlchemist"),
         TEXT("/Game/Characters/Humans/Sailor/SK_Sailor.SK_Sailor"),
-        TEXT("/Game/Characters/Humans/Bobert/SK_Bobert.SK_Bobert") };
+        TEXT("/Game/Characters/Humans/Bobert/SK_Bobert.SK_Bobert"),
+        // The pirate crew: not referenced by the constructor (loaded when the ship spawns them; the folder is always cooked).
+        TEXT("/Game/Characters/Humans/PirateChef/SK_PirateChef.SK_PirateChef"), TEXT("/Game/Characters/Humans/PirateSeated/SK_PirateSeated.SK_PirateSeated"),
+        TEXT("/Game/Characters/Humans/PirateConcertina/SK_PirateConcertina.SK_PirateConcertina"), TEXT("/Game/Characters/Humans/PirateCheering/SK_PirateCheering.SK_PirateCheering"),
+        TEXT("/Game/Characters/Humans/PirateDancer/SK_PirateDancer.SK_PirateDancer"), TEXT("/Game/Characters/Humans/PirateFencerA/SK_PirateFencerA.SK_PirateFencerA"),
+        TEXT("/Game/Characters/Humans/PirateFencerB/SK_PirateFencerB.SK_PirateFencerB"), TEXT("/Game/Characters/Humans/Jeffries/SK_Jeffries.SK_Jeffries") };
+    static_assert(UE_ARRAY_COUNT(MeshPaths) == static_cast<int32>(EDockHuman::Count), "a mesh path for every human");
     // The sailor's pipe (component space: his feet, X forward, Y right). His
     // mouth on the model (SourceAssets/NPCs/Humans/manifest.json Sailor
     // mouth_cm); the bit sits in its right corner, the stem forward and a
@@ -202,11 +208,13 @@ namespace
     }
     EBone Of(EBone Left, int32 Side) { return static_cast<EBone>(Left + Side); }
     // Motion-capture clips: idles per kind of person, and gesturing while talking.
-    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipCount };
+    enum EClip { ClipStandHip, ClipStandLook, ClipTalk, ClipReact, ClipZombieIdle, ClipZombieWalk, ClipZombieFall, ClipDrunkSway, ClipJog, ClipCount };
     const TCHAR* ClipPaths[] = { TEXT("/Game/Characters/Humans/Anim/AS_Human_StandHip.AS_Human_StandHip"),
         TEXT("/Game/Characters/Humans/Anim/AS_Human_StandLook.AS_Human_StandLook"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Talk.AS_Human_Talk"),
         TEXT("/Game/Characters/Humans/Anim/AS_Human_React.AS_Human_React"), TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieIdle.AS_Human_ZombieIdle"),
-        TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieWalk.AS_Human_ZombieWalk"), TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieFall.AS_Human_ZombieFall") };
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieWalk.AS_Human_ZombieWalk"), TEXT("/Game/Characters/Humans/Anim/AS_Human_ZombieFall.AS_Human_ZombieFall"),
+        // The pirate crew (2026-11-02): the deck hands' drunken sway, the chef's jog (in place; 273.4 cm/s at the clip's scale).
+        TEXT("/Game/Characters/Humans/Anim/AS_Human_DrunkSway.AS_Human_DrunkSway"), TEXT("/Game/Characters/Humans/Anim/AS_Human_Jog.AS_Human_Jog") };
     // The zombie's shamble, in place: the walk clip's own speed at the clip
     // skeleton's scale (Tools/build_npc_mocap.py CHUCK_WALK_LOOP; the hips are
     // scaled to each body); its collapse is a lay-down played fast.
@@ -306,7 +314,8 @@ ADockNPC::ADockNPC()
     SailorMeshes[0] = PipeAsset.Object; SailorMeshes[1] = WispAsset.Object; SailorMeshes[2] = PuffSphere.Object; PuffMaterial = PuffMat.Object;
     static ConstructorHelpers::FObjectFinder<UAnimSequence> StandHip(ClipPaths[ClipStandHip]), StandLook(ClipPaths[ClipStandLook]),
         Talk(ClipPaths[ClipTalk]), React(ClipPaths[ClipReact]), ZombieIdle(ClipPaths[ClipZombieIdle]), ZombieWalk(ClipPaths[ClipZombieWalk]),
-        ZombieFall(ClipPaths[ClipZombieFall]);
+        ZombieFall(ClipPaths[ClipZombieFall]), DrunkSway(ClipPaths[ClipDrunkSway]), Jog(ClipPaths[ClipJog]);
+    Clips[ClipDrunkSway] = DrunkSway.Object; Clips[ClipJog] = Jog.Object;
     Clips[ClipStandHip] = StandHip.Object; Clips[ClipStandLook] = StandLook.Object; Clips[ClipTalk] = Talk.Object; Clips[ClipReact] = React.Object;
     Clips[ClipZombieIdle] = ZombieIdle.Object; Clips[ClipZombieWalk] = ZombieWalk.Object; Clips[ClipZombieFall] = ZombieFall.Object;
     Body->SetSkinnedAssetAndUpdate(Worker.Object);
@@ -1025,6 +1034,8 @@ void ADockNPC::BeginPlay()
     NPCRegistry.Add(this);
     Phase = FMath::FRandRange(0.f, 30.f);
     NextGlance = FMath::FRandRange(1.f, 3.f);
+    if (!HumanMeshes[static_cast<int32>(Kind)] && IsPirate())   // the crew are loaded when they're spawned
+        HumanMeshes[static_cast<int32>(Kind)] = LoadObject<USkeletalMesh>(nullptr, MeshPaths[static_cast<int32>(Kind)]);
     if (USkeletalMesh* Mesh = HumanMeshes[static_cast<int32>(Kind)]) Body->SetSkinnedAssetAndUpdate(Mesh);
     ChuckGroom::Attach(this, Body, Grooms);   // strand hair and beards, where the NPC has them
     BoneIndex.Init(INDEX_NONE, BoneCount);
@@ -1117,6 +1128,7 @@ void ADockNPC::BeginPlay()
             SkelIndex.Reset();
         }
     }
+    if (IsPirate()) SetupPirate();
 }
 
 void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOffset) const
@@ -1156,6 +1168,14 @@ void ADockNPC::SampleClips(float Time, TArray<FQuat>& BoneDelta, FVector& HipsOf
         }
     }
     else Sample(Clips[IdleClip], Local);
+    if (IsPirate() && JogBlend > .01f)
+    {
+        // The chef's jog, on its own clock (its stride is paced to his speed).
+        Other.SetNum(N);
+        const FAnimExtractContext Context(static_cast<double>(FMath::Fmod(JogTime, FMath::Max(Clips[ClipJog]->GetPlayLength(), .1f))));
+        for (int32 B = 0; B < N; ++B) Clips[ClipJog]->GetBoneTransform(Other[B], FSkeletonPoseBoneIndex(B), Context, false);
+        Blend(JogBlend);
+    }
     if (TalkBlend > 0.f) { Sample(Clips[ClipTalk], Other); Blend(TalkBlend); }
     if (ReactTime >= 0.f)
     {
@@ -1466,9 +1486,10 @@ void ADockNPC::Tick(float DeltaSeconds)
                 const float Close = FMath::Clamp((CloseStart - Across) / (CloseStart - CloseFull), 0.f, 1.f);
                 Target = FVector2D(FMath::Clamp(YawTo, -70.f, 70.f), FMath::Clamp(PitchTo, -20.f, FMath::Lerp(LookDownFar, 55.f, Close)));
             }
-            if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated()) UpdateTurn(DeltaSeconds, YawTo, true);   // the smith keeps to his anvil, the keeper behind his bar, the elf on her bench
+            // (A performing pirate turns to the rat only while he talks to him; the chef, the fencers and Jeffries never by this.)
+            if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated() && PirateTurns()) UpdateTurn(DeltaSeconds, YawTo, !IsPirate() || Chuck->GetTalkingTo() == this);   // the smith keeps to his anvil, the keeper behind his bar, the elf on her bench
         }
-        else if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated()) UpdateTurn(DeltaSeconds, 0.f, false);
+        else if (HasMocap() && !IsSmith() && !IsKeeper() && !IsSeated() && PirateTurns()) UpdateTurn(DeltaSeconds, 0.f, false);
         bTalking = Chuck->GetTalkingTo() == this;
     }
     if (NightStage > 0 && IsKeeper()) TickTavernNight(DeltaSeconds);
@@ -1502,6 +1523,7 @@ void ADockNPC::Tick(float DeltaSeconds)
     Look.X = FMath::FInterpTo(Look.X, Target.X, DeltaSeconds, Rate);
     Look.Y = FMath::FInterpTo(Look.Y, Target.Y, DeltaSeconds, Rate);
     if (IsSmith()) TickSmith(DeltaSeconds);
+    if (IsPirate()) TickPirate(DeltaSeconds);
     TickVoice(DeltaSeconds);
     UpdatePose(DeltaSeconds);
 }
@@ -1772,6 +1794,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
             Delta[Chest] = Pitch(4.f);
             Delta[Neck] = Pitch(-4.f) * Delta[Neck];
         }
+        if (IsPirate()) PirateDelta(Delta, BoneDelta, HipsOffset);
         TArray<FTransform> Space;
         Solve(Delta, Space, &BoneDelta, HipsOffset);
         PoseHands(Space, true);
@@ -1783,6 +1806,7 @@ void ADockNPC::UpdatePose(float DeltaSeconds)
         if (IsSeated()) PoseSeated(Space);
         if (bDrinker) PoseDrink(Space);
         if (IsAlchemist()) PoseSleeves(Space);
+        if (IsPirate()) PosePirate(Space, DeltaSeconds);
         PoseFace(Space);
         ProbeShake(Space, DeltaSeconds);
         const FReferenceSkeleton& Ref = Body->GetSkinnedAsset()->GetRefSkeleton();
@@ -2453,6 +2477,10 @@ FString ADockNPC::GetTalkSubtitle(int32 Index) const
 
 bool ADockNPC::GetAmbientSubtitle(const FVector& At, FString& Speaker, FString& Text)
 {
+    // A pirate calling out (the chef at the rat; DockNPCPirate.inl Shout), heard within a few rooms' reach.
+    for (const TWeakObjectPtr<ADockNPC>& Entry : All())
+        if (Entry.IsValid() && Entry->IsShouting() && FVector::Dist(Entry->GetActorLocation(), At) < 1500.f)
+        { Speaker = Entry->DisplayName; Text = Entry->ShoutText; return true; }
     if (!InTavern(At)) return false;
     // The latest to start speaking (the keeper over Dougmund as he cuts in).
     const ADockNPC* Who = nullptr;
@@ -2472,11 +2500,11 @@ void ADockNPC::PoseDrink(TArray<FTransform>& Space)
     const float A = FMath::SmoothStep(0.f, DrinkRaise, U) * (1.f - FMath::SmoothStep(DrinkLower, DrinkDown, U));
     DrinkLift = A;
     // On the table: standing on its base, its body toward his left.
-    const FVector RestGrip(DrinkRestAhead, DrinkRestOut * Right, TavernTableTop + TankardGripHeight + .2f);
+    const FVector RestGrip(DrinkRestAhead, DrinkRestOut * Right, (DrinkTableTop != 0.f ? DrinkTableTop : TavernTableTop) + TankardGripHeight + .2f);
     const FVector RestAlong = FVector(.35f, -Right, 0.f).GetSafeNormal();
     // At his lips: its mouth tipped to him, the rim's lower edge on his lower lip,
     // the handle to his right. His lips from the head as posed (tipped back while he drinks).
-    const FVector Lips = Space[BoneIndex[Head]].TransformPosition(HeadRef.InverseTransformPosition(WorkerMouth));
+    const FVector Lips = Space[BoneIndex[Head]].TransformPosition(HeadRef.InverseTransformPosition(PirateMouth.IsZero() ? WorkerMouth : PirateMouth));
     const float Tip = FMath::DegreesToRadians(FMath::Lerp(DrinkTipStart, DrinkTipEnd, FMath::SmoothStep(DrinkRaise, DrinkLower, U)));
     const FVector DrinkUp(-FMath::Sin(Tip), 0.f, FMath::Cos(Tip));
     const FVector DrinkAlong(0.f, -Right, 0.f);
@@ -2917,3 +2945,6 @@ float ADockNPC::GetHeadBow() const
     const FVector Up = HeadT.GetRotation().RotateVector(HeadUpLocal);
     return FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Up.X), static_cast<float>(Up.Z)));
 }
+
+// The pirate crew (Claude, 2026-11-02; docs/SHIP.md milestone 3), in this file's namespace (its bones, clips and helpers).
+#include "DockNPCPirate.inl"

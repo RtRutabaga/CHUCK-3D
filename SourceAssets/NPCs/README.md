@@ -332,3 +332,25 @@ lines from References/Original/PHASE-2.md).
   - **Known gaps:**
     - Braids and ponytails are rigid to the head; nothing swings, and a braid turns with the head.
     - Brows are still cards.
+
+- The pirate crew (Claude, 2026-11-02; docs/SHIP.md, milestone 3): eight humans in `humans.json`
+  (`PirateChef`, `PirateSeated`, `PirateConcertina`, `PirateCheering`, `PirateDancer`, `PirateFencerA`,
+  `PirateFencerB`, `Jeffries`), built and imported like the others:
+  - `build_npc_humans.py -- PirateChef ...`, then `Import-NPCHumans.ps1 -Only <names>`, then
+    `Import-NPCGrooms.ps1 -Only <names>`.
+  - **New pieces:** `tricorn` (`make_tricorn`) is a felt hat built on the head rather than cut from the body.
+    Its crown is fitted to the head at the brow, and its brim is cocked up on three sides with the point
+    forward. It is rigid on the head, has strand hair pressed under it, and is not counted in the height.
+    `trim` adds braid edging. `sash` is a broad waist band with its knotted end down one hip.
+  - **Moustaches, no beards** (user 2026-11-02): only a `wild_moustache` groom each (`copies` 2); the beard volume just shapes it.
+    `make_beard` takes `moustache_size` (scales the lip tube), `moustache_droop` and `moustache_out` (m: its ends carried on
+    down beside the mouth, a walrus or horseshoe).
+  - **Skin:** `skin_subsurface` is 0.62, 0.36, 0.28 on every pirate. The default subsurface colour turned
+    dark and young skin orange-red in the ship's sun.
+  - **Props:** `Tools/build_pirate_props.py` makes `SM_Cutlass`, `SM_Cleaver`, `SM_ConcertinaEnd` and
+    `SM_ConcertinaBellows`. Each has its origin in the fist: +X along the grip toward the blade, -Z toward
+    the edge. Import them with `Import-NPCHumans.ps1 -Only prop:<Name>`.
+  - **Clips:** `build_npc_mocap.py -- DrunkSway Jog` builds just those two and keeps the others' files.
+    Import them with `-Only clip:DrunkSway,clip:Jog`.
+  - **Runtime:** `DockNPCPirate.inl` (the performances) and `ShipCrew.cpp` (placement, lines, beat,
+    fencing). The pirates' meshes are loaded when the ship spawns them, not referenced by every NPC.

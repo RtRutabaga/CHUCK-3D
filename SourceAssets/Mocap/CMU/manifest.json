@@ -104,6 +104,22 @@
                       "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
                       "sha256":  "19E935A336E06981C1680B79C7DB7CD9B2C95FF404696F6742181B9E4DA39057",
                       "bytes":  1400429
+                  },
+                  {
+                      "file":  "137_15.bvh",
+                      "description":  "Drunk Wait",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/137/137_15.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "CC01E8AA28E35B31056A1C2E11D78E2C3752CC6C0F51A9B00C9FDB2C6C796D05",
+                      "bytes":  4031181
+                  },
+                  {
+                      "file":  "16_35.bvh",
+                      "description":  "run/jog",
+                      "source":  "https://raw.githubusercontent.com/una-dinosauria/cmu-mocap/master/data/016/16_35.bvh",
+                      "license":  "CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu): free for any use; BVH conversion by B. Hahne (cgspeed.com)",
+                      "sha256":  "D20D54A9CCEBD7AAF4AA6C4D7662C4905D47009401895DE216A914EDECF287BE",
+                      "bytes":  125846
                   }
               ]
 }

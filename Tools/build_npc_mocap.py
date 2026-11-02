@@ -49,6 +49,12 @@ CLIPS = {            # clip: (take, seconds to skip after the T-pose, seconds to
     # (cut at 2.6 s it was still propped on its elbows, as if getting up; 111_12 "Lay down" ends sitting)
     # Tried and dropped for the zombie: 104_41 ZombieWalk (arms out), 91_24
     # HurtLegWalk, 104_13 StumbleWalk, 90_16 "fall on face" (a dive).
+    # The pirate crew (Claude, 2026-11-02; docs/SHIP.md, milestone 3): a loose, rolling drunk's sway for the
+    # deck hands' idle (the runtime lays their beat-locked performances on top), and the chef's jog after the rat.
+    'DrunkSway': ('137_15', 2.0, 12.0, True),    # "Drunk Wait": swaying on the spot, weight rolling between the feet
+    'Jog': ('16_35', .3, None, 'walk'),          # "run/jog": one stride cycle, in place (the runtime moves him at its speed)
+    # Tried for the crew and dropped: 137_13 "Drunk Coffee Mug" (wanders), 02_07-09 "swordplay" (flailing, not
+    # fencing), 93_06 "lindyHop2" (crouched swing dance, not a jig), 142_08, 79_69 (walk about), 09_01 (sprint).
     # Tried and dropped: 140_06/07 "Idle" (a crouched ready stance), 113_21
     # "Standing still" (head tipped far back), 141_20 "Waiting" (fidgety, 5 s),
     # 76_06 "avoid stepping on something" (a cartoonish hop with flailing arms).
@@ -178,7 +184,8 @@ def retarget(rig, clip, take, skip, keep, loops=True):
         def gap(a, b):
             return sum(min(a[n].rotation_difference(b[n]).angle, 2 * math.pi - a[n].rotation_difference(b[n]).angle) for n in legs)
         seam = 6
-        best = min(range(int(1.5 * FPS), len(frames) - seam), key=lambda f: gap(frames[f][0], frames[0][0]))
+        lo = min(int(1.5 * FPS), len(frames) // 2)   # a short take (the jog's single stride) loops sooner
+        best = min(range(lo, len(frames) - seam), key=lambda f: gap(frames[f][0], frames[0][0]))
         frames = frames[:best + seam]
         print('CHUCK_WALK_LOOP', clip, f'speed_cm_s={speed:.1f}', f'cycle_frames={best}', f'seam_error={gap(frames[best][0], frames[0][0]):.3f}')
     # Loop: the first second becomes a blend from the clip's end back into its
@@ -268,7 +275,10 @@ if __name__ == '__main__':
     rig = load_rig()
     bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = FPS, 1.   # after the import, which sets the file's rate
     manifest = {'generator': 'Tools/build_npc_mocap.py', 'source': 'SourceAssets/Mocap/CMU (CMU Graphics Lab Motion Capture Database)', 'clips': {}}
+    only = [a for a in argv if a in CLIPS]   # `-- DrunkSway Jog`: just those, the others' files and entries kept
+    if only and (OUT / 'manifest.json').exists(): manifest = json.loads((OUT / 'manifest.json').read_text(encoding='utf-8'))
     for clip, (take, skip, keep, loops) in CLIPS.items():
+        if only and clip not in only: continue
         manifest['clips'][clip] = retarget(rig, clip, take, skip, keep, loops)
     (OUT / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n', encoding='utf-8')
     print('CHUCK_CLIPS_READY', sorted(manifest['clips']))

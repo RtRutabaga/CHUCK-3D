@@ -24,7 +24,7 @@ file before the editor starts (clearing its graph in a running editor trips an e
 the import makes it again and re-parents the instances of the NPCs it imports, so import them all.
 To re-import only some of it (leaving the rest's assets untouched), set
 CHUCK_HUMANS_ONLY to a comma list of NPC names and/or "clips", "props" (all of
-them) or "prop:<Name>" (just that one, e.g. prop:Tankard)
+them), "prop:<Name>" or "clip:<Name>" (just that one, e.g. prop:Tankard)
 (Tools/Import-NPCHumans.ps1 -Only Blacksmith,props).
 """
 from pathlib import Path
@@ -318,9 +318,10 @@ def import_mesh(npc, info):
 
 
 # A clean rebuild deletes the folder on disk before the editor starts: Tools/Import-NPCHumans.ps1 -Clean.
-def import_clips():
-    """The motion-capture clips (Tools/build_npc_mocap.py) onto the shared skeleton."""
+def import_clips(names=None):
+    """The motion-capture clips (Tools/build_npc_mocap.py) onto the shared skeleton (`names`: just those)."""
     clips = json.loads((SOURCE / 'Anim/manifest.json').read_text(encoding='utf-8'))['clips']
+    if names: clips = {k: v for k, v in clips.items() if k in names}
     skeleton = unreal.load_asset(SKELETON)
     for clip, info in clips.items():
         options = unreal.FbxImportUI()
@@ -387,7 +388,9 @@ def import_props(names=None):
 ONLY = {x.strip() for x in os.environ.get('CHUCK_HUMANS_ONLY', '').split(',') if x.strip()}
 for npc, info in MANIFEST['npcs'].items():
     if not ONLY or npc in ONLY: import_mesh(npc, info)
+CLIPS = {x[5:] for x in ONLY if x.startswith('clip:')}   # clip:<Name>, just that one
 if not ONLY or 'clips' in ONLY: import_clips()
+elif CLIPS: import_clips(CLIPS)
 PROPS = {x[5:] for x in ONLY if x.startswith('prop:')}
 if not ONLY or 'props' in ONLY: import_props()
 elif PROPS: import_props(PROPS)

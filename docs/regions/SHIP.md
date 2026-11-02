@@ -2,7 +2,7 @@
 
 Written 2026-11-01 (Claude), on the user's request: "start building the ship/next part of the game. base your approach on how we've handled the chult adaptation from 2d". **Approved by the user, 2026-11-01**, with milestone 1 to start, and these answers to the questions below: the chest gives 40 cigarettes **and** starts the golden leaf's 45-second stamina lock; the sea and horizon rock round a still hull; the user will supply a ship track and the pirates' voice takes later (until then, sea and creaks only, and subtitles only). Claude builds the setting, as with the temple. Actual work and tests go in HANDOFF.
 
-**Milestone 1 built, 2026-11-01 (Claude):** the escape and below decks. **Milestone 2 built, 2026-11-02 (Claude):** the weather deck, the rig and its climb, and the open sea rocking round the still hull (the sea's tilt rather than the deck's, with no camera roll). What is built: [../SHIP.md](../SHIP.md); tests: HANDOFF.
+**Milestone 1 built, 2026-11-01 (Claude):** the escape and below decks. **Milestone 2 built, 2026-11-02 (Claude):** the weather deck, the rig and its climb, and the open sea rocking round the still hull (the sea's tilt rather than the deck's, with no camera roll). **Milestone 3 built, 2026-11-02 (Claude):** the crew (the chef and his chase, the seated pirate, the concertina player, the cheering pirate, the dancer, the two fencers, Jeffries) with their 2D first and repeat lines as subtitles, all keeping to the ship track's beat; voices still to come. What is built: [../SHIP.md](../SHIP.md); tests: HANDOFF.
 
 ## Direction and sources
 

@@ -176,8 +176,87 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
 
 ### Not yet (later milestones)
 
-- **Milestone 3, the crew:** pirates, the chef's chase, voices.
+- **Milestone 3, the crew:** built on November 2 (below), except the voices.
 - **Milestone 4, the ending:** the chest, the plank, the fall into the Hells.
+
+## Milestone 3: the crew (November 2)
+
+User request: "Do the next part" (after milestone 2). The code is in `ShipCrew.cpp` (`AShipCrew`: who stands where, their lines, the beat, the fencing, the hits) and `DockNPCPirate.inl` (their performances, as `ADockNPC` members; included at the end of `DockNPC.cpp`). The bodies are in the human NPC kit, and the props come from `Tools/build_pirate_props.py`.
+
+### Who is aboard
+
+| Pirate (2D credits name) | Where | What he does |
+| --- | --- | --- |
+| The Pirate Chef | The galley, at the work table's starboard side | Chops on the board on every other beat. When he sees the rat in the galley he calls out, then chases it with his cleaver (below). |
+| The Seated Pirate | The crew quarters, on the mess-table stool that faces the door from the arrival compartment | Sways on the beat with his tankard and drinks from it (the tavern drinker's pose). |
+| The Concertina Pirate | Deck, amidships to starboard | Squeezes the concertina open and shut over two bars, bobbing on the beat and nodding. |
+| The Cheering Pirate | Deck, amidships to port | Sways, bobbing, his tankard at his side. Every eight bars he raises it high and pumps it on the beat, and every other time drinks instead. |
+| The Dancing Pirate | Deck, on the main hatch's grating | Dances a jig: a hop on every beat, kicks out and back on each leg, heel taps on each, a jump with the heels together to close the phrase. Hands on his hips. |
+| The Swordsmen (two) | Deck, the open ground forward of the fore mast | Fence (below). No lines. |
+| Jeffries | Deck, his back to the main mast's aft side | Tied to it by the chest and waist, wrists bound behind him round it. Heaves at the ropes in bursts of three, more often with the rat near; between them he sags and twists. |
+
+- **Mustachioed (user, November 2):** "These are the mustachioed pirates ... make all the pirates have mustaches and not full beard". Every pirate has a strand moustache and no beard. The kit's moustache volume gains `moustache_size`, `moustache_droop` and `moustache_out`, so each is his own: a ginger handlebar on the cheering pirate, a grey walrus on the seated one, horseshoes on the concertina player and a fencer, drooping ones on the chef and Jeffries, trim ones on the dancer and the other fencer. All eight stay men for now (the user's choice). A mustache pirate flag for the ship comes later.
+- **Bodies:** eight new humans in `SourceAssets/NPCs/humans.json, built with `Tools/build_npc_humans.py` on the shared skeleton, with strand hair and beards from the CC0 pack. They are loaded only when the ship spawns them; the Waterdeep NPCs don't reference them.
+- **New kit pieces:**
+  - `tricorn`: a felt hat built on the head, its brim cocked up on three sides into a triangle, the point over the face. As Phase 7 asks, a turned head never hides the face. `trim` adds braid edging.
+  - `sash`: a broad band round the waist, its end hanging down one hip.
+- **Skin:** the crew's skin has a milder subsurface colour (`skin_subsurface` 0.62, 0.36, 0.28). The default (1.2, 0.45, 0.3) turned dark and young skin orange-red in the ship's strong sun.
+- **Props** (`Tools/build_pirate_props.py`, `SourceAssets/NPCs/Props`): a cutlass (shell guard, knuckle bow), the chef's cleaver, and the concertina's ends and bellows (the bellows stretch between the hands). The tankards are the tavern keeper's.
+- **Motion:** each performance is laid over a motion-capture idle and placed by IK.
+  - New CMU clips (`Tools/build_npc_mocap.py`): `DrunkSway` (137_15 "Drunk Wait") for the deck hands, and `Jog` (16_35, one stride in place) for the chef.
+  - Tried and dropped: 137_13, 137_16, the 02_07-09 swordplay (flailing, not fencing), 93_06 (a swing dance, not a jig), 142_08, 79_69, 09_01, 13_09.
+  - Legs that dip, hop or step are placed by two-bone IK on the clip's own feet.
+
+### Keeping time
+
+The performances keep to the ship score: 136.12 beats a minute, the first beat 0.107 s in. I measured this from the track itself by spectral flux and autocorrelation, and checked it holds across all 207.7 s. `DockGameMode` tells `ShipScore` when the track starts, and `AShipCrew` hands each pirate the beat every frame.
+
+### Their lines
+
+Each line is the 2D game's (`ship_crew_quarters.json`, `ship_exterior_deck.json`, `ship_galley.json`), word for word. Each talking pirate gives his first lines until one conversation is talked through, then his repeat lines from then on.
+
+| Pirate | First | Repeat |
+| --- | --- | --- |
+| Seated Pirate | "Well I'll be. Never seen a rat wearin' a coat before." | "You seem like a good listener, I bet all of the crew would love to bend your ear" |
+| Concertina Pirate | "Requests are considered in the order they are shouted." | "Still considering it." |
+| Cheering Pirate | "Don't mind Jeffries over there tied to the mast. He's gone mad. Too much sun, I think." | "You're not smoking the captain's cigarettes, are you!?" / "Don't let the captain catch you sniffing around in his quarters!" |
+| Dancing Pirate | "Deck's moving. Saves me half the work." | "Other half's mine." |
+| Jeffries | "The sea is wrong, the land is wrong. Open your eyes!" / "Half the crew is gone... lost to the purple. They don't even remember them." | "Don't go into the purple! DON'T GO INTO THE PURPLE!" / "Why don't they see!?" |
+
+The chef's "Damn! Another rat got in, come er' you little bugger!" is called out when he first sees the rat, and again after a death aboard (the 2D notice re-arms on death). It shows as a subtitle while he is within 15 m.
+
+All of it is subtitles only: no voice takes yet. The performers turn to the rat while he talks to them, and their performances settle without stopping.
+
+### The chef's chase
+
+The 2D galley is an escape, not a fight, and so is this one.
+
+- **Who he chases:** the rat in the galley that he can see. He stays inside the galley. A rat that has just appeared there (a respawn or the Ship Galley checkpoint) goes unseen until it moves, so arriving never costs Sanity before the player can act.
+- **His speed:** 205 cm/s at most, so the rat outruns him slowly at a run (225) and quickly at a sprint (380). He steers round the furniture.
+- **His blow:** in reach (95 cm) he raises the cleaver and brings it down where the rat was. If it lands, it costs one of Chuck's five Sanity (the 2D 20 of 100). After a blow that lands he stands over it 1.4 s longer.
+- **Safe places:** he can't reach under the work table or the counter, or anywhere a man's reach is blocked overhead. After 5 s unable to reach, or once the rat leaves the galley, he shakes the cleaver after it, then walks back to his board.
+
+### The fencing
+
+The two fence in eight-beat phrases on their ground, forward of the fore mast:
+
+1. One advances and lunges, and the other retreats and parries.
+2. Then either the other answers, so they end where they began, or the first presses again, so they move a step along the deck.
+3. They turn a little in each recovery.
+
+Whoever leads, and which way they turn, keeps both on their ground and inside the rail. They stand side-on in a crouch, on feet that are planted and stepped one at a time, each with a cutlass. The other fist rests on the hip.
+
+Their blades fence at a man's chest height, over the rat's head. What hurts him is their feet (the rat in a stance, or in the way of an advance or lunge) and walking into them. Each costs one Sanity, as the 2D swordsmen's 15 of 100.
+
+### Tests (milestone 3)
+
+- **Three new trials, 15 in all:**
+  - `crew_talk`: each pirate with lines, talked to twice. The first conversation must be his first lines exactly, the second his repeat lines.
+  - `chef_chase`: into the galley. The chef must see the rat and chase it. Under the work table nothing may reach the rat, and the chef must give up. The rat then gets out of the galley alive.
+  - `fencers`: in front of a fencer's front foot the rat must be hurt. Well off their line, nothing may reach him. The fencers must stay on their ground, and no crew body may go into the hull's planking.
+- **Stills:** 15 crew stills (`Crew*`) and the trials' (`ShipPlay_ChefChase`, `ShipPlay_ChefUnderTable`, `ShipPlay_Fencers`, `ShipPlay_CrewTalk`).
+- **Logs:** `CHUCK_SHIP_PIRATE` gives each pirate's state after the stills (props, grip error, foot sink). `CHUCK_SHIP_VIEW` now logs the frame time.
+- **Verify-Package** expects 15 trials.
 
 ## The ship's score (November 2)
 
@@ -190,4 +269,4 @@ The user supplied the soundtrack while milestone 2 was being built: "here is the
 - **The test:** under `-ChuckShipTest` it starts 2 s before its end, and `CHUCK_SHIP_MUSIC_CHECK` confirms it loops. Verify-Package requires that check.
 - **Not checked:** I have not heard it on speakers, and I haven't checked the mix against the sea wash or the loop's seam.
 
-The pirates' voices are still the user's to supply.
+The pirates' voices are still the user's to supply. Until then their lines are subtitles only (milestone 3).

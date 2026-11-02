@@ -2,7 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 2 (latest) — the pirate ship's weather deck, rig and sea, and its score (Claude)
+## November 2 (latest, later) — the pirate ship's crew (Claude)
+
+- **Asked:** "Do the next part" (milestone 3 of [../regions/SHIP.md](../regions/SHIP.md)); then "These are the mustachioed pirates ... make all the pirates have mustaches and not full beard". Asked which pirates should be women: "None for now". The mustache flag is for later.
+- **Source:** `main` at 8874f5b8.
+- **Built** ([../SHIP.md](../SHIP.md), milestone 3):
+  - `ShipCrew.cpp/.h` (new): `AShipCrew` places the eight, gives them their 2D lines, hands them the beat (`ShipScore`, started by `DockGameMode`), runs the fencing phrases and the fencers' hits, and tracks `WorstHullOut`. Spawned by `ShipSetting.cpp`.
+  - `DockNPCPirate.inl` (new, included by `DockNPC.cpp`): the performances, the chef's state machine (Work/Notice/Chase/Swing/Lost/Return), the props and Jeffries' ropes.
+  - `DockNPC.cpp/.h`: eight `EDockHuman` pirate kinds (loaded only by the ship), `DrunkSway` and `Jog` clips (`Clips[9]`), `FFenceCue`, the pirate API, turning only while talking for performers, pirate shouts as ambient subtitles.
+  - Kit: `humans.json` (eight specs, `skin_subsurface`, moustache-only grooms), `build_npc_humans.py` (`tricorn` hat, `sash`, `moustache_size/droop/out`), `build_npc_mocap.py` and `Fetch-CMUMocap.ps1` (137_15, 16_35; `-- Clip` builds only those), `import_npc_humans.py` (`clip:Name`), `build_pirate_props.py` (new: cutlass, cleaver, concertina ends and bellows).
+  - `ShipTest.cpp`: crew and face stills, `CHUCK_SHIP_CREW`/`CHUCK_SHIP_PIRATE` logs, frame time in `CHUCK_SHIP_VIEW`, trials `crew_talk`, `chef_chase`, `fencers` (15 in all). `Verify-Package.ps1` expects 15.
+- **Tested:**
+  - Uncooked: 15/15 trials; all ten first/repeat line checks; mustache face stills (two grooms each, three on the dancer) in `Local/PirateReview/faces_moustache.png`.
+  - Packaged `Builds/ShipCrewCandidate`: Verify-Package 182 passes (`Local/verify-package-20261102-111230.log`); ship `Local/verify-ship-20261102-115340.log`: `CHUCK_SHIP_TEST failures=0 trials=15 passed=15`, music check 0 failures; `CHUCK_SHIP_CHEF notices=1 swings=2 hits=2 state=Lost` (he gave up, the rat escaped); `CHUCK_SHIP_FENCERS near_hits=1 far_hits=0 fence_out=0.0 hull_out=0.0 parry_gap=1.5`; concertina grip 2.1 cm, chef grip 3.2 cm, no foot sink. Verify-Menu 42/42 (`Local/shipcrew-verify-menu.log`).
+  - The first candidate failed Verify-Menu at Ship Galley: the chef saw the rat at the checkpoint and hit him before the check (`Local/verify-menu-20261102-105625-ShipGalley.log`). Fixed: a rat that has just appeared goes unseen until it moves 50 cm. Rebuilt and re-verified.
+  - Deck views held the 60 fps cap (16.7 ms) at 1280×720; the uncapped cost was not measured.
+  - Not played by hand; no Xbox pad.
+- **Remaining flaws:**
+  - No voices (subtitles only), waiting on the user's takes.
+  - The chef's chop grip drifts up to about 6.6 cm and the cheering toast's about 5 cm at their extremes.
+  - The Blender review renders don't show strand hair; only in-engine stills do.
+  - The default skin subsurface (1.2, 0.45, 0.3) still reddens other NPCs in strong sun; only the crew have the milder value.
+  - Blades have no collision with each other (the parry is posed, 2–3 cm apart).
+- **Contract compatibility:** no rig, slot or socket changes on Chuck. New `EDockHuman` values before `Count`; `Clips[9]`; new public `ADockNPC` and `AShipCrew` API; the kit's new `tricorn`, `sash`, moustache and `skin_subsurface` options are optional (old specs build unchanged).
+- **Binary/LFS:** eight pirate folders (meshes, textures, grooms), two clips, four props and their materials, two BVH takes; about 150 MB, all LFS.
+- **Launcher:** promoted as ShipCrew (see the promotion receipt).
+
+Next part of the work could be done by either — preference: Claude (milestone 4, the chest and the ending; the mustache flag when you want it; play the crew by hand first).
+
+## November 2 — the pirate ship's weather deck, rig and sea, and its score (Claude)
 
 - **Asked:** "Do the next part of the ship" (milestone 2 of [../regions/SHIP.md](../regions/SHIP.md)); then the user supplied `ship.wav`, "here is the soundtrack to add".
 - **Source:** `main` at f0faf7b9.
