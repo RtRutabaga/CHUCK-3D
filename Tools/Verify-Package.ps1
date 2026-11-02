@@ -218,12 +218,16 @@ if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 
 # The pirate ship, milestone 1 (Claude, 2026-11-01; docs/SHIP.md): the real character crawls to the rubble crevice's end
 # and the escape plays onto the ship; the ship's checks; stills of every space; then aboard: through the doors to the
 # galley and through the crew quarters to the cabin, down the ladder into the hold and back up, over the side into the sea
-# (an Astral death, back in the compartment), and back into the crawlway through the masonry and out.
+# (an Astral death, back in the compartment), and back into the crawlway through the masonry and out. Milestone 2
+# (2026-11-02): the weather deck's checks (rail, main top, ladders, grips, sails, sea); up and down the companion ladder
+# and the quarterdeck's; up the rope ladder to the main top, onto the main yard and out to the yardarm, into the sea and
+# back on deck; the drop from the yard onto the deck; the rail holds him.
 $shipLog=Join-Path $evidence ('verify-ship-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $shipProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$shipLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_ESCAPE_TEST pass=1 plays=1 finishes=1 out=1 space=Arrival shots=3' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_CHECK failures=0 missing=0' -Quiet) -or
-   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=6 passed=6 ship_check=0 rats=16 ' -Quiet)) {
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=12 passed=12 ship_check=0 rats=16 jars=23 ladders=5 ' -Quiet)) {
     throw "Ship verification failed. Inspect $shipLog"
 }
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen

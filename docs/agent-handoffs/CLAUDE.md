@@ -2,7 +2,37 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 1 (latest) — the swing carries its momentum into the leap (Claude)
+## November 2 (latest) — the pirate ship's weather deck, rig and sea, and its score (Claude)
+
+- **Asked:** "Do the next part of the ship" (milestone 2 of [../regions/SHIP.md](../regions/SHIP.md)); then the user supplied `ship.wav`, "here is the soundtrack to add".
+- **Source:** `main` at f0faf7b9.
+- **Built** ([../SHIP.md](../SHIP.md), milestone 2 and "The ship's score"):
+  - `ShipDeck.inl` (new): the open weather deck (post-and-rail bulwarks, quarterdeck rail and break ladders, companion hatch and ladder, helm and binnacle, skylight, capstan, bitts, windlass, catheads and anchors, fife and pin rails with coils, the bell, stores); the rig (masts, tops, yards, shrouds with ratlines, futtocks, backstays, stays, lifts, braces, halyards, the spanker); eight sails rebuilt each frame; the black flag; the rope ladder to the main top; 12 main-yard swing grips.
+  - `ShipSea.inl` (new): the sea's ring mesh round the waterline out to 400 km, with a hidden curtain inside the planking.
+  - `Tools/create_ship_sea.py` (new): `M_ShipSea` (WPO waves, tilt, flare-following edge ring, foam) and `M_ShipSail` (two-sided foliage canvas) in `/Game/Art/Ship`.
+  - `ShipSetting.cpp/.h`: planking stops at the rail line; the deck floors gain the companion and skylight holes; the sky atmosphere, volumetric clouds and the camera-dependent sky light; `Rock()` tilts the sea, sun and sky planet; `EShipSpawn::Deck`; respawn from the last space after going over the side; the check extended (6 spawns, 20 rail places, the main top, 5 ladders, 12 grips, 8 sails, flag, sea material).
+  - `ShipTest.cpp`: 18 more stills and six trials (deck_up, deck_down, quarterdeck, rigging, yard_drop, rail), 12 in all.
+  - Ship score: `SourceAssets/Audio/Ship.wav` (the user's file, byte copy) → `/Game/Art/Audio/SW_Ship` (looping, 207.7 s) by `Tools/import_ship_music.py`. `DockGameMode.cpp` fades it in aboard (3 s, 0.45) and logs `CHUCK_SHIP_MUSIC_CHECK`; the music-duck smoke test now expects 10 tracks.
+  - `DockMenu.cpp` and `Verify-Menu.ps1`: the Ship Deck checkpoint. `Verify-Package.ps1`: ship trials=12 and the music check.
+- **Tested:**
+  - Uncooked: `CHUCK_SHIP_CHECK failures=0` (168,826 triangles), 12/12 trials, escape pass.
+  - Packaged `Builds/ShipDeckCandidate`: Verify-Package 182 passes (`Local/verify-package-20261101-224010.log`); ship `Local/verify-ship-20261101-232114.log`: 12/12 trials, `CHUCK_SHIP_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1`. Verify-Menu 42/42 (`Local/shipdeck-verify-menu.log`).
+  - The first package with the music failed the smoke test's music-duck check (it expected 9 tracks); fixed and rebuilt.
+  - Stills: `SourceAssets/Setting/Review/Ship_*.png` (deck, rig, sails, sea, waterline, yard catch).
+  - Not played by hand; no Xbox pad; no frame-time measurement; the music not heard on speakers.
+- **Remaining flaws:**
+  - A faint darker band just below the horizon.
+  - Furniture and fittings are simple shapes; the rigging has no collision.
+  - His paws pass through the furled sail's roll on the main yard.
+  - No camera roll (by design); only the sea, sun and sky move.
+  - The sails are animated shapes, not cloth simulation.
+- **Contract compatibility:** no rig, slot, clip or socket changes. New `EShipSpawn::Deck` (ShipSpawns 6); new public `AShipSetting` getters (`GetGrips`, `GetSails`, `GetSeaTilt`); new assets `M_ShipSea`, `M_ShipSail`, `SW_Ship`; `MusicTracks` now 10.
+- **Binary/LFS:** `Ship.wav` (39.9 MB), `SW_Ship.uasset` (25.4 MB), the two materials and 23 review PNGs, all LFS.
+- **Launcher:** promoted as ShipDeck (see the promotion receipt).
+
+Next part of the work could be done by either — preference: Claude (milestone 3, the crew and Jeffries; play the deck by hand first).
+
+## November 1 — the swing carries its momentum into the leap (Claude)
 
 - **Asked:** the swing felt like it slowed or paused, then he jumped "unrealistically forward". He should "really feel the momentum": a good back-and-forth swing should carry him forward realistically on the forward swing and jump.
 - **Source:** `main` at efc59b91.

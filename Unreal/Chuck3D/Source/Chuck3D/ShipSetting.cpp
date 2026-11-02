@@ -13,6 +13,7 @@
 #include "Components/PostProcessComponent.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
+#include "ChuckCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Engine/PostProcessVolume.h"
@@ -130,7 +131,7 @@ namespace
 
     struct FParts
     {
-        FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest;
+        FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging;
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -162,12 +163,15 @@ namespace
     const TCHAR* GlassMat = TEXT("/Game/Art/Materials/M_WindowGlass.M_WindowGlass");
     const TCHAR* FlameMat = TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame");
     const TCHAR* ChestMat = TEXT("/Game/Art/Materials/M_AgedDockTimber.M_AgedDockTimber");   // sea chests and the captain's
-    const TCHAR* SeaMat = TEXT("/Game/Art/ChultTemple/M_TempleRiftSea.M_TempleRiftSea");
+    const TCHAR* SeaMat = TEXT("/Game/Art/Ship/M_ShipSea.M_ShipSea");   // Tools/create_ship_sea.py
 
     // ------------------------------------------------------------------ openings in the planking
     struct FOpening { float Side, X0, X1, Z0, Z1; bool bLid; };
     // Rows of the hull's mesh (cm above the keel): every opening's sill and head is one.
-    const float Rows[] = {0, 1, 40, 80, 130, 190, 250, WaterZ, LowerZ, HoleZ0, 395, 435, HoleZ1, 500, DeckBeam, DeckZ, 630, RailZ};
+    // (Above the weather deck the planking stops a little over it: the waist's at WaistTopZ, the quarterdeck's at
+    // QuarterTopZ. Posts and rails stand above, ShipDeck.inl.)
+    const float Rows[] = {0, 1, 40, 80, 130, 190, 250, WaterZ, LowerZ, HoleZ0, 395, 435, HoleZ1, 500, DeckBeam, DeckZ, WaistTopZ, 650, 700, QuarterTopZ};
+    float PlankTopAt(float X) { return X < QuarterFore - .1f ? QuarterTopZ : WaistTopZ; }
     constexpr float PortZ0 = 395, PortZ1 = 450;
     const TArray<FOpening>& Openings()
     {
@@ -201,6 +205,9 @@ namespace
         return FVector(-Hx, Side, -Hz).GetSafeNormal();
     }
 
+    // The bowsprit: its heel between the bitts on the deck, out over the stem and up (T 0..1 along it).
+    FVector BowspritAt(float T) { return FMath::Lerp(FVector(BowX - 170, 0, DeckZ + 38), FVector(BowX + 650, 0, DeckZ + 360), T); }
+
     void BuildHull(FParts& P)
     {
         TArray<float> Xs;
@@ -212,7 +219,7 @@ namespace
                 for (int32 J = 0; J + 1 < NR; ++J)
                 {
                     const float X0 = Xs[I], X1 = Xs[I + 1], Z0 = Rows[J], Z1 = Rows[J + 1];
-                    if (CellOpen(Side, X0, X1, Z0, Z1)) continue;
+                    if (CellOpen(Side, X0, X1, Z0, Z1) || Z1 > PlankTopAt((X0 + X1) * .5f) + .1f) continue;
                     auto Pt = [&](float X, float Z, bool bIn) { return J == 0 && Z < .5f ? FVector(X, 0, FMath::Max(Z, BottomZ(X))) : HullPoint(X, FMath::Max(Z, BottomZ(X)), Side, bIn); };
                     const FVector N00 = HullNormal(X0, Z0, Side), N10 = HullNormal(X1, Z0, Side), N11 = HullNormal(X1, Z1, Side), N01 = HullNormal(X0, Z1, Side);
                     P.Hull.Quad(Pt(X0, Z0, false), Pt(X1, Z0, false), Pt(X1, Z1, false), Pt(X0, Z1, false), N00, N10, N11, N01);
@@ -247,13 +254,17 @@ namespace
                 P.Iron.B(O.X1, O.X1 + 5, Y - 2, Y + 2, O.Z0, O.Z1);
             }
         }
-        // The rail's cap, the length of each side.
+        // The planking's top edge, the length of each side, and where the quarterdeck's higher planking steps down to
+        // the waist's.
         for (float Side : {1.f, -1.f})
+        {
             for (int32 I = 0; I + 1 < Xs.Num(); ++I)
             {
-                const float X0 = Xs[I], X1 = Xs[I + 1];
-                P.Hull.Flat(HullPoint(X0, RailZ, Side, false), HullPoint(X1, RailZ, Side, false), HullPoint(X1, RailZ, Side, true), HullPoint(X0, RailZ, Side, true), FVector::UpVector);
+                const float X0 = Xs[I], X1 = Xs[I + 1], Z = PlankTopAt((X0 + X1) * .5f);
+                P.Hull.Flat(HullPoint(X0, Z, Side, false), HullPoint(X1, Z, Side, false), HullPoint(X1, Z, Side, true), HullPoint(X0, Z, Side, true), FVector::UpVector);
             }
+            P.Hull.Flat(HullPoint(QuarterFore, WaistTopZ, Side, false), HullPoint(QuarterFore, QuarterTopZ, Side, false), HullPoint(QuarterFore, QuarterTopZ, Side, true), HullPoint(QuarterFore, WaistTopZ, Side, true), FVector::ForwardVector);
+        }
         // The wales: two heavy strakes along the outside, and the stem.
         for (float Z : {LowerZ - 20, DeckZ + 10})
             for (float Side : {1.f, -1.f})
@@ -268,7 +279,7 @@ namespace
                     P.Wood.Flat(A - FVector(0, 0, 9), Bp - FVector(0, 0, 9), Bp + N1 * 7 - FVector(0, 0, 9), A + N0 * 7 - FVector(0, 0, 9), FVector::DownVector);
                 }
         P.Wood.Box(FVector(BowX + 6, 0, (BottomZ(BowX) + RailZ + 60) * .5f), FVector(10, 0, 0), FVector(0, 9, 0), FVector(0, 0, (RailZ + 60 - BottomZ(BowX)) * .5f));
-        P.Wood.Spar(FVector(BowX - 100, 0, RailZ + 10), FVector(BowX + 650, 0, RailZ + 260), 20, 10);   // the bowsprit
+        P.Wood.Spar(BowspritAt(0), BowspritAt(1), 20, 10);   // the bowsprit, its heel in the bitts on the deck
         P.Wood.Box(FVector(0, 0, -8), FVector(1500, 0, 0), FVector(0, 14, 0), FVector(0, 0, 9));          // the keel
 
         // The transom: planked across the stern, with the cabin's four stern windows.
@@ -295,14 +306,9 @@ namespace
             P.Wood.B(SternX - 4, SternX + 6, C - WHalf, C + WHalf, (WZ0 + WZ1) * .5f - 2, (WZ0 + WZ1) * .5f + 2);
             P.Hidden.B(SternX - 12, SternX + 2, C - WHalf, C + WHalf, WZ0, WZ1);
         }
-        // The stern's bulwark round the quarterdeck.
-        for (float Side : {1.f, -1.f})
-            for (float X = SternX; X < QuarterFore; X += 25)
-            {
-                const float H0 = OuterAt(X, RailZ), H1 = OuterAt(X + 25, RailZ);
-                P.Hull.Flat(FVector(X, Side * H0, RailZ), FVector(X + 25, Side * H1, RailZ), FVector(X + 25, Side * H1 * .99f, QuarterZ + 100), FVector(X, Side * H0 * .99f, QuarterZ + 100), FVector(0, Side, 0));
-                P.Hull.Flat(FVector(X, Side * (H0 - Shell), RailZ), FVector(X + 25, Side * (H1 - Shell), RailZ), FVector(X + 25, Side * (H1 - Shell), QuarterZ + 100), FVector(X, Side * (H0 - Shell), QuarterZ + 100), FVector(0, -Side, 0));
-            }
+        // (The transom stands to QuarterRailZ: the taffrail. The quarterdeck's sides are planked to QuarterTopZ, with
+        // posts and rails above, ShipDeck.inl.)
+        P.Hull.B(SternX - 12, SternX + 2, -OuterAt(SternX + 1, RailZ) * .97f, OuterAt(SternX + 1, RailZ) * .97f, QuarterRailZ, QuarterRailZ + 8);
     }
 
     // ------------------------------------------------------------------ floors, decks, bulkheads
@@ -442,6 +448,9 @@ namespace
     }
     // A hanging lantern: an iron frame, glass, a flame; a light under the beam, swung by the sea.
     struct FLamp { FVector At; float Intensity, Radius; };
+
+#include "ShipDeck.inl"
+#include "ShipSea.inl"
 }
 
 FVector ShipOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -800000, 0); }
@@ -465,6 +474,7 @@ namespace
         case EShipSpawn::Quarters: return {{-250, 60}, LowerZ, 180};
         case EShipSpawn::Galley: return {{400, 160}, LowerZ, 0};
         case EShipSpawn::Cabin: return {{-1140, 0}, LowerZ, 180};
+        case EShipSpawn::Deck: return {{-80, 160}, DeckZ, 0};
         default: return {{235, 210}, LowerZ, 112};
         }
     }
@@ -472,15 +482,25 @@ namespace
 FVector ShipSpawn(EShipSpawn S) { const FSpawnDef D = SpawnDef(S); return ShipWorld(FVector(D.At.X, D.At.Y, D.Floor + 34.65f)); }
 float ShipSpawnYaw(EShipSpawn S) { return SpawnDef(S).Yaw; }
 
+namespace
+{
+    int32 GLastSpace = -1;   // the last space he was in aboard (AShipSetting::Tick): over the side, he came from there
+    bool OutsideHull(const FVector& L) { return FMath::Abs(L.Y) > OuterAt(L.X, FMath::Clamp(static_cast<float>(L.Z), 1.f, RailZ)) + 5 || L.X < SternX - 12 || L.X > BowX + 5; }
+}
 int32 ShipSpaceAt(const FVector& World)
 {
     if (!InShip(World)) return -1;
     const FVector L = ShipLocal(World);
-    // Outside the planking (gone over the side), by where along the ship he is on the lower deck.
-    const bool bOutside = FMath::Abs(L.Y) > OuterAt(L.X, FMath::Clamp(static_cast<float>(L.Z), 1.f, RailZ)) + 5 || L.X < SternX - 12;
-    if (bOutside) return L.X > ArrivalAft && L.X < ArrivalFore ? int32(EShipSpawn::Arrival) : L.X >= ArrivalFore ? int32(EShipSpawn::Galley) : L.X > CabinFore ? int32(EShipSpawn::Quarters) : int32(EShipSpawn::Cabin);
+    // Outside the planking (gone over the side, or out along a yard): the space he was last in, or else by where along
+    // the ship he is on the lower deck.
+    if (OutsideHull(L))
+    {
+        if (GLastSpace >= 0) return GLastSpace;
+        return L.X > ArrivalAft && L.X < ArrivalFore ? int32(EShipSpawn::Arrival) : L.X >= ArrivalFore ? int32(EShipSpawn::Galley) : L.X > CabinFore ? int32(EShipSpawn::Quarters) : int32(EShipSpawn::Cabin);
+    }
     if (L.Z < LowerZ - 20 && L.Z > HoldZ - 40 && L.X > HoldAft && L.X < HoldFore) return int32(EShipSpawn::Hold);
-    if (L.Z > QuarterZ + 40) return -1;
+    // On the weather deck or the quarterdeck, or above them (the rig).
+    if (L.Z > (L.X < QuarterFore ? QuarterZ : DeckZ) - 10) return int32(EShipSpawn::Deck);
     if (L.X > ArrivalAft && L.X < ArrivalFore) return int32(EShipSpawn::Arrival);
     if (L.X >= ArrivalFore && L.X < GalleyFore) return int32(EShipSpawn::Galley);
     if (L.X > CabinFore && L.X <= ArrivalAft) return int32(EShipSpawn::Quarters);
@@ -489,8 +509,8 @@ int32 ShipSpaceAt(const FVector& World)
 }
 const TCHAR* ShipSpaceName(int32 Space)
 {
-    static const TCHAR* Names[] = {TEXT("Arrival"), TEXT("Hold"), TEXT("Quarters"), TEXT("Galley"), TEXT("Cabin")};
-    return Space >= 0 && Space < 5 ? Names[Space] : TEXT("None");
+    static const TCHAR* Names[] = {TEXT("Arrival"), TEXT("Hold"), TEXT("Quarters"), TEXT("Galley"), TEXT("Cabin"), TEXT("Deck")};
+    return Space >= 0 && Space < ShipSpawns ? Names[Space] : TEXT("None");
 }
 bool ShipRespawn(const FVector& World, FVector& Out)
 {
@@ -501,7 +521,7 @@ bool ShipRespawn(const FVector& World, FVector& Out)
 }
 bool IsShipSpawn(const FVector& World, float& Yaw)
 {
-    for (int32 I = 0; I < 5; ++I)
+    for (int32 I = 0; I < ShipSpawns; ++I)
         if (FVector::Dist(World, ShipSpawn(EShipSpawn(I))) < 1.f) { Yaw = ShipSpawnYaw(EShipSpawn(I)); return true; }
     return false;
 }
@@ -591,31 +611,51 @@ void AShipSetting::BuildEnvironment()
     { C->SetupAttachment(RootComponent); C->SetWorldLocationAndRotation(G + At, R); C->RegisterComponent(); };
     // A clear afternoon at sea: the sun high on the starboard quarter, so its light comes in through the starboard
     // ports and down through the gratings.
-    auto* Sun = NewObject<UDirectionalLightComponent>(this);
-    Sun->SetMobility(EComponentMobility::Movable); Sun->SetAtmosphereSunLight(true);
-    Sun->SetIntensity(5.f); Sun->SetLightColor(FLinearColor(1.f, .95f, .86f));
-    Sun->DynamicShadowDistanceMovableLight = 6000; Sun->DynamicShadowCascades = 3;
-    Sun->SetVolumetricScatteringIntensity(2.f);
-    Attach(Sun, FVector::ZeroVector, FRotator(-38, 62, 0));
-    // (Its sky is hidden behind the sea box; the sky light's capture needs it.)
-    auto* Sky = NewObject<USkyAtmosphereComponent>(this); Sky->SetRayleighScattering(FLinearColor(.13f, .43f, .66f)); Attach(Sky, FVector(0, 0, -WaterZ));
+    auto* Sun_ = NewObject<UDirectionalLightComponent>(this);
+    Sun_->SetMobility(EComponentMobility::Movable); Sun_->SetAtmosphereSunLight(true);
+    Sun_->SetIntensity(5.f); Sun_->SetLightColor(FLinearColor(1.f, .95f, .86f));
+    Sun_->DynamicShadowDistanceMovableLight = 6000; Sun_->DynamicShadowCascades = 3;
+    Sun_->SetVolumetricScatteringIntensity(2.f); Sun_->bCastCloudShadows = true;
+    Attach(Sun_, FVector::ZeroVector, FRotator(-38, 62, 0));
+    Sun = Sun_;
+    SunBase = Sun->GetComponentQuat();
+    // The open sky (milestone 2: the sea box is gone). Its planet is centred under the waterline, and moved every frame
+    // as the sea rocks so the horizon tilts with the sea (Rock); its ground, should any show, is the far sea's blue.
+    Sky = NewObject<USkyAtmosphereComponent>(this);
+    Sky->TransformMode = ESkyAtmosphereTransformMode::PlanetCenterAtComponentTransform;
+    Sky->SetRayleighScattering(FLinearColor(.13f, .43f, .66f)); Sky->SetMieScatteringScale(.008f); Sky->SetHeightFogContribution(1.f);
+    Sky->SetGroundAlbedo(FColor(8, 28, 44));
+    Attach(Sky, FVector(0, 0, WaterZ - Sky->BottomRadius * 100000.f));
+    // Fair-weather clouds far off (the fall cutscene's cloud material, thinner and higher: they read as cloud kilometres away).
+    if (!FParse::Param(FCommandLine::Get(), TEXT("ChuckShipNoClouds")))
+        if (auto* CloudMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Cutscenes/FallToChult/MI_FallClouds.MI_FallClouds")))
+        {
+            auto* Clouds = NewObject<UVolumetricCloudComponent>(this);
+            Clouds->SetLayerBottomAltitude(1.4f); Clouds->SetLayerHeight(1.6f);
+            auto* Mid = UMaterialInstanceDynamic::Create(CloudMaterial, this);
+            Mid->SetScalarParameterValue(TEXT("Cloud_GlobalCoverage"), -.18f);
+            Mid->SetScalarParameterValue(TEXT("Cloud_GlobalDensity"), .01f);
+            Clouds->SetMaterial(Mid);
+            Attach(Clouds);
+        }
     // Below decks the sky's fill is faint: without dynamic GI it would light the inside as if there were no hull.
     auto* Fill = NewObject<USkyLightComponent>(this);
     Fill->SetMobility(EComponentMobility::Movable); Fill->bRealTimeCapture = true;
     Fill->bLowerHemisphereIsBlack = true; Fill->SetLowerHemisphereColor(FLinearColor(.06f, .05f, .04f));
     Fill->SetIntensity(.22f); Attach(Fill, FVector(0, 0, 1500));
+    SkyFill = Fill;
     auto* Fog = NewObject<UExponentialHeightFogComponent>(this);
     // Thin: the sea box beyond must stay clear (a thicker fog whitened every opening); the volumetric fog near by shows the shafts.
     Fog->SetFogDensity(.0006f); Fog->SetFogHeightFalloff(.02f); Fog->SetFogMaxOpacity(.25f); Fog->SetVolumetricFog(true);
     Fog->SetVolumetricFogScatteringDistribution(.6f); Fog->SetVolumetricFogExtinctionScale(1.4f);
-    Fog->SetVolumetricFogDistance(2500); Fog->SetFogInscatteringColor(FLinearColor(.25f, .3f, .36f));
+    Fog->SetVolumetricFogDistance(2500); Fog->SetFogInscatteringColor(FLinearColor(.45f, .55f, .66f));   // (the sea's haze, as pale as the sky at the horizon)
     Attach(Fog, FVector(0, 0, WaterZ));
     auto* Post = NewObject<UPostProcessComponent>(this);
     Post->bUnbound = true; Post->Priority = 110;
     auto& S = Post->Settings;
     S.bOverride_AutoExposureMethod = true; S.AutoExposureMethod = AEM_Histogram;
     S.bOverride_AutoExposureMinBrightness = true; S.AutoExposureMinBrightness = -.6f;
-    S.bOverride_AutoExposureMaxBrightness = true; S.AutoExposureMaxBrightness = 3.f;
+    S.bOverride_AutoExposureMaxBrightness = true; S.AutoExposureMaxBrightness = 5.f;   // (3 below decks in milestone 1; the open deck is brighter)
     S.bOverride_AutoExposureBias = true; S.AutoExposureBias = -.4f;
     S.bOverride_BloomIntensity = true; S.BloomIntensity = .45f;
     S.bOverride_AmbientOcclusionIntensity = true; S.AmbientOcclusionIntensity = .7f;
@@ -623,23 +663,8 @@ void AShipSetting::BuildEnvironment()
     S.bOverride_LocalExposureShadowContrastScale = true; S.LocalExposureShadowContrastScale = .7f;
     S.bOverride_LocalExposureHighlightContrastScale = true; S.LocalExposureHighlightContrastScale = .8f;
     Attach(Post);
-    // The open sea all round, seen through every opening: the sanctum's sea-tear material, which draws the sea and the
-    // sky from the view ray alone (Tools/create_temple_rift_sea.py), on a great box round the ship; its sea at the waterline.
-    auto* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
-    auto* SeaBox = NewObject<UStaticMeshComponent>(this, TEXT("ShipSea"));
-    SeaBox->SetStaticMesh(Cube); SeaBox->SetCollisionEnabled(ECollisionEnabled::NoCollision); SeaBox->SetCastShadow(false);
-    SeaBox->SetWorldScale3D(FVector(3000, 3000, 3000));
-    Attach(SeaBox, FVector(0, 0, WaterZ));
-    if (auto* M = LoadObject<UMaterialInterface>(nullptr, SeaMat))
-    {
-        auto* Mid = UMaterialInstanceDynamic::Create(M, this);
-        Mid->SetScalarParameterValue(TEXT("SeaZ"), static_cast<float>(G.Z + WaterZ));
-        float SeaGain = .22f; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipSeaGain="), SeaGain);
-        Mid->SetScalarParameterValue(TEXT("Gain"), SeaGain);   // (tuned for the sanctum's darkness; the ship's interior is brighter)
-        SeaBox->SetMaterial(0, Mid);
-    }
-    else ++Missing;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SEA material=%s visible=%d bounds=%.0f at=%s"), *GetNameSafe(SeaBox->GetMaterial(0)), SeaBox->IsVisible(), SeaBox->Bounds.SphereRadius, *SeaBox->GetComponentLocation().ToString());
+    // The open sea (BuildSea): a real surface to the horizon, its waves meeting the hull.
+    BuildSea();
     // The sea against the hull and the ship's timbers working: a slow wash and creaks (SFX_ShipWash, SFX_ShipCreak_*).
     if (USoundBase* WashSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_ShipWash_00.SFX_ShipWash_00")))
     {
@@ -655,7 +680,7 @@ void AShipSetting::Build()
     UWorld* World = GetWorld();
     BuildEnvironment();
     FParts P;
-    GJars.Reset();
+    GJars.Reset(); GLastSpace = -1;
     BuildHull(P);
 
     // ---- Decks and floors.
@@ -663,14 +688,17 @@ void AShipSetting::Build()
     const FHole MainGrating{HatchX0, HatchX1, -HatchHalf, HatchHalf};
     const FHole ForeGrating{700, 820, -60, 60};
     const FHole AftGrating{-760, -640, -60, 60};
+    const FHole Companion{CompX0, CompX1, CompY0, CompY1};
+    const FHole Skylight{SkyX0, SkyX1, -SkyHalf, SkyHalf};
     Floor(P.Deck, HoldAft, HoldFore, HoldZ, 10, {});
     Floor(P.Deck, SternX + 2, GalleyFore, LowerZ, 15, {MainHatch});
     Beams(P.Wood, HoldAft, HoldFore, LowerBeam, LowerZ - 15 - LowerBeam, {MainHatch});
-    // The weather deck (closed for now, lit through its three gratings) and the quarterdeck, higher, over the cabin.
-    Floor(P.Deck, QuarterFore, BowX, DeckZ, 15, {MainGrating, ForeGrating, AftGrating});
-    Beams(P.Wood, QuarterFore, GalleyFore + 300, DeckBeam, DeckZ - 15 - DeckBeam, {MainGrating, ForeGrating, AftGrating});
-    Floor(P.Deck, SternX + 2, QuarterFore, QuarterZ, 15, {});
-    Beams(P.Wood, SternX + 2, QuarterFore, QuarterZ - 25, 10, {});
+    // The weather deck, open to the sky (its gratings still light the lower deck; the companion hatch has a ladder
+    // down to the crew quarters), and the quarterdeck, higher, over the cabin, with the cabin's skylight.
+    Floor(P.Deck, QuarterFore, BowX, DeckZ, 15, {MainGrating, ForeGrating, AftGrating, Companion});
+    Beams(P.Wood, QuarterFore, GalleyFore + 300, DeckBeam, DeckZ - 15 - DeckBeam, {MainGrating, ForeGrating, AftGrating, Companion});
+    Floor(P.Deck, SternX + 2, QuarterFore + 8, QuarterZ, 15, {Skylight});
+    Beams(P.Wood, SternX + 2, QuarterFore, QuarterZ - 25, 10, {Skylight});
     for (const FHole& H : {MainGrating, ForeGrating, AftGrating}) Grating(P, H, DeckZ, 15);
     // The quarterdeck's break: its face over the main deck, and under it inside, down to the main deck's beams.
     for (float Z = DeckBeam; Z < QuarterZ; Z += 25)
@@ -706,18 +734,18 @@ void AShipSetting::Build()
             P.WoodDecor.B(X, X + 25, Side > 0 ? H - 10 : -H, Side > 0 ? H : -H + 10, Z, Z + 14);
         }
 
-    // ---- The masts, stepped on the keel, through both decks and up into the sky; their partners at each deck.
+    // ---- The masts, stepped on the keel, through both decks; their partners at each deck. Above the deck: the rig
+    // (ShipDeck.inl).
     for (float MX : {MainMastX, ForeMastX})
     {
         P.Wood.Spar(FVector(MX, 0, HoldZ), FVector(MX, 0, DeckZ), MastR, MastR, 14);
-        P.WoodDecor.Spar(FVector(MX, 0, DeckZ), FVector(MX, 0, MX < 0 ? 2700 : 2450), MastR, 16, 14);
         for (float Z : {LowerZ, DeckBeam}) P.Wood.B(MX - 48, MX + 48, -48, 48, Z == LowerZ ? Z : Z - 6, Z == LowerZ ? Z + 6 : Z);
         for (float Z : {HoldZ + 60, LowerZ + 80, LowerZ + 170}) P.Iron.Spar(FVector(MX, 0, Z), FVector(MX, 0, Z + 6), MastR + 1.5f, MastR + 1.5f, 14);
-        // A fighting top and a yard (the sails come with the deck).
-        const float Top = MX < 0 ? 1900 : 1720;
-        P.WoodDecor.B(MX - 90, MX + 90, -110, 110, Top - 8, Top + 4);
-        P.WoodDecor.Spar(FVector(MX, -620, Top - 250), FVector(MX, 620, Top - 250), 9, 9, 8);
     }
+    BuildWeatherDeck(P);
+    BuildRig(P);
+    for (const FChuckClimbable& L : DeckLadders()) { AddChuckClimbable(L); ++Ladders; }
+    for (const FChuckSwingGrip& G : YardGrips()) { AddChuckSwingGrip(G); ++Grips; }
     // Stanchions under the lower deck's beams.
     for (float X : {-950.f, -150.f, 750.f}) P.Wood.B(X - 8, X + 8, -8, 8, HoldZ, LowerBeam);
 
@@ -947,6 +975,19 @@ void AShipSetting::Build()
     for (float Y : {-260.f, -180.f, 220.f}) Barrel(1090, Y, LowerZ, false, Y);
     Sack(860, -250, LowerZ, 30); Sack(820, -300, LowerZ, -20);
     if (TankardMesh) for (const FVector& T : {FVector(-300, -135, 0), FVector(-370, -205, 0), FVector(-330, -235, 0)}) Prop(TankardMesh, FVector(T.X, T.Y, LowerZ + 76), FRotator(0, T.X, 0));
+    // The weather deck's stores: crates lashed by the port rail forward (two high: from them he can see over it), water
+    // casks aft of the main mast to starboard, coils of rope.
+    for (const FVector& C : {FVector(640, 372, 0), FVector(706, 372, 0), FVector(640, 372, 1)})
+    {
+        const FVector At(C.X, C.Y, DeckZ + 30 + C.Z * 60);
+        Prop(CrateMesh, At, FRotator(0, C.Z * 4 - 2, 0));
+        P.Hidden.TurnedBox(At, FVector(30, 32.5f, 30), FRotator(0, C.Z * 4 - 2, 0));
+    }
+    for (const FVector& Bp : {FVector(-660, -330, 0), FVector(-660, -268, 0), FVector(-722, -300, 0)}) Barrel(Bp.X, Bp.Y, DeckZ, false, Bp.Y);
+    Prop(CoilMesh, FVector(-560, 140, DeckZ), FRotator(0, 40, 0));
+    Prop(CoilMesh, FVector(360, -160, DeckZ), FRotator(0, -20, 0));
+    Prop(CoilMesh, FVector(1180, 170, DeckZ), FRotator(0, 70, 0));
+    Prop(CoilMesh, FVector(-1330, 210, QuarterZ), FRotator(0, 10, 0));
 
     // ---- The ladder from the arrival compartment down into the hold (ChuckClimbable): rails and rungs on the hatch's fore edge.
     for (float Y : {-24.f, 24.f}) P.Wood.B(HatchX1 - 9, HatchX1 - 3, Y - 3, Y + 3, HoldZ, LowerZ + 15);
@@ -1037,6 +1078,9 @@ void AShipSetting::Build()
         }
     }
 
+    // ---- The sails and the flag (rebuilt every frame as they breathe: UpdateSails).
+    BuildSails();
+
     // ---- Emit.
     Emit(this, TEXT("ShipHull"), P.Hull, WoodMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipDeck"), P.Deck, DeckMat, true, true, Missing, Triangles);
@@ -1054,6 +1098,7 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipChest"), P.Chest, ChestMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipGlass"), P.Glass, GlassMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);
+    Emit(this, TEXT("ShipRigging"), P.Rigging, DarkMat, false, true, Missing, Triangles);   // the tarred standing rigging
     Emit(this, TEXT("ShipHidden"), P.Hidden, nullptr, true, false, Missing, Triangles);
 
     // ---- The crawlway through the masonry: on all fours in it, and on the floor just out of its mouth.
@@ -1064,14 +1109,154 @@ void AShipSetting::Build()
     for (const FVector& J : ShipJars()) if (AClayJar::PlaceAt(World, ShipWorld(J + FVector(0, 0, 2)), J.X * 3.f, 1)) ++JarsPlaced;
     for (const FVector& R : ShipRats()) if (AEnemyRat::PlaceAt(World, ShipWorld(R + FVector(0, 0, 2)), R.Y * 2.f)) ++RatsPlaced;
 
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_BUILT tris=%d missing=%d props=%d lamps=%d swingers=%d ladders=%d jars=%d rats=%d"),
-        Triangles, Missing, Props, Lamps.Num(), Swingers.Num(), Ladders, JarsPlaced, RatsPlaced);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_BUILT tris=%d missing=%d props=%d lamps=%d swingers=%d ladders=%d grips=%d sails=%d jars=%d rats=%d"),
+        Triangles, Missing, Props, Lamps.Num(), Swingers.Num(), Ladders, Grips, Sails.Num(), JarsPlaced, RatsPlaced);
 }
+
+namespace
+{
+    TArray<FSailDef> GSails;
+    constexpr int32 SailU = 16, SailV = 12, FlagU = 10, FlagV = 6;
+    // A two-sided sheet over a grid (U across, V down) from a shape function; Tris only when it is first made.
+    void GridMesh(TFunctionRef<FVector(float, float)> At, int32 NU, int32 NV, float SizeU, float SizeV, TArray<FVector>& V, TArray<FVector>& N, TArray<FVector2D>& UV, TArray<int32>* Tris)
+    {
+        V.Reset(); N.Reset(); UV.Reset();
+        const int32 Count = (NU + 1) * (NV + 1);
+        V.SetNumUninitialized(Count * 2); N.SetNumUninitialized(Count * 2); UV.SetNumUninitialized(Count * 2);
+        for (int32 J = 0; J <= NV; ++J)
+            for (int32 I = 0; I <= NU; ++I)
+            {
+                const float U = I / float(NU), W = J / float(NV);
+                const FVector P = At(U, W);
+                // The normal from nearby samples (kept off a staysail's head, where its two head corners meet).
+                const float E = .02f, Wn = FMath::Clamp(W, .03f, .97f);
+                const FVector DU = At(FMath::Min(1.f, U + E), Wn) - At(FMath::Max(0.f, U - E), Wn);
+                const FVector DV = At(U, FMath::Min(1.f, Wn + E)) - At(U, FMath::Max(0.f, Wn - E));
+                const FVector Nn = FVector::CrossProduct(DU, DV).GetSafeNormal();
+                const int32 K = J * (NU + 1) + I;
+                V[K] = P; N[K] = Nn; UV[K] = FVector2D(U * SizeU, W * SizeV) / 150;
+                V[K + Count] = P; N[K + Count] = -Nn; UV[K + Count] = UV[K];
+            }
+        if (!Tris) return;
+        Tris->Reset();
+        for (int32 J = 0; J < NV; ++J)
+            for (int32 I = 0; I < NU; ++I)
+            {
+                const int32 A = J * (NU + 1) + I, B = A + 1, C = A + NU + 2, D = A + NU + 1;
+                Tris->Append({A, C, B, A, D, C});
+                Tris->Append({A + Count, B + Count, C + Count, A + Count, C + Count, D + Count});
+            }
+    }
+    float SailWidth(const FSailDef& S) { return FMath::Max(FVector::Dist(S.A, S.B), FVector::Dist(S.D, S.C)); }
+    float SailHeight(const FSailDef& S) { return FMath::Max(FVector::Dist(S.A, S.D), FVector::Dist(S.B, S.C)); }
+}
+
+void AShipSetting::BuildSea()
+{
+    FSeaMesh M;
+    BuildSeaMesh(M);
+    SeaSurface = NewObject<UProceduralMeshComponent>(this, TEXT("ShipSeaSurface"));
+    SeaSurface->SetupAttachment(RootComponent); SeaSurface->SetWorldLocation(ShipOrigin()); SeaSurface->RegisterComponent();
+    SeaSurface->CreateMeshSection_LinearColor(0, M.V, M.T, M.N, M.UV0, M.UV1, M.UV2, TArray<FVector2D>(), TArray<FLinearColor>(), TArray<FProcMeshTangent>(), false);
+    SeaSurface->SetCollisionEnabled(ECollisionEnabled::NoCollision); SeaSurface->SetCastShadow(false);
+    SeaSurface->ComponentTags.Add(TEXT("Ship"));
+    if (auto* Mat = LoadObject<UMaterialInterface>(nullptr, SeaMat))
+    {
+        SeaMid = UMaterialInstanceDynamic::Create(Mat, this);
+        float Speed = 110.f; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipSeaSpeed="), Speed);
+        SeaMid->SetScalarParameterValue(TEXT("Speed"), Speed);
+        SeaSurface->SetMaterial(0, SeaMid);
+    }
+    else ++Missing;
+    Triangles += M.T.Num() / 3;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SEA verts=%d tris=%d material=%s"), M.V.Num(), M.T.Num() / 3, *GetNameSafe(SeaMid));
+}
+
+void AShipSetting::BuildSails()
+{
+    GSails = SailDefs();
+    // (The sails' canvas lets the sun through, as thin cloth does: Tools/create_ship_sea.py.)
+    auto* Canvas = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Ship/M_ShipSail.M_ShipSail"));
+    auto* Black = LoadObject<UMaterialInterface>(nullptr, DarkMat);
+    Missing += !Canvas + !Black;
+    TArray<FVector> V, N; TArray<FVector2D> UV; TArray<int32> T;
+    auto Make = [&](const TCHAR* Name, UMaterialInterface* Mat) -> UProceduralMeshComponent*
+    {
+        auto* M = NewObject<UProceduralMeshComponent>(this, Name);
+        M->SetupAttachment(RootComponent); M->SetWorldLocation(ShipOrigin()); M->RegisterComponent();
+        M->CreateMeshSection(0, V, T, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+        M->SetMaterial(0, Mat); M->SetCollisionEnabled(ECollisionEnabled::NoCollision); M->SetCastShadow(true);
+        M->ComponentTags.Add(TEXT("Ship"));
+        Triangles += T.Num() / 3;
+        return M;
+    };
+    for (int32 I = 0; I < GSails.Num(); ++I)
+    {
+        const FSailDef& S = GSails[I];
+        GridMesh([&S](float U, float W) { return SailPoint(S, U, W, 0); }, SailU, SailV, SailWidth(S), SailHeight(S), V, N, UV, &T);
+        Sails.Add(Make(*FString::Printf(TEXT("ShipSail%d"), I), Canvas));
+    }
+    GridMesh([](float U, float W) { return FlagPoint(U, W, 0); }, FlagU, FlagV, 150, 95, V, N, UV, &T);
+    Flag = Make(TEXT("ShipFlag"), Black);
+}
+
+void AShipSetting::UpdateSails()
+{
+    TArray<FVector> V, N; TArray<FVector2D> UV;
+    const float T = Clock;
+    for (int32 I = 0; I < Sails.Num() && I < GSails.Num(); ++I)
+    {
+        if (!Sails[I]) continue;
+        const FSailDef& S = GSails[I];
+        GridMesh([&S, T](float U, float W) { return SailPoint(S, U, W, T); }, SailU, SailV, SailWidth(S), SailHeight(S), V, N, UV, nullptr);
+        Sails[I]->UpdateMeshSection(0, V, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>());
+    }
+    if (Flag)
+    {
+        GridMesh([T](float U, float W) { return FlagPoint(U, W, T); }, FlagU, FlagV, 150, 95, V, N, UV, nullptr);
+        Flag->UpdateMeshSection(0, V, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>());
+    }
+}
+
+void AShipSetting::Rock()
+{
+    // The ship rides a long swell (user 2026-11-01: the sea and the horizon rock round a still hull, so nobody's feet,
+    // ladder or grip ever moves): the sea, its horizon, the sky and the sun roll about 1.5 degrees on the lamps' 7.3 s
+    // swell and pitch a little on a longer one. The sea's ring on the hull follows the planking's flare (M_ShipSea).
+    const float Roll = 1.5f * FMath::Sin(Clock * 2 * PI / 7.3f), Pitch = .6f * FMath::Sin(Clock * 2 * PI / 9.1f + .8f);
+    Tilt = FVector2D(Pitch, Roll);
+    const FQuat Q(FRotator(Pitch, 0, Roll));
+    const FVector Nn = Q.RotateVector(FVector::UpVector);
+    if (SeaMid) SeaMid->SetVectorParameterValue(TEXT("Tilt"), FLinearColor(-Nn.X / Nn.Z, -Nn.Y / Nn.Z, 0, 0));
+    if (Sun) Sun->SetWorldRotation(Q * SunBase);
+    if (Sky) Sky->SetWorldLocation(ShipWorld(FVector(0, 0, WaterZ)) - Nn * (Sky->BottomRadius * 100000.f));
+}
+
+float AShipSetting::SeaPlaneZ(const FVector& World) const
+{
+    const FVector Nn = FQuat(FRotator(Tilt.X, 0, Tilt.Y)).RotateVector(FVector::UpVector);
+    const FVector W0 = ShipWorld(FVector(0, 0, WaterZ));
+    return static_cast<float>(W0.Z - (Nn.X * (World.X - W0.X) + Nn.Y * (World.Y - W0.Y)) / Nn.Z);
+}
+
 
 void AShipSetting::Tick(float Dt)
 {
     Super::Tick(Dt);
     Clock += Dt;
+    Rock();
+    UpdateSails();
+    // Where he was last aboard (over the side, he returns there); the sky's fill fuller when the view is out on deck.
+    if (const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
+        if (InShip(Pawn->GetActorLocation()) && !OutsideHull(ShipLocal(Pawn->GetActorLocation()))) GLastSpace = ShipSpaceAt(Pawn->GetActorLocation());
+    if (SkyFill)
+        if (const APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0))
+        {
+            const FVector C = ShipLocal(Cam->GetCameraLocation());
+            const bool bOut = OutsideHull(C) || C.Z > (C.X < QuarterFore ? QuarterZ : DeckZ) - 5;
+            const float Want = bOut ? .75f : .22f, Now = SkyFill->Intensity;
+            if (FMath::Abs(Want - Now) > .002f) SkyFill->SetIntensity(FMath::Lerp(Now, Want, 1 - FMath::Exp(-4.f * Dt)));
+        }
     // The ship rides a long swell: the lamps and hammocks swing with it (about a 7 s roll), the lamps' flames flicker.
     const float Roll = 4.f * FMath::Sin(Clock * 2 * PI / 7.3f), Pitch = 1.6f * FMath::Sin(Clock * 2 * PI / 9.1f + .8f);
     for (int32 I = 0; I < Swingers.Num(); ++I)
@@ -1097,7 +1282,7 @@ int32 AShipSetting::Check() const
     FCollisionQueryParams Q(SCENE_QUERY_STAT(ShipCheck), false);
     if (const APawn* Chuck = UGameplayStatics::GetPlayerPawn(World, 0)) Q.AddIgnoredActor(Chuck);
     // Every spawn stands on its floor, with room for him.
-    for (int32 I = 0; I < 5; ++I)
+    for (int32 I = 0; I < ShipSpawns; ++I)
     {
         const FVector S = ShipSpawn(EShipSpawn(I));
         FHitResult Hit;
@@ -1124,8 +1309,30 @@ int32 AShipSetting::Check() const
         const bool bHull = World->LineTraceSingleByChannel(Hit, ShipWorld(FVector(0, 0, HoldZ + 60)), ShipWorld(FVector(0, Side * 700, HoldZ + 60)), ECC_Visibility, Q);
         Failures += !bHull;
     }
+    // The deck's rail: the gaps between its posts leave him no room to stand on the planking and slip through.
+    int32 RailRoom = 0;
+    for (float Side : {1.f, -1.f})
+        for (float X : {-1300.f, -620.f, 30.f, 600.f, 1200.f})
+            for (float Dx : {0.f, 27.f})
+            {
+                const float Xx = X + Dx, Top = PlankTopAt(Xx);
+                const FVector At = ShipWorld(FVector(Xx, Side * (OuterAt(Xx, Top) - 5), Top + 36));
+                RailRoom += !World->OverlapAnyTestByChannel(At, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(15.f, 32.5f), Q);
+            }
+    Failures += RailRoom;
+    // The main top: a floor with room, forward of the lubber's hole (where the rope ladder lets him off).
+    {
+        const FVector At = ShipWorld(FVector(TopLadderX + 40, 0, MainTopZ + 36));
+        FHitResult Hit;
+        const bool bFloor = World->LineTraceSingleByChannel(Hit, At, At - FVector(0, 0, 60), ECC_Visibility, Q) && FMath::Abs(Hit.ImpactPoint.Z - (At.Z - 36)) < 3;
+        const bool bRoom = !World->OverlapAnyTestByChannel(At, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(15.f, 32.5f), Q);
+        Failures += !(bFloor && bRoom);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TOP floor=%d room=%d rail_room=%d"), bFloor, bRoom, RailRoom);
+    }
     Failures += Missing > 0;
-    Failures += Ladders != 1;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHECK failures=%d missing=%d tris=%d jars=%d rats=%d ladders=%d"), Failures, Missing, Triangles, JarsPlaced, RatsPlaced, Ladders);
+    Failures += Ladders != 5;
+    Failures += Grips != 2 * MainGrips;
+    Failures += Sails.Num() != 8 || !Flag || !SeaMid;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHECK failures=%d missing=%d tris=%d jars=%d rats=%d ladders=%d grips=%d sails=%d sea=%d"), Failures, Missing, Triangles, JarsPlaced, RatsPlaced, Ladders, Grips, Sails.Num(), SeaMid != nullptr);
     return Failures;
 }

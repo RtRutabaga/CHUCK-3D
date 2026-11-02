@@ -123,7 +123,10 @@ void ADockGameMode::StartPlay()
     auto* RunComponent=RunScore ? UGameplayStatics::CreateSound2D(World,RunScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     auto* BossScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ChultTempleBoss.SW_ChultTempleBoss"));
     auto* BossComponent=BossScore ? UGameplayStatics::CreateSound2D(World,BossScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent};
+    // Aboard the pirate ship, the user's ship track (2026-11-02).
+    auto* ShipScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Ship.SW_Ship"));
+    auto* ShipComponent=ShipScore ? UGameplayStatics::CreateSound2D(World,ShipScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -145,14 +148,15 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         // Held silent (the Fireball, 2026-10-26): when it lifts, whatever plays where he is comes back in.
         if(Self.IsValid() && World->GetTimeSeconds()<Self->MusicHoldUntil){Region->Mode=-1;return;}
-        // Aboard the ship (2026-11-01; docs/regions/SHIP.md): no score until the user's ship track comes, only the sea and
-        // the timbers (ShipSetting.cpp). Every score fades out.
+        // Aboard the ship (2026-11-01; docs/regions/SHIP.md): every other score fades out and the user's ship track
+        // (2026-11-02) comes in, looping, under the sea and the timbers (ShipSetting.cpp). The escape's arrival brings it
+        // in as he crawls through the masonry, as the 2D escape starts the ship's music.
         if(Chuck && InShip(Chuck->GetActorLocation()))
         {
             if(Region->Mode==30) return;
@@ -160,7 +164,23 @@ void ADockGameMode::StartPlay()
             if(Self.IsValid()) Self->MusicRegion=30;
             for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss})
                 if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(2.f,0.f);
-            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION ship=1"));
+            if(Ship.IsValid())
+            {
+                if(Ship->IsPlaying()) Ship->AdjustVolume(2.5f,.45f);
+                else
+                {
+                    // (The ship test starts it just before its end, to hear it loop.)
+                    const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckShipTest"));
+                    Ship->FadeIn(3.f,.45f,Test && ShipScore?FMath::Max(0.f,ShipScore->Duration-2.f):0.f);
+                    FTimerHandle Check;
+                    World->GetTimerManager().SetTimer(Check,[Ship,ShipScore,Region](){
+                        if(Region->Mode!=30) return;
+                        const bool Loop=ShipScore && ShipScore->bLooping,Playing=Ship.IsValid() && Ship->IsPlaying();
+                        UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIP_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                    },6.f,false);
+                }
+            }
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION ship=1 score=%d"),Ship.IsValid());
             return;
         }
         // In Chult (after the fall, or from its checkpoint): Waterdeep's scores
@@ -2901,7 +2921,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==9 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==10 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum, ship
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

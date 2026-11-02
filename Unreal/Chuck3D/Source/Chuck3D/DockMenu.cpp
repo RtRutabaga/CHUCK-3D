@@ -52,7 +52,7 @@ namespace
     constexpr int32 TempleColumn=6,WindColumn=12;
     // The pirate ship (2026-11-01; ShipSetting.h), in a sixth column, in EShipSpawn's order.
     const FChultPoint ShipPoints[]={{TEXT("ShipArrival"),TEXT("Ship Arrival")},{TEXT("ShipHold"),TEXT("Ship Hold")},{TEXT("ShipQuarters"),TEXT("Ship Quarters")},
-        {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")}};
+        {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")},{TEXT("ShipDeck"),TEXT("Ship Deck")}};
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
