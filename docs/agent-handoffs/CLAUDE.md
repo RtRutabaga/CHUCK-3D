@@ -2,6 +2,39 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 1 (latest) — the swing carries its momentum into the leap (Claude)
+
+- **Asked:** the swing felt like it slowed or paused, then he jumped "unrealistically forward". He should "really feel the momentum": a good back-and-forth swing should carry him forward realistically on the forward swing and jump.
+- **Source:** `main` at efc59b91.
+- **Built** (docs/BRACHIATION.md, "Big gaps need a real swing", rewritten):
+  - **Swing:** damping halved (`SwingDamping` .45, was .9), so a pumped swing keeps its energy instead of dying off between strokes. Pump gain 8 within 30° of the bottom, as before.
+  - **Arc limits:** 1.15 rad in the open; under a deck, 44° in front (`SwingDeckLimit`) and 38° behind (`SwingDeckLimitBack`), so the bigger swing does not put his head through the planks.
+  - **Every leap is a projectile now:** the flight starts at the swing's own velocity at release (taken numerically from the pendulum) and blends into the launch velocity over 0.14 s (`SwingLeapRamp`), with gravity throughout. That removes the pause-then-shoot: he leaves the grip at the speed he was swinging. `SwingLeapAt(T)` gives the path. The old lift curve (`SwingLeapLift`) is gone.
+  - **Spin:** his body carries the swing's rotation into the flight (clamped at 30° or the release angle under a deck, 60° in the open), then settles to the catch pose.
+  - **Catch:** he arrives still swinging (−8°, moving forward with a 20° carry), and the flight's velocity runs on into the new swing (τ 0.04 s), so momentum survives the catch too.
+  - **Release:** a press at the top of the forward swing lets go at once; otherwise he still waits for the stroke's best point.
+  - **Reach:** `SwingReachK` 2.8, throw 120 along, 100 up, for leaps over 165 cm. Short of the gap, the launch is scaled to 50–92% and he falls.
+  - **Under a deck:** apex capped 12 cm, catch centre 6 cm low, launch angle 14–27° (20–48° in the open).
+  - **Bridge test** (`ChultBridge.cpp`): the rhythm trial now needs an amplitude over 42.5°. New trial 10, `big_gap_held_forward_jumping_on_falls_short`: holding forward and jumping on as he catches the plank before a big gap falls short. New `CHUCK_BRIDGE_HEAD_ABOVE` log. Verify-Package expects `trials=10`.
+- **Tested:**
+  - Uncooked suite: bridge 10/10 (`Local/brach-s3c.log`), canopy 48/48, giant canopy 72/72, raptor 8/8 (route 8/8), birds crossed=1, lamp swing 8/8.
+  - Reach at a 175–185 cm gap on the bridge: still, stick let go, 49.6 cm; held forward 50–58 cm; held forward and jumping on, 153.6 cm (short); rhythm 203–249 cm.
+  - A rhythm leap: about 108 cm/s on the swing at release, rising to 420–440 cm/s over the ramp, 0.45 s of flight.
+  - Head under the bridge: `CHUCK_BRIDGE_HEAD ok=1 frames=3693 through_1cm=72 max_through_cm=1.9 max_above_cm=9.2`.
+  - Packaged `Builds/Swing3Candidate`: Verify-Package 182 passes (`Local/verify-package-20261101-170250.log`), bridge 10/10 (`Local/verify-bridge-20261101-181315.log`). Promoted as `Swing3`.
+  - Not played by hand; no Xbox pad.
+- **Remaining flaws:**
+  - The launch is still about 4× his swing speed. A 31.5 cm pendulum cannot throw a 65 cm rat 180 cm on its own, so there is an assisted throw on top. The ramp hides most of it, but the pickup is still visible.
+  - Easy-gap launches reach about 530 cm/s.
+  - Frames with his head more than 1 cm through a plank rose to 72 (from 3), all at 1.9 cm or less.
+  - The route tests (raptor, giant canopy) use the pump assist rather than a recorded human rhythm.
+  - A late press at the very top of the swing falls short.
+- **Contract compatibility:** no rig, slot, clip or socket changes. New constants `SwingDamping`, `SwingDeckLimit`, `SwingDeckLimitBack`, `SwingCatchCarry`, `SwingCatchDeg`, `SwingLeapRamp`; changed `SwingReachK`, `SwingThrowAlong`, `SwingThrowUp`. New members `SwingLeapC0/Vs/V0`, `SwingFromVel`, `SwingLeapSpin`; new `SwingLeapAt`, `SwingCentreFacing`; `SwingLeapLift` removed. Bridge test trials=10.
+- **Binary/LFS:** none. The re-saved Common materials were restored, not committed.
+- **Launcher:** promoted (`Windows-Previous-20261101-Swing3` and `-Swing2` kept, the Ship backup pruned). `Builds/Swing3Candidate` was moved into place by the promotion.
+
+Next part of the work could be done by either — preference: Claude for any more swing feel (play it by hand first); the ship's milestone 2 is either, preference Claude.
+
 ## November 1 — the pirate ship: plan, escape and below decks (Claude)
 
 - **Asked:** "start building the ship/next part of the game. base your approach on how we've handled the chult adaptation from 2d".

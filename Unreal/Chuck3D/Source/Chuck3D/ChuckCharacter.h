@@ -116,11 +116,21 @@ public:
     // plus a throw from the arms, flown ballistically to the next grip's
     // height (SwingReachNow). A jump pressed early waits for the forward
     // stroke and he lets go at its best point; short of the grip he falls.
+    // Every leap (11-01 later, "really feel the momentum") is a real flight:
+    // his centre leaves at the swing's own velocity, the arms' throw adds to
+    // it over SwingLeapRamp, then only his gravity acts until the catch.
     static constexpr float SwingEasyLeap = 165.f;
-    static constexpr float SwingPumpGain = 7.f;   // rad/s^2 at the bottom of the swing
-    static constexpr float SwingThrowAlong = 140.f;   // cm/s, the arms' throw along the leap
-    static constexpr float SwingThrowUp = 180.f;   // cm/s, and up
-    static constexpr float SwingReachK = 2.4f;   // the legs' whip: launch cm/s per cm/s of the swing
+    static constexpr float SwingPumpGain = 8.f;   // rad/s^2 at the bottom of the swing
+    static constexpr float SwingDamping = .45f;   // 1/s (was .9: the swing keeps its momentum)
+    static constexpr float SwingAngleLimit = 1.15f;   // rad either way, about 66 degrees (was 1.0)
+    static constexpr float SwingDeckLimit = .77f;   // rad, 44 degrees, under a deck: higher, his snout would meet the board
+    static constexpr float SwingDeckLimitBack = .66f;   // rad, 38 degrees, swung back under a deck: higher, his head would rise between the boards
+    static constexpr float SwingCatchCarry = 20.f;   // degrees a leap's catch swings him on to
+    static constexpr float SwingCatchDeg = -8.f;   // where on the swing (behind the grip) a leap's catch takes him, moving forward
+    static constexpr float SwingThrowAlong = 120.f;   // cm/s, the arms' throw along the leap
+    static constexpr float SwingThrowUp = 100.f;   // cm/s, and up
+    static constexpr float SwingReachK = 2.8f;   // the legs' whip: launch cm/s per cm/s of the swing
+    static constexpr float SwingLeapRamp = .14f;   // s over which the throw builds after he lets go
     /** How far (cm, horizontally) a leap toward a grip Delta away (grip to grip) would carry him if he let go now. */
     float SwingReachNow(const FVector& Delta) const;
     /** The swing's amplitude now (degrees, from its energy). */
@@ -625,12 +635,19 @@ private:
     int32 SwingGrip = -1, SwingTarget = -1, SwingLeft = -1;   // hanging from / flying to / last let go of
     float SwingAngle = 0, SwingRate = 0;   // pendulum (rad, rad/s; positive: his body ahead of the grip)
     float SwingClock = 0, SwingBlendTime = .15f, SwingRegrabAt = -1, SwingYawFrom = 0;
-    float SwingLeapClock = 0, SwingLeapTime = .5f, SwingLeapLift = 0, SwingLeapFromAngle = 0, SwingLeapYaw = 0;
+    float SwingLeapClock = 0, SwingLeapTime = .5f, SwingLeapFromAngle = 0, SwingLeapYaw = 0;
     FVector SwingDir = FVector::ForwardVector, SwingFrom = FVector::ZeroVector, SwingLeapFrom = FVector::ZeroVector, SwingLeapDir = FVector::ForwardVector;
     bool bSwingJumpQueued = false;
     int32 SwingCatches = 0, SwingLeapCount = 0, SwingDismounts = 0;
     // Where his paws hold the current grip (a board's near edge), and fly to.
     FVector SwingHold = FVector::ZeroVector, SwingLeapTo = FVector::ZeroVector;
+    // The flight: his centre's start, its velocity on the swing as he let go,
+    // the launch velocity the throw builds to; the body's spin as he let go
+    // (deg/s); his velocity at the catch, carried briefly onto the new swing.
+    FVector SwingLeapC0 = FVector::ZeroVector, SwingLeapVs = FVector::ZeroVector, SwingLeapV0 = FVector::ZeroVector, SwingFromVel = FVector::ZeroVector;
+    float SwingLeapSpin = 0;
+    FVector SwingLeapAt(float T) const;
+    FVector SwingCentreFacing(const FVector& Grip, float BodyDeg, const FVector& Forward) const;
     // A jump waiting for the swing to build (since when; whether it has swung toward the target yet).
     float SwingWaitSince = -1, SwingReachPrev = 0; int32 SwingWaitTarget = -1; bool bSwingWaitToward = false;
     // A leap without the swing for it: falls short (and that grip can't be caught on the way down).

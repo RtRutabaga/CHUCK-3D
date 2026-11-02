@@ -60,66 +60,85 @@ The same Swing/SwingLeap gaits on Chult's four canopy trees: 38 branch grips in 
 
 User requests:
 - 10-31: pumping on a hold had no practical effect on the leap. For the larger jumps he should need enough swing going to make it ("a slight challenge", a little risk on the bridge, not hard). His head and ears also passed through the bridge's planks.
-- 11-01, after the first version: holding the stick forward still carried every gap. The player should have to swing back, then forward, then jump. The physics should "make sense... like a real person trying to make a big brachiation jump", and it applies to the gaps between the trees too.
+- 11-01, after the first version: holding the stick forward still carried every gap. The player should have to swing back, then forward, then jump, with physics that "make sense... like a real person trying to make a big brachiation jump", between the trees too.
+- 11-01, later: "really feel the momentum". He seemed to slow or pause on the swing and then jump unrealistically forward. He should propel forward with the momentum of the back-and-forth swing.
 
-**The pump** (`SwingPumpGain` = 7 rad/s²):
-- The stick drives his legs the way it points, but only through the bottom of the swing (within 30°, strongest at the bottom), like a kip.
-- Held one way, it gains on the stroke going that way what it takes from the stroke coming back, so holding forward builds nothing.
-- Back while he swings back and forward while he swings forward, it builds the swing:
-  - from a leap's catch: about 42° after one swing back;
-  - from a near-still hang: about 35° after one swing back and 42° after two.
-- From a dead hang a push starts the swing.
-- A catch now carries the body only 14° in front (27° before, 35° originally), so a leap's momentum alone never makes the next big gap.
+**The swing** (a pendulum from the grip, L = 31.5 cm to his centre, his gravity 784 cm/s²):
+- Damping is `SwingDamping` = 0.45/s (0.9 before 11-01 later, which made the swing drag and lose its speed).
+- It goes as high as `SwingAngleLimit` (66°) from a ring or branch.
+- Under a deck it stops at `SwingDeckLimit` (44°) in front and `SwingDeckLimitBack` (38°) behind. Higher, his snout meets the board he holds, or his head rises through the gap behind.
 
-**The leap's reach** (`SwingReachNow`): leaps up to `SwingEasyLeap` (165 cm, grip to grip) need nothing, as before. A longer leap goes as far as his release carries him:
-- His centre leaves at the swing's own velocity (L × rate along the arc: forward and up when he lets go on the way up in front). That is multiplied by `SwingReachK` = 2.4 for the legs' whip, and the arms' throw is added (140 cm/s along, 180 cm/s up).
-- The launch is flown ballistically to the next grip's height under his gravity.
+**The pump** (`SwingPumpGain` = 8 rad/s²):
+- The stick drives his legs the way it points, only through the bottom of the swing (within 30°, strongest at the bottom), like a kip.
+- Held one way, it gains on the stroke going that way what it takes from the stroke coming back, so holding forward builds nothing beyond one stroke.
+- Back while he swings back and forward while he swings forward, it builds the swing. From a still hang a push starts it.
+
+**The catch:** a leap's catch takes him at 8° behind the grip, moving forward, with a swing of `SwingCatchCarry` (20°). His flight's speed runs on into the arms for a moment, rather than stopping dead, so he visibly swings through under the new grip.
+- That swing and one pushed forward stroke are never enough for a big gap. The next one needs a swing back and forward again.
+
+**The leap's reach** (`SwingReachNow`; only for leaps over `SwingEasyLeap`, 165 cm grip to grip):
+- What he has is the swing's own velocity as he lets go (L × rate along the arc), times `SwingReachK` = 2.8 for the legs' whip, plus the arms' throw (120 cm/s along, 100 up). It is flown to the next grip's height under his gravity.
+- More of the reach now comes from the swing and less from the throw (2.4 and 140/180 before), so a weak swing falls well short.
 - Let go on the back stroke, the swing takes away from the throw.
-- Measured reach for a 180 cm gap:
 
-| How the player swings | Reach |
-|---|---|
-| Still, stick let go | about 84 cm |
-| Stick held forward for 2.5 s | about 83 cm |
-| One swing back from a catch, released at the best point | 230–255 cm |
-| Two swings back from a near-still hang | 260 cm |
+**The flight** (every leap, 11-01 later):
+- His centre leaves exactly where the swing has it, at the swing's own velocity (`SwingLeapVs`).
+- The throw builds on that over `SwingLeapRamp` (0.14 s), not in one frame. Then only his gravity acts, a real parabola, until he hangs behind the next grip (`SwingLeapAt`).
+- The launch leaves at the angle the swing and throw give it (20–48° in the open, 14–27° under a deck), with the speed that angle needs to reach the grip.
+- Under a deck the arc rises at most 12 cm. He comes in 6 cm low with his arms reaching, and is taken up onto the swing as they close.
+- His body carries on turning the way the swing turned it, easing off (the legs thrown through), then hangs down for the catch. Under a deck that carry stops at 30°.
+- Before, the paws slid in a straight line at a fixed 320 cm/s, whatever the swing was doing.
+- `CHUCK_SWING_FLIGHT` logs the swing speed, launch speed and angle, flight time and apex.
 
 **The jump's timing:**
 - A jump pressed for a big gap waits for the swing toward it. Pressed on the back stroke, it waits until the swing turns.
-- He lets go at the best point of that forward stroke, in front of the grip where the reach stops growing (about 17–23° in front). The press doesn't have to be frame-exact; the swing is the challenge.
+- He lets go at the best point of that forward stroke, about 20–28° in front, where the reach stops growing.
+- Pressed at the top of the forward swing (high in front, already turning back), he lets go there and then, with what that late release gives him. Before, he hung on for a whole extra swing: the pause.
 - If no swing toward the gap comes (under 4° after 0.45 s, or 1 s in all), he goes anyway.
 - The grip it was aimed at is kept while it waits, so pumping back with the stick doesn't re-aim him backward.
-- Short of the grip, his paws reach 45–90% of the way (by reach ÷ gap) and 22 cm low, and he drops (`CHUCK_SWING_SHORT`, `CHUCK_SWING_MISS`). That grip can't be caught for 1.5 s. Over the bridge's gorge that is a fall death and a return to the bank.
-- Jumping while the stick points back aims the leap back, as always. At the bridge's last plank, with nothing behind, that kicks off.
+- Short of the grip, he flies the launch he has (45–92% of what it needed), so he falls short and low. When the flight ends he drops with its velocity (`CHUCK_SWING_SHORT`, `CHUCK_SWING_MISS`). That grip can't be caught for 1.5 s. Over the bridge's gorge that is a fall death and a return to the bank.
+- Jumping while the stick points back aims the leap back, as always.
+
+**Measured on the bridge** (`Local/brach-s3c.log`, 180 cm gaps unless noted):
+
+| How the player swings | Reach |
+|---|---|
+| Still, stick let go | 50 cm |
+| Stick held forward for 2.5 s from still | 50 cm |
+| Stick held forward, jumping on as he catches (175 cm gap) | 154 cm |
+| One swing back and forward after a catch | 203–249 cm |
+
+- Big-gap flights leave at 108–120 cm/s on the swing and reach about 420–440 cm/s at the end of the throw, in 0.45 s.
+- From a catch, the pumping takes about 1.4 s, one swing back and forward. From a near-still hang it takes about 2–3 s.
 
 **Where this bites:**
 - The bridge's 6–7-slot gaps: 174–185 cm, about half its leaps.
 - The gaps between the canopy's and the giant canopy's trees: 180–182 cm.
 
-The lamp alleys (125–146 cm) and the temple's rings (140 cm) are unchanged.
+The lamp alleys (125–146 cm) and the temple's rings (140 cm) need no swing, but their leaps fly the same way.
 
 **Under a board** (`FChuckSwingGrip::Depth`, set by the bridge for every plank):
-- He holds a plank by its near edge going his way, not its centre: paws under it, fingers over the edge, inset depth/2 − 2.5 cm and 1.6 cm below its mid-thickness. His head hangs in the gap he came from.
-- The plank-to-plank flight dips 6–14 cm instead of rising up to 30 cm over the deck.
-- While he is under a board, the anim lays both ears flat back (−62°) and lifts the chin a little.
-- It holds the head near level against the swing's body pitch (`FChuckAnimParams::DuckWeight`, `DuckLevel`: 0.7 × pitch, less 1.35 × the pitch past 30°, clamped to −20…30). Past 30° the head nods forward again, because at the top of a big swing the body's own tip lifts the crown toward the board.
-- Rings and branches (no depth) are unchanged.
+- He holds a plank by its near edge going his way: paws under it, fingers over the edge, inset depth/2 − 2.5 cm and 1.6 cm below its mid-thickness.
+- The anim lays both ears flat back (−62°) and holds the head near level against the body's pitch (`DuckWeight`, `DuckLevel`: 0.7 × pitch, less 1.35 × the pitch past 30°, clamped to −20…30).
+- The swing and flight limits above keep his head under the boards.
 
-**Measured** on the bridge test's two crossings, with ear tips, crown and snout taken from the imported mesh (`-ChuckHeadProbe`; `CHUCK_BRIDGE_HEAD`):
+**Measured** on the bridge test's two crossings (ear tips, crown and snout from the imported mesh; `CHUCK_BRIDGE_HEAD`):
 
-| | Frames with a point inside a plank | Deepest | Head above the deck's underside mid-leap |
+| | Frames with a point inside a plank | Deepest | Head above the deck's underside |
 |---|---|---|---|
 | Before (10-31) | 246 of 1903 | 15.1 cm | 31 cm |
-| Now (`Local/brach-s2-bridge.log`) | 661 of 4288, only 3 deeper than 1 cm | 2.1 cm | 8.9 cm (in the gaps) |
+| 11-01 | 661 of 4288, 3 deeper than 1 cm | 2.1 cm | 8.9 cm |
+| 11-01 later (`Local/brach-s3c.log`) | 835 of 3693, 72 deeper than 1 cm | 1.9 cm | 9.2 cm |
 
-- The 1 cm-or-less contact is the crown's fur brushing the board at the top of the big swings.
+- The contact is the crown's fur and the snout brushing the board at the top of the big swings.
 - The test fails at more than 5% of frames deeper than 1 cm, 5 cm through, or 10 cm above.
-- Review still (10-31): `SourceAssets/Setting/Review/Bridge_BrachiationUnder.png`.
+- `CHUCK_BRIDGE_HEAD_ABOVE` logs frames more than 8 cm above.
 
-**Tests:** `-ChuckBridgeTest` has 9 trials, all with real stick input and no assist:
-- The crossings pump like a player: the stick back as he swings back and toward the gap as he swings toward it, with the jump pressed on the forward stroke after a swing back.
-- `big_gap_no_swing_falls_short`: hanging still, jump with the stick let go. He falls short and returns to the bank.
-- `big_gap_stick_held_forward_falls_short`: stick held toward the gap for 2.5 s, then jump. He still falls short.
-- `big_gap_swing_back_then_forward`: pumped in time, two swings back, jumped going forward. He makes it.
+**Tests:** `-ChuckBridgeTest` has 10 trials, all with real stick input and no assist:
+- The crossings pump like a player: the stick back as he swings back and toward the gap as he swings toward it. Jump is pressed on the forward stroke once the swing is above 42.5°.
+- `big_gap_no_swing_falls_short`: hanging still, jump with the stick let go. Short, back to the bank.
+- `big_gap_stick_held_forward_falls_short`: stick held toward the gap for 2.5 s, then jump. Short.
+- `big_gap_held_forward_jumping_on_falls_short` (new): the stick held forward throughout, leaping onto the plank before a big gap and jumping on at once. Short.
+- `big_gap_swing_back_then_forward`: pumped in time, jumped going forward. Made.
 
-Route tests that cross big gaps (canopy, giant canopy, golden leaf, raptor, birds) call `SetTestSwingPump(true)`. It pumps in time for them, and their big leaps wait until the swing carries them; the bridge test covers the player's side.
+Route tests that cross big gaps (canopy, giant canopy, golden leaf, raptor, birds) call `SetTestSwingPump(true)`. It pumps in time for them, and their big leaps wait until the swing carries them.

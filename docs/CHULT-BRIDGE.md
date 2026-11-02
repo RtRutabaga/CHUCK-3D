@@ -65,6 +65,7 @@ on the far bank; cross back steering with the stick and step down; let go over
 the gorge and return to the near bank with Chult's score back; dropped onto a
 plank, he does not stand on it; at a big gap, from hanging still, the stick
 let go falls short, the stick held forward falls short, and swinging back and
-then forward makes it. It also measures his head against the planks
+then forward makes it; holding forward and jumping on as he catches the plank
+before a big gap also falls short (10 trials, 2026-11-01). It also measures his head against the planks
 (`CHUCK_BRIDGE_HEAD`). `-ChuckBridgeCapture` saves review stills to
 `Saved/Screenshots/<platform>/Bridge`.
