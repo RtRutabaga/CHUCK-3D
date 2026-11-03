@@ -1181,7 +1181,9 @@ void AShipSetting::BuildSails()
     // (The sails' canvas lets the sun through, as thin cloth does: Tools/create_ship_sea.py.)
     auto* Canvas = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Ship/M_ShipSail.M_ShipSail"));
     auto* Black = LoadObject<UMaterialInterface>(nullptr, DarkMat);
-    Missing += !Canvas + !Black;
+    // (The flag: the user's mustachioed skull and crossed cutlasses, 2026-11-02: Tools/create_ship_flag.py.)
+    auto* FlagMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Ship/M_ShipFlag.M_ShipFlag"));
+    Missing += !Canvas + !Black + !FlagMat;
     TArray<FVector> V, N; TArray<FVector2D> UV; TArray<int32> T;
     auto Make = [&](const TCHAR* Name, UMaterialInterface* Mat) -> UProceduralMeshComponent*
     {
@@ -1200,7 +1202,7 @@ void AShipSetting::BuildSails()
         Sails.Add(Make(*FString::Printf(TEXT("ShipSail%d"), I), Canvas));
     }
     GridMesh([](float U, float W) { return FlagPoint(U, W, 0); }, FlagU, FlagV, 150, 95, V, N, UV, &T);
-    Flag = Make(TEXT("ShipFlag"), Black);
+    Flag = Make(TEXT("ShipFlag"), FlagMat ? FlagMat : Black);
 }
 
 void AShipSetting::UpdateSails()

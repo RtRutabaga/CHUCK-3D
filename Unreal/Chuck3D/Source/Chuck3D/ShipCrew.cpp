@@ -25,6 +25,9 @@ namespace
     constexpr float TableX = -340, TableY = -175, StoolR = 130, StoolA = 164, StoolTop = 41, TableTop = 76;
     // The chef at the galley's work table (560..800 x -75..75, top 86 high), on its starboard side facing across it.
     const FVector2D ChefAt(680, -108);
+    // The captain (user 2026-11-02: on deck from the start; the 2D game brings him on only at the trigger): on the quarterdeck
+    // just forward of the skylight, looking forward over the waist at his crew (the way across the quarterdeck passes before him).
+    const FVector2D CaptainAt(-1065, -45);
     constexpr float ChefYaw = 90;
 }
 
@@ -108,6 +111,8 @@ void AShipCrew::PlaceCrew()
             { TEXT("Don't go into the purple! DON'T GO INTO THE PURPLE!"), TEXT("Why don't they see!?") });
         N->TieToMast(ShipWorld(FVector(MainMastX, 0, DeckZ)), MastR);
     }
+    // The captain (no lines yet: the 2D game gives him none before the trigger).
+    Add(EDockHuman::PirateCaptain, ShipWorld(FVector(CaptainAt.X, CaptainAt.Y, QuarterZ)), 0.f);
     // The fencers (no lines: busy).
     Pair = PairStart = FVector2D((FenceX0 + FenceX1) * .5f, 0);
     AxisYaw = AxisStart = 0.f;

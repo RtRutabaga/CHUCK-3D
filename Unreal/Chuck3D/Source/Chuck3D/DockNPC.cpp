@@ -74,7 +74,8 @@ namespace
         TEXT("/Game/Characters/Humans/PirateChef/SK_PirateChef.SK_PirateChef"), TEXT("/Game/Characters/Humans/PirateSeated/SK_PirateSeated.SK_PirateSeated"),
         TEXT("/Game/Characters/Humans/PirateConcertina/SK_PirateConcertina.SK_PirateConcertina"), TEXT("/Game/Characters/Humans/PirateCheering/SK_PirateCheering.SK_PirateCheering"),
         TEXT("/Game/Characters/Humans/PirateDancer/SK_PirateDancer.SK_PirateDancer"), TEXT("/Game/Characters/Humans/PirateFencerA/SK_PirateFencerA.SK_PirateFencerA"),
-        TEXT("/Game/Characters/Humans/PirateFencerB/SK_PirateFencerB.SK_PirateFencerB"), TEXT("/Game/Characters/Humans/Jeffries/SK_Jeffries.SK_Jeffries") };
+        TEXT("/Game/Characters/Humans/PirateFencerB/SK_PirateFencerB.SK_PirateFencerB"), TEXT("/Game/Characters/Humans/Jeffries/SK_Jeffries.SK_Jeffries"),
+        TEXT("/Game/Characters/Humans/PirateCaptain/SK_PirateCaptain.SK_PirateCaptain") };
     static_assert(UE_ARRAY_COUNT(MeshPaths) == static_cast<int32>(EDockHuman::Count), "a mesh path for every human");
     // The sailor's pipe (component space: his feet, X forward, Y right). His
     // mouth on the model (SourceAssets/NPCs/Humans/manifest.json Sailor

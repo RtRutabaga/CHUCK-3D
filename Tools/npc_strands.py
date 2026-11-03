@@ -474,6 +474,41 @@ class Groomer:
         r = np.array([r0 * (1 - .7 * (i / (len(path) - 1)) ** 2) for i in range(len(path))], np.float32)
         return np.array([tuple(p) for p in path], np.float32), r
 
+    def handlebar(self, paths, entry, rnd):
+        """A waxed handlebar moustache (the pirate captain, 2026-11-02): each strand starts on the upper lip near
+        the middle (or partway along) and runs along one end's path, its place in the cross-section kept
+        (so the bundle twists with the curl), ending anywhere from halfway to the curl's tip; denser toward
+        the root, as hair thins toward a waxed point."""
+        out = []
+        for pts, radii in paths:
+            P = np.array([tuple(p) for p in pts], np.float32); R = np.array(radii, np.float32)
+            seg = np.linalg.norm(np.diff(P, axis=0), axis=1); s = np.concatenate([[0.], np.cumsum(seg)]); total = float(s[-1])
+            if total < 1e-4: continue
+            def at(u):
+                d = u * total
+                return (np.array([np.interp(d, s, P[:, i]) for i in range(3)]), float(np.interp(d, s, R)))
+            for _ in range(entry.get('count', 600)):
+                u0 = rnd.uniform(0., .12) ** 1.3
+                u1 = 1. - (1. - rnd.uniform(.0, 1.)) ** 2.2 * .5   # most reach well into the curl
+                ang, rad = rnd.uniform(0., 6.283), math.sqrt(rnd.uniform(0., 1.)) * .85
+                n = entry.get('points', 16)
+                path = []
+                for k in range(n):
+                    u = u0 + (u1 - u0) * k / (n - 1)
+                    c, r = at(u)
+                    c2, _ = at(min(1., u + .01)); c1, _ = at(max(0., u - .01))
+                    tng = Vector(tuple(c2 - c1)).normalized()
+                    side = tng.cross(Vector((0., 1., 0.)))
+                    if side.length < 1e-4: side = tng.cross(Vector((0., 0., 1.)))
+                    side.normalize(); up = side.cross(tng).normalized()
+                    taper = r * rad * (1. - .35 * (u - u0) / max(1e-4, u1 - u0))
+                    path.append(Vector(tuple(c)) + (side * math.cos(ang) + up * math.sin(ang)) * taper)
+                if (path[-1] - path[0]).length < .004: continue
+                r0 = entry.get('radius', .00016)
+                out.append((path, np.array([r0 * (1. - .75 * (k / (n - 1)) ** 2) for k in range(n)], np.float32)))
+        print('CHUCK_GROOM_STYLE handlebar', entry['group'], f'paths={len(paths)}', f'strands={len(out)}')
+        return out
+
     def braid(self, paths, entry, rnd):
         """A braid of strands: each of its three plaits (make_braid's paths: points and radii)
         filled with strands lying along it."""
@@ -535,6 +570,9 @@ def make_grooms(kit, info, spec_groom, meshes, beard=None, braids=None):
             # On the head (2026-10-29): on the spine it stayed put as the head turned, and came away from it.
             got = g.braid(braids or [], entry, rnd)
             bone_of = lambda root: entry.get('bone', 'head')
+        elif entry.get('style') == 'handlebar':   # the captain's curled moustache: strands along make_beard's ends, on the head
+            got = g.handlebar(getattr(kit, 'handlebars', []), entry, rnd)
+            bone_of = lambda root: 'head'
         else:
             got = g.grow(entry, rnd)
             bone_of = (lambda root: 'head') if entry.get('bone') == 'head' else g.bone_of

@@ -354,3 +354,19 @@ lines from References/Original/PHASE-2.md).
     Import them with `-Only clip:DrunkSway,clip:Jog`.
   - **Runtime:** `DockNPCPirate.inl` (the performances) and `ShipCrew.cpp` (placement, lines, beat,
     fencing). The pirates' meshes are loaded when the ship spawns them, not referenced by every NPC.
+- The pirate captain (Claude, 2026-11-02; docs/SHIP.md, "The captain and the flag"): `PirateCaptain`, a halfling
+  on platform boots after the user's two reference pictures (`Humans/PirateCaptain/Reference`). New kit options:
+  - **`boots` `platform`** (a fraction of the body's height): a thick block under the front of the foot and a block
+    heel under its back (`platform_blocks`), rigid on the foot. The build stands him on them (the height includes them).
+  - **`bootstrap`:** buckled straps round a boot's shaft, `at` fractions from its ankle cut to its top, `width` wide.
+  - **`coatskirt`:** a frock coat's skirts, cut from the skirt helper so they hang over both legs. They run from under
+    the belt (`top` below the waist) to a `hem` (a fraction of the waist's height above the floor), open at the front
+    (`open`, `spread`), with a back `vent`. The `coat` above them ends at the waist (`bottom` 0.03).
+  - **`trim` `above` / `below`** (m from the waist): edging only above or below a height, so the coat's gold braid
+    skips the seam where its skirts join under the belt. A rolled trim of a skirted piece is cut from the same helper.
+  - **`hardware`:** brass, rigid on the bone under each piece. It puts a buckle on every boot strap
+    (`boot_buckles`) and on the belt (`belt_buckle`), and buttons down the coat's front edges (`coat_buttons`,
+    `coat_button_top`) and the waistcoat (`waistcoat_buttons`). Slot `Brass`.
+  - **`moustache_curl`** (m, the curl's radius): the moustache's ends sweep out and up and curl back over themselves
+    (a handlebar). Its paths go to a **`handlebar`** groom (`count` strands a side), whose strands run along them and
+    twist with the curl.

@@ -36,7 +36,7 @@ class AChuckCharacter;
 enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Sailor, Bobert,
     // The pirate ship's crew (Claude, 2026-11-02; docs/SHIP.md milestone 3; DockNPCPirate.inl, ShipCrew.cpp). Loaded only when
     // the ship spawns them (the others are referenced by every NPC).
-    PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, Count };
+    PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, PirateCaptain, Count };
 
 /** What the ship's crew tells a fencing pirate each frame (ShipCrew.cpp): where to stand and what his sword does. */
 struct FFenceCue
@@ -434,6 +434,11 @@ public:
     float GetWorstPropGrip() const { return WorstPropGrip; }
     /** The lowest any of his feet went below the deck (cm), after settling. */
     float GetWorstFootSink() const { return WorstFootSink; }
+    /** The captain (2026-11-02): his time in his round (s; tests set it to see each stance), what he is doing ("Hips",
+        "Draw", "Display", "Return") and how far his cutlass's tip goes into the deck where it stands planted (cm; 0 above it). */
+    void SetCaptainTime(float Seconds) { CaptainT = Seconds; }
+    const TCHAR* GetCaptainPhase() const;
+    float GetCaptainTipDepth() const { return CaptainTipDepth; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -681,6 +686,11 @@ private:
     // Where the rat last appeared (a spawn, respawn or checkpoint): until he moves from there the chef doesn't see him.
     FVector ChefRatArrival = FVector::ZeroVector, ChefRatLast = FVector(1e9f);
     bool bChefRatStill = false;
+    // The captain: his round, the cutlass planted in the deck at his right (component space: the fist's place on its grip
+    // and the blade's direction) and its scale (a halfling's cutlass, its tip a few cm into the planking).
+    float CaptainT = 0.f, CutlassScale = 1.f, CaptainTipDepth = 0.f;
+    FVector CaptainHilt = FVector::ZeroVector, CaptainBlade = FVector(0.f, 0.f, -1.f);
+    int32 CaptainPhase = 0;
     bool PirateTurns() const { return !IsPirate() || Kind == EDockHuman::PirateConcertina || Kind == EDockHuman::PirateCheering || Kind == EDockHuman::PirateDancer; }
     bool ChefCanReach(const class AChuckCharacter* Chuck) const;
     void SetupPirate();

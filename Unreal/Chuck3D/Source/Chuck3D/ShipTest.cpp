@@ -102,7 +102,19 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("FaceDancer"), {7, 10, DeckZ + 152}, {70, -20, DeckZ + 147}},
         {TEXT("FaceJeffries"), {-604, 0, DeckZ + 158}, {-534, 0, DeckZ + 154}},
         {TEXT("FaceSeated"), {-372, -166, LowerZ + 118}, {-465, -139, LowerZ + 112}},
-        {TEXT("FaceChef"), {690, 15, LowerZ + 150}, {680, -108, LowerZ + 146}}};
+        {TEXT("FaceChef"), {690, 15, LowerZ + 150}, {680, -108, LowerZ + 146}},
+        // The captain on the quarterdeck (user 2026-11-02): fists on his hips, then his cutlass held up (each still sets his round).
+        {TEXT("CaptainHips"), {-925, -20, QuarterZ + 95}, {-1065, -45, QuarterZ + 60}},
+        {TEXT("CaptainHipsSide"), {-1050, -300, QuarterZ + 95}, {-1065, -45, QuarterZ + 55}},
+        {TEXT("CaptainSword"), {-925, 40, QuarterZ + 110}, {-1065, -10, QuarterZ + 80}},
+        {TEXT("CaptainSwordSide"), {-1055, 290, QuarterZ + 100}, {-1065, -25, QuarterZ + 70}},
+        {TEXT("CaptainFace"), {-1005, -30, QuarterZ + 100}, {-1065, -45, QuarterZ + 95}},
+        {TEXT("CaptainBoots"), {-985, -170, QuarterZ + 30}, {-1065, -45, QuarterZ + 15}},
+        {TEXT("CaptainFromDeck"), {-640, -40, DeckZ + 45}, {-1065, -45, QuarterZ + 90}},
+        // The flag at the main truck: the user's mustachioed skull and crossed cutlasses.
+        {TEXT("Flag"), {MainMastX + 60, -480, 2930}, {MainMastX + 60, 40, 2910}},
+        {TEXT("FlagStarboard"), {MainMastX + 60, 520, 2930}, {MainMastX + 60, 40, 2910}},
+        {TEXT("FlagFromDeck"), {MainMastX - 900, -350, DeckZ + 160}, {MainMastX + 60, 40, 2880}}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -180,6 +192,9 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Phase % 2 == 0)
             {
                 Chuck->SetActorHiddenInGame(true);
+                if (FString(Views[I].Name).StartsWith(TEXT("Captain")))   // his round: hips, or the cutlass up
+                    if (const AShipCrew* Crew = AShipCrew::Get(World))
+                        if (ADockNPC* Cap = Crew->Find(EDockHuman::PirateCaptain)) Cap->SetCaptainTime(FString(Views[I].Name).Contains(TEXT("Sword")) ? 19.f : 6.f);
                 if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
                 if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z), (SW(Views[I].Aim.X, Views[I].Aim.Y, Views[I].Aim.Z) - SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z)).Rotation());
                 ++Run->Phase; return;
@@ -208,6 +223,12 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_PIRATE %s mocap=%d props=%d grip_cm=%.1f sink_cm=%.1f bellows=%.1f toast=%.2f dance=%.1f/%.1f strain=%.2f chef=%s lines=%d"),
                             *E->DisplayName, E->HasMocap(), E->GetPirateProps(), E->GetWorstPropGrip(), E->GetWorstFootSink(), E->GetBellows(), E->GetToast(),
                             E->GetDanceFeet().X, E->GetDanceFeet().Y, E->GetStrain(), E->GetChefStateName(), E->Lines.Num());
+                // The captain: there, his planted cutlass's tip in the deck, his hand on its grip while he held it up.
+                const ADockNPC* Cap = Crew->Find(EDockHuman::PirateCaptain);
+                const bool bCaptain = Cap && Cap->HasMocap() && Cap->GetPirateProps() == 1 && Cap->GetCaptainTipDepth() > 1.f && Cap->GetCaptainTipDepth() < 8.f && Cap->GetWorstPropGrip() < 8.f;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CAPTAIN pass=%d phase=%s tip_depth_cm=%.1f grip_cm=%.1f"), bCaptain, Cap ? Cap->GetCaptainPhase() : TEXT("none"),
+                    Cap ? Cap->GetCaptainTipDepth() : 0.f, Cap ? Cap->GetWorstPropGrip() : 0.f);
+                Run->Failures += !bCaptain;
             }
         }
         if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipViewsOnly"))) { Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST views_only=1 failures=%d"), Run->Failures); FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0); return; }

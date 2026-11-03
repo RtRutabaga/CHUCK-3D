@@ -2,7 +2,34 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 2 (latest, later) — the pirate ship's crew (Claude)
+## November 2 (latest, evening) — the pirate captain and the moustache flag (Claude)
+
+- **Asked:** "Make the captain. Here are reference images. In the 2d game the captain only makes his appearance after the trigger but in this game I want him on deck from the start, we'll go over later what he does with the trigger. The captain is a short Halfling but he wears very tall platform boots. Also add this pirate flag to the ship" (two captain pictures and the flag picture).
+- **Source:** `main` at 36fe2d72.
+- **Built** ([../SHIP.md](../SHIP.md), "The captain and the flag"):
+  - `humans.json` `PirateCaptain`: a halfling of about 99 cm on platform soles of about 13 cm (112 cm standing, 116 cm with the tricorn). He has a burgundy gold-braided frock coat with turned-back cuffs, a waistcoat and coat with brass buttons, a belt buckle over a sash, and knee boots with three buckled straps. His dark shoulder-length curls and waxed handlebar moustache with curled ends are strand grooms; he has no beard.
+  - `build_npc_humans.py`: new kit options `coatskirt`, `bootstrap`, `platform` (boots), `hardware` (buckles and buttons, Brass slot), rolled-trim `above`/`below`, and `moustache_curl`. `npc_strands.py`: new `handlebar` groom style. All are optional, and older specs build unchanged.
+  - `DockNPC.cpp/.h`, `DockNPCPirate.inl`: `EDockHuman::PirateCaptain`. He stands with his fists on his hips beside his cutlass, which is planted in the deck. Every 28 s he pulls it out, holds it up and out, then plants it again. Public `SetCaptainTime`, `GetCaptainPhase` and `GetCaptainTipDepth`. `ShipCrew.cpp` places him on the quarterdeck at (-1065, -45), just forward of the skylight. He has no lines.
+  - The flag: `Tools/create_ship_flag.py` (new) imports the user's picture as `T_ShipFlag` and makes `M_ShipFlag` (two-sided foliage). `ShipSetting.cpp` puts it on the flag at the main truck, and the ship check counts it as missing if it is absent.
+  - `ShipTest.cpp`: ten new stills (seven of the captain, three of the flag) and `CHUCK_SHIP_CAPTAIN`, which fails unless he is aboard with his mocap and his cutlass, the planted tip is 1–8 cm into the deck, and his fist is within 8 cm of the grip.
+- **Tested:**
+  - Uncooked: views-only run with 0 failures, and `CHUCK_SHIP_CAPTAIN pass=1 tip_depth_cm=4.0 grip_cm=2.9`. Trials quarterdeck, crew_talk and rail passed 3/3. The in-engine stills are in `Local/CaptainReview/captain_and_flag.png`.
+  - Packaged `Builds/CaptainCandidate`: Verify-Package 182 passes (`Local/verify-package-20261102-145220.log`). The newest ship log has `CHUCK_SHIP_TEST failures=0 trials=15 passed=15` and `CHUCK_SHIP_MUSIC_CHECK failures=0`, and the captain check passed. Verify-Menu passed 42/42 (`Local/captain-verify-menu.log`).
+  - Not played by hand; no Xbox pad.
+- **Remaining flaws:**
+  - Nothing happens with him at the trigger yet: no lines and no behaviour (to be decided with the user, milestone 4).
+  - The handlebar moustache reads as a dense, solid mass rather than waxed hair.
+  - His face is a generic halfling, not yet close to the reference.
+  - The coat sleeves are bulky.
+  - The Blender review renders don't show strands.
+  - The flag is mirrored from the starboard side (the same picture on both faces, as on a real flag).
+- **Contract compatibility:** no changes to Chuck's rig, slots or sockets. There is a new `EDockHuman` value before `Count` and a new public captain API. The ship now needs `/Game/Art/Ship/M_ShipFlag`.
+- **Binary/LFS:** the captain's FBX, grooms and references are 13 MB; the imported captain 16 MB; the flag picture, texture and material about 1 MB. All binaries are LFS.
+- **Launcher:** promoted as Captain (receipt 36fe2d7 plus this work; prior package kept, older pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 4: the chest, what the captain does at the trigger, the plank and the fall; tell me what he should do then).
+
+## November 2 (later) — the pirate ship's crew (Claude)
 
 - **Asked:** "Do the next part" (milestone 3 of [../regions/SHIP.md](../regions/SHIP.md)); then "These are the mustachioed pirates ... make all the pirates have mustaches and not full beard". Asked which pirates should be women: "None for now". The mustache flag is for later.
 - **Source:** `main` at 8874f5b8.

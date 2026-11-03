@@ -6,6 +6,11 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The pirate captain and the flag (November 2, Claude):** the user's request; details in [SHIP.md](SHIP.md#the-captain-and-the-flag-november-2).
+  - The captain, a halfling on tall platform boots from the user's pictures, is on the quarterdeck from the start (in the 2D game he appears only at the trigger). He wears a burgundy gold-braided frock coat and a tricorn, and has a handlebar moustache.
+  - He stands with his fists on his hips beside his cutlass, which is planted in the deck. Every 28 s he pulls it out and holds it up, then plants it again. He has no lines yet, and what he does at the trigger is to be decided with the user.
+  - The user's mustachioed skull-and-cutlasses flag flies from the main truck.
+  - Verified (Verify-Package 182 passes, ship test 15/15 with the captain check; Verify-Menu 42/42) and in the launcher as Captain. Not played by hand.
 - **The ship's crew (November 2, Claude):** milestone 3 of [regions/SHIP.md](regions/SHIP.md); details in [SHIP.md](SHIP.md#milestone-3-the-crew-november-2).
   - Eight mustachioed pirates (the user: moustaches, no beards; all men for now), in tricorns, sashes and headscarves: the chef in the galley, the seated pirate at the mess table, and on deck the concertina player, the cheering pirate, the dancer, two fencers and Jeffries tied to the main mast.
   - Each performs on the ship track's beat (136.12 bpm, measured from the track): squeezing the concertina, toasting and drinking, a jig, eight-beat fencing phrases, Jeffries heaving at his ropes.

@@ -113,7 +113,7 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
   - two staysails on the fore topmast and jib stays;
   - the spanker on its gaff and boom over the quarterdeck (the boom clears a standing man at the helm).
 
-  The main course is furled on its yard. The square sails' feet are cut in a curve (a roach), so the topsails sweep clear over the tops. The sails breathe with the swell and flutter a little at their free edges; their meshes are rebuilt every frame (`UpdateSails`). A black flag streams from the main truck.
+  The main course is furled on its yard. The square sails' feet are cut in a curve (a roach), so the topsails sweep clear over the tops. The sails breathe with the swell and flutter a little at their free edges; their meshes are rebuilt every frame (`UpdateSails`). A flag streams from the main truck: since November 2 the user's mustachioed skull over crossed cutlasses (below).
 - **Standing rigging** (tarred, dark):
   - shrouds from deadeyes on the channels to each masthead, with ratlines;
   - futtock shrouds;
@@ -257,6 +257,44 @@ Their blades fence at a man's chest height, over the rat's head. What hurts him 
 - **Stills:** 15 crew stills (`Crew*`) and the trials' (`ShipPlay_ChefChase`, `ShipPlay_ChefUnderTable`, `ShipPlay_Fencers`, `ShipPlay_CrewTalk`).
 - **Logs:** `CHUCK_SHIP_PIRATE` gives each pirate's state after the stills (props, grip error, foot sink). `CHUCK_SHIP_VIEW` now logs the frame time.
 - **Verify-Package** expects 15 trials.
+
+## The captain and the flag (November 2)
+
+User request: "Make the captain. Here are reference images. In the 2d game the captain only makes his appearance after the trigger but in this game I want him on deck from the start, we'll go over later what he does with the trigger. The captain is a short Halfling but he wears very tall platform boots. Also add this pirate flag to the ship".
+
+### The captain
+
+- **References:** the user's two pictures, `SourceAssets/NPCs/Humans/PirateCaptain/Reference/` (fists on his hips; his cutlass raised).
+- **Body** (`PirateCaptain` in `SourceAssets/NPCs/humans.json`): a halfling man of about 99 cm with short legs, a square jaw and a dimpled chin. He stands on platform soles of about 13 cm, so his whole height is 112 cm (116 cm with the hat). Chuck, at 65 cm, comes up to his waist.
+- **Hair:** dark curls to the shoulder (the `hair_to_shoulder` style, curled) and a waxed handlebar moustache whose ends curl up. There is no beard.
+- **Clothes:**
+  - a burgundy frock coat to the knee, with gold braid along its edges, collar and big turned-back cuffs, and brass buttons;
+  - a near-black waistcoat buttoned in brass, over an open cream shirt;
+  - a belt with a big brass buckle over a red sash;
+  - dark breeches;
+  - knee boots on platform soles and block heels, with three buckled straps each;
+  - a black tricorn edged in gold.
+- **New kit options:** see `SourceAssets/NPCs/README.md`, "The captain".
+- **Where he stands:** on the quarterdeck, just forward of the skylight, looking forward over the waist at his crew. The way across the quarterdeck passes in front of him.
+- **What he does:**
+  - He stands with his fists on his hips (the first picture). His cutlass stands planted point-down in the deck at his right, its tip 4 cm into the planks.
+  - Every 28 s he reaches for it, pulls it out, and holds it up and out to his right a while, the blade turning slowly (the second picture). Then he drives it back into the deck and puts his fist on his hip again.
+  - He watches the rat when the rat comes near, as the other humans do.
+- **Lines:** none yet. The 2D game gives the captain none before the trigger, and what he does at the trigger is still to be decided with the user (milestone 4).
+- **Not on board in the 2D game:** there he appears only at the trigger. On deck from the start is the user's change.
+
+### The flag
+
+The user's picture, `SourceAssets/Setting/Ship/ShipFlag_Moustache.jpg` (a skull with a curled moustache over two crossed cutlasses, on black), is now the flag at the main truck. `Tools/create_ship_flag.py` imports it as `T_ShipFlag` and makes `M_ShipFlag`: two-sided foliage shading like the sails', so the sun shows through the cloth. The picture fills the 150 × 95 cm sheet with the hoist at its left edge, and from the far side it reads mirrored, as a real flag does.
+
+### Tests
+
+- **Stills:** `CaptainHips`, `CaptainHipsSide`, `CaptainSword`, `CaptainSwordSide` (each sets his round to that stance), `CaptainFace`, `CaptainBoots`, `CaptainFromDeck`; `Flag`, `FlagStarboard`, `FlagFromDeck`.
+- **Check:** `CHUCK_SHIP_CAPTAIN`, a failure unless:
+  - he is aboard with his motion capture and his cutlass;
+  - its planted tip is 1–8 cm into the deck;
+  - his fist was within 8 cm of its grip while he held it.
+- **The ship check** now needs `M_ShipFlag`.
 
 ## The ship's score (November 2)
 

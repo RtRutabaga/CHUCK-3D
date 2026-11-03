@@ -118,6 +118,11 @@ class Body:
         """Top of a boot: `height` above the ankle (default a calf boot; a shoe is ~.06)."""
         return self.ankle.z + (opts or {}).get('height', .17)
 
+    def strap_heights(self, opts):
+        """A bootstrap item's straps: `at` fractions from the boot's ankle cut (0) to its top (1); `boots` its boots."""
+        lo, hi = self.ankle.z + .045, self.boot_top(opts['boots_opts'])
+        return [lo + f * (hi - lo) for f in opts.get('at', (.1, .45, .8))]
+
     def margin(self, i, piece, opts):
         """edge_margin, torn if the garment is `ragged` (the sewer zombie's rags)."""
         m = self.edge_margin(i, piece, opts)
@@ -138,6 +143,16 @@ class Body:
             return c.z - (self.floor + .07)
         if piece == 'apron':   # a front panel over the skirt (the smith's: longer `bottom`, wider `width`)
             return min(c.z - (self.floor + opts.get('bottom', .3)), opts.get('width', .15) - abs(c.x), -c.y - .01)
+        if piece == 'coatskirt':
+            # A frock coat's skirts (the pirate captain, 2026-11-02): from under the belt (`top` below the waist)
+            # to the `hem` (a fraction of the waist's height above the floor: .5 about the knee), open at the
+            # front and wider toward the hem (`open`, `spread`), with a vent up the back (`vent` of its length).
+            top = self.waist_z - opts.get('top', .03)
+            hem = self.floor + opts.get('hem', .5) * (self.waist_z - self.floor)
+            m = min(top - c.z, c.z - hem)
+            if c.y < 0: m = min(m, abs(c.x) - (opts.get('open', .04) + opts.get('spread', .2) * max(0., top - c.z)))
+            else: m = min(m, max(abs(c.x) - .006, c.z - (hem + opts.get('vent', .45) * (top - hem))))
+            return m
         if b is None: return OUT
         if piece == 'shirt':
             if b in self.FOREARMS:
@@ -176,6 +191,9 @@ class Body:
         if piece == 'boots':   # the shaft; boot_feet makes the feet
             if b not in self.FEET and b not in self.LEGS: return OUT
             return min(self.boot_top(opts) - c.z, c.z - (self.ankle.z + .045))
+        if piece == 'bootstrap':   # buckled straps round a boot's shaft (the captain's): `at` fractions up it, `width` wide
+            if b not in self.FEET and b not in self.LEGS: return OUT
+            return max(opts.get('width', .02) * .5 - abs(c.z - z) for z in self.strap_heights(opts))
         if piece == 'cap':
             if b != self.HEAD: return OUT
             # A knit cap pulled down: just above the brows at the front,
@@ -254,7 +272,12 @@ class Body:
             return min(u - .18, .9 - u) * L
         if piece == 'trim':   # a band along the edges of another piece (`of`), `width` wide: brass edging on plate
             m = self.margin(i, opts['of_opts']['piece'], opts['of_opts'])
-            return -1. if m <= -1. else min(m, opts.get('width', .02) - m)
+            if m <= -1.: return -1.
+            m = min(m, opts.get('width', .02) - m)
+            # Only above or below a height (from the waist): a coat's trim stops where its skirts are joined on under the belt.
+            if 'above' in opts: m = min(m, c.z - (self.waist_z + opts['above']))
+            if 'below' in opts: m = min(m, (self.waist_z + opts['below']) - c.z)
+            return m
         if piece == 'robe':   # a robe's body: a close round collar, sleeves to the wrist (the hand isn't cloth), to the upper thigh
             collar = self.neck.z + opts.get('collar', .02) - c.z
             if b in self.FOREARMS | self.ARMS or b == self.NECK: return collar
@@ -316,6 +339,8 @@ PIECES = {
     'furcollar': dict(offset=.03, thickness=.016, hides=False),
     'scarf':    dict(offset=.024, thickness=.014, hides=False),
     'cuff':     dict(offset=.01, thickness=.006, hides=False),
+    'coatskirt': dict(offset=.03, thickness=.007, hides=False),   # cut from the skirt helper, over the breeches
+    'bootstrap': dict(offset=.02, thickness=.004, hides=False),
 }
 
 
@@ -388,12 +413,15 @@ def cut_along(bm, margin):
     bm.verts.layers.float.remove(m)
 
 
-def boot_feet(body, boots):
+def boot_feet(body, boots, platform=0.):
     """No toes in a boot: each boot foot is new geometry, the convex hull of
     that foot (flat sole, rounded toe box, heel) remeshed, smoothed and pushed
     out like the rest of the cloth, skinned from the body and joined to the
-    shaft cut from the leg."""
+    shaft cut from the leg. `platform` (a fraction of the body's height; the
+    pirate captain's, 2026-11-02) sets the boot on a tall platform sole and
+    block heel: the build then stands him on them."""
     cut = body.ankle.z + .045
+    left = 1. if body.shoulder.x > 0 else -1.
     for side in (1., -1.):
         hull = bmesh.new()
         for i, c in enumerate(body.co):
@@ -416,8 +444,140 @@ def boot_feet(body, boots):
         bpy.ops.object.datalayout_transfer(modifier=dt.name); bpy.ops.object.modifier_apply(modifier=dt.name)
         foot.modifiers.new('Armature', 'ARMATURE').object = body.rig
         foot.data.materials.append(boots.data.materials[0])
+        blocks = platform_blocks(body, foot, platform * (body.top - body.floor), 'foot_l' if side == left else 'foot_r', boots) if platform > 0. else []
         bpy.ops.object.select_all(action='DESELECT'); foot.select_set(True); boots.select_set(True)
+        for b in blocks: b.select_set(True)
         bpy.context.view_layer.objects.active = boots; bpy.ops.object.join()
+
+
+def platform_blocks(body, foot, height, bone, boots):
+    """A platform boot's sole (the pirate captain's): a thick block under the front of the foot and a block heel
+    under its back, an arch between them, each `height` tall, a little wider at the ground. Rigid on the foot."""
+    co = [v.co.copy() for v in foot.data.vertices]
+    zb = min(c.z for c in co)
+    sole = [c for c in co if c.z < zb + .012]
+    y0, y1 = min(c.y for c in sole), max(c.y for c in sole)   # toe (front, -Y) and heel
+    L = y1 - y0
+    made = []
+    for name, keep in (('platform_front', lambda c: c.y < y0 + .56 * L), ('platform_heel', lambda c: c.y > y1 - .3 * L)):
+        pts = [c for c in sole if keep(c)]
+        cx, cy = sum(c.x for c in pts) / len(pts), sum(c.y for c in pts) / len(pts)
+        bm = bmesh.new()
+        for c in pts:
+            bm.verts.new((cx + (c.x - cx) * 1.1, cy + (c.y - cy) * 1.02, zb + .006))
+            bm.verts.new((cx + (c.x - cx) * 1.24, cy + (c.y - cy) * 1.07, zb - height))
+        bmesh.ops.convex_hull(bm, input=bm.verts)
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+        obj = new_object(name, bm)
+        activate(obj)
+        bv = obj.modifiers.new('Edge', 'BEVEL'); bv.width = .004; bv.segments = 2; bv.limit_method = 'ANGLE'
+        bpy.ops.object.modifier_apply(modifier=bv.name)
+        obj.vertex_groups.new(name=bone).add([v.index for v in obj.data.vertices], 1., 'REPLACE')
+        obj.modifiers.new('Armature', 'ARMATURE').object = body.rig
+        obj.data.materials.append(boots.data.materials[0])
+        made.append(obj)
+    return made
+
+
+def make_hardware(info, spec, material):
+    """Brass on the captain's clothes (2026-11-02): a buckle on each boot strap and the belt, buttons down the
+    coat's front edges and the waistcoat. Each piece is rigid on the bone under it. `spec` is the spec's
+    `hardware`; it reads the outfit's boots straps, belt, coat and jerkin for where they are."""
+    from mathutils.bvhtree import BVHTree
+    outfit = spec['_outfit']
+    polys = [tuple(p.vertices) for p in info.obj.data.polygons]
+    bvh = BVHTree.FromPolygons([tuple(c) for c in info.co], polys)
+    left = 1. if info.shoulder.x > 0 else -1.
+    item = lambda piece: next((it for it in outfit if it['piece'] == piece), None)
+    off = lambda it: it.get('offset', PIECES[it['piece']]['offset']) + PIECES[it['piece']]['thickness']
+    parts = []
+
+    def surface(origin, direction):
+        hit, n, face, _ = bvh.ray_cast(Vector(origin), Vector(direction).normalized())
+        if hit is None: return None
+        bone = info.bone[min(polys[face], key=lambda k: (info.co[k] - hit).length)]
+        return hit, n.normalized(), bone
+
+    def frame(n, up=Vector((0, 0, 1))):
+        right = up.cross(n).normalized(); up = n.cross(right).normalized()
+        return Matrix((right, n, up)).transposed().to_4x4()
+
+    def add(bm, bone):
+        obj = new_object('hardware', bm)
+        obj.vertex_groups.new(name=bone).add([v.index for v in obj.data.vertices], 1., 'REPLACE')
+        parts.append(obj)
+
+    def box(bm, M, centre, size):
+        bmesh.ops.create_cube(bm, size=1., matrix=M @ Matrix.Translation(centre) @ Matrix.Diagonal((*size, 1.)))
+
+    def buckle(at, n, bone, w, h, bar, t, up=Vector((0, 0, 1))):
+        bm = bmesh.new()
+        M = Matrix.Translation(at + n * t * .5) @ frame(n, up)
+        for sz in (-1, 1): box(bm, M, Vector((0, 0, sz * (h - bar) * .5)), (w, t, bar))
+        for sx in (-1, 1): box(bm, M, Vector((sx * (w - bar) * .5, 0, 0)), (bar, t, h))
+        box(bm, M, Vector((0, t * .35, 0)), (w * .9, t * .6, bar * .55))   # the prong across it
+        add(bm, bone)
+
+    def button(at, n, bone, r):
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=6, radius=1.,
+                                  matrix=Matrix.Translation(at + n * r * .3) @ frame(n) @ Matrix.Diagonal((r, r * .45, r, 1.)))
+        add(bm, bone)
+
+    boots, straps = item('boots'), item('bootstrap')
+    if spec.get('boot_buckles') and straps:
+        straps = dict(straps, boots_opts=boots)
+        for z in info.strap_heights(straps):
+            for side in (left, -left):
+                calf = 'calf_l' if side == left else 'calf_r'
+                leg = [c for i, c in enumerate(info.co) if info.bone[i] in (calf, 'foot_l' if side == left else 'foot_r') and abs(c.z - z) < .012]
+                if not leg: continue
+                cx, cy = sum(c.x for c in leg) / len(leg), sum(c.y for c in leg) / len(leg)
+                d = Vector((side * .75, -.66, 0)).normalized()
+                got = surface((cx + d.x * .3, cy + d.y * .3, z), -d)
+                if got:
+                    hit, n, _ = got
+                    w = straps.get('width', .02)
+                    buckle(hit + n * off(straps), n, calf, w * 1.35, w * 1.2, w * .22, .004)
+    belt = item('belt')
+    if spec.get('belt_buckle') and belt:
+        z = info.waist_z - .02 + belt.get('z', 0.)
+        got = surface((0., -.5, z), (0, 1, 0))
+        if got:
+            hit, n, bone = got
+            buckle(hit + n * off(belt), n, 'pelvis', .07, .055, .011, .006)
+    coat = item('coat')
+    if spec.get('coat_buttons') and coat:
+        k = spec['coat_buttons']
+        for j in range(k):
+            z = info.waist_z + .05 + (spec.get('coat_button_top', .2) - .05) * j / max(1, k - 1)
+            for sx in (-1, 1):
+                x = sx * (coat.get('open', .04) + max(0., z - (info.waist_z + .12)) * coat.get('lapel', .5) + .032)
+                got = surface((x, -.5, z), (0, 1, 0))
+                if got:
+                    hit, n, bone = got
+                    button(hit + n * off(coat), n, bone, .0075)
+    vest = item('jerkin')
+    if spec.get('waistcoat_buttons') and vest:
+        k = spec['waistcoat_buttons']
+        for j in range(k):
+            z = info.waist_z + .03 + .14 * j / max(1, k - 1)
+            got = surface((0., -.5, z), (0, 1, 0))
+            if got:
+                hit, n, bone = got
+                button(hit + n * off(vest), n, bone, .0055)
+    if not parts: return []
+    bpy.ops.object.select_all(action='DESELECT')
+    for p in parts: p.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    obj = parts[0]; obj.name = 'hardware'
+    for p in obj.data.polygons: p.use_smooth = True
+    obj.modifiers.new('Armature', 'ARMATURE').object = info.rig
+    obj.data.materials.append(material)
+    box_uv(obj, TILE_CM[spec.get('fabric', 'metal_plate_02')])
+    print('CHUCK_HARDWARE', len(obj.data.vertices))
+    return [obj]
 
 
 PLATE = {'helmet', 'cuirass', 'pauldron', 'vambrace'}   # hard edges: their hems are relaxed further
@@ -457,6 +617,23 @@ def rolled_trim(body, opts, material):
     bm.free(); bpy.data.objects.remove(obj)
     r, sides = opts.get('radius', .005), 8
     tb = bmesh.new()
+    if 'above' in opts or 'below' in opts:
+        # Only along the edges above (or below) a height from the waist (the captain's coat, 2026-11-02: not along
+        # the seam where its skirts join on under the belt): each loop split into open runs there, capped.
+        ok = lambda p: ('above' not in opts or p.z > body.waist_z + opts['above']) and ('below' not in opts or p.z < body.waist_z + opts['below'])
+        for pts in loops:
+            flags = [ok(p) for p in pts]
+            if all(flags): continue   # whole loops are swept below as before
+            n = len(pts)
+            start = next(k for k in range(n) if not flags[k])
+            run = []
+            for j in range(1, n + 1):
+                k = (start + j) % n
+                if flags[k]: run.append(pts[k])
+                if (not flags[k] or j == n) and run:
+                    if len(run) > 3: tube(tb, run, [r] * len(run), sides)
+                    run = []
+        loops = [pts for pts in loops if all(ok(p) for p in pts)]
     for pts in loops:
         n = len(pts)
         rings = []
@@ -526,7 +703,7 @@ def make_piece(body, piece, opts, material):
     sol = obj.modifiers.new('Cloth', 'SOLIDIFY'); sol.thickness = p['thickness']; sol.offset = 1.; sol.use_rim = True
     bpy.ops.object.modifier_move_to_index(modifier=sol.name, index=0); bpy.ops.object.modifier_apply(modifier=sol.name)
     obj.data.materials.clear(); obj.data.materials.append(material)
-    if piece == 'boots': boot_feet(body, obj)
+    if piece == 'boots': boot_feet(body, obj, opts.get('platform', 0.))
     for poly in obj.data.polygons: poly.material_index = 0; poly.use_smooth = True
     box_uv(obj, TILE_CM[opts['fabric']])
     return obj, keep
@@ -602,7 +779,7 @@ def skirt_source(body):
     return src
 
 
-SKIRTED = ('skirt', 'apron', 'mailskirt')   # cut from the skirt helper, not the body
+SKIRTED = ('skirt', 'apron', 'mailskirt', 'coatskirt')   # cut from the skirt helper, not the body
 
 
 def skin_to(obj, rig, weights):
@@ -1137,6 +1314,24 @@ def make_beard(info, spec, slots):
             for k, (dx, dz, r) in enumerate(((.004 + out * .6, droop * .45, .0048 * big), (.005 + out, droop, .0036 * big))):
                 x, z = hx + .007 + dx, mouth.mid - .004 - dz
                 pts.append(Vector((sx * x, front_y(sx * x, z) - r * .45, z))); rr.append(r)
+        curl = spec.get('moustache_curl', 0.)
+        if curl > 0.:
+            # A handlebar (the captain, 2026-11-02): past the corner each end sweeps out and up and curls back in
+            # over itself, a spiral of `curl` radius tightening through 1.15 turns, swept a little back from the face.
+            s1 = Vector((hx + .016 * big, 0., mouth.mid + .001))
+            y1 = front_y(sx * (hx + .007), mouth.mid - .004) - .004 * big
+            pts[-1] = Vector((sx * (hx + .006), front_y(sx * (hx + .006), mouth.mid - .002) - .004 * big, mouth.mid - .002))
+            rr[-1] = .0052 * big
+            pts.append(Vector((sx * s1.x, y1 - .001, s1.z))); rr.append(.0044 * big)
+            n = 18
+            for k in range(1, n + 1):
+                t = k / n
+                a = -math.pi * .5 + t * 2.3 * math.pi
+                r = curl * (1. - .55 * t)
+                x = s1.x + r * math.cos(a)
+                z = s1.z + curl + r * math.sin(a)
+                pts.append(Vector((sx * x, y1 + .35 * (x - s1.x) + .002 * t, z))); rr.append(max(.0012, .0042 * big * (1. - .72 * t)))
+            HANDLEBAR_PATHS.append(([p.copy() for p in pts], list(rr)))
         tube(bm, pts, rr, 8)
     beard = new_object('beard', bm)
     voxel_merge(beard, .0055, 14)
@@ -1290,6 +1485,7 @@ def make_beard(info, spec, slots):
 
 
 BRAID_PATHS = []   # make_braid's plaits this build: (points, radii) each
+HANDLEBAR_PATHS = []   # make_beard's curled moustache ends this build: (points, radii) each; a `handlebar` groom follows them
 
 
 def make_braid(info, spec, top, L, r0, back_at, step):
@@ -1911,7 +2107,7 @@ def build(name, spec, extra=None):
     info.rig (Tools/build_temple_heroes.py's armour, robes and gear); it may set hide[i] for skin
     it covers. Output goes to OUT/<name> (the heroes point OUT at their own folder)."""
     reset_scene()
-    BRAID_PATHS.clear()
+    BRAID_PATHS.clear(); HANDLEBAR_PATHS.clear()
     body = HumanService.create_human(scale=.1, macro_detail_dict=spec['macro'])
     # Proportion targets on top of the macro sliders (the dwarf: short legs, broad torso, big hands and head),
     # before the rig, so the rig is fitted to the shape.
@@ -1973,8 +2169,11 @@ def build(name, spec, extra=None):
             continue
         if piece == 'trim':
             item = dict(item, of_opts=next(it for it in spec['outfit'] if it.get('id', it['piece']) == item['of']))
-        obj, keep = make_piece(skirt if piece in SKIRTED else info, piece, item, slot_material(slot))
-        if piece in SKIRTED: (seat_skirt if spec.get('seated') else soften_skirt)(obj, info)
+        if piece == 'bootstrap':
+            item = dict(item, boots_opts=next(it for it in spec['outfit'] if it['piece'] == 'boots'))
+        skirted = piece in SKIRTED or (piece == 'trim' and item['of_opts']['piece'] in SKIRTED)   # a coat skirt's trim is cut from the same helper
+        obj, keep = make_piece(skirt if skirted else info, piece, item, slot_material(slot))
+        if skirted: (seat_skirt if spec.get('seated') else soften_skirt)(obj, info)
         meshes.append(obj)
         folder = ROOT / item['folder'] if 'folder' in item else CLOTH
         slots[slot] = {'type': 'fabric', 'fabric': item['fabric'], 'tint': item['tint'], 'tile_cm': TILE_CM[item['fabric']], 'gain': fabric_gain(item['fabric'], folder)}
@@ -1997,13 +2196,18 @@ def build(name, spec, extra=None):
         meshes += make_ponytail(info, spec['ponytail'], slots)
     if spec.get('fringe'): meshes += make_fringe(info, spec['fringe'], slots)     # Bobert's wisps round a bald head
     if spec.get('earring'): meshes += make_earring(info, spec['earring'], slots)
+    if spec.get('hardware'):   # the captain's brass: buckles and buttons
+        hw = spec['hardware']
+        slots['Brass'] = {'type': 'fabric', 'fabric': hw.get('fabric', 'metal_plate_02'), 'tint': hw['tint'],
+                          'tile_cm': TILE_CM[hw.get('fabric', 'metal_plate_02')], 'gain': fabric_gain(hw.get('fabric', 'metal_plate_02'))}
+        meshes += make_hardware(info, dict(hw, _outfit=spec['outfit']), slot_material('Brass'))
     sized = list(meshes)   # what sets the height: the body and the kit's outfit (not a hero's helmet, hat or props)
     meshes += hats
     if extra: meshes += extra(info, slots, hide)
     grooms = {}
     if spec.get('groom'):   # strand hair (Tools/npc_strands.py), after the hats it lies under
         beard_obj = next((o for o in meshes if o.name.split('.')[0] == 'beard'), None)
-        kit = _types.SimpleNamespace(Body=Body, face_marks=face_marks, Mouth=Mouth, front_hairline=front_hairline)
+        kit = _types.SimpleNamespace(Body=Body, face_marks=face_marks, Mouth=Mouth, front_hairline=front_hairline, handlebars=HANDLEBAR_PATHS)
         grooms = STRANDS.make_grooms(kit, info, spec['groom'], meshes, beard_obj, BRAID_PATHS)
         # The strands replace the beard's mass and cards (its volume only shaped them); the rings stay.
         for o in [o for o in meshes if o.name.split('.')[0] in ('beard', 'beard_strands')]:

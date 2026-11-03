@@ -3172,6 +3172,317 @@
     0.36,
     0.28
    ]
+  },
+  "PirateCaptain": {
+   "height_cm": 112,
+   "note": "The pirate captain (user 2026-11-02: 'Make the captain. Here are reference images ... The captain is a short Halfling but he wears very tall platform boots'; references in SourceAssets/NPCs/Humans/PirateCaptain/Reference). On deck from the start (the 2D game brings him on only at the trigger; what he does then is still to be decided). A halfling man of about 99 cm on platform soles of about 13 cm: short legs, a strong jaw and a dimpled chin, thick dark brows, dark curls to the shoulder and a waxed handlebar moustache whose ends curl up (moustache_curl, a `handlebar` groom). A burgundy frock coat to the knee with gold braid on its edges and big turned-back cuffs, brass buttons; a near-black waistcoat buttoned in brass; an open cream shirt; a belt with a big brass buckle over a red sash knotted at the hip; dark breeches; knee boots on platform soles with three buckled straps; a black tricorn edged in gold. The crew are mustachioed: a moustache, no beard.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.42,
+    "muscle": 0.6,
+    "weight": 0.5,
+    "height": 0.0,
+    "proportions": 0.55,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.04,
+     "asian": 0.04,
+     "caucasian": 0.92
+    }
+   },
+   "targets": {
+    "upperlegs-height-decr": 0.6,
+    "lowerlegs-height-decr": 0.5,
+    "measure-upperarm-length-decr": 0.25,
+    "measure-lowerarm-length-decr": 0.2,
+    "head-scale-vert-incr": 0.12,
+    "head-scale-horiz-incr": 0.18,
+    "neck-scale-vert-decr": 0.2,
+    "chin-prominent-incr": 0.35,
+    "nose-scale-vert-incr": 0.15,
+    "l-ear-shape-pointed": 0.35,
+    "r-ear-shape-pointed": 0.35,
+    "head-square": 0.45,
+    "chin-width-incr": 0.5,
+    "chin-cleft-incr": 0.7,
+    "chin-bones-incr": 0.3,
+    "eyebrows-trans-down": 0.3,
+    "eyebrows-angle-down": 0.3,
+    "nose-scale-depth-incr": 0.2
+   },
+   "skin": "middleage_caucasian_male",
+   "skin_tint": [
+    0.93,
+    0.84,
+    0.76
+   ],
+   "eyes": "brown",
+   "eyebrows": "eyebrow009",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "beard": {
+    "length": 0.03,
+    "width": 0.06,
+    "clear": 0.033,
+    "braids": false,
+    "cheek": 0.03,
+    "cards": 12,
+    "lying_cards": 80,
+    "sideburn_cards": 8,
+    "tint": [
+     0.045,
+     0.028,
+     0.018
+    ],
+    "strand_tint": [
+     0.08,
+     0.05,
+     0.032
+    ],
+    "card_scale": 0.4,
+    "moustache_size": 1.3,
+    "moustache_curl": 0.011
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "fabric": "rough_linen",
+     "tint": [
+      0.56,
+      0.5,
+      0.4
+     ],
+     "collar": -0.05
+    },
+    {
+     "piece": "jerkin",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.022,
+      0.016
+     ]
+    },
+    {
+     "piece": "trousers",
+     "fabric": "caban",
+     "tint": [
+      0.035,
+      0.03,
+      0.03
+     ]
+    },
+    {
+     "piece": "sash",
+     "fabric": "rough_linen",
+     "tint": [
+      0.32,
+      0.02,
+      0.025
+     ],
+     "width": 0.085,
+     "offset": 0.03
+    },
+    {
+     "piece": "belt",
+     "fabric": "brown_leather",
+     "tint": [
+      0.025,
+      0.018,
+      0.012
+     ],
+     "offset": 0.042
+    },
+    {
+     "piece": "boots",
+     "fabric": "brown_leather",
+     "tint": [
+      0.022,
+      0.015,
+      0.011
+     ],
+     "height": 0.3,
+     "platform": 0.13
+    },
+    {
+     "piece": "bootstrap",
+     "fabric": "brown_leather",
+     "tint": [
+      0.03,
+      0.02,
+      0.013
+     ],
+     "at": [
+      0.08,
+      0.45,
+      0.82
+     ],
+     "width": 0.022
+    },
+    {
+     "piece": "coat",
+     "fabric": "caban",
+     "tint": [
+      0.2,
+      0.026,
+      0.034
+     ],
+     "sleeve": 1.0,
+     "bottom": 0.03,
+     "open": 0.05,
+     "lapel": 0.55
+    },
+    {
+     "piece": "coatskirt",
+     "fabric": "caban",
+     "tint": [
+      0.2,
+      0.026,
+      0.034
+     ],
+     "top": 0.0,
+     "hem": 0.48,
+     "open": 0.05,
+     "spread": 0.2,
+     "vent": 0.45
+    },
+    {
+     "piece": "cuff",
+     "slot": "CoatCuff",
+     "fabric": "caban",
+     "tint": [
+      0.2,
+      0.026,
+      0.034
+     ],
+     "from": 0.5,
+     "to": 1.0,
+     "offset": 0.036
+    },
+    {
+     "piece": "trim",
+     "of": "coat",
+     "slot": "CoatTrim",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "above": -0.006,
+     "rolled": true,
+     "radius": 0.0055
+    },
+    {
+     "piece": "trim",
+     "of": "coatskirt",
+     "slot": "CoatTrim",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "below": -0.025,
+     "rolled": true,
+     "radius": 0.0055
+    },
+    {
+     "piece": "trim",
+     "of": "cuff",
+     "slot": "CoatTrim",
+     "fabric": "metal_plate_02",
+     "tint": [
+      0.42,
+      0.27,
+      0.09
+     ],
+     "rolled": true,
+     "radius": 0.005
+    },
+    {
+     "piece": "tricorn",
+     "fabric": "caban",
+     "tint": [
+      0.02,
+      0.017,
+      0.015
+     ],
+     "trim": {
+      "fabric": "metal_plate_02",
+      "tint": [
+       0.42,
+       0.27,
+       0.09
+      ]
+     }
+    }
+   ],
+   "hardware": {
+    "fabric": "metal_plate_02",
+    "tint": [
+     0.42,
+     0.27,
+     0.09
+    ],
+    "boot_buckles": true,
+    "belt_buckle": true,
+    "coat_buttons": 5,
+    "coat_button_top": 0.2,
+    "waistcoat_buttons": 5
+   },
+   "face": true,
+   "groom": [
+    {
+     "style": "hair_to_shoulder",
+     "group": "Hair",
+     "points": 16,
+     "set": {
+      "Curl Hair Curves/Factor": 0.75,
+      "Curl Hair Curves/Radius": 0.006,
+      "Curl Hair Curves/Frequency": 9.0
+     },
+     "colour": [
+      0.05,
+      0.032,
+      0.02
+     ],
+     "root": 0.5,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.28
+     ],
+     "specular": 0.3,
+     "under": 0.005
+    },
+    {
+     "style": "handlebar",
+     "group": "Beard",
+     "count": 700,
+     "points": 16,
+     "colour": [
+      0.075,
+      0.048,
+      0.032
+     ],
+     "root": 0.45,
+     "grey": 0.0,
+     "grey_colour": [
+      0.32,
+      0.3,
+      0.27
+     ],
+     "specular": 0.35
+    }
+   ],
+   "skin_subsurface": [
+    0.5,
+    0.3,
+    0.25
+   ]
   }
  }
 }
