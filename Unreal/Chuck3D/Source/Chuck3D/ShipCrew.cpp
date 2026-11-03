@@ -23,7 +23,6 @@ namespace
         return K[N - 1][1];
     }
     float Ease01(float X) { return FMath::SmoothStep(0.f, 1.f, FMath::Clamp(X, 0.f, 1.f)); }
-    float Held(float U, float A0, float A1, float B0, float B1) { return Ease01((U - A0) / (A1 - A0)) * (1.f - Ease01((U - B0) / (B1 - B0))); }
     // Where the crew stand (the ship frame). The deck's performers amidships by the main hatch's grating, where he comes up
     // the companion: the dancer on the planking just forward of the grating, clear of the capstan (user 2026-11-02: he
     // danced on the grating), the concertina player and the cheering pirate either side of him; Jeffries with his back to the main mast's aft side, between its fife rails (left open for him
@@ -31,7 +30,7 @@ namespace
     const FVector2D DancerAt(215, 92), ConcertinaAt(215, -165), CheeringAt(100, 215);
     constexpr float JeffriesBack = 14.f;              // cm from the mast's face to his heels' line
     // The fencers: their middle stays in this box, each a half-gap either side of it along the line between them.
-    constexpr float FenceX0 = 600, FenceX1 = 1150, FenceY = 170, FenceHalf = 85, FenceStep = 32, FenceTurn = 22;
+    constexpr float FenceX0 = 600, FenceX1 = 1150, FenceY = 170, FenceHalf = 75;
     // The seated pirate on the mess table's stool that faces the door from the arrival compartment (ShipSetting.cpp's table
     // at -340, -175: five stools 130 cm round it from 20 degrees, every 72; this is the third), the table 76 high, the stools 41.
     constexpr float TableX = -340, TableY = -175, StoolR = 130, StoolA = 164, StoolTop = 41, TableTop = 76;
@@ -202,77 +201,273 @@ void AShipCrew::Tick(float DeltaSeconds)
 
 FVector AShipCrew::GetFencePair() const { return ShipWorld(FVector(Pair.X, Pair.Y, DeckZ)); }
 
+namespace
+{
+    // The fencers' blows (user 2026-11-03: "more intense and complex while being smooth realistic good looking movements").
+    // Each phrase is a run of blows, one fencer attacking and the other parrying, the parry turning into the riposte:
+    //   Head: a cut down at his head from over the shoulder, parried overhead;
+    //   Flank: a cut from his right at the other's flank, parried with the blade upright on that side;
+    //   Low: a backhand cut low at the other's leg, parried with the point down;
+    //   Lunge: a lunging thrust at the chest, parried to the outside;
+    //   Feint: a half thrust to the inside the other goes to parry, the point dipped under his blade and thrust home on the
+    //     outside, parried at the last moment;
+    //   BeatEvade: a sharp beat that knocks the other's blade aside and a lunge into the opening, which he escapes by leaping back;
+    //   Bind: blades crossed hilt to hilt, the two close and shoving, then springing apart.
+    enum class EAttack : uint8 { Head, Flank, Low, Lunge, Feint, BeatEvade, Bind, Count };
+    // Beats from the attacker's first move to the blow, from the blow until both are back on guard, and how often each comes.
+    constexpr float AttackLead[] = { .85f, .7f, .7f, .6f, 1.1f, .95f, .7f };
+    constexpr float AttackTail[] = { .8f, .75f, .8f, 1.f, 1.f, 1.1f, 2.4f };
+    constexpr float AttackWeight[] = { 3.f, 3.f, 2.f, 3.f, 2.f, 1.5f, 1.2f };
+    // Ground the attacker gains at each blow (cm), and the last beat a blow's recovery may run to (the phrase ends on guard).
+    constexpr float AttackGain[] = { 10.f, 10.f, 10.f, 14.f, 14.f, 20.f, 0.f };
+    constexpr float PhraseEnd = 7.6f;
+    // How a sword position turns his shoulders (+1 the sword shoulder driven forward, -1 drawn back) and bends his knees.
+    float PoseTwist(EFencePose P)
+    {
+        switch (P)
+        {
+        case EFencePose::ChamberHigh: return -.5f;  case EFencePose::SwingHigh: return -.1f;  case EFencePose::CutHead: return .7f;
+        case EFencePose::ChamberFlank: return -.8f; case EFencePose::CutFlank: return .8f;    case EFencePose::ChamberLow: return -.3f;
+        case EFencePose::CutLow: return .5f;        case EFencePose::Thrust: case EFencePose::Lunge: return .9f;
+        case EFencePose::Feint: return .4f;         case EFencePose::Disengage: return .3f;   case EFencePose::ParryHigh: return .1f;
+        case EFencePose::ParryIn: return .45f;      case EFencePose::ParryOut: return -.3f;   case EFencePose::ParryLow: return -.2f;
+        case EFencePose::Knocked: return -.6f;      case EFencePose::BeatAside: return .5f;   case EFencePose::BindHold: return .3f;
+        case EFencePose::BindPress: return .4f;     default: return 0.f;
+        }
+    }
+    float PoseCrouch(EFencePose P)
+    {
+        switch (P)
+        {
+        case EFencePose::CutHead: return .1f;   case EFencePose::ChamberFlank: return .1f; case EFencePose::CutFlank: return .15f;
+        case EFencePose::ChamberLow: return .3f; case EFencePose::CutLow: return .55f;     case EFencePose::Disengage: return .1f;
+        case EFencePose::ParryHigh: return .3f; case EFencePose::ParryIn: return .1f;      case EFencePose::ParryOut: return .1f;
+        case EFencePose::ParryLow: return .6f;  case EFencePose::BindHold: case EFencePose::BindPress: return .1f;
+        default: return 0.f;
+        }
+    }
+    FFenceKey FenceKey(float Beat, EFencePose Pose, bool bFlow = false, float Lunge = 0.f, float Off = 0.f, float Lean = 0.f)
+    {
+        FFenceKey K; K.Beat = Beat; K.Pose = Pose; K.bFlow = bFlow; K.Lunge = Lunge; K.Off = Off; K.Lean = Lean;
+        return K;
+    }
+    // The keys round beat Now: Out[1] the last at or before it, Out[2] the next, Out[0] and Out[3] their neighbours.
+    void KeysAround(const TArray<FFenceKey>& K, float Now, FFenceKey Out[4])
+    {
+        int32 I = 0;
+        while (I + 2 < K.Num() && K[I + 1].Beat <= Now) ++I;
+        Out[0] = K[FMath::Max(I - 1, 0)]; Out[1] = K[I]; Out[2] = K[FMath::Min(I + 1, K.Num() - 1)]; Out[3] = K[FMath::Min(I + 2, K.Num() - 1)];
+    }
+    struct FFenceBody { float Lunge, Off, Lean, Twist, Crouch; };
+    FFenceBody BodyAt(const TArray<FFenceKey>& K, float Now)
+    {
+        FFenceKey A[4]; KeysAround(K, Now, A);
+        float V[4];
+        const auto Eval = [&](auto Get) { for (int32 J = 0; J < 4; ++J) V[J] = Get(A[J]); return FenceCurve(A, V, Now); };
+        return { FMath::Clamp(Eval([](const FFenceKey& X) { return X.Lunge; }), 0.f, 1.f), Eval([](const FFenceKey& X) { return X.Off; }),
+            FMath::Clamp(Eval([](const FFenceKey& X) { return X.Lean; }), 0.f, 1.f), Eval([](const FFenceKey& X) { return PoseTwist(X.Pose); }),
+            FMath::Clamp(Eval([](const FFenceKey& X) { return PoseCrouch(X.Pose); }), 0.f, 1.f) };
+    }
+    FVector2D AxisOf(float Yaw) { return FVector2D(FMath::Cos(FMath::DegreesToRadians(Yaw)), FMath::Sin(FMath::DegreesToRadians(Yaw))); }
+    // How far a fencer standing at P would be outside the ground (0 inside).
+    float OutAt(const FVector2D& P)
+    {
+        const float Half = FMath::Min(FenceY, ShipInnerHalf(P.X, DeckZ + 40) - 90.f);
+        return FMath::Max(0.f, FMath::Max(FMath::Max(FenceX0 - static_cast<float>(P.X), static_cast<float>(P.X) - FenceX1), FMath::Abs(static_cast<float>(P.Y)) - Half));
+    }
+    // ... and either of a pair with this middle and line, Pad cm further apart than their stance.
+    float Outside(const FVector2D& Centre, float Yaw, float Pad = 0.f)
+    {
+        const FVector2D Ax = AxisOf(Yaw) * (FenceHalf + Pad);
+        return FMath::Max(OutAt(Centre - Ax), OutAt(Centre + Ax));
+    }
+}
+
+FString AShipCrew::GetFenceTally() const
+{
+    return FString::Printf(TEXT("head=%d flank=%d low=%d lunge=%d feint=%d beat=%d bind=%d"), Tally[0], Tally[1], Tally[2], Tally[3], Tally[4], Tally[5], Tally[6]);
+}
+
+void AShipCrew::PlanPhrase()
+{
+    using P = EFencePose;
+    FRandomStream R(20261103 + Phrases * 7919);
+    for (TArray<FFenceKey>& L : Keys) { L.Reset(); L.Add(FenceKey(0.f, P::Guard)); }
+    PairKeys.Reset(); PairKeys.Add(FenceKey(0.f, P::Guard));
+    Blows.Reset();
+    const float PlanYaw = AxisStart + AxisTurn;
+    // Every fifth phrase they circle (the pair turning on the deck), watching each other, before they engage again.
+    const bool bBreath = Phrases % 5 == 0;
+    float Cur = .35f;
+    if (bBreath)
+    {
+        for (int32 I = 0; I < 2; ++I)
+        {
+            const float S = I == Leader ? 1.f : -1.f;
+            Keys[I].Add(FenceKey(.6f, P::Guard, true, 0.f, -14.f * S));
+            Keys[I].Add(FenceKey(1.3f, P::Guard, true, 0.f, 12.f * S));
+            Keys[I].Add(FenceKey(1.9f, P::Guard, false, 0.f, 0.f));
+        }
+        Cur = 2.2f;
+    }
+    const auto Merge = [](TArray<FFenceKey>& L, const TArray<FFenceKey>& Add)
+    {
+        // What he was going to do after this moves first is dropped (a return to guard the next blow cuts short).
+        while (L.Num() > 1 && L.Last().Beat > Add[0].Beat - .2f) L.Pop();
+        L.Append(Add);
+    };
+    float TotalWeight = 0.f;
+    for (const float W : AttackWeight) TotalWeight += W;
+    int32 Att = Leader, Fails = 0;
+    EAttack Last = EAttack::Count;
+    bool bBound = false;
+    float Gained = 0.f;
+    while (Fails < 12)
+    {
+        float Pick = R.FRand() * TotalWeight;
+        int32 A = 0;
+        for (; A < int32(EAttack::Count) - 1; ++A) { if (Pick < AttackWeight[A]) break; Pick -= AttackWeight[A]; }
+        const EAttack Kind = EAttack(A);
+        if ((Kind == EAttack::Bind && (bBound || bBreath)) || (Kind == Last && R.FRand() < .75f)) { ++Fails; continue; }
+        const float S = Cur + AttackLead[A];
+        if (S + AttackTail[A] > PhraseEnd) { ++Fails; continue; }
+        TArray<FFenceKey> Ak, Dk;
+        float Contact = S;
+        bool bContact = true;
+        switch (Kind)
+        {
+        case EAttack::Head:
+            Ak = { FenceKey(S - .85f, P::ChamberHigh, true, .1f, 4.f), FenceKey(S - .38f, P::SwingHigh, true, .3f, 8.f), FenceKey(S, P::CutHead, false, .55f, 12.f),
+                FenceKey(S + .18f, P::CutHead, false, .55f, 12.f), FenceKey(S + .8f, P::Guard) };
+            Dk = { FenceKey(S - .32f, P::ParryHigh, false, 0.f, -6.f, .1f), FenceKey(S + .2f, P::ParryHigh, false, 0.f, -8.f, .1f), FenceKey(S + .8f, P::Guard) };
+            break;
+        case EAttack::Flank:
+            Ak = { FenceKey(S - .7f, P::ChamberFlank, true, .1f, 4.f), FenceKey(S, P::CutFlank, false, .5f, 12.f), FenceKey(S + .18f, P::CutFlank, false, .5f, 12.f), FenceKey(S + .75f, P::Guard) };
+            Dk = { FenceKey(S - .28f, P::ParryIn, false, 0.f, -6.f), FenceKey(S + .2f, P::ParryIn, false, 0.f, -6.f), FenceKey(S + .75f, P::Guard) };
+            break;
+        case EAttack::Low:
+            Ak = { FenceKey(S - .7f, P::ChamberLow, true, .15f, 4.f), FenceKey(S, P::CutLow, false, .75f, 12.f), FenceKey(S + .18f, P::CutLow, false, .75f, 12.f), FenceKey(S + .8f, P::Guard) };
+            Dk = { FenceKey(S - .28f, P::ParryLow, false, 0.f, -6.f), FenceKey(S + .2f, P::ParryLow, false, 0.f, -6.f), FenceKey(S + .8f, P::Guard) };
+            break;
+        case EAttack::Lunge:
+            Ak = { FenceKey(S - .6f, P::Guard, true, 0.f, 10.f), FenceKey(S, P::Thrust, false, 1.f, 12.f), FenceKey(S + .2f, P::Thrust, false, 1.f, 12.f), FenceKey(S + 1.f, P::Guard) };
+            Dk = { FenceKey(S - .25f, P::ParryOut, false, 0.f, -10.f), FenceKey(S + .22f, P::ParryOut, false, 0.f, -10.f), FenceKey(S + .9f, P::Guard) };
+            break;
+        case EAttack::Feint:
+            Ak = { FenceKey(S - 1.1f, P::Guard, true, 0.f, 6.f), FenceKey(S - .75f, P::Feint, false, .3f, 10.f), FenceKey(S - .4f, P::Disengage, true, .35f, 10.f),
+                FenceKey(S, P::Thrust, false, 1.f, 12.f), FenceKey(S + .2f, P::Thrust, false, 1.f, 12.f), FenceKey(S + 1.f, P::Guard) };
+            Dk = { FenceKey(S - .55f, P::ParryIn, false, 0.f, -4.f), FenceKey(S - .1f, P::ParryOut, false, 0.f, -10.f), FenceKey(S + .22f, P::ParryOut, false, 0.f, -10.f), FenceKey(S + .9f, P::Guard) };
+            break;
+        case EAttack::BeatEvade:
+            Ak = { FenceKey(S - .95f, P::Guard, true, 0.f, 4.f), FenceKey(S - .6f, P::BeatAside, false, .2f, 10.f), FenceKey(S, P::Lunge, false, 1.f, 14.f),
+                FenceKey(S + .22f, P::Lunge, false, 1.f, 14.f), FenceKey(S + 1.1f, P::Guard) };
+            Dk = { FenceKey(S - .5f, P::Knocked, false, 0.f, -2.f), FenceKey(S - .05f, P::Guard, false, 0.f, -34.f, .75f), FenceKey(S + .3f, P::Guard, false, 0.f, -34.f, .6f), FenceKey(S + 1.f, P::Guard) };
+            Contact = S - .6f;   // the beat meets his blade; the lunge meets nothing
+            break;
+        default:   // the bind
+            Ak = { FenceKey(S - .7f, P::SwingHigh, true, .1f, 12.f), FenceKey(S, P::BindPress, false, .25f, 22.f), FenceKey(S + .7f, P::BindPress, false, .2f, 28.f),
+                FenceKey(S + 1.4f, P::BindPress, false, .15f, 22.f), FenceKey(S + 1.9f, P::Guard, true, 0.f, -14.f, .2f), FenceKey(S + 2.4f, P::Guard) };
+            Dk = { FenceKey(S - .25f, P::BindHold, false, 0.f, 18.f), FenceKey(S + .7f, P::BindHold, false, 0.f, 12.f, .15f), FenceKey(S + 1.4f, P::BindHold, false, 0.f, 18.f),
+                FenceKey(S + 1.9f, P::Guard, true, 0.f, -14.f, .2f), FenceKey(S + 2.4f, P::Guard) };
+            break;
+        }
+        // The attacker steps in to land his blow on the other's blade near its hilt; the other gives less ground for it.
+        for (FFenceKey& X : Ak) if (X.Pose == P::CutHead || X.Pose == P::CutFlank || X.Pose == P::CutLow || X.Pose == P::Thrust) X.Off += X.Pose == P::CutHead ? 14.f : 8.f;
+        for (FFenceKey& X : Dk) if (X.Pose == P::ParryHigh || X.Pose == P::ParryIn || X.Pose == P::ParryOut || X.Pose == P::ParryLow) X.Off += 4.f;
+        Merge(Keys[Att], Ak);
+        Merge(Keys[1 - Att], Dk);
+        FBlow Blow; Blow.Strike = Contact; Blow.bContact = bContact; Blow.Kind = uint8(A);
+        Blows.Add(Blow);
+        // The attacker gains ground (fencer A along the line, B against it), if the pair stays on theirs.
+        float Gain = AttackGain[A] * (Att == 0 ? 1.f : -1.f);
+        if (Outside(PairStart + AxisOf(PlanYaw) * (Gained + Gain), PlanYaw, 40.f) > 0.f) Gain = 0.f;
+        if (Gain != 0.f)
+        {
+            PairKeys.Add(FenceKey(S - .4f, P::Guard, false, 0.f, Gained));
+            Gained += Gain;
+            PairKeys.Add(FenceKey(S + .3f, P::Guard, false, 0.f, Gained));
+        }
+        ++Tally[A];
+        Last = Kind; bBound |= Kind == EAttack::Bind;
+        Cur = S + (Kind == EAttack::Bind ? AttackTail[A] : .45f + (R.FRand() < .4f ? .35f : 0.f));
+        // Mostly the one who parried ripostes; now and then the attacker renews his attack.
+        if (R.FRand() < .72f) Att = 1 - Att;
+    }
+    for (TArray<FFenceKey>& L : Keys) if (L.Last().Beat < 7.95f) L.Add(FenceKey(8.f, P::Guard));
+    PairKeys.Add(FenceKey(8.f, P::Guard, false, 0.f, Gained));
+}
+
 void AShipCrew::TickFencing(float DeltaSeconds)
 {
     ADockNPC* F[2] = { Find(EDockHuman::PirateFencerA), Find(EDockHuman::PirateFencerB) };
     if (!F[0] || !F[1]) return;
-    const auto Axis = [](float Yaw) { return FVector2D(FMath::Cos(FMath::DegreesToRadians(Yaw)), FMath::Sin(FMath::DegreesToRadians(Yaw))); };
-    const auto Outside = [](const FVector2D& Centre, float Yaw, float Pad = 0.f)
-    {
-        // How far either fencer would stand outside the ground (0 inside).
-        float Out = 0.f;
-        for (const float S : { -1.f, 1.f })
-        {
-            const FVector2D P = Centre + FVector2D(FMath::Cos(FMath::DegreesToRadians(Yaw)), FMath::Sin(FMath::DegreesToRadians(Yaw))) * (S * (FenceHalf + Pad));
-            const float Half = FMath::Min(FenceY, ShipInnerHalf(P.X, DeckZ + 40) - 90.f);
-            Out = FMath::Max(Out, FMath::Max(FMath::Max(FenceX0 - static_cast<float>(P.X), static_cast<float>(P.X) - FenceX1), FMath::Abs(static_cast<float>(P.Y)) - Half));
-        }
-        return FMath::Max(0.f, Out);
-    };
-    // Eight-beat phrases: the leader advances and lunges (the other retreats and parries), then either the other answers
-    // (they end where they began) or the leader presses again (they move a step and a half along the deck); the pair turns
-    // a little during the recoveries. Whoever leads, and which way they turn, keeps them on their ground.
     const int32 P = FMath::FloorToInt(Beat / 8.f);
     if (P != Phrase)
     {
         Phrase = P; ++Phrases;
-        LastParryGap = PhraseParryGap; PhraseParryGap = 1e3f;
         PairStart = Pair; AxisStart = AxisYaw;
+        // They take turns to open; whoever's advance keeps them on their ground.
         Leader = Phrases & 1;
-        bPress = Phrases % 3 == 2;
-        const auto Shift = [&](int32 L, bool bTwice) { return Axis(AxisStart) * (FenceStep * (L == 0 ? 1.f : -1.f) * (bTwice ? 2.f : 0.f)); };
-        if (bPress && Outside(PairStart + Shift(Leader, true), AxisStart, 30.f) > 0.f)
-        {
-            Leader = 1 - Leader;
-            if (Outside(PairStart + Shift(Leader, true), AxisStart, 30.f) > 0.f) bPress = false;
-        }
-        const FVector2D End = PairStart + Shift(Leader, bPress);
+        if (Outside(PairStart + AxisOf(AxisStart) * (Leader == 0 ? 30.f : -30.f), AxisStart, 40.f) > 0.f) Leader = 1 - Leader;
         AxisTurn = 0.f;
-        for (const float T : { FenceTurn * (Phrases % 2 ? 1.f : -1.f), -FenceTurn * (Phrases % 2 ? 1.f : -1.f) })
-            if (Outside(End, AxisStart + T, 20.f) <= 0.f) { AxisTurn = T; break; }
+        if (Phrases % 5 == 0)   // circling: the pair turns on the deck
+            for (const float T : { 30.f, -30.f, 15.f, -15.f })
+                if (Outside(PairStart, AxisStart + T * (Phrases % 8 ? 1.f : -1.f), 45.f) <= 0.f) { AxisTurn = T * (Phrases % 8 ? 1.f : -1.f); break; }
+        PlanPhrase();
     }
     const float U = Beat - P * 8.f;
-    const int32 Second = bPress ? Leader : 1 - Leader;
-    const float Dir[2] = { 1.f, -1.f };   // fencer A advances along the axis, B against it
-    const FVector2D A0 = Axis(AxisStart);
-    Pair = PairStart + A0 * (FenceStep * (Ease01(U / 2.f) * Dir[Leader] + Ease01((U - 4.f) / 2.f) * Dir[Second]));
-    AxisYaw = AxisStart + AxisTurn * (.5f * Ease01(U - 3.f) + .5f * Ease01(U - 7.f));
-    const FVector2D Ax = Axis(AxisYaw);
-    WorstFenceOut = FMath::Max(WorstFenceOut, Outside(Pair, AxisYaw));
+    AxisYaw = AxisStart + AxisTurn * Ease01((U - .3f) / 1.7f);
+    const FVector2D Ax = AxisOf(AxisYaw);
+    {
+        FFenceKey K[4]; KeysAround(PairKeys, U, K);
+        float V[4]; for (int32 J = 0; J < 4; ++J) V[J] = K[J].Off;
+        Pair = PairStart + Ax * FenceCurve(K, V, U);
+    }
     for (int32 I = 0; I < 2; ++I)
     {
+        const FFenceBody Bd = BodyAt(Keys[I], U);
+        const float Side = I == 0 ? -1.f : 1.f;
+        const FVector2D C = Pair + Ax * (Side * (FenceHalf - Bd.Off));
+        WorstFenceOut = FMath::Max(WorstFenceOut, OutAt(C));
+        // His feet lead the way he is going: the front foot first going forward, the back foot first going back.
+        const FVector2D Facing = Ax * -Side;
+        const float Speed = DeltaSeconds > 0.f && !FencerAt[I].IsZero() ? static_cast<float>(FVector2D::DotProduct(C - FencerAt[I], Facing)) / DeltaSeconds : 0.f;
+        FencerAt[I] = C;
+        StrideNow[I] = FMath::FInterpTo(StrideNow[I], FMath::Clamp(Speed * .18f, -10.f, 14.f), DeltaSeconds, 12.f);
         FFenceCue Cue;
-        const FVector2D C = Pair + Ax * (I == 0 ? -FenceHalf : FenceHalf);
         Cue.Centre = ShipWorld(FVector(C.X, C.Y, DeckZ));
-        Cue.Facing = FVector(Ax.X, Ax.Y, 0.f) * (I == 0 ? 1.f : -1.f);
+        Cue.Facing = FVector(Facing.X, Facing.Y, 0.f);
         Cue.Target = F[1 - I]->GetActorLocation() + FVector(0, 0, 38.f);
-        const bool bFirst = I == Leader, bSecond = I == Second;
-        const float Attack = (bFirst ? Held(U, 2.f, 2.45f, 2.8f, 3.6f) : 0.f) + (bSecond ? Held(U, 6.f, 6.45f, 6.8f, 7.6f) : 0.f);
-        const float Defend = (!bFirst ? Held(U, 1.95f, 2.3f, 2.9f, 3.5f) : 0.f) + (!bSecond ? Held(U, 5.95f, 6.3f, 6.9f, 7.5f) : 0.f);
-        Cue.Thrust = FMath::Clamp(Attack, 0.f, 1.f); Cue.Lunge = Cue.Thrust; Cue.Parry = FMath::Clamp(Defend, 0.f, 1.f);
-        // On an advance his front foot leads; on a retreat it follows.
-        const float Adv1 = Held(U, 0.f, .6f, 1.f, 1.8f), Adv2 = Held(U - 4.f, 0.f, .6f, 1.f, 1.8f);
-        Cue.Stride = (bFirst ? 14.f : -10.f) * Adv1 + (bSecond ? 14.f : -10.f) * Adv2;
+        Cue.Head = F[1 - I]->GetActorLocation() + FVector(0, 0, 72.f);
+        if (!F[1 - I]->GetBlade(Cue.PartnerBase, Cue.PartnerTip)) Cue.PartnerBase = Cue.PartnerTip = FVector::ZeroVector;
+        KeysAround(Keys[I], U, Cue.Key);
+        Cue.Now = U;
+        Cue.Lunge = Bd.Lunge; Cue.Lean = Bd.Lean; Cue.Twist = Bd.Twist; Cue.Crouch = Bd.Crouch;
+        Cue.Stride = StrideNow[I];
         F[I]->SetFenceCue(Cue);
     }
-    // How close the thrust's tip came to the parrying blade (they should meet).
+    // How close their blades came at each blow that should meet the other's blade (they should touch).
     {
         FVector B0, T0, B1, T1;
-        if (F[0]->GetBlade(B0, T0) && F[1]->GetBlade(B1, T1) && ((U > 2.3f && U < 3.f) || (U > 6.3f && U < 7.f)))
+        const bool bBlades = F[0]->GetBlade(B0, T0) && F[1]->GetBlade(B1, T1);
+        for (FBlow& Bl : Blows)
         {
-            FVector Pa, Pb;
-            FMath::SegmentDistToSegmentSafe(B0, T0, B1, T1, Pa, Pb);
-            PhraseParryGap = FMath::Min(PhraseParryGap, static_cast<float>(FVector::Dist(Pa, Pb)));
+            if (Bl.bDone || !Bl.bContact) continue;
+            if (U > Bl.Strike + .2f)
+            {
+                Bl.bDone = true;
+                if (Bl.Gap > 999.f) continue;   // never seen at a steady frame rate
+                LastParryGap = Bl.Gap;
+                static const TCHAR* KindNames[] = { TEXT("head"), TEXT("flank"), TEXT("low"), TEXT("lunge"), TEXT("feint"), TEXT("beat"), TEXT("bind") };
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FENCE_BLOW kind=%s gap=%.1f beat=%.2f"), KindNames[FMath::Min<int32>(Bl.Kind, 6)], Bl.Gap, Beat);
+                if (Phrases > 2) { WorstContactGap = FMath::Max(WorstContactGap, Bl.Gap); ++Contacts; Touching += Bl.Gap < 4.f; }
+            }
+            else if (bBlades && DeltaSeconds < .05f && U >= Bl.Strike - .03f)
+            {
+                FVector Pa, Pb;
+                FMath::SegmentDistToSegmentSafe(B0, T0, B1, T1, Pa, Pb);
+                Bl.Gap = FMath::Min(Bl.Gap, static_cast<float>(FVector::Dist(Pa, Pb)));
+            }
         }
     }
     // Their blades (over his head as they fence, but low in a lunge), and their feet, cost Chuck Sanity where they meet him

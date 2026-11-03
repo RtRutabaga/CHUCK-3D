@@ -2,7 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 3 (latest) — big leaps: one swing back then forward is enough; no sweet spot (Claude)
+## November 3 (latest) — the fencers' fight made harder (Claude)
+
+- **Asked:** "Make the sword fighter's fight more intense and complex while being smooth realistic good looking movements".
+- **Source:** `main` at 4685279e (begun on 5a3e115b; the brachiation commit landed in between and is untouched).
+- **Changed** ([../SHIP.md](../SHIP.md#the-fight-made-harder-november-3)):
+  - `DockNPC.h`: new `EFencePose` (20 sword positions), `FFenceKey`, `FenceCurve` (Hermite: flow keys sweep through, stop keys hold). `FFenceCue` now carries four keys, the partner's blade and head, and Lunge/Lean/Twist/Crouch/Stride.
+  - `ShipCrew.h/.cpp`: `AShipCrew::PlanPhrase` plans each phrase (seeded by its number) as blows of seven kinds (head, flank, low, lunge, feint, beat, bind), ripostes 72%, a circling phrase every fifth; ground gained per blow kept on the fencing ground; FenceHalf 85 → 75. Each blow's blade gap is measured (`CHUCK_FENCE_BLOW`), with new getters for contacts, touching, worst gap and the tally.
+  - `DockNPCPirate.inl`: the fencer pose rewritten: keyed fist/blade/edge/pole on the curve, each blow aimed onto the partner's blade near his hilt and clear of his head; body twist, lunge, lean, crouch and beat bounce; steps 0.15 s; the off hand thrown back in a lunge.
+  - `ShipTest.cpp`: the `fencers` trial also needs at least 4 contacts with 90% touching (within 4 cm); new `-ChuckFenceFilm` (90 side stills, 0.1 s apart).
+  - Docs: `docs/SHIP.md`, `docs/HANDOFF.md`.
+- **Tested:**
+  - Uncooked full ship test 15/15, failures 0 (`Local/fence-full.log`): 508 blows, 507 touching, worst 7.6 cm; near hits 4, far 0, fence/hull out 0.
+  - Film review (`Local/fence-film3.log`, stills in `Saved/Screenshots/WindowsEditor/Ship/Film/`): 276/276 touching, worst 2.8 cm.
+  - Packaged `Builds/FencingCandidate`: the first Verify-Package failed on the temple heroes `fireball` trial (`sanity_after=1`, `Local/verify-temple-heroes-20261103-092436.log`), unrelated code; the rerun on the same build passed: 182 passes (`Local/verify-package-20261103-093215.log`), fireball pass=1 (`Local/verify-temple-heroes-20261103-100253.log`), ship 15/15 with 506/506 touching, worst 2.3 cm (`Local/verify-ship-20261103-101318.log`). Verify-Menu 42/42.
+- **Remaining flaws:** reviewed from stills, not watched in motion or played by hand. No steel sound (the user's audio to come). The fingers don't regrip between cuts and thrusts. In a bind the two bodies aren't checked against each other. The temple fireball trial failed once (Chuck's Sanity 1 instead of 2) and passed on the rerun: a flake worth watching.
+- **Contract compatibility:** `FFenceCue` changed (old Thrust/Parry fields gone); only the ship fencers use it. Chuck, the rat hits and the other crew are unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as Fencing (receipt 4685279; prior package kept, ShipFixes pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 4: the chest, what the captain does at the trigger, the plank and the fall).
+
+## November 3 — big leaps: one swing back then forward is enough; no sweet spot (Claude)
 
 - **Asked:** "I want it to be easier to get a good back and forth swing, if the player goes back the full amount then forward the full amount and releases while going forward I want that to result in a successful jump to the next plank, and I want it to look and feel realistic. I don't want just holding forward to make it across, you should have to go back then forward at least for the bigger gaps. but I also don't want it to be as tricky of a sweet spot as it currently is ... make forward swing you more forward easier".
 - **Source:** `main` at 5a3e115b.

@@ -10,7 +10,9 @@
 //     and every other time drinks from it instead;
 //   the dancing pirate dances a jig: a hop on every beat, kicks and heel taps on alternate legs, a jump to close the phrase,
 //     hands on his hips;
-//   the fencers stand side-on in a crouch, advancing and lunging, parrying and recovering, on feet that step and stay put;
+//   the fencers stand side-on in a crouch and fight in phrases of cuts, thrusts, feints, beats and binds (ShipCrew.cpp),
+//     each blow landing on the other's blade, the sword moving on smooth curves between its positions, on feet that step
+//     and stay put, the free arm thrown back for balance in a lunge;
 //   Jeffries, tied to the main mast by the chest and the waist, his wrists bound behind him round it, heaves against the ropes;
 //   the seated pirate sways on his stool at the mess table with his tankard (the tavern drinker's pose, DockNPC.cpp);
 //   the chef chops at his work table on the beat until he sees the rat, then chases it with his cleaver (TickChef).
@@ -438,16 +440,24 @@ void ADockNPC::PirateDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVect
         break;
     }
     case EDockHuman::PirateFencerA: case EDockHuman::PirateFencerB:
+    {
         Damp(.3f);
-        HipsOffset.Z -= FencerCrouch + 7.f * Fence.Lunge;
-        // Side-on, sword shoulder forward; leaning into a lunge; the head turned back to his man.
-        Delta[Pelvis] = Yaw(-22.f);
-        Delta[Spine1] = Pitch(3.f + 6.f * Fence.Lunge);
-        Delta[Spine2] = Yaw(-8.f + 8.f * Fence.Thrust) * Pitch(3.f + 6.f * Fence.Lunge);
-        Delta[Chest] = Yaw(-6.f + 10.f * Fence.Thrust);
-        Delta[Neck] = Yaw(14.f) * Delta[Neck];
-        Delta[Head] = Yaw(18.f - 6.f * Fence.Thrust) * Delta[Head];
+        // Down in his stance, bouncing lightly on the beat while on guard; lower in a lunge or a low parry; the hips carried
+        // forward over the front knee in a lunge, back when he leans away from a blade.
+        const float Guarded = 1.f - FMath::Clamp(Fence.Lunge + Fence.Crouch, 0.f, 1.f);
+        HipsOffset.Z -= FencerCrouch + 8.f * Fence.Lunge + 9.f * Fence.Crouch + 1.8f * Dip * Guarded;
+        HipsOffset.X += 13.f * Fence.Lunge - 10.f * Fence.Lean;
+        // Side-on, sword shoulder forward; the shoulders wound back for a cut and driven through it; leaning into a lunge or
+        // away from a blade; the head turned back to his man throughout.
+        const float Tw = Fence.Twist;
+        Delta[Pelvis] = Yaw(-22.f + 6.f * Tw);
+        Delta[Spine1] = Pitch(3.f + 7.f * Fence.Lunge - 9.f * Fence.Lean + 3.f * Fence.Crouch) * Yaw(3.f * Tw);
+        Delta[Spine2] = Yaw(-8.f + 9.f * Tw) * Pitch(3.f + 6.f * Fence.Lunge - 7.f * Fence.Lean);
+        Delta[Chest] = Yaw(-6.f + 11.f * Tw) * Roll(-3.f * Fence.Lean);
+        Delta[Neck] = Yaw(14.f - 5.f * Tw) * Pitch(-3.f * Fence.Lunge + 4.f * Fence.Lean) * Delta[Neck];
+        Delta[Head] = Yaw(18.f - 12.f * Tw) * Pitch(-4.f * Fence.Lunge) * Delta[Head];
         break;
+    }
     case EDockHuman::Jeffries:
     {
         Damp(.3f);
@@ -646,11 +656,12 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
     {
         if (!bFenceCue) break;
         // The feet: his right ahead toward his man, his left behind and turned out; each planted on the deck and stepped
-        // (one at a time) when the stance has moved off it.
+        // (one at a time, quickly) when the stance has moved off it. A lunge throws the front foot well forward.
         const FTransform ToWorld = Body->GetComponentTransform();
         const FVector Want[2] = {
-            FVector(-24.f - 6.f * Fence.Lunge, ArmOut * 12.f, AnkleRest),                                  // his left, behind
-            FVector(26.f + Fence.Stride + 24.f * Fence.Lunge, -ArmOut * 8.f, AnkleRest) };                  // his right, ahead
+            FVector(-24.f - 7.f * Fence.Lunge, ArmOut * 12.f, AnkleRest),                                  // his left, behind
+            FVector(26.f + Fence.Stride + 34.f * Fence.Lunge, -ArmOut * 8.f, AnkleRest) };                  // his right, ahead
+        constexpr float FenceStepTime = .15f;
         for (int32 Side = 0; Side < 2; ++Side)
         {
             const FVector W = ToWorld.TransformPosition(Want[Side]);
@@ -658,10 +669,10 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
             if (StepT[Side] < 0.f && StepT[1 - Side] < 0.f && FVector::Dist2D(Plant[Side], W) > StepSlack) { StepFrom[Side] = Plant[Side]; StepT[Side] = 0.f; }
             if (StepT[Side] >= 0.f)
             {
-                StepT[Side] = FMath::Min(1.f, StepT[Side] + DeltaSeconds / StepTime);
+                StepT[Side] = FMath::Min(1.f, StepT[Side] + DeltaSeconds / FenceStepTime);
                 StepTo[Side] = W;
                 const float E = Ease01(StepT[Side]);
-                Plant[Side] = FMath::Lerp(StepFrom[Side], StepTo[Side], E) + FVector(0.f, 0.f, StepLift * FMath::Sin(PI * StepT[Side]));
+                Plant[Side] = FMath::Lerp(StepFrom[Side], StepTo[Side], E) + FVector(0.f, 0.f, StepLift * .7f * FMath::Sin(PI * StepT[Side]));
                 if (StepT[Side] >= 1.f) { Plant[Side] = StepTo[Side]; StepT[Side] = -1.f; }
             }
         }
@@ -673,32 +684,150 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
             Feet[Side] = Side == 0 ? Yaw(ArmOut * 70.f) * FootRest[0] : FootRest[1];
         }
         KeepFeetOn(Space, Ankles, Feet, FVector(1.f, 0.f, .2f));
-        // The sword arm: on guard (fist forward, the blade up at his man), thrusting at his chest, or parrying across.
-        const FVector Target = ToWorld.InverseTransformPosition(Fence.Target);
+        // The sword (2026-11-03): each key of his phrase is a fist, a blade, the edge's way and where the elbow points, all in
+        // his own frame (X toward his man, Z up); between keys the four run on a cubic, stopping where he stops (a parry held,
+        // a blow landing) and sweeping on through a wind-up. Blows are aimed onto his man's blade where it is, so steel meets
+        // steel; parries are where the blow will come.
         const FVector S = Shoulder[1];
         const float ArmReach = static_cast<float>(FVector::Dist(S, Space[BoneIndex[LowerR]].GetLocation()) + FVector::Dist(Space[BoneIndex[LowerR]].GetLocation(), Space[BoneIndex[HandR]].GetLocation()));
-        const float Th = Fence.Thrust, Pa = Fence.Parry * (1.f - Th), Gd = FMath::Max(0.f, 1.f - Th - Pa);
-        const FVector Guard = S + FVector(34.f, -Right * 6.f, -20.f);
-        const FVector Thrust = S + (Target - S).GetSafeNormal() * ArmReach * .97f;
-        const FVector Parry = S + FVector(30.f, -Right * 18.f, -6.f);
-        const FVector Fist = Guard * Gd + Thrust * Th + Parry * Pa;
-        const FVector GuardDir = (Target + FVector(0, 0, 28.f) - Guard).GetSafeNormal();
-        const FVector ThrustDir = (Target - Thrust).GetSafeNormal();
-        const FVector ParryDir = FVector(.45f, Right * .25f, 1.f).GetSafeNormal();
-        const FVector Blade = (GuardDir * Gd + ThrustDir * Th + ParryDir * Pa).GetSafeNormal();
-        const FVector Along = FVector::VectorPlaneProject(FVector(.25f, 0.f, -1.f), Blade).GetSafeNormal();   // the edge down (toward his man in a parry)
-        PlaceHand(Space, 1, Fist, Along, Blade, FVector(-.25f, Right * .6f, -1.f));
+        const float SwordReach = ArmReach * .97f;
+        const FVector Target = ToWorld.InverseTransformPosition(Fence.Target);
+        const FVector HeadAt = ToWorld.InverseTransformPosition(Fence.Head);
+        const bool bPartner = !Fence.PartnerTip.IsZero();
+        const FVector PB = bPartner ? ToWorld.InverseTransformPosition(Fence.PartnerBase) : Target;
+        const FVector PT = bPartner ? ToWorld.InverseTransformPosition(Fence.PartnerTip) : Target;
+        const float R = Right;
+        const auto Dir = [](float X, float Y, float Z) { return FVector(X, Y, Z).GetSafeNormal(); };
+        // The edge's way: Hint square to the blade (the way the edge faces: down a blow's path, toward a blow it parries).
+        const auto EdgeOf = [](const FVector& Hint, const FVector& Blade)
+        {
+            const FVector E = FVector::VectorPlaneProject(Hint, Blade);
+            return E.SizeSquared() > 1e-4f ? E.GetSafeNormal() : FVector::VectorPlaneProject(FVector(0.f, 0.f, -1.f), Blade).GetSafeNormal();
+        };
+        // A blow along Way that lands on his man's blade: the point where they cross is as near his man's hilt as his arm
+        // allows, on his own blade's last third; a hair to his own side of it, so the steel touches rather than passes.
+        const auto OnBlade = [&](const FVector& Way, const FVector& Aim)
+        {
+            const FVector W = Way.GetSafeNormal();
+            if (bPartner)
+                for (float Fr = .14f; Fr <= .9f; Fr += .06f)
+                {
+                    FVector C = PB + (PT - PB) * Fr;
+                    FVector N = FVector::CrossProduct(W, (PT - PB).GetSafeNormal());
+                    if (N.SizeSquared() > 1e-4f) { N.Normalize(); if (FVector::DotProduct(N, S - C) < 0.f) N = -N; C += N * 1.2f; }
+                    for (const float G : { .7f, .6f, .8f, .5f })
+                    {
+                        const FVector Fist = C - W * (CutlassBase + G * (CutlassTip - CutlassBase));
+                        if (FVector::Dist(S, Fist) > SwordReach) continue;
+                        // (clear of his man's head: the blade beyond the crossing doesn't run on through it)
+                        const FVector Closest = FMath::ClosestPointOnSegment(HeadAt, Fist + W * CutlassBase, Fist + W * CutlassTip);
+                        if (FVector::Dist(Closest, HeadAt) < 16.f) continue;
+                        return Fist;
+                    }
+                }
+            // Out of reach: the crossing that needs the least more reach, the blow's line kept and drawn back toward him by
+            // what it lacks (it falls a little short of the steel rather than swinging off line at his man's head).
+            FVector Best = S + W * SwordReach;
+            float Lack = 1e9f;
+            if (bPartner)
+                for (float Fr = .22f; Fr <= .9f; Fr += .06f)
+                    for (const float G : { .7f, .5f, .35f })
+                    {
+                        const FVector Fist = PB + (PT - PB) * Fr - W * (CutlassBase + G * (CutlassTip - CutlassBase));
+                        const float L = static_cast<float>(FVector::Dist(S, Fist)) - SwordReach;
+                        if (L < Lack) { Lack = L; Best = Fist; }
+                    }
+            else Best = Aim - W * 45.f;
+            return S + (Best - S).GetClampedToMaxSize(SwordReach);
+        };
+        struct FSword { FVector Fist, Blade, Edge, Pole; };
+        const float Search = Clock * 2.3f;   // the guard's point, never quite still, feeling for an opening
+        const auto PoseOf = [&](EFencePose Pose) -> FSword
+        {
+            FSword K;
+            switch (Pose)
+            {
+            case EFencePose::ChamberHigh:   // the hand up by his right ear, the blade back over his shoulder
+                K.Fist = S + FVector(4.f, R * 10.f, 22.f); K.Blade = Dir(-.55f, R * .25f, .8f); K.Edge = EdgeOf(FVector(.8f, 0.f, .6f), K.Blade); K.Pole = Dir(-.1f, R, -.15f); break;
+            case EFencePose::SwingHigh:     // coming over: the blade upright, the hand rising forward
+                K.Fist = S + FVector(22.f, R * 6.f, 22.f); K.Blade = Dir(.1f, R * .12f, 1.f); K.Edge = EdgeOf(FVector(1.f, 0.f, 0.f), K.Blade); K.Pole = Dir(-.2f, R * .8f, -.5f); break;
+            case EFencePose::CutHead:       // down at his head
+                K.Blade = (((HeadAt - S).GetSafeNormal() + FVector(0.f, 0.f, -.3f))).GetSafeNormal(); K.Fist = OnBlade(K.Blade, HeadAt);
+                K.Edge = EdgeOf(FVector(0.f, 0.f, -1.f), K.Blade); K.Pole = Dir(-.3f, R * .5f, -1.f); break;
+            case EFencePose::ChamberFlank:  // the hand out to his right, the blade back and up behind it
+                K.Fist = S + FVector(6.f, R * 24.f, -4.f); K.Blade = Dir(-.45f, R * .75f, .45f); K.Edge = EdgeOf(FVector(.6f, -R, 0.f), K.Blade); K.Pole = Dir(-.6f, R * .5f, -.6f); break;
+            case EFencePose::CutFlank:      // across from his right at his man's left side
+                K.Blade = ((Target - S).GetSafeNormal() + FVector(0.f, R * .5f, -.1f)).GetSafeNormal(); K.Fist = OnBlade(K.Blade, Target);
+                K.Edge = EdgeOf(FVector(0.f, -R, 0.f), K.Blade); K.Pole = Dir(-.25f, R * .4f, -1.f); break;
+            case EFencePose::ChamberLow:    // the hand low across to his left, the blade back behind it
+                K.Fist = S + FVector(14.f, -R * 14.f, -26.f); K.Blade = Dir(-.4f, -R * .8f, -.3f); K.Edge = EdgeOf(FVector(.6f, R, .2f), K.Blade); K.Pole = Dir(-.3f, R * .8f, -.6f); break;
+            case EFencePose::CutLow:        // backhand, low at his man's right leg
+                K.Blade = ((Target + FVector(0.f, 0.f, -30.f) - S).GetSafeNormal() + FVector(0.f, -R * .5f, -.2f)).GetSafeNormal(); K.Fist = OnBlade(K.Blade, Target);
+                K.Edge = EdgeOf(FVector(0.f, R, .3f), K.Blade); K.Pole = Dir(-.2f, R * .6f, -1.f); break;
+            case EFencePose::Thrust:        // the point at his chest, met by his parry
+                K.Blade = (Target + FVector(0.f, 0.f, 12.f) - S).GetSafeNormal(); K.Fist = OnBlade(K.Blade, Target);   // level at his upper chest
+                K.Edge = EdgeOf(FVector(0.f, R * .3f, -1.f), K.Blade); K.Pole = Dir(-.25f, R * .6f, -1.f); break;
+            case EFencePose::Lunge:         // the point at his chest, nothing in the way, as far as the arm goes
+                K.Blade = (Target - S).GetSafeNormal(); K.Fist = S + K.Blade * SwordReach;
+                K.Edge = EdgeOf(FVector(0.f, R * .3f, -1.f), K.Blade); K.Pole = Dir(-.25f, R * .6f, -1.f); break;
+            case EFencePose::Feint:         // a half thrust at his inside
+                K.Blade = (Target - S + FVector(0.f, R * 10.f, 0.f)).GetSafeNormal(); K.Fist = S + K.Blade * SwordReach * .62f;
+                K.Edge = EdgeOf(FVector(0.f, 0.f, -1.f), K.Blade); K.Pole = Dir(-.25f, R * .6f, -1.f); break;
+            case EFencePose::Disengage:     // the point dipped under his man's blade, to come up on its other side
+                K.Fist = S + FVector(32.f, -R * 2.f, -30.f); K.Blade = Dir(1.f, R * .2f, -.2f); K.Edge = EdgeOf(FVector(0.f, 0.f, -1.f), K.Blade); K.Pole = Dir(-.25f, R * .6f, -1.f); break;
+            case EFencePose::ParryHigh:     // the blade across over his head, edge up
+                K.Fist = S + FVector(30.f, R * 12.f, 18.f); K.Blade = Dir(.35f, -R, .2f); K.Edge = EdgeOf(FVector(0.f, 0.f, 1.f), K.Blade); K.Pole = Dir(0.f, R, -.3f); break;
+            case EFencePose::ParryIn:       // the blade upright before his left side
+                K.Fist = S + FVector(32.f, -R * 14.f, -16.f); K.Blade = Dir(.6f, -R * .2f, .8f); K.Edge = EdgeOf(FVector(.3f, -R, 0.f), K.Blade); K.Pole = Dir(-.3f, R * .5f, -1.f); break;
+            case EFencePose::ParryOut:      // the blade upright before his right side
+                K.Fist = S + FVector(34.f, R * 14.f, -18.f); K.Blade = Dir(.65f, R * .25f, .75f); K.Edge = EdgeOf(FVector(.3f, R, 0.f), K.Blade); K.Pole = Dir(-.3f, R * .8f, -.8f); break;
+            case EFencePose::ParryLow:      // the hand high, the point down before his right leg
+                K.Fist = S + FVector(28.f, R * 12.f, -24.f); K.Blade = Dir(.45f, R * .35f, -1.f); K.Edge = EdgeOf(FVector(.2f, R, 0.f), K.Blade); K.Pole = Dir(0.f, R, .4f); break;
+            case EFencePose::Knocked:       // his blade beaten out to his right
+                K.Fist = S + FVector(28.f, R * 24.f, -12.f); K.Blade = Dir(.75f, R * .6f, .25f); K.Edge = EdgeOf(FVector(0.f, 0.f, -1.f), K.Blade); K.Pole = Dir(-.3f, R * .8f, -.8f); break;
+            case EFencePose::BeatAside:     // a sharp blow on his man's blade, sweeping it to his own left
+                K.Blade = Dir(.8f, -R * .55f, .05f); K.Fist = OnBlade(K.Blade, Target); K.Edge = EdgeOf(FVector(0.f, -R, 0.f), K.Blade); K.Pole = Dir(-.3f, R * .6f, -1.f); break;
+            case EFencePose::BindHold:      // blades crossed high near the hilts
+                K.Fist = S + FVector(36.f, -R * 4.f, 4.f); K.Blade = Dir(.45f, -R * .3f, .85f); K.Edge = EdgeOf(FVector(0.f, -R, 0.f), K.Blade); K.Pole = Dir(-.3f, R * .7f, -1.f); break;
+            case EFencePose::BindPress:     // bearing down on his man's crossed blade
+                K.Blade = Dir(.45f, -R * .3f, .85f); K.Fist = OnBlade(K.Blade, HeadAt); K.Edge = EdgeOf(FVector(0.f, -R, -.3f), K.Blade); K.Pole = Dir(-.3f, R * .7f, -1.f); break;
+            default:                        // on guard: the fist forward, the point up at his man's eyes, moving a little
+                K.Fist = S + FVector(34.f, -R * 6.f, -20.f) + FVector(0.f, R * 1.5f * FMath::Sin(Search), 1.5f * FMath::Sin(Search * .73f + 1.f));
+                K.Blade = (Target + FVector(0.f, R * 6.f * FMath::Sin(Search * 1.3f), 28.f + 5.f * FMath::Cos(Search)) - K.Fist).GetSafeNormal();
+                K.Edge = EdgeOf(FVector(.25f, 0.f, -1.f), K.Blade); K.Pole = Dir(-.25f, R * .6f, -1.f); break;
+            }
+            return K;
+        };
+        FSword Key[4];
+        FVector Fists[4], Blades[4], Edges[4], Poles[4];
+        for (int32 J = 0; J < 4; ++J)
+        {
+            Key[J] = PoseOf(Fence.Key[J].Pose);
+            Fists[J] = Key[J].Fist; Blades[J] = Key[J].Blade; Edges[J] = Key[J].Edge; Poles[J] = Key[J].Pole;
+        }
+        FVector Fist = FenceCurve(Fence.Key, Fists, Fence.Now);
+        Fist = S + (Fist - S).GetClampedToMaxSize(SwordReach);
+        const FVector Blade = FenceCurve(Fence.Key, Blades, Fence.Now).GetSafeNormal();
+        const FVector Along = EdgeOf(FenceCurve(Fence.Key, Edges, Fence.Now), Blade);
+        PlaceHand(Space, 1, Fist, Along, Blade, FenceCurve(Fence.Key, Poles, Fence.Now).GetSafeNormal());
         FVector P, A, T;
         HandFrame(Space, 1, P, A, T);
         if (Clock > 6.f) WorstPropGrip = FMath::Max(WorstPropGrip, static_cast<float>(FVector::Dist(P, Fist)));
         PlaceProp(0, FTransform(FRotationMatrix::MakeFromXZ(T, -FVector::VectorPlaneProject(A, T).GetSafeNormal()).ToQuat(), P));
         BladeBaseW = ToWorld.TransformPosition(P + T * CutlassBase);
         BladeTipW = ToWorld.TransformPosition(P + T * CutlassTip);
-        // The other fist on his hip, the elbow out (out of the way of his own blade).
+        // The other hand: a fist on his hip on guard; thrown back and down behind him for balance as he lunges or cuts.
         {
             const FVector HipsAt = Space[BoneIndex[Pelvis]].GetLocation();
-            const FVector OffAlong = FVector(.15f, -ArmOut * .55f, -.8f).GetSafeNormal();
-            PlaceHand(Space, 0, HipsAt + FVector(-3.f, ArmOut * 20.f, 9.f), OffAlong, FVector::VectorPlaneProject(FVector(1.f, 0.f, .3f), OffAlong).GetSafeNormal(), FVector(-.5f, ArmOut, .3f));
+            const float Back = Ease01(FMath::Clamp(Fence.Lunge * 1.4f + FMath::Max(0.f, Fence.Twist) * .3f, 0.f, 1.f));
+            const FVector HipFist = HipsAt + FVector(-3.f, ArmOut * 20.f, 9.f);
+            const FVector BackFist = Shoulder[0] + FVector(-36.f, ArmOut * 16.f, -24.f);
+            const FVector HipAlong = FVector(.15f, -ArmOut * .55f, -.8f).GetSafeNormal(), BackAlong = FVector(-.75f, ArmOut * .25f, -.6f).GetSafeNormal();
+            const FVector OffFist = FMath::Lerp(HipFist, BackFist, Back);
+            const FVector OffAlong = FMath::Lerp(HipAlong, BackAlong, Back).GetSafeNormal();
+            const FVector OffThumb = FVector::VectorPlaneProject(FMath::Lerp(FVector(1.f, 0.f, .3f), FVector(0.f, 0.f, 1.f), Back), OffAlong).GetSafeNormal();
+            PlaceHand(Space, 0, OffFist, OffAlong, OffThumb, FMath::Lerp(FVector(-.5f, ArmOut, .3f), FVector(.2f, ArmOut, -.6f), Back).GetSafeNormal());
+            SetGrip(0, FMath::Lerp(.55f, .3f, Back));
         }
         break;
     }

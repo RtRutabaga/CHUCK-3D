@@ -238,15 +238,11 @@ The 2D galley is an escape, not a fight, and so is this one.
 
 ### The fencing
 
-The two fence in eight-beat phrases on their ground, forward of the fore mast:
+The two fence in eight-beat phrases on their ground, forward of the fore mast. Until November 3 each phrase was one lunge and parry each way; since then each is a run of four to six blows ("The fight made harder", below).
 
-1. One advances and lunges, and the other retreats and parries.
-2. Then either the other answers, so they end where they began, or the first presses again, so they move a step along the deck.
-3. They turn a little in each recovery.
+Whoever leads, and the ground each blow gains, keeps both on their ground and inside the rail. They stand side-on in a crouch, on feet that are planted and stepped one at a time, each with a cutlass. The other fist rests on the hip, and is thrown back for balance in a lunge.
 
-Whoever leads, and which way they turn, keeps both on their ground and inside the rail. They stand side-on in a crouch, on feet that are planted and stepped one at a time, each with a cutlass. The other fist rests on the hip.
-
-Their blades fence at a man's chest height, over the rat's head. What hurts him is their feet (the rat in a stance, or in the way of an advance or lunge) and walking into them. Each costs one Sanity, as the 2D swordsmen's 15 of 100.
+Their blades fence mostly at a man's chest height, over the rat's head, but a low cut or parry brings the point down near the deck and can catch him. What hurts him is their blades, their feet (the rat in a stance, or in the way of an advance or lunge) and walking into them. Each costs one Sanity, as the 2D swordsmen's 15 of 100.
 
 ### Tests (milestone 3)
 
@@ -370,3 +366,32 @@ User request: "Make the pirate flag more prominent while still being in a spot c
   - Nobody has played it by hand.
   - The haze's colours are the cellar's; they have not been tuned for the lamplit sail locker.
   - The flag is mirrored on its far side, as before.
+
+## The fight made harder (November 3)
+
+User request: "Make the sword fighter's fight more intense and complex while being smooth realistic good looking movements".
+
+- **What they fight** (`ShipCrew.cpp`, `AShipCrew::PlanPhrase`): each eight-beat phrase is planned afresh (from the phrase's number, so the same every run) as a run of blows. The one who parried mostly ripostes; now and then the attacker renews. There are seven kinds of blow:
+  - **head:** a cut from over the shoulder down at the head, parried overhead with the blade across;
+  - **flank:** a cut from the right at the other's left side, parried with the blade upright on that side;
+  - **low:** a backhand cut at the leg, parried point down;
+  - **lunge:** a lunging thrust at the chest, parried to the outside;
+  - **feint:** a half thrust to the inside that draws the parry, the point dipped under the blade and thrust home on the outside, parried at the last moment;
+  - **beat:** a sharp blow knocks the other's blade aside, then a lunge into the opening, which he escapes by leaping back and leaning away;
+  - **bind:** the blades crossed upright near the hilts, the two close and shoving for over a beat, then springing apart (at most once a phrase).
+- Every fifth phrase they circle: the pair turns up to 30° on the deck, stepping in and out, before engaging again.
+- **How it moves** (`DockNPCPirate.inl`):
+  - Each blow is a few sword positions in time (wind-up, the blow, a held moment, back to guard; the parry, held, back to guard): 20 positions in all (`EFencePose`, `DockNPC.h`).
+  - Between positions the fist, the blade, the edge and the elbow run on a cubic. The sword sweeps on through a wind-up without stopping. It stops dead where a blow lands or a parry is held.
+  - Each blow is aimed at the other's blade where it is, crossing it as near his hilt as the arm reaches, never through his head. So steel meets steel at every blow.
+  - The body goes with it: the shoulders wind back for a cut and drive through it, the hips drop and carry forward in a lunge, the knees bend for a low parry, they lean away from a blade, and they bounce lightly on the beat while on guard. Each blow has its own steps in and out, the front foot leads an advance and the back foot a retreat, and the steps are quicker (0.15 s). The free arm is thrown back for balance in a lunge.
+  - They stand closer (1.5 m between them; it was 1.7 m), so blows reach the blade.
+- **Hurting the rat** is as before: their feet and bodies, one Sanity each.
+- **Tests:**
+  - The `fencers` trial now also needs at least four blows that should meet the other's blade, 90% of them touching (within 4 cm). Each blow is logged (`CHUCK_FENCE_BLOW kind gap`). Blows seen only on frames slower than 50 ms are not counted.
+  - `-ChuckFenceFilm` takes 90 stills of the fight from the side, 0.1 s apart (`Saved/Screenshots/.../Ship/Film/`), for reviewing it frame by frame.
+- **Not checked:**
+  - Nobody has played it by hand or watched it in motion; it was reviewed from still sequences.
+  - There is no sound of steel yet: the user's audio is still to come.
+  - The fingers don't change grip between cuts and thrusts.
+  - In a bind the two stand close, but their bodies are not checked against each other.

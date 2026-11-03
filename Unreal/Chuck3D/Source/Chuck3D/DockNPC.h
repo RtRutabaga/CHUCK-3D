@@ -38,14 +38,47 @@ enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuar
     // the ship spawns them (the others are referenced by every NPC).
     PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, PirateCaptain, Count };
 
+/** A fencer's sword positions (2026-11-03). ShipCrew.cpp sets them out in time; DockNPCPirate.inl makes each a fist and blade.
+ *  Wind-ups (Chamber*, SwingHigh) the blade sweeps through; blows (Cut*, Thrust, BeatAside, BindPress) land on his partner's
+ *  blade wherever it is; parries are held where his partner's blow will come; Lunge and Feint aim at his partner's body. */
+enum class EFencePose : uint8 { Guard, ChamberHigh, SwingHigh, CutHead, ChamberFlank, CutFlank, ChamberLow, CutLow, Thrust, Lunge, Feint,
+    Disengage, ParryHigh, ParryIn, ParryOut, ParryLow, Knocked, BeatAside, BindHold, BindPress, Count };
+
+/** A moment of a fencer's phrase: the sword position he is in at Beat, whether his sword passes through it (a wind-up flowing
+ *  into the cut) or stops there (a guard, a parry, a blow landing), and his body then (lunge 0..1, cm stepped toward his
+ *  partner, leaning back 0..1). */
+struct FFenceKey
+{
+    float Beat = 0.f;
+    EFencePose Pose = EFencePose::Guard;
+    bool bFlow = false;
+    float Lunge = 0.f, Off = 0.f, Lean = 0.f;
+};
+
+/** Cubic between keys K[1] and K[2] (K[0] and K[3] their neighbours) at beat Now: where he stops at a key it is still there,
+ *  where he passes through it the motion carries on through it. V are the keys' values. */
+template <typename T>
+T FenceCurve(const FFenceKey K[4], const T V[4], float Now)
+{
+    const float H = FMath::Max(K[2].Beat - K[1].Beat, 1e-3f);
+    const float S = FMath::Clamp((Now - K[1].Beat) / H, 0.f, 1.f), S2 = S * S, S3 = S2 * S;
+    const T M0 = K[1].bFlow ? (V[2] - V[0]) * (H / FMath::Max(K[2].Beat - K[0].Beat, 1e-3f)) : V[1] * 0.f;
+    const T M1 = K[2].bFlow ? (V[3] - V[1]) * (H / FMath::Max(K[3].Beat - K[1].Beat, 1e-3f)) : V[1] * 0.f;
+    return V[1] * (2.f * S3 - 3.f * S2 + 1.f) + M0 * (S3 - 2.f * S2 + S) + V[2] * (3.f * S2 - 2.f * S3) + M1 * (S3 - S2);
+}
+
 /** What the ship's crew tells a fencing pirate each frame (ShipCrew.cpp): where to stand and what his sword does. */
 struct FFenceCue
 {
     FVector Centre = FVector::ZeroVector;   // world: the middle between his feet, on the deck
     FVector Facing = FVector::ForwardVector;// world, level: toward his partner
-    FVector Target = FVector::ZeroVector;   // world: his partner's chest, where a thrust goes
-    float Thrust = 0, Parry = 0, Lunge = 0; // 0..1
-    float Stride = 0;                       // cm the front foot is ahead of the stance this moment (an advance's first step)
+    FVector Target = FVector::ZeroVector;   // world: his partner's chest
+    FVector Head = FVector::ZeroVector;     // world: his partner's head
+    FVector PartnerBase = FVector::ZeroVector, PartnerTip = FVector::ZeroVector;   // world: his partner's blade (zero: none yet)
+    FFenceKey Key[4];                       // his sword's keys round now (between Key[1] and Key[2])
+    float Now = 0.f;                        // beats into the phrase
+    float Lunge = 0, Lean = 0, Twist = 0, Crouch = 0;   // his body now (twist: the sword shoulder driven forward +, drawn back -)
+    float Stride = 0;                       // cm the front foot leads (advancing) or trails (retreating) this moment
 };
 
 UCLASS()

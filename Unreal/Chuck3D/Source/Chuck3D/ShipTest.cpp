@@ -157,6 +157,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         TArray<FString> Heard; double Pressed = 0; int32 TalkOk = 0, TalkChecks = 0, Count0 = 0, Count1 = 0, Seen = 0;
         // The music's change of track at the companion (2026-11-02): when he arrived, and the switches before.
         double Arrived = -1; int32 Switches0 = 0;
+        int32 FilmFrame = -1;   // -ChuckFenceFilm's stills taken
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -271,6 +272,38 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     Cap ? Cap->GetCaptainTipDepth() : 0.f, Cap ? Cap->GetWorstPropGrip() : 0.f);
                 Run->Failures += !bCaptain;
             }
+        }
+        // -ChuckFenceFilm: the fencers from the side, a still every 0.1 s for 9 s, to review their fight frame by frame.
+        if (FParse::Param(FCommandLine::Get(), TEXT("ChuckFenceFilm")) && Run->FilmFrame < 90)
+        {
+            const AShipCrew* Crew = AShipCrew::Get(World);
+            if (!Crew || Now < Run->Next) return;
+            if (Run->FilmFrame < 0)
+            {
+                Chuck->SetActorHiddenInGame(true);
+                if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
+                Run->FilmFrame = 0;
+            }
+            else
+            {
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / TEXT("Film") / FString::Printf(TEXT("Fence_%03d.png"), Run->FilmFrame), true, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FENCE_FILM frame=%d beat=%.2f gap=%.1f"), Run->FilmFrame, Crew->GetBeat(), Crew->GetLastParryGap());
+                ++Run->FilmFrame;
+            }
+            Run->Next = Now + .1;
+            // From the side of their line, on the ship's middle side of them, the camera keeping its place once set.
+            const ADockNPC* A = Crew->Find(EDockHuman::PirateFencerA);
+            const ADockNPC* B = Crew->Find(EDockHuman::PirateFencerB);
+            if (A && B && Run->Camera.IsValid() && Run->FilmFrame == 0)
+            {
+                const FVector Mid = (ShipLocal(A->GetActorLocation()) + ShipLocal(B->GetActorLocation())) * .5;
+                const FVector Line = (ShipLocal(B->GetActorLocation()) - ShipLocal(A->GetActorLocation())).GetSafeNormal2D();
+                FVector Side(-Line.Y, Line.X, 0.);
+                if (FMath::Abs((Mid + Side * 330.).Y) > FMath::Abs((Mid - Side * 330.).Y)) Side = -Side;
+                const FVector Eye = ShipWorld(FVector(Mid.X, Mid.Y, DeckZ + 130) + Side * 330.), Aim = ShipWorld(FVector(Mid.X, Mid.Y, DeckZ + 105));
+                Run->Camera->SetActorLocationAndRotation(Eye, (Aim - Eye).Rotation());
+            }
+            return;
         }
         if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipViewsOnly"))) { Run->bDone = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST views_only=1 failures=%d"), Run->Failures); FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0); return; }
         if (Now < Run->Next) return;
@@ -692,9 +725,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 {
                     const int32 Far = Crew->GetFencerHits() - Run->Count0;
                     Done = true;
-                    Run->bPass = Run->Count1 >= 1 && Far == 0 && Crew->GetWorstFenceOut() < 5.f && Crew->GetWorstHullOut() <= 0.f && !Chuck->IsAstral();
-                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_FENCERS near_hits=%d far_hits=%d fence_out=%.1f hull_out=%.1f parry_gap=%.1f phrases=%d"), Run->Count1, Far,
-                        Crew->GetWorstFenceOut(), Crew->GetWorstHullOut(), Crew->GetLastParryGap(), Crew->GetFencePhrases());
+                    // (2026-11-03) and their blows land on each other's blades: steel meets steel at every one.
+                    const bool bContact = Crew->GetFenceContacts() >= 4 && Crew->GetFenceTouching() >= Crew->GetFenceContacts() * .9f;
+                    Run->bPass = Run->Count1 >= 1 && Far == 0 && Crew->GetWorstFenceOut() < 5.f && Crew->GetWorstHullOut() <= 0.f && !Chuck->IsAstral() && bContact;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_FENCERS near_hits=%d far_hits=%d fence_out=%.1f hull_out=%.1f parry_gap=%.1f contacts=%d touching=%d worst_contact_gap=%.1f phrases=%d %s"), Run->Count1, Far,
+                        Crew->GetWorstFenceOut(), Crew->GetWorstHullOut(), Crew->GetLastParryGap(), Crew->GetFenceContacts(), Crew->GetFenceTouching(), Crew->GetWorstContactGap(), Crew->GetFencePhrases(), *Crew->GetFenceTally());
                 }
             }
             break;
