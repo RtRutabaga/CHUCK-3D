@@ -711,6 +711,7 @@ private:
     FVector Plant[2], StepFrom[2], StepTo[2];
     float StepT[2] = { -1.f, -1.f };
     bool bPlanted = false;
+    int32 DanceBeatHeard = MIN_int32;           // the dancer's last beat heard landing on the deck
     // The chef.
     enum class EChef : uint8 { Work, Notice, Chase, Swing, Lost, Return };
     EChef Chef = EChef::Work;

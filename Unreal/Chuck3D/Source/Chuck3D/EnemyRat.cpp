@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "ShipSetting.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
@@ -52,6 +53,9 @@ AEnemyRat::AEnemyRat()
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Rat(TEXT("/Game/Characters/Rat/SK_Rat.SK_Rat"));
     Body->SetSkinnedAssetAndUpdate(Rat.Object);
 }
+
+int32 AEnemyRat::ShipSoundsHeard = 0;
+int32 AEnemyRat::ShipSoundsHushed = 0;
 
 void AEnemyRat::BeginPlay()
 {
@@ -107,6 +111,12 @@ void AEnemyRat::SetState(EState NewState)
 
 void AEnemyRat::Play(const TArray<USoundBase*>& Set, float Volume)
 {
+    // Aboard the ship the rats live in the hold, and are heard only there (2026-11-03, the user), not through its decks.
+    if (InShip(GetActorLocation()))
+    {
+        if (!ShipHearsHold(this)) { ++ShipSoundsHushed; return; }
+        ++ShipSoundsHeard;
+    }
     if (Set.Num()) UGameplayStatics::PlaySoundAtLocation(this, Set[FMath::RandRange(0, Set.Num() - 1)], GetActorLocation(), Volume, FMath::FRandRange(.94f, 1.06f), 0.f, Attenuation);
 }
 

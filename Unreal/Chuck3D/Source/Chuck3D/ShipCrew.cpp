@@ -377,6 +377,8 @@ void AShipCrew::PlanPhrase()
         Merge(Keys[Att], Ak);
         Merge(Keys[1 - Att], Dk);
         FBlow Blow; Blow.Strike = Contact; Blow.bContact = bContact; Blow.Kind = uint8(A);
+        // The blade heard cutting the air on its way in: a cut's swing, a thrust's lunge (the beat's lunge goes past him).
+        Blow.Swish = Kind == EAttack::BeatEvade ? S - .2f : S - .3f;
         Blows.Add(Blow);
         // The attacker gains ground (fencer A along the line, B against it), if the pair stays on theirs.
         float Gain = AttackGain[A] * (Att == 0 ? 1.f : -1.f);
@@ -446,9 +448,38 @@ void AShipCrew::TickFencing(float DeltaSeconds)
         Cue.Stride = StrideNow[I];
         F[I]->SetFenceCue(Cue);
     }
+    // The fight heard (2026-11-03): each blow's blade through the air, the steel meeting where the blades cross, and in a
+    // bind the hilts locking and the blades scraping as they shove. Recorded (Tools/make_ship_sounds.py); spatial, carrying
+    // across the deck; quieter below (ShipSound).
+    {
+        FVector B0(0.f), T0(0.f), B1(0.f), T1(0.f);
+        const bool bBlades = F[0]->GetBlade(B0, T0) && F[1]->GetBlade(B1, T1);
+        const FVector Mid = (F[0]->GetActorLocation() + F[1]->GetActorLocation()) * .5f + FVector(0, 0, 60.f);
+        auto Crossing = [&]()
+        {
+            if (!bBlades) return Mid;
+            FVector Pa, Pb; FMath::SegmentDistToSegmentSafe(B0, T0, B1, T1, Pa, Pb);
+            return (Pa + Pb) * .5f;
+        };
+        static constexpr float ClashVolume[] = { 1.f, .9f, .8f, .7f, .7f, 1.f, .9f };   // head, flank, low, lunge, feint, beat, bind
+        for (FBlow& Bl : Blows)
+        {
+            auto Due = [&](uint8 Bit, float At) { if ((Bl.Heard & Bit) || U < At || U > At + .5f) return false; Bl.Heard |= Bit; return true; };
+            const bool bBind = Bl.Kind == uint8(EAttack::Bind);
+            const bool bThrust = Bl.Kind == uint8(EAttack::Lunge) || Bl.Kind == uint8(EAttack::Feint) || Bl.Kind == uint8(EAttack::BeatEvade);
+            if (Due(1, Bl.Swish)) ShipSound(this, TEXT("SFX_SwordSwish"), 1, Mid, bThrust ? .3f : .45f);
+            if (Bl.bContact && Due(2, Bl.Strike))
+            {
+                ShipSound(this, bBind ? TEXT("SFX_SwordBind") : TEXT("SFX_SwordClash"), bBind ? 2 : 10, Crossing(), ClashVolume[FMath::Min<int32>(Bl.Kind, 6)], true);
+                ++Clashes;
+            }
+            if (bBind && Due(4, Bl.Strike + .25f)) ShipSound(this, TEXT("SFX_SwordScrape"), 1, Crossing(), .55f, true);
+            if (bBind && Due(8, Bl.Strike + 1.5f)) ShipSound(this, TEXT("SFX_SwordScrape"), 1, Crossing(), .45f, true);   // springing apart
+        }
+    }
     // How close their blades came at each blow that should meet the other's blade (they should touch).
     {
-        FVector B0, T0, B1, T1;
+        FVector B0(0.f), T0(0.f), B1(0.f), T1(0.f);
         const bool bBlades = F[0]->GetBlade(B0, T0) && F[1]->GetBlade(B1, T1);
         for (FBlow& Bl : Blows)
         {

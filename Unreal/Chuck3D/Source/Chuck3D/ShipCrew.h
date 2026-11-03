@@ -63,6 +63,8 @@ public:
     int32 GetFenceContacts() const { return Contacts; }
     /** ... and how many of them touched (blades within 4 cm). */
     int32 GetFenceTouching() const { return Touching; }
+    /** How many times steel has been heard meeting steel. */
+    int32 GetFenceClashes() const { return Clashes; }
     /** Blows of each kind so far (EAttack order: head, flank, low, lunge, feint, beat, bind), as text. */
     FString GetFenceTally() const;
     /** The middle between the fencers now (world, on the deck). */
@@ -83,9 +85,12 @@ private:
     // This phrase: each fencer's sword keys, the pair's ground gained (Off: cm along fencer A's facing), and the blows that
     // should meet the other's blade (beat, and the closest the blades came about then).
     TArray<FFenceKey> Keys[2], PairKeys;
-    struct FBlow { float Strike = 0.f; float Gap = 1e3f; bool bContact = true; bool bDone = false; uint8 Kind = 0; };
+    // Each blow of the phrase: when it lands (beats into the phrase), how close the blades came, and its sounds (2026-11-03):
+    // the blade cutting the air (Swish), the steel meeting (at Strike) and, in a bind, the blades scraping as they shove.
+    struct FBlow { float Strike = 0.f; float Gap = 1e3f; bool bContact = true; bool bDone = false; uint8 Kind = 0;
+        float Swish = -1.f; uint8 Heard = 0; };
     TArray<FBlow> Blows;
-    int32 Contacts = 0, Touching = 0;
+    int32 Contacts = 0, Touching = 0, Clashes = 0;
     FVector2D FencerAt[2] = { FVector2D::ZeroVector, FVector2D::ZeroVector };
     float StrideNow[2] = { 0.f, 0.f };
     int32 Tally[7] = {};

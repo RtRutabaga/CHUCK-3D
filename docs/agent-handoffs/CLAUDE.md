@@ -2,7 +2,30 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 3 (latest) — the fencers' fight made harder (Claude)
+## November 3 (latest) — the ship heard: steel, feet, sea, rigging; rats only in the hold; quieter creaks (Claude)
+
+- **Asked:** "Find and download sword fight sounds and also other immersive sounds, such as the boat going through the water. Maybe also some feet on deck sounds for the fighting and the dancing. Make it so you can only hear the rats in the hull and nowhere else on the ship. Decrease the volume of the creaking sound that we currently have."
+- **Source:** `main` at 01b362f2.
+- **Changed** ([../SHIP.md](../SHIP.md#the-ship-heard-november-3)):
+  - Recordings (all CC0): BigSoundBank (Joseph Sardin): sword swish and scrape, waves and froth, marina lapping, wooden-pontoon steps and jumps, wooden-floor steps, masts whistling. Still North Media via OpenGameArt: sabre blade-on-blade and hilt-on-blade hits. Rejected: two ferry recordings (engine hum), one truncated download.
+  - `Tools/make_ship_sounds.py` (new): checks the source hashes, cuts 30 sounds (mono 16-bit, −3 dBFS; the loops crossfaded) into `SourceAssets/Audio/SFX/SFX_{SwordClash,SwordBind,SwordScrape,SwordSwish,DeckStep,DeckStamp,ShipWater,ShipLap,ShipRigging}_*.wav`, writes `ship-recorded-manifest.json`. `Tools/import_ship_recorded_sfx.py` (new) imports them to `Content/Art/Audio/SFX`.
+  - `ShipSetting.h/.cpp`: `ShipSound()` / `AShipSetting::PlayAt` (near or carrying attenuation, ×0.3 through a deck, small pitch spread, counted); `ShipHearsHold()`; three new ambience loops (water along the hull and rigging wind on deck, lapping below, the old wash kept) mixed by where he is and how high he has climbed; creaks 0.35–0.55 → 0.14–0.22.
+  - `EnemyRat.h/.cpp`: aboard, the rats' sounds play only when he is in the hold (`ShipSoundsHeard` / `ShipSoundsHushed` counters).
+  - `ShipCrew.h/.cpp`: each blow's swish, the clash at the blade crossing (bind hilt hits in a bind) and the bind's scrapes, on the beat; `GetFenceClashes()`.
+  - `DockNPC.h`, `DockNPC.cpp`, `DockNPCPirate.inl`: the dancer's steps on each beat (a stamp every eighth); the fencers' steps (a stamp on a long lunge), only for steps over 16 cm.
+  - `ShipTest.cpp`: new `sounds` trial (10 s on deck, 10 s in the hold); `Tools/Verify-Package.ps1` now expects 16 ship trials.
+  - Docs: `docs/SHIP.md`, `docs/HANDOFF.md`, `SourceAssets/Audio/README.md`.
+- **Tested:**
+  - Uncooked full ship test 16/16, failures 0 (`Local/sounds-full.log`); fencers+sounds rerun 2/2 (`Local/sounds-steps.log`).
+  - Packaged `Builds/SoundsCandidate`: Verify-Package 182 passes (`Local/verify-package-20261103-123030.log`); ship 16/16 (`Local/verify-ship-20261103-131134.log`): on deck 11 clashes, 94 feet, rats heard 0 (40 hushed), mix wash .20 / water .60 / lap 0 / rigging .35; in the hold rats heard 36, lap 1.0, water .14, rigging .04; 4 creaks. Verify-Menu 42/42.
+- **Remaining flaws:** the mix and the volumes are measured, not listened to on speakers. The feet may still be busy (94 sounds in 10 s with the dancer and both fencers). Through-deck muffling is volume only (no low-pass). The "small waves" recording is a beach; whether it reads as a hull at sea is unchecked.
+- **Contract compatibility:** new free functions `ShipSound`/`ShipHearsHold`; `EnemyRat` statics; `FBlow` gains Swish/Heard. Nothing else changes for Chuck or other regions; rats outside the ship sound as before.
+- **Binary/LFS:** 30 WAVs (~11 MB) and 30 uassets (~6.3 MB), LFS-tracked by the existing patterns.
+- **Launcher:** promoted as ShipSounds (receipt 01b362f; prior package kept, Swing4 pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 4: the chest, what the captain does at the trigger, the plank and the fall).
+
+## November 3 (morning) — the fencers' fight made harder (Claude)
 
 - **Asked:** "Make the sword fighter's fight more intense and complex while being smooth realistic good looking movements".
 - **Source:** `main` at 4685279e (begun on 5a3e115b; the brachiation commit landed in between and is untouched).

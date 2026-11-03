@@ -22,6 +22,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "NPCVoiceData.h"
+#include "ShipSetting.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 

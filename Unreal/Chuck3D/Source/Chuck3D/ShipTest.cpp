@@ -141,11 +141,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers };
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers, Sounds };
     static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
-        ET::CrewTalk, ET::ChefChase, ET::Fencers};
+        ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
-        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers")};
+        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds")};
     struct FRun
     {
         int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths0 = 0, Mounts0 = 0, Crawls0 = 0, Shots = 0, ShipFailures = -1, Catches0 = 0, Leaps0 = 0;
@@ -158,6 +158,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         // The music's change of track at the companion (2026-11-02): when he arrived, and the switches before.
         double Arrived = -1; int32 Switches0 = 0;
         int32 FilmFrame = -1;   // -ChuckFenceFilm's stills taken
+        // The sounds trial (2026-11-03): what was heard on deck.
+        int32 DeckClash = 0, DeckFeet = 0, DeckRatsHeard = 0, DeckRatsHushed = 0, Creaks0 = 0; bool DeckMix = false;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -343,7 +345,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::DeckUp: Reset(EShipSpawn::Quarters); break;
             case ET::DeckDown: case ET::Quarterdeck: case ET::Rigging: case ET::Rail: Reset(EShipSpawn::Deck); break;
             case ET::YardDrop: Reset(EShipSpawn::Deck); Chuck->ResetAtLocation(SW(MainYardX, 70, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0)); break;
-            case ET::CrewTalk: case ET::Fencers: Reset(EShipSpawn::Deck); break;
+            case ET::CrewTalk: case ET::Fencers: case ET::Sounds: Reset(EShipSpawn::Deck); break;
             case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
             }
             Run->Heard.Reset(); Run->TalkOk = Run->TalkChecks = Run->Count0 = Run->Count1 = Run->Seen = 0; Run->Pressed = 0;
@@ -731,6 +733,48 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_FENCERS near_hits=%d far_hits=%d fence_out=%.1f hull_out=%.1f parry_gap=%.1f contacts=%d touching=%d worst_contact_gap=%.1f phrases=%d %s"), Run->Count1, Far,
                         Crew->GetWorstFenceOut(), Crew->GetWorstHullOut(), Crew->GetLastParryGap(), Crew->GetFenceContacts(), Crew->GetFenceTouching(), Crew->GetWorstContactGap(), Crew->GetFencePhrases(), *Crew->GetFenceTally());
                 }
+            }
+            break;
+        }
+        case ET::Sounds:
+        {
+            // The ship heard (2026-11-03): on deck, the sea along the hull and the rigging up and the lapping gone, the fight's
+            // steel and the feet on the planking playing, the hold's rats silent; then down in the hold, the lapping up and the
+            // rats heard. The creaks keep coming, quieter.
+            Limit = 30;
+            AShipSetting* S = AShipSetting::Get(World);
+            AShipCrew* Crew = AShipCrew::Get(World);
+            if (!S || !Crew) { Done = true; break; }
+            Stop();
+            if (Run->Sub == 0)
+            {
+                Run->Count0 = S->GetSoundsPlayed(TEXT("SFX_SwordClash")) + S->GetSoundsPlayed(TEXT("SFX_SwordBind"));
+                Run->Count1 = S->GetSoundsPlayed(TEXT("SFX_DeckStep")) + S->GetSoundsPlayed(TEXT("SFX_DeckStamp"));
+                Run->Seen = AEnemyRat::ShipSoundsHeard; Run->TalkChecks = AEnemyRat::ShipSoundsHushed; Run->Creaks0 = S->GetCreaks();
+                Run->Sub = 1; Run->At = Now;
+            }
+            else if (Run->Sub == 1 && Time > 10.f)
+            {
+                const FVector4 A = S->GetAmbience();
+                Run->DeckClash = S->GetSoundsPlayed(TEXT("SFX_SwordClash")) + S->GetSoundsPlayed(TEXT("SFX_SwordBind")) - Run->Count0;
+                Run->DeckFeet = S->GetSoundsPlayed(TEXT("SFX_DeckStep")) + S->GetSoundsPlayed(TEXT("SFX_DeckStamp")) - Run->Count1;
+                Run->DeckRatsHeard = AEnemyRat::ShipSoundsHeard - Run->Seen; Run->DeckRatsHushed = AEnemyRat::ShipSoundsHushed - Run->TalkChecks;
+                Run->DeckMix = A.Y > .5f && A.W > .3f && A.Z < .05f && A.X < .25f;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SOUNDS_DECK clashes=%d feet=%d swishes=%d scrapes=%d rats_heard=%d rats_hushed=%d wash=%.2f water=%.2f lap=%.2f rigging=%.2f"),
+                    Run->DeckClash, Run->DeckFeet, S->GetSoundsPlayed(TEXT("SFX_SwordSwish")), S->GetSoundsPlayed(TEXT("SFX_SwordScrape")), Run->DeckRatsHeard, Run->DeckRatsHushed, A.X, A.Y, A.Z, A.W);
+                Reset(EShipSpawn::Hold); Stop();
+                Run->Seen = AEnemyRat::ShipSoundsHeard; Run->Sub = 2; Run->At = Now;
+            }
+            else if (Run->Sub == 2 && Time > 10.f)
+            {
+                const FVector4 A = S->GetAmbience();
+                const int32 HoldRats = AEnemyRat::ShipSoundsHeard - Run->Seen;
+                const int32 Creaks = S->GetCreaks() - Run->Creaks0;
+                const bool bHoldMix = A.Z > .9f && A.Y < .2f && A.W < .1f && A.X > .45f;
+                Done = true;
+                Run->bPass = Run->DeckClash >= 4 && Run->DeckFeet >= 10 && Run->DeckRatsHeard == 0 && Run->DeckRatsHushed > 0 && Run->DeckMix && HoldRats > 0 && bHoldMix && Creaks >= 2;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SOUNDS pass=%d deck_clashes=%d deck_feet=%d deck_rats_heard=%d deck_rats_hushed=%d deck_mix=%d hold_rats_heard=%d hold_mix=%d wash=%.2f water=%.2f lap=%.2f rigging=%.2f creaks=%d"),
+                    Run->bPass, Run->DeckClash, Run->DeckFeet, Run->DeckRatsHeard, Run->DeckRatsHushed, Run->DeckMix, HoldRats, bHoldMix, A.X, A.Y, A.Z, A.W, Creaks);
             }
             break;
         }

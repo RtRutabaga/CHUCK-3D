@@ -29,6 +29,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
 
 // The pirate ship's setting (Claude, 2026-11-01; ShipSetting.h, docs/SHIP.md). Everything is built in the ship's frame
@@ -666,12 +667,65 @@ void AShipSetting::BuildEnvironment()
     Attach(Post);
     // The open sea (BuildSea): a real surface to the horizon, its waves meeting the hull.
     BuildSea();
-    // The sea against the hull and the ship's timbers working: a slow wash and creaks (SFX_ShipWash, SFX_ShipCreak_*).
-    if (USoundBase* WashSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_ShipWash_00.SFX_ShipWash_00")))
+    // The sea against the hull and the ship's timbers working: a slow wash and creaks (SFX_ShipWash, SFX_ShipCreak_*,
+    // generated); and since 2026-11-03 recordings (Tools/make_ship_sounds.py): the sea rushing along the hull and the wind
+    // in the rigging on deck, water lapping at the planking below. Tick mixes them by where he is.
+    auto Loop = [&](const TCHAR* Name) -> UAudioComponent*
     {
-        Wash = NewObject<UAudioComponent>(this); Wash->SetSound(WashSound); Wash->bAutoActivate = false; Wash->bIsUISound = false;
-        Attach(Wash); Wash->SetVolumeMultiplier(.0f); Wash->FadeIn(4.f, .5f);
+        USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name));
+        if (!Sound) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_SOUND_MISSING %s"), Name); return nullptr; }
+        auto* A = NewObject<UAudioComponent>(this); A->SetSound(Sound); A->bAutoActivate = false; A->bIsUISound = false;
+        A->bAllowSpatialization = false;
+        Attach(A); A->SetVolumeMultiplier(0.f); A->Play();
+        return A;
+    };
+    Wash = Loop(TEXT("SFX_ShipWash_00"));
+    Water = Loop(TEXT("SFX_ShipWater_00"));
+    Lap = Loop(TEXT("SFX_ShipLap_00"));
+    Rigging = Loop(TEXT("SFX_ShipRigging_00"));
+    auto Hearing = [&](float Inner, float Falloff)
+    {
+        auto* H = NewObject<USoundAttenuation>(this);
+        H->Attenuation.bAttenuate = true; H->Attenuation.bSpatialize = true;
+        H->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+        H->Attenuation.AttenuationShapeExtents = FVector(Inner, 0.f, 0.f);
+        H->Attenuation.FalloffDistance = Falloff;
+        return H;
+    };
+    NearHearing = Hearing(250.f, 1600.f);   // feet on the planking
+    FarHearing = Hearing(450.f, 3200.f);    // steel on steel, across the ship
+}
+
+void ShipSound(const UObject* Context, const TCHAR* Stem, int32 Count, const FVector& At, float Volume, bool bCarries)
+{
+    if (AShipSetting* S = Context ? AShipSetting::Get(Context->GetWorld()) : nullptr) S->PlayAt(Stem, Count, At, Volume, bCarries);
+}
+
+bool ShipHearsHold(const UObject* Context)
+{
+    const APawn* Pawn = Context ? UGameplayStatics::GetPlayerPawn(Context, 0) : nullptr;
+    return Pawn && ShipSpaceAt(Pawn->GetActorLocation()) == int32(EShipSpawn::Hold);
+}
+
+void AShipSetting::PlayAt(const TCHAR* Stem, int32 Count, const FVector& At, float Volume, bool bCarries)
+{
+    TArray<int32>* Set = SoundSets.Find(Stem);
+    if (!Set)
+    {
+        Set = &SoundSets.Add(Stem);
+        for (int32 I = 0; I < Count; ++I)
+            if (USoundBase* Sound = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Stem, I, Stem, I)))
+                Set->Add(SoundPool.Add(Sound));
+        if (Set->Num() < Count) UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_SOUND_MISSING %s %d/%d"), Stem, Set->Num(), Count);
     }
+    if (!Set->Num()) return;
+    // Through a deck (the weather deck heard from below, or the lower decks from on deck): about a third as loud.
+    float V = Volume;
+    if (const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
+        if ((ShipSpaceAt(Pawn->GetActorLocation()) == int32(EShipSpawn::Deck)) != (ShipSpaceAt(At) == int32(EShipSpawn::Deck))) V *= .3f;
+    UGameplayStatics::PlaySoundAtLocation(this, SoundPool[(*Set)[FMath::RandRange(0, Set->Num() - 1)]], At, V, FMath::FRandRange(.95f, 1.05f), 0.f,
+        bCarries ? FarHearing : NearHearing);
+    ++SoundsPlayed.FindOrAdd(Stem);
 }
 
 void AShipSetting::Build()
@@ -1363,15 +1417,39 @@ void AShipSetting::Tick(float Dt)
         if (Swingers[I]) Swingers[I]->SetRelativeRotation(FRotator(Pitch * (1 + .2f * FMath::Sin(SwingPhase[I])), 0, Roll * (1 + .15f * FMath::Cos(SwingPhase[I] * 1.3f))));
     for (int32 I = 0; I < Lamps.Num(); ++I)
         if (Lamps[I] && LampBase.IsValidIndex(I)) Lamps[I]->SetIntensity(LampBase[I] * (1.f + .06f * FMath::Sin(Clock * 11.f + I * 1.7f) + .04f * FMath::Sin(Clock * 23.f + I)));
-    // Now and then a timber creaks somewhere close.
+    // The ambience by where he is: on deck (or up the rig), the sea rushing along the hull and the wind in the rigging (the
+    // higher he climbs, the more wind), the wash under them; below, the wash and the water lapping at the planking (closest
+    // in the hold), the sea along the hull faint through it. Levels follow him over a second or so; all fade in at first.
+    {
+        const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
+        const int32 Space = Pawn ? ShipSpaceAt(Pawn->GetActorLocation()) : -1;
+        const bool bDeck = Space == int32(EShipSpawn::Deck), bHold = Space == int32(EShipSpawn::Hold);
+        const float Up = Pawn && bDeck ? FMath::Clamp(static_cast<float>(ShipLocal(Pawn->GetActorLocation()).Z - DeckZ - 150.f) / 900.f, 0.f, 1.f) : 0.f;
+        const float Want[4] = {
+            bDeck ? .2f : .5f,                          // the wash
+            bDeck ? .6f - .2f * Up : .14f,              // the sea along the hull
+            bDeck ? 0.f : bHold ? 1.f : .7f,            // the lapping
+            bDeck ? .35f + .4f * Up : .04f };           // the rigging
+        UAudioComponent* Loops[4] = { Wash, Water, Lap, Rigging };
+        const float Open = FMath::Clamp(Clock / 4.f, 0.f, 1.f);
+        for (int32 I = 0; I < 4; ++I)
+        {
+            AmbNow[I] = FMath::FInterpTo(AmbNow[I], Want[I], Dt, 1.5f);
+            if (Loops[I]) Loops[I]->SetVolumeMultiplier(FMath::Max(.001f, AmbNow[I] * Open));
+        }
+    }
+    // Now and then a timber creaks somewhere close (quieter since 2026-11-03, the user: about two fifths of before).
     if (Clock > NextCreak)
     {
         NextCreak = Clock + FMath::FRandRange(3.5f, 8.f);
-        static const TCHAR* Creaks[] = {TEXT("SFX_ShipCreak_00"), TEXT("SFX_ShipCreak_01"), TEXT("SFX_ShipCreak_02"), TEXT("SFX_ShipCreak_03")};
-        const TCHAR* Name = Creaks[FMath::RandRange(0, 3)];
+        static const TCHAR* CreakNames[] = {TEXT("SFX_ShipCreak_00"), TEXT("SFX_ShipCreak_01"), TEXT("SFX_ShipCreak_02"), TEXT("SFX_ShipCreak_03")};
+        const TCHAR* Name = CreakNames[FMath::RandRange(0, 3)];
         if (USoundBase* S = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name)))
             if (auto* Chuck = UGameplayStatics::GetPlayerPawn(this, 0))
-                UGameplayStatics::PlaySoundAtLocation(this, S, Chuck->GetActorLocation() + FVector(FMath::FRandRange(-500.f, 500.f), FMath::FRandRange(-350.f, 350.f), 120.f), FMath::FRandRange(.35f, .55f), FMath::FRandRange(.9f, 1.1f));
+            {
+                UGameplayStatics::PlaySoundAtLocation(this, S, Chuck->GetActorLocation() + FVector(FMath::FRandRange(-500.f, 500.f), FMath::FRandRange(-350.f, 350.f), 120.f), FMath::FRandRange(.14f, .22f), FMath::FRandRange(.9f, 1.1f));
+                ++Creaks;
+            }
     }
 }
 

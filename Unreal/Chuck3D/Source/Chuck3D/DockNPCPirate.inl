@@ -641,6 +641,21 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         }
         KeepFeetOn(Space, Ankles, Feet, FVector(1.f, 0.f, 0.f));
         DanceFeet = FVector2D(Ankles[0].Z - AnkleRest, Ankles[1].Z - AnkleRest);
+        // Heard on the planking (2026-11-03): each beat his hop lands, the jump's landing both feet hard, the heel-taps light.
+        {
+            const int32 Whole = FMath::FloorToInt(B);
+            if (Whole != DanceBeatHeard && Perf > .5f)
+            {
+                const bool bFirst = DanceBeatHeard == MIN_int32;
+                DanceBeatHeard = Whole;
+                const FVector Deck = Body->GetComponentTransform().TransformPosition(FVector(0.f, 0.f, AnkleRest));
+                if (!bFirst)
+                {
+                    if ((Whole & 7) == 0) ShipSound(this, TEXT("SFX_DeckStamp"), 4, Deck, .8f);
+                    else ShipSound(this, TEXT("SFX_DeckStep"), 9, Deck, (Whole & 7) >= 4 ? .4f : .55f);
+                }
+            }
+        }
         // Fists on his hips, elbows out.
         const FVector Hips = Space[BoneIndex[Pelvis]].GetLocation();
         for (int32 Side = 0; Side < 2; ++Side)
@@ -673,7 +688,15 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
                 StepTo[Side] = W;
                 const float E = Ease01(StepT[Side]);
                 Plant[Side] = FMath::Lerp(StepFrom[Side], StepTo[Side], E) + FVector(0.f, 0.f, StepLift * .7f * FMath::Sin(PI * StepT[Side]));
-                if (StepT[Side] >= 1.f) { Plant[Side] = StepTo[Side]; StepT[Side] = -1.f; }
+                if (StepT[Side] >= 1.f)
+                {
+                    Plant[Side] = StepTo[Side]; StepT[Side] = -1.f;
+                    // His boot down on the planking (2026-11-03): a step heard by how far it went (a shuffle of a few cm is
+                    // silent); a lunge's front foot lands hard.
+                    const float Went = static_cast<float>(FVector::Dist2D(StepFrom[Side], Plant[Side]));
+                    if (Side == 1 && Fence.Lunge > .6f && Went > 20.f) ShipSound(this, TEXT("SFX_DeckStamp"), 4, Plant[Side], .55f);
+                    else if (Went > 16.f) ShipSound(this, TEXT("SFX_DeckStep"), 9, Plant[Side], FMath::GetMappedRangeValueClamped(FVector2f(16.f, 45.f), FVector2f(.16f, .34f), Went));
+                }
             }
         }
         bPlanted = true;

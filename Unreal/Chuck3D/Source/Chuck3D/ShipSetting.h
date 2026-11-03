@@ -86,6 +86,11 @@ const TCHAR* ShipSpaceName(int32 Space);
 /** The jars (ship frame, on their shelf or floor) and the rats' homes (ship frame, floor). */
 const TArray<FVector>& ShipJars();
 const TArray<FVector>& ShipRats();
+/** A recorded ship sound (one of Stem_00..Stem_<Count-1>) at a place aboard (world): heard near it (or across the deck if
+ *  it carries), and quieter through a deck (the weather deck's sounds below, the lower decks' above). No ship: silent. */
+void ShipSound(const UObject* Context, const TCHAR* Stem, int32 Count, const FVector& At, float Volume, bool bCarries = false);
+/** Whether he is down in the hold: the hold's rats are heard only there (2026-11-03, the user). */
+bool ShipHearsHold(const UObject* Context);
 
 class AChuckCharacter;
 // -ChuckChultTest -ChuckShipTest (ShipTest.cpp): the escape from the rubble crevice played for real, then stills and the
@@ -116,6 +121,12 @@ public:
     float SeaPlaneZ(const FVector& World) const;
     /** Checks of the built ship (floors, doorways, ladder, spawns): failures. */
     int32 Check() const;
+    /** ShipSound's work (see it); and how many times each stem has played, for the tests. */
+    void PlayAt(const TCHAR* Stem, int32 Count, const FVector& At, float Volume, bool bCarries);
+    int32 GetSoundsPlayed(const TCHAR* Stem) const { const int32* N = SoundsPlayed.Find(Stem); return N ? *N : 0; }
+    /** The ambience's levels now (before the opening fade): the wash, the water along the hull, the lapping, the rigging. */
+    FVector4 GetAmbience() const { return FVector4(AmbNow[0], AmbNow[1], AmbNow[2], AmbNow[3]); }
+    int32 GetCreaks() const { return Creaks; }
 private:
     void Build();
     void BuildEnvironment();
@@ -128,6 +139,18 @@ private:
     UPROPERTY() TArray<class UPointLightComponent*> Lamps;
     UPROPERTY() TArray<class USceneComponent*> Swingers;   // hanging lamps and hammocks, swung with the sea
     UPROPERTY() class UAudioComponent* Wash = nullptr;
+    // The recorded ambience (2026-11-03): the sea rushing along the hull and the wind in the rigging on deck, water
+    // lapping at the planking below; and the one-shot sounds' attenuations and loaded sets.
+    UPROPERTY() class UAudioComponent* Water = nullptr;
+    UPROPERTY() class UAudioComponent* Lap = nullptr;
+    UPROPERTY() class UAudioComponent* Rigging = nullptr;
+    UPROPERTY() class USoundAttenuation* NearHearing = nullptr;
+    UPROPERTY() class USoundAttenuation* FarHearing = nullptr;
+    UPROPERTY() TArray<class USoundBase*> SoundPool;
+    TMap<FString, TArray<int32>> SoundSets;
+    TMap<FString, int32> SoundsPlayed;
+    float AmbNow[4] = {};
+    int32 Creaks = 0;
     UPROPERTY() TArray<class UProceduralMeshComponent*> Sails;
     UPROPERTY() class UMaterialInstanceDynamic* SeaMid = nullptr;
     UPROPERTY() class UDirectionalLightComponent* Sun = nullptr;

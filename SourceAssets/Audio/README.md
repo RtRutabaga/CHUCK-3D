@@ -140,3 +140,31 @@ The user supplied two tracks: "add the temple 2 sound track starting with Temple
 The user supplied the pirate ship's soundtrack while milestone 2 was being built ("here is the soundtrack to add"). `C:/Users/ashsm/Downloads/ship.wav` is copied byte-for-byte to `SourceAssets/Audio/Ship.wav` (39,896,080 bytes), SHA-256 `96F3AE34C6C04F46CE982F40956C41689CE8D52D4DBBF26CE02926D8B9495F1A`, identical to the original: stereo 16-bit 48 kHz, 207.72 s. No edits and no invented attribution.
 
 `Tools/import_ship_music.py` (Unreal 5.7.4, `-AllowCommandletAudio`) imports it looping as `/Game/Art/Audio/SW_Ship` (`CHUCK_AUDIO_IMPORTED SW_Ship looping=True duration=207.72`; 25,417,472 bytes). `DockGameMode` plays it at 45% aboard the ship (`InShip`), fading in over 3 s as every other score fades out; the escape's arrival brings it in. `-ChuckShipTest` starts it 2 s before its end and `CHUCK_SHIP_MUSIC_CHECK` confirms the loop. The sea wash and creaks (`gen_ship_sfx.py`) play under it unchanged. Not heard on speakers by the agent.
+
+## The ship's recorded sounds — November 3, 2026 (Claude)
+
+The user asked for sword-fight sounds, the boat going through the water and feet on the deck. Thirty sounds are cut from CC0 recordings that Claude downloaded on 2026-11-03:
+- **BigSoundBank** (Joseph Sardin, CC0, BWF downloads): #0128, #0129, #1444, #1447, #1516, #1841, #1842, #1845 and #2443.
+- **Still North Media's "Medieval sound effects - Weapon impacts"** (Ben Jaszczak & Brian Nelson, CC0, OpenGameArt): two 7z archives, from which three sabre files were extracted unmodified with Windows' bsdtar.
+
+The originals (about 160 MB) are not kept in the repository. `SFX/ship-recorded-manifest.json` lists each with its title, author, page, download URL, size and SHA-256, and `Tools/make_ship_sounds.py <download folder>` checks those hashes before cutting.
+
+Processing:
+- cuts at detected onsets, with fades;
+- 192 kHz to 48 kHz downsampling (box and smoothing filter);
+- stereo to mono;
+- 3 s equal-power loop crossfades;
+- peak normalisation to −3 dBFS.
+
+Mono 16-bit:
+- `SFX_SwordClash_00..09` (0.55–0.9 s) and `SFX_SwordBind_00..01` (192 kHz sources), `SFX_SwordScrape_00`, `SFX_SwordSwish_00`;
+- `SFX_DeckStep_00..08`, `SFX_DeckStamp_00..03`;
+- loops `SFX_ShipWater_00` (30 s), `SFX_ShipLap_00` (30 s) and `SFX_ShipRigging_00` (36 s).
+
+`Tools/import_ship_recorded_sfx.py` (UE 5.7.4, `-AllowCommandletAudio`) imports them into `/Game/Art/Audio/SFX`, setting the three loops (over 20 s) to loop (`CHUCK_SHIP_RECORDED_SFX_IMPORTED 30`).
+
+The ferry recordings #0694 and #0697 were downloaded and rejected: steady 48–50 Hz engine tones dominate them. #1800 was downloaded truncated and was also dropped.
+
+Storage: WAVs about 11 MB and uassets about 6.3 MB, through the existing Git LFS rules.
+
+Runtime levels are in docs/SHIP.md ("The ship heard"). Nobody has listened to them on speakers.

@@ -392,6 +392,25 @@ User request: "Make the sword fighter's fight more intense and complex while bei
   - `-ChuckFenceFilm` takes 90 stills of the fight from the side, 0.1 s apart (`Saved/Screenshots/.../Ship/Film/`), for reviewing it frame by frame.
 - **Not checked:**
   - Nobody has played it by hand or watched it in motion; it was reviewed from still sequences.
-  - There is no sound of steel yet: the user's audio is still to come.
+  - The sound of steel came later the same day ("The ship heard", below).
   - The fingers don't change grip between cuts and thrusts.
   - In a bind the two stand close, but their bodies are not checked against each other.
+
+## The ship heard (November 3)
+
+User request: "Find and download sword fight sounds and also other immersive sounds, such as the boat going through the water. Maybe also some feet on deck sounds for the fighting and the dancing. Make it so you can only hear the rats in the hull and nowhere else on the ship. Decrease the volume of the creaking sound that we currently have."
+
+- **The recordings** (all CC0; cut by `Tools/make_ship_sounds.py`, imported by `Tools/import_ship_recorded_sfx.py`; sources, pages and hashes in `SourceAssets/Audio/SFX/ship-recorded-manifest.json`, details in `SourceAssets/Audio/README.md`):
+  - **Steel:** ten sabre-on-sword hits and two hilt-on-blade hits from Still North Media's weapon-impact library (real swords struck together), a blade sliding along a blade and a sword through the air (BigSoundBank).
+  - **Feet:** boots on a wooden pontoon, and two-footed jumps and hard steps on wood (BigSoundBank).
+  - **The sea and the wind:** small waves and froth (the sea along the hull), water lapping round moored hulls (below decks), wind whistling in masts (the rigging), all BigSoundBank. The ferry recordings there were left out: under the water they are mostly engine hum.
+- **The fight** (`ShipCrew.cpp`): every blow's blade is heard through the air just before it lands, and steel rings where the blades cross, louder for a head cut or a beat than for a parried thrust. A bind locks with a heavier hilt-on-blade hit, scrapes as they shove and scrapes again as they spring apart. These carry across the deck (heard to about 36 m).
+- **Feet on the deck** (`DockNPCPirate.inl`): a fencer's boot is heard when a step lands, by how far it went (shuffles under 16 cm are silent), and a lunge's front foot lands hard. The dancer's hop lands on every beat, lighter on the heel-taps, and the jump's landing is a two-footed stamp.
+- **Where you hear what** (`ShipSetting.cpp`, `ShipSound`): sounds from the weather deck are about a third as loud below, and the lower decks' as quiet from on deck.
+  - On deck: the sea rushing along the hull (0.6), the wind in the rigging (0.35, rising to 0.75 up the rig), and the old wash under them (0.2).
+  - Below: the wash (0.5), the water lapping at the planking (0.7, 1.0 in the hold), and the sea along the hull and the rigging faint (0.14, 0.04).
+  - The levels follow him over about a second.
+- **The rats** (`EnemyRat.cpp`) are heard only when he is in the hold, nowhere else aboard.
+- **The creaks** are about two fifths as loud as before (0.14-0.22, from 0.35-0.55).
+- **Tests:** the new `sounds` trial (16 trials now) stands on deck for 10 s, then in the hold for 10 s. It checks the clashes and feet play, the deck and hold mixes, that no rat is heard on deck while some are hushed, that rats are heard in the hold, and that creaks keep coming. These are play counts and levels; nobody has listened to them.
+- **Not checked:** heard on speakers by nobody. The balance against the score, how busy the fencers' feet sound (about three steps a second each) and whether the surf recording reads as a moving hull are for the user's ears. The steps sound the same in boots and bare feet, and through a deck sounds are only quieter, not muffled.

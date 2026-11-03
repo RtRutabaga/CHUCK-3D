@@ -1,0 +1,387 @@
+{
+  "provenance": "Cut by Tools/make_ship_sounds.py from CC0 recordings; originals not kept in the repository (see sources)",
+  "sources": [
+    {
+      "local": "bsb/0128.wav",
+      "title": "Sword Through the Air",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/sword-through-the-air-s0128.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/0128.wav",
+      "bytes": 21630,
+      "sha256": "be18d5c692d1e16f55197911203decfca9909445aeda771054bddda242ce7c8a"
+    },
+    {
+      "local": "bsb/0129.wav",
+      "title": "Sword",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/sword-s0129.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/0129.wav",
+      "bytes": 86362,
+      "sha256": "533373c707aa0f9f3c2559259552ce9a7f62094ba1700e2e150e7748813f6be6"
+    },
+    {
+      "local": "bsb/1444.wav",
+      "title": "Pontoon Marina",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/pontoon-marina-s1444.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1444.wav",
+      "bytes": 41385264,
+      "sha256": "7f66c03735001aa7732c46aa828993cf434a0f71b2fabf018333d059ebeaee35"
+    },
+    {
+      "local": "bsb/1447.wav",
+      "title": "Small Waves, Froth and Beach",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/small-waves-froth-and-beach-s1447.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1447.wav",
+      "bytes": 28109934,
+      "sha256": "301a34ea42d193498fcb5ce5346d27447fcd6618e43417a7c7cc3bef3020f7f3"
+    },
+    {
+      "local": "bsb/1516.wav",
+      "title": "Steps on a Wooden Floor #2",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/steps-on-a-wooden-floor-2-s1516.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1516.wav",
+      "bytes": 3766446,
+      "sha256": "ec9d7af3dd06f4353ff1ea9c9277acb8ffa77f5ce8342ae13921f95ae677e18a"
+    },
+    {
+      "local": "bsb/1841.wav",
+      "title": "Jumping on Wooden Pontoon #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/jumping-on-wooden-pontoon-1-s1841.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1841.wav",
+      "bytes": 158970,
+      "sha256": "c2d31a189daa0f79c4d2dec55b612849c2074bd445d026d529093282598b2cd2"
+    },
+    {
+      "local": "bsb/1842.wav",
+      "title": "Jumping on Wooden Pontoon #2",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/jumping-on-wooden-pontoon-2-s1842.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1842.wav",
+      "bytes": 170978,
+      "sha256": "f0c80731f0b68a0e99fcf01815f847b186d09c6b6fc18cc63c98611e20a18be5"
+    },
+    {
+      "local": "bsb/1845.wav",
+      "title": "Walk on Pontoon",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/walk-on-pontoon-s1845.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1845.wav",
+      "bytes": 888198,
+      "sha256": "e1eb819b6566a1c29a9c12540b3ad0553e146d528a4270e92ffbf1732748fa47"
+    },
+    {
+      "local": "bsb/2443.wav",
+      "title": "Masts Whistling #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/masts-whistling-1-s2443.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/2443.wav",
+      "bytes": 19231606,
+      "sha256": "883cc26a1dc89d1b9f8421ca9e8f3548c5a9ef2fdfa96e7f3b45af285e1d9e81"
+    },
+    {
+      "local": "x/Sabre Katana Blade on Blade.wav",
+      "title": "Sabre Katana Blade on Blade",
+      "author": "Ben Jaszczak & Brian Nelson (Still North Media)",
+      "license": "CC0 1.0",
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-impacts",
+      "url": "https://opengameart.org/sites/default/files/medieval_sfx_weapon_on_weapon_1_of_2.7z and _2_of_2.7z (extracted unmodified)",
+      "bytes": 9038980,
+      "sha256": "92b086e5cc7209fcb28a715e7ae76446d6f0d5bab39098fda8288e2ef36ca6d6"
+    },
+    {
+      "local": "x/Sabre Norse Sword Blade on Blade.wav",
+      "title": "Sabre Norse Sword Blade on Blade",
+      "author": "Ben Jaszczak & Brian Nelson (Still North Media)",
+      "license": "CC0 1.0",
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-impacts",
+      "url": "https://opengameart.org/sites/default/files/medieval_sfx_weapon_on_weapon_1_of_2.7z and _2_of_2.7z (extracted unmodified)",
+      "bytes": 10568836,
+      "sha256": "3e1067e8d955d04de67a173f9c9430f9283663fc3ad0192b007fa3f68f256701"
+    },
+    {
+      "local": "x/Sabre Norse Sword Hilt on Blade.wav",
+      "title": "Sabre Norse Sword Hilt on Blade",
+      "author": "Ben Jaszczak & Brian Nelson (Still North Media)",
+      "license": "CC0 1.0",
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-impacts",
+      "url": "https://opengameart.org/sites/default/files/medieval_sfx_weapon_on_weapon_1_of_2.7z and _2_of_2.7z (extracted unmodified)",
+      "bytes": 9438340,
+      "sha256": "f9232179d507d21653c913746a976bba110220dfbb625a174a6c381fa5c8c942"
+    },
+    {
+      "local": "oga/medieval_sfx_weapon_on_weapon_1_of_2.7z",
+      "title": "Medieval sound effects - Weapon impacts (archive)",
+      "author": "Ben Jaszczak & Brian Nelson (Still North Media)",
+      "license": "CC0 1.0",
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-impacts",
+      "url": "https://opengameart.org/sites/default/files/medieval_sfx_weapon_on_weapon_1_of_2.7z",
+      "bytes": 82085493,
+      "sha256": "27a854442ecfc51102dc023bb3ff462fe1bc6b895b39b2f63a54cccf1e8e6ea9"
+    },
+    {
+      "local": "oga/medieval_sfx_weapon_on_weapon_2_of_2.7z",
+      "title": "Medieval sound effects - Weapon impacts (archive)",
+      "author": "Ben Jaszczak & Brian Nelson (Still North Media)",
+      "license": "CC0 1.0",
+      "page": "https://opengameart.org/content/medieval-sound-effects-weapon-impacts",
+      "url": "https://opengameart.org/sites/default/files/medieval_sfx_weapon_on_weapon_2_of_2.7z",
+      "bytes": 73817773,
+      "sha256": "cdc209e2edd4511085d1b7a9c764b26f4c1a754cd1a8e53b5274d11898b8f4c9"
+    }
+  ],
+  "sounds": [
+    {
+      "name": "SFX_SwordClash_00",
+      "file": "SFX_SwordClash_00.wav",
+      "duration": 0.9,
+      "rate": 48000,
+      "sha256": "f21e77e7cbd92eba6cb110a55b4696df14c0745be9d2c785482cd9aac46c06b5",
+      "note": "Still North Media \"Sabre Norse Sword Blade on Blade.wav\" at 12.45 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_01",
+      "file": "SFX_SwordClash_01.wav",
+      "duration": 0.704,
+      "rate": 48000,
+      "sha256": "325f495c162032eed8faa22364931301856375197fdb2b34387a74d4d7182726",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 2.64 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_02",
+      "file": "SFX_SwordClash_02.wav",
+      "duration": 0.846,
+      "rate": 48000,
+      "sha256": "2de847a70713362e4dd427c57090a810950a2b1310fa0df06e1011365f88645e",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 12.27 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_03",
+      "file": "SFX_SwordClash_03.wav",
+      "duration": 0.9,
+      "rate": 48000,
+      "sha256": "56d014a81c5b2d40f026f2746aad03e351d3503b0a0d617758b422658dc39077",
+      "note": "Still North Media \"Sabre Norse Sword Blade on Blade.wav\" at 15.24 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_04",
+      "file": "SFX_SwordClash_04.wav",
+      "duration": 0.553,
+      "rate": 48000,
+      "sha256": "f0cffdfc729b8bf39de3aec2e8578a13e739d5d4d5405e6e9da839632d9c6fa2",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 1.24 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_05",
+      "file": "SFX_SwordClash_05.wav",
+      "duration": 0.9,
+      "rate": 48000,
+      "sha256": "aca81479eef7bc8dce48dfcdb970df9724f4051509a6eece5d16f49a3c0d4472",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 11.29 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_06",
+      "file": "SFX_SwordClash_06.wav",
+      "duration": 0.772,
+      "rate": 48000,
+      "sha256": "5663216bf8c16fb9c1368a811ff0ef09bc4ccb7fca9cab3011474ad060a370d0",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 0.45 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_07",
+      "file": "SFX_SwordClash_07.wav",
+      "duration": 0.864,
+      "rate": 48000,
+      "sha256": "aac88b0d44b5882d89c352e06a9d781c3b7965ac97d0f320aa71843dda142506",
+      "note": "Still North Media \"Sabre Katana Blade on Blade.wav\" at 13.14 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_08",
+      "file": "SFX_SwordClash_08.wav",
+      "duration": 0.689,
+      "rate": 48000,
+      "sha256": "d0bf249abfc70c372e31dfad59568c2ebea988004c02a8b0dd54b651603b5b00",
+      "note": "Still North Media \"Sabre Norse Sword Blade on Blade.wav\" at 17.66 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordClash_09",
+      "file": "SFX_SwordClash_09.wav",
+      "duration": 0.9,
+      "rate": 48000,
+      "sha256": "c9046cb0669103b9d8bdc01e6f01124b308534971635f2397cee56f1caa78629",
+      "note": "Still North Media \"Sabre Norse Sword Blade on Blade.wav\" at 11.47 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordBind_00",
+      "file": "SFX_SwordBind_00.wav",
+      "duration": 0.933,
+      "rate": 48000,
+      "sha256": "a4385f43dc370814cd064793ffb9599f6f81aaab444730423e518e2b82898671",
+      "note": "Still North Media \"Sabre Norse Sword Hilt on Blade.wav\" at 1.80 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordBind_01",
+      "file": "SFX_SwordBind_01.wav",
+      "duration": 1.0,
+      "rate": 48000,
+      "sha256": "c37faa00e81cb6bf9beda538dc96011c83715647019b78012dd84360bc4b675f",
+      "note": "Still North Media \"Sabre Norse Sword Hilt on Blade.wav\" at 0.47 s (192 to 48 kHz)"
+    },
+    {
+      "name": "SFX_SwordScrape_00",
+      "file": "SFX_SwordScrape_00.wav",
+      "duration": 0.767,
+      "rate": 44100,
+      "sha256": "08d7c9e929df5e1dab8a576128f4fb7046525f27cef1189153af3a66240e6672",
+      "note": "BSB #0129 \"Sword\", from 0.2 s"
+    },
+    {
+      "name": "SFX_SwordSwish_00",
+      "file": "SFX_SwordSwish_00.wav",
+      "duration": 0.463,
+      "rate": 22050,
+      "sha256": "cccddc0e3946dca4bbfc44b094e4b0006d822dda0690e7e7df1e56228b0427f4",
+      "note": "BSB #0128 \"Sword Through the Air\""
+    },
+    {
+      "name": "SFX_DeckStep_00",
+      "file": "SFX_DeckStep_00.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "58cda446324fceaee08504451ef0bc8b88a23a181e5a907f95c6ff800df3cd51",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 0.34 s"
+    },
+    {
+      "name": "SFX_DeckStep_01",
+      "file": "SFX_DeckStep_01.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "2a0acd1ad745cefc7b08a0c354cb483ad28ec1cd78e9509ab09bd3b1796df23c",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 0.99 s"
+    },
+    {
+      "name": "SFX_DeckStep_02",
+      "file": "SFX_DeckStep_02.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "70e13303b2ed7b039fde461b604cf509167193d302269c1c82bad00277aaa573",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 1.60 s"
+    },
+    {
+      "name": "SFX_DeckStep_03",
+      "file": "SFX_DeckStep_03.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "c950090dc11cc1089cba53440b7ddc12e1351b0e609e7b924c9ea2b35a906a77",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 2.23 s"
+    },
+    {
+      "name": "SFX_DeckStep_04",
+      "file": "SFX_DeckStep_04.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "b4c703ea103ca72eeb3ebe54c0c6919366256498e1efcb04f6827b3045020e07",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 2.80 s"
+    },
+    {
+      "name": "SFX_DeckStep_05",
+      "file": "SFX_DeckStep_05.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "c60d77e34bb080c46f9a73b70ed639096f82beecdccfa7b1ea5c375b92bbb829",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 3.38 s"
+    },
+    {
+      "name": "SFX_DeckStep_06",
+      "file": "SFX_DeckStep_06.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "746fed55061f402833453f486423a66c98f7ba17099d874bb6dbf0016b9dd008",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 4.06 s"
+    },
+    {
+      "name": "SFX_DeckStep_07",
+      "file": "SFX_DeckStep_07.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "d28ed2ae2b5275c59ba8efb833fdcc618f19cade4a42a08957c8f64c84ac97e8",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 4.71 s"
+    },
+    {
+      "name": "SFX_DeckStep_08",
+      "file": "SFX_DeckStep_08.wav",
+      "duration": 0.32,
+      "rate": 48000,
+      "sha256": "b0e9f8f6597e3a9e3a2cc9381948ad9606f01cd76b896589f5eeea926ebe3272",
+      "note": "BSB #1845 \"Walk on Pontoon\" at 5.37 s"
+    },
+    {
+      "name": "SFX_DeckStamp_00",
+      "file": "SFX_DeckStamp_00.wav",
+      "duration": 0.45,
+      "rate": 48000,
+      "sha256": "69edfbb7f2befc463991b8a9f717f1a78e6ac9e3ba1afdfa6b48d45cc82330f2",
+      "note": "BSB #1841 \"Jumping on wooden pontoon\" at 0.58 s"
+    },
+    {
+      "name": "SFX_DeckStamp_01",
+      "file": "SFX_DeckStamp_01.wav",
+      "duration": 0.45,
+      "rate": 48000,
+      "sha256": "109361210febb0942333ca870f35f7874fc6dfdfe2aa6f4f4c70808e19ef3f1f",
+      "note": "BSB #1842 \"Jumping on wooden pontoon\" at 0.61 s"
+    },
+    {
+      "name": "SFX_DeckStamp_02",
+      "file": "SFX_DeckStamp_02.wav",
+      "duration": 0.3,
+      "rate": 48000,
+      "sha256": "10cd1f77ae483db98af948ab7b0a72c23756c596d30fb5e2207e78791d28af00",
+      "note": "BSB #1516 \"Steps on a Wooden Floor #2\" at 0.41 s"
+    },
+    {
+      "name": "SFX_DeckStamp_03",
+      "file": "SFX_DeckStamp_03.wav",
+      "duration": 0.3,
+      "rate": 48000,
+      "sha256": "cd7e17cc6af05325fae805a9efa486cbe6cc22758053dcedb54c13c1afedfb60",
+      "note": "BSB #1516 \"Steps on a Wooden Floor #2\" at 1.91 s"
+    },
+    {
+      "name": "SFX_ShipWater_00",
+      "file": "SFX_ShipWater_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "0121dd6f7082ef4b1e2496cedc42efc2512bb16a0ce8138370f2a281b10533e7",
+      "note": "BSB #1447 \"Small Waves, Froth and Beach\", 4-34 s loop (3 s crossfade)"
+    },
+    {
+      "name": "SFX_ShipLap_00",
+      "file": "SFX_ShipLap_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "bf724d2cedd7eb10220c63e3bd33843485374e3ac53fa52aa8aab147ee74df68",
+      "note": "BSB #1444 \"Pontoon Marina\", 60-90 s loop (3 s crossfade)"
+    },
+    {
+      "name": "SFX_ShipRigging_00",
+      "file": "SFX_ShipRigging_00.wav",
+      "duration": 36.0,
+      "rate": 48000,
+      "sha256": "5a1b50b2f090b4e06a27a46aac2ad738831c6fc41ee3d352c7e202a8d7d34095",
+      "note": "BSB #2443 \"Masts Whistling #1\", 59-95 s loop (3 s crossfade)"
+    }
+  ]
+}

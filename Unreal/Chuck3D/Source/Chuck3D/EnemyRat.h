@@ -35,6 +35,9 @@ public:
     /** Struck by Chuck's slash sweeping along Swing: flinch back, or die. */
     void TakeSlash(const FVector& Swing);
     /** Reach footprint for the slash (cm): about the rat's half length. */
+    /** Aboard the ship: the rats' sounds played (he was in the hold) and hushed (he was elsewhere aboard), for the tests. */
+    static int32 ShipSoundsHeard;
+    static int32 ShipSoundsHushed;
     static constexpr float HitRadius = 16.f;
     static constexpr float HitHeight = 18.f;
     // Tuning (see the class comment).
