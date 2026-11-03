@@ -85,6 +85,9 @@ FVector SpankerThroat() { return FVector(MainMastX - MastR - 4, 0, MainTopZ - 23
 FVector SpankerPeak() { return FVector(MainMastX - 640, 70, MainTopZ + 80); }
 FVector SpankerTack() { return FVector(MainMastX - MastR - 4, 0, QuarterZ + 250); }
 FVector SpankerClew() { return FVector(SternX + 70, 150, QuarterZ + 262); }
+// The flag's size and where its hoist hangs from the gaff's peak (FlagPoint, below).
+constexpr float FlagFly = 260, FlagDrop = 165;
+FVector FlagHoist() { return SpankerPeak() + FVector(-10, 14, -8); }
 // Where a hull side is at X (its post line) and how far up the planking goes.
 float PostLine(float X) { return FMath::Max(0.f, OuterAt(X, PlankTopAt(X)) - 5); }
 
@@ -468,6 +471,8 @@ void BuildRig(FParts& P)
     P.WoodDecor.Spar(SpankerTack(), SpankerClew(), 9, 7, 10);
     P.CanvasDecor.Rope({SpankerClew(), FVector(SternX + 30, 0, QuarterRailZ + 4)}, 1.1f);
     P.CanvasDecor.Rope({SpankerPeak(), FVector(Mm.X + 10, 0, Mm.Top + 120)}, 1.f);
+    // The flag's halyard: from a block at the peak down the flag's hoist, its tail hanging below it.
+    P.CanvasDecor.Rope({SpankerPeak() + FVector(-4, 6, -6), FlagHoist(), FlagHoist() - FVector(0, 0, FlagDrop), FlagHoist() - FVector(2, -3, FlagDrop + 70)}, .7f);
     // The rope ladder up to the main top: tarred ropes and wooden rungs, its foot made fast on the deck.
     LadderAt(P.Rigging, P.WoodDecor, TopLadderX, -1, 0, DeckZ, MainTopZ, MainTopZ, 30, true);
     P.Iron.Spar(FVector(TopLadderX - 6, 0, DeckZ), FVector(TopLadderX - 6, 0, DeckZ + 4), 7, 7, 10);
@@ -533,12 +538,13 @@ FVector SailPoint(const FSailDef& S, float U, float V, float T)
     P += S.Fill * (S.Depth * Shape * Breath + Flutter);
     return P;
 }
-// The flag at the main truck: hoisted on its halyard, streaming forward and to port with the wind.
+// The flag (user 2026-11-02: more prominent): flown as a ship's colours were under sail, from the spanker gaff's peak over
+// the quarterdeck, hoisted on its halyard just aft of the peak and streaming to leeward (port, as the spanker fills), clear
+// of the sail's leech. 2.6 x 1.65 m, about a big ensign's size, and some 10 m over the quarterdeck where it is seen.
 FVector FlagPoint(float U, float V, float T)
 {
-    const FMast& M = MainMast();
-    const FVector Hoist(GallantX(M), 0, M.Top + 1352);
-    const FVector Fly = FVector(.9f, .38f, -.06f).GetSafeNormal() * 150 * U;
-    const float Wave = 9 * U * FMath::Sin(U * 5.f - T * 6.5f) + 3 * U * FMath::Sin(U * 11.f - T * 9.f + V * 2.f);
-    return Hoist + Fly + FVector(0, 0, -V * 95 - U * U * 8) + FVector(-.38f, .9f, 0) * Wave;
+    const FVector Along = FVector(.42f, .9f, -.05f).GetSafeNormal(), Across(-Along.Y, Along.X, 0);
+    const FVector Fly = Along * FlagFly * U;
+    const float Wave = 14 * U * FMath::Sin(U * 5.f - T * 6.5f) + 4 * U * FMath::Sin(U * 11.f - T * 9.f + V * 2.f);
+    return FlagHoist() + Fly + FVector(0, 0, -V * FlagDrop - U * U * 14) + Across * Wave;
 }

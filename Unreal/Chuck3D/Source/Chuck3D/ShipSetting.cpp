@@ -132,7 +132,7 @@ namespace
 
     struct FParts
     {
-        FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging;
+        FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging, Lumber, Veil;
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -750,34 +750,125 @@ void AShipSetting::Build()
     // Stanchions under the lower deck's beams.
     for (float X : {-950.f, -150.f, 750.f}) P.Wood.B(X - 8, X + 8, -8, 8, HoldZ, LowerBeam);
 
-    // ---- The arrival compartment: a sail locker. In its starboard-aft corner the temple's masonry has come through
-    // the ship's timbers, and the crawlway the escape ends in runs through it.
+    // ---- The arrival compartment: a sail locker. In its starboard-aft corner a pile of the ship's spare lumber, stacked
+    // boards with heavy timbers heaped on them up to the beams; the crawlway the escape ends in runs through the stack, and
+    // where it comes out a small piece of the temple's masonry sits in the timber, its mouth ringed with the cellar's oil
+    // haze: the two worlds run together there (user 2026-11-02: was a heap of temple blocks).
     {
         const float Z0 = LowerZ, T0 = SeamY - SeamHalf, T1 = SeamY + SeamHalf, Roof = Z0 + SeamH;
         const float Wall = -InnerAt(0, Z0 + 40) + 2;   // the hull's inside there
-        // The crawlway's floor, walls and roof (straight faces), and its blind end.
-        P.Stone.B(SeamX0 - 8, SeamX1, T0, T1, Z0, Z0 + 2);
-        P.Stone.B(SeamX0 - 8, SeamX1, Wall, T0, Z0, Roof + 28);
-        P.Stone.B(SeamX0 - 8, SeamX1, T1, T1 + 62, Z0, Roof + 20);
-        P.Stone.B(SeamX0 - 8, SeamX1, Wall, T1 + 62, Roof, Roof + 34);
-        P.Stone.B(ArrivalAft + Bulkhead, SeamX0, Wall, T1 + 62, Z0, Roof + 34);
-        // Great blocks of the temple's masonry heaped on it and jammed against the hull and up into the beams, set a
-        // little askew, as the rubble map's are.
+        const float Aft = ArrivalAft + Bulkhead, Inner = T1 + 62;   // the pile's aft end (the bulkhead) and its inboard side
+        const float StoneX0 = SeamX1 - 52, StoneOut = SeamX1 + 6, Jamb = 30, StoneTop = Roof + 26;
         FRandomStream R(20261101);
-        struct FBlk { float X, Y, Z, HX, HY, HZ; };
-        const FBlk Blocks[] = {
-            {-90, -380, Roof + 70, 70, 34, 38}, {30, -370, Roof + 64, 60, 40, 30}, {-40, -300, Roof + 48, 58, 46, 16}, {95, -250, Roof + 46, 38, 30, 14},
-            {-120, -385, Roof + 150, 34, 26, 46}, {-120, -390, DeckBeam - 40, 32, 22, 40}, {60, -228, Roof + 22, 26, 18, 22}, {120, -330, Roof + 40, 22, 52, 10},
-            {-10, -232, Z0 + 18, 22, 10, 18}, {150, -360, Z0 + 14, 18, 26, 14}, {165, -220, Z0 + 9, 14, 12, 9}};
-        for (const FBlk& K : Blocks)
-            P.Stone.TurnedBox(FVector(K.X, K.Y, K.Z), FVector(K.HX, K.HY, K.HZ), FRotator(R.FRandRange(-6, 6), R.FRandRange(-9, 9), R.FRandRange(-6, 6)));
-        // The ship's timbers split round it: a bulkhead board and two of the hull's ceiling planks torn and bent away.
-        P.WoodDecor.TurnedBox(FVector(-140, -205, Z0 + 150), FVector(4, 40, 9), FRotator(-24, 18, 0));
-        P.WoodDecor.TurnedBox(FVector(-60, -402, Z0 + 210), FVector(70, 3, 7), FRotator(0, 0, -28));
-        P.WoodDecor.TurnedBox(FVector(40, -398, Z0 + 196), FVector(55, 3, 6), FRotator(8, -6, -34));
-        P.WoodDecor.TurnedBox(FVector(-30, -360, DeckBeam - 6), FVector(5, 50, 6), FRotator(0, -14, 12));
-        // A fan of fine grit spilled from its mouth.
-        for (int32 I = 0; I < 9; ++I) P.StoneDecor.TurnedBox(FVector(SeamX1 + R.FRandRange(6, 50), SeamY + R.FRandRange(-60, 60), Z0 + 1), FVector(R.FRandRange(3, 7), R.FRandRange(3, 6), 1.5f), FRotator(0, R.FRandRange(0, 90), 0));
+        // What he can't pass: the crawlway's sides and roof and its blind end, as before (invisible; the boards dress them).
+        P.Hidden.B(Aft, SeamX1, Wall, T0, Z0, Roof + 28);
+        P.Hidden.B(Aft, SeamX1, T1, Inner, Z0, Roof + 20);
+        P.Hidden.B(Aft, SeamX1, Wall, Inner, Roof, Roof + 34);
+        P.Hidden.B(Aft, SeamX0, Wall, Inner, Z0, Roof + 34);
+        // The stack: boards laid fore and aft in rows either side of the crawlway (its walls), then boards laid across over
+        // it (its roof), each board's ends a little off its neighbours'. Over the masonry only the top rows run on forward.
+        constexpr float Board = 6.5f;
+        int32 Layer = 0;
+        for (float Z = Z0; Z < Roof + 34 - 1; Z += Board, ++Layer)
+        {
+            const bool bAcross = Z >= Roof;
+            const bool bOverStone = Z >= StoneTop;
+            if (!bAcross)
+            {
+                // Rows from the hull in to the crawlway's starboard side, and from its inboard side in to the pile's edge.
+                for (int32 Part = 0; Part < 2; ++Part)
+                {
+                    const float Y0 = Part == 0 ? Wall : T1, Y1 = Part == 0 ? T0 : Inner;
+                    float Y = Y0;
+                    while (Y < Y1 - 4)
+                    {
+                        const float W = FMath::Min(R.FRandRange(17, 27), Y1 - Y);
+                        const float Ya = Y, Yb = Y + W - .8f;
+                        // Beside the masonry (its jambs are Jamb wide) the boards stop at it; outside that they run on past.
+                        const bool bByStone = (Part == 0 && Yb > T0 - Jamb) || (Part == 1 && Ya < T1 + Jamb);
+                        const float X1 = bByStone ? StoneX0 : SeamX1 + R.FRandRange(-6, 10);
+                        // The boards that face the crawlway are square to it, so its walls are straight inside.
+                        const bool bFace = (Part == 0 && Yb >= T0 - 1) || (Part == 1 && Ya <= T1 + 1);
+                        const float X0 = bFace ? Aft : Aft + R.FRandRange(0, 6);
+                        P.Lumber.B(X0, X1, Ya, Yb, Z, Z + Board - .5f);
+                        Y += W;
+                    }
+                }
+            }
+            else
+            {
+                const float X1 = bOverStone ? SeamX1 + 2 : StoneX0;
+                float X = Aft;
+                while (X < X1 - 4)
+                {
+                    const float W = FMath::Min(R.FRandRange(18, 28), X1 - X);
+                    P.Lumber.B(X, X + W - .8f, Wall + R.FRandRange(0, 5), Inner + R.FRandRange(-6, 6), Z, Z + Board - .5f);
+                    X += W;
+                }
+            }
+        }
+        P.Lumber.B(Aft, SeamX0, T0, T1, Z0, Roof);   // the boards' ends at the crawlway's blind end
+        const float StackTop = Z0 + Layer * Board;
+        // The masonry at the mouth: two jambs and a lintel of the temple's stone set into the stack, a block of its floor,
+        // and a few broken pieces of it standing proud of the boards round its edge.
+        P.Stone.B(StoneX0, SeamX1, T0, T1, Z0, Z0 + 2);
+        P.Stone.B(StoneX0, StoneOut, T0 - Jamb, T0, Z0, StoneTop);
+        P.Stone.B(StoneX0, StoneOut, T1, T1 + Jamb, Z0, StoneTop - 4);
+        P.Stone.B(StoneX0, StoneOut, T0 - Jamb, T1 + Jamb, Roof, StoneTop);
+        P.StoneDecor.TurnedBox(FVector(StoneOut - 14, T0 - Jamb - 4, StoneTop - 12), FVector(12, 9, 13), FRotator(4, -7, 6));
+        P.StoneDecor.TurnedBox(FVector(StoneOut - 18, T1 + Jamb + 5, Z0 + 26), FVector(10, 8, 14), FRotator(-5, 9, -4));
+        P.StoneDecor.TurnedBox(FVector(StoneOut - 22, SeamY + 18, StoneTop + 5), FVector(14, 18, 6), FRotator(3, 6, -5));
+        // A little fine grit spilled from its mouth.
+        for (int32 I = 0; I < 6; ++I) P.StoneDecor.TurnedBox(FVector(SeamX1 + R.FRandRange(8, 44), SeamY + R.FRandRange(-45, 45), Z0 + 1), FVector(R.FRandRange(2.5f, 5), R.FRandRange(2.5f, 5), 1.2f), FRotator(0, R.FRandRange(0, 90), 0));
+        // Heavy timbers heaped on the stack, crossed, and two of them leant up against the hull's side under the deck beams.
+        auto Timber = [](FSurf& S, const FVector& A, const FVector& Bp, float W, float H, float Roll)
+        {
+            FRotator Rt = (Bp - A).Rotation(); Rt.Roll = Roll;
+            S.TurnedBox((A + Bp) * .5f, FVector(static_cast<float>(FVector::Dist(A, Bp)) * .5f, W * .5f, H * .5f), Rt);
+        };
+        const float HeapZ = StackTop;
+        Timber(P.Wood, FVector(Aft + 6, -395, HeapZ + 10), FVector(SeamX1 - 10, -398, HeapZ + 10), 20, 20, 0);
+        Timber(P.Wood, FVector(Aft + 20, -345, HeapZ + 10), FVector(StoneX0 + 30, -340, HeapZ + 10), 18, 20, 0);
+        Timber(P.Wood, FVector(Aft + 2, -262, HeapZ + 9), FVector(SeamX1 - 30, -255, HeapZ + 9), 16, 18, 0);
+        for (const float X : {-112.f, -18.f, 66.f}) Timber(P.Wood, FVector(X + R.FRandRange(-6, 6), Wall + 12, HeapZ + 29.5f), FVector(X + R.FRandRange(-12, 12), Inner - 4, HeapZ + 29.5f), 18, 19, 0);
+        Timber(P.Lumber, FVector(-140, -372, HeapZ + 41.5f), FVector(34, -360, HeapZ + 41.5f), 26, 5, 0);
+        Timber(P.Lumber, FVector(-120, -330, HeapZ + 41), FVector(58, -322, HeapZ + 41), 24, 4, 2);
+        Timber(P.Lumber, FVector(-60, -248, HeapZ + 41.5f), FVector(80, -232, HeapZ + 39.5f), 22, 4, -3);
+        // Leant against the hull: up from the heap's top to under the deck beams, their feet on the heap.
+        Timber(P.Wood, FVector(-90, -330, HeapZ + 39), FVector(-110, Wall + 14, DeckBeam - 12), 16, 16, 0);
+        Timber(P.Wood, FVector(40, -320, HeapZ + 39), FVector(70, Wall + 14, DeckBeam - 30), 16, 15, 0);
+        Timber(P.Lumber, FVector(-20, -285, HeapZ + 41), FVector(-34, Wall + 8, DeckBeam - 40), 24, 4, 0);
+        // Off-cuts on the floor before it.
+        Timber(P.Lumber, FVector(SeamX1 + 40, -210, Z0 + 2.5f), FVector(SeamX1 + 120, -176, Z0 + 2.5f), 14, 4.5f, 0);
+        Timber(P.Lumber, FVector(SeamX1 + 30, -402, Z0 + 2.5f), FVector(SeamX1 + 95, -398, Z0 + 2.5f), 18, 4.5f, 0);
+        Timber(P.Wood, FVector(SeamX1 + 60, -390, Z0 + 7.5f), FVector(SeamX1 + 64, -330, Z0 + 7.5f), 16, 14, 0);
+        // The oil haze round the masonry's mouth: a band standing off the stone's edge on the stack's face, fading out away
+        // from it (the cellar's M_AstralOilMist fades up V and at U's ends, so its ends are at the floor).
+        {
+            TArray<FVector2D> Edge;   // (Y, Z) round the jambs and lintel, from the floor on the starboard side
+            const float Ya = T0 - Jamb, Yb = T1 + Jamb, Za = StoneTop;
+            for (float Z = Z0; Z < Za; Z += 8) Edge.Add({Ya, Z});
+            for (float Y = Ya; Y < Yb; Y += 8) Edge.Add({Y, Za});
+            for (float Z = Za; Z >= Z0 - .1f; Z -= 8) Edge.Add({Yb, Z});
+            const FVector2D Mid((Ya + Yb) * .5f, Z0 + 10);
+            constexpr int32 Levels = 8; constexpr float Reach = 46;
+            const int32 N = Edge.Num();
+            auto Pt = [&](int32 I, int32 J)
+            {
+                const float U = I / float(N - 1), H = J / float(Levels);
+                const FVector2D E = Edge[I], Out = (E - Mid).GetSafeNormal();
+                const FVector2D Q = E + Out * (H * Reach * (.85f + .15f * FMath::Sin(U * UE_TWO_PI * 4)));
+                return FVector(StoneOut + 2 + H * H * 9 + 2 * FMath::Sin(U * UE_TWO_PI * 3), Q.X, FMath::Max(static_cast<float>(Q.Y), Z0 + 1.f));
+            };
+            for (int32 I = 0; I < N - 1; ++I) for (int32 J = 0; J < Levels; ++J)
+            {
+                const int32 First = P.Veil.V.Num();
+                P.Veil.Flat(Pt(I, J), Pt(I + 1, J), Pt(I + 1, J + 1), Pt(I, J + 1), FVector(1, 0, 0));
+                if (P.Veil.V.Num() == First) continue;
+                const float U0 = I / float(N - 1), U1 = (I + 1) / float(N - 1), V0 = J / float(Levels), V1 = (J + 1) / float(Levels);
+                P.Veil.UV[First] = {U0, V0}; P.Veil.UV[First + 1] = {U1, V0}; P.Veil.UV[First + 2] = {U1, V1}; P.Veil.UV[First + 3] = {U0, V1};
+            }
+        }
 
         // Sailcloth: folded spare sails stacked by the port side, aft; coils of rope; a spare spar along starboard.
         // Each folded sail is a stack of thin, uneven folds with a lashing round it.
@@ -1043,14 +1134,16 @@ void AShipSetting::Build()
     // ---- The hammocks in the crew quarters: canvas slung fore and aft from hooks on the beams, sagging; swung by the sea.
     {
         struct FHam { float X, Y, Z; };
-        const FHam Hams[] = {{-560, 270, 0}, {-760, 260, 10}, {-960, 250, 30}, {-560, -270, 5}, {-760, -260, -5}, {-960, -250, 25}, {-660, 110, 40}, {-860, -110, 45}};
+        // (2026-11-02: the two that hung at -960 straddled the quarterdeck's break, their fore lanyards up through the main
+        // deck into the open waist - the user's "floating mop" by the starboard break ladder; they hang forward of it now.)
+        const FHam Hams[] = {{-560, 270, 0}, {-760, 260, 10}, {-460, 165, 20}, {-560, -270, 5}, {-760, -260, -5}, {-450, -352, 35}, {-660, 110, 40}, {-860, -110, 45}};
         for (const FHam& Hm : Hams)
         {
             const float Top = Hm.X < QuarterFore ? QuarterZ - 25 : DeckBeam;
             auto* Pivot = NewObject<USceneComponent>(this); Pivot->SetupAttachment(RootComponent); Pivot->SetWorldLocation(ShipWorld(FVector(Hm.X, Hm.Y, Top))); Pivot->RegisterComponent();
             FSurf C, R;
             constexpr int32 NX = 12, NY = 5; constexpr float Len = 100, Half = 34;
-            const float Low = LowerZ + 150 + Hm.Z - Top, EndZ = Low + 46;
+            const float Low = LowerZ + 100 + Hm.Z - Top, EndZ = Low + 46;   // the bed's low point ~1-1.45 m off the floor (2026-11-02: was 1.5-1.95)
             auto Pt = [&](int32 I, int32 J)
             {
                 const float U = I / float(NX) * 2 - 1, V = J / float(NY) * 2 - 1;
@@ -1100,6 +1193,8 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipGlass"), P.Glass, GlassMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipRigging"), P.Rigging, DarkMat, false, true, Missing, Triangles);   // the tarred standing rigging
+    Emit(this, TEXT("ShipLumber"), P.Lumber, DeckMat, false, true, Missing, Triangles);
+    Emit(this, TEXT("ShipRiftVeil"), P.Veil, TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"), false, false, Missing, Triangles);   // the cellar's oil haze
     Emit(this, TEXT("ShipHidden"), P.Hidden, nullptr, true, false, Missing, Triangles);
 
     // ---- The crawlway through the masonry: on all fours in it, and on the floor just out of its mouth.
@@ -1119,7 +1214,7 @@ void AShipSetting::Build()
 namespace
 {
     TArray<FSailDef> GSails;
-    constexpr int32 SailU = 16, SailV = 12, FlagU = 10, FlagV = 6;
+    constexpr int32 SailU = 16, SailV = 12, FlagU = 14, FlagV = 9;
     // A two-sided sheet over a grid (U across, V down) from a shape function; Tris only when it is first made.
     void GridMesh(TFunctionRef<FVector(float, float)> At, int32 NU, int32 NV, float SizeU, float SizeV, TArray<FVector>& V, TArray<FVector>& N, TArray<FVector2D>& UV, TArray<int32>* Tris)
     {
@@ -1201,7 +1296,7 @@ void AShipSetting::BuildSails()
         GridMesh([&S](float U, float W) { return SailPoint(S, U, W, 0); }, SailU, SailV, SailWidth(S), SailHeight(S), V, N, UV, &T);
         Sails.Add(Make(*FString::Printf(TEXT("ShipSail%d"), I), Canvas));
     }
-    GridMesh([](float U, float W) { return FlagPoint(U, W, 0); }, FlagU, FlagV, 150, 95, V, N, UV, &T);
+    GridMesh([](float U, float W) { return FlagPoint(U, W, 0); }, FlagU, FlagV, FlagFly, FlagDrop, V, N, UV, &T);
     Flag = Make(TEXT("ShipFlag"), FlagMat ? FlagMat : Black);
 }
 
@@ -1218,7 +1313,7 @@ void AShipSetting::UpdateSails()
     }
     if (Flag)
     {
-        GridMesh([T](float U, float W) { return FlagPoint(U, W, T); }, FlagU, FlagV, 150, 95, V, N, UV, nullptr);
+        GridMesh([T](float U, float W) { return FlagPoint(U, W, T); }, FlagU, FlagV, FlagFly, FlagDrop, V, N, UV, nullptr);
         Flag->UpdateMeshSection(0, V, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>());
     }
 }

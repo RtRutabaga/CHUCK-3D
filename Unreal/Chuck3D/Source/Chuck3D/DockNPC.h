@@ -89,6 +89,13 @@ public:
     float GetStraightArmOut() const;
     /** How far in front of his body line his more forward hand is (cm), for tests: hands at his sides, not held out. */
     float GetHandsForward() const;
+    /** Where a hand's bone is in the world (Side 0 left, 1 right), for tests' cameras. */
+    FVector GetHandWorld(int32 Side) const;
+    /** Wrist to middle knuckle in his standing pose (cm), and the scale of the fist the hand code holds things in (1: a
+        grown man's; the halfling captain's hand is smaller, so what he holds sits in his fist, not past his fingers). */
+    float GetHandLength() const;
+    void SetFistScale(float Scale) { FistScale = FMath::Clamp(Scale, .4f, 1.2f); }
+    float GetFistScale() const { return FistScale; }
     /** Close a hand (0 relaxed .. 1 a fist round a shaft): the guard's spear hand, later. Side 0 = left. */
     void SetGrip(int32 Side, float Amount) { Grip[FMath::Clamp(Side, 0, 1)] = FMath::Clamp(Amount, 0.f, 1.f); }
     /** A guard's spear (Tools/build_spear.py): upright beside the foot on Side (0 left, 1 right), that fist round its grip. */
@@ -436,7 +443,7 @@ public:
     float GetWorstFootSink() const { return WorstFootSink; }
     /** The captain (2026-11-02): his time in his round (s; tests set it to see each stance), what he is doing ("Hips",
         "Draw", "Display", "Return") and how far his cutlass's tip goes into the deck where it stands planted (cm; 0 above it). */
-    void SetCaptainTime(float Seconds) { CaptainT = Seconds; }
+    void SetCaptainTime(float Seconds, float HoldFor = 0.f) { CaptainT = Seconds; CaptainHold = HoldFor; }
     const TCHAR* GetCaptainPhase() const;
     float GetCaptainTipDepth() const { return CaptainTipDepth; }
 protected:
@@ -472,6 +479,7 @@ private:
     TArray<int32> FingerBone;                     // [side][finger][joint] flattened, mesh bone indices
     TArray<FVector> FingerAxis;                   // each finger joint's bending axis, in its own frame
     float Grip[2] = { 0.f, 0.f };
+    float FistScale = 1.f;
     float ArmOut = 1.f;                           // which way is out for the left arm (+/-Y)
     void PoseHands(TArray<FTransform>& Space, bool bStraightenWrists) const;
     // Voice and face.
@@ -688,7 +696,7 @@ private:
     bool bChefRatStill = false;
     // The captain: his round, the cutlass planted in the deck at his right (component space: the fist's place on its grip
     // and the blade's direction) and its scale (a halfling's cutlass, its tip a few cm into the planking).
-    float CaptainT = 0.f, CutlassScale = 1.f, CaptainTipDepth = 0.f;
+    float CaptainT = 0.f, CutlassScale = 1.f, CaptainTipDepth = 0.f, CaptainHold = 0.f;   // (Hold: s a test keeps him at CaptainT)
     FVector CaptainHilt = FVector::ZeroVector, CaptainBlade = FVector(0.f, 0.f, -1.f);
     int32 CaptainPhase = 0;
     bool PirateTurns() const { return !IsPirate() || Kind == EDockHuman::PirateConcertina || Kind == EDockHuman::PirateCheering || Kind == EDockHuman::PirateDancer; }

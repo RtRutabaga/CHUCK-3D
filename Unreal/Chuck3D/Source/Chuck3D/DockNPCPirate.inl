@@ -38,8 +38,8 @@ namespace
     constexpr float FencerCrouch = 11.f;        // cm his hips are down in the stance
     constexpr float StepTime = .2f, StepLift = 7.f, StepSlack = 5.f;
     // The captain's round (s): fists on hips, then reach for the planted cutlass, pull it out, raise it, hold it up, bring it
-    // back over its place, drive it in, let go, fists on hips again.
-    constexpr float CaptainRound = 28.f, CapReach = 16.f, CapPull = 16.7f, CapRaise = 17.1f, CapHold = 18.f, CapLower = 24.5f,
+    // back over its place, drive it in, let go, fists on hips again. (2026-11-02: a longer reach, the hand opening on the way.)
+    constexpr float CaptainRound = 28.f, CapReach = 15.6f, CapPull = 16.7f, CapRaise = 17.1f, CapHold = 18.f, CapLower = 24.5f,
         CapPlunge = 25.4f, CapLetGo = 25.8f, CapBack = 26.6f;
     constexpr float CaptainPlunge = 4.f;         // cm the planted tip goes into the deck
     // The mouths on their models (SourceAssets/NPCs/Humans/manifest.json mouth_cm): where a drinker's tankard meets his lips.
@@ -155,13 +155,15 @@ void ADockNPC::SetupPirate()
         DisplayName = TEXT("Pirate Captain"); IdleClip = ClipStandLook;
         AddPirateProp(TEXT("/Game/Characters/Humans/Props/SM_Cutlass.SM_Cutlass"), TEXT("CaptainCutlass"));
         SetGrip(0, .85f); SetGrip(1, 1.f);
-        // Where his cutlass stands planted: by his right hand within an easy bend of the arm, the blade leaning a little
-        // forward and out, sized so its tip goes a few cm into the deck (a halfling's cutlass is shorter).
+        // Where his cutlass stands planted: before his right foot, clear of his hip, its grip low enough that his arm
+        // reaches down and forward to it nearly straight (user 2026-11-02: the grip was by his hip, so his fist on the hip
+        // and his fist on the grip were the same place and he never seemed to take it). The blade leans a little forward and
+        // out, so the hilt leans back toward him; sized so its tip goes a few cm into the deck (a halfling's cutlass is shorter).
         const float Right = -ArmOut;
         const FVector S = Standing[BoneIndex[UpperR]].GetLocation();
         const float L = static_cast<float>(FVector::Dist(S, Standing[BoneIndex[LowerR]].GetLocation()) + FVector::Dist(Standing[BoneIndex[LowerR]].GetLocation(), Standing[BoneIndex[HandR]].GetLocation()));
-        CaptainHilt = S + FVector(.3f * L, Right * .3f * L, -.66f * L);
-        CaptainBlade = FVector(.12f, Right * .2f, -1.f).GetSafeNormal();
+        CaptainHilt = S + FVector(.58f * L, Right * .3f * L, -.72f * L);
+        CaptainBlade = FVector(.1f, Right * .16f, -1.f).GetSafeNormal();
         CutlassScale = FMath::Clamp(static_cast<float>(CaptainHilt.Z + CaptainPlunge) / (static_cast<float>(-CaptainBlade.Z) * CutlassTip), .7f, 1.1f);
         CaptainTipDepth = -static_cast<float>(CaptainHilt.Z + CaptainBlade.Z * CutlassTip * CutlassScale);
         CaptainT = 4.f;
@@ -234,7 +236,7 @@ void ADockNPC::TickPirate(float DeltaSeconds)
     switch (Kind)
     {
     case EDockHuman::PirateChef: TickChef(DeltaSeconds); break;
-    case EDockHuman::PirateCaptain: CaptainT = FMath::Fmod(CaptainT + DeltaSeconds, CaptainRound); break;
+    case EDockHuman::PirateCaptain: if (CaptainHold > 0.f) CaptainHold -= DeltaSeconds; else CaptainT = FMath::Fmod(CaptainT + DeltaSeconds, CaptainRound); break;
     case EDockHuman::PirateFencerA: case EDockHuman::PirateFencerB:
         if (bFenceCue)
             SetActorLocationAndRotation(Fence.Centre + FVector(0.f, 0.f, HalfHeight), FRotator(0.f, static_cast<float>(Fence.Facing.Rotation().Yaw), 0.f));
@@ -719,8 +721,12 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         const FCap LeftHip = OnHip(0);
         PlaceHand(Space, 0, LeftHip.Fist, LeftHip.Along, LeftHip.Blade, LeftHip.Pole);
         const float L = static_cast<float>(FVector::Dist(Shoulder[1], Space[BoneIndex[LowerR]].GetLocation()) + FVector::Dist(Space[BoneIndex[LowerR]].GetLocation(), Space[BoneIndex[HandR]].GetLocation()));
+        // Taking the planted grip: his fist over it, the thumb down its length toward the blade (so, drawn, the blade comes up
+        // out of the thumb's side of his fist), his knuckles forward and a little in, the wrist square to the grip, the elbow
+        // out to his side and back.
         const FVector StuckAlong = FVector::VectorPlaneProject(FVector(1.f, 0.f, 0.f), CaptainBlade).GetSafeNormal();
-        const FCap Planted{ CaptainHilt, StuckAlong, CaptainBlade, FVector(-.3f, Right * .8f, -.2f).GetSafeNormal() };
+        const FVector GripAlong = FVector::VectorPlaneProject(FVector(1.f, -Right * .15f, -.2f), CaptainBlade).GetSafeNormal();
+        const FCap Planted{ CaptainHilt, GripAlong, CaptainBlade, FVector(-.35f, Right * .85f, .15f).GetSafeNormal() };
         const FCap Pulled{ CaptainHilt - CaptainBlade * 16.f, StuckAlong, CaptainBlade, Planted.Pole };
         // Held up and out to his right, the blade rising past his shoulder (the reference), turning slowly as he shows it.
         const float Sway = FMath::Sin(CaptainT * .9f) * .12f;
@@ -740,6 +746,23 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         else if (C < CapLetGo) { CaptainPhase = 3; Hand = Mix(Pulled, Planted, (C - CapPlunge) / (CapLetGo - CapPlunge)); bHeld = true; }
         else { CaptainPhase = 3; Hand = Mix(Planted, Hip, (C - CapLetGo) / (CapBack - CapLetGo)); }
         PlaceHand(Space, 1, Hand.Fist, Hand.Along, Hand.Blade, Hand.Pole);
+        // His right hand's fingers: a fist on his hip; opening as he reaches, closing round the grip as he gets there; shut
+        // while he holds it; opening as he lets go and curling back into a fist on the way to his hip.
+        {
+            float G = .85f;
+            if (C >= CapReach && C < CapPull)
+            {
+                const float T = (C - CapReach) / (CapPull - CapReach);
+                G = T < .55f ? FMath::Lerp(.85f, .2f, Ease01(T / .55f)) : FMath::Lerp(.2f, 1.f, Ease01((T - .55f) / .45f));
+            }
+            else if (bHeld) G = 1.f;
+            else if (C >= CapLetGo && C < CapBack)
+            {
+                const float T = (C - CapLetGo) / (CapBack - CapLetGo);
+                G = T < .35f ? FMath::Lerp(1.f, .3f, Ease01(T / .35f)) : FMath::Lerp(.3f, .85f, Ease01((T - .35f) / .65f));
+            }
+            Grip[1] = G;
+        }
         const FVector Size(CutlassScale);
         if (bHeld)
         {

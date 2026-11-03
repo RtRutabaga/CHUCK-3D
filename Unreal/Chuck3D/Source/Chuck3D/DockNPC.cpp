@@ -1454,6 +1454,19 @@ float ADockNPC::GetHandsForward() const
     return FMath::Max(Ahead(HandL), Ahead(HandR));
 }
 
+float ADockNPC::GetHandLength() const
+{
+    if (Rest.Num() == 0 || BoneIndex.Num() == 0) return 0.f;
+    TArray<FTransform> Standing;
+    Solve(Rest, Standing);
+    return static_cast<float>(FVector::Dist(Standing[BoneIndex[HandR]].GetLocation(), Standing[BoneIndex[MiddleR]].GetLocation()));
+}
+
+FVector ADockNPC::GetHandWorld(int32 Side) const
+{
+    return Body ? Body->GetBoneLocation(BoneNames[Side == 0 ? HandL : HandR]) : GetActorLocation();
+}
+
 void ADockNPC::EndPlay(const EEndPlayReason::Type Reason)
 {
     if (ProbeFrames > 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_NPC_SHAKE who=%s %s"), Tags.Num() ? *Tags[0].ToString() : *DisplayName, *GetJitterReport());
@@ -1863,12 +1876,12 @@ void ADockNPC::HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& F
     if (Palm.IsNearlyZero())
     {
         Thumb = ThumbBone.GetSafeNormal();
-        Fist = Hand + Along * FistReach;
+        Fist = Hand + Along * FistReach * FistScale;
         return;
     }
     Thumb = FVector::CrossProduct(Palm, Along).GetSafeNormal();
     if (FVector::DotProduct(Thumb, ThumbBone) < 0.f) Thumb = -Thumb;
-    Fist = Hand + Along * FistReach + Palm * PalmDepth;
+    Fist = Hand + Along * FistReach * FistScale + Palm * PalmDepth * FistScale;
 }
 
 void ADockNPC::PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& Fist, const FVector& Along, const FVector& Thumb, const FVector& Pole)
@@ -1893,7 +1906,7 @@ void ADockNPC::PlaceHand(TArray<FTransform>& Space, int32 Side, const FVector& F
     };
     const int32 Upper = BoneIndex[Of(UpperL, Side)], Lower = BoneIndex[Of(LowerL, Side)], Hand = BoneIndex[Of(HandL, Side)];
     const FVector Palm = FVector::CrossProduct(Along, Thumb).GetSafeNormal() * PalmSign[Side];
-    const FVector Wrist = Fist - Along * FistReach - Palm * PalmDepth;
+    const FVector Wrist = Fist - Along * FistReach * FistScale - Palm * PalmDepth * FistScale;
     const FVector S = Space[Upper].GetLocation();
     const float A = static_cast<float>(FVector::Dist(S, Space[Lower].GetLocation()));
     const float Bl = static_cast<float>(FVector::Dist(Space[Lower].GetLocation(), Space[Hand].GetLocation()));

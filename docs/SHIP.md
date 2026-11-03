@@ -32,9 +32,9 @@ An original two-masted ship after the 2D deck reference (`docs/design/pirate shi
 
 | Space | Where (X) | What is in it |
 | --- | --- | --- |
-| Arrival compartment | −170 to 330 | A sail locker amidships. Folded spare sails, rope coils, a spare spar and a barrel. The main hatch with a ladder down. The temple masonry and its crawlway in the starboard-aft corner. The broken planking in the port side. |
+| Arrival compartment | −170 to 330 | A sail locker amidships. Folded spare sails, rope coils, a spare spar and a barrel. The main hatch with a ladder down. A pile of spare lumber in the starboard-aft corner, the crawlway through it ending in a small piece of the temple's masonry ringed with the oil haze (November 2, below). The broken planking in the port side. |
 | Galley | 330 to 1150 | A brick hearth under an iron top with a great pot and its pipe up through the deck, and a fire glowing in the firebox. A work table under a rail of hanging pots. A counter along the port side, open underneath, with a low board of jars. A rack of shelves to starboard. Water casks and sacks. |
-| Crew quarters | −1080 to −170 | Eight hammocks slung fore and aft from the beams, 1.5 m up, over his head. A 2 m round mess table on a pedestal with five stools (stool 41 cm, table 76 cm: he can mantle up) and tankards. Iron-bound sea chests along both sides. The main mast. |
+| Crew quarters | −1080 to −170 | Eight hammocks slung fore and aft from the beams, their beds about 1–1.45 m off the floor (lowered November 2; before, 1.5–1.95 m). A 2 m round mess table on a pedestal with five stools (stool 41 cm, table 76 cm: he can mantle up) and tankards. Iron-bound sea chests along both sides. The main mast. |
 | Captain's cabin | transom to −1080 | A bed with brass posts, a blanket and pillow. A desk with a chart and a lamp, and his chair. A rug. The iron-bound chest (closed: milestone 4). A bench under the stern windows (he can see out from it). |
 | Hold | −1300 to 1150, below | Cargo stowed in tiers (the docks' crates, barrels and rope coils, and canvas sacks). Three shelving units along the sides. Stanchions. A raised way of crates along the starboard side, aft from the ladder: a sack to step onto, then crates one and two high. |
 
@@ -62,7 +62,7 @@ An original two-masted ship after the 2D deck reference (`docs/design/pirate shi
 The rubble map's crevice ends at a crack of lamplit timber (`AtChultTempleCreviceEnd`). Crawling to it starts the 2D Phase 6 escape, letterboxed with no control. Esc skips it.
 
 1. It goes to black, and the music fades.
-2. The ship's stage is built, and he is on all fours in a stone passage: the crawlway through a mass of the temple's masonry that has come through the ship's timbers in the arrival compartment's starboard-aft corner. The blocks are jammed against the hull and up into the deck beams, the planking is split round them, and grit has spilled from the mouth. Behind him, his crawl camera looks along the passage toward the lamplight at its mouth.
+2. The ship's stage is built, and he is on all fours in a stone passage: the crawlway through the pile of lumber in the arrival compartment's starboard-aft corner (until November 2 a mass of the temple's masonry). Its mouth is a small piece of the temple's stone set in the boards, ringed with the oil haze, and grit has spilled from it. Behind him, his crawl camera looks along the passage toward the lamplight at its mouth.
 3. He crawls out among the sailcloth, seen from low in the compartment, and gets up.
 4. He walks to the broken planking in the port side. The view eases in past him to the open sea through it.
 5. Control returns where he stands, facing the hole.
@@ -113,7 +113,7 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
   - two staysails on the fore topmast and jib stays;
   - the spanker on its gaff and boom over the quarterdeck (the boom clears a standing man at the helm).
 
-  The main course is furled on its yard. The square sails' feet are cut in a curve (a roach), so the topsails sweep clear over the tops. The sails breathe with the swell and flutter a little at their free edges; their meshes are rebuilt every frame (`UpdateSails`). A flag streams from the main truck: since November 2 the user's mustachioed skull over crossed cutlasses (below).
+  The main course is furled on its yard. The square sails' feet are cut in a curve (a roach), so the topsails sweep clear over the tops. The sails breathe with the swell and flutter a little at their free edges; their meshes are rebuilt every frame (`UpdateSails`). A flag streams from the spanker gaff's peak over the quarterdeck: since November 2 the user's mustachioed skull over crossed cutlasses (below; at the main truck until the evening of November 2).
 - **Standing rigging** (tarred, dark):
   - shrouds from deadeyes on the channels to each masthead, with ratlines;
   - futtock shrouds;
@@ -277,7 +277,7 @@ User request: "Make the captain. Here are reference images. In the 2d game the c
 - **New kit options:** see `SourceAssets/NPCs/README.md`, "The captain".
 - **Where he stands:** on the quarterdeck, just forward of the skylight, looking forward over the waist at his crew. The way across the quarterdeck passes in front of him.
 - **What he does:**
-  - He stands with his fists on his hips (the first picture). His cutlass stands planted point-down in the deck at his right, its tip 4 cm into the planks.
+  - He stands with his fists on his hips (the first picture). His cutlass stands planted point-down in the deck before his right foot, its tip 4 cm into the planks (by his right hip until November 2, below).
   - Every 28 s he reaches for it, pulls it out, and holds it up and out to his right a while, the blade turning slowly (the second picture). Then he drives it back into the deck and puts his fist on his hip again.
   - He watches the rat when the rat comes near, as the other humans do.
 - **Lines:** none yet. The 2D game gives the captain none before the trigger, and what he does at the trigger is still to be decided with the user (milestone 4).
@@ -285,7 +285,7 @@ User request: "Make the captain. Here are reference images. In the 2d game the c
 
 ### The flag
 
-The user's picture, `SourceAssets/Setting/Ship/ShipFlag_Moustache.jpg` (a skull with a curled moustache over two crossed cutlasses, on black), is now the flag at the main truck. `Tools/create_ship_flag.py` imports it as `T_ShipFlag` and makes `M_ShipFlag`: two-sided foliage shading like the sails', so the sun shows through the cloth. The picture fills the 150 × 95 cm sheet with the hoist at its left edge, and from the far side it reads mirrored, as a real flag does.
+The user's picture, `SourceAssets/Setting/Ship/ShipFlag_Moustache.jpg` (a skull with a curled moustache over two crossed cutlasses, on black), is now the ship's flag (at the main truck at first; at the spanker gaff's peak, larger, since November 2, below). `Tools/create_ship_flag.py` imports it as `T_ShipFlag` and makes `M_ShipFlag`: two-sided foliage shading like the sails', so the sun shows through the cloth. The picture fills the 150 × 95 cm sheet with the hoist at its left edge, and from the far side it reads mirrored, as a real flag does.
 
 ### Tests
 
@@ -331,3 +331,42 @@ User request: "here is the ship soundtrack but done on a concertina. If possible
   - `Tools/align_ship_music.py --demo` writes sample crossings to `Local/ShipMusicSwitch/` to listen to.
 - **Not checked:** I haven't heard it in the game. The offline crossings were checked only by measurement: the tunes' harmony and onsets line up, and on the two tracks' beat grids the beats agree to about 0.2 of a beat at the median.
 - **Not done:** the concertina player's bellows keep to the beat, but his hands aren't matched to the notes.
+
+## Fixes on deck and below (November 2, night)
+
+User request: "Make the pirate flag more prominent while still being in a spot consistent with real flag placement on a ship like this. Move the awkward floating mop on the deck so that it's not propping itself up impossibly. Instead of temple stones in the ship have this be a pile of lumber with just small section of stone where you climb out, with our fade out oil slick around the small stone opening, indicating collided worlds. Lower the hammocks to be more realistic placement. Move the dancing pirate forward some so that he's dancing on the deck and not on the grate. Fix the captains hand for how he picks up his sword".
+
+- **The flag** (`ShipDeck.inl`, `FlagPoint`):
+  - It now flies where a ship of this kind wore its colours under sail: from the spanker gaff's peak, over the quarterdeck, about 10 m above it. Before, it was at the main truck, 24 m above the deck.
+  - It is 2.6 × 1.65 m (it was 1.5 × 0.95 m), about the size of a big ensign.
+  - It is hoisted on a halyard just aft of the peak, with the halyard's tail hanging below it. It streams to leeward (to port, the way the spanker fills), clear of the sail's leech.
+  - The main truck is bare.
+- **The "mop"** was not a mop. Two crew-quarters hammocks hung at x = −960, across the quarterdeck's break. Each one's fore lanyard ran up through the main deck and ended in the air about 90 cm over the waist's planking, beside a break ladder. These two now hang forward of the break: one inboard of the port row, the other outboard of the mess table on the starboard side.
+- **The arrival compartment's corner** (`ShipSetting.cpp`):
+  - In place of the temple blocks, a pile of the ship's spare lumber fills the corner:
+    - stacked boards (`ShipLumber`, the light deck planks) laid fore and aft either side of the crawlway, with boards laid across over it;
+    - heavy timbers crossed on top, two of them leant against the hull up under the deck beams;
+    - off-cuts on the floor.
+  - Where the crawlway comes out, a small piece of the temple's masonry sits in the boards: two jambs and a lintel, about 1.4 m across and 70 cm high, with three broken pieces proud of the edge and a little grit.
+  - The cellar's oil haze (`M_AstralOilMist`) stands off the stone's edge across the stack's face, as a 46 cm band that fades away from the stone.
+  - What he can and can't pass is unchanged: the crawlway's sides, roof and blind end are invisible boxes, and the boards facing it are square, so its walls are straight inside.
+- **The hammocks:** all eight beds hang 50 cm lower, about 1–1.45 m off the floor, low enough for a man to roll into. The lanyards still run to the beams.
+- **The dancer** now dances on the planking just forward of the main hatch's grating, at (215, 92), clear of the capstan. The cheering pirate moved a little aft and outboard to (100, 215) to keep room between them. The concertina player is unchanged.
+- **The captain's hand** (`DockNPCPirate.inl`):
+  - **Where the cutlass stands:** before his right foot. Before, it stood by his right hip, so his fist on his hip and his fist on the grip were almost the same place and he never seemed to reach for it.
+  - **The reach:** it now takes 1.1 s (it was 0.7 s). His hand opens on the way, closes round the grip as it arrives, stays shut while he holds the cutlass, and opens again as he lets go.
+  - **The grip:** his thumb lies down the grip toward the blade, his knuckles face forward and his elbow is out, so when he draws the cutlass, the blade comes up out of his fist on the thumb side.
+  - **The fist's size:** the hand code places a fist for a grown man's hand, so on the halfling the grip sat 3–4 cm past his fingers. His fist is now scaled to his hand: 7.6 cm against the fencer's 11.1 cm, a scale of 0.68, measured when the crew is placed (`CHUCK_CAPTAIN_FIST`). The other NPCs are unchanged.
+- **Tests:**
+  - New stills:
+    - flag: `Flag`, `FlagAft`, `FlagFromDeck`, `FlagFromWaist`;
+    - arrival corner: `ArrivalPile`, `ArrivalMouth`;
+    - where the lanyard stood: `BreakStarboard`; hammocks: `QuartersAft`;
+    - captain's draw: `CaptainReach`, `CaptainGrip`, `CaptainDraw`, `CaptainLift`, `CaptainGripClose` and `CaptainGripBack`, each holding him at that moment of his round;
+    - his hand close up: `CaptainHand*`, a camera that follows the hand.
+  - The dancer's and cheering pirate's stills follow them.
+  - `SetCaptainTime` can now hold him at a moment for a still.
+- **Not checked:**
+  - Nobody has played it by hand.
+  - The haze's colours are the cellar's; they have not been tuned for the lamplit sail locker.
+  - The flag is mirrored on its far side, as before.

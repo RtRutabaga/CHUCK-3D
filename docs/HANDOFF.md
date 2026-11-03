@@ -6,6 +6,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Fixes on deck and below (November 2, late night, Claude):** the user's six requests; details in [SHIP.md](SHIP.md#fixes-on-deck-and-below-november-2-night).
+  - The flag is larger (2.6 x 1.65 m) and flies from the spanker gaff's peak over the quarterdeck, on a halyard, where a ship like this wore its colours; the main truck is bare.
+  - The "floating mop" was a hammock lanyard poking up through the deck at the quarterdeck break; those two hammocks now hang forward of the break, and all eight hang 50 cm lower.
+  - The temple blocks in the arrival compartment are now a pile of the ship's spare lumber; the crawlway comes out through a small piece of temple stone ringed with the cellar's oil haze. Collision unchanged.
+  - The dancer dances on the planking forward of the main hatch grating (the cheering pirate moved a little to make room).
+  - The captain's cutlass stands before his right foot; he reaches for it over 1.1 s, his hand opening and closing round the grip, the thumb toward the blade; his fist is scaled to his halfling hand (0.68).
+  - Verified (Verify-Package 182 passes, ship test 15/15; Verify-Menu 42/42) and in the launcher as ShipFixes. Not played by hand.
 - **The concertina version on deck (November 2, night, Claude):** the user's request; details in [SHIP.md](SHIP.md#below-decks-and-above-the-concertina-version-november-2).
   - Below decks the ship track plays; on the weather deck the user's concertina version takes over at the matching moment of the tune (a 2 s crossfade after 0.4 s on deck), and back again going down.
   - The two recordings differ in tempo (135.7 vs 129.0 bpm) and the concertina plays the opening phrase once, so `Tools/align_ship_music.py` maps one onto the other by harmony and note onsets (`ShipMusicMap.inl`, generated). The crew's beat follows whichever track plays, counted on without a jump.

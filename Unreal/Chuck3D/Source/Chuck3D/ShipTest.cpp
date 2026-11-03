@@ -86,10 +86,10 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("CrewRatEye"), {-80, 160, DeckZ + 55}, {100, -20, DeckZ + 120}},
         {TEXT("CrewConcertina"), {335, -55, DeckZ + 150}, {215, -165, DeckZ + 125}},
         {TEXT("CrewConcertinaFront"), {109, -59, DeckZ + 150}, {215, -165, DeckZ + 125}},
-        {TEXT("CrewDancerFace"), {-66, 44, DeckZ + 160}, {70, -20, DeckZ + 145}},
-        {TEXT("CrewCheering"), {50, 300, DeckZ + 150}, {150, 170, DeckZ + 150}},
-        {TEXT("CrewDancer"), {230, 60, DeckZ + 110}, {70, -20, DeckZ + 75}},
-        {TEXT("CrewDancerLow"), {180, 110, DeckZ + 35}, {70, -20, DeckZ + 60}},
+        {TEXT("CrewDancerFace"), {79, 113, DeckZ + 160}, {215, 92, DeckZ + 145}},
+        {TEXT("CrewCheering"), {0, 345, DeckZ + 150}, {100, 215, DeckZ + 150}},
+        {TEXT("CrewDancer"), {-60, 150, DeckZ + 140}, {215, 92, DeckZ + 75}},
+        {TEXT("CrewDancerLow"), {40, 200, DeckZ + 35}, {215, 92, DeckZ + 60}},
         {TEXT("CrewJeffries"), {-720, 90, DeckZ + 160}, {-534, 0, DeckZ + 130}},
         {TEXT("CrewJeffriesRat"), {-660, 50, DeckZ + 45}, {-534, 0, DeckZ + 140}},
         {TEXT("CrewJeffriesBack"), {-380, -150, DeckZ + 170}, {-534, 0, DeckZ + 120}},
@@ -99,8 +99,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("CrewChef"), {470, 140, LowerZ + 160}, {680, -115, LowerZ + 110}},
         // Their faces close to (the mustaches, user 2026-11-02).
         {TEXT("FaceConcertina"), {166, -116, DeckZ + 158}, {215, -165, DeckZ + 152}},
-        {TEXT("FaceCheering"), {95, 45, DeckZ + 165}, {150, 170, DeckZ + 160}},
-        {TEXT("FaceDancer"), {7, 10, DeckZ + 152}, {70, -20, DeckZ + 147}},
+        {TEXT("FaceCheering"), {120, 95, DeckZ + 165}, {100, 215, DeckZ + 160}},
+        {TEXT("FaceDancer"), {150, 100, DeckZ + 152}, {215, 92, DeckZ + 147}},
         {TEXT("FaceJeffries"), {-604, 0, DeckZ + 158}, {-534, 0, DeckZ + 154}},
         {TEXT("FaceSeated"), {-372, -166, LowerZ + 118}, {-465, -139, LowerZ + 112}},
         {TEXT("FaceChef"), {690, 15, LowerZ + 150}, {680, -108, LowerZ + 146}},
@@ -112,10 +112,32 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("CaptainFace"), {-1005, -30, QuarterZ + 100}, {-1065, -45, QuarterZ + 95}},
         {TEXT("CaptainBoots"), {-985, -170, QuarterZ + 30}, {-1065, -45, QuarterZ + 15}},
         {TEXT("CaptainFromDeck"), {-640, -40, DeckZ + 45}, {-1065, -45, QuarterZ + 90}},
-        // The flag at the main truck: the user's mustachioed skull and crossed cutlasses.
-        {TEXT("Flag"), {MainMastX + 60, -480, 2930}, {MainMastX + 60, 40, 2910}},
-        {TEXT("FlagStarboard"), {MainMastX + 60, 520, 2930}, {MainMastX + 60, 40, 2910}},
-        {TEXT("FlagFromDeck"), {MainMastX - 900, -350, DeckZ + 160}, {MainMastX + 60, 40, 2880}}};
+        // His hand taking the planted cutlass and drawing it (user 2026-11-02): reaching, gripping, drawing, lifting.
+        {TEXT("CaptainReach"), {-975, 110, QuarterZ + 85}, {-1050, -20, QuarterZ + 55}},
+        {TEXT("CaptainGrip"), {-975, 110, QuarterZ + 85}, {-1050, -20, QuarterZ + 55}},
+        {TEXT("CaptainDraw"), {-975, 110, QuarterZ + 85}, {-1050, -20, QuarterZ + 60}},
+        {TEXT("CaptainLift"), {-975, 110, QuarterZ + 90}, {-1055, -20, QuarterZ + 75}},
+        {TEXT("CaptainGripClose"), {-1010, 45, QuarterZ + 70}, {-1048, -22, QuarterZ + 55}},
+        {TEXT("CaptainGripBack"), {-1110, 50, QuarterZ + 75}, {-1050, -22, QuarterZ + 55}},
+        {TEXT("CaptainHandReach"), {44, 28, 14}, {0, 0, -3}},
+        {TEXT("CaptainHandGrip"), {44, 28, 14}, {0, 0, -3}},
+        {TEXT("CaptainHandGripOut"), {8, 55, 8}, {0, 0, -3}},
+        {TEXT("CaptainHandGripFront"), {55, -12, 10}, {0, 0, -3}},
+        {TEXT("CaptainHandDraw"), {44, 28, 14}, {0, 0, 0}},
+        {TEXT("CaptainHandUp"), {48, 30, 4}, {0, 0, 8}},
+        {TEXT("CaptainHandUpOut"), {6, 58, 0}, {0, 0, 8}},
+        {TEXT("CaptainHandLetGo"), {44, 28, 14}, {0, 0, -3}},
+        // The flag at the spanker gaff's peak (user 2026-11-02: more prominent): the mustachioed skull and crossed cutlasses.
+        {TEXT("Flag"), {-400, 450, 1500}, {-1030, 200, 1590}},
+        {TEXT("FlagAft"), {-2100, 700, 1250}, {-1030, 200, 1590}},
+        {TEXT("FlagFromDeck"), {-150, 260, DeckZ + 160}, {-1030, 200, 1590}},
+        {TEXT("FlagFromWaist"), {200, -250, DeckZ + 150}, {-1030, 200, 1590}},
+        // The lumber in the arrival compartment and the masonry's mouth in it (user 2026-11-02).
+        {TEXT("ArrivalPile"), {250, -60, LowerZ + 150}, {-20, -330, LowerZ + 70}},
+        {TEXT("ArrivalMouth"), {260, -270, LowerZ + 60}, {SeamX1, -300, LowerZ + 40}},
+        // By the starboard break ladder, where a hammock's lanyard stood up through the deck (user 2026-11-02: "floating mop").
+        {TEXT("BreakStarboard"), {-700, -120, DeckZ + 120}, {-880, -230, DeckZ + 70}},
+        {TEXT("QuartersAft"), {-300, 0, LowerZ + 150}, {-900, 0, LowerZ + 110}}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -197,11 +219,27 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Chuck->SetActorHiddenInGame(true);
                 if (FString(Views[I].Name).StartsWith(TEXT("Captain")))   // his round: hips, or the cutlass up
                     if (const AShipCrew* Crew = AShipCrew::Get(World))
-                        if (ADockNPC* Cap = Crew->Find(EDockHuman::PirateCaptain)) Cap->SetCaptainTime(FString(Views[I].Name).Contains(TEXT("Sword")) ? 19.f : 6.f);
+                        if (ADockNPC* Cap = Crew->Find(EDockHuman::PirateCaptain))
+                        {
+                            const FString V = Views[I].Name;
+                            static const TPair<const TCHAR*, float> Times[] = {{TEXT("Sword"), 19.f}, {TEXT("Reach"), 16.15f}, {TEXT("Grip"), 16.7f},
+                                {TEXT("Draw"), 16.95f}, {TEXT("Lift"), 17.55f}, {TEXT("HandUp"), 19.f}, {TEXT("LetGo"), 26.05f}};
+                            float At = 6.f;
+                            for (const auto& T : Times) if (V.Contains(T.Key)) At = T.Value;
+                            Cap->SetCaptainTime(At, 1.6f);
+                        }
                 if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
                 if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z), (SW(Views[I].Aim.X, Views[I].Aim.Y, Views[I].Aim.Z) - SW(Views[I].Eye.X, Views[I].Eye.Y, Views[I].Eye.Z)).Rotation());
                 ++Run->Phase; return;
             }
+            // The captain's hand close to: these views' eye and aim are offsets from his right hand, as it is now.
+            if (FString(Views[I].Name).StartsWith(TEXT("CaptainHand")) && Run->Camera.IsValid())
+                if (const AShipCrew* Crew = AShipCrew::Get(World))
+                    if (const ADockNPC* Cap = Crew->Find(EDockHuman::PirateCaptain))
+                    {
+                        const FVector H = Cap->GetHandWorld(1);
+                        Run->Camera->SetActorLocationAndRotation(H + Views[I].Eye, (Views[I].Aim - Views[I].Eye).Rotation());
+                    }
             FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / (FString(Views[I].Name) + TEXT(".png")), true, false);
             {
                 const AShipSetting* S = AShipSetting::Get(World);

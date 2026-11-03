@@ -24,10 +24,11 @@ namespace
     }
     float Ease01(float X) { return FMath::SmoothStep(0.f, 1.f, FMath::Clamp(X, 0.f, 1.f)); }
     float Held(float U, float A0, float A1, float B0, float B1) { return Ease01((U - A0) / (A1 - A0)) * (1.f - Ease01((U - B0) / (B1 - B0))); }
-    // Where the crew stand (the ship frame). The deck's performers in a ring amidships, round the main hatch's grating, where
-    // he comes up the companion; Jeffries with his back to the main mast's aft side, between its fife rails (left open for him
+    // Where the crew stand (the ship frame). The deck's performers amidships by the main hatch's grating, where he comes up
+    // the companion: the dancer on the planking just forward of the grating, clear of the capstan (user 2026-11-02: he
+    // danced on the grating), the concertina player and the cheering pirate either side of him; Jeffries with his back to the main mast's aft side, between its fife rails (left open for him
     // in milestone 2); the fencers' ground forward of the fore mast, over the fore grating, clear of the rails and the stores.
-    const FVector2D DancerAt(70, -20), ConcertinaAt(215, -165), CheeringAt(150, 170);
+    const FVector2D DancerAt(215, 92), ConcertinaAt(215, -165), CheeringAt(100, 215);
     constexpr float JeffriesBack = 14.f;              // cm from the mast's face to his heels' line
     // The fencers: their middle stays in this box, each a half-gap either side of it along the line between them.
     constexpr float FenceX0 = 600, FenceX1 = 1150, FenceY = 170, FenceHalf = 85, FenceStep = 32, FenceTurn = 22;
@@ -152,11 +153,17 @@ void AShipCrew::PlaceCrew()
         N->TieToMast(ShipWorld(FVector(MainMastX, 0, DeckZ)), MastR);
     }
     // The captain (no lines yet: the 2D game gives him none before the trigger).
-    Add(EDockHuman::PirateCaptain, ShipWorld(FVector(CaptainAt.X, CaptainAt.Y, QuarterZ)), 0.f);
+    ADockNPC* Captain = Add(EDockHuman::PirateCaptain, ShipWorld(FVector(CaptainAt.X, CaptainAt.Y, QuarterZ)), 0.f);
     // The fencers (no lines: busy).
     Pair = PairStart = FVector2D((FenceX0 + FenceX1) * .5f, 0);
     AxisYaw = AxisStart = 0.f;
-    Add(EDockHuman::PirateFencerA, Deck(Pair - FVector2D(FenceHalf, 0)), 0.f);
+    ADockNPC* FencerA = Add(EDockHuman::PirateFencerA, Deck(Pair - FVector2D(FenceHalf, 0)), 0.f);
+    // The halfling's fist, sized to his hand against a grown man's (the fencers' cutlass sits right in theirs): 2026-11-02.
+    if (Captain && FencerA && FencerA->GetHandLength() > 1.f)
+    {
+        Captain->SetFistScale(Captain->GetHandLength() / FencerA->GetHandLength());
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_CAPTAIN_FIST hand_cm=%.1f man_hand_cm=%.1f fist_scale=%.2f"), Captain->GetHandLength(), FencerA->GetHandLength(), Captain->GetFistScale());
+    }
     Add(EDockHuman::PirateFencerB, Deck(Pair + FVector2D(FenceHalf, 0)), 180.f);
     // Below decks: the seated pirate at the mess table, the chef at his work table.
     {

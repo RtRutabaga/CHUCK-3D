@@ -2,7 +2,30 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 2 (latest, night) — the concertina version on deck, matched to the tune (Claude)
+## November 2 (latest, late night) — ship fixes: the flag, the "mop", the lumber pile, the hammocks, the dancer, the captain's hand (Claude)
+
+- **Asked:** "Make the pirate flag more prominent while still being in a spot consistent with real flag placement on a ship like this. Move the awkward floating mop on the deck so that it's not propping itself up impossibly. Instead of temple stones in the ship have this be a pile of lumber with just small section of stone where you climb out, with our fade out oil slick around the small stone opening, indicating collided worlds. Lower the hammocks to be more realistic placement. Move the dancing pirate forward some so that he's dancing on the deck and not on the grate. Fix the captains hand for how he picks up his sword".
+- **Source:** `main` at 4b943915.
+- **Changed** ([../SHIP.md](../SHIP.md), "Fixes on deck and below"):
+  - `ShipDeck.inl`: `FlagHoist`/`FlagFly`/`FlagDrop`; the flag at the spanker gaff's peak, 2.6 x 1.65 m, streaming to leeward; a halyard with a hanging tail.
+  - `ShipSetting.cpp`: flag grid 14 x 9; new surfaces `ShipLumber` (deck planks material, non-solid) and `ShipRiftVeil` (`M_AstralOilMist`, no shadow); the arrival corner rebuilt as a board stack with heavy timbers and off-cuts, a small stone mouth (jambs, lintel, three broken pieces, grit) and a 46 cm haze band round it. The crawlway's invisible collision boxes are unchanged. Hammock beds 50 cm lower; the two hammocks at x = -960 (whose lanyard came up through the deck: the "mop") moved forward of the break.
+  - `ShipCrew.cpp`: dancer (215, 92), cheering pirate (100, 215); the captain's fist scale set from his hand against fencer A's (`CHUCK_CAPTAIN_FIST`).
+  - `DockNPC.h/.cpp`: `GetHandWorld`, `GetHandLength`, `SetFistScale`/`GetFistScale` (fist reach and palm depth scaled; default 1, so other NPCs are unchanged); `SetCaptainTime(Seconds, HoldFor)` can hold his round for stills.
+  - `DockNPCPirate.inl`: the cutlass before his right foot; reach 15.6–16.7 s; a new grip frame (thumb toward the blade, knuckles forward, elbow out); his right hand's fingers open and close through the reach and the let-go.
+  - `ShipTest.cpp`: new stills (Flag*, ArrivalPile, ArrivalMouth, BreakStarboard, QuartersAft, Captain* and hand-following CaptainHand*); dancer and cheering views follow them.
+  - Docs: `docs/SHIP.md`, `docs/regions/SHIP.md`.
+- **Tested:**
+  - Uncooked full run: ship check 0 failures, 13/15 (`Local/ship-fixes-full.log`); yard_drop and chef_chase failed while the frame rate fell to 2–8 fps mid-run, and passed on a rerun with rigging, seam and sea (`Local/ship-fixes-rerun.log`). Views-only runs reviewed by eye.
+  - Packaged `Builds/ShipFixesCandidate`: Verify-Package 182 passes (`Local/verify-package-20261102-210941.log`), ship 15/15, failures 0 (`Local/verify-ship-20261102-215047.log`); Verify-Menu 42/42 (`Local/shipfixes-verify-menu.log`).
+  - Stills: `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Ship/` (Flag*, Arrival*, BreakStarboard, QuartersAft, Captain*, Dancer*).
+- **Remaining flaws:** not played by hand; the haze keeps the cellar's colours, untuned for the lamplit sail locker; the flag is mirrored on its far side; the captain's fingers are a single open/close blend, not posed per finger round the grip.
+- **Contract compatibility:** no changes to Chuck. New `ADockNPC` API (above); new surfaces `ShipLumber`, `ShipRiftVeil`; collision unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as ShipFixes (receipt 4b94391 plus this work; prior package kept, Captain pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 4: the chest, what the captain does at the trigger, the plank and the fall).
+
+## November 2 (night) — the concertina version on deck, matched to the tune (Claude)
 
 - **Asked:** "when you're belowdeck on the ship the main/current theme plays, then when you go above deck the concertina version starts playing BUT i want it to match the current part of the song as close as possible ... I'd also like this to feel like it's coming from the concertina player if it can get louder when you're closer to the concertina player (though not dramatically, i want to hear it from all points of the weather deck)" (file `Ship_concertina.wav`).
 - **Source:** `main` at 9bf2b9bc.
