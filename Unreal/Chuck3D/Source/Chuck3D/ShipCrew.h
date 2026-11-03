@@ -12,16 +12,29 @@
 // mast, advancing, lunging and parrying in eight-beat phrases) and costs Chuck Sanity where a blade or a fencer meets him.
 // Their performances are ADockNPC's (DockNPCPirate.inl).
 
-// The ship score's clock (the user's ship track, SW_Ship: 136.12 beats a minute, its first beat 0.107 s in; measured from the
-// track, docs/SHIP.md). DockGameMode tells it when the track starts; the crew read the beat from it.
+// The ship score's clock. Below decks the user's ship track plays (SW_Ship); on the weather deck, their concertina version of
+// it (SW_ShipConcertina, 2026-11-02), taking over at the matching moment of the tune and handing back the same way. Each has
+// its own beat grid (Tools/align_ship_music.py, ShipMusicMap.inl; docs/SHIP.md). DockGameMode tells this clock which track
+// started where; the crew keep to the beat of whichever is playing.
 namespace ShipScore
 {
-    constexpr float BeatsPerMinute = 136.12f, FirstBeat = .107f, Duration = 207.72f;
+    enum class ETrack : uint8 { Ship, Concertina };
     /** The track began playing now at OffsetSeconds into itself. */
-    void Started(const UWorld* World, float OffsetSeconds);
-    /** Beats since the track's first beat (looping with it); from the crew's own clock if the track isn't playing. */
+    void Started(const UWorld* World, ETrack Track, float OffsetSeconds);
+    ETrack Current();
+    float Duration(ETrack Track);
+    /** Seconds into the playing track (looping with it). */
+    float Position(const UWorld* World);
+    /** The moment of the other track that sounds most like Seconds into this one. */
+    float Matching(ETrack From, float Seconds);
+    /** Beats since the score began, counted on through loops and changes of track (whole beats kept; the part of a beat
+     *  follows the playing track's grid); from the crew's own clock if no track is playing. */
     float Beat(const UWorld* World);
     bool IsPlaying();
+    /** How far (in beats, -0.5..0.5) the beat moved at the last change of track: how well the two lined up there. */
+    float LastBeatStep();
+    /** Where the concertina version comes from (the concertina player, on the weather deck). */
+    FVector ConcertinaSource();
 }
 
 UCLASS()

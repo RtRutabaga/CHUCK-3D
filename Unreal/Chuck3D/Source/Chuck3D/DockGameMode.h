@@ -19,6 +19,10 @@ public:
     float GetMusicDuck() const { return MusicDuck; }
     /** Which score the region timer has on: 0 docks, 1 sewer, 2 night, 3 Chult, 4 Chult's bridge and far side. */
     int32 GetMusicRegion() const { return MusicRegion; }
+    /** The concertina version's loudness for where he stands on the ship (1 at a middling distance; louder near the player). */
+    float GetConcertinaNear() const { return ConcertinaNear; }
+    /** How many times the ship's music has changed between the ship track and the concertina version. */
+    int32 GetShipMusicSwitches() const { return ShipMusicSwitches; }
     bool IsRunningVerification() const { return bSmokeTest; }
     /** Every Waterdeep score fades out (the fall to Chult brings its own). */
     void FadeOutMusic(float Seconds);
@@ -59,6 +63,10 @@ private:
     float MusicDuck = 1.f, DuckLowest = 1.f, DuckQuiet = 0.f;
     int32 MusicRegion = 0;
     bool bDuckRecovered = false;
+    // The ship's concertina version (2026-11-02): its loudness by the player, kept apart so the duck can multiply it in.
+    TWeakObjectPtr<class UAudioComponent> ConcertinaTrack;
+    float ConcertinaNear = 1.f;
+    int32 ShipMusicSwitches = 0;
     void UpdateMusicDuck(float DeltaSeconds);
     // -ChuckSmithCapture: the blacksmith at work, a frame every 60 ms from a fixed three-quarter view.
     bool bSmithCapture = false;

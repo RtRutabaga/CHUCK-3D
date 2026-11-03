@@ -209,7 +209,7 @@ User request: "Do the next part" (after milestone 2). The code is in `ShipCrew.c
 
 ### Keeping time
 
-The performances keep to the ship score: 136.12 beats a minute, the first beat 0.107 s in. I measured this from the track itself by spectral flux and autocorrelation, and checked it holds across all 207.7 s. `DockGameMode` tells `ShipScore` when the track starts, and `AShipCrew` hands each pirate the beat every frame.
+The performances keep to the ship score: 136.12 beats a minute, the first beat 0.107 s in. I measured this from the track itself by spectral flux and autocorrelation, and checked it holds across all 207.7 s. `DockGameMode` tells `ShipScore` when the track starts, and `AShipCrew` hands each pirate the beat every frame. Since the concertina version (below), the grid is 135.725 beats a minute, the first beat 0.091 s in. This is a sharper fit, and the 136.12 grid slipped about a beat over the track. On deck the crew follow the concertina's own grid, and the count runs on through loops and changes of track.
 
 ### Their lines
 
@@ -308,3 +308,26 @@ The user supplied the soundtrack while milestone 2 was being built: "here is the
 - **Not checked:** I have not heard it on speakers, and I haven't checked the mix against the sea wash or the loop's seam.
 
 The pirates' voices are still the user's to supply. Until then their lines are subtitles only (milestone 3).
+
+## Below decks and above: the concertina version (November 2)
+
+User request: "here is the ship soundtrack but done on a concertina. If possible, I would like it so when you're belowdeck on the ship the main/current theme plays, then when you go above deck the concertina version starts playing BUT i want it to match the current part of the song as close as possible ... I'd also like this to feel like it's coming from the concertina player if it can get louder when you're closer to the concertina player (though not dramatically, i want to hear it from all points of the weather deck)".
+
+- **The file:** `C:/Users/ashsm/Downloads/Ship_concertina.wav`, copied byte for byte to `SourceAssets/Audio/ShipConcertina.wav` (stereo 16-bit, 48 kHz, 187.6 s). `Tools/import_ship_music.py` brings it in as `/Game/Art/Audio/SW_ShipConcertina`, looping. The script now leaves an already-imported track alone unless `CHUCK_REIMPORT_SHIP_MUSIC=1` is set.
+- **Where each plays:** below decks the ship track. On the weather deck the concertina version: that is the waist, the quarterdeck, the rig, and over the side from there (`ShipSpaceAt` = Deck, the same space the checkpoints use). The change waits until he has been on the new side of the deck for 0.4 s, so it doesn't flicker at a hatch. The two cross in 1.5 s (in) and 2 s (out).
+- **Matching the tune** (`Tools/align_ship_music.py`, generating `ShipMusicMap.inl`):
+  - The two are the same tune, but the concertina's is played about 5% slower (129.0 against 135.7 beats a minute), so a percentage or an offset would be up to a second out.
+  - Its opening phrase is played once where the ship track plays it twice (the ship track's 0–18.75 s and 18.75–37.5 s both match the concertina's opening). It also drops a beat or two at some section joins.
+  - The tool compares the harmony of each moment of one track (4 s either side) with every moment of the other. It keeps to a continuous run, jumping only where another place matches clearly better for many seconds. It then lines up the note onsets within a frame.
+  - The result is two maps, ship → concertina and concertina → ship, each of about 220 points.
+  - The new track starts at the mapped moment of the old one. Examples: ship 60 s → concertina 40.6 s; 150 s → 131.1 s; concertina 100 s → ship 120.4 s.
+- **The crew's beat:** each track has its own grid (the ship track 135.725 beats a minute from 0.091 s, the concertina 128.985 from 0.417 s). At a change, the crew's beat count goes on from where it was, so no fencing phrase is cut short; only the part of a beat follows the new music. The test logs that step: 0.04–0.26 of a beat in the trials. The count also runs on through each track's loop, which before made the fencers jump mid-phrase.
+- **From the concertina player:**
+  - The concertina version plays from his position, 1.1 m above the deck. It is up to about 2.3 dB louder within 1.5 m of him, and about 2.5 dB quieter from 14 m on, so it is clearly heard everywhere on deck (`UpdateMusicDuck`, multiplied with the speech duck).
+  - It is spatialised only a little: fully 2D within 2 m, blending towards 3D only out to 60 m, so at the deck's far end it is about a fifth directional and keeps its stereo width.
+- **Tests:**
+  - The deck_up trial now waits 1.5 s on deck and requires the concertina version to have taken over. Deck_down requires the ship track back (`CHUCK_SHIP_MUSIC_FOLLOWS`; each change is logged as `CHUCK_SHIP_MUSIC_SWITCH` with its positions and beat step).
+  - `CHUCK_SHIP_MUSIC_CHECK` now also needs the concertina version to loop.
+  - `Tools/align_ship_music.py --demo` writes sample crossings to `Local/ShipMusicSwitch/` to listen to.
+- **Not checked:** I haven't heard it in the game. The offline crossings were checked only by measurement: the tunes' harmony and onsets line up, and on the two tracks' beat grids the beats agree to about 0.2 of a beat at the median.
+- **Not done:** the concertina player's bellows keep to the beat, but his hands aren't matched to the notes.

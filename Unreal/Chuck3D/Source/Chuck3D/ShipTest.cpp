@@ -9,6 +9,7 @@
 #include "ShipSetting.h"
 #include "ShipEscape.h"
 #include "ShipCrew.h"
+#include "DockGameMode.h"
 #include "ChultTempleRubble.h"
 #include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
@@ -132,6 +133,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         int32 EscapeOk = 0;
         // The crew's trials (milestone 3): what he heard, and counts at the start of a stage.
         TArray<FString> Heard; double Pressed = 0; int32 TalkOk = 0, TalkChecks = 0, Count0 = 0, Count1 = 0, Seen = 0;
+        // The music's change of track at the companion (2026-11-02): when he arrived, and the switches before.
+        double Arrived = -1; int32 Switches0 = 0;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -259,7 +262,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             Run->bStarted = true; Run->Sub = 0; Run->Point = 0; Run->At = Now; Run->bPass = false; Run->bMount = false;
             Run->Deaths0 = Chuck->GetFallDeaths(); Run->Mounts0 = Chuck->GetLadderMounts(); Run->Crawls0 = Chuck->GetCrawls();
-            Run->Catches0 = Chuck->GetSwingCatches(); Run->Leaps0 = Chuck->GetSwingLeaps(); Run->bTop = false;
+            Run->Catches0 = Chuck->GetSwingCatches(); Run->Leaps0 = Chuck->GetSwingLeaps(); Run->bTop = false; Run->Arrived = -1;
             switch (Run->Trials[Run->Trial])
             {
             case ET::Galley: case ET::Sea: case ET::Seam: Reset(EShipSpawn::Arrival); break;
@@ -362,32 +365,52 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         };
         const AShipSetting* ShipNow = AShipSetting::Get(World);
         (void)ShipNow;
+        // Up on deck the concertina version must have taken over, below the ship track (each at the tune's matching moment).
+        const ADockGameMode* GM = World->GetAuthGameMode<ADockGameMode>();
+        auto MusicFollows = [&](ShipScore::ETrack Want) -> bool
+        {
+            const int32 Switches = GM ? GM->GetShipMusicSwitches() : 0;
+            const bool bOk = ShipScore::IsPlaying() && ShipScore::Current() == Want && Switches > Run->Switches0;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_MUSIC_FOLLOWS pass=%d want=%s switches=%d position_s=%.2f concertina_near=%.2f"), bOk,
+                Want == ShipScore::ETrack::Concertina ? TEXT("Concertina") : TEXT("Ship"), Switches - Run->Switches0, ShipScore::Position(World), GM ? GM->GetConcertinaNear() : 0.f);
+            return bOk;
+        };
         switch (Trial)
         {
         case ET::DeckUp:
         {
             // From the crew quarters into the companion ladder's foot (aft of it, walking forward), up onto the weather deck.
             if (Time < .5f) break;
-            if (Run->Sub == 0) { if (Steer(CompX1 - 60, (CompY0 + CompY1) * .5f, 10)) Run->Sub = 1; }
-            else
+            if (Run->Sub == 0) { if (Steer(CompX1 - 60, (CompY0 + CompY1) * .5f, 10)) { Run->Sub = 1; Run->Switches0 = GM ? GM->GetShipMusicSwitches() : 0; } }
+            else if (Run->Sub == 1)
             {
                 Push(FVector(1, 0, 0));
                 if (Chuck->IsOnLadder() && L.Z > LowerZ + 150 && !Run->bMount) { Run->bMount = true; Shot(TEXT("CompanionClimb")); }
-                if (Ground && !Chuck->IsOnLadder() && L.Z > DeckZ) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0; Shot(TEXT("CompanionTop")); }
+                if (Ground && !Chuck->IsOnLadder() && L.Z > DeckZ)
+                {
+                    Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0; Shot(TEXT("CompanionTop"));
+                    Stop(); Run->Sub = 2; Run->Arrived = Now;
+                }
             }
+            else if (Now - Run->Arrived > 1.5) { Done = true; Run->bPass = MusicFollows(ShipScore::ETrack::Concertina) && Run->bPass; }
             break;
         }
         case ET::DeckDown:
         {
             // From the deck to the companion's fore edge, aft over its lip onto the ladder, down into the crew quarters.
             if (Time < .5f) break;
-            if (Run->Sub == 0) { if (Steer(CompX1 + 30, (CompY0 + CompY1) * .5f, 12)) Run->Sub = 1; }
+            if (Run->Sub == 0) { if (Steer(CompX1 + 30, (CompY0 + CompY1) * .5f, 12)) { Run->Sub = 1; Run->Switches0 = GM ? GM->GetShipMusicSwitches() : 0; } }
             else if (Run->Sub == 1) { Push(FVector(-1, 0, 0), .85f); if (Chuck->IsOnLadder()) Run->Sub = 2; }
-            else
+            else if (Run->Sub == 2)
             {
                 if (Chuck->IsOnLadder()) Push(FVector(-1, 0, 0)); else Stop();
-                if (!Chuck->IsOnLadder() && Ground && L.Z < DeckZ - 100) { Done = true; Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Quarters) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0; }
+                if (!Chuck->IsOnLadder() && Ground && L.Z < DeckZ - 100)
+                {
+                    Run->bPass = ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Quarters) && NewDeaths == 0 && Chuck->GetLadderMounts() > Run->Mounts0;
+                    Stop(); Run->Sub = 3; Run->Arrived = Now;
+                }
             }
+            else if (Now - Run->Arrived > 1.5) { Done = true; Run->bPass = MusicFollows(ShipScore::ETrack::Ship) && Run->bPass; }
             break;
         }
         case ET::Quarterdeck:

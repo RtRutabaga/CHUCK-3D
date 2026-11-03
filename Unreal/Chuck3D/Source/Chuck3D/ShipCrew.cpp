@@ -4,13 +4,24 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShipSetting.h"
+#include "ShipMusicMap.inl"
 
 using namespace Ship;
 
 namespace
 {
-    double GScoreStart = -1.0;   // audio time the ship track began
+    double GScoreStart = -1.0;   // audio time the playing track began
     float GScoreOffset = 0.f;
+    ShipScore::ETrack GTrack = ShipScore::ETrack::Ship;
+    float GLastBeatStep = 0.f;   // how far (in beats) the count moved at the last change of track
+    double GBeatShift = 0.0;     // whole beats added at a change of track, so the crew's count runs on (no phrase cut short)
+    template <int32 N> float MapThrough(const float (&K)[N][2], float S)
+    {
+        if (S <= K[0][0]) return K[0][1];
+        for (int32 I = 1; I < N; ++I)
+            if (S < K[I][0]) return FMath::Lerp(K[I - 1][1], K[I][1], (S - K[I - 1][0]) / FMath::Max(K[I][0] - K[I - 1][0], 1e-3f));
+        return K[N - 1][1];
+    }
     float Ease01(float X) { return FMath::SmoothStep(0.f, 1.f, FMath::Clamp(X, 0.f, 1.f)); }
     float Held(float U, float A0, float A1, float B0, float B1) { return Ease01((U - A0) / (A1 - A0)) * (1.f - Ease01((U - B0) / (B1 - B0))); }
     // Where the crew stand (the ship frame). The deck's performers in a ring amidships, round the main hatch's grating, where
@@ -31,22 +42,51 @@ namespace
     constexpr float ChefYaw = 90;
 }
 
-void ShipScore::Started(const UWorld* World, float OffsetSeconds)
+void ShipScore::Started(const UWorld* World, ETrack Track, float OffsetSeconds)
 {
+    const bool bWas = World && IsPlaying();
+    const float Before = bWas ? Beat(World) : 0.f;
     GScoreStart = World ? World->GetAudioTimeSeconds() : 0.0;
     GScoreOffset = OffsetSeconds;
+    GTrack = Track;
+    GBeatShift = 0.0;
+    // Taking over from the other track: the count goes on from where it was, only the part of a beat following the music.
+    if (bWas) { GBeatShift = FMath::RoundToDouble(Before - Beat(World)); GLastBeatStep = Beat(World) - Before; }
 }
 
+float ShipScore::LastBeatStep() { return GLastBeatStep; }
+
 bool ShipScore::IsPlaying() { return GScoreStart >= 0.0; }
+ShipScore::ETrack ShipScore::Current() { return GTrack; }
+float ShipScore::Duration(ETrack Track) { return Track == ETrack::Ship ? ShipMusicMap::ShipDuration : ShipMusicMap::ConcertinaDuration; }
+
+float ShipScore::Position(const UWorld* World)
+{
+    if (!World || GScoreStart < 0.0) return 0.f;
+    return FMath::Fmod(static_cast<float>(World->GetAudioTimeSeconds() - GScoreStart) + GScoreOffset, Duration(GTrack));
+}
+
+float ShipScore::Matching(ETrack From, float Seconds)
+{
+    const float S = FMath::Clamp(Seconds, 0.f, Duration(From));
+    const float To = From == ETrack::Ship ? MapThrough(ShipMusicMap::ShipToConcertina, S) : MapThrough(ShipMusicMap::ConcertinaToShip, S);
+    return FMath::Clamp(To, 0.f, Duration(From == ETrack::Ship ? ETrack::Concertina : ETrack::Ship) - .05f);
+}
 
 float ShipScore::Beat(const UWorld* World)
 {
-    const float Period = 60.f / BeatsPerMinute;
+    const bool bShip = GTrack == ETrack::Ship;
+    const float Period = 60.f / (bShip ? ShipMusicMap::ShipBPM : ShipMusicMap::ConcertinaBPM);
     if (!World) return 0.f;
     if (GScoreStart < 0.0) return World->GetTimeSeconds() / Period;
-    const float T = FMath::Fmod(static_cast<float>(World->GetAudioTimeSeconds() - GScoreStart) + GScoreOffset, Duration);
-    return (T - FirstBeat) / Period;
+    // Counted on through the track's loops (a whole number of beats a loop), so a phrase isn't cut short where it loops.
+    const double Length = Duration(GTrack), Elapsed = World->GetAudioTimeSeconds() - GScoreStart + GScoreOffset;
+    const double Loops = FMath::FloorToDouble(Elapsed / Length), In = Elapsed - Loops * Length;
+    return static_cast<float>((In - (bShip ? ShipMusicMap::ShipFirstBeat : ShipMusicMap::ConcertinaFirstBeat)) / Period
+        + Loops * FMath::RoundToDouble(Length / Period) + GBeatShift);
 }
+
+FVector ShipScore::ConcertinaSource() { return ShipWorld(FVector(ConcertinaAt.X, ConcertinaAt.Y, DeckZ + 110.f)); }
 
 AShipCrew::AShipCrew()
 {

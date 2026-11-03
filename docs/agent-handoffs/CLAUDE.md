@@ -2,7 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 2 (latest, evening) — the pirate captain and the moustache flag (Claude)
+## November 2 (latest, night) — the concertina version on deck, matched to the tune (Claude)
+
+- **Asked:** "when you're belowdeck on the ship the main/current theme plays, then when you go above deck the concertina version starts playing BUT i want it to match the current part of the song as close as possible ... I'd also like this to feel like it's coming from the concertina player if it can get louder when you're closer to the concertina player (though not dramatically, i want to hear it from all points of the weather deck)" (file `Ship_concertina.wav`).
+- **Source:** `main` at 9bf2b9bc.
+- **Built** ([../SHIP.md](../SHIP.md), "Below decks and above"):
+  - `SourceAssets/Audio/ShipConcertina.wav` (new, byte copy of the user's file, LFS) imported as `SW_ShipConcertina` (looping, 187.6 s) by `Tools/import_ship_music.py`, which now keeps tracks already imported unless `CHUCK_REIMPORT_SHIP_MUSIC=1`.
+  - `Tools/align_ship_music.py` (new; runs on Blender's bundled Python for numpy): beat grids for both (ship 135.725 bpm, first beat 0.091 s; concertina 128.985 bpm, 0.417 s) and two-way time maps from a 4 s chroma similarity path with rare jumps (the concertina plays the repeated opening once) refined by onset cross-correlation. Writes `Source/Chuck3D/ShipMusicMap.inl`; `--demo` writes listening crossings to `Local/ShipMusicSwitch/`.
+  - `ShipCrew.cpp/.h`: `ShipScore` now knows which track plays (`ETrack`), its position, the matching moment in the other, and a beat count that runs on through loops and changes of track. The old 136.12 bpm constant is gone.
+  - `DockGameMode.cpp/.h`: the ship branch picks the track by `ShipSpaceAt` (deck = concertina), switches after 0.4 s with a 2 s fade out and 1.5 s fade in at the matched time, logs `CHUCK_SHIP_MUSIC_SWITCH`. The concertina is spatialised at the player (non-spatialised blend 200→6000 cm, no distance attenuation) and scaled x1.3→x0.75 by distance (150→1400 cm). `MusicTracks` has 11 entries; new getters `GetConcertinaNear`, `GetShipMusicSwitches`.
+  - `ShipTest.cpp`: the deck_up and deck_down trials wait 1.5 s at the end and require the right track (`CHUCK_SHIP_MUSIC_FOLLOWS`).
+- **Tested:**
+  - Uncooked: deck_up, deck_down, fencers, quarterdeck 4/4 (`Local/ship-music-test2.log`); fencers' parry gap normal after the continuous beat fix.
+  - Packaged `Builds/ConcertinaCandidate`: the first Verify-Package stopped on the temple wind trial pit2 (a death; `Local/verify-temple-wind-20261102-174053.log`), code unrelated, passed in all earlier runs. The re-run on the same build passed: 182 passes (`Local/verify-package-20261102-174800.log`), temple wind all passing (`Local/verify-temple-wind-20261102-181204.log`), ship 15/15 with both music trials passing and seven matched switches (`Local/verify-ship-20261102-182902.log`). Verify-Menu 42/42 (`Local/concertina-verify-menu.log`). Watch pit2 for another flake.
+  - Listening crossings for the user: `Local/ShipMusicSwitch/*.wav`. Not heard in the game on speakers; not played by hand.
+- **Remaining flaws:** the two beat grids agree to about 0.2 beat (median) after a switch, so the crew can be slightly off the concertina for a moment; the concertina player's hands are not matched to its notes; the match is to the nearest phrase where the concertina skips the repeat.
+- **Contract compatibility:** no changes to Chuck. `ShipScore::Started` now takes an `ETrack`; new `/Game/Art/Audio/SW_ShipConcertina`.
+- **Binary/LFS:** the WAV (36 MB) and the imported asset (22 MB), both LFS.
+- **Launcher:** promoted as Concertina (receipt 9bf2b9b plus this work; prior package kept, older pruned).
+
+Next part of the work could be done by either — preference: Claude (milestone 4: the chest, what the captain does at the trigger, the plank and the fall).
+
+## November 2 (evening) — the pirate captain and the moustache flag (Claude)
 
 - **Asked:** "Make the captain. Here are reference images. In the 2d game the captain only makes his appearance after the trigger but in this game I want him on deck from the start, we'll go over later what he does with the trigger. The captain is a short Halfling but he wears very tall platform boots. Also add this pirate flag to the ship" (two captain pictures and the flag picture).
 - **Source:** `main` at 36fe2d72.
