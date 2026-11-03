@@ -42,7 +42,8 @@ along the canyon frame). From standing under plank 0 a hop catches it; jump
 plank a jump with the stick let go steps down onto the bank. Since 2026-10-31
 the 6–7-slot gaps (174–185 cm) need a real swing. Since 11-01 that means
 swinging back, then forward, with the stick in time with the swing; held
-forward it builds nothing. The jump goes as far as the release carries him;
+forward it builds nothing. Since 11-02 one full swing back, then forward, is
+enough, and a jump pressed anywhere on the forward swing makes it. The jump goes as far as the release carries him;
 short, he falls into the gorge. He holds each plank by its near
 edge with his ears laid back, and flies low under the deck (BRACHIATION.md). Letting go over
 the gorge is a fall death: he comes back on the near bank by the bridge
@@ -64,8 +65,9 @@ then the real character: catch the first plank; cross all 30 leaps; step down
 on the far bank; cross back steering with the stick and step down; let go over
 the gorge and return to the near bank with Chult's score back; dropped onto a
 plank, he does not stand on it; at a big gap, from hanging still, the stick
-let go falls short, the stick held forward falls short, and swinging back and
-then forward makes it; holding forward and jumping on as he catches the plank
-before a big gap also falls short (10 trials, 2026-11-01). It also measures his head against the planks
+let go falls short, the stick held forward falls short, and one swing back and
+then forward makes it, pressed going forward or as it tops out; holding forward
+and jumping on as he catches the plank before a big gap also falls short (11
+trials, 2026-11-02). It also measures his head against the planks
 (`CHUCK_BRIDGE_HEAD`). `-ChuckBridgeCapture` saves review stills to
 `Saved/Screenshots/<platform>/Bridge`.

@@ -131,8 +131,21 @@ public:
     static constexpr float SwingThrowUp = 100.f;   // cm/s, and up
     static constexpr float SwingReachK = 2.8f;   // the legs' whip: launch cm/s per cm/s of the swing
     static constexpr float SwingLeapRamp = .14f;   // s over which the throw builds after he lets go
+    // (11-02, "make forward swing you more forward easier"): facing his way,
+    // the forward beat drives harder than the back one, by up to
+    // SwingForwardBeat more after a back swing of SwingBeatBackFull degrees
+    // (none under SwingBeatBackFrom). One full swing back, then forward, makes
+    // a big gap; held forward there is no back swing to drive from.
+    static constexpr float SwingForwardBeat = 1.25f;
+    static constexpr float SwingBeatBackFrom = 10.f;
+    static constexpr float SwingBeatBackFull = 20.f;
+    static constexpr float SwingTopGrace = .15f;   // s after the forward swing tops out that a press still lets go with its best
     /** How far (cm, horizontally) a leap toward a grip Delta away (grip to grip) would carry him if he let go now. */
     float SwingReachNow(const FVector& Delta) const;
+    /** The reach at a given swing rate and angle (SwingReachNow's model). */
+    float SwingReachAt(const FVector& Delta, float Rate, float Angle) const;
+    /** The best reach this swing's energy gives on its stroke toward Delta (released at its best point). */
+    float SwingStrokeBest(const FVector& Delta) const;
     /** The swing's amplitude now (degrees, from its energy). */
     float GetSwingAmplitude() const;
     /** The swing's angular rate (rad/s; positive: swinging forward along his facing). */
@@ -650,6 +663,7 @@ private:
     FVector SwingCentreFacing(const FVector& Grip, float BodyDeg, const FVector& Forward) const;
     // A jump waiting for the swing to build (since when; whether it has swung toward the target yet).
     float SwingWaitSince = -1, SwingReachPrev = 0; int32 SwingWaitTarget = -1; bool bSwingWaitToward = false;
+    float SwingBackAmp = 0, SwingTurnedAt = -1, SwingTurnSign = 0;   // the last back swing's height (deg); when and which way the swing last turned
     // A leap without the swing for it: falls short (and that grip can't be caught on the way down).
     bool bSwingLeapShort = false; int32 SwingMissed = -1; float SwingMissUntil = -1; int32 SwingShorts = 0;
     bool bTestSwingPump = false;

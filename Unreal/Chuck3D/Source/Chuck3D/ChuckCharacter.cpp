@@ -1250,10 +1250,34 @@ float AChuckCharacter::SwingReachNow(const FVector& Delta) const
     // next grip's height under his gravity. Let go on the back stroke, the
     // swing takes from the throw.
     if (Gait != EGait::Swing) return 0.f;
+    return SwingReachAt(Delta, SwingRate, SwingAngle);
+}
+float AChuckCharacter::SwingStrokeBest(const FVector& Delta) const
+{
+    // On this swing's energy, the stroke toward Delta released at its best
+    // point (as high as the boards, or his arms, let it go): a press anywhere
+    // on that stroke, or just after it tops out, lets go with this.
+    if (Gait != EGait::Swing || !GetChuckSwingGrips().IsValidIndex(SwingGrip)) return 0.f;
+    const float Sign = FVector::DotProduct(Delta.GetSafeNormal2D(), SwingDir) >= 0.f ? 1.f : -1.f;
+    const float L = SwingLength();
+    const float CosAmp = FMath::Cos(SwingAngle) - SwingRate * SwingRate * L / (2.f * SwingGravity);
+    const float Amp = FMath::Acos(FMath::Clamp(CosAmp, -1.f, 1.f));
+    const bool bDeck = GetChuckSwingGrips()[SwingGrip].Depth > 0.f;
+    const float Top = FMath::Min(Amp, bDeck ? (Sign > 0.f ? SwingDeckLimit : SwingDeckLimitBack) : SwingAngleLimit);
+    float Best = 0.f;
+    for (float X = 0.f; X <= Top; X += FMath::DegreesToRadians(1.f))
+    {
+        const float Rate = FMath::Sqrt(FMath::Max(0.f, 2.f * SwingGravity / L * (FMath::Cos(X) - CosAmp)));
+        Best = FMath::Max(Best, SwingReachAt(Delta, Rate * Sign, X * Sign));
+    }
+    return Best;
+}
+float AChuckCharacter::SwingReachAt(const FVector& Delta, float Rate, float Angle) const
+{
     const FVector Dir = Delta.GetSafeNormal2D();
     const float Toward = static_cast<float>(FVector::DotProduct(Dir, SwingDir));
     const float Sign = Toward >= 0.f ? 1.f : -1.f, Along = FMath::Abs(Toward);
-    const float V = SwingLength() * SwingRate * Sign * SwingReachK, A = SwingAngle * Sign;
+    const float V = SwingLength() * Rate * Sign * SwingReachK, A = Angle * Sign;
     const float Forward = SwingThrowAlong + V * FMath::Cos(A) * Along, Up = SwingThrowUp + V * FMath::Sin(A);
     if (Forward <= 0.f) return 0.f;
     const float Root = Up * Up - 2.f * SwingGravity * static_cast<float>(Delta.Z);
@@ -1308,6 +1332,7 @@ void AChuckCharacter::EnterSwing(int32 Index, bool bFromLeap)
     SwingDir = Grip.Along.GetSafeNormal2D() * (FVector::DotProduct(Heading, Grip.Along) >= 0.f ? 1.f : -1.f);
     SwingHold = SwingHoldPoint(Index, SwingDir);
     SwingWaitSince = -1; bSwingWaitToward = false;
+    SwingBackAmp = 0; SwingTurnedAt = -1; SwingTurnSign = 0;
     Movement->SetMovementMode(MOVE_Flying);
     Movement->StopMovementImmediately();
     const float L = SwingLength();
@@ -1433,17 +1458,22 @@ void AChuckCharacter::SwingJump()
         }
         const float Wait = Now - SwingWaitSince;
         bool bGo;
-        // (The stroke toward it is over; or there's no swing to wait for, or it never came.)
-        // Pressed at the top of the forward swing (high in front, turning back):
-        // he lets go there and then, with what that late release gives him,
-        // rather than hanging on for a whole swing more.
-        if (!bMovingToward && bPressedNow && SwingAngle * Sign > FMath::DegreesToRadians(12.f)) bGo = true;
+        // (2026-11-02, "not as tricky of a sweet spot"): a press anywhere on the
+        // stroke toward it, or just after it tops out, lets go with that
+        // stroke's best (SwingStrokeBest); he still leaves at the swing's own
+        // speed where he is. Pressed later on the way back, the jump waits for
+        // the next stroke toward it.
+        const bool bJustTopped = !bMovingToward && bInFront && SwingAngle * Sign > FMath::DegreesToRadians(12.f)
+            && SwingTurnSign == Sign && Now - SwingTurnedAt < SwingTopGrace;
+        if (bJustTopped && bPressedNow) bGo = true;
         else if (!bMovingToward) bGo = bSwingWaitToward || (!bTestSwingPump && ((Wait > .45f && GetSwingAmplitude() < 4.f) || Wait > 1.f));
         else { bGo = bSwingWaitToward && bInFront && Have < SwingReachPrev - .5f; bSwingWaitToward = true; }   // (in front of the grip and past the stroke's best point)
-        if (bGo && Have < Need && bTestSwingPump && Wait < 6.f) { bGo = false; bSwingWaitToward = false; SwingReachPrev = 0.f; }   // (route tests: the next stroke)
+        const float Best = bMovingToward || bJustTopped ? FMath::Max(Have, SwingStrokeBest(Centres)) : Have;
+        if (bGo && Best < Need && bTestSwingPump && Wait < 6.f) { bGo = false; bSwingWaitToward = false; SwingReachPrev = 0.f; }   // (route tests: the next stroke)
         SwingReachPrev = bMovingToward ? FMath::Max(SwingReachPrev, Have) : 0.f;   // (this stroke's best)
         if (!bGo) { bSwingJumpQueued = true; return; }
-        bShort = Have < Need;
+        if (bGo && Best > Have) UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_STROKE_BEST have=%.1f best=%.1f need=%.1f topped=%d"), Have, Best, Need, bJustTopped ? 1 : 0);
+        bShort = Best < Need;
     }
     if (SwingWaitSince >= 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_SWING_WAITED seconds=%.2f need=%.1f have=%.1f amp=%.1f angle=%.1f short=%d"), GetWorld()->GetTimeSeconds() - SwingWaitSince, Need, Have, GetSwingAmplitude(), FMath::RadiansToDegrees(SwingAngle), bShort ? 1 : 0);
     SwingWaitSince = -1; bSwingWaitToward = false;
@@ -2506,10 +2536,21 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (FMath::Abs(Push) > .3f && SwingDeg < 30.f)
         {
             const float Window = FMath::Square(FMath::Cos(SwingDeg / 30.f * HALF_PI));
-            Accel += FMath::Abs(SwingRate) < .4f && SwingDeg < 6.f ? SwingPumpGain * .5f * Push : SwingPumpGain * Push * Window * FMath::Min(1.f, FMath::Abs(SwingRate) / .6f);
+            // (Forward, the way he faces, after a good back swing: a harder beat.)
+            const float Beat = Push > 0.f && SwingRate > 0.f ? 1.f + SwingForwardBeat * FMath::Clamp((SwingBackAmp - SwingBeatBackFrom) / (SwingBeatBackFull - SwingBeatBackFrom), 0.f, 1.f) : 1.f;
+            // (A small swing, or none: the push is a lean, the legs drawn that
+            // way - held back from a still hang he swings back about 20 degrees
+            // and hangs back there; turned forward at the top, he goes. 11-02:
+            // before, only a 6-degree kick, and held back he barely moved.)
+            const float AmpCos = FMath::Cos(SwingAngle) - SwingRate * SwingRate * L / (2.f * SwingGravity);
+            Accel += AmpCos > FMath::Cos(FMath::DegreesToRadians(12.f)) ? SwingPumpGain * .75f * Push : SwingPumpGain * Beat * Push * Window * FMath::Min(1.f, FMath::Abs(SwingRate) / .6f);
         }
+        const float RateBefore = SwingRate;
         SwingRate += Accel * DeltaSeconds;
         SwingAngle += SwingRate * DeltaSeconds;
+        // Where the swing turns: the back swing's height (for the forward beat), the forward swing topping out.
+        if (RateBefore < 0.f && SwingRate >= 0.f && SwingAngle < 0.f) { SwingBackAmp = FMath::RadiansToDegrees(-SwingAngle); SwingTurnedAt = GetWorld()->GetTimeSeconds(); SwingTurnSign = -1.f; }
+        else if (RateBefore > 0.f && SwingRate <= 0.f && SwingAngle > 0.f) { SwingBackAmp = 0.f; SwingTurnedAt = GetWorld()->GetTimeSeconds(); SwingTurnSign = 1.f; }
         const float Limit = GetChuckSwingGrips()[SwingGrip].Depth > 0.f ? (SwingAngle < 0.f ? SwingDeckLimitBack : SwingDeckLimit) : SwingAngleLimit;   // (as high as his arms, or the boards, let him swing)
         if (FMath::Abs(SwingAngle) > Limit) { SwingAngle = FMath::Sign(SwingAngle) * Limit; if (SwingRate * SwingAngle > 0.f) SwingRate = 0.f; }
         const float Turn = FMath::SmoothStep(0.f, .2f, SwingClock);

@@ -542,16 +542,16 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
     C->DisableInput(PC);C->SetLookLocked(true);PC->SetViewTarget(C);
     const bool bCapture=FParse::Param(FCommandLine::Get(),TEXT("ChuckBridgeCapture"));
     const int32 Static=CheckChultBridge(Owner,C);
-    enum EKind {KCatch,KCross,KStepDown,KBack,KLetGo,KNoStand,KShort,KHold,KRhythm,KHoldOn};
+    enum EKind {KCatch,KCross,KStepDown,KBack,KLetGo,KNoStand,KShort,KHold,KRhythm,KHoldOn,KLate};
     struct FTrial {EKind Kind;const TCHAR* Name;};
     const TArray<FTrial> Trials={{KCatch,TEXT("catch_first")},{KCross,TEXT("cross")},{KStepDown,TEXT("step_down_far")},{KBack,TEXT("cross_back")},{KLetGo,TEXT("let_go_fall")},{KNoStand,TEXT("no_standing")},
-        {KShort,TEXT("big_gap_no_swing_falls_short")},{KHold,TEXT("big_gap_stick_held_forward_falls_short")},{KRhythm,TEXT("big_gap_swing_back_then_forward")},
-        {KHoldOn,TEXT("big_gap_held_forward_jumping_on_falls_short")}};
+        {KShort,TEXT("big_gap_no_swing_falls_short")},{KHold,TEXT("big_gap_stick_held_forward_falls_short")},{KRhythm,TEXT("big_gap_one_swing_back_then_forward")},
+        {KHoldOn,TEXT("big_gap_held_forward_jumping_on_falls_short")},{KLate,TEXT("big_gap_one_swing_pressed_as_it_tops_out")}};
     struct FRun
     {
         int32 Trial=0,Failures=0,Phase=0,Jumps=0,Leaps=0,Deaths=0,Shot=0,ShotIndex=0;
         int32 HeadFrames=0,HeadThrough=0,HeadThrough1=0,HeadAbove=0;float HeadMaxPen=0,HeadMaxAbove=-1e3f;
-        int32 Shorts=0,Waits=0,Backs=0,AtGrip=-1;float Settled=-1;bool bBack=false;
+        int32 Shorts=0,Waits=0,Backs=0,AtGrip=-1;float Settled=-1,FwdSeen=-1;bool bBack=false,bFwdStroke=false,bSawBack=false;
         float Start=-1,LastJump=-1,NextShot=0,Tick=-1;bool bMusicFar=false,bMusicBack=false;
         ACameraActor* Camera=nullptr;FTimerHandle Timer;
     };
@@ -598,10 +598,10 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         const float Yaw=ChultBridgeRespawnYaw();
         if(Run->Start<0)
         {
-            Run->Start=Now;Run->Phase=0;Run->Jumps=0;Run->Leaps=C->GetSwingLeaps();Run->Deaths=C->GetFallDeaths();Run->LastJump=0;Run->Shorts=C->GetSwingShorts();Run->Settled=-1;Run->Backs=0;Run->AtGrip=-1;Run->bBack=false;
+            Run->Start=Now;Run->Phase=0;Run->Jumps=0;Run->Leaps=C->GetSwingLeaps();Run->Deaths=C->GetFallDeaths();Run->LastJump=0;Run->Shorts=C->GetSwingShorts();Run->Settled=-1;Run->Backs=0;Run->AtGrip=-1;Run->bBack=false;Run->FwdSeen=-1;Run->bFwdStroke=false;Run->bSawBack=false;
             if(Trial.Kind==KCatch||Trial.Kind==KLetGo) Place(ChultBridgeNearStand(),Yaw);
             else if(Trial.Kind==KBack) Place(ChultBridgeFarStand(),Yaw+180);
-            else if(Trial.Kind==KShort||Trial.Kind==KHold||Trial.Kind==KRhythm||Trial.Kind==KHoldOn)
+            else if(Trial.Kind==KShort||Trial.Kind==KHold||Trial.Kind==KRhythm||Trial.Kind==KHoldOn||Trial.Kind==KLate)
             {
                 // Hanging still from the plank before a big gap (dropped onto it from below its paws' reach);
                 // for KHoldOn the one before that, to leap onto it first.
@@ -658,7 +658,7 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         auto PumpStick=[&](const FVector& Fwd,int32 Step=0){C->SetTestStickWorld(Rate>=0.f || (Step!=0 && NextGap(Step)<=AChuckCharacter::SwingEasyLeap) ? Fwd : -Fwd);};
         // Ready for the next leap: a short one at once; a big one once he has
         // swung back and is on his way forward again.
-        auto Ready=[&](int32 Step){return NextGap(Step)<=AChuckCharacter::SwingEasyLeap || (Run->Backs>=1 && Rate>.3f && C->GetSwingAmplitude()>42.5f);};   // (a big swing going: 2026-11-01 later)
+        auto Ready=[&](int32 Step){return NextGap(Step)<=AChuckCharacter::SwingEasyLeap || (Run->Backs>=1 && Rate>.3f);};   // (2026-11-02: one swing back, then forward)
         switch(Trial.Kind)
         {
         case KCatch:
@@ -710,12 +710,15 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
         case KShort:
         case KHold:
         case KRhythm:
+        case KLate:
             // A big gap from a still hang, as three players might try it:
             //  - the stick let go: no swing; he falls short (back to the near bank);
             //  - the stick held toward it for 2.5 s: it gains on the forward stroke
             //    what it loses on the back one; still short;
-            //  - pumped in time (back as he swings back, forward as he swings
-            //    forward), two swings back, jumped on the way forward: made.
+            //  - one swing back, then forward (2026-11-02): the stick back from the
+            //    still hang until he has swung back and turned, forward a moment
+            //    later (a player's reaction), jumped on the way forward: made;
+            //  - KLate: the same, jumped only as the forward swing tops out: made.
             if(Run->Phase==0)
             {
                 if(C->IsSwinging() && C->GetSwingAmplitude()<6.f && Run->Settled<0) {Run->Settled=Time;Run->Backs=0;}   // (swings counted from here)
@@ -723,14 +726,21 @@ void StartChultBridgeReview(AActor* Owner,AChuckCharacter* C)
                 {
                     const float Since=Time-Run->Settled;
                     if(Trial.Kind==KHold && Since>.4f) C->SetTestStickWorld(AlongDir());
-                    if(Trial.Kind==KRhythm) PumpStick(AlongDir());
-                    const bool bGo=Trial.Kind==KShort ? Since>.4f : Trial.Kind==KHold ? Since>2.9f : (Run->Backs>=1 && Rate>.3f && C->GetSwingAmplitude()>42.5f);
+                    if(Trial.Kind==KRhythm||Trial.Kind==KLate)
+                    {
+                        if(Rate<-.3f) Run->bSawBack=true;   // (swung back: the lean's swing, from a still hang)
+                        if(Run->bSawBack && Rate>0.f && Run->FwdSeen<0) Run->FwdSeen=Time;
+                        C->SetTestStickWorld(Run->FwdSeen>=0 && Time-Run->FwdSeen>=.12f ? AlongDir() : -AlongDir());
+                        if(Rate>1.f && Run->FwdSeen>=0) Run->bFwdStroke=true;
+                    }
+                    const bool bGo=Trial.Kind==KShort ? Since>.4f : Trial.Kind==KHold ? Since>2.9f
+                        : Trial.Kind==KRhythm ? (Run->FwdSeen>=0 && Time-Run->FwdSeen>=.12f && Rate>.3f) : (Run->bFwdStroke && Rate<=0.f);
                     if(bGo) {Press();Run->Phase=1;}
                 }
             }
             else if(Trial.Kind==KHold) C->SetTestStickWorld(AlongDir());
-            else if(Trial.Kind==KRhythm) PumpStick(AlongDir());
-            if(Trial.Kind!=KRhythm)
+            else if(Trial.Kind==KRhythm||Trial.Kind==KLate) C->SetTestStickWorld(AlongDir());
+            if(Trial.Kind!=KRhythm && Trial.Kind!=KLate)
             {
                 if(Run->Phase==1 && C->GetFallDeaths()>Run->Deaths) Run->Phase=2;
                 Pass=BigGap>=0 && Run->Phase==2 && C->GetSwingShorts()==Run->Shorts+1 && bGround && IsChultBridgeRespawn(C->GetActorLocation()) && C->GetSwingLeaps()-Run->Leaps==1;

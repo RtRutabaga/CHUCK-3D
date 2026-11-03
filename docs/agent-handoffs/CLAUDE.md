@@ -2,7 +2,30 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 2 (latest, late night) — ship fixes: the flag, the "mop", the lumber pile, the hammocks, the dancer, the captain's hand (Claude)
+## November 3 (latest) — big leaps: one swing back then forward is enough; no sweet spot (Claude)
+
+- **Asked:** "I want it to be easier to get a good back and forth swing, if the player goes back the full amount then forward the full amount and releases while going forward I want that to result in a successful jump to the next plank, and I want it to look and feel realistic. I don't want just holding forward to make it across, you should have to go back then forward at least for the bigger gaps. but I also don't want it to be as tricky of a sweet spot as it currently is ... make forward swing you more forward easier".
+- **Source:** `main` at 5a3e115b.
+- **Changed** ([../BRACHIATION.md](../BRACHIATION.md), 11-02 section):
+  - `ChuckCharacter.h/.cpp`:
+    - **Forward beat:** pushing forward on the forward stroke gets up to 2.25x the pump gain, scaled by how far back the last back stroke went (10° nothing, 20° and over full); reset at each forward turn, so holding forward builds no beat. New constants `SwingForwardBeat` 1.25, `SwingBeatBackFrom` 10, `SwingBeatBackFull` 20; members `SwingBackAmp`, `SwingTurnedAt`, `SwingTurnSign`.
+    - **Lean start:** below 12° of swing the stick leans him (0.75 of the gain) instead of the old kick, which left him stuck near 6° when holding back from a still hang.
+    - **No sweet spot:** a jump pressed anywhere on the forward stroke takes the best reach that stroke will give (`SwingStrokeBest`, sampled from the swing's energy up to the arc limit) and leaves at that point; pressed within `SwingTopGrace` 0.15 s after the forward top it still goes. Pressed on the back stroke it waits for the next forward one. New `SwingReachAt`, `SwingStrokeBest`; log `CHUCK_SWING_STROKE_BEST`.
+  - `ChultBridge.cpp`: trial 8 is now one swing back then forward (stick back until it swings back, forward as it comes through, jump going forward); new trial 11 presses as it tops out. 11 trials.
+  - `Tools/Verify-Package.ps1`: bridge `trials=11`.
+  - Docs: `docs/BRACHIATION.md`, `docs/CHULT-BRIDGE.md`, `docs/HANDOFF.md`.
+- **Tested:**
+  - Uncooked bridge 11/11 (`Local/brach-b5.log`): from still, stick let go 49 cm, held forward 55.7, held forward and jumping on 153.6 (best 159.6) of 174.6, all short; one swing back then forward 203.6 (best 212.2) of 180, made; pressed as it tops out made (best 197.6).
+  - Uncooked suite (`Local/brach-s4-*.log`): bridge 11/11, canopy 48/48, giant 72/72, raptor 8/8 (route 8/8), birds crossed, lamp 8/8.
+  - Packaged `Builds/Swing4Candidate`: Verify-Package 182 passes (`Local/verify-package-20261102-233317.log`); bridge 11/11, failures 0, head 69 of 3624 frames more than 1 cm into a plank, 2.6 cm worst (`Local/verify-bridge-20261103-004844.log`).
+- **Remaining flaws:** not played by hand or on a pad. A top-grace press looks like a thrown leap from nearly no swing speed. Holding back about 0.3 s too long, or switching forward too early, still falls short (by design). The 44° deck limit still clamps hard. Head worst 2.6 cm (was 1.9). The short-leap scaling still uses the current reach, not the stroke's best. Route tests use the pump assist.
+- **Contract compatibility:** Chuck only: new constants, members and methods (above); no change to grips or other callers. Bridge test count 11.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as Swing4 (receipt 5a3e115 plus this work; prior package kept, Concertina pruned).
+
+Next part of the work could be done by either — preference: Claude (retune the swing after you've played it by hand).
+
+## November 2 (late night) — ship fixes: the flag, the "mop", the lumber pile, the hammocks, the dancer, the captain's hand (Claude)
 
 - **Asked:** "Make the pirate flag more prominent while still being in a spot consistent with real flag placement on a ship like this. Move the awkward floating mop on the deck so that it's not propping itself up impossibly. Instead of temple stones in the ship have this be a pile of lumber with just small section of stone where you climb out, with our fade out oil slick around the small stone opening, indicating collided worlds. Lower the hammocks to be more realistic placement. Move the dancing pirate forward some so that he's dancing on the deck and not on the grate. Fix the captains hand for how he picks up his sword".
 - **Source:** `main` at 4b943915.

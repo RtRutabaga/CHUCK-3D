@@ -389,7 +389,7 @@ if ($snakeProcess.ExitCode -or !(Select-String -LiteralPath $snakeLog -Pattern '
 # to the near bank, and can't stand on a plank; its own score over the bridge.
 $bridgeLog=Join-Path $evidence ('verify-bridge-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $bridgeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckBridgeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$bridgeLog+'"')) -WindowStyle Hidden -Wait -PassThru
-if ($bridgeProcess.ExitCode -or !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_BRIDGE_TEST_COMPLETE failures=0 trials=10 static_failures=0 grips=31 music_far=1 music_back=1' -Quiet) -or
+if ($bridgeProcess.ExitCode -or !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_BRIDGE_TEST_COMPLETE failures=0 trials=11 static_failures=0 grips=31 music_far=1 music_back=1' -Quiet) -or
     !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_CHULT_BRIDGE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Chult bridge brachiation verification failed. Inspect $bridgeLog"
 }
