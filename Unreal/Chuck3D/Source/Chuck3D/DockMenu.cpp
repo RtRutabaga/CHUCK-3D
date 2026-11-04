@@ -28,6 +28,7 @@
 #include "HAL/PlatformTime.h"
 #include "HAL/PlatformMisc.h"
 #include "Misc/Paths.h"
+#include "ShipStorm.h"
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
 
@@ -52,11 +53,13 @@ namespace
     constexpr int32 TempleColumn=6,WindColumn=12;
     // The pirate ship (2026-11-01; ShipSetting.h), in a sixth column, in EShipSpawn's order.
     const FChultPoint ShipPoints[]={{TEXT("ShipArrival"),TEXT("Ship Arrival")},{TEXT("ShipHold"),TEXT("Ship Hold")},{TEXT("ShipQuarters"),TEXT("Ship Quarters")},
-        {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")},{TEXT("ShipDeck"),TEXT("Ship Deck")}};
+        {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")},{TEXT("ShipDeck"),TEXT("Ship Deck")},
+        // The storm (2026-11-03, ShipStorm.h): on deck with the ending's seven conditions met, as it rolls in.
+        {TEXT("ShipStorm"),TEXT("Ship Storm (dev)")}};
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
-            if(Point==ShipPoints[I].Point){Location=ShipSpawn(EShipSpawn(I));Yaw=ShipSpawnYaw(EShipSpawn(I));return true;}
+            if(Point==ShipPoints[I].Point){const EShipSpawn S=I<ShipSpawns?EShipSpawn(I):EShipSpawn::Deck;Location=ShipSpawn(S);Yaw=ShipSpawnYaw(S);return true;}
         return false;
     }   // the interior's first six in the third column, the trap run's in the fourth, the wind's in the fifth
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
@@ -88,6 +91,9 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     {
         FadeOutMusic(.1f);
         AShipSetting::Enter(GetWorld());
+        // A fresh start aboard: the ending's conditions forgotten (the chest shut, no storm); the storm checkpoint meets them all.
+        ShipGate::Reset(GetWorld());
+        if(Point==TEXT("ShipStorm")) ShipGate::OpenAll();
         C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;

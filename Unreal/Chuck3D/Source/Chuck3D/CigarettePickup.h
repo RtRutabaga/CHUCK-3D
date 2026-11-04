@@ -28,6 +28,11 @@ public:
     /** Spawn one flying out of a broken thing at From (Launch: initial velocity). */
     static ACigarettePickup* Spawn(UWorld* World, const FVector& From, const FVector& Launch, float GroundZ);
     static ACigarettePickup* SpawnGolden(UWorld* World, const FVector& At);
+    /** The captain's golden carton (the ship's chest, 2026-11-03): 40 cigarettes and the golden leaf's stamina lock, taken
+     *  once (it does not come back after a death). Thrown from From, landing on GroundZ. */
+    static ACigarettePickup* SpawnCarton(UWorld* World, const FVector& From, const FVector& Launch, float GroundZ);
+    static constexpr int32 CartonCigarettes = 40;
+    bool IsCarton() const { return bCarton; }
     bool IsGoldenAvailable() const { return bGolden && !bCollected; }
     // Pocketed when Chuck's centre comes this close (horizontal, cm), once it can be.
     static constexpr float CollectRadius = 26.f;
@@ -46,7 +51,7 @@ private:
     float Ground = 0;
     float Age = 0;
     bool bLanded = false;
-    bool bGolden = false, bCollected = false;
+    bool bGolden = false, bCollected = false, bCarton = false;
     uint32 CollectedGeneration = 0;
     // Golden: an ordinary cigarette inside a soft gold aura (halo, rising motes, light).
     void AddGoldenAura();

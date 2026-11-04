@@ -2,7 +2,58 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 3 (latest) — the ship heard: steel, feet, sea, rigging; rats only in the hold; quieter creaks (Claude)
+## November 3 (latest) — the chest, the trigger and the storm (Claude)
+
+- **Asked:** "when the ship trigger takes effect, i want a storm to roll in and for the ship going through a storm to be a thing for a good while before the captain kicks chuck off the plank. start working on this (the chest, the trigger, the storm). implement sounds for the storm too and really make it look and feel cool. don't do the plank part yet".
+- **Source:** `main` at 37f3e30f.
+- **Changed** ([../SHIP.md](../SHIP.md#the-chest-the-trigger-and-the-storm-november-3)):
+  - `ShipStorm.h/.cpp` (new):
+    - `ShipGate` holds the 2D game's seven conditions (the chef has seen him; one talk each with the seated pirate, concertina player, cheering pirate, dancer and Jeffries; the chest open). They are kept through deaths aboard and reset by a fresh ship start.
+    - `AShipChest`: a hinged lid that opens once, by scratch or interact. It drops a golden carton.
+    - `AShipStorm` runs the roll-in clocks (wind, dark, sea, rain, lightning) and handles:
+      - rain streaks with splashes;
+      - spray bursts with wave slams;
+      - lightning bolts built from forks, with a flash light and delayed thunder;
+      - six storm loops mixed for on deck and below decks.
+  - `CigarettePickup.h/.cpp`: `SpawnCarton`. A carton gives 40 cigarettes and the 45 s stamina lock, and is taken once.
+  - `ChuckCharacter.cpp`: `Interact()` opens the chest when Chuck faces it.
+  - `ShipSetting.h/.cpp`: `ApplyStorm` (sun, sky, clouds, fog, post-process, sea), a second `FlashLight`, storm rocking (6.5° roll, 3° pitch, chop, heel). Swinging lamps and hammocks scale with the sea, and the ambience and creaks with the storm. The chest's lid was taken out of the hull mesh.
+  - `ShipDeck.inl`: sail flutter and the flag in wind. `ShipSea.inl`: extra sea rings out to 150 m.
+  - `DockGameMode.cpp`: the music ducks under the gale. `DockMenu.cpp`: new **Ship Storm (dev)** checkpoint, and a ship start resets the gate.
+  - `ShipTest.cpp`: new `chest` and `storm` trials (18 trials), plus storm stills (`-ChuckStormStills=`).
+  - Tools:
+    - `Tools/create_ship_sea.py`: the sea's `Storm` parameter. It also rebuilds `M_ShipSail`.
+    - `Tools/create_ship_storm.py` (new): `M_ShipRain`, `M_ShipSpray` and `M_ShipBolt`.
+    - `Tools/make_storm_sounds.py`, `Tools/decode_storm_mp3.py` and `Tools/import_storm_sfx.py` (new): 23 sounds cut from 19 CC0 BigSoundBank recordings. `storm-recorded-manifest.json` records them.
+    - `Verify-Package.ps1` expects 18 ship trials; `Verify-Menu.ps1` gains the new checkpoint.
+  - Docs: `docs/SHIP.md`, `docs/regions/SHIP.md`, `docs/HANDOFF.md`, `SourceAssets/Audio/README.md`.
+- **Tested:**
+  - Uncooked full ship test passed 18/18 (`Local/storm-full.log`); the gate opened naturally, through the crew talks, the chef chase and the chest.
+    - Chest: lid at 108°, 40 cigarettes, stamina locked.
+    - Storm:
+      - 2,539 drops shown, 6 sprays, 3 strikes with their thunder;
+      - roll 10.3°;
+      - worst frame 43 ms uncooked;
+      - the mix checked on deck and below.
+  - About 20 storm stills were reviewed (`Saved/Screenshots/WindowsEditor/Ship/Storm/`).
+  - Packaged `Builds/StormCandidate`: Verify-Package passed 182 checks (`Local/verify-package-20261103-234647.log`), with the ship test at 18/18 (`Local/verify-ship-20261104-002802.log`). Verify-Menu passed 43/43, including Ship Storm (`Local/verify-menu-storm.txt`).
+  - Editor smoke test after packaging:
+    - The first run failed the two turn-in-place checks.
+    - The rerun passed both (`Local/smoke-storm-rerun.txt`). This looks like a timing flake; `Interact` is the only character change.
+    - The 7 "imports render separately from collision" checks still fail, as they do on unmodified main.
+- **Remaining flaws:**
+  - The storm has no end yet; only the menu stops it. The captain's sequence and the plank are not built.
+  - Not heard on speakers: the balance is measured, not listened to. Not played by hand.
+  - The crew do not react to the storm, and the sails are not reefed.
+  - A faint speckle shows on edges against the clouds for a frame or two at a flash.
+  - No wet look on deck or crew. Rain passes through the sails and tops; none comes through the gratings below.
+- **Contract compatibility:** new actors and the `ShipGate` namespace; the `CigarettePickup` carton is additive. Chuck's only change is that `Interact` returns after starting an NPC talk, then tries the chest; nothing changes elsewhere.
+- **Binary/LFS:** 23 WAVs (~36 MB), 23 sound uassets plus 3 new and 2 rebuilt materials (~18 MB), all LFS-tracked by the existing patterns.
+- **Launcher:** promoted as Storm. The receipt says 37f3e30 because the source was uncommitted when it was built; the commit follows. The prior package was kept and Fencing pruned.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence at the trigger, the plank and the fall out of the storm).
+
+## November 3 (evening) — the ship heard: steel, feet, sea, rigging; rats only in the hold; quieter creaks (Claude)
 
 - **Asked:** "Find and download sword fight sounds and also other immersive sounds, such as the boat going through the water. Maybe also some feet on deck sounds for the fighting and the dancing. Make it so you can only hear the rats in the hull and nowhere else on the ship. Decrease the volume of the creaking sound that we currently have."
 - **Source:** `main` at 01b362f2.

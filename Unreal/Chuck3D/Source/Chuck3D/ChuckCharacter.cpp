@@ -1,4 +1,5 @@
 #include "ChuckCharacter.h"
+#include "ShipStorm.h"
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
 #include "ChultBridge.h"
@@ -2111,7 +2112,11 @@ void AChuckCharacter::Interact()
         GetCharacterMovement()->StopMovementImmediately();
         // Chuck turns to face whoever he's listening to.
         SetActorRotation(FRotator(0, (NPC->GetActorLocation() - GetActorLocation()).Rotation().Yaw, 0));
+        return;
     }
+    // The captain's chest aboard the ship (2026-11-03): interacting opens it, as scratching it does.
+    if (AShipChest* Chest = AShipChest::Get(GetWorld()))
+        if (Chest->CanInteract(this)) Chest->Open();
 }
 void AChuckCharacter::Exhale()
 {

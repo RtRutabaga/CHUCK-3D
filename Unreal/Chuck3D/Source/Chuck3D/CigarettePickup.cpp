@@ -78,6 +78,26 @@ ACigarettePickup* ACigarettePickup::SpawnGolden(UWorld* World, const FVector& At
     return Pickup;
 }
 
+ACigarettePickup* ACigarettePickup::SpawnCarton(UWorld* World, const FVector& From, const FVector& Launch, float GroundZ)
+{
+    // A carton of two packs in gold foil (Premium Buhetian Halfling Leaf), 22 x 12 x 9 cm: the engine cube, its centre
+    // half its height above where it lies.
+    constexpr float HalfHeight = 4.5f;
+    auto* Pickup = Spawn(World, From, Launch, GroundZ + HalfHeight - .8f);
+    if (!Pickup) return nullptr;
+    Pickup->bGolden = Pickup->bCarton = true;
+    Pickup->Spin = FRotator(FMath::FRandRange(-220.f, 220.f), FMath::FRandRange(-160.f, 160.f), 0);
+    if (UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")))
+    {
+        Pickup->Mesh->SetStaticMesh(Cube);
+        Pickup->Mesh->EmptyOverrideMaterials();
+        if (UMaterialInterface* Gold = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Metal.M_Metal"))) Pickup->Mesh->SetMaterial(0, Gold);
+        Pickup->Mesh->SetWorldScale3D(FVector(.22f, .12f, .09f));
+    }
+    Pickup->AddGoldenAura();
+    return Pickup;
+}
+
 void ACigarettePickup::AddGoldenAura()
 {
     UStaticMesh* Sphere = AuraSphere;   // 100 cm across
@@ -207,6 +227,15 @@ void ACigarettePickup::Tick(float DeltaSeconds)
     const FVector To = Chuck->GetActorLocation() - GetActorLocation();
     if (To.Size2D() <= CollectRadius && FMath::Abs(To.Z) < 60.f)
     {
+        if (bCarton)
+        {
+            Chuck->AddCigarettes(CartonCigarettes);
+            Chuck->LockStamina(AChuckCharacter::GoldenLeafDuration);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CARTON collected=1 cigarettes=%d duration=%.0f"), CartonCigarettes, AChuckCharacter::GoldenLeafDuration);
+            if (PickupSounds.Num()) UGameplayStatics::PlaySound2D(this, PickupSounds[FMath::RandRange(0, PickupSounds.Num() - 1)], PickupVolume, .85f);
+            Destroy();
+            return;
+        }
         if (bGolden)
         {
             Chuck->LockStamina(AChuckCharacter::GoldenLeafDuration);

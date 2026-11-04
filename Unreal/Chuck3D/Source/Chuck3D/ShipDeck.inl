@@ -522,6 +522,9 @@ TArray<FSailDef> SailDefs()
 }
 // A point of the sail at (U across, V down) at time T: the bilinear sheet pushed out along its fill, held at its fixed
 // edges, breathing with the swell and fluttering a little at its free edge.
+// The storm's wind (0..1) and the canvas's own clock, which runs faster as the wind rises (AShipSetting::UpdateSails sets
+// both): in the gale the sails stand fuller and their free edges thrum, the flag streams out flat and cracks.
+float GSailWind = 0, GFlutter = 0;
 FVector SailPoint(const FSailDef& S, float U, float V, float T)
 {
     const FVector Top = FMath::Lerp(S.A, S.B, U), Bottom = FMath::Lerp(S.D, S.C, U) + FVector(0, 0, S.Roach * FMath::Sin(PI * U));
@@ -534,8 +537,10 @@ FVector SailPoint(const FSailDef& S, float U, float V, float T)
     default: Shape = FMath::Sin(PI * U * .62f) * FMath::Sin(PI * V); Free = U * U; break;                                 // luff, head, foot held; the leech free
     }
     const float Breath = 1 + .07f * FMath::Sin(T * 2 * PI / 7.3f + S.Phase) + .025f * FMath::Sin(T * 2 * PI / 2.1f + S.Phase * 2.3f);
-    const float Flutter = 1.6f * Free * FMath::Sin(T * 7.f + U * 11.f + V * 7.f + S.Phase) * FMath::Sin(PI * V);
-    P += S.Fill * (S.Depth * Shape * Breath + Flutter);
+    const float F = GFlutter;
+    const float Flutter = (1.6f + 5.5f * GSailWind) * Free * (FMath::Sin(F * 7.f + U * 11.f + V * 7.f + S.Phase) + .45f * GSailWind * FMath::Sin(F * 17.f + U * 23.f - V * 9.f + S.Phase * 3.f)) * FMath::Sin(PI * V);
+    const float Gust = 1.f + GSailWind * (.22f + .06f * FMath::Sin(T * 2 * PI / 4.1f + S.Phase));
+    P += S.Fill * (S.Depth * Shape * Breath * Gust + Flutter);
     return P;
 }
 // The flag (user 2026-11-02: more prominent): flown as a ship's colours were under sail, from the spanker gaff's peak over
@@ -545,6 +550,8 @@ FVector FlagPoint(float U, float V, float T)
 {
     const FVector Along = FVector(.42f, .9f, -.05f).GetSafeNormal(), Across(-Along.Y, Along.X, 0);
     const FVector Fly = Along * FlagFly * U;
-    const float Wave = 14 * U * FMath::Sin(U * 5.f - T * 6.5f) + 4 * U * FMath::Sin(U * 11.f - T * 9.f + V * 2.f);
-    return FlagHoist() + Fly + FVector(0, 0, -V * FlagDrop - U * U * 14) + Across * Wave;
+    const float Tf = GFlutter, W = GSailWind;
+    const float Wave = (14 + 10 * W) * U * FMath::Sin(U * 5.f - Tf * 6.5f) + (4 + 9 * W) * U * FMath::Sin(U * 11.f - Tf * 9.f + V * 2.f)
+        + 6 * W * U * U * FMath::Sin(U * 19.f - Tf * 14.f + V * 3.f);
+    return FlagHoist() + Fly + FVector(0, 0, -V * FlagDrop - U * U * 14 * (1 - .75f * W)) + Across * Wave;
 }

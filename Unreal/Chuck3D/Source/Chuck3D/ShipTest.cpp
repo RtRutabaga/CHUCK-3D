@@ -9,6 +9,8 @@
 #include "ShipSetting.h"
 #include "ShipEscape.h"
 #include "ShipCrew.h"
+#include "ShipStorm.h"
+#include "CigarettePickup.h"
 #include "DockGameMode.h"
 #include "ChultTempleRubble.h"
 #include "ChultTempleInterior.h"
@@ -141,11 +143,13 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers, Sounds };
+    // (The chest and the storm come last: the crew's trials meet six of the ending's seven conditions, the chest the last.)
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm };
     static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
-        ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds};
+        ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
-        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds")};
+        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
+        TEXT("chest"), TEXT("storm")};
     struct FRun
     {
         int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths0 = 0, Mounts0 = 0, Crawls0 = 0, Shots = 0, ShipFailures = -1, Catches0 = 0, Leaps0 = 0;
@@ -160,6 +164,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         int32 FilmFrame = -1;   // -ChuckFenceFilm's stills taken
         // The sounds trial (2026-11-03): what was heard on deck.
         int32 DeckClash = 0, DeckFeet = 0, DeckRatsHeard = 0, DeckRatsHushed = 0, Creaks0 = 0; bool DeckMix = false;
+        // The storm trial (2026-11-03): its stills, and what it measured on deck.
+        int32 StormShot = 0, Strikes0 = 0, Thunders0 = 0, Splashes0 = 0, Sprays0 = 0, MaxDrops = 0; float MaxRoll = 0, WorstMs = 0; bool StormDeck = false;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -347,6 +353,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::YardDrop: Reset(EShipSpawn::Deck); Chuck->ResetAtLocation(SW(MainYardX, 70, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0)); break;
             case ET::CrewTalk: case ET::Fencers: case ET::Sounds: Reset(EShipSpawn::Deck); break;
             case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
+            case ET::Chest: Reset(EShipSpawn::Cabin); break;
+            case ET::Storm: Reset(EShipSpawn::Deck); Run->StormShot = 0; break;
             }
             Run->Heard.Reset(); Run->TalkOk = Run->TalkChecks = Run->Count0 = Run->Count1 = Run->Seen = 0; Run->Pressed = 0;
             Chuck->SetSanity(AChuckCharacter::MaxSanity);
@@ -776,6 +784,155 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SOUNDS pass=%d deck_clashes=%d deck_feet=%d deck_rats_heard=%d deck_rats_hushed=%d deck_mix=%d hold_rats_heard=%d hold_mix=%d wash=%.2f water=%.2f lap=%.2f rigging=%.2f creaks=%d"),
                     Run->bPass, Run->DeckClash, Run->DeckFeet, Run->DeckRatsHeard, Run->DeckRatsHushed, Run->DeckMix, HoldRats, bHoldMix, A.X, A.Y, A.Z, A.W, Creaks);
             }
+            break;
+        }
+        case ET::Chest:
+        {
+            // The captain's chest (2026-11-03): before it, facing it, he interacts; the lid swings open and a golden carton
+            // drops out before it; he walks over it: 40 cigarettes and the golden leaf's stamina lock. It opens once (a
+            // second interact does nothing). The gate opens with it only if the other six conditions were met.
+            Limit = 25;
+            AShipChest* Chest = AShipChest::Get(World);
+            ACigarettePickup* Carton = nullptr;
+            for (TActorIterator<ACigarettePickup> It(World); It; ++It) if (It->IsCarton() && !It->IsActorBeingDestroyed()) Carton = *It;
+            if (!Chest) { Done = true; break; }
+            if (Run->Sub == 0)
+            {
+                Run->Count0 = ShipGate::DoneCount(); Run->Count1 = Chuck->GetCigarettes();
+                Chuck->ResetAtLocation(SW(-1185, 88, LowerZ + Stand + 1)); Chuck->SetActorRotation(FRotator(0, 90, 0)); Stop();
+                Run->Sub = 1; Run->At = Now; break;
+            }
+            if (Run->Sub == 1) { Stop(); if (Time > .8f) { Run->bTop = Chest->CanInteract(Chuck); Chuck->Interact(); Run->Sub = 2; Run->At = Now; } break; }
+            if (Run->Sub == 2)
+            {
+                Stop();
+                if (Time > .45f && !Run->bMount) { Run->bMount = true; Shot(TEXT("ChestOpening")); }
+                if (Time > 2.6f) { Shot(TEXT("ChestOpen")); Chuck->Interact(); Run->Sub = 3; Run->At = Now; Run->Point = 0; }
+                break;
+            }
+            if (Run->Sub == 3)
+            {
+                if (Carton) { const FVector C = ShipLocal(Carton->GetActorLocation()); Steer(C.X, C.Y, 4.f); }
+                if (Chuck->GetCigarettes() >= Run->Count1 + ACigarettePickup::CartonCigarettes || Time > 12.f) { Stop(); Run->Sub = 4; Run->At = Now; }
+                break;
+            }
+            Stop();
+            if (Time < 1.f) break;
+            int32 Cartons = 0;
+            for (TActorIterator<ACigarettePickup> It(World); It; ++It) Cartons += It->IsCarton() && !It->IsActorBeingDestroyed();
+            const int32 Got = Chuck->GetCigarettes() - Run->Count1;
+            const bool bGate = ShipGate::IsOpen() == (Run->Count0 + 1 == ShipGate::Steps);
+            Done = true;
+            Run->bPass = Run->bTop && Chest->IsOpen() && Chest->GetLidAngle() > 95.f && Got == ACigarettePickup::CartonCigarettes && Chuck->GetStaminaLockRemaining() > 30.f
+                && ShipGate::Done(ShipGate::EStep::Chest) && bGate && Cartons == 0 && NewDeaths == 0;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHEST_TRIAL pass=%d could_interact=%d open=%d lid=%.0f cigarettes=%d lock_s=%.1f gate_before=%d gate_now=%d open_gate=%d cartons_left=%d"),
+                Run->bPass, Run->bTop, Chest->IsOpen(), Chest->GetLidAngle(), Got, Chuck->GetStaminaLockRemaining(), Run->Count0, ShipGate::DoneCount(), ShipGate::IsOpen(), Cartons);
+            break;
+        }
+        case ET::Storm:
+        {
+            // The storm (2026-11-03): stills as it rolls in (its clock set) and in full, one with a lightning strike; then he
+            // walks the deck in it (rain, splashes, spray, a strike and its thunder, the rolling, the mix on deck) and goes
+            // below (the rain overhead, the wind through the hull).
+            Limit = 150;
+            AShipStorm* Storm = AShipStorm::Get(World);
+            AShipSetting* S = AShipSetting::Get(World);
+            if (!Storm || !S) { Done = true; break; }
+            if (!ShipGate::IsOpen()) ShipGate::OpenAll();
+            struct FStill { const TCHAR* Name; FVector Eye, Aim; float Clock; bool bStrike; };
+            static const TArray<FStill> Stills = {
+                {TEXT("RollIn05"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 5, false},
+                {TEXT("RollIn25"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 25, false},
+                {TEXT("RollIn45"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 45, false},
+                {TEXT("RollIn70"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 70, false},
+                {TEXT("FullFromBow"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 150, false},
+                {TEXT("FullFromQuarter"), {-1460, 260, QuarterZ + 190}, {600, -60, DeckZ + 230}, 151, false},
+                {TEXT("FullHorizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}, 152, false},
+                {TEXT("FullWeatherSide"), {200, 250, DeckZ + 160}, {300, -2500, DeckZ - 200}, 153, false},
+                {TEXT("FullRat"), {-40, 210, DeckZ + 40}, {500, -150, DeckZ + 110}, 154, false},
+                {TEXT("FullCrew"), {-170, 260, DeckZ + 170}, {90, -40, DeckZ + 100}, 155, false},
+                {TEXT("FullSails"), {900, -520, DeckZ + 160}, {-300, 60, 1900}, 156, false},
+                {TEXT("FullOutside"), {2300, -3600, 1200}, {0, 0, 1000}, 157, false},
+                {TEXT("FullBow"), {2600, -900, 650}, {1500, 0, 450}, 158, false},
+                {TEXT("FullWaterline"), {300, -950, 390}, {300, -430, 300}, 159, false},
+                {TEXT("Spray"), {250, 260, DeckZ + 150}, {450, -420, RailZ + 60}, 159.5f, true},
+                {TEXT("Lightning"), {0, -150, DeckZ + 170}, {300, 2000, DeckZ + 600}, 160, true},
+                {TEXT("LightningDeck"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 161, true},
+                {TEXT("FullQuarters"), {-200, 250, LowerZ + 160}, {-800, -100, LowerZ + 100}, 162, false},
+                {TEXT("FullArrivalHole"), {150, -150, LowerZ + 90}, {125, 420, LowerZ + 80}, 163, false}};
+            auto StormShot = [&](const TCHAR* Name) { FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / TEXT("Storm") / FString::Printf(TEXT("Storm_%s.png"), Name), true, false); };
+            if (Run->Sub == 0)
+            {
+                // Each still: set it up, let the light settle 2.5 s (a strike 2.3 s in), take it.
+                const int32 Si = Run->StormShot / 3, Step = Run->StormShot % 3;
+                if (Si >= Stills.Num())
+                {
+                    Chuck->SetActorHiddenInGame(false);
+                    if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
+                    Reset(EShipSpawn::Deck); Storm->SetClock(150.f);
+                    Run->Strikes0 = Storm->GetStrikes(); Run->Thunders0 = Storm->GetThunders(); Run->Splashes0 = Storm->GetSplashes(); Run->Sprays0 = Storm->GetSprays();
+                    Run->MaxDrops = 0; Run->MaxRoll = 0; Run->WorstMs = 0; Run->Sub = 1; Run->At = Now; Run->Point = 0;
+                    break;
+                }
+                const FStill& V = Stills[Si];
+                // (-ChuckStormStills=a+b: only those stills.)
+                FString Want; FParse::Value(FCommandLine::Get(), TEXT("ChuckStormStills="), Want);
+                if (Step == 0 && !Want.IsEmpty() && !Want.Contains(V.Name)) { Run->StormShot += 3; break; }
+                if (Step == 0)
+                {
+                    Stop(); Chuck->SetActorHiddenInGame(true);
+                    if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
+                    if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(V.Eye.X, V.Eye.Y, V.Eye.Z), (SW(V.Aim.X, V.Aim.Y, V.Aim.Z) - SW(V.Eye.X, V.Eye.Y, V.Eye.Z)).Rotation());
+                    Storm->SetClock(V.Clock);
+                    Run->Pressed = Now; ++Run->StormShot;
+                }
+                else if (Step == 1 && Now - Run->Pressed > (V.bStrike ? 2.3 : 2.5))
+                {
+                    if (V.bStrike && FCString::Strcmp(V.Name, TEXT("Spray")) == 0) Storm->SprayNow(SW(450, -ShipOuterHalf(450, RailZ) - 20, RailZ + 10), 1.2f);
+                    else if (V.bStrike) Storm->StrikeNow(70000.f, FRotator((SW(V.Aim.X, V.Aim.Y, 0) - SW(V.Eye.X, V.Eye.Y, 0)).Rotation()).Yaw);
+                    else StormShot(V.Name);
+                    Run->Pressed = Now; ++Run->StormShot;
+                }
+                else if (Step == 2 && (!V.bStrike || Now - Run->Pressed > (FCString::Strcmp(V.Name, TEXT("Spray")) == 0 ? .55 : .02)))
+                {
+                    if (V.bStrike) StormShot(V.Name);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_STILL name=%s clock=%.0f wind=%.2f dark=%.2f sea=%.2f rain=%.2f flash=%.2f drops=%d sun=%.2f roll=%.1f frame_ms=%.1f"),
+                        V.Name, Storm->GetClock(), Storm->GetWind(), Storm->GetDark(), Storm->GetSea(), Storm->GetRain(), Storm->GetFlash(), Storm->GetDropsShown(), S->GetSunIntensity(), S->GetSeaTilt().Y, GAverageMS);
+                    Run->Next = Now + .4; ++Run->StormShot;
+                }
+                break;
+            }
+            if (Run->Sub == 1)
+            {
+                // Forward along the deck to the fore mast's lee, in the full storm; a strike near by part way.
+                Run->MaxDrops = FMath::Max(Run->MaxDrops, Storm->GetDropsShown());
+                Run->MaxRoll = FMath::Max(Run->MaxRoll, FMath::Abs(S->GetSeaTilt().Y));
+                if (Time > 2.f) Run->WorstMs = FMath::Max(Run->WorstMs, GAverageMS);
+                if (Run->Point == 0 && Time > 3.f) { Storm->StrikeNow(60000.f, 70.f); Run->Point = 1; }
+                if (Time > 4.f && Time < 4.1f) Shot(TEXT("StormDeck"));
+                const bool bThere = Steer(380, -120, 40.f);
+                if ((bThere && Time > 9.f) || Time > 20.f)
+                {
+                    Stop();
+                    const FVector4 Lp = Storm->GetLoopLevels();
+                    Run->StormDeck = bThere && Lp.X > .4f && Lp.Z > .5f && Lp.Y < .05f && Storm->GetFlapLevel() > .2f && Storm->GetSeaLevel() > .4f;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_DECK there=%d rain=%.2f above=%.2f gale=%.2f below_wind=%.2f flap=%.2f sea=%.2f drops=%d splashes=%d sprays=%d strikes=%d thunders=%d roll=%.1f worst_ms=%.1f"),
+                        bThere, Lp.X, Lp.Y, Lp.Z, Lp.W, Storm->GetFlapLevel(), Storm->GetSeaLevel(), Run->MaxDrops, Storm->GetSplashes() - Run->Splashes0, Storm->GetSprays() - Run->Sprays0,
+                        Storm->GetStrikes() - Run->Strikes0, Storm->GetThunders() - Run->Thunders0, Run->MaxRoll, Run->WorstMs);
+                    Reset(EShipSpawn::Quarters); Run->Sub = 2; Run->At = Now;
+                }
+                break;
+            }
+            Stop();
+            if (Time < 6.f) break;
+            const FVector4 Lp = Storm->GetLoopLevels();
+            const bool bBelow = Lp.Y > .35f && Lp.X < .05f && Lp.W > .5f && Storm->GetDropsShown() >= 0;
+            Done = true;
+            Run->bPass = Run->StormDeck && bBelow && Run->MaxDrops > 1000 && Storm->GetSplashes() > Run->Splashes0 + 20 && Storm->GetStrikes() > Run->Strikes0
+                && Storm->GetThunders() > Run->Thunders0 && Run->MaxRoll > 4.f && NewDeaths == 0;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM pass=%d deck=%d below=%d below_rain=%.2f deck_rain=%.2f below_wind=%.2f drops=%d splashes=%d sprays=%d strikes=%d thunders=%d roll=%.1f worst_ms=%.1f"),
+                Run->bPass, Run->StormDeck, bBelow, Lp.Y, Lp.X, Lp.W, Run->MaxDrops, Storm->GetSplashes() - Run->Splashes0, Storm->GetSprays() - Run->Sprays0,
+                Storm->GetStrikes() - Run->Strikes0, Storm->GetThunders() - Run->Thunders0, Run->MaxRoll, Run->WorstMs);
             break;
         }
         case ET::Rail:

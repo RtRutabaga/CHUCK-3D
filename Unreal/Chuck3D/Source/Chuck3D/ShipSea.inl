@@ -2,7 +2,7 @@
 // ShipSetting.cpp's anonymous namespace (it uses the hull's lines). M_ShipSea (Tools/create_ship_sea.py) moves it.
 //
 // Rings round the hull's waterline: the first on the planking itself (4 cm inside its outer face), then out by growing
-// steps, about a metre apart to 60 m (where the waves fade) and then ever wider to 400 km, past any horizon. Every ring
+// steps, about a metre apart to 60 m (where the waves fade), 2 m apart to 150 m (the storm's swell) and then ever wider to 400 km, past any horizon. Every ring
 // is the waterline pushed straight out along its normals, the transom's corners filled with fans, so the rings stay
 // round and never cross. Inside the first ring a curtain runs down inside the planking to a metre under the water. Per
 // vertex: UV1 = (distance out from the waterline, the hull's flare dO/dZ there; the curtain -100), UV2 = the outward
@@ -71,7 +71,9 @@ void BuildSeaMesh(FSeaMesh& M)
     // The rings' distances out (cm). The first is the planking; the curtain is ring -1.
     TArray<float> Ds = {0, 12, 28, 48, 72, 100, 135, 175, 220, 270, 330, 400};
     for (float D = 480; D <= 6000; D += 100) Ds.Add(D);
-    for (float D = 7600; D < 4.2e7f; D *= 1.32f) Ds.Add(D);
+    // (2 m apart on to 150 m, 2026-11-03: the storm's swell, M_ShipSea, keeps its shape to there.)
+    for (float D = 6200; D <= 15000; D += 200) Ds.Add(D);
+    for (float D = 19000; D < 4.2e7f; D *= 1.32f) Ds.Add(D);
     const int32 Np = Loop.Num();
     // The curtain.
     for (const FEdge& E : Loop)

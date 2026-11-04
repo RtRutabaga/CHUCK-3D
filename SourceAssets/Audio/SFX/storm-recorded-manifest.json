@@ -1,0 +1,387 @@
+{
+  "provenance": "Cut by Tools/make_storm_sounds.py from CC0 recordings; originals not kept in the repository (see sources)",
+  "sources": [
+    {
+      "local": "bsb/1019.wav",
+      "title": "Summer Rain on Terrace",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/summer-rain-on-terrace-s1019.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1019.wav",
+      "bytes": 30092336,
+      "sha256": "66ed2534bdde6c399426e568ce8f82c680d7644d19a7fcd4b73cd3fb3a4a07c8"
+    },
+    {
+      "local": "bsb/0820.wav",
+      "title": "Rain and thunder in a tent",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/rain-and-storm-in-a-tent-s0820.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/0820.wav",
+      "bytes": 40222976,
+      "sha256": "9df63103173a8f1af692ee71b573e370577b975dbdd5baa41a95c98f18b4a641"
+    },
+    {
+      "local": "dec/0153.wav",
+      "title": "Strong wind #3",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/strong-wind-3-s0153.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/0153.mp3",
+      "bytes": 24556430,
+      "sha256": "ed3f57d91a38d356018ecf4659572088631aaaedfeb6ead6cff44253d90f75e4",
+      "decoded_from": "mp3/0153.mp3",
+      "mp3_sha256": "50ea9c0e363e3f43f069cabd1aa7b5019ca5b9a480ac5c8a0a3c841b9d781ee4"
+    },
+    {
+      "local": "bsb/0147.wav",
+      "title": "Whistling of the Wind #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/whistling-of-the-wind-1-s0147.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/0147.wav",
+      "bytes": 9262178,
+      "sha256": "b30aa107a7503cac3b294f422405ea7dfff9fc5352d3a0891bee1aa614a3636b"
+    },
+    {
+      "local": "bsb/1715.wav",
+      "title": "Wind from inside #2",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/wind-from-inside-2-s1715.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/1715.wav",
+      "bytes": 48947022,
+      "sha256": "5d38f3cbc26b7d932b3d8d8b4e7a5626097450528722bcb9e3b831c14f9fe942"
+    },
+    {
+      "local": "dec/1633.wav",
+      "title": "Flag in the Wind #2",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/flag-in-the-wind-2-s1633.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1633.mp3",
+      "bytes": 6083546,
+      "sha256": "ad303a17c7daa8e8748b3239db4d75ebf995826800f955d3df499c13b3554fcd",
+      "decoded_from": "mp3/1633.mp3",
+      "mp3_sha256": "572881beedb8703b4ca79abe93ca9466073a0400e03664d9726c9a9b06623d0f"
+    },
+    {
+      "local": "bsb/0698.wav",
+      "title": "Sea Waves",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/sea-waves-s0698.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/0698.wav",
+      "bytes": 32020114,
+      "sha256": "bf3d671f1a35bfede601c2c089b4d8e4934c24ef71a63bebc64d93fca1256d91"
+    },
+    {
+      "local": "dec/2570.wav",
+      "title": "Cliff #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/cliff-1-s2570.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/2570.mp3",
+      "bytes": 63895630,
+      "sha256": "f08bb9098541ec23ab6700d69bcf86c4aab421c089290b4f0ea4026c1632fac2",
+      "decoded_from": "mp3/2570.mp3",
+      "mp3_sha256": "0ba3b344070a7a8ab1169f9bfaf688e40983e167dbbb214e32b34377b48507b4"
+    },
+    {
+      "local": "bsb/2718.wav",
+      "title": "Thunder #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-s2718.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/2718.wav",
+      "bytes": 3306598,
+      "sha256": "09269be64e0a13da0361e20c1ad14612b995d4211b8cd346b698e6d277bc8168"
+    },
+    {
+      "local": "bsb/3113.wav",
+      "title": "Thunder #2",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-2-s3113.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3113.wav",
+      "bytes": 725418,
+      "sha256": "88b9cc1944d63662da3989114683ac616b0e93480d8b5fe4547fca7f52de17c2"
+    },
+    {
+      "local": "bsb/3114.wav",
+      "title": "Thunder #3",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-3-s3114.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3114.wav",
+      "bytes": 1614196,
+      "sha256": "448d45edf4022a0ac979a076e997321abcef3807cc8f41dcae2be2e317360255"
+    },
+    {
+      "local": "bsb/3115.wav",
+      "title": "Thunder #4",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-4-s3115.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3115.wav",
+      "bytes": 2477266,
+      "sha256": "97c045a16f104b89b3c50e012f349e3ab5c92e31b02b40f9bdd6aef510bf9895"
+    },
+    {
+      "local": "bsb/3116.wav",
+      "title": "Thunder #5",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-5-s3116.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3116.wav",
+      "bytes": 3152526,
+      "sha256": "3e4c46af957b7dc625617e7701a5ff98986f2b5c0b6fadcb7b4701f0a97c16a6"
+    },
+    {
+      "local": "bsb/3179.wav",
+      "title": "Thunder #6",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-6-s3179.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3179.wav",
+      "bytes": 1982322,
+      "sha256": "1fdd78bec376bd36c13ad2463f05356ce83fdcf4d1fecbc18d421fcfa5aa51f2"
+    },
+    {
+      "local": "bsb/3180.wav",
+      "title": "Thunder #7",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-7-s3180.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3180.wav",
+      "bytes": 1861956,
+      "sha256": "d210d253c4bce26975014d1491d71421ba1d0ddbcd890e1452c036afe95922e9"
+    },
+    {
+      "local": "bsb/3181.wav",
+      "title": "Thunder #8",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-8-s3181.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3181.wav",
+      "bytes": 5997484,
+      "sha256": "12d1e96ec7c7d593cafb20b9a273091dd58ae34a3c31b38af11e56daa432defd"
+    },
+    {
+      "local": "bsb/3182.wav",
+      "title": "Thunder #9",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-9-s3182.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3182.wav",
+      "bytes": 4240312,
+      "sha256": "9b044beab7ec65afbef263364bf861359a3cffd2428bbd2ed8aa6ab1347dc133"
+    },
+    {
+      "local": "bsb/3183.wav",
+      "title": "Thunder #10",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-10-s3183.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3183.wav",
+      "bytes": 4426188,
+      "sha256": "a26179c860eb60e319bcdff2e66e6605a319a667f437ec6b0017505c9684b385"
+    },
+    {
+      "local": "bsb/3184.wav",
+      "title": "Thunder #11",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0",
+      "page": "https://bigsoundbank.com/thunder-11-s3184.html",
+      "url": "https://bigsoundbank.com/UPLOAD/bwf-en/3184.wav",
+      "bytes": 5070246,
+      "sha256": "33304e0729038c527f9a7df6e2ded3ad23aa55b6bc9878fd4f6d166b84c3bdf3"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "SFX_StormRain_00",
+      "file": "SFX_StormRain_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "5f406c6f01571151aca526bf99db744159da94e5f0d5a73ce5367c03ce380ead",
+      "note": "1019 from 115 s, steadiest 32 s (swing 1.8 dB), 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormRainAbove_00",
+      "file": "SFX_StormRainAbove_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "b7ffb72b2c65a0a9921ed83fe7f392e5c19a0f1d2765b6337ae97efce2a2748c",
+      "note": "0820 from 5 s, steadiest 32 s (swing 1.1 dB), 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormWind_00",
+      "file": "SFX_StormWind_00.wav",
+      "duration": 40.0,
+      "rate": 48000,
+      "sha256": "00b0ceba2759f500d0828dabd5f591360ea19f90559ec6a392fe96994df966cf",
+      "note": "0153 from 72 s with 0147 from 45 s at -7 dB under it, 40 s, 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormWindBelow_00",
+      "file": "SFX_StormWindBelow_00.wav",
+      "duration": 40.0,
+      "rate": 48000,
+      "sha256": "9e8dc28a4c20a6df98137f51b76c98344192ed0db99528940384425866a6737b",
+      "note": "1715 from 77 s, steadiest 42 s (swing 6.3 dB), 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormFlap_00",
+      "file": "SFX_StormFlap_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "a39539a6f8c6631531397526dc37e0630b7d142d84f05a87ee5213b54e98028a",
+      "note": "1633 from 5 s, steadiest 32 s (swing 15.4 dB), 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormSea_00",
+      "file": "SFX_StormSea_00.wav",
+      "duration": 30.0,
+      "rate": 48000,
+      "sha256": "9cf6814a5fdfd12224a674f6e059360863fd66db628612af90fe60de9d825249",
+      "note": "0698 from 28 s, steadiest 32 s (swing 2.8 dB), 2 s crossfade"
+    },
+    {
+      "name": "SFX_StormThunderNear_00",
+      "file": "SFX_StormThunderNear_00.wav",
+      "duration": 19.32,
+      "rate": 48000,
+      "sha256": "2794583e70f3895357106c165645acd4a76210e35d1f3a63e20b760a4c12f19d",
+      "note": "2718 from 0.58 s"
+    },
+    {
+      "name": "SFX_StormThunderNear_01",
+      "file": "SFX_StormThunderNear_01.wav",
+      "duration": 14.76,
+      "rate": 48000,
+      "sha256": "72ca91e23a9b233e4e2cf554eb5ebe3f88145916b35f058df24d44e27a29246e",
+      "note": "3115 from 1.10 s"
+    },
+    {
+      "name": "SFX_StormThunderNear_02",
+      "file": "SFX_StormThunderNear_02.wav",
+      "duration": 22.0,
+      "rate": 48000,
+      "sha256": "dce80f2828835bbd02904f46a0980d3f7e49568722fb721f587b58960ff4fd96",
+      "note": "3183 from 0.12 s"
+    },
+    {
+      "name": "SFX_StormThunderNear_03",
+      "file": "SFX_StormThunderNear_03.wav",
+      "duration": 10.4,
+      "rate": 48000,
+      "sha256": "40c51916aa425ef55e9e2ae412631df914133679640044606c012debafb8806a",
+      "note": "3114 from 0.80 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_00",
+      "file": "SFX_StormThunderFar_00.wav",
+      "duration": 3.98,
+      "rate": 48000,
+      "sha256": "eeea620e0fd15415a38ee5f6d574cd16ee16d44f387239c5fb6d6598bcd1e196",
+      "note": "3113 from 1.04 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_01",
+      "file": "SFX_StormThunderFar_01.wav",
+      "duration": 16.38,
+      "rate": 48000,
+      "sha256": "9592389e7640c7352fea1201e4f1f66cea5e1f0f5b50fe0062f2b00cbe7e45d9",
+      "note": "3116 from 0.80 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_02",
+      "file": "SFX_StormThunderFar_02.wav",
+      "duration": 10.2,
+      "rate": 48000,
+      "sha256": "cd15f1086821706eab751902d8007dca303e552710209c7d29d5521aa5c8fe51",
+      "note": "3179 from 0.38 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_03",
+      "file": "SFX_StormThunderFar_03.wav",
+      "duration": 10.58,
+      "rate": 48000,
+      "sha256": "e8091165988ad6d65d31797c15e0ab3df2e1d8716927a76738fb38e11885b804",
+      "note": "3180 from 0.02 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_04",
+      "file": "SFX_StormThunderFar_04.wav",
+      "duration": 22.0,
+      "rate": 48000,
+      "sha256": "a9d46acebd386260866e98a676abac918b01b4e8601ec651edee3452eb50a9bb",
+      "note": "3181 from 0.74 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_05",
+      "file": "SFX_StormThunderFar_05.wav",
+      "duration": 22.0,
+      "rate": 48000,
+      "sha256": "a50e2aeeb27a77ab4f44d314e81c2c741cf421bc1da1456be95ac3bb5da9d0cd",
+      "note": "3182 from 0.64 s"
+    },
+    {
+      "name": "SFX_StormThunderFar_06",
+      "file": "SFX_StormThunderFar_06.wav",
+      "duration": 22.0,
+      "rate": 48000,
+      "sha256": "38aeec89ecf50b6a68c7769745ca414999c2cc3fe60d15995623031827e3d1d2",
+      "note": "3184 from 2.68 s"
+    },
+    {
+      "name": "SFX_StormSlam_00",
+      "file": "SFX_StormSlam_00.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "ebcb24e3cedf728787d3271ca3d66ef577096d887fa49ec5e5f1fb74842aad96",
+      "note": "2570 from 62.15 s, 3 s"
+    },
+    {
+      "name": "SFX_StormSlam_01",
+      "file": "SFX_StormSlam_01.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "0de18af022faaa38c7d1d9fc1ea3e51060746582ef1c0f57e6a00415272b7bfb",
+      "note": "2570 from 197.35 s, 3 s"
+    },
+    {
+      "name": "SFX_StormSlam_02",
+      "file": "SFX_StormSlam_02.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "8ffc4dfc441cedecb98cd55fb23b4f0ec251e52fa171eda4d3f965dbaa677cab",
+      "note": "2570 from 207.70 s, 3 s"
+    },
+    {
+      "name": "SFX_StormSlam_03",
+      "file": "SFX_StormSlam_03.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "bc791b71cb3cb91b39f540fe887d9c52b1a45403bd73704374b87f722039c0fb",
+      "note": "2570 from 241.75 s, 3 s"
+    },
+    {
+      "name": "SFX_StormSlam_04",
+      "file": "SFX_StormSlam_04.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "8386e87d26fa98477be2383dc36cd9da18f5b18ccdbb23607cbde4a9cf849c7d",
+      "note": "2570 from 293.80 s, 3 s"
+    },
+    {
+      "name": "SFX_StormSlam_05",
+      "file": "SFX_StormSlam_05.wav",
+      "duration": 3.0,
+      "rate": 48000,
+      "sha256": "3bac90e03e5b29e9409d3b324b3edccd07d6c216329233db93011e16a4a382e9",
+      "note": "2570 from 315.30 s, 3 s"
+    }
+  ]
+}

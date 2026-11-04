@@ -6,6 +6,17 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The chest, the trigger and the storm (November 3–4, Claude):** the user's request; the plank is not built yet. Details in [SHIP.md](SHIP.md#the-chest-the-trigger-and-the-storm-november-3).
+  - The captain's chest opens (scratch or interact) and drops a golden carton: 40 cigarettes and the stamina lock, taken once. When the 2D game's seven conditions are met, a storm rolls in over about a minute and keeps on.
+  - The storm brings:
+    - dark storm cloud, a grey light and haze;
+    - a storm swell, with the ship rolling about 6.5°;
+    - slanted rain with splashes, and seas coming over the bow and the weather rail;
+    - forked lightning lighting the ship, and thunder after it;
+    - recorded CC0 rain, gale, canvas, sea, slams and thunder, mixed for on deck and below decks. The music ducks under it.
+  - The new **Ship Storm (dev)** checkpoint starts on deck with the storm coming.
+  - Verified: ship test 18/18 uncooked and packaged; Verify-Package 182 passes; Verify-Menu 43/43; in the launcher as Storm.
+  - Not yet: heard on speakers, played by hand, an end to the storm, the crew reacting to it, a wet deck. A faint speckle shows on edges at a flash.
 - **The ship heard (November 3, Claude):** recorded CC0 sword clashes, swishes and scrapes for the fencers, deck feet for the fencers and the dancer, the sea along the hull and the wind in the rigging on deck, lapping below; the rats heard only in the hold; creaks quieter. Details in [SHIP.md](SHIP.md#the-ship-heard-november-3).
 - **The fencers' fight made harder (November 3, Claude):** the user's request; details in [SHIP.md](SHIP.md#the-fight-made-harder-november-3).
   - Each eight-beat phrase is now a run of four to six blows, mostly riposted, of seven kinds: cuts at the head, flank and leg, a lunging thrust, a feint, a beat and lunge escaped by leaping back, and a bind with the blades crossed near the hilts. Every fifth phrase they circle and the pair turns on the deck.

@@ -168,3 +168,12 @@ The ferry recordings #0694 and #0697 were downloaded and rejected: steady 48–5
 Storage: WAVs about 11 MB and uassets about 6.3 MB, through the existing Git LFS rules.
 
 Runtime levels are in docs/SHIP.md ("The ship heard"). Nobody has listened to them on speakers.
+
+## The ship's storm — November 3, 2026 (Claude)
+
+User request: "implement sounds for the storm too". 23 sounds cut from 19 CC0 recordings by Joseph Sardin (BigSoundBank), by `Tools/make_storm_sounds.py` (run with Blender 4.5.14's Python for numpy). The originals are not in the repository: `SFX/storm-recorded-manifest.json` lists each one's page, download URL, size and SHA-256 (checked before cutting), and each output's source, cut point, duration and hash. Thirteen were BWF downloads (`https://bigsoundbank.com/UPLOAD/bwf-en/<NNNN>.wav`); six (0153, 0740, 1632, 1633, 2570, and 0152, of which 0153, 1633 and 2570 are used) were refused as BWF (HTTP 403) and taken as MP3 (`UPLOAD/mp3/<NNNN>.mp3`), decoded to WAV by `Tools/decode_storm_mp3.py` (Blender's audaspace, resampled to 48 kHz). 0740 (rain with thunder in it), 0152, 1632, 0146, 0154, 0155, 0266 and 1289 were downloaded and not used.
+
+- Loops (the steadiest stretch of each recording, 2 s equal-power crossfade): `SFX_StormRain_00` (1019, 30 s), `SFX_StormRainAbove_00` (0820, rain on a tent from inside, 30 s), `SFX_StormWind_00` (0153 strong wind with 0147 whistling wind 7 dB under it, the whistle resampled 44.1 to 48 kHz, 40 s), `SFX_StormWindBelow_00` (1715, wind from inside, 40 s), `SFX_StormFlap_00` (1633, a flag in strong wind, 30 s), `SFX_StormSea_00` (0698, heavy waves, 30 s).
+- `SFX_StormThunderNear_00`–`03` (2718, 3115, 3183, 3114: the sharpest onsets) and `SFX_StormThunderFar_00`–`06` (3113, 3116, 3179–3182, 3184): each from 0.1 s before its onset to where it has fallen 40 dB under its peak for a second (at most 22 s), faded out.
+- `SFX_StormSlam_00`–`05`: the six strongest wave hits in 2570 (waves on a cliff), at least 5 s apart, 3 s each.
+- Mono 16-bit, peaks at −3 dBFS. Only cuts, fades, crossfades, the gale's mix, resampling and stereo-to-mono mixing are applied; the low-pass below decks is the game's (`ShipStorm.cpp`). `Tools/import_storm_sfx.py` (UE 5.7.4, `-AllowCommandletAudio`) imports them to `/Game/Art/Audio/SFX` and sets the six beds to loop.

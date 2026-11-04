@@ -1,5 +1,6 @@
 #include "ShipSetting.h"
 #include "ShipCrew.h"
+#include "ShipStorm.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
@@ -618,9 +619,18 @@ void AShipSetting::BuildEnvironment()
     Sun_->SetIntensity(5.f); Sun_->SetLightColor(FLinearColor(1.f, .95f, .86f));
     Sun_->DynamicShadowDistanceMovableLight = 6000; Sun_->DynamicShadowCascades = 3;
     Sun_->SetVolumetricScatteringIntensity(2.f); Sun_->bCastCloudShadows = true;
+    Sun_->ForwardShadingPriority = 1;   // (over the storm's lightning light, ApplyStorm)
     Attach(Sun_, FVector::ZeroVector, FRotator(-38, 62, 0));
     Sun = Sun_;
     SunBase = Sun->GetComponentQuat();
+    // The storm's lightning (ApplyStorm): a hard white light from the strike's side, casting the hull's and the rig's
+    // shadows, on only during a flash.
+    FlashLight = NewObject<UDirectionalLightComponent>(this);
+    FlashLight->SetMobility(EComponentMobility::Movable); FlashLight->SetAtmosphereSunLight(false);
+    FlashLight->SetIntensity(0.f); FlashLight->SetLightColor(FLinearColor(.86f, .9f, 1.f));
+    FlashLight->DynamicShadowDistanceMovableLight = 5000; FlashLight->DynamicShadowCascades = 2;
+    FlashLight->SetVolumetricScatteringIntensity(1.5f);
+    Attach(FlashLight); FlashLight->SetVisibility(false);
     // The open sky (milestone 2: the sea box is gone). Its planet is centred under the waterline, and moved every frame
     // as the sea rocks so the horizon tilts with the sea (Rock); its ground, should any show, is the far sea's blue.
     Sky = NewObject<USkyAtmosphereComponent>(this);
@@ -639,6 +649,7 @@ void AShipSetting::BuildEnvironment()
             Mid->SetScalarParameterValue(TEXT("Cloud_GlobalDensity"), .01f);
             Clouds->SetMaterial(Mid);
             Attach(Clouds);
+            CloudLayer = Clouds; CloudMid = Mid;
         }
     // Below decks the sky's fill is faint: without dynamic GI it would light the inside as if there were no hull.
     auto* Fill = NewObject<USkyLightComponent>(this);
@@ -652,6 +663,7 @@ void AShipSetting::BuildEnvironment()
     Fog->SetVolumetricFogScatteringDistribution(.6f); Fog->SetVolumetricFogExtinctionScale(1.4f);
     Fog->SetVolumetricFogDistance(2500); Fog->SetFogInscatteringColor(FLinearColor(.45f, .55f, .66f));   // (the sea's haze, as pale as the sky at the horizon)
     Attach(Fog, FVector(0, 0, WaterZ));
+    HazeFog = Fog;
     auto* Post = NewObject<UPostProcessComponent>(this);
     Post->bUnbound = true; Post->Priority = 110;
     auto& S = Post->Settings;
@@ -665,6 +677,7 @@ void AShipSetting::BuildEnvironment()
     S.bOverride_LocalExposureShadowContrastScale = true; S.LocalExposureShadowContrastScale = .7f;
     S.bOverride_LocalExposureHighlightContrastScale = true; S.LocalExposureHighlightContrastScale = .8f;
     Attach(Post);
+    Grade = Post;
     // The open sea (BuildSea): a real surface to the horizon, its waves meeting the hull.
     BuildSea();
     // The sea against the hull and the ship's timbers working: a slow wash and creaks (SFX_ShipWash, SFX_ShipCreak_*,
@@ -1028,11 +1041,14 @@ void AShipSetting::Build()
         P.Brass.Spar(FVector(-1312, PB - 30, Z0 + 78), FVector(-1312, PB - 30, Z0 + 95), 5, 3, 10);   // the desk lamp
         P.Wood.B(-1300, -1255, PB - 60, PB - 20, Z0, Z0 + 46);                 // his chair
         P.Wood.B(-1300, -1296, PB - 60, PB - 20, Z0 + 46, Z0 + 110);
-        // The chest (closed until milestone 4): iron-bound, a brass lock plate.
-        P.Chest.B(-1230, -1140, 150, 205, Z0, Z0 + 42);
-        P.Chest.B(-1230, -1140, 150, 205, Z0 + 42, Z0 + 56);
-        for (float X : {-1222.f, -1148.f}) P.Iron.B(X - 3, X + 3, 149, 206, Z0, Z0 + 57);
-        P.Brass.B(-1190, -1180, 147, 150, Z0 + 36, Z0 + 48);
+        // The chest: iron-bound, a brass lock plate. Its lid, on its hinge, is AShipChest's (ShipStorm.cpp, 2026-11-03); the
+        // dark of its inside shows when that opens.
+        P.Chest.B(-1230, -1140, 150, 205, Z0, Z0 + 40);
+        P.Chest.B(-1230, -1140, 150, 154, Z0 + 40, Z0 + 42); P.Chest.B(-1230, -1140, 201, 205, Z0 + 40, Z0 + 42);
+        P.Chest.B(-1230, -1226, 154, 201, Z0 + 40, Z0 + 42); P.Chest.B(-1144, -1140, 154, 201, Z0 + 40, Z0 + 42);
+        P.Dark.B(-1226, -1144, 154, 201, Z0 + 40, Z0 + 40.5f);
+        for (float X : {-1222.f, -1148.f}) P.Iron.B(X - 3, X + 3, 149, 206, Z0, Z0 + 42.5f);
+        P.Brass.B(-1190, -1180, 147, 150, Z0 + 30, Z0 + 41);
     }
 
     // ---- The hold: cargo stowed in tiers, the pantry's kind of shelving along the sides with jars, sacks.
@@ -1260,6 +1276,9 @@ void AShipSetting::Build()
     for (const FVector& R : ShipRats()) if (AEnemyRat::PlaceAt(World, ShipWorld(R + FVector(0, 0, 2)), R.Y * 2.f)) ++RatsPlaced;
     // ---- The crew (milestone 3, ShipCrew.cpp).
     AShipCrew::Spawn(World);
+    // ---- The captain's chest's lid and the storm that the ending's trigger brings (2026-11-03, ShipStorm.cpp).
+    AShipChest::Spawn(World);
+    AShipStorm::Spawn(World);
 
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_BUILT tris=%d missing=%d props=%d lamps=%d swingers=%d ladders=%d grips=%d sails=%d jars=%d rats=%d"),
         Triangles, Missing, Props, Lamps.Num(), Swingers.Num(), Ladders, Grips, Sails.Num(), JarsPlaced, RatsPlaced);
@@ -1358,6 +1377,7 @@ void AShipSetting::UpdateSails()
 {
     TArray<FVector> V, N; TArray<FVector2D> UV;
     const float T = Clock;
+    GSailWind = StormWind; GFlutter = SailClock;
     for (int32 I = 0; I < Sails.Num() && I < GSails.Num(); ++I)
     {
         if (!Sails[I]) continue;
@@ -1377,13 +1397,74 @@ void AShipSetting::Rock()
     // The ship rides a long swell (user 2026-11-01: the sea and the horizon rock round a still hull, so nobody's feet,
     // ladder or grip ever moves): the sea, its horizon, the sky and the sun roll about 1.5 degrees on the lamps' 7.3 s
     // swell and pitch a little on a longer one. The sea's ring on the hull follows the planking's flare (M_ShipSea).
-    const float Roll = 1.5f * FMath::Sin(Clock * 2 * PI / 7.3f), Pitch = .6f * FMath::Sin(Clock * 2 * PI / 9.1f + .8f);
+    // In the storm (2026-11-03) the swell builds: she rolls about 6.5 degrees and pitches 3, a shorter chop rides on it, and
+    // the gale heels her to leeward (port) by up to 3.5 degrees.
+    const float Roll = FMath::Lerp(1.5f, 6.5f, StormSea) * FMath::Sin(RollPhase) + 1.1f * StormSea * FMath::Sin(ChopPhase) + 3.5f * StormWind;
+    const float Pitch = FMath::Lerp(.6f, 3.f, StormSea) * FMath::Sin(PitchPhase + .8f) + .7f * StormSea * FMath::Sin(ChopPhase * 1.37f + 1.f);
     Tilt = FVector2D(Pitch, Roll);
     const FQuat Q(FRotator(Pitch, 0, Roll));
     const FVector Nn = Q.RotateVector(FVector::UpVector);
     if (SeaMid) SeaMid->SetVectorParameterValue(TEXT("Tilt"), FLinearColor(-Nn.X / Nn.Z, -Nn.Y / Nn.Z, 0, 0));
     if (Sun) Sun->SetWorldRotation(Q * SunBase);
     if (Sky) Sky->SetWorldLocation(ShipWorld(FVector(0, 0, WaterZ)) - Nn * (Sky->BottomRadius * 100000.f));
+}
+
+float AShipSetting::GetSunIntensity() const { return (Sun ? Sun->Intensity : 0.f) + (FlashLight && FlashLight->IsVisible() ? FlashLight->Intensity : 0.f); }
+
+void AShipSetting::ApplyStorm(float Dt)
+{
+    // The storm (2026-11-03, ShipStorm.h): the clouds close over and come down, the light dims and goes grey, the haze
+    // thickens with the rain, the sea builds (M_ShipSea's Storm: a long storm swell, darker water, spume); a lightning
+    // flash is the sun's light swung for a moment to the strike's side (so it casts the hull's shadows and only comes
+    // below decks through the openings) and turned up hard.
+    const AShipStorm* Storm = AShipStorm::Get(GetWorld());
+    const float Dark = Storm ? Storm->GetDark() : 0.f, Rain = Storm ? Storm->GetRain() : 0.f, Flash = Storm ? Storm->GetFlash() : 0.f;
+    if (SeaMid) SeaMid->SetScalarParameterValue(TEXT("Storm"), StormSea);
+    if (Dark <= 0.f && Flash <= 0.f && CloudSet == 0.f) return;   // calm, and already set so
+    if (Sun)
+    {
+        // (The storm clouds' shadow dims it further; in a flash it comes up only slowly, lighting the clouds.)
+        FlashSlow = FMath::FInterpTo(FlashSlow, Flash, Dt, Flash > FlashSlow ? 10.f : 3.f);
+        Sun->SetIntensity(FMath::Lerp(5.f, 2.6f, Dark) + 1.6f * FlashSlow);
+        Sun->SetLightColor(FMath::Lerp(FLinearColor(1.f, .95f, .86f), FLinearColor(.74f, .8f, .9f), Dark));
+        Sun->SetVolumetricScatteringIntensity(FMath::Lerp(2.f, .5f, Dark));
+    }
+    if (FlashLight)
+    {
+        const bool bOn = Flash > .02f && Storm;
+        if (FlashLight->IsVisible() != bOn) FlashLight->SetVisibility(bOn);
+        if (bOn) { FlashLight->SetIntensity(7.f * Flash); FlashLight->SetWorldRotation((-Storm->GetFlashFrom()).Rotation()); }
+    }
+    if (Sky)
+    {
+        Sky->SetRayleighScatteringScale(.0331f * FMath::Lerp(1.f, .45f, Dark));
+        Sky->SetMieScatteringScale(FMath::Lerp(.008f, .03f, Dark));
+    }
+    if (CloudMid && CloudLayer && FMath::Abs(Dark - CloudSet) > .003f)
+    {
+        CloudSet = Dark;
+        CloudMid->SetScalarParameterValue(TEXT("Cloud_GlobalCoverage"), FMath::Lerp(-.18f, .62f, Dark));
+        CloudMid->SetScalarParameterValue(TEXT("Cloud_GlobalDensity"), FMath::Lerp(.01f, .05f, Dark));
+        CloudMid->SetScalarParameterValue(TEXT("StormClouds"), Dark);
+        CloudLayer->SetLayerBottomAltitude(FMath::Lerp(1.4f, .75f, Dark));
+        CloudLayer->SetLayerHeight(FMath::Lerp(1.6f, 3.5f, Dark));
+    }
+    if (HazeFog)
+    {
+        HazeFog->SetFogDensity(FMath::Lerp(.0006f, .0014f, Dark) + .0009f * Rain);
+        HazeFog->SetFogMaxOpacity(FMath::Lerp(.25f, .75f, Dark));
+        HazeFog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(.45f, .55f, .66f), FLinearColor(.2f, .23f, .26f), Dark) * (1.f + 1.5f * Flash));
+        HazeFog->SetVolumetricFogExtinctionScale(FMath::Lerp(1.4f, 2.2f, Dark));
+    }
+    if (Grade)
+    {
+        auto& S = Grade->Settings;
+        S.AutoExposureBias = FMath::Lerp(-.4f, -.55f, Dark);
+        S.ColorSaturation = FVector4(FMath::Lerp(.95f, .62f, Dark), FMath::Lerp(.95f, .64f, Dark), FMath::Lerp(.92f, .68f, Dark), 1);
+        S.BloomIntensity = .45f + .35f * Dark;
+        S.bOverride_VignetteIntensity = true; S.VignetteIntensity = .4f + .25f * Dark;
+    }
+    if (Dark <= 0.f && Flash <= 0.f) CloudSet = 0.f;
 }
 
 float AShipSetting::SeaPlaneZ(const FVector& World) const
@@ -1398,7 +1479,16 @@ void AShipSetting::Tick(float Dt)
 {
     Super::Tick(Dt);
     Clock += Dt;
+    {
+        const AShipStorm* Storm = AShipStorm::Get(GetWorld());
+        StormSea = Storm ? Storm->GetSea() : 0.f; StormWind = Storm ? Storm->GetWind() : 0.f;
+        RollPhase += Dt * 2 * PI / FMath::Lerp(7.3f, 6.2f, StormSea);
+        PitchPhase += Dt * 2 * PI / FMath::Lerp(9.1f, 5.8f, StormSea);
+        ChopPhase += Dt * 2 * PI / 3.1f;
+        SailClock += Dt * (1.f + 2.4f * StormWind);
+    }
     Rock();
+    ApplyStorm(Dt);
     UpdateSails();
     // Where he was last aboard (over the side, he returns there); the sky's fill fuller when the view is out on deck.
     if (const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
@@ -1408,11 +1498,16 @@ void AShipSetting::Tick(float Dt)
         {
             const FVector C = ShipLocal(Cam->GetCameraLocation());
             const bool bOut = OutsideHull(C) || C.Z > (C.X < QuarterFore ? QuarterZ : DeckZ) - 5;
-            const float Want = bOut ? .75f : .22f, Now = SkyFill->Intensity;
-            if (FMath::Abs(Want - Now) > .002f) SkyFill->SetIntensity(FMath::Lerp(Now, Want, 1 - FMath::Exp(-4.f * Dt)));
+            // (In the storm: more, as the overcast lights the deck from all over (the sky it captures is far darker); a lightning
+            // flash lights it at once.)
+            const AShipStorm* Storm = AShipStorm::Get(GetWorld());
+            const float Dark = Storm ? Storm->GetDark() : 0.f, Flash = Storm ? Storm->GetFlash() : 0.f;
+            const float Want = (bOut ? FMath::Lerp(.75f, 1.15f, Dark) : FMath::Lerp(.22f, .26f, Dark)), Now = SkyFill->Intensity;
+            if (Flash > .05f) SkyFill->SetIntensity(Want + Flash * (bOut ? .9f : .2f));
+            else if (FMath::Abs(Want - Now) > .002f) SkyFill->SetIntensity(FMath::Lerp(Now, Want, 1 - FMath::Exp(-4.f * Dt)));
         }
     // The ship rides a long swell: the lamps and hammocks swing with it (about a 7 s roll), the lamps' flames flicker.
-    const float Roll = 4.f * FMath::Sin(Clock * 2 * PI / 7.3f), Pitch = 1.6f * FMath::Sin(Clock * 2 * PI / 9.1f + .8f);
+    const float Roll = (4.f + 7.f * StormSea) * FMath::Sin(RollPhase) + 2.f * StormSea * FMath::Sin(ChopPhase), Pitch = (1.6f + 4.f * StormSea) * FMath::Sin(PitchPhase + .8f);
     for (int32 I = 0; I < Swingers.Num(); ++I)
         if (Swingers[I]) Swingers[I]->SetRelativeRotation(FRotator(Pitch * (1 + .2f * FMath::Sin(SwingPhase[I])), 0, Roll * (1 + .15f * FMath::Cos(SwingPhase[I] * 1.3f))));
     for (int32 I = 0; I < Lamps.Num(); ++I)
@@ -1434,20 +1529,23 @@ void AShipSetting::Tick(float Dt)
         const float Open = FMath::Clamp(Clock / 4.f, 0.f, 1.f);
         for (int32 I = 0; I < 4; ++I)
         {
-            AmbNow[I] = FMath::FInterpTo(AmbNow[I], Want[I], Dt, 1.5f);
+            // (The storm: the sea louder along the hull and against it below; its own sounds are AShipStorm's.)
+            const float Storm = I == 0 ? 1.f + .8f * StormSea : I == 1 ? 1.f + .7f * StormSea : I == 2 ? 1.f + .3f * StormSea : 1.f + .6f * StormWind;
+            AmbNow[I] = FMath::FInterpTo(AmbNow[I], Want[I] * Storm, Dt, 1.5f);
             if (Loops[I]) Loops[I]->SetVolumeMultiplier(FMath::Max(.001f, AmbNow[I] * Open));
         }
     }
     // Now and then a timber creaks somewhere close (quieter since 2026-11-03, the user: about two fifths of before).
     if (Clock > NextCreak)
     {
-        NextCreak = Clock + FMath::FRandRange(3.5f, 8.f);
+        // (Working hard in the storm: more often and louder.)
+        NextCreak = Clock + FMath::FRandRange(3.5f, 8.f) * FMath::Lerp(1.f, .3f, StormSea);
         static const TCHAR* CreakNames[] = {TEXT("SFX_ShipCreak_00"), TEXT("SFX_ShipCreak_01"), TEXT("SFX_ShipCreak_02"), TEXT("SFX_ShipCreak_03")};
         const TCHAR* Name = CreakNames[FMath::RandRange(0, 3)];
         if (USoundBase* S = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name)))
             if (auto* Chuck = UGameplayStatics::GetPlayerPawn(this, 0))
             {
-                UGameplayStatics::PlaySoundAtLocation(this, S, Chuck->GetActorLocation() + FVector(FMath::FRandRange(-500.f, 500.f), FMath::FRandRange(-350.f, 350.f), 120.f), FMath::FRandRange(.14f, .22f), FMath::FRandRange(.9f, 1.1f));
+                UGameplayStatics::PlaySoundAtLocation(this, S, Chuck->GetActorLocation() + FVector(FMath::FRandRange(-500.f, 500.f), FMath::FRandRange(-350.f, 350.f), 120.f), FMath::FRandRange(.14f, .22f) * (1.f + 1.4f * StormSea), FMath::FRandRange(.9f, 1.1f) * (1.f - .12f * StormSea));
                 ++Creaks;
             }
     }

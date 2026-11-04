@@ -414,3 +414,63 @@ User request: "Find and download sword fight sounds and also other immersive sou
 - **The creaks** are about two fifths as loud as before (0.14-0.22, from 0.35-0.55).
 - **Tests:** the new `sounds` trial (16 trials now) stands on deck for 10 s, then in the hold for 10 s. It checks the clashes and feet play, the deck and hold mixes, that no rat is heard on deck while some are hushed, that rats are heard in the hold, and that creaks keep coming. These are play counts and levels; nobody has listened to them.
 - **Not checked:** heard on speakers by nobody. The balance against the score, how busy the fencers' feet sound (about three steps a second each) and whether the surf recording reads as a moving hull are for the user's ears. The steps sound the same in boots and bare feet, and through a deck sounds are only quieter, not muffled.
+
+## The chest, the trigger and the storm (November 3)
+
+User request: "when the ship trigger takes effect, i want a storm to roll in and for the ship going through a storm to be a thing for a good while before the captain kicks chuck off the plank. start working on this (the chest, the trigger, the storm). implement sounds for the storm too and really make it look and feel cool. don't do the plank part yet". The code is `ShipStorm.h/.cpp`; the materials come from `Tools/create_ship_storm.py`, the sea's storm from `Tools/create_ship_sea.py`.
+
+### The chest (`AShipChest`)
+
+- The captain's chest in his cabin (against the port side) now has a lid on a hinge. Scratching it, or interacting with it while facing it within about a metre, opens it once: the lid swings back past upright (1.1 s, the hinges creaking, a knock as it comes against its stay) and a warm gold light comes up inside.
+- A golden carton (22 × 12 × 9 cm, in the golden leaf's aura) pops out over the front and lands before the chest. Walking over it gives 40 cigarettes and starts the golden leaf's 45 s stamina lock (the user's decision of 2026-11-01). It is taken once and never comes back, through deaths too; the chest stays open.
+- The 2D game drops it "with no dialogue box"; there is none here either.
+
+### The trigger (`ShipGate`)
+
+- The 2D game's seven conditions: the chef has seen him (noticed, chasing or swinging), he has talked once to the seated pirate, the concertina player, the cheering pirate, the dancer and Jeffries, and he has opened the chest. They are kept for the session, through deaths aboard, and logged as each is met (`CHUCK_SHIP_GATE`).
+- When the seventh is met, the storm begins. Later it will also start the captain's sequence (not built).
+- A fresh start aboard from the checkpoint menu forgets them (the chest shuts, the storm ends). The new **Ship Storm (dev)** checkpoint, in the ship's column, starts on deck with all seven met, so the storm rolls in at once.
+
+### The storm (`AShipStorm`)
+
+It rolls in over about a minute and then keeps on: there is no end to it yet (the plank will come out of it later). Seconds after the gate opens:
+
+| | from | full by | then |
+| --- | --- | --- | --- |
+| Wind (sails, flag, the gale's sound) | 0 | 45 s | gusts every few seconds (0.82–1.0) |
+| Dark (clouds, light, haze) | 4 s | 55 s | |
+| Sea (swell, rolling, spray, slams) | 8 s | 70 s | |
+| Rain | 22 s | 65 s | squalls over most of a minute (0.55–1.0) |
+| Lightning | 18 s | | far off first, then closer and more often |
+
+- **The sky** (`AShipSetting::ApplyStorm`): the fair-weather clouds (the engine's volumetric cloud material) thicken, come down to 750 m and turn to storm cloud (its own `StormClouds` setting). The sun dims under them to a grey light; the sky's fill rises instead, so the deck stays readable in the overcast. The haze thickens with the rain, the colour drains (saturation about 0.63) and a vignette closes in.
+- **The sea** (`M_ShipSea`'s new `Storm` setting): a long storm swell (90, 56 and 33 m waves, up to 0.6 m, running down the wind from starboard), the wind sea under it nearly twice as high, darker slate water, foam on far more of the crests and spume streaked down the wind. Against the hull the swell is lower. The sea mesh has rings 2 m apart out to 150 m now, so the swell keeps its shape there; its slope still shades the sea to 800 m.
+- **The ship's motion:** she rolls about 6.5° each way on a slightly quicker swell (6.2 s), pitches 3° (5.8 s), a 3.1 s chop rides on both, and the gale heels her up to 3.5° to port. (The hull stays still; the sea, sky and sun move, as before.) Up to 11° of the horizon's tilt was measured. The lamps and hammocks below swing about three times as far.
+- **The sails and flag** (`ShipDeck.inl`): fuller, their free edges thrumming faster and harder; the flag streams out flatter and cracks.
+- **Rain:** 2,600 streaks in a 30 m box round the view, falling slanted down the wind, lit by the light round them (a flash lights them) with a little glow of their own. They stop at the deck or the sea, so none falls below decks, and those landing on deck near the view throw tiny splashes.
+- **Spray:** every 1–4 s at full sea a sea comes over the bow or the starboard (weather) rail: white water thrown up, blown across the deck and falling, with the slam of a wave (heard muffled below).
+- **Lightning:** a jagged channel from the cloud down to the sea, with forks, a white core and a faint glow round it, lit for the flash (two to four strokes in a few tenths of a second; it is not fogged, so it cuts through the haze). Its light on the ship is a second, hard white light from the strike's side, casting the hull's and the rig's shadows (so below decks it comes only through the openings); the sun brightens more slowly, to light the clouds (a sudden change there speckled every edge against the sky). Thunder follows after about a third of the real delay: a crack and its roll for a strike within 1.2 km, rolling thunder for one further off.
+
+### The storm heard
+
+All CC0 recordings by Joseph Sardin (BigSoundBank), cut by `Tools/make_storm_sounds.py` (sources, URLs and hashes in `SourceAssets/Audio/SFX/storm-recorded-manifest.json`; six that the site would serve only as MP3 are decoded by `Tools/decode_storm_mp3.py` with Blender's audaspace), imported by `Tools/import_storm_sfx.py`:
+
+- **Loops**, mixed by where he is (`AShipStorm::TickSound`): heavy rain on a terrace (the rain on deck); rain on a tent heard from inside, low-passed (the rain on the deck overhead, below decks); strong wind with whistling wind under it (the gale, louder up the rig); wind heard from indoors (below decks); a flag flogging in a strong wind (the canvas); heavy waves (the sea in the storm). The ship's own wash, water along the hull and rigging loops are turned up with the storm, and the creaks come about three times as often and louder.
+- **Thunder:** four close strikes (a sharp crack and its roll) and seven distant rolls, heard everywhere aboard, low-passed and quieter below decks.
+- **The sea's slams:** six wave hits on a cliff, one at each spray.
+- **The music** sinks to about half under the full gale.
+
+### Tests (the chest and the storm)
+
+- `chest` (trial 17): before the chest, facing it, he interacts; the lid opens, the carton drops; he walks over it. It checks the lid's angle, 40 cigarettes, the stamina lock, that a second interact does nothing, that no carton is left, and that the gate opens with the chest only if the other six were met.
+- `storm` (trial 18): 19 stills as it rolls in (at 5, 25, 45 and 70 s) and in full, from the deck, the rig, the rat's eye, outside, below, and with a strike and a spray (`Saved/Screenshots/WindowsEditor/Ship/Storm/`; `-ChuckStormStills=a+b` takes only those); then he walks forward along the deck in the full storm (a strike near by on the way) and goes below. It checks rain and splashes shown, a spray, strikes and their thunder, the roll, the mix on deck (rain, gale, canvas, sea; no rain overhead) and below (rain overhead and wind through the hull; no deck rain).
+- `-ChuckShipTrials=chest+storm` runs just these two.
+
+### Not yet / not checked
+
+- The plank, the fragments and the fall (the user: not yet). Nothing ends the storm except the menu.
+- Heard on speakers by nobody: the balance of rain, gale, sea and thunder against the music and each other is measured, not listened to.
+- The crew go on as before in the storm (the dancer dances, the fencers fence). Whether they should react (or the sails be reefed, as a real crew would in a gale) is the user's call.
+- The flash still leaves a faint speckle on edges against the clouds for a frame or two.
+- No wet look on the deck or the crew; no rain comes below through the gratings; drops pass through the sails and tops.
+- Not played by hand.

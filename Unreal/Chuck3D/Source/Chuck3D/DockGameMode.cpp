@@ -88,6 +88,7 @@
 #include "Misc/Paths.h"
 #include "DynamicRHI.h"
 #include "ShipCrew.h"
+#include "ShipStorm.h"
 
 ADockGameMode::ADockGameMode()
 {
@@ -1322,8 +1323,11 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
         const float Dist=Listener ? FVector::Dist(Listener->GetActorLocation(),::ShipScore::ConcertinaSource()) : 1e6f;
         ConcertinaNear=FMath::Lerp(1.3f,.75f,FMath::SmoothStep(150.f,1400.f,Dist));
     }
+    // The ship's storm (2026-11-03, ShipStorm.h): the music sinks under the gale, to about half.
+    const AShipStorm* Storm=AShipStorm::Get(GetWorld());
+    const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f;
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
-        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
+        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*StormDuck*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
 }
 
 void ADockGameMode::TickChuckPortrait(float DeltaSeconds)

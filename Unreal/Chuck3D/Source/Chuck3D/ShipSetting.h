@@ -127,6 +127,8 @@ public:
     /** The ambience's levels now (before the opening fade): the wash, the water along the hull, the lapping, the rigging. */
     FVector4 GetAmbience() const { return FVector4(AmbNow[0], AmbNow[1], AmbNow[2], AmbNow[3]); }
     int32 GetCreaks() const { return Creaks; }
+    /** The sun's light now (its intensity: dimmed by the storm, spiking in a lightning flash). */
+    float GetSunIntensity() const;
 private:
     void Build();
     void BuildEnvironment();
@@ -158,6 +160,18 @@ private:
     UPROPERTY() class UProceduralMeshComponent* Flag = nullptr;
     UPROPERTY() class USkyLightComponent* SkyFill = nullptr;   // faint below decks, fuller when the view is out on deck
     UPROPERTY() class UProceduralMeshComponent* SeaSurface = nullptr;
+    // The storm (2026-11-03, ShipStorm.h): the parts of the sky it changes, and the swell's phases (accumulated, so its
+    // periods can change as it builds).
+    UPROPERTY() class UVolumetricCloudComponent* CloudLayer = nullptr;
+    UPROPERTY() class UMaterialInstanceDynamic* CloudMid = nullptr;
+    UPROPERTY() class UExponentialHeightFogComponent* HazeFog = nullptr;
+    UPROPERTY() class UPostProcessComponent* Grade = nullptr;
+    // Lightning's light on the ship (not the sky's: the clouds are lit by the sun alone, which only brightens slowly in a
+    // flash; a sudden change there speckles every edge against the sky).
+    UPROPERTY() class UDirectionalLightComponent* FlashLight = nullptr;
+    float FlashSlow = 0;
+    void ApplyStorm(float Dt);
+    float RollPhase = 0, PitchPhase = 0, ChopPhase = 0, SailClock = 0, StormSea = 0, StormWind = 0, CloudSet = -1;
     TArray<float> SwingPhase, LampBase;
     FQuat SunBase = FQuat::Identity;
     FVector2D Tilt = FVector2D::ZeroVector;
