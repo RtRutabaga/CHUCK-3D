@@ -6,6 +6,18 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The rubble map is the sanctum fallen in (November 4, Claude):** the user's request and follow-up; details in [CHULT-TEMPLE-RUBBLE.md](CHULT-TEMPLE-RUBBLE.md).
+  - The Fireball now throws Chuck into the sanctum itself, partly collapsed. It is built by the sanctum's own builder and set 40 m under the real hall: the same walls, piers, dais, idols and torches. Only the sanctum's torches, braziers and fire bowls light it.
+  - What came down:
+    - the balcony's middle 16 m fell into the Astral pool, its broken ends sagging;
+    - both stairs broke in the middle into new Astral ruptures;
+    - two piers toppled;
+    - four holes opened in the vault, with earth and roots over them;
+    - the arch high in the wall is walled with rubble.
+  - Every piece of rubble lies under one of those sources, and the test fails on any that does not (unsourced=0), floats, or stacks up past 1.4 m.
+  - The crevice now opens under the −S stair; the lane crosses the hall to it.
+  - Verified: the rubble test uncooked and packaged; Verify-Package 182 passes (one earlier run failed the tunnels' long run-through on a spike-pit death, and it passed on a rerun); Verify-Menu 43/43. In the launcher as SanctumFallen.
+  - Not yet: played by hand; the rubble is plain boxes; the stairs' breaks are straight cuts; the frame time with the copy's extra lights is not measured.
 - **The chest, the trigger and the storm (November 3–4, Claude):** the user's request; the plank is not built yet. Details in [SHIP.md](SHIP.md#the-chest-the-trigger-and-the-storm-november-3).
   - The captain's chest opens (scratch or interact) and drops a golden carton: 40 cigarettes and the stamina lock, taken once. When the 2D game's seven conditions are met, a storm rolls in over about a minute and keeps on.
   - The storm brings:

@@ -2,7 +2,63 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 3 (latest) — the chest, the trigger and the storm (Claude)
+## November 4 (latest) — the rubble map as the sanctum fallen in (Claude)
+
+- **Asked:** "make the rubble map look more convincingly like the temple sanctum had partially collapsed in. there should be rubble from the balcony, blocked off stair cases, and only torches where there were torches in the temple sanctum map". Follow-up, mid-task: every piece of rubble must have fallen from somewhere discernible; no unexplained or unrealistically stacked piles and nothing floating; new Astral areas may close off access.
+- **Source:** `main` at ebdccc18.
+- **Changed** ([../CHULT-TEMPLE-RUBBLE.md](../CHULT-TEMPLE-RUBBLE.md)):
+  - `ChultTempleWindBuild.inl`:
+    - `Sanctum()` takes an optional `FSanctumFall`:
+      - gallery runs kept;
+      - piers broken to stumps;
+      - no ceiling;
+      - aisle ruptures and the sea tear buried by mask;
+      - the arch walled;
+      - wall and stair-mass openings;
+      - stair breaks.
+    - `StairMass` takes openings and breaks; `SanctumHoles` takes a rupture mask.
+    - With no `FSanctumFall`, the sanctum builds as before; its architraves are now made in spans between piers, the same shape.
+  - `ChultTempleRubble.h/.cpp`:
+    - New layout: the hall frame is the sanctum's, `DropZ` −4000.
+    - The crevice now opens under the −S stair (`MouthS`, `CrawlT` −5950), with a new lane.
+    - The fall's own 4 ruptures and 4 vault holes.
+    - `GalleryFall`, `StairBreakDebris`, `FallenPierPieces` and the hall's `Fittings`.
+    - Heaps only under the vault holes, at most 1.4 m high.
+    - `ChultTempleRubbleBaseAt`, `ChultTempleRubbleSourced` and `ChultTempleRubbleUnsourced`.
+    - The old seeded chamber, round drums and lane braziers/torches are gone.
+  - `ChultTempleRubbleBuild.inl`:
+    - Builds the hall via `Sanctum(&Fall)`, shifted down.
+    - The broken vault, the gallery's sagging broken ends, the arch choke, the stair-break faces.
+    - Hidden walls past the breaks.
+    - Gravel only where something came down.
+  - `ChultTempleRubbleTest.cpp`:
+    - 15 new stills.
+    - A passage trace before the crawl.
+    - Rift fall into the sanctum's +S aisle rupture.
+    - Fails on `unsourced>0`.
+  - `ChultTempleInterior.cpp`: the call site (idols, steps) and the spawn's facing.
+  - `Tools/Verify-Package.ps1`: `wind_glows=53`.
+- **Tested:**
+  - Uncooked rubble test: failures=0 floating=0 heard=0, lane, crawl and rift_fall pass, 92 blocks, unsourced=0 (`Local/rubble-fall-10.log`). Interior check passes with spawns=21.
+  - About 15 stills reviewed (`Saved/Screenshots/WindowsEditor/Chult/Rubble*.png`).
+  - Packaged `Builds/RubbleCandidate`:
+    - Verify-Package passed 182 checks (`Local/verify-package-20261104-093203.log`); the ship escape from the moved crevice passes.
+    - The first verification (run by Build-Game) failed only the Astral wind `full` trial, with a spike-pit death in tunnel leg 4, which this change does not touch. A rerun of that test on the same package passed (`Local/verify-temple-wind-rerun-rubble.log`), so treat it as a flake.
+    - Verify-Menu passed 43/43 (`Local/verify-menu-rubble.txt`).
+- **Remaining flaws:**
+  - Not played by hand.
+  - The rubble is plain boxes.
+  - The stair breaks are straight cuts with spalls.
+  - One sagging gallery slab reads as a thin dark plane from below.
+  - The copy doubles the sanctum's geometry (about 382k interior triangles) and adds about 40 unshadowed fire lights; frame time is not measured.
+  - First tries that were rejected and replaced: stacked stair chokes, rubble standing in the Astral pit, and a crevice behind the stair's foot (the stairs drop 13 m, not 7).
+- **Contract compatibility:** `Sanctum()`'s new parameter defaults to null. `TempleRubble` constants moved, but ShipTest and ShipEscape use only `CrawlBendS`, `CrawlEndT` and `AtChultTempleCreviceEnd`. Chuck is unchanged.
+- **Binary/LFS:** none (code and docs only).
+- **Launcher:** promoted as SanctumFallen (receipt e911248). The Storm package is kept and ShipSounds pruned. The backup folder is named `Windows-Previous-20261104-SanctumFallen` by the script, though it holds the Storm build.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence at the storm's trigger, the plank and the fall), or a hand-play pass of the rubble map by the user.
+
+## November 3 — the chest, the trigger and the storm (Claude)
 
 - **Asked:** "when the ship trigger takes effect, i want a storm to roll in and for the ship going through a storm to be a thing for a good while before the captain kicks chuck off the plank. start working on this (the chest, the trigger, the storm). implement sounds for the storm too and really make it look and feel cool. don't do the plank part yet".
 - **Source:** `main` at 37f3e30f.
