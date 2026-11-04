@@ -186,7 +186,7 @@ namespace
         case ETempleInteriorSpawn::Wind6:return {(TempleWind::Legs[2].S0+TempleWind::Legs[2].S1)*.5f,-710,TempleWind::UZ,1,0,TEXT("Astral Wind 6")};
         case ETempleInteriorSpawn::Wind7:return {(TempleWind::Legs[3].S0+TempleWind::Legs[3].S1)*.5f,-1000,TempleWind::UZ,0,-1,TEXT("Astral Wind 7")};
         // Where the Fireball throws him (October 26): the rubble lane's first corner, facing along it.
-        case ETempleInteriorSpawn::Rubble:return {TempleRubble::Lane[0].S,TempleRubble::Lane[0].T,TempleRubble::RZ,-1,0,TEXT("Temple Rubble")};
+        case ETempleInteriorSpawn::Rubble:return {TempleRubble::Lane[0].S,TempleRubble::Lane[0].T,TempleRubble::RZ,0,1,TEXT("Temple Rubble")};
         default:return {TempleWind::HallMid,TempleWind::HT1-220,TempleWind::UZ,0,-1,TEXT("Temple Sanctum")};
         }
     }
@@ -1006,7 +1006,7 @@ void BuildChultTempleInterior(AActor* Owner)
     TArray<FGlow> Glows;
     Built.Steps+=TempleWindBuild::BuildWind(P,Fires,Jars,Skulls,Idols,Glows);
     // ---- The rubble map (October 26; ChultTempleRubbleBuild.inl): where the Fireball throws him.
-    TempleRubbleBuild::BuildRubble(P,Fires,Jars,Skulls,Glows);
+    Built.Steps+=TempleRubbleBuild::BuildRubble(P,Fires,Jars,Skulls,Idols,Glows);   // (the sanctum fallen in since 2026-11-04)
 
     // ---- Emit.
     int32 Missing=0,Triangles=0;

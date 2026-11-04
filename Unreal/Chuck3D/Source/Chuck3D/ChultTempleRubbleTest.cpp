@@ -34,18 +34,21 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
     UWorld* World = Owner->GetWorld();
     struct FView { const TCHAR* Name; FVector Eye, Aim; };
     const TArray<FView> Views = {
-        {TEXT("RubbleArrival"), FVector(76550, -5250, RZ + 260), FVector(75400, -6600, RZ + 40)},
-        {TEXT("RubbleHigh"), FVector(76550, -5200, RZ + 800), FVector(75000, -7800, RZ)},
-        {TEXT("RubbleLane"), FVector(75550, -5700, RZ + 150), FVector(75550, -6900, RZ + 40)},
-        {TEXT("RubbleCave"), FVector(75900, -7400, RZ + 200), FVector(75100, -6700, RTop + 300)},
-        {TEXT("RubbleRift"), FVector(75900, -7700, RZ + 170), FVector(75600, -8250, RZ - 40)},
-        {TEXT("RubbleSouth"), FVector(76200, -7900, RZ + 180), FVector(74800, -8250, RZ + 60)},
-        {TEXT("RubbleMouth"), FVector(75100, -8150, RZ + 140), FVector(PileS1, -8250, RZ + 40)},
-        {TEXT("RubbleMouthLow"), FVector(PileS1 + 220, -8170, RZ + 45), FVector(PileS1, -8250, RZ + 22)},
-        {TEXT("RubbleMouthFar"), FVector(76100, -7300, RZ + 170), FVector(PileS1, -8250, RZ + 40)},
-        {TEXT("RubbleWest"), FVector(74450, -5300, RZ + 300), FVector(74800, -7400, RZ)},
-        {TEXT("RubbleCaves"), FVector(75500, -7500, RZ + 160), FVector(76050, -8150, RTop + 150)},
-        {TEXT("RubbleLong"), FVector(75600, -5250, RZ + 420), FVector(75500, -8500, RZ + 100)}};
+        {TEXT("RubbleArrival"), FVector(80150, -7950, RZ + 230), FVector(79850, -6000, RZ + 80)},
+        {TEXT("RubbleHigh"), FVector(79900, -8500, RZ + 950), FVector(78500, -4700, RZ + 150)},
+        {TEXT("RubbleGallery"), FVector(78700, -5700, RZ + 260), FVector(78700, -3700, RUZ - 250)},
+        {TEXT("RubbleGalleryHigh"), FVector(78300, -5300, RZ + 900), FVector(78700, -3800, RZ)},
+        {TEXT("RubbleStairMinus"), FVector(77650, -6900, RZ + 260), FVector(77100, -5450, RZ + 420)},
+        {TEXT("RubbleStairPlus"), FVector(79750, -6900, RZ + 260), FVector(80300, -5450, RZ + 420)},
+        {TEXT("RubbleNave"), FVector(78700, -5900, RZ + 220), FVector(78700, -7700, RZ + 160)},
+        {TEXT("RubbleCave"), FVector(78700, -7400, RZ + 200), FVector(78550, -6700, RTop + 300)},
+        {TEXT("RubblePier"), FVector(78450, -6250, RZ + 200), FVector(77900, -6900, RZ + 80)},
+        {TEXT("RubblePierPlus"), FVector(79200, -5700, RZ + 200), FVector(79700, -5150, RZ + 100)},
+        {TEXT("RubbleLane"), FVector(79950, -6450, RZ + 150), FVector(77300, -6250, RZ + 40)},
+        {TEXT("RubbleMouth"), FVector(78000, -6150, RZ + 160), FVector(PileS1, CrawlT, RZ + 60)},
+        {TEXT("RubbleMouthLow"), FVector(PileS1 + 220, CrawlT - 80, RZ + 45), FVector(PileS1, CrawlT, RZ + 22)},
+        {TEXT("RubbleArch"), FVector(78700, -5100, RZ + 500), FVector(78700, RT1, RUZ + 140)},
+        {TEXT("RubbleDais"), FVector(78100, -6400, RZ + 300), FVector(78700, -8600, RZ + 400)}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->SetViewTarget(Camera); PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
@@ -132,8 +135,17 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             switch (Trials[Run->Trial])
             {
             case ET::Lane: Chuck->ResetAtLocation(ChultTempleInteriorSpawn(ETempleInteriorSpawn::Rubble)); Stop(); break;
-            case ET::Crawl: Reset(PileS1 + 230, CrawlT, -1, 0); break;
-            case ET::RiftFall: Reset(76000, -5600, 0, -1); break;
+            case ET::Crawl:
+            {
+                Reset(PileS1 + 230, CrawlT, -1, 0);
+                // The way in is open: a trace low along the passage from the apron to the bend meets nothing.
+                FHitResult Hit; FCollisionQueryParams Q; Q.AddIgnoredActor(Chuck);
+                for (float Z : {6.f, 20.f, 34.f})
+                    if (World->LineTraceSingleByChannel(Hit, W(PileS1 + 60, CrawlT, RZ + Z), W(CrawlBendS + 10, CrawlT, RZ + Z), ECC_Pawn, Q))
+                    { ++Run->Failures; UE_LOG(LogTemp, Warning, TEXT("CHUCK_TEMPLE_RUBBLE_PASSAGE_HIT z=%.0f at=%s comp=%s actor=%s"), Z, *ChultTempleInteriorFrameOf(Hit.ImpactPoint).ToString(), *GetNameSafe(Hit.GetComponent()), *GetNameSafe(Hit.GetActor())); }
+                break;
+            }
+            case ET::RiftFall: Reset(Lane[1].S, Lane[1].T, 0, 1); break;
             }
             Run->Start = Now; Run->bStarted = true; Run->Next = Now;
             if (Run->TrapSounds0 < 0)
@@ -171,7 +183,7 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             const bool bInPassage = P.X < PileS1 - 40;
             if (bInPassage) { ++Run->InFrames; Run->MaxHalfIn = FMath::Max(Run->MaxHalfIn, Half); Run->LowFrames += Chuck->IsCrawling(); }
             Run->MinHalf = FMath::Min(Run->MinHalf, Half);
-            if (Run->Sub == 0) { if (Steer(CrawlBendS, CrawlT, 12)) Run->Sub = 1; if (P.X < RS0 - 80 && Run->At < 0) { Run->At = Now; Shot(TEXT("CrawlIn")); } }
+            if (Run->Sub == 0) { if (Steer(CrawlBendS, CrawlT, 12)) Run->Sub = 1; if (P.X < MouthS - 80 && Run->At < 0) { Run->At = Now; Shot(TEXT("CrawlIn")); } }
             else if (Run->Sub == 1) { if (Steer(CrawlBendS, CrawlEndT + 50, 12)) { Run->Sub = 2; Run->bEnd = AtChultTempleCreviceEnd(Chuck->GetActorLocation()); Shot(TEXT("CrawlEnd")); Run->At = Now; UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_CRAWL_END reached=%d seconds=%.1f half=%.1f"), Run->bEnd, Time, Half); } if (P.Y < CrawlT - 150 && P.Y > CrawlT - 200) Shot(TEXT("CrawlBend")); }
             else if (Run->Sub == 2) { Stop(); if (Now - Run->At > 1.5) Run->Sub = 3; }
             else if (Run->Sub == 3) { if (Steer(CrawlBendS, CrawlT, 12)) Run->Sub = 4; }
@@ -191,9 +203,9 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
         }
         case ET::RiftFall:
         {
-            // Into the rupture between the lane's first legs: an Astral death, back where he came to.
+            // Into the sanctum's +S aisle rupture past the lane's first leg: an Astral death, back where he came to.
             Limit = 20;
-            if (Run->Sub == 0) { Steer(Rifts[4].S, Rifts[4].T, 5); if (NewDeaths) { Run->Sub = 1; Run->At = Now; Stop(); } }
+            if (Run->Sub == 0) { Steer(FallRiftS, FallRiftT, 5); if (NewDeaths) { Run->Sub = 1; Run->At = Now; Stop(); } }
             else if (Now - Run->At > 1.5f)
             {
                 const bool Home = FVector::Dist(Chuck->GetActorLocation(), ChultTempleInteriorSpawn(ETempleInteriorSpawn::Rubble)) < 40 && Ground && !Chuck->IsAstral();

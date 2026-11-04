@@ -3,52 +3,71 @@
 #include "ChultTempleWind.h"
 
 // The rubble map (Claude, 2026-10-26; docs/CHULT-TEMPLE-RUBBLE.md), after the 2D game's temple_rubble map: where the
-// wizard's Fireball throws Chuck. A chamber beside the sanctum, at its floor's depth, whose vault has caved in: choked
-// with great broken blocks of masonry and fallen columns, and torn through by the Astral (the sanctum's kind of
-// rupture: fall in and he is gone). One clear lane winds from where he comes to, past torches and braziers, to the
-// one way out: a crevice low in the far wall, too low to stand in, that he crawls along on all fours. The crevice's
-// end (a crack of warm light) is where the escape to the ship will begin; that is not built yet.
+// wizard's Fireball throws Chuck. Since 2026-11-04 (user: "make the rubble map look more convincingly like the temple
+// sanctum had partially collapsed in. there should be rubble from the balcony, blocked off stair cases, and only torches
+// where there were torches in the temple sanctum map") it is the sanctum itself, fallen in: the same hall, gallery,
+// stairs, colonnades, dais and torches (built by the sanctum's own builder, TempleWindBuild::Sanctum with an
+// FSanctumFall), its vault caved in four places, the gallery's middle fallen into the Astral pool below it, both stairs
+// choked with what came down, two piers broken off and lying in the nave, the sea tear buried. One clear lane winds
+// from where he comes to, to the one way out: a crevice low in the -S wall, too low to stand in, that he crawls along on
+// all fours. Its end (a crack of warm light) is where the escape to the ship will begin; that is not built yet.
+// The copy stands DropZ under the sanctum (the white-out carries him there), so the battle's hall is never touched.
 // Frame coordinates as in ChultTempleInterior.h (S toward the temple, T across, Z above the plaza).
 namespace TempleRubble
 {
-    constexpr float RS0 = 74300, RS1 = 76700, RT0 = -8700, RT1 = -5100;   // 24 x 36 m, beside the sanctum (HS0 77000)
-    constexpr float RZ = TempleWind::HZ, RTop = RZ + 1000;                // its floor at the sanctum's; a 10 m vault
-    // Since 2026-10-26 (user: "more like an opening in rubble"): the mouth is a gap at the foot of a pile of fallen blocks
-    // heaped against the wall, PileS1 out from it; the passage runs through the pile to the wall.
-    constexpr float PileS1 = RS0 + 170;
-    // The lane's corners, from where he comes to (the first) to the crevice's mouth (the last, on the -S wall).
+    constexpr float DropZ = -4000;   // the fallen hall's depth under the sanctum's (its cavities stay clear of the sanctum's wells)
+    constexpr float RS0 = TempleWind::HS0, RS1 = TempleWind::HS1, RT0 = TempleWind::HT0, RT1 = TempleWind::HT1;
+    constexpr float RZ = TempleWind::HZ + DropZ, RTop = TempleWind::HTop + DropZ;   // its floor and its vault
+    constexpr float RUZ = TempleWind::UZ + DropZ;                                    // the gallery's floor
+    // The gallery's runs still standing at the stairs' heads (the middle 16 m fell into the pool), and the piers brought
+    // down (row 0 the -S row, 1 the +S; index in TempleWind::PierT): the -S row's fourth, the +S row's second.
+    constexpr float GalleryKeep0 = 77900, GalleryKeep1 = 79500;
+    constexpr int32 FallenPiers[] = {3, 6};
+    // The mouth is a gap at the foot of a pile of fallen blocks heaped against the -S stair's masonry (its open face at
+    // MouthS), PileS1 out from it, where the flight is 2.2 m overhead; the passage runs through the pile, under the stair
+    // and through the -S wall into the rock. (The aisle's rupture there, SanctumRifts[0], lies buried under the pile.)
+    constexpr float MouthS = RS0 + TempleWind::StairW, PileS1 = MouthS + 170;
+    constexpr uint32 OpenSanctumRifts = 0xE;   // bit K: TempleWind::SanctumRifts[K] still open
+    // The lane's corners, from where he comes to (the first: the +S aisle by the dais) across the hall to the crevice's mouth.
     struct FPt { float S, T; };
-    constexpr FPt Lane[] = {{76250, -5600}, {75550, -5600}, {75550, -6700}, {76150, -6700}, {76150, -7700}, {75000, -7700}, {75000, -8250}, {PileS1 + 100, -8250}};
+    constexpr FPt Lane[] = {{79950, -7650}, {79950, -6250}, {PileS1 + 100, -6250}, {PileS1 + 100, -5950}};
     constexpr float LaneHalf = 110;
     // The crevice: its mouth in the -S wall at CrawlT, along -S to the bend at CrawlBendS, then along -T to its end.
     // 80 cm wide and 44 cm high (he is 65 cm standing, 33 on all fours).
-    constexpr float CrawlT = -8250, CrawlHalf = 40, CrawlH = 44, CrawlBendS = 73760, CrawlEndT = -8640;
-    // The Astral ruptures in the floor: centre, radii (ragged ellipses as the sanctum's aisle ruptures).
+    constexpr float CrawlT = -5950, CrawlHalf = 40, CrawlH = 44, CrawlBendS = RS0 - 540, CrawlEndT = CrawlT - 390;
+    // The fall's own Astral ruptures (the sanctum's pool and aisle ruptures are there too: ChultTempleSanctumHoleAt).
     struct FRift { float S, T, RS, RT; };
-    constexpr FRift Rifts[] = {{74800, -5700, 200, 150}, {74650, -6600, 170, 240}, {75050, -6300, 120, 160}, {74750, -7300, 230, 160},
-        {76250, -6150, 140, 110}, {75600, -8250, 260, 150}, {76350, -8300, 160, 230}, {75550, -7300, 170, 120}, {74550, -7850, 110, 110}};
+    constexpr FRift Rifts[] = {{79250, -7000, 130, 110}, {77480, -6950, 110, 150}};
+    // The sanctum's own rupture the rift-fall check walks into: the +S aisle's, past the lane's first leg.
+    constexpr float FallRiftS = 79960, FallRiftT = -5600;
     // Where the vault has come down: ragged ellipses of the ceiling fallen in, earth and roots over each, its fall heaped
-    // under it (four since 2026-10-26, user: "more ceiling collapses"). Their earth cavities (CaveRoom x the radii) never overlap.
+    // under it: over the gallery's middle (what brought it down), the nave over the buried sea tear, over the crevice's
+    // pile, before the dais. Their earth cavities (CaveRoom x the radii) never overlap, nor reach the colonnades' beams.
     struct FCave { float S, T, RS, RT; };
-    constexpr FCave Caves[] = {{75050, -6750, 480, 720}, {76050, -8150, 360, 340}, {76050, -6200, 280, 330}, {75100, -8250, 320, 260}};
+    constexpr FCave Caves[] = {{78700, -4050, 630, 360}, {78550, -6700, 470, 560}, {77500, -6250, 180, 330}, {78400, -8150, 370, 290}};
     constexpr float CaveRoom = 1.3f;
 }
 
 // The collapsed vault's hole a frame point (S, T) is under, or -1. Grow widens each.
 int32 ChultTempleRubbleCaveAt(float S, float T, float Grow = 0);
-// What the rubble map's floor is at a frame point: 0 floor, 1 the Astral. Grow widens each rupture.
+// What the rubble map's floor is at a frame point: 0 floor, 1 the Astral (the sanctum's pool and ruptures, and the
+// fall's own). Grow widens each rupture.
 int32 ChultTempleRubbleHoleAt(const FVector2D& Frame, float Grow = 0);
+// What the fallen hall's own masonry puts under a frame point (frame Z): the floor, the dais, the stairs' treads, the
+// gallery's standing runs.
+float ChultTempleRubbleBaseAt(const FVector2D& Frame);
 // Distance (frame, cm) from the lane's centre line.
 float ChultTempleRubbleLaneDistance(const FVector2D& Frame);
 // The rubble: turned boxes (frame centre, half-size, turn) and fallen column drums (ends, radius). Each is solid; all
-// keep off the lane, the ruptures, the braziers' spots and the crevice's mouth.
+// keep off the lane, the ruptures, the hall's fittings and the crevice's mouth.
 struct FTempleRubbleBlock { FVector Centre, Half; FRotator Turn; bool bMoss = false; };
 struct FTempleRubbleDrum { FVector A, B; float Radius = 0; };
 const TArray<FTempleRubbleBlock>& ChultTempleRubbleBlocks();
 // Blocks resting on nothing: every point of the underside more than Tolerance cm above what is under it. 0 expected.
 int32 ChultTempleRubbleFloating(float Tolerance = 8.f);
 const TArray<FTempleRubbleDrum>& ChultTempleRubbleDrums();
-// The braziers along the lane and the pots by it (two cigarettes each: the Fireball halved his Sanity), frame, on the floor.
+// The hall's braziers (the sanctum's: kept clear of rubble) and the pots by the lane (two cigarettes each: the Fireball
+// halved his Sanity), frame, on the floor.
 const TArray<FVector2D>& ChultTempleRubbleBraziers();
 const TArray<FVector2D>& ChultTempleRubbleJars();
 // The crevice's straight runs (through the pile, along -S, along -T) as frame boxes (S in X, T in Y) and the crawl spaces (frame, with Z) that put him

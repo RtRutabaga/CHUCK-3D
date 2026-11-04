@@ -1,11 +1,12 @@
 // The rubble map (Claude, 2026-10-26; ChultTempleRubble.h, docs/CHULT-TEMPLE-RUBBLE.md). Included into
 // ChultTempleInterior.cpp's anonymous namespace after ChultTempleWindBuild.inl: frame coordinates, faces looking inward.
 //
-// A chamber of the temple's own masonry whose vault has come down: the corbelled walls stand, the ceiling has a great
-// ragged hole in it with earth and roots over it, and the floor is heaped with what fell (broken blocks, slabs of the
-// vault, column drums) and torn through by the Astral (the sanctum's ruptures). A lane stays clear, lit by braziers
-// and wall torches, to the crevice low in the -S wall: a crawl, lined in rough stone, bending once, ending at a crack
-// with warm light and old timber behind it (the ship, later).
+// Since 2026-11-04 the sanctum itself, fallen in (built by TempleWindBuild::Sanctum with an FSanctumFall, let down
+// DropZ): its corbelled walls, piers, stairs, dais and torches stand where the sanctum has them; the vault has four
+// ragged holes with earth and roots over them; the gallery's middle lies in the Astral pool; the stairs are choked;
+// the floor is heaped with what fell (broken blocks, slabs of the vault, two piers in lengths) and torn through by the
+// Astral. A lane stays clear to the crevice low in the -S wall: a crawl, lined in rough stone, bending once, ending at a
+// crack with warm light and old timber behind it (the ship, later).
 
 namespace TempleRubbleBuild
 {
@@ -150,8 +151,9 @@ namespace TempleRubbleBuild
         const float BS0 = CrawlBendS - CrawlHalf, BS1 = CrawlBendS + CrawlHalf;
         FLining L; L.Dado = 0; L.Low = &P.Stone; L.High = &P.Stone;
         // Run A, from the mouth (+S, open on the chamber) to the bend (-S, open on run B).
-        Line(P, A0, RS0, AT0, AT1, RZ, RZ + CrawlH, {{0, AT0, AT1, RZ, RZ + CrawlH}, {1, AT0, AT1, RZ, RZ + CrawlH}}, L);
-        // Through the pile before the wall (2026-10-26) the chamber's own floor runs on; the pile's blocks are its walls and roof.
+        // (Since 2026-11-04 it starts at the -S stair's open face: under the stair and through the hall's -S wall.)
+        Line(P, A0, MouthS, AT0, AT1, RZ, RZ + CrawlH, {{0, AT0, AT1, RZ, RZ + CrawlH}, {1, AT0, AT1, RZ, RZ + CrawlH}}, L);
+        // Through the pile before the stair (2026-10-26) the hall's own floor runs on; the pile's blocks are its walls and roof.
         // Run B, from the bend (its +S wall open on run A) to its end: a crack in the end wall.
         Line(P, BS0, BS1, CrawlEndT, AT1, RZ, RZ + CrawlH, {{1, AT0, AT1, RZ, RZ + CrawlH}, {2, CrawlBendS - 7, CrawlBendS + 6, RZ + 5, RZ + 37}}, L);
         // Lumps and spalls on the walls and roof, a few pebbles on the floor (visual only).
@@ -171,7 +173,7 @@ namespace TempleRubbleBuild
             for (int32 I = 0; I < Count / 2; ++I)
                 TurnedBox(P.Steps, FVector(R.FRandRange(S0 + 8, S1 - 8), R.FRandRange(T0 + 8, T1 - 8), RZ + .8f), FVector(R.FRandRange(1.5f, 4), R.FRandRange(1.5f, 3), 1.2f), FRotator(0, R.FRandRange(0, 360), 0));
         };
-        Lumps(A0, RS0, AT0, AT1, 40);
+        Lumps(A0, MouthS, AT0, AT1, 52);
         Lumps(BS0, BS1, CrawlEndT, AT0, 30);
         // The mouth: a spill of small stones and grit out of the gap in the pile (its blocks are the rubble's own).
         for (int32 I = 0; I < 14; ++I)
@@ -191,32 +193,99 @@ namespace TempleRubbleBuild
         Glows.Add({FVector(CrawlBendS, CrawlEndT - 30, RZ + 25), 700.f, 240.f, FLinearColor(1.f, .72f, .4f)});
     }
 
-    int32 BuildRubble(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FSkull>& Skulls, TArray<FGlow>& Glows)
+    // A surface's triangles added to another's, moved by Shift (local).
+    void AppendShifted(FSurf& To, const FSurf& From, const FVector& Shift)
+    {
+        const int32 Base = To.V.Num();
+        for (const FVector& V : From.V) To.V.Add(V + Shift);
+        To.N.Append(From.N); To.UV.Append(From.UV); To.C.Append(From.C);
+        for (int32 I : From.T) To.T.Add(Base + I);
+    }
+
+    int32 BuildRubble(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FSkull>& Skulls, TArray<FIdol>& Idols, TArray<FGlow>& Glows)
     {
         FRandomStream R(2026102602);
-        // The ruptures' boxes, snapped to the 10 cm grid: the floor is whole outside them.
+        // The fall's own ruptures' boxes, snapped to the 10 cm grid: cut from the hall's floor, built here.
         TArray<FBox2D> HoleBoxes;
         for (const FRift& Rf : Rifts)
         {
             const float GS = Rf.RS * 1.3f + 20, GT = Rf.RT * 1.3f + 20;
             HoleBoxes.Add(FBox2D(FVector2D(FMath::FloorToFloat((Rf.S - GS) / 10) * 10, FMath::FloorToFloat((Rf.T - GT) / 10) * 10), FVector2D(FMath::CeilToFloat((Rf.S + GS) / 10) * 10, FMath::CeilToFloat((Rf.T + GT) / 10) * 10)));
         }
-        // The chamber's lining: the walls to the corbels, the crevice's mouth in the -S wall; the floor and vault apart.
-        FLining L; L.Dado = 200; L.Frieze = 120; L.Top = &P.Moss; L.bFloor = true; L.bCeiling = false; L.FloorHoles = HoleBoxes;
-        Line(P, RS0, RS1, RT0, RT1, RZ, RTop, {{0, CrawlT - CrawlHalf, CrawlT + CrawlHalf, RZ, RZ + CrawlH}}, L);
-        constexpr int32 Courses = 5; constexpr float Step = 40, Course = 46;
-        Corbel(P, 1, RS0, RS1, RT0, RT1, RTop, Courses, Step, Course);
-        BrokenVault(P, RS0 + Courses * Step, RS1 - Courses * Step, RT0, RT1, RTop, R);
-        // Pilasters down the long walls (the chamber's old order), some cracked off.
-        for (float Sg : {-1.f, 1.f}) for (float T = RT0 + 450; T < RT1 - 300; T += 900)
+        // ---- The hall (2026-11-04): the sanctum as its own builder makes it, with what the Fireball brought down (the
+        // gallery's middle, two piers, the sea tear buried, no vault, the arch walled), built at the sanctum's height and
+        // let down DropZ. Its torches, braziers and fire bowls are the sanctum's, where the sanctum has them.
+        int32 Steps = 0;
         {
-            const float W = Sg < 0 ? RS0 : RS1, In = -Sg;
-            if (Sg < 0 && FMath::Abs(T - CrawlT) < 260) continue;
-            const float Top_ = R.FRand() < .3f ? RZ + R.FRandRange(150, 400) : RTop - Courses * Course;
-            Box(P.Stone, FMath::Min(W, W + In * 45), FMath::Max(W, W + In * 45), T - 70, T + 70, RZ, Top_);
-            Box(P.Stone, FMath::Min(W, W + In * 62), FMath::Max(W, W + In * 62), T - 86, T + 86, RZ, RZ + 50);
+            TempleWindBuild::FSanctumFall Fall;
+            Fall.GalleryKept = {FVector2D(TempleWind::HS0, GalleryKeep0), FVector2D(GalleryKeep1, TempleWind::HS1)};
+            for (int32 F : FallenPiers) Fall.FallenPiers.Add(F);
+            Fall.FloorHoles = HoleBoxes;
+            Fall.WallHoles = {{0, CrawlT - CrawlHalf, CrawlT + CrawlHalf, TempleWind::HZ, TempleWind::HZ + CrawlH}};
+            Fall.MassHoles = {FBox2D(FVector2D(CrawlT - CrawlHalf, TempleWind::HZ), FVector2D(CrawlT + CrawlHalf, TempleWind::HZ + CrawlH))};
+            Fall.RiftMask = OpenSanctumRifts;
+            FParts H; TArray<FFire> HF; TArray<FJarSpot> HJ; TArray<FIdol> HI; TArray<FGlow> HG;
+            FRandomStream HR(2026102202);   // (the sanctum's own seed: the same glyphs and treads)
+            Steps = TempleWindBuild::Sanctum(H, HF, HJ, HI, HG, HR, &Fall);
+            const FVector Shift = At(0, 0, DropZ) - At(0, 0, 0);
+            FSurf* To[] = {&P.Stone, &P.Moss, &P.Plaster, &P.Steps, &P.StepMoss, &P.Ramp, &P.Dark, &P.Iron, &P.Wood, &P.Astral, &P.Block, &P.Veil, &P.Sea};
+            const FSurf* From[] = {&H.Stone, &H.Moss, &H.Plaster, &H.Steps, &H.StepMoss, &H.Ramp, &H.Dark, &H.Iron, &H.Wood, &H.Astral, &H.Block, &H.Veil, &H.Sea};
+            for (int32 I = 0; I < int32(UE_ARRAY_COUNT(To)); ++I) AppendShifted(*To[I], *From[I], Shift);
+            const FVector Down(0, 0, DropZ);
+            for (FFire F : HF) { F.Flame += Down; F.Light += Down; Fires.Add(F); }
+            for (FIdol I : HI) { I.At += Down; Idols.Add(I); }
+            for (FGlow G : HG) { G.At += Down; Glows.Add(G); }
         }
-        // The broken floor round the ruptures, their wells, haze, chips and glow.
+        // The broken vault over it: the ceiling between the corbels with the four holes, earth and roots over each.
+        constexpr int32 Courses = 6; constexpr float Step = 40;
+        BrokenVault(P, RS0 + Courses * Step, RS1 - Courses * Step, RT0, RT1, RTop, R);
+        // The gallery's broken ends: a length of each run's slab snapped and sagging from the break, still held at its top
+        // (solid); courses and spalls jutting from the two faces where its slab and balustrade snapped, and a few hanging
+        // from the slab's underside (visual).
+        for (float Sg : {1.f, -1.f})
+        {
+            const float E = Sg > 0 ? GalleryKeep0 : GalleryKeep1;   // Sg: the way the break faces
+            {
+                constexpr float Sag = 64, Half = 210;   // its fall (degrees) and half-length
+                const float C = FMath::Cos(FMath::DegreesToRadians(Sag)), Sn = FMath::Sin(FMath::DegreesToRadians(Sag));
+                TurnedBox(Sg > 0 ? P.Stone : P.Moss, FVector(E + Sg * (Half * C - 4), (TempleWind::GalleryT + RT1) * .5f + Sg * 25, RUZ - 30 - Half * Sn), FVector(Half, 205, 30), FRotator(-Sg * Sag, Sg * 4, 5));
+            }
+            for (int32 I = 0; I < 9; ++I)
+            {
+                const float T = R.FRandRange(TempleWind::GalleryT + 20, RT1 - 30), Z = R.FRandRange(RUZ - 58, RUZ - 6);
+                TurnedBox(R.FRand() < .3f ? P.StepMoss : P.Steps, FVector(E + Sg * R.FRandRange(4, 22), T, Z), FVector(R.FRandRange(14, 30), R.FRandRange(18, 40), R.FRandRange(8, 18)),
+                    FRotator(R.FRandRange(-25, 25), R.FRandRange(-30, 30), R.FRandRange(-20, 20)));
+            }
+            for (int32 I = 0; I < 3; ++I)
+                TurnedBox(P.Steps, FVector(E - Sg * R.FRandRange(10, 60), R.FRandRange(TempleWind::GalleryT + 40, RT1 - 60), RUZ - 70 - R.FRandRange(0, 12)), FVector(R.FRandRange(14, 26), R.FRandRange(14, 26), R.FRandRange(8, 14)),
+                    FRotator(R.FRandRange(-20, 20), R.FRandRange(0, 90), R.FRandRange(-20, 20)));
+            // The balustrade's snapped end, its top course cracked off and lying askew on the slab.
+            TurnedBox(P.Steps, FVector(E + Sg * 8, TempleWind::GalleryT + 13, RUZ + 50), FVector(14, 15, 36), FRotator(Sg * 12, 0, 6));
+            TurnedBox(P.Plaster, FVector(E - Sg * 70, TempleWind::GalleryT + 60, RUZ + 7), FVector(52, 17, 6), FRotator(3, 24 * Sg, 4));
+        }
+        // The arch he came in by, high in the +T wall over where the gallery fell: choked with blocks to its lintel.
+        {
+            const float S0 = TempleWind::Legs[3].S0 + 22, S1 = TempleWind::Legs[3].S1 - 22, Z0 = RUZ, Z1 = RUZ + 280;
+            for (float Z = Z0; Z < Z1 - 10; )
+            {
+                const float H_ = FMath::Min(R.FRandRange(34, 60), Z1 - Z);
+                for (float S = S0; S < S1 - 5; )
+                {
+                    const float W = FMath::Min(R.FRandRange(40, 80), S1 - S);
+                    TurnedBox(R.FRand() < .35f ? P.Moss : P.Stone, FVector(S + W * .5f, RT1 - 14 + R.FRandRange(-6, 4), Z + H_ * .5f), FVector(W * .5f + 2, 14, H_ * .5f + 2),
+                        FRotator(R.FRandRange(-6, 6), R.FRandRange(-8, 8), R.FRandRange(-6, 6)));
+                    S += W;
+                }
+                Z += H_;
+            }
+            for (int32 I = 0; I < 6; ++I)   // spilled out over the sill
+                TurnedBox(P.Steps, FVector(R.FRandRange(S0, S1), RT1 - 26 - R.FRandRange(0, 14), RUZ + R.FRandRange(0, 8)), FVector(R.FRandRange(8, 18), R.FRandRange(6, 14), R.FRandRange(5, 10)),
+                    FRotator(R.FRandRange(-25, 25), R.FRandRange(0, 360), R.FRandRange(-25, 25)));
+        }
+        // The stairs' chokes are impassable (ChultTempleRubble.cpp StairChokes): a hidden wall across each flight there,
+        // from the treads to well over the gallery, so no climb over the heap gets by.
+        for (float S0 : {RS0, RS1 - TempleWind::StairW}) Box(P.Block, S0, S0 + TempleWind::StairW, -5420, -5390, RZ + 300, RUZ + 450);
+        // The fall's own ruptures: the broken floor round them, their wells, haze, chips and glow.
         for (const FBox2D& B : HoleBoxes) BrokenFloor(P, B, RZ);
         for (int32 K = 0; K < int32(UE_ARRAY_COUNT(Rifts)); ++K)
         {
@@ -237,32 +306,27 @@ namespace TempleRubbleBuild
             const FVector Ax = (D.B - D.A).GetSafeNormal();
             for (const FVector& E : {D.A, D.B}) TurnedBox(P.Steps, E + Ax * ((E == D.A) ? -2.f : 2.f), FVector(4, D.Radius * .8f, D.Radius * .7f), Ax.Rotation() + FRotator(0, 0, R.FRandRange(0, 90)));
         }
-        // Gravel and spalls over the floor off the lane (visual): denser near the heaps.
-        for (int32 I = 0; I < 520; ++I)
+        // Gravel and spalls over the floor off the lane (visual), on the dais and the stairs' treads too, denser where it fell.
+        for (int32 I = 0; I < 1100; ++I)
         {
             const FVector2D At_(R.FRandRange(RS0 + 15, RS1 - 15), R.FRandRange(RT0 + 15, RT1 - 15));
             if (ChultTempleRubbleHoleAt(At_, 12)) continue;
+            if (ChultTempleRubbleCaveAt(At_.X, At_.Y, 250) < 0 && R.FRand() < .45f) continue;
             const float Lane_ = ChultTempleRubbleLaneDistance(At_);
             if (Lane_ < LaneHalf - 10 && R.FRand() < .85f) continue;   // the lane mostly clear
             const float Big = Lane_ > LaneHalf + 60 && R.FRand() < .25f ? 2.2f : 1.f;
-            TurnedBox(R.FRand() < .2f ? P.StepMoss : P.Steps, FVector(At_.X, At_.Y, RZ + 2.f * Big), FVector(R.FRandRange(3, 8), R.FRandRange(2.5f, 6), R.FRandRange(2.2f, 4.5f)) * Big,
+            TurnedBox(R.FRand() < .2f ? P.StepMoss : P.Steps, FVector(At_.X, At_.Y, ChultTempleRubbleBaseAt(At_) + 2.f * Big), FVector(R.FRandRange(3, 8), R.FRandRange(2.5f, 6), R.FRandRange(2.2f, 4.5f)) * Big,
                 FRotator(R.FRandRange(-12, 12), R.FRandRange(0, 360), R.FRandRange(-12, 12)));
         }
-        // Light: braziers along the lane, wall torches by it, a glyph panel over the crevice.
-        for (const FVector2D& Bz : ChultTempleRubbleBraziers()) Brazier(P, Fires, Bz.X, Bz.Y, RZ);
-        for (float T : {-5450.f, -6350.f, -7250.f, -8150.f}) Torch(P, Fires, 0, RS1, -1, T, RZ + 230, 3800, 800);
-        for (float T : {-5750.f, -6950.f, -8000.f, -8500.f}) Torch(P, Fires, 0, RS0, 1, T, RZ + 230, 3800, 800);
-        for (float S : {75100.f, 76100.f}) Torch(P, Fires, 1, RT0, 1, S, RZ + 260, 3800, 800);
-        for (float S : {74900.f, 75900.f}) Torch(P, Fires, 1, RT1, -1, S, RZ + 260, 3800, 800);
         // Pots by the lane (cigarettes), old skulls.
         for (const FVector2D& J : ChultTempleRubbleJars()) Jars.Add({FVector(J.X, J.Y, RZ), float(R.FRandRange(0, 360)), false, 2});
-        for (int32 I = 0, Made = 0; I < 60 && Made < 7; ++I)
+        for (int32 I = 0, Made = 0; I < 80 && Made < 7; ++I)
         {
-            const FVector2D At_(R.FRandRange(RS0 + 100, RS1 - 100), R.FRandRange(RT0 + 100, RT1 - 100));
+            const FVector2D At_(R.FRandRange(RS0 + 100, RS1 - 100), R.FRandRange(RT0 + 100, TempleWind::PoolT - 200));
             if (ChultTempleRubbleHoleAt(At_, 40) || ChultTempleRubbleLaneDistance(At_) < LaneHalf + 20) continue;
-            Skulls.Add({FVector(At_.X, At_.Y, RZ + 6), FRotator(R.FRandRange(-15, 25), R.FRandRange(0, 360), R.FRandRange(-80, 80))}); ++Made;
+            Skulls.Add({FVector(At_.X, At_.Y, ChultTempleRubbleBaseAt(At_) + 6), FRotator(R.FRandRange(-15, 25), R.FRandRange(0, 360), R.FRandRange(-80, 80))}); ++Made;
         }
         Crevice(P, Glows, R);
-        return 0;
+        return Steps;
     }
 }
