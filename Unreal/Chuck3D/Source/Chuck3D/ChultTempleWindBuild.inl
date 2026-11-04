@@ -518,7 +518,7 @@ namespace TempleWindBuild
             for (int32 I = 0; I < 96; ++I) { const float A = I * UE_TWO_PI / 96; Ring.Add(C + FVector2D(FMath::Cos(A), FMath::Sin(A)) * ChultTempleSanctumSeaRadius(A)); }
             OilRing(P, Ring, true, HZ, 100, C, false);
             Chips(P, R, Ring, C, 22, HZ, false);
-            Glows.Add({FVector(SeaS, SeaT, HZ - 170), 4200.f, 700.f, FLinearColor(.72f, .86f, 1)});
+            Glows.Add({FVector(SeaS, SeaT, HZ - 170), 2400.f, 600.f, FLinearColor(.72f, .86f, 1)});   // (was 4200 / 700: it lit the sealing wizard's robe white from below)
         }
     }
     // The boxes SanctumHoles takes, snapped to the 10 cm grid.

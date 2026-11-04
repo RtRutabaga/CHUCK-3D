@@ -321,7 +321,7 @@ void ATempleSanctumScene::TickFireball(float Dt)
         Sigils(WzFeet, Tip, FMath::Clamp(Clock / 2.5f, 0.f, 1.f) * (Line >= 6 ? 1.6f : 1.f));
         const FVector ToBh = (Centre - Wz->GetActorLocation()).GetSafeNormal2D(), Rt = FVector::CrossProduct(FVector::UpVector, ToBh);
         const float Gather = FCString::Strcmp(Shot, TEXT("FireballGather")) == 0 ? ShotClock : 0.f;   // (the shot's own time: 0 on its first frame)
-        GemLight->SetWorldLocation(Tip); GemLight->SetIntensity(1500.f + (Line >= 6 ? 9000.f * FMath::Clamp(Gather / 2.f, 0.f, 1.f) : 0.f) + 400.f * FMath::Sin(Clock * 11.f));
+        GemLight->SetWorldLocation(Tip); GemLight->SetIntensity(900.f + (Line >= 6 ? 3200.f * FMath::Clamp(Gather / 2.f, 0.f, 1.f) : 0.f) + 250.f * FMath::Sin(Clock * 11.f));   // (2026-11-04, user: at 10,500 a metre off it turned his hat and robe white)
         if (Line <= 3 && Rg)
         {
             // The ranger, over the wizard's shoulder: she knows those sigils.
@@ -367,7 +367,7 @@ void ATempleSanctumScene::TickFireball(float Dt)
                 BeadPos += To.GetSafeNormal() * FMath::Min(Dist, BeadSpeed * Dt);
                 Flare(BeadPos, -To.GetSafeNormal() * 200.f, FireCol(1.f), 34.f, 30.f, .22f, 3.f);
                 for (int32 K = 0; K < 3; ++K) Mote(BeadPos, -To.GetSafeNormal() * 300.f + FMath::VRand() * 120.f, FireCol(.8f), 3.f, .4f, 2.f);
-                GemLight->SetWorldLocation(BeadPos); GemLight->SetIntensity(14000.f);
+                GemLight->SetWorldLocation(BeadPos); GemLight->SetIntensity(9000.f);
                 if (Dist < ATempleBeholder::BodyRadius + 10.f) Detonate();
             }
         }

@@ -171,7 +171,9 @@ void ATempleSeal::Tick(float Dt)
     for (FMote& M : Parts) { M.Age += Dt; M.Vel.Z -= M.Grav * Dt; M.Vel *= FMath::Exp(-1.2f * Dt); M.Pos += M.Vel * Dt; }
     Parts.RemoveAll([](const FMote& M) { return M.Age > M.Life; });
     Glow->SetLightColor(FMath::Lerp(Sea, Spray, Flash));
-    Glow->SetIntensity((bWorked ? 900.f + 4200.f * Coverage : 400.f + 1500.f * Coverage) * (.85f + .15f * FMath::Sin(T * 9.f)) + 26000.f * Flash * Flash);
+    // (2026-11-04, user: the wizard's robe turned partly bright white: at up to 26,000 two metres off this light blew out his
+    // dark velvet. The threads and web are emissive and keep their brightness; only the light they throw is lower.)
+    Glow->SetIntensity((bWorked ? 600.f + 2200.f * Coverage : 300.f + 900.f * Coverage) * (.85f + .15f * FMath::Sin(T * 9.f)) + 9000.f * Flash * Flash);
     DrawWeb();
     DrawThreads();
     DrawMotes();

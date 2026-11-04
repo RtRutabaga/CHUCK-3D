@@ -506,7 +506,7 @@ void ATempleHero::TickWizard(float DeltaSeconds)
     const FVector Here = GetActorLocation();
     const float Snuffed = IsSuppressed() ? .04f + .12f * FMath::Abs(FMath::Sin(W * 23.f)) : 1.f;
     if (Hum) Hum->SetVolumeMultiplier(.32f * (IsSuppressed() ? .05f : 1.f) * (Battle->IsHushed() ? 0.f : 1.f));
-    if (GemLight) GemLight->SetIntensity(Snuffed * (700.f + 250.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 4000.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f)));
+    if (GemLight) GemLight->SetIntensity(Snuffed * (450.f + 160.f * FMath::Sin(W * 7.3f) * FMath::Sin(W * 3.1f + 1.f) + (Act == EAct::Attack ? 1600.f * FMath::Max(0.f, 1.f - FMath::Abs(Animator.Time() - HeroClipData::Wizard::CastFire) * 5.f) : 0.f)));
     const ATempleBeholder* Bh = Battle->GetBeholder();
     ATempleSeal* Seal = Battle->GetSeal();
     FVector LookAt = Act == EAct::Attack && Target.IsValid() ? Target->GetMesh()->GetBoneLocation(TEXT("head")) : Bh ? Bh->GetCentre() : Battle->BeholderSpot();
