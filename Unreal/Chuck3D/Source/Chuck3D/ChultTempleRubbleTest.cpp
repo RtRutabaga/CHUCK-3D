@@ -38,8 +38,8 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
         {TEXT("RubbleHigh"), FVector(79900, -8500, RZ + 950), FVector(78500, -4700, RZ + 150)},
         {TEXT("RubbleGallery"), FVector(78700, -5700, RZ + 260), FVector(78700, -3700, RUZ - 250)},
         {TEXT("RubbleGalleryHigh"), FVector(78300, -5300, RZ + 900), FVector(78700, -3800, RZ)},
-        {TEXT("RubbleStairMinus"), FVector(77650, -6900, RZ + 260), FVector(77100, -5450, RZ + 420)},
-        {TEXT("RubbleStairPlus"), FVector(79750, -6900, RZ + 260), FVector(80300, -5450, RZ + 420)},
+        {TEXT("RubbleStairMinus"), FVector(78150, -5850, RZ + 340), FVector(77000, -5290, RZ + 380)},
+        {TEXT("RubbleStairPlus"), FVector(79250, -5850, RZ + 340), FVector(80400, -5290, RZ + 380)},
         {TEXT("RubbleNave"), FVector(78700, -5900, RZ + 220), FVector(78700, -7700, RZ + 160)},
         {TEXT("RubbleCave"), FVector(78700, -7400, RZ + 200), FVector(78550, -6700, RTop + 300)},
         {TEXT("RubblePier"), FVector(78450, -6250, RZ + 200), FVector(77900, -6900, RZ + 80)},
@@ -114,16 +114,16 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
             while (Run->Trial < UE_ARRAY_COUNT(Trials) && FParse::Value(FCommandLine::Get(), TEXT("ChuckRubbleTrials="), Only) && !Only.Contains(Names[Run->Trial])) { Run->Results.Add(1); ++Run->Trial; }
             if (Run->Trial >= UE_ARRAY_COUNT(Trials))
             {
-                const int32 Floating = ChultTempleRubbleFloating();
+                const int32 Floating = ChultTempleRubbleFloating(), Unsourced = ChultTempleRubbleUnsourced();
                 // Nothing of the trap run or the hall is heard while he is here (user 2026-10-26).
                 int32 TrapSounds = 0, HallSounds = 0;
                 for (TActorIterator<AChultTempleTraps> It(World); It; ++It) TrapSounds += It->SoundsPlayed;
                 if (const ATempleSanctumBattle* Bt = ATempleSanctumBattle::Get(World)) HallSounds = Bt->GetSoundsPlayed();
                 const int32 Heard = (TrapSounds - Run->TrapSounds0) + (HallSounds - Run->HallSounds0);
-                int32 Fails = Run->Failures + (Floating > 0) + (Heard > 0); FString Line = FString::Printf(TEXT(" floating=%d heard=%d"), Floating, Heard);
+                int32 Fails = Run->Failures + (Floating > 0) + (Heard > 0) + (Unsourced > 0); FString Line = FString::Printf(TEXT(" floating=%d heard=%d"), Floating, Heard);
                 for (int32 K = 0; K < Run->Results.Num(); ++K) { Fails += !Run->Results[K]; Line += FString::Printf(TEXT(" %s=%d"), Names[K], Run->Results[K]); }
                 Run->bDone = true; Stop();
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_TEST failures=%d%s blocks=%d drums=%d rifts=%d"), Fails, *Line, ChultTempleRubbleBlocks().Num(), ChultTempleRubbleDrums().Num(), int32(UE_ARRAY_COUNT(Rifts)));
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_TEST failures=%d%s blocks=%d drums=%d rifts=%d unsourced=%d"), Fails, *Line, ChultTempleRubbleBlocks().Num(), ChultTempleRubbleDrums().Num(), int32(UE_ARRAY_COUNT(Rifts)), Unsourced);
                 FPlatformMisc::RequestExitWithStatus(false, Fails ? 1 : 0);
                 return;
             }

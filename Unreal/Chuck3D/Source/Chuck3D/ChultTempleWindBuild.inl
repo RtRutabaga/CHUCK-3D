@@ -369,7 +369,8 @@ namespace TempleWindBuild
     // solid stone to the floor, its open side a wall from the floor up to the soffit and on under the gallery to the
     // back wall, with a plinth course where it stands on floor and a string course along the stair's line.
     // Holes: openings in its open face (frame T in X, Z in Y), the rubble map's crevice under the stair (2026-11-04).
-    void StairMass(FParts& P, float Open, float Into, const TArray<FBox2D>& Holes = {})
+    // Breaks: T ranges where the flight and the masonry under it are gone (the rubble map, 2026-11-04).
+    void StairMass(FParts& P, float Open, float Into, const TArray<FBox2D>& Holes = {}, const TArray<FVector2D>& Breaks = {})
     {
         const float Rr = (UZ - HZ) / (GalleryT - StairFoot);
         auto Soffit = [&](float T) { return FMath::Max(HZ + (T - StairFoot) * Rr - 50, HZ); };
@@ -378,6 +379,9 @@ namespace TempleWindBuild
         {
             const float T0 = FMath::Lerp(StairFoot, GalleryT, I / float(Pieces)), T1 = FMath::Lerp(StairFoot, GalleryT, (I + 1) / float(Pieces));
             if (Soffit(T1) <= HZ + .5f) continue;
+            bool bBroken = false;
+            for (const FVector2D& Bk : Breaks) bBroken |= (T0 + T1) * .5f > Bk.X && (T0 + T1) * .5f < Bk.Y;
+            if (bBroken) continue;
             // The face from the floor (or a hole's top) up to the soffit, split where an opening starts and ends.
             TArray<float> Cuts = {T0, T1};
             for (const FBox2D& H : Holes) for (float C : {float(H.Min.X), float(H.Max.X)}) if (C > T0 && C < T1) Cuts.Add(C);
@@ -387,6 +391,7 @@ namespace TempleWindBuild
                 const float A = Cuts[C], B = Cuts[C + 1], M = (A + B) * .5f;
                 float Z0 = HZ;
                 for (const FBox2D& H : Holes) if (M > H.Min.X && M < H.Max.X) Z0 = FMath::Max(Z0, float(H.Max.Y));
+                if (Z0 >= FMath::Min(Soffit(A), Soffit(B)) - 1) continue;
                 QuadToward(P.Stone, {Open, A, Z0}, {Open, B, Z0}, {Open, B, Soffit(B)}, {Open, A, Soffit(A)}, {Open + Into * 100, M, HZ + 100});
             }
             // The string course: a band 12 cm deep, 5 cm proud, just under the stair's fascia.
@@ -403,15 +408,17 @@ namespace TempleWindBuild
         if (P1 > P0)
         {
             // (Broken where an opening is.)
-            TArray<FVector2D> Runs = {FVector2D(P0, P1)};
-            for (const FBox2D& H : Holes)
+            TArray<FVector2D> Runs = {FVector2D(P0, P1)}, Cut;
+            for (const FBox2D& H : Holes) Cut.Add(FVector2D(H.Min.X, H.Max.X));
+            Cut.Append(Breaks);
+            for (const FVector2D& H : Cut)
             {
                 TArray<FVector2D> Next;
                 for (const FVector2D& Rn : Runs)
                 {
-                    if (H.Max.X <= Rn.X || H.Min.X >= Rn.Y) { Next.Add(Rn); continue; }
-                    if (H.Min.X > Rn.X) Next.Add(FVector2D(Rn.X, H.Min.X));
-                    if (H.Max.X < Rn.Y) Next.Add(FVector2D(H.Max.X, Rn.Y));
+                    if (H.Y <= Rn.X || H.X >= Rn.Y) { Next.Add(Rn); continue; }
+                    if (H.X > Rn.X) Next.Add(FVector2D(Rn.X, H.X));
+                    if (H.Y < Rn.Y) Next.Add(FVector2D(H.Y, Rn.Y));
                 }
                 Runs = Next;
             }
@@ -534,6 +541,7 @@ namespace TempleWindBuild
         TArray<FHole> WallHoles;         // openings in the walls (the crevice's way through)
         TArray<FBox2D> MassHoles;        // openings in the -S stair's masonry face (T, Z): the crevice's mouth under it
         uint32 RiftMask = ~0u;           // the aisle ruptures still open (bit K: SanctumRifts[K]); the rest lie buried
+        TArray<FVector2D> StairBreaks;   // T ranges of both flights fallen away (with their masonry), aligned to StairMass's pieces
     };
 
     // ---- The sanctum: a grand hall, the gallery he enters on, twin stairs down its side walls, a nave
@@ -588,10 +596,26 @@ namespace TempleWindBuild
         }
         for (float S = HS0 + StairW + 250; S < HS1 - StairW - 100; S += 500) if (Kept(S - 18) && Kept(S + 18)) Box(P.Stone, S - 18, S + 18, GalleryT - 2, GalleryT + 28, UZ + 92, UZ + 118);
         // The stairs down the side walls, from the gallery's ends to the floor (13 m down, 25 m long).
-        Steps += Run(P, 1, StairFoot, GalleryT, HS0, HS0 + StairW, HS0 + StairW, HZ, UZ, HZ, R);
-        Steps += Run(P, 1, StairFoot, GalleryT, HS1 - StairW, HS1, HS1 - StairW, HZ, UZ, HZ, R);
+        // (Fallen: in flights either side of each break, its broken masonry's ends faced.)
+        {
+            auto ZAt = [&](float T) { return HZ + (T - StairFoot) * (UZ - HZ) / (GalleryT - StairFoot); };
+            for (float Sg : {-1.f, 1.f})
+            {
+                const float C0 = Sg < 0 ? HS0 : HS1 - StairW, C1 = Sg < 0 ? HS0 + StairW : HS1, Open = Sg < 0 ? HS0 + StairW : HS1 - StairW;
+                float U = StairFoot;
+                if (Fall) for (const FVector2D& Bk : Fall->StairBreaks)
+                {
+                    Steps += Run(P, 1, U, Bk.X, C0, C1, Open, ZAt(U), ZAt(Bk.X), HZ, R);
+                    for (float E : {float(Bk.X), float(Bk.Y)})
+                        QuadToward(P.Stone, {C0, E, HZ}, {C1, E, HZ}, {C1, E, ZAt(E)}, {C0, E, ZAt(E)}, {(C0 + C1) * .5f, (Bk.X + Bk.Y) * .5f, HZ + 100});
+                    U = Bk.Y;
+                }
+                Steps += Run(P, 1, U, GalleryT, C0, C1, Open, ZAt(U), UZ, HZ, R);
+            }
+        }
         // Solid masonry under them (2026-10-24, user), and the floor's ruptures: the pool at their foot, the aisles', the sea tear.
-        StairMass(P, HS0 + StairW, 1, Fall ? Fall->MassHoles : TArray<FBox2D>()); StairMass(P, HS1 - StairW, -1);
+        StairMass(P, HS0 + StairW, 1, Fall ? Fall->MassHoles : TArray<FBox2D>(), Fall ? Fall->StairBreaks : TArray<FVector2D>());
+        StairMass(P, HS1 - StairW, -1, {}, Fall ? Fall->StairBreaks : TArray<FVector2D>());
         SanctumHoles(P, Glows, HoleBoxes, R, !Fall, Fall ? Fall->RiftMask : ~0u);
         // The processional: a paved way with pale kerbs from under the gallery to the dais (visual over the floor).
         const float PW = 190;

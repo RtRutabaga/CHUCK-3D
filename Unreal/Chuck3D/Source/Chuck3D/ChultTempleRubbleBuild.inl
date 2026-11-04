@@ -224,6 +224,7 @@ namespace TempleRubbleBuild
             Fall.WallHoles = {{0, CrawlT - CrawlHalf, CrawlT + CrawlHalf, TempleWind::HZ, TempleWind::HZ + CrawlH}};
             Fall.MassHoles = {FBox2D(FVector2D(CrawlT - CrawlHalf, TempleWind::HZ), FVector2D(CrawlT + CrawlHalf, TempleWind::HZ + CrawlH))};
             Fall.RiftMask = OpenSanctumRifts;
+            Fall.StairBreaks = {FVector2D(StairBreak0, StairBreak1)};
             FParts H; TArray<FFire> HF; TArray<FJarSpot> HJ; TArray<FIdol> HI; TArray<FGlow> HG;
             FRandomStream HR(2026102202);   // (the sanctum's own seed: the same glyphs and treads)
             Steps = TempleWindBuild::Sanctum(H, HF, HJ, HI, HG, HR, &Fall);
@@ -282,9 +283,25 @@ namespace TempleRubbleBuild
                 TurnedBox(P.Steps, FVector(R.FRandRange(S0, S1), RT1 - 26 - R.FRandRange(0, 14), RUZ + R.FRandRange(0, 8)), FVector(R.FRandRange(8, 18), R.FRandRange(6, 14), R.FRandRange(5, 10)),
                     FRotator(R.FRandRange(-25, 25), R.FRandRange(0, 360), R.FRandRange(-25, 25)));
         }
-        // The stairs' chokes are impassable (ChultTempleRubble.cpp StairChokes): a hidden wall across each flight there,
-        // from the treads to well over the gallery, so no climb over the heap gets by.
-        for (float S0 : {RS0, RS1 - TempleWind::StairW}) Box(P.Block, S0, S0 + TempleWind::StairW, -5420, -5390, RZ + 300, RUZ + 450);
+        // The stairs' breaks: their broken ends ragged with jutting courses and spalls (visual), and a hidden wall across
+        // each flight at the far side of its break, from the floor to well over the gallery, so no wall run gets across.
+        const auto ZAt = [](float T) { return RZ + (T - TempleWind::StairFoot) * (TempleWind::UZ - TempleWind::HZ) / (TempleWind::GalleryT - TempleWind::StairFoot); };
+        for (float S0 : {RS0, RS1 - TempleWind::StairW})
+        {
+            Box(P.Block, S0, S0 + TempleWind::StairW, StairBreak1, StairBreak1 + 30, RZ, RUZ + 450);
+            for (float E : {StairBreak0, StairBreak1})
+            {
+                const float Out = E == StairBreak0 ? 1.f : -1.f;   // into the gap
+                for (int32 I = 0; I < 10; ++I)
+                {
+                    const float Z = R.FRandRange(RZ + 20, ZAt(E) - 8);
+                    TurnedBox(R.FRand() < .3f ? P.StepMoss : P.Steps, FVector(R.FRandRange(S0 + 15, S0 + TempleWind::StairW - 15), E + Out * R.FRandRange(3, 18), Z),
+                        FVector(R.FRandRange(14, 32), R.FRandRange(10, 22), R.FRandRange(8, 20)), FRotator(R.FRandRange(-20, 20), R.FRandRange(-25, 25), R.FRandRange(-20, 20)));
+                }
+                // The tread at the break snapped, hanging a little over it.
+                TurnedBox(P.Steps, FVector(S0 + TempleWind::StairW * .5f, E + Out * 14, ZAt(E) - 10), FVector(TempleWind::StairW * .45f, 16, 9), FRotator(-Out * 14, 0, R.FRandRange(-6, 6)));
+            }
+        }
         // The fall's own ruptures: the broken floor round them, their wells, haze, chips and glow.
         for (const FBox2D& B : HoleBoxes) BrokenFloor(P, B, RZ);
         for (int32 K = 0; K < int32(UE_ARRAY_COUNT(Rifts)); ++K)
@@ -306,12 +323,13 @@ namespace TempleRubbleBuild
             const FVector Ax = (D.B - D.A).GetSafeNormal();
             for (const FVector& E : {D.A, D.B}) TurnedBox(P.Steps, E + Ax * ((E == D.A) ? -2.f : 2.f), FVector(4, D.Radius * .8f, D.Radius * .7f), Ax.Rotation() + FRotator(0, 0, R.FRandRange(0, 90)));
         }
-        // Gravel and spalls over the floor off the lane (visual), on the dais and the stairs' treads too, denser where it fell.
+        // Gravel and spalls off the lane (visual), only where something came down: under the vault's holes, by the fallen
+        // piers, the pool's rim, the stairs' breaks, the crevice's pile.
         for (int32 I = 0; I < 1100; ++I)
         {
             const FVector2D At_(R.FRandRange(RS0 + 15, RS1 - 15), R.FRandRange(RT0 + 15, RT1 - 15));
             if (ChultTempleRubbleHoleAt(At_, 12)) continue;
-            if (ChultTempleRubbleCaveAt(At_.X, At_.Y, 250) < 0 && R.FRand() < .45f) continue;
+            if (!ChultTempleRubbleSourced(At_)) continue;   // (only where something came down)
             const float Lane_ = ChultTempleRubbleLaneDistance(At_);
             if (Lane_ < LaneHalf - 10 && R.FRand() < .85f) continue;   // the lane mostly clear
             const float Big = Lane_ > LaneHalf + 60 && R.FRand() < .25f ? 2.2f : 1.f;

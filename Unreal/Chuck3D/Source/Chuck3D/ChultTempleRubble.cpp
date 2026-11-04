@@ -231,24 +231,25 @@ namespace
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_PILE laid=%d of %d"), Laid, int32(UE_ARRAY_COUNT(Up)));
     }
 
+    // Set down on what is under its corners (the highest of them touching): on a rim, the floor-side corners.
+    void Plunge(FRubble& Out, float S, float T, const FVector& Half, const FRotator& Turn, bool bMoss)
+    {
+        FTempleRubbleBlock B; B.Centre = FVector(S, T, 0); B.Half = Half; B.Turn = Turn; B.bMoss = bMoss;
+        float Z = -1e9f;
+        for (float X : {-1.f, 1.f}) for (float Y : {-1.f, 1.f})
+        {
+            const FVector O = Turn.RotateVector(FVector(X * Half.X, Y * Half.Y, -Half.Z));
+            Z = FMath::Max(Z, static_cast<float>(TopAt(Out, FVector2D(S, T) + FVector2D(O)) - O.Z));
+        }
+        B.Centre.Z = Z - 2;
+        Out.Blocks.Add(B);
+    }
+
     // The gallery's middle (2026-11-04, user: "rubble from the balcony"): 16 m of its slab, balustrade and finials fell
     // with the vault over it into the Astral pool 13 m below. Most of it is gone into the Astral; pieces lie on the
     // islands round the piers' feet, and what was flung across the pool lies at its far rim, some teetering over the edge. Nothing stands in the pit (the Astral reads as open void).
     void GalleryFall(FRubble& Out)
     {
-        // Set down on what is under its corners (the highest of them touching): on the rim, the floor-side corners.
-        auto Plunge = [&](float S, float T, const FVector& Half, const FRotator& Turn, bool bMoss)
-        {
-            FTempleRubbleBlock B; B.Centre = FVector(S, T, 0); B.Half = Half; B.Turn = Turn; B.bMoss = bMoss;
-            float Z = -1e9f;
-            for (float X : {-1.f, 1.f}) for (float Y : {-1.f, 1.f})
-            {
-                const FVector O = Turn.RotateVector(FVector(X * Half.X, Y * Half.Y, -Half.Z));
-                Z = FMath::Max(Z, static_cast<float>(TopAt(Out, FVector2D(S, T) + FVector2D(O)) - O.Z));
-            }
-            B.Centre.Z = Z - 2;
-            Out.Blocks.Add(B);
-        };
         auto Any = [](const FTempleRubbleBlock&) { return true; };
         // (Its broken ends sag from the standing runs: ChultTempleRubbleBuild.inl.)
         int32 Laid = 0, Of = 0;
@@ -270,67 +271,37 @@ namespace
         }
         // Flung over the pool to its far rim: slabs teetering over the edge (their floor-side ends on the floor), blocks,
         // a balustrade length and a finial on the floor there.
-        Plunge(78700, -4935, FVector(200, 160, 28), FRotator(-22, 90, 5), false);
-        Plunge(78060, -4945, FVector(140, 120, 26), FRotator(-16, 75, -6), true);
-        Plunge(79330, -4945, FVector(150, 130, 26), FRotator(-18, 100, 4), false);
+        Plunge(Out, 78700, -4935, FVector(200, 160, 28), FRotator(-22, 90, 5), false);
+        Plunge(Out, 78060, -4945, FVector(140, 120, 26), FRotator(-16, 75, -6), true);
+        Plunge(Out, 79330, -4945, FVector(150, 130, 26), FRotator(-18, 100, 4), false);
         const FUp Floor[] = {{78520, -5085, {70, 60, 40}, {0, 20, 0}, false}, {78900, -5125, {60, 55, 35}, {6, -30, -4}, true},
             {78650, -5185, {170, 41, 13}, {0, 8, 0}, false}, {78400, -5150, {18, 15, 13}, {25, 35, 10}, false}, {79000, -5030, {44, 40, 26}, {10, 60, -8}, false}};
         for (const FUp& U : Floor) { ++Of; Laid += Lay(Out, U, FVector2D::ZeroVector, 3.f, 22.f, Any); }
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_GALLERY laid=%d of %d"), Laid, Of);
     }
 
-    // The stairs choked (2026-11-04, user: "blocked off stair cases"): 2 to 6 m up each, what came down off the gallery and
-    // the vault lies heaped across the flight from the wall to its open edge, higher than he can climb, with a slab
-    // leaning on the wall over it. A hidden wall across each flight there makes sure of it (ChultTempleRubbleBuild.inl).
-    void StairChokes(FRubble& Out)
+    // The stairs broken (2026-11-04): what fell from each flight's break went into the Astral rupture under it. A few
+    // pieces of its treads and masonry lie on the hall's floor by the rupture's rim, one tipped over the edge.
+    void StairBreakDebris(FRubble& Out)
     {
         int32 Laid = 0, Of = 0;
+        const float Mid = (StairBreak0 + StairBreak1) * .5f;
         for (float Sg : {-1.f, 1.f})
         {
-            const float Sc = Sg < 0 ? RS0 + TW::StairW * .5f : RS1 - TW::StairW * .5f, In = -Sg;   // the flight's middle; In toward the hall
-            // In layers, the biggest first: across the treads from the wall to the open edge, then on them, then a cap; a
-            // spill down the flight below it. (Kept within the flight and a little over its open edge.)
-            const FUp Up[] = {
-                {Sc, -5660, {90, 60, 40}, {0, 5, 0}, false}, {Sc, -5150, {85, 55, 38}, {0, -5, 0}, true},
-                {Sc - In * 45, -5560, {58, 70, 55}, {0, 10, 0}, false}, {Sc + In * 45, -5520, {58, 64, 50}, {0, -15, 0}, true},
-                {Sc - In * 40, -5400, {60, 66, 58}, {0, -8, 0}, true}, {Sc + In * 48, -5380, {55, 70, 52}, {0, 20, 0}, false},
-                {Sc - In * 42, -5260, {58, 60, 50}, {0, 12, 0}, false}, {Sc + In * 45, -5250, {52, 58, 46}, {0, -20, 0}, false},
-                {Sc - In * 20, -5470, {70, 75, 48}, {8, 25, 6}, false}, {Sc + In * 25, -5330, {65, 70, 45}, {-6, -30, 8}, true},
-                {Sc, -5580, {60, 60, 40}, {10, 40, -6}, false}, {Sc - In * 30, -5300, {55, 55, 40}, {-10, -45, 8}, false},
-                {Sc, -5420, {66, 60, 42}, {6, 15, -8}, true}, {Sc + In * 20, -5500, {50, 55, 36}, {12, 60, 10}, false},
-                {Sc - In * 25, -5360, {46, 50, 34}, {-12, -60, -8}, false}, {Sc, -5450, {48, 50, 32}, {14, 30, 10}, true},
-                {Sc + In * 10, -5380, {40, 44, 28}, {-14, -40, 10}, false}, {Sc - In * 10, -5520, {38, 42, 28}, {10, 70, -10}, false},
-                {Sc, -5480, {190, 41, 13}, {0, 84, 0}, false},   // a balustrade length across the heap
-                {Sc + In * 30, -5760, {40, 44, 28}, {12, -40, 10}, true}, {Sc - In * 35, -5820, {34, 30, 24}, {0, 70, 0}, false},
-                {Sc + In * 15, -5900, {28, 30, 20}, {10, 20, 0}, false}, {Sc - In * 20, -6000, {22, 20, 16}, {0, 35, 0}, false}};
-            // Each set down where it falls, tipped to the flight's slope (and its own turn), lowered until it touches what
-            // is under it: the treads, or the pieces already down (a heap perches; nothing is left hanging).
-            const float Slope = FMath::RadiansToDegrees(FMath::Atan((TW::UZ - TW::HZ) / (TW::GalleryT - TW::StairFoot)));
-            auto SetDown = [&](FTempleRubbleBlock& B, float& Fit)
-            {
-                TArray<FVector> Under;
-                for (float X : {-1.f, 0.f, 1.f}) for (float Y : {-1.f, 0.f, 1.f}) Under.Add(B.Turn.RotateVector(FVector(X * B.Half.X, Y * B.Half.Y, -B.Half.Z)));
-                float Z = -1e9f; TArray<float> Sup;
-                for (const FVector& O : Under) { Sup.Add(TopAt(Out, FVector2D(B.Centre) + FVector2D(O))); Z = FMath::Max(Z, Sup.Last() - static_cast<float>(O.Z)); }
-                B.Centre.Z = Z - 4; Fit = 0;
-                for (int32 I = 0; I < Under.Num(); ++I) Fit += FMath::Min(80.f, static_cast<float>(Z + Under[I].Z - Sup[I]));
-            };
+            const float Face = Sg < 0 ? RS0 + TW::StairW : RS1 - TW::StairW, In = -Sg;   // the flight's open face; In toward the hall
+            Plunge(Out, Face + In * 95, Mid + 30 * Sg, FVector(105, 78, 26), FRotator(-16, Sg < 0 ? 180.f : 0.f, 5 * Sg), Sg > 0);
+            ++Of; ++Laid;
+            const FUp Up[] = {{Face + In * 240, Mid - 70, {66, 52, 34}, {0, 25, 0}, false}, {Face + In * 215, Mid + 120, {58, 46, 30}, {5, -35, 4}, true},
+                {Face + In * 330, Mid + 20, {38, 34, 22}, {0, 60, 0}, false}, {Face + In * 290, Mid - 200, {30, 26, 18}, {8, 15, -6}, false},
+                {Face + In * 180, Mid + 230, {26, 24, 16}, {0, -50, 0}, true}};
             for (const FUp& U : Up)
             {
                 ++Of;
-                FTempleRubbleBlock Best; float BestFit = 1e9f;
-                for (float Sign : {1.f, -1.f})
+                Laid += Lay(Out, U, FVector2D(In, 0), 3.f, 22.f, [](const FTempleRubbleBlock& B)
                 {
-                    FTempleRubbleBlock B; B.Centre = FVector(U.S, U.T, RZ); B.Half = U.Half; B.bMoss = U.bMoss;
-                    B.Turn = FRotator(U.Turn.Pitch, U.Turn.Yaw, Sign * Slope + U.Turn.Roll);
-                    float Fit; SetDown(B, Fit);
-                    if (Fit < BestFit) { BestFit = Fit; Best = B; }
-                }
-                Out.Blocks.Add(Best); ++Laid;
+                    return !ChultTempleRubbleHoleAt(FVector2D(B.Centre), static_cast<float>(FVector2D(B.Half.X, B.Half.Y).Size()) * .6f);
+                }, 120.f);
             }
-            // A slab of the vault leaning on the wall over the heap, along the flight.
-            ++Of;
-            Laid += Lay(Out, {Sc - In * 30, -5370, {230, 70, 22}, {-30, 90, In * 50}, true}, FVector2D(0, -1), 3.f, 40.f, [](const FTempleRubbleBlock&) { return true; }, 560.f);
         }
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_STAIRS laid=%d of %d"), Laid, Of);
     }
@@ -373,22 +344,23 @@ namespace
         FRandomStream R(2026110401);
         Pile(Out);
         GalleryFall(Out);
-        StairChokes(Out);
+        StairBreakDebris(Out);
         FallenPierPieces(Out, R);
-        // Heaps: a few big blocks round a centre, smaller ones on and against them; bigger under the collapses, where the
-        // first tries go. (No fallen round columns since 2026-11-04: the sanctum's piers are square.)
-        int32 Heaps = 0, CaveFirst = 0, Rejected = 0;
-        for (int32 Try = 0; Try < 12000 && Heaps < 95; ++Try)
+        // Heaps: a few big blocks round a centre, smaller ones on and against them, only under the vault's holes (what fell
+        // through them; user 2026-11-04: no unexplained piles). (No fallen round columns since 2026-11-04: the sanctum's
+        // piers are square.)
+        int32 Heaps = 0, Rejected = 0;
+        for (int32 Try = 0; Try < 12000 && Heaps < 60; ++Try)
         {
-            FVector2D H(R.FRandRange(RS0 + 60, RS1 - 60), R.FRandRange(RT0 + 60, RT1 - 60));
-            if (CaveFirst < 70) { const FCave& Cv = Caves[CaveFirst % UE_ARRAY_COUNT(Caves)]; H = FVector2D(Cv.S + R.FRandRange(-1.f, 1.f) * Cv.RS, Cv.T + R.FRandRange(-1.f, 1.f) * Cv.RT); ++CaveFirst; }
-            if (!Clear(H, 90)) continue;
+            const FCave& Cv = Caves[Try % UE_ARRAY_COUNT(Caves)];
+            const FVector2D H(Cv.S + R.FRandRange(-1.f, 1.f) * Cv.RS, Cv.T + R.FRandRange(-1.f, 1.f) * Cv.RT);
+            if (ChultTempleRubbleCaveAt(H.X, H.Y) < 0 || !Clear(H, 90)) continue;
             bool Near = false;
             for (const FTempleRubbleBlock& B : Out.Blocks) Near |= FVector2D::Distance(FVector2D(B.Centre), H) < 120;
             if (Near) continue;
             ++Heaps;
-            const float CaveK = ChultTempleRubbleCaveAt(H.X, H.Y, 150.f) >= 0 ? 1.4f : 1.f;
-            const int32 Count = R.RandRange(4, 9) + (CaveK > 1.f ? 3 : 0);
+            constexpr float CaveK = 1.3f;
+            const int32 Count = R.RandRange(4, 9);
             for (int32 K = 0, Attempt = 0; K < Count && Attempt < Count * 6; ++Attempt)   // (a piece that cannot rest there is tried again)
             {
                 FTempleRubbleBlock B;
@@ -418,7 +390,8 @@ namespace
                 {
                     FTempleRubbleBlock Try_ = B;
                     Try_.Turn = FRotator(FMath::Clamp(Pitch, -40.f, 40.f) + JP, Yaw, FMath::Clamp(Sign * Roll, -40.f, 40.f) + JR);
-                    if (Rest(Out, Try_, K == 0 ? R.FRandRange(4.f, 14.f) : 3.f, 22.f) && (!bAny || Try_.Centre.Z > Best.Centre.Z)) { Best = Try_; bAny = true; }
+                    // (No more than 1.4 m up: what fell through a vault hole spreads; it does not stack into towers.)
+                    if (Rest(Out, Try_, K == 0 ? R.FRandRange(4.f, 14.f) : 3.f, 22.f, 140.f) && (!bAny || Try_.Centre.Z < Best.Centre.Z)) { Best = Try_; bAny = true; }
                 }
                 }
                 if (!bAny) { ++Rejected; continue; }
@@ -461,6 +434,25 @@ namespace
         UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_LAYOUT blocks=%d drums=%d heaps=%d rejected=%d in_passage=%d"), Out.Blocks.Num(), Out.Drums.Num(), Heaps, Rejected, InWay);
         return Out;
     }
+}
+
+bool ChultTempleRubbleSourced(const FVector2D& F)
+{
+    if (ChultTempleRubbleCaveAt(F.X, F.Y, 350.f) >= 0) return true;                                    // under or by a hole in the vault
+    if (F.X > GalleryKeep0 - 300 && F.X < GalleryKeep1 + 300 && F.Y > TempleWind::PoolT - 300) return true;   // the gallery's fall, to the pool's rim
+    for (int32 P : FallenPiers)                                                                        // a fallen pier, where it lies
+        if (FVector2D::Distance(F, FVector2D(TempleWind::HallMid + (P / 5 ? 1.f : -1.f) * TempleWind::NaveHalf, TempleWind::PierT[P % 5])) < 1300) return true;
+    const float BreakT = (StairBreak0 + StairBreak1) * .5f;                                            // a stair's break
+    for (float S : {RS0 + TempleWind::StairW, RS1 - TempleWind::StairW}) if (FVector2D::Distance(F, FVector2D(S, BreakT)) < 550) return true;
+    return F.X < PileS1 + 250 && FMath::Abs(F.Y - CrawlT) < 400;                                       // the crevice's pile
+}
+
+int32 ChultTempleRubbleUnsourced()
+{
+    int32 N = 0;
+    for (const FTempleRubbleBlock& B : Rubble().Blocks)
+        if (!ChultTempleRubbleSourced(FVector2D(B.Centre))) { ++N; UE_LOG(LogTemp, Warning, TEXT("CHUCK_TEMPLE_RUBBLE_UNSOURCED at=%s"), *B.Centre.ToString()); }
+    return N;
 }
 
 int32 ChultTempleRubbleCaveAt(float S, float T, float Grow)
@@ -507,10 +499,9 @@ float ChultTempleRubbleBaseAt(const FVector2D& F)
         if (F.Y < DaisT1) return RZ + DaisH;
         if (F.Y < DaisT1 + 180) return RZ + DaisH * (1.f - (F.Y - DaisT1) / 180.f);
     }
-    // The stairs (their treads' line, the gallery's floor at their heads; a little past the open edge, so a block can
-    // overhang it). (Nothing is set on the gallery's standing runs over the pool: what fell is under them.)
-    const float Margin = F.Y > CrawlT + 250 ? 50.f : 0.f;
-    const bool bFlight = F.X < RS0 + StairW + Margin || F.X > RS1 - StairW - Margin;
+    // The stairs (their treads' line, the gallery's floor at their heads), not where they broke. (Nothing is set on the
+    // gallery's standing runs over the pool: what fell is under them.)
+    const bool bFlight = (F.X < RS0 + StairW || F.X > RS1 - StairW) && !(F.Y > StairBreak0 && F.Y < StairBreak1);
     if (bFlight && F.Y > StairFoot) return F.Y > GalleryT ? RUZ : RZ + (F.Y - StairFoot) * (UZ - HZ) / (GalleryT - StairFoot);
     // The Astral's pits (the pool, the ruptures): their bottoms.
     if (ChultTempleRubbleHoleAt(F)) return RZ - 330;

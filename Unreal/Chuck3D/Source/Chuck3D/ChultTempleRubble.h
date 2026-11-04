@@ -35,21 +35,36 @@ namespace TempleRubble
     // The crevice: its mouth in the -S wall at CrawlT, along -S to the bend at CrawlBendS, then along -T to its end.
     // 80 cm wide and 44 cm high (he is 65 cm standing, 33 on all fours).
     constexpr float CrawlT = -5950, CrawlHalf = 40, CrawlH = 44, CrawlBendS = RS0 - 540, CrawlEndT = CrawlT - 390;
-    // The fall's own Astral ruptures (the sanctum's pool and aisle ruptures are there too: ChultTempleSanctumHoleAt).
+    // The stairs broken (2026-11-04, user: "blocked off stair cases ... close access with new Astral sea areas"): the
+    // middle of each flight, 3.1 m from 4.9 to 6.5 m up (StairMass's 7th and 8th pieces), fell with its masonry into an
+    // Astral rupture torn in the floor under it. The flight below ends at the break; the one above is out of reach.
+    constexpr float StairPiece = (TempleWind::GalleryT - TempleWind::StairFoot) / 16;
+    constexpr float StairBreak0 = TempleWind::StairFoot + 6 * StairPiece, StairBreak1 = TempleWind::StairFoot + 8 * StairPiece;
+    // The fall's own Astral ruptures (the sanctum's pool and aisle ruptures are there too: ChultTempleSanctumHoleAt):
+    // two in the aisles, then the two under the stairs' breaks (their walls' side clipped by the walls).
     struct FRift { float S, T, RS, RT; };
-    constexpr FRift Rifts[] = {{79250, -7000, 130, 110}, {77480, -6950, 110, 150}};
+    constexpr FRift Rifts[] = {{79250, -7000, 130, 110}, {77480, -6950, 110, 150},
+        {RS0 + 80, (StairBreak0 + StairBreak1) * .5f, 190, 200}, {RS1 - 80, (StairBreak0 + StairBreak1) * .5f, 190, 200}};
     // The sanctum's own rupture the rift-fall check walks into: the +S aisle's, past the lane's first leg.
     constexpr float FallRiftS = 79960, FallRiftT = -5600;
     // Where the vault has come down: ragged ellipses of the ceiling fallen in, earth and roots over each, its fall heaped
-    // under it: over the gallery's middle (what brought it down), the nave over the buried sea tear, over the crevice's
-    // pile, before the dais. Their earth cavities (CaveRoom x the radii) never overlap, nor reach the colonnades' beams.
+    // under it: over the gallery's middle and the pool before it (what brought the gallery down), the nave over the buried
+    // sea tear, over the crevice's pile, before the dais. Their earth cavities (CaveRoom x the radii) never overlap, nor
+    // reach the colonnades' beams. Every piece of rubble lies within reach of one of these, a fallen pier, the gallery's
+    // fall or a stair's break (ChultTempleRubbleSourced).
     struct FCave { float S, T, RS, RT; };
-    constexpr FCave Caves[] = {{78700, -4050, 630, 360}, {78550, -6700, 470, 560}, {77500, -6250, 180, 330}, {78400, -8150, 370, 290}};
+    constexpr FCave Caves[] = {{78700, -4200, 630, 520}, {78550, -6700, 470, 560}, {77500, -6250, 180, 330}, {78400, -8150, 370, 290}};
     constexpr float CaveRoom = 1.3f;
 }
 
 // The collapsed vault's hole a frame point (S, T) is under, or -1. Grow widens each.
 int32 ChultTempleRubbleCaveAt(float S, float T, float Grow = 0);
+// Whether a frame point is somewhere rubble could have come down (user 2026-11-04: no unexplained piles): under or
+// beside a hole in the vault, round a fallen pier's stump and along where it fell, the gallery's fall into the pool and
+// its far rim, a stair's break, the crevice's pile.
+bool ChultTempleRubbleSourced(const FVector2D& Frame);
+// Blocks lying anywhere else (0 expected).
+int32 ChultTempleRubbleUnsourced();
 // What the rubble map's floor is at a frame point: 0 floor, 1 the Astral (the sanctum's pool and ruptures, and the
 // fall's own). Grow widens each rupture.
 int32 ChultTempleRubbleHoleAt(const FVector2D& Frame, float Grow = 0);
