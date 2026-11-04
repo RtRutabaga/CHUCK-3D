@@ -202,7 +202,60 @@ namespace TempleRubbleBuild
         for (int32 I : From.T) To.T.Add(Base + I);
     }
 
-    int32 BuildRubble(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FSkull>& Skulls, TArray<FIdol>& Idols, TArray<FGlow>& Glows)
+    // A crack: a thin black line walked across a surface (Pt maps its 2D (U, V) to the frame, Inward the way off it),
+    // wandering, tapering, sometimes forking (visual). Bias pulls its heading (a wall's cracks run down). Ok: may it go on.
+    void Crack(FParts& P, FRandomStream& R, TFunctionRef<FVector(const FVector2D&)> Pt, const FVector& Inward, FVector2D At, FVector2D Dir,
+        const FVector2D& Bias, float W, int32 Steps, TFunctionRef<bool(const FVector2D&)> Ok, int32 Depth = 0)
+    {
+        for (int32 I = 0; I < Steps; ++I)
+        {
+            const FVector2D Next = At + Dir * R.FRandRange(12, 30);
+            if (!Ok(Next)) return;
+            const FVector2D Side = FVector2D(-Dir.Y, Dir.X) * W * .5f;
+            QuadToward(P.Dark, Pt(At - Side), Pt(Next - Side), Pt(Next + Side), Pt(At + Side), Pt((At + Next) * .5f) + Inward * 100);
+            if (Depth == 0 && W > 1.6f && R.FRand() < .2f)
+                Crack(P, R, Pt, Inward, Next, Dir.GetRotated(R.FRand() < .5f ? -45.f : 45.f), Bias, W * .6f, Steps / 3, Ok, 1);
+            At = Next;
+            Dir = (Dir.GetRotated(R.FRandRange(-28, 28)) + Bias * .35f).GetSafeNormal();
+            W = FMath::Max(W * .95f, 1.5f);
+        }
+    }
+
+    // A torch knocked off its mount (2026-11-04): its cup, stem and arm lying on the floor by the wall, black or still
+    // smouldering. At: on the floor (frame); Yaw: the way it lies.
+    void FallenTorch(FParts& P, TArray<FFire>& Fires, const FVector& At, float Yaw, bool bSmoulder)
+    {
+        const FVector D(FMath::Cos(FMath::DegreesToRadians(Yaw)), FMath::Sin(FMath::DegreesToRadians(Yaw)), 0);
+        Drum(P.Iron, At + FVector(0, 0, 7.5f), At + D * 14 + FVector(0, 0, 7.5f), 7.5f, 10);
+        Drum(P.Dark, At + D * 14.2f + FVector(0, 0, 7.5f), At + D * 14.6f + FVector(0, 0, 7.5f), 6.5f, 10);
+        Drum(P.Iron, At - D * 9 + FVector(0, 0, 3.5f), At + FVector(0, 0, 3.5f), 3.5f, 8);
+        Drum(P.Iron, At - D * 31 + FVector(0, 0, 2.5f), At - D * 9 + FVector(0, 0, 2.5f), 2.5f, 6);
+        if (bSmoulder) Fires.Add({At + D * 18 + FVector(0, 0, 2), At + D * 22 + FVector(0, 0, 25), 9, 10, 520, 170});
+    }
+
+    // A great fire bowl knocked over (2026-11-04): its stem and bowl lie off the plinth, the way the blast threw it, the
+    // bowl on its rim, its embers spilled and still burning on the floor beyond. Base: the plinth's middle on the floor.
+    void TippedBowl(FParts& P, TArray<FFire>& Fires, TArray<FGlow>& Glows, FRandomStream& R, const FVector& Base, const FVector2D& Way)
+    {
+        const FVector D(Way.X, Way.Y, 0);
+        const FVector S0 = Base + D * 62 + FVector(0, 0, 20), S1 = S0 + D * 106;
+        Drum(P.Stone, S0, S1, 20, 12);
+        Drum(P.Stone, S1, S1 + D * 12 + FVector(0, 0, 12), 34, 14);
+        const FVector B0 = S1 + D * 10 + FVector(0, 0, 32), B1 = B0 + D * 34;
+        Drum(P.Stone, B0, B1, 52, 16);
+        Drum(P.Dark, B1, B1 + D * .6f, 46, 16);
+        // The embers, spilled out of it: a low fire, ash and coals round it.
+        const FVector E = B1 + D * 70 + FVector(0, 0, -50);
+        Fires.Add({E + FVector(0, 0, 2), E + FVector(0, 0, 45), 34, 26, 2600, 650});
+        for (int32 I = 0; I < 14; ++I)
+        {
+            const FVector C = E + FVector(R.FRandRange(-80, 80), R.FRandRange(-80, 80), 0) + D * R.FRandRange(-40, 40);
+            TurnedBox(P.Dark, FVector(C.X, C.Y, Base.Z + 1.2f), FVector(R.FRandRange(4, 12), R.FRandRange(3, 9), 1.5f), FRotator(R.FRandRange(-6, 6), R.FRandRange(0, 360), R.FRandRange(-6, 6)));
+        }
+        Glows.Add({E + FVector(0, 0, 20), 900.f, 260.f, FLinearColor(1.f, .35f, .08f)});
+    }
+
+    int32 BuildRubble(FParts& P, TArray<FFire>& Fires, TArray<FJarSpot>& Jars, TArray<FSkull>& Skulls, TArray<FIdol>& Idols, TArray<FGlow>& Glows, TArray<FScorch>& Scorches)
     {
         FRandomStream R(2026102602);
         // The fall's own ruptures' boxes, snapped to the 10 cm grid: cut from the hall's floor, built here.
@@ -216,6 +269,7 @@ namespace TempleRubbleBuild
         // gallery's middle, two piers, the sea tear buried, no vault, the arch walled), built at the sanctum's height and
         // let down DropZ. Its torches, braziers and fire bowls are the sanctum's, where the sanctum has them.
         int32 Steps = 0;
+        TArray<FVector> Knocked, KnockedOut, Tipped;
         {
             TempleWindBuild::FSanctumFall Fall;
             Fall.GalleryKept = {FVector2D(TempleWind::HS0, GalleryKeep0), FVector2D(GalleryKeep1, TempleWind::HS1)};
@@ -225,17 +279,99 @@ namespace TempleRubbleBuild
             Fall.MassHoles = {FBox2D(FVector2D(CrawlT - CrawlHalf, TempleWind::HZ), FVector2D(CrawlT + CrawlHalf, TempleWind::HZ + CrawlH))};
             Fall.RiftMask = OpenSanctumRifts;
             Fall.StairBreaks = {FVector2D(StairBreak0, StairBreak1)};
+            Fall.bSeaOpen = true;
+            Fall.KnockedTorches = &Knocked; Fall.KnockedTorchOut = &KnockedOut; Fall.TippedBowls = &Tipped;
+            // The blast (2026-11-04, user: "knock some of the torches over ... some would have gone out in the explosion"):
+            // the torches nearest it were thrown off their mounts, the next ring blown out; the far ones still burn. Of the
+            // two fire bowls before the dais, the -S one went over and the other went cold.
+            Fall.Fate = [](const FVector2D& F, bool bTorch) -> int32
+            {
+                const float D = FVector2D::Distance(F, FVector2D(BlastS, BlastT));
+                if (bTorch) return D < 1720 ? 2 : D < 1950 ? 1 : 0;
+                return D < 800 ? (F.X < TempleWind::HallMid ? 2 : 1) : 0;
+            };
             FParts H; TArray<FFire> HF; TArray<FJarSpot> HJ; TArray<FIdol> HI; TArray<FGlow> HG;
             FRandomStream HR(2026102202);   // (the sanctum's own seed: the same glyphs and treads)
             Steps = TempleWindBuild::Sanctum(H, HF, HJ, HI, HG, HR, &Fall);
             const FVector Shift = At(0, 0, DropZ) - At(0, 0, 0);
-            FSurf* To[] = {&P.Stone, &P.Moss, &P.Plaster, &P.Steps, &P.StepMoss, &P.Ramp, &P.Dark, &P.Iron, &P.Wood, &P.Astral, &P.Block, &P.Veil, &P.Sea};
+            FSurf* To[] = {&P.Stone, &P.Moss, &P.Plaster, &P.Steps, &P.StepMoss, &P.Ramp, &P.Dark, &P.Iron, &P.Wood, &P.Astral, &P.Block, &P.Veil, &P.SeaLow};
             const FSurf* From[] = {&H.Stone, &H.Moss, &H.Plaster, &H.Steps, &H.StepMoss, &H.Ramp, &H.Dark, &H.Iron, &H.Wood, &H.Astral, &H.Block, &H.Veil, &H.Sea};
             for (int32 I = 0; I < int32(UE_ARRAY_COUNT(To)); ++I) AppendShifted(*To[I], *From[I], Shift);
             const FVector Down(0, 0, DropZ);
             for (FFire F : HF) { F.Flame += Down; F.Light += Down; Fires.Add(F); }
             for (FIdol I : HI) { I.At += Down; Idols.Add(I); }
             for (FGlow G : HG) { G.At += Down; Glows.Add(G); }
+        }
+        // The torches knocked off their mounts, on the floor below each, half still smouldering; the fire bowl knocked
+        // over, its embers burning on the floor. Soot over each mount where the flame was torn off, and round each.
+        const FVector Down(0, 0, DropZ);
+        for (int32 I = 0; I < Knocked.Num(); ++I)
+        {
+            const FVector Mount = Knocked[I] + Down, Out = KnockedOut[I].GetSafeNormal();
+            const FVector2D At2 = FVector2D(Mount) + FVector2D(Out) * R.FRandRange(45, 110) + FVector2D(-Out.Y, Out.X) * R.FRandRange(-50, 50);
+            FallenTorch(P, Fires, FVector(At2.X, At2.Y, ChultTempleRubbleBaseAt(At2)), R.FRandRange(0, 360), I % 2 == 0);
+            Scorches.Add({FVector(At2.X, At2.Y, ChultTempleRubbleBaseAt(At2) + 50), FVector(0, 0, -1), FVector(140, 70, 70), .7f});
+            Scorches.Add({Mount + Out * 12 + FVector(0, 0, 60), -Out, FVector(60, 45, 110), .65f});
+        }
+        for (const FVector& T : Tipped)
+        {
+            const FVector Base = T + Down;
+            const FVector2D Way = (FVector2D(Base.X - BlastS, Base.Y - BlastT).GetSafeNormal() + FVector2D(0, 1.5f)).GetSafeNormal();
+            TippedBowl(P, Fires, Glows, R, Base, Way);
+            Scorches.Add({Base + FVector(Way.X, Way.Y, 0) * 240 + FVector(0, 0, 60), FVector(0, 0, -1), FVector(160, 170, 170), .9f});
+        }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_RUBBLE_FIRES knocked_torches=%d tipped_bowls=%d"), Knocked.Num(), Tipped.Num());
+        // Cracks (2026-11-04, user: "cracks running through the walls"): down each wall from under the corbels, up from
+        // the floor near the blast, out from the stairs' breaks, and across the vault out from each hole.
+        {
+            constexpr float WallTop = RTop - 6 * 46, Off = .8f;
+            struct FWall { int32 Axis; float W, Into, U0, U1; };
+            const FWall Walls[] = {{0, RS0, 1, RT0, RT1}, {0, RS1, -1, RT0, RT1}, {1, RT0, 1, RS0, RS1}, {1, RT1, -1, RS0, RS1}};
+            for (const FWall& Wl : Walls)
+            {
+                auto Pt = [&](const FVector2D& Q) { return Wl.Axis == 0 ? FVector(Wl.W + Wl.Into * Off, Q.X, Q.Y) : FVector(Q.X, Wl.W + Wl.Into * Off, Q.Y); };
+                const FVector Inward = Wl.Axis == 0 ? FVector(Wl.Into, 0, 0) : FVector(0, Wl.Into, 0);
+                auto Ok = [&](const FVector2D& Q)
+                {
+                    if (Q.X < Wl.U0 + 10 || Q.X > Wl.U1 - 10 || Q.Y < RZ + 3 || Q.Y > WallTop - 5) return false;
+                    if (Wl.Axis == 0 && Wl.W == RS0 && FMath::Abs(Q.X - CrawlT) < CrawlHalf + 6 && Q.Y < RZ + CrawlH + 6) return false;   // the crevice's way through
+                    if (Wl.Axis == 1 && Wl.W == RT1 && Q.X > TempleWind::Legs[3].S0 - 30 && Q.X < TempleWind::Legs[3].S1 + 30 && Q.Y > RUZ - 5 && Q.Y < RUZ + 315) return false;   // the walled arch
+                    return true;
+                };
+                const int32 Long = Wl.Axis == 0 ? 9 : 6;
+                for (int32 K = 0; K < Long; ++K)
+                {
+                    const FVector2D From(FMath::Lerp(Wl.U0 + 150, Wl.U1 - 150, (K + R.FRandRange(.1f, .9f)) / Long), WallTop - R.FRandRange(10, 120));
+                    Crack(P, R, Pt, Inward, From, FVector2D(R.FRandRange(-.5f, .5f), -1).GetSafeNormal(), FVector2D(0, -1), R.FRandRange(5.f, 8.f), R.RandRange(25, 55), Ok);
+                }
+                // Up from the floor where the blast was nearest (the end wall and the long walls' dais end).
+                for (int32 K = 0; K < 4; ++K)
+                {
+                    const float U = Wl.Axis == 1 ? (Wl.W == RT0 ? BlastS + R.FRandRange(-1500, 1500) : -1e9f) : R.FRandRange(RT0 + 100, BlastT + 600);
+                    if (U < -1e8f) continue;
+                    Crack(P, R, Pt, Inward, FVector2D(U, RZ + 4), FVector2D(R.FRandRange(-.4f, .4f), 1).GetSafeNormal(), FVector2D(0, 1), R.FRandRange(4.f, 6.f), R.RandRange(15, 35), Ok);
+                }
+                // From the stairs' breaks, up and down the wall behind them.
+                if (Wl.Axis == 0)
+                    for (float E : {StairBreak0, StairBreak1})
+                    {
+                        const float Z = RZ + (E - TempleWind::StairFoot) * (TempleWind::UZ - TempleWind::HZ) / (TempleWind::GalleryT - TempleWind::StairFoot);
+                        for (float Up : {1.f, -1.f})
+                            Crack(P, R, Pt, Inward, FVector2D(E, Z + 20 * Up), FVector2D(R.FRandRange(-.5f, .5f), Up).GetSafeNormal(), FVector2D(0, Up), 6.f, R.RandRange(15, 30), Ok);
+                    }
+            }
+            // Across the vault from each hole's rim.
+            const float CZ = RTop - Off;
+            auto Pt = [&](const FVector2D& Q) { return FVector(Q.X, Q.Y, CZ); };
+            auto Ok = [&](const FVector2D& Q) { return Q.X > RS0 + 245 && Q.X < RS1 - 245 && Q.Y > RT0 + 10 && Q.Y < RT1 - 10 && ChultTempleRubbleCaveAt(Q.X, Q.Y, 15) < 0; };
+            for (int32 K = 0; K < int32(UE_ARRAY_COUNT(Caves)); ++K)
+                for (int32 J = 0; J < 7; ++J)
+                {
+                    const float A = R.FRandRange(0, UE_TWO_PI); const FVector2D Dir(FMath::Cos(A), FMath::Sin(A));
+                    FVector2D E(Caves[K].S, Caves[K].T);
+                    for (float D = 0; D < 1500; D += 10) { E = FVector2D(Caves[K].S, Caves[K].T) + Dir * D; if (ChultTempleRubbleCaveAt(E.X, E.Y, 20) < 0) break; }
+                    Crack(P, R, Pt, FVector(0, 0, -1), E, Dir, Dir, R.FRandRange(5.f, 8.f), R.RandRange(12, 30), Ok);
+                }
         }
         // The broken vault over it: the ceiling between the corbels with the four holes, earth and roots over each.
         constexpr int32 Courses = 6; constexpr float Step = 40;
@@ -343,6 +479,46 @@ namespace TempleRubbleBuild
             const FVector2D At_(R.FRandRange(RS0 + 100, RS1 - 100), R.FRandRange(RT0 + 100, TempleWind::PoolT - 200));
             if (ChultTempleRubbleHoleAt(At_, 40) || ChultTempleRubbleLaneDistance(At_) < LaneHalf + 20) continue;
             Skulls.Add({FVector(At_.X, At_.Y, ChultTempleRubbleBaseAt(At_) + 6), FRotator(R.FRandRange(-15, 25), R.FRandRange(0, 360), R.FRandRange(-80, 80))}); ++Made;
+        }
+        // The Fireball's soot (2026-11-04, user: "burn singe on rubble and the snake statues"; M_TempleScorch decals):
+        // under where it burst (the floor before the dais and the dais), up the end wall behind, on the serpent colossi
+        // and the guardian serpents (their sides toward it), and on the rubble near it. None reaches the lane (the decals
+        // would print on Chuck).
+        {
+            const FVector2D Blast(BlastS, BlastT);
+            auto Add = [&](const FVector& At, const FVector& Dir, const FVector& Size, float Strength)
+            {
+                if (ChultTempleRubbleLaneDistance(FVector2D(At)) < FMath::Max(Size.Y, Size.Z) + 140) return;
+                Scorches.Add({At, Dir, Size, Strength});
+            };
+            Add(FVector(BlastS, BlastT, RZ + 250), FVector(0, 0, -1), FVector(700, 820, 820), 1.f);
+            Add(FVector(BlastS, TempleWind::DaisT0 + 520, RZ + TempleWind::DaisH + 250), FVector(0, 0, -1), FVector(600, 1050, 500), .8f);
+            Add(FVector(BlastS, RT0 + 20, RZ + 700), FVector(0, -1, 0), FVector(220, 1300, 650), .6f);
+            for (float Sg : {-1.f, 1.f})
+            {
+                const FVector C(TempleWind::HallMid + Sg * 760, TempleWind::DaisT0 + 330, RZ + TempleWind::DaisH + 246 + 160);
+                const FVector From = FVector(C.X - BlastS, C.Y - BlastT, -120).GetSafeNormal();
+                Add(C - From * 150, From, FVector(650, 300, 380), .95f);
+                Add(C + FVector(0, 0, 300), FVector(0, 0, -1), FVector(600, 240, 240), .6f);
+                for (float T : {-5250.f, -5650.f})
+                {
+                    const FVector G(TempleWind::HallMid + Sg * 420, T, RZ + 175);
+                    const FVector Fr = FVector(G.X - BlastS, G.Y - BlastT, -60).GetSafeNormal();
+                    Add(G - Fr * 90, Fr, FVector(300, 120, 140), .45f);
+                }
+            }
+            // The rubble within 20 m of it, the biggest first, at most 26 pieces, fainter further off.
+            TArray<const FTempleRubbleBlock*> Near;
+            for (const FTempleRubbleBlock& B : ChultTempleRubbleBlocks()) if (FVector2D::Distance(FVector2D(B.Centre), Blast) < 2000) Near.Add(&B);
+            Near.Sort([](const FTempleRubbleBlock& A, const FTempleRubbleBlock& B) { return A.Half.X * A.Half.Y > B.Half.X * B.Half.Y; });
+            for (int32 I = 0; I < FMath::Min(Near.Num(), 26); ++I)
+            {
+                const FTempleRubbleBlock& B = *Near[I];
+                const float D = static_cast<float>(FVector2D::Distance(FVector2D(B.Centre), Blast));
+                const FVector2D Away = (FVector2D(B.Centre) - Blast).GetSafeNormal();
+                const float Span = FMath::Max(B.Half.X, B.Half.Y) * 1.25f + 30;
+                Add(B.Centre + FVector(0, 0, B.Half.Z + 60), FVector(Away.X * .35f, Away.Y * .35f, -1).GetSafeNormal(), FVector(B.Half.Z * 2 + 160, Span, Span), FMath::GetMappedRangeValueClamped(FVector2D(600, 2000), FVector2D(1.f, .45f), D));
+            }
         }
         Crevice(P, Glows, R);
         return Steps;

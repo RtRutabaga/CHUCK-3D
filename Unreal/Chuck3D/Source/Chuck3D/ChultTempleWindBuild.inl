@@ -542,6 +542,13 @@ namespace TempleWindBuild
         TArray<FBox2D> MassHoles;        // openings in the -S stair's masonry face (T, Z): the crevice's mouth under it
         uint32 RiftMask = ~0u;           // the aisle ruptures still open (bit K: SanctumRifts[K]); the rest lie buried
         TArray<FVector2D> StairBreaks;   // T ranges of both flights fallen away (with their masonry), aligned to StairMass's pieces
+        bool bSeaOpen = false;           // the sea tear still open (2026-11-04: "some of the water world astral rip")
+        // What the blast did to each fire (frame S, T of a torch's mount or a bowl's middle; bTorch for wall torches):
+        // 0 still burning, 1 blown out, 2 knocked down (a torch off its mount, a bowl over). Null: all burning.
+        TFunction<int32(const FVector2D&, bool)> Fate;
+        // Out: the torches knocked off their mounts (frame: the cup where it hung, X/Y the way out from the wall) and the
+        // fire bowls knocked over (frame: the bowl's middle on the floor); the rubble map lays them where they fell.
+        TArray<FVector>* KnockedTorches = nullptr; TArray<FVector>* KnockedTorchOut = nullptr; TArray<FVector>* TippedBowls = nullptr;
     };
 
     // ---- The sanctum: a grand hall, the gallery he enters on, twin stairs down its side walls, a nave
@@ -556,9 +563,40 @@ namespace TempleWindBuild
         // came in by is choked (its wall whole behind the rubble); the fall's own ruptures and the crevice cut.
         if (Fall)
         {
-            HoleBoxes.Pop();
+            if (!Fall->bSeaOpen) HoleBoxes.Pop();
             for (int32 K = int32(UE_ARRAY_COUNT(SanctumRifts)) - 1; K >= 0; --K) if (!(Fall->RiftMask & (1u << K))) HoleBoxes.RemoveAt(1 + K);
         }
+        // The fires, as the blast left them (fallen hall): burning, out (cold cup, no flame), or knocked down.
+        auto FateOf = [&](const FVector2D& F, bool bTorch) { return Fall && Fall->Fate ? Fall->Fate(F, bTorch) : 0; };
+        auto WallTorch = [&](int32 Axis, float W, float Into, float U, float Z, float Intensity, float Radius)
+        {
+            auto L = [&](float O, float A, float Zz) { return Axis == 0 ? FVector(W + Into * O, U + A, Zz) : FVector(U + A, W + Into * O, Zz); };
+            const int32 F = FateOf(Axis == 0 ? FVector2D(W, U) : FVector2D(U, W), true);
+            if (F == 2)
+            {
+                // Its mount alone: the wall plate and the arm snapped short, bent down.
+                const FVector A = L(0, -6, Z - 46), B = L(4, 6, Z - 14);
+                Box(P.Iron, A.X, B.X, A.Y, B.Y, Z - 46, Z - 14);
+                TurnedBox(P.Iron, L(7, 0, Z - 27), FVector(Axis == 0 ? 6.f : 2.5f, Axis == 0 ? 2.5f : 6.f, 2.5f), FRotator(0, 0, 0) + FRotator(Axis == 0 ? -35.f * Into : 0.f, 0, Axis == 1 ? 35.f * Into : 0.f));
+                if (Fall->KnockedTorches) { Fall->KnockedTorches->Add(L(24, 0, Z - 10)); Fall->KnockedTorchOut->Add(L(1, 0, 0) - L(0, 0, 0)); }
+                return;
+            }
+            Torch(P, Fires, Axis, W, Into, U, Z, Intensity, Radius);
+            if (F == 1) { Fires.Pop(); Drum(P.Dark, L(24, 0, Z - 3), L(24, 0, Z - 2), 6.5f, 10); }   // burnt out: a black cup
+        };
+        auto Bowl = [&](float S, float T, float Z, bool bGreat)
+        {
+            const int32 F = FateOf(FVector2D(S, T), false);
+            if (F == 2 && bGreat)
+            {
+                // Knocked over: its stepped plinth stands; the stem and bowl lie where they fell (the rubble map).
+                Box(P.Stone, S - 70, S + 70, T - 70, T + 70, Z, Z + 24); Box(P.Stone, S - 56, S + 56, T - 56, T + 56, Z + 24, Z + 44);
+                if (Fall->TippedBowls) Fall->TippedBowls->Add(FVector(S, T, Z));
+                return;
+            }
+            if (bGreat) GreatBrazier(P, Fires, S, T, Z); else Brazier(P, Fires, S, T, Z);
+            if (F >= 1) Fires.Pop();   // cold
+        };
         L.FloorHoles = HoleBoxes;   // the broken floor (2026-10-24)
         TArray<FHole> WallHoles = {{3, Legs[3].S0, Legs[3].S1, UZ, UZ + 280}};
         if (Fall) { L.bCeiling = false; L.FloorHoles.Append(Fall->FloorHoles); WallHoles = Fall->WallHoles; }
@@ -616,7 +654,7 @@ namespace TempleWindBuild
         // Solid masonry under them (2026-10-24, user), and the floor's ruptures: the pool at their foot, the aisles', the sea tear.
         StairMass(P, HS0 + StairW, 1, Fall ? Fall->MassHoles : TArray<FBox2D>(), Fall ? Fall->StairBreaks : TArray<FVector2D>());
         StairMass(P, HS1 - StairW, -1, {}, Fall ? Fall->StairBreaks : TArray<FVector2D>());
-        SanctumHoles(P, Glows, HoleBoxes, R, !Fall, Fall ? Fall->RiftMask : ~0u);
+        SanctumHoles(P, Glows, HoleBoxes, R, !Fall || Fall->bSeaOpen, Fall ? Fall->RiftMask : ~0u);
         // The processional: a paved way with pale kerbs from under the gallery to the dais (visual over the floor).
         const float PW = 190;
         const float ProcT = PoolT - PoolJag - 10;   // from beyond the pool (2026-10-24)
@@ -646,7 +684,7 @@ namespace TempleWindBuild
                 Box(P.Plaster, S - PierHalf - 8, S + PierHalf + 8, T - PierHalf - 8, T + PierHalf + 8, ArchZ - 120, ArchZ - 90);
                 Box(P.Stone, S - PierHalf - 22, S + PierHalf + 22, T - PierHalf - 22, T + PierHalf + 22, ArchZ - 90, ArchZ - 40);
                 Box(P.Stone, S - PierHalf - 36, S + PierHalf + 36, T - PierHalf - 36, T + PierHalf + 36, ArchZ - 40, ArchZ);
-                Torch(P, Fires, 0, S - Sg * PierHalf, -Sg, T, HZ + 380, 4400, 1000);
+                WallTorch(0, S - Sg * PierHalf, -Sg, T, HZ + 380, 4400, 1000);
                 // the upper colonnade: a pilaster over the pier up to the ceiling's beam
                 Box(P.Stone, S - 50, S + 50, T - 70, T + 70, ArchZ + 70, HTop - 60);
             }
@@ -679,10 +717,10 @@ namespace TempleWindBuild
         // Fires: braziers along the processional, great fire bowls flanking the dais and in the aisles before it.
         for (float Sg : {-1.f, 1.f})
         {
-            Brazier(P, Fires, HallMid + Sg * 420, -5080, HZ);   // at the pool's far edge (was -4300)
-            Brazier(P, Fires, HallMid + Sg * 420, -5975, HZ);
-            GreatBrazier(P, Fires, HallMid + Sg * 600, DaisT1 + 260, HZ);
-            GreatBrazier(P, Fires, HallMid + Sg * 1450, DaisT1 + 420, HZ);
+            Bowl(HallMid + Sg * 420, -5080, HZ, false);   // at the pool's far edge (was -4300)
+            Bowl(HallMid + Sg * 420, -5975, HZ, false);
+            Bowl(HallMid + Sg * 600, DaisT1 + 260, HZ, true);
+            Bowl(HallMid + Sg * 1450, DaisT1 + 420, HZ, true);
         }
         // The dais across the -T end: risen 96 cm, five steps down its front (visual) over a hidden ramp.
         Box(P.Stone, DaisS0, DaisS1, DaisT0, DaisT1, HZ, HZ + DaisH);
@@ -734,16 +772,16 @@ namespace TempleWindBuild
         for (float Sg : {-1.f, 1.f})
         {
             const float W = Sg < 0 ? HS0 : HS1;
-            for (float T : {-7025.f, -7700.f, -8400.f}) Torch(P, Fires, 0, W, -Sg, T, HZ + 360, 4400, 1000);
+            for (float T : {-7025.f, -7700.f, -8400.f}) WallTorch(0, W, -Sg, T, HZ + 360, 4400, 1000);
             for (float K : {.25f, .55f, .85f})
             {
                 const float T = FMath::Lerp(GalleryT, StairFoot, K), Zs = FMath::Lerp(UZ, HZ, K);
-                Torch(P, Fires, 0, W, -Sg, T, Zs + 280, 3800, 800);
+                WallTorch(0, W, -Sg, T, Zs + 280, 3800, 800);
             }
-            Torch(P, Fires, 0, W, -Sg, HT1 - 250, UZ + 230, 3600, 700);
-            Torch(P, Fires, 1, HT0, 1, HallMid + Sg * 1250, HZ + 420, 5200, 1100);
+            WallTorch(0, W, -Sg, HT1 - 250, UZ + 230, 3600, 700);
+            WallTorch(1, HT0, 1, HallMid + Sg * 1250, HZ + 420, 5200, 1100);
         }
-        for (float S : {77500.f, 78150.f, 79250.f, 79900.f}) if (Kept(S)) Torch(P, Fires, 1, HT1, -1, S, UZ + 230, 3600, 700);   // (fallen: those over the slab that fell went with it)
+        for (float S : {77500.f, 78150.f, 79250.f, 79900.f}) if (Kept(S)) WallTorch(1, HT1, -1, S, UZ + 230, 3600, 700);   // (fallen: those over the slab that fell went with it)
         for (float Sg : {-1.f, 1.f}) for (float T : {-8050.f}) Glyphs(P, R, 0, Sg < 0 ? HS0 : HS1, -Sg, T - 160, T + 160, HZ + 420, HZ + 560);
         // Pots: on the gallery and in the hall's far corners (fallen: the rubble map has its own).
         if (Fall) return Steps;

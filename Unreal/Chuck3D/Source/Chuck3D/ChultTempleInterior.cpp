@@ -20,6 +20,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
+#include "Components/DecalComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -209,7 +210,7 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
-    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil,Sea;};
+    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil,Sea,SeaLow;};   // (SeaLow: the rubble map's sea tear, its sea lower)
     // A box in the frame (closed, faces outward).
     void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1)
     {
@@ -421,6 +422,9 @@ namespace
     struct FJarSpot{FVector At;float Yaw;bool bUrn;int32 Cigarettes;};
     struct FIdol{FVector At;float Yaw;float Radius;};
     struct FSkull{FVector At;FRotator Rotation;};
+    // Soot from the Fireball (the rubble map, 2026-11-04): a decal box at At (frame), projecting along Dir (frame), Size its
+    // depth along Dir and its half-width and half-height; Strength 0..1.
+    struct FScorch{FVector At,Dir,Size;float Strength;};
     // An iron wall torch on the wall plane (Axis 0: the wall is at S=W; 1: at T=W),
     // at U along it, pointing Into (+1/-1 along the axis) with its cup's rim at Z.
     void Torch(FParts& P,TArray<FFire>& Fires,int32 Axis,float W,float Into,float U,float Z,float Intensity=4200,float Radius=650)
@@ -1006,7 +1010,8 @@ void BuildChultTempleInterior(AActor* Owner)
     TArray<FGlow> Glows;
     Built.Steps+=TempleWindBuild::BuildWind(P,Fires,Jars,Skulls,Idols,Glows);
     // ---- The rubble map (October 26; ChultTempleRubbleBuild.inl): where the Fireball throws him.
-    Built.Steps+=TempleRubbleBuild::BuildRubble(P,Fires,Jars,Skulls,Idols,Glows);   // (the sanctum fallen in since 2026-11-04)
+    TArray<FScorch> Scorches;
+    Built.Steps+=TempleRubbleBuild::BuildRubble(P,Fires,Jars,Skulls,Idols,Glows,Scorches);   // (the sanctum fallen in since 2026-11-04)
 
     // ---- Emit.
     int32 Missing=0,Triangles=0;
@@ -1036,6 +1041,33 @@ void BuildChultTempleInterior(AActor* Owner)
         UMaterialInstanceDynamic* Mid=UMaterialInstanceDynamic::Create(SeaBase,Sea);
         Mid->SetScalarParameterValue(TEXT("SeaZ"),static_cast<float>((G+At(TempleWind::SeaS,TempleWind::SeaT,TempleWind::HZ-1500)).Z));
         Sea->SetMaterial(0,Mid);
+    }
+    // The rubble map's sea tear (2026-11-04): the same sea, its plane as far under that hall's floor.
+    auto* SeaLow=Emit(Owner,TEXT("ChultTempleInteriorSeaLow"),{{&P.SeaLow,SeaMat}},false,Missing,Triangles);SeaLow->SetCastShadow(false);
+    if(UMaterialInterface* SeaBase=SeaLow->GetMaterial(0))
+    {
+        UMaterialInstanceDynamic* Mid=UMaterialInstanceDynamic::Create(SeaBase,SeaLow);
+        Mid->SetScalarParameterValue(TEXT("SeaZ"),static_cast<float>((G+At(TempleWind::SeaS,TempleWind::SeaT,TempleWind::HZ-1500+TempleRubble::DropZ)).Z));
+        Mid->SetScalarParameterValue(TEXT("Gain"),.55f);   // (that hall is darker - most of its torches are out - so the eye opens and the sea would wash pale)
+        SeaLow->SetMaterial(0,Mid);
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_RUBBLE_SEA tris=%d sea_z=%.0f floor_z=%.0f"),P.SeaLow.T.Num()/3,static_cast<float>((G+At(TempleWind::SeaS,TempleWind::SeaT,TempleWind::HZ-1500+TempleRubble::DropZ)).Z),static_cast<float>((G+At(0,0,TempleRubble::RZ)).Z));
+    }
+    // The Fireball's soot in the rubble map (2026-11-04; Tools/create_temple_scorch.py).
+    if(Scorches.Num())
+    {
+        UMaterialInterface* ScorchBase=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Art/ChultTemple/M_TempleScorch.M_TempleScorch"));Missing+=!ScorchBase;
+        for(int32 I=0;ScorchBase&&I<Scorches.Num();++I)
+        {
+            const FScorch& Sc=Scorches[I];
+            auto* D=NewObject<UDecalComponent>(Owner);D->SetupAttachment(Owner->GetRootComponent());
+            UMaterialInstanceDynamic* Mid=UMaterialInstanceDynamic::Create(ScorchBase,D);
+            Mid->SetScalarParameterValue(TEXT("Strength"),Sc.Strength);Mid->SetScalarParameterValue(TEXT("Seed"),I*1.37f);
+            D->SetDecalMaterial(Mid);D->DecalSize=FVector(Sc.Size.X*.5f,Sc.Size.Y,Sc.Size.Z);D->SetFadeScreenSize(0.f);
+            const FVector Dir=(WorldAt(Sc.Dir.X,Sc.Dir.Y,Sc.Dir.Z)-WorldAt(0,0,0)).GetSafeNormal();
+            D->SetWorldLocationAndRotation(G+AtV(Sc.At),FRotationMatrix::MakeFromX(Dir).Rotator());
+            D->ComponentTags.Add(TEXT("ChultTempleScorch"));D->RegisterComponent();
+        }
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_TEMPLE_RUBBLE_SCORCH decals=%d material=%d"),Scorches.Num(),ScorchBase!=nullptr);
     }
     auto* Block=Emit(Owner,TEXT("ChultTempleInteriorBlock"),{{&P.Block,StoneMat}},true,Missing,Triangles);Block->SetHiddenInGame(true);Block->SetCastShadow(false);
     // The traps' moving parts.

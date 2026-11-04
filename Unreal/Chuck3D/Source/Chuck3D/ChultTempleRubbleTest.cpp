@@ -48,7 +48,12 @@ void ReviewChultTempleRubble(AActor* Owner, AChuckCharacter* Chuck, int32 Failur
         {TEXT("RubbleMouth"), FVector(78000, -6150, RZ + 160), FVector(PileS1, CrawlT, RZ + 60)},
         {TEXT("RubbleMouthLow"), FVector(PileS1 + 220, CrawlT - 80, RZ + 45), FVector(PileS1, CrawlT, RZ + 22)},
         {TEXT("RubbleArch"), FVector(78700, -5100, RZ + 500), FVector(78700, RT1, RUZ + 140)},
-        {TEXT("RubbleDais"), FVector(78100, -6400, RZ + 300), FVector(78700, -8600, RZ + 400)}};
+        {TEXT("RubbleDais"), FVector(78100, -6400, RZ + 300), FVector(78700, -8600, RZ + 400)},
+        {TEXT("RubbleSea"), FVector(78160, -6560, RZ + 600), FVector(78083, -6720, RZ - 300)},
+        {TEXT("RubbleColossus"), FVector(78450, -7500, RZ + 260), FVector(77940, -8470, RZ + 450)},
+        {TEXT("RubbleTorch"), FVector(77450, -7350, RZ + 140), FVector(77080, -7700, RZ + 40)},
+        {TEXT("RubbleBowl"), FVector(78450, -6950, RZ + 220), FVector(78030, -7150, RZ + 30)},
+        {TEXT("RubbleCracks"), FVector(78600, -6900, RZ + 350), FVector(77000, -7050, RZ + 650)}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     Chuck->SetActorHiddenInGame(true);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->SetViewTarget(Camera); PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }

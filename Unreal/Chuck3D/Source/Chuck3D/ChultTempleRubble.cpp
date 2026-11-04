@@ -345,6 +345,8 @@ namespace
         Pile(Out);
         GalleryFall(Out);
         StairBreakDebris(Out);
+        // The sea tear (2026-11-04): a slab of the vault from the hole over the -S row lies half over its +T side, tipped into it.
+        Plunge(Out, TempleWind::SeaS + 10, TempleWind::SeaT + 165, FVector(130, 110, 24), FRotator(-14, -90, 6), true);
         FallenPierPieces(Out, R);
         // Heaps: a few big blocks round a centre, smaller ones on and against them, only under the vault's holes (what fell
         // through them; user 2026-11-04: no unexplained piles). (No fallen round columns since 2026-11-04: the sanctum's
@@ -476,9 +478,11 @@ int32 ChultTempleRubbleHoleAt(const FVector2D& F, float Grow)
         const float Jag = 1.f + .14f * FMath::Sin(6.f * FMath::Atan2(DY, DX) + Rf.S * .1f) + .06f * FMath::Sin(11.f * FMath::Atan2(DY, DX) + Rf.T * .07f);
         if (FMath::Sqrt(DX * DX + DY * DY) * Jag < 1.f) return 1;
     }
-    // The sanctum's own: the pool before the gallery and the aisles' ruptures still open (its sea tear and the rupture
-    // under the crevice's pile lie buried). (ChultTempleSanctumHoleAt's rupture outline.)
-    if (ChultTempleSanctumHoleAt(F, Grow) != 1) return 0;
+    // The sanctum's own: the pool before the gallery, the sea tear and the aisles' ruptures still open (the rupture under
+    // the crevice's pile lies buried). (ChultTempleSanctumHoleAt's rupture outline.)
+    const int32 Sanctum = ChultTempleSanctumHoleAt(F, Grow);
+    if (Sanctum == 2) return 1;   // the sea tear (open here: its fall is an Astral death)
+    if (Sanctum != 1) return 0;
     for (int32 K = 0; K < int32(UE_ARRAY_COUNT(TempleWind::SanctumRifts)); ++K)
     {
         if (OpenSanctumRifts & (1u << K)) continue;

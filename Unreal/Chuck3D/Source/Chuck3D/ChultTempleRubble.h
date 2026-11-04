@@ -28,6 +28,7 @@ namespace TempleRubble
     // and through the -S wall into the rock. (The aisle's rupture there, SanctumRifts[0], lies buried under the pile.)
     constexpr float MouthS = RS0 + TempleWind::StairW, PileS1 = MouthS + 170;
     constexpr uint32 OpenSanctumRifts = 0xE;   // bit K: TempleWind::SanctumRifts[K] still open
+    // The sea tear the wizard was sealing is open here too (2026-11-04, user), a vault slab fallen half over it.
     // The lane's corners, from where he comes to (the first: the +S aisle by the dais) across the hall to the crevice's mouth.
     struct FPt { float S, T; };
     constexpr FPt Lane[] = {{79950, -7650}, {79950, -6250}, {PileS1 + 100, -6250}, {PileS1 + 100, -5950}};
@@ -48,12 +49,17 @@ namespace TempleRubble
     // The sanctum's own rupture the rift-fall check walks into: the +S aisle's, past the lane's first leg.
     constexpr float FallRiftS = 79960, FallRiftT = -5600;
     // Where the vault has come down: ragged ellipses of the ceiling fallen in, earth and roots over each, its fall heaped
-    // under it: over the gallery's middle and the pool before it (what brought the gallery down), the nave over the buried
-    // sea tear, over the crevice's pile, before the dais. Their earth cavities (CaveRoom x the radii) never overlap, nor
+    // under it: over the gallery's middle and the pool before it (what brought the gallery down), the nave, over the
+    // crevice's pile, before the dais, and over each fallen pier (2026-11-04, user: "pillar collapse below roof breaks":
+    // the vault and the beam it carried came down on it). Their earth cavities (CaveRoom x the radii) never overlap, nor
     // reach the colonnades' beams. Every piece of rubble lies within reach of one of these, a fallen pier, the gallery's
     // fall or a stair's break (ChultTempleRubbleSourced).
     struct FCave { float S, T, RS, RT; };
-    constexpr FCave Caves[] = {{78700, -4200, 630, 520}, {78550, -6700, 470, 560}, {77500, -6250, 180, 330}, {78400, -8150, 370, 290}};
+    constexpr FCave Caves[] = {{78700, -4200, 520, 520}, {78750, -6700, 420, 560}, {77450, -5950, 170, 260}, {78400, -8150, 370, 290},
+        {77800, -6760, 300, 330}, {79700, -5150, 230, 280}};
+    // Where the Fireball burst (the beholder's place before the dais, TempleSanctumBattle): what the blast did to the
+    // fires and where its soot lies are measured from here.
+    constexpr float BlastS = TempleWind::HallMid, BlastT = TempleWind::DaisT1 - 150;
     constexpr float CaveRoom = 1.3f;
 }
 
