@@ -2,7 +2,50 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 4 (latest) — the rubble map as the sanctum fallen in (Claude)
+## November 4 (latest, evening) — the Fireball's damage in the rubble map (Claude)
+
+- **Asked:** "Add more damage from the fireball, burn singe on rubble and the snake statues, cracks running through the walls, pillar collapse below roof breaks, and some of the water world astral rip that the wizard was trying to seal in the beholder encounter"; then "knock some of the torches over" and "don't have all of the torches lit, some would have gone out in the explosion".
+- **Source:** `main` at f6c345fb.
+- **Changed** ([../CHULT-TEMPLE-RUBBLE.md](../CHULT-TEMPLE-RUBBLE.md#the-fireballs-damage)):
+  - `Tools/create_temple_scorch.py` (new) creates `M_TempleScorch`, a deferred decal (soot).
+    - It is one custom node with its noise written inline, and it has no specular.
+    - Lessons: two custom nodes each declaring a helper struct drew nothing, the standard Noise node speckled, and dark soot alone did not read on the dark stone.
+  - `ChultTempleInterior.cpp`:
+    - `FScorch` decals (the material loaded by path; /Game/Art is always cooked).
+    - The `SeaLow` mesh for the rubble map's sea tear, with `SeaZ` shifted and `Gain` 0.55.
+    - The `BuildRubble` call takes the scorch list.
+  - `ChultTempleWindBuild.inl`:
+    - `FSanctumFall` gains `bSeaOpen`, `Fate` and outputs for the knocked torches and tipped bowls.
+    - In `Sanctum()`, torches and bowls go through `WallTorch`/`Bowl` wrappers: burning, out (a black cup, no fire) or knocked down (the mount alone, or the plinth alone).
+    - Without a fall, nothing changes.
+  - `ChultTempleRubble.h/.cpp`:
+    - Vault holes over both fallen piers; the nave and crevice holes moved.
+    - `BlastS`/`BlastT`.
+    - The sea tear counts as an Astral hole, with a slab half over it.
+  - `ChultTempleRubbleBuild.inl`:
+    - `Crack`, `FallenTorch` and `TippedBowl`.
+    - Cracks down walls, up near the blast, from the stair breaks and across the vault.
+    - The scorch list, kept off the lane because Chuck takes decals.
+  - `ChultTempleRubbleTest.cpp`: 5 more stills.
+  - `Tools/Verify-Package.ps1`: `wind_glows=55`.
+- **Tested:**
+  - Uncooked rubble test: failures=0 floating=0 heard=0 unsourced=0, with lane, crawl and rift_fall passing; knocked_torches=7, tipped_bowls=1, decals=50 with material=1 (`Local/rubble-fire-2.log`). Stills reviewed.
+  - Packaged `Builds/FireCandidate`:
+    - Verify-Package passed 182 checks (`Local/verify-package-20261104-115635.log`), with the packaged rubble test showing the same counts.
+    - Verify-Menu passed 43/43 (`Local/verify-menu-fire.txt`).
+- **Remaining flaws:**
+  - The rip's sea reads paler and more sky-like than the sanctum's own.
+  - Soot is decals only: no charred stone, smoke or glowing embers in it.
+  - Cracks are flat lines.
+  - Frame time is not measured (about 400k interior triangles, about 50 decals).
+  - Not played by hand.
+- **Contract compatibility:** `Sanctum()`'s fall parameter is still optional, and the sanctum is unchanged. Chuck is unchanged; the decals are kept away from him rather than turning his decals off.
+- **Binary/LFS:** `M_TempleScorch.uasset` (about 10 KB, LFS).
+- **Launcher:** promoted as FireballDamage (receipt a4fd719). The SanctumFallen package is kept and Storm pruned; the backup folder is named `Windows-Previous-20261104-FireballDamage` by the script, though it holds SanctumFallen.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence at the storm's trigger and the plank), or a hand-play pass of the rubble map by the user.
+
+## November 4 — the rubble map as the sanctum fallen in (Claude)
 
 - **Asked:** "make the rubble map look more convincingly like the temple sanctum had partially collapsed in. there should be rubble from the balcony, blocked off stair cases, and only torches where there were torches in the temple sanctum map". Follow-up, mid-task: every piece of rubble must have fallen from somewhere discernible; no unexplained or unrealistically stacked piles and nothing floating; new Astral areas may close off access.
 - **Source:** `main` at ebdccc18.

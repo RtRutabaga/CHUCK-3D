@@ -6,6 +6,16 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The Fireball's damage in the rubble map (November 4, later, Claude):** the user's request; details in [CHULT-TEMPLE-RUBBLE.md](CHULT-TEMPLE-RUBBLE.md#the-fireballs-damage).
+  - Fires, by distance from where the Fireball burst:
+    - 7 torches were knocked off their mounts onto the floor, half still smouldering;
+    - 4 were blown out;
+    - one great fire bowl was knocked over with its embers burning, and the other went cold;
+    - the far fires still burn.
+  - Soot (a new `M_TempleScorch` decal) lies under the blast, across the dais and up the end wall, on the serpent colossi and guardian serpents, on the rubble near the blast and under each knocked torch.
+  - Cracks run down the walls and across the vault; each toppled pier has a roof hole above it; and the water-world rip the wizard was sealing is open, with a slab half over it.
+  - Verified: the rubble test uncooked and packaged; Verify-Package 182 passes; Verify-Menu 43/43. In the launcher as FireballDamage.
+  - Not yet: the rip's sea reads paler than the sanctum's; the soot is decals only; the cracks are flat lines; not played by hand.
 - **The rubble map is the sanctum fallen in (November 4, Claude):** the user's request and follow-up; details in [CHULT-TEMPLE-RUBBLE.md](CHULT-TEMPLE-RUBBLE.md).
   - The Fireball now throws Chuck into the sanctum itself, partly collapsed. It is built by the sanctum's own builder and set 40 m under the real hall: the same walls, piers, dais, idols and torches. Only the sanctum's torches, braziers and fire bowls light it.
   - What came down:
