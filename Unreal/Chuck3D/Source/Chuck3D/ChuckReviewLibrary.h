@@ -9,6 +9,7 @@ class UAnimSequence;
 class UGroomAsset;
 class UGroomBindingAsset;
 class UMaterialInterface;
+class USkeletalMesh;
 
 /** Explicit refresh for isolated editor asset reviews, which have no game tick. */
 UCLASS()
@@ -30,4 +31,10 @@ public:
     static bool RebuildGroomBinding(UGroomBindingAsset* Binding);
     UFUNCTION(BlueprintCallable, Category="Chuck|Review", meta=(DevelopmentOnly))
     static TArray<FVector> SampleGroomRoots(UGroomAsset* Groom);
+    /** Each LOD's sections and their materials (slot names, as drawn: through the LOD's material map), and with bFix
+     *  each generated LOD's map set so its sections draw with the material of the LOD 0 section they came from
+     *  (2026-11-04: the heroes' reduced LODs drew the wrong materials - the wizard's skirt white, the fighter's beard
+     *  shade as mail). Returns the report (before, and after when fixed). */
+    UFUNCTION(BlueprintCallable, Category="Chuck|Review", meta=(DevelopmentOnly))
+    static FString FixLODMaterials(USkeletalMesh* Mesh, bool bFix);
 };

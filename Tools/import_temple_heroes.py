@@ -375,6 +375,9 @@ def import_hero(name, info):
     try:
         sub = unreal.get_editor_subsystem(unreal.SkeletalMeshEditorSubsystem)
         lod_ok = sub.regenerate_lod(mesh, 4, True, False)
+        # Their LOD material maps go stale across re-imports (2026-11-04: from ~15 m the wizard's skirt drew white,
+        # the fighter's beard shade grey): each reduced section draws its own source section's material.
+        unreal.log(f'CHUCK_HERO_LOD_MATERIALS {name} ' + unreal.ChuckReviewLibrary.fix_lod_materials(mesh, True))
     except Exception as e:
         unreal.log_warning(f'CHUCK_HERO_LOD_FAILED {name} {e}')
     ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)

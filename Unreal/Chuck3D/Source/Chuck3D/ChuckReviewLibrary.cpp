@@ -6,8 +6,11 @@
 #include "GroomAsset.h"
 #include "GroomBindingAsset.h"
 #include "HairStrandsDatas.h"
+#include "Engine/SkeletalMesh.h"
 #if WITH_EDITOR
 #include "AssetCompilingManager.h"
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshLODModel.h"
 #endif
 
 bool UChuckReviewLibrary::RefreshEditorPose(UPoseableMeshComponent* Component)
@@ -134,4 +137,44 @@ TArray<FVector> UChuckReviewLibrary::SampleGroomRoots(UGroomAsset* Groom)
     }
 #endif
     return Roots;
+}
+
+FString UChuckReviewLibrary::FixLODMaterials(USkeletalMesh* Mesh, bool bFix)
+{
+    FString Out;
+#if WITH_EDITOR
+    if (!Mesh) return TEXT("none");
+    FSkeletalMeshModel* Model = Mesh->GetImportedModel();
+    if (!Model || Model->LODModels.Num() == 0) return TEXT("no model");
+    const TArray<FSkeletalMaterial>& Mats = Mesh->GetMaterials();
+    auto SlotName = [&](int32 I) { return Mats.IsValidIndex(I) ? Mats[I].MaterialSlotName.ToString() : FString::Printf(TEXT("#%d"), I); };
+    auto Drawn = [&](int32 L, int32 S)
+    {
+        const int32 Own = Model->LODModels[L].Sections[S].MaterialIndex;
+        const FSkeletalMeshLODInfo* Info = Mesh->GetLODInfo(L);
+        return Info && Info->LODMaterialMap.IsValidIndex(S) && Info->LODMaterialMap[S] != INDEX_NONE ? Info->LODMaterialMap[S] : Own;
+    };
+    auto Report = [&]()
+    {
+        FString R;
+        for (int32 L = 0; L < Model->LODModels.Num(); ++L)
+        {
+            R += FString::Printf(TEXT(" LOD%d:"), L);
+            for (int32 S = 0; S < Model->LODModels[L].Sections.Num(); ++S)
+                R += FString::Printf(TEXT(" %s%s"), *SlotName(Drawn(L, S)), Model->LODModels[L].Sections[S].MaterialIndex != Drawn(L, S) ? TEXT("(mapped)") : TEXT(""));
+        }
+        return R;
+    };
+    Out = TEXT("before") + Report();
+    if (bFix)
+    {
+        // A generated LOD's sections carry the material index of the section they were reduced from: draw with it.
+        for (int32 L = 1; L < Model->LODModels.Num(); ++L)
+            if (FSkeletalMeshLODInfo* Info = Mesh->GetLODInfo(L)) Info->LODMaterialMap.Reset();
+        Mesh->PostEditChange();
+        Mesh->MarkPackageDirty();
+        Out += TEXT(" | after") + Report();
+    }
+#endif
+    return Out;
 }
