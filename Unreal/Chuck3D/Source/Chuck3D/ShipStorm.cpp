@@ -89,6 +89,13 @@ namespace ShipGate
 }
 
 float ShipStormWind() { return GWind; }
+bool ShipRatClearOnDeck(const APawn* Pawn)
+{
+    // On the weather deck (or the quarterdeck, or up the rig) and at least 1.7 m from the companion hatch's middle.
+    if (!Pawn || ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck)) return false;
+    const FVector L = ShipLocal(Pawn->GetActorLocation());
+    return FVector2D::Distance(FVector2D(L.X, L.Y), FVector2D((CompX0 + CompX1) * .5f, (CompY0 + CompY1) * .5f)) >= 170.f;
+}
 bool ShipRuptureOpen() { return GRupture > .3f; }
 bool ShipRuptureSwallows(const FVector& Feet)
 {
@@ -305,7 +312,9 @@ AShipStorm* AShipStorm::Spawn(UWorld* World)
     // (Drawn from the start, a sliver out of sight under the deck, so its shaders are ready when it first shows.)
     S->BuildRupture(0.f);
     // The second part comes when the user's storm track ends (its length; -ChuckShipStormIntenseAt= for tests).
-    if (const USoundWave* Track = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SW_ShipStorm.SW_ShipStorm"))) S->IntenseAt = Track->Duration;
+    // (User 2026-11-05: "only do normal storm for about half the song then fade into storm-intense song and start storm
+    // intense sequence".)
+    if (const USoundWave* Track = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SW_ShipStorm.SW_ShipStorm"))) S->IntenseAt = Track->Duration * .5f;
     FParse::Value(FCommandLine::Get(), TEXT("ChuckShipStormIntenseAt="), S->IntenseAt);
     S->Bolt = NewObject<UProceduralMeshComponent>(S, TEXT("StormBolt"));
     S->Bolt->SetupAttachment(S->RootComponent);
@@ -403,7 +412,9 @@ void AShipStorm::Levels(float Dt)
                 {EDockHuman::PirateCheering, EStep::Cheering}, {EDockHuman::PirateDancer, EStep::Dancer}, {EDockHuman::Jeffries, EStep::Jeffries}};
             for (const auto& T : Talks) if (const ADockNPC* N = Crew->Find(T.Key)) if (N->HasTalkedOnce()) ShipGate::Mark(T.Value);
         }
-    if (!bStarted && ShipGate::IsOpen()) { Begin(); Clock = 0.f; }
+    // (User 2026-11-05: the storm and its music begin only once he is up on the weather deck and clear of the companion, so
+    // that the rupture closing the way below can never leave him there.)
+    if (!bStarted && ShipGate::IsOpen() && ShipRatClearOnDeck(UGameplayStatics::GetPlayerPawn(this, 0))) { Begin(); Clock = 0.f; }
     if (!bStarted) return;
     Clock += Dt;
     const float T = Clock;
@@ -753,9 +764,8 @@ void AShipStorm::TickRupture(float Dt, const APawn* Pawn)
     const FVector2D Mid((CompX0 + CompX1) * .5f, (CompY0 + CompY1) * .5f);
     if (RuptureClock < 0.f)
     {
-        if (!Pawn || ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck)) return;
+        if (!ShipRatClearOnDeck(Pawn)) return;   // (not under his feet as he steps off the ladder)
         const FVector L = ShipLocal(Pawn->GetActorLocation());
-        if (FVector2D::Distance(FVector2D(L.X, L.Y), Mid) < 170.f) return;   // (not under his feet as he steps off the ladder)
         RuptureClock = 0.f;
         SetChuckClimbableBlocked(ShipWorld(FVector(CompX1, Mid.Y, DeckZ)), true);
         if (USoundBase* S = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_AstralSummon_00.SFX_AstralSummon_00")))

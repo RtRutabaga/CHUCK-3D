@@ -186,6 +186,8 @@ private:
 /** The storm's wind now (0 calm .. 1 the full gale, up to 1.3 once it intensifies), for the sails, the flag and the
  *  hanging things (ShipDeck.inl). */
 float ShipStormWind();
+/** He is up on the weather deck, clear of the companion hatch: the storm may begin (2026-11-05). */
+bool ShipRatClearOnDeck(const APawn* Pawn);
 /** The Astral rupture over the companion hatch is open (2026-11-04): the ladder is closed and a death aboard returns him
  *  to the deck. */
 bool ShipRuptureOpen();

@@ -2,7 +2,25 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 5 (latest) — the concertina player's hands; the storm developed (Claude)
+## November 5 (latest, afternoon) — the storm waits for the deck; louder storm music; the second part at half the track (Claude)
+
+- **Asked:** "have the music louder during storm and especially during intense storm. Only do normal storm for about half the song then fade into storm-intense song and start storm intense sequence. make sure storm music and storm doesnt start until after player's on deck, i want to avoid player being able to get below deck once this begins".
+- **Source:** `main` at f8896c33.
+- **Changed** ([../SHIP.md](../SHIP.md#follow-up-november-5)):
+  - `ShipStorm.h/.cpp`: the storm begins only once the gate is open **and** he is on the weather deck 1.7 m or more from the companion hatch (`ShipRatClearOnDeck`); the rupture forms in the same frame. The second part comes at half the storm track's length (101 s).
+  - `DockGameMode.cpp`: the storm track at 75%, the intense track at 100% (other scores 45%), neither ducked under the gale; a 3.5 s crossfade between them.
+  - `ShipTest.cpp`: `chest` checks the storm waits while he is below (`storm_waits`); the storm trials' first-part stills moved before 101 s.
+- **Tested:**
+  - Editor `-ChuckShipTrials=chest+storm_work`: 3/3 (`Local/ship-storm-work-7.log`: storm_waits=1, start on deck, intense at 101.2 s with the music switch).
+  - Packaged `Builds/ShipStorm2Candidate`: Verify-Package 182 checks (`Local/verify-package-20261105-094542.log`; ship 19/19). Verify-Menu 44/44 (`Local/verify-menu-shipstorm2.txt`).
+- **Remaining flaws:** the new levels have not been heard on speakers (100% could clip against the storm's loops); not played by hand. The candidate was first written under `Source/Chuck3D/Builds` (a relative path from the shell's folder) and moved to `Builds/` before the menu check and promotion.
+- **Contract compatibility:** unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as ShipStorm2 (receipt f8896c3: built from the working tree before this commit). ShipStorm kept, HeroLod pruned.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence and the plank out of the storm).
+
+## November 5 — the concertina player's hands; the storm developed (Claude)
 
 - **Asked:** fix the concertina player's hands ("backwards on the concertina"); develop the storm: an Astral rupture at the ladder keeping Chuck above deck, the user's Ship_storm track at the storm's start and Ship_storm_intense after it as the storm intensifies, no concertina switching in the storm, the crew working the ship (captain at the helm, no concertina), and in the intense part more wave influence, more wind and seas crashing on deck; free resources as needed.
 - **Source:** `main` at e0a10f63.

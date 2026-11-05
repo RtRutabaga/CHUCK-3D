@@ -831,8 +831,12 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Done = true;
             Run->bPass = Run->bTop && Chest->IsOpen() && Chest->GetLidAngle() > 95.f && Got == ACigarettePickup::CartonCigarettes && Chuck->GetStaminaLockRemaining() > 30.f
                 && ShipGate::Done(ShipGate::EStep::Chest) && bGate && Cartons == 0 && NewDeaths == 0;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHEST_TRIAL pass=%d could_interact=%d open=%d lid=%.0f cigarettes=%d lock_s=%.1f gate_before=%d gate_now=%d open_gate=%d cartons_left=%d"),
-                Run->bPass, Run->bTop, Chest->IsOpen(), Chest->GetLidAngle(), Got, Chuck->GetStaminaLockRemaining(), Run->Count0, ShipGate::DoneCount(), ShipGate::IsOpen(), Cartons);
+            // (2026-11-05: the gate open below decks, the storm waits until he is up on deck.)
+            const AShipStorm* WaitingStorm = AShipStorm::Get(World);
+            const bool bStormWaits = !WaitingStorm || !WaitingStorm->HasStarted();
+            Run->bPass = Run->bPass && bStormWaits;
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHEST_TRIAL pass=%d could_interact=%d open=%d lid=%.0f cigarettes=%d lock_s=%.1f gate_before=%d gate_now=%d open_gate=%d cartons_left=%d storm_waits=%d"),
+                Run->bPass, Run->bTop, Chest->IsOpen(), Chest->GetLidAngle(), Got, Chuck->GetStaminaLockRemaining(), Run->Count0, ShipGate::DoneCount(), ShipGate::IsOpen(), Cartons, bStormWaits);
             break;
         }
         case ET::Storm:
@@ -851,21 +855,21 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 {TEXT("RollIn25"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 25, false},
                 {TEXT("RollIn45"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 45, false},
                 {TEXT("RollIn70"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 70, false},
-                {TEXT("FullFromBow"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 150, false},
-                {TEXT("FullFromQuarter"), {-1460, 260, QuarterZ + 190}, {600, -60, DeckZ + 230}, 151, false},
-                {TEXT("FullHorizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}, 152, false},
-                {TEXT("FullWeatherSide"), {200, 250, DeckZ + 160}, {300, -2500, DeckZ - 200}, 153, false},
-                {TEXT("FullRat"), {-40, 210, DeckZ + 40}, {500, -150, DeckZ + 110}, 154, false},
-                {TEXT("FullCrew"), {-170, 260, DeckZ + 170}, {90, -40, DeckZ + 100}, 155, false},
-                {TEXT("FullSails"), {900, -520, DeckZ + 160}, {-300, 60, 1900}, 156, false},
-                {TEXT("FullOutside"), {2300, -3600, 1200}, {0, 0, 1000}, 157, false},
-                {TEXT("FullBow"), {2600, -900, 650}, {1500, 0, 450}, 158, false},
-                {TEXT("FullWaterline"), {300, -950, 390}, {300, -430, 300}, 159, false},
-                {TEXT("Spray"), {250, 260, DeckZ + 150}, {450, -420, RailZ + 60}, 159.5f, true},
-                {TEXT("Lightning"), {0, -150, DeckZ + 170}, {300, 2000, DeckZ + 600}, 160, true},
-                {TEXT("LightningDeck"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 161, true},
-                {TEXT("FullQuarters"), {-200, 250, LowerZ + 160}, {-800, -100, LowerZ + 100}, 162, false},
-                {TEXT("FullArrivalHole"), {150, -150, LowerZ + 90}, {125, 420, LowerZ + 80}, 163, false}};
+                {TEXT("FullFromBow"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 80, false},
+                {TEXT("FullFromQuarter"), {-1460, 260, QuarterZ + 190}, {600, -60, DeckZ + 230}, 81, false},
+                {TEXT("FullHorizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}, 82, false},
+                {TEXT("FullWeatherSide"), {200, 250, DeckZ + 160}, {300, -2500, DeckZ - 200}, 83, false},
+                {TEXT("FullRat"), {-40, 210, DeckZ + 40}, {500, -150, DeckZ + 110}, 84, false},
+                {TEXT("FullCrew"), {-170, 260, DeckZ + 170}, {90, -40, DeckZ + 100}, 85, false},
+                {TEXT("FullSails"), {900, -520, DeckZ + 160}, {-300, 60, 1900}, 86, false},
+                {TEXT("FullOutside"), {2300, -3600, 1200}, {0, 0, 1000}, 87, false},
+                {TEXT("FullBow"), {2600, -900, 650}, {1500, 0, 450}, 88, false},
+                {TEXT("FullWaterline"), {300, -950, 390}, {300, -430, 300}, 89, false},
+                {TEXT("Spray"), {250, 260, DeckZ + 150}, {450, -420, RailZ + 60}, 89.5f, true},
+                {TEXT("Lightning"), {0, -150, DeckZ + 170}, {300, 2000, DeckZ + 600}, 90, true},
+                {TEXT("LightningDeck"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, 91, true},
+                {TEXT("FullQuarters"), {-200, 250, LowerZ + 160}, {-800, -100, LowerZ + 100}, 92, false},
+                {TEXT("FullArrivalHole"), {150, -150, LowerZ + 90}, {125, 420, LowerZ + 80}, 93, false}};
             auto StormShot = [&](const TCHAR* Name) { FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / TEXT("Storm") / FString::Printf(TEXT("Storm_%s.png"), Name), true, false); };
             if (Run->Sub == 0)
             {
@@ -875,7 +879,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 {
                     Chuck->SetActorHiddenInGame(false);
                     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
-                    Reset(EShipSpawn::Deck); Storm->SetClock(150.f);
+                    Reset(EShipSpawn::Deck); Storm->SetClock(80.f);
                     Run->Strikes0 = Storm->GetStrikes(); Run->Thunders0 = Storm->GetThunders(); Run->Splashes0 = Storm->GetSplashes(); Run->Sprays0 = Storm->GetSprays();
                     Run->MaxDrops = 0; Run->MaxRoll = 0; Run->WorstMs = 0; Run->Sub = 1; Run->At = Now; Run->Point = 0;
                     break;
@@ -959,7 +963,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Run->MaxPuffs = FMath::Max(Run->MaxPuffs, Storm->GetPuffsShown());
             if (const ADockNPC* Captain = Crew->Find(EDockHuman::PirateCaptain)) { Run->HelmMin = FMath::Min(Run->HelmMin, Captain->GetHelmAngle()); Run->HelmMax = FMath::Max(Run->HelmMax, Captain->GetHelmAngle()); }
             auto WorkShot = [&](const TCHAR* Name) { FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / TEXT("Storm") / FString::Printf(TEXT("Work_%s.png"), Name), true, false); };
-            const float FullAt = 110.f, IntenseFull = Storm->GetIntenseAt() + 40.f;
+            const float FullAt = 72.f, IntenseFull = Storm->GetIntenseAt() + 40.f;
             if (Run->Sub == 0)
             {
                 // The full storm (its first part), the crew on their way; on until they are all at work.
@@ -1024,6 +1028,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
                     if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(V.Eye.X, V.Eye.Y, V.Eye.Z), (SW(V.Aim.X, V.Aim.Y, V.Aim.Z) - SW(V.Eye.X, V.Eye.Y, V.Eye.Z)).Rotation());
                     if (V.bIntense && Storm->GetClock() < IntenseFull) Storm->SetClock(IntenseFull);
+                    if (!V.bIntense && Storm->GetClock() > Storm->GetIntenseAt() - 6.f) Storm->SetClock(FullAt);   // (its first part)
                     Run->Pressed = Now; ++Run->WorkShot;
                 }
                 else if (Step == 1 && Now - Run->Pressed > 2.5)

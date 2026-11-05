@@ -150,7 +150,7 @@ The user supplied two storm tracks with the request to develop the storm ("add t
 | `C:/Users/ashsm/OneDrive/Desktop/Ship_storm.wav` | `SourceAssets/Audio/ShipStorm.wav` | 38,866,972 | `CD9B14464AF9886204F7E6B7FBA84A16AC30538E327F86887EBE138E07FCAF08` | stereo 16-bit 48 kHz, 202.36 s |
 | `C:/Users/ashsm/Downloads/Ship_storm intense.wav` | `SourceAssets/Audio/ShipStormIntense.wav` | 36,186,640 | `302A7A34A8F7D6D67EC135E0CCC71AAA4977EB8FCAE2E14F9049CD5247354533` | stereo 16-bit 48 kHz, 188.40 s |
 
-`Tools/import_ship_music.py` (Unreal 5.7.4, `-AllowCommandletAudio`) imports them as `/Game/Art/Audio/SW_ShipStorm` (played once: `looping=False duration=202.36`, 27,387,171 bytes) and `/Game/Art/Audio/SW_ShipStormIntense` (`looping=True duration=188.40`, 25,189,020 bytes). `DockGameMode` plays the first at 45% from the storm's start wherever he is aboard, and the second, looping, from the storm's second part (when the first has played through). They sink only 12% under the gale (the other scores about 45%). Not heard on speakers by the agent.
+`Tools/import_ship_music.py` (Unreal 5.7.4, `-AllowCommandletAudio`) imports them as `/Game/Art/Audio/SW_ShipStorm` (played once: `looping=False duration=202.36`, 27,387,171 bytes) and `/Game/Art/Audio/SW_ShipStormIntense` (`looping=True duration=188.40`, 25,189,020 bytes). `DockGameMode` plays the first at 75% from the storm's start (once he is on deck) wherever he is aboard, and crossfades into the second, looping at 100%, at the storm's second part, halfway through the first (user, 2026-11-05). Neither is ducked under the gale (the other scores sink about 45%). Not heard on speakers by the agent.
 
 ## The ship's recorded sounds — November 3, 2026 (Claude)
 

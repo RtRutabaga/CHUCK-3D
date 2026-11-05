@@ -540,3 +540,12 @@ At the storm's start the deck's crew stow what they hold (the concertina, the ta
 - The sea washing aboard passes through deck fittings (the capstan, the coamings, the crew's feet) rather than round them, and the crew don't react to it.
 - The rupture's veils follow the sewer's style (oil film); from close by, the nearest can read as a flat sheet.
 - Not played by hand.
+
+### Follow-up (November 5)
+
+User request: "have the music louder during storm and especially during intense storm. Only do normal storm for about half the song then fade into storm-intense song and start storm intense sequence. make sure storm music and storm doesnt start until after player's on deck, i want to avoid player being able to get below deck once this begins since we'll be locking this off with astral sea".
+
+- **When it starts:** with the gate open, the storm (and its music, the crew going to their stations, the rupture) waits until he is on the weather deck (or the quarterdeck or the rig) and at least 1.7 m from the companion hatch (`ShipRatClearOnDeck`). The rupture forms at the same moment, so the way below is closed as the storm begins. Opening the chest in the cabin no longer starts it there.
+- **The second part** now comes halfway through the storm track (101 s), with a 3.5 s crossfade into the intense track.
+- **Louder:** the storm track plays at 75% and the intense track at 100% (the ship's other scores play at 45%), and neither sinks under the gale now.
+- **Tests:** `chest` also checks the storm has not started while he is below (`storm_waits=1`). The `storm` trial's stills and walk moved to 80–93 s and `storm_work`'s first-part stills to 72 s, to stay in the first part.

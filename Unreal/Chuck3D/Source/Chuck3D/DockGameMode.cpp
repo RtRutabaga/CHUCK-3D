@@ -97,6 +97,13 @@ ADockGameMode::ADockGameMode()
     PrimaryActorTick.bCanEverTick = true;
 }
 
+namespace
+{
+    // The ship storm's music (user 2026-11-05: "have the music louder during storm and especially during intense storm"):
+    // the other scores play at .45.
+    constexpr float ShipStormMusicLevel = .75f, ShipIntenseMusicLevel = 1.f;
+}
+
 void ADockGameMode::StartPlay()
 {
     UWorld* World = GetWorld();
@@ -206,8 +213,11 @@ void ADockGameMode::StartPlay()
                 {
                     for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss,Ship,Concertina})
                         if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(2.5f,0.f);
-                    if(Out.IsValid() && Out->IsPlaying()) Out->FadeOut(1.5f,0.f);
-                    In->FadeIn(Region->Mode==31?1.f:2.5f,.45f,Expect);
+                    // (A slow crossfade from the storm track into the intense one; both louder than the ship's music,
+                    // the intense one louder still: user 2026-11-05.)
+                    const float Cross=Region->Mode==31?3.5f:2.5f;
+                    if(Out.IsValid() && Out->IsPlaying()) Out->FadeOut(Cross,0.f);
+                    In->FadeIn(Cross,Intense?ShipIntenseMusicLevel:ShipStormMusicLevel,Expect);
                     Region->StormStart=Now-Expect; Region->Mode=Want;
                     if(Self.IsValid()) Self->MusicRegion=Want;
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIP_STORM_MUSIC track=%s at_s=%.1f storm_s=%.1f"),Intense?TEXT("Intense"):TEXT("Storm"),Expect,Storm->GetClock());
@@ -215,7 +225,7 @@ void ADockGameMode::StartPlay()
                 }
                 if(FMath::Abs(Now-Region->StormStart-Expect)>6.0 && (!Intense || (Expect>1.f && Expect<Length-2.f)))
                 {
-                    In->Stop(); In->FadeIn(.5f,.45f,Expect); Region->StormStart=Now-Expect;
+                    In->Stop(); In->FadeIn(.5f,Intense?ShipIntenseMusicLevel:ShipStormMusicLevel,Expect); Region->StormStart=Now-Expect;
                     UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIP_STORM_MUSIC resync=1 at_s=%.1f"),Expect);
                 }
                 return;
@@ -1370,7 +1380,7 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     // The ship's storm (2026-11-03, ShipStorm.h): the music sinks under the gale, to about half; the storm's own tracks
     // (2026-11-04) only a little, being written for it.
     const AShipStorm* Storm=AShipStorm::Get(GetWorld());
-    const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f, StormTrackDuck=Storm ? 1.f-.12f*FMath::Min(Storm->GetWind(),1.f) : 1.f;
+    const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f, StormTrackDuck=1.f;   // (the storm's own tracks are not ducked under it: 2026-11-05)
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
         if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*(StormTracks.Contains(Track) ? StormTrackDuck : StormDuck)*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
 }
