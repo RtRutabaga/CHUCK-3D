@@ -91,7 +91,7 @@ Verify-Package runs it and requires `CHUCK_TEMPLE_RUBBLE_TEST failures=0 floatin
 
 ## Not done, and known flaws
 
-- **The sea tear's sea** reads paler and more sky-like than the sanctum's own, even at `Gain` 0.55; why is not understood.
+- **The sea tear's sea** reads pale, more sky than water, from most angles. The sanctum's own tear does too in current captures (November 4), so the copy matches it. The cause is in `M_TempleRiftSea` or the lighting, not in this map.
 - **Soot** is decals only: no charred colour in the stone itself, no smoke and no embers glowing in the soot.
 - **Cracks** are flat black lines (no depth) and cross the wall pilasters' backs unseen.
 - **Rubble shapes:** the rubble is boxes in the temple's stone. There are no sculpted break faces, and close up they read as blocks.

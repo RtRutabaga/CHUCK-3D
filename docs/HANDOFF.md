@@ -6,6 +6,10 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The fighter's beard and the wizard's robe (November 4, night, Claude):** the user's request; details in [CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md#the-fighters-beard-and-the-wizards-robe-november-4).
+  - The fighter's beard is a deep young brown with dark roots and a matte finish. It read grey because strands lost their self-shadowing on October 30.
+  - The light from the wizard's own effects (his gem's gather and cast, the seal's glow and flash, the sea tear's under-floor light) is cut by about half or more, so his dark velvet no longer blows out white. The effects themselves are as bright as before.
+  - Verified: sanctum captures; Verify-Package 182 passes; Verify-Menu 43/43. In the launcher as HeroLook.
 - **The Fireball's damage in the rubble map (November 4, later, Claude):** the user's request; details in [CHULT-TEMPLE-RUBBLE.md](CHULT-TEMPLE-RUBBLE.md#the-fireballs-damage).
   - Fires, by distance from where the Fireball burst:
     - 7 torches were knocked off their mounts onto the floor, half still smouldering;

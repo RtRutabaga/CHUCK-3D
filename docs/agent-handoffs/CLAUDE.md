@@ -2,7 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 4 (latest, evening) — the Fireball's damage in the rubble map (Claude)
+## November 4 (latest, night) — the fighter's young beard; the wizard's robe not blown white (Claude)
+
+- **Asked:** "In beholder encounter Currently the fighter's beard reads as white/gray and the wizards robe partially turns bright white, fix this, youthful beard look for fighter".
+- **Source:** `main` at b0a17dd7.
+- **Found:**
+  - The beard was specified dark brown. Since `r.HairStrands.Voxelization=0` (October 30, for Waterdeep) the strands have no self-shadowing and took bright highlights, so it read salt-and-pepper (it was dark in the October 29 portrait).
+  - The robe whiteout came from effect lights a metre or two from his dark velvet. The worst was the Fireball gather shot (the gem light at 10,500 by his hat brim); the seal's glow and break flash and the sea tear's under-floor light also contributed.
+- **Changed** ([../CHULT-TEMPLE-HEROES.md](../CHULT-TEMPLE-HEROES.md#the-fighters-beard-and-the-wizards-robe-november-4)):
+  - The fighter's Beard and BeardJaw grooms: colour (.016, .0095, .0055), root .6, roughness .85, specular .04 (`SourceAssets/Heroes/heroes.json` and the manifest; `MI_Fighter_Beard`, `MI_Fighter_BeardJaw`).
+  - `Tools/set_hero_groom_shading.py` (new): applies a manifest's groom shading to the existing instances, without re-importing the strands.
+  - Light intensities:
+    - `TempleSanctumScene.cpp`: the gather gem 10,500 → 4,100; the bead 14,000 → 9,000.
+    - `TempleHero.cpp`: the gem's cast spike 4,700 → 2,050.
+    - `TempleSeal.cpp`: the glow up to 5,100 → 2,800; the flash 26,000 → 9,000.
+    - `ChultTempleWindBuild.inl`: the sea tear's daylight 4,200 / 700 → 2,400 / 600.
+- **Tested:**
+  - `-ChuckSanctumCapture -ChuckSanctumOnly=portraits+wizard_seal+fireball` passed (`Local/hero-look-3.log`, `-4.log`); stills reviewed (fighter head and figure, the gather shot).
+  - Packaged `Builds/HeroLookCandidate`: Verify-Package passed 182 checks (`Local/verify-package-20261104-145612.log`; the temple heroes' test passed with failures=0). Verify-Menu passed 43/43 (`Local/verify-menu-herolook.txt`).
+- **Remaining flaws:**
+  - The voxel volume stays off, so very fine tips of dark hair can still catch light. Turning it on only in the sanctum would cost about 2 ms; I didn't do it.
+  - The sanctum's sea tear itself reads as pale sky (in `M_TempleRiftSea` or the lighting; not changed here).
+  - Not played by hand.
+- **Contract compatibility:** light intensities and material instance values only. Chuck is unchanged.
+- **Binary/LFS:** two material instances (LFS).
+- **Launcher:** promoted as HeroLook (receipt 3ee3f58). The FireballDamage package is kept and SanctumFallen pruned.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence at the storm's trigger and the plank).
+
+## November 4 (evening) — the Fireball's damage in the rubble map (Claude)
 
 - **Asked:** "Add more damage from the fireball, burn singe on rubble and the snake statues, cracks running through the walls, pillar collapse below roof breaks, and some of the water world astral rip that the wizard was trying to seal in the beholder encounter"; then "knock some of the torches over" and "don't have all of the torches lit, some would have gone out in the explosion".
 - **Source:** `main` at f6c345fb.

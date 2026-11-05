@@ -463,3 +463,25 @@ The kit's strand grooms cover the heroes too: see `SourceAssets/NPCs/README.md` 
   - Her hairline at the temples is still thin.
 
 `Import-TempleHeroes.ps1` now deletes a hero's mesh before re-importing when it has lost a material slot: a re-import keeps the old slots. `Tools/Import-NPCGrooms.ps1 -Set heroes` imports the grooms; `ATempleHero::Setup` attaches them (`NPCGroom.h`).
+
+## The fighter's beard and the wizard's robe (November 4)
+
+User request: "In beholder encounter Currently the fighter's beard reads as white/gray and the wizards robe partially turns bright white, fix this, youthful beard look for fighter".
+
+- **The fighter's beard:** it was specified dark brown, but strand hair has rendered without its voxel volume since October 30 (`r.HairStrands.Voxelization=0`, for Waterdeep's frame rate). The strands lost their self-shadowing and took bright highlights, so the beard read salt-and-pepper grey.
+  - It is now a deep young brown: colour (.016, .0095, .0055), roots darkened .6, roughness .85, specular .04. That is in `SourceAssets/Heroes/heroes.json` and the manifest.
+  - `Tools/set_hero_groom_shading.py` applies a manifest's groom shading to the existing `MI_<Hero>_<Group>` instances without re-importing the strands (`CHUCK_GROOMS_ONLY=Fighter`).
+- **The wizard's robe:** his dark velvet was blown out pale by the lights a metre or two from it. The emissive threads, web and gem keep their brightness; only the light they throw is lower:
+
+| Light | Was | Now |
+| --- | --- | --- |
+| The Fireball cutscene's gem light in the gather (`TempleSanctumScene`) | 10,500 | 4,100 |
+| The thrown bead | 14,000 | 9,000 |
+| His gem's spike on a cast (`TempleHero`) | 4,700 | 2,050 |
+| The seal's glow (`TempleSeal`) | up to 5,100 | 2,800 |
+| The seal's break flash | 26,000 | 9,000 |
+| The sea tear's daylight from under the floor | 4,200, radius 700 | 2,400, radius 600 |
+
+- **Checked:** `-ChuckSanctumCapture -ChuckSanctumOnly=portraits+wizard_seal+fireball`, with the fighter's head and figure stills and the gather shot (`Saved/Screenshots/WindowsEditor/Sanctum/`).
+- **Not done:** the voxel volume stays off, so dark hair can still catch some light at its tips.
+
