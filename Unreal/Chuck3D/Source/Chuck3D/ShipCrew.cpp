@@ -4,6 +4,10 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "ShipSetting.h"
+#include "ShipStorm.h"
+#include "ProceduralMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Engine/StaticMesh.h"
 #include "ShipMusicMap.inl"
 
 using namespace Ship;
@@ -188,7 +192,14 @@ void AShipCrew::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     Beat = ShipScore::Beat(GetWorld());
     for (ADockNPC* N : Crew) if (N) N->SetBeat(Beat);
-    TickFencing(DeltaSeconds);
+    // In the storm (2026-11-04) nobody fences; the crew work as hard as the storm blows.
+    if (bStorm)
+    {
+        const AShipStorm* Storm = AShipStorm::Get(GetWorld());
+        const float Force = Storm ? FMath::Max(Storm->GetWind(), .3f) + Storm->GetIntense() : 1.f;
+        for (ADockNPC* N : Crew) if (N) N->SetStormForce(Force);
+    }
+    else TickFencing(DeltaSeconds);
     // Nobody through the hull: each body (a 24 cm capsule) inside the planking at his hips' height.
     for (const ADockNPC* N : Crew)
         if (N)
@@ -528,4 +539,133 @@ void AShipCrew::TickFencing(float DeltaSeconds)
         bHit |= FVector::Dist2D(Body, C) < R + 27.f && FMath::Abs(Body.Z - C.Z) < 110.f;   // against his body
         if (bHit && Chuck->TakeBite(bHit ? Tip : Body, 1)) { ++FencerHits; UE_LOG(LogTemp, Display, TEXT("CHUCK_FENCER_HIT sanity=%d"), Chuck->GetSanity()); }
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------- the storm
+// (2026-11-04, user: "during storm have the NPC's responding to the storm, doing things sailors would in a storm, the captain
+// at the helm. no concertina held by the concertina player as he is now manning the ship as with the other crewmen".)
+// The lines they work (ship frame): each hauling part runs aft along the deck at hand height from its lead block, up from
+// which it goes aloft to the mast; behind the haulers its tail falls to the deck in a coil. The dancer sweats up a halyard
+// from the main mast's port fife rail.
+namespace
+{
+    struct FHaulLine { FVector Aloft, Block, Hands0, Hands1, Down, Tail; };
+    const FHaulLine MainHaul{ {-478, -42, DeckZ + 940}, {-430, -230, DeckZ + 16}, {-395, -230, DeckZ + 98}, {-150, -230, DeckZ + 92}, {-112, -230, DeckZ + 3}, {-70, -230, DeckZ + 3} };
+    const FHaulLine ForeHaul{ {442, 40, DeckZ + 880}, {335, 235, DeckZ + 16}, {370, 235, DeckZ + 98}, {650, 235, DeckZ + 92}, {688, 235, DeckZ + 3}, {730, 235, DeckZ + 3} };
+    const FVector HalyardPin(-505, 76, DeckZ + 94), HalyardAloft(-505, 72, DeckZ + 1000);
+    // A rope's tube along a path (the ship frame), into a mesh section's arrays.
+    void Tube(TArray<FVector>& V, TArray<FVector>& N, TArray<int32>& T, TArray<FVector2D>& UV, const TArray<FVector>& P, float R)
+    {
+        constexpr int32 Sides = 6;
+        const int32 Base = V.Num();
+        float Run = 0.f;
+        for (int32 I = 0; I < P.Num(); ++I)
+        {
+            if (I) Run += static_cast<float>(FVector::Dist(P[I], P[I - 1]));
+            const FVector D = (P[FMath::Min(I + 1, P.Num() - 1)] - P[FMath::Max(I - 1, 0)]).GetSafeNormal();
+            FVector X = FVector::CrossProduct(D, FVector::UpVector);
+            if (X.SizeSquared() < 1e-4) X = FVector::CrossProduct(D, FVector::ForwardVector);
+            X.Normalize();
+            const FVector Y = FVector::CrossProduct(X, D);
+            for (int32 S = 0; S < Sides; ++S)
+            {
+                const float A = 2.f * PI * S / Sides;
+                const FVector O = X * FMath::Cos(A) + Y * FMath::Sin(A);
+                V.Add(P[I] + O * R); N.Add(O); UV.Add(FVector2D(S / float(Sides), Run / 20.f));
+            }
+        }
+        for (int32 I = 0; I + 1 < P.Num(); ++I)
+            for (int32 S = 0; S < Sides; ++S)
+            {
+                const int32 A = Base + I * Sides + S, B = Base + I * Sides + (S + 1) % Sides, C = A + Sides, D = B + Sides;
+                T.Append({ A, B, C, B, D, C });
+            }
+    }
+    // A coil of rope flaked down on the deck round C.
+    TArray<FVector> Coil(const FVector& C, float Turns = 5.f)
+    {
+        TArray<FVector> P;
+        const int32 Steps = FMath::RoundToInt(Turns * 14);
+        for (int32 K = 0; K <= Steps; ++K)
+        {
+            const float A = K / 14.f * 2.f * PI, R = 7.f + 16.f * K / float(Steps);
+            P.Add(C + FVector(R * FMath::Cos(A), R * FMath::Sin(A), 1.6f + .8f * (K % 14 == 0)));
+        }
+        return P;
+    }
+}
+
+void AShipCrew::BeginStorm()
+{
+    if (bStorm) return;
+    bStorm = true;
+    const auto W = [](float X, float Y, float Z) { return ShipWorld(FVector(X, Y, Z)); };
+    const auto Way = [&](std::initializer_list<FVector2D> Points, float Z) { TArray<FVector> Out; for (const FVector2D& P : Points) Out.Add(W(P.X, P.Y, Z)); return Out; };
+    int32 Sent = 0;
+    const auto Send = [&](EDockHuman Kind, EStormWork Work, const TArray<FVector>& Points, float Yaw, const FVector& A, const FVector& B, float Phase)
+    {
+        if (ADockNPC* N = Find(Kind)) { N->SetStormWork(Work, Points, Yaw, A, B, Phase); ++Sent; }
+    };
+    // The concertina player and the cheering pirate on the main's line to starboard, one either side of it, facing its block.
+    Send(EDockHuman::PirateConcertina, EStormWork::Haul, Way({ {-330, -214} }, DeckZ), 180.f, ShipWorld(MainHaul.Hands0), ShipWorld(MainHaul.Hands1), 0.f);
+    Send(EDockHuman::PirateCheering, EStormWork::Haul, Way({ {185, 90}, {185, -90}, {-60, -246}, {-230, -246} }, DeckZ), 180.f, ShipWorld(MainHaul.Hands0), ShipWorld(MainHaul.Hands1), .04f);
+    // The fencers, their cutlasses put up, on the fore's line to port.
+    Send(EDockHuman::PirateFencerA, EStormWork::Haul, Way({ {430, 251} }, DeckZ), 180.f, ShipWorld(ForeHaul.Hands0), ShipWorld(ForeHaul.Hands1), .5f);
+    Send(EDockHuman::PirateFencerB, EStormWork::Haul, Way({ {530, 219} }, DeckZ), 180.f, ShipWorld(ForeHaul.Hands0), ShipWorld(ForeHaul.Hands1), .54f);
+    // The dancer round the companion (clear of it) to the main mast's port fife rail, sweating up its halyard.
+    Send(EDockHuman::PirateDancer, EStormWork::Sweat, Way({ {-150, 285}, {-400, 255}, {-505, 112} }, DeckZ), -90.f, ShipWorld(HalyardPin), ShipWorld(HalyardAloft), .25f);
+    // The captain round the skylight and the wheel to the helm, behind the wheel facing forward.
+    Send(EDockHuman::PirateCaptain, EStormWork::Helm, Way({ {-1165, -110}, {-1500, -110}, {HelmHub().X - 22.f, 0} }, QuarterZ), 0.f, ShipWorld(HelmHub()), ShipWorld(HelmHub() - FVector(1, 0, 0)), 0.f);
+    // The lines they work, rigged.
+    if (!StormLines)
+    {
+        StormLines = NewObject<UProceduralMeshComponent>(this, TEXT("StormLines"));
+        StormLines->SetupAttachment(RootComponent);
+        StormLines->RegisterComponent();
+        StormLines->SetWorldLocation(ShipOrigin());
+        StormLines->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        // (Hemp: the deck's rope coils' own material.)
+        const UStaticMesh* Coil = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
+        UMaterialInterface* Hemp = Coil ? Coil->GetMaterial(0) : nullptr;
+        if (!Hemp) Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Canvas.M_Canvas"));
+        StormLines->SetMaterial(0, Hemp);
+        if (UMaterialInterface* Wood = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Wood.M_Wood"))) StormLines->SetMaterial(1, Wood);
+    }
+    TArray<FVector> V, N; TArray<int32> T; TArray<FVector2D> UV;
+    TArray<FVector> BV, BN; TArray<int32> BT; TArray<FVector2D> BUV;
+    for (const FHaulLine* L : { &MainHaul, &ForeHaul })
+    {
+        Tube(V, N, T, UV, { L->Aloft, L->Block + FVector(0, 0, 6) }, 1.5f);
+        Tube(V, N, T, UV, { L->Block + FVector((L->Hands0 - L->Block).GetSafeNormal2D() * 6.f), L->Hands0, L->Hands1, L->Down, L->Tail }, 1.5f);
+        Tube(V, N, T, UV, Coil(L->Tail + (L->Tail - L->Down).GetSafeNormal2D() * 22.f - FVector(0, 0, 3)), 1.5f);
+        // The blocks: the lead block's shell at the deck (lashed to a ringbolt), and the one aloft.
+        Tube(BV, BN, BT, BUV, { L->Block - FVector(0, 0, 4), L->Block + FVector(0, 0, 14) }, 6.f);
+        Tube(BV, BN, BT, BUV, { L->Aloft - FVector(0, 0, 9), L->Aloft + FVector(0, 0, 9) }, 6.f);
+    }
+    Tube(V, N, T, UV, { HalyardPin + FVector(0, 0, 12), HalyardAloft }, 1.5f);
+    Tube(V, N, T, UV, { HalyardPin + FVector(0, 0, 4), HalyardPin + FVector(18, 14, -40), FVector(-470, 100, DeckZ + 3) }, 1.5f);
+    Tube(V, N, T, UV, Coil(FVector(-462, 112, DeckZ)), 1.5f);
+    Tube(BV, BN, BT, BUV, { HalyardAloft - FVector(0, 0, 9), HalyardAloft + FVector(0, 0, 9) }, 6.f);
+    StormLines->CreateMeshSection(0, V, T, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+    StormLines->CreateMeshSection(1, BV, BT, BN, BUV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+    StormLines->SetVisibility(true);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_STORM begin=1 sent=%d"), Sent);
+}
+
+void AShipCrew::EndStorm()
+{
+    if (!bStorm) return;
+    bStorm = false;
+    for (ADockNPC* N : Crew) if (N && N->GetStormWork() != EStormWork::None) N->SetStormWork(EStormWork::None, {}, 0.f, FVector::ZeroVector, FVector::ZeroVector, 0.f);
+    if (StormLines) StormLines->SetVisibility(false);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_STORM end=1"));
+}
+
+int32 AShipCrew::GetAtStations(int32* Of) const
+{
+    int32 At = 0, Total = 0;
+    for (const ADockNPC* N : Crew)
+        if (N && N->GetStormWork() != EStormWork::None) { ++Total; At += N->IsAtStormStation(); }
+    if (Of) *Of = Total;
+    return At;
 }

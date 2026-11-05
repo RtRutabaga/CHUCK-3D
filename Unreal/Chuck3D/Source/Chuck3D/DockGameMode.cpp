@@ -145,7 +145,14 @@ void ADockGameMode::StartPlay()
         A.StereoSpread=200.f;
         ConcertinaTrack=ConcertinaComponent;
     }
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent};
+    // The ship's storm (2026-11-04): the user's storm track as it starts, then their intense storm track, looping, once it
+    // has played through and the storm intensifies (ShipStorm.h). Heard everywhere aboard.
+    auto* StormScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ShipStorm.SW_ShipStorm"));
+    auto* StormComponent=StormScore ? UGameplayStatics::CreateSound2D(World,StormScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    auto* IntenseScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ShipStormIntense.SW_ShipStormIntense"));
+    auto* IntenseComponent=IntenseScore ? UGameplayStatics::CreateSound2D(World,IntenseScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    StormTracks={StormComponent,IntenseComponent};
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent,StormComponent,IntenseComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -164,10 +171,10 @@ void ADockGameMode::StartPlay()
                 LoopConfigured && Playing ? 0 : 1,LoopConfigured,Playing);
         },6.f,false);
     }
-    struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; bool OnDeck=false, DeckPending=false; double PendingSince=0; };
+    struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; bool OnDeck=false, DeckPending=false; double PendingSince=0, StormStart=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),StormMusic=TWeakObjectPtr<UAudioComponent>(StormComponent),IntenseMusic=TWeakObjectPtr<UAudioComponent>(IntenseComponent),IntenseScore,ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
@@ -182,6 +189,43 @@ void ADockGameMode::StartPlay()
         if(Chuck && InShip(Chuck->GetActorLocation()))
         {
             using ::ShipScore::ETrack;
+            // The storm (2026-11-04, user: "add this Ship_storm soundtrack for the storm starting, after the song plays have the
+            // storm intensify and switch soundtrack to Ship_storm_intense. no concertina transition during storm"): from the
+            // storm's start, wherever he is aboard, the storm track (31) and, from the storm's second part, the intense one
+            // looping (32). Each is kept at the storm's own clock (a checkpoint or a test that jumps it brings it along).
+            const AShipStorm* Storm=AShipStorm::Get(World);
+            if(Storm && Storm->HasStarted() && StormMusic.IsValid())
+            {
+                const bool Intense=Storm->GetClock()>=Storm->GetIntenseAt() && IntenseMusic.IsValid();
+                const int32 Want=Intense?32:31;
+                const float Length=Intense && IntenseScore ? FMath::Max(IntenseScore->Duration,1.f) : 1e9f;
+                const float Expect=Intense ? FMath::Fmod(Storm->GetClock()-Storm->GetIntenseAt(),Length) : Storm->GetClock();
+                const double Now=World->GetAudioTimeSeconds();
+                const TWeakObjectPtr<UAudioComponent> In=Intense?IntenseMusic:StormMusic,Out=Intense?StormMusic:IntenseMusic;
+                if(Region->Mode!=Want)
+                {
+                    for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss,Ship,Concertina})
+                        if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(2.5f,0.f);
+                    if(Out.IsValid() && Out->IsPlaying()) Out->FadeOut(1.5f,0.f);
+                    In->FadeIn(Region->Mode==31?1.f:2.5f,.45f,Expect);
+                    Region->StormStart=Now-Expect; Region->Mode=Want;
+                    if(Self.IsValid()) Self->MusicRegion=Want;
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIP_STORM_MUSIC track=%s at_s=%.1f storm_s=%.1f"),Intense?TEXT("Intense"):TEXT("Storm"),Expect,Storm->GetClock());
+                    return;
+                }
+                if(FMath::Abs(Now-Region->StormStart-Expect)>6.0 && (!Intense || (Expect>1.f && Expect<Length-2.f)))
+                {
+                    In->Stop(); In->FadeIn(.5f,.45f,Expect); Region->StormStart=Now-Expect;
+                    UE_LOG(LogTemp,Display,TEXT("CHUCK_SHIP_STORM_MUSIC resync=1 at_s=%.1f"),Expect);
+                }
+                return;
+            }
+            if(Region->Mode==31 || Region->Mode==32)
+            {
+                // A calm (the menu's fresh start aboard): the storm's music goes and the ship's comes back.
+                for(const TWeakObjectPtr<UAudioComponent>& Track : {StormMusic,IntenseMusic}) if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
+                Region->Mode=-1;
+            }
             const bool OnDeck=ShipSpaceAt(Chuck->GetActorLocation())==int32(EShipSpawn::Deck);
             const double Now=World->GetAudioTimeSeconds();
             auto Player=[&](ETrack T){ return T==ETrack::Ship?Ship:Concertina; };
@@ -1323,11 +1367,12 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
         const float Dist=Listener ? FVector::Dist(Listener->GetActorLocation(),::ShipScore::ConcertinaSource()) : 1e6f;
         ConcertinaNear=FMath::Lerp(1.3f,.75f,FMath::SmoothStep(150.f,1400.f,Dist));
     }
-    // The ship's storm (2026-11-03, ShipStorm.h): the music sinks under the gale, to about half.
+    // The ship's storm (2026-11-03, ShipStorm.h): the music sinks under the gale, to about half; the storm's own tracks
+    // (2026-11-04) only a little, being written for it.
     const AShipStorm* Storm=AShipStorm::Get(GetWorld());
-    const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f;
+    const float StormDuck=Storm ? 1.f-.45f*Storm->GetWind() : 1.f, StormTrackDuck=Storm ? 1.f-.12f*FMath::Min(Storm->GetWind(),1.f) : 1.f;
     for(const TWeakObjectPtr<UAudioComponent>& Track : MusicTracks)
-        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*StormDuck*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
+        if(Track.IsValid()) Track->SetVolumeMultiplier(MusicDuck*(StormTracks.Contains(Track) ? StormTrackDuck : StormDuck)*(Track==ConcertinaTrack ? ConcertinaNear : 1.f));
 }
 
 void ADockGameMode::TickChuckPortrait(float DeltaSeconds)
@@ -2979,7 +3024,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==11 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum, ship, ship concertina
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==13 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum, ship, ship concertina, ship storm, ship storm intense
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

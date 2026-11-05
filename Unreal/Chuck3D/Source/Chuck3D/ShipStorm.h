@@ -97,20 +97,36 @@ public:
     /** Back to calm (ShipGate::Reset). */
     void Calm();
     /** (Tests and stills) jump the storm to this many seconds in. */
-    void SetClock(float Seconds) { Clock = Seconds; bStarted = Seconds > 0.f; }
+    void SetClock(float Seconds);
     /** (Tests and stills) a strike now, Distance cm away at Bearing degrees (ship frame). */
     void StrikeNow(float Distance, float Bearing);
     /** (Tests and stills) a sea thrown over the side now at At (world). */
     void SprayNow(const FVector& At, float Size) { SprayBurst(At, Size); }
+    // ---- 2026-11-04 (user: "after the song plays have the storm intensify ... more wave influence on ship, more wind, waves
+    // crashing on deck at times"; "an astral rupture form at ladder locking player to staying above deck").
+    /** The storm's second part, 0..1: from the end of the user's storm track (IntenseAt s in) it builds over 25 s and stays. */
+    float GetIntense() const { return Intense; }
+    float GetIntenseAt() const { return IntenseAt; }
+    bool HasStarted() const { return bStarted; }
+    /** The Astral rupture over the companion hatch: 0 none, rising to 1 as it tears open (once he is on deck in the storm). */
+    float GetRupture() const { return Rupture; }
+    /** Seas breaking aboard: how many, and how many times one has shoved him across the deck. */
+    int32 GetDeckWaves() const { return DeckWaves; }
+    int32 GetWaveShoves() const { return WaveShoves; }
+    /** (Tests and stills) a sea breaking over the weather rail now, its middle at X (ship frame), Size about 1. */
+    void DeckWaveNow(float X, float Size = 1.f);
+    /** Spume puffs shown now (the flipbook's billows). */
+    int32 GetPuffsShown() const { return PuffsShown; }
 private:
     void Levels(float Dt);
+    void Begin();
     void TickRain(float Dt, const FVector& Camera, bool bInside);
     void TickSpray(float Dt, const FVector& Camera);
     void TickLightning(float Dt);
     void TickSound(float Dt, bool bBelow);
     void BuildBolt(const FVector& Base, const FVector& Camera);
     void Thunder(float Distance, bool bNear);
-    void SprayBurst(const FVector& At, float Size);
+    void SprayBurst(const FVector& At, float Size, bool bSound = true);
     class UInstancedStaticMeshComponent* MakeSprites(const TCHAR* Name, const TCHAR* Material, int32 CustomFloats);
     bool bStarted = false;
     float Clock = 0.f, Wind = 0.f, Dark = 0.f, Sea = 0.f, Rain = 0.f, Squall = 0.f, Gust = 0.f;
@@ -145,7 +161,33 @@ private:
     UPROPERTY() TArray<class USoundBase*> NearThunder;
     UPROPERTY() TArray<class USoundBase*> FarThunder;
     UPROPERTY() TArray<class USoundBase*> Slams;
+    // The second part, the rupture and the seas aboard (2026-11-04).
+    float Intense = 0.f, IntenseAt = 202.36f;
+    float Rupture = 0.f, RuptureClock = -1.f;
+    int32 RuptureBuilt = -1;
+    void TickRupture(float Dt, const APawn* Pawn);
+    void BuildRupture(float Open);
+    UPROPERTY() class UProceduralMeshComponent* RuptureMesh = nullptr;
+    UPROPERTY() class UPointLightComponent* RuptureLight = nullptr;
+    struct FDeckWave { float Age = 0.f, Size = 1.f, X0 = 0.f, X1 = 0.f; bool bShoved = false; };
+    TArray<FDeckWave> Waves;
+    float NextWave = 30.f;
+    int32 DeckWaves = 0, WaveShoves = 0, PuffsShown = 0;
+    void TickDeckWaves(float Dt, const FVector& Camera);
+    UPROPERTY() class UProceduralMeshComponent* WashMesh = nullptr;
+    // Spume: big billows of white water (a CC0 flipbook, M_ShipSpume) thrown up where a sea breaks aboard or on the bow.
+    struct FPuff { FVector P, V; float Age, Life, Size, Frame0; };
+    TArray<FPuff> Puffs;
+    void Billow(const FVector& At, int32 Count, float Size);
+    void TickPuffs(float Dt, const FVector& Camera);
+    UPROPERTY() class UInstancedStaticMeshComponent* PuffSprites = nullptr;
 };
 
-/** The storm's wind now (0 calm .. 1 the full gale), for the sails, the flag and the hanging things (ShipDeck.inl). */
+/** The storm's wind now (0 calm .. 1 the full gale, up to 1.3 once it intensifies), for the sails, the flag and the
+ *  hanging things (ShipDeck.inl). */
 float ShipStormWind();
+/** The Astral rupture over the companion hatch is open (2026-11-04): the ladder is closed and a death aboard returns him
+ *  to the deck. */
+bool ShipRuptureOpen();
+/** He has stepped into it (his feet, world): an Astral death. */
+bool ShipRuptureSwallows(const FVector& Feet);

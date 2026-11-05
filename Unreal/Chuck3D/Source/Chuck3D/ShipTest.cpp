@@ -144,12 +144,12 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
     // (The chest and the storm come last: the crew's trials meet six of the ending's seven conditions, the chest the last.)
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm };
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm, StormWork };
     static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
-        ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm};
+        ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm, ET::StormWork};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
         TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
-        TEXT("chest"), TEXT("storm")};
+        TEXT("chest"), TEXT("storm"), TEXT("storm_work")};
     struct FRun
     {
         int32 Phase = 0, Trial = -1, Sub = 0, Point = 0, Failures = 0, Deaths0 = 0, Mounts0 = 0, Crawls0 = 0, Shots = 0, ShipFailures = -1, Catches0 = 0, Leaps0 = 0;
@@ -166,6 +166,10 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         int32 DeckClash = 0, DeckFeet = 0, DeckRatsHeard = 0, DeckRatsHushed = 0, Creaks0 = 0; bool DeckMix = false;
         // The storm trial (2026-11-03): its stills, and what it measured on deck.
         int32 StormShot = 0, Strikes0 = 0, Thunders0 = 0, Splashes0 = 0, Sprays0 = 0, MaxDrops = 0; float MaxRoll = 0, WorstMs = 0; bool StormDeck = false;
+        // The storm's work, rupture and second part (2026-11-04).
+        int32 WorkShot = 0, Stations = 0, StationsOf = 0, Shoves0 = 0, Waves0 = 0, MaxPuffs = 0; float WorstWorkGrip = 0, HelmMin = 0, HelmMax = 0, IntenseRoll = 0;
+        TMap<FString, float> GripBy;
+        bool Music31 = false, Music32 = false, RuptureDeath = false, Shoved = false; double WaveAt = -1;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Camera = Camera;
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipTrials="), Only);
@@ -355,6 +359,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
             case ET::Chest: Reset(EShipSpawn::Cabin); break;
             case ET::Storm: Reset(EShipSpawn::Deck); Run->StormShot = 0; break;
+            case ET::StormWork: Reset(EShipSpawn::Deck); Run->WorkShot = 0; Run->WorstWorkGrip = 0; Run->HelmMin = Run->HelmMax = 0; Run->IntenseRoll = 0; Run->MaxPuffs = 0;
+                Run->Music31 = Run->Music32 = Run->RuptureDeath = Run->Shoved = false; Run->WaveAt = -1; break;
             }
             Run->Heard.Reset(); Run->TalkOk = Run->TalkChecks = Run->Count0 = Run->Count1 = Run->Seen = 0; Run->Pressed = 0;
             Chuck->SetSanity(AChuckCharacter::MaxSanity);
@@ -933,6 +939,160 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM pass=%d deck=%d below=%d below_rain=%.2f deck_rain=%.2f below_wind=%.2f drops=%d splashes=%d sprays=%d strikes=%d thunders=%d roll=%.1f worst_ms=%.1f"),
                 Run->bPass, Run->StormDeck, bBelow, Lp.Y, Lp.X, Lp.W, Run->MaxDrops, Storm->GetSplashes() - Run->Splashes0, Storm->GetSprays() - Run->Sprays0,
                 Storm->GetStrikes() - Run->Strikes0, Storm->GetThunders() - Run->Thunders0, Run->MaxRoll, Run->WorstMs);
+            break;
+        }
+        case ET::StormWork:
+        {
+            // The storm's work, its rupture and its second part (2026-11-04): the deck's crew go to their stations and work
+            // there (stills, and their hands on their lines and the wheel); the Astral rupture fills the companion hatch, and
+            // walking into it is an Astral death back on deck; once it intensifies the ship rolls deeper and a sea breaks aboard
+            // and shoves him across the deck; the storm's two tracks play in turn.
+            Limit = 170;
+            AShipStorm* Storm = AShipStorm::Get(World);
+            AShipSetting* S = AShipSetting::Get(World);
+            AShipCrew* Crew = AShipCrew::Get(World);
+            const ADockGameMode* Mode = World->GetAuthGameMode<ADockGameMode>();
+            if (!Storm || !S || !Crew) { Done = true; break; }
+            if (!ShipGate::IsOpen()) ShipGate::OpenAll();
+            const int32 Region = Mode ? Mode->GetMusicRegion() : 0;
+            Run->Music31 |= Region == 31; Run->Music32 |= Region == 32;
+            Run->MaxPuffs = FMath::Max(Run->MaxPuffs, Storm->GetPuffsShown());
+            if (const ADockNPC* Captain = Crew->Find(EDockHuman::PirateCaptain)) { Run->HelmMin = FMath::Min(Run->HelmMin, Captain->GetHelmAngle()); Run->HelmMax = FMath::Max(Run->HelmMax, Captain->GetHelmAngle()); }
+            auto WorkShot = [&](const TCHAR* Name) { FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Ship") / TEXT("Storm") / FString::Printf(TEXT("Work_%s.png"), Name), true, false); };
+            const float FullAt = 110.f, IntenseFull = Storm->GetIntenseAt() + 40.f;
+            if (Run->Sub == 0)
+            {
+                // The full storm (its first part), the crew on their way; on until they are all at work.
+                if (Storm->GetClock() < FullAt) Storm->SetClock(FullAt);
+                Run->Stations = Crew->GetAtStations(&Run->StationsOf);
+                if ((Run->StationsOf > 0 && Run->Stations == Run->StationsOf && Time > 6.f) || Time > 35.f)
+                {
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK_STATIONS at=%d of=%d seconds=%.1f rupture=%.2f"), Run->Stations, Run->StationsOf, Time, Storm->GetRupture());
+                    Run->Sub = 1; Run->At = Now; Run->Pressed = Now; Run->WorkShot = 0;
+                }
+                break;
+            }
+            struct FStill { const TCHAR* Name; FVector Eye, Aim; bool bIntense; float Wave; };
+            static const TArray<FStill> Stills = {
+                {TEXT("MainHaul"), {-110, -430, DeckZ + 175}, {-290, -230, DeckZ + 100}, false, -1},
+                {TEXT("MainHaulFront"), {-560, -150, DeckZ + 150}, {-280, -230, DeckZ + 105}, false, -1},
+                {TEXT("ForeHaul"), {740, 420, DeckZ + 170}, {480, 235, DeckZ + 100}, false, -1},
+                {TEXT("ForeHaulFront"), {250, 330, DeckZ + 150}, {480, 235, DeckZ + 105}, false, -1},
+                {TEXT("Sweat"), {-400, 330, DeckZ + 175}, {-505, 110, DeckZ + 150}, false, -1},
+                {TEXT("Helm"), {-1250, -170, QuarterZ + 165}, {-1470, 0, QuarterZ + 85}, false, -1},
+                {TEXT("HelmBehind"), {-1585, 140, QuarterZ + 185}, {-1440, 0, QuarterZ + 90}, false, -1},
+                {TEXT("Rupture"), {-40, 340, DeckZ + 200}, {-250, 130, DeckZ + 40}, false, -1},
+                {TEXT("RuptureClose"), {-140, 40, DeckZ + 140}, {-250, 130, DeckZ + 15}, false, -1},
+                {TEXT("WholeDeck"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 300}, false, -1},
+                {TEXT("IntenseBow"), {1500, -220, DeckZ + 190}, {-600, 40, DeckZ + 330}, true, -1},
+                {TEXT("IntenseQuarter"), {-1460, 260, QuarterZ + 190}, {600, -60, DeckZ + 230}, true, -1},
+                {TEXT("IntenseHorizon"), {0, -150, DeckZ + 170}, {0, 2000, DeckZ + 170}, true, -1},
+                {TEXT("DeckWaveBurst"), {330, 340, DeckZ + 210}, {650, -260, DeckZ + 90}, true, .5f},
+                {TEXT("DeckWaveSheet"), {330, 340, DeckZ + 210}, {650, -200, DeckZ + 20}, true, 1.3f},
+                {TEXT("DeckWaveRat"), {480, 260, DeckZ + 40}, {650, -300, DeckZ + 70}, true, .9f}};
+            if (Run->Sub == 1)
+            {
+                // Each still: the camera set, the storm at its part, 2.5 s to settle (a wave set off, then the still after its delay).
+                const int32 Si = Run->WorkShot / 3, Step = Run->WorkShot % 3;
+                // (Their hands on their work, meanwhile.)
+                for (EDockHuman K : {EDockHuman::PirateConcertina, EDockHuman::PirateCheering, EDockHuman::PirateFencerA, EDockHuman::PirateFencerB, EDockHuman::PirateDancer, EDockHuman::PirateCaptain})
+                    if (const ADockNPC* N = Crew->Find(K))
+                        if (N->IsAtStormStation() && Time > 2.f)
+                            for (int32 Side = 0; Side < 2; ++Side)
+                            {
+                                const float Gap = static_cast<float>(FVector::Dist(N->GetStormFist(Side), N->GetStormGripWant(Side)));
+                                Run->WorstWorkGrip = FMath::Max(Run->WorstWorkGrip, Gap);
+                                float& By = Run->GripBy.FindOrAdd(FString::Printf(TEXT("%s_%d_%d"), *N->GetName(), int32(K), Side)); By = FMath::Max(By, Gap);
+                            }
+                if (Storm->GetIntense() > .9f) Run->IntenseRoll = FMath::Max(Run->IntenseRoll, FMath::Abs(S->GetSeaTilt().Y));
+                if (Si >= Stills.Num())
+                {
+                    Chuck->SetActorHiddenInGame(false);
+                    if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
+                    // Into the rupture: from before the ladder's lip, walking aft at it.
+                    Chuck->ResetAtLocation(SW(CompX1 + 45, (CompY0 + CompY1) * .5f, DeckZ + Stand)); Chuck->SetActorRotation(FRotator(0, 180, 0));
+                    Run->Deaths0 = Chuck->GetFallDeaths(); Run->Mounts0 = Chuck->GetLadderMounts();
+                    Run->Sub = 2; Run->At = Now;
+                    break;
+                }
+                const FStill& V = Stills[Si];
+                FString Want; FParse::Value(FCommandLine::Get(), TEXT("ChuckStormStills="), Want);
+                if (Step == 0 && !Want.IsEmpty() && !Want.Contains(V.Name)) { Run->WorkShot += 3; break; }
+                if (Step == 0)
+                {
+                    Stop(); Chuck->SetActorHiddenInGame(true);
+                    if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Run->Camera.Get());
+                    if (Run->Camera.IsValid()) Run->Camera->SetActorLocationAndRotation(SW(V.Eye.X, V.Eye.Y, V.Eye.Z), (SW(V.Aim.X, V.Aim.Y, V.Aim.Z) - SW(V.Eye.X, V.Eye.Y, V.Eye.Z)).Rotation());
+                    if (V.bIntense && Storm->GetClock() < IntenseFull) Storm->SetClock(IntenseFull);
+                    Run->Pressed = Now; ++Run->WorkShot;
+                }
+                else if (Step == 1 && Now - Run->Pressed > 2.5)
+                {
+                    if (V.Wave >= 0.f) Storm->DeckWaveNow(650.f, 1.2f);
+                    Run->Pressed = Now; ++Run->WorkShot;
+                }
+                else if (Step == 2 && Now - Run->Pressed > FMath::Max(V.Wave, .02f))
+                {
+                    WorkShot(V.Name);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK_STILL name=%s clock=%.0f intense=%.2f wind=%.2f roll=%.1f puffs=%d waves=%d helm=%.1f rupture=%.2f music=%d frame_ms=%.1f"),
+                        V.Name, Storm->GetClock(), Storm->GetIntense(), ShipStormWind(), S->GetSeaTilt().Y, Storm->GetPuffsShown(), Storm->GetDeckWaves(),
+                        Crew->Find(EDockHuman::PirateCaptain) ? Crew->Find(EDockHuman::PirateCaptain)->GetHelmAngle() : 0.f, Storm->GetRupture(), Region, GAverageMS);
+                    Run->Pressed = Now; ++Run->WorkShot;
+                }
+                break;
+            }
+            if (Run->Sub == 2)
+            {
+                // Walking into the rupture: the ladder is not taken, he goes into the Astral and comes back on deck.
+                if (Chuck->GetFallDeaths() > Run->Deaths0)
+                {
+                    if (Time > 4.5f)
+                    {
+                        Stop();
+                        Run->RuptureDeath = Chuck->GetLadderMounts() == Run->Mounts0 && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck);
+                        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RUPTURE_TRIAL death=1 mounts=%d space=%s at=%s"), Chuck->GetLadderMounts() - Run->Mounts0,
+                            ShipSpaceName(ShipSpaceAt(Chuck->GetActorLocation())), *L.ToString());
+                        // Then a sea aboard, with him in its way.
+                        Chuck->ResetAtLocation(SW(650, -120, DeckZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0));
+                        Run->Shoves0 = Storm->GetWaveShoves(); Run->Waves0 = Storm->GetDeckWaves();
+                        Run->Sub = 3; Run->At = Now; Run->WaveAt = -1;
+                    }
+                    else Stop();
+                }
+                else if (Time < 6.f) Push(FVector(-1, 0, 0));
+                else
+                {
+                    Stop();
+                    UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_RUPTURE_TRIAL death=0 mounts=%d at=%s gait=%s"), Chuck->GetLadderMounts() - Run->Mounts0, *L.ToString(), Chuck->GetGaitName());
+                    Chuck->ResetAtLocation(SW(650, -120, DeckZ + Stand));
+                    Run->Shoves0 = Storm->GetWaveShoves(); Run->Waves0 = Storm->GetDeckWaves();
+                    Run->Sub = 3; Run->At = Now; Run->WaveAt = -1;
+                }
+                break;
+            }
+            if (Run->Sub == 3)
+            {
+                Stop();
+                if (Run->WaveAt < 0 && Time > 1.5f) { Storm->DeckWaveNow(650.f, 1.2f); Run->WaveAt = Now; Shot(TEXT("WaveRat")); }
+                if (Run->WaveAt > 0 && Now - Run->WaveAt > 4.f)
+                {
+                    Run->Shoved = Storm->GetWaveShoves() > Run->Shoves0 && L.Y > -100.f;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_WAVE_TRIAL shoved=%d at=%s"), Run->Shoved, *L.ToString());
+                    Run->Sub = 4; Run->At = Now;
+                }
+                break;
+            }
+            // The intense track by now, and the storm's music through.
+            if (Time < 3.f) break;
+            Done = true;
+            int32 Of = 0; const int32 At = Crew->GetAtStations(&Of);
+            for (const auto& G : Run->GripBy) UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK_GRIP who=%s worst_cm=%.1f"), *G.Key, G.Value);
+            Run->bPass = Run->Stations == Run->StationsOf && Run->StationsOf == 6 && At == Of && Run->WorstWorkGrip < 8.f && Run->HelmMax - Run->HelmMin > 12.f
+                && Storm->GetRupture() >= 1.f && Run->RuptureDeath && Run->Shoved && Run->IntenseRoll > 8.f && Run->MaxPuffs > 10 && Storm->GetDeckWaves() > Run->Waves0
+                && Run->Music31 && Run->Music32 && ShipRuptureOpen();
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK pass=%d stations=%d/%d worst_grip_cm=%.1f helm_range=%.1f rupture=%.2f rupture_death=%d shoved=%d intense_roll=%.1f puffs=%d waves=%d music_storm=%d music_intense=%d"),
+                Run->bPass, Run->Stations, Run->StationsOf, Run->WorstWorkGrip, Run->HelmMax - Run->HelmMin, Storm->GetRupture(), Run->RuptureDeath, Run->Shoved, Run->IntenseRoll,
+                Run->MaxPuffs, Storm->GetDeckWaves(), Run->Music31, Run->Music32);
             break;
         }
         case ET::Rail:

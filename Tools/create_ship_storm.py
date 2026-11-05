@@ -10,7 +10,10 @@ the shapes come from the plane's local position (it runs -50..50 cm in X and Y),
                data 0 (ShipStorm.cpp fades each blob), broken up by a noise on the blob.
   M_ShipBolt   a lightning channel: unlit additive, not fogged, white-violet, brightest along the ribbon's middle (UV x
                0..1 across), times the Intensity parameter (the flash, set each frame).
-Creates or rebuilds only these three assets in /Game/Art/Ship; imports nothing.
+  M_ShipSpume  (2026-11-04) white water billowing: lit translucent, Unity Labs' CC0 smoke flipbook (T_JetSmoke, imported
+               by Tools/import_temple_fire.py) as its shape; custom data 0 the frame, 2 the opacity.
+  M_ShipDeckWash (2026-11-04) a sea washing across the deck: lit translucent water, vertex colour R foam, G opacity.
+Creates or rebuilds only these five assets in /Game/Art/Ship; imports nothing.
 """
 import unreal
 
@@ -133,3 +136,73 @@ return float3(.82, .86, 1.0) * core * I;
 ''', unreal.CustomMaterialOutputType.CMOT_FLOAT3, {'UV': uv, 'I': inten})
 prop(m, glow, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 save(m, 'M_ShipBolt')
+
+# ---- (2026-11-04) Spume: billows of white water thrown up where a sea breaks aboard or on the bow. Drawn from Unity Labs'
+# CC0 smoke flipbook (WispySmoke01 8x8, already imported for the temple's jets as T_JetSmoke by
+# Tools/import_temple_fire.py): its density as white water, lit by the storm's light. Custom data 0 the frame, 2 the opacity.
+smoke = unreal.load_asset('/Game/Art/ChultTemple/Fire/T_JetSmoke')
+if not smoke:
+    raise RuntimeError('T_JetSmoke missing: run Tools/import_temple_fire.py first')
+m = material('M_ShipSpume', unreal.BlendMode.BLEND_TRANSLUCENT, unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+tex = node(m, unreal.MaterialExpressionTextureObject, texture=smoke)
+uv = node(m, unreal.MaterialExpressionTextureCoordinate)
+frame = node(m, unreal.MaterialExpressionPerInstanceCustomData, data_index=0)
+opac = node(m, unreal.MaterialExpressionPerInstanceCustomData, data_index=2, const_default_value=.5)
+soft = node(m, unreal.MaterialExpressionDepthFade, fade_distance_default=60.)
+depth = node(m, unreal.MaterialExpressionPixelDepth)
+book = custom(m, r'''
+float n = 64.;
+float f = fmod(max(Frame, 0.), n), f0 = floor(f), b = f - f0, f1 = fmod(f0 + 1., n);
+float2 c0 = float2(fmod(f0, 8.), floor(f0 / 8.)), c1 = float2(fmod(f1, 8.), floor(f1 / 8.));
+float2 uv = saturate(UV);
+float4 s = lerp(Texture2DSample(Tex, TexSampler, (uv + c0) / 8.), Texture2DSample(Tex, TexSampler, (uv + c1) / 8.), b);
+float fade = saturate(Opacity) * Soft * saturate((Depth - 30.) / 90.);
+return float4(lerp(.55, .82, saturate(s.r * 1.4)).xxx, saturate(s.a * .95) * fade);
+''', unreal.CustomMaterialOutputType.CMOT_FLOAT4, {'Tex': tex, 'UV': uv, 'Frame': frame, 'Opacity': opac, 'Soft': soft, 'Depth': depth})
+rgb = node(m, unreal.MaterialExpressionComponentMask, r=True, g=True, b=True, a=False); link(book, rgb)
+alpha = node(m, unreal.MaterialExpressionComponentMask, r=False, g=False, b=False, a=True); link(book, alpha)
+prop(m, rgb, unreal.MaterialProperty.MP_BASE_COLOR)
+prop(m, alpha, unreal.MaterialProperty.MP_OPACITY)
+glow = node(m, unreal.MaterialExpressionMultiply); link(rgb, glow, 'A'); link(node(m, unreal.MaterialExpressionConstant, r=.02), glow, 'B')
+prop(m, glow, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+prop(m, node(m, unreal.MaterialExpressionConstant, r=.5), unreal.MaterialProperty.MP_ROUGHNESS)
+save(m, 'M_ShipSpume')
+
+# ---- (2026-11-04) The sea washing across the deck (ShipStorm.cpp's sheet): lit translucent water over the planking, its
+# vertex colour R the foam (the front, the churn by the rail), G how much water (opacity); the foam broken up by a noise
+# that runs with the water, the clear water dark green-grey and glossy.
+m = material('M_ShipDeckWash', unreal.BlendMode.BLEND_TRANSLUCENT, unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+m.set_editor_property('two_sided', False)
+m.set_editor_property('used_with_instanced_static_meshes', False)
+m.set_editor_property('translucency_lighting_mode', unreal.TranslucencyLightingMode.TLM_SURFACE_PER_PIXEL_LIGHTING)
+water_normal = unreal.load_asset('/Game/Art/Textures/Water/T_Water_TilingNormal_Waves_02')
+water_foam = unreal.load_asset('/Game/Art/Textures/Water/T_WaterFlow_01_Foam_Tiled')
+if not water_normal or not water_foam:
+    raise RuntimeError('the sea textures are missing (Tools/create_ship_sea.py uses them)')
+vc = node(m, unreal.MaterialExpressionVertexColor)
+wp = node(m, unreal.MaterialExpressionWorldPosition)
+tm = node(m, unreal.MaterialExpressionTime)
+# (The water runs across the deck toward port, +Y: its ripples and foam run with it.)
+uv_n = custom(m, 'return W.xy / 140. + float2(.03, -.55) * Tm;', unreal.CustomMaterialOutputType.CMOT_FLOAT2, {'W': wp, 'Tm': tm})
+uv_f = custom(m, 'return W.xy / 95. + float2(-.02, -.8) * Tm;', unreal.CustomMaterialOutputType.CMOT_FLOAT2, {'W': wp, 'Tm': tm})
+nrm = node(m, unreal.MaterialExpressionTextureSample, texture=water_normal, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+link(uv_n, nrm, 'UVs')
+fsm = node(m, unreal.MaterialExpressionTextureSample, texture=water_foam)
+link(uv_f, fsm, 'UVs')
+wash = custom(m, r'''
+float tex = dot(F.rgb, float3(.33, .33, .34));
+float foam = saturate(C.r * 1.25 - .25 + (tex - .5) * 1.1) * saturate(C.r * 2.5);
+foam = smoothstep(.2, .7, foam);
+float3 col = lerp(float3(.02, .034, .033), float3(.62, .66, .67), foam);
+float a = saturate(C.g) * lerp(.3, .85, foam);
+return float4(col, a);
+''', unreal.CustomMaterialOutputType.CMOT_FLOAT4, {'C': vc, 'F': fsm})
+flat = custom(m, 'float3 n = N.xyz * float3(.55, .55, 1); return normalize(lerp(float3(0, 0, 1), n, saturate(C.g * 1.5)));', unreal.CustomMaterialOutputType.CMOT_FLOAT3, {'N': nrm, 'C': vc})
+rgb = node(m, unreal.MaterialExpressionComponentMask, r=True, g=True, b=True, a=False); link(wash, rgb)
+alpha = node(m, unreal.MaterialExpressionComponentMask, r=False, g=False, b=False, a=True); link(wash, alpha)
+prop(m, rgb, unreal.MaterialProperty.MP_BASE_COLOR)
+prop(m, alpha, unreal.MaterialProperty.MP_OPACITY)
+prop(m, flat, unreal.MaterialProperty.MP_NORMAL)
+prop(m, node(m, unreal.MaterialExpressionConstant, r=.3), unreal.MaterialProperty.MP_ROUGHNESS)
+prop(m, node(m, unreal.MaterialExpressionConstant, r=.25), unreal.MaterialProperty.MP_SPECULAR)
+save(m, 'M_ShipDeckWash')

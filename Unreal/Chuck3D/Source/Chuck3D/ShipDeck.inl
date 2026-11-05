@@ -291,19 +291,20 @@ void BuildWeatherDeck(FParts& P)
         const float Z = QuarterZ, HX = HelmX;
         for (float Y : {-34.f, 34.f}) P.Wood.B(HX - 6, HX + 6, Y - 6, Y + 6, Z, Z + 122);
         P.Wood.B(HX - 8, HX + 8, -40, 40, Z + 112, Z + 122);
-        P.Iron.Spar(FVector(HX - 10, 0, Z + 106), FVector(HX + 30, 0, Z + 106), 3.5f, 3.5f, 8);
-        const FVector Hub(HX + 22, 0, Z + 106);
+        // (2026-11-04: the wheel on the posts' aft side, so the helmsman stands behind it looking forward over it at the
+        // binnacle; its rim, spokes and handles are their own part (P.Wheel, about the hub), turned by the captain in the storm.)
+        P.Iron.Spar(FVector(HX + 10, 0, Z + 106), FVector(HX - 30, 0, Z + 106), 3.5f, 3.5f, 8);
+        const FVector Hub = HelmHub();
         P.Wood.Spar(Hub - FVector(8, 0, 0), Hub + FVector(8, 0, 0), 14, 14, 14);
-        P.Brass.Spar(Hub + FVector(8, 0, 0), Hub + FVector(10, 0, 0), 8, 6, 12);
+        P.Brass.Spar(Hub - FVector(8, 0, 0), Hub - FVector(10, 0, 0), 8, 6, 12);
         TArray<FVector> Rim;
-        for (int32 K = 0; K <= 28; ++K) { const float A = K / 28.f * 2 * PI; Rim.Add(Hub + FVector(0, 70 * FMath::Cos(A), 70 * FMath::Sin(A))); }
-        P.WoodDecor.Rope(Rim, 4.5f);
-        for (int32 K = 0; K < 10; ++K)
+        for (int32 K = 0; K <= 28; ++K) { const float A = K / 28.f * 2 * PI; Rim.Add(FVector(0, 70 * FMath::Cos(A), 70 * FMath::Sin(A))); }
+        P.Wheel.Rope(Rim, 4.5f);
+        for (int32 K = 0; K < HelmSpokes; ++K)
         {
-            const float A = K / 10.f * 2 * PI + .3f;
-            const FVector Dir(0, FMath::Cos(A), FMath::Sin(A));
-            P.WoodDecor.Spar(Hub + Dir * 12, Hub + Dir * 70, 3.2f, 2.4f, 6);
-            P.WoodDecor.Spar(Hub + Dir * 74, Hub + Dir * 92, 2.8f, 2.f, 8);
+            const FVector Dir = HelmSpoke(K, 0.f);
+            P.Wheel.Spar(Dir * 12, Dir * 70, 3.2f, 2.4f, 6);
+            P.Wheel.Spar(Dir * 74, Dir * 92, 2.8f, 2.f, 8);
         }
         P.Hidden.B(Hub.X - 8, Hub.X + 8, -92, 92, Z + 16, Z + 198);
         // The binnacle: a cabinet and its brass hood.

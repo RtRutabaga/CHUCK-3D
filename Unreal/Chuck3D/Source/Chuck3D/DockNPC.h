@@ -81,6 +81,10 @@ struct FFenceCue
     float Stride = 0;                       // cm the front foot leads (advancing) or trails (retreating) this moment
 };
 
+/** A sailor's work in the ship's storm (2026-11-04, DockNPCPirate.inl): hauling on a line along the deck with his mate,
+ *  sweating a halyard up at the fife rail, or the captain at the helm. */
+enum class EStormWork : uint8 { None, Haul, Sweat, Helm };
+
 UCLASS()
 class CHUCK3D_API ADockNPC : public AActor
 {
@@ -100,7 +104,7 @@ public:
     TArray<FString> Lines;
     FString GetTalkSubtitle(int32 Index) const;
     /** Not while an ambient line is running (the tavern at night): those aren't conversations. */
-    bool CanTalk() const { return Lines.Num() > 0 && AmbientLine < 0 && !IsAmbientSpeaking(); }
+    bool CanTalk() const { return Lines.Num() > 0 && AmbientLine < 0 && !IsAmbientSpeaking() && StormWork == EStormWork::None; }   // (busy in the storm)
     static constexpr float TalkRadius = 120.f;     // cm from Chuck's centre to the NPC's
     static constexpr float NoticeRange = 450.f;    // he watches Chuck within this
     /** Head turn now (deg; + looks right / + looks down), for tests. */
@@ -479,6 +483,20 @@ public:
     void SetCaptainTime(float Seconds, float HoldFor = 0.f) { CaptainT = Seconds; CaptainHold = HoldFor; }
     const TCHAR* GetCaptainPhase() const;
     float GetCaptainTipDepth() const { return CaptainTipDepth; }
+    /** The storm (2026-11-04): he leaves what he was doing (props stowed, the fencing stopped) and goes along Way (world, his
+     *  feet, the last point his station) to his work there, facing Yaw. Rope: the line he works (world): for Haul the hauling
+     *  part's two ends (the lead block, then toward its tail), for Sweat its foot and the block aloft, for Helm the wheel's hub
+     *  and its axle's way aft. Phase (0..1) puts him in step with his mates. None: back to his performance (a calm, the menu). */
+    void SetStormWork(EStormWork Work, const TArray<FVector>& Way, float Yaw, const FVector& RopeA, const FVector& RopeB, float Phase);
+    EStormWork GetStormWork() const { return StormWork; }
+    bool IsAtStormStation() const { return StormWork != EStormWork::None && StormArrived; }
+    /** How hard the storm is (0 calm .. 1 the full gale, up to 2 once it has intensified): his effort and the helm's swing. */
+    void SetStormForce(float Force) { StormForce = Force; }
+    /** The helm: the wheel's turn now (degrees, about its axle), steered by the captain. */
+    float GetHelmAngle() const { return HelmAngle; }
+    /** His hands' fists now (world, from the last pose): the tests check they are on his line or the wheel. */
+    FVector GetStormFist(int32 Side) const { return StormFistW[FMath::Clamp(Side, 0, 1)]; }
+    FVector GetStormGripWant(int32 Side) const { return StormWantW[FMath::Clamp(Side, 0, 1)]; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -733,7 +751,20 @@ private:
     float CaptainT = 0.f, CutlassScale = 1.f, CaptainTipDepth = 0.f, CaptainHold = 0.f;   // (Hold: s a test keeps him at CaptainT)
     FVector CaptainHilt = FVector::ZeroVector, CaptainBlade = FVector(0.f, 0.f, -1.f);
     int32 CaptainPhase = 0;
-    bool PirateTurns() const { return !IsPirate() || Kind == EDockHuman::PirateConcertina || Kind == EDockHuman::PirateCheering || Kind == EDockHuman::PirateDancer; }
+    bool PirateTurns() const { return !IsPirate() || (StormWork == EStormWork::None && (Kind == EDockHuman::PirateConcertina || Kind == EDockHuman::PirateCheering || Kind == EDockHuman::PirateDancer)); }
+    // The storm's work (2026-11-04).
+    EStormWork StormWork = EStormWork::None;
+    TArray<FVector> StormWay;
+    int32 StormLeg = 0;
+    bool StormArrived = false;
+    float StormYaw = 0.f, StormPhase = 0.f, StormClock = 0.f, StormBlend = 0.f, StormForce = 1.f, HelmAngle = 0.f, StormSpeed = 0.f;
+    FVector StormRopeA = FVector::ZeroVector, StormRopeB = FVector::ZeroVector;
+    FTransform StormHome = FTransform::Identity;   // where he was before the storm (back there in a calm)
+    float StormHomeYaw = 0.f;
+    FVector StormFistW[2] = { FVector::ZeroVector, FVector::ZeroVector }, StormWantW[2] = { FVector::ZeroVector, FVector::ZeroVector };
+    void TickStormWork(float DeltaSeconds);
+    void StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVector& HipsOffset);
+    void PoseStorm(TArray<FTransform>& Space);
     bool ChefCanReach(const class AChuckCharacter* Chuck) const;
     void SetupPirate();
     void TickPirate(float DeltaSeconds);

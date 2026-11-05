@@ -141,6 +141,17 @@ The user supplied the pirate ship's soundtrack while milestone 2 was being built
 
 `Tools/import_ship_music.py` (Unreal 5.7.4, `-AllowCommandletAudio`) imports it looping as `/Game/Art/Audio/SW_Ship` (`CHUCK_AUDIO_IMPORTED SW_Ship looping=True duration=207.72`; 25,417,472 bytes). `DockGameMode` plays it at 45% aboard the ship (`InShip`), fading in over 3 s as every other score fades out; the escape's arrival brings it in. `-ChuckShipTest` starts it 2 s before its end and `CHUCK_SHIP_MUSIC_CHECK` confirms the loop. The sea wash and creaks (`gen_ship_sfx.py`) play under it unchanged. Not heard on speakers by the agent.
 
+## The ship's storm tracks — November 4, 2026 (Claude)
+
+The user supplied two storm tracks with the request to develop the storm ("add this Ship_storm soundtrack for the storm starting, after the song plays have the storm intensify and switch soundtrack to Ship_storm_intense"). Both are copied byte-for-byte; no edits and no invented attribution.
+
+| Source | Copy | Bytes | SHA-256 | Format |
+| --- | --- | --- | --- | --- |
+| `C:/Users/ashsm/OneDrive/Desktop/Ship_storm.wav` | `SourceAssets/Audio/ShipStorm.wav` | 38,866,972 | `CD9B14464AF9886204F7E6B7FBA84A16AC30538E327F86887EBE138E07FCAF08` | stereo 16-bit 48 kHz, 202.36 s |
+| `C:/Users/ashsm/Downloads/Ship_storm intense.wav` | `SourceAssets/Audio/ShipStormIntense.wav` | 36,186,640 | `302A7A34A8F7D6D67EC135E0CCC71AAA4977EB8FCAE2E14F9049CD5247354533` | stereo 16-bit 48 kHz, 188.40 s |
+
+`Tools/import_ship_music.py` (Unreal 5.7.4, `-AllowCommandletAudio`) imports them as `/Game/Art/Audio/SW_ShipStorm` (played once: `looping=False duration=202.36`, 27,387,171 bytes) and `/Game/Art/Audio/SW_ShipStormIntense` (`looping=True duration=188.40`, 25,189,020 bytes). `DockGameMode` plays the first at 45% from the storm's start wherever he is aboard, and the second, looping, from the storm's second part (when the first has played through). They sink only 12% under the gale (the other scores about 45%). Not heard on speakers by the agent.
+
 ## The ship's recorded sounds — November 3, 2026 (Claude)
 
 The user asked for sword-fight sounds, the boat going through the water and feet on the deck. Thirty sounds are cut from CC0 recordings that Claude downloaded on 2026-11-03:

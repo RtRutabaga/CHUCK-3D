@@ -4,6 +4,8 @@ UnrealEditor-Cmd <uproject> -run=pythonscript -script=Tools/import_ship_music.py
 
   SourceAssets/Audio/Ship.wav           -> /Game/Art/Audio/SW_Ship             (looping; the user's ship track, unmodified)
   SourceAssets/Audio/ShipConcertina.wav -> /Game/Art/Audio/SW_ShipConcertina   (looping; their concertina version of it)
+  SourceAssets/Audio/ShipStorm.wav      -> /Game/Art/Audio/SW_ShipStorm        (once; the user's storm track, 2026-11-04)
+  SourceAssets/Audio/ShipStormIntense.wav -> /Game/Art/Audio/SW_ShipStormIntense (looping; their intense storm track)
 Played aboard the pirate ship (DockGameMode's ship branch), from the escape's arrival on: the ship track below decks, the
 concertina version on the weather deck. A track already imported is left as it is; set CHUCK_REIMPORT_SHIP_MUSIC=1 to
 bring them all in again.
@@ -14,7 +16,8 @@ import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
 REIMPORT = os.environ.get('CHUCK_REIMPORT_SHIP_MUSIC') == '1'
-for source, name in (('Ship.wav', 'SW_Ship'), ('ShipConcertina.wav', 'SW_ShipConcertina')):
+for source, name, looping in (('Ship.wav', 'SW_Ship', True), ('ShipConcertina.wav', 'SW_ShipConcertina', True),
+                              ('ShipStorm.wav', 'SW_ShipStorm', False), ('ShipStormIntense.wav', 'SW_ShipStormIntense', True)):
     path = '/Game/Art/Audio/' + name
     if not REIMPORT and unreal.EditorAssetLibrary.does_asset_exist(path):
         unreal.log(f'CHUCK_AUDIO_KEPT {name}')
@@ -26,7 +29,7 @@ for source, name in (('Ship.wav', 'SW_Ship'), ('ShipConcertina.wav', 'SW_ShipCon
     wave = unreal.load_asset(path)
     if not isinstance(wave, unreal.SoundWave):
         raise RuntimeError(name + ' import failed')
-    wave.set_editor_property('looping', True); wave.set_editor_property('volume', 1.0)
+    wave.set_editor_property('looping', looping); wave.set_editor_property('volume', 1.0)
     if not unreal.EditorAssetLibrary.save_loaded_asset(wave, only_if_is_dirty=False):
         raise RuntimeError(name + ' save failed')
-    unreal.log(f'CHUCK_AUDIO_IMPORTED {name} looping=True duration={wave.get_editor_property("duration"):.2f}')
+    unreal.log(f'CHUCK_AUDIO_IMPORTED {name} looping={looping} duration={wave.get_editor_property("duration"):.2f}')

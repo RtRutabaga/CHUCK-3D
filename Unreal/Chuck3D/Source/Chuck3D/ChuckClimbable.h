@@ -16,11 +16,14 @@ struct FChuckClimbable
     FVector Out = FVector::ForwardVector;    // horizontal, from the ladder toward the climber (he faces -Out)
     float HalfWidth = 25.f;                  // how far to either side of the line he can take hold
     FVector Lip = FVector::ZeroVector;       // a point on the top edge (its face looks along Out); the floor above is on its -Out side
+    bool bBlocked = false;                   // closed for now (the ship's storm rupture over the companion, 2026-11-04): not taken hold of
 };
 
 /** Register one (a world builder does this; the same one twice is ignored). */
 void AddChuckClimbable(const FChuckClimbable& Climbable);
 const TArray<FChuckClimbable>& GetChuckClimbables();
+/** Close (or reopen) the climbable whose top lip is at Lip (within 5 cm). False if there is none. */
+bool SetChuckClimbableBlocked(const FVector& Lip, bool bBlocked);
 
 /**
  * Something he swings from by both paws, hand over hand to the next (user

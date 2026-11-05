@@ -2,7 +2,38 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 5 (latest) — the heroes' distant LODs draw the right materials (Claude)
+## November 5 (latest) — the concertina player's hands; the storm developed (Claude)
+
+- **Asked:** fix the concertina player's hands ("backwards on the concertina"); develop the storm: an Astral rupture at the ladder keeping Chuck above deck, the user's Ship_storm track at the storm's start and Ship_storm_intense after it as the storm intensifies, no concertina switching in the storm, the crew working the ship (captain at the helm, no concertina), and in the intense part more wave influence, more wind and seas crashing on deck; free resources as needed.
+- **Source:** `main` at e0a10f63.
+- **Changed** ([../SHIP.md](../SHIP.md#the-storm-developed-november-4)):
+  - `DockNPCPirate.inl`: the concertina player's palms now face the instrument (they faced out). The crew's storm work (`SetStormWork`, `TickStormWork`, `StormDelta`, `PoseStorm`): hauling a line in pairs, sweating a halyard, the captain steering; grips kept within reach along their line and taken the way round that keeps the wrist natural.
+  - `DockNPC.h`: `EStormWork` and the storm members; no talk or turning to the rat while they work.
+  - `ShipCrew.h/.cpp`: `BeginStorm`/`EndStorm`, the stations and the rigged lines (hauling parts, blocks, coils, the halyard); no fencing in the storm.
+  - `ShipStorm.h/.cpp`: the second part (from the storm track's end, 202 s; harder wind, heavier rain, more spray and lightning); the rupture over the companion hatch (`TickRupture`, `BuildRupture`, `ShipRuptureSwallows`, `ShipRuptureOpen`); seas breaking aboard (`DeckWaveNow`, the water sheet, the shove); spume billows; `SetClock` now starts the storm properly.
+  - `ShipSetting.h/.cpp`, `ShipDeck.inl`: the wheel moved to the posts' aft side and split out so it turns (`HelmHub`, `HelmSpoke`); deeper rolling and a bigger sea in the second part; deaths respawn on deck while the rupture is open.
+  - `ChuckClimbable.h/.cpp`: `bBlocked` and `SetChuckClimbableBlocked`; `ChuckCharacter.cpp` skips blocked climbables and dies in the rupture.
+  - `DockGameMode.h/.cpp`: the two storm tracks, kept at the storm's clock, ducked less under the gale; no concertina switching while the storm runs.
+  - `DockMenu.cpp`: **Ship Storm Intense (dev)** checkpoint.
+  - `ShipTest.cpp`: trial `storm_work` (19 trials). `Verify-Package.ps1` expects 19, `Verify-Menu.ps1` includes the new checkpoint.
+  - `Tools/import_ship_music.py` (the two tracks; storm once, intense looping), `Tools/create_ship_storm.py` (`M_ShipSpume` from the CC0 Unity Labs smoke flipbook already in the project, `M_ShipDeckWash` with the sea's own textures). No new download was needed.
+  - Assets: `SourceAssets/Audio/ShipStorm.wav`, `ShipStormIntense.wav` (the user's files, byte-for-byte; `SourceAssets/Audio/README.md`); `SW_ShipStorm`, `SW_ShipStormIntense`, `M_ShipSpume`, `M_ShipDeckWash`; `M_ShipRain`/`Spray`/`Bolt` rebuilt by the same script.
+- **Tested:**
+  - Editor `-ChuckShipTest -ChuckShipTrials=storm_work`: passed after fixes (`Local/ship-storm-work-6.log`); stills `Saved/Screenshots/WindowsEditor/Ship/Storm/Work_*.png` and `Ship/CrewConcertina*.png` reviewed.
+  - Packaged `Builds/ShipStormCandidate`: Verify-Package passed 182 checks (`Local/verify-package-20261104-225516.log`); its ship test 19/19 (`Local/verify-ship-20261104-233643.log`: stations 6/6, worst grip 2.3 cm, wheel swing 68°, rupture death back on deck, wave shove, 15.6° roll, both storm tracks). Verify-Menu passed 44/44 (`Local/verify-menu-shipstorm.txt`).
+- **Remaining flaws:**
+  - Not heard on speakers: the storm tracks against the gale, slams and thunder.
+  - The sea washing aboard passes through deck fittings and the crew's feet; the crew don't react to it. The haulers' feet stay planted and the line doesn't visibly run.
+  - The rupture's veils use the sewer's oil-film style; the nearest can read as a flat sheet.
+  - Up to about 15° of horizon tilt at the peaks of the second part: may be too much for some players.
+  - Not played by hand. No plank, captain's sequence or end to the storm yet.
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged; `FChuckClimbable` gained a field (default off).
+- **Binary/LFS:** two WAVs (75 MB), two sound waves (52 MB), five materials (LFS).
+- **Launcher:** promoted as ShipStorm. Its receipt names e0a10f6 because it was built from the working tree before this commit. The HeroLod package is kept and HeroLook pruned.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence and the plank out of the storm).
+
+## November 5 — the heroes' distant LODs draw the right materials (Claude)
 
 - **Asked:** "when i load the beholder encounter the fighters beard is still grey and the wizards skirt part of robe is still white while casting".
 - **Source:** `main` at 44c9469b.

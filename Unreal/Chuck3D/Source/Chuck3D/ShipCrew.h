@@ -71,7 +71,17 @@ public:
     FVector GetFencePair() const;
     /** The furthest any of the crew's bodies has gone into the hull's planking (cm; 0 clear): nothing passes through it. */
     float GetWorstHullOut() const { return WorstHullOut; }
+    /** The storm (2026-11-04): the deck's crew leave the music, the dance and the fencing for their stations: two hauling a
+     *  line on each side of the waist, the dancer sweating a halyard at the main mast, the captain at the helm. The lines
+     *  they work are rigged. EndStorm puts them back (a calm: the checkpoint menu). */
+    void BeginStorm();
+    void EndStorm();
+    bool InStorm() const { return bStorm; }
+    /** How many of the deck's crew are at their stations, and how many have stations. */
+    int32 GetAtStations(int32* Of = nullptr) const;
 private:
+    bool bStorm = false;
+    UPROPERTY() class UProceduralMeshComponent* StormLines = nullptr;
     void PlaceCrew();
     void TickFencing(float DeltaSeconds);
     /** Set out this phrase's blows (a new choice each phrase, from the phrase's number). */

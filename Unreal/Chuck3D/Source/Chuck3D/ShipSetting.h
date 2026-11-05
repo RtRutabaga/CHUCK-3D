@@ -53,6 +53,12 @@ namespace Ship
     // The skylight over the cabin, and the helm.
     constexpr float SkyX0 = -1220, SkyX1 = -1110, SkyHalf = 50;
     constexpr float HelmX = -1420;
+    // The wheel (2026-11-04: on the posts' aft side, the helmsman behind it): its hub, its ten spokes' directions (ship frame,
+    // in the wheel's plane) when it has turned Angle degrees about its axle, and that turn.
+    inline FVector HelmHub() { return FVector(HelmX - 22, 0, QuarterZ + 106); }
+    constexpr int32 HelmSpokes = 10;
+    inline FQuat HelmTurn(float Angle) { return FQuat(FVector::ForwardVector, FMath::DegreesToRadians(Angle)); }
+    inline FVector HelmSpoke(int32 K, float Angle) { const float A = K / float(HelmSpokes) * 2 * PI + .3f; return HelmTurn(Angle).RotateVector(FVector(0, FMath::Cos(A), FMath::Sin(A))); }
     // The temple masonry grown through the arrival compartment's starboard-aft corner, and the crawlway through it that
     // the escape comes out of (the crevice's other end): it runs from its blind end (X0) toward +X to its mouth (X1).
     constexpr float SeamX0 = -150, SeamX1 = 130, SeamY = -300, SeamHalf = 40, SeamH = 44;
@@ -171,7 +177,8 @@ private:
     UPROPERTY() class UDirectionalLightComponent* FlashLight = nullptr;
     float FlashSlow = 0;
     void ApplyStorm(float Dt);
-    float RollPhase = 0, PitchPhase = 0, ChopPhase = 0, SailClock = 0, StormSea = 0, StormWind = 0, CloudSet = -1;
+    float RollPhase = 0, PitchPhase = 0, ChopPhase = 0, SailClock = 0, StormSea = 0, StormWind = 0, CloudSet = -1, StormIntense = 0, WheelSet = 0;
+    UPROPERTY() class UProceduralMeshComponent* Wheel = nullptr;   // the helm's wheel (2026-11-04: it turns)
     TArray<float> SwingPhase, LampBase;
     FQuat SunBase = FQuat::Identity;
     FVector2D Tilt = FVector2D::ZeroVector;

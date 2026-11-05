@@ -18,6 +18,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Sound/SoundBase.h"
+#include "Sound/SoundWave.h"
+#include "ChuckClimbable.h"
 #include "UObject/ConstructorHelpers.h"
 
 // The chest, the ending's trigger and the storm (Claude, 2026-11-03; ShipStorm.h, docs/SHIP.md).
@@ -26,7 +28,7 @@ using namespace Ship;
 namespace
 {
     bool GStep[ShipGate::Steps] = {};
-    float GWind = 0.f;
+    float GWind = 0.f, GRupture = 0.f;
     UStaticMesh* GPlane = nullptr;
     float Smooth(float A, float B, float X) { return FMath::SmoothStep(A, B, X); }
 
@@ -87,6 +89,14 @@ namespace ShipGate
 }
 
 float ShipStormWind() { return GWind; }
+bool ShipRuptureOpen() { return GRupture > .3f; }
+bool ShipRuptureSwallows(const FVector& Feet)
+{
+    // Into the companion hatch under it (its opening, the ladder's lip on its fore edge), down past the deck's top.
+    if (GRupture < .3f || !InShip(Feet)) return false;
+    const FVector L = ShipLocal(Feet);
+    return L.X > CompX0 && L.X < CompX1 + 4 && L.Y > CompY0 && L.Y < CompY1 && L.Z < DeckZ + 6 && L.Z > LowerZ - 60;
+}
 
 // ---------------------------------------------------------------------------------------------------------------- the chest
 AShipChest::AShipChest()
@@ -216,7 +226,10 @@ namespace
 {
     // How the storm comes in (seconds after the gate opens) and how it then keeps on.
     constexpr float WindIn0 = 0, WindIn1 = 45, DarkIn0 = 4, DarkIn1 = 55, SeaIn0 = 8, SeaIn1 = 70, RainIn0 = 22, RainIn1 = 65, LightningFrom = 18;
-    constexpr int32 MaxDrops = 2600, MaxSplashes = 240, MaxBlobs = 420;
+    constexpr int32 MaxDrops = 3400, MaxSplashes = 240, MaxBlobs = 520, MaxPuffs = 180;
+    constexpr float IntenseRamp = 25.f;   // s the second part takes to build (2026-11-04)
+    constexpr float RuptureForm = 2.4f;   // s the rupture takes to tear open
+    constexpr float WaveLife = 4.4f;      // s a sea breaking aboard runs across the deck and drains
     constexpr float RainBox = 1500.f, RainAbove = 1300.f, RainBelow = 500.f;
     // The gale blows from the starboard beam (the flag streams to port), the ship's way adds a little from ahead.
     FVector WindVelocity(float Wind) { return FVector(-180.f, 620.f, 0.f) * Wind; }
@@ -271,10 +284,29 @@ AShipStorm* AShipStorm::Spawn(UWorld* World)
     S->RainSprites = S->MakeSprites(TEXT("StormRain"), TEXT("/Game/Art/Ship/M_ShipRain.M_ShipRain"), 1);
     S->SplashSprites = S->MakeSprites(TEXT("StormSplash"), TEXT("/Game/Art/Ship/M_ShipSpray.M_ShipSpray"), 1);
     S->SpraySprites = S->MakeSprites(TEXT("StormSpray"), TEXT("/Game/Art/Ship/M_ShipSpray.M_ShipSpray"), 1);
+    // (2026-11-04: the spume's billows, Unity Labs' CC0 smoke flipbook drawn as white water: Tools/create_ship_storm.py.)
+    S->PuffSprites = S->MakeSprites(TEXT("StormSpume"), TEXT("/Game/Art/Ship/M_ShipSpume.M_ShipSpume"), 3);
     TArray<FTransform> Zero;
     Zero.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxDrops); S->RainSprites->AddInstances(Zero, false, true);
     Zero.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxSplashes); S->SplashSprites->AddInstances(Zero, false, true);
     Zero.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxBlobs); S->SpraySprites->AddInstances(Zero, false, true);
+    Zero.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxPuffs); S->PuffSprites->AddInstances(Zero, false, true);
+    // The rupture over the companion hatch, and the seas washing across the deck (rebuilt as they change; relative to the
+    // storm, at the ship's origin: the ship frame).
+    auto Proc = [&](const TCHAR* Name) { auto* M = NewObject<UProceduralMeshComponent>(S, Name); M->SetupAttachment(S->RootComponent); M->RegisterComponent();
+        M->SetCollisionEnabled(ECollisionEnabled::NoCollision); M->SetCastShadow(false); return M; };
+    S->RuptureMesh = Proc(TEXT("StormRupture"));
+    S->WashMesh = Proc(TEXT("StormDeckWash"));
+    S->RuptureLight = NewObject<UPointLightComponent>(S, TEXT("StormRuptureLight"));
+    S->RuptureLight->SetupAttachment(S->RootComponent);
+    S->RuptureLight->SetRelativeLocation(FVector((CompX0 + CompX1) * .5f, (CompY0 + CompY1) * .5f, DeckZ + 45));
+    S->RuptureLight->SetIntensity(0.f); S->RuptureLight->SetAttenuationRadius(560.f); S->RuptureLight->SetLightColor(FLinearColor(.48f, .035f, 1.f));
+    S->RuptureLight->SetCastShadows(false); S->RuptureLight->RegisterComponent();
+    // (Drawn from the start, a sliver out of sight under the deck, so its shaders are ready when it first shows.)
+    S->BuildRupture(0.f);
+    // The second part comes when the user's storm track ends (its length; -ChuckShipStormIntenseAt= for tests).
+    if (const USoundWave* Track = LoadObject<USoundWave>(nullptr, TEXT("/Game/Art/Audio/SW_ShipStorm.SW_ShipStorm"))) S->IntenseAt = Track->Duration;
+    FParse::Value(FCommandLine::Get(), TEXT("ChuckShipStormIntenseAt="), S->IntenseAt);
     S->Bolt = NewObject<UProceduralMeshComponent>(S, TEXT("StormBolt"));
     S->Bolt->SetupAttachment(S->RootComponent);
     S->Bolt->RegisterComponent();
@@ -315,21 +347,44 @@ AShipStorm* AShipStorm::Spawn(UWorld* World)
     Set(TEXT("SFX_StormThunderNear"), S->NearThunder);
     Set(TEXT("SFX_StormThunderFar"), S->FarThunder);
     Set(TEXT("SFX_StormSlam"), S->Slams);
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_READY loops=%d near_thunder=%d far_thunder=%d slams=%d"),
-        S->Loops.FilterByPredicate([](UAudioComponent* A) { return A != nullptr; }).Num(), S->NearThunder.Num(), S->FarThunder.Num(), S->Slams.Num());
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_READY loops=%d near_thunder=%d far_thunder=%d slams=%d intense_at=%.1f spume=%d"),
+        S->Loops.FilterByPredicate([](UAudioComponent* A) { return A != nullptr; }).Num(), S->NearThunder.Num(), S->FarThunder.Num(), S->Slams.Num(), S->IntenseAt,
+        S->PuffSprites && S->PuffSprites->GetMaterial(0) != nullptr);
     return S;
 }
 
 void AShipStorm::Calm()
 {
-    bStarted = false; Clock = 0.f; Wind = Dark = Sea = Rain = Flash = 0.f; GWind = 0.f;
-    Pulses.Reset(); PendingThunder.Reset(); Blobs.Reset(); Splashes.Reset();
-    NextStrike = LightningFrom; NextSpray = 6.f;
+    bStarted = false; Clock = 0.f; Wind = Dark = Sea = Rain = Flash = Intense = 0.f; GWind = 0.f;
+    Pulses.Reset(); PendingThunder.Reset(); Blobs.Reset(); Splashes.Reset(); Puffs.Reset(); Waves.Reset();
+    NextStrike = LightningFrom; NextSpray = 6.f; NextWave = 30.f;
+    // The rupture closes and the ladder opens again; the crew go back to what they were doing.
+    if (RuptureClock >= 0.f) SetChuckClimbableBlocked(ShipWorld(FVector(CompX1, (CompY0 + CompY1) * .5f, DeckZ)), false);
+    Rupture = 0.f; GRupture = 0.f; RuptureClock = -1.f; BuildRupture(0.f);
+    if (RuptureLight) RuptureLight->SetIntensity(0.f);
+    if (WashMesh) WashMesh->ClearAllMeshSections();
+    if (PuffSprites) PuffSprites->SetVisibility(false);
+    if (AShipCrew* Crew = AShipCrew::Get(GetWorld())) Crew->EndStorm();
     for (UAudioComponent* A : Loops) if (A) A->Stop();
     for (float& L : LoopNow) L = 0.f;
     for (auto* C : {RainSprites, SplashSprites, SpraySprites}) if (C) C->SetVisibility(false);
     if (BoltMid) BoltMid->SetScalarParameterValue(TEXT("Intensity"), 0.f);
     if (BoltGlowMid) BoltGlowMid->SetScalarParameterValue(TEXT("Intensity"), 0.f);
+}
+
+void AShipStorm::Begin()
+{
+    if (bStarted) return;
+    bStarted = true;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM start=1 intense_at=%.1f"), IntenseAt);
+    // The crew leave their music, dancing and fencing for their storm stations (2026-11-04).
+    if (AShipCrew* Crew = AShipCrew::Get(GetWorld())) Crew->BeginStorm();
+}
+
+void AShipStorm::SetClock(float Seconds)
+{
+    if (Seconds > 0.f) Begin();
+    Clock = Seconds;
 }
 
 void AShipStorm::Levels(float Dt)
@@ -348,22 +403,22 @@ void AShipStorm::Levels(float Dt)
                 {EDockHuman::PirateCheering, EStep::Cheering}, {EDockHuman::PirateDancer, EStep::Dancer}, {EDockHuman::Jeffries, EStep::Jeffries}};
             for (const auto& T : Talks) if (const ADockNPC* N = Crew->Find(T.Key)) if (N->HasTalkedOnce()) ShipGate::Mark(T.Value);
         }
-    if (!bStarted && ShipGate::IsOpen())
-    {
-        bStarted = true; Clock = 0.f;
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM start=1"));
-    }
+    if (!bStarted && ShipGate::IsOpen()) { Begin(); Clock = 0.f; }
     if (!bStarted) return;
     Clock += Dt;
     const float T = Clock;
     // Gusts (a few seconds) and squalls (most of a minute): the full storm never sits still.
     Gust = .5f + .32f * FMath::Sin(T * 2 * PI / 6.3f) * FMath::Sin(T * 2 * PI / 2.9f + .7f) + .18f * FMath::Sin(T * 2 * PI / 13.7f + 2.f);
     Squall = FMath::Clamp(.5f + .3f * FMath::Sin(T * 2 * PI / 47.f - 1.2f) + .2f * FMath::Sin(T * 2 * PI / 19.f), 0.f, 1.f);
+    // The second part (2026-11-04): from the end of the storm track, harder gusts, heavier rain, a bigger sea.
+    const float WasIntense = Intense;
+    Intense = Smooth(IntenseAt, IntenseAt + IntenseRamp, T);
+    if (WasIntense <= 0.f && Intense > 0.f) { NextWave = 4.f; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_INTENSE start=1 clock=%.1f"), T); }
     Wind = Smooth(WindIn0, WindIn1, T) * (.82f + .18f * Gust);
     Dark = Smooth(DarkIn0, DarkIn1, T) * (.9f + .1f * Squall);
     Sea = Smooth(SeaIn0, SeaIn1, T);
-    Rain = Smooth(RainIn0, RainIn1, T) * (.55f + .45f * Squall);
-    GWind = Wind;
+    Rain = FMath::Min(1.f, Smooth(RainIn0, RainIn1, T) * (.55f + .45f * Squall) + .3f * Intense);
+    GWind = Wind * (1.f + .3f * Intense);
 }
 
 void AShipStorm::Tick(float Dt)
@@ -382,14 +437,17 @@ void AShipStorm::Tick(float Dt)
     }
     TickRain(Dt, Eye, bBelow);
     TickSpray(Dt, Eye);
+    TickDeckWaves(Dt, Eye);
+    TickPuffs(Dt, Eye);
     TickLightning(Dt);
     TickSound(Dt, bBelow);
+    TickRupture(Dt, Pawn);
 }
 
 void AShipStorm::TickRain(float Dt, const FVector& Eye, bool bInside)
 {
     if (!RainSprites || !SplashSprites) return;
-    const int32 Shown = FMath::RoundToInt(MaxDrops * FMath::Clamp(Rain, 0.f, 1.f));
+    const int32 Shown = FMath::RoundToInt(MaxDrops * FMath::Clamp(Rain, 0.f, 1.f) * FMath::Lerp(.76f, 1.f, Intense));
     if (Shown == 0 && !RainSprites->IsVisible()) return;
     RainSprites->SetVisibility(Shown > 0);
     const FVector Blow = WindVelocity(Wind);
@@ -453,7 +511,7 @@ void AShipStorm::TickRain(float Dt, const FVector& Eye, bool bInside)
     SplashSprites->BatchUpdateInstancesTransforms(0, S, true, true, true);
 }
 
-void AShipStorm::SprayBurst(const FVector& At, float Size)
+void AShipStorm::SprayBurst(const FVector& At, float Size, bool bSound)
 {
     // Water thrown up where a sea meets the bow or the weather side: up, out and blown across the deck.
     const int32 Count = FMath::RoundToInt(38 * Size);
@@ -466,7 +524,9 @@ void AShipStorm::SprayBurst(const FVector& At, float Size)
         Blobs.Add(B);
     }
     ++Sprays;
-    if (Slams.Num())
+    // (2026-11-04) a few billows of white water over the thrown spray.
+    Billow(At + FVector(0, 0, 40), FMath::RoundToInt(2 + 3 * Size), 150.f * Size);
+    if (bSound && Slams.Num())
     {
         const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
         const bool bApart = Pawn && ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck);   // below decks: through the hull
@@ -483,13 +543,13 @@ void AShipStorm::TickSpray(float Dt, const FVector& Eye)
     NextSpray -= Dt;
     if (NextSpray <= 0.f && Sea > .35f)
     {
-        NextSpray = FMath::FRandRange(1.2f, 3.6f) / FMath::Max(Sea, .4f);
+        NextSpray = FMath::FRandRange(1.2f, 3.6f) / FMath::Max(Sea, .4f) / (1.f + 1.3f * Intense);
         const bool bBow = FMath::FRand() < .45f;
         const FVector At = bBow ? FVector(FMath::FRandRange(1350.f, 1650.f), FMath::FRandRange(-180.f, 60.f), RailZ + 30)
                                 : FVector(FMath::FRandRange(-700.f, 1200.f), 0, RailZ + 10);
         FVector L = At;
         if (!bBow) L.Y = -ShipOuterHalf(At.X, RailZ) - 20.f;
-        SprayBurst(ShipWorld(L), FMath::FRandRange(.7f, 1.25f) * Sea);
+        SprayBurst(ShipWorld(L), FMath::FRandRange(.7f, 1.25f) * Sea * (1.f + .35f * Intense));
     }
     const FVector Blow = WindVelocity(Wind);
     TArray<FTransform> X; X.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxBlobs);
@@ -636,8 +696,8 @@ void AShipStorm::TickLightning(float Dt)
     NextStrike -= Dt;
     if (Clock > LightningFrom && NextStrike <= 0.f && Dark > .25f)
     {
-        NextStrike = FMath::Lerp(16.f, 5.5f, Dark) * FMath::FRandRange(.6f, 1.4f);
-        const bool bClose = Dark > .8f && FMath::FRand() < .2f;
+        NextStrike = FMath::Lerp(16.f, 5.5f, Dark) * FMath::FRandRange(.6f, 1.4f) * FMath::Lerp(1.f, .55f, Intense);
+        const bool bClose = Dark > .8f && FMath::FRand() < .2f + .2f * Intense;
         const float Distance = bClose ? FMath::FRandRange(40000.f, 110000.f) : FMath::FRandRange(160000.f, 650000.f) * FMath::Lerp(1.4f, 1.f, Dark);
         StrikeNow(Distance, FMath::FRandRange(0.f, 360.f));
     }
@@ -669,10 +729,10 @@ void AShipStorm::TickSound(float Dt, bool bBelow)
     const float Want[6] = {
         bBelow ? 0.f : Rain * .95f,
         bBelow ? Rain * .9f : 0.f,
-        bBelow ? Wind * .12f : Wind * (.75f + .25f * Gust) * (1.f + .35f * Up),
+        (bBelow ? Wind * .12f : Wind * (.75f + .25f * Gust) * (1.f + .35f * Up)) * (1.f + .25f * Intense),
         bBelow ? Wind * .85f : Wind * .15f,
         bBelow ? 0.f : Wind * .45f,
-        bBelow ? Sea * .3f : Sea * .7f * (1.f - .4f * Up) };
+        (bBelow ? Sea * .3f : Sea * .7f * (1.f - .4f * Up)) * (1.f + .35f * Intense) };
     for (int32 I = 0; I < 6 && I < Loops.Num(); ++I)
     {
         LoopNow[I] = FMath::FInterpTo(LoopNow[I], Want[I], Dt, 1.6f);
@@ -680,4 +740,263 @@ void AShipStorm::TickSound(float Dt, bool bBelow)
         if (LoopNow[I] > .002f && !Loops[I]->IsPlaying()) Loops[I]->Play(FMath::FRandRange(0.f, 20.f));
         Loops[I]->SetVolumeMultiplier(FMath::Max(.001f, LoopNow[I]));
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------- the rupture
+// (2026-11-04, user: "when the storm starts and player is above deck, have an astral rupture form at ladder locking player
+// to staying above deck".) Once he is up on deck in the storm, clear of the hatch, the Astral tears open in the companion
+// hatch: a slit first, along the hatch, that widens until the whole opening is the Astral's glow, with the oil-film veils
+// standing up round its edge as the sewer's and the temple's ruptures have, and its purple light. The ladder below can't be
+// taken hold of; stepping into it is an Astral death, and every death aboard now returns him to the deck.
+void AShipStorm::TickRupture(float Dt, const APawn* Pawn)
+{
+    const FVector2D Mid((CompX0 + CompX1) * .5f, (CompY0 + CompY1) * .5f);
+    if (RuptureClock < 0.f)
+    {
+        if (!Pawn || ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck)) return;
+        const FVector L = ShipLocal(Pawn->GetActorLocation());
+        if (FVector2D::Distance(FVector2D(L.X, L.Y), Mid) < 170.f) return;   // (not under his feet as he steps off the ladder)
+        RuptureClock = 0.f;
+        SetChuckClimbableBlocked(ShipWorld(FVector(CompX1, Mid.Y, DeckZ)), true);
+        if (USoundBase* S = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_AstralSummon_00.SFX_AstralSummon_00")))
+            UGameplayStatics::PlaySoundAtLocation(this, S, ShipWorld(FVector(Mid.X, Mid.Y, DeckZ + 40)), 1.f, .82f);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RUPTURE forming=1 storm_s=%.1f rat_from_hatch_cm=%.0f"), Clock, FVector2D::Distance(FVector2D(L.X, L.Y), Mid));
+    }
+    RuptureClock += Dt;
+    const float Was = Rupture;
+    Rupture = FMath::Clamp(RuptureClock / RuptureForm, 0.f, 1.f);
+    GRupture = Rupture;
+    const int32 Key = FMath::RoundToInt(Rupture * 80.f);
+    if (Key != RuptureBuilt) BuildRupture(Rupture);
+    if (Was < 1.f && Rupture >= 1.f) UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RUPTURE open=1"));
+    // Its light: a flare as it tears, then a slow uneven throb.
+    if (RuptureLight)
+    {
+        const float Flare = FMath::Exp(-FMath::Square((RuptureClock - 1.3f) / .7f));
+        RuptureLight->SetIntensity(Rupture * (2600.f + 500.f * FMath::Sin(RuptureClock * 2.1f) * FMath::Sin(RuptureClock * .73f + 1.f)) + 7000.f * Flare);
+    }
+}
+
+void AShipStorm::BuildRupture(float Open)
+{
+    if (!RuptureMesh) return;
+    RuptureBuilt = FMath::RoundToInt(Open * 80.f);
+    // The tear: a ragged oval round the hatch's middle, a slit along it at first, clipped to the opening (so at full it is
+    // the whole hatch, the ladder's top under the Astral's glow 8 cm down).
+    const float X0 = CompX0 + 1, X1 = CompX1 - 1, Y0 = CompY0 + 1, Y1 = CompY1 - 1;
+    const FVector2D C((X0 + X1) * .5f, (Y0 + Y1) * .5f);
+    const float E = FMath::SmoothStep(0.f, 1.f, Open);
+    const float Rx = Open > 0.f ? 115.f * (.3f + .7f * E) : .5f, Ry = Open > 0.f ? FMath::Max(.5f, 115.f * FMath::Pow(E, 1.4f)) : .5f;
+    constexpr int32 N = 44;
+    TArray<FVector2D> Edge;
+    for (int32 I = 0; I < N; ++I)
+    {
+        const float A = 2.f * PI * I / N;
+        const float Rag = 1.f + .14f * FMath::Sin(3.f * A + 1.f) + .08f * FMath::Sin(7.f * A + 2.f) + .05f * FMath::Sin(13.f * A + .4f);
+        // (Pointed at its two ends while it is still a slit.)
+        const float Point = FMath::Pow(FMath::Abs(FMath::Sin(A)), FMath::Lerp(.6f, 1.f, E));
+        FVector2D P = C + FVector2D(Rx * FMath::Cos(A) * Rag, Ry * FMath::Sin(A) * Rag * FMath::Lerp(Point, 1.f, E));
+        P.X = FMath::Clamp(P.X, X0, X1); P.Y = FMath::Clamp(P.Y, Y0, Y1);
+        Edge.Add(P);
+    }
+    const float CapZ = Open > 0.f ? DeckZ - 8 : LowerZ - 40;   // (closed: a sliver hidden under the deck)
+    // Section 0: the Astral's glow filling it (a fan, both sides).
+    {
+        TArray<FVector> V, Nn; TArray<int32> T; TArray<FVector2D> UV;
+        V.Add(FVector(C.X, C.Y, CapZ)); Nn.Add(FVector::UpVector); UV.Add(FVector2D(.5f, .5f));
+        for (const FVector2D& P : Edge) { V.Add(FVector(P.X, P.Y, CapZ)); Nn.Add(FVector::UpVector); UV.Add(FVector2D((P.X - X0) / 120.f, (P.Y - Y0) / 120.f)); }
+        for (int32 I = 0; I < N; ++I) { const int32 A = 1 + I, B = 1 + (I + 1) % N; T.Append({0, B, A, 0, A, B}); }
+        RuptureMesh->CreateMeshSection(0, V, T, Nn, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+    }
+    // Section 1: the veils, standing up from its edge and leaning in a little, taller as it opens (V up: the film fades with it).
+    {
+        TArray<FVector> V, Nn; TArray<int32> T; TArray<FVector2D> UV;
+        constexpr int32 Levels = 8;
+        const float H = Open > 0.f ? 25.f + 95.f * FMath::Pow(E, .7f) : 1.f;
+        for (int32 I = 0; I <= N; ++I)
+        {
+            // (Round the hatch rather than along its square edge: a ragged oval just outside its coaming, as it opens.)
+            const float A = 2.f * PI * (I % N) / N;
+            const float Rag = 1.f + .1f * FMath::Sin(3.f * A + 2.f) + .07f * FMath::Sin(8.f * A + .3f) + .04f * FMath::Sin(17.f * A);
+            const FVector2D P = Open > 0.f ? C + FVector2D(FMath::Cos(A) * (40.f + 46.f * E), FMath::Sin(A) * (12.f + 74.f * FMath::Pow(E, 1.2f))) * Rag : Edge[I % N];
+            const FVector2D In = (C - P).GetSafeNormal();
+            for (int32 Lv = 0; Lv <= Levels; ++Lv)
+            {
+                const float W = Lv / float(Levels), U = I / float(N);
+                const float Hh = H * (1.f + .18f * FMath::Sin(U * 19.f) + .1f * FMath::Sin(U * 41.f + 1.f));
+                const FVector2D Q = P + In * (W * W * 14.f * FMath::Sin(U * 13.f));
+                V.Add(FVector(Q.X, Q.Y, (Open > 0.f ? DeckZ + 4 : LowerZ - 40) + W * Hh));
+                Nn.Add(FVector(-In.X, -In.Y, 0));
+                UV.Add(FVector2D(U * 3.f, W));
+            }
+        }
+        for (int32 I = 0; I < N; ++I)
+            for (int32 Lv = 0; Lv < Levels; ++Lv)
+            {
+                const int32 A = I * (Levels + 1) + Lv, B = (I + 1) * (Levels + 1) + Lv, Cc = B + 1, D = A + 1;
+                T.Append({A, B, Cc, A, Cc, D, A, Cc, B, A, D, Cc});   // (both windings)
+            }
+        RuptureMesh->CreateMeshSection(1, V, T, Nn, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+    }
+    static UMaterialInterface* Depth = nullptr; static UMaterialInterface* Oil = nullptr;
+    if (!Depth) Depth = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth"));
+    if (!Oil) Oil = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"));
+    RuptureMesh->SetMaterial(0, Depth); RuptureMesh->SetMaterial(1, Oil);
+}
+
+// ---------------------------------------------------------------------------------------------------------------- seas aboard
+// (2026-11-04, user: "when the storm intensity increases have more wave influence on ship, more wind, waves crashing on deck
+// at times, make it look intense and cool".) In the second part, every 7-13 s a sea breaks over the weather (starboard) rail
+// into the waist: white water bursting up along the rail and billowing over, then a sheet of green water with a foaming front
+// running across the deck to the lee rail and draining away. Its front shoves him across the deck if it catches him there.
+// (Never over the companion hatch: the rupture is there.)
+void AShipStorm::DeckWaveNow(float X, float Size)
+{
+    const float Half = (230.f + 120.f * Size);
+    FDeckWave W; W.Size = Size; W.X0 = X - Half; W.X1 = X + Half;
+    Waves.Add(W); ++DeckWaves;
+    // The burst along the rail, and billows of spume over it.
+    for (int32 K = 0; K < 5; ++K)
+    {
+        const float Xk = FMath::Lerp(W.X0 + 40.f, W.X1 - 40.f, K / 4.f) + FMath::FRandRange(-30.f, 30.f);
+        const FVector At = ShipWorld(FVector(Xk, -ShipOuterHalf(Xk, RailZ) - 15.f, RailZ + 20));
+        SprayBurst(At, 1.5f * Size, false);
+        Billow(At + FVector(0, 50, 70), 3, 190.f * Size);
+    }
+    // Its sound: the sea's slam, heavy, and a second as it comes over.
+    const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
+    const bool bApart = Pawn && ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck);
+    const FVector Mid = ShipWorld(FVector(X, -ShipOuterHalf(X, RailZ), RailZ));
+    for (int32 K = 0; K < 2 && Slams.Num(); ++K)
+        if (UAudioComponent* A = UGameplayStatics::SpawnSoundAtLocation(this, Slams[FMath::RandRange(0, Slams.Num() - 1)], Mid, FRotator::ZeroRotator,
+            (K == 0 ? 1.f : .7f) * (bApart ? .6f : 1.f), K == 0 ? .82f : .95f, K * .25f))
+            if (bApart) { A->SetLowPassFilterEnabled(true); A->SetLowPassFilterFrequency(700.f); }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_DECK_WAVE n=%d x=%.0f size=%.2f"), DeckWaves, X, Size);
+}
+
+void AShipStorm::TickDeckWaves(float Dt, const FVector& Eye)
+{
+    NextWave -= Dt;
+    if (Intense > .3f && Sea > .9f && NextWave <= 0.f)
+    {
+        NextWave = FMath::FRandRange(7.f, 13.f);
+        // Aft of the main mast, or forward of the companion (well clear of the rupture).
+        const float X = FMath::FRand() < .3f ? FMath::FRandRange(-720.f, -560.f) : FMath::FRandRange(180.f, 1050.f);
+        DeckWaveNow(X, FMath::FRandRange(.85f, 1.3f) * Intense);
+    }
+    if (!WashMesh) return;
+    if (!Waves.Num()) { if (WashMesh->GetNumSections()) WashMesh->ClearAllMeshSections(); return; }
+    TArray<FVector> V, Nn; TArray<int32> T; TArray<FVector2D> UV; TArray<FColor> Col;
+    ACharacter* Chuck = Cast<ACharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    constexpr int32 NX = 26, NY = 22;
+    for (int32 Wi = Waves.Num() - 1; Wi >= 0; --Wi)
+    {
+        FDeckWave& W = Waves[Wi];
+        W.Age += Dt;
+        if (W.Age > WaveLife) { Waves.RemoveAt(Wi); continue; }
+        // The front runs from the weather rail across to the lee one in about two seconds (fast, then slowing), the water
+        // behind it thinning; then it all drains away.
+        const float Run = FMath::Clamp(W.Age / 2.f, 0.f, 1.f);
+        const float Go = 1.f - FMath::Square(1.f - Run);
+        const float Body = W.Size * (1.f - FMath::SmoothStep(1.9f, WaveLife, W.Age)) * FMath::SmoothStep(0.f, .2f, W.Age);
+        const int32 Base = V.Num();
+        for (int32 I = 0; I <= NX; ++I)
+        {
+            const float U = I / float(NX), X = FMath::Lerp(W.X0, W.X1, U);
+            const float Half = ShipInnerHalf(X, DeckZ + 10) - 4.f;
+            const float Front = FMath::Lerp(-Half, Half, Go) + 25.f * FMath::Sin(U * 9.f + W.X0) * (1.f - Run * .5f);
+            const float Ends = FMath::Sin(PI * U);   // (lower toward its ends along the deck)
+            for (int32 J = 0; J <= NY; ++J)
+            {
+                const float Y = FMath::Lerp(-Half, FMath::Min(Front, Half), J / float(NY));
+                const float D = FMath::Max(0.f, Front - Y);   // behind the front
+                const float H = Body * Ends * (6.f + 20.f * FMath::Exp(-D / 70.f) + 6.f * FMath::Exp(-(Y + Half) / 60.f) * (1.f - Run));
+                V.Add(FVector(X, Y, DeckZ + .6f + FMath::Max(0.f, H)));
+                Nn.Add(FVector(0, -.25f * FMath::Exp(-D / 70.f), 1).GetSafeNormal());
+                UV.Add(FVector2D(X / 300.f, Y / 300.f));
+                // R: foam (the front, and the water still churning near the rail); G: how much water (its opacity).
+                const float Foam = FMath::Clamp(FMath::Exp(-D / 32.f) + .25f * (1.f - Run) * FMath::Exp(-(Y + Half) / 70.f), 0.f, 1.f);
+                const float Amount = FMath::Clamp(Body * Ends * 1.6f, 0.f, 1.f) * FMath::SmoothStep(0.f, 30.f, Front - Y + 4.f);
+                Col.Add(FColor(uint8(Foam * 255), uint8(Amount * 255), 0, 255));
+            }
+        }
+        for (int32 I = 0; I < NX; ++I)
+            for (int32 J = 0; J < NY; ++J)
+            {
+                const int32 A = Base + I * (NY + 1) + J, B = A + NY + 1;
+                T.Append({A, A + 1, B, A + 1, B + 1, B});
+            }
+        // Its front catches him on the deck: a shove toward the lee rail.
+        if (Chuck && !W.bShoved && W.Age < 2.2f)
+        {
+            const FVector L = ShipLocal(Chuck->GetActorLocation()) - FVector(0, 0, 34.65f);
+            const float Half = ShipInnerHalf(static_cast<float>(L.X), DeckZ + 10) - 4.f;
+            const float Front = FMath::Lerp(-Half, Half, Go);
+            if (L.X > W.X0 + 20 && L.X < W.X1 - 20 && L.Z > DeckZ - 5 && L.Z < DeckZ + 45 && Front > L.Y && Front - L.Y < 80.f)
+            {
+                W.bShoved = true; ++WaveShoves;
+                Chuck->LaunchCharacter(FVector(-60.f, 380.f * W.Size, 150.f), true, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_WAVE_SHOVE n=%d at=%s"), WaveShoves, *L.ToString());
+            }
+        }
+    }
+    if (V.Num())
+    {
+        WashMesh->CreateMeshSection(0, V, T, Nn, UV, Col, TArray<FProcMeshTangent>(), false);
+        static UMaterialInterface* Wash = nullptr;
+        if (!Wash) Wash = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Ship/M_ShipDeckWash.M_ShipDeckWash"));
+        WashMesh->SetMaterial(0, Wash);
+    }
+    else WashMesh->ClearAllMeshSections();
+}
+
+// ---------------------------------------------------------------------------------------------------------------- spume
+void AShipStorm::Billow(const FVector& At, int32 Count, float Size)
+{
+    for (int32 I = 0; I < Count && Puffs.Num() < MaxPuffs; ++I)
+    {
+        FPuff P;
+        P.P = At + FVector(FMath::FRandRange(-60.f, 60.f), FMath::FRandRange(-30.f, 30.f), FMath::FRandRange(-20.f, 40.f)) * (Size / 200.f);
+        P.V = FVector(FMath::FRandRange(-80.f, 80.f), FMath::FRandRange(60.f, 260.f), FMath::FRandRange(220.f, 520.f));
+        P.Age = -FMath::FRandRange(0.f, .15f); P.Life = FMath::FRandRange(1.3f, 2.3f); P.Size = Size * FMath::FRandRange(.7f, 1.3f);
+        P.Frame0 = FMath::FRandRange(0.f, 10.f);
+        Puffs.Add(P);
+    }
+}
+
+void AShipStorm::TickPuffs(float Dt, const FVector& Eye)
+{
+    if (!PuffSprites) return;
+    const FVector Blow = WindVelocity(Wind);
+    const FVector O = ShipOrigin();
+    TArray<FTransform> X; X.Init(FTransform(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector), MaxPuffs);
+    int32 N = 0;
+    for (int32 I = Puffs.Num() - 1; I >= 0; --I)
+    {
+        FPuff& P = Puffs[I];
+        P.Age += Dt;
+        if (P.Age < 0.f) continue;
+        if (P.Age > P.Life) { Puffs.RemoveAtSwap(I); continue; }
+        // Thrown up, slowed by the air, carried off down the wind, settling.
+        P.V.X += (Blow.X - P.V.X) * 1.1f * Dt; P.V.Y += (Blow.Y - P.V.Y) * 1.1f * Dt; P.V.Z -= 330.f * Dt; P.V.Z *= 1.f - .6f * Dt;
+        P.P += P.V * Dt;
+        const FVector L = P.P - O;
+        if (L.Z < SurfaceZ(L) + P.Size * .25f) { P.P.Z = O.Z + SurfaceZ(L) + P.Size * .25f; P.V.Z = FMath::Max(0.f, static_cast<float>(P.V.Z)); }
+        if (N >= MaxPuffs) continue;
+        const float U = P.Age / P.Life;
+        FVector Z = Eye - P.P; const float Dist = Z.Size(); if (!Z.Normalize()) Z = FVector::UpVector;
+        if (Dist < 40.f) continue;
+        const FVector X0 = FVector::CrossProduct(FMath::Abs(Z.Z) > .98f ? FVector::ForwardVector : FVector::UpVector, Z).GetSafeNormal(), Y0 = FVector::CrossProduct(Z, X0);
+        const float Spin = I * 2.3f + P.Age * .4f;
+        const FVector Xa = X0 * FMath::Cos(Spin) + Y0 * FMath::Sin(Spin), Ya = Y0 * FMath::Cos(Spin) - X0 * FMath::Sin(Spin);
+        X[N] = FTransform(FMatrix(Xa, Ya, Z, FVector::ZeroVector).ToQuat(), P.P, FVector(P.Size * (.55f + .85f * U) / 100.f));
+        PuffSprites->SetCustomDataValue(N, 0, P.Frame0 + U * 46.f, false);
+        PuffSprites->SetCustomDataValue(N, 1, 0.f, false);
+        // (Thinner close to the view: a billow must never fill the screen.)
+        PuffSprites->SetCustomDataValue(N, 2, .6f * FMath::SmoothStep(0.f, .1f, U) * FMath::Pow(1.f - U, 1.4f) * FMath::SmoothStep(60.f, 420.f, Dist), false);
+        ++N;
+    }
+    PuffsShown = N;
+    PuffSprites->SetVisibility(N > 0);
+    PuffSprites->BatchUpdateInstancesTransforms(0, X, true, true, true);
 }

@@ -470,7 +470,73 @@ All CC0 recordings by Joseph Sardin (BigSoundBank), cut by `Tools/make_storm_sou
 
 - The plank, the fragments and the fall (the user: not yet). Nothing ends the storm except the menu.
 - Heard on speakers by nobody: the balance of rain, gale, sea and thunder against the music and each other is measured, not listened to.
-- The crew go on as before in the storm (the dancer dances, the fencers fence). Whether they should react (or the sails be reefed, as a real crew would in a gale) is the user's call.
+- The crew go on as before in the storm (the dancer dances, the fencers fence). Whether they should react (or the sails be reefed, as a real crew would in a gale) is the user's call. (November 4: they now work the ship in the storm; see below.)
 - The flash still leaves a faint speckle on edges against the clouds for a frame or two.
 - No wet look on the deck or the crew; no rain comes below through the gratings; drops pass through the sails and tops.
+- Not played by hand.
+
+## The storm developed (November 4)
+
+User request: "fix the concertina players hands (currently they're backwards on the concertina). then, develop the storm sequence: when the storm starts and player is above deck, have an astral rupture form at ladder locking player to staying above deck. add this Ship_storm soundtrack for the storm starting, after the song plays have the storm intensify and switch soundtrack to Ship_storm_intense. no concertina transition during storm/ following the trigger. during storm have the NPC's responding to the storm, doing things sailors would in a storm, the captain at the helm. no concertina held by the concertina player as he is now manning the ship as with the other crewmen. when the storm intensity increases have more wave influence on ship, more wind, waves crashing on deck at times, make it look intense and cool. download and implement whatever free resources you need".
+
+### The concertina player's hands
+
+His palms faced out, the fingers curling away from the instrument (in this rig, fingers up with the palm in means the thumb's side back toward him; `DockNPCPirate.inl`). Now each hand lies over its end, palm in, fingers on the buttons, the back of the hand out.
+
+### The rupture over the companion (`AShipStorm::TickRupture`)
+
+- Once the storm has started and he is on the weather deck (at least 1.7 m from the companion hatch, so it never opens under him as he climbs out), the Astral tears open in the companion hatch: a slit along it first, widening over 2.4 s until the whole opening is the Astral's starry glow 8 cm below the deck, with the oil-film veils standing round it as the sewer's and the temple's ruptures have, a purple light that flares as it tears, and the Astral summoning sound.
+- The companion ladder can no longer be taken hold of (`SetChuckClimbableBlocked`, a new flag on `FChuckClimbable`). Stepping into the hatch is an Astral death (`ShipRuptureSwallows`), and while the rupture is open every death aboard returns him to the deck (`ShipRespawn`).
+- If he is below when the storm starts (the chest is in the cabin, so the seventh condition is often met there), it forms as soon as he comes up and walks clear of the hatch.
+- The checkpoint menu's fresh start aboard closes it and frees the ladder.
+
+### The storm's music (`DockGameMode`)
+
+From the storm's start, wherever he is aboard: the user's storm track (once), and from the storm's second part their intense track, looping (`SW_ShipStorm`, `SW_ShipStormIntense`; `SourceAssets/Audio/README.md`). The ship track and the concertina version fade out and there is no switching between them by deck in the storm. Each storm track is kept at the storm's clock (a checkpoint jumping it brings the music along). The storm tracks sink only 12% under the gale.
+
+### The second part (`AShipStorm::Levels`)
+
+When the storm track has played through (202 s, its length read from the asset), the storm intensifies over 25 s and stays so:
+- **Sea and ship:** she rolls about 10° each way (6.5° before) on a quicker swell, pitches about 5°, the chop rides harder and the heel deepens: about 15° of horizon tilt was measured at the peaks. `M_ShipSea`'s Storm goes on to 1.7 (its swell and wind sea higher, more foam and spume).
+- **Wind:** the gusts 30% stronger (the sails thrum and fill harder, the flag streams flatter); the gale's loop 25% louder, the sea's 35%.
+- **Rain:** heavier (up to 3,400 streaks).
+- **Spray:** about twice as often and larger, with billows of spume (below).
+- **Lightning:** strikes nearly twice as often and more of them close.
+
+### Seas breaking aboard (`AShipStorm::DeckWaveNow`)
+
+In the second part, every 7–13 s a sea breaks over the weather (starboard) rail into the waist, aft of the main mast or forward of the companion (never over the rupture):
+- White water bursts up along 5–7 m of the rail, with billows of spume over it, and the sea's slam, heavy, twice.
+- A sheet of dark green water with a foaming front runs across the deck to the lee rail in about two seconds, rippling and foaming as it goes (`M_ShipDeckWash`, using the sea's own normal and foam textures), then drains away (4.4 s in all).
+- If its front catches him on the deck, it shoves him across toward the lee rail (he keeps his feet; the rail holds him).
+
+The spume (also over every spray now) is drawn from Unity Labs' CC0 smoke flipbook (`WispySmoke01`, already imported for the temple's jets as `T_JetSmoke`) as white water: `M_ShipSpume`, lit, on camera-facing sprites that billow up, blow down the wind and thin away. No new download was needed.
+
+### The crew in the storm (`AShipCrew::BeginStorm`, `DockNPCPirate.inl`)
+
+At the storm's start the deck's crew stow what they hold (the concertina, the tankard, the cutlasses), stop the music, dancing and fencing, and walk briskly to their stations (round the companion and the skylight, never through them):
+- **On the main's line to starboard:** the concertina player and the cheering pirate, one either side of it, facing its lead block. They haul together: both hands draw back as they throw their weight back, then the forward hand lets go and reaches on along the line and the other follows. The line runs aft along the deck at hand height from a lead block, up to the mast, and its tail lies coiled behind them.
+- **On the fore's line to port:** the two fencers, the same way, half a heave out of step with the first pair.
+- **At the main mast's port fife rail:** the dancer sweats up a halyard, reaching high on it and throwing his weight down, hand over hand.
+- **At the helm:** the captain, behind the wheel facing forward, his hands on two spokes, steering it to and fro against the sea (a long sweep with quicker corrections over it, wider in the full gale and wider still in the second part). The wheel now turns: its rim and spokes are their own part, and it stands on the aft side of its posts (it was on the fore side, with no room for a helmsman behind it).
+- They work faster as the storm builds. Jeffries stays tied to the mast. The chef and the seated pirate below go on as before (he cannot go below in the storm).
+- Their talk stops while they work (they can't be talked to), and they don't turn to the rat.
+- Every grip is kept within the man's reach along its line or spoke, and the hand takes the line the way round that keeps the wrist natural.
+
+### Checkpoints
+
+**Ship Storm Intense (dev)** (new, after Ship Storm (dev)): the storm already running, 8 s before its second part.
+
+### Tests
+
+- `storm_work` (trial 19): the full storm's first part until the six deck crew are at their stations; 16 stills (`Saved/Screenshots/WindowsEditor/Ship/Storm/Work_*.png`: both hauling pairs, the halyard, the helm from before and behind, the rupture, the whole deck, the second part from the bow, the quarter and the horizon, and a sea breaking aboard from the deck and at the rat's eye); then he walks aft at the companion's lip into the rupture (an Astral death, no ladder taken, back on deck), and a sea breaks aboard over him. It checks all six at work, every hand within 8 cm of its line or spoke, the wheel's swing over 12°, the rupture open, the death and the deck return, the shove, more than 8° of roll in the second part, spume shown, seas aboard, and both storm tracks heard (music regions 31 and 32).
+- `-ChuckShipTrials=storm_work` runs it (with `storm`, whose name it contains).
+
+### Not checked / still open
+
+- Heard on speakers by nobody: the storm tracks against the gale, the sea's slams and the thunder.
+- The plank, the captain's sequence and the storm's end (the user: not yet).
+- The haulers' feet stay planted (they don't walk the line back); the line itself doesn't run through their hands.
+- The sea washing aboard passes through deck fittings (the capstan, the coamings, the crew's feet) rather than round them, and the crew don't react to it.
+- The rupture's veils follow the sewer's style (oil film); from close by, the nearest can read as a flat sheet.
 - Not played by hand.

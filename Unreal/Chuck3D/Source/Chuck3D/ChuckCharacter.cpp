@@ -1649,6 +1649,7 @@ bool AChuckCharacter::TryMountLadder()
     for (int32 I = 0; I < All.Num(); ++I)
     {
         const FChuckClimbable& C = All[I];
+        if (C.bBlocked) continue;
         const FVector Side = FVector::CrossProduct(FVector::UpVector, C.Out);
         const FVector Rel = Location - C.Foot;
         const float Front = static_cast<float>(FVector::DotProduct(Rel, C.Out));
@@ -3361,4 +3362,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     else if (bChultRespawn && ChultTempleInteriorSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Over the ship's side into the sea (2026-11-01): Astral, back at the start of the space he went over from.
     else if (ShipSeaSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
+    // Into the Astral rupture over the companion hatch in the ship's storm (2026-11-04): Astral, back on deck.
+    else if (ShipRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
 }

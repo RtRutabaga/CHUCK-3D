@@ -235,6 +235,7 @@ void ADockNPC::TickPirate(float DeltaSeconds)
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_TALKED %s conversations=%d"), *DisplayName, Conversations);
     }
     if (ShoutUntil >= 0.f && Clock > ShoutUntil) ShoutUntil = -1.f;
+    if (StormWork != EStormWork::None) { TickStormWork(DeltaSeconds); return; }   // (2026-11-04: at his storm station)
     switch (Kind)
     {
     case EDockHuman::PirateChef: TickChef(DeltaSeconds); break;
@@ -407,6 +408,7 @@ void ADockNPC::PirateDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVect
         HipsOffset *= W;
     };
     PirateDip = 0.f;
+    if (StormWork != EStormWork::None) { StormDelta(Delta, BoneDelta, HipsOffset); return; }
     switch (Kind)
     {
     case EDockHuman::PirateConcertina:
@@ -545,6 +547,7 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         }
         if (Dipped > .05f) KeepFeetOn(Space, Ankles, Feet, FVector(1.f, 0.f, 0.f));
     };
+    if (StormWork != EStormWork::None) { PoseStorm(Space); return; }
     const FVector Shoulder[2] = { Space[BoneIndex[UpperL]].GetLocation(), Space[BoneIndex[UpperR]].GetLocation() };
     switch (Kind)
     {
@@ -560,7 +563,9 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         const FVector Centre((Shoulder[0] + Shoulder[1]) * .5f + FVector(31.f, 0.f, -24.f));
         const FVector Fist[2] = { Centre - Axis * (BellowsGap * .5f + ConcertinaFace), Centre + Axis * (BellowsGap * .5f + ConcertinaFace) };
         const FVector Along = FVector::VectorPlaneProject(FVector(.25f, 0.f, 1.f), Axis).GetSafeNormal();   // knuckles up, over the buttons
-        const FVector Thumb = FVector::VectorPlaneProject(FVector(1.f, 0.f, -.2f), Along).GetSafeNormal();
+        // (2026-11-04, user: his hands were "backwards on the concertina": palms out, the fingers curling away from it. In this
+        // rig fingers up with the palm in toward the bellows means the thumb's side back toward him.)
+        const FVector Thumb = FVector::VectorPlaneProject(FVector(-1.f, 0.f, .2f), Along).GetSafeNormal();
         for (int32 Side = 0; Side < 2; ++Side)
             PlaceHand(Space, Side, Fist[Side], Along, Thumb, FVector(-.3f, OutOf(Side), -.7f));
         FVector P[2], A, T;
@@ -1050,4 +1055,282 @@ void ADockNPC::UpdateRopes(const TArray<FTransform>& Space)
     if (Ropes->GetNumSections() == 0 || Ropes->GetProcMeshSection(0)->ProcVertexBuffer.Num() != V.Num())
         Ropes->CreateMeshSection(0, V, Tris, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
     else Ropes->UpdateMeshSection(0, V, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>());
+}
+
+// ------------------------------------------------------------------ the storm (2026-11-04)
+// (User: "during storm have the NPC's responding to the storm, doing things sailors would in a storm, the captain at the
+// helm. no concertina held by the concertina player as he is now manning the ship as with the other crewmen".) At the
+// storm's start each of the deck's crew stows what he holds (the concertina, the tankard, the cutlasses) and walks briskly to
+// his station (AShipCrew::BeginStorm): two to a line, they haul it hand over hand, leaning back into each heave together;
+// the dancer sweats up a halyard, reaching high and throwing his weight down on it; the captain takes the helm, steering
+// the wheel against the sea. They work harder and quicker as the storm builds.
+namespace
+{
+    constexpr float StormWalk = 165.f;   // cm/s to his station
+    // A hand round a line: its thumb's side along the line (ThumbWay), its palm toward PalmWant; the knuckles' way follows
+    // (the rig's hands: palm = (along x thumb), mirrored for the right hand: measured on the concertina, 2026-11-04).
+    void GripOn(const FVector& ThumbWay, const FVector& PalmWant, float Out, FVector& Along, FVector& Thumb)
+    {
+        Thumb = ThumbWay.GetSafeNormal();
+        const FVector Palm = FVector::VectorPlaneProject(PalmWant, Thumb).GetSafeNormal();
+        Along = FVector::CrossProduct(Thumb, Palm * Out).GetSafeNormal();
+    }
+}
+
+void ADockNPC::SetStormWork(EStormWork Work, const TArray<FVector>& Way, float Yaw, const FVector& RopeA, const FVector& RopeB, float InPhase)
+{
+    if (Work == EStormWork::None)
+    {
+        if (StormWork == EStormWork::None) return;
+        // Back to what he was doing, where he was (a calm comes only from the checkpoint menu's fresh start).
+        StormWork = EStormWork::None; StormArrived = false; StormBlend = 0.f; StormSpeed = 0.f; JogBlend = 0.f; HelmAngle = 0.f;
+        SetActorLocationAndRotation(StormHome.GetLocation(), StormHome.Rotator());
+        HomeYaw = StormHomeYaw;
+        for (UStaticMeshComponent* P : PirateProps) if (P) P->SetVisibility(true);
+        bPlanted = false;
+        return;
+    }
+    if (StormWork == EStormWork::None) { StormHome = GetActorTransform(); StormHomeYaw = HomeYaw; }
+    StormWork = Work; StormWay = Way; StormLeg = 0; StormArrived = false; StormYaw = Yaw;
+    StormRopeA = RopeA; StormRopeB = RopeB; StormPhase = InPhase; StormClock = 0.f; StormBlend = 0.f;
+    // The concertina, the tankard and the cutlasses put away; the fencing over.
+    for (UStaticMeshComponent* P : PirateProps) if (P) P->SetVisibility(false);
+    bFenceCue = false; bPlanted = false; bTurning = false; TurnHold = 0.f;
+    Grip[0] = Grip[1] = .5f;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_STORM_WORK %s work=%d legs=%d"), *DisplayName, int32(Work), Way.Num());
+}
+
+void ADockNPC::TickStormWork(float DeltaSeconds)
+{
+    StormClock += DeltaSeconds;
+    if (!StormArrived)
+    {
+        const FVector Me = GetActorLocation();
+        if (StormLeg < StormWay.Num())
+        {
+            // Along his way, each leg straight (kept on his own deck's level), turning as he goes.
+            const FVector To(StormWay[StormLeg].X, StormWay[StormLeg].Y, Me.Z);
+            const float Dist = static_cast<float>(FVector::Dist2D(To, Me));
+            const bool bLast = StormLeg == StormWay.Num() - 1;
+            if (Dist < 5.f) { ++StormLeg; }
+            else
+            {
+                StormSpeed = StormWalk * (bLast ? FMath::Clamp(Dist / 70.f, .35f, 1.f) : 1.f);
+                SetActorLocation(Me + (To - Me).GetSafeNormal2D() * FMath::Min(Dist, StormSpeed * DeltaSeconds));
+                TurnZombie(To, DeltaSeconds, 420.f);
+            }
+        }
+        else
+        {
+            // There: turn to his work.
+            StormSpeed = 0.f;
+            const float Current = static_cast<float>(GetActorRotation().Yaw);
+            const float Left = FMath::FindDeltaAngleDegrees(Current, StormYaw);
+            const float Step = FMath::Clamp(Left, -260.f * DeltaSeconds, 260.f * DeltaSeconds);
+            SetActorRotation(FRotator(0.f, Current + Step, 0.f));
+            if (FMath::Abs(Left) < 2.f)
+            {
+                SetActorRotation(FRotator(0.f, StormYaw, 0.f)); HomeYaw = StormYaw; StormArrived = true;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_STORM_STATION %s after_s=%.1f"), *DisplayName, StormClock);
+            }
+        }
+    }
+    JogBlend = FMath::FInterpTo(JogBlend, StormSpeed > 30.f ? 1.f : 0.f, DeltaSeconds, 6.f);
+    JogTime += DeltaSeconds * StormSpeed / FMath::Max(ChefJogClip * HipScale, 1.f);
+    StormBlend = FMath::FInterpConstantTo(StormBlend, StormArrived ? 1.f : 0.f, DeltaSeconds, 1.3f);
+    if (StormWork == EStormWork::Helm)
+    {
+        // Steering: the wheel worked to and fro against the sea (a long sweep, quicker corrections over it), wider in the
+        // full gale and wider still once it has intensified.
+        const float T = GetWorld()->GetTimeSeconds();
+        const float Sweep = 16.f + 10.f * FMath::Clamp(StormForce - 1.f, 0.f, 1.f);
+        HelmAngle = StormBlend * (Sweep * FMath::Sin(T * 2.f * PI / 6.8f) + .35f * Sweep * FMath::Sin(T * 2.f * PI / 2.6f + 1.3f));
+    }
+    // Jeffries' storm is AShipCrew's (he stays tied); the others' work has no talk.
+    TalkBlend = 0.f;
+}
+
+namespace
+{
+    // Where in his heave (or his pull on the halyard) he is: shared by the men on one line (world time, their phase).
+    float StormCycle(const UWorld* World, float Phase, float Force, float Slow, float Quick)
+    {
+        const float Period = FMath::Lerp(Slow, Quick, FMath::Clamp((Force - .5f) / 1.5f, 0.f, 1.f));
+        return Frac(static_cast<float>(World->GetTimeSeconds()) / Period + Phase);
+    }
+}
+
+void ADockNPC::StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVector& HipsOffset)
+{
+    const float Work = StormBlend;
+    for (FQuat& Q : BoneDelta) Q = FQuat::Slerp(FQuat::Identity, Q, FMath::Lerp(1.f, .35f, Work));
+    HipsOffset *= FMath::Lerp(1.f, .35f, Work);
+    PirateDip = 0.f;
+    if (Work <= 0.f) return;
+    switch (StormWork)
+    {
+    case EStormWork::Haul:
+    {
+        // Reaching forward along the line, then heaving back on it, his weight thrown back, knees bent.
+        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.8f, 2.05f);
+        const float Pull = U < .5f ? Ease01(U / .5f) : 1.f - Ease01((U - .5f) / .5f);
+        const float Lean = Work * (5.f - 19.f * Pull);   // + forward, - back
+        Delta[Spine1] = Pitch(.35f * Lean) * Delta[Spine1];
+        Delta[Spine2] = Pitch(.35f * Lean) * Delta[Spine2];
+        Delta[Chest] = Pitch(.3f * Lean) * Delta[Chest];
+        Delta[Head] = Pitch(-.5f * Lean + 6.f * Work) * Delta[Head];
+        HipsOffset.X -= Work * (3.f + 13.f * Pull);
+        HipsOffset.Z -= Work * (8.f + 6.f * Pull);
+        break;
+    }
+    case EStormWork::Sweat:
+    {
+        // Up on his toes reaching for the line high, then dropping his weight down onto it.
+        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.6f, 1.9f);
+        const float Up = U < .3f ? Ease01(U / .3f) : U < .4f ? 1.f : 1.f - Ease01((U - .4f) / .45f);
+        const float Down = U < .4f ? 0.f : U < .85f ? Ease01((U - .4f) / .45f) : 1.f - Ease01((U - .85f) / .15f);
+        Delta[Spine1] = Pitch(Work * (-3.f * Up + 9.f * Down)) * Delta[Spine1];
+        Delta[Spine2] = Pitch(Work * (-3.f * Up + 7.f * Down)) * Delta[Spine2];
+        Delta[Head] = Pitch(Work * (-22.f * Up + 6.f * Down)) * Delta[Head];
+        HipsOffset.Z += Work * (3.f * Up - 15.f * Down);
+        break;
+    }
+    case EStormWork::Helm:
+    {
+        // Braced behind the wheel, leaning a little into it, his body going with it as he heaves it round.
+        Delta[Spine1] = Roll(-.12f * HelmAngle) * Pitch(3.f * Work) * Delta[Spine1];
+        Delta[Chest] = Roll(-.1f * HelmAngle) * Pitch(3.f * Work) * Delta[Chest];
+        Delta[Head] = Pitch(-5.f * Work) * Roll(.08f * HelmAngle) * Delta[Head];
+        HipsOffset.Z -= 5.f * Work;
+        break;
+    }
+    default: break;
+    }
+}
+
+void ADockNPC::PoseStorm(TArray<FTransform>& Space)
+{
+    const float Work = StormBlend;
+    if (Work <= 0.f) return;   // (walking there: the jog alone, arms free)
+    const FTransform ToWorld = Body->GetComponentTransform();
+    const auto OutOf = [this](int32 Side) { return Side == 0 ? ArmOut : -ArmOut; };
+    // The feet: a long stance on the line (his left forward), square and wide at the halyard and the wheel.
+    {
+        FVector Ankles[2]; FQuat Feet[2];
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            FVector Off(0.f, OutOf(Side) * 6.f, 0.f);
+            if (StormWork == EStormWork::Haul) Off = Side == 0 ? FVector(22.f, OutOf(Side) * 3.f, 0.f) : FVector(-28.f, OutOf(Side) * 7.f, 0.f);
+            else if (StormWork == EStormWork::Helm) Off = FVector(0.f, OutOf(Side) * 7.f, 0.f);
+            Ankles[Side] = AnkleStand[Side] + Off * Work;
+            Feet[Side] = (StormWork == EStormWork::Haul && Side == 1 ? Yaw(OutOf(Side) * 25.f * Work) : FQuat::Identity) * FootRest[Side];
+        }
+        KeepFeetOn(Space, Ankles, Feet, FVector(1.f, 0.f, 0.f));
+    }
+    FVector Want[2], ThumbWay[2], PalmWay[2], Pole[2];
+    float G[2] = { 1.f, 1.f };
+    const FVector ChestAt = Space[BoneIndex[Chest]].GetLocation();
+    const FVector Shoulder[2] = { Space[BoneIndex[UpperL]].GetLocation(), Space[BoneIndex[UpperR]].GetLocation() };
+    // Every grip within his arm's reach: on its line (From, Dir), the point nearest the one wanted (S along it) that his
+    // shoulder reaches (the halfling's short arms at the wheel; a long reach forward along a line).
+    float ArmReach[2];
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const FVector Up = Space[BoneIndex[Of(UpperL, Side)]].GetLocation(), Lo = Space[BoneIndex[Of(LowerL, Side)]].GetLocation(), Ha = Space[BoneIndex[Of(HandL, Side)]].GetLocation();
+        ArmReach[Side] = static_cast<float>(FVector::Dist(Up, Lo) + FVector::Dist(Lo, Ha)) * .88f + 4.f * FistScale;
+    }
+    const auto WithinReach = [&](int32 Side, const FVector& From, const FVector& Dir, float S)
+    {
+        const FVector D = From - Shoulder[Side];
+        const float B = static_cast<float>(FVector::DotProduct(Dir, D)), C = static_cast<float>(D.SizeSquared()) - ArmReach[Side] * ArmReach[Side];
+        const float Disc = B * B - C;
+        if (Disc < 0.f) return -B;   // (out of reach all along it: its nearest point)
+        const float R = FMath::Sqrt(Disc);
+        return FMath::Clamp(S, -B - R, -B + R);
+    };
+    switch (StormWork)
+    {
+    case EStormWork::Haul:
+    {
+        // Both hands on the line before him, the forward one his left: in the heave both draw back toward him; then the
+        // forward hand lets go and reaches on along it, and the other follows up behind it.
+        const FVector A = ToWorld.InverseTransformPosition(StormRopeA), B = ToWorld.InverseTransformPosition(StormRopeB);
+        const FVector Dir = (A - B).GetSafeNormal();
+        const float S0 = static_cast<float>(FVector::DotProduct(ChestAt - B, Dir));
+        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.8f, 2.05f);
+        float SF = 62.f, SB = 36.f, LiftF = 0.f, LiftB = 0.f;
+        if (U < .5f) { const float E = Ease01(U / .5f); SF = FMath::Lerp(62.f, 36.f, E); SB = FMath::Lerp(36.f, 10.f, E); }
+        else
+        {
+            const float V = (U - .5f) / .5f;
+            if (V < .5f) { const float E = Ease01(V / .5f); SF = FMath::Lerp(36.f, 62.f, E); SB = 10.f; LiftF = 6.f * FMath::Sin(PI * V / .5f); G[0] = FMath::Lerp(1.f, .35f, FMath::Sin(PI * V / .5f)); }
+            else { const float E = Ease01((V - .5f) / .5f); SF = 62.f; SB = FMath::Lerp(10.f, 36.f, E); LiftB = 6.f * FMath::Sin(PI * (V - .5f) / .5f); G[1] = FMath::Lerp(1.f, .35f, FMath::Sin(PI * (V - .5f) / .5f)); }
+        }
+        const float F = WithinReach(0, B, Dir, S0 + SF);
+        const float Bk = WithinReach(1, B, Dir, FMath::Min(S0 + SB, F - 13.f));
+        Want[0] = B + Dir * F + FVector(0.f, 0.f, LiftF);
+        Want[1] = B + Dir * Bk + FVector(0.f, 0.f, LiftB);
+        for (int32 Side = 0; Side < 2; ++Side) { ThumbWay[Side] = Dir; PalmWay[Side] = FVector(0.f, 0.f, -1.f); Pole[Side] = FVector(-.3f, OutOf(Side), -1.f); }
+        break;
+    }
+    case EStormWork::Sweat:
+    {
+        // The halyard straight up before him: both hands high on it, then hauled down to his waist (his left above his right).
+        const FVector A = ToWorld.InverseTransformPosition(StormRopeA), B = ToWorld.InverseTransformPosition(StormRopeB);
+        const FVector Dir = (B - A).GetSafeNormal();
+        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.6f, 1.9f);
+        const float High = static_cast<float>(FMath::Max(Shoulder[0].Z, Shoulder[1].Z)) + 40.f;
+        const float Low = static_cast<float>(Space[BoneIndex[Pelvis]].GetLocation().Z) + 22.f;
+        float H = Low;
+        if (U < .3f) { H = FMath::Lerp(Low, High, Ease01(U / .3f)); G[0] = G[1] = .3f; }
+        else if (U < .4f) { H = High; G[0] = G[1] = FMath::Lerp(.3f, 1.f, (U - .3f) / .1f); }
+        else if (U < .85f) H = FMath::Lerp(High, Low, Ease01((U - .4f) / .45f));
+        const float Per = 1.f / FMath::Max(static_cast<float>(Dir.Z), .2f);   // along the line a cm of height
+        const float S0 = WithinReach(0, A, Dir, (H + 7.f - static_cast<float>(A.Z)) * Per);
+        const float S1 = WithinReach(1, A, Dir, FMath::Min((H - 7.f - static_cast<float>(A.Z)) * Per, S0 - 13.f * Per));
+        Want[0] = A + Dir * S0; Want[1] = A + Dir * S1;
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            ThumbWay[Side] = Dir;
+            PalmWay[Side] = FVector::VectorPlaneProject(Want[Side] - Shoulder[Side], FVector::UpVector).GetSafeNormal();
+            Pole[Side] = FVector(-.2f, OutOf(Side), -.6f);
+        }
+        break;
+    }
+    case EStormWork::Helm:
+    {
+        // On the two spokes either side just below the hub (the eighth and the second below level), round as the wheel turns.
+        const FVector Hub = ToWorld.InverseTransformPosition(StormRopeA);
+        for (int32 Side = 0; Side < 2; ++Side)
+        {
+            // (Spoke 9 points to the ship's port side and spoke 5 to starboard, both a little below the hub, when the wheel is square.)
+            const int32 K = (OutOf(Side) * static_cast<float>(ToWorld.InverseTransformVector(FVector(0, 1, 0)).Y)) > 0.f ? 9 : 5;
+            const FVector Spoke = ToWorld.InverseTransformVectorNoScale(Ship::HelmSpoke(K, HelmAngle)).GetSafeNormal();
+            Want[Side] = Hub + Spoke * FMath::Clamp(WithinReach(Side, Hub, Spoke, 32.f), 16.f, 66.f);
+            ThumbWay[Side] = Spoke;
+            PalmWay[Side] = FVector(1.f, 0.f, 0.f);
+            Pole[Side] = FVector(-.4f, OutOf(Side), -.7f);
+        }
+        break;
+    }
+    default: return;
+    }
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        FVector Along, Thumb, Now, NowAlong, NowThumb;
+        GripOn(ThumbWay[Side], PalmWay[Side], OutOf(Side), Along, Thumb);
+        // (A line can be gripped either way round: the way that keeps his knuckles going on from his forearm, not bent
+        // back toward his shoulder, as the hand reaching across his body would be.)
+        if (FVector::DotProduct(Along, Want[Side] - Shoulder[Side]) < 0.f) GripOn(-ThumbWay[Side], PalmWay[Side], OutOf(Side), Along, Thumb);
+        // (Eased in from where his arms hung as he walked up.)
+        HandFrame(Space, Side, Now, NowAlong, NowThumb);
+        const FVector Fist = FMath::Lerp(Now, Want[Side], Work);
+        PlaceHand(Space, Side, Fist, FMath::Lerp(NowAlong, Along, Work).GetSafeNormal(), FMath::Lerp(NowThumb, Thumb, Work).GetSafeNormal(), Pole[Side].GetSafeNormal());
+        Grip[Side] = FMath::Lerp(.5f, G[Side], Work);
+        FVector P, A2, T2;
+        HandFrame(Space, Side, P, A2, T2);
+        StormFistW[Side] = ToWorld.TransformPosition(P);
+        StormWantW[Side] = ToWorld.TransformPosition(Want[Side]);
+        if (Work >= 1.f && Clock > 6.f) WorstPropGrip = FMath::Max(WorstPropGrip, static_cast<float>(FVector::Dist(P, Want[Side])));
+    }
 }

@@ -14,6 +14,13 @@ void AddChuckClimbable(const FChuckClimbable& Climbable)
 
 const TArray<FChuckClimbable>& GetChuckClimbables() { return Climbables; }
 
+bool SetChuckClimbableBlocked(const FVector& Lip, bool bBlocked)
+{
+    for (FChuckClimbable& C : Climbables)
+        if (FVector::Dist(C.Lip, Lip) < 5.f) { C.bBlocked = bBlocked; return true; }
+    return false;
+}
+
 namespace
 {
     TArray<FChuckSwingGrip> SwingGrips;

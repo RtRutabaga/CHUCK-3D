@@ -65,6 +65,8 @@ private:
     bool bDuckRecovered = false;
     // The ship's concertina version (2026-11-02): its loudness by the player, kept apart so the duck can multiply it in.
     TWeakObjectPtr<class UAudioComponent> ConcertinaTrack;
+    // The ship storm's two tracks (2026-11-04): ducked less under the gale than the others.
+    TArray<TWeakObjectPtr<class UAudioComponent>> StormTracks;
     float ConcertinaNear = 1.f;
     int32 ShipMusicSwitches = 0;
     void UpdateMusicDuck(float DeltaSeconds);

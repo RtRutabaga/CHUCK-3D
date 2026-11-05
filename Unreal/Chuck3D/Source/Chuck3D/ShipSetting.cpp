@@ -135,6 +135,7 @@ namespace
     struct FParts
     {
         FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging, Lumber, Veil;
+        FSurf Wheel;   // the helm's rim, spokes and handles, about its hub (2026-11-04: it turns)
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -519,7 +520,8 @@ bool ShipRespawn(const FVector& World, FVector& Out)
 {
     if (!InShip(World)) return false;
     const int32 Space = ShipSpaceAt(World);
-    Out = ShipSpawn(Space >= 0 ? EShipSpawn(Space) : EShipSpawn::Arrival);
+    // (In the storm, once the rupture has closed the companion: always back on deck, 2026-11-04.)
+    Out = ShipSpawn(ShipRuptureOpen() ? EShipSpawn::Deck : Space >= 0 ? EShipSpawn(Space) : EShipSpawn::Arrival);
     return true;
 }
 bool IsShipSpawn(const FVector& World, float& Yaw)
@@ -1250,6 +1252,7 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipDeck"), P.Deck, DeckMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipWood"), P.Wood, WoodMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipWoodDecor"), P.WoodDecor, WoodMat, false, true, Missing, Triangles);
+    if ((Wheel = Emit(this, TEXT("ShipHelmWheel"), P.Wheel, WoodMat, false, true, Missing, Triangles)) != nullptr) Wheel->SetWorldLocation(ShipWorld(HelmHub()));
     Emit(this, TEXT("ShipDark"), P.Dark, DarkMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipIron"), P.Iron, IronMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipCanvas"), P.Canvas, CanvasMat, false, true, Missing, Triangles);
@@ -1399,8 +1402,11 @@ void AShipSetting::Rock()
     // swell and pitch a little on a longer one. The sea's ring on the hull follows the planking's flare (M_ShipSea).
     // In the storm (2026-11-03) the swell builds: she rolls about 6.5 degrees and pitches 3, a shorter chop rides on it, and
     // the gale heels her to leeward (port) by up to 3.5 degrees.
-    const float Roll = FMath::Lerp(1.5f, 6.5f, StormSea) * FMath::Sin(RollPhase) + 1.1f * StormSea * FMath::Sin(ChopPhase) + 3.5f * StormWind;
-    const float Pitch = FMath::Lerp(.6f, 3.f, StormSea) * FMath::Sin(PitchPhase + .8f) + .7f * StormSea * FMath::Sin(ChopPhase * 1.37f + 1.f);
+    // Once it intensifies (2026-11-04) she rolls about 10 degrees each way and pitches 5, the chop rides harder on both and
+    // the heel deepens; the swell comes quicker (AShipSetting::Tick).
+    const float Roll = (FMath::Lerp(1.5f, 6.5f, StormSea) + 3.5f * StormIntense) * FMath::Sin(RollPhase) + (1.1f * StormSea + 1.f * StormIntense) * FMath::Sin(ChopPhase)
+        + 3.5f * FMath::Min(StormWind, 1.f) + 1.f * StormIntense;
+    const float Pitch = (FMath::Lerp(.6f, 3.f, StormSea) + 2.2f * StormIntense) * FMath::Sin(PitchPhase + .8f) + (.7f * StormSea + .8f * StormIntense) * FMath::Sin(ChopPhase * 1.37f + 1.f);
     Tilt = FVector2D(Pitch, Roll);
     const FQuat Q(FRotator(Pitch, 0, Roll));
     const FVector Nn = Q.RotateVector(FVector::UpVector);
@@ -1419,7 +1425,7 @@ void AShipSetting::ApplyStorm(float Dt)
     // below decks through the openings) and turned up hard.
     const AShipStorm* Storm = AShipStorm::Get(GetWorld());
     const float Dark = Storm ? Storm->GetDark() : 0.f, Rain = Storm ? Storm->GetRain() : 0.f, Flash = Storm ? Storm->GetFlash() : 0.f;
-    if (SeaMid) SeaMid->SetScalarParameterValue(TEXT("Storm"), StormSea);
+    if (SeaMid) SeaMid->SetScalarParameterValue(TEXT("Storm"), StormSea + .7f * StormIntense);   // (M_ShipSea's swell and foam carry on past 1)
     if (Dark <= 0.f && Flash <= 0.f && CloudSet == 0.f) return;   // calm, and already set so
     if (Sun)
     {
@@ -1481,10 +1487,18 @@ void AShipSetting::Tick(float Dt)
     Clock += Dt;
     {
         const AShipStorm* Storm = AShipStorm::Get(GetWorld());
-        StormSea = Storm ? Storm->GetSea() : 0.f; StormWind = Storm ? Storm->GetWind() : 0.f;
-        RollPhase += Dt * 2 * PI / FMath::Lerp(7.3f, 6.2f, StormSea);
-        PitchPhase += Dt * 2 * PI / FMath::Lerp(9.1f, 5.8f, StormSea);
-        ChopPhase += Dt * 2 * PI / 3.1f;
+        StormSea = Storm ? Storm->GetSea() : 0.f; StormIntense = Storm ? Storm->GetIntense() : 0.f; StormWind = ShipStormWind();
+        RollPhase += Dt * 2 * PI / (FMath::Lerp(7.3f, 6.2f, StormSea) - .8f * StormIntense);
+        PitchPhase += Dt * 2 * PI / (FMath::Lerp(9.1f, 5.8f, StormSea) - .7f * StormIntense);
+        ChopPhase += Dt * 2 * PI / (3.1f - .4f * StormIntense);
+        // The helm (2026-11-04): the wheel turns as the captain steers.
+        if (Wheel)
+        {
+            const AShipCrew* Crew = AShipCrew::Get(GetWorld());
+            const ADockNPC* Captain = Crew ? Crew->Find(EDockHuman::PirateCaptain) : nullptr;
+            const float Angle = Captain ? Captain->GetHelmAngle() : 0.f;
+            if (FMath::Abs(Angle - WheelSet) > .01f) { WheelSet = Angle; Wheel->SetWorldRotation(HelmTurn(Angle)); }
+        }
         SailClock += Dt * (1.f + 2.4f * StormWind);
     }
     Rock();

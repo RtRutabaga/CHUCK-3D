@@ -55,7 +55,9 @@ namespace
     const FChultPoint ShipPoints[]={{TEXT("ShipArrival"),TEXT("Ship Arrival")},{TEXT("ShipHold"),TEXT("Ship Hold")},{TEXT("ShipQuarters"),TEXT("Ship Quarters")},
         {TEXT("ShipGalley"),TEXT("Ship Galley")},{TEXT("ShipCabin"),TEXT("Ship Cabin")},{TEXT("ShipDeck"),TEXT("Ship Deck")},
         // The storm (2026-11-03, ShipStorm.h): on deck with the ending's seven conditions met, as it rolls in.
-        {TEXT("ShipStorm"),TEXT("Ship Storm (dev)")}};
+        {TEXT("ShipStorm"),TEXT("Ship Storm (dev)")},
+        // (2026-11-04) the same, some seconds before the storm's second part (the user's intense track).
+        {TEXT("ShipStormIntense"),TEXT("Ship Storm Intense (dev)")}};
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
@@ -93,7 +95,8 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
         AShipSetting::Enter(GetWorld());
         // A fresh start aboard: the ending's conditions forgotten (the chest shut, no storm); the storm checkpoint meets them all.
         ShipGate::Reset(GetWorld());
-        if(Point==TEXT("ShipStorm")) ShipGate::OpenAll();
+        if(Point==TEXT("ShipStorm") || Point==TEXT("ShipStormIntense")) ShipGate::OpenAll();
+        if(Point==TEXT("ShipStormIntense")) if(AShipStorm* Storm=AShipStorm::Get(GetWorld())) Storm->SetClock(FMath::Max(1.f,Storm->GetIntenseAt()-8.f));
         C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;
