@@ -485,3 +485,18 @@ User request: "In beholder encounter Currently the fighter's beard reads as whit
 - **Checked:** `-ChuckSanctumCapture -ChuckSanctumOnly=portraits+wizard_seal+fireball`, with the fighter's head and figure stills and the gather shot (`Saved/Screenshots/WindowsEditor/Sanctum/`).
 - **Not done:** the voxel volume stays off, so dark hair can still catch some light at its tips.
 
+### Follow-up: the distant LODs (November 4, night)
+
+User: "when i load the beholder encounter the fighters beard is still grey and the wizards skirt part of robe is still white while casting".
+
+- **The cause:** from the gallery the heroes draw their reduced LODs (1 to 3). Those LODs' material maps had gone stale, probably when the card beard and MakeHuman hair slots were removed on October 28, so each section drew another slot's material:
+  - the wizard's skirt drew as teeth/eye white, his hat gold, his whole robe green at LOD 1;
+  - the fighter's armour drew as cloth and his beard shade as mail;
+  - the ranger's last two LODs were partly wrong.
+  - All the close-up captures were LOD 0, so the earlier fix was checked where the fault never showed.
+- **The fix:**
+  - `UChuckReviewLibrary::FixLODMaterials` reports each LOD's drawn slots and clears the generated LODs' maps, so each reduced section draws the material of the LOD 0 section it came from.
+  - `Tools/fix_hero_lod_materials.py` ran it on the three heroes (`CHUCK_LOD_FIX=1`; without it, it only reports).
+  - `Tools/import_temple_heroes.py` now runs it after `regenerate_lod`.
+- **Checked:** sanctum portraits with `-ExecCmds="r.SkeletalMeshLODBias 1"` and `2`, in the editor and before and after in the package (`Local/hero-lod*.log`). Check heroes this way after any hero import.
+

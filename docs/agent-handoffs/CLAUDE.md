@@ -2,7 +2,32 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 4 (latest, night) — the fighter's young beard; the wizard's robe not blown white (Claude)
+## November 5 (latest) — the heroes' distant LODs draw the right materials (Claude)
+
+- **Asked:** "when i load the beholder encounter the fighters beard is still grey and the wizards skirt part of robe is still white while casting".
+- **Source:** `main` at 44c9469b.
+- **Found:**
+  - The Temple Sanctum checkpoint starts Chuck on the gallery, so the heroes draw their reduced LODs (1 to 3).
+  - `r.SkeletalMeshLODBias 1`, `2` and `3` captures in the package showed every LOD of the fighter and the wizard drawing other slots' materials: the wizard's skirt white, his hat gold, his robe green; the fighter's armour as cloth, his beard shade as mail. The ranger's LOD 2 and 3 were partly wrong too.
+  - The cause was stale `LODMaterialMap`s, probably left from the October 28 slot removal. The previous fix was checked only in close-ups at LOD 0.
+- **Changed** ([../CHULT-TEMPLE-HEROES.md](../CHULT-TEMPLE-HEROES.md#follow-up-the-distant-lods-november-4-night)):
+  - `ChuckReviewLibrary.h/.cpp`: `FixLODMaterials(Mesh, bFix)` reports each LOD's drawn slots and clears the generated LODs' maps.
+  - `Tools/fix_hero_lod_materials.py` (new): runs it on the three heroes (applied; `SK_HeroFighter`/`Wizard`/`Ranger` saved).
+  - `Tools/import_temple_heroes.py`: runs it after `regenerate_lod`.
+- **Tested:**
+  - The report after the fix: every LOD's slots follow LOD 0's (minus the dropped brows and lashes) (`Local/hero-lods-fix.txt`).
+  - Forced-LOD captures, in the editor (bias 1, 2) and in the package (bias 2, portraits and the bolt cast): all right.
+  - Packaged `Builds/HeroLodCandidate`: Verify-Package passed 182 checks (`Local/verify-package-20261104-192305.log`). The first run (`-175310`) failed only "roll carries Chuck its authored distance": side drift 2.05 cm, just past the limit, in code this change doesn't touch; the smoke test passed rerun alone (`Local/verify-smoke-rerun-herolod.log`). Verify-Menu passed 43/43 (`Local/verify-menu-herolod.txt`).
+- **Remaining flaws:**
+  - Waterdeep's human NPCs come from the same kind of pipeline and were not checked at reduced LODs.
+  - Not played by hand.
+- **Contract compatibility:** asset fix plus an editor-only library function. The game code is unchanged.
+- **Binary/LFS:** three hero skeletal meshes (LFS).
+- **Launcher:** promoted as HeroLod (receipt c8c69ac). The HeroLook package is kept and FireballDamage pruned.
+
+Next part of the work could be done by either — preference: Claude (check the Waterdeep NPCs' LODs the same way, then the captain's sequence at the storm's trigger and the plank).
+
+## November 4 (night) — the fighter's young beard; the wizard's robe not blown white (Claude)
 
 - **Asked:** "In beholder encounter Currently the fighter's beard reads as white/gray and the wizards robe partially turns bright white, fix this, youthful beard look for fighter".
 - **Source:** `main` at b0a17dd7.
