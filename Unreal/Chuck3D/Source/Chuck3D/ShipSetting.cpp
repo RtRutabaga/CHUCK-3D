@@ -372,12 +372,15 @@ namespace
             if (bDoor || FMath::Abs(Y) > W - 10) continue;
             for (float F : {-1.f, 1.f}) P.WoodDecor.B(X + F * Bulkhead - (F < 0 ? 3 : 0), X + F * Bulkhead + (F > 0 ? 3 : 0), Y - 5, Y + 5, Z0, Z1);
         }
+        // (2026-11-05: the posts stand 1 cm proud into the opening and stop under the lintel, and the lintel sits 1 cm
+        // proud below the opening's head and a little proud of the posts' faces: before, the frame's faces lay in the
+        // bulkhead's and each other's planes, and flickered.)
         for (const FDoor& D : Doors)
+        {
             for (float F : {-1.f, 1.f})
-            {
-                P.WoodDecor.B(X - Bulkhead - 4, X + Bulkhead + 4, D.Y + F * D.Half - (F > 0 ? 0 : 8), D.Y + F * D.Half + (F > 0 ? 8 : 0), Z0, Z0 + D.Height + 10);
-                P.WoodDecor.B(X - Bulkhead - 4, X + Bulkhead + 4, D.Y - D.Half - 8, D.Y + D.Half + 8, Z0 + D.Height, Z0 + D.Height + 10);
-            }
+                P.WoodDecor.B(X - Bulkhead - 4, X + Bulkhead + 4, D.Y + F * D.Half - (F > 0 ? 1 : 8), D.Y + F * D.Half + (F > 0 ? 8 : -1), Z0, Z0 + D.Height - 1);
+            P.WoodDecor.B(X - Bulkhead - 4.6f, X + Bulkhead + 4.6f, D.Y - D.Half - 8.6f, D.Y + D.Half + 8.6f, Z0 + D.Height - 1, Z0 + D.Height + 10);
+        }
     }
     // Beams across under a deck, every Step, skipping holes.
     void Beams(FSurf& S, float X0, float X1, float Under, float Depth, const TArray<FHole>& Holes, float Step = 60)
@@ -1291,7 +1294,7 @@ void AShipSetting::Build()
 namespace
 {
     TArray<FSailDef> GSails;
-    constexpr int32 SailU = 16, SailV = 12, FlagU = 14, FlagV = 9;
+    constexpr int32 SailU = 32, SailV = 24, FlagU = 14, FlagV = 9;   // (the sails finer since 2026-11-05: they give way round him)
     // A two-sided sheet over a grid (U across, V down) from a shape function; Tris only when it is first made.
     void GridMesh(TFunctionRef<FVector(float, float)> At, int32 NU, int32 NV, float SizeU, float SizeV, TArray<FVector>& V, TArray<FVector>& N, TArray<FVector2D>& UV, TArray<int32>* Tris)
     {
@@ -1382,6 +1385,16 @@ void AShipSetting::UpdateSails()
     TArray<FVector> V, N; TArray<FVector2D> UV;
     const float T = Clock;
     GSailWind = StormWind; GFlutter = SailClock;
+    GSailBodyR = 0;
+    if (const AChuckCharacter* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+    {
+        const FVector C = ShipLocal(Chuck->GetActorLocation());
+        if (C.Z > MainTopZ - 400)   // (up in the rig, among the sails)
+        {
+            const FVector Up = Chuck->GetMesh()->GetUpVector();
+            GSailBodyA = C - Up * 26; GSailBodyB = C + Up * 52; GSailBodyR = 20;
+        }
+    }
     for (int32 I = 0; I < Sails.Num() && I < GSails.Num(); ++I)
     {
         if (!Sails[I]) continue;
@@ -1622,7 +1635,7 @@ int32 AShipSetting::Check() const
     }
     Failures += Missing > 0;
     Failures += Ladders != 4 || Shrouds != 8;
-    Failures += Grips != 2 * MainGrips;
+    Failures += Grips != 40;   // (the course and topsail yards of both masts, 2026-11-05)
     Failures += Sails.Num() != 8 || !Flag || !SeaMid;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHECK failures=%d missing=%d tris=%d jars=%d rats=%d ladders=%d shrouds=%d grips=%d sails=%d sea=%d"), Failures, Missing, Triangles, JarsPlaced, RatsPlaced, Ladders, Shrouds, Grips, Sails.Num(), SeaMid != nullptr);
     return Failures;

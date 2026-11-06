@@ -2,7 +2,24 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 5 (latest, evening) — the ship's ratlines climbable; climbing sideways (Claude)
+## November 5 (latest, night) — the nets' feet on deck; every reachable yard; the door frames (Claude)
+
+- **Asked:** start the ratlines from the deck so it looks realistic and reads clearly as where the climb starts (secured to the stanchions' bases); brachiation on the rest of the yards; fix the glitchy wood in the door frames below deck.
+- **Source:** `main` at 16e9c9b0.
+- **Changed** ([../SHIP.md](../SHIP.md#follow-up-the-nets-feet-on-deck-every-yard-the-door-frames-november-5-night)):
+  - `ShipDeck.inl`: `RailPosts` (shared post layout); `NetFoot`/`NetJoin` and the deck net (sheer pole on chocks, legs out over the rail to the shrouds 2 m up, ratlines, lashings to the stanchions' feet with iron bands); the climb line follows the net's inside face then turns over the join; `YardGrips` now both course and both topsail yards (40); `SailGiveWay` (canvas pushed round Chuck).
+  - `ShipSetting.cpp`: door posts/lintel no longer coplanar with the bulkhead or each other; sails 32 × 24; `UpdateSails` feeds Chuck's body to the sails; check expects 40 grips.
+  - `ChuckCharacter.cpp`: at the top of a climb with no lip, still climbing, he takes a grip over him (facing out); the body leans along a net's foot too.
+  - `ShipTest.cpp`: `ratlines` reworked (net foot, lowered onto shrouds, topmast shrouds → topsail yard → three leaps → let go); stills `NetFoot*`, `TopsailYard`.
+- **Tested:** editor ship trials ratlines/rigging/yard_drop/deck_up/cabin/galley 6/6 (`Local/ship-ratlines-test5.log`). Packaged `Builds/RatlinesYardsCandidate`: Verify-Package 182 passes (`Local/verify-package-20261105-193540.log`; ship 20/20). Verify-Menu 44/44 (`Local/verify-menu-ratlines-yards.txt`).
+- **Remaining flaws:** the canvas folds sharply round him; the topgallant yards are out of reach (no ratlines to them); door flicker checked only in stills, not by hand.
+- **Contract compatibility:** unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as RatlinesYards. The 14 `Common/Materials` re-saves from the package build are left uncommitted in the working tree (restoring them was blocked this session).
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence and the plank out of the storm).
+
+## November 5 (evening) — the ship's ratlines climbable; climbing sideways (Claude)
 
 - **Asked:** "on the ship, remove the ladder and instead make all the ratlines climbable by chuck. for both this and in general in the game, chuck needs to be able to also climb sideways (been meaning to have you add this for awhile since its also needed to make chult trees smoother)".
 - **Source:** `main` at a5f228a9.

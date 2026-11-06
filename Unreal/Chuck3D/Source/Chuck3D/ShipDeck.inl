@@ -98,6 +98,38 @@ FVector ShroudLow(const FMast& M, float Side, int32 K) { const float X = M.X - 1
 FVector ShroudHigh(const FMast& M, float Side, int32 K) { return FVector(M.X - 66 + K * 10, Side * (TopHalfOf(M) - 6), M.Top - 14); }
 FVector TopShroudLow(const FMast& M, float Side, int32 K) { return FVector(M.X - 15 + K * 15, Side * (TopHalfOf(M) - 6), M.Top + 8); }
 FVector TopShroudHigh(const FMast& M, float Side, int32 K) { return FVector(TopmastX(M) - 6 + K * 4, Side * 14, M.Top + 864); }
+// The ratlines' foot on deck (2026-11-05): a short net from a sheer pole on the deck, inside the bulwark, out over the
+// rail to the shrouds just above it (NetJoinZ); leg K under shroud K.
+constexpr float NetIn = 45, NetJoinZ = 780;
+FVector NetJoin(const FMast& M, float Side, int32 K)
+{
+    const FVector Lo = ShroudLow(M, Side, K), Hi = ShroudHigh(M, Side, K);
+    return FMath::Lerp(Lo, Hi, (NetJoinZ - Lo.Z) / (Hi.Z - Lo.Z));
+}
+FVector NetFoot(const FMast& M, float Side, int32 K) { const float X = static_cast<float>(NetJoin(M, Side, K).X); return FVector(X, Side * (PostLine(X) - NetIn), DeckZ + 5); }
+
+// The rail's posts (stanchions) along one side (Part 0 round the quarterdeck, 1 the waist), every 55 cm along the post
+// line, and that line resampled every 25 cm.
+void RailPosts(float Side, int32 Part, TArray<FVector2D>& Line, TArray<FVector2D>& Posts)
+{
+    const float XA = Part == 0 ? SternX + 8 : QuarterFore, XB = Part == 0 ? QuarterFore : BowX - 6;
+    TArray<FVector2D> Dense;
+    for (float X = XA; X < XB; X += 4) Dense.Add(FVector2D(X, Side * PostLine(X)));
+    Dense.Add(FVector2D(XB, Side * PostLine(XB - .2f)));
+    Line = {Dense[0]}; Posts = {Dense[0]};
+    float NextPost = 0;
+    for (int32 I = 1; I < Dense.Num(); ++I)
+    {
+        NextPost += FVector2D::Distance(Dense[I - 1], Dense[I]);
+        if (FVector2D::Distance(Line.Last(), Dense[I]) >= 25 || I == Dense.Num() - 1) Line.Add(Dense[I]);
+        if (NextPost >= 55) { Posts.Add(Dense[I]); NextPost = 0; }
+    }
+    if (FVector2D::Distance(Posts.Last(), Dense.Last()) > 20) Posts.Add(Dense.Last());
+}
+// The ratlines' foot on deck (2026-11-05, user: start the climb from the deck, plainly): inside the bulwark, under each
+// mast's shrouds, a short net rises from a sheer pole lying on the deck, lashed to the stanchions' feet, and leans out
+// over the rail to join the shrouds just above it (JoinZ). Leg K under shroud K.
+// (NetFoot, NetJoin: with the shrouds, above.)
 
 // ------------------------------------------------------------------ the climbs
 TArray<FChuckClimbable> DeckLadders()
@@ -139,15 +171,17 @@ TArray<FChuckClimbable> DeckShrouds()
                 // The lower shrouds: the plane through the middle two, his line just outside it.
                 const FVector Lo = (ShroudLow(M, Side, 1) + ShroudLow(M, Side, 2)) * .5f, Hi = (ShroudHigh(M, Side, 1) + ShroudHigh(M, Side, 2)) * .5f;
                 auto On = [&](float Z) { const FVector P = FMath::Lerp(Lo, Hi, (Z - Lo.Z) / (Hi.Z - Lo.Z)); return FVector(P.X, P.Y, Z) + O * Off; };
-                const float X = Lo.X, In = PostLine(X) - 37;   // in front of the pin rail on the bulwark's inside
+                // The net at the foot (NetFoot..NetJoin), his line just inside it; over the join (clear of the rail's
+                // cap, never through it) round onto the shrouds' outer face.
+                const FVector NLo = (NetFoot(M, Side, 1) + NetFoot(M, Side, 2)) * .5f, NHi = (NetJoin(M, Side, 1) + NetJoin(M, Side, 2)) * .5f;
+                auto Inside = [&](float Z) { const FVector P = FMath::Lerp(NLo, NHi, (Z - NLo.Z) / (NHi.Z - NLo.Z)); return FVector(P.X, P.Y, Z) - O * Off; };
+                const FVector Start = Inside(DeckZ + Stand);
                 FChuckClimbable L;
-                L.Foot = ShipWorld(FVector(X, Side * In, DeckZ));
-                // (Up the inside till his feet clear the rail's cap, then out over it: never through it.)
-                L.Line = {ShipWorld(FVector(X, Side * In, DeckZ + Stand)), ShipWorld(FVector(X, Side * In, RailZ + 36)),
-                    ShipWorld(FVector(X, Side * (PostLine(X) + 4), RailZ + 48)), ShipWorld(On(RailZ + 80)), ShipWorld(On(M.Top - HangDrop))};
+                L.Foot = ShipWorld(FVector(Start.X, Start.Y, DeckZ));
+                L.Line = {ShipWorld(Start), ShipWorld(Inside(NetJoinZ - 45)), ShipWorld(On(NetJoinZ + 25)), ShipWorld(On(M.Top - HangDrop))};
                 L.TopZ = ShipOrigin().Z + M.Top; L.Out = O; L.HalfWidth = 15;
                 L.Lip = ShipWorld(FVector(Hi.X, Side * H, M.Top));
-                L.Approach = O; L.TurnZ = ShipOrigin().Z + RailZ + 44;
+                L.Approach = O; L.TurnZ = ShipOrigin().Z + NetJoinZ - 10;
                 L.SideTravel = 45; L.TopSideTravel = 0;
                 Out.Add(L);
             }
@@ -169,15 +203,28 @@ TArray<FChuckClimbable> DeckShrouds()
         }
     return Out;
 }
-// The main yard, hand over hand from either side of the top out to its yardarms.
+// The yards, hand over hand (2026-11-05: every yard he can reach, now the ratlines are climbed): each mast's course yard
+// from either side of its top out to the yardarms (the main's as before, 12 grips), and its topsail yard from beside the
+// topmast head, where the topmast shrouds end under it (reaching up from their top takes it), out to its yardarms.
+// 90 cm apart (easy leaps); along the yard as it is braced (the fore's 12 degrees).
+int32 YardGripCount(const FMast& M, int32 Which) { const float First = Which == 0 ? (M.X < 0 ? MainGrip0 : 160.f) : 75.f; return 1 + FMath::FloorToInt((YardHalf(M, Which) - 30 - First) / MainGripStep); }
 TArray<FChuckSwingGrip> YardGrips()
 {
     TArray<FChuckSwingGrip> Out;
-    for (float Side : {1.f, -1.f})
-        for (int32 K = 0; K < MainGrips; ++K)
+    for (const FMast* Mp : {&MainMast(), &ForeMast()})
+        for (int32 W = 0; W < 2; ++W)
         {
-            FChuckSwingGrip G; G.Grip = ShipWorld(FVector(MainYardX, Side * (MainGrip0 + K * MainGripStep), MainYardZ)); G.Along = FVector(0, 1, 0); G.Depth = 0;
-            Out.Add(G);
+            const FMast& M = *Mp;
+            const FQuat Q(FRotator(0, M.Brace, 0));
+            const float First = W == 0 ? (M.X < 0 ? MainGrip0 : 160.f) : 75.f;
+            for (float Side : {1.f, -1.f})
+                for (int32 K = 0; K < YardGripCount(M, W); ++K)
+                {
+                    FChuckSwingGrip G;
+                    G.Grip = ShipWorld(YardCentre(M, W) + Q.RotateVector(FVector(0, Side * (First + K * MainGripStep), 0)));
+                    G.Along = Q.RotateVector(FVector(0, 1, 0)); G.Depth = 0;
+                    Out.Add(G);
+                }
         }
     return Out;
 }
@@ -203,21 +250,8 @@ void BuildWeatherDeck(FParts& P)
     for (float Side : {1.f, -1.f})
         for (int32 Part = 0; Part < 2; ++Part)
         {
-            const float XA = Part == 0 ? SternX + 8 : QuarterFore, XB = Part == 0 ? QuarterFore : BowX - 6;
-            // The post line, resampled every 25 cm along its curve.
-            TArray<FVector2D> Dense;
-            for (float X = XA; X < XB; X += 4) Dense.Add(FVector2D(X, Side * PostLine(X)));
-            Dense.Add(FVector2D(XB, Side * PostLine(XB - .2f)));
-            TArray<FVector2D> Line = {Dense[0]}; float Run = 0, NextPost = 0;
-            TArray<FVector2D> Posts = {Dense[0]};
-            for (int32 I = 1; I < Dense.Num(); ++I)
-            {
-                const float Seg = FVector2D::Distance(Dense[I - 1], Dense[I]);
-                Run += Seg; NextPost += Seg;
-                if (FVector2D::Distance(Line.Last(), Dense[I]) >= 25 || I == Dense.Num() - 1) Line.Add(Dense[I]);
-                if (NextPost >= 55) { Posts.Add(Dense[I]); NextPost = 0; }
-            }
-            if (FVector2D::Distance(Posts.Last(), Dense.Last()) > 20) Posts.Add(Dense.Last());
+            TArray<FVector2D> Line, Posts;
+            RailPosts(Side, Part, Line, Posts);
             const float Base = Part == 0 ? QuarterTopZ : WaistTopZ, Top = Part == 0 ? QuarterRailZ : RailZ;
             for (const FVector2D& Pt : Posts) P.Wood.B(Pt.X - 5, Pt.X + 5, Pt.Y - 5, Pt.Y + 5, Base, Top - 8);
             for (int32 I = 1; I < Line.Num(); ++I)
@@ -464,6 +498,36 @@ void BuildRig(FParts& P)
                 P.Rigging.Rope({Low[K], High[K]}, 2.2f);
                 P.Iron.Spar(High[K] - FVector(0, 0, 5), High[K] + FVector(0, 0, 3), 3.4f, 3.4f, 8);   // its band at the rim
             }
+            // The net at the foot: its legs from the sheer pole on deck out to the shrouds over the rail, its ratlines, the
+            // pole lashed to the nearest stanchions' feet (and seized to the shrouds at the join).
+            {
+                FVector Foot[4], Join[4];
+                for (int32 K = 0; K < 4; ++K)
+                {
+                    Foot[K] = NetFoot(M, Side, K); Join[K] = NetJoin(M, Side, K);
+                    P.Rigging.Rope({Foot[K], Join[K]}, 1.9f);
+                    P.Rigging.Spar(Join[K] - FVector(0, 0, 4), Join[K] + FVector(0, 0, 4), 3.2f, 3.2f, 8);   // the seizing
+                }
+                for (float Z = DeckZ + 36; Z < NetJoinZ - 12; Z += 36)
+                {
+                    TArray<FVector> Line;
+                    for (int32 K = 0; K < 4; ++K) Line.Add(FMath::Lerp(Foot[K], Join[K], (Z - Foot[K].Z) / (Join[K].Z - Foot[K].Z)));
+                    P.Rigging.Rope(Line, .9f);
+                }
+                const FVector PoleA = Foot[0] - FVector(18, 0, 0), PoleB = Foot[3] + FVector(18, 0, 0);
+                P.WoodDecor.Spar(PoleA, PoleB, 4.5f, 4.5f, 8);
+                for (const FVector& E : {PoleA, PoleB}) P.WoodDecor.Spar(E - FVector(0, 0, 5), E + FVector(0, 0, -1), 5.5f, 5.5f, 8);   // its chocks
+                TArray<FVector2D> RailLine, Posts;
+                RailPosts(Side, 1, RailLine, Posts);
+                for (const FVector2D& Pt : Posts)
+                {
+                    if (Pt.X < PoleA.X - 30 || Pt.X > PoleB.X + 30) continue;
+                    const FVector Pole(FMath::Clamp(static_cast<float>(Pt.X), static_cast<float>(PoleA.X) + 4, static_cast<float>(PoleB.X) - 4), PoleA.Y, PoleA.Z);
+                    const FVector PostFoot(Pt.X, Pt.Y - Side * 6, WaistTopZ + 5);
+                    P.Iron.Spar(PostFoot + FVector(0, 0, -3), PostFoot + FVector(0, 0, 3), 6.f, 6.f, 8);           // a band round the post's foot
+                    for (float O : {-2.f, 2.f}) P.Rigging.Rope({Pole + FVector(O, 0, 3), PostFoot + FVector(O, 0, 0)}, .8f);   // the lashing
+                }
+            }
             for (float Z = Low[0].Z + 38; Z < M.Top - 30; Z += 38)
             {
                 TArray<FVector> Line;
@@ -575,6 +639,23 @@ TArray<FSailDef> SailDefs()
 // The storm's wind (0..1) and the canvas's own clock, which runs faster as the wind rises (AShipSetting::UpdateSails sets
 // both): in the gale the sails stand fuller and their free edges thrum, the flag streams out flat and cracks.
 float GSailWind = 0, GFlutter = 0;
+// Chuck, as a thick segment (ship frame; radius 0: not near): the canvas gives way round him, pushed out to the far side
+// of him in a soft dome (2026-11-05: he hangs from the topsail and fore yards right where their sails hang).
+FVector GSailBodyA = FVector::ZeroVector, GSailBodyB = FVector::ZeroVector;
+float GSailBodyR = 0;
+FVector SailGiveWay(const FSailDef& S, const FVector& P)
+{
+    if (GSailBodyR <= 0) return P;
+    const FVector Q = FMath::ClosestPointOnSegment(P, GSailBodyA, GSailBodyB);
+    const FVector D = P - Q;
+    const float Along = static_cast<float>(FVector::DotProduct(D, S.Fill));
+    const float Lat2 = FMath::Max(0.f, static_cast<float>(D.SizeSquared()) - Along * Along);
+    const float Reach = GSailBodyR * 2.8f;
+    if (Lat2 >= Reach * Reach) return P;
+    const float Dome = GSailBodyR * 1.15f * (1.f - Lat2 / (Reach * Reach));
+    if (Along >= 0) return Along < Dome ? P + S.Fill * (Dome - Along) : P;
+    return -Along < Dome ? P - S.Fill * (Dome + Along) : P;
+}
 FVector SailPoint(const FSailDef& S, float U, float V, float T)
 {
     const FVector Top = FMath::Lerp(S.A, S.B, U), Bottom = FMath::Lerp(S.D, S.C, U) + FVector(0, 0, S.Roach * FMath::Sin(PI * U));
@@ -591,7 +672,7 @@ FVector SailPoint(const FSailDef& S, float U, float V, float T)
     const float Flutter = (1.6f + 5.5f * GSailWind) * Free * (FMath::Sin(F * 7.f + U * 11.f + V * 7.f + S.Phase) + .45f * GSailWind * FMath::Sin(F * 17.f + U * 23.f - V * 9.f + S.Phase * 3.f)) * FMath::Sin(PI * V);
     const float Gust = 1.f + GSailWind * (.22f + .06f * FMath::Sin(T * 2 * PI / 4.1f + S.Phase));
     P += S.Fill * (S.Depth * Shape * Breath * Gust + Flutter);
-    return P;
+    return SailGiveWay(S, P);
 }
 // The flag (user 2026-11-02: more prominent): flown as a ship's colours were under sail, from the spanker gaff's peak over
 // the quarterdeck, hoisted on its halyard just aft of the peak and streaming to leeward (port, as the spanker fills), clear

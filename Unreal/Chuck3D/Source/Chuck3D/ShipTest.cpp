@@ -78,6 +78,10 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("ShroudsTop"), {MainMastX - 60, 330, MainTopZ + 120}, {MainMastX - 50, 120, MainTopZ - 60}},
         {TEXT("ForeShroudsPort"), {ForeMastX - 60, 1100, 1000}, {ForeMastX - 50, 300, 1050}},
         {TEXT("ForeShroudsStarboard"), {ForeMastX - 300, -900, 900}, {ForeMastX - 50, -300, 1000}},
+        {TEXT("NetFoot"), {MainMastX + 120, 180, DeckZ + 110}, {MainMastX - 50, 420, DeckZ + 80}},
+        {TEXT("NetFootLow"), {MainMastX - 230, 250, DeckZ + 35}, {MainMastX - 50, 420, DeckZ + 70}},
+        {TEXT("NetFootFore"), {ForeMastX + 150, -200, DeckZ + 120}, {ForeMastX - 50, -420, DeckZ + 90}},
+        {TEXT("TopsailYard"), {MainMastX - 250, 500, MainTopZ + 700}, {MainMastX + 63, 250, MainTopZ + 740}},
         {TEXT("MainTop"), {MainMastX + 160, -90, MainTopZ + 75}, {MainYardX, 520, MainYardZ}},
         {TEXT("TopDown"), {MainMastX + 150, 100, MainTopZ + 110}, {MainMastX + 380, 120, DeckZ}},
         {TEXT("Yardarm"), {MainYardX + 60, 560, MainYardZ + 40}, {MainYardX + 600, 1600, 300}},
@@ -582,10 +586,10 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::Ratlines:
         {
-            // The ratlines (2026-11-05): up the starboard fore shrouds from the deck, across them both ways, down and off at
-            // the rail (not straight back on, the stick still held out); from the main top up its port topmast shrouds to
-            // under the crosstrees (no lip: he stays on) and back down to the top; out over the rim onto the lower shrouds'
-            // heads, lowered onto them, and down them to the deck.
+            // The ratlines (2026-11-05): up the starboard fore shrouds from the net at their foot on deck, across them both
+            // ways, down and off at the deck (not straight back on, the stick still held out); from the main top out over
+            // the rim onto the lower shrouds' heads, lowered onto them, down to the deck; from the main top up its port
+            // topmast shrouds, up onto the topsail yard, three leaps out along it, let go onto the deck.
             Limit = 90;
             if (Time < .5f) break;
             const float OnX = static_cast<float>(L.X);
@@ -618,39 +622,52 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     const bool bOff = !Chuck->IsOnLadder() && Ground && L.Z < DeckZ + 60 && FMath::Abs(L.Y) < ShipInnerHalf(OnX, DeckZ + 20);
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RATLINES_OFF ok=%d at=%s"), bOff, *L.ToString());
                     Run->bMount = Run->bMount && bOff;
-                    Stop(); Chuck->ResetAtLocation(SW(MainMastX, 60, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0));
-                    Run->Sub = 5; Run->At = Now; Run->Arrived = -1;
+                    Stop(); Chuck->ResetAtLocation(SW(MainMastX + 20, 60, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0));
+                    Run->Sub = 5; Run->At = Now; Run->Arrived = -1; Run->Point = 0;
                 }
                 else if (Time > 15) Done = true;
             }
-            else if (Run->Sub == 5)
-            {
-                Push(FVector(0, 1, 0));
-                if (Chuck->IsOnLadder() && L.Z > MainTopZ + 715)
-                {
-                    if (Run->Arrived < 0) { Run->Arrived = int32(Time * 100); Shot(TEXT("TopmastShrouds")); }
-                    else if (Time > Run->Arrived * .01f + 1.f) { Run->bTop = Chuck->IsOnLadder(); Stop(); Run->Sub = 6; Run->At = Now; Run->Arrived = -1; }
-                }
-                else if (Time > 20) Done = true;
-            }
+            else if (Run->Sub == 5) { if (Route({{MainMastX - 50, 70}, {MainMastX - 51, 80}}, 6)) { Run->Sub = 6; Run->At = Now; } }
             else if (Run->Sub == 6)
             {
-                // Released, then out from the net: down to the top's floor.
-                if (Time > .3f) Push(FVector(0, 1, 0));
-                if (!Chuck->IsOnLadder() && Ground && FMath::Abs(L.Z - (MainTopZ + Stand)) < 6) { Run->Sub = 7; Run->At = Now; Run->Point = 0; }
-                else if (Time > 20) Done = true;
-            }
-            else if (Run->Sub == 7) { if (Route({{MainMastX - 50, 70}, {MainMastX - 51, 80}}, 6)) { Run->Sub = 8; Run->At = Now; } }
-            else if (Run->Sub == 8)
-            {
+                // Out over the rim at the lower shrouds' heads: lowered onto them, down to the deck.
                 Push(FVector(0, 1, 0));
                 if (Chuck->IsOnLadder() && L.Z < MainTopZ - 200 && Run->Arrived < 0) { Run->Arrived = 0; Shot(TEXT("ShroudsDown")); }
                 if (!Chuck->IsOnLadder() && Ground && L.Z < DeckZ + 60)
                 {
-                    Done = true;
-                    Run->bPass = Run->bMount && Run->bTop && NewDeaths == 0 && Chuck->GetLadderMounts() - Run->Mounts0 >= 3 && FMath::Abs(L.Y) < ShipInnerHalf(OnX, DeckZ + 20);
+                    Run->bMount = Run->bMount && FMath::Abs(L.Y) < ShipInnerHalf(OnX, DeckZ + 20);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RATLINES_DOWN ok=%d at=%s"), Run->bMount ? 1 : 0, *L.ToString());
+                    Stop(); Chuck->ResetAtLocation(SW(MainMastX, 60, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0));
+                    Run->Sub = 7; Run->At = Now; Run->Arrived = -1; Run->Catches0 = Chuck->GetSwingCatches(); Run->Leaps0 = Chuck->GetSwingLeaps();
                 }
                 else if (Time > 25) Done = true;
+            }
+            else if (Run->Sub == 7)
+            {
+                // Up the port topmast shrouds; at their top, still climbing, he reaches up and takes the topsail yard.
+                Push(FVector(0, 1, 0));
+                if (Chuck->IsOnLadder() && L.Z > MainTopZ + 715 && Run->Arrived < 0) { Run->Arrived = 0; Shot(TEXT("TopmastShrouds")); }
+                if (Chuck->IsSwinging()) { Run->bTop = true; Run->Sub = 8; Run->At = Now; Shot(TEXT("TopsailYardCatch")); }
+                else if (Time > 20) Done = true;
+            }
+            else if (Run->Sub == 8)
+            {
+                // Hand over hand out along it, the topsail giving way round him.
+                Push(FVector(0, 1, 0));
+                if (Chuck->GetSwingLeaps() - Run->Leaps0 >= 3 && Chuck->IsSwinging()) { Shot(TEXT("TopsailYard")); Stop(); Run->Sub = 9; Run->At = Now; }
+                else if (Chuck->IsSwinging() && Time > .5f) { Chuck->JumpPressed(); Run->At = Now; }
+                else if (!Chuck->IsSwinging() && !Chuck->IsSwingLeaping() && Time > 2) Done = true;
+            }
+            else if (Run->Sub == 9) { if (Time > .6f && Chuck->IsSwinging()) { Chuck->DodgeToward(FVector2D::ZeroVector); Run->Sub = 10; Run->At = Now; } }
+            else if (Run->Sub == 10)
+            {
+                // Let go: a long fall, onto the deck (no fall damage).
+                if (Ground && Time > .5f)
+                {
+                    Done = true;
+                    Run->bPass = Run->bMount && Run->bTop && NewDeaths == 0 && Chuck->GetLadderMounts() - Run->Mounts0 >= 3 && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck);
+                }
+                else if (Time > 10) Done = true;
             }
             break;
         }

@@ -2562,6 +2562,16 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (!C.Approach.IsNearlyZero()) SetActorRotation(ChuckClimbFacing(C, Z).Rotation());
         Movement->Velocity = FVector::ZeroVector;
         if (Climb > 0.f && Z >= Top - .5f && C.bTopOut) { LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f; StartClimb(false, C.Out, C.Lip + Side * LadderSide); }
+        // At the top of a climb with no lip, still climbing: he reaches up for a yard or ring over him (the topmast
+        // shrouds' end under the topsail yard, 2026-11-05).
+        else if (Climb > 0.f && Z >= Top - .5f && !C.bTopOut && LadderClock > .3f)
+        {
+            const int32 Was = LadderIndex;
+            const FRotator WasFacing = GetActorRotation();
+            SetActorRotation(C.Out.Rotation());   // (he swings out along it, away from the net)
+            if (!TrySwingCatch()) SetActorRotation(WasFacing);
+            else { LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f; if (LadderIndex == Was) LadderIndex = -1; }
+        }
         else if (Climb < 0.f && Z <= Bottom + .5f)
         {
             Movement->SetMovementMode(MOVE_Walking);
@@ -3303,7 +3313,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
         {
             const FChuckClimbable& C = GetChuckClimbables()[LadderIndex];
-            if (C.Line.Num() >= 2 && (C.Approach.IsNearlyZero() || Location.Z > C.TurnZ + 15.f)) LeanTo = ChuckClimbUp(C, static_cast<float>(Location.Z));
+            // (Upright while he turns round over the join; along the net below it, the shrouds above.)
+            if (C.Line.Num() >= 2 && (C.Approach.IsNearlyZero() || FMath::Abs(Location.Z - C.TurnZ) > 20.f)) LeanTo = ChuckClimbUp(C, static_cast<float>(Location.Z));
         }
         LadderLeanUp = FMath::VInterpNormalRotationTo(LadderLeanUp, LeanTo, DeltaSeconds, 120.f);
         if (FVector::DotProduct(LadderLeanUp, FVector::UpVector) < .9999f) GetMesh()->SetWorldRotation(FQuat::FindBetweenNormals(FVector::UpVector, LadderLeanUp) * GetActorQuat());

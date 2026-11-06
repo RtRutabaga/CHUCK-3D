@@ -6,6 +6,11 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The nets' feet on deck, every yard, the door frames (November 5, night, Claude):** the user's follow-up; details in [SHIP.md](SHIP.md#follow-up-the-nets-feet-on-deck-every-yard-the-door-frames-november-5-night).
+  - The climb starts at a short net rising from a sheer pole on the deck, lashed to the stanchions' feet, leaning out over the rail into the shrouds.
+  - Brachiation on both course yards and both topsail yards (40 grips); from the top of the topmast shrouds he reaches up onto the topsail yard. The sails give way round him.
+  - The door frames below decks no longer flicker (no shared faces).
+  - Verified: ship test 20/20 editor and package; Verify-Package 182 passes; Verify-Menu 44/44. In the launcher as RatlinesYards. Not played by hand.
 - **The ship's ratlines climbable; climbing sideways (November 5, evening, Claude):** the user's request; details in [SHIP.md](SHIP.md#the-ratlines-and-climbing-sideways-november-5).
   - The rope ladder to the main top (and its lubber's hole) is gone. All eight ratline nets are climbed: both masts' lower shrouds from the deck (up the bulwark, over the rail, round onto the outer face, over the top's rim) and their topmast shrouds from the tops (up to under the crosstrees). Walking out over a top's rim at the lower shrouds' heads lowers him onto them.
   - The lower shrouds now end at the tops' rims (they ran under the tops to the mastheads).
