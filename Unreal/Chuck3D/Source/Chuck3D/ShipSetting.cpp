@@ -815,6 +815,7 @@ void AShipSetting::Build()
     BuildWeatherDeck(P);
     BuildRig(P);
     for (const FChuckClimbable& L : DeckLadders()) { AddChuckClimbable(L); ++Ladders; }
+    for (const FChuckClimbable& L : DeckShrouds()) { AddChuckClimbable(L); ++Shrouds; }
     for (const FChuckSwingGrip& G : YardGrips()) { AddChuckSwingGrip(G); ++Grips; }
     // Stanchions under the lower deck's beams.
     for (float X : {-950.f, -150.f, 750.f}) P.Wood.B(X - 8, X + 8, -8, 8, HoldZ, LowerBeam);
@@ -1610,9 +1611,9 @@ int32 AShipSetting::Check() const
                 RailRoom += !World->OverlapAnyTestByChannel(At, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(15.f, 32.5f), Q);
             }
     Failures += RailRoom;
-    // The main top: a floor with room, forward of the lubber's hole (where the rope ladder lets him off).
+    // The main top: a floor with room, forward of the mast.
     {
-        const FVector At = ShipWorld(FVector(TopLadderX + 40, 0, MainTopZ + 36));
+        const FVector At = ShipWorld(FVector(MainMastX + 150, 0, MainTopZ + 36));
         FHitResult Hit;
         const bool bFloor = World->LineTraceSingleByChannel(Hit, At, At - FVector(0, 0, 60), ECC_Visibility, Q) && FMath::Abs(Hit.ImpactPoint.Z - (At.Z - 36)) < 3;
         const bool bRoom = !World->OverlapAnyTestByChannel(At, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(15.f, 32.5f), Q);
@@ -1620,9 +1621,9 @@ int32 AShipSetting::Check() const
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TOP floor=%d room=%d rail_room=%d"), bFloor, bRoom, RailRoom);
     }
     Failures += Missing > 0;
-    Failures += Ladders != 5;
+    Failures += Ladders != 4 || Shrouds != 8;
     Failures += Grips != 2 * MainGrips;
     Failures += Sails.Num() != 8 || !Flag || !SeaMid;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHECK failures=%d missing=%d tris=%d jars=%d rats=%d ladders=%d grips=%d sails=%d sea=%d"), Failures, Missing, Triangles, JarsPlaced, RatsPlaced, Ladders, Grips, Sails.Num(), SeaMid != nullptr);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CHECK failures=%d missing=%d tris=%d jars=%d rats=%d ladders=%d shrouds=%d grips=%d sails=%d sea=%d"), Failures, Missing, Triangles, JarsPlaced, RatsPlaced, Ladders, Shrouds, Grips, Sails.Num(), SeaMid != nullptr);
     return Failures;
 }

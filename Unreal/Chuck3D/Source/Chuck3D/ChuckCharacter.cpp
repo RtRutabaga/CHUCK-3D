@@ -774,7 +774,7 @@ void AChuckCharacter::JumpPressed()
     if (Gait == EGait::SwingLeap) { if (SwingLeapClock > SwingLeapTime - .35f) bSwingJumpQueued = true; return; }
     if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
     {
-        WallNormal = GetChuckClimbables()[LadderIndex].Out; LadderIndex = -1;
+        WallNormal = -ChuckClimbFacing(GetChuckClimbables()[LadderIndex], static_cast<float>(GetActorLocation().Z)); LadderIndex = -1;
         LadderCooldownUntil = Now + .6f;
         WallJump(); return;
     }
@@ -1650,24 +1650,34 @@ bool AChuckCharacter::TryMountLadder()
     {
         const FChuckClimbable& C = All[I];
         if (C.bBlocked) continue;
+        // Just stepped off its foot with the stick still held the way that took him down: not straight back on.
+        if (I == LadderNoRemount)
+        {
+            if (FVector::DotProduct(Stick.GetSafeNormal2D(), LadderNoRemountDir) > .7f) continue;
+            LadderNoRemount = -1;
+        }
         const FVector Side = FVector::CrossProduct(FVector::UpVector, C.Out);
         const FVector Rel = Location - C.Foot;
-        const float Front = static_cast<float>(FVector::DotProduct(Rel, C.Out));
-        if (FMath::Abs(Feet - static_cast<float>(C.Foot.Z)) < 25.f && FMath::Abs(FVector::DotProduct(Rel, Side)) < C.HalfWidth + 10.f
-            && Front > -10.f && Front < 45.f && FVector::DotProduct(Stick, -C.Out) > .6f)
+        // Taken hold of walking toward it (a ladder: -Out; the shrouds: out over the rail).
+        const FVector Toward = C.Approach.IsNearlyZero() ? -C.Out : C.Approach;
+        const float Front = static_cast<float>(FVector::DotProduct(Rel, -Toward));
+        if (FMath::Abs(Feet - static_cast<float>(C.Foot.Z)) < 25.f && FMath::Abs(FVector::DotProduct(Rel, Side)) < FMath::Max(C.HalfWidth, C.SideTravel) + 10.f
+            && Front > -10.f && Front < 45.f && FVector::DotProduct(Stick, Toward) > .6f)
         {
             EnterLadder(I); ++LadderMounts;
             return true;
         }
         const FVector Top = Location - C.Lip;
         const float Onto = static_cast<float>(FVector::DotProduct(Top, -C.Out));   // how far onto the floor above
-        if (FMath::Abs(Feet - C.TopZ) < 20.f && FMath::Abs(FVector::DotProduct(Top, Side)) < C.HalfWidth + 10.f
+        if (C.bTopOut && FMath::Abs(Feet - C.TopZ) < 20.f && FMath::Abs(FVector::DotProduct(Top, Side)) < FMath::Max(C.HalfWidth, C.TopSideTravel) + 10.f
             && Onto > 0.f && Onto < 55.f && FVector::DotProduct(Stick, C.Out) > .6f)
         {
             auto* Movement = GetCharacterMovement();
             Movement->SetMovementMode(MOVE_Flying);
             Movement->StopMovementImmediately();
-            ClimbStart = FVector(C.Foot.X, C.Foot.Y, C.TopZ - ChuckClipData::HangDrop);
+            const float TopAt = LadderTopOf(C);
+            const float Across = FMath::Clamp(static_cast<float>(FVector::DotProduct(Top, Side)), -C.TopSideTravel, C.TopSideTravel);
+            ClimbStart = ChuckClimbPoint(C, TopAt) + Side * Across;
             ClimbDir = -C.Out;
             ClimbRise = static_cast<float>(C.Lip.Z - ClimbStart.Z) + Half + 1.f;
             ClimbAdvance = static_cast<float>(FVector::DotProduct(ClimbStart - C.Lip, C.Out)) + 18.5f;
@@ -1763,9 +1773,23 @@ void AChuckCharacter::EnterLadder(int32 Index)
     Movement->StopMovementImmediately();
     LadderIndex = Index; LadderClock = 0; LadderFrom = GetActorLocation();
     Gait = EGait::Ladder;
-    SetActorRotation((-GetChuckClimbables()[Index].Out).Rotation());
+    const FChuckClimbable& C = GetChuckClimbables()[Index];
+    // Across a net he keeps to where he took hold (within its reach there).
+    const float Z = FMath::Clamp(static_cast<float>(LadderFrom.Z), LadderBottomOf(C), LadderTopOf(C));
+    const float Reach = ChuckClimbSideTravel(C, Z, LadderBottomOf(C), LadderTopOf(C));
+    LadderSide = FMath::Clamp(static_cast<float>(FVector::DotProduct(LadderFrom - ChuckClimbPoint(C, Z), FVector::CrossProduct(FVector::UpVector, C.Out))), -Reach, Reach);
+    LadderLatchSign = 0; LadderNoRemount = -1;
+    SetActorRotation(ChuckClimbFacing(C, Z).Rotation());
     SetClip(EClip::WallRun, FMath::Frac(LadderPhase) * Period(EClip::WallRun), .12f);
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; bRunJump = bSprintLeap = false; RunWeight = 0;
+}
+float AChuckCharacter::LadderBottomOf(const FChuckClimbable& C) const
+{
+    return C.Line.Num() >= 2 ? static_cast<float>(C.Line[0].Z) : static_cast<float>(C.Foot.Z) + GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f;
+}
+float AChuckCharacter::LadderTopOf(const FChuckClimbable& C) const
+{
+    return C.Line.Num() >= 2 ? static_cast<float>(C.Line.Last().Z) : C.TopZ - ChuckClipData::HangDrop;
 }
 void AChuckCharacter::FallToDeath()
 {
@@ -2498,23 +2522,50 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     {
         // Up toward it, down away from it, the climb clip stepping with the
         // height covered; out over the top with the pull-up, off at the foot.
+        // Across a net (the ratlines) with the stick sideways, within its reach at that height; on a slanted one he
+        // follows its line, leaning with it; on the shrouds he turns round going over the rail.
         const FChuckClimbable& C = GetChuckClimbables()[LadderIndex];
-        const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-        const float Bottom = static_cast<float>(C.Foot.Z) + Half + 1.f, Top = C.TopZ - ChuckClipData::HangDrop;
+        const float Bottom = LadderBottomOf(C), Top = LadderTopOf(C);
+        const FVector Side = FVector::CrossProduct(FVector::UpVector, C.Out);   // his right, facing it
         LadderClock += DeltaSeconds;
-        const float Want = static_cast<float>(FVector::DotProduct(StickWorld(), -C.Out));
+        const FVector Stick = StickWorld();
+        const FVector Facing = ChuckClimbFacing(C, static_cast<float>(Location.Z));
+        float Want = static_cast<float>(FVector::DotProduct(Stick, Facing));
+        if (!C.Approach.IsNearlyZero())
+        {
+            // Turning round on it: the way the stick set going stays that way while it is held so.
+            const FVector Dir = Stick.GetSafeNormal2D();
+            if (Stick.Size2D() < .3f) LadderLatchSign = 0;
+            else if (LadderLatchSign != 0 && FVector::DotProduct(Dir, LadderLatchDir) > .7f) Want = LadderLatchSign * LadderLatchUp * static_cast<float>(Stick.Size2D());
+            else
+            {
+                LadderLatchDir = Dir;
+                LadderLatchSign = FMath::Abs(Want) > .3f ? FMath::Sign(Want) : 0.f;
+                LadderLatchUp = FMath::Abs(Want) / static_cast<float>(Stick.Size2D());
+            }
+        }
         const float Climb = FMath::Abs(Want) > .3f ? FMath::Clamp(Want * 1.3f, -1.f, 1.f) : 0.f;
         const float Z = FMath::Clamp(static_cast<float>(Location.Z) + Climb * LadderSpeed * DeltaSeconds, Bottom, Top);
+        const float Reach = ChuckClimbSideTravel(C, Z, Bottom, Top);
+        const float Across = static_cast<float>(FVector::DotProduct(Stick, Side));
+        const float SideBefore = LadderSide;
+        if (Reach > 0.f && FMath::Abs(Across) > .3f) LadderSide += FMath::Clamp(Across * 1.3f, -1.f, 1.f) * LadderSideSpeed * DeltaSeconds;
+        LadderSide = FMath::Clamp(LadderSide, -Reach, Reach);
         const float Settle = FMath::SmoothStep(0.f, .15f, LadderClock);
-        const FVector At(FMath::Lerp(LadderFrom.X, C.Foot.X, Settle), FMath::Lerp(LadderFrom.Y, C.Foot.Y, Settle), Z);
-        LadderPhase += (Z - static_cast<float>(Location.Z)) / LadderStride;
+        const FVector Point = ChuckClimbPoint(C, Z) + Side * LadderSide;
+        const FVector At(FMath::Lerp(LadderFrom.X, Point.X, Settle), FMath::Lerp(LadderFrom.Y, Point.Y, Settle), Z);
+        // The climb clip steps with the height covered, or with the way across (forward; backward climbing down).
+        const float Rise = Z - static_cast<float>(Location.Z), Moved = FMath::Abs(LadderSide - SideBefore);
+        LadderPhase += (FMath::Abs(Rise) >= Moved ? Rise : (Rise < -.01f ? -Moved : Moved)) / LadderStride;
         BaseTime = FMath::Frac(LadderPhase) * Period(EClip::WallRun);
         SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+        if (!C.Approach.IsNearlyZero()) SetActorRotation(ChuckClimbFacing(C, Z).Rotation());
         Movement->Velocity = FVector::ZeroVector;
-        if (Climb > 0.f && Z >= Top - .5f) { LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f; StartClimb(false, C.Out, C.Lip); }
+        if (Climb > 0.f && Z >= Top - .5f && C.bTopOut) { LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f; StartClimb(false, C.Out, C.Lip + Side * LadderSide); }
         else if (Climb < 0.f && Z <= Bottom + .5f)
         {
             Movement->SetMovementMode(MOVE_Walking);
+            if (!C.Approach.IsNearlyZero()) { LadderNoRemount = LadderIndex; LadderNoRemountDir = Stick.GetSafeNormal2D(); }
             Gait = EGait::Idle; LadderIndex = -1;
             LadderCooldownUntil = GetWorld()->GetTimeSeconds() + .6f;
             SetClip(EClip::Idle, 0, .2f);
@@ -2653,7 +2704,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const float Rise = static_cast<float>(Location.Z) - WallPrevZ;
         WallPrevZ = static_cast<float>(Location.Z);
         const float PrevPhase = WallPhase;
-        WallPhase = FMath::Frac(WallPhase + FMath::Max(0.f, Rise) / WallRunStride);
+        // (Across the wall as well: the steps follow the way covered either way.)
+        const float AcrossMoved = static_cast<float>(FVector::DotProduct(Movement->Velocity, FRotationMatrix((-WallNormal).Rotation()).GetUnitAxis(EAxis::Y))) * DeltaSeconds;
+        WallPhase = FMath::Frac(WallPhase + (FMath::Max(0.f, Rise) + FMath::Abs(AcrossMoved)) / WallRunStride);
         BaseTime = WallPhase * Period(EClip::WallRun);
         // A scrabble of claws at each paw contact (two per cycle); the golden
         // leaf's long climbs are no longer silent.
@@ -2676,7 +2729,22 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             float Up = 2.f * WallRunRise / WallRunTime * FMath::Max(0.f, 1.f - WallRunClock / WallRunTime);
             if (IsStaminaLocked()) Up = FMath::Max(Up, LockedWallRunSpeed);
             const float Inward = IsStaminaLocked() ? FMath::Clamp(30.f + 12.f * (static_cast<float>(FVector::DotProduct(Chest-Hit.ImpactPoint,WallNormal)) - GetCapsuleComponent()->GetScaledCapsuleRadius() - .5f),30.f,240.f) : 30.f;
-            Movement->Velocity = FVector(0, 0, Up) - WallNormal * Inward;
+            // Across the wall (user 2026-11-05): the stick sideways carries him along it as he climbs (round a trunk on
+            // the golden leaf; held only across, the long climb mostly stops going up). Not in a wall jump's own run.
+            const FVector Along = FRotationMatrix((-WallNormal).Rotation()).GetUnitAxis(EAxis::Y);
+            const float Across = bWallAuto ? 0.f : static_cast<float>(FVector::DotProduct(StickWorld(), Along));
+            const float Toward = static_cast<float>(FVector::DotProduct(StickWorld(), -WallNormal));
+            // (Only a push clearly across, 40 degrees or more off the wall: a stick held a little off square to a
+            // curved trunk must not drift him round it.)
+            const float Sideways = FMath::Abs(Across) > .45f && FMath::Abs(Across) > .8f * Toward ? FMath::Clamp(Across * 1.3f, -1.f, 1.f) * LadderSideSpeed : 0.f;
+            if (IsStaminaLocked() && FMath::Abs(Across) > .7f && Toward < .35f) Up *= LockedSideRise;
+            Movement->Velocity = FVector(0, 0, Up) - WallNormal * Inward + Along * Sideways;
+            if (Sideways != 0.f)
+            {
+                // Round a curved face: keep square to it.
+                if (bWall && FMath::Abs(Hit.ImpactNormal.Z) < .5f) WallNormal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
+                SetActorRotation(FMath::RInterpTo(GetActorRotation(), (-WallNormal).Rotation(), DeltaSeconds, 10.f));
+            }
         }
     }
     else if (Gait == EGait::Hang)
@@ -3228,7 +3296,19 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         const FVector Lean = FVector::UpVector * FMath::Cos(A) + WallNormal * FMath::Sin(A);
         GetMesh()->SetWorldRotation(FQuat::FindBetweenNormals(FVector::UpVector, Lean) * GetActorQuat());
     }
-    else GetMesh()->SetRelativeRotation(FRotator::ZeroRotator);
+    else
+    {
+        // On a slanted net (the shrouds) his body lies along it, once he faces it.
+        FVector LeanTo = FVector::UpVector;
+        if (Gait == EGait::Ladder && GetChuckClimbables().IsValidIndex(LadderIndex))
+        {
+            const FChuckClimbable& C = GetChuckClimbables()[LadderIndex];
+            if (C.Line.Num() >= 2 && (C.Approach.IsNearlyZero() || Location.Z > C.TurnZ + 15.f)) LeanTo = ChuckClimbUp(C, static_cast<float>(Location.Z));
+        }
+        LadderLeanUp = FMath::VInterpNormalRotationTo(LadderLeanUp, LeanTo, DeltaSeconds, 120.f);
+        if (FVector::DotProduct(LadderLeanUp, FVector::UpVector) < .9999f) GetMesh()->SetWorldRotation(FQuat::FindBetweenNormals(FVector::UpVector, LadderLeanUp) * GetActorQuat());
+        else GetMesh()->SetRelativeRotation(FRotator::ZeroRotator);
+    }
     // Swinging: the whole body pitched about his centre (about the ring, since
     // his centre hangs from it); after letting go it eases back upright.
     if (!bBodyPitchLive) BodyPitch = FMath::FInterpTo(BodyPitch, 0.f, DeltaSeconds, 9.f);

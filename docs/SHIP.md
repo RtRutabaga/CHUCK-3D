@@ -124,6 +124,8 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
 
 ### The climb up the rig (optional)
 
+(November 5: the rope ladder is gone; he climbs the ratlines instead. See [the ratlines](#the-ratlines-and-climbing-sideways-november-5).)
+
 1. A rope ladder hangs from the main top's lubber's hole, its foot made fast on the deck just forward of the main mast. He walks into its foot and climbs it like any ladder: 10.2 m, about 14 seconds.
 2. At the top he pulls himself out onto the platform forward of the hole. The lookout's clay jar stands on the aft port corner, with a cigarette inside.
 3. The main yard is slung 55 cm under the top, just forward of the mast. A jump off either side of the top, or a drop from its edge, catches it. He then goes hand over hand out along it. There are 12 grips (`AddChuckSwingGrip`), six a side and 90 cm apart (easy leaps, no pumping), from 1.7 m to 6.2 m out; the last is over the sea.
@@ -549,3 +551,32 @@ User request: "have the music louder during storm and especially during intense 
 - **The second part** now comes halfway through the storm track (101 s), with a 3.5 s crossfade into the intense track.
 - **Louder:** the storm track plays at 75% and the intense track at 100% (the ship's other scores play at 45%), and neither sinks under the gale now.
 - **Tests:** `chest` also checks the storm has not started while he is below (`storm_waits=1`). The `storm` trial's stills and walk moved to 80–93 s and `storm_work`'s first-part stills to 72 s, to stay in the first part.
+
+## The ratlines, and climbing sideways (November 5)
+
+User request: "on the ship, remove the ladder and instead make all the ratlines climbable by chuck. for both this and in general in the game, chuck needs to be able to also climb sideways (been meaning to have you add this for awhile since its also needed to make chult trees smoother)".
+
+### The rig (`ShipDeck.inl`)
+
+- **The rope ladder to the main top is gone**, and with it the main top's lubber's hole (the top's floor is whole). The lookout's jar moved to the top's fore starboard corner, clear of the nets.
+- **Every ratline net is climbed** (`DeckShrouds`, eight `ChuckClimbable`s): the lower shrouds and the topmast shrouds, on both sides of both masts.
+  - **The lower shrouds** now run from the channel's deadeyes up to the top's rim, aft of the yard, each with an iron band there (before, they ran under the top to the masthead, where no climber could get out). The futtock shrouds carry on under the top to the mast. Ratlines run nearly to the rim.
+  - **From the deck:** walk at the bulwark between the main or fore shrouds and he climbs up its inside, out over the rail and turns round onto the shrouds' outer face, facing the mast. Up the slanted net (about 20°), his body lying along it, to the rim, and over it onto the top with the ordinary pull-up.
+  - **From the top:** walk out over the rim at the lower shrouds' heads (aft of the mast) and he lowers himself onto them, as at a ladder's top; down the net, round at the rail and off onto the deck.
+  - **The topmast shrouds** start at the rim just aft of the yard (moved a little forward). Walk out over the rim there and he climbs onto them; up to under the crosstrees, where they end (no lip to climb out over); back down onto the top.
+  - The two mounts on each side of a top are kept apart along the rim: lower shrouds aft (about 0.5 m aft of the mast), topmast shrouds by the mast, the yard's catch forward of both.
+- **Controls on a net:** toward the net climbs up, away climbs down, sideways climbs across. Across a lower shroud net he has up to 45 cm either way at the foot, narrowing to none at the top (the shrouds converge); the topmast nets are narrow. Going over the rail he turns round: the way the stick was held when he started up (or down) keeps him going that way while it stays held, so holding out over the rail carries on up, and climbing down carries on to the deck. Stepping off at the foot with the stick still held outboard, he does not climb straight back on.
+- Jumping off a net kicks back off it, as off a ladder (over the sea from the outer face).
+
+### Climbing sideways in general (`ChuckCharacter.cpp`, `ChuckClimbable.h/.cpp`)
+
+- **Climbables** (`FChuckClimbable`) can now be nets: a climbing line that may slant or bend (`Line`), a reach either side of it at the foot and the top (`SideTravel`, `TopSideTravel`), a way to walk on at the foot other than toward it with a turn at a height (`Approach`, `TurnZ`), and no lip at the top (`bTopOut`). Ladders and lianas are unchanged (no reach across: they are narrow).
+- **Wall climbs** (any wall run up a face, and the golden leaf's long trunk climbs): the stick held clearly across the wall (40° or more off square to it) carries him along it at 55 cm/s as he climbs, the climb clip stepping with the way covered. On a curved face (a trunk) he keeps square to it, so on the golden leaf he can climb round a giant to line up with a limb. On the golden leaf, held only across, the climb mostly stops rising (35%). A wall jump's own run ignores the stick, as before. (A first, looser threshold, 20°, drifted the golden-leaf test's climber round giant 1's trunk off its pull-up spot; a stick held a little off square must not do that.)
+- Shimmying along a hanging edge was already there.
+
+### Tests
+
+- The ship's check counts 4 ladders and 8 shroud nets; the main top's floor check moved forward of the mast.
+- `rigging` now goes up the port main shrouds onto the top before the yard.
+- New trial `ratlines` (20 trials): the starboard fore shrouds from the deck; across them both ways (15 cm right, 35 cm back left, low on the net); down and off at the rail without climbing back on; from the main top up its port topmast shrouds to under the crosstrees (still holding on a second later) and back down; out over the rim onto the lower shrouds' heads and down them to the deck.
+- New stills: `Shrouds`, `ShroudsOutside`, `ShroudsTop`, `ForeShroudsPort`, `ForeShroudsStarboard`, and the trials' `ShroudsClimb`, `RatlinesAcross`, `TopmastShrouds`, `ShroudsDown`.

@@ -3,6 +3,8 @@
 #include "GameFramework/Character.h"
 #include "ChuckCharacter.generated.h"
 
+struct FChuckClimbable;
+
 class USpringArmComponent;
 class UCameraComponent;
 class UGroomComponent;
@@ -219,6 +221,8 @@ public:
     static constexpr float VaultMaxDepth = 90.f;   // cm front to back: thicker is a step up, not a vault
     static constexpr float VaultReach = 85.f;      // cm in front of him the face may be when he jumps
     static constexpr float LadderStride = 30.f;    // cm climbed per cycle of the climb clip
+    static constexpr float LadderSideSpeed = 55.f;  // cm/s across a net (the ratlines), or across a wall as he climbs it
+    static constexpr float LockedSideRise = .35f;   // golden leaf, stick held across the wall: the share of the climb still going up
     static constexpr float WallBuffer = .15f;      // s a jump pressed before reaching a wall still counts
     // Flow between moves (user 2026-10-12: "too much pause between movements"):
     // a dodge pressed while he can't yet (in the air, pulling up, finishing a
@@ -708,6 +712,17 @@ private:
     float LadderPhase = 0, LadderClock = 0, LadderCooldownUntil = -1;
     FVector LadderFrom = FVector::ZeroVector, ClimbFrom = FVector::ZeroVector;
     bool bClimbReverse = false;    // lowering himself from the floor above onto a ladder: the pull-up played backward
+    float LadderSide = 0;          // across a net: how far to his right of its line (ChuckClimbable SideTravel)
+    // A net he turns round on (Approach): the stick's way when it set climbing up or down, kept while it stays that way
+    // (held out over the rail he goes on up as he turns to face back in; climbing down, on to the deck).
+    FVector LadderLatchDir = FVector::ZeroVector;
+    float LadderLatchSign = 0, LadderLatchUp = 0;
+    // Stepped off such a net at its foot, the stick still held out over the rail: not straight back on.
+    int32 LadderNoRemount = -1;
+    FVector LadderNoRemountDir = FVector::ZeroVector;
+    FVector LadderLeanUp = FVector::UpVector;   // the mesh's up on a slanted net (eased)
+    float LadderBottomOf(const FChuckClimbable& C) const;
+    float LadderTopOf(const FChuckClimbable& C) const;
     bool TryMountLadder();
     // Speed vault.
     bool TryVault();

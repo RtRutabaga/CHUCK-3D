@@ -9,7 +9,7 @@
 // comes out of a mass of temple masonry grown through the timbers), the hold under it (cargo, the pantry's shelves and
 // jars, rats), the galley forward, the crew quarters aft and the captain's cabin in the stern. Milestone 2 (2026-11-02) is
 // the weather deck in the open: its rails, hatches and ladders, the helm on the quarterdeck, the masts with their tops,
-// sails and rigging, an optional climb up to the main top and out along the main yard, and the open sea, its waves
+// sails and rigging, an optional climb up the ratlines to the main top and out along the main yard, and the open sea, its waves
 // meeting the hull, rocking round the still hull with the sky and the sun (ShipDeck.inl, ShipSea.inl).
 //
 // The ship's frame: X to the bow, Y to port, Z up from the bottom of the keel, in cm; it sails on its own stage, its
@@ -42,10 +42,9 @@ namespace Ship
     constexpr float MainYardZ = MainTopZ - 55, MainYardX = MainMastX + 45, MainYardHalf = 650;
     constexpr float MainGrip0 = 170, MainGripStep = 90;
     constexpr int32 MainGrips = 6;                          // a side
-    // The main top: its platform (X0..X1, Y half) with the lubber's hole forward of the mast; the rope ladder up to it
-    // from the deck hangs on the hole's fore edge (TopLadderX).
+    // The main top: its platform (X0..X1, Y half). He climbs to it up the shrouds' ratlines (2026-11-05: the rope ladder
+    // through its lubber's hole is gone; ShipDeck.inl DeckShrouds).
     constexpr float TopX0 = MainMastX - 70, TopX1 = MainMastX + 190, TopHalf = 130;
-    constexpr float LubberX0 = MainMastX + 60, LubberX1 = MainMastX + 110, LubberHalf = 30, TopLadderX = LubberX1;
     // The companion hatch from the crew quarters up to the weather deck (its ladder on the fore edge), and the two
     // ladders up the quarterdeck's break.
     constexpr float CompX0 = -310, CompX1 = -190, CompY0 = 70, CompY1 = 190;
@@ -143,7 +142,7 @@ private:
     void UpdateSails();
     void Rock();
     bool bBuilt = false;
-    int32 Missing = 0, Triangles = 0, RatsPlaced = 0, JarsPlaced = 0, Ladders = 0, Grips = 0;
+    int32 Missing = 0, Triangles = 0, RatsPlaced = 0, JarsPlaced = 0, Ladders = 0, Shrouds = 0, Grips = 0;
     UPROPERTY() TArray<class UPointLightComponent*> Lamps;
     UPROPERTY() TArray<class USceneComponent*> Swingers;   // hanging lamps and hammocks, swung with the sea
     UPROPERTY() class UAudioComponent* Wash = nullptr;

@@ -2,7 +2,29 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 5 (latest, afternoon) — the storm waits for the deck; louder storm music; the second part at half the track (Claude)
+## November 5 (latest, evening) — the ship's ratlines climbable; climbing sideways (Claude)
+
+- **Asked:** "on the ship, remove the ladder and instead make all the ratlines climbable by chuck. for both this and in general in the game, chuck needs to be able to also climb sideways (been meaning to have you add this for awhile since its also needed to make chult trees smoother)".
+- **Source:** `main` at a5f228a9.
+- **Changed** ([../SHIP.md](../SHIP.md#the-ratlines-and-climbing-sideways-november-5)):
+  - `ChuckClimbable.h/.cpp`: climbables can be nets: `Line` (a slanted or bent climbing line), `SideTravel`/`TopSideTravel`, `Approach` + `TurnZ` (walk on from the far side and turn round), `bTopOut`; helpers `ChuckClimbPoint/SideTravel/Facing/Up`.
+  - `ChuckCharacter.h/.cpp`: the Ladder gait climbs across nets, follows slanted lines with the body lying along them, keeps the stick's up/down through the turn at the rail, does not re-mount straight after stepping off with the stick still held; the top-lip mount and jump-off use the new line/facing. Wall runs move across the wall with the stick held 40°+ off square (55 cm/s; on the golden leaf, held only across, the rise slows to 35%).
+  - `ShipDeck.inl`, `ShipSetting.h/.cpp`: the rope ladder and lubber's hole removed; `DeckShrouds` (8 nets); the lower shrouds end at the tops' rims, the topmast shrouds start by the mast; the lookout's jar moved to the main top's fore starboard corner; check counts 4 ladders + 8 nets.
+  - `ShipTest.cpp`: `rigging` goes up the shrouds; new trial `ratlines` (20 trials); new stills. `Tools/Verify-Package.ps1` expects 20 trials and 4 ladders.
+- **Tested:**
+  - Editor: `ratlines`, `rigging`, `yard_drop`, `ladder_up`, `deck_up` pass (`Local/ship-ratlines-test*.log`; the first `deck_up` failure was `-NoSound`, it passes with sound). Golden leaf trees 0/1 pass (`Local/golden-tree*-ratlines-editor.log`).
+  - First package: golden tree 1 failed 2/2 (`climb_timeout`, hanging at the top) while the launcher build passed: the 20° sideways threshold drifted the test's climber 15 cm round the trunk. Raised to 40°; then passes.
+  - Packaged `Builds/RatlinesCandidate`: Verify-Package 182 passes (`Local/verify-package-20261105-160832.log`; ship 20/20).
+  - Verify-Menu 44/44 (`Local/verify-menu-ratlines.txt`).
+- **Remaining flaws:** climbing across plays the up/down climb clip (no sideways clip); the turn over the rail is a yaw blend through the rail's coils; the fore port shrouds sit close to the braced fore course; not played by hand or on a controller.
+- **Lesson:** a climb line must never pass the capsule through solid geometry: flying-mode depenetration pinned him at the rail cap climbing down. And use absolute `-ArchiveDirectory` paths (a relative one archived under `Source/Chuck3D/Builds` again; moved).
+- **Contract compatibility:** `FChuckClimbable` only gained fields with defaults; existing ladders and lianas unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as Ratlines.
+
+Next part of the work could be done by either — preference: Claude (the captain's sequence and the plank out of the storm).
+
+## November 5 (afternoon) — the storm waits for the deck; louder storm music; the second part at half the track (Claude)
 
 - **Asked:** "have the music louder during storm and especially during intense storm. Only do normal storm for about half the song then fade into storm-intense song and start storm intense sequence. make sure storm music and storm doesnt start until after player's on deck, i want to avoid player being able to get below deck once this begins".
 - **Source:** `main` at f8896c33.

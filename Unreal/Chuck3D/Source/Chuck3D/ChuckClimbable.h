@@ -17,7 +17,27 @@ struct FChuckClimbable
     float HalfWidth = 25.f;                  // how far to either side of the line he can take hold
     FVector Lip = FVector::ZeroVector;       // a point on the top edge (its face looks along Out); the floor above is on its -Out side
     bool bBlocked = false;                   // closed for now (the ship's storm rupture over the companion, 2026-11-04): not taken hold of
+    // A net, slanted or bent (the ship's ratlines, 2026-11-05). Line: where his centre goes, bottom to top (world; each
+    // point's Z his centre's height there; the first over Foot); empty, straight up from Foot as a ladder. SideTravel: how
+    // far either side of the line he can climb across, at the bottom and at the top (a ladder or rope: 0). Approach: the
+    // way he walks to take hold at the foot, when it isn't toward it (-Out): from the deck out over the rail onto the
+    // shrouds' outer face, turning round at TurnZ (his centre's height) to face -Out. bTopOut false: no lip at the top,
+    // the climb just ends there (the topmast shrouds under the crosstrees).
+    TArray<FVector> Line;
+    float SideTravel = 0.f, TopSideTravel = 0.f;
+    FVector Approach = FVector::ZeroVector;
+    float TurnZ = 0.f;
+    bool bTopOut = true;
 };
+
+/** Along its line at his centre's height Z (clamped to its ends; a ladder: over Foot). */
+FVector ChuckClimbPoint(const FChuckClimbable& C, float Z);
+/** How far either side of its line he can be at height Z (Bottom and Top: the ends of his climb). */
+float ChuckClimbSideTravel(const FChuckClimbable& C, float Z, float Bottom, float Top);
+/** The way he faces on it at height Z (horizontal; -Out except where he turns round from Approach). */
+FVector ChuckClimbFacing(const FChuckClimbable& C, float Z);
+/** The way the line runs up at height Z (unit; straight up for a ladder). */
+FVector ChuckClimbUp(const FChuckClimbable& C, float Z);
 
 /** Register one (a world builder does this; the same one twice is ignored). */
 void AddChuckClimbable(const FChuckClimbable& Climbable);

@@ -90,6 +90,14 @@ constexpr float FlagFly = 260, FlagDrop = 165;
 FVector FlagHoist() { return SpankerPeak() + FVector(-10, 14, -8); }
 // Where a hull side is at X (its post line) and how far up the planking goes.
 float PostLine(float X) { return FMath::Max(0.f, OuterAt(X, PlankTopAt(X)) - 5); }
+// The shrouds (2026-11-05: every ratline net is climbed, the rope ladder to the main top gone). The lower shrouds, four a
+// side, from the deadeyes over the channel up to the top's rim, aft of the yard (the futtock shrouds carry them on under
+// it to the mast); the topmast shrouds, three a side, from the rim just forward of them up to the topmast head.
+float TopHalfOf(const FMast& M) { return M.X < 0 ? TopHalf : 120; }
+FVector ShroudLow(const FMast& M, float Side, int32 K) { const float X = M.X - 125 + K * 50; return FVector(X, Side * (PostLine(X) + 28), WaistTopZ + 68); }
+FVector ShroudHigh(const FMast& M, float Side, int32 K) { return FVector(M.X - 66 + K * 10, Side * (TopHalfOf(M) - 6), M.Top - 14); }
+FVector TopShroudLow(const FMast& M, float Side, int32 K) { return FVector(M.X - 15 + K * 15, Side * (TopHalfOf(M) - 6), M.Top + 8); }
+FVector TopShroudHigh(const FMast& M, float Side, int32 K) { return FVector(TopmastX(M) - 6 + K * 4, Side * 14, M.Top + 864); }
 
 // ------------------------------------------------------------------ the climbs
 TArray<FChuckClimbable> DeckLadders()
@@ -108,12 +116,57 @@ TArray<FChuckClimbable> DeckLadders()
         L.Foot = ShipWorld(FVector(E + 26.5f, Side * BreakLadderY, DeckZ)); L.TopZ = ShipOrigin().Z + QuarterZ; L.Out = FVector(1, 0, 0); L.HalfWidth = 22;
         L.Lip = ShipWorld(FVector(E, Side * BreakLadderY, QuarterZ)); Out.Add(L);
     }
-    // The rope ladder from the deck up through the main top's lubber's hole.
-    {
-        FChuckClimbable L;
-        L.Foot = ShipWorld(FVector(TopLadderX - 26.5f, 0, DeckZ)); L.TopZ = ShipOrigin().Z + MainTopZ; L.Out = FVector(-1, 0, 0); L.HalfWidth = 22;
-        L.Lip = ShipWorld(FVector(TopLadderX, 0, MainTopZ)); Out.Add(L);
-    }
+    return Out;
+}
+// The ratlines: each mast's lower shrouds and topmast shrouds, a net a side, climbed on their outer faces, and across
+// them as well as up (ChuckClimbable Line/SideTravel). From the deck he goes up the bulwark's inside, out over the rail
+// and turns round onto the lower shrouds, up to the top and over its rim; from the top, out over the rim onto the topmast
+// shrouds, up to under the crosstrees (no lip there). Walking out over the rim at the lower shrouds' heads, he lowers
+// himself onto them.
+TArray<FChuckClimbable> DeckShrouds()
+{
+    TArray<FChuckClimbable> Out;
+    constexpr float Off = 18;      // his centre off the net (the climb clip's paws on it), across the lean
+    constexpr float Stand = 33.5f; // his centre over a floor (half height + 1)
+    constexpr float HangDrop = 22; // ChuckClipData::HangDrop: his centre under a lip at the top of a climb
+    for (const FMast* Mp : {&MainMast(), &ForeMast()})
+        for (float Side : {1.f, -1.f})
+        {
+            const FMast& M = *Mp;
+            const float H = TopHalfOf(M);
+            const FVector O(0, Side, 0);
+            {
+                // The lower shrouds: the plane through the middle two, his line just outside it.
+                const FVector Lo = (ShroudLow(M, Side, 1) + ShroudLow(M, Side, 2)) * .5f, Hi = (ShroudHigh(M, Side, 1) + ShroudHigh(M, Side, 2)) * .5f;
+                auto On = [&](float Z) { const FVector P = FMath::Lerp(Lo, Hi, (Z - Lo.Z) / (Hi.Z - Lo.Z)); return FVector(P.X, P.Y, Z) + O * Off; };
+                const float X = Lo.X, In = PostLine(X) - 37;   // in front of the pin rail on the bulwark's inside
+                FChuckClimbable L;
+                L.Foot = ShipWorld(FVector(X, Side * In, DeckZ));
+                // (Up the inside till his feet clear the rail's cap, then out over it: never through it.)
+                L.Line = {ShipWorld(FVector(X, Side * In, DeckZ + Stand)), ShipWorld(FVector(X, Side * In, RailZ + 36)),
+                    ShipWorld(FVector(X, Side * (PostLine(X) + 4), RailZ + 48)), ShipWorld(On(RailZ + 80)), ShipWorld(On(M.Top - HangDrop))};
+                L.TopZ = ShipOrigin().Z + M.Top; L.Out = O; L.HalfWidth = 15;
+                L.Lip = ShipWorld(FVector(Hi.X, Side * H, M.Top));
+                L.Approach = O; L.TurnZ = ShipOrigin().Z + RailZ + 44;
+                L.SideTravel = 45; L.TopSideTravel = 0;
+                Out.Add(L);
+            }
+            {
+                // The topmast shrouds, from the top's floor out over its rim; they end under the crosstrees.
+                const FVector Lo = TopShroudLow(M, Side, 1) + FVector(0, 0, 8), Hi = TopShroudHigh(M, Side, 1);
+                auto On = [&](float Z) { const FVector P = FMath::Lerp(Lo, Hi, (Z - Lo.Z) / (Hi.Z - Lo.Z)); return FVector(P.X, P.Y, Z) + O * Off; };
+                const float X = Lo.X, In = H - 21;
+                FChuckClimbable L;
+                L.Foot = ShipWorld(FVector(X, Side * In, M.Top));
+                L.Line = {ShipWorld(FVector(X, Side * In, M.Top + Stand)), ShipWorld(FVector(X, Side * In, M.Top + 50)),
+                    ShipWorld(FVector(X, Side * (H + 2), M.Top + 75)), ShipWorld(On(M.Top + 105)), ShipWorld(On(M.Top + 720))};
+                L.TopZ = ShipOrigin().Z + M.Top + 720; L.Out = O; L.HalfWidth = 15;
+                L.Lip = L.Line.Last();
+                L.Approach = O; L.TurnZ = ShipOrigin().Z + M.Top + 75;
+                L.SideTravel = 10; L.TopSideTravel = 0; L.bTopOut = false;
+                Out.Add(L);
+            }
+        }
     return Out;
 }
 // The main yard, hand over hand from either side of the top out to its yardarms.
@@ -203,7 +256,7 @@ void BuildWeatherDeck(FParts& P)
         P.WoodDecor.TurnedBox(FVector(CompX0 - 30, Yc, Z + 52), FVector(3, 62, 50), FRotator(-14, 0, 0));
         P.Hidden.B(CompX0 - 46, CompX0 - 10, Yc - 62, Yc + 62, Z, Z + 100);
     }
-    // ---- The fife rails at the masts' feet (the main's open fore and aft: the rope ladder's foot, and room aft), with
+    // ---- The fife rails at the masts' feet (the main's open fore and aft), with
     // belaying pins; the pin rails inside the rail by the shrouds.
     auto Pins = [&](float X0, float X1, float Y, float Z)
     {
@@ -354,17 +407,16 @@ void BuildRig(FParts& P)
         P.WoodDecor.B(TopmastX(M) - 10, TopmastX(M) + 10, -90, 90, M.Top + 868, M.Top + 876);
         P.WoodDecor.B(TopmastX(M) - 40, TopmastX(M) + 40, -40, -32, M.Top + 868, M.Top + 876); P.WoodDecor.B(TopmastX(M) - 40, TopmastX(M) + 40, 32, 40, M.Top + 868, M.Top + 876);
 
-        // ---- The top: a platform on its trestletrees, round the mast and (the main's) the lubber's hole; a rim.
+        // ---- The top: a platform on its trestletrees round the mast; a rim.
         const float X0 = bMain ? TopX0 : M.X - 70, X1 = bMain ? TopX1 : M.X + 130, H = bMain ? TopHalf : 120;
         TArray<FHole> Holes = {{M.X - 27, TopmastX(M) + 19, -27, 27}};
-        if (bMain) Holes.Add({LubberX0, LubberX1, -LubberHalf, LubberHalf});
         Slab(P.Wood, X0, X1, -H, H, M.Top - 12, M.Top, Holes);
         for (float Y : {-H, H - 4}) P.WoodDecor.B(X0, X1, Y, Y + 4, M.Top, M.Top + 5);
         P.WoodDecor.B(X0, X0 + 4, -H, H, M.Top, M.Top + 5); P.WoodDecor.B(X1 - 4, X1, -H, H, M.Top, M.Top + 5);
         for (float Y : {-32.f, 32.f}) P.WoodDecor.B(X0 + 10, X1 - 10, Y - 6, Y + 6, M.Top - 30, M.Top - 12);   // trestletrees
         for (float X : {M.X - 40, M.X + 100}) P.WoodDecor.B(X - 5, X + 5, -H + 8, H - 8, M.Top - 24, M.Top - 12);   // crosstrees under it
-        // A clay jar the lookout keeps up there (the main top), on its aft port corner.
-        if (bMain) GJars.Add(FVector(M.X - 42, 92, M.Top));
+        // A clay jar the lookout keeps up there (the main top), on its fore starboard corner (clear of the nets' heads).
+        if (bMain) GJars.Add(FVector(M.X + 150, -92, M.Top));
 
         // ---- The yards (tapered both ways from their slings), the main course furled on its yard, the footropes.
         for (int32 W = 0; W < 3; ++W)
@@ -398,21 +450,21 @@ void BuildRig(FParts& P)
         {
             const float CX0 = M.X - 150, CX1 = M.X + 70;
             for (float X = CX0; X < CX1; X += 22) P.Wood.B(X, X + 22, Side > 0 ? PostLine(X + 11) + 4 : -PostLine(X + 11) - 36, Side > 0 ? PostLine(X + 11) + 36 : -PostLine(X + 11) - 4, WaistTopZ - 20, WaistTopZ - 10);   // the channel
-            const float Xs[4] = {M.X - 125, M.X - 75, M.X - 25, M.X + 25};
             FVector Low[4], High[4];
             for (int32 K = 0; K < 4; ++K)
             {
-                const float Y = Side * (PostLine(Xs[K]) + 28);
-                const FVector Dead(Xs[K], Y, WaistTopZ + 14);
+                const FVector Dead = ShroudLow(M, Side, K) - FVector(0, 0, 54);
+                const float Xk = static_cast<float>(Dead.X);
                 P.WoodDecor.Spar(Dead - FVector(0, 0, 9), Dead + FVector(0, 0, 9), 9, 9, 10);           // the lower deadeye
                 P.WoodDecor.Spar(Dead + FVector(0, 0, 36), Dead + FVector(0, 0, 54), 9, 9, 10);         // the upper
                 for (float O : {-4.f, 0.f, 4.f}) P.CanvasDecor.Rope({Dead + FVector(O, 0, 8), Dead + FVector(O, 0, 37)}, .7f);   // lanyards
-                P.Iron.Rope({Dead - FVector(0, 0, 9), FVector(Xs[K], Side * (PostLine(Xs[K]) + 8), WaistTopZ - 110)}, 1.6f);       // chainplate
-                Low[K] = Dead + FVector(0, 0, 54);
-                High[K] = FVector(M.X + (K - 1.5f) * 6, Side * (HeadR + 4), M.Top - 16);
+                P.Iron.Rope({Dead - FVector(0, 0, 9), FVector(Xk, Side * (PostLine(Xk) + 8), WaistTopZ - 110)}, 1.6f);       // chainplate
+                Low[K] = ShroudLow(M, Side, K);
+                High[K] = ShroudHigh(M, Side, K);
                 P.Rigging.Rope({Low[K], High[K]}, 2.2f);
+                P.Iron.Spar(High[K] - FVector(0, 0, 5), High[K] + FVector(0, 0, 3), 3.4f, 3.4f, 8);   // its band at the rim
             }
-            for (float Z = Low[0].Z + 38; Z < M.Top - 70; Z += 38)
+            for (float Z = Low[0].Z + 38; Z < M.Top - 30; Z += 38)
             {
                 TArray<FVector> Line;
                 for (int32 K = 0; K < 4; ++K) { const float T = (Z - Low[K].Z) / (High[K].Z - Low[K].Z); Line.Add(FMath::Lerp(Low[K], High[K], T)); }
@@ -424,8 +476,8 @@ void BuildRig(FParts& P)
             FVector TL[3], TH[3];
             for (int32 K = 0; K < 3; ++K)
             {
-                TL[K] = FVector(M.X - 55 + K * 35, Side * (H - 6), M.Top + 8);
-                TH[K] = FVector(TopmastX(M) - 6 + K * 4, Side * 14, M.Top + 864);
+                TL[K] = TopShroudLow(M, Side, K);
+                TH[K] = TopShroudHigh(M, Side, K);
                 P.WoodDecor.Spar(TL[K] - FVector(0, 0, 4), TL[K] + FVector(0, 0, 8), 6, 6, 8);
                 P.Rigging.Rope({TL[K] + FVector(0, 0, 8), TH[K]}, 1.6f);
             }
@@ -474,9 +526,6 @@ void BuildRig(FParts& P)
     P.CanvasDecor.Rope({SpankerPeak(), FVector(Mm.X + 10, 0, Mm.Top + 120)}, 1.f);
     // The flag's halyard: from a block at the peak down the flag's hoist, its tail hanging below it.
     P.CanvasDecor.Rope({SpankerPeak() + FVector(-4, 6, -6), FlagHoist(), FlagHoist() - FVector(0, 0, FlagDrop), FlagHoist() - FVector(2, -3, FlagDrop + 70)}, .7f);
-    // The rope ladder up to the main top: tarred ropes and wooden rungs, its foot made fast on the deck.
-    LadderAt(P.Rigging, P.WoodDecor, TopLadderX, -1, 0, DeckZ, MainTopZ, MainTopZ, 30, true);
-    P.Iron.Spar(FVector(TopLadderX - 6, 0, DeckZ), FVector(TopLadderX - 6, 0, DeckZ + 4), 7, 7, 10);
 }
 
 // ------------------------------------------------------------------ the sails (built each frame: they breathe)
