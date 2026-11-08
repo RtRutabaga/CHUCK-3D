@@ -2,6 +2,20 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 8 — the ship's new ending, planned (Claude)
+
+- **Asked:** "dont add to the game yet but write documentation for this": no plank walk; the reef points on the main, then the fore yard's trouble with the lower fore ratlines torn loose, the golden-cigarette long jump from the main top to the foremast, the higher fore ratlines to the fore topsail, a cinematic cutscene (the ship in the storm, Astral ruptures on the current, Jeffries noticing) ending with Chuck knocked into a Phlegethos rupture and the fall cutscene; gold guide lights; period-jargon orders as a joke plus clear, situation-specific lines; flesh out the user's storm dialogue draft and keep it nautically accurate.
+- **Source:** `main` at fb913d59.
+- **Changed:** new [../regions/SHIP-STORM-ENDING.md](../regions/SHIP-STORM-ENDING.md) (the rig's proper names from `ShipDeck.inl`, the five steps, the jump's numbers, the dialogue: user lines verbatim, proposed lines marked, guidance table, background orders, nautical notes, build list, questions); a pointer in [../regions/SHIP.md](../regions/SHIP.md#the-ending); a line in HANDOFF.
+- **Findings for the build:** she is a brig; the main course is furled today, so "reef points" needs it set close-reefed in the storm; the yardarms hang about 2 m outboard (work spots must sit over the deck); main-top rim to fore-top rim is 6.7 m with a 1 m drop, against about 2.9 m for his current sprint jump; the main top allows only a 2.6 m run-up, and the lookout's jar sits in the starboard lane.
+- **Tested:** nothing (documentation only).
+- **Contract compatibility:** unchanged.
+- **Binary/LFS:** none.
+- **Launcher:** unchanged (still Rope).
+- **Left alone:** uncommitted work already in the tree that is not from this session and not in any handoff: `ShipRope.*`, `DockNPC*`, `ShipDeck.inl`, `ShipSetting.*`, `ShipTest.cpp`, `Tools/create_rope_material.py`, `M_Rope`/`T_Rope001_*`, new `MI_RopeTarred.uasset` and `JeffriesRopeBody.inl` (apparently Jeffries' ropes as `ShipRope`), plus the 14 `Common/Materials` re-saves.
+
+Next part of the work could be done by either — preference: Claude (once the user approves the plan and lines: the reef, the carry-away, the leap, the cutscene).
+
 ## November 7 — the storm's lines as rope (Claude)
 
 - **Asked:** find and use free resources to make the ship's ropes better: the lines the crew haul in the storm bent at sharp, unrealistic angles; realistic bends for how they hold them. (Kept in mind, not built: the plank walk is dropped; the fore ratlines will tear loose in the storm, so the rope code is general.)

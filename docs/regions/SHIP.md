@@ -73,6 +73,8 @@ The sea is an open-ocean surface of moving waves out to the horizon, with foam a
 
 ## The ending
 
+**Changed by the user, 2026-11-07/08:** no plank walk. The plan that replaces step 2 below (the reef points on the main, the fore rigging carried away, the golden-leaf leap to the foremast, the cutscene on the fore topsail yard and the fall into a Phlegethos rupture) is [SHIP-STORM-ENDING.md](SHIP-STORM-ENDING.md), not built yet. Step 1 and step 2 below are kept only as the history of the first plan; step 3 still stands.
+
 The ending starts only once the 2D's seven conditions are met: the chef has chased him, he has talked to the seated pirate and to the four deck pirates (concertina, cheering, dancing, Jeffries), and he has opened the chest.
 
 1. **Captain on deck** (cutscene, Esc skips): the captain comes up the midship hatch and crosses the deck to the helm, the camera following. A crewman calls out, and then the accusation, the order, the objection and the refusal follow, with "..." beats between them.
