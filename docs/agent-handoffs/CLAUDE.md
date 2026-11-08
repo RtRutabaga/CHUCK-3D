@@ -2,6 +2,24 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 8 — all the ship's rope; Jeffries' lashings; the floating coil (Claude)
+
+- **Asked:** "make the rest of the ship rigging rope look like our new good looking rope, also do this for the rope securing Jeffries (and it needs to be around him, not with parts of him passing through it impossibly). our current coiled rope decor is good as is but i did see one below deck that floats impossibly so make sure that doesnt happen".
+- **Source:** `main` at 9d7763cd (the work started on fb913d59; the uncommitted files the previous entry left alone are this work).
+- **Changed** ([../SHIP.md](../SHIP.md#all-the-ships-rope-jeffries-lashings-the-floating-coil-november-8)):
+  - `ShipRope.h/.cpp`: the lay scales with rope radius; `Hull2D`.
+  - `ShipSetting.h/.cpp`, `ShipDeck.inl`: every rigging rope is a `Cord` (ShipRope tube); standing rigging `MI_RopeTarred`, running rigging and lashings `M_Rope` (new `Hemp` surface); the arrival compartment's coil moved onto the floor; the ship check traces under every coil (`CHUCK_SHIP_COIL`).
+  - `DockNPC.h/.cpp`, `DockNPCPirate.inl`, new `JeffriesRopeBody.inl`: Jeffries' lashings are taut hulls round his posed mesh and the mast (chest, hips, wrists, line round the mast); fists held clear of the mast; `-ChuckBakeJeffriesRope` regenerates the body points (editor only).
+  - `ShipTest.cpp`: `CHUCK_SHIP_JEFFRIES_ROPE` (body inside a rope < 0.6 cm); new rope/Jeffries stills.
+  - `Tools/create_rope_material.py`: `M_Rope` parameterised; builds `MI_RopeTarred`.
+- **Tested:** editor full ship test 20/20 (`Local/ship-rigging-full.log`). Packaged `Builds/RiggingCandidate`: Verify-Package 182 passes (`Local/verify-package-20261108-120725.log`), ship 20/20, rope depth 0.24 cm, 7 coils resting (`Local/verify-ship-20261108-124853.log`), Verify-Menu 44/44 (`Local/verify-menu-rigging.txt`). Stills reviewed. Not played by hand.
+- **Remaining flaws:** no knots on Jeffries' lashings; a short step where each turn climbs to the next behind the mast; the rope follows his outline in flat slices, not cloth folds; the tarred standing rigging reads dark against the sky.
+- **Contract compatibility:** only new members on `ADockNPC`; no rig or animation changes.
+- **Binary/LFS:** new `MI_RopeTarred.uasset`; `M_Rope.uasset` and the three `T_Rope001_*` re-saved (LFS).
+- **Launcher:** promoted as Rigging (receipt names 9d7763cd, the build was of this work on top of it). The 14 `Common/Materials` re-saves from package builds are still left uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the reef points, the fore ratlines torn loose and the jump to the foremast).
+
 ## November 8 — the ship's new ending, planned (Claude)
 
 - **Asked:** "dont add to the game yet but write documentation for this": no plank walk; the reef points on the main, then the fore yard's trouble with the lower fore ratlines torn loose, the golden-cigarette long jump from the main top to the foremast, the higher fore ratlines to the fore topsail, a cinematic cutscene (the ship in the storm, Astral ruptures on the current, Jeffries noticing) ending with Chuck knocked into a Phlegethos rupture and the fall cutscene; gold guide lights; period-jargon orders as a joke plus clear, situation-specific lines; flesh out the user's storm dialogue draft and keep it nautically accurate.

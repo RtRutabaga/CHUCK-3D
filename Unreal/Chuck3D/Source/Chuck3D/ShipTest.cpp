@@ -147,7 +147,17 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("ArrivalMouth"), {260, -270, LowerZ + 60}, {SeamX1, -300, LowerZ + 40}},
         // By the starboard break ladder, where a hammock's lanyard stood up through the deck (user 2026-11-02: "floating mop").
         {TEXT("BreakStarboard"), {-700, -120, DeckZ + 120}, {-880, -230, DeckZ + 70}},
-        {TEXT("QuartersAft"), {-300, 0, LowerZ + 150}, {-900, 0, LowerZ + 110}}};
+        {TEXT("QuartersAft"), {-300, 0, LowerZ + 150}, {-900, 0, LowerZ + 110}},
+        // The rope (user 2026-11-08): Jeffries' lashings round him and the mast, the rigging in the rope scan, the coil that floated.
+        {TEXT("JeffriesRopes"), {-615, 35, DeckZ + 125}, {-530, 0, DeckZ + 115}},
+        {TEXT("JeffriesRopesSide"), {-548, 95, DeckZ + 120}, {-515, 0, DeckZ + 110}},
+        {TEXT("JeffriesWrists"), {-508, -78, DeckZ + 95}, {-522, 0, DeckZ + 95}},
+        {TEXT("JeffriesWristsHigh"), {-545, -70, DeckZ + 150}, {-515, -12, DeckZ + 92}},
+        {TEXT("JeffriesMastFore"), {-395, 30, DeckZ + 125}, {-490, 0, DeckZ + 110}},
+        {TEXT("RopeDeadeyes"), {-450, 210, DeckZ + 150}, {-520, 380, DeckZ + 110}},
+        {TEXT("RopeRatlines"), {-560, 240, DeckZ + 260}, {-560, 400, DeckZ + 320}},
+        {TEXT("RopeStays"), {-200, -120, DeckZ + 300}, {300, 0, DeckZ + 700}},
+        {TEXT("ArrivalCoil"), {120, 200, LowerZ + 110}, {-40, 350, LowerZ + 10}}};
     auto* Camera = World->SpawnActor<ACameraActor>(); Camera->GetCameraComponent()->SetFieldOfView(74);
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -344,7 +354,12 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Trial >= Run->Trials.Num())
             {
                 int32 Passed = 0; for (int32 R : Run->Results) Passed += R;
-                const int32 Fails = Run->Failures + (Run->Results.Num() - Passed);
+                // Jeffries' lashings lie round him: no part of him more than a little inside a rope (2026-11-08).
+                float RopeDepth = -100.f;
+                for (TActorIterator<ADockNPC> It(World); It; ++It) if (It->GetKind() == EDockHuman::Jeffries) RopeDepth = FMath::Max(RopeDepth, It->GetRopeDepth());
+                const bool bRopeOk = RopeDepth > -99.f && RopeDepth < .6f;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_JEFFRIES_ROPE depth_cm=%.2f pass=%d"), RopeDepth, bRopeOk ? 1 : 0);
+                const int32 Fails = Run->Failures + (Run->Results.Num() - Passed) + !bRopeOk;
                 int32 LiveRats = 0; for (const auto& R : AEnemyRat::All()) if (R.IsValid() && !R->IsDead() && InShip(R->GetActorLocation())) ++LiveRats;
                 const AShipSetting* S = AShipSetting::Get(World);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TEST failures=%d trials=%d passed=%d ship_check=%d rats=%d jars=%d ladders=%d missing=%d tris=%d"), Fails, Run->Results.Num(), Passed, Run->ShipFailures,

@@ -457,6 +457,8 @@ public:
     bool GetFeet(FVector& Back, FVector& Front) const;
     /** Jeffries at the main mast: his back to it (its centre, world) and the ropes round him and it. */
     void TieToMast(const FVector& MastCentre, float MastRadius);
+    /** Jeffries: the furthest any of his ropes has passed into his body (cm; < 0 never touched it). Measured in ship tests. */
+    float GetRopeDepth() const { return RopeDepth; }
     /** The chef: his place at the work table (feet, world) and the galley he keeps to (ship-frame box, X0 X1 Y0 Y1). */
     void SetupChef(const FVector& WorkFeet, float WorkYaw, const FBox2D& Galley, float FloorZ);
     const TCHAR* GetChefStateName() const;
@@ -723,6 +725,9 @@ private:
     UPROPERTY() class UProceduralMeshComponent* Ropes = nullptr;
     FVector MastLocal = FVector::ZeroVector;     // Jeffries: the mast's centre in his component space
     float MastR = 30.f;
+    float RopeDepth = -100.f;                     // Jeffries: the furthest a rope has sunk into him (cm, measured in tests)
+    bool bMeasureRope = false;
+    int32 RopeFrame = 0;
     FVector PirateMouth = FVector::ZeroVector;   // component space, from the manifest (a drinker's lips)
     float DrinkTableTop = 0.f;                   // the table his tankard rests on (component space; the tavern's by default)
     float BellowsGap = 0.f, ToastLift = 0.f, Strain = 0.f, StrainKick = 0.f, NextStrain = 2.f, WorstPropGrip = 0.f, WorstFootSink = 0.f;
@@ -782,4 +787,5 @@ private:
     void PlaceProp(int32 Index, const FTransform& At);
     void HoldTankard(TArray<FTransform>& Space, int32 Side, const FVector& Handle, const FVector& Along, const FVector& Up, const FVector& Pole);
     void UpdateRopes(const TArray<FTransform>& Space);
+    void BakeRopeBody() const;
 };

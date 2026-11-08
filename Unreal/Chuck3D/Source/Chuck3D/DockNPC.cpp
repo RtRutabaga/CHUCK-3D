@@ -25,6 +25,14 @@
 #include "ShipSetting.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "ShipRope.h"
+#include "Algo/Reverse.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#if WITH_EDITORONLY_DATA
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshLODModel.h"
+#endif
 
 namespace
 {

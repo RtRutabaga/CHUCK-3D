@@ -165,6 +165,7 @@ void Tube(FMesh& M, const TArray<FVector>& Path, float R, float UOffset, int32 S
     if (X.SizeSquared() < 1e-4) X = FVector::CrossProduct(D[0], FVector::ForwardVector);
     X.Normalize();
     const int32 Base = M.V.Num(), Ring = Sides + 1;
+    const float Lay = LayRepeat * R / LayRadius;   // a thinner rope's strands lie closer (the lay a few times its thickness)
     float Run = 0.f;
     for (int32 I = 0; I < N; ++I)
     {
@@ -180,7 +181,7 @@ void Tube(FMesh& M, const TArray<FVector>& Path, float R, float UOffset, int32 S
             const float A = 2.f * PI * S / Sides, Ca = FMath::Cos(A), Sa = FMath::Sin(A);
             const FVector O = X * Ca + Y * Sa, Round = Y * Ca - X * Sa;   // out, and the way V runs round
             M.V.Add(Path[I] + O * R); M.N.Add(O);
-            M.UV.Add(FVector2D((Run + UOffset) / LayRepeat, S / float(Sides) * AroundRepeat));
+            M.UV.Add(FVector2D((Run + UOffset) / Lay, S / float(Sides) * AroundRepeat));
             // The normal map's tangent along the rope (U); its bitangent must run with V round it.
             M.Tan.Add(FProcMeshTangent(D[I], FVector::DotProduct(FVector::CrossProduct(O, D[I]), Round) < 0.f));
         }
@@ -229,4 +230,28 @@ void Shell(FMesh& M, const FVector& C, const FVector& Long, const FVector& Cheek
             Tri(M, A, B, Cc, Out); Tri(M, B, E, Cc, Out);
         }
 }
+
+void Hull2D(TArray<FVector2D> Points, TArray<FVector2D>& Out)
+{
+    // Andrew's monotone chain.
+    Out.Reset();
+    Points.Sort([](const FVector2D& A, const FVector2D& B) { return A.X < B.X || (A.X == B.X && A.Y < B.Y); });
+    if (Points.Num() < 3) { Out = Points; return; }
+    const auto Cross = [](const FVector2D& O, const FVector2D& A, const FVector2D& B) { return (A.X - O.X) * (B.Y - O.Y) - (A.Y - O.Y) * (B.X - O.X); };
+    TArray<FVector2D> H; H.SetNum(Points.Num() * 2);
+    int32 K = 0;
+    for (int32 I = 0; I < Points.Num(); ++I)
+    {
+        while (K >= 2 && Cross(H[K - 2], H[K - 1], Points[I]) <= 0.) --K;
+        H[K++] = Points[I];
+    }
+    for (int32 I = Points.Num() - 2, Lower = K + 1; I >= 0; --I)
+    {
+        while (K >= Lower && Cross(H[K - 2], H[K - 1], Points[I]) <= 0.) --K;
+        H[K++] = Points[I];
+    }
+    H.SetNum(FMath::Max(0, K - 1));
+    Out = MoveTemp(H);
+}
+
 }

@@ -17,7 +17,8 @@
  */
 namespace ShipRope
 {
-    constexpr float LayRepeat = 26.f;          // cm of rope a texture repeat along it
+    constexpr float LayRepeat = 26.f;          // cm of rope a texture repeat along it, on a rope of LayRadius
+    constexpr float LayRadius = 1.5f;          // (other ropes scale it by their radius: a lay about three times their thickness)
     constexpr float AroundRepeat = 3.f / 7.f;   // of the texture's V round it (three strands)
 
     /** A point the rope passes and its bend there: the radius of the arc it takes round it (0: a sharp turn, at an end).
@@ -54,10 +55,14 @@ namespace ShipRope
         void Into(class UProceduralMeshComponent* Mesh, int32 Section, bool bUpdate) const;
     };
 
-    /** The rope's tube along Path (radius R, Sides round), its ends capped; UOffset (cm) runs the strands along it. */
+    /** The rope's tube along Path (radius R, Sides round), its ends capped; UOffset (cm) runs the strands along it (LayRepeat
+     *  cm a repeat at LayRadius, in proportion to R). */
     void Tube(FMesh& M, const TArray<FVector>& Path, float R, float UOffset = 0.f, int32 Sides = 10);
     /** A wooden block's shell: an ellipsoid at C, Radii along Long, across its cheeks' plane and through its cheeks (Cheek). */
     void Shell(FMesh& M, const FVector& C, const FVector& Long, const FVector& Cheek, const FVector& Radii);
 
     float Length(const TArray<FVector>& Path);
+
+    /** The convex outline round Points (x, y; z ignored), counter-clockwise (seen from above), no repeated points. */
+    void Hull2D(TArray<FVector2D> Points, TArray<FVector2D>& Out);
 }

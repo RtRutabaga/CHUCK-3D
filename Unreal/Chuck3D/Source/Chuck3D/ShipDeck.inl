@@ -48,7 +48,7 @@ void Sagging(FSurf& S, const FVector& A, const FVector& B, float R, float Sag, i
         const float T = I / float(Segments);
         Path.Add(FMath::Lerp(A, B, T) - FVector(0, 0, Sag * 4 * T * (1 - T)));
     }
-    S.Rope(Path, R);
+    S.Cord(Path, R);
 }
 
 // ------------------------------------------------------------------ the rig's numbers
@@ -236,7 +236,7 @@ void LadderAt(FSurf& Rails, FSurf& Rungs, float EdgeX, float Dir, float Yc, floa
     const float Xa = EdgeX + Dir * 3, Xb = EdgeX + Dir * 10;
     for (float Y : {Yc - 24, Yc + 24})
     {
-        if (bRope) Rails.Rope({FVector((Xa + Xb) * .5f, Y, Z0), FVector((Xa + Xb) * .5f, Y, RailTop)}, 1.6f);
+        if (bRope) Rails.Cord({FVector((Xa + Xb) * .5f, Y, Z0), FVector((Xa + Xb) * .5f, Y, RailTop)}, 1.6f);
         else Rails.B(FMath::Min(Xa, Xb) + 1, FMath::Max(Xa, Xb), Y - 3, Y + 3, Z0, RailTop);
     }
     for (float Z = Z0 + 24; Z <= Z1 - 4; Z += Step) Rungs.B(FMath::Min(Xa, Xb), FMath::Max(Xa, Xb), Yc - 27, Yc + 27, Z - 2.5f, Z + 2.5f);
@@ -327,7 +327,7 @@ void BuildWeatherDeck(FParts& P)
             {
                 TArray<FVector> Loop;
                 for (int32 K = 0; K <= 12; ++K) { const float A = K / 12.f * 2 * PI; Loop.Add(FVector(X + 9 * FMath::Sin(A), Y - Side * 3, RailZ - 46 - 16 * (1 - FMath::Cos(A)) * .5f - 4)); }
-                P.CanvasDecor.Rope(Loop, 1.4f);
+                P.Hemp.Cord(Loop, 1.4f);
             }
         }
     // ---- The capstan between the main hatch and the fore mast.
@@ -354,7 +354,7 @@ void BuildWeatherDeck(FParts& P)
         {
             // The cable from the windlass out through its hawse hole.
             const float HX = 1560, HY = Side * (PostLine(1560) - 4);
-            P.Rigging.Rope({FVector(WX + 6, Side * 60, DeckZ + 40), FVector((WX + HX) * .5f, Side * 70, DeckZ + 8), FVector(HX, HY, DeckZ + 14)}, 4.5f);
+            P.Rigging.Cord({FVector(WX + 6, Side * 60, DeckZ + 40), FVector((WX + HX) * .5f, Side * 70, DeckZ + 8), FVector(HX, HY, DeckZ + 14)}, 4.5f);
             // A cathead out over the side, and the anchor hung from it.
             const float CX = 1470, In = PostLine(CX) - 30, Out = PostLine(CX) + 75;
             Beam(P.Wood, FVector(CX, Side * In, WaistTopZ + 30), FVector(CX + 12, Side * Out, WaistTopZ + 46), 9, 9);
@@ -371,7 +371,7 @@ void BuildWeatherDeck(FParts& P)
             }
         }
         // The bobstay under the bowsprit to the stem.
-        P.Rigging.Rope({BowspritAt(.62f), FVector(BowX + 10, 0, WaterZ + 70)}, 2.4f);
+        P.Rigging.Cord({BowspritAt(.62f), FVector(BowX + 10, 0, WaterZ + 70)}, 2.4f);
     }
     // ---- The quarterdeck: the helm (its wheel facing forward, the binnacle before it) and the cabin's skylight.
     {
@@ -474,7 +474,7 @@ void BuildRig(FParts& P)
             {
                 TArray<FVector> Loop;
                 for (int32 K = 0; K <= 10; ++K) { const float A = K / 10.f * 2 * PI; Loop.Add(C + FVector(-2 + 17 * FMath::Cos(A), Y, 8 + 17 * FMath::Sin(A))); }
-                P.Rigging.Rope(Loop, .9f);
+                P.Rigging.Cord(Loop, .9f);
             }
         }
 
@@ -491,11 +491,11 @@ void BuildRig(FParts& P)
                 const float Xk = static_cast<float>(Dead.X);
                 P.WoodDecor.Spar(Dead - FVector(0, 0, 9), Dead + FVector(0, 0, 9), 9, 9, 10);           // the lower deadeye
                 P.WoodDecor.Spar(Dead + FVector(0, 0, 36), Dead + FVector(0, 0, 54), 9, 9, 10);         // the upper
-                for (float O : {-4.f, 0.f, 4.f}) P.CanvasDecor.Rope({Dead + FVector(O, 0, 8), Dead + FVector(O, 0, 37)}, .7f);   // lanyards
+                for (float O : {-4.f, 0.f, 4.f}) P.Hemp.Cord({Dead + FVector(O, 0, 8), Dead + FVector(O, 0, 37)}, .7f);   // lanyards
                 P.Iron.Rope({Dead - FVector(0, 0, 9), FVector(Xk, Side * (PostLine(Xk) + 8), WaistTopZ - 110)}, 1.6f);       // chainplate
                 Low[K] = ShroudLow(M, Side, K);
                 High[K] = ShroudHigh(M, Side, K);
-                P.Rigging.Rope({Low[K], High[K]}, 2.2f);
+                P.Rigging.Cord({Low[K], High[K]}, 2.2f);
                 P.Iron.Spar(High[K] - FVector(0, 0, 5), High[K] + FVector(0, 0, 3), 3.4f, 3.4f, 8);   // its band at the rim
             }
             // The net at the foot: its legs from the sheer pole on deck out to the shrouds over the rail, its ratlines, the
@@ -505,14 +505,14 @@ void BuildRig(FParts& P)
                 for (int32 K = 0; K < 4; ++K)
                 {
                     Foot[K] = NetFoot(M, Side, K); Join[K] = NetJoin(M, Side, K);
-                    P.Rigging.Rope({Foot[K], Join[K]}, 1.9f);
-                    P.Rigging.Spar(Join[K] - FVector(0, 0, 4), Join[K] + FVector(0, 0, 4), 3.2f, 3.2f, 8);   // the seizing
+                    P.Rigging.Cord({Foot[K], Join[K]}, 1.9f);
+                    P.Rigging.Cord({Join[K] - FVector(0, 0, 4), Join[K] + FVector(0, 0, 4)}, 3.2f);   // the seizing
                 }
                 for (float Z = DeckZ + 36; Z < NetJoinZ - 12; Z += 36)
                 {
                     TArray<FVector> Line;
                     for (int32 K = 0; K < 4; ++K) Line.Add(FMath::Lerp(Foot[K], Join[K], (Z - Foot[K].Z) / (Join[K].Z - Foot[K].Z)));
-                    P.Rigging.Rope(Line, .9f);
+                    P.Rigging.Cord(Line, .9f);
                 }
                 const FVector PoleA = Foot[0] - FVector(18, 0, 0), PoleB = Foot[3] + FVector(18, 0, 0);
                 P.WoodDecor.Spar(PoleA, PoleB, 4.5f, 4.5f, 8);
@@ -525,17 +525,17 @@ void BuildRig(FParts& P)
                     const FVector Pole(FMath::Clamp(static_cast<float>(Pt.X), static_cast<float>(PoleA.X) + 4, static_cast<float>(PoleB.X) - 4), PoleA.Y, PoleA.Z);
                     const FVector PostFoot(Pt.X, Pt.Y - Side * 6, WaistTopZ + 5);
                     P.Iron.Spar(PostFoot + FVector(0, 0, -3), PostFoot + FVector(0, 0, 3), 6.f, 6.f, 8);           // a band round the post's foot
-                    for (float O : {-2.f, 2.f}) P.Rigging.Rope({Pole + FVector(O, 0, 3), PostFoot + FVector(O, 0, 0)}, .8f);   // the lashing
+                    for (float O : {-2.f, 2.f}) P.Rigging.Cord({Pole + FVector(O, 0, 3), PostFoot + FVector(O, 0, 0)}, .8f);   // the lashing
                 }
             }
             for (float Z = Low[0].Z + 38; Z < M.Top - 30; Z += 38)
             {
                 TArray<FVector> Line;
                 for (int32 K = 0; K < 4; ++K) { const float T = (Z - Low[K].Z) / (High[K].Z - Low[K].Z); Line.Add(FMath::Lerp(Low[K], High[K], T)); }
-                P.Rigging.Rope(Line, .9f);
+                P.Rigging.Cord(Line, .9f);
             }
             // Futtock shrouds under the top (aft of the yard), from its rim to the mast below.
-            for (float Dx : {-55.f, -20.f}) P.Rigging.Rope({FVector(M.X + Dx, Side * (H - 6), M.Top - 10), FVector(M.X + Dx * .4f, Side * (MastR - 2), M.Top - 170)}, 1.6f);
+            for (float Dx : {-55.f, -20.f}) P.Rigging.Cord({FVector(M.X + Dx, Side * (H - 6), M.Top - 10), FVector(M.X + Dx * .4f, Side * (MastR - 2), M.Top - 170)}, 1.6f);
             // Topmast shrouds and their ratlines.
             FVector TL[3], TH[3];
             for (int32 K = 0; K < 3; ++K)
@@ -543,18 +543,18 @@ void BuildRig(FParts& P)
                 TL[K] = TopShroudLow(M, Side, K);
                 TH[K] = TopShroudHigh(M, Side, K);
                 P.WoodDecor.Spar(TL[K] - FVector(0, 0, 4), TL[K] + FVector(0, 0, 8), 6, 6, 8);
-                P.Rigging.Rope({TL[K] + FVector(0, 0, 8), TH[K]}, 1.6f);
+                P.Rigging.Cord({TL[K] + FVector(0, 0, 8), TH[K]}, 1.6f);
             }
             for (float Z = M.Top + 50; Z < M.Top + 800; Z += 36)
             {
                 TArray<FVector> Line;
                 for (int32 K = 0; K < 3; ++K) { const float T = (Z - TL[K].Z) / (TH[K].Z - TL[K].Z); Line.Add(FMath::Lerp(TL[K] + FVector(0, 0, 8), TH[K], T)); }
-                P.Rigging.Rope(Line, .7f);
+                P.Rigging.Cord(Line, .7f);
             }
             // Backstays from the topmast and topgallant heads down to the side aft of the shrouds.
             const float BX = M.X - 230;
-            P.Rigging.Rope({FVector(TopmastX(M), Side * 12, M.Top + 870), FVector(BX, Side * (PostLine(BX) + 22), WaistTopZ + 30)}, 1.8f);
-            P.Rigging.Rope({FVector(GallantX(M), Side * 8, M.Top + 1330), FVector(BX - 60, Side * (PostLine(BX - 60) + 22), WaistTopZ + 30)}, 1.4f);
+            P.Rigging.Cord({FVector(TopmastX(M), Side * 12, M.Top + 870), FVector(BX, Side * (PostLine(BX) + 22), WaistTopZ + 30)}, 1.8f);
+            P.Rigging.Cord({FVector(GallantX(M), Side * 8, M.Top + 1330), FVector(BX - 60, Side * (PostLine(BX - 60) + 22), WaistTopZ + 30)}, 1.4f);
             P.WoodDecor.Spar(FVector(BX, Side * (PostLine(BX) + 22), WaistTopZ + 20), FVector(BX, Side * (PostLine(BX) + 22), WaistTopZ + 38), 8, 8, 10);
         }
 
@@ -566,30 +566,30 @@ void BuildRig(FParts& P)
             for (float Side : {1.f, -1.f})
             {
                 const FVector E = YardEnd(M, W, Side, 6);
-                P.CanvasDecor.Rope({FVector(LiftX, Side * 10, LiftZ), E + FVector(0, 0, 4)}, .9f);
+                P.Hemp.Cord({FVector(LiftX, Side * 10, LiftZ), E + FVector(0, 0, 4)}, .9f);
                 // The brace: from the yardarm aft (the fore's to the main mast, the main's to the quarterdeck's rail).
                 const FVector To = bMain ? FVector(-1340, Side * (PostLine(-1340) - 6), QuarterRailZ - 6) : FVector(MainMastX + 20, Side * (HeadR + 6), MainTopZ - 120 + W * 260);
-                P.CanvasDecor.Rope({E, To}, 1.f);
+                P.Hemp.Cord({E, To}, 1.f);
             }
             const FVector C = YardCentre(M, W);
-            P.CanvasDecor.Rope({C + FVector(-14, 0, 10), FVector(M.X + MastR + 6, 6, DeckZ + 80)}, 1.1f);
+            P.Hemp.Cord({C + FVector(-14, 0, 10), FVector(M.X + MastR + 6, 6, DeckZ + 80)}, 1.1f);
         }
     }
     // ---- The stays: fore stay and fore topmast stay to the bowsprit (the staysails ride them), the main stays forward.
     const FMast& F = ForeMast(); const FMast& Mm = MainMast();
-    P.Rigging.Rope({FVector(F.X + 22, 0, F.Top + 116), BowspritAt(.5f)}, 3.f);
-    P.Rigging.Rope({FVector(TopmastX(F) + 10, 0, F.Top + 866), BowspritAt(1.f)}, 2.2f);
-    P.Rigging.Rope({FVector(GallantX(F) + 6, 0, F.Top + 1330), BowspritAt(1.f) + FVector(40, 0, 14)}, 1.6f);
-    P.Rigging.Rope({FVector(Mm.X + 22, 0, Mm.Top + 132), FVector(F.X - 26, 0, F.Top - 30)}, 3.f);
-    P.Rigging.Rope({FVector(TopmastX(Mm) + 10, 0, Mm.Top + 866), FVector(F.X + 24, 0, F.Top + 128)}, 2.2f);
-    P.Rigging.Rope({FVector(GallantX(Mm) + 6, 0, Mm.Top + 1330), FVector(TopmastX(F), 0, F.Top + 870)}, 1.6f);
+    P.Rigging.Cord({FVector(F.X + 22, 0, F.Top + 116), BowspritAt(.5f)}, 3.f);
+    P.Rigging.Cord({FVector(TopmastX(F) + 10, 0, F.Top + 866), BowspritAt(1.f)}, 2.2f);
+    P.Rigging.Cord({FVector(GallantX(F) + 6, 0, F.Top + 1330), BowspritAt(1.f) + FVector(40, 0, 14)}, 1.6f);
+    P.Rigging.Cord({FVector(Mm.X + 22, 0, Mm.Top + 132), FVector(F.X - 26, 0, F.Top - 30)}, 3.f);
+    P.Rigging.Cord({FVector(TopmastX(Mm) + 10, 0, Mm.Top + 866), FVector(F.X + 24, 0, F.Top + 128)}, 2.2f);
+    P.Rigging.Cord({FVector(GallantX(Mm) + 6, 0, Mm.Top + 1330), FVector(TopmastX(F), 0, F.Top + 870)}, 1.6f);
     // The spanker's gaff and boom on the main mast, over the quarterdeck.
     P.WoodDecor.Spar(SpankerThroat(), SpankerPeak(), 8, 5, 10);
     P.WoodDecor.Spar(SpankerTack(), SpankerClew(), 9, 7, 10);
-    P.CanvasDecor.Rope({SpankerClew(), FVector(SternX + 30, 0, QuarterRailZ + 4)}, 1.1f);
-    P.CanvasDecor.Rope({SpankerPeak(), FVector(Mm.X + 10, 0, Mm.Top + 120)}, 1.f);
+    P.Hemp.Cord({SpankerClew(), FVector(SternX + 30, 0, QuarterRailZ + 4)}, 1.1f);
+    P.Hemp.Cord({SpankerPeak(), FVector(Mm.X + 10, 0, Mm.Top + 120)}, 1.f);
     // The flag's halyard: from a block at the peak down the flag's hoist, its tail hanging below it.
-    P.CanvasDecor.Rope({SpankerPeak() + FVector(-4, 6, -6), FlagHoist(), FlagHoist() - FVector(0, 0, FlagDrop), FlagHoist() - FVector(2, -3, FlagDrop + 70)}, .7f);
+    P.Hemp.Cord({SpankerPeak() + FVector(-4, 6, -6), FlagHoist(), FlagHoist() - FVector(0, 0, FlagDrop), FlagHoist() - FVector(2, -3, FlagDrop + 70)}, .7f);
 }
 
 // ------------------------------------------------------------------ the sails (built each frame: they breathe)

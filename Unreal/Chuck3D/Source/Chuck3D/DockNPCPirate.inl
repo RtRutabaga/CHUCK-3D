@@ -197,6 +197,11 @@ void ADockNPC::SitAtTable(const FVector& Hips, float Yaw, float StoolTop, float 
     DrinkClock = FMath::FRandRange(DrinkDown, DrinkPeriod - 4.f);
 }
 
+namespace JeffriesRopeData
+{
+#include "JeffriesRopeBody.inl"
+}
+
 void ADockNPC::TieToMast(const FVector& MastCentre, float MastRadius)
 {
     MastLocal = GetActorTransform().InverseTransformPosition(MastCentre);
@@ -209,8 +214,67 @@ void ADockNPC::TieToMast(const FVector& MastCentre, float MastRadius)
         Ropes->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Ropes->bUseAsyncCooking = true;
         Ropes->RegisterComponent();
-        if (auto* Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Canvas.M_Canvas"))) Ropes->SetMaterial(0, Hemp);
+        // The ship's hemp (2026-11-08: the CC0 rope scan, as on the storm's lines; was plain canvas).
+        UMaterialInterface* Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Rope.M_Rope"));
+        if (!Hemp) Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Canvas.M_Canvas"));
+        if (Hemp) Ropes->SetMaterial(0, Hemp);
     }
+    bMeasureRope = FParse::Param(FCommandLine::Get(), TEXT("ChuckShipTest"));
+    if (FParse::Param(FCommandLine::Get(), TEXT("ChuckBakeJeffriesRope"))) BakeRopeBody();
+}
+
+void ADockNPC::BakeRopeBody() const
+{
+    // His mesh's own vertices (the editor's imported model) near where his ropes go: his torso from below the hips to above
+    // the chest, and his arms; each kept in the frame of the bone that carries most of it, so that, posed each frame, they
+    // follow his body as it moves. One a 1.4 cm cell.
+#if WITH_EDITORONLY_DATA
+    const USkeletalMesh* Mesh = Cast<USkeletalMesh>(Body->GetSkinnedAsset());
+    const FSkeletalMeshModel* Model = Mesh ? Mesh->GetImportedModel() : nullptr;
+    if (!Model || Model->LODModels.IsEmpty()) { UE_LOG(LogTemp, Error, TEXT("CHUCK_JEFFRIES_ROPE_BAKE failed: no imported model")); return; }
+    const FSkeletalMeshLODModel& LOD = Model->LODModels[0];
+    const FReferenceSkeleton& Ref = Mesh->GetRefSkeleton();
+    TArray<FTransform> RefComp; RefComp.SetNum(Ref.GetNum());
+    for (int32 B = 0; B < Ref.GetNum(); ++B)
+    {
+        const int32 Parent = Ref.GetParentIndex(B);
+        RefComp[B] = Parent == INDEX_NONE ? Ref.GetRefBonePose()[B] : Ref.GetRefBonePose()[B] * RefComp[Parent];
+    }
+    TMap<int32, int32> Ours;
+    for (const int32 E : { Pelvis, Spine1, Spine2, Chest, ClavL, ClavR, UpperL, UpperR, LowerL, LowerR, HandL, HandR, ThighL, ThighR }) Ours.Add(BoneIndex[E], E);
+    const double Low = RefComp[BoneIndex[Pelvis]].GetLocation().Z - 12., High = RefComp[BoneIndex[Chest]].GetLocation().Z + 30.;
+    TSet<FIntVector> Cells;
+    FString Out = TEXT("// Jeffries' body where his ropes go: points on his mesh (his shirt and arms), each in the frame of the bone that carries it\n")
+        TEXT("// ({EBone, x, y, z}, cm). Generated: run the ship with -ChuckBakeJeffriesRope in the editor (ADockNPC::BakeRopeBody,\n")
+        TEXT("// DockNPCPirate.inl), which rewrites this file; then rebuild. Empty ({-1}): his ropes fall back to plain ovals round him.\n")
+        TEXT("const float JeffriesRopeBody[][4] = {\n");
+    int32 Count = 0;
+    for (const FSkelMeshSection& S : LOD.Sections)
+        for (const FSoftSkinVertex& V : S.SoftVertices)
+        {
+            int32 Best = 0;
+            for (int32 I = 1; I < MAX_TOTAL_INFLUENCES; ++I) if (V.InfluenceWeights[I] > V.InfluenceWeights[Best]) Best = I;
+            if (!S.BoneMap.IsValidIndex(V.InfluenceBones[Best])) continue;
+            const int32 MeshBone = S.BoneMap[V.InfluenceBones[Best]];
+            const int32* E = Ours.Find(MeshBone);
+            if (!E) continue;
+            const FVector P(V.Position);
+            const bool bArm = *E >= UpperL && *E <= HandR;
+            if (!bArm && (P.Z < Low || P.Z > High)) continue;
+            bool bThere = false;
+            Cells.Add(FIntVector(FMath::FloorToInt32(P.X / 1.4), FMath::FloorToInt32(P.Y / 1.4), FMath::FloorToInt32(P.Z / 1.4)), &bThere);
+            if (bThere) continue;
+            const FVector L = RefComp[MeshBone].GetRotation().UnrotateVector(P - RefComp[MeshBone].GetLocation());   // (unscaled: the rig's bones carry a scale)
+            Out += FString::Printf(TEXT("    {%d.f, %.2ff, %.2ff, %.2ff},\n"), *E, L.X, L.Y, L.Z);
+            ++Count;
+        }
+    Out += TEXT("};\n");
+    const FString File = FPaths::ConvertRelativePathToFull(FPaths::GameSourceDir() / TEXT("Chuck3D/JeffriesRopeBody.inl"));
+    const bool bSaved = FFileHelper::SaveStringToFile(Out, *File);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_JEFFRIES_ROPE_BAKE points=%d saved=%d file=%s"), Count, bSaved ? 1 : 0, *File);
+#else
+    UE_LOG(LogTemp, Error, TEXT("CHUCK_JEFFRIES_ROPE_BAKE failed: needs the editor"));
+#endif
 }
 
 void ADockNPC::SetupChef(const FVector& WorkFeet, float WorkYaw, const FBox2D& Galley, float FloorZ)
@@ -937,7 +1001,10 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
         const FVector Hips = Space[BoneIndex[Pelvis]].GetLocation();
         for (int32 Side = 0; Side < 2; ++Side)
         {
-            const FVector Fist = Hips + FVector(-21.f + 2.f * Strain, OutOf(Side) * (8.f + 3.f * Strain), 10.f);
+            FVector Fist = Hips + FVector(-21.f + 2.f * Strain, OutOf(Side) * (15.f + 3.f * Strain), 10.f);
+            // Against the mast, not in it (2026-11-08): his fists either side of it behind him.
+            const FVector2D Off(Fist.X - MastLocal.X, Fist.Y - MastLocal.Y);
+            if (Off.Size() < MastR + 4.5f) { const FVector2D O = Off.GetSafeNormal() * (MastR + 4.5f); Fist.X = MastLocal.X + O.X; Fist.Y = MastLocal.Y + O.Y; }
             const FVector Along = FVector(-.3f, 0.f, -.95f).GetSafeNormal();
             const FVector Thumb = FVector::VectorPlaneProject(FVector(0.f, -OutOf(Side), 0.f), Along).GetSafeNormal();
             PlaceHand(Space, Side, Fist, Along, Thumb, FVector(-1.f, OutOf(Side) * .5f, 0.f));
@@ -986,75 +1053,141 @@ void ADockNPC::PosePirate(TArray<FTransform>& Space, float DeltaSeconds)
 void ADockNPC::UpdateRopes(const TArray<FTransform>& Space)
 {
     if (!Ropes) return;
-    // Two bands round his chest (over his arms) and his waist and round the mast behind him, and a lashing round his wrists
-    // tied off to the mast: hemp tubes rebuilt every frame from where his body is (component space).
-    TArray<TArray<FVector>> Paths;
-    const FVector Mast(MastLocal.X, MastLocal.Y, 0.f);
-    const auto Band = [&](const FVector& Centre, float Front, float Half, float Z)
-    {
-        TArray<FVector> P;
-        const FVector Back = (Mast - FVector(Centre.X, Centre.Y, 0.f)).GetSafeNormal2D();   // toward the mast, behind him
-        const FVector Side = FVector::CrossProduct(FVector::UpVector, Back);
-        for (int32 K = 0; K <= 12; ++K)   // round his front, from one side to the other
+    // (2026-11-08, the user: "it needs to be around him, not with parts of him passing through it impossibly".) Lashings
+    // hauled tight round him and the mast: at each turn's height the rope lies round the outline of his body there (his
+    // mesh's points, JeffriesRopeBody.inl, posed with him every frame) and the mast's together, as a rope pulled taut round
+    // both does: over his front and arms, straight across from his sides to the mast, round its far side. Two turns over his
+    // chest and arms, two round his hips, each lashing climbing to its next turn behind the mast. His wrists: two turns
+    // round each forearm above the hand, and the line between them round the mast's far side.
+    constexpr float R = 1.25f, Snug = .2f;   // the rope's radius, and how far it presses into the cloth
+    TArray<FVector> Pts; TArray<int32> Bones;
+    for (const auto& B : JeffriesRopeData::JeffriesRopeBody)
+        if (B[0] >= 0.f)
         {
-            const float A = PI * (K / 12.f) - PI * .5f;
-            P.Add(FVector(Centre.X, Centre.Y, Z) - Back * (Front * FMath::Cos(A)) + Side * (Half * FMath::Sin(A)));
+            const int32 E = static_cast<int32>(B[0]);
+            Pts.Add(Space[BoneIndex[E]].GetLocation() + Space[BoneIndex[E]].GetRotation().RotateVector(FVector(B[1], B[2], B[3]))); Bones.Add(E);
         }
-        for (int32 K = 0; K <= 14; ++K)   // round the far side of the mast and back
-        {
-            const float A = PI * .5f - PI * (K / 14.f);
-            P.Add(FVector(Mast.X, Mast.Y, Z) + Back * ((MastR + 1.2f) * FMath::Cos(A)) + Side * ((MastR + 1.2f) * FMath::Sin(A)));
-        }
-        const FVector First = P[0];   // (a copy: adding an element of the array to itself)
-        P.Add(First);
-        Paths.Add(P);
-    };
     const FVector ChestAt = Space[BoneIndex[Chest]].GetLocation(), HipsAt = Space[BoneIndex[Pelvis]].GetLocation();
-    Band(ChestAt, 15.f, 24.f, static_cast<float>(ChestAt.Z) + 10.f);
-    Band(ChestAt, 15.f, 24.f, static_cast<float>(ChestAt.Z) + 1.f);
-    Band(HipsAt, 15.f, 20.f, static_cast<float>(HipsAt.Z) + 14.f);
-    // The wrists: three turns round both, then a line back to the mast.
-    const FVector Wrists = (Space[BoneIndex[HandL]].GetLocation() + Space[BoneIndex[HandR]].GetLocation()) * .5f;
+    const FVector2D Mast(MastLocal.X, MastLocal.Y);
+    const FVector2D Back = (Mast - FVector2D(ChestAt.X, ChestAt.Y)).GetSafeNormal();   // from him toward the mast
+    const auto Round = [](int32 K, int32 N) { const float A = 2.f * PI * K / N; return FVector2D(FMath::Cos(A), FMath::Sin(A)); };
+    if (Pts.IsEmpty())   // (no baked body: ovals round his chest and hips)
+        for (const FVector& C : { ChestAt + FVector(0, 0, 5), HipsAt + FVector(0, 0, 14) })
+            for (int32 Dz = -6; Dz <= 6; Dz += 3)
+                for (int32 K = 0; K < 24; ++K)
+                {
+                    const FVector2D O = Round(K, 24) * FVector2D(15.f, 24.f);
+                    Pts.Add(FVector(C.X - Back.X * O.X - Back.Y * O.Y, C.Y - Back.Y * O.X + Back.X * O.Y, C.Z + Dz)); Bones.Add(Chest);
+                }
+    // The rope's centre line hauled tight round In (points in a plane), a rope's radius off them less what it presses in.
+    const auto Taut = [&](const TArray<FVector2D>& In, TArray<FVector2D>& Out)
     {
-        TArray<FVector> P;
-        for (int32 K = 0; K <= 36; ++K)
-        {
-            const float A = 2.f * PI * K / 12.f;
-            P.Add(Wrists + FVector(4.5f * FMath::Cos(A), (K / 36.f - .5f) * 6.f, 4.f * FMath::Sin(A)));
-        }
-        P.Add(FVector(Mast.X + (Wrists.X - Mast.X) * .35f, Mast.Y, Wrists.Z - 2.f));
-        P.Add(FVector(Mast.X, Mast.Y, Wrists.Z - 2.f) + (FVector(Wrists.X, Wrists.Y, 0.f) - FVector(Mast.X, Mast.Y, 0.f)).GetSafeNormal2D() * (MastR + 1.f));
-        Paths.Add(P);
-    }
-    TArray<FVector> V, N; TArray<int32> Tris; TArray<FVector2D> UV;
-    constexpr int32 Sides = 6; constexpr float R = 1.25f;
-    for (const TArray<FVector>& P : Paths)
+        TArray<FVector2D> Hull, Grown;
+        ShipRope::Hull2D(In, Hull);
+        for (const FVector2D& P : Hull) for (int32 K = 0; K < 12; ++K) Grown.Add(P + Round(K, 12) * (R - Snug));
+        ShipRope::Hull2D(Grown, Out);
+    };
+    // The loop round his body and the mast at height Z, starting behind the mast.
+    const auto Loop = [&](float Z, TArray<FVector2D>& Out)
     {
-        const int32 Base = V.Num();
-        for (int32 I = 0; I < P.Num(); ++I)
+        TArray<FVector2D> In;
+        for (const FVector& P : Pts) if (FMath::Abs(P.Z - Z) < 2.f) In.Add(FVector2D(P.X, P.Y));
+        for (int32 K = 0; K < 32; ++K) In.Add(Mast + Round(K, 32) * MastR);
+        TArray<FVector2D> L;
+        Taut(In, L);
+        int32 Start = 0;
+        for (int32 I = 1; I < L.Num(); ++I) if (FVector2D::DotProduct(L[I] - Mast, Back) > FVector2D::DotProduct(L[Start] - Mast, Back)) Start = I;
+        Out.Reset();
+        for (int32 I = 0; I < L.Num(); ++I) Out.Add(L[(Start + I) % L.Num()]);
+    };
+    TArray<TArray<FVector>> RopeLines;
+    for (const TArray<float>& Turns : { TArray<float>{ static_cast<float>(ChestAt.Z) + 15.f, static_cast<float>(ChestAt.Z) + 8.f },   // (over his chest, above his bound hands)
+                                        TArray<float>{ static_cast<float>(HipsAt.Z) + 2.f, static_cast<float>(HipsAt.Z) - 5.f } })   // (round his hips, under his bound hands)
+    {
+        TArray<FVector>& Path = RopeLines.AddDefaulted_GetRef();
+        for (int32 T = 0; T < Turns.Num(); ++T)
         {
-            const FVector D = (P[FMath::Min(I + 1, P.Num() - 1)] - P[FMath::Max(I - 1, 0)]).GetSafeNormal();
-            FVector X = FVector::CrossProduct(D, FVector::UpVector);
-            if (X.SizeSquared() < 1e-4) X = FVector::CrossProduct(D, FVector::ForwardVector);
-            X.Normalize();
-            const FVector Y = FVector::CrossProduct(X, D);
-            for (int32 S = 0; S < Sides; ++S)
+            TArray<FVector2D> L; Loop(Turns[T], L);
+            for (int32 I = 0; I < L.Num(); ++I)
             {
-                const float A = 2.f * PI * S / Sides;
-                const FVector O = X * FMath::Cos(A) + Y * FMath::Sin(A);
-                V.Add(P[I] + O * R); N.Add(O); UV.Add(FVector2D(S / float(Sides), I * .3f));
+                const FVector2D& P = L[I];
+                // Climbing to its next turn over the last stretch round the mast's far side (a lashing's turns run on).
+                float Z = Turns[T];
+                const FVector2D D = (P - Mast).GetSafeNormal();
+                const float Phi = FMath::Atan2(static_cast<float>(Back.X * D.Y - Back.Y * D.X), static_cast<float>(Back.X * D.X + Back.Y * D.Y));
+                if (T + 1 < Turns.Num() && I > L.Num() / 2 && FMath::Abs(Phi) < 1.3f) Z = FMath::Lerp(Turns[T], Turns[T + 1], 1.f - FMath::Abs(Phi) / 1.3f);
+                Path.Add(FVector(P.X, P.Y, Z));
             }
+            if (T + 1 == Turns.Num() && L.Num()) Path.Add(FVector(L[0].X, L[0].Y, Turns[T] - 1.f));   // its end tucked under the last turn
         }
-        for (int32 I = 0; I + 1 < P.Num(); ++I)
-            for (int32 S = 0; S < Sides; ++S)
-            {
-                const int32 A = Base + I * Sides + S, Bq = Base + I * Sides + (S + 1) % Sides, C = A + Sides, D = Bq + Sides;
-                Tris.Append({ A, Bq, C, Bq, D, C });   // (the ship's own winding: outward faces clockwise)
-            }
     }
-    if (Ropes->GetNumSections() == 0 || Ropes->GetProcMeshSection(0)->ProcVertexBuffer.Num() != V.Num())
-        Ropes->CreateMeshSection(0, V, Tris, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
-    else Ropes->UpdateMeshSection(0, V, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>());
+    // The wrists: two turns round each forearm above the hand, wound from the side toward the mast.
+    TArray<FVector> Wound[2];
+    for (int32 Side = 0; Side < 2; ++Side)
+    {
+        const FVector Hand = Space[BoneIndex[HandL + Side]].GetLocation(), Elbow = Space[BoneIndex[LowerL + Side]].GetLocation();
+        const FVector A = (Hand - Elbow).GetSafeNormal(), W = Hand - A * 4.f;
+        FVector X = FVector::CrossProduct(A, FVector::UpVector);
+        if (X.SizeSquared() < 1e-4) X = FVector::CrossProduct(A, FVector::ForwardVector);
+        X.Normalize();
+        const FVector Y = FVector::CrossProduct(A, X);
+        TArray<FVector2D> In, L;
+        for (int32 I = 0; I < Pts.Num(); ++I)
+            if ((Bones[I] == LowerL + Side || Bones[I] == HandL + Side) && FMath::Abs(FVector::DotProduct(Pts[I] - W, A)) < 3.5f && FVector::Dist(Pts[I], W) < 10.f)
+                In.Add(FVector2D(FVector::DotProduct(Pts[I] - W, X), FVector::DotProduct(Pts[I] - W, Y)));
+        if (In.Num() < 3) for (int32 K = 0; K < 12; ++K) In.Add(Round(K, 12) * 3.5f);
+        Taut(In, L);
+        const FVector ToMast = FVector(Mast.X, Mast.Y, W.Z) - W;
+        const FVector2D Dir(FVector::DotProduct(ToMast, X), FVector::DotProduct(ToMast, Y));
+        int32 Start = 0;
+        for (int32 I = 1; I < L.Num(); ++I) if (FVector2D::DotProduct(L[I], Dir) > FVector2D::DotProduct(L[Start], Dir)) Start = I;
+        for (int32 T = 0; T < 2; ++T)
+            for (int32 I = 0; I < L.Num(); ++I)
+            {
+                const FVector2D P = L[(Start + I) % L.Num()];
+                Wound[Side].Add(W + A * (-2.6f + 2.6f * (T + I / float(L.Num()))) + X * P.X + Y * P.Y);
+            }
+        if (Side == 0) Algo::Reverse(Wound[0]);   // (the left ends where the line leaves it, toward the mast)
+    }
+    // The line between them, round the far side of the mast from him, leaving and joining each wrist along a tangent.
+    {
+        TArray<FVector>& Path = RopeLines.AddDefaulted_GetRef();
+        Path = Wound[0];
+        const FVector E0 = Wound[0].Last(), E1 = Wound[1][0];
+        const float Rm = MastR + R - Snug;
+        TArray<FVector2D> In, H;
+        for (int32 K = 0; K < 48; ++K) In.Add(Mast + Round(K, 48) * Rm);
+        In.Add(FVector2D(E0.X, E0.Y)); In.Add(FVector2D(E1.X, E1.Y));
+        ShipRope::Hull2D(In, H);
+        const int32 N = H.Num();
+        const auto Nearest = [&](const FVector2D& P) { int32 Best = 0; for (int32 I = 1; I < N; ++I) if (FVector2D::DistSquared(H[I], P) < FVector2D::DistSquared(H[Best], P)) Best = I; return Best; };
+        const int32 I0 = Nearest(FVector2D(E0.X, E0.Y)), I1 = Nearest(FVector2D(E1.X, E1.Y)), IB = Nearest(Mast - Back * Rm);
+        bool bForwardPassesHim = false;
+        for (int32 I = I0; I != I1; I = (I + 1) % N) if (I == IB) bForwardPassesHim = true;
+        const int32 Step = bForwardPassesHim ? N - 1 : 1;
+        int32 Count = 0;
+        for (int32 I = I0; I != I1; I = (I + Step) % N) ++Count;
+        int32 K = 0;
+        for (int32 I = I0; ; I = (I + Step) % N, ++K)
+        {
+            Path.Add(FVector(H[I].X, H[I].Y, FMath::Lerp(E0.Z, E1.Z, Count ? K / float(Count) : 0.f)));
+            if (I == I1) break;
+        }
+        Path.Append(Wound[1]);
+    }
+    ShipRope::FMesh M;
+    for (const TArray<FVector>& Path : RopeLines) ShipRope::Tube(M, Path, R, 0.f, 8);
+    M.Into(Ropes, 0, Ropes->GetNumSections() > 0);
+
+    // Tests: the furthest his body comes inside a rope (cm; a body point a rope's radius from its centre line touches it).
+    if (bMeasureRope && (RopeFrame++ % 15) == 0)
+        for (const FVector& P : Pts)
+        {
+            float Near = 1e9f;
+            for (const TArray<FVector>& Path : RopeLines)
+                for (int32 I = 1; I < Path.Num(); ++I) Near = FMath::Min(Near, static_cast<float>(FMath::PointDistToSegment(P, Path[I - 1], Path[I])));
+            RopeDepth = FMath::Max(RopeDepth, R - Near);
+        }
 }
 
 // ------------------------------------------------------------------ the storm (2026-11-04)

@@ -1,6 +1,7 @@
 #include "ShipSetting.h"
 #include "ShipCrew.h"
 #include "ShipStorm.h"
+#include "ShipRope.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
@@ -130,11 +131,21 @@ namespace
             }
         }
         void Rope(const TArray<FVector>& Path, float R) { for (int32 I = 1; I < Path.Num(); ++I) Spar(Path[I - 1], Path[I], R, R, 6, false); }
+        // Real rope (2026-11-08): a smooth tube along Path with the rope scan's strands laid round it (ShipRope.h; M_Rope).
+        void Cord(const TArray<FVector>& Path, float R)
+        {
+            ShipRope::FMesh M;
+            ShipRope::Tube(M, Path, R, 0.f, R < 1.2f ? 8 : 10);
+            const int32 Base = V.Num();
+            V.Append(M.V); N.Append(M.N); UV.Append(M.UV); Tan.Append(M.Tan);
+            for (const int32 I : M.T) T.Add(Base + I);
+        }
     };
 
     struct FParts
     {
         FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging, Lumber, Veil;
+        FSurf Hemp;    // the running rigging and every other rope in natural hemp (2026-11-08; the standing rigging, Rigging, is tarred)
         FSurf Wheel;   // the helm's rim, spokes and handles, about its hub (2026-11-04: it turns)
     };
 
@@ -167,6 +178,8 @@ namespace
     const TCHAR* GlassMat = TEXT("/Game/Art/Materials/M_WindowGlass.M_WindowGlass");
     const TCHAR* FlameMat = TEXT("/Game/Art/Materials/M_TorchFlame.M_TorchFlame");
     const TCHAR* ChestMat = TEXT("/Game/Art/Materials/M_AgedDockTimber.M_AgedDockTimber");   // sea chests and the captain's
+    const TCHAR* RopeMat = TEXT("/Game/Art/Materials/M_Rope.M_Rope");                 // Tools/create_rope_material.py
+    const TCHAR* TarredRopeMat = TEXT("/Game/Art/Materials/MI_RopeTarred.MI_RopeTarred");
     const TCHAR* SeaMat = TEXT("/Game/Art/Ship/M_ShipSea.M_ShipSea");   // Tools/create_ship_sea.py
 
     // ------------------------------------------------------------------ openings in the planking
@@ -959,7 +972,7 @@ void AShipSetting::Build()
             {
                 const FVector C = FVector(X, Y, 0) + Q.RotateVector(FVector(U * HX, 0, 0));
                 const FVector Ac = Q.RotateVector(FVector(0, HY + 3, 0));
-                P.CanvasDecor.Rope({C - Ac + FVector(0, 0, Z + 1), C - Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Z + 1)}, 1.4f);
+                P.Hemp.Cord({C - Ac + FVector(0, 0, Z + 1), C - Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Z + 1)}, 1.4f);
             }
             P.Hidden.TurnedBox(FVector(X, Y, (Z + Top) * .5f), FVector(HX, HY, (Top - Z) * .5f), FRotator(0, Yaw, 0));
             return Top;
@@ -1073,6 +1086,7 @@ void AShipSetting::Build()
         C->SetWorldTransform(FTransform(Rot, ShipWorld(Local), Scale)); C->SetStaticMesh(Mesh);
         C->SetCollisionEnabled(ECollisionEnabled::NoCollision); if (Mat) C->SetMaterial(0, Mat);
         C->ComponentTags.Add(TEXT("Ship")); C->RegisterComponent();
+        if (Mesh == CoilMesh) Coils.Add(C);
     };
     auto Crate = [&](float X, float Y, int32 Tier, float Yaw)
     {
@@ -1138,7 +1152,7 @@ void AShipSetting::Build()
     }
     // The arrival compartment's coils and a barrel; the galley's water casks and sacks; tankards on the mess table.
     Prop(CoilMesh, FVector(-120, 120, LowerZ), FRotator(0, 15, 0));
-    Prop(CoilMesh, FVector(-40, 360, LowerZ + 38), FRotator(0, -30, 0));
+    Prop(CoilMesh, FVector(-40, 350, LowerZ), FRotator(0, -30, 0));   // (on the floor: it hung 38 cm in the air, 2026-11-08)
     Barrel(285, -330, LowerZ, false, 20);
     for (float Y : {-260.f, -180.f, 220.f}) Barrel(1090, Y, LowerZ, false, Y);
     Sack(860, -250, LowerZ, 30); Sack(820, -300, LowerZ, -20);
@@ -1234,10 +1248,10 @@ void AShipSetting::Build()
             for (float U : {-1.f, 1.f})
             {
                 const FVector End(U * (Len + 4), 0, EndZ + 4);
-                for (float V : {-1.f, 0.f, 1.f}) R.Rope({Pt(U < 0 ? 0 : NX, 2 + int32(V) * 2), End}, .5f);
-                R.Rope({End, FVector(U * (Len + 40), 0, -2)}, .7f);
+                for (float V : {-1.f, 0.f, 1.f}) R.Cord({Pt(U < 0 ? 0 : NX, 2 + int32(V) * 2), End}, .5f);
+                R.Cord({End, FVector(U * (Len + 40), 0, -2)}, .7f);
             }
-            for (auto Pair : {TPair<FSurf*, const TCHAR*>(&C, CanvasMat), TPair<FSurf*, const TCHAR*>(&R, CanvasMat)})
+            for (auto Pair : {TPair<FSurf*, const TCHAR*>(&C, CanvasMat), TPair<FSurf*, const TCHAR*>(&R, RopeMat)})
             {
                 auto* M = NewObject<UProceduralMeshComponent>(this); M->SetupAttachment(Pivot); M->RegisterComponent();
                 M->CreateMeshSection(0, Pair.Key->V, Pair.Key->T, Pair.Key->N, Pair.Key->UV, TArray<FColor>(), Pair.Key->Tan, false);
@@ -1269,7 +1283,8 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipChest"), P.Chest, ChestMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipGlass"), P.Glass, GlassMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);
-    Emit(this, TEXT("ShipRigging"), P.Rigging, DarkMat, false, true, Missing, Triangles);   // the tarred standing rigging
+    Emit(this, TEXT("ShipRigging"), P.Rigging, TarredRopeMat, false, true, Missing, Triangles);   // the tarred standing rigging
+    Emit(this, TEXT("ShipHemp"), P.Hemp, RopeMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipLumber"), P.Lumber, DeckMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipRiftVeil"), P.Veil, TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"), false, false, Missing, Triangles);   // the cellar's oil haze
     Emit(this, TEXT("ShipHidden"), P.Hidden, nullptr, true, false, Missing, Triangles);
@@ -1633,6 +1648,22 @@ int32 AShipSetting::Check() const
         Failures += !(bFloor && bRoom);
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_TOP floor=%d room=%d rail_room=%d"), bFloor, bRoom, RailRoom);
     }
+    // Every rope coil rests on what is under it (2026-11-08: one below decks floated in the air).
+    int32 Floating = 0;
+    for (const TWeakObjectPtr<UStaticMeshComponent>& C : Coils)
+    {
+        if (!C.IsValid()) continue;
+        const FBoxSphereBounds B = C->Bounds;
+        const FVector Under(B.Origin.X, B.Origin.Y, B.Origin.Z - B.BoxExtent.Z);
+        FHitResult Hit;
+        const bool bOn = World->LineTraceSingleByChannel(Hit, Under + FVector(0, 0, 4), Under - FVector(0, 0, 80), ECC_Visibility, Q);
+        const float Gap = bOn ? static_cast<float>(Under.Z - Hit.ImpactPoint.Z) : 999.f;
+        const bool bResting = bOn && Gap > -2.f && Gap < 1.5f;
+        Floating += !bResting;
+        const FVector L = ShipLocal(Under);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_COIL at=(%.0f,%.0f,%.0f) gap=%.1f resting=%d"), L.X, L.Y, L.Z, Gap, bResting);
+    }
+    Failures += Floating;
     Failures += Missing > 0;
     Failures += Ladders != 4 || Shrouds != 8;
     Failures += Grips != 40;   // (the course and topsail yards of both masts, 2026-11-05)

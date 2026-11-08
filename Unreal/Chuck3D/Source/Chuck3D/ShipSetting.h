@@ -143,6 +143,7 @@ private:
     void Rock();
     bool bBuilt = false;
     int32 Missing = 0, Triangles = 0, RatsPlaced = 0, JarsPlaced = 0, Ladders = 0, Shrouds = 0, Grips = 0;
+    TArray<TWeakObjectPtr<class UStaticMeshComponent>> Coils;   // the rope coils set about the ship (Check: each rests on something)
     UPROPERTY() TArray<class UPointLightComponent*> Lamps;
     UPROPERTY() TArray<class USceneComponent*> Swingers;   // hanging lamps and hammocks, swung with the sea
     UPROPERTY() class UAudioComponent* Wash = nullptr;
