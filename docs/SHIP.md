@@ -538,7 +538,7 @@ At the storm's start the deck's crew stow what they hold (the concertina, the ta
 
 - Heard on speakers by nobody: the storm tracks against the gale, the sea's slams and the thunder.
 - The plank, the captain's sequence and the storm's end (the user: not yet).
-- The haulers' feet stay planted (they don't walk the line back); the line itself doesn't run through their hands.
+- The haulers' feet stay planted (they don't walk the line back). (Since November 7 the line runs through their hands: [the storm's lines as rope](#the-storms-lines-as-rope-november-7).)
 - The sea washing aboard passes through deck fittings (the capstan, the coamings, the crew's feet) rather than round them, and the crew don't react to it.
 - The rupture's veils follow the sewer's style (oil film); from close by, the nearest can read as a flat sheet.
 - Not played by hand.
@@ -591,3 +591,22 @@ User request: "have the ratlines start from the deck in a way that looks realist
 - **The door frames below decks** (`BuildBulkhead`): the posts stand 1 cm proud into the opening and stop under the lintel; the lintel sits 1 cm proud below the head and of the posts' faces. Their faces lay in the bulkhead's and each other's planes before, and flickered.
 - **Tests:** the ship check expects 40 grips. `ratlines` now: up the starboard fore net from the deck, across, down and off; from the main top lowered onto the lower shrouds and down to the deck; up the port topmast shrouds onto the main topsail yard, three leaps out along it, let go onto the deck. New stills `NetFoot`, `NetFootLow`, `NetFootFore`, `TopsailYard`, and the trial's `TopsailYardCatch`, `TopsailYard`.
 - **Not yet:** the canvas folds a little sharply round him; the topgallant yards; not played by hand.
+
+## The storm's lines as rope (November 7)
+
+User request: "find and implement free resource(s) to make the ropes better on the ship, currently the ropes that the crew pull on during storm sequence looks like sharp angles that are completely unrealistic, i want realistic rope bends for how they're holding it." (Kept in mind, not built: the fore ratlines are to tear partly loose in the storm later, so the rope code is general.)
+
+- **The free resource:** ambientCG **Rope 001** (CC0), the 1K colour, DirectX normal and roughness maps (`SourceAssets/Surfaces/Rope`, hashes in its `manifest.json`; `Tools/Fetch-RopeTextures.ps1` fetches and checks them). `Tools/create_rope_material.py` imports them to `/Game/Art/Textures/Rope` and builds `/Game/Art/Materials/M_Rope` (the scan darkened toward wet, weathered hemp). The scan is a seamless strip of diagonal strands, 8 across and 7 down; with the rope's length along U (26 cm a repeat) and 3/7 of V round it, three strands lie round the rope in a 9.75 cm lay, as on hawser-laid hemp. ambientCG's other two ropes are steel cable (Rope 002) and a dark greenish rope (Rope 003). Poly Haven has no rope. Unreal's Cable Component was not used: it simulates only between two ends and cannot be threaded through four hands and a sheave.
+- **The rope** (`ShipRope.h/.cpp`, new): a tube (10 sides) along a path, its frame carried without twist so the strands lie true round bends, with tangents for the normal map and capped ends. The path bends as rope does:
+  - `Sheave`: over a fixed sheave, from a tangent off the line coming in round the far side to a tangent toward the next point;
+  - `Bent`: round each point it passes in an arc of a given radius (a fist: 3 cm, never passing more than 1 cm from the fist however sharply it turns there);
+  - `Droop`: slack from where it is let go, carrying on a hand's breadth the way it left, falling and settling along the deck (its curve's controls kept in order so it never folds back);
+  - `Coil`: flaked down flat on the deck, turns side by side, the tail running into its outer turn.
+- **The hauling lines** (`AShipCrew::UpdateStormLines`, each frame in the storm): down from the block aloft, over the lead block's sheave (its centre 30 cm off the deck, the block's shell round it, stropped to a ringbolt), up into the haulers' fists in order along the line, slack behind the last hand to the deck, in a gentle S along it into the coil. Before the men arrive it lies along the deck from the block; as each settles in, it lifts into his hands. A hand let go to reach on along the line no longer bends it.
+- **The halyard:** down from aloft through the dancer's hands to a pin in the main's port fife rail (x −511, the rail's own pin), over the pin's head, its tail off aft outboard of the rail and coiled down clear of his feet.
+- **Hauled through:** the strands run toward the tail with the hands that grip it (`LineHauled`), never back: when a holding hand is carried forward by the man's body as he reaches on, it slips along the rope.
+- **Hands:** `ADockNPC::GetStormHold` (how firmly each hand holds: 0 let go .. 1 gripping) and `GetStormBlend`.
+- **Tests:** `storm_work` also checks every gripping fist within 2 cm of its rope's middle and no turn between two of a rope's segments over 25° (`CHUCK_SHIP_STORM_ROPE` at each still: `fist_gap`, `worst_turn` and where, `hauled`). New stills `RopeHands`, `RopeBlock`, `RopeTail`, `RopePin`.
+
+- **Tested:** editor `chest+storm_work` pass (`Local/ship-rope-storm-work.log`: stations 6/6, worst grip 2.1 cm, rope gap 1.0 cm, worst turn 18.2°); the halyard's pin stills after the pin move (`Local/ship-rope-test8.log`: gap 0.2 cm, turn ≈16°). Packaged `Builds/RopeCandidate`: Verify-Package 182 passes (`Local/verify-package-20261107-203223.log`), ship 20/20 (`Local/verify-ship-20261107-211348.log`: rope gap 1.0 cm, worst turn 18.1°, worst grip 2.4 cm). Close-up stills reviewed (`Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Ship/Storm/Work_Rope*.png`).
+- **Not yet:** while the rear man is still arriving his hold points lie on the deck, so for about a second the rope runs diagonally from the deck up to the front man's hand; the halyard goes once over the pin's head (no belaying turns); Jeffries' ropes and the standing rigging still use the old canvas tubes; the fore line's front fencer holds it at hip height (his pose reads as hands on hips); not played by hand.

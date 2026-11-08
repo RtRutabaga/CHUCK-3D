@@ -1097,6 +1097,7 @@ void ADockNPC::SetStormWork(EStormWork Work, const TArray<FVector>& Way, float Y
     for (UStaticMeshComponent* P : PirateProps) if (P) P->SetVisibility(false);
     bFenceCue = false; bPlanted = false; bTurning = false; TurnHold = 0.f;
     Grip[0] = Grip[1] = .5f;
+    StormFistW[0] = StormFistW[1] = StormWantW[0] = StormWantW[1] = FVector::ZeroVector; StormHoldW[0] = StormHoldW[1] = 0.f;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_STORM_WORK %s work=%d legs=%d"), *DisplayName, int32(Work), Way.Num());
 }
 
@@ -1211,6 +1212,7 @@ void ADockNPC::StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVecto
 void ADockNPC::PoseStorm(TArray<FTransform>& Space)
 {
     const float Work = StormBlend;
+    StormHoldW[0] = StormHoldW[1] = 0.f;
     if (Work <= 0.f) return;   // (walking there: the jog alone, arms free)
     const FTransform ToWorld = Body->GetComponentTransform();
     const auto OutOf = [this](int32 Side) { return Side == 0 ? ArmOut : -ArmOut; };
@@ -1327,6 +1329,7 @@ void ADockNPC::PoseStorm(TArray<FTransform>& Space)
         const FVector Fist = FMath::Lerp(Now, Want[Side], Work);
         PlaceHand(Space, Side, Fist, FMath::Lerp(NowAlong, Along, Work).GetSafeNormal(), FMath::Lerp(NowThumb, Thumb, Work).GetSafeNormal(), Pole[Side].GetSafeNormal());
         Grip[Side] = FMath::Lerp(.5f, G[Side], Work);
+        StormHoldW[Side] = Work * FMath::Clamp((G[Side] - .35f) / .65f, 0.f, 1.f);
         FVector P, A2, T2;
         HandFrame(Space, Side, P, A2, T2);
         StormFistW[Side] = ToWorld.TransformPosition(P);

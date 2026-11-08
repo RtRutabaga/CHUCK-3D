@@ -79,9 +79,23 @@ public:
     bool InStorm() const { return bStorm; }
     /** How many of the deck's crew are at their stations, and how many have stations. */
     int32 GetAtStations(int32* Of = nullptr) const;
+    /** The storm's lines (2026-11-07, ShipRope.h) as last drawn: the furthest a gripping fist is from its rope's middle (cm),
+     *  the sharpest turn between two of a rope's segments (degrees: its smoothness) and how much rope has been hauled
+     *  through the haulers' hands on each line (cm). */
+    float GetLineFistGap() const { return LineFistGap; }
+    float GetLineWorstTurn() const { return LineWorstTurn; }
+    FVector GetLineWorstTurnAt() const { return LineWorstTurnAt; }   // (where: the ship frame)
+    float GetLineHauled(int32 Line) const { return Line >= 0 && Line < 3 ? LineHauled[Line] : 0.f; }
 private:
     bool bStorm = false;
     UPROPERTY() class UProceduralMeshComponent* StormLines = nullptr;
+    /** The lines rebuilt through the hands that hold them (each frame in the storm). */
+    void UpdateStormLines(float DeltaSeconds);
+    float LineHauled[3] = { 0.f, 0.f, 0.f };
+    FVector LineFistPrev[3][4];
+    bool LineFistSeen[3][4] = {};
+    float LineFistGap = 0.f, LineWorstTurn = 0.f;
+    FVector LineWorstTurnAt = FVector::ZeroVector;
     void PlaceCrew();
     void TickFencing(float DeltaSeconds);
     /** Set out this phrase's blows (a new choice each phrase, from the phrase's number). */

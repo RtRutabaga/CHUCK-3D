@@ -6,6 +6,10 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The storm's lines as rope (November 7, Claude):** the user's request; details in [SHIP.md](SHIP.md#the-storms-lines-as-rope-november-7).
+  - The lines the crew haul in the storm are now three-strand hemp rope (CC0 ambientCG Rope001 textures) bending smoothly: over lead blocks stropped to the deck, through each man's fists, slack to the deck and coiled down; the halyard goes over a fife-rail pin. The strands run along as it is hauled.
+  - Verified: Verify-Package 182 passes, ship 20/20 (rope within 1 cm of every gripping fist, no turn over 18°); Verify-Menu 44/44. In the launcher as Rope. Not played by hand.
+  - The user's plot change (not built): no plank walk; reef points on the main, then the fore ratlines torn loose, the gold-cigarette jump to the foremast, knocked into a Hell rupture, the fall to Pythegoes.
 - **The nets' feet on deck, every yard, the door frames (November 5, night, Claude):** the user's follow-up; details in [SHIP.md](SHIP.md#follow-up-the-nets-feet-on-deck-every-yard-the-door-frames-november-5-night).
   - The climb starts at a short net rising from a sheer pole on the deck, lashed to the stanchions' feet, leaning out over the rail into the shrouds.
   - Brachiation on both course yards and both topsail yards (40 grips); from the top of the topmast shrouds he reaches up onto the topsail yard. The sails give way round him.

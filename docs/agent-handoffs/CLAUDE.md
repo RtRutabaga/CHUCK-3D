@@ -2,7 +2,25 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
-## November 5 (latest, night) — the nets' feet on deck; every reachable yard; the door frames (Claude)
+## November 7 — the storm's lines as rope (Claude)
+
+- **Asked:** find and use free resources to make the ship's ropes better: the lines the crew haul in the storm bent at sharp, unrealistic angles; realistic bends for how they hold them. (Kept in mind, not built: the plank walk is dropped; the fore ratlines will tear loose in the storm, so the rope code is general.)
+- **Source:** `main` at e99eeef2.
+- **Changed** ([../SHIP.md](../SHIP.md#the-storms-lines-as-rope-november-7)):
+  - New `ShipRope.h/.cpp`: rope tube (parallel-transport frame, tangents, capped ends, UVs for the scan's lay), `Sheave`, `Bent` (fillets, fist hold limit), `Droop`, `Coil`, block `Shell`.
+  - `ShipCrew.h/.cpp`: `UpdateStormLines` rebuilds both hauling lines and the halyard each frame through the men's fists, over lead blocks stropped to the deck, to a fife-rail pin, slack to the deck and coiled; hauled strands ratchet toward the tail.
+  - `DockNPC.h`, `DockNPCPirate.inl`: `GetStormHold`/`GetStormBlend` (how firmly each hand holds).
+  - `ShipTest.cpp`: `storm_work` checks fist gap < 2 cm and worst turn < 25°; stills `RopeHands`, `RopeBlock`, `RopeTail`, `RopePin`.
+  - New resource: ambientCG Rope001 (CC0) in `SourceAssets/Surfaces/Rope` (manifest + hashes), `Tools/Fetch-RopeTextures.ps1`, `Tools/create_rope_material.py` → `M_Rope` and `T_Rope001_*`.
+- **Tested:** editor `chest+storm_work` pass (`Local/ship-rope-storm-work.log`). Packaged `Builds/RopeCandidate`: Verify-Package 182 passes (`Local/verify-package-20261107-203223.log`), ship 20/20 (`Local/verify-ship-20261107-211348.log`: rope gap 1.0 cm, worst turn 18.1°). Verify-Menu 44/44 (`Local/verify-menu-rope.txt`).
+- **Remaining flaws:** the rope runs diagonally from the deck to the front man's hand for about a second while the rear man arrives; no belaying turns on the pin; Jeffries' ropes and the standing rigging still use the canvas tubes; the fore line's front fencer grips at hip height; not played by hand.
+- **Contract compatibility:** only new accessors on `ADockNPC`; no rig or animation changes.
+- **Binary/LFS:** three CC0 jpgs (LFS), `M_Rope.uasset` and three texture uassets (LFS).
+- **Launcher:** promoted as Rope. The 14 `Common/Materials` re-saves from package builds are still left uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the reef points, the fore ratlines torn loose and the jump to the foremast).
+
+## November 5 (night) — the nets' feet on deck; every reachable yard; the door frames (Claude)
 
 - **Asked:** start the ratlines from the deck so it looks realistic and reads clearly as where the climb starts (secured to the stanchions' bases); brachiation on the rest of the yards; fix the glitchy wood in the door frames below deck.
 - **Source:** `main` at 16e9c9b0.

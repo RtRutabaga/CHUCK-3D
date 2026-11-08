@@ -497,6 +497,10 @@ public:
     /** His hands' fists now (world, from the last pose): the tests check they are on his line or the wheel. */
     FVector GetStormFist(int32 Side) const { return StormFistW[FMath::Clamp(Side, 0, 1)]; }
     FVector GetStormGripWant(int32 Side) const { return StormWantW[FMath::Clamp(Side, 0, 1)]; }
+    /** How far he has settled into his work (0 walking there .. 1 at it), and how firmly each hand holds his line now (0 let
+     *  go, reaching on along it .. 1 gripping): the storm's lines run through the hands that hold them (AShipCrew). */
+    float GetStormBlend() const { return StormBlend; }
+    float GetStormHold(int32 Side) const { return StormHoldW[FMath::Clamp(Side, 0, 1)]; }
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
@@ -762,6 +766,7 @@ private:
     FTransform StormHome = FTransform::Identity;   // where he was before the storm (back there in a calm)
     float StormHomeYaw = 0.f;
     FVector StormFistW[2] = { FVector::ZeroVector, FVector::ZeroVector }, StormWantW[2] = { FVector::ZeroVector, FVector::ZeroVector };
+    float StormHoldW[2] = { 0.f, 0.f };
     void TickStormWork(float DeltaSeconds);
     void StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVector& HipsOffset);
     void PoseStorm(TArray<FTransform>& Space);

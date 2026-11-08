@@ -1,0 +1,16 @@
+{
+  "license": "CC0-1.0",
+  "retrieved": "2026-11-07",
+  "license_url": "https://docs.ambientcg.com/license/",
+  "asset_page": "https://ambientcg.com/view?id=Rope001",
+  "archive": "https://ambientcg.com/get?file=Rope001_1K-JPG.zip",
+  "archive_sha256": "0F4DAF2C2720B9BD910369CAB753090B0AD6560435526EC5AAAB293BAE5FDBFC",
+  "assets": [
+    { "file": "Rope001_1K-JPG_Color.jpg", "map": "color", "bytes": 527156, "resolution": [1024, 512],
+      "sha256": "CE37F5DA3B4762A2264D2D9A7F133F7CAF8809F42F1216DA506301E84F212E97" },
+    { "file": "Rope001_1K-JPG_NormalDX.jpg", "map": "normal_dx", "bytes": 884196, "resolution": [1024, 512],
+      "sha256": "E9EAAC3192433A11C4BB38F068556DB258DAF0094B86F52B3B35D205CBA2AB81" },
+    { "file": "Rope001_1K-JPG_Roughness.jpg", "map": "roughness", "bytes": 248515, "resolution": [1024, 512],
+      "sha256": "B7092A728F1EF9165D52AFEA65A6C96D9CE927FF1150073AFD86263C43F92054" }
+  ]
+}

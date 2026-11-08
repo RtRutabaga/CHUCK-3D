@@ -175,7 +175,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         // The storm trial (2026-11-03): its stills, and what it measured on deck.
         int32 StormShot = 0, Strikes0 = 0, Thunders0 = 0, Splashes0 = 0, Sprays0 = 0, MaxDrops = 0; float MaxRoll = 0, WorstMs = 0; bool StormDeck = false;
         // The storm's work, rupture and second part (2026-11-04).
-        int32 WorkShot = 0, Stations = 0, StationsOf = 0, Shoves0 = 0, Waves0 = 0, MaxPuffs = 0; float WorstWorkGrip = 0, HelmMin = 0, HelmMax = 0, IntenseRoll = 0;
+        int32 WorkShot = 0, Stations = 0, StationsOf = 0, Shoves0 = 0, Waves0 = 0, MaxPuffs = 0; float WorstWorkGrip = 0, WorstRopeGap = 0, WorstRopeTurn = 0, HelmMin = 0, HelmMax = 0, IntenseRoll = 0;
         TMap<FString, float> GripBy;
         bool Music31 = false, Music32 = false, RuptureDeath = false, Shoved = false; double WaveAt = -1;
     };
@@ -367,7 +367,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
             case ET::Chest: Reset(EShipSpawn::Cabin); break;
             case ET::Storm: Reset(EShipSpawn::Deck); Run->StormShot = 0; break;
-            case ET::StormWork: Reset(EShipSpawn::Deck); Run->WorkShot = 0; Run->WorstWorkGrip = 0; Run->HelmMin = Run->HelmMax = 0; Run->IntenseRoll = 0; Run->MaxPuffs = 0;
+            case ET::StormWork: Reset(EShipSpawn::Deck); Run->WorkShot = 0; Run->WorstWorkGrip = 0; Run->WorstRopeGap = Run->WorstRopeTurn = 0; Run->HelmMin = Run->HelmMax = 0; Run->IntenseRoll = 0; Run->MaxPuffs = 0;
                 Run->Music31 = Run->Music32 = Run->RuptureDeath = Run->Shoved = false; Run->WaveAt = -1; break;
             }
             Run->Heard.Reset(); Run->TalkOk = Run->TalkChecks = Run->Count0 = Run->Count1 = Run->Seen = 0; Run->Pressed = 0;
@@ -1078,6 +1078,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 {TEXT("ForeHaul"), {740, 420, DeckZ + 170}, {480, 235, DeckZ + 100}, false, -1},
                 {TEXT("ForeHaulFront"), {250, 330, DeckZ + 150}, {480, 235, DeckZ + 105}, false, -1},
                 {TEXT("Sweat"), {-400, 330, DeckZ + 175}, {-505, 110, DeckZ + 150}, false, -1},
+                // The lines close (2026-11-07): through the haulers' hands, round the lead block, the tail to its coil, the pin.
+                {TEXT("RopeHands"), {-235, -345, DeckZ + 135}, {-280, -230, DeckZ + 92}, false, -1},
+                {TEXT("RopeBlock"), {-370, -330, DeckZ + 75}, {-425, -230, DeckZ + 25}, false, -1},
+                {TEXT("RopeTail"), {-20, -345, DeckZ + 120}, {-120, -215, DeckZ + 25}, false, -1},
+                {TEXT("RopePin"), {-640, 190, DeckZ + 125}, {-535, 85, DeckZ + 60}, false, -1},
                 {TEXT("Helm"), {-1250, -170, QuarterZ + 165}, {-1470, 0, QuarterZ + 85}, false, -1},
                 {TEXT("HelmBehind"), {-1585, 140, QuarterZ + 185}, {-1440, 0, QuarterZ + 90}, false, -1},
                 {TEXT("Rupture"), {-40, 340, DeckZ + 200}, {-250, 130, DeckZ + 40}, false, -1},
@@ -1103,6 +1108,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                                 Run->WorstWorkGrip = FMath::Max(Run->WorstWorkGrip, Gap);
                                 float& By = Run->GripBy.FindOrAdd(FString::Printf(TEXT("%s_%d_%d"), *N->GetName(), int32(K), Side)); By = FMath::Max(By, Gap);
                             }
+                // (Their lines through the hands that grip them, and smooth all along.)
+                if (Time > 2.f) { Run->WorstRopeGap = FMath::Max(Run->WorstRopeGap, Crew->GetLineFistGap()); Run->WorstRopeTurn = FMath::Max(Run->WorstRopeTurn, Crew->GetLineWorstTurn()); }
                 if (Storm->GetIntense() > .9f) Run->IntenseRoll = FMath::Max(Run->IntenseRoll, FMath::Abs(S->GetSeaTilt().Y));
                 if (Si >= Stills.Num())
                 {
@@ -1134,6 +1141,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 else if (Step == 2 && Now - Run->Pressed > FMath::Max(V.Wave, .02f))
                 {
                     WorkShot(V.Name);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_ROPE name=%s fist_gap=%.2f worst_turn=%.1f at=%s hauled=%.0f,%.0f,%.0f"), V.Name,
+                        Crew->GetLineFistGap(), Crew->GetLineWorstTurn(), *Crew->GetLineWorstTurnAt().ToCompactString(), Crew->GetLineHauled(0), Crew->GetLineHauled(1), Crew->GetLineHauled(2));
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK_STILL name=%s clock=%.0f intense=%.2f wind=%.2f roll=%.1f puffs=%d waves=%d helm=%.1f rupture=%.2f music=%d frame_ms=%.1f"),
                         V.Name, Storm->GetClock(), Storm->GetIntense(), ShipStormWind(), S->GetSeaTilt().Y, Storm->GetPuffsShown(), Storm->GetDeckWaves(),
                         Crew->Find(EDockHuman::PirateCaptain) ? Crew->Find(EDockHuman::PirateCaptain)->GetHelmAngle() : 0.f, Storm->GetRupture(), Region, GAverageMS);
@@ -1187,11 +1196,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Done = true;
             int32 Of = 0; const int32 At = Crew->GetAtStations(&Of);
             for (const auto& G : Run->GripBy) UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK_GRIP who=%s worst_cm=%.1f"), *G.Key, G.Value);
-            Run->bPass = Run->Stations == Run->StationsOf && Run->StationsOf == 6 && At == Of && Run->WorstWorkGrip < 8.f && Run->HelmMax - Run->HelmMin > 12.f
+            Run->bPass = Run->Stations == Run->StationsOf && Run->StationsOf == 6 && At == Of && Run->WorstWorkGrip < 8.f && Run->WorstRopeGap < 2.f && Run->WorstRopeTurn < 25.f && Run->HelmMax - Run->HelmMin > 12.f
                 && Storm->GetRupture() >= 1.f && Run->RuptureDeath && Run->Shoved && Run->IntenseRoll > 8.f && Run->MaxPuffs > 10 && Storm->GetDeckWaves() > Run->Waves0
                 && Run->Music31 && Run->Music32 && ShipRuptureOpen();
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK pass=%d stations=%d/%d worst_grip_cm=%.1f helm_range=%.1f rupture=%.2f rupture_death=%d shoved=%d intense_roll=%.1f puffs=%d waves=%d music_storm=%d music_intense=%d"),
-                Run->bPass, Run->Stations, Run->StationsOf, Run->WorstWorkGrip, Run->HelmMax - Run->HelmMin, Storm->GetRupture(), Run->RuptureDeath, Run->Shoved, Run->IntenseRoll,
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_STORM_WORK pass=%d stations=%d/%d worst_grip_cm=%.1f rope_gap_cm=%.2f rope_turn_deg=%.1f helm_range=%.1f rupture=%.2f rupture_death=%d shoved=%d intense_roll=%.1f puffs=%d waves=%d music_storm=%d music_intense=%d"),
+                Run->bPass, Run->Stations, Run->StationsOf, Run->WorstWorkGrip, Run->WorstRopeGap, Run->WorstRopeTurn, Run->HelmMax - Run->HelmMin, Storm->GetRupture(), Run->RuptureDeath, Run->Shoved, Run->IntenseRoll,
                 Run->MaxPuffs, Storm->GetDeckWaves(), Run->Music31, Run->Music32);
             break;
         }

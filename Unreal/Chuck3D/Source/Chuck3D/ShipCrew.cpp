@@ -6,6 +6,7 @@
 #include "ShipSetting.h"
 #include "ShipStorm.h"
 #include "ProceduralMeshComponent.h"
+#include "ShipRope.h"
 #include "Materials/MaterialInterface.h"
 #include "Engine/StaticMesh.h"
 #include "ShipMusicMap.inl"
@@ -198,6 +199,7 @@ void AShipCrew::Tick(float DeltaSeconds)
         const AShipStorm* Storm = AShipStorm::Get(GetWorld());
         const float Force = Storm ? FMath::Max(Storm->GetWind(), .3f) + Storm->GetIntense() : 1.f;
         for (ADockNPC* N : Crew) if (N) N->SetStormForce(Force);
+        UpdateStormLines(DeltaSeconds);
     }
     else TickFencing(DeltaSeconds);
     // Nobody through the hull: each body (a 24 cm capsule) inside the planking at his hips' height.
@@ -544,55 +546,28 @@ void AShipCrew::TickFencing(float DeltaSeconds)
 // ---------------------------------------------------------------------------------------------------------------- the storm
 // (2026-11-04, user: "during storm have the NPC's responding to the storm, doing things sailors would in a storm, the captain
 // at the helm. no concertina held by the concertina player as he is now manning the ship as with the other crewmen".)
-// The lines they work (ship frame): each hauling part runs aft along the deck at hand height from its lead block, up from
-// which it goes aloft to the mast; behind the haulers its tail falls to the deck in a coil. The dancer sweats up a halyard
-// from the main mast's port fife rail.
+// The lines they work (ship frame): each hauling part comes down from its block aloft to a lead block at the deck, round its
+// sheave and up into the haulers' hands; behind the last hand it hangs slack to the deck and runs aft along it into a coil.
+// The dancer sweats up a halyard: down from its block aloft through his hands to its belaying pin in the main mast's port
+// fife rail, its tail hanging off the pin to a coil at his feet. (2026-11-07: rebuilt each frame through the hands holding
+// them, ShipRope.h, where they had been straight sticks with sharp corners.)
 namespace
 {
-    struct FHaulLine { FVector Aloft, Block, Hands0, Hands1, Down, Tail; };
-    const FHaulLine MainHaul{ {-478, -42, DeckZ + 940}, {-430, -230, DeckZ + 16}, {-395, -230, DeckZ + 98}, {-150, -230, DeckZ + 92}, {-112, -230, DeckZ + 3}, {-70, -230, DeckZ + 3} };
-    const FHaulLine ForeHaul{ {442, 40, DeckZ + 880}, {335, 235, DeckZ + 16}, {370, 235, DeckZ + 98}, {650, 235, DeckZ + 92}, {688, 235, DeckZ + 3}, {730, 235, DeckZ + 3} };
-    const FVector HalyardPin(-505, 76, DeckZ + 94), HalyardAloft(-505, 72, DeckZ + 1000);
-    // A rope's tube along a path (the ship frame), into a mesh section's arrays.
-    void Tube(TArray<FVector>& V, TArray<FVector>& N, TArray<int32>& T, TArray<FVector2D>& UV, const TArray<FVector>& P, float R)
-    {
-        constexpr int32 Sides = 6;
-        const int32 Base = V.Num();
-        float Run = 0.f;
-        for (int32 I = 0; I < P.Num(); ++I)
-        {
-            if (I) Run += static_cast<float>(FVector::Dist(P[I], P[I - 1]));
-            const FVector D = (P[FMath::Min(I + 1, P.Num() - 1)] - P[FMath::Max(I - 1, 0)]).GetSafeNormal();
-            FVector X = FVector::CrossProduct(D, FVector::UpVector);
-            if (X.SizeSquared() < 1e-4) X = FVector::CrossProduct(D, FVector::ForwardVector);
-            X.Normalize();
-            const FVector Y = FVector::CrossProduct(X, D);
-            for (int32 S = 0; S < Sides; ++S)
-            {
-                const float A = 2.f * PI * S / Sides;
-                const FVector O = X * FMath::Cos(A) + Y * FMath::Sin(A);
-                V.Add(P[I] + O * R); N.Add(O); UV.Add(FVector2D(S / float(Sides), Run / 20.f));
-            }
-        }
-        for (int32 I = 0; I + 1 < P.Num(); ++I)
-            for (int32 S = 0; S < Sides; ++S)
-            {
-                const int32 A = Base + I * Sides + S, B = Base + I * Sides + (S + 1) % Sides, C = A + Sides, D = B + Sides;
-                T.Append({ A, B, C, B, D, C });
-            }
-    }
-    // A coil of rope flaked down on the deck round C.
-    TArray<FVector> Coil(const FVector& C, float Turns = 5.f)
-    {
-        TArray<FVector> P;
-        const int32 Steps = FMath::RoundToInt(Turns * 14);
-        for (int32 K = 0; K <= Steps; ++K)
-        {
-            const float A = K / 14.f * 2.f * PI, R = 7.f + 16.f * K / float(Steps);
-            P.Add(C + FVector(R * FMath::Cos(A), R * FMath::Sin(A), 1.6f + .8f * (K % 14 == 0)));
-        }
-        return P;
-    }
+    constexpr float LineR = 1.5f;   // a 3 cm line
+    struct FHaulLine { FVector Aloft, Block, Hands0, Hands1, Tail; FVector Side; };
+    const FHaulLine MainHaul{ {-478, -42, DeckZ + 940}, {-430, -230, DeckZ + 16}, {-395, -230, DeckZ + 98}, {-150, -230, DeckZ + 92}, {-70, -230, DeckZ}, {0, 1, 0} };
+    const FHaulLine ForeHaul{ {442, 40, DeckZ + 880}, {335, 235, DeckZ + 16}, {370, 235, DeckZ + 98}, {650, 235, DeckZ + 92}, {730, 235, DeckZ}, {0, -1, 0} };
+    // (On the fife rail's pin at x -511, its head 94 cm up; the tail led off aft along the rail's outboard side and flaked
+    // down aft of the rail, clear of the dancer's feet.)
+    const FVector HalyardPin(-511, 75, DeckZ + 94), HalyardAloft(-511, 72, DeckZ + 1000);
+    const FVector HalyardWay = FVector(-1, .15f, 0).GetSafeNormal();
+    constexpr float SheaveR = 5.5f, FistBend = 3.f, PinBend = 2.5f;
+    // The lead block's sheave: its centre 30 cm off the deck, turning in the plane of the line aloft and the hauling part.
+    FVector SheaveAt(const FHaulLine& L) { return L.Block + FVector(0, 0, 14); }
+    FVector SheaveAxle(const FHaulLine& L) { const FVector C = SheaveAt(L); return FVector::CrossProduct(L.Aloft - C, L.Hands0 - C).GetSafeNormal(); }
+    // Which of the crew are on which line: the main's and the fore's hauling parts, then the halyard.
+    const EDockHuman LineMen[3][2] = { { EDockHuman::PirateConcertina, EDockHuman::PirateCheering },
+        { EDockHuman::PirateFencerA, EDockHuman::PirateFencerB }, { EDockHuman::PirateDancer, EDockHuman::Count } };
 }
 
 void AShipCrew::BeginStorm()
@@ -616,7 +591,7 @@ void AShipCrew::BeginStorm()
     Send(EDockHuman::PirateDancer, EStormWork::Sweat, Way({ {-150, 285}, {-400, 255}, {-505, 112} }, DeckZ), -90.f, ShipWorld(HalyardPin), ShipWorld(HalyardAloft), .25f);
     // The captain round the skylight and the wheel to the helm, behind the wheel facing forward.
     Send(EDockHuman::PirateCaptain, EStormWork::Helm, Way({ {-1165, -110}, {-1500, -110}, {HelmHub().X - 22.f, 0} }, QuarterZ), 0.f, ShipWorld(HelmHub()), ShipWorld(HelmHub() - FVector(1, 0, 0)), 0.f);
-    // The lines they work, rigged.
+    // The lines they work, rigged: their blocks (wood, and the lead blocks' strops) once; the ropes each frame.
     if (!StormLines)
     {
         StormLines = NewObject<UProceduralMeshComponent>(this, TEXT("StormLines"));
@@ -624,32 +599,151 @@ void AShipCrew::BeginStorm()
         StormLines->RegisterComponent();
         StormLines->SetWorldLocation(ShipOrigin());
         StormLines->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        // (Hemp: the deck's rope coils' own material.)
-        const UStaticMesh* Coil = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil"));
-        UMaterialInterface* Hemp = Coil ? Coil->GetMaterial(0) : nullptr;
+        StormLines->bUseAsyncCooking = true;
+        // Hemp: the CC0 rope scan (M_Rope); failing that the deck's rope coils' own material.
+        UMaterialInterface* Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Rope.M_Rope"));
+        if (!Hemp) { const UStaticMesh* CoilMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/Props/SM_RopeCoil.SM_RopeCoil")); Hemp = CoilMesh ? CoilMesh->GetMaterial(0) : nullptr; }
         if (!Hemp) Hemp = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Canvas.M_Canvas"));
         StormLines->SetMaterial(0, Hemp);
+        StormLines->SetMaterial(2, Hemp);
         if (UMaterialInterface* Wood = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Wood.M_Wood"))) StormLines->SetMaterial(1, Wood);
+        ShipRope::FMesh Blocks, Strops;
+        for (const FHaulLine* L : { &MainHaul, &ForeHaul })
+        {
+            // The lead block round its sheave (where the rope bends with its hauling part at rest), stropped to a ringbolt
+            // in the deck under it; the block aloft hanging from the mast, its pendant up to it.
+            const FVector C = SheaveAt(*L), A = (L->Aloft - C).GetSafeNormal(), B = (L->Hands0 - C).GetSafeNormal();
+            const FVector Long = (A + B).GetSafeNormal(), Cheek = SheaveAxle(*L);
+            ShipRope::Shell(Blocks, C, Long, Cheek, FVector(11.f, 8.f, 5.f));
+            const FVector Foot = C - Long * 11.f;
+            ShipRope::Tube(Strops, { Foot + Long * 3.f, Foot, FVector(Foot.X, Foot.Y, DeckZ + 1.f) }, 1.3f);
+            ShipRope::Tube(Strops, { FVector(Foot.X - 4, Foot.Y, DeckZ + 1.2f), FVector(Foot.X + 4, Foot.Y, DeckZ + 1.2f) }, 1.4f);
+            ShipRope::Shell(Blocks, L->Aloft + A * 2.f, A, FVector::CrossProduct(A, FVector::UpVector).GetSafeNormal(), FVector(11.f, 8.f, 5.f));
+            ShipRope::Tube(Strops, { L->Aloft + A * 10.f, L->Aloft + A * 40.f }, 1.4f);
+        }
+        ShipRope::Shell(Blocks, HalyardAloft + FVector(0, 0, 2), FVector::UpVector, FVector(1, 0, 0), FVector(11.f, 8.f, 5.f));
+        ShipRope::Tube(Strops, { HalyardAloft + FVector(0, 0, 10), HalyardAloft + FVector(0, 0, 40) }, 1.4f);
+        Blocks.Into(StormLines, 1, false);
+        Strops.Into(StormLines, 2, false);
     }
-    TArray<FVector> V, N; TArray<int32> T; TArray<FVector2D> UV;
-    TArray<FVector> BV, BN; TArray<int32> BT; TArray<FVector2D> BUV;
-    for (const FHaulLine* L : { &MainHaul, &ForeHaul })
-    {
-        Tube(V, N, T, UV, { L->Aloft, L->Block + FVector(0, 0, 6) }, 1.5f);
-        Tube(V, N, T, UV, { L->Block + FVector((L->Hands0 - L->Block).GetSafeNormal2D() * 6.f), L->Hands0, L->Hands1, L->Down, L->Tail }, 1.5f);
-        Tube(V, N, T, UV, Coil(L->Tail + (L->Tail - L->Down).GetSafeNormal2D() * 22.f - FVector(0, 0, 3)), 1.5f);
-        // The blocks: the lead block's shell at the deck (lashed to a ringbolt), and the one aloft.
-        Tube(BV, BN, BT, BUV, { L->Block - FVector(0, 0, 4), L->Block + FVector(0, 0, 14) }, 6.f);
-        Tube(BV, BN, BT, BUV, { L->Aloft - FVector(0, 0, 9), L->Aloft + FVector(0, 0, 9) }, 6.f);
-    }
-    Tube(V, N, T, UV, { HalyardPin + FVector(0, 0, 12), HalyardAloft }, 1.5f);
-    Tube(V, N, T, UV, { HalyardPin + FVector(0, 0, 4), HalyardPin + FVector(18, 14, -40), FVector(-470, 100, DeckZ + 3) }, 1.5f);
-    Tube(V, N, T, UV, Coil(FVector(-462, 112, DeckZ)), 1.5f);
-    Tube(BV, BN, BT, BUV, { HalyardAloft - FVector(0, 0, 9), HalyardAloft + FVector(0, 0, 9) }, 6.f);
-    StormLines->CreateMeshSection(0, V, T, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
-    StormLines->CreateMeshSection(1, BV, BT, BN, BUV, TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+    for (int32 L = 0; L < 3; ++L) { LineHauled[L] = 0.f; for (bool& B : LineFistSeen[L]) B = false; }
+    UpdateStormLines(0.f);
     StormLines->SetVisibility(true);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_STORM begin=1 sent=%d"), Sent);
+}
+
+void AShipCrew::UpdateStormLines(float DeltaSeconds)
+{
+    if (!StormLines) return;
+    ShipRope::FMesh Ropes;
+    float WorstGap = 0.f, WorstTurn = 0.f;
+    FVector WorstAt = FVector::ZeroVector;
+    for (int32 Line = 0; Line < 3; ++Line)
+    {
+        const bool bHalyard = Line == 2;
+        const FHaulLine& H = Line == 0 ? MainHaul : ForeHaul;
+        // The line the hands are put on (A toward the block or the pin, B on along it) and the way the rope runs through
+        // them as it is hauled (toward its tail).
+        const FVector A = bHalyard ? HalyardPin : H.Hands0, B = bHalyard ? HalyardAloft : H.Hands1;
+        const FVector Dir = (B - A).GetSafeNormal(), TailWard = bHalyard ? -Dir : Dir;
+        const FVector Top = bHalyard ? HalyardAloft : SheaveAt(H);
+        // Each hand on it: where it holds the rope. Settling in, the rope comes up off the deck into his hands (the halyard
+        // hangs taut from aloft anyway); a hand let go to reach on along it no longer bends it.
+        struct FHold { FVector P; float S; FVector Fist; float Hold; };
+        TArray<FHold> Holds;
+        float Pulled = 0.f; int32 Pulling = 0;
+        for (int32 Man = 0; Man < 2; ++Man)
+        {
+            const ADockNPC* N = LineMen[Line][Man] == EDockHuman::Count ? nullptr : Find(LineMen[Line][Man]);
+            for (int32 Side = 0; Side < 2; ++Side)
+            {
+                const int32 Slot = Man * 2 + Side;
+                const float Blend = N && N->GetStormWork() != EStormWork::None ? N->GetStormBlend() : 0.f;
+                const FVector FistW = N ? N->GetStormFist(Side) : FVector::ZeroVector;
+                if (Blend < .02f || FistW.IsNearlyZero()) { LineFistSeen[Line][Slot] = false; continue; }
+                const FVector F = ShipLocal(FistW);
+                const float Hold = N->GetStormHold(Side) / FMath::Max(Blend, 1e-3f);   // (its grip alone)
+                const FVector OnLine = A + Dir * FVector::DotProduct(F - A, Dir);
+                const FVector Rest = bHalyard ? OnLine : FVector(OnLine.X, OnLine.Y, DeckZ + LineR);
+                const FVector P = FMath::Lerp(Rest, FMath::Lerp(OnLine, F, Hold), Blend);
+                Holds.Add({ P, static_cast<float>(FVector::DotProduct(P - Top, bHalyard ? -Dir : Dir)), F, Hold * Blend });
+                // The rope hauled through the hands that grip it, by how far they draw it toward its tail.
+                if (LineFistSeen[Line][Slot] && Hold * Blend > .9f)
+                {
+                    Pulled += static_cast<float>(FVector::DotProduct(F - LineFistPrev[Line][Slot], TailWard)); ++Pulling;
+                }
+                LineFistPrev[Line][Slot] = F; LineFistSeen[Line][Slot] = true;
+            }
+        }
+        // (Only ever in: under the yard's weight the line does not run back when they ease and reach on; a holding hand
+        // carried forward by his body slips along it.)
+        if (Pulling) LineHauled[Line] += FMath::Clamp(Pulled / Pulling, 0.f, 90.f * DeltaSeconds);
+        Holds.Sort([](const FHold& X, const FHold& Y) { return X.S < Y.S; });
+        // Down from aloft, round the lead block's sheave, through the hands in order along it.
+        TArray<ShipRope::FKnot> Knots;
+        Knots.Add({ bHalyard ? HalyardAloft : H.Aloft, 0.f });
+        for (const FHold& Hd : Holds) Knots.Add({ Hd.P, FistBend, 1.f });
+        FVector Way, Coil0, CoilSide; float Outer, Inner;
+        if (bHalyard)
+        {
+            // Down to its pin, over the pin's head and off it aft, outboard of the rail.
+            Knots.Add({ HalyardPin + FVector(0, 0, 4), PinBend });
+            Knots.Add({ HalyardPin + FVector(-8, 6, 1), 0.f });
+            Way = HalyardWay; CoilSide = FVector(-Way.Y, Way.X, 0) * -1.f; Outer = 17.f; Inner = 6.f;
+            Coil0 = FVector(HalyardPin.X, HalyardPin.Y + 10.f, DeckZ + LineR) + Way * 90.f;
+        }
+        else
+        {
+            if (Holds.Num() == 0) Knots.Add({ FVector(Top.X, Top.Y, DeckZ + LineR) + Dir.GetSafeNormal2D() * 40.f, 12.f });   // (nobody on it: along the deck)
+            Way = FVector(Dir.X, Dir.Y, 0).GetSafeNormal(); CoilSide = H.Side; Outer = 23.f; Inner = 8.f;
+            Coil0 = FVector(H.Tail.X, H.Tail.Y, DeckZ + LineR);
+        }
+        TArray<FVector> Path;
+        if (bHalyard) ShipRope::Bent(Knots, Path);
+        else
+        {
+            // Round the sheave from aloft toward the first hand, then on from where it leaves the sheave.
+            Path.Add(H.Aloft);
+            ShipRope::Sheave(H.Aloft, SheaveAt(H), SheaveAxle(H), SheaveR, Knots[1].P, Path);
+            Knots[0].P = Path.Last();
+            TArray<FVector> On;
+            ShipRope::Bent(Knots, On);
+            for (int32 I = 1; I < On.Num(); ++I) Path.Add(On[I]);
+        }
+        // Behind the last hand (or off the pin) slack to the deck, along it, and flaked down in its coil.
+        const FVector Last = Knots.Last().P, Before = Knots[Knots.Num() - 2].P;
+        FVector Touch;
+        ShipRope::Droop(Last, (Last - Before).GetSafeNormal(), Way, DeckZ + LineR, Path, Touch);
+        // (Along the deck in a gentle S from where it touched down to the coil's way in, however far aside the hand was.)
+        const float Run = FMath::Max(static_cast<float>(FVector::DotProduct(Coil0 - Touch, Way)), 2.f);
+        const FVector C0 = Touch + Way * Run + FVector::VectorPlaneProject(Coil0 - Touch, Way) * FMath::Clamp(Run / 20.f, 0.f, 1.f);
+        for (int32 K = 1; K <= 8; ++K)
+        {
+            const float T = K / 8.f, T2 = T * T, T3 = T2 * T;
+            Path.Add(Touch * (2 * T3 - 3 * T2 + 1) + Way * Run * (T3 - 2 * T2 + T) + C0 * (-2 * T3 + 3 * T2) + Way * Run * (T3 - T2));
+        }
+        ShipRope::Coil(Path.Last(), Way, CoilSide, Outer, Inner, Path);
+        ShipRope::Tube(Ropes, Path, LineR, -FMath::Fmod(LineHauled[Line], ShipRope::LayRepeat));
+        // How true it is: every gripping fist on the rope; no sharp turn anywhere along it.
+        for (const FHold& Hd : Holds)
+            if (Hd.Hold > .9f)
+            {
+                float Near = 1e9f;
+                for (int32 I = 1; I < Path.Num(); ++I) Near = FMath::Min(Near, static_cast<float>(FMath::PointDistToSegment(Hd.Fist, Path[I - 1], Path[I])));
+                WorstGap = FMath::Max(WorstGap, Near);
+            }
+        for (int32 I = 1; I + 1 < Path.Num(); ++I)
+        {
+            const FVector U = Path[I] - Path[I - 1], V = Path[I + 1] - Path[I];
+            if (U.Size() > .2f && V.Size() > .2f)
+            {
+                const float Turn = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(U.GetSafeNormal(), V.GetSafeNormal())), -1.f, 1.f)));
+                if (Turn > WorstTurn) { WorstTurn = Turn; WorstAt = Path[I]; }
+            }
+        }
+    }
+    Ropes.Into(StormLines, 0, true);
+    LineFistGap = WorstGap; LineWorstTurn = WorstTurn; LineWorstTurnAt = WorstAt;
 }
 
 void AShipCrew::EndStorm()
