@@ -4,6 +4,8 @@ Written 2026-11-08 (Claude) at the user's request: "dont add to the game yet but
 
 The user's draft lines are kept word for word below, marked **(user)**. Lines marked **(proposed)** are Claude's suggestions. They go into the game only once the user approves or rewrites them, since the brief says NPC lines come from the 2D game or the user. Lines marked **(2D)** come from the 2D game.
 
+**Voiced, 2026-11-08:** the user voiced every line in this document's dialogue section (scripted beats, guidance lines, background orders) in ElevenLabs, which approves them. They also voiced Jeffries' cutscene lines JEF_01 to JEF_06 and two sound-only takes, JEF_X01 (straining) and JEF_X02 (choking on seawater), and two captain lines for when the storm first starts (below). CAP_40 (the accusation) is dropped, and so are the other Jeffries lines Claude drafted. See [The voice takes](#the-voice-takes).
+
 ## The ship's rig, by its proper names
 
 What the ship actually is, from `ShipDeck.inl`, so the dialogue matches what the player sees. She is a **brig**: two masts, both square-rigged, with a gaff **spanker** on the mainmast over the quarterdeck.
@@ -152,6 +154,24 @@ Shouted by the captain and the crew in the gaps, in no situation in particular. 
 ### Unused 2D lines
 
 The plank's lines from the 2D ending have no place now: "Captain on deck!", the accusation, "Put him on the plank.", "But we've all grown fond of the smoking rat, Cap.", "No.". One could come back: when Chuck lights the golden leaf in the main top, the captain recognises it: **"That's the rat who stole my Premium Buhetian Halfling Leaf." (2D)**, then "...", then the jump order. A question for the user.
+
+## The voice takes
+
+The user's ElevenLabs takes (2026-11-08; the two storm-start lines 2026-11-05) are in `SourceAssets/NPCs/Voice/ShipStorm/source/`, as supplied: one file per script section with every line in script order, and the two storm-start lines on their own. `SourceAssets/NPCs/Voice/ShipStorm/lines.json` lists the 61 lines: id, speaker (`PirateCaptain`, `PirateCrewman1`, `PirateCrewman2`, `Jeffries`), text, source take, and start and end in seconds. That is the `source`/`start`/`end` form `Tools/build_npc_voice.py` already reads, so building the sequence means copying these entries into `SourceAssets/NPCs/dialogue.json` and running it; that tool levels each line and makes the Unreal assets. `Tools/split_ship_storm_voice.py` writes each line as its own WAV to `Local/ShipStormVoice/<speaker>/<id>.wav` for listening.
+
+Storm-start lines (new, the user's):
+- **CAP_S00** [Captain] ALL HANDS ON DECK! STORM'S UPON US!
+- **CAP_S01** [Captain] THE SEAS SHALL RUE THE DAY THEY DARED CHALLENGE THE MUSTACHIOED MARAUDERS! BWAHAHAHAHA!
+
+How the cut points were found (once; the tool only applies them):
+1. The silences in each take (10 ms loudness, 12 dB over the noise floor) split it at every pause of 0.12 s or more: 37 pieces in the scripted take, 54 in the guidance take, 21 in the background take, 12 in the cutscene take.
+2. Windows' built-in offline recognizer (System.Speech, en-US; nothing installed), given only that take's sentences as its vocabulary, named about half the pieces. Every one it named fell in script order.
+3. A best-path alignment in script order matched every piece to a sentence, using the named pieces and the syllable counts. Each line was found exactly once (the user made one take of each, so there are no a/b repeats). A full-file recognition pass gave the same line timings.
+4. Two boundaries were settled by hand: "MOVE!" at 3.1 s is the end of CAP_01, not the crewman's "CAP'N!" (that is the piece at 4.0 s); CAP_31 begins at 78.0 s. Each cut has 0.1 s of lead and 0.2 s of tail, never past the midpoint of the gap to the next line.
+5. Checked: each finished clip back through the recognizer. With all the script's lines as its choices, 35 named their own line or half of it, 16 gave no answer (mostly the hoarse Jeffries takes and lines with pauses inside), and none named another line, apart from CAP_20L. Against only their neighbours, no doubtful clip matched a neighbour. CAP_20L ("NOW THE LARBOARD!") was heard as "starboard". The hiss measurement settles it: the two "starboard" clips have the "s" burst where the word starts and both "larboard" clips have none.
+6. The sound-only take has no words. Its first 4.5 s are three pitched, sustained sounds (the strain, JEF_X01), and from 4.7 s there are eight short noisy bursts (the choking, JEF_X02). The 0.19 s gap between them is the only judgement call.
+
+Not done: nobody has listened to every clip. The speakers in the scripted take follow the script; when everyone is shouting, their voices' pitch is too close to confirm by measurement.
 
 ## Nautical notes
 

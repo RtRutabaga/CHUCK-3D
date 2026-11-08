@@ -20,6 +20,18 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
 
 Next part of the work could be done by either — preference: Claude (the reef points, the fore ratlines torn loose and the jump to the foremast).
 
+## November 8 (later) — the ship storm's voice takes split by line (Claude)
+
+- **Asked:** the user voiced the storm script in ElevenLabs, one file per section with every line in order (only JEF_01-06 of the cutscene, only JEF_X01/X02 of the sound-only takes, none of the storm-time Jeffries lines), plus two standalone captain lines for the storm's start; "go through the sound files and separate as needed for the game by 'looking' at the audio".
+- **Source:** `main` at 9d7763cd.
+- **Changed:** `SourceAssets/NPCs/Voice/ShipStorm/source/` (the 7 takes, LFS, renamed; the original names are in `lines.json`); `SourceAssets/NPCs/Voice/ShipStorm/lines.json` (61 lines: id, npc, text, source, start, end, in `build_npc_voice.py`'s form); new `Tools/split_ship_storm_voice.py` (clips to `Local/ShipStormVoice/<npc>/<id>.wav`); [../regions/SHIP-STORM-ENDING.md](../regions/SHIP-STORM-ENDING.md#the-voice-takes) (voiced lines approved, CAP_40 and the other Jeffries drafts dropped, the method and checks).
+- **Tested:** the tool ran and wrote 61 clips. Each clip re-recognized: 35 named their own line, 16 no answer, none another line apart from CAP_20L, which the hiss check shows is "larboard" as scripted. Against neighbours only, no doubtful clip matched a neighbour. Not listened to by a person.
+- **Method lesson:** Windows' System.Speech (en-US, already present) with a grammar of only the expected sentences works as an offline forced aligner. Pad each piece with 0.5 s of silence or short pieces come back empty. Too large a grammar (127 sentence pieces) makes it refuse almost everything. Blender's `aud` `write` failed at the end of some MP3s ("filling the audio frame failed with ffmpeg"): use `data()` + `wave` instead.
+- **Remaining flaws:** speaker attribution in the scripted take follows the script (not confirmable by measurement); JEF_X01/X02 are split at a 0.19 s gap by sound character; `Captain_Storm_02` (an older REEF THOSE SAILS take, 11-05) in Downloads was not supplied and is not used.
+- **Contract compatibility:** unchanged. **Binary/LFS:** 7 audio files (about 3.5 MB, LFS). **Launcher:** unchanged (Rope). The other uncommitted ship work in the tree is still left alone.
+
+Next part of the work could be done by either — preference: Claude (the storm ending's build, using these lines).
+
 ## November 8 — the ship's new ending, planned (Claude)
 
 - **Asked:** "dont add to the game yet but write documentation for this": no plank walk; the reef points on the main, then the fore yard's trouble with the lower fore ratlines torn loose, the golden-cigarette long jump from the main top to the foremast, the higher fore ratlines to the fore topsail, a cinematic cutscene (the ship in the storm, Astral ruptures on the current, Jeffries noticing) ending with Chuck knocked into a Phlegethos rupture and the fall cutscene; gold guide lights; period-jargon orders as a joke plus clear, situation-specific lines; flesh out the user's storm dialogue draft and keep it nautically accurate.

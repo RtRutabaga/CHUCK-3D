@@ -1,0 +1,502 @@
+{
+ "notes": "ElevenLabs takes supplied by the user 2026-11-08 (Captain_Storm_00/01 2026-11-05) for the ship storm ending (docs/regions/SHIP-STORM-ENDING.md). Each line is cut from its source take by start/end (seconds); speakers by script. Not yet in SourceAssets/NPCs/dialogue.json (not built). Tools/split_ship_storm_voice.py writes the clips to Local/ShipStormVoice for listening.",
+ "sources": {
+  "ship_storm_scripted.mp3": "Scripted beats (play once, in order).mp3",
+  "ship_storm_guidance.mp3": "Guidance lines (repeat while Chuck is in the wrong place).mp3",
+  "ship_storm_background.mp3": "Background orders (the joke; play in gaps).mp3",
+  "ship_storm_cutscene_jeffries.mp3": "Cutscene.mp3",
+  "ship_storm_jeffries_sounds.mp3": "Sound-only takes.mp3",
+  "Captain_Storm_00.mp3": "Captain_Storm_00_ALL HANDS ON DECK! STORM'S UPON US!.mp3",
+  "Captain_Storm_01.wav": "Captain_Storm_01_THE SEAS SHALL RUE THE DAY THEY DARED CHALLENGE THE MUSTACHIOED MARAUDERS! BWAHAHAHAHA!.wav"
+ },
+ "lines": [
+  {
+   "id": "CAP_01",
+   "npc": "PirateCaptain",
+   "text": "REEF THOSE SAILS, YE USELESS BILGE RATS! MOVE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 0,
+   "end": 3.91
+  },
+  {
+   "id": "CR1_01",
+   "npc": "PirateCrewman1",
+   "text": "CAP'N! THE REEF POINTS ON THE MAIN COURSE ARE COMIN' LOOSE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 3.93,
+   "end": 7.25
+  },
+  {
+   "id": "CR2_01",
+   "npc": "PirateCrewman2",
+   "text": "BOTH YARDARMS, CAP'N! THE CANVAS IS BREAKIN' FREE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 7.25,
+   "end": 11.21
+  },
+  {
+   "id": "CAP_02",
+   "npc": "PirateCaptain",
+   "text": "YOU THERE, CABIN BOY! YE LOOK SPRY ENOUGH! UP THE MAIN SHROUDS WITH YE! SECURE THOSE REEF POINTS, LARBOARD AND STARBOARD! MOVE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 11.24,
+   "end": 20.05
+  },
+  {
+   "id": "CR1_02L",
+   "npc": "PirateCrewman1",
+   "text": "LARBOARD YARDARM'S FAST, CAP'N!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 20.05,
+   "end": 22.27
+  },
+  {
+   "id": "CR1_02S",
+   "npc": "PirateCrewman1",
+   "text": "STARBOARD YARDARM'S FAST, CAP'N!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 22.34,
+   "end": 24.58
+  },
+  {
+   "id": "CR2_02",
+   "npc": "PirateCrewman2",
+   "text": "MAIN YARD'S SECURE, CAP'N!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 24.59,
+   "end": 26.96
+  },
+  {
+   "id": "CR1_03",
+   "npc": "PirateCrewman1",
+   "text": "CAP'N! THE FORE TOPSAIL CLEWLINES ARE FOULED! WE CAN'T GET THE SAIL IN!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 26.96,
+   "end": 31.55
+  },
+  {
+   "id": "CR1_04",
+   "npc": "PirateCrewman1",
+   "text": "SHE'S JAMMED IN THE QUARTER BLOCK, UP ON THE TOPSAIL YARD!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 31.55,
+   "end": 35.23
+  },
+  {
+   "id": "CR2_03",
+   "npc": "PirateCrewman2",
+   "text": "THE FORE RATLINES HAVE CARRIED AWAY! THERE'S NO WAY ALOFT!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 35.23,
+   "end": 39.72
+  },
+  {
+   "id": "CAP_03",
+   "npc": "PirateCaptain",
+   "text": "CABIN BOY! YE'RE ALREADY UP THERE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 39.75,
+   "end": 42.14
+  },
+  {
+   "id": "CAP_04",
+   "npc": "PirateCaptain",
+   "text": "CABIN BOY! GET BACK UP THE MAINMAST! I'VE AN IDEA!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 42.22,
+   "end": 45.88
+  },
+  {
+   "id": "CAP_05",
+   "npc": "PirateCaptain",
+   "text": "CABIN BOY! YE'RE ON THE FORE ALREADY! UP TO THE CROSSTREES WITH YE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 45.98,
+   "end": 50.45
+  },
+  {
+   "id": "CAP_06",
+   "npc": "PirateCaptain",
+   "text": "JUMP FOR THE FOREMAST, YE LITTLE SCALLYWAG! JUMP!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 50.52,
+   "end": 53.88
+  },
+  {
+   "id": "CR2_04",
+   "npc": "PirateCrewman2",
+   "text": "HE'S MADE IT, CAP'N! HE'S IN THE FORE TOP!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 53.89,
+   "end": 57.02
+  },
+  {
+   "id": "CAP_07",
+   "npc": "PirateCaptain",
+   "text": "THE TOPMAST RATLINES ARE SOUND, BOY! UP TO THE CROSSTREES! CLEAR THAT CLEWLINE!",
+   "source": "Voice/ShipStorm/source/ship_storm_scripted.mp3",
+   "start": 57.02,
+   "end": 62.81
+  },
+  {
+   "id": "CAP_10",
+   "npc": "PirateCaptain",
+   "text": "SECURE THOSE REEF POINTS, LARBOARD AND STARBOARD! MOVE!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 0,
+   "end": 3.99
+  },
+  {
+   "id": "CAP_11",
+   "npc": "PirateCaptain",
+   "text": "THE MAINMAST, BOY! THE ONE JEFFRIES IS TIED TO! UP THE ROPE NETS!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 4.18,
+   "end": 9.77
+  },
+  {
+   "id": "CAP_12",
+   "npc": "PirateCaptain",
+   "text": "NOT THE FORE, YE LUBBER! THE MAIN RIGGING!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 9.83,
+   "end": 13.25
+  },
+  {
+   "id": "CAP_13",
+   "npc": "PirateCaptain",
+   "text": "THE OTHER MAST! JEFFRIES'S MAST!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 13.34,
+   "end": 16.48
+  },
+  {
+   "id": "CAP_14",
+   "npc": "PirateCaptain",
+   "text": "LAY OUT ON THE YARD! LAY OUT!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 16.55,
+   "end": 18.76
+  },
+  {
+   "id": "CAP_15",
+   "npc": "PirateCaptain",
+   "text": "THE BIG SPAR UNDER YE, BOY! OUT ALONG IT, HAND OVER HAND!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 18.85,
+   "end": 23.59
+  },
+  {
+   "id": "CAP_16",
+   "npc": "PirateCaptain",
+   "text": "BELAY THAT! THE MAIN YARD, NOT THE TOPSAIL YARD!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 23.7,
+   "end": 27.43
+  },
+  {
+   "id": "CAP_17",
+   "npc": "PirateCaptain",
+   "text": "TOO HIGH, BOY! THE LOWEST SPAR! UNDER THE TOP!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 27.51,
+   "end": 31.39
+  },
+  {
+   "id": "CAP_18",
+   "npc": "PirateCaptain",
+   "text": "OUT TO THE YARDARM! WHERE SHE'S FLOGGIN'!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 31.48,
+   "end": 34.28
+  },
+  {
+   "id": "CAP_19",
+   "npc": "PirateCaptain",
+   "text": "FURTHER OUT, BOY! WHERE THE CANVAS IS FLAPPIN'!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 34.38,
+   "end": 37.75
+  },
+  {
+   "id": "CAP_20S",
+   "npc": "PirateCaptain",
+   "text": "NOW THE STARBOARD!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 37.81,
+   "end": 39.41
+  },
+  {
+   "id": "CAP_20L",
+   "npc": "PirateCaptain",
+   "text": "NOW THE LARBOARD!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 39.49,
+   "end": 41.07
+  },
+  {
+   "id": "CAP_21",
+   "npc": "PirateCaptain",
+   "text": "THE OTHER END O' THE YARD, BOY!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 41.14,
+   "end": 43.34
+  },
+  {
+   "id": "CAP_22S",
+   "npc": "PirateCaptain",
+   "text": "BACK UP THE MAIN SHROUDS! THE STARBOARD YARDARM'S STILL FLOGGIN'!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 43.43,
+   "end": 47.45
+  },
+  {
+   "id": "CAP_22L",
+   "npc": "PirateCaptain",
+   "text": "BACK UP THE MAIN SHROUDS! THE LARBOARD YARDARM'S STILL FLOGGIN'!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 47.53,
+   "end": 51.56
+  },
+  {
+   "id": "CAP_23",
+   "npc": "PirateCaptain",
+   "text": "UP THE MAINMAST AGAIN! THE OTHER SIDE!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 51.64,
+   "end": 54.57
+  },
+  {
+   "id": "CAP_24",
+   "npc": "PirateCaptain",
+   "text": "UP THE MAIN SHROUDS, BOY! TO THE MAIN TOP!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 54.65,
+   "end": 57.71
+  },
+  {
+   "id": "CAP_25",
+   "npc": "PirateCaptain",
+   "text": "UP TO THE TOP, BOY! WHERE YE WERE BEFORE!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 57.8,
+   "end": 61.46
+  },
+  {
+   "id": "CAP_26",
+   "npc": "PirateCaptain",
+   "text": "THERE'S LEAF IN THE LOOKOUT'S JAR! SMOKE IT, BOY!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 61.49,
+   "end": 64.98
+  },
+  {
+   "id": "CAP_27",
+   "npc": "PirateCaptain",
+   "text": "RUN AT IT, BOY! RUN AND LEAP!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 65.18,
+   "end": 67.52
+  },
+  {
+   "id": "CAP_28",
+   "npc": "PirateCaptain",
+   "text": "AGAIN! UP YE GO! AND THIS TIME RUN AT IT!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 67.67,
+   "end": 71.37
+  },
+  {
+   "id": "CAP_29",
+   "npc": "PirateCaptain",
+   "text": "ANOTHER! THERE'S ANOTHER IN THE JAR!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 71.52,
+   "end": 74.01
+  },
+  {
+   "id": "CAP_30",
+   "npc": "PirateCaptain",
+   "text": "UP THE FORE TOPMAST SHROUDS! TO THE CROSSTREES!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 74.2,
+   "end": 77.79
+  },
+  {
+   "id": "CAP_31",
+   "npc": "PirateCaptain",
+   "text": "CLIMB, BOY! THE ROPE NETS OVER YE, ALL THE WAY UP!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 77.92,
+   "end": 82.19
+  },
+  {
+   "id": "CAP_32",
+   "npc": "PirateCaptain",
+   "text": "NOT DOWN, YE FOOL!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 82.34,
+   "end": 84.3
+  },
+  {
+   "id": "CAP_33",
+   "npc": "PirateCaptain",
+   "text": "BACK UP THE MAIN, BOY, AND JUMP AGAIN!",
+   "source": "Voice/ShipStorm/source/ship_storm_guidance.mp3",
+   "start": 84.5,
+   "end": 87.17
+  },
+  {
+   "id": "BG_01",
+   "npc": "PirateCaptain",
+   "text": "HANDSOMELY ON THAT HALYARD! HANDSOMELY! ... NOW SMARTLY, DAMN YE!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 0,
+   "end": 4.62
+  },
+  {
+   "id": "BG_02",
+   "npc": "PirateCaptain",
+   "text": "WEATHER EARING FIRST, THEN THE LEE! MIND YER EARINGS!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 4.77,
+   "end": 8.62
+  },
+  {
+   "id": "BG_03",
+   "npc": "PirateCaptain",
+   "text": "TIE YER POINTS ROUND THE YARD! REEF KNOTS, MIND, NOT GRANNIES!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 8.73,
+   "end": 12.89
+  },
+  {
+   "id": "BG_04",
+   "npc": "PirateCaptain",
+   "text": "STARBOARD YER HELM! ... I SAID STARBOARD! ... THE OTHER STARBOARD!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 12.95,
+   "end": 17.73
+  },
+  {
+   "id": "BG_05",
+   "npc": "PirateCaptain",
+   "text": "SHE'S GRIPIN'! UP HELM! LUFF AND TOUCH HER, THEN KEEP HER FULL!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 17.83,
+   "end": 21.77
+  },
+  {
+   "id": "BG_06",
+   "npc": "PirateCrewman2",
+   "text": "WHO'S GOT THE WEATHER MAIN BRACE?! HAUL TAUT AND BELAY!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 21.82,
+   "end": 25.68
+  },
+  {
+   "id": "BG_07",
+   "npc": "PirateCaptain",
+   "text": "CLEW UP! BUNTLINES AND CLEWLINES, HAUL!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 25.73,
+   "end": 28.91
+  },
+  {
+   "id": "BG_08",
+   "npc": "PirateCrewman1",
+   "text": "LET GO THE FORE TOPSAIL HALYARD! ... NO, THE OTHER ONE!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 29.01,
+   "end": 32.65
+  },
+  {
+   "id": "BG_09",
+   "npc": "PirateCaptain",
+   "text": "OVER THE FUTTOCKS, LIKE A SAILOR! THE LUBBER'S HOLE'S FOR LUBBERS!",
+   "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
+   "start": 32.69,
+   "end": 37.07
+  },
+  {
+   "id": "JEF_01",
+   "npc": "Jeffries",
+   "text": "It's back! The purple is back!",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 0.11,
+   "end": 3.1
+  },
+  {
+   "id": "JEF_02",
+   "npc": "Jeffries",
+   "text": "Don't go into the purple! DON'T GO INTO THE PURPLE!",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 3.34,
+   "end": 7.25
+  },
+  {
+   "id": "JEF_03",
+   "npc": "Jeffries",
+   "text": "There! And there! They're moving with the current!",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 7.4,
+   "end": 10.63
+  },
+  {
+   "id": "JEF_04",
+   "npc": "Jeffries",
+   "text": "Why don't they see!?",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 10.75,
+   "end": 12.99
+  },
+  {
+   "id": "JEF_05",
+   "npc": "Jeffries",
+   "text": "That one's not purple... That one's burning.",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 13.1,
+   "end": 16.79
+  },
+  {
+   "id": "JEF_06",
+   "npc": "Jeffries",
+   "text": "NO!",
+   "source": "Voice/ShipStorm/source/ship_storm_cutscene_jeffries.mp3",
+   "start": 17.05,
+   "end": 18.59
+  },
+  {
+   "id": "JEF_X01",
+   "npc": "Jeffries",
+   "text": "[straining hard against ropes, gritted teeth, effortful grunts] Nnngh... hhhnn... nnngh!",
+   "source": "Voice/ShipStorm/source/ship_storm_jeffries_sounds.mp3",
+   "start": 0.01,
+   "end": 4.62
+  },
+  {
+   "id": "JEF_X02",
+   "npc": "Jeffries",
+   "text": "[hit by a wave of seawater, choking, coughing and spluttering] Hhuh— khh! Khh-hah! Hah...",
+   "source": "Voice/ShipStorm/source/ship_storm_jeffries_sounds.mp3",
+   "start": 4.62,
+   "end": 9.8
+  },
+  {
+   "id": "CAP_S00",
+   "npc": "PirateCaptain",
+   "text": "ALL HANDS ON DECK! STORM'S UPON US!",
+   "source": "Voice/ShipStorm/source/Captain_Storm_00.mp3",
+   "start": 0,
+   "end": 3.19
+  },
+  {
+   "id": "CAP_S01",
+   "npc": "PirateCaptain",
+   "text": "THE SEAS SHALL RUE THE DAY THEY DARED CHALLENGE THE MUSTACHIOED MARAUDERS! BWAHAHAHAHA!",
+   "source": "Voice/ShipStorm/source/Captain_Storm_01.wav",
+   "start": 0,
+   "end": 9.12
+  }
+ ]
+}
