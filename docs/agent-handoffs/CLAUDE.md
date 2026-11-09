@@ -2,6 +2,44 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 9 — the storm ending's sea ruptures reworked (Claude)
+
+- **Asked:** "Make the hell ruptures look better" (the Astral ruptures and the burning Phlegethos one in the fore topsail cutscene).
+- **Source:** `main` at 01fc07c5.
+- **Changed** ([../regions/SHIP-STORM-ENDING.md](../regions/SHIP-STORM-ENDING.md)):
+  - New `Tools/create_sea_rupture_materials.py`, which makes three materials: `M_SeaRuptureAstral`, `M_SeaRupturePhlegethos` and `M_SeaRuptureFoam` (under `/Game/Art/Materials/`).
+    - Each rupture is still a flat ragged disc on the sea. The material traces the view down a well under it: the sea pouring over the lip and down the wall in streaks, lit from below.
+    - The Astral floor is a nebula with stars, and its wall is lit violet with an oily film near the lip.
+    - The Phlegethos floor is cracked basalt plates over molten rock with a lava lake in the middle, plus steam on the wall.
+    - A foam ring on the sea is drawn in round each lip.
+  - `ShipEndingScene.cpp/.h`:
+    - New `BuildRuptures` (hole, foam ring, Astral oil veil, lights welling up).
+    - `-ChuckShipSceneShots` takes six stills (`ShipRuptures/`).
+    - The flat `M_AstralDepth`, `M_FireEmber` and `M_Dark` discs are gone.
+    - A trial of fire and smoke round the burning lip was dropped; it hid the shot.
+- **Tested:**
+  - Editor `-game -ChuckChultTest -ChuckShipEndingTest -ChuckShipEndingFrom=leap -ChuckShipSceneShots`: failures=0 on every run, ending with `plunged=1 miss_cm=99 leaps=3` (`Local/ship-ruptures-6.log`).
+  - Stills reviewed: `Local/ship-ruptures/Rupture_0..5`.
+  - Packaged `Builds/RupturesCandidate`:
+    - The first Verify-Package failed only on the temple `wizard_seal` trial (`max_coverage=0.26`), which this work does not touch and which had passed in the four previous runs.
+    - The re-run on the same build passed 182 (`Local/verify-package-20261109-083909.log`).
+    - Verify-Menu was not run (cutscene-only change).
+- **Not checked:** a human has not watched it in motion.
+- **Remaining flaws:**
+  - The Astral nebula floor shows only when looking well down into a rupture.
+  - The sea's own foam texture shows straight-edged tiles in the top-down shots (pre-existing).
+  - The lip is a hard mesh edge in places.
+  - There is no fire or smoke at the burning rupture.
+  - `wizard_seal` looks flaky (one failure in six packaged runs).
+- **Contract compatibility:** no rig, animation or public API changes.
+- **Binary/LFS:** three new material `.uasset` files (LFS).
+- **Launcher:**
+  - Promoted as Ruptures.
+  - The receipt names 01fc07c5; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions).
+
 ## November 8 (night) — the ship's storm ending built, with all 61 voiced lines (Claude)
 
 - **Asked:** "create the storm sequence, including adding all the lines".

@@ -4,6 +4,11 @@
 #include "ShipCrew.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
+#include "HAL/FileManager.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "DockGameMode.h"
 #include "AudioDevice.h"
 #include "EngineUtils.h"
@@ -97,10 +102,11 @@ void AShipForeTopsailScene::Begin(float InSide)
     Ruptures = NewObject<UProceduralMeshComponent>(this, TEXT("SeaRuptures"));
     Ruptures->SetupAttachment(RootComponent); Ruptures->SetCollisionEnabled(ECollisionEnabled::NoCollision); Ruptures->SetCastShadow(false);
     Ruptures->RegisterComponent(); Ruptures->SetWorldLocation(ShipOrigin());
-    Ruptures->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth")));
+    Ruptures->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_SeaRuptureAstral.M_SeaRuptureAstral")));
     Ruptures->SetMaterial(1, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist")));
-    Ruptures->SetMaterial(2, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_FireEmber.M_FireEmber")));
-    Ruptures->SetMaterial(3, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_Dark.M_Dark")));
+    Ruptures->SetMaterial(2, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_SeaRupturePhlegethos.M_SeaRupturePhlegethos")));
+    Ruptures->SetMaterial(3, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_SeaRuptureFoam.M_SeaRuptureFoam")));
+    bShots = FParse::Param(FCommandLine::Get(), TEXT("ChuckShipSceneShots"));
     for (int32 I = 0; I < 4; ++I)
     {
         auto* L = NewObject<UPointLightComponent>(this, *FString::Printf(TEXT("RiftLight%d"), I));
@@ -138,20 +144,43 @@ FVector2D AShipForeTopsailScene::RiftAt(const FRupture& R) const
 
 void AShipForeTopsailScene::BuildRuptures()
 {
+    // Each rupture is a ragged disc on the sea whose material traces the view down a well under it (the sea pouring over
+    // its lip and down its sides, the plane it opens onto at the bottom: Tools/create_sea_rupture_materials.py), with the
+    // white water drawn round into it on the sea about its lip. Sections: 0 Astral holes, 1 the Astral's oil film standing
+    // at their lips, 2 the Phlegethos hole, 3 the foam rings.
     if (!Ruptures) return;
-    TArray<FVector> V[4], N[4]; TArray<int32> T[4]; TArray<FVector2D> UV[4];
-    auto Fan = [&](int32 S, const FVector2D& C, float Z, float R, float Seed, float Rag)
+    TArray<FVector> V[4], N[4]; TArray<int32> T[4]; TArray<FVector2D> UV[4], UV1[4], UV2[4];
+    constexpr int32 Edge = 48;
+    auto Lip = [](float A, float Seed, float Rag)
     {
-        const int32 Base = V[S].Num(); constexpr int32 Edge = 36;
-        V[S].Add(FVector(C.X, C.Y, Z)); N[S].Add(FVector::UpVector); UV[S].Add(FVector2D(.5f, .5f));
+        return 1.03f + Rag * (.08f * FMath::Sin(3.f * A + Seed) + .05f * FMath::Sin(7.f * A + 2.f * Seed) + .03f * FMath::Sin(13.f * A + Seed * 3.f));
+    };
+    auto Hole = [&](int32 S, const FVector2D& C, float Z, float R, float Seed, float Rag, float Open)
+    {
+        const int32 Base = V[S].Num();
+        V[S].Add(FVector(C.X, C.Y, Z)); UV[S].Add(FVector2D::ZeroVector);
         for (int32 I = 0; I < Edge; ++I)
         {
-            const float A = 2.f * PI * I / Edge;
-            const float K = 1.f + Rag * (.16f * FMath::Sin(3.f * A + Seed) + .09f * FMath::Sin(7.f * A + 2.f * Seed) + .05f * FMath::Sin(13.f * A + Seed * 3.f));
-            const FVector2D P = C + FVector2D(FMath::Cos(A) * R * K * 1.25f, FMath::Sin(A) * R * K * .85f);
-            V[S].Add(FVector(P.X, P.Y, Z)); N[S].Add(FVector::UpVector); UV[S].Add(FVector2D((P.X - C.X) / 240.f + .5f, (P.Y - C.Y) / 240.f + .5f));
+            const float A = 2.f * PI * I / Edge, K = Lip(A, Seed, Rag);
+            V[S].Add(FVector(C.X + FMath::Cos(A) * R * K * 1.25f, C.Y + FMath::Sin(A) * R * K * .85f, Z));
+            UV[S].Add(FVector2D(FMath::Cos(A) * K, FMath::Sin(A) * K));   // (the well's wall is the unit circle)
         }
-        for (int32 I = 0; I < Edge; ++I) T[S].Append({Base, Base + 1 + (I + 1) % Edge, Base + 1 + I, Base, Base + 1 + I, Base + 1 + (I + 1) % Edge});   // (both faces)
+        for (int32 I = 0; I <= Edge; ++I) { N[S].Add(FVector::UpVector); UV1[S].Add(FVector2D(R, Open)); UV2[S].Add(FVector2D(Seed, 0.f)); }
+        for (int32 I = 0; I < Edge; ++I) T[S].Append({Base, Base + 1 + (I + 1) % Edge, Base + 1 + I});
+    };
+    auto Foam = [&](const FVector2D& C, float Z, float R, float Seed, float Rag, float Kind, float Open)
+    {
+        const int32 Base = V[3].Num();
+        for (int32 I = 0; I <= Edge; ++I)
+        {
+            const float A = 2.f * PI * I / Edge, K = Lip(A, Seed, Rag);
+            const FVector2D D(FMath::Cos(A) * 1.25f, FMath::Sin(A) * .85f);
+            const FVector2D In = C + D * R * K * .99f, Out = C + D * (R * K * 1.55f + 60.f);
+            V[3].Add(FVector(In.X, In.Y, Z + 1.f)); V[3].Add(FVector(Out.X, Out.Y, Z - 6.f));
+            UV[3].Add(FVector2D(I / float(Edge), 0.f)); UV[3].Add(FVector2D(I / float(Edge), 1.f));
+            for (int32 J = 0; J < 2; ++J) { N[3].Add(FVector::UpVector); UV1[3].Add(FVector2D(Kind, Open)); UV2[3].Add(FVector2D::ZeroVector); }
+        }
+        for (int32 I = 0; I < Edge; ++I) { const int32 A = Base + I * 2; T[3].Append({A, A + 2, A + 3, A, A + 3, A + 1}); }
     };
     int32 Near = 0;
     for (const FRupture& R : Rifts)
@@ -162,52 +191,41 @@ void AShipForeTopsailScene::BuildRuptures()
         const float Z = SeaLocalZ(GetWorld(), C) + 28.f, Rr = R.R * (.25f + .75f * Open);
         if (!R.bBurning)
         {
-            Fan(0, C, Z, Rr, R.Seed, 1.f);
-            // A low veil of the Astral's oily film standing up round its edge.
+            Hole(0, C, Z, Rr, R.Seed, 1.f, Open);
+            Foam(C, Z, Rr, R.Seed, 1.f, 0.f, Open);
+            // A low veil of the Astral's oily film standing up round its lip.
             const int32 Base = V[1].Num(); constexpr int32 Ring = 30;
             for (int32 I = 0; I <= Ring; ++I)
             {
-                const float A = 2.f * PI * (I % Ring) / Ring;
-                const float K = 1.f + .14f * FMath::Sin(3.f * A + R.Seed);
+                const float A = 2.f * PI * (I % Ring) / Ring, K = Lip(A, R.Seed, 1.f);
                 const FVector2D P = C + FVector2D(FMath::Cos(A) * Rr * K * 1.25f, FMath::Sin(A) * Rr * K * .85f);
-                const float H = 40.f + 60.f * Open * (1.f + .3f * FMath::Sin(A * 5.f + Clock));
+                const float H = 25.f + 45.f * Open * (1.f + .3f * FMath::Sin(A * 5.f + Clock));
                 V[1].Add(FVector(P.X, P.Y, Z - 4)); V[1].Add(FVector(P.X, P.Y, Z + H));
                 N[1].Add(FVector(FMath::Cos(A), FMath::Sin(A), 0)); N[1].Add(FVector(FMath::Cos(A), FMath::Sin(A), 0));
                 UV[1].Add(FVector2D(I / float(Ring) * 3.f, 0.f)); UV[1].Add(FVector2D(I / float(Ring) * 3.f, 1.f));
+                UV1[1].Add(FVector2D::ZeroVector); UV1[1].Add(FVector2D::ZeroVector); UV2[1].Add(FVector2D::ZeroVector); UV2[1].Add(FVector2D::ZeroVector);
             }
             for (int32 I = 0; I < Ring; ++I) { const int32 A = Base + I * 2; T[1].Append({A, A + 2, A + 3, A, A + 3, A + 1, A, A + 3, A + 2, A, A + 1, A + 3}); }
-            // Light from the nearest three.
+            // Light from the nearest three, welling up out of them.
             if (Near < 3 && FVector2D::Distance(C, FVector2D(0, 0)) < 3200.f)
             {
-                Lights[Near]->SetWorldLocation(ShipWorld(FVector(C.X, C.Y, Z + 120.f)));
-                Lights[Near]->SetIntensity(Open * (4000.f + 900.f * FMath::Sin(Clock * 2.3f + R.Seed)));
+                Lights[Near]->SetWorldLocation(ShipWorld(FVector(C.X, C.Y, Z + 160.f)));
+                Lights[Near]->SetIntensity(Open * (6000.f + 1200.f * FMath::Sin(Clock * 2.3f + R.Seed)));
                 ++Near;
             }
         }
         else
         {
-            // Phlegethos from above: molten light through the gaps between cracked basalt plates.
-            Fan(2, C, Z, Rr, R.Seed, .7f);
-            constexpr int32 Plates = 9;
-            for (int32 P = 0; P < Plates; ++P)
-            {
-                const float A0 = 2.f * PI * (P + .08f) / Plates, A1 = 2.f * PI * (P + .9f) / Plates;
-                const float In = (P % 3 == 0 ? .1f : .32f) * Rr, Out = Rr * (.93f + .05f * FMath::Sin(P * 2.1f));
-                const int32 Base = V[3].Num();
-                for (const FVector2D& Q : {C + FVector2D(FMath::Cos(A0), FMath::Sin(A0)) * In, C + FVector2D(FMath::Cos(A0) * 1.25f, FMath::Sin(A0) * .85f) * Out,
-                    C + FVector2D(FMath::Cos((A0 + A1) * .5f) * 1.25f, FMath::Sin((A0 + A1) * .5f) * .85f) * (Out * .98f), C + FVector2D(FMath::Cos(A1) * 1.25f, FMath::Sin(A1) * .85f) * Out,
-                    C + FVector2D(FMath::Cos(A1), FMath::Sin(A1)) * In})
-                    { V[3].Add(FVector(Q.X, Q.Y, Z + 3.f)); N[3].Add(FVector::UpVector); UV[3].Add(FVector2D(Q.X / 200.f, Q.Y / 200.f)); }
-                for (int32 K = 1; K < 4; ++K) T[3].Append({Base, Base + K + 1, Base + K, Base, Base + K, Base + K + 1});
-            }
+            Hole(2, C, Z, Rr, R.Seed, .7f, Open);
+            Foam(C, Z, Rr, R.Seed, .7f, 1.f, Open);
             Lights[3]->SetWorldLocation(ShipWorld(FVector(C.X, C.Y, Z + 450.f)));
-            Lights[3]->SetIntensity(Open * (3200.f + 900.f * FMath::Sin(Clock * 3.1f)));
+            Lights[3]->SetIntensity(Open * (5200.f + 1400.f * FMath::Sin(Clock * 3.1f) * FMath::Sin(Clock * 1.7f + 1.f)));
         }
     }
     for (int32 I = Near; I < 3; ++I) Lights[I]->SetIntensity(0.f);
     for (int32 S = 0; S < 4; ++S)
     {
-        if (T[S].Num()) Ruptures->CreateMeshSection(S, V[S], T[S], N[S], UV[S], TArray<FColor>(), TArray<FProcMeshTangent>(), false);
+        if (T[S].Num()) Ruptures->CreateMeshSection(S, V[S], T[S], N[S], UV[S], UV1[S], UV2[S], TArray<FVector2D>(), TArray<FColor>(), TArray<FProcMeshTangent>(), false);
         else Ruptures->ClearMeshSection(S);
     }
 }
@@ -316,6 +334,16 @@ void AShipForeTopsailScene::Tick(float Dt)
     DriveChuck(Dt);
     Lines();
     BuildRuptures();
+    if (bShots)
+    {
+        static const float ShotAt[] = {20.5f, 23.5f, 29.5f, 32.f, 34.5f, 37.2f};
+        if (ShotNext < UE_ARRAY_COUNT(ShotAt) && Clock >= ShotAt[ShotNext])
+        {
+            const FString Folder = FPaths::ScreenShotDir() / TEXT("ShipRuptures"); IFileManager::Get().MakeDirectory(*Folder, true);
+            FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("Rupture_%d_%s.png"), ShotNext, Shot), false, false);
+            ++ShotNext;
+        }
+    }
     const FVector P = C->GetActorLocation(), L = ShipLocal(P);
     const AShipCrew* Crew = AShipCrew::Get(GetWorld());
     const ADockNPC* J = Crew ? Crew->Find(EDockHuman::Jeffries) : nullptr;
@@ -343,13 +371,14 @@ void AShipForeTopsailScene::Tick(float Dt)
     else if (Clock < GustAt)
     {
         const FVector2D R = RiftAt(Rifts.Last());
-        Frame(ShipWorld(FVector(1450.f, Side * 150.f, 1350.f)), ShipWorld(FVector(R.X, R.Y, WaterZ)), TEXT("Burning"), 48.f);
+        Frame(ShipWorld(FVector(300.f, Side * 1500.f, 1750.f)), ShipWorld(FVector(R.X, R.Y, WaterZ)), TEXT("Burning"), 58.f);   // (abaft it and outboard of the headsails)
     }
     else if (Clock < BelowAt) Frame(P + FVector(-330.f, -Side * 60.f, 140.f), P, TEXT("Gust"), 56.f);
     else
     {
         const FVector2D R = RiftAt(Rifts.Last());
-        Frame(ShipWorld(FVector(Land.X - 250.f, Land.Y - Side * 450.f, 2700.f)), FMath::Lerp(P, ShipWorld(FVector(R.X, R.Y, WaterZ)), .55f), TEXT("Below"), 58.f);
+        // (From outboard of the fall, so the fore topsail is not between.)
+        Frame(ShipWorld(FVector(Land.X - 150.f, Land.Y + Side * 380.f, 2700.f)), FMath::Lerp(P, ShipWorld(FVector(R.X, R.Y, WaterZ)), .4f), TEXT("Below"), 58.f);
     }
     // Into the sea through the burning rupture: a flare, then black.
     if (bThrown && !bPlunged && L.Z < SeaLocalZ(GetWorld(), FVector2D(L.X, L.Y)) + 70.f)

@@ -65,5 +65,8 @@ private:
     void Lines();
     void BuildRuptures();
     FVector2D RiftAt(const FRupture& R) const;
+    // -ChuckShipSceneShots: stills of the ruptures for review (Saved/Screenshots/ShipRuptures).
+    bool bShots = false;
+    int32 ShotNext = 0;
     void Finish();
 };

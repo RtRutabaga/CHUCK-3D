@@ -179,6 +179,7 @@ How it plays:
   
   Then a dark red flash fades to black and silence, and the "End of demo" card follows (the fall into Phlegethos is not made).
 - **Dev checkpoints:** Ship Reef (dev), Ship Foremast Leap (dev), Ship Fore Topmast (dev).
+- **The ruptures' look (2026-11-09):** each is a ragged disc on the sea whose material traces the view down a well under it, so it reads as a hole: the sea pours over its lip and down its sides, and the plane it opens onto lies at the bottom (`Tools/create_sea_rupture_materials.py`: `M_SeaRuptureAstral`, `M_SeaRupturePhlegethos`, `M_SeaRuptureFoam`). The Astral ones are lit violet from below, with an oily sheen on the water at the lip and a silver-violet nebula with stars at the bottom (seen when looking well down into one). The burning one has irregular plates of near-black basalt over molten rock, a molten lake at its heart, and its lower walls flash to steam. White water swirls in toward each one's lip. The burning and below shots moved outboard, so the headsails and the fore topsail no longer block them. Review stills: `-ChuckShipSceneShots` writes six to `Saved/Screenshots/.../ShipRuptures` (copies in `Local/ship-ruptures/`). Rim fire from `AChuckFlames` was tried and dropped, because its smoke covered the shots.
 
 Where it differs from the plan (the open questions, defaults taken):
 - **Q2, the main course:** it stays furled on its yard, and the loose canvas is two flogging sections from the work spots out to the yardarms. A set, close-reefed course was not built. The lines still say "reef points".
