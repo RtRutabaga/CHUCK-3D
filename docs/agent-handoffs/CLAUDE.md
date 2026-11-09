@@ -2,6 +2,39 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 9 (evening) — the ship's gold glow softened; Jeffries' hair no longer lit purple (Claude)
+
+- **Asked:**
+  - Make the glowing gold on the ship, the golden cigarette in the main top and the ending's guide lights, a softer, less dramatic gold.
+  - Stop Jeffries' hair lighting up unrealistically under the purple light.
+- **Source:** `main` at 06639353.
+- **Changed:**
+  - `CigarettePickup.h/.cpp`: `SetSoftAura()`, used only by the ship's main-top leaf. Chult's golden leaf and the captain's carton are unchanged. In soft mode:
+    - The halo is about a third as bright, and the haze and wisp are about a sixth.
+    - The motes are dimmer and the breath is slower and shallower.
+    - The light drops from 4.5–7 cd to 0.55–0.7 cd over 130 cm, and casts shadows.
+  - `ShipEnding.cpp`: the guide lights' halo intensity drops from .45–.8 to .2–.26, and their size from .7 to .55. Their lamps drop from 2–3.5 cd to 0.45–0.55 cd and cast shadows. They breathe and bob slower.
+  - `ShipStorm.cpp` (the companion-hatch rupture light) and `ShipEndingScene.cpp` (the cutscene's rift lights) now cast shadows. Unshadowed, they lit strand hair through the mainmast and through the head, so Jeffries' hair and the crew's beards blazed purple. The gold lights did the same to Chuck's fur.
+  - `ShipEndingTest.cpp`: a still of the leaf in the main top (`LeafMainTop`).
+- **Tested:**
+  - Editor ending test, full and skip runs: failures=0 ×3 (`Local/ship-soft-gold-1..3.log`).
+  - Stills: `Local/ship-soft-gold/`. Jeffries' hair is dark with no purple, and the leaf and guide lights are a soft warm pool.
+  - Packaged `Builds/SoftGoldCandidate`: Verify-Package 182 (`Local/verify-package-20261109-103842.log`). Verify-Menu was not run.
+- **Not checked:**
+  - Nobody has played it by hand.
+  - The frame cost of the shadowed rift lights (radius 1600–2400) has not been measured.
+- **Remaining flaws:**
+  - Standing right on the leaf, there is still a bright warm patch round Chuck's feet.
+  - Chult's golden leaf keeps its strong aura, by design: the user's 2026-10-15 request to stand out to a first-time player.
+- **Contract compatibility:** no rig or animation changes.
+- **Binary/LFS:** none.
+- **Launcher:**
+  - Promoted as SoftGold.
+  - The receipt names 06639353; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions).
+
 ## November 9 — the storm ending's sea ruptures reworked (Claude)
 
 - **Asked:** "Make the hell ruptures look better" (the Astral ruptures and the burning Phlegethos one in the fore topsail cutscene).

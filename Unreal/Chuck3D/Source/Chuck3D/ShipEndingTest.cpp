@@ -58,7 +58,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     {
         int32 Phase = 0, Sub = 0, Failures = 0, Shots = 0, Leaps0 = 0;
         double At = 0, Start = 0, Next = 0;
-        TArray<FString> Results; TSet<FString> ShotsSeen;
+        TArray<FString> Results; TSet<FString> ShotsSeen; bool bLeafShot = false;
         FTimerHandle Timer; bool bDone = false, bStorm = false;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Start = Run->At = World->GetTimeSeconds();
@@ -187,6 +187,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case 5:
             // The golden cigarette by the lookout's jar: walked over, smoked.
+            if (T < .2f && !Run->bLeafShot) { Run->bLeafShot = true; Shot(TEXT("LeafMainTop")); }
             Push(FVector(1, 0, 0));
             if (Chuck->IsStaminaLocked() || T > 4.f)
             {

@@ -170,14 +170,14 @@ AShipEnding* AShipEnding::Spawn(UWorld* World)
         auto* H = NewObject<UStaticMeshComponent>(E, *FString::Printf(TEXT("GuideHalo%d"), I));
         H->SetupAttachment(E->RootComponent); H->SetStaticMesh(Sphere);
         H->SetCollisionEnabled(ECollisionEnabled::NoCollision); H->SetCastShadow(false); H->SetCanEverAffectNavigation(false);
-        H->SetUsingAbsoluteLocation(true); H->SetWorldScale3D(FVector(.7f)); H->SetVisibility(false);
+        H->SetUsingAbsoluteLocation(true); H->SetWorldScale3D(FVector(.55f)); H->SetVisibility(false);
         H->RegisterComponent();
         UMaterialInstanceDynamic* M = Aura ? H->CreateDynamicMaterialInstance(0, Aura) : nullptr;
         if (M) M->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.f, .64f, .2f));
         auto* L = NewObject<UPointLightComponent>(E, *FString::Printf(TEXT("GuideLamp%d"), I));
         L->SetupAttachment(E->RootComponent); L->SetUsingAbsoluteLocation(true);
         L->SetIntensityUnits(ELightUnits::Candelas); L->SetIntensity(0.f); L->SetAttenuationRadius(260.f);
-        L->SetLightColor(FLinearColor(1.f, .64f, .2f)); L->SetCastShadows(false); L->SetVisibility(false);
+        L->SetLightColor(FLinearColor(1.f, .64f, .2f)); L->SetCastShadows(true);   // (shadowed, so it never lights his fur through him) L->SetVisibility(false);
         L->RegisterComponent();
         E->GuideHalo.Add(H); E->GuideLamp.Add(L); E->GuideMat.Add(M);
     }
@@ -266,6 +266,7 @@ void AShipEnding::SpawnLeaf()
 {
     if (Leaf.IsValid()) Leaf->Destroy();
     Leaf = ACigarettePickup::SpawnGolden(GetWorld(), LeafSpot());
+    if (Leaf.IsValid()) Leaf->SetSoftAura();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_LEAF spawned=%d again=%d at=%s"), Leaf.IsValid(), bLeafAgain, *ShipLocal(LeafSpot()).ToString());
 }
 
@@ -591,12 +592,13 @@ void AShipEnding::TickGuideLights(float Dt)
     }
     if (At.Num() != GuideAt.Num() || (At.Num() && !At[0].Equals(GuideAt[0], 1.f))) { SetGuides(At); ++GuidesShown; }
     GuidePhase += Dt;
-    const float Breath = .5f + .5f * FMath::Sin(GuidePhase * 2.1f);
+    // Soft (user 2026-11-09): a gentle gold glow that breathes a little, slowly, and bobs only slightly.
+    const float Breath = .5f + .5f * FMath::Sin(GuidePhase * 1.4f);
     for (int32 I = 0; I < GuideAt.Num() && I < GuideHalo.Num(); ++I)
     {
-        if (GuideMat[I]) GuideMat[I]->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.45f, .8f, Breath));
-        GuideLamp[I]->SetIntensity(FMath::Lerp(2.f, 3.5f, Breath));
-        GuideHalo[I]->SetWorldLocation(GuideAt[I] + FVector(0, 0, 4.f * FMath::Sin(GuidePhase * 1.3f + I)));
+        if (GuideMat[I]) GuideMat[I]->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.2f, .26f, Breath));
+        GuideLamp[I]->SetIntensity(FMath::Lerp(.45f, .55f, Breath));
+        GuideHalo[I]->SetWorldLocation(GuideAt[I] + FVector(0, 0, 2.f * FMath::Sin(GuidePhase * 1.1f + I)));
     }
 }
 

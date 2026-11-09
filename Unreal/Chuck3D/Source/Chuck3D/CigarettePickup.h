@@ -34,6 +34,9 @@ public:
     static constexpr int32 CartonCigarettes = 40;
     bool IsCarton() const { return bCarton; }
     bool IsGoldenAvailable() const { return bGolden && !bCollected; }
+    /** A softer, quieter aura (the ship's main top, user 2026-11-09: a gentle glow, not dramatic). */
+    // Its light is shadowed: unshadowed, it lit Chuck's fur strands right through him.
+    void SetSoftAura();
     // Pocketed when Chuck's centre comes this close (horizontal, cm), once it can be.
     static constexpr float CollectRadius = 26.f;
     static constexpr float CollectDelay = .35f;   // it visibly pops out first
@@ -68,4 +71,5 @@ private:
     UPROPERTY() UStaticMesh* AuraSphere = nullptr;
     UPROPERTY() UStaticMesh* AuraMote = nullptr;
     float AuraPhase = 0;
+    bool bSoftAura = false;
 };

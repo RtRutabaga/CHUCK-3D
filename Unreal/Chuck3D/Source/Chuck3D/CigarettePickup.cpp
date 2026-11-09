@@ -157,16 +157,35 @@ void ACigarettePickup::AddGoldenAura()
     TickGoldenAura();
 }
 
+void ACigarettePickup::SetSoftAura()
+{
+    bSoftAura = true;
+    if (Glow) { Glow->SetCastShadows(true); Glow->SetAttenuationRadius(130.f); Glow->MarkRenderStateDirty(); }
+    TickGoldenAura();
+}
+
 void ACigarettePickup::TickGoldenAura()
 {
     // A slow breathing pulse (about 2.6 s), never off; motes drift up round it.
     const float Clock = Age + AuraPhase;
-    const float Breath = .5f + .5f * FMath::Sin(Clock * 2.4f);
-    if (HaloMaterial) HaloMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(1.1f, 1.8f, Breath));   // the cigarette stays readable inside it
-    if (WispMaterial) WispMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.4f, .6f, Breath));
-    if (OuterMaterial) OuterMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.35f, .6f, Breath));
-    if (MoteMaterial) MoteMaterial->SetScalarParameterValue(TEXT("Intensity"), 7.f);
-    if (Glow) Glow->SetIntensity(FMath::Lerp(4.5f, 7.f, Breath));
+    const float Breath = .5f + .5f * FMath::Sin(Clock * (bSoftAura ? 1.6f : 2.4f));
+    if (bSoftAura)
+    {
+        // Soft: a gentle warm glow round the cigarette, a faint haze and a few dim motes; it breathes only a little.
+        if (HaloMaterial) HaloMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.5f, .65f, Breath));
+        if (WispMaterial) WispMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.05f, .065f, Breath));
+        if (OuterMaterial) OuterMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.08f, .1f, Breath));
+        if (MoteMaterial) MoteMaterial->SetScalarParameterValue(TEXT("Intensity"), 2.2f);
+        if (Glow) Glow->SetIntensity(FMath::Lerp(.55f, .7f, Breath));
+    }
+    else
+    {
+        if (HaloMaterial) HaloMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(1.1f, 1.8f, Breath));   // the cigarette stays readable inside it
+        if (WispMaterial) WispMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.4f, .6f, Breath));
+        if (OuterMaterial) OuterMaterial->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.35f, .6f, Breath));
+        if (MoteMaterial) MoteMaterial->SetScalarParameterValue(TEXT("Intensity"), 7.f);
+        if (Glow) Glow->SetIntensity(FMath::Lerp(4.5f, 7.f, Breath));
+    }
     if (!Motes) return;
     for (int32 I = 0; I < GoldenMotes; ++I)
     {

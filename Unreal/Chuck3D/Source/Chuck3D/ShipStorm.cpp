@@ -310,7 +310,9 @@ AShipStorm* AShipStorm::Spawn(UWorld* World)
     S->RuptureLight->SetupAttachment(S->RootComponent);
     S->RuptureLight->SetRelativeLocation(FVector((CompX0 + CompX1) * .5f, (CompY0 + CompY1) * .5f, DeckZ + 45));
     S->RuptureLight->SetIntensity(0.f); S->RuptureLight->SetAttenuationRadius(560.f); S->RuptureLight->SetLightColor(FLinearColor(.48f, .035f, 1.f));
-    S->RuptureLight->SetCastShadows(false); S->RuptureLight->RegisterComponent();
+    // Shadowed (user 2026-11-09): unshadowed, it lit strand hair through the mainmast and through the head, so Jeffries' hair
+    // and the crew's beards blazed purple.
+    S->RuptureLight->SetCastShadows(true); S->RuptureLight->RegisterComponent();
     // (Drawn from the start, a sliver out of sight under the deck, so its shaders are ready when it first shows.)
     S->BuildRupture(0.f);
     // The second part comes when the user's storm track ends (its length; -ChuckShipStormIntenseAt= for tests).

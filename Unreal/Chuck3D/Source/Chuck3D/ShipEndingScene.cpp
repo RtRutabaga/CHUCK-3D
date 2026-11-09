@@ -110,7 +110,7 @@ void AShipForeTopsailScene::Begin(float InSide)
     for (int32 I = 0; I < 4; ++I)
     {
         auto* L = NewObject<UPointLightComponent>(this, *FString::Printf(TEXT("RiftLight%d"), I));
-        L->SetupAttachment(RootComponent); L->SetUsingAbsoluteLocation(true); L->SetCastShadows(false);
+        L->SetupAttachment(RootComponent); L->SetUsingAbsoluteLocation(true); L->SetCastShadows(true);   // (shadowed: unshadowed, they lit the crew's strand hair through the ship)
         L->SetAttenuationRadius(I == 3 ? 2400.f : 1600.f); L->SetIntensity(0.f);
         L->SetLightColor(I == 3 ? FLinearColor(1.f, .32f, .08f) : FLinearColor(.62f, .3f, 1.f));
         L->RegisterComponent(); Lights.Add(L);
