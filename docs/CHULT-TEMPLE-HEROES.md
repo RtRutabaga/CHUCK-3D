@@ -500,3 +500,22 @@ User: "when i load the beholder encounter the fighters beard is still grey and t
   - `Tools/import_temple_heroes.py` now runs it after `regenerate_lod`.
 - **Checked:** sanctum portraits with `-ExecCmds="r.SkeletalMeshLODBias 1"` and `2`, in the editor and before and after in the package (`Local/hero-lod*.log`). Check heroes this way after any hero import.
 
+## Hair under unshadowed light (November 9)
+
+User: "In the beholder encounter the fighters hair appears white/gray and the ranger appears to have very blonde/white hair over a very dark hair roots."
+
+- **The cause:** the same one the November 4 fix worked round, now fixed at the source.
+  - Strand hair has had no voxel volume since October 30 (`r.HairStrands.Voxelization=0`, Waterdeep's frame rate). Without it, a strand is shadowed only from lights that cast shadows.
+  - The sanctum's torches and braziers, the beholder's eye glow, the seal and the cutscene lights cast none, so they lit every strand right through the head.
+  - The fighter's near-black beard read grey-brown at fight distance. The ranger's copper strands went pale salmon over her darker scalp shell and root shading.
+  - Close portraits by one torch hid it. The entrance and Fireball shots showed it.
+- **The fix:**
+  - `ChuckGroom::Want` (`NPCGroom.cpp`), called from each hero's tick, turns the voxel volume on while any hero's hair is within the grooms' draw distance plus 5 m of the camera, and off again otherwise. `ATempleHero::EndPlay` releases it. It logs `CHUCK_GROOM_VOXELS on=0/1`.
+  - Waterdeep and the ship keep it off, so their frame rate is unchanged.
+  - **Ranger:** specular .5 → .25 (the only dark hair still at full sheen), root darkening .35 → .15, scalp shell tint (.27, .09, .032) → (.4, .14, .05).
+  - **Wizard:** with the voxel volume his white hair read cream under the torches. Hair (.46, .45, .42) → (.58, .575, .56), beard (.48, .47, .44) → (.6, .595, .58), each grey shade raised to match, and the scalp and beard-shade shells kept at .8 and .9 of them.
+  - The values are in `SourceAssets/Heroes/heroes.json` and the manifest. `Tools/set_hero_groom_shading.py` now also sets the scalp and beard-shade (stubble) tints.
+- **Checked:** `-ChuckSanctumOnly=portraits+entrance+fireball` stills, before and with the voxel volume, in `Local/hero-hair-before/`, `Local/hero-hair-after/` and `Local/hero-hair-after2/` (`compare*.png`).
+- **Not done:**
+  - A few darker flecks remain along the ranger's front hairline, where the scalp shell shows between combed strands.
+  - The frame cost in the sanctum with the voxel volume on has not been measured.

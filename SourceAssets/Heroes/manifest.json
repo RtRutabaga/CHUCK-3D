@@ -465,18 +465,18 @@
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
      "tint": [
-      0.36800000000000005,
-      0.36000000000000004,
-      0.336
+      0.464,
+      0.46,
+      0.448
      ]
     },
     "BeardShade": {
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
      "tint": [
-      0.432,
-      0.423,
-      0.396
+      0.54,
+      0.5355,
+      0.522
      ]
     },
     "Skin": {
@@ -535,16 +535,16 @@
      "bone": "head",
      "strands": 10186,
      "colour": [
-      0.46,
-      0.45,
-      0.42
+      0.58,
+      0.575,
+      0.56
      ],
      "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.62,
-      0.61,
-      0.58
+      0.72,
+      0.715,
+      0.7
      ],
      "roughness": 0.5,
      "specular": 0.3,
@@ -571,16 +571,16 @@
      "bone": "head",
      "strands": 3953,
      "colour": [
-      0.48,
-      0.47,
-      0.44
+      0.6,
+      0.595,
+      0.58
      ],
      "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.64,
-      0.63,
-      0.6
+      0.74,
+      0.735,
+      0.72
      ],
      "roughness": 0.5,
      "specular": 0.3,
@@ -607,16 +607,16 @@
      "bone": "jaw",
      "strands": 10422,
      "colour": [
-      0.48,
-      0.47,
-      0.44
+      0.6,
+      0.595,
+      0.58
      ],
      "root": 0.3,
      "grey": 0.5,
      "grey_colour": [
-      0.64,
-      0.63,
-      0.6
+      0.74,
+      0.735,
+      0.72
      ],
      "roughness": 0.5,
      "specular": 0.3,
@@ -819,9 +819,9 @@
      "type": "stubble",
      "texture": "Textures/scalp_stubble.png",
      "tint": [
-      0.27,
-      0.09,
-      0.032
+      0.4,
+      0.14,
+      0.05
      ]
     },
     "Skin": {
@@ -884,7 +884,7 @@
       0.1,
       0.035
      ],
-     "root": 0.35,
+     "root": 0.15,
      "grey": 0.0,
      "grey_colour": [
       0.5,
@@ -892,7 +892,7 @@
       0.48
      ],
      "roughness": 0.45,
-     "specular": 0.5,
+     "specular": 0.25,
      "roots_cm": {
       "mean": [
        1.85,

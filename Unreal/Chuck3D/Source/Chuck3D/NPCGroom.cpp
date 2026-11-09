@@ -2,6 +2,10 @@
 #include "Components/SkinnedMeshComponent.h"
 #include "Engine/SkinnedAsset.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 #include "GroomAsset.h"
 #include "GroomComponent.h"
 #include "Misc/PackageName.h"
@@ -14,6 +18,24 @@ namespace
         FTransform T = FTransform::Identity;
         for (; Index != INDEX_NONE; Index = Ref.GetParentIndex(Index)) T = T * Ref.GetRefBonePose()[Index];
         return T;
+    }
+
+    // Voxels: wanted this frame by any caller (gathered over one frame, applied at the first call of the next).
+    uint64 VoxFrame = 0;
+    bool bVoxWanted = false, bVoxOn = false;
+    // Strands are costly: drawn only within 25 m (every haired NPC drew from anywhere on the map, which
+    // slowed the temple's frames).
+    float GroomCull()
+    {
+        static const float V = []{ float C = 2500.f; FParse::Value(FCommandLine::Get(), TEXT("ChuckGroomCull="), C); return C; }();   // -ChuckGroomCull=<cm> to test
+        return V;
+    }
+    void SetVoxels(bool bOn)
+    {
+        if (bOn == bVoxOn) return;
+        bVoxOn = bOn;
+        if (IConsoleVariable* V = IConsoleManager::Get().FindConsoleVariable(TEXT("r.HairStrands.Voxelization"))) V->Set(bOn ? 1 : 0, ECVF_SetByCode);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_GROOM_VOXELS on=%d"), bOn ? 1 : 0);
     }
 }
 
@@ -41,10 +63,7 @@ int32 ChuckGroom::Attach(AActor* Owner, USkinnedMeshComponent* Mesh, TArray<UGro
         Hair->SimulationSettings.SolverSettings.bEnableSimulation = false;
         Hair->GroomAsset = Groom;
         Hair->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        // Strands are costly: drawn only within 25 m (every haired NPC drew from anywhere on the map, which
-        // slowed the temple's frames).
-        static const float Cull=[]{ float V=2500.f; FParse::Value(FCommandLine::Get(),TEXT("ChuckGroomCull="),V); return V; }();   // -ChuckGroomCull=<cm> to test
-        Hair->SetCullDistance(Cull);
+        Hair->SetCullDistance(GroomCull());
         Hair->SetupAttachment(Mesh, Bone);
         // Authored in the mesh's rest pose: undo the bone's rest transform, then it rides on the bone.
         Hair->SetRelativeTransform(RefComponentSpace(Ref, Index).Inverse());
@@ -55,4 +74,19 @@ int32 ChuckGroom::Attach(AActor* Owner, USkinnedMeshComponent* Mesh, TArray<UGro
     }
     if (Count) UE_LOG(LogTemp, Display, TEXT("CHUCK_GROOM_ATTACHED %s grooms=%d"), *Name, Count);
     return Count;
+}
+
+void ChuckGroom::Want(const AActor* Owner, const FVector& HairAt)
+{
+    if (GFrameCounter != VoxFrame) { if (VoxFrame) SetVoxels(bVoxWanted); bVoxWanted = false; VoxFrame = GFrameCounter; }
+    const UWorld* World = Owner ? Owner->GetWorld() : nullptr;
+    const APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+    if (!PC || !PC->PlayerCameraManager) return;
+    // A little past the draw distance, so it is on before the hair comes into view.
+    if (FVector::DistSquared(PC->PlayerCameraManager->GetCameraLocation(), HairAt) < FMath::Square(GroomCull() + 500.f)) bVoxWanted = true;
+}
+
+void ChuckGroom::Release()
+{
+    SetVoxels(false); bVoxWanted = false; VoxFrame = 0;
 }

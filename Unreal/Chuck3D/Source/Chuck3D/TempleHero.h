@@ -115,6 +115,7 @@ public:
     static constexpr float HalfHeight = 92.f;
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
     UPROPERTY(VisibleAnywhere) UCapsuleComponent* Capsule = nullptr;
     UPROPERTY(VisibleAnywhere) USkeletalMeshComponent* Mesh = nullptr;

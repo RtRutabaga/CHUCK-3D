@@ -31,4 +31,14 @@ for hero, info in heroes.items():
         if not unreal.EditorAssetLibrary.save_loaded_asset(mi, only_if_is_dirty=False): raise RuntimeError(path)
         print('CHUCK_HERO_GROOM_SHADING', hero, group, g['colour'], g['specular'], g['roughness'])
         done += 1
+    # The scalp and beard shells under the strands (stubble slots): their tint follows the hair (2026-11-09).
+    for slot, s in (info.get('slots') or {}).items():
+        if s.get('type') != 'stubble': continue
+        path = f'/Game/Characters/Heroes/{hero}/MI_{hero}_{slot}'
+        mi = unreal.load_asset(path)
+        if not mi: raise RuntimeError(f'Missing {path}')
+        LIB.set_material_instance_vector_parameter_value(mi, 'Tint', unreal.LinearColor(*s['tint'], 1))
+        LIB.update_material_instance(mi)
+        if not unreal.EditorAssetLibrary.save_loaded_asset(mi, only_if_is_dirty=False): raise RuntimeError(path)
+        print('CHUCK_HERO_GROOM_SHELL', hero, slot, s['tint'])
 print('CHUCK_HERO_GROOM_SHADING_READY', done)

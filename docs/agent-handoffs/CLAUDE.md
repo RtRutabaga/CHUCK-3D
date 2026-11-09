@@ -2,6 +2,46 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 9 (night) — the heroes' hair in the beholder encounter: fighter dark again, ranger auburn (Claude)
+
+- **Asked:** in the beholder encounter the fighter's hair reads white/grey, and the ranger's reads very blonde/white over very dark roots. Fix it.
+- **Source:** `main` at 111e0f12.
+- **Cause:**
+  - `r.HairStrands.Voxelization=0` (DefaultEngine.ini, kept for Waterdeep's frame rate) leaves strands with no self-shadowing.
+  - The sanctum's unshadowed lights then light the hair straight through the head. These are the torches and braziers, the beholder's eye light, the FX lights and the cutscene lights.
+  - So dark hair reads grey and red hair reads pale.
+  - Close torch-lit portraits looked fine. The entrance and Fireball shots showed it.
+  - A/B with voxelization 1: the fighter's beard is dark again and the ranger's hair a deep auburn.
+- **Changed:**
+  - `NPCGroom.h/.cpp`: `ChuckGroom::Want(Owner, HairAt)` / `Release()`.
+    - Voxelization is switched on at runtime only while the camera is within the groom draw distance (+5 m) of a hero's hair. It is gathered per frame.
+    - It goes off again elsewhere and on `EndPlay`, and logs `CHUCK_GROOM_VOXELS on=`.
+    - The groom cull distance now has a helper, `-ChuckGroomCull=` to test. The value is unchanged at 25 m.
+  - `TempleHero.h/.cpp`: each visible hero with grooms calls `Want` from `Tick` and `Release` on `EndPlay`.
+  - `SourceAssets/Heroes/heroes.json`, `manifest.json`:
+    - Ranger hair specular .5→.25 and root darkening .35→.15. Scalp shell tint (.27,.09,.03)→(.4,.14,.05), so the roots match the strands.
+    - Wizard hair and beard whitened (they read cream once self-shadowed). Scalp and beard-shade tints follow.
+  - `Tools/set_hero_groom_shading.py`: also sets the stubble shells' `Tint` from the manifest. Run with `CHUCK_GROOMS_ONLY=Wizard,Ranger`; it saved 7 MIs.
+  - `docs/CHULT-TEMPLE-HEROES.md`: section "Hair under unshadowed light (November 9)".
+- **Tested:**
+  - Editor sanctum captures (`Local/beholder_iter.sh`, trials + entrance + Fireball). Before, voxels-forced and after sets are in `Local/hero-hair-before/`, `hero-hair-vox1/`, `hero-hair-after/` and `hero-hair-after2/` (compare*.png). All trials passed in the after runs (`Local/beholder-fight-hairafter*.log`).
+  - The runtime switch was seen in the editor logs: on near the heroes, off after the teleport to the rubble map.
+  - Packaged `Builds/HeroHairCandidate`: Verify-Package 182 (`Local/verify-package-20261109-142241.log`). That run never comes near the heroes, so it logs no voxel switch. Verify-Menu was not run.
+- **Not checked:**
+  - Nobody has played it by hand.
+  - The sanctum's frame cost with voxels on has not been measured.
+- **Remaining flaws:**
+  - A few dark flecks along the ranger's front hairline, where the scalp shell shows between combed strands.
+  - Other haired NPCs (Waterdeep, ship) still use the unshadowed path. They were not reported and were not changed.
+- **Contract compatibility:** no rig or animation changes.
+- **Binary/LFS:** 7 MI uassets (Ranger Hair/Scalp; Wizard Hair/Beard/BeardJaw/BeardShade/Scalp).
+- **Launcher:**
+  - Promoted as HeroHair.
+  - The receipt names 111e0f12; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions).
+
 ## November 9 (evening) — the ship's gold glow softened; Jeffries' hair no longer lit purple (Claude)
 
 - **Asked:**

@@ -11,6 +11,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GroomComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
@@ -123,6 +124,12 @@ void ATempleHero::BeginPlay()
     // last one (BonesClipT), whatever the frame rate (the blade's hit test depends on it).
     Mesh->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
     Home = GetActorLocation() - FVector(0, 0, HalfHeight); HomeYaw = GetActorRotation().Yaw;
+}
+
+void ATempleHero::EndPlay(const EEndPlayReason::Type Reason)
+{
+    ChuckGroom::Release();
+    Super::EndPlay(Reason);
 }
 
 const TCHAR* ATempleHero::GetRoleName() const
@@ -264,6 +271,7 @@ void ATempleHero::Tick(float DeltaSeconds)
     BonesClip = Animator.Playing();
     Animator.Tick(DeltaSeconds, 0.f);
     if (W >= HitStopUntil) ActTime += DeltaSeconds;
+    if (Grooms.Num() && !IsHidden()) ChuckGroom::Want(this, Grooms[0]->GetComponentLocation());   // dark/red hair true under unshadowed light
     if (!Battle.IsValid()) return;
     TickShove(DeltaSeconds);
     if (Hum && Battle.IsValid() && Battle->IsHushed()) Hum->SetVolumeMultiplier(0.f);   // (heard from the rubble map otherwise)
