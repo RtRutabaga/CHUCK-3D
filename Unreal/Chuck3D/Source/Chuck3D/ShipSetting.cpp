@@ -33,6 +33,7 @@
 #include "Misc/Parse.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
+#include "ShipEnding.h"
 
 // The pirate ship's setting (Claude, 2026-11-01; ShipSetting.h, docs/SHIP.md). Everything is built in the ship's frame
 // (X to the bow, Y to port, Z up from the keel) on procedural meshes, one per material, from the existing wood, canvas,
@@ -147,6 +148,7 @@ namespace
         FSurf Hull, Deck, Wood, WoodDecor, StoneDecor, Dark, Iron, Canvas, CanvasDecor, Stone, Brick, Brass, Rug, Glass, Flame, Hidden, Chest, Rigging, Lumber, Veil;
         FSurf Hemp;    // the running rigging and every other rope in natural hemp (2026-11-08; the standing rigging, Rigging, is tarred)
         FSurf Wheel;   // the helm's rim, spokes and handles, about its hub (2026-11-04: it turns)
+        FSurf ForeRatlines;   // the fore lower shrouds' ratlines, which carry away in the storm (2026-11-08, ShipEnding.cpp)
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -1285,6 +1287,7 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipRigging"), P.Rigging, TarredRopeMat, false, true, Missing, Triangles);   // the tarred standing rigging
     Emit(this, TEXT("ShipHemp"), P.Hemp, RopeMat, false, true, Missing, Triangles);
+    Emit(this, TEXT("ShipForeRatlines"), P.ForeRatlines, TarredRopeMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipLumber"), P.Lumber, DeckMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipRiftVeil"), P.Veil, TEXT("/Game/Art/Materials/M_AstralOilMist.M_AstralOilMist"), false, false, Missing, Triangles);   // the cellar's oil haze
     Emit(this, TEXT("ShipHidden"), P.Hidden, nullptr, true, false, Missing, Triangles);
@@ -1301,6 +1304,8 @@ void AShipSetting::Build()
     // ---- The captain's chest's lid and the storm that the ending's trigger brings (2026-11-03, ShipStorm.cpp).
     AShipChest::Spawn(World);
     AShipStorm::Spawn(World);
+    // ---- The ending in the storm: the reef, the leap to the foremast, the fore topsail (2026-11-08, ShipEnding.cpp).
+    AShipEnding::Spawn(World);
 
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_BUILT tris=%d missing=%d props=%d lamps=%d swingers=%d ladders=%d grips=%d sails=%d jars=%d rats=%d"),
         Triangles, Missing, Props, Lamps.Num(), Swingers.Num(), Ladders, Grips, Sails.Num(), JarsPlaced, RatsPlaced);

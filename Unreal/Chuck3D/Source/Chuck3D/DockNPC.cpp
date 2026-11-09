@@ -2473,6 +2473,33 @@ bool ADockNPC::StartAmbient(const TCHAR* Id, bool bLoop, float Pause, float Dela
     return true;
 }
 
+float ADockNPC::SpeakLine(const TCHAR* Npc, const TCHAR* Id, USoundAttenuation* Attenuation)
+{
+    int32 Index = INDEX_NONE;
+    for (int32 I = 0; I < VoiceLines.Num(); ++I)
+        if (FCString::Strcmp(NPCVoiceData::Lines[VoiceLines[I]].Npc, Npc) == 0 && FCString::Strcmp(NPCVoiceData::Lines[VoiceLines[I]].Id, Id) == 0) Index = I;
+    for (int32 I = 0; Index == INDEX_NONE && I < NPCVoiceData::LineCount; ++I)
+    {
+        const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
+        if (FCString::Strcmp(L.Npc, Npc) != 0 || FCString::Strcmp(L.Id, Id) != 0) continue;
+        USoundBase* Sound = *L.Sound ? LoadObject<USoundBase>(nullptr, L.Sound) : nullptr;
+        if (*L.Sound && !Sound) UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_VOICE_MISSING %s %s"), Npc, Id);
+        Index = VoiceLines.Add(I); VoiceSounds.Add(Sound);
+    }
+    if (Index == INDEX_NONE) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_LINE_MISSING %s %s"), Npc, Id); return -1.f; }
+    EnsureVoiceAudio();
+    if (Attenuation) VoiceAudio->AttenuationSettings = Attenuation;
+    AmbientLine = -1; AmbientStopIn = -1.f;
+    if (!StartVoiceLine(Index)) return -1.f;
+    return NPCVoiceData::Lines[VoiceLines[Index]].Seconds;
+}
+
+void ADockNPC::StopSpeaking(float Fade)
+{
+    if (IsSpeaking() && VoiceAudio) VoiceAudio->FadeOut(Fade, 0.f);
+    VoiceTime = -1.f; AmbientLine = -1;
+}
+
 float ADockNPC::GetVoiceVolumeAt(const FVector& At) const
 {
     if (!VoiceAudio || !VoiceAudio->AttenuationSettings) return 0.f;
@@ -2488,7 +2515,7 @@ void ADockNPC::StopAmbient(float Delay, float Fade)
 FString ADockNPC::GetTalkSubtitle(int32 Index) const
 {
     if (!Lines.IsValidIndex(Index)) return FString();
-    if (!VoiceLines.IsValidIndex(Index)) return Lines[Index];
+    if (!VoiceLines.IsValidIndex(Index) || Index >= TalkVoiceCount) return Lines[Index];   // (ambient and scripted lines follow the talk ones)
     const NPCVoiceData::FLine& L = NPCVoiceData::Lines[VoiceLines[Index]];
     // The smith rests his hammer, then the recording has a sigh and a pause
     // before his first words at about 1.8 s. Show the ellipsis through both.

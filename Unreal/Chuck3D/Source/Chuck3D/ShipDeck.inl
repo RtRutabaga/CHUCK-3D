@@ -586,7 +586,7 @@ void BuildRig(FParts& P)
                 {
                     TArray<FVector> Line;
                     for (int32 K = 0; K < 4; ++K) Line.Add(FMath::Lerp(Foot[K], Join[K], (Z - Foot[K].Z) / (Join[K].Z - Foot[K].Z)));
-                    P.Rigging.Cord(Line, .9f);
+                    (bMain ? P.Rigging : P.ForeRatlines).Cord(Line, .9f);   // (the fore's carry away in the storm: ShipEnding.cpp)
                 }
                 const FVector PoleA = Foot[0] - FVector(18, 0, 0), PoleB = Foot[3] + FVector(18, 0, 0);
                 P.WoodDecor.Spar(PoleA, PoleB, 4.5f, 4.5f, 8);
@@ -606,7 +606,7 @@ void BuildRig(FParts& P)
             {
                 TArray<FVector> Line;
                 for (int32 K = 0; K < 4; ++K) { const float T = (Z - Low[K].Z) / (High[K].Z - Low[K].Z); Line.Add(FMath::Lerp(Low[K], High[K], T)); }
-                P.Rigging.Cord(Line, .9f);
+                (bMain ? P.Rigging : P.ForeRatlines).Cord(Line, .9f);
             }
             // Futtock shrouds under the top (aft of the yard), from its rim to the mast below.
             for (float Dx : {-55.f, -20.f}) P.Rigging.Cord({FVector(M.X + Dx, Side * (H - 6), M.Top - 10), FVector(M.X + Dx * .4f, Side * (MastR - 2), M.Top - 170)}, 1.6f);

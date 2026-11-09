@@ -3378,6 +3378,25 @@ void AChuckCharacter::BeginFallCutscene()
     GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
     FallScene=AFallCutscene::Start(this);
 }
+void AChuckCharacter::CatchSwingGrip(int32 Index)
+{
+    if (!GetChuckSwingGrips().IsValidIndex(Index)) return;
+    const FChuckSwingGrip& G=GetChuckSwingGrips()[Index];
+    LadderIndex=-1;
+    SetActorLocation(G.Grip-FVector(0,0,ChuckClipData::SwingGripZ-GetCapsuleComponent()->GetScaledCapsuleHalfHeight()),false,nullptr,ETeleportType::TeleportPhysics);
+    GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+    GetCharacterMovement()->StopMovementImmediately();
+    Gait=EGait::Air;
+    EnterSwing(Index,false);
+}
+void AChuckCharacter::EndDemo()
+{
+    bDemoEnded=true;
+    GetCharacterMovement()->StopMovementImmediately();
+    GetCharacterMovement()->DisableMovement();
+    SetActorHiddenInGame(true);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END source=ship"));
+}
 void AChuckCharacter::EndFallCutscene()
 {
     // The cinematic is finished before the preview helper hides its stage.

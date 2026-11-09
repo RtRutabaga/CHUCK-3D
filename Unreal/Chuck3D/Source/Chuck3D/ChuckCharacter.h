@@ -33,6 +33,10 @@ public:
     bool IsInFallCutscene() const { return bCutscene; }
     /** The cutscene is over: the demo's end card. */
     void EndFallCutscene();
+    /** The game so far ends here: the end card (the ship's ending, 2026-11-08, until the fall into Phlegethos exists). */
+    void EndDemo();
+    /** Take hold of swing grip Index now (GetChuckSwingGrips; the ship's ending cutscene puts him on the fore topsail yard). */
+    void CatchSwingGrip(int32 Index);
     /** Begin at an explicit checkpoint with fresh traversal, fall and camera state. */
     void ResetAtLocation(const FVector& Location);
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */

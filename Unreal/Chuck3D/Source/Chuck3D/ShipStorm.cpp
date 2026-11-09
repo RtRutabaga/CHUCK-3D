@@ -20,6 +20,7 @@
 #include "Sound/SoundBase.h"
 #include "Sound/SoundWave.h"
 #include "ChuckClimbable.h"
+#include "ShipEnding.h"
 #include "UObject/ConstructorHelpers.h"
 
 // The chest, the ending's trigger and the storm (Claude, 2026-11-03; ShipStorm.h, docs/SHIP.md).
@@ -84,6 +85,7 @@ namespace ShipGate
         for (bool& B : GStep) B = false;
         if (AShipChest* C = AShipChest::Get(World)) C->Close();
         if (AShipStorm* S = AShipStorm::Get(World)) S->Calm();
+        if (AShipEnding* E = AShipEnding::Get(World)) E->Reset();
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_GATE reset=1"));
     }
 }

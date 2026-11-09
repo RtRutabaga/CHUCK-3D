@@ -233,6 +233,15 @@ if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHU
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=21 passed=21 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
     throw "Ship verification failed. Inspect $shipLog"
 }
+# The ship's storm ending (Claude, 2026-11-08; docs/regions/SHIP-STORM-ENDING.md): the 61 voiced lines' sounds; the orders and
+# the guidance; both yardarms tied; the fore ratlines carried away; a jump without the leaf short of the fore top; the leaf;
+# the long leap from both lanes onto the fore top; up the fore topmast shrouds; the cutscene into the burning rupture.
+$endingLog=Join-Path $evidence ('verify-ship-ending-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$endingProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipEndingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$endingLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($endingProcess.ExitCode -or !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_LINES lines=61 sounds=61 pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_TEST failures=0 trials=orders=1 reef_larboard=1 reef_starboard=1 fore_carry=1 jump_no_leaf=1 leaf=1 leap_port=1 leap_starboard=1 fore_climb=1 scene=1' -Quiet)) {
+    throw "Ship ending verification failed. Inspect $endingLog"
+}
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
 # logs solid and on the ground, no jar or urn inside the masonry; then the see-through undergrowth round Chuck.
 $propLog=Join-Path $evidence ('verify-chult-props-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')

@@ -360,6 +360,12 @@ public:
     static constexpr float TavernInterrupt = 3.5f;     // s inside before the keeper speaks up
     /** Speak this NPC's ambient line Id (NPCVoiceData), after Delay s; with bLoop, again Pause s after each time. */
     bool StartAmbient(const TCHAR* Id, bool bLoop, float Pause = 0.f, float Delay = 0.f);
+    /** Speak the scripted line Npc/Id (NPCVoiceData) now, from his mouth with Attenuation (null: his usual), his jaw moving
+     *  with it (the ship's storm ending, 2026-11-08: the voices are the script's, the bodies the crew's). Its length in
+     *  seconds, or -1 if there is no such line. */
+    float SpeakLine(const TCHAR* Npc, const TCHAR* Id, class USoundAttenuation* Attenuation = nullptr);
+    /** Stop whatever he is saying, fading over Fade s. */
+    void StopSpeaking(float Fade = .2f);
     /** Stop the ambient line (and its loop) after Delay s, fading out over Fade s. */
     void StopAmbient(float Delay = 0.f, float Fade = .25f);
     bool IsAmbientSpeaking() const { return bAmbientVoice && IsSpeaking(); }

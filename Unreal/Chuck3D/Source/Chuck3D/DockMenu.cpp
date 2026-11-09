@@ -29,6 +29,7 @@
 #include "HAL/PlatformMisc.h"
 #include "Misc/Paths.h"
 #include "ShipStorm.h"
+#include "ShipEnding.h"
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
 
@@ -57,7 +58,9 @@ namespace
         // The storm (2026-11-03, ShipStorm.h): on deck with the ending's seven conditions met, as it rolls in.
         {TEXT("ShipStorm"),TEXT("Ship Storm (dev)")},
         // (2026-11-04) the same, some seconds before the storm's second part (the user's intense track).
-        {TEXT("ShipStormIntense"),TEXT("Ship Storm Intense (dev)")}};
+        {TEXT("ShipStormIntense"),TEXT("Ship Storm Intense (dev)")},
+        // The ending (2026-11-08, ShipEnding.h): the orders begun, the leap from the main top, the fore top.
+        {TEXT("ShipReef"),TEXT("Ship Reef (dev)")},{TEXT("ShipLeap"),TEXT("Ship Foremast Leap (dev)")},{TEXT("ShipForeTop"),TEXT("Ship Fore Topmast (dev)")}};
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
@@ -97,6 +100,16 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
         ShipGate::Reset(GetWorld());
         if(Point==TEXT("ShipStorm") || Point==TEXT("ShipStormIntense")) ShipGate::OpenAll();
         if(Point==TEXT("ShipStormIntense")) if(AShipStorm* Storm=AShipStorm::Get(GetWorld())) Storm->SetClock(FMath::Max(1.f,Storm->GetIntenseAt()-8.f));
+        const bool bEnding=Point==TEXT("ShipReef") || Point==TEXT("ShipLeap") || Point==TEXT("ShipForeTop");
+        if(bEnding)
+        {
+            ShipGate::OpenAll();
+            if(AShipStorm* Storm=AShipStorm::Get(GetWorld())) Storm->SetClock(Storm->GetIntenseAt()+(Point==TEXT("ShipReef") ? 6.f : 30.f));
+            if(AShipEnding* End=AShipEnding::Get(GetWorld()))
+                End->SkipTo(Point==TEXT("ShipReef") ? AShipEnding::EStep::Waiting : Point==TEXT("ShipLeap") ? AShipEnding::EStep::Leap : AShipEnding::EStep::ForeClimb);
+            if(Point==TEXT("ShipLeap")) {ShipAt=ShipWorld(FVector(Ship::MainMastX-40,70,Ship::MainTopZ+33.5f));ShipYaw=0;}
+            if(Point==TEXT("ShipForeTop")) {ShipAt=AShipEnding::ForeTopSpot(70.f);ShipYaw=90;}
+        }
         C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;

@@ -2,6 +2,37 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 8 (night) — the ship's storm ending built, with all 61 voiced lines (Claude)
+
+- **Asked:** "create the storm sequence, including adding all the lines".
+- **Source:** `main` at 06b2c422.
+- **Changed** ([../regions/SHIP-STORM-ENDING.md](../regions/SHIP-STORM-ENDING.md#what-was-built-2026-11-08)):
+  - The 61 lines added to `SourceAssets/NPCs/dialogue.json` as scene lines of `PirateCaptain`, `PirateCrewman1`, `PirateCrewman2` and `Jeffries`. `build_npc_voice.py` produced the levelled WAVs and `NPCVoiceData.h`; `import_npc_voice.py` (`CHUCK_VOICE_ONLY`) imported 61 SoundWaves under `/Game/Art/Audio/Voice/`.
+  - New `ShipEnding.h/.cpp`, `ShipEndingScene.h/.cpp` and `ShipEndingTest.cpp`.
+  - `DockNPC` gains `SpeakLine` and `StopSpeaking`, and a talk subtitle never shows a scripted line.
+  - `ShipDeck.inl`/`ShipSetting.cpp`: the fore lower ratlines are their own mesh. The ending is spawned with the ship.
+  - `ShipStorm.cpp`: the gate reset also resets the ending.
+  - `DockGameMode.cpp`: subtitles and letterbox.
+  - `DockMenu.cpp` and `Verify-Menu.ps1`: Ship Reef, Ship Foremast Leap and Ship Fore Topmast (dev).
+  - `ChuckCharacter`: `EndDemo`, `CatchSwingGrip`.
+  - `ShipCrew.cpp`: a guard for the fencers' unplanned first phrase. It crashed one run: `KeysAround` on an empty array.
+  - `Verify-Package.ps1` runs the ending test.
+- **Tested** (uncooked editor `-game`):
+  - `-ChuckChultTest -ChuckShipEndingTest -ChuckShipEndingSkip`: failures=0, all 10 trials (`Local/ship-ending-full-skip.log`).
+  - The same from the leap with the whole cutscene (`-ChuckShipEndingFrom=leap`): failures=0, 8 shots, 3 yard leaps, thrown, into the burning rupture 99 cm from its middle, end card (`Local/ship-ending-12.log`, `-13.log`).
+  - Stills are in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/ShipEnding/`.
+  - Full ship test `-ChuckShipTest`: 21/21, ship check 0 (`Local/ship-full-ending.log`).
+- **Not checked:** nobody has listened to the lines in the game or judged their mix against the storm; a human has not played it; the package is not built yet (see below).
+- **Remaining flaws:**
+  - The main course stays furled with flogging canvas at the yardarms, not set close-reefed.
+  - There is no tug or work clip, and no jammed quarter block.
+  - The Astral sea ruptures are flat rainbow discs on the swell, and the Phlegethos one is a flat disc of dark plates over glowing channels.
+  - On the starboard side the cutscene puts him on the yard directly: the braced yard's first grip is beyond his reach from that net.
+  - The jar in the starboard run-up lane still stands there.
+  - The fall into Phlegethos ends on the end card.
+- **Contract compatibility:** new public members on `ADockNPC` and `AChuckCharacter` only; no rig or animation changes; the leap boost is applied by the ending, on the ship only.
+- **Binary/LFS:** 61 new voice `.uasset` files (LFS); 61 new WAVs under `SourceAssets/NPCs/Voice/` (LFS).
+
 ## November 8 — the fore course clear of the ratlines; the masts solid to the truck; the landing's leaves (Claude)
 
 - **Asked:** stop the fore course intersecting the fore ratlines unrealistically; give every part of each mast collision so that above the topsail he can climb the highest part of the mast directly on the golden leaf; after the fall to Chult, keep the leaves' rustle on landing but cut it off so it is brief and realistic.

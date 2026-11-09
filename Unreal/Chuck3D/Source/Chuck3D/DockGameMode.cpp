@@ -89,6 +89,7 @@
 #include "DynamicRHI.h"
 #include "ShipCrew.h"
 #include "ShipStorm.h"
+#include "ShipEnding.h"
 
 ADockGameMode::ADockGameMode()
 {
@@ -4393,7 +4394,7 @@ void ADockHUD::DrawHUD()
     }
     // The sanctum's cutscenes (2026-10-26): letterboxed, no HUD, the heroes' subtitles still shown.
     const ATempleSanctumBattle* SceneBattle=ATempleSanctumBattle::Get(GetWorld());
-    const bool bScene=SceneBattle && SceneBattle->IsScenePlaying();
+    const bool bScene=(SceneBattle && SceneBattle->IsScenePlaying()) || ShipEndingSceneLetterboxed(GetWorld());   // (and the ship's fore topsail cutscene, 2026-11-08)
     if(bScene)
     {
         const float Bar=FMath::Max(0.f,(Canvas->SizeY-Canvas->SizeX/2.2f)*.5f);
@@ -4431,7 +4432,8 @@ void ADockHUD::DrawHUD()
     FString Speaker, Line;
     const bool bTalk=Chuck->GetDialogue(Speaker,Line);
     const ATempleSanctumBattle* SanctumBattle=ATempleSanctumBattle::Get(GetWorld());
-    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line) || (SanctumBattle && SanctumBattle->GetHeroSubtitle(Speaker,Line)))
+    const AShipEnding* ShipEnd=AShipEnding::Get(GetWorld());
+    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line) || (SanctumBattle && SanctumBattle->GetHeroSubtitle(Speaker,Line)) || (ShipEnd && ShipEnd->GetSubtitle(Speaker,Line)))
     {
         const float UiScale=FMath::Clamp(Canvas->SizeY/1080.f,.5f,2.f);
         // Canvas requires a UFont even when the glyph face comes from Slate.

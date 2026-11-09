@@ -101,6 +101,8 @@ class AChuckCharacter;
 // -ChuckChultTest -ChuckShipTest (ShipTest.cpp): the escape from the rubble crevice played for real, then stills and the
 // real character through every space aboard.
 void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures);
+// -ChuckChultTest -ChuckShipEndingTest (ShipEndingTest.cpp): the storm ending played through.
+void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures);
 
 UCLASS()
 class CHUCK3D_API AShipSetting : public AActor

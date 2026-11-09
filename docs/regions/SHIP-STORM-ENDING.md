@@ -1,6 +1,6 @@
 # The ship's ending: the reef, the leap to the foremast and the fall (plan)
 
-Written 2026-11-08 (Claude) at the user's request: "dont add to the game yet but write documentation for this". **Not built. Draft for the user's approval.** It replaces step 2 of [SHIP.md](SHIP.md#the-ending) (the plank) and changes step 1 (the captain no longer comes on deck at the trigger; he has been on the quarterdeck from the start). Step 3, the fall into the Nine Hells, stays, now landing in **Phlegethos**, the 2D game's name for that layer.
+Written 2026-11-08 (Claude) at the user's request: "dont add to the game yet but write documentation for this". **Built later the same day** (user: "create the storm sequence, including adding all the lines"): see [What was built](#what-was-built-2026-11-08) for what the game does and where it differs from this plan. It replaces step 2 of [SHIP.md](SHIP.md#the-ending) (the plank) and changes step 1 (the captain no longer comes on deck at the trigger; he has been on the quarterdeck from the start). Step 3, the fall into the Nine Hells, stays, now landing in **Phlegethos**, the 2D game's name for that layer.
 
 The user's draft lines are kept word for word below, marked **(user)**. Lines marked **(proposed)** are Claude's suggestions. They go into the game only once the user approves or rewrites them, since the brief says NPC lines come from the 2D game or the user. Lines marked **(2D)** come from the 2D game.
 
@@ -154,6 +154,42 @@ Shouted by the captain and the crew in the gaps, in no situation in particular. 
 ### Unused 2D lines
 
 The plank's lines from the 2D ending have no place now: "Captain on deck!", the accusation, "Put him on the plank.", "But we've all grown fond of the smoking rat, Cap.", "No.". One could come back: when Chuck lights the golden leaf in the main top, the captain recognises it: **"That's the rat who stole my Premium Buhetian Halfling Leaf." (2D)**, then "...", then the jump order. A question for the user.
+
+## What was built (2026-11-08)
+
+Code: `ShipEnding.h/.cpp` (`AShipEnding`: the steps, the lines, the guidance, the guide lights, the leap, the loose canvas and the carried-away ratlines), `ShipEndingScene.h/.cpp` (`AShipForeTopsailScene`: the cutscene), `ShipEndingTest.cpp` (`-ChuckChultTest -ChuckShipEndingTest`, optional `-ChuckShipEndingSkip`). Small changes: `DockNPC` (`SpeakLine`, `StopSpeaking`; a talk subtitle never shows a scripted line), `ShipDeck.inl`/`ShipSetting.cpp` (the fore lower ratlines are their own mesh, `ShipForeRatlines`), `ShipStorm.cpp` (`ShipGate::Reset` resets the ending), `DockGameMode.cpp` (the ending's subtitles; the cutscene letterboxed), `DockMenu.cpp` and `Tools/Verify-Menu.ps1` (three dev checkpoints), `ChuckCharacter` (`EndDemo`: the end card), `ShipCrew.cpp` (a guard: the fencers' first phrase could be left unplanned and crash).
+
+How it plays:
+- **Storm start:** about 3 s into the storm the captain says CAP_S00, then CAP_S01. The background orders start after that, one at a time, in the gaps.
+- **The orders** begin when the storm's second part comes in (`IntenseAt`): CAP_01, CR1_01, CR2_01, CAP_02. The young crewman's voice comes from the port fore hauler (Swordsman A's body) and the older one's from the cheering pirate at the main haul. The captain speaks from the helm and Jeffries from the mainmast. Every line is the user's take, and only one plays at a time. A sea breaking aboard sometimes catches Jeffries, giving his choking sound (JEF_X02, at most every 40 s).
+- **Reef:** both main yardarms flog with loose canvas. He hangs still for 1.2 s at a main-yard grip 3.4 m or more from the yard's middle (the 3.5 m and 4.4 m grips), and that side is tied: the canvas rolls up and the crewman calls CR1_02L or CR1_02S. With both sides tied the crewman calls CR2_02. Then CR1_03 and CR1_04 follow, and CR2_03 (held while he is on the fore lower shrouds). As it starts, a sea breaks aboard forward, the fore lower ratlines vanish, broken rope ends stream from the shrouds, the fore nets close, and the golden cigarette appears in the main top. The captain then calls CAP_03, CAP_04 or CAP_05, depending on where Chuck is.
+- **Leap:** on the main top the captain calls CAP_06. While the golden leaf is lit, leaving the main top's fore edge heading forward (within about 53° of the bow) becomes 600 cm/s forward and 400 cm/s up. That covers a running jump, a sprint leap, or the run's own vault over the rim, caught at its top. Measured: 7.4 to 8.0 m out, from either lane, onto the fore top, where he lands and stops (his speed cut to 40 cm/s, so he does not slide off its far side). If it is aimed within 22° of the fore top, it is steered onto it. **This boost applies only here**, in this step and only from the main top (the plan's question 3, answered with the safe default). If the leaf runs out before the leap, another appears 2 s later. A miss lands on deck and gets CAP_28. Landing on the fore top gets CR2_04 and CAP_07.
+- **Fore climb:** at the head of either fore topmast shroud net, the cutscene starts. If he drops to the deck he is back at the leap step, and CAP_32 and CAP_33 come first.
+- **Guidance:** in each wrong place, the jargon line comes first (after 1 to 8 s) and repeats every 11 s (CAP_06 every 6 s). Once he has been 30 s in that place, and the jargon has been heard, the clear line takes over. The timer runs only once the scripted lines are said, and starts again on a new place or progress.
+- **Guide lights:** up to four gold auras (`M_GoldenLeafAura`, breathing, a 2–3.5 cd light): the main shroud feet, the main top, the loose work spots, the fore top's two landing lanes, the fore topmast shroud feet and heads.
+- **Cutscene** (letterboxed, Esc skips; about 39 s):
+  1. Crosstrees (he takes the fore topsail yard's first grip behind the cut, then goes out three grips to the outermost, at the yardarm). From the starboard net the braced yard's first grip is 52 cm away, out of his 45 cm reach, so the scene puts him on it directly (`AChuckCharacter::CatchSwingGrip`).
+  2. Wide.
+  3. Jeffries: JEF_X01, then JEF_01.
+  4. Ruptures: eight Astral ones open in the sea and slide aft at 1.4 m/s (JEF_02, JEF_03).
+  5. Clewline (JEF_04).
+  6. Burning: the Phlegethos rupture, cracked basalt plates over molten light (JEF_05).
+  7. Gust: he lets go and is thrown out to his side at 4.3 m/s (JEF_06). He is thrown from the outermost grip because, from an inner one, he caught the next grip out as he flew past it.
+  8. Below: from above he falls into the burning rupture, which is timed to be under him.
+  
+  Then a dark red flash fades to black and silence, and the "End of demo" card follows (the fall into Phlegethos is not made).
+- **Dev checkpoints:** Ship Reef (dev), Ship Foremast Leap (dev), Ship Fore Topmast (dev).
+
+Where it differs from the plan (the open questions, defaults taken):
+- **Q2, the main course:** it stays furled on its yard, and the loose canvas is two flogging sections from the work spots out to the yardarms. A set, close-reefed course was not built. The lines still say "reef points".
+- **Q3:** the boost applies on the ship only.
+- **Q4:** the leaf is the lookout's stash, by his jar. CAP_40 and the accusation are not used.
+- **Q5:** the cutscene has no music of its own; the storm tracks play on.
+- **Q6:** the orders start at `IntenseAt`.
+- **Not built:**
+  - the tug clip at the work spots (he just hangs there);
+  - the fore topsail's half-clewed state and the jammed quarter block, and any work clip in the cutscene;
+  - the fall into Phlegethos.
 
 ## The voice takes
 

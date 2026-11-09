@@ -479,6 +479,7 @@ void AChultLanding::VerifyAndCapture()
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleWindTest"))){ReviewChultTempleWind(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckTempleRubbleTest"))){ReviewChultTempleRubble(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckShipTest"))){ReviewShip(this,C,Failures);return;}
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckShipEndingTest"))){ReviewShipEnding(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckWreckReview"))){ReviewChultWreck(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBirdReview"))){ReviewChultBirds(this,C,Failures);return;}
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckVistaReview"))){ReviewChultVista(this,C,Failures);return;}

@@ -417,7 +417,7 @@ void AShipCrew::TickFencing(float DeltaSeconds)
     ADockNPC* F[2] = { Find(EDockHuman::PirateFencerA), Find(EDockHuman::PirateFencerB) };
     if (!F[0] || !F[1]) return;
     const int32 P = FMath::FloorToInt(Beat / 8.f);
-    if (P != Phrase)
+    if (P != Phrase || PairKeys.Num() == 0)   // (2026-11-08: a beat before the score's first, -1 like the unset phrase, left them unplanned)
     {
         Phrase = P; ++Phrases;
         PairStart = Pair; AxisStart = AxisYaw;
