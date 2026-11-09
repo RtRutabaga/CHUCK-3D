@@ -64,7 +64,14 @@ namespace
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
-            if(Point==ShipPoints[I].Point){const EShipSpawn S=I<ShipSpawns?EShipSpawn(I):EShipSpawn::Deck;Location=ShipSpawn(S);Yaw=ShipSpawnYaw(S);return true;}
+            if(Point==ShipPoints[I].Point)
+            {
+                const EShipSpawn S=I<ShipSpawns?EShipSpawn(I):EShipSpawn::Deck;Location=ShipSpawn(S);Yaw=ShipSpawnYaw(S);
+                // The ending's checkpoints aloft (2026-11-08): the main top's port run-up lane, the fore top.
+                if(Point==TEXT("ShipLeap")) {Location=ShipWorld(FVector(Ship::MainMastX-40,70,Ship::MainTopZ+34.65f));Yaw=0;}
+                if(Point==TEXT("ShipForeTop")) {Location=AShipEnding::ForeTopSpot(70.f)+FVector(0,0,1.15f);Yaw=90;}
+                return true;
+            }
         return false;
     }   // the interior's first six in the third column, the trap run's in the fourth, the wind's in the fifth
     bool ChultPoint(const FString& Point,FVector& Location,float& Yaw,FVector& Recovery)
@@ -107,8 +114,6 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
             if(AShipStorm* Storm=AShipStorm::Get(GetWorld())) Storm->SetClock(Storm->GetIntenseAt()+(Point==TEXT("ShipReef") ? 6.f : 30.f));
             if(AShipEnding* End=AShipEnding::Get(GetWorld()))
                 End->SkipTo(Point==TEXT("ShipReef") ? AShipEnding::EStep::Waiting : Point==TEXT("ShipLeap") ? AShipEnding::EStep::Leap : AShipEnding::EStep::ForeClimb);
-            if(Point==TEXT("ShipLeap")) {ShipAt=ShipWorld(FVector(Ship::MainMastX-40,70,Ship::MainTopZ+33.5f));ShipYaw=0;}
-            if(Point==TEXT("ShipForeTop")) {ShipAt=AShipEnding::ForeTopSpot(70.f);ShipYaw=90;}
         }
         C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
@@ -222,7 +227,11 @@ void ADockHUD::Tick(float DeltaSeconds)
         FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=0;
         bool bChult=ChultPoint(MenuTestPoint,ChultAt,ChultYaw,ChultRecovery);
         FVector ShipAt;float ShipYaw=0;
-        if(ShipPoint(MenuTestPoint,ShipAt,ShipYaw)){bChult=true;ChultAt=ChultRecovery=ShipAt;ChultYaw=ShipYaw;}   // (aboard, checked as Chult's points are)
+        if(ShipPoint(MenuTestPoint,ShipAt,ShipYaw))
+        {
+            bChult=true;ChultAt=ChultRecovery=ShipAt;ChultYaw=ShipYaw;   // (aboard, checked as Chult's points are)
+            FVector Back; if(ShipRespawn(ShipAt,Back)) ChultRecovery=Back;   // (aloft, the ending's checkpoints: a death returns him to the deck)
+        }
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
             MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():

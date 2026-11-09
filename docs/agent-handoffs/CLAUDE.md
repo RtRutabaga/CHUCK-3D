@@ -22,7 +22,8 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - The same from the leap with the whole cutscene (`-ChuckShipEndingFrom=leap`): failures=0, 8 shots, 3 yard leaps, thrown, into the burning rupture 99 cm from its middle, end card (`Local/ship-ending-12.log`, `-13.log`).
   - Stills are in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/ShipEnding/`.
   - Full ship test `-ChuckShipTest`: 21/21, ship check 0 (`Local/ship-full-ending.log`).
-- **Not checked:** nobody has listened to the lines in the game or judged their mix against the storm; a human has not played it; the package is not built yet (see below).
+  - Packaged `Builds/StormEndingCandidate`: Verify-Package 182 passes, with the ship test at 21/21 and the ending at 10/10 (`Local/verify-package-20261108-214833.log`). The menu check first failed on the aloft checkpoints, because its spawn and recovery expectations were the deck. Both the spawns and the test were fixed, and the package rebuilt and verified again (see Launcher).
+- **Not checked:** nobody has listened to the lines in the game or judged their mix against the storm; a human has not played it.
 - **Remaining flaws:**
   - The main course stays furled with flogging canvas at the yardarms, not set close-reefed.
   - There is no tug or work clip, and no jammed quarter block.
@@ -32,6 +33,9 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - The fall into Phlegethos ends on the end card.
 - **Contract compatibility:** new public members on `ADockNPC` and `AChuckCharacter` only; no rig or animation changes; the leap boost is applied by the ending, on the ship only.
 - **Binary/LFS:** 61 new voice `.uasset` files (LFS); 61 new WAVs under `SourceAssets/NPCs/Voice/` (LFS).
+- **Launcher:** promoted as StormEnding. It was rebuilt after the menu fix (the aloft checkpoints' spawns and expected recovery), and that build passed Verify-Package 182 (`Local/verify-package-20261108-234043.log`) and Verify-Menu 47/47 (`Local/verify-menu-storm-ending-3.txt`). The receipt names 6406aaf3; the build also contains the uncommitted menu fix, committed right after. The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions: the set close-reefed course, the cutscene's music, and the leaf's owner).
 
 ## November 8 — the fore course clear of the ratlines; the masts solid to the truck; the landing's leaves (Claude)
 
