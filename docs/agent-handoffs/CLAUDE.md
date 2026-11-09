@@ -2,6 +2,25 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 8 — the fore course clear of the ratlines; the masts solid to the truck; the landing's leaves (Claude)
+
+- **Asked:** stop the fore course intersecting the fore ratlines unrealistically; give every part of each mast collision so that above the topsail he can climb the highest part of the mast directly on the golden leaf; after the fall to Chult, keep the leaves' rustle on landing but cut it off so it is brief and realistic.
+- **Source:** `main` at 67dc301d (94772e06, the voice split, was committed meanwhile; no shared files).
+- **Changed** ([../SHIP.md](../SHIP.md#the-fore-course-clear-of-the-ratlines-the-masts-solid-to-the-truck-the-landings-leaves-november-8)):
+  - `ShipDeck.inl`: `CourseClew`/`CourseClewLead` (the fore course's clews at the ship's side, forward of the foremost shroud; sheet and tack to rail blocks); one hidden collision shell per mast round the topmast and topgallant, faired over the doubling to the truck; `CourseNetClearance`.
+  - `ShipSetting.cpp`: ship check `CHUCK_SHIP_COURSE` (canvas vs fore shrouds/ratlines) and `CHUCK_SHIP_MASTS`.
+  - `ChuckCharacter.cpp`: on the golden leaf the wall run's normal comes from the nearest of a fan of lines (0, ±8, ±16, ±30°), not the last line's hit normal, which spiralled off thin poles.
+  - `ShipTest.cpp`: trial `mast_climb` (both masts, aft/port/fore, to the truck; 21 trials); still `ShipPlay_MastTruck`; `-ChuckMastTrace`.
+  - `FallCutscene.h/.cpp`: landed leaves lie still and stay; the floor litter is heavy (falls 1.1–1.6 m/s, little drift); `CHUCK_FALL_CUTSCENE_LEAVES` at +1/+2/+4 s.
+  - `Tools/Verify-Package.ps1`: expects 21 ship trials, the course and mast checks, mast_climb, and no airborne litter 2 s after the landing.
+- **Tested:** editor full ship test 21/21, check 0 failures, course 0 crossings / 53 cm, masts 8/8, all six mast climbs to the truck, Jeffries 0.24 cm (`Local/ship-mast-full.log`); editor fall cutscene: airborne litter 17 → 0 → 0 at +1/+2/+4 s, test failures=0 (`Local/fall-leaves1.log`). Stills reviewed (`ForeShroudsPort`, `Sails`, `ShipPlay_MastTruck`, fall `T26.6`, `T29.0`). Packaged `Builds/MastsCandidate`: Verify-Package 182 passes (`Local/verify-package-20261108-160432.log`), ship 21/21 with all six mast climbs and the course check (`Local/verify-ship-20261108-164604.log`), fall litter airborne 19 → 0 → 0 (`Local/verify-fall*` of that run); Verify-Menu 44/44 (`Local/verify-menu-masts.txt`).
+- **Remaining flaws:** the crosstrees, caps and yards are still not solid (he passes through the topsail and topgallant yards climbing the fore face); climbing a topmast's fore face he passes through the topsail sail's head; the climb uses the wall-run clip; the fan normal changes all golden-leaf climbs (Chult trunks covered only by Verify-Package's tests); not played by hand.
+- **Contract compatibility:** no rig or animation changes; wall-run behaviour changed only under the golden leaf.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as Masts (receipt names 94772e06, the voice-split commit that landed meanwhile; the build is this uncommitted work on top of it). The 14 `Common/Materials` re-saves are still left uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the reef points, the fore ratlines torn loose and the jump to the foremast).
+
 ## November 8 — all the ship's rope; Jeffries' lashings; the floating coil (Claude)
 
 - **Asked:** "make the rest of the ship rigging rope look like our new good looking rope, also do this for the rope securing Jeffries (and it needs to be around him, not with parts of him passing through it impossibly). our current coiled rope decor is good as is but i did see one below deck that floats impossibly so make sure that doesnt happen".

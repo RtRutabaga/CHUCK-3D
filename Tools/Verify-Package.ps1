@@ -227,7 +227,10 @@ $shipProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-C
 if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_ESCAPE_TEST pass=1 plays=1 finishes=1 out=1 space=Arrival shots=3' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_CHECK failures=0 missing=0' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
-   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=20 passed=20 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_COURSE crossings=0 .* pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_MASTS solid=8 of=8' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TRIAL name=mast_climb pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=21 passed=21 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
     throw "Ship verification failed. Inspect $shipLog"
 }
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
@@ -294,6 +297,7 @@ if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHU
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_SCORE at=0\.0' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_END at=4[0-9.]+ skipped=0 landed=1 vanished=1 summoned=1 exhales=2' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_TEST failures=0 landing=1' -Quiet) -or
+   !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_LEAVES after=2 airborne=0 ' -Quiet) -or
    (Select-String -LiteralPath $fallLog -Pattern 'Fatal error:' -Quiet)) {
     throw "Fall-to-Chult cutscene verification failed. Inspect $fallLog"
 }

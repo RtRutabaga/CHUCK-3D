@@ -91,14 +91,16 @@ private:
     int32 Exhales = 0, Crashes = 0;
     FVector PantryStart = FVector::ZeroVector;
     float PantryYaw = 0;
-    struct FLeaf { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Age; float Life; };
+    // (2026-11-08: a leaf that reaches the floor lies still there; the floor litter he throws up is damp and heavy, back down
+    // in about a second and a half.)
+    struct FLeaf { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Age; float Life; float Sink = 60.f; float Drift = 30.f; bool bGrounded = false; };
     TArray<FLeaf> Leaves;
     float ShakeUntil = -1e9f;   // (the clock starts negative: no shake until set)
     int32 PartFrames[3] = {0, 0, 0};
     float PartTime[3] = {0, 0, 0}, PartWorst[3] = {0, 0, 0};
     void BuildStage();
     void HideDocks();
-    void Burst(const FVector& At, int32 Count, float Speed);
+    void Burst(const FVector& At, int32 Count, float Speed, bool bLitter = false);
     void UpdateLeaves(float DeltaSeconds);
     void UpdateChuck(float DeltaSeconds);
     void UpdateCamera();

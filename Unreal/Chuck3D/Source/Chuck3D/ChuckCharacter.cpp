@@ -2724,8 +2724,26 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         FHitResult Hit;
         FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckWallHold), false, this);
         const FVector Chest = Location + FVector(0, 0, 15);
-        const bool bWall = GetWorld()->LineTraceSingleByChannel(Hit, Chest, Chest - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + (IsStaminaLocked() ? 100.f : 8.f)), ECC_Visibility, Query);
-        if(bWall && IsStaminaLocked()) WallNormal=FVector(Hit.ImpactNormal.X,Hit.ImpactNormal.Y,0).GetSafeNormal();
+        bool bWall = GetWorld()->LineTraceSingleByChannel(Hit, Chest, Chest - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + (IsStaminaLocked() ? 100.f : 8.f)), ECC_Visibility, Query);
+        if (IsStaminaLocked())
+        {
+            // Following a curved face on the long climb: square to the nearest point of it, found by a small fan of lines
+            // round the last normal (2026-11-08: the ship's topmasts). The line's own hit normal is not used: on a thin pole
+            // a line along the last normal lands off to one side, and the normal there points further round each frame
+            // until the line misses the pole.
+            const FVector Ahead = -WallNormal;
+            float Best = 1e9f;
+            for (const float Deg : {0.f, -8.f, 8.f, -16.f, 16.f, -30.f, 30.f})
+            {
+                FHitResult Ray;
+                const FVector Dir = Ahead.RotateAngleAxis(Deg, FVector::UpVector);
+                if (!GetWorld()->LineTraceSingleByChannel(Ray, Chest, Chest + Dir * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 100.f), ECC_Visibility, Query)
+                    || FMath::Abs(Ray.ImpactNormal.Z) > .9f) continue;
+                const float D = static_cast<float>(FVector::Dist2D(Chest, Ray.ImpactPoint));
+                if (D < Best - .05f) { Best = D; Hit = Ray; }
+            }
+            if (Best < 1e8f) { bWall = true; WallNormal = FVector(Chest.X - Hit.ImpactPoint.X, Chest.Y - Hit.ImpactPoint.Y, 0).GetSafeNormal(); }
+        }
         const bool bLetGo = !bWallAuto && FVector::DotProduct(StickWorld(), -WallNormal) < -.3f;
         FVector Edge; bool bRoom = false;
         const FVector Face = Location - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f);

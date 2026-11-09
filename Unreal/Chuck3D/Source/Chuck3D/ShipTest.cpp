@@ -162,11 +162,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
     // (The chest and the storm come last: the crew's trials meet six of the ending's seven conditions, the chest the last.)
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, Ratlines, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm, StormWork };
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, Ratlines, MastClimb, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm, StormWork };
     static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
-        ET::Ratlines, ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm, ET::StormWork};
+        ET::Ratlines, ET::MastClimb, ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm, ET::StormWork};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
-        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("ratlines"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
+        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("ratlines"), TEXT("mast_climb"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
         TEXT("chest"), TEXT("storm"), TEXT("storm_work")};
     struct FRun
     {
@@ -180,6 +180,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         // The music's change of track at the companion (2026-11-02): when he arrived, and the switches before.
         double Arrived = -1; int32 Switches0 = 0;
         int32 FilmFrame = -1;   // -ChuckFenceFilm's stills taken
+        // The mast climb (2026-11-08): the runs up past the topsail yards that reached the truck, and the highest of this run.
+        int32 MastOk = 0; float MastTop = 0;
         // The sounds trial (2026-11-03): what was heard on deck.
         int32 DeckClash = 0, DeckFeet = 0, DeckRatsHeard = 0, DeckRatsHushed = 0, Creaks0 = 0; bool DeckMix = false;
         // The storm trial (2026-11-03): its stills, and what it measured on deck.
@@ -378,6 +380,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::DeckUp: Reset(EShipSpawn::Quarters); break;
             case ET::DeckDown: case ET::Quarterdeck: case ET::Rigging: case ET::Rail: case ET::Ratlines: Reset(EShipSpawn::Deck); break;
             case ET::YardDrop: Reset(EShipSpawn::Deck); Chuck->ResetAtLocation(SW(MainYardX, 70, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0)); break;
+            case ET::MastClimb: Reset(EShipSpawn::Deck); Run->MastOk = 0; break;
             case ET::CrewTalk: case ET::Fencers: case ET::Sounds: Reset(EShipSpawn::Deck); break;
             case ET::ChefChase: Reset(EShipSpawn::Arrival); break;
             case ET::Chest: Reset(EShipSpawn::Cabin); break;
@@ -683,6 +686,47 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     Run->bPass = Run->bMount && Run->bTop && NewDeaths == 0 && Chuck->GetLadderMounts() - Run->Mounts0 >= 3 && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck);
                 }
                 else if (Time > 10) Done = true;
+            }
+            break;
+        }
+        case ET::MastClimb:
+        {
+            // On the golden leaf, from just over a topsail yard, straight up the mast (user 2026-11-08): the topmast's head,
+            // over the doubling onto the topgallant, to the truck. Each mast, from aft, from the port side and from forward.
+            // (The spars' axes: TopmastX and GallantX in ShipDeck.inl.)
+            Limit = 80;
+            const int32 Runs = 6, K = Run->Sub / 2;
+            if (K >= Runs) { Done = true; Run->bPass = Run->MastOk == Runs && NewDeaths == 0; break; }
+            const float MastX = K < 3 ? MainMastX : ForeMastX, Top = K < 3 ? MainTopZ : ForeTopZ;
+            const float Tx = MastX + 24 + 17, Face = float(K % 3);
+            const FVector Toward = Face == 0 ? FVector(1, 0, 0) : Face == 1 ? FVector(0, -1, 0) : FVector(-1, 0, 0);
+            const TCHAR* FaceName = Face == 0 ? TEXT("aft") : Face == 1 ? TEXT("port") : TEXT("fore");
+            if (Run->Sub % 2 == 0)
+            {
+                // Beside the topmast, a little over the topsail yard, facing it.
+                const FVector From = Face == 0 ? FVector(Tx - 13.6f - 22, 0, Top + 790) : Face == 1 ? FVector(Tx, 13.6f + 22, Top + 790) : FVector(Tx + 31 + 22, 0, Top + 790);
+                Chuck->ResetAtLocation(SW(From.X, From.Y, From.Z)); Chuck->SetActorRotation(Toward.Rotation());
+                Chuck->LockStamina(30.f);
+                Run->MastTop = From.Z; Run->Sub += 1; Run->At = Now;
+                break;
+            }
+            // The stick toward the mast, as a player holds it (the topgallant stands 23 cm forward of the topmast's head).
+            {
+                const float Ax = FMath::Lerp(Tx, Tx + 23.f, FMath::Clamp((static_cast<float>(L.Z) - Top - 800.f) / 160.f, 0.f, 1.f));
+                const FVector ToMast = FVector(Ax - L.X, -L.Y, 0).GetSafeNormal();
+                Push(ToMast.IsNearlyZero() ? Toward : ToMast);
+            }
+            Run->MastTop = FMath::Max(Run->MastTop, static_cast<float>(L.Z));
+            if (FParse::Param(FCommandLine::Get(), TEXT("ChuckMastTrace")) && FMath::Fmod(Time, .1f) < .017f)
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_MAST_TRACE k=%d t=%.2f rel=(%.1f,%.1f,%.1f) gait=%s"), K, Time, L.X - Tx, L.Y, L.Z - Top, Chuck->GetGaitName());
+            const bool bTop = Run->MastTop > Top + 1300;
+            if (bTop && Time > 1.f && Run->Arrived < 0 && K == 4) { Run->Arrived = 0; Shot(TEXT("MastTruck")); }
+            if ((bTop && (Chuck->IsHanging() || Ground) && Time > 1.f) || Time > 12.f || L.Z < Top + 600)
+            {
+                Run->MastOk += bTop;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_MAST_CLIMB mast=%s face=%s top_cm=%.0f truck_cm=%.0f gait=%s ok=%d"), K < 3 ? TEXT("main") : TEXT("fore"), FaceName,
+                    Run->MastTop - DeckZ, Top + 1362 - DeckZ, Chuck->GetGaitName(), bTop ? 1 : 0);
+                Stop(); Run->Sub += 1; Run->At = Now; Run->Arrived = -1;
             }
             break;
         }

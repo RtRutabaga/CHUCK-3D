@@ -1664,6 +1664,28 @@ int32 AShipSetting::Check() const
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_COIL at=(%.0f,%.0f,%.0f) gap=%.1f resting=%d"), L.X, L.Y, L.Z, Gap, bResting);
     }
     Failures += Floating;
+    // The fore course stands clear of the fore ratlines (2026-11-08: it ran through the port net).
+    {
+        int32 Crossings = 0; float Clearance = 0;
+        CourseNetClearance(Crossings, Clearance);
+        const bool bClear = Crossings == 0 && Clearance > 15.f;
+        Failures += !bClear;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_COURSE crossings=%d clearance_cm=%.1f pass=%d"), Crossings, Clearance, bClear);
+    }
+    // The masts above the tops are solid to the truck (2026-11-08): a trace across each at the topmast and topgallant.
+    {
+        int32 Solid = 0;
+        for (const FMast* Mp : {&MainMast(), &ForeMast()})
+            for (float Z : {Mp->Top + 400.f, Mp->Top + 890.f, Mp->Top + 1100.f, Mp->Top + 1340.f})
+            {
+                const float X = Z < Mp->Top + 850.f ? TopmastX(*Mp) : GallantX(*Mp);
+                FHitResult Hit;
+                Solid += World->LineTraceSingleByChannel(Hit, ShipWorld(FVector(X - 80, 0, Z)), ShipWorld(FVector(X + 80, 0, Z)), ECC_Visibility, Q)
+                    && World->LineTraceSingleByChannel(Hit, ShipWorld(FVector(X, 80, Z)), ShipWorld(FVector(X, -80, Z)), ECC_Visibility, Q);
+            }
+        Failures += Solid != 8;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_MASTS solid=%d of=8"), Solid);
+    }
     Failures += Missing > 0;
     Failures += Ladders != 4 || Shrouds != 8;
     Failures += Grips != 40;   // (the course and topsail yards of both masts, 2026-11-05)

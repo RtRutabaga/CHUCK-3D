@@ -98,6 +98,22 @@ FVector ShroudLow(const FMast& M, float Side, int32 K) { const float X = M.X - 1
 FVector ShroudHigh(const FMast& M, float Side, int32 K) { return FVector(M.X - 66 + K * 10, Side * (TopHalfOf(M) - 6), M.Top - 14); }
 FVector TopShroudLow(const FMast& M, float Side, int32 K) { return FVector(M.X - 15 + K * 15, Side * (TopHalfOf(M) - 6), M.Top + 8); }
 FVector TopShroudHigh(const FMast& M, float Side, int32 K) { return FVector(TopmastX(M) - 6 + K * 4, Side * 14, M.Top + 864); }
+// The fore course's clews (2026-11-08, user: the sail must not pass through the fore ratlines). With the yard braced
+// 12 degrees its port (lee) yardarm swings aft, and the clews used to hang out over the sea, the port one aft among the
+// shrouds, so the canvas ran through the net. Now both clews come in to the ship's side, the lee one sheeted aft only as
+// far as just forward of the foremost shroud (as a sharp-braced course bears on its lee rigging), the weather one tacked
+// forward; the sail stands some 50 cm clear of every shroud and ratline (CHUCK_SHIP_COURSE). Side +1 port.
+FVector CourseClew(float Side)
+{
+    const float X = ForeMastX + (Side > 0 ? 60.f : 200.f);
+    return FVector(X, Side * (PostLine(X) - 10), DeckZ + 300);
+}
+// Where the clews' sheet (port, a little aft) and tack (starboard, forward) are made fast on the rail.
+FVector CourseClewLead(float Side)
+{
+    const float X = ForeMastX + (Side > 0 ? 40.f : 290.f);
+    return FVector(X, Side * (PostLine(X) - 4), RailZ + 3);
+}
 // The ratlines' foot on deck (2026-11-05): a short net from a sheer pole on the deck, inside the bulwark, out over the
 // rail to the shrouds just above it (NetJoinZ); leg K under shroud K.
 constexpr float NetIn = 45, NetJoinZ = 780;
@@ -437,6 +453,64 @@ void BuildRig(FParts& P)
         P.WoodDecor.B(TopmastX(M) - 14, GallantX(M) + 12, -14, 14, M.Top + 880, M.Top + 894);
         P.WoodDecor.Spar(FVector(GallantX(M), 0, M.Top + 800), FVector(GallantX(M), 0, M.Top + 1350), GallantR, 6, 10);
         P.WoodDecor.Spar(FVector(GallantX(M), 0, M.Top + 1350), FVector(GallantX(M), 0, M.Top + 1362), 9, 9, 10);
+        // The masts above the top are solid too (user 2026-11-08: on the golden leaf he can climb them right to the truck).
+        // One hidden, seamless shell round the topmast and topgallant (overlapping closed shapes would leave caps inside
+        // that his ledge test takes for edges): each section the hull of the two spars' circles there. Over the doubling,
+        // where the topgallant stands forward of the topmast's head, it fairs each face of one into the other with no ledge
+        // or overhang to stop a climb: the fore face slants out onto the topgallant's heel, the aft face and sides lean
+        // forward onto it over the topmast's head. The truck's top is the last hold.
+        {
+            const float Tx = TopmastX(M), Gx = GallantX(M);
+            auto Smooth = [](float T) { T = FMath::Clamp(T, 0.f, 1.f); return T * T * (3 - 2 * T); };
+            auto Section = [&](float Z, float& Ca, float& Ra, float& Cb, float& Rb)
+            {
+                const float H = Z - M.Top;
+                const float Rt = 17.f - 5.f * (H - 2) / 898.f, Rg = H < 800 ? GallantR : GallantR - 4.f * (H - 800) / 550.f;
+                const float In = Smooth((H - 680) / 120), Out = Smooth((H - 860) / 130);   // the topgallant coming in, the topmast going out
+                Ca = FMath::Lerp(Tx, Gx, Out); Ra = FMath::Lerp(Rt, Rg, Out);
+                Cb = FMath::Lerp(Tx, Gx, In); Rb = FMath::Lerp(Rt, Rg, In);
+                if (H > 1350) { Ra = Rb = 9; Ca = Cb = Gx; }   // the truck
+            };
+            TArray<float> Zs;
+            for (float H = -12; H < 680; H += 50) Zs.Add(M.Top + H);
+            for (float H = 680; H < 1000; H += 10) Zs.Add(M.Top + H);
+            for (float H = 1000; H < 1350; H += 50) Zs.Add(M.Top + H);
+            Zs.Append({M.Top + 1350, M.Top + 1350.5f, M.Top + 1362});
+            constexpr int32 Around = 24;
+            auto Ring = [&](float Z, TArray<FVector>& Out)
+            {
+                float Ca, Ra, Cb, Rb; Section(Z, Ca, Ra, Cb, Rb);
+                Out.Reset();
+                for (int32 K = 0; K < Around; ++K)
+                {
+                    const float An = K * 2 * PI / Around; const FVector D(FMath::Cos(An), FMath::Sin(An), 0);
+                    const bool bA = Ca * D.X + Ra >= Cb * D.X + Rb;
+                    Out.Add(FVector(bA ? Ca : Cb, 0, Z) + D * (bA ? Ra : Rb));
+                }
+            };
+            TArray<FVector> Lo, Hi;
+            Ring(Zs[0], Lo);
+            for (int32 I = 1; I < Zs.Num(); ++I)
+            {
+                Ring(Zs[I], Hi);
+                for (int32 K = 0; K < Around; ++K)
+                {
+                    const int32 K1 = (K + 1) % Around;
+                    auto Dir = [](int32 J) { const float An = J * 2 * PI / Around; return FVector(FMath::Cos(An), FMath::Sin(An), 0); };   // (outward)
+                    const FVector N0 = Dir(K), N1 = Dir(K1);
+                    P.Hidden.Quad(Lo[K], Lo[K1], Hi[K1], Hi[K], N0, N1, N1, N0);
+                }
+                Lo = Hi;
+            }
+            // Its ends: the heel under the top's floor, the truck's top.
+            for (int32 K = 0; K < Around; ++K)
+            {
+                const int32 K1 = (K + 1) % Around;
+                P.Hidden.Tri(FVector(Gx, 0, M.Top + 1362), Lo[K], Lo[K1], FVector::UpVector);
+            }
+            Ring(Zs[0], Lo);
+            for (int32 K = 0; K < Around; ++K) P.Hidden.Tri(FVector(Tx, 0, Zs[0]), Lo[K], Lo[(K + 1) % Around], -FVector::UpVector);
+        }
         // Crosstrees at the topmast head.
         P.WoodDecor.B(TopmastX(M) - 10, TopmastX(M) + 10, -90, 90, M.Top + 868, M.Top + 876);
         P.WoodDecor.B(TopmastX(M) - 40, TopmastX(M) + 40, -40, -32, M.Top + 868, M.Top + 876); P.WoodDecor.B(TopmastX(M) - 40, TopmastX(M) + 40, 32, 40, M.Top + 868, M.Top + 876);
@@ -574,6 +648,14 @@ void BuildRig(FParts& P)
             const FVector C = YardCentre(M, W);
             P.Hemp.Cord({C + FVector(-14, 0, 10), FVector(M.X + MastR + 6, 6, DeckZ + 80)}, 1.1f);
         }
+        // The fore course's sheet and tack, from its clews down to a block on the rail.
+        if (!bMain)
+            for (float Side : {1.f, -1.f})
+            {
+                const FVector Clew = CourseClew(Side), Lead = CourseClewLead(Side);
+                P.Hemp.Cord({Clew, Lead + FVector(0, 0, 6)}, 1.2f);
+                P.WoodDecor.Spar(Lead + FVector(0, 0, 1), Lead + FVector(0, 0, 11), 4.5f, 4.f, 8);   // the block
+            }
     }
     // ---- The stays: fore stay and fore topmast stay to the bowsprit (the staysails ride them), the main stays forward.
     const FMast& F = ForeMast(); const FMast& Mm = MainMast();
@@ -609,13 +691,8 @@ TArray<FSailDef> SailDefs()
         const float W = FVector::Dist(A, B);
         Out.Add({A, B, Dr, Dl, (YardNormal(M) + FVector(0, .28f, 0)).GetSafeNormal(), W * .12f, Phase, 0, Roach});
     };
-    // The fore course: its clews sheeted aft and down, its foot high enough over the deck for the crew.
-    {
-        const FQuat Q(FRotator(0, F.Brace, 0));
-        const FVector C0 = YardCentre(F, 0);
-        Square(F, 0, 20, FVector(C0.X, 0, 0) + Q.RotateVector(FVector(-70, F.CourseHalf + 10, 0)) + FVector(0, 0, DeckZ + 300),
-            FVector(C0.X, 0, 0) + Q.RotateVector(FVector(-70, -F.CourseHalf - 10, 0)) + FVector(0, 0, DeckZ + 300), 0, 30);
-    }
+    // The fore course: its clews at the ship's side (CourseClew), its foot high enough over the deck for the crew.
+    Square(F, 0, 20, CourseClew(1), CourseClew(-1), 0, 30);
     // The topsails and topgallants: their clews at the yardarms below.
     Square(F, 1, 14, YardEnd(F, 0, 1, 18) + FVector(4, 0, 10), YardEnd(F, 0, -1, 18) + FVector(4, 0, 10), 1.1f, 160);
     Square(F, 2, 10, YardEnd(F, 1, 1, 14) + FVector(4, 0, 8), YardEnd(F, 1, -1, 14) + FVector(4, 0, 8), 2.3f, 40);
@@ -673,6 +750,52 @@ FVector SailPoint(const FSailDef& S, float U, float V, float T)
     const float Gust = 1.f + GSailWind * (.22f + .06f * FMath::Sin(T * 2 * PI / 4.1f + S.Phase));
     P += S.Fill * (S.Depth * Shape * Breath * Gust + Flutter);
     return SailGiveWay(S, P);
+}
+// The fore course against the fore lower shrouds and their ratlines (2026-11-08): how many times any of them passes
+// through the canvas, and the canvas's least clearance from them, over calm and gale and the sail's breathing.
+void CourseNetClearance(int32& Crossings, float& Clearance)
+{
+    const FSailDef S = SailDefs()[0];
+    const float Wind0 = GSailWind, Flutter0 = GFlutter, Body0 = GSailBodyR;
+    GSailBodyR = 0;
+    struct FSeg { FVector A, B; float R; };
+    TArray<FSeg> Segs;
+    const FMast& M = ForeMast();
+    for (float Side : {1.f, -1.f})
+    {
+        FVector Low[4], High[4];
+        for (int32 K = 0; K < 4; ++K) { Low[K] = ShroudLow(M, Side, K); High[K] = ShroudHigh(M, Side, K); Segs.Add({Low[K], High[K], 2.2f}); }
+        for (float Z = Low[0].Z + 38; Z < M.Top - 30; Z += 38)
+            for (int32 K = 0; K < 3; ++K)
+            {
+                auto At = [&](int32 J) { return FMath::Lerp(Low[J], High[J], (Z - Low[J].Z) / (High[J].Z - Low[J].Z)); };
+                Segs.Add({At(K), At(K + 1), .9f});
+            }
+    }
+    constexpr int32 NU = 32, NV = 24;
+    const float States[][3] = {{0, 0, 0}, {0, 3, 1}, {1, 1, 2}, {1, 5, 7.7f}, {1, 2.2f, 13}};   // wind, time, the canvas's clock
+    Crossings = 0; Clearance = 1e9f;
+    TArray<FVector> G; G.SetNum((NU + 1) * (NV + 1));
+    for (const auto& St : States)
+    {
+        GSailWind = St[0]; GFlutter = St[2];
+        for (int32 J = 0; J <= NV; ++J) for (int32 I = 0; I <= NU; ++I) G[J * (NU + 1) + I] = SailPoint(S, I / float(NU), J / float(NV), St[1]);
+        for (const FSeg& Sg : Segs)
+        {
+            const FBox Box = FBox(TArray<FVector>{Sg.A, Sg.B}).ExpandBy(5);
+            for (const FVector& P : G) Clearance = FMath::Min(Clearance, static_cast<float>(FMath::PointDistToSegment(P, Sg.A, Sg.B)) - Sg.R);
+            for (int32 J = 0; J < NV; ++J)
+                for (int32 I = 0; I < NU; ++I)
+                {
+                    const FVector& A = G[J * (NU + 1) + I]; const FVector& B = G[J * (NU + 1) + I + 1];
+                    const FVector& C = G[(J + 1) * (NU + 1) + I + 1]; const FVector& D = G[(J + 1) * (NU + 1) + I];
+                    if (!Box.Intersect(FBox(TArray<FVector>{A, B, C, D}))) continue;
+                    FVector Hit, N;
+                    Crossings += FMath::SegmentTriangleIntersection(Sg.A, Sg.B, A, B, C, Hit, N) || FMath::SegmentTriangleIntersection(Sg.A, Sg.B, A, C, D, Hit, N);
+                }
+        }
+    }
+    GSailWind = Wind0; GFlutter = Flutter0; GSailBodyR = Body0;
 }
 // The flag (user 2026-11-02: more prominent): flown as a ship's colours were under sail, from the spanker gaff's peak over
 // the quarterdeck, hoisted on its halyard just aft of the peak and streaming to leeward (port, as the spanker fills), clear

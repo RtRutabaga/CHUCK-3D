@@ -317,16 +317,18 @@ void AFallCutscene::HideDocks()
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_DOCKS_HIDDEN actors=%d"), Hidden);
 }
 
-void AFallCutscene::Burst(const FVector& At, int32 Count, float Speed)
+void AFallCutscene::Burst(const FVector& At, int32 Count, float Speed, bool bLitter)
 {
     for (int32 I = 0; I < Count; ++I)
     {
         FLeaf L;
-        L.Position = At + FMath::VRand() * FMath::FRandRange(10.f, 90.f);
+        L.Position = At + FMath::VRand() * FMath::FRandRange(10.f, bLitter ? 60.f : 90.f);
         L.Velocity = FMath::VRand() * FMath::FRandRange(.3f, 1.f) * Speed + FVector(0, 0, Speed * .25f);
         L.Rotation = FRotator(FMath::FRandRange(0.f, 360.f), FMath::FRandRange(0.f, 360.f), FMath::FRandRange(0.f, 360.f));
         L.Spin = FRotator(FMath::FRandRange(-300.f, 300.f), FMath::FRandRange(-300.f, 300.f), FMath::FRandRange(-300.f, 300.f));
         L.Age = 0; L.Life = FMath::FRandRange(5.f, 9.f);
+        // The floor's litter is wet and heavy: it drops back fast and hardly drifts (a brief rustle, not a flurry).
+        if (bLitter) { L.Sink = FMath::FRandRange(110.f, 160.f); L.Drift = FMath::FRandRange(6.f, 12.f); }
         Leaves.Add(L);
     }
 }
@@ -340,12 +342,14 @@ void AFallCutscene::UpdateLeaves(float DeltaSeconds)
     {
         FLeaf& L = Leaves[I];
         L.Age += DeltaSeconds;
+        // Down on the floor it lies where it fell (it stays: no leaf vanishes off the ground).
+        if (L.bGrounded) continue;
         if (L.Age > L.Life) { Leaves.RemoveAtSwap(I); continue; }
-        // Thrown out, then caught by the air: a slow fluttering sink.
+        // Thrown out, then caught by the air: a fluttering sink.
         L.Velocity *= FMath::Max(0.f, 1.f - 2.5f * DeltaSeconds);
-        L.Velocity.Z = FMath::Max(L.Velocity.Z - 300.f * DeltaSeconds, -60.f);
-        L.Position += (L.Velocity + FVector(FMath::Sin(L.Age * 3.f + I) * 30.f, FMath::Cos(L.Age * 2.3f + I) * 30.f, 0)) * DeltaSeconds;
-        if (L.Position.Z <= Floor) { L.Position.Z = Floor; L.Velocity = FVector::ZeroVector; L.Spin = FRotator::ZeroRotator; L.Rotation.Pitch = 0; L.Rotation.Roll = 0; }
+        L.Velocity.Z = FMath::Max(L.Velocity.Z - 300.f * DeltaSeconds, -L.Sink);
+        L.Position += (L.Velocity + FVector(FMath::Sin(L.Age * 3.f + I) * L.Drift, FMath::Cos(L.Age * 2.3f + I) * L.Drift, 0)) * DeltaSeconds;
+        if (L.Position.Z <= Floor) { L.Position.Z = Floor; L.Velocity = FVector::ZeroVector; L.Spin = FRotator::ZeroRotator; L.Rotation.Pitch = 0; L.Rotation.Roll = 0; L.bGrounded = true; }
         L.Rotation += L.Spin * DeltaSeconds;
     }
     // None right at the lens, where a leaf is only a blur.
@@ -635,7 +639,7 @@ void AFallCutscene::Events(float From, float To)
     {
         // A body hitting the ground from the sky: litter thrown up, a heavy
         // thud, the camera jarred.
-        Burst(G + FVector(0, 0, 20), 70, 380.f);
+        Burst(G + FVector(0, 0, 20), 70, 300.f, true);
         if (ThudSound) UGameplayStatics::PlaySound2D(this, ThudSound, 1.f);
         if (LandSound) UGameplayStatics::PlaySound2D(this, LandSound, ThudSound ? .5f : 1.f, .62f);
         if (LeafCrashes.Num()) UGameplayStatics::PlaySound2D(this, LeafCrashes[0], .5f, .7f);
@@ -666,6 +670,15 @@ void AFallCutscene::Events(float From, float To)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_SHOT t=%.1f shot=%s chuck=%s camera=%s"), At, ShotName(At), C ? *C->GetActorLocation().ToString() : TEXT("-"), *Camera->GetActorLocation().ToString());
             }
         if (Crossed(10.f)) UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_MUSIC playing=%d"), IsMusicPlaying());
+        // The rustle round him is over in a moment: litter still in the air near him after it is a fault.
+        for (float After : {1.f, 2.f, 4.f})
+            if (Crossed(Impact + After))
+            {
+                int32 Air = 0, Settled = 0;
+                for (const FLeaf& L : Leaves)
+                    if (FVector::DistSquared2D(L.Position, G) < FMath::Square(500.f) && L.Position.Z < G.Z + 400.f) { if (L.bGrounded) ++Settled; else ++Air; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_LEAVES after=%.0f airborne=%d grounded=%d"), After, Air, Settled);
+            }
     }
 }
 
