@@ -86,7 +86,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl"), TEXT("SwingSlip"), TEXT("FallFlail")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -465,6 +465,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     RestoreSlideCamera(); bAutoClimb = false;
     Sanity = MaxSanity; AstralPhase = EAstral::None; bPendingVanish = false; SetAstralHidden(false);
     bHeldVanish = false; HeldBy.Reset(); HeldLimp = 0; HeldBiteAt = -1;
+    if (bSceneHold) { bSceneHold = false; SetActorEnableCollision(true); }
     TalkingTo.Reset(); TalkLine = 0;
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
@@ -525,7 +526,7 @@ float AChuckCharacter::Period(EClip Clip) const
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
     const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang || Clip == EClip::ShimmyLeft || Clip == EClip::ShimmyRight
-        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl;
+        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl || Clip == EClip::FallFlail;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -3389,6 +3390,36 @@ void AChuckCharacter::CatchSwingGrip(int32 Index)
     Gait=EGait::Air;
     EnterSwing(Index,false);
 }
+void AChuckCharacter::BeginSceneHold()
+{
+    bSceneHold=true;
+    auto* Movement=GetCharacterMovement();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
+    bBodyPitchLive=false; BodyPitch=0; WallSideTilt=0; LadderIndex=-1;
+    Gait=EGait::Air;
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    SetClip(EClip::SwingSlip,0,.12f);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_SCENE_HOLD at=%s"),*GetActorLocation().ToString());
+}
+void AChuckCharacter::SetSceneClip(int32 Which, float Time, float FadeSeconds)
+{
+    const EClip Clip=Which==0 ? EClip::SwingSlip : EClip::FallFlail;
+    if(Base!=Clip) SetClip(Clip,Time,FadeSeconds);
+    BaseTime=Time;
+}
+float AChuckCharacter::GetSceneClipLength(int32 Which) const
+{
+    const UAnimSequence* S=Clips[static_cast<int32>(Which==0 ? EClip::SwingSlip : EClip::FallFlail)];
+    return S ? S->GetPlayLength() : 1.f;
+}
+void AChuckCharacter::SetScenePose(const FVector& Centre, const FQuat& Rotation)
+{
+    SetActorLocationAndRotation(Centre,Rotation,false,nullptr,ETeleportType::TeleportPhysics);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+}
 void AChuckCharacter::EndDemo()
 {
     bDemoEnded=true;
@@ -3442,6 +3473,11 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     if(bDemoEnded)
     {
         if(PC && PC->WasInputKeyJustPressed(EKeys::Escape)) Quit();
+        return;
+    }
+    if(bSceneHold)
+    {
+        UpdateCutscenePose(DeltaSeconds);
         return;
     }
     if(bCutscene)

@@ -2,6 +2,86 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 9 (late night) — the storm ending: lines heard over the storm; a great sea knocks her over and Chuck loses his grip (Claude)
+
+- **Asked:**
+  - The storm dialogue is too quiet, above all once the storm intensifies.
+  - The cutscene made Chuck look as if he jumped into the rupture. Instead, a big wave should knock the ship over, and a new animation should show him losing his grip, so that he falls into the rupture without it looking intentional.
+  - More cinematic shots of the ship from further out, showing the storm's ferocity.
+- **Source:** `main` at 0f5e52ef.
+- **Changed:**
+  - **Volume:**
+    - `DockNPC.h/.cpp`: `SetVoiceVolume`.
+    - `ShipEnding.cpp`:
+      - Every ship line plays at ×1.4, plus .3×Intense (+3 to +5.6 dB).
+      - Cutscene lines use an unattenuated, unspatialized `SceneVoice`.
+    - `ShipStorm.cpp`:
+      - The storm's loops (rain, gale, canvas, sea) duck to 40% under any line spoken in the ship, then come back about 1 s after it.
+      - New `GetSpeechDuck`.
+  - **Knock-down:**
+    - `ShipSetting.h/.cpp`:
+      - `SetKnock(RollDeg, Weight)` blends the sea's roll to a held heel.
+      - `GetSeaUp` and `GetSeaTurn`.
+      - The ship still never moves; the sea turns round her.
+    - `ShipStorm.cpp`:
+      - `DeckWaveNow` gains `From`, so a sea can break from either side (mirrored mesh, normals and shove).
+      - New `BillowNow`.
+  - **Chuck:**
+    - `Tools/build_chuck_v1.py`: new clips `SwingSlip` (37 f: the yard jolts, the right paw is torn off and claws back, the left peels off at 70%) and `FallFlail` (24 f loop, clawing upward).
+    - Built in Blender 4.5.14 (`Local/chuck-slip-blender.log`).
+    - Only the two new FBX files, the manifest and the .blend were kept. The other rewritten FBX files were restored.
+    - Imported with `Import-ChuckV1.ps1 -Clips SwingSlip,FallFlail`.
+    - `ChuckCharacter.h/.cpp`: a cutscene hold mode (`BeginSceneHold`, `SetSceneClip`, `SetScenePose`). It is inert outside the hold.
+  - **Cutscene** (`ShipEndingScene.h/.cpp`), 11 shots, about 42 s:
+    - Crosstrees, then four wide shots in the sea's frame with a level horizon:
+      - SeaLevel off her lee bow.
+      - Aerial off her weather quarter, with lightning.
+      - Astern, low, with lightning ahead.
+      - Comber, from ahead.
+    - The great sea (`M_ShipComber`, `Tools/create_ship_comber_material.py`) rises to 13 m on the weather side, curls, and breaks on her beam at 37.3 s.
+    - Spray, billows and two deck seas follow. She is knocked to 26° toward his side, with an overshoot, and the camera shakes.
+    - Grip shot: he swings out after the true vertical (~41°) and loses his grip (JEF_06 at 38.5 s).
+    - Below shot: he falls straight down along the sea's up (~2 s) into the burning rupture.
+    - His landing is predicted from the heel (`PredictFall`). The ruptures follow the tilted sea.
+  - `ShipEndingTest.cpp`:
+    - Requires a heel of at least 20° and 10+ shots.
+    - Logs `storm_duck_min` and `heel_deg`.
+    - New `-ChuckShipSceneSide=1` option climbs the larboard shrouds.
+  - Docs: `docs/regions/SHIP-STORM-ENDING.md` (beat 7, the shot list, the voice bullet) and `docs/HANDOFF.md`.
+- **Tested:**
+  - Editor ending test:
+    - Full run, starboard: failures=0, shots=11, `storm_duck_min=0.40`.
+    - From the leap: missed the rupture's centre by 35–42 cm, heel 28.5°, swing ~41°, fall 1.97 s.
+    - Port side: failures=0, missed by 35 cm.
+    - Logs: `Local/ship-knock-*.log`. Stills: `Local/ship-knock/`.
+  - Packaged `Builds/KnockCandidate`:
+    - First Verify-Package run: the known temple `wizard_seal` flake (`max_coverage=0.25`, `Local/verify-temple-heroes-20261109-210013.log`).
+    - Second run: every region test passed, ship ending included (`Local/verify-ship-ending-20261109-220154.log`: scene pass, heel 28.6°, missed by 40 cm). But the smoke test's roll drifted 2.04 cm sideways against a 2 cm limit (`Local/verify-package-20261109-210738.log`; earlier builds 1.80).
+    - Smoke re-run on the same build: 1.80 cm, `CHUCK_TEST_COMPLETE failures=0`, 152 passes (`Local/knock-smoke-rerun.log`). It was promoted on that log.
+    - The roll never touches the new code, so the 2.04 cm was a timing wobble near the limit.
+- **Not checked:**
+  - Nobody has listened to the new loudness, or played the ending by hand.
+  - The frame cost of the shadowed rift lights is not measured.
+  - Verify-Menu was not run.
+- **Remaining flaws:**
+  - The wave's back slope reads pale, a little like a snowy hillside.
+  - In the Grip shot the clewline passes through Chuck.
+  - Under the 26° tilt the Below shot's rupture looks skewed (its shader assumes a level disc).
+  - The sea round it looks rocky from above (pre-existing).
+  - Rain and spray tilt in frame during the knock.
+  - He still falls into the burning (Phlegethos) rupture, as the plan says. The user's request said "astral sea rupture"; ask whether he should land in an Astral one instead.
+- **Contract compatibility:**
+  - Two new clips appended to `EClip` (after Crawl). The rig is unchanged.
+  - Existing clip indices are unchanged.
+- **Binary/LFS:**
+  - 2 FBX files, `Chuck_V1.blend`, 2 clip uassets and `M_ShipComber.uasset`.
+- **Launcher:**
+  - Promoted as Knock.
+  - The receipt names 0f5e52e; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (whether he lands in an Astral or the burning rupture, then the fall into Phlegethos, and your answers to the plan's open questions).
+
 ## November 9 (night) — the heroes' hair in the beholder encounter: fighter dark again, ranger auburn (Claude)
 
 - **Asked:** in the beholder encounter the fighter's hair reads white/grey, and the ranger's reads very blonde/white over very dark roots. Fix it.

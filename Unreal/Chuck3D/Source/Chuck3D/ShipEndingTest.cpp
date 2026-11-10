@@ -58,7 +58,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     {
         int32 Phase = 0, Sub = 0, Failures = 0, Shots = 0, Leaps0 = 0;
         double At = 0, Start = 0, Next = 0;
-        TArray<FString> Results; TSet<FString> ShotsSeen; bool bLeafShot = false;
+        TArray<FString> Results; TSet<FString> ShotsSeen; bool bLeafShot = false; float DuckMin = 1.f;
         FTimerHandle Timer; bool bDone = false, bStorm = false;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Start = Run->At = World->GetTimeSeconds();
@@ -76,6 +76,8 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         const bool Ground = M->IsMovingOnGround();
         auto Push = [&](const FVector& D) { Chuck->SetTestStickWorld(D); Chuck->AddMovementInput(D, 1.f, true); };
         auto Stop = [&]() { Chuck->SetTestStick(FVector2D::ZeroVector); };
+        // The storm's sounds under the crew's lines (2026-11-09): the lowest they sank.
+        if (const AShipStorm* Sounds = AShipStorm::Get(World)) Run->DuckMin = FMath::Min(Run->DuckMin, Sounds->GetSpeechDuck());
         auto Shot = [&](const FString& Name) { if (Run->Shots < 40) { ++Run->Shots; FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("ShipEnding") / (Name + TEXT(".png")), true, false); } };
         auto Place = [&](float X, float Y, float Z, float Yaw) { Chuck->ResetAtLocation(SW(X, Y, Z)); Chuck->GetCharacterMovement()->StopMovementImmediately(); Chuck->SetActorRotation(FRotator(0, Yaw, 0)); Chuck->SetRunHeld(false); Stop(); Chuck->Recenter(); };
         auto Next = [&](const TCHAR* Name, bool bPass, const FString& Note)
@@ -200,16 +202,18 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         case 8:
         {
             // From where he landed on the fore top, to the foot of the starboard topmast shrouds and up them: at their head the cutscene.
+            // (-ChuckShipSceneSide=1: the larboard ones, for the cutscene on that side.)
+            static const float Up = []{ float V = -1.f; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipSceneSide="), V); return V >= 0.f ? 1.f : -1.f; }();
             if (Run->Sub == 0)
             {
-                const FVector2D To(ForeMastX, -84.f);
+                const FVector2D To(ForeMastX, Up * 84.f);
                 const FVector2D D = To - FVector2D(L.X, L.Y);
                 if (D.Size() < 6.f) { Run->Sub = 1; Run->At = Now; }
                 else Push(FVector(D.X, D.Y, 0).GetSafeNormal() * .5f);
                 if (T > 8.f) Next(TEXT("fore_climb"), false, TEXT("no_foot=1"));
                 break;
             }
-            Push(FVector(0, -1, 0));
+            Push(FVector(0, Up, 0));
             if (E->GetStep() == AShipEnding::EStep::Scene) { Shot(TEXT("ForeHead")); Next(TEXT("fore_climb"), true, TEXT("")); }
             else if (T > 25.f) Next(TEXT("fore_climb"), false, FString::Printf(TEXT("no_scene=1 gait=%s"), Chuck->GetGaitName()));
             break;
@@ -226,15 +230,16 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 // (A little into each shot, once its camera has settled.)
                 static double ShotFirst = 0; static FString Pending;
                 if (Pending != ShotName) { Pending = ShotName; ShotFirst = Now; }
-                else if (Now - ShotFirst > (ShotName == TEXT("Gust") ? .35 : ShotName == TEXT("Below") ? .9 : 1.6)) { Run->ShotsSeen.Add(ShotName); Shot(TEXT("Scene_") + ShotName); }
+                else if (Now - ShotFirst > (ShotName == TEXT("Grip") ? .6 : ShotName == TEXT("Below") ? .9 : 1.6)) { Run->ShotsSeen.Add(ShotName); Shot(TEXT("Scene_") + ShotName); }
             }
             if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipEndingSkip")) && S->GetClock() > 8.f && !S->IsFinished()) const_cast<AShipForeTopsailScene*>(S)->Skip();
             if (S->IsFinished() && Chuck->HasDemoEnded())
             {
                 const bool bSkip = FParse::Param(FCommandLine::Get(), TEXT("ChuckShipEndingSkip"));
-                const bool bPass = bSkip ? true : Run->ShotsSeen.Num() >= 7 && S->GetYardLeaps() == 3 && S->HasThrown() && S->HasPlunged() && S->GetPlungeMiss() < 300.f
-                    && E->GetLineCount(TEXT("JEF_01")) == 1 && E->GetLineCount(TEXT("JEF_06")) == 1;
-                Next(TEXT("scene"), bPass, FString::Printf(TEXT("shots=%d leaps=%d thrown=%d plunged=%d miss_cm=%.0f skipped=%d"), Run->ShotsSeen.Num(), S->GetYardLeaps(), S->HasThrown(), S->HasPlunged(), S->GetPlungeMiss(), bSkip));
+                // (2026-11-09: the great sea knocks her over at least 20 degrees and he loses his grip: eleven shots.)
+                const bool bPass = bSkip ? true : Run->ShotsSeen.Num() >= 10 && S->GetYardLeaps() == 3 && S->HasThrown() && S->HasPlunged() && S->GetPlungeMiss() < 300.f
+                    && S->GetMaxHeel() >= 20.f && E->GetLineCount(TEXT("JEF_01")) == 1 && E->GetLineCount(TEXT("JEF_06")) == 1;
+                Next(TEXT("scene"), bPass, FString::Printf(TEXT("shots=%d leaps=%d thrown=%d plunged=%d miss_cm=%.0f heel_deg=%.1f skipped=%d"), Run->ShotsSeen.Num(), S->GetYardLeaps(), S->HasThrown(), S->HasPlunged(), S->GetPlungeMiss(), S->GetMaxHeel(), bSkip));
                 Run->Next = Now + 2.0;
             }
             else if (T > 70.f) Next(TEXT("scene"), false, TEXT("timeout=1"));
@@ -245,8 +250,8 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 0) { Shot(TEXT("EndCard")); Run->Sub = 1; }
             if (Now < Run->Next + 1.0) break;
             Run->bDone = true;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_ENDING_TEST failures=%d trials=%s lines_spoken=%d leaps=%d guides=%d seconds=%.0f"), Run->Failures, *FString::Join(Run->Results, TEXT(" ")),
-                E->GetLinesSpoken(), E->GetLeaps(), E->GetGuides(), Now - Run->Start);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_ENDING_TEST failures=%d trials=%s lines_spoken=%d leaps=%d guides=%d storm_duck_min=%.2f seconds=%.0f"), Run->Failures, *FString::Join(Run->Results, TEXT(" ")),
+                E->GetLinesSpoken(), E->GetLeaps(), E->GetGuides(), Run->DuckMin, Now - Run->Start);
             FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0);
             break;
         }

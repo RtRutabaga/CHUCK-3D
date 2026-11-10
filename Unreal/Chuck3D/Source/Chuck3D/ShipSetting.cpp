@@ -1441,8 +1441,8 @@ void AShipSetting::Rock()
     const float Roll = (FMath::Lerp(1.5f, 6.5f, StormSea) + 3.5f * StormIntense) * FMath::Sin(RollPhase) + (1.1f * StormSea + 1.f * StormIntense) * FMath::Sin(ChopPhase)
         + 3.5f * FMath::Min(StormWind, 1.f) + 1.f * StormIntense;
     const float Pitch = (FMath::Lerp(.6f, 3.f, StormSea) + 2.2f * StormIntense) * FMath::Sin(PitchPhase + .8f) + (.7f * StormSea + .8f * StormIntense) * FMath::Sin(ChopPhase * 1.37f + 1.f);
-    Tilt = FVector2D(Pitch, Roll);
-    const FQuat Q(FRotator(Pitch, 0, Roll));
+    Tilt = FVector2D(FMath::Lerp(Pitch, Pitch * .35f, KnockWeight), FMath::Lerp(Roll, KnockRoll, KnockWeight));
+    const FQuat Q(FRotator(Tilt.X, 0, Tilt.Y));
     const FVector Nn = Q.RotateVector(FVector::UpVector);
     if (SeaMid) SeaMid->SetVectorParameterValue(TEXT("Tilt"), FLinearColor(-Nn.X / Nn.Z, -Nn.Y / Nn.Z, 0, 0));
     if (Sun) Sun->SetWorldRotation(Q * SunBase);

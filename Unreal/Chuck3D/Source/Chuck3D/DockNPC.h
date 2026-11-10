@@ -366,6 +366,8 @@ public:
     float SpeakLine(const TCHAR* Npc, const TCHAR* Id, class USoundAttenuation* Attenuation = nullptr);
     /** Stop whatever he is saying, fading over Fade s. */
     void StopSpeaking(float Fade = .2f);
+    /** Scales this NPC's voice from now on (the ship's storm: shouted over the gale). */
+    void SetVoiceVolume(float Volume);
     /** Stop the ambient line (and its loop) after Delay s, fading out over Fade s. */
     void StopAmbient(float Delay = 0.f, float Fade = .25f);
     bool IsAmbientSpeaking() const { return bAmbientVoice && IsSpeaking(); }

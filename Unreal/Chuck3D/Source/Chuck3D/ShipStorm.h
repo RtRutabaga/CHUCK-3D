@@ -114,7 +114,9 @@ public:
     int32 GetDeckWaves() const { return DeckWaves; }
     int32 GetWaveShoves() const { return WaveShoves; }
     /** (Tests and stills) a sea breaking over the weather rail now, its middle at X (ship frame), Size about 1. */
-    void DeckWaveNow(float X, float Size = 1.f);
+    void DeckWaveNow(float X, float Size = 1.f, float From = -1.f);
+    /** (The storm ending's cutscene) spume billows now at At (world). */
+    void BillowNow(const FVector& At, int32 Count, float Size) { Billow(At, Count, Size); }
     /** Spume puffs shown now (the flipbook's billows). */
     int32 GetPuffsShown() const { return PuffsShown; }
 private:
@@ -158,6 +160,10 @@ private:
     // The loops: rain on deck, rain overhead (below decks), the gale, the wind heard below, the canvas flogging, the heavy sea.
     UPROPERTY() TArray<class UAudioComponent*> Loops;
     float LoopNow[6] = {};
+    float SpeechDuck = 1.f, SpeechQuiet = 99.f;   // the loops under the crew's lines
+public:
+    float GetSpeechDuck() const { return SpeechDuck; }
+private:
     UPROPERTY() TArray<class USoundBase*> NearThunder;
     UPROPERTY() TArray<class USoundBase*> FarThunder;
     UPROPERTY() TArray<class USoundBase*> Slams;
@@ -169,7 +175,8 @@ private:
     void BuildRupture(float Open);
     UPROPERTY() class UProceduralMeshComponent* RuptureMesh = nullptr;
     UPROPERTY() class UPointLightComponent* RuptureLight = nullptr;
-    struct FDeckWave { float Age = 0.f, Size = 1.f, X0 = 0.f, X1 = 0.f; bool bShoved = false; };
+    // From: the rail it comes over (-1 starboard, the weather side; +1 port: the ending's knock-down, 2026-11-09).
+    struct FDeckWave { float Age = 0.f, Size = 1.f, X0 = 0.f, X1 = 0.f, From = -1.f; bool bShoved = false; };
     TArray<FDeckWave> Waves;
     float NextWave = 30.f;
     int32 DeckWaves = 0, WaveShoves = 0, PuffsShown = 0;

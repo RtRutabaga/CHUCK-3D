@@ -2494,6 +2494,12 @@ float ADockNPC::SpeakLine(const TCHAR* Npc, const TCHAR* Id, USoundAttenuation* 
     return NPCVoiceData::Lines[VoiceLines[Index]].Seconds;
 }
 
+void ADockNPC::SetVoiceVolume(float Volume)
+{
+    EnsureVoiceAudio();
+    if (VoiceAudio) VoiceAudio->SetVolumeMultiplier(Volume);
+}
+
 void ADockNPC::StopSpeaking(float Fade)
 {
     if (IsSpeaking() && VoiceAudio) VoiceAudio->FadeOut(Fade, 0.f);

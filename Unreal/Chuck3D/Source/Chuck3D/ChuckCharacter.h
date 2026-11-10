@@ -37,6 +37,13 @@ public:
     void EndDemo();
     /** Take hold of swing grip Index now (GetChuckSwingGrips; the ship's ending cutscene puts him on the fore topsail yard). */
     void CatchSwingGrip(int32 Index);
+    /** The ship's storm ending (2026-11-09): the cutscene holds him (no gait, physics or collision) and places him each
+     *  frame (SetScenePose); he plays its clip: 0 losing his grip on the yard (SwingSlip), 1 falling (FallFlail). */
+    void BeginSceneHold();
+    void SetSceneClip(int32 Which, float Time, float FadeSeconds);
+    float GetSceneClipLength(int32 Which) const;
+    void SetScenePose(const FVector& Centre, const FQuat& Rotation);
+    bool IsSceneHeld() const { return bSceneHold; }
     /** Begin at an explicit checkpoint with fresh traversal, fall and camera state. */
     void ResetAtLocation(const FVector& Location);
     /** Death/fall recovery uses the current area's entrance. R remains a dock reset. */
@@ -416,6 +423,7 @@ private:
     friend class AFallCutscene;
     bool bDemoEnded = false;
     bool bCutscene = false;
+    bool bSceneHold = false;
     TWeakObjectPtr<class AFallCutscene> FallScene;
     void BeginFallCutscene();
     /** In the cutscene the pose is the clip it sets (Base/BaseTime), with no gait logic or foot IK. */
@@ -455,7 +463,7 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
     enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl };
     EGait Gait = EGait::Idle;

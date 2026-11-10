@@ -108,6 +108,7 @@ private:
     FString LastLine;
     TMap<FString, int32> Said;
     UPROPERTY() USoundAttenuation* Shout = nullptr;
+    UPROPERTY() USoundAttenuation* SceneVoice = nullptr;   // (the cutscene's: unattenuated, the camera often far off)
     // Guidance: the situation he is in, how long, and what has been said there.
     int32 Situation = -1, GuideSaid = 0;
     float SituationTime = 0.f, NextGuideIn = -1.f, ClearAfter = 0.f;

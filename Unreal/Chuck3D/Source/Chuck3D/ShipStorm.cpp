@@ -748,12 +748,19 @@ void AShipStorm::TickSound(float Dt, bool bBelow)
         bBelow ? Wind * .85f : Wind * .15f,
         bBelow ? 0.f : Wind * .45f,
         (bBelow ? Sea * .3f : Sea * .7f * (1.f - .4f * Up)) * (1.f + .35f * Intense) };
+    // Under the crew's shouted lines (user 2026-11-09: hard to hear over the storm) the rain, the gale, the canvas and the
+    // sea sink about 8 dB, quickly, and come back over a second or so after the line.
+    bool bSpeech = false;
+    for (const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All()) bSpeech |= N.IsValid() && N->IsSpeaking() && InShip(N->GetActorLocation());
+    SpeechQuiet = bSpeech ? 0.f : SpeechQuiet + Dt;
+    const float DuckTo = SpeechQuiet < .4f ? .4f : 1.f;
+    SpeechDuck = FMath::FInterpConstantTo(SpeechDuck, DuckTo, Dt, DuckTo < SpeechDuck ? 3.f : .7f);
     for (int32 I = 0; I < 6 && I < Loops.Num(); ++I)
     {
         LoopNow[I] = FMath::FInterpTo(LoopNow[I], Want[I], Dt, 1.6f);
         if (!Loops[I]) continue;
         if (LoopNow[I] > .002f && !Loops[I]->IsPlaying()) Loops[I]->Play(FMath::FRandRange(0.f, 20.f));
-        Loops[I]->SetVolumeMultiplier(FMath::Max(.001f, LoopNow[I]));
+        Loops[I]->SetVolumeMultiplier(FMath::Max(.001f, LoopNow[I] * SpeechDuck));
     }
 }
 
@@ -864,23 +871,24 @@ void AShipStorm::BuildRupture(float Open)
 // into the waist: white water bursting up along the rail and billowing over, then a sheet of green water with a foaming front
 // running across the deck to the lee rail and draining away. Its front shoves him across the deck if it catches him there.
 // (Never over the companion hatch: the rupture is there.)
-void AShipStorm::DeckWaveNow(float X, float Size)
+void AShipStorm::DeckWaveNow(float X, float Size, float From)
 {
     const float Half = (230.f + 120.f * Size);
-    FDeckWave W; W.Size = Size; W.X0 = X - Half; W.X1 = X + Half;
+    const float Fs = From >= 0.f ? 1.f : -1.f;   // (the weather rail is -Y; a sea from port mirrors it)
+    FDeckWave W; W.Size = Size; W.X0 = X - Half; W.X1 = X + Half; W.From = Fs;
     Waves.Add(W); ++DeckWaves;
     // The burst along the rail, and billows of spume over it.
     for (int32 K = 0; K < 5; ++K)
     {
         const float Xk = FMath::Lerp(W.X0 + 40.f, W.X1 - 40.f, K / 4.f) + FMath::FRandRange(-30.f, 30.f);
-        const FVector At = ShipWorld(FVector(Xk, -ShipOuterHalf(Xk, RailZ) - 15.f, RailZ + 20));
+        const FVector At = ShipWorld(FVector(Xk, -Fs * (-ShipOuterHalf(Xk, RailZ) - 15.f), RailZ + 20));
         SprayBurst(At, 1.5f * Size, false);
-        Billow(At + FVector(0, 50, 70), 3, 190.f * Size);
+        Billow(At + FVector(0, -Fs * 50, 70), 3, 190.f * Size);
     }
     // Its sound: the sea's slam, heavy, and a second as it comes over.
     const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
     const bool bApart = Pawn && ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck);
-    const FVector Mid = ShipWorld(FVector(X, -ShipOuterHalf(X, RailZ), RailZ));
+    const FVector Mid = ShipWorld(FVector(X, Fs * ShipOuterHalf(X, RailZ), RailZ));
     for (int32 K = 0; K < 2 && Slams.Num(); ++K)
         if (UAudioComponent* A = UGameplayStatics::SpawnSoundAtLocation(this, Slams[FMath::RandRange(0, Slams.Num() - 1)], Mid, FRotator::ZeroRotator,
             (K == 0 ? 1.f : .7f) * (bApart ? .6f : 1.f), K == 0 ? .82f : .95f, K * .25f))
@@ -925,8 +933,8 @@ void AShipStorm::TickDeckWaves(float Dt, const FVector& Eye)
                 const float Y = FMath::Lerp(-Half, FMath::Min(Front, Half), J / float(NY));
                 const float D = FMath::Max(0.f, Front - Y);   // behind the front
                 const float H = Body * Ends * (6.f + 20.f * FMath::Exp(-D / 70.f) + 6.f * FMath::Exp(-(Y + Half) / 60.f) * (1.f - Run));
-                V.Add(FVector(X, Y, DeckZ + .6f + FMath::Max(0.f, H)));
-                Nn.Add(FVector(0, -.25f * FMath::Exp(-D / 70.f), 1).GetSafeNormal());
+                V.Add(FVector(X, -W.From * Y, DeckZ + .6f + FMath::Max(0.f, H)));
+                Nn.Add(FVector(0, W.From * .25f * FMath::Exp(-D / 70.f), 1).GetSafeNormal());
                 UV.Add(FVector2D(X / 300.f, Y / 300.f));
                 // R: foam (the front, and the water still churning near the rail); G: how much water (its opacity).
                 const float Foam = FMath::Clamp(FMath::Exp(-D / 32.f) + .25f * (1.f - Run) * FMath::Exp(-(Y + Half) / 70.f), 0.f, 1.f);
@@ -938,18 +946,20 @@ void AShipStorm::TickDeckWaves(float Dt, const FVector& Eye)
             for (int32 J = 0; J < NY; ++J)
             {
                 const int32 A = Base + I * (NY + 1) + J, B = A + NY + 1;
-                T.Append({A, A + 1, B, A + 1, B + 1, B});
+                if (W.From < 0.f) T.Append({A, A + 1, B, A + 1, B + 1, B});
+                else T.Append({A, B, A + 1, A + 1, B, B + 1});
             }
         // Its front catches him on the deck: a shove toward the lee rail.
         if (Chuck && !W.bShoved && W.Age < 2.2f)
         {
-            const FVector L = ShipLocal(Chuck->GetActorLocation()) - FVector(0, 0, 34.65f);
+            FVector L = ShipLocal(Chuck->GetActorLocation()) - FVector(0, 0, 34.65f);
+            L.Y *= -W.From;   // (into the wave's own frame: from -Y)
             const float Half = ShipInnerHalf(static_cast<float>(L.X), DeckZ + 10) - 4.f;
             const float Front = FMath::Lerp(-Half, Half, Go);
             if (L.X > W.X0 + 20 && L.X < W.X1 - 20 && L.Z > DeckZ - 5 && L.Z < DeckZ + 45 && Front > L.Y && Front - L.Y < 80.f)
             {
                 W.bShoved = true; ++WaveShoves;
-                Chuck->LaunchCharacter(FVector(-60.f, 380.f * W.Size, 150.f), true, false);
+                Chuck->LaunchCharacter(FVector(-60.f, -W.From * 380.f * W.Size, 150.f), true, false);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_WAVE_SHOVE n=%d at=%s"), WaveShoves, *L.ToString());
             }
         }

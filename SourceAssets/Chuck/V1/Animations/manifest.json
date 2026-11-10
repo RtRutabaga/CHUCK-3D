@@ -1891,6 +1891,48 @@
     "foot_R": []
    },
    "notes": "Ring to ring, reaching with one paw: the lead paw lets go and stretches out toward the next ring, the other swings back for balance; the lead paw takes the bar with the body behind it, the other rising to it."
+  },
+  {
+   "name": "SwingSlip",
+   "file": "Animations/AS_Chuck_SwingSlip.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 36,
+   "frame_count": 37,
+   "duration_s": 1.2,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9666,
+   "grip_cm": [
+    5.5,
+    63.5
+   ],
+   "release": 0.7,
+   "time_mapping": "clip time = time since the yard jolted; both paws are off the bar from release x duration",
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hanging from the yard by both paws (Swing at 0), the yard jolts: the right paw is torn off and claws back for the bar, missing; the left peels off; then both reach up after it as he falls. The runtime holds the grip on the yard until release."
+  },
+  {
+   "name": "FallFlail",
+   "file": "Animations/AS_Chuck_FallFlail.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 23,
+   "frame_count": 24,
+   "duration_s": 0.8,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.0491,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Falling, looped: arms up clawing after the yard, legs pedalling, tail whipping, ears back, chin up."
   }
  ]
 }

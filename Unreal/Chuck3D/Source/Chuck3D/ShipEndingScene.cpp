@@ -2,6 +2,7 @@
 #include "ShipEnding.h"
 #include "ShipSetting.h"
 #include "ShipCrew.h"
+#include "ShipStorm.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "HAL/FileManager.h"
@@ -23,18 +24,22 @@
 #include "ProceduralMeshComponent.h"
 #include "Sound/SoundBase.h"
 
-// The fore topsail cutscene (Claude, 2026-11-08; ShipEndingScene.h). Shots: "Crosstrees" (close, as he takes the fore topsail
-// yard and goes out along it), "Wide" (the brig in the storm from off her side), "Jeffries" (at the mainmast, seeing them),
-// "Ruptures" (the Astral ones in the sea round her, sliding aft), "Clewline" (close on him at the yard), "Burning" (over the
-// bow: the Phlegethos rupture drifting toward her), "Gust" (thrown off), "Below" (from above as he falls into it).
+// The fore topsail cutscene (Claude, 2026-11-08; 2026-11-09 the knock-down and the storm shots; ShipEndingScene.h). Shots:
+// "Crosstrees" (close, as he takes the fore topsail yard and goes out along it), "SeaLevel" (low over the swell off her lee
+// bow, she driving past), "Aerial" (high and far off her weather quarter, lightning beyond her), "Jeffries" (at the mainmast,
+// seeing them), "Ruptures" (the Astral ones in the sea round her, sliding aft), "Clewline" (close on him at the yard),
+// "Astern" (low, far astern: her stern lifting and dropping, the ruptures glowing round her), "Burning" (over the bow: the
+// Phlegethos rupture drifting toward her), "Comber" (from off her lee side: the great sea rising beyond her, breaking over
+// her, knocking her over), "Grip" (close: he swings out on the yardarm and loses his grip), "Below" (from above as he falls
+// into it). The shots off her hold the horizon level, so she is seen to roll and to go over.
 using namespace Ship;
 
 namespace
 {
     // Jeffries' lines (the user's takes, 2026-11-08), at their beats.
     struct FBeat { float At; const TCHAR* Id; };
-    const FBeat Beats[] = {{10.7f, TEXT("JEF_X01")}, {15.6f, TEXT("JEF_01")}, {19.3f, TEXT("JEF_02")}, {23.5f, TEXT("JEF_03")}, {27.3f, TEXT("JEF_04")},
-        {30.6f, TEXT("JEF_05")}, {35.95f, TEXT("JEF_06")}};
+    const FBeat Beats[] = {{12.7f, TEXT("JEF_X01")}, {15.8f, TEXT("JEF_01")}, {19.3f, TEXT("JEF_02")}, {23.4f, TEXT("JEF_03")}, {27.8f, TEXT("JEF_04")},
+        {31.3f, TEXT("JEF_05")}, {37.45f, TEXT("JEF_X02")}, {38.5f, TEXT("JEF_06")}};   // (X02: the sea breaking over him)
     constexpr int32 BeatCount = UE_ARRAY_COUNT(Beats);
     float SeaLocalZ(const UWorld* World, const FVector2D& At)
     {
@@ -97,8 +102,20 @@ void AShipForeTopsailScene::Begin(float InSide)
     Rifts = {{{2600, Off * 1500}, 260, 1.f, false}, {{1700, Side * 1700}, 200, 2.f, false}, {{900, Off * 2200}, 320, 3.f, false},
         {{-300, Side * 1500}, 230, 4.f, false}, {{-1200, Off * 1300}, 280, 5.f, false}, {{-2300, Side * 2100}, 340, 6.f, false},
         {{3800, Side * 900}, 240, 7.f, false}, {{-3200, Off * 2000}, 300, 8.f, false}, {{0, 0}, 330, 9.f, true}};
-    LandAt = GustAt + 2.45f;
-    Land = ShipLocal(TopsailGrip(Side, 2)) + FVector(120.f * 2.45f, Side * 430.f * 2.45f, 0.f);
+    // The knock-down heels her toward his side (the sign of a roll that takes the sea's up away from him).
+    KnockRoll = Side * KnockDeg * (FQuat(FRotator(0, 0, 10)).RotateVector(FVector::UpVector).Y < 0 ? 1.f : -1.f);
+    MaxHeel = 0.f; bHeld = bHitDone = false; ReleasedAt = -1.f; Phi = PhiRate = 0.f; StrikeNext = 0;
+    Facing = FQuat(FRotator(0, Side > 0 ? 90.f : -90.f, 0));
+    // Where he will fall: hanging from the yardarm's grip with her knocked over, swung out to the true vertical.
+    {
+        const FVector Grip = ShipLocal(TopsailGrip(Side, 3));
+        const FQuat Swung(-Facing.GetRightVector(), FMath::DegreesToRadians(KnockDeg));
+        LandAt = SlipAt + .84f + PredictFall(Grip + Swung.RotateVector(Facing.RotateVector(FVector(-5.5f, 0, -31.f))), FVector::ZeroVector, Land);
+    }
+    Comber = NewObject<UProceduralMeshComponent>(this, TEXT("Comber"));
+    Comber->SetupAttachment(RootComponent); Comber->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Comber->RegisterComponent(); Comber->SetWorldLocation(ShipOrigin());
+    Comber->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Ship/M_ShipComber.M_ShipComber")));
     Ruptures = NewObject<UProceduralMeshComponent>(this, TEXT("SeaRuptures"));
     Ruptures->SetupAttachment(RootComponent); Ruptures->SetCollisionEnabled(ECollisionEnabled::NoCollision); Ruptures->SetCastShadow(false);
     Ruptures->RegisterComponent(); Ruptures->SetWorldLocation(ShipOrigin());
@@ -118,7 +135,7 @@ void AShipForeTopsailScene::Begin(float InSide)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_START side=%.0f at=%s"), Side, *ShipLocal(C->GetActorLocation()).ToString());
 }
 
-void AShipForeTopsailScene::Frame(const FVector& InEye, const FVector& InAim, const TCHAR* Name, float Fov)
+void AShipForeTopsailScene::Frame(const FVector& InEye, const FVector& InAim, const TCHAR* Name, float Fov, bool bLevel)
 {
     if (!Camera) return;
     if (FCString::Strcmp(Name, Shot) != 0)
@@ -131,7 +148,18 @@ void AShipForeTopsailScene::Frame(const FVector& InEye, const FVector& InAim, co
     Eye = bCut ? InEye : FMath::VInterpTo(Eye, InEye, Dt, 3.f);
     Aim = bCut ? InAim : FMath::VInterpTo(Aim, InAim, Dt, 4.f);
     bCut = false;
-    Camera->SetActorLocationAndRotation(Eye, (Aim - Eye).Rotation());
+    FRotator Look = (Aim - Eye).Rotation();
+    if (bLevel)
+        if (const AShipSetting* S = AShipSetting::Get(GetWorld())) Look = FRotationMatrix::MakeFromXZ((Aim - Eye).GetSafeNormal(), S->GetSeaUp()).Rotator();
+    // The sea's blow: a shake, dying away.
+    const float Shake = 1.f - FMath::SmoothStep(WaveHit, WaveHit + 1.4f, Clock);
+    if (Clock > WaveHit && Shake > 0.f)
+    {
+        const float A = Shake * (FCString::Strcmp(Name, TEXT("Grip")) == 0 ? 5.f : 9.f);
+        Look.Roll += 1.6f * Shake * FMath::Sin(Clock * 37.f);
+        Camera->SetActorLocationAndRotation(Eye + FVector(FMath::Sin(Clock * 53.f), FMath::Sin(Clock * 47.f + 1.f), FMath::Sin(Clock * 61.f + 2.f)) * A, Look);
+    }
+    else Camera->SetActorLocationAndRotation(Eye, Look);
     Camera->GetCameraComponent()->SetFieldOfView(Fov);
 }
 
@@ -149,6 +177,8 @@ void AShipForeTopsailScene::BuildRuptures()
     // white water drawn round into it on the sea about its lip. Sections: 0 Astral holes, 1 the Astral's oil film standing
     // at their lips, 2 the Phlegethos hole, 3 the foam rings.
     if (!Ruptures) return;
+    // (Each vertex on the sea's plane where it is: she may be knocked far over.)
+    auto SeaZ = [&](double X, double Y) { return SeaLocalZ(GetWorld(), FVector2D(X, Y)) + 28.f; };
     TArray<FVector> V[4], N[4]; TArray<int32> T[4]; TArray<FVector2D> UV[4], UV1[4], UV2[4];
     constexpr int32 Edge = 48;
     auto Lip = [](float A, float Seed, float Rag)
@@ -158,11 +188,12 @@ void AShipForeTopsailScene::BuildRuptures()
     auto Hole = [&](int32 S, const FVector2D& C, float Z, float R, float Seed, float Rag, float Open)
     {
         const int32 Base = V[S].Num();
-        V[S].Add(FVector(C.X, C.Y, Z)); UV[S].Add(FVector2D::ZeroVector);
+        V[S].Add(FVector(C.X, C.Y, SeaZ(C.X, C.Y))); UV[S].Add(FVector2D::ZeroVector);
         for (int32 I = 0; I < Edge; ++I)
         {
             const float A = 2.f * PI * I / Edge, K = Lip(A, Seed, Rag);
-            V[S].Add(FVector(C.X + FMath::Cos(A) * R * K * 1.25f, C.Y + FMath::Sin(A) * R * K * .85f, Z));
+            const double Px = C.X + FMath::Cos(A) * R * K * 1.25f, Py = C.Y + FMath::Sin(A) * R * K * .85f;
+            V[S].Add(FVector(Px, Py, SeaZ(Px, Py)));
             UV[S].Add(FVector2D(FMath::Cos(A) * K, FMath::Sin(A) * K));   // (the well's wall is the unit circle)
         }
         for (int32 I = 0; I <= Edge; ++I) { N[S].Add(FVector::UpVector); UV1[S].Add(FVector2D(R, Open)); UV2[S].Add(FVector2D(Seed, 0.f)); }
@@ -176,7 +207,7 @@ void AShipForeTopsailScene::BuildRuptures()
             const float A = 2.f * PI * I / Edge, K = Lip(A, Seed, Rag);
             const FVector2D D(FMath::Cos(A) * 1.25f, FMath::Sin(A) * .85f);
             const FVector2D In = C + D * R * K * .99f, Out = C + D * (R * K * 1.55f + 60.f);
-            V[3].Add(FVector(In.X, In.Y, Z + 1.f)); V[3].Add(FVector(Out.X, Out.Y, Z - 6.f));
+            V[3].Add(FVector(In.X, In.Y, SeaZ(In.X, In.Y) + 1.f)); V[3].Add(FVector(Out.X, Out.Y, SeaZ(Out.X, Out.Y) - 6.f));
             UV[3].Add(FVector2D(I / float(Edge), 0.f)); UV[3].Add(FVector2D(I / float(Edge), 1.f));
             for (int32 J = 0; J < 2; ++J) { N[3].Add(FVector::UpVector); UV1[3].Add(FVector2D(Kind, Open)); UV2[3].Add(FVector2D::ZeroVector); }
         }
@@ -200,7 +231,8 @@ void AShipForeTopsailScene::BuildRuptures()
                 const float A = 2.f * PI * (I % Ring) / Ring, K = Lip(A, R.Seed, 1.f);
                 const FVector2D P = C + FVector2D(FMath::Cos(A) * Rr * K * 1.25f, FMath::Sin(A) * Rr * K * .85f);
                 const float H = 25.f + 45.f * Open * (1.f + .3f * FMath::Sin(A * 5.f + Clock));
-                V[1].Add(FVector(P.X, P.Y, Z - 4)); V[1].Add(FVector(P.X, P.Y, Z + H));
+                const float Zp = SeaZ(P.X, P.Y);
+                V[1].Add(FVector(P.X, P.Y, Zp - 4)); V[1].Add(FVector(P.X, P.Y, Zp + H));
                 N[1].Add(FVector(FMath::Cos(A), FMath::Sin(A), 0)); N[1].Add(FVector(FMath::Cos(A), FMath::Sin(A), 0));
                 UV[1].Add(FVector2D(I / float(Ring) * 3.f, 0.f)); UV[1].Add(FVector2D(I / float(Ring) * 3.f, 1.f));
                 UV1[1].Add(FVector2D::ZeroVector); UV1[1].Add(FVector2D::ZeroVector); UV2[1].Add(FVector2D::ZeroVector); UV2[1].Add(FVector2D::ZeroVector);
@@ -233,7 +265,8 @@ void AShipForeTopsailScene::BuildRuptures()
 void AShipForeTopsailScene::DriveChuck(float Dt)
 {
     AChuckCharacter* C = Chuck.Get();
-    if (!C || bThrown) return;
+    if (!C) return;
+    if (bHeld) { HoldChuck(Dt); return; }
     auto Push = [&](const FVector& D) { C->SetTestStickWorld(D); C->AddMovementInput(D, 1.f, true); };
     if (!bCaught)
     {
@@ -259,25 +292,170 @@ void AShipForeTopsailScene::DriveChuck(float Dt)
         return;
     }
     C->SetTestStick(FVector2D::ZeroVector);
-    if (Clock >= GustAt)
+    if (Clock >= SlipAt && !C->IsSwingLeaping())
     {
-        // The gust: the yard jerks, the canvas flogs, and he is thrown off it, out clear of the side.
-        // (Let go first; once he is off the yard, thrown.)
-        if (C->IsSwingLeaping()) return;   // (between grips: off the next one he reaches)
-        if (C->IsSwinging() || C->IsHanging()) C->DodgeToward(FVector2D::ZeroVector);
-        bLetGo = true;
-        const FVector V(120.f, Side * 430.f, 200.f);
-        C->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-        C->GetCharacterMovement()->Velocity = V;
-        C->LaunchCharacter(V, true, true);
-        bThrown = true;
-        const FVector P = ShipLocal(C->GetActorLocation());
-        const float G = -static_cast<float>(C->GetCharacterMovement()->GetGravityZ());
-        const float Drop = static_cast<float>(P.Z) - (WaterZ + 60.f);
-        const float Tf = (V.Z + FMath::Sqrt(V.Z * V.Z + 2.f * G * FMath::Max(Drop, 1.f))) / FMath::Max(G, 1.f);
-        Land = P + FVector(V.X * Tf, V.Y * Tf, 0.f); LandAt = Clock + Tf;
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_THROWN clock=%.2f from=%s fall_s=%.2f land=%s"), Clock, *P.ToString(), Tf, *Land.ToString());
+        // The yard jolts as she goes over: from here the scene holds him (SwingSlip) about the grip he has.
+        const int32 Gi = C->GetSwingGrip();
+        SlipGrip = GetChuckSwingGrips().IsValidIndex(Gi) ? GetChuckSwingGrips()[Gi].Grip : TopsailGrip(Side, 3);
+        C->BeginSceneHold();
+        bHeld = true; Phi = 0.f; PhiRate = 0.f;
+        PrevCentre = SlipGrip + Facing.RotateVector(FVector(-5.5f, 0, -31.f));
+        const FQuat Swung(-Facing.GetRightVector(), FMath::DegreesToRadians(KnockDeg));
+        LandAt = SlipAt + .84f + PredictFall(ShipLocal(SlipGrip) + Swung.RotateVector(Facing.RotateVector(FVector(-5.5f, 0, -31.f))), FVector::ZeroVector, Land);
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_SLIP clock=%.2f grip=%s land=%s"), Clock, *ShipLocal(SlipGrip).ToString(), *Land.ToString());
+        HoldChuck(Dt);
     }
+}
+
+void AShipForeTopsailScene::HoldChuck(float Dt)
+{
+    AChuckCharacter* C = Chuck.Get();
+    if (!C || bPlunged) return;
+    const AShipSetting* Ship = AShipSetting::Get(GetWorld());
+    const FVector Up = Ship ? Ship->GetSeaUp() : FVector::UpVector;
+    const float T = Clock - SlipAt, Slip = C->GetSceneClipLength(0);
+    if (!bLetGo)
+    {
+        // Hanging from the yardarm, he swings out after the true vertical as she goes over (a pendulum about the grip,
+        // kicked by the yard's jolt), his grip giving way (the clip) until it lets go.
+        const FVector Out = Facing.GetForwardVector();
+        const float HeelOut = FMath::Atan2(static_cast<float>(-FVector::DotProduct(Up, Out)), static_cast<float>(Up.Z));   // + with the true vertical outboard
+        if (T > .08f && T < .18f) PhiRate += 7.f * Dt;
+        PhiRate += (-(Phi - HeelOut) * 16.f - PhiRate * 1.6f) * Dt;
+        Phi += PhiRate * Dt;
+        const FQuat R(-Facing.GetRightVector(), Phi);
+        const FVector Centre = SlipGrip + R.RotateVector(Facing.RotateVector(FVector(-5.5f, 0, -31.f)));
+        C->SetScenePose(Centre, R * Facing);
+        C->SetSceneClip(0, FMath::Min(T, Slip), .12f);
+        if (T >= Slip * .7f)
+        {
+            // Off: from where he is, as he was moving.
+            bLetGo = bThrown = true; ReleasedAt = Clock;
+            FallP = Centre; FallV = Dt > 0.f ? (Centre - PrevCentre) / Dt : FVector::ZeroVector; FallRot = R * Facing;
+            LandAt = Clock + PredictFall(ShipLocal(FallP), FallV, Land);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_THROWN clock=%.2f from=%s fall_s=%.2f land=%s swing_deg=%.1f heel_deg=%.1f lost_grip=1"),
+                Clock, *ShipLocal(FallP).ToString(), LandAt - Clock, *Land.ToString(), FMath::RadiansToDegrees(Phi), FMath::RadiansToDegrees(HeelOut));
+        }
+        PrevCentre = Centre;
+        return;
+    }
+    // Falling: straight down, the sea's way, turning upright to it, clawing after the yard.
+    const float G = -static_cast<float>(C->GetCharacterMovement()->GetGravityZ());
+    FallV += -Up * G * Dt;
+    FallP += FallV * Dt;
+    FallRot = FQuat::Slerp(FallRot, FQuat::FindBetweenNormals(FVector::UpVector, Up) * Facing, FMath::Min(1.f, Dt * 2.5f));
+    C->SetScenePose(FallP, FallRot);
+    if (T < Slip) C->SetSceneClip(0, T, 0.f);
+    else C->SetSceneClip(1, T - Slip, .2f);
+}
+
+float AShipForeTopsailScene::PredictFall(const FVector& P0, const FVector& V0, FVector& Out) const
+{
+    // (Ship frame; the sea knocked over to KnockRoll; its plane through the waterline at her middle.)
+    const FVector Up = FQuat(FRotator(0, 0, KnockRoll)).RotateVector(FVector::UpVector);
+    const AChuckCharacter* C = Chuck.Get();
+    const float G = C ? -static_cast<float>(C->GetCharacterMovement()->GetGravityZ()) : 980.f;
+    FVector P = P0, V = V0;
+    float T = 0.f;
+    constexpr float Step = 1.f / 120.f;
+    while (T < 6.f && FVector::DotProduct(P - FVector(0, 0, WaterZ), Up) > 70.f) { V += -Up * G * Step; P += V * Step; T += Step; }
+    Out = P;
+    return T;
+}
+
+void AShipForeTopsailScene::Knock()
+{
+    // The great sea strikes her at WaveHit: she goes over in about a second, a little past and back, and stays down.
+    AShipSetting* Ship = AShipSetting::Get(GetWorld());
+    if (!Ship) return;
+    const float W = FMath::SmoothStep(WaveHit - .1f, WaveHit + .95f, Clock);
+    const float Over = 1.f + .1f * FMath::Exp(-FMath::Square((Clock - WaveHit - 1.15f) / .45f));
+    Ship->SetKnock(KnockRoll * Over, W);
+    const FVector Up = Ship->GetSeaUp();
+    MaxHeel = FMath::Max(MaxHeel, FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(Up.Z), -1.f, 1.f))));
+    // Her side takes it: the white water bursting up over the weather rail and across the deck.
+    if (!bHitDone && Clock >= WaveHit)
+    {
+        bHitDone = true;
+        if (AShipStorm* Storm = AShipStorm::Get(GetWorld()))
+        {
+            const float From = -Side;
+            for (int32 K = 0; K < 9; ++K)
+            {
+                const float X = FMath::Lerp(-1300.f, 1400.f, K / 8.f) + FMath::FRandRange(-80.f, 80.f);
+                const FVector Rail = ShipWorld(FVector(X, From * (ShipOuterHalf(X, RailZ) + 30.f), RailZ + 40.f));
+                Storm->SprayNow(Rail, 2.2f);
+                Storm->BillowNow(Rail + FVector(0, 0, 120.f + 90.f * (K % 3)), 4, 380.f);
+                Storm->BillowNow(Rail + FVector(0, -From * 120.f, 420.f + 60.f * (K % 2)), 2, 520.f);
+            }
+            Storm->DeckWaveNow(-450.f, 1.7f, From);
+            Storm->DeckWaveNow(650.f, 1.6f, From);
+        }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_WAVE clock=%.2f from=%.0f knock_deg=%.1f"), Clock, -Side, KnockRoll);
+    }
+}
+
+void AShipForeTopsailScene::BuildComber()
+{
+    // The great sea (M_ShipComber): a long ridge of water running down on her from the far side, rising as it comes, its
+    // crest curling over and plunging onto her side at WaveHit, then falling away into white water under her.
+    if (!Comber) return;
+    const float Show = FMath::SmoothStep(BurningAt, BurningAt + 1.5f, Clock) * (1.f - FMath::SmoothStep(WaveHit + .3f, WaveHit + 1.1f, Clock));
+    if (Show <= .001f) { if (Comber->GetNumSections()) Comber->ClearAllMeshSections(); return; }
+    // Its crest's distance from her middle (cm, toward the far side), its height over the sea, and its curl.
+    const float D = FMath::Max(560.f + 1500.f * (WaveHit - Clock), 520.f);   // (against her side, where it breaks)
+    const float H = Show * (250.f + 1050.f * FMath::SmoothStep(BurningAt, WaveHit - .7f, Clock)) * (1.f - .85f * FMath::SmoothStep(WaveHit - .05f, WaveHit + .7f, Clock));
+    const float Curl = FMath::SmoothStep(WaveHit - 1.6f, WaveHit - .1f, Clock);
+    const float Broken = FMath::SmoothStep(WaveHit - .2f, WaveHit + .6f, Clock);
+    // Its profile: cm across from the crest toward her (at 9 m high), height as a fraction of H, foam, thin water.
+    struct FPt { float D, Hf, Foam, Thin; };
+    const FPt Prof[] = {
+        {-3000.f, 0.f, 0.f, 0.f}, {-1800.f, .12f, 0.f, .05f}, {-1000.f, .38f, .02f, .1f}, {-500.f, .7f, .05f, .25f}, {-200.f, .9f, .15f, .45f},
+        {0.f, 1.f, .45f, .7f},
+        {120.f + 200.f * Curl, .97f - .05f * Curl, .8f, .85f}, {190.f + 330.f * Curl, .86f - .18f * Curl, 1.f, .8f}, {210.f + 360.f * Curl, .7f - .28f * Curl, 1.f, .6f},
+        {150.f + 250.f * Curl, .6f - .25f * Curl, .7f, .3f}, {120.f + 170.f * Curl, .48f - .2f * Curl, .35f, .2f},
+        {100.f + 60.f * Curl, .38f - .1f * Curl, .22f, .15f}, {200.f + 100.f * Curl, .18f - .05f * Curl, .3f, .1f}, {380.f + 150.f * Curl, .06f, .7f, .05f},
+        {560.f + 200.f * Curl, 0.f, .85f, 0.f}};
+    constexpr int32 NP = UE_ARRAY_COUNT(Prof), NX = 64;
+    const float S = FMath::Max(H, 1.f) / 900.f;
+    TArray<FVector> V, N; TArray<int32> T; TArray<FVector2D> UV; TArray<FColor> Col;
+    V.Reserve((NX + 1) * NP);
+    for (int32 I = 0; I <= NX; ++I)
+    {
+        const float X = FMath::Lerp(-3600.f, 3800.f, I / float(NX));
+        const float Ends = FMath::SmoothStep(-3600.f, -1800.f, X) * (1.f - FMath::SmoothStep(2000.f, 3800.f, X));
+        const float Lag = .00012f * FMath::Square(X - 100.f);   // (its ends behind its middle)
+        // A lumpy, uneven crest along its length, the lip running ahead in places, the whole of it heaving as it comes.
+        const float Lump = 1.f + .13f * FMath::Sin(X / 730.f + 1.3f + Clock * .6f) + .07f * FMath::Sin(X / 260.f + 4.1f - Clock * 1.1f) + .04f * FMath::Sin(X / 97.f + Clock * 2.3f);
+        const float Reach = 1.f + .25f * FMath::Sin(X / 540.f + 2.2f) + .12f * FMath::Sin(X / 180.f - Clock * 1.7f);
+        for (int32 J = 0; J < NP; ++J)
+        {
+            const FPt& Pt = Prof[J];
+            const float Dd = Pt.D * (Pt.D < 0.f ? 1.f : S * Reach);
+            const float Y = -Side * (D + Lag - Dd);
+            const float Z = SeaLocalZ(GetWorld(), FVector2D(X, Y)) + Pt.Hf * H * Ends * Lump - 30.f * (1.f - Ends);
+            V.Add(FVector(X, Y, Z));
+            UV.Add(FVector2D(X / 400.f, J / float(NP - 1)));
+            const float Foam = FMath::Clamp(Pt.Foam * (.5f + .5f * Ends) * (1.f + .5f * Broken) + .25f * Broken * Pt.Hf, 0.f, 1.f);
+            Col.Add(FColor(uint8(Foam * 255), uint8(Pt.Thin * Ends * (1.f - Broken) * 255), 0, 255));
+        }
+    }
+    N.SetNum(V.Num());
+    for (int32 I = 0; I <= NX; ++I)
+        for (int32 J = 0; J < NP; ++J)
+        {
+            const FVector Dx = V[FMath::Min(I + 1, NX) * NP + J] - V[FMath::Max(I - 1, 0) * NP + J];
+            const FVector Dp = V[I * NP + FMath::Min(J + 1, NP - 1)] - V[I * NP + FMath::Max(J - 1, 0)];
+            N[I * NP + J] = (Side * FVector::CrossProduct(Dx, Dp)).GetSafeNormal();   // (up, out of the water)
+        }
+    for (int32 I = 0; I < NX; ++I)
+        for (int32 J = 0; J + 1 < NP; ++J)
+        {
+            const int32 A = I * NP + J, B = A + NP;
+            if (Side > 0.f) T.Append({A, A + 1, B, A + 1, B + 1, B});
+            else T.Append({A, B, A + 1, A + 1, B, B + 1});
+        }
+    Comber->CreateMeshSection(0, V, T, N, UV, Col, TArray<FProcMeshTangent>(), false);
 }
 
 void AShipForeTopsailScene::Lines()
@@ -305,6 +483,8 @@ void AShipForeTopsailScene::Finish()
     if (bFinished) return;
     bFinished = true; bPlaying = false;
     if (FAudioDevice* AD = GetWorld()->GetAudioDeviceRaw()) AD->SetTransientPrimaryVolume(1.f);
+    if (AShipSetting* Ship = AShipSetting::Get(GetWorld())) Ship->SetKnock(0.f, 0.f);   // (behind the end card)
+    if (Comber) Comber->ClearAllMeshSections();
     if (AChuckCharacter* C = Chuck.Get())
     {
         if (auto* PC = Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
@@ -334,24 +514,49 @@ void AShipForeTopsailScene::Tick(float Dt)
     DriveChuck(Dt);
     Lines();
     BuildRuptures();
+    Knock();
+    BuildComber();
+    // Lightning: behind her in the aerial shot, ahead astern of her, and beyond the great sea as it comes.
+    {
+        struct FStrike { float At, Distance, Bearing; };
+        const FStrike Strikes[] = {{10.2f, 90000.f, Side * 39.f}, {28.7f, 70000.f, Side * 15.f}, {35.3f, 60000.f, -Side * 70.f}};
+        if (StrikeNext < UE_ARRAY_COUNT(Strikes) && Clock >= Strikes[StrikeNext].At)
+        {
+            if (AShipStorm* Storm = AShipStorm::Get(GetWorld())) Storm->StrikeNow(Strikes[StrikeNext].Distance, Strikes[StrikeNext].Bearing);
+            ++StrikeNext;
+        }
+    }
     if (bShots)
     {
-        static const float ShotAt[] = {20.5f, 23.5f, 29.5f, 32.f, 34.5f, 37.2f};
+        static const float ShotAt[] = {7.5f, 9.8f, 29.f, 36.2f, 36.9f, 37.55f, 38.1f, 38.7f, 39.7f};
         if (ShotNext < UE_ARRAY_COUNT(ShotAt) && Clock >= ShotAt[ShotNext])
         {
-            const FString Folder = FPaths::ScreenShotDir() / TEXT("ShipRuptures"); IFileManager::Get().MakeDirectory(*Folder, true);
-            FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("Rupture_%d_%s.png"), ShotNext, Shot), false, false);
+            const FString Folder = FPaths::ScreenShotDir() / TEXT("ShipKnock"); IFileManager::Get().MakeDirectory(*Folder, true);
+            FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("Knock_%d_%s.png"), ShotNext, Shot), false, false);
             ++ShotNext;
         }
     }
     const FVector P = C->GetActorLocation(), L = ShipLocal(P);
     const AShipCrew* Crew = AShipCrew::Get(GetWorld());
     const ADockNPC* J = Crew ? Crew->Find(EDockHuman::Jeffries) : nullptr;
+    const AShipSetting* Ship = AShipSetting::Get(GetWorld());
+    const FVector SeaUp = Ship ? Ship->GetSeaUp() : FVector::UpVector;
+    // A camera off her rides the sea: placed in the sea's frame (turned with it round her waterline), so she is seen to roll
+    // and to go over while the horizon holds level.
+    const FQuat Turn = Ship ? Ship->GetSeaTurn() : FQuat::Identity;
+    auto AtSea = [&](const FVector& Local) { return ShipWorld(FVector(0, 0, WaterZ) + Turn.RotateVector(Local - FVector(0, 0, WaterZ))); };
     if (Clock < WideAt) Frame(P + FVector(-230.f, Side * 250.f, 60.f), P + FVector(70.f, 0, 15.f), TEXT("Crosstrees"), 50.f);
+    else if (Clock < AerialAt)
+    {
+        // Low over the swell off her lee bow, drifting aft as she drives on, her masts towering over the lens.
+        const float U = (Clock - WideAt) / (AerialAt - WideAt);
+        Frame(AtSea(FVector(2700.f - 900.f * U, Side * 2300.f, WaterZ + 380.f)), ShipWorld(FVector(400.f - 500.f * U, 0, 1150.f)), TEXT("SeaLevel"), 62.f, true);
+    }
     else if (Clock < JeffriesAt)
     {
-        const float U = (Clock - WideAt) / (JeffriesAt - WideAt);
-        Frame(ShipWorld(FVector(2600.f - 500.f * U, Side * 3300.f, 1500.f - 200.f * U)), ShipWorld(FVector(150.f, 0, 1050.f)), TEXT("Wide"), 44.f);
+        // High and far off her weather quarter, closing a little: the whole brig rolling in it, lightning beyond her.
+        const float U = (Clock - AerialAt) / (JeffriesAt - AerialAt);
+        Frame(AtSea(FVector(-5200.f + 800.f * U, -Side * 4200.f, 4300.f - 600.f * U)), ShipWorld(FVector(300.f, 0, 800.f)), TEXT("Aerial"), 42.f, true);
     }
     else if (Clock < RupturesAt)
     {
@@ -367,18 +572,38 @@ void AShipForeTopsailScene::Tick(float Dt)
         const float U = (Clock - RupturesAt) / (ClewAt - RupturesAt);
         Frame(ShipWorld(FVector(250.f - 300.f * U, Side * 520.f, 1150.f)), ShipWorld(FVector(-900.f - 400.f * U, Side * 1700.f, 320.f)), TEXT("Ruptures"), 52.f);
     }
-    else if (Clock < BurningAt) Frame(P + FVector(-150.f, Side * 120.f, -35.f), P + FVector(0, 0, 25.f), TEXT("Clewline"), 46.f);
-    else if (Clock < GustAt)
+    else if (Clock < AsternAt) Frame(P + FVector(-150.f, Side * 120.f, -35.f), P + FVector(0, 0, 25.f), TEXT("Clewline"), 46.f);
+    else if (Clock < BurningAt)
+    {
+        // Low and far astern, to weather: her stern lifting and falling away, the ruptures' glow round her.
+        const float U = (Clock - AsternAt) / (BurningAt - AsternAt);
+        Frame(AtSea(FVector(-5600.f + 400.f * U, -Side * 1500.f, WaterZ + 650.f)), ShipWorld(FVector(200.f, Side * 300.f, 1000.f)), TEXT("Astern"), 40.f, true);
+    }
+    else if (Clock < ComberAt)
     {
         const FVector2D R = RiftAt(Rifts.Last());
-        Frame(ShipWorld(FVector(300.f, Side * 1500.f, 1750.f)), ShipWorld(FVector(R.X, R.Y, WaterZ)), TEXT("Burning"), 58.f);   // (abaft it and outboard of the headsails)
+        Frame(AtSea(FVector(300.f, Side * 1500.f, 1750.f)), ShipWorld(FVector(R.X, R.Y, WaterZ)), TEXT("Burning"), 58.f, true);   // (abaft it and outboard of the headsails)
     }
-    else if (Clock < BelowAt) Frame(P + FVector(-330.f, -Side * 60.f, 140.f), P, TEXT("Gust"), 56.f);
+    else if (Clock < GripAt)
+    {
+        // From ahead of her, a little to lee, low: the great sea coming down on her beam, its crest curling over in profile
+        // against the sky; it breaks on her and she goes over, her masts swinging down toward the lens's side.
+        const float U = (Clock - ComberAt) / (GripAt - ComberAt);
+        Frame(AtSea(FVector(5600.f - 400.f * U, Side * 1100.f, WaterZ + 650.f)), ShipWorld(FVector(-100.f, -Side * 1100.f, 900.f)), TEXT("Comber"), 60.f, true);
+    }
+    else if (Clock < BelowAt)
+    {
+        // Close on him at the yardarm, in her frame, from abaft and a little above, along the yard: him hanging under it,
+        // the sea far below past him swinging up as she goes over, the burning rupture's glow on it.
+        const FVector G = bHeld ? SlipGrip : P;
+        Frame(G + FVector(-240.f, -Side * 40.f, 50.f), G + FVector(0.f, Side * 30.f, -55.f), TEXT("Grip"), 55.f);
+    }
     else
     {
         const FVector2D R = RiftAt(Rifts.Last());
-        // (From outboard of the fall, so the fore topsail is not between.)
-        Frame(ShipWorld(FVector(Land.X - 150.f, Land.Y + Side * 380.f, 2700.f)), FMath::Lerp(P, ShipWorld(FVector(R.X, R.Y, WaterZ)), .4f), TEXT("Below"), 58.f);
+        // From above him (the sea's up), outboard of the fall, so the fore topsail is not between.
+        const FVector Over = ShipWorld(FVector(Land.X - 150.f, Land.Y + Side * 380.f, Land.Z)) + SeaUp * 2400.f;
+        Frame(Over, FMath::Lerp(P, ShipWorld(FVector(R.X, R.Y, Land.Z)), .4f), TEXT("Below"), 58.f, true);
     }
     // Into the sea through the burning rupture: a flare, then black.
     if (bThrown && !bPlunged && L.Z < SeaLocalZ(GetWorld(), FVector2D(L.X, L.Y)) + 70.f)

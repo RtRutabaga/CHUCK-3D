@@ -162,6 +162,8 @@ AShipEnding* AShipEnding::Spawn(UWorld* World)
     A.AttenuationShapeExtents = FVector(1800.f, 0.f, 0.f);
     A.FalloffDistance = 3000.f;
     A.NonSpatializedRadiusStart = 900.f; A.NonSpatializedRadiusEnd = 300.f;
+    E->SceneVoice = NewObject<USoundAttenuation>(E);
+    E->SceneVoice->Attenuation.bAttenuate = false; E->SceneVoice->Attenuation.bSpatialize = false;
     // The guide lights: the golden leaf's aura, dimmer.
     UStaticMesh* Sphere = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
     UMaterialInterface* Aura = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Pickups/M_GoldenLeafAura.M_GoldenLeafAura"));
@@ -206,7 +208,12 @@ bool AShipEnding::Say(EDockHuman Who, const TCHAR* Npc, const TCHAR* Id, bool bF
     if (!Line) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_LINE_MISSING %s %s"), Npc, Id); return false; }
     if (IsSpeaking()) if (ADockNPC* Was = Body(Speaking.Who)) Was->StopSpeaking(.15f);
     ADockNPC* N = Body(Who);
-    const float Seconds = N ? N->SpeakLine(Npc, Id, Shout) : -1.f;
+    // Shouted over the gale (user 2026-11-09: "too quiet, especially during intense storm"): up about 3 dB, more once it
+    // intensifies; the storm's own sounds duck under every line (AShipStorm::TickSound), as the music does. In the cutscene
+    // the camera is often far off: heard at full level wherever it is.
+    const bool bScene = ShipEndingSceneLetterboxed(GetWorld());
+    const float Seconds = N ? N->SpeakLine(Npc, Id, bScene ? SceneVoice : Shout) : -1.f;
+    if (N) { const AShipStorm* Storm = AShipStorm::Get(GetWorld()); N->SetVoiceVolume(1.4f + .3f * (Storm ? Storm->GetIntense() : 0.f)); }
     Speaking.Who = Who; Speaking.Npc = Npc; Speaking.Id = Id; Speaking.Text = Line->Text;
     Speaking.Seconds = Seconds > 0.f ? Seconds : Line->Seconds; Speaking.Elapsed = 0.f;
     LastLine = Id; ++LinesSpoken; Said.FindOrAdd(Id)++;

@@ -124,6 +124,13 @@ public:
     int32 GetSails() const { return Sails.Num(); }
     /** The sea's tilt round the still hull now: the pitch and roll (degrees) its plane, the sky and the sun are turned by. */
     FVector2D GetSeaTilt() const { return Tilt; }
+    /** The sea's up (world; the true vertical round the still hull). */
+    FVector GetSeaUp() const { return FQuat(FRotator(Tilt.X, 0, Tilt.Y)).RotateVector(FVector::UpVector); }
+    /** The sea's turn round the still hull (its frame: a camera off her riding the sea sees her roll and heel). */
+    FQuat GetSeaTurn() const { return FQuat(FRotator(Tilt.X, 0, Tilt.Y)); }
+    /** The storm ending's knock-down (2026-11-09): Weight 0..1 of the way from her own rolling to RollDeg (and her pitch
+     *  eased to a third), held until it is set back to 0. */
+    void SetKnock(float RollDeg, float Weight) { KnockRoll = RollDeg; KnockWeight = FMath::Clamp(Weight, 0.f, 1.f); }
     /** The sea's surface height (world Z) at a world point, without its waves: the tilted plane through the waterline. */
     float SeaPlaneZ(const FVector& World) const;
     /** Checks of the built ship (floors, doorways, ladder, spawns): failures. */
@@ -184,5 +191,6 @@ private:
     TArray<float> SwingPhase, LampBase;
     FQuat SunBase = FQuat::Identity;
     FVector2D Tilt = FVector2D::ZeroVector;
+    float KnockRoll = 0.f, KnockWeight = 0.f;
     float Clock = 0, NextCreak = 4;
 };

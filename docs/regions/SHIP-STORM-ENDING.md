@@ -80,7 +80,7 @@ In-engine, after the FallCutscene pattern, cut to the user's music at a phrase (
 4. The deck: Jeffries straining at his ropes on the mainmast, looking out at them. His 2D line: **"It's back! The purple is back!" (2D)**. The crew go on hauling.
 5. Close: Chuck working the clewline free of the block. It runs; the fore topsail's clew flies loose; the sail flogs.
 6. Ahead, a different rupture drifting toward the bow: a Phlegethos one, red light, cracked basalt plates and lava channels seen from above through it (the Hell fragments described in the original plank plan).
-7. A gust; the flogging sail and the yard's jerk throw Chuck off the yard. He falls past the fore course, clear of the side.
+7. A great sea knocks her over; hanging from the yardarm he swings out and loses his grip (user 2026-11-09: never a jump). He falls straight down, past the fore course, clear of the side.
 8. From above: he drops into the Phlegethos rupture as it passes under the bow. Cut to the fall into Phlegethos (plan step 3, unchanged).
 
 No reactions from Chuck: he works, he is thrown, he falls.
@@ -166,19 +166,25 @@ How it plays:
 - **Leap:** on the main top the captain calls CAP_06. While the golden leaf is lit, leaving the main top's fore edge heading forward (within about 53° of the bow) becomes 600 cm/s forward and 400 cm/s up. That covers a running jump, a sprint leap, or the run's own vault over the rim, caught at its top. Measured: 7.4 to 8.0 m out, from either lane, onto the fore top, where he lands and stops (his speed cut to 40 cm/s, so he does not slide off its far side). If it is aimed within 22° of the fore top, it is steered onto it. **This boost applies only here**, in this step and only from the main top (the plan's question 3, answered with the safe default). If the leaf runs out before the leap, another appears 2 s later. A miss lands on deck and gets CAP_28. Landing on the fore top gets CR2_04 and CAP_07.
 - **Fore climb:** at the head of either fore topmast shroud net, the cutscene starts. If he drops to the deck he is back at the leap step, and CAP_32 and CAP_33 come first.
 - **Guidance:** in each wrong place, the jargon line comes first (after 1 to 8 s) and repeats every 11 s (CAP_06 every 6 s). Once he has been 30 s in that place, and the jargon has been heard, the clear line takes over. The timer runs only once the scripted lines are said, and starts again on a new place or progress.
-- **Guide lights:** up to four gold auras (`M_GoldenLeafAura`, breathing, a 2–3.5 cd light): the main shroud feet, the main top, the loose work spots, the fore top's two landing lanes, the fore topmast shroud feet and heads.
-- **Cutscene** (letterboxed, Esc skips; about 39 s):
+- **Guide lights:** up to four soft gold auras (`M_GoldenLeafAura`, breathing slowly, a shadowed 0.45–0.55 cd light; softened 2026-11-09): the main shroud feet, the main top, the loose work spots, the fore top's two landing lanes, the fore topmast shroud feet and heads.
+- **Cutscene** (letterboxed, Esc skips; about 42 s; reworked 2026-11-09):
   1. Crosstrees (he takes the fore topsail yard's first grip behind the cut, then goes out three grips to the outermost, at the yardarm). From the starboard net the braced yard's first grip is 52 cm away, out of his 45 cm reach, so the scene puts him on it directly (`AChuckCharacter::CatchSwingGrip`).
-  2. Wide.
-  3. Jeffries: JEF_X01, then JEF_01.
-  4. Ruptures: eight Astral ones open in the sea and slide aft at 1.4 m/s (JEF_02, JEF_03).
-  5. Clewline (JEF_04).
-  6. Burning: the Phlegethos rupture, cracked basalt plates over molten light (JEF_05).
-  7. Gust: he lets go and is thrown out to his side at 4.3 m/s (JEF_06). He is thrown from the outermost grip because, from an inner one, he caught the next grip out as he flew past it.
-  8. Below: from above he falls into the burning rupture, which is timed to be under him.
+  2. SeaLevel (5.5 s): low over the swell off her lee bow, she driving past.
+  3. Aerial (9 s): high and far off her weather quarter, lightning beyond her.
+  4. Jeffries (12.5 s): JEF_X01, then JEF_01.
+  5. Ruptures (19 s): eight Astral ones open in the sea and slide aft at 1.4 m/s (JEF_02, JEF_03).
+  6. Clewline (24 s).
+  7. Astern (27.5 s): low and far astern, her stern lifting and dropping, lightning ahead (JEF_04).
+  8. Burning (31 s): the Phlegethos rupture, cracked basalt plates over molten light (JEF_05).
+  9. Comber (35 s): from ahead of her, a little to lee: a great sea (`M_ShipComber`, up to 13 m) comes down on her beam from the far side, its crest curling, and breaks on her side at 37.3 s. White water bursts over the rail and across the deck (JEF_X02, Jeffries hit by it), and she is knocked over to 26° toward his side, a little past and back, and stays down.
+  10. Grip (37.6 s): close on him at the yardarm, in her frame, the sea swinging up past him. The yard jolts; he swings out after the true vertical (to about 41°), the right paw is torn off the bar and claws back for it, the left peels off (`AS_Chuck_SwingSlip`), and at 38.5 s he is off (JEF_06).
+  11. Below (39 s): he falls straight down, along the sea's up (about 2 s, 15 m), clawing after the yard (`AS_Chuck_FallFlail`), clear of her side, into the burning rupture, timed to be under him.
+
+  Every shot off her rides the sea's frame with its horizon level, so she is seen to roll and to go over. The ship never moves in this game (the sea tilts round her: `AShipSetting::SetKnock`).
   
   Then a dark red flash fades to black and silence, and the "End of demo" card follows (the fall into Phlegethos is not made).
 - **Dev checkpoints:** Ship Reef (dev), Ship Foremast Leap (dev), Ship Fore Topmast (dev).
+- **The storm's lines heard (2026-11-09):** every shouted line plays 3 dB louder (up to 5.6 dB once the storm intensifies). Under each line the storm's rain, gale, canvas and sea sink to 40% (about 8 dB), as the music already does, and come back about a second after it. In the cutscene the lines are heard at full level wherever the camera is.
 - **The ruptures' look (2026-11-09):** each is a ragged disc on the sea whose material traces the view down a well under it, so it reads as a hole: the sea pours over its lip and down its sides, and the plane it opens onto lies at the bottom (`Tools/create_sea_rupture_materials.py`: `M_SeaRuptureAstral`, `M_SeaRupturePhlegethos`, `M_SeaRuptureFoam`). The Astral ones are lit violet from below, with an oily sheen on the water at the lip and a silver-violet nebula with stars at the bottom (seen when looking well down into one). The burning one has irregular plates of near-black basalt over molten rock, a molten lake at its heart, and its lower walls flash to steam. White water swirls in toward each one's lip. The burning and below shots moved outboard, so the headsails and the fore topsail no longer block them. Review stills: `-ChuckShipSceneShots` writes six to `Saved/Screenshots/.../ShipRuptures` (copies in `Local/ship-ruptures/`). Rim fire from `AChuckFlames` was tried and dropped, because its smoke covered the shots.
 
 Where it differs from the plan (the open questions, defaults taken):

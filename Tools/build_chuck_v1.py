@@ -2121,6 +2121,108 @@ for name, lead in (('SwingLeapLeft', 'L'), ('SwingLeapRight', 'R')):
         'stance_intervals_s': {'foot_L': [], 'foot_R': []},
         'notes': 'Ring to ring, reaching with one paw: the lead paw lets go and stretches out toward the next ring, the other swings back for balance; the lead paw takes the bar with the body behind it, the other rising to it.'}, ground=False)
 
+# ---- the ship's storm ending (user 2026-11-09): a big sea knocks the brig over
+# and he loses his grip on the fore topsail yard, so the fall into the burning
+# rupture is not a jump. SwingSlip: hanging from the yard by both paws (the
+# Swing pose at the bottom of the arc), the yard jolts; the trailing (right)
+# paw is torn off the bar, swings down and claws back up for it and misses
+# (just short, under the bar); the left paw's fingers loosen and peel open and
+# it slides off; from SLIP_RELEASE both paws are off and reaching up after the
+# yard, paws open, legs kicking. The runtime holds the grip where the yard is
+# until SLIP_RELEASE (the body pivots about it as the ship lurches), then lets
+# him fall. FallFlail: falling (looped): arms up clawing at the air after the
+# yard, legs pedalling, the tail whipping, ears laid back, chin up.
+SLIP_FRAMES, SLIP_RELEASE, FALL_FRAMES = 37, .7, 24
+
+def slip_tail(w, up, whip):
+    for i, b in enumerate(TAIL):
+        k = (i + 1) / 6
+        poser.rotate(b, 'Y', (-34 if i == 0 else -4) * (1 - up) + (14 if i == 0 else 5) * up)
+        poser.rotate(b, 'Z', whip * math.sin(w + k * 2.4))
+
+def kick_legs(w, amount, rest_z=4.):
+    r = 0.
+    for side, ph in (('L', 0.), ('R', math.pi)):
+        lead = 1.5 if side == 'L' else -1.
+        y = NEUTRAL_BALL[side].y * .85
+        ball = Vector((3. + lead + 7. * amount * math.sin(w + ph), y, rest_z + 5. * amount * (.5 + .5 * math.cos(w + ph))))
+        r = max(r, poser.leg(side, ball, 50 + 12 * amount * math.sin(w + ph), 15, pole=(1., 0., 0.)))
+    return r
+
+def swing_slip(phase, f):
+    u = f / (SLIP_FRAMES - 1)
+    torn = smoothstep(u, .16, .3)                                     # the right paw torn off the bar
+    claw = smoothstep(u, .3, .44) * (1 - smoothstep(u, .56, .7))       # ...clawing back up for it, missing
+    loosen = smoothstep(u, .28, .58)                                  # the left paw's fingers opening
+    off = smoothstep(u, .58, SLIP_RELEASE)                            # ...and off
+    after = smoothstep(u, SLIP_RELEASE - .04, 1.)                     # both up after the yard
+    jolt = math.exp(-((u - .1) / .06) ** 2)                           # the yard's jerk
+    w = TAU * u * 3.2
+    hang_twist = torn * (1 - off)                                     # twisting under the one paw
+    poser.translate('pelvis', (0., 0., 1.5 - 2.5 * jolt))
+    poser.rotate('pelvis', 'Y', -6 * after + 5 * jolt)
+    poser.rotate('spine_01', 'Y', 3 - 6 * after)
+    poser.rotate('chest', 'Y', -5 - 4 * after)
+    poser.rotate('spine_02', 'Z', 8 * hang_twist)
+    poser.rotate('chest', 'Z', 14 * hang_twist)
+    poser.rotate('chest', 'X', 6 * hang_twist)
+    poser.rotate('neck', 'Y', -4 - 6 * hang_twist)
+    poser.rotate('head', 'Y', 6 + 14 * after + 6 * claw)               # eyes on the bar
+    poser.rotate('head', 'Z', -10 * claw)
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 6 + 12 * after + 8 * jolt)
+    slip_tail(w, after, 6 + 14 * torn)
+    poser.update()
+    r = 0.
+    held = {s: Vector((SWING_GRIP.x - .5, sg * 3.4, SWING_GRIP.z - 2.)) for s, sg in (('L', 1), ('R', -1))}
+    up = {s: Vector((7. + 1.5 * math.sin(w + (0 if s == 'L' else 2.)), sg * 8.5, SWING_GRIP.z - 6. + 2. * math.sin(w * 1.3 + (0 if s == 'L' else 1.5))))
+          for s, sg in (('L', 1), ('R', -1))}
+    # Right: off the bar, swung down and out, clawing back up to just under it, then up with the left.
+    down = Vector((2., -13., 41.))
+    miss = Vector((7.5, -5.5, SWING_GRIP.z - 7.5))
+    R = held['R'].lerp(down, torn).lerp(miss, claw).lerp(up['R'], after)
+    r = max(r, poser.arm('R', R, pole=(.2, -1., -.3)))
+    curl('R', 70 * (1 - torn) + 45 * claw + 12 * after)
+    # Left: holding on, sliding a little out along the bar as the fingers open; then off and up.
+    slide = held['L'] + Vector((0., 2.5 * loosen, -1.5 * off))
+    L = slide.lerp(up['L'], after)
+    r = max(r, poser.arm('L', L, pole=(-.2, 1., -.1)))
+    curl('L', 70 * (1 - .55 * loosen) * (1 - off) + 12 * after)
+    r = max(r, kick_legs(w, .25 + .75 * smoothstep(u, .14, .4)))
+    ik_goals()
+    return r
+
+def fall_flail(phase, f):
+    w = TAU * phase
+    poser.translate('pelvis', (0., 0., 1.))
+    poser.rotate('pelvis', 'Y', -7)
+    poser.rotate('spine_01', 'Y', -4)
+    poser.rotate('chest', 'Y', -9)
+    poser.rotate('chest', 'Z', 5 * math.sin(w))
+    poser.rotate('neck', 'Y', -4)
+    poser.rotate('head', 'Y', 20 + 3 * math.sin(w * 2))
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 18)
+    slip_tail(w + 1., 1., 16)
+    poser.update()
+    r = 0.
+    for s, sg, ph in (('L', 1, 0.), ('R', -1, math.pi)):
+        paw = Vector((7. + 2.5 * math.sin(w + ph), sg * (8.5 + 1.5 * math.cos(w + ph)), SWING_GRIP.z - 6. + 3. * math.sin(w + ph)))
+        r = max(r, poser.arm(s, paw, pole=(.2, sg * 1., -.3)))
+        curl(s, 18 + 30 * (.5 + .5 * math.sin(w + ph + 1.2)))
+    r = max(r, kick_legs(w, 1.))
+    ik_goals()
+    return r
+
+author('SwingSlip', SLIP_FRAMES, swing_slip, False, {
+    'grip_cm': [SWING_GRIP.x, SWING_GRIP.z], 'release': SLIP_RELEASE,
+    'time_mapping': 'clip time = time since the yard jolted; both paws are off the bar from release x duration',
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Hanging from the yard by both paws (Swing at 0), the yard jolts: the right paw is torn off and claws back for the bar, missing; the left peels off; then both reach up after it as he falls. The runtime holds the grip on the yard until release.'}, ground=False)
+author('FallFlail', FALL_FRAMES, fall_flail, True, {
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Falling, looped: arms up clawing after the yard, legs pedalling, tail whipping, ears back, chin up.'}, ground=False)
+
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
            primary_bone_axis='Y', secondary_bone_axis='X', use_armature_deform_only=False,
