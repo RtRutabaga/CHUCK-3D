@@ -16,6 +16,7 @@
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "HAL/PlatformMisc.h"
+#include "Async/ParallelFor.h"
 
 // The land on both rims of the gorge (Claude, 2026-10-15; replaces the
 // earlier starting-side vista). The gorge itself is ChultGorge.cpp; this file
@@ -59,16 +60,18 @@ void BuildChultVista(AActor* Owner)
             for(float T:Cols)if(Band==0?FMath::Abs(T)<=50000:Band==1?T<=-50000:T>=50000)BandCols.Add(T);
             const TArray<float> U=Rows(Band==0?250:1000,Band==0?250:1000,Limit);
             FChultGrid Grid;Grid.Init(BandCols.Num(),U.Num());TArray<float> FloorDistance;FloorDistance.SetNum(Grid.P.Num());
-            for(int32 J=0;J<U.Num();++J)for(int32 I=0;I<BandCols.Num();++I)
+            // Every vertex on its own (pure functions of S and T): spread over the cores (2026-11-10).
+            ParallelFor(U.Num(),[&](int32 J){for(int32 I=0;I<BandCols.Num();++I)
             {
                 const float T=BandCols[I],S=ChultGorgeLip(Side,T)-Sg*U[J];const int32 K=Grid.Id(I,J);
                 const float D=ChultGorgeFloorDistance(S,T);FloorDistance[K]=D;
                 float Z=ChultGorgeLandZ(S,T,Side);
                 // Inside an existing floor: buried just below it, never over it.
-                if(D<=1){Z-=12;Grid.Hidden[K]=1;++Reserved;}
+                if(D<=1){Z-=12;Grid.Hidden[K]=1;}
                 Grid.P[K]=ChultCanyonFrame(S,T,Z);
-            }
-            for(int32 J=0;J<U.Num();++J)for(int32 I=0;I<BandCols.Num();++I)
+            }});
+            for(uint8 Hid:Grid.Hidden)Reserved+=Hid;
+            ParallelFor(U.Num(),[&](int32 J){for(int32 I=0;I<BandCols.Num();++I)
             {
                 const FVector P=Grid.P[Grid.Id(I,J)],F=Frame(P);
                 const float Steep=Steepness(Grid,I,J),Break=.35f*Noise(F.X,F.Y,900,1)+.15f*Noise(F.X,F.Y,260,2);
@@ -78,7 +81,7 @@ void BuildChultVista(AActor* Owner)
                 const float Rock=FMath::Clamp(Ease((Steep-FMath::Lerp(.95f,1.35f,Inland)+Break)/.75f),0.f,1.f);
                 const float Crag=FMath::Clamp(.4f+.35f*Noise(F.X,F.Y,2400,3)+.5f*Inland,0.f,1.f);
                 Grid.C[Grid.Id(I,J)]=FColor(FMath::RoundToInt(Rock*255),FMath::RoundToInt(Crag*255),0,255);
-            }
+            }});
             for(int32 I0=0;I0<BandCols.Num()-1;I0+=48)for(int32 J0=0;J0<U.Num()-1;J0+=40)
             {
                 const int32 I1=FMath::Min(I0+48,BandCols.Num()-1),J1=FMath::Min(J0+40,U.Num()-1);
@@ -97,17 +100,17 @@ void BuildChultVista(AActor* Owner)
         // The far plateau and ranges: a coarse sheet beyond the fine rows.
         TArray<float> FarT,FarU;for(float T=-130000;T<=130000;T+=1800)FarT.Add(T);for(float X=Limit;X<=Limit+150000;X+=1800)FarU.Add(X);
         FChultGrid Far;Far.Init(FarT.Num(),FarU.Num());
-        for(int32 J=0;J<FarU.Num();++J)for(int32 I=0;I<FarT.Num();++I)
+        ParallelFor(FarU.Num(),[&](int32 J){for(int32 I=0;I<FarT.Num();++I)
         {
             const float T=FarT[I],S=ChultGorgeLip(Side,T)-Sg*FarU[J];const int32 K=Far.Id(I,J);
             if(ChultGorgeFloorDistance(S,T)<=1)Far.Hidden[K]=1;
             Far.P[K]=ChultCanyonFrame(S,T,ChultGorgeLandZ(S,T,Side)-(J==0?60:0));
-        }
-        for(int32 J=0;J<FarU.Num();++J)for(int32 I=0;I<FarT.Num();++I)
+        }});
+        ParallelFor(FarU.Num(),[&](int32 J){for(int32 I=0;I<FarT.Num();++I)
         {
             const FVector F=Frame(Far.P[Far.Id(I,J)]);const float Rock=FMath::Clamp(Ease((Steepness(Far,I,J)-1.4f+.3f*Noise(F.X,F.Y,5000,4))/.8f),0.f,1.f);
             Far.C[Far.Id(I,J)]=FColor(FMath::RoundToInt(Rock*255),235,0,255);
-        }
+        }});
         for(int32 I0=0;I0<FarT.Num()-1;I0+=26)
             if(auto* Mesh=Far.Emit(Owner,FString::Printf(TEXT("ChultRimFar%d_%d"),Side,I0),Ground,I0,FMath::Min(I0+26,FarT.Num()-1),0,FarU.Num()-1,[](int32,int32){return FVector::UpVector;},false,false,Triangles))
             {Mesh->ComponentTags.Add(TEXT("ChultStartVista"));++Chunks;}

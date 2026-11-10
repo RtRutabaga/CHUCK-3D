@@ -154,7 +154,7 @@ void BuildChultRuins(AActor* Owner)
             const FVector Axis=FMath::Abs(N.Z)>.95f?FVector::ForwardVector:FVector::UpVector;
             Tangents.Emplace(FVector::CrossProduct(Axis,N).GetSafeNormal(),false);
         }
-        Mesh->CreateMeshSection(Section,S->V,S->T,S->N,S->UV,S->C,Tangents,true);
+        Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(Section,S->V,S->T,S->N,S->UV,S->C,Tangents,true);
         const TCHAR* Path=Section==0?TEXT("/Game/Art/ChultRuins/M_RuinStone.M_RuinStone"):
             TEXT("/Game/Art/ChultRuins/M_RuinMoss.M_RuinMoss");
         auto* Material=LoadObject<UMaterialInterface>(nullptr,Path);Mesh->SetMaterial(Section++,Material);Missing+=Material==nullptr;

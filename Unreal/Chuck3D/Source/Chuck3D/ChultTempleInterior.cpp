@@ -496,7 +496,7 @@ namespace
         {
             const FSurf& S=*Pair.Key;TArray<FProcMeshTangent> Tangents;
             for(const FVector& N:S.N){const FVector Axis=FMath::Abs(N.Z)>.95f?FVector::ForwardVector:FVector::UpVector;Tangents.Emplace(FVector::CrossProduct(Axis,N).GetSafeNormal(),false);}
-            Mesh->CreateMeshSection(Section,S.V,S.T,S.N,S.UV,S.C,Tangents,bSolid);
+            Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(Section,S.V,S.T,S.N,S.UV,S.C,Tangents,bSolid);
             auto* Material=LoadObject<UMaterialInterface>(nullptr,Pair.Value);Missing+=!Material;Mesh->SetMaterial(Section++,Material);Triangles+=S.T.Num()/3;
         }
         Mesh->SetCollisionEnabled(bSolid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
@@ -1082,7 +1082,7 @@ void BuildChultTempleInterior(AActor* Owner)
         {
             auto* Mesh=NewObject<UProceduralMeshComponent>(Traps,*Name);Mesh->SetupAttachment(Traps->GetRootComponent());Mesh->bUseComplexAsSimpleCollision=true;
             Mesh->RegisterComponent();Mesh->SetWorldLocation(Location);
-            Mesh->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,TArray<FProcMeshTangent>(),bSolid);Mesh->SetMaterial(0,M);Triangles+=S.T.Num()/3;
+            Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,TArray<FProcMeshTangent>(),bSolid);Mesh->SetMaterial(0,M);Triangles+=S.T.Num()/3;
             if(Second){Mesh->CreateMeshSection(1,Second->V,Second->T,Second->N,Second->UV,Second->C,TArray<FProcMeshTangent>(),false);Mesh->SetMaterial(1,M2);Triangles+=Second->T.Num()/3;}
             Mesh->SetCollisionEnabled(bSolid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
             if(bSolid)Mesh->SetCollisionProfileName(TEXT("BlockAll"));

@@ -86,7 +86,7 @@ namespace
     UProceduralMeshComponent* Finish(AActor* Owner,const TCHAR* Name,FSurface& S,UMaterialInterface* Mat,bool Solid)
     {
         auto* P=NewObject<UProceduralMeshComponent>(Owner,FName(Name));P->SetupAttachment(Owner->GetRootComponent());P->SetWorldLocation(AChultLanding::FloorOrigin());P->RegisterComponent();
-        P->bUseComplexAsSimpleCollision=true;P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,S.Tangents,Solid);
+        P->bUseComplexAsSimpleCollision=true;P->bUseAsyncCooking=AChultLanding::bAsyncCook;P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,S.Tangents,Solid);
         P->SetMaterial(0,Mat);P->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(Solid) P->SetCollisionProfileName(TEXT("BlockAll"));return P;
     }

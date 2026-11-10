@@ -99,6 +99,8 @@ private:
     int32 PartFrames[3] = {0, 0, 0};
     float PartTime[3] = {0, 0, 0}, PartWorst[3] = {0, 0, 0};
     void BuildStage();
+    /** Land round playable Chult out to the horizon, for the high shots. */
+    void BuildOuterLand();
     void HideDocks();
     void Burst(const FVector& At, int32 Count, float Speed, bool bLitter = false);
     void UpdateLeaves(float DeltaSeconds);

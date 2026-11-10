@@ -550,7 +550,7 @@ void BuildGrove(AActor* Owner)
         const double Start=FPlatformTime::Seconds();
         CalculateTangents(S,Tangents);
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_CANOPY_TANGENTS mesh=%s vertices=%d ms=%.1f"),Name,S.V.Num(),(FPlatformTime::Seconds()-Start)*1000);
-        P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,Tangents,Solid);
+        P->bUseAsyncCooking=AChultLanding::bAsyncCook;P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,Tangents,Solid);
         P->SetMaterial(0,Bark);P->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(Solid)P->SetCollisionProfileName(TEXT("BlockAll"));P->ComponentTags.Add(TEXT("ChultCanopy"));
     };

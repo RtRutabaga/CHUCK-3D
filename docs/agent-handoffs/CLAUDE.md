@@ -2,6 +2,50 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 10 — the fall: land to the horizon round Chult; the pantry fall's white freeze halved (Claude)
+
+- **Asked:** the fall to Chult showed a square of terrain that stops abruptly in the high views; make it look better. Also cut the load time at the pantry fall's start.
+- **Source:** `main` at 4ff2f7df.
+- **Changed:**
+  - **Outer land** (`FallCutscene.h/.cpp`, `BuildOuterLand`):
+    - The square was ChultVista's land ending over the flat far plane.
+    - The cutscene now builds land round it in the canyon frame, out to 45 km:
+      - It matches `ChultGorgeLandZ` at the seam.
+      - The gorge carries on as a valley that shoals and widens.
+      - Over 3 km it blends into calmer hills, which sink to the far plane 25–40 km out.
+    - It uses M_ChultGorge. There are 32 chunks (118k triangles), built in about 40 ms. They are hidden with the sky at the crash, so playable Chult is unchanged.
+  - **Async collision during the fall:**
+    - `AChultLanding::bAsyncCook` is set round the fall's `BuildSet()`. Every Chult `CreateMeshSection` site sets `bUseAsyncCooking` from it: ChultGrid.h, ChultLandform.h, ChultCanopy, Ruins, Temple, TempleInterior (2), Expansion, Bridge, Canyon, Dressing, Wreck (2) and the landing's root collision.
+    - `AChultLanding::AfterCollision(Owner, Delay, Fn)` waits until no procedural mesh has a pending cook (it reads `AsyncBodySetupQueue` by reflection, with a 20 s cap). The path (.6 s), tree grounding (1.1 s) and the wreck's second clearing (1.2 s) now use it.
+    - The checkpoint entry still cooks synchronously.
+  - **Parallel heights:**
+    - In `ChultVista.cpp`, the band and far-sheet height and colour loops run in `ParallelFor`.
+    - In `ChultUpriver.cpp`, the floor's corner heights are computed once in `ParallelFor` and the same quads are built in the same order.
+  - `docs/CHULT-LANDING.md`: a contract bullet for `bAsyncCook`, `AfterCollision` and the thread-safety rule for height functions.
+- **Contract:** no rig, character, camera or traversal changes. The landing transform, path, grounding and wreck results are unchanged; in the editor, grounding lowered=10992, no_ground=1538 and the wreck cleared 369, the same as before.
+- **Tested:**
+  - **Editor:**
+    - The stage build went from a ~7.0 s single-frame freeze to 2.8 s. Collision was ready ~0.6 s later.
+    - Stills: `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FallCutscene/` (T15.0_CloudDeck, T16.9, T18.6, T20.3, T06.5, PlayableLanding).
+    - Logs: `Local/fall-profile-*.log`, `Local/fall-outer-land.log`.
+  - **Packaged, first candidate:**
+    - Crashed 60 s after the stage build (`Local/verify-demo-end-20261110-090913.log`). The dump, symbolized with dbghelp, pointed at `AfterCollision`.
+    - Cause: the poll lambda cleared its own timer and then used its destroyed captures.
+    - Fix: copy them to the stack before `ClearTimer`.
+  - **Packaged, second candidate:**
+    - `CHUCK_PACKAGE_VERIFIED passes=182` (`Local/verify-package-20261110-091324.log`).
+    - `CHUCK_FALL_STAGE build_ms` 3218–3254 (packaged was ~6.5 s before). `CHUCK_CHULT_COLLISION_READY` after ~470 ms.
+    - `CHUCK_FALL_CUTSCENE_TEST failures=0 landing=1` and `CHUCK_DEMO_END_TEST failures=0`.
+    - Promoted as OuterLand. The receipt names 4ff2f7d because the build was made before this commit. The prior package was kept and HeroHair pruned.
+- **Not tested:** nobody has watched the full fall by hand; only stills were reviewed.
+- **Remaining flaws:**
+  - Laying the path still hitches ~0.4 s about 1 s after the white clears (pre-existing).
+  - The rest of the 3.2 s is mostly the temple and interior (~0.5 s), vista dressing (~0.5 s) and the root collision mesh (~0.25 s).
+  - Small steps may show where the outer land meets the vista edge.
+  - The far haze reads tan at the left edge of the 3 km still.
+  - The 14 `Content/Common/Materials/*.uasset` re-saves were uncommitted before this session. They are not this work and remain uncommitted.
+- **Next owner:** either agent; Claude preferred for further fall/cutscene work.
+
 ## November 9 (late night) — the storm ending: lines heard over the storm; a great sea knocks her over and Chuck loses his grip (Claude)
 
 - **Asked:**

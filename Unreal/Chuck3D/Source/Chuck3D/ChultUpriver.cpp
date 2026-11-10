@@ -21,6 +21,7 @@
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "HAL/PlatformMisc.h"
+#include "Async/ParallelFor.h"
 
 // Upriver beyond the bridge (Claude, 2026-10-15; docs/CHULT-UPRIVER.md).
 // The far bank's floor now runs on from S=28000 to ChultFarFloorEnd (64000):
@@ -185,12 +186,15 @@ void BuildChultUpriver(AActor* Owner)
         FChultLandform Ground;
         // From the temple precinct on, wider (2026-10-16).
         const float Wide=S0>=ChultTemplePrecinctFrom?ChultTemplePrecinctHalf:6500;
-        for(float S=S0;S<S0+2000;S+=100)for(float T=-Wide;T<Wide;T+=100)
+        // Each corner's height once, over the cores (2026-11-10; it was four times, one per quad).
+        const int32 NS=20,NT=FMath::RoundToInt(2*Wide/100);
+        TArray<FVector> Corner;Corner.SetNum((NS+1)*(NT+1));
+        ParallelFor(NS+1,[&](int32 A){for(int32 B=0;B<=NT;++B){FVector P=ChultCanyonFrame(S0+A*100.f,-Wide+B*100.f);P.Z=ChultCanyonGroundZ(P);Corner[A*(NT+1)+B]=P;}});
+        for(int32 A=0;A<NS;++A)for(int32 B=0;B<NT;++B)
         {
             // Not over the temple interior's well (inside the temple's masonry, 2026-10-20).
-            if(ChultTempleInteriorCutsGround(S+50,T+50))continue;
-            FVector A=ChultCanyonFrame(S,T),B=ChultCanyonFrame(S+100,T),C=ChultCanyonFrame(S+100,T+100),D=ChultCanyonFrame(S,T+100);
-            for(FVector* P:{&A,&B,&C,&D})P->Z=ChultCanyonGroundZ(*P);Ground.Quad(A,B,C,D);
+            if(ChultTempleInteriorCutsGround(S0+A*100.f+50,-Wide+B*100.f+50))continue;
+            Ground.Quad(Corner[A*(NT+1)+B],Corner[(A+1)*(NT+1)+B],Corner[(A+1)*(NT+1)+B+1],Corner[A*(NT+1)+B+1]);
         }
         for(int32 I=0;I<Ground.V.Num();++I)Ground.UV[I]=FVector2D(Ground.V[I].X/260,Ground.V[I].Y/260);
         auto* Mesh=Ground.Finish(Owner,*FString::Printf(TEXT("ChultUpriverFloor%d"),Chunks),TEXT("/Game/Art/Cutscenes/FallToChult/M_FallGround.M_FallGround"));

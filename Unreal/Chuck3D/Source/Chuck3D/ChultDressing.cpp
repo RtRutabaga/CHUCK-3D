@@ -26,7 +26,7 @@ void BuildChultWetDressing(AActor* Owner, bool SolidRocks)
         auto* P=NewObject<UProceduralMeshComponent>(Owner,FName(Name));
         P->SetupAttachment(Owner->GetRootComponent()); P->SetWorldLocation(G); P->RegisterComponent();
         P->bUseComplexAsSimpleCollision=true;
-        P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,TArray<FProcMeshTangent>(),Solid);
+        P->bUseAsyncCooking=AChultLanding::bAsyncCook;P->CreateMeshSection(0,S.V,S.T,S.N,S.UV,S.C,TArray<FProcMeshTangent>(),Solid);
         P->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(Solid) P->SetCollisionProfileName(TEXT("BlockAll"));
         P->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,*FString::Printf(TEXT("/Game/Art/Cutscenes/FallToChult/%s.%s"),Material,Material)));

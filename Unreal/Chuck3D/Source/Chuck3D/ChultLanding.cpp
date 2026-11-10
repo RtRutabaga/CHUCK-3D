@@ -26,6 +26,7 @@
 #include "ChultWreck.h"
 #include "ChultBirds.h"
 #include "ProceduralMeshComponent.h"
+#include "UObject/UObjectIterator.h"
 #include "FallCutscene.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Camera/CameraActor.h"
@@ -367,7 +368,7 @@ void AChultLanding::BuildSet()
     FallenLog(FVector(3350,950,0),15,1.2f);
     auto* RootCollision=NewObject<UProceduralMeshComponent>(this,TEXT("ChultRootCollision"));
     RootCollision->bUseComplexAsSimpleCollision=true;
-    RootCollision->CreateMeshSection(0,RootVertices,RootTriangles,TArray<FVector>(),TArray<FVector2D>(),TArray<FColor>(),TArray<FProcMeshTangent>(),true);
+    RootCollision->bUseAsyncCooking=AChultLanding::bAsyncCook;RootCollision->CreateMeshSection(0,RootVertices,RootTriangles,TArray<FVector>(),TArray<FVector2D>(),TArray<FColor>(),TArray<FProcMeshTangent>(),true);
     RootCollision->SetCollisionProfileName(TEXT("BlockAll")); RootCollision->SetHiddenInGame(true); RootCollision->SetCastShadow(false); Attach(RootCollision);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_ROOTS triangles=%d trees=%d"),RootTriangles.Num()/3,TreeCount);
     BuildChultWetDressing(this,true);
@@ -383,11 +384,10 @@ void AChultLanding::BuildSet()
     BuildChultWreck(this);     // the cog wrecked beyond the bridge (Claude, 2026-10-18)
     AChultFoliageFade::Spawn(GetWorld());   // see-through undergrowth (Claude, 2026-10-27)
     // Let the registered terrain/solid foliage enter the physics scene first.
-    FTimerHandle PathTimer;
-    GetWorldTimerManager().SetTimer(PathTimer,FTimerDelegate::CreateWeakLambda(this,[this](){BuildChultPath(this);}),.6f,false);
+    // (In the fall the collision is still cooking on worker threads: these wait for it.)
+    AfterCollision(this,.6f,[this](){BuildChultPath(this);});
     // Then let every tree's foot down onto the lowest ground under it (ChultPropAudit.h, 2026-10-27).
-    FTimerHandle GroundTimer;
-    GetWorldTimerManager().SetTimer(GroundTimer,FTimerDelegate::CreateWeakLambda(this,[this](){GroundChultTrees(GetWorld());}),1.1f,false);
+    AfterCollision(this,1.1f,[this](){GroundChultTrees(GetWorld());});
     int32 Instances=0,Missing=0;
     for(auto& Set:Sets) {Instances+=Set.Value->GetInstanceCount(); Missing+=Set.Value->GetStaticMesh()==nullptr;}
     Missing+=Floor->GetMaterial(0)==nullptr;
@@ -395,6 +395,44 @@ void AChultLanding::BuildSet()
     for(auto& Set:Sets) if(Set.Key.StartsWith(TEXT("SM_ChultFern"))) NaturalFerns+=Set.Value->GetInstanceCount();
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_NATURE ferns=%d fern_variants=4 background_trees=%d tree_collision=1 foliage_collision=0 missing_assets=%d"),NaturalFerns,NaturalTrees,Missing);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_LANDING trees=%d instances=%d missing_assets=%d origin=%s grips=0"),TreeCount,Instances,Missing,*G.ToString());
+}
+
+int32 AChultLanding::PendingCollision(UWorld* World)
+{
+    // A component's queue of async cooks empties when its newest one lands.
+    static FArrayProperty* Queue=FindFProperty<FArrayProperty>(UProceduralMeshComponent::StaticClass(),TEXT("AsyncBodySetupQueue"));
+    if(!Queue||!World) return 0;
+    int32 Pending=0;
+    for(TObjectIterator<UProceduralMeshComponent> It;It;++It)
+        if(It->GetWorld()==World && IsValid(*It))
+        { FScriptArrayHelper Items(Queue,Queue->ContainerPtrToValuePtr<void>(*It)); Pending+=Items.Num()>0; }
+    return Pending;
+}
+
+void AChultLanding::AfterCollision(AActor* Owner,float Delay,TFunction<void()> Fn)
+{
+    UWorld* World=Owner?Owner->GetWorld():nullptr;
+    if(!World) return;
+    auto Run=[Owner,Delay,Fn]()
+    {
+        FTimerHandle Once;
+        Owner->GetWorldTimerManager().SetTimer(Once,FTimerDelegate::CreateWeakLambda(Owner,[Fn](){Fn();}),Delay,false);
+    };
+    if(PendingCollision(World)==0) { Run(); return; }
+    auto Poll=MakeShared<FTimerHandle>();
+    const double Since=FPlatformTime::Seconds();
+    Owner->GetWorldTimerManager().SetTimer(*Poll,FTimerDelegate::CreateWeakLambda(Owner,[Owner,Poll,Since,Run]()
+    {
+        const int32 Pending=PendingCollision(Owner->GetWorld());
+        // Never wait forever on a mesh whose cook was dropped.
+        if(Pending>0 && FPlatformTime::Seconds()-Since<20.) return;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_COLLISION_READY after_ms=%.0f pending=%d"),(FPlatformTime::Seconds()-Since)*1000,Pending);
+        // Clearing the timer destroys this lambda, so keep what it needs first.
+        const auto Then=Run;
+        const TSharedRef<FTimerHandle> Handle=Poll;
+        Owner->GetWorldTimerManager().ClearTimer(*Handle);
+        Then();
+    }),.05f,true);
 }
 
 void AChultLanding::VerifyAndCapture()

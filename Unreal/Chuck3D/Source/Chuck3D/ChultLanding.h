@@ -23,6 +23,13 @@ public:
     void BuildSet();
     void BuildEnvironment();
     void VerifyAndCapture();
+    /** While true, Chult's procedural meshes cook their collision on worker
+     *  threads (the fall cutscene: nothing touches the ground for 25 s). */
+    static inline bool bAsyncCook=false;
+    /** Runs Fn Delay seconds after every Chult collision mesh has finished
+     *  cooking (at once plus Delay when nothing is pending). */
+    static void AfterCollision(AActor* Owner,float Delay,TFunction<void()> Fn);
+    static int32 PendingCollision(UWorld* World);
 private:
     bool bSetBuilt=false, bEnvironmentBuilt=false;
 };

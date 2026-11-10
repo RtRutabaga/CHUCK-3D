@@ -1,5 +1,9 @@
 #include "FallCutscene.h"
 #include "ChultLanding.h"
+#include "ChultCanyon.h"
+#include "ChultGorge.h"
+#include "ChultGrid.h"
+#include "ChultRiver.h"
 #include "AstralSummon.h"
 #include "ChuckAnimInstance.h"
 #include "ChuckCharacter.h"
@@ -25,6 +29,7 @@
 #include "GameFramework/Info.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Async/ParallelFor.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Sound/SoundWave.h"
@@ -138,6 +143,7 @@ float AFallCutscene::Altitude(float T)
 
 void AFallCutscene::BuildStage()
 {
+    const double Started = FPlatformTime::Seconds();
     UWorld* World = GetWorld();
     const FVector G = LandingSpot();
     auto Attach = [this](USceneComponent* C, const FVector& At, const FRotator& Rot = FRotator::ZeroRotator)
@@ -281,7 +287,12 @@ void AFallCutscene::BuildStage()
     // cutscene and the start of play are one place. Its lighting comes in as
     // he crashes into the canopy.
     Landing = GetWorld()->SpawnActor<AChultLanding>();
+    // Its collision cooks on worker threads while he falls (the first touch is
+    // the crash, 25 s on), instead of holding the white for seconds.
+    AChultLanding::bAsyncCook = true;
     Landing->BuildSet();
+    AChultLanding::bAsyncCook = false;
+    BuildOuterLand();
     // Leaves shaken loose by his fall.
     FallingLeaves = NewObject<UInstancedStaticMeshComponent>(this);
     FallingLeaves->SetStaticMesh(Mesh(TEXT("SM_FallLeafCard")));
@@ -291,7 +302,111 @@ void AFallCutscene::BuildStage()
     FallingLeaves->RegisterComponent();
     int32 Instances = 0;
     for (auto* H : Jungle) Instances += H->GetInstanceCount();
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_STAGE sets=%d instances=%d crowns=%d trunks=%d landing=%d"), Jungle.Num(), Instances, Crowns->GetInstanceCount(), Trunks->GetInstanceCount(), Landing != nullptr);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_STAGE sets=%d instances=%d crowns=%d trunks=%d landing=%d build_ms=%.0f"), Jungle.Num(), Instances, Crowns->GetInstanceCount(), Trunks->GetInstanceCount(), Landing != nullptr, (FPlatformTime::Seconds() - Started) * 1000);
+}
+
+void AFallCutscene::BuildOuterLand()
+{
+    // Playable Chult's land (ChultVista) ends 1.3 km along the gorge either way
+    // and 2-2.5 km inland, and from the sky that read as a raised square with a
+    // hard edge. Round it, in the same canyon frame, the land carries on: the
+    // same heights at the seam (ChultGorgeLandZ), the gorge winding on as a
+    // valley that shoals and widens, then over 3 km into calmer hills that sink
+    // to the far plane's level 25-40 km out. Only the sky shots see it.
+    const double Started = FPlatformTime::Seconds();
+    static constexpr float TMax = 130000.f, Step = 2600.f, Blend = 300000.f, FadeFrom = 2500000.f, FadeLength = 1500000.f, Reach = 4500000.f;
+    const float Inland1 = 150000.f + ChultFarFloorEnd - 4500.f + 12000.f;   // ChultVista's far-side reach (the near side's is 200000)
+    const float FarZ = -100.f;   // just under the far plane's top (it lies at -80, 1 m thick)
+    auto Ease = [](float U) { U = FMath::Clamp(U, 0.f, 1.f); return U * U * (3.f - 2.f * U); };
+    auto Noise = [](float X, float Y, float Scale, float Seed) { return FMath::PerlinNoise2D(FVector2D(X / Scale + 3.71f + Seed * 2.13f, Y / Scale - 11.3f + Seed * 1.71f)); };
+    auto SMin = [](float T) { return ChultGorgeLip(0, FMath::Clamp(T, -TMax, TMax)) - 200000.f; };
+    auto SMax = [Inland1](float T) { return ChultGorgeLip(1, FMath::Clamp(T, -TMax, TMax)) + Inland1; };
+    float Lo = 1e9f, Hi = -1e9f;
+    for (float T = -TMax; T <= TMax; T += 1000.f) { Lo = FMath::Min(Lo, SMin(T)); Hi = FMath::Max(Hi, SMax(T)); }
+    // Axes: 26 m cells round the seam, growing 8% a cell out to the horizon.
+    auto Axis = [](float From, float To)
+    {
+        TArray<float> A;
+        for (float X = From; X <= To + 1.f; X += Step) A.Add(X);
+        TArray<float> Before;
+        for (float X = From, D = Step; X > From - Reach; D *= 1.08f) { X -= D; Before.Insert(X, 0); }
+        for (float X = A.Last(), D = Step; X < To + Reach; D *= 1.08f) { X += D; A.Add(X); }
+        Before.Append(A);
+        return Before;
+    };
+    const TArray<float> Ts = Axis(-TMax - 3 * Step, TMax + 3 * Step);
+    const TArray<float> Ss = Axis(FMath::FloorToFloat(Lo / Step) * Step - 3 * Step, FMath::CeilToFloat(Hi / Step) * Step + 3 * Step);
+    // The seam's mean height: the hills further out sit at it.
+    double Sum = 0; int32 Count = 0;
+    for (float T = -TMax; T <= TMax; T += 10000.f) { Sum += ChultGorgeLandZ(SMin(T) - 1.f, T) + ChultGorgeLandZ(SMax(T) + 1.f, T); Count += 2; }
+    const float Level = Sum / Count;
+    FChultGrid Land;
+    Land.Init(Ts.Num(), Ss.Num());
+    ParallelFor(Ss.Num(), [&](int32 J)
+    {
+        for (int32 I = 0; I < Ts.Num(); ++I)
+        {
+            const float S = Ss[J], T = Ts[I], Tc = FMath::Clamp(T, -TMax, TMax);
+            const float Lip0 = ChultGorgeLip(0, T), Lip1 = ChultGorgeLip(1, T);
+            const bool bGap = S > Lip0 && S < Lip1;
+            const int32 K = Land.Id(I, J);
+            const float InsideBy = FMath::Min3(TMax - FMath::Abs(T), S - SMin(Tc), SMax(Tc) - S);
+            float Z;
+            if (InsideBy >= 0)
+            {
+                // Under the playable land, just below it (and down the gorge, below its mist).
+                Z = bGap ? ChultGorgeMistZ - 4300.f : ChultGorgeLandZ(S, T) - 300.f;
+                if (InsideBy > 2.2f * Step) Land.Hidden[K] = 1;
+            }
+            else
+            {
+                const float DT = FMath::Max(FMath::Abs(T) - TMax, 0.f), DS = FMath::Max3(SMin(Tc) - S, S - SMax(Tc), 0.f);
+                const float D = FMath::Sqrt(DT * DT + DS * DS);
+                // Calmer hills, broad swells and a few forested ranges.
+                const float W = Noise(S, T, 40000, 1) * 12000;
+                const float R1 = 1 - FMath::Abs(Noise(S + W, T - W, 70000, 5)), R2 = 1 - FMath::Abs(Noise(S - W, T, 180000, 6));
+                const float Hills = Level + 2500 * Noise(S + W, T, 30000, 2) + 900 * Noise(S, T + W, 9000, 3) + 300 * Noise(S, T, 3000, 4)
+                    + 9000 * (R1 * R1 - .55f) + 16000 * (R2 * R2 * R2 - .45f);
+                const float Mix = Ease(D / Blend);
+                Z = Mix < 1 ? FMath::Lerp(ChultGorgeLandZ(S, T), Hills, Mix) : Hills;
+                if (DT > 0)
+                {
+                    // The gorge winds on beyond the bridge's reach as a valley, shoaling and widening.
+                    const float Mid = (Lip0 + Lip1) * .5f, Half = FMath::Max((Lip1 - Lip0) * .5f, 1500.f);
+                    const float Depth = 8500.f * (1 - Ease(DT / 1200000.f));
+                    const float Open = Half * .6f, Wide = Half * .6f + .06f * DT + 1.f;
+                    Z -= Depth * (1 - Ease((FMath::Abs(S - Mid) - Open) / Wide));
+                }
+                Z = FMath::Lerp(Z, FarZ, Ease((D - FadeFrom) / FadeLength));
+            }
+            Land.P[K] = ChultCanyonFrame(S, T, Z);
+        }
+    });
+    int32 Hidden = 0;
+    for (uint8 H : Land.Hidden) Hidden += H;
+    // Jungle on all but the steepest ground (M_ChultGorge's weights: R rock, G crag).
+    ParallelFor(Ss.Num(), [&](int32 J)
+    {
+        for (int32 I = 0; I < Ts.Num(); ++I)
+        {
+            const FVector N = Land.Normal(I, J, FVector::UpVector);
+            const float Steep = FMath::Sqrt(FMath::Max(0.f, static_cast<float>(1 - N.Z * N.Z))) / FMath::Max(static_cast<float>(N.Z), .05f);
+            const float Rock = Ease((Steep - 1.4f + .3f * Noise(Ss[J], Ts[I], 5000, 7)) / .8f);
+            Land.C[Land.Id(I, J)] = FColor(FMath::RoundToInt(Rock * 255), 235, 0, 255);
+        }
+    });
+    auto* Ground = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/ChultGorge/M_ChultGorge.M_ChultGorge"));
+    int32 Triangles = 0, Chunks = 0;
+    for (int32 I0 = 0; I0 < Ts.Num() - 1; I0 += 48)
+        for (int32 J0 = 0; J0 < Ss.Num() - 1; J0 += 48)
+            if (auto* Mesh = Land.Emit(this, FString::Printf(TEXT("FallOuterLand_%d_%d"), I0, J0), Ground, I0, FMath::Min(I0 + 48, Ts.Num() - 1), J0, FMath::Min(J0 + 48, Ss.Num() - 1),
+                [](int32, int32) { return FVector::UpVector; }, false, false, Triangles))
+            {
+                SkyParts.Add(Mesh);   // hidden with the open sky at the crash
+                ++Chunks;
+            }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_OUTER_LAND cols=%d rows=%d hidden=%d chunks=%d triangles=%d level_cm=%.0f material=%d ms=%.1f"),
+        Ts.Num(), Ss.Num(), Hidden, Chunks, Triangles, Level, Ground != nullptr, (FPlatformTime::Seconds() - Started) * 1000);
 }
 
 void AFallCutscene::HideDocks()

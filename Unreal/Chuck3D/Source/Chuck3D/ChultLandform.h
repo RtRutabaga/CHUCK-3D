@@ -34,7 +34,7 @@ struct FChultLandform
     UProceduralMeshComponent* Finish(AActor* Owner,const TCHAR* Name,const TCHAR* Path,bool Solid=true)
     {
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner,FName(Name));Mesh->SetupAttachment(Owner->GetRootComponent());Mesh->SetWorldLocation(AChultLanding::FloorOrigin());Mesh->RegisterComponent();
-        Mesh->bUseComplexAsSimpleCollision=true;Mesh->CreateMeshSection(0,V,T,N,UV,C,Tangents,Solid);
+        Mesh->bUseComplexAsSimpleCollision=true;Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(0,V,T,N,UV,C,Tangents,Solid);
         Mesh->SetMaterial(0,LoadObject<UMaterialInterface>(nullptr,Path));Mesh->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(Solid)Mesh->SetCollisionProfileName(TEXT("BlockAll"));return Mesh;
     }

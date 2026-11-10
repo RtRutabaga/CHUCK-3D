@@ -50,7 +50,7 @@ struct FChultGrid
         if(T.Num()==0)return nullptr;
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner,FName(*Name));Mesh->SetupAttachment(Owner->GetRootComponent());
         Mesh->SetWorldLocation(AChultLanding::FloorOrigin());Mesh->bUseComplexAsSimpleCollision=true;Mesh->RegisterComponent();
-        Mesh->CreateMeshSection(0,V,T,N,UV,Col,Tan,bSolid);Mesh->SetMaterial(0,Material);
+        Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(0,V,T,N,UV,Col,Tan,bSolid);Mesh->SetMaterial(0,Material);
         Mesh->SetCollisionEnabled(bSolid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
         if(bSolid)Mesh->SetCollisionProfileName(TEXT("BlockAll"));
         Mesh->SetCastShadow(bShadow);Triangles+=T.Num()/3;

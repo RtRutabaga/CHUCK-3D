@@ -318,7 +318,7 @@ namespace
         for(const auto& Pair:Sections)
         {
             FSurf& S=*Pair.Key;if(S.T.IsEmpty())continue;
-            Mesh->CreateMeshSection(Section,S.V,S.T,S.N,S.UV,TArray<FColor>(),S.Tan,bSolid);
+            Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(Section,S.V,S.T,S.N,S.UV,TArray<FColor>(),S.Tan,bSolid);
             if(Pair.Value){auto* M=LoadObject<UMaterialInterface>(nullptr,Pair.Value);Missing+=!M;Mesh->SetMaterial(Section,M);}
             ++Section;Triangles+=S.T.Num()/3;
         }
@@ -944,7 +944,7 @@ void BuildChultWreck(AActor* Owner)
         }
         auto* Mesh=NewObject<UProceduralMeshComponent>(Owner,TEXT("ChultWreckGround"));Mesh->SetupAttachment(Owner->GetRootComponent());
         Mesh->SetWorldLocation(AChultLanding::FloorOrigin());Mesh->bUseComplexAsSimpleCollision=true;Mesh->RegisterComponent();
-        Mesh->CreateMeshSection(0,Ground.V,Ground.T,Ground.N,Ground.UV,Ground.C,Ground.Tan,true);
+        Mesh->bUseAsyncCooking=AChultLanding::bAsyncCook;Mesh->CreateMeshSection(0,Ground.V,Ground.T,Ground.N,Ground.UV,Ground.C,Ground.Tan,true);
         auto* Mat=LoadObject<UMaterialInterface>(nullptr,GroundMat);Missing+=!Mat;Mesh->SetMaterial(0,Mat);
         Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Mesh->SetCollisionProfileName(TEXT("BlockAll"));
         Mesh->ComponentTags.Add(TEXT("ChultWreck"));Triangles+=Ground.T.Num()/3;
@@ -980,11 +980,10 @@ void BuildChultWreck(AActor* Owner)
 
     const int32 Cleared=ClearVegetation(Owner);
     // The road and the bridge exit's jungle are laid later (ChultPath, at 0.6 s): clear again after.
-    FTimerHandle Later;
-    Owner->GetWorldTimerManager().SetTimer(Later,FTimerDelegate::CreateWeakLambda(Owner,[Owner]()
+    AChultLanding::AfterCollision(Owner,1.2f,[Owner]()
     {
         UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_WRECK_CLEARED instances=%d pass=2"),ClearVegetation(Owner));
-    }),1.2f,false);
+    });
 
     const FVector Bow=ToFloor(Hull(1,0)),Stern=ToFloor(Hull(-1,0));
     const float LowEdge=ToFloor(FVector(0,-InnerHalf(0,DeckZ(0)),DeckZ(0))).Z-GroundAt(ToFloor(FVector(0,-InnerHalf(0,DeckZ(0)),DeckZ(0))));
