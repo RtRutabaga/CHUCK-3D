@@ -2,6 +2,44 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 10 — the tavern's rubbish bin out back (Claude)
+
+- **Asked:** build a period rubbish bin behind the tavern in Waterdeep. The keeper's night line (`night_00`) has Bobert "rootin' about in me bin out back".
+- **Source:** `main` at 0ced641c.
+- **Changed:**
+  - New `Tools/build_tavern_bin.py` (Blender 4.5.14) → `SourceAssets/NPCs/Props/SM_TavernBin.fbx` plus a `TavernBin` entry in the props manifest. Imported with `Tools/Import-NPCHumans.ps1 -Only prop:TavernBin`.
+    - It is an old cask sawn down and stood on end: 62 cm tall and 44 cm across, with eighteen staves.
+    - Two staves are left long as lugs, and one is cracked short.
+    - It has four iron hoops and a boarded bottom.
+    - Its plank lid has been knocked off and leans against it.
+    - Wet scraps, cabbage leaves, a mutton bone and a fish's backbone are heaped inside. A few scraps and a gnawed bone are spilled at its foot.
+    - About 9k triangles, with the slots Staves, Hoops, Refuse, Leaves and Bone (M_HumanFabric instances).
+  - `DockSetting.cpp`:
+    - The bin is placed in the alley behind the tavern at (60,1020), against the back wall between a window and a post.
+    - It has a hidden 44×62 cm collision cylinder tagged `TavernBin` and logs `CHUCK_TAVERN_BIN placed=`.
+    - Everything stays within y≤1043, so the alley's capsule route at y=1060 stays clear.
+    - New `-ChuckBinCapture` (4 stills, `Screenshots/Bin`).
+- **Tested:**
+  - Blender review renders: `Local/tavern-bin/`.
+  - Editor captures: `Local/tavern-bin/game/` and `Local/bin-capture*.log`.
+  - Packaged `Builds/TavernBinCandidate`: Verify-Package 182 (`Local/verify-package-20261110-125607.log`), including `CHUCK_WORLD_CHECK_COMPLETE failures=0` (the alley capsule route) and `CHUCK_TAVERN_BIN placed=1`.
+  - Verify-Menu was not run.
+- **Not checked:**
+  - Nobody has played it by hand.
+  - It has not been seen at night.
+- **Remaining flaws:**
+  - The refuse heap reads very dark in the alley's shade.
+  - The spilled scraps are simple lumps.
+  - It is not interactive. Chuck can jump onto it (62 cm), the same as a crate.
+- **Contract compatibility:** no rig or animation changes.
+- **Binary/LFS:** SM_TavernBin plus 5 MIs (new) and the FBX source.
+- **Launcher:**
+  - Promoted as TavernBin.
+  - The receipt names 0ced641c; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions).
+
 ## November 10 — the fall: land to the horizon round Chult; the pantry fall's white freeze halved (Claude)
 
 - **Asked:** the fall to Chult showed a square of terrain that stops abruptly in the high views; make it look better. Also cut the load time at the pantry fall's start.

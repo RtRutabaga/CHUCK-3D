@@ -672,6 +672,84 @@
      "gain": 26.931
     }
    }
+  },
+  "TavernBin": {
+   "fbx": "SM_TavernBin.fbx",
+   "tris": 9036,
+   "bounds_min_cm": [
+    -46.3,
+    -22.4,
+    -0.7
+   ],
+   "bounds_max_cm": [
+    61.5,
+    22.4,
+    67.6
+   ],
+   "height_cm": 62.0,
+   "belly_radius_cm": 22.5,
+   "slots": {
+    "Staves": {
+     "type": "fabric",
+     "fabric": "brown_planks_03",
+     "folder": "SourceAssets/Surfaces/PolyHaven",
+     "tile_cm": 60.0,
+     "tint": [
+      0.15,
+      0.105,
+      0.065
+     ],
+     "gain": 7.27
+    },
+    "Hoops": {
+     "type": "fabric",
+     "fabric": "metal_plate_02",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 50.0,
+     "tint": [
+      0.07,
+      0.05,
+      0.038
+     ],
+     "gain": 14.226
+    },
+    "Refuse": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 25.0,
+     "tint": [
+      0.075,
+      0.056,
+      0.034
+     ],
+     "gain": 26.931
+    },
+    "Leaves": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 12.0,
+     "tint": [
+      0.13,
+      0.17,
+      0.065
+     ],
+     "gain": 2.523
+    },
+    "Bone": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "folder": "SourceAssets/Surfaces/Cloth",
+     "tile_cm": 10.0,
+     "tint": [
+      0.33,
+      0.29,
+      0.21
+     ],
+     "gain": 2.523
+    }
+   }
   }
  },
  "generators": {
@@ -686,6 +764,7 @@
   "Cutlass": "Tools/build_pirate_props.py",
   "Cleaver": "Tools/build_pirate_props.py",
   "ConcertinaEnd": "Tools/build_pirate_props.py",
-  "ConcertinaBellows": "Tools/build_pirate_props.py"
+  "ConcertinaBellows": "Tools/build_pirate_props.py",
+  "TavernBin": "Tools/build_tavern_bin.py"
  }
 }
