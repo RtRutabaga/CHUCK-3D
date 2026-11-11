@@ -161,6 +161,30 @@
    "peaks": 11,
    "gain_db": -1.51
   },
+  "PirateCaptain/CAP_P00": {
+   "wav": "Voice/PirateCaptain/CAP_P00.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCaptain/VO_PirateCaptain_CAP_P00",
+   "seconds": 5.486,
+   "rate": 44100,
+   "peaks": 18,
+   "gain_db": 1.61
+  },
+  "PirateCaptain/CAP_P01": {
+   "wav": "Voice/PirateCaptain/CAP_P01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCaptain/VO_PirateCaptain_CAP_P01",
+   "seconds": 6.766,
+   "rate": 44100,
+   "peaks": 26,
+   "gain_db": 1.06
+  },
+  "PirateCaptain/CAP_P02": {
+   "wav": "Voice/PirateCaptain/CAP_P02.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCaptain/VO_PirateCaptain_CAP_P02",
+   "seconds": 1.622,
+   "rate": 44100,
+   "peaks": 4,
+   "gain_db": 2.63
+  },
   "PirateCaptain/CAP_01": {
    "wav": "Voice/PirateCaptain/CAP_01.wav",
    "asset": "/Game/Art/Audio/Voice/PirateCaptain/VO_PirateCaptain_CAP_01",
@@ -452,10 +476,10 @@
   "PirateCaptain/BG_04": {
    "wav": "Voice/PirateCaptain/BG_04.wav",
    "asset": "/Game/Art/Audio/Voice/PirateCaptain/VO_PirateCaptain_BG_04",
-   "seconds": 4.78,
+   "seconds": 7.379,
    "rate": 44100,
-   "peaks": 26,
-   "gain_db": -1.22
+   "peaks": 27,
+   "gain_db": 1.15
   },
   "PirateCaptain/BG_05": {
    "wav": "Voice/PirateCaptain/BG_05.wav",
@@ -585,6 +609,38 @@
    "peaks": 20,
    "gain_db": -0.2
   },
+  "Jeffries/JEF_P01": {
+   "wav": "Voice/Jeffries/JEF_P01.wav",
+   "asset": "/Game/Art/Audio/Voice/Jeffries/VO_Jeffries_JEF_P01",
+   "seconds": 5.564,
+   "rate": 44100,
+   "peaks": 28,
+   "gain_db": -0.26
+  },
+  "Jeffries/JEF_P02": {
+   "wav": "Voice/Jeffries/JEF_P02.wav",
+   "asset": "/Game/Art/Audio/Voice/Jeffries/VO_Jeffries_JEF_P02",
+   "seconds": 5.642,
+   "rate": 44100,
+   "peaks": 15,
+   "gain_db": 1.06
+  },
+  "Jeffries/JEF_P03": {
+   "wav": "Voice/Jeffries/JEF_P03.wav",
+   "asset": "/Game/Art/Audio/Voice/Jeffries/VO_Jeffries_JEF_P03",
+   "seconds": 3.499,
+   "rate": 44100,
+   "peaks": 20,
+   "gain_db": -1.34
+  },
+  "Jeffries/JEF_P04": {
+   "wav": "Voice/Jeffries/JEF_P04.wav",
+   "asset": "/Game/Art/Audio/Voice/Jeffries/VO_Jeffries_JEF_P04",
+   "seconds": 1.887,
+   "rate": 44100,
+   "peaks": 12,
+   "gain_db": -0.77
+  },
   "Jeffries/JEF_01": {
    "wav": "Voice/Jeffries/JEF_01.wav",
    "asset": "/Game/Art/Audio/Voice/Jeffries/VO_Jeffries_JEF_01",
@@ -648,6 +704,118 @@
    "rate": 44100,
    "peaks": 15,
    "gain_db": 0.32
+  },
+  "PirateSeated/SEA_01": {
+   "wav": "Voice/PirateSeated/SEA_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateSeated/VO_PirateSeated_SEA_01",
+   "seconds": 4.676,
+   "rate": 44100,
+   "peaks": 14,
+   "gain_db": 1.11
+  },
+  "PirateSeated/SEA_02": {
+   "wav": "Voice/PirateSeated/SEA_02.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateSeated/VO_PirateSeated_SEA_02",
+   "seconds": 5.146,
+   "rate": 44100,
+   "peaks": 16,
+   "gain_db": 1.64
+  },
+  "PirateSeated/SEA_ARR": {
+   "wav": "Voice/PirateSeated/SEA_ARR.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateSeated/VO_PirateSeated_SEA_ARR",
+   "seconds": 0.788,
+   "rate": 44100,
+   "peaks": 2,
+   "gain_db": 0.87
+  },
+  "PirateConcertina/CON_01": {
+   "wav": "Voice/PirateConcertina/CON_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateConcertina/VO_PirateConcertina_CON_01",
+   "seconds": 3.474,
+   "rate": 44100,
+   "peaks": 14,
+   "gain_db": 1.07
+  },
+  "PirateConcertina/CON_02": {
+   "wav": "Voice/PirateConcertina/CON_02.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateConcertina/VO_PirateConcertina_CON_02",
+   "seconds": 2.008,
+   "rate": 44100,
+   "peaks": 3,
+   "gain_db": 1.99
+  },
+  "PirateConcertina/CON_ARR": {
+   "wav": "Voice/PirateConcertina/CON_ARR.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateConcertina/VO_PirateConcertina_CON_ARR",
+   "seconds": 0.729,
+   "rate": 44100,
+   "peaks": 3,
+   "gain_db": 4.23
+  },
+  "PirateCheering/CHE_01": {
+   "wav": "Voice/PirateCheering/CHE_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCheering/VO_PirateCheering_CHE_01",
+   "seconds": 6.191,
+   "rate": 44100,
+   "peaks": 20,
+   "gain_db": -0.03
+  },
+  "PirateCheering/CHE_02": {
+   "wav": "Voice/PirateCheering/CHE_02.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCheering/VO_PirateCheering_CHE_02",
+   "seconds": 3.553,
+   "rate": 44100,
+   "peaks": 13,
+   "gain_db": 1.03
+  },
+  "PirateCheering/CHE_03": {
+   "wav": "Voice/PirateCheering/CHE_03.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCheering/VO_PirateCheering_CHE_03",
+   "seconds": 4.127,
+   "rate": 44100,
+   "peaks": 14,
+   "gain_db": 1.32
+  },
+  "PirateCheering/CHE_ARR": {
+   "wav": "Voice/PirateCheering/CHE_ARR.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateCheering/VO_PirateCheering_CHE_ARR",
+   "seconds": 1.159,
+   "rate": 44100,
+   "peaks": 3,
+   "gain_db": 2.59
+  },
+  "PirateDancer/DAN_01": {
+   "wav": "Voice/PirateDancer/DAN_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateDancer/VO_PirateDancer_DAN_01",
+   "seconds": 3.392,
+   "rate": 44100,
+   "peaks": 19,
+   "gain_db": 4.57
+  },
+  "PirateDancer/DAN_02": {
+   "wav": "Voice/PirateDancer/DAN_02.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateDancer/VO_PirateDancer_DAN_02",
+   "seconds": 1.501,
+   "rate": 44100,
+   "peaks": 10,
+   "gain_db": 2.77
+  },
+  "PirateDancer/DAN_ARR": {
+   "wav": "Voice/PirateDancer/DAN_ARR.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateDancer/VO_PirateDancer_DAN_ARR",
+   "seconds": 1.251,
+   "rate": 44100,
+   "peaks": 6,
+   "gain_db": 2.85
+  },
+  "PirateChef/CHEF_01": {
+   "wav": "Voice/PirateChef/CHEF_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PirateChef/VO_PirateChef_CHEF_01",
+   "seconds": 4.206,
+   "rate": 44100,
+   "peaks": 15,
+   "gain_db": -0.57
   }
  }
 }

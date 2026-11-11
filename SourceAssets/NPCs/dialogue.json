@@ -202,6 +202,23 @@
   },
   "PirateCaptain": {
    "voice": "ElevenLabs takes supplied by the user 2026-11-08 (the storm-start lines 2026-11-05), split by line: SourceAssets/NPCs/Voice/ShipStorm/lines.json; the ship's storm ending (docs/regions/SHIP-STORM-ENDING.md)",
+   "talk": [
+    {
+     "id": "CAP_P00",
+     "text": "Oi! There ye are, cabin boy! What're ye doin' skulkin' about? Get to work!",
+     "source": "Voice/PirateCaptain/source/CAP_P00.mp3"
+    },
+    {
+     "id": "CAP_P01",
+     "text": "And keep yer grubby paws off the cigarettes in me cabin! Catch ye nickin' even one, and there'll be HELL to pay!",
+     "source": "Voice/PirateCaptain/source/CAP_P01.mp3"
+    },
+    {
+     "id": "CAP_P02",
+     "text": "Arrgh!",
+     "source": "Voice/PirateCaptain/source/CAP_P02.wav"
+    }
+   ],
    "scene": [
     {
      "id": "CAP_01",
@@ -457,10 +474,8 @@
     },
     {
      "id": "BG_04",
-     "text": "STARBOARD YER HELM! ... I SAID STARBOARD! ... THE OTHER STARBOARD!",
-     "source": "Voice/ShipStorm/source/ship_storm_background.mp3",
-     "start": 12.95,
-     "end": 17.73
+     "text": "MAN THE PUMPS! SOUND THE WELL AND SING OUT THE DEPTH! ... SHE'S MAKIN' WATER, LADS! PUMP, DAMN YE!",
+     "source": "Voice/PirateCaptain/source/BG_04_pumps.wav"
     },
     {
      "id": "BG_05",
@@ -588,6 +603,28 @@
   },
   "Jeffries": {
    "voice": "the user's ElevenLabs takes, 2026-11-08 (ShipStorm/lines.json); JEF_X01/X02 are sounds only (no subtitle)",
+   "talk": [
+    {
+     "id": "JEF_P01",
+     "text": "The sea is wrong, the land is wrong. Open your eyes!",
+     "source": "Voice/Jeffries/source/JEF_P01.mp3"
+    },
+    {
+     "id": "JEF_P02",
+     "text": "Half the crew is gone... lost to the purple. They don't even remember them.",
+     "source": "Voice/Jeffries/source/JEF_P02.mp3"
+    },
+    {
+     "id": "JEF_P03",
+     "text": "Don't go into the purple! DON'T GO INTO THE PURPLE!",
+     "source": "Voice/Jeffries/source/JEF_P03.wav"
+    },
+    {
+     "id": "JEF_P04",
+     "text": "Why don't they see!?",
+     "source": "Voice/Jeffries/source/JEF_P04.wav"
+    }
+   ],
    "scene": [
     {
      "id": "JEF_01",
@@ -644,6 +681,101 @@
      "source": "Voice/ShipStorm/source/ship_storm_jeffries_sounds.mp3",
      "start": 4.62,
      "end": 9.8
+    }
+   ]
+  },
+  "PirateSeated": {
+   "voice": "ElevenLabs takes supplied by the user 2026-11-11 (the ship's pre-storm talk: first, second, then 'Arrgh!' from the third talk on); words from the 2D game's ship dialogue",
+   "talk": [
+    {
+     "id": "SEA_01",
+     "text": "Well I'll be. Never seen a rat wearin' a coat before.",
+     "source": "Voice/PirateSeated/source/SEA_01.mp3"
+    },
+    {
+     "id": "SEA_02",
+     "text": "You seem like a good listener, I bet all of the crew would love to bend your ear",
+     "source": "Voice/PirateSeated/source/SEA_02.mp3"
+    },
+    {
+     "id": "SEA_ARR",
+     "text": "Arrgh!",
+     "source": "Voice/PirateSeated/source/SEA_Arrgh.wav"
+    }
+   ]
+  },
+  "PirateConcertina": {
+   "voice": "ElevenLabs takes supplied by the user 2026-11-11 (the ship's pre-storm talk: first, second, then 'Arrgh!' from the third talk on); words from the 2D game's ship dialogue",
+   "talk": [
+    {
+     "id": "CON_01",
+     "text": "Requests are considered in the order they are shouted.",
+     "source": "Voice/PirateConcertina/source/CON_01.mp3"
+    },
+    {
+     "id": "CON_02",
+     "text": "Still considering it.",
+     "source": "Voice/PirateConcertina/source/CON_02.wav"
+    },
+    {
+     "id": "CON_ARR",
+     "text": "Arrgh!",
+     "source": "Voice/PirateConcertina/source/CON_Arrgh.wav"
+    }
+   ]
+  },
+  "PirateCheering": {
+   "voice": "ElevenLabs takes supplied by the user 2026-11-11 (the ship's pre-storm talk: first, second, then 'Arrgh!' from the third talk on); words from the 2D game's ship dialogue",
+   "talk": [
+    {
+     "id": "CHE_01",
+     "text": "Don't mind Jeffries over there tied to the mast. He's gone mad. Too much sun, I think.",
+     "source": "Voice/PirateCheering/source/CHE_01.mp3"
+    },
+    {
+     "id": "CHE_02",
+     "text": "You're not smoking the captain's cigarettes, are you!?",
+     "source": "Voice/PirateCheering/source/CHE_02.mp3"
+    },
+    {
+     "id": "CHE_03",
+     "text": "Don't let the captain catch you sniffing around in his quarters!",
+     "source": "Voice/PirateCheering/source/CHE_03.mp3"
+    },
+    {
+     "id": "CHE_ARR",
+     "text": "Arrgh!",
+     "source": "Voice/PirateCheering/source/CHE_Arrgh.wav"
+    }
+   ]
+  },
+  "PirateDancer": {
+   "voice": "ElevenLabs takes supplied by the user 2026-11-11 (the ship's pre-storm talk: first, second, then 'Arrgh!' from the third talk on); words from the 2D game's ship dialogue",
+   "talk": [
+    {
+     "id": "DAN_01",
+     "text": "Deck's moving. Saves me half the work.",
+     "source": "Voice/PirateDancer/source/DAN_01.wav"
+    },
+    {
+     "id": "DAN_02",
+     "text": "Other half's mine.",
+     "source": "Voice/PirateDancer/source/DAN_02.wav"
+    },
+    {
+     "id": "DAN_ARR",
+     "text": "Arrgh!",
+     "source": "Voice/PirateDancer/source/DAN_Arrgh.wav"
+    }
+   ]
+  },
+  "PirateChef": {
+   "voice": "ElevenLabs take supplied by the user 2026-11-11; the chef's shout when he first sees the rat in his galley (2D game's words)",
+   "talk": [
+    {
+     "id": "CHEF_01",
+     "text": "Damn! Another rat got in, come er' you little bugger!",
+     "source": "Voice/PirateChef/source/CHEF_01.mp3"
     }
    ]
   }

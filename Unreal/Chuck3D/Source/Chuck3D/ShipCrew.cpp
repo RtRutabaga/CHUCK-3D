@@ -143,21 +143,20 @@ void AShipCrew::PlaceCrew()
     };
     // The deck's performers, each turned toward the dancer in the middle (the dancer toward the companion he comes up).
     if (ADockNPC* N = Add(EDockHuman::PirateDancer, Deck(DancerAt), Face(DancerAt, FVector2D(-250, 130))))
-        N->SetPirateLines({ TEXT("Deck's moving. Saves me half the work.") }, { TEXT("Other half's mine.") });
+        N->SetPirateVoice(TEXT("PirateDancer"), { TEXT("DAN_01") }, { TEXT("DAN_02") }, { TEXT("DAN_ARR") });
     if (ADockNPC* N = Add(EDockHuman::PirateConcertina, Deck(ConcertinaAt), Face(ConcertinaAt, DancerAt)))
-        N->SetPirateLines({ TEXT("Requests are considered in the order they are shouted.") }, { TEXT("Still considering it.") });
+        N->SetPirateVoice(TEXT("PirateConcertina"), { TEXT("CON_01") }, { TEXT("CON_02") }, { TEXT("CON_ARR") });
     if (ADockNPC* N = Add(EDockHuman::PirateCheering, Deck(CheeringAt), Face(CheeringAt, DancerAt)))
-        N->SetPirateLines({ TEXT("Don't mind Jeffries over there tied to the mast. He's gone mad. Too much sun, I think.") },
-            { TEXT("You're not smoking the captain's cigarettes, are you!?"), TEXT("Don't let the captain catch you sniffing around in his quarters!") });
+        N->SetPirateVoice(TEXT("PirateCheering"), { TEXT("CHE_01") }, { TEXT("CHE_02"), TEXT("CHE_03") }, { TEXT("CHE_ARR") });
     // Jeffries, his back to the main mast, facing aft.
     if (ADockNPC* N = Add(EDockHuman::Jeffries, Deck(FVector2D(MainMastX - MastR - JeffriesBack, 0)), 180.f))
     {
-        N->SetPirateLines({ TEXT("The sea is wrong, the land is wrong. Open your eyes!"), TEXT("Half the crew is gone... lost to the purple. They don't even remember them.") },
-            { TEXT("Don't go into the purple! DON'T GO INTO THE PURPLE!"), TEXT("Why don't they see!?") });
+        N->SetPirateVoice(TEXT("Jeffries"), { TEXT("JEF_P01"), TEXT("JEF_P02") }, { TEXT("JEF_P03"), TEXT("JEF_P04") });   // (no "Arrgh!": he goes on)
         N->TieToMast(ShipWorld(FVector(MainMastX, 0, DeckZ)), MastR);
     }
-    // The captain (no lines yet: the 2D game gives him none before the trigger).
+    // The captain (the 2D game gives him no lines before the trigger; the user's pre-storm takes, 2026-11-11).
     ADockNPC* Captain = Add(EDockHuman::PirateCaptain, ShipWorld(FVector(CaptainAt.X, CaptainAt.Y, QuarterZ)), 0.f);
+    if (Captain) Captain->SetPirateVoice(TEXT("PirateCaptain"), { TEXT("CAP_P00") }, { TEXT("CAP_P01") }, { TEXT("CAP_P02") });
     // The fencers (no lines: busy).
     Pair = PairStart = FVector2D((FenceX0 + FenceX1) * .5f, 0);
     AxisYaw = AxisStart = 0.f;
@@ -176,7 +175,7 @@ void AShipCrew::PlaceCrew()
         if (ADockNPC* N = Add(EDockHuman::PirateSeated, ShipWorld(FVector(Stool.X, Stool.Y, LowerZ)), 0.f))
         {
             N->SitAtTable(ShipWorld(FVector(Stool.X, Stool.Y, LowerZ)), Face(Stool, FVector2D(TableX, TableY)), StoolTop, TableTop, ShipWorld(FVector(ArrivalAft, 0, LowerZ + 150)));
-            N->SetPirateLines({ TEXT("Well I'll be. Never seen a rat wearin' a coat before.") }, { TEXT("You seem like a good listener, I bet all of the crew would love to bend your ear") });
+            N->SetPirateVoice(TEXT("PirateSeated"), { TEXT("SEA_01") }, { TEXT("SEA_02") }, { TEXT("SEA_ARR") });
         }
     }
     if (ADockNPC* N = Add(EDockHuman::PirateChef, ShipWorld(FVector(ChefAt.X, ChefAt.Y, LowerZ)), ChefYaw))

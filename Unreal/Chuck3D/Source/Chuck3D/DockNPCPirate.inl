@@ -72,6 +72,49 @@ void ADockNPC::SetPirateLines(const TArray<FString>& First, const TArray<FString
     Lines = First; RepeatLines = Repeat;
 }
 
+void ADockNPC::SetPirateVoice(const TCHAR* Npc, const TArray<FString>& First, const TArray<FString>& Repeat, const TArray<FString>& After)
+{
+    PirateVoiceNpc = Npc;
+    PirateVoiceIds[0] = First; PirateVoiceIds[1] = Repeat; PirateVoiceIds[2] = After.Num() ? After : Repeat;
+    UsePirateVoice(PirateVoiceIds[FMath::Min(Conversations, 2)]);
+}
+
+void ADockNPC::UsePirateVoice(const TArray<FString>& Ids)
+{
+    // A scripted line under way (a storm order this body speaks) is kept, re-found after the talk lines.
+    const int32 Speaking = IsSpeaking() && VoiceLines.IsValidIndex(VoiceLine) && VoiceLine >= TalkVoiceCount ? VoiceLines[VoiceLine] : INDEX_NONE;
+    USoundBase* SpeakingSound = Speaking != INDEX_NONE && VoiceSounds.IsValidIndex(VoiceLine) ? VoiceSounds[VoiceLine] : nullptr;
+    VoiceLines.Reset(); VoiceSounds.Reset();
+    TArray<FString> Text;
+    for (const FString& Id : Ids)
+        for (int32 I = 0; I < NPCVoiceData::LineCount; ++I)
+        {
+            const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
+            if (PirateVoiceNpc != L.Npc || Id != L.Id) continue;
+            USoundBase* Sound = *L.Sound ? LoadObject<USoundBase>(nullptr, L.Sound) : nullptr;
+            if (*L.Sound && !Sound) UE_LOG(LogTemp, Warning, TEXT("CHUCK_NPC_VOICE_MISSING %s %s"), *PirateVoiceNpc, *Id);
+            VoiceLines.Add(I); VoiceSounds.Add(Sound); Text.Add(L.Text);   // (no sound: it runs on its subtitle)
+            break;
+        }
+    Lines = Text;
+    TalkVoiceCount = VoiceLines.Num();
+    HeardLine = -1;
+    if (Speaking != INDEX_NONE) { VoiceLine = VoiceLines.Add(Speaking); VoiceSounds.Add(SpeakingSound); }
+    else if (VoiceTime >= 0.f && !bAmbientVoice) { VoiceLine = -1; VoiceTime = -1.f; }
+    if (TalkVoiceCount) EnsureVoiceAudio();
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_VOICE %s talk=%d lines=%d"), *PirateVoiceNpc, FMath::Min(Conversations, 2) + 1, TalkVoiceCount);
+}
+
+void ADockNPC::ShoutLine(const TCHAR* Npc, const TCHAR* Id, float Seconds)
+{
+    const float Spoken = SpeakLine(Npc, Id);
+    const NPCVoiceData::FLine* Found = nullptr;
+    for (int32 I = 0; I < NPCVoiceData::LineCount && !Found; ++I)
+        if (FCString::Strcmp(NPCVoiceData::Lines[I].Npc, Npc) == 0 && FCString::Strcmp(NPCVoiceData::Lines[I].Id, Id) == 0) Found = &NPCVoiceData::Lines[I];
+    if (Found) Shout(Found->Text, Spoken > 0.f ? Spoken + .3f : Seconds);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_SHOUT %s %s seconds=%.2f"), Npc, Id, Spoken);
+}
+
 void ADockNPC::Shout(const FString& Text, float Seconds)
 {
     ShoutText = Text; ShoutUntil = Clock + Seconds;
@@ -295,7 +338,8 @@ void ADockNPC::TickPirate(float DeltaSeconds)
     else if (bInConversation)
     {
         bInConversation = false; ++Conversations;
-        if (RepeatLines.Num()) Lines = RepeatLines;
+        if (!PirateVoiceNpc.IsEmpty()) UsePirateVoice(PirateVoiceIds[FMath::Min(Conversations, 2)]);
+        else if (RepeatLines.Num()) Lines = RepeatLines;
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PIRATE_TALKED %s conversations=%d"), *DisplayName, Conversations);
     }
     if (ShoutUntil >= 0.f && Clock > ShoutUntil) ShoutUntil = -1.f;
@@ -401,7 +445,7 @@ void ADockNPC::TickChef(float DeltaSeconds)
     case EChef::Work:
         ChefSpeed = 0.f;
         if (Sees()) { Chef = EChef::Notice; ChefTime = 0.f; ++ChefNotices;
-            if (!bChefSaidLine) { Shout(TEXT("Damn! Another rat got in, come er' you little bugger!"), 3.6f); bChefSaidLine = true; }
+            if (!bChefSaidLine) { ShoutLine(TEXT("PirateChef"), TEXT("CHEF_01"), 3.6f); bChefSaidLine = true; }
             UE_LOG(LogTemp, Display, TEXT("CHUCK_CHEF_NOTICE at_cm=%.0f"), Dist); }
         break;
     case EChef::Notice:

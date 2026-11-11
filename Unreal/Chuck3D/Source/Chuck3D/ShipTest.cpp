@@ -747,33 +747,40 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::CrewTalk:
         {
-            // Each pirate with lines, talked to twice: the first conversation is the 2D game's *_first lines, word for
-            // word, the second its *_repeat lines (they stay the repeat ones after).
-            Limit = 90;
-            struct FTalker { EDockHuman Kind; TArray<FString> First, Repeat; };
-            static const TArray<FTalker> Talkers = {
-                {EDockHuman::PirateSeated, {TEXT("Well I'll be. Never seen a rat wearin' a coat before.")}, {TEXT("You seem like a good listener, I bet all of the crew would love to bend your ear")}},
-                {EDockHuman::PirateConcertina, {TEXT("Requests are considered in the order they are shouted.")}, {TEXT("Still considering it.")}},
+            // Each pirate with lines, talked to three times: the first conversation is the 2D game's *_first lines, word for
+            // word, the second its *_repeat lines, the third on the pirate's "Arrgh!" (Jeffries: his repeat lines again).
+            // The captain's are the user's (2026-11-11). Every line is voiced: he is heard saying each before it moves on.
+            Limit = 200;
+            struct FTalker { EDockHuman Kind; TArray<FString> First, Repeat, Third; };
+            const TArray<FString> Arrgh = {TEXT("Arrgh!")};
+            const TArray<FString> JeffRepeat = {TEXT("Don't go into the purple! DON'T GO INTO THE PURPLE!"), TEXT("Why don't they see!?")};
+            const TArray<FTalker> Talkers = {
+                {EDockHuman::PirateSeated, {TEXT("Well I'll be. Never seen a rat wearin' a coat before.")}, {TEXT("You seem like a good listener, I bet all of the crew would love to bend your ear")}, Arrgh},
+                {EDockHuman::PirateConcertina, {TEXT("Requests are considered in the order they are shouted.")}, {TEXT("Still considering it.")}, Arrgh},
                 {EDockHuman::PirateCheering, {TEXT("Don't mind Jeffries over there tied to the mast. He's gone mad. Too much sun, I think.")},
-                    {TEXT("You're not smoking the captain's cigarettes, are you!?"), TEXT("Don't let the captain catch you sniffing around in his quarters!")}},
-                {EDockHuman::PirateDancer, {TEXT("Deck's moving. Saves me half the work.")}, {TEXT("Other half's mine.")}},
+                    {TEXT("You're not smoking the captain's cigarettes, are you!?"), TEXT("Don't let the captain catch you sniffing around in his quarters!")}, Arrgh},
+                {EDockHuman::PirateDancer, {TEXT("Deck's moving. Saves me half the work.")}, {TEXT("Other half's mine.")}, Arrgh},
                 {EDockHuman::Jeffries, {TEXT("The sea is wrong, the land is wrong. Open your eyes!"), TEXT("Half the crew is gone... lost to the purple. They don't even remember them.")},
-                    {TEXT("Don't go into the purple! DON'T GO INTO THE PURPLE!"), TEXT("Why don't they see!?")}}};
+                    JeffRepeat, JeffRepeat},
+                {EDockHuman::PirateCaptain, {TEXT("Oi! There ye are, cabin boy! What're ye doin' skulkin' about? Get to work!")},
+                    {TEXT("And keep yer grubby paws off the cigarettes in me cabin! Catch ye nickin' even one, and there'll be HELL to pay!")}, Arrgh}};
             const AShipCrew* Crew = AShipCrew::Get(World);
             if (!Crew || Run->Point >= Talkers.Num())
             {
                 Done = true;
-                Run->bPass = Crew && Run->TalkChecks == Talkers.Num() * 2 && Run->TalkOk == Run->TalkChecks && NewDeaths == 0;
+                Run->bPass = Crew && Run->TalkChecks == Talkers.Num() * 3 && Run->TalkOk == Run->TalkChecks && NewDeaths == 0;
                 break;
             }
             const FTalker& T = Talkers[Run->Point];
             ADockNPC* N = Crew->Find(T.Kind);
-            if (!N) { ++Run->TalkChecks; ++Run->Point; break; }
+            if (!N) { Run->TalkChecks += 3; ++Run->Point; break; }
             if (Run->Sub == 0)
             {
-                // Before him (beside the seated one, who faces his table), turned to him.
+                // Before him (beside the seated one, who faces his table), turned to him. (The captain stands on the
+                // quarterdeck in his tall boots: his feet are its planking, not a man's height under his middle.)
                 const FVector To = T.Kind == EDockHuman::PirateSeated ? -N->GetActorRightVector() : N->GetActorForwardVector();
-                const FVector Feet = N->GetActorLocation() - FVector(0, 0, 90.f) + To * 85.f;
+                FVector Feet = N->GetActorLocation() - FVector(0, 0, 90.f) + To * 85.f;
+                if (T.Kind == EDockHuman::PirateCaptain) Feet.Z = ShipWorld(FVector(0, 0, QuarterZ)).Z;
                 Chuck->ResetAtLocation(Feet + FVector(0, 0, Stand + 2.f));
                 Chuck->SetActorRotation(FRotator(0, (N->GetActorLocation() - Feet).Rotation().Yaw, 0));
                 Stop(); Run->Sub = 1; Run->At = Now; Run->Heard.Reset(); Run->Pressed = 0;
@@ -782,26 +789,29 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Time < .6f || Now - Run->Pressed < .3) break;
             if (Chuck->IsTalking())
             {
-                FString Speaker, Text;
-                if (Chuck->GetDialogue(Speaker, Text) && (Run->Heard.IsEmpty() || Run->Heard.Last() != Text)) Run->Heard.Add(Text);
+                // The conversation's lines as written (the subtitles reveal them a sentence at a time), and each one heard.
+                if (Run->Heard.IsEmpty()) { Run->Heard = N->Lines; Run->Count0 = 0; Run->Count1 = -1; }
+                if (N->IsSpeaking() && Chuck->GetTalkLine() != Run->Count1) { Run->Count1 = Chuck->GetTalkLine(); ++Run->Count0; }
+                if (N->IsSpeaking() || Now - Run->Pressed < .6) break;   // he finishes the line first
                 Chuck->Interact(); Run->Pressed = Now;
             }
             else if (Run->Heard.IsEmpty())
             {
                 Chuck->Interact(); Run->Pressed = Now;
-                if (!Chuck->IsTalking() && Time > 3.f) { ++Run->TalkChecks; UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_CREW_TALK %s no_prompt=1"), *N->DisplayName); Run->Sub = 0; ++Run->Point; }
+                if (!Chuck->IsTalking() && Time > 3.f) { Run->TalkChecks += 3; UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_CREW_TALK %s no_prompt=1"), *N->DisplayName); Run->Sub = 0; ++Run->Point; }
             }
             else
             {
                 // A conversation over: what he heard against the lines it should have been.
-                const TArray<FString>& Want = Run->Sub == 1 ? T.First : T.Repeat;
-                const bool bOk = Run->Heard == Want && N->GetConversations() == Run->Sub;
+                const TArray<FString>& Want = Run->Sub == 1 ? T.First : Run->Sub == 2 ? T.Repeat : T.Third;
+                const bool bOk = Run->Heard == Want && N->GetConversations() == Run->Sub && Run->Count0 == Want.Num();
                 ++Run->TalkChecks; Run->TalkOk += bOk;
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_TALK %s %s ok=%d lines=%d conversations=%d first_heard=\"%s\""), *N->DisplayName, Run->Sub == 1 ? TEXT("first") : TEXT("repeat"),
-                    bOk, Run->Heard.Num(), N->GetConversations(), Run->Heard.Num() ? *Run->Heard[0] : TEXT(""));
+                static const TCHAR* TalkNames[] = {TEXT(""), TEXT("first"), TEXT("repeat"), TEXT("third")};
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_CREW_TALK %s %s ok=%d lines=%d voiced=%d conversations=%d first_heard=\"%s\""), *N->DisplayName, TalkNames[FMath::Clamp(Run->Sub, 0, 3)],
+                    bOk, Run->Heard.Num(), Run->Count0, N->GetConversations(), Run->Heard.Num() ? *Run->Heard[0] : TEXT(""));
                 if (Run->Sub == 1 && Run->Point == 0) Shot(TEXT("CrewTalk"));
                 Run->Heard.Reset();
-                if (Run->Sub == 1) { Run->Sub = 2; Run->At = Now; }
+                if (Run->Sub < 3) { ++Run->Sub; Run->At = Now; }
                 else { Run->Sub = 0; ++Run->Point; }
             }
             break;

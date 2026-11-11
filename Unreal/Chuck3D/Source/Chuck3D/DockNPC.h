@@ -451,6 +451,11 @@ public:
     EDockHuman GetKind() const { return Kind; }
     /** The 2D game's first and repeat lines: Lines are the first ones until a conversation through them ends, then the repeat ones. */
     void SetPirateLines(const TArray<FString>& First, const TArray<FString>& Repeat);
+    /** The same, voiced (user 2026-11-11, the pre-storm takes): the lines are NPCVoiceData's Npc/Id, their text the subtitles.
+     *  First for the first talk, Repeat for the second, After (if any: the "Arrgh!") from the third on, else Repeat again. */
+    void SetPirateVoice(const TCHAR* Npc, const TArray<FString>& First, const TArray<FString>& Repeat, const TArray<FString>& After = {});
+    /** The chef's shout when he first sees the rat, voiced if his take exists (else on its subtitle for Seconds). */
+    void ShoutLine(const TCHAR* Npc, const TCHAR* Id, float Seconds);
     int32 GetConversations() const { return Conversations; }
     bool HasTalkedOnce() const { return Conversations > 0; }
     /** The beat the deck keeps time to (beats since the ship score's first beat), set each frame by the crew. */
@@ -724,6 +729,10 @@ private:
     void HandFrame(const TArray<FTransform>& Space, int32 Side, FVector& Fist, FVector& Along, FVector& Thumb) const;
     // ---- The pirate crew (DockNPCPirate.inl).
     TArray<FString> RepeatLines;
+    FString PirateVoiceNpc;                       // SetPirateVoice: whose takes, and the ids for each talk
+    TArray<FString> PirateVoiceIds[3];
+    /** Make Ids (NPCVoiceData PirateVoiceNpc/Id) the talk lines, voiced; a scripted line he is saying keeps going. */
+    void UsePirateVoice(const TArray<FString>& Ids);
     int32 Conversations = 0;
     bool bInConversation = false;
     float Beat = 0.f;

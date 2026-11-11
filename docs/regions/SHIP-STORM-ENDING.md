@@ -144,7 +144,7 @@ Shouted by the captain and the crew in the gaps, in no situation in particular. 
 - [Captain] **HANDSOMELY ON THAT HALYARD! HANDSOMELY! ... NOW SMARTLY, DAMN YE!** ("handsomely" means slowly; "smartly" means fast.)
 - [Captain] **WEATHER EARING FIRST, THEN THE LEE! MIND YER EARINGS!** (the reef earings at the yardarm; it sounds like earrings.)
 - [Captain] **TIE YER POINTS ROUND THE YARD! REEF KNOTS, MIND, NOT GRANNIES!**
-- [Captain] **STARBOARD YER HELM! ... I SAID STARBOARD! THE OTHER STARBOARD!** (in the period, helm orders named the tiller's side, so "starboard the helm" turned her to larboard. Sailors argued about it for two centuries.)
+- [Captain] **MAN THE PUMPS! SOUND THE WELL AND SING OUT THE DEPTH! ... SHE'S MAKIN' WATER, LADS! PUMP, DAMN YE!** (BG_04, the user's take of 2026-11-11. It replaces "STARBOARD YER HELM! … THE OTHER STARBOARD!", which made no sense from a captain who has the helm himself. "Sound the well": a marked rod dropped down the pump well to measure the water in the hold.)
 - [Captain] **SHE'S GRIPIN'! UP HELM! LUFF AND TOUCH HER, THEN KEEP HER FULL!** ("griping": the ship trying to come up into the wind.)
 - [Crewman 2] **WHO'S GOT THE WEATHER MAIN BRACE?! HAUL TAUT AND BELAY!**
 - [Captain] **CLEW UP! BUNTLINES AND CLEWLINES, HAUL!**

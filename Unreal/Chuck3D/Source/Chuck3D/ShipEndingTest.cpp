@@ -49,6 +49,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         const NPCVoiceData::FLine& L = NPCVoiceData::Lines[I];
         const FString Npc = L.Npc;
         if (Npc != TEXT("PirateCaptain") && Npc != TEXT("PirateCrewman1") && Npc != TEXT("PirateCrewman2") && Npc != TEXT("Jeffries")) continue;
+        if (FString(L.Id).StartsWith(TEXT("CAP_P")) || FString(L.Id).StartsWith(TEXT("JEF_P"))) continue;   // (their pre-storm talk, 2026-11-11)
         ++Lines; Sounds += *L.Sound && LoadObject<USoundBase>(nullptr, L.Sound) != nullptr;
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_ENDING_LINES lines=%d sounds=%d pass=%d"), Lines, Sounds, Lines == 61 && Sounds == 61);

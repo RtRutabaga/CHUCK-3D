@@ -2,6 +2,49 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 11 — the ship's pre-storm lines voiced; the captain's pumps order (Claude)
+
+- **Asked:**
+  - Write ElevenLabs prompts for every ship NPC's pre-storm talk lines, then put the user's takes into the game.
+  - Replace the captain's storm order BG_04 ("Starboard yer helm…"), which made no sense because he is at the helm himself.
+  - The user cut and named every take by hand, so the audio files were used as delivered.
+- **Source:** `main` at 01938373.
+- **Changed:**
+  - New takes under `SourceAssets/NPCs/Voice/<NPC>/source/`, built to `Voice/<NPC>/<id>.wav` by `Tools/build_npc_voice.py` and imported with `Tools/import_npc_voice.py`.
+    - Seated, concertina, cheering and dancing pirates: first talk, second talk, then "Arrgh!" from the third talk on (`SEA_/CON_/CHE_/DAN_` ids; `*_ARR`).
+    - Jeffries: JEF_P01–P02 the first time, JEF_P03–P04 every time after.
+    - The captain: CAP_P00 first, CAP_P01 second, CAP_P02 "Arrgh!" after.
+    - The chef: CHEF_01, shouted when he first sees the rat in his galley (the existing notice trigger).
+    - BG_04 is now "MAN THE PUMPS! SOUND THE WELL AND SING OUT THE DEPTH! … SHE'S MAKIN' WATER, LADS! PUMP, DAMN YE!" (`source/BG_04_pumps.wav`).
+  - `dialogue.json`, `manifest.json` and `NPCVoiceData.h` regenerated.
+  - `DockNPC.h` / `DockNPCPirate.inl`:
+    - `SetPirateVoice(Npc, First, Repeat, After)` swaps the voiced talk set as conversations finish.
+    - `ShoutLine` plays a voiced line with its subtitle for the take's length.
+  - `ShipCrew.cpp` gives each talker its voice sets. The captain can now be talked to before the storm; that is not one of the storm's gate conditions.
+  - `ShipTest.cpp`: `crew_talk` now talks to six NPCs (the captain included) three times each and requires every line to be voiced.
+  - `ShipEndingTest.cpp`: its storm line count skips `CAP_P`/`JEF_P`, so it stays at 61.
+  - `docs/regions/SHIP.md` and `SHIP-STORM-ENDING.md` updated.
+- **Tested:**
+  - Editor `crew_talk`: 18/18 talks, every line voiced (`Local/ship-pre-storm-voice-1.log`).
+  - Editor `chef_chase`: passed, with `CHUCK_PIRATE_SHOUT PirateChef CHEF_01 seconds=4.21` (`Local/ship-pre-storm-voice-chef.log`).
+  - Packaged `Builds/PreStormVoiceCandidate`: Verify-Package 182 (`Local/verify-package-20261111-120400.log`).
+    - The first run crashed in the temple heroes test while the user's game was open.
+    - The second failed only the known intermittent `wizard_seal` (`Local/verify-temple-heroes-20261111-115630.log`).
+  - Verify-Menu was not run.
+- **Not checked:**
+  - Nobody has listened to the takes in the game or played the talks by hand.
+  - The storm with the new BG_04 has not been watched.
+- **Remaining flaws:**
+  - Subtitles reveal sentence by sentence on a timer, so they may run slightly ahead of or behind a take.
+- **Contract compatibility:** no rig or animation changes.
+- **Binary/LFS:** 43 new WAV/MP3 takes and generated WAVs (LFS), their new `VO_*` sound waves, and BG_04 replaced.
+- **Launcher:**
+  - Promoted as PreStormVoice.
+  - The receipt names 01938373; the build is this work on top of it, committed right after.
+  - The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (listen to the pre-storm talks and the pumps order in game, then the fall into Phlegethos).
+
 ## November 10 — the tavern's rubbish bin out back (Claude)
 
 - **Asked:** build a period rubbish bin behind the tavern in Waterdeep. The keeper's night line (`night_00`) has Bobert "rootin' about in me bin out back".
