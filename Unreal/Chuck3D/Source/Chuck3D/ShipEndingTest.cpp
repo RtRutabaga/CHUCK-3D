@@ -3,7 +3,7 @@
 // captain's storm lines; the orders; standing about on deck (the jargon line, then the clear one after 30 s); out along the
 // main yard to each work spot and the points tied, dropping to the deck; the fore ratlines carried away (their nets closed);
 // a running jump off the main top without the golden leaf (short of the fore top); the leaf in the main top smoked; the long
-// leap from the port lane and the starboard lane onto the fore top; up the fore topmast shrouds; the cutscene to its end (or,
+// leap from the starboard lane and the larboard lane onto the fore top; up the fore topmast shrouds; the cutscene to its end (or,
 // with -ChuckShipEndingSkip, skipped). Every one of the storm's 61 voice lines has its sound.
 #include "ShipEnding.h"
 #include "ShipEndingScene.h"
@@ -58,7 +58,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     {
         int32 Phase = 0, Sub = 0, Failures = 0, Shots = 0, Leaps0 = 0;
         double At = 0, Start = 0, Next = 0;
-        TArray<FString> Results; TSet<FString> ShotsSeen; bool bLeafShot = false; float DuckMin = 1.f;
+        TArray<FString> Results; TSet<FString> ShotsSeen; bool bLeafShot = false, bCrossShot = false; float DuckMin = 1.f;
         FTimerHandle Timer; bool bDone = false, bStorm = false;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Start = Run->At = World->GetTimeSeconds();
@@ -111,10 +111,43 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             break;
         case 1: case 2:
         {
-            // Out along the main yard to the work spot (larboard, then starboard), hang there, let go onto the deck.
+            // Out along the main yard to the work spot (starboard, +Y, then larboard), hang there, let go onto the deck. The
+            // larboard trial starts on the starboard side of the yard, by the top, and swings across its middle to the larboard
+            // side: pumped back and forth, then the leap (user 2026-11-10).
             const float Side = Run->Phase == 1 ? 1.f : -1.f;
-            const int32 S = Run->Phase == 1 ? 0 : 1;
-            if (Run->Sub == 0) { Push(FVector(0, Side, 0)); if (FMath::Abs(L.Y) > 98 && Ground) { Chuck->JumpPressed(); Run->Sub = 1; Run->At = Now; } else if (T > 4) Next(S == 0 ? TEXT("reef_larboard") : TEXT("reef_starboard"), false, TEXT("no_yard=1")); }
+            const int32 S = Run->Phase == 1 ? 1 : 0;
+            const TCHAR* Name = S == 0 ? TEXT("reef_larboard") : TEXT("reef_starboard");
+            if (Run->Sub == 0)
+            {
+                const float Out = Run->Phase == 2 ? 1.f : Side;
+                Push(FVector(0, Out, 0));
+                if (FMath::Abs(L.Y) > 98 && Ground) { Chuck->JumpPressed(); Run->Sub = Run->Phase == 2 ? 10 : 1; Run->At = Now; }
+                else if (T > 4) Next(Name, false, TEXT("no_yard=1"));
+            }
+            else if (Run->Sub == 10)
+            {
+                // On the yard's innermost starboard grip: the stick to larboard, the swing pumped in time, the jump pressed.
+                if (!Chuck->IsSwinging()) Push(FVector(0, 1, 0)); else Stop();
+                if (Chuck->IsSwinging() && T > .8f) { Chuck->SetTestSwingPump(true); Push(FVector(0, -1, 0)); Chuck->JumpPressed(); Run->Sub = 11; Run->At = Now; }
+                else if (!Chuck->IsSwinging() && T > 3) Next(Name, false, TEXT("no_catch=1"));
+            }
+            else if (Run->Sub == 11)
+            {
+                Push(FVector(0, -1, 0));
+                if (Chuck->IsSwinging() && L.Y < -150.f)
+                {
+                    Chuck->SetTestSwingPump(false);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_YARD_CROSS crossed=1 seconds=%.1f grip_y=%.0f"), T, L.Y);
+                    Shot(TEXT("YardCrossed")); Run->Sub = 1; Run->At = Now;
+                }
+                else if (Chuck->IsSwingLeaping() && !Run->bCrossShot) { Run->bCrossShot = true; Shot(TEXT("YardCrossMid")); }
+                else if ((!Chuck->IsSwinging() && !Chuck->IsSwingLeaping()) || T > 12.f)
+                {
+                    Chuck->SetTestSwingPump(false);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_YARD_CROSS crossed=0 seconds=%.1f y=%.0f"), T, L.Y);
+                    Next(Name, false, TEXT("no_cross=1"));
+                }
+            }
             else if (Run->Sub == 1)
             {
                 Push(FVector(0, Side, 0));
@@ -131,7 +164,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             {
                 const bool bPass = E->IsSideDone(S) && E->GetWhere() == AShipEnding::EWhere::Deck && E->GetLineCount(S == 0 ? TEXT("CR1_02L") : TEXT("CR1_02S")) <= 1;
                 Next(S == 0 ? TEXT("reef_larboard") : TEXT("reef_starboard"), bPass, TEXT(""));
-                if (S == 0) Place(MainYardX, -70, MainTopZ + Stand, -90);
+                if (S == 1) Place(MainYardX, 70, MainTopZ + Stand, 90);   // (the starboard trial done: the larboard one from the top)
             }
             else if (T > 6.f) Next(S == 0 ? TEXT("reef_larboard") : TEXT("reef_starboard"), false, TEXT("no_landing=1"));
             break;
@@ -157,8 +190,8 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             break;
         case 4: case 6: case 7:
         {
-            // A running jump off the main top's fore rim: without the leaf (4) short; with it, from each lane (6 port, 7 starboard).
-            const TCHAR* Name = Run->Phase == 4 ? TEXT("jump_no_leaf") : Run->Phase == 6 ? TEXT("leap_port") : TEXT("leap_starboard");
+            // A running jump off the main top's fore rim: without the leaf (4) short; with it, from each lane (6 starboard, 7 larboard).
+            const TCHAR* Name = Run->Phase == 4 ? TEXT("jump_no_leaf") : Run->Phase == 6 ? TEXT("leap_starboard") : TEXT("leap_port");
             if (Run->Sub == 0)
             {
                 if (T < .6f) { Run->Leaps0 = E->GetLeaps(); break; }
@@ -176,7 +209,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     const bool bLeapt = E->GetLeaps() > Run->Leaps0;
                     const bool bFore = E->GetWhere() == AShipEnding::EWhere::ForeTop;
                     const bool bPass = Run->Phase == 4 ? !bLeapt && !bFore : bLeapt && bFore && E->GetStep() == AShipEnding::EStep::ForeClimb;
-                    if (Run->Phase != 4) Shot(Run->Phase == 6 ? TEXT("LandedPort") : TEXT("LandedStarboard"));
+                    if (Run->Phase != 4) Shot(Run->Phase == 6 ? TEXT("LandedStarboard") : TEXT("LandedPort"));
                     const int32 Was = Run->Phase;
                     Next(Name, bPass, FString::Printf(TEXT("leapt=%d fore=%d out_cm=%.0f to=%s"), bLeapt, bFore, FVector::Dist2D(E->GetLastLeapTakeoff(), L), *E->GetLastLeapLanding().ToString()));
                     if (Was == 4) Place(MainMastX + 70, -104, MainTopZ + Stand, 0);
@@ -201,8 +234,8 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             break;
         case 8:
         {
-            // From where he landed on the fore top, to the foot of the starboard topmast shrouds and up them: at their head the cutscene.
-            // (-ChuckShipSceneSide=1: the larboard ones, for the cutscene on that side.)
+            // From where he landed on the fore top, to the foot of the larboard topmast shrouds and up them: at their head the cutscene.
+            // (-ChuckShipSceneSide=1: the starboard ones, for the cutscene on that side.)
             static const float Up = []{ float V = -1.f; FParse::Value(FCommandLine::Get(), TEXT("ChuckShipSceneSide="), V); return V >= 0.f ? 1.f : -1.f; }();
             if (Run->Sub == 0)
             {

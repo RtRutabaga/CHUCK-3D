@@ -239,6 +239,9 @@ TArray<FChuckSwingGrip> YardGrips()
                     FChuckSwingGrip G;
                     G.Grip = ShipWorld(YardCentre(M, W) + Q.RotateVector(FVector(0, Side * (First + K * MainGripStep), 0)));
                     G.Along = Q.RotateVector(FVector(0, 1, 0)); G.Depth = 0;
+                    // The main course yard's innermost grips, either side of the top: a pumped swing and a big leap across
+                    // its middle from one to the other (user 2026-11-10; 340 cm, past the usual 240).
+                    if (M.X < 0 && W == 0 && K == 0) G.LeapRange = 2.f * First + 30.f;
                     Out.Add(G);
                 }
         }

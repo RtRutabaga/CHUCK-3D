@@ -36,7 +36,7 @@
 #include "ShipEnding.h"
 
 // The pirate ship's setting (Claude, 2026-11-01; ShipSetting.h, docs/SHIP.md). Everything is built in the ship's frame
-// (X to the bow, Y to port, Z up from the keel) on procedural meshes, one per material, from the existing wood, canvas,
+// (X to the bow, Y to starboard, Z up from the keel) on procedural meshes, one per material, from the existing wood, canvas,
 // iron, temple stone, brick and glass materials; the cargo is the docks' crates, barrels and rope coils.
 using namespace Ship;
 
@@ -195,7 +195,7 @@ namespace
     const TArray<FOpening>& Openings()
     {
         static const TArray<FOpening> O = {
-            // The arrival compartment: the broken planking that shows the sea (port), small scuttles.
+            // The arrival compartment: the broken planking that shows the sea (starboard), small scuttles.
             {1, HoleX0, HoleX1, HoleZ0, HoleZ1, false}, {1, -125, -75, PortZ0, PortZ1, false}, {1, 250, 300, PortZ0, PortZ1, false}, {-1, 200, 250, PortZ0, PortZ1, false},
             // The galley's gunports, their lids raised.
             {1, 525, 575, PortZ0, PortZ1, true}, {1, 625, 675, PortZ0, PortZ1, true}, {-1, 525, 575, PortZ0, PortZ1, true}, {-1, 975, 1025, PortZ0, PortZ1, true},
@@ -632,7 +632,7 @@ void AShipSetting::BuildEnvironment()
     const FVector G = ShipOrigin();
     auto Attach = [this, G](USceneComponent* C, FVector At = FVector::ZeroVector, FRotator R = FRotator::ZeroRotator)
     { C->SetupAttachment(RootComponent); C->SetWorldLocationAndRotation(G + At, R); C->RegisterComponent(); };
-    // A clear afternoon at sea: the sun high on the starboard quarter, so its light comes in through the starboard
+    // A clear afternoon at sea: the sun high on the port quarter, so its light comes in through the port
     // ports and down through the gratings.
     auto* Sun_ = NewObject<UDirectionalLightComponent>(this);
     Sun_->SetMobility(EComponentMobility::Movable); Sun_->SetAtmosphereSunLight(true);
@@ -838,7 +838,7 @@ void AShipSetting::Build()
     // Stanchions under the lower deck's beams.
     for (float X : {-950.f, -150.f, 750.f}) P.Wood.B(X - 8, X + 8, -8, 8, HoldZ, LowerBeam);
 
-    // ---- The arrival compartment: a sail locker. In its starboard-aft corner a pile of the ship's spare lumber, stacked
+    // ---- The arrival compartment: a sail locker. In its port-aft corner a pile of the ship's spare lumber, stacked
     // boards with heavy timbers heaped on them up to the beams; the crawlway the escape ends in runs through the stack, and
     // where it comes out a small piece of the temple's masonry sits in the timber, its mouth ringed with the cellar's oil
     // haze: the two worlds run together there (user 2026-11-02: was a heap of temple blocks).
@@ -863,7 +863,7 @@ void AShipSetting::Build()
             const bool bOverStone = Z >= StoneTop;
             if (!bAcross)
             {
-                // Rows from the hull in to the crawlway's starboard side, and from its inboard side in to the pile's edge.
+                // Rows from the hull in to the crawlway's port side, and from its inboard side in to the pile's edge.
                 for (int32 Part = 0; Part < 2; ++Part)
                 {
                     const float Y0 = Part == 0 ? Wall : T1, Y1 = Part == 0 ? T0 : Inner;
@@ -933,7 +933,7 @@ void AShipSetting::Build()
         // The oil haze round the masonry's mouth: a band standing off the stone's edge on the stack's face, fading out away
         // from it (the cellar's M_AstralOilMist fades up V and at U's ends, so its ends are at the floor).
         {
-            TArray<FVector2D> Edge;   // (Y, Z) round the jambs and lintel, from the floor on the starboard side
+            TArray<FVector2D> Edge;   // (Y, Z) round the jambs and lintel, from the floor on the port side
             const float Ya = T0 - Jamb, Yb = T1 + Jamb, Za = StoneTop;
             for (float Z = Z0; Z < Za; Z += 8) Edge.Add({Ya, Z});
             for (float Y = Ya; Y < Yb; Y += 8) Edge.Add({Y, Za});
@@ -958,7 +958,7 @@ void AShipSetting::Build()
             }
         }
 
-        // Sailcloth: folded spare sails stacked by the port side, aft; coils of rope; a spare spar along starboard.
+        // Sailcloth: folded spare sails stacked by the starboard side, aft; coils of rope; a spare spar along port.
         // Each folded sail is a stack of thin, uneven folds with a lashing round it.
         auto Folded = [&](float X, float Y, float Z, float HX, float HY, int32 Folds, float Yaw)
         {
@@ -1001,7 +1001,7 @@ void AShipSetting::Build()
         P.Flame.B(912, 930, -28, 28, Z0 + 20, Z0 + 34);
         P.Iron.Spar(FVector(1010, 0, Z0 + 140), FVector(1010, 0, DeckZ + 120), 12, 12, 10);
         P.Iron.Spar(FVector(960, -30, Z0 + 140), FVector(960, -30, Z0 + 175), 22, 20, 12);   // a great pot
-        // A work table amidships, a counter along the port side (open underneath), a rack of shelves to starboard.
+        // A work table amidships, a counter along the starboard side (open underneath), a rack of shelves to port.
         Table(P.Wood, 560, 800, -75, 75, Z0 + 86);
         const float PH = InnerAt(880, Z0 + 60);
         Table(P.Wood, 720, 1060, PH - 62, PH + 2, Z0 + 90);
@@ -1020,7 +1020,7 @@ void AShipSetting::Build()
     // ---- The crew quarters: a big round mess table and stools, sea chests, hammocks slung under the deck beams.
     {
         const float Z0 = LowerZ;
-        // (The table stands to starboard of the way through from the arrival compartment's door to the cabin's.)
+        // (The table stands to port of the way through from the arrival compartment's door to the cabin's.)
         constexpr float TX = -340, TY = -175;
         P.Wood.Spar(FVector(TX, TY, Z0 + 70), FVector(TX, TY, Z0 + 76), 100, 100, 28);
         P.Wood.Spar(FVector(TX, TY, Z0), FVector(TX, TY, Z0 + 70), 14, 14, 12);
@@ -1130,7 +1130,7 @@ void AShipSetting::Build()
         P.Hidden.TurnedBox(FVector(X, Y, Floor + RZ * .7f), FVector(RX * .9f, RY * .9f, RZ * .7f), FRotator(0, Yaw, 0));
     };
     {
-        // A raised way over the rats along the starboard side, aft from the ladder: a sack to step on, then crates.
+        // A raised way over the rats along the port side, aft from the ladder: a sack to step on, then crates.
         Sack(40, -175, HoldZ, 10); Sack(-5, -205, HoldZ, -20);
         Crate(-60, -250, 0, 3); Crate(-125, -250, 0, -4); Crate(-190, -250, 0, 0); Crate(-190, -250, 1, 6);
         Crate(-255, -250, 0, -2); Crate(-255, -250, 1, -5); Crate(-320, -250, 0, 4); Crate(-320, -250, 1, 1); Crate(-385, -252, 0, 0);
@@ -1159,8 +1159,8 @@ void AShipSetting::Build()
     for (float Y : {-260.f, -180.f, 220.f}) Barrel(1090, Y, LowerZ, false, Y);
     Sack(860, -250, LowerZ, 30); Sack(820, -300, LowerZ, -20);
     if (TankardMesh) for (const FVector& T : {FVector(-300, -135, 0), FVector(-370, -205, 0), FVector(-330, -235, 0)}) Prop(TankardMesh, FVector(T.X, T.Y, LowerZ + 76), FRotator(0, T.X, 0));
-    // The weather deck's stores: crates lashed by the port rail forward (two high: from them he can see over it), water
-    // casks aft of the main mast to starboard, coils of rope.
+    // The weather deck's stores: crates lashed by the starboard rail forward (two high: from them he can see over it), water
+    // casks aft of the main mast to port, coils of rope.
     for (const FVector& C : {FVector(640, 372, 0), FVector(706, 372, 0), FVector(640, 372, 1)})
     {
         const FVector At(C.X, C.Y, DeckZ + 30 + C.Z * 60);
@@ -1227,7 +1227,7 @@ void AShipSetting::Build()
     {
         struct FHam { float X, Y, Z; };
         // (2026-11-02: the two that hung at -960 straddled the quarterdeck's break, their fore lanyards up through the main
-        // deck into the open waist - the user's "floating mop" by the starboard break ladder; they hang forward of it now.)
+        // deck into the open waist - the user's "floating mop" by the port break ladder; they hang forward of it now.)
         const FHam Hams[] = {{-560, 270, 0}, {-760, 260, 10}, {-460, 165, 20}, {-560, -270, 5}, {-760, -260, -5}, {-450, -352, 35}, {-660, 110, 40}, {-860, -110, 45}};
         for (const FHam& Hm : Hams)
         {
@@ -1435,7 +1435,7 @@ void AShipSetting::Rock()
     // ladder or grip ever moves): the sea, its horizon, the sky and the sun roll about 1.5 degrees on the lamps' 7.3 s
     // swell and pitch a little on a longer one. The sea's ring on the hull follows the planking's flare (M_ShipSea).
     // In the storm (2026-11-03) the swell builds: she rolls about 6.5 degrees and pitches 3, a shorter chop rides on it, and
-    // the gale heels her to leeward (port) by up to 3.5 degrees.
+    // the gale heels her to leeward (starboard) by up to 3.5 degrees.
     // Once it intensifies (2026-11-04) she rolls about 10 degrees each way and pitches 5, the chop rides harder on both and
     // the heel deepens; the swell comes quicker (AShipSetting::Tick).
     const float Roll = (FMath::Lerp(1.5f, 6.5f, StormSea) + 3.5f * StormIntense) * FMath::Sin(RollPhase) + (1.1f * StormSea + 1.f * StormIntense) * FMath::Sin(ChopPhase)
@@ -1669,7 +1669,7 @@ int32 AShipSetting::Check() const
         UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_COIL at=(%.0f,%.0f,%.0f) gap=%.1f resting=%d"), L.X, L.Y, L.Z, Gap, bResting);
     }
     Failures += Floating;
-    // The fore course stands clear of the fore ratlines (2026-11-08: it ran through the port net).
+    // The fore course stands clear of the fore ratlines (2026-11-08: it ran through the starboard net).
     {
         int32 Crossings = 0; float Clearance = 0;
         CourseNetClearance(Crossings, Clearance);

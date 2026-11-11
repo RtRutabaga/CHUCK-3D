@@ -84,6 +84,53 @@ Next part of the work could be done by either — preference: Claude (the fall i
   - The 14 `Content/Common/Materials/*.uasset` re-saves were uncommitted before this session. They are not this work and remain uncommitted.
 - **Next owner:** either agent; Claude preferred for further fall/cutscene work.
 
+## November 10 — the ship's sides named right; louder lines in the intense storm; guide lights after the orders; no Jeffries strain/choke; a longer storm-line pause; a swing across the main yard's middle (Claude)
+
+- **Asked:**
+  - The intense storm's dialogue is still a little too quiet; the start is good.
+  - Every starboard and larboard reference is backwards; swap them.
+  - The golden guide light comes on before the instructions; it should come on after them.
+  - Take out Jeffries' coughing and struggling noises.
+  - More time between the captain's "storm's upon us" and "the seas shall rue the day".
+  - After one side's reef points are tied, he should be able to reach the other side with a back-and-forth swing and a leap across the middle of the yard (before, he could only drop there).
+  - Confirmed: he falls into the hell (Phlegethos) rupture, as built.
+- **Source:** `main` at 4ff2f7df.
+- **Cause of the sides:**
+  - Unreal's Y runs to starboard facing the bow (+X), but the ship's code and docs treated +Y as port.
+  - So yardarm 0 ("larboard") was on the starboard side, and every side-specific line (NOW THE STARBOARD!, the crewman's FAST call, the deck call) named the wrong side.
+- **Changed:**
+  - **Sides:**
+    - `ShipEnding.cpp`: side index 0 is now larboard, at -Y (work spots, grips, which-side-is-here, flapping canvas).
+    - Comments in the ship sources were swapped (47 lines), the frame comment says Y to starboard, and the test spots were renamed (`ForeShroudsPort`/`Starboard` swapped, `BreakPort`).
+    - `ShipEndingTest.cpp`: the trials are named for their real sides (`reef_starboard` first, `leap_starboard` for the +Y lane).
+    - `Tools/Verify-Package.ps1`: expects the new trial order.
+    - `docs/SHIP.md` and `docs/regions/SHIP-STORM-ENDING.md`: side words swapped (not in quoted dialogue).
+  - **Volume:**
+    - `ShipEnding.cpp`: voice ×(1.4 + .7·Intense), up to +6.4 dB (was +5.6).
+    - `ShipStorm.cpp`: under a line the loops duck to .4 − .18·Intense (about 13 dB once intense), and the sea slams and thunder spawned meanwhile are halved.
+  - **Guide lights:** `ShipEnding.h/.cpp`: `LitStep`. A step's lights show only once its queued orders have all been said (logs `CHUCK_SHIP_GUIDE_LIT`).
+  - **Jeffries:** JEF_X01/X02 are no longer queued in play or in the cutscene. JEF_01 moved to 14 s in the cutscene. The voice files stay imported.
+  - **Pause:** CAP_S01 now follows CAP_S00 by 4.5 s (was 1.5).
+  - **Yard crossing:**
+    - `ChuckClimbable.h`: `FChuckSwingGrip::LeapRange`.
+    - `ChuckCharacter.cpp` `FindSwingTarget`: a pair of grips that both set it may be leapt up to that range.
+    - `ShipDeck.inl`: the main course yard's innermost grips (±170) get 370, so he can leap the 340 cm middle on a pumped swing (the existing big-leap wait). Every other leap still reaches 240 cm.
+  - `ShipEndingTest.cpp`: the larboard reef trial now starts on the starboard side of the top, catches the inner grip, pumps and crosses (`CHUCK_SHIP_YARD_CROSS`, stills `YardCrossMid`, `YardCrossed`), then goes out to larboard.
+- **Tested:** 
+  - Editor: `Local/ship-fix-3.log`, all 10 trials passed. The crossing waited 1.83 s for its swing (408 cm against 340), caught the -166 grip and logged crossed=1 at 2.6 s. Storm duck minimum 0.22. CAP_S00 to CAP_S01 about 4.6 s.
+  - Package: `CHUCK_PACKAGE_VERIFIED passes=182` (`Local/verify-package-20261110-191053.log`). The packaged ship ending (`Local/verify-ship-ending-20261110-200442.log`) had failures=0 with the new trial names. The reef guide lit at 40.9 s, 0.1 s after CAP_02 finished.
+- **Not checked:**
+  - Nobody has listened to the new loudness or played it by hand.
+  - The crossing has been done only with the test's in-time pump.
+- **Remaining flaws:**
+  - The leap across the middle flies with no collision. Its arc may pass close to the top's underside.
+  - Earlier flaws (the comber's pale back, the clewline through Chuck, the skewed rupture under the tilt) are unchanged.
+- **Contract compatibility:** no rig or clip changes. `FChuckSwingGrip` gains a defaulted field.
+- **Binary/LFS:** none.
+- **Launcher:** promoted as ShipFix (receipt c806645 plus this commit's source; the previous build is kept, OuterLand pruned).
+
+Next part of the work could be done by either — preference: Claude (the fall into Phlegethos after the burning rupture, and your answers to the plan's open questions).
+
 ## November 9 (late night) — the storm ending: lines heard over the storm; a great sea knocks her over and Chuck loses his grip (Claude)
 
 - **Asked:**

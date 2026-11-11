@@ -12,7 +12,7 @@
 // sails and rigging, an optional climb up the ratlines to the main top and out along the main yard, and the open sea, its waves
 // meeting the hull, rocking round the still hull with the sky and the sun (ShipDeck.inl, ShipSea.inl).
 //
-// The ship's frame: X to the bow, Y to port, Z up from the bottom of the keel, in cm; it sails on its own stage, its
+// The ship's frame: X to the bow, Y to starboard, Z up from the bottom of the keel, in cm; it sails on its own stage, its
 // axes the world's, 8 km from Chult's landing.
 namespace Ship
 {
@@ -58,10 +58,10 @@ namespace Ship
     constexpr int32 HelmSpokes = 10;
     inline FQuat HelmTurn(float Angle) { return FQuat(FVector::ForwardVector, FMath::DegreesToRadians(Angle)); }
     inline FVector HelmSpoke(int32 K, float Angle) { const float A = K / float(HelmSpokes) * 2 * PI + .3f; return HelmTurn(Angle).RotateVector(FVector(0, FMath::Cos(A), FMath::Sin(A))); }
-    // The temple masonry grown through the arrival compartment's starboard-aft corner, and the crawlway through it that
+    // The temple masonry grown through the arrival compartment's port-aft corner, and the crawlway through it that
     // the escape comes out of (the crevice's other end): it runs from its blind end (X0) toward +X to its mouth (X1).
     constexpr float SeamX0 = -150, SeamX1 = 130, SeamY = -300, SeamHalf = 40, SeamH = 44;
-    // The broken planking in the port side that shows the open sea (the 2D escape's "a hole reveals the open sea").
+    // The broken planking in the starboard side that shows the open sea (the 2D escape's "a hole reveals the open sea").
     constexpr float HoleX0 = 50, HoleX1 = 200, HoleZ0 = LowerZ + 45, HoleZ1 = LowerZ + 120;
 }
 

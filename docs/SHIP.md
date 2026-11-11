@@ -8,7 +8,7 @@ The 2D direction is Phase 6's escape cutscene and Phase 7's ship (`docs/developm
 
 ### Where it is
 
-The ship sails on its own stage, 8 km from Chult's landing (`ShipOrigin()`: the landing spot − 800,000 cm in Y). Its frame has X to the bow, Y to port and Z up from the keel, in cm, with the world's axes. Arriving there hides whatever stage was standing (Waterdeep or Chult), stops its sound and stills its actors, as entering Chult does to Waterdeep. There is no way back.
+The ship sails on its own stage, 8 km from Chult's landing (`ShipOrigin()`: the landing spot − 800,000 cm in Y). Its frame has X to the bow, Y to starboard (Unreal's Y runs to the right facing the bow; until 2026-11-10 this document and the code's comments had it as port, every side named backwards) and Z up from the keel, in cm, with the world's axes. Arriving there hides whatever stage was standing (Waterdeep or Chult), stops its sound and stills its actors, as entering Chult does to Waterdeep. There is no way back.
 
 ### The ship (`ShipSetting.cpp`)
 
@@ -32,18 +32,18 @@ An original two-masted ship after the 2D deck reference (`docs/design/pirate shi
 
 | Space | Where (X) | What is in it |
 | --- | --- | --- |
-| Arrival compartment | −170 to 330 | A sail locker amidships. Folded spare sails, rope coils, a spare spar and a barrel. The main hatch with a ladder down. A pile of spare lumber in the starboard-aft corner, the crawlway through it ending in a small piece of the temple's masonry ringed with the oil haze (November 2, below). The broken planking in the port side. |
-| Galley | 330 to 1150 | A brick hearth under an iron top with a great pot and its pipe up through the deck, and a fire glowing in the firebox. A work table under a rail of hanging pots. A counter along the port side, open underneath, with a low board of jars. A rack of shelves to starboard. Water casks and sacks. |
+| Arrival compartment | −170 to 330 | A sail locker amidships. Folded spare sails, rope coils, a spare spar and a barrel. The main hatch with a ladder down. A pile of spare lumber in the port-aft corner, the crawlway through it ending in a small piece of the temple's masonry ringed with the oil haze (November 2, below). The broken planking in the starboard side. |
+| Galley | 330 to 1150 | A brick hearth under an iron top with a great pot and its pipe up through the deck, and a fire glowing in the firebox. A work table under a rail of hanging pots. A counter along the starboard side, open underneath, with a low board of jars. A rack of shelves to port. Water casks and sacks. |
 | Crew quarters | −1080 to −170 | Eight hammocks slung fore and aft from the beams, their beds about 1–1.45 m off the floor (lowered November 2; before, 1.5–1.95 m). A 2 m round mess table on a pedestal with five stools (stool 41 cm, table 76 cm: he can mantle up) and tankards. Iron-bound sea chests along both sides. The main mast. |
 | Captain's cabin | transom to −1080 | A bed with brass posts, a blanket and pillow. A desk with a chart and a lamp, and his chair. A rug. The iron-bound chest (closed: milestone 4). A bench under the stern windows (he can see out from it). |
-| Hold | −1300 to 1150, below | Cargo stowed in tiers (the docks' crates, barrels and rope coils, and canvas sacks). Three shelving units along the sides. Stanchions. A raised way of crates along the starboard side, aft from the ladder: a sack to step onto, then crates one and two high. |
+| Hold | −1300 to 1150, below | Cargo stowed in tiers (the docks' crates, barrels and rope coils, and canvas sacks). Three shelving units along the sides. Stanchions. A raised way of crates along the port side, aft from the ladder: a sack to step onto, then crates one and two high. |
 
 - **Lanterns:** 11 iron-framed lanterns hang from the beams, each with a shadowed warm point light. They and the hammocks swing on a slow 7.3 s roll and the flames flicker.
 - **Sound:** a slow wash of the sea against the hull loops, and now and then a timber creaks near him. Both are synthesised: `Tools/gen_ship_sfx.py`, imported by `Tools/import_ship_sfx.py`. Aboard, every other score fades out. Since November 2 the user's ship track (`SW_Ship`, below) plays under these sounds.
 - **The sea:** seen through every opening, it is the sanctum's sea-tear material (`M_TempleRiftSea`), which draws an open sea under a pale sky from the view ray alone. It sits on a 3 km box round the ship, its sea at the waterline. The material gained a `Gain` parameter (default 1, so the sanctum is unchanged); the ship sets 0.22, because its interior exposure would otherwise blow it out (`-ChuckShipSeaGain=` overrides it for tuning). Seen from inside, that is all that is needed. The weather deck (milestone 2) will need a real water surface where the sea meets the hull.
 - **Hiding the other stages:** fog, sky lights and atmospheres belong to `AInfo` actors, which the hiding pass otherwise leaves running (the game mode is one). Their parts are switched off too: Waterdeep's harbour fog had turned every opening white.
 - **(Milestone 2 replaced the sea box with a real sea surface and the open sky: see below.)**
-- **Lighting:** an afternoon sun high on the starboard quarter, with volumetric fog so its light shows in shafts through the ports and gratings. The sky light is faint below decks: with no dynamic GI it would otherwise light the inside as if there were no hull. The exposure is set for an interior.
+- **Lighting:** an afternoon sun high on the port quarter, with volumetric fog so its light shows in shafts through the ports and gratings. The sky light is faint below decks: with no dynamic GI it would otherwise light the inside as if there were no hull. The exposure is set for an interior.
 
 ### Getting about
 
@@ -62,9 +62,9 @@ An original two-masted ship after the 2D deck reference (`docs/design/pirate shi
 The rubble map's crevice ends at a crack of lamplit timber (`AtChultTempleCreviceEnd`). Crawling to it starts the 2D Phase 6 escape, letterboxed with no control. Esc skips it.
 
 1. It goes to black, and the music fades.
-2. The ship's stage is built, and he is on all fours in a stone passage: the crawlway through the pile of lumber in the arrival compartment's starboard-aft corner (until November 2 a mass of the temple's masonry). Its mouth is a small piece of the temple's stone set in the boards, ringed with the oil haze, and grit has spilled from it. Behind him, his crawl camera looks along the passage toward the lamplight at its mouth.
+2. The ship's stage is built, and he is on all fours in a stone passage: the crawlway through the pile of lumber in the arrival compartment's port-aft corner (until November 2 a mass of the temple's masonry). Its mouth is a small piece of the temple's stone set in the boards, ringed with the oil haze, and grit has spilled from it. Behind him, his crawl camera looks along the passage toward the lamplight at its mouth.
 3. He crawls out among the sailcloth, seen from low in the compartment, and gets up.
-4. He walks to the broken planking in the port side. The view eases in past him to the open sea through it.
+4. He walks to the broken planking in the starboard side. The view eases in past him to the open sea through it.
 5. Control returns where he stands, facing the hole.
 
 It plays once a session. A respawn aboard never replays it. Skipping puts him at the same place at once. Sanity carries over unchanged.
@@ -101,7 +101,7 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
   - **At the bow:** the bitts at the bowsprit's heel, the windlass with its cables to the hawse holes, two catheads with their anchors, and the bobstay.
   - **Rails and pins:** fife rails with belaying pins at the masts' feet. The main mast's rails are open fore (the rope ladder's foot) and aft (room for Jeffries in milestone 3). Pin rails inside the bulwark by the shrouds, with coils hung on the pins.
   - **The bell:** the ship's bell in a small belfry on the fore fife rail.
-  - **Stores:** crates lashed by the port rail forward (two high, so he can climb them and see over the rail), water casks aft of the main mast and rope coils.
+  - **Stores:** crates lashed by the starboard rail forward (two high, so he can climb them and see over the rail), water casks aft of the main mast and rope coils.
 - **Ladders** (all `ChuckClimbable`, climbed like the hold's): the companion ladder from the crew quarters, and one up each side of the quarterdeck's break. Chuck's step height is 4 cm, so stairs would be a mantle at every step. These are ladders.
 
 ### The rig
@@ -127,7 +127,7 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
 (November 5: the rope ladder is gone; he climbs the ratlines instead. See [the ratlines](#the-ratlines-and-climbing-sideways-november-5).)
 
 1. A rope ladder hangs from the main top's lubber's hole, its foot made fast on the deck just forward of the main mast. He walks into its foot and climbs it like any ladder: 10.2 m, about 14 seconds.
-2. At the top he pulls himself out onto the platform forward of the hole. The lookout's clay jar stands on the aft port corner, with a cigarette inside.
+2. At the top he pulls himself out onto the platform forward of the hole. The lookout's clay jar stands on the aft starboard corner, with a cigarette inside.
 3. The main yard is slung 55 cm under the top, just forward of the mast. A jump off either side of the top, or a drop from its edge, catches it. He then goes hand over hand out along it. There are 12 grips (`AddChuckSwingGrip`), six a side and 90 cm apart (easy leaps, no pumping), from 1.7 m to 6.2 m out; the last is over the sea.
 4. **Recovery:** let go over the deck and he falls the 10 m and rolls, unhurt (there is no fall damage). Let go over the sea and it is an Astral death; he comes back at the Ship Deck spawn. There is no way back up from the yard to the top.
 
@@ -165,7 +165,7 @@ User request: "Do the next part of the ship" (after milestone 1). The code is in
 - **Six new trials, 12 in all:**
   - `deck_up`: the companion ladder up from the crew quarters.
   - `deck_down`: down it from the deck.
-  - `quarterdeck`: up the port break ladder, past the helm, down the starboard one.
+  - `quarterdeck`: up the starboard break ladder, past the helm, down the port one.
   - `rigging`: up the rope ladder, off the top's side onto the main yard, five leaps out to the yardarm, let go into the sea and back on deck.
   - `yard_drop`: onto the yard and let go over the deck, landing unhurt.
   - `rail`: walking hard at the rail for 3 s keeps him aboard.
@@ -189,10 +189,10 @@ User request: "Do the next part" (after milestone 2). The code is in `ShipCrew.c
 
 | Pirate (2D credits name) | Where | What he does |
 | --- | --- | --- |
-| The Pirate Chef | The galley, at the work table's starboard side | Chops on the board on every other beat. When he sees the rat in the galley he calls out, then chases it with his cleaver (below). |
+| The Pirate Chef | The galley, at the work table's port side | Chops on the board on every other beat. When he sees the rat in the galley he calls out, then chases it with his cleaver (below). |
 | The Seated Pirate | The crew quarters, on the mess-table stool that faces the door from the arrival compartment | Sways on the beat with his tankard and drinks from it (the tavern drinker's pose). |
-| The Concertina Pirate | Deck, amidships to starboard | Squeezes the concertina open and shut over two bars, bobbing on the beat and nodding. |
-| The Cheering Pirate | Deck, amidships to port | Sways, bobbing, his tankard at his side. Every eight bars he raises it high and pumps it on the beat, and every other time drinks instead. |
+| The Concertina Pirate | Deck, amidships to port | Squeezes the concertina open and shut over two bars, bobbing on the beat and nodding. |
+| The Cheering Pirate | Deck, amidships to starboard | Sways, bobbing, his tankard at his side. Every eight bars he raises it high and pumps it on the beat, and every other time drinks instead. |
 | The Dancing Pirate | Deck, on the main hatch's grating | Dances a jig: a hop on every beat, kicks out and back on each leg, heel taps on each, a jump with the heels together to close the phrase. Hands on his hips. |
 | The Swordsmen (two) | Deck, the open ground forward of the fore mast | Fence (below). No lines. |
 | Jeffries | Deck, his back to the main mast's aft side | Tied to it by the chest and waist, wrists bound behind him round it. Heaves at the ropes in bursts of three, more often with the rat near; between them he sags and twists. |
@@ -337,9 +337,9 @@ User request: "Make the pirate flag more prominent while still being in a spot c
 - **The flag** (`ShipDeck.inl`, `FlagPoint`):
   - It now flies where a ship of this kind wore its colours under sail: from the spanker gaff's peak, over the quarterdeck, about 10 m above it. Before, it was at the main truck, 24 m above the deck.
   - It is 2.6 × 1.65 m (it was 1.5 × 0.95 m), about the size of a big ensign.
-  - It is hoisted on a halyard just aft of the peak, with the halyard's tail hanging below it. It streams to leeward (to port, the way the spanker fills), clear of the sail's leech.
+  - It is hoisted on a halyard just aft of the peak, with the halyard's tail hanging below it. It streams to leeward (to starboard, the way the spanker fills), clear of the sail's leech.
   - The main truck is bare.
-- **The "mop"** was not a mop. Two crew-quarters hammocks hung at x = −960, across the quarterdeck's break. Each one's fore lanyard ran up through the main deck and ended in the air about 90 cm over the waist's planking, beside a break ladder. These two now hang forward of the break: one inboard of the port row, the other outboard of the mess table on the starboard side.
+- **The "mop"** was not a mop. Two crew-quarters hammocks hung at x = −960, across the quarterdeck's break. Each one's fore lanyard ran up through the main deck and ended in the air about 90 cm over the waist's planking, beside a break ladder. These two now hang forward of the break: one inboard of the starboard row, the other outboard of the mess table on the port side.
 - **The arrival compartment's corner** (`ShipSetting.cpp`):
   - In place of the temple blocks, a pile of the ship's spare lumber fills the corner:
     - stacked boards (`ShipLumber`, the light deck planks) laid fore and aft either side of the crawlway, with boards laid across over it;
@@ -359,7 +359,7 @@ User request: "Make the pirate flag more prominent while still being in a spot c
   - New stills:
     - flag: `Flag`, `FlagAft`, `FlagFromDeck`, `FlagFromWaist`;
     - arrival corner: `ArrivalPile`, `ArrivalMouth`;
-    - where the lanyard stood: `BreakStarboard`; hammocks: `QuartersAft`;
+    - where the lanyard stood: `BreakPort`; hammocks: `QuartersAft`;
     - captain's draw: `CaptainReach`, `CaptainGrip`, `CaptainDraw`, `CaptainLift`, `CaptainGripClose` and `CaptainGripBack`, each holding him at that moment of his round;
     - his hand close up: `CaptainHand*`, a camera that follows the hand.
   - The dancer's and cheering pirate's stills follow them.
@@ -423,7 +423,7 @@ User request: "when the ship trigger takes effect, i want a storm to roll in and
 
 ### The chest (`AShipChest`)
 
-- The captain's chest in his cabin (against the port side) now has a lid on a hinge. Scratching it, or interacting with it while facing it within about a metre, opens it once: the lid swings back past upright (1.1 s, the hinges creaking, a knock as it comes against its stay) and a warm gold light comes up inside.
+- The captain's chest in his cabin (against the starboard side) now has a lid on a hinge. Scratching it, or interacting with it while facing it within about a metre, opens it once: the lid swings back past upright (1.1 s, the hinges creaking, a knock as it comes against its stay) and a warm gold light comes up inside.
 - A golden carton (22 × 12 × 9 cm, in the golden leaf's aura) pops out over the front and lands before the chest. Walking over it gives 40 cigarettes and starts the golden leaf's 45 s stamina lock (the user's decision of 2026-11-01). It is taken once and never comes back, through deaths too; the chest stays open.
 - The 2D game drops it "with no dialogue box"; there is none here either.
 
@@ -446,11 +446,11 @@ It rolls in over about a minute and then keeps on: there is no end to it yet (th
 | Lightning | 18 s | | far off first, then closer and more often |
 
 - **The sky** (`AShipSetting::ApplyStorm`): the fair-weather clouds (the engine's volumetric cloud material) thicken, come down to 750 m and turn to storm cloud (its own `StormClouds` setting). The sun dims under them to a grey light; the sky's fill rises instead, so the deck stays readable in the overcast. The haze thickens with the rain, the colour drains (saturation about 0.63) and a vignette closes in.
-- **The sea** (`M_ShipSea`'s new `Storm` setting): a long storm swell (90, 56 and 33 m waves, up to 0.6 m, running down the wind from starboard), the wind sea under it nearly twice as high, darker slate water, foam on far more of the crests and spume streaked down the wind. Against the hull the swell is lower. The sea mesh has rings 2 m apart out to 150 m now, so the swell keeps its shape there; its slope still shades the sea to 800 m.
-- **The ship's motion:** she rolls about 6.5° each way on a slightly quicker swell (6.2 s), pitches 3° (5.8 s), a 3.1 s chop rides on both, and the gale heels her up to 3.5° to port. (The hull stays still; the sea, sky and sun move, as before.) Up to 11° of the horizon's tilt was measured. The lamps and hammocks below swing about three times as far.
+- **The sea** (`M_ShipSea`'s new `Storm` setting): a long storm swell (90, 56 and 33 m waves, up to 0.6 m, running down the wind from port), the wind sea under it nearly twice as high, darker slate water, foam on far more of the crests and spume streaked down the wind. Against the hull the swell is lower. The sea mesh has rings 2 m apart out to 150 m now, so the swell keeps its shape there; its slope still shades the sea to 800 m.
+- **The ship's motion:** she rolls about 6.5° each way on a slightly quicker swell (6.2 s), pitches 3° (5.8 s), a 3.1 s chop rides on both, and the gale heels her up to 3.5° to starboard. (The hull stays still; the sea, sky and sun move, as before.) Up to 11° of the horizon's tilt was measured. The lamps and hammocks below swing about three times as far.
 - **The sails and flag** (`ShipDeck.inl`): fuller, their free edges thrumming faster and harder; the flag streams out flatter and cracks.
 - **Rain:** 2,600 streaks in a 30 m box round the view, falling slanted down the wind, lit by the light round them (a flash lights them) with a little glow of their own. They stop at the deck or the sea, so none falls below decks, and those landing on deck near the view throw tiny splashes.
-- **Spray:** every 1–4 s at full sea a sea comes over the bow or the starboard (weather) rail: white water thrown up, blown across the deck and falling, with the slam of a wave (heard muffled below).
+- **Spray:** every 1–4 s at full sea a sea comes over the bow or the port (weather) rail: white water thrown up, blown across the deck and falling, with the slam of a wave (heard muffled below).
 - **Lightning:** a jagged channel from the cloud down to the sea, with forks, a white core and a faint glow round it, lit for the flash (two to four strokes in a few tenths of a second; it is not fogged, so it cuts through the haze). Its light on the ship is a second, hard white light from the strike's side, casting the hull's and the rig's shadows (so below decks it comes only through the openings); the sun brightens more slowly, to light the clouds (a sudden change there speckled every edge against the sky). Thunder follows after about a third of the real delay: a crack and its roll for a strike within 1.2 km, rolling thunder for one further off.
 
 ### The storm heard
@@ -507,7 +507,7 @@ When the storm track has played through (202 s, its length read from the asset),
 
 ### Seas breaking aboard (`AShipStorm::DeckWaveNow`)
 
-In the second part, every 7–13 s a sea breaks over the weather (starboard) rail into the waist, aft of the main mast or forward of the companion (never over the rupture):
+In the second part, every 7–13 s a sea breaks over the weather (port) rail into the waist, aft of the main mast or forward of the companion (never over the rupture):
 - White water bursts up along 5–7 m of the rail, with billows of spume over it, and the sea's slam, heavy, twice.
 - A sheet of dark green water with a foaming front runs across the deck to the lee rail in about two seconds, rippling and foaming as it goes (`M_ShipDeckWash`, using the sea's own normal and foam textures), then drains away (4.4 s in all).
 - If its front catches him on the deck, it shoves him across toward the lee rail (he keeps his feet; the rail holds him).
@@ -517,9 +517,9 @@ The spume (also over every spray now) is drawn from Unity Labs' CC0 smoke flipbo
 ### The crew in the storm (`AShipCrew::BeginStorm`, `DockNPCPirate.inl`)
 
 At the storm's start the deck's crew stow what they hold (the concertina, the tankard, the cutlasses), stop the music, dancing and fencing, and walk briskly to their stations (round the companion and the skylight, never through them):
-- **On the main's line to starboard:** the concertina player and the cheering pirate, one either side of it, facing its lead block. They haul together: both hands draw back as they throw their weight back, then the forward hand lets go and reaches on along the line and the other follows. The line runs aft along the deck at hand height from a lead block, up to the mast, and its tail lies coiled behind them.
-- **On the fore's line to port:** the two fencers, the same way, half a heave out of step with the first pair.
-- **At the main mast's port fife rail:** the dancer sweats up a halyard, reaching high on it and throwing his weight down, hand over hand.
+- **On the main's line to port:** the concertina player and the cheering pirate, one either side of it, facing its lead block. They haul together: both hands draw back as they throw their weight back, then the forward hand lets go and reaches on along the line and the other follows. The line runs aft along the deck at hand height from a lead block, up to the mast, and its tail lies coiled behind them.
+- **On the fore's line to starboard:** the two fencers, the same way, half a heave out of step with the first pair.
+- **At the main mast's starboard fife rail:** the dancer sweats up a halyard, reaching high on it and throwing his weight down, hand over hand.
 - **At the helm:** the captain, behind the wheel facing forward, his hands on two spokes, steering it to and fro against the sea (a long sweep with quicker corrections over it, wider in the full gale and wider still in the second part). The wheel now turns: its rim and spokes are their own part, and it stands on the aft side of its posts (it was on the fore side, with no room for a helmsman behind it).
 - They work faster as the storm builds. Jeffries stays tied to the mast. The chef and the seated pirate below go on as before (he cannot go below in the storm).
 - Their talk stops while they work (they can't be talked to), and they don't turn to the rat.
@@ -558,7 +558,7 @@ User request: "on the ship, remove the ladder and instead make all the ratlines 
 
 ### The rig (`ShipDeck.inl`)
 
-- **The rope ladder to the main top is gone**, and with it the main top's lubber's hole (the top's floor is whole). The lookout's jar moved to the top's fore starboard corner, clear of the nets.
+- **The rope ladder to the main top is gone**, and with it the main top's lubber's hole (the top's floor is whole). The lookout's jar moved to the top's fore port corner, clear of the nets.
 - **Every ratline net is climbed** (`DeckShrouds`, eight `ChuckClimbable`s): the lower shrouds and the topmast shrouds, on both sides of both masts.
   - **The lower shrouds** now run from the channel's deadeyes up to the top's rim, aft of the yard, each with an iron band there (before, they ran under the top to the masthead, where no climber could get out). The futtock shrouds carry on under the top to the mast. Ratlines run nearly to the rim.
   - **From the deck:** walk at the bulwark between the main or fore shrouds and he climbs up its inside, out over the rail and turns round onto the shrouds' outer face, facing the mast. Up the slanted net (about 20°), his body lying along it, to the rim, and over it onto the top with the ordinary pull-up.
@@ -577,8 +577,8 @@ User request: "on the ship, remove the ladder and instead make all the ratlines 
 ### Tests
 
 - The ship's check counts 4 ladders and 8 shroud nets; the main top's floor check moved forward of the mast.
-- `rigging` now goes up the port main shrouds onto the top before the yard.
-- New trial `ratlines` (20 trials): the starboard fore shrouds from the deck; across them both ways (15 cm right, 35 cm back left, low on the net); down and off at the rail without climbing back on; from the main top up its port topmast shrouds to under the crosstrees (still holding on a second later) and back down; out over the rim onto the lower shrouds' heads and down them to the deck.
+- `rigging` now goes up the starboard main shrouds onto the top before the yard.
+- New trial `ratlines` (20 trials): the port fore shrouds from the deck; across them both ways (15 cm right, 35 cm back left, low on the net); down and off at the rail without climbing back on; from the main top up its starboard topmast shrouds to under the crosstrees (still holding on a second later) and back down; out over the rim onto the lower shrouds' heads and down them to the deck.
 - New stills: `Shrouds`, `ShroudsOutside`, `ShroudsTop`, `ForeShroudsPort`, `ForeShroudsStarboard`, and the trials' `ShroudsClimb`, `RatlinesAcross`, `TopmastShrouds`, `ShroudsDown`.
 
 ### Follow-up: the nets' feet on deck, every yard, the door frames (November 5, night)
@@ -589,7 +589,7 @@ User request: "have the ratlines start from the deck in a way that looks realist
 - **Every yard he can reach** (`YardGrips`, 40 grips): both masts' course yards (from either side of their tops; the fore's along its 12° brace) and both topsail yards. The topsail yards are reached from the top of the topmast shrouds: still climbing at their end, he reaches up and takes the yard, facing out along it. The topgallant yards have no ratlines up to them and stay out of reach.
 - **The sails give way round him** (`SailGiveWay`): the topsails and the fore course hang right under their yards, so the canvas near him is pushed to his far side in a soft dome. The sails' meshes are finer for it (32 × 24).
 - **The door frames below decks** (`BuildBulkhead`): the posts stand 1 cm proud into the opening and stop under the lintel; the lintel sits 1 cm proud below the head and of the posts' faces. Their faces lay in the bulkhead's and each other's planes before, and flickered.
-- **Tests:** the ship check expects 40 grips. `ratlines` now: up the starboard fore net from the deck, across, down and off; from the main top lowered onto the lower shrouds and down to the deck; up the port topmast shrouds onto the main topsail yard, three leaps out along it, let go onto the deck. New stills `NetFoot`, `NetFootLow`, `NetFootFore`, `TopsailYard`, and the trial's `TopsailYardCatch`, `TopsailYard`.
+- **Tests:** the ship check expects 40 grips. `ratlines` now: up the port fore net from the deck, across, down and off; from the main top lowered onto the lower shrouds and down to the deck; up the starboard topmast shrouds onto the main topsail yard, three leaps out along it, let go onto the deck. New stills `NetFoot`, `NetFootLow`, `NetFootFore`, `TopsailYard`, and the trial's `TopsailYardCatch`, `TopsailYard`.
 - **Not yet:** the canvas folds a little sharply round him; the topgallant yards; not played by hand.
 
 ## The storm's lines as rope (November 7)
@@ -603,7 +603,7 @@ User request: "find and implement free resource(s) to make the ropes better on t
   - `Droop`: slack from where it is let go, carrying on a hand's breadth the way it left, falling and settling along the deck (its curve's controls kept in order so it never folds back);
   - `Coil`: flaked down flat on the deck, turns side by side, the tail running into its outer turn.
 - **The hauling lines** (`AShipCrew::UpdateStormLines`, each frame in the storm): down from the block aloft, over the lead block's sheave (its centre 30 cm off the deck, the block's shell round it, stropped to a ringbolt), up into the haulers' fists in order along the line, slack behind the last hand to the deck, in a gentle S along it into the coil. Before the men arrive it lies along the deck from the block; as each settles in, it lifts into his hands. A hand let go to reach on along the line no longer bends it.
-- **The halyard:** down from aloft through the dancer's hands to a pin in the main's port fife rail (x −511, the rail's own pin), over the pin's head, its tail off aft outboard of the rail and coiled down clear of his feet.
+- **The halyard:** down from aloft through the dancer's hands to a pin in the main's starboard fife rail (x −511, the rail's own pin), over the pin's head, its tail off aft outboard of the rail and coiled down clear of his feet.
 - **Hauled through:** the strands run toward the tail with the hands that grip it (`LineHauled`), never back: when a holding hand is carried forward by the man's body as he reaches on, it slips along the rope.
 - **Hands:** `ADockNPC::GetStormHold` (how firmly each hand holds: 0 let go .. 1 gripping) and `GetStormBlend`.
 - **Tests:** `storm_work` also checks every gripping fist within 2 cm of its rope's middle and no turn between two of a rope's segments over 25° (`CHUCK_SHIP_STORM_ROPE` at each still: `fist_gap`, `worst_turn` and where, `hauled`). New stills `RopeHands`, `RopeBlock`, `RopeTail`, `RopePin`.
@@ -633,11 +633,11 @@ User request: "make the rest of the ship rigging rope look like our new good loo
 
 User request: "make it so the foremast course sail doesn't intersect with the fore ratlines in an unrealistic way, then give all portions of each masts collision objects so that if the player somehow climbs about the topsail and starts climbing the highest portion of the mast directly with gold leaf staminia they can actually climb it. Also, in the fall to chult cutscene currently the leaves around chuck rustle when he lands which is good but then they keep rustling unrealistically, cut that off so that its a brief realistic rustle".
 
-- **The fore course** (`ShipDeck.inl`: `CourseClew`, `CourseClewLead`, `SailDefs`): its clews hung out over the sea, 1.4–1.6 m outboard of the side, and with the yard braced 12° the port (lee) clew sat 1.5 m aft among the shrouds, so the lower port quarter of the sail ran through the shrouds and their ratlines. Now:
+- **The fore course** (`ShipDeck.inl`: `CourseClew`, `CourseClewLead`, `SailDefs`): its clews hung out over the sea, 1.4–1.6 m outboard of the side, and with the yard braced 12° the starboard (lee) clew sat 1.5 m aft among the shrouds, so the lower starboard quarter of the sail ran through the shrouds and their ratlines. Now:
   - both clews come in to the ship's side, 3 m over the deck (the crew still walk under the foot);
   - the lee clew is sheeted aft only as far as just forward of the foremost shroud, as a sharp-braced course bears on its lee rigging; the weather clew is tacked forward;
-  - a sheet (port) and a tack (starboard) run from the clews down to a block on the rail (there were no ropes at the clews).
-  - The ship check measures the canvas against every fore lower shroud and ratline, in calm and gale and through the sail's breathing: `CHUCK_SHIP_COURSE crossings=0 clearance_cm=53.0`. Before the change the same measure (worked out offline) found the port shroud and ratlines through it in every state.
+  - a sheet (starboard) and a tack (port) run from the clews down to a block on the rail (there were no ropes at the clews).
+  - The ship check measures the canvas against every fore lower shroud and ratline, in calm and gale and through the sail's breathing: `CHUCK_SHIP_COURSE crossings=0 clearance_cm=53.0`. Before the change the same measure (worked out offline) found the starboard shroud and ratlines through it in every state.
 - **The masts solid above the tops** (`ShipDeck.inl`, `BuildRig`): the lower masts were already solid; the topmasts, topgallant masts and trucks were only drawn. They now have one hidden, seamless collision shell each, every section the outline of the two spars there:
   - it follows the topmast up from the top and the topgallant up to the truck;
   - over the doubling, where the topgallant stands 23 cm forward of the topmast's head, it fairs each face of one into the other: the fore face slants out onto the topgallant's heel, and the aft face and sides lean forward onto it over the topmast's head, with no ledge or overhang to stop a climb;
@@ -645,7 +645,7 @@ User request: "make it so the foremast course sail doesn't intersect with the fo
   - The crosstrees, caps, yards and sails stay as they were (not solid), so the ratlines, yards and sails work as before.
   - Ship check: `CHUCK_SHIP_MASTS solid=8 of=8` (traces across both masts' topmasts, doublings and topgallants).
 - **The golden leaf's long climb on a thin pole** (`ChuckCharacter.cpp`, the wall run): on a 12–20 cm pole he dropped off after a tenth of a second. Each frame the climb took its new wall normal from where a line along the last normal hit; on a thin round pole that line lands off to one side, the normal there points further round, and within a few frames the line missed the pole. On the golden leaf the normal now comes from the nearest point among a small fan of lines (0, ±8, ±16, ±30°) round the last normal, which stays square to a pole and is the same as before on a flat wall or a big trunk. (Only the golden leaf's long climb uses it; ordinary wall runs are unchanged.)
-- **New trial `mast_climb`** (21 trials now): on the golden leaf, from just over each topsail yard, he climbs each mast from aft, from the port side and from forward, the stick toward the mast as a player holds it, and must reach the truck (`CHUCK_SHIP_MAST_CLIMB`). New still `ShipPlay_MastTruck`. `-ChuckMastTrace` logs his path every 0.1 s.
+- **New trial `mast_climb`** (21 trials now): on the golden leaf, from just over each topsail yard, he climbs each mast from aft, from the starboard side and from forward, the stick toward the mast as a player holds it, and must reach the truck (`CHUCK_SHIP_MAST_CLIMB`). New still `ShipPlay_MastTruck`. `-ChuckMastTrace` logs his path every 0.1 s.
 - **The landing's leaves** (`FallCutscene.cpp/.h`): the litter thrown up when he hits the floor kept sliding about on the ground for 5–9 s (its sideways drift went on after it landed), then vanished. Now:
   - a leaf that reaches the floor lies still where it fell and stays;
   - the floor's litter is wet and heavy: thrown lower, it drops at 1.1–1.6 m/s and hardly drifts, so the rustle is over in about a second and a half;

@@ -33,7 +33,7 @@ namespace ShipGate
     void Reset(UWorld* World);
 }
 
-/** The captain's chest (in his cabin, against the port side). Its body is the ship's; this is its lid on its hinge, the
+/** The captain's chest (in his cabin, against the starboard side). Its body is the ship's; this is its lid on its hinge, the
  *  glow inside and the carton it drops. Scratched or interacted with, it opens once. */
 UCLASS()
 class CHUCK3D_API AShipChest : public AChuckBreakable
@@ -175,7 +175,7 @@ private:
     void BuildRupture(float Open);
     UPROPERTY() class UProceduralMeshComponent* RuptureMesh = nullptr;
     UPROPERTY() class UPointLightComponent* RuptureLight = nullptr;
-    // From: the rail it comes over (-1 starboard, the weather side; +1 port: the ending's knock-down, 2026-11-09).
+    // From: the rail it comes over (-1 port, the weather side; +1 starboard: the ending's knock-down, 2026-11-09).
     struct FDeckWave { float Age = 0.f, Size = 1.f, X0 = 0.f, X1 = 0.f, From = -1.f; bool bShoved = false; };
     TArray<FDeckWave> Waves;
     float NextWave = 30.f;

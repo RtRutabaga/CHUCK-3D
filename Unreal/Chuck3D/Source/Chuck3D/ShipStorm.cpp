@@ -33,7 +33,7 @@ namespace
     UStaticMesh* GPlane = nullptr;
     float Smooth(float A, float B, float X) { return FMath::SmoothStep(A, B, X); }
 
-    // The chest (ship frame): its body runs X -1230..-1140, Y 150..205 against the port side, on the cabin floor, 42 cm high
+    // The chest (ship frame): its body runs X -1230..-1140, Y 150..205 against the starboard side, on the cabin floor, 42 cm high
     // (the ship's mesh); its lid is 14 cm more, hinged along the back top edge. The front faces the cabin (-Y).
     constexpr float ChestX0 = -1230, ChestX1 = -1140, ChestY0 = 150, ChestY1 = 205, ChestBody = 42, ChestLid = 14;
     constexpr float LidOpen = 108.f;   // degrees
@@ -240,7 +240,7 @@ namespace
     constexpr float RuptureForm = 2.4f;   // s the rupture takes to tear open
     constexpr float WaveLife = 4.4f;      // s a sea breaking aboard runs across the deck and drains
     constexpr float RainBox = 1500.f, RainAbove = 1300.f, RainBelow = 500.f;
-    // The gale blows from the starboard beam (the flag streams to port), the ship's way adds a little from ahead.
+    // The gale blows from the port beam (the flag streams to starboard), the ship's way adds a little from ahead.
     FVector WindVelocity(float Wind) { return FVector(-180.f, 620.f, 0.f) * Wind; }
     // The surface a falling drop or a blob stops at (ship frame): the deck it is over, or the sea.
     float SurfaceZ(const FVector& L)
@@ -546,7 +546,7 @@ void AShipStorm::SprayBurst(const FVector& At, float Size, bool bSound)
         const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
         const bool bApart = Pawn && ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck);   // below decks: through the hull
         UAudioComponent* A = UGameplayStatics::SpawnSoundAtLocation(this, Slams[FMath::RandRange(0, Slams.Num() - 1)], At, FRotator::ZeroRotator,
-            FMath::Clamp(.55f * Size, .3f, .9f) * (bApart ? .6f : 1.f), FMath::FRandRange(.9f, 1.05f));
+            FMath::Clamp(.55f * Size, .3f, .9f) * (bApart ? .6f : 1.f) * FMath::Max(SpeechDuck, .5f), FMath::FRandRange(.9f, 1.05f));
         if (A && bApart) { A->SetLowPassFilterEnabled(true); A->SetLowPassFilterFrequency(700.f); }
     }
 }
@@ -554,7 +554,7 @@ void AShipStorm::SprayBurst(const FVector& At, float Size, bool bSound)
 void AShipStorm::TickSpray(float Dt, const FVector& Eye)
 {
     if (!SpraySprites) return;
-    // Seas over the bow as she pitches into them, and over the weather (starboard) rail as she rolls.
+    // Seas over the bow as she pitches into them, and over the weather (port) rail as she rolls.
     NextSpray -= Dt;
     if (NextSpray <= 0.f && Sea > .35f)
     {
@@ -698,7 +698,7 @@ void AShipStorm::Thunder(float Distance, bool bNear)
     if (!Set.Num()) return;
     const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
     const bool bBelow = Pawn && ShipSpaceAt(Pawn->GetActorLocation()) != int32(EShipSpawn::Deck);
-    const float Volume = (bNear ? 1.f : FMath::Lerp(.85f, .45f, FMath::Clamp((Distance - 120000.f) / 500000.f, 0.f, 1.f))) * (bBelow ? .7f : 1.f);
+    const float Volume = (bNear ? 1.f : FMath::Lerp(.85f, .45f, FMath::Clamp((Distance - 120000.f) / 500000.f, 0.f, 1.f))) * (bBelow ? .7f : 1.f) * FMath::Max(SpeechDuck, .5f);
     if (UAudioComponent* A = UGameplayStatics::SpawnSound2D(this, Set[FMath::RandRange(0, Set.Num() - 1)], Volume, FMath::FRandRange(.92f, 1.04f)))
         if (bBelow) { A->SetLowPassFilterEnabled(true); A->SetLowPassFilterFrequency(650.f); }
     ++Thunders;
@@ -749,11 +749,12 @@ void AShipStorm::TickSound(float Dt, bool bBelow)
         bBelow ? 0.f : Wind * .45f,
         (bBelow ? Sea * .3f : Sea * .7f * (1.f - .4f * Up)) * (1.f + .35f * Intense) };
     // Under the crew's shouted lines (user 2026-11-09: hard to hear over the storm) the rain, the gale, the canvas and the
-    // sea sink about 8 dB, quickly, and come back over a second or so after the line.
+    // sea sink about 8 dB, quickly, and come back over a second or so after the line; once the storm is intense, about 13 dB
+    // (2026-11-10: the intense storm's lines still too quiet). Its sea slams and thunder under a line are halved.
     bool bSpeech = false;
     for (const TWeakObjectPtr<ADockNPC>& N : ADockNPC::All()) bSpeech |= N.IsValid() && N->IsSpeaking() && InShip(N->GetActorLocation());
     SpeechQuiet = bSpeech ? 0.f : SpeechQuiet + Dt;
-    const float DuckTo = SpeechQuiet < .4f ? .4f : 1.f;
+    const float DuckTo = SpeechQuiet < .4f ? .4f - .18f * Intense : 1.f;
     SpeechDuck = FMath::FInterpConstantTo(SpeechDuck, DuckTo, Dt, DuckTo < SpeechDuck ? 3.f : .7f);
     for (int32 I = 0; I < 6 && I < Loops.Num(); ++I)
     {
@@ -867,14 +868,14 @@ void AShipStorm::BuildRupture(float Open)
 
 // ---------------------------------------------------------------------------------------------------------------- seas aboard
 // (2026-11-04, user: "when the storm intensity increases have more wave influence on ship, more wind, waves crashing on deck
-// at times, make it look intense and cool".) In the second part, every 7-13 s a sea breaks over the weather (starboard) rail
+// at times, make it look intense and cool".) In the second part, every 7-13 s a sea breaks over the weather (port) rail
 // into the waist: white water bursting up along the rail and billowing over, then a sheet of green water with a foaming front
 // running across the deck to the lee rail and draining away. Its front shoves him across the deck if it catches him there.
 // (Never over the companion hatch: the rupture is there.)
 void AShipStorm::DeckWaveNow(float X, float Size, float From)
 {
     const float Half = (230.f + 120.f * Size);
-    const float Fs = From >= 0.f ? 1.f : -1.f;   // (the weather rail is -Y; a sea from port mirrors it)
+    const float Fs = From >= 0.f ? 1.f : -1.f;   // (the weather rail is -Y; a sea from starboard mirrors it)
     FDeckWave W; W.Size = Size; W.X0 = X - Half; W.X1 = X + Half; W.From = Fs;
     Waves.Add(W); ++DeckWaves;
     // The burst along the rail, and billows of spume over it.
@@ -891,7 +892,7 @@ void AShipStorm::DeckWaveNow(float X, float Size, float From)
     const FVector Mid = ShipWorld(FVector(X, Fs * ShipOuterHalf(X, RailZ), RailZ));
     for (int32 K = 0; K < 2 && Slams.Num(); ++K)
         if (UAudioComponent* A = UGameplayStatics::SpawnSoundAtLocation(this, Slams[FMath::RandRange(0, Slams.Num() - 1)], Mid, FRotator::ZeroRotator,
-            (K == 0 ? 1.f : .7f) * (bApart ? .6f : 1.f), K == 0 ? .82f : .95f, K * .25f))
+            (K == 0 ? 1.f : .7f) * (bApart ? .6f : 1.f) * FMath::Max(SpeechDuck, .5f), K == 0 ? .82f : .95f, K * .25f))
             if (bApart) { A->SetLowPassFilterEnabled(true); A->SetLowPassFilterFrequency(700.f); }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_DECK_WAVE n=%d x=%.0f size=%.2f"), DeckWaves, X, Size);
 }

@@ -1388,7 +1388,8 @@ int32 AChuckCharacter::FindSwingTarget(const FVector& Want) const
         if (I == SwingGrip) continue;
         const FVector Delta = Grips[I].Grip - From;
         const float Reach = static_cast<float>(Delta.Size2D());
-        if (Reach < 40.f || Reach > SwingLeapRange || Delta.Z > 70.f || Delta.Z < -130.f) continue;
+        const float Range = FMath::Max(SwingLeapRange, FMath::Min(Grips[I].LeapRange, Grips[SwingGrip].LeapRange));
+        if (Reach < 40.f || Reach > Range || Delta.Z > 70.f || Delta.Z < -130.f) continue;
         const float Along = static_cast<float>(FVector::DotProduct(Delta.GetSafeNormal2D(), Dir));
         if (Along < .55f) continue;
         const float Score = Reach * (1.6f - Along);

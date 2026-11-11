@@ -239,7 +239,7 @@ if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHU
 $endingLog=Join-Path $evidence ('verify-ship-ending-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $endingProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipEndingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$endingLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($endingProcess.ExitCode -or !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_LINES lines=61 sounds=61 pass=1' -Quiet) -or
-   !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_TEST failures=0 trials=orders=1 reef_larboard=1 reef_starboard=1 fore_carry=1 jump_no_leaf=1 leaf=1 leap_port=1 leap_starboard=1 fore_climb=1 scene=1' -Quiet)) {
+   !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_TEST failures=0 trials=orders=1 reef_starboard=1 reef_larboard=1 fore_carry=1 jump_no_leaf=1 leaf=1 leap_starboard=1 leap_port=1 fore_climb=1 scene=1' -Quiet)) {
     throw "Ship ending verification failed. Inspect $endingLog"
 }
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen

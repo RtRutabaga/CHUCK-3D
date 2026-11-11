@@ -24,7 +24,7 @@ class CHUCK3D_API AShipForeTopsailScene : public AActor
 public:
     AShipForeTopsailScene();
     virtual void Tick(float DeltaSeconds) override;
-    /** Begin now (he is at the head of the fore topmast shrouds on Side, +1 larboard). */
+    /** Begin now (he is at the head of the fore topmast shrouds on Side, +1 starboard). */
     static AShipForeTopsailScene* Play(UWorld* World, float Side);
     static AShipForeTopsailScene* Get(const UWorld* World);
     void Skip();

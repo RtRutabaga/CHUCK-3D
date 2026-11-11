@@ -41,7 +41,7 @@ public:
     static const TCHAR* WhereName(EWhere Where);
     EStep GetStep() const { return Step; }
     EWhere GetWhere() const { return Where; }
-    /** The main yardarms: 0 larboard (+Y), 1 starboard. */
+    /** The main yardarms: 0 larboard (-Y), 1 starboard (+Y; Unreal's Y runs to starboard facing the bow). */
     bool IsSideDone(int32 Side) const { return bSideDone[Side & 1]; }
     bool IsCarriedAway() const { return bCarried; }
     /** The line being spoken now: its subtitle (none for Jeffries' sounds). */
@@ -91,6 +91,7 @@ private:
     void SetGuides(const TArray<FVector>& At);
     ADockNPC* Body(EDockHuman Who) const;
     EStep Step = EStep::Waiting;
+    EStep LitStep = EStep::Waiting;   // the step whose orders have been given (its guide lights may show)
     EWhere Where = EWhere::Other, LastGround = EWhere::Deck;
     bool bSideDone[2] = {false, false};
     float WorkTime[2] = {0.f, 0.f};

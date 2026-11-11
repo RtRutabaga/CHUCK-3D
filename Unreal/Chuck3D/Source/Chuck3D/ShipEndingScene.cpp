@@ -38,8 +38,9 @@ namespace
 {
     // Jeffries' lines (the user's takes, 2026-11-08), at their beats.
     struct FBeat { float At; const TCHAR* Id; };
-    const FBeat Beats[] = {{12.7f, TEXT("JEF_X01")}, {15.8f, TEXT("JEF_01")}, {19.3f, TEXT("JEF_02")}, {23.4f, TEXT("JEF_03")}, {27.8f, TEXT("JEF_04")},
-        {31.3f, TEXT("JEF_05")}, {37.45f, TEXT("JEF_X02")}, {38.5f, TEXT("JEF_06")}};   // (X02: the sea breaking over him)
+    // (No straining or choking from him: JEF_X01/X02 cut, user 2026-11-10.)
+    const FBeat Beats[] = {{14.f, TEXT("JEF_01")}, {19.3f, TEXT("JEF_02")}, {23.4f, TEXT("JEF_03")}, {27.8f, TEXT("JEF_04")},
+        {31.3f, TEXT("JEF_05")}, {38.5f, TEXT("JEF_06")}};
     constexpr int32 BeatCount = UE_ARRAY_COUNT(Beats);
     float SeaLocalZ(const UWorld* World, const FVector2D& At)
     {

@@ -39,7 +39,7 @@ namespace
     // The seated pirate on the mess table's stool that faces the door from the arrival compartment (ShipSetting.cpp's table
     // at -340, -175: five stools 130 cm round it from 20 degrees, every 72; this is the third), the table 76 high, the stools 41.
     constexpr float TableX = -340, TableY = -175, StoolR = 130, StoolA = 164, StoolTop = 41, TableTop = 76;
-    // The chef at the galley's work table (560..800 x -75..75, top 86 high), on its starboard side facing across it.
+    // The chef at the galley's work table (560..800 x -75..75, top 86 high), on its port side facing across it.
     const FVector2D ChefAt(680, -108);
     // The captain (user 2026-11-02: on deck from the start; the 2D game brings him on only at the trigger): on the quarterdeck
     // just forward of the skylight, looking forward over the waist at his crew (the way across the quarterdeck passes before him).
@@ -548,7 +548,7 @@ void AShipCrew::TickFencing(float DeltaSeconds)
 // at the helm. no concertina held by the concertina player as he is now manning the ship as with the other crewmen".)
 // The lines they work (ship frame): each hauling part comes down from its block aloft to a lead block at the deck, round its
 // sheave and up into the haulers' hands; behind the last hand it hangs slack to the deck and runs aft along it into a coil.
-// The dancer sweats up a halyard: down from its block aloft through his hands to its belaying pin in the main mast's port
+// The dancer sweats up a halyard: down from its block aloft through his hands to its belaying pin in the main mast's starboard
 // fife rail, its tail hanging off the pin to a coil at his feet. (2026-11-07: rebuilt each frame through the hands holding
 // them, ShipRope.h, where they had been straight sticks with sharp corners.)
 namespace
@@ -581,13 +581,13 @@ void AShipCrew::BeginStorm()
     {
         if (ADockNPC* N = Find(Kind)) { N->SetStormWork(Work, Points, Yaw, A, B, Phase); ++Sent; }
     };
-    // The concertina player and the cheering pirate on the main's line to starboard, one either side of it, facing its block.
+    // The concertina player and the cheering pirate on the main's line to port, one either side of it, facing its block.
     Send(EDockHuman::PirateConcertina, EStormWork::Haul, Way({ {-330, -214} }, DeckZ), 180.f, ShipWorld(MainHaul.Hands0), ShipWorld(MainHaul.Hands1), 0.f);
     Send(EDockHuman::PirateCheering, EStormWork::Haul, Way({ {185, 90}, {185, -90}, {-60, -246}, {-230, -246} }, DeckZ), 180.f, ShipWorld(MainHaul.Hands0), ShipWorld(MainHaul.Hands1), .04f);
-    // The fencers, their cutlasses put up, on the fore's line to port.
+    // The fencers, their cutlasses put up, on the fore's line to starboard.
     Send(EDockHuman::PirateFencerA, EStormWork::Haul, Way({ {430, 251} }, DeckZ), 180.f, ShipWorld(ForeHaul.Hands0), ShipWorld(ForeHaul.Hands1), .5f);
     Send(EDockHuman::PirateFencerB, EStormWork::Haul, Way({ {530, 219} }, DeckZ), 180.f, ShipWorld(ForeHaul.Hands0), ShipWorld(ForeHaul.Hands1), .54f);
-    // The dancer round the companion (clear of it) to the main mast's port fife rail, sweating up its halyard.
+    // The dancer round the companion (clear of it) to the main mast's starboard fife rail, sweating up its halyard.
     Send(EDockHuman::PirateDancer, EStormWork::Sweat, Way({ {-150, 285}, {-400, 255}, {-505, 112} }, DeckZ), -90.f, ShipWorld(HalyardPin), ShipWorld(HalyardAloft), .25f);
     // The captain round the skylight and the wheel to the helm, behind the wheel facing forward.
     Send(EDockHuman::PirateCaptain, EStormWork::Helm, Way({ {-1165, -110}, {-1500, -110}, {HelmHub().X - 22.f, 0} }, QuarterZ), 0.f, ShipWorld(HelmHub()), ShipWorld(HelmHub() - FVector(1, 0, 0)), 0.f);

@@ -76,8 +76,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("Shrouds"), {-250, 140, DeckZ + 120}, {MainMastX - 50, 330, 1100}},
         {TEXT("ShroudsOutside"), {-300, 1100, 900}, {MainMastX - 50, 300, 1150}},
         {TEXT("ShroudsTop"), {MainMastX - 60, 330, MainTopZ + 120}, {MainMastX - 50, 120, MainTopZ - 60}},
-        {TEXT("ForeShroudsPort"), {ForeMastX - 60, 1100, 1000}, {ForeMastX - 50, 300, 1050}},
-        {TEXT("ForeShroudsStarboard"), {ForeMastX - 300, -900, 900}, {ForeMastX - 50, -300, 1000}},
+        {TEXT("ForeShroudsStarboard"), {ForeMastX - 60, 1100, 1000}, {ForeMastX - 50, 300, 1050}},
+        {TEXT("ForeShroudsPort"), {ForeMastX - 300, -900, 900}, {ForeMastX - 50, -300, 1000}},
         {TEXT("NetFoot"), {MainMastX + 120, 180, DeckZ + 110}, {MainMastX - 50, 420, DeckZ + 80}},
         {TEXT("NetFootLow"), {MainMastX - 230, 250, DeckZ + 35}, {MainMastX - 50, 420, DeckZ + 70}},
         {TEXT("NetFootFore"), {ForeMastX + 150, -200, DeckZ + 120}, {ForeMastX - 50, -420, DeckZ + 90}},
@@ -145,8 +145,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         // The lumber in the arrival compartment and the masonry's mouth in it (user 2026-11-02).
         {TEXT("ArrivalPile"), {250, -60, LowerZ + 150}, {-20, -330, LowerZ + 70}},
         {TEXT("ArrivalMouth"), {260, -270, LowerZ + 60}, {SeamX1, -300, LowerZ + 40}},
-        // By the starboard break ladder, where a hammock's lanyard stood up through the deck (user 2026-11-02: "floating mop").
-        {TEXT("BreakStarboard"), {-700, -120, DeckZ + 120}, {-880, -230, DeckZ + 70}},
+        // By the port break ladder, where a hammock's lanyard stood up through the deck (user 2026-11-02: "floating mop").
+        {TEXT("BreakPort"), {-700, -120, DeckZ + 120}, {-880, -230, DeckZ + 70}},
         {TEXT("QuartersAft"), {-300, 0, LowerZ + 150}, {-900, 0, LowerZ + 110}},
         // The rope (user 2026-11-08): Jeffries' lashings round him and the mast, the rigging in the rope scan, the coil that floated.
         {TEXT("JeffriesRopes"), {-615, 35, DeckZ + 125}, {-530, 0, DeckZ + 115}},
@@ -528,7 +528,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::Quarterdeck:
         {
-            // Up the port ladder at the break, across the quarterdeck by the helm, down the starboard ladder.
+            // Up the starboard ladder at the break, across the quarterdeck by the helm, down the port ladder.
             Limit = 50;
             if (Time < .5f) break;
             const float E = QuarterFore + 8;
@@ -549,8 +549,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::Rigging:
         {
-            // Up the port main shrouds' ratlines (out over the rail, round onto their outer face) and over the top's rim;
-            // off its port side onto the main yard; hand over hand out to the yardarm; let go, into the sea; back on deck.
+            // Up the starboard main shrouds' ratlines (out over the rail, round onto their outer face) and over the top's rim;
+            // off its starboard side onto the main yard; hand over hand out to the yardarm; let go, into the sea; back on deck.
             Limit = 80;
             if (Time < .5f) break;
             if (Run->Sub == 0) { if (Route({{-160, 40}, {-430, 40}, {-430, 330}, {MainMastX - 50, 330}}, 10)) Run->Sub = 1; }
@@ -604,9 +604,9 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::Ratlines:
         {
-            // The ratlines (2026-11-05): up the starboard fore shrouds from the net at their foot on deck, across them both
+            // The ratlines (2026-11-05): up the port fore shrouds from the net at their foot on deck, across them both
             // ways, down and off at the deck (not straight back on, the stick still held out); from the main top out over
-            // the rim onto the lower shrouds' heads, lowered onto them, down to the deck; from the main top up its port
+            // the rim onto the lower shrouds' heads, lowered onto them, down to the deck; from the main top up its starboard
             // topmast shrouds, up onto the topsail yard, three leaps out along it, let go onto the deck.
             Limit = 90;
             if (Time < .5f) break;
@@ -662,7 +662,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             else if (Run->Sub == 7)
             {
-                // Up the port topmast shrouds; at their top, still climbing, he reaches up and takes the topsail yard.
+                // Up the starboard topmast shrouds; at their top, still climbing, he reaches up and takes the topsail yard.
                 Push(FVector(0, 1, 0));
                 if (Chuck->IsOnLadder() && L.Z > MainTopZ + 715 && Run->Arrived < 0) { Run->Arrived = 0; Shot(TEXT("TopmastShrouds")); }
                 if (Chuck->IsSwinging()) { Run->bTop = true; Run->Sub = 8; Run->At = Now; Shot(TEXT("TopsailYardCatch")); }
@@ -692,7 +692,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         case ET::MastClimb:
         {
             // On the golden leaf, from just over a topsail yard, straight up the mast (user 2026-11-08): the topmast's head,
-            // over the doubling onto the topgallant, to the truck. Each mast, from aft, from the port side and from forward.
+            // over the doubling onto the topgallant, to the truck. Each mast, from aft, from the starboard side and from forward.
             // (The spars' axes: TopmastX and GallantX in ShipDeck.inl.)
             Limit = 80;
             const int32 Runs = 6, K = Run->Sub / 2;
@@ -700,7 +700,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             const float MastX = K < 3 ? MainMastX : ForeMastX, Top = K < 3 ? MainTopZ : ForeTopZ;
             const float Tx = MastX + 24 + 17, Face = float(K % 3);
             const FVector Toward = Face == 0 ? FVector(1, 0, 0) : Face == 1 ? FVector(0, -1, 0) : FVector(-1, 0, 0);
-            const TCHAR* FaceName = Face == 0 ? TEXT("aft") : Face == 1 ? TEXT("port") : TEXT("fore");
+            const TCHAR* FaceName = Face == 0 ? TEXT("aft") : Face == 1 ? TEXT("starboard") : TEXT("fore");
             if (Run->Sub % 2 == 0)
             {
                 // Beside the topmast, a little over the topsail yard, facing it.

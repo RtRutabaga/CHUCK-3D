@@ -28,7 +28,7 @@ using namespace Ship;
 namespace
 {
     constexpr float Stand = 33.5f;   // his capsule's centre over a floor
-    // Who speaks: the captain at the helm, the young crewman (one of the fore haulers, port side), the older one (the cheering
+    // Who speaks: the captain at the helm, the young crewman (one of the fore haulers, starboard side), the older one (the cheering
     // pirate, hauling at the main), Jeffries at the mainmast.
     constexpr EDockHuman Captain = EDockHuman::PirateCaptain, Crew1 = EDockHuman::PirateFencerA, Crew2 = EDockHuman::PirateCheering, Jeff = EDockHuman::Jeffries;
     const TCHAR* const CaptainNpc = TEXT("PirateCaptain");
@@ -117,9 +117,9 @@ FVector AShipEnding::WorkSpot(int32 Side)
     for (const FChuckSwingGrip& G : GetChuckSwingGrips())
     {
         const FVector L = ShipLocal(G.Grip);
-        if (OnMainCourse(L) && FMath::Abs(FMath::Abs(L.Y) - 440.f) < 15.f && (L.Y > 0) == (Side == 0)) return G.Grip;
+        if (OnMainCourse(L) && FMath::Abs(FMath::Abs(L.Y) - 440.f) < 15.f && (L.Y < 0) == (Side == 0)) return G.Grip;
     }
-    return ShipWorld(FVector(MainYardX, Side == 0 ? 440.f : -440.f, MainYardZ));
+    return ShipWorld(FVector(MainYardX, Side == 0 ? -440.f : 440.f, MainYardZ));
 }
 FVector AShipEnding::ForeTopSpot(float Y) { return ShipWorld(FVector(ForeMastX + 30, Y, ForeTopZ + Stand)); }
 FVector AShipEnding::ForeShroudsHead(float Side)
@@ -213,7 +213,7 @@ bool AShipEnding::Say(EDockHuman Who, const TCHAR* Npc, const TCHAR* Id, bool bF
     // the camera is often far off: heard at full level wherever it is.
     const bool bScene = ShipEndingSceneLetterboxed(GetWorld());
     const float Seconds = N ? N->SpeakLine(Npc, Id, bScene ? SceneVoice : Shout) : -1.f;
-    if (N) { const AShipStorm* Storm = AShipStorm::Get(GetWorld()); N->SetVoiceVolume(1.4f + .3f * (Storm ? Storm->GetIntense() : 0.f)); }
+    if (N) { const AShipStorm* Storm = AShipStorm::Get(GetWorld()); N->SetVoiceVolume(1.4f + .7f * (Storm ? Storm->GetIntense() : 0.f)); }
     Speaking.Who = Who; Speaking.Npc = Npc; Speaking.Id = Id; Speaking.Text = Line->Text;
     Speaking.Seconds = Seconds > 0.f ? Seconds : Line->Seconds; Speaking.Elapsed = 0.f;
     LastLine = Id; ++LinesSpoken; Said.FindOrAdd(Id)++;
@@ -241,7 +241,7 @@ bool AShipEnding::GetSubtitle(FString& Speaker, FString& Text) const
 
 void AShipEnding::Reset()
 {
-    Step = EStep::Waiting; bSideDone[0] = bSideDone[1] = false; WorkTime[0] = WorkTime[1] = 0.f;
+    Step = LitStep = EStep::Waiting; bSideDone[0] = bSideDone[1] = false; WorkTime[0] = WorkTime[1] = 0.f;
     bCarried = bStartLines = bTroubleQueued = bCaptainCalled = bJumpCalled = bMissed = bForeDropped = bLeafAgain = bLeafSaid = bLanded = bWasOnTop = bLeaping = false;
     BothDoneAt = -1.f; Background = 0; Situation = -1; Pending.Reset(); FlapRoll[0] = FlapRoll[1] = 0.f;
     if (IsSpeaking()) if (ADockNPC* N = Body(Speaking.Who)) N->StopSpeaking(.2f);
@@ -290,7 +290,7 @@ void AShipEnding::CarryAway()
     for (float Side : {1.f, -1.f})
     {
         if (const FChuckClimbable* C = FindClimb(true, true, Side)) Blocked += SetChuckClimbableBlocked(C->Lip, true);
-        // The broken rungs' ends left on the shrouds, streaming to leeward (port) and down: along the net's line, every 38 cm.
+        // The broken rungs' ends left on the shrouds, streaming to leeward (starboard) and down: along the net's line, every 38 cm.
         const FChuckClimbable* C = FindClimb(true, true, Side);
         if (!C || C->Line.Num() < 4) continue;
         const FVector A = ShipLocal(C->Line[2]), B = ShipLocal(C->Line.Last());
@@ -359,7 +359,7 @@ void AShipEnding::TickSteps(float Dt, AChuckCharacter* Chuck)
     case EStep::Waiting:
         if (!Storm || !Storm->HasStarted()) return;
         // The storm upon them: the captain's two lines (the user's, 2026-11-05).
-        if (!bStartLines && Storm->GetClock() > 3.f) { Queue(Captain, CaptainNpc, TEXT("CAP_S00"), 0.f); Queue(Captain, CaptainNpc, TEXT("CAP_S01"), 1.5f); bStartLines = true; }
+        if (!bStartLines && Storm->GetClock() > 3.f) { Queue(Captain, CaptainNpc, TEXT("CAP_S00"), 0.f); Queue(Captain, CaptainNpc, TEXT("CAP_S01"), 4.5f); bStartLines = true; }   // (a longer pause between: user 2026-11-10)
         // The orders begin with the storm's second part.
         if (Storm->GetIntense() > .05f && bStartLines)
         {
@@ -377,7 +377,7 @@ void AShipEnding::TickSteps(float Dt, AChuckCharacter* Chuck)
         const FVector GL = ShipLocal(Grip);
         for (int32 S = 0; S < 2; ++S)
         {
-            const bool bHere = G != INDEX_NONE && FMath::Abs(GL.Y) >= WorkReach && (GL.Y > 0) == (S == 0) && !bSideDone[S];
+            const bool bHere = G != INDEX_NONE && FMath::Abs(GL.Y) >= WorkReach && (GL.Y < 0) == (S == 0) && !bSideDone[S];
             WorkTime[S] = bHere ? WorkTime[S] + Dt : 0.f;
             if (WorkTime[S] < WorkHold) continue;
             bSideDone[S] = true; Progress();
@@ -522,7 +522,7 @@ void AShipEnding::TickGuidance(float Dt, const AChuckCharacter* Chuck)
             FVector Grip;
             const bool bAt = NearestMainGrip(Chuck->GetActorLocation(), &Grip) != INDEX_NONE;
             const FVector GL = ShipLocal(Grip);
-            const int32 SideHere = GL.Y > 0 ? 0 : 1;
+            const int32 SideHere = GL.Y < 0 ? 0 : 1;
             if (bAt && bSideDone[SideHere]) Sit = Left == 0 ? ReefOtherL : ReefOtherS;
             else if (!(bAt && FMath::Abs(GL.Y) >= WorkReach - 100.f)) Sit = ReefYard;
             break;
@@ -574,7 +574,13 @@ void AShipEnding::SetGuides(const TArray<FVector>& At)
 
 void AShipEnding::TickGuideLights(float Dt)
 {
-    // Only the next target or targets glow; the crew never mention it.
+    // Only the next target or targets glow; the crew never mention it. They light only once the orders for the step have
+    // been given and the last of them has been said (user 2026-11-10: the light came on before the instructions).
+    if (Step != LitStep)
+    {
+        if (Pending.Num() == 0 && !IsSpeaking()) { LitStep = Step; UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_GUIDE_LIT step=%s clock=%.1f"), StepName(Step), Clock); }
+        else { if (GuideAt.Num()) SetGuides({}); return; }
+    }
     TArray<FVector> At;
     auto MainFeet = [&]() { for (float Side : {1.f, -1.f}) if (const FChuckClimbable* C = FindClimb(false, true, Side)) At.Add(C->Foot + FVector(0, 0, 30)); };
     const FVector MainTop = ShipWorld(FVector((TopX0 + TopX1) * .5f + 40.f, 70.f, MainTopZ + 25.f));
@@ -622,7 +628,7 @@ void AShipEnding::TickFlaps(float Dt)
         FlapRoll[S] = bSideDone[S] ? FMath::Min(1.f, FlapRoll[S] + Dt / 1.4f) : 0.f;
         const float Drop = 135.f * Show * (1.f - FMath::SmoothStep(0.f, 1.f, FlapRoll[S]));
         if (Drop < 2.f) { Flaps->ClearMeshSection(S); continue; }
-        const float Side = S == 0 ? 1.f : -1.f;
+        const float Side = S == 0 ? -1.f : 1.f;
         constexpr int32 NU = 10, NV = 7;
         TArray<FVector> V, N; TArray<int32> T; TArray<FVector2D> UV;
         for (int32 I = 0; I <= NU; ++I)
@@ -690,17 +696,6 @@ void AShipEnding::Tick(float Dt)
         const FBack& B = Back[Background % BackCount];
         if (Say(B.Who, B.Npc, B.Id)) ++Background;
     }
-    // Jeffries: a sea breaking aboard catches him at the mast, now and then; and he strains at his ropes as the storm builds.
-    if (const AShipStorm* Storm = AShipStorm::Get(GetWorld()))
-    {
-        if (Storm->GetDeckWaves() < WavesSeen) WavesSeen = Storm->GetDeckWaves();
-        if (Storm->GetDeckWaves() > WavesSeen)
-        {
-            WavesSeen = Storm->GetDeckWaves();
-            if (!IsSpeaking() && Pending.Num() == 0 && Clock - StormSeen > 40.f) { Queue(Jeff, TEXT("Jeffries"), TEXT("JEF_X02"), .6f); StormSeen = Clock; }
-        }
-        if (Storm->GetIntense() > .02f && !Said.Contains(TEXT("JEF_X01")) && !IsSpeaking() && Pending.Num() == 0 && Step == EStep::Waiting)
-            Say(Jeff, TEXT("Jeffries"), TEXT("JEF_X01"));
-    }
+    // (Jeffries' straining at his ropes and his choking under the seas, JEF_X01/X02, are not played: user 2026-11-10.)
     if (Chuck->GetRespawns() != Respawns) { Respawns = Chuck->GetRespawns(); bLeaping = false; bWasOnTop = false; }
 }

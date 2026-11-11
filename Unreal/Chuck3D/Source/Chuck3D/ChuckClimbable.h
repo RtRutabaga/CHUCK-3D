@@ -58,6 +58,9 @@ struct FChuckSwingGrip
     // for a bar or ring: he holds a board by its near edge, his head clear of
     // it in the gap he came from, and flies board to board low under the deck.
     float Depth = 0.f;
+    // A leap longer than the usual range (AChuckCharacter::SwingLeapRange) allowed between two grips that both set it
+    // (the ship's main yard, across its middle by the top: 2026-11-10, a pumped swing and a big leap), or 0.
+    float LeapRange = 0.f;
 };
 
 void AddChuckSwingGrip(const FChuckSwingGrip& Grip);
