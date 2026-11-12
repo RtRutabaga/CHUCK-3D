@@ -81,7 +81,7 @@ if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'C
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE tiers=4 pyramids=2 levels=3 .*stakes=8 serpents=6 stelae=4 .*statues=30 missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_ROOMS_CHECK failures=0 rooms=8 jars=30 urns=10 breaks=2' -Quiet) -or
-   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=40 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=55 missing_assets=0 missing_sounds=0 ' -Quiet) -or
+   !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR spaces=40 .*spike_bands=5 launchers=8 slabs=3 grips=5 axes=6 jets=11 saws=16 .*wind_tears=24 wind_glows=56 missing_assets=0 missing_sounds=0 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .*intrusions=0 .*spawns=21 grips=5 bands=5 launchers=8 slabs=3 ' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK cog=1 crew=0 .*ruptures=9 rupture_lights=9 .*missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 rifts_open=9/9 ' -Quiet) -or
@@ -230,7 +230,8 @@ if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHU
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_COURSE crossings=0 .* pass=1' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_MASTS solid=8 of=8' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TRIAL name=mast_climb pass=1' -Quiet) -or
-   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=21 passed=21 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TRIAL name=rail_climb pass=1' -Quiet) -or
+   !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=22 passed=22 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
     throw "Ship verification failed. Inspect $shipLog"
 }
 # The ship's storm ending (Claude, 2026-11-08; docs/regions/SHIP-STORM-ENDING.md): the 61 voiced lines' sounds; the orders and

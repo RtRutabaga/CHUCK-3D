@@ -99,6 +99,10 @@ public:
     int32 GetLedgeScrambles() const { return LedgeScrambles; }
     int32 GetSlides() const { return Slides; }
     int32 GetMantles() const { return Mantles; }
+    /** Pull-ups onto a top too narrow to stand back from the edge (a rail, a wall's coping): he stands balanced on it. */
+    int32 GetPerchClimbs() const { return PerchClimbs; }
+    /** Hops from a hang up to a higher edge within reach (a double rail's middle bar to its cap). */
+    int32 GetHangHops() const { return HangHops; }
     // Ledges: grabbed automatically when his paws reach a top edge while he is
     // moving up or into the wall; holding toward the wall this long pulls up.
     static constexpr float PullUpHold = .2f;
@@ -645,7 +649,9 @@ private:
     int32 PullUps = 0;
     int32 LedgeScrambles = 0;
     int32 Mantles = 0;
-    bool FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom) const;
+    // bThin: a top only 2.5 cm deep counts too (a rail's bar; 2026-11-11). Off for the automatic ups that step straight over
+    // onto whatever stands beyond (mantle, scramble), so walking at a bulwark never carries him over it.
+    bool FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom, bool bThin = true) const;
     /** Where he ends up standing after climbing over Edge: the first clear spot
      *  inward from it (In cm first, then further), on whatever slope is there. */
     bool FindStand(const FVector& Normal, const FVector& Edge, float In, FVector& OutStand) const;
@@ -654,8 +660,15 @@ private:
     float HangOut = 0, HangLower = 0;   // extra clearance from the face / below the edge for this grab
     void EnterHang(const FVector& Normal, const FVector& Edge, bool bRoom);
     void DropFromHang();
-    void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge);
+    void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge, const FVector* StandAt = nullptr);
     bool TryMantle();
+    // Up from a hang (user 2026-11-11, "like other games"): onto a top with room to stand; else balanced on a narrow top
+    // (FindPerch); else up to a higher edge in reach (TryHangHop). False: nothing there to go up to.
+    bool TryHangUp();
+    /** A narrow walkable top beyond Edge (at least 4 cm deep) with the capsule clear standing centred on it. */
+    bool FindPerch(const FVector& Normal, const FVector& Edge, FVector& OutStand) const;
+    bool TryHangHop();
+    int32 PerchClimbs = 0, HangHops = 0;
     /** Any top edge his paws reach ahead along Probe (an eave over his head, a sloped cut end included). */
     bool TryGrabEdge(const FVector& Probe);
     bool bHangClimbQueued = false;   // a jump pressed as he caught the edge: up and over once he's hanging

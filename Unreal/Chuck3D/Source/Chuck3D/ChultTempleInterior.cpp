@@ -210,7 +210,7 @@ namespace
             T.Append({I,I+2,I+1,I,I+3,I+2});
         }
     };
-    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil,Sea,SeaLow;};   // (SeaLow: the rubble map's sea tear, its sea lower)
+    struct FParts{FSurf Stone,Moss,Plaster,Steps,StepMoss,Ramp,Dark,Iron,Wood,Astral,Block,Veil,Sea,SeaLow,Lumber;};   // (SeaLow: the rubble map's sea tear, its sea lower; Lumber: the ship's boards seen through the crevice's crack)
     // A box in the frame (closed, faces outward).
     void Box(FSurf& M,float S0,float S1,float T0,float T1,float Z0,float Z1)
     {
@@ -1021,6 +1021,7 @@ void BuildChultTempleInterior(AActor* Owner)
     Emit(Owner,TEXT("ChultTempleInteriorDark"),{{&P.Dark,DarkMat}},false,Missing,Triangles);
     Emit(Owner,TEXT("ChultTempleInteriorIron"),{{&P.Iron,IronMat}},false,Missing,Triangles);
     Emit(Owner,TEXT("ChultTempleInteriorWood"),{{&P.Wood,WoodMat}},false,Missing,Triangles);   // the timbers behind the rubble crevice's crack
+    Emit(Owner,TEXT("ChultTempleInteriorLumber"),{{&P.Lumber,TEXT("/Game/Art/Materials/M_WoodLight.M_WoodLight")}},false,Missing,Triangles);   // (the ship's lumber pile, as ShipSetting.cpp's)
     // The crevice's crawl spaces (October 26): he goes down on all fours in them.
     {
         TArray<FBox> Crawl;ChultTempleRubbleCrawlSpaces(Crawl);

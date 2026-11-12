@@ -34,8 +34,9 @@ namespace
     float Smooth(float A, float B, float X) { return FMath::SmoothStep(A, B, X); }
 
     // The chest (ship frame): its body runs X -1230..-1140, Y 150..205 against the starboard side, on the cabin floor, 42 cm high
-    // (the ship's mesh); its lid is 14 cm more, hinged along the back top edge. The front faces the cabin (-Y).
-    constexpr float ChestX0 = -1230, ChestX1 = -1140, ChestY0 = 150, ChestY1 = 205, ChestBody = 42, ChestLid = 14;
+    // (the ship's mesh); its lid is 17 cm more (a 3 cm skirt and a 14 cm barrel top since 2026-11-11), hinged along the back
+    // top edge. The front faces the cabin (-Y).
+    constexpr float ChestX0 = -1230, ChestX1 = -1140, ChestY0 = 150, ChestY1 = 205, ChestBody = 42, ChestSkirt = 3, ChestDome = 14, ChestLid = ChestSkirt + ChestDome;
     constexpr float LidOpen = 108.f;   // degrees
     constexpr float LidTime = 1.1f;
 
@@ -148,19 +149,83 @@ void AShipChest::BuildLid()
         Lid->CreateMeshSection(Index, V, T, N, UV, TArray<FColor>(), TArray<FProcMeshTangent>(), Index == 0);
         if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, Material)) Lid->SetMaterial(Index, M);
     };
-    // The lid's boards, a little crowned (a raised middle plank), then its iron bands and the brass hasp over the front.
+    // A treasure chest's lid (2026-11-11, user: "make the chest look more like a treasure chest"; it was a flat board box):
+    // a barrel top over a short skirt, its staves along X; iron bands over it at the body's straps and round both ends;
+    // brass studs along the bands, brass caps on the corners, and the brass hasp hanging over the front to the lock.
+    // The dome's section: Y from the front (-D) to the hinge (0), Z = skirt + rise * sin(phi), with phi 0..pi.
+    constexpr int32 NPhi = 14;
+    auto Arc = [&](float Phi, float Grow) { return FVector2D(-D * .5f - (D * .5f + Grow) * FMath::Cos(Phi), ChestSkirt + (ChestDome + Grow) * FMath::Sin(Phi)); };
+    auto ArcNormal = [&](float Phi) { return FVector(0, -FMath::Cos(Phi) / (D * .5f), FMath::Sin(Phi) / ChestDome).GetSafeNormal(); };
+    // A strip of the dome's surface between X0 and X1, Grow out from the wood, with its two end faces (Ends) when a band.
+    auto Dome = [&](TArray<FVector>& V, TArray<int32>& T, TArray<FVector>& N, TArray<FVector2D>& UV, float X0, float X1, float Grow, bool bEnds)
+    {
+        float Arclen = 0;
+        for (int32 I = 0; I < NPhi; ++I)
+        {
+            const float P0 = PI * I / NPhi, P1 = PI * (I + 1) / NPhi;
+            const FVector2D A = Arc(P0, Grow), B = Arc(P1, Grow);
+            const float Step = FVector2D::Distance(A, B);
+            const int32 Base = V.Num();
+            V.Append({FVector(X0, A.X, A.Y), FVector(X1, A.X, A.Y), FVector(X1, B.X, B.Y), FVector(X0, B.X, B.Y)});
+            N.Append({ArcNormal(P0), ArcNormal(P0), ArcNormal(P1), ArcNormal(P1)});
+            UV.Append({FVector2D(X0, Arclen) / 60.f, FVector2D(X1, Arclen) / 60.f, FVector2D(X1, Arclen + Step) / 60.f, FVector2D(X0, Arclen + Step) / 60.f});
+            T.Append({Base, Base + 2, Base + 1, Base, Base + 3, Base + 2});   // (UE draws the reversed winding)
+            Arclen += Step;
+        }
+        // The ends: fans over the half-ellipse (for the wood, the lid's two end boards; for a band, its edges).
+        for (const float X : {X0, X1})
+        {
+            if (!bEnds && FMath::Abs(FMath::Abs(X) - HX) > .1f) continue;
+            const FVector Nn(X < (X0 + X1) * .5f ? -1 : 1, 0, 0);
+            const FVector Mid(X, -D * .5f, ChestSkirt);
+            for (int32 I = 0; I < NPhi; ++I)
+            {
+                const FVector2D A = Arc(PI * I / NPhi, Grow), B = Arc(PI * (I + 1) / NPhi, Grow);
+                const FVector2D Ai = Arc(PI * I / NPhi, bEnds ? 0.f : -D), Bi = Arc(PI * (I + 1) / NPhi, bEnds ? 0.f : -D);
+                const int32 Base = V.Num();
+                if (bEnds)
+                {
+                    V.Append({FVector(X, Ai.X, Ai.Y), FVector(X, A.X, A.Y), FVector(X, B.X, B.Y), FVector(X, Bi.X, Bi.Y)});
+                    for (int32 K = 0; K < 4; ++K) N.Add(Nn);
+                    for (int32 K = 0; K < 4; ++K) UV.Add(FVector2D(V[Base + K].Y, V[Base + K].Z) / 60.f);
+                }
+                else
+                {
+                    V.Append({Mid, FVector(X, A.X, A.Y), FVector(X, B.X, B.Y), Mid});
+                    for (int32 K = 0; K < 4; ++K) N.Add(Nn);
+                    for (int32 K = 0; K < 4; ++K) UV.Add(FVector2D(V[Base + K].Y, V[Base + K].Z) / 60.f);
+                }
+                if (Nn.X > 0) T.Append({Base, Base + 1, Base + 2, Base, Base + 2, Base + 3}); else T.Append({Base, Base + 2, Base + 1, Base, Base + 3, Base + 2});
+            }
+        }
+    };
     Section(0, [&](auto& V, auto& T, auto& N, auto& UV)
     {
-        Box(V, T, N, UV, FVector(-HX, -D, 0), FVector(HX, 0, ChestLid - 3));
-        Box(V, T, N, UV, FVector(-HX + 3, -D + 6, ChestLid - 3), FVector(HX - 3, -6, ChestLid));
+        Box(V, T, N, UV, FVector(-HX, -D, 0), FVector(HX, 0, ChestSkirt));   // the skirt (its underside the lid's inside)
+        Dome(V, T, N, UV, -HX, HX, 0.f, false);
     }, TEXT("/Game/Art/Materials/M_AgedDockTimber.M_AgedDockTimber"));
     Section(1, [&](auto& V, auto& T, auto& N, auto& UV)
     {
-        for (float X : {-37.f, 37.f}) Box(V, T, N, UV, FVector(X - 3, -D - 1, -.5f), FVector(X + 3, 1, ChestLid + 1));
+        // Bands over the top at the body's straps and round each end; a band along the skirt.
+        for (const float X : {-37.f, 37.f}) { Dome(V, T, N, UV, X - 3, X + 3, .8f, true); Box(V, T, N, UV, FVector(X - 3, -D - .8f, -.4f), FVector(X + 3, .8f, ChestSkirt + .2f)); }
+        for (const float S : {-1.f, 1.f}) Dome(V, T, N, UV, S > 0 ? HX - 3.5f : -HX - .6f, S > 0 ? HX + .6f : -HX + 3.5f, .8f, true);
+        Box(V, T, N, UV, FVector(-HX - .6f, -D - .8f, -.4f), FVector(HX + .6f, -D + .2f, ChestSkirt + .4f));
     }, TEXT("/Game/Art/Materials/M_RustIron.M_RustIron"));
     Section(2, [&](auto& V, auto& T, auto& N, auto& UV)
     {
-        Box(V, T, N, UV, FVector(-5, -D - 3, -9), FVector(5, -D - 1, ChestLid - 2));
+        // The hasp: a plate down from the dome's front over the lock, its ring.
+        Box(V, T, N, UV, FVector(-5, -D - 2.6f, -10), FVector(5, -D - .8f, ChestSkirt + 5));
+        Box(V, T, N, UV, FVector(-2, -D - 3.6f, -8), FVector(2, -D - 2.6f, -4));
+        // Studs along the bands over the top, and caps on the dome's four corners.
+        for (const float X : {-37.f, 37.f, -HX + 1.5f, HX - 1.5f})
+            for (int32 I = 1; I < NPhi; I += 2)
+            {
+                const float Phi = PI * I / NPhi;
+                const FVector2D At = Arc(Phi, .8f);
+                const FVector C(X, At.X, At.Y), Nn = ArcNormal(Phi) * .9f;
+                Box(V, T, N, UV, C + FVector(-1.1f, -1.1f, -1.1f) + Nn, C + FVector(1.1f, 1.1f, 1.1f) + Nn);
+            }
+        for (const float X : {-HX - 1.f, HX - 6.f}) for (const float Y : {-D - 1.f, -6.f}) Box(V, T, N, UV, FVector(X, Y, -.6f), FVector(X + 7, Y + 7, ChestSkirt + 1.5f));
     }, TEXT("/Game/Art/Materials/M_Metal.M_Metal"));
     Lid->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     Lid->ComponentTags.Add(TEXT("Ship"));

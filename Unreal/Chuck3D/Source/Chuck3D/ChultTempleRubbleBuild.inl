@@ -155,7 +155,7 @@ namespace TempleRubbleBuild
         Line(P, A0, MouthS, AT0, AT1, RZ, RZ + CrawlH, {{0, AT0, AT1, RZ, RZ + CrawlH}, {1, AT0, AT1, RZ, RZ + CrawlH}}, L);
         // Through the pile before the stair (2026-10-26) the hall's own floor runs on; the pile's blocks are its walls and roof.
         // Run B, from the bend (its +S wall open on run A) to its end: a crack in the end wall.
-        Line(P, BS0, BS1, CrawlEndT, AT1, RZ, RZ + CrawlH, {{1, AT0, AT1, RZ, RZ + CrawlH}, {2, CrawlBendS - 7, CrawlBendS + 6, RZ + 5, RZ + 37}}, L);
+        Line(P, BS0, BS1, CrawlEndT, AT1, RZ, RZ + CrawlH, {{1, AT0, AT1, RZ, RZ + CrawlH}, {2, CrawlBendS - 9, CrawlBendS + 8, RZ + 3, RZ + 40}}, L);
         // Lumps and spalls on the walls and roof, a few pebbles on the floor (visual only).
         auto Lumps = [&](float S0, float S1, float T0, float T1, int32 Count)
         {
@@ -182,15 +182,108 @@ namespace TempleRubbleBuild
             if (FMath::Abs(T - CrawlT) < 100) continue;   // (the apron he crawls in from stays clear)
             TurnedBox(P.Steps, FVector(PileS1 + R.FRandRange(-10, 90), T, RZ + 2), FVector(R.FRandRange(3, 10), R.FRandRange(3, 8), R.FRandRange(2, 5)), FRotator(R.FRandRange(-12, 12), R.FRandRange(0, 360), R.FRandRange(-12, 12)));
         }
-        // Behind the crack: a hollow of old planks (the ship's timbers, for later) lit warm.
+        // Behind the crack (2026-11-11, user: "look more like where you're actually heading, without the weird 3-boxed-grid
+        // look"; it was a 70 cm box of planks): the ship's crawlway as he comes into it (ShipSetting.cpp's arrival seam, 280 cm
+        // through a pile of lumber, its last 52 cm in stone): stacked boards either side with dark gaps between, boards laid
+        // over, a plank floor, running on to the stone mouth and the lit compartment beyond it, with its planking, frames,
+        // a deck beam, a barrel and a crate. Visual only (the crack's wall is solid); seen only through the crack.
         {
-            const float H0 = CrawlEndT - 70, H1 = CrawlEndT;
-            FLining W; W.Dado = 0; W.Low = &P.Wood; W.High = &P.Wood; W.bFloor = true; W.bCeiling = true;
-            Line(P, CrawlBendS - 45, CrawlBendS + 45, H0, H1, RZ - 10, RZ + 60, {{3, CrawlBendS - 7, CrawlBendS + 6, RZ + 5, RZ + 37}}, W);
-            // Planks across it (the boards' seams), dark gaps between.
-            for (float Z = RZ - 4; Z < RZ + 56; Z += 14) Box(P.Dark, CrawlBendS - 44, CrawlBendS + 44, H0 + .5f, H0 + 1.2f, Z, Z + 1.2f);
+            const float SC = CrawlBendS, E0 = CrawlEndT, Len = 280, PHalf = 40, PH = 44, Z0 = RZ;
+            const float E1 = E0 - Len, Stone0 = E1 + 52;    // the mouth; where the stone lining begins
+            const float RoomT = E1 - 300, RS0_ = SC - 230, RS1_ = SC + 210, RoomH = 215;
+            // The crack's ragged edges: chips of the wall's stone standing into it on both faces, so it reads as a break.
+            for (float Face : {1.f, -1.f})
+                for (int32 I = 0; I < 9; ++I)
+                {
+                    const int32 Edge = I % 4;   // the crack's left, right, bottom and top edges
+                    const float S = Edge == 0 ? SC - 9 : Edge == 1 ? SC + 8 : SC + R.FRandRange(-7.f, 6.f);
+                    const float Z = Edge == 2 ? RZ + 3 : Edge == 3 ? RZ + 40 : RZ + R.FRandRange(6.f, 36.f);
+                    TurnedBox(Face > 0 ? P.Steps : P.Stone, FVector(S, E0 + Face * 1.5f, Z), FVector(R.FRandRange(2.5f, 4.5f), R.FRandRange(1.5f, 3.f), R.FRandRange(3.f, 6.f)),
+                        FRotator(R.FRandRange(-25, 25), R.FRandRange(-20, 20), R.FRandRange(0, 360)));
+                }
+            // The rock between the crack and the boards (the wall is 12 deep on the far side too).
+            Box(P.Stone, SC - 28, SC - 9, E0 - 12, E0, Z0, Z0 + 52); Box(P.Stone, SC + 8, SC + 28, E0 - 12, E0, Z0, Z0 + 52);
+            Box(P.Stone, SC - 9, SC + 8, E0 - 12, E0, Z0 + 40, Z0 + 52); Box(P.Stone, SC - 9, SC + 8, E0 - 12, E0, Z0, Z0 + 3);
+            // The floor: planks along the way, butted at random, dark beneath the seams.
+            Box(P.Dark, SC - PHalf - 4, SC + PHalf + 4, E1 - 2, E0 - 12, Z0 - 4, Z0 - 3);
+            for (float S = SC - PHalf; S < SC + PHalf - 1; S += 16)
+                for (float T = E0 - 12; T > E1 + 1;)
+                {
+                    const float Ta = FMath::Max(T - R.FRandRange(70.f, 160.f), E1);
+                    Box(P.Lumber, S + .5f, S + 15.5f, Ta + .4f, T, Z0 - 3, Z0 + R.FRandRange(-.25f, .25f));
+                    T = Ta;
+                }
+            // The walls: boards on edge, stacked, each course a little in or out, its lengths butted at random; the last
+            // 52 cm in stone, as at the ship's mouth.
+            for (float Side : {-1.f, 1.f})
+            {
+                const float Face = SC + Side * PHalf;
+                Box(P.Dark, Face + Side * 22, Face + Side * 24, E1, E0 - 12, Z0, Z0 + PH + 10);
+                for (float Z = Z0; Z < Z0 + PH + 8; Z += 5.3f)
+                {
+                    const float In = R.FRandRange(-.5f, 3.f), Th = R.FRandRange(4.f, 4.6f);
+                    for (float T = E0 - 12; T > Stone0 + 1;)
+                    {
+                        const float Ta = FMath::Max(T - R.FRandRange(50.f, 140.f), Stone0);
+                        const float Stick = R.FRand() < .25f ? R.FRandRange(2.f, 6.f) : 0.f;   // a board's end standing proud
+                        Box(P.Lumber, Face + Side * (In - Stick), Face + Side * 20, Ta + .5f, T - .5f, Z, Z + Th);
+                        T = Ta;
+                    }
+                }
+                Box(P.Stone, Face, Face + Side * 30, E1, Stone0, Z0, Z0 + PH);
+            }
+            // Over it: boards laid across with gaps, the stone lintel at the mouth.
+            Box(P.Dark, SC - PHalf - 22, SC + PHalf + 22, E1, E0 - 12, Z0 + PH + 8, Z0 + PH + 9);
+            for (float T = E0 - 12; T > Stone0 + 1;)
+            {
+                const float W = R.FRandRange(12.f, 18.f), Ta = FMath::Max(T - W, Stone0);
+                Box(P.Lumber, SC - PHalf - 20, SC + PHalf + 20, Ta + .6f, T - .6f, Z0 + PH + R.FRandRange(0.f, 1.2f), Z0 + PH + 5);
+                T = Ta;
+            }
+            Box(P.Stone, SC - PHalf - 30, SC + PHalf + 30, E1, Stone0, Z0 + PH, Z0 + PH + 26);
+            // Out of the mouth: the compartment. Its floor planks run along the ship (S here), the hull's planking and frames
+            // across the far side, a deck beam over, the lumber pile's face either side of the mouth.
+            Box(P.Dark, RS0_, RS1_, RoomT, E1, Z0 - 4, Z0 - 3);
+            for (float T = E1; T > RoomT + 1; T -= 17)
+                for (float S = RS0_; S < RS1_ - 1;)
+                {
+                    const float Sb = FMath::Min(S + R.FRandRange(120.f, 260.f), RS1_);
+                    Box(P.Lumber, S, Sb - .5f, T - 16.4f, T, Z0 - 3, Z0 + R.FRandRange(-.2f, .2f));
+                    S = Sb;
+                }
+            // The far side: strakes of hull planking, dark seams, frames standing in front every 55 cm.
+            Box(P.Dark, RS0_, RS1_, RoomT - 6, RoomT - 5, Z0, Z0 + RoomH);
+            for (float Z = Z0; Z < Z0 + RoomH; Z += 19) Box(P.Wood, RS0_, RS1_, RoomT - 5, RoomT, Z + .6f, Z + 18.4f);
+            for (float S = RS0_ + 20; S < RS1_; S += 55) Box(P.Wood, S - 7, S + 7, RoomT, RoomT + 15, Z0, Z0 + RoomH);
+            Box(P.Wood, RS0_, RS1_, RoomT + 15, RoomT + 25, Z0 + 52, Z0 + 60);   // a stringer along the frames
+            // The ends: the bulkheads, planked upright.
+            for (float S : {RS0_, RS1_})
+                for (float T = E1; T > RoomT; T -= 22) Box(P.Wood, S - 3, S + 3, T - 21.4f, T, Z0, Z0 + RoomH);
+            // Overhead: the deck's planks on its beams.
+            Box(P.Lumber, RS0_, RS1_, RoomT, E1, Z0 + RoomH, Z0 + RoomH + 4);
+            for (float T = E1 - 40; T > RoomT; T -= 110) Box(P.Wood, RS0_, RS1_, T - 11, T, Z0 + RoomH - 20, Z0 + RoomH);
+            // The pile's face round the mouth: the boards' ends, stacked.
+            for (float Z = Z0; Z < Z0 + RoomH; Z += 5.3f)
+                for (float S = RS0_; S < RS1_; S += R.FRandRange(14.f, 22.f))
+                {
+                    const float Sb = S + R.FRandRange(12.f, 20.f);
+                    if (Sb > SC - PHalf - 30 && S < SC + PHalf + 30 && Z < Z0 + PH + 26) continue;   // the mouth's stone
+                    if (Z > Z0 + 130 && (S < SC - 150 || S > SC + 140)) continue;                    // the pile's shoulders
+                    Box(P.Lumber, S, FMath::Min(Sb, RS1_), E1 - R.FRandRange(0.f, 6.f), E1 + 30, Z, Z + R.FRandRange(4.f, 4.8f));
+                }
+            Box(P.Stone, SC - PHalf - 30, SC + PHalf + 30, E1 - 6, E1, Z0 + PH, Z0 + PH + 26);
+            // A cask on its end and a crate, off to the sides of the way out.
+            {
+                const FVector Cask(SC + 70, RoomT + 95, Z0);
+                Drum(P.Wood, Cask, Cask + FVector(0, 0, 88), 27, 16);
+                for (float H : {10.f, 30.f, 58.f, 78.f}) Drum(P.Iron, Cask + FVector(0, 0, H), Cask + FVector(0, 0, H + 4), 28.2f, 16);
+                Box(P.Wood, SC - 150, SC - 82, RoomT + 70, RoomT + 135, Z0, Z0 + 62);
+                Box(P.Wood, SC - 146, SC - 86, RoomT + 74, RoomT + 131, Z0 + 62, Z0 + 64);
+            }
         }
-        Glows.Add({FVector(CrawlBendS, CrawlEndT - 30, RZ + 25), 700.f, 240.f, FLinearColor(1.f, .72f, .4f)});
+        // The light: low in the crawlway (what reaches the crack), stronger out in the compartment.
+        Glows.Add({FVector(CrawlBendS, CrawlEndT - 150, RZ + 30), 260.f, 190.f, FLinearColor(1.f, .74f, .45f)});
+        Glows.Add({FVector(CrawlBendS, CrawlEndT - 280 - 120, RZ + 120), 4200.f, 360.f, FLinearColor(1.f, .84f, .62f)});
     }
 
     // A surface's triangles added to another's, moved by Shift (local).

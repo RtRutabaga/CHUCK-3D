@@ -766,8 +766,8 @@ void AChuckCharacter::JumpPressed()
         // climb up (the stick still held from before the catch doesn't count;
         // pressed during the catch itself, up once he has hold).
         if (!bHangNeedsRelease && FVector::DotProduct(StickWorld(), -HangNormal) < -.3f) { WallNormal = HangNormal; WallJump(); }
-        else if (bHangRoom && HangClock < HangSnapTime) bHangClimbQueued = true;
-        else if (bHangRoom) StartClimb(false, HangNormal, HangEdge);
+        else if (HangClock < HangSnapTime) bHangClimbQueued = true;
+        else TryHangUp();
         return;
     }
     if (Gait == EGait::Swing) { SwingJump(); return; }
@@ -862,7 +862,7 @@ bool AChuckCharacter::TryEnterWallRun()
         }
         // Arriving with the top already at his hips (a leap a little high):
         // scramble straight on rather than bounce off the edge.
-        if (FindLedge(Normal, Hit.ImpactPoint, -34.f, -15.f, Edge, bRoom) && bRoom)
+        if (FindLedge(Normal, Hit.ImpactPoint, -34.f, -15.f, Edge, bRoom, false) && bRoom)
         {
             StartClimb(true, Normal, Edge);
             ++LedgeScrambles;
@@ -904,18 +904,25 @@ void AChuckCharacter::EnterWallRun(const FHitResult& Hit, const FVector& Normal)
     SetClip(EClip::WallRun, 0, .08f);
     if (GetWorld()->GetTimeSeconds() - AirJumpPressedAt < WallBuffer) { AirJumpPressedAt = -1e3f; WallJump(); }
 }
-bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom) const
+bool AChuckCharacter::FindLedge(const FVector& Normal, const FVector& FacePoint, float MinAbove, float MaxAbove, FVector& OutEdge, bool& bRoom, bool bThin) const
 {
     // A walkable top between MinAbove and MaxAbove (relative to his centre),
     // just beyond the face in front of him, where the face really ends.
     const FVector Center = GetActorLocation();
     const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
     const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const FVector Over = FacePoint - Normal * 8.f;
     FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckLedge), false, this);
     FHitResult Top;
-    const FVector Start(Over.X, Over.Y, Center.Z + MaxAbove + 5.f), End(Over.X, Over.Y, Center.Z + MinAbove);
-    if (!GetWorld()->LineTraceSingleByChannel(Top, Start, End, ECC_Visibility, Query) || Top.bStartPenetrating || Top.ImpactNormal.Z < .7f) return false;
+    // 8 cm in from the face; failing that 2.5 cm in, for a thin top (a rail's 6 cm bar, 2026-11-11).
+    bool bTop = false;
+    for (const float In : {8.f, 2.5f})
+    {
+        if (In < 8.f && !bThin) break;
+        const FVector Over = FacePoint - Normal * In;
+        const FVector Start(Over.X, Over.Y, Center.Z + MaxAbove + 5.f), End(Over.X, Over.Y, Center.Z + MinAbove);
+        if (GetWorld()->LineTraceSingleByChannel(Top, Start, End, ECC_Visibility, Query) && !Top.bStartPenetrating && Top.ImpactNormal.Z >= .7f) { bTop = true; break; }
+    }
+    if (!bTop) return false;
     // A "top" with something solid right on it is a face inside a roof or wall (the trace began inside it), not an edge.
     if (GetWorld()->OverlapBlockingTestByChannel(Top.ImpactPoint + FVector(0, 0, 3.f), FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(1.5f), Query)) return false;
     // Nothing just above the top: the lip trace follows the top's own slope
@@ -1037,7 +1044,8 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
     // stick doesn't let go of the edge he just caught; it counts once released.
     bHangNeedsRelease = FVector::DotProduct(StickWorld(), -Normal) < -.3f;
     // Jump pressed on the way up to it: over the top as soon as he has hold.
-    bHangClimbQueued = bRoom && GetWorld()->GetTimeSeconds() - AirJumpPressedAt < .3f;
+    FVector PerchAt;
+    bHangClimbQueued = GetWorld()->GetTimeSeconds() - AirJumpPressedAt < .3f && (bRoom || FindPerch(Normal, Edge, PerchAt));
     if (bHangClimbQueued) AirJumpPressedAt = -1e3f;
     LastWallNormal = Normal; bWallJumpFlight = false; WallCoyoteUntil = -1; bRunJump = bSprintLeap = false;
     ++Hangs;
@@ -1129,7 +1137,7 @@ void AChuckCharacter::DropFromHang()
     Gait = EGait::Air;
     SetClip(EClip::JumpLoop, 0, .15f);
 }
-void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge)
+void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge, const FVector* StandAt)
 {
     // The capsule follows the clip's authored path, scaled to the real step:
     // up to standing on the top, and far enough in to stand clear of the edge.
@@ -1142,7 +1150,8 @@ void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVec
     // To where he will stand: the first clear spot in from the edge (on a
     // pitched roof, up the slope); a flat top gives the authored distances.
     FVector Stand;
-    if (!FindStand(Normal, Edge, bMantle ? 17.f : 18.5f, Stand)) Stand = Edge - Normal * (bMantle ? 17.f : 18.5f) + FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f);
+    if (StandAt) Stand = *StandAt;
+    else if (!FindStand(Normal, Edge, bMantle ? 17.f : 18.5f, Stand)) Stand = Edge - Normal * (bMantle ? 17.f : 18.5f) + FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f);
     ClimbRise = static_cast<float>(Stand.Z - ClimbStart.Z);
     ClimbAdvance = static_cast<float>(FVector::DotProduct(Stand - ClimbStart, -Normal));
     bClimbMantle = bMantle;
@@ -1150,6 +1159,93 @@ void AChuckCharacter::StartClimb(bool bMantle, const FVector& Normal, const FVec
     Gait = EGait::Climb;
     if (bMantle) ++Mantles; else ++PullUps;
     SetClip(bMantle ? EClip::Mantle : EClip::PullUp, 0, bMantle ? .08f : .05f);
+}
+bool AChuckCharacter::TryHangUp()
+{
+    // Up from a hang (user 2026-11-11: "like in other games ... even if you won't be able to stand easily on the surface
+    // you climb up to"): over the top where there is room; else up onto a narrow top (a rail's cap), balanced on it;
+    // else (something over that top: a double rail's cap over its middle bar) up to the next edge in reach.
+    if (bHangRoom) { StartClimb(false, HangNormal, HangEdge); return true; }
+    FVector Perch;
+    if (FindPerch(HangNormal, HangEdge, Perch))
+    {
+        ++PerchClimbs;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_PERCH_CLIMB edge=%s stand=%s"), *HangEdge.ToString(), *Perch.ToString());
+        StartClimb(false, HangNormal, HangEdge, &Perch);
+        return true;
+    }
+    return TryHangHop();
+}
+bool AChuckCharacter::FindPerch(const FVector& Normal, const FVector& Edge, FVector& OutStand) const
+{
+    // How deep the top runs in from the edge at the edge's own height (a rail's cap, a coping, a beam), then the
+    // capsule stood on its middle: room for him there, nothing over it.
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckPerch), false, this);
+    float Deep = 0;
+    for (float In = 1.f; In <= 40.f; In += 1.5f)
+    {
+        const FVector At = Edge - Normal * In;
+        FHitResult Top;
+        if (!GetWorld()->LineTraceSingleByChannel(Top, FVector(At.X, At.Y, Edge.Z + 8.f), FVector(At.X, At.Y, Edge.Z - 5.f), ECC_Visibility, Query)
+            || Top.bStartPenetrating || Top.ImpactNormal.Z < .7f || FMath::Abs(Top.ImpactPoint.Z - Edge.Z) > 4.f) break;
+        Deep = In;
+    }
+    if (Deep < 4.f) return false;
+    const FVector Mid = Edge - Normal * FMath::Min(Deep * .5f + .5f, Radius + 4.f);
+    FHitResult Floor;
+    if (!GetWorld()->LineTraceSingleByChannel(Floor, FVector(Mid.X, Mid.Y, Edge.Z + 8.f), FVector(Mid.X, Mid.Y, Edge.Z - 6.f), ECC_Visibility, Query)
+        || Floor.bStartPenetrating || Floor.ImpactNormal.Z < .7f) return false;
+    const FVector Stand(Mid.X, Mid.Y, Floor.ImpactPoint.Z + Half + 1.f);
+    if (GetWorld()->OverlapBlockingTestByChannel(Stand + FVector(0, 0, 1.f), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius, Half), Query)) return false;
+    OutStand = Stand;
+    return true;
+}
+bool AChuckCharacter::TryHangHop()
+{
+    // A face above the edge he hangs from, a little in front of him, with an edge of its own in reach: up to hang from
+    // that one (from a double rail's middle bar to its cap). Searched upward from just over this edge.
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const FVector Center = GetActorLocation();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckHangHop), false, this);
+    for (float Z = static_cast<float>(HangEdge.Z) + 8.f; Z <= static_cast<float>(HangEdge.Z) + 56.f; Z += 4.f)
+    {
+        const FVector From(Center.X, Center.Y, Z);
+        FHitResult Face;
+        if (!GetWorld()->LineTraceSingleByChannel(Face, From, From - HangNormal * (Radius + HangOut + 24.f), ECC_Visibility, Query)
+            || Face.bStartPenetrating || FMath::Abs(Face.ImpactNormal.Z) > .3f) continue;
+        const FVector Normal = FVector(Face.ImpactNormal.X, Face.ImpactNormal.Y, 0).GetSafeNormal();
+        if (FVector::DotProduct(Normal, HangNormal) < .7f) continue;
+        // Where that face ends going up (a bar may be only a few centimetres deep, too thin for FindLedge's look 8 cm
+        // in): a centimetre at a time until the level trace misses it, then its top just in from the face.
+        const float FaceDist = static_cast<float>((Face.ImpactPoint - From).Size2D());
+        float TopZ = Z; bool bEnds = false;
+        for (float Up = 1.f; Up <= 40.f; Up += 1.f)
+        {
+            FHitResult Still;
+            const FVector At(Center.X, Center.Y, Z + Up);
+            if (!GetWorld()->LineTraceSingleByChannel(Still, At, At - HangNormal * (FaceDist + 4.f), ECC_Visibility, Query)) { bEnds = true; break; }
+            TopZ = Z + Up;
+        }
+        if (!bEnds) continue;
+        FHitResult Top;
+        const FVector In = Face.ImpactPoint - Normal * 1.5f;
+        if (!GetWorld()->LineTraceSingleByChannel(Top, FVector(In.X, In.Y, TopZ + 3.f), FVector(In.X, In.Y, TopZ - 3.f), ECC_Visibility, Query) || Top.bStartPenetrating || Top.ImpactNormal.Z < .7f) { Z = TopZ; continue; }
+        const FVector Edge(Face.ImpactPoint.X, Face.ImpactPoint.Y, Top.ImpactPoint.Z);
+        if (Edge.Z < HangEdge.Z + 6.f || Edge.Z > HangEdge.Z + 60.f) { Z = TopZ; continue; }
+        // Nothing lying right on it (a top inside a wall is no edge).
+        if (GetWorld()->OverlapBlockingTestByChannel(Edge + FVector(0, 0, 3.f) - Normal * 1.5f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(1.f), Query)) { Z = TopZ; continue; }
+        FVector Stand;
+        const bool bRoom = FindStand(Normal, Edge, Radius + 4.f, Stand);
+        const FVector Was = HangEdge;
+        EnterHang(Normal, Edge, bRoom);
+        HangSnapTime = .3f;   // a reach and a pull up to it, not a snap
+        ++HangHops;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_HANG_HOP from=%s to=%s rise=%.1f room=%d"), *Was.ToString(), *Edge.ToString(), Edge.Z - Was.Z, bRoom ? 1 : 0);
+        return true;
+    }
+    return false;
 }
 bool AChuckCharacter::TryMantle()
 {
@@ -1168,7 +1264,7 @@ bool AChuckCharacter::TryMantle()
     const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
     if (FVector::DotProduct(Direction, -Normal) < .6f) return false;
     FVector Edge; bool bRoom = false;
-    if (!FindLedge(Normal, Hit.ImpactPoint, -Half + MantleMin, -Half + MantleMax, Edge, bRoom) || !bRoom) return false;
+    if (!FindLedge(Normal, Hit.ImpactPoint, -Half + MantleMin, -Half + MantleMax, Edge, bRoom, false) || !bRoom) return false;
     StartClimb(true, Normal, Edge);
     return true;
 }
@@ -2258,7 +2354,7 @@ bool AChuckCharacter::FindPierExit()
     const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
     SetActorLocation(Face.ImpactPoint + Normal * (Radius + .5f) + FVector(0, 0, -Probe.Z - ChuckClipData::HangDrop), false, nullptr, ETeleportType::TeleportPhysics);
     FVector Edge; bool bRoom = false;
-    if (!FindLedge(Normal, Face.ImpactPoint, ChuckClipData::HangDrop - 30.f, ChuckClipData::HangDrop + 30.f, Edge, bRoom) || !bRoom) return false;
+    if (!FindLedge(Normal, Face.ImpactPoint, ChuckClipData::HangDrop - 30.f, ChuckClipData::HangDrop + 30.f, Edge, bRoom, false) || !bRoom) return false;
     ExitNormal = Normal; ExitEdge = Edge;
     SetActorLocation(Edge + Normal * (Radius + .5f) - FVector(0, 0, ChuckClipData::HangDrop), false, nullptr, ETeleportType::TeleportPhysics);
     return true;
@@ -2826,8 +2922,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // Up: the stick anywhere toward the wall (within about 70 degrees), held briefly.
         HangHold = Toward > .35f ? HangHold + DeltaSeconds : 0.f;
         if (bAutoClimb && HangClock >= .7f) { bAutoClimb = false; StartClimb(false, HangNormal, HangEdge); }   // out of the water at the pier
-        else if (bHangClimbQueued && HangClock >= HangSnapTime) { bHangClimbQueued = false; StartClimb(false, HangNormal, HangEdge); }
-        else if (HangHold >= PullUpHold && bHangRoom && HangClock >= HangSnapTime) StartClimb(false, HangNormal, HangEdge);
+        else if (bHangClimbQueued && HangClock >= HangSnapTime) { bHangClimbQueued = false; TryHangUp(); }
+        else if (HangHold >= PullUpHold && HangClock >= HangSnapTime) { if (!TryHangUp()) HangHold = -.3f; }   // (nothing up there: look again in a moment)
         else if (Toward < -.5f && HangClock > .15f) DropFromHang();
     }
     else if (Gait == EGait::Climb)

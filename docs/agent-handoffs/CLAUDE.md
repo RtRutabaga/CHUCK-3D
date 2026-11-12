@@ -2,6 +2,26 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 11 (evening) — the ship spruced up; up from any hang (Claude)
+
+- **Asked:** the ship interior seen through the crevice to look like where he is heading (not the "3-boxed-grid"); a treasure chest; an ornate rug; nicer hammocks and sacks; pressing up while hanging pulls him up even onto tops he can't easily stand on (the ship's rails), and on the taller double rails from the middle bar up to the top one and onto it.
+- **Source:** `main` at c7d0e684.
+- **Changed:**
+  - `ChuckCharacter.h/.cpp`: `TryHangUp` (room → pull-up; else `FindPerch` → stand centred on a narrow top; else `TryHangHop` → hang from the next edge up to 60 cm above, its top found a centimetre at a time). `FindLedge` accepts a 2.5 cm-deep top when the 8 cm look misses (`bThin`, off for the automatic mantle and scrambles). `StartClimb` takes an optional stand. Counters `GetPerchClimbs`, `GetHangHops`.
+  - `ChultTempleRubbleBuild.inl` / `ChultTempleInterior.cpp`: the crevice's crack ragged; behind it the ship's lumber crawlway and compartment (new `FParts::Lumber`, `M_WoodLight`); two lights.
+  - `ShipStorm.cpp` (domed chest lid, `ChestLid` 17), `ShipSetting.cpp` (chest body dress, carpet with UVs + fringe, hammocks, sacks; `M_ShipRug/M_ShipSack/M_ShipHammock`).
+  - New `Tools/make_ship_rug.py` (stdlib only) → `SourceAssets/Setting/Ship/ShipRug.png`; `Tools/create_ship_furnishings.py` → `T_ShipRug`, `M_ShipRug`, `M_ShipSack`, `M_ShipHammock` (rough linen and caban textures already in the project).
+  - `ShipTest.cpp`: trial `rail_climb` (22 trials), stills `ChestClose`, `CabinRug`, `Hammocks`, `HoldSacks`, `GalleySacks`, `ShipPlay_CreviceThrough(Back)`.
+  - Outside my usual ownership: `Tools/Verify-Package.ps1` (Codex's tooling) now expects 22 ship trials, `rail_climb` passing and `wind_glows=56`.
+- **Tested:** editor ship test 22/22 (`Local/ship-full.log`); packaged `Builds/ShipSpruceCandidate` Verify-Package 182 (`Local/verify-package-20261111-171956.log`), ship 22/22. The first package run failed only on the glow count and the trial count (expectations updated, same build re-verified). Verify-Menu was not run. Stills reviewed in the editor and the package.
+- **Not checked:** not played by hand; other climbing regions are covered only by Verify-Package's existing trials (Waterdeep, Chult ruins, temple), which passed.
+- **Remaining flaws:** perch and hop reuse the PullUp/Hang clips; the compartment through the crack is dim; the quarters' sea chests are plain; the blankets are flat navy.
+- **Contract compatibility:** no rig, socket or clip changes.
+- **Binary/LFS:** 4 new `.uasset` (LFS) and one PNG (LFS).
+- **Launcher:** promoted as ShipSpruce (receipt names c7d0e684; this work sits on top of it, committed right after). `Windows-Previous-20261110-ShipFix` pruned. The 14 `Common/Materials` re-saves are still uncommitted (not this work).
+
+Next part of the work could be done by either — preference: Claude (play the rails and the crevice by hand; dedicated reach-up/balance clips if the reused ones read wrong).
+
 ## November 11 — the ship's pre-storm lines voiced; the captain's pumps order (Claude)
 
 - **Asked:**

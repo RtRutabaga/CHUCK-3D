@@ -149,6 +149,7 @@ namespace
         FSurf Hemp;    // the running rigging and every other rope in natural hemp (2026-11-08; the standing rigging, Rigging, is tarred)
         FSurf Wheel;   // the helm's rim, spokes and handles, about its hub (2026-11-04: it turns)
         FSurf ForeRatlines;   // the fore lower shrouds' ratlines, which carry away in the storm (2026-11-08, ShipEnding.cpp)
+        FSurf Carpet, Fringe, Sack;   // the captain's rug (its own UVs) and its fringe; the sacks' jute (2026-11-11)
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -183,6 +184,10 @@ namespace
     const TCHAR* RopeMat = TEXT("/Game/Art/Materials/M_Rope.M_Rope");                 // Tools/create_rope_material.py
     const TCHAR* TarredRopeMat = TEXT("/Game/Art/Materials/MI_RopeTarred.MI_RopeTarred");
     const TCHAR* SeaMat = TEXT("/Game/Art/Ship/M_ShipSea.M_ShipSea");   // Tools/create_ship_sea.py
+    // Tools/create_ship_furnishings.py (2026-11-11): the rug's woven picture, jute, hammock canvas.
+    const TCHAR* CarpetMat = TEXT("/Game/Art/Ship/M_ShipRug.M_ShipRug");
+    const TCHAR* SackMat = TEXT("/Game/Art/Ship/M_ShipSack.M_ShipSack");
+    const TCHAR* HammockMat = TEXT("/Game/Art/Ship/M_ShipHammock.M_ShipHammock");
 
     // ------------------------------------------------------------------ openings in the planking
     struct FOpening { float Side, X0, X1, Z0, Z1; bool bLid; };
@@ -1045,7 +1050,22 @@ void AShipSetting::Build()
     // ---- The captain's cabin: a brass-trimmed bed, a desk, a rug, the chest, a bench under the stern windows.
     {
         const float Z0 = LowerZ;
-        P.Rug.B(-1480, -1170, -130, 130, Z0, Z0 + 1);
+        // The rug (2026-11-11, user: "a nice ornate rug"): a knotted Persian-style picture (Tools/make_ship_rug.py) over
+        // UVs 0..1 across it, 1.2 cm of pile, and a fringe of loose warp ends at either end.
+        {
+            constexpr float RX0 = -1480, RX1 = -1170, RY0 = -130, RY1 = 130;
+            P.Carpet.B(RX0, RX1, RY0, RY1, Z0, Z0 + 1.2f);
+            for (int32 I = 0; I < P.Carpet.V.Num(); ++I) P.Carpet.UV[I] = FVector2D((P.Carpet.V[I].X - RX0) / (RX1 - RX0), (P.Carpet.V[I].Y - RY0) / (RY1 - RY0));
+            FRandomStream FR(1111);
+            for (const float End : {RX0, RX1})
+                for (float Y = RY0 + 2.5f; Y < RY1 - 2; Y += 2.6f)
+                {
+                    const float Out = End < RX0 + 1 ? -1.f : 1.f, L = FR.FRandRange(7.f, 10.f);
+                    const FVector A(End, Y, Z0 + .5f), Bp(End + Out * L, Y + FR.FRandRange(-1.6f, 1.6f), Z0 + .35f);
+                    P.Fringe.Spar(A, FMath::Lerp(A, Bp, .45f) + FVector(0, 0, .25f), .42f, .4f, 4, false);
+                    P.Fringe.Spar(FMath::Lerp(A, Bp, .45f) + FVector(0, 0, .25f), Bp, .4f, .3f, 4, false);
+                }
+        }
         P.Wood.B(SternX + 2, SternX + 50, -InnerAt(SternX + 30, Z0 + 20) + 2, InnerAt(SternX + 30, Z0 + 20) - 2, Z0, Z0 + 45);
         const float SB = -InnerAt(-1350, Z0 + 40);
         P.Wood.B(-1460, -1240, SB + 2, SB + 120, Z0, Z0 + 40);           // the bed's frame
@@ -1068,8 +1088,26 @@ void AShipSetting::Build()
         P.Chest.B(-1230, -1140, 150, 154, Z0 + 40, Z0 + 42); P.Chest.B(-1230, -1140, 201, 205, Z0 + 40, Z0 + 42);
         P.Chest.B(-1230, -1226, 154, 201, Z0 + 40, Z0 + 42); P.Chest.B(-1144, -1140, 154, 201, Z0 + 40, Z0 + 42);
         P.Dark.B(-1226, -1144, 154, 201, Z0 + 40, Z0 + 40.5f);
-        for (float X : {-1222.f, -1148.f}) P.Iron.B(X - 3, X + 3, 149, 206, Z0, Z0 + 42.5f);
-        P.Brass.B(-1190, -1180, 147, 150, Z0 + 30, Z0 + 41);
+        // (2026-11-11, a treasure chest's dress: AShipChest's barrel lid; iron straps down the front and ends, bands round
+        // the foot and under the rim, brass studs along them, brass corners, a big brass lock plate with its keyhole,
+        // ring handles on the ends.)
+        for (float X : {-1222.f, -1148.f}) P.Iron.B(X - 3, X + 3, 149.2f, 205.8f, Z0 + 3, Z0 + 42.4f);
+        for (float Z : {Z0 + 4.f, Z0 + 33.f}) P.Iron.B(-1230.8f, -1139.2f, 149.2f, 205.8f, Z, Z + 5);
+        for (float X : {-1222.f, -1148.f}) for (float Z = Z0 + 11; Z < Z0 + 31; Z += 6.5f) P.Brass.B(X - 1.1f, X + 1.1f, 148.3f, 149.3f, Z - 1.1f, Z + 1.1f);
+        for (float X = -1226.f; X <= -1144.f; X += 8.2f) for (float Z : {Z0 + 6.5f, Z0 + 35.5f}) { if (FMath::Abs(X + 1185) < 13) continue; P.Brass.B(X - 1, X + 1, 148.3f, 149.3f, Z - 1, Z + 1); }
+        for (float X : {-1231.5f, -1145.5f}) for (float Y : {148.5f, 199.5f}) for (float Z : {Z0 + 3.f, Z0 + 34.f}) P.Brass.B(X, X + 7, Y, Y + 7, Z, Z + 8);
+        P.Brass.B(-1197, -1173, 147.6f, 149.3f, Z0 + 18, Z0 + 38);                 // the lock plate
+        P.Dark.B(-1186.6f, -1183.4f, 147.2f, 147.7f, Z0 + 25, Z0 + 31);            // its keyhole
+        P.Dark.B(-1187.6f, -1182.4f, 147.2f, 147.7f, Z0 + 30, Z0 + 34);
+        for (float X : {-1231.f, -1139.f})
+        {
+            const float Out = X < -1185 ? -1 : 1;
+            P.Iron.B(X + Out * .2f - 2.5f, X + Out * .2f + 2.5f, 169, 186, Z0 + 26, Z0 + 33);   // the handle's plate
+            TArray<FVector> Ring;
+            for (int32 K = 0; K <= 10; ++K) { const float A = PI * K / 10; Ring.Add(FVector(X + Out * 2.5f, 177.5f - 7 * FMath::Cos(A), Z0 + 29 - 7 * FMath::Sin(A))); }
+            P.Iron.Rope(Ring, 1.1f);
+        }
+
     }
 
     // ---- The hold: cargo stowed in tiers, the pantry's kind of shelving along the sides with jars, sacks.
@@ -1102,31 +1140,71 @@ void AShipSetting::Build()
         Prop(BarrelMesh, At, FRotator(bLying ? 90 : 0, Yaw, 0));
         if (bLying) P.Hidden.TurnedBox(At, FVector(45, 29, 29), FRotator(0, Yaw, 0)); else P.Hidden.B(X - 28, X + 28, Y - 28, Y + 28, Floor, Floor + 90);
     };
-    // A sack: a lumpy, slumped canvas body with a flat bottom and a tied neck lying over.
+    // A sack (2026-11-11, user: "make sacks look nicer"; was a lumpy ellipsoid): a jute grain sack lying slumped on its
+    // side, its sewn bottom pulled out into two dog-eared corners, full in the body with soft folds, drawn in to a neck
+    // tied round with cord and its mouth frilled out beyond the tie, the neck end sagging to the floor. Smooth normals.
+    // (Same size and the same step box as before: the hold's way over the rats steps on one.)
     FRandomStream SackR(20261102);
     auto Sack = [&](float X, float Y, float Floor, float Yaw)
     {
         const FQuat Q(FRotator(0, Yaw, 0));
-        constexpr int32 NU = 14, NV = 9;
         const float RX = SackR.FRandRange(25, 31), RY = SackR.FRandRange(17, 21), RZ = SackR.FRandRange(14, 18);
-        const float Ph = SackR.FRandRange(0, 6.28f);
-        auto Pt = [&](int32 I, int32 J)
+        const float Ph = SackR.FRandRange(0, 6.28f), Lean = SackR.FRandRange(-.12f, .12f);
+        const FVector Base(X, Y, Floor);
+        constexpr float NeckU = .9f;
+        // The body by u (0 the bottom seam .. NeckU the tie) round theta about its length.
+        auto Body = [&](float U, float Th)
         {
-            const float U = I * 2 * PI / NU, V = -PI * .5f + J * PI / NV;
-            const float Lump = 1 + .07f * FMath::Sin(3 * U + Ph) * FMath::Cos(2 * V) + .05f * FMath::Sin(5 * U + 2 * V + Ph);
-            float Z = RZ * FMath::Sin(V) * Lump; Z = FMath::Max(Z, -RZ * .55f);
-            const float W = FMath::Cos(V) * Lump * (1 + .18f * FMath::Max(0.f, -FMath::Sin(V)));   // slumped wider low
-            return FVector(X, Y, Floor + RZ * .55f) + Q.RotateVector(FVector(RX * W * FMath::Cos(U), RY * W * FMath::Sin(U), Z));
+            const float Cap = U < .16f ? FMath::Sqrt(FMath::Max(0.f, 1 - FMath::Square(1 - U / .16f))) : 1.f;
+            const float Neck = FMath::Lerp(1.f, .2f, FMath::SmoothStep(.6f, NeckU, U));
+            const float Fold = 1 + (.035f + .07f * FMath::SmoothStep(.55f, NeckU, U)) * FMath::Sin(9 * Th + Ph + U * 3) + .03f * FMath::Sin(4 * Th - Ph + U * 7);
+            const float S = Cap * Neck * Fold;
+            const float C = FMath::Cos(Th), Sn = FMath::Sin(Th);
+            float Yy = RY * S * FMath::Sign(C) * FMath::Pow(FMath::Abs(C), .8f), Zz = RZ * S * FMath::Sign(Sn) * FMath::Pow(FMath::Abs(Sn), .9f);
+            if (Zz < 0) { Yy *= 1 + .16f * FMath::Min(1.f, -Zz / RZ) * Neck; Zz = FMath::Max(Zz, -RZ * .55f * Neck - (1 - Neck) * RZ * .1f); }   // slumped wide on the floor
+            // The bottom's dog-ears: its corners (the sides of the seam) pulled out beyond the cap.
+            const float Ear = U < .22f ? 5.f * FMath::Pow(FMath::Abs(C), 4.f) * FMath::Sin(PI * U / .22f) * (Zz > -RZ * .2f ? 1.f : .5f) : 0.f;
+            const float Along = -RX + 2 * RX * U / NeckU * .92f - Ear;
+            const float Sag = -RZ * .45f * FMath::SmoothStep(.55f, 1.f, U);   // the neck end lies lower
+            return Base + Q.RotateVector(FVector(Along, Yy + Lean * Along, Zz + RZ * .55f + Sag));
         };
-        for (int32 I = 0; I < NU; ++I) for (int32 J = 0; J < NV; ++J)
+        constexpr int32 NU = 22, NT = 20;
+        auto Normal = [&](float U, float Th)
         {
-            const FVector A = Pt(I, J), Bv = Pt(I + 1, J), Cv = Pt(I + 1, J + 1), D = Pt(I, J + 1);
-            const FVector Mid = (A + Bv + Cv + D) * .25f - (FVector(X, Y, Floor + RZ * .55f));
-            P.CanvasDecor.Quad(A, Bv, Cv, D, Mid.GetSafeNormal(), Mid.GetSafeNormal(), Mid.GetSafeNormal(), Mid.GetSafeNormal());
+            const FVector Du = Body(FMath::Min(U + .01f, NeckU), Th) - Body(FMath::Max(U - .01f, 0.f), Th), Dt = Body(U, Th + .02f) - Body(U, Th - .02f);
+            FVector N = FVector::CrossProduct(Dt, Du).GetSafeNormal();
+            const FVector Out = Body(U, Th) - (Base + Q.RotateVector(FVector(-RX + 2 * RX * U / NeckU * .92f, 0, RZ * .4f - RZ * .45f * FMath::SmoothStep(.55f, 1.f, U))));
+            return FVector::DotProduct(N, Out) < 0 ? -N : N;
+        };
+        for (int32 I = 0; I < NU; ++I) for (int32 J = 0; J < NT; ++J)
+        {
+            const float U0 = NeckU * I / NU, U1 = NeckU * (I + 1) / NU, T0 = 2 * PI * J / NT, T1 = 2 * PI * (J + 1) / NT;
+            P.Sack.Quad(Body(U0, T0), Body(U1, T0), Body(U1, T1), Body(U0, T1), Normal(FMath::Max(U0, .005f), T0), Normal(U1, T0), Normal(U1, T1), Normal(FMath::Max(U0, .005f), T1));
         }
-        const FVector Neck = FVector(X, Y, Floor) + Q.RotateVector(FVector(RX * .9f, 0, RZ * 1.1f));
-        P.CanvasDecor.Spar(Neck, Neck + Q.RotateVector(FVector(14, 0, -6)), 6, 4, 8);
-        P.CanvasDecor.Spar(Neck - Q.RotateVector(FVector(2, 0, 0)), Neck + Q.RotateVector(FVector(2, 0, 0)), 7, 7, 8);
+        // The tie: a few turns of cord round the neck; past it the mouth's frill, flared and wavy, both faces.
+        const FVector NeckC = Base + Q.RotateVector(FVector(-RX + 2 * RX * .92f, 0, RZ * .55f - RZ * .45f));
+        const FVector Ax = Q.RotateVector(FVector(1, 0, 0)).GetSafeNormal(), Ay = Q.RotateVector(FVector(0, 1, 0)), Az(0, 0, 1);
+        const float NeckR = FMath::Min(RY, RZ) * .24f;
+        for (int32 K = 0; K < 3; ++K)
+        {
+            TArray<FVector> Loop;
+            for (int32 M = 0; M <= 12; ++M) { const float A = 2 * PI * M / 12; Loop.Add(NeckC + Ax * (K * 1.1f - 1.1f) + (Ay * FMath::Cos(A) + Az * FMath::Sin(A)) * (NeckR + .9f)); }
+            P.Hemp.Cord(Loop, .45f);
+        }
+        P.Hemp.Cord({NeckC + Ax * 1.2f + Az * -(NeckR + .8f), NeckC + Ax * 5.f + Ay * 2.f + Az * -(NeckR + 4.f)}, .45f);   // its end hanging
+        constexpr int32 NF = 18;
+        auto Frill = [&](float V, float Th)
+        {
+            const float R = FMath::Lerp(NeckR, NeckR * 2.1f, V) * (1 + .22f * V * FMath::Sin(7 * Th + Ph));
+            return NeckC + Ax * (1.6f + 6.5f * V) + (Ay * FMath::Cos(Th) + Az * FMath::Sin(Th)) * R - Az * 2.f * V * V;
+        };
+        for (int32 J = 0; J < NF; ++J)
+        {
+            const float T0 = 2 * PI * J / NF, T1 = 2 * PI * (J + 1) / NF;
+            const FVector A = Frill(0, T0), Bv = Frill(1, T0), Cv = Frill(1, T1), D = Frill(0, T1);
+            const FVector N0 = (Ay * FMath::Cos(T0) + Az * FMath::Sin(T0)), N1 = (Ay * FMath::Cos(T1) + Az * FMath::Sin(T1));
+            P.Sack.Quad(A, Bv, Cv, D, N0, N0, N1, N1); P.Sack.Quad(A, Bv, Cv, D, -N0, -N0, -N1, -N1);
+        }
         P.Hidden.TurnedBox(FVector(X, Y, Floor + RZ * .7f), FVector(RX * .9f, RY * .9f, RZ * .7f), FRotator(0, Yaw, 0));
     };
     {
@@ -1233,28 +1311,65 @@ void AShipSetting::Build()
         {
             const float Top = Hm.X < QuarterFore ? QuarterZ - 25 : DeckBeam;
             auto* Pivot = NewObject<USceneComponent>(this); Pivot->SetupAttachment(RootComponent); Pivot->SetWorldLocation(ShipWorld(FVector(Hm.X, Hm.Y, Top))); Pivot->RegisterComponent();
-            FSurf C, R;
-            constexpr int32 NX = 12, NY = 5; constexpr float Len = 100, Half = 34;
+            // (2026-11-11, user: "make hammocks look nicer"; it was a doubled 12 x 5 sheet with three cords an end.) Naval
+            // hammocks: the canvas body sags and its sides curl up, gathered at each end to the clews, a cord through the
+            // hem round it, nine nettles an end fanning to an iron ring, the lanyard on up to the beam's hook; in most a
+            // blanket lies rumpled, rolled into a pillow at the head. Smooth normals; the canvas is two-sided.
+            FSurf C, R, Bl;
+            constexpr int32 NX = 28, NY = 10; constexpr float Len = 100, Half = 36;
             const float Low = LowerZ + 100 + Hm.Z - Top, EndZ = Low + 46;   // the bed's low point ~1-1.45 m off the floor (2026-11-02: was 1.5-1.95)
-            auto Pt = [&](int32 I, int32 J)
+            auto Pt = [&](float U, float V)
             {
-                const float U = I / float(NX) * 2 - 1, V = J / float(NY) * 2 - 1;
-                return FVector(U * Len, V * Half * (1 - .35f * U * U), FMath::Lerp(Low, EndZ, U * U) - 10 * (1 - V * V));
+                const float W = Half * (1 - .1f * U * U - .5f * FMath::Pow(U, 6));   // gathered toward the clews
+                const float Dip = 13 * (1 - V * V) * (1 - .6f * U * U);            // the body's hollow
+                const float Curl = 8 * FMath::Pow(V, 4) * (1 - U * U);             // the sides curl up round it
+                return FVector(U * Len, V * W, FMath::Lerp(Low, EndZ, U * U) - Dip + Curl);
+            };
+            auto Nrm = [&](float U, float V)
+            {
+                const FVector N = FVector::CrossProduct(Pt(U + .01f, V) - Pt(U - .01f, V), Pt(U, V + .01f) - Pt(U, V - .01f)).GetSafeNormal();
+                return N.Z < 0 ? -N : N;
             };
             for (int32 I = 0; I < NX; ++I) for (int32 J = 0; J < NY; ++J)
             {
-                const FVector A = Pt(I, J), Bv = Pt(I + 1, J), Cv = Pt(I + 1, J + 1), D = Pt(I, J + 1);
-                const FVector N = FVector::CrossProduct(Bv - A, D - A).GetSafeNormal() * (FVector::CrossProduct(Bv - A, D - A).Z < 0 ? -1 : 1);
-                C.Quad(A, Bv, Cv, D, N, N, N, N); C.Quad(A, Bv, Cv, D, -N, -N, -N, -N);
+                const float U0 = -1 + 2.f * I / NX, U1 = -1 + 2.f * (I + 1) / NX, V0 = -1 + 2.f * J / NY, V1 = -1 + 2.f * (J + 1) / NY;
+                C.Quad(Pt(U0, V0), Pt(U1, V0), Pt(U1, V1), Pt(U0, V1), Nrm(U0, V0), Nrm(U1, V0), Nrm(U1, V1), Nrm(U0, V1));
             }
+            // The hem's cord along both sides and across both ends.
+            for (float V : {-1.f, 1.f}) { TArray<FVector> Hem; for (int32 I = 0; I <= NX; ++I) Hem.Add(Pt(-1 + 2.f * I / NX, V) + FVector(0, V * .6f, .4f)); R.Cord(Hem, .8f); }
             for (float U : {-1.f, 1.f})
             {
-                const FVector End(U * (Len + 4), 0, EndZ + 4);
-                for (float V : {-1.f, 0.f, 1.f}) R.Cord({Pt(U < 0 ? 0 : NX, 2 + int32(V) * 2), End}, .5f);
-                R.Cord({End, FVector(U * (Len + 40), 0, -2)}, .7f);
+                TArray<FVector> Hem; for (int32 J = 0; J <= NY; ++J) Hem.Add(Pt(U, -1 + 2.f * J / NY) + FVector(U * .6f, 0, .4f)); R.Cord(Hem, .7f);
+                // The clews: nine nettles to the ring, the ring, the lanyard up to the hook.
+                const FVector Ring(U * (Len + 34), 0, EndZ + 12);
+                for (int32 K = 0; K < 9; ++K) R.Cord({Pt(U, -1 + 2.f * K / 8) + FVector(U * .6f, 0, .4f), Ring - FVector(U * 2.6f, 0, 0)}, .4f);
+                TArray<FVector> Loop; for (int32 M = 0; M <= 12; ++M) { const float A = 2 * PI * M / 12; Loop.Add(Ring + FVector(U * 2.6f * FMath::Cos(A), 0, 2.6f * FMath::Sin(A))); }
+                R.Cord(Loop, .55f);
+                R.Cord({Ring + FVector(U * 2.6f, 0, 0), FVector(U * (Len + 40), 0, -2)}, .7f);
             }
-            for (auto Pair : {TPair<FSurf*, const TCHAR*>(&C, CanvasMat), TPair<FSurf*, const TCHAR*>(&R, RopeMat)})
+            // The blanket in it, rumpled over the middle, and rolled at the head (all but one in three).
+            if (int32(FMath::Abs(Hm.X + Hm.Y)) % 3 != 0)
             {
+                constexpr int32 BU = 14, BV = 7;
+                const float Ua = -.45f, Ub = .38f, Vw = .78f;
+                auto Bp = [&](float A, float Bb)
+                {
+                    const float U = FMath::Lerp(Ua, Ub, A), V = (Bb * 2 - 1) * Vw;
+                    return Pt(U, V) + Nrm(U, V) * (1.6f + 1.4f * FMath::Sin(A * 17 + Hm.X) * FMath::Sin(Bb * 9 + Hm.Y) + 2.2f * FMath::Square(FMath::Sin(A * 6.3f)));
+                };
+                for (int32 I = 0; I < BU; ++I) for (int32 J = 0; J < BV; ++J)
+                {
+                    const float A0 = float(I) / BU, A1 = float(I + 1) / BU, B0 = float(J) / BV, B1 = float(J + 1) / BV;
+                    const FVector Q0 = Bp(A0, B0), Q1 = Bp(A1, B0), Q2 = Bp(A1, B1), Q3 = Bp(A0, B1);
+                    FVector N = FVector::CrossProduct(Q1 - Q0, Q3 - Q0).GetSafeNormal(); if (N.Z < 0) N = -N;
+                    Bl.Quad(Q0, Q1, Q2, Q3, N, N, N, N);
+                }
+                const float Hu = Hm.X > -700 ? -.72f : .7f;   // the head's end
+                Bl.Spar(Pt(Hu, -.62f) + Nrm(Hu, -.62f) * 7.5f, Pt(Hu, .62f) + Nrm(Hu, .62f) * 7.5f, 7.5f, 7.f, 12);
+            }
+            for (auto Pair : {TPair<FSurf*, const TCHAR*>(&C, HammockMat), TPair<FSurf*, const TCHAR*>(&R, RopeMat), TPair<FSurf*, const TCHAR*>(&Bl, RugMat)})
+            {
+                if (Pair.Key->T.IsEmpty()) continue;
                 auto* M = NewObject<UProceduralMeshComponent>(this); M->SetupAttachment(Pivot); M->RegisterComponent();
                 M->CreateMeshSection(0, Pair.Key->V, Pair.Key->T, Pair.Key->N, Pair.Key->UV, TArray<FColor>(), Pair.Key->Tan, false);
                 M->SetMaterial(0, LoadObject<UMaterialInterface>(nullptr, Pair.Value)); M->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -1282,6 +1397,9 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipBrick"), P.Brick, BrickMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipBrass"), P.Brass, BrassMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipRug"), P.Rug, RugMat, true, true, Missing, Triangles);
+    Emit(this, TEXT("ShipCarpet"), P.Carpet, CarpetMat, true, true, Missing, Triangles);
+    Emit(this, TEXT("ShipCarpetFringe"), P.Fringe, HammockMat, false, true, Missing, Triangles);
+    Emit(this, TEXT("ShipSacks"), P.Sack, SackMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipChest"), P.Chest, ChestMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipGlass"), P.Glass, GlassMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);

@@ -60,6 +60,12 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("Cabin"), {-1110, 200, LowerZ + 170}, {-1550, -100, LowerZ + 90}},
         {TEXT("CabinWindows"), {-1250, -40, LowerZ + 60}, {SternX, 0, LowerZ + 140}},
         {TEXT("CabinChest"), {-1080, 60, LowerZ + 80}, {-1185, 178, LowerZ + 30}},
+        // The furnishings (2026-11-11): the treasure chest close, the rug, hammocks, sacks in the hold and the galley.
+        {TEXT("ChestClose"), {-1170, 75, LowerZ + 75}, {-1185, 178, LowerZ + 40}},
+        {TEXT("CabinRug"), {-1140, -160, LowerZ + 160}, {-1330, 0, LowerZ}},
+        {TEXT("Hammocks"), {-780, 130, LowerZ + 170}, {-560, 265, LowerZ + 95}},
+        {TEXT("HoldSacks"), {-560, -140, HoldZ + 75}, {-640, -205, HoldZ + 10}},
+        {TEXT("GalleySacks"), {760, -200, LowerZ + 75}, {840, -275, LowerZ + 10}},
         {TEXT("Hold"), {150, 150, HoldZ + 170}, {-700, -100, HoldZ + 40}},
         {TEXT("HoldFore"), {0, -150, HoldZ + 170}, {900, 100, HoldZ + 40}},
         {TEXT("HoldLadder"), {-60, 120, HoldZ + 80}, {HatchX1, 0, HoldZ + 160}},
@@ -162,11 +168,11 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     if (auto* PC = Cast<APlayerController>(Chuck->GetController())) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
     // (The chest and the storm come last: the crew's trials meet six of the ending's seven conditions, the chest the last.)
-    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, Ratlines, MastClimb, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm, StormWork };
-    static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail,
+    enum class ET : uint8 { Galley, Cabin, LadderDown, LadderUp, Sea, Seam, DeckUp, DeckDown, Quarterdeck, Rigging, YardDrop, Rail, RailClimb, Ratlines, MastClimb, CrewTalk, ChefChase, Fencers, Sounds, Chest, Storm, StormWork };
+    static const ET AllTrials[] = {ET::Galley, ET::Cabin, ET::LadderDown, ET::LadderUp, ET::Sea, ET::Seam, ET::DeckUp, ET::DeckDown, ET::Quarterdeck, ET::Rigging, ET::YardDrop, ET::Rail, ET::RailClimb,
         ET::Ratlines, ET::MastClimb, ET::CrewTalk, ET::ChefChase, ET::Fencers, ET::Sounds, ET::Chest, ET::Storm, ET::StormWork};
     static const TCHAR* Names[] = {TEXT("galley"), TEXT("cabin"), TEXT("ladder_down"), TEXT("ladder_up"), TEXT("sea"), TEXT("seam"),
-        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("ratlines"), TEXT("mast_climb"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
+        TEXT("deck_up"), TEXT("deck_down"), TEXT("quarterdeck"), TEXT("rigging"), TEXT("yard_drop"), TEXT("rail"), TEXT("rail_climb"), TEXT("ratlines"), TEXT("mast_climb"), TEXT("crew_talk"), TEXT("chef_chase"), TEXT("fencers"), TEXT("sounds"),
         TEXT("chest"), TEXT("storm"), TEXT("storm_work")};
     struct FRun
     {
@@ -182,6 +188,8 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         int32 FilmFrame = -1;   // -ChuckFenceFilm's stills taken
         // The mast climb (2026-11-08): the runs up past the topsail yards that reached the truck, and the highest of this run.
         int32 MastOk = 0; float MastTop = 0;
+        // The rail climb (2026-11-11): the waist rail's cap reached, the quarterdeck's fore rail's cap reached, counts at the start.
+        bool RailCap = false; int32 Perches0 = 0, Hops0 = 0; float StuckY = 0; double StuckAt = 0;
         // The sounds trial (2026-11-03): what was heard on deck.
         int32 DeckClash = 0, DeckFeet = 0, DeckRatsHeard = 0, DeckRatsHushed = 0, Creaks0 = 0; bool DeckMix = false;
         // The storm trial (2026-11-03): its stills, and what it measured on deck.
@@ -217,6 +225,28 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (!Escape || (!Escape->IsPlaying() && Escape->GetPlays() == 0))
             {
                 Push((ChultTempleInteriorWorldOf(FVector(TempleRubble::CrawlBendS, TempleRubble::CrawlEndT, 0)) - ChultTempleInteriorWorldOf(FVector(TempleRubble::CrawlBendS, TempleRubble::CrawlEndT + 1, 0))).GetSafeNormal2D());
+                // (2026-11-11) Through the crack itself, from just before it and from a body length back (he crawls up from
+                // behind these): the ship's crawlway beyond.
+                if (ACameraActor* Cam = Run->Camera.Get())
+                {
+                    using namespace TempleRubble;
+                    auto* PC = Cast<APlayerController>(Chuck->GetController());
+                    const bool bNear = T < .9, bFar = T >= .9 && T < 1.5;
+                    if ((bNear || bFar) && PC)
+                    {
+                        const FVector Eye = ChultTempleInteriorWorldOf(FVector(CrawlBendS + 2, CrawlEndT + (bNear ? 30 : 120), RZ + (bNear ? 22 : 36)));
+                        const FVector Aim = ChultTempleInteriorWorldOf(FVector(CrawlBendS, CrawlEndT - 330, RZ + 18));
+                        Cam->SetActorLocationAndRotation(Eye, (Aim - Eye).Rotation()); Cam->GetCameraComponent()->SetFieldOfView(bNear ? 60 : 50);
+                        PC->SetViewTarget(Cam);
+                        if (T > .6 && !(Run->EscapeOk & 64)) { Run->EscapeOk |= 64; Shot(TEXT("CreviceThrough")); }
+                        if (T > 1.3 && !(Run->EscapeOk & 128)) { Run->EscapeOk |= 128; Shot(TEXT("CreviceThroughBack")); }
+                    }
+                    else if (PC && PC->GetViewTarget() == Cam) PC->SetViewTarget(Chuck);
+                }
+                // (2026-11-11) The crack at the crevice's end and the ship's crawlway through it, from his own camera.
+                const float ToEnd = FVector::Dist2D(Chuck->GetActorLocation(), ChultTempleInteriorWorldOf(FVector(TempleRubble::CrawlBendS, TempleRubble::CrawlEndT, 0)));
+                if (T > 1.2 && !(Run->EscapeOk & 16)) { Run->EscapeOk |= 16; Shot(TEXT("CreviceCrack")); }
+                if (ToEnd < 115.f && !(Run->EscapeOk & 32)) { Run->EscapeOk |= 32; Shot(TEXT("CreviceNear")); }
                 if (T > 20) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_ESCAPE_NO_START")); Run->bEscaped = true; ++Run->Failures; }
                 return;
             }
@@ -378,7 +408,7 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             case ET::LadderDown: Reset(EShipSpawn::Arrival); break;
             case ET::LadderUp: Reset(EShipSpawn::Hold); break;
             case ET::DeckUp: Reset(EShipSpawn::Quarters); break;
-            case ET::DeckDown: case ET::Quarterdeck: case ET::Rigging: case ET::Rail: case ET::Ratlines: Reset(EShipSpawn::Deck); break;
+            case ET::DeckDown: case ET::Quarterdeck: case ET::Rigging: case ET::Rail: case ET::RailClimb: case ET::Ratlines: Reset(EShipSpawn::Deck); break;
             case ET::YardDrop: Reset(EShipSpawn::Deck); Chuck->ResetAtLocation(SW(MainYardX, 70, MainTopZ + Stand)); Chuck->SetActorRotation(FRotator(0, 90, 0)); break;
             case ET::MastClimb: Reset(EShipSpawn::Deck); Run->MastOk = 0; break;
             case ET::CrewTalk: case ET::Fencers: case ET::Sounds: Reset(EShipSpawn::Deck); break;
@@ -1284,6 +1314,50 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 Done = true;
                 Run->bPass = NewDeaths == 0 && Ground && L.Y < ShipInnerHalf(300, DeckZ + 20) && ShipSpaceAt(Chuck->GetActorLocation()) == int32(EShipSpawn::Deck);
             }
+            break;
+        }
+        case ET::RailClimb:
+        {
+            // (User 2026-11-11: up onto a rail from a hang, and from a double rail's middle bar up to its cap.) Run 0: at the
+            // waist's rail from the deck; run 1 (Point 1): at the quarterdeck's fore rail from aft. Walk in, jump, hold on in.
+            Limit = 24;
+            const bool bQuarter = Run->Point == 1;
+            const FVector In = bQuarter ? FVector(1, 0, 0) : FVector(0, 1, 0);
+            const float CapZ = bQuarter ? QuarterZ + 96 : RailZ;
+            if (Run->Sub == 0)
+            {
+                if (!bQuarter) { Run->Perches0 = Chuck->GetPerchClimbs(); Run->Hops0 = Chuck->GetHangHops(); Run->RailCap = false; }
+                Chuck->ResetAtLocation(bQuarter ? SW(QuarterFore - 75, 100, QuarterZ + Stand) : SW(200, 200, DeckZ + Stand));
+                Chuck->SetActorRotation(In.Rotation()); Chuck->Recenter();
+                Run->Sub = 1; Run->StuckY = -1e6f; Run->StuckAt = Now; break;
+            }
+            Push(In);
+            const float Along = static_cast<float>(FVector::DotProduct(L, In));
+            if (Run->Sub == 1)
+            {
+                // Up against it: jump.
+                if (Along > Run->StuckY + 1.f) { Run->StuckY = Along; Run->StuckAt = Now; }
+                else if (Ground && Now - Run->StuckAt > .3) { Chuck->JumpPressed(); Run->Sub = 2; Run->StuckAt = Now; Run->MastTop = 0; Run->Heard.Reset(); UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RAIL_CLIMB_JUMP run=%d at=%s"), Run->Point, *L.ToString()); }
+                break;
+            }
+            // Held on in: hanging he goes up; done once he stands on the cap.
+            if (Run->Sub == 2)
+            {
+                Run->MastTop = FMath::Max(Run->MastTop, static_cast<float>(L.Z));
+                if (Run->Heard.IsEmpty() || Run->Heard.Last() != Chuck->GetGaitName())
+                { Run->Heard.Add(Chuck->GetGaitName()); UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RAIL_CLIMB_GAIT run=%d gait=%s at=%s"), Run->Point, Chuck->GetGaitName(), *L.ToString()); }
+            }
+            if (Run->Sub == 2 && Ground && L.Z > CapZ + 20 && !Chuck->IsHanging())
+            {
+                const bool bOn = FMath::Abs(L.Z - (CapZ + Stand)) < 6.f;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_RAIL_CLIMB run=%d on_cap=%d z_over_cap=%.1f perches=%d hops=%d"), Run->Point, bOn, L.Z - CapZ - Stand,
+                    Chuck->GetPerchClimbs() - Run->Perches0, Chuck->GetHangHops() - Run->Hops0);
+                Shot(bQuarter ? TEXT("RailClimbQuarter") : TEXT("RailClimbWaist"));
+                if (!bQuarter) { Run->RailCap = bOn; Run->Point = 1; Run->Sub = 0; Run->At = Now; break; }
+                Done = true;
+                Run->bPass = Run->RailCap && bOn && NewDeaths == 0 && Chuck->GetPerchClimbs() - Run->Perches0 >= 2;
+            }
+            else if (Now - Run->StuckAt > 9) { UE_LOG(LogTemp, Warning, TEXT("CHUCK_SHIP_RAIL_CLIMB run=%d stuck gait=%s at=%s top_z=%.1f"), Run->Point, Chuck->GetGaitName(), *L.ToString(), Run->MastTop); Done = true; }
             break;
         }
         default: break;
