@@ -1,0 +1,125 @@
+# Defect catalog — what the user has caught by hand, and what could catch it automatically
+
+Written 2026-11-13 (Claude). First step of the automation idea: turn the corrections the user has made so far into checks that run on every region, so the same kind of problem is not found by hand twice. Sources: the git history (to 69838d6f), the "Asked:" lines in `agent-handoffs/CLAUDE.md`, `CODEX.md` and the archived prototype handoffs, and the existing test flags in `Source/Chuck3D`.
+
+The proposed checks are not built; they are a design, not a claim that they work. See also [AGENT-WORKFLOW.md](AGENT-WORKFLOW.md#working-efficiently-2026-11-13) for the shot-list, placement-table and light-audit tooling referenced below.
+
+How to read the "catch" column:
+- **Numeric**: measurable from the game's own data (collision, transforms, bones, audio levels); can be a pass/fail line in Verify-Package.
+- **Visual**: needs a picture; a vision reviewer can flag the obvious cases, the user still judges the rest.
+- **Human**: feel, sound quality, taste, story. Stays with the user.
+
+## The categories
+
+### 1. Walk-through solids (collision holes)
+- **Seen:** the side gate's stone jambs by the sewer hatch (11-12); the ship's mast cap and the hole round the masthead, the binnacle hood (11-12); chimney collision (10-02); stored barrels and planks walk-through (10-02); the cheese made solid (10-09); fallen logs open or walk-through (10-27); root collision (10-12).
+- **Checks now:** `-ChuckCollisionAudit` (`WaterdeepCollisionAudit.cpp`) — Waterdeep only, and only meshes whose material name contains Stone/Plaster/Wood/Brick. `ChultPropAudit` covers logs only.
+- **Proposed check:** one audit for every map: every visible static mesh above a size threshold either has collision or is on an explicit "decorative, pass-through" list (foliage, cloth, rope, FX). Probe each with a rat-sized capsule from several sides. Log `CHUCK_COLLISION_AUDIT map=… gaps=N`; Verify-Package requires 0.
+- **Catch:** Numeric.
+
+### 2. Chuck inside geometry / stuck / out of the world
+- **Seen:** left inside a sanctum pier (11-12, never reproduced); props blocking the spawn or the dock entrance (10-02, 10-03); the dock vista shortcut (10-02).
+- **Checks now:** per-region test trials follow fixed routes; the pier push-out logs `CHUCK_SANCTUM_PIER_PUSH_OUT` but only in the sanctum.
+- **Proposed check:** a robot playtester per map: the region's main route plus some minutes of random/exploratory input (jumps, climbs, hangs, leaps at edges). Each frame: is Chuck's capsule overlapping blocking geometry, below the world's floor, outside the region bounds, or not moving for N seconds while input is held? Log positions and a still for each incident.
+- **Catch:** Numeric.
+
+### 3. Things passing through things
+- **Seen:** the fore course through the fore ratlines (11-08); Jeffries' lashings through his body (11-08); rope bending at impossible angles through hands (11-07); hair through hats (10-29); the axe through the dwarf's shoulders (10-04); hands into thighs (10-01); the T-rex's route through the first giants (11-12, 10-15); the bridge planks through Chuck's head (11-12).
+- **Checks now:** ad hoc and per case: the ship check's crossing count (`CHUCK_SHIP_RATLINES_ACROSS`), the rope-to-fist distance, the bridge head check, the T-rex route.
+- **Proposed check:** a general "interpenetration" pass: for named pairs (rope vs body, cloth vs rigging, prop vs character, creature route vs large static), sample the meshes and report the deepest penetration. Creature routes get a swept clearance test against large statics. The region plan lists the pairs that matter.
+- **Catch:** Numeric for most; hair through hats is Visual.
+
+### 4. Floating, sunk or badly seated objects
+- **Seen:** the floating coil below deck (11-08); the mop propping itself up (11-02); rubble that didn't fall from anywhere, floating (11-04); trees hanging over air on slopes (10-27); jars inside stone (10-27); dinosaurs' feet not on the ground (10-16); shrines over a terrace's edge (10-20); the bench over the sewer grate (10-01).
+- **Checks now:** `ChultPropAudit` (trees, logs, jars) for Chult; `CHUCK_TEMPLE_RUBBLE_FLOATING` for the rubble map; the ship's coil check.
+- **Proposed check:** one support audit for every map (hand-placed props are listed in `Content/Data/Placements/<Region>.txt`, `ChuckPlacements.h`, so the audit can name the line to fix): for each prop not tagged as hanging/flying, trace down from several points of its footprint; report gaps over 2 cm, penetration over 5 cm into stone, and footprints more than a third over air. Characters and creatures: foot bones vs ground during idle and walk.
+- **Catch:** Numeric.
+
+### 5. Jitter, twitching and pops
+- **Seen:** the tail squiggle (11-12); the landing leaves twitching (11-12); the storm crew's jitter from a phase bug (11-12); the NPC motion-capture shake (10-05); the elf twitch (10-06); still open: whole-body pops at the start of walk-start and slash cross-fades.
+- **Checks now:** `CHUCK_NPC_JITTER` (Waterdeep NPCs). The tail was diagnosed by logging bone travel between frames.
+- **Proposed check:** a motion audit: record every skeletal mesh's bones and every "resting" instance for a few seconds at fixed frame rate; flag frame-to-frame jumps above a speed limit per bone class (tail tip, hands, root), and any movement of objects that should be still. Run it on idle, walk-start, slash and each cutscene.
+- **Catch:** Numeric (this is the main way to catch motion problems; still images miss them).
+
+### 6. Sound heard where it shouldn't be, or at the wrong level
+- **Seen:** sewer zombies heard from the streets (11-12); temple interior sounds outside (11-12); rats heard everywhere on the ship instead of only in the hold (11-03); the creak too loud (11-03); the seated pirate too quiet (11-12); storm lines under the music (11-09, 11-10); the smith too quiet, Dougmund not heard from the stairs (10-06).
+- **Checks now:** music checks per region; `ChultTempleSoundAudible` for the temple; nothing general for levels.
+- **Proposed check:** an audibility audit: for each sound source, its "zone" (room, level, deck) is declared; listener probes in every other zone must hear it below a threshold. A loudness check: every voice line normalized to a target loudness, and each line's level at its normal listening distance compared with the music under it.
+- **Catch:** Numeric for leaks and levels. Whether a sound is good is Human (the agent can't hear).
+
+### 7. Lighting that wrecks materials
+- **Seen:** unshadowed lights bleaching the heroes' hair (11-09); purple rupture lights making hair blaze (11-09); the wizard's robe blown white by his own lights (11-04); the fighter's beard grey in cutscene light (10-29); the gnome's grey hair reading red (10-29); the crevice glow too bright (10-27, 11-12); sewer fill too grey or too dark (several, 10-03/04); outdoor sky leaking into the Astral chasms (10-02).
+- **Checks now:** stills captured by the `...Capture` and `...Review` flags, looked at by the agent case by case. Since 2026-11-13: `CHUCK_LIGHT_AUDIT` (`LightAudit.h/.cpp`) lists every shadowless point/spot light whose reach covers a groom, run by shot lists `Tools/shots/audit-*.txt` at the night docks, pantry, sanctum and ship.
+- **Proposed check:** add the light audit to Verify-Package for every map once merged. For every hero/NPC close-up still, measure the average colour of the hair, skin and clothing regions against the material's base colour; flag big shifts (white-out, saturation blow-up). Sky leaks: render enclosed spaces and look for sky pixels.
+- **Catch:** Partly Numeric (light settings, colour shift), the rest Visual.
+
+### 8. Wrong materials, stretched or smeared textures, flicker
+- **Seen:** the distant LODs drawing the wrong material (white skirt, grey beard; 11-04); the dino faces smeared by UVs (11-12); the door frames flickering from shared faces (11-05); tunnel floor seams (10-02); oil-film seams (10-09); the neck's mapping seam behind the dino skull (still open).
+- **Checks now:** none general; LOD repair is in the hero import.
+- **Proposed check:** at import: every LOD's material slots must match LOD0; UV texel density per triangle within a range (flags smeared faces); coplanar overlapping faces in the same mesh or between touching meshes (flags flicker). In game: force each LOD on each character and compare stills.
+- **Catch:** Numeric.
+
+### 9. Look and realism of objects and placement
+- **Seen:** hammocks hung too high, then re-hung (11-02, 11-12); the "3-boxed-grid" view through the crevice (11-11); the flag in the wrong place (11-02); the lumber pile that read as sails (11-12); the dancer's position (11-02); the concertina player's hands backwards (11-04); the terrain square ending abruptly in the fall's high views (11-10); NPC eyes like mascara (10-30); Chuck like a felt doll (10-31).
+- **Checks now:** stills and the user.
+- **Proposed check:** a vision reviewer: after each build, stills from fixed cameras (the `-ChuckShots=<file>` shot lists and `Tools/Take-Shots.ps1`, which need no recompile) plus the robot playtester's stills go to a reviewer agent with the reference images and this catalog; it lists what looks wrong. Expect it to find the obvious (backwards hands, a white robe, the edge of the world) and miss the subtle.
+- **Catch:** Visual, then Human.
+
+### 10. Triggers and timing
+- **Seen:** the beholder entrance before Chuck settled (10-27); the storm starting before Chuck was on deck (11-05); guide lights before the orders (11-10); the captain's pause too short (11-10); the pantry fall's white freeze too long (11-10).
+- **Checks now:** per-sequence tests (ship ending, sanctum).
+- **Proposed check:** every cutscene and scripted sequence logs its start conditions; a check that Chuck is grounded and inside the expected area at the start, and that lines don't overlap. Long blank or frozen frames: measure.
+- **Catch:** Numeric for conditions and freezes; pacing is Human.
+
+### 11. Wrong in the world's own logic
+- **Seen:** larboard and starboard mirrored (11-10); the captain ordering the helm while he holds it (11-11); torches only where the sanctum had them, some blown out (11-04); rubble only from visible sources (11-04).
+- **Checks now:** none.
+- **Proposed check:** a text reviewer agent that reads the region plan, the 2D source and the scripted lines/orders and flags contradictions. Partly a checklist in the region plan.
+- **Catch:** Visual/Human; an agent can catch some.
+
+### 12. Feel of the controls and moves
+- **Seen:** the brachiation swing four times (10-29 to 11-12); ladders by stick direction (11-12); wall climbing cost (10-12); the gorge fall length (11-12); running, rolling, side jumps (09-27).
+- **Checks now:** trials that the move works (it reaches, it lands).
+- **Proposed check:** none can judge feel. Agents can keep the numbers stable once the user likes them (swing reach, timing windows, fall times) so they don't drift.
+- **Catch:** Human.
+
+## Scored against the November 12 list
+
+The 23 items, with what the proposed checks would have caught (my judgment, not a run):
+
+| Item | Category | Would catch |
+| --- | --- | --- |
+| 1 sewer zombies heard in the streets | 6 | Numeric |
+| 2 side gate jambs | 1 | Numeric (already did) |
+| 3 tail squiggle | 5 | Numeric |
+| 4 landing leaves twitch | 5 | Numeric |
+| 5 dino voices | 6 | Human |
+| 6 gorge fall too short | 12 | Human |
+| 7 forward swing | 12 | Human |
+| 8 river zombies past the river | 11 | Human (an agent might, from the plan) |
+| 9 T-rex size and the giants | 3 | Numeric for the overlap; size is Human |
+| 10 dino faces smeared | 8 | Numeric |
+| 11 temple sounds outside | 6 | Numeric |
+| 12 skeleton grab and throw | — | new feature, not a defect |
+| 13 Chuck inside a pier | 2 | Numeric |
+| 14 crevice glow | 7 | Visual |
+| 15 hammocks | 9 | Visual |
+| 16 captain's bed | — | new content |
+| 17 galley stove | — | new content |
+| 18 lumber pile read as sails | 9 | Visual |
+| 19 seated pirate too quiet | 6 | Numeric |
+| 20 ladders by stick | 12 | Human |
+| 21 storm crew jitter | 5 | Numeric |
+| 22 mast cap and masthead hole | 1 | Numeric |
+| 23 binnacle hood | 1 | Numeric |
+
+Of the 20 that were defects, about 12 could have been caught by numeric checks, about 3 by a vision reviewer, and about 5 need the user (feel and sound).
+
+## Suggested build order
+
+1. Generalize the collision audit (1) and the support audit (4) to every map; add both to Verify-Package. They reuse code that exists.
+2. The motion audit (5) and the audibility/loudness audit (6): new, but measurable, and they cover problems that are hard to see in stills.
+3. The robot playtester (2), starting from the existing trial routes.
+4. Import checks (8): LOD slots, UV density, coplanar faces.
+5. The vision reviewer (7, 9) with the reference images, fed by the shot lists.
+6. Then try the whole set on the next region and count what the user still finds.

@@ -2,6 +2,17 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 13 — the defect catalog (Claude, documentation only)
+
+- **Asked:** the user asked whether agents could automate most of the remaining game, including checks for the kinds of problems they have found and corrected by hand. First step agreed: a catalog of those corrections.
+- **Source:** `main` at 69838d6f (after the `claude/improvements` merge; that session asked me to wait for it, and I did).
+- **Changed:** new [../AUTOMATION-DEFECT-CATALOG.md](../AUTOMATION-DEFECT-CATALOG.md): 12 categories mined from the git history and the handoffs' requests, each with past cases, the checks that exist now, a proposed general audit and whether it is numeric, visual or needs the user; the November 12 list scored by hand (of 20 defects, about 12 numeric, 3 visual, 5 for the user); a build order.
+- **Tested:** nothing to run; documentation only. The scoring is my judgment, not a run of any audit.
+- **Contract compatibility:** no code, rig or asset changes.
+- **Launcher:** unchanged (PauseSave).
+
+Next part of the work could be done by either — preference: Claude (step 1 of the catalog's build order: the collision and support audits for every map, added to Verify-Package).
+
 ## November 13 — saving and a pause menu; the review's improvements (Claude)
 
 - **Asked:**
