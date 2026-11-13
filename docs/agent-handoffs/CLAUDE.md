@@ -60,7 +60,7 @@ Next part of the work could be done by either — preference: Claude (step 1 of 
     - The sanctum is skipped (voxels on).
     - The ship flags one cabin lamp on one crew member.
     - The docks at night flag the tavern lamps on the keeper (about 130–150) and street lamps on two NPCs.
-    - The pantry flags its purple Astral lights on Chuck's fur (about 1,200). The stills (`Local/shots/pantry-fur/`) show his fur magenta-pink on all sides. Not changed: the user's call.
+    - The pantry flags its purple Astral lights on Chuck's fur (about 1,200). The stills (`Local/shots/pantry-fur/`) show his fur magenta-pink on all sides. The user chose to leave it as it is (11-13).
   - Editor smoke test (`Tools/Test-Game.ps1`): failures=0, previously 7.
   - Packaged `Builds/PauseSaveCandidate`:
     - The first Verify-Package failed only on the temple wind's full run (one Astral death at leg 7). The same package's wind test alone then passed (full=1, 0 deaths; `Local/verify-temple-wind-rerun.log`). A flaky trial: that first run overlapped the 19 GB LFS prune, and packaged traversal trials fail when the machine runs slow.
@@ -72,12 +72,11 @@ Next part of the work could be done by either — preference: Claude (step 1 of 
 - **Remaining flaws:**
   - The save keeps the checkpoint, morning or evening, cigarettes and sanity only. Collected pickups return.
   - The light audit's brightness estimate does not separate reported from unreported cases. It is a list to look at, not a pass/fail.
-  - The pantry's purple fur is unresolved.
 - **Contract compatibility:** no rig or animation changes.
 - **Binary/LFS:** the 14 re-saved Common/Materials only.
 - **Launcher:** promoted as PauseSave. The receipt names 201b8913 (the merge); the build also contains the uncommitted post-merge edits that are committed right after it, so this work matches the launcher. Previous package kept as `Windows-Previous-20261113-PauseSave`; the candidate folder is gone.
 
-Next part of the work could be done by either — preference: Claude (the pause menu's tutorial-text and guide-light options, and whether the pantry's purple fur should change).
+Next part of the work could be done by either — preference: Claude (the pause menu's tutorial-text and guide-light options).
 
 ## November 12 (night) — the squiggle; thrown by the leg (Claude)
 
