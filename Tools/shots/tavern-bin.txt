@@ -6,4 +6,4 @@ shot west-low    -120 1075 60     60 1020 30
 shot above        160 1080 170    60 1015 25
 shot front         60 1085 130    60 1020 50
 # Chuck beside it, for scale
-chuck with-chuck  200 1075 90     130 1060 0
+chuck with-chuck  360 1075 100    140 1062 30

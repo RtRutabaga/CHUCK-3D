@@ -2,6 +2,72 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 13 — saving and a pause menu; the review's improvements (Claude)
+
+- **Asked:**
+  - "Begin on all improvement suggestions" from my review of how the game is built.
+  - A save option in a pause menu. Later pause-menu options will turn the tutorial text and the golden guide lights on or off.
+- **Source:**
+  - Written on branch `claude/improvements` (worktree `C:\GameDev\CHUCK-3D-improve`) while another session had unfinished work on main.
+  - Merged into main at 201b8913 over 65955119, then finished on main.
+- **Changed:**
+  - **Save and pause menu:**
+    - `ChuckSave.h/.cpp`: one slot at `%LOCALAPPDATA%\CHUCK3D\SaveGames\Chuck.sav`, outside the build so promotions keep it. `-ChuckSaveSlot=` selects another slot for tests.
+    - `DockMenu.cpp`:
+      - `ADockGameMode::CurrentSavePoint` matches Chuck's death-recovery point to the nearest named dev checkpoint in the regions built so far. The docks after the sewer map to Night.
+      - `SaveGame` and `ContinueFromSave`.
+      - `ADockHUD::ShowPause/ClosePause/CanPause`: Esc or gamepad Start, only when his own camera is on him (no cutscene, letterbox or demo end) and not in `-Chuck` verification runs.
+      - Pause menu: Resume, Save Game, Quit Game, and a "Last save / Saved: …" line.
+      - Title menu: Continue when a save exists. The menu test expects 3 buttons when one does.
+    - `-ChuckPauseTest[=<checkpoint>]`.
+    - `ChuckCharacter.h`: `SetCigarettes`.
+    - `ChuckCharacter.cpp` and `DefaultInput.ini`: the old "Quit" action on Esc/Start is gone. It quit the game outright in play and fired alongside the pause menu. Esc still exits at the demo's end card and skips cutscenes.
+  - **Shot lists:**
+    - `ChuckShots.h/.cpp` and `Tools/Take-Shots.ps1`: `-ChuckShots=<file>` takes stills from a text list with no recompile. A list can name a checkpoint, the evening, fov, HUD on or off, cameras, Chuck placed for scale, and an `audit` step.
+    - The tavern bin's hand-written `-ChuckBinCapture` block was replaced by `Tools/shots/tavern-bin.txt`.
+  - **Placement table:**
+    - `ChuckPlacements.h/.cpp` reads `Content/Data/Placements/<Region>.txt`, staged as UFS via `DefaultGame.ini`.
+    - The tavern bin moved there from `DockSetting.cpp`.
+  - **Light audit:**
+    - `LightAudit.h/.cpp` lists visible shadowless lights by their estimated light on a groom (threshold 100), skipping everything while voxels are on.
+    - `Tools/shots/audit-*.txt` run it at seven checkpoints. `pantry-fur.txt` has stills of its strongest candidate.
+  - **Smoke test:**
+    - The 7 old editor failures ("…Art imports render separately from collision") were real: in uncooked runs the art meshes kept their own collision.
+    - `DockGameMode.cpp`'s `Prop` now sets `bUseDefaultCollision=false` and the NoCollision profile. A failure now logs `CHUCK_PROP_ART_DETAIL`.
+  - **Housekeeping:**
+    - The 14 `Common/Materials` re-saves from Nov 5 are committed. Same sizes; every build since was made and verified with them.
+    - October entries of HANDOFF.md and this file moved to `docs/archive/HANDOFF-2026-10.md` and `docs/archive/agent-handoffs/CLAUDE-2026-10.md`.
+    - PROJECT-BRIEF's region table and open questions brought up to date (saving decided, naming done).
+    - AGENT-WORKFLOW gained "Working efficiently (2026-11-13)", and PLAYING documents saving.
+  - **Local storage:**
+    - `git lfs prune --verify-remote` took `.git/lfs` from 21 GB to 3.6 GB.
+    - It first found one old object never uploaded to GitHub (a version of `SourceAssets/NPCs/Humans/Textures/short02_diffuse.png`). It was pushed before pruning.
+- **Tested:**
+  - Pause test at Waterdeep, ChultTempleHall and ShipHold: failures=0 each (`Local/pause-test-*.log`). Stills in `Local/pause/` (`Waterdeep_menu.png` is the menu after saving).
+  - `Take-Shots` with `tavern-bin.txt`: 5 stills, no HUD (`Local/shots/tavern-bin/`).
+  - All seven audits ran (`Local/shots/audit-*.log`):
+    - The sanctum is skipped (voxels on).
+    - The ship flags one cabin lamp on one crew member.
+    - The docks at night flag the tavern lamps on the keeper (about 130–150) and street lamps on two NPCs.
+    - The pantry flags its purple Astral lights on Chuck's fur (about 1,200). The stills (`Local/shots/pantry-fur/`) show his fur magenta-pink on all sides. Not changed: the user's call.
+  - Editor smoke test (`Tools/Test-Game.ps1`): failures=0, previously 7.
+  - Packaged `Builds/PauseSaveCandidate`:
+    - The first Verify-Package failed only on the temple wind's full run (one Astral death at leg 7). The same package's wind test alone then passed (full=1, 0 deaths; `Local/verify-temple-wind-rerun.log`). A flaky trial: that first run overlapped the 19 GB LFS prune, and packaged traversal trials fail when the machine runs slow.
+    - A full rerun of Verify-Package on a quiet machine then passed: `CHUCK_PACKAGE_VERIFIED passes=182` (`Local/verify-package-20261113-122829.log`).
+- **Not checked:**
+  - Nobody has played it by hand, including the pause menu with a real keyboard or gamepad. The test sends Esc through player input, not through Slate's focus routing.
+  - Verify-Menu was not run.
+  - Continue from a save made aboard during the storm restarts the storm checkpoint fresh.
+- **Remaining flaws:**
+  - The save keeps the checkpoint, morning or evening, cigarettes and sanity only. Collected pickups return.
+  - The light audit's brightness estimate does not separate reported from unreported cases. It is a list to look at, not a pass/fail.
+  - The pantry's purple fur is unresolved.
+- **Contract compatibility:** no rig or animation changes.
+- **Binary/LFS:** the 14 re-saved Common/Materials only.
+- **Launcher:** promoted as PauseSave. The receipt names 201b8913 (the merge); the build also contains the uncommitted post-merge edits that are committed right after it, so this work matches the launcher. Previous package kept as `Windows-Previous-20261113-PauseSave`; the candidate folder is gone.
+
+Next part of the work could be done by either — preference: Claude (the pause menu's tutorial-text and guide-light options, and whether the pantry's purple fur should change).
+
 ## November 12 (night) — the squiggle; thrown by the leg (Claude)
 
 - **Asked:** "the squiggle look is much worse/more frequent now, please fix"; the skeleton to pick Chuck up by the leg and huck him, with realistic flight, crash landing and a forceful, damaging wall hit.

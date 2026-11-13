@@ -587,25 +587,28 @@ void ADockHUD::TickPauseTest()
         UE_LOG(LogTemp,Display,TEXT("CHUCK_PAUSE_TEST saved=%s expected=%s"),Save?*Save->Point:TEXT("-"),*PauseTestPoint);
         Check(Save && Save->Point==PauseTestPoint && Save->Cigarettes==(C?C->GetCigarettes():-1),TEXT("the save holds this checkpoint and the cigarette count"));
         Check(bPauseOpen && PC && PC->IsPaused(),TEXT("saving keeps the menu open"));
-        Click(TEXT("Resume"));
+        const FString Folder=FPaths::ScreenShotDir()/TEXT("Pause");
+        IFileManager::Get().MakeDirectory(*Folder,true);
+        FScreenshotRequest::RequestScreenshot(Folder/PauseTestPoint+TEXT("_menu.png"),true,false);
         break;
     }
-    case 4:
+    case 4: Click(TEXT("Resume")); break;
+    case 5:
         Check(!bPauseOpen && PC && !PC->IsPaused() && !PC->bShowMouseCursor,TEXT("Resume closes the menu and resumes play"));
         Press();
         break;
-    case 5: Check(bPauseOpen,TEXT("Esc opens it again")); Press(); break;
-    case 6:
+    case 6: Check(bPauseOpen,TEXT("Esc opens it again")); Press(); break;
+    case 7:
         Check(!bPauseOpen && PC && !PC->IsPaused(),TEXT("Esc closes it"));
         ShowMenu(false);   // the title, as on a fresh start
         break;
-    case 7:
+    case 8:
         Check(MenuButtons.Contains(TEXT("Continue")),TEXT("the title offers Continue"));
         if(C) C->SetCigarettes(0);   // a fresh start's count, which Continue restores
         Click(TEXT("Continue"));
         PauseTestNext=FPlatformTime::Seconds()+5.;
         break;
-    case 8:
+    case 9:
     {
         FString Point,Label;
         const bool bHere=Mode && Mode->CurrentSavePoint(Point,Label);

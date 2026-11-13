@@ -6,6 +6,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Saving and a pause menu; build tooling (November 13, Claude):** Esc / Start opens a pause menu (Resume, Save Game, Quit Game); one save slot resumes at the checkpoint Chuck last reached, with Continue on the title. New tools: shot lists (`Tools/Take-Shots.ps1`), a placement table (`Content/Data/Placements/`), a light-on-hair audit; the editor smoke test's 7 old failures fixed; October logs archived; local LFS cache 21 GB to 3.6 GB. Details in [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **The squiggle; thrown by the leg (November 12, night, Claude):**
   - Squiggle:
     - The earlier tail-twist change is off.

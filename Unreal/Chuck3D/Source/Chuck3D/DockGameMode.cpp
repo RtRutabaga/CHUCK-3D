@@ -399,6 +399,10 @@ void ADockGameMode::StartPlay()
         Actor->Tags.Add(FName(Name));
         Actor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
         Actor->GetStaticMeshComponent()->SetStaticMesh(Asset);
+        // Art only (its collision is a separate hidden shape). The profile too, and not the mesh's default
+        // collision: uncooked editor runs re-applied the mesh's own collision (the smoke test's 7 old failures).
+        Actor->GetStaticMeshComponent()->bUseDefaultCollision=false;
+        Actor->GetStaticMeshComponent()->SetCollisionProfileName(TEXT("NoCollision"));
         Actor->GetStaticMeshComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         return Actor;
     };
@@ -1659,6 +1663,13 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 const auto* Component=Actor->FindComponentByClass<UStaticMeshComponent>();
                 bValid &= Component && Component->GetStaticMesh() && Component->GetCollisionEnabled()==ECollisionEnabled::NoCollision;
             }
+            if(!bValid)
+                for(AActor* Actor:Props)
+                {
+                    const auto* Component=Actor->FindComponentByClass<UStaticMeshComponent>();
+                    UE_LOG(LogTemp,Warning,TEXT("CHUCK_PROP_ART_DETAIL %s found=%d expected=%d mesh=%s collision=%d"),Tag,Props.Num(),Expected,
+                        Component && Component->GetStaticMesh() ? *Component->GetStaticMesh()->GetName() : TEXT("none"),Component ? int32(Component->GetCollisionEnabled()) : -1);
+                }
             Check(bValid,*FString::Printf(TEXT("%s imports render separately from collision"),Tag));
         }
         FHitResult PropHit;

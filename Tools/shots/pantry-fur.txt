@@ -1,0 +1,8 @@
+# Chuck under the pantry's purple lights (the light audit's strongest candidate, 2026-11-13).
+# He stands at the pantry checkpoint (55,835,floor -320).
+at Pantry
+wait 6
+fov 55
+shot front   55 690 -240    55 835 -290
+shot side    200 835 -250   55 835 -290
+shot back    55 975 -245    55 835 -290

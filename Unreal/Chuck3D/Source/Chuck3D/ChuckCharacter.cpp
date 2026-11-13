@@ -283,7 +283,7 @@ void AChuckCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Input->BindAction("Sprint", IE_Pressed, this, &AChuckCharacter::SprintPressed);
     Input->BindAction("Slash", IE_Pressed, this, &AChuckCharacter::Slash);
     Input->BindAction("Slash", IE_Released, this, &AChuckCharacter::SlashReleased);
-    Input->BindAction("Quit", IE_Pressed, this, &AChuckCharacter::Quit);
+    // Esc / Start open the pause menu now (ADockHUD::ShowPause, 2026-11-13), which has Quit Game; they no longer quit in play.
 }
 // A dodge owns the capsule; the stick is still read to choose the next move.
 void AChuckCharacter::Forward(float Value) { InputForward = Value; if (!OwnsCapsule() && !IsTalking()) AddMovementInput(FRotator(0,ViewYaw,0).Vector(),Value); }
