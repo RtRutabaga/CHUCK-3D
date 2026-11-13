@@ -3,6 +3,7 @@
 #include "DockVista.h"
 #include "DockWeathering.h"
 #include "DockTavern.h"
+#include "ChuckPlacements.h"
 #include "DockFire.h"
 #include "ChuckClimbable.h"
 #include "LampSwing.h"
@@ -562,23 +563,8 @@ void BuildDockSetting(UWorld* World)
     }
     for(float X : {-330.f,-180.f,-30.f,120.f,310.f})
         Box(FVector(X,998,150),FVector(11,9,300),TEXT("Wood"));
-    // The keeper's bin out back, which Bobert roots in (his night line; Tools/build_tavern_bin.py). It stands
-    // against the wall between a window and a post, its lid knocked off along the wall, and stays within
-    // 1043 so the alley route at y=1060 keeps Chuck's capsule clear.
-    {
-        const FVector BinAt(60,1020,0);
-        bool bBin=false;
-        if(UStaticMesh* BinMesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Characters/Humans/Props/SM_TavernBin.SM_TavernBin")))
-        {
-            Prop(BinMesh,BinAt,FVector::OneVector,4.f);
-            auto* Body=NewObject<UStaticMeshComponent>(Owner); Body->SetupAttachment(Root);
-            Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
-            Body->SetRelativeLocation(BinAt+FVector(0,0,31)); Body->SetRelativeScale3D(FVector(44,44,62)/100);
-            Body->SetCollisionProfileName(TEXT("BlockAll")); Body->SetVisibility(false); Body->ComponentTags.Add(TEXT("TavernBin"));
-            Body->RegisterComponent(); bBin=true;
-        }
-        UE_LOG(LogTemp,Display,TEXT("CHUCK_TAVERN_BIN placed=%d at=%s"),bBin?1:0,*BinAt.ToString());
-    }
+    // Hand-placed dressing (the tavern's bin out back, ...) comes from Content/Data/Placements/Waterdeep.txt.
+    ChuckPlacements::Spawn(World,TEXT("Waterdeep"));
     // Dock Street entrance: the town beyond this labeled wall is now a real
     // playable neighborhood. Keep the western/far city boundary closed.
     // Match the plaza's masonry thickness and battlements while retaining the
@@ -1136,20 +1122,6 @@ void BuildDockSetting(UWorld* World)
             World->GetTimerManager().SetTimer(Shot,[I](){const FString Folder=FPaths::ScreenShotDir()/TEXT("Tavern");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);},6.f+I*4.f,false);
         }
         FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));},16.f,false);
-    }
-    // The bin out back, from Chuck's height and a person's, both ways along the alley.
-    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckBinCapture")))
-    {
-        auto* Camera=World->SpawnActor<ACameraActor>();Camera->GetCameraComponent()->SetFieldOfView(70);
-        const FVector Views[]={FVector(250,1070,75),FVector(-120,1075,60),FVector(160,1080,170),FVector(60,1085,130)};
-        const FVector Targets[]={FVector(60,1020,30),FVector(60,1020,30),FVector(60,1015,25),FVector(60,1020,50)};
-        for(int32 I=0;I<UE_ARRAY_COUNT(Views);++I)
-        {
-            FTimerHandle View,Shot;
-            World->GetTimerManager().SetTimer(View,[World,Camera,P=Views[I],T=Targets[I]](){Camera->SetActorLocationAndRotation(P,(T-P).Rotation());if(auto* PC=World->GetFirstPlayerController()) PC->SetViewTarget(Camera);},4.f+I*3.f,false);
-            World->GetTimerManager().SetTimer(Shot,[I](){const FString Folder=FPaths::ScreenShotDir()/TEXT("Bin");IFileManager::Get().MakeDirectory(*Folder,true);FScreenshotRequest::RequestScreenshot(Folder/FString::Printf(TEXT("View%d.png"),I),false,false);},6.f+I*3.f,false);
-        }
-        FTimerHandle Exit;World->GetTimerManager().SetTimer(Exit,[World](){if(auto* PC=World->GetFirstPlayerController()) PC->ConsoleCommand(TEXT("quit"));},6.f+UE_ARRAY_COUNT(Views)*3.f,false);
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckSettingCapture")))
     {

@@ -15,4 +15,15 @@ The user explicitly switched to this workflow after confirming that only one age
 - **Contracts.** A new rig/material-slot/socket contract is agreed in a committed document (the `RIG-CONTRACT-V1.md` pattern) before code depends on it.
 - **Regions.** Before building a region, write `docs/regions/<REGION>.md` from the 2D phase documents and get the user's approval (see PROJECT-BRIEF.md).
 
+## Working efficiently (2026-11-13)
+
+From a review of how the game has been built, agreed with the user:
+
+- **Stills without code.** Write a shot list and run `Tools/Take-Shots.ps1 Tools/shots/<name>.txt` (format in `Source/Chuck3D/ChuckShots.h`: a checkpoint to start from, cameras, Chuck placed for scale). Do not add another hand-written `-Chuck...Capture` block for a review; keep C++ test code for checks that assert something.
+- **Dressing props from a table.** Hand-placed props go in `Content/Data/Placements/<Region>.txt` (format in `ChuckPlacements.h`), not as coordinates in C++: moving one is an edit and a rerun, no recompile. Structure (floors, walls, routes) stays in the region builders.
+- **Lights and hair.** A light with shadows off lights strand hair and fur through the head (grey or pale hair, purple beards). Prefer shadowed lights near characters, and run the audit shot lists (`Tools/shots/audit-*.txt`, `LightAudit.h`) after adding lights; fix what `CHUCK_LIGHT_AUDIT` lists.
+- **Binary churn.** Every saved `.uasset` is kept forever in Git LFS (21 GB locally by November). Save or re-import only what changed; before committing, check `git status` for assets you did not mean to touch, and either commit them on purpose or restore them. Never leave stray re-saves in the checkout for the next session. `git lfs prune` (safe: it keeps anything unpushed or still checked out) reclaims local space.
+- **Saving.** The player's save is one slot (`ChuckSave.h`): it resumes at the named checkpoint nearest Chuck's death-recovery point. A new region's checkpoints therefore have to be in the dev checkpoint page (`DockMenu.cpp`) to be saveable, and anything a region needs restored beyond its checkpoint must be added to the save.
+- **More than one session at a time.** When another session has unfinished changes on `main`, work in a worktree on a branch and merge it once that session is idle; never compile or import in the shared checkout under its feet.
+
 Older workflows (v1 worktrees, v2 split) are in [archive/AGENT-WORKFLOW-HISTORY.md](archive/AGENT-WORKFLOW-HISTORY.md). Per-agent prototype handoff logs are in [archive/agent-handoffs/](archive/agent-handoffs/).

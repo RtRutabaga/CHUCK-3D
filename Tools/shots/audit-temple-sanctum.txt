@@ -1,0 +1,4 @@
+# Unshadowed lights that reach strand hair at the ChultTempleSanctum checkpoint (LightAudit.h). Tools/Take-Shots.ps1 Tools/shots/audit-temple-sanctum.txt
+at ChultTempleSanctum
+wait 8
+audit

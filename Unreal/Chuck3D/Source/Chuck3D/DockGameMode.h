@@ -15,6 +15,12 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     /** Start the chosen location in the fresh world already waiting behind the title menu. */
     bool StartFromMenu(const FString& Point);
+    /** The checkpoint Chuck last reached (his death-recovery point's nearest named checkpoint), for the save. */
+    bool CurrentSavePoint(FString& Point, FString& Label) const;
+    /** Writes the save from where he is now; false if there is nowhere to resume. */
+    bool SaveGame(FString* SavedLabel = nullptr);
+    /** Starts from the save, as its checkpoint does, with its cigarette count. */
+    bool ContinueFromSave();
     /** The score's current duck (1 full, MusicDuckLevel under speech or by the tavern at night). */
     float GetMusicDuck() const { return MusicDuck; }
     /** Which score the region timer has on: 0 docks, 1 sewer, 2 night, 3 Chult, 4 Chult's bridge and far side. */
@@ -229,6 +235,17 @@ private:
     TWeakObjectPtr<UWorld> MenuTestWorld;
     void ShowTitleMenu();
     void ShowMenu(bool Checkpoints);
+    /** The pause menu (user 2026-11-13): Esc or the gamepad's Start, outside cutscenes. Resume, Save Game,
+     *  Quit Game; later options (tutorial text, the golden guide lights) go here too. */
+    void ShowPause();
+    void ClosePause();
+    bool CanPause() const;
+    bool bPauseOpen = false;
+    TSharedPtr<class STextBlock> PauseStatus;
+    FString PauseTestPoint;
+    int32 PauseTestStage = 0, PauseTestFailures = 0;
+    double PauseTestNext = 0;
+    void TickPauseTest();
     /** The stamina ring under the cigarette count (user 2026-10-08). */
     void DrawStamina(const class AChuckCharacter* Chuck, float Px, float Top);
     UPROPERTY() class UTexture2D* StaminaEmblem = nullptr;

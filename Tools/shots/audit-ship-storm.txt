@@ -1,0 +1,4 @@
+# Unshadowed lights that reach strand hair at the ShipStorm checkpoint (LightAudit.h). Tools/Take-Shots.ps1 Tools/shots/audit-ship-storm.txt
+at ShipStorm
+wait 8
+audit

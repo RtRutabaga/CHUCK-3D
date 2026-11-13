@@ -312,6 +312,8 @@ public:
     static constexpr float BiteImmunity = 1.f;       // s
     /** Cigarettes collected (the currency; HUD counter). */
     int32 GetCigarettes() const { return CigaretteCount; }
+    /** Restored from the save (ChuckSave.h). */
+    void SetCigarettes(int32 Value) { CigaretteCount = FMath::Max(0, Value); }
     /** Picked up: each refills a point of Sanity first; once it's full they count up like coins. */
     void AddCigarettes(int32 Count);
     /** Breakables (grass tufts, jars, later small rats) broken by the slash so far. */

@@ -1,0 +1,4 @@
+# Unshadowed lights that reach strand hair at the ShipDeck checkpoint (LightAudit.h). Tools/Take-Shots.ps1 Tools/shots/audit-ship-deck.txt
+at ShipDeck
+wait 8
+audit

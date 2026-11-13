@@ -48,8 +48,8 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 3 | Tavern, pantry, fall to Chult | Done: full cutscene and Escape-skip both enter playable Chult landing |
 | 4 | Chult jungle | Started: verified playable landing, local respawn and ground loop; farther jungle remains |
 | 5 | Deeper into Chult | — |
-| 6 | The jungle temple | Started: the exterior, and the interior's first four maps (hidden stair, well, Great Hall, spike corridor, pier hall, dart gallery); creatures and later maps remain |
-| 7 | The pirate ship | Started: plan approved 2026-11-01 ([regions/SHIP.md](regions/SHIP.md)); milestone 1, the escape from the temple and the ship below decks ([SHIP.md](SHIP.md)); the deck, crew and ending remain |
+| 6 | The jungle temple | Built: the exterior, the interior's maps, skeletons and snakes, the trap run, the Astral wind, the sanctum with the heroes and the beholder, and the rubble map leading to the ship ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)) |
+| 7 | The pirate ship | Built: plan approved 2026-11-01 ([regions/SHIP.md](regions/SHIP.md)); the escape from the temple, below decks, the deck and rig, the crew and their voiced lines, and the storm ending ([regions/SHIP-STORM-ENDING.md](regions/SHIP-STORM-ENDING.md)) are built; the fall into Phlegethos is not |
 | 8 | Phlegethos | — |
 | 9 | The Feywild | — |
 | 10 | Zephyros' tower | — |
@@ -67,9 +67,8 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 
 ## Open questions for the user
 
-- **Saving.** The prototype has no persistent save. The 2D game used twelve-character save codes. A multi-region game needs a decision.
+- **Saving.** Decided 2026-11-13: a Save Game option in a pause menu (Esc or the gamepad's Start), one slot that resumes at the checkpoint Chuck last reached, and Continue on the title menu. Later pause-menu options: turning the tutorial text and the golden guide lights on or off.
 - **Combat depth.** Small enemies (rats, a zombie) exist. Combat in later regions follows each region plan.
-- **Naming.** The launcher, scripts and the Unreal `Content/Prototype` folder still use "Prototype". Renaming them is planned cleanup.
 
 ## Technical rules
 
