@@ -1269,7 +1269,7 @@ void ADockNPC::SetStormWork(EStormWork Work, const TArray<FVector>& Way, float Y
     }
     if (StormWork == EStormWork::None) { StormHome = GetActorTransform(); StormHomeYaw = HomeYaw; }
     StormWork = Work; StormWay = Way; StormLeg = 0; StormArrived = false; StormYaw = Yaw;
-    StormRopeA = RopeA; StormRopeB = RopeB; StormPhase = InPhase; StormClock = 0.f; StormBlend = 0.f;
+    StormRopeA = RopeA; StormRopeB = RopeB; StormPhase = InPhase; StormClock = 0.f; StormBlend = 0.f; StormBeat = 0.f; StormPace = StormForce;
     // The concertina, the tankard and the cutlasses put away; the fencing over.
     for (UStaticMeshComponent* P : PirateProps) if (P) P->SetVisibility(false);
     bFenceCue = false; bPlanted = false; bTurning = false; TurnHold = 0.f;
@@ -1313,6 +1313,15 @@ void ADockNPC::TickStormWork(float DeltaSeconds)
             }
         }
     }
+    // The heave's beat, integrated (user 2026-11-12: the crew shook on the lines, worse the longer the game ran - the
+    // cycle was world time over a period that followed every gust, so each change of period jumped the phase by the
+    // whole time elapsed). It follows the storm's force slowly, and even at its worst is a strong, steady heave.
+    StormPace = FMath::FInterpTo(StormPace, StormForce, DeltaSeconds, .4f);
+    {
+        const bool bSweat = StormWork == EStormWork::Sweat;
+        const float Period = FMath::Lerp(bSweat ? 2.8f : 3.f, bSweat ? 2.35f : 2.5f, FMath::Clamp((StormPace - .5f) / 1.5f, 0.f, 1.f));
+        StormBeat += DeltaSeconds / Period;
+    }
     JogBlend = FMath::FInterpTo(JogBlend, StormSpeed > 30.f ? 1.f : 0.f, DeltaSeconds, 6.f);
     JogTime += DeltaSeconds * StormSpeed / FMath::Max(ChefJogClip * HipScale, 1.f);
     StormBlend = FMath::FInterpConstantTo(StormBlend, StormArrived ? 1.f : 0.f, DeltaSeconds, 1.3f);
@@ -1330,12 +1339,9 @@ void ADockNPC::TickStormWork(float DeltaSeconds)
 
 namespace
 {
-    // Where in his heave (or his pull on the halyard) he is: shared by the men on one line (world time, their phase).
-    float StormCycle(const UWorld* World, float Phase, float Force, float Slow, float Quick)
-    {
-        const float Period = FMath::Lerp(Slow, Quick, FMath::Clamp((Force - .5f) / 1.5f, 0.f, 1.f));
-        return Frac(static_cast<float>(World->GetTimeSeconds()) / Period + Phase);
-    }
+    // Where in his heave (or his pull on the halyard) he is: the men on one line, sent together, keep together (their
+    // beats run alike from the same start; each has his phase).
+    float StormCycle(float Beat, float Phase) { return Frac(Beat + Phase); }
 }
 
 void ADockNPC::StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVector& HipsOffset)
@@ -1350,7 +1356,7 @@ void ADockNPC::StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVecto
     case EStormWork::Haul:
     {
         // Reaching forward along the line, then heaving back on it, his weight thrown back, knees bent.
-        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.8f, 2.05f);
+        const float U = StormCycle(StormBeat, StormPhase);
         const float Pull = U < .5f ? Ease01(U / .5f) : 1.f - Ease01((U - .5f) / .5f);
         const float Lean = Work * (5.f - 19.f * Pull);   // + forward, - back
         Delta[Spine1] = Pitch(.35f * Lean) * Delta[Spine1];
@@ -1364,7 +1370,7 @@ void ADockNPC::StormDelta(TArray<FQuat>& Delta, TArray<FQuat>& BoneDelta, FVecto
     case EStormWork::Sweat:
     {
         // Up on his toes reaching for the line high, then dropping his weight down onto it.
-        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.6f, 1.9f);
+        const float U = StormCycle(StormBeat, StormPhase);
         const float Up = U < .3f ? Ease01(U / .3f) : U < .4f ? 1.f : 1.f - Ease01((U - .4f) / .45f);
         const float Down = U < .4f ? 0.f : U < .85f ? Ease01((U - .4f) / .45f) : 1.f - Ease01((U - .85f) / .15f);
         Delta[Spine1] = Pitch(Work * (-3.f * Up + 9.f * Down)) * Delta[Spine1];
@@ -1436,7 +1442,7 @@ void ADockNPC::PoseStorm(TArray<FTransform>& Space)
         const FVector A = ToWorld.InverseTransformPosition(StormRopeA), B = ToWorld.InverseTransformPosition(StormRopeB);
         const FVector Dir = (A - B).GetSafeNormal();
         const float S0 = static_cast<float>(FVector::DotProduct(ChestAt - B, Dir));
-        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.8f, 2.05f);
+        const float U = StormCycle(StormBeat, StormPhase);
         float SF = 62.f, SB = 36.f, LiftF = 0.f, LiftB = 0.f;
         if (U < .5f) { const float E = Ease01(U / .5f); SF = FMath::Lerp(62.f, 36.f, E); SB = FMath::Lerp(36.f, 10.f, E); }
         else
@@ -1457,7 +1463,7 @@ void ADockNPC::PoseStorm(TArray<FTransform>& Space)
         // The halyard straight up before him: both hands high on it, then hauled down to his waist (his left above his right).
         const FVector A = ToWorld.InverseTransformPosition(StormRopeA), B = ToWorld.InverseTransformPosition(StormRopeB);
         const FVector Dir = (B - A).GetSafeNormal();
-        const float U = StormCycle(GetWorld(), StormPhase, StormForce, 2.6f, 1.9f);
+        const float U = StormCycle(StormBeat, StormPhase);
         const float High = static_cast<float>(FMath::Max(Shoulder[0].Z, Shoulder[1].Z)) + 40.f;
         const float Low = static_cast<float>(Space[BoneIndex[Pelvis]].GetLocation().Z) + 22.f;
         float H = Low;

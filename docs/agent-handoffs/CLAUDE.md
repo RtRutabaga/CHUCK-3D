@@ -2,6 +2,39 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 12 — the user's 23-item list (Claude)
+
+- **Asked:** 23 adjustments across Waterdeep, Chult, the temple and the ship. Mid-way the user clarified the skeleton throw: a forceful throw in a random direction, wherever it lands, with only the throw's damage; a wall-slam animation may come later, after playing it.
+- **Source:** `main` at d72817ae.
+- **Changed, item by item:**
+  1. Sewer zombies' rasps only on their own level (`DockNPC.cpp`: they were heard through the streets, 2D distance only).
+  2. `-ChuckCollisionAudit` (new `WaterdeepCollisionAudit.cpp`): every visible stone, plaster, wood or brick box a rat could walk into with no collision. It found two: the side gate's stone jambs beside the sewer hatch. They and the lintel are now solid (`DockSetting.cpp`); a rerun found 0.
+  3. The squiggle: twist is taken off the tail bones after the pose is sampled (`ChuckAnimInstance.cpp`). A rolled tail bone wrings the thin skinned tail into a corkscrew. Largest twist logged by the reruns: 15 degrees (a Roll). That is not proof the squiggle you saw is gone.
+  4. Landing leaves (`FallCutscene.cpp`): each leaf keeps one instance. They were cleared and re-added every frame, and indices shifted, so leaves lying still took each other's last-frame place: the renderer's motion between frames made them twitch.
+  5. New dinosaur roars, growls, calls, hisses and deaths (`Tools/build_dino_sfx.py`): real animals slowed down under the old voices. Six CC0 BigSoundBank recordings are used, in `SourceAssets/Audio/SFX/Dinos/Source/BigSoundBank`, credited, with hashes in its manifest. Unauditioned: I can't hear them.
+  6. A fall into the gorge: 1.6 s past the old line (about 24 m), the view held at the lip, then the Astral (`ChuckCharacter.cpp`).
+  7. Forward swing: stronger and wider after a back swing; on big leaps he lets go near the top of the forward swing. The stroke's best reach still decides the landing. Under boards (the bridge) the boost is 0.8x over 35 degrees and he lets go by 24 degrees, or his head rises through the planks (`docs/BRACHIATION.md`).
+  8. The river's path attackers only where the road runs by the river (within 11 m of the bank): the five beyond about S 28000, where the road runs through the low trees, are gone. 67 zombies, was 72. The river test's counts are computed now, and its third dodge trial moved to S 26300.
+  9. T-rex 15% larger; its stretch starts at S 39000 (was 35600), so the first two giants are outside it; its loop (20 legs) starts in the gap between the third and fourth giants.
+  10. Dino faces: their head bone is ~2 cm long, so the spine-wrapped UVs gave the whole head one u and smeared the pattern down the face. UVs on the head are now along it and round a level axis (`build_raptor.py`, `build_trex.py`). Only the meshes were reimported, by the new `Tools/reimport_dino_meshes.py`, which keeps every slot's material (the old import scripts would reset the M_DinoSkin instances). The clip FBX/headers were unchanged.
+  11. Temple interior sounds (skeletons, snakes) heard only from inside (`ChultTempleSoundAudible`); traps already were.
+  12. The skeleton's stoop grabs him, lifts him for 0.55 s, holds him 0.25 s and throws him in a random direction at 640 cm/s out and 400 up (`ThrowFromHeld`). The grab's one sanity is the throw's damage; a last-sanity grab is a plain blow.
+  13. Out of any sanctum pier (or the rubble map's copy) through its nearest face if he is ever left inside one (`ChultTempleSanctumPushOutOfPier`, logged `CHUCK_SANCTUM_PIER_PUSH_OUT`). Not reproduced here: the fling itself is swept, so whatever put him inside (a ledge or hang snap) is unknown.
+  14. Rubble crevice glow about half again.
+  15–19, 21–23. Ship: hammocks re-hung; captain's bed; galley stove (forge iron); the "simple lumber" pile (it was the spare sails); the seated pirate's voice played 1.45x; the storm heave integrated (it jumped by the whole time elapsed at every gust); the cap solid and no hole round the masthead; the binnacle hood solid (`docs/SHIP.md`).
+  20. Ladders and nets: stick up climbs up, stick down climbs down, whichever way the camera looks; the way he got on holds while the stick is held (toward it up; walked off a top onto it, down). Tests that climbed down by pushing away from the net now press down.
+- **Tests run:**
+  - Editor, ship: 22/22 (`Local/t1112e-ship.log`; first run 20/22 before the ladder fixes). Skeleton 10/10, random throw seen (`t1112d-skeleton.log`). T-rex 4/4, route 20 legs (`t1112b-trex.log`). Bridge 11/11, head check passed at 9.2 cm (`t1112d-bridge.log`). River zombies 5/5 (`t1112b-river.log`). Fall cutscene passed, leaves all down by 2 s (`t1112-fall.log`). Giant canopy 72/72, canopy 48/48, raptor 8/8 (`t1112c-*.log`). Collision audit 0 gaps (`t1112b-audit.log`).
+  - Sanctum: only the known intermittent `wizard_seal` failed (`t1112c-sanctum.log`).
+  - Packaged `Builds/ListFixCandidate`: Verify-Package 182 passes (`Local/verify-package-20261112-180219.log`); ship 22/22 in the editor on the final source (`Local/t1112e-ship.log`). Verify-Menu was not run.
+- **Not checked:** nothing played by hand; the sounds are not listened to; the pier push-out never fired in a test (no repro); the ladder change was not played with a controller.
+- **Remaining flaws:** the stove's forge iron reads shinier and more streaked than cast iron; the dino neck shows a small mapping seam behind the skull; the stove's iron and the bed are procedural boxes and spars; item 2's picture is matched only through the audit.
+- **Contract compatibility:** no rig, socket or clip changes (the dino meshes keep their skeletons; the clip data is unchanged).
+- **Binary/LFS:** six source MP3s (about 1.5 MB), two FBX, two skeletal meshes, 16 sound waves, all LFS. The 14 `Common/Materials` re-saves are still not this work and stay uncommitted.
+- **Launcher:** promoted as ListFix (receipt names d72817ae; this work is committed right after). `Windows-Previous-20261111-PreStormVoice` pruned.
+
+Next part of the work could be done by either — preference: Claude (play the list by hand: the ladders, the bridge swing, the skeleton throw, the sounds).
+
 ## November 11 (evening) — the ship spruced up; up from any hang (Claude)
 
 - **Asked:** the ship interior seen through the crevice to look like where he is heading (not the "3-boxed-grid"); a treasure chest; an ornate rug; nicer hammocks and sacks; pressing up while hanging pulls him up even onto tops he can't easily stand on (the ship's rails), and on the taller double rails from the middle bar up to the top one and onto it.

@@ -93,7 +93,7 @@ private:
     float PantryYaw = 0;
     // (2026-11-08: a leaf that reaches the floor lies still there; the floor litter he throws up is damp and heavy, back down
     // in about a second and a half.)
-    struct FLeaf { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Age; float Life; float Sink = 60.f; float Drift = 30.f; bool bGrounded = false; };
+    struct FLeaf { FVector Position; FVector Velocity; FRotator Rotation; FRotator Spin; float Age; float Life; float Sink = 60.f; float Drift = 30.f; bool bGrounded = false; bool bDead = false; int32 Instance = -1; bool bShown = false; };
     TArray<FLeaf> Leaves;
     float ShakeUntil = -1e9f;   // (the clock starts negative: no shake until set)
     int32 PartFrames[3] = {0, 0, 0};

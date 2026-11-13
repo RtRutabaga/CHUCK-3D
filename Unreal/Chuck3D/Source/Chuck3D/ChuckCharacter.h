@@ -153,7 +153,15 @@ public:
     // SwingForwardBeat more after a back swing of SwingBeatBackFull degrees
     // (none under SwingBeatBackFrom). One full swing back, then forward, makes
     // a big gap; held forward there is no back swing to drive from.
-    static constexpr float SwingForwardBeat = 1.25f;
+    // (11-12, "I barely go forward and I jump and make it"): the forward beat after a good back swing is much stronger
+    // and drives him over a wider arc (SwingForwardWindow either side of the bottom, not 30), and on a big leap he lets go
+    // near the top of the forward swing (its rate down to SwingReleaseRate of the stroke's peak, or past SwingReleaseDeg)
+    // instead of just past the bottom. Whether he lands is still the stroke's best reach, so back-then-forward lands.
+    static constexpr float SwingForwardBeat = 2.6f;
+    static constexpr float SwingForwardWindow = 42.f;
+    static constexpr float SwingReleaseRate = .45f;
+    static constexpr float SwingReleaseDeg = 44.f;
+    static constexpr float SwingReleaseDegDeck = 24.f;
     static constexpr float SwingBeatBackFrom = 10.f;
     static constexpr float SwingBeatBackFull = 20.f;
     static constexpr float SwingTopGrace = .15f;   // s after the forward swing tops out that a press still lets go with its best
@@ -273,6 +281,10 @@ public:
     void SetHeldPose(const FVector& Chest, float Yaw);
     /** The bite: all his sanity; limp, then the vanish from its hands. */
     void HeldBitten();
+    /** Thrown out of its hands (a temple skeleton, 2026-11-12): flying at Velocity, briefly safe from another blow. */
+    void ThrowFromHeld(const FVector& Velocity);
+    int32 GetThrows() const { return Throws; }
+    int32 GetPierPushOuts() const { return PierPushOuts; }
     bool IsHeld() const { return Gait == EGait::Held; }
     /** Held, or vanishing out of a zombie's hands (still drawn in its grip). */
     bool IsInGrip() const { return Gait == EGait::Held || bHeldVanish; }
@@ -547,7 +559,7 @@ private:
     TWeakObjectPtr<AActor> HeldBy;
     float HeldClock = 0, HeldBiteAt = -1, HeldLimp = 0;
     bool bHeldVanish = false;
-    int32 TimesHeld = 0;
+    int32 TimesHeld = 0, Throws = 0;
     void UpdateHeld(float DeltaSeconds);
     // The sewer's water slide (SewerSlide.cpp): carried down, out at the pier.
     void BeginSlide(float Into);
@@ -559,6 +571,9 @@ private:
     FRotator SavedCameraRotation = FRotator::ZeroRotator;
     FVector ExitNormal = FVector::ZeroVector, ExitEdge = FVector::ZeroVector;
     bool bSlideCamera = false, bAutoClimb = false, bExitFound = false;
+    int32 PierPushOuts = 0;
+    float GorgeFallClock = -1.f;                  // falling into the canyon gorge past the line (2026-11-12)
+    static constexpr float GorgeFallTime = 1.6f;   // seconds of it before the Astral takes him
     int32 Slides = 0;
     int32 Respawns = 0;
     void BeginVanish();
@@ -692,6 +707,7 @@ private:
     FVector SwingCentreFacing(const FVector& Grip, float BodyDeg, const FVector& Forward) const;
     // A jump waiting for the swing to build (since when; whether it has swung toward the target yet).
     float SwingWaitSince = -1, SwingReachPrev = 0; int32 SwingWaitTarget = -1; bool bSwingWaitToward = false;
+    float SwingStrokePeak = 0;   // the fastest this stroke toward a waited leap's grip has gone (rad/s)
     float SwingBackAmp = 0, SwingTurnedAt = -1, SwingTurnSign = 0;   // the last back swing's height (deg); when and which way the swing last turned
     // A leap without the swing for it: falls short (and that grip can't be caught on the way down).
     bool bSwingLeapShort = false; int32 SwingMissed = -1; float SwingMissUntil = -1; int32 SwingShorts = 0;

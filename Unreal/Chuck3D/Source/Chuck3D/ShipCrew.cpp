@@ -176,6 +176,7 @@ void AShipCrew::PlaceCrew()
         {
             N->SitAtTable(ShipWorld(FVector(Stool.X, Stool.Y, LowerZ)), Face(Stool, FVector2D(TableX, TableY)), StoolTop, TableTop, ShipWorld(FVector(ArrivalAft, 0, LowerZ + 150)));
             N->SetPirateVoice(TEXT("PirateSeated"), { TEXT("SEA_01") }, { TEXT("SEA_02") }, { TEXT("SEA_ARR") });
+            N->SetVoiceVolume(1.45f);   // (user 2026-11-12: "a little louder"; his takes are a little quieter than the others')
         }
     }
     if (ADockNPC* N = Add(EDockHuman::PirateChef, ShipWorld(FVector(ChefAt.X, ChefAt.Y, LowerZ)), ChefYaw))

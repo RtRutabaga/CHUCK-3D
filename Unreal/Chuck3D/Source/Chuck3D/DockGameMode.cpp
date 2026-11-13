@@ -882,6 +882,12 @@ void ADockGameMode::StartPlay()
         FTimerHandle GrabCheck;
         World->GetTimerManager().SetTimer(GrabCheck,[World](){StartZombieGrabReview(World);},4.f,false);
     }
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit")))
+    {
+        extern void StartWaterdeepCollisionAudit(UWorld*);
+        FTimerHandle AuditCheck;
+        World->GetTimerManager().SetTimer(AuditCheck,[World](){StartWaterdeepCollisionAudit(World);},6.f,false);
+    }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))
     {
         extern void StartZombieImpactReview(UWorld*);

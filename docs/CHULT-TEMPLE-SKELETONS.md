@@ -107,3 +107,7 @@ Read-only sources: `docs/development/PHASE-4.md` and `PHASE-6.md`, `src/entities
 - Seventeen 104k-triangle skeletons are on screen at most a dozen at a time; LODs drop to 7k vertices. Cooked frame cost in the pier hall has not been measured separately.
 - The mesh is the realistic CC0 model with generated surface detail, not a hand-painted texture. Close up its joints are clean, rigid pieces with no cartilage or wear at the contacts.
 - Skeletons of the shrine hall (map 7) and the final chamber come with those maps.
+
+## The grab throws him (2026-11-12)
+
+User: "make their squat then scratch into a squat then pick chuck up and throw him". When the stoop's hand meets him, it takes him (`AChuckCharacter::BeginHeld`, one sanity) and lifts him from the floor to before its chest over 0.55 s. It holds him there 0.25 s, then throws him hard in a random direction (any way round), at 640 cm/s out and 400 up (user's clarification: random, and wherever he lands is fine; a slam-into-a-wall animation may come later, after the user has played it) (`ThrowFromHeld`; 0.9 s safe from another blow). It may throw him into a trap or a pit. A grab that would take his last sanity is an ordinary blow. Struck down while holding him, it drops him.

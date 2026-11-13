@@ -75,6 +75,7 @@ struct FChuckAnimResult
     /** Stance locks dropped because a paw was pulled out of reach (cumulative). */
     int32 Releases = 0;
     int32 Evaluations = 0;
+    float TailTwist = 0.f;   // the most twist taken off a tail bone so far (degrees; 2026-11-12)
 };
 
 struct FChuckAnimProxy : public FAnimInstanceProxy

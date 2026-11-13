@@ -20,7 +20,7 @@ class AChuckCharacter;
  * than his sprint and, after a clear tell, bites once - he dies. A roll or side
  * jump through the tell can still beat one bite. Up in the giants (15-17 m) it
  * cannot reach him: it stalks beneath, growling and snapping up, then gives up.
- * It never leaves its stretch (S 35600-50400), so the far bank, the deep jungle
+ * It never leaves its stretch (S 39000-50400), so the far bank, the deep jungle
  * and the temple are safe - and so is the last giant's liana down - and it
  * cannot be scratched to death.
  */
@@ -67,7 +67,9 @@ public:
     static constexpr float ReachHeight = 330.f;      // his feet above its own that it can still bite
     static constexpr float Patience = 20.f;          // out of reach before it gives up
     static constexpr float SnapEvery = 3.2f;
-    static constexpr float TerritoryFrom = 35600.f;   // canyon frame S
+    // Canyon frame S. From 39000 (2026-11-12; was 35600): the first two giants (S 36600, 37900) are outside it, so
+    // climbing the first is never within its reach.
+    static constexpr float TerritoryFrom = 39000.f;
     // Ends just short of the last giant's liana (it comes down at S~50700): the canopy's way out is safe.
     static constexpr float TerritoryTo = 50400.f;
 

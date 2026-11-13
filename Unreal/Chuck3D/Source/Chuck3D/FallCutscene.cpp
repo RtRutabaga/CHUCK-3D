@@ -451,25 +451,52 @@ void AFallCutscene::Burst(const FVector& At, int32 Count, float Speed, bool bLit
 void AFallCutscene::UpdateLeaves(float DeltaSeconds)
 {
     if (!FallingLeaves) return;
+    // Each leaf keeps its own instance for good (user 2026-11-12: the litter fluttered after the rustle). They were all
+    // cleared and re-added each frame, and a leaf gone or one at the lens shifted every index after it, so a leaf lying
+    // still took another's last-frame place: the renderer's motion between frames made them twitch. Now a leaf on the
+    // floor is written once, when it lands, and never again; a gone one, or one at the lens, is shrunk to nothing.
     const float Floor = LandingSpot().Z + 2.f;
-    FallingLeaves->ClearInstances();
-    for (int32 I = Leaves.Num() - 1; I >= 0; --I)
+    const FVector Lens = Camera ? Camera->GetActorLocation() : FVector::ZeroVector;
+    bool bDirty = false;
+    for (int32 I = 0; I < Leaves.Num(); ++I)
     {
         FLeaf& L = Leaves[I];
+        if (L.bDead) continue;
         L.Age += DeltaSeconds;
-        // Down on the floor it lies where it fell (it stays: no leaf vanishes off the ground).
-        if (L.bGrounded) continue;
-        if (L.Age > L.Life) { Leaves.RemoveAtSwap(I); continue; }
-        // Thrown out, then caught by the air: a fluttering sink.
-        L.Velocity *= FMath::Max(0.f, 1.f - 2.5f * DeltaSeconds);
-        L.Velocity.Z = FMath::Max(L.Velocity.Z - 300.f * DeltaSeconds, -L.Sink);
-        L.Position += (L.Velocity + FVector(FMath::Sin(L.Age * 3.f + I) * L.Drift, FMath::Cos(L.Age * 2.3f + I) * L.Drift, 0)) * DeltaSeconds;
-        if (L.Position.Z <= Floor) { L.Position.Z = Floor; L.Velocity = FVector::ZeroVector; L.Spin = FRotator::ZeroRotator; L.Rotation.Pitch = 0; L.Rotation.Roll = 0; L.bGrounded = true; }
-        L.Rotation += L.Spin * DeltaSeconds;
+        bool bMoved = false;
+        if (!L.bGrounded)
+        {
+            if (L.Age > L.Life) L.bDead = true;
+            else
+            {
+                // Thrown out, then caught by the air: a fluttering sink.
+                L.Velocity *= FMath::Max(0.f, 1.f - 2.5f * DeltaSeconds);
+                L.Velocity.Z = FMath::Max(L.Velocity.Z - 300.f * DeltaSeconds, -L.Sink);
+                L.Position += (L.Velocity + FVector(FMath::Sin(L.Age * 3.f + I) * L.Drift, FMath::Cos(L.Age * 2.3f + I) * L.Drift, 0)) * DeltaSeconds;
+                // Down on the floor it lies where it fell (it stays: no leaf vanishes off the ground).
+                if (L.Position.Z <= Floor) { L.Position.Z = Floor; L.Velocity = FVector::ZeroVector; L.Spin = FRotator::ZeroRotator; L.Rotation.Pitch = 0; L.Rotation.Roll = 0; L.bGrounded = true; }
+                L.Rotation += L.Spin * DeltaSeconds;
+                bMoved = true;
+            }
+        }
+        // None right at the lens, where a leaf is only a blur.
+        const bool bShow = !L.bDead && FVector::DistSquared(L.Position, Lens) > FMath::Square(160.f);
+        const float Grow = FMath::Min(1.f, L.Age * 6.f);
+        if (bShow && Grow < 1.f) bMoved = true;
+        if (L.Instance < 0)
+        {
+            L.Instance = FallingLeaves->AddInstance(FTransform(L.Rotation, L.Position, FVector(bShow ? Grow * 1.4f : 0.f)), true);
+            L.bShown = bShow;
+            continue;
+        }
+        if (!bMoved && bShow == L.bShown) continue;
+        // (Appearing or vanishing is a teleport, not motion.)
+        const bool bTeleport = bShow != L.bShown || L.bGrounded;
+        FallingLeaves->UpdateInstanceTransform(L.Instance, FTransform(L.Rotation, L.Position, FVector(bShow ? Grow * 1.4f : 0.f)), true, false, bTeleport);
+        L.bShown = bShow;
+        bDirty = true;
     }
-    // None right at the lens, where a leaf is only a blur.
-    const FVector Lens = Camera ? Camera->GetActorLocation() : FVector::ZeroVector;
-    for (const FLeaf& L : Leaves) if (FVector::DistSquared(L.Position, Lens) > FMath::Square(160.f)) FallingLeaves->AddInstance(FTransform(L.Rotation, L.Position, FVector(FMath::Min(1.f, L.Age * 6.f) * 1.4f)), true);
+    if (bDirty) FallingLeaves->MarkRenderStateDirty();
 }
 
 FVector AFallCutscene::ChuckTarget() const
@@ -791,7 +818,7 @@ void AFallCutscene::Events(float From, float To)
             {
                 int32 Air = 0, Settled = 0;
                 for (const FLeaf& L : Leaves)
-                    if (FVector::DistSquared2D(L.Position, G) < FMath::Square(500.f) && L.Position.Z < G.Z + 400.f) { if (L.bGrounded) ++Settled; else ++Air; }
+                    if (!L.bDead && FVector::DistSquared2D(L.Position, G) < FMath::Square(500.f) && L.Position.Z < G.Z + 400.f) { if (L.bGrounded) ++Settled; else ++Air; }
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FALL_CUTSCENE_LEAVES after=%.0f airborne=%d grounded=%d"), After, Air, Settled);
             }
     }

@@ -6,26 +6,26 @@
     {
       "name": "SFX_TRexRoar_00",
       "file": "SFX_TRexRoar_00.wav",
-      "duration": 4.05,
-      "sha256": "c855ba91c77500d29c8be32bdbf7a47781486129bfb17909d54f668278a6eb6d"
+      "duration": 4.5,
+      "sha256": "92c7131992b9d2759b08aa23b5aa0500c2d75fc2d913550352a5ba530a367248"
     },
     {
       "name": "SFX_TRexRoar_01",
       "file": "SFX_TRexRoar_01.wav",
-      "duration": 3.7,
-      "sha256": "03a25d9617216177bd8c6c8e2bb44da74b5aa522d1e549380706ed14ed26cb93"
+      "duration": 3.767,
+      "sha256": "4dc0eb53c07f6d197aaab9392a905759727fbef5dfbd7e32c3688068e374271f"
     },
     {
       "name": "SFX_TRexGrowl_00",
       "file": "SFX_TRexGrowl_00.wav",
-      "duration": 3.444,
-      "sha256": "ea23dc3273f9a62e259a3485226e9fdff8af55f58b4d639c99ea25f0a8bad774"
+      "duration": 3.518,
+      "sha256": "3e97b4650fada662ff5e8c3dc66f1c844ece5f4a5ee7975c37be05330eb75240"
     },
     {
       "name": "SFX_TRexDeath_00",
       "file": "SFX_TRexDeath_00.wav",
-      "duration": 5.176,
-      "sha256": "f71e9ff5317007b471ec92bddf31fb9b2280748bb55a91148751d5e6b28e286d"
+      "duration": 5.376,
+      "sha256": "e253eaf21d9e2a684c89ad179e994b3dbbc1df34dfd84dd854c129a39754a42e"
     },
     {
       "name": "SFX_TRexSnap_00",
@@ -54,20 +54,20 @@
     {
       "name": "SFX_RaptorCall_00",
       "file": "SFX_RaptorCall_00.wav",
-      "duration": 1.079,
-      "sha256": "7e1f0b1bb9020d1b7840f41a1b7fb37cf89986d6754833a1c692870e2b104498"
+      "duration": 1.538,
+      "sha256": "2758b6c19b0335b029e83a8d5f9fb18ceb7360ce6fbd886fdccd5ecb732eb42f"
     },
     {
       "name": "SFX_RaptorHiss_00",
       "file": "SFX_RaptorHiss_00.wav",
-      "duration": 0.52,
-      "sha256": "d18a64038b9eef714627ff21bf4cfb83924cdd3f001952bb2ab42937ddb613cd"
+      "duration": 1.389,
+      "sha256": "ed1afa23329dd12350e798f8d33d44799a9335bfbb418f06c1f8367fcebc9b8b"
     },
     {
       "name": "SFX_RaptorDeath_00",
       "file": "SFX_RaptorDeath_00.wav",
-      "duration": 1.372,
-      "sha256": "20a1f02f7909ea661ad4bd86e9ac20c00842fe26d76e0ea28732fb22241fa1e4"
+      "duration": 1.422,
+      "sha256": "74fd8b2dc7d3a7082f78eb92e6b3740ee5e1326b6a2b92b6e0c0ed9b410acaf3"
     },
     {
       "name": "SFX_RaptorSnap_00",

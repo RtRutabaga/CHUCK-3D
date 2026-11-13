@@ -1566,8 +1566,20 @@ void AChuckCharacter::SwingJump()
             && SwingTurnSign == Sign && Now - SwingTurnedAt < SwingTopGrace;
         if (bJustTopped && bPressedNow) bGo = true;
         else if (!bMovingToward) bGo = bSwingWaitToward || (!bTestSwingPump && ((Wait > .45f && GetSwingAmplitude() < 4.f) || Wait > 1.f));
-        else { bGo = bSwingWaitToward && bInFront && Have < SwingReachPrev - .5f; bSwingWaitToward = true; }   // (in front of the grip and past the stroke's best point)
-        const float Best = bMovingToward || bJustTopped ? FMath::Max(Have, SwingStrokeBest(Centres)) : Have;
+        else
+        {
+            // In front of the grip and up toward the top of the stroke: its rate fallen well off its peak, or high.
+            if (!bSwingWaitToward) SwingStrokePeak = 0.f;
+            SwingStrokePeak = FMath::Max(SwingStrokePeak, FMath::Abs(SwingRate));
+            // (Under boards - the bridge - no higher than SwingReleaseDegDeck: pitched further, his head would rise through them in the leap.)
+            const bool bUnderDeck = Grips[SwingGrip].Depth > 0.f || Grips[Target].Depth > 0.f;
+            bGo = bSwingWaitToward && bInFront && (bUnderDeck ? SwingAngle * Sign > FMath::DegreesToRadians(SwingReleaseDegDeck) || FMath::Abs(SwingRate) < SwingReleaseRate * SwingStrokePeak
+                                                              : FMath::Abs(SwingRate) < SwingReleaseRate * SwingStrokePeak || SwingAngle * Sign > FMath::DegreesToRadians(SwingReleaseDeg));
+            bSwingWaitToward = true;
+        }
+        // (Released near the stroke's top since 2026-11-12: the reach this stroke has already shown counts, so a swing that
+        // could make it does.)
+        const float Best = FMath::Max(bMovingToward || bJustTopped ? FMath::Max(Have, SwingStrokeBest(Centres)) : Have, bSwingWaitToward ? SwingReachPrev : 0.f);
         if (bGo && Best < Need && bTestSwingPump && Wait < 6.f) { bGo = false; bSwingWaitToward = false; SwingReachPrev = 0.f; }   // (route tests: the next stroke)
         SwingReachPrev = bMovingToward ? FMath::Max(SwingReachPrev, Have) : 0.f;   // (this stroke's best)
         if (!bGo) { bSwingJumpQueued = true; return; }
@@ -1876,7 +1888,19 @@ void AChuckCharacter::EnterLadder(int32 Index)
     const float Z = FMath::Clamp(static_cast<float>(LadderFrom.Z), LadderBottomOf(C), LadderTopOf(C));
     const float Reach = ChuckClimbSideTravel(C, Z, LadderBottomOf(C), LadderTopOf(C));
     LadderSide = FMath::Clamp(static_cast<float>(FVector::DotProduct(LadderFrom - ChuckClimbPoint(C, Z), FVector::CrossProduct(FVector::UpVector, C.Out))), -Reach, Reach);
-    LadderLatchSign = 0; LadderNoRemount = -1;
+    LadderNoRemount = -1;
+    // The way he got on holds while the stick stays held (TickLadder): pushed on toward it, up; walked off a top or an
+    // edge onto it, away from it, down.
+    {
+        const FVector Stick = StickWorld();
+        const float Toward = static_cast<float>(FVector::DotProduct(Stick, ChuckClimbFacing(C, Z)));
+        LadderLatchSign = 0;
+        if (Stick.Size2D() >= .3f && FMath::Abs(Toward) > .3f)
+        {
+            LadderLatchDir = Stick.GetSafeNormal2D();
+            LadderLatchSign = FMath::Sign(Toward);
+        }
+    }
     SetActorRotation(ChuckClimbFacing(C, Z).Rotation());
     SetClip(EClip::WallRun, FMath::Frac(LadderPhase) * Period(EClip::WallRun), .12f);
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = false; bRunJump = bSprintLeap = false; RunWeight = 0;
@@ -1900,7 +1924,7 @@ void AChuckCharacter::FallToDeath()
     Movement->StopMovementImmediately();
     Movement->DisableMovement();
     LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
-    RestoreSlideCamera(); LadderIndex = -1; bClimbReverse = false;
+    RestoreSlideCamera(); LadderIndex = -1; bClimbReverse = false; GorgeFallClock = -1.f;
     Gait = EGait::Astral; AstralPhase = EAstral::Vanishing; AstralClock = .8f; bAstralFaded = true;
     SetAstralHidden(true);
     CameraFade(0.f, 1.f, .35f);
@@ -2166,6 +2190,20 @@ void AChuckCharacter::HeldBitten()
     Sanity = 0;
     HeldBiteAt = HeldClock;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_HELD_BITE sanity=%d after=%.2f"), Sanity, HeldClock);
+}
+void AChuckCharacter::ThrowFromHeld(const FVector& Velocity)
+{
+    if (Gait != EGait::Held || bHeldVanish) return;
+    HeldBy.Reset();
+    auto* Movement = GetCharacterMovement();
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = Velocity;
+    Gait = EGait::Air; bRunJump = bSprintLeap = false;
+    BiteImmuneUntil = GetWorld()->GetTimeSeconds() + .9f;
+    SetClip(EClip::JumpLoop, 0, .1f);
+    PreviousMotionLocation = GetActorLocation();
+    ++Throws;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN velocity=%s sanity=%d"), *Velocity.ToCompactString(), Sanity);
 }
 void AChuckCharacter::UpdateHeld(float DeltaSeconds)
 {
@@ -2628,19 +2666,16 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         LadderClock += DeltaSeconds;
         const FVector Stick = StickWorld();
         const FVector Facing = ChuckClimbFacing(C, static_cast<float>(Location.Z));
-        float Want = static_cast<float>(FVector::DotProduct(Stick, Facing));
-        if (!C.Approach.IsNearlyZero())
+        // Stick up climbs up and stick down climbs down, whichever way the camera looks (user 2026-11-12: going down,
+        // the key to press changed with the camera; was the stick's world direction toward the ladder). The way he got on
+        // holds while the stick stays held that way (EnterLadder): walked onto it from the top holding on toward it, he
+        // keeps going down until the stick is let go or turned.
+        (void)Facing;
+        float Want = InputForward;
+        if (LadderLatchSign != 0)
         {
-            // Turning round on it: the way the stick set going stays that way while it is held so.
-            const FVector Dir = Stick.GetSafeNormal2D();
-            if (Stick.Size2D() < .3f) LadderLatchSign = 0;
-            else if (LadderLatchSign != 0 && FVector::DotProduct(Dir, LadderLatchDir) > .7f) Want = LadderLatchSign * LadderLatchUp * static_cast<float>(Stick.Size2D());
-            else
-            {
-                LadderLatchDir = Dir;
-                LadderLatchSign = FMath::Abs(Want) > .3f ? FMath::Sign(Want) : 0.f;
-                LadderLatchUp = FMath::Abs(Want) / static_cast<float>(Stick.Size2D());
-            }
+            if (Stick.Size2D() < .3f || FVector::DotProduct(Stick.GetSafeNormal2D(), LadderLatchDir) < .5f) LadderLatchSign = 0;
+            else Want = LadderLatchSign * static_cast<float>(Stick.Size2D());
         }
         const float Climb = FMath::Abs(Want) > .3f ? FMath::Clamp(Want * 1.3f, -1.f, 1.f) : 0.f;
         const float Z = FMath::Clamp(static_cast<float>(Location.Z) + Climb * LadderSpeed * DeltaSeconds, Bottom, Top);
@@ -2698,11 +2733,15 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         // the other, so swinging back and then forward is what builds it. From a
         // still hang a push starts it.
         const float SwingDeg = FMath::Abs(FMath::RadiansToDegrees(SwingAngle));
-        if (FMath::Abs(Push) > .3f && SwingDeg < 30.f)
+        // (Forward, the way he faces, after a good back swing: a harder beat, over a wider arc.)
+        const float BackDrive = Push > 0.f && SwingRate > 0.f ? FMath::Clamp((SwingBackAmp - SwingBeatBackFrom) / (SwingBeatBackFull - SwingBeatBackFrom), 0.f, 1.f) : 0.f;
+        // (Under boards - the bridge - a little less, over a narrower arc: higher, his head would rise between them.)
+        const bool bUnderBoards = GetChuckSwingGrips()[SwingGrip].Depth > 0.f;
+        const float WindowDeg = FMath::Lerp(30.f, bUnderBoards ? 35.f : SwingForwardWindow, BackDrive);
+        if (FMath::Abs(Push) > .3f && SwingDeg < WindowDeg)
         {
-            const float Window = FMath::Square(FMath::Cos(SwingDeg / 30.f * HALF_PI));
-            // (Forward, the way he faces, after a good back swing: a harder beat.)
-            const float Beat = Push > 0.f && SwingRate > 0.f ? 1.f + SwingForwardBeat * FMath::Clamp((SwingBackAmp - SwingBeatBackFrom) / (SwingBeatBackFull - SwingBeatBackFrom), 0.f, 1.f) : 1.f;
+            const float Window = FMath::Square(FMath::Cos(SwingDeg / WindowDeg * HALF_PI));
+            const float Beat = 1.f + SwingForwardBeat * (bUnderBoards ? .8f : 1.f) * BackDrive;
             // (A small swing, or none: the push is a lean, the legs drawn that
             // way - held back from a still hang he swings back about 20 degrees
             // and hangs back there; turned forward at the top, he goes. 11-02:
@@ -3399,6 +3438,13 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             if (bStepGait && P.bStance[I] && !bPrevStance[I]) PlayStep(Pose.Evaluations ? Pose.BallWorld[I] : Location, Gait == EGait::Turn ? ChuckClipData::WalkSpeed * .6f : Speed);
             bPrevStance[I] = P.bStance[I];
         }
+        // Tail twist taken off (ChuckAnimInstance, 2026-11-12): logged each time it passes a new 15-degree mark.
+        static float TailTwistLogged = 15.f;
+        if (Pose.TailTwist >= TailTwistLogged)
+        {
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_TAIL_TWIST_REMOVED max_deg=%.0f gait=%s clip=%d"), Pose.TailTwist, GetGaitName(), static_cast<int32>(Base));
+            TailTwistLogged = (FMath::FloorToFloat(Pose.TailTwist / 15.f) + 1.f) * 15.f;
+        }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
     if (Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap) P.bFootIK = false;
@@ -3616,7 +3662,44 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     UpdateMotion(DeltaSeconds);
     UpdateExhale(DeltaSeconds);
     // (The temple's sanctum, enlarged on 2026-10-23, has its floor below this line: it is not off the world.)
-    if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation()) && !InChultTempleSanctum(GetActorLocation()) && !InChultTempleRubble(GetActorLocation())) FallToDeath();
+    // Never left inside one of the sanctum's piers (user 2026-11-12: thrown into one by the beholder's blast, he was
+    // held in it by its walls).
+    if (bChultRespawn && (InChultTempleSanctum(GetActorLocation()) || InChultTempleRubble(GetActorLocation())) && !IsInGrip())
+    {
+        FVector Out = GetActorLocation();
+        if (ChultTempleSanctumPushOutOfPier(Out, GetCapsuleComponent()->GetScaledCapsuleRadius()))
+        {
+            SetActorLocation(Out, false, nullptr, ETeleportType::TeleportPhysics);
+            if (Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::WallRun || Gait == EGait::WallSide) { Gait = EGait::Air; GetCharacterMovement()->SetMovementMode(MOVE_Falling); }
+            ++PierPushOuts;
+        }
+    }
+    // Off the canyon bridge into the gorge (user 2026-11-12: "let him fall for a bit before dying"): past the line he
+    // keeps falling, the view held at the lip watching him drop away, for GorgeFallTime or until he strikes something.
+    FVector GorgeBank;
+    const bool bGorge = bChultRespawn && !IsAstral() && ChultBridgeRespawn(GetActorLocation(), GorgeBank);
+    if (bGorge && GetActorLocation().Z < -100)
+    {
+        if (GorgeFallClock < 0.f)
+        {
+            GorgeFallClock = 0.f;
+            if (!bSlideCamera)
+            {
+                SavedCameraRelative = Camera->GetRelativeLocation(); SavedCameraRotation = Camera->GetRelativeRotation();
+                SlideCameraAt = Camera->GetComponentLocation(); bSlideCamera = true;
+            }
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_GORGE_FALL_BEGIN at=%s"), *GetActorLocation().ToString());
+        }
+        GorgeFallClock += DeltaSeconds;
+        const bool bStruck = GetCharacterMovement()->IsMovingOnGround() && GorgeFallClock > .2f;
+        if (GorgeFallClock >= GorgeFallTime || bStruck || GetActorLocation().Z < -4000)
+        {
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_GORGE_FALL_END after_s=%.2f z=%.0f struck=%d"), GorgeFallClock, GetActorLocation().Z, bStruck ? 1 : 0);
+            GorgeFallClock = -1.f;
+            FallToDeath();
+        }
+    }
+    else if (GetActorLocation().Z < -100 && !IsWithinDockSewer(GetActorLocation()) && !IsWithinDockPantry(GetActorLocation()) && !InChultTempleSanctum(GetActorLocation()) && !InChultTempleRubble(GetActorLocation())) FallToDeath();
     // Down into one of the Astral ruptures round the jungle wreck (2026-10-18): an Astral death.
     else if (bChultRespawn && ChultWreckRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Off the temple well's stair into its pit, or into the pier hall's rift (2026-10-20): Astral.

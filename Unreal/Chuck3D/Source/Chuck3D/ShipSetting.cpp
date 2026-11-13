@@ -150,6 +150,7 @@ namespace
         FSurf Wheel;   // the helm's rim, spokes and handles, about its hub (2026-11-04: it turns)
         FSurf ForeRatlines;   // the fore lower shrouds' ratlines, which carry away in the storm (2026-11-08, ShipEnding.cpp)
         FSurf Carpet, Fringe, Sack;   // the captain's rug (its own UVs) and its fringe; the sacks' jute (2026-11-11)
+        FSurf StoveIron;   // the galley stove's blackened cast iron (2026-11-12; M_ForgeIron, not the rust)
     };
 
     UProceduralMeshComponent* Emit(AActor* Owner, const TCHAR* Name, FSurf& S, const TCHAR* Material, bool bSolid, bool bShadow, int32& Missing, int32& Triangles)
@@ -459,6 +460,36 @@ namespace
     {
         S.B(X0, X1, Y0, Y1, Top - Thick, Top);
         for (float X : {X0 + 6, X1 - 6 - Leg}) for (float Y : {Y0 + 6, Y1 - 6 - Leg}) S.B(X, X + Leg, Y, Y + Leg, Top - 200, Top - Thick);
+    }
+    // A soft pad (2026-11-12, the captain's bed): its top rounds down to its base all round within Round, puffed by Puff
+    // in the middle; denser toward the edges. Height(X, Y) gives its top there (for a blanket over it).
+    float CushionZ(float X, float Y, float X0, float X1, float Y0, float Y1, float Zb, float Zt, float Round, float Puff)
+    {
+        auto E = [&](float D) { const float K = FMath::Clamp(D / Round, 0.f, 1.f); return FMath::Sqrt(K * (2 - K)); };
+        const float U = FMath::Clamp((X - X0) / (X1 - X0), 0.f, 1.f), V = FMath::Clamp((Y - Y0) / (Y1 - Y0), 0.f, 1.f);
+        const float Edge = E(FMath::Min(X - X0, X1 - X)) * E(FMath::Min(Y - Y0, Y1 - Y));
+        return Zb + Edge * (Zt - Zb + Puff * FMath::Sin(PI * U) * FMath::Sin(PI * V));
+    }
+    void Cushion(FSurf& S, float X0, float X1, float Y0, float Y1, float Zb, float Zt, float Round, float Puff, int32 NU = 18, int32 NV = 12)
+    {
+        auto At = [&](float A, float Bb)
+        {
+            const float X = FMath::Lerp(X0, X1, .5f - .5f * FMath::Cos(PI * A)), Y = FMath::Lerp(Y0, Y1, .5f - .5f * FMath::Cos(PI * Bb));
+            return FVector(X, Y, CushionZ(X, Y, X0, X1, Y0, Y1, Zb, Zt, Round, Puff));
+        };
+        auto Nm = [&](float A, float Bb)
+        {
+            const float E = .004f;
+            FVector N = FVector::CrossProduct(At(FMath::Min(A + E, 1.f), Bb) - At(FMath::Max(A - E, 0.f), Bb), At(A, FMath::Min(Bb + E, 1.f)) - At(A, FMath::Max(Bb - E, 0.f)));
+            N = N.GetSafeNormal();
+            if (N.IsNearlyZero()) { const FVector C = At(A, Bb) - FVector((X0 + X1) * .5f, (Y0 + Y1) * .5f, Zb); N = C.GetSafeNormal(); }
+            return N.Z < 0 ? -N : N;
+        };
+        for (int32 I = 0; I < NU; ++I) for (int32 J = 0; J < NV; ++J)
+        {
+            const float A0 = float(I) / NU, A1 = float(I + 1) / NU, B0 = float(J) / NV, B1 = float(J + 1) / NV;
+            S.Quad(At(A0, B0), At(A1, B0), At(A1, B1), At(A0, B1), Nm(A0, B0), Nm(A1, B0), Nm(A1, B1), Nm(A0, B1));
+        }
     }
     // A shelf unit along the hull: uprights and boards (heights above the floor), its back to the side.
     TArray<FVector> GJars;   // where the jars stand (ship frame), gathered as the shelves are built
@@ -963,31 +994,50 @@ void AShipSetting::Build()
             }
         }
 
-        // Sailcloth: folded spare sails stacked by the starboard side, aft; coils of rope; a spare spar along port.
-        // Each folded sail is a stack of thin, uneven folds with a lashing round it.
-        auto Folded = [&](float X, float Y, float Z, float HX, float HY, int32 Folds, float Yaw)
+        // Coils of rope and a spare spar along port; the spare lumber stacked by the starboard side, aft.
+        // (2026-11-12, user: "right across from it there's a simple looking lumber pile, make it look good too": the
+        // spare sails stacked here read as plain boards.) Spare lumber, stacked as the crevice's pile is: courses of
+        // boards fore and aft, each board its own width and length and a little off its neighbours, on stickers laid
+        // across every few courses, lashed; a heavy timber or two on top.
+        auto Lumber = [&](float X, float Y, float Z, float HX, float HY, int32 Courses, float Yaw)
         {
-            float Top = Z;
-            for (int32 K = 0; K < Folds; ++K)
-            {
-                const float T = R.FRandRange(4.5f, 7.f);
-                P.Canvas.TurnedBox(FVector(X + R.FRandRange(-4, 4), Y + R.FRandRange(-5, 5), Top + T * .5f), FVector(HX * R.FRandRange(.94f, 1.02f), HY * R.FRandRange(.93f, 1.02f), T * .5f), FRotator(R.FRandRange(-1.5f, 1.5f), Yaw + R.FRandRange(-3, 3), R.FRandRange(-1.5f, 1.5f)));
-                Top += T * .92f;
-            }
             const FQuat Q(FRotator(0, Yaw, 0));
-            for (float U : {-.45f, .45f})
+            const FVector C(X, Y, 0);
+            float Top = Z;
+            constexpr float Board = 6.5f;
+            for (int32 K = 0; K < Courses; ++K)
             {
-                const FVector C = FVector(X, Y, 0) + Q.RotateVector(FVector(U * HX, 0, 0));
+                if (K > 0 && K % 3 == 0)
+                {
+                    // stickers across the stack
+                    for (float U : {-.75f, 0.f, .75f})
+                        P.Lumber.TurnedBox(C + Q.RotateVector(FVector(U * HX + R.FRandRange(-4, 4), 0, 0)) + FVector(0, 0, Top + 1.5f), FVector(3.5f, HY + 2, 1.5f), FRotator(0, Yaw + R.FRandRange(-3, 3), 0));
+                    Top += 3.f;
+                }
+                float Yb = -HY;
+                while (Yb < HY - 4)
+                {
+                    const float W = FMath::Min(R.FRandRange(17, 27), HY - Yb);
+                    const float L = HX * R.FRandRange(.86f, 1.f), Off = R.FRandRange(-6, 6);
+                    P.Lumber.TurnedBox(C + Q.RotateVector(FVector(Off, Yb + W * .5f, 0)) + FVector(0, 0, Top + Board * .5f),
+                        FVector(L, W * .5f - .4f, Board * .5f - .25f), FRotator(R.FRandRange(-.6f, .6f), Yaw + R.FRandRange(-1.2f, 1.2f), 0));
+                    Yb += W;
+                }
+                Top += Board;
+            }
+            for (float U : {-.5f, .5f})
+            {
+                const FVector At = C + Q.RotateVector(FVector(U * HX, 0, 0));
                 const FVector Ac = Q.RotateVector(FVector(0, HY + 3, 0));
-                P.Hemp.Cord({C - Ac + FVector(0, 0, Z + 1), C - Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Top + 1), C + Ac + FVector(0, 0, Z + 1)}, 1.4f);
+                P.Hemp.Cord({At - Ac + FVector(0, 0, Z + 1), At - Ac + FVector(0, 0, Top + 1), At + Ac + FVector(0, 0, Top + 1), At + Ac + FVector(0, 0, Z + 1)}, 1.4f);
             }
             P.Hidden.TurnedBox(FVector(X, Y, (Z + Top) * .5f), FVector(HX, HY, (Top - Z) * .5f), FRotator(0, Yaw, 0));
             return Top;
         };
-        const float Fold1 = Folded(-90, 245, Z0, 60, 85, 6, 0);
-        const float Fold2 = Folded(-95, 240, Fold1, 52, 70, 5, 6);
-        Folded(-80, 232, Fold2, 40, 58, 4, -10);
-        Folded(-105, 375, Z0, 45, InnerAt(-100, Z0 + 20) - 377, 4, 0);
+        const float Lum1 = Lumber(-90, 245, Z0, 60, 85, 8, 0);
+        Lumber(-88, 240, Lum1, 46, 62, 3, 4);
+        P.Wood.TurnedBox(FVector(-92, 222, Lum1 + 3 * 6.5f + 9), FVector(70, 9, 9), FRotator(0, 3, 1));   // a heavy timber laid on top
+        Lumber(-105, 375, Z0, 45, InnerAt(-100, Z0 + 20) - 377, 5, 0);
         // The mouth's lamplight, low: the light he crawls toward.
         auto* Mouth = NewObject<UPointLightComponent>(this); Mouth->SetupAttachment(RootComponent); Mouth->SetMobility(EComponentMobility::Movable);
         Mouth->SetWorldLocation(ShipWorld(FVector(SeamX1 + 70, SeamY + 60, Z0 + 55))); Mouth->SetIntensity(700); Mouth->SetAttenuationRadius(320);
@@ -999,13 +1049,105 @@ void AShipSetting::Build()
     // ---- The galley.
     {
         const float Z0 = LowerZ;
-        // The hearth: a brick firebox under an iron cooking top, its pipe up through the deck.
-        P.Brick.B(900, 1060, -80, 80, Z0, Z0 + 80);
-        P.Iron.B(910, 1050, -70, 70, Z0 + 80, Z0 + 140);
-        P.Dark.B(904, 912, -35, 35, Z0 + 20, Z0 + 62);
-        P.Flame.B(912, 930, -28, 28, Z0 + 20, Z0 + 34);
-        P.Iron.Spar(FVector(1010, 0, Z0 + 140), FVector(1010, 0, DeckZ + 120), 12, 12, 10);
-        P.Iron.Spar(FVector(960, -30, Z0 + 140), FVector(960, -30, Z0 + 175), 22, 20, 12);   // a great pot
+        // The galley stove (2026-11-12, user: "make the chef's oven look better"; it was an iron box on a brick one): a
+        // cast-iron firehearth on a brick footing in an iron tray. Its front: the fire behind a barred grate, the ash pit
+        // under it, two oven doors over it with hinges and latches; banded top and foot, rivets; a fiddle rail round the
+        // cooking top, a hood narrowing into the funnel, which goes up through the deck to a rain cap. On it a great
+        // cauldron, lidded, on its bail, and a kettle; a ladle and tongs on the rail; split logs stacked to port.
+        {
+            const float SX0 = 904, SX1 = 1054, SY0 = -66, SY1 = 66, Top = Z0 + 118;
+            P.Brick.B(892, 1066, -84, 84, Z0, Z0 + 16);                                   // the footing
+            P.StoveIron.B(886, 1072, -90, 90, Z0 + 16, Z0 + 18);                               // the tray
+            P.StoveIron.B(886, 1072, 87, 90, Z0 + 18, Z0 + 24); P.StoveIron.B(886, 1072, -90, -87, Z0 + 18, Z0 + 24);
+            P.StoveIron.B(886, 889, -87, 87, Z0 + 18, Z0 + 24); P.StoveIron.B(1069, 1072, -87, 87, Z0 + 18, Z0 + 24);
+            P.StoveIron.B(SX0 + 10, SX1, SY0, SY1, Z0 + 18, Top);                              // the body
+            P.StoveIron.B(SX0 - 3, SX1 + 3, SY0 - 3, SY1 + 3, Z0 + 18, Z0 + 26);               // its foot band
+            P.StoveIron.B(SX0 - 4, SX1 + 4, SY0 - 4, SY1 + 4, Top - 6, Top);                   // the cooking top
+            // The front plate, round the fire's mouth (Y +-42, 44..70 up) and the ash pit's (Y +-36, 30..39 up).
+            const float F0 = SX0, F1 = SX0 + 10;
+            P.StoveIron.B(F0, F1, SY0, -42, Z0 + 26, Z0 + 72); P.StoveIron.B(F0, F1, 42, SY1, Z0 + 26, Z0 + 72);
+            P.StoveIron.B(F0, F1, -42, 42, Z0 + 39, Z0 + 44);
+            P.StoveIron.B(F0, F1, -42, -36, Z0 + 26, Z0 + 39); P.StoveIron.B(F0, F1, 36, 42, Z0 + 26, Z0 + 39);
+            P.StoveIron.B(F0, F1, -36, 36, Z0 + 26, Z0 + 30);
+            P.StoveIron.B(F0, F1, SY0, SY1, Z0 + 70, Top - 6);
+            P.Dark.B(F1 - 1, F1 + .5f, -42, 42, Z0 + 30, Z0 + 72);
+            // The fire: a bed of coals and three tongues behind the grate's bars; a little glow in the ash pit.
+            P.Flame.B(F0 + 2, F1 - 1, -40, 40, Z0 + 44, Z0 + 49);
+            for (float Y : {-24.f, -2.f, 21.f}) P.Flame.TurnedBox(FVector(F1 - 3, Y, Z0 + 55), FVector(1.2f, 7, 7), FRotator(0, 0, Y * .3f));
+            P.Flame.B(F1 - 2, F1 - 1, -30, 30, Z0 + 30, Z0 + 32);
+            for (float Y = -38; Y <= 38.1f; Y += 7.6f) P.StoveIron.Spar(FVector(F0 - .5f, Y, Z0 + 44), FVector(F0 - .5f, Y, Z0 + 70), 1.1f, 1.1f, 6);
+            P.StoveIron.Spar(FVector(F0 - .5f, -42, Z0 + 57), FVector(F0 - .5f, 42, Z0 + 57), 1.f, 1.f, 6);
+            // The oven doors: raised panels, two hinges each on the outer side, a latch bar and its knob.
+            for (float S : {-1.f, 1.f})
+            {
+                const float Y0 = S < 0 ? -60.f : 4.f, Y1 = S < 0 ? -4.f : 60.f;
+                P.StoveIron.B(F0 - 2, F0, Y0, Y1, Z0 + 76, Z0 + 106);
+                P.StoveIron.B(F0 - 3.5f, F0 - 2, Y0 + 6, Y1 - 6, Z0 + 81, Z0 + 101);
+                const float Hy = S < 0 ? Y0 : Y1;
+                for (float Z : {Z0 + 80.f, Z0 + 100.f}) P.StoveIron.Spar(FVector(F0 - 2, Hy, Z - 3), FVector(F0 - 2, Hy, Z + 3), 1.6f, 1.6f, 8);
+                const float Ly = S < 0 ? Y1 - 8 : Y0 + 8;
+                P.StoveIron.B(F0 - 5, F0 - 3.5f, Ly - 1.2f, Ly + 1.2f, Z0 + 86, Z0 + 96);
+                P.Brass.Spar(FVector(F0 - 5, Ly, Z0 + 91), FVector(F0 - 8.5f, Ly, Z0 + 91), 1.6f, 2.2f, 8);
+            }
+            // Rivets along the bands' fronts.
+            for (float Y = SY0 + 4; Y < SY1 - 2; Y += 9.5f) for (float Z : {Z0 + 22.f, Top - 3.f})
+                P.StoveIron.Spar(FVector(SX0 - 3.5f, Y, Z), FVector(SX0 - 5.f, Y, Z), .9f, .5f, 6);
+            // The fiddle rail: posts at the corners and between, and the rail round them.
+            const float RX0 = SX0 - 1, RX1 = SX1 + 1, RY0 = SY0 - 1, RY1 = SY1 + 1, RZ = Top + 11;
+            for (float X : {RX0, (RX0 + RX1) * .5f, RX1}) for (float Y : {RY0, RY1}) P.StoveIron.Spar(FVector(X, Y, Top), FVector(X, Y, RZ), 1.1f, 1.1f, 6);
+            for (float X : {RX0, RX1}) P.StoveIron.Spar(FVector(X, 0, Top), FVector(X, 0, RZ), 1.1f, 1.1f, 6);
+            P.StoveIron.Rope({FVector(RX0, RY0, RZ), FVector(RX1, RY0, RZ), FVector(RX1, RY1, RZ), FVector(RX0, RY1, RZ), FVector(RX0, RY0, RZ)}, 1.f);
+            // The hood over the back of the top, narrowing into the funnel; the funnel up through the deck to its rain cap.
+            P.StoveIron.B(978, 1046, -46, 46, Top, Top + 26);
+            P.StoveIron.B(976, 1048, -48, 48, Top + 24, Top + 28);
+            P.StoveIron.Spar(FVector(1010, 0, Top + 28), FVector(1010, 0, Top + 50), 30, 12, 12);
+            P.StoveIron.Spar(FVector(1010, 0, Top + 50), FVector(1010, 0, DeckZ + 120), 12, 12, 12);
+            for (float Z : {DeckZ + 4.f, DeckZ + 60.f}) P.StoveIron.Spar(FVector(1010, 0, Z), FVector(1010, 0, Z + 4), 14, 14, 12);
+            P.StoveIron.Spar(FVector(1010, 0, DeckZ + 120), FVector(1010, 0, DeckZ + 124), 15, 15, 12);
+            for (int32 K = 0; K < 3; ++K)
+            {
+                const float A = K * 2 * PI / 3;
+                P.StoveIron.Spar(FVector(1010 + 13 * FMath::Cos(A), 13 * FMath::Sin(A), DeckZ + 124), FVector(1010 + 15 * FMath::Cos(A), 15 * FMath::Sin(A), DeckZ + 134), .8f, .8f, 5);
+            }
+            P.StoveIron.Spar(FVector(1010, 0, DeckZ + 133), FVector(1010, 0, DeckZ + 142), 24, 2, 14);   // the cap
+            // The great cauldron, lidded, on its bail; the kettle.
+            const FVector Pot(942, -28, Top);
+            P.StoveIron.Spar(Pot, Pot + FVector(0, 0, 4), 15, 19, 14);
+            P.StoveIron.Spar(Pot + FVector(0, 0, 4), Pot + FVector(0, 0, 26), 19, 21, 14);
+            P.StoveIron.Spar(Pot + FVector(0, 0, 26), Pot + FVector(0, 0, 29), 22.5f, 22.5f, 14);
+            P.StoveIron.Spar(Pot + FVector(0, 0, 29), Pot + FVector(0, 0, 32), 21, 6, 14);
+            P.StoveIron.Spar(Pot + FVector(0, 0, 32), Pot + FVector(0, 0, 35), 2.5f, 3.5f, 8);
+            {
+                TArray<FVector> Bail;
+                for (int32 K = 0; K <= 12; ++K) { const float A = PI * K / 12; Bail.Add(Pot + FVector(0, -22.5f * FMath::Cos(A), 26 + 20 * FMath::Sin(A))); }
+                P.StoveIron.Rope(Bail, .7f);
+            }
+            const FVector Kt(944, 34, Top);
+            P.StoveIron.Spar(Kt, Kt + FVector(0, 0, 13), 11, 12, 12);
+            P.StoveIron.Spar(Kt + FVector(0, 0, 13), Kt + FVector(0, 0, 19), 12, 7, 12);
+            P.StoveIron.Spar(Kt + FVector(0, 0, 19), Kt + FVector(0, 0, 22), 3, 1.8f, 8);
+            P.StoveIron.Spar(Kt + FVector(-9, 0, 7), Kt + FVector(-19, 0, 17), 2.6f, 1.2f, 8);   // the spout
+            {
+                TArray<FVector> Handle;
+                for (int32 K = 0; K <= 10; ++K) { const float A = PI * K / 10; Handle.Add(Kt + FVector(-7 * FMath::Cos(A), 0, 18 + 12 * FMath::Sin(A))); }
+                P.StoveIron.Rope(Handle, .9f);
+            }
+            // A ladle and tongs hung on the rail's port side.
+            P.StoveIron.Spar(FVector(960, RY0 - 1.5f, RZ + 2), FVector(960, RY0 - 3, RZ - 34), .8f, .8f, 6);
+            P.StoveIron.Spar(FVector(960, RY0 - 3, RZ - 34), FVector(960, RY0 - 3.5f, RZ - 40), 4.5f, 1.f, 10);
+            P.StoveIron.Spar(FVector(985, RY0 - 1.5f, RZ + 2), FVector(983, RY0 - 3, RZ - 30), .7f, .7f, 6);
+            P.StoveIron.Spar(FVector(988, RY0 - 1.5f, RZ + 2), FVector(990, RY0 - 3, RZ - 30), .7f, .7f, 6);
+            // Split logs stacked to port of it.
+            FRandomStream LR(1112);
+            for (int32 Row = 0; Row < 3; ++Row) for (int32 K = 0; K < 5 - Row; ++K)
+            {
+                const float Y = -104 - K * 13 - Row * 6.5f, Z = Z0 + 6 + Row * 11;
+                const float Lx = LR.FRandRange(-4, 4);
+                P.WoodDecor.Spar(FVector(962 + Lx, Y, Z), FVector(1040 + Lx, Y + LR.FRandRange(-2, 2), Z), 6.f, 5.5f, 7);
+            }
+            P.Hidden.B(SX0 - 4, SX1 + 4, SY0 - 4, SY1 + 4, Z0, Top);
+            P.Hidden.B(958, 1046, -170, -98, Z0, Z0 + 32);
+        }
         // A work table amidships, a counter along the starboard side (open underneath), a rack of shelves to port.
         Table(P.Wood, 560, 800, -75, 75, Z0 + 86);
         const float PH = InnerAt(880, Z0 + 60);
@@ -1068,14 +1210,99 @@ void AShipSetting::Build()
         }
         P.Wood.B(SternX + 2, SternX + 50, -InnerAt(SternX + 30, Z0 + 20) + 2, InnerAt(SternX + 30, Z0 + 20) - 2, Z0, Z0 + 45);
         const float SB = -InnerAt(-1350, Z0 + 40);
-        P.Wood.B(-1460, -1240, SB + 2, SB + 120, Z0, Z0 + 40);           // the bed's frame
-        P.Canvas.B(-1455, -1245, SB + 6, SB + 116, Z0 + 40, Z0 + 62);    // mattress
-        P.Hidden.B(-1455, -1245, SB + 6, SB + 116, Z0 + 40, Z0 + 66);
-        P.Rug.B(-1400, -1244, SB + 4, SB + 118, Z0 + 62, Z0 + 66);        // a blanket over it
-        P.Canvas.B(-1452, -1418, SB + 20, SB + 100, Z0 + 62, Z0 + 76);   // the pillow
-        for (float X : {-1460.f, -1250.f}) for (float Y : {SB + 2, SB + 112}) P.Brass.Spar(FVector(X + 5, Y + 4, Z0), FVector(X + 5, Y + 4, Z0 + 150), 4, 3.5f, 10);
-        P.Brass.Spar(FVector(-1455, SB + 6, Z0 + 140), FVector(-1455, SB + 116, Z0 + 140), 2.5f, 2.5f, 8);
-        P.Brass.Spar(FVector(-1245, SB + 6, Z0 + 120), FVector(-1245, SB + 116, Z0 + 120), 2.5f, 2.5f, 8);
+        // The captain's bed (2026-11-12, user: "make the captain's bed look better"; it was four boxes and brass poles): a
+        // panelled oak box bed on a plinth, a tall headboard against the stern with a carved crest and a lower footboard,
+        // turned posts with brass finials, a lee-board along the open side so he doesn't roll out in a sea, a soft
+        // mattress, two pillows, a sheet turned down over a blanket that hangs in folds over the side.
+        {
+            const float BX0 = -1460, BX1 = -1240, BY0 = SB + 2, BY1 = SB + 120;
+            P.Chest.B(BX0 + 5, BX1 - 5, BY0, BY1, Z0 + 7, Z0 + 36);                  // the box
+            P.Chest.B(BX0 + 2, BX1 - 2, BY0, BY1 + 3, Z0, Z0 + 7);                   // its plinth
+            P.Chest.B(BX0 + 3, BX1 - 3, BY0, BY1 + 2.5f, Z0 + 35, Z0 + 40);          // the capping rail
+            // Raised panels in moulded frames along the open side.
+            const float PanelLen = (BX1 - BX0 - 34) / 3;
+            for (int32 K = 0; K < 3; ++K)
+            {
+                const float X0 = BX0 + 12 + K * (PanelLen + 5), X1 = X0 + PanelLen;
+                P.WoodDecor.B(X0, X1, BY1, BY1 + .8f, Z0 + 11, Z0 + 32);
+                P.WoodDecor.B(X0 + 4, X1 - 4, BY1 + .8f, BY1 + 2, Z0 + 15, Z0 + 28);
+                P.Brass.B((X0 + X1) * .5f - 1.2f, (X0 + X1) * .5f + 1.2f, BY1 + 2, BY1 + 2.6f, Z0 + 20.5f, Z0 + 23.5f);
+            }
+            // Turned posts at the corners, each with a brass ball.
+            auto Post = [&](float X, float Y, float Top)
+            {
+                P.Chest.B(X - 5, X + 5, Y - 5, Y + 5, Z0, Z0 + 44);
+                P.Wood.Spar(FVector(X, Y, Z0 + 44), FVector(X, Y, Z0 + 50), 5.5f, 4.f, 12);
+                P.Wood.Spar(FVector(X, Y, Z0 + 50), FVector(X, Y, Top - 10), 3.6f, 3.f, 12);
+                P.Wood.Spar(FVector(X, Y, Top - 10), FVector(X, Y, Top - 6), 4.8f, 4.8f, 12);
+                P.Brass.Spar(FVector(X, Y, Top - 6), FVector(X, Y, Top - 3), 2.f, 4.f, 12);
+                P.Brass.Spar(FVector(X, Y, Top - 3), FVector(X, Y, Top + 3), 4.f, 1.f, 12);
+            };
+            for (float Y : {BY0 + 6, BY1 - 4}) { Post(BX0 + 5, Y, Z0 + 132); Post(BX1 - 5, Y, Z0 + 92); }
+            // The headboard: a panelled board between the head posts, its crest cut in a shallow arch.
+            P.Chest.B(BX0 + 1, BX0 + 7, BY0 + 6, BY1 - 4, Z0 + 36, Z0 + 108);
+            for (int32 K = 0; K < 2; ++K)
+            {
+                const float Y0 = BY0 + 14 + K * 52, Y1 = Y0 + 44;
+                P.WoodDecor.B(BX0 + 7, BX0 + 8.5f, Y0, Y1, Z0 + 62, Z0 + 100);
+            }
+            for (int32 K = 0; K < 12; ++K)
+            {
+                const float Ya = FMath::Lerp(BY0 + 6, BY1 - 4, K / 12.f), Yb = FMath::Lerp(BY0 + 6, BY1 - 4, (K + 1) / 12.f);
+                const float Mid = (K + .5f) / 12.f, Rise = 14 * FMath::Sin(PI * Mid);
+                P.Chest.B(BX0 + 1, BX0 + 7, Ya, Yb, Z0 + 108, Z0 + 110 + Rise);
+            }
+            P.Wood.Spar(FVector(BX0 + 4, BY0 + 6, Z0 + 109), FVector(BX0 + 4, BY1 - 4, Z0 + 109), 2.2f, 2.2f, 8);
+            // The footboard, lower, with one long panel.
+            P.Chest.B(BX1 - 7, BX1 - 1, BY0 + 6, BY1 - 4, Z0 + 36, Z0 + 78);
+            P.WoodDecor.B(BX1 - 8.5f, BX1 - 7, BY0 + 16, BY1 - 14, Z0 + 46, Z0 + 72);
+            P.Wood.Spar(FVector(BX1 - 4, BY0 + 6, Z0 + 79), FVector(BX1 - 4, BY1 - 4, Z0 + 79), 2.2f, 2.2f, 8);
+            // A short lee-board along the open side at the head, by the pillows (the blanket hangs over the side beyond it),
+            // on two brass pins.
+            P.Chest.B(BX0 + 8, BX0 + 52, BY1 - 3, BY1 + 1, Z0 + 40, Z0 + 74);
+            P.Wood.Spar(FVector(BX0 + 8, BY1 - 1, Z0 + 75), FVector(BX0 + 52, BY1 - 1, Z0 + 75), 2.f, 2.f, 8);
+            for (float X : {BX0 + 18.f, BX0 + 42.f}) P.Brass.Spar(FVector(X, BY1 + 1, Z0 + 57), FVector(X, BY1 + 3, Z0 + 57), 1.6f, 1.6f, 8);
+            // The bedding: the mattress, two pillows, a sheet turned down over the blanket.
+            const float MX0 = BX0 + 8, MX1 = BX1 - 8, MY0 = BY0 + 4, MY1 = BY1 - 4, MZ0 = Z0 + 38, MZ1 = Z0 + 58;
+            Cushion(P.Canvas, MX0, MX1, MY0, MY1, MZ0, MZ1, 7, 2.f, 22, 12);
+            const float Mz = MZ1 + 2;
+            Cushion(P.CanvasDecor, MX0 + 3, MX0 + 38, MY0 + 6, MY0 + 54, Mz - 3, Mz + 10, 9, 3.f, 12, 10);
+            Cushion(P.CanvasDecor, MX0 + 6, MX0 + 40, MY0 + 58, MY1 - 6, Mz - 3, Mz + 9, 9, 3.f, 12, 10);
+            // The blanket: over the mattress from below the pillows to the foot, and down over the open side in folds.
+            const float KX0 = MX0 + 46, KX1 = MX1 + 1;
+            constexpr int32 KU = 26, KV = 16;
+            auto Blanket = [&](float A, float Bb, float Lift)
+            {
+                const float X = FMath::Lerp(KX0, KX1, A);
+                const float Fold = 1.2f * FMath::Sin(X * .11f) * FMath::Sin(Bb * 7.f) + .8f * FMath::Sin(X * .05f + 1.3f);
+                if (Bb <= .8f)
+                {
+                    const float Y = FMath::Lerp(MY0 + 1, MY1 + 1, Bb / .8f);
+                    return FVector(X, Y, CushionZ(X, FMath::Min(Y, MY1 - .5f), MX0, MX1, MY0, MY1, MZ0, MZ1, 7, 2.f) + 1.4f + Lift + .5f * Fold);
+                }
+                const float H = (Bb - .8f) / .2f;   // down the open side, rounding over the edge
+                const float Ang = FMath::Min(H * 1.6f, 1.f) * HALF_PI;
+                const float R = 10.f, Drop = FMath::Max(0.f, H * 1.6f - 1.f) / .6f * 24.f;   // (clear of the box's panels as it hangs)
+                const float Sway = 1.8f * FMath::Sin(X * .16f) * FMath::Min(1.f, Drop / 8.f);
+                return FVector(X, MY1 + 1 + R * FMath::Sin(Ang) + Sway + Lift, MZ1 - R + 1.4f + R * FMath::Cos(Ang) - Drop + .3f * Fold);
+            };
+            for (int32 I = 0; I < KU; ++I) for (int32 J = 0; J < KV; ++J)
+            {
+                const float A0 = float(I) / KU, A1 = float(I + 1) / KU, B0 = float(J) / KV, B1 = float(J + 1) / KV;
+                const FVector Q0 = Blanket(A0, B0, 0), Q1 = Blanket(A1, B0, 0), Q2 = Blanket(A1, B1, 0), Q3 = Blanket(A0, B1, 0);
+                FVector N = FVector::CrossProduct(Q1 - Q0, Q3 - Q0).GetSafeNormal(); if (N.Z + N.Y * .5f < 0) N = -N;
+                P.Rug.Quad(Q0, Q1, Q2, Q3, N, N, N, N);
+            }
+            // The sheet's turned-down band across the blanket's head end.
+            for (int32 J = 0; J < KV; ++J)
+            {
+                const float B0 = float(J) / KV, B1 = float(J + 1) / KV;
+                const FVector Q0 = Blanket(0, B0, 1.2f) - FVector(3, 0, 0), Q1 = Blanket(.06f, B0, 1.2f), Q2 = Blanket(.06f, B1, 1.2f), Q3 = Blanket(0, B1, 1.2f) - FVector(3, 0, 0);
+                FVector N = FVector::CrossProduct(Q1 - Q0, Q3 - Q0).GetSafeNormal(); if (N.Z + N.Y * .5f < 0) N = -N;
+                P.CanvasDecor.Quad(Q0, Q1, Q2, Q3, N, N, N, N);
+            }
+            P.Hidden.B(BX0 + 5, BX1 - 5, BY0 + 6, BY1, Z0 + 40, Z0 + 66);
+        }
         const float PB = InnerAt(-1340, Z0 + 40);
         Table(P.Wood, -1420, -1290, PB - 75, PB - 6, Z0 + 78);
         P.Canvas.B(-1400, -1330, PB - 60, PB - 20, Z0 + 78, Z0 + 79);          // a chart
@@ -1306,7 +1533,10 @@ void AShipSetting::Build()
         struct FHam { float X, Y, Z; };
         // (2026-11-02: the two that hung at -960 straddled the quarterdeck's break, their fore lanyards up through the main
         // deck into the open waist - the user's "floating mop" by the port break ladder; they hang forward of it now.)
-        const FHam Hams[] = {{-560, 270, 0}, {-760, 260, 10}, {-460, 165, 20}, {-560, -270, 5}, {-760, -260, -5}, {-450, -352, 35}, {-660, 110, 40}, {-860, -110, 45}};
+        // (2026-11-12, user: some intersected. Each is 2.7 m clew to clew and 72 cm wide: in a lane they now hang 3.6 m
+        // apart, and the lanes beside one another are staggered fore and aft or 95 cm apart.)
+        const FHam Hams[] = {{-470, 285, 0}, {-830, 275, 10}, {-560, 180, 25}, {-800, 110, 45},
+                             {-470, -285, 5}, {-830, -275, -5}, {-560, -180, 30}, {-800, -110, 40}};
         for (const FHam& Hm : Hams)
         {
             const float Top = Hm.X < QuarterFore ? QuarterZ - 25 : DeckBeam;
@@ -1400,6 +1630,7 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipCarpet"), P.Carpet, CarpetMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipCarpetFringe"), P.Fringe, HammockMat, false, true, Missing, Triangles);
     Emit(this, TEXT("ShipSacks"), P.Sack, SackMat, false, true, Missing, Triangles);
+    Emit(this, TEXT("ShipStoveIron"), P.StoveIron, TEXT("/Game/Art/Materials/M_ForgeIron.M_ForgeIron"), false, true, Missing, Triangles);
     Emit(this, TEXT("ShipChest"), P.Chest, ChestMat, true, true, Missing, Triangles);
     Emit(this, TEXT("ShipGlass"), P.Glass, GlassMat, false, false, Missing, Triangles);
     Emit(this, TEXT("ShipFlame"), P.Flame, FlameMat, false, false, Missing, Triangles);

@@ -784,6 +784,7 @@ private:
     int32 StormLeg = 0;
     bool StormArrived = false;
     float StormYaw = 0.f, StormPhase = 0.f, StormClock = 0.f, StormBlend = 0.f, StormForce = 1.f, HelmAngle = 0.f, StormSpeed = 0.f;
+    float StormBeat = 0.f, StormPace = 1.f;   // heaves done since his storm work began (integrated: 2026-11-12), the eased force
     FVector StormRopeA = FVector::ZeroVector, StormRopeB = FVector::ZeroVector;
     FTransform StormHome = FTransform::Identity;   // where he was before the storm (back there in a calm)
     float StormHomeYaw = 0.f;

@@ -13,8 +13,8 @@ $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'
 $riverZombieLog=Join-Path $evidence ('verify-river-zombies-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $riverZombieProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=5' -Quiet) -or
-   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIES total=72 road=8 flanks=24 path_attackers=16 opposite=24' -Quiet) -or
-   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_MILL_TEST pass=1 configured=24 moved=24 bounded=24 stationary=48' -Quiet) -or
+   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIES total=67 road=8 flanks=24 path_attackers=11 opposite=24' -Quiet) -or
+   !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_MILL_TEST pass=1 configured=19 moved=19 bounded=19 stationary=48' -Quiet) -or
    !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_MIST_CHECK pools=16 pass=1' -Quiet)) {
     throw "Far-bank zombies verification failed. Inspect $riverZombieLog"
 }
@@ -361,7 +361,7 @@ if ($giantProcess.ExitCode -or !(Select-String -LiteralPath $giantLog -Pattern '
 $trexLog=Join-Path $evidence ('verify-trex-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $trexProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckTRexTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$trexLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if ($trexProcess.ExitCode -or !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_TEST_COMPLETE failures=0 trials=4' -Quiet) -or
-    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=24 liana_exit_safe=1' -Quiet) -or
+    !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=20 liana_exit_safe=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SOUNDS steps=3 roar=2 snap=1 growl=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult T-rex verification failed. Inspect $trexLog"

@@ -25,6 +25,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -547,11 +548,46 @@ bool IsChultTempleInteriorSpawn(const FVector& World,float& OutYaw)
     return false;
 }
 bool InChultTempleInterior(const FVector& World,float Margin){return SpaceAt(WorldFrame(World),Margin)!=nullptr;}
+bool ChultTempleSoundAudible(const UWorld* World,const FVector& Source)
+{
+    if(!World||!InChultTempleInterior(Source,50.f))return true;
+    const APawn* Chuck=UGameplayStatics::GetPlayerPawn(World,0);
+    return Chuck&&InChultTempleInterior(Chuck->GetActorLocation(),100.f);
+}
 bool InChultTempleSanctum(const FVector& World)
 {
     using namespace TempleWind;
     const FVector F=WorldFrame(World);
     return F.X>HS0&&F.X<HS1&&F.Y>HT0&&F.Y<HT1&&F.Z>HZ-300&&F.Z<HTop;
+}
+bool ChultTempleSanctumPushOutOfPier(FVector& World,float Radius)
+{
+    using namespace TempleWind;
+    const FVector F=WorldFrame(World);
+    for(const float Drop:{0.f,TempleRubble::DropZ})
+    {
+        const float Zb=HZ+Drop,Up=F.Z-Zb;
+        if(Up<-60||Up>1100)continue;
+        for(const float Sg:{-1.f,1.f})for(int32 K=0;K<int32(UE_ARRAY_COUNT(PierT));++K)
+        {
+            const float S=HallMid+Sg*NaveHalf,T=PierT[K];
+            // The rubble map's fallen piers are stumps (ChultTempleWindBuild.inl's Sanctum).
+            bool bStump=false;
+            if(Drop!=0.f)for(const int32 Fallen:TempleRubble::FallenPiers)bStump|=Fallen==(Sg<0?0:1)*5+K;
+            const float PierTop=bStump?190.f+60*(K%3):980.f;
+            const float Half=Up<30?PierHalf+26:Up<70?PierHalf+14:Up<PierTop?PierHalf:-1.f;
+            if(Half<0)continue;
+            const float DX=F.X-S,DY=F.Y-T;
+            if(FMath::Abs(DX)>=Half||FMath::Abs(DY)>=Half)continue;
+            FVector Out=F;
+            if(Half-FMath::Abs(DX)<Half-FMath::Abs(DY))Out.X=S+FMath::Sign(DX==0?1.f:DX)*(Half+Radius+2);
+            else Out.Y=T+FMath::Sign(DY==0?1.f:DY)*(Half+Radius+2);
+            World=WorldAt(Out.X,Out.Y,Out.Z);
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_SANCTUM_PIER_PUSH_OUT row=%d pier=%d rubble=%d up=%.0f from=(%.0f,%.0f) to=(%.0f,%.0f)"),Sg<0?0:1,K,Drop!=0.f,Up,F.X,F.Y,Out.X,Out.Y);
+            return true;
+        }
+    }
+    return false;
 }
 int32 ChultTempleInteriorMusicPart(const FVector& World,int32 Current)
 {

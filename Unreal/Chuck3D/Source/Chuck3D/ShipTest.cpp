@@ -66,6 +66,13 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         {TEXT("Hammocks"), {-780, 130, LowerZ + 170}, {-560, 265, LowerZ + 95}},
         {TEXT("HoldSacks"), {-560, -140, HoldZ + 75}, {-640, -205, HoldZ + 10}},
         {TEXT("GalleySacks"), {760, -200, LowerZ + 75}, {840, -275, LowerZ + 10}},
+        // (2026-11-12) the captain's bed, the galley stove, the hammocks from below, the arrival compartment's starboard side.
+        {TEXT("CabinBed"), {-1190, 30, LowerZ + 150}, {-1360, -170, LowerZ + 55}},
+        {TEXT("CabinBedLow"), {-1250, -20, LowerZ + 45}, {-1350, -170, LowerZ + 60}},
+        {TEXT("GalleyStove"), {800, -40, LowerZ + 130}, {980, 0, LowerZ + 90}},
+        {TEXT("GalleyStoveLow"), {840, 60, LowerZ + 40}, {960, -20, LowerZ + 70}},
+        {TEXT("HammocksBelow"), {-380, 0, LowerZ + 50}, {-700, 60, LowerZ + 150}},
+        {TEXT("ArrivalStarboard"), {200, -120, LowerZ + 130}, {-80, 280, LowerZ + 40}},
         {TEXT("Hold"), {150, 150, HoldZ + 170}, {-700, -100, HoldZ + 40}},
         {TEXT("HoldFore"), {0, -150, HoldZ + 170}, {900, 100, HoldZ + 40}},
         {TEXT("HoldLadder"), {-60, 120, HoldZ + 80}, {HatchX1, 0, HoldZ + 160}},
@@ -662,8 +669,9 @@ void ReviewShip(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             else if (Run->Sub == 4)
             {
-                // Down: away from the net (out over the side), held on through the turn at the rail, off at its foot.
-                Push(FVector(0, -1, 0));
+                // Down: the stick held down (2026-11-12: stick down climbs down, whichever way the camera looks; it was the
+                // stick away from the net), held through the turn at the rail; off at its foot, the stick then out over the side.
+                if (Chuck->IsOnLadder()) Chuck->SetTestStick(FVector2D(0.f, -1.f)); else Push(FVector(0, -1, 0));
                 if (!Chuck->IsOnLadder() && Ground && L.Z < DeckZ + 60 && Run->Arrived < 0) Run->Arrived = int32(Time * 100);
                 if (Run->Arrived >= 0 && Time > Run->Arrived * .01f + 1.2f)
                 {

@@ -485,7 +485,9 @@ void ADockNPC::TickZombie(float DeltaSeconds)
     // A rat it could reach: on its level, not gone into the light, near its place.
     const bool bThere = Chuck && !Chuck->IsAstral() && Rise < 80.f && FVector::Dist2D(Chuck->GetActorLocation(), ZHome) < ZombieLeash;
     const bool bSees = bThere && (Distance < ZombieNotice || (Distance < ZombieSight && Facing < 70.f));
-    if (ZState != EZombie::Dead && Distance < 1200.f && GetWorld()->GetTimeSeconds() >= NextZombieRasp)
+    // Rasps only on its own level (user 2026-11-12: the sewer zombies were
+    // heard through the streets above them, 2D distance only).
+    if (ZState != EZombie::Dead && Distance < 1200.f && Rise < 300.f && GetWorld()->GetTimeSeconds() >= NextZombieRasp)
     {
         PlayZombieSound(TEXT("Rasp"), 3, Location + FVector(0, 0, 45), .38f);
         NextZombieRasp = GetWorld()->GetTimeSeconds() + FMath::FRandRange(4.f, 7.f);

@@ -182,10 +182,62 @@ def spine_coord(p):
     return best[1], .5 + ang / (2 * math.pi)
 
 
+# The head (2026-11-12, user: "their faces look stretched and weird"): round the spine the head took the short head bone,
+# tilted and drawn out six times, as its axis, so the snout and jaw were measured from a slanting line and their
+# texture sheared and smeared. Ahead of the neck it is now measured along the head (u by how far forward) and round a
+# level line through the middle of each slice of it (v), eased into the body's mapping over the back of the skull.
 me = body.data
+head_j = pts[1]; c_j = seg_len[0] / total
+# (the skull reaches back over the top of the neck: the head's mapping starts 60% of the way up the neck's last bone)
+X0 = pts[2].x + .6 * (pts[1].x - pts[2].x)
+head_vs = [v.co for v in me.vertices if v.co.x > X0]
+head_len = max((v.x for v in head_vs), default=X0) - X0
+NB = 24
+bins = [[1e9, -1e9] for _ in range(NB)]
+for v in head_vs:
+    k = min(NB - 1, int((v.x - X0) / max(head_len, 1e-6) * NB))
+    bins[k][0] = min(bins[k][0], v.z); bins[k][1] = max(bins[k][1], v.z)
+for k in range(NB):            # empty slices take their neighbour's middle
+    if bins[k][0] > bins[k][1]: bins[k] = bins[k - 1] if k else [head_j.z, head_j.z]
+mids = [(b[0] + b[1]) * .5 for b in bins]
+mids = [(mids[max(0, k - 1)] + 2 * mids[k] + mids[min(NB - 1, k + 1)]) / 4 for k in range(NB)]   # smoothed
+
+
+def head_mid(x):
+    f = min(NB - 1.001, max(0., (x - X0) / max(head_len, 1e-6) * NB - .5)); k = int(f)
+    return mids[k] + (mids[min(NB - 1, k + 1)] - mids[k]) * (f - k)
+
+
+# Round the head by distance, not angle: at the neck's own radius a turn is the body's whole v, so toward the snout,
+# where the head is thinner, the texture keeps its size instead of squeezing the whole way round into it.
+ring = [((v.y) ** 2 + (v.z - head_mid(v.x)) ** 2) ** .5 for v in head_vs if v.x < X0 + head_len / NB]
+R_j = sum(ring) / len(ring) if ring else 1.
+
+
+# u is the distance from the snout's tip over the whole length: the head bone is only ~2 cm long, so on the spine
+# alone the head's full length (the T-rex's 1.9 m) had one u - that was the smear down its face.
+H_extra = max(0., (head_len - (head_j.x - X0)) - seg_len[0])
+L_all = total + H_extra
+
+
+def head_coord(p, c):
+    D = c[0] * total + H_extra
+    if p.x <= X0 or head_len <= 0: return (D / L_all, c[1])
+    zc = head_mid(p.x)
+    Dh = max(0., H_extra + c_j * total - (p.x - head_j.x))
+    r = ((p.y) ** 2 + (p.z - zc) ** 2) ** .5
+    ang = math.atan2(p.y, p.z - zc)
+    v = min(.98, max(.02, .5 + ang / (2 * math.pi) * max(.8, min(1., r / R_j))))   # (round by distance, but the jaw still reaches the belly)
+    t = min(1., (p.x - X0) / max(1e-6, head_j.x - X0)); w = t * t * (3 - 2 * t)
+    vb = c[1]
+    if abs(v - vb) > .5: v += 1 if v < vb else -1     # ease the shorter way round
+    return ((D + (Dh - D) * w) / L_all, vb + (v - vb) * w)
+
+
 uv = me.uv_layers.new(name='UVMap') if not me.uv_layers else me.uv_layers[0]
 for poly in me.polygons:
-    coords = [spine_coord(me.vertices[me.loops[li].vertex_index].co) for li in poly.loop_indices]
+    coords = [head_coord(me.vertices[me.loops[li].vertex_index].co, spine_coord(me.vertices[me.loops[li].vertex_index].co)) for li in poly.loop_indices]
+    coords = [(c[0], c[1] % 1.0) for c in coords]
     us = [c[1] for c in coords]
     if max(us) - min(us) > .5:                       # the seam under the belly: keep a face on one side
         coords = [(c[0], c[1] + 1 if c[1] < .5 else c[1]) for c in coords]

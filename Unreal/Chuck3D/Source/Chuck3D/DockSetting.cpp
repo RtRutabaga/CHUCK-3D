@@ -692,8 +692,8 @@ void BuildDockSetting(UWorld* World)
     for(float Z : {46.f,202.f})
         Box(Gate+FVector(12,0,Z),FVector(5,178,9),TEXT("Dark"));
     for(float Y : {-110.f,110.f})
-        Box(Gate+FVector(10,Y,140),FVector(35,30,280),TEXT("Stone"));
-    Box(Gate+FVector(10,0,281),FVector(42,250,26),TEXT("Stone"));
+        Box(Gate+FVector(10,Y,140),FVector(35,30,280),TEXT("Stone"),true);   // (solid since 2026-11-12: the user walked into them; -ChuckCollisionAudit)
+    Box(Gate+FVector(10,0,281),FVector(42,250,26),TEXT("Stone"),true);
     Box(Gate+FVector(15,0,298),FVector(45,38,26),TEXT("Stone"));
     Box(Gate+FVector(17,-25,112),FVector(6,10,24),TEXT("Dark"));
     for(float Y : {-72.f,72.f}) for(float Z : {46.f,202.f})

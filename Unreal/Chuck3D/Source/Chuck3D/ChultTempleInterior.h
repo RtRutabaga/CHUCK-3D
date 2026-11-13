@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 class AActor;
+class UWorld;
 class AChuckCharacter;
 
 // The temple interior (Claude, 2026-10-20; docs/CHULT-TEMPLE-INTERIOR.md),
@@ -29,12 +30,19 @@ bool IsChultTempleInteriorSpawn(const FVector& World, float& OutYaw);
 // Inside the interior (world), Margin widening every space: the light and fog
 // change while the camera is in, and the bird swoops keep out.
 bool InChultTempleInterior(const FVector& World, float Margin = 0);
+// A sound made at Source inside the interior is heard only while Chuck is in it
+// too (user 2026-11-12: skeletons heard from the skull path). True for any
+// source outside the interior.
+bool ChultTempleSoundAudible(const UWorld* World, const FVector& Source);
 // Which of the interior's scores plays where he is (user 2026-10-23): 0 the temple interior's, 1 "temple 2"
 // from the trap run's pits (Temple Pits) through the Astral wind, 2 the boss battle's in the sanctum.
 // Between spaces it keeps Current.
 int32 ChultTempleInteriorMusicPart(const FVector& World, int32 Current);
 // In the sanctum (world), down to 3 m under its floor: the one space below the world's fall-death line (world Z -100).
 bool InChultTempleSanctum(const FVector& World);
+// Inside one of the sanctum's piers (or the rubble map's copy of them): out through its nearest face, clear by his
+// radius (user 2026-11-12: the beholder's blast could leave him inside a pier, held in by its walls). World in/out.
+bool ChultTempleSanctumPushOutOfPier(FVector& World, float Radius);
 // Below the walkway into the well's pit or the pier hall's rift: an Astral death.
 bool ChultTempleInteriorSwallows(const FVector& FeetWorld);
 

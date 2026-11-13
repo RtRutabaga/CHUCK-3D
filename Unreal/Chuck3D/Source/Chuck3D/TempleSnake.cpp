@@ -1,5 +1,6 @@
 #include "TempleSnake.h"
 #include "ChuckCharacter.h"
+#include "ChultTempleInterior.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -139,6 +140,8 @@ void ATempleSnake::SetState(EState To)
 void ATempleSnake::Sound(const TArray<USoundBase*>& Set, float Volume)
 {
     if (!Set.Num()) return;
+    // Heard only by a rat inside the temple with it (user 2026-11-12: heard from the skull path).
+    if (!ChultTempleSoundAudible(GetWorld(), HeadPos)) return;
     UGameplayStatics::PlaySoundAtLocation(this, Set[Random.RandRange(0, Set.Num() - 1)], HeadPos + FVector(0, 0, 5), Volume, Random.FRandRange(.92f, 1.08f), 0.f, Attenuation);
     ++SoundsPlayed;
 }

@@ -54,7 +54,7 @@ void AChultTempleRubbleGlow::Setup(const FVector& At, const FVector& Out)
     Motes->SetCanEverAffectNavigation(false);
     Motes->SetUsingAbsoluteLocation(true); Motes->SetUsingAbsoluteRotation(true); Motes->SetUsingAbsoluteScale(true);
     Motes->RegisterComponent();
-    if (Aura) { MoteMat = Motes->CreateDynamicMaterialInstance(0, Aura); MoteMat->SetVectorParameterValue(TEXT("Color"), Gold); MoteMat->SetScalarParameterValue(TEXT("Intensity"), 3.5f); }
+    if (Aura) { MoteMat = Motes->CreateDynamicMaterialInstance(0, Aura); MoteMat->SetVectorParameterValue(TEXT("Color"), Gold); MoteMat->SetScalarParameterValue(TEXT("Intensity"), 2.f); }
     for (int32 I = 0; I < MoteCount; ++I) Motes->AddInstance(FTransform(FRotator::ZeroRotator, At, FVector(0.f)), true);
     // A warm pool on the stones round the gap, and a little light some way in, so the passage reads as going somewhere.
     auto Lamp = [&](const TCHAR* Name, const FVector& Where, float Radius)
@@ -82,12 +82,12 @@ void AChultTempleRubbleGlow::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     Clock += DeltaSeconds;
     // The golden cigarette's slow breath (about 2.6 s), fainter: a glow to notice, not a beacon (about half as bright
-    // since 2026-10-27, user: "dimmer").
+    // since 2026-10-27, user: "dimmer"; about half that again since 2026-11-12, "fainter").
     const float Breath = .5f + .5f * FMath::Sin(Clock * 2.4f);
-    if (HazeMat) HazeMat->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.16f, .27f, Breath));
-    if (WispMat) WispMat->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.09f, .15f, Breath));
-    if (Light) Light->SetIntensity(FMath::Lerp(6.5f, 10.f, Breath));
-    if (Inner) Inner->SetIntensity(FMath::Lerp(3.f, 4.5f, Breath));
+    if (HazeMat) HazeMat->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.085f, .145f, Breath));
+    if (WispMat) WispMat->SetScalarParameterValue(TEXT("Intensity"), FMath::Lerp(.05f, .08f, Breath));
+    if (Light) Light->SetIntensity(FMath::Lerp(3.6f, 5.5f, Breath));
+    if (Inner) Inner->SetIntensity(FMath::Lerp(1.7f, 2.5f, Breath));
     if (!Motes) return;
     const FVector Side = FVector::CrossProduct(FVector::UpVector, Ahead);
     for (int32 I = 0; I < MoteCount; ++I)

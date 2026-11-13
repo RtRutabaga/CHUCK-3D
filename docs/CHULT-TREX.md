@@ -53,3 +53,8 @@ Stills are saved to `Screenshots/.../Chult/TRex_*.png`.
 - There is no camera shake on its footfalls and no hearing/occlusion model. The sounds are synthetic and have not been heard on speakers.
 - There is no navmesh, only sweeps. A chase into the trunks can wedge it for a moment.
 - It has not been played by a person, and there is no Xbox test.
+
+## Bigger, and clear of the first giant (2026-11-12)
+
+- 15% larger (13.8 m): mesh, capsule (radius 172, half-height 334), stride and foot IK all scaled (`Size` in ChultTRex.cpp).
+- Its stretch now starts at S 39000 (was 35600). The first two giants (S 36600, 37900) are outside it, so climbing the first is never within its reach. Its loop starts there: 20 legs, was 24.

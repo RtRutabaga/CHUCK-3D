@@ -151,3 +151,7 @@ The lamp alleys (125–146 cm) and the temple's rings (140 cm) need no swing, bu
 - `big_gap_one_swing_pressed_as_it_tops_out` (11-02): the same, jump pressed only as the forward swing turns back. Made.
 
 Route tests that cross big gaps (canopy, giant canopy, golden leaf, raptor, birds) call `SetTestSwingPump(true)`. It pumps in time for them, and their big leaps wait until the swing carries them.
+
+## A real forward swing (2026-11-12)
+
+User: "I swing back ... then I swing forward and I barely go forward and I jump and make it and it feels like I shouldn't have made it." After a good back swing the forward beat is much stronger (`SwingForwardBeat` 2.6, was 1.25) and drives over a wider arc (`SwingForwardWindow` 42 degrees either side of the bottom, was 30). On a big leap he lets go near the top of the forward swing, when its rate has fallen to `SwingReleaseRate` (45%) of the stroke's peak or it passes `SwingReleaseDeg` (44 degrees). Before, he let go just past the bottom, where the modelled reach first stops growing. Whether he lands is still the stroke's best reach (`SwingStrokeBest`), so back-then-forward always lands.

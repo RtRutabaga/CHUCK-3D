@@ -117,10 +117,26 @@ R1, R2 = 'rubberduck-80-creature/', 'rubberduck-80-creature-2/'
 K = 'Kenney-impact/'
 
 # --- T-rex -----------------------------------------------------------------
-write('SFX_TRexRoar_00', mix((rate(cut(trex, 36.58, 3.6), .9), 0, 0), (highpass(lowpass(cut(sandworm, .12, 4.), 900), 40), -8, .05)), tail=.9)
-write('SFX_TRexRoar_01', mix((rate(fade(cut(trex, loudest(trex, 26.19, 35.19, 3.3), 3.3), .12, .01), .9), 0, 0), (highpass(lowpass(cut(sandworm, 1.6, 3.6), 900), 40), -9, .1)), tail=.8)
-write('SFX_TRexGrowl_00', rate(cut(trex, 10.42, 3.1), .9), tail=.8)
-write('SFX_TRexDeath_00', rate(cut(trex, 4.16, 4.4), .85), tail=1.4)
+# (2026-11-12, user: "find and implement new better raptor and T-rex sounds"): real animals under the old bellows, slowed
+# far down the way film creature voices are built - a donkey's bray at about 0.4x for the roar's tonal body, a cat's roar at
+# 0.3x for its snarl, a horse's breath at 0.45x for the growl's breathing (BigSoundBank, CC0; Source/BigSoundBank).
+B = 'BigSoundBank/'
+bray, catroar, hbreath = load(B + 'bsb_1551.mp3'), load(B + 'bsb_1881.mp3'), load(B + 'bsb_1543.mp3')
+inhale = lowpass(rate(hbreath, .5), 1400)
+write('SFX_TRexRoar_00', mix((inhale, -6, 0),
+                             (lowpass(rate(fade(cut(bray, 1.85, 1.25), .04, .2), .42), 1600), 0, .45),
+                             (rate(cut(trex, 36.58, 3.6), .9), -3, .5),
+                             (lowpass(rate(cut(catroar, 0., .95), .3), 1300), -5, .55),
+                             (highpass(lowpass(cut(sandworm, .12, 4.), 900), 40), -10, .5)), tail=.9)
+write('SFX_TRexRoar_01', mix((lowpass(rate(fade(cut(bray, 4.05, .45), .03, .1), .38), 1500), 0, 0),
+                             (lowpass(rate(fade(cut(bray, 4.95, .6), .03, .25), .4), 1500), -2, .9),
+                             (rate(fade(cut(trex, loudest(trex, 26.19, 35.19, 3.3), 3.3), .12, .01), .9), -4, .1),
+                             (lowpass(rate(cut(catroar, .1, .8), .32), 1200), -6, .2),
+                             (highpass(lowpass(cut(sandworm, 1.6, 3.6), 900), 40), -11, .1)), tail=.8)
+write('SFX_TRexGrowl_00', mix((lowpass(rate(cut(catroar, 0., .95), .27), 900), 0, 0),
+                              (lowpass(rate(hbreath, .45), 1100), -4, .2),
+                              (rate(cut(trex, 10.42, 3.1), .9), -5, 0)), tail=.8)
+write('SFX_TRexDeath_00', mix((lowpass(rate(fade(cut(bray, 6.05, .6), .03, .3), .35), 1200), 0, 0), (rate(cut(trex, 4.16, 4.4), .85), -3, .2)), tail=1.4)
 clack = mix((rate(load(K + 'impactWood_heavy_000.ogg'), .6), 0, 0), (rate(load(K + 'impactPunch_heavy_002.ogg'), .7), -3, 0),
             (rate(peak_at(load('StarNinjas-crunch/crunch.5.ogg')), .6), -4, .01))
 write('SFX_TRexSnap_00', clack[:int(.45 * SR)], tail=.15)
@@ -131,9 +147,14 @@ for v, (soft, grass) in enumerate([('000', '000'), ('002', '001'), ('004', '003'
     write(f'SFX_TRexStep_{v:02d}', mix(*layers)[:int(.9 * SR)], tail=.35)
 
 # --- Raptor ----------------------------------------------------------------
-write('SFX_RaptorCall_00', mix((rate(cut(vicious, 7.28, .72), .8), 0, 0), (rate(cut(raspy, .02, .9), .85), -3, .02)), tail=.25)
-write('SFX_RaptorHiss_00', mix((rate(load(R2 + 'breath_02.ogg'), .85), 0, 0), (highpass(cut(load(R1 + 'breath.ogg'), 0, .5), 1500), -5, .02)), tail=.15)
-write('SFX_RaptorDeath_00', mix((rate(load(R1 + 'scream_02.ogg'), .7), 0, 0), (rate(load(R2 + 'die_03.ogg'), .8), -6, .15)), tail=.5)
+# (2026-11-12): a bird's piercing call lowered a little for the shriek (screaming piha, 0.78x), a horse's whinny sped up
+# for its rattling tail, a barn owl's hiss for the tell, a horse's neigh slowed for the death cry (BigSoundBank, CC0).
+piha, neigh, owl = load(B + 'bsb_1762.mp3'), load(B + 'bsb_0863.mp3'), load(B + 'bsb_1400.mp3')
+write('SFX_RaptorCall_00', mix((highpass(rate(fade(cut(piha, 0., 1.2), .01, .2), .78), 300), 0, 0),
+                               (highpass(rate(fade(cut(neigh, .38, .75), .01, .2), 1.3), 400), -5, .32),
+                               (rate(cut(vicious, 7.28, .72), .8), -8, .02)), tail=.25)
+write('SFX_RaptorHiss_00', mix((highpass(rate(fade(cut(owl, .35, 1.25), .05, .3), .9), 700), 0, 0), (rate(load(R2 + 'breath_02.ogg'), .85), -9, 0)), tail=.2)
+write('SFX_RaptorDeath_00', mix((rate(fade(cut(neigh, .3, 1.), .01, .4), .72), 0, 0), (rate(load(R1 + 'scream_02.ogg'), .7), -5, .05)), tail=.5)
 for v, (wood, crunch, air) in enumerate([('002', 'crunch.5', 'attack_01'), ('004', 'crunch.6', 'attack_05')]):
     snap = mix((rate(load(K + f'impactWood_heavy_{wood}.ogg'), 1.3), 0, 0), (peak_at(load(f'StarNinjas-crunch/{crunch}.ogg')), -3, .005),
                (load(R2 + f'{air}.ogg'), -9, 0))

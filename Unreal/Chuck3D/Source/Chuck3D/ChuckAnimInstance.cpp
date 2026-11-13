@@ -172,6 +172,29 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
 
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
     const FTransform& ToWorld = GetComponentTransform();
+    {
+        // No twist along the tail (user 2026-11-12: "Chuck turns squiggly for a moment"): a tail bone rolled about its own
+        // length (a mirrored clip blending with an unmirrored one, or a clip's own roll) wrings the thin skinned tail into a
+        // corkscrew. Each tail bone keeps only the swing of its pose from the rest pose, about the line to the next.
+        static const TCHAR* TailBones[] = {TEXT("tail_0"), TEXT("tail_1"), TEXT("tail_2"), TEXT("tail_3"), TEXT("tail_4"), TEXT("tail_5")};
+        float Worst = 0.f;
+        for (int32 I = 0; I < UE_ARRAY_COUNT(TailBones); ++I)
+        {
+            const FCompactPoseBoneIndex B = Find(Bones, TailBones[I]);
+            if (B == INDEX_NONE) continue;
+            const FCompactPoseBoneIndex Next = I + 1 < UE_ARRAY_COUNT(TailBones) ? Find(Bones, TailBones[I + 1]) : FCompactPoseBoneIndex(INDEX_NONE);
+            FVector Axis = Next != INDEX_NONE ? Bones.GetRefPoseTransform(Next).GetLocation() : Bones.GetRefPoseTransform(B).GetLocation();
+            if (!Axis.Normalize()) continue;
+            const FQuat Ref = Bones.GetRefPoseTransform(B).GetRotation();
+            const FQuat Delta = Ref.Inverse() * Output.Pose[B].GetRotation();
+            FQuat Swing, Twist;
+            Delta.ToSwingTwist(Axis, Swing, Twist);
+            const float TwistDeg = FMath::RadiansToDegrees(Twist.GetAngle());   // (q and -q: 360 is none)
+            Worst = FMath::Max(Worst, FMath::Min(TwistDeg, 360.f - TwistDeg));
+            Output.Pose[B].SetRotation((Ref * Swing).GetNormalized());
+        }
+        Result.TailTwist = FMath::Max(Result.TailTwist, Worst);
+    }
     if (Params.DuckWeight > KINDA_SMALL_NUMBER)
     {
         // Under a board: a rat lays its ears flat back and lifts its chin to

@@ -23,6 +23,10 @@ namespace
 {
     struct FRiverHome { FVector Feet; bool NearRoad; TWeakObjectPtr<ADockNPC> Zombie; bool Path=false,Opposite=false; };
     TArray<FRiverHome> Homes;
+    bool bHomesPlaced=false;int32 PathDropped=0;
+    // (user 2026-11-12: "the ones through the low canopy trees past the river removed") the road's attackers only where it
+    // runs by the river: not where it has left the bank for the low trees.
+    constexpr float PathRiverReach=1100.f;
     void ProtectRiverCamera(ADockNPC* Zombie)
     {
         // Only the river encounters: keep a pursuing torso out of the orbit.
@@ -104,7 +108,7 @@ void SpawnChultRiverZombies(UWorld* World)
         }
     }
     for(TActorIterator<ADockNPC> It(World);It;++It)if(It->ActorHasTag(TEXT("ChultRiverZombie")))return;
-    Homes.Reset();FRandomStream R(20261016);
+    Homes.Reset();bHomesPlaced=false;PathDropped=0;FRandomStream R(20261016);
     const FVector G=AChultLanding::FloorOrigin(),Inland(.6,-.8,0);
     // Eight separated singles by the road, three deeper jungle sentries at
     // each station. No new enemies in the bridge arrival or the giants' grove.
@@ -142,6 +146,7 @@ void SpawnChultRiverZombies(UWorld* World)
         if(!InChultRiverExtension(P)||F.X<18200||F.X>32900||F.Y>6400||F.Y<-6100)return false;
         const float Bank=ChultRiverCenter(F.X),Width=ChultRiverWidth(F.X);
         if(Opposite ? F.Y<Bank+Width+210||D<1300 : F.Y>Bank-Width-210||D<80||D>270)return false;
+        if(!Opposite&&(Bank-Width)-F.Y>PathRiverReach){++PathDropped;return false;}
         for(const auto& H:Homes)if(FVector::Dist2D(H.Feet-G,P)<(Opposite?600:440))return false;
         FVector Feet;if(!OpenFloor(World,P,Feet))return false;
         const FVector Facing=Opposite ? -FVector(.8,.6,0) : RoadAt(F.X-500)-P;
@@ -214,14 +219,15 @@ void SpawnChultRiverZombies(UWorld* World)
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILLING configured=%d route_radius_cm=100 travel_bound_cm=115 speed_fraction=0.35"),Milling);
     int32 Near=0,Flanks=0,Path=0,Opposite=0;
     for(const auto& H:Homes){Near+=H.NearRoad;Path+=H.Path;Opposite+=H.Opposite;Flanks+=!H.NearRoad&&!H.Path&&!H.Opposite;}
-    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d path_attackers=%d opposite=%d"),Homes.Num(),Near,Flanks,Path,Opposite);
+    bHomesPlaced=true;
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIES total=%d road=%d flanks=%d path_attackers=%d opposite=%d path_tries_in_the_trees=%d"),Homes.Num(),Near,Flanks,Path,Opposite,PathDropped);
 }
 
 void StartChultRiverZombieReview(UWorld* World)
 {
     auto* Chuck=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World,0));
     if(!Chuck||ChultFarRoad().IsEmpty()) { FPlatformMisc::RequestExitWithStatus(false,1);return; }
-    if(Homes.Num()<72)   // the zombies wait for the trees' grounding (SpawnChultRiverZombies): so does their test
+    if(!bHomesPlaced)   // the zombies wait for the trees' grounding (SpawnChultRiverZombies): so does their test
     {
         static int32 Waits=0;
         if(++Waits<160)
@@ -271,14 +277,15 @@ void StartChultRiverZombieReview(UWorld* World)
                 CameraGuards+=Guard->GetCollisionResponseToChannel(ECC_Camera)==ECR_Block&&Guard->GetCollisionResponseToChannel(ECC_Pawn)==ECR_Ignore
                     &&Guard->GetCollisionResponseToChannel(ECC_Visibility)==ECR_Ignore;
     }
-    Run->Failures+=(Near!=8)+(Flanks!=24)+(Path!=16)+(Opposite!=24)+(Clear!=72)+(Dry!=72)+(Supported!=72)+(CameraGuards!=72);
+    const int32 All=Homes.Num();
+    Run->Failures+=(Near!=8)+(Flanks!=24)+(Path<4||Path>16)+(Opposite!=24)+(Clear!=All)+(Dry!=All)+(Supported!=All)+(CameraGuards!=All);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_ZOMBIE_LAYOUT failures=%d road=%d flanks=%d path_attackers=%d opposite=%d clear=%d dry=%d supported=%d camera_guards=%d"),Run->Failures,Near,Flanks,Path,Opposite,Clear,Dry,Supported,CameraGuards);
     Chuck->DisableInput(Cast<APlayerController>(Chuck->GetController()));Chuck->SetLookLocked(true);
     // Three live dodge routes, an unguarded control and an opposite-bank approach.
     // No sanity refill during a trial; no combat, enemy freezing or stat changes.
     World->GetTimerManager().SetTimer(Run->Timer,[World,Chuck,Run,G]()
     {
-        const float S=Run->Trial==0?18200:Run->Trial==1?23900:29600;
+        const float S=Run->Trial==0?18200:Run->Trial==1?23900:26300;   // (the third was 29600, where the road now runs through the trees without attackers)
         auto* Move=Chuck->GetCharacterMovement();const float Now=World->GetTimeSeconds();
         if(Run->Trial==-1)
         {
@@ -295,7 +302,8 @@ void StartChultRiverZombieReview(UWorld* World)
                 }
                 else Stationary+=FVector::Dist2D(Z->GetActorLocation(),H.Feet)<2;
             }
-            const bool Pass=Configured==24&&Moved==24&&Bounded==24&&Stationary==48;
+            int32 Milled=0;for(const auto& H:Homes)Milled+=(H.Path||H.NearRoad)&&H.Zombie.IsValid();
+            const bool Pass=Configured==Milled&&Moved==Milled&&Bounded==Milled&&Stationary==48;
             Run->Failures+=!Pass;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_RIVER_MILL_TEST pass=%d configured=%d moved=%d bounded=%d stationary=%d"),Pass,Configured,Moved,Bounded,Stationary);
             Run->Trial=0;Run->Start=-1;return;

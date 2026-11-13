@@ -157,6 +157,7 @@ void ATempleSkeleton::BeginPlay()
 
 void ATempleSkeleton::EndPlay(const EEndPlayReason::Type Reason)
 {
+    if (bCarrying) ThrowChuck(Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)), 60.f);
     SkeletonRegistry.RemoveAll([this](const TWeakObjectPtr<ATempleSkeleton>& S) { return !S.IsValid() || S.Get() == this; });
     Super::EndPlay(Reason);
 }
@@ -197,6 +198,8 @@ void ATempleSkeleton::SetState(EState To)
 void ATempleSkeleton::Sound(const TArray<USoundBase*>& Set, float Volume)
 {
     if (!Set.Num()) return;
+    // Heard only by a rat inside the temple with it (user 2026-11-12: heard from the skull path).
+    if (!ChultTempleSoundAudible(GetWorld(), GetActorLocation())) return;
     UGameplayStatics::PlaySoundAtLocation(this, Set[Random.RandRange(0, Set.Num() - 1)], GetActorLocation(), Volume, Random.FRandRange(.92f, 1.08f), 0.f, Attenuation);
     ++SoundsPlayed;
 }
@@ -314,8 +317,33 @@ void ATempleSkeleton::TakeSlash(const FVector& Swing)
     else if (State == EState::Guard || State == EState::Return) SetState(EState::Chase);
 }
 
+void ATempleSkeleton::TickCarry(AChuckCharacter* Chuck, float DeltaSeconds)
+{
+    if (!Chuck || !Chuck->IsHeld()) { bCarrying = false; return; }
+    CarryClock += DeltaSeconds;
+    // From its hand at the floor up to before its chest, held out at arm's length; then the throw.
+    const FVector Hand = StrikingTip(EAttack::Grab);
+    const FVector Up = GetActorLocation() + GetActorForwardVector().GetSafeNormal2D() * 42.f + FVector(0, 0, 25.f);
+    const float U = FMath::SmoothStep(0.f, CarryLift, CarryClock);
+    const FVector Chest = FMath::Lerp(Hand + FVector(0, 0, 14.f), Up, U);
+    Chuck->SetHeldPose(Chest, static_cast<float>(GetActorRotation().Yaw) + 180.f);
+    if (CarryClock >= CarryLift + CarryHold) ThrowChuck(Chuck, ThrowSpeed);
+}
+
+void ATempleSkeleton::ThrowChuck(AChuckCharacter* Chuck, float Speed)
+{
+    bCarrying = false;
+    if (!Chuck) return;
+    Sound(SwingSounds, 1.f);
+    Chuck->ThrowFromHeld(ThrowDir * Speed + FVector(0, 0, Speed > 100.f ? ThrowUp : 0.f));
+    ++Throws;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_THROW dir=%s speed=%.0f"), *ThrowDir.ToCompactString(), Speed);
+}
+
 void ATempleSkeleton::Die(const FVector& Swing)
 {
+    // Struck down holding him: he drops from its hand.
+    if (bCarrying) ThrowChuck(Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)), 60.f);
     SetState(EState::Dead);
     Sound(CollapseSounds, 1.f);
     GetCharacterMovement()->StopMovementImmediately();
@@ -460,14 +488,27 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
                 if (!bStruck && Gap < HitSlack && bReach)
                 {
                     bStruck = true;
-                    const bool bLanded = Chuck->TakeBite(Here, S.Damage, Attack == EAttack::Kick);
+                    // The stoop's grab (2026-11-12): its hand closes on him, it lifts him and throws him. Unless the grab
+                    // would take his last sanity: then it is a blow like the others.
+                    bool bLanded = false;
+                    if (Attack == EAttack::Grab && Chuck->GetSanity() > S.Damage && Chuck->BeginHeld(this))
+                    {
+                        Chuck->SetSanity(Chuck->GetSanity() - S.Damage);
+                        bCarrying = true; CarryClock = 0.f; bLanded = true;
+                        // Thrown hard in a random direction (user 2026-11-12): wherever he lands - a wall, a trap, a pit, or
+                        // just the floor - is his luck; the grab's sanity is the throw's damage.
+                        ThrowDir = FVector(1.f, 0.f, 0.f).RotateAngleAxis(Random.FRandRange(0.f, 360.f), FVector::UpVector);
+                        Sound(HitSounds, .9f);
+                    }
+                    else bLanded = Chuck->TakeBite(Here, S.Damage, Attack == EAttack::Kick);
                     if (bLanded) ++Landed[static_cast<int32>(Attack)];
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_STRIKE attack=%s landed=%d gap=%.1f clip_t=%.2f sanity=%d"), AttackName(Attack), bLanded ? 1 : 0, Gap, T, Chuck->GetSanity());
                 }
             }
         }
         if (T > S.Strike + S.After && !bStruck) { bStruck = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_STRIKE attack=%s landed=0 gap=%.1f clip_t=%.2f miss=1"), AttackName(Attack), LastStrikeGap, T); }
-        if (T >= Animator.Length() - .2f)
+        if (bCarrying) TickCarry(Chuck, DeltaSeconds);
+        if (T >= Animator.Length() - .2f && !bCarrying)
         {
             ++Strikes;
             AttackReadyAt = GetWorld()->GetTimeSeconds() + Random.FRandRange(PauseMin, PauseMax);

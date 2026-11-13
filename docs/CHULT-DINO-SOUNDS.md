@@ -71,3 +71,19 @@ The candidate list below (Freesound) is kept for reference only.
 - Raptor: [CC0 sounds library (OpenGameArt)](https://opengameart.org/content/cc0-sounds-library) has steps on leaves, gravel and mud; pitched down and layered they suit a 4 m raptor on the jungle floor.
 
 **Larger bundles (optional):** [Monster Sound Effects Pack — Ogrebane](https://opengameart.org/content/monster-sound-effects-pack) and [Monster snarls — Darsycho](https://opengameart.org/content/monster-snarls) on OpenGameArt are listed as CC0: growls, grunts and death sounds.
+
+## Third pass (2026-11-12): real animals under the creature voices
+
+User: "find and implement new better raptor and t-rex sounds". Seven CC0 recordings by Joseph Sardin (BigSoundBank, licence page https://bigsoundbank.com/licenses.html) were added to `Source/BigSoundBank/` (URLs and hashes in `Source/manifest.json`; credited in DEMO-CREDITS.txt). More downloads were refused by the site's bot check and were not forced.
+
+| Slot | Now |
+|---|---|
+| T-rex roar 00 | a horse's breath at 0.5x as the intake, then a donkey's bray at 0.42x (low-passed) for the roar's tonal body, a cat's roar at 0.3x for its snarl, over the old bellow and deep roar |
+| T-rex roar 01 | two bray phrases at 0.38-0.4x, the cat's roar at 0.32x, over the old second bellow |
+| T-rex growl | the cat's roar at 0.27x and a horse's breath at 0.45x over the old growl |
+| T-rex death | a bray phrase at 0.35x over the old death bellow |
+| Raptor call | a screaming piha (a piercing rainforest bird) at 0.78x, a horse's whinny sped up 1.3x for its rattling tail, over the old screech |
+| Raptor hiss | a barn owl's hiss (0.9x) over the old breath |
+| Raptor death | a horse's neigh at 0.72x over the old scream |
+
+Steps and snaps are unchanged. Nobody has listened to them: Claude cannot hear, and the cuts were chosen from loudness envelopes.

@@ -416,6 +416,7 @@ void BuildWeatherDeck(FParts& P)
         // The binnacle: a cabinet and its brass hood.
         P.Wood.B(HX + 70, HX + 116, -23, 23, Z, Z + 92);
         P.Brass.Spar(FVector(HX + 93, 0, Z + 92), FVector(HX + 93, 0, Z + 116), 19, 5, 14);
+        P.Hidden.Spar(FVector(HX + 93, 0, Z + 92), FVector(HX + 93, 0, Z + 116), 19, 5, 14);   // the hood solid too (user 2026-11-12)
         // The skylight: a coaming, a glazed ridge roof with its bars, solid to stand on.
         const float X0 = SkyX0, X1 = SkyX1, H = SkyHalf;
         P.Wood.B(X0 - 8, X1 + 8, -H - 8, -H, Z, Z + 42); P.Wood.B(X0 - 8, X1 + 8, H, H + 8, Z, Z + 42);
@@ -450,7 +451,8 @@ void BuildRig(FParts& P)
         // The lower mast above the deck (solid: he walks round it), its bands; the masthead above the top, its cap.
         P.Wood.Spar(FVector(M.X, 0, DeckZ), FVector(M.X, 0, M.Top + 130), MastR, HeadR, 14);
         for (float Z : {DeckZ + 90, DeckZ + 210, DeckZ + 330, DeckZ + 450, DeckZ + 570}) P.Iron.Spar(FVector(M.X, 0, Z), FVector(M.X, 0, Z + 5), MastR + 1.2f - (Z - DeckZ) / (M.Top + 130 - DeckZ) * (MastR - HeadR), MastR + 1.2f - (Z - DeckZ) / (M.Top + 130 - DeckZ) * (MastR - HeadR), 14);
-        P.WoodDecor.B(M.X - 28, TopmastX(M) + 19, -24, 24, M.Top + 128, M.Top + 146);
+        // The cap is solid (user 2026-11-12: he stood sunk in it).
+        P.Wood.B(M.X - 28, TopmastX(M) + 19, -24, 24, M.Top + 128, M.Top + 146);
         // The topmast, forward of the masthead, from just over the top; its cap; the topgallant mast and its truck.
         P.WoodDecor.Spar(FVector(TopmastX(M), 0, M.Top + 2), FVector(TopmastX(M), 0, M.Top + 900), TopmastR, 12, 12);
         P.WoodDecor.B(TopmastX(M) - 14, GallantX(M) + 12, -14, 14, M.Top + 880, M.Top + 894);
@@ -520,7 +522,9 @@ void BuildRig(FParts& P)
 
         // ---- The top: a platform on its trestletrees round the mast; a rim.
         const float X0 = bMain ? TopX0 : M.X - 70, X1 = bMain ? TopX1 : M.X + 130, H = bMain ? TopHalf : 120;
-        TArray<FHole> Holes = {{M.X - 27, TopmastX(M) + 19, -27, 27}};
+        // No hole round the masthead and the topmast's heel (user 2026-11-12: he fell into the gaps either side of where
+        // the two meet, 17 cm wide, and stuck there): the platform runs up to them.
+        TArray<FHole> Holes;
         Slab(P.Wood, X0, X1, -H, H, M.Top - 12, M.Top, Holes);
         for (float Y : {-H, H - 4}) P.WoodDecor.B(X0, X1, Y, Y + 4, M.Top, M.Top + 5);
         P.WoodDecor.B(X0, X0 + 4, -H, H, M.Top, M.Top + 5); P.WoodDecor.B(X1 - 4, X1, -H, H, M.Top, M.Top + 5);

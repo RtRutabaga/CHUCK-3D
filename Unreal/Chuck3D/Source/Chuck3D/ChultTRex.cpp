@@ -35,7 +35,9 @@ namespace
     TArray<TWeakObjectPtr<AChultTRex>> TRexRegistry;
     // Its body is 12 m long; the capsule is its legs and belly (the head and
     // tail carry no collision), 5.8 m tall like the model.
-    constexpr float HalfHeight = 290.f, Radius = 150.f;
+    // (2026-11-12, user: "a bit bigger": the model, its capsule and its gait all 15% larger: 13.8 m long.)
+    constexpr float Size = 1.15f;
+    constexpr float HalfHeight = 290.f * Size, Radius = 150.f * Size;
     const FVector Along(.8,.6,0),Across(-.6,.8,0);
     float FrameS(const FVector& World){return FVector::DotProduct(World-AChultLanding::FloorOrigin()-ChultCanyonFrame(0,0),Along);}
     FVector Ground(float S,float T){const FVector P=ChultCanyonFrame(S,T);return FVector(P.X,P.Y,ChultCanyonGroundZ(P));}
@@ -65,10 +67,12 @@ const TArray<FVector>& AChultTRex::PatrolPoints()
     // tree's liana), back down the far side, across before the first.
     static const TArray<FVector> Points=[]()
     {
-        TArray<FVector> P;P.Add(Ground(35700,ChultGiantLineT(35700)));
-        for(int32 I=0;I<11;++I){const float S=36600+1300*I+650;P.Add(Ground(S,ChultGiantLineT(S)-1250));}
+        // (2026-11-12, user: never near enough to attack him at the very first giant: its stretch, and so its loop,
+        // begins at TerritoryFrom, 24 m past that tree, beyond the second; was S 35700, by the first tree's foot.)
+        TArray<FVector> P;P.Add(Ground(TerritoryFrom+850,ChultGiantLineT(TerritoryFrom+850)));   // (in the gap between the third and fourth giants)
+        for(int32 I=0;I<11;++I){const float S=36600+1300*I+650;if(S<TerritoryFrom+600)continue;P.Add(Ground(S,ChultGiantLineT(S)-1250));}
         P.Add(Ground(50250,ChultGiantLineT(50250)));
-        for(int32 I=10;I>=0;--I){const float S=36600+1300*I+650;P.Add(Ground(S,ChultGiantLineT(S)+1250));}
+        for(int32 I=10;I>=0;--I){const float S=36600+1300*I+650;if(S<TerritoryFrom+600)continue;P.Add(Ground(S,ChultGiantLineT(S)+1250));}
         return P;
     }();
     return Points;
@@ -87,6 +91,7 @@ AChultTRex::AChultTRex()
     Move->SetWalkableFloorAngle(44);
     bUseControllerRotationYaw = false;
     GetMesh()->SetRelativeLocation(FVector(0, 0, -HalfHeight));
+    GetMesh()->SetRelativeScale3D(FVector(Size));
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     GetMesh()->SetAnimInstanceClass(UDinoAnimInstance::StaticClass());
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> TRexMesh(TEXT("/Game/Characters/TRex/SK_TRex.SK_TRex"));
@@ -110,8 +115,8 @@ void AChultTRex::BeginPlay()
     // (its chase is a long walk).
     FDinoGait Gait;
     Gait.IdlePeriod = TRexClipData::IdleLength;
-    Gait.WalkEnd = Gait.WalkPeriod = TRexClipData::WalkLength; Gait.WalkStride = 634.f;
-    Gait.FadeTime = .35f; Gait.IKUp = 70.f; Gait.IKDown = 110.f; Gait.FootRestZ = 10.f; Gait.TraceUp = 200.f;
+    Gait.WalkEnd = Gait.WalkPeriod = TRexClipData::WalkLength; Gait.WalkStride = 634.f * Size;
+    Gait.FadeTime = .35f; Gait.IKUp = 70.f * Size; Gait.IKDown = 110.f * Size; Gait.FootRestZ = 10.f * Size; Gait.TraceUp = 200.f * Size;
     Animator.Init(GetMesh(), Clips, Gait);
     Play(TEXT("Idle"), true, 1.f, true);
     // Synthetic sounds (Tools/gen_trex_sfx.py), heard far across the valley.

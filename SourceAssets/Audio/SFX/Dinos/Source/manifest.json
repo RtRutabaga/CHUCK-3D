@@ -280,6 +280,72 @@
       "bytes": 1273958,
       "sha256": "040d2841619c732098c30a638731317d13d7647e5ce1a75a3246219ce4b162ff",
       "obtained": "downloaded by Claude with the user approval, 2026-10-16"
+    },
+    {
+      "file": "BigSoundBank/bsb_0863.mp3",
+      "title": "Horse Neighing #3",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/horse-neighing-3-s0863.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/0863.mp3",
+      "bytes": 126848,
+      "sha256": "09a8a94883a861e22815e9cef78a5f709bde9a9125fec9a380e8117ee57787d8",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
+    },
+    {
+      "file": "BigSoundBank/bsb_1400.mp3",
+      "title": "Barn Owl #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/barn-owl-s1400.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1400.mp3",
+      "bytes": 778788,
+      "sha256": "d72a20e460d7e71bf3eeb08740f02dd84a552bbba05f279fed66cd2339383c27",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
+    },
+    {
+      "file": "BigSoundBank/bsb_1543.mp3",
+      "title": "Breath Horse #4",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/breath-horse-4-s1543.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1543.mp3",
+      "bytes": 30948,
+      "sha256": "7f3f576c541371f6898bbd7510b2698402df9bdcb5682f11361f2ff1f70c7d5c",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
+    },
+    {
+      "file": "BigSoundBank/bsb_1551.mp3",
+      "title": "Donkey, Braying #3",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/donkey-braying-3-s1551.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1551.mp3",
+      "bytes": 415908,
+      "sha256": "34b555d7d21da2b3241001d40302c014308057bbbc56fc7cc581b9825dae86da",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
+    },
+    {
+      "file": "BigSoundBank/bsb_1762.mp3",
+      "title": "Screaming Piha",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/screaming-piha-s1762.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1762.mp3",
+      "bytes": 66468,
+      "sha256": "98a2bd079ca5bfc884bbb1989ba0fb4b864018a95451d2170c91eebc941f7e6c",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
+    },
+    {
+      "file": "BigSoundBank/bsb_1881.mp3",
+      "title": "Cat roar #1",
+      "author": "Joseph Sardin (BigSoundBank)",
+      "license": "CC0 1.0 (BigSoundBank royalty-free licence)",
+      "page": "https://bigsoundbank.com/cat-roar-1-s1881.html",
+      "url": "https://bigsoundbank.com/UPLOAD/mp3/1881.mp3",
+      "bytes": 52068,
+      "sha256": "5ff2ae04b5c8fd9fb8358324c2c0970f1d1fade0bb9add011bd99e0d55a79edd",
+      "downloaded": "2026-11-12 (Claude, user-authorised)"
     }
   ]
 }
