@@ -1,4 +1,6 @@
 #include "ChuckAnimInstance.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Animation/AnimNodeBase.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimationPoseData.h"
@@ -149,11 +151,20 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
         FPoseContext PoseA(Output);
         Sample(Params.ClipA, Params.TimeA, Params.PeriodA, Params.bMirrorA, PoseA);
         if (bRun && Params.bRunOnA) AddRun(PoseA);
-        if (Params.ClipB && Params.WeightB > KINDA_SMALL_NUMBER)
+        if (Params.bSnapshotB && Params.SnapshotSerial != SnapshotTaken) { SnapshotLocal = LastLocal; SnapshotTaken = Params.SnapshotSerial; }
+        const bool bFromSnapshot = Params.bSnapshotB && SnapshotLocal.Num() == Output.Pose.GetNumBones();
+        if ((Params.ClipB || bFromSnapshot) && Params.WeightB > KINDA_SMALL_NUMBER)
         {
             FPoseContext PoseB(Output);
-            Sample(Params.ClipB, Params.TimeB, Params.PeriodB, Params.bMirrorB, PoseB);
-            if (bRun && Params.bRunOnB) AddRun(PoseB);
+            if (bFromSnapshot)
+            {
+                for (FCompactPoseBoneIndex I : PoseB.Pose.ForEachBoneIndex()) PoseB.Pose[I] = SnapshotLocal[I.GetInt()];
+            }
+            else
+            {
+                Sample(Params.ClipB, Params.TimeB, Params.PeriodB, Params.bMirrorB, PoseB);
+                if (bRun && Params.bRunOnB) AddRun(PoseB);
+            }
             FAnimationPoseData DataA(PoseA), DataB(PoseB), OutData(Output);
             FAnimationRuntime::BlendTwoPosesTogether(DataA, DataB, 1.f - FMath::Clamp(Params.WeightB, 0.f, 1.f), OutData);
         }
@@ -169,9 +180,14 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
             }
         }
     }
+    LastLocal.SetNum(Output.Pose.GetNumBones());
+    for (FCompactPoseBoneIndex I : Output.Pose.ForEachBoneIndex()) LastLocal[I.GetInt()] = Output.Pose[I];
 
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
     const FTransform& ToWorld = GetComponentTransform();
+    // (2026-11-12 night: the user found the squiggle "much worse" with this on: only with -ChuckTailTwistFix, to compare.)
+    static const bool bTailTwistFix = FParse::Param(FCommandLine::Get(), TEXT("ChuckTailTwistFix"));
+    if (bTailTwistFix)
     {
         // No twist along the tail (user 2026-11-12: "Chuck turns squiggly for a moment"): a tail bone rolled about its own
         // length (a mirrored clip blending with an unmirrored one, or a clip's own roll) wrings the thin skinned tail into a
@@ -194,6 +210,33 @@ bool FChuckAnimProxy::Evaluate(FPoseContext& Output)
             Output.Pose[B].SetRotation((Ref * Swing).GetNormalized());
         }
         Result.TailTwist = FMath::Max(Result.TailTwist, Worst);
+    }
+    {
+        // The squiggle (user 2026-11-12): the tail snapped up to half a metre between two frames - in a roll, in cross-fades
+        // (idle into the walk, the slashes), at the idle's loop - where a tail bone's rotation in one pose and the next lie
+        // far apart; smeared by the TAA it read as a squiggle for a moment. Each tail bone follows its pose with a little
+        // lag (TailLag: the tail's own follow-through) and turns at most TailTurnRate a second, so a snap becomes a swing.
+        static const TCHAR* TailChain[] = {TEXT("tail_0"), TEXT("tail_1"), TEXT("tail_2"), TEXT("tail_3"), TEXT("tail_4"), TEXT("tail_5")};
+        constexpr float TailTurnRate = 360.f, TailLag = .045f;   // degrees per second, each bone about its parent; seconds
+        const float MaxStep = FMath::DegreesToRadians(TailTurnRate) * FMath::Clamp(DeltaTime, 1.f / 120.f, 1.f / 20.f);
+        if (TailPrev.Num() != UE_ARRAY_COUNT(TailChain)) { TailPrev.Init(FQuat::Identity, UE_ARRAY_COUNT(TailChain)); bTailPrevValid = false; }
+        for (int32 I = 0; I < UE_ARRAY_COUNT(TailChain); ++I)
+        {
+            const FCompactPoseBoneIndex B = Find(Bones, TailChain[I]);
+            if (B == INDEX_NONE) continue;
+            FQuat Q = Output.Pose[B].GetRotation();
+            if (bTailPrevValid)
+            {
+                if ((TailPrev[I] | Q) < 0.f) Q = -Q;   // (the same rotation, the nearer sign)
+                const float Angle = static_cast<float>(TailPrev[I].AngularDistance(Q));
+                const float Follow = Angle * (1.f - FMath::Exp(-FMath::Clamp(DeltaTime, 1.f / 120.f, 1.f / 20.f) / TailLag));
+                const float Step = FMath::Min(Follow, MaxStep);
+                if (Step < Angle - KINDA_SMALL_NUMBER) { Q = FQuat::Slerp(TailPrev[I], Q, Step / FMath::Max(Angle, 1e-5f)).GetNormalized(); if (Step >= MaxStep) ++Result.TailClamps; }
+                Output.Pose[B].SetRotation(Q);
+            }
+            TailPrev[I] = Q;
+        }
+        bTailPrevValid = true;
     }
     if (Params.DuckWeight > KINDA_SMALL_NUMBER)
     {

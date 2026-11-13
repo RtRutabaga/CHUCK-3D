@@ -2,6 +2,43 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md).
 
+## November 12 (night) — the squiggle; thrown by the leg (Claude)
+
+- **Asked:** "the squiggle look is much worse/more frequent now, please fix"; the skeleton to pick Chuck up by the leg and huck him, with realistic flight, crash landing and a forceful, damaging wall hit.
+- **Source:** `main` at 7c513d05.
+- **The squiggle, measured:**
+  - The tail-twist stripping from earlier today is off; it stays behind `-ChuckTailTwistFix` only, for comparison.
+  - New detectors in `ChuckCharacter.cpp`, logged each frame:
+    - `CHUCK_TAIL_ZIGZAG`: alternating bends in the tail's bones. None found in either configuration, so the squiggle is not the skeleton bending.
+    - `CHUCK_TAIL_JUMP`: the tail jumping between frames, measured in the body's own frame.
+    - Both run only with `-ChuckTailWatch` or `-ChuckTailCapture`. Their per-frame bone reads were in play at first; in packaged runs that coincided with lower frame rates (about 39-43 fps against the usual 49) and with timing failures in the trap run and Astral wind traversal trials, so they were taken out of play.
+  - The jump log found tail-only snaps, up to 18 cm at the tip in one frame with the body still (in Idle), and larger ones in cross-fades. Under TAA a jump like that smears into a squiggle for a moment.
+  - Fix (`ChuckAnimInstance.cpp`): each tail bone follows its pose with a 45 ms lag and turns at most 360°/s. Tail-only snaps are gone from the smoke test.
+  - What remains are whole-body pops at the start of the walk-start and slash cross-fades (the head moves 12-13 cm in one frame); the tail tip shows them most.
+  - A fade begun during another fade now starts from a snapshot of the pose shown (`bSnapshotB`). That did not remove those pops, so their cause is still open.
+  - `-ChuckTailCapture [-ChuckTailActions]`: close-up stills of the tail through walks, stops, turns, runs, a jump, a roll, a slash and a side jump (`ChuckTailCapture.cpp`).
+- **Thrown by the leg:** see [../CHULT-TEMPLE-SKELETONS.md](../CHULT-TEMPLE-SKELETONS.md#by-the-leg-and-hucked-2026-11-12-later).
+  - New Chuck clips `HeldLeg`, `Tumble`, `CrashLand` and `WallSlam` (`Tools/build_chuck_v1.py`; imported with `Import-ChuckV1.ps1 -Clips ...`). The other rewritten FBX files were restored from HEAD.
+  - New skeleton clip `Throw` (CMU 124_01; `build_temple_skeleton.py`, `Tools/import_skeleton_clip.py`). `SkeletonClipData.h` gained only the Throw constants; the other rewritten FBX files were restored.
+  - New `EGait::Thrown` and a body turn (`BodyQuat`) on the mesh.
+- **Tests:**
+  - Editor `-ChuckSkeletonTest`: 10/10. In `grab_lands` he is held, thrown at 9.5 m/s, crash-lands and gets up (`Local/throw3-free.log`).
+  - With `-ChuckThrowAtWall`, two wall slams (2 cm and 82 cm up, sanity 5 to 4). The first throw went over an edge into a pit, a fall death, which failed that test-only trial (`Local/throw3-wall.log`).
+  - Captures reviewed: `Saved/Screenshots/WindowsEditor/Skeleton/T3_*`, `Local/SkeletonWallShots`.
+  - Smoke test with the tail lag (`Local/jump-smoke-limit.log`).
+  - The first package's skeleton check failed: the random throw went over the pier hall's rift (a fall death). That is allowed in play, but under `-ChuckSkeletonTest` the throw now keeps its random heading only if it is open floor. It traces up to 11 m out, stopping at a wall, and needs floor within 50 cm of the skeleton's feet every metre; otherwise it tries the next of 16 headings. Two editor runs after the fix: 10/10 each (`Local/throw5-1.log`, `Local/throw5-2.log`).
+  - Packaged (`Builds/ThrowCandidate`, now the launcher's):
+    - `Verify-Package` 182 passes (`Local/verify-package-20261113-093937.log`). Its skeleton check now expects 9 clips (it was 8 before `Throw`).
+    - Several earlier package runs overnight failed timing-sensitive traversal trials (trap run `pit_chain`, `leap_short`, `pit_twist`; Astral wind `full`). The machine was running at about 37-43 fps against its usual 49. The ListFix launcher package failed the same trap-run check at 41 fps (`Local/run-baseline-listfix.log`), so the code was not the cause.
+    - After the machine woke from sleep the checks passed again (trap run 46 fps, `Local/run-after-wake.log`).
+    - If those trials fail again, check the frame rate first.
+- **Not checked:** not played by hand. The wall slam close to the floor reads modestly. The walk-start and slash cross-fade pops are not fixed.
+- **Contract compatibility:** rig unchanged. New clips are appended at the end of `EClip`, and `EGait::Thrown` at the end of `EGait`.
+- **Binary/LFS:** four Chuck clip FBX and uassets, one skeleton clip FBX and uasset, `Chuck_V1.blend`, and the BVH `124_01.bvh` (491 KB, CMU, recorded in the manifest and in `Fetch-CMUMocap.ps1`).
+- **Launcher:** promoted as Throw (`Promote-Build.ps1`). Its receipt shows source 7c513d0 because the package was built from this work before its commit. The previous package is kept as `Windows-Previous-20261113-Throw` and ListFix as the second; ShipSpruce was pruned.
+
+Next part of the work can be done here (play the throw and judge the squiggle by hand; the cross-fade pops if the squiggle persists).
+
 ## November 12 — the user's 23-item list (Claude)
 
 - **Asked:** 23 adjustments across Waterdeep, Chult, the temple and the ship. Mid-way the user clarified the skeleton throw: a forceful throw in a random direction, wherever it lands, with only the throw's damage; a wall-slam animation may come later, after playing it.

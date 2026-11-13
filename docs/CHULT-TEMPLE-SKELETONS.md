@@ -111,3 +111,16 @@ Read-only sources: `docs/development/PHASE-4.md` and `PHASE-6.md`, `src/entities
 ## The grab throws him (2026-11-12)
 
 User: "make their squat then scratch into a squat then pick chuck up and throw him". When the stoop's hand meets him, it takes him (`AChuckCharacter::BeginHeld`, one sanity) and lifts him from the floor to before its chest over 0.55 s. It holds him there 0.25 s, then throws him hard in a random direction (any way round), at 640 cm/s out and 400 up (user's clarification: random, and wherever he lands is fine; a slam-into-a-wall animation may come later, after the user has played it) (`ThrowFromHeld`; 0.9 s safe from another blow). It may throw him into a trap or a pit. A grab that would take his last sanity is an ordinary blow. Struck down while holding him, it drops him.
+
+## By the leg and hucked (2026-11-12, later)
+
+User: "I want the skeleton to actually pick him up by the leg and huck him, the way he flies through the air and lands should look realistic ... and his crash landing should look realistic too, and if he gets thrown against a wall it should have its own realistic forceful and damaging look". Before, he was lifted bodily and pushed away.
+
+- **The skeleton:** the stoop's grab (CMU 139_06) takes him by the left ankle in its right hand. It rises for 0.45 s, turning toward a random direction, then pitches him. The pitch is a new clip, `Throw`, from CMU 124_01 "Baseball Pitch" (3.0-4.3 s, played 1.15x), released at the hand's fastest moment (0.70 s, 15.5 m/s; `SkeletonClipData::ThrowStrike`). It was imported alone by `Tools/import_skeleton_clip.py`. CMU 113_24 and 111_33 (gentle lobs) and 69_70 were looked at and dropped.
+- **Chuck held** (`AChuckCharacter::BeginLegHeld/SetLegHold`, clip `HeldLeg`): head down, a pendulum from the hand, so he swings with the arm; his real ankle is kept in the hand. The held leg is straight and pointed, the other kicks, his arms claw at the floor and his tail hangs.
+- **Thrown** (`ThrowFromLegHold`, clip `Tumble`): he leaves at the swing's own speed, capped at 9.5 m/s along the throw (the release always goes the way the skeleton is facing, at least 6.4 m/s and 4 m/s up), and spins end over end (7-15 rad/s, slowing).
+- **Crash landing** (clip `CrashLand`, 2.2 s): face down along his flight with a bounce, a skid, sprawled and dazed, then onto all fours and up.
+- **A wall** (clip `WallSlam`, 2.5 s, one more sanity; the last one takes him): back first, flattened, the head whipping back into it and then forward. Limp, he slides down to its foot (the runtime lowers him over 0.1-0.5 s), slumps sitting against it, then gets onto his paws and up.
+- **Tests:** `-ChuckSkeletonTest`'s `grab_lands` now passes only when he is thrown and back on his feet. `-ChuckThrowAtWall` (tests only) aims the throw at the nearest wall. Under `-ChuckSkeletonTest` the random heading is kept only if it is open floor out to 11 m or a wall (floor within 50 cm of the skeleton's feet every metre). Otherwise it tries the next of 16 headings, because a throw into the pier hall's rift is a fall death that the throw's own test can't judge. In play the heading stays fully random.
+- **Not yet:** the wall slam close to the floor reads modestly; nobody has played it by hand. The user may add a wall-specific animation after playing.
+

@@ -86,7 +86,7 @@ AChuckCharacter::AChuckCharacter()
     Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Body->SetAnimInstanceClass(UChuckAnimInstance::StaticClass());
     Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl"), TEXT("SwingSlip"), TEXT("FallFlail")};
+    static const TCHAR* ClipNames[] = {TEXT("Idle"), TEXT("WalkStart"), TEXT("WalkLoop"), TEXT("WalkStop"), TEXT("TurnLeft90"), TEXT("TurnRight90"), TEXT("JumpStart"), TEXT("JumpLoop"), TEXT("JumpLand"), TEXT("Roll"), TEXT("SideJumpLeft"), TEXT("SideJumpRight"), TEXT("RunLoop"), TEXT("RunJump"), TEXT("SlashRight"), TEXT("SlashLeft"), TEXT("WallRun"), TEXT("WallKick"), TEXT("Hang"), TEXT("PullUp"), TEXT("Mantle"), TEXT("ShimmyLeft"), TEXT("ShimmyRight"), TEXT("StrafeLeft"), TEXT("StrafeRight"), TEXT("StrafeRunLeft"), TEXT("StrafeRunRight"), TEXT("SlashLowRight"), TEXT("SlashLowLeft"), TEXT("Summon"), TEXT("SpeedVault"), TEXT("SprintLoop"), TEXT("SprintLeap"), TEXT("Swing"), TEXT("SwingLeapLeft"), TEXT("SwingLeapRight"), TEXT("Crawl"), TEXT("SwingSlip"), TEXT("FallFlail"), TEXT("HeldLeg"), TEXT("Tumble"), TEXT("CrashLand"), TEXT("WallSlam")};
     for (const TCHAR* Name : ClipNames)
     {
         ConstructorHelpers::FObjectFinder<UAnimSequence> Clip(*FString::Printf(TEXT("/Game/Characters/Chuck/V1/Animations/AS_Chuck_%s.AS_Chuck_%s"), Name, Name));
@@ -470,7 +470,7 @@ void AChuckCharacter::ResetAtLocation(const FVector& Location)
     if (auto* PC = Cast<APlayerController>(Controller)) if (PC->PlayerCameraManager) PC->PlayerCameraManager->StopCameraFade();
     LastWallNormal = FVector::ZeroVector; bWallJumpFlight = bWallAuto = bChimney = false; WallCoyoteUntil = -1; AirJumpPressedAt = -1e3f; LedgeCooldownUntil = -1;
     StaminaLockUntil = -1.f;
-    SwingGrip = SwingTarget = SwingLeft = -1; SwingRegrabAt = -1; bSwingJumpQueued = bHangClimbQueued = bBodyPitchLive = false; BodyPitch = 0;
+    SwingGrip = SwingTarget = SwingLeft = -1; SwingRegrabAt = -1; bSwingJumpQueued = bHangClimbQueued = bBodyPitchLive = false; BodyPitch = 0; bBodyQuatLive = bLegHeld = false;
     SwingWaitSince = -1; bSwingWaitToward = bSwingLeapShort = false; SwingMissed = -1; SwingMissUntil = -1; DuckBlend = 0;
     if (GetCharacterMovement()->MovementMode == MOVE_Flying || GetCharacterMovement()->MovementMode == MOVE_None) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->BrakingDecelerationWalking = ChuckClipData::WalkSpeed * ChuckClipData::WalkSpeed / (2.f * ChuckClipData::StopTravel);
@@ -526,7 +526,7 @@ float AChuckCharacter::Period(EClip Clip) const
     // The importer keeps the full loop period (Idle 2.0 s, WalkLoop 0.3 s,
     // JumpLoop 0.4 s; logged as CHUCK_CLIP) and interpolates back to frame 0.
     const bool bLoop = Clip == EClip::Idle || Clip == EClip::WalkLoop || Clip == EClip::RunLoop || Clip == EClip::JumpLoop || Clip == EClip::WallRun || Clip == EClip::Hang || Clip == EClip::ShimmyLeft || Clip == EClip::ShimmyRight
-        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl || Clip == EClip::FallFlail;
+        || Clip == EClip::StrafeLeft || Clip == EClip::StrafeRight || Clip == EClip::StrafeRunLeft || Clip == EClip::StrafeRunRight || Clip == EClip::Crawl || Clip == EClip::FallFlail || Clip == EClip::HeldLeg || Clip == EClip::Tumble;
     const UAnimSequence* Sequence = Clips[static_cast<int32>(Clip)];
     return bLoop && Sequence ? Sequence->GetPlayLength() : 0.f;
 }
@@ -535,6 +535,10 @@ void AChuckCharacter::SetClip(EClip Clip, float Time, float FadeSeconds)
 {
     if (FadeSeconds > 0)
     {
+        // A fade begun while another is still under way fades from the pose shown, not the clip that was fading in (that
+        // dropped the rest of the blend at once: the body jumped, the tail most - the squiggle, user 2026-11-12).
+        bFadeFromSnapshot = FadeWeight > .02f;
+        if (bFadeFromSnapshot) ++FadeSnapshotSerial;
         Fading = Base;
         FadingTime = BaseTime;
         FadeWeight = 1;
@@ -1924,7 +1928,7 @@ void AChuckCharacter::FallToDeath()
     Movement->StopMovementImmediately();
     Movement->DisableMovement();
     LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
-    RestoreSlideCamera(); LadderIndex = -1; bClimbReverse = false; GorgeFallClock = -1.f;
+    RestoreSlideCamera(); LadderIndex = -1; bClimbReverse = false; GorgeFallClock = -1.f; bBodyQuatLive = bLegHeld = false;
     Gait = EGait::Astral; AstralPhase = EAstral::Vanishing; AstralClock = .8f; bAstralFaded = true;
     SetAstralHidden(true);
     CameraFade(0.f, 1.f, .35f);
@@ -2204,6 +2208,164 @@ void AChuckCharacter::ThrowFromHeld(const FVector& Velocity)
     PreviousMotionLocation = GetActorLocation();
     ++Throws;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN velocity=%s sanity=%d"), *Velocity.ToCompactString(), Sanity);
+}
+bool AChuckCharacter::BeginLegHeld(AActor* By)
+{
+    if (!BeginHeld(By)) return false;
+    bLegHeld = true; LegHoldFix = FVector::ZeroVector;
+    PendC = PendPrev = GetActorLocation();
+    BodyQuat = FQuat::Identity; bBodyQuatLive = true;
+    SetClip(EClip::HeldLeg, 0, .15f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_LEG_HELD by=%s"), *GetNameSafe(By));
+    return true;
+}
+void AChuckCharacter::SetLegHold(const FVector& Hand, float FaceYaw, float DeltaSeconds)
+{
+    if (Gait != EGait::Held || !bLegHeld || bHeldVanish) return;
+    // His centre hangs from the hand by the held leg: a pendulum the holder's arm swings (Verlet, a little damping).
+    const float Dt = FMath::Clamp(DeltaSeconds, 1.f / 240.f, 1.f / 20.f);
+    const FVector Vel = (PendC - PendPrev) * .992f;
+    PendPrev = PendC;
+    PendC += Vel + FVector(0, 0, -980.f) * Dt * Dt;
+    FVector U = PendC - Hand;
+    if (!U.Normalize()) U = -FVector::UpVector;
+    PendC = Hand + U * LegHoldLength;
+    PendDt = Dt;
+    // Feet toward the hand, head away from it.
+    BodyQuat = FQuat::FindBetweenNormals(FVector::UpVector, U);
+    SetActorLocationAndRotation(PendC + LegHoldFix, FRotator(0, FaceYaw, 0), false, nullptr, ETeleportType::TeleportPhysics);
+    // His real left ankle into the hand (the clip's leg is not quite the pendulum's length): eased, from the pose drawn.
+    const FVector Ankle = GetMesh()->GetBoneLocation(TEXT("foot_L"));
+    LegHoldFix = FMath::VInterpTo(LegHoldFix, LegHoldFix + (Hand - Ankle), Dt, 20.f);
+    LegHoldFix = LegHoldFix.GetClampedToMaxSize(25.f);
+}
+void AChuckCharacter::ThrowFromLegHold(const FVector& Dir, float MinSpeed, float Up)
+{
+    if (Gait != EGait::Held || !bLegHeld || bHeldVanish) return;
+    const FVector Swing = (PendC - PendPrev) / PendDt;
+    const FVector D = Dir.GetSafeNormal2D();
+    const float Along = FMath::Clamp(static_cast<float>(FVector::DotProduct(Swing, D)), MinSpeed, MaxLegThrowSpeed);   // (the hand at the release is ~15 m/s: a rat leaves at under 10)
+    const FVector Side = Swing - D * FVector::DotProduct(Swing, D);
+    const FVector V = D * Along + FVector(Side.X, Side.Y, 0).GetClampedToMaxSize(150.f) * .3f + FVector(0, 0, FMath::Clamp(static_cast<float>(Swing.Z), Up, Up * 1.6f));
+    // The spin he leaves with: the pendulum's own turn about the hand (end over end along the throw).
+    const FVector Axis = FVector::CrossProduct(FVector::UpVector, D).GetSafeNormal();
+    SpinAxis = Axis.IsNearlyZero() ? FVector::RightVector : Axis;
+    SpinRate = FMath::Clamp(Swing.Size() / LegHoldLength, 7.f, 15.f);   // rad/s
+    SpinAngle = 0; BodyQuatFrom = BodyQuat;
+    HeldBy.Reset(); bLegHeld = false;
+    auto* Movement = GetCharacterMovement();
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = V;
+    Gait = EGait::Thrown; ThrownPhase = EThrown::Flight; ThrownClock = 0; ThrowPrevVel = V;
+    BiteImmuneUntil = GetWorld()->GetTimeSeconds() + .6f;
+    SetActorRotation(FRotator(0, D.Rotation().Yaw + 180.f, 0));   // (facing back along the throw: he goes feet first, tumbling)
+    SetClip(EClip::Tumble, 0, .1f);
+    PreviousMotionLocation = GetActorLocation();
+    ++Throws;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN_BY_LEG velocity=%s swing=%.0f spin=%.1f"), *V.ToCompactString(), Swing.Size(), SpinRate);
+}
+void AChuckCharacter::UpdateThrown(float DeltaSeconds)
+{
+    ThrownClock += DeltaSeconds;
+    auto* Movement = GetCharacterMovement();
+    BaseTime += DeltaSeconds;
+    switch (ThrownPhase)
+    {
+    case EThrown::Flight:
+    {
+        SpinAngle += SpinRate * DeltaSeconds;
+        SpinRate *= FMath::Exp(-.35f * DeltaSeconds);
+        BodyQuat = FQuat(SpinAxis, SpinAngle) * BodyQuatFrom;
+        bBodyQuatLive = true;
+        const FVector V = Movement->Velocity;
+        // Struck a wall: going fast, the speed across the ground cut short, and a wall where he was going.
+        if (ThrowPrevVel.Size2D() > 220.f && V.Size2D() < ThrowPrevVel.Size2D() * .45f)
+        {
+            FHitResult Wall;
+            FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckThrownWall), false, this);
+            const FVector From = GetActorLocation(), To = From + ThrowPrevVel.GetSafeNormal2D() * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 25.f);
+            if (GetWorld()->SweepSingleByChannel(Wall, From, To, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(8.f), Q) && FMath::Abs(Wall.ImpactNormal.Z) < .55f)
+            {
+                BeginWallSlam(Wall);
+                break;
+            }
+        }
+        ThrowPrevVel = V;
+        if (Movement->IsMovingOnGround() || ThrownClock > 4.f) BeginCrashLand();
+        break;
+    }
+    case EThrown::Crash:
+    {
+        // Down on his face, skidding to a stop; the clip gets him up.
+        ThrowSkid *= FMath::Exp(-7.f * DeltaSeconds);
+        if (!ThrowSkid.IsNearlyZero(2.f)) { FHitResult Hit; AddActorWorldOffset(ThrowSkid * DeltaSeconds, true, &Hit); if (Hit.bBlockingHit) ThrowSkid = FVector::ZeroVector; }
+        Movement->Velocity = FVector::ZeroVector;
+        BodyQuat = FQuat::Slerp(BodyQuatFrom, FQuat::Identity, FMath::SmoothStep(0.f, .12f, ThrownClock));
+        if (ThrownClock >= Clips[static_cast<int32>(EClip::CrashLand)]->GetPlayLength() - .05f)
+        {
+            bBodyQuatLive = false; Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
+            Movement->SetMovementMode(MOVE_Walking);
+        }
+        break;
+    }
+    case EThrown::Slam:
+    {
+        // Down the wall from where he struck it to its foot, limp; then the clip slumps him and gets him up.
+        const float U = FMath::SmoothStep(WallSlamSlide0, WallSlamSlide1, ThrownClock);
+        FVector At = SlamFrom; At.Z = FMath::Lerp(static_cast<float>(SlamFrom.Z), SlamFloorZ, U * U);
+        SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+        Movement->Velocity = FVector::ZeroVector;
+        BodyQuat = FQuat::Slerp(BodyQuatFrom, FQuat::Identity, FMath::SmoothStep(0.f, .05f, ThrownClock));
+        if (ThrownClock >= Clips[static_cast<int32>(EClip::WallSlam)]->GetPlayLength() - .05f)
+        {
+            bBodyQuatLive = false; Gait = EGait::Idle; SetClip(EClip::Idle, 0, .25f);
+            Movement->SetMovementMode(MOVE_Walking);
+        }
+        break;
+    }
+    }
+}
+void AChuckCharacter::BeginCrashLand()
+{
+    auto* Movement = GetCharacterMovement();
+    const FVector V = Movement->Velocity;
+    ThrownPhase = EThrown::Crash; ThrownClock = 0;
+    // Face down along the way he was going, his head first (the clip lies him along his facing).
+    const FVector Along = V.GetSafeNormal2D().IsNearlyZero() ? GetActorForwardVector() : V.GetSafeNormal2D();
+    SetActorRotation(FRotator(0, Along.Rotation().Yaw, 0));
+    ThrowSkid = Along * FMath::Min(static_cast<float>(V.Size2D()) * .55f, 320.f);
+    BodyQuatFrom = BodyQuat;
+    Movement->SetMovementMode(MOVE_Walking);
+    Movement->StopMovementImmediately();
+    SetClip(EClip::CrashLand, 0, .06f);
+    PlaySfx(LandSounds, ESfx::Land, LandVolume * 1.6f);
+    ++CrashLands;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN_CRASH speed=%.0f down_speed=%.0f"), V.Size2D(), -V.Z);
+}
+void AChuckCharacter::BeginWallSlam(const FHitResult& Wall)
+{
+    auto* Movement = GetCharacterMovement();
+    ThrownPhase = EThrown::Slam; ThrownClock = 0;
+    // Back first against it: facing out from it.
+    const FVector Out = FVector(Wall.ImpactNormal.X, Wall.ImpactNormal.Y, 0).GetSafeNormal();
+    SetActorRotation(FRotator(0, Out.Rotation().Yaw, 0));
+    const float R = GetCapsuleComponent()->GetScaledCapsuleRadius(), Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    SlamFrom = FVector(Wall.ImpactPoint.X, Wall.ImpactPoint.Y, GetActorLocation().Z) + Out * (R + 1.f);
+    FHitResult Floor;
+    FCollisionQueryParams Q(SCENE_QUERY_STAT(ChuckSlamFloor), false, this);
+    SlamFloorZ = GetWorld()->LineTraceSingleByChannel(Floor, SlamFrom, SlamFrom - FVector(0, 0, 2000.f), ECC_Pawn, Q) ? static_cast<float>(Floor.ImpactPoint.Z) + Half + .5f : static_cast<float>(SlamFrom.Z);
+    SlamFloorZ = FMath::Min(SlamFloorZ, static_cast<float>(SlamFrom.Z));
+    BodyQuatFrom = BodyQuat;
+    Movement->StopMovementImmediately();
+    Movement->SetMovementMode(MOVE_Flying);
+    SetClip(EClip::WallSlam, 0, .04f);
+    PlaySfx(LandSounds, ESfx::Land, LandVolume * 2.f);
+    // It hurts: a sanity (the last one takes him, after he has slid down).
+    ++BitesTaken;
+    Sanity = FMath::Max(0, Sanity - 1);
+    if (Sanity == 0) { bPendingVanish = true; PendingVanishAt = GetWorld()->GetTimeSeconds() + .7f; }
+    ++WallSlams;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN_WALL_SLAM speed=%.0f height=%.0f sanity=%d"), ThrowPrevVel.Size2D(), SlamFrom.Z - SlamFloorZ, Sanity);
 }
 void AChuckCharacter::UpdateHeld(float DeltaSeconds)
 {
@@ -2633,6 +2795,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         if (Into > 35.f) BeginSlide(Into);
     }
     if (Gait == EGait::Held) UpdateHeld(DeltaSeconds);
+    else if (Gait == EGait::Thrown) UpdateThrown(DeltaSeconds);
     else if (Gait == EGait::Astral) UpdateAstral(DeltaSeconds);
     else if (Gait == EGait::Vault)
     {
@@ -3363,6 +3526,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.PeriodB = Period(Fading);
     P.bMirrorB = Fading == EClip::WalkStop && bStopMirror;
     P.WeightB = FadeWeight;
+    P.bSnapshotB = bFadeFromSnapshot && FadeWeight > 0; P.SnapshotSerial = FadeSnapshotSerial;
     P.ClipRun = RunWeight > 0 ? Clips[static_cast<int32>(EClip::RunLoop)] : nullptr;
     P.TimeRun = WalkPhase * RunPeriod;
     P.PeriodRun = Period(EClip::RunLoop);
@@ -3438,12 +3602,53 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
             if (bStepGait && P.bStance[I] && !bPrevStance[I]) PlayStep(Pose.Evaluations ? Pose.BallWorld[I] : Location, Gait == EGait::Turn ? ChuckClipData::WalkSpeed * .6f : Speed);
             bPrevStance[I] = P.bStance[I];
         }
-        // Tail twist taken off (ChuckAnimInstance, 2026-11-12): logged each time it passes a new 15-degree mark.
-        static float TailTwistLogged = 15.f;
-        if (Pose.TailTwist >= TailTwistLogged)
+        // The squiggle (user 2026-11-12): the tail bent back and forth along its length, a zigzag. Measured on the skinned
+        // bones each frame: consecutive bends that turn opposite ways, both sharper than 18 degrees. Logged with what was
+        // playing (rate-limited); counted for tests. Only with -ChuckTailWatch or -ChuckTailCapture: a dozen bone reads a
+        // frame on the game thread are a diagnostic's cost, not play's.
+        static const bool bTailWatch = FParse::Param(FCommandLine::Get(), TEXT("ChuckTailWatch")) || FParse::Param(FCommandLine::Get(), TEXT("ChuckTailCapture"));
+        if (bTailWatch)
         {
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_TAIL_TWIST_REMOVED max_deg=%.0f gait=%s clip=%d"), Pose.TailTwist, GetGaitName(), static_cast<int32>(Base));
-            TailTwistLogged = (FMath::FloorToFloat(Pose.TailTwist / 15.f) + 1.f) * 15.f;
+            FVector TP[7]; int32 N = 0;
+            static const FName TailNames[] = {TEXT("tail_0"), TEXT("tail_1"), TEXT("tail_2"), TEXT("tail_3"), TEXT("tail_4"), TEXT("tail_5")};
+            for (const FName& B : TailNames) if (GetMesh()->GetBoneIndex(B) != INDEX_NONE) TP[N++] = GetMesh()->GetBoneLocation(B);
+            float Worst = 0.f; int32 Alternations = 0;
+            for (int32 I = 1; I + 2 < N; ++I)
+            {
+                const FVector D0 = (TP[I] - TP[I - 1]).GetSafeNormal(), D1 = (TP[I + 1] - TP[I]).GetSafeNormal(), D2 = (TP[I + 2] - TP[I + 1]).GetSafeNormal();
+                const float A0 = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(D0 | D1), -1.f, 1.f)));
+                const float A1 = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(D1 | D2), -1.f, 1.f)));
+                if (A0 > 18.f && A1 > 18.f && ((D0 ^ D1) | (D1 ^ D2)) < 0.f) { ++Alternations; Worst = FMath::Max(Worst, FMath::Min(A0, A1)); }
+            }
+            // ...and the tail jumping between frames (in his own body's frame): smeared by the TAA, a squiggle for a moment.
+            {
+                const FVector Tip = GetMesh()->GetBoneLocation(TEXT("tail_5"), EBoneSpaces::ComponentSpace);
+                const FVector Mid = GetMesh()->GetBoneLocation(TEXT("tail_3"), EBoneSpaces::ComponentSpace);
+                const float Jump = FMath::Max(static_cast<float>(FVector::Dist(Tip, TailTipPrev)), static_cast<float>(FVector::Dist(Mid, TailMidPrev)));
+                const float Allowed = 4.f + 250.f * DeltaSeconds;   // (a whip may go 2.5 m/s at the tip)
+                if (TailTipPrev != FVector::ZeroVector && Jump > Allowed && Gait == TailGaitPrev)
+                {
+                    ++TailJumpFrames;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_TAIL_JUMP frames=%d cm=%.1f pelvis_cm=%.1f head_cm=%.1f tail0_cm=%.1f dt_ms=%.1f gait=%s base=%d fading=%d fade_w=%.2f"), TailJumpFrames, Jump,
+                        static_cast<float>(FVector::Dist(GetMesh()->GetBoneLocation(TEXT("pelvis"), EBoneSpaces::ComponentSpace), TailPelvisPrev)),
+                        static_cast<float>(FVector::Dist(GetMesh()->GetBoneLocation(TEXT("head"), EBoneSpaces::ComponentSpace), TailHeadPrev)),
+                        static_cast<float>(FVector::Dist(GetMesh()->GetBoneLocation(TEXT("tail_1"), EBoneSpaces::ComponentSpace), TailBasePrev)),
+                        DeltaSeconds * 1000.f, GetGaitName(), static_cast<int32>(Base), static_cast<int32>(Fading), FadeWeight);
+                }
+                TailTipPrev = Tip; TailMidPrev = Mid; TailGaitPrev = Gait;
+                TailPelvisPrev = GetMesh()->GetBoneLocation(TEXT("pelvis"), EBoneSpaces::ComponentSpace); TailHeadPrev = GetMesh()->GetBoneLocation(TEXT("head"), EBoneSpaces::ComponentSpace); TailBasePrev = GetMesh()->GetBoneLocation(TEXT("tail_1"), EBoneSpaces::ComponentSpace);
+            }
+            if (Alternations > 0)
+            {
+                ++TailZigzagFrames;
+                const double Now = GetWorld()->GetTimeSeconds();
+                if (Now - TailZigzagLoggedAt > .5)
+                {
+                    TailZigzagLoggedAt = Now;
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_TAIL_ZIGZAG frames=%d alternations=%d worst_deg=%.0f gait=%s base=%d fading=%d fade_w=%.2f layer=%d"),
+                        TailZigzagFrames, Alternations, Worst, GetGaitName(), static_cast<int32>(Base), static_cast<int32>(Fading), FadeWeight, LayerTime >= 0 ? 1 : 0);
+                }
+            }
         }
     }
     // On a wall the paws follow the clip (planted on the wall plane).
@@ -3456,7 +3661,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Place the mesh on the traced ground under the capsule, then offset each
     // paw by its own traced ground and drop the pelvis for a lower paw.
     const float CapsuleBottom = Location.Z - GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    const bool bOffGround = bAirborne || IsInGrip() || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
+    const bool bOffGround = bAirborne || IsInGrip() || Gait == EGait::Thrown || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap;
     const float Ground = bOffGround ? CapsuleBottom : FindGround(Location, CapsuleBottom);
     MeshDrop = FMath::FInterpTo(MeshDrop, FMath::Clamp(CapsuleBottom - Ground, 0.f, 4.f), DeltaSeconds, 20.f);
     GetMesh()->SetRelativeLocation(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MeshDrop));   // (shorter on all fours)
@@ -3491,6 +3696,9 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         GetMesh()->SetWorldLocationAndRotation(GetActorLocation() + R.RotateVector(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MeshDrop)), R * GetActorQuat());
     }
     else BodyPitch = 0;
+    // Held by the leg and thrown (2026-11-12): the whole body turned about his centre.
+    if (bBodyQuatLive)
+        GetMesh()->SetWorldLocationAndRotation(GetActorLocation() + BodyQuat.RotateVector(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MeshDrop)), BodyQuat * GetActorQuat());
     const FChuckAnimResult Last = Anim->GetResult();
     const float MeshZ = CapsuleBottom - MeshDrop;
     float Lowest = 0;
@@ -3514,7 +3722,7 @@ void AChuckCharacter::BeginFallCutscene()
     if(auto* PC=Cast<APlayerController>(Controller)) DisableInput(PC);
     TalkingTo.Reset(); TalkLine=0;
     LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
-    bSlideCamera=false; BodyPitch=0; WallSideTilt=0;
+    bSlideCamera=false; BodyPitch=0; WallSideTilt=0; bBodyQuatLive=bLegHeld=false;
     Gait=EGait::Air; AstralPhase=EAstral::None;
     NextExhaleAt=1e9f;   // he breathes out when the cutscene says
     SetClip(EClip::JumpLoop,0,.2f);
@@ -3541,7 +3749,7 @@ void AChuckCharacter::BeginSceneHold()
     Movement->DisableMovement();
     SetActorEnableCollision(false);
     LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
-    bBodyPitchLive=false; BodyPitch=0; WallSideTilt=0; LadderIndex=-1;
+    bBodyPitchLive=false; BodyPitch=0; WallSideTilt=0; bBodyQuatLive=bLegHeld=false; LadderIndex=-1;
     Gait=EGait::Air;
     GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
     SetClip(EClip::SwingSlip,0,.12f);
@@ -3600,7 +3808,7 @@ void AChuckCharacter::UpdateCutscenePose(float DeltaSeconds)
     FadeWeight=FMath::Max(0.f,FadeWeight-FadeRate*DeltaSeconds);
     FChuckAnimParams& P=Anim->Params;
     P=FChuckAnimParams();
-    P.ClipA=Clips[static_cast<int32>(Base)]; P.TimeA=BaseTime; P.PeriodA=Period(Base);
+    P.ClipA=Clips[static_cast<int32>(Base)]; P.TimeA=BaseTime; P.PeriodA=Period(Base); P.bSnapshotB=false;
     P.ClipB=FadeWeight>0 ? Clips[static_cast<int32>(Fading)] : nullptr; P.TimeB=FadingTime; P.PeriodB=Period(Fading); P.WeightB=FadeWeight;
     // No paw locks or foot IK: he is carried across kilometres, and the floor he lands on is flat.
 }

@@ -2223,6 +2223,204 @@ author('FallFlail', FALL_FRAMES, fall_flail, True, {
     'stance_intervals_s': {'foot_L': [], 'foot_R': []},
     'notes': 'Falling, looped: arms up clawing after the yard, legs pedalling, tail whipping, ears back, chin up.'}, ground=False)
 
+# ---- thrown by a temple skeleton (user 2026-11-12): "pick him up by the leg and huck him ... the way he flies through
+# the air and lands should look realistic ... and his crash landing ... and if he gets thrown against a wall it should
+# have its own realistic forceful and damaging look". The runtime turns the whole body (ChuckCharacter's body turn):
+# held, it hangs him head-down from the skeleton's hand by his left ankle and swings him as a pendulum; thrown, it
+# spins him end over end with the throw's spin; these clips are the limbs. All authored upright.
+#   HeldLeg (loop): hung by the left ankle (the runtime turns him over): that leg straight, foot pointed; the other
+#     kicking; arms reaching and clawing toward the floor (over his head here), back arching, tail hanging floorward
+#     (up here), head craned to see the floor.
+#   Tumble (loop): flung, limbs splayed and flailing, the tail whipping, the head turning.
+#   CrashLand: hits the floor face down from the tumble, a bounce, sprawled; lies dazed; pushes up onto all fours and
+#     stands (2.2 s).
+#   WallSlam: back first into a wall off the floor: the impact flattens him, the head whips back into it and then
+#     forward; limp, he slides down it (the runtime lowers him); crumples sitting against it; slumps dazed; leans
+#     forward onto his paws and gets up (2.5 s).
+THROW_HOLD = 'foot_L'
+HELD_FRAMES, TUMBLE_FRAMES, CRASH_FRAMES, SLAM_FRAMES = 30, 24, 66, 75
+
+def smooth_tail(w, base_y, rest_y, whip, lag=.55):
+    for i, b in enumerate(TAIL):
+        poser.rotate(b, 'Y', base_y if i == 0 else rest_y)
+        poser.rotate(b, 'Z', whip * math.sin(w - lag * i))   # a travelling wave: neighbours nearly in phase
+
+def turn_body(pivot, degrees, lift=Vector((0., 0., 0.)), axis='Y'):
+    """Turn the whole body about pivot (armature space; +Y pitches nose down), then lift; returns the map from
+    body-frame points to armature space."""
+    pb = rig.pose.bones['pelvis']
+    rot4 = Matrix.Rotation(math.radians(degrees), 4, axis)
+    pb.matrix = Matrix.Translation(lift) @ Matrix.Translation(pivot) @ rot4 @ Matrix.Translation(-pivot) @ pb.matrix
+    poser.update()
+    rot3 = rot4.to_3x3()
+    return (lambda p: lift + pivot + rot3 @ (Vector(p) - pivot)), rot3
+
+def held_leg(phase, f):
+    w = TAU * phase
+    poser.rotate('pelvis', 'Y', -6 + 3 * math.sin(w))
+    poser.rotate('spine_01', 'Y', -8 + 3 * math.sin(w + .4))
+    poser.rotate('spine_02', 'Y', -8)
+    poser.rotate('chest', 'Y', -10 + 4 * math.sin(w + .8))
+    poser.rotate('chest', 'Z', 9 * math.sin(w * 2))                    # twisting to get free
+    poser.rotate('neck', 'Y', -14)
+    poser.rotate('head', 'Y', -24 + 6 * math.sin(w * 2 + 1.))          # craned toward the floor
+    poser.rotate('head', 'Z', -8 * math.sin(w * 2))
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 24)
+    smooth_tail(w * 2, 36, 7, 10)
+    poser.update()
+    r = 0.
+    for s, sg, ph in (('L', 1, 0.), ('R', -1, math.pi)):
+        sh = poser.head(f'upperarm_{s}')
+        paw = sh + Vector((3. + 4. * math.sin(w * 2 + ph), sg * (6. + 2. * math.cos(w * 2 + ph)), 17. + 3. * math.sin(w * 2 + ph + .7)))
+        r = max(r, poser.arm(s, paw, pole=(-.3, sg * 1., .2)))
+        curl(s, 25 + 35 * (.5 + .5 * math.sin(w * 2 + ph + 1.4)))
+    hip = poser.head('thigh_L')
+    lengths = poser.length('thigh_L') + poser.length('calf_L') + (poser.rest_head['toes_L'] - poser.rest_head['foot_L']).length
+    r = max(r, poser.leg('L', hip + Vector((1., .5, -.97 * lengths)), 45, 20))    # held: straight, pointed
+    hip = poser.head('thigh_R')
+    r = max(r, poser.leg('R', hip + Vector((6. + 7. * math.sin(w * 2), -2., -13. + 5. * math.cos(w * 2))), 30 + 15 * math.sin(w * 2), 10, pole=(1., 0., 0.)))
+    ik_goals()
+    return r
+
+def tumble(phase, f):
+    w = TAU * phase
+    poser.rotate('spine_01', 'Z', 7 * math.sin(w))
+    poser.rotate('chest', 'Z', 10 * math.sin(w + .6))
+    poser.rotate('chest', 'Y', -4 + 4 * math.sin(w * 2))
+    poser.rotate('neck', 'Z', 12 * math.sin(w + 1.2))
+    poser.rotate('head', 'Y', -10 + 8 * math.sin(w * 2 + .5))
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 28)
+    smooth_tail(w * 2, 10, 4, 16, .6)
+    poser.update()
+    r = 0.
+    for s, sg, ph in (('L', 1, 0.), ('R', -1, 2.3)):
+        sh = poser.head(f'upperarm_{s}')
+        paw = sh + Vector((4. * math.sin(w * 2 + ph), sg * (14. + 2. * math.cos(w * 2 + ph)), 4. + 6. * math.sin(w * 2 + ph + .9)))
+        r = max(r, poser.arm(s, paw, pole=(-.2, sg * 1., -.4)))
+        curl(s, 10 + 30 * (.5 + .5 * math.sin(w * 2 + ph)))
+    for s, sg, ph in (('L', 1, .5), ('R', -1, 2.9)):
+        hip = poser.head(f'thigh_{s}')
+        r = max(r, poser.leg(s, hip + Vector((5. * math.sin(w * 2 + ph), sg * (7. + 2. * math.sin(w + ph)), -15. + 4. * math.cos(w * 2 + ph))), 25, 10, pole=(1., sg * .3, 0.)))
+    ik_goals()
+    return r
+
+STAND_PAWS = {s: Vector(NEUTRAL_BALL[s]) for s in 'LR'}
+REST_WRIST = {s: Vector(poser.rest_head[f'hand_{s}']) for s in 'LR'}
+
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+def get_up(t0, t, pitch_from, lift_from, legs_from, arms_from):
+    """From a body turned pitch_from (degrees, nose down +) about its hips, lifted lift_from, onto all fours and up to
+    the stance by t0 + 1.25 s. legs_from/arms_from: armature-space paw/wrist targets at the start (per side)."""
+    u = (t - t0) / 1.25
+    fours = smoothstep(u, 0., .45)                       # onto paws and knees
+    up = smoothstep(u, .45, 1.)                          # up onto the hind paws
+    pitch = lerp(lerp(pitch_from, 66., fours), 0., up)
+    lift = lerp(lerp(lift_from, Vector((0., 0., -9.)), fours), Vector((0., 0., 0.)), up)
+    return pitch, lift, fours, up
+
+def crash_land(phase, f):
+    t = f / FPS
+    hit = math.exp(-((t - .05) / .05) ** 2)
+    bounce = 5. * math.sin(math.pi * min(1., max(0., (t - .06) / .22)))
+    daze = smoothstep(t, .25, .4) * (1 - smoothstep(t, .85, 1.))
+    pitch, lift, fours, up = 88., Vector((0., 0., -14. + bounce - 2. * hit)), 0., 0.
+    if t > .95:
+        pitch, lift, fours, up = get_up(.95, t, 88., Vector((0., 0., -14.)), None, None)
+    # The body in its own frame: sprawled (arms over the head), head lifting and shaking while dazed.
+    poser.rotate('spine_01', 'Y', -6 * (1 - fours) + 10 * hit)
+    poser.rotate('chest', 'Y', -8 * (1 - fours) + 8 * hit)
+    poser.rotate('chest', 'Z', 6 * daze * math.sin(t * 9))
+    poser.rotate('head', 'Y', -18 * (1 - up) + 25 * hit)
+    poser.rotate('head', 'Z', 12 * daze * math.sin(t * 13))
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 18 * (1 - up))
+    smooth_tail(t * 4, -78 * (1 - up) * (1 - .5 * fours), 4 * (1 - up), 3 * (1 - up))   # (down his body: along the floor behind him)
+    poser.update()
+    pivot = Vector((0., 0., 22.))
+    tb, rot = turn_body(pivot, pitch, lift)
+    r = 0.
+    for s, sg in (('L', 1), ('R', -1)):
+        sh = poser.head(f'upperarm_{s}')
+        sprawl = tb(poser.rest_head[f'upperarm_{s}'] + Vector((2., sg * 14., 16.)))       # flung out ahead, flat
+        sprawl.z = max(sprawl.z, 2.)
+        planted = Vector((sh.x + 2., sh.y + sg * 1.5, 2.2))                                # under the shoulder
+        idle = REST_WRIST[s] + Vector((1.5, 0., 0.))
+        wrist = lerp(lerp(sprawl, planted, fours), idle, up)
+        r = max(r, poser.arm(s, wrist, pole=tuple((rot @ Vector((-.4, sg * 1., -.2))).normalized())))
+        curl(s, lerp(lerp(15., 40., fours), 20., up))
+        hip = poser.head(f'thigh_{s}')
+        splay = tb(STAND_PAWS[s] + Vector((0., sg * 4., -2.)))                               # legs out behind
+        splay.z = max(splay.z, 1.)
+        knees = Vector((hip.x - 9., hip.y + sg * 1., 1.))
+        ball = lerp(lerp(splay, knees, fours), STAND_PAWS[s], up)
+        r = max(r, poser.leg(s, ball, lerp(lerp(70., 40., fours), 0., up), 0., pole=tuple((rot @ Vector((1., 0., 0.))).normalized())))
+    ik_goals()
+    return r
+
+SLAM_SLIDE = (.1, .5)          # the runtime lowers him down the wall over this, from where he struck to the floor
+
+def wall_slam(phase, f):
+    t = f / FPS
+    hit = math.exp(-((t - .03) / .04) ** 2)
+    whip = math.sin(math.pi * min(1., max(0., (t - .04) / .25)))      # the head snapping forward off the wall
+    limp = smoothstep(t, .08, .2)
+    sit = smoothstep(t, .48, .6)                                       # crumpled down at its foot
+    slump = smoothstep(t, .6, .9) * (1 - smoothstep(t, 1.35, 1.55))
+    t_up = 1.4
+    up_u = smoothstep(t, t_up, t_up + 1.1)
+    lean = smoothstep(t, t_up, t_up + .45) * (1 - smoothstep(t, t_up + .55, t_up + 1.1))
+    # Back against the wall (the wall is behind him, -X): flattened, then sagging; seated, leaning back on it.
+    poser.rotate('spine_01', 'Y', -10 * hit + 8 * limp * (1 - sit) + 14 * slump)
+    poser.rotate('spine_02', 'Y', -8 * hit + 6 * limp * (1 - sit) + 10 * slump)
+    poser.rotate('chest', 'Y', -12 * hit + 8 * limp + 8 * slump - 6 * up_u)
+    poser.rotate('neck', 'Y', -18 * hit + 22 * whip + 10 * slump)
+    poser.rotate('head', 'Y', -30 * hit + 30 * whip + 18 * slump - 10 * up_u)
+    poser.rotate('head', 'Z', 14 * slump * math.sin(t * 3.))           # lolling
+    for side in 'LR':
+        poser.rotate(f'ear_{side}', 'Y', 26 * (1 - up_u))
+    smooth_tail(t * 3, -30 * (1 - sit) * (1 - up_u) + 20 * sit * (1 - up_u), 2, 4 * limp * (1 - up_u))
+    poser.update()
+    # Seated: hips dropped to the floor and leaning back against the wall; getting up: forward onto the paws, then up.
+    drop = 18. * sit * (1 - up_u)
+    pitch = -18. * sit * (1 - lean) * (1 - up_u) + 45. * lean
+    tb, rot = turn_body(Vector((-3., 0., 16.)), pitch, Vector((0., 0., -drop)))
+    r = 0.
+    for s, sg in (('L', 1), ('R', -1)):
+        sh = poser.head(f'upperarm_{s}')
+        flung = sh + Vector((-6., sg * 13., 3.))                       # thrown back and out at the impact
+        hang = sh + Vector((-2., sg * 7., -17.))                        # limp at his sides against the wall
+        floor = Vector((sh.x - 1., sh.y + sg * 5., 1.5))               # palms on the floor beside him
+        push = Vector((sh.x + 6., sh.y + sg * 2., 1.5))                # ahead, to push up from
+        idle = REST_WRIST[s] + Vector((1.5, 0., 0.))
+        wrist = lerp(lerp(lerp(lerp(flung, hang, limp), floor, sit), push, lean), idle, smoothstep(t, t_up + .6, t_up + 1.1))
+        r = max(r, poser.arm(s, wrist, pole=tuple((rot @ Vector((-.4, sg * 1., -.2))).normalized())))
+        curl(s, 8 + 25 * slump + 20 * lean)
+        hip = poser.head(f'thigh_{s}')
+        dangling = STAND_PAWS[s] + Vector((5. * (1 - limp) + 2., sg * 1., 2.))   # off the floor against the wall
+        seated = Vector((hip.x + 15., hip.y + sg * 3., 0.5))           # legs out before him, knees up
+        tucked = Vector((hip.x + 4., hip.y + sg * 1., .5))             # drawn under to rise
+        ball = lerp(lerp(lerp(dangling, seated, sit), tucked, lean), STAND_PAWS[s], smoothstep(t, t_up + .45, t_up + 1.1))
+        r = max(r, poser.leg(s, ball, 0., 0., pole=tuple((rot @ Vector((1., 0., .5))).normalized())))
+    ik_goals()
+    return r
+
+author('HeldLeg', HELD_FRAMES, held_leg, True, {
+    'hold_bone': THROW_HOLD, 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Hung by the left ankle (authored upright; the runtime turns him over and swings him from the hand): the held leg straight and pointed, the other kicking, arms clawing toward the floor (overhead here), tail hanging floorward.'}, ground=False)
+author('Tumble', TUMBLE_FRAMES, tumble, True, {
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Flung: limbs splayed and flailing, the tail whipping; the runtime spins the body end over end.'}, ground=False)
+author('CrashLand', CRASH_FRAMES, crash_land, False, {
+    'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Face down from the tumble with a bounce, sprawled; dazed; onto all fours from 0.95 s and up to the stance by 2.2 s.'})
+author('WallSlam', SLAM_FRAMES, wall_slam, False, {
+    'slide_s': list(SLAM_SLIDE), 'stance_intervals_s': {'foot_L': [], 'foot_R': []},
+    'notes': 'Back first into a wall: flattened, the head whipping back into it and forward; limp down it (the runtime lowers him over slide_s); seated and slumped against it; forward onto his paws and up by 2.5 s.'})
+
 # ---------------------------------------------------------------- export
 FBX = dict(apply_unit_scale=True, axis_forward='-Y', axis_up='Z', add_leaf_bones=False,
            primary_bone_axis='Y', secondary_bone_axis='X', use_armature_deform_only=False,

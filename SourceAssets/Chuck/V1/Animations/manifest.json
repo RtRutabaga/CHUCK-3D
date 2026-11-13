@@ -1933,6 +1933,83 @@
     "foot_R": []
    },
    "notes": "Falling, looped: arms up clawing after the yard, legs pedalling, tail whipping, ears back, chin up."
+  },
+  {
+   "name": "HeldLeg",
+   "file": "Animations/AS_Chuck_HeldLeg.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 29,
+   "frame_count": 30,
+   "duration_s": 1.0,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.0785,
+   "hold_bone": "foot_L",
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Hung by the left ankle (authored upright; the runtime turns him over and swings him from the hand): the held leg straight and pointed, the other kicking, arms clawing toward the floor (overhead here), tail hanging floorward."
+  },
+  {
+   "name": "Tumble",
+   "file": "Animations/AS_Chuck_Tumble.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 23,
+   "frame_count": 24,
+   "duration_s": 0.8,
+   "loop": true,
+   "loop_note": "no duplicate endpoint sample; last frame interpolates to frame 0",
+   "root_motion": false,
+   "max_leg_reach_ratio": 0.9123,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Flung: limbs splayed and flailing, the tail whipping; the runtime spins the body end over end."
+  },
+  {
+   "name": "CrashLand",
+   "file": "Animations/AS_Chuck_CrashLand.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 65,
+   "frame_count": 66,
+   "duration_s": 2.1667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.1443,
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Face down from the tumble with a bounce, sprawled; dazed; onto all fours from 0.95 s and up to the stance by 2.2 s."
+  },
+  {
+   "name": "WallSlam",
+   "file": "Animations/AS_Chuck_WallSlam.fbx",
+   "fps": 30,
+   "first_frame": 0,
+   "last_frame": 74,
+   "frame_count": 75,
+   "duration_s": 2.4667,
+   "loop": false,
+   "loop_note": "",
+   "root_motion": false,
+   "max_leg_reach_ratio": 1.3582,
+   "slide_s": [
+    0.1,
+    0.5
+   ],
+   "stance_intervals_s": {
+    "foot_L": [],
+    "foot_R": []
+   },
+   "notes": "Back first into a wall: flattened, the head whipping back into it and forward; limp down it (the runtime lowers him over slide_s); seated and slumped against it; forward onto his paws and up by 2.5 s."
   }
  ]
 }

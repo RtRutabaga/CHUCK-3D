@@ -25,6 +25,10 @@ struct FChuckAnimParams
     float PeriodB = 0.f;
     bool bMirrorB = false;
     float WeightB = 0.f;
+    /** B is the pose shown when this fade began (a fade started while another was under way: 2026-11-12, the squiggle).
+     *  A new SnapshotSerial captures it. */
+    bool bSnapshotB = false;
+    int32 SnapshotSerial = 0;
     /** Speed layer on the WalkLoop sample (A or B): RunLoop blended in by WeightRun (saunter -> run). */
     UAnimSequence* ClipRun = nullptr;
     float TimeRun = 0.f;
@@ -76,6 +80,7 @@ struct FChuckAnimResult
     int32 Releases = 0;
     int32 Evaluations = 0;
     float TailTwist = 0.f;   // the most twist taken off a tail bone so far (degrees; 2026-11-12)
+    int32 TailClamps = 0;    // tail bone turns held back to the tail's rate this run (2026-11-12, the squiggle)
 };
 
 struct FChuckAnimProxy : public FAnimInstanceProxy
@@ -99,6 +104,8 @@ private:
     };
     FFootLock Locks[2];
     float DeltaTime = 0.f;
+    TArray<FQuat> TailPrev; bool bTailPrevValid = false;   // the tail's last pose (its turn rate)
+    TArray<FTransform> LastLocal, SnapshotLocal; int32 SnapshotTaken = 0;   // the cross-faded pose last shown, and the fade's snapshot
     bool bHasResult = false;
     // _L/_R mirror map for the current required bones.
     TArray<FCompactPoseBoneIndex> MirrorBones;

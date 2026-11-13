@@ -6,6 +6,20 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **The squiggle; thrown by the leg (November 12, night, Claude):**
+  - Squiggle:
+    - The earlier tail-twist change is off.
+    - The squiggle was the tail jumping between frames (up to 18 cm at the tip), smeared by TAA.
+    - Each tail bone now follows with a 45 ms lag and at most 360°/s.
+    - Still open: whole-body pops at the start of the walk-start and slash cross-fades.
+  - Skeleton grab:
+    - It now takes Chuck by the ankle, rises and hucks him with an overhand throw (CMU mocap) in a random direction.
+    - He hangs and kicks, tumbles through the air, crash-lands face down, skids and gets up.
+    - Against a wall he slams back first, slides down and slumps (one more sanity).
+  - Verified: skeleton 10/10 in the editor.
+  - Verified: Verify-Package 182 (after a slow-machine night of timing failures in the traversal trials, which the old package failed too). In the launcher as Throw.
+  - Not played by hand.
+  - Details in [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **The user's 23-item list (November 12, Claude):**
   - Audio: no sewer zombies heard from the streets, no temple interior sounds outside, new CC0-based dinosaur voices (unauditioned).
   - Collision: the side gate's stone jambs by the sewer hatch, found by the new `-ChuckCollisionAudit`; the ship's mast cap, the tops round the masthead, the binnacle hood; a push out of any sanctum pier.

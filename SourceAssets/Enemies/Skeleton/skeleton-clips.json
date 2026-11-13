@@ -97,6 +97,21 @@
    "side_cm": 52.6477,
    "aim_deg": 39.951,
    "effector": "middle_03_r"
+  },
+  "Throw": {
+   "fbx": "Anim/AS_Skeleton_Throw.fbx",
+   "take": "124_01",
+   "frames": 40,
+   "fps": 30,
+   "loops": false,
+   "speed_cm_s": 0.0,
+   "seconds": 1.3333,
+   "strike": 0.7,
+   "reach_cm": 75.0887,
+   "height_cm": 155.1585,
+   "side_cm": -17.9978,
+   "aim_deg": -13.4787,
+   "effector": "middle_03_r"
   }
  }
 }

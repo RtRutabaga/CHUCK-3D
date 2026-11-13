@@ -57,7 +57,7 @@ void StartTempleSkeletonReview(UWorld* World)
     static constexpr int32 Count = UE_ARRAY_COUNT(Trials);
     struct FRun
     {
-        int32 Trial = 0, Failures = 0, Phase = 0, Shot = 0, Landed = 0, Attacks = 0, Settles = 0;
+        int32 Trial = 0, Failures = 0, Phase = 0, Shot = 0, Landed = 0, Attacks = 0, Settles = 0, Throws = 0, Downs = 0;
         float Start = -1, Tick = -1, LastPress = -10, NextShot = 0, PelvisZ = 0, MinDist = 1e9f;
         bool bSawRise = false, bSawChase = false, bSawReturn = false, bSawAttack = false, bPlaced = false;
         ATempleSkeleton* Subject = nullptr;
@@ -105,6 +105,7 @@ void StartTempleSkeletonReview(UWorld* World)
                 default: break;
                 }
                 Run->Landed = K->GetLanded(AttackOf); Run->Attacks = K->GetAttacks(AttackOf); Run->Settles = K->GetSettles();
+                Run->Throws = Chuck->GetThrows(); Run->Downs = Chuck->GetCrashLands() + Chuck->GetWallSlams();
             }
         }
         const float T = Now - Run->Start;
@@ -174,12 +175,23 @@ void StartTempleSkeletonReview(UWorld* World)
             Pass = Run->bSawRise && Run->bSawChase && K->GetRises() > 0 && K->GetTopSpeed() > 70.f && K->GetTopSpeed() < 100.f && Run->MinDist < 110.f;
             Done = Pass; Limit = 14;
             break;
-        case KKick: case KGrab: case KSwat:
+        case KKick: case KSwat:
             // He stands where that attack reaches: it winds up, aims and strikes, and the bones meet him.
             Pass = K->GetAttacks(AttackOf) > Run->Attacks && K->GetLanded(AttackOf) > Run->Landed
                 && Lost == (AttackOf == ATempleSkeleton::EAttack::Kick ? ATempleSkeleton::KickDamage : 1);
             Done = Pass && K->GetState() != ATempleSkeleton::EState::Attack; Limit = 10;
             break;
+        case KGrab:
+        {
+            // (2026-11-12) The stoop takes him by the ankle, swings him and throws him; he lands (or strikes a wall) and is
+            // back on his feet: a sanity for the throw, another if a wall stopped him.
+            const bool bThrown = Chuck->GetThrows() > Run->Throws, bDown = Chuck->GetCrashLands() + Chuck->GetWallSlams() > Run->Downs;
+            const bool bUp = bDown && !Chuck->IsThrown() && !Chuck->IsLegHeld();
+            Pass = K->GetLanded(AttackOf) > Run->Landed && bThrown && bUp && (Lost == 1 || (Lost == 2 && Chuck->GetWallSlams() > 0));
+            if (bUp && !Pass) UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_GRAB_THROW thrown=%d down=%d lost=%d"), bThrown, bDown, Lost);
+            Done = bUp; Limit = 14;
+            break;
+        }
         case KStepBack:
             // The kick's wind-up, then a step back out of its reach before the strike: the foot passes short of him.
             if (Run->Phase == 0 && K->GetState() == ATempleSkeleton::EState::Attack && K->GetAnimEvaluations() > 0)
@@ -250,14 +262,16 @@ void StartTempleSkeletonReview(UWorld* World)
             if (!Run->Camera) { Run->Camera = World->SpawnActor<ACameraActor>(); Run->Camera->GetCameraComponent()->SetFieldOfView(55); }
             // From the side of the line between them, a little above Chuck's eye.
             // After the collapse: on the heap, from above and to the side.
-            const FVector Mid = K->IsDead() ? K->GetMesh()->GetBoneLocation(TEXT("spine_02")) : (K->GetActorLocation() + Chuck->GetActorLocation()) * .5f;
+            // (Thrown: on him, close, every tenth of a second - the flight, the landing or the wall.)
+            const bool bOnChuck = Chuck->IsThrown();
+            const FVector Mid = bOnChuck ? Chuck->GetActorLocation() : K->IsDead() ? K->GetMesh()->GetBoneLocation(TEXT("spine_02")) : (K->GetActorLocation() + Chuck->GetActorLocation()) * .5f;
             FVector Side = FVector::CrossProduct((K->GetActorLocation() - Chuck->GetActorLocation()).GetSafeNormal2D(), FVector::UpVector);
             if (Side.IsNearlyZero()) Side = FVector::RightVector;
-            const FVector Eye = Mid + Side * (K->IsDead() ? 200.f : 330.f) + FVector(0, 0, K->IsDead() ? 150.f : 20.f);
+            const FVector Eye = Mid + Side * (bOnChuck ? 230.f : K->IsDead() ? 200.f : 330.f) + FVector(0, 0, bOnChuck ? 60.f : K->IsDead() ? 150.f : 20.f);
             Run->Camera->SetActorLocationAndRotation(Eye, (Mid + FVector(0, 0, K->IsDead() ? 0.f : -10.f) - Eye).Rotation()); PC->SetViewTarget(Run->Camera);
             const FString Folder = FPaths::ScreenShotDir() / TEXT("Skeleton"); IFileManager::Get().MakeDirectory(*Folder, true);
             FScreenshotRequest::RequestScreenshot(Folder / FString::Printf(TEXT("T%d_%s_%03d.png"), Run->Trial, Trial.Name, Run->Shot++), false, false);
-            Run->NextShot += K->GetState() == ATempleSkeleton::EState::Attack ? .12f : .5f;
+            Run->NextShot += bOnChuck ? .1f : K->GetState() == ATempleSkeleton::EState::Attack ? .12f : .5f;
         }
         if (!Done && T < Limit) return;
         Run->Failures += !Pass;

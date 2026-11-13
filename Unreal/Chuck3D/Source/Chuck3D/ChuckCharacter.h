@@ -283,8 +283,21 @@ public:
     void HeldBitten();
     /** Thrown out of its hands (a temple skeleton, 2026-11-12): flying at Velocity, briefly safe from another blow. */
     void ThrowFromHeld(const FVector& Velocity);
+    // Picked up by the leg and hucked (user 2026-11-12, a temple skeleton): hung head-down by his left ankle from the
+    // holder's hand, a pendulum it swings; thrown, he tumbles end over end with the swing's spin, crash-lands face down
+    // and gets up, or slams back first into a wall, slides down it, slumps and gets up (a sanity).
+    bool BeginLegHeld(AActor* By);
+    /** Each tick while held by the leg: the hand (world) and the way he faces. */
+    void SetLegHold(const FVector& Hand, float FaceYaw, float DeltaSeconds);
+    /** Let go at the top of the throw: at the swing's own speed, at least MinSpeed along Dir and Up upward. */
+    void ThrowFromLegHold(const FVector& Dir, float MinSpeed, float Up);
+    bool IsLegHeld() const { return Gait == EGait::Held && bLegHeld; }
+    bool IsThrown() const { return Gait == EGait::Thrown; }
+    int32 GetCrashLands() const { return CrashLands; }
+    int32 GetWallSlams() const { return WallSlams; }
     int32 GetThrows() const { return Throws; }
     int32 GetPierPushOuts() const { return PierPushOuts; }
+    int32 GetTailZigzagFrames() const { return TailZigzagFrames; }
     bool IsHeld() const { return Gait == EGait::Held; }
     /** Held, or vanishing out of a zombie's hands (still drawn in its grip). */
     bool IsInGrip() const { return Gait == EGait::Held || bHeldVanish; }
@@ -479,15 +492,16 @@ private:
     bool bFollowReady = false;
 
     // v1 clips (docs/RIG-CONTRACT-V1.md, SourceAssets/Chuck/V1/Animations/manifest.json).
-    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, Num };
+    enum class EClip : uint8 { Idle, WalkStart, WalkLoop, WalkStop, TurnLeft90, TurnRight90, JumpStart, JumpLoop, JumpLand, Roll, SideJumpLeft, SideJumpRight, RunLoop, RunJump, SlashRight, SlashLeft, WallRun, WallKick, Hang, PullUp, Mantle, ShimmyLeft, ShimmyRight, StrafeLeft, StrafeRight, StrafeRunLeft, StrafeRunRight, SlashLowRight, SlashLowLeft, Summon, SpeedVault, SprintLoop, SprintLeap, Swing, SwingLeapLeft, SwingLeapRight, Crawl, SwingSlip, FallFlail, HeldLeg, Tumble, CrashLand, WallSlam, Num };
     UPROPERTY() TArray<UAnimSequence*> Clips;
-    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl };
+    enum class EGait : uint8 { Idle, Start, Loop, Stop, Turn, Air, Land, Roll, SideJump, Slash, WallRun, Hang, Climb, Strafe, Astral, WallSide, Ladder, Vault, Swing, SwingLeap, Held, Crawl, Thrown };
     EGait Gait = EGait::Idle;
     EClip Base = EClip::Idle;
     float BaseTime = 0;
     EClip Fading = EClip::Idle;
     float FadingTime = 0;
     float FadeWeight = 0;
+    bool bFadeFromSnapshot = false; int32 FadeSnapshotSerial = 0;   // (SetClip: a fade over a fade starts from the pose shown)
     float FadeRate = 0;
     float StateTime = 0;
     float StartDistance = 0;
@@ -559,7 +573,20 @@ private:
     TWeakObjectPtr<AActor> HeldBy;
     float HeldClock = 0, HeldBiteAt = -1, HeldLimp = 0;
     bool bHeldVanish = false;
-    int32 TimesHeld = 0, Throws = 0;
+    int32 TimesHeld = 0, Throws = 0, CrashLands = 0, WallSlams = 0;
+    enum class EThrown : uint8 { Flight, Crash, Slam };
+    EThrown ThrownPhase = EThrown::Flight;
+    bool bLegHeld = false, bBodyQuatLive = false;
+    FQuat BodyQuat = FQuat::Identity, BodyQuatFrom = FQuat::Identity;
+    FVector LegHoldFix = FVector::ZeroVector, PendC = FVector::ZeroVector, PendPrev = FVector::ZeroVector, SpinAxis = FVector::RightVector, ThrowSkid = FVector::ZeroVector, ThrowPrevVel = FVector::ZeroVector, SlamFrom = FVector::ZeroVector;
+    float PendDt = 1.f / 60.f, SpinRate = 0.f, SpinAngle = 0.f, ThrownClock = 0.f, SlamFloorZ = 0.f;
+    static constexpr float LegHoldLength = 29.f;   // cm, the held ankle to his centre
+    static constexpr float WallSlamSlide0 = .1f;   // s into WallSlam he slides down the wall, to WallSlamSlide1 (the clip's slide_s)
+    static constexpr float WallSlamSlide1 = .5f;
+    static constexpr float MaxLegThrowSpeed = 950.f;   // cm/s along the throw
+    void UpdateThrown(float DeltaSeconds);
+    void BeginCrashLand();
+    void BeginWallSlam(const FHitResult& Wall);
     void UpdateHeld(float DeltaSeconds);
     // The sewer's water slide (SewerSlide.cpp): carried down, out at the pier.
     void BeginSlide(float Into);
@@ -572,6 +599,9 @@ private:
     FVector ExitNormal = FVector::ZeroVector, ExitEdge = FVector::ZeroVector;
     bool bSlideCamera = false, bAutoClimb = false, bExitFound = false;
     int32 PierPushOuts = 0;
+    int32 TailZigzagFrames = 0; double TailZigzagLoggedAt = -1.0;   // the squiggle detector (2026-11-12)
+    FVector TailPelvisPrev = FVector::ZeroVector, TailHeadPrev = FVector::ZeroVector, TailBasePrev = FVector::ZeroVector;
+    int32 TailJumpFrames = 0; FVector TailTipPrev = FVector::ZeroVector, TailMidPrev = FVector::ZeroVector; EGait TailGaitPrev = EGait::Idle;
     float GorgeFallClock = -1.f;                  // falling into the canyon gorge past the line (2026-11-12)
     static constexpr float GorgeFallTime = 1.6f;   // seconds of it before the Astral takes him
     int32 Slides = 0;
@@ -595,7 +625,7 @@ private:
     EClip FadingLayerClip = EClip::SlashRight;
     float FadingLayerTime = -1;
     float FadingLayerWeight = 0;
-    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap || Gait == EGait::Held; }
+    bool OwnsCapsule() const { return IsDodging() || Gait == EGait::Astral || Gait == EGait::Slash || Gait == EGait::WallRun || Gait == EGait::WallSide || Gait == EGait::Ladder || Gait == EGait::Vault || Gait == EGait::Hang || Gait == EGait::Climb || Gait == EGait::Swing || Gait == EGait::SwingLeap || Gait == EGait::Held || Gait == EGait::Thrown; }
     // Ledge state.
     FVector HangNormal = FVector::ZeroVector;
     FVector HangEdge = FVector::ZeroVector;   // the top edge on the wall face

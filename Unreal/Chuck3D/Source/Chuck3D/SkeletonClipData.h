@@ -27,5 +27,10 @@ namespace SkeletonClipData
     constexpr float StrikeReach = 62.85f;
     constexpr float StrikeHeight = 156.73f;
     constexpr float StrikeAim = 39.95f;   // deg: the striking end is this far round to the left (+) at the strike
+    constexpr float ThrowLength = 1.3333f;
+    constexpr float ThrowStrike = 0.7000f;   // middle_03_r at the strike
+    constexpr float ThrowReach = 75.09f;
+    constexpr float ThrowHeight = 155.16f;
+    constexpr float ThrowAim = -13.48f;   // deg: the striking end is this far round to the left (+) at the strike
     constexpr float WalkSpeed = 87.30f;   // the ground speed of the clip
 }

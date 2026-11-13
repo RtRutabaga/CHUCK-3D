@@ -28,7 +28,10 @@ $takes=[ordered]@{
     # The pirate crew (Claude, 2026-11-02; docs/SHIP.md, milestone 3): the deck hands' idle and the chef's jog.
     # Also tried for them and dropped (see Tools/build_npc_mocap.py): 137_13, 137_16, 02_07-09, 93_06, 142_08,
     # 79_69, 09_01, 13_09.
-    '137_15'='Drunk Wait'; '16_35'='run/jog'
+    '137_15'='Drunk Wait'; '16_35'='run/jog';
+    # The skeleton's throw (Claude, 2026-11-12). Also looked at and dropped: 113_24 "Throw" and 111_33 "Throwing" (gentle
+    # lobs, 3-5 m/s at the hand), 69_70 (a squat and pick-up; the Grab clip already crouches).
+    '124_01'='Baseball Pitch'
 }
 $records=@()
 foreach ($take in $takes.Keys) {

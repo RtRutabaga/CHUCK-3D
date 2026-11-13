@@ -139,8 +139,8 @@ public:
     static constexpr int32 Health = 10;              // scratches (2D: SKELETON_SCRATCHES 6 vs the zombie's 8; the 3D zombie takes 14)
     static constexpr int32 KickDamage = 2;
     static constexpr int32 GrabDamage = 1;
-    static constexpr float CarryLift = .55f;        // s lifting him from the floor to before its chest
-    static constexpr float CarryHold = .25f;        // then held there a moment
+    static constexpr float CarryLift = .45f;        // s rising out of the stoop with him, before the pitch
+    static constexpr float ThrowRate = 1.15f;       // the pitch's playback, a little quicker than the man's
     static constexpr float ThrowSpeed = 640.f;      // cm/s, out (a forceful throw)
     static constexpr float ThrowUp = 400.f;         // and up
     static constexpr int32 SwatDamage = 1;
@@ -179,7 +179,7 @@ private:
     void Fall(EBlow Kind, const FVector& From);
     bool bStruck = false, bSwung = false, bHeld = false;
     // The stoop's grab picks him up and throws him (user 2026-11-12: was a claw along the floor).
-    bool bCarrying = false; float CarryClock = 0.f; int32 Throws = 0;
+    bool bCarrying = false, bPitching = false; float CarryClock = 0.f; int32 Throws = 0;
     FVector ThrowDir = FVector::ForwardVector;
     void TickCarry(AChuckCharacter* Chuck, float DeltaSeconds);
     void ThrowChuck(AChuckCharacter* Chuck, float Speed);
