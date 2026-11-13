@@ -1,0 +1,4 @@
+# Unshadowed lights that reach strand hair at the Pantry checkpoint (LightAudit.h). Tools/Take-Shots.ps1 Tools/shots/audit-tavern-pantry.txt
+at Pantry
+wait 8
+audit

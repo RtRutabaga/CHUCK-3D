@@ -1,0 +1,9 @@
+# The tavern's rubbish bin in the alley out back (Tools/build_tavern_bin.py, placed by
+# Content/Data/Placements/Waterdeep.txt). Run: Tools/Take-Shots.ps1 Tools/shots/tavern-bin.txt
+fov 70
+shot east-low     250 1070 75     60 1020 30
+shot west-low    -120 1075 60     60 1020 30
+shot above        160 1080 170    60 1015 25
+shot front         60 1085 130    60 1020 50
+# Chuck beside it, for scale
+chuck with-chuck  200 1075 90     130 1060 0

@@ -32,6 +32,11 @@
 #include "ShipEnding.h"
 #include "HAL/FileManager.h"
 #include "UnrealClient.h"
+#include "ChuckSave.h"
+#include "ChuckShots.h"
+#include "ShipEscape.h"
+#include "EngineUtils.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 namespace
 {
@@ -139,10 +144,90 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     return true;
 }
 
-// Source-only placeholder menu: no authored UI assets or save system.
+bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
+{
+    const auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    if(!C) return false;
+    // Where a death would return him: the checkpoint he last reached. Match it to the nearest named
+    // checkpoint (by the place each one recovers to) among the regions built so far.
+    const FVector Back=C->GetAreaStartLocation();
+    float Best=TNumericLimits<float>::Max();
+    auto Consider=[&](const TCHAR* Name,const TCHAR* Text,const FVector& Recovery)
+    {
+        const float D=FVector::Dist(Back,Recovery);
+        if(D<Best){Best=D;Point=Name;Label=Text;}
+    };
+    Consider(TEXT("Waterdeep"),TEXT("Waterdeep"),AChuckCharacter::StartLocation());
+    Consider(TEXT("Sewer"),TEXT("Sewer"),DockSewerStartLocation());
+    Consider(TEXT("SewerJump"),TEXT("Sewer Jump"),DockSewerCheckpointLocation());
+    Consider(TEXT("SewerLongJump"),TEXT("Sewer Long Jump"),DockSewerLeapCheckpointLocation());
+    Consider(TEXT("Pantry"),TEXT("Tavern Pantry"),DockPantryStartLocation());
+    UWorld* World=GetWorld();
+    bool bChult=false; for(TActorIterator<AChultLanding> It(World);It;++It) bChult=true;
+    if(bChult)
+    {
+        auto Each=[&](const FChultPoint* Points,int32 Count)
+        {
+            for(int32 I=0;I<Count;++I)
+            {
+                FVector At,Recovery;float Yaw;
+                if(ChultPoint(Points[I].Point,At,Yaw,Recovery)) Consider(Points[I].Point,Points[I].Label,Recovery);
+            }
+        };
+        Each(ChultPoints,UE_ARRAY_COUNT(ChultPoints));
+        Each(TemplePoints,UE_ARRAY_COUNT(TemplePoints));
+    }
+    if(AShipSetting::Get(World))
+        for(const FChultPoint& P : ShipPoints)
+        {
+            FVector At;float Yaw;
+            if(!ShipPoint(P.Point,At,Yaw)) continue;
+            FVector Recovery=At,Deck; if(ShipRespawn(At,Deck)) Recovery=Deck;
+            Consider(P.Point,P.Label,Recovery);
+        }
+    // The docks after the sewer are the evening's.
+    if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
+    // The dev markers are dropped from the label the player sees.
+    Label.ReplaceInline(TEXT(" (dev)"),TEXT(""));
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_SAVE_POINT point=%s distance=%.1f recovery=%s"),*Point,Best,*Back.ToString());
+    return !Point.IsEmpty();
+}
+
+bool ADockGameMode::SaveGame(FString* SavedLabel)
+{
+    FString Point,Label;
+    const auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    if(!C || !CurrentSavePoint(Point,Label)) return false;
+    if(SavedLabel) *SavedLabel=Label;
+    return ChuckSave::Write(Point,Label,HasExitedDockSewer(),C->GetCigarettes(),C->GetSanity());
+}
+
+bool ADockGameMode::ContinueFromSave()
+{
+    const UChuckSaveGame* Save=ChuckSave::Load();
+    auto* C=Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this,0));
+    if(!Save || !C || !StartFromMenu(Save->Point)) return false;
+    if(Save->bEvening) MarkDockSewerExited();
+    C->SetCigarettes(Save->Cigarettes); C->SetSanity(Save->Sanity);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_SAVE_CONTINUE point=%s evening=%d cigarettes=%d"),*Save->Point,Save->bEvening?1:0,C->GetCigarettes());
+    return true;
+}
+
+// Source-only menus (Slate): the title, the dev checkpoints and the pause menu.
 void ADockHUD::BeginPlay()
 {
     Super::BeginPlay();
+#if !UE_BUILD_SHIPPING
+    // -ChuckPauseTest[=<checkpoint>]: the pause menu, saving there and continuing from the title (TickPauseTest).
+    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckPauseTest")) || FParse::Value(FCommandLine::Get(),TEXT("ChuckPauseTest="),PauseTestPoint))
+    {
+        if(PauseTestPoint.IsEmpty()) PauseTestPoint=TEXT("Waterdeep");
+        IFileManager::Get().Delete(*ChuckSave::SlotPath());
+        SetTickableWhenPaused(true);
+        PauseTestNext=FPlatformTime::Seconds()+3.;
+    }
+#endif
+    if(ChuckShots::Start(this)) return;   // -ChuckShots=<file>: stills from a shot list (ChuckShots.h)
     const auto* Mode=GetWorld()->GetAuthGameMode();
     // Scripted verification/capture entry points retain their direct startup.
     if(FString(FCommandLine::Get()).Contains(TEXT("-Chuck")) ||
@@ -164,8 +249,15 @@ void ADockHUD::ShowTitleMenu() { ShowMenu(FParse::Param(FCommandLine::Get(),TEXT
 void ADockHUD::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-    UpdateTutorial();
+    if(auto* PC=GetOwningPlayerController())
+    {
+        const bool bPausePressed=PC->WasInputKeyJustPressed(EKeys::Escape) || PC->WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
+        if(bPauseOpen) { if(bPausePressed) ClosePause(); }
+        else if(bPausePressed && CanPause()) ShowPause();
+    }
+    if(!bPauseOpen) UpdateTutorial();
 #if !UE_BUILD_SHIPPING
+    if(!PauseTestPoint.IsEmpty()) TickPauseTest();
     // Exercise real Slate button delegates, including page changes and the
     // paused-world -> gameplay transition that direct map-option tests missed.
     if(MenuTestPoint.IsEmpty() || FPlatformTime::Seconds()<MenuTestNext) return;
@@ -184,7 +276,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     auto* PC=GetOwningPlayerController();
     if(MenuTestStage==0)
     {
-        Check(MenuWidget.IsValid() && PC && PC->IsPaused() && MenuButtons.Num()==2,TEXT("title pauses the fresh world"));
+        Check(MenuWidget.IsValid() && PC && PC->IsPaused() && MenuButtons.Num()==(ChuckSave::Load()?3:2),TEXT("title pauses the fresh world"));
         Click(TEXT("Dev Checkpoints"));
     }
     else if(MenuTestStage==1)
@@ -199,7 +291,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==2)
     {
-        Check(MenuButtons.Num()==2,TEXT("Back returns to title"));
+        Check(MenuButtons.Num()==(ChuckSave::Load()?3:2),TEXT("Back returns to title"));
         if(MenuTestPoint==TEXT("NewGame")) { Click(TEXT("New Game")); ++MenuTestStage; }
         else Click(TEXT("Dev Checkpoints"));
     }
@@ -338,6 +430,18 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     };
     if(!Checkpoints)
     {
+        if(ChuckSave::Load())
+            Add(TEXT("Continue"),[this]()
+            {
+                auto* Mode=GetWorld()->GetAuthGameMode<ADockGameMode>();
+                if(!Mode || !Mode->ContinueFromSave()) return FReply::Handled();
+                GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
+                MenuWidget.Reset();
+                auto* Controller=GetOwningPlayerController();
+                Controller->SetPause(false); Controller->bShowMouseCursor=false;
+                Controller->SetInputMode(FInputModeGameOnly());
+                return FReply::Handled();
+            });
         Add(TEXT("New Game"),[Start](){return Start(TEXT("Waterdeep"));});
         Add(TEXT("Dev Checkpoints"),[this](){ShowMenu(true);return FReply::Handled();});
     }
@@ -368,4 +472,157 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     FSlateApplication::Get().SetKeyboardFocus(First);
     FSlateApplication::Get().SetUserFocus(0,First);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU page=%s"),Checkpoints?TEXT("checkpoints"):TEXT("title"));
+}
+
+bool ADockHUD::CanPause() const
+{
+    const auto* PC=GetOwningPlayerController();
+    const auto* C=Cast<AChuckCharacter>(GetOwningPawn());
+    if(!PC || !C || MenuWidget.IsValid() || PC->IsPaused()) return false;
+    // Esc skips cutscenes and ends the demo: only in play, his own camera on him.
+    if(C->HasDemoEnded() || C->IsInFallCutscene() || AShipEscape::IsLetterboxed(GetWorld())) return false;
+    if(PC->GetViewTarget()!=C) return false;
+    // Scripted verification runs keep Esc for their own cutscene checks.
+    if(PauseTestPoint.IsEmpty() && FString(FCommandLine::Get()).Contains(TEXT("-Chuck"))) return false;
+    return true;
+}
+
+void ADockHUD::ShowPause()
+{
+    auto* PC=GetOwningPlayerController();
+    if(!PC || !GEngine || !GEngine->GameViewport) return;
+    MenuButtons.Reset();
+    TSharedPtr<SVerticalBox> Rows;
+    TSharedPtr<SButton> First;
+    MenuWidget=SNew(SBorder).BorderBackgroundColor(FLinearColor(.018f,.014f,.027f,.82f))
+        .HAlign(HAlign_Center).VAlign(VAlign_Center)
+        [SNew(SBox).WidthOverride(360.f)[SAssignNew(Rows,SVerticalBox)]];
+    Rows->AddSlot().AutoHeight().Padding(0,0,0,28)
+        [SNew(STextBlock).Text(FText::FromString(TEXT("Paused")))
+        .Font(FCoreStyle::GetDefaultFontStyle("Bold",34)).Justification(ETextJustify::Center)];
+    auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
+    {
+        TSharedPtr<SButton> Button;
+        Rows->AddSlot().AutoHeight().Padding(0,6)
+            [SAssignNew(Button,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(20,14))
+            .OnClicked_Lambda(MoveTemp(Action))
+            [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",20))]];
+        if(!First.IsValid()) First=Button;
+        MenuButtons.Add(Label,Button);
+    };
+    Add(TEXT("Resume"),[this](){ClosePause();return FReply::Handled();});
+    Add(TEXT("Save Game"),[this]()
+    {
+        auto* Mode=GetWorld()->GetAuthGameMode<ADockGameMode>();
+        FString Label;
+        const bool bSaved=Mode && Mode->SaveGame(&Label);
+        if(PauseStatus.IsValid()) PauseStatus->SetText(FText::FromString(bSaved ? FString::Printf(TEXT("Saved: %s"),*Label) : FString(TEXT("Could not save"))));
+        return FReply::Handled();
+    });
+    // Later options (the tutorial text, the golden guide lights) go here, above Quit.
+    Add(TEXT("Quit Game"),[this](){UKismetSystemLibrary::QuitGame(this,GetOwningPlayerController(),EQuitPreference::Quit,false);return FReply::Handled();});
+    FString Last;
+    if(const UChuckSaveGame* Save=ChuckSave::Load()) Last=FString::Printf(TEXT("Last save: %s"),*Save->Label);
+    Rows->AddSlot().AutoHeight().Padding(0,18,0,0)
+        [SAssignNew(PauseStatus,STextBlock).Text(FText::FromString(Last)).Justification(ETextJustify::Center)
+        .Font(FCoreStyle::GetDefaultFontStyle("Regular",15)).ColorAndOpacity(FLinearColor(.8f,.78f,.84f))];
+    GEngine->GameViewport->AddViewportWidgetContent(MenuWidget.ToSharedRef(),100);
+    bPauseOpen=true;
+    SetTickableWhenPaused(true);
+    PC->SetPause(true); PC->bShowMouseCursor=true;
+    // Game and UI, so Esc / Start still reach this HUD to close it.
+    FInputModeGameAndUI Input; Input.SetWidgetToFocus(First); Input.SetHideCursorDuringCapture(false); PC->SetInputMode(Input);
+    FSlateApplication::Get().SetKeyboardFocus(First);
+    FSlateApplication::Get().SetUserFocus(0,First);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU page=pause"));
+}
+
+void ADockHUD::ClosePause()
+{
+    auto* PC=GetOwningPlayerController();
+    if(MenuWidget.IsValid() && GEngine && GEngine->GameViewport) GEngine->GameViewport->RemoveViewportWidgetContent(MenuWidget.ToSharedRef());
+    MenuWidget.Reset(); MenuButtons.Reset(); PauseStatus.Reset();
+    bPauseOpen=false;
+    if(PauseTestPoint.IsEmpty()) SetTickableWhenPaused(false);
+    if(PC) { PC->SetPause(false); PC->bShowMouseCursor=false; PC->SetInputMode(FInputModeGameOnly()); }
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU page=closed"));
+}
+
+void ADockHUD::TickPauseTest()
+{
+#if !UE_BUILD_SHIPPING
+    if(FPlatformTime::Seconds()<PauseTestNext) return;
+    PauseTestNext=FPlatformTime::Seconds()+.5;
+    auto* PC=GetOwningPlayerController();
+    auto* C=Cast<AChuckCharacter>(GetOwningPawn());
+    auto* Mode=GetWorld()->GetAuthGameMode<ADockGameMode>();
+    auto Check=[this](bool Passed,const TCHAR* What)
+    {
+        PauseTestFailures+=!Passed;
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_PAUSE_TEST %s: %s"),Passed?TEXT("PASS"):TEXT("FAIL"),What);
+    };
+    auto Press=[PC](){ if(PC) PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1)); };
+    auto Click=[this,&Check](const TCHAR* Label)
+    {
+        auto Button=MenuButtons.FindRef(Label).Pin();
+        Check(Button.IsValid(),Label);
+        if(Button.IsValid()) Button->SimulateClick();
+    };
+    switch(PauseTestStage++)
+    {
+    case 0:
+        if(PauseTestPoint!=TEXT("Waterdeep")) Check(Mode && Mode->StartFromMenu(PauseTestPoint),TEXT("the test checkpoint starts"));
+        if(C) C->SetCigarettes(3);
+        PauseTestNext=FPlatformTime::Seconds()+5.;
+        break;
+    case 1: Press(); break;
+    case 2:
+        Check(bPauseOpen && PC && PC->IsPaused() && MenuButtons.Num()==3,TEXT("Esc opens the pause menu and pauses the world"));
+        Click(TEXT("Save Game"));
+        break;
+    case 3:
+    {
+        const UChuckSaveGame* Save=ChuckSave::Load();
+        Check(Save!=nullptr,TEXT("Save Game writes the save"));
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_PAUSE_TEST saved=%s expected=%s"),Save?*Save->Point:TEXT("-"),*PauseTestPoint);
+        Check(Save && Save->Point==PauseTestPoint && Save->Cigarettes==(C?C->GetCigarettes():-1),TEXT("the save holds this checkpoint and the cigarette count"));
+        Check(bPauseOpen && PC && PC->IsPaused(),TEXT("saving keeps the menu open"));
+        Click(TEXT("Resume"));
+        break;
+    }
+    case 4:
+        Check(!bPauseOpen && PC && !PC->IsPaused() && !PC->bShowMouseCursor,TEXT("Resume closes the menu and resumes play"));
+        Press();
+        break;
+    case 5: Check(bPauseOpen,TEXT("Esc opens it again")); Press(); break;
+    case 6:
+        Check(!bPauseOpen && PC && !PC->IsPaused(),TEXT("Esc closes it"));
+        ShowMenu(false);   // the title, as on a fresh start
+        break;
+    case 7:
+        Check(MenuButtons.Contains(TEXT("Continue")),TEXT("the title offers Continue"));
+        if(C) C->SetCigarettes(0);   // a fresh start's count, which Continue restores
+        Click(TEXT("Continue"));
+        PauseTestNext=FPlatformTime::Seconds()+5.;
+        break;
+    case 8:
+    {
+        FString Point,Label;
+        const bool bHere=Mode && Mode->CurrentSavePoint(Point,Label);
+        Check(!MenuWidget.IsValid() && PC && !PC->IsPaused(),TEXT("Continue closes the title and plays"));
+        Check(bHere && Point==PauseTestPoint && C && C->GetCharacterMovement()->IsMovingOnGround(),TEXT("Continue starts at the saved checkpoint, on its floor"));
+        Check(C && C->GetCigarettes()==3,TEXT("Continue restores the cigarette count"));
+        const FString Folder=FPaths::ScreenShotDir()/TEXT("Pause");
+        IFileManager::Get().MakeDirectory(*Folder,true);
+        FScreenshotRequest::RequestScreenshot(Folder/PauseTestPoint+TEXT("_continue.png"),true,false);
+        PauseTestNext=FPlatformTime::Seconds()+1.;
+        break;
+    }
+    default:
+        IFileManager::Get().Delete(*ChuckSave::SlotPath());
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_PAUSE_TEST_COMPLETE failures=%d point=%s"),PauseTestFailures,*PauseTestPoint);
+        PauseTestPoint.Empty();
+        FPlatformMisc::RequestExit(false);
+    }
+#endif
 }

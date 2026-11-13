@@ -1,0 +1,4 @@
+# Unshadowed lights that reach strand hair at the ShipQuarters checkpoint (LightAudit.h). Tools/Take-Shots.ps1 Tools/shots/audit-ship-quarters.txt
+at ShipQuarters
+wait 8
+audit

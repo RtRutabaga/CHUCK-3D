@@ -1,0 +1,8 @@
+# Waterdeep's hand-placed dressing props (Source/Chuck3D/ChuckPlacements.h). Edit and rerun the game, no
+# recompile. One prop per line:
+#   prop <mesh path> x y z yaw [scale=S] [cyl=DIAMxHEIGHT] [box=XxYxZ] [tag=Name]
+# cm and degrees in world space; cyl/box add a hidden collision proxy standing on z (none: no collision).
+
+# The keeper's bin out back, which Bobert roots in (his night line; Tools/build_tavern_bin.py). Against the tavern's
+# back wall between a window and a post; it stays within y<=1043 so the alley route at y=1060 keeps Chuck's capsule clear.
+prop /Game/Characters/Humans/Props/SM_TavernBin   60 1020 0   4   cyl=44x62   tag=TavernBin
