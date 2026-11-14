@@ -1052,7 +1052,7 @@ void AShipSetting::Build()
         // The galley stove (2026-11-12, user: "make the chef's oven look better"; it was an iron box on a brick one): a
         // cast-iron firehearth on a brick footing in an iron tray. Its front: the fire behind a barred grate, the ash pit
         // under it, two oven doors over it with hinges and latches; banded top and foot, rivets; a fiddle rail round the
-        // cooking top, a hood narrowing into the funnel, which goes up through the deck to a rain cap. On it a great
+        // cooking top, a hood narrowing into the funnel, which goes up to the deck's underside. On it a great
         // cauldron, lidded, on its bail, and a kettle; a ladle and tongs on the rail; split logs stacked to port.
         {
             const float SX0 = 904, SX1 = 1054, SY0 = -66, SY1 = 66, Top = Z0 + 118;
@@ -1097,19 +1097,13 @@ void AShipSetting::Build()
             for (float X : {RX0, (RX0 + RX1) * .5f, RX1}) for (float Y : {RY0, RY1}) P.StoveIron.Spar(FVector(X, Y, Top), FVector(X, Y, RZ), 1.1f, 1.1f, 6);
             for (float X : {RX0, RX1}) P.StoveIron.Spar(FVector(X, 0, Top), FVector(X, 0, RZ), 1.1f, 1.1f, 6);
             P.StoveIron.Rope({FVector(RX0, RY0, RZ), FVector(RX1, RY0, RZ), FVector(RX1, RY1, RZ), FVector(RX0, RY1, RZ), FVector(RX0, RY0, RZ)}, 1.f);
-            // The hood over the back of the top, narrowing into the funnel; the funnel up through the deck to its rain cap.
+            // The hood over the back of the top, narrowing into the funnel; the funnel up to the deck.
             P.StoveIron.B(978, 1046, -46, 46, Top, Top + 26);
             P.StoveIron.B(976, 1048, -48, 48, Top + 24, Top + 28);
             P.StoveIron.Spar(FVector(1010, 0, Top + 28), FVector(1010, 0, Top + 50), 30, 12, 12);
-            P.StoveIron.Spar(FVector(1010, 0, Top + 50), FVector(1010, 0, DeckZ + 120), 12, 12, 12);
-            for (float Z : {DeckZ + 4.f, DeckZ + 60.f}) P.StoveIron.Spar(FVector(1010, 0, Z), FVector(1010, 0, Z + 4), 14, 14, 12);
-            P.StoveIron.Spar(FVector(1010, 0, DeckZ + 120), FVector(1010, 0, DeckZ + 124), 15, 15, 12);
-            for (int32 K = 0; K < 3; ++K)
-            {
-                const float A = K * 2 * PI / 3;
-                P.StoveIron.Spar(FVector(1010 + 13 * FMath::Cos(A), 13 * FMath::Sin(A), DeckZ + 124), FVector(1010 + 15 * FMath::Cos(A), 15 * FMath::Sin(A), DeckZ + 134), .8f, .8f, 5);
-            }
-            P.StoveIron.Spar(FVector(1010, 0, DeckZ + 133), FVector(1010, 0, DeckZ + 142), 24, 2, 14);   // the cap
+            // (2026-11-13, user: "remove the chimney/pipe on the ship's deck": the funnel now ends in a collar under the deck.)
+            P.StoveIron.Spar(FVector(1010, 0, Top + 50), FVector(1010, 0, DeckZ - 15), 12, 12, 12);
+            P.StoveIron.Spar(FVector(1010, 0, DeckZ - 19), FVector(1010, 0, DeckZ - 15), 16, 16, 12);
             // The great cauldron, lidded, on its bail; the kettle.
             const FVector Pot(942, -28, Top);
             P.StoveIron.Spar(Pot, Pot + FVector(0, 0, 4), 15, 19, 14);

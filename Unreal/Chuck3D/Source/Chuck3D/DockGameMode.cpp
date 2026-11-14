@@ -894,16 +894,23 @@ void ADockGameMode::StartPlay()
     }
     {
         // -ChuckWorldAudit[=<checkpoint>] (WorldAudit.cpp): collision gaps and floating props of a region; -ChuckCollisionAudit is Waterdeep's.
+        // -ChuckMotionAudit[=<checkpoint>] (MotionAudit.cpp): pops and jitter. -ChuckSoundAudit[=<checkpoint>] (SoundAudit.cpp): sounds through walls.
         FString AuditPoint;
-        const bool bAudit=FParse::Value(FCommandLine::Get(),TEXT("ChuckWorldAudit="),AuditPoint) || FParse::Param(FCommandLine::Get(),TEXT("ChuckWorldAudit")) ||
-            FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit"));
-        if(bAudit)
+        int32 AuditKind=-1;
+        const TCHAR* const AuditNames[]={TEXT("ChuckWorldAudit"),TEXT("ChuckMotionAudit"),TEXT("ChuckSoundAudit")};
+        for(int32 K=0;K<3&&AuditKind<0;++K)
+            if(FParse::Value(FCommandLine::Get(),*(FString(AuditNames[K])+TEXT("=")),AuditPoint)||FParse::Param(FCommandLine::Get(),AuditNames[K]))AuditKind=K;
+        if(AuditKind<0&&FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit")))AuditKind=0;
+        if(AuditKind>=0)
         {
             if(AuditPoint.IsEmpty()) AuditPoint=TEXT("Waterdeep");
             if(AuditPoint!=TEXT("Waterdeep") && !StartFromMenu(AuditPoint)) UE_LOG(LogTemp,Error,TEXT("CHUCK_WORLD_AUDIT unknown checkpoint %s"),*AuditPoint);
             extern void StartWorldAudit(UWorld*,const FString&);
+            extern void StartMotionAudit(UWorld*,const FString&);
+            extern void StartSoundAudit(UWorld*,const FString&);
             FTimerHandle AuditCheck;
-            World->GetTimerManager().SetTimer(AuditCheck,[World,AuditPoint](){StartWorldAudit(World,AuditPoint);},1.f,false);
+            World->GetTimerManager().SetTimer(AuditCheck,[World,AuditPoint,AuditKind](){
+                if(AuditKind==0)StartWorldAudit(World,AuditPoint);else if(AuditKind==1)StartMotionAudit(World,AuditPoint);else StartSoundAudit(World,AuditPoint);},1.f,false);
         }
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))

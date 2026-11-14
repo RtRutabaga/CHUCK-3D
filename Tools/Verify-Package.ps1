@@ -29,6 +29,46 @@ foreach($region in $worldAudit.Keys) {
     }
 }
 if($WorldAuditOnly) { Write-Output 'CHUCK_WORLD_AUDIT_VERIFIED'; return }
+# The motion and sound audits (MotionAudit.cpp, SoundAudit.cpp; the catalog's step 2). Each must not be blind (the
+# motion detector's self-test and Chuck's own walk; the planted sound heard through the floor at half the places or
+# more), and its findings may not rise above the region's known ones plus a small margin: one-shot sounds and where
+# a looping clip happens to be when the recording starts vary from run to run (motion +1 mesh, sound +3 sources).
+# Lower the numbers here when findings are fixed. Intended cases go in Content/Data/Audit/Allow.txt ("motion", "sound").
+$motionAudit=[ordered]@{ Waterdeep=@{PopMeshes=4;JitterMeshes=0}; Chult=@{PopMeshes=1;JitterMeshes=0}; ShipArrival=@{PopMeshes=7;JitterMeshes=0} }
+$soundAudit=[ordered]@{ Waterdeep=4; Chult=20; ShipArrival=4 }
+foreach($region in $motionAudit.Keys) {
+    $auditLog=Join-Path $evidence ('verify-motion-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckMotionAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_MOTION_AUDIT region='+$region+' .*') | Select-Object -Last 1
+    if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'pop_meshes=(\d+) jitter_meshes=(\d+) .*chuck_moved=1 .*selftest=1') {
+        throw "Motion audit of $region failed or was blind. Inspect $auditLog"
+    }
+    $pops=[int]$Matches[1]; $jitter=[int]$Matches[2]; $limit=$motionAudit[$region]
+    Write-Output ("CHUCK_MOTION_AUDIT_VERIFY region=$region pop_meshes=$pops/$($limit.PopMeshes)+1 jitter_meshes=$jitter/$($limit.JitterMeshes)+1")
+    if($pops -gt $limit.PopMeshes+1 -or $jitter -gt $limit.JitterMeshes+1) {
+        throw "Motion audit of $region found new pops or jitter. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-motion.csv')); inspect $auditLog"
+    }
+}
+foreach($region in $soundAudit.Keys) {
+    $auditLog=Join-Path $evidence ('verify-sound-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckSoundAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_SOUND_AUDIT region='+$region+' .*') | Select-Object -Last 1
+    if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'places=(\d+) .*leaks=(\d+) .*probe_heard=(\d+)/') {
+        throw "Sound audit of $region failed. Inspect $auditLog"
+    }
+    $places=[int]$Matches[1]; $leaks=[int]$Matches[2]; $probe=[int]$Matches[3]; $limit=$soundAudit[$region]
+    Write-Output ("CHUCK_SOUND_AUDIT_VERIFY region=$region leaks=$leaks/$limit+3 probe_heard=$probe/$places")
+    if($places -lt 10 -or $probe*2 -lt $places) { throw "Sound audit of $region was deaf (probe heard at $probe of $places places). Inspect $auditLog" }
+    if($leaks -gt $limit+3) {
+        throw "Sound audit of $region found new leaks. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-sound.csv')); inspect $auditLog"
+    }
+}
+# The voice files' loudness (Tools/Check-VoiceLoudness.py), when Python is installed; reported, not a failure.
+if(Get-Command python -ErrorAction SilentlyContinue) {
+    $voice=& python (Join-Path $PSScriptRoot 'Check-VoiceLoudness.py') 2>&1 | Out-String
+    Write-Output ($voice.Trim())
+}
+
 $riverZombieLog=Join-Path $evidence ('verify-river-zombies-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $riverZombieProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=5' -Quiet) -or

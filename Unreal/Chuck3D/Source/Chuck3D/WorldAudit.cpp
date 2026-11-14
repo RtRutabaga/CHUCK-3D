@@ -503,3 +503,10 @@ void StartWorldAudit(UWorld* World, const FString& Region)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_WORLD_AUDIT_START region=%s"), *Region);
     WaitThenRun(World, Region, World->GetTimeSeconds());
 }
+
+// The allow list for the other audits (MotionAudit.cpp, SoundAudit.cpp): check is "motion", "sound" or the like.
+bool ChuckAuditAllowed(const TCHAR* Check, const FString& Key)
+{
+    static const TArray<FAllow> List = LoadAllow();
+    return Allowed(List, Check, Key);
+}

@@ -37,13 +37,13 @@ How to read the "catch" column:
 
 ### 5. Jitter, twitching and pops
 - **Seen:** the tail squiggle (11-12); the landing leaves twitching (11-12); the storm crew's jitter from a phase bug (11-12); the NPC motion-capture shake (10-05); the elf twitch (10-06); still open: whole-body pops at the start of walk-start and slash cross-fades.
-- **Checks now:** `CHUCK_NPC_JITTER` (Waterdeep NPCs). The tail was diagnosed by logging bone travel between frames.
+- **Checks now:** `-ChuckMotionAudit` on every region (pops and jitter of every skinned mesh near Chuck; in Verify-Package since 2026-11-13); `CHUCK_NPC_JITTER` (Waterdeep NPCs).
 - **Proposed check:** a motion audit: record every skeletal mesh's bones and every "resting" instance for a few seconds at fixed frame rate; flag frame-to-frame jumps above a speed limit per bone class (tail tip, hands, root), and any movement of objects that should be still. Run it on idle, walk-start, slash and each cutscene.
 - **Catch:** Numeric (this is the main way to catch motion problems; still images miss them).
 
 ### 6. Sound heard where it shouldn't be, or at the wrong level
 - **Seen:** sewer zombies heard from the streets (11-12); temple interior sounds outside (11-12); rats heard everywhere on the ship instead of only in the hold (11-03); the creak too loud (11-03); the seated pirate too quiet (11-12); storm lines under the music (11-09, 11-10); the smith too quiet, Dougmund not heard from the stairs (10-06).
-- **Checks now:** music checks per region; `ChultTempleSoundAudible` for the temple; nothing general for levels.
+- **Checks now:** `-ChuckSoundAudit` on every region (sounds heard through solid; in Verify-Package since 2026-11-13); `Tools/Check-VoiceLoudness.py` (voice files' levels); music checks per region; `ChultTempleSoundAudible` for the temple.
 - **Proposed check:** an audibility audit: for each sound source, its "zone" (room, level, deck) is declared; listener probes in every other zone must hear it below a threshold. A loudness check: every voice line normalized to a target loudness, and each line's level at its normal listening distance compared with the music under it.
 - **Catch:** Numeric for leaks and levels. Whether a sound is good is Human (the agent can't hear).
 
@@ -109,6 +109,64 @@ How to read the "catch" column:
 
 Limits: a support that is a spline mesh or a landscape holds props only through its collision; "reachable" is not known, so unreachable places need an allow line; oriented boxes are looser than the meshes, so a prop near (not on) a support passes.
 
+## The motion and sound audits (built 2026-11-13; categories 5 and 6)
+
+### Motion: `-ChuckMotionAudit=<checkpoint>` (`Source/Chuck3D/MotionAudit.cpp`)
+
+- **Method:**
+  - At a fixed 30 fps it records, for 15 s, the bones of every shown skinned mesh within 60 m of Chuck. That includes the NPCs' poseable bodies.
+  - Bones are read in each mesh's own space, so walking, teleports and the ship's roll don't count.
+  - Chuck idles, walks off, stops and slashes during the recording.
+  - Frame-skipping optimisations are switched off for the run, because they would look like pops.
+- **Pop:** a frame in which a bone's acceleration rises over four times anything within about a quarter-second and over 2.5 cm/frame², and its travel that frame is over 2.5 times its neighbours'. The second test separates a jump in place from a sharp stop, such as a hammer meeting the anvil.
+- **Jitter:** five or more frames in a row in which a bone's acceleration turns round (over 120°) at over 0.3 cm/frame².
+- **Grouping:** bones of one mesh that pop or shake together count as one finding.
+- **Not blind:** a self-test track with one step and one shake must give exactly those (`selftest=1`), and Chuck's walk must register (`chuck_moved=1`).
+- **Output:** `CHUCK_MOTION_AUDIT region=… pop_meshes=… jitter_meshes=…` and `Saved/Audit/<region>-motion.csv` (mesh, bone, frame, phase, size).
+
+### Sound: `-ChuckSoundAudit=<checkpoint>` (`Source/Chuck3D/SoundAudit.cpp`)
+
+- **Sources:** the region's audio components, its creatures and people, deduplicated to 4 m.
+- **Listening places:** round each source, places a rat could stand 7 and 15 m off, on any floor within 9 m up or down, with solid between them and the source. At most 80 per region.
+- **Measurement:** Chuck is set at each place for 1.2 s, with collision and movement off. The audio engine's own list of active sounds is read on the audio thread, with each sound's gain at the listener (its volume times distance and occlusion falloff).
+  - The game's own gating is included, because a gated sound never plays.
+  - The master volume is not included, because it is 0 while the test window is in the background.
+- **Leak:** a spatialized sound over 0.05 (-26 dB) whose line to the listener goes through solid, with no clear way round (4 or 8 m over, or 4 m to either side). Each source counts once.
+- **Not deaf:** a planted sound 3 m under the floor at each place must be heard at half the places or more.
+- **Output:** `CHUCK_SOUND_AUDIT region=… leaks=… probe_heard=…/…` and `Saved/Audit/<region>-sound.csv`.
+
+### Voice files: `Tools/Check-VoiceLoudness.py`
+
+- Gated speech level of every line in `SourceAssets/NPCs/Voice`: BS.1770-style gating, without K-weighting.
+- Flags a line more than 4 dB off its speaker's median, a speaker more than 4 dB off all speakers, and clipping.
+- Standard-library Python only; it takes about 5 s.
+- It checks the files only; the game's per-speaker volume comes on top.
+
+### Verify-Package and baselines
+
+- Verify-Package runs all three regions for motion and sound after the world audit, and prints the voice report (not a failure).
+- **Limits** are the known findings plus a margin, because one-shot sounds and where a looping clip is when the recording starts vary between runs: motion +1 mesh, sound +3 sources. Lower the limits when findings are fixed.
+
+### What they found (editor runs, 2026-11-13; nothing fixed yet)
+
+| Region | Finding |
+| --- | --- |
+| Waterdeep | the tavern keeper's right hand jumps 17 cm in one frame every 6 s (the idle's loop seam); the blacksmith's brow bone jumps 12 cm, and his forearm 7.6 cm; a sailor's forearm 9 cm |
+| Ship | the dancer's left foot jumps 28 cm every 3.5 s (loop seam); both fencers' thumbs snap 16–23 cm; the concertina player's and the cheering pirate's right calves pop 3–8 cm; the chef's fingers 10 cm |
+| Chult | no pops or jitter near the landing |
+| Every region (packaged only) | **Chuck:** his right calf jumps 5.2 cm in one frame of the slash (frame 187, 0.23 s into it). It is found in the packaged game but not in the editor run, and it is counted in every region's limit |
+| Chult | **sound:** the temple interior's skeletons rising, spike traps and darts are heard 7–11 m above them (gain 0.2–0.67), the "temple interior heard outside" kind; raptor steps heard through a rise in the ground |
+| Ship | **sound:** the hold's rats heard on the lower deck through the deck (0.15–0.26); the fencers' clashes and stamps heard below deck |
+| Waterdeep | **sound:** a sewer zombie's rasp heard through the rock (0.18); the anvil through the forge wall; a rat's chitter |
+| Voice files | the blacksmith's line is 5.5 dB louder than the other voices; the wizard's `fireball_01` is 10 dB quieter than his other lines |
+
+**Limits:**
+- Cutscenes are not recorded yet, and neither is wind motion in materials (the landing leaves); neither are still objects that move.
+- Chuck's walk-start cross-fade pop, still open in the handoff, was not caught: the walk test may be too short, or the pop too small.
+- The sound audit hears only what plays during its 1.2 s at each place.
+- The listener is the camera, wherever it settles.
+- Voice level in the running game, and against the music, is not measured.
+
 ## Scored against the November 12 list
 
 The 23 items, with what the proposed checks would have caught (my judgment, not a run):
@@ -144,7 +202,7 @@ Of the 20 that were defects, about 12 could have been caught by numeric checks, 
 ## Suggested build order
 
 1. ~~Generalize the collision audit (1) and the support audit (4) to every map; add both to Verify-Package.~~ Done 2026-11-13 (above).
-2. The motion audit (5) and the audibility/loudness audit (6): new, but measurable, and they cover problems that are hard to see in stills.
+2. ~~The motion audit (5) and the audibility/loudness audit (6).~~ Done 2026-11-13 (above); voice level in the running game is still to do.
 3. The robot playtester (2), starting from the existing trial routes.
 4. Import checks (8): LOD slots, UV density, coplanar faces.
 5. The vision reviewer (7, 9) with the reference images, fed by the shot lists.

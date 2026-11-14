@@ -414,6 +414,7 @@ void BuildDockPantry(UWorld* World)
         World->GetTimerManager().SetTimer(Skip,[World](){
             World->GetFirstPlayerController()->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::Escape,IE_Pressed,1));
         },8.f,false);
+        // 1.5 s after Esc (2026-11-13): the skip's 0.5 s fade ends about 1 s after the key at 2-3 fps, so a check at 1 s raced it.
         World->GetTimerManager().SetTimer(EndCheck,[Player](){
             auto* C=Player(); auto* PC=Cast<APlayerController>(C->GetController());
             const bool Playable=!C->HasDemoEnded() && !C->IsInFallCutscene() && C->GetActorEnableCollision()
@@ -421,8 +422,8 @@ void BuildDockPantry(UWorld* World)
                 && C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f) && C->GetSanity()==3;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_SKIP_TEST failures=%d landing=%d"),!Playable,Playable);
             PC->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::W,IE_Pressed,1));
-        },9.f,false);
-        World->GetTimerManager().SetTimer(EndShot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},9.3f,false);
+        },9.5f,false);
+        World->GetTimerManager().SetTimer(EndShot,[](){FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir()/TEXT("Demo/End.png"),true,false);},9.8f,false);
         World->GetTimerManager().SetTimer(Escape,[World](){
             auto* PC=World->GetFirstPlayerController(); auto* C=Cast<AChuckCharacter>(PC->GetPawn());
             const bool Moved=C->GetActorLocation().X>AChultLanding::Entrance().X+20;
@@ -431,7 +432,7 @@ void BuildDockPantry(UWorld* World)
             const bool Local=C->GetActorLocation().Equals(AChultLanding::Entrance(),3.f);
             UE_LOG(LogTemp,Display,TEXT("CHUCK_CHULT_INPUT_TEST failures=%d moved=%d local_reset=%d"),!Moved+!Local,Moved,Local);
             PC->ConsoleCommand(TEXT("quit"));
-        },10.f,false);
+        },10.5f,false);
         World->GetTimerManager().SetTimer(Watchdog,[World](){
             UE_LOG(LogTemp,Error,TEXT("CHUCK_CHULT_INPUT_TEST failures=1 watchdog=1"));
             World->GetFirstPlayerController()->ConsoleCommand(TEXT("quit"));

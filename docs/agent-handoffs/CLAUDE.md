@@ -2,6 +2,51 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 13 — the ship's deck funnel removed; the motion and sound audits (Claude)
+
+- **Asked:** "Remove the chimney/pipe on the ships deck then do step 2. Leave the crocks and plates for now". Step 2 of the defect catalog's build order is the motion audit (category 5) and the sound audit (category 6).
+- **Source:** `main` at 540d53c7.
+- **Changed:**
+  - `ShipSetting.cpp`: the galley stove's funnel ends in a collar under the deck. The funnel above the deck, its bands, rain cap and stays are gone.
+  - **New `MotionAudit.cpp`:** `-ChuckMotionAudit[=<checkpoint>]` records every shown skinned mesh within 60 m of Chuck at a fixed 30 fps for 15 s while he idles, walks, stops and slashes. It reads the bones in component space and finds one-frame pops and jitter.
+    - A self-test on a made-up track must pass, and Chuck's own walk must register.
+    - Writes `Saved/Audit/<Region>-motion.csv`.
+  - **New `SoundAudit.cpp`:** `-ChuckSoundAudit[=<checkpoint>]` finds up to 80 places behind solid, near each sound source, and puts the listener there. It reports sounds heard through solid when no detour around the obstacle is clear.
+    - A planted probe sound must be heard at least half the time.
+    - Writes `Saved/Audit/<Region>-sound.csv`.
+  - **New `Tools/Check-VoiceLoudness.py`** (standard library): the speech level of every voice file. It flags lines off their speaker, speakers off the rest, and clipping.
+  - `WorldAudit.cpp` exports the allow-list check (`motion` and `sound` entries in `Content/Data/Audit/Allow.txt`).
+  - `DockGameMode.cpp`: the audit switch takes the two new kinds.
+  - `Tools/Verify-Package.ps1` runs both audits on Waterdeep, Chult and the ship:
+    - motion limits are mesh counts (4/1/7, +1);
+    - sound limits are leak counts (4/20/4, +3), with the probe required;
+    - the voice report is information only.
+  - `DockPantry.cpp`: the demo skip test checks 1.5 s after Esc instead of 1 s.
+    - It failed 1 run in 3, on the launcher package too.
+    - Cause: the skip's 0.5 s fade ended on the same frame as the check when frames take 400 ms.
+  - The defect catalog has the new section, findings and limits.
+- **Tested:**
+  - Editor runs of all three regions for both audits.
+  - Candidate `Builds/AuditCandidate`:
+    - `CHUCK_PACKAGE_VERIFIED passes=182` and `CHUCK_CANDIDATE_VERIFIED`; every world, motion and sound verify line is within its limit.
+    - Evidence: `Local/verify-package-20261113-222806.log` and `Local/audit2-candidate-build2.log`.
+    - The ship's world audit stays at 0/0 after the funnel change.
+  - An earlier verify of the same code failed once on the alchemist's wrist gap (8.1 cm against a limit of 8; 4.3–4.6 cm in every other run). It is a single-moment sample of his idle; not changed.
+- **Not tested:** the deck by eye after the funnel removal (only the audits and the ship tests ran).
+- **Remaining flaws (findings, not fixed):**
+  - **Pops:**
+    - the tavern keeper's hand and the ship dancer's foot (loop seams);
+    - the blacksmith's brow and forearm; a sailor's forearm;
+    - the fencers' thumbs; the concertina player's and the cheering pirate's calves; the chef's fingers;
+    - Chuck's right calf, 5.2 cm in one frame of the slash (packaged only).
+  - **Sound:** the temple interior heard 7–11 m above ground in Chult; ship rats and the fencing heard through the deck; the anvil, a rat and a sewer zombie through Waterdeep's walls.
+  - **Voice:** the blacksmith is +5.5 dB over the other voices; the wizard's `fireball_01` is −10 dB under his other lines.
+  - **Gaps:** cutscenes aren't recorded, and Chuck's walk-start pop isn't caught. Voice level in the running game, and against the music, isn't measured.
+- **Contract compatibility:** no rig, scale, material or asset-path changes.
+- **Launcher:** promoted as MotionSound (see the receipt).
+
+Next part of the work could be done by either — preference: Claude (step 3, the robot playtester, is under way); the pops and leaks above are fixes for whoever owns each region.
+
 ## November 13 — the world audit: collision and support checks on every map (Claude)
 
 - **Asked:** "Yes, start step 1": step 1 of the defect catalog's build order. The collision audit and the support (floating) audit run on every map and are added to Verify-Package.
