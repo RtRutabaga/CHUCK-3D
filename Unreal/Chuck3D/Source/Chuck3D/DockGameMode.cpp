@@ -892,11 +892,19 @@ void ADockGameMode::StartPlay()
         FTimerHandle TailCheck;
         World->GetTimerManager().SetTimer(TailCheck,[World](){StartChuckTailCapture(World);},5.f,false);
     }
-    if(FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit")))
     {
-        extern void StartWaterdeepCollisionAudit(UWorld*);
-        FTimerHandle AuditCheck;
-        World->GetTimerManager().SetTimer(AuditCheck,[World](){StartWaterdeepCollisionAudit(World);},6.f,false);
+        // -ChuckWorldAudit[=<checkpoint>] (WorldAudit.cpp): collision gaps and floating props of a region; -ChuckCollisionAudit is Waterdeep's.
+        FString AuditPoint;
+        const bool bAudit=FParse::Value(FCommandLine::Get(),TEXT("ChuckWorldAudit="),AuditPoint) || FParse::Param(FCommandLine::Get(),TEXT("ChuckWorldAudit")) ||
+            FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit"));
+        if(bAudit)
+        {
+            if(AuditPoint.IsEmpty()) AuditPoint=TEXT("Waterdeep");
+            if(AuditPoint!=TEXT("Waterdeep") && !StartFromMenu(AuditPoint)) UE_LOG(LogTemp,Error,TEXT("CHUCK_WORLD_AUDIT unknown checkpoint %s"),*AuditPoint);
+            extern void StartWorldAudit(UWorld*,const FString&);
+            FTimerHandle AuditCheck;
+            World->GetTimerManager().SetTimer(AuditCheck,[World,AuditPoint](){StartWorldAudit(World,AuditPoint);},1.f,false);
+        }
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))
     {

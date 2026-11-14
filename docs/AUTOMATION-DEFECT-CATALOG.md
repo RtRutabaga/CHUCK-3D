@@ -2,7 +2,7 @@
 
 Written 2026-11-13 (Claude). First step of the automation idea: turn the corrections the user has made so far into checks that run on every region, so the same kind of problem is not found by hand twice. Sources: the git history (to 69838d6f), the "Asked:" lines in `agent-handoffs/CLAUDE.md`, `CODEX.md` and the archived prototype handoffs, and the existing test flags in `Source/Chuck3D`.
 
-The proposed checks are not built; they are a design, not a claim that they work. See also [AGENT-WORKFLOW.md](AGENT-WORKFLOW.md#working-efficiently-2026-11-13) for the shot-list, placement-table and light-audit tooling referenced below.
+Categories 1 and 4 are built as the world audit (below, 2026-11-13). The other proposed checks are not built; they are a design, not a claim that they work. See also [AGENT-WORKFLOW.md](AGENT-WORKFLOW.md#working-efficiently-2026-11-13) for the shot-list, placement-table and light-audit tooling referenced below.
 
 How to read the "catch" column:
 - **Numeric**: measurable from the game's own data (collision, transforms, bones, audio levels); can be a pass/fail line in Verify-Package.
@@ -13,7 +13,7 @@ How to read the "catch" column:
 
 ### 1. Walk-through solids (collision holes)
 - **Seen:** the side gate's stone jambs by the sewer hatch (11-12); the ship's mast cap and the hole round the masthead, the binnacle hood (11-12); chimney collision (10-02); stored barrels and planks walk-through (10-02); the cheese made solid (10-09); fallen logs open or walk-through (10-27); root collision (10-12).
-- **Checks now:** `-ChuckCollisionAudit` (`WaterdeepCollisionAudit.cpp`) — Waterdeep only, and only meshes whose material name contains Stone/Plaster/Wood/Brick. `ChultPropAudit` covers logs only.
+- **Checks now:** the world audit (below): every region, every material. (Until 2026-11-13: `-ChuckCollisionAudit`, Waterdeep only, Stone/Plaster/Wood/Brick materials only.) `ChultPropAudit` still checks the fallen logs.
 - **Proposed check:** one audit for every map: every visible static mesh above a size threshold either has collision or is on an explicit "decorative, pass-through" list (foliage, cloth, rope, FX). Probe each with a rat-sized capsule from several sides. Log `CHUCK_COLLISION_AUDIT map=… gaps=N`; Verify-Package requires 0.
 - **Catch:** Numeric.
 
@@ -31,7 +31,7 @@ How to read the "catch" column:
 
 ### 4. Floating, sunk or badly seated objects
 - **Seen:** the floating coil below deck (11-08); the mop propping itself up (11-02); rubble that didn't fall from anywhere, floating (11-04); trees hanging over air on slopes (10-27); jars inside stone (10-27); dinosaurs' feet not on the ground (10-16); shrines over a terrace's edge (10-20); the bench over the sewer grate (10-01).
-- **Checks now:** `ChultPropAudit` (trees, logs, jars) for Chult; `CHUCK_TEMPLE_RUBBLE_FLOATING` for the rubble map; the ship's coil check.
+- **Checks now:** the world audit's floating check (below), every region; `ChultPropAudit` (trees on slopes, jars in stone) for Chult; `CHUCK_TEMPLE_RUBBLE_FLOATING` for the rubble map; the ship's coil check. Not yet: things sunk into stone, footprints half over air, creatures' feet.
 - **Proposed check:** one support audit for every map (hand-placed props are listed in `Content/Data/Placements/<Region>.txt`, `ChuckPlacements.h`, so the audit can name the line to fix): for each prop not tagged as hanging/flying, trace down from several points of its footprint; report gaps over 2 cm, penetration over 5 cm into stone, and footprints more than a third over air. Characters and creatures: foot bones vs ground during idle and walk.
 - **Catch:** Numeric.
 
@@ -83,6 +83,32 @@ How to read the "catch" column:
 - **Proposed check:** none can judge feel. Agents can keep the numbers stable once the user likes them (swing reach, timing windows, fall times) so they don't drift.
 - **Catch:** Human.
 
+## The world audit (built 2026-11-13; categories 1 and 4)
+
+`-ChuckWorldAudit=<checkpoint>` (`Source/Chuck3D/WorldAudit.cpp`) starts at a dev checkpoint (Waterdeep when none; `Chult` builds the jungle and the temple; `ShipArrival` the ship), waits for the region to stand, then reads the scene and quits. About 0.2 s for Waterdeep and the ship, 22 s for Chult (340,000 pieces).
+
+- **Collision gaps:** a visible mesh at least 25 cm each way, its foot within 40 cm of the floor under it, that does not block a pawn and has nothing solid inside it. "Solid inside" is looked for three ways, because collision comes in three kinds here: an overlap in its own box, an overlap in the band a rat walks into (its lowest 40 cm, across the middle of its footprint: a tree's trunk), and four rays 20 cm over the floor walking in from its sides (the ship's hidden boxes are closed triangle meshes, which an overlap wholly inside touches nowhere).
+- **Floating props:** visible static meshes between 10 cm and 3 m that touch one another (oriented boxes within 3 cm) are grouped; a group floats if none of it touches a big mesh (3 m or more), a procedural surface (measured as boxes round every 24 triangles) or anything solid. A piece wholly inside a big box (the sky dome, a hull shell) is not held by it.
+- **Probes:** each run plants a 30 cm cube in the air and a 60 cm walk-through cube on the floor beside Chuck, and must find both (`probes_found=2/2`), so a blind audit cannot pass.
+- **Output:** `CHUCK_WORLD_AUDIT region=… gaps=… floating=…`, three example lines per kind, and in `Saved/Audit/`: `<region>-findings.csv` (every finding) and `<region>-findings.txt`, a shot list for `Tools/Take-Shots.ps1` with one camera per finding (the clearest of eight directions).
+- **Intended cases** go in `Content/Data/Audit/Allow.txt` with a reason (Chult's walk-through undergrowth, canopy leaf cards, the distant vista, fire and smoke sprites, the grass tufts, the stake skulls).
+- **Verify-Package** runs it on the three regions first (`-WorldAuditOnly` runs just that). A region fails if a probe is missed or a count rises above its known findings; lower the limit there when a finding is fixed.
+
+### What it found, and what was done
+
+| Region | Finding | Done |
+| --- | --- | --- |
+| Waterdeep | the two plaza towers' dark caps (35 cm, overhanging the stone) walk-through | made solid (`DockPlaza.cpp`) |
+| Chult | the temple precinct's palms had no trunk collision at all (64) | a hidden trunk capsule each, as ChultExpansion's (`ChultTemple.cpp`) |
+| Chult | the jungle band behind the temple starts 5 m in front of the hidden wall; its trees had no trunk collision | solid |
+| Chult | the small trees on the pyramid terraces and the temple's back corners (15) had none | solid |
+| Ship | none (the crates and barrels are held by the hidden boxes) | — |
+| Waterdeep | the cellar shelves' plaster crocks (18) are walk-through | **open, the user's call:** solid crocks would change how Chuck climbs the pantry shelves |
+| Waterdeep | 117 floating pieces, mostly the house fronts' repair masonry (thin stone plates 12 cm off the wall and 4–8 cm off the ground, `DockSetting.cpp` "lower masonry courses"); also stone blocks on a roof 5–10 cm over the stone under them, wooden rails and beams, forge iron, shop bottles | **open:** a triage list (`Saved/Audit/Waterdeep-findings.csv`); some are false alarms where the support has no collision and no box near enough, some are real but small |
+| Chult | four vista ferns hang in the void 44 m down | allowed with the vista; not seen in play |
+
+Limits: a support that is a spline mesh or a landscape holds props only through its collision; "reachable" is not known, so unreachable places need an allow line; oriented boxes are looser than the meshes, so a prop near (not on) a support passes.
+
 ## Scored against the November 12 list
 
 The 23 items, with what the proposed checks would have caught (my judgment, not a run):
@@ -117,7 +143,7 @@ Of the 20 that were defects, about 12 could have been caught by numeric checks, 
 
 ## Suggested build order
 
-1. Generalize the collision audit (1) and the support audit (4) to every map; add both to Verify-Package. They reuse code that exists.
+1. ~~Generalize the collision audit (1) and the support audit (4) to every map; add both to Verify-Package.~~ Done 2026-11-13 (above).
 2. The motion audit (5) and the audibility/loudness audit (6): new, but measurable, and they cover problems that are hard to see in stills.
 3. The robot playtester (2), starting from the existing trial routes.
 4. Import checks (8): LOD slots, UV density, coplanar faces.

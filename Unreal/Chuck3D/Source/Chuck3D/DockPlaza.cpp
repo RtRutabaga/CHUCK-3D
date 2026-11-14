@@ -203,7 +203,7 @@ void BuildDockPlaza(UWorld* World)
     for(float X : {-60.f,580.f})
     {
         Shape(FVector(X,-4270,330),FVector(240,260,660),TEXT("Stone"),true);
-        Shape(FVector(X,-4270,670),FVector(270,290,35),TEXT("Dark"));
+        Shape(FVector(X,-4270,670),FVector(270,290,35),TEXT("Dark"),true);   // (solid since 2026-11-13: -ChuckWorldAudit found the cap walk-through)
         for(float DX : {-90.f,90.f}) for(float DY : {-100.f,100.f})
             Shape(FVector(X+DX,-4270+DY,720),FVector(70,70,80),TEXT("Stone"),true);
     }

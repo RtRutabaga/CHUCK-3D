@@ -1,0 +1,12 @@
+# World audit allow list (WorldAudit.cpp, docs/AUTOMATION-DEFECT-CATALOG.md).
+# <collision|float|any> <wildcard or text in "<mesh> <material> <actor>/<component>"> # why it is intended
+collision SM_GrassTuft_*   # the shreddable grass tufts: Chuck walks into them and slashes them by design
+float  */ChuckFlameSheets   # flame sprites (ChuckFlames.cpp) burn in the air over their fuel
+float  */ChuckFlameSmoke    # smoke sprites rise from the fires
+collision SM_ChultFern*            # Chult undergrowth: walked through and faded by design (CHULT-FOLIAGE-FADE.md)
+collision SM_FallElephantEar*      # the same undergrowth
+collision SM_FallShrub*            # the same undergrowth
+float     SM_FallLeafCard*         # canopy leaf cards hang in the crowns, held by branches the boxes do not reach
+collision *GoldenLeafAura*         # the golden leaf's glow (FX)
+any       */ChultVista_*           # the distant vista round Chult: scenery Chuck cannot reach
+collision SM_TempleSkull*          # skulls on the avenue's stakes, 1.8 m up, left without collision on purpose (ChultTemple.cpp)

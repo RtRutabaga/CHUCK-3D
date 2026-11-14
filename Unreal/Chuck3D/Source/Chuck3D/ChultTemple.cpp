@@ -917,6 +917,14 @@ void BuildChultTemple(AActor* Owner)
         if(Suppress)return;
         Place(TEXT("SM_ChultIslandTree"),L,Scale,Yaw);if(Solid)Place(TEXT("SM_ChultIslandTrunkCollision"),L,Scale,Yaw,true,true);++Trees;
     };
+    // A palm with its trunk solid, as ChultExpansion's (14 cm radius and 7 m per unit of scale); until 2026-11-13 the
+    // precinct's palms had none and Chuck walked through them (-ChuckWorldAudit).
+    auto Palm=[&](const FVector& L,float Scale,float Yaw)
+    {
+        Place(TEXT("SM_FallPalm"),L,Scale,Yaw);
+        auto* C=NewObject<UCapsuleComponent>(Owner);C->InitCapsuleSize(14*Scale,350*Scale);C->SetCollisionProfileName(TEXT("BlockAll"));C->SetHiddenInGame(true);
+        C->SetupAttachment(Owner->GetRootComponent());C->SetWorldLocation(G+L+FVector(0,0,350*Scale-14*Scale));C->RegisterComponent();
+    };
     // Ledges: each terrace's top between its edge and the next terrace in.
     struct FLedge{float Off,HS,HT,InS,InT,Z,SkipT;bool Summit;};
     TArray<FLedge> Ledges;
@@ -951,19 +959,19 @@ void BuildChultTemple(AActor* Owner)
                 Suppress|=L.Off!=0&&L.Summit&&Sc+S>HouseFront-400&&Sc+S<HouseBack+400&&FMath::Abs(T)<HouseHalf+400;
             }
             const FVector At_=At(Sc+S,T,L.Z-2);
-            if(Rear&&R.FRand()<.06f){Tree(At_,R.FRandRange(.7f,1.1f),R.FRandRange(0,360),false);continue;}
+            if(Rear&&R.FRand()<.06f){Tree(At_,R.FRandRange(.7f,1.1f),R.FRandRange(0,360),true);continue;}   // (solid since 2026-11-13: -ChuckWorldAudit)
             Plant(At_,R.RandRange(0,6),R.FRandRange(1.2f,Back?2.8f:2.f),R.FRandRange(0,360));
         }
     }
     OffT=0;Suppress=false;
-    // A few trees clinging to the pyramids' outer upper corners and the central temple's back corners.
+    // A few trees clinging to the pyramids' outer upper corners and the central temple's back corners (solid since 2026-11-13).
     for(float Side:{-1.f,1.f})for(int32 Tr:{1,2})
     {
         const float H=TierHalf(Tr)-Band-120;
-        Tree(Flat(Sc+H,Side*(PyramidT+H),Tr*Tier+Tier-4),R.FRandRange(.8f,1.1f),R.FRandRange(0,360),false);
-        if(Tr==1)Tree(Flat(Sc-H,Side*(PyramidT+H),Tr*Tier+Tier-4),R.FRandRange(.7f,.9f),R.FRandRange(0,360),false);
+        Tree(Flat(Sc+H,Side*(PyramidT+H),Tr*Tier+Tier-4),R.FRandRange(.8f,1.1f),R.FRandRange(0,360),true);
+        if(Tr==1)Tree(Flat(Sc-H,Side*(PyramidT+H),Tr*Tier+Tier-4),R.FRandRange(.7f,.9f),R.FRandRange(0,360),true);
     }
-    for(float Side:{-1.f,1.f})Tree(Flat(Sc+LevelS[1]-250,Side*(LevelT[1]-250),2*Tier-4),R.FRandRange(.9f,1.2f),R.FRandRange(0,360),false);
+    for(float Side:{-1.f,1.f})Tree(Flat(Sc+LevelS[1]-250,Side*(LevelT[1]-250),2*Tier-4),R.FRandRange(.9f,1.2f),R.FRandRange(0,360),true);
     // The plaza and the precinct's sides: trees and growth thickening outward from the road.
     for(int32 I=0;I<16000;++I)
     {
@@ -982,7 +990,7 @@ void BuildChultTemple(AActor* Owner)
         if(I%4==0&&Clear&&!OnWayIn(S,T,250)&&A>1500&&!OnStructure(S,T,350)&&R.FRand()<.08f+.7f*Wild)
         {
             Tree(Ground,R.FRandRange(1.8f,3.f),R.FRandRange(0,360),true);
-            if(I%12==0)Place(TEXT("SM_FallPalm"),Ground+(Across*120),R.FRandRange(1.3f,1.9f),R.FRandRange(0,360));
+            if(I%12==0)Palm(Ground+(Across*120),R.FRandRange(1.3f,1.9f),R.FRandRange(0,360));
             continue;
         }
         if(!Clear||R.FRand()>.55f+.45f*Ease((A-800)/2500))continue;
@@ -996,7 +1004,8 @@ void BuildChultTemple(AActor* Owner)
         const float S=R.FRandRange(BackFrom-500,BackTo+1500),T=R.FRandRange(-ChultTemplePrecinctHalf+100,ChultTemplePrecinctHalf-100);
         if(OnStructure(S,T,-40))continue;
         const FVector Ground=Flat(S,T,ChultCanyonGroundZ(ChultCanyonFrame(S,T))-3-PlazaZ());
-        if(I%4==0&&!OnStructure(S,T,250)){Tree(Ground,R.FRandRange(2.f,3.2f),R.FRandRange(0,360),false);if(I%16==0)Place(TEXT("SM_FallPalm"),Ground+Across*150,R.FRandRange(1.4f,2.f),R.FRandRange(0,360));continue;}
+        // Solid too (2026-11-13): the band starts 5 m in front of the hidden wall, where Chuck can reach.
+        if(I%4==0&&!OnStructure(S,T,250)){Tree(Ground,R.FRandRange(2.f,3.2f),R.FRandRange(0,360),true);if(I%16==0)Palm(Ground+Across*150,R.FRandRange(1.4f,2.f),R.FRandRange(0,360));continue;}
         Plant(Ground,4+I%3,R.FRandRange(2.f,3.4f),R.FRandRange(0,360));
     }
     // The landing's tall trees (SM_FallTree_A/B, about 27 m at scale 1, 2026-10-17),

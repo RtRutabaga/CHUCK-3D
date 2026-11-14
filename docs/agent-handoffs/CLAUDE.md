@@ -2,6 +2,41 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 13 — the world audit: collision and support checks on every map (Claude)
+
+- **Asked:** "Yes, start step 1": step 1 of the defect catalog's build order. The collision audit and the support (floating) audit run on every map and are added to Verify-Package.
+- **Source:** `main` at 8e186db9.
+- **Changed:**
+  - **New `WorldAudit.cpp`** (replaces `WaterdeepCollisionAudit.cpp`, now deleted). `-ChuckWorldAudit[=<checkpoint>]` builds that region's checkpoint and runs two checks:
+    - **Collision gaps:** visible static meshes from 25 cm to 30 m that sit on the floor but don't block Chuck, with no blocker inside them. The test uses overlaps plus four rays in the walking band, so hidden triangle-mesh blockers count.
+    - **Floating:** touching pieces are grouped. A group is flagged when nothing holds it: no big anchor mesh (not one enclosing it), no procedural-mesh chunk and no collision.
+    - **Planted probes:** each run plants a walk-through cube and a floating cube, so the audit can't pass while blind.
+    - **Allow list:** `Content/Data/Audit/Allow.txt` (UFS).
+    - **Output:** `Saved/Audit/<Region>-findings.csv`, plus a `-ChuckShots` list of views.
+  - `-ChuckCollisionAudit` still works for Waterdeep, so its old log line remains.
+  - `DockGameMode.cpp`: the audit switch.
+  - `Tools/Verify-Package.ps1`:
+    - Runs the audit on Waterdeep, Chult and ShipArrival first.
+    - Requires both probes and enforces a baseline ratchet: counts may not rise. Waterdeep gaps 18, floating 117; Chult 0/0; ship 0/0.
+    - `-WorldAuditOnly` runs only the audit.
+  - **Fixes the audit found:**
+    - `DockPlaza.cpp`: the tower cap was walk-through and is now solid.
+    - `ChultTemple.cpp`: the fallen palms get a hidden blocking capsule. The back-band trees, the rear terrace tree and the pyramid and corner trees now block.
+  - The defect catalog has a world-audit section and a findings table.
+- **Tested:**
+  - Editor runs of all three regions: probes 2/2 each; final counts as above. Chult started at 46,468 gaps before the allow list and fixes.
+  - Candidate package `Builds/AuditCandidate`: the packaged audit gives the same counts. `CHUCK_PACKAGE_VERIFIED passes=182`, `CHUCK_CANDIDATE_VERIFIED`; evidence `Local/verify-package-20261113-172628.log` and `Local/audit-candidate-build.log`.
+- **Not tested:** whether the new Chult tree and palm collision feels right in play. The verify run's temple tests pass, but nobody has walked the jungle by hand.
+- **Remaining flaws:**
+  - Waterdeep's 18 gaps are all the pantry shelf's plaster crocks (`DockPantry.cpp:304`). Whether they should block is the user's call.
+  - Waterdeep's 117 floating findings are a triage list, not all real. Most are the repair masonry plates at `DockSetting.cpp:196`, 4–8 cm off the ground and 12 cm off the wall; the rest are roof stones, rails, forge iron and bottles. Some are false positives where the supporting piece has no collision, hence the ratchet rather than 0.
+  - Palm capsules aren't lowered by Chult's tree grounding, so on slopes they may sit a little high.
+  - Spline meshes and landscape are skipped. Floating doesn't check NPC-held or animated props.
+- **Contract compatibility:** no rig, scale, material or asset-path changes. New data file `Content/Data/Audit/Allow.txt`.
+- **Launcher:** promoted as WorldAudit (see the receipt).
+
+Next part of the work could be done by either — preference: Claude (step 2 of the catalog's build order); the crocks and the masonry plates need the user's call first.
+
 ## November 13 — the defect catalog (Claude, documentation only)
 
 - **Asked:** the user asked whether agents could automate most of the remaining game, including checks for the kinds of problems they have found and corrected by hand. First step agreed: a catalog of those corrections.

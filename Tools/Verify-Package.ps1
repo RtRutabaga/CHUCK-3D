@@ -1,4 +1,4 @@
-param([switch]$NoCapture,[switch]$MotionCapture,[switch]$NoGroom,[string]$PackageRoot)
+param([switch]$NoCapture,[switch]$MotionCapture,[switch]$NoGroom,[string]$PackageRoot,[switch]$WorldAuditOnly)
 $ErrorActionPreference='Stop'
 if($NoCapture -and $MotionCapture) { throw 'MotionCapture requires captures; omit NoCapture.' }
 $projectRoot=Split-Path $PSScriptRoot -Parent
@@ -10,6 +10,25 @@ $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
+# The world audit (WorldAudit.cpp, docs/AUTOMATION-DEFECT-CATALOG.md): collision gaps and floating props in each region.
+# Both planted probes must be found (the audit is not blind), and neither count may rise above the region's known
+# findings, listed in the catalog; lower is better (lower the number here when a finding is fixed). Intended cases go in
+# Unreal/Chuck3D/Content/Data/Audit/Allow.txt with a reason, not here.
+$worldAudit=[ordered]@{ Waterdeep=@{Gaps=18;Floating=117}; Chult=@{Gaps=0;Floating=0}; ShipArrival=@{Gaps=0;Floating=0} }
+foreach($region in $worldAudit.Keys) {
+    $auditLog=Join-Path $evidence ('verify-world-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckWorldAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_WORLD_AUDIT region='+$region+' .*') | Select-Object -Last 1
+    if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'gaps=(\d+) .*floating=(\d+) .*probes_found=2/2') {
+        throw "World audit of $region failed or was blind. Inspect $auditLog"
+    }
+    $gaps=[int]$Matches[1]; $floating=[int]$Matches[2]; $limit=$worldAudit[$region]
+    Write-Output ("CHUCK_WORLD_AUDIT_VERIFY region=$region gaps=$gaps/$($limit.Gaps) floating=$floating/$($limit.Floating)")
+    if($gaps -gt $limit.Gaps -or $floating -gt $limit.Floating) {
+        throw "World audit of $region found new faults (gaps $gaps > $($limit.Gaps) or floating $floating > $($limit.Floating)). The list and a shot list are in $(Join-Path $PackageRoot 'Chuck3D\Saved\Audit'); inspect $auditLog"
+    }
+}
+if($WorldAuditOnly) { Write-Output 'CHUCK_WORLD_AUDIT_VERIFIED'; return }
 $riverZombieLog=Join-Path $evidence ('verify-river-zombies-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $riverZombieProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=5' -Quiet) -or
