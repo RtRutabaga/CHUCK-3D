@@ -1636,8 +1636,10 @@ void AShipSetting::Build()
     Emit(this, TEXT("ShipHidden"), P.Hidden, nullptr, true, false, Missing, Triangles);
 
     // ---- The crawlway through the masonry: on all fours in it, and on the floor just out of its mouth.
-    AChuckCharacter::RegisterCrawlSpace(World, FTransform(ShipWorld(FVector((SeamX0 + SeamX1) * .5f, SeamY, LowerZ + 40))), FVector((SeamX1 - SeamX0) * .5f, SeamHalf, 40));
-    AChuckCharacter::RegisterCrawlSpace(World, FTransform(ShipWorld(FVector(SeamX1 + 30, SeamY, LowerZ + 40))), FVector(30, SeamHalf + 40, 40));
+    // Only as high as the crawlway itself (under its roof) and a standing Chuck just out of its mouth: on the stack over it
+    // he never goes down on all fours inside the boards (the robot playtester, 2026-11-14: they reached 80 cm up).
+    AChuckCharacter::RegisterCrawlSpace(World, FTransform(ShipWorld(FVector((SeamX0 + SeamX1) * .5f, SeamY, LowerZ + SeamH * .5f))), FVector((SeamX1 - SeamX0) * .5f, SeamHalf, SeamH * .5f));
+    AChuckCharacter::RegisterCrawlSpace(World, FTransform(ShipWorld(FVector(SeamX1 + 30, SeamY, LowerZ + 30))), FVector(30, SeamHalf + 40, 30));
 
     // ---- The hold's life: jars on the shelves and floor (a cigarette each), the rats.
     for (const FVector& J : ShipJars()) if (AClayJar::PlaceAt(World, ShipWorld(J + FVector(0, 0, 2)), J.X * 3.f, 1)) ++JarsPlaced;

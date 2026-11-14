@@ -2,6 +2,32 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 14 — the playtester's ship faults fixed (Claude)
+
+- **Asked:** "Yes, fix them": the two ship faults the robot playtester found (the crawlway mouth, the hull under the gunport).
+- **Source:** `main` at 816d13d1.
+- **Changed:**
+  - `ChuckCharacter.cpp/.h`:
+    - **No hanging inside things.** New `FindHangClear`/`HangFits`: an edge is caught only if there is a spot to hang from it that is clear (3 cm tolerance; his feet may rest up to 16 cm in a floor right under him, as at the low quarterdeck rail). Checked by every grab path: the wall-jump catch, the drop hang, the hang hop, the edge grab and the wall-run catch. `EnterHang` uses the spot that check found when the strict one finds none (`CHUCK_HANG_TIGHT ... out= lower=`), never the plain hold further in.
+    - **Safety net:** half a second inside solid on his feet (walking or crawling gaits) and he is moved to the nearest clear spot (`CHUCK_UNSTUCK`). The playtester reports inside after 3 frames, so it still sees what this hides from a player.
+    - A refused edge logs `CHUCK_HANG_REFUSED` with what was in the way.
+  - `ShipSetting.cpp`: the crawlway's crawl spaces stop at its 44 cm roof (they reached 80 cm up, so standing inside the boards over it he went down on all fours and could never get out).
+  - `DockNPCPirate.inl`: the galley chef's steps stop at Chuck (they swept against walls only, so his capsule walked into Chuck's; found by playtest seed 3).
+  - `Tools/Verify-Package.ps1`: the ship's playtest limit is now 0 (was 2).
+  - The defect catalog: the findings marked fixed, with causes.
+- **Causes found:** the crawlway mouth came from a hang off a timber's side on top of the stack (no room under it) and a climb up the stack's face, then the too-tall crawl space. The hull fault was a sprint leap caught on the gunport's sill, hung at the plain hold inside the hull.
+- **Tested:**
+  - Editor playtests on the ship, seeds 0–7 and the default: no inside, stuck or void faults after the last change (seeds 7 and 0 rerun on the final code; 1–6 on the code before the hang-spot change).
+  - Editor ship trials rail, rail_climb, ratlines, mast_climb, rigging: 5/5. The first candidate failed `rail_climb` (the quarterdeck rail's hang has his feet in the deck); fixed with the floor allowance.
+  - Candidate `Builds/AuditCandidate`: `CHUCK_PACKAGE_VERIFIED passes=182` and `CHUCK_CANDIDATE_VERIFIED`; playtest 0/0, 0/0, 0/0; every world, motion and sound line within its limit.
+  - Evidence: `Local/verify-package-20261114-133510.log`, `Local/audit4-candidate-build.log`, `Local/railclimb-editor.log`.
+- **Not tested:** the hang change by hand; other regions' climbing only through the package's trials (all passed).
+- **Remaining flaws:** the playtester still covers one start point per region; the sewer zombie's steps (`StepZombie`) also sweep against walls only, like the chef's did (not seen to fail; not changed).
+- **Contract compatibility:** no rig, scale, material or asset-path changes. Traversal behaviour change: edges with no clear hanging spot are no longer caught.
+- **Launcher:** promoted as PlaytestFixes (see the receipt).
+
+Next part of the work could be done by either — preference: Claude (step 4 of the catalog, the import checks, or the playtester on more checkpoints).
+
 ## November 14 — the robot playtester (Claude)
 
 - **Asked:** "When you're ready go ahead and do your next step too": step 3 of the defect catalog's build order, the robot playtester (category 2: Chuck inside geometry, stuck, or out of the world).

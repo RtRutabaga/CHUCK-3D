@@ -692,6 +692,7 @@ private:
     float ClimbAdvance = 0;
     bool bClimbMantle = false;
     float LedgeCooldownUntil = -1;
+    float InsideClock = 0;           // how long he has been inside solid on his feet (see UpdateMotion)
     int32 Hangs = 0;
     int32 PullUps = 0;
     int32 LedgeScrambles = 0;
@@ -706,6 +707,8 @@ private:
     FVector HangHoldAt(const FVector& Edge) const;
     float HangOut = 0, HangLower = 0;   // extra clearance from the face / below the edge for this grab
     void EnterHang(const FVector& Normal, const FVector& Edge, bool bRoom);
+    bool FindHangClear(const FVector& Normal, const FVector& Edge, float Inset, float Feet, float& Out, float& Lower) const;
+    bool HangFits(const FVector& Normal, const FVector& Edge) const;
     void DropFromHang();
     void StartClimb(bool bMantle, const FVector& Normal, const FVector& Edge, const FVector* StandAt = nullptr);
     bool TryMantle();

@@ -203,14 +203,15 @@ Limits: a support that is a spline mesh or a landscape holds props only through 
 ### Verify-Package
 
 - Each region runs with its own seed.
-- Faults may not exceed the known ones: Waterdeep 0, Chult 0, ship 2.
+- Faults may not exceed the known ones: Waterdeep 0, Chult 0, ship 0 (ship 2 until the fixes of 2026-11-14).
 
-### What it found (editor runs, 2026-11-14; nothing fixed yet)
+### What it found (editor runs, 2026-11-14; the ship's three fixed the same day)
 
 | Region | Finding |
 | --- | --- |
-| Ship | **Hull under the gunport, arrival compartment** (seed 7, local about (219, −402) above the lower deck): landing from a jump, he ends partly inside the hull planking (the hidden collision `ShipHidden`). Shot: `Local/playtest-ship-hull-inside.png`. |
-| Ship | **The crawlway's stone mouth** (local about (107, −325), 21 cm over the lower deck): he gets in standing, under the lintel. His crouched capsule is inside the masonry and the crawl restarts every frame (2,541 `CHUCK_CRAWL_START` in 45 s); he can't move out. Reproduce: `-ChuckPlaytest=ShipArrival -ChuckPlaytestAt=400107,1699675,386`. Shot: `Local/playtest-ship-crawlway-stuck.png`. |
+| Ship | **Hull under the gunport, arrival compartment** (seed 7, local about (219, −402) above the lower deck): landing from a jump, he ends partly inside the hull planking (the hidden collision `ShipHidden`). Shot: `Local/playtest-ship-hull-inside.png`. **Fixed:** he caught the gunport's sill from a sprint leap with no room to hang under it; an edge with no clear hanging spot is no longer caught (`HangFits`, all of the grab paths). |
+| Ship | **The crawlway's stone mouth** (local about (107, −325), 21 cm over the lower deck): he gets in standing, under the lintel. His crouched capsule is inside the masonry and the crawl restarts every frame (2,541 `CHUCK_CRAWL_START` in 45 s); he can't move out. Reproduce: `-ChuckPlaytest=ShipArrival -ChuckPlaytestAt=400107,1699675,386`. Shot: `Local/playtest-ship-crawlway-stuck.png`. **Fixed:** he reached it by hanging from a timber's side on top of the stack (no room to hang there) and by a climb up its face; the crawl spaces reached 80 cm up, over the crawlway's 44 cm roof, so standing inside the boards he went down on all fours and could not get out. The crawl spaces now stop at the roof; the hang check above; and a safety net moves him to the nearest clear spot after half a second inside solid on his feet (`CHUCK_UNSTUCK`). |
+| Ship | **The galley chef walked into Chuck** (seed 3): his steps were swept against walls only. **Fixed:** they stop at pawns too. |
 | Waterdeep | 2–3 falls per run near the start at street height: leaps off the dock edge into the harbour (an Astral death, by design). |
 | Chult | nothing in the landing's 60 m |
 | Chuck | `GetGaitName()` read past its table while he was thrown (no name for `Thrown`); fixed, with a compile-time check. |
@@ -218,7 +219,8 @@ Limits: a support that is a spline mesh or a landscape holds props only through 
 **Limits:**
 - 90 s within 60 m of each checkpoint covers 40–100 cells. The regions' other checkpoints (temple, canopy, rubble, the ship's deck) are not played yet.
 - The robot does not follow the main route. The trials' fixed routes still do that.
-- It won't find a fault it doesn't get to: the crawlway appeared in 2 of 5 ship runs.
+- It won't find a fault it doesn't get to: the crawlway appeared in 2 of 5 ship runs. After the fixes, ship seeds 0–7 and the default seed ran clean in the editor.
+- The safety net (`CHUCK_UNSTUCK`) acts after 0.5 s; the playtester reports inside after 3 frames, so it still sees faults the net would hide from a player.
 - "Inside" is not judged during the gaits that place him. One that leaves him inside is caught afterwards, but one that passes through a wall and comes out the other side is not.
 ## Scored against the November 12 list
 

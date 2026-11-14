@@ -377,8 +377,10 @@ bool ADockNPC::ChefStep(const FVector& Direction, float Distance)
     if (!ChefBox.IsInside(FVector2D(To.X, To.Y))) return false;
     FCollisionQueryParams Query(SCENE_QUERY_STAT(ChefStep), false, this);
     const FCollisionObjectQueryParams Static(ECC_WorldStatic);
+    // Nor into Chuck: his capsule pushed into Chuck's (the robot playtester, 2026-11-14).
+    FCollisionObjectQueryParams Solid(ECC_WorldStatic); Solid.AddObjectTypesToQuery(ECC_Pawn);
     FHitResult Hit;
-    if (GetWorld()->SweepSingleByObjectType(Hit, From, To, FQuat::Identity, Static, FCollisionShape::MakeCapsule(24.f, HalfHeight - 18.f), Query)) return false;
+    if (GetWorld()->SweepSingleByObjectType(Hit, From, To, FQuat::Identity, Solid, FCollisionShape::MakeCapsule(24.f, HalfHeight - 18.f), Query)) return false;
     FHitResult Floor;
     if (!GetWorld()->LineTraceSingleByObjectType(Floor, To - FVector(0, 0, HalfHeight - 30.f), To - FVector(0, 0, HalfHeight + 30.f), Static, Query)) return false;
     SetActorLocation(FVector(To.X, To.Y, Floor.ImpactPoint.Z + HalfHeight));

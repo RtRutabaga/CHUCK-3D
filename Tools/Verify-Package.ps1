@@ -68,7 +68,7 @@ foreach($region in $soundAudit.Keys) {
 # cover ground (20+ cells of 2 m); faults (inside, stuck, out of the world) may not exceed the known ones. The ship's 2
 # are the arrival compartment's crawlway mouth and the hidden collision by it (docs/AUTOMATION-DEFECT-CATALOG.md).
 # Falls the game catches are listed, not counted. Intended cases go in Content/Data/Audit/Allow.txt ("playtest").
-$playtest=[ordered]@{ Waterdeep=0; Chult=0; ShipArrival=2 }
+$playtest=[ordered]@{ Waterdeep=0; Chult=0; ShipArrival=0 }
 foreach($region in $playtest.Keys) {
     $auditLog=Join-Path $evidence ('verify-playtest-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
     $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckPlaytest='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru

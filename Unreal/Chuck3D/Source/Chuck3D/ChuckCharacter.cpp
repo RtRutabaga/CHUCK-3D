@@ -1,4 +1,5 @@
 #include "ChuckCharacter.h"
+#include "Engine/OverlapResult.h"
 #include "ShipStorm.h"
 #include "ChultLanding.h"
 #include "ChultCanopy.h"
@@ -860,7 +861,7 @@ bool AChuckCharacter::TryEnterWallRun()
     FVector Edge; bool bRoom = false;
     if (Movement->Velocity.Z > -400.f && GetWorld()->GetTimeSeconds() >= LedgeCooldownUntil)
     {
-        if (!bFeetOnly && FindLedge(Normal, Hit.ImpactPoint, -15.f, 45.f, Edge, bRoom))
+        if (!bFeetOnly && FindLedge(Normal, Hit.ImpactPoint, -15.f, 45.f, Edge, bRoom) && HangFits(Normal, Edge))
         {
             EnterHang(Normal, Edge, bRoom);
             return true;
@@ -1006,7 +1007,7 @@ bool AChuckCharacter::TryDropHang()
     const FVector Probe = FVector(Face.ImpactPoint.X, Face.ImpactPoint.Y, TopZ - 2.f) + Normal * (Radius + 5.f);
     if (GetWorld()->LineTraceSingleByChannel(Below, Probe, Probe - FVector(0, 0, DropHangMinDrop), ECC_Visibility, Query)) return false;
     FVector Edge; bool bRoom = false;
-    if (!FindLedge(Normal, Face.ImpactPoint, -Half - 15.f, -Half + 12.f, Edge, bRoom)) return false;
+    if (!FindLedge(Normal, Face.ImpactPoint, -Half - 15.f, -Half + 12.f, Edge, bRoom) || !HangFits(Normal, Edge)) return false;
     const float Yaw = GetActorRotation().Yaw;
     EnterHang(Normal, Edge, bRoom);
     // Swing round to face the wall on the way down rather than snapping.
@@ -1015,6 +1016,42 @@ bool AChuckCharacter::TryDropHang()
     bHangNeedsRelease = true;
     ++DropHangs;
     return true;
+}
+bool AChuckCharacter::FindHangClear(const FVector& Normal, const FVector& Edge, float Inset, float Feet, float& Out, float& Lower) const
+{
+    // Where he can hang from this edge without being inside anything: as held, or a little further out and lower. Feet
+    // is how far his feet may sink into a floor right under him (a low rail over a deck: as it always was).
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+    const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckHangClear), false, this);
+    for (const float L : {0.f, 8.f, 16.f, 24.f})
+        for (const float O : {0.f, 5.f, 10.f, 15.f})
+        {
+            const FVector Hold = Edge + Normal * (Radius + .5f + O) - FVector(0, 0, HangDrop + L);
+            // His feet may rest in a floor right under him (a low rail over the deck he stands on), up to Feet; not in a
+            // wall bellying in under the edge (the hull under a gunport) or anything else.
+            float Lift = 0;
+            FHitResult Floor;
+            if (Feet > 0 && GetWorld()->LineTraceSingleByChannel(Floor, Hold, Hold - FVector(0, 0, Half + 2.f), ECC_Pawn, Query) && !Floor.bStartPenetrating && Floor.ImpactNormal.Z > .7f)
+                Lift = FMath::Clamp(static_cast<float>(Floor.ImpactPoint.Z - (Hold.Z - Half)) + 1.f, 0.f, Feet);
+            const FVector At = Hold + FVector(0, 0, Lift * .5f);
+            if (!GetWorld()->OverlapBlockingTestByChannel(At, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - Inset, FMath::Max(Radius, Half - Inset - Lift * .5f)), Query)) { Out = O; Lower = L; return true; }
+        }
+    return false;
+}
+bool AChuckCharacter::HangFits(const FVector& Normal, const FVector& Edge) const
+{
+    // An edge with no room under it to hang (a timber's side on a solid stack, a sill over a hull that bellies in) is no
+    // edge: hanging there would leave him inside it (the robot playtester, 2026-11-14).
+    float Out = 0, Lower = 0;
+    if (FindHangClear(Normal, Edge, 3.f, 16.f, Out, Lower)) return true;
+    TArray<FOverlapResult> Hits;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckHangFits), false, this);
+    const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius(), Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+    GetWorld()->OverlapMultiByChannel(Hits, Edge + Normal * (Radius + .5f) - FVector(0, 0, HangDrop), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 3.f, Half - 3.f), Query);
+    FString What; for (const FOverlapResult& H : Hits) if (H.bBlockingHit) What += FString::Printf(TEXT("%s/%s "), *GetNameSafe(H.GetActor()), *GetNameSafe(H.GetComponent()));
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_HANG_REFUSED at=%s normal=%s in=%s"), *Edge.ToString(), *Normal.ToString(), *What);
+    return false;
 }
 void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool bRoom)
 {
@@ -1026,23 +1063,12 @@ void AChuckCharacter::EnterHang(const FVector& Normal, const FVector& Edge, bool
     HangNormal = Normal; HangEdge = Edge; HangFrom = GetActorLocation();
     // Under an eave the usual hang would put his head in the roof: hang a
     // little further out and lower instead, clear of it.
-    HangOut = HangLower = 0;
+    // Clear of everything if it can be; else the spot HangFits allowed (a centimetre or two in, or his feet in the floor);
+    // never the plain hold when that is further in (seed 7's hull under the gunport, 2026-11-14).
+    if (!FindHangClear(Normal, Edge, 1.f, 0.f, HangOut, HangLower))
     {
-        const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
-        const float Half = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-        FCollisionQueryParams Query(SCENE_QUERY_STAT(ChuckHangClear), false, this);
-        const auto Clear = [&](float Out, float Lower)
-        {
-            HangOut = Out; HangLower = Lower;
-            return !GetWorld()->OverlapBlockingTestByChannel(HangHoldAt(Edge), FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(Radius - 1.f, Half - 1.f), Query);
-        };
-        bool bClear = false;
-        for (const float Lower : {0.f, 8.f, 16.f, 24.f})
-        {
-            for (const float Out : {0.f, 5.f, 10.f, 15.f}) if (Clear(Out, Lower)) { bClear = true; break; }
-            if (bClear) break;
-        }
-        if (!bClear) HangOut = HangLower = 0;
+        if (!FindHangClear(Normal, Edge, 3.f, 16.f, HangOut, HangLower)) HangOut = HangLower = 0;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_HANG_TIGHT at=%s out=%.0f lower=%.0f"), *Edge.ToString(), HangOut, HangLower);
     }
     HangClock = 0; HangHold = 0; bHangRoom = bRoom; HangSnapTime = .12f; HangYawFrom = (-Normal).Rotation().Yaw; bCornerCarry = false;
     // Still pushing the way the last wall jump went (away from this wall): that
@@ -1241,6 +1267,7 @@ bool AChuckCharacter::TryHangHop()
         if (Edge.Z < HangEdge.Z + 6.f || Edge.Z > HangEdge.Z + 60.f) { Z = TopZ; continue; }
         // Nothing lying right on it (a top inside a wall is no edge).
         if (GetWorld()->OverlapBlockingTestByChannel(Edge + FVector(0, 0, 3.f) - Normal * 1.5f, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(1.f), Query)) { Z = TopZ; continue; }
+        if (!HangFits(Normal, Edge)) { Z = TopZ; continue; }
         FVector Stand;
         const bool bRoom = FindStand(Normal, Edge, Radius + 4.f, Stand);
         const FVector Was = HangEdge;
@@ -1297,7 +1324,7 @@ bool AChuckCharacter::TryGrabEdge(const FVector& Probe)
         const FVector Normal = FVector(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, 0).GetSafeNormal();
         if (Normal.IsNearlyZero() || FVector::DotProduct(Probe, -Normal) < .5f) continue;
         FVector Edge; bool bRoom = false;
-        if (FindLedge(Normal, Hit.ImpactPoint, -15.f, bUnder ? 75.f : 45.f, Edge, bRoom) && Edge.Z - Center.Z <= (bUnder ? 64.f : 45.f))
+        if (FindLedge(Normal, Hit.ImpactPoint, -15.f, bUnder ? 75.f : 45.f, Edge, bRoom) && Edge.Z - Center.Z <= (bUnder ? 64.f : 45.f) && HangFits(Normal, Edge))
         {
             if (bUnder) ++EaveGrabs;
             UE_LOG(LogTemp, Display, TEXT("CHUCK_EDGE_GRAB under=%d height=%.0f edge_above=%.1f room=%d at=%s"), bUnder ? 1 : 0, Height, Edge.Z - Center.Z, bRoom ? 1 : 0, *Edge.ToString());
@@ -2763,6 +2790,22 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     }
     const EGait GaitBefore = Gait;
     bBodyPitchLive = false;
+    // Never left inside anything on his feet (the robot playtester, 2026-11-14): half a second inside solid and he is
+    // moved to the nearest clear spot, wherever the cause (a placed move's unswept end, a crouch that can't stand).
+    if (Movement->MovementMode == MOVE_Walking && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop
+        || Gait == EGait::Turn || Gait == EGait::Land || Gait == EGait::Strafe || Gait == EGait::Crawl)
+        && GetWorld()->EncroachingBlockingGeometry(this, Location, GetActorRotation()))
+    {
+        InsideClock += DeltaSeconds;
+        FVector Spot = Location;
+        if (InsideClock >= .5f && GetWorld()->FindTeleportSpot(this, Spot, GetActorRotation()))
+        {
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_UNSTUCK from=%s to=%s gait=%s"), *Location.ToString(), *Spot.ToString(), GetGaitName());
+            SetActorLocation(Spot, false, nullptr, ETeleportType::TeleportPhysics);
+            InsideClock = 0;
+        }
+    }
+    else InsideClock = 0;
     // Into a crawl space on the ground (2026-10-26, the temple rubble's crevice): down on all fours.
     const bool bInCrawlSpace = InCrawlSpace(GetWorld(), Location);
     if (bInCrawlSpace && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe || Gait == EGait::Land || Gait == EGait::Turn)) EnterCrawl();
@@ -3049,7 +3092,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
         FVector Edge; bool bRoom = false;
         const FVector Face = Location - WallNormal * (GetCapsuleComponent()->GetScaledCapsuleRadius() + .5f);
         if (TrySwingCatch()) {}   // a lantern's ring beside him on the way up
-        else if (!bLetGo && FindLedge(WallNormal, Face, 5.f, 45.f, Edge, bRoom)) EnterHang(WallNormal, Edge, bRoom);
+        else if (!bLetGo && FindLedge(WallNormal, Face, 5.f, 45.f, Edge, bRoom) && HangFits(WallNormal, Edge)) EnterHang(WallNormal, Edge, bRoom);
         else if (!bLetGo && TryGrabEdge(-WallNormal)) {}   // an eave over his head
         else if ((WallRunClock >= WallRunTime && !IsStaminaLocked()) || !bWall || bLetGo) LeaveWall();
         else
