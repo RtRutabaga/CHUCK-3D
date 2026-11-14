@@ -2,6 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 14 — the robot playtester (Claude)
+
+- **Asked:** "When you're ready go ahead and do your next step too": step 3 of the defect catalog's build order, the robot playtester (category 2: Chuck inside geometry, stuck, or out of the world).
+- **Source:** `main` at f4b7005a.
+- **Changed:**
+  - **New `PlaytestAudit.cpp`:** `-ChuckPlaytest[=<checkpoint>]` drives Chuck for 90 s at a fixed 30 fps with seeded random input (headings scored on clearance, visited cells and a leash home; jumps, sprints, dodges, edge leaps). It reports:
+    - **inside:** his capsule (shrunk 4 cm) overlaps blocking geometry, outside the placed gaits (hang, climb, vault, swing, ladder, held, thrown, Astral);
+    - **stuck:** no more than 60 cm of movement in 8 s while trying to move;
+    - **void:** falling 4 s with no floor below; falls into water are listed separately.
+    - After a fault he is put back at a safe spot from about 8 s earlier. A planted cube 300 m up must be found as "inside", or the run fails.
+    - Repeatable: `-ChuckPlaytestSeed=<n>`, `-ChuckPlaytestAt=X,Y,Z`. Writes `Saved/Audit/<Region>-playtest.csv`, a state line per fault and a screenshot in `Screenshots/Playtest/`.
+  - `DockGameMode.cpp`: the audit switch takes the new kind.
+  - `ChuckCharacter.cpp`: **bug fix** — `GetGaitName()` had no name for `Thrown` (22 names for 23 gaits, read past the table). Added, with a `static_assert` so it can't drift again.
+  - `Tools/Verify-Package.ps1`: runs the playtester on Waterdeep, Chult and the ship; needs the probe and at least 20 cells; faults may not exceed 0/0/2.
+  - The defect catalog: a playtester section with the findings and limits; step 3 marked done.
+- **Tested:**
+  - Editor runs on all three regions, several seeds; the probe is found every time.
+  - Candidate `Builds/AuditCandidate`: `CHUCK_PACKAGE_VERIFIED passes=182` and `CHUCK_CANDIDATE_VERIFIED`. Playtest Waterdeep 0/0 (84 cells), Chult 0/0 (99), ship 0/2 (29). Every world, motion and sound line within its limit (the sound leaks varied: Waterdeep and ship 5 against a baseline of 4, within the +3 margin).
+  - Evidence: `Local/verify-package-20261114-004605.log`, `Local/audit3-candidate-build.log`, `Local/playtest-ship-hull-inside.png`, `Local/playtest-ship-crawlway-stuck.png`.
+- **Remaining flaws (findings, not fixed):**
+  - **Ship crawlway mouth** (local 107,−325, 21 cm above the lower deck): crouched, he is inside the stone/hidden blocker and the crawl restarts every frame. Repro: `-ChuckPlaytest=ShipArrival -ChuckPlaytestAt=400107,1699675,386`.
+  - **Ship hull under the gunport** (seed 7, t≈20.9 s): after landing he is partly inside the hull planking.
+  - Waterdeep's dock edge gives 2–3 falls into the harbour per run (by design; not counted).
+  - Limits: one start point per region, 90 s; the main route and other checkpoints aren't covered. The placed gaits aren't checked for being inside.
+- **Contract compatibility:** no rig, scale, material or asset-path changes.
+- **Launcher:** promoted as Playtest (see the receipt).
+
+Next part of the work could be done by either — preference: Claude (the two ship faults are traversal/collision); step 4 of the catalog is open to either.
+
 ## November 13 — the ship's deck funnel removed; the motion and sound audits (Claude)
 
 - **Asked:** "Remove the chimney/pipe on the ships deck then do step 2. Leave the crocks and plates for now". Step 2 of the defect catalog's build order is the motion audit (category 5) and the sound audit (category 6).

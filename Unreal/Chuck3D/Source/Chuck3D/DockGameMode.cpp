@@ -895,10 +895,11 @@ void ADockGameMode::StartPlay()
     {
         // -ChuckWorldAudit[=<checkpoint>] (WorldAudit.cpp): collision gaps and floating props of a region; -ChuckCollisionAudit is Waterdeep's.
         // -ChuckMotionAudit[=<checkpoint>] (MotionAudit.cpp): pops and jitter. -ChuckSoundAudit[=<checkpoint>] (SoundAudit.cpp): sounds through walls.
+        // -ChuckPlaytest[=<checkpoint>] (PlaytestAudit.cpp): a robot player looking for places he gets inside, stuck or out of the world.
         FString AuditPoint;
         int32 AuditKind=-1;
-        const TCHAR* const AuditNames[]={TEXT("ChuckWorldAudit"),TEXT("ChuckMotionAudit"),TEXT("ChuckSoundAudit")};
-        for(int32 K=0;K<3&&AuditKind<0;++K)
+        const TCHAR* const AuditNames[]={TEXT("ChuckWorldAudit"),TEXT("ChuckMotionAudit"),TEXT("ChuckSoundAudit"),TEXT("ChuckPlaytest")};
+        for(int32 K=0;K<4&&AuditKind<0;++K)
             if(FParse::Value(FCommandLine::Get(),*(FString(AuditNames[K])+TEXT("=")),AuditPoint)||FParse::Param(FCommandLine::Get(),AuditNames[K]))AuditKind=K;
         if(AuditKind<0&&FParse::Param(FCommandLine::Get(),TEXT("ChuckCollisionAudit")))AuditKind=0;
         if(AuditKind>=0)
@@ -908,9 +909,10 @@ void ADockGameMode::StartPlay()
             extern void StartWorldAudit(UWorld*,const FString&);
             extern void StartMotionAudit(UWorld*,const FString&);
             extern void StartSoundAudit(UWorld*,const FString&);
+            extern void StartPlaytest(UWorld*,const FString&);
             FTimerHandle AuditCheck;
             World->GetTimerManager().SetTimer(AuditCheck,[World,AuditPoint,AuditKind](){
-                if(AuditKind==0)StartWorldAudit(World,AuditPoint);else if(AuditKind==1)StartMotionAudit(World,AuditPoint);else StartSoundAudit(World,AuditPoint);},1.f,false);
+                if(AuditKind==0)StartWorldAudit(World,AuditPoint);else if(AuditKind==1)StartMotionAudit(World,AuditPoint);else if(AuditKind==2)StartSoundAudit(World,AuditPoint);else StartPlaytest(World,AuditPoint);},1.f,false);
         }
     }
     if(FParse::Param(FCommandLine::Get(),TEXT("ChuckZombieImpactTest")))

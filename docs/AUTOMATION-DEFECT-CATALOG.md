@@ -19,7 +19,7 @@ How to read the "catch" column:
 
 ### 2. Chuck inside geometry / stuck / out of the world
 - **Seen:** left inside a sanctum pier (11-12, never reproduced); props blocking the spawn or the dock entrance (10-02, 10-03); the dock vista shortcut (10-02).
-- **Checks now:** per-region test trials follow fixed routes; the pier push-out logs `CHUCK_SANCTUM_PIER_PUSH_OUT` but only in the sanctum.
+- **Checks now:** `-ChuckPlaytest` on every region (a robot player looking for inside, stuck and out of the world; in Verify-Package since 2026-11-14); per-region test trials follow fixed routes; the pier push-out logs `CHUCK_SANCTUM_PIER_PUSH_OUT` but only in the sanctum.
 - **Proposed check:** a robot playtester per map: the region's main route plus some minutes of random/exploratory input (jumps, climbs, hangs, leaps at edges). Each frame: is Chuck's capsule overlapping blocking geometry, below the world's floor, outside the region bounds, or not moving for N seconds while input is held? Log positions and a still for each incident.
 - **Catch:** Numeric.
 
@@ -167,6 +167,59 @@ Limits: a support that is a spline mesh or a landscape holds props only through 
 - The listener is the camera, wherever it settles.
 - Voice level in the running game, and against the music, is not measured.
 
+## The robot playtester (built 2026-11-14; category 2)
+
+`-ChuckPlaytest[=<checkpoint>]` (`PlaytestAudit.cpp`) plays a region for 90 s of game time at a fixed 30 fps.
+
+### How it plays
+
+- It drives Chuck through the stick and buttons only, with real input disabled so a real mouse cannot steer it.
+- It heads for open, least-visited ground within 60 m of the start, and changes direction every 1.5–4 s.
+- It jumps (holding 0.1–0.5 s), sprints and dodges at random, sometimes leaps at edges, and turns away when blocked.
+- Its random choices come from a seed (the region's name, or `-ChuckPlaytestSeed=N`), so a run repeats: seed 7 on the ship found the same fault at the same moment twice.
+- `-ChuckPlaytestAt=X,Y,Z` starts it where an earlier run found something.
+
+### What it checks every frame
+
+- **Inside:** his capsule, shrunk by 4 cm, overlaps something solid (not a pawn, not a physics prop) for 3 frames.
+  - Only while his movement sweeps him. The hang, the climb onto a top, the vault, the swing and the ladder place him along their paths and may cross an edge on the way.
+  - If one of those leaves him inside, he is caught as soon as he walks or falls again.
+- **Stuck:** 8 s in which he never gets 60 cm from where he is, although the robot has turned and jumped.
+- **Void:** 4 s of falling with no floor within 200 m below.
+- **Falls the game catches** (an Astral death) are listed as information.
+
+### After a fault
+
+- It logs where and when, his gait, what he was in, and his movement state (mode, crouched, capsule, velocity, floor).
+- It takes a screenshot (up to 8 per run).
+- After two frames it puts him back where he stood 8 s before, and goes on.
+- Output: `Saved/Audit/<Region>-playtest.csv`, and screenshots in `Screenshots/<platform>/Playtest/`.
+
+### Not blind
+
+- A solid cube planted in the sky must be found by the inside test, and the space above it must not be (`probe=2`).
+- The run must cover 20 or more cells of 2 m.
+
+### Verify-Package
+
+- Each region runs with its own seed.
+- Faults may not exceed the known ones: Waterdeep 0, Chult 0, ship 2.
+
+### What it found (editor runs, 2026-11-14; nothing fixed yet)
+
+| Region | Finding |
+| --- | --- |
+| Ship | **Hull under the gunport, arrival compartment** (seed 7, local about (219, −402) above the lower deck): landing from a jump, he ends partly inside the hull planking (the hidden collision `ShipHidden`). Shot: `Local/playtest-ship-hull-inside.png`. |
+| Ship | **The crawlway's stone mouth** (local about (107, −325), 21 cm over the lower deck): he gets in standing, under the lintel. His crouched capsule is inside the masonry and the crawl restarts every frame (2,541 `CHUCK_CRAWL_START` in 45 s); he can't move out. Reproduce: `-ChuckPlaytest=ShipArrival -ChuckPlaytestAt=400107,1699675,386`. Shot: `Local/playtest-ship-crawlway-stuck.png`. |
+| Waterdeep | 2–3 falls per run near the start at street height: leaps off the dock edge into the harbour (an Astral death, by design). |
+| Chult | nothing in the landing's 60 m |
+| Chuck | `GetGaitName()` read past its table while he was thrown (no name for `Thrown`); fixed, with a compile-time check. |
+
+**Limits:**
+- 90 s within 60 m of each checkpoint covers 40–100 cells. The regions' other checkpoints (temple, canopy, rubble, the ship's deck) are not played yet.
+- The robot does not follow the main route. The trials' fixed routes still do that.
+- It won't find a fault it doesn't get to: the crawlway appeared in 2 of 5 ship runs.
+- "Inside" is not judged during the gaits that place him. One that leaves him inside is caught afterwards, but one that passes through a wall and comes out the other side is not.
 ## Scored against the November 12 list
 
 The 23 items, with what the proposed checks would have caught (my judgment, not a run):
@@ -203,7 +256,7 @@ Of the 20 that were defects, about 12 could have been caught by numeric checks, 
 
 1. ~~Generalize the collision audit (1) and the support audit (4) to every map; add both to Verify-Package.~~ Done 2026-11-13 (above).
 2. ~~The motion audit (5) and the audibility/loudness audit (6).~~ Done 2026-11-13 (above); voice level in the running game is still to do.
-3. The robot playtester (2), starting from the existing trial routes.
+3. ~~The robot playtester (2), starting from the existing trial routes.~~ Done 2026-11-14 as an exploring robot (above); following the main route and the other checkpoints is still to do.
 4. Import checks (8): LOD slots, UV density, coplanar faces.
 5. The vision reviewer (7, 9) with the reference images, fed by the shot lists.
 6. Then try the whole set on the next region and count what the user still finds.

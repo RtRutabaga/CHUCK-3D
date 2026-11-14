@@ -63,6 +63,26 @@ foreach($region in $soundAudit.Keys) {
         throw "Sound audit of $region found new leaks. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-sound.csv')); inspect $auditLog"
     }
 }
+# The robot playtester (Claude, 2026-11-14; PlaytestAudit.cpp): 90 s of a robot player on each region, with each
+# region's own seed, so a run is repeatable up to the game's own variation. Its planted solid must be found and it must
+# cover ground (20+ cells of 2 m); faults (inside, stuck, out of the world) may not exceed the known ones. The ship's 2
+# are the arrival compartment's crawlway mouth and the hidden collision by it (docs/AUTOMATION-DEFECT-CATALOG.md).
+# Falls the game catches are listed, not counted. Intended cases go in Content/Data/Audit/Allow.txt ("playtest").
+$playtest=[ordered]@{ Waterdeep=0; Chult=0; ShipArrival=2 }
+foreach($region in $playtest.Keys) {
+    $auditLog=Join-Path $evidence ('verify-playtest-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckPlaytest='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_PLAYTEST region='+$region+' .*') | Select-Object -Last 1
+    if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'cells=(\d+) .*inside=(\d+) stuck=(\d+) void=(\d+) .*probe=2') {
+        throw "Playtest of $region failed or was blind. Inspect $auditLog"
+    }
+    $cells=[int]$Matches[1]; $faults=[int]$Matches[2]+[int]$Matches[3]+[int]$Matches[4]; $limit=$playtest[$region]
+    Write-Output ("CHUCK_PLAYTEST_VERIFY region=$region faults=$faults/$limit cells=$cells")
+    if($cells -lt 20) { throw "Playtest of $region hardly moved ($cells cells). Inspect $auditLog" }
+    if($faults -gt $limit) {
+        throw "Playtest of $region found new places he gets inside, stuck or out of the world. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-playtest.csv')); inspect $auditLog"
+    }
+}
 # The voice files' loudness (Tools/Check-VoiceLoudness.py), when Python is installed; reported, not a failure.
 if(Get-Command python -ErrorAction SilentlyContinue) {
     $voice=& python (Join-Path $PSScriptRoot 'Check-VoiceLoudness.py') 2>&1 | Out-String
