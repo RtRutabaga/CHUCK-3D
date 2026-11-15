@@ -54,3 +54,40 @@ The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused
 ## Out of scope for this milestone
 
 The trio and the Pit Fiend, the Astral escalation and the Feywild river, the river cutscene, and every Phlegethos creature.
+
+## What was built (2026-11-14)
+
+Code: `PhlegethosSetting.h/.cpp` (the stage, its hazards, light and embers), `PhlegethosFall.h/.cpp` (the cutscene), `PhlegethosTest.cpp` (`-ChuckChultTest -ChuckPhlegethosTest[=<trial>]`, `-ChuckChultTest -ChuckHellFallTest`). Small changes: `ChuckCharacter` (`BeginHellFall`/`EndHellFall`, lava as an Astral death, respawn at the stretch's start), `ShipEndingScene.cpp` (its end leads into the fall, no longer the end card), `DockMenu.cpp` (six checkpoints in a seventh column, saveable), `DockGameMode.cpp` (the two scores), `Tools/Verify-Package.ps1` and `Tools/Verify-Menu.ps1`. Assets: `Tools/Fetch-Phlegethos.ps1` then `Tools/create_phlegethos_assets.py` (run with `-ExecutePythonScript`; `-run=pythonscript` crashes in the content browser when importing).
+
+### The fall (about 67 s with the 5 s lead)
+
+Song-time shots on the bars: tumbling out of the dark; small in a vast red sky (bar 0); his face (4); over his shoulder down at the burning lake through the haze (7); level with him, the volcano climbing into view as he drops below its height (9); down past him at the lake, the road and the columns (11); from the plain, up at him (13, the breakdown); beside him, the ground rushing up (15); the impact (16); flat on the basalt, still; the summons light (18); he looks left, right and back (20); the drag, two exhales (22); a crane up and back over the lake toward the fortress while the volcano erupts (24 to 31); the music fades over bars 31 to 33 and the picture goes to black at 62.6 s. Esc skips. Both end on the plain, playable, the region live.
+
+A volumetric ash deck was tried and removed: its layer sat under him (placed by another stage's hidden atmosphere) and read as dunes from above.
+
+### The challenges (as measured by the test)
+
+| Trial | What the real character does |
+| --- | --- |
+| road_hops | runs the spine, jumping two breaks (80 and 95 cm) |
+| road_leap | runs past the geysers (they knock him back along the spine, never across it) and sprint-leaps the 230 cm break |
+| lake_hops | all 21 column-to-column hops, 32 to 65 cm gaps, rises up to 40 cm, one 110 cm rise taken by a wall run and pull-up; seven cracked columns sink 0.55 s after he lands |
+| lake_slabs | a side wall run on one slab and a kick to the other across 4.4 m of lava |
+| gorge_wall | a side wall run along the cliff over a 2.4 m break in the shelf |
+| gorge_drop | a running jump down to the lower shelf |
+| chains | off the shelf into the first ring, eight leaps along nine rings, the step down at the end |
+| bombs | up the ramp under falling bombs (each marked as it comes; hits cost Sanity) |
+| steps | across seven crumbling steps (cracking 0.45 s and falling 0.95 s after he lands) without stopping |
+| chimney | wall jumps up a 1 m by 4 m slot to the mesa |
+| leap | a sprint leap over the last 2.3 m gap |
+| gate | the processional to the shut gate, where he stops |
+
+Everything that sinks or crumbles comes back after a death, and when he is 15 m away.
+
+### Known gaps
+
+- No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
+- The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
+- The cliffs, slabs and fortress are plain boxes in the CC0 basalt; the idols are blocky; the far ranges are low-poly at a distance. The volcano is a smooth cone and its eruption is only light and sound (no plume).
+- The geysers hit hard: running straight through without timing them cost 3 Sanity in the tests.
+- Not played by hand.

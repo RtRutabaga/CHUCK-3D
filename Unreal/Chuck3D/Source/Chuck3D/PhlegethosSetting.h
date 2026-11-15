@@ -39,8 +39,8 @@ namespace Phleg
     struct FColumn { float X, Y, R, Top; bool bSinks; };
     constexpr FColumn Columns[] = {
         {8571, -60, 55, 0, false}, {8694, 30, 50, 20, false}, {8823, -40, 48, 40, false}, {8942, 60, 55, 30, true},
-        {9069, -10, 52, 70, false}, {9197, 70, 46, 60, false}, {9337, 0, 58, 25, true}, {9476, -80, 50, 25, true},
-        {9598, -20, 62, 135, false}, {9745, 40, 55, 125, false}, {9912, 0, 75, 110, false},
+        {9069, -10, 52, 70, false}, {9197, 70, 46, 60, false}, {9337, 0, 58, 25, true}, {9466, -80, 68, 25, false},
+        {9598, -20, 62, 125, false}, {9745, 40, 55, 125, false}, {9912, 0, 75, 110, false},
         // (the slabs' gap: 9987..10427 is lava between the walls; a chained side wall run crosses it)
         {10496, 0, 95, 110, false}, {10653, -80, 50, 80, true}, {10787, -10, 48, 60, false}, {10917, 70, 52, 40, true}, {11065, 10, 55, 20, false}, {11201, -70, 50, 0, true}, {11337, 0, 50, -10, false}, {11467, 80, 55, 10, true}, {11607, 20, 50, 30, false}, {11754, -50, 60, 10, false}, {11925, 10, 70, 0, false}};
     constexpr float SlabX0 = 9840, SlabX1 = 10520, SlabHalfGap = 90, SlabThick = 45, SlabTop = G + 380;
@@ -153,6 +153,13 @@ private:
     UPROPERTY() UInstancedStaticMeshComponent* BombMarks = nullptr;
     float NextBomb = 0, Clock = 0, EruptUntil = -1, EruptStrength = 0;
     struct FMote { FVector P, V; float Age = 0, Life = 1, Size = 1, Heat = 0; };
+    // Smoke (the temple jets' CC0 flipbook smoke): steam off the lava at vents near the route, and the volcano's plume.
+    UPROPERTY() UInstancedStaticMeshComponent* Smoke = nullptr;
+    struct FPuff { FVector P, V; float Age = 0, Life = 1, Size0 = 1, Size1 = 1, Frame = 0, Rate = 12, Heat = 0, Spin = 0; };
+    TArray<FPuff> Puffs;
+    TArray<FVector> Vents;
+    float VentCarry = 0, PlumeCarry = 0;
+    void TickSmoke(float Dt, const FVector& Eye);
     TArray<FMote> MoteList;
     int32 SunkCount = 0, CrumbledCount = 0, GeyserHits = 0, BombHits = 0, BombsFired = 0;
     bool bWasAstral = false;

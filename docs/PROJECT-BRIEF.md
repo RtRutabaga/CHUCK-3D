@@ -49,8 +49,8 @@ The order follows the 2D phases. "Done" means a playable, verified build exists.
 | 4 | Chult jungle | Started: verified playable landing, local respawn and ground loop; farther jungle remains |
 | 5 | Deeper into Chult | — |
 | 6 | The jungle temple | Built: the exterior, the interior's maps, skeletons and snakes, the trap run, the Astral wind, the sanctum with the heroes and the beholder, and the rubble map leading to the ship ([CHULT-TEMPLE-HEROES.md](CHULT-TEMPLE-HEROES.md)) |
-| 7 | The pirate ship | Built: plan approved 2026-11-01 ([regions/SHIP.md](regions/SHIP.md)); the escape from the temple, below decks, the deck and rig, the crew and their voiced lines, and the storm ending ([regions/SHIP-STORM-ENDING.md](regions/SHIP-STORM-ENDING.md)) are built; the fall into Phlegethos is not |
-| 8 | Phlegethos | — |
+| 7 | The pirate ship | Built: plan approved 2026-11-01 ([regions/SHIP.md](regions/SHIP.md)); the escape from the temple, below decks, the deck and rig, the crew and their voiced lines, and the storm ending ([regions/SHIP-STORM-ENDING.md](regions/SHIP-STORM-ENDING.md)) are built, leading into the fall to Phlegethos |
+| 8 | Phlegethos | Built (2026-11-14, [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md)): the fall cutscene and the region to the fortress gate, its parkour challenges and both of the user's tracks; no creatures yet, and the Pit Fiend battle, the Feywild river and its cutscene are not built |
 | 9 | The Feywild | — |
 | 10 | Zephyros' tower | — |
 | 11 | The rainy city | — |

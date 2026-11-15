@@ -131,6 +131,15 @@ struct TriFns
     }
     float H(float2 i){return frac(sin(dot(i,float2(127.1,311.7)))*43758.5453);}
     float N(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(H(i),H(i+float2(1,0)),f.x),lerp(H(i+float2(0,1)),H(i+1),f.x),f.y);}
+    // Distance to the nearest edge between Voronoi cells (the plates' cracks), in cell units.
+    float Edge(float2 p)
+    {
+        float2 i=floor(p),f=frac(p),mr=0;float md=8;
+        for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){float2 g=float2(x,y),o=float2(H(i+g),H(i+g+17.3))*.85+.075,r=g+o-f;float d=dot(r,r);if(d<md){md=d;mr=r;}}
+        md=8;
+        for(int y2=-2;y2<=2;y2++)for(int x2=-2;x2<=2;x2++){float2 g=float2(x2,y2),o=float2(H(i+g),H(i+g+17.3))*.85+.075,r=g+o-f;if(dot(mr-r,mr-r)>.00001)md=min(md,dot(.5*(mr+r),normalize(r-mr)));}
+        return md;
+    }
 };
 TriFns F;
 float3 n=normalize(N);
@@ -143,7 +152,7 @@ BASALT = TRI + r'''
 float patch=F.N(P.xy/900)*.6+F.N(P.xy/260+3.1)*.4;
 float b2=saturate(VC.g+(patch-.5)*1.6);
 float3 a=F.Tri(AD,ADSampler,P,260,sg,w),b=F.Tri(BD,BDSampler,P,330,sg,w);
-float3 rock=lerp(a,b,b2)*float3(.86,.84,.86);
+float3 rock=lerp(a,b,b2)*float3(.74,.7,.72);
 float lum=dot(rock,float3(.3,.59,.11));
 float3 Na=F.TriN(AN,ANSampler,P,260,sg,w,n),Nb=F.TriN(BN,BNSampler,P,330,sg,w,n);
 float3 arm=lerp(F.Tri(AA,AASampler,P,260,sg,w),F.Tri(BA,BASampler,P,330,sg,w),b2);
@@ -158,7 +167,17 @@ float flick=.75+.25*sin(T*1.7+P.x*.013+P.y*.017);
 float seam=crease*VC.r;
 // The lava's light thrown up the faces close over it.
 float under=saturate(1-P.z/240)*saturate(1.2-n.z);
-Emit=float3(1.,.28,.04)*(seam*seam*22*flick)+float3(.9,.25,.05)*under*under*.9*(.6+.4*lum*3);
+// Plates: the up-facing basalt broken into slabs (about 1.6 m, warped so they never tile), the lava glowing in the cracks
+// between them where the vertex colour says the ground is hot (the goal art's cracked plain).
+float2 pq=P.xy/160+float2(F.N(P.xy/310),F.N(P.xy/310+9.1))*.55;
+float e=F.Edge(pq),wob=F.N(P.xy/45);
+float hot=smoothstep(.12,.55,VC.r)*smoothstep(.55,.85,n.z)*saturate(1-ash*1.4);
+float crack=(1-smoothstep(.03+.025*wob,.075+.03*wob,e))*hot;
+float rim=(1-smoothstep(.05,.16,e))*hot;
+rock*=lerp(1,.45,rim);
+rock=lerp(rock,float3(.02,.012,.01),crack);
+Emit=float3(1.,.28,.04)*(seam*seam*22*flick)+float3(.9,.25,.05)*under*under*.9*(.6+.4*lum*3)
+    +float3(1.,.3,.05)*crack*(14+10*flick*wob)+float3(.7,.14,.02)*(rim-crack)*1.2;
 WN=normalize(n+lerp(Na,Nb,b2)*(1-ash*.6)*1.15);
 AO=arm.r; Rough=lerp(lerp(.82,.95,arm.g),.97,ash);
 return rock;
@@ -222,6 +241,46 @@ float core=pow(r,lerp(3.,1.6,heat));
 float3 hot=lerp(float3(.08,.07,.065),lerp(float3(1.,.22,.03),float3(1.,.8,.4),saturate(heat*1.4-.4)),saturate(heat*3));
 return hot*core*lerp(.6,60,heat);
 '''
+
+
+SKY = r'''
+struct SkyFns
+{
+    float H(float2 i){return frac(sin(dot(i,float2(127.1,311.7)))*43758.5453);}
+    float N(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(H(i),H(i+float2(1,0)),f.x),lerp(H(i+float2(0,1)),H(i+1),f.x),f.y);}
+    float Fbm(float2 p){float s=0,a=.5;for(int k=0;k<6;k++){s+=a*N(p);p=p*2.03+float2(1.7,9.2);a*=.5;}return s;}
+};
+SkyFns F;
+// A sky of smoke: heavy billows drifting, black above, lit from below by the burning land - deep red at the horizon,
+// orange toward the volcano. Seen on a dome round the stage.
+float3 d=normalize(Dir);
+float up=saturate(d.z);
+float2 uv=d.xy/(up+.12)*1.4;
+float t=T*.006;
+float w=F.Fbm(uv*.6+float2(t,-t*.7));
+float c=F.Fbm(uv*1.2+w*1.6+float2(-t*1.3,t));
+float billow=smoothstep(.3,.75,c);
+float horizon=pow(1-up,3.5);
+float2 vd=normalize(Volc);
+float toward=pow(saturate(dot(normalize(d.xy+.0001),vd)),6)*pow(1-up,1.5);
+float3 under=lerp(float3(.25,.03,.006),float3(.9,.22,.03),toward);
+float3 col=float3(.006,.002,.0015)+under*(horizon*(.35+.65*(1-billow))+.12*(1-billow)*(1-up))*(.8+.4*w);
+col+=float3(1,.35,.06)*toward*(1-billow)*.8;
+return col*Bright;
+'''
+
+
+def sky(m):
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT)
+    m.set_editor_property('two_sided', True)
+    m.set_editor_property('is_sky', True)
+    wp = node(m, unreal.MaterialExpressionWorldPosition)
+    cam = node(m, unreal.MaterialExpressionCameraPositionWS)
+    dirn = node(m, unreal.MaterialExpressionSubtract)
+    link(wp, dirn, 'A'); link(cam, dirn, 'B')
+    v = node(m, unreal.MaterialExpressionConstant2Vector, r=.88, g=-.47)
+    c = custom(m, SKY, {'Dir': dirn, 'T': node(m, unreal.MaterialExpressionTime), 'Volc': v, 'Bright': const(m, 6.)})
+    out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
 
 def basalt(m):
@@ -290,4 +349,5 @@ material('M_PhlegPath', path)
 material('M_PhlegLava', lava)
 material('M_PhlegGlow', glow)
 material('M_PhlegEmber', ember)
-unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=5 textures={len(textures)}')
+material('M_PhlegSky', sky)
+unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=6 textures={len(textures)}')

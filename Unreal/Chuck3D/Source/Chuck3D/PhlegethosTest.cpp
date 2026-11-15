@@ -174,6 +174,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             else if (Run->Sub >= 1)
             {
                 Push(FVector(B.X - P.X, B.Y - P.Y, 0));
+                if (B.Top - A.Top > 60 && Now >= Run->Next) { Run->Next = Now + .1; UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TALL_TRACE sub=%d gait=%s at=%s vz=%.0f"), Run->Sub, Chuck->GetGaitName(), *P.ToString(), M->Velocity.Z); }
                 const float FromA = FVector2D::Distance(FVector2D(P.X, P.Y), FVector2D(A.X, A.Y));
                 if (Run->Sub == 1 && Ground && FromA > A.R * .62f) { Chuck->JumpPressed(); Run->Sub = 2; Run->At = Now; }
                 if (Run->Sub >= 2 && Chuck->IsHanging() && T > .2f) { Chuck->JumpPressed(); }
