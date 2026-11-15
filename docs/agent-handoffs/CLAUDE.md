@@ -45,9 +45,10 @@ Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-e
   - The far hills are smooth.
   - The ship's hidden-hull fault the playtester found is open.
 - **Contract compatibility:** no rig, scale or character changes. One new asset, `M_PhlegMolten`.
-- **Launcher:** NOT updated. It still runs PhlegethosLook (5fad64c4), so it is stale for this work. The candidate is in `Builds/PhlegethosCandidate` for a verification rerun (`Tools/Verify-Package.ps1 -PackageRoot Builds\PhlegethosCandidate\Windows`, then Promote-Build).
+- **Package rerun:** the fourth verification on the unchanged candidate passed every step, Phlegethos and hell fall included (`CHUCK_PACKAGE_VERIFIED passes=182`; `Local/phleg-wastes-verify4.log`, `Local/verify-package-20261115-120433.log`). The earlier failures were flaky checks in other regions.
+- **Launcher:** promoted as PhlegethosWastes (receipt 5862442a). The previous package is kept at `Builds/Windows-Previous-20261115-PhlegethosWastes`, the 11-14 Phlegethos backup was pruned, and the candidate folder was removed.
 
-Next part of the work can be done by Claude only (re-verify and promote this candidate, the ship's hidden-hull fault, Phlegethos creatures); preference: Claude, here.
+Next part of the work can be done by Claude only (the ship's hidden-hull fault, Phlegethos creatures); preference: Claude, here.
 
 ## November 15 — Phlegethos second look pass and hell lightning (Claude)
 

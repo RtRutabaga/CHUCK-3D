@@ -11,7 +11,7 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
   - Inaccessible badlands with lava rivers, flows, fire rain and a distant city of fire replace most of the open lava.
   - The fortress moved 153 m out, behind the wastes: open broken ground with a winding flagstone path.
   - The cutscene's crane is higher and wider.
-  - Editor: 14/14 trials and the fall cutscene pass. Three package verifications failed on flaky checks in other regions; the launcher is NOT updated (still PhlegethosLook).
+  - Editor: 14/14 trials and the fall cutscene pass. Three package verifications failed on flaky checks in other regions; the fourth rerun passed (182 passes) and was promoted as PhlegethosWastes.
   - See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos second look pass and hell lightning (November 15, Claude):** faceted basalt crags over the slabs, cliffs, chimney and mesa (plain collision boxes kept underneath); a dark red-orange sky with billowing cloud; crusted lava with Voronoi plates, glowing seams and flow streaks; glowing cracks on rock faces; a far volcano and ranges rescaled so the sky shows; a rising ash plume; and forked red lightning with return-stroke flashes that light the sky and the stage, with delayed thunder. Strikes come faster on the ascent and while the volcano erupts. Phlegethos 13/13, the fall cutscene and the full package verification (182 passes) ran; promoted as PhlegethosLook. Details in [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md) and [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos and the fall into it (November 14, Claude):**
