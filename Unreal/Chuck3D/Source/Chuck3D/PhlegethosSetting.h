@@ -27,7 +27,10 @@ namespace Phleg
     constexpr float G = 300;          // the basalt's walking height over it
     constexpr float Rim = -60;        // where the basalt's sides go down to (under the lava)
     // The stretches, by X.
-    constexpr float RoadX = 2500, LakeX = 8000, GorgeX = 12800, AscentX = 20000, FortressX = 25410, GateX = 28700;
+    // (2026-11-16, the user: the staging area before the fortress was too close; a longer stretch of open, natural volcanic
+    // land with a path winding to it. The gate moved from 28700 to 44000: the wastes, then the forecourt.)
+    constexpr float RoadX = 2500, LakeX = 8000, GorgeX = 12800, AscentX = 20000, FortressX = 25410, GateX = 44000;
+    constexpr float ForecourtX = GateX - 3200;   // where the wastes' path comes out onto the level forecourt before the gate
     // The lava road: its spine's segments (X0, X1, width at each end), the gaps between them.
     struct FSeg { float X0, X1, W0, W1, Y0, Y1; };
     constexpr FSeg Spine[] = {{2300, 3800, 520, 180, 0, 40}, {3880, 4600, 160, 150, 40, 10}, {4695, 5600, 145, 140, 10, -60},
@@ -61,7 +64,10 @@ namespace Phleg
     constexpr FStep Steps[] = {{22560, 0, 60}, {22740, 60, 55}, {22920, -10, 55}, {23100, -70, 58}, {23280, 0, 55}, {23460, 70, 55}, {23640, 0, 60}};
     constexpr float StepCrack = .45f, StepFall = .95f;
     constexpr float ChimneyX0 = 23900, ChimneyX1 = 24060, ChimneyHalf = 50, ChimneyBase = RampTop, MesaTop = RampTop + 400, MesaX1 = 25180;
-    constexpr float FortressTop = MesaTop;   // the approach plateau, across the last 2.7 m gap
+    constexpr float FortressTop = MesaTop;   // where the wastes start, across the last 2.7 m gap, and the forecourt's level
+    /** The wastes before the fortress: the winding path's centre (Y at X), and the ground's height (local cm). */
+    float ApproachPathY(float X);
+    float ApproachGround(float X, float Y);
     // The volcano (the land beyond, PhlegethosSetting.cpp; the fall cutscene looks at it).
     // (2026-11-15: 12 km off and 1.5 km high, about 7 degrees above his horizon as in the goal art; at 3.5 km and 2.2 km it
     // and the ranges walled in the sky from his eye.)
@@ -151,8 +157,8 @@ private:
     // Movers: sinking columns (0) and crumbling steps (1).
     struct FMover { TWeakObjectPtr<UProceduralMeshComponent> Mesh; FVector Top; float Half = 0; float Touched = -1; float Drop = 0; float DownFor = 0; int32 Kind = 0; bool bCracked = false; };
     TArray<FMover> Movers;
-    // Geysers: their spout meshes and light.
-    struct FSpout { TWeakObjectPtr<UProceduralMeshComponent> Mesh; TWeakObjectPtr<UPointLightComponent> Light; FVector Base; float Side = 1; float Phase = 0; int32 Stage = 0; };
+    // Geysers: their vents and light (the fountain is drawn with the bombs' blobs).
+    struct FSpout { TWeakObjectPtr<UPointLightComponent> Light; FVector Base; float Side = 1; float Phase = 0; int32 Stage = 0; };
     TArray<FSpout> Spouts;
     // Lava bombs: a glowing ball falling on a marked spot.
     struct FBomb { FVector From, To; float Age = 0, Flight = 2.f; bool bLanded = false; float After = 0; };
@@ -164,6 +170,12 @@ private:
     // Smoke (the temple jets' CC0 flipbook smoke): steam off the lava at vents near the route, and the volcano's plume.
     UPROPERTY() UInstancedStaticMeshComponent* Smoke = nullptr;
     struct FPuff { FVector P, V; float Age = 0, Life = 1, Size0 = 1, Size1 = 1, Frame = 0, Rate = 12, Heat = 0, Spin = 0; };
+    // Fire rain: burning rocks falling out of the smoke far off, trailing fire.
+    struct FMeteor { FVector P, V; float Size = 1, Carry = 0; };
+    TArray<FMeteor> MeteorList;
+    UPROPERTY() UInstancedStaticMeshComponent* Meteors = nullptr;
+    float NextMeteor = 2.f;
+    void TickMeteors(float Dt, const FVector& Eye);
     TArray<FPuff> Puffs;
     TArray<FVector> Vents;
     float VentCarry = 0, PlumeCarry = 0;

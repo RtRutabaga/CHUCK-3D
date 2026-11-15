@@ -80,6 +80,7 @@ A volumetric ash deck was tried and removed: its layer sat under him (placed by 
 | steps | across seven crumbling steps (cracking 0.45 s and falling 0.95 s after he lands) without stopping |
 | chimney | wall jumps up a 1 m by 4 m slot to the mesa |
 | leap | a sprint leap over the last 2.3 m gap |
+| approach | (2026-11-16) along the wastes' winding path from the landing to the forecourt, 155 m, at a run, never more than 3 m off it (47 cm in the editor) |
 | gate | the processional to the shut gate, where he stops |
 
 Everything that sinks or crumbles comes back after a death, and when he is 15 m away.
@@ -110,16 +111,28 @@ The user: "start making plethegos look closer to goal" and "add some hell lightn
 - **Hell lightning:** bolts across the smoke sky 4.5 to 12 km away (to the land or cloud to cloud), and in the volcano's plume. Each has two to four return strokes, lights the clouds round it, flashes a red light across the land, and its thunder follows after a delay set by distance. A strike every 6 to 13 s, every 3.5 to 8 s from the ascent on, every 1 to 3.5 s while the volcano erupts. (`APhlegethosSetting::Strike`, `M_PhlegBolt`; the sky's `Flash`/`FlashDir` parameters.)
 - **Plume:** many smaller puffs that keep rising and lean downwind.
 
+### The geysers, the badlands, the wastes (2026-11-16)
+
+The user: the first challenge looked like "a weird flat at the top orange funnel that springs up" and "invisible things hit me"; "add more inaccessible volcanic terrain ... less giant sections of lava", "more cinematic in the cutscene intro"; then "don't add the swirling fire things", the staging area before the fortress "too close", "a longer section of volcanic terrain before the fortress ... more like open natural land ... less contrived block feel", "a setting appropriate path winding its way to the fortress".
+
+- **Geysers (the bug):** the spout was a short cone at the vent while the burn landed 1.5 m across on the spine, where nothing was drawn. Now the vent bubbles and a glowing mark spreads on the spine where it will come down. Then it throws an arc of molten blobs over the edge onto the mark, and the burn is only there (the mark's size), only while the arc reaches it. The blobs, the bombs, their marks and the fire rain use a new unlit `M_PhlegMolten` (on the lava material they came out half black, half white).
+- **Badlands:** past the route's lava, from 10 m off it out to 3.5 km and with no collision (never in reach), a heightfield of black crust in stepped flows and pressure ridges, climbing to jagged hills toward the ranges. The lava is left in rivers threading it (great ones, and nearer smaller ones) and in pools. 46 burning flows run down the hills into the rivers, some falling off a mesa 2 km out where a city of fire stands (black towers, a 440 m citadel spire, lit windows, a wall round the rim: Phlegethos's Abriymoch in look only). The crust near the route and along the banks cracks and glows. The shores follow the flatter diagonal, so they do not staircase from the fall. The old near-lake mesas, which read as boxes, are gone.
+- **Fire rain:** a burning rock out of the smoke every 2 to 5 s far off (more while the volcano erupts), trailing hot smoke and bursting where it lands; never on the route.
+- **The wastes:** the gate moved from X 287 m to 440 m. The last leap now lands on a promontory of open, broken ground: a shallow valley with hummocks, sharp-crested rock, pressure ridges framing it, lava standing in hollows off the path, a ragged coastline. Columnar basalt stands in clusters, with tors, boulders, glowing fissures and steam. Worn flagstones wind about 150 m along the valley floor (`Phleg::ApproachPathY`, `ApproachGround`), marked by iron stakes every 17 m and a brazier at every other one, to the level forecourt where the idols' processional (now 5 pairs) leads to the gate. A heightfield with collision replaced the flat box plateau.
+- **Cutscene crane:** rises to 56 m and frames the badlands, the wastes and the fortress, the volcano on the left and the city on the right.
+- **Not built (the user withdrew it):** the fire whirls.
+
 ### Known gaps
 
 - No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
 - Toward the goal art:
-  - The fortress walls and the plinths are still plain boxes.
-  - There is no stepped stone path with carved blocks (the second image).
+  - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.
   - The idols are blocky.
   - The volcano's plume reads as one dark blob at 12 km.
   - The lava falls are flat sheets.
-  - The far ranges are smooth at a distance.
+  - The far hills are smooth and greyish at a distance.
+- The wastes are dark between the braziers; the walk is 70 s at a run.
+- The flagstones are plain slabs, not the goal art's carved blocks.
 - The geysers hit hard: running straight through without timing them cost 3 Sanity in the tests.
 - Not played by hand.

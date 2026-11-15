@@ -2,6 +2,53 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos: geysers fixed, badlands, the wastes before the fortress (Claude)
+
+- **Asked:**
+  - The first challenge looked like "a weird flat at the top orange funnel that springs up", and "invisible things hit me".
+  - "Add more inaccessible volcanic terrain ... less giant sections of lava", more cinematic for the cutscene's reveal, with setting-appropriate Phlegethos features.
+  - Mid-task: "don't add the swirling fire things".
+  - The fortress's staging area was "too close": a longer stretch of open, natural volcanic land with a path winding to the fortress, "less contrived block feel".
+- **Source:** `main` at 5fad64c4; this commit.
+- **Changed:**
+  - `PhlegethosSetting.h/.cpp`:
+    - The geysers are a visible fountain arcing onto a warning mark, and the burn is only there.
+    - The badlands heightfield (no collision): river channels, pools, 46 lava flows, and the city of fire on a mesa 2 km out.
+    - Fire rain.
+    - The near mesa boxes removed.
+    - The wastes: `GateX` moved from 28700 to 44000, plus `ForecourtX`, `ApproachPathY` and `ApproachGround`; a solid heightfield, the flagstone path, basalt column clusters, tors, fissures, stakes and braziers, steam. The idols are moved to the forecourt.
+    - `InPhlegethos` extended to the new gate.
+  - `PhlegethosTest.cpp`:
+    - New `approach` trial (14 trials).
+    - Geyser stills.
+    - The gate and approach trials break on the frame they place him: a stale timer from the long walk had ended `gate` at once.
+  - `PhlegethosFall.cpp`: the crane rises to 56 m and is reframed.
+  - `Tools/create_phlegethos_assets.py`: new `M_PhlegMolten`.
+  - `Tools/Verify-Package.ps1`: Phlegethos now expects `passed=14`.
+  - The fire whirls were built and then removed at the user's request (no trace left).
+- **Tested (editor):**
+  - All 14 Phlegethos trials pass (`approach` worst off path 47 cm, 71 s); evidence `Local/phleg-trials-wastes.log`.
+  - Fall cutscene: `failures=0 handoff=1` (`Local/phleg-hellfall-wastes.log`).
+  - Stills are in `Local/phleg-wastes/`.
+- **Package:**
+  - The candidate built (`Builds/PhlegethosCandidate`), but three verification runs each failed on a different check outside Phlegethos, all timing or random-seed dependent:
+    1. Waterdeep world audit, floating 118/117: an NPC's pipe smoke wisp.
+    2. Chult sound audit, leaks 24/23: three more raptor steps and temple trap sounds than usual.
+    3. ShipArrival playtester, `inside=1`: Chuck inside `ShipHidden` collision mid-jump, random seed -642331038.
+  - The Phlegethos package steps come after these and did not run.
+  - Logs: `Local/phleg-wastes-package.log`, `Local/phleg-wastes-verify2.log`, `Local/phleg-wastes-verify3.log`.
+- **Not tested:** anything by hand; the Phlegethos and hell-fall checks in the package.
+- **Remaining flaws:**
+  - The wastes are dark between the braziers, and the walk is 70 s at a run.
+  - The flagstones are plain slabs.
+  - Boxes remain: the fortress walls, the mesa and the lake shores.
+  - The far hills are smooth.
+  - The ship's hidden-hull fault the playtester found is open.
+- **Contract compatibility:** no rig, scale or character changes. One new asset, `M_PhlegMolten`.
+- **Launcher:** NOT updated. It still runs PhlegethosLook (5fad64c4), so it is stale for this work. The candidate is in `Builds/PhlegethosCandidate` for a verification rerun (`Tools/Verify-Package.ps1 -PackageRoot Builds\PhlegethosCandidate\Windows`, then Promote-Build).
+
+Next part of the work can be done by Claude only (re-verify and promote this candidate, the ship's hidden-hull fault, Phlegethos creatures); preference: Claude, here.
+
 ## November 15 — Phlegethos second look pass and hell lightning (Claude)
 
 - **Asked:** "start making plethegos look closer to goal"; "add some hell lightning too, overall more immersive and cool".

@@ -22,8 +22,8 @@ using namespace Phleg;
 namespace
 {
     constexpr float Stand = 34.65f;
-    enum class ET : uint8 { Stills, RoadHops, RoadLeap, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Bombs, Steps, Chimney, Leap, Gate, Count };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("bombs"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("gate")};
+    enum class ET : uint8 { Stills, RoadHops, RoadLeap, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Bombs, Steps, Chimney, Leap, Approach, Gate, Count };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("bombs"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -115,16 +115,24 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
         // A death ends any trial but the stills.
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
-        if (Now - Run->TrialStart > 75.f) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
+        // (The wastes' walk is 155 m: about 70 s at his run.)
+        if (Now - Run->TrialStart > (Run->Trial == int32(ET::Approach) ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
         switch (ET(Run->Trial))
         {
         case ET::Stills:
         {
             // Each stretch's start, looking on along the way (rat height, then raised).
             const int32 K = Run->Hop;
+            // (Then the geysers on the road: four shots over one period, so the warning mark and the fountain both show.)
+            if (K >= PhlegSpawns)
+            {
+                if (Run->Sub == -1) { Place(4560, SpineMid(4560), G, 0); Chuck->SetOrbitPitch(-14); Run->Sub = 10; }
+                else if (Run->Sub >= 10 && Run->Sub < 14 && T > 1.2f + .85f * (Run->Sub - 10)) { Shot(FString::Printf(TEXT("Geyser_%d"), Run->Sub - 10)); ++Run->Sub; }
+                else if (Run->Sub >= 14) Next(true, FString::Printf(TEXT("stills=%d"), PhlegSpawns * 2 + 4));
+                break;
+            }
             if (Run->Sub == -1)
             {
-                if (K >= PhlegSpawns) { Next(true, FString::Printf(TEXT("stills=%d"), K * 2)); break; }
                 const FVector S = PhlegLocal(PhlegethosSpawn(EPhlegSpawn(K)));
                 Place(S.X, S.Y, S.Z - Stand, 0); Chuck->SetOrbitPitch(-8); Run->Sub = 1;
             }
@@ -310,10 +318,22 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 2 && Ground && P.X > FortressX + 10) Next(FMath::Abs(P.Z - Stand - FortressTop) < 30, Run->Note);
             break;
         }
+        case ET::Approach:
+        {
+            // (2026-11-16) The wastes: from the landing along the winding path to the forecourt at a run, never off it.
+            if (Run->Sub == -1) { Place(25600, 0, FortressTop, 0); Run->Sub = 0; Run->Hop = 0; Chuck->SetRunHeld(true); break; }
+            const float Look = P.X + 380;
+            Toward(Look, ApproachPathY(Look));
+            if (T > .3f) Run->Hop = FMath::Max(Run->Hop, FMath::RoundToInt(FMath::Abs(P.Y - ApproachPathY(P.X))));
+            for (int32 K = 0; K < 3; ++K) if (Run->Sub == K && P.X > FortressX + 3500 + K * 4500) { Shot(FString::Printf(TEXT("Wastes_%d"), K)); ++Run->Sub; }
+            if (Ground && P.X > ForecourtX + 300) Next(Run->Hop < 300, FString::Printf(TEXT("worst_off_path_cm=%d"), Run->Hop));
+            break;
+        }
         case ET::Gate:
         {
             // Up the processional to the shut gate: he goes no further.
-            if (Run->Sub == -1) { Place(GateX - 1200, 0, FortressTop, 0); Run->Sub = 0; Chuck->SetRunHeld(true); }
+            // (break on the frame he is placed: T is still the trial before's, which ran long after the wastes came)
+            if (Run->Sub == -1) { Place(GateX - 1200, 0, FortressTop, 0); Run->Sub = 0; Chuck->SetRunHeld(true); break; }
             Toward(P.X + 200, 0);
             if (T > 1.5f && Run->Sub == 0) { Shot(TEXT("Processional")); Run->Sub = 1; }
             if (T > 10.f) Next(P.X < GateX - 150 && P.X > GateX - 400, TEXT(""));

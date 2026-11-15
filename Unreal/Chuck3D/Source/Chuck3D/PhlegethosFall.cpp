@@ -312,9 +312,11 @@ void APhlegethosFall::UpdateCamera()
     {
         // Up and back over him, turning to look north along the way on: the road over the lake, the columns, the
         // gorge's falls, the volcano erupting, the fortress on its mesa. He is a speck at the bottom of the frame.
+        // (2026-11-16: higher, to 56 m, and wider, so the badlands and their rivers, the wastes and the path winding to the
+        // fortress, the volcano on the left and the city of fire on the right are all in it.)
         const float U = Ease(Span(T, Crane, End));
-        From = G0 + FMath::Lerp(FVector(-160.f, -60.f, 60.f), FVector(-2600.f, -1400.f, 2600.f), U);
-        At = FMath::Lerp(G0 + FVector(0, 0, 30.f), PhlegWorld(FVector(16000, -1800, 900)), Ease(Span(T, Crane, Crane + 9.f)));
+        From = G0 + FMath::Lerp(FVector(-160.f, -60.f, 60.f), FVector(-4200.f, -2600.f, 5600.f), U);
+        At = FMath::Lerp(G0 + FVector(0, 0, 30.f), PhlegWorld(FVector(30000, 400, 900)), Ease(Span(T, Crane, Crane + 9.f)));
         Focal = FMath::Lerp(35.f, 22.f, U); Stop = FMath::Lerp(4.f, 16.f, U);
     }
     if (T < ShakeUntil)

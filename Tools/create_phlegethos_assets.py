@@ -17,6 +17,7 @@ into /Game/Art/Audio as SW_Phlegethos and SW_Phlegethos2 (looping), and builds:
   M_PhlegEmber   additive camera-facing embers and ash (PerInstanceCustomData 0: heat 0 ash .. 1 white-hot).
   M_PhlegSky     the smoke sky dome (unlit); parameters Flash and FlashDir light its clouds round a lightning bolt.
   M_PhlegBolt    additive lightning ribbon (UV V across it, vertex colour R dims branches; parameter Intensity).
+  M_PhlegMolten  unlit molten gobs on spheres: the geysers' fountain, the bombs and their marks, the fire rain.
 
 Run once after fetching; reruns rebuild only these assets. Existing materials are not touched.
 """
@@ -412,6 +413,27 @@ def ember(m):
     out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
 
+MOLTEN = r'''
+// A gob of molten rock (2026-11-16: the geysers' fountain, the bombs and their marks, the fire rain): hottest facing the
+// eye, a darker crusted rim so it reads round, the heat moving over it. (On the lava material they came out half black,
+// half white: its crust plates and UVs are for the lake, not a ball.)
+float f=saturate(dot(normalize(N),normalize(CV)));
+float wob=.5+.5*sin(P.x*.11+T*6.)*sin(P.y*.09-T*5.)*sin(P.z*.13+T*4.3);
+float heat=saturate(.25+.75*pow(f,.6))*(.7+.3*wob);
+float3 c=lerp(float3(.5,.04,.004),float3(1.,.34,.04),heat);
+c=lerp(c,float3(1.,.7,.3),saturate((heat-.82)*4.));
+return c*heat*S;
+'''
+
+
+def molten(m):
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT)
+    m.set_editor_property('used_with_instanced_static_meshes', True)
+    c = custom(m, MOLTEN, {'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'CV': node(m, unreal.MaterialExpressionCameraVectorWS),
+                           'P': node(m, unreal.MaterialExpressionWorldPosition), 'T': node(m, unreal.MaterialExpressionTime), 'S': const(m, 3.)})
+    out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+
 material('M_PhlegBasalt', basalt)
 material('M_PhlegPath', path)
 material('M_PhlegLava', lava)
@@ -419,4 +441,5 @@ material('M_PhlegGlow', glow)
 material('M_PhlegEmber', ember)
 material('M_PhlegSky', sky)
 material('M_PhlegBolt', bolt)
-unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=7 textures={len(textures)}')
+material('M_PhlegMolten', molten)
+unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=8 textures={len(textures)}')

@@ -6,6 +6,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos geysers, badlands and the wastes (November 16, Claude):**
+  - The road's geysers now visibly arc onto a warning mark, and burn only there.
+  - Inaccessible badlands with lava rivers, flows, fire rain and a distant city of fire replace most of the open lava.
+  - The fortress moved 153 m out, behind the wastes: open broken ground with a winding flagstone path.
+  - The cutscene's crane is higher and wider.
+  - Editor: 14/14 trials and the fall cutscene pass. Three package verifications failed on flaky checks in other regions; the launcher is NOT updated (still PhlegethosLook).
+  - See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos second look pass and hell lightning (November 15, Claude):** faceted basalt crags over the slabs, cliffs, chimney and mesa (plain collision boxes kept underneath); a dark red-orange sky with billowing cloud; crusted lava with Voronoi plates, glowing seams and flow streaks; glowing cracks on rock faces; a far volcano and ranges rescaled so the sky shows; a rising ash plume; and forked red lightning with return-stroke flashes that light the sky and the stage, with delayed thunder. Strikes come faster on the ascent and while the volcano erupts. Phlegethos 13/13, the fall cutscene and the full package verification (182 passes) ran; promoted as PhlegethosLook. Details in [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md) and [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos and the fall into it (November 14, Claude):**
   - The ship's storm ending now leads into a 67 s fall cutscene on the fall-to-Chult score, cut one phrase later. Chuck falls past the volcano, dies his quiet death on the basalt, is summoned back, looks round and takes a drag; the camera cranes over the region as the volcano erupts.

@@ -30,6 +30,7 @@
 #include "Sound/SoundBase.h"
 #include "Sound/SoundWave.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Algo/BinarySearch.h"
 
 // Phlegethos (Claude, 2026-11-14; PhlegethosSetting.h, docs/regions/PHLEGETHOS.md). Built in the stage frame on
 // procedural meshes, one per material: the CC0 basalts and flagstones (M_PhlegBasalt, M_PhlegPath), the molten lake and
@@ -42,6 +43,10 @@ namespace
     float Hash(float X, float Y) { return FMath::Frac(FMath::Sin(X * 127.1f + Y * 311.7f) * 43758.5453f); }
     float Noise(float X, float Y, float Scale, float Seed = 0) { return FMath::PerlinNoise2D(FVector2D(X / Scale + Seed * 3.71f + .31f, Y / Scale - Seed * 1.93f + .77f)); }
     float Ease(float T) { T = FMath::Clamp(T, 0.f, 1.f); return T * T * (3 - 2 * T); }
+
+    // The badlands' landmark (2026-11-16; stage frame, cm): the city of fire on its mesa (centre, radius, top).
+    const FVector2D CityAt(215000, 118000);
+    constexpr float CityR = 24000, CityZ = 9000;
 
     enum ESound { RumbleLoop, GeyserRoar, GeyserHiss, Crack0, Crack1, Fall0, Fall1, Thunder0, Thunder1, Thunder2, Slam0, Slam1, SoundCount };
     const TCHAR* SoundNames[SoundCount] = {TEXT("SFX_ForgeLoop_00"), TEXT("SFX_TempleRunFireRoar_00"), TEXT("SFX_TempleRunFireHiss_00"), TEXT("SFX_TempleSlabCrack_00"),
@@ -267,7 +272,42 @@ FVector PhlegethosOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -1
 bool InPhlegethos(const FVector& World)
 {
     const FVector L = PhlegLocal(World);
-    return L.X > -6000 && L.X < 33000 && FMath::Abs(L.Y) < 9000 && L.Z > -2000 && L.Z < 8000;
+    return L.X > -6000 && L.X < GateX + 4300 && FMath::Abs(L.Y) < 9000 && L.Z > -2000 && L.Z < 8000;
+}
+
+// The wastes (2026-11-16): from the last leap's landing to the forecourt, open broken ground with the path winding along a
+// shallow valley through it; hummocks, ridges and lava-filled hollows off it; the edges going down into the lake.
+float Phleg::ApproachPathY(float X)
+{
+    const float U = FMath::Clamp((X - (FortressX + 1500)) / (ForecourtX - (FortressX + 1500)), 0.f, 1.f);
+    return FMath::Sin(PI * U) * (700.f * FMath::Sin(U * 2 * PI * 1.3f + .4f) + 250.f * FMath::Sin(U * 2 * PI * 3.3f + 1.3f));
+}
+
+float Phleg::ApproachGround(float X, float Y)
+{
+    const float Dp = FMath::Abs(Y - ApproachPathY(X));
+    // The path's line: down a couple of metres into the wastes, rolling, back up to the forecourt's level.
+    const float Inner = Ease((X - FortressX - 1200) / 3000.f) * (1 - Ease((X - (ForecourtX - 2600)) / 2400.f));
+    float H = FortressTop - 190.f * Inner + 130.f * Noise(X, 0, 5200, 120) * Inner;
+    // Off it: rough, broken ground rising into hummocks and pressure ridges, ridges farther out framing the valley.
+    const float Off = Ease((Dp - 230.f) / 900.f);
+    // (sharp-crested broken rock, not smooth swells: the first pass read as dunes)
+    H += (45.f * Noise(X, Y, 700, 121) + 18.f * Noise(X, Y, 180, 122)) * (.25f + .75f * Off);
+    H += Off * (170.f * FMath::Pow(1 - FMath::Abs(Noise(X, Y, 1100, 133)), 4) + 60.f * FMath::Pow(1 - FMath::Abs(Noise(X, Y, 380, 134)), 3));
+    H += Off * (280.f * FMath::Max(0.f, Noise(X, Y, 2600, 123) + .1f) + 560.f * FMath::Pow(1 - FMath::Abs(Noise(X + 900, Y, 4200, 124)), 5));
+    H += Ease((Dp - 1800.f) / 2400.f) * (320.f + 700.f * Noise(X, Y, 6000, 125)) * Inner;
+    // Hollows off the path where the lava stands.
+    H -= 950.f * FMath::SmoothStep(.22f, .45f, Noise(X, Y, 3600, 128)) * Ease((Dp - 650.f) / 600.f) * Inner;
+    // The forecourt: level before the gate, as far out as the wall runs.
+    const float Fc = Ease((X - (ForecourtX - 600)) / 800.f) * (1 - Ease((FMath::Abs(Y) - 3000.f) / 1500.f));
+    H = FMath::Lerp(H, FortressTop + 3.f * Noise(X, Y, 600, 126), Fc);
+    // The landing off the last leap: level where he comes down.
+    H = FMath::Lerp(H, FortressTop, (1 - Ease((X - FortressX - 500) / 900.f)) * (1 - Ease((FMath::Abs(Y) - 700.f) / 900.f)));
+    // The land's edge going down into the lake (never along the wall's foot).
+    // (Ragged, and narrowing to a promontory at the landing: with an even width it read as a rectangle from the fall.)
+    const float W = FMath::Min(FMath::Max(5200.f + 1500.f * Noise(X, Y > 0 ? 7000.f : -7000.f, 3000, 127), X > ForecourtX - 1500 ? 5000.f : 0.f),
+                               900.f + (X - FortressX) * 1.6f);
+    return FMath::Lerp(H, LavaZ - 250.f, Ease((FMath::Abs(Y) - W) / 1300.f));
 }
 FVector PhlegethosLandingSpot() { return PhlegWorld(FVector(0, 0, G)); }
 FVector PhlegethosSpawn(EPhlegSpawn S) { return PhlegWorld(SpawnAt[int32(S)]); }
@@ -333,6 +373,12 @@ APhlegethosSetting::APhlegethosSetting()
     BombMarks->SetStaticMesh(Ball.Object);
     BombMarks->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     BombMarks->SetCastShadow(false);
+    Meteors = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Meteors"));
+    Meteors->SetupAttachment(RootComponent);
+    Meteors->SetStaticMesh(Ball.Object);
+    Meteors->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Meteors->SetCastShadow(false);
+    Meteors->bNeverDistanceCull = true;
 }
 
 APhlegethosSetting* APhlegethosSetting::Get(const UWorld* World)
@@ -427,8 +473,11 @@ void APhlegethosSetting::Build()
     if (auto* Soot = Mat(TEXT("/Game/Art/ChultTemple/Fire/M_TempleJetSmoke.M_TempleJetSmoke"))) Smoke->SetMaterial(0, Soot); else ++Missing;
     if (auto* Ember = Mat(TEXT("/Game/Art/Phlegethos/M_PhlegEmber.M_PhlegEmber"))) { Motes->SetMaterial(0, Ember); }
     else ++Missing;
-    BombBalls->SetMaterial(0, LavaMat);
-    BombMarks->SetMaterial(0, LavaMat);
+    UMaterialInterface* Molten = Mat(TEXT("/Game/Art/Phlegethos/M_PhlegMolten.M_PhlegMolten"));
+    if (!Molten) { ++Missing; Molten = LavaMat; }
+    BombBalls->SetMaterial(0, Molten);
+    BombMarks->SetMaterial(0, Molten);
+    Meteors->SetMaterial(0, Molten);
     for (int32 I = 0; I < SoundCount; ++I)
         Sounds.Add(LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), SoundNames[I], SoundNames[I])));
     BuildEnvironment();
@@ -701,13 +750,146 @@ void APhlegethosSetting::Build()
     // ---------------------------------------------------------------- 5. the fortress approach
     {
         const float Z = FortressTop;
-        Rock.Paint = FColor(130, 90, 100, 255);
-        Rock.Prism(Box2(FortressX, GateX + 600, -2600, 2600), Flat(Z), Rim, 40, 0, 51, 2);
+        // (2026-11-16: this was a flat box of plateau 33 m long to the gate. Now the wastes: a heightfield of broken ground
+        // 150 m long, ApproachGround, solid, its face to the last leap sheer.)
+        {
+            FPhlegSurf Land;
+            TArray<float> Xs, Ys;
+            for (float X = FortressX; X < GateX + 700; X += 120) Xs.Add(X);
+            Xs.Add(GateX + 700);
+            for (float Y = -8000; Y <= 8000; Y += 120) Ys.Add(Y);
+            const int32 NX = Xs.Num(), NY = Ys.Num();
+            TArray<float> Hz; TArray<FColor> Cv; Hz.SetNum(NX * NY); Cv.SetNum(NX * NY);
+            for (int32 J = 0; J < NY; ++J) for (int32 I = 0; I < NX; ++I)
+            {
+                const float X = Xs[I], Y = Ys[J], H = ApproachGround(X, Y);
+                Hz[J * NX + I] = H;
+                const float Dp = FMath::Abs(Y - ApproachPathY(X));
+                // Hot near the lava (the hollows and the edges) and in patches off the path; ash in drifts beside it.
+                const float Hot = FMath::Max(1 - Ease((H - LavaZ - 40) / 260.f), .8f * FMath::SmoothStep(.3f, .6f, Noise(X, Y, 1900, 129))) * Ease((Dp - 300) / 500.f);
+                const float Ash = .5f * FMath::SmoothStep(.1f, .5f, Noise(X, Y, 1500, 130)) * (1 - Ease((Dp - 900) / 900.f));
+                Cv[J * NX + I] = FColor(uint8(255 * FMath::Clamp(Hot, 0.f, 1.f)), uint8(128 + 110 * Noise(X, Y, 3000, 131)), uint8(255 * Ash), 255);
+            }
+            auto Pt = [&](int32 I, int32 J) { return FVector(Xs[I], Ys[J], Hz[J * NX + I]); };
+            auto Nm = [&](int32 I, int32 J)
+            {
+                const FVector Dx = Pt(FMath::Min(I + 1, NX - 1), J) - Pt(FMath::Max(I - 1, 0), J), Dy = Pt(I, FMath::Min(J + 1, NY - 1)) - Pt(I, FMath::Max(J - 1, 0));
+                FVector Nn = FVector::CrossProduct(Dx, Dy).GetSafeNormal(); if (Nn.Z < 0) Nn = -Nn;
+                return Nn.IsNearlyZero() ? FVector::UpVector : Nn;
+            };
+            for (int32 J = 0; J + 1 < NY; ++J) for (int32 I = 0; I + 1 < NX; ++I)
+            {
+                const float Top = FMath::Max(FMath::Max(Hz[J * NX + I], Hz[J * NX + I + 1]), FMath::Max(Hz[(J + 1) * NX + I], Hz[(J + 1) * NX + I + 1]));
+                if (Top < LavaZ - 30) continue;
+                FIntPoint Q[4] = {{I, J}, {I + 1, J}, {I + 1, J + 1}, {I, J + 1}};
+                if (FMath::Abs(Hz[J * NX + I + 1] - Hz[(J + 1) * NX + I]) < FMath::Abs(Hz[J * NX + I] - Hz[(J + 1) * NX + I + 1])) Q[0] = {I + 1, J}, Q[1] = {I + 1, J + 1}, Q[2] = {I, J + 1}, Q[3] = {I, J};
+                Land.Quad(Pt(Q[0].X, Q[0].Y), Pt(Q[1].X, Q[1].Y), Pt(Q[2].X, Q[2].Y), Pt(Q[3].X, Q[3].Y), Nm(Q[0].X, Q[0].Y), Nm(Q[1].X, Q[1].Y), Nm(Q[2].X, Q[2].Y), Nm(Q[3].X, Q[3].Y));
+                const int32 L = Land.C.Num();
+                for (int32 K = 0; K < 4; ++K) Land.C[L - 4 + K] = Cv[Q[K].Y * NX + Q[K].X];
+            }
+            // The face to the last leap, sheer to under the lava.
+            Land.Paint = FColor(60, 128, 40, 255);
+            for (int32 J = 0; J + 1 < NY; ++J)
+            {
+                const FVector A = Pt(0, J), B2 = Pt(0, J + 1);
+                if (FMath::Max(A.Z, B2.Z) < LavaZ - 30) continue;
+                Land.Flat(FVector(A.X, A.Y, Rim), FVector(B2.X, B2.Y, Rim), B2, A, -FVector::ForwardVector);
+            }
+            Emit(TEXT("PhlegWastes"), Land, BasaltMat, true, true);
+        }
+        // The path: worn flagstones laid along its winding line, a few gone; from the landing to the forecourt.
+        Path.Paint = FColor(0, 0, 60, 255);
+        {
+            FRandomStream PR(52);
+            for (float X = FortressX + 260; X < ForecourtX + 200; X += 150)
+            {
+                if (PR.FRand() < .07f && X > FortressX + 1500) continue;
+                const FVector2D C(X, ApproachPathY(X));
+                const FVector2D T = FVector2D(1, (ApproachPathY(X + 20) - ApproachPathY(X - 20)) / 40.f).GetSafeNormal(), Nn(-T.Y, T.X);
+                const float W = 105 + 20 * Noise(X, 0, 500, 132), L = 70;
+                const TArray<FVector2D> Slab = {C - T * L - Nn * W, C + T * L - Nn * W, C + T * L + Nn * W, C - T * L + Nn * W};
+                const float Zc = ApproachGround(C.X, C.Y);
+                Path.Prism(Slab, [](float Xx, float Yy) { return ApproachGround(Xx, Yy) + 4.f; }, Zc - 40, 0, 0, 53, 1);
+            }
+        }
+        // The forecourt's processional to the gate.
         Path.Paint = FColor(0, 0, 40, 255);
-        Path.Prism(Box2(FortressX + 40, GateX, -170, 170), Flat(Z + 4), Z - 30, 0, 0, 52, 1);
+        Path.Prism(Box2(ForecourtX + 150, GateX, -170, 170), Flat(Z + 4), Z - 30, 0, 0, 52, 1);
+        // Off the path: columnar basalt standing in clusters, broken tors, tumbled boulders; never on the path.
+        {
+            FRandomStream WR(61);
+            auto OffPath = [&](float X, float Y, float Clear) { return FMath::Abs(Y - ApproachPathY(X)) > Clear && (X < ForecourtX - 400 || FMath::Abs(Y) > 1200); };
+            for (int32 K = 0; K < 14; ++K)
+            {
+                const float X = WR.FRandRange(FortressX + 1500, ForecourtX - 200), Y = (WR.FRand() < .5f ? -1.f : 1.f) * WR.FRandRange(900, 4200);
+                if (!OffPath(X, Y, 800)) continue;
+                const int32 Count = WR.RandRange(6, 18);
+                const float Tall = WR.FRandRange(300, 1400);
+                for (int32 C = 0; C < Count; ++C)
+                {
+                    const float Cx = X + WR.FRandRange(-260, 260), Cy = Y + WR.FRandRange(-260, 260), Rr = WR.FRandRange(38, 80);
+                    if (!OffPath(Cx, Cy, 520)) continue;
+                    const float Gz = ApproachGround(Cx, Cy);
+                    if (Gz < LavaZ + 20) continue;
+                    Rock.Paint = FColor(WR.RandRange(0, 80), WR.RandRange(0, 255), 30, 255);
+                    Rock.Prism(Hex(Cx, Cy, Rr, WR.FRand()), Flat(Gz + Tall * WR.FRandRange(.25f, 1.f) * (1 - .5f * FVector2D(Cx - X, Cy - Y).Size() / 370.f)), Gz - 120, 3, 0, 140 + K * 20 + C, 1);
+                }
+            }
+            for (int32 K = 0; K < 190; ++K)
+            {
+                // (most along the valley's sides, where he sees them)
+                const float X = WR.FRandRange(FortressX + 1200, GateX - 200), S = WR.FRandRange(40, 380);
+                const float Y = K % 3 ? ApproachPathY(X) + (WR.FRand() < .5f ? -1.f : 1.f) * WR.FRandRange(450, 1900) : WR.FRandRange(-5000, 5000);
+                if (!OffPath(X, Y, 380 + S * 1.3f)) continue;
+                const float Gz = ApproachGround(X, Y);
+                if (Gz < LavaZ + 40) continue;
+                Rock.Paint = FColor(WR.RandRange(20, 120), WR.RandRange(60, 200), 30, 255);
+                Rock.Blob(FVector(X, Y, Gz + S * .3f), FVector(S * WR.FRandRange(1.f, 1.6f), S, S * WR.FRandRange(.6f, 1.3f)), 200 + K, Gz - 60);
+            }
+            // Fissures glowing across the open ground, off the path.
+            Glow.Paint = FColor(255, 95, 20, 255);
+            for (int32 F = 0; F < 26; ++F)
+            {
+                FVector2D P(WR.FRandRange(FortressX + 1500, ForecourtX - 300), WR.FRandRange(-4500, 4500));
+                FVector2D D = FVector2D(WR.FRandRange(-1, 1), WR.FRandRange(-1, 1)).GetSafeNormal();
+                for (int32 S = 0; S < 10; ++S)
+                {
+                    const FVector2D Q = P + D * WR.FRandRange(70, 160);
+                    if (!OffPath(P.X, P.Y, 350) || !OffPath(Q.X, Q.Y, 350)) break;
+                    const float W = WR.FRandRange(3.f, 8.f);
+                    const FVector2D Sd(-D.Y, D.X);
+                    auto Zg = [](const FVector2D& A) { return ApproachGround(A.X, A.Y) + 1.5f; };
+                    Glow.Flat(FVector(P - Sd * W, Zg(P - Sd * W)), FVector(Q - Sd * W, Zg(Q - Sd * W)), FVector(Q + Sd * W, Zg(Q + Sd * W)), FVector(P + Sd * W, Zg(P + Sd * W)), FVector::UpVector);
+                    P = Q; D = (D + FVector2D(WR.FRandRange(-.6f, .6f), WR.FRandRange(-.6f, .6f))).GetSafeNormal();
+                }
+            }
+            // Markers of the way: iron stakes beside the path, some chained, braziers lighting it every 40 m or so.
+            int32 Brazier = 0;
+            for (float X = FortressX + 1800; X < ForecourtX - 300; X += 1700)
+            {
+                const float Side = (int32(X / 1700) & 1) ? 1.f : -1.f, Y = ApproachPathY(X) + Side * 260;
+                const float Gz = ApproachGround(X, Y);
+                const FVector Foot(X, Y, Gz - 20);
+                Iron.Spar(Foot, Foot + FVector(WR.FRandRange(-15, 15), Side * WR.FRandRange(0, 25), 380), 9, 1.5f, 6);
+                Iron.Spar(Foot + FVector(0, 0, 300), Foot + FVector(0, -Side * 45, 300), 3, 3, 5);
+                if (++Brazier % 2 == 0)
+                {
+                    const FVector Bz(X + 60, Y + Side * 40, ApproachGround(X + 60, Y + Side * 40));
+                    Iron.Spar(Bz - FVector(0, 0, 10), Bz + FVector(0, 0, 80), 7, 5, 6);
+                    Iron.Spar(Bz + FVector(0, 0, 80), Bz + FVector(0, 0, 112), 36, 46, 10);
+                    AddDockFlame(this, PhlegWorld(Bz + FVector(0, 0, 108)), 48, 95);
+                }
+            }
+            // Steam off the hollows' lava.
+            for (int32 K = 0; K < 120 && Vents.Num() < 24; ++K)
+            {
+                const float X = WR.FRandRange(FortressX + 2000, ForecourtX - 500), Y = WR.FRandRange(-4000, 4000);
+                if (ApproachGround(X, Y) < LavaZ - 100 && OffPath(X, Y, 900)) Vents.Add(FVector(X, Y, 0));
+            }
+        }
         // The idols: hulking horned figures on plinths either side of the processional, their eyes lit from within.
         int32 I = 0;
-        for (float X = FortressX + 500; X < GateX - 300; X += 560, ++I)
+        for (float X = ForecourtX + 500; X < GateX - 300; X += 560, ++I)
             for (float S : {-1.f, 1.f})
             {
                 const FVector Base(X, S * 430, Z);
@@ -838,14 +1020,13 @@ void APhlegethosSetting::Build()
                 if (Zt(Q) < 1000) break;
             }
         }
-        // Mesas standing out of the lake nearer in, for depth.
-        Rock.Paint = FColor(40, 128, 80, 255);
+        // (Mesas stood out of the lake nearer in; 2026-11-16 the badlands stand there and these read as boxes in the
+        // cutscene's crane. Their random draws are kept so the stream's later rocks stay where they were.)
         for (int32 I = 0; I < 22; ++I)
         {
             const float A = R.FRandRange(0, 2 * PI), D = R.FRandRange(4500, 9000);
-            const float X = 14000 + FMath::Cos(A) * D * 1.6f, Y = FMath::Sin(A) * D;
-            if (FMath::Abs(Y) < 2400) continue;
-            Far.Prism(Isle(X, Y, R.FRandRange(500, 1500), R.FRandRange(400, 1200), .25f, 70 + I, 18), Flat(R.FRandRange(600, 3000)), Rim, 160, 0, 70 + I, 1);
+            if (FMath::Abs(FMath::Sin(A) * D) < 2400) continue;
+            R.FRand(); R.FRand(); R.FRand();
         }
     }
 
@@ -920,7 +1101,186 @@ void APhlegethosSetting::Build()
         for (const FVector& V : VentAt) Vents.Add(V);
     }
 
+    // ---------------------------------------------------------------- the badlands (2026-11-16)
+    // The user: "add more inaccessible volcanic terrain ... so that it's less giant sections of lava", for the cutscene's
+    // reveal after he lands. Past the route's own lava (it rises out of it 10 m and more off the route, never in his reach,
+    // and has no collision) a broken field of black crust in stepped flows and pressure ridges, climbing to jagged hills
+    // toward the ranges; the lava left in rivers threading it and in pools, burning flows running down the hills into them,
+    // and on a mesa two kilometres off a city of fire (Phlegethos's Abriymoch, in look only).
+    FPhlegSurf Bad;
+    {
+        auto Clearance = [](float X, float Y)
+        {
+            // The arrival plain (round the landing) and the route's corridor of lava, its half-width along X.
+            const float Pl = (FVector2D(X / 3000.f, Y / 2800.f).Size() - 1.f) * 2800.f;
+            static const FVector2D Wd[] = {{1500, 2000}, {2600, 1900}, {7800, 1900}, {8300, 2350}, {12600, 2350}, {13000, 2700}, {20400, 2700},
+                                           {20900, 1700}, {25000, 1700}, {25400, 2500}, {27500, 7000}, {GateX + 700, 7000}, {GateX + 1500, 0}};
+            constexpr int32 Nw = UE_ARRAY_COUNT(Wd);
+            float Cor = 1e9f;
+            if (X > Wd[Nw - 1].X) Cor = FMath::Abs(Y);
+            else if (X >= Wd[0].X)
+                for (int32 I = 0; I + 1 < Nw; ++I)
+                    if (X <= Wd[I + 1].X) { Cor = FMath::Abs(Y) - FMath::Lerp(Wd[I].Y, Wd[I + 1].Y, (X - Wd[I].X) / (Wd[I + 1].X - Wd[I].X)); break; }
+            return FMath::Min(Pl, Cor);
+        };
+        auto Terrain = [&](float X, float Y, float* Hot = nullptr, float* Ash = nullptr) -> float
+        {
+            const float Cl = Clearance(X, Y);
+            if (Hot) *Hot = 0; if (Ash) *Ash = 0;
+            if (Cl <= 0) return -300.f;
+            const float Near = Ease(Cl / 1000.f), Far = Ease((Cl - 4000.f) / 90000.f);
+            const float Wx = Noise(X, Y, 14000, 81) * 5000, Wy = Noise(X, Y, 14000, 82) * 5000;
+            // Crust a metre or two over the lava, lumpy; stepped where flows piled on flows; spined with pressure ridges.
+            float H = 150 + 90 * Noise(X, Y, 1300, 83) + 40 * Noise(X, Y, 330, 84);
+            const float Ter = (Noise(X + Wx, Y + Wy, 9000, 85) + .15f) * 4.f;
+            if (Ter > 0) H += 260.f * (FMath::FloorToFloat(Ter) + FMath::SmoothStep(.75f, 1.f, FMath::Frac(Ter)));
+            const float Rd = 1 - FMath::Abs(Noise(X + Wx, Y + Wy, 6000, 86));
+            H += FMath::Pow(Rd, 6) * (450 + 3200 * Far);
+            // Hills, jagged, growing with the distance.
+            const float Hill = 1 - FMath::Abs(Noise(X + Wx * 3, Y + Wy * 3, 60000, 87));
+            H += Far * (7000 * Hill * Hill * Hill + 2500 * Noise(X, Y, 20000, 88) + 2600 + 900 * Noise(X, Y, 2600, 89));
+            // The city's mesa, sheer-sided.
+            const float Dc = FVector2D(X - CityAt.X, Y - CityAt.Y).Size();
+            H = FMath::Max(H, (CityZ + 400 * Noise(X, Y, 3000, 94)) * Ease((CityR + 3000 - Dc) / 2500.f));
+            // The lava left in it: rivers (great ones and, near, smaller), pools, and the fire whirls' pools.
+            const float Cb = FMath::Abs(Noise(X + Wx, Y + Wy, 45000, 90)), Cs = FMath::Abs(Noise(X + Wx * .5f, Y + Wy * .5f, 9000, 91));
+            const float Ws = .055f * (1 - Far);
+            float Wet = FMath::SmoothStep(.04f, .09f, Cb);
+            if (Ws > .005f) Wet = FMath::Min(Wet, FMath::SmoothStep(Ws, Ws * 2.f, Cs));
+            Wet = FMath::Min(Wet, FMath::SmoothStep(-.4f, -.28f, Noise(X, Y, 16000, 92)));
+            Wet = FMath::Max(Wet, Ease((CityR + 3500 - Dc) / 1000.f));
+            const float K = Near * Wet;
+            // Hot: the banks and some of the crust near the route crack and glow (not far off: at that size the cracks shimmer).
+            if (Hot) *Hot = FMath::Max(1 - Ease((K - .45f) / .35f), .7f * FMath::SmoothStep(.25f, .6f, Noise(X, Y, 2500, 93))) * (1 - Ease((Cl - 20000) / 30000.f));
+            if (Ash) *Ash = FMath::Clamp(Far * .3f + .35f * FMath::SmoothStep(.2f, .6f, Noise(X, Y, 4000, 96)), 0.f, 1.f);
+            // (Low crust at the shore and the heights only inland of it: straight from the lava up to a hill, the shore ran
+            // along the grid's cells in a staircase seen from above.)
+            return FMath::Lerp(-300.f, FMath::Lerp(150.f, H, K * K * K), K);
+        };
+        // A grid fine (3 m) along the route, coarsening out to 3.5 km.
+        TArray<float> Xs, Ys;
+        for (float X = -4000; X <= 34000; X += 300) Xs.Add(X);
+        { float S = 300, X = Xs[0]; while (X > -330000) { X -= S; S *= 1.06f; Xs.Insert(X, 0); } }
+        { float S = 300, X = Xs.Last(); while (X < 380000) { X += S; S *= 1.06f; Xs.Add(X); } }
+        Ys.Add(0); { float S = 200, Y = 0; while (Y < 330000) { Y += S; S *= 1.045f; Ys.Add(Y); Ys.Insert(-Y, 0); } }
+        const int32 NX = Xs.Num(), NY = Ys.Num();
+        TArray<float> Hz; TArray<FColor> Cv; Hz.SetNum(NX * NY); Cv.SetNum(NX * NY);
+        for (int32 J = 0; J < NY; ++J) for (int32 I = 0; I < NX; ++I)
+        {
+            float Hot, Ash;
+            Hz[J * NX + I] = Terrain(Xs[I], Ys[J], &Hot, &Ash);
+            Cv[J * NX + I] = FColor(uint8(255 * FMath::Clamp(Hot, 0.f, 1.f)), uint8(128 + 100 * Noise(Xs[I], Ys[J], 7000, 95)), uint8(255 * Ash), 255);
+        }
+        auto Pt = [&](int32 I, int32 J) { return FVector(Xs[I], Ys[J], Hz[J * NX + I]); };
+        auto Nm = [&](int32 I, int32 J)
+        {
+            const FVector Dx = Pt(FMath::Min(I + 1, NX - 1), J) - Pt(FMath::Max(I - 1, 0), J), Dy = Pt(I, FMath::Min(J + 1, NY - 1)) - Pt(I, FMath::Max(J - 1, 0));
+            FVector Nn = FVector::CrossProduct(Dx, Dy).GetSafeNormal(); if (Nn.Z < 0) Nn = -Nn;
+            return Nn.IsNearlyZero() ? FVector::UpVector : Nn;
+        };
+        for (int32 J = 0; J + 1 < NY; ++J) for (int32 I = 0; I + 1 < NX; ++I)
+        {
+            const float Top = FMath::Max(FMath::Max(Hz[J * NX + I], Hz[J * NX + I + 1]), FMath::Max(Hz[(J + 1) * NX + I], Hz[(J + 1) * NX + I + 1]));
+            if (Top < LavaZ - 20) continue;
+            // (Split along the flatter diagonal: always the same one cut the shores into a staircase seen from above.)
+            FIntPoint Q[4] = {{I, J}, {I + 1, J}, {I + 1, J + 1}, {I, J + 1}};
+            if (FMath::Abs(Hz[J * NX + I + 1] - Hz[(J + 1) * NX + I]) < FMath::Abs(Hz[J * NX + I] - Hz[(J + 1) * NX + I + 1])) Q[0] = {I + 1, J}, Q[1] = {I + 1, J + 1}, Q[2] = {I, J + 1}, Q[3] = {I, J};
+            Bad.Quad(Pt(Q[0].X, Q[0].Y), Pt(Q[1].X, Q[1].Y), Pt(Q[2].X, Q[2].Y), Pt(Q[3].X, Q[3].Y), Nm(Q[0].X, Q[0].Y), Nm(Q[1].X, Q[1].Y), Nm(Q[2].X, Q[2].Y), Nm(Q[3].X, Q[3].Y));
+            const int32 L = Bad.C.Num();
+            for (int32 K = 0; K < 4; ++K) Bad.C[L - 4 + K] = Cv[Q[K].Y * NX + Q[K].X];
+        }
+        // The grid's own surface (bilinear), and its cell size there: the flows lie on what is drawn, not on the function.
+        auto Cell = [](const TArray<float>& A, float V) { int32 I = Algo::UpperBound(A, V) - 1; return FMath::Clamp(I, 0, A.Num() - 2); };
+        auto Sample = [&](float X, float Y, float* Size = nullptr)
+        {
+            const int32 I = Cell(Xs, X), J = Cell(Ys, Y);
+            const float U = FMath::Clamp((X - Xs[I]) / (Xs[I + 1] - Xs[I]), 0.f, 1.f), V = FMath::Clamp((Y - Ys[J]) / (Ys[J + 1] - Ys[J]), 0.f, 1.f);
+            if (Size) *Size = FMath::Max(Xs[I + 1] - Xs[I], Ys[J + 1] - Ys[J]);
+            return FMath::Lerp(FMath::Lerp(Hz[J * NX + I], Hz[J * NX + I + 1], U), FMath::Lerp(Hz[(J + 1) * NX + I], Hz[(J + 1) * NX + I + 1], U), V);
+        };
+        // Burning flows: from high ground downhill until they run into the lava, widening as they go.
+        FRandomStream FR(31);
+        int32 FlowCount = 0;
+        for (int32 Try = 0; Try < 3000 && FlowCount < 46; ++Try)
+        {
+            FVector2D P(FR.FRandRange(-30000, 170000), (FR.FRand() < .5f ? -1.f : 1.f) * FR.FRandRange(5000, 120000));
+            if (FlowCount < 8) P = CityAt + FVector2D(FR.FRandRange(-1, 1), FR.FRandRange(-1, 1)).GetSafeNormal() * (CityR + 1200);   // off the mesa's rim
+            if (Sample(P.X, P.Y) < 1000) continue;
+            TArray<FVector2D> Pts; Pts.Add(P);
+            for (int32 S = 0; S < 160; ++S)
+            {
+                const float Cl = FMath::Max(0.f, Clearance(P.X, P.Y)), Step = 300 * (1 + Cl / 25000.f), E = Step * .6f;
+                const FVector2D Gd(Sample(P.X + E, P.Y) - Sample(P.X - E, P.Y), Sample(P.X, P.Y + E) - Sample(P.X, P.Y - E));
+                FVector2D D = Gd.Size() > 2.f ? -Gd.GetSafeNormal() : (Pts.Num() > 1 ? (Pts.Last() - Pts[Pts.Num() - 2]).GetSafeNormal() : FVector2D(1, 0));
+                D = (D + FVector2D(Noise(P.X, P.Y, 3000, 97), Noise(P.Y, P.X, 3000, 98)) * .7f).GetSafeNormal();
+                P += D * Step; Pts.Add(P);
+                if (Sample(P.X, P.Y) < LavaZ - 40) break;
+            }
+            if (Pts.Num() < 8 || Sample(Pts.Last().X, Pts.Last().Y) > LavaZ) continue;
+            ++FlowCount;
+            const float W0 = FR.FRandRange(90, 230) * (1 + FMath::Max(0.f, Clearance(Pts[0].X, Pts[0].Y)) / 9000.f);
+            float Len = 0;
+            const int32 I0 = Falls.V.Num();
+            for (int32 K = 0; K < Pts.Num(); ++K)
+            {
+                const FVector2D Dd = (Pts[FMath::Min(K + 1, Pts.Num() - 1)] - Pts[FMath::Max(K - 1, 0)]).GetSafeNormal(), Sd(-Dd.Y, Dd.X);
+                const float W = W0 * (1 + K * .025f) * (K == 0 ? .3f : 1.f);
+                if (K > 0) Len += (Pts[K] - Pts[K - 1]).Size();
+                auto Z = [&](const FVector2D& Q) { float Sz; const float H = Sample(Q.X, Q.Y, &Sz); return FMath::Max(H, LavaZ - 30) + 30 + Sz * .03f; };
+                const float Slope = K > 0 ? FMath::Clamp(FMath::Abs(Sample(Pts[K - 1].X, Pts[K - 1].Y) - Sample(Pts[K].X, Pts[K].Y)) / FMath::Max(1.f, (Pts[K] - Pts[K - 1]).Size()) * 2.f, 0.f, 1.f) : 0.f;
+                Falls.Paint = FColor(0, uint8(50 + 205 * Slope), 0, 255);
+                Falls.Vert(FVector(Pts[K] - Sd * W, Z(Pts[K] - Sd * W)), FVector::UpVector, FVector2D(-W / 400, Len / 400));
+                Falls.Vert(FVector(Pts[K] + Sd * W, Z(Pts[K] + Sd * W)), FVector::UpVector, FVector2D(W / 400, Len / 400));
+            }
+            for (int32 K = 0; K + 1 < Pts.Num(); ++K)
+            {
+                const int32 A = I0 + K * 2;
+                Falls.Face(A, A + 1, A + 3, FVector::UpVector); Falls.Face(A, A + 3, A + 2, FVector::UpVector);
+            }
+        }
+        // The city of fire: black towers crowded on the mesa, the citadel's spire over them, spikes off their crowns, the
+        // windows lit; a wall round the rim.
+        FRandomStream CR(77);
+        const FVector Cc(CityAt.X, CityAt.Y, CityZ);
+        const FVector Face = FVector(-1.f, -.5f, 0).GetSafeNormal();   // toward the route
+        auto Tower = [&](const FVector& B, float Rr, float H)
+        {
+            Far.Spar(B - FVector(0, 0, 800), B + FVector(0, 0, H), Rr, Rr * .55f, 8);
+            Far.Spar(B + FVector(0, 0, H), B + FVector(0, 0, H * 1.35f), Rr * .55f, 0, 8);
+            for (int32 K = 0; K < 4; ++K)
+            {
+                const float A = K * PI / 2 + CR.FRand();
+                const FVector Out(FMath::Cos(A), FMath::Sin(A), 0), Root = B + FVector(0, 0, H * .9f) + Out * Rr * .5f;
+                Far.Spar(Root, Root + Out * Rr * .9f + FVector(0, 0, H * .14f), Rr * .14f, 0, 4);
+            }
+            Glow.Paint = FColor(255, 85, 18, 255);
+            for (float Z = H * .12f; Z < H * .88f; Z += FMath::Max(1000.f, H * .07f))
+                if (CR.FRand() < .6f)
+                {
+                    const float Rz = FMath::Lerp(Rr, Rr * .55f, Z / H), Sw = CR.FRandRange(-.35f, .35f);
+                    const FVector F2 = (Face + FVector(-Face.Y, Face.X, 0) * Sw).GetSafeNormal();
+                    Glow.Box(B + FVector(0, 0, Z) + F2 * Rz * .97f, F2 * 30, FVector(-F2.Y, F2.X, 0) * Rr * .13f, FVector(0, 0, Rr * .28f));
+                }
+        };
+        Far.Paint = FColor(10, 100, 30, 255);
+        Tower(Cc, 3600, 44000);
+        for (int32 K = 0; K < 46; ++K)
+        {
+            const float A = CR.FRandRange(0, 2 * PI), D = FMath::Lerp(5000.f, CityR * .92f, FMath::Sqrt(CR.FRand()));
+            Tower(Cc + FVector(FMath::Cos(A) * D, FMath::Sin(A) * D, 0), CR.FRandRange(900, 2600), FMath::Lerp(28000.f, 6000.f, D / CityR) * CR.FRandRange(.6f, 1.15f));
+        }
+        for (int32 K = 0; K < 40; ++K)
+        {
+            const float A = 2 * PI * (K + .5f) / 40;
+            const FVector At = Cc + FVector(FMath::Cos(A), FMath::Sin(A), 0) * (CityR + 400);
+            Far.TurnedBox(At + FVector(0, 0, 1400), FVector(2000, 500, 1800), FRotator(0, FMath::RadiansToDegrees(A) + 90, 0));
+            if (K % 4 == 0) Far.Spar(At - FVector(0, 0, 500), At + FVector(0, 0, 5200), 1300, 900, 8);
+        }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_BADLANDS grid=%dx%d flows=%d"), NX, NY, FlowCount);
+    }
+
     Emit(TEXT("PhlegLava"), Lava, LavaMat, false, false);
+    Emit(TEXT("PhlegBadlands"), Bad, BasaltMat, false, true);
     Emit(TEXT("PhlegFalls"), Falls, LavaMat, false, false);
     Emit(TEXT("PhlegRock"), Rock, BasaltMat, true, true);
     Emit(TEXT("PhlegCrags"), RockVis, BasaltMat, false, true);
@@ -935,7 +1295,8 @@ void APhlegethosSetting::Build()
     // Jars on the safe ground off the route (traced onto the rock, so after it stands).
     {
         const FVector Jars[] = {FVector(-400, -900, G), FVector(-900, 300, G), FVector(1200, 700, G), FVector(LakeX + 200, 300, G), FVector(LakeShoreX + 500, 200, G),
-                                FVector(AscentX + 300, -250, G), FVector(26500, 900, FortressTop), FVector(27600, -1100, FortressTop)};
+                                FVector(AscentX + 300, -250, G), FVector(27000, ApproachPathY(27000) + 330, ApproachGround(27000, ApproachPathY(27000) + 330)),
+                                FVector(33000, ApproachPathY(33000) - 330, ApproachGround(33000, ApproachPathY(33000) - 330))};
         int32 Placed = 0;
         for (const FVector& J : Jars)
         {
@@ -948,28 +1309,7 @@ void APhlegethosSetting::Build()
 
     for (FSpout& Sp : Spouts)
     {
-        FPhlegSurf Col; Col.Paint = FColor(0, 200, 0, 255);
-        // A column of molten rock, its UV running up it; scaled from nothing to full when it bursts.
-        for (int32 K = 0; K < 10; ++K)
-        {
-            const float A0 = 2 * PI * K / 10, A1 = 2 * PI * (K + 1) / 10;
-            const FVector D0(FMath::Cos(A0), FMath::Sin(A0), 0), D1(FMath::Cos(A1), FMath::Sin(A1), 0);
-            for (int32 H = 0; H < 6; ++H)
-            {
-                const float Z0 = H * 100.f, Z1 = (H + 1) * 100.f, R0 = 22 + 30 * H / 6.f, R1 = 22 + 30 * (H + 1) / 6.f;
-                const int32 I = Col.V.Num();
-                Col.Vert(D0 * R0 + FVector(0, 0, Z0), D0, FVector2D(K / 4.f, -Z0 / 400)); Col.Vert(D1 * R0 + FVector(0, 0, Z0), D1, FVector2D((K + 1) / 4.f, -Z0 / 400));
-                Col.Vert(D1 * R1 + FVector(0, 0, Z1), D1, FVector2D((K + 1) / 4.f, -Z1 / 400)); Col.Vert(D0 * R1 + FVector(0, 0, Z1), D0, FVector2D(K / 4.f, -Z1 / 400));
-                Col.Face(I, I + 1, I + 2, D0 + D1); Col.Face(I, I + 2, I + 3, D0 + D1);
-            }
-        }
-        auto* M = NewObject<UProceduralMeshComponent>(this); M->SetupAttachment(RootComponent); M->RegisterComponent();
-        M->CreateMeshSection(0, Col.V, Col.T, Col.N, Col.UV, Col.C, Col.Tan, false);
-        M->SetMaterial(0, LavaMat); M->SetCollisionEnabled(ECollisionEnabled::NoCollision); M->SetCastShadow(false);
-        M->SetWorldLocation(PhlegWorld(Sp.Base)); M->SetWorldScale3D(FVector(1, 1, .01f));
-        // (leaning over the spine)
-        M->SetWorldRotation(FRotator(0, 0, Sp.Side * 22.f));
-        Sp.Mesh = M;
+        // (The fountain itself is drawn each frame with the bombs' blobs, TickHazards.)
         auto* L = NewObject<UPointLightComponent>(this); L->SetupAttachment(RootComponent); L->RegisterComponent();
         // (above the spine's top: 10 cm under it, the light leaked through the joints of its pieces in bright crosses)
         L->SetWorldLocation(PhlegWorld(Sp.Base + FVector(0, -Sp.Side * 60, 330)));
@@ -1167,6 +1507,7 @@ void APhlegethosSetting::TickMotes(float Dt)
     if (!Cam || !Motes) return;
     const FVector Eye = Cam->GetCameraLocation();
     if (!InPhlegethos(Eye) && FVector::Dist(Eye, PhlegethosOrigin()) > 800000) { if (Motes->GetInstanceCount()) Motes->ClearInstances(); return; }
+    TickMeteors(Dt, Eye);
     TickSmoke(Dt, Eye);
     TickLightning(Dt, Eye);
     Dt = FMath::Min(Dt, .05f);
@@ -1374,6 +1715,59 @@ void APhlegethosSetting::TickLightning(float Dt, const FVector& Eye)
     }
 }
 
+void APhlegethosSetting::TickMeteors(float Dt, const FVector& Eye)
+{
+    if (!Meteors) return;
+    Dt = FMath::Min(Dt, .05f);
+    const FVector LEye = PhlegLocal(Eye);
+    FRandomStream R(FMath::Rand());
+    // Fire rain: a burning rock out of the smoke every few seconds somewhere far off, more while the volcano erupts.
+    if (Clock >= NextMeteor)
+    {
+        NextMeteor = Clock + (Clock < EruptUntil ? R.FRandRange(.5f, 1.4f) : R.FRandRange(2.f, 5.f));
+        const float A = R.FRandRange(0, 2 * PI), D = R.FRandRange(25000, 150000);
+        FVector Ground(LEye.X + FMath::Cos(A) * D, LEye.Y + FMath::Sin(A) * D, LavaZ);
+        // (never on the route)
+        if (Ground.X > -5000 && Ground.X < GateX + 5000 && FMath::Abs(Ground.Y) < 9000) Ground.Y = (Ground.Y < 0 ? -1.f : 1.f) * (9000 + FMath::Abs(Ground.Y));
+        const FVector Dir = FVector(R.FRandRange(-.55f, .55f), R.FRandRange(-.55f, .55f), -1).GetSafeNormal();
+        FMeteor M; M.P = Ground - Dir * R.FRandRange(70000, 110000); M.V = Dir * R.FRandRange(20000, 32000); M.Size = R.FRandRange(3.f, 9.f);
+        MeteorList.Add(M);
+    }
+    TArray<FTransform> Xf;
+    for (int32 I = MeteorList.Num() - 1; I >= 0; --I)
+    {
+        FMeteor& M = MeteorList[I];
+        const FVector Step = M.V * Dt;
+        M.P += Step;
+        // Its trail: hot smoke every 10 m along the way.
+        M.Carry += Step.Size();
+        const FVector Back = -M.V.GetSafeNormal();
+        while (M.Carry > 1000.f)
+        {
+            M.Carry -= 1000.f;
+            FPuff Pf; Pf.P = M.P + Back * M.Carry + FVector(R.FRandRange(-1, 1), R.FRandRange(-1, 1), R.FRandRange(-1, 1)) * M.Size * 20;
+            Pf.V = FVector(R.FRandRange(-60, 60), R.FRandRange(-60, 60), R.FRandRange(0, 120));
+            Pf.Life = R.FRandRange(3.f, 5.f); Pf.Size0 = M.Size * 110; Pf.Size1 = M.Size * 650; Pf.Frame = R.FRandRange(0, 64); Pf.Heat = 1.f; Pf.Spin = R.FRandRange(0, 6.28f);
+            Puffs.Add(Pf);
+        }
+        if (M.P.Z < LavaZ + 100)
+        {
+            // Down: a burst of burning smoke.
+            for (int32 K = 0; K < 10; ++K)
+            {
+                FPuff Pf; Pf.P = FVector(M.P.X, M.P.Y, LavaZ + 200) + FVector(R.FRandRange(-1, 1), R.FRandRange(-1, 1), 0) * M.Size * 60;
+                Pf.V = FVector(R.FRandRange(-1, 1), R.FRandRange(-1, 1), R.FRandRange(.6f, 1.6f)) * M.Size * 70;
+                Pf.Life = R.FRandRange(4.f, 7.f); Pf.Size0 = M.Size * 250; Pf.Size1 = M.Size * 1300; Pf.Frame = R.FRandRange(0, 64); Pf.Heat = 1.f; Pf.Spin = R.FRandRange(0, 6.28f);
+                Puffs.Add(Pf);
+            }
+            MeteorList.RemoveAtSwap(I);
+            continue;
+        }
+        Xf.Add(FTransform(FRotator(Clock * 90, Clock * 70, 0), PhlegWorld(M.P), FVector(M.Size)));
+    }
+    Meteors->ClearInstances(); if (Xf.Num()) Meteors->AddInstances(Xf, false, true);
+}
+
 void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
 {
     if (!Smoke) return;
@@ -1412,13 +1806,14 @@ void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
     {
         FPuff& Pf = Puffs[I];
         Pf.Age += Dt;
-        if (Pf.Age > Pf.Life || Puffs.Num() > 600) { Puffs.RemoveAtSwap(I); continue; }
+        if (Pf.Age > Pf.Life || Puffs.Num() > 1200) { Puffs.RemoveAtSwap(I); continue; }
         const float A = Pf.Age / Pf.Life;
         // (The plume's puffs keep rising, buoyant, and drift downwind: slowed like the steam, they climbed 280 m while growing
         // to a kilometre and piled into a dark ball over the crater.)
         if (Pf.Size0 > 5000) { Pf.V.X = FMath::FInterpTo(Pf.V.X, 1800.f, Dt, .15f); Pf.V.Z *= FMath::Exp(-.02f * Dt); }
         else Pf.V *= FMath::Exp(-.12f * Dt);
-        Pf.P += Pf.V * Dt; Pf.Frame += Pf.Rate * Dt;
+        Pf.P += Pf.V * Dt;
+        Pf.Frame += Pf.Rate * Dt;
         const FVector W = PhlegWorld(Pf.P);
         FVector Z = Eye - W; if (!Z.Normalize()) Z = FVector::UpVector;
         const FVector X0 = FVector::CrossProduct(FMath::Abs(Z.Z) > .98f ? FVector::ForwardVector : FVector::UpVector, Z).GetSafeNormal();
@@ -1492,6 +1887,11 @@ void APhlegethosSetting::TickHazards(float Dt, AChuckCharacter* C)
     }
 
     // ---- geysers on the lava road
+    // (2026-11-16, the user: "a weird flat at the top orange funnel that springs up", "invisible things hit me". The spout
+    // was a short cone standing at the vent while the burn landed 1.5 m across on the spine, where nothing was drawn. Now
+    // the vent bubbles and a glowing mark spreads on the spine where it will come down; then it throws an arc of molten
+    // blobs over the edge onto the mark, and the burn is only there, only while the arc reaches it.)
+    TArray<FTransform> Balls, Marks;
     for (FSpout& Sp : Spouts)
     {
         const float U = FMath::Fmod(Clock + Sp.Phase, GeyserPeriod);
@@ -1503,20 +1903,55 @@ void APhlegethosSetting::TickHazards(float Dt, AChuckCharacter* C)
             if (Stage == 2 && Sounds[GeyserRoar]) UGameplayStatics::PlaySoundAtLocation(this, Sounds[GeyserRoar], PhlegWorld(Sp.Base), .9f, .75f);
         }
         Sp.Stage = Stage;
+        const FVector Land = Sp.Base + FVector(0, -Sp.Side * GeyserReach, G - Sp.Base.Z);   // where the arc comes down
+        const float Warn = Stage == 1 ? (U - (GeyserPeriod - GeyserWarn - GeyserBurn)) / GeyserWarn : Stage == 2 ? 1.f : 0.f;
         float H = 0;
-        if (Stage == 1) H = .05f + .04f * FMath::Sin(Clock * 30.f);                  // bubbling up
         if (Stage == 2)
         {
             const float B = (U - (GeyserPeriod - GeyserBurn)) / GeyserBurn;         // 0..1 over the burst
             H = FMath::Clamp(B * 6.f, 0.f, 1.f) * FMath::Clamp((1 - B) * 4.f, 0.f, 1.f) * (1 + .08f * FMath::Sin(Clock * 40.f));
         }
-        if (auto* M = Sp.Mesh.Get()) M->SetWorldScale3D(FVector(.8f + .4f * H, .8f + .4f * H, FMath::Max(.01f, H * .8f)));
-        if (auto* L = Sp.Light.Get()) L->SetIntensity(H * 900.f);
-        // The spray comes down across the spine: a burn if he is in it.
+        if (Near < 9000.f && Stage >= 1)
+        {
+            // Bubbling at the vent while it builds.
+            for (int32 K = 0; K < 6; ++K)
+            {
+                const float Ph = FMath::Frac(Clock * 1.9f + K * .37f);
+                const FVector P = Sp.Base + FVector(FMath::Sin(K * 2.1f) * 28, FMath::Cos(K * 1.3f) * 28, (15 + 70 * Warn) * FMath::Sin(PI * Ph) - 10);
+                Balls.Add(FTransform(FRotator(0, K * 60, 0), PhlegWorld(P), FVector(.16f + .12f * Warn)));
+            }
+            // The mark on the spine, spreading to the burn's size as it comes.
+            const float Mk = Stage == 1 ? .35f + .65f * Warn : 1.f;
+            Marks.Add(FTransform(FRotator::ZeroRotator, PhlegWorld(Land + FVector(0, 0, 2)), FVector(GeyserSpread * 2.f / 100.f * Mk, 1.5f * Mk, .02f)));
+        }
+        if (Near < 9000.f && H > .03f)
+        {
+            // The arc: from the vent over the edge, coming down on the mark at full strength (short of it as it rises and fails).
+            const FVector From = Sp.Base + FVector(0, 0, 20);
+            const FVector To = FMath::Lerp(From + FVector(0, -Sp.Side * 30, -40), Land, FMath::Min(1.f, H * 1.15f));
+            const float Apex = 110 + 250 * H;
+            for (int32 K = 0; K < 24; ++K)
+            {
+                const float T = FMath::Frac(K / 24.f + Clock * 1.7f);
+                const float Fan = (Hash(K, Sp.Base.X) - .5f) * 1.7f * GeyserSpread * T;
+                const FVector P = FMath::Lerp(From, To, T) + FVector(Fan, 0, 4 * Apex * T * (1 - T));
+                const float S = (.22f + .16f * Hash(K, 3)) * (1 - .3f * T) * (.6f + .4f * H);
+                Balls.Add(FTransform(FRotator(Clock * 300 + K * 40, K * 70, 0), PhlegWorld(P), FVector(S, S, S * 1.4f)));
+            }
+            // The gush at the vent, and the splash on the mark.
+            Balls.Add(FTransform(FRotator(0, Clock * 90, 0), PhlegWorld(From + FVector(0, 0, 50 * H)), FVector(.6f, .6f, 1.3f * H)));
+            if (H > .6f)
+                for (int32 K = 0; K < 5; ++K)
+                {
+                    const float A = Clock * 7 + K * 1.26f;
+                    Balls.Add(FTransform(FRotator::ZeroRotator, PhlegWorld(Land + FVector(FMath::Cos(A) * 60, FMath::Sin(A) * 45, 6 + 26 * FMath::Abs(FMath::Sin(A * 2)))), FVector(.2f)));
+                }
+        }
+        if (auto* L = Sp.Light.Get()) L->SetIntensity(H * 900.f + Warn * 120.f);
+        // The arc comes down on the mark: a burn if he is in it.
         if (Stage == 2 && H > .6f && !bAstral)
         {
-            const FVector Hit = Sp.Base + FVector(0, -Sp.Side * GeyserReach, G - Sp.Base.Z);
-            if (FMath::Abs(Body.X - Hit.X) < GeyserSpread && FMath::Abs(Body.Y - Hit.Y) < 200 && Body.Z < G + 260)
+            if (FMath::Abs(Body.X - Land.X) < GeyserSpread && FMath::Abs(Body.Y - Land.Y) < 120 && Body.Z < G + 260)
                 // (Knocked back along the spine, not across it: a burn should not throw him into the lava.)
                 if (C->TakeBite(PhlegWorld(Body + FVector(90, 0, 0)), 1)) ++GeyserHits;
         }
@@ -1542,7 +1977,6 @@ void APhlegethosSetting::TickHazards(float Dt, AChuckCharacter* C)
         NextBomb = Clock + R.FRandRange(1.1f, 1.9f);
         if (BombsFired % 4 == 1) Erupt(.6f);
     }
-    TArray<FTransform> Balls, Marks;
     for (int32 I = Bombs.Num() - 1; I >= 0; --I)
     {
         FBomb& Bm = Bombs[I];
