@@ -2,6 +2,47 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 15 — Phlegethos second look pass and hell lightning (Claude)
+
+- **Asked:** "start making plethegos look closer to goal"; "add some hell lightning too, overall more immersive and cool".
+- **Source:** `main` at 4c87d9bc; this commit.
+- **Changed:**
+  - `PhlegethosSetting.h/.cpp`:
+    - Crags: faceted rock skins over the slabs, the cliffs, the cleft, the far ridge, the chimney and the mesa. The collision stays plain hidden boxes, so the traversal is unchanged.
+    - Lightning: `Strike()` and `TickLightning()`. Forked midpoint-displacement bolts as camera-facing ribbons, sky and plume strikes, return-stroke pulses, a sky flash toward the bolt, an unshadowed flash light, and thunder delayed by distance.
+    - Fog, exposure and bloom retuned. The sun is redder.
+    - Lava lights now fade over rock, so no glow pools sit on the path.
+    - The volcano and the ranges were rescaled and moved out, and the lava-sea rings extended.
+    - The plume rises and grows.
+  - `PhlegethosTest.cpp`: the stills strike lightning in the rat shots.
+  - `Tools/create_phlegethos_assets.py`:
+    - Lava rewritten with crust plates, seams and flow streaks.
+    - Basalt: a sin-free hash, glowing cracks only on steep faces, and an under-glow.
+    - Path under-glow.
+    - Sky rewritten dark, with a flash term.
+    - New `M_PhlegBolt`, an unlit additive material.
+  - `docs/regions/PHLEGETHOS.md`: the second look pass and the known gaps.
+- **Tested:**
+  - Editor: Phlegethos 13/13 with the crags (`Local/phleg-trials-look.log`).
+  - Fall cutscene: ends at 62.56 s, handoff=1 (`Local/phleg-hellfall-look2.log`).
+  - Stills are in `Local/phleg-look2/`.
+  - Candidate: `CHUCK_PACKAGE_VERIFIED passes=182` and `CHUCK_CANDIDATE_VERIFIED` (`Local/verify-package-20261115-005220.log`, `Local/phleg-look2-package.log`).
+- **Not tested:**
+  - Anything by hand.
+  - The thunder audio was not auditioned.
+  - The editor trials weren't re-run after the last light-fade, plume and material changes; the package run covers them.
+- **Remaining flaws:**
+  - The fortress walls and plinths are still plain boxes, and there's no stepped stone path.
+  - The idols are blocky.
+  - The plume reads as one dark mass.
+  - The lava falls are flat, and the far ranges are smooth.
+  - The bolt material logs one harmless warning (`apply_fogging` does not exist).
+  - The receipt names 4c87d9b, but the package was built with this commit's uncommitted changes.
+- **Contract compatibility:** no rig, scale or character changes. One new asset (`M_PhlegBolt`) and four rebuilt Phlegethos materials.
+- **Launcher:** promoted as PhlegethosLook. The previous package is kept as `Windows-Previous-20261115-PhlegethosLook` and `Windows-Previous-20261114-Phlegethos`; PlaytestFixes was pruned.
+
+Next part of the work can be done by Claude only (Phlegethos creatures and the trio vs the Pit Fiend); the remaining art polish (fortress walls, stepped path, idols, plume, falls) by either — preference: Claude.
+
 ## November 14 — Phlegethos and the fall into it (Claude)
 
 - **Asked:** build the fall to Phlegethos (the fall-to-Chult score, "a bit more of the song creating a slightly longer cut scene") and Phlegethos itself, which should "look really cool" with challenges that "draw on Chuck's parkour in ways that are fun to play"; not the trio vs the Pit Fiend yet; download free resources. Tracks supplied: `Phlegethos.wav` and `Phlegethos_2.wav` (for the intense part). Later, three goal-art images for the look.

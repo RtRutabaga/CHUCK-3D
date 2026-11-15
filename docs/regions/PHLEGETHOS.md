@@ -84,7 +84,7 @@ A volumetric ash deck was tried and removed: its layer sat under him (placed by 
 
 Everything that sinks or crumbles comes back after a death, and when he is 15 m away.
 
-### Look pass toward the user's goal art (2026-11-14)
+### First look pass toward the user's goal art (2026-11-14)
 
 The user's three goal images are in `References/Phlegethos/` (a smoky sky lit red from below, charcoal basalt plates with glowing cracks, jagged rock, ruined arches and pillars with rusted chains, lava rivers and falls, steam, an erupting volcano with a plume). Matched so far:
 
@@ -95,10 +95,31 @@ The user's three goal images are in `References/Phlegethos/` (a smoky sky lit re
 
 The lake's tall column is eased: a wider, non-sinking run-up column before it and a 100 cm rise (it failed 2 of 9 runs, once packaged, at 110 cm).
 
+### Second look pass and hell lightning (2026-11-15)
+
+The user: "start making plethegos look closer to goal" and "add some hell lightning too, overall more immersive and cool".
+
+- **The backdrop was the wrong size.** The ranges stood from 600 m out to 800 m high and the volcano 3.5 km off and 2.2 km high, so from Chuck's eye they walled in nearly everything under 30 degrees: the "sky" in every still was mostly mountainside, and the sky dome barely showed. Now the ranges rise from 3 km out to about 550 m with sharp crests, and the volcano stands 12 km off, 1.5 km high (about 7 degrees, as in the goal art), its crater lit and its flows wider. The fog is thinner (.0045) and stops short of the sky dome.
+- **Sky:** dark smoke lit red from below, orange toward the volcano, black overhead, with a glowing haze at and under the horizon.
+- **Exposure:** no longer lifts a dark view by more than a little (the lava and the sky burned out).
+- **Lava:** a dark crust in drifting plates, thin seams molten in places only, deep red to orange; the falls dimmer and streaked; far off a darker glow with broad brighter patches.
+- **Basalt:** darker charcoal with a sheen. Thin cracks glow along some runs between the plates (the ash lies in drifts, not over everything).
+- **Bright crosses on the road** came from the crack pattern's sin hash breaking down along its cell lines. It is now a sin-free hash, and the rock scan's dark tile edges no longer glow on the tops.
+- **Lava lights:** the lights that throw the lava's glow on Chuck fade out when they would sit under or on rock (they made lamp-like pools). The geyser lights moved above the road.
+- **Broken cliff faces:** the gorge cliffs, the far ridge, the cleft, the slabs, the chimney walls and the mesa are faceted crags. Each sits over a plain hidden collision box and is only cut in, a few cm where Chuck wall-runs or wall-jumps, up to 1.5 m where he never touches.
+- **Hell lightning:** bolts across the smoke sky 4.5 to 12 km away (to the land or cloud to cloud), and in the volcano's plume. Each has two to four return strokes, lights the clouds round it, flashes a red light across the land, and its thunder follows after a delay set by distance. A strike every 6 to 13 s, every 3.5 to 8 s from the ascent on, every 1 to 3.5 s while the volcano erupts. (`APhlegethosSetting::Strike`, `M_PhlegBolt`; the sky's `Flash`/`FlashDir` parameters.)
+- **Plume:** many smaller puffs that keep rising and lean downwind.
+
 ### Known gaps
 
 - No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
-- Toward the goal art: the cliffs and fortress walls are still mostly flat-faced blocks topped with rock; no stepped stone path with carved blocks (the second image); the idols are blocky.
+- Toward the goal art:
+  - The fortress walls and the plinths are still plain boxes.
+  - There is no stepped stone path with carved blocks (the second image).
+  - The idols are blocky.
+  - The volcano's plume reads as one dark blob at 12 km.
+  - The lava falls are flat sheets.
+  - The far ranges are smooth at a distance.
 - The geysers hit hard: running straight through without timing them cost 3 Sanity in the tests.
 - Not played by hand.

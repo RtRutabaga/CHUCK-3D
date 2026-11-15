@@ -26,6 +26,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Sound/SoundBase.h"
 #include "Sound/SoundWave.h"
 #include "UObject/ConstructorHelpers.h"
@@ -128,6 +129,49 @@ struct FPhlegSurf
                 if (Nn.IsNearlyZero()) Nn = Out;
                 Quad(A, Bp, Cc, D, Nn, Nn, Nn, Nn);
             }
+    }
+    // A box seen as broken basalt (2026-11-15, the goal art's cliffs): each side (-X, +X, -Y, +Y) cut into facets pushed IN
+    // by up to Depth cm, never out, so a plain collision box stands where it did and wall runs and jumps meet the same
+    // plane; the pushes fade to nothing at the side's edges so the sides still meet, and the top stays flat to walk on.
+    void Crag(float X0, float X1, float Y0, float Y1, float Z0, float Z1, const float Depth[4], float Seed)
+    {
+        Flat(FVector(X0, Y0, Z1), FVector(X1, Y0, Z1), FVector(X1, Y1, Z1), FVector(X0, Y1, Z1), FVector::UpVector);
+        for (int32 F = 0; F < 4; ++F)
+        {
+            FVector O, U, Nn; float Lu;
+            switch (F)
+            {
+            case 0: O = FVector(X0, Y1, 0); U = FVector(0, -1, 0); Lu = Y1 - Y0; Nn = FVector(-1, 0, 0); break;
+            case 1: O = FVector(X1, Y0, 0); U = FVector(0, 1, 0); Lu = Y1 - Y0; Nn = FVector(1, 0, 0); break;
+            case 2: O = FVector(X0, Y0, 0); U = FVector(1, 0, 0); Lu = X1 - X0; Nn = FVector(0, -1, 0); break;
+            default: O = FVector(X1, Y1, 0); U = FVector(-1, 0, 0); Lu = X1 - X0; Nn = FVector(0, 1, 0); break;
+            }
+            const float Dp = Depth[F], S = Seed + F * 13.f;
+            if (Dp <= 0.f) { Flat(O + FVector(0, 0, Z0), O + U * Lu + FVector(0, 0, Z0), O + U * Lu + FVector(0, 0, Z1), O + FVector(0, 0, Z1), Nn); continue; }
+            const float Cell = FMath::Clamp(Dp * 1.4f, 40.f, 150.f);
+            const int32 Nu = FMath::Clamp(FMath::CeilToInt(Lu / Cell), 1, 300), Nz = FMath::Clamp(FMath::CeilToInt((Z1 - Z0) / (Cell * .85f)), 1, 120);
+            auto Pt = [&](int32 I, int32 K)
+            {
+                const float Uu = Lu * I / Nu, Z = FMath::Lerp(Z0, Z1, float(K) / Nz);
+                const float A = Noise(Uu, Z, 240, S), Bb = .5f - FMath::Abs(Noise(Uu * 1.3f, Z * .7f, 110, S + 3));
+                const float Strata = .5f + .5f * FMath::Sin(Z / 41.f + Noise(Uu, Z, 300, S + 5) * 3.f);
+                const float K1 = FMath::Clamp(.4f + .6f * A + .7f * Bb + .25f * Strata, 0.f, 1.f);
+                const float Edge = FMath::Min3(Uu, Lu - Uu, Z1 - Z);
+                const float Push = Dp * K1 * FMath::Clamp(Edge / (Dp * 1.5f + 30.f), 0.f, 1.f);
+                // (a little jitter along the face too, so the facets are not a grid)
+                const float J = (I > 0 && I < Nu && K > 0 && K < Nz) ? Cell * .3f : 0.f;
+                return O + U * (Uu + J * Noise(Uu, Z, 50, S + 7)) + FVector(0, 0, Z + J * Noise(Z, Uu, 50, S + 9)) - Nn * Push;
+            };
+            for (int32 K = 0; K < Nz; ++K)
+                for (int32 I = 0; I < Nu; ++I)
+                {
+                    const FVector A = Pt(I, K), Bp = Pt(I + 1, K), Cc = Pt(I + 1, K + 1), D = Pt(I, K + 1);
+                    // (flat-shaded facets: each triangle its own normal, as broken rock)
+                    FVector N1 = FVector::CrossProduct(Bp - A, Cc - A).GetSafeNormal(); if (FVector::DotProduct(N1, Nn) < 0) N1 = -N1;
+                    FVector N2 = FVector::CrossProduct(Cc - A, D - A).GetSafeNormal(); if (FVector::DotProduct(N2, Nn) < 0) N2 = -N2;
+                    Tri(A, Bp, Cc, N1.IsNearlyZero() ? Nn : N1); Tri(A, Cc, D, N2.IsNearlyZero() ? Nn : N2);
+                }
+        }
     }
     // A solid stood on its outline (closed, star-shaped round its centroid): the top as rings to the rim, its height
     // Top(x, y); the sides down to Bottom with a few rows, pushed out by Jag (cm) of noise so they read as broken rock.
@@ -390,14 +434,23 @@ void APhlegethosSetting::Build()
     BuildEnvironment();
 
     FRandomStream R(8);
-    FPhlegSurf Rock, Path, Lava, Glow, Iron, Dark, Far, Falls, Chain;
+    FPhlegSurf Rock, Path, Lava, Glow, Iron, Dark, Far, Falls, Chain, RockVis, RockCol;
     auto Flat = [](float Z) { return [Z](float, float) { return Z; }; };
+    // A sheer block of broken basalt: a plain collision box (hidden), seen as the faceted crag cut into it (FPhlegSurf::Crag).
+    // Depths per side -X, +X, -Y, +Y (cm): a few where he runs or jumps on the face, deep where he never touches it.
+    auto CragBox = [&](float X0, float X1, float Y0, float Y1, float Z0, float Z1, float DmX, float DpX, float DmY, float DpY)
+    {
+        const float D[4] = {DmX, DpX, DmY, DpY};
+        RockCol.B(X0, X1, Y0, Y1, Z0, Z1);
+        RockVis.Paint = Rock.Paint; RockVis.Crag(X0, X1, Y0, Y1, Z0, Z1, D, X0 * .001f + Y0 * .0007f);
+    };
 
     // ---------------------------------------------------------------- the molten lake, to the horizon
     {
         // Rings of quads out from the route, coarser further out (the UVs stay world cm/400).
         const float Xc = 14000, Yc = 0;
-        TArray<float> Rad = {0, 3000, 7000, 12000, 20000, 32000, 50000, 80000, 130000, 250000, 500000, 1000000, 2000000};
+        // (to 29 km, just inside the fog's cutoff: from the fall's height the sky dome's foot showed past a nearer edge)
+        TArray<float> Rad = {0, 3000, 7000, 12000, 20000, 32000, 50000, 80000, 130000, 250000, 500000, 1000000, 1800000, 2900000};
         constexpr int32 Segs = 48;
         Lava.Paint = FColor(0, 8, 0, 255);
         for (int32 K = 0; K + 1 < Rad.Num(); ++K)
@@ -513,7 +566,8 @@ void APhlegethosSetting::Build()
         for (float S : {-1.f, 1.f})
         {
             const float Y0 = S * SlabHalfGap, Y1 = S * (SlabHalfGap + SlabThick);
-            Rock.B(SlabX0, SlabX1, FMath::Min(Y0, Y1), FMath::Max(Y0, Y1), Rim, SlabTop);
+            // (the inner face is the wall run's)
+            CragBox(SlabX0, SlabX1, FMath::Min(Y0, Y1), FMath::Max(Y0, Y1), Rim, SlabTop, 10, 10, S > 0 ? 8.f : 35.f, S > 0 ? 35.f : 8.f);
             // A broken crown over each.
             for (int32 I = 0; I < 5; ++I)
                 Rock.TurnedBox(FVector(R.FRandRange(SlabX0 + 60, SlabX1 - 60), S * (SlabHalfGap + SlabThick * .5f), SlabTop + R.FRandRange(10, 50)), FVector(R.FRandRange(40, 90), SlabThick * .45f, R.FRandRange(20, 60)), FRotator(R.FRandRange(-20, 20), R.FRandRange(-6, 6), R.FRandRange(-8, 8)));
@@ -526,8 +580,8 @@ void APhlegethosSetting::Build()
     {
         // The cliff on the -Y side: its face flat and sheer along the shelf (he wall runs on it), its top broken.
         Rock.Paint = FColor(30, 90, 50, 255);
-        Rock.B(GorgeX - 200, ChainX0, -1600, CliffY, Rim, CliffTop);
-        Rock.B(ChainX1, AscentX + 900, -1600, CliffY - 200, Rim, CliffTop + 200);
+        CragBox(GorgeX - 200, ChainX0, -1600, CliffY, Rim, CliffTop, 70, 15, 0, 9);   // (+Y: the wall run's face)
+        CragBox(ChainX1, AscentX + 900, -1600, CliffY - 200, Rim, CliffTop + 200, 30, 50, 0, 55);
         for (int32 I = 0; I < 40; ++I)
         {
             const float X = R.FRandRange(GorgeX - 100, AscentX + 800);
@@ -539,7 +593,7 @@ void APhlegethosSetting::Build()
         Rock.Prism(Box2(Break1X1, Break2X0, CliffY, ShelfY1 - 10), Flat(G), Rim, 10, 0, 32, 1);
         Rock.Prism(Box2(Break2X1, ChainX0, CliffY, ShelfY1 + 10), Flat(LowShelf), Rim, 10, 0, 33, 1);
         // The cleft behind the chains, where a lava fall pours out of the cliff into the river.
-        Rock.B(ChainX0, ChainX1, -1600, -700, Rim, CliffTop + 100);
+        CragBox(ChainX0, ChainX1, -1600, -700, Rim, CliffTop + 100, 0, 0, 0, 70);
         // The broken arch: a pillar each end, the lintel between them, iron chains hanging to the grips.
         Rock.Paint = FColor(40, 200, 30, 255);
         const float LintelZ = ChainGripZ + 330;
@@ -571,7 +625,7 @@ void APhlegethosSetting::Build()
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_CHAINS grips=%d"), Grips);
         // The far side of the gorge: a great ridge with lava falls pouring down it.
         Rock.Paint = FColor(30, 120, 80, 255);
-        Rock.B(GorgeX + 400, AscentX + 600, 1000, 2600, Rim, G + 1200);
+        CragBox(GorgeX + 400, AscentX + 600, 1000, 2600, Rim, G + 1200, 110, 110, 150, 0);
         for (int32 I = 0; I < 30; ++I)
             Rock.TurnedBox(FVector(R.FRandRange(GorgeX + 400, AscentX + 600), R.FRandRange(1100, 2500), G + 1200 + R.FRandRange(0, 300)), FVector(R.FRandRange(200, 500), R.FRandRange(200, 500), R.FRandRange(100, 400)), FRotator(R.FRandRange(-10, 10), R.FRandRange(0, 90), R.FRandRange(-10, 10)));
         // Lava falls: a sheet down a face, flowing, with a churned pool at its foot.
@@ -632,10 +686,11 @@ void APhlegethosSetting::Build()
         // The chimney's foot and the mesa it climbs, its slot cut 1 m wide.
         Rock.Paint = FColor(130, 70, 60, 255);
         Rock.Prism(Box2(23720, ChimneyX0 + 2, -260, 260), Flat(ChimneyBase), Rim, 20, 0, 43, 1);
-        Rock.B(ChimneyX0, ChimneyX1, -600, -ChimneyHalf, Rim, MesaTop);
-        Rock.B(ChimneyX0, ChimneyX1, ChimneyHalf, 600, Rim, MesaTop);
+        // (the slot's faces are wall-jumped: a few cm only)
+        CragBox(ChimneyX0, ChimneyX1, -600, -ChimneyHalf, Rim, MesaTop, 25, 0, 45, 5);
+        CragBox(ChimneyX0, ChimneyX1, ChimneyHalf, 600, Rim, MesaTop, 25, 0, 5, 45);
         Rock.B(ChimneyX0 - 2, ChimneyX1, -ChimneyHalf, ChimneyHalf, Rim, ChimneyBase);   // the slot's floor
-        Rock.B(ChimneyX1, MesaX1, -600, 600, Rim, MesaTop);
+        CragBox(ChimneyX1, MesaX1, -600, 600, Rim, MesaTop, 5, 45, 55, 55);
         for (int32 I = 0; I < 10; ++I)
             Rock.TurnedBox(FVector(R.FRandRange(ChimneyX1 + 300, MesaX1 - 200), ((R.FRand() < .5f) ? 1 : -1) * R.FRandRange(320, 560), MesaTop + R.FRandRange(10, 60)), FVector(R.FRandRange(50, 140), R.FRandRange(40, 120), R.FRandRange(30, 90)), FRotator(R.FRandRange(-15, 15), R.FRandRange(0, 90), R.FRandRange(-15, 15)));
         Path.Paint = FColor(0, 0, 80, 255);
@@ -718,16 +773,19 @@ void APhlegethosSetting::Build()
 
     // ---------------------------------------------------------------- the land beyond: ridges, mesas, the volcano
     {
-        // A ring of broken ranges round the lake, from 600 m out rising to about 800 m; the volcano 3.4 km north-west, 2.2 km
-        // high, its crater lit (the fall sees it climb into view as he drops below its height). Units are cm, as everywhere.
-        auto Volcano = [](float X, float Y) { const float D = FVector2D(X - VolcanoAt.X, Y - VolcanoAt.Y).Size(); return VolcanoTop * (1 - FMath::Pow(D / 190000.f, .75f)) - FMath::Max(0.f, 16000.f - D) * 1.1f; };
+        // A ring of broken ranges round the lake, from 3 km out rising to about 550 m (a few degrees above his horizon); the
+        // volcano 12 km off, 1.5 km high, its crater lit (the fall sees it climb into view as he drops below its height).
+        // Units are cm, as everywhere. (2026-11-15: they stood from 600 m out to 800 m high and walled in the sky.)
+        auto Volcano = [](float X, float Y) { const float D = FVector2D(X - VolcanoAt.X, Y - VolcanoAt.Y).Size(); return VolcanoTop * (1 - FMath::Pow(D / VolcanoBase, .75f)) - FMath::Max(0.f, CraterR - D) * 1.1f; };
         auto Ranges = [&](float X, float Y)
         {
             const float Dx = (X - 14000) / 1.3f, D = FVector2D(Dx, Y).Size();
-            const float Out = Ease((D - 60000) / 90000.f);
+            const float Out = Ease((D - 300000) / 400000.f);
             const float W = Noise(X, Y, 90000, 61) * 30000;
+            // (sharp crests: ridged noise cubed, a second finer ridge on it, as the goal art's jagged ranges)
             const float Ridge = 1 - FMath::Abs(Noise(X + W, Y - W, 110000, 62));
-            const float H = Out * (Ridge * Ridge * 60000 + 14000 * Noise(X, Y, 30000, 63) + 3000 * Noise(X, Y, 7000, 64) + 9000) - 2000 * (1 - Out);
+            const float Ridge2 = 1 - FMath::Abs(Noise(X - W, Y + W, 38000, 67));
+            const float H = Out * (Ridge * Ridge * Ridge * 42000 + Ridge2 * Ridge2 * 12000 * Ridge + 6000 * Noise(X, Y, 30000, 63) + 2500 * Noise(X, Y, 7000, 64) + 3000) - 2000 * (1 - Out);
             const float V = Volcano(X, Y);
             return FMath::Max(H, V) + (V > 0 ? 2500.f * Noise(X, Y, 15000, 65) + 9000.f * (.5f - FMath::Abs(Noise(X, Y, 26000, 66))) * FMath::Min(1.f, V / 60000.f) : 0.f);
         };
@@ -740,7 +798,8 @@ void APhlegethosSetting::Build()
             const float X = 14000 + Ax[I] * 1.2f, Y = Ax[J];
             P[J * N + I] = FVector(X, Y, Ranges(X, Y));
         }
-        Far.Paint = FColor(40, 128, 160, 255);
+        // (dark, no ash: at B 160 the distant ranges read as beige dunes; no hot cracks, which shimmer at that size)
+        Far.Paint = FColor(0, 128, 15, 255);
         auto Nrm = [&](int32 I, int32 J)
         {
             const FVector Dx = P[J * N + FMath::Min(I + 1, N - 1)] - P[J * N + FMath::Max(I - 1, 0)];
@@ -760,18 +819,18 @@ void APhlegethosSetting::Build()
         for (int32 K = 0; K < 16; ++K)
         {
             const float A0 = 2 * PI * K / 16, A1 = 2 * PI * (K + 1) / 16;
-            Lava.Tri(Crater, Crater + FVector(FMath::Cos(A0), FMath::Sin(A0), 0) * 15500, Crater + FVector(FMath::Cos(A1), FMath::Sin(A1), 0) * 15500, FVector::UpVector);
+            Lava.Tri(Crater, Crater + FVector(FMath::Cos(A0), FMath::Sin(A0), 0) * CraterR * .95f, Crater + FVector(FMath::Cos(A1), FMath::Sin(A1), 0) * CraterR * .95f, FVector::UpVector);
         }
-        Lava.Paint = FColor(0, 140, 0, 255);
+        Lava.Paint = FColor(0, 40, 0, 255);
         for (int32 F = 0; F < 7; ++F)
         {
             const float A = -2.3f + F * .55f;
             FVector2D Dir(FMath::Cos(A), FMath::Sin(A));
-            FVector2D Q = FVector2D(Crater.X, Crater.Y) + Dir * 15000;
+            FVector2D Q = FVector2D(Crater.X, Crater.Y) + Dir * CraterR;
             for (int32 S = 0; S < 16; ++S)
             {
-                const FVector2D Nq = Q + Dir * 11000 + FVector2D(-Dir.Y, Dir.X) * 4000 * Noise(Q.X, Q.Y, 30000, F);
-                const float W0 = 900 + S * 180, W1 = 900 + (S + 1) * 180;
+                const FVector2D Nq = Q + Dir * 22000 + FVector2D(-Dir.Y, Dir.X) * 8000 * Noise(Q.X, Q.Y, 30000, F);
+                const float W0 = 3000 + S * 600, W1 = 3000 + (S + 1) * 600;
                 const FVector2D Sd(-Dir.Y, Dir.X);
                 auto Zt = [&](const FVector2D& V) { return Ranges(V.X, V.Y) + 400; };
                 Lava.Flat(FVector(Q - Sd * W0, Zt(Q)), FVector(Nq - Sd * W1, Zt(Nq)), FVector(Nq + Sd * W1, Zt(Nq)), FVector(Q + Sd * W0, Zt(Q)), FVector::UpVector);
@@ -864,6 +923,8 @@ void APhlegethosSetting::Build()
     Emit(TEXT("PhlegLava"), Lava, LavaMat, false, false);
     Emit(TEXT("PhlegFalls"), Falls, LavaMat, false, false);
     Emit(TEXT("PhlegRock"), Rock, BasaltMat, true, true);
+    Emit(TEXT("PhlegCrags"), RockVis, BasaltMat, false, true);
+    if (auto* Solid = Emit(TEXT("PhlegCragSolid"), RockCol, DarkMat, true, false)) Solid->SetHiddenInGame(true);
     Emit(TEXT("PhlegPath"), Path, PathMat, true, true);
     Emit(TEXT("PhlegGlow"), Glow, GlowMat, false, false);
     Emit(TEXT("PhlegIron"), Iron, IronMat, true, true);
@@ -910,7 +971,8 @@ void APhlegethosSetting::Build()
         M->SetWorldRotation(FRotator(0, 0, Sp.Side * 22.f));
         Sp.Mesh = M;
         auto* L = NewObject<UPointLightComponent>(this); L->SetupAttachment(RootComponent); L->RegisterComponent();
-        L->SetWorldLocation(PhlegWorld(Sp.Base + FVector(0, -Sp.Side * 60, 220)));
+        // (above the spine's top: 10 cm under it, the light leaked through the joints of its pieces in bright crosses)
+        L->SetWorldLocation(PhlegWorld(Sp.Base + FVector(0, -Sp.Side * 60, 330)));
         L->SetIntensity(0.f); L->SetLightColor(FLinearColor(1.f, .35f, .08f)); L->SetAttenuationRadius(900.f); L->SetCastShadows(true);
         L->SetIntensityUnits(ELightUnits::Candelas);
         Sp.Light = L;
@@ -939,13 +1001,34 @@ void APhlegethosSetting::BuildEnvironment()
             const FVector A = Pt(I, J), Bp = Pt(I + 1, J), Cc = Pt(I + 1, J + 1), D = Pt(I, J + 1);
             Dome.Flat(A, Bp, Cc, D, -((A + Cc) * .5f).GetSafeNormal());
         }
-        if (auto* Mesh = Emit(TEXT("PhlegSky"), Dome, LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegSky.M_PhlegSky")), false, false))
-        { Mesh->SetWorldLocation(G0 + FVector(14000, 0, 0)); Mesh->bNeverDistanceCull = true; Mesh->SetBoundsScale(4.f); }
+        UMaterialInterface* SkyMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegSky.M_PhlegSky"));
+        if (auto* Mesh = Emit(TEXT("PhlegSky"), Dome, SkyMat, false, false))
+        {
+            Mesh->SetWorldLocation(G0 + FVector(14000, 0, 0)); Mesh->bNeverDistanceCull = true; Mesh->SetBoundsScale(4.f);
+            if (SkyMat) { SkyMid = UMaterialInstanceDynamic::Create(SkyMat, this); Mesh->SetMaterial(0, SkyMid); }
+        }
     }
+    // Hell lightning: three bolt meshes (rebuilt each strike), and the flash's light across the land.
+    if (UMaterialInterface* BoltMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegBolt.M_PhlegBolt")))
+        for (int32 I = 0; I < 3; ++I)
+        {
+            auto* B = NewObject<UProceduralMeshComponent>(this, *FString::Printf(TEXT("PhlegBolt%d"), I));
+            B->SetupAttachment(RootComponent); B->RegisterComponent(); B->SetWorldLocation(G0);
+            B->SetCollisionEnabled(ECollisionEnabled::NoCollision); B->SetCastShadow(false); B->bNeverDistanceCull = true;
+            auto* Mid = UMaterialInstanceDynamic::Create(BoltMat, this); Mid->SetScalarParameterValue(TEXT("Intensity"), 0.f);
+            B->SetMaterial(0, Mid); B->SetVisibility(false);
+            Bolts.Add(B); BoltMids.Add(Mid);
+        }
+    else ++Missing;
+    FlashLight = NewObject<UDirectionalLightComponent>(this);
+    FlashLight->SetMobility(EComponentMobility::Movable); FlashLight->SetAtmosphereSunLight(false);
+    FlashLight->SetIntensity(0.f); FlashLight->SetLightColor(FLinearColor(1.f, .45f, .38f)); FlashLight->SetCastShadows(false);
+    FlashLight->SetVolumetricScatteringIntensity(1.5f);
+    Attach(FlashLight, FVector::ZeroVector, FRotator(-35, 0, 0));
     Sun = NewObject<UDirectionalLightComponent>(this);
     Sun->SetMobility(EComponentMobility::Movable); Sun->SetAtmosphereSunLight(false);
     // (Dim: the light here is the lava's; a strong low sun striped the ground between the spires' shadows.)
-    Sun->SetIntensity(.9f); Sun->SetLightColor(FLinearColor(1.f, .4f, .22f));
+    Sun->SetIntensity(.9f); Sun->SetLightColor(FLinearColor(1.f, .33f, .2f));
     Sun->DynamicShadowDistanceMovableLight = 8000; Sun->DynamicShadowCascades = 3;
     Sun->SetVolumetricScatteringIntensity(2.5f); Sun->SetForwardShadingPriority(1);
     Attach(Sun, FVector::ZeroVector, FRotator(-16, 140, 0));
@@ -960,8 +1043,11 @@ void APhlegethosSetting::BuildEnvironment()
     Attach(SkyLight);
     auto* Fog = NewObject<UExponentialHeightFogComponent>(this);
     // (Thick low over the lake, thinning with height: from the fall's altitude the volcano stands clear of it.)
-    Fog->SetFogDensity(.016f); Fog->SetFogHeightFalloff(.5f); Fog->SetFogMaxOpacity(.85f);
-    Fog->SetFogInscatteringColor(FLinearColor(.09f, .022f, .008f));
+    // (2026-11-15: thinner. At .016 the low haze hid everything a few km off from his eye - the volcano and the ranges the
+    // goal art shows, every lightning bolt - and the sky seen was mostly fog. The sky dome itself is past the fog's cutoff.)
+    Fog->SetFogDensity(.0045f); Fog->SetFogHeightFalloff(.35f); Fog->SetFogMaxOpacity(.8f);
+    Fog->FogCutoffDistance = 3000000.f;
+    Fog->SetFogInscatteringColor(FLinearColor(.08f, .016f, .006f));
     Fog->SetDirectionalInscatteringColor(FLinearColor(.25f, .07f, .02f));
     Fog->SetStartDistance(600.f);
     Fog->SetVolumetricFog(true);
@@ -970,15 +1056,16 @@ void APhlegethosSetting::BuildEnvironment()
     Fog->SetVolumetricFogDistance(6000.f);
     Fog->SetVolumetricFogAlbedo(FColor(255, 170, 140));
     Fog->SetVolumetricFogEmissive(FLinearColor(.012f, .003f, .001f));
-    Attach(Fog, FVector(0, 0, -200));
-    auto* Post = NewObject<UPostProcessComponent>(this);
+    Attach(Fog, FVector(0, 0, -200));    auto* Post = NewObject<UPostProcessComponent>(this);
     Post->bUnbound = true; Post->Priority = 50.f;
     FPostProcessSettings& P = Post->Settings;
     P.bOverride_AutoExposureMethod = true; P.AutoExposureMethod = AEM_Histogram;
-    P.bOverride_AutoExposureMinBrightness = true; P.AutoExposureMinBrightness = -1.f;
-    P.bOverride_AutoExposureMaxBrightness = true; P.AutoExposureMaxBrightness = 1.5f;
+    // (Not raised far in the dark: adapting down to EV -1, every dark view was lifted till the lava and the sky burned out;
+    // the goal art is dark with the lava bright in it.)
+    P.bOverride_AutoExposureMinBrightness = true; P.AutoExposureMinBrightness = .3f;
+    P.bOverride_AutoExposureMaxBrightness = true; P.AutoExposureMaxBrightness = 2.5f;
     P.bOverride_AutoExposureBias = true; P.AutoExposureBias = -.2f;
-    P.bOverride_BloomIntensity = true; P.BloomIntensity = 1.1f;
+    P.bOverride_BloomIntensity = true; P.BloomIntensity = .85f;
     P.bOverride_BloomThreshold = true; P.BloomThreshold = 1.5f;
     P.bOverride_VignetteIntensity = true; P.VignetteIntensity = .5f;
     P.bOverride_FilmGrainIntensity = true; P.FilmGrainIntensity = .06f;
@@ -1044,15 +1131,26 @@ void APhlegethosSetting::TickLight(float Dt, AChuckCharacter* C)
     const FVector L = PhlegLocal(C->GetActorLocation());
     // Beside him toward the nearer lava and below his feet, so the glow comes up across him.
     const float Side = FMath::Sin(Clock * .21f) > 0 ? 1.f : -1.f;
+    // (Only where they are over the lava: under the road they shone up through the seams between its pieces, and set on
+    // the rock they threw lamp-like pools on it. Over rock they fade out.)
+    auto OverLava = [&](const FVector& P)
+    {
+        FHitResult Hit; FCollisionQueryParams Q(TEXT("PhlegUnder"), false, C);
+        return !GetWorld()->LineTraceSingleByChannel(Hit, PhlegWorld(FVector(P.X, P.Y, L.Z + 150)), PhlegWorld(P), ECC_Visibility, Q);
+    };
     const FVector Want = FVector(L.X + 80, L.Y + Side * 260, FMath::Max(LavaZ + 60, L.Z - 220));
+    UnderOn = FMath::FInterpTo(UnderOn, OverLava(Want) ? 1.f : 0.f, Dt, 4.f);
     const FVector Now = PhlegLocal(UnderLight->GetComponentLocation());
     UnderLight->SetWorldLocation(PhlegWorld(FMath::VInterpTo(Now, Want, Dt, 1.5f)));
     const float Flicker = .85f + .1f * FMath::Sin(Clock * 7.3f) + .05f * FMath::Sin(Clock * 17.1f);
-    UnderLight->SetIntensity(55.f * Flicker * (L.Z > G + 500 ? .6f : 1.f));
+    UnderLight->SetIntensity(55.f * Flicker * (L.Z > G + 500 ? .6f : 1.f) * UnderOn);
     if (AheadLight)
     {
         const FVector Fwd = C->GetActorForwardVector();
-        AheadLight->SetWorldLocation(PhlegWorld(FVector(L.X, L.Y, LavaZ + 60) + Fwd * 700 + FVector(0, 0, 0)));
+        const FVector At = FVector(L.X, L.Y, LavaZ + 60) + Fwd * 700;
+        AheadOn = FMath::FInterpTo(AheadOn, OverLava(At) ? 1.f : 0.f, Dt, 4.f);
+        AheadLight->SetWorldLocation(PhlegWorld(At));
+        AheadLight->SetIntensity(40.f * AheadOn);
     }
     // The volcano's eruption: the sky flushes red, the light pulses.
     if (Sun)
@@ -1070,6 +1168,7 @@ void APhlegethosSetting::TickMotes(float Dt)
     const FVector Eye = Cam->GetCameraLocation();
     if (!InPhlegethos(Eye) && FVector::Dist(Eye, PhlegethosOrigin()) > 800000) { if (Motes->GetInstanceCount()) Motes->ClearInstances(); return; }
     TickSmoke(Dt, Eye);
+    TickLightning(Dt, Eye);
     Dt = FMath::Min(Dt, .05f);
     constexpr int32 Embers = 260, Ashes = 220;
     FRandomStream R(FMath::Rand());
@@ -1122,6 +1221,159 @@ void APhlegethosSetting::TickMotes(float Dt)
     for (int32 I = 0; I < Data.Num(); ++I) Motes->SetCustomDataValue(I, 0, Data[I], I == Data.Num() - 1);
 }
 
+namespace
+{
+    // A bolt's path from A to B by midpoint displacement: 2^Depth segments, jagged at every scale.
+    void BoltPath(FRandomStream& R, const FVector& A, const FVector& B, float Jag, int32 Depth, TArray<FVector>& Out)
+    {
+        Out = {A, B};
+        for (int32 D = 0; D < Depth; ++D, Jag *= .9f)
+        {
+            TArray<FVector> Nx; Nx.Reserve(Out.Num() * 2);
+            for (int32 I = 0; I + 1 < Out.Num(); ++I)
+            {
+                const FVector P = Out[I], Q = Out[I + 1], Dir = (Q - P).GetSafeNormal();
+                FVector Side = FVector::CrossProduct(Dir, FVector::UpVector); if (!Side.Normalize()) Side = FVector::RightVector;
+                const FVector Up2 = FVector::CrossProduct(Side, Dir);
+                const float L = FVector::Dist(P, Q);
+                Nx.Add(P); Nx.Add((P + Q) * .5f + (Side * R.FRandRange(-1, 1) + Up2 * R.FRandRange(-.6f, .6f)) * L * Jag);
+            }
+            Nx.Add(Out.Last()); Out = MoveTemp(Nx);
+        }
+    }
+    // A ribbon along a path, turned to face the eye: UV V across it, width tapering to the tip; vertex colour R its strength.
+    void BoltRibbon(FPhlegSurf& S, const TArray<FVector>& P, const FVector& Eye, float Width, float Taper, uint8 Strength)
+    {
+        S.Paint = FColor(Strength, 0, 0, 255);
+        const int32 Base = S.V.Num(), M = P.Num();
+        for (int32 I = 0; I < M; ++I)
+        {
+            const FVector T = (P[FMath::Min(I + 1, M - 1)] - P[FMath::Max(I - 1, 0)]).GetSafeNormal();
+            const FVector ToEye = (Eye - P[I]).GetSafeNormal();
+            FVector Side = FVector::CrossProduct(T, ToEye); if (!Side.Normalize()) Side = FVector::RightVector;
+            const float W = Width * .5f * FMath::Lerp(1.f, Taper, float(I) / (M - 1));
+            S.Vert(P[I] - Side * W, ToEye, FVector2D(I, 0)); S.Vert(P[I] + Side * W, ToEye, FVector2D(I, 1));
+        }
+        for (int32 I = 0; I + 1 < M; ++I)
+        {
+            const int32 A = Base + I * 2;
+            S.T.Append({A, A + 1, A + 3}); S.T.Append({A, A + 3, A + 2});   // (M_PhlegBolt is two-sided)
+        }
+    }
+}
+
+void APhlegethosSetting::Strike(bool bPlume, float YawSpread)
+{
+    APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0);
+    if (!Cam || Bolts.IsEmpty()) return;
+    FRandomStream R(FMath::Rand());
+    const FVector Eye = PhlegLocal(Cam->GetCameraLocation());
+    FVector A, B; float Jag = .3f;
+    if (bPlume)
+    {
+        // In the volcano's plume: the ash cloud over the crater crackling (a dirty thunderstorm).
+        const FVector Crater(VolcanoAt.X, VolcanoAt.Y, VolcanoTop + 1500);
+        A = Crater + FVector(R.FRandRange(-50000, 50000), R.FRandRange(-50000, 50000), R.FRandRange(60000, 200000));
+        B = R.FRand() < .5f ? Crater + FVector(R.FRandRange(-25000, 25000), R.FRandRange(-25000, 25000), R.FRandRange(-4000, 15000))
+                            : A + FVector(R.FRandRange(-90000, 90000), R.FRandRange(-90000, 90000), R.FRandRange(-90000, 0));
+        Jag = .34f;
+    }
+    else
+    {
+        // Out across the smoke sky, ahead of the eye or to the sides: down to the land, or cloud to cloud.
+        const float Yaw = FMath::DegreesToRadians(Cam->GetCameraRotation().Yaw + R.FRandRange(-YawSpread, YawSpread));
+        // (Low under the smoke and within about 12 km: higher and further, they were off the top of his view and a pixel wide.)
+        const float D = R.FRandRange(450000, 1200000);
+        const FVector2D At = FVector2D(Eye.X, Eye.Y) + FVector2D(FMath::Cos(Yaw), FMath::Sin(Yaw)) * D;
+        A = FVector(At.X, At.Y, R.FRandRange(150000, 280000));
+        if (R.FRand() < .6f) B = FVector(At.X + R.FRandRange(-50000, 50000), At.Y + R.FRandRange(-50000, 50000), R.FRandRange(0, 20000));
+        else B = A + FVector(R.FRandRange(-150000, 150000), R.FRandRange(-150000, 150000), R.FRandRange(-50000, 10000));    }
+    const float Dist = FVector::Dist(Eye, (A + B) * .5f);
+    // (Wide and soft: about 12 px across with a white core of 3 or 4 - a real width of a few metres was smeared to
+    // nothing by the temporal AA at any distance.)
+    const float Width = FMath::Clamp(Dist * .016f, 1500.f, 25000.f);
+    FPhlegSurf S;
+    TArray<FVector> Trunk; BoltPath(R, A, B, Jag, 7, Trunk);
+    BoltRibbon(S, Trunk, Eye, Width, .45f, 255);
+    // Branches forking off the trunk, shorter and dimmer, heading on the trunk's way.
+    const int32 Forks = R.RandRange(3, 6);
+    for (int32 K = 0; K < Forks; ++K)
+    {
+        const int32 From = R.RandRange(Trunk.Num() / 8, Trunk.Num() * 3 / 4);
+        const FVector Dir = (B - A).GetSafeNormal();
+        FVector Off = FVector::CrossProduct(Dir, FVector(R.FRandRange(-1, 1), R.FRandRange(-1, 1), R.FRandRange(-1, 1))).GetSafeNormal();
+        const float L = FVector::Dist(A, B) * R.FRandRange(.12f, .32f);
+        TArray<FVector> Fork; BoltPath(R, Trunk[From], Trunk[From] + (Dir * .7f + Off * .8f).GetSafeNormal() * L, .32f, 5, Fork);
+        BoltRibbon(S, Fork, Eye, Width * .55f, .1f, 110);
+    }
+    const int32 I = NextBolt++ % Bolts.Num();
+    UProceduralMeshComponent* Mesh = Bolts[I];
+    Mesh->CreateMeshSection(0, S.V, S.T, S.N, S.UV, S.C, S.Tan, false);
+    Mesh->SetVisibility(true);
+    FFlash F; F.Bolt = I;
+    F.Dir = ((A + B) * .5f - Eye).GetSafeNormal();
+    F.Power = FMath::Clamp(1.4f - Dist / 1400000.f, .35f, 1.2f);
+    // Return strokes: two to four flickers in the first third of a second.
+    const int32 Pulses = R.RandRange(2, 4);
+    for (int32 K = 0; K < 4; ++K) { F.Pulse[K] = K == 0 ? 0.f : F.Pulse[K - 1] + R.FRandRange(.06f, .14f); F.Gain[K] = K < Pulses ? (K == 0 ? 1.f : R.FRandRange(.35f, .95f)) : 0.f; }
+    F.Life = F.Pulse[Pulses - 1] + .35f;
+    // The thunder after it (sped up: the real delay from 10 km is half a minute), deeper the nearer.
+    F.Thunder = FMath::Clamp(Dist / 100000.f * .3f, .5f, 4.f);
+    F.Sound = Dist < 700000.f ? Thunder2 : (R.FRand() < .5f ? Thunder0 : Thunder1);
+    F.Volume = FMath::Clamp(1.1f - Dist / 1600000.f, .3f, .9f);
+    Flashes.Add(F);
+    ++Strikes;
+    FVector2D Screen(-1, -1);
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0)) PC->ProjectWorldLocationToScreen(PhlegWorld((A + B) * .5f), Screen);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_STRIKE n=%d plume=%d dist_m=%.0f pulses=%d screen=%.0f,%.0f width_m=%.0f"), Strikes, bPlume ? 1 : 0, Dist / 100.f, Pulses, Screen.X, Screen.Y, Width / 100.f);
+}
+
+void APhlegethosSetting::TickLightning(float Dt, const FVector& Eye)
+{
+    const FVector LEye = PhlegLocal(Eye);
+    // Now and then, more often on the ascent and while the volcano erupts.
+    const bool bErupt = Clock < EruptUntil;
+    if (Clock >= NextStrike)
+    {
+        if (NextStrike > 0.f) Strike(FMath::FRand() < (bErupt ? .75f : .35f));
+        const bool bHigh = LEye.X > AscentX - 300;
+        NextStrike = Clock + (bErupt ? FMath::FRandRange(1.2f, 3.5f) : bHigh ? FMath::FRandRange(3.5f, 8.f) : FMath::FRandRange(6.f, 13.f));
+    }
+    float Sky = 0.f; FVector SkyDir = FVector::ForwardVector;
+    for (int32 K = Flashes.Num() - 1; K >= 0; --K)
+    {
+        FFlash& F = Flashes[K];
+        F.Age += Dt;
+        if (!F.bHeard && F.Age >= F.Thunder)
+        {
+            F.bHeard = true;
+            if (Sounds.IsValidIndex(F.Sound) && Sounds[F.Sound]) UGameplayStatics::PlaySound2D(this, Sounds[F.Sound], F.Volume, FMath::FRandRange(.68f, .8f));
+        }
+        float Env = 0.f;
+        for (int32 P = 0; P < 4; ++P) if (F.Age >= F.Pulse[P]) Env = FMath::Max(Env, F.Gain[P] * FMath::Exp(-(F.Age - F.Pulse[P]) / .05f));
+        // (a faint afterglow so it never pops off)
+        Env = FMath::Max(Env, .12f * FMath::Clamp(1.f - F.Age / F.Life, 0.f, 1.f));
+        const bool bLit = F.Age < F.Life;
+        if (Bolts.IsValidIndex(F.Bolt))
+        {
+            BoltMids[F.Bolt]->SetScalarParameterValue(TEXT("Intensity"), bLit ? Env * 70.f : 0.f);
+            if (!bLit) Bolts[F.Bolt]->SetVisibility(false);
+        }
+        if (bLit && Env * F.Power > Sky) { Sky = Env * F.Power; SkyDir = F.Dir; }
+        if (!bLit && F.bHeard) Flashes.RemoveAtSwap(K);
+    }
+    if (SkyMid)
+    {
+        SkyMid->SetScalarParameterValue(TEXT("Flash"), Sky);
+        SkyMid->SetVectorParameterValue(TEXT("FlashDir"), FLinearColor(SkyDir.X, SkyDir.Y, SkyDir.Z, 0.f));
+    }
+    if (FlashLight)
+    {
+        FlashLight->SetIntensity(Sky * 1.4f);
+        if (Sky > 0.f) FlashLight->SetWorldRotation(FRotator(-FMath::Clamp(FMath::RadiansToDegrees(FMath::Asin(SkyDir.Z)) + 10.f, 18.f, 60.f), (-SkyDir).Rotation().Yaw, 0.f));
+    }
+}
+
 void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
 {
     if (!Smoke) return;
@@ -1143,13 +1395,15 @@ void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
     }
     // The volcano's plume: great billows from the crater, more while it erupts.
     const FVector Crater(VolcanoAt.X, VolcanoAt.Y, VolcanoTop + 1500);
-    PlumeCarry += Dt * (Clock < EruptUntil ? 3.f : .9f);
+    PlumeCarry += Dt * (Clock < EruptUntil ? 7.f : 3.f);
     while (PlumeCarry >= 1.f)
     {
         PlumeCarry -= 1.f;
-        FPuff Pf; Pf.P = Crater + FVector(R.FRandRange(-6000, 6000), R.FRandRange(-6000, 6000), 0);
-        Pf.V = FVector(R.FRandRange(-200, 400), R.FRandRange(-300, 300), R.FRandRange(900, 1500) * (Clock < EruptUntil ? 1.8f : 1.f));
-        Pf.Life = R.FRandRange(30, 45); Pf.Size0 = R.FRandRange(12000, 20000); Pf.Size1 = R.FRandRange(60000, 110000); Pf.Frame = R.FRandRange(0, 64); Pf.Heat = 1.f; Pf.Spin = R.FRandRange(0, 6.28f);
+        // (a column a few hundred metres across rising a kilometre and more, leaning off downwind, as the goal art's; many
+        // smaller puffs, as a few huge ones read as one dark ball over the crater)
+        FPuff Pf; Pf.P = Crater + FVector(R.FRandRange(-10000, 10000), R.FRandRange(-10000, 10000), 0);
+        Pf.V = FVector(R.FRandRange(300, 1400), R.FRandRange(-400, 400), R.FRandRange(2600, 4200) * (Clock < EruptUntil ? 1.6f : 1.f));
+        Pf.Life = R.FRandRange(30, 45); Pf.Size0 = R.FRandRange(14000, 26000); Pf.Size1 = R.FRandRange(70000, 130000); Pf.Frame = R.FRandRange(0, 64); Pf.Heat = 1.f; Pf.Spin = R.FRandRange(0, 6.28f);
         Puffs.Add(Pf);
     }
     TArray<FTransform> Xf; Xf.Reserve(Puffs.Num());
@@ -1158,9 +1412,13 @@ void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
     {
         FPuff& Pf = Puffs[I];
         Pf.Age += Dt;
-        if (Pf.Age > Pf.Life || Puffs.Num() > 400) { Puffs.RemoveAtSwap(I); continue; }
+        if (Pf.Age > Pf.Life || Puffs.Num() > 600) { Puffs.RemoveAtSwap(I); continue; }
         const float A = Pf.Age / Pf.Life;
-        Pf.V *= FMath::Exp(-.12f * Dt); Pf.P += Pf.V * Dt; Pf.Frame += Pf.Rate * Dt;
+        // (The plume's puffs keep rising, buoyant, and drift downwind: slowed like the steam, they climbed 280 m while growing
+        // to a kilometre and piled into a dark ball over the crater.)
+        if (Pf.Size0 > 5000) { Pf.V.X = FMath::FInterpTo(Pf.V.X, 1800.f, Dt, .15f); Pf.V.Z *= FMath::Exp(-.02f * Dt); }
+        else Pf.V *= FMath::Exp(-.12f * Dt);
+        Pf.P += Pf.V * Dt; Pf.Frame += Pf.Rate * Dt;
         const FVector W = PhlegWorld(Pf.P);
         FVector Z = Eye - W; if (!Z.Normalize()) Z = FVector::UpVector;
         const FVector X0 = FVector::CrossProduct(FMath::Abs(Z.Z) > .98f ? FVector::ForwardVector : FVector::UpVector, Z).GetSafeNormal();

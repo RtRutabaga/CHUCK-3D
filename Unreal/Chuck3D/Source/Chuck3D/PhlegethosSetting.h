@@ -8,6 +8,7 @@ class UInstancedStaticMeshComponent;
 class UPointLightComponent;
 class UDirectionalLightComponent;
 class UMaterialInterface;
+class UMaterialInstanceDynamic;
 class USoundBase;
 class UAudioComponent;
 class AChuckCharacter;
@@ -62,8 +63,12 @@ namespace Phleg
     constexpr float ChimneyX0 = 23900, ChimneyX1 = 24060, ChimneyHalf = 50, ChimneyBase = RampTop, MesaTop = RampTop + 400, MesaX1 = 25180;
     constexpr float FortressTop = MesaTop;   // the approach plateau, across the last 2.7 m gap
     // The volcano (the land beyond, PhlegethosSetting.cpp; the fall cutscene looks at it).
-    inline const FVector2D VolcanoAt(310000, -160000);
-    constexpr float VolcanoTop = 220000;
+    // (2026-11-15: 12 km off and 1.5 km high, about 7 degrees above his horizon as in the goal art; at 3.5 km and 2.2 km it
+    // and the ranges walled in the sky from his eye.)
+    inline const FVector2D VolcanoAt(1060000, -550000);
+    constexpr float VolcanoTop = 150000;
+    constexpr float VolcanoBase = 420000;   // its foot's radius
+    constexpr float CraterR = 30000;
 }
 
 enum class EPhlegSpawn : uint8 { Arrival, Road, Lake, Gorge, Ascent, Fortress };
@@ -109,6 +114,9 @@ public:
     void ResetHazards();
     /** The volcano's eruption (the ascent, and the cutscene's crane up). */
     void Erupt(float Strength);
+    /** Hell lightning: a bolt now, across the smoke sky or (bPlume) in the volcano's plume, its flash and its thunder. */
+    void Strike(bool bPlume, float YawSpread = 65.f);
+    int32 GetStrikes() const { return Strikes; }
     int32 GetMissingMaterials() const { return Missing; }
     int32 GetTriangles() const { return Triangles; }
     int32 GetSunk() const { return SunkCount; }
@@ -161,6 +169,17 @@ private:
     float VentCarry = 0, PlumeCarry = 0;
     void TickSmoke(float Dt, const FVector& Eye);
     TArray<FMote> MoteList;
+    // Hell lightning (2026-11-15): a few bolt meshes rebuilt each strike facing the eye, the sky's clouds lit round them,
+    // a flash light across the land, the thunder after it.
+    struct FFlash { int32 Bolt = 0; float Age = 0, Life = .7f, Power = 1, Thunder = 0; FVector Dir = FVector::ForwardVector; int32 Sound = 0; float Volume = .5f; bool bHeard = false; float Pulse[4] = {0, .1f, .22f, .36f}; float Gain[4] = {1, .55f, .85f, .3f}; };
+    TArray<FFlash> Flashes;
+    UPROPERTY() TArray<UProceduralMeshComponent*> Bolts;
+    UPROPERTY() TArray<UMaterialInstanceDynamic*> BoltMids;
+    UPROPERTY() UMaterialInstanceDynamic* SkyMid = nullptr;
+    UPROPERTY() UDirectionalLightComponent* FlashLight = nullptr;
+    float NextStrike = 4.f, UnderOn = 1.f, AheadOn = 1.f;
+    int32 Strikes = 0, NextBolt = 0;
+    void TickLightning(float Dt, const FVector& Eye);
     int32 SunkCount = 0, CrumbledCount = 0, GeyserHits = 0, BombHits = 0, BombsFired = 0;
     bool bWasAstral = false;
 };

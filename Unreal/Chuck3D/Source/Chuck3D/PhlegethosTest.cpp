@@ -67,7 +67,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckPhlegethosTest="), Only);
     struct FRun
     {
-        int32 Trial = 0, Sub = 0, Hop = 0, Failures = 0, Deaths0 = 0, Shots = 0, Chains0 = 0, SideRuns0 = 0, Passed = 0;
+        int32 Trial = 0, Sub = 0, Hop = 0, Failures = 0, Deaths0 = 0, Shots = 0, Chains0 = 0, SideRuns0 = 0, Passed = 0, Struck = -1;
         double At = 0, Start = 0, TrialStart = 0, Next = 0;
         TArray<FString> Results; FTimerHandle Timer; bool bDone = false, bPlaced = false; FString Note;
     };
@@ -128,6 +128,8 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const FVector S = PhlegLocal(PhlegethosSpawn(EPhlegSpawn(K)));
                 Place(S.X, S.Y, S.Z - Stand, 0); Chuck->SetOrbitPitch(-8); Run->Sub = 1;
             }
+            // (Lightning ahead for the rat-height shot of every other stretch, so the stills show it.)
+            else if (Run->Sub == 1 && T > 2.43f && Run->Struck != K && K % 2 == 0) { if (auto* S = APhlegethosSetting::Get(Chuck->GetWorld())) S->Strike(K == 4, 14.f); Run->Struck = K; }
             else if (Run->Sub == 1 && T > 2.5f) { Shot(FString::Printf(TEXT("%d_%s_Rat"), K, PhlegethosStretchName(K))); Chuck->SetOrbitPitch(-40); Run->Sub = 2; Run->At = Now; }
             else if (Run->Sub == 2 && T > 1.5f) { Shot(FString::Printf(TEXT("%d_%s_High"), K, PhlegethosStretchName(K))); ++Run->Hop; Run->Sub = -1; }
             break;
