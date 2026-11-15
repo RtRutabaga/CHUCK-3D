@@ -2,6 +2,40 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 14 — Phlegethos and the fall into it (Claude)
+
+- **Asked:** build the fall to Phlegethos (the fall-to-Chult score, "a bit more of the song creating a slightly longer cut scene") and Phlegethos itself, which should "look really cool" with challenges that "draw on Chuck's parkour in ways that are fun to play"; not the trio vs the Pit Fiend yet; download free resources. Tracks supplied: `Phlegethos.wav` and `Phlegethos_2.wav` (for the intense part). Later, three goal-art images for the look.
+- **Source:** `main` at 816d13d1 (with a4a8d2f5); commits 0f8f19fd, 9a8700b5 and this one.
+- **Changed:**
+  - New `PhlegethosSetting.h/.cpp`: the stage, its hazards, light, embers and smoke.
+  - New `PhlegethosFall.h/.cpp`: the cutscene.
+  - New `PhlegethosTest.cpp`: 13 trials, plus `-ChuckHellFallTest`.
+  - New `Tools/Fetch-Phlegethos.ps1` and `Tools/create_phlegethos_assets.py`: CC0 textures, the two scores and six materials under `/Game/Art/Phlegethos`. The goal art is in `References/Phlegethos/`.
+  - `ChuckCharacter`: `BeginHellFall` and `EndHellFall`. Lava is an Astral death, with respawn at the stretch start.
+  - `ShipEndingScene.cpp`: its end leads into the fall instead of the end card.
+  - `DockMenu.cpp`: six checkpoints.
+  - `DockGameMode.cpp`: the two scores, crossfading. The duck test now expects 15 tracks.
+  - `ShipEnding.cpp/.h`: up to 1.5 s in the air keeps his deck situation. A sea knock had restarted the 30 s count to the captain's clear order (a package run failed `orders`).
+  - `Verify-Package.ps1` and `Verify-Menu.ps1`: the new steps and points.
+- **Tested:**
+  - Editor: Phlegethos 13/13, fall cutscene (ends at 62.56 s, handoff=1), ship ending 10/10 after the guidance fix.
+  - Candidate `Builds/PhlegethosCandidate`: `CHUCK_PACKAGE_VERIFIED passes=182` and `CHUCK_CANDIDATE_VERIFIED`. Phlegethos 13/13, hell fall, ship ending, every audit within its limit.
+  - Three earlier candidates failed before the fixes: `lake_hops` (the tall column), the ship's `orders`, and the duck test's track count.
+  - Evidence: `Local/verify-package-20261114-215201.log`, `Local/verify-phlegethos-20261114-230114.log`, `Local/verify-hell-fall-20261114-225948.log`, `Local/verify-ship-ending-20261114-225645.log`, `Local/phleg-package4.log`, `Screenshots/.../HellFall/`.
+- **Not tested:**
+  - Anything by hand.
+  - Verify-Menu for the six new points (Verify-Package's menu test counts them).
+  - The sea-knock fix in the exact failing case (the knock didn't recur in the editor run).
+- **Remaining flaws:**
+  - No creatures; no audit baselines for Phlegethos.
+  - Cliffs and fortress walls are mostly flat-faced blocks; no stepped stone path from the second goal image; the idols are blocky.
+  - The geysers hit hard.
+  - The receipt names 9a8700b, but the package was built with the uncommitted guidance and duck-test fixes now in this commit.
+- **Contract compatibility:** no rig, scale or character asset changes. New assets only, under `/Game/Art/Phlegethos` and `/Game/Art/Audio/SW_Phlegethos*`.
+- **Launcher:** promoted as Phlegethos (the previous package kept as `Windows-Previous-20261114-Phlegethos`, older pruned to two).
+
+Next part of the work can be done by Claude only (Phlegethos creatures and the trio vs the Pit Fiend are Claude's); the setting's art polish could be done by either — preference: Claude, while the stage code is fresh.
+
 ## November 14 — the playtester's ship faults fixed (Claude)
 
 - **Asked:** "Yes, fix them": the two ship faults the robot playtester found (the crawlway mouth, the hull under the gunport).

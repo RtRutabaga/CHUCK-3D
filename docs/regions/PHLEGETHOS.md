@@ -84,10 +84,21 @@ A volumetric ash deck was tried and removed: its layer sat under him (placed by 
 
 Everything that sinks or crumbles comes back after a death, and when he is 15 m away.
 
+### Look pass toward the user's goal art (2026-11-14)
+
+The user's three goal images are in `References/Phlegethos/` (a smoky sky lit red from below, charcoal basalt plates with glowing cracks, jagged rock, ruined arches and pillars with rusted chains, lava rivers and falls, steam, an erupting volcano with a plume). Matched so far:
+
+- A sky dome (`M_PhlegSky`): billowing smoke, black overhead, red at the horizon, orange toward the volcano. Thinner, darker fog; a dim sun so the light comes from the lava.
+- The walkable basalt broken into plates with lava glowing in the cracks (Voronoi edges in `M_PhlegBasalt`, on the flat tops only). The crease glow reads the scan's AO, not its colour.
+- Jagged rock everywhere, crags along the gorge's top, 34 spires on the skyline, a ridged volcano with a smoke plume that thickens when it erupts, steam off the lava beside the route.
+- A ruined gate where the road leaves the plain (broken arch, hanging chains, a drape), a fallen carved block, four toppled pillars in the lava, one still chained.
+
+The lake's tall column is eased: a wider, non-sinking run-up column before it and a 100 cm rise (it failed 2 of 9 runs, once packaged, at 110 cm).
+
 ### Known gaps
 
 - No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
-- The cliffs, slabs and fortress are plain boxes in the CC0 basalt; the idols are blocky; the far ranges are low-poly at a distance. The volcano is a smooth cone and its eruption is only light and sound (no plume).
+- Toward the goal art: the cliffs and fortress walls are still mostly flat-faced blocks topped with rock; no stepped stone path with carved blocks (the second image); the idols are blocky.
 - The geysers hit hard: running straight through without timing them cost 3 Sanity in the tests.
 - Not played by hand.

@@ -544,6 +544,9 @@ void AShipEnding::TickGuidance(float Dt, const AChuckCharacter* Chuck)
         break;
     default: break;
     }
+    // A moment in the air (a sea knocking him off his feet, a hop) keeps his situation: the clear line's count goes on.
+    GuideAirTime = Where == EWhere::Air ? GuideAirTime + Dt : 0.f;
+    if (Sit < 0 && Where == EWhere::Air && GuideAirTime < 1.5f && Situation >= 0) return;
     if (Sit != Situation) { Situation = Sit; SituationTime = 0.f; GuideSaid = 0; NextGuideIn = Sit >= 0 ? Guides[Sit].First : -1.f; }
     if (Sit < 0) return;
     // (The time there counts once the scripted lines have been said; the clear line only after the jargon has been heard.)
