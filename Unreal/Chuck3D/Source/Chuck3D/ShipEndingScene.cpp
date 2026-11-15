@@ -488,8 +488,8 @@ void AShipForeTopsailScene::Finish()
     if (Comber) Comber->ClearAllMeshSections();
     if (AChuckCharacter* C = Chuck.Get())
     {
-        if (auto* PC = Cast<APlayerController>(C->GetController())) PC->SetViewTarget(C);
-        C->EndDemo();
+        // (2026-11-14) On into the fall through the burning rupture to Phlegethos (PhlegethosFall.h), no longer the end card.
+        C->BeginHellFall();
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SHIP_SCENE_END clock=%.2f skipped=%d thrown=%d plunged=%d miss_cm=%.0f leaps=%d"), Clock, bSkipping, bThrown, bPlunged, PlungeMiss, YardLeaps);
 }

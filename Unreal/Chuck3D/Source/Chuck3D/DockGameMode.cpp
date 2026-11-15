@@ -1,4 +1,5 @@
 #include "DockGameMode.h"
+#include "PhlegethosSetting.h"
 #include "ShipSetting.h"
 #include "ShipEscape.h"
 #include "TempleSkeleton.h"
@@ -160,7 +161,13 @@ void ADockGameMode::StartPlay()
     auto* IntenseScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_ShipStormIntense.SW_ShipStormIntense"));
     auto* IntenseComponent=IntenseScore ? UGameplayStatics::CreateSound2D(World,IntenseScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
     StormTracks={StormComponent,IntenseComponent};
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent,StormComponent,IntenseComponent};
+    // Phlegethos (2026-11-14; docs/regions/PHLEGETHOS.md): the user's Phlegethos track, looping, and their Phlegethos_2 "for
+    // when things get more intense" from the ascent's foot on (PhlegethosIntense), crossfading, each keeping its place.
+    auto* PhlegScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Phlegethos.SW_Phlegethos"));
+    auto* PhlegComponent=PhlegScore ? UGameplayStatics::CreateSound2D(World,PhlegScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    auto* Phleg2Score=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_Phlegethos2.SW_Phlegethos2"));
+    auto* Phleg2Component=Phleg2Score ? UGameplayStatics::CreateSound2D(World,Phleg2Score,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent,StormComponent,IntenseComponent,PhlegComponent,Phleg2Component};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -182,12 +189,45 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; bool OnDeck=false, DeckPending=false; double PendingSince=0, StormStart=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),StormMusic=TWeakObjectPtr<UAudioComponent>(StormComponent),IntenseMusic=TWeakObjectPtr<UAudioComponent>(IntenseComponent),IntenseScore,ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),StormMusic=TWeakObjectPtr<UAudioComponent>(StormComponent),IntenseMusic=TWeakObjectPtr<UAudioComponent>(IntenseComponent),Phleg=TWeakObjectPtr<UAudioComponent>(PhlegComponent),Phleg2=TWeakObjectPtr<UAudioComponent>(Phleg2Component),PhlegScore,Phleg2Score,IntenseScore,ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         // Held silent (the Fireball, 2026-10-26): when it lifts, whatever plays where he is comes back in.
         if(Self.IsValid() && World->GetTimeSeconds()<Self->MusicHoldUntil){Region->Mode=-1;return;}
+        // In Phlegethos: its track (40), the intense one from the ascent on (41).
+        if(Chuck && InPhlegethos(Chuck->GetActorLocation()))
+        {
+            const int32 Want=PhlegethosIntense(Chuck->GetActorLocation(),Region->Mode==41)?41:40;
+            if(Region->Mode==Want) return;
+            const bool First=Region->Mode!=40 && Region->Mode!=41;
+            if(First)
+                for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss,Ship,Concertina,StormMusic,IntenseMusic})
+                    if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
+            const TWeakObjectPtr<UAudioComponent> In=Want==41?Phleg2:Phleg,Out=Want==41?Phleg:Phleg2;
+            USoundWave* Score=Want==41?Phleg2Score:PhlegScore;
+            // (Each keeps its place while the other plays: the one going out only fades down.)
+            if(Out.IsValid() && Out->IsPlaying()) Out->AdjustVolume(2.5f,0.f);
+            if(In.IsValid())
+            {
+                if(In->IsPlaying()) In->AdjustVolume(Want==41?2.f:3.f,Want==41?.55f:.45f);
+                else
+                {
+                    const bool Test=FParse::Param(FCommandLine::Get(),TEXT("ChuckPhlegethosMusicTest"));
+                    In->FadeIn(First?3.f:2.f,Want==41?.55f:.45f,Test && Score?FMath::Max(0.f,Score->Duration-2.f):0.f);
+                    FTimerHandle Check;
+                    World->GetTimerManager().SetTimer(Check,[In,Score,Region,Want](){
+                        if(Region->Mode!=Want) return;
+                        const bool Loop=Score && Score->bLooping,Playing=In.IsValid() && In->IsPlaying();
+                        UE_LOG(LogTemp,Display,TEXT("CHUCK_PHLEGETHOS_MUSIC_CHECK failures=%d looping=%d playing_after_boundary=%d"),!(Loop&&Playing),Loop,Playing);
+                    },6.f,false);
+                }
+            }
+            Region->Mode=Want; Region->Underground=false;
+            if(Self.IsValid()) Self->MusicRegion=Want;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION phlegethos=1 intense=%d"),Want==41);
+            return;
+        }
         // Aboard the ship (2026-11-01; docs/regions/SHIP.md): every other score fades out and the user's ship track
         // (2026-11-02) comes in, looping, under the sea and the timbers (ShipSetting.cpp). The escape's arrival brings it
         // in as he crawls through the masonry, as the 2D escape starts the ship's music. On the weather deck (and the

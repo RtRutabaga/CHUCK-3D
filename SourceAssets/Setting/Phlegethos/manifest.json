@@ -1,0 +1,139 @@
+{
+  "providers": [
+    "Poly Haven (https://polyhaven.com/license)",
+    "ambientCG (https://docs.ambientcg.com/license/)"
+  ],
+  "license": "CC0-1.0",
+  "resolution": 2048,
+  "assets": [
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock",
+      "role": "Diffuse",
+      "file": "dark_rock_diff_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock/dark_rock_diff_2k.jpg",
+      "md5": "980167324d1d407197227619a80cfb71",
+      "bytes": 2159653,
+      "license": "CC0-1.0",
+      "sha256": "0F01BFEC36EC4546E23576A10C52EF073F9EB815826C5FCE2A1CDB08CD8188B8"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock",
+      "role": "nor_dx",
+      "file": "dark_rock_nor_dx_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock/dark_rock_nor_dx_2k.jpg",
+      "md5": "87c6f48852e3bdfbf1a25768b331e995",
+      "bytes": 3814603,
+      "license": "CC0-1.0",
+      "sha256": "92EF7ECE84B72DEC3C2A576340711A9528C98186CDC99F6C2C4DF24B06DF6080"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock",
+      "role": "arm",
+      "file": "dark_rock_arm_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock/dark_rock_arm_2k.jpg",
+      "md5": "43de6d1bf42e0fabd6aa69fa75d4976c",
+      "bytes": 2750758,
+      "license": "CC0-1.0",
+      "sha256": "D3A26098EA5329F78A42E223E57C10F00AF2A72854982197CC37CC151AA2FD5F"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock_02",
+      "role": "Diffuse",
+      "file": "dark_rock_02_diff_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock_02/dark_rock_02_diff_2k.jpg",
+      "md5": "492ae574844fa49cba63aee89ef226d1",
+      "bytes": 2441558,
+      "license": "CC0-1.0",
+      "sha256": "DA78FB6DD90414ADA98F6E1627ACA6BC1ACB480C8BCE7AABFBDE8E3BEB666A71"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock_02",
+      "role": "nor_dx",
+      "file": "dark_rock_02_nor_dx_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock_02/dark_rock_02_nor_dx_2k.jpg",
+      "md5": "f3602096dcaa42da594b307072501e86",
+      "bytes": 3861608,
+      "license": "CC0-1.0",
+      "sha256": "2F2F9C4D27ACE1AE6810DFEDBCCFD1B22C5989C57E6CDD05A2638993BC50A07D"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "dark_rock_02",
+      "role": "arm",
+      "file": "dark_rock_02_arm_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/dark_rock_02/dark_rock_02_arm_2k.jpg",
+      "md5": "97fb8a2c3fcef2e1679c709c386311ca",
+      "bytes": 2575178,
+      "license": "CC0-1.0",
+      "sha256": "E34AA572F0C578EADBF9D812AD514A22775880C7B19A6B98E979D99474FCCBB5"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "volcanic_rock_tiles",
+      "role": "Diffuse",
+      "file": "volcanic_rock_tiles_diff_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/volcanic_rock_tiles/volcanic_rock_tiles_diff_2k.jpg",
+      "md5": "6ff2a89f363b6e8b42a984dc01a04244",
+      "bytes": 3088952,
+      "license": "CC0-1.0",
+      "sha256": "947AE421C776517C7356565F2DE05B6FE6F662BD5E2A331388B11E6943B97FB4"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "volcanic_rock_tiles",
+      "role": "nor_dx",
+      "file": "volcanic_rock_tiles_nor_dx_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/volcanic_rock_tiles/volcanic_rock_tiles_nor_dx_2k.jpg",
+      "md5": "13d28e5f4658d4ff1edad56619b32bfc",
+      "bytes": 4348376,
+      "license": "CC0-1.0",
+      "sha256": "FAA63FED207F2E80ED7814920FDCB51B1E195801EB7BB40A1B410EA07954C43E"
+    },
+    {
+      "provider": "Poly Haven",
+      "asset": "volcanic_rock_tiles",
+      "role": "arm",
+      "file": "volcanic_rock_tiles_arm_2k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/volcanic_rock_tiles/volcanic_rock_tiles_arm_2k.jpg",
+      "md5": "cc17cf67b7019dfe14b3db737f1760ee",
+      "bytes": 2669395,
+      "license": "CC0-1.0",
+      "sha256": "7AC68087BBF4E471ACA55E351DFADCC1F0DFEF6CDE6274437AF9C0A3C229EF05"
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava004",
+      "role": "Diffuse",
+      "file": "Lava004_2K-JPG_Color.jpg",
+      "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "39B733F424C99DC9277D78B827C0FD3326E049531072E5B2C0CF53F2B44D5949",
+      "bytes": 5974128
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava004",
+      "role": "nor_dx",
+      "file": "Lava004_2K-JPG_NormalDX.jpg",
+      "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "B363BC7DB5AF15F85AEB0C5DF51B0672A43DDD01B5A126A8948A9AD3242D6DB2",
+      "bytes": 7984162
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava004",
+      "role": "rough",
+      "file": "Lava004_2K-JPG_Roughness.jpg",
+      "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "DB4682A24AE6857163EB970B58687E9EB757BE10FE73FC55B129BE1A5F6F8F48",
+      "bytes": 2104710
+    }
+  ]
+}

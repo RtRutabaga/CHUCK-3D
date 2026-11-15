@@ -35,6 +35,9 @@ public:
     void EndFallCutscene();
     /** The game so far ends here: the end card (the ship's ending, 2026-11-08, until the fall into Phlegethos exists). */
     void EndDemo();
+    /** Out of the burning rupture under the ship's bow (2026-11-14): the fall into Phlegethos (PhlegethosFall.h), and its end. */
+    void BeginHellFall();
+    void EndHellFall();
     /** Take hold of swing grip Index now (GetChuckSwingGrips; the ship's ending cutscene puts him on the fore topsail yard). */
     void CatchSwingGrip(int32 Index);
     /** The ship's storm ending (2026-11-09): the cutscene holds him (no gait, physics or collision) and places him each
@@ -452,10 +455,12 @@ protected:
     virtual void BeginPlay() override;
 private:
     friend class AFallCutscene;
+    friend class APhlegethosFall;
     bool bDemoEnded = false;
     bool bCutscene = false;
     bool bSceneHold = false;
     TWeakObjectPtr<class AFallCutscene> FallScene;
+    TWeakObjectPtr<class APhlegethosFall> HellFallScene;
     void BeginFallCutscene();
     /** In the cutscene the pose is the clip it sets (Base/BaseTime), with no gait logic or foot IK. */
     void UpdateCutscenePose(float DeltaSeconds);

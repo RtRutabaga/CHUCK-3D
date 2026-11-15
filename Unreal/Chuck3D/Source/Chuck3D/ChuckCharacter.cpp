@@ -51,6 +51,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "UObject/ConstructorHelpers.h"
+#include "PhlegethosSetting.h"
+#include "PhlegethosFall.h"
 
 AChuckCharacter::AChuckCharacter()
 {
@@ -403,6 +405,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     // In Chult: around the brachiation trees, back on the ruin top that leads onto them (user 2026-10-14).
     // Fallen into the canyon's gorge: back on the bank by the bridge (2026-10-14).
     FVector Bridge;
+    // In Phlegethos (2026-11-14): the start of the stretch he was in.
+    if(PhlegethosRespawn(GetActorLocation(),Bridge)) return Bridge;
     // Aboard the ship (2026-11-01): the start of the space he was in.
     if(ShipRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
@@ -427,6 +431,7 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
     if (IsChultUpriverSpawn(Location, UpriverYaw)) return UpriverYaw;     // facing up the road
     if (IsChultTempleInteriorSpawn(Location, UpriverYaw)) return UpriverYaw;   // facing on into the temple
     if (IsShipSpawn(Location, UpriverYaw)) return UpriverYaw;                  // aboard, facing on into the space
+    if (IsPhlegethosSpawn(Location, UpriverYaw)) return UpriverYaw;            // in the Hells, facing on along the way
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
@@ -3823,6 +3828,43 @@ void AChuckCharacter::EndDemo()
     SetActorHiddenInGame(true);
     UE_LOG(LogTemp,Display,TEXT("CHUCK_DEMO_END source=ship"));
 }
+void AChuckCharacter::BeginHellFall()
+{
+    // Off the fore topsail yard into the burning rupture: out of his control from here to Phlegethos's plain.
+    bSceneHold=false; bDemoEnded=false; bCutscene=true;
+    auto* Movement=GetCharacterMovement();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    if(auto* PC=Cast<APlayerController>(Controller)) DisableInput(PC);
+    TalkingTo.Reset(); TalkLine=0;
+    LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
+    bSlideCamera=false; BodyPitch=0; WallSideTilt=0; bBodyQuatLive=bLegHeld=false; LadderIndex=-1;
+    Gait=EGait::Air; AstralPhase=EAstral::None;
+    NextExhaleAt=1e9f;
+    SetActorHiddenInGame(false);
+    GetMesh()->SetVisibility(true,true);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    SetClip(EClip::JumpLoop,0,.2f);
+    HellFallScene=APhlegethosFall::Start(this);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_HELL_FALL_BEGIN"));
+}
+void AChuckCharacter::EndHellFall()
+{
+    // Playable on the plain where he landed, his sanity and stamina as they were.
+    const int32 KeptSanity=Sanity;
+    const float KeptStamina=Stamina, KeptLock=StaminaLockUntil;
+    APhlegethosSetting* Stage=APhlegethosSetting::Enter(GetWorld(),true);
+    bCutscene=false; bDemoEnded=false;
+    SetActorEnableCollision(true);
+    ResetAtLocation(PhlegethosSpawn(EPhlegSpawn::Arrival));
+    Sanity=KeptSanity; Stamina=KeptStamina; StaminaLockUntil=KeptLock;
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    NextExhaleAt=GetWorld()->GetTimeSeconds()+8.f;
+    if(auto* PC=Cast<APlayerController>(Controller)) { EnableInput(PC); PC->SetViewTarget(this); }
+    HellFallScene.Reset();
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_PHLEGETHOS_HANDOFF playable=1 live=%d at=%s sanity=%d"),Stage && Stage->IsLive(),*GetActorLocation().ToString(),Sanity);
+}
 void AChuckCharacter::EndFallCutscene()
 {
     // The cinematic is finished before the preview helper hides its stage.
@@ -3878,6 +3920,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     if(bCutscene)
     {
         if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && FallScene.IsValid()) FallScene->Skip();
+        else if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && HellFallScene.IsValid()) HellFallScene->Skip();
         UpdateCutscenePose(DeltaSeconds);
         UpdateExhale(DeltaSeconds);
         return;
@@ -3960,4 +4003,6 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     else if (ShipSeaSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
     // Into the Astral rupture over the companion hatch in the ship's storm (2026-11-04): Astral, back on deck.
     else if (ShipRuptureSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
+    // Into Phlegethos's molten lake (2026-11-14): Astral, back at the start of the stretch.
+    else if (PhlegethosLavaSwallows(GetActorLocation() - FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight()))) FallToDeath();
 }

@@ -322,6 +322,22 @@ if($endingProcess.ExitCode -or !(Select-String -LiteralPath $endingLog -Pattern 
    !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_TEST failures=0 trials=orders=1 reef_starboard=1 reef_larboard=1 fore_carry=1 jump_no_leaf=1 leaf=1 leap_starboard=1 leap_port=1 fore_climb=1 scene=1' -Quiet)) {
     throw "Ship ending verification failed. Inspect $endingLog"
 }
+# Phlegethos (Claude, 2026-11-14; docs/regions/PHLEGETHOS.md): the fall from the burning rupture to the plain and its handoff;
+# then the real character through every challenge: the road's hops and sprint leap past the geysers, all 21 column hops, the
+# chained wall run between the slabs, the gorge's wall run and drop, the chains, the bomb ramp, the crumbling steps, the
+# chimney, the last leap and the shut gate.
+$hellLog=Join-Path $evidence ('verify-hell-fall-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$hellProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckHellFallTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$hellLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_END at=6[0-9]\.[0-9]+ skipped=0 landed=1 vanished=1 summoned=1 erupted=1 exhales=2' -Quiet) -or
+   !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_TEST failures=0 handoff=1' -Quiet)) {
+    throw "Fall to Phlegethos verification failed. Inspect $hellLog"
+}
+$phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$phlegProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($phlegProcess.ExitCode -or !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_BUILD pass=1 missing=0' -Quiet) -or
+   !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=13 ' -Quiet)) {
+    throw "Phlegethos verification failed. Inspect $phlegLog"
+}
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
 # logs solid and on the ground, no jar or urn inside the masonry; then the see-through undergrowth round Chuck.
 $propLog=Join-Path $evidence ('verify-chult-props-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')

@@ -267,7 +267,7 @@ void ReviewShipEnding(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 else if (Now - ShotFirst > (ShotName == TEXT("Grip") ? .6 : ShotName == TEXT("Below") ? .9 : 1.6)) { Run->ShotsSeen.Add(ShotName); Shot(TEXT("Scene_") + ShotName); }
             }
             if (FParse::Param(FCommandLine::Get(), TEXT("ChuckShipEndingSkip")) && S->GetClock() > 8.f && !S->IsFinished()) const_cast<AShipForeTopsailScene*>(S)->Skip();
-            if (S->IsFinished() && Chuck->HasDemoEnded())
+            if (S->IsFinished() && (Chuck->HasDemoEnded() || Chuck->IsInFallCutscene()))
             {
                 const bool bSkip = FParse::Param(FCommandLine::Get(), TEXT("ChuckShipEndingSkip"));
                 // (2026-11-09: the great sea knocks her over at least 20 degrees and he loses his grip: eleven shots.)

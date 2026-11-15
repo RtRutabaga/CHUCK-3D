@@ -35,6 +35,7 @@
 #include "ChuckSave.h"
 #include "ChuckShots.h"
 #include "ShipEscape.h"
+#include "PhlegethosSetting.h"
 #include "EngineUtils.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -66,6 +67,15 @@ namespace
         {TEXT("ShipStormIntense"),TEXT("Ship Storm Intense (dev)")},
         // The ending (2026-11-08, ShipEnding.h): the orders begun, the leap from the main top, the fore top.
         {TEXT("ShipReef"),TEXT("Ship Reef (dev)")},{TEXT("ShipLeap"),TEXT("Ship Foremast Leap (dev)")},{TEXT("ShipForeTop"),TEXT("Ship Fore Topmast (dev)")}};
+    // Phlegethos (2026-11-14; PhlegethosSetting.h), in a seventh column, in EPhlegSpawn's order: each stretch's start.
+    const FChultPoint PhlegPoints[]={{TEXT("PhlegArrival"),TEXT("Phlegethos Arrival")},{TEXT("PhlegRoad"),TEXT("Phlegethos Road")},{TEXT("PhlegLake"),TEXT("Phlegethos Lake")},
+        {TEXT("PhlegGorge"),TEXT("Phlegethos Gorge")},{TEXT("PhlegAscent"),TEXT("Phlegethos Ascent")},{TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")}};
+    bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
+    {
+        for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
+            if(Point==PhlegPoints[I].Point) {Location=PhlegethosSpawn(EPhlegSpawn(I));Yaw=PhlegethosSpawnYaw(EPhlegSpawn(I));return true;}
+        return false;
+    }
     bool ShipPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(ShipPoints);++I)
@@ -104,6 +114,14 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
     FVector ShipAt;float ShipYaw=0;
+    if(C && PhlegPoint(Point,ShipAt,ShipYaw))
+    {
+        FadeOutMusic(.1f);
+        if(APhlegethosSetting* Stage=APhlegethosSetting::Enter(GetWorld(),true)) Stage->ResetHazards();
+        C->ResetAtLocation(ShipAt);C->SetActorRotation(FRotator(0,ShipYaw,0));C->Recenter();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
+        return true;
+    }
     if(C && ShipPoint(Point,ShipAt,ShipYaw))
     {
         FadeOutMusic(.1f);
@@ -184,6 +202,12 @@ bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
             if(!ShipPoint(P.Point,At,Yaw)) continue;
             FVector Recovery=At,Deck; if(ShipRespawn(At,Deck)) Recovery=Deck;
             Consider(P.Point,P.Label,Recovery);
+        }
+    if(APhlegethosSetting::Get(World))
+        for(const FChultPoint& P : PhlegPoints)
+        {
+            FVector At;float Yaw;
+            if(PhlegPoint(P.Point,At,Yaw)) Consider(P.Point,P.Label,At);
         }
     // The docks after the sewer are the evening's.
     if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
@@ -281,7 +305,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints)+UE_ARRAY_COUNT(PhlegPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         // -MenuTestShot: a picture of the page (its five columns), held a moment before Back.
         if(FParse::Param(FCommandLine::Get(),TEXT("MenuTestShot")) && !bMenuShot)
         {
@@ -305,6 +329,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         for(const FChultPoint& Point:ChultPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:TemplePoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:ShipPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
+        for(const FChultPoint& Point:PhlegPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -324,6 +349,7 @@ void ADockHUD::Tick(float DeltaSeconds)
             bChult=true;ChultAt=ChultRecovery=ShipAt;ChultYaw=ShipYaw;   // (aboard, checked as Chult's points are)
             FVector Back; if(ShipRespawn(ShipAt,Back)) ChultRecovery=Back;   // (aloft, the ending's checkpoints: a death returns him to the deck)
         }
+        if(PhlegPoint(MenuTestPoint,ShipAt,ShipYaw)) {bChult=true;ChultAt=ChultRecovery=ShipAt;ChultYaw=ShipYaw;}
         const FVector Expected=MenuTestPoint==TEXT("Sewer")?DockSewerStartLocation():
             MenuTestPoint==TEXT("SewerJump")?DockSewerCheckpointLocation():
             MenuTestPoint==TEXT("SewerLongJump")?DockSewerLeapCheckpointLocation():
@@ -396,7 +422,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
     // The checkpoint page has five columns: Waterdeep, Chult, the temple interior, its trap run, the Astral wind.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth;
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
@@ -404,7 +430,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Third,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fourth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fifth,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Sixth,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Sixth,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Seventh,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
@@ -463,6 +490,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         }
         Target=Sixth;
         for(const FChultPoint& Point:ShipPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
+        Target=Seventh;
+        for(const FChultPoint& Point:PhlegPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
