@@ -2,6 +2,34 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos: second geysers out, quieter splash, flameskulls and fire snakes (Claude)
+
+- **Asked:** remove the second flame geysers; reduce the lava falls' splash and tone down its sound; do the region's creatures, without the 2D game's separate horned devils.
+- **Source:** `main` at cf8f6720; this commit.
+- **Changed:**
+  - `PhlegethosSetting.h/.cpp`: the ramp's lava bombs (balls, marks, slams, burns, counters) removed; the volcano erupts every 6–9 s while Chuck is on the ramp. `TickSplash` toned down (fewer, lower, smaller drops; rarer gobbets; smaller domes; thinner smoke; 240 cd light; the hiss within 20 m only, quieter, rarer). `Enter()` spawns the creatures.
+  - `PhlegethosCreatures.h/.cpp` (new): `APhlegFlameskull` (temple skull 1.2x, ember eyes, moving flipbook fire, flickering light; a fast run across a fixed haunt with a 3.1x weave and a bob; a touch costs 1 Sanity and pushes him back along −X; cannot be scratched; asleep beyond 90 m). `SpawnPhlegethosCreatures`: 4 road skulls, 3 ramp skulls, 5 harmless over the lava; 11 fire snakes.
+  - `ChuckFlames.h`: `AddMoving`/`SetBase` for fire that follows an actor.
+  - `ChultTempleInterior.h`: `FTempleSnakePost::bFire`.
+  - `TempleSnake.h/.cpp`: `FrameOf`/`WorldOf` (temple or stage frame), `FloorAt` ground trace; a fire snake follows the ground, turns back from steps over 18 cm, lights on channel 0, wears `M_PhlegFireSnake` (Heat cools on death), has a glow light, skips the temple sound gate.
+  - `Tools/create_phlegethos_assets.py`: `M_PhlegFireSnake` (snake scale textures as charred crust with heat in the gaps; Heat parameter); 9 materials. New asset `Content/Art/Phlegethos/M_PhlegFireSnake.uasset`; the other re-saved assets restored.
+  - `PhlegethosTest.cpp`: trials `skulls`, `fire_snakes` added, `bombs` → `ramp`; 17 trials; the other trials run with the creatures calm. `Tools/Verify-Package.ps1` expects 17.
+  - `PhlegethosFall.cpp`: a comment. `docs/regions/PHLEGETHOS.md`: the change section and a Creatures plan.
+- **Tested (editor):**
+  - Phlegethos 17/17 (`Local/phleg-creatures-trials.log`): skulls burns=2 with no deaths; fire_snakes strikes=1, scratches=1 (dead); splashes=25361.
+  - Fall cutscene `failures=0 handoff=1` (`Local/phleg-creatures-hellfall.log`); creature log `skulls=12 harmful=7 fire_snakes=11`.
+  - Stills in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Phlegethos/`.
+- **Package:** `CHUCK_PACKAGE_VERIFIED passes=182` first run (`Local/phleg-creatures-package.log`, `Local/verify-package-20261116-081215.log`).
+- **Not tested:** anything by hand; how hard the skull lanes are to time in play.
+- **Remaining flaws:**
+  - Lemures, spined devils and the Pit Fiend are not built.
+  - Chuck's fur reads very bright near the hot cracks on the ascent (from the earlier light raise).
+  - The falls are still flat sheets; the hills still lack rock detail; the ship's hidden-hull fault is open.
+- **Contract compatibility:** no rig, scale or character changes. `FTempleSnakePost` gains `bFire` (default off; temple snakes unchanged). Trial `bombs` renamed `ramp`; two trials added.
+- **Launcher:** promoted as PhlegethosCreatures. The receipt names cf8f6720 because the package was built from the working tree before this commit. PhlegethosHills kept as the previous package; PhlegethosLava pruned; no candidate left.
+
+Next part of the work can be done by Claude only (lemures, spined devils, the Pit Fiend colossus); preference: Claude, here.
+
 ## November 16 — Phlegethos landing hills, hot cracks, fall splash, light and spawns (Claude)
 
 - **Asked:**

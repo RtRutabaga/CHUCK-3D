@@ -18,7 +18,9 @@ into /Game/Art/Audio as SW_Phlegethos and SW_Phlegethos2 (looping), and builds:
   M_PhlegEmber   additive camera-facing embers and ash (PerInstanceCustomData 0: heat 0 ash .. 1 white-hot).
   M_PhlegSky     the smoke sky dome (unlit); parameters Flash and FlashDir light its clouds round a lightning bolt.
   M_PhlegBolt    additive lightning ribbon (UV V across it, vertex colour R dims branches; parameter Intensity).
-  M_PhlegMolten  unlit molten gobs on spheres: the geysers' fountain, the bombs and their marks, the fire rain.
+  M_PhlegMolten  unlit molten gobs on spheres: the falls' spray, the fire rain, the flameskulls' eyes.
+  M_PhlegFireSnake  the fire snakes' skin (2026-11-16): the temple snake's scale textures as a charred crust with the heat
+                 glowing through the gaps; parameter Heat (1 alive, cooling to 0 when it dies).
 
 Run once after fetching; reruns rebuild only these assets. Existing materials are not touched.
 """
@@ -507,6 +509,33 @@ def molten(m):
     out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
 
+FIRESNAKE = r'''
+// A fire snake (2026-11-16; 5e's, a serpent of living fire): the temple snake's scales a dark charred crust, the heat
+// glowing through every gap between them, flickering and running down its length; dying, it cools (Heat to 0).
+float gap=saturate(Cav.r*1.5-.2);
+float run=.6+.4*sin(UV.x*60.-T*7.)*sin(UV.x*23.+T*3.1);
+float fl=.78+.22*sin(T*13.+UV.x*90.);
+Base=lerp(float3(.055,.024,.014),float3(.012,.006,.005),gap);
+return (float3(1.,.33,.05)*pow(gap,1.3)*(4.+5.*run)*fl+float3(.7,.1,.012)*.45*run)*Heat;
+'''
+
+
+def firesnake(m):
+    m.set_editor_property('used_with_skeletal_mesh', True)
+    tiled = node(m, unreal.MaterialExpressionTextureCoordinate, u_tiling=200. / 12., v_tiling=1.)
+    nrm = node(m, unreal.MaterialExpressionTextureSample, texture=unreal.load_asset('/Game/Characters/Snake/T_SnakeScales_N'),
+               sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL); link(tiled, nrm, 'UVs')
+    cav = node(m, unreal.MaterialExpressionTextureSample, texture=unreal.load_asset('/Game/Characters/Snake/T_SnakeScales_C'),
+               sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR); link(tiled, cav, 'UVs')
+    heat = node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Heat', default_value=1.)
+    c = custom(m, FIRESNAKE, {'Cav': cav, 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'T': node(m, unreal.MaterialExpressionTime), 'Heat': heat},
+               extra=(('Base', unreal.CustomMaterialOutputType.CMOT_FLOAT3),))
+    out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    out(m, c, unreal.MaterialProperty.MP_BASE_COLOR, 'Base')
+    out(m, nrm, unreal.MaterialProperty.MP_NORMAL)
+    out(m, const(m, .55), unreal.MaterialProperty.MP_ROUGHNESS)
+
+
 material('M_PhlegBasalt', basalt)
 material('M_PhlegPath', path)
 material('M_PhlegLava', lava)
@@ -515,4 +544,5 @@ material('M_PhlegEmber', ember)
 material('M_PhlegSky', sky)
 material('M_PhlegBolt', bolt)
 material('M_PhlegMolten', molten)
-unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=8 textures={len(textures)}')
+material('M_PhlegFireSnake', firesnake)
+unreal.log(f'CHUCK_PHLEG_ASSETS_READY materials=9 textures={len(textures)}')

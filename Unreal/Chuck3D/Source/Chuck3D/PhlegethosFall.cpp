@@ -121,7 +121,7 @@ float APhlegethosFall::Altitude(float T)
 
 void APhlegethosFall::BuildStage()
 {
-    // The stage itself (not yet live: no bombs, no geysers), its light and air; the ship goes dark.
+    // The stage itself (not yet live: no hazards), its light and air; the ship goes dark.
     APhlegethosSetting::Enter(GetWorld(), false);
     // (No volumetric ash deck: its layer sat under him, placed by another stage's hidden atmosphere, and read as dunes from
     // above. He falls through the haze toward the burning lake instead.)

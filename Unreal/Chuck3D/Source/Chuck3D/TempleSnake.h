@@ -5,6 +5,8 @@
 #include "TempleSnake.generated.h"
 
 class UPoseableMeshComponent;
+class UPointLightComponent;
+class UMaterialInstanceDynamic;
 class USoundBase;
 class USoundAttenuation;
 class AChuckCharacter;
@@ -84,6 +86,9 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
     UPROPERTY() UPoseableMeshComponent* Body = nullptr;
+    // A fire snake's (Post.bFire): its glow on the ground round it, and its skin (Heat cools when it dies).
+    UPROPERTY() UPointLightComponent* Glow = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* FireSkin = nullptr;
     UPROPERTY() USoundAttenuation* Attenuation = nullptr;
     UPROPERTY() TArray<USoundBase*> HissSounds;
     UPROPERTY() TArray<USoundBase*> StrikeSounds;
@@ -117,6 +122,10 @@ private:
     void Sound(const TArray<USoundBase*>& Set, float Volume);
     void SetState(EState To);
     bool InLeash(const FVector& World, float Margin = 0) const;
+    // The leash's frame (the temple's canyon frame, or the Phlegethos stage's) and the floor under a point.
+    FVector FrameOf(const FVector& World) const;
+    FVector WorldOf(const FVector& Frame) const;
+    float FloorAt(const FVector& World, float Fallback) const;
 };
 
 /** Spawns the chamber's twenty snakes once (not in other automated runs). Called by BuildChultTempleInterior. */

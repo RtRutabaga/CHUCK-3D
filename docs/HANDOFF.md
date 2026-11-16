@@ -6,6 +6,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos: second geysers out, a quieter splash, flameskulls and fire snakes (November 16, Claude):**
+  - The ascent ramp's lava bombs (the "second flame geysers") are removed; the volcano still erupts in the sky while Chuck climbs.
+  - The lava falls' splash is about a third as busy and lower, and its hiss is much quieter and fades with distance.
+  - Creatures begun (2D Phase 8 bestiary, no horned devils by the user's choice): 12 flameskulls (7 can reach Chuck: on the road and the ramp; 5 over the lava) and 11 fire snakes (the temple snake with a burning skin, following the ground) in the hills, the wastes and before the gate.
+  - Not built yet: lemures, spined devils, the Pit Fiend colossus.
+  - Editor: 17/17 trials (new `skulls`, `fire_snakes`; `bombs` became `ramp`) and the fall cutscene pass. Package verified first time (182 passes), promoted as PhlegethosCreatures. Not played by hand.
+  - See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md) and [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md#creatures).
 - **Phlegethos landing hills, hot cracks, fall splash, light and spawns (November 16, Claude):**
   - Chuck now lands in a new hilly land mass before the arrival plain. A winding flagstone path runs about 85 m over two rises to the plain's neck. No hazards yet; creatures come later.
   - The road's lava geysers and their visuals were removed. The ground is kept for the flame skulls planned there.

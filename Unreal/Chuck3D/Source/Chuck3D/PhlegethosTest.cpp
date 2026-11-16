@@ -1,10 +1,13 @@
 // -ChuckChultTest -ChuckPhlegethosTest (Claude, 2026-11-14; PhlegethosSetting.h): the real character through Phlegethos's
-// challenges, each a trial placed at its start: the hills' path from the landing (2026-11-16), the road's hops and its sprint leap past the geysers, every column hop
+// challenges, each a trial placed at its start: the hills' path from the landing (2026-11-16), the road's hops and its sprint leap, the flameskulls and a fire snake (2026-11-16), every column hop
 // of the lake (the wall run up the tall one), the chained wall run between the slabs, the gorge's side wall run and drop,
-// the chains, the bomb ramp, the crumbling steps, the chimney, the last leap, the shut gate; and stills of each stretch.
+// the chains, the ramp, the crumbling steps, the chimney, the last leap, the shut gate; and stills of each stretch.
 // -ChuckPhlegethosTest=<trial> runs one. -ChuckHellFallTest: the fall cutscene alone, its shots, then the handoff.
 #include "PhlegethosSetting.h"
 #include "PhlegethosFall.h"
+#include "PhlegethosCreatures.h"
+#include "TempleSnake.h"
+#include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -22,8 +25,8 @@ using namespace Phleg;
 namespace
 {
     constexpr float Stand = 34.65f;
-    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Bombs, Steps, Chimney, Leap, Approach, Gate, Count };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("bombs"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
+    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Count };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -107,12 +110,14 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         if (Run->Trial >= int32(ET::Count))
         {
             Run->bDone = true;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TEST failures=%d passed=%d trials=%s sunk=%d crumbled=%d splashes=%d bomb_hits=%d bombs=%d seconds=%.0f"), Run->Failures, Run->Passed,
-                *FString::Join(Run->Results, TEXT(" ")), Stage ? Stage->GetSunk() : 0, Stage ? Stage->GetCrumbled() : 0, Stage ? Stage->GetSplashes() : 0, Stage ? Stage->GetBombHits() : 0, Stage ? Stage->GetBombs() : 0, Now - Run->Start);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TEST failures=%d passed=%d trials=%s sunk=%d crumbled=%d splashes=%d seconds=%.0f"), Run->Failures, Run->Passed,
+                *FString::Join(Run->Results, TEXT(" ")), Stage ? Stage->GetSunk() : 0, Stage ? Stage->GetCrumbled() : 0, Stage ? Stage->GetSplashes() : 0, Now - Run->Start);
             FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0);
             return;
         }
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
+        // (The flameskulls burn only in their own trial: the traversal trials are of the moves, and do not dodge.)
+        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes);
         // A death ends any trial but the stills.
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
         // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
@@ -174,6 +179,56 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 1 && Ground && P.X > Spine[3].X1 - 24) { Chuck->JumpPressed(); Run->Sub = 2; Run->Note = FString::Printf(TEXT("sprinting=%d"), Chuck->IsSprinting()); }
             if (Run->Sub == 2 && Now - Run->At > 0 && P.X > Spine[3].X1 + 40 && P.X < Spine[4].X0) Shot(TEXT("RoadLeap"));
             if (Run->Sub == 2 && Ground && P.X > Spine[4].X0 + 10) Next(true, Run->Note);
+            break;
+        }
+        case ET::Skulls:
+        {
+            // (2026-11-16) The flameskulls: the road's four and the ramp's three weaving; then he stands in one's lane on the
+            // spine. Pass: it burns him, he is thrown back along the spine and not off it, and no death.
+            if (Run->Sub == -1)
+            {
+                Place(4150, SpineMid(4150), G, 0); Chuck->SetOrbitPitch(-10); Run->Sub = 0;
+                Run->Chains0 = APhlegFlameskull::Burns; Run->Hop = PhlegethosFlameskullCount(true);
+                break;
+            }
+            if (Run->Sub == 0 && T > .8f) { Shot(TEXT("Skulls_Road")); Run->Sub = 1; }
+            if (Run->Sub == 1 && T > 1.4f) { Shot(TEXT("Skulls_Road2")); Place(4250 - 20, SpineMid(4250), G, 0); Run->Sub = 2; }
+            if (Run->Sub == 2 && T > 8.f)
+            {
+                const int32 Burned = APhlegFlameskull::Burns - Run->Chains0;
+                Next(Burned > 0 && Deaths == 0 && P.Z - Stand > G - 20 && Run->Hop == 7 && PhlegethosFlameskullCount(false) > Run->Hop,
+                    FString::Printf(TEXT("burns=%d skulls=%d harmful=%d"), Burned, PhlegethosFlameskullCount(false), Run->Hop));
+            }
+            break;
+        }
+        case ET::FireSnakes:
+        {
+            // (2026-11-16) A fire snake in the hills: he stands near it; it sees him, comes, rears and strikes; then he
+            // turns on it and scratches. Pass: it struck, and one scratch killed it.
+            ATempleSnake* K = nullptr; int32 Fire = 0;
+            for (const auto& E : ATempleSnake::All()) if (E.IsValid() && E->GetPost().bFire) { if (!K) K = E.Get(); ++Fire; }
+            if (!K) { Next(false, TEXT("no_fire_snakes=1")); break; }
+            if (Run->Sub == -1)
+            {
+                K->ResetToPost();
+                const FVector F = PhlegLocal(K->GetPost().Feet);
+                const FVector2D In = FVector2D(F.X - HillsLandX, F.Y).GetSafeNormal();   // from the clearing's side
+                Place(F.X - In.X * 170, F.Y - In.Y * 170, F.Z, FMath::RadiansToDegrees(FMath::Atan2(In.Y, In.X))); Chuck->SetOrbitPitch(-14);
+                Run->Sub = 0; Run->Chains0 = K->GetStrikes(); Run->SideRuns0 = K->GetBites(); Run->Hop = 0;
+                break;
+            }
+            if (Run->Sub == 0 && K->GetState() == ATempleSnake::EState::Rear && Run->Shots < 60 && !Run->Note.Contains(TEXT("shot"))) { Shot(TEXT("FireSnake_Rear")); Run->Note += TEXT("shot "); }
+            if (Run->Sub == 0 && K->GetStrikes() > Run->Chains0 && K->GetState() == ATempleSnake::EState::Recoil) { Run->Sub = 1; Run->At = Now; }
+            if (Run->Sub == 0 && T > 14.f) { Next(false, FString::Printf(TEXT("no_strike=1 state=%s fire=%d"), K->GetStateName(), Fire)); break; }
+            if (Run->Sub == 1)
+            {
+                // Face its head and scratch, a few times if need be.
+                const FVector To = K->SnoutTip() - Chuck->GetActorLocation();
+                Chuck->SetActorRotation(FRotator(0, To.Rotation().Yaw, 0));
+                if (!K->IsDead() && Now >= Run->Next && M->IsMovingOnGround()) { Chuck->Slash(); Chuck->SlashReleased(); Run->Next = Now + .7; ++Run->Hop; }
+                if (K->IsDead() && T > 2.f) { Shot(TEXT("FireSnake_Dead")); Next(true, FString::Printf(TEXT("strikes=%d bites=%d scratches=%d fire_snakes=%d"), K->GetStrikes() - Run->Chains0, K->GetBites() - Run->SideRuns0, Run->Hop, Fire)); }
+                else if (T > 6.f) Next(false, FString::Printf(TEXT("not_killed=1 scratches=%d state=%s"), Run->Hop, K->GetStateName()));
+            }
             break;
         }
         case ET::LakeHops:
@@ -274,13 +329,13 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             break;
         }
-        case ET::Bombs:
+        case ET::Ramp:
         {
-            // Up the ramp at a run while the bombs come down. Pass: at the top alive (hits are counted, not failures).
-            if (Run->Sub == -1) { Place(RampX0 + 50, 0, G, 0); Run->Sub = 0; Chuck->SetRunHeld(true); Run->Chains0 = Stage ? Stage->GetBombs() : 0; }
+            // Up the ramp at a run (its lava bombs gone, 2026-11-16). Pass: at the top.
+            if (Run->Sub == -1) { Place(RampX0 + 50, 0, G, 0); Run->Sub = 0; Chuck->SetRunHeld(true); }
             Toward(P.X + 200, 0);
-            if (P.X > RampX0 + 800 && Run->Sub == 0) { Shot(TEXT("Bombs")); Run->Sub = 1; }
-            if (Ground && P.X > RampX1 - 120) Next(Stage && Stage->GetBombs() > Run->Chains0, FString::Printf(TEXT("bombs=%d hits=%d"), Stage ? Stage->GetBombs() - Run->Chains0 : 0, Stage ? Stage->GetBombHits() : 0));
+            if (P.X > RampX0 + 800 && Run->Sub == 0) { Shot(TEXT("Ramp")); Run->Sub = 1; }
+            if (Ground && P.X > RampX1 - 120) Next(true, FString::Printf(TEXT("x=%.0f"), P.X));
             break;
         }
         case ET::Steps:

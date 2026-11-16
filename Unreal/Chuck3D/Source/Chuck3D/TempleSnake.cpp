@@ -1,6 +1,10 @@
 #include "TempleSnake.h"
 #include "ChuckCharacter.h"
 #include "ChultTempleInterior.h"
+#include "PhlegethosSetting.h"
+#include "PhlegethosCreatures.h"
+#include "Components/PointLightComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PoseableMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -106,6 +110,24 @@ void ATempleSnake::BeginPlay()
             if (USoundBase* S = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Stem, I, Stem, I))) Set.Add(S);
     };
     Load(HissSounds, TEXT("SFX_SnakeHiss"), 3); Load(StrikeSounds, TEXT("SFX_SnakeStrike"), 3); Load(SlitherSounds, TEXT("SFX_SnakeSlither"), 4); Load(DeathSounds, TEXT("SFX_SnakeDeath"), 2);
+    if (Post.bFire)
+    {
+        // A fire snake (2026-11-16): lit by Phlegethos's light (the temple's channel 1 is the torches'), its skin burning,
+        // its glow on the rock round it.
+        Body->SetLightingChannels(true, false, false);
+        if (UMaterialInterface* Skin = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegFireSnake.M_PhlegFireSnake")))
+        {
+            FireSkin = UMaterialInstanceDynamic::Create(Skin, this);
+            Body->SetMaterialByName(TEXT("Skin"), FireSkin);
+        }
+        Glow = NewObject<UPointLightComponent>(this, TEXT("Glow"));
+        Glow->SetupAttachment(Body);
+        Glow->SetLightColor(FLinearColor(1.f, .4f, .1f));
+        Glow->SetIntensity(260.f);
+        Glow->SetAttenuationRadius(300.f);
+        Glow->SetCastShadows(false);
+        Glow->RegisterComponent();
+    }
     Attenuation = NewObject<USoundAttenuation>(this);
     Attenuation->Attenuation.bAttenuate = true;
     Attenuation->Attenuation.bSpatialize = true;
@@ -141,14 +163,27 @@ void ATempleSnake::Sound(const TArray<USoundBase*>& Set, float Volume)
 {
     if (!Set.Num()) return;
     // Heard only by a rat inside the temple with it (user 2026-11-12: heard from the skull path).
-    if (!ChultTempleSoundAudible(GetWorld(), HeadPos)) return;
+    if (!Post.bFire && !ChultTempleSoundAudible(GetWorld(), HeadPos)) return;
     UGameplayStatics::PlaySoundAtLocation(this, Set[Random.RandRange(0, Set.Num() - 1)], HeadPos + FVector(0, 0, 5), Volume, Random.FRandRange(.92f, 1.08f), 0.f, Attenuation);
     ++SoundsPlayed;
 }
 
+FVector ATempleSnake::FrameOf(const FVector& World) const { return Post.bFire ? PhlegLocal(World) : ChultTempleInteriorFrameOf(World); }
+FVector ATempleSnake::WorldOf(const FVector& Frame) const { return Post.bFire ? PhlegWorld(Frame) : ChultTempleInteriorWorldOf(Frame); }
+
+float ATempleSnake::FloorAt(const FVector& World, float Fallback) const
+{
+    // (A fire snake's ground is never flat: the floor under each new point of its track, from just over it.)
+    FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(SnakeFloor), false, this);
+    if (APawn* P = UGameplayStatics::GetPlayerPawn(this, 0)) Q.AddIgnoredActor(P);
+    const FVector Top(World.X, World.Y, Fallback + 60.f);
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Top, Top - FVector(0, 0, 160.f), ECC_Visibility, Q)) return static_cast<float>(Hit.ImpactPoint.Z);
+    return -1e6f;
+}
+
 bool ATempleSnake::InLeash(const FVector& World, float Margin) const
 {
-    const FVector F = ChultTempleInteriorFrameOf(World);
+    const FVector F = FrameOf(World);
     return F.X >= Post.Leash.Min.X - Margin && F.X <= Post.Leash.Max.X + Margin && F.Y >= Post.Leash.Min.Y - Margin && F.Y <= Post.Leash.Max.Y + Margin;
 }
 
@@ -195,8 +230,13 @@ void ATempleSnake::Coil()
 void ATempleSnake::Advance(const FVector& Delta)
 {
     HeadPos += FVector(Delta.X, Delta.Y, 0);
+    if (Post.bFire) { const float Z = FloorAt(HeadPos, static_cast<float>(HeadPos.Z)); if (Z > -1e5f) HeadPos.Z = Z; }
     while (FVector::Dist2D(HeadPos, Trail[0]) >= Spacing)
-        Trail.Insert(Trail[0] + (HeadPos - Trail[0]).GetSafeNormal2D() * Spacing, 0);
+    {
+        FVector P = Trail[0] + (HeadPos - Trail[0]).GetSafeNormal2D() * Spacing;
+        if (Post.bFire) { const float Z = FloorAt(P, static_cast<float>(HeadPos.Z)); P.Z = Z > -1e5f ? Z : HeadPos.Z; }
+        Trail.Insert(P, 0);
+    }
     const int32 Keep = FMath::CeilToInt((Length + 30.f) / Spacing);
     if (Trail.Num() > Keep) Trail.SetNum(Keep);
 }
@@ -325,6 +365,12 @@ void ATempleSnake::Pose()
 bool ATempleSnake::Blocked(const FVector& From, const FVector& To) const
 {
     if (!InLeash(To)) return true;
+    if (Post.bFire)
+    {
+        // Not over a drop, up a boulder or out onto the lava: the floor ahead within a hand of where its head is.
+        const float Z = FloorAt(To, static_cast<float>(HeadPos.Z));
+        return FMath::Abs(Z - static_cast<float>(HeadPos.Z)) > 18.f;
+    }
     static TArray<FBox2D> Obstacles;
     if (!Obstacles.Num()) ChultTempleSnakeObstacles(Obstacles);
     const FVector F = ChultTempleInteriorFrameOf(To);
@@ -379,7 +425,7 @@ bool ATempleSnake::Scratch(const FVector& Location, const FVector& Ahead, float 
         {
             Swung = Swing; DeathT = 0; Gape = .45f;
             SetState(EState::Dead);
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SNAKE_DEAD at=%s"), *ChultTempleInteriorFrameOf(HeadPos).ToString());
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SNAKE_DEAD at=%s fire=%d"), *FrameOf(HeadPos).ToString(), Post.bFire);
         }
         return true;
     }
@@ -401,6 +447,18 @@ void ATempleSnake::Tick(float DeltaSeconds)
     FlickClock += DeltaSeconds;
     if (State != EState::Dead && State != EState::Strike && FlickClock > NextFlick) { FlickClock = 0; NextFlick = State == EState::Rest ? Random.FRandRange(1.8f, 4.5f) : Random.FRandRange(.7f, 1.6f); }
     Flick = State == EState::Dead || State == EState::Strike ? 0.f : FMath::Clamp(FMath::Sin(PI * FMath::Clamp(FlickClock / .38f, 0.f, 1.f)) * 1.25f, 0.f, 1.f);
+    if (Post.bFire)
+    {
+        // Its glow over its middle, flickering; dying, it cools.
+        const float Heat = State == EState::Dead ? FMath::Clamp(1.f - DeathT / 2.5f, .08f, 1.f) : 1.f;
+        if (FireSkin) FireSkin->SetScalarParameterValue(TEXT("Heat"), Heat);
+        if (Glow)
+        {
+            Glow->SetWorldLocation(BodyPoint(Length * .4f) + FVector(0, 0, 18.f));
+            Glow->SetIntensity(260.f * Heat * (.85f + .15f * FMath::Sin(FlickClock * 11.f + Phase)));
+        }
+        GroundZ = static_cast<float>(HeadPos.Z);
+    }
     if (State == EState::Dead)
     {
         DeathT += DeltaSeconds;
@@ -409,7 +467,7 @@ void ATempleSnake::Tick(float DeltaSeconds)
         return;
     }
     if (bHeld) { Pose(); return; }
-    const bool bThere = Chuck && !Chuck->IsAstral() && InLeash(ChuckAt, 150.f);
+    const bool bThere = Chuck && !Chuck->IsAstral() && InLeash(ChuckAt, 150.f) && !(Post.bFire && APhlegFlameskull::bCalm);
     const bool bReach = bThere && !Chuck->IsSwinging() && FMath::Abs(static_cast<float>(ChuckAt.Z) - 34.65f - GroundZ) < 40.f;
     Cooldown = FMath::Max(0.f, Cooldown - DeltaSeconds);
     auto Sees = [&]()
@@ -450,8 +508,8 @@ void ATempleSnake::Tick(float DeltaSeconds)
         Lost = bReach ? 0.f : Lost + DeltaSeconds;
         if (Lost > 3.f) { SetState(EState::Return); break; }
         if (!bReach) break;
-        const FVector F = ChultTempleInteriorFrameOf(ChuckAt);
-        const FVector Goal = ChultTempleInteriorWorldOf(FVector(FMath::Clamp(F.X, Post.Leash.Min.X, Post.Leash.Max.X), FMath::Clamp(F.Y, Post.Leash.Min.Y, Post.Leash.Max.Y), F.Z));
+        const FVector F = FrameOf(ChuckAt);
+        const FVector Goal = WorldOf(FVector(FMath::Clamp(F.X, Post.Leash.Min.X, Post.Leash.Max.X), FMath::Clamp(F.Y, Post.Leash.Min.Y, Post.Leash.Max.Y), F.Z));
         // Close enough to strike from where its front would leave the floor: it rears. Else on, until its snout is on him.
         if ((FVector::Dist2D(TrailPoint(Front), ChuckAt) < StrikeStart || Dist < 35.f) && Cooldown <= 0.f) {   // (its snout on him after a winding approach: rear anyway)
             Aim = (ChuckAt - TrailPoint(Front)).GetSafeNormal2D(); SetState(EState::Rear); break; }
@@ -508,7 +566,7 @@ void ATempleSnake::Tick(float DeltaSeconds)
     }
     {
         // How far its snout has ever been outside the chamber's rectangle (cm).
-        const FVector F = ChultTempleInteriorFrameOf(HeadPos);
+        const FVector F = FrameOf(HeadPos);
         const double Out = FMath::Max3(0.0, Post.Leash.Min.X - F.X, F.X - Post.Leash.Max.X) + FMath::Max3(0.0, Post.Leash.Min.Y - F.Y, F.Y - Post.Leash.Max.Y);
         WorstLeash = FMath::Max(WorstLeash, static_cast<float>(Out));
     }

@@ -31,6 +31,10 @@ public:
     AChuckFlames();
     static AChuckFlames* Get(UWorld* World);
     void Add(AActor* FireOwner, const FVector& Base, float Width, float Height);
+    /** A fire that moves (a flameskull's, 2026-11-16): its index, then SetBase as it goes; its sparks and smoke stay where
+     *  they left it, trailing behind. */
+    int32 AddMoving(AActor* FireOwner, const FVector& Base, float Width, float Height) { Add(FireOwner, Base, Width, Height); return Flames.Num() - 1; }
+    void SetBase(int32 Index, const FVector& Base) { if (Flames.IsValidIndex(Index)) Flames[Index].Base = Base; }
     virtual void Tick(float DeltaSeconds) override;
     int32 GetFlameCount() const { return Flames.Num(); }
     int32 GetMissingMaterials() const { return MissingMaterials; }

@@ -17,7 +17,7 @@ class AChuckCharacter;
 // Phase 8: one continuous stage built in code on its own site, 8 km beyond the ship's. A molten lake at Z 0 everywhere,
 // and the basalt he walks on about 3 m above it. Along the route (X, north toward the fortress): the hills where the fall
 // lands (2026-11-16, built before the rest), the arrival plain, the lava road's spine, the basalt column lake, the lava-fall gorge with its chains,
-// the ascent (the volcano erupting: bombs, crumbling steps, a wall-jump chimney) and the fortress approach to its shut
+// the ascent (the volcano erupting, crumbling steps, a wall-jump chimney) and the fortress approach to its shut
 // gate. Falling into the lava is an Astral death, as the Astral Sea is: back at the start of the stretch.
 //
 // The frame: X along the route, Y across (to the right looking north), Z up from the lava, in cm.
@@ -63,7 +63,7 @@ namespace Phleg
     // (The far side starts 20 cm past the last ring: his step down off a line's end looks 40 cm ahead.)
     constexpr int32 ChainGrips = 9;
     constexpr float ChainX0 = 17300, ChainStep = 145, ChainX1 = ChainX0 + 70 + (ChainGrips - 1) * ChainStep + 20, ChainGripZ = LowShelf - 50, ChainY = -95, ChainLand = ChainGripZ - 95;
-    // The ascent: the bomb ramp, the crumbling steps, the chimney, the last leap.
+    // The ascent: the ramp, the crumbling steps, the chimney, the last leap.
     constexpr float RampX0 = 20650, RampX1 = 22440, RampTop = G + 300, RampHalf = 230;
     struct FStep { float X, Y, Half; };
     constexpr FStep Steps[] = {{22560, 0, 60}, {22740, 60, 55}, {22920, -10, 55}, {23100, -70, 58}, {23280, 0, 55}, {23460, 70, 55}, {23640, 0, 60}};
@@ -136,8 +136,6 @@ public:
     int32 GetSunk() const { return SunkCount; }
     int32 GetCrumbled() const { return CrumbledCount; }
     int32 GetSplashes() const { return SplashCount; }
-    int32 GetBombHits() const { return BombHits; }
-    int32 GetBombs() const { return BombsFired; }
     /** A sinking column's or crumbling step's mesh (for tests): Kind 0 columns, 1 steps. */
     int32 GetMoverCount(int32 Kind) const;
     float GetMoverDrop(int32 Kind, int32 Index) const;
@@ -174,12 +172,7 @@ private:
     TArray<FDrop> Drops;
     UPROPERTY() UInstancedStaticMeshComponent* Spray = nullptr;
     void TickSplash(float Dt, const FVector& Eye);
-    // Lava bombs: a glowing ball falling on a marked spot.
-    struct FBomb { FVector From, To; float Age = 0, Flight = 2.f; bool bLanded = false; float After = 0; };
-    TArray<FBomb> Bombs;
-    UPROPERTY() UInstancedStaticMeshComponent* BombBalls = nullptr;
-    UPROPERTY() UInstancedStaticMeshComponent* BombMarks = nullptr;
-    float NextBomb = 0, Clock = 0, EruptUntil = -1, EruptStrength = 0;
+    float NextErupt = 0, Clock = 0, EruptUntil = -1, EruptStrength = 0;
     struct FMote { FVector P, V; float Age = 0, Life = 1, Size = 1, Heat = 0; };
     // Smoke (the temple jets' CC0 flipbook smoke): steam off the lava at vents near the route, and the volcano's plume.
     UPROPERTY() UInstancedStaticMeshComponent* Smoke = nullptr;
@@ -206,6 +199,6 @@ private:
     float NextStrike = 4.f, UnderOn = 1.f, AheadOn = 1.f;
     int32 Strikes = 0, NextBolt = 0;
     void TickLightning(float Dt, const FVector& Eye);
-    int32 SunkCount = 0, CrumbledCount = 0, SplashCount = 0, BombHits = 0, BombsFired = 0;
+    int32 SunkCount = 0, CrumbledCount = 0, SplashCount = 0;
     bool bWasAstral = false;
 };

@@ -75,6 +75,9 @@ struct FTempleSnakePost
     float Yaw = 0;
     bool bWander = false;
     FBox2D Leash = FBox2D(ForceInit);
+    // A Phlegethos fire snake (2026-11-16, PhlegethosCreatures.cpp): Leash is in the stage's frame (PhlegLocal), the
+    // body follows the ground under it, and it burns.
+    bool bFire = false;
 };
 void ChultTempleSnakePosts(TArray<FTempleSnakePost>& Out);
 // Frame (S,T) rectangles of the chamber's piers, idol plinths and brazier (the snakes steer round them).

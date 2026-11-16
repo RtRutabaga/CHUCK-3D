@@ -13,15 +13,15 @@ Direction: the 2D game's `docs/development/PHASE-8.md` and `hell_falling_cutscen
 | The fall into the Nine Hells: open heated air, a distant volcano climbing into view, a basalt plain with sparse lava fissures, the quiet death, the look round, the cigarette | **Built**: the fall cutscene, on the fall-to-Chult score cut one phrase later (about 15 s longer) |
 | Six connected maps: arrival, lava road, lava lake islands, rubble pass with a lava fall, the fractured way, the fortress approach | **Built** as one continuous stage in six stretches, with a checkpoint each |
 | The lava lake island crossing ("Include a sequence where Chuck jumps across small islands over a lava lake") | **Built**: a basalt column causeway, some columns sinking under him |
-| Lava falls, lava rivers, narrow basalt paths, jump challenges | **Built** as parkour: a narrowing basalt spine, a lava-fall gorge crossed along its wall and on hanging chains, a wall-jump chimney, crumbling steps, lava bombs |
-| Lemures, fire snakes, spined devils, flameskulls, horned devils | **Not in this milestone** (creatures are a later Claude milestone). Lava geysers and bombs are this milestone's moving hazards |
+| Lava falls, lava rivers, narrow basalt paths, jump challenges | **Built** as parkour: a narrowing basalt spine, a lava-fall gorge crossed along its wall and on hanging chains, a wall-jump chimney, crumbling steps (the lava geysers and bombs were removed on 2026-11-16) |
+| Lemures, fire snakes, spined devils, flameskulls, horned devils | **Flameskulls and fire snakes built** (2026-11-16); lemures, spined devils and the Pit Fiend planned below. **No horned devils** (the user, 2026-11-16: "in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game") |
 | Infernal idols, fortress exterior | **Built**: the processional and the shut gate |
 | The trio battling the Pit Fiend, Astral escalation, the Feywild river, the river cutscene | **Not built** (user: "don't do the trio of heros pit fiend encounter yet"). The fortress yard ends at the shut gate |
 | Breakable urns with cigarettes | **Built**: clay jars on the safe ground off the routes |
 
 ## Chuck
 
-Lava is a fall hazard exactly like the Astral Sea: falling in is an Astral death, and he is summoned back at the start of the stretch he fell from. Geyser spray and lava bombs cost Sanity, as a zombie's bite does. Nothing here asks for a new move: every challenge uses one he already has.
+Lava is a fall hazard exactly like the Astral Sea: falling in is an Astral death, and he is summoned back at the start of the stretch he fell from. A flameskull's touch and a fire snake's bite cost Sanity, as a zombie's bite does. Nothing here asks for a new move: every challenge uses one he already has.
 
 ## The stage
 
@@ -30,10 +30,10 @@ One continuous stage, built in code on its own site (`PhlegethosSetting.h`), 8 k
 | Stretch | Checkpoint | Traversal |
 | --- | --- | --- |
 | 0. The arrival plain | Phlegethos Arrival | The fall's landing spot. Broad cracked basalt with glowing fissures; boulders to vault and mantle; the worn path north. Jars. The volcano, the lava rivers and the fortress on its mesa are in view |
-| 1. The lava road | Phlegethos Road | The road narrows to a basalt spine over the lava: running jumps over breaks, then a sprint-leap gap with a straight run-up. Lava geysers beside the spine erupt on a beat, with a bubbling warning |
+| 1. The lava road | Phlegethos Road | The road narrows to a basalt spine over the lava: running jumps over breaks, then a sprint-leap gap with a straight run-up. Flameskulls weave across the spine (the geysers until 2026-11-16) |
 | 2. The column lake | Phlegethos Lake | Hexagonal basalt columns standing out of a lava lake at different heights: hops, mantles, ledge pull-ups. Cracked columns sink when he stands on them. Two long basalt slabs either side of a wide lava gap: a chained side wall run carries him across |
 | 3. The lava-fall gorge | Phlegethos Gorge | A shelf along the gorge's basalt wall, with lava falls pouring past. A break in the shelf is crossed by a side wall run. Then iron chains hanging from a broken infernal arch over the lava river: brachiation |
-| 4. The ascent (Phlegethos_2) | Phlegethos Ascent | The volcano erupts. A wall-jump chimney up the mesa's face; crumbling basalt steps over the lava that fall away behind him; lava bombs falling on glowing marks; a last sprint leap onto the approach |
+| 4. The ascent (Phlegethos_2) | Phlegethos Ascent | The volcano erupts. A wall-jump chimney up the mesa's face; crumbling basalt steps over the lava that fall away behind him; flameskulls weaving across the ramp (the lava bombs until 2026-11-16); a last sprint leap onto the approach |
 | 5. The fortress approach | Phlegethos Fortress | A processional of infernal idols with lit eyes to the iron-black fortress wall and its shut gate. The end of this milestone |
 
 ## Music
@@ -50,11 +50,11 @@ CC0 textures, fetched and hash-checked by `Tools/Fetch-Phlegethos.ps1` into `Sou
 - ambientCG `Lava004` (the first molten surface; still imported, no longer used by the lava).
 - ambientCG `Lava001` (the lake: dark crust torn by molten streaks) and `Lava005` (the flows' streaming molten lines), 2K colour, emission and normal (2026-11-16).
 
-The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused for the geysers and bombs.
+The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused for the flameskulls' fire and the falls' smoke. The flameskull is the temple's skull (CDmir's CC0 "human skull 0"); the fire snake is the temple snake (Tools/build_temple_snake.py) with a burning skin.
 
 ## Out of scope for this milestone
 
-The trio and the Pit Fiend, the Astral escalation and the Feywild river, the river cutscene, and every Phlegethos creature.
+The trio and the Pit Fiend's battle, the Astral escalation and the Feywild river, the river cutscene. The creatures are built in stages (below).
 
 ## What was built (2026-11-14)
 
@@ -174,15 +174,59 @@ The user (with a goal image, `References/Phlegethos/phlegethos-goal-hot-cracks.p
   - The stills now cover all 13 spawns, and the fall-splash shots replace the geyser shots.
   - Verify-Package expects `passed=15`.
 
+### The second geysers, a quieter splash, flameskulls and fire snakes (2026-11-16)
+
+The user: "you took out the first flame geyser section but left the second. also take out the 2nds flame geysers. reduce the intense large splash pattern from the lava falls and tone done the sound effects for them. then do the npc's for the region (one change from the 2d game, in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game)".
+
+- **The second geysers** were the ascent ramp's lava bombs: balls arcing onto glowing marks, which read as the road's geysers again. The bombs, their marks, their slams and their burns are gone. The volcano still erupts in the sky while he is on the ramp (every 6 to 9 s). The `bombs` trial is now `ramp` (up it at a run).
+- **The falls' splash**, toned down:
+  - About a third as many drops, thrown half as high and far.
+  - The big gobbets are rarer (7 %) and smaller.
+  - The boiling swells are smaller, the smoke thinner, the light a quarter dimmer.
+  - The hiss: a third as loud, fading with distance, a third as often, only within 20 m.
+
+### Creatures
+
+From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entities/`), less the horned devils. Each keeps to its own ground and never follows him far.
+
+| 2D | 3D | Where | State |
+| --- | --- | --- | --- |
+| Flameskulls: weave fast round a fixed haunt, bee-like, never pursue; cannot be scratched; float over lava | `APhlegFlameskull` (PhlegethosCreatures.h) | The lava road (4, where the geysers were), the ascent's ramp (3, where the bombs fell), and 5 out over the lava as the setting's life | **Built** |
+| Fire snakes: the temple snake, only its look changed; on the shores and in the yard | `ATempleSnake` with `bFire` | The hills beside the path (4), the wastes (4), before the gate (3) | **Built** |
+| Lemures: the zombie/skeleton lifecycle, the slowest and most durable | Planned: a shapeless, melting human mass (SDF-built like the beholder) on the temple skeleton's rig and gait, slower, more scratches to put down; some rise up out of the ground as he nears | The hills, the wastes, before the gate | Next |
+| Spined devils: never move; flick burning tail spines across a lane on a staggered beat; scratching one defeats Chuck at once | Planned: a small winged, spined devil perched on a rock beside the way, its spines arcing across it | The gorge's shelf and the wastes | Next |
+| Horned devils: the Chult colossus's gameplay | **Not built** (the user) | | |
+| Pit Fiend: the colossus, wholly avoidable, beyond notice range of the route (the fractured way); the trio's battle at the fortress | Planned: the colossus in the wastes (the T-rex's gameplay: it notices him far off, strides after him, one blow; he must keep out of its sight). Its battle with the trio stays out of scope | The wastes | Next |
+
+**Flameskulls.**
+- The model: the temple skull at 1.2 times real size, embers in its sockets, and flipbook fire that moves with it, so its sparks trail behind. Its own light flickers on its face and on the ground under it.
+- Its motion (2D: a sine run with a weave 3.1 times faster): runs of 2.6 m each way across the spine and out over the lava (about 4.8 s there and back), a 45 cm weave and a bob, chest high on him. It looks where it goes and banks into the weave.
+- A touch burns: a Sanity point, a hiss. He is thrown a step back along the way, never off the spine's side.
+- A soft rush of fire as it passes within 2 m.
+- It cannot be scratched. Asleep (hidden, still) beyond 90 m.
+
+**Fire snakes.**
+- The temple's pit viper and all its behaviour (the crawl, the tell, the strike, one scratch kills), with:
+  - a leash in the stage's frame;
+  - its track following the ground under it (traced point by point), and turning back from drops, boulders and the lava's edge;
+  - lit by the stage's light, not the temple's torch channel;
+  - a burning skin, `M_PhlegFireSnake`: the snake's scale textures as a charred crust with the heat glowing through every gap, running and flickering down its length. Its own light flickers over its middle. Dying, it cools.
+
+**Tests.**
+- Two new trials, `skulls` and `fire_snakes`, making 17. Verify-Package expects `passed=17`.
+- `skulls`: he stands in a road skull's lane. It burns him (2 burns), throws him back along the spine and does not kill him.
+- `fire_snakes`: a hills snake sees him, comes and strikes; one scratch kills it.
+- The other trials run with the creatures calm (they test the moves, and do not dodge).
+
 ### Known gaps
 
-- No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
+- Creatures still to build: lemures, spined devils, the Pit Fiend (above).
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
 - Toward the goal art:
   - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.
   - The idols are blocky.
   - The volcano's plume reads as one dark blob at 12 km.
-  - The lava falls are flat sheets with no thickness (their feet now splash).
+  - The lava falls are flat sheets with no thickness (their feet splash, now softly).
   - The far hills are smooth and greyish at a distance.
 - The wastes are dark between the braziers; the walk is 70 s at a run.
 - The flagstones are plain slabs, not the goal art's carved blocks.

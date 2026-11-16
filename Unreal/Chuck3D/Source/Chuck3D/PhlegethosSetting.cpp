@@ -1,4 +1,5 @@
 #include "PhlegethosSetting.h"
+#include "PhlegethosCreatures.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
@@ -420,11 +421,6 @@ APhlegethosSetting::APhlegethosSetting()
     Motes->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Motes->SetCastShadow(false);
     Motes->SetMobility(EComponentMobility::Movable);
-    BombBalls = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("BombBalls"));
-    BombBalls->SetupAttachment(RootComponent);
-    BombBalls->SetStaticMesh(Ball.Object);
-    BombBalls->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    BombBalls->SetCastShadow(false);
     Smoke = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Smoke"));
     Smoke->SetupAttachment(RootComponent);
     Smoke->SetStaticMesh(Quad.Object);
@@ -432,11 +428,6 @@ APhlegethosSetting::APhlegethosSetting()
     Smoke->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Smoke->SetCastShadow(false);
     Smoke->bNeverDistanceCull = true;
-    BombMarks = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("BombMarks"));
-    BombMarks->SetupAttachment(RootComponent);
-    BombMarks->SetStaticMesh(Ball.Object);
-    BombMarks->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    BombMarks->SetCastShadow(false);
     Meteors = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Meteors"));
     Meteors->SetupAttachment(RootComponent);
     Meteors->SetStaticMesh(Ball.Object);
@@ -498,6 +489,7 @@ APhlegethosSetting* APhlegethosSetting::Enter(UWorld* World, bool bMakeLive)
     auto* Stage = World->SpawnActor<APhlegethosSetting>(PhlegethosOrigin(), FRotator::ZeroRotator, P);
     Stage->Build();
     Stage->SetLive(bMakeLive);
+    SpawnPhlegethosCreatures(Stage);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_ENTER hidden=%d live=%d triangles=%d missing=%d"), Hidden, bMakeLive, Stage->Triangles, Stage->Missing);
     return Stage;
 }
@@ -544,8 +536,6 @@ void APhlegethosSetting::Build()
     else ++Missing;
     UMaterialInterface* Molten = Mat(TEXT("/Game/Art/Phlegethos/M_PhlegMolten.M_PhlegMolten"));
     if (!Molten) { ++Missing; Molten = LavaMat; }
-    BombBalls->SetMaterial(0, Molten);
-    BombMarks->SetMaterial(0, Molten);
     Meteors->SetMaterial(0, Molten);
     Spray->SetMaterial(0, Molten);
     for (int32 I = 0; I < SoundCount; ++I)
@@ -882,7 +872,7 @@ void APhlegethosSetting::Build()
 
     // ---------------------------------------------------------------- 4. the ascent
     {
-        // The bomb ramp up the mesa's flank, broad and open.
+        // The ramp up the mesa's flank, broad and open.
         Rock.Paint = FColor(150, 60, 110, 255);
         Rock.Prism(Box2(RampX0 - 10, RampX1, -RampHalf, RampHalf), [](float X, float) { return FMath::Lerp(G, RampTop, FMath::Clamp((X - RampX0) / (RampX1 - RampX0), 0.f, 1.f)); }, Rim, 30, 0, 41, 6);
         Path.Paint = FColor(0, 0, 120, 255);
@@ -1621,8 +1611,7 @@ void APhlegethosSetting::ResetHazards()
         M.Touched = -1; M.Drop = 0; M.DownFor = 0; M.bCracked = false;
         if (auto* Mesh = M.Mesh.Get()) { Mesh->SetWorldLocation(PhlegethosOrigin()); Mesh->SetVisibility(true); Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }
     }
-    Bombs.Reset(); BombBalls->ClearInstances(); BombMarks->ClearInstances();
-    NextBomb = Clock + 2.f;
+    NextErupt = Clock + 2.f;
 }
 
 void APhlegethosSetting::Erupt(float Strength)
@@ -1963,23 +1952,24 @@ void APhlegethosSetting::TickSplash(float Dt, const FVector& Eye)
         if (Near > 9000.f) { if (L) L->SetIntensity(0.f); continue; }
         const FVector Side(-Ft.Out.Y, Ft.Out.X, 0);
         const float Wk = Ft.Width / 200.f;
-        // The spray, in pulses as the sheet's surges come down.
+        // The spray, in pulses as the sheet's surges come down. (Toned down 2026-11-16, the user: the splash read too
+        // intense and large; fewer drops, lower and shorter, the big gobbets rarer and smaller.)
         const float Surge = .75f + .25f * FMath::Sin(Clock * 2.3f + Ft.P.X * .01f) + .15f * FMath::Sin(Clock * 5.1f + Ft.P.X);
-        Ft.Carry += Dt * 150.f * Wk * Surge;
+        Ft.Carry += Dt * 55.f * Wk * Surge;
         while (Ft.Carry >= 1.f)
         {
             Ft.Carry -= 1.f;
             FDrop D;
             const float A = R.FRandRange(-1.f, 1.f);
-            const bool bBig = R.FRand() < .18f;
+            const bool bBig = R.FRand() < .07f;
             D.P = Ft.P + Side * A * Ft.Width + Ft.Out * R.FRandRange(-30.f, 70.f) + FVector(0, 0, 8);
-            D.V = Ft.Out * R.FRandRange(80.f, 520.f) + Side * A * R.FRandRange(40.f, 220.f) + FVector(0, 0, bBig ? R.FRandRange(260.f, 520.f) : R.FRandRange(380.f, 980.f));
-            D.Size = bBig ? R.FRandRange(.14f, .26f) : R.FRandRange(.04f, .11f);
+            D.V = Ft.Out * R.FRandRange(50.f, 260.f) + Side * A * R.FRandRange(20.f, 110.f) + FVector(0, 0, bBig ? R.FRandRange(160.f, 320.f) : R.FRandRange(220.f, 520.f));
+            D.Size = bBig ? R.FRandRange(.09f, .15f) : R.FRandRange(.03f, .075f);
             Drops.Add(D);
             ++SplashCount;
         }
         // Steam and smoke rolling up off it, lit from under.
-        Ft.SmokeCarry += Dt * 3.f * Wk;
+        Ft.SmokeCarry += Dt * 2.f * Wk;
         while (Ft.SmokeCarry >= 1.f)
         {
             Ft.SmokeCarry -= 1.f;
@@ -1996,13 +1986,13 @@ void APhlegethosSetting::TickSplash(float Dt, const FVector& Eye)
             const float Ph = FMath::Frac(Clock * (.55f + .11f * K) + K * .37f + Ft.P.X * .001f);
             const FVector P = Ft.P + Side * FMath::Sin(K * 2.3f + Ft.P.X) * Ft.Width * .9f + Ft.Out * (20.f + 110.f * Hash(K, Ft.P.X));
             // (low and broad: rounder, they read as eggs sitting on the melt)
-            const float S = (.3f + .3f * Hash(K, 2)) * FMath::Sin(PI * Ph) * Wk;
+            const float S = (.18f + .18f * Hash(K, 2)) * FMath::Sin(PI * Ph) * Wk;
             if (S > .02f) Xf.Add(FTransform(FRotator(0, K * 40.f, 0), PhlegWorld(P + FVector(0, 0, 8.f * S - 8.f)), FVector(S * 2.4f, S * 2.f, S * .3f)));
         }
-        if (L) L->SetIntensity(320.f * Surge * (.9f + .1f * FMath::Sin(Clock * 13.f + Ft.P.X)));
-        // Its hiss now and then, near.
-        if (Near < 3000.f && Sounds[SplashHiss] && R.FRand() < Dt * .35f)
-            UGameplayStatics::PlaySoundAtLocation(this, Sounds[SplashHiss], PhlegWorld(Ft.P), .3f, R.FRandRange(.5f, .65f));
+        if (L) L->SetIntensity(240.f * Surge * (.9f + .1f * FMath::Sin(Clock * 13.f + Ft.P.X)));
+        // Its hiss now and then, near, soft (quieter and rarer 2026-11-16, the user: tone the sounds down).
+        if (Near < 2000.f && Sounds[SplashHiss] && R.FRand() < Dt * .12f)
+            UGameplayStatics::PlaySoundAtLocation(this, Sounds[SplashHiss], PhlegWorld(Ft.P), .1f * (1.f - Near / 2000.f), R.FRandRange(.45f, .55f));
     }
     // The drops: flying, slowed a little by the air, back into the melt.
     for (int32 I = Drops.Num() - 1; I >= 0; --I)
@@ -2139,55 +2129,11 @@ void APhlegethosSetting::TickHazards(float Dt, AChuckCharacter* C)
     }
 
     // (The geysers on the lava road ran here until 2026-11-16: the user had them removed, flame skulls to come.)
-    TArray<FTransform> Balls, Marks;
-
-    // ---- lava bombs on the ascent's ramp and steps
-    // (On the ramp only: over the crumbling steps a blast knocked him back onto a fallen one.)
-    const bool bBombing = !bAstral && Body.X > RampX0 - 200 && Body.X < RampX1 - 60;
-    if (bBombing && Clock >= NextBomb)
+    // (The ascent's lava bombs, balls arcing onto glowing marks on the ramp, went too, 2026-11-16: the user read them as
+    // the road's geysers again. The volcano still erupts over him on the ramp, in the sky only.)
+    if (!bAstral && Body.X > RampX0 - 200 && Body.X < RampX1 - 60 && Clock >= NextErupt)
     {
-        // Aimed at where he will be when it comes down, with some lead and some scatter; one in three straight at him.
-        FRandomStream R(int32(Clock * 1000));
-        const FVector V = C->GetVelocity();
-        FBomb Bm; Bm.Flight = R.FRandRange(1.6f, 2.1f);
-        FVector Aim = Body + FVector(V.X, V.Y, 0) * Bm.Flight * R.FRandRange(.5f, 1.f);
-        if (R.FRand() > .34f) Aim += FVector(R.FRandRange(-260, 260), R.FRandRange(-200, 200), 0);
-        FHitResult Hit; const FVector Top = PhlegWorld(FVector(Aim.X, Aim.Y, RampTop + 600));
-        FCollisionQueryParams Q(TEXT("PhlegBomb"), false, C);
-        if (GetWorld()->LineTraceSingleByChannel(Hit, Top, Top - FVector(0, 0, 1200), ECC_Visibility, Q)) Aim = PhlegLocal(Hit.ImpactPoint);
-        else Aim.Z = LavaZ;
-        Bm.To = Aim; Bm.From = Aim + FVector(-3000, -1600, 4200);
-        Bombs.Add(Bm); ++BombsFired;
-        NextBomb = Clock + R.FRandRange(1.1f, 1.9f);
-        if (BombsFired % 4 == 1) Erupt(.6f);
+        Erupt(.6f);
+        NextErupt = Clock + FMath::FRandRange(6.f, 9.f);
     }
-    for (int32 I = Bombs.Num() - 1; I >= 0; --I)
-    {
-        FBomb& Bm = Bombs[I];
-        Bm.Age += Dt;
-        const float U = FMath::Clamp(Bm.Age / Bm.Flight, 0.f, 1.f);
-        if (!Bm.bLanded)
-        {
-            FVector P = FMath::Lerp(Bm.From, Bm.To, U); P.Z += 1500.f * FMath::Sin(PI * U) * (1 - U);
-            Balls.Add(FTransform(FRotator(Clock * 200, Clock * 150, 0), PhlegWorld(P), FVector(.5f)));
-            // The mark on the ground: a ring of glow growing as it comes.
-            const float K = .3f + .9f * U;
-            Marks.Add(FTransform(FRotator::ZeroRotator, PhlegWorld(Bm.To + FVector(0, 0, 2)), FVector(1.1f * K, 1.1f * K, .02f)));
-            if (U >= 1)
-            {
-                Bm.bLanded = true;
-                const float D = FVector::Dist(Body, Bm.To + FVector(0, 0, Half));
-                if (Sounds[Slam0]) UGameplayStatics::PlaySoundAtLocation(this, Sounds[(I & 1) ? Slam1 : Slam0], PhlegWorld(Bm.To), .8f, .8f);
-                if (D < 120 && !bAstral && C->TakeBite(PhlegWorld(Body + FVector(90, 0, 0)), 1)) ++BombHits;
-            }
-        }
-        else
-        {
-            Bm.After += Dt;
-            if (Bm.After < .6f) Balls.Add(FTransform(FRotator::ZeroRotator, PhlegWorld(Bm.To), FVector(.5f + Bm.After * 2.f, .5f + Bm.After * 2.f, .2f)));
-            if (Bm.After > .6f) Bombs.RemoveAtSwap(I);
-        }
-    }
-    BombBalls->ClearInstances(); if (Balls.Num()) BombBalls->AddInstances(Balls, false, true);
-    BombMarks->ClearInstances(); if (Marks.Num()) BombMarks->AddInstances(Marks, false, true);
 }
