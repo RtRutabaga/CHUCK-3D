@@ -112,8 +112,8 @@
       "file": "Lava004_2K-JPG_Color.jpg",
       "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
       "license": "CC0-1.0",
-      "sha256": "39B733F424C99DC9277D78B827C0FD3326E049531072E5B2C0CF53F2B44D5949",
-      "bytes": 5974128
+      "bytes": 5974128,
+      "sha256": "39B733F424C99DC9277D78B827C0FD3326E049531072E5B2C0CF53F2B44D5949"
     },
     {
       "provider": "ambientCG",
@@ -122,8 +122,8 @@
       "file": "Lava004_2K-JPG_NormalDX.jpg",
       "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
       "license": "CC0-1.0",
-      "sha256": "B363BC7DB5AF15F85AEB0C5DF51B0672A43DDD01B5A126A8948A9AD3242D6DB2",
-      "bytes": 7984162
+      "bytes": 7984162,
+      "sha256": "B363BC7DB5AF15F85AEB0C5DF51B0672A43DDD01B5A126A8948A9AD3242D6DB2"
     },
     {
       "provider": "ambientCG",
@@ -132,8 +132,68 @@
       "file": "Lava004_2K-JPG_Roughness.jpg",
       "source": "https://ambientcg.com/get?file=Lava004_2K-JPG.zip",
       "license": "CC0-1.0",
-      "sha256": "DB4682A24AE6857163EB970B58687E9EB757BE10FE73FC55B129BE1A5F6F8F48",
-      "bytes": 2104710
+      "bytes": 2104710,
+      "sha256": "DB4682A24AE6857163EB970B58687E9EB757BE10FE73FC55B129BE1A5F6F8F48"
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava001",
+      "role": "Diffuse",
+      "file": "Lava001_2K-JPG_Color.jpg",
+      "source": "https://ambientcg.com/get?file=Lava001_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "706A012169ADF13C4465E1798F34DF0EDB744B0A3D1D3BD3334AC95DE83B1A21",
+      "bytes": 6268477
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava001",
+      "role": "emit",
+      "file": "Lava001_2K-JPG_Emission.jpg",
+      "source": "https://ambientcg.com/get?file=Lava001_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "B28B107BA8EA09AD297B4319B305D1711B0C99886C42371F2F64E5E069D5586B",
+      "bytes": 5073702
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava001",
+      "role": "nor_dx",
+      "file": "Lava001_2K-JPG_NormalDX.jpg",
+      "source": "https://ambientcg.com/get?file=Lava001_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "8E5F57314B2CFE24E7328C54199D7ADBA20A56AB4F5A859800D8E9263B11313D",
+      "bytes": 9658204
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava005",
+      "role": "Diffuse",
+      "file": "Lava005_2K-JPG_Color.jpg",
+      "source": "https://ambientcg.com/get?file=Lava005_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "2DA2BE6955510CC7A48F47D4FA4762911B5513D4E71A6FA9A5EB1ECEE55A9CC3",
+      "bytes": 7083285
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava005",
+      "role": "emit",
+      "file": "Lava005_2K-JPG_Emission.jpg",
+      "source": "https://ambientcg.com/get?file=Lava005_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "9E21A0A36DA5962759CD366FF5D9CE3E82DA4C1EF2FF0ACF1362F9B090286D04",
+      "bytes": 7058076
+    },
+    {
+      "provider": "ambientCG",
+      "asset": "Lava005",
+      "role": "nor_dx",
+      "file": "Lava005_2K-JPG_NormalDX.jpg",
+      "source": "https://ambientcg.com/get?file=Lava005_2K-JPG.zip",
+      "license": "CC0-1.0",
+      "sha256": "385217495FA7070B9E472571C482913E54E0B3B82A45FF58D7339A69FFCAB2BB",
+      "bytes": 8406111
     }
   ]
 }

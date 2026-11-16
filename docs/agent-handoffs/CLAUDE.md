@@ -2,6 +2,31 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos lava from CC0 scans: crust plates, molten pools, streaky falls (Claude)
+
+- **Asked:** "Download and implement free resource(s) to make all the lava look better both lava sea and flowing lava things". The user approved both ambientCG sets and gave two goal images (`References/Phlegethos/phlegethos-goal-lava-columns.png`, `phlegethos-goal-lava-fall.png`).
+- **Source:** `main` at 9fe65ba9; this commit.
+- **Downloaded (CC0, ambientCG):** Lava001_2K-JPG (34 MB zip) and Lava005_2K-JPG (35 MB zip); colour, emission and normal (DirectX) kept in `SourceAssets/Setting/Phlegethos/` (about 43 MB), SHA-256 in `manifest.json`. Zips cached in `Local/AmbientCG`. No software installed.
+- **Changed:**
+  - `Tools/Fetch-Phlegethos.ps1`: adds the Lava001/Lava005 records to an existing manifest and extracts them from the zips.
+  - `Tools/create_phlegethos_assets.py`: an `emit` texture role (sRGB colour); `M_PhlegLava` rewritten. Lava004 is no longer used by it.
+    - The lake: rounded dark crust plates (smooth-minimum Voronoi edge) on a net of thin bright veins, widening into open molten pools with swirling lines from the Lava005 emission; fades to the Lava001 scan from 60 m and to coarse layers further out, so there is no tiling grid at the horizon.
+    - Flows, rivers and falls (vertex colour G = speed): bright melt with darker red streaks from both scans, moving with the speed.
+    - The old diagonal pulse stripes are gone; molten base colour is near black so only emission shows.
+  - New assets: `T_Lava001_2K_JPG_{Color,Emission,NormalDX}`, `T_Lava005_2K_JPG_{Color,Emission,NormalDX}` (Lava005 Color is imported but unused); `M_PhlegLava` rebuilt. The other Phlegethos materials and textures the script re-saves were restored unchanged.
+  - `docs/regions/PHLEGETHOS.md`: free resources and a lava section.
+- **Tested (editor):** Phlegethos 14/14 (`Local/phleg-lava-trials.log`); fall cutscene `failures=0 handoff=1` (`Local/phleg-lava-hellfall.log`); 54 stills in `Local/phleg-lava/`, reviewed against both goal images.
+- **Package:** `CHUCK_PACKAGE_VERIFIED passes=182` on the first run (`Local/phleg-lava-package.log`, `Local/verify-package-20261115-164118.log`).
+- **Not tested:** anything by hand.
+- **Remaining flaws:**
+  - The falls are flat sheets: no spray, splash or steam at their foot.
+  - The walkable basalt keeps its straight hex glowing cracks; the columns are not yet the goal's rocky columns with glowing feet.
+  - The ship's hidden-hull fault the playtester found is open.
+- **Contract compatibility:** no rig, scale or character changes; six new textures, one material changed.
+- **Launcher:** promoted as PhlegethosLava. The receipt names 9fe65ba9 because the package was built from the working tree before this commit. The previous package is kept at `Builds/Windows-Previous-20261115-PhlegethosLava`, the PhlegethosLook backup was pruned, and the candidate folder was removed.
+
+Next part of the work can be done by Claude only (lava fall spray/steam and the goal's columns, the ship's hidden-hull fault, Phlegethos creatures); preference: Claude, here.
+
 ## November 16 — Phlegethos: geysers fixed, badlands, the wastes before the fortress (Claude)
 
 - **Asked:**

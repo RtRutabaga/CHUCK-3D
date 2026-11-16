@@ -6,6 +6,12 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos lava from CC0 scans (November 16, Claude):**
+  - ambientCG Lava001 and Lava005 (CC0) drive a rewritten `M_PhlegLava`, toward the user's two goal images.
+  - The lava sea: rounded dark crust plates on thin bright veins, opening into molten pools with swirling lines; no stripes or horizon grid.
+  - Flows, rivers and falls: bright melt with darker red streaks, moving with their speed.
+  - Editor: 14/14 trials and the fall cutscene pass. Package verified first time (182 passes); promoted as PhlegethosLava. Not played by hand.
+  - Open: no spray or steam at the falls; the basalt's straight glowing cracks; the goal's columns. See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos geysers, badlands and the wastes (November 16, Claude):**
   - The road's geysers now visibly arc onto a warning mark, and burn only there.
   - Inaccessible badlands with lava rivers, flows, fire rain and a distant city of fire replace most of the open lava.

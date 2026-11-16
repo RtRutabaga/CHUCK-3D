@@ -1,7 +1,7 @@
 # CC0 textures for Phlegethos (Claude, 2026-11-14; docs/regions/PHLEGETHOS.md); no software installation.
 # Poly Haven: dark_rock and dark_rock_02 (basalt), volcanic_rock_tiles (the worn path, the fortress paving). 2K JPG
-# diffuse, normal (DirectX) and ARM. ambientCG: Lava004 (the molten surface), 2K JPG colour, normal (DirectX) and
-# roughness, from its zip. The first run records each file's provider MD5 (Poly Haven) or SHA-256 in the manifest; later
+# diffuse, normal (DirectX) and ARM. ambientCG: Lava004 (the first molten surface), 2K JPG colour, normal (DirectX) and
+# roughness; Lava001 and Lava005 (the lake and the flows, 2026-11-16), colour, emission and normal (DirectX); from zips. The first run records each file's provider MD5 (Poly Haven) or SHA-256 in the manifest; later
 # runs check against it.
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -25,6 +25,14 @@ if($records.Count -eq 0) {
         $records+= [pscustomobject][ordered]@{provider='ambientCG'; asset='Lava004'; role=$r.role; file="Lava004_2K-JPG_$($r.suffix).jpg"; source='https://ambientcg.com/get?file=Lava004_2K-JPG.zip'; license='CC0-1.0'}
     }
 }
+# (2026-11-16) ambientCG Lava001 (the lake: dark crust over molten seams) and Lava005 (streaky molten flow: rivers, falls),
+# with their emission maps; added to an existing manifest.
+foreach($id in @('Lava001','Lava005')) {
+    if(@($records | Where-Object { $_.asset -eq $id }).Count -gt 0) { continue }
+    foreach($r in @(@{role='Diffuse';suffix='Color'},@{role='emit';suffix='Emission'},@{role='nor_dx';suffix='NormalDX'})) {
+        $records+= [pscustomobject][ordered]@{provider='ambientCG'; asset=$id; role=$r.role; file="${id}_2K-JPG_$($r.suffix).jpg"; source="https://ambientcg.com/get?file=${id}_2K-JPG.zip"; license='CC0-1.0'}
+    }
+}
 foreach($record in $records) {
     $target=Join-Path $folder $record.file
     if($record.provider -eq 'Poly Haven') {
@@ -33,7 +41,7 @@ foreach($record in $records) {
     } else {
         if(!(Test-Path -LiteralPath $target)) {
             $zip=Join-Path $cache "$($record.asset)_2K-JPG.zip"
-            if(!(Test-Path -LiteralPath $zip)) { Invoke-WebRequest -Uri $record.source -OutFile $zip }
+            if(!(Test-Path -LiteralPath $zip)) { $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri $record.source -OutFile $zip }
             $archive=[IO.Compression.ZipFile]::OpenRead($zip)
             try {
                 $entry=$archive.Entries | Where-Object { $_.Name -eq $record.file }

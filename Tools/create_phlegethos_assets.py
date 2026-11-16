@@ -3,7 +3,7 @@
 UnrealEditor-Cmd <uproject> -ExecutePythonScript=<absolute path to this file> -AllowCommandletAudio -unattended -nosplash -NoLiveCoding
 (-run=pythonscript crashes in the content browser when importing.)
 
-Imports the twelve CC0 maps fetched by Tools/Fetch-Phlegethos.ps1 (SourceAssets/Setting/Phlegethos) into
+Imports the CC0 maps fetched by Tools/Fetch-Phlegethos.ps1 (SourceAssets/Setting/Phlegethos) into
 /Game/Art/Phlegethos, the user's two Phlegethos tracks (SourceAssets/Audio/Phlegethos.wav, Phlegethos2.wav, unmodified)
 into /Game/Art/Audio as SW_Phlegethos and SW_Phlegethos2 (looping), and builds:
 
@@ -11,8 +11,9 @@ into /Game/Art/Audio as SW_Phlegethos and SW_Phlegethos2 (looping), and builds:
                  height above the lava). Vertex colour R: cracked heat (glowing seams in the rock's dark creases), G: the
                  second basalt, B: ash settled on top. The lava's light comes up the faces near it (Z under about 2 m).
   M_PhlegPath    the worn volcanic flagstones of the road and the fortress, with ash in the joints.
-  M_PhlegLava    the molten surface: the lava scan, its crust dark and its cracks white-hot, drifting and churning; UV V
-                 runs down a flow (rivers, falls) and vertex colour G is its speed. Strongly emissive.
+  M_PhlegLava    the molten surface: the lake's rounded crust plates on a net of glowing veins, open molten pools in places
+                 (Lava005's swirls), the plates crazed and, past 60 m, the crust scan (ambientCG Lava001); the flows and
+                 falls stream with Lava005. UV V runs down a flow (rivers, falls) and vertex colour G is its speed.
   M_PhlegGlow    plain emissive for fissures, eyes and the lava bombs' marks; vertex colour RGB is the colour, A pulses.
   M_PhlegEmber   additive camera-facing embers and ash (PerInstanceCustomData 0: heat 0 ash .. 1 white-hot).
   M_PhlegSky     the smoke sky dome (unlit); parameters Flash and FlashDir light its clouds round a lightning bolt.
@@ -78,15 +79,15 @@ for rec in json.loads((SOURCE / 'manifest.json').read_text(encoding='utf-8-sig')
     task.destination_name = name; task.automated = True; task.replace_existing = True; task.save = False
     TOOLS.import_asset_tasks([task]); tex = unreal.load_asset(DEST + '/' + name)
     role = rec['role'].lower()
-    tex.set_editor_property('srgb', role == 'diffuse')
+    tex.set_editor_property('srgb', role in ('diffuse', 'emit'))
     tex.set_editor_property('compression_settings', unreal.TextureCompressionSettings.TC_NORMALMAP if role == 'nor_dx' else
-                            unreal.TextureCompressionSettings.TC_DEFAULT if role == 'diffuse' else unreal.TextureCompressionSettings.TC_MASKS)
+                            unreal.TextureCompressionSettings.TC_DEFAULT if role in ('diffuse', 'emit') else unreal.TextureCompressionSettings.TC_MASKS)
     ASSETS.save_loaded_asset(tex, only_if_is_dirty=False)
     textures[rec['asset'], role] = tex
 
 
 def tex_object(m, asset, role):
-    typ = {'diffuse': unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, 'nor_dx': unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+    typ = {'diffuse': unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, 'emit': unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, 'nor_dx': unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
            'arm': unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, 'rough': unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE}[role]
     return node(m, unreal.MaterialExpressionTextureObject, texture=textures[asset, role], sampler_type=typ)
 
@@ -217,50 +218,89 @@ struct LavaFns
 {
     float H(float2 i){return frac(sin(dot(i,float2(127.1,311.7)))*43758.5453);}
     float N(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(H(i),H(i+float2(1,0)),f.x),lerp(H(i+float2(0,1)),H(i+1),f.x),f.y);}
+    float L(float3 c){return dot(c,float3(.3,.59,.11));}
     float Edge(float2 p)
     {
         float2 i=floor(p),f=frac(p),mr=0;float md=8;
-        for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){float2 g=float2(x,y),o=float2(H(i+g),H(i+g+17.3))*.85+.075,r=g+o-f;float d=dot(r,r);if(d<md){md=d;mr=r;}}
-        md=8;
-        for(int y2=-2;y2<=2;y2++)for(int x2=-2;x2<=2;x2++){float2 g=float2(x2,y2),o=float2(H(i+g),H(i+g+17.3))*.85+.075,r=g+o-f;if(dot(mr-r,mr-r)>.00001)md=min(md,dot(.5*(mr+r),normalize(r-mr)));}
-        return md;
+        for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){float2 g=float2(x,y),o=float2(H(i+g),H(i+g+17.3))*.8+.1,r=g+o-f;float d=dot(r,r);if(d<md){md=d;mr=r;}}
+        // Smooth minimum of the distances to the cell's borders: the plates' corners round off and the veins pool at
+        // their junctions, as in the goal image (a hard minimum gave straight-sided polygons).
+        float sm=0;
+        for(int y2=-2;y2<=2;y2++)for(int x2=-2;x2<=2;x2++){float2 g=float2(x2,y2),o=float2(H(i+g),H(i+g+17.3))*.8+.1,r=g+o-f;if(dot(mr-r,mr-r)>.00001)sm+=exp(-14*dot(.5*(mr+r),normalize(r-mr)));}
+        return max(0,-log(sm)/14);
     }
 };
 LavaFns F;
-// World-scale UVs (cm/400): drifting slowly, the flow's speed down V (vertex colour G, 0 still .. 1 a fall).
-// (2026-11-15, the user's goal art: deep red-orange lava under a dark drifting crust, molten in its seams and its rivers;
-// the yellow-white only in the hottest threads. The flat bright sheet lit everything round it tan.)
+// (2026-11-16, with ambientCG CC0 scans: Lava001 for the lake - dark crust torn open by molten streaks - and Lava005 for
+// the flows - molten lines streaming. The procedural Voronoi plates read as a regular hex net from Chuck's eye and above.)
+// UVs are world cm/400; vertex colour G is the flow's speed (0 the lake .. 1 a fall), V runs down a flow.
 float speed=VC.g;
-float2 uv=UV;
-float2 warp=float2(F.N(uv*1.3+T*.05),F.N(uv*1.3+5.2-T*.04))-.5;
-float2 u1=uv*.55+warp*.35+float2(T*.006,-T*(.012+speed*.9));
-float2 u2=uv*1.1-warp*.25+float2(-T*.009,-T*(.02+speed*1.4))+.37;
-float3 c1=Texture2DSample(LD,LDSampler,u1).rgb,c2=Texture2DSample(LD,LDSampler,u2).rgb;
-float l1=dot(c1,float3(.3,.59,.11)),l2=dot(c2,float3(.3,.59,.11));
-float scan=saturate(max(l1,l2*.9)*1.6-.5+(F.N(uv*2.5+T*.15)-.5)*.3);
-// Crust plates (about 2.5 m) drifting on the flow, cracked apart; molten between them, the plates dark with a dull ember
-// heart where they are thin.
-float2 pq=uv*1.6+warp*.6+float2(T*.004,-T*(.008+speed*.6));
-float e=F.Edge(pq),thin=F.N(pq*2.3+7.1);
-// (Seams thin, and hot only in places: some cracks cooled dark, so the plates never read as an even net.)
-float seamHeat=smoothstep(.3,.75,F.N(pq*.45+T*.02)*.75+thin*.35);
-float seam=(1-smoothstep(.01,.05+.05*thin,e))*(1-speed)*seamHeat;
-float crust=(1-seam)*smoothstep(.25,.55,thin*.6+F.N(uv*.7-T*.01)*.6)*(1-speed);
-float molten=saturate(max(scan*(1-crust*.9),seam*(.5+.3*thin)));
-// A fall or river: streaks down the flow, molten with dark crust threads carried in it.
-float streak=F.N(float2(uv.x*7,uv.y*.5-T*speed*1.6))*.7+F.N(float2(uv.x*19,uv.y*1.4-T*speed*2.2))*.3;
-molten=lerp(molten,saturate(.22+streak*.7),speed);
-// Far off, the seams merge into a dull glow: the lake seen from the fall or across it reads molten, not as sand.
-float far=saturate((D-2500)/40000);
-molten=lerp(molten,.16+.12*molten+.22*smoothstep(.45,.85,F.N(uv*.03+T*.002)),far*.8);
-float pulse=.85+.15*sin(T*1.3+uv.x*2.1+uv.y*1.7);
-float3 hot=lerp(float3(.7,.06,.006),float3(1.,.3,.035),saturate(molten*1.25))*pulse;
-hot=lerp(hot,float3(1.,.62,.25),saturate((molten-.9)*6));
-Emit=hot*molten*(3+8*molten*molten)*VA*(1-.6*speed);
-Rough=lerp(.85,.3,molten);
-float3 Nn=Texture2DSample(LN,LNSampler,u1).rgb*2-1;
-WN=normalize(float3(Nn.xy*(1-molten)*1.1,1));
-return lerp(float3(.025,.018,.016),float3(.22,.05,.01),molten);
+// Wrapped so the noise hash keeps its precision far out on the lake (UVs reach thousands there).
+float2 uv=UV-floor(UV/512)*512;
+float2 warp=float2(F.N(uv*.9+T*.03),F.N(uv*.9+5.2-T*.025))-.5;
+// The lake (2026-11-16, the user's goal image References/Phlegethos/phlegethos-goal-lava-columns.png): rounded crust
+// plates about 1.5 m across, dark red-brown and faintly glowing, drifting apart on a branching net of bright molten veins
+// that run wide in places; the plate rims glow from the veins, and fine cracks (the Lava001 scan) craze their tops. Warped
+// twice so the cells are rounded and never read as a hex net.
+float2 a1=uv*.28+warp*.18+float2(T*.004,-T*.006);
+float2 a2=float2(uv.x*.7-uv.y*.71,uv.x*.71+uv.y*.7)*.16-warp*.12+float2(-T*.003,T*.002)+.31;
+float e1=F.L(Texture2DSample(CE,CESampler,a1).rgb),e2=F.L(Texture2DSample(CE,CESampler,a2).rgb);
+float3 cA=Texture2DSample(CA,CASampler,a1).rgb;
+float2 pq=uv*2.6+warp*1.2+float2(T*.006,-T*.004);
+pq+=(float2(F.N(pq*.55+1.7),F.N(pq*.55+8.3))-.5)*.9+(float2(F.N(pq*.13+2.9),F.N(pq*.13+6.1))-.5)*1.6;
+float e=F.Edge(pq);
+float wide=smoothstep(.3,.85,F.N(pq*.21+3.1)*.75+F.N(pq*.9+4.4)*.25);
+float wid=.012+.11*wide*wide;
+// Open pools (2026-11-16, the user's second goal image References/Phlegethos/phlegethos-goal-lava-fall.png): in places
+// the plates shrink to rafts and give way to bright open melt crossed by thin swirling lines (Lava005, drifting).
+float open=smoothstep(.55,.82,F.N(uv*.03+float2(T*.002,0))*.62+F.N(uv*.1-T*.004)*.38);
+wid+=open*open*.55;
+float vein=(1-smoothstep(wid*.25,wid,e))*(.72+.28*smoothstep(.02,.12,wid-e));
+float2 sw=float2(uv.y*.7+uv.x*.3,uv.x*.7-uv.y*.3)*.32+warp*.45+float2(T*.006,-T*.01);
+float swirl=F.L(Texture2DSample(FE,FESampler,sw).rgb);
+float pool=saturate(.5+pow(saturate(swirl*1.5),1.4)*.55);
+float rim=exp(-e*(16-7*wide))*(1-vein);
+float craze=saturate(e1*2.4-.3);
+float lakeHeat=max(vein*lerp(.7+.3*F.N(pq*1.7-T*.2),pool,open),max(rim*.45,craze*.2));
+// The veins' detail fades before it shimmers (a 1.5 m net at 100 m is a few pixels); the scans carry the middle distance.
+float vf=smoothstep(6000,20000,D);
+lakeHeat=lerp(lakeHeat,saturate(.18+e2*1.1+e1*.4),vf);
+// The flows: the streaming scan along V at the flow's speed, two layers sliding past each other.
+float2 f1=float2(uv.y*.32-T*(.03+speed*.55),uv.x*.55);
+float2 f2=float2(uv.y*.55-T*(.05+speed*.85),uv.x*.9+.43);
+float s1=F.L(Texture2DSample(FE,FESampler,f1).rgb),s2=F.L(Texture2DSample(FE,FESampler,f2).rgb);
+// (The second goal image: a fall nearly all molten, orange to yellow, the darker red streaks running down it.)
+float flowHeat=saturate(.3+pow(saturate(max(s1,s2*.85)*1.45),1.35)*.82);
+float k=smoothstep(.08,.35,speed);
+float molten=lerp(lakeHeat,flowHeat,k);
+// Far off the scans blur to their average: a dull glow with broad hot patches, so the lake from the fall reads molten.
+// (Fully at the horizon: any of the scans left there showed as a grid of tiles.)
+// Each finer term fades out before its cells shrink to pixels (they shimmered into a grid toward the horizon); the flows
+// keep their heat, so the rivers still read from the crane.
+float far=smoothstep(6000,70000,D);
+float m1=1-smoothstep(150000,600000,D),m2=1-smoothstep(40000,150000,D);
+float macro=lerp(.45,smoothstep(.4,.9,F.N(uv*.004+.7)*.6+lerp(.5,F.N(uv*.013+T*.001),m2)*.4),m1);
+// From the fall's height two coarse layers of the crust scan (about 400 m and 1 km, turned) keep the lake broken into
+// rafts and glowing rifts; the near scans blur to their average there.
+float2 a3=float2(uv.x*.6+uv.y*.8,uv.y*.6-uv.x*.8)*.01+warp*.01+float2(T*.0002,0);
+float2 a4=float2(uv.x*.8-uv.y*.6,uv.y*.8+uv.x*.6)*.0039+.53;
+float e3=max(F.L(Texture2DSample(CE,CESampler,a3).rgb),F.L(Texture2DSample(CE,CESampler,a4).rgb)*.9);
+float farLake=.06+.08*lerp(.3,open,m2)+.2*macro*macro+m2*smoothstep(.1,.42,e3)*.7;
+molten=lerp(molten,lerp(farLake,.42,k),far);
+// (A slow throb, out of phase across the lake: a sine of the UVs drew 18 m diagonal stripes, seen from the fall.)
+float pulse=.88+.12*sin(T*1.3+F.N(uv*.05)*12*m2);
+float3 hot=lerp(float3(.65,.05,.005),float3(1.,.28,.03),saturate(molten*1.2))*pulse;
+hot=lerp(hot,float3(1.,.6,.22),saturate((molten-.9)*6));
+Emit=hot*molten*(2+8*molten*molten)*VA*(1-.4*k);
+// The plates themselves smoulder dull red (the goal's crust is never black), more where they are thin.
+Emit+=float3(.16,.018,.003)*(.2+.8*F.N(pq*.35+T*.05))*(1-molten)*(1-k)*(1-vf*.6)*VA;
+Rough=lerp(.55,.35,molten);
+float3 Nn=lerp(Texture2DSample(CN,CNSampler,a1).rgb,Texture2DSample(FN,FNSampler,f1).rgb,k)*2-1;
+WN=normalize(float3(Nn.xy*(1-molten)*1.2,1));
+// (Molten nearly black in base colour: its light is emissive. Lit, the bright base colour showed the sun's shadow acne
+// as diagonal stripes from above.)
+float3 crustCol=lerp(cA*.2,float3(.05,.022,.016),.5);
+return lerp(crustCol,float3(.03,.008,.002),saturate(molten*1.5));
 '''
 
 GLOW = r'''
@@ -387,7 +427,8 @@ def lava(m):
     vc = node(m, unreal.MaterialExpressionVertexColor)
     inputs = {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'T': node(m, unreal.MaterialExpressionTime),
               'VC': vc, 'VA': (vc, 'A'), 'D': node(m, unreal.MaterialExpressionPixelDepth),
-              'LD': tex_object(m, 'Lava004', 'diffuse'), 'LN': tex_object(m, 'Lava004', 'nor_dx')}
+              'CA': tex_object(m, 'Lava001', 'diffuse'), 'CE': tex_object(m, 'Lava001', 'emit'),
+              'CN': tex_object(m, 'Lava001', 'nor_dx'), 'FE': tex_object(m, 'Lava005', 'emit'), 'FN': tex_object(m, 'Lava005', 'nor_dx')}
     c = custom(m, LAVA, inputs, extra=[('Emit', F3), ('WN', F3), ('Rough', F1)])
     out(m, c, unreal.MaterialProperty.MP_BASE_COLOR)
     out(m, c, unreal.MaterialProperty.MP_EMISSIVE_COLOR, 'Emit')

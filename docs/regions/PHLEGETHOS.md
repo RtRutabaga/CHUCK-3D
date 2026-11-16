@@ -47,7 +47,8 @@ One continuous stage, built in code on its own site (`PhlegethosSetting.h`), 8 k
 CC0 textures, fetched and hash-checked by `Tools/Fetch-Phlegethos.ps1` into `SourceAssets/Setting/Phlegethos`:
 
 - Poly Haven `dark_rock` and `dark_rock_02` (basalt), `volcanic_rock_tiles` (the worn path and the fortress paving). 2K diffuse, normal, ARM.
-- ambientCG `Lava004` (the molten surface, driven by a flowing emissive material).
+- ambientCG `Lava004` (the first molten surface; still imported, no longer used by the lava).
+- ambientCG `Lava001` (the lake: dark crust torn by molten streaks) and `Lava005` (the flows' streaming molten lines), 2K colour, emission and normal (2026-11-16).
 
 The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused for the geysers and bombs.
 
@@ -122,6 +123,17 @@ The user: the first challenge looked like "a weird flat at the top orange funnel
 - **Cutscene crane:** rises to 56 m and frames the badlands, the wastes and the fortress, the volcano on the left and the city on the right.
 - **Not built (the user withdrew it):** the fire whirls.
 
+### The lava from the CC0 scans (2026-11-16)
+
+The user: "Download and implement free resource(s) to make all the lava look better both lava sea and flowing lava things". With the user's yes, ambientCG `Lava001_2K-JPG.zip` (34 MB) and `Lava005_2K-JPG.zip` (35 MB); their colour, emission and normal maps are kept (about 43 MB). `M_PhlegLava` was rewritten around them:
+
+- **The sea, toward the user's goal image** (`References/Phlegethos/phlegethos-goal-lava-columns.png`, given mid-task): rounded crust plates about 1.5 m across, varied in size, dark red-brown and smouldering faintly. They drift apart on a branching net of thin bright veins that widen in places and pool at the junctions, and the plate rims glow from the veins. Lava001's fine cracks craze the plate tops. The rounding comes from a smooth minimum of the cell-border distances, warped twice; the old hard-edged Voronoi read as a hex net. The veins fade into Lava001's crust scan (two scales) from about 60 to 200 m, before they shimmer. A first pass with only the streaky scan on the lake was replaced after the goal image.
+- **Open pools, toward the user's second goal image** (`References/Phlegethos/phlegethos-goal-lava-fall.png`): in places (about a sixth of the lake, 100 to 300 m patches) the plates shrink to rafts and give way to bright open melt crossed by thin swirling lines (Lava005, drifting).
+- **Rivers, flows and falls:** Lava005's streaks run down the flow at the flow's speed, two layers sliding past each other. After the second goal image they are nearly all molten, orange to yellow, the darker red streaks running down them. The falls are still flat sheets, with no thickness or spray, and no steam where they land.
+- **Far off and from the fall:** two coarse layers of the crust scan (about 400 m and 1 km) keep the lake broken into rafts and glowing rifts; finer detail fades out before it shimmers. The horizon no longer shows a grid of tiles.
+- **Two old faults fixed:** the throb was a sine of the UVs and drew 18 m diagonal stripes seen from the fall; and the bright base colour no longer catches the light (the glow is emissive).
+- The glowing cracks on the walkable basalt are the basalt material and were not changed.
+
 ### Known gaps
 
 - No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
@@ -130,7 +142,7 @@ The user: the first challenge looked like "a weird flat at the top orange funnel
   - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.
   - The idols are blocky.
   - The volcano's plume reads as one dark blob at 12 km.
-  - The lava falls are flat sheets.
+  - The lava falls are flat sheets (now streaming, but with no thickness or spray).
   - The far hills are smooth and greyish at a distance.
 - The wastes are dark between the braziers; the walk is 70 s at a run.
 - The flagstones are plain slabs, not the goal art's carved blocks.
