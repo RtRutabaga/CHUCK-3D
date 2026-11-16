@@ -1,5 +1,5 @@
 // -ChuckChultTest -ChuckPhlegethosTest (Claude, 2026-11-14; PhlegethosSetting.h): the real character through Phlegethos's
-// challenges, each a trial placed at its start: the road's hops and its sprint leap past the geysers, every column hop
+// challenges, each a trial placed at its start: the hills' path from the landing (2026-11-16), the road's hops and its sprint leap past the geysers, every column hop
 // of the lake (the wall run up the tall one), the chained wall run between the slabs, the gorge's side wall run and drop,
 // the chains, the bomb ramp, the crumbling steps, the chimney, the last leap, the shut gate; and stills of each stretch.
 // -ChuckPhlegethosTest=<trial> runs one. -ChuckHellFallTest: the fall cutscene alone, its shots, then the handoff.
@@ -22,8 +22,8 @@ using namespace Phleg;
 namespace
 {
     constexpr float Stand = 34.65f;
-    enum class ET : uint8 { Stills, RoadHops, RoadLeap, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Bombs, Steps, Chimney, Leap, Approach, Gate, Count };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("bombs"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
+    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Bombs, Steps, Chimney, Leap, Approach, Gate, Count };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("bombs"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -47,7 +47,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 W->bDone = true;
                 const APhlegethosSetting* S = APhlegethosSetting::Get(Owner->GetWorld());
                 const FVector L = PhlegLocal(Chuck->GetActorLocation());
-                const bool bPass = S && S->IsLive() && FVector::Dist(Chuck->GetActorLocation(), PhlegethosSpawn(EPhlegSpawn::Arrival)) < 60 && S->GetMissingMaterials() == 0;
+                const bool bPass = S && S->IsLive() && FVector::Dist(Chuck->GetActorLocation(), PhlegethosSpawn(EPhlegSpawn::Landing)) < 60 && S->GetMissingMaterials() == 0;
                 FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("HellFall/Handoff.png"), true, false);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_HELL_FALL_TEST failures=%d handoff=%d at=%s seconds=%.1f"), Failures + !bPass, bPass, *L.ToString(), T);
                 FTimerHandle Quit; Owner->GetWorldTimerManager().SetTimer(Quit, [Failures, bPass]() { FPlatformMisc::RequestExitWithStatus(false, (Failures + !bPass) ? 1 : 0); }, 2.f, false);
@@ -107,28 +107,30 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         if (Run->Trial >= int32(ET::Count))
         {
             Run->bDone = true;
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TEST failures=%d passed=%d trials=%s sunk=%d crumbled=%d geyser_hits=%d bomb_hits=%d bombs=%d seconds=%.0f"), Run->Failures, Run->Passed,
-                *FString::Join(Run->Results, TEXT(" ")), Stage ? Stage->GetSunk() : 0, Stage ? Stage->GetCrumbled() : 0, Stage ? Stage->GetGeyserHits() : 0, Stage ? Stage->GetBombHits() : 0, Stage ? Stage->GetBombs() : 0, Now - Run->Start);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TEST failures=%d passed=%d trials=%s sunk=%d crumbled=%d splashes=%d bomb_hits=%d bombs=%d seconds=%.0f"), Run->Failures, Run->Passed,
+                *FString::Join(Run->Results, TEXT(" ")), Stage ? Stage->GetSunk() : 0, Stage ? Stage->GetCrumbled() : 0, Stage ? Stage->GetSplashes() : 0, Stage ? Stage->GetBombHits() : 0, Stage ? Stage->GetBombs() : 0, Now - Run->Start);
             FPlatformMisc::RequestExitWithStatus(false, Run->Failures ? 1 : 0);
             return;
         }
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
         // A death ends any trial but the stills.
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
-        // (The wastes' walk is 155 m: about 70 s at his run.)
-        if (Now - Run->TrialStart > (Run->Trial == int32(ET::Approach) ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
+        // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
+        const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills);
+        if (Now - Run->TrialStart > (bLong ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
         switch (ET(Run->Trial))
         {
         case ET::Stills:
         {
             // Each stretch's start, looking on along the way (rat height, then raised).
             const int32 K = Run->Hop;
-            // (Then the geysers on the road: four shots over one period, so the warning mark and the fountain both show.)
+            // (Then a lava fall's foot from the gorge's shelf, across the river: four shots, so the spray shows in motion.
+            // The geysers' shots were here until 2026-11-16.)
             if (K >= PhlegSpawns)
             {
-                if (Run->Sub == -1) { Place(4560, SpineMid(4560), G, 0); Chuck->SetOrbitPitch(-14); Run->Sub = 10; }
-                else if (Run->Sub >= 10 && Run->Sub < 14 && T > 1.2f + .85f * (Run->Sub - 10)) { Shot(FString::Printf(TEXT("Geyser_%d"), Run->Sub - 10)); ++Run->Sub; }
-                else if (Run->Sub >= 14) Next(true, FString::Printf(TEXT("stills=%d"), PhlegSpawns * 2 + 4));
+                if (Run->Sub == -1) { Place(GorgeX + 1100, -95, G, 90); Chuck->SetOrbitPitch(-6); Run->Sub = 10; }
+                else if (Run->Sub >= 10 && Run->Sub < 14 && T > 1.5f + .6f * (Run->Sub - 10)) { Shot(FString::Printf(TEXT("FallSplash_%d"), Run->Sub - 10)); ++Run->Sub; }
+                else if (Run->Sub >= 14) Next(Stage && Stage->GetSplashes() > 0, FString::Printf(TEXT("stills=%d splashes=%d"), PhlegSpawns * 2 + 4, Stage ? Stage->GetSplashes() : 0));
                 break;
             }
             if (Run->Sub == -1)
@@ -140,6 +142,17 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             else if (Run->Sub == 1 && T > 2.43f && Run->Struck != K && K % 2 == 0) { if (auto* S = APhlegethosSetting::Get(Chuck->GetWorld())) S->Strike(K == 4, 14.f); Run->Struck = K; }
             else if (Run->Sub == 1 && T > 2.5f) { Shot(FString::Printf(TEXT("%d_%s_Rat"), K, PhlegethosStretchName(K))); Chuck->SetOrbitPitch(-40); Run->Sub = 2; Run->At = Now; }
             else if (Run->Sub == 2 && T > 1.5f) { Shot(FString::Printf(TEXT("%d_%s_High"), K, PhlegethosStretchName(K))); ++Run->Hop; Run->Sub = -1; }
+            break;
+        }
+        case ET::Hills:
+        {
+            // (2026-11-16) From the landing along the hills' winding path over the rises to the plain at a run, never off it.
+            if (Run->Sub == -1) { Place(HillsLandX, 0, G, 0); Run->Sub = 0; Run->Hop = 0; Chuck->SetRunHeld(true); break; }
+            const float Look = P.X + 380;
+            Toward(Look, Look < HillsJoinX ? HillsPathY(Look) : 0.f);
+            if (T > .3f && P.X > HillsLandX + 1300 && P.X < HillsJoinX) Run->Hop = FMath::Max(Run->Hop, FMath::RoundToInt(FMath::Abs(P.Y - HillsPathY(P.X))));
+            for (int32 K = 0; K < 3; ++K) if (Run->Sub == K && P.X > HillsLandX + 600 + K * 3000) { Shot(FString::Printf(TEXT("Hills_%d"), K)); ++Run->Sub; }
+            if (Ground && P.X > HillsJoinX + 600) Next(Run->Hop < 300 && P.Z - Stand > G - 80, FString::Printf(TEXT("worst_off_path_cm=%d"), Run->Hop));
             break;
         }
         case ET::RoadHops:
@@ -154,7 +167,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::RoadLeap:
         {
-            // Past the geysers at a run, then a sprint at the long break and the leap.
+            // Along the last long segment at a run, then a sprint at the long break and the leap.
             if (Run->Sub == -1) { Place(Spine[3].X0 + 300, SpineMid(Spine[3].X0 + 300), G, 0); Run->Sub = 0; Chuck->SetRunHeld(true); }
             Toward(P.X + 200, SpineMid(P.X + 200));
             if (Run->Sub == 0 && P.X > Spine[3].X1 - 420) { if (Chuck->TrySprint()) Run->Sub = 1; }

@@ -134,6 +134,46 @@ The user: "Download and implement free resource(s) to make all the lava look bet
 - **Two old faults fixed:** the throb was a sine of the UVs and drew 18 m diagonal stripes seen from the fall; and the bright base colour no longer catches the light (the glow is emissive).
 - The glowing cracks on the walkable basalt are the basalt material and were not changed.
 
+### The landing hills, hot cracks, fall splash, more light and spawns (2026-11-16)
+
+The user (with a goal image, `References/Phlegethos/phlegethos-goal-hot-cracks.png`): "Make the hot cracks look better like this goal image. Remove the lava spigot hazards, keep these areas, just remove this hazard and the visuals that go with it (later we'll add flame skull hostile npcs here as the hazard). Expand the overall playable area by creating a natural land mass looking hilly section with pathway similar in design to the last part of the map but have it before the current first part of the map, make it so this is where Chuck lands. ... Give the lava waterfalls natural splash effect ... Slightly increase lighting for the whole region. Add additional spawn points ..."
+
+- **The hills** (`Phleg::HillsGround`, `HillsPathY`; X -13 800 to the plain):
+  - The fall now lands at X -11 000 in a level clearing about 13 m across, its ground the goal image's cracked plates.
+  - A flagstone path winds about 85 m east over two long rises (to about 3.3 m) and a dip, to the plain's neck, where it joins the plain's own path. The plain's path now runs across where the old landing was.
+  - Off the path: rolling hills, broken crests and knolls, low near the clearing and rising away from it; ridges framing the valley; basalt column clusters, tors and boulders; glowing fissures; a few iron stakes; lava-filled hollows well off the path with steam.
+  - The land mass goes down into the lake 40 to 55 m out on either side and behind the landing.
+  - The badlands keep clear of it, and the meteors fall elsewhere.
+  - No hazards: hostile NPCs come later.
+- **The geysers** are gone: their vents, fountains, warning marks, lights, sounds and burns. The road is otherwise as it was.
+- **The hot cracks** (`M_PhlegBasalt`, wherever the vertex colour marks the ground hot):
+  - Broader plates (about 2.5 m), warped twice so they are irregular.
+  - The crack edges are ragged at small scale and bevelled down into the crack (the normal tilts on the lip).
+  - The cracks are 3 to 8 cm wide and glow almost all along: a yellow core, fire flickering along them, the plates' lips lit orange.
+  - Dark hairline cracks run across the plates.
+  - The first pass glowed too strongly: the cracks bloomed into bands and the exposure turned the plates black.
+- **The lava falls' splash** (`TickSplash`, within 90 m):
+  - Molten spray thrown up and out where each of the gorge's six falls meets the lake, in surges. The drops are stretched along their flight and fall back in arcs, with bigger gobbets among them.
+  - Low boiling swells on the melt; steam and smoke rolling up; a flickering unshadowed light; a hiss now and then.
+- **Light:**
+  - The sun goes from .9 to 1.2 and the sky light from .9 to 1.15.
+  - The exposure bias goes from -.2 to -.05.
+  - The lava's light on him is a fifth stronger.
+- **Spawns:** 13 instead of 6. A death returns him to the last one he passed:
+  - the hills' landing;
+  - the plain;
+  - the road, and its last long segment before the sprint leap;
+  - the lake, and the column beyond the slabs;
+  - the gorge, the shelf past its first break, and the low shelf before the chains;
+  - the ascent, the ramp's top before the crumbling steps, and the chimney's foot;
+  - the fortress.
+
+  The dev checkpoint page lists all 13 over two columns.
+- **Tests:**
+  - New trial `hills`: from the landing along the path to the plain at a run, never more than 3 m off it (85 cm). That makes 15 trials.
+  - The stills now cover all 13 spawns, and the fall-splash shots replace the geyser shots.
+  - Verify-Package expects `passed=15`.
+
 ### Known gaps
 
 - No creatures (lemures, fire snakes, spined devils, flameskulls, horned devils): a later milestone.
@@ -142,9 +182,9 @@ The user: "Download and implement free resource(s) to make all the lava look bet
   - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.
   - The idols are blocky.
   - The volcano's plume reads as one dark blob at 12 km.
-  - The lava falls are flat sheets (now streaming, but with no thickness or spray).
+  - The lava falls are flat sheets with no thickness (their feet now splash).
   - The far hills are smooth and greyish at a distance.
 - The wastes are dark between the braziers; the walk is 70 s at a run.
 - The flagstones are plain slabs, not the goal art's carved blocks.
-- The geysers hit hard: running straight through without timing them cost 3 Sanity in the tests.
+- The hills are a smooth heightfield (1.2 m grid): from low down their slopes read soft, like clay, more than broken rock. Between the clearing and the plain they are dark.
 - Not played by hand.

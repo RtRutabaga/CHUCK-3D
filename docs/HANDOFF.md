@@ -6,6 +6,15 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos landing hills, hot cracks, fall splash, light and spawns (November 16, Claude):**
+  - Chuck now lands in a new hilly land mass before the arrival plain. A winding flagstone path runs about 85 m over two rises to the plain's neck. No hazards yet; creatures come later.
+  - The road's lava geysers and their visuals were removed. The ground is kept for the flame skulls planned there.
+  - The basalt's hot cracks now follow the user's goal image (`References/Phlegethos/phlegethos-goal-hot-cracks.png`): broad bevelled plates, cracks a hand wide with a yellow core and fire in them, lit lips, and dark hairlines.
+  - The lava falls' feet throw molten spray in arcs, with boiling domes, smoke, a flickering glow and a hiss.
+  - The region is a little brighter.
+  - Spawns went from 6 to 13 (menu columns 7 and 8).
+  - Editor: 15/15 trials (new `hills` trial) and the fall cutscene pass. The package was verified first time (182 passes) and promoted as PhlegethosHills. Not played by hand.
+  - See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos lava from CC0 scans (November 16, Claude):**
   - ambientCG Lava001 and Lava005 (CC0) drive a rewritten `M_PhlegLava`, toward the user's two goal images.
   - The lava sea: rounded dark crust plates on thin bright veins, opening into molten pools with swirling lines; no stripes or horizon grid.

@@ -176,20 +176,52 @@ float flick=.75+.25*sin(T*1.7+P.x*.013+P.y*.017);
 float seam=crease*VC.r*(1-smoothstep(.45,.75,n.z));
 // The lava's light thrown up the faces close over it (a band at the foot only: stronger, rocks in the lake glowed gold).
 float under=pow(saturate(1-P.z/160),2)*saturate(1.2-n.z)*.35;
-// Plates: the up-facing basalt broken into slabs (about 1.6 m, warped so they never tile), the lava glowing in the cracks
-// between them where the vertex colour says the ground is hot (the goal art's cracked plain).
-float2 pq=P.xy/160+float2(F.N(P.xy/310),F.N(P.xy/310+9.1))*.55;
-float e=F.Edge(pq),wob=F.N(P.xy/45);
+// Plates: the up-facing basalt broken into slabs, the lava glowing in the cracks between them where the vertex colour
+// says the ground is hot. (2026-11-16, the user's goal image References/Phlegethos/phlegethos-goal-hot-cracks.png:
+// broad dark plates, two to three metres, their edges ragged and bevelled down into the cracks; the cracks a hand wide,
+// glowing all along with a yellow core and flickering fire in them; the plates' lips lit orange by them; fine dark
+// hairline cracks across the plates. The first plates were 1.6 m with hairline glowing cracks, many of them cooled
+// dark, and read as straight lines drawn on a floor.)
 float hot=smoothstep(.12,.55,VC.r)*smoothstep(.55,.85,n.z)*saturate(1-ash*1.2);
-// (Thin, and hot only along some runs: some cracks cooled dark, as the goal art's plain.)
-float run=smoothstep(.35,.7,F.N(pq*.6+3.7)*.8+wob*.3);
-float gap=1-smoothstep(.008+.008*wob,.022+.012*wob,e);
-float crack=gap*hot*run;
-float rim=(1-smoothstep(.02,.07,e))*hot;
-rock*=lerp(1,.5,rim);
-rock=lerp(rock,float3(.015,.01,.008),gap*hot);
-Emit=float3(1.,.28,.04)*(seam*seam*22*flick)+float3(.85,.16,.03)*under*(.6+.4*lum*3)
-    +float3(1.,.28,.04)*crack*(7+5*flick*wob)+float3(.6,.1,.015)*saturate(rim-gap)*run*.5;
+float wob=F.N(P.xy/45);
+float3 lit=0;
+if(hot>.003)
+{
+    // The crack's distance at a point: warped twice so the plates are irregular, ragged at small scale.
+    float2 w1=float2(F.N(P.xy/360),F.N(P.xy/360+9.1))*.5,w2=float2(F.N(P.xy/90+4.2),F.N(P.xy/90+7.7))*.07;
+    float2 pq=P.xy/250+w1+w2;
+    float rag=(F.N(P.xy/7)-.5)*.018+(F.N(P.xy/19+2.3)-.5)*.026;
+    float e=F.Edge(pq)+rag;
+    // Its gradient (which way the plate's lip falls toward the crack), by differences two centimetres over.
+    float ex=F.Edge(pq+float2(2./250,0))+rag,ey=F.Edge(pq+float2(0,2./250))+rag;
+    float2 gd=float2(ex-e,ey-e);gd/=max(length(gd),1e-5);
+    // The width: 3 to 8 cm, wider in places; a few runs near shut.
+    // (First pass .016-.058 with a strong glow: the cracks bloomed into bands and the exposure blacked out the plates.)
+    float wd=.011+.018*F.N(pq*.8+1.3)+.006*wob;
+    float run=smoothstep(.12,.42,F.N(pq*.55+3.7)*.8+wob*.3);
+    wd*=lerp(.5,1,run);
+    float gap=1-smoothstep(wd*.7,wd,e);
+    float core=1-smoothstep(0,wd*.55,e);
+    // Fire licking in the cracks, moving along them.
+    float lick=F.N(P.xy/9+T*float2(.35,1.2))*.65+F.N(P.xy/23-T*float2(.6,.2))*.35;
+    float flame=gap*(.55+.9*lick);
+    // The lip: bevelled down into the crack over 6 to 10 cm, lit by it.
+    float lipW=wd+.035;
+    float lip=(1-smoothstep(wd,lipW,e))*(1-gap);
+    float glowLip=exp(-max(e-wd,0)/.011)*(1-gap);
+    // Hairline cracks across the plates, dark, a few glowing faintly.
+    float e2=F.Edge(pq*2.6+w1*2.+5.3)+rag*.6;
+    float hair=(1-smoothstep(.006,.016,e2))*(1-gap)*smoothstep(wd+.04,wd+.09,e);
+    float hairHot=hair*smoothstep(.72,.9,F.N(pq*3.1+1.7));
+    rock*=lerp(1,1-.65*hair*(1-hairHot),hot);
+    rock=lerp(rock,rock*.75+float3(.03,.012,.006),lip*hot);
+    rock=lerp(rock,float3(.02,.008,.004),gap*hot);
+    // The bevel: the normal tilted toward the crack on the lip (world XY: the stage is never turned).
+    n=normalize(n+float3(-gd*lip*hot*.9,0));
+    lit=float3(1.,.62,.16)*core*hot*run*(3.5+3*lick)+float3(1.,.3,.05)*flame*hot*(1.6+1.6*run)
+       +float3(.95,.22,.035)*glowLip*hot*(.25+.5*run)+float3(1.,.3,.05)*hairHot*hot*.3;
+}
+Emit=float3(1.,.28,.04)*(seam*seam*22*flick)+float3(.85,.16,.03)*under*(.6+.4*lum*3)+lit;
 WN=normalize(n+lerp(Na,Nb,b2)*(1-ash*.6)*1.15);
 // (A glassy sheen on the basalt, as the goal art's: the lava's glow catches its edges.)
 AO=arm.r; Rough=lerp(lerp(.5,.78,arm.g),.92,ash);

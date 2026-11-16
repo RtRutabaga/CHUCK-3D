@@ -3851,13 +3851,13 @@ void AChuckCharacter::BeginHellFall()
 }
 void AChuckCharacter::EndHellFall()
 {
-    // Playable on the plain where he landed, his sanity and stamina as they were.
+    // Playable where he landed (the hills, 2026-11-16), his sanity and stamina as they were.
     const int32 KeptSanity=Sanity;
     const float KeptStamina=Stamina, KeptLock=StaminaLockUntil;
     APhlegethosSetting* Stage=APhlegethosSetting::Enter(GetWorld(),true);
     bCutscene=false; bDemoEnded=false;
     SetActorEnableCollision(true);
-    ResetAtLocation(PhlegethosSpawn(EPhlegSpawn::Arrival));
+    ResetAtLocation(PhlegethosSpawn(EPhlegSpawn::Landing));
     Sanity=KeptSanity; Stamina=KeptStamina; StaminaLockUntil=KeptLock;
     GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
     NextExhaleAt=GetWorld()->GetTimeSeconds()+8.f;

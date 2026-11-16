@@ -335,7 +335,7 @@ if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHU
 $phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $phlegProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($phlegProcess.ExitCode -or !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_BUILD pass=1 missing=0' -Quiet) -or
-   !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=14 ' -Quiet)) {
+   !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=15 ' -Quiet)) {
     throw "Phlegethos verification failed. Inspect $phlegLog"
 }
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen

@@ -2,6 +2,70 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos landing hills, hot cracks, fall splash, light and spawns (Claude)
+
+- **Asked:**
+  - Make the hot cracks look like the goal image (`References/Phlegethos/phlegethos-goal-hot-cracks.png`, added).
+  - Remove the lava spigot hazards and their visuals, keeping the areas for flame skulls later.
+  - Add a natural hilly land mass with a path before the first part, where Chuck lands, with no hazards.
+  - Give the lava falls a natural splash.
+  - Light the region slightly more.
+  - Add spawn points.
+- **Source:** `main` at 832f7087; this commit.
+- **Changed:**
+  - `PhlegethosSetting.h/.cpp`:
+    - **Geysers removed:** the geysers, their vents, lights, sounds and hits are gone. The road's ground is unchanged.
+    - **The hills (`HillsGround`, `HillsPathY`, from X −11000 to −2500):**
+      - a level landing clearing;
+      - a flagstone path over two rises (about 3.3 m) and a dip to the plain's neck;
+      - rolling hills, crests and tors off the path, low near the clearing;
+      - ridges framing the valley;
+      - lava hollows well off the path;
+      - edges down into the lake;
+      - column clusters, boulders, fissures, stakes, vents and jars.
+      - The badlands clear round them, and the plain's path flagstones now start at the join.
+    - **Landing:** `PhlegethosLandingSpot` and the fall cutscene's handoff are at the hills.
+    - **Splash (`TickSplash`):** each lava fall's foot has:
+      - molten spray stretched along its flight and falling back in arcs, with bigger gobbets;
+      - flattened boiling domes;
+      - smoke;
+      - a flickering 320 cd light;
+      - a hiss.
+    - **Light:** sun 1.2 (was lower), sky light 1.15, exposure bias −0.05, Chuck's under/ahead lights raised.
+    - **Spawns:** `EPhlegSpawn` now has 13 entries:
+      - Landing, Plain, Road, RoadLong, Lake, LakeSlabs, Gorge, GorgeShelf, GorgeChains, Ascent, AscentSteps, AscentChimney, Fortress;
+      - each has a stretch start, so a death returns Chuck to the nearest one behind him.
+  - `DockMenu.cpp`: 13 Phlegethos points in menu columns 7 and 8.
+  - `ChuckCharacter.cpp`: the fall cutscene ends at the Landing spawn.
+  - `PhlegethosTest.cpp`:
+    - new `hills` trial (runs the path; checks it stays on it and on the ground);
+    - geyser stills replaced by fall-splash stills;
+    - the log prints `splashes=`.
+  - `Tools/Verify-Package.ps1`: expects 15 Phlegethos passes.
+  - `Tools/create_phlegethos_assets.py` and `M_PhlegBasalt` rebuilt: the hot-crack block is rewritten to the goal image.
+    - plates 2–3 m, warped twice, ragged;
+    - cracks 4–12 cm with a yellow core and licking fire;
+    - lips bevelled and lit;
+    - dark hairlines, a few faintly hot.
+    - The other assets the script re-saves were restored unchanged.
+  - `docs/regions/PHLEGETHOS.md`: a new section; the known gaps are updated.
+- **Tested (editor):**
+  - Phlegethos 15/15 (`Local/phleg-hills-trials2.log`). In the hills trial Chuck strayed at most 85 cm off the path; `splashes=69033`.
+  - Fall cutscene `failures=0 handoff=1` at X −11000 (`Local/phleg-hills-hellfall.log`).
+  - Stills in `Local/phleg-hills3/`, with contact sheets `sheet_spawns.png` and `sheet_fall.png`. Every spawn stands on ground.
+- **Package:** `CHUCK_PACKAGE_VERIFIED passes=182` on the first run (`Local/phleg-hills-package.log`, `Local/verify-package-20261115-200122.log`).
+- **Not tested:** anything by hand.
+- **Remaining flaws:**
+  - The hills read as a smooth, dark heightfield; they need rock detail and scatter.
+  - The falls are still flat sheets above the splash.
+  - The cracks are a little uniformly bright.
+  - The cutscene's FromGround shot is dark (it was already dark before this work).
+  - The ship's hidden-hull fault is open.
+- **Contract compatibility:** no rig, scale or character changes. The `EPhlegSpawn` enum is reordered and extended, so old Phlegethos checkpoint saves map to different points. There is one new trial; one material changed.
+- **Launcher:** promoted as PhlegethosHills. The receipt names 832f7087 because the package was built from the working tree before this commit. The previous package is kept; the PhlegethosWastes backup was pruned; the candidate folder was removed.
+
+Next part of the work can be done by Claude only (flame skulls and hill creatures, lava-fall thickness, the ship's hidden-hull fault); preference: Claude, here.
+
 ## November 16 — Phlegethos lava from CC0 scans: crust plates, molten pools, streaky falls (Claude)
 
 - **Asked:** "Download and implement free resource(s) to make all the lava look better both lava sea and flowing lava things". The user approved both ambientCG sets and gave two goal images (`References/Phlegethos/phlegethos-goal-lava-columns.png`, `phlegethos-goal-lava-fall.png`).

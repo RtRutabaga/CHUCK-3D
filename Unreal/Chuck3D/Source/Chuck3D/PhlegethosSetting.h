@@ -15,8 +15,8 @@ class AChuckCharacter;
 
 // Phlegethos, the first layer of the Nine Hells (Claude, 2026-11-14; docs/regions/PHLEGETHOS.md), after the 2D game's
 // Phase 8: one continuous stage built in code on its own site, 8 km beyond the ship's. A molten lake at Z 0 everywhere,
-// and the basalt he walks on about 3 m above it. Six stretches along the route (X, north toward the fortress): the
-// arrival plain where the fall lands, the lava road's spine, the basalt column lake, the lava-fall gorge with its chains,
+// and the basalt he walks on about 3 m above it. Along the route (X, north toward the fortress): the hills where the fall
+// lands (2026-11-16, built before the rest), the arrival plain, the lava road's spine, the basalt column lake, the lava-fall gorge with its chains,
 // the ascent (the volcano erupting: bombs, crumbling steps, a wall-jump chimney) and the fortress approach to its shut
 // gate. Falling into the lava is an Astral death, as the Astral Sea is: back at the start of the stretch.
 //
@@ -35,10 +35,15 @@ namespace Phleg
     struct FSeg { float X0, X1, W0, W1, Y0, Y1; };
     constexpr FSeg Spine[] = {{2300, 3800, 520, 180, 0, 40}, {3880, 4600, 160, 150, 40, 10}, {4695, 5600, 145, 140, 10, -60},
                               {5600, 7000, 135, 130, -60, -60}, {7230, 8000, 200, 560, -60, 0}};
-    // Geysers beside the spine on the long straight: (X, side). Each erupts for Burn s every Period s.
-    struct FGeyser { float X; float Side; float Phase; };
-    constexpr FGeyser Geysers[] = {{4950, 1, 0.f}, {5300, -1, 1.1f}, {5850, 1, .4f}, {6250, -1, 1.6f}, {6650, 1, 2.3f}};
-    constexpr float GeyserPeriod = 3.4f, GeyserWarn = .9f, GeyserBurn = 1.3f, GeyserReach = 150.f, GeyserSpread = 95.f;
+    // (2026-11-16, the user: the geysers beside the road are gone, "later we'll add flame skull hostile npcs here as the
+    // hazard"; the road stays as it was.)
+    // The hills before the plain (2026-11-16, the user: "a natural land mass looking hilly section with pathway similar in
+    // design to the last part of the map ... where Chuck lands"): the fall lands at HillsLandX, a path winds over the
+    // hills to the plain's edge at HillsJoinX. No hazards: hostile NPCs come later.
+    constexpr float HillsLandX = -11000, HillsJoinX = -2500;
+    /** The hills' winding path (centre Y at X), and the ground's height there (local cm). */
+    float HillsPathY(float X);
+    float HillsGround(float X, float Y);
     // The column lake: each column's centre, radius, top (above G) and whether it sinks when stood on.
     struct FColumn { float X, Y, R, Top; bool bSinks; };
     constexpr FColumn Columns[] = {
@@ -77,8 +82,11 @@ namespace Phleg
     constexpr float CraterR = 30000;
 }
 
-enum class EPhlegSpawn : uint8 { Arrival, Road, Lake, Gorge, Ascent, Fortress };
-constexpr int32 PhlegSpawns = 6;
+// The spawn points in the route's order: each stretch's start and (2026-11-16, the user: "additional spawn points to make
+// getting through some of these parts a little more merciful") points within the longer stretches. A death returns him to
+// the last one he passed.
+enum class EPhlegSpawn : uint8 { Landing, Arrival, Road, RoadLong, Lake, LakeSlabs, Gorge, GorgeShelf, GorgeChains, Ascent, AscentSteps, AscentChimney, Fortress };
+constexpr int32 PhlegSpawns = 13;
 
 FVector PhlegethosOrigin();
 inline FVector PhlegWorld(const FVector& Local) { return PhlegethosOrigin() + Local; }
@@ -95,7 +103,7 @@ bool PhlegethosRespawn(const FVector& World, FVector& Out);
 bool IsPhlegethosSpawn(const FVector& World, float& Yaw);
 /** Into the lava (world, his feet): an Astral death. */
 bool PhlegethosLavaSwallows(const FVector& Feet);
-/** Which stretch (0..5) a point is in, -1 outside; and whether the intense score plays there. */
+/** Which spawn's stretch (0..PhlegSpawns-1) a point is in, -1 outside; and whether the intense score plays there. */
 int32 PhlegethosStretchAt(const FVector& World);
 const TCHAR* PhlegethosStretchName(int32 Stretch);
 bool PhlegethosIntense(const FVector& World, bool bWasIntense);
@@ -127,7 +135,7 @@ public:
     int32 GetTriangles() const { return Triangles; }
     int32 GetSunk() const { return SunkCount; }
     int32 GetCrumbled() const { return CrumbledCount; }
-    int32 GetGeyserHits() const { return GeyserHits; }
+    int32 GetSplashes() const { return SplashCount; }
     int32 GetBombHits() const { return BombHits; }
     int32 GetBombs() const { return BombsFired; }
     /** A sinking column's or crumbling step's mesh (for tests): Kind 0 columns, 1 steps. */
@@ -157,9 +165,15 @@ private:
     // Movers: sinking columns (0) and crumbling steps (1).
     struct FMover { TWeakObjectPtr<UProceduralMeshComponent> Mesh; FVector Top; float Half = 0; float Touched = -1; float Drop = 0; float DownFor = 0; int32 Kind = 0; bool bCracked = false; };
     TArray<FMover> Movers;
-    // Geysers: their vents and light (the fountain is drawn with the bombs' blobs).
-    struct FSpout { TWeakObjectPtr<UPointLightComponent> Light; FVector Base; float Side = 1; float Phase = 0; int32 Stage = 0; };
-    TArray<FSpout> Spouts;
+    // The lava falls' feet (2026-11-16, the user: "give the lava waterfalls natural splash effect"): where each comes down
+    // into the lake, its width and the way out from its face; molten spray thrown up and falling back, boiling domes,
+    // steam and smoke, a flickering light.
+    struct FFallFoot { FVector P; FVector Out; float Width = 200; float Carry = 0, SmokeCarry = 0; TWeakObjectPtr<UPointLightComponent> Light; };
+    TArray<FFallFoot> FallFeet;
+    struct FDrop { FVector P, V; float Size = 1; };
+    TArray<FDrop> Drops;
+    UPROPERTY() UInstancedStaticMeshComponent* Spray = nullptr;
+    void TickSplash(float Dt, const FVector& Eye);
     // Lava bombs: a glowing ball falling on a marked spot.
     struct FBomb { FVector From, To; float Age = 0, Flight = 2.f; bool bLanded = false; float After = 0; };
     TArray<FBomb> Bombs;
@@ -192,6 +206,6 @@ private:
     float NextStrike = 4.f, UnderOn = 1.f, AheadOn = 1.f;
     int32 Strikes = 0, NextBolt = 0;
     void TickLightning(float Dt, const FVector& Eye);
-    int32 SunkCount = 0, CrumbledCount = 0, GeyserHits = 0, BombHits = 0, BombsFired = 0;
+    int32 SunkCount = 0, CrumbledCount = 0, SplashCount = 0, BombHits = 0, BombsFired = 0;
     bool bWasAstral = false;
 };

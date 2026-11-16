@@ -68,8 +68,14 @@ namespace
         // The ending (2026-11-08, ShipEnding.h): the orders begun, the leap from the main top, the fore top.
         {TEXT("ShipReef"),TEXT("Ship Reef (dev)")},{TEXT("ShipLeap"),TEXT("Ship Foremast Leap (dev)")},{TEXT("ShipForeTop"),TEXT("Ship Fore Topmast (dev)")}};
     // Phlegethos (2026-11-14; PhlegethosSetting.h), in a seventh column, in EPhlegSpawn's order: each stretch's start.
-    const FChultPoint PhlegPoints[]={{TEXT("PhlegArrival"),TEXT("Phlegethos Arrival")},{TEXT("PhlegRoad"),TEXT("Phlegethos Road")},{TEXT("PhlegLake"),TEXT("Phlegethos Lake")},
-        {TEXT("PhlegGorge"),TEXT("Phlegethos Gorge")},{TEXT("PhlegAscent"),TEXT("Phlegethos Ascent")},{TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")}};
+    // (2026-11-16: the hills' landing first, and the points within the longer stretches; over two columns.)
+    const FChultPoint PhlegPoints[]={{TEXT("PhlegLanding"),TEXT("Phlegethos Landing")},{TEXT("PhlegArrival"),TEXT("Phlegethos Plain")},{TEXT("PhlegRoad"),TEXT("Phlegethos Road")},
+        {TEXT("PhlegRoadLong"),TEXT("Phlegethos Road Leap")},{TEXT("PhlegLake"),TEXT("Phlegethos Lake")},{TEXT("PhlegLakeSlabs"),TEXT("Phlegethos Slabs")},
+        {TEXT("PhlegGorge"),TEXT("Phlegethos Gorge")},{TEXT("PhlegGorgeShelf"),TEXT("Phlegethos Shelf")},{TEXT("PhlegGorgeChains"),TEXT("Phlegethos Chains")},
+        {TEXT("PhlegAscent"),TEXT("Phlegethos Ascent")},{TEXT("PhlegAscentSteps"),TEXT("Phlegethos Steps")},{TEXT("PhlegAscentChimney"),TEXT("Phlegethos Chimney")},
+        {TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")}};
+    static_assert(UE_ARRAY_COUNT(PhlegPoints)==PhlegSpawns,"a checkpoint for every Phlegethos spawn");
+    constexpr int32 PhlegColumn=7;
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
@@ -422,7 +428,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
     // The checkpoint page has five columns: Waterdeep, Chult, the temple interior, its trap run, the Astral wind.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh;
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh,Eighth;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
@@ -431,7 +437,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fourth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fifth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Sixth,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Seventh,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Seventh,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Eighth,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
@@ -490,8 +497,11 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         }
         Target=Sixth;
         for(const FChultPoint& Point:ShipPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
-        Target=Seventh;
-        for(const FChultPoint& Point:PhlegPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
+        for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
+        {
+            Target=I<PhlegColumn?Seventh:Eighth;
+            const TCHAR* Name=PhlegPoints[I].Point;Add(PhlegPoints[I].Label,[Start,Name](){return Start(Name);});
+        }
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
