@@ -142,7 +142,11 @@ void ATempleSanctumBattle::TickTalk(float DeltaSeconds, bool bIn, const AChuckCh
     UE_LOG(LogTemp, Display, TEXT("CHUCK_HERO_LINE step=%d npc=%s id=%s sound=%d playing=%d"), Step, Script[Step].Npc, Script[Step].Id, Sound != nullptr, VoiceAudio && VoiceAudio->IsPlaying() ? 1 : 0);
 }
 
-bool ATempleSanctumBattle::IsHeroSpeaking() const { return TalkPlaying >= 0; }
+bool ATempleSanctumBattle::IsHeroSpeaking() const
+{
+    if (IsFortress()) { FString S, T; return GetFortressSubtitle(S, T); }
+    return TalkPlaying >= 0;
+}
 
 bool ATempleSanctumBattle::IsScenePlaying() const { return TheScene.IsValid() && TheScene->IsLetterboxed(); }
 
@@ -150,6 +154,7 @@ bool ATempleSanctumBattle::IsTalkSoundPlaying() const { return TalkPlaying >= 0 
 
 bool ATempleSanctumBattle::GetHeroSubtitle(FString& Speaker, FString& Text) const
 {
+    if (IsFortress()) return GetFortressSubtitle(Speaker, Text);
     if (TalkPlaying < 0) return false;
     const int32 V = VoiceIndex(TalkPlaying);
     if (V == INDEX_NONE) return false;

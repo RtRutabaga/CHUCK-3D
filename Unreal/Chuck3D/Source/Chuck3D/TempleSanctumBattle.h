@@ -70,7 +70,7 @@ public:
     void OnBladeHit(ATempleSkeleton* Victim, EBlow Kind, const FVector& At, const FVector& Vel);
     void OnBlocked(const FVector& At, const FVector& Normal);
     void FireArrow(const FVector& From, ATempleSkeleton* At, const FVector& Fallback);
-    void FireBolt(const FVector& From, ATempleSkeleton* At);
+    void FireBolt(const FVector& From, ATempleSkeleton* At, float Spread = 0.f);
     // What flies, for the beholder too: bone splinters, dust, the bolts' fire.
     void Splinters(const FVector& At, const FVector& Dir, int32 Count, float Speed);
     void Dust(const FVector& At, const FVector& Dir, int32 Count, float Size);
@@ -94,6 +94,46 @@ public:
     void ClearFlying();
 
     static ATempleSanctumBattle* Get(const UWorld* World);
+
+    // ---- The trio's battle before Phlegethos's fortress (2026-11-16; FortressBattle.cpp; docs/regions/PHLEGETHOS.md#the-trios-battle).
+    // The same heroes, flight and sounds on a second site: the forecourt. The fighter holds lemures off and stands between
+    // the Pit Fiend and the breach; the wizard binds the breach (the seal) and turns bolt fans on the fiend; the ranger
+    // shoots it. The fiend (FortressFiend.cpp) answers with its mace and its fire.
+    enum class ESite : uint8 { Sanctum, Fortress };
+    bool IsFortress() const { return Site == ESite::Fortress; }
+    /** Spawns the fortress battle once (in play and under -ChuckPhlegethosTest). */
+    static ATempleSanctumBattle* SpawnFortress(UWorld* World);
+    static ATempleSanctumBattle* GetFortress(const UWorld* World);
+    /** The fortress's Pit Fiend. */
+    class ATempleSkeleton* GetFiend() const { return TheFiend.Get(); }
+    /** What the heroes fight beyond the skeletons/lemures: the beholder's centre, or the fiend's chest. */
+    FVector BigFoeCentre() const;
+    bool IsBigFoeFighting() const;
+    /** A point (world) in the sanctum's broken floor or the fortress's breach (within Margin of its edge). */
+    bool HoleAt(const FVector& World, float Margin) const;
+    /** The fiend's mace is coming down on the fighter at Ground: he gets out from under it (mostly). */
+    void FiendSmashComing(ATempleHero* At, const FVector& Ground);
+    /** A blow of the fiend's on the ground at At (Strength 0..1): the heroes near it are thrown or braced. */
+    void FiendBlast(const FVector& At, float Strength);
+    /** Its fire gathering in its left hand, then loosed at a hero. */
+    void FireballGather(class ATempleSkeleton* Fiend);
+    void FireballLoose(class ATempleSkeleton* Fiend, ATempleHero* At);
+    int32 GetFiendArrows() const { return FiendArrows; }
+    int32 GetFiendBolts() const { return FiendBolts; }
+    int32 GetFireBursts() const { return FireBursts; }
+    int32 GetFireHeroHits() const { return FireHeroHits; }
+    int32 GetFireDodges() const { return FireDodges; }
+    int32 GetSmashDodges() const { return SmashDodges; }
+    int32 GetFiendCuts() const { return FiendCuts; }
+    void AddFiendCut() { ++FiendCuts; }
+    /** The fortress's entrance (about 13 s, once a session): the trio's three lines over the battle. */
+    bool IsFortressScenePlaying() const { return FortClock >= 0.f && !bFortReleased; }
+    int32 GetFortressEntrances() const { return FortEntrances; }
+    float GetFortressSceneClock() const { return FortClock; }
+    void SetFortressScene(bool b) { bFortScene = b; }
+    void SkipFortressScene();
+    int32 GetFortressLinesSpoken() const { return FortSpoken; }
+    static constexpr float FortSceneEnd = 13.4f;
 
     // The heroes' lines (TempleHeroTalk.cpp, user 2026-10-25): their calls when Chuck comes in, then the argument before the Fireball.
     /** A hero is speaking one of the scene's lines (the music ducks under it). */
@@ -130,6 +170,30 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
+    ESite Site = ESite::Sanctum;
+    TWeakObjectPtr<class ATempleSkeleton> TheFiend;
+    int32 FiendArrows = 0, FiendBolts = 0, FireBursts = 0, FireHeroHits = 0, FireDodges = 0, SmashDodges = 0, FiendCuts = 0;
+    struct FFireball { FVector Pos = FVector::ZeroVector, Vel = FVector::ZeroVector; TWeakObjectPtr<ATempleHero> Target; TWeakObjectPtr<class ATempleSkeleton> Owner; float Age = 0; int32 Slot = 0; bool bLoose = false; };
+    TArray<FFireball> Fireballs;
+    struct FBurst { FVector At = FVector::ZeroVector; float Age = 0; int32 Slot = 0; };
+    TArray<FBurst> Bursts;
+    TArray<int32> BallFlames, BurstFlames;
+    UPROPERTY() UPointLightComponent* FireLight = nullptr;
+    float FireFlash = 0;
+    struct FDodge { TWeakObjectPtr<ATempleHero> Hero; float When = 0; FVector From = FVector::ZeroVector, Past = FVector::ZeroVector; bool bSmash = false; };
+    TArray<FDodge> Dodges;
+    void SpawnFortressCast();
+    void TickFortress(float DeltaSeconds, AChuckCharacter* Chuck, const FVector& Eye);
+    void TickFortressFire(float DeltaSeconds, AChuckCharacter* Chuck);
+    void FireBurst(const FVector& At, ATempleHero* Struck);
+    // The entrance and the lines.
+    UPROPERTY() class ACameraActor* FortCam = nullptr;
+    float FortClock = -1.f, FortDwell = 0.f, FortTalkT = 0.f;
+    bool bFortScene = true, bFortReleased = true, bFortSkipping = false;
+    int32 FortEntrances = 0, FortLine = -1, FortSpoken = 0;
+    void TickFortressScene(float DeltaSeconds, AChuckCharacter* Chuck);
+    void FortressRelease(AChuckCharacter* Chuck);
+    bool GetFortressSubtitle(FString& Speaker, FString& Text) const;
     // Assets, hard-referenced so they cook.
     UPROPERTY() TArray<USkeletalMesh*> HeroMeshes;
     UPROPERTY() TArray<UAnimSequence*> HeroClipList;

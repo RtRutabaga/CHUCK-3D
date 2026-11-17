@@ -1,5 +1,6 @@
 // Phlegethos's creatures (Claude, 2026-11-16). See PhlegethosCreatures.h and docs/regions/PHLEGETHOS.md#creatures.
 #include "PhlegethosCreatures.h"
+#include "TempleSanctumBattle.h"
 #include "PhlegethosSetting.h"
 #include "ChuckCharacter.h"
 #include "ChuckFlames.h"
@@ -298,6 +299,8 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
         Post.Leash = FBox2D(FVector2D(29200, -3600), FVector2D(39800, 3600));
         ATempleSkeleton::SpawnAt(World, Post);
     }
+    // The trio's battle at the fortress (FortressBattle.cpp, 2026-11-16): streamed in as he crosses the wastes.
+    ATempleSanctumBattle::SpawnFortress(World);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_CREATURES skulls=%d harmful=%d fire_snakes=%d lemures=%d devils=%d fiend=%d"), PhlegethosFlameskullCount(false),
         PhlegethosFlameskullCount(true), SnakesPlaced, LemuresPlaced, DevilsPlaced, PhlegethosPitFiend() != nullptr);
 }
@@ -305,13 +308,13 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
 int32 PhlegethosLemureCount()
 {
     int32 N = 0;
-    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsLemure()) ++N;
+    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsLemure() && FCString::Strcmp(S->GetPost().Space, TEXT("fortress")) != 0) ++N;   // (the region's own, not the trio's battle's)
     return N;
 }
 
 ATempleSkeleton* PhlegethosPitFiend()
 {
-    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsFiend()) return S.Get();
+    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsFiend() && !S->IsFortressFiend()) return S.Get();   // (the wastes' own, not the fortress's)
     return nullptr;
 }
 

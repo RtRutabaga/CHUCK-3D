@@ -35,11 +35,12 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
+#include "PhlegethosSetting.h"
 
 namespace
 {
     using namespace TempleWind;
-    TWeakObjectPtr<ATempleSanctumBattle> TheBattle;
+    TWeakObjectPtr<ATempleSanctumBattle> TheBattle, TheFortressBattle;
 
     constexpr int32 ChipPool = 260, DustPool = 150, FirePool = 140, ArrowPool = 14, CorePool = 3;
     constexpr int32 WantUp = 3;               // skeletons on their feet at once while he is in the hall
@@ -94,6 +95,26 @@ ATempleSanctumBattle* ATempleSanctumBattle::Get(const UWorld* World)
     return B && B->GetWorld() == World ? B : nullptr;
 }
 
+ATempleSanctumBattle* ATempleSanctumBattle::GetFortress(const UWorld* World)
+{
+    ATempleSanctumBattle* B = TheFortressBattle.Get();
+    return B && B->GetWorld() == World ? B : nullptr;
+}
+
+ATempleSanctumBattle* ATempleSanctumBattle::SpawnFortress(UWorld* World)
+{
+    if (!World) return nullptr;
+    if (ATempleSanctumBattle* B = GetFortress(World)) return B;
+    // (in play, and in Phlegethos's own trials; not in the other automated runs, whose worlds their checks were written against)
+    if (Suppressed() && !FParse::Param(FCommandLine::Get(), TEXT("ChuckPhlegethosTest"))) return nullptr;
+    FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; P.bDeferConstruction = true;
+    auto* B = World->SpawnActor<ATempleSanctumBattle>(FVector::ZeroVector, FRotator::ZeroRotator, P);
+    if (!B) return nullptr;
+    B->Site = ESite::Fortress;
+    UGameplayStatics::FinishSpawningActor(B, FTransform::Identity);
+    return B;
+}
+
 ATempleSanctumBattle::ATempleSanctumBattle()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -132,6 +153,14 @@ ATempleSanctumBattle::ATempleSanctumBattle()
 void ATempleSanctumBattle::BeginPlay()
 {
     Super::BeginPlay();
+    if (IsFortress())
+    {
+        TheFortressBattle = this;
+        Random.Initialize(20261116);
+        Floor = static_cast<float>(PhlegWorld(FVector(0, 0, Phleg::FortressTop)).Z);
+        Beholder = PhlegWorld(FVector(43150, 1250, Phleg::FortressTop + 300));   // the fiend's post, at its chest
+        return;
+    }
     TheBattle = this;
     Random.Initialize(20261022);
     Floor = static_cast<float>(W(HallMid, DaisT1 + 700, HZ).Z);
@@ -153,7 +182,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
         for (const TCHAR* G : Grooms[FMath::Clamp(R, 0, 2)])
             if (G) P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Characters/Heroes/%s/GR_%s_%s.GR_%s_%s"), *Name, *Name, G, *Name, G)));
     }
-    P.Add(FSoftObjectPath(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
+    if (!IsFortress()) P.Add(FSoftObjectPath(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
     for (const TCHAR* A : {TEXT("/Game/Characters/Heroes/Props/SM_HeroArrow.SM_HeroArrow"), TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull"),
                            TEXT("/Game/Characters/Heroes/FX/M_HeroDust.M_HeroDust"), TEXT("/Game/Characters/Heroes/FX/M_HeroBoltFire.M_HeroBoltFire"),
                            TEXT("/Game/Characters/Heroes/FX/M_HeroGlow.M_HeroGlow"), TEXT("/Game/Characters/Heroes/FX/M_HeroTrail.M_HeroTrail"),
@@ -164,7 +193,7 @@ TArray<FSoftObjectPath> ATempleSanctumBattle::AssetPaths() const
             P.Add(FSoftObjectPath(FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Set.Stem, I, Set.Stem, I)));
     for (const TCHAR* Fx : BeholderFxPaths) P.Add(FSoftObjectPath(Fx));
     P.Add(FSoftObjectPath(SealWebPath));
-    TalkAssetPaths(P);
+    if (!IsFortress()) TalkAssetPaths(P);
     return P;
 }
 
@@ -194,7 +223,7 @@ void ATempleSanctumBattle::FinishLoading()
         }
         HeroClips.Add(Map);
     }
-    BeholderMesh = Cast<USkeletalMesh>(Find(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
+    if (!IsFortress()) BeholderMesh = Cast<USkeletalMesh>(Find(TEXT("/Game/Characters/Beholder/SK_Beholder.SK_Beholder")));
     ArrowMesh = Cast<UStaticMesh>(Find(TEXT("/Game/Characters/Heroes/Props/SM_HeroArrow.SM_HeroArrow")));
     SkullMesh = Cast<UStaticMesh>(Find(TEXT("/Game/Art/ChultTemple/SM_TempleSkull.SM_TempleSkull")));
     DustMat = Cast<UMaterialInterface>(Find(TEXT("/Game/Characters/Heroes/FX/M_HeroDust.M_HeroDust")));
@@ -235,15 +264,16 @@ void ATempleSanctumBattle::FinishLoading()
     Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     Attenuation->Attenuation.AttenuationShapeExtents = FVector(300.f, 0.f, 0.f);
     Attenuation->Attenuation.FalloffDistance = 3600.f;   // heard across the hall (54 m) and from the gallery
-    FinishTalkLoading();
+    if (!IsFortress()) FinishTalkLoading();
     bReady = true; bLoading = false;
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LOADED seconds=%.2f"), FPlatformTime::Seconds() - LoadStart);
-    SpawnCast();
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SANCTUM_LOADED seconds=%.2f fortress=%d"), FPlatformTime::Seconds() - LoadStart, IsFortress() ? 1 : 0);
+    if (IsFortress()) SpawnFortressCast(); else SpawnCast();
 }
 
 void ATempleSanctumBattle::EndPlay(const EEndPlayReason::Type Reason)
 {
     if (TheBattle.Get() == this) TheBattle = nullptr;
+    if (TheFortressBattle.Get() == this) TheFortressBattle = nullptr;
     Super::EndPlay(Reason);
 }
 
@@ -487,14 +517,15 @@ void ATempleSanctumBattle::FireArrow(const FVector& From, ATempleSkeleton* At, c
     Sound(ESound::ArrowFlight, From + A.Vel * .08f, .6f);
 }
 
-void ATempleSanctumBattle::FireBolt(const FVector& From, ATempleSkeleton* At)
+void ATempleSanctumBattle::FireBolt(const FVector& From, ATempleSkeleton* At, float Spread)
 {
     if (Bolts.Num() >= CorePool) Bolts.RemoveAt(0);
     FBoltFlight B;
     B.Pos = From; B.Target = At; B.Age = 0;
-    // At a skeleton, or (none given) at the beholder itself.
-    const FVector Aim = At ? At->GetMesh()->GetBoneLocation(TEXT("spine_03")) : TheBeholder.IsValid() ? TheBeholder->GetCentre() : Beholder;
-    B.Vel = (Aim - From).GetSafeNormal() * 1500.f + FVector(0, 0, 150.f);
+    // At a skeleton, or (none given) at the beholder itself (the fiend, at the fortress).
+    const FVector Aim = At ? At->GetMesh()->GetBoneLocation(TEXT("spine_03")) : BigFoeCentre();
+    // (a fan: each bolt of the wizard's three thrown out to the side, turning in onto the mark)
+    B.Vel = (Aim - From).GetSafeNormal().RotateAngleAxis(Spread, FVector::UpVector) * 1500.f + FVector(0, 0, 150.f + FMath::Abs(Spread) * 4.f);
     Bolts.Add(B);
     Flash->SetWorldLocation(From); Flash->SetLightColor(FLinearColor(.35f, 1.f, .8f)); FlashTime = .18f;
 }
@@ -553,6 +584,22 @@ void ATempleSanctumBattle::TickFlying(float Dt, const FVector& Eye)
                 continue;
             }
         }
+        if (ATempleSkeleton* Fd = TheFiend.Get())
+        {
+            // The fiend's hide: its trunk and head (2.4 times a man).
+            USkeletalMeshComponent* M = Fd->GetMesh();
+            FVector P1, P2;
+            FMath::SegmentDistToSegmentSafe(Tip0, Tip1, M->GetBoneLocation(TEXT("pelvis")), M->GetBoneLocation(TEXT("head")), P1, P2);
+            if (FVector::Dist(P1, P2) < 52.f)
+            {
+                A.bSpent = true; ++FiendArrows;
+                Sound(ESound::ArrowHit, P1, .95f, .8f);
+                Fd->StickArrow(ArrowMesh, P1, A.Vel);
+                Fd->TakeHeroBlow(EBlow::Arrow, From, P1);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_ARROW_FIEND arrows=%d"), FiendArrows);
+                continue;
+            }
+        }
         for (const TWeakObjectPtr<ATempleSkeleton>& Wk : Pool)
         {
             ATempleSkeleton* S = Wk.Get();
@@ -582,7 +629,21 @@ void ATempleSanctumBattle::TickFlying(float Dt, const FVector& Eye)
         ATempleSkeleton* S = B.Target.Get();
         ATempleBeholder* Bh = TheBeholder.Get();
         const bool bAtBeholder = !B.Target.IsValid() && Bh;
-        const FVector Aim = S && S->IsUp() ? S->GetMesh()->GetBoneLocation(TEXT("spine_03")) : bAtBeholder ? Bh->GetCentre() : B.Pos + B.Vel;
+        ATempleSkeleton* Fd = !B.Target.IsValid() ? TheFiend.Get() : nullptr;
+        const FVector Aim = S && S->IsUp() ? S->GetMesh()->GetBoneLocation(TEXT("spine_03")) : bAtBeholder ? Bh->GetCentre() : Fd ? BigFoeCentre() : B.Pos + B.Vel;
+        if (Fd && FVector::Dist(B.Pos, Aim) < 70.f)
+        {
+            // Burst on the fiend's chest: it flinches.
+            ++FiendBolts;
+            Sound(ESound::BoltImpact, B.Pos, 1.f, .85f);
+            FirePuffs(B.Pos, FVector::ZeroVector, 26, 52.f);
+            for (int32 K = 0; K < 18; ++K) FirePuffs(B.Pos, FMath::VRand() * 460.f, 1, 24.f);
+            Flash->SetWorldLocation(B.Pos); Flash->SetLightColor(FLinearColor(.35f, 1.f, .8f)); FlashTime = .35f;
+            Fd->TakeHeroBlow(EBlow::Bolt, B.Pos - B.Vel * .1f, B.Pos);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_BOLT_FIEND bolts=%d"), FiendBolts);
+            Bolts.RemoveAt(I);
+            continue;
+        }
         const FVector Want = (Aim - B.Pos).GetSafeNormal() * 1500.f;
         B.Vel = FMath::Lerp(B.Vel, Want, FMath::Min(1.f, 5.f * Dt));
         B.Pos += B.Vel * Dt;
@@ -609,7 +670,7 @@ void ATempleSanctumBattle::TickFlying(float Dt, const FVector& Eye)
             Bolts.RemoveAt(I);
             continue;
         }
-        if ((S && S->IsUp() && FVector::Dist(B.Pos, Aim) < 28.f) || B.Age > 2.5f || B.Pos.Z < Floor)
+        if ((S && S->IsUp() && FVector::Dist(B.Pos, Aim) < 28.f) || B.Age > 3.f || B.Pos.Z < Floor)
         {
             Sound(ESound::BoltImpact, B.Pos, 1.f);
             FirePuffs(B.Pos, FVector::ZeroVector, 24, 40.f);
@@ -710,6 +771,19 @@ void ATempleSanctumBattle::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+    if (IsFortress())
+    {
+        // (FortressBattle.cpp: streamed in as he crosses the wastes)
+        if (!bReady)
+        {
+            if ((Chuck && !bLoading && InPhlegethos(Chuck->GetActorLocation()) && PhlegLocal(Chuck->GetActorLocation()).X > 32000.f) || (bForced && !bLoading)) StartLoading();
+            return;
+        }
+        FVector Eye = FVector::ZeroVector;
+        if (APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0)) Eye = Cam->GetCameraLocation();
+        TickFortress(DeltaSeconds, Chuck, Eye);
+        return;
+    }
     if (!bReady)
     {
         // Streamed in while he is still on his way: within 150 m of the hall (the Astral wind, the trap run).

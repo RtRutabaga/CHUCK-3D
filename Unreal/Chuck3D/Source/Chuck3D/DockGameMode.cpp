@@ -1437,6 +1437,7 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking() && (!Entry->IsAmbientSpeaking() || bInTavern);
     // The sanctum heroes' lines (TempleHeroTalk.cpp) duck the boss music the same way.
     if(const ATempleSanctumBattle* Battle=ATempleSanctumBattle::Get(GetWorld())) bSpeech |= Battle->IsHeroSpeaking();
+    if(const ATempleSanctumBattle* Fort=ATempleSanctumBattle::GetFortress(GetWorld())) bSpeech |= Fort->IsHeroSpeaking();   // (and the trio's at the fortress)
     DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
     // At night, from the crate staircase to the tavern, the music stays down under the tavern's talk.
     const bool bByTavern = Listener && ADockNPC::NearTavernAtNight(Listener->GetActorLocation());
@@ -4474,7 +4475,8 @@ void ADockHUD::DrawHUD()
     }
     // The sanctum's cutscenes (2026-10-26): letterboxed, no HUD, the heroes' subtitles still shown.
     const ATempleSanctumBattle* SceneBattle=ATempleSanctumBattle::Get(GetWorld());
-    const bool bScene=(SceneBattle && SceneBattle->IsScenePlaying()) || ShipEndingSceneLetterboxed(GetWorld());   // (and the ship's fore topsail cutscene, 2026-11-08)
+    const ATempleSanctumBattle* FortBattle=ATempleSanctumBattle::GetFortress(GetWorld());
+    const bool bScene=(SceneBattle && SceneBattle->IsScenePlaying()) || ShipEndingSceneLetterboxed(GetWorld()) || (FortBattle && FortBattle->IsFortressScenePlaying());   // (and the ship's fore topsail cutscene, 2026-11-08)
     if(bScene)
     {
         const float Bar=FMath::Max(0.f,(Canvas->SizeY-Canvas->SizeX/2.2f)*.5f);
@@ -4513,7 +4515,7 @@ void ADockHUD::DrawHUD()
     const bool bTalk=Chuck->GetDialogue(Speaker,Line);
     const ATempleSanctumBattle* SanctumBattle=ATempleSanctumBattle::Get(GetWorld());
     const AShipEnding* ShipEnd=AShipEnding::Get(GetWorld());
-    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line) || (SanctumBattle && SanctumBattle->GetHeroSubtitle(Speaker,Line)) || (ShipEnd && ShipEnd->GetSubtitle(Speaker,Line)))
+    if(bTalk || ADockNPC::GetAmbientSubtitle(Chuck->GetActorLocation(),Speaker,Line) || (SanctumBattle && SanctumBattle->GetHeroSubtitle(Speaker,Line)) || (FortBattle && FortBattle->GetHeroSubtitle(Speaker,Line)) || (ShipEnd && ShipEnd->GetSubtitle(Speaker,Line)))
     {
         const float UiScale=FMath::Clamp(Canvas->SizeY/1080.f,.5f,2.f);
         // Canvas requires a UFont even when the glyph face comes from Slate.

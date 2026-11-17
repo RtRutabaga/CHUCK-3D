@@ -73,7 +73,7 @@ namespace
         {TEXT("PhlegRoadLong"),TEXT("Phlegethos Road Leap")},{TEXT("PhlegLake"),TEXT("Phlegethos Lake")},{TEXT("PhlegLakeSlabs"),TEXT("Phlegethos Slabs")},
         {TEXT("PhlegGorge"),TEXT("Phlegethos Gorge")},{TEXT("PhlegGorgeShelf"),TEXT("Phlegethos Shelf")},{TEXT("PhlegGorgeChains"),TEXT("Phlegethos Chains")},
         {TEXT("PhlegAscent"),TEXT("Phlegethos Ascent")},{TEXT("PhlegAscentSteps"),TEXT("Phlegethos Steps")},{TEXT("PhlegAscentChimney"),TEXT("Phlegethos Chimney")},
-        {TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")}};
+        {TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")},{TEXT("PhlegForecourt"),TEXT("Phlegethos Forecourt")}};
     static_assert(UE_ARRAY_COUNT(PhlegPoints)==PhlegSpawns,"a checkpoint for every Phlegethos spawn");
     constexpr int32 PhlegColumn=7;
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)

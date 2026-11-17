@@ -20,6 +20,8 @@
 //   bursts (ash, embers, a flare of the mace's light, the view shaken); left in the ground a moment, then dragged up.
 //   Under it, he is dead (a roll at the right moment saves him); near it, the blast knocks him off his feet.
 #include "TempleSkeleton.h"
+#include "TempleSanctumBattle.h"
+#include "TempleHero.h"
 #include "ChuckCharacter.h"
 #include "PhlegethosSetting.h"
 #include "TempleBeholder.h"
@@ -74,7 +76,7 @@ void ATempleSkeleton::TickFiend(float DeltaSeconds, float Speed)
     const float Sc = KindScale(), Base = FeetZ();
     const float Moving = FMath::Clamp(Speed / FiendChase, 0.f, 1.f);
     const bool bAlert = State == EState::Chase || State == EState::Attack || State == EState::Recover;
-    const bool bSmash = State == EState::Attack && Attack == EAttack::Smash;
+    const bool bSmash = State == EState::Attack && (Attack == EAttack::Smash || Attack == EAttack::Hurl);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(FiendGround), false, this);
     if (APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0)) Q.AddIgnoredActor(Pawn);
     for (const TWeakObjectPtr<ATempleSkeleton>& S : All()) if (S.IsValid()) Q.AddIgnoredActor(S.Get());
@@ -269,6 +271,7 @@ void ATempleSkeleton::FiendImpact(const FVector& At, float Strength, bool bEmber
 {
     if (APhlegethosSetting* Setting = APhlegethosSetting::Get(GetWorld())) Setting->GroundBlow(At, Strength, bEmbers);
     if (Shake > 0.f) BeholderShake(GetWorld(), At, Shake, 1200.f + 2400.f * Shake, Shake > .7f ? 1 : 0);
+    if (ATempleSanctumBattle* B = Battle.Get()) B->FiendBlast(At, Strength);   // (the trio's battle: the heroes near it)
     if (BlastRadius <= 0.f) return;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Chuck) return;
@@ -309,6 +312,9 @@ void ATempleSkeleton::TickSmash(AChuckCharacter* Chuck, float DeltaSeconds)
         const FVector W = CT.TransformPosition(Body(X, Y, 0.f));
         FHitResult G;
         FCollisionQueryParams Q(SCENE_QUERY_STAT(FiendSmashGround), false, this); if (Chuck) Q.AddIgnoredActor(Chuck);
+        // (the ground, not a lemure or a hero standing on it)
+        for (const TWeakObjectPtr<ATempleSkeleton>& S : All()) if (S.IsValid()) Q.AddIgnoredActor(S.Get());
+        if (ATempleSanctumBattle* B = Battle.Get()) for (int32 R = 0; R < 3; ++R) if (ATempleHero* H = B->GetHero(R)) Q.AddIgnoredActor(H);
         float Z = 0.f;
         if (GetWorld()->LineTraceSingleByChannel(G, W + FVector(0, 0, 250.f), W - FVector(0, 0, 300.f), ECC_Pawn, Q))
             Z = static_cast<float>(FVector::DotProduct(CT.InverseTransformPosition(G.ImpactPoint), Up));

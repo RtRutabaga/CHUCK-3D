@@ -28,6 +28,8 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     void Setup(ATempleSanctumBattle* InBattle, UMaterialInterface* Web, UMaterialInterface* Thread, UMaterialInterface* Spark, UStaticMesh* Plane);
 
+    /** Over Phlegethos's breach instead of the sanctum's sea tear (the trio's battle, 2026-11-16). */
+    void PlaceAtBreach();
     /** The wizard works it this frame: his gem and his left palm (world). */
     void Work(const FVector& Gem, const FVector& Palm);
     /** Torn apart (the antimagic cone, or the wizard thrown off it): it shatters from From. */
@@ -51,7 +53,7 @@ private:
     FVector Centre = FVector::ZeroVector, Gem = FVector::ZeroVector, Palm = FVector::ZeroVector, CamEye = FVector::ZeroVector;
     float T = 0, LastWork = -10, Coverage = 0, MaxCoverage = 0, NextSurge = 7.f, SurgeAt = -10, BreakAt = -10, Flash = 0;
     int32 Surges = 0, Breaks = 0;
-    bool bReady = false;
+    bool bReady = false, bBreach = false;
     FRandomStream Random;
     struct FMote { FVector Pos, Vel; FLinearColor Col; float Size, Age, Life, Grav; };
     TArray<FMote> Parts;

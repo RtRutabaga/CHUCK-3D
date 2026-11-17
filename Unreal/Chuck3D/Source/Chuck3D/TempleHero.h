@@ -71,6 +71,13 @@ public:
     bool TakeBeholderBite(const FVector& From, const FVector& At);
     /** The central eye's cone: thrown back; the wizard's binding is snuffed a while. */
     void TakeBeholderCone(const FVector& Apex, const FVector& Axis);
+    // The Pit Fiend's blows (the trio's battle before Phlegethos's fortress, 2026-11-16).
+    /** Its mace is coming down where he stands (Ground): back and aside out from under it. */
+    void EvadeFiendSmash(const FVector& Ground);
+    /** A blow or its fire on the ground at At (Strength 0..1): the fighter braced behind his shield, or thrown back. */
+    void TakeFiendBlast(const FVector& At, float Strength);
+    /** Its fire coming at him from From toward Aim: thrown aside out of its line. */
+    void EvadeFire(const FVector& From, const FVector& Aim);
     /** The fighter answers a bite caught on his shield: a rising cut at its face. */
     void CounterBeholder(ATempleBeholder* Beholder);
     bool IsSuppressed() const;
@@ -155,6 +162,9 @@ private:
     void Shove(const FVector& Velocity, float Seconds);
     void TickShove(float DeltaSeconds);
     void BeholderContact();
+    void FiendContact();
+    bool bFiendCut = false, bFiendStruck = false;
+    float EvadedAt = -10.f;
     FVector ShoveVel = FVector::ZeroVector;
     float ShoveStart = 0, ShoveUntil = 0, SuppressUntil = 0, ParalysedUntil = 0, NextBeholderShot = 0;
     TWeakObjectPtr<ATempleBeholder> CounterOn;

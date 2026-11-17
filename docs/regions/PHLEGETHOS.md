@@ -16,7 +16,8 @@ Direction: the 2D game's `docs/development/PHASE-8.md` and `hell_falling_cutscen
 | Lava falls, lava rivers, narrow basalt paths, jump challenges | **Built** as parkour: a narrowing basalt spine, a lava-fall gorge crossed along its wall and on hanging chains, a wall-jump chimney, crumbling steps (the lava geysers and bombs were removed on 2026-11-16) |
 | Lemures, fire snakes, spined devils, flameskulls, horned devils | **All built** (2026-11-16), with the Pit Fiend as the colossus; see Creatures below. **No horned devils** (the user, 2026-11-16: "in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game") |
 | Infernal idols, fortress exterior | **Built**: the processional and the shut gate |
-| The trio battling the Pit Fiend, Astral escalation, the Feywild river, the river cutscene | **Not built** (user: "don't do the trio of heros pit fiend encounter yet"). The fortress yard ends at the shut gate |
+| The trio battling the Pit Fiend | **Built** 2026-11-16 (the user: "go ahead and do the trio encounter"): on the forecourt before the shut gate; see [The trio's battle](#the-trios-battle) |
+| Astral escalation, the Feywild river, the river cutscene | **Not built**. The forecourt still ends at the shut gate |
 | Breakable urns with cigarettes | **Built**: clay jars on the safe ground off the routes |
 
 ## Chuck
@@ -54,7 +55,7 @@ The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused
 
 ## Out of scope for this milestone
 
-The trio and the Pit Fiend's battle, the Astral escalation and the Feywild river, the river cutscene.
+The Astral escalation and the Feywild river, the river cutscene. (The trio's battle was built on 2026-11-16.)
 
 ## What was built (2026-11-14)
 
@@ -196,7 +197,7 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 | Lemures: the zombie/skeleton lifecycle, the slowest and most durable | `ATempleSkeleton` with `Post.Kind = 1`, body `SK_Lemure` | The hills (3), the wastes (3), before the gate (2); 3 lie in the ash | **Built** |
 | Spined devils: never move; flick burning tail spines across a lane on a staggered beat; scratching one defeats Chuck at once | `APhlegSpinedDevil` (PhlegethosCreatures.h) | On columns in the river beside the gorge's shelf (3), on low columns beside the wastes' path (3) | **Built** |
 | Horned devils: the Chult colossus's gameplay | **Not built** (the user) | | |
-| Pit Fiend: the colossus, wholly avoidable, beyond notice range of the route (the fractured way); the trio's battle at the fortress | `ATempleSkeleton` with `Post.Kind = 2`, body `SK_PitFiend`. Its battle with the trio stays out of scope | Its round through the wastes | **Built** |
+| Pit Fiend: the colossus, wholly avoidable, beyond notice range of the route (the fractured way); the trio's battle at the fortress | `ATempleSkeleton` with `Post.Kind = 2`, body `SK_PitFiend`. A second one fights the trio at the fortress (2026-11-16) | Its round through the wastes; the forecourt | **Built** |
 
 **Flameskulls.**
 - The model: the temple skull at 1.2 times real size, embers in its sockets, and flipbook fire that moves with it, so its sparks trail behind. Its own light flickers on its face and on the ground under it.
@@ -248,7 +249,7 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 **Lemures** pick him up by the leg and throw him as the temple skeletons do (the user, 2026-11-16), with their kicks and swats.
 
 **Tests.**
-- Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20. Verify-Package expects `passed=20`.
+- Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20; then `trio` (2026-11-16, the trio's battle), making 21. Verify-Package expects `passed=21`.
 - `skulls`: he stands in a road skull's lane. It burns him (2 burns), throws him back along the spine and does not kill him.
 - `fire_snakes`: a hills snake sees him, comes and strikes; one scratch kills it.
 - `lemures`: a hills lemure sees him, comes and - its first attack - picks him up by the leg and throws him; he goes back and scratches it seventeen times (his sanity held up); it falls and melts. (In the trials a throw goes only where there is ground, as in the skeleton's test.)
@@ -257,9 +258,33 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 - `fiend_show` (by name only, not in the 20): the fiend on the open forecourt filmed whole by a camera of its own off its right: its round, the roar, coming on, the mace brought down (`Show_*` stills).
 - The other trials run with the creatures calm (they test the moves, and do not dodge).
 
+### The trio's battle
+
+Built 2026-11-16 (Claude) on the user's "When you're ready, go ahead and do the trio encounter". Direction: the 2D game's Phase 8 "Fortress Climax" (`docs/development/PHASE-8.md`, `src/entities/battle_hazards.py` `InfernalBattleChoreographer`, `data/dialogue/phlegethos_fortress.json`, all read-only): the trio are already battling a Pit Fiend; the fighter engages the lesser devils; the wizard casts at it; the ranger fires directly at it; the fiend answers across their lanes; Chuck is not part of it and survives by avoiding it; their entrance lines show they are trying to bind the fractures, without explaining them.
+
+**Where.** The forecourt before the shut gate (the processional of idols down its middle). The scattered boulders are kept off the forecourt now (|Y| over 32 m only), so the battle has open ground.
+- The Pit Fiend (a second one: the wastes' own still walks its round) stands before the gate right of the processional, at its post 32 m from the forecourt's edge.
+- **The breach** (`PhlegethosSetting.h`, `BreachX/Y`, `BreachRadius`): a ragged tear about 5 m across in the forecourt left of the processional, a broken basalt lip round it, shattered rock faces going down a metre and a half, then the Astral's unlit space (`M_AstralDepth`) to 6 m down. Into it is an Astral death (`PhlegethosLavaSwallows`), as the lava is.
+- The fighter stands between the fiend and the breach's side of the court; the wizard at the breach; the ranger back on the right with a clear line at the fiend.
+- A new spawn and checkpoint at the forecourt's edge, **Phlegethos Forecourt** (`EPhlegSpawn::Forecourt`, the menu's 14th Phlegethos point), so a death in the battle is not 150 m back through the wastes.
+
+**Who does what** (`FortressBattle.cpp`, `FortressFiend.cpp`; the sanctum battle's heroes, arrows, bolts, sounds and seal on a second site, `ATempleSanctumBattle` with `ESite::Fortress`):
+- The wizard binds the breach (the seal's web over the tear, its surges as in the sanctum) and every 6-10 s turns from it to throw a fan of three bolts at the fiend (2D: "repeated bolt fans").
+- The ranger shoots the fiend ("I have the fiend"): an arrow every 1-2 s when nothing comes for her or the wizard; they stand in its hide (up to 14).
+- The fighter holds off the lemures that come up out of the forecourt's edges at him (two on their feet at a time, six in all, recycled out of sight); with none on him he faces the fiend, and when it is close and not swinging he steps in and cuts at its legs.
+- The Pit Fiend: by turns (after the mace mostly fire, after fire mostly the mace) it walks in on the fighter and brings its mace down on him (he mostly gets out from under it; the blast still rocks him or throws him), or hurls fire from its left hand at the wizard or the ranger (a new attack, `EAttack::Hurl`: the arm drawn back past its hip, fire gathering in the hand, flung over; the ball flies at about 17 m/s and bursts where it strikes, in flame, ash and embers; they throw themselves aside about half the time). It roars at them every 24-36 s or after nine stings, and beats its wings now and then where it stands. It flinches at arrows, bolts and cuts; nothing brings it down (2D: its defeat is not in this phase).
+- **Chuck**: not anyone's quarry. If he comes under the fiend it swats, stamps or brings the mace down on him as in the wastes (the mace kills him); its blasts and its fire knock him off his feet near them, and the fire's middle burns him (1 Sanity). The lemures go for the heroes.
+
+**The entrance** (about 13 s, once a session): as he first comes out onto the forecourt on his feet, letterboxed, no control, Esc skips. Wide from the open ground behind the fighter over the battle to the fiend (the fighter's line; the fiend walks in and brings its mace down on him); over the wizard's shoulder at the breach and his binding (his line); over the ranger's shoulder at the fiend (her line; the fiend throws at her). Then the view eases back to him. The lines (2D data, one each, in the sanctum's order): fighter "The fractures are spreading faster than we can bind them!"; wizard "Then we hold this one shut. Keep that thing away from the breach!"; ranger "I have the fiend. Finish the repair!". **Subtitles only for now**: there are no voice takes of these lines (the sanctum's were the user's ElevenLabs takes); the jaws move to a made-up rhythm while each line is up.
+
+**Music**: unchanged, `SW_Phlegethos2` (the "more intense" track) from the ascent on. The 2D game's "dynamic finale" layering is not done.
+
+**Test**: `trio` (the 21st trial): he walks out onto the forecourt; the entrance plays with its three lines; then 45 s from the forecourt's edge. Pass: one entrance, three lines; arrows and bolts on the fiend; at least one smash and one hurl, a fire burst, a lemure put down; the fiend never in the breach. Stills `Trio_Entrance_*`, `Trio_Battle_0-7`, `Trio_Smash`, `Trio_Hurl`. Under the other trials (creatures calm) the battle stands still and its entrance does not play.
+
 ### Known gaps
 
 - The creatures were tested only by the trials, not played by hand: how hard the devils' lanes and the Pit Fiend's round are is untried.
+- The trio's battle: no voice takes for the three lines (subtitles only); the heroes have no dodge clip (a lunge with a hit-flinch); the fiend's fire is the braziers' flipbook flame (it reads as a flame flying, not a ball); the battle's sounds are the sanctum's (the bolt-impact pitched down for the fire's burst); the forecourt is dark, the fiend a dark red shape between flashes; nothing ends the fight (the Astral escalation and the river come next); not played by hand.
 - The lemures share the skeleton's motion capture: a stiff, upright walk, not a shamble.
 - The Pit Fiend's legs are still the skeleton's motion-capture walk under the IK and the heavy stance, not a gait of its own; its swats and stamp are the skeleton's clips at 2.4 times; the wings' membranes stretch rather than crease when folded; the thigh plates and the mace may cut into the body in some poses.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).

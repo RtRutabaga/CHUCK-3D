@@ -274,10 +274,10 @@ namespace
                                           FVector(Columns[11].X, Columns[11].Y, G + Columns[11].Top + Stand), FVector(LakeShoreX + 400, -90, G + Stand),
                                           FVector(Break1X1 + 160, -95, G + Stand), FVector(Break2X1 + 180, -95, LowShelf + Stand),
                                           FVector(AscentX + 250, 0, G + Stand), FVector(RampX1 - 40, 0, RampTop + Stand), FVector(23790, 0, ChimneyBase + Stand),
-                                          FVector(25600, 0, FortressTop + Stand)};
-    const float SpawnYaw[PhlegSpawns] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                                          FVector(25600, 0, FortressTop + Stand), FVector(ForecourtX - 300, 0, FortressTop + Stand)};
+    const float SpawnYaw[PhlegSpawns] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     const float StretchX[PhlegSpawns + 1] = {-1e9f, HillsJoinX + 300, RoadX, Spine[3].X0 + 80, LakeX, Columns[11].X - Columns[11].R + 20, LakeShoreX + 150,
-                                             Break1X1 + 60, Break2X1 + 60, AscentX, RampX1 - 80, 23740, FortressX + 50, 1e9f};
+                                             Break1X1 + 60, Break2X1 + 60, AscentX, RampX1 - 80, 23740, FortressX + 50, ForecourtX - 350, 1e9f};
 }
 
 FVector PhlegethosOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -1600000, 0); }
@@ -385,7 +385,7 @@ int32 PhlegethosStretchAt(const FVector& World)
 const TCHAR* PhlegethosStretchName(int32 S)
 {
     static const TCHAR* Names[] = {TEXT("Landing"), TEXT("Plain"), TEXT("Road"), TEXT("RoadLong"), TEXT("Lake"), TEXT("LakeSlabs"), TEXT("Gorge"), TEXT("GorgeShelf"),
-                                   TEXT("GorgeChains"), TEXT("Ascent"), TEXT("AscentSteps"), TEXT("AscentChimney"), TEXT("Fortress")};
+                                   TEXT("GorgeChains"), TEXT("Ascent"), TEXT("AscentSteps"), TEXT("AscentChimney"), TEXT("Fortress"), TEXT("Forecourt")};
     static_assert(UE_ARRAY_COUNT(Names) == PhlegSpawns, "a name for every spawn");
     return S >= 0 && S < PhlegSpawns ? Names[S] : TEXT("None");
 }
@@ -401,7 +401,22 @@ bool IsPhlegethosSpawn(const FVector& World, float& Yaw)
     for (int32 I = 0; I < PhlegSpawns; ++I) if (FVector::Dist(World, PhlegethosSpawn(EPhlegSpawn(I))) < 1.f) { Yaw = SpawnYaw[I]; return true; }
     return false;
 }
-bool PhlegethosLavaSwallows(const FVector& Feet) { return InPhlegethos(Feet) && PhlegLocal(Feet).Z < LavaZ + 30.f; }
+bool PhlegethosLavaSwallows(const FVector& Feet)
+{
+    if (!InPhlegethos(Feet)) return false;
+    const FVector L = PhlegLocal(Feet);
+    // (and down into the breach: a metre under the forecourt inside its outline, 2026-11-16)
+    return L.Z < LavaZ + 30.f || (L.Z < FortressTop - 100.f && BreachInside(L.X, L.Y) > -10.f);
+}
+float Phleg::BreachRadius(float A)
+{
+    return 255.f + 48.f * FMath::Sin(3.f * A + .7f) + 30.f * FMath::Sin(7.f * A + 2.1f) + 16.f * FMath::Sin(13.f * A + .3f);
+}
+float Phleg::BreachInside(float X, float Y)
+{
+    const float Dx = X - BreachX, Dy = Y - BreachY;
+    return BreachRadius(FMath::Atan2(Dy, Dx)) - FMath::Sqrt(Dx * Dx + Dy * Dy);
+}
 bool PhlegethosIntense(const FVector& World, bool bWas)
 {
     if (!InPhlegethos(World)) return false;
@@ -943,6 +958,8 @@ void APhlegethosSetting::Build()
             {
                 const float Top = FMath::Max(FMath::Max(Hz[J * NX + I], Hz[J * NX + I + 1]), FMath::Max(Hz[(J + 1) * NX + I], Hz[(J + 1) * NX + I + 1]));
                 if (Top < LavaZ - 30) continue;
+                // (the breach: open; its lip, below, covers the stepped edge)
+                if (BreachInside((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) > -40.f) continue;
                 FIntPoint Q[4] = {{I, J}, {I + 1, J}, {I + 1, J + 1}, {I, J + 1}};
                 if (FMath::Abs(Hz[J * NX + I + 1] - Hz[(J + 1) * NX + I]) < FMath::Abs(Hz[J * NX + I] - Hz[(J + 1) * NX + I + 1])) Q[0] = {I + 1, J}, Q[1] = {I + 1, J + 1}, Q[2] = {I, J + 1}, Q[3] = {I, J};
                 Land.Quad(Pt(Q[0].X, Q[0].Y), Pt(Q[1].X, Q[1].Y), Pt(Q[2].X, Q[2].Y), Pt(Q[3].X, Q[3].Y), Nm(Q[0].X, Q[0].Y), Nm(Q[1].X, Q[1].Y), Nm(Q[2].X, Q[2].Y), Nm(Q[3].X, Q[3].Y));
@@ -974,13 +991,48 @@ void APhlegethosSetting::Build()
                 Path.Prism(Slab, [](float Xx, float Yy) { return ApproachGround(Xx, Yy) + 4.f; }, Zc - 40, 0, 0, 53, 1);
             }
         }
+        // The breach (2026-11-16): a ragged tear in the forecourt into the Astral Sea. A broken basalt lip round it (its inner
+        // edge the tear's outline, covering the ground's stepped hole), the rock going down from it a metre and a half
+        // into shattered faces, and under that the Astral itself: deep walls and a floor in its unlit space.
+        {
+            constexpr int32 N = 96;
+            FPhlegSurf Lip, Astral;
+            Lip.Paint = FColor(90, 150, 30, 255);
+            auto At = [&](float A, float Out, float Dz)
+            {
+                const float R = BreachRadius(A) + Out;
+                const float X = BreachX + R * FMath::Cos(A), Y = BreachY + R * FMath::Sin(A);
+                return FVector(X, Y, ApproachGround(X, Y) + Dz);
+            };
+            for (int32 K = 0; K < N; ++K)
+            {
+                const float A0 = 2 * PI * K / N, A1 = 2 * PI * (K + 1) / N;
+                // Broken teeth along the very edge: a little lower in places, a little raised.
+                const float J0 = 6.f * FMath::Sin(A0 * 23.f) - 4.f, J1 = 6.f * FMath::Sin(A1 * 23.f) - 4.f;
+                const FVector I0 = At(A0, 0, 3 + J0), I1 = At(A1, 0, 3 + J1), M0 = At(A0, 90, 4), M1 = At(A1, 90, 4), O0 = At(A0, 210, -3), O1 = At(A1, 210, -3);
+                Lip.Quad(I0, I1, M1, M0, FVector::UpVector, FVector::UpVector, FVector::UpVector, FVector::UpVector);
+                Lip.Quad(M0, M1, O1, O0, FVector::UpVector, FVector::UpVector, FVector::UpVector, FVector::UpVector);
+                // The rock face down from the lip, shattered: each column of it stepping in or out a little as it goes down.
+                const FVector In0 = FVector(BreachX - I0.X, BreachY - I0.Y, 0).GetSafeNormal(), In1 = FVector(BreachX - I1.X, BreachY - I1.Y, 0).GetSafeNormal();
+                const float S0 = 14.f * FMath::Sin(A0 * 11.f + 1.f), S1 = 14.f * FMath::Sin(A1 * 11.f + 1.f);
+                const FVector D0 = I0 + In0 * S0 - FVector(0, 0, 150), D1 = I1 + In1 * S1 - FVector(0, 0, 150);
+                Lip.Quad(I0, I1, D1, D0, In0, In1, In1, In0);
+                const FVector E0 = D0 + In0 * 20.f - FVector(0, 0, BreachDepth - 150), E1 = D1 + In1 * 20.f - FVector(0, 0, BreachDepth - 150);
+                Astral.Quad(D0, D1, E1, E0, In0, In1, In1, In0);
+                const FVector Mid(BreachX, BreachY, E0.Z);
+                Astral.Tri(E0, E1, Mid, FVector::UpVector);
+            }
+            if (auto* L = Emit(TEXT("PhlegBreachLip"), Lip, BasaltMat, true, true)) L->SetCastShadow(true);
+            if (UMaterialInterface* Depth = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth")))
+                if (auto* D = Emit(TEXT("PhlegBreachAstral"), Astral, Depth, false, false)) D->SetCastShadow(false);
+        }
         // The forecourt's processional to the gate.
         Path.Paint = FColor(0, 0, 40, 255);
         Path.Prism(Box2(ForecourtX + 150, GateX, -170, 170), Flat(Z + 4), Z - 30, 0, 0, 52, 1);
         // Off the path: columnar basalt standing in clusters, broken tors, tumbled boulders; never on the path.
         {
             FRandomStream WR(61);
-            auto OffPath = [&](float X, float Y, float Clear) { return FMath::Abs(Y - ApproachPathY(X)) > Clear && (X < ForecourtX - 400 || FMath::Abs(Y) > 1200); };
+            auto OffPath = [&](float X, float Y, float Clear) { return FMath::Abs(Y - ApproachPathY(X)) > Clear && (X < ForecourtX - 400 || FMath::Abs(Y) > 3200); };   // (2026-11-16: the forecourt clear for the trio's battle; was |Y| > 1200)
             for (int32 K = 0; K < 14; ++K)
             {
                 const float X = WR.FRandRange(FortressX + 1500, ForecourtX - 200), Y = (WR.FRand() < .5f ? -1.f : 1.f) * WR.FRandRange(900, 4200);

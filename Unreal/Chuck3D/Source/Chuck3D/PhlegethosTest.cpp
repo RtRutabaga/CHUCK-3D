@@ -9,6 +9,8 @@
 #include "PhlegethosCreatures.h"
 #include "TempleSnake.h"
 #include "TempleSkeleton.h"
+#include "TempleSanctumBattle.h"
+#include "TempleHero.h"
 #include "Components/CapsuleComponent.h"
 #include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
@@ -31,8 +33,8 @@ namespace
 {
     constexpr float Stand = 34.65f;
     // (FiendShow, after Count, only by name: -ChuckPhlegethosTest=fiend_show, the Pit Fiend's moves filmed whole for review)
-    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Count, FiendShow };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate"), TEXT("-"), TEXT("fiend_show")};
+    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Trio, Count, FiendShow };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate"), TEXT("trio"), TEXT("-"), TEXT("fiend_show")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -123,11 +125,11 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
         // (The flameskulls burn only in their own trial: the traversal trials are of the moves, and do not dodge.)
-        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend) && Run->Trial != int32(ET::FiendShow);
+        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend) && Run->Trial != int32(ET::FiendShow) && Run->Trial != int32(ET::Trio);
         // A death ends any trial but the stills.
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
         // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
-        const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills);
+        const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills) || Run->Trial == int32(ET::Trio);
         if (Now - Run->TrialStart > (bLong ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
         switch (ET(Run->Trial))
         {
@@ -244,7 +246,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             // sanity kept up: this is the lemure's life, not his) and it melts where it falls. Pass: it threw him, it took
             // its seventeen scratches and fell, and it melted.
             ATempleSkeleton* L = nullptr; int32 Count = 0;
-            for (const auto& E : ATempleSkeleton::All()) if (E.IsValid() && E->IsLemure()) { ++Count; if (!L && !E->GetPost().bDormant) L = E.Get(); }
+            for (const auto& E : ATempleSkeleton::All()) if (E.IsValid() && E->IsLemure() && FCString::Strcmp(E->GetPost().Space, TEXT("fortress")) != 0) { ++Count; if (!L && !E->GetPost().bDormant) L = E.Get(); }
             if (!L) { Next(false, TEXT("no_lemures=1")); break; }
             if (Run->Sub == -1)
             {
@@ -629,6 +631,65 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Toward(P.X + 200, 0);
             if (T > 1.5f && Run->Sub == 0) { Shot(TEXT("Processional")); Run->Sub = 1; }
             if (T > 10.f) Next(P.X < GateX - 150 && P.X > GateX - 400, TEXT(""));
+            break;
+        }
+        case ET::Trio:
+        {
+            // (2026-11-16) The trio's battle at the fortress: he walks out onto the forecourt; the entrance plays (the three
+            // lines over the battle), then he stands at the forecourt's edge while it goes on. Pass: the entrance once with
+            // its three lines, then arrows and bolts on the fiend, its mace at the fighter and its fire at the others, a
+            // lemure put down, and the fiend never in the breach.
+            ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(World);
+            if (!B) { Next(false, TEXT("no_battle=1")); break; }
+            if (Run->Sub == -1) { Place(ForecourtX - 600, 250, FortressTop, 20); Run->Sub = 0; break; }
+            if (Run->Sub == 0)
+            {
+                // (its assets stream in as he crosses the wastes)
+                if (!B->IsReady() || !B->GetFiend()) { if (T > 40.f) Next(false, TEXT("not_ready=1")); break; }
+                Run->Sub = 1; Run->At = Now; Run->Chains0 = B->GetFortressEntrances();
+                break;
+            }
+            ATempleSkeleton* F = B->GetFiend();
+            const float S = static_cast<float>(Now - Run->At);
+            if (Run->Sub == 1)
+            {
+                Toward(ForecourtX + 500, 950);   // (out onto the open ground right of the processional)
+                if (B->IsFortressScenePlaying()) { Stop(); Run->Sub = 2; Run->At = Now; }
+                else if (S > 15.f) Next(false, TEXT("no_entrance=1"));
+                break;
+            }
+            if (Run->Sub == 2)
+            {
+                if (S > 1.6f && !Run->Note.Contains(TEXT("wide"))) { Shot(TEXT("Trio_Entrance_Wide")); Run->Note += TEXT("wide "); }
+                if (S > 3.2f && !Run->Note.Contains(TEXT("smash"))) { Shot(TEXT("Trio_Entrance_Smash")); Run->Note += TEXT("smash "); }
+                if (S > 6.5f && !Run->Note.Contains(TEXT("wizard"))) { Shot(TEXT("Trio_Entrance_Wizard")); Run->Note += TEXT("wizard "); }
+                if (S > 10.5f && !Run->Note.Contains(TEXT("ranger"))) { Shot(TEXT("Trio_Entrance_Ranger")); Run->Note += TEXT("ranger "); }
+                if (!B->IsFortressScenePlaying())
+                {
+                    Run->Sub = 3; Run->At = Now; Run->Note += FString::Printf(TEXT("scene=%.1f lines=%d "), S, B->GetFortressLinesSpoken());
+                    // (his camera on the battle: the fiend a little right of centre)
+                    if (F) Chuck->SetActorRotation(FRotator(0, (F->GetActorLocation() - Chuck->GetActorLocation()).Rotation().Yaw - 12.f, 0));
+                    Chuck->Recenter(); Chuck->SetOrbitPitch(4);
+                }
+                else if (S > 20.f) Next(false, TEXT("scene_stuck=1"));
+                break;
+            }
+            // Watching from the forecourt's edge (his own camera) while the battle goes on.
+            const int32 K = static_cast<int32>(S / 5.f);
+            if (K < 8 && !Run->Note.Contains(FString::Printf(TEXT("b%d "), K))) { Shot(FString::Printf(TEXT("Trio_Battle_%d"), K)); Run->Note += FString::Printf(TEXT("b%d "), K); }
+            if (F && F->GetState() == ATempleSkeleton::EState::Attack && F->GetLastAttack() == ATempleSkeleton::EAttack::Hurl && F->GetStateTime() > .7f && !Run->Note.Contains(TEXT("hurl ")))
+                { Shot(TEXT("Trio_Hurl")); Run->Note += TEXT("hurl "); }
+            if (F && F->GetState() == ATempleSkeleton::EState::Attack && F->GetLastAttack() == ATempleSkeleton::EAttack::Smash && F->GetStateTime() > 1.36f && !Run->Note.Contains(TEXT("down ")))
+                { Shot(TEXT("Trio_Smash")); Run->Note += TEXT("down "); }
+            if (S < 45.f) break;
+            const FVector Fl = F ? PhlegLocal(F->GetActorLocation()) : FVector::ZeroVector;
+            const float InBreach = F ? BreachInside(Fl.X, Fl.Y) : 0.f;
+            const bool bPass = B->GetFortressEntrances() == Run->Chains0 + 1 && B->GetFortressLinesSpoken() == 3 && B->GetFiendArrows() > 0 && B->GetFiendBolts() > 0
+                && F && F->GetSmashes() > 0 && F->GetHurls() > 0 && B->GetFireBursts() > 0 && B->GetFallen() > 0 && InBreach < -100.f;
+            Next(bPass, FString::Printf(TEXT("%sarrows=%d bolts=%d cuts=%d smashes=%d hurls=%d bursts=%d fire_hits=%d fire_dodges=%d smash_dodges=%d fallen=%d roars=%d hero_blows=%d breach=%.0f heroes_hit=%d/%d/%d"),
+                *Run->Note, B->GetFiendArrows(), B->GetFiendBolts(), B->GetFiendCuts(), F ? F->GetSmashes() : 0, F ? F->GetHurls() : 0, B->GetFireBursts(), B->GetFireHeroHits(),
+                B->GetFireDodges(), B->GetSmashDodges(), B->GetFallen(), F ? F->GetFortRoars() : 0, F ? F->GetHeroBlowsTaken() : 0, InBreach,
+                B->GetHero(0) ? B->GetHero(0)->GetHitsTaken() : -1, B->GetHero(1) ? B->GetHero(1)->GetHitsTaken() : -1, B->GetHero(2) ? B->GetHero(2)->GetHitsTaken() : -1));
             break;
         }
         default: Next(false, TEXT("unknown=1")); break;

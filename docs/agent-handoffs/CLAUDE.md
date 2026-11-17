@@ -2,6 +2,28 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos: the trio's battle at the fortress (Claude)
+
+- **Asked:** "When you're ready, go ahead and do the trio encounter" (after the fiend-motion milestone was promoted and pushed as e6903e7b).
+- **Source:** `main` at e6903e7b; this commit.
+- **Changed:**
+  - `TempleSanctumBattle.h/.cpp`: a second site, `ESite::Fortress` (`SpawnFortress`, `GetFortress`; `Get` still returns only the sanctum's). Fortress: no beholder, its own cast, streamed in once he is past X 32000 in the wastes; arrows and bolts strike the fiend (`TheFiend`); `FireBolt` takes a spread (the wizard's fans); `BigFoeCentre`, `IsBigFoeFighting`, `HoleAt` (the sanctum's floor or the breach).
+  - `FortressBattle.cpp` (new): the cast (heroes, seal over the breach, the fiend, six lemures), lit on channel 0; activity while he is near the forecourt (held when `APhlegFlameskull::bCalm`); the heroes' dodges; the fiend's blast on heroes and lemures; its fireballs (flipbook flames from `AChuckFlames`, a light, `GroundBlow`, the burst on heroes and on Chuck); the entrance's three shots and its subtitle-only lines.
+  - `FortressFiend.cpp` (new): `ATempleSkeleton::TickFortress` (stance, roar, wing flares, walking in on the fighter, smash at him, hurl at wizard/ranger by turns, ordinary attacks if Chuck is under it), `TickHurl`, `FiendStruck` (flinches, never falls), `FortRoar`.
+  - `TempleSkeleton.h/.cpp`: `EAttack::Hurl` (counters sized 6); the fortress fiend's tick; `Steer` and the arrows' lighting through the battle; `TakeHeroBlow` on a fiend only flinches; lemures melt in battle. `PitFiendMotion.cpp`: the hurl shares the smash's body layers; its impacts reach the heroes (`FiendBlast`); the smash's ground trace ignores creatures and heroes.
+  - `TempleHero.h/.cpp`: aim at `BigFoeCentre` instead of only the beholder; the wizard's bolt fan; the ranger shoots the fiend every 1-2 s and leaves the fighter's lemures to him at the fortress; the fighter's cut at the fiend's legs (`FiendContact`); `EvadeFiendSmash`, `EvadeFire`, `TakeFiendBlast`; hole checks through the battle.
+  - `TempleSeal.h/.cpp`: `PlaceAtBreach`. `TempleHeroTalk.cpp`: subtitles/speech from the fortress's lines.
+  - `PhlegethosSetting.h/.cpp`: the breach (hole in the wastes' heightfield, basalt lip and faces, Astral depth), `BreachRadius`/`BreachInside`, its Astral death; spawn `Forecourt` (14 spawns); boulders kept off the forecourt.
+  - `PhlegethosCreatures.cpp`: spawns the fortress battle; `PhlegethosPitFiend()` and the lemure count leave the battle's own out. `DockMenu.cpp`: checkpoint "Phlegethos Forecourt". `DockGameMode.cpp`: letterbox, subtitles and music duck for the fortress. `PhlegethosTest.cpp`: trial `trio`, the `lemures` count. `Tools/Verify-Package.ps1`: Phlegethos `passed=21`. `Tools/Verify-Menu.ps1`: the new checkpoint.
+- **Tested (editor):** `trio` pass (`Local/phleg-trio-5.log`: entrance 13.4 s, 3 lines; arrows=13 bolts=12 cuts=5 smashes=3 hurls=4 bursts=4, smash dodges 3, lemures down 4, fiend 23 m clear of the breach); all 21 trials (`Local/phleg-all-trio.log`: 20 passed, `lemures` failed on its count of 14 lemures - the battle's six - fixed and rerun alone, pass, `Local/phleg-lemures-4.log`). Sheets `Local/trio-sheet-2.png`, `Local/trio-sheet-3.png`.
+- **Package:** 182 passes, `Local/verify-package-20261117-004146.log`. The first verification inside `Build-Game.ps1` failed once on "Xbox A mapping jumps" (docks smoke test, untouched by this work, passed in every earlier package); the rerun on the same candidate passed everything.
+- **Not tested:** anything by hand; the sanctum's battle after the hero changes except in the package verification's sanctum trials; how the crossfire feels to play through.
+- **Remaining flaws:** no voice takes (subtitles only, and a made-up jaw rhythm); no dodge clip for the heroes; the fireball is a flying flipbook flame; sounds borrowed from the sanctum; dark forecourt; the fight never ends (escalation and river next).
+- **Contract compatibility:** no rig, scale or control changes to Chuck. `ATempleSanctumBattle::Get` unchanged (sanctum only). `EAttack` gains `Hurl`. Phlegethos gains a 14th spawn at the end of `EPhlegSpawn` (earlier saves' indices unchanged).
+- **Launcher:** promoted as PhlegethosTrioBattle (receipt `e6903e7b` plus this work, committed right after); previous package kept as `Builds/Windows-Previous-20261117-PhlegethosTrioBattle`, PhlegethosNPCs backup pruned; no candidate folder left.
+
+Next part of the work can be done by Claude only (the Astral escalation, the Feywild river and the river cutscene; voice takes for the three fortress lines when the user supplies them); preference: Claude, here.
+
 ## November 16 — Phlegethos: the Pit Fiend's motion, its mace, lemures that throw (Claude)
 
 - **Asked:** the user could not find the Pit Fiend; wants "more realistic leg movement and placement and overall more immersive body movements such as wings beating etc ... formidable in battle, not just a lumbering skeleton with dressing" (it will fight the trio later); lemures should pick up and throw Chuck as the skeletons do.

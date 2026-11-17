@@ -45,7 +45,7 @@ public:
     ATempleSkeleton();
     virtual void Tick(float DeltaSeconds) override;
     enum class EState : uint8 { Dormant, Rise, Guard, Chase, Attack, Recover, Return, Settle, Dead };
-    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, Smash, None };   // (Smash: the Pit Fiend's mace, 2026-11-16)
+    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, Smash, Hurl, None };   // (Smash: the Pit Fiend's mace; Hurl: its fire at a hero, the trio's battle; 2026-11-16)
     /** How a hero's blow lands (docs/CHULT-TEMPLE-HEROES.md). */
     enum class EBlow : uint8 { Cut, Cleave, Decapitate, Bash, Arrow, Bolt };
     EState GetState() const { return State; }
@@ -182,6 +182,17 @@ public:
     /** Review (-ChuckPhlegethosTest=fiend_show): the roar now; the mace brought down on a world point. */
     void ShowRoar();
     void ShowSmash(const FVector& At);
+    // ---- The trio's battle at the fortress (2026-11-16; FortressFiend.cpp; docs/regions/PHLEGETHOS.md#the-trios-battle):
+    // a second Pit Fiend, before the breach, fights the three heroes. It brings its mace down on the fighter, hurls fire
+    // at the ranger and the wizard, roars and beats its wings; arrows stand in it and the wizard's bolts burst on it, but
+    // nothing brings it down. Chuck is no one's quarry here, but it swats, stamps and smashes at him if he comes under it,
+    // and its blows and its fire knock him off his feet across the forecourt.
+    bool IsFortressFiend() const { return IsFiend() && Battle.IsValid(); }
+    int32 GetHurls() const { return Hurls; }
+    int32 GetHeroBlowsTaken() const { return FortHits; }
+    int32 GetFortRoars() const { return FortRoars; }
+    /** Tests: the next blow at a hero (0 smash the fighter, 1 hurl at the wizard, 2 hurl at the ranger), whatever the distance. */
+    void ForceFortress(int32 Which) { FortForced = Which; }
     static constexpr float FiendScale = 2.4f;
     static constexpr float LemureScale = .93f;
     static constexpr float LemureSpeed = 50.f;       // (2D: 15 to the skeleton's 25)
@@ -252,7 +263,7 @@ private:
     float AttackReadyAt = 0;   // world time it may strike again (a pause after each attack)
     float StateTime = 0, Lost = 0, OutOfReach = 0, StepDistance = 0, TopSpeed = 0, WorstLeash = 0, LastStrikeGap = 1e9f, StuckTime = 0;
     int32 HitsTaken = 0, Strikes = 0, Rises = 0, Settles = 0, SoundsPlayed = 0;
-    int32 Attacks[5] = {0, 0, 0, 0, 0}, Landed[5] = {0, 0, 0, 0, 0};
+    int32 Attacks[6] = {0, 0, 0, 0, 0, 0}, Landed[6] = {0, 0, 0, 0, 0, 0};
     TWeakObjectPtr<ATempleSanctumBattle> Battle;
     TWeakObjectPtr<ATempleHero> Foe;
     UPROPERTY() TArray<UStaticMeshComponent*> StuckArrows;
@@ -261,6 +272,15 @@ private:
     float HitStopUntil = 0.f, StaggerTime = 0.f, SlotAngle = 0.f;
     FVector StaggerVel = FVector::ZeroVector;
     void TickSanctum(float DeltaSeconds);
+    bool TickFortress(float DeltaSeconds, float LocoSpeed);   // false: a blow at Chuck is under way (the ordinary attack runs it)
+    void TickHurl(AChuckCharacter* Chuck, float DeltaSeconds);
+    void FortRoar();
+    void FiendStruck(EBlow Kind, const FVector& From, const FVector& At);
+    bool bOnChuck = false, bLoosed = false, bGathering = false, bChoseBlow = false, bWantSmash = false;
+    TWeakObjectPtr<ATempleHero> HurlAt;
+    int32 Hurls = 0, FortHits = 0, FortRoars = 0, HitsSinceRoar = 0, FortForced = -1, NextHurl = 0;
+    float NextRoarAt = 0.f, NextFlareAt = 0.f, WalkUntil = 0.f;
+    FVector WalkGoal = FVector::ZeroVector;
     void Fall(EBlow Kind, const FVector& From);
     bool bStruck = false, bSwung = false, bHeld = false;
     // The stoop's grab picks him up and throws him (user 2026-11-12: was a claw along the floor).

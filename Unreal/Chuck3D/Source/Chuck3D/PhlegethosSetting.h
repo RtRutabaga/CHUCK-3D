@@ -73,6 +73,13 @@ namespace Phleg
     /** The wastes before the fortress: the winding path's centre (Y at X), and the ground's height (local cm). */
     float ApproachPathY(float X);
     float ApproachGround(float X, float Y);
+    // The breach (2026-11-16, the trio's battle; docs/regions/PHLEGETHOS.md#the-trios-battle): a tear into the Astral Sea
+    // in the forecourt left of the processional, which the wizard is trying to bind shut ("Keep that thing away from the
+    // breach!"). Its ragged outline: the radius at an angle round its centre. Into it is an Astral death.
+    constexpr float BreachX = 42400, BreachY = -1500, BreachDepth = 620;
+    float BreachRadius(float Angle);
+    /** How far a point (local X, Y) is inside the breach's outline (< 0 outside). */
+    float BreachInside(float X, float Y);
     // The volcano (the land beyond, PhlegethosSetting.cpp; the fall cutscene looks at it).
     // (2026-11-15: 12 km off and 1.5 km high, about 7 degrees above his horizon as in the goal art; at 3.5 km and 2.2 km it
     // and the ranges walled in the sky from his eye.)
@@ -85,8 +92,9 @@ namespace Phleg
 // The spawn points in the route's order: each stretch's start and (2026-11-16, the user: "additional spawn points to make
 // getting through some of these parts a little more merciful") points within the longer stretches. A death returns him to
 // the last one he passed.
-enum class EPhlegSpawn : uint8 { Landing, Arrival, Road, RoadLong, Lake, LakeSlabs, Gorge, GorgeShelf, GorgeChains, Ascent, AscentSteps, AscentChimney, Fortress };
-constexpr int32 PhlegSpawns = 13;
+// (2026-11-16, the trio's battle: the forecourt's edge, last, so a death in the battle is not 150 m back through the wastes.)
+enum class EPhlegSpawn : uint8 { Landing, Arrival, Road, RoadLong, Lake, LakeSlabs, Gorge, GorgeShelf, GorgeChains, Ascent, AscentSteps, AscentChimney, Fortress, Forecourt };
+constexpr int32 PhlegSpawns = 14;
 
 FVector PhlegethosOrigin();
 inline FVector PhlegWorld(const FVector& Local) { return PhlegethosOrigin() + Local; }

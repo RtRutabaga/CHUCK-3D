@@ -1,6 +1,7 @@
 #include "TempleSeal.h"
 #include "ChultTempleInterior.h"
 #include "ChultTempleWind.h"
+#include "PhlegethosSetting.h"
 #include "TempleHero.h"
 #include "TempleSanctumBattle.h"
 #include "Camera/PlayerCameraManager.h"
@@ -74,8 +75,23 @@ void ATempleSeal::Setup(ATempleSanctumBattle* InBattle, UMaterialInterface* Web,
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SEAL_SPAWN ready=%d at=%s"), bReady ? 1 : 0, *Centre.ToCompactString());
 }
 
+void ATempleSeal::PlaceAtBreach()
+{
+    bBreach = true;
+    Centre = PhlegWorld(FVector(Phleg::BreachX, Phleg::BreachY, Phleg::ApproachGround(Phleg::BreachX, Phleg::BreachY)));
+    SetActorLocation(Centre);
+    Glow->SetWorldLocation(Centre + FVector(0, 0, 70));
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_SEAL_BREACH at=%s"), *Centre.ToCompactString());
+}
+
 FVector ATempleSeal::Rim(float A, float Grow, float Z) const
 {
+    if (bBreach)
+    {
+        const float R = Phleg::BreachRadius(A) + Grow;
+        const float X = Phleg::BreachX + R * FMath::Cos(A), Y = Phleg::BreachY + R * FMath::Sin(A);
+        return PhlegWorld(FVector(X, Y, Phleg::ApproachGround(X, Y) + Z));
+    }
     // The tear's own ragged outline (ChultTempleSanctumSeaRadius), in the hall's frame.
     const float R = ChultTempleSanctumSeaRadius(A) + Grow;
     return ChultTempleInteriorWorldOf(FVector(SeaS + R * FMath::Cos(A), SeaT + R * FMath::Sin(A), HZ + Z));

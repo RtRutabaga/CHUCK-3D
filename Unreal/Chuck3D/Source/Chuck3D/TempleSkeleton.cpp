@@ -43,8 +43,10 @@ namespace
             // The sanctum's blow at a hero: a fist driven out at chest height (CMU 02_05).
             {TEXT("Strike"), 1.f, SkeletonClipData::StrikeStrike, SkeletonClipData::StrikeAim, .1f, .12f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, 1},
             // The Pit Fiend's mace (2026-11-16): over the idle, the arm and body driven by TickSmash; the strike at 1.32 s.
-            {TEXT("Idle"), 1.f, 1.32f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow}};
-        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 4)];
+            {TEXT("Idle"), 1.f, 1.32f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow},
+            // Its fire hurled at a hero (the trio's battle, 2026-11-16): over the idle, the left arm and body driven by TickHurl.
+            {TEXT("Idle"), 1.f, .98f, 0.f, .04f, .1f, TEXT("hand_l"), TEXT("lowerarm_l"), 0.f, 1}};
+        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 5)];
     }
 
     // Spawned in play and in its own test only: the other automated runs keep the worlds their checks were written against.
@@ -250,7 +252,7 @@ int32 ATempleSkeleton::GetAnimEvaluations() const
 
 const TCHAR* ATempleSkeleton::AttackName(EAttack A)
 {
-    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); case EAttack::Smash: return TEXT("Smash"); default: return TEXT("None"); }
+    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); case EAttack::Smash: return TEXT("Smash"); case EAttack::Hurl: return TEXT("Hurl"); default: return TEXT("None"); }
 }
 
 const TCHAR* ATempleSkeleton::GetStateName() const
@@ -349,10 +351,7 @@ FVector ATempleSkeleton::Steer(const FVector& Want, const AActor* Ignore) const
         {
             bool bHole = false;
             for (const float Ahead : {35.f, 80.f})
-            {
-                const FVector F = ChultTempleInteriorFrameOf(GetActorLocation() + Try * FMath::Min(Ahead, Look + 30.f));
-                bHole |= ChultTempleSanctumHoleAt(FVector2D(F.X, F.Y), Radius + 8.f) != 0;
-            }
+                bHole |= Battle->HoleAt(GetActorLocation() + Try * FMath::Min(Ahead * KindScale(), Look + 30.f), RadiusNow() + 8.f);
             if (bHole) continue;
         }
         FHitResult Hit;
@@ -487,7 +486,8 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     const bool bLocoState = State == EState::Chase || State == EState::Return || (IsFiend() && (State == EState::Guard || State == EState::Recover));
     Animator.Tick(DeltaSeconds, bLocoState ? Travelled + TurnStep : 0.f);
     if (MaceBone != INDEX_NONE) TickMace();
-    if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
+    if (IsFortressFiend()) { if (TickFortress(DeltaSeconds, LocoSpeed)) return; }
+    else if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
     if (State == EState::Dead)
     {
         // A lemure, down, melts into a puddle of itself where it lies (2026-11-16).
@@ -803,6 +803,7 @@ FTransform ATempleSkeleton::SkullTransform() const
 bool ATempleSkeleton::TakeHeroBlow(EBlow Kind, const FVector& From, const FVector& At)
 {
     if (State == EState::Dead) return false;
+    if (IsFiend()) { FiendStruck(Kind, From, At); return false; }   // (nothing the trio has brings it down)
     const FVector Push = (At - From).GetSafeNormal2D();
     const FVector Local = GetActorTransform().InverseTransformVectorNoScale(Push);
     // Turned by a blow from its side (+ twist: to its left; a push from its left turns it right).
@@ -887,7 +888,7 @@ void ATempleSkeleton::StickArrow(UStaticMesh* Arrow, const FVector& At, const FV
     auto* C = NewObject<UStaticMeshComponent>(this);
     C->SetStaticMesh(Arrow);
     C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    C->SetLightingChannels(false, true, false);
+    C->LightingChannels = GetMesh()->LightingChannels;   // (the temple's interior channel, or Phlegethos's for the fiend)
     C->RegisterComponent();
     C->SetWorldLocationAndRotation(At - Dir.GetSafeNormal() * 52.f, Dir.Rotation());
     C->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, Best);
@@ -910,6 +911,14 @@ void ATempleSkeleton::TickSanctum(float DeltaSeconds)
     }
     if (State == EState::Dead)
     {
+        // (a lemure in the trio's battle melts where it fell, as in the wastes)
+        if (IsLemure())
+        {
+            if (Animator.Finished()) MeltT += DeltaSeconds;
+            const float K = FMath::Clamp(1.f - MeltT * .22f, .14f, 1.f);
+            GetMesh()->SetRelativeScale3D(FVector(1.f + (1.f - K) * .4f, 1.f + (1.f - K) * .4f, K));
+            return;
+        }
         if (Animator.Finished()) { Animator.SetJaw(bHeadless ? 0.f : 20.f); if (!bHeadless) Animator.SetLook(28.f, -8.f); }
         return;
     }
