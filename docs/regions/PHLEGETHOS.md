@@ -229,25 +229,39 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 - On the gorge's shelf the spines fly from the river across the shelf at the cliff: wait for the beat, or wall run past. In the wastes they cross the path.
 
 **The Pit Fiend.**
-- Modelled after the user's goal image (`References/Phlegethos/pit-fiend-goal.jpg`, 2026-11-16): a winged devil 4.2 m tall (2.4 times the rig), its horns rising another metre. Smooth crimson hide over heavy muscle, dark blotches on the shoulders; long horns from the crown sweeping out, then up and in; a snarling fanged muzzle on the rig's jaw bone, burning eyes; charcoal armour (a collar, layered spiked pauldrons, spiked bracers, a belt hung with three skulls, plates down the front and outside of each thigh, knee guards with a spike, greaves, armoured clawed feet); great bat wings half raised; spines down its back; a long tail curling round on the ground beside it.
+- Modelled after the user's goal image (`References/Phlegethos/pit-fiend-goal.jpg`, 2026-11-16): a winged devil 4.2 m tall (2.4 times the rig), its horns rising another metre. Smooth crimson hide over heavy muscle, dark blotches on the shoulders; long horns from the crown sweeping out, then up and in; a snarling fanged muzzle on the rig's jaw bone, burning eyes; charcoal armour (a collar, layered spiked pauldrons, spiked bracers, a belt hung with three skulls, plates down the front and outside of each thigh, knee guards with a spike, greaves, armoured clawed feet); great bat wings; spines down its back; a long barbed tail, its last half trailing on the ground behind it.
 - A spiked, flanged mace in its right fist, part of the skinned mesh (weighted wholly to the right hand, so it swings with the walk and the swats). Moving flipbook fire rises from the head's crown, with a flickering light above it. The build script gives the head's position as an affine combination of four joints (`creatures.json` "mace_head"), which the game turns into the right hand's bone space from its own reference pose (no socket, whatever the import's axes and units).
 - The mace's iron has no glow of its own: at every vertex-alpha glow tried (down to .015 of the eyes' 30) Phlegethos's dark exposure burned it out pale.
-- It walks a slow round through the wastes (95 cm/s), crossing the path twice and keeping to the valley's floor (never in the lava hollows or up on the ridges). It notices him 22 m away in front of it, or 8 m all round; it roars (the T-rex's roar, lower), stands a moment, then strides after him at 170 cm/s (faster than his walk, slower than his run). One kick or swat that meets him takes all his sanity; a roll still dodges it. It cannot be scratched (a dull thud). It gives him up at the edge of its ground or when it has lost sight of him for 4 s, and goes back to its round.
+- It walks a slow round through the wastes (95 cm/s) along the path itself, weaving across it within 3 m of it (2026-11-16, third pass: 15 m off, the user could not find it among the boulders; the boulders now are cover from it). It notices him 22 m away in front of it, or 8 m all round; it roars, then strides after him at 170 cm/s (faster than his walk, slower than his run). It cannot be scratched (a dull thud). It gives him up at the edge of its ground or when it has lost sight of him for 4 s, and goes back to its round.
+- A warm fill light moves with it, from 3.4 m in front and 2.6 m up (dark crimson in the dark wastes, it did not read).
+
+**The Pit Fiend's motion** (2026-11-16, third pass; the user: "more realistic leg movement and placement and overall more immersive body movements such as wings beating etc ... look formidable in battle, not just a lumbering skeleton with dressing"). The skeleton's motion capture still moves the body; `PitFiendMotion.cpp` sets layers over it each tick (`FFiendPose`, applied in `SkeletonAnim.cpp`):
+- Its own bones: each wing's arm, forearm and three fingers (with a leaf at each finger's end) and eight tail bones, built by `Tools/build_phleg_creatures.py` and merged by the import into the temple skeleton's shared skeleton asset (the skeleton's clips leave them at rest). The membranes are weighted across the bones round them.
+- Feet: each foot is set onto the ground actually under it (a trace), the sole laid on the slope (up to 22 degrees), by two-bone IK; the hips come down into a heavy, bent-kneed stance and lower still where a foot's ground is lower; each footfall (an ankle coming down onto its ground) dips the hips, jolts the wings, plays the tread, throws a puff of ash and shakes the view a little near it. It steps round as it turns where it stands, instead of sliding on its feet.
+- It leans into its going (up to 12 degrees as it charges), rolls into its turns, and breathes.
+- Wings: folded on its back on its round, half open as it comes for him, spread in the roar and over a swing. A beat is up slow and part folded, down hard and spread; the downstroke throws up the ash under it and lifts the body a little. Two in the roar, one every 2.6-4.2 s as it charges.
+- Tail: sways with its stride, trails its turns, lifts off the ground as it charges and lies along it at rest, now and then flicks; it is kept out of the ground by traces under its joints.
+- The roar: reared back 22 degrees, head up, jaws wide, wings spread and beating twice, the view shaken; 2.6 s, then it comes.
+- The mace (a new attack, `Smash`, its most common, chosen from 2.2 to 3 m): swung up over its right shoulder in 0.95 s, the chest turning away, the left arm thrown forward, the wings flaring up; held a moment; brought down in an arc gathering speed into the ground in front of it (0.22 s), the body bending 50 degrees into it and crouching; ash, embers, a flare of the mace's light, the view shaken hard; left in the ground half a second, then dragged up. The arm is two-bone IK on a planned path of the head; the haft is turned along it. Under the head (within 38 cm of him) he is dead, a roll at the right moment still saves him; within 4.2 m the blast knocks him off his feet (`AChuckCharacter::Blasted`: flung tumbling, crash-lands, gets up; no harm of itself). It still swats at its feet and stamps (the stamp shakes the ground; its blast within 2.3 m knocks him down).
+- The hit is judged at the head's planned landing place: the bones read on the game thread lag a swing this fast by a frame or two.
+
+**Lemures** pick him up by the leg and throw him as the temple skeletons do (the user, 2026-11-16), with their kicks and swats.
 
 **Tests.**
 - Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20. Verify-Package expects `passed=20`.
 - `skulls`: he stands in a road skull's lane. It burns him (2 burns), throws him back along the spine and does not kill him.
 - `fire_snakes`: a hills snake sees him, comes and strikes; one scratch kills it.
-- `lemures`: a hills lemure sees him, comes and strikes; he scratches it seventeen times (his sanity held up); it falls and melts.
+- `lemures`: a hills lemure sees him, comes and - its first attack - picks him up by the leg and throws him; he goes back and scratches it seventeen times (his sanity held up); it falls and melts. (In the trials a throw goes only where there is ground, as in the skeleton's test.)
 - `devils`: in the gorge shelf's first lane its spines burn him (2 of 6 thrown); beside a wastes devil's column one scratch takes all his sanity.
-- `fiend`: on the path 20 m before it, it notices him (at 17-20 m), roars, comes, misses one kick and lands the next.
+- `fiend`: on the path before it, it notices him, roars (two wing beats), comes and kills him (third pass: by its mace; footfalls and beats counted, the planted feet within 13 cm of their height on flat ground).
+- `fiend_show` (by name only, not in the 20): the fiend on the open forecourt filmed whole by a camera of its own off its right: its round, the roar, coming on, the mace brought down (`Show_*` stills).
 - The other trials run with the creatures calm (they test the moves, and do not dodge).
 
 ### Known gaps
 
 - The creatures were tested only by the trials, not played by hand: how hard the devils' lanes and the Pit Fiend's round are is untried.
 - The lemures share the skeleton's motion capture: a stiff, upright walk, not a shamble.
-- The Pit Fiend's wings are rigid (they do not fold or beat); its walk is the skeleton's at 2.4 times the size.
+- The Pit Fiend's legs are still the skeleton's motion-capture walk under the IK and the heavy stance, not a gait of its own; its swats and stamp are the skeleton's clips at 2.4 times; the wings' membranes stretch rather than crease when folded; the thigh plates and the mace may cut into the body in some poses.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
 - Toward the goal art:
   - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.

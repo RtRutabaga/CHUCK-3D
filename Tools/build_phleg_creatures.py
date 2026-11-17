@@ -528,14 +528,25 @@ def fiend_body():
     for z, bone in ((108, 'spine_01'), (115, 'spine_01'), (122, 'spine_02'), (129, 'spine_02'), (136, 'spine_03'), (143, 'spine_03')):
         b = V3(-12.5 + (z - 108) * .05, 0, z)
         B.tube(bone, [b, b + V3(-5.5, 0, 3)], [1.6, .1], tag='horn', k=.8)
-    # The tail: from under the spine's base, down to the ground behind it and round beside its left foot, the end dark.
-    tail = catmull([V3(-11, 0, 99), V3(-24, 2, 86), V3(-38, 8, 58), V3(-50, 20, 26), V3(-48, 40, 10), V3(-30, 58, 7),
-                    V3(-4, 64, 8), V3(18, 58, 10), V3(28, 48, 12)], 46)
-    r = np.linspace(7.5, 1.0, len(tail)) ** 1.
+    # The tail (2026-11-16 third pass, on its own eight bones so the game can swing it): from under the spine's base, down
+    # and back, its last half trailing on the ground behind, turning a little to its left; the end dark and barbed.
+    tail = catmull([V3(-11, 0, 99), V3(-26, 0, 84), V3(-42, 2, 60), V3(-58, 5, 37), V3(-75, 9, 19), V3(-94, 15, 10),
+                    V3(-113, 23, 8), V3(-130, 33, 9), V3(-142, 45, 11)], 64)
+    r = np.linspace(7.5, 1.1, len(tail))
+    seg = np.cumsum(np.r_[0, np.linalg.norm(np.diff(tail, axis=0), axis=1)]); seg /= seg[-1]
+    joints = [tail[np.argmin(np.abs(seg - k / TAIL_BONES))] for k in range(TAIL_BONES + 1)]
     n_dark = int(len(tail) * .72)
-    B.tube('pelvis', tail[:n_dark + 1], r[:n_dark + 1], k=3)
-    B.tube('pelvis', tail[n_dark:], r[n_dark:], tag='tip', k=1.)
-    B.tube('pelvis', [tail[-1], tail[-1] + (tail[-1] - tail[-3]) * 1.6], [1.0, .08], tag='tip', k=.5)
+    for k in range(TAIL_BONES):
+        i0, i1 = np.argmin(np.abs(seg - k / TAIL_BONES)), np.argmin(np.abs(seg - (k + 1) / TAIL_BONES)) + 1
+        i1 = min(i1, len(tail))
+        for a, b, tag in ((i0, min(i1, n_dark + 1), 'skin'), (max(i0, n_dark), i1, 'tip')):
+            if b - a >= 2: B.tube(f'tail_{k + 1:02d}', tail[a:b], r[a:b], tag=tag, k=3 if tag == 'skin' else 1.)
+    B.tube(f'tail_{TAIL_BONES:02d}', [tail[-1], tail[-1] + (tail[-1] - tail[-3]) * 1.6], [1.1, .08], tag='tip', k=.5)
+    for t_ in (.8, .87, .94):   # barbs down the end
+        i = int(len(tail) * t_); d_ = tail[i + 1] - tail[i - 1]; d_ /= np.linalg.norm(d_)
+        for s_ in (1, -1):
+            side_ = np.cross(d_, V3(0, 0, 1)) * s_
+            B.tube(f'tail_{min(TAIL_BONES, int(t_ * TAIL_BONES) + 1):02d}', [tail[i], tail[i] + side_ * 3.2 - d_ * 2 + V3(0, 0, 1.5)], [1., .06], tag='tip', k=.4)
     # Wing bones (rigid on the upper spine): the arm up and out from the shoulder blades, fingers spread down from the
     # wrist; the membranes between are added below.
     wing = {}
@@ -546,14 +557,16 @@ def fiend_body():
         fingers = [[wrist, Wp(-38, 84, 146), Wp(-44, 101, 122)], [wrist, Wp(-41, 77, 135), Wp(-49, 84, 104)],
                    [wrist, Wp(-38, 66, 128), Wp(-44, 62, 98)]]
         flank = [wrist, Wp(-24, 34, 132), V3(-15, s * 15, 116)]
-        B.tube('spine_03', [root, mid, elbow], [5, 4.2, 3.4], tag='wing', k=2.5)
-        B.tube('spine_03', [elbow, wrist], [3.1, 2.4], tag='wing', k=1.5)
-        for fp in fingers:
-            B.tube('spine_03', catmull(fp, 8), np.linspace(2.1, .6, 8), tag='wing', k=1.)
-        B.tube('spine_03', [elbow, elbow + V3(-1, s * 1.5, 9)], [2, .1], tag='claw', k=.5)    # a hook at the elbow
-        B.tube('spine_03', [wrist, wrist + V3(3, s * 2, 7)], [1.5, .1], tag='claw', k=.5)    # and the thumb's
+        # (third pass: on their own bones - arm, forearm, three fingers - so the game can fold, spread and beat them)
+        B.tube(f'wing_arm_{S}', [root, mid, elbow], [5, 4.2, 3.4], tag='wing', k=2.5)
+        B.tube(f'wing_fore_{S}', [elbow, wrist], [3.1, 2.4], tag='wing', k=1.5)
+        for i, fp in enumerate(fingers):
+            B.tube(f'wing_f{i + 1}_{S}', catmull(fp, 8), np.linspace(2.1, .6, 8), tag='wing', k=1.)
+        B.tube(f'wing_arm_{S}', [elbow, elbow + V3(-1, s * 1.5, 9)], [2, .1], tag='claw', k=.5)    # a hook at the elbow
+        B.tube(f'wing_fore_{S}', [wrist, wrist + V3(3, s * 2, 7)], [1.5, .1], tag='claw', k=.5)    # and the thumb's
         wing[S] = (root, elbow, wrist, fingers, mid, flank)
     B.disp(lambda P: .08 * fbm(P / 1.9, 2, 41) + .3 * fbm(P / 7.5, 2, 43))   # (smooth hide: the goal's)
+    wing['tail'] = joints
     return B, wing
 
 
@@ -665,6 +678,65 @@ def membrane_colour(W):
     return col, np.zeros(len(W))   # (no glow: a vein mask here lit the membranes in patches)
 
 
+TAIL_BONES = 8
+
+
+def fiend_bones(wing):
+    """The fiend's own bones beyond the temple rig (cm): each wing's arm, forearm and three fingers off spine_03, the
+    tail's eight off the pelvis. Unreal merges them into the shared skeleton; the skeleton's clips leave them at rest and
+    the game moves them (SkeletonAnim.cpp, the fiend's layers)."""
+    bones = {}
+    for S in ('l', 'r'):
+        root, elbow, wrist, f, mid, flank = wing[S]
+        bones[f'wing_arm_{S}'] = (root, elbow, 'spine_03')
+        bones[f'wing_fore_{S}'] = (elbow, wrist, f'wing_arm_{S}')
+        for i, fp in enumerate(f):
+            bones[f'wing_f{i + 1}_{S}'] = (wrist, fp[-1], f'wing_fore_{S}')
+            # (a leaf at each finger's end, so the game knows which way the finger points)
+            d = fp[-1] - wrist; bones[f'wing_t{i + 1}_{S}'] = (fp[-1], fp[-1] + d / np.linalg.norm(d) * 5, f'wing_f{i + 1}_{S}')
+    j = wing['tail']
+    for k in range(TAIL_BONES): bones[f'tail_{k + 1:02d}'] = (j[k], j[k + 1], 'pelvis' if k == 0 else f'tail_{k:02d}')
+    d = j[-1] - j[-2]; bones['tail_tip'] = (j[-1], j[-1] + d / np.linalg.norm(d) * 5, f'tail_{TAIL_BONES:02d}')
+    return bones
+
+
+def add_bones(rig, bones):
+    select_only(rig); bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    for name, (h, t, parent) in bones.items():
+        b = eb.new(name); b.head = tuple(np.asarray(h) / 100.); b.tail = tuple(np.asarray(t) / 100.)
+        b.parent = eb[parent]; b.use_connect = False; b.roll = 0.
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for b in rig.data.bones: J[b.name] = (np.array(b.head_local) * 100., np.array(b.tail_local) * 100.)
+
+
+def seg_near(P, A, B):
+    """Each point's distance to segment AB and its fraction along it."""
+    d = B - A; t = np.clip(((P - A) @ d) / max(d @ d, 1e-9), 0, 1)
+    return np.linalg.norm(P - (A + t[:, None] * d), axis=1), t
+
+
+def membrane_weights(W, edges):
+    """A membrane's vertices between the bone edges round it: edges = [(points, bone of each point)]. Each vertex takes
+    both edges, weighted by the other's distance; each edge's bones by where along it the vertex is nearest."""
+    per = []
+    for pts, bones in edges:
+        D = np.full(len(W), 1e9); Wt = {n: np.zeros(len(W)) for n in set(bones)}
+        for i in range(len(pts) - 1):
+            d, t = seg_near(W, pts[i], pts[i + 1])
+            m = d < D; D = np.where(m, d, D)
+            for n in Wt: Wt[n] = np.where(m, 0., Wt[n])
+            Wt[bones[i]] = Wt[bones[i]] + np.where(m, 1 - t, 0.); Wt[bones[i + 1]] = Wt[bones[i + 1]] + np.where(m, t, 0.)
+        per.append((D, Wt))
+    (Da, Wa), (Db, Wb) = per
+    a = Db / np.maximum(Da + Db, 1e-6)
+    out = {}
+    for n, w in Wa.items(): out[n] = out.get(n, 0) + w * a
+    for n, w in Wb.items(): out[n] = out.get(n, 0) + w * (1 - a)
+    tot = sum(out.values()); return {n: w / np.maximum(tot, 1e-9) for n, w in out.items()}
+
+
 def fiend_wings(wing):
     obs = []
     for S, s in (('l', 1), ('r', -1)):
@@ -672,8 +744,15 @@ def fiend_wings(wing):
         # (between the fingers, the last to the flank, and the flank up under the arm to the shoulder)
         panels = [([wrist, elbow, mid, root], flank, 10, 14, 1.5, 2.), (f[0], f[1], 9, 16, 6.5, 3.), (f[1], f[2], 9, 16, 6.5, 3.),
                   (f[2], flank, 12, 16, 7.5, 3.5)]
+        # The bone edges round the panels: the arm chain (wing_fore from the wrist, wing_arm from the elbow in), each
+        # finger, and the flank from the wrist (wing_fore) to the body's side (spine_02).
+        arm = ([wrist, elbow, mid, root], [f'wing_fore_{S}', f'wing_arm_{S}', f'wing_arm_{S}', f'wing_arm_{S}'])
+        fing = [(catmull(fp, 8), [f'wing_f{i + 1}_{S}'] * 8) for i, fp in enumerate(f)]
+        fl = (catmull(flank, 8), [f'wing_fore_{S}'] * 3 + ['spine_02'] * 5)
+        edges = [[arm, fl], [fing[0], fing[1]], [fing[1], fing[2]], [fing[2], fl]]
         for i, (A, Bp, nu, nv, sc, bl) in enumerate(panels):
             ob = membrane(f'wing_{S}{i}', (A, Bp), nu, nv, .9, sc, bl * s, membrane_colour)
+            add_weights(ob, membrane_weights(verts_of(ob), edges[i]))
             obs.append(ob)
     return obs
 
@@ -932,8 +1011,8 @@ def build_skinned():
         body, wing = fiend_body()
         ob, V = field_object('SK_PitFiend', body, .7, .42, fiend_look)
         add_weights(ob, body.weights(V))
+        add_bones(rig, fiend_bones(wing))
         wings = fiend_wings(wing)
-        for w in wings: add_weights(w, {'spine_03': np.ones(len(w.data.vertices))})
         mb, head = fiend_mace()
         mace, _ = field_object('fiend_mace', mb, .55, .5, mace_look)
         add_weights(mace, {'hand_r': np.ones(len(mace.data.vertices))})

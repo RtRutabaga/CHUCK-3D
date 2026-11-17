@@ -2,6 +2,31 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos: the Pit Fiend's motion, its mace, lemures that throw (Claude)
+
+- **Asked:** the user could not find the Pit Fiend; wants "more realistic leg movement and placement and overall more immersive body movements such as wings beating etc ... formidable in battle, not just a lumbering skeleton with dressing" (it will fight the trio later); lemures should pick up and throw Chuck as the skeletons do.
+- **Source:** `main` at dadce124; this commit.
+- **Changed:**
+  - `Tools/build_phleg_creatures.py`: the fiend's own bones added to the rig before export (`fiend_bones`, `add_bones`): `wing_arm/fore/f1-3/t1-3_{l,r}`, `tail_01`-`tail_08`, `tail_tip`. Wing tubes on their bones; membranes weighted across the bone edges round each panel (`membrane_weights`); the tail remodelled to trail behind on the ground, on its bones, barbed. `import_phleg_creatures.py` saves the shared skeleton asset (the import merges the new bones into `SK_TempleSkeleton_Skeleton`; the skeleton's clips leave them at rest).
+  - `SkeletonAnim.h/.cpp`: `FFiendPose` and `FiendLayers`: foot IK to traced ground with the sole on the slope, hips lowered/shifted, spine lean/roll/twist/bend/breath, left arm swing, right-arm IK with the haft turned (the mace), wing raise/sweep/fold/finger fold, tail yaw/pitch. Axes: Unreal's are left-handed (`Up x Forward` is the right side).
+  - `PitFiendMotion.cpp` (new): `TickFiend` (ground traces, footfall detection, stance, roar, lean/roll, wing states and beats, tail sway/trail/lift/flick/ground fix), `FiendPlant`, `FiendImpact` (ash/embers via `APhlegethosSetting::GroundBlow`, `BeholderShake`, the blast), `TickSmash` (the mace's swing on a planned arc; hit judged at the planned landing point), `ShowRoar`/`ShowSmash` for review.
+  - `TempleSkeleton.h/.cpp`: `EAttack::Smash` (the fiend's from 2.2-3 m, 60% at 1.4-2.2 m); 2.6 s roar; turning in place walks the stride; fiend footsteps from footfalls; stamp/swat impacts; warm `FiendFill` light; lemures grab and throw (`IsFiend()` only is excluded now); in the Phlegethos trials a throw goes only toward ground.
+  - `PhlegethosCreatures.cpp`: the fiend's round along the path within 3 m of it. `PhlegethosSetting.h/.cpp`: `GroundBlow`; drops can land on a floor; puffs have their own drag. `ChuckCharacter.h/.cpp`: `Blasted` (knocked off his feet: flung tumbling, crash-lands, gets up; no harm).
+  - `Content/Data/Audit/Allow.txt`: smoke wisps (`SM_CigaretteSmoke*`) allowed to float.
+  - `PhlegethosTest.cpp`: `lemures` passes only if it threw him; `fiend` checks wing beats and footfalls, 40 s; new `fiend_show` (by name only; its own camera on the forecourt).
+- **Tested (editor):** `fiend` pass (`Local/phleg-fiend-3.log`: killed by the mace at 16.7 s; beats=6 footfalls=11 smashes=1 blasts=1, planted ankles within 13 cm, tail 2 cm into the ground at worst); `lemures` pass (`Local/phleg-lemures-3.log`: held, hung, thrown 640 cm/s, 17 hits, melted); `fiend_show` pass (`Local/phleg-fiend-show.log`, stills `Saved/Screenshots/WindowsEditor/Phlegethos/Show_*`, sheet `Local/fiend-smash-sequence.png`). The full 20 ran in the package verification (below).
+- **Package:** Package verified (`Local/verify-package-20261116-195926.log`, 182 passes) after one rerun: the first run failed only on the Waterdeep world audit (a dock NPC's pipe-smoke wisp counted as floating, 118 vs 117), now allow-listed (`SM_CigaretteSmoke*` in `Content/Data/Audit/Allow.txt`).
+- **Not tested:** anything by hand; how the mace and the blast feel in play; the fiend's round on the path for difficulty.
+- **Remaining flaws:**
+  - The legs are still the skeleton's motion-capture walk under the IK and heavier stance, not a gait of its own; the swat and stamp are the skeleton's clips at 2.4x.
+  - Folded wings stretch their membranes rather than crease; thigh plates and mace may cut into the body in some poses.
+  - `fiend_show`'s forecourt pillars hide the walk frames; the stills are dark.
+  - The tail's ground check can be fooled by a block beside it (85 cm on the forecourt in `fiend_show`).
+- **Contract compatibility:** the shared temple skeleton asset gains the fiend's 22 bones (temple skeletons and their clips unaffected; their trials ran in the package verification). Chuck gains `Blasted` (no rig, scale or control changes). `EAttack` gains `Smash` (counters sized 5).
+- **Launcher:** promoted as PhlegethosFiendMotion (receipt dadce124 plus this commit's then-uncommitted work); kept `Windows-Previous-20261116-PhlegethosFiendMotion` and `-PhlegethosNPCs`, pruned `-PhlegethosCreatures`. No candidate folder left.
+
+Next part of the work can be done by Claude only (the trio vs Pit Fiend battle when the user wants it, then the Astral escalation and Feywild river); preference: Claude, here.
+
 ## November 16 — Phlegethos: lemures, spined devils and the Pit Fiend (Claude)
 
 - **Asked:** proceed with the region's remaining creatures (no horned devils; the trio vs Pit Fiend battle not yet). Then a goal image for the Pit Fiend (added as `References/Phlegethos/pit-fiend-goal.jpg`): the fiend was remodelled to it.

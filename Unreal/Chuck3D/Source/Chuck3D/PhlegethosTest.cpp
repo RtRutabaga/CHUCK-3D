@@ -15,6 +15,8 @@
 #include "ChuckClimbable.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
@@ -28,8 +30,9 @@ using namespace Phleg;
 namespace
 {
     constexpr float Stand = 34.65f;
-    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Count };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate")};
+    // (FiendShow, after Count, only by name: -ChuckPhlegethosTest=fiend_show, the Pit Fiend's moves filmed whole for review)
+    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Count, FiendShow };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate"), TEXT("-"), TEXT("fiend_show")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -78,7 +81,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         TArray<FString> Results; FTimerHandle Timer; bool bDone = false, bPlaced = false; FString Note;
     };
     auto Run = MakeShared<FRun>(); Run->Failures = Failures; Run->Start = World->GetTimeSeconds();
-    if (!Only.IsEmpty()) for (int32 I = 0; I < int32(ET::Count); ++I) if (Only == Names[I]) Run->Trial = I;
+    if (!Only.IsEmpty()) for (int32 I = 0; I <= int32(ET::FiendShow); ++I) if (Only == Names[I]) Run->Trial = I;
     Owner->GetWorldTimerManager().SetTimer(Run->Timer, [Owner, Chuck, Run, Only]()
     {
         if (Run->bDone) return;
@@ -110,7 +113,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             ++Run->Trial; Run->Sub = 0; Run->Hop = 0; Run->bPlaced = false; Run->Note.Empty();
             if (!Only.IsEmpty()) Run->Trial = int32(ET::Count);
         };
-        if (Run->Trial >= int32(ET::Count))
+        if (Run->Trial == int32(ET::Count))
         {
             Run->bDone = true;
             UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_TEST failures=%d passed=%d trials=%s sunk=%d crumbled=%d splashes=%d seconds=%.0f"), Run->Failures, Run->Passed,
@@ -120,7 +123,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
         // (The flameskulls burn only in their own trial: the traversal trials are of the moves, and do not dodge.)
-        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend);
+        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend) && Run->Trial != int32(ET::FiendShow);
         // A death ends any trial but the stills.
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
         // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
@@ -236,9 +239,10 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         case ET::Lemures:
         {
-            // (2026-11-16) A hills lemure: he stands before it; it sees him, shambles to him and kicks or swats; he scratches
-            // it down (his sanity kept up: this is the lemure's life, not his) and it melts where it falls. Pass: it struck,
-            // it took its seventeen scratches and fell, and it melted.
+            // (2026-11-16) A hills lemure: he stands before it; it sees him, shambles to him and - its first attack - picks him
+            // up by the leg and throws him (the user: "same as the skeletons"); he goes back to it and scratches it down (his
+            // sanity kept up: this is the lemure's life, not his) and it melts where it falls. Pass: it threw him, it took
+            // its seventeen scratches and fell, and it melted.
             ATempleSkeleton* L = nullptr; int32 Count = 0;
             for (const auto& E : ATempleSkeleton::All()) if (E.IsValid() && E->IsLemure()) { ++Count; if (!L && !E->GetPost().bDormant) L = E.Get(); }
             if (!L) { Next(false, TEXT("no_lemures=1")); break; }
@@ -248,13 +252,17 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const FVector F = PhlegLocal(L->GetPost().Feet);
                 const FVector Fw = FRotator(0, L->GetPost().Yaw, 0).Vector();
                 Place(F.X + Fw.X * 280, F.Y + Fw.Y * 280, F.Z, L->GetPost().Yaw + 180.f); Chuck->SetOrbitPitch(-12);
-                Run->Sub = 0; Run->Chains0 = L->GetStrikes(); Run->Hop = 0; Run->Next = Now;
+                Run->Sub = 0; Run->Chains0 = L->GetStrikes(); Run->Hop = 0; Run->Next = Now; Run->SideRuns0 = L->GetThrows();
+                L->ForceAttack(ATempleSkeleton::EAttack::Grab);
                 break;
             }
             Chuck->SetSanity(5);
             const FVector To = L->GetActorLocation() - Chuck->GetActorLocation();
             if (Run->Sub == 0 && T > 1.2f && !Run->Note.Contains(TEXT("near"))) { Shot(TEXT("Lemure_Near")); Run->Note += TEXT("near "); }
             if (Run->Sub == 0 && L->GetState() == ATempleSkeleton::EState::Attack && !Run->Note.Contains(TEXT("attack"))) { Shot(TEXT("Lemure_Attack")); Run->Note += TEXT("attack "); }
+            if (Chuck->IsLegHeld() && !Run->Note.Contains(TEXT("held"))) { Run->Note += TEXT("held "); Run->At = Now; }
+            if (Run->Note.Contains(TEXT("held")) && !Run->Note.Contains(TEXT("hung")) && Now - Run->At > .35) { Shot(TEXT("Lemure_Grab")); Run->Note += TEXT("hung "); }
+            if (Chuck->IsThrown() && !Run->Note.Contains(TEXT("flying"))) { Shot(TEXT("Lemure_Throw")); Run->Note += TEXT("flying "); }
             if (Run->Sub == 0 && L->GetStrikes() > Run->Chains0) { Run->Sub = 1; Run->At = Now; }
             if (Run->Sub == 0 && T > 16.f) { Next(false, FString::Printf(TEXT("no_strike=1 state=%s notices=%d"), L->GetStateName(), L->GetNotices())); break; }
             if (Run->Sub == 1)
@@ -270,8 +278,9 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 2 && T > 6.f)
             {
                 Shot(TEXT("Lemure_Melted"));
-                Next(L->GetHitsTaken() >= ATempleSkeleton::LemureHealth && L->GetMelt() > 2.f && Count == 8,
-                    FString::Printf(TEXT("strikes=%d hits=%d melt=%.1f lemures=%d top_speed=%.0f"), L->GetStrikes() - Run->Chains0, L->GetHitsTaken(), L->GetMelt(), Count, L->GetTopSpeed()));
+                const int32 Throws = L->GetThrows() - Run->SideRuns0;
+                Next(L->GetHitsTaken() >= ATempleSkeleton::LemureHealth && L->GetMelt() > 2.f && Count == 8 && Throws > 0,
+                    FString::Printf(TEXT("strikes=%d throws=%d hits=%d melt=%.1f lemures=%d top_speed=%.0f %s"), L->GetStrikes() - Run->Chains0, Throws, L->GetHitsTaken(), L->GetMelt(), Count, L->GetTopSpeed(), *Run->Note));
             }
             break;
         }
@@ -349,12 +358,101 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 1 && Dist < 700.f && !Run->Note.Contains(TEXT("close"))) { Shot(TEXT("Fiend_Close")); Run->Note += TEXT("close "); Chuck->Slash(); Chuck->SlashReleased(); }
             if (Run->Sub == 1 && F->GetState() == ATempleSkeleton::EState::Attack && !Run->Note.Contains(TEXT("blow"))) { Run->Note += TEXT("blow "); Run->Next = Now; }
             if (Run->Sub == 1 && Run->Note.Contains(TEXT("blow")) && Now - Run->Next > .5 && !Run->Note.Contains(TEXT("strike"))) { Shot(TEXT("Fiend_Strike")); Run->Note += TEXT("strike "); }
+            // (2026-11-16 third pass) The roar's spread wings, the mace at the top of its swing and in the ground.
+            if (Run->Sub == 1 && F->IsRoaring() && F->GetStateTime() > 1.f && !Run->Note.Contains(TEXT("spread"))) { Shot(TEXT("Fiend_RoarWings")); Run->Note += TEXT("spread "); }
+            if (Run->Sub == 1 && F->GetState() == ATempleSkeleton::EState::Attack && F->GetLastAttack() == ATempleSkeleton::EAttack::Smash)
+            {
+                if (F->GetStateTime() > 1.f && !Run->Note.Contains(TEXT("windup"))) { Shot(TEXT("Fiend_Windup")); Run->Note += TEXT("windup "); }
+                if (F->GetStateTime() > 1.38f && !Run->Note.Contains(TEXT("impact"))) { Shot(TEXT("Fiend_Impact")); Run->Note += TEXT("impact "); }
+            }
+            if (Run->Sub == 1 && Run->Note.Contains(TEXT("roar")) && !Run->Note.Contains(TEXT("walking")) && F->GetState() == ATempleSkeleton::EState::Chase && !F->IsRoaring() && Dist < 1300.f) { Shot(TEXT("Fiend_Charge")); Run->Note += TEXT("walking "); }
             if (Run->Sub == 1 && (Chuck->GetSanity() == 0 || Chuck->IsAstral()))
             {
-                Next(F->GetHitsTaken() == 0, FString::Printf(TEXT("%skilled=1 attack=%s top_speed=%.0f t=%.1f"), *Run->Note, ATempleSkeleton::AttackName(F->GetLastAttack()), F->GetTopSpeed(), T));
+                // (and its body: the roar's two wing beats, its feet coming down, the planted feet on the ground, the tail kept
+                // out of it)
+                Next(F->GetHitsTaken() == 0 && F->GetWingBeats() >= 2 && F->GetFootfalls() >= 4,
+                    FString::Printf(TEXT("%skilled=1 attack=%s top_speed=%.0f t=%.1f beats=%d footfalls=%d smashes=%d blasts=%d foot_gap=%.0f tail_under=%.0f"), *Run->Note,
+                        ATempleSkeleton::AttackName(F->GetLastAttack()), F->GetTopSpeed(), T, F->GetWingBeats(), F->GetFootfalls(), F->GetSmashes(), F->GetSmashBlasts(), F->GetWorstFootGap(), F->GetTailUnder()));
                 break;
             }
-            if (Run->Sub == 1 && T > 25.f) Next(false, FString::Printf(TEXT("%snot_killed=1 state=%s dist=%.0f gap=%.0f"), *Run->Note, F->GetStateName(), Dist, F->GetLastStrikeGap()));
+            if (Run->Sub == 1 && T > 40.f) Next(false, FString::Printf(TEXT("%snot_killed=1 state=%s dist=%.0f gap=%.0f"), *Run->Note, F->GetStateName(), Dist, F->GetLastStrikeGap()));
+            break;
+        }
+        case ET::FiendShow:
+        {
+            // (2026-11-16, review only) The Pit Fiend filmed whole from 18 m off its side: on its round (folded wings, its
+            // stride, its tail), its roar (reared, wings spread and beating), coming on, and its mace brought down on the
+            // ground before it. Pass: it struck the ground and its wings beat.
+            ATempleSkeleton* F = PhlegethosPitFiend();
+            if (!F) { Next(false, TEXT("no_fiend=1")); break; }
+            Chuck->SetSanity(5);
+            if (Run->Sub == -1)
+            {
+                // (on the level forecourt before the gate, open ground, walking back toward its round; he behind it, out of
+                // its sight)
+                F->ResetToPost();
+                const FVector ShowAt = PhlegWorld(FVector(41700, 0, FortressTop));
+                F->SetActorLocation(ShowAt + FVector(0, 0, F->HalfHeightNow() + 5.f), false, nullptr, ETeleportType::TeleportPhysics);
+                F->SetActorRotation(FRotator(0, (PhlegWorld(FVector(39000, 0, FortressTop)) - ShowAt).Rotation().Yaw, 0));
+                Place(43000, 0, FortressTop, 180.f); Chuck->SetOrbitPitch(10);
+                Run->Sub = 0; Run->Hop = 0;
+                break;
+            }
+            {
+                // A camera of its own off the fiend's right, at its waist's height, 14 m out, the whole of it in frame.
+                static TWeakObjectPtr<ACameraActor> Cam;
+                if (!Cam.IsValid())
+                {
+                    Cam = World->SpawnActor<ACameraActor>();
+                    if (Cam.IsValid()) { Cam->GetCameraComponent()->SetFieldOfView(50.f); Cam->GetCameraComponent()->bConstrainAspectRatio = false; }
+                    if (APlayerController* PC = World->GetFirstPlayerController(); PC && Cam.IsValid()) PC->SetViewTarget(Cam.Get());
+                }
+                if (Cam.IsValid())
+                {
+                    const FVector Fw = F->GetActorForwardVector(), Rt = FVector::CrossProduct(FVector::UpVector, Fw);
+                    const FVector Look = F->GetActorLocation() + FVector(0, 0, 40.f) + Fw * 120.f;
+                    // (raised over the rock between, not pulled in: a smoothed height so the view does not jump)
+                    static float Lift = 250.f;
+                    FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(FiendShowCam), false, F); Q.AddIgnoredActor(Chuck);
+                    float Want = 250.f;
+                    while (Want < 2400.f && World->LineTraceSingleByChannel(Hit, Look, Look + (Rt * .93f + Fw * .37f).GetSafeNormal() * 1150.f + FVector(0, 0, Want), ECC_Visibility, Q)) Want += 200.f;
+                    Lift = FMath::FInterpTo(Lift, Want, World->GetDeltaSeconds(), 2.f);
+                    const FVector Eye = Look + (Rt * .93f + Fw * .37f).GetSafeNormal() * 1150.f + FVector(0, 0, Lift);
+                    Cam->SetActorLocationAndRotation(Eye, (Look - Eye).Rotation());
+                }
+            }
+            if (Run->Sub == 0)
+            {
+                const float Ts[] = {1.2f, 1.6f, 2.0f, 2.4f, 2.8f};
+                if (Run->Hop < 5 && T > Ts[Run->Hop]) { Shot(FString::Printf(TEXT("Show_Walk_%d"), Run->Hop)); ++Run->Hop; }
+                if (T > 3.2f) { F->ShowRoar(); Run->Sub = 1; Run->Hop = 0; Run->At = Now; }
+                break;
+            }
+            if (Run->Sub == 1)
+            {
+                const float Ts[] = {.3f, .8f, 1.2f, 1.6f, 2.0f, 2.4f, 3.2f, 3.7f, 4.2f};
+                if (Run->Hop < 9 && T > Ts[Run->Hop]) { Shot(FString::Printf(TEXT("Show_%s_%d"), Run->Hop < 6 ? TEXT("Roar") : TEXT("Charge"), Run->Hop)); ++Run->Hop; }
+                if (T > 4.5f)
+                {
+                    const FVector Ahead = F->GetActorLocation() + F->GetActorForwardVector() * 220.f;
+                    FHitResult Hit; float Gz = F->GetActorLocation().Z - F->HalfHeightNow();
+                    if (World->LineTraceSingleByChannel(Hit, Ahead + FVector(0, 0, 400), Ahead - FVector(0, 0, 900), ECC_Visibility)) Gz = static_cast<float>(Hit.ImpactPoint.Z);
+                    F->ShowSmash(FVector(Ahead.X, Ahead.Y, Gz));
+                    Run->Sub = 2; Run->Hop = 0; Run->At = Now;
+                }
+                break;
+            }
+            if (Run->Sub == 2)
+            {
+                const float Ts[] = {.45f, .9f, 1.12f, 1.24f, 1.32f, 1.4f, 1.6f, 2.1f, 2.6f};
+                if (Run->Hop < 9 && T > Ts[Run->Hop]) { Shot(FString::Printf(TEXT("Show_Smash_%d"), Run->Hop)); ++Run->Hop; }
+                if (T > 3.2f)
+                {
+                    Next(F->GetSmashes() > 0 && F->GetWingBeats() >= 2 && F->GetFootfalls() >= 3, FString::Printf(TEXT("smashes=%d beats=%d footfalls=%d foot_gap=%.0f tail_under=%.0f gap=%.0f"),
+                        F->GetSmashes(), F->GetWingBeats(), F->GetFootfalls(), F->GetWorstFootGap(), F->GetTailUnder(), F->GetLastStrikeGap()));
+                    F->ResetToPost();
+                }
+            }
             break;
         }
         case ET::LakeHops:

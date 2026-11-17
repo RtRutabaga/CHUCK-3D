@@ -159,6 +159,8 @@ for name in ('SK_Lemure', 'SK_PitFiend'):
     except Exception as e:
         unreal.log_warning(f'CHUCK_PHLEG_CREATURE_LOD_FAILED {name} {e}')
     ASSETS.save_loaded_asset(mesh, only_if_is_dirty=False)
+    # (2026-11-16: the fiend's wing and tail bones are merged into the shared skeleton by the import; keep them)
+    ASSETS.save_loaded_asset(skeleton, only_if_is_dirty=True)
     box = mesh.get_bounds().box_extent
     unreal.log(f'CHUCK_PHLEG_CREATURE_IMPORTED {name} extent=({box.x:.0f},{box.y:.0f},{box.z:.0f}) lod_ok={lod_ok}')
 

@@ -3,6 +3,7 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimationPoseData.h"
 #include "AnimationRuntime.h"
+#include "TwoBoneIK.h"
 #include "BonePose.h"
 #include "Components/SkeletalMeshComponent.h"
 
@@ -55,6 +56,123 @@ namespace
         const FBoneTransform Moved[] = {FBoneTransform(Bone, T)};
         Pose.LocalBlendCSBoneTransforms(Moved, 1.f);
     }
+
+    FVector At(FCSPose<FCompactPose>& Pose, FCompactPoseBoneIndex Bone) { return Pose.GetComponentSpaceTransform(Bone).GetLocation(); }
+
+    void SetCS(FCSPose<FCompactPose>& Pose, FCompactPoseBoneIndex Bone, const FTransform& T)
+    {
+        const FBoneTransform Moved[] = {FBoneTransform(Bone, T)};
+        Pose.LocalBlendCSBoneTransforms(Moved, 1.f);
+    }
+
+    // Two bones reaching for Goal (component space), the joint between them bending toward Pole; the end's rotation set.
+    void Reach(FCSPose<FCompactPose>& Pose, FCompactPoseBoneIndex A, FCompactPoseBoneIndex B, FCompactPoseBoneIndex C, const FVector& Goal, const FVector& Pole, const FQuat& EndRotation)
+    {
+        if (A == INDEX_NONE || B == INDEX_NONE || C == INDEX_NONE) return;
+        FTransform TA = Pose.GetComponentSpaceTransform(A), TB = Pose.GetComponentSpaceTransform(B), TC = Pose.GetComponentSpaceTransform(C);
+        AnimationCore::SolveTwoBoneIK(TA, TB, TC, Pole, Goal, false, 1.0, 1.0);
+        TC.SetRotation(EndRotation);
+        SetCS(Pose, A, TA); SetCS(Pose, B, TB); SetCS(Pose, C, TC);
+    }
+
+    // The Pit Fiend's layers (FFiendPose; 2026-11-16).
+    void FiendLayers(FCSPose<FCompactPose>& Pose, const FBoneContainer& Bones, const FSkeletonAnimParams& P)
+    {
+        const FFiendPose& F = P.Fiend;
+        // (Unreal's axes are left-handed: Up x Forward points to the body's RIGHT. Rt is that; Lt its left.)
+        const FVector Up = P.Up.GetSafeNormal(), Fw = P.Forward.GetSafeNormal(), Rt = FVector::CrossProduct(Up, Fw).GetSafeNormal(), Lt = -Rt;
+        auto B = [&](const TCHAR* Name) { return Find(Bones, Name); };
+        // The feet: where the clip puts them, onto the ground under them, set out a little and laid on its slope; kept
+        // there below, whatever the hips and spine do.
+        static const TCHAR* LegNames[2][3] = {{TEXT("thigh_l"), TEXT("calf_l"), TEXT("foot_l")}, {TEXT("thigh_r"), TEXT("calf_r"), TEXT("foot_r")}};
+        FCompactPoseBoneIndex Leg[2][3] = {{FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE)}, {FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE)}};
+        FTransform Goal[2];
+        bool bLegs = true;
+        for (int32 I = 0; I < 2 && bLegs; ++I)
+        {
+            for (int32 K = 0; K < 3; ++K) { Leg[I][K] = B(LegNames[I][K]); bLegs &= Leg[I][K] != INDEX_NONE; }
+            if (!bLegs) break;
+            Goal[I] = Pose.GetComponentSpaceTransform(Leg[I][2]);
+            Goal[I].AddToTranslation(Up * F.FootLift[I] + Lt * (I == 0 ? F.Stance : -F.Stance));
+            Goal[I].SetRotation(FQuat::FindBetweenNormals(Up, F.FootNormal[I].GetSafeNormal()) * Goal[I].GetRotation());
+        }
+        // The hips lowered and shifted (the knees take it, below); the spine leaning into its going and rolling into its
+        // turns, twisting and bending with a swing, breathing.
+        const FCompactPoseBoneIndex Pelvis = B(TEXT("pelvis"));
+        if (Pelvis != INDEX_NONE)
+        {
+            FTransform T = Pose.GetComponentSpaceTransform(Pelvis);
+            T.AddToTranslation(F.PelvisShift - Up * F.PelvisDrop);
+            SetCS(Pose, Pelvis, T);
+        }
+        const FCompactPoseBoneIndex S1 = B(TEXT("spine_01")), S2 = B(TEXT("spine_02")), S3 = B(TEXT("spine_03"));
+        // (a turn of + about Rt tips the facing down; about Fw, + drops its left side; about Up, + turns it to its right)
+        Turn(Pose, S1, Rt, F.Lean * .35f + F.ChestBend * .2f);
+        Turn(Pose, S2, Rt, F.Lean * .35f + F.ChestBend * .4f);
+        Turn(Pose, S3, Rt, F.Lean * .3f + F.ChestBend * .4f - F.Breath * 1.4f);
+        Turn(Pose, S1, Fw, F.Roll * .4f); Turn(Pose, S2, Fw, F.Roll * .35f); Turn(Pose, S3, Fw, F.Roll * .25f);
+        Turn(Pose, S2, Up, -F.ChestTwist * .45f); Turn(Pose, S3, Up, -F.ChestTwist * .55f);
+        Turn(Pose, B(TEXT("upperarm_l")), Rt, F.LeftArm);
+        // The legs reach for their feet, the knees bending forward.
+        if (bLegs)
+            for (int32 I = 0; I < 2; ++I)
+                Reach(Pose, Leg[I][0], Leg[I][1], Leg[I][2], Goal[I].GetLocation(), At(Pose, Leg[I][1]) + Fw * 60.f, Goal[I].GetRotation());
+        // The mace arm reaching for its swing, the elbow out to the right and back, the haft turned along it.
+        if (F.HandWeight > .001f)
+        {
+            const FCompactPoseBoneIndex UA = B(TEXT("upperarm_r")), LA = B(TEXT("lowerarm_r")), H = B(TEXT("hand_r"));
+            if (UA != INDEX_NONE && LA != INDEX_NONE && H != INDEX_NONE)
+            {
+                const FTransform TH = Pose.GetComponentSpaceTransform(H);
+                const FVector Cur = TH.TransformVector(F.HaftLocal).GetSafeNormal();   // (with the bone's own scale: the rig's carries a sign)
+                const FQuat Q = FQuat::Slerp(FQuat::Identity, FQuat::FindBetweenNormals(Cur, F.HaftDir.GetSafeNormal()), F.HandWeight);
+                Reach(Pose, UA, LA, H, FMath::Lerp(TH.GetLocation(), F.HandTarget, F.HandWeight), At(Pose, LA) + Rt * 40.f - Fw * 25.f, Q * TH.GetRotation());
+            }
+        }
+        // The wings: raised and swept at the shoulder, the forearm folded back along the arm, the fingers folded in
+        // along the forearm (the outer ones most).
+        static const TCHAR* WingNames[2][8] = {
+            {TEXT("wing_arm_l"), TEXT("wing_fore_l"), TEXT("wing_f1_l"), TEXT("wing_f2_l"), TEXT("wing_f3_l"), TEXT("wing_t1_l"), TEXT("wing_t2_l"), TEXT("wing_t3_l")},
+            {TEXT("wing_arm_r"), TEXT("wing_fore_r"), TEXT("wing_f1_r"), TEXT("wing_f2_r"), TEXT("wing_f3_r"), TEXT("wing_t1_r"), TEXT("wing_t2_r"), TEXT("wing_t3_r")}};
+        for (int32 I = 0; I < 2; ++I)
+        {
+            const float S = I == 0 ? 1.f : -1.f;
+            FCompactPoseBoneIndex W[8] = {FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE),
+                                          FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE), FCompactPoseBoneIndex(INDEX_NONE)};
+            bool bAll = true;
+            for (int32 K = 0; K < 8; ++K) { W[K] = B(WingNames[I][K]); bAll &= W[K] != INDEX_NONE; }
+            if (!bAll) continue;
+            Turn(Pose, W[0], -Fw * S, F.WingRaise[I]);   // (the left wing, on Lt, rises turning about -Fw)
+            Turn(Pose, W[0], Up * S, F.WingSweep[I]);
+            {
+                const FVector Sh = At(Pose, W[0]), El = At(Pose, W[1]), Wr = At(Pose, W[2]);
+                const FVector Axis = FVector::CrossProduct((Wr - El).GetSafeNormal(), (Sh - El).GetSafeNormal()).GetSafeNormal();
+                const float Gap = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct((Wr - El).GetSafeNormal(), (Sh - El).GetSafeNormal())), -1.f, 1.f)));
+                if (!Axis.IsNearlyZero()) Turn(Pose, W[1], Axis, FMath::Clamp(F.WingFold[I], -40.f, Gap - 14.f));
+            }
+            const FVector El = At(Pose, W[1]), Wr = At(Pose, W[2]);
+            const FVector Back = (El - Wr).GetSafeNormal();
+            for (int32 K = 0; K < 3; ++K)
+            {
+                const FVector Dir = (At(Pose, W[5 + K]) - At(Pose, W[2 + K])).GetSafeNormal();
+                const FVector Axis = FVector::CrossProduct(Dir, Back).GetSafeNormal();
+                const float Gap = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(Dir, Back)), -1.f, 1.f)));
+                if (!Axis.IsNearlyZero()) Turn(Pose, W[2 + K], Axis, FMath::Clamp(F.WingFinger[I] * (.8f + .12f * K), -30.f, Gap - 6.f - 4.f * K));
+            }
+        }
+        // The tail, bone by bone from the hips: raised, then turned to its left.
+        static const TCHAR* TailNames[9] = {TEXT("tail_01"), TEXT("tail_02"), TEXT("tail_03"), TEXT("tail_04"), TEXT("tail_05"), TEXT("tail_06"), TEXT("tail_07"), TEXT("tail_08"), TEXT("tail_tip")};
+        TArray<FCompactPoseBoneIndex, TInlineAllocator<9>> Tail;
+        for (int32 K = 0; K < 9; ++K) Tail.Add(B(TailNames[K]));
+        for (int32 K = 0; K < 8; ++K)
+        {
+            if (Tail[K] == INDEX_NONE || Tail[K + 1] == INDEX_NONE) break;
+            const FVector Seg = (At(Pose, Tail[K + 1]) - At(Pose, Tail[K])).GetSafeNormal();
+            const FVector Lift = FVector::CrossProduct(Seg, Up).GetSafeNormal();
+            if (!Lift.IsNearlyZero()) Turn(Pose, Tail[K], Lift, F.TailPitch[K]);
+            Turn(Pose, Tail[K], Up, F.TailYaw[K]);
+        }
+    }
 }
 
 void FSkeletonAnimProxy::PreUpdate(UAnimInstance* InAnimInstance, float DeltaSeconds)
@@ -77,13 +195,14 @@ bool FSkeletonAnimProxy::Evaluate(FPoseContext& Output)
     ++Evaluations;
 
     const bool bLook = !FMath::IsNearlyZero(Params.LookYaw, .05f) || !FMath::IsNearlyZero(Params.LookPitch, .05f);
-    if (!bLook && Params.Jaw < .05f && Params.Flinch < .05f && FMath::Abs(Params.Twist) < .05f && Params.HeadScale > .999f) return true;
+    if (!bLook && Params.Jaw < .05f && Params.Flinch < .05f && FMath::Abs(Params.Twist) < .05f && Params.HeadScale > .999f && !Params.Fiend.bOn) return true;
     // The layers, about the body's own axes: Up, and Side (its left), so that a
     // turn of + about Side tips the facing down.
     const FBoneContainer& Bones = Output.Pose.GetBoneContainer();
     FComponentSpacePoseContext CS(this);
     CS.Pose.InitPose(Output.Pose);
     const FVector Up = Params.Up.GetSafeNormal(), Side = FVector::CrossProduct(Params.Up, Params.Forward).GetSafeNormal();
+    if (Params.Fiend.bOn) FiendLayers(CS.Pose, Bones, Params);
     if (Params.Flinch > .05f)
     {
         // Thrown back at the chest, the head snapping on a little further.
@@ -209,5 +328,6 @@ void FSkeletonAnimator::Tick(float DeltaSeconds, float Travelled)
         P.LookYaw = LookNow.X; P.LookPitch = LookNow.Y; P.Jaw = Jaw; P.Flinch = FlinchNow;
         P.Twist = TwistNow; P.HeadScale = HeadScale;
         P.Forward = Forward; P.Up = FVector::UpVector;
+        P.Fiend = Fiend;
     }
 }

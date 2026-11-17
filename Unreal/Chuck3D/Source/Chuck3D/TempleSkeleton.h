@@ -45,7 +45,7 @@ public:
     ATempleSkeleton();
     virtual void Tick(float DeltaSeconds) override;
     enum class EState : uint8 { Dormant, Rise, Guard, Chase, Attack, Recover, Return, Settle, Dead };
-    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, None };
+    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, Smash, None };   // (Smash: the Pit Fiend's mace, 2026-11-16)
     /** How a hero's blow lands (docs/CHULT-TEMPLE-HEROES.md). */
     enum class EBlow : uint8 { Cut, Cleave, Decapitate, Bash, Arrow, Bolt };
     EState GetState() const { return State; }
@@ -162,6 +162,26 @@ public:
     float GetMelt() const { return MeltT; }
     /** The Pit Fiend's mace head, world (zero for the others). */
     FVector GetMaceHead() const;
+    // The Pit Fiend's motion (2026-11-16 third pass; PitFiendMotion.cpp; the user: "more realistic leg movement and
+    // placement and overall more immersive body movements such as wings beating etc ... formidable in battle"): its feet
+    // set on the ground under them, a heavy bent-kneed stance that dips at each footfall, leaning into its going and its
+    // turns, stepping round as it turns, wings folded on its round, half open as it comes, beating; a tail that sways,
+    // trails its turns, lifts as it charges and lies along the ground; a roar reared back with its wings spread; and the
+    // mace swung high over its shoulder and brought down two-handed-hard into the ground in front of it (a blow kills him,
+    // the blast near it knocks him off his feet).
+    int32 GetFootfalls() const { return Fm.Plants; }
+    int32 GetWingBeats() const { return Fm.WingBeats; }
+    int32 GetSmashes() const { return Fm.Smashes; }
+    int32 GetSmashBlasts() const { return Fm.Blasts; }
+    float GetWorstFootGap() const { return Fm.WorstFootGap; }
+    float GetTailUnder() const { return Fm.WorstTailUnder; }
+    float GetWingFold(int32 Side) const { return Animator.Fiend.WingFold[Side & 1]; }
+    float GetWingRaise(int32 Side) const { return Animator.Fiend.WingRaise[Side & 1]; }
+    bool IsRoaring() const { return bRoaring; }
+    float GetStateTime() const { return StateTime; }
+    /** Review (-ChuckPhlegethosTest=fiend_show): the roar now; the mace brought down on a world point. */
+    void ShowRoar();
+    void ShowSmash(const FVector& At);
     static constexpr float FiendScale = 2.4f;
     static constexpr float LemureScale = .93f;
     static constexpr float LemureSpeed = 50.f;       // (2D: 15 to the skeleton's 25)
@@ -193,9 +213,31 @@ private:
     // The Pit Fiend's mace (2026-11-16, the user's goal image): its head's point in the right hand's bone space, the fire
     // on it and its light.
     UPROPERTY() TObjectPtr<UPointLightComponent> MaceLight;
+    UPROPERTY() TObjectPtr<UPointLightComponent> FillLight;
     int32 MaceFlame = INDEX_NONE, MaceBone = INDEX_NONE;
     FVector MaceLocal = FVector::ZeroVector;
     void TickMace();
+    struct FFiendMotion
+    {
+        float Lift[2] = {0, 0}, Stand[2] = {1e9f, 1e9f}; FVector Normal[2] = {FVector::UpVector, FVector::UpVector}; bool bAir[2] = {false, false};
+        float Dip = 0, DipVel = 0, Lean = 0, LeanAdd = 0, Roll = 0, YawRate = 0, LastYaw = 0, Crouch = 0, Clock = 0;
+        float Raise[2] = {0, 0}, Sweep[2] = {0, 0}, Fold[2] = {0, 0}, Finger[2] = {0, 0}, Jig = 0, JigVel = 0, Spread = 0;
+        int32 Beats = 0; float BeatPhase = 0, BeatRate = .85f, NextBeat = 3; bool bDownDone = false;
+        float TailYaw[8] = {}, TailPitch[8] = {}, TailFix[8] = {}, NextFlick = 5, FlickT = -1, FlickSide = 1;
+        // The swing (TickSmash): the head's path in component space, the arm's and body's targets, the wings' override.
+        bool bSmashInit = false, bImpact = false; FVector HeadFrom = FVector::ZeroVector, DirFrom = FVector::UpVector, Target = FVector::ZeroVector;
+        FVector Hand = FVector::ZeroVector, Haft = FVector::UpVector; float HandW = 0, Twist = 0, Bend = 0, LeftArm = 0;
+        float WingW = 0, WR = 0, WS = 0, WF = 0, WFi = 0, Flash = 0;
+        bool bRoarBeat = false, bRoarShake = false;
+        int32 Plants = 0, WingBeats = 0, Smashes = 0, Blasts = 0;
+        float WorstFootGap = 0, WorstTailUnder = 0;
+    } Fm;
+    float MaceLen = 0.f, LastYawTick = 0.f;
+    FVector ShowAim = FVector::ZeroVector;
+    void TickFiend(float DeltaSeconds, float Speed);
+    void TickSmash(AChuckCharacter* Chuck, float DeltaSeconds);
+    void FiendPlant(int32 Foot, const FVector& At);
+    void FiendImpact(const FVector& At, float Strength, bool bEmbers, float BlastRadius, float Shake);
     FVector FrameOf(const FVector& World) const;
     FVector WorldOf(const FVector& Frame) const;
     float ChaseSpeedNow() const { return IsFiend() ? FiendChase : IsLemure() ? LemureSpeed : ChaseSpeed; }
@@ -210,7 +252,7 @@ private:
     float AttackReadyAt = 0;   // world time it may strike again (a pause after each attack)
     float StateTime = 0, Lost = 0, OutOfReach = 0, StepDistance = 0, TopSpeed = 0, WorstLeash = 0, LastStrikeGap = 1e9f, StuckTime = 0;
     int32 HitsTaken = 0, Strikes = 0, Rises = 0, Settles = 0, SoundsPlayed = 0;
-    int32 Attacks[4] = {0, 0, 0, 0}, Landed[4] = {0, 0, 0, 0};
+    int32 Attacks[5] = {0, 0, 0, 0, 0}, Landed[5] = {0, 0, 0, 0, 0};
     TWeakObjectPtr<ATempleSanctumBattle> Battle;
     TWeakObjectPtr<ATempleHero> Foe;
     UPROPERTY() TArray<UStaticMeshComponent*> StuckArrows;

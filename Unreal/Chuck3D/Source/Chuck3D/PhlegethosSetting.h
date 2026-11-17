@@ -126,6 +126,9 @@ public:
     bool IsLive() const { return bLive; }
     /** Everything moved by the hazards back as it was (a death, a checkpoint). */
     void ResetHazards();
+    /** A heavy blow on the ground at a world point (the Pit Fiend's mace, its stamp, its wings' downbeat; 2026-11-16): ash
+     *  and dust thrown up and out along the ground, and (bEmbers) molten embers flung up. Strength 1 is the mace. */
+    void GroundBlow(const FVector& WorldAt, float Strength, bool bEmbers);
     /** The volcano's eruption (the ascent, and the cutscene's crane up). */
     void Erupt(float Strength);
     /** Hell lightning: a bolt now, across the smoke sky or (bPlume) in the volcano's plume, its flash and its thunder. */
@@ -168,7 +171,7 @@ private:
     // steam and smoke, a flickering light.
     struct FFallFoot { FVector P; FVector Out; float Width = 200; float Carry = 0, SmokeCarry = 0; TWeakObjectPtr<UPointLightComponent> Light; };
     TArray<FFallFoot> FallFeet;
-    struct FDrop { FVector P, V; float Size = 1; };
+    struct FDrop { FVector P, V; float Size = 1; float Floor = -1e9f; };
     TArray<FDrop> Drops;
     UPROPERTY() UInstancedStaticMeshComponent* Spray = nullptr;
     void TickSplash(float Dt, const FVector& Eye);
@@ -176,7 +179,7 @@ private:
     struct FMote { FVector P, V; float Age = 0, Life = 1, Size = 1, Heat = 0; };
     // Smoke (the temple jets' CC0 flipbook smoke): steam off the lava at vents near the route, and the volcano's plume.
     UPROPERTY() UInstancedStaticMeshComponent* Smoke = nullptr;
-    struct FPuff { FVector P, V; float Age = 0, Life = 1, Size0 = 1, Size1 = 1, Frame = 0, Rate = 12, Heat = 0, Spin = 0; };
+    struct FPuff { FVector P, V; float Age = 0, Life = 1, Size0 = 1, Size1 = 1, Frame = 0, Rate = 12, Heat = 0, Spin = 0, Drag = .12f; };
     // Fire rain: burning rocks falling out of the smoke far off, trailing fire.
     struct FMeteor { FVector P, V; float Size = 1, Carry = 0; };
     TArray<FMeteor> MeteorList;

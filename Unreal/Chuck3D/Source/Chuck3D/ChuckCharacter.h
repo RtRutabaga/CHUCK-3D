@@ -295,6 +295,11 @@ public:
     /** Let go at the top of the throw: at the swing's own speed, at least MinSpeed along Dir and Up upward. */
     void ThrowFromLegHold(const FVector& Dir, float MinSpeed, float Up);
     bool IsLegHeld() const { return Gait == EGait::Held && bLegHeld; }
+    /** Knocked off his feet by a blow on the ground near him (the Pit Fiend's mace, 2026-11-16): flung away from From at
+     *  Speed and Up, tumbling, to crash-land and get up as from a throw. No harm of itself. Only on the ground, not
+     *  already flying; returns whether it threw him. */
+    bool Blasted(const FVector& From, float Speed, float Up);
+    int32 GetBlasts() const { return Blasts; }
     bool IsThrown() const { return Gait == EGait::Thrown; }
     int32 GetCrashLands() const { return CrashLands; }
     int32 GetWallSlams() const { return WallSlams; }
@@ -580,7 +585,7 @@ private:
     TWeakObjectPtr<AActor> HeldBy;
     float HeldClock = 0, HeldBiteAt = -1, HeldLimp = 0;
     bool bHeldVanish = false;
-    int32 TimesHeld = 0, Throws = 0, CrashLands = 0, WallSlams = 0;
+    int32 TimesHeld = 0, Throws = 0, CrashLands = 0, WallSlams = 0, Blasts = 0;
     enum class EThrown : uint8 { Flight, Crash, Slam };
     EThrown ThrownPhase = EThrown::Flight;
     bool bLegHeld = false, bBodyQuatLive = false;

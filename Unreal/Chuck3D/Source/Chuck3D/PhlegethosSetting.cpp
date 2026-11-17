@@ -2001,13 +2001,43 @@ void APhlegethosSetting::TickSplash(float Dt, const FVector& Eye)
         D.V.Z -= 980.f * Dt;
         D.V *= FMath::Exp(-.35f * Dt);
         D.P += D.V * Dt;
-        if (D.P.Z < LavaZ - 4.f || Drops.Num() > 1000) { Drops.RemoveAtSwap(I); continue; }
+        if (D.P.Z < FMath::Max(LavaZ - 4.f, D.Floor) || Drops.Num() > 1000) { Drops.RemoveAtSwap(I); continue; }
         const float Speed = D.V.Size();
         const FQuat Q = Speed > 1.f ? FRotationMatrix::MakeFromZ(D.V / Speed).ToQuat() : FQuat::Identity;
         Xf.Add(FTransform(Q, PhlegWorld(D.P), FVector(D.Size, D.Size, D.Size * (1.f + Speed * .0016f))));
     }
     Spray->ClearInstances();
     if (Xf.Num()) Spray->AddInstances(Xf, false, true);
+}
+
+void APhlegethosSetting::GroundBlow(const FVector& WorldAt, float Strength, bool bEmbers)
+{
+    const FVector L = PhlegLocal(WorldAt);
+    FRandomStream R(FMath::Rand());
+    // A ring of ash rolling out low along the ground, slowing fast, rising as it spreads.
+    const int32 N = FMath::RoundToInt(5.f + 15.f * Strength);
+    for (int32 K = 0; K < N; ++K)
+    {
+        const float A = 2.f * PI * (K + R.FRand()) / N;
+        const FVector D(FMath::Cos(A), FMath::Sin(A), 0.f);
+        FPuff Pf;
+        Pf.P = L + D * R.FRandRange(20.f, 80.f) * Strength + FVector(0, 0, 25.f * Strength);
+        Pf.V = D * R.FRandRange(260.f, 560.f) * Strength + FVector(0, 0, R.FRandRange(40.f, 170.f) * Strength);
+        Pf.Life = R.FRandRange(1.8f, 3.4f); Pf.Size0 = R.FRandRange(50.f, 110.f) * (.4f + Strength); Pf.Size1 = R.FRandRange(260.f, 520.f) * (.4f + Strength);
+        Pf.Frame = R.FRandRange(0, 64); Pf.Heat = bEmbers ? .3f : .04f; Pf.Spin = R.FRandRange(0, 6.28f); Pf.Drag = 2.4f;
+        Puffs.Add(Pf);
+    }
+    if (!bEmbers) return;
+    // Embers flung up out of the broken crust, falling back onto it.
+    for (int32 K = 0; K < FMath::RoundToInt(36.f * Strength); ++K)
+    {
+        FDrop Dp;
+        const float A = R.FRandRange(0.f, 2.f * PI);
+        Dp.P = L + FVector(0, 0, 12.f);
+        Dp.V = FVector(FMath::Cos(A), FMath::Sin(A), 0.f) * R.FRandRange(80.f, 380.f) + FVector(0, 0, R.FRandRange(260.f, 680.f));
+        Dp.Size = R.FRandRange(.025f, .07f); Dp.Floor = L.Z - 20.f;
+        Drops.Add(Dp);
+    }
 }
 
 void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
@@ -2053,7 +2083,7 @@ void APhlegethosSetting::TickSmoke(float Dt, const FVector& Eye)
         // (The plume's puffs keep rising, buoyant, and drift downwind: slowed like the steam, they climbed 280 m while growing
         // to a kilometre and piled into a dark ball over the crater.)
         if (Pf.Size0 > 5000) { Pf.V.X = FMath::FInterpTo(Pf.V.X, 1800.f, Dt, .15f); Pf.V.Z *= FMath::Exp(-.02f * Dt); }
-        else Pf.V *= FMath::Exp(-.12f * Dt);
+        else Pf.V *= FMath::Exp(-Pf.Drag * Dt);
         Pf.P += Pf.V * Dt;
         Pf.Frame += Pf.Rate * Dt;
         const FVector W = PhlegWorld(Pf.P);

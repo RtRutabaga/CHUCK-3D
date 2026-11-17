@@ -22,8 +22,35 @@ struct FSkeletonTrack
     bool bLoop = false;
 };
 
+/**
+ * The Pit Fiend's own layers over the clips (2026-11-16, the user: "more realistic leg movement and placement and overall
+ * more immersive body movements such as wings beating ... formidable in battle, not just a lumbering skeleton"). Set each
+ * tick by ATempleSkeleton::TickFiend (PitFiendMotion.cpp). Lengths are cm and angles degrees in the mesh's component space
+ * (the rig's own units: 2.4 times smaller than the world's). Index 0 is the left side, 1 the right.
+ */
+struct FFiendPose
+{
+    bool bOn = false;
+    float FootLift[2] = {0.f, 0.f};          // each foot raised (+) or lowered to the ground under it
+    FVector FootNormal[2] = {FVector::UpVector, FVector::UpVector};   // that ground's slope (the sole laid on it)
+    float PelvisDrop = 0.f;                  // the hips lowered, the knees bending under them, the feet kept
+    FVector PelvisShift = FVector::ZeroVector;
+    float Stance = 0.f;                      // each foot set out to its own side (a wide, heavy stance)
+    float Lean = 0.f, Roll = 0.f;            // the spine pitched forward, rolled to its left
+    float Breath = 0.f;                      // -1..1
+    float ChestTwist = 0.f, ChestBend = 0.f; // the chest turned to its left, bent forward
+    float LeftArm = 0.f;                     // the left arm swung back (+) or forward
+    float WingRaise[2] = {0, 0}, WingSweep[2] = {0, 0}, WingFold[2] = {0, 0}, WingFinger[2] = {0, 0};
+    float TailYaw[8] = {}, TailPitch[8] = {};// each tail bone turned to its left, raised
+    // The right hand reaching for HandTarget (the mace's swings), its haft turned along HaftDir; HaftLocal is the
+    // mace head's direction in the hand bone's own space.
+    FVector HandTarget = FVector::ZeroVector, HaftDir = FVector::UpVector, HaftLocal = FVector::UpVector;
+    float HandWeight = 0.f;
+};
+
 struct FSkeletonAnimParams
 {
+    FFiendPose Fiend;
     FSkeletonTrack From, To;
     float Fade = 1.f;                     // To over From
     float LookYaw = 0.f, LookPitch = 0.f; // deg: + left / + down
@@ -80,6 +107,10 @@ public:
     bool Finished() const;
     float GetJaw() const { return Jaw; }
     float GetFlinch() const { return FlinchNow; }
+    /** The walk's phase (0..1) and stride; the Pit Fiend's layers (sent with the clips each tick). */
+    float GetPhase() const { return Phase; }
+    bool IsWalking() const { return Cur.bLoco; }
+    FFiendPose Fiend;
 private:
     struct FTrack { FName Clip; bool bLoco = false, bLoop = false; float Time = 0.f, Rate = 1.f; };
     TWeakObjectPtr<USkeletalMeshComponent> Mesh;

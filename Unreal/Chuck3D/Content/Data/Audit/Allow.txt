@@ -10,3 +10,4 @@ float     SM_FallLeafCard*         # canopy leaf cards hang in the crowns, held 
 collision *GoldenLeafAura*         # the golden leaf's glow (FX)
 any       */ChultVista_*           # the distant vista round Chult: scenery Chuck cannot reach
 collision SM_TempleSkull*          # skulls on the avenue's stakes, 1.8 m up, left without collision on purpose (ChultTemple.cpp)
+float     SM_CigaretteSmoke*       # pipe and cigarette smoke wisps rise in the air by design (a dock NPC's pipe wisp failed 11-16 when it happened to be alive at the audit)

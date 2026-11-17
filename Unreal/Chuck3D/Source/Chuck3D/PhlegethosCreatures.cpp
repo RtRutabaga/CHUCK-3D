@@ -281,9 +281,9 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
         Devil(P);
     }
     // The Pit Fiend (2D: the colossus, wholly avoidable; its battle with the heroes is not built): its round through the
-    // wastes, crossing the path twice, off it either side by fifteen metres. It notices him from 22 m in front of it.
+    // wastes, along the path itself, weaving across it. It notices him from 22 m in front of it.
     {
-        const FVector2D Round[] = {{31500, 1500}, {35500, 1600}, {37800, 200}, {35500, -1500}, {31500, -1400}, {30300, 100}};
+        const FVector2D Round[] = {{31200, 300}, {33600, -300}, {36000, 300}, {37800, -100}, {35800, -300}, {33400, 300}, {30600, -250}};   // (2026-11-16: along the path itself, weaving across it, where it is seen: 15 m off, it was hidden among the boulders)
         FTempleSkeletonPost Post;
         Post.Kind = 2; Post.Space = TEXT("wastes");
         for (const FVector2D& R : Round)

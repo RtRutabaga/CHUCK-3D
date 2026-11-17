@@ -2301,6 +2301,30 @@ void AChuckCharacter::ThrowFromLegHold(const FVector& Dir, float MinSpeed, float
     ++Throws;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_THROWN_BY_LEG velocity=%s swing=%.0f spin=%.1f"), *V.ToCompactString(), Swing.Size(), SpinRate);
 }
+bool AChuckCharacter::Blasted(const FVector& From, float Speed, float Up)
+{
+    auto* Movement = GetCharacterMovement();
+    if (IsAstral() || Gait == EGait::Thrown || !Movement->IsMovingOnGround()) return false;
+    FVector D = (GetActorLocation() - From).GetSafeNormal2D();
+    if (D.IsNearlyZero()) D = -GetActorForwardVector();
+    const FVector V = D * Speed + FVector(0, 0, Up);
+    // Off his feet, turning end over end away from the blow, as when thrown by the leg (UpdateThrown lands him).
+    const FVector Axis = FVector::CrossProduct(FVector::UpVector, D).GetSafeNormal();
+    SpinAxis = Axis.IsNearlyZero() ? FVector::RightVector : Axis;
+    SpinRate = FMath::Clamp(Speed / 60.f, 5.f, 11.f);
+    SpinAngle = 0; BodyQuat = FQuat::Identity; BodyQuatFrom = BodyQuat; bBodyQuatLive = true;
+    bLegHeld = false; bRunJump = bSprintLeap = false;
+    Movement->SetMovementMode(MOVE_Falling);
+    Movement->Velocity = V;
+    Gait = EGait::Thrown; ThrownPhase = EThrown::Flight; ThrownClock = 0; ThrowPrevVel = V;
+    BiteImmuneUntil = GetWorld()->GetTimeSeconds() + .6f;
+    SetActorRotation(FRotator(0, D.Rotation().Yaw + 180.f, 0));
+    SetClip(EClip::Tumble, 0, .1f);
+    PreviousMotionLocation = GetActorLocation();
+    ++Blasts;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_BLASTED velocity=%s"), *V.ToCompactString());
+    return true;
+}
 void AChuckCharacter::UpdateThrown(float DeltaSeconds)
 {
     ThrownClock += DeltaSeconds;

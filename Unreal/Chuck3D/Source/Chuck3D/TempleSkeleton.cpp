@@ -41,8 +41,10 @@ namespace
             {TEXT("Grab"), 1.25f, SkeletonClipData::GrabStrike, SkeletonClipData::GrabAim, .2f, .35f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, ATempleSkeleton::GrabDamage},
             {TEXT("Swat"), 1.3f, SkeletonClipData::SwatStrike, SkeletonClipData::SwatAim, .25f, .12f, TEXT("middle_03_l"), TEXT("middle_02_l"), 2.f, ATempleSkeleton::SwatDamage},
             // The sanctum's blow at a hero: a fist driven out at chest height (CMU 02_05).
-            {TEXT("Strike"), 1.f, SkeletonClipData::StrikeStrike, SkeletonClipData::StrikeAim, .1f, .12f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, 1}};
-        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 3)];
+            {TEXT("Strike"), 1.f, SkeletonClipData::StrikeStrike, SkeletonClipData::StrikeAim, .1f, .12f, TEXT("middle_03_r"), TEXT("middle_02_r"), 2.f, 1},
+            // The Pit Fiend's mace (2026-11-16): over the idle, the arm and body driven by TickSmash; the strike at 1.32 s.
+            {TEXT("Idle"), 1.f, 1.32f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow}};
+        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 4)];
     }
 
     // Spawned in play and in its own test only: the other automated runs keep the worlds their checks were written against.
@@ -156,6 +158,7 @@ void ATempleSkeleton::BeginPlay()
             if (bAll && MaceBone != INDEX_NONE)
             {
                 MaceLocal = RefComponentSpace(Ref, MaceBone).InverseTransformPosition(P / Sum);
+                MaceLen = static_cast<float>(FVector::Dist(P / Sum, RefComponentSpace(Ref, MaceBone).GetLocation()));
                 if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) MaceFlame = Fire->AddMoving(this, GetActorLocation(), 34.f, 70.f);
                 MaceLight = NewObject<UPointLightComponent>(this, TEXT("MaceLight"));
                 MaceLight->SetupAttachment(RootComponent);
@@ -166,6 +169,18 @@ void ATempleSkeleton::BeginPlay()
                 MaceLight->SetCastShadows(false);
                 MaceLight->SetLightingChannels(true, false, false);
                 MaceLight->RegisterComponent();
+                // (2026-11-16, the user could not find it: dark crimson in the dark wastes it did not read. A warm fill from
+                // in front and above it, as if from the burning ground, moving with it.)
+                FillLight = NewObject<UPointLightComponent>(this, TEXT("FiendFill"));
+                FillLight->SetupAttachment(RootComponent);
+                FillLight->SetRelativeLocation(FVector(140.f, 0.f, 110.f));   // (x2.4: 3.4 m ahead, 2.6 m up)
+                FillLight->SetLightColor(FLinearColor(1.f, .52f, .32f));
+                FillLight->SetIntensity(1100.f);
+                FillLight->SetAttenuationRadius(1000.f);
+                FillLight->SetSourceRadius(80.f);
+                FillLight->SetCastShadows(false);
+                FillLight->SetLightingChannels(true, false, false);
+                FillLight->RegisterComponent();
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_FIEND_MACE local=(%.1f,%.1f,%.1f)"), MaceLocal.X, MaceLocal.Y, MaceLocal.Z);
             }
         }
@@ -235,7 +250,7 @@ int32 ATempleSkeleton::GetAnimEvaluations() const
 
 const TCHAR* ATempleSkeleton::AttackName(EAttack A)
 {
-    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); default: return TEXT("None"); }
+    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); case EAttack::Smash: return TEXT("Smash"); default: return TEXT("None"); }
 }
 
 const TCHAR* ATempleSkeleton::GetStateName() const
@@ -349,6 +364,7 @@ FVector ATempleSkeleton::Steer(const FVector& Want, const AActor* Ignore) const
 
 FVector ATempleSkeleton::StrikingTip(EAttack A) const
 {
+    if (A == EAttack::Smash) return GetMaceHead();
     const FAttackSpec& S = Spec(A);
     const FVector Tip = GetMesh()->GetBoneLocation(S.Tip), Parent = GetMesh()->GetBoneLocation(S.TipParent);
     return Tip + (Tip - Parent).GetSafeNormal() * S.TipAhead;
@@ -372,6 +388,7 @@ void ATempleSkeleton::ResetToPost()
 void ATempleSkeleton::StartAttack(EAttack Kind)
 {
     Attack = Kind; LastAttack = Kind; bStruck = false; bSwung = false; LastStrikeGap = 1e9f;
+    Fm.bSmashInit = false; Fm.bImpact = false;
     ++Attacks[static_cast<int32>(Kind)];
     const FAttackSpec& S = Spec(Kind);
     Animator.Play(S.Clip, false, S.Rate, true, .18f);
@@ -449,7 +466,7 @@ void ATempleSkeleton::TickMace()
     {
         const float T = GetWorld()->GetTimeSeconds();
         MaceLight->SetWorldLocation(P + FVector(0, 0, 140.f));   // (closer and brighter, it burned the head itself out)
-        MaceLight->SetIntensity(700.f * (.82f + .12f * FMath::Sin(T * 15.f) + .07f * FMath::Sin(T * 37.f + 1.3f)));
+        MaceLight->SetIntensity(700.f * (.82f + .12f * FMath::Sin(T * 15.f) + .07f * FMath::Sin(T * 37.f + 1.3f)) + 5000.f * Fm.Flash);   // (a flare as it strikes)
     }
 }
 
@@ -459,8 +476,16 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     const FVector Here = GetActorLocation();
     const float Travelled = static_cast<float>(FVector::Dist2D(Here, LastLocation));
     LastLocation = Here;
+    // (The Pit Fiend steps round as it turns where it stands, rather than sliding round on its feet: the turn's arc at
+    // its feet walks the stride on.)
+    const float YawNow = static_cast<float>(GetActorRotation().Yaw);
+    const float TurnStep = IsFiend() ? FMath::Abs(FMath::FindDeltaAngleDegrees(LastYawTick, YawNow)) * PI / 180.f * 34.f * KindScale() : 0.f;
+    LastYawTick = YawNow;
+    const float LocoSpeed = static_cast<float>(GetVelocity().Size2D()) + TurnStep / FMath::Max(DeltaSeconds, 1e-3f);
+    if (IsFiend()) TickFiend(DeltaSeconds, static_cast<float>(GetVelocity().Size2D()));
     Animator.SetTimeScale(GetWorld()->GetTimeSeconds() < HitStopUntil ? .03f : 1.f);
-    Animator.Tick(DeltaSeconds, State == EState::Chase || State == EState::Return ? Travelled : 0.f);
+    const bool bLocoState = State == EState::Chase || State == EState::Return || (IsFiend() && (State == EState::Guard || State == EState::Recover));
+    Animator.Tick(DeltaSeconds, bLocoState ? Travelled + TurnStep : 0.f);
     if (MaceBone != INDEX_NONE) TickMace();
     if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
     if (State == EState::Dead)
@@ -487,7 +512,8 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     if (!InLeash(Here)) WorstLeash = FMath::Max(WorstLeash, static_cast<float>(FVector::Dist2D(Here, ClampToLeash(Here))));
     // Footfalls: one each half cycle of the walk.
     StepDistance += Speed * DeltaSeconds;
-    if (Speed > 15.f && StepDistance > SkeletonClipData::WalkSpeed * SkeletonClipData::WalkLength * .5f * KindScale()) { StepDistance = 0; Sound(StepSounds, IsFiend() ? 1.f : .55f); }
+    // (The Pit Fiend's are its feet coming down: FiendPlant.)
+    if (!IsFiend() && Speed > 15.f && StepDistance > SkeletonClipData::WalkSpeed * SkeletonClipData::WalkLength * .5f * KindScale()) { StepDistance = 0; Sound(StepSounds, .55f); }
 
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     const FVector ChuckAt = Chuck ? Chuck->GetActorLocation() : Here + FVector(1e6, 0, 0);
@@ -517,11 +543,11 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     {
         Move->MaxWalkSpeed = MaxSpeed;
         const FVector Want = Target - Here;
-        if (Want.Size2D() < 12.f) { Animator.Locomote(Speed); return; }
+        if (Want.Size2D() < 12.f) { Animator.Locomote(LocoSpeed); return; }
         const FVector Dir = Steer(Want, Chuck);
         AddMovementInput(Dir, FMath::Clamp(static_cast<float>(Want.Size2D()) / 40.f, .25f, 1.f));
         Face(Speed > 15.f ? GetVelocity() : Dir, TurnRate, DeltaSeconds);
-        Animator.Locomote(Speed);
+        Animator.Locomote(LocoSpeed);
     };
     auto Home = [&]()
     {
@@ -570,8 +596,10 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         if (Lost > (IsFiend() ? 4.f : LoseTime) || OutOfReach > Patience) { bRoaring = false; SetState(EState::Return); break; }
         if (bRoaring)
         {
-            Move->MaxWalkSpeed = 0; Face(ToChuck, 70.f, DeltaSeconds); Animator.Locomote(Speed);
-            if (StateTime > 1.1f) bRoaring = false;
+            Move->MaxWalkSpeed = 0; Face(ToChuck, 70.f, DeltaSeconds); Animator.Locomote(LocoSpeed);
+            // (The Pit Fiend's roar, 2026-11-16: reared back, head up, jaws wide, wings spread and beating - TickFiend.)
+            if (IsFiend()) { Animator.SetJaw(StateTime > .35f && StateTime < 2.1f ? 38.f : 6.f); Animator.SetLook(0.f, StateTime > .3f && StateTime < 2.2f ? -26.f : 0.f); }
+            if (StateTime > (IsFiend() ? 2.6f : 1.1f)) bRoaring = false;
             break;
         }
         const float Sc = KindScale();
@@ -582,21 +610,33 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         const float Facing = FVector::DotProduct(ToChuck.GetSafeNormal2D(), GetActorForwardVector());
         EAttack Kind = Forced;
         // After a blow it stands off a moment before the next (an opening to scratch it).
-        // (A lemure and the Pit Fiend kick and swat; neither picks him up.)
+        // (A lemure picks him up by the leg and throws him as a skeleton does - the user, 2026-11-16. The Pit Fiend swats,
+        // stamps, or - most, and from furthest - brings its mace down on him.)
         if (Kind == EAttack::None && GetWorld()->GetTimeSeconds() >= AttackReadyAt)
-            Kind = Dist < 58.f * Sc ? EAttack::Swat : Dist < 98.f * Sc ? (Post.Kind || Random.FRand() < .6f ? EAttack::Kick : EAttack::Grab) : EAttack::None;
-        const float Ready = (Kind == EAttack::Swat ? 62.f : Kind == EAttack::Kick ? 100.f : Kind == EAttack::Grab ? 100.f : 0.f) * Sc;
+        {
+            if (IsFiend()) Kind = Dist < 58.f * Sc ? EAttack::Swat : Dist < 90.f * Sc ? (Random.FRand() < .4f ? EAttack::Kick : EAttack::Smash) : Dist < 125.f * Sc ? EAttack::Smash : EAttack::None;
+            else Kind = Dist < 58.f * Sc ? EAttack::Swat : Dist < 98.f * Sc ? (Random.FRand() < .6f ? EAttack::Kick : EAttack::Grab) : EAttack::None;
+        }
+        const float Ready = (Kind == EAttack::Swat ? 62.f : Kind == EAttack::Kick ? 100.f : Kind == EAttack::Grab ? 100.f : Kind == EAttack::Smash ? 125.f : 0.f) * Sc;
         if (bReach && Kind != EAttack::None && Dist < Ready && Facing > .55f) { Forced = EAttack::None; StartAttack(Kind); break; }
-        if (bReach && Dist < 70.f * Sc) { Move->MaxWalkSpeed = 0; Face(ToChuck, 220.f, DeltaSeconds); Animator.Locomote(Speed); break; }
-        if (GoalGap < 15.f) { Move->MaxWalkSpeed = 0; Face(ToChuck, 160.f, DeltaSeconds); Animator.Locomote(Speed); break; }   // at its edge, watching
+        if (bReach && Dist < 70.f * Sc) { Move->MaxWalkSpeed = 0; Face(ToChuck, 220.f, DeltaSeconds); Animator.Locomote(LocoSpeed); break; }
+        if (GoalGap < 15.f) { Move->MaxWalkSpeed = 0; Face(ToChuck, 160.f, DeltaSeconds); Animator.Locomote(LocoSpeed); break; }   // at its edge, watching
         Walk(Goal, ChaseSpeedNow(), IsFiend() ? 90.f : 170.f);
         break;
     }
     case EState::Attack:
     {
         Move->MaxWalkSpeed = 0;
+        if (Attack == EAttack::Smash) { TickSmash(Chuck, DeltaSeconds); break; }
         const FAttackSpec& S = Spec(Attack);
         const float T = Animator.Time();
+        // (The Pit Fiend's stamp and swat shake the ground where they land; the stamp's blast knocks him off his feet.)
+        if (IsFiend() && !Fm.bImpact && T >= S.Strike)
+        {
+            Fm.bImpact = true;
+            const FVector Tip = StrikingTip(Attack);
+            FiendImpact(FVector(Tip.X, Tip.Y, FeetZ()), Attack == EAttack::Kick ? .55f : .3f, false, Attack == EAttack::Kick && !bStruck ? 230.f : 0.f, Attack == EAttack::Kick ? .55f : .3f);
+        }
         // Winding up it turns to bring the strike onto him; from just before the strike it is committed.
         if (T < S.Strike - .22f && Chuck && !bCarrying && !bPitching)
             Face(ToChuck.GetSafeNormal2D().RotateAngleAxis(S.Aim, FVector::UpVector), 260.f, DeltaSeconds);   // (+ yaw turns right: a strike on its left needs it turned right of him)
@@ -629,7 +669,7 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
                         // (-ChuckSkeletonTest only: still random, but at floor - a throw into a pit is a fall death, which
                         // the test of the throw itself cannot judge. Each of up to 16 headings from the random one is
                         // traced out to 11 m, stopping at a wall; it needs floor every metre within 50 cm of his.)
-                        if (FParse::Param(FCommandLine::Get(), TEXT("ChuckSkeletonTest")) && !FParse::Param(FCommandLine::Get(), TEXT("ChuckThrowAtWall")))
+                        if ((FParse::Param(FCommandLine::Get(), TEXT("ChuckSkeletonTest")) || FParse::Param(FCommandLine::Get(), TEXT("ChuckPhlegethosTest"))) && !FParse::Param(FCommandLine::Get(), TEXT("ChuckThrowAtWall")))
                         {
                             FCollisionQueryParams FQ(SCENE_QUERY_STAT(SkeletonThrowFloor), false, this); FQ.AddIgnoredActor(Chuck);
                             const FVector From = Here + FVector(0, 0, 40.f);
