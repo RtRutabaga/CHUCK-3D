@@ -1,0 +1,35 @@
+{
+ "SK_Lemure": {
+  "uv_cm": 274.92
+ },
+ "SK_PitFiend": {
+  "uv_cm": 675.97,
+  "mace_head": {
+   "hand_r": -3.71716,
+   "upperarm_r": 8.6268,
+   "pelvis": -7.10341,
+   "ball_r": 3.19378
+  }
+ },
+ "SM_SpinedDevil_Body": {
+  "uv_cm": 103.38
+ },
+ "SM_SpinedDevil_Head": {
+  "uv_cm": 45.95
+ },
+ "SM_SpinedDevil_WingL": {
+  "uv_cm": 75.52
+ },
+ "SM_SpinedDevil_WingR": {
+  "uv_cm": 75.78
+ },
+ "SM_SpinedDevil_Tail": {
+  "uv_cm": 50.14
+ },
+ "SM_DevilSpine": {
+  "uv_cm": 15.32
+ },
+ "SM_DevilPerch": {
+  "uv_cm": 481.64
+ }
+}

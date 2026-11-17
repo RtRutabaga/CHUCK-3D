@@ -5,6 +5,10 @@
 #include "TempleSanctumBattle.h"
 #include "ChultTempleInterior.h"
 #include "ChultTempleWind.h"
+#include "PhlegethosSetting.h"
+#include "PhlegethosCreatures.h"
+#include "ChuckFlames.h"
+#include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Animation/AnimSequence.h"
@@ -100,11 +104,12 @@ ATempleSkeleton* ATempleSkeleton::SpawnAt(UWorld* World, const FTempleSkeletonPo
     if (!World) return nullptr;
     FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
     Params.bDeferConstruction = true;
-    auto* S = World->SpawnActor<ATempleSkeleton>(InPost.Feet + FVector(0, 0, HalfHeight + 2), FRotator(0, InPost.Yaw, 0), Params);
+    const float Hh = HalfHeight * (InPost.Kind == 2 ? FiendScale : InPost.Kind == 1 ? LemureScale : 1.f);
+    auto* S = World->SpawnActor<ATempleSkeleton>(InPost.Feet + FVector(0, 0, Hh + 2), FRotator(0, InPost.Yaw, 0), Params);
     if (!S) return nullptr;
     S->Post = InPost;
     S->Random.Initialize(static_cast<int32>(InPost.Feet.X * 7 + InPost.Feet.Y * 13));
-    UGameplayStatics::FinishSpawningActor(S, FTransform(FRotator(0, InPost.Yaw, 0), InPost.Feet + FVector(0, 0, HalfHeight + 2)));
+    UGameplayStatics::FinishSpawningActor(S, FTransform(FRotator(0, InPost.Yaw, 0), InPost.Feet + FVector(0, 0, Hh + 2)));
     return S;
 }
 
@@ -122,6 +127,49 @@ void ATempleSkeleton::BeginPlay()
 {
     Super::BeginPlay();
     SkeletonRegistry.Add(this);
+    if (Post.Kind)
+    {
+        // (2026-11-16) A lemure or the Pit Fiend: its own body on this rig (Tools/build_phleg_creatures.py), its own size,
+        // lit by Phlegethos's light (channel 1 is the temple's torches).
+        const TCHAR* Path = IsFiend() ? TEXT("/Game/Art/Phlegethos/Creatures/SK_PitFiend.SK_PitFiend") : TEXT("/Game/Art/Phlegethos/Creatures/SK_Lemure.SK_Lemure");
+        if (USkeletalMesh* Body = LoadObject<USkeletalMesh>(nullptr, Path)) GetMesh()->SetSkinnedAssetAndUpdate(Body);
+        GetMesh()->SetLightingChannels(true, false, false);
+        SetActorScale3D(FVector(KindScale()));
+        GetCharacterMovement()->MaxStepHeight = IsFiend() ? 70.f : 30.f;
+        if (IsFiend()) GetCharacterMovement()->SetWalkableFloorAngle(58.f);   // (the wastes' broken ground)
+        // The mace's head in the right hand's space. Tools/build_phleg_creatures.py gives it as an affine combination of
+        // four joints in the rest pose (creatures.json "mace_head"), true whatever the import's axes and units.
+        const USkeletalMesh* M = Cast<USkeletalMesh>(GetMesh()->GetSkinnedAsset());
+        if (IsFiend() && M)
+        {
+            const FReferenceSkeleton& Ref = M->GetRefSkeleton();
+            struct FW { const TCHAR* Bone; double W; };
+            const FW Head[] = {{TEXT("hand_r"), -3.71716}, {TEXT("upperarm_r"), 8.6268}, {TEXT("pelvis"), -7.10341}, {TEXT("ball_r"), 3.19378}};
+            FVector P(0); double Sum = 0; bool bAll = true;
+            for (const FW& H : Head)
+            {
+                const int32 I = Ref.FindBoneIndex(H.Bone);
+                if (I == INDEX_NONE) { bAll = false; break; }
+                P += RefComponentSpace(Ref, I).GetLocation() * H.W; Sum += H.W;
+            }
+            MaceBone = Ref.FindBoneIndex(TEXT("hand_r"));
+            if (bAll && MaceBone != INDEX_NONE)
+            {
+                MaceLocal = RefComponentSpace(Ref, MaceBone).InverseTransformPosition(P / Sum);
+                if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) MaceFlame = Fire->AddMoving(this, GetActorLocation(), 34.f, 70.f);
+                MaceLight = NewObject<UPointLightComponent>(this, TEXT("MaceLight"));
+                MaceLight->SetupAttachment(RootComponent);
+                MaceLight->SetLightColor(FLinearColor(1.f, .45f, .12f));
+                MaceLight->SetIntensity(700.f);
+                MaceLight->SetAttenuationRadius(1100.f);
+                MaceLight->SetSourceRadius(20.f);
+                MaceLight->SetCastShadows(false);
+                MaceLight->SetLightingChannels(true, false, false);
+                MaceLight->RegisterComponent();
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_FIEND_MACE local=(%.1f,%.1f,%.1f)"), MaceLocal.X, MaceLocal.Y, MaceLocal.Z);
+            }
+        }
+    }
     // The mesh's facing (toes ahead of ankles in its rest pose) turned onto the actor's.
     if (const USkeletalMesh* M = Cast<USkeletalMesh>(GetMesh()->GetSkinnedAsset()))
     {
@@ -134,21 +182,36 @@ void ATempleSkeleton::BeginPlay()
             GetMesh()->SetRelativeRotation(FRotator(0, -BodyForward.Rotation().Yaw, 0));
         }
     }
-    Animator.Init(GetMesh(), Clips, SkeletonClipData::WalkSpeed * (SkeletonClipData::WalkLength), BodyForward);
+    Animator.Init(GetMesh(), Clips, SkeletonClipData::WalkSpeed * (SkeletonClipData::WalkLength) * KindScale(), BodyForward);
     auto Load = [](TArray<USoundBase*>& Set, const TCHAR* Stem, int32 Count)
     {
         for (int32 I = 0; I < Count; ++I)
             if (USoundBase* S = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s_%02d.%s_%02d"), Stem, I, Stem, I))) Set.Add(S);
     };
-    Load(StepSounds, TEXT("SFX_SkeletonStep"), 4); Load(RattleSounds, TEXT("SFX_SkeletonRattle"), 2); Load(SwingSounds, TEXT("SFX_SkeletonSwing"), 3);
-    Load(HitSounds, TEXT("SFX_SkeletonHit"), 3); Load(CollapseSounds, TEXT("SFX_SkeletonCollapse"), 2); Load(RiseSounds, TEXT("SFX_SkeletonRise"), 2);
+    if (IsLemure())
+    {
+        // (wet groans, no rattle of bone; its feet make no sound)
+        Load(RattleSounds, TEXT("SFX_ZombieRasp"), 3); Load(SwingSounds, TEXT("SFX_ZombieSwing"), 2); Load(HitSounds, TEXT("SFX_ZombieClawHit"), 3);
+        Load(CollapseSounds, TEXT("SFX_ZombieDeath"), 1); Load(RiseSounds, TEXT("SFX_ZombieRasp"), 3); PitchScale = .78f;
+    }
+    else if (IsFiend())
+    {
+        // (heavy treads, a growl; a roar when it sees him; a scratch is a dull thud against it)
+        Load(StepSounds, TEXT("SFX_TRexStep"), 3); Load(RattleSounds, TEXT("SFX_BeholderGrowl"), 3); Load(SwingSounds, TEXT("SFX_ZombieSwing"), 2);
+        Load(HitSounds, TEXT("SFX_FallThud"), 1); Load(RoarSounds, TEXT("SFX_TRexRoar"), 2); PitchScale = .72f;
+    }
+    else
+    {
+        Load(StepSounds, TEXT("SFX_SkeletonStep"), 4); Load(RattleSounds, TEXT("SFX_SkeletonRattle"), 2); Load(SwingSounds, TEXT("SFX_SkeletonSwing"), 3);
+        Load(HitSounds, TEXT("SFX_SkeletonHit"), 3); Load(CollapseSounds, TEXT("SFX_SkeletonCollapse"), 2); Load(RiseSounds, TEXT("SFX_SkeletonRise"), 2);
+    }
     // Heard within the room, not through the masonry from the halls above (as the traps).
     Attenuation = NewObject<USoundAttenuation>(this);
     Attenuation->Attenuation.bAttenuate = true;
     Attenuation->Attenuation.bSpatialize = true;
     Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     Attenuation->Attenuation.AttenuationShapeExtents = FVector(220.f, 0.f, 0.f);
-    Attenuation->Attenuation.FalloffDistance = 1800.f;
+    Attenuation->Attenuation.FalloffDistance = IsFiend() ? 6000.f : 1800.f;
     ResetToPost();
     int32 Loaded = 0;
     for (const auto& Clip : Clips) Loaded += Clip.Value != nullptr;
@@ -192,7 +255,12 @@ void ATempleSkeleton::SetState(EState To)
     case EState::Rise: ++Rises; Animator.Play(TEXT("Rise"), false, RiseRate, false, 0.f);   // from where it lies (or from part way down)
         Sound(RiseSounds, .9f); break;
     case EState::Settle: ++Settles; Animator.Play(TEXT("Rise"), false, SettleRate, true, .4f); Sound(RiseSounds, .7f); break;
-    case EState::Chase: if (From == EState::Guard || From == EState::Rise) Sound(RattleSounds, .8f); break;
+    case EState::Chase:
+        if (From == EState::Guard || From == EState::Rise || (Post.Kind && From == EState::Return)) ++Notices;
+        // The Pit Fiend roars when it sees him, and stands a moment before it comes (his warning).
+        if (IsFiend() && (From == EState::Guard || From == EState::Return)) { bRoaring = true; Sound(RoarSounds, 1.f); }
+        else if (From == EState::Guard || From == EState::Rise) Sound(RattleSounds, .8f);
+        break;
     default: break;
     }
 }
@@ -201,12 +269,15 @@ void ATempleSkeleton::Sound(const TArray<USoundBase*>& Set, float Volume)
 {
     if (!Set.Num()) return;
     // Heard only by a rat inside the temple with it (user 2026-11-12: heard from the skull path).
-    if (!ChultTempleSoundAudible(GetWorld(), GetActorLocation())) return;
-    UGameplayStatics::PlaySoundAtLocation(this, Set[Random.RandRange(0, Set.Num() - 1)], GetActorLocation(), Volume, Random.FRandRange(.92f, 1.08f), 0.f, Attenuation);
+    if (!Post.Kind && !ChultTempleSoundAudible(GetWorld(), GetActorLocation())) return;
+    UGameplayStatics::PlaySoundAtLocation(this, Set[Random.RandRange(0, Set.Num() - 1)], GetActorLocation(), Volume, Random.FRandRange(.92f, 1.08f) * PitchScale, 0.f, Attenuation);
     ++SoundsPlayed;
 }
 
-float ATempleSkeleton::FeetZ() const { return static_cast<float>(GetActorLocation().Z) - HalfHeight; }
+float ATempleSkeleton::FeetZ() const { return static_cast<float>(GetActorLocation().Z) - HalfHeightNow(); }
+
+FVector ATempleSkeleton::FrameOf(const FVector& World) const { return Post.Kind ? PhlegLocal(World) : ChultTempleInteriorFrameOf(World); }
+FVector ATempleSkeleton::WorldOf(const FVector& Frame) const { return Post.Kind ? PhlegWorld(Frame) : ChultTempleInteriorWorldOf(Frame); }
 
 void ATempleSkeleton::Face(const FVector& Dir, float DegPerSecond, float DeltaSeconds)
 {
@@ -216,22 +287,23 @@ void ATempleSkeleton::Face(const FVector& Dir, float DegPerSecond, float DeltaSe
 
 bool ATempleSkeleton::InLeash(const FVector& World, float Margin) const
 {
-    const FVector F = ChultTempleInteriorFrameOf(World);
+    const FVector F = FrameOf(World);
     return F.X >= Post.Leash.Min.X - Margin && F.X <= Post.Leash.Max.X + Margin && F.Y >= Post.Leash.Min.Y - Margin && F.Y <= Post.Leash.Max.Y + Margin;
 }
 
 FVector ATempleSkeleton::ClampToLeash(const FVector& World) const
 {
-    const FVector F = ChultTempleInteriorFrameOf(World);
+    const FVector F = FrameOf(World);
     const FVector C(FMath::Clamp(F.X, Post.Leash.Min.X, Post.Leash.Max.X), FMath::Clamp(F.Y, Post.Leash.Min.Y, Post.Leash.Max.Y), F.Z);
-    return ChultTempleInteriorWorldOf(C);
+    return WorldOf(C);
 }
 
 bool ATempleSkeleton::CanReach(const AChuckCharacter* Chuck) const
 {
     if (!Chuck || Chuck->IsAstral() || Chuck->IsSwinging() || Chuck->IsSwingLeaping()) return false;
     const float ChuckFeet = static_cast<float>(Chuck->GetActorLocation().Z) - Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    return FMath::Abs(ChuckFeet - FeetZ()) < 45.f && InLeash(Chuck->GetActorLocation(), 70.f);
+    // (the Pit Fiend's feet on the wastes' rough ground: a little more give)
+    return FMath::Abs(ChuckFeet - FeetZ()) < 45.f + 30.f * (KindScale() - 1.f) * (KindScale() > 1.f) && InLeash(Chuck->GetActorLocation(), 70.f);
 }
 
 bool ATempleSkeleton::Sees(const AChuckCharacter* Chuck) const
@@ -253,7 +325,7 @@ FVector ATempleSkeleton::Steer(const FVector& Want, const AActor* Ignore) const
     if (Ignore) Q.AddIgnoredActor(Ignore);
     for (const TWeakObjectPtr<ATempleSkeleton>& S : SkeletonRegistry) if (S.IsValid()) Q.AddIgnoredActor(S.Get());
     const FVector From = GetActorLocation() + FVector(0, 0, -20);
-    const float Look = FMath::Min(120.f, static_cast<float>(Want.Size2D()));
+    const float Look = FMath::Min(120.f * KindScale(), static_cast<float>(Want.Size2D()));
     for (const float Turn : {0.f, 30.f, -30.f, 60.f, -60.f, 95.f, -95.f})
     {
         const FVector Try = Dir.RotateAngleAxis(Turn, FVector::UpVector);
@@ -269,7 +341,7 @@ FVector ATempleSkeleton::Steer(const FVector& Want, const AActor* Ignore) const
             if (bHole) continue;
         }
         FHitResult Hit;
-        if (!GetWorld()->SweepSingleByChannel(Hit, From, From + Try * Look, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(Radius - 4.f), Q)
+        if (!GetWorld()->SweepSingleByChannel(Hit, From, From + Try * Look, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(RadiusNow() - 4.f), Q)
             || Hit.ImpactNormal.Z > .7f) return Try;
     }
     return Dir;
@@ -284,7 +356,8 @@ FVector ATempleSkeleton::StrikingTip(EAttack A) const
 
 void ATempleSkeleton::ResetToPost()
 {
-    SetActorLocation(Post.Feet + FVector(0, 0, HalfHeight + 2), false, nullptr, ETeleportType::TeleportPhysics);
+    SetActorLocation(Post.Feet + FVector(0, 0, HalfHeightNow() + 2), false, nullptr, ETeleportType::TeleportPhysics);
+    GetMesh()->SetRelativeScale3D(FVector(1.f)); MeltT = 0.f; RouteAt = 0; bRoaring = false;
     SetActorRotation(FRotator(0, Post.Yaw, 0));
     auto* Move = GetCharacterMovement();
     Move->StopMovementImmediately();
@@ -310,10 +383,12 @@ void ATempleSkeleton::StartAttack(EAttack Kind)
 void ATempleSkeleton::TakeSlash(const FVector& Swing)
 {
     if (State == EState::Dead) return;
+    // (The Pit Fiend: a scratch at its shin is nothing to it.)
+    if (IsFiend()) { Sound(HitSounds, .35f); UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_FIEND_SCRATCHED state=%s"), GetStateName()); return; }
     ++HitsTaken;
     Sound(HitSounds, .9f);
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_HIT hits=%d of=%d state=%s"), HitsTaken, Health, GetStateName());
-    if (HitsTaken >= Health) { Die(Swing); return; }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_HIT hits=%d of=%d state=%s kind=%d"), HitsTaken, GetMaxHealth(), GetStateName(), Post.Kind);
+    if (HitsTaken >= GetMaxHealth()) { Die(Swing); return; }
     Animator.Flinch(9.f);
     if (State == EState::Dormant || State == EState::Settle) SetState(EState::Rise);
     else if (State == EState::Guard || State == EState::Return) SetState(EState::Chase);
@@ -359,6 +434,25 @@ void ATempleSkeleton::Die(const FVector& Swing)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_DEAD space=%s from=%s"), Post.Space, *Swing.GetSafeNormal2D().ToCompactString());
 }
 
+FVector ATempleSkeleton::GetMaceHead() const
+{
+    return MaceBone == INDEX_NONE ? FVector::ZeroVector : GetMesh()->GetBoneTransform(MaceBone).TransformPosition(MaceLocal);
+}
+
+void ATempleSkeleton::TickMace()
+{
+    // The fire and its light follow the mace's head as it walks and swings (the flames rise from its crown: started under
+    // it they hid the iron in a white blaze); the light flickers.
+    const FVector P = GetMaceHead();
+    if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) Fire->SetBase(MaceFlame, P + FVector(0, 0, 14.f));
+    if (MaceLight)
+    {
+        const float T = GetWorld()->GetTimeSeconds();
+        MaceLight->SetWorldLocation(P + FVector(0, 0, 140.f));   // (closer and brighter, it burned the head itself out)
+        MaceLight->SetIntensity(700.f * (.82f + .12f * FMath::Sin(T * 15.f) + .07f * FMath::Sin(T * 37.f + 1.3f)));
+    }
+}
+
 void ATempleSkeleton::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -367,14 +461,25 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     LastLocation = Here;
     Animator.SetTimeScale(GetWorld()->GetTimeSeconds() < HitStopUntil ? .03f : 1.f);
     Animator.Tick(DeltaSeconds, State == EState::Chase || State == EState::Return ? Travelled : 0.f);
+    if (MaceBone != INDEX_NONE) TickMace();
     if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
     if (State == EState::Dead)
     {
+        // A lemure, down, melts into a puddle of itself where it lies (2026-11-16).
+        if (IsLemure())
+        {
+            if (Animator.Finished()) MeltT += DeltaSeconds;
+            const float K = FMath::Clamp(1.f - MeltT * .22f, .14f, 1.f);
+            GetMesh()->SetRelativeScale3D(FVector(1.f + (1.f - K) * .4f, 1.f + (1.f - K) * .4f, K));
+            return;
+        }
         // Down: the skull rolls aside and the jaw falls open as it settles.
         if (Animator.Finished()) { Animator.SetJaw(20.f); Animator.SetLook(28.f, -8.f); }
         return;
     }
     if (bHeld) { GetCharacterMovement()->MaxWalkSpeed = 0; return; }
+    // (Phlegethos's trials of the moves: its creatures hold still.)
+    if (Post.Kind && APhlegFlameskull::bCalm) { GetCharacterMovement()->MaxWalkSpeed = 0; return; }
     StateTime += DeltaSeconds;
     auto* Move = GetCharacterMovement();
     const float Speed = static_cast<float>(GetVelocity().Size2D());
@@ -382,14 +487,14 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     if (!InLeash(Here)) WorstLeash = FMath::Max(WorstLeash, static_cast<float>(FVector::Dist2D(Here, ClampToLeash(Here))));
     // Footfalls: one each half cycle of the walk.
     StepDistance += Speed * DeltaSeconds;
-    if (Speed > 15.f && StepDistance > SkeletonClipData::WalkSpeed * SkeletonClipData::WalkLength * .5f) { StepDistance = 0; Sound(StepSounds, .55f); }
+    if (Speed > 15.f && StepDistance > SkeletonClipData::WalkSpeed * SkeletonClipData::WalkLength * .5f * KindScale()) { StepDistance = 0; Sound(StepSounds, IsFiend() ? 1.f : .55f); }
 
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     const FVector ChuckAt = Chuck ? Chuck->GetActorLocation() : Here + FVector(1e6, 0, 0);
     const FVector ToChuck = ChuckAt - Here;
     const float Dist = static_cast<float>(ToChuck.Size2D());
     // Far off (another hall): nothing to do but keep its pose.
-    if (Dist > 4000.f && (State == EState::Dormant || State == EState::Guard)) return;
+    if (Dist > (IsFiend() ? 12000.f : 4000.f) && (State == EState::Dormant || State == EState::Guard)) return;
     const bool bReach = CanReach(Chuck);
     const bool bInSpace = Chuck && !Chuck->IsAstral() && InLeash(ChuckAt, 120.f);
 
@@ -421,7 +526,7 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     auto Home = [&]()
     {
         if (FVector::Dist2D(Here, Post.Feet) < 25.f) return true;
-        Walk(Post.Feet, ReturnSpeed, 140.f);
+        Walk(Post.Feet, ReturnSpeedNow(), 140.f);
         return false;
     };
 
@@ -440,10 +545,19 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         break;
     case EState::Guard:
     {
+        const bool bView = FVector::DotProduct(ToChuck.GetSafeNormal2D(), GetActorForwardVector()) > .25f;
+        const bool bNotice = bInSpace && ((Dist < NoticeNow() && bView) || Dist < CloseNow()) && Sees(Chuck);
+        if (IsFiend() && Post.Route.Num() > 1)
+        {
+            // Its round through the wastes, slow and heavy.
+            if (bNotice) { SetState(EState::Chase); break; }
+            if (FVector::Dist2D(Here, Post.Route[RouteAt]) < 110.f) RouteAt = (RouteAt + 1) % Post.Route.Num();
+            Walk(Post.Route[RouteAt], FiendPatrol, 45.f);
+            break;
+        }
         Move->MaxWalkSpeed = 0;
         Animator.Play(TEXT("Idle"), true, 1.f);
-        const bool bView = FVector::DotProduct(ToChuck.GetSafeNormal2D(), GetActorForwardVector()) > .25f;
-        if (bInSpace && ((Dist < NoticeRange && bView) || Dist < CloseNotice) && Sees(Chuck)) SetState(EState::Chase);
+        if (bNotice) SetState(EState::Chase);
         else if (FVector::Dist2D(Here, Post.Feet) > 40.f) SetState(EState::Return);
         else Face(FRotator(0, Post.Yaw, 0).Vector(), 60.f, DeltaSeconds);
         break;
@@ -451,8 +565,16 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     case EState::Chase:
     {
         Lost = bInSpace && (Dist < 350.f || Sees(Chuck)) ? 0.f : Lost + DeltaSeconds;
-        OutOfReach = bReach || !bInSpace ? 0.f : OutOfReach + DeltaSeconds;
-        if (Lost > LoseTime || OutOfReach > Patience) { SetState(EState::Return); break; }
+        // (Phlegethos's: out of reach only once it is close - far off, on rough ground, it is on its way to him)
+        OutOfReach = bReach || !bInSpace || (Post.Kind && Dist > 300.f * KindScale()) ? 0.f : OutOfReach + DeltaSeconds;
+        if (Lost > (IsFiend() ? 4.f : LoseTime) || OutOfReach > Patience) { bRoaring = false; SetState(EState::Return); break; }
+        if (bRoaring)
+        {
+            Move->MaxWalkSpeed = 0; Face(ToChuck, 70.f, DeltaSeconds); Animator.Locomote(Speed);
+            if (StateTime > 1.1f) bRoaring = false;
+            break;
+        }
+        const float Sc = KindScale();
         // To him, but no further than the edge of its own space.
         const FVector Goal = ClampToLeash(ChuckAt);
         const float GoalGap = static_cast<float>(FVector::Dist2D(Here, Goal));
@@ -460,12 +582,14 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         const float Facing = FVector::DotProduct(ToChuck.GetSafeNormal2D(), GetActorForwardVector());
         EAttack Kind = Forced;
         // After a blow it stands off a moment before the next (an opening to scratch it).
-        if (Kind == EAttack::None && GetWorld()->GetTimeSeconds() >= AttackReadyAt) Kind = Dist < 58.f ? EAttack::Swat : Dist < 98.f ? (Random.FRand() < .6f ? EAttack::Kick : EAttack::Grab) : EAttack::None;
-        const float Ready = Kind == EAttack::Swat ? 62.f : Kind == EAttack::Kick ? 100.f : Kind == EAttack::Grab ? 100.f : 0.f;
+        // (A lemure and the Pit Fiend kick and swat; neither picks him up.)
+        if (Kind == EAttack::None && GetWorld()->GetTimeSeconds() >= AttackReadyAt)
+            Kind = Dist < 58.f * Sc ? EAttack::Swat : Dist < 98.f * Sc ? (Post.Kind || Random.FRand() < .6f ? EAttack::Kick : EAttack::Grab) : EAttack::None;
+        const float Ready = (Kind == EAttack::Swat ? 62.f : Kind == EAttack::Kick ? 100.f : Kind == EAttack::Grab ? 100.f : 0.f) * Sc;
         if (bReach && Kind != EAttack::None && Dist < Ready && Facing > .55f) { Forced = EAttack::None; StartAttack(Kind); break; }
-        if (bReach && Dist < 70.f) { Move->MaxWalkSpeed = 0; Face(ToChuck, 220.f, DeltaSeconds); Animator.Locomote(Speed); break; }
+        if (bReach && Dist < 70.f * Sc) { Move->MaxWalkSpeed = 0; Face(ToChuck, 220.f, DeltaSeconds); Animator.Locomote(Speed); break; }
         if (GoalGap < 15.f) { Move->MaxWalkSpeed = 0; Face(ToChuck, 160.f, DeltaSeconds); Animator.Locomote(Speed); break; }   // at its edge, watching
-        Walk(Goal, ChaseSpeed, 170.f);
+        Walk(Goal, ChaseSpeedNow(), IsFiend() ? 90.f : 170.f);
         break;
     }
     case EState::Attack:
@@ -539,7 +663,7 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
                         }
                         Sound(HitSounds, .9f);
                     }
-                    else bLanded = Chuck->TakeBite(Here, S.Damage, Attack == EAttack::Kick);
+                    else bLanded = Chuck->TakeBite(Here, IsFiend() ? FiendBlow : S.Damage, Attack == EAttack::Kick);
                     if (bLanded) ++Landed[static_cast<int32>(Attack)];
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_TEMPLE_SKELETON_STRIKE attack=%s landed=%d gap=%.1f clip_t=%.2f sanity=%d"), AttackName(Attack), bLanded ? 1 : 0, Gap, T, Chuck->GetSanity());
                 }
@@ -554,7 +678,7 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         if (T >= Animator.Length() - .2f && !bCarrying)
         {
             ++Strikes;
-            AttackReadyAt = GetWorld()->GetTimeSeconds() + Random.FRandRange(PauseMin, PauseMax);
+            AttackReadyAt = GetWorld()->GetTimeSeconds() + Random.FRandRange(PauseMin, PauseMax) * (IsLemure() ? 1.7f : 1.f);   // (a lemure, slow, stands longer between)
             Animator.Play(TEXT("Idle"), true, 1.f, false, .3f);
             SetState(EState::Recover);
         }
@@ -566,7 +690,19 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
         if (StateTime > .45f) SetState(EState::Chase);
         break;
     case EState::Return:
-        if (bInSpace && bReach && Dist < NoticeRange * .6f && StateTime > 1.f && Sees(Chuck)) { SetState(EState::Chase); break; }
+        if (bInSpace && bReach && Dist < NoticeNow() * .6f && StateTime > 1.f && Sees(Chuck)) { SetState(EState::Chase); break; }
+        if (IsFiend() && Post.Route.Num() > 1)
+        {
+            // Back to the nearest point of its round, then on round it.
+            if (StateTime < .1f)
+            {
+                float Best = 1e12f;
+                for (int32 I = 0; I < Post.Route.Num(); ++I) { const float D2 = static_cast<float>(FVector::DistSquared2D(Here, Post.Route[I])); if (D2 < Best) { Best = D2; RouteAt = I; } }
+            }
+            if (FVector::Dist2D(Here, Post.Route[RouteAt]) < 140.f) SetState(EState::Guard);
+            else Walk(Post.Route[RouteAt], ReturnSpeedNow(), 60.f);
+            break;
+        }
         if (Home())
         {
             Move->StopMovementImmediately();

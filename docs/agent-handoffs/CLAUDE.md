@@ -2,6 +2,35 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 16 — Phlegethos: lemures, spined devils and the Pit Fiend (Claude)
+
+- **Asked:** proceed with the region's remaining creatures (no horned devils; the trio vs Pit Fiend battle not yet). Then a goal image for the Pit Fiend (added as `References/Phlegethos/pit-fiend-goal.jpg`): the fiend was remodelled to it.
+- **Source:** `main` at 6562b930; this commit.
+- **Changed:**
+  - `Tools/build_phleg_creatures.py` (new): SDF sculpts (Blender 4.5.14, `sdf_kit.py`): `SK_Lemure` and `SK_PitFiend` skinned to the rebuilt temple skeleton rig (unchanged), the spined devil as five static parts, its spine, its basalt column; review renders (`--review`, `Local/creatures/`); `SourceAssets/Enemies/Phlegethos/*.fbx` + `creatures.json`.
+  - `Tools/import_phleg_creatures.py` (new): imports into `/Game/Art/Phlegethos/Creatures`; `M_PhlegCreature` (vertex colour albedo with gamma 2.2, alpha glow, tiling detail normal) and its instances.
+  - `ChultTempleInterior.h`: `FTempleSkeletonPost` gains `Kind` (1 lemure, 2 Pit Fiend) and `Route`.
+  - Pit Fiend second pass (`fiend_body`/`fiend_look`/`fiend_mace` in the build script): long out-and-up horns, charcoal armour (collar, spiked pauldrons and bracers, skull belt, thigh plates, knee guards, greaves, armoured feet), smoother hide, wings 1.5x the first pass, a tail curled on the ground, a spiked mace in the right fist (skinned to `hand_r`); `creatures.json` "mace_head" = the head as affine joint weights. `TempleSkeleton.cpp` turns it into hand space, puts moving flipbook fire on the crown and a 700 cd flickering light 1.4 m above it (`TickMace`, `GetMaceHead`). `import_phleg_creatures.py -ChuckPhlegOnly=<mesh,...>` re-imports only those meshes; `MI_PitFiend` detail .3, roughness .45.
+  - `TempleSkeleton.h/.cpp`: kinds load their own mesh and scale (lemure .93, fiend 2.4), sounds, speeds, notice ranges; the stage frame; the fiend's patrol route, roar, 4 s lose-sight, one-blow kill, unscratchable; lemures 17 health, melt into a puddle; calm gate for trials; scaled reach/radius getters.
+  - `PhlegethosCreatures.h/.cpp`: `APhlegSpinedDevil` (column, tail flick wind-up/whip/release, 3-spine pool with moving flipbook fire, stone hits, wing flap, head look, contact 1 point, scratch fatal); spawns 8 lemures, 6 devils, the fiend; `PhlegethosScratchDevils`, `PhlegethosLemureCount`, `PhlegethosPitFiend`.
+  - `ChuckCharacter.cpp`: the skeleton slash uses `RadiusNow`/`HalfHeightNow`; slashes reach the devils.
+  - `PhlegethosTest.cpp`: trials `lemures`, `devils`, `fiend` (20). `Tools/Verify-Package.ps1` expects 20. `docs/regions/PHLEGETHOS.md`: Creatures built.
+  - New assets: `Content/Art/Phlegethos/Creatures/*` (LFS).
+- **Tested (editor):**
+  - Phlegethos 20/20 (`Local/phleg-npcs-trials.log`): lemures hits=17 melt=3.5; devils thrown=9 hits=3 scratched=1; fiend noticed at 1764 cm, killed by a kick.
+  - Fall cutscene `failures=0 handoff=1` (`Local/phleg-npcs-hellfall.log`); `lemures=8 devils=6 fiend=1`.
+  - Stills in `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/Phlegethos/` (Lemure_*, Devil_*, Fiend_*); the remodelled fiend: 20/20 again (`Local/phleg-fiend2-trials.log`), then its own trial after the mace fixes (`Local/phleg-fiend2-one.log`, `Fiend_Close.png`); review renders `Local/creatures/SK_PitFiend_*.png`.
+- **Package:** `Tools/Build-Game.ps1 -Package -SkipBaseAssets` into `Builds/PhlegethosCandidate`, then `Tools/Verify-Package.ps1`: `CHUCK_PACKAGE_VERIFIED passes=182` (`Local/verify-package-20261116-162735.log`, run log `Local/phleg-fiend2-verify.log`). Earlier verification runs of the first-pass creatures failed on known flakes unrelated to this work (gnome wrist gap 8.1 > 8, the ShipArrival playtest inside the hull, Chult stuck) and the last was stopped for the remodel.
+- **Not tested:** anything by hand; how hard the devils' lanes and the fiend's round are in play.
+- **Remaining flaws:**
+  - Lemures use the skeleton's upright mocap walk, not a shamble.
+  - The Pit Fiend's wings are rigid; its walk is the skeleton's at 2.4x; its thigh plates and mace may cut into the body in some poses of the skeleton's clips; its iron mace head has no glow of its own (the fire does it).
+  - Earlier: Chuck's fur bright near the ascent's hot cracks; flat falls; plain hills; the ship's hidden-hull fault.
+- **Contract compatibility:** no rig, scale or character changes; the temple skeleton rig is reused unchanged. `FTempleSkeletonPost` gains `Kind`/`Route` (default 0/empty; temple skeletons unchanged). Three trials added.
+- **Launcher:** promoted with `Tools/Promote-Build.ps1 -Label PhlegethosNPCs` (receipt 6562b93, built from the working tree with this work uncommitted; committed right after). Kept `Windows-Previous-20261116-PhlegethosCreatures` and `-PhlegethosNPCs`; pruned `Windows-Previous-20261115-PhlegethosHills`. No candidate folder left. Not played by hand.
+
+Next part of the work can be done by Claude only (the trio vs Pit Fiend battle when the user wants it, then the Astral escalation and Feywild river); preference: Claude, here.
+
 ## November 16 — Phlegethos: second geysers out, quieter splash, flameskulls and fire snakes (Claude)
 
 - **Asked:** remove the second flame geysers; reduce the lava falls' splash and tone down its sound; do the region's creatures, without the 2D game's separate horned devils.

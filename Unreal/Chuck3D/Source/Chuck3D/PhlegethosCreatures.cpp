@@ -5,6 +5,8 @@
 #include "ChuckFlames.h"
 #include "ChultTempleInterior.h"
 #include "TempleSnake.h"
+#include "TempleSkeleton.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -177,6 +179,7 @@ namespace
 void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
 {
     if (!Stage || GSkulls.Num()) return;
+    // (the stage's creatures are its own: the temple's skeletons' leashes and sounds are in the temple's frame)
     UWorld* World = Stage->GetWorld();
     FActorSpawnParameters SP; SP.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     auto Skull = [&](const APhlegFlameskull::FHaunt& H, float Phase)
@@ -234,7 +237,82 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
         Post.Leash = FBox2D(FVector2D(A.X - A.HalfX, A.Y - A.HalfY), FVector2D(A.X + A.HalfX, A.Y + A.HalfY));
         SnakesPlaced += ATempleSnake::SpawnAt(World, Post) != nullptr;
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_CREATURES skulls=%d harmful=%d fire_snakes=%d"), PhlegethosFlameskullCount(false), PhlegethosFlameskullCount(true), SnakesPlaced);
+    // Lemures (2D: the zombie's and skeleton's lifecycle, slower and more durable): beside the hills' path, the wastes', and
+    // before the gate. Some lie in the ash until he is near, then rise. Each keeps to its own patch of ground.
+    struct FLemureAt { float X, Y; bool bDormant; };
+    const FLemureAt Lemures[] = {
+        {-7600, HillsPathY(-7600) - 250, false}, {-6100, HillsPathY(-6100) + 260, false}, {-4500, HillsPathY(-4500) - 260, true},
+        {29800, ApproachPathY(29800) - 270, false}, {33000, ApproachPathY(33000) + 280, true}, {36600, ApproachPathY(36600) - 260, false},
+        {GateX - 2100, 500, false}, {GateX - 1300, -550, true}};
+    int32 LemuresPlaced = 0;
+    for (const FLemureAt& A : Lemures)
+    {
+        const float Z = GroundAt(World, A.X, A.Y);
+        if (Z < G - 60) continue;
+        FTempleSkeletonPost Post;
+        Post.Kind = 1; Post.bDormant = A.bDormant; Post.Space = TEXT("phlegethos");
+        Post.Feet = PhlegWorld(FVector(A.X, A.Y, Z));
+        const float PathY = A.X < HillsJoinX ? HillsPathY(A.X) : A.X < ForecourtX ? ApproachPathY(A.X) : 0.f;
+        Post.Yaw = PathY > A.Y ? 90.f : -90.f;   // facing the path
+        Post.Leash = FBox2D(FVector2D(A.X - 480, FMath::Min(A.Y, PathY) - 420), FVector2D(A.X + 480, FMath::Max(A.Y, PathY) + 420));
+        LemuresPlaced += ATempleSkeleton::SpawnAt(World, Post) != nullptr;
+    }
+    // Spined devils: three on columns in the river beside the gorge's shelf, throwing across it at the cliff; three on
+    // low columns beside the wastes' path, throwing across it.
+    int32 DevilsPlaced = 0;
+    auto Devil = [&](const APhlegSpinedDevil::FPerch& P) { if (auto* D = World->SpawnActor<APhlegSpinedDevil>(P.Seat, FRotator(0, P.Yaw, 0), SP)) { D->Init(P); ++DevilsPlaced; } };
+    const float ShelfAt[] = {13500, 14450, 15950};
+    for (int32 I = 0; I < UE_ARRAY_COUNT(ShelfAt); ++I)
+    {
+        APhlegSpinedDevil::FPerch P;
+        P.Seat = PhlegWorld(FVector(ShelfAt[I], 230, G + 95)); P.Yaw = -90.f;
+        P.Aim = PhlegWorld(FVector(ShelfAt[I] - 40, CliffY + 8, (ShelfAt[I] > Break2X0 ? LowShelf : G) + 32));
+        P.Delay = I * .7f; P.ColumnDrop = 460.f;
+        Devil(P);
+    }
+    const float WasteAt[] = {31000, 34500, 38200};
+    for (int32 I = 0; I < UE_ARRAY_COUNT(WasteAt); ++I)
+    {
+        const float X = WasteAt[I], Side = I & 1 ? -1.f : 1.f, PathY = ApproachPathY(X);
+        APhlegSpinedDevil::FPerch P;
+        P.Seat = PhlegWorld(FVector(X, PathY + Side * 330, GroundAt(World, X, PathY + Side * 330) + 70)); P.Yaw = Side > 0 ? -90.f : 90.f;
+        P.Aim = PhlegWorld(FVector(X + 30, PathY - Side * 250, GroundAt(World, X + 30, PathY) + 32));
+        P.Delay = .3f + I * .8f; P.ColumnDrop = 460.f;
+        Devil(P);
+    }
+    // The Pit Fiend (2D: the colossus, wholly avoidable; its battle with the heroes is not built): its round through the
+    // wastes, crossing the path twice, off it either side by fifteen metres. It notices him from 22 m in front of it.
+    {
+        const FVector2D Round[] = {{31500, 1500}, {35500, 1600}, {37800, 200}, {35500, -1500}, {31500, -1400}, {30300, 100}};
+        FTempleSkeletonPost Post;
+        Post.Kind = 2; Post.Space = TEXT("wastes");
+        for (const FVector2D& R : Round)
+        {
+            // (on the broken ground, never in one of the lava hollows off the path: in toward the path until it is ground)
+            float Y = ApproachPathY(R.X) + R.Y, Z = GroundAt(World, R.X, Y);
+            for (float K = .85f; (Z < FortressTop - 400.f || Z > FortressTop + 150.f) && K > .1f; K -= .15f) { Y = ApproachPathY(R.X) + R.Y * K; Z = GroundAt(World, R.X, Y); }
+            Post.Route.Add(PhlegWorld(FVector(R.X, Y, Z)));
+        }
+        Post.Feet = Post.Route[0];
+        Post.Yaw = (Post.Route[1] - Post.Route[0]).Rotation().Yaw;
+        Post.Leash = FBox2D(FVector2D(29200, -3600), FVector2D(39800, 3600));
+        ATempleSkeleton::SpawnAt(World, Post);
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_CREATURES skulls=%d harmful=%d fire_snakes=%d lemures=%d devils=%d fiend=%d"), PhlegethosFlameskullCount(false),
+        PhlegethosFlameskullCount(true), SnakesPlaced, LemuresPlaced, DevilsPlaced, PhlegethosPitFiend() != nullptr);
+}
+
+int32 PhlegethosLemureCount()
+{
+    int32 N = 0;
+    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsLemure()) ++N;
+    return N;
+}
+
+ATempleSkeleton* PhlegethosPitFiend()
+{
+    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsFiend()) return S.Get();
+    return nullptr;
 }
 
 int32 PhlegethosFlameskullCount(bool bHarmfulOnly)
@@ -242,4 +320,263 @@ int32 PhlegethosFlameskullCount(bool bHarmfulOnly)
     int32 N = 0;
     for (const auto& S : GSkulls) if (S.IsValid() && (!bHarmfulOnly || S->GetHaunt().bHarmful)) ++N;
     return N;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The spined devils (2026-11-16).
+
+namespace
+{
+    TArray<TWeakObjectPtr<APhlegSpinedDevil>> GDevils;
+    constexpr float DevilSize = 1.25f;                 // (the model is 45 cm crouched; a little more, to read beside him)
+    const FVector HeadPivot(4, 0, 33), WingPivotL(-5, 5, 31), WingPivotR(-5, -5, 31), TailPivot(-8, 0, 9);
+    const FVector TailTipLocal(-28, -1, 23);           // the burning tuft, in the tail's frame
+    constexpr int32 SpinePool = 3;
+    UStaticMesh* CreatureMesh(const TCHAR* Name)
+    {
+        return LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/Art/Phlegethos/Creatures/%s.%s"), Name, Name));
+    }
+}
+
+int32 APhlegSpinedDevil::Thrown = 0;
+int32 APhlegSpinedDevil::Hits = 0;
+int32 APhlegSpinedDevil::Scratched = 0;
+const TArray<TWeakObjectPtr<APhlegSpinedDevil>>& APhlegSpinedDevil::All() { return GDevils; }
+
+APhlegSpinedDevil::APhlegSpinedDevil()
+{
+    PrimaryActorTick.bCanEverTick = true;
+    RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+    // Its column (collision: he can climb onto it, and the spines' flight starts clear of it).
+    Column = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Column"));
+    Column->SetupAttachment(RootComponent);
+    auto* Devil = CreateDefaultSubobject<USceneComponent>(TEXT("Devil"));
+    Devil->SetupAttachment(RootComponent);
+    Devil->SetRelativeScale3D(FVector(DevilSize));
+    auto Part = [&](const TCHAR* Name, USceneComponent* Parent, const FVector& At)
+    {
+        auto* C = CreateDefaultSubobject<UStaticMeshComponent>(Name);
+        C->SetupAttachment(Parent);
+        C->SetRelativeLocation(At);
+        C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        return C;
+    };
+    Body = Part(TEXT("Body"), Devil, FVector::ZeroVector);
+    Head = Part(TEXT("Head"), Devil, HeadPivot);
+    WingL = Part(TEXT("WingL"), Devil, WingPivotL);
+    WingR = Part(TEXT("WingR"), Devil, WingPivotR);
+    Tail = Part(TEXT("Tail"), Devil, TailPivot);
+    for (int32 I = 0; I < SpinePool; ++I)
+    {
+        auto* S = CreateDefaultSubobject<UStaticMeshComponent>(*FString::Printf(TEXT("Spine%d"), I));
+        S->SetupAttachment(RootComponent);
+        S->SetUsingAbsoluteLocation(true); S->SetUsingAbsoluteRotation(true); S->SetUsingAbsoluteScale(true);
+        S->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        S->SetCastShadow(false);
+        S->SetRelativeScale3D(FVector(1.3f));
+        S->SetHiddenInGame(true);
+        SpineMeshes.Add(S);
+    }
+    // The smoulder of its spines on it.
+    Light = CreateDefaultSubobject<UPointLightComponent>(TEXT("Light"));
+    Light->SetupAttachment(Tail);
+    Light->SetRelativeLocation(TailTipLocal);
+    Light->SetLightColor(FLinearColor(1.f, .45f, .12f));
+    Light->SetIntensity(160.f);
+    Light->SetAttenuationRadius(220.f);
+    Light->SetCastShadows(false);
+}
+
+void APhlegSpinedDevil::BeginPlay()
+{
+    Super::BeginPlay();
+    GDevils.Add(this);
+    // (Loaded here, not held by the constructor: the import script replaces these.)
+    Column->SetStaticMesh(CreatureMesh(TEXT("SM_DevilPerch")));
+    Body->SetStaticMesh(CreatureMesh(TEXT("SM_SpinedDevil_Body")));
+    Head->SetStaticMesh(CreatureMesh(TEXT("SM_SpinedDevil_Head")));
+    WingL->SetStaticMesh(CreatureMesh(TEXT("SM_SpinedDevil_WingL")));
+    WingR->SetStaticMesh(CreatureMesh(TEXT("SM_SpinedDevil_WingR")));
+    Tail->SetStaticMesh(CreatureMesh(TEXT("SM_SpinedDevil_Tail")));
+    UStaticMesh* SpineMesh = CreatureMesh(TEXT("SM_DevilSpine"));
+    for (UStaticMeshComponent* S : SpineMeshes) S->SetStaticMesh(SpineMesh);
+    auto Sound = [](const TCHAR* Name) { return LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name)); };
+    ThrowSound = Sound(TEXT("SFX_HeroArrowFlight_00")); StoneSound = Sound(TEXT("SFX_HeroArrowHit_01"));
+    BurnSound = Sound(TEXT("SFX_TempleRunFireHiss_00")); HissSound = Sound(TEXT("SFX_RaptorHiss_00"));
+}
+
+void APhlegSpinedDevil::EndPlay(const EEndPlayReason::Type Reason)
+{
+    GDevils.RemoveAll([this](const TWeakObjectPtr<APhlegSpinedDevil>& P) { return !P.IsValid() || P.Get() == this; });
+    Super::EndPlay(Reason);
+}
+
+void APhlegSpinedDevil::Init(const FPerch& InPerch)
+{
+    Perch = InPerch;
+    SetActorLocationAndRotation(Perch.Seat, FRotator(0, Perch.Yaw, 0));
+    Column->SetRelativeLocation(FVector(0, 0, -Perch.ColumnDrop));
+    Column->SetRelativeRotation(FRotator(0, FMath::Frac(Perch.Seat.X * .013f) * 360.f, 0));
+    Clock = 0; NextThrow = Perch.Delay + Interval; FlickT = -1;
+    Flying.SetNum(SpinePool);
+    if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld()))
+        for (FSpine& S : Flying) S.Flame = Fire->AddMoving(this, Perch.Seat - FVector(0, 0, 8000), 8.f, 12.f);
+}
+
+FVector APhlegSpinedDevil::GetCentre() const { return GetActorTransform().TransformPosition(FVector(2, 0, 18) * DevilSize); }
+FVector APhlegSpinedDevil::TailTip() const { return Tail->GetComponentTransform().TransformPosition(TailTipLocal); }
+
+void APhlegSpinedDevil::Throw()
+{
+    // A spine from the tuft at its tail's end, through the aim point across the lane and on until it meets stone.
+    int32 Free = INDEX_NONE;
+    for (int32 I = 0; I < Flying.Num(); ++I) if (Flying[I].Life < 0 && Flying[I].Stuck < 0) { Free = I; break; }
+    if (Free == INDEX_NONE) return;
+    FSpine& S = Flying[Free];
+    S.Pos = TailTip();
+    S.Vel = (Perch.Aim - S.Pos).GetSafeNormal() * SpineSpeed;
+    S.Life = 3.f; S.Stuck = -1.f;
+    SpineMeshes[Free]->SetHiddenInGame(false);
+    ++Thrown;
+    if (ThrowSound) UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, S.Pos, .5f, 1.35f);
+}
+
+void APhlegSpinedDevil::TickSpines(float Dt, AChuckCharacter* Chuck)
+{
+    AChuckFlames* Fire = AChuckFlames::Get(GetWorld());
+    for (int32 I = 0; I < Flying.Num(); ++I)
+    {
+        FSpine& S = Flying[I];
+        UStaticMeshComponent* M = SpineMeshes[I];
+        if (S.Stuck >= 0)
+        {
+            // Burning out where it struck.
+            S.Stuck -= Dt;
+            if (Fire) Fire->SetBase(S.Flame, S.Stuck > .4f ? S.Pos : Perch.Seat - FVector(0, 0, 8000));
+            if (S.Stuck < 0) M->SetHiddenInGame(true);
+            continue;
+        }
+        if (S.Life < 0) continue;
+        S.Life -= Dt;
+        const FVector From = S.Pos, To = S.Pos + S.Vel * Dt;
+        bool bEnd = S.Life < 0;
+        // Him: the spine's step against his body (feet to shoulders).
+        if (Chuck && !Chuck->IsAstral() && !APhlegFlameskull::bCalm)
+        {
+            const FVector C = Chuck->GetActorLocation(), Feet = C - FVector(0, 0, Stand);
+            FVector PA, PB;
+            FMath::SegmentDistToSegmentSafe(From, To, Feet + FVector(0, 0, 10), Feet + FVector(0, 0, 58), PA, PB);
+            if (FVector::Dist(PA, PB) < 16.f)
+            {
+                // Knocked on along its flight (bZombieHit: a shove, not a launch).
+                if (Chuck->TakeBite(C - S.Vel.GetSafeNormal2D() * 100.f, SpineBurn, true, false))
+                {
+                    ++Hits;
+                    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, PA, .55f, 1.2f);
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_SPINE_HIT at=%s sanity=%d"), *PhlegLocal(C).ToString(), Chuck->GetSanity());
+                }
+                S.Life = -1.f; M->SetHiddenInGame(true);
+                if (Fire) Fire->SetBase(S.Flame, Perch.Seat - FVector(0, 0, 8000));
+                continue;
+            }
+        }
+        // Stone: it sticks and burns out.
+        FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(DevilSpine), false, this);
+        if (Chuck) Q.AddIgnoredActor(Chuck);
+        if (GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Q))
+        {
+            S.Pos = Hit.ImpactPoint - S.Vel.GetSafeNormal() * 6.f; S.Life = -1.f; S.Stuck = 1.4f;
+            if (StoneSound) UGameplayStatics::PlaySoundAtLocation(this, StoneSound, S.Pos, .35f, 1.3f);
+        }
+        else S.Pos = To;
+        if (bEnd && S.Stuck < 0) { S.Life = -1.f; M->SetHiddenInGame(true); if (Fire) Fire->SetBase(S.Flame, Perch.Seat - FVector(0, 0, 8000)); continue; }
+        M->SetWorldLocationAndRotation(S.Pos, S.Vel.Rotation());
+        if (Fire) Fire->SetBase(S.Flame, S.Pos - S.Vel.GetSafeNormal() * 10.f);
+    }
+}
+
+void APhlegSpinedDevil::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+    const float Dt = FMath::Clamp(DeltaSeconds, 0.f, .05f);
+    UWorld* World = GetWorld();
+    auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(World, 0));
+    const APhlegethosSetting* Stage = APhlegethosSetting::Get(World);
+    const bool bFar = !Chuck || !Stage || Stage->IsHidden() || FVector::Dist(Chuck->GetActorLocation(), Perch.Seat) > 7000.f;
+    if (bFar != bAsleep) { bAsleep = bFar; SetActorHiddenInGame(bFar); }
+    if (bFar) return;
+    Clock += Dt;
+    const FVector C = Chuck->GetActorLocation();
+
+    // The beat: the tail winds back for a moment, then whips over its shoulder, and the spine goes at the whip.
+    const bool bThrowing = !APhlegFlameskull::bCalm && Stage->IsLive() && FVector::Dist(C, Perch.Seat) < 4500.f;
+    if (bThrowing && FlickT < 0 && Clock >= NextThrow - .5f) { FlickT = 0; bReleased = false; }
+    float TailPitch = 4.f * FMath::Sin(Clock * 1.3f + Perch.Delay), TailYaw = 6.f * FMath::Sin(Clock * .8f + Perch.Delay * 2.f);
+    if (FlickT >= 0)
+    {
+        FlickT += Dt;
+        // wind back (0 - .5 s), whip (.5 - .68), settle (to 1.3)
+        if (FlickT < .5f) TailPitch = 18.f * FMath::SmoothStep(0.f, 1.f, FlickT / .5f);
+        else if (FlickT < .68f) TailPitch = FMath::Lerp(18.f, -78.f, FMath::SmoothStep(0.f, 1.f, (FlickT - .5f) / .18f));
+        else TailPitch = FMath::Lerp(-78.f, 0.f, FMath::SmoothStep(0.f, 1.f, (FlickT - .68f) / .62f));
+        if (!bReleased && FlickT >= .6f)
+        {
+            bReleased = true; Throw(); Flap = 1.f;
+            if (HissSound && FMath::FRand() < .4f) UGameplayStatics::PlaySoundAtLocation(this, HissSound, GetCentre(), .25f, 1.6f);
+        }
+        if (FlickT > 1.3f) { FlickT = -1; NextThrow += Interval; while (NextThrow < Clock) NextThrow += Interval; }
+    }
+    else if (!bThrowing) NextThrow = Clock + Perch.Delay * .5f + .6f;
+    Tail->SetRelativeRotation(FRotator(TailPitch, TailYaw, 0));
+
+    // The wings stir; at a throw they beat open once.
+    Flap = FMath::Max(0.f, Flap - Dt * 1.8f);
+    const float Wing = 5.f * FMath::Sin(Clock * 2.1f + Perch.Delay) + 38.f * FMath::Sin(FMath::Min(1.f, (1.f - Flap) * 1.f) * PI) * (Flap > 0);
+    WingL->SetRelativeRotation(FRotator(0, -Wing * .3f, Wing));
+    WingR->SetRelativeRotation(FRotator(0, Wing * .3f, -Wing));
+    // It breathes; its head follows him.
+    Body->SetRelativeScale3D(FVector(1.f, 1.f, 1.f + .02f * FMath::Sin(Clock * 2.4f + Perch.Delay)));
+    const FVector Local = GetActorTransform().InverseTransformVectorNoScale(C - Head->GetComponentLocation());
+    const bool bWatch = Local.Size() < 1500.f;
+    const float WantYaw = bWatch ? FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Y), static_cast<float>(Local.X))), -75.f, 75.f) : 20.f * FMath::Sin(Clock * .5f);
+    const float WantPitch = bWatch ? FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(static_cast<float>(Local.Z), static_cast<float>(Local.Size2D()))), -45.f, 25.f) : -10.f;
+    LookYaw = FMath::FInterpTo(LookYaw, WantYaw, Dt, 4.f); LookPitch = FMath::FInterpTo(LookPitch, WantPitch, Dt, 4.f);
+    Head->SetRelativeRotation(FRotator(LookPitch, LookYaw, 0));
+    Light->SetIntensity(160.f * (.75f + .25f * FMath::Sin(Clock * 13.f + Perch.Delay)) + 500.f * Flap);
+
+    TickSpines(Dt, Chuck);
+
+    // Brushing against it hurts (2D: contact merely hurts; the scratch is what kills).
+    TouchWait -= Dt;
+    if (!APhlegFlameskull::bCalm && TouchWait <= 0 && FVector::Dist(C, GetCentre()) < 42.f && Chuck->TakeBite(GetCentre(), 1, true, false))
+    {
+        TouchWait = 1.f; ++Hits;
+        if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, C, .4f, 1.4f);
+    }
+}
+
+bool APhlegSpinedDevil::TryScratch(AChuckCharacter* Chuck, const FVector& Location, const FVector& Ahead, float Reach)
+{
+    if (!Chuck || bAsleep) return false;
+    const FVector Cn = GetCentre();
+    const FVector To = Cn - Location;
+    const float Feet = static_cast<float>(Location.Z) - Stand;
+    // (on a low column it sits above his head: he reaches up to it; its body is about 26 cm round its middle)
+    if (static_cast<float>(To.Size2D()) - 26.f > Reach || Cn.Z < Feet - 10.f || Cn.Z > Feet + 105.f) return false;
+    if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && To.Size2D() > 20.f) return false;
+    // (2D: scratching one immediately defeats Chuck.) Its spines through him: all of his sanity, through a dodge.
+    ++Scratched;
+    if (HissSound) UGameplayStatics::PlaySoundAtLocation(this, HissSound, Cn, .7f, 1.2f);
+    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, Location, .7f, 1.f);
+    Flap = 1.f;
+    Chuck->TakeBite(Cn, Chuck->GetSanity(), false, true);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_DEVIL_SCRATCHED sanity=%d"), Chuck->GetSanity());
+    return true;
+}
+
+bool PhlegethosScratchDevils(AChuckCharacter* Chuck, const FVector& Location, const FVector& Ahead, float Reach)
+{
+    bool bAny = false;
+    for (const auto& D : GDevils) if (D.IsValid() && D->TryScratch(Chuck, Location, Ahead, Reach)) { bAny = true; break; }
+    return bAny;
 }

@@ -6,6 +6,14 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos: lemures, spined devils and the Pit Fiend (November 16, Claude):**
+  - All of the region's creatures are now built (2D Phase 8; no horned devils, by the user's choice). The trio's battle with the Pit Fiend is still out of scope.
+  - 8 lemures (melting flesh masses on the temple skeleton's rig and lifecycle, slower, 17 scratches; 3 lie in the ash and rise) in the hills, the wastes and before the gate.
+  - 6 spined devils on basalt columns (3 beside the gorge shelf, 3 beside the wastes' path) flick burning spines across the lane every 2 s, staggered; brushing one costs a point, scratching one costs all.
+  - The Pit Fiend, 4.2 m, modelled on the user's goal image (horns, charcoal armour, skull belt, great wings, a flaming mace in its fist), walks a round through the wastes; it notices Chuck from 22 m ahead (8 m all round), roars and strides after him; one blow takes all his sanity; it cannot be scratched.
+  - Models sculpted in Blender by `Tools/build_phleg_creatures.py` (no downloads).
+  - Editor: 20/20 trials (new `lemures`, `devils`, `fiend`) and the fall cutscene pass. Package: verified 182 passes (`Local/verify-package-20261116-162735.log`) and promoted as PhlegethosNPCs (receipt 6562b93 plus the uncommitted creature work, committed right after). Not played by hand.
+  - See [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md) and [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md#creatures).
 - **Phlegethos: second geysers out, a quieter splash, flameskulls and fire snakes (November 16, Claude):**
   - The ascent ramp's lava bombs (the "second flame geysers") are removed; the volcano still erupts in the sky while Chuck climbs.
   - The lava falls' splash is about a third as busy and lower, and its hiss is much quieter and fades with distance.

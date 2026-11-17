@@ -14,7 +14,7 @@ Direction: the 2D game's `docs/development/PHASE-8.md` and `hell_falling_cutscen
 | Six connected maps: arrival, lava road, lava lake islands, rubble pass with a lava fall, the fractured way, the fortress approach | **Built** as one continuous stage in six stretches, with a checkpoint each |
 | The lava lake island crossing ("Include a sequence where Chuck jumps across small islands over a lava lake") | **Built**: a basalt column causeway, some columns sinking under him |
 | Lava falls, lava rivers, narrow basalt paths, jump challenges | **Built** as parkour: a narrowing basalt spine, a lava-fall gorge crossed along its wall and on hanging chains, a wall-jump chimney, crumbling steps (the lava geysers and bombs were removed on 2026-11-16) |
-| Lemures, fire snakes, spined devils, flameskulls, horned devils | **Flameskulls and fire snakes built** (2026-11-16); lemures, spined devils and the Pit Fiend planned below. **No horned devils** (the user, 2026-11-16: "in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game") |
+| Lemures, fire snakes, spined devils, flameskulls, horned devils | **All built** (2026-11-16), with the Pit Fiend as the colossus; see Creatures below. **No horned devils** (the user, 2026-11-16: "in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game") |
 | Infernal idols, fortress exterior | **Built**: the processional and the shut gate |
 | The trio battling the Pit Fiend, Astral escalation, the Feywild river, the river cutscene | **Not built** (user: "don't do the trio of heros pit fiend encounter yet"). The fortress yard ends at the shut gate |
 | Breakable urns with cigarettes | **Built**: clay jars on the safe ground off the routes |
@@ -54,7 +54,7 @@ The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused
 
 ## Out of scope for this milestone
 
-The trio and the Pit Fiend's battle, the Astral escalation and the Feywild river, the river cutscene. The creatures are built in stages (below).
+The trio and the Pit Fiend's battle, the Astral escalation and the Feywild river, the river cutscene.
 
 ## What was built (2026-11-14)
 
@@ -193,10 +193,10 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 | --- | --- | --- | --- |
 | Flameskulls: weave fast round a fixed haunt, bee-like, never pursue; cannot be scratched; float over lava | `APhlegFlameskull` (PhlegethosCreatures.h) | The lava road (4, where the geysers were), the ascent's ramp (3, where the bombs fell), and 5 out over the lava as the setting's life | **Built** |
 | Fire snakes: the temple snake, only its look changed; on the shores and in the yard | `ATempleSnake` with `bFire` | The hills beside the path (4), the wastes (4), before the gate (3) | **Built** |
-| Lemures: the zombie/skeleton lifecycle, the slowest and most durable | Planned: a shapeless, melting human mass (SDF-built like the beholder) on the temple skeleton's rig and gait, slower, more scratches to put down; some rise up out of the ground as he nears | The hills, the wastes, before the gate | Next |
-| Spined devils: never move; flick burning tail spines across a lane on a staggered beat; scratching one defeats Chuck at once | Planned: a small winged, spined devil perched on a rock beside the way, its spines arcing across it | The gorge's shelf and the wastes | Next |
+| Lemures: the zombie/skeleton lifecycle, the slowest and most durable | `ATempleSkeleton` with `Post.Kind = 1`, body `SK_Lemure` | The hills (3), the wastes (3), before the gate (2); 3 lie in the ash | **Built** |
+| Spined devils: never move; flick burning tail spines across a lane on a staggered beat; scratching one defeats Chuck at once | `APhlegSpinedDevil` (PhlegethosCreatures.h) | On columns in the river beside the gorge's shelf (3), on low columns beside the wastes' path (3) | **Built** |
 | Horned devils: the Chult colossus's gameplay | **Not built** (the user) | | |
-| Pit Fiend: the colossus, wholly avoidable, beyond notice range of the route (the fractured way); the trio's battle at the fortress | Planned: the colossus in the wastes (the T-rex's gameplay: it notices him far off, strides after him, one blow; he must keep out of its sight). Its battle with the trio stays out of scope | The wastes | Next |
+| Pit Fiend: the colossus, wholly avoidable, beyond notice range of the route (the fractured way); the trio's battle at the fortress | `ATempleSkeleton` with `Post.Kind = 2`, body `SK_PitFiend`. Its battle with the trio stays out of scope | Its round through the wastes | **Built** |
 
 **Flameskulls.**
 - The model: the temple skull at 1.2 times real size, embers in its sockets, and flipbook fire that moves with it, so its sparks trail behind. Its own light flickers on its face and on the ground under it.
@@ -212,15 +212,42 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
   - lit by the stage's light, not the temple's torch channel;
   - a burning skin, `M_PhlegFireSnake`: the snake's scale textures as a charred crust with the heat glowing through every gap, running and flickering down its length. Its own light flickers over its middle. Dying, it cools.
 
+**The models (lemures, Pit Fiend, spined devils).** Sculpted as distance fields by `Tools/build_phleg_creatures.py` (Blender 4.5.14, the beholder's `sdf_kit.py`; no downloads), imported by `Tools/import_phleg_creatures.py` into `/Game/Art/Phlegethos/Creatures`.
+- The lemure and the Pit Fiend are skinned to the temple skeleton's own rig (the script rebuilds it, unchanged), so the skeleton's CMU motion-capture clips drive them. Each primitive belongs to a bone; a vertex is weighted to the bones of the primitives nearest it.
+- Colour: vertex colour (the albedo with its occlusion baked in; alpha the glow) and a tiling detail normal, in one material, `M_PhlegCreature`. Unreal stores the vertex colours gamma-encoded, so each instance raises them to the power 2.2.
+- Review renders of each model: `Local/creatures/` (not in Git).
+
+**Lemures.**
+- A melting mass of flesh in a man's shape: hunched, the head run down into the shoulders, the face like wax with two ember eye pits and drips at the chin, flesh running down the body in sags and rolls, drips hanging from the belly, back and arms, the deepest folds glowing with the heat inside.
+- The skeleton's whole lifecycle at 0.93 times its size: it stands guard or lies in the ash and gets up when he is near; it shambles after him at 50 cm/s (below his walk; 2D: 15 to the skeleton's 25); kicks and swats (never picks him up), a longer pause between blows. Seventeen scratches put it down (2D: 10 to the skeleton's 6); it collapses and melts into a puddle where it lies.
+- Wet groans (the zombie's sounds, lower); its feet are silent. Each keeps to its own patch beside the path.
+
+**Spined devils.**
+- A small devil (56 cm crouched) like a gargoyle on a basalt column: bat ears, swept horns, a fanged snout, embers for eyes, spines all over its back and arms, small bat wings, a long spined tail ending in a tuft of smouldering spines.
+- Every 2 s (staggered, 2D's beat) its tail winds back and whips over its shoulder, and a burning spine (flipbook fire) flies across the lane at 9.5 m/s at his chest height. A spine that meets him burns a Sanity point and shoves him on along its flight; the rest strike the stone and burn out. Its wings beat as it throws; its head follows him.
+- Brushing against it costs a point; scratching it costs all of them (2D: melee is fatal).
+- On the gorge's shelf the spines fly from the river across the shelf at the cliff: wait for the beat, or wall run past. In the wastes they cross the path.
+
+**The Pit Fiend.**
+- Modelled after the user's goal image (`References/Phlegethos/pit-fiend-goal.jpg`, 2026-11-16): a winged devil 4.2 m tall (2.4 times the rig), its horns rising another metre. Smooth crimson hide over heavy muscle, dark blotches on the shoulders; long horns from the crown sweeping out, then up and in; a snarling fanged muzzle on the rig's jaw bone, burning eyes; charcoal armour (a collar, layered spiked pauldrons, spiked bracers, a belt hung with three skulls, plates down the front and outside of each thigh, knee guards with a spike, greaves, armoured clawed feet); great bat wings half raised; spines down its back; a long tail curling round on the ground beside it.
+- A spiked, flanged mace in its right fist, part of the skinned mesh (weighted wholly to the right hand, so it swings with the walk and the swats). Moving flipbook fire rises from the head's crown, with a flickering light above it. The build script gives the head's position as an affine combination of four joints (`creatures.json` "mace_head"), which the game turns into the right hand's bone space from its own reference pose (no socket, whatever the import's axes and units).
+- The mace's iron has no glow of its own: at every vertex-alpha glow tried (down to .015 of the eyes' 30) Phlegethos's dark exposure burned it out pale.
+- It walks a slow round through the wastes (95 cm/s), crossing the path twice and keeping to the valley's floor (never in the lava hollows or up on the ridges). It notices him 22 m away in front of it, or 8 m all round; it roars (the T-rex's roar, lower), stands a moment, then strides after him at 170 cm/s (faster than his walk, slower than his run). One kick or swat that meets him takes all his sanity; a roll still dodges it. It cannot be scratched (a dull thud). It gives him up at the edge of its ground or when it has lost sight of him for 4 s, and goes back to its round.
+
 **Tests.**
-- Two new trials, `skulls` and `fire_snakes`, making 17. Verify-Package expects `passed=17`.
+- Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20. Verify-Package expects `passed=20`.
 - `skulls`: he stands in a road skull's lane. It burns him (2 burns), throws him back along the spine and does not kill him.
 - `fire_snakes`: a hills snake sees him, comes and strikes; one scratch kills it.
+- `lemures`: a hills lemure sees him, comes and strikes; he scratches it seventeen times (his sanity held up); it falls and melts.
+- `devils`: in the gorge shelf's first lane its spines burn him (2 of 6 thrown); beside a wastes devil's column one scratch takes all his sanity.
+- `fiend`: on the path 20 m before it, it notices him (at 17-20 m), roars, comes, misses one kick and lands the next.
 - The other trials run with the creatures calm (they test the moves, and do not dodge).
 
 ### Known gaps
 
-- Creatures still to build: lemures, spined devils, the Pit Fiend (above).
+- The creatures were tested only by the trials, not played by hand: how hard the devils' lanes and the Pit Fiend's round are is untried.
+- The lemures share the skeleton's motion capture: a stiff, upright walk, not a shamble.
+- The Pit Fiend's wings are rigid (they do not fold or beat); its walk is the skeleton's at 2.4 times the size.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).
 - Toward the goal art:
   - The fortress walls and the plinths are still plain boxes, as are the mesa and the lake's shores.

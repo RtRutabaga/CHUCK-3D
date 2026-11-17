@@ -10,6 +10,7 @@
 #include "ChultTempleRubble.h"
 #include "ShipSetting.h"
 #include "ChultRaptor.h"
+#include "PhlegethosCreatures.h"
 #include "TempleSkeleton.h"
 #include "TempleSnake.h"
 #include "DockSewer.h"
@@ -2137,13 +2138,16 @@ void AChuckCharacter::SlashHit()
         ATempleSkeleton* Skeleton = Entry.Get();
         if (!Skeleton || Skeleton->IsDead()) continue;
         const FVector To = Skeleton->GetActorLocation() - Location;
-        const float Reach = static_cast<float>(To.Size2D()) - ATempleSkeleton::Radius;
-        const float SkeletonFeet = static_cast<float>(Skeleton->GetActorLocation().Z) - ATempleSkeleton::HalfHeight;
+        // (scaled: Phlegethos's lemures and Pit Fiend wear this rig, 2026-11-16)
+        const float Reach = static_cast<float>(To.Size2D()) - Skeleton->RadiusNow();
+        const float SkeletonFeet = static_cast<float>(Skeleton->GetActorLocation().Z) - Skeleton->HalfHeightNow();
         if (Reach > SlashReach || FMath::Abs(SkeletonFeet - Feet) > 45.f) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && Reach > 5.f) continue;
         Skeleton->TakeSlash(Swing);
         ++SlashRatHits;
     }
+    // Phlegethos's spined devils (2026-11-16): a scratch at one is fatal to him.
+    if (PhlegethosScratchDevils(this, Location, Ahead, SlashReach)) ++SlashRatHits;
     // People: a scratch at the shins of anyone in reach. Nothing breaks; they react.
     for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
     {

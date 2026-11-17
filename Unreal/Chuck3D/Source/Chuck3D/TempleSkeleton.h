@@ -13,6 +13,7 @@ class ATempleHero;
 class ATempleSanctumBattle;
 class UStaticMeshComponent;
 class UStaticMesh;
+class UPointLightComponent;
 
 /**
  * The temple skeletons (user 2026-10-21: "create the skeleton enemies in temple,
@@ -145,6 +146,32 @@ public:
     static constexpr float ThrowUp = 400.f;         // and up
     static constexpr int32 SwatDamage = 1;
 
+    // ---- Phlegethos (2026-11-16; docs/regions/PHLEGETHOS.md#creatures): the same rig, clips and lifecycle wearing other
+    // bodies. A lemure (2D: the undead's behaviour, slowest and most durable): a melting mass of flesh a little smaller
+    // than a man, slower than his walk, seventeen scratches to put down; it melts where it falls. The Pit Fiend (2D: the
+    // colossus, wholly avoidable): 2.4 times a man (4.2 m), it walks a round through the wastes, notices him far off in
+    // front of it, roars and strides after him (slower than his run, faster than his walk), and one blow kills him; it
+    // cannot be scratched, and it gives him up at the edge of its ground.
+    bool IsLemure() const { return Post.Kind == 1; }
+    bool IsFiend() const { return Post.Kind == 2; }
+    float KindScale() const { return IsFiend() ? FiendScale : IsLemure() ? LemureScale : 1.f; }
+    float HalfHeightNow() const { return HalfHeight * KindScale(); }
+    float RadiusNow() const { return Radius * KindScale(); }
+    int32 GetMaxHealth() const { return IsLemure() ? LemureHealth : Health; }
+    int32 GetNotices() const { return Notices; }
+    float GetMelt() const { return MeltT; }
+    /** The Pit Fiend's mace head, world (zero for the others). */
+    FVector GetMaceHead() const;
+    static constexpr float FiendScale = 2.4f;
+    static constexpr float LemureScale = .93f;
+    static constexpr float LemureSpeed = 50.f;       // (2D: 15 to the skeleton's 25)
+    static constexpr float FiendPatrol = 95.f;
+    static constexpr float FiendChase = 170.f;
+    static constexpr float FiendNotice = 2200.f;
+    static constexpr float FiendClose = 800.f;
+    static constexpr int32 LemureHealth = 17;        // (2D: 10 scratches to the skeleton's 6)
+    static constexpr int32 FiendBlow = 5;            // all of him
+
     static const TArray<TWeakObjectPtr<ATempleSkeleton>>& All();
     static ATempleSkeleton* SpawnAt(UWorld* World, const FTempleSkeletonPost& Post);
 protected:
@@ -159,6 +186,22 @@ private:
     UPROPERTY() TArray<USoundBase*> HitSounds;
     UPROPERTY() TArray<USoundBase*> CollapseSounds;
     UPROPERTY() TArray<USoundBase*> RiseSounds;
+    UPROPERTY() TArray<USoundBase*> RoarSounds;
+    int32 RouteAt = 0, Notices = 0;
+    float MeltT = 0.f, PitchScale = 1.f;
+    bool bRoaring = false;
+    // The Pit Fiend's mace (2026-11-16, the user's goal image): its head's point in the right hand's bone space, the fire
+    // on it and its light.
+    UPROPERTY() TObjectPtr<UPointLightComponent> MaceLight;
+    int32 MaceFlame = INDEX_NONE, MaceBone = INDEX_NONE;
+    FVector MaceLocal = FVector::ZeroVector;
+    void TickMace();
+    FVector FrameOf(const FVector& World) const;
+    FVector WorldOf(const FVector& Frame) const;
+    float ChaseSpeedNow() const { return IsFiend() ? FiendChase : IsLemure() ? LemureSpeed : ChaseSpeed; }
+    float ReturnSpeedNow() const { return IsFiend() ? FiendPatrol * 1.2f : IsLemure() ? LemureSpeed * .9f : ReturnSpeed; }
+    float NoticeNow() const { return IsFiend() ? FiendNotice : NoticeRange; }
+    float CloseNow() const { return IsFiend() ? FiendClose : CloseNotice; }
     FTempleSkeletonPost Post;
     FSkeletonAnimator Animator;
     FVector BodyForward = FVector::ForwardVector;   // the mesh's facing in component space

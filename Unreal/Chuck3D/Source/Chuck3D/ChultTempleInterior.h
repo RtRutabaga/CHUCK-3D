@@ -65,6 +65,10 @@ struct FTempleSkeletonPost
     bool bDormant = false;                // lying among the bones until he comes near
     FBox2D Leash = FBox2D(ForceInit);
     const TCHAR* Space = TEXT("");
+    // Phlegethos (2026-11-16, PhlegethosCreatures.cpp): 1 a lemure, 2 the Pit Fiend, on this rig and its clips (0: a temple
+    // skeleton). Not 0: Leash is in the stage's frame (PhlegLocal), and the sounds are its own.
+    uint8 Kind = 0;
+    TArray<FVector> Route;                // the Pit Fiend's patrol (world), walked round and round
 };
 void ChultTempleSkeletonPosts(TArray<FTempleSkeletonPost>& Out);
 // The snake chamber's twenty snakes (October 21; docs/CHULT-TEMPLE-SNAKES.md): each lies coiled at its
