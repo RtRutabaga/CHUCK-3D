@@ -186,8 +186,15 @@ class Body:
             return max(band, tail)
         if piece == 'trousers':
             if b in self.LEGS | self.TORSO:   # waistband to the boots, tucked in
-                return min(self.waist_z + .01 - c.z, c.z - (self.boot_top() - .07))
+                # (`hem`: down to that far over the ankle instead, over low shoes: the businessman's suit, 2026-11-17)
+                return min(self.waist_z + .01 - c.z, c.z - (self.ankle.z + opts['hem'] if 'hem' in opts else self.boot_top() - .07))
             return OUT
+        if piece == 'tie':   # a necktie (the businessman, 2026-11-17): from the knot under the collar down the shirt front to the belt
+            if b not in self.TORSO and b != self.NECK: return OUT
+            top, end = self.neck.z + .005, self.waist_z + .015
+            u = clamp((top - c.z) / max(1e-3, top - end))
+            half = .017 + .022 * min(1., u * 4.) - .012 * clamp((u - .93) / .07)   # the knot narrow, the blade widening, its point
+            return min(half - abs(c.x), top - c.z, c.z - end, -c.y - .01)
         if piece == 'boots':   # the shaft; boot_feet makes the feet
             if b not in self.FEET and b not in self.LEGS: return OUT
             return min(self.boot_top(opts) - c.z, c.z - (self.ankle.z + .045))
@@ -341,6 +348,7 @@ PIECES = {
     'cuff':     dict(offset=.01, thickness=.006, hides=False),
     'coatskirt': dict(offset=.03, thickness=.007, hides=False),   # cut from the skirt helper, over the breeches
     'bootstrap': dict(offset=.02, thickness=.004, hides=False),
+    'tie':      dict(offset=.011, thickness=.004, hides=False),   # over the shirt, under the coat
 }
 
 

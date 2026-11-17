@@ -7,6 +7,7 @@
 #include "ChultTempleInterior.h"
 #include "TempleSnake.h"
 #include "TempleSkeleton.h"
+#include "DockNPC.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -301,6 +302,20 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
     }
     // The trio's battle at the fortress (FortressBattle.cpp, 2026-11-16): streamed in as he crosses the wastes.
     ATempleSanctumBattle::SpawnFortress(World);
+    // The bus stop's commuter (2026-11-17; PhlegethosBusStop.inl): on the pavement by the kerb, looking up the road for
+    // his bus; the city's response to the rat (the 2D game's city.json "businessman"). No umbrella (the user).
+    {
+        FVector2D C, T, Nn; BusStopFrame(C, T, Nn);
+        const FVector2D At = C + T * 70.f + Nn * 585.f;
+        const FVector2D Look = (-T * .55f - Nn * .85f).GetSafeNormal();
+        if (ADockNPC* Man = ADockNPC::SpawnHuman(World, EDockHuman::Businessman, PhlegWorld(FVector(At.X, At.Y, GroundAt(World, At.X, At.Y))), FMath::RadiansToDegrees(FMath::Atan2(Look.Y, Look.X))))
+        {
+            Man->DisplayName = TEXT("Businessman");
+            Man->Lines = {TEXT("Ah! A rat!")};
+            Man->Tags.Add(TEXT("PhlegBusinessman"));
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BUSINESSMAN at=%s"), *PhlegLocal(Man->GetActorLocation()).ToString());
+        }
+    }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_CREATURES skulls=%d harmful=%d fire_snakes=%d lemures=%d devils=%d fiend=%d"), PhlegethosFlameskullCount(false),
         PhlegethosFlameskullCount(true), SnakesPlaced, LemuresPlaced, DevilsPlaced, PhlegethosPitFiend() != nullptr);
 }

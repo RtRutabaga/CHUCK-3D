@@ -84,7 +84,8 @@ namespace
         TEXT("/Game/Characters/Humans/PirateConcertina/SK_PirateConcertina.SK_PirateConcertina"), TEXT("/Game/Characters/Humans/PirateCheering/SK_PirateCheering.SK_PirateCheering"),
         TEXT("/Game/Characters/Humans/PirateDancer/SK_PirateDancer.SK_PirateDancer"), TEXT("/Game/Characters/Humans/PirateFencerA/SK_PirateFencerA.SK_PirateFencerA"),
         TEXT("/Game/Characters/Humans/PirateFencerB/SK_PirateFencerB.SK_PirateFencerB"), TEXT("/Game/Characters/Humans/Jeffries/SK_Jeffries.SK_Jeffries"),
-        TEXT("/Game/Characters/Humans/PirateCaptain/SK_PirateCaptain.SK_PirateCaptain") };
+        TEXT("/Game/Characters/Humans/PirateCaptain/SK_PirateCaptain.SK_PirateCaptain"),
+        TEXT("/Game/Characters/Humans/Businessman/SK_Businessman.SK_Businessman") };
     static_assert(UE_ARRAY_COUNT(MeshPaths) == static_cast<int32>(EDockHuman::Count), "a mesh path for every human");
     // The sailor's pipe (component space: his feet, X forward, Y right). His
     // mouth on the model (SourceAssets/NPCs/Humans/manifest.json Sailor
@@ -1046,7 +1047,7 @@ void ADockNPC::BeginPlay()
     NPCRegistry.Add(this);
     Phase = FMath::FRandRange(0.f, 30.f);
     NextGlance = FMath::FRandRange(1.f, 3.f);
-    if (!HumanMeshes[static_cast<int32>(Kind)] && IsPirate())   // the crew are loaded when they're spawned
+    if (!HumanMeshes[static_cast<int32>(Kind)] && Kind >= EDockHuman::PirateChef)   // the crew (and later NPCs) are loaded when they're spawned
         HumanMeshes[static_cast<int32>(Kind)] = LoadObject<USkeletalMesh>(nullptr, MeshPaths[static_cast<int32>(Kind)]);
     if (USkeletalMesh* Mesh = HumanMeshes[static_cast<int32>(Kind)]) Body->SetSkinnedAssetAndUpdate(Mesh);
     ChuckGroom::Attach(this, Body, Grooms);   // strand hair and beards, where the NPC has them
@@ -1105,7 +1106,7 @@ void ADockNPC::BeginPlay()
     // The idle this person plays: the guard keeps looking about; the worker
     // and the market woman stand with weight on one leg, a hand to the hip
     // now and then (each from its own random point in the clip).
-    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard || Kind == EDockHuman::Dwarf || IsSeated()) ? ClipStandLook : ClipStandHip;
+    IdleClip = (Kind == EDockHuman::Guard || Kind == EDockHuman::GuardWoman || Kind == EDockHuman::SideGuard || Kind == EDockHuman::Dwarf || Kind == EDockHuman::Businessman || IsSeated()) ? ClipStandLook : ClipStandHip;   // (the commuter looks about for his bus)
     bool bClips = !BoneIndex.Contains(INDEX_NONE);
     for (const auto& Clip : Clips) bClips &= Clip && Clip->GetSkeleton();
     if (bClips)

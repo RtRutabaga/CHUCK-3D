@@ -11,6 +11,8 @@
 #include "TempleSkeleton.h"
 #include "TempleSanctumBattle.h"
 #include "TempleHero.h"
+#include "PhlegethosBleed.h"
+#include "DockNPC.h"
 #include "Components/CapsuleComponent.h"
 #include "ChultTempleInterior.h"
 #include "ChuckCharacter.h"
@@ -33,8 +35,8 @@ namespace
 {
     constexpr float Stand = 34.65f;
     // (FiendShow, after Count, only by name: -ChuckPhlegethosTest=fiend_show, the Pit Fiend's moves filmed whole for review)
-    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Trio, Count, FiendShow };
-    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate"), TEXT("trio"), TEXT("-"), TEXT("fiend_show")};
+    enum class ET : uint8 { Stills, Hills, RoadHops, RoadLeap, Skulls, FireSnakes, Lemures, Devils, Fiend, LakeHops, LakeSlabs, GorgeWall, GorgeDrop, Chains, Ramp, Steps, Chimney, Leap, Approach, Gate, Trio, BusStop, Bleed, Count, FiendShow };
+    const TCHAR* Names[] = {TEXT("stills"), TEXT("hills"), TEXT("road_hops"), TEXT("road_leap"), TEXT("skulls"), TEXT("fire_snakes"), TEXT("lemures"), TEXT("devils"), TEXT("fiend"), TEXT("lake_hops"), TEXT("lake_slabs"), TEXT("gorge_wall"), TEXT("gorge_drop"), TEXT("chains"), TEXT("ramp"), TEXT("steps"), TEXT("chimney"), TEXT("leap"), TEXT("approach"), TEXT("gate"), TEXT("trio"), TEXT("bus_stop"), TEXT("bleed"), TEXT("-"), TEXT("fiend_show")};
     // The spine's centre line at X (the segment it is on).
     float SpineMid(float X) { for (const FSeg& S : Spine) if (X >= S.X0 - 60 && X <= S.X1 + 60) return FMath::Lerp(S.Y0, S.Y1, FMath::SmoothStep(0.f, 1.f, (X - S.X0) / (S.X1 - S.X0))); return 0.f; }
 }
@@ -97,7 +99,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         auto Push = [&](const FVector& D) { const FVector N = D.GetSafeNormal2D(); Chuck->SetTestStickWorld(N); if (!Chuck->IsWallSideRunning()) Chuck->AddMovementInput(N, 1.f, true); };
         auto Toward = [&](float X, float Y) { Push(FVector(X - P.X, Y - P.Y, 0)); };
         auto Stop = [&]() { Chuck->SetTestStick(FVector2D::ZeroVector); };
-        auto Shot = [&](const FString& Name) { if (Run->Shots < 60) { ++Run->Shots; FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Phlegethos") / (Name + TEXT(".png")), true, false); } };
+        auto Shot = [&](const FString& Name) { if (Run->Shots < 90) { ++Run->Shots; FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("Phlegethos") / (Name + TEXT(".png")), true, false); } };
         auto Place = [&](float X, float Y, float Z, float Yaw)
         {
             Chuck->ResetAtLocation(PhlegWorld(FVector(X, Y, Z + Stand)));
@@ -125,11 +127,13 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         if (!Run->bPlaced) { Run->bPlaced = true; Run->TrialStart = Now; Run->At = Now; Run->Sub = -1; }
         // (The flameskulls burn only in their own trial: the traversal trials are of the moves, and do not dodge.)
-        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend) && Run->Trial != int32(ET::FiendShow) && Run->Trial != int32(ET::Trio);
+        APhlegFlameskull::bCalm = Run->Trial != int32(ET::Skulls) && Run->Trial != int32(ET::FireSnakes) && Run->Trial != int32(ET::Lemures) && Run->Trial != int32(ET::Devils) && Run->Trial != int32(ET::Fiend) && Run->Trial != int32(ET::FiendShow) && Run->Trial != int32(ET::Trio) && Run->Trial != int32(ET::Bleed);
+        // (The Feywild bleedthrough: its own trial; the trio's watches the battle undisturbed. 2026-11-17)
+        APhlegBleed::bHold = Run->Trial != int32(ET::Bleed);
         // A death ends any trial but the stills.
-        if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
+        if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Trial != int32(ET::BusStop) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
         // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
-        const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills) || Run->Trial == int32(ET::Trio);
+        const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills) || Run->Trial == int32(ET::Trio) || Run->Trial == int32(ET::Bleed);
         if (Now - Run->TrialStart > (bLong ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
         switch (ET(Run->Trial))
         {
@@ -617,7 +621,15 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             // (2026-11-16) The wastes: from the landing along the winding path to the forecourt at a run, never off it.
             if (Run->Sub == -1) { Place(25600, 0, FortressTop, 0); Run->Sub = 0; Run->Hop = 0; Chuck->SetRunHeld(true); break; }
             const float Look = P.X + 380;
-            Toward(Look, ApproachPathY(Look));
+            // (2026-11-17: round the bus stop's small ruptures on the path, the far side from where each sits off it)
+            float Aside = 0.f;
+            for (int32 Ri = 0; Ri < RiftCount; ++Ri)
+            {
+                const FVector2D Rc = RiftCentre(Ri);
+                const float Off = static_cast<float>(Rc.Y) - ApproachPathY(static_cast<float>(Rc.X));
+                if (FMath::Abs(Off) < 300.f && P.X > Rc.X - 520.f && P.X < Rc.X + 200.f) Aside = (Off >= 0.f ? -1.f : 1.f) * (Rifts[Ri].R * 1.4f + 75.f - FMath::Abs(Off));
+            }
+            Toward(Look, ApproachPathY(Look) + Aside);
             if (T > .3f) Run->Hop = FMath::Max(Run->Hop, FMath::RoundToInt(FMath::Abs(P.Y - ApproachPathY(P.X))));
             for (int32 K = 0; K < 3; ++K) if (Run->Sub == K && P.X > FortressX + 3500 + K * 4500) { Shot(FString::Printf(TEXT("Wastes_%d"), K)); ++Run->Sub; }
             if (Ground && P.X > ForecourtX + 300) Next(Run->Hop < 300, FString::Printf(TEXT("worst_off_path_cm=%d"), Run->Hop));
@@ -690,6 +702,151 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 *Run->Note, B->GetFiendArrows(), B->GetFiendBolts(), B->GetFiendCuts(), F ? F->GetSmashes() : 0, F ? F->GetHurls() : 0, B->GetFireBursts(), B->GetFireHeroHits(),
                 B->GetFireDodges(), B->GetSmashDodges(), B->GetFallen(), F ? F->GetFortRoars() : 0, F ? F->GetHeroBlowsTaken() : 0, InBreach,
                 B->GetHero(0) ? B->GetHero(0)->GetHitsTaken() : -1, B->GetHero(1) ? B->GetHero(1)->GetHitsTaken() : -1, B->GetHero(2) ? B->GetHero(2)->GetHitsTaken() : -1));
+            break;
+        }
+        case ET::BusStop:
+        {
+            // (2026-11-17) The bus stop in the wastes: the fragment and its commuter from the path; he walks up to him (who
+            // turns his head to the rat), then on into the small rupture on the path past the stop: an Astral death.
+            ADockNPC* Man = nullptr;
+            for (const TWeakObjectPtr<ADockNPC>& Np : ADockNPC::All()) if (Np.IsValid() && Np->Tags.Contains(TEXT("PhlegBusinessman"))) Man = Np.Get();
+            FVector2D C, Tt, Nn; BusStopFrame(C, Tt, Nn);
+            if (Run->Sub == -1)
+            {
+                const FVector2D S = C - Tt * 620.f;
+                Place(static_cast<float>(S.X), static_cast<float>(S.Y), ApproachGround(static_cast<float>(S.X), static_cast<float>(S.Y)), FMath::RadiansToDegrees(FMath::Atan2(Tt.Y + Nn.Y * .5f, Tt.X + Nn.X * .5f)));
+                Chuck->SetOrbitPitch(-6); Run->Sub = 0; break;
+            }
+            if (!Man) { Next(false, TEXT("no_businessman=1")); break; }
+            if (Run->Sub == 0 && T > 2.f) { Shot(TEXT("BusStop_Path")); Chuck->SetOrbitPitch(-32); Run->Sub = 1; }
+            else if (Run->Sub == 1 && T > 3.4f) { Shot(TEXT("BusStop_High")); Chuck->SetOrbitPitch(-4); Run->Sub = 2; Run->At = Now; }
+            else if (Run->Sub == 2)
+            {
+                const FVector2D Goal = C + Tt * 90.f + Nn * 440.f;   // on the road below him by the kerb
+                Toward(static_cast<float>(Goal.X), static_cast<float>(Goal.Y));
+                if (FVector2D::Distance(FVector2D(P.X, P.Y), Goal) < 50.f || T > 14.f) { Stop(); Run->Sub = 3; Run->At = Now; }
+            }
+            else if (Run->Sub == 3 && T > 1.6f)
+            {
+                Chuck->SetActorRotation(FRotator(0, (Man->GetActorLocation() - Chuck->GetActorLocation()).Rotation().Yaw - 25.f, 0)); Chuck->Recenter(); Chuck->SetOrbitPitch(2);
+                Run->Note += FString::Printf(TEXT("watching=%d mocap=%d talk=%d "), Man->IsWatchingChuck() ? 1 : 0, Man->HasMocap() ? 1 : 0, Man->CanTalk() ? 1 : 0);
+                Run->Sub = 4; Run->At = Now;
+            }
+            else if (Run->Sub == 4 && T > 1.2f) { Shot(TEXT("BusStop_Businessman")); Run->Sub = 5; Run->At = Now; }
+            else if (Run->Sub == 5)
+            {
+                // Into the rupture on the path beyond the stop.
+                const FVector2D Rc = RiftCentre(2);
+                Toward(static_cast<float>(Rc.X), static_cast<float>(Rc.Y));
+                if (T > 1.f && !Run->Note.Contains(TEXT("ruptureshot"))) { Shot(TEXT("BusStop_Rupture")); Run->Note += TEXT("ruptureshot "); }
+                if (Deaths > 0) { Stop(); Run->Note += TEXT("rupture_death=1 "); Run->Sub = 6; Run->At = Now; }
+                else if (T > 18.f) Next(false, Run->Note + TEXT("no_rupture_death=1"));
+            }
+            else if (Run->Sub == 6 && T > 4.f)
+            {
+                const bool bPass = Run->Note.Contains(TEXT("watching=1")) && Run->Note.Contains(TEXT("mocap=1")) && Run->Note.Contains(TEXT("talk=1")) && Deaths == 1 && !Chuck->IsAstral();
+                Next(bPass, Run->Note);
+            }
+            break;
+        }
+        case ET::Bleed:
+        {
+            // (2026-11-17) The Feywild bleedthrough: on the island after the trio's entrance, standing on the river's columns
+            // while the moat and the waves fall (they never fall there); onto a whole slab before the river comes; in the
+            // collapse, his slab cracks under him and he goes into the river: swept down it into the far tear, and back at
+            // the forecourt's checkpoint with it all re-armed.
+            ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(World);
+            APhlegBleed* Bl = APhlegBleed::Get(World);
+            if (!B || !Bl) { Next(false, TEXT("no_bleed=1")); break; }
+            if (Run->Sub == -1) { Place(IslandX0 + 300, 300, FortressTop, 0); Run->Sub = 0; break; }
+            const float Rx = RiverX0 + 110.f;
+            const float Cl = Bl->GetClock();
+            auto Face = [&](float Yaw, float Pitch) { Chuck->SetActorRotation(FRotator(0, Yaw, 0)); Chuck->Recenter(); Chuck->SetOrbitPitch(Pitch); };
+            auto Once = [&](const FString& Tag) { if (Run->Note.Contains(Tag + TEXT(" "))) return false; Run->Note += Tag + TEXT(" "); return true; };
+            if (Run->Sub == 0)
+            {
+                if (!B->IsReady() || !B->GetFiend()) { if (T > 40.f) Next(false, TEXT("not_ready=1")); break; }
+                if (!B->HasFortressSceneRun()) { Toward(RiverX1 + 70.f, 300.f); if (B->IsFortressScenePlaying()) { Stop(); B->SkipFortressScene(); } else if (T > 30.f) Next(false, TEXT("no_scene=1")); break; }
+                if (B->IsFortressScenePlaying()) break;
+                Run->Sub = 1; Run->At = Now; Run->Chains0 = Bl->GetStarts();
+                break;
+            }
+            if (Run->Sub == 1)
+            {
+                // Onto the river's columns (they never fall in the waves).
+                if (FMath::Abs(P.X - Rx) > 30.f || FMath::Abs(P.Y - 300.f) > 40.f) Toward(Rx, 300.f); else Stop();
+                if (Bl->GetStarts() > Run->Chains0) { Run->Sub = 2; Run->At = Now; }
+                else if (T > 12.f) Next(false, TEXT("no_start=1"));
+                break;
+            }
+            if (Run->Sub == 2)
+            {
+                if (FMath::Abs(P.X - Rx) > 30.f || FMath::Abs(P.Y - 300.f) > 40.f) Toward(Rx, 300.f); else Stop();
+                if (Cl > 1.6f && Once(TEXT("faceback"))) Face(180.f, -10.f);
+                if (Cl > 2.6f && Once(TEXT("moatshot"))) Shot(TEXT("Bleed_Moat_Back"));
+                if (Cl > 4.f && Once(TEXT("facefront"))) Face(0.f, -6.f);
+                if (Cl > 4.8f && Once(TEXT("frontshot"))) Shot(TEXT("Bleed_Moat_Front"));
+                if (Cl > 5.6f && Once(TEXT("moat")))
+                    Run->Note += FString::Printf(TEXT("moat=%d/%d/%d "), Bl->GetFallen(APhlegBleed::EZone::MoatBack), Bl->GetFallen(APhlegBleed::EZone::MoatSide), Bl->GetFallen(APhlegBleed::EZone::MoatFront));
+                if (Cl > 7.f && Once(TEXT("faceneg"))) Face(-90.f, -14.f);
+                if (Cl > APhlegBleed::Wave1At + 2.5f && Once(TEXT("w1shot"))) Shot(TEXT("Bleed_Wave1"));
+                if (Cl > APhlegBleed::Wave2At - 1.f && Once(TEXT("facepos"))) Face(90.f, -14.f);
+                if (Cl > APhlegBleed::Wave2At + 2.5f && Once(TEXT("w2shot"))) Shot(TEXT("Bleed_Wave2"));
+                if (Cl > APhlegBleed::Wave3At + 2.f && Once(TEXT("w3shot"))) Shot(TEXT("Bleed_Wave3"));
+                if (Cl > APhlegBleed::RiverAt - 2.f)
+                {
+                    Run->Note += FString::Printf(TEXT("land_fallen=%d "), Bl->GetFallen(APhlegBleed::EZone::Land));
+                    FVector W;
+                    if (!Bl->FindWhole(3, 300.f, W)) { Next(false, Run->Note + TEXT("no_whole_slab=1")); break; }
+                    Run->Note += FString::Printf(TEXT("refuge=%.0f "), W.Y);
+                    Run->Sub = 3; Run->At = Now; Run->Hop = FMath::RoundToInt(W.Y);
+                }
+                break;
+            }
+            if (Run->Sub == 3)
+            {
+                const float Wx = IslandX0 + FieldColW * 1.5f, Wy = static_cast<float>(Run->Hop);
+                if (FMath::Abs(P.X - Wx) > 30.f || FMath::Abs(P.Y - Wy) > 40.f) Toward(Wx, Wy); else Stop();
+                if (Cl > APhlegBleed::RiverAt + 1.6f && Once(TEXT("faceriver"))) Face(70.f, -8.f);
+                if (Cl > APhlegBleed::RiverAt + 2.2f && Once(TEXT("rivershot0"))) Shot(TEXT("Bleed_River_Open"));
+                if (Cl > APhlegBleed::RiverAt + 4.5f && Once(TEXT("faceriver2"))) Face(-60.f, -10.f);
+                if (Cl > APhlegBleed::RiverAt + 5.5f && Once(TEXT("rivershot1"))) Shot(TEXT("Bleed_River"));
+                if (Cl > APhlegBleed::CollapseAt - 1.f && Once(TEXT("facecollapse"))) Face(160.f, -16.f);
+                if (Cl > APhlegBleed::CollapseAt + .3f)
+                {
+                    const int32 Under = Bl->SlabStateAt(P.X, P.Y);
+                    Run->Note += FString::Printf(TEXT("collapse_under=%d front=%.0f "), Under, Bl->GetRiverFront());
+                    Shot(TEXT("Bleed_Collapse"));
+                    Run->Sub = 4; Run->At = Now;
+                }
+                break;
+            }
+            if (Run->Sub == 4)
+            {
+                // Into the water.
+                Toward(Rx + 80.f, P.Y);
+                if (Bl->GetStage() == APhlegBleed::EStage::Swept) { Run->Sub = 5; Run->At = Now; Run->Note += FString::Printf(TEXT("swept_after=%.2f "), T); }
+                else if (T > 6.f) Next(false, Run->Note + TEXT("not_swept=1"));
+                break;
+            }
+            if (Run->Sub == 5)
+            {
+                Stop();
+                for (int32 K = 0; K < 3; ++K) if (T > .7f + K * 1.1f && Once(FString::Printf(TEXT("sweptshot%d"), K))) Shot(FString::Printf(TEXT("Bleed_Swept_%d"), K));
+                if (Bl->GetSweepEnds() > 0) { Run->Sub = 6; Run->At = Now; Run->Note += FString::Printf(TEXT("sweep_s=%.1f "), T); }
+                else if (T > 14.f) Next(false, Run->Note + TEXT("sweep_stuck=1"));
+                break;
+            }
+            if (Run->Sub == 6)
+            {
+                if (Chuck->IsAstral() || !Ground || T < 1.f) { if (T > 10.f) Next(false, Run->Note + TEXT("no_return=1")); break; }
+                Shot(TEXT("Bleed_Returned"));
+                const bool bMoat = Run->Note.Contains(FString::Printf(TEXT("moat=%d/%d/%d"), FieldRows * MoatCols, (FieldCols - 2 * MoatCols) * 2 * MoatRows, FieldRows * MoatCols));
+                int32 LandFallen = 0; { const int32 I = Run->Note.Find(TEXT("land_fallen=")); if (I >= 0) LandFallen = FCString::Atoi(*Run->Note.Mid(I + 12)); }
+                const bool bPass = bMoat && LandFallen >= 15 && Bl->GetSweeps() == 1 && Bl->GetSweepEnds() == 1 && Bl->GetRearms() >= 1 && Deaths == 0
+                    && OnIsland(P.X, P.Y) && Bl->GetMissing() == 0 && Bl->GetSlabCount() == FieldCols * FieldRows;
+                Next(bPass, Run->Note + FString::Printf(TEXT("starts=%d rearms=%d pressed=%d at_return=%s"), Bl->GetStarts(), Bl->GetRearms(), Bl->GetPressedFalls(), *P.ToString()));
+            }
             break;
         }
         default: Next(false, TEXT("unknown=1")); break;

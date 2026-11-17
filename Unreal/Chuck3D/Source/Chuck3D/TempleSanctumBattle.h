@@ -133,6 +133,9 @@ public:
     void SetFortressScene(bool b) { bFortScene = b; }
     void SkipFortressScene();
     int32 GetFortressLinesSpoken() const { return FortSpoken; }
+    /** The entrance scene has played (or is off): the Feywild bleedthrough may start (PhlegethosBleed.cpp, 2026-11-17). */
+    bool HasFortressSceneRun() const { return FortEntrances > 0 || !bFortScene; }
+    bool IsFortressFighting() const { return bActive; }
     static constexpr float FortSceneEnd = 13.4f;
 
     // The heroes' lines (TempleHeroTalk.cpp, user 2026-10-25): their calls when Chuck comes in, then the argument before the Fireball.

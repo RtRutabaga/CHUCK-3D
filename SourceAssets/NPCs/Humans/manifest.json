@@ -4272,6 +4272,159 @@
      }
     }
    }
+  },
+  "Businessman": {
+   "fbx": "Businessman/SK_Businessman.fbx",
+   "height_cm": 182,
+   "tris": 71487,
+   "slots": {
+    "Shirt": {
+     "type": "fabric",
+     "fabric": "rough_linen",
+     "tint": [
+      0.62,
+      0.63,
+      0.64
+     ],
+     "tile_cm": 27.1,
+     "gain": 2.523
+    },
+    "Tie": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.045,
+      0.012,
+      0.016
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Trousers": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.031,
+      0.034
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Boots": {
+     "type": "fabric",
+     "fabric": "brown_leather",
+     "tint": [
+      0.012,
+      0.01,
+      0.009
+     ],
+     "tile_cm": 40.0,
+     "gain": 26.931
+    },
+    "Coat": {
+     "type": "fabric",
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.031,
+      0.034
+     ],
+     "tile_cm": 27.4,
+     "gain": 4.437
+    },
+    "Scalp": {
+     "type": "stubble",
+     "texture": "Textures/scalp_stubble.png",
+     "tint": [
+      0.05,
+      0.036,
+      0.026
+     ]
+    },
+    "Skin": {
+     "type": "skin",
+     "texture": "Textures/young_lightskinned_male_diffuse.png"
+    },
+    "Eye": {
+     "type": "eye",
+     "texture": "Textures/brownlight_eye_soft.png"
+    },
+    "Teeth": {
+     "type": "teeth",
+     "texture": "Textures/teeth.png",
+     "tint": [
+      0.62,
+      0.56,
+      0.47
+     ]
+    },
+    "Tongue": {
+     "type": "teeth",
+     "texture": "Textures/tongue01_diffuse.png",
+     "tint": [
+      0.55,
+      0.4,
+      0.38
+     ]
+    },
+    "Brow": {
+     "type": "hair",
+     "texture": "Textures/eyebrow002.png"
+    },
+    "Lash": {
+     "type": "card",
+     "texture": "Textures/eyelashes01_fine.png",
+     "tint": [
+      0.03,
+      0.03,
+      0.03
+     ]
+    }
+   },
+   "mouth_cm": [
+    16.1,
+    0.0,
+    164.7
+   ],
+   "grooms": {
+    "Hair": {
+     "abc": "Businessman/GR_Businessman_Hair.abc",
+     "bone": "head",
+     "strands": 43053,
+     "colour": [
+      0.045,
+      0.032,
+      0.022
+     ],
+     "root": 0.55,
+     "grey": 0.02,
+     "grey_colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "roughness": 0.5,
+     "specular": 0.3,
+     "roots_cm": {
+      "mean": [
+       2.31,
+       0.56,
+       176.61
+      ],
+      "min": [
+       -5.03,
+       -7.9,
+       165.98
+      ],
+      "max": [
+       14.71,
+       7.95,
+       182.8
+      ]
+     }
+    }
+   }
   }
  },
  "generator": "Tools/build_npc_humans.py",

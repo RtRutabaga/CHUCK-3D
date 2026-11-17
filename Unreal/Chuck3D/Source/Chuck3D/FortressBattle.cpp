@@ -14,6 +14,7 @@
 #include "DockSubtitles.h"
 #include "PhlegethosSetting.h"
 #include "PhlegethosCreatures.h"
+#include "PhlegethosBleed.h"
 #include "TempleBeholder.h"
 #include "TempleHero.h"
 #include "TempleSeal.h"
@@ -37,9 +38,11 @@ namespace
     // The cast's ground (local X, Y): the fiend before the gate right of the processional; the fighter between it and the
     // breach's side; the wizard at the breach; the ranger back on the right with a clear line at the fiend.
     constexpr float FiendX = 43150, FiendY = 1250;
-    const FVector2D HeroAt[3] = {{42580, 930}, {41980, -1020}, {41450, 1800}};   // (the fighter within a few strides of the fiend)
+    // (the fighter within a few strides of the fiend; 2026-11-17: the wizard and the ranger back beyond the Feywild
+    // bleedthrough's slab field, which ends at Phleg::FieldX1, 41970; were at 41980 and 41450)
+    const FVector2D HeroAt[3] = {{42580, 930}, {42180, -950}, {42200, 2000}};
     // The lemures' ground: along the forecourt's edges, off the processional and the cast.
-    const FVector2D LemureAt[] = {{43350, 2600}, {42550, 2750}, {41750, 2700}, {43500, -2350}, {42900, -2650}, {41300, -2600}};
+    const FVector2D LemureAt[] = {{43350, 2600}, {42700, 2750}, {42250, 3150}, {43500, -2350}, {42900, -2650}, {42300, -3100}};   // (2026-11-17: all beyond the slab field)
     constexpr int32 FortWantUp = 2;
     constexpr int32 BallSlots = 2, BurstSlots = 3;
     const FVector Away(0, 0, -1e6);
@@ -69,7 +72,12 @@ bool ATempleSanctumBattle::IsBigFoeFighting() const
 
 bool ATempleSanctumBattle::HoleAt(const FVector& World, float Margin) const
 {
-    if (IsFortress()) { const FVector L = PhlegLocal(World); return Phleg::BreachInside(static_cast<float>(L.X), static_cast<float>(L.Y)) > -Margin; }
+    if (IsFortress())
+    {
+        const FVector L = PhlegLocal(World);
+        if (const APhlegBleed* Bl = APhlegBleed::Get(GetWorld()); Bl && Bl->OpenAt(static_cast<float>(L.X), static_cast<float>(L.Y))) return true;   // (a fallen slab, 2026-11-17)
+        return Phleg::BreachInside(static_cast<float>(L.X), static_cast<float>(L.Y)) > -Margin;
+    }
     const FVector F = ChultTempleInteriorFrameOf(World);
     return ChultTempleSanctumHoleAt(FVector2D(F.X, F.Y), Margin) != 0;
 }

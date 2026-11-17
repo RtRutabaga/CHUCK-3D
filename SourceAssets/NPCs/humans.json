@@ -3483,6 +3483,117 @@
     0.3,
     0.25
    ]
+  },
+  "Businessman": {
+   "height_cm": 182,
+   "note": "Phlegethos's wastes (user 2026-11-17): the 2D fractured way's displaced commuter at his modern city bus shelter, here without the 2D's umbrella. A man in his late thirties in a charcoal business suit, white shirt and dark tie, black shoes. Keeps the city's response to the rat.",
+   "macro": {
+    "gender": 1.0,
+    "age": 0.55,
+    "muscle": 0.5,
+    "weight": 0.52,
+    "height": 0.72,
+    "proportions": 0.6,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+     "african": 0.03,
+     "asian": 0.05,
+     "caucasian": 0.92
+    }
+   },
+   "skin": "young_caucasian_male",
+   "eyes": "brownlight",
+   "eyebrows": "eyebrow002",
+   "eyelashes": "eyelashes01",
+   "hair": null,
+   "scalp": {
+    "tint": [
+     0.05,
+     0.036,
+     0.026
+    ],
+    "fade": 0.02
+   },
+   "outfit": [
+    {
+     "piece": "shirt",
+     "collar": -0.004,
+     "fabric": "rough_linen",
+     "tint": [
+      0.62,
+      0.63,
+      0.64
+     ]
+    },
+    {
+     "piece": "tie",
+     "fabric": "caban",
+     "tint": [
+      0.045,
+      0.012,
+      0.016
+     ]
+    },
+    {
+     "piece": "trousers",
+     "hem": 0.025,
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.031,
+      0.034
+     ]
+    },
+    {
+     "piece": "boots",
+     "height": 0.065,
+     "fabric": "brown_leather",
+     "tint": [
+      0.012,
+      0.01,
+      0.009
+     ]
+    },
+    {
+     "piece": "coat",
+     "sleeve": 0.96,
+     "bottom": 0.2,
+     "open": 0.006,
+     "lapel": 0.42,
+     "fabric": "caban",
+     "tint": [
+      0.03,
+      0.031,
+      0.034
+     ]
+    }
+   ],
+   "face": true,
+   "groom": [
+    {
+     "style": "basic_short_hair",
+     "group": "Hair",
+     "points": 8,
+     "set": {
+      "Duplicate Hair Curves/Amount": 340,
+      "Set Hair Curve Profile/Length": 0.55
+     },
+     "colour": [
+      0.045,
+      0.032,
+      0.022
+     ],
+     "root": 0.55,
+     "grey": 0.02,
+     "grey_colour": [
+      0.3,
+      0.29,
+      0.27
+     ],
+     "specular": 0.3
+    }
+   ]
   }
  }
 }

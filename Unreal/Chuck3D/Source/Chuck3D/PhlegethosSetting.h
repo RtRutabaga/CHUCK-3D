@@ -80,6 +80,39 @@ namespace Phleg
     float BreachRadius(float Angle);
     /** How far a point (local X, Y) is inside the breach's outline (< 0 outside). */
     float BreachInside(float X, float Y);
+    // The Feywild bleedthrough (2026-11-17; PhlegethosBleed.h, docs/regions/PHLEGETHOS.md#the-feywild-bleedthrough): the
+    // front of the forecourt is a field of basalt slabs over the Astral, its edges on the wastes' ground grid. When the
+    // trio's scene ends a moat of them falls away round an island (behind him, in front toward the battle, at both
+    // sides), then the island's slabs fall in waves; a Feywild river crosses the island along Y over its two middle
+    // columns, and in the end it is the only way out.
+    constexpr float FieldX0 = 39690, FieldX1 = 41970, FieldY0 = -2960, FieldY1 = 3040;
+    constexpr int32 FieldCols = 10, FieldRows = 24;
+    constexpr float FieldColW = (FieldX1 - FieldX0) / FieldCols, FieldRowW = (FieldY1 - FieldY0) / FieldRows;
+    constexpr int32 MoatCols = 2, MoatRows = 2;   // the moat: two columns at each end, two rows at each side
+    constexpr int32 RiverCol0 = 4, RiverCol1 = 5;  // the river's two columns
+    constexpr float RiverX0 = FieldX0 + RiverCol0 * FieldColW, RiverX1 = FieldX0 + (RiverCol1 + 1) * FieldColW;
+    constexpr float IslandX0 = FieldX0 + MoatCols * FieldColW, IslandX1 = FieldX1 - MoatCols * FieldColW;
+    constexpr float IslandY0 = FieldY0 + MoatRows * FieldRowW, IslandY1 = FieldY1 - MoatRows * FieldRowW;
+    constexpr float VoidZ = FortressTop - 650;     // the Astral's floor under the slabs
+    inline bool InSlabField(float X, float Y) { return X > FieldX0 && X < FieldX1 && Y > FieldY0 && Y < FieldY1; }
+    inline bool OnIsland(float X, float Y) { return X > IslandX0 && X < IslandX1 && Y > IslandY0 && Y < IslandY1; }
+    // The bus stop (2026-11-17, the user: the 2D fractured way's modern city bus stop, its businessman without the
+    // umbrella, and small Astral ruptures): a fragment of a city street fallen into the wastes beside the path, laid
+    // along it (PhlegethosBusStop.inl). The ground round it is pressed level.
+    constexpr float BusStopX = 34300;
+    /** The fragment's frame at the stop: its centre on the path's line, along the path (T) and away from it (N). */
+    void BusStopFrame(FVector2D& Centre, FVector2D& T, FVector2D& Nrm);
+    // The small ruptures round it: centre along the path (X), off the path's centre (Y), radius and seed. Into one is an
+    // Astral death, as the breach.
+    struct FRift { float X, Off, R, Seed; };
+    // (the three on the path small enough to clear at a run, or to go round)
+    inline constexpr FRift Rifts[] = {{BusStopX - 780, 330, 165, 1}, {BusStopX - 1350, 30, 100, 2}, {BusStopX + 950, -20, 110, 3},
+                                      {BusStopX + 1500, 70, 105, 4}, {BusStopX + 420, 1150, 140, 5}};
+    constexpr int32 RiftCount = UE_ARRAY_COUNT(Rifts);
+    FVector2D RiftCentre(int32 Index);
+    float RiftRadius(int32 Index, float Angle);
+    /** How far a point (local X, Y) is inside the nearest small rupture (< 0 outside them all). */
+    float RiftInside(float X, float Y);
     // The volcano (the land beyond, PhlegethosSetting.cpp; the fall cutscene looks at it).
     // (2026-11-15: 12 km off and 1.5 km high, about 7 degrees above his horizon as in the goal art; at 3.5 km and 2.2 km it
     // and the ranges walled in the sky from his eye.)
@@ -155,6 +188,8 @@ private:
     void BuildEnvironment();
     UProceduralMeshComponent* Emit(const TCHAR* Name, struct FPhlegSurf& S, UMaterialInterface* Material, bool bSolid, bool bShadow);
     void TickHazards(float Dt, AChuckCharacter* C);
+    void BuildBusStop();   // PhlegethosBusStop.inl
+    UPROPERTY() class APhlegBleed* Bleed = nullptr;
     void TickMotes(float Dt);
     void TickLight(float Dt, AChuckCharacter* C);
     bool bBuilt = false, bLive = false;

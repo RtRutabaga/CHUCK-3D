@@ -280,6 +280,13 @@ public:
     // everything, he goes limp and vanishes from its hands into the astral light.
     /** Seized by By (the same dodges and walls as a bite save him). Returns whether it held. */
     bool BeginHeld(AActor* By);
+    // Carried off out of his control (Phlegethos's Feywild river, 2026-11-17; PhlegethosBleed.cpp): the owner moves him
+    // each frame with SetCarried while he flails; EndCarried (the screen already dark) returns him to the area's start as
+    // an Astral return does, summoned back.
+    void BeginCarried();
+    void SetCarried(const FVector& Centre, const FRotator& Facing);
+    void EndCarried();
+    bool IsCarried() const { return Gait == EGait::Astral && AstralPhase == EAstral::Carried; }
     /** The zombie's hands: his chest at Chest (world), facing Yaw. */
     void SetHeldPose(const FVector& Chest, float Yaw);
     /** The bite: all his sanity; limp, then the vanish from its hands. */
@@ -574,7 +581,7 @@ private:
     int32 BitesTaken = 0;
     int32 Sanity = MaxSanity;
     int32 PickupsCollected = 0;
-    enum class EAstral : uint8 { None, Vanishing, Away, Summoning, SlideDown, SlideAway };   // the last two: the sewer's water slide out
+    enum class EAstral : uint8 { None, Vanishing, Away, Summoning, SlideDown, SlideAway, Carried };   // SlideDown/Away: the sewer's water slide out; Carried: the Feywild river
     EAstral AstralPhase = EAstral::None;
     float AstralClock = 0;
     bool bPendingVanish = false;

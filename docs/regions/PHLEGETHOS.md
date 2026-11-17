@@ -17,7 +17,8 @@ Direction: the 2D game's `docs/development/PHASE-8.md` and `hell_falling_cutscen
 | Lemures, fire snakes, spined devils, flameskulls, horned devils | **All built** (2026-11-16), with the Pit Fiend as the colossus; see Creatures below. **No horned devils** (the user, 2026-11-16: "in 2d we had both horned devils and pit fiend but i dont want the separate horned devils in our game") |
 | Infernal idols, fortress exterior | **Built**: the processional and the shut gate |
 | The trio battling the Pit Fiend | **Built** 2026-11-16 (the user: "go ahead and do the trio encounter"): on the forecourt before the shut gate; see [The trio's battle](#the-trios-battle) |
-| Astral escalation, the Feywild river, the river cutscene | **Not built**. The forecourt still ends at the shut gate |
+| Astral escalation, the Feywild river, the river cutscene | **Built 2026-11-17 up to the sweep** (the user: "in the encounter, add the river appearance and sweep into feywild river (don't start the cutscene or feywild yet)"): see [The Feywild bleedthrough](#the-feywild-bleedthrough). The river cutscene and the Feywild are **not built** |
+| The fractured way's displaced bus shelter, its commuter, the Astral bands | **Built** 2026-11-17 in the wastes (the businessman without the 2D's umbrella, the user): see [The bus stop](#the-bus-stop) |
 | Breakable urns with cigarettes | **Built**: clay jars on the safe ground off the routes |
 
 ## Chuck
@@ -55,7 +56,7 @@ The fire and smoke flipbooks already in the project (Unity Labs, CC0) are reused
 
 ## Out of scope for this milestone
 
-The Astral escalation and the Feywild river, the river cutscene. (The trio's battle was built on 2026-11-16.)
+The river cutscene and the Feywild. (The trio's battle was built on 2026-11-16; the bus stop and the bleedthrough up to the river's sweep on 2026-11-17.)
 
 ## What was built (2026-11-14)
 
@@ -249,7 +250,7 @@ From the 2D game's Phase 8 bestiary (`docs/development/PHASE-8.md`, `src/entitie
 **Lemures** pick him up by the leg and throw him as the temple skeletons do (the user, 2026-11-16), with their kicks and swats.
 
 **Tests.**
-- Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20; then `trio` (2026-11-16, the trio's battle), making 21. Verify-Package expects `passed=21`.
+- Two new trials, `skulls` and `fire_snakes`, making 17; then three more (below), making 20; then `trio` (2026-11-16, the trio's battle), making 21; then `bus_stop` and `bleed` (2026-11-17), making 23. Verify-Package expects `passed=23`.
 - `skulls`: he stands in a road skull's lane. It burns him (2 burns), throws him back along the spine and does not kill him.
 - `fire_snakes`: a hills snake sees him, comes and strikes; one scratch kills it.
 - `lemures`: a hills lemure sees him, comes and - its first attack - picks him up by the leg and throws him; he goes back and scratches it seventeen times (his sanity held up); it falls and melts. (In the trials a throw goes only where there is ground, as in the skeleton's test.)
@@ -281,10 +282,43 @@ Built 2026-11-16 (Claude) on the user's "When you're ready, go ahead and do the 
 
 **Test**: `trio` (the 21st trial): he walks out onto the forecourt; the entrance plays with its three lines; then 45 s from the forecourt's edge. Pass: one entrance, three lines; arrows and bolts on the fiend; at least one smash and one hurl, a fire burst, a lemure put down; the fiend never in the breach. Stills `Trio_Entrance_*`, `Trio_Battle_0-7`, `Trio_Smash`, `Trio_Hurl`. Under the other trials (creatures calm) the battle stands still and its entrance does not play.
 
+### The bus stop
+
+Built 2026-11-17 (Claude) on the user's "Add the modern city bus stop with business man Npc with small astral ruptures to a sensible place along the plethegos path, similar to 2d game. No umbrella for the business man." Direction: the 2D game's `phlegethos_fractured_way` (Phase 8, read-only), between its rubble pass and the fortress approach: "A displaced modern bus shelter and umbrella-carrying businessman form an accessible collided-world tableau; the commuter retains the city's `Ah! A rat!` response. Four mandatory one-tile Astral bands form the map's only required challenge."
+
+**Where.** Half way across the wastes (`Phleg::BusStopX`, 34300, 88 m before the forecourt), beside the winding path on its right, where it is seen coming round the bend. The ground there is pressed level with the path (`ApproachGround`).
+
+**What** (`PhlegethosBusStop.inl`, built with the stage; `Tools/create_feywild_bleed_assets.py` for its materials):
+- A fragment of a city street fallen into the wastes, laid along the path, its ends broken off with the rebar showing: a strip of road (asphalt, a dashed lane line, a solid edge line, a yellow bus box), a kerb, the pavement in 60 cm flags (`M_CityAsphalt`, `M_CityConcrete`).
+- A glass shelter: four aluminium posts, a dark roof with its fascia, glass at the back and one end, a lit advertising panel at the other (a plain cold lightbox: no picture or brand), a bench; the stop's sign and a lit timetable case on a pole by the kerb; a bin (`M_CityPaint`, the existing `M_WindowGlass`). Its own downlight under the roof (shadowed) and the panel's cold glow.
+- **The businessman** (`EDockHuman::Businessman`; `SourceAssets/NPCs/humans.json`, built by `Tools/build_npc_humans.py` with a new `tie` piece and a trouser `hem`): a man in his late thirties in a charcoal suit, white shirt, dark tie and black shoes, short dark hair (a strand groom). **No umbrella.** He stands on the pavement by the kerb looking up the road, on the guards' looking-about idle; he turns his head to watch the rat. Talk (F / Y) gives the 2D city's line, "Ah! A rat!" (`city.json` `businessman`): subtitle only, no voice take.
+- **Five small Astral ruptures** (`Phleg::Rifts`, the breach's construction: a broken lip, shattered faces, the Astral below): one has bitten off the road's far end; three are on the path either side of the stop (about 2 m across: clear them at a run or go round); one is in the slope behind the shelter. Into one is an Astral death (back at the Fortress spawn; half a metre down counts, as he can wedge on a lip). They are not mandatory as the 2D's bands were: the wastes are open ground.
+
+**Test**: `bus_stop`: from the path toward the stop (stills `BusStop_Path`, `BusStop_High`), he walks to the kerb below the businessman (`BusStop_Businessman`: watching the rat, motion capture running, talkable), then into the path's rupture past the stop: one Astral death, and back. The `approach` trial now goes round the path's ruptures (148 cm off the path at worst).
+
+### The Feywild bleedthrough
+
+Built 2026-11-17 (Claude) on the user's "in the encounter, add the river appearance and sweep into feywild river (don't start the cutscene or feywild yet). We'll need a way to keep the player in the staging area during the encounter leading up to this, the 2d game used appearing astral ruptures to block exit and also as a hazard obstacle course for player, maybe we could do something similar with how the pressure plate fall away to astral rupture section worked in the temple?" Direction: the 2D Phase 8's "Feywild Bleedthrough" ("Initially Astral Sea blocks appear and cut off Chuck's retreat. As the battle continues additional Astral blocks appear as fall hazards. Later moving Feywild river blocks begin flowing through the arena. Eventually it becomes impossible to avoid both ... The intended solution is for the player to deliberately jump into a Feywild river block"), and the temple's cracked slabs over the Astral rift (`AChultTempleTraps`, which fall .6 s after he stands on them).
+
+**The field** (`PhlegethosBleed.h/.cpp`, `APhlegBleed`; constants in `PhlegethosSetting.h`): the front of the forecourt, 23 x 60 m from 11 m before its old edge (`FieldX0..X1`, `FieldY0..Y1`), is 240 basalt slabs (10 columns, 24 rows, their inner corners jittered so they read as a broken crust), each its own mesh, over the Astral (`M_AstralDepth`: walls and a floor 6.5 m down). The wastes' ground is cut away under it; the forecourt is now level from 20 m further back, so the field is level. **The island**: the middle six columns and twenty rows (14 x 50 m); round it **the moat**: two columns at each end and two rows at each side, about 4.6 m wide (too far to jump). The river runs over the island's two middle columns. To make room, the wizard and the ranger moved back past the field (to X 42180/42200), the idols start 8.5 m further on, the processional starts past the field, and the lemures' posts moved off it.
+
+**The encounter** (from the moment the trio's entrance releases him onto the island, or he is back on it after a death):
+- **0 s, the moat**: it cracks (violet light in its edges and in splitting lines across it, a shudder, a crack's sound) and falls away, tearing outward from where he stands: behind him toward the wastes, then the sides, then in front toward the battle; a rumble, and the Astral's violet light comes up out of it. He is shut in: the island is the staging area.
+- **9 s, 17 s, 24 s, the waves**: the island's -Y end (62% of its slabs, in a line coming in), its +Y end, then scattered slabs through it. Each cracks for 1.6 s first; **a cracking slab he stands on falls .6 s after he first stands on it** (the temple's slabs). The river's two columns never fall.
+- **31 s, the river**: a tear (`M_FeyTear`: green and cyan light turning, violet in its folds) opens over the +Y moat and another over the -Y moat; Feywild water (`M_FeyRiver`: translucent, teal, lit from within, sparkles in it, foam where it pours) gushes out of the first, its front racing 8 m/s down the island's middle columns as a hard-edged current, its sides walls of water, and pours down into the second. Its sound runs along it.
+- **41 s, the collapse**: what is left of the island cracks and falls in over 9 s from its far ends toward him; anything he stands on cracks at once and goes in under a second. The river is all that is left.
+- **Into the river** (walked, jumped, at any time it runs where he is): swept away down it, flailing (`AChuckCharacter::BeginCarried`), the view following from behind; over the island's edge and down into the far tear, the view going black. **For now** (the river cutscene and the Feywild are later slices) he is then returned to the Phlegethos Forecourt checkpoint (on the island) as from an Astral death, and everything re-arms; it starts again when he stands on the island.
+- **A fall into the Astral** (a fallen slab, the moat): an Astral death, back at the Forecourt checkpoint; it all re-arms while the view is dark. The trio's entrance does not play again.
+- The trio's battle goes on beyond the front moat throughout.
+
+**Test**: `bleed`: the entrance plays (or has), he stands on the river's columns while the moat and the waves fall (all 120 moat slabs gone by 5.6 s; 53 of the island's in the waves), steps onto a whole slab before the river comes, and in the collapse, with his slab cracking under him, steps into the river: swept (6 s to the far tear), back at the checkpoint, re-armed, no death. Stills `Bleed_Moat_Back/Front`, `Bleed_Wave1-3`, `Bleed_River_Open`, `Bleed_River`, `Bleed_Collapse`, `Bleed_Swept_0-2`, `Bleed_Returned`. In every other trial it is held off (`APhlegBleed::bHold`).
+
 ### Known gaps
 
 - The creatures were tested only by the trials, not played by hand: how hard the devils' lanes and the Pit Fiend's round are is untried.
-- The trio's battle: no voice takes for the three lines (subtitles only); the heroes have no dodge clip (a lunge with a hit-flinch); the fiend's fire is the braziers' flipbook flame (it reads as a flame flying, not a ball); the battle's sounds are the sanctum's (the bolt-impact pitched down for the fire's burst); the forecourt is dark, the fiend a dark red shape between flashes; nothing ends the fight (the Astral escalation and the river come next); not played by hand.
+- The bus stop: the businessman's "Ah! A rat!" has no voice take (subtitle only); his idle is the guards' (no watch-checking or impatience of his own); the advertising panel is a blank lightbox; the city fragment is plain boxes and prisms (no kerb drain, no litter, no wear on the shelter).
+- The bleedthrough: the river and its tears read as a glowing teal current between two pale tears (the tears' turning colours are lost at a distance); the moat is hard to read from his height until he is near it; there is no music change (the 2D's "dynamic finale"); the slabs are a grid of broken flags, not irregular rock; the sweep's camera trails him by about 3 m; the sounds are borrowed (the temple's slab cracks and falls, the ship's water, the Astral summon); the river cutscene and the Feywild are not built (he goes back to the Forecourt checkpoint); not played by hand.
+- The trio's battle: no voice takes for the three lines (subtitles only); the heroes have no dodge clip (a lunge with a hit-flinch); the fiend's fire is the braziers' flipbook flame (it reads as a flame flying, not a ball); the battle's sounds are the sanctum's (the bolt-impact pitched down for the fire's burst); the forecourt is dark, the fiend a dark red shape between flashes; nothing ends the fight (the bleedthrough's river is his way out); not played by hand.
 - The lemures share the skeleton's motion capture: a stiff, upright walk, not a shamble.
 - The Pit Fiend's legs are still the skeleton's motion-capture walk under the IK and the heavy stance, not a gait of its own; its swats and stamp are the skeleton's clips at 2.4 times; the wings' membranes stretch rather than crease when folded; the thigh plates and the mace may cut into the body in some poses.
 - The world, motion, sound and playtest audits do not cover Phlegethos yet (no baselines).

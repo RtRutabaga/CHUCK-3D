@@ -1,5 +1,6 @@
 #include "PhlegethosSetting.h"
 #include "PhlegethosCreatures.h"
+#include "PhlegethosBleed.h"
 #include "ChuckCharacter.h"
 #include "ChuckClimbable.h"
 #include "ClayJar.h"
@@ -295,12 +296,50 @@ float Phleg::ApproachPathY(float X)
     return FMath::Sin(PI * U) * (700.f * FMath::Sin(U * 2 * PI * 1.3f + .4f) + 250.f * FMath::Sin(U * 2 * PI * 3.3f + 1.3f));
 }
 
+namespace
+{
+    float WastesInner(float X) { return Ease((X - FortressX - 1200) / 3000.f) * (1 - Ease((X - (ForecourtX - 2600)) / 2400.f)); }
+    float WastesPathLevel(float X) { const float Inner = WastesInner(X); return FortressTop - 190.f * Inner + 130.f * Noise(X, 0, 5200, 120) * Inner; }
+}
+
+void Phleg::BusStopFrame(FVector2D& Centre, FVector2D& T, FVector2D& Nrm)
+{
+    Centre = FVector2D(BusStopX, ApproachPathY(BusStopX));
+    T = FVector2D(1, (ApproachPathY(BusStopX + 40) - ApproachPathY(BusStopX - 40)) / 80.f).GetSafeNormal();
+    Nrm = FVector2D(-T.Y, T.X);
+}
+
+FVector2D Phleg::RiftCentre(int32 Index)
+{
+    const FRift& R = Rifts[FMath::Clamp(Index, 0, RiftCount - 1)];
+    return FVector2D(R.X, ApproachPathY(R.X) + R.Off);
+}
+
+float Phleg::RiftRadius(int32 Index, float A)
+{
+    const FRift& R = Rifts[FMath::Clamp(Index, 0, RiftCount - 1)];
+    return R.R * (1.f + .2f * FMath::Sin(3.f * A + R.Seed * 1.7f) + .12f * FMath::Sin(7.f * A + R.Seed * 2.9f) + .06f * FMath::Sin(13.f * A + R.Seed));
+}
+
+float Phleg::RiftInside(float X, float Y)
+{
+    float Best = -1e9f;
+    for (int32 I = 0; I < RiftCount; ++I)
+    {
+        const FVector2D C = RiftCentre(I);
+        const float Dx = X - C.X, Dy = Y - C.Y;
+        if (FMath::Abs(Dx) > 600.f || FMath::Abs(Dy) > 600.f) continue;
+        Best = FMath::Max(Best, RiftRadius(I, FMath::Atan2(Dy, Dx)) - FMath::Sqrt(Dx * Dx + Dy * Dy));
+    }
+    return Best;
+}
+
 float Phleg::ApproachGround(float X, float Y)
 {
     const float Dp = FMath::Abs(Y - ApproachPathY(X));
     // The path's line: down a couple of metres into the wastes, rolling, back up to the forecourt's level.
-    const float Inner = Ease((X - FortressX - 1200) / 3000.f) * (1 - Ease((X - (ForecourtX - 2600)) / 2400.f));
-    float H = FortressTop - 190.f * Inner + 130.f * Noise(X, 0, 5200, 120) * Inner;
+    const float Inner = WastesInner(X);
+    float H = WastesPathLevel(X);
     // Off it: rough, broken ground rising into hummocks and pressure ridges, ridges farther out framing the valley.
     const float Off = Ease((Dp - 230.f) / 900.f);
     // (sharp-crested broken rock, not smooth swells: the first pass read as dunes)
@@ -310,8 +349,18 @@ float Phleg::ApproachGround(float X, float Y)
     H += Ease((Dp - 1800.f) / 2400.f) * (320.f + 700.f * Noise(X, Y, 6000, 125)) * Inner;
     // Hollows off the path where the lava stands.
     H -= 950.f * FMath::SmoothStep(.22f, .45f, Noise(X, Y, 3600, 128)) * Ease((Dp - 650.f) / 600.f) * Inner;
+    // The bus stop's fallen city fragment (2026-11-17): the ground under and round it pressed level with the path.
+    if (FMath::Abs(X - BusStopX) < 1600.f)
+    {
+        FVector2D C, T, Nn; BusStopFrame(C, T, Nn);
+        const FVector2D D(X - C.X, Y - C.Y);
+        const float U = static_cast<float>(FVector2D::DotProduct(D, T)), V = static_cast<float>(FVector2D::DotProduct(D, Nn));
+        const float Wb = (1 - Ease((FMath::Abs(U) - 620.f) / 520.f)) * (1 - Ease((V - 900.f) / 480.f)) * (1 - Ease((-V - 200.f) / 300.f));
+        if (Wb > 0) H = FMath::Lerp(H, WastesPathLevel(C.X), Wb);
+    }
     // The forecourt: level before the gate, as far out as the wall runs.
-    const float Fc = Ease((X - (ForecourtX - 600)) / 800.f) * (1 - Ease((FMath::Abs(Y) - 3000.f) / 1500.f));
+    // (2026-11-17: level from 20 m further back, so the bleedthrough's slab field, which starts 11 m before it, is level.)
+    const float Fc = Ease((X - (ForecourtX - 2000)) / 800.f) * (1 - Ease((FMath::Abs(Y) - 3100.f) / 1500.f));
     H = FMath::Lerp(H, FortressTop + 3.f * Noise(X, Y, 600, 126), Fc);
     // The landing off the last leap: level where he comes down.
     H = FMath::Lerp(H, FortressTop, (1 - Ease((X - FortressX - 500) / 900.f)) * (1 - Ease((FMath::Abs(Y) - 700.f) / 900.f)));
@@ -406,7 +455,11 @@ bool PhlegethosLavaSwallows(const FVector& Feet)
     if (!InPhlegethos(Feet)) return false;
     const FVector L = PhlegLocal(Feet);
     // (and down into the breach: a metre under the forecourt inside its outline, 2026-11-16)
-    return L.Z < LavaZ + 30.f || (L.Z < FortressTop - 100.f && BreachInside(L.X, L.Y) > -10.f);
+    if (L.Z < LavaZ + 30.f || (L.Z < FortressTop - 100.f && BreachInside(L.X, L.Y) > -10.f)) return true;
+    // (2026-11-17: down a small rupture by the bus stop, or through the bleedthrough's slab field where a slab has fallen)
+    // (half a metre down: on its broken lip he can wedge part way in)
+    if (FMath::Abs(L.X - BusStopX) < 2500.f && RiftInside(L.X, L.Y) > -10.f && L.Z < ApproachGround(L.X, L.Y) - 45.f) return true;
+    return InSlabField(L.X, L.Y) && L.Z < FortressTop - 110.f;
 }
 float Phleg::BreachRadius(float A)
 {
@@ -960,6 +1013,9 @@ void APhlegethosSetting::Build()
                 if (Top < LavaZ - 30) continue;
                 // (the breach: open; its lip, below, covers the stepped edge)
                 if (BreachInside((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) > -40.f) continue;
+                // (the bus stop's small ruptures, the same; the bleedthrough's slab field is APhlegBleed's, over the Astral)
+                if (RiftInside((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) > -40.f) continue;
+                if (InSlabField((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f)) continue;
                 FIntPoint Q[4] = {{I, J}, {I + 1, J}, {I + 1, J + 1}, {I, J + 1}};
                 if (FMath::Abs(Hz[J * NX + I + 1] - Hz[(J + 1) * NX + I]) < FMath::Abs(Hz[J * NX + I] - Hz[(J + 1) * NX + I + 1])) Q[0] = {I + 1, J}, Q[1] = {I + 1, J + 1}, Q[2] = {I, J + 1}, Q[3] = {I, J};
                 Land.Quad(Pt(Q[0].X, Q[0].Y), Pt(Q[1].X, Q[1].Y), Pt(Q[2].X, Q[2].Y), Pt(Q[3].X, Q[3].Y), Nm(Q[0].X, Q[0].Y), Nm(Q[1].X, Q[1].Y), Nm(Q[2].X, Q[2].Y), Nm(Q[3].X, Q[3].Y));
@@ -980,10 +1036,11 @@ void APhlegethosSetting::Build()
         Path.Paint = FColor(0, 0, 60, 255);
         {
             FRandomStream PR(52);
-            for (float X = FortressX + 260; X < ForecourtX + 200; X += 150)
+            for (float X = FortressX + 260; X < FieldX0 - 90; X += 150)   // (2026-11-17: to the slab field; was to the forecourt)
             {
                 if (PR.FRand() < .07f && X > FortressX + 1500) continue;
                 const FVector2D C(X, ApproachPathY(X));
+                if (RiftInside(C.X, C.Y) > -150.f) continue;   // (a small rupture has torn it away)
                 const FVector2D T = FVector2D(1, (ApproachPathY(X + 20) - ApproachPathY(X - 20)) / 40.f).GetSafeNormal(), Nn(-T.Y, T.X);
                 const float W = 105 + 20 * Noise(X, 0, 500, 132), L = 70;
                 const TArray<FVector2D> Slab = {C - T * L - Nn * W, C + T * L - Nn * W, C + T * L + Nn * W, C - T * L + Nn * W};
@@ -994,14 +1051,16 @@ void APhlegethosSetting::Build()
         // The breach (2026-11-16): a ragged tear in the forecourt into the Astral Sea. A broken basalt lip round it (its inner
         // edge the tear's outline, covering the ground's stepped hole), the rock going down from it a metre and a half
         // into shattered faces, and under that the Astral itself: deep walls and a floor in its unlit space.
+        // (2026-11-17: the same for the small ruptures round the bus stop, each a little shallower.)
         {
-            constexpr int32 N = 96;
             FPhlegSurf Lip, Astral;
             Lip.Paint = FColor(90, 150, 30, 255);
+            auto Tear = [&](float Cx, float Cy, TFunctionRef<float(float)> Radius, float Depth, int32 N, float Ls)
+            {
             auto At = [&](float A, float Out, float Dz)
             {
-                const float R = BreachRadius(A) + Out;
-                const float X = BreachX + R * FMath::Cos(A), Y = BreachY + R * FMath::Sin(A);
+                const float R = Radius(A) + Out;
+                const float X = Cx + R * FMath::Cos(A), Y = Cy + R * FMath::Sin(A);
                 return FVector(X, Y, ApproachGround(X, Y) + Dz);
             };
             for (int32 K = 0; K < N; ++K)
@@ -1009,18 +1068,25 @@ void APhlegethosSetting::Build()
                 const float A0 = 2 * PI * K / N, A1 = 2 * PI * (K + 1) / N;
                 // Broken teeth along the very edge: a little lower in places, a little raised.
                 const float J0 = 6.f * FMath::Sin(A0 * 23.f) - 4.f, J1 = 6.f * FMath::Sin(A1 * 23.f) - 4.f;
-                const FVector I0 = At(A0, 0, 3 + J0), I1 = At(A1, 0, 3 + J1), M0 = At(A0, 90, 4), M1 = At(A1, 90, 4), O0 = At(A0, 210, -3), O1 = At(A1, 210, -3);
+                const FVector I0 = At(A0, 0, 3 + J0), I1 = At(A1, 0, 3 + J1), M0 = At(A0, 90 * Ls, 4), M1 = At(A1, 90 * Ls, 4), O0 = At(A0, 210 * Ls, -3), O1 = At(A1, 210 * Ls, -3);
                 Lip.Quad(I0, I1, M1, M0, FVector::UpVector, FVector::UpVector, FVector::UpVector, FVector::UpVector);
                 Lip.Quad(M0, M1, O1, O0, FVector::UpVector, FVector::UpVector, FVector::UpVector, FVector::UpVector);
                 // The rock face down from the lip, shattered: each column of it stepping in or out a little as it goes down.
-                const FVector In0 = FVector(BreachX - I0.X, BreachY - I0.Y, 0).GetSafeNormal(), In1 = FVector(BreachX - I1.X, BreachY - I1.Y, 0).GetSafeNormal();
+                const FVector In0 = FVector(Cx - I0.X, Cy - I0.Y, 0).GetSafeNormal(), In1 = FVector(Cx - I1.X, Cy - I1.Y, 0).GetSafeNormal();
                 const float S0 = 14.f * FMath::Sin(A0 * 11.f + 1.f), S1 = 14.f * FMath::Sin(A1 * 11.f + 1.f);
                 const FVector D0 = I0 + In0 * S0 - FVector(0, 0, 150), D1 = I1 + In1 * S1 - FVector(0, 0, 150);
                 Lip.Quad(I0, I1, D1, D0, In0, In1, In1, In0);
-                const FVector E0 = D0 + In0 * 20.f - FVector(0, 0, BreachDepth - 150), E1 = D1 + In1 * 20.f - FVector(0, 0, BreachDepth - 150);
+                const FVector E0 = D0 + In0 * 20.f - FVector(0, 0, Depth - 150), E1 = D1 + In1 * 20.f - FVector(0, 0, Depth - 150);
                 Astral.Quad(D0, D1, E1, E0, In0, In1, In1, In0);
-                const FVector Mid(BreachX, BreachY, E0.Z);
+                const FVector Mid(Cx, Cy, E0.Z);
                 Astral.Tri(E0, E1, Mid, FVector::UpVector);
+            }
+            };
+            Tear(Phleg::BreachX, Phleg::BreachY, [](float A) { return BreachRadius(A); }, Phleg::BreachDepth, 96, 1.f);
+            for (int32 Ri = 0; Ri < RiftCount; ++Ri)
+            {
+                const FVector2D Rc = RiftCentre(Ri);
+                Tear(static_cast<float>(Rc.X), static_cast<float>(Rc.Y), [Ri](float A) { return RiftRadius(Ri, A); }, 470.f, 56, .55f);
             }
             if (auto* L = Emit(TEXT("PhlegBreachLip"), Lip, BasaltMat, true, true)) L->SetCastShadow(true);
             if (UMaterialInterface* Depth = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth")))
@@ -1028,11 +1094,20 @@ void APhlegethosSetting::Build()
         }
         // The forecourt's processional to the gate.
         Path.Paint = FColor(0, 0, 40, 255);
-        Path.Prism(Box2(ForecourtX + 150, GateX, -170, 170), Flat(Z + 4), Z - 30, 0, 0, 52, 1);
+        Path.Prism(Box2(FieldX1 + 30, GateX, -170, 170), Flat(Z + 4), Z - 30, 0, 0, 52, 1);   // (2026-11-17: from beyond the slab field)
         // Off the path: columnar basalt standing in clusters, broken tors, tumbled boulders; never on the path.
         {
             FRandomStream WR(61);
-            auto OffPath = [&](float X, float Y, float Clear) { return FMath::Abs(Y - ApproachPathY(X)) > Clear && (X < ForecourtX - 400 || FMath::Abs(Y) > 3200); };   // (2026-11-16: the forecourt clear for the trio's battle; was |Y| > 1200)
+            // (2026-11-17: and off the slab field, the bus stop's fragment and its ruptures)
+            FVector2D BsC, BsT, BsN; BusStopFrame(BsC, BsT, BsN);
+            auto OffStop = [&](float X, float Y, float Clear)
+            {
+                const FVector2D D(X - BsC.X, Y - BsC.Y);
+                const float U = static_cast<float>(FVector2D::DotProduct(D, BsT)), V = static_cast<float>(FVector2D::DotProduct(D, BsN));
+                return (FMath::Abs(U) > 700.f + Clear * .5f || V > 1000.f + Clear * .5f || V < -300.f - Clear * .5f) && RiftInside(X, Y) < -Clear * .5f - 60.f;
+            };
+            auto OffPath = [&](float X, float Y, float Clear) { return FMath::Abs(Y - ApproachPathY(X)) > Clear && (X < ForecourtX - 400 || FMath::Abs(Y) > 3200) && OffStop(X, Y, Clear)
+                                                                       && !(X > FieldX0 - 500 && X < FieldX1 + 300 && Y > FieldY0 - 500 && Y < FieldY1 + 500); };   // (2026-11-16: the forecourt clear for the trio's battle; was |Y| > 1200)
             for (int32 K = 0; K < 14; ++K)
             {
                 const float X = WR.FRandRange(FortressX + 1500, ForecourtX - 200), Y = (WR.FRand() < .5f ? -1.f : 1.f) * WR.FRandRange(900, 4200);
@@ -1079,8 +1154,9 @@ void APhlegethosSetting::Build()
             }
             // Markers of the way: iron stakes beside the path, some chained, braziers lighting it every 40 m or so.
             int32 Brazier = 0;
-            for (float X = FortressX + 1800; X < ForecourtX - 300; X += 1700)
+            for (float X = FortressX + 1800; X < FieldX0 - 300; X += 1700)
             {
+                if (FMath::Abs(X - BusStopX) < 1300.f) continue;   // (the bus stop's fragment, 2026-11-17)
                 const float Side = (int32(X / 1700) & 1) ? 1.f : -1.f, Y = ApproachPathY(X) + Side * 260;
                 const float Gz = ApproachGround(X, Y);
                 const FVector Foot(X, Y, Gz - 20);
@@ -1103,7 +1179,7 @@ void APhlegethosSetting::Build()
         }
         // The idols: hulking horned figures on plinths either side of the processional, their eyes lit from within.
         int32 I = 0;
-        for (float X = ForecourtX + 500; X < GateX - 300; X += 560, ++I)
+        for (float X = ForecourtX + 1350; X < GateX - 300; X += 560, ++I)   // (2026-11-17: beyond the slab field; were from +500)
             for (float S : {-1.f, 1.f})
             {
                 const FVector Base(X, S * 430, Z);
@@ -1538,6 +1614,13 @@ void APhlegethosSetting::Build()
     {
         Rumble = UGameplayStatics::CreateSound2D(this, Sounds[RumbleLoop], 0.f, .55f, 0.f, nullptr, true, false);
     }
+    // The bus stop in the wastes and the Feywild bleedthrough's slab field before the fortress (2026-11-17).
+    BuildBusStop();
+    {
+        FActorSpawnParameters Bp; Bp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        Bleed = GetWorld()->SpawnActor<APhlegBleed>(PhlegethosOrigin(), FRotator::ZeroRotator, Bp);
+        if (Bleed) Bleed->Build(this);
+    }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEGETHOS_BUILT triangles=%d missing=%d movers=%d falls=%d ms=%.0f"), Triangles, Missing, Movers.Num(), FallFeet.Num(), (FPlatformTime::Seconds() - Started) * 1000);
 }
 
@@ -1663,6 +1746,7 @@ void APhlegethosSetting::ResetHazards()
         M.Touched = -1; M.Drop = 0; M.DownFor = 0; M.bCracked = false;
         if (auto* Mesh = M.Mesh.Get()) { Mesh->SetWorldLocation(PhlegethosOrigin()); Mesh->SetVisibility(true); Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }
     }
+    if (Bleed) Bleed->Rearm();
     NextErupt = Clock + 2.f;
 }
 
@@ -2219,3 +2303,5 @@ void APhlegethosSetting::TickHazards(float Dt, AChuckCharacter* C)
         NextErupt = Clock + FMath::FRandRange(6.f, 9.f);
     }
 }
+
+#include "PhlegethosBusStop.inl"

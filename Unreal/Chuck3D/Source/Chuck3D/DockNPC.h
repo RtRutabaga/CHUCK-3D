@@ -36,7 +36,9 @@ class AChuckCharacter;
 enum class EDockHuman : uint8 { Worker, Guard, MarketWoman, GuardWoman, SideGuard, Zombie, Blacksmith, Dwarf, TavernKeeper, ElfElder, GnomeAlchemist, Sailor, Bobert,
     // The pirate ship's crew (Claude, 2026-11-02; docs/SHIP.md milestone 3; DockNPCPirate.inl, ShipCrew.cpp). Loaded only when
     // the ship spawns them (the others are referenced by every NPC).
-    PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, PirateCaptain, Count };
+    PirateChef, PirateSeated, PirateConcertina, PirateCheering, PirateDancer, PirateFencerA, PirateFencerB, Jeffries, PirateCaptain,
+    // Phlegethos's wastes (2026-11-17): the commuter at the fallen bus stop (PhlegethosBusStop.inl). Loaded when spawned.
+    Businessman, Count };
 
 /** A fencer's sword positions (2026-11-03). ShipCrew.cpp sets them out in time; DockNPCPirate.inl makes each a fist and blade.
  *  Wind-ups (Chamber*, SwingHigh) the blade sweeps through; blows (Cut*, Thrust, BeatAside, BindPress) land on his partner's
@@ -447,7 +449,7 @@ public:
     /** The head's largest one-frame change of turning speed after 8 s (deg/s^2): a twitch. */
     float GetPeakHeadAccel() const { return PeakHeadAccel; }
     // ---- The pirate crew (Claude, 2026-11-02; docs/SHIP.md milestone 3; DockNPCPirate.inl). Placed by AShipCrew.
-    bool IsPirate() const { return Kind >= EDockHuman::PirateChef && Kind < EDockHuman::Count; }
+    bool IsPirate() const { return Kind >= EDockHuman::PirateChef && Kind <= EDockHuman::PirateCaptain; }
     EDockHuman GetKind() const { return Kind; }
     /** The 2D game's first and repeat lines: Lines are the first ones until a conversation through them ends, then the repeat ones. */
     void SetPirateLines(const TArray<FString>& First, const TArray<FString>& Repeat);

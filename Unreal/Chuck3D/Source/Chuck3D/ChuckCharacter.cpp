@@ -2559,7 +2559,7 @@ void AChuckCharacter::UpdateExhale(float DeltaSeconds)
 }
 const TCHAR* AChuckCharacter::GetAstralName() const
 {
-    static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning"), TEXT("SlideDown"), TEXT("SlideAway")};
+    static const TCHAR* Names[] = {TEXT("None"), TEXT("Vanishing"), TEXT("Away"), TEXT("Summoning"), TEXT("SlideDown"), TEXT("SlideAway"), TEXT("Carried")};
     return Names[static_cast<int32>(AstralPhase)];
 }
 void AChuckCharacter::SetAstralHidden(bool bHide)
@@ -2592,6 +2592,34 @@ void AChuckCharacter::BeginSlide(float Into)
     bSlideCamera = true;
     ++Slides;
     UE_LOG(LogTemp, Display, TEXT("CHUCK_SLIDE_BEGIN into=%.0f speed=%.0f"), Into, SlideSpeed);
+}
+void AChuckCharacter::BeginCarried()
+{
+    // Into the Feywild river in Phlegethos's forecourt (2026-11-17): swept off out of his control, flailing.
+    if (IsCarried()) return;
+    auto* Movement = GetCharacterMovement();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    bPendingVanish = false; GorgeFallClock = -1.f; bBodyQuatLive = bLegHeld = false;
+    Gait = EGait::Astral; AstralPhase = EAstral::Carried; AstralClock = 0; bAstralFaded = false;
+    LayerTime = FadingLayerTime = -1; SlashHitAt = -1; bSlashQueued = bSlashHeld = false; RunWeight = 0;
+    TalkingTo.Reset(); TalkLine = 0;
+    SetClip(EClip::FallFlail, 0, .2f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_CARRIED_BEGIN at=%s"), *GetActorLocation().ToString());
+}
+void AChuckCharacter::SetCarried(const FVector& Centre, const FRotator& Facing)
+{
+    if (!IsCarried()) return;
+    SetActorLocationAndRotation(Centre, Facing, false, nullptr, ETeleportType::TeleportPhysics);
+}
+void AChuckCharacter::EndCarried()
+{
+    if (!IsCarried()) return;
+    // Gone into the tear: back at the area's start as from an Astral death (the vanish's last moment: the view is dark).
+    SetActorRotation(FRotator(0, GetActorRotation().Yaw, 0));
+    SetAstralHidden(true);
+    AstralPhase = EAstral::Vanishing; AstralClock = 1.44f; bAstralFaded = true;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_CARRIED_END at=%s"), *GetActorLocation().ToString());
 }
 void AChuckCharacter::HoldSlideCamera()
 {
@@ -2692,6 +2720,12 @@ void AChuckCharacter::UpdateAstral(float DeltaSeconds)
             MarkDockSewerExited();
             UE_LOG(LogTemp, Display, TEXT("CHUCK_SLIDE_EXIT found=%d edge=%s"), bExitFound, *ExitEdge.ToString());
         }
+        break;
+    }
+    case EAstral::Carried:
+    {
+        const float FlailLength = Clips[static_cast<int32>(EClip::FallFlail)]->GetPlayLength();
+        BaseTime = FMath::Fmod(BaseTime + DeltaSeconds, FMath::Max(FlailLength, .1f));
         break;
     }
     case EAstral::SlideAway:
@@ -3621,7 +3655,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     P.ClipUpper[1] = LayerTime >= 0 ? Clips[static_cast<int32>(LayerClip)] : nullptr;
     P.TimeUpper[1] = LayerTime;
     P.WeightUpper[1] = LayerTime >= 0 ? LayerWeightAt(LayerTime, Clips[static_cast<int32>(LayerClip)]->GetPlayLength()) : 0.f;
-    P.bFootIK = !bAirborne && AstralPhase != EAstral::SlideDown;   // nothing to plant on the way down the slide
+    P.bFootIK = !bAirborne && AstralPhase != EAstral::SlideDown && AstralPhase != EAstral::Carried;   // nothing to plant on the way down the slide (or in the river)
     // In a zombie's grip: the struggle, the bite's jolt, limp after it.
     P.HeldWeight = IsInGrip() ? FMath::Min(1.f, (bHeldVanish ? 1.f : HeldClock / .15f)) : 0.f;
     P.HeldTime = HeldClock;
@@ -3645,7 +3679,7 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     // Stance from the manifest intervals of whichever clip dominates. WalkLoop:
     // generated from the manifest (ChuckClipData.h), trimmed likewise.
     const bool bLoopDominant = ((Gait == EGait::Loop || (Gait == EGait::Strafe && Base == EClip::WalkLoop)) && FadeWeight < .5f) || (Gait == EGait::Stop && FadeWeight >= .5f);
-    const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Astral && AstralPhase != EAstral::SlideDown) || (Gait == EGait::Land && StateTime > .1f);   // the summon keeps his paws planted
+    const bool bStanding = Gait == EGait::Idle || (Gait == EGait::Astral && AstralPhase != EAstral::SlideDown && AstralPhase != EAstral::Carried) || (Gait == EGait::Land && StateTime > .1f);   // the summon keeps his paws planted
     const FStance* Clip = nullptr;
     if (Gait == EGait::Start) Clip = &StartStance;
     else if (Gait == EGait::Stop && !bLoopDominant) Clip = bStopMirror ? &StopStanceMirrored : &StopStance;

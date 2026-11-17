@@ -325,7 +325,8 @@ if($endingProcess.ExitCode -or !(Select-String -LiteralPath $endingLog -Pattern 
 # Phlegethos (Claude, 2026-11-14; docs/regions/PHLEGETHOS.md): the fall from the burning rupture to the plain and its handoff;
 # then the real character through every challenge: the road's hops and sprint leap past the geysers, all 21 column hops, the
 # chained wall run between the slabs, the gorge's wall run and drop, the chains, the ramp, the crumbling steps, the
-# chimney, the last leap, the walk along the wastes' winding path (2026-11-16) and the shut gate.
+# chimney, the last leap, the walk along the wastes' winding path (2026-11-16) and the shut gate; the trio's battle; the bus
+# stop's commuter and a fall into its rupture, and the Feywild bleedthrough to the river's sweep (2026-11-17).
 $hellLog=Join-Path $evidence ('verify-hell-fall-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $hellProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckHellFallTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$hellLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_END at=6[0-9]\.[0-9]+ skipped=0 landed=1 vanished=1 summoned=1 erupted=1 exhales=2' -Quiet) -or
@@ -335,7 +336,7 @@ if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHU
 $phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $phlegProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($phlegProcess.ExitCode -or !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_BUILD pass=1 missing=0' -Quiet) -or
-   !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=21 ' -Quiet)) {
+   !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=23 ' -Quiet)) {
     throw "Phlegethos verification failed. Inspect $phlegLog"
 }
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
