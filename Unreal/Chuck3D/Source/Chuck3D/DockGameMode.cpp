@@ -1,5 +1,6 @@
 #include "DockGameMode.h"
 #include "PhlegethosSetting.h"
+#include "FeywildSetting.h"
 #include "ShipSetting.h"
 #include "ShipEscape.h"
 #include "TempleSkeleton.h"
@@ -170,7 +171,10 @@ void ADockGameMode::StartPlay()
     // The fortress encounter (2026-11-17): the user's "Ritual of the Broken Sun", looping, from the trio's entrance on.
     auto* Phleg3Score=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_PhlegFortressBattle.SW_PhlegFortressBattle"));
     auto* Phleg3Component=Phleg3Score ? UGameplayStatics::CreateSound2D(World,Phleg3Score,1.f,1.f,0.f,nullptr,false,false) : nullptr;
-    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent,StormComponent,IntenseComponent,PhlegComponent,Phleg2Component,Phleg3Component};
+    // The Feywild (2026-11-18; docs/regions/FEYWILD.md): the user's Feywild_main, looping.
+    auto* FeyScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_FeywildMain.SW_FeywildMain"));
+    auto* FeyComponent=FeyScore ? UGameplayStatics::CreateSound2D(World,FeyScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    MusicTracks={MusicComponent,SewerScoreComponent,NightComponent,ChultComponent,BridgeComponent,TempleComponent,InteriorComponent,RunComponent,BossComponent,ShipComponent,ConcertinaComponent,StormComponent,IntenseComponent,PhlegComponent,Phleg2Component,Phleg3Component,FeyComponent};
     if(MusicComponent)
     {
         // Smoke runs start just before the end to exercise looping without a long wait.
@@ -192,12 +196,24 @@ void ADockGameMode::StartPlay()
     struct FMusicRegion { bool Underground=false; int32 Mode=0; double TempleLeft=-1e9; bool OnDeck=false, DeckPending=false; double PendingSince=0, StormStart=0; };
     auto Region=MakeShared<FMusicRegion>();
     FTimerHandle RegionTimer;
-    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),StormMusic=TWeakObjectPtr<UAudioComponent>(StormComponent),IntenseMusic=TWeakObjectPtr<UAudioComponent>(IntenseComponent),Phleg=TWeakObjectPtr<UAudioComponent>(PhlegComponent),Phleg2=TWeakObjectPtr<UAudioComponent>(Phleg2Component),Phleg3=TWeakObjectPtr<UAudioComponent>(Phleg3Component),PhlegScore,Phleg2Score,Phleg3Score,IntenseScore,ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
+    World->GetTimerManager().SetTimer(RegionTimer,[World,Region,Docks=TWeakObjectPtr<UAudioComponent>(MusicComponent),Sewer=TWeakObjectPtr<UAudioComponent>(SewerScoreComponent),Night=TWeakObjectPtr<UAudioComponent>(NightComponent),Chult=TWeakObjectPtr<UAudioComponent>(ChultComponent),Bridge=TWeakObjectPtr<UAudioComponent>(BridgeComponent),Temple=TWeakObjectPtr<UAudioComponent>(TempleComponent),Interior=TWeakObjectPtr<UAudioComponent>(InteriorComponent),Run=TWeakObjectPtr<UAudioComponent>(RunComponent),Boss=TWeakObjectPtr<UAudioComponent>(BossComponent),Ship=TWeakObjectPtr<UAudioComponent>(ShipComponent),Concertina=TWeakObjectPtr<UAudioComponent>(ConcertinaComponent),StormMusic=TWeakObjectPtr<UAudioComponent>(StormComponent),IntenseMusic=TWeakObjectPtr<UAudioComponent>(IntenseComponent),Phleg=TWeakObjectPtr<UAudioComponent>(PhlegComponent),Phleg2=TWeakObjectPtr<UAudioComponent>(Phleg2Component),Phleg3=TWeakObjectPtr<UAudioComponent>(Phleg3Component),FeyMusic=TWeakObjectPtr<UAudioComponent>(FeyComponent),PhlegScore,Phleg2Score,Phleg3Score,IntenseScore,ConcertinaScore,SewerScore,NightScore,ChultScore,BridgeScore,TempleScore,InteriorScore,RunScore,BossScore,ShipScore,TestMusic,Self=TWeakObjectPtr<ADockGameMode>(this)](){
         auto* PC=World->GetFirstPlayerController();APawn* Pawn=PC?PC->GetPawn():nullptr;
         const auto* Chuck=Cast<AChuckCharacter>(Pawn);
         if(Chuck && (Chuck->IsInFallCutscene() || Chuck->HasDemoEnded())) return;   // the fall's own score has taken over
         // Held silent (the Fireball, 2026-10-26): when it lifts, whatever plays where he is comes back in.
         if(Self.IsValid() && World->GetTimeSeconds()<Self->MusicHoldUntil){Region->Mode=-1;return;}
+        // In the Feywild: its main track (50).
+        if(Chuck && InFeywild(Chuck->GetActorLocation()))
+        {
+            if(Region->Mode==50) return;
+            for(const TWeakObjectPtr<UAudioComponent>& Track : {Docks,Sewer,Night,Chult,Bridge,Temple,Interior,Run,Boss,Ship,Concertina,StormMusic,IntenseMusic,Phleg,Phleg2,Phleg3})
+                if(Track.IsValid() && Track->IsPlaying()) Track->FadeOut(1.5f,0.f);
+            if(FeyMusic.IsValid()) FeyMusic->FadeIn(3.f,.5f);
+            Region->Mode=50; Region->Underground=false;
+            if(Self.IsValid()) Self->MusicRegion=50;
+            UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_REGION feywild=1"));
+            return;
+        }
         // In Phlegethos: its track (40), the intense one from the ascent on (41), the fortress encounter's from the trio's
         // entrance on (42, 2026-11-17).
         if(Chuck && InPhlegethos(Chuck->GetActorLocation()))
@@ -3121,7 +3137,7 @@ void ADockGameMode::Tick(float DeltaSeconds)
                 Dwarf ? Dwarf->GetMaxJawOpen() : 0.f,Dwarf ? Dwarf->GetJawOpen() : 0.f,Dwarf ? Dwarf->GetBlinks() : 0,Dwarf && Dwarf->Lines.Num() ? *Dwarf->Lines[0] : TEXT(""));
             // The score sinks under them while they speak.
             UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_DUCK_MEASURE speaking=%d duck=%.2f tracks=%d"),Dwarf && Dwarf->IsSpeaking() ? 1 : 0,MusicDuck,MusicTracks.Num());
-            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==16 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum, ship, ship concertina, ship storm, ship storm intense, Phlegethos, Phlegethos 2, the fortress encounter
+            Check(Dwarf && Dwarf->IsSpeaking() && MusicDuck<.4f && MusicTracks.Num()==17 && MusicTracks[0].IsValid(),   // docks, sewer, night, Chult, Chult bridge, Chult temple, temple interior, temple run, sanctum, ship, ship concertina, ship storm, ship storm intense, Phlegethos, Phlegethos 2, the fortress encounter, the Feywild
                 TEXT("the music ducks under NPC speech"));
             Check(Dwarf && Dwarf->GetVoiceSoundCount()==1 && Dwarf->GetFaceBoneCount()==5 && Dwarf->IsSpeaking() && Dwarf->GetMaxJawOpen()>4.f && Dwarf->GetBlinks()>=1
                 && Dwarf->Lines.Num()==1 && Dwarf->Lines[0].StartsWith(TEXT("Ach, away")),

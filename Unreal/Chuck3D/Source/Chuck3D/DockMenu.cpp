@@ -36,6 +36,7 @@
 #include "ChuckShots.h"
 #include "ShipEscape.h"
 #include "PhlegethosSetting.h"
+#include "FeywildSetting.h"
 #include "EngineUtils.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -76,6 +77,8 @@ namespace
         {TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")},{TEXT("PhlegForecourt"),TEXT("Phlegethos Forecourt")}};
     static_assert(UE_ARRAY_COUNT(PhlegPoints)==PhlegSpawns,"a checkpoint for every Phlegethos spawn");
     constexpr int32 PhlegColumn=7;
+    // The Feywild's look slice (2026-11-18; FeywildSetting.h), under Phlegethos's last column.
+    const FChultPoint FeyPoints[]={{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
@@ -120,6 +123,14 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
     FVector ShipAt;float ShipYaw=0;
+    if(C && Point==TEXT("FeyLook"))
+    {
+        FadeOutMusic(.1f);
+        AFeywildSetting::Enter(GetWorld());
+        C->ResetAtLocation(FeywildSpawn());C->SetActorRotation(FRotator(0,FeywildSpawnYaw(),0));C->Recenter();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
+        return true;
+    }
     if(C && PhlegPoint(Point,ShipAt,ShipYaw))
     {
         FadeOutMusic(.1f);
@@ -215,6 +226,7 @@ bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
             FVector At;float Yaw;
             if(PhlegPoint(P.Point,At,Yaw)) Consider(P.Point,P.Label,At);
         }
+    if(AFeywildSetting::Get(World)) Consider(FeyPoints[0].Point,FeyPoints[0].Label,FeywildSpawn());
     // The docks after the sewer are the evening's.
     if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
     // The dev markers are dropped from the label the player sees.
@@ -311,7 +323,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints)+UE_ARRAY_COUNT(PhlegPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints)+UE_ARRAY_COUNT(PhlegPoints)+UE_ARRAY_COUNT(FeyPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         // -MenuTestShot: a picture of the page (its five columns), held a moment before Back.
         if(FParse::Param(FCommandLine::Get(),TEXT("MenuTestShot")) && !bMenuShot)
         {
@@ -336,6 +348,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         for(const FChultPoint& Point:TemplePoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:ShipPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:PhlegPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
+        for(const FChultPoint& Point:FeyPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -502,6 +515,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
             Target=I<PhlegColumn?Seventh:Eighth;
             const TCHAR* Name=PhlegPoints[I].Point;Add(PhlegPoints[I].Label,[Start,Name](){return Start(Name);});
         }
+        Target=Eighth;
+        for(const FChultPoint& Point:FeyPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }

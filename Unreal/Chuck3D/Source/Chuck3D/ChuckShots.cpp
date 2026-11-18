@@ -3,6 +3,7 @@
 #include "DockGameMode.h"
 #include "SewerSlide.h"
 #include "LightAudit.h"
+#include "FeywildSetting.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
@@ -53,6 +54,7 @@ bool ChuckShots::Start(AHUD* Hud)
     bool bEvening = false;
     TArray<FShot> Shots;
     FShot Next;
+    FVector Origin = FVector::ZeroVector;
     int32 Errors = 0;
     for (int32 I = 0; I < Lines.Num(); ++I)
     {
@@ -63,13 +65,14 @@ bool ChuckShots::Start(AHUD* Hud)
         const FString Op = W[0].ToLower();
         if (Op == TEXT("at") && W.Num() > 1) At = W[1];
         else if (Op == TEXT("evening")) bEvening = true;
+        else if (Op == TEXT("origin") && W.Num() > 1 && W[1].ToLower() == TEXT("feywild")) Origin = FeywildOrigin();
         else if (Op == TEXT("audit")) { FShot A = Next; A.bAudit = true; A.Name = TEXT("audit"); Shots.Add(A); Next.Wait = 2.f; }
         else if (Op == TEXT("wait") && W.Num() > 1) Next.Wait = FCString::Atof(*W[1]);
         else if (Op == TEXT("fov") && W.Num() > 1) Next.Fov = FCString::Atof(*W[1]);
         else if (Op == TEXT("hud") && W.Num() > 1) Next.bHud = W[1].ToLower() == TEXT("on");
         else if ((Op == TEXT("shot") || Op == TEXT("chuck")) && W.Num() > 1 && Vectors(W, 2, Next.Eye, Next.Aim))
         {
-            Next.Name = W[1]; Next.bPlaceChuck = Op == TEXT("chuck");
+            Next.Name = W[1]; Next.bPlaceChuck = Op == TEXT("chuck"); Next.Eye += Origin; Next.Aim += Origin;
             Shots.Add(Next);
             Next.Wait = 2.f;
         }

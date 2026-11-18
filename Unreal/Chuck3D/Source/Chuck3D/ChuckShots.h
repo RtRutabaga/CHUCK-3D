@@ -9,6 +9,7 @@ class AHUD;
 //
 //   at ChultBridge                       start from this checkpoint first (any dev checkpoint name; default: the docks)
 //   evening                              the docks' evening (after the sewer)
+//   origin feywild                       the following coordinates are in the Feywild's own frame (FeywildSetting.h)
 //   wait 6                               seconds before the next shot (default 2; the first waits 4 more for streaming)
 //   fov 70                               field of view for the following shots (default 75)
 //   hud on                               keep the HUD and tutorial text in the following shots (default off)

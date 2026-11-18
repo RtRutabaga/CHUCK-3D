@@ -1,0 +1,25 @@
+# The Feywild's look slice against its goal images (References/Feywild/). Tools/Take-Shots.ps1 Tools/shots/feywild-look.txt -ResX 1672 -ResY 941
+at FeyLook
+origin feywild
+wait 14
+fov 62
+# As general-waterfall-glade: the old oak on the left, the path, the pond and falls beyond.
+chuck glade -520 -260 95   3900 900 230
+# Down the path at his height, among the mushrooms.
+chuck path 700 -60 105   3300 -620 120
+# Across the pond to the falls: the mirror water and lilies.
+chuck pond 2150 1050 70   5150 1350 300
+# The amber giants, looking up from under them.
+chuck giants 2350 -560 170   3300 -1500 330
+# Close on the fungi and plants, for the materials.
+fov 50
+chuck fungi 1000 -430 105   1250 -900 40
+# Under the oak's wisteria.
+fov 70
+chuck oak 450 -700 130   1500 -1700 620
+# The open sky: blue to peach, never purple.
+fov 80
+chuck sky 3000 1300 120   6000 -1400 1500
+chuck skyback 3000 1300 120   -2000 3200 1300
+fov 45
+chuck fallfoot 4300 1350 90   5150 1350 130

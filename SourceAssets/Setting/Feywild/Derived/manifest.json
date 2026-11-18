@@ -1,0 +1,275 @@
+{
+ "tool": "Blender 4.5.14",
+ "assets": [
+  {
+   "file": "SM_FeyCapBlue.fbx",
+   "source": "modelled",
+   "triangles": 3718,
+   "dimensions_cm": [
+    63.726,
+    48.61,
+    43.972
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "10671F0AE0365709AB074EAC8098603DB550DEBAFCD78E52EB01F5704D52BC83"
+  },
+  {
+   "file": "SM_FeyCapAmber.fbx",
+   "source": "modelled",
+   "triangles": 1974,
+   "dimensions_cm": [
+    295.666,
+    295.666,
+    306.126
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "5D3E4E6031DCD36A801A40545ABBED6D35F82B86928C040EE3857FE7AAACE6CF"
+  },
+  {
+   "file": "SM_FeyCapViolet.fbx",
+   "source": "modelled",
+   "triangles": 6276,
+   "dimensions_cm": [
+    101.545,
+    78.007,
+    55.501
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "BA7C8AFEAC8F12D8BB6536652C186B73CC68C081A9043AD23F994428B1EE4C9D"
+  },
+  {
+   "file": "SM_FeyBellLamp.fbx",
+   "source": "modelled",
+   "triangles": 765,
+   "dimensions_cm": [
+    130.347,
+    65.428,
+    176.373
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "79FCE3EFBB4E470CB3AE7BA167D1F5ACEC51BC30FB25DEC2FAFE7C8AA7AC25E8"
+  },
+  {
+   "file": "SM_FeyFoxglove.fbx",
+   "source": "modelled",
+   "triangles": 1932,
+   "dimensions_cm": [
+    57.805,
+    53.208,
+    128.106
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "839430FA06ACF8D3C3011CF51AFBE09DBFDD8DA209B0EC1D746AC24AC82A8490"
+  },
+  {
+   "file": "SM_FeyBroadLeaf.fbx",
+   "source": "modelled",
+   "triangles": 846,
+   "dimensions_cm": [
+    122.646,
+    129.088,
+    71.444
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "0CD6BFA354CF98E29500A649AD4493C751479D0C6CCB399196D261EFF1371A83"
+  },
+  {
+   "file": "SM_FeyCrimsonLeaf.fbx",
+   "source": "modelled",
+   "triangles": 752,
+   "dimensions_cm": [
+    116.515,
+    104.672,
+    58.54
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "B0612A7EDA8C92CD5CC4352CCBD97A4279475AD8480C6796D247B25724E587E0"
+  },
+  {
+   "file": "SM_FeyLilyPad.fbx",
+   "source": "modelled",
+   "triangles": 390,
+   "dimensions_cm": [
+    99.363,
+    99.897,
+    4.232
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "55357A6FF3191E8FBEFAE55571E27C7F71DCCEC4C1FCCB3AC6584AA6D596FB4A"
+  },
+  {
+   "file": "SM_FeyLily.fbx",
+   "source": "modelled",
+   "triangles": 1164,
+   "dimensions_cm": [
+    49.664,
+    50.43,
+    14.006
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "AC1A088AB410EC22358D54C61B5542CBE1BA6E3C6620423EE5BEFFF35BAE2151"
+  },
+  {
+   "file": "SM_FeyPetals.fbx",
+   "source": "modelled",
+   "triangles": 336,
+   "dimensions_cm": [
+    71.356,
+    52.91,
+    0.747
+   ],
+   "slots": [
+    "FeyPlant"
+   ],
+   "sha256": "FCDD0D4AFF1995351489FEF684EB926976E59F11844A1A2D17DEB69579A114E9"
+  },
+  {
+   "file": "SM_FeyOak0.fbx",
+   "source": "modelled",
+   "triangles": 146214,
+   "dimensions_cm": [
+    1974.257,
+    1887.418,
+    1533.33
+   ],
+   "slots": [
+    "FeyBark",
+    "FeyLeaf",
+    "FeyPlant"
+   ],
+   "sha256": "AD70D3F079D28423DC311EDBD2A84AA27373E383DAC04CEB7143A22308F996C9"
+  },
+  {
+   "file": "SM_FeyOak0Collision.fbx",
+   "source": "modelled",
+   "triangles": 724,
+   "dimensions_cm": [
+    1130.095,
+    1155.664,
+    834.177
+   ],
+   "slots": [
+    "FeyBark"
+   ],
+   "sha256": "176865866BA216AE7727BBE4FA58B0DDE8CBEA1BAC15AFD14BF15FD04522CE2C"
+  },
+  {
+   "file": "SM_FeyOak1.fbx",
+   "source": "modelled",
+   "triangles": 81208,
+   "dimensions_cm": [
+    1876.42,
+    2606.293,
+    1505.697
+   ],
+   "slots": [
+    "FeyBark",
+    "FeyLeaf",
+    "FeyPlant"
+   ],
+   "sha256": "E96FAC3C8DDBAC85970EAC59FBF08F0094CEDAAAA780F657DE5CF8A9A63C0E45"
+  },
+  {
+   "file": "SM_FeyOak1Collision.fbx",
+   "source": "modelled",
+   "triangles": 724,
+   "dimensions_cm": [
+    994.128,
+    1266.187,
+    834.992
+   ],
+   "slots": [
+    "FeyBark"
+   ],
+   "sha256": "D1B9E707030FED60064CAEA54908C567E1DC038ADE11A5A1CDFF1BAA523E6D36"
+  },
+  {
+   "file": "SM_FeyGrass0.fbx",
+   "source": "grass_medium_02",
+   "triangles": 284,
+   "dimensions_cm": [
+    11.889,
+    11.976,
+    15.678
+   ],
+   "slots": [
+    "grass_medium_02"
+   ],
+   "sha256": "4258DF9D50F491FF6A06EB90C95244A3BC35EFA60B0219A1748B9E11F48C1012"
+  },
+  {
+   "file": "SM_FeyGrass1.fbx",
+   "source": "grass_medium_02",
+   "triangles": 485,
+   "dimensions_cm": [
+    26.012,
+    24.95,
+    23.187
+   ],
+   "slots": [
+    "grass_medium_02"
+   ],
+   "sha256": "65EE075CA035EB1DB22E700FE92E5873D5583CD42A83ED820E19AF02AA5D4AED"
+  },
+  {
+   "file": "SM_FeyCelandine0.fbx",
+   "source": "celandine_01",
+   "triangles": 414,
+   "dimensions_cm": [
+    27.298,
+    22.536,
+    18.501
+   ],
+   "slots": [
+    "celandine_01"
+   ],
+   "sha256": "071DB89FC8E4C89330091DCDFBAD75DE7DF18FFE8C270D64B640E7AF5BDEBC49"
+  },
+  {
+   "file": "SM_FeyCelandine1.fbx",
+   "source": "celandine_01",
+   "triangles": 365,
+   "dimensions_cm": [
+    25.315,
+    31.059,
+    14.309
+   ],
+   "slots": [
+    "celandine_01"
+   ],
+   "sha256": "F779658DD8D9310F52DB99962B20DA5D874E4357179A1DD27F165E83081FAD20"
+  },
+  {
+   "file": "SM_FeyMoss.fbx",
+   "source": "moss_01",
+   "triangles": 448,
+   "dimensions_cm": [
+    50.186,
+    48.485,
+    4.619
+   ],
+   "slots": [
+    "moss_01"
+   ],
+   "sha256": "CA55F763F17DC6AED4F0E156D00D5E8023B4EA6C05D838F4A753C6730385F35A"
+  }
+ ]
+}
