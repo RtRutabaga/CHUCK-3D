@@ -81,21 +81,29 @@ namespace Phleg
     /** How far a point (local X, Y) is inside the breach's outline (< 0 outside). */
     float BreachInside(float X, float Y);
     // The Feywild bleedthrough (2026-11-17; PhlegethosBleed.h, docs/regions/PHLEGETHOS.md#the-feywild-bleedthrough): the
-    // front of the forecourt is a field of basalt slabs over the Astral, its edges on the wastes' ground grid. When the
-    // trio's scene ends a moat of them falls away round an island (behind him, in front toward the battle, at both
-    // sides), then the island's slabs fall in waves; a Feywild river crosses the island along Y over its two middle
-    // columns, and in the end it is the only way out.
-    constexpr float FieldX0 = 39690, FieldX1 = 41970, FieldY0 = -2960, FieldY1 = 3040;
-    constexpr int32 FieldCols = 10, FieldRows = 24;
+    // forecourt where the trio fight is a field of basalt slabs over the Astral, its edges on the wastes' ground grid. When
+    // he has come onto it (the island, the battle's side: the user, 2026-11-17, "trapped on the side that the trio and fiend
+    // are on") a moat of them falls away round it (behind him, at both sides, and before the fortress wall), then the
+    // island's slabs fall in waves; a Feywild river crosses the island along Y over its first two columns, and in the end
+    // it is the only way out. The ground round the breach is not slabs: it holds (FieldKept).
+    // (First built 39690..41970 in front of the battle: he was shut in on the wrong side of it.)
+    constexpr float FieldX0 = 41000, FieldX1 = 43600, FieldY0 = -2960, FieldY1 = 3040;
+    constexpr int32 FieldCols = 12, FieldRows = 24;
     constexpr float FieldColW = (FieldX1 - FieldX0) / FieldCols, FieldRowW = (FieldY1 - FieldY0) / FieldRows;
-    constexpr int32 MoatCols = 2, MoatRows = 2;   // the moat: two columns at each end, two rows at each side
-    constexpr int32 RiverCol0 = 4, RiverCol1 = 5;  // the river's two columns
+    constexpr int32 MoatCols = 2, MoatFrontCols = 2, MoatRows = 2;   // the moat: two columns behind, two before the wall, two rows at each side
+    constexpr int32 RiverCol0 = 2, RiverCol1 = 3;  // the river's two columns (the island's first)
     constexpr float RiverX0 = FieldX0 + RiverCol0 * FieldColW, RiverX1 = FieldX0 + (RiverCol1 + 1) * FieldColW;
-    constexpr float IslandX0 = FieldX0 + MoatCols * FieldColW, IslandX1 = FieldX1 - MoatCols * FieldColW;
+    constexpr float IslandX0 = FieldX0 + MoatCols * FieldColW, IslandX1 = FieldX1 - MoatFrontCols * FieldColW;
     constexpr float IslandY0 = FieldY0 + MoatRows * FieldRowW, IslandY1 = FieldY1 - MoatRows * FieldRowW;
     constexpr float VoidZ = FortressTop - 650;     // the Astral's floor under the slabs
     inline bool InSlabField(float X, float Y) { return X > FieldX0 && X < FieldX1 && Y > FieldY0 && Y < FieldY1; }
     inline bool OnIsland(float X, float Y) { return X > IslandX0 && X < IslandX1 && Y > IslandY0 && Y < IslandY1; }
+    /** A field cell that is ground, not a slab: it touches the breach's lip (the wizard's ground holds). */
+    bool FieldKept(int32 Col, int32 Row);
+    inline int32 FieldColAt(float X) { return FMath::Clamp(FMath::FloorToInt((X - FieldX0) / FieldColW), 0, FieldCols - 1); }
+    inline int32 FieldRowAt(float Y) { return FMath::Clamp(FMath::FloorToInt((Y - FieldY0) / FieldRowW), 0, FieldRows - 1); }
+    /** A point of the field over a slab (not the kept ground). */
+    inline bool OverSlab(float X, float Y) { return InSlabField(X, Y) && !FieldKept(FieldColAt(X), FieldRowAt(Y)); }
     // The bus stop (2026-11-17, the user: the 2D fractured way's modern city bus stop, its businessman without the
     // umbrella, and small Astral ruptures): a fragment of a city street fallen into the wastes beside the path, laid
     // along it (PhlegethosBusStop.inl). The ground round it is pressed level.
@@ -140,6 +148,8 @@ FVector PhlegethosLandingSpot();
 FVector PhlegethosSpawn(EPhlegSpawn Spawn);
 float PhlegethosSpawnYaw(EPhlegSpawn Spawn);
 /** Where a death here returns him (the start of the stretch), and whether a point is a spawn (its yaw). */
+/** (2026-11-17) The fortress encounter's track: from the trio's entrance on, while he is at the forecourt (FortressBattle.cpp). */
+bool PhlegethosBattleMusic(const UWorld* World, const FVector& At, bool bWas);
 bool PhlegethosRespawn(const FVector& World, FVector& Out);
 bool IsPhlegethosSpawn(const FVector& World, float& Yaw);
 /** Into the lava (world, his feet): an Astral death. */

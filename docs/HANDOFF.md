@@ -6,6 +6,13 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Phlegethos: shut in on the battle's side, a fiercer fight, one fiend, the encounter's music (November 17, Claude):**
+  - The bleedthrough's slab field now lies under the trio's battle: he walks onto it and the moat falls away behind him, shutting him in with the trio and the fiend. A death there does not reset it: he comes back on the ground by the breach (which holds) and it goes on. The battle's slabs hold while they stand on them.
+  - The fiend has three new moves (a leap onto the fighter with the mace brought down as it lands, a mace sweep at waist height, a two-beat wing buffet) and fights faster; three lemures up at once; the wizard bolts it more often. The wastes' Pit Fiend is gone (one fiend only).
+  - The user's "Ritual of the Broken Sun" plays from the trio's entrance on (`SW_PhlegFortressBattle`).
+  - The devils throw only when he is in front of them and in sight; the bus stop dimmer; braziers larger with their own light; the mace's fire visible (it burned inside the iron); the idols moved to a ledge at the wall across the front moat.
+  - Editor: all 23 Phlegethos trials pass. Package: full verification passed (182 passes, 23/23 Phlegethos trials), promoted as `PhlegethosArenaFight`. Not played by hand.
+  - See [regions/PHLEGETHOS.md](regions/PHLEGETHOS.md#the-trap-on-the-battles-side-a-fiercer-fight-one-fiend-2026-11-17-second-pass) and [agent-handoffs/CLAUDE.md](agent-handoffs/CLAUDE.md).
 - **Phlegethos: spined devils aim at him, quieter; stake bars and the ascent's lava fall gone; dimmer hot cracks (November 17, Claude):**
   - The spined devils now throw at Chuck when he is in front of them, in sight and within 26 m: at where he is as the tail winds back (no lead), 60% of throws 35-110 cm wide. Their sounds are about 40-60% of what they were.
   - The stakes beside the path lost their cross bar; the lava fall pouring onto the stone at the ascent's foot is removed; the basalt's hot cracks glow at about half.

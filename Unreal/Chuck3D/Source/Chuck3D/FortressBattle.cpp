@@ -37,13 +37,13 @@ namespace
     float FortYaw(const FVector& From, const FVector& To) { return static_cast<float>((To - From).GetSafeNormal2D().Rotation().Yaw); }
     // The cast's ground (local X, Y): the fiend before the gate right of the processional; the fighter between it and the
     // breach's side; the wizard at the breach; the ranger back on the right with a clear line at the fiend.
-    constexpr float FiendX = 43150, FiendY = 1250;
-    // (the fighter within a few strides of the fiend; 2026-11-17: the wizard and the ranger back beyond the Feywild
-    // bleedthrough's slab field, which ends at Phleg::FieldX1, 41970; were at 41980 and 41450)
-    const FVector2D HeroAt[3] = {{42580, 930}, {42180, -950}, {42200, 2000}};
-    // The lemures' ground: along the forecourt's edges, off the processional and the cast.
-    const FVector2D LemureAt[] = {{43350, 2600}, {42700, 2750}, {42250, 3150}, {43500, -2350}, {42900, -2650}, {42300, -3100}};   // (2026-11-17: all beyond the slab field)
-    constexpr int32 FortWantUp = 2;
+    // (2026-11-17: the whole battle on the bleedthrough's island, Phleg::IslandX0..X1 41433..43167, the user: Chuck shut in
+    // on the battle's side; the fiend at 42880, before the front moat and the idols' ledge at the wall, was at 43150)
+    constexpr float FiendX = 42880, FiendY = 1250;
+    const FVector2D HeroAt[3] = {{42500, 900}, {42180, -950}, {42200, 2000}};
+    // The lemures' ground: along the island's sides, off the river, the breach and the cast.
+    const FVector2D LemureAt[] = {{42950, 2150}, {42550, 2300}, {42150, 2250}, {42950, -2200}, {42600, -2300}, {42150, -2250}};
+    constexpr int32 FortWantUp = 3;   // (2026-11-17: more of them at once, the fight more intense; was 2)
     constexpr int32 BallSlots = 2, BurstSlots = 3;
     const FVector Away(0, 0, -1e6);
     // The trio's lines (2D data/dialogue/phlegethos_fortress.json, "phlegethos_battle_entrance"), one to each of them in the
@@ -114,7 +114,7 @@ void ATempleSanctumBattle::SpawnFortressCast()
         Post.Kind = 2; Post.Space = TEXT("fortress");
         Post.Feet = FiendFeet;
         Post.Yaw = FortYaw(FiendFeet, FortW(HeroAt[0].X, HeroAt[0].Y));
-        Post.Leash = FBox2D(FVector2D(FiendX - 1100, FiendY - 1500), FVector2D(Phleg::GateX - 250, FiendY + 1100));
+        Post.Leash = FBox2D(FVector2D(FiendX - 1100, FiendY - 1500), FVector2D(Phleg::IslandX1 - 160, FiendY + 1100));
         if (ATempleSkeleton* F = ATempleSkeleton::SpawnAt(World, Post))
         {
             F->SetSanctum(this);
@@ -123,7 +123,7 @@ void ATempleSanctumBattle::SpawnFortressCast()
         }
     }
     // The lemures lying along the forecourt's edges.
-    const FBox2D Leash(FVector2D(Phleg::ForecourtX - 200, -3000), FVector2D(Phleg::GateX - 200, 3000));
+    const FBox2D Leash(FVector2D(Phleg::RiverX1 + 60, Phleg::IslandY0 + 80), FVector2D(Phleg::IslandX1 - 80, Phleg::IslandY1 - 80));
     for (const FVector2D& L : LemureAt)
     {
         FTempleSkeletonPost Post;
@@ -213,14 +213,14 @@ void ATempleSanctumBattle::TickFortress(float Dt, AChuckCharacter* Chuck, const 
 
 // ---------------------------------------------------------------------------- the fiend's blows on the heroes
 
-void ATempleSanctumBattle::FiendSmashComing(ATempleHero* At, const FVector& Ground)
+void ATempleSanctumBattle::FiendSmashComing(ATempleHero* At, const FVector& Ground, float Lead, float Chance)
 {
     if (!At) return;
     // Mostly he sees it come and is out from under it as it falls (0.25 s before it lands); now and then he is caught
-    // bracing, and the blast throws him.
-    if (Random.FRand() < .8f)
+    // bracing, and the blast throws him. (Lead: seconds from now he moves; the leap and the sweep, 2026-11-17.)
+    if (Random.FRand() < Chance)
     {
-        FDodge D; D.Hero = At; D.When = static_cast<float>(GetWorld()->GetTimeSeconds()) + 1.32f - .38f; D.Past = Ground; D.bSmash = true;
+        FDodge D; D.Hero = At; D.When = static_cast<float>(GetWorld()->GetTimeSeconds()) + Lead; D.Past = Ground; D.bSmash = true;
         Dodges.Add(D);
     }
 }
@@ -489,4 +489,12 @@ bool ATempleSanctumBattle::GetFortressSubtitle(FString& Speaker, FString& Text) 
     Speaker = FortSpeakers[L.Hero];
     Text = DockSubtitles::At(L.Text, LineSeconds(L.Text), FortTalkT);
     return true;
+}
+
+bool PhlegethosBattleMusic(const UWorld* World, const FVector& At, bool bWas)
+{
+    // From the moment the trio's entrance starts, while he is at the forecourt (a little further back before it leaves him).
+    const ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(World);
+    if (!B || !(B->IsFortressScenePlaying() || B->HasFortressSceneRun()) || !InPhlegethos(At)) return false;
+    return PhlegLocal(At).X > Phleg::ForecourtX - (bWas ? 2600.f : 1500.f);
 }

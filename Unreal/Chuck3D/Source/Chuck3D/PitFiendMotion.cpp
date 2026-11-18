@@ -76,7 +76,7 @@ void ATempleSkeleton::TickFiend(float DeltaSeconds, float Speed)
     const float Sc = KindScale(), Base = FeetZ();
     const float Moving = FMath::Clamp(Speed / FiendChase, 0.f, 1.f);
     const bool bAlert = State == EState::Chase || State == EState::Attack || State == EState::Recover;
-    const bool bSmash = State == EState::Attack && (Attack == EAttack::Smash || Attack == EAttack::Hurl);
+    const bool bSmash = State == EState::Attack && (Attack == EAttack::Smash || Attack == EAttack::Hurl || Attack == EAttack::Leap || Attack == EAttack::Sweep || Attack == EAttack::Buffet);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(FiendGround), false, this);
     if (APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0)) Q.AddIgnoredActor(Pawn);
     for (const TWeakObjectPtr<ATempleSkeleton>& S : All()) if (S.IsValid()) Q.AddIgnoredActor(S.Get());

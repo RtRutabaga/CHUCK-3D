@@ -71,7 +71,7 @@ return float4(col * bright, alpha);
 
 CONCRETE = NOISE + r'''
 float2 w = P.xy;
-float base = .27 + .06 * N.fbm(w / 37.) + .03 * N.n(w / 4.1);
+float base = .2 + .045 * N.fbm(w / 37.) + .025 * N.n(w / 4.1);   // (2026-11-17: darker, the user: the bus stop dimmer; was .27)
 float2 j = abs(frac(w / 60. + .5) - .5) * 60.;
 float joint = (1. - smoothstep(.4, 1.1, min(j.x, j.y))) * step(.5, C.g);
 base *= 1. - .45 * joint;
@@ -86,7 +86,7 @@ float2 w = P.xy;
 float base = .042 + .015 * N.fbm(w / 29.) + .02 * step(.86, N.h(floor(w / 1.1)));
 float3 col = float3(base, base, base * 1.04);
 float wear = .75 + .25 * N.fbm(w / 9. + 2.);
-col = lerp(col, float3(.62, .62, .6) * wear, saturate(C.r));
+col = lerp(col, float3(.42, .42, .4) * wear, saturate(C.r));   // (markings .62 to .42, 2026-11-17)
 col = lerp(col, float3(.62, .45, .06) * wear, saturate(C.g));
 return col;
 '''

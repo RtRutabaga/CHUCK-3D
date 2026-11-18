@@ -112,7 +112,7 @@ public:
     /** A point (world) in the sanctum's broken floor or the fortress's breach (within Margin of its edge). */
     bool HoleAt(const FVector& World, float Margin) const;
     /** The fiend's mace is coming down on the fighter at Ground: he gets out from under it (mostly). */
-    void FiendSmashComing(ATempleHero* At, const FVector& Ground);
+    void FiendSmashComing(ATempleHero* At, const FVector& Ground, float Lead = 1.32f - .38f, float Chance = .8f);
     /** A blow of the fiend's on the ground at At (Strength 0..1): the heroes near it are thrown or braced. */
     void FiendBlast(const FVector& At, float Strength);
     /** Its fire gathering in its left hand, then loosed at a hero. */

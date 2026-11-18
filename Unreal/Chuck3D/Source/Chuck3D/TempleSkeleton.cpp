@@ -45,8 +45,12 @@ namespace
             // The Pit Fiend's mace (2026-11-16): over the idle, the arm and body driven by TickSmash; the strike at 1.32 s.
             {TEXT("Idle"), 1.f, 1.32f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow},
             // Its fire hurled at a hero (the trio's battle, 2026-11-16): over the idle, the left arm and body driven by TickHurl.
-            {TEXT("Idle"), 1.f, .98f, 0.f, .04f, .1f, TEXT("hand_l"), TEXT("lowerarm_l"), 0.f, 1}};
-        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 5)];
+            {TEXT("Idle"), 1.f, .98f, 0.f, .04f, .1f, TEXT("hand_l"), TEXT("lowerarm_l"), 0.f, 1},
+            // Its leap, its mace's sweep, its wings' buffet (the trio's battle, 2026-11-17): over the idle, driven by FortressFiend.cpp.
+            {TEXT("Idle"), 1.f, 1.f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow},
+            {TEXT("Idle"), 1.f, 1.12f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, ATempleSkeleton::FiendBlow},
+            {TEXT("Idle"), 1.f, 1.4f, 0.f, .04f, .1f, TEXT("hand_r"), TEXT("lowerarm_r"), 0.f, 1}};
+        return Specs[FMath::Clamp(static_cast<int32>(Attack), 0, 8)];
     }
 
     // Spawned in play and in its own test only: the other automated runs keep the worlds their checks were written against.
@@ -161,7 +165,9 @@ void ATempleSkeleton::BeginPlay()
             {
                 MaceLocal = RefComponentSpace(Ref, MaceBone).InverseTransformPosition(P / Sum);
                 MaceLen = static_cast<float>(FVector::Dist(P / Sum, RefComponentSpace(Ref, MaceBone).GetLocation()));
-                if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) MaceFlame = Fire->AddMoving(this, GetActorLocation(), 34.f, 70.f);
+                // (2026-11-17, the user could not see its fire: at 34 x 70 cm from 14 cm over the head's middle it burned inside
+                // the iron, 70 cm across at its scale. Now as wide as the head, taller, from its crown, and a second tongue.)
+                if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) { MaceFlame = Fire->AddMoving(this, GetActorLocation(), 78.f, 165.f); MaceFlame2 = Fire->AddMoving(this, GetActorLocation(), 52.f, 120.f); }
                 MaceLight = NewObject<UPointLightComponent>(this, TEXT("MaceLight"));
                 MaceLight->SetupAttachment(RootComponent);
                 MaceLight->SetLightColor(FLinearColor(1.f, .45f, .12f));
@@ -252,7 +258,8 @@ int32 ATempleSkeleton::GetAnimEvaluations() const
 
 const TCHAR* ATempleSkeleton::AttackName(EAttack A)
 {
-    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); case EAttack::Smash: return TEXT("Smash"); case EAttack::Hurl: return TEXT("Hurl"); default: return TEXT("None"); }
+    switch (A) { case EAttack::Kick: return TEXT("Kick"); case EAttack::Grab: return TEXT("Grab"); case EAttack::Swat: return TEXT("Swat"); case EAttack::Strike: return TEXT("Strike"); case EAttack::Smash: return TEXT("Smash"); case EAttack::Hurl: return TEXT("Hurl");
+        case EAttack::Leap: return TEXT("Leap"); case EAttack::Sweep: return TEXT("Sweep"); case EAttack::Buffet: return TEXT("Buffet"); default: return TEXT("None"); }
 }
 
 const TCHAR* ATempleSkeleton::GetStateName() const
@@ -460,12 +467,19 @@ void ATempleSkeleton::TickMace()
     // The fire and its light follow the mace's head as it walks and swings (the flames rise from its crown: started under
     // it they hid the iron in a white blaze); the light flickers.
     const FVector P = GetMaceHead();
-    if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld())) Fire->SetBase(MaceFlame, P + FVector(0, 0, 14.f));
+    if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld()))
+    {
+        // (from the crown; the second trailing the swing a little)
+        const FVector Trail = (P - MacePrev).GetClampedToMaxSize(60.f);
+        Fire->SetBase(MaceFlame, P + FVector(0, 0, 32.f));
+        Fire->SetBase(MaceFlame2, P + FVector(0, 0, 20.f) - Trail);
+    }
+    MacePrev = P;
     if (MaceLight)
     {
         const float T = GetWorld()->GetTimeSeconds();
         MaceLight->SetWorldLocation(P + FVector(0, 0, 140.f));   // (closer and brighter, it burned the head itself out)
-        MaceLight->SetIntensity(700.f * (.82f + .12f * FMath::Sin(T * 15.f) + .07f * FMath::Sin(T * 37.f + 1.3f)) + 5000.f * Fm.Flash);   // (a flare as it strikes)
+        MaceLight->SetIntensity(1500.f * (.82f + .12f * FMath::Sin(T * 15.f) + .07f * FMath::Sin(T * 37.f + 1.3f)) + 5000.f * Fm.Flash);   // (a flare as it strikes)
     }
 }
 

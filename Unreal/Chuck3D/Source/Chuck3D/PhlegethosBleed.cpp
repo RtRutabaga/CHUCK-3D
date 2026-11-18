@@ -1,6 +1,8 @@
 #include "PhlegethosBleed.h"
 #include "PhlegethosSetting.h"
 #include "TempleSanctumBattle.h"
+#include "TempleHero.h"
+#include "TempleSkeleton.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
 #include "Camera/CameraActor.h"
@@ -90,11 +92,12 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
     TheBleed = this;
     const FVector Origin = PhlegethosOrigin();
     UMaterialInterface* Basalt = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegBasalt.M_PhlegBasalt"));
+    UMaterialInterface* PathMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegPath.M_PhlegPath"));
     UMaterialInterface* Glow = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_PhlegGlow.M_PhlegGlow"));
     UMaterialInterface* Depth = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Materials/M_AstralDepth.M_AstralDepth"));
     UMaterialInterface* RiverMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_FeyRiver.M_FeyRiver"));
     UMaterialInterface* TearMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Phlegethos/M_FeyTear.M_FeyTear"));
-    Missing = !Basalt + !Glow + !Depth + !RiverMat + !TearMat;
+    Missing = !Basalt + !Glow + !Depth + !RiverMat + !TearMat + !PathMat;
     for (int32 I = 0; I < SndCount; ++I)
         Sounds.Add(LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), BleedSoundNames[I], BleedSoundNames[I])));
     Attenuation = NewObject<USoundAttenuation>(this);
@@ -113,15 +116,19 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
         float X = FieldX0 + I * FieldColW, Y = FieldY0 + J * FieldRowW;
         const bool bEdgeX = I == 0 || I == NX - 1, bEdgeY = J == 0 || J == NY - 1;
         const bool bRiverEdge = I == RiverCol0 || I == RiverCol1 + 1;
-        if (!bEdgeX && !bRiverEdge && !bEdgeY) X += R.FRandRange(-55.f, 55.f);
-        if (!bEdgeY && !bEdgeX) Y += R.FRandRange(-60.f, 60.f);
+        // (a corner of the kept ground round the breach stays on the grid: the ground's cut follows the grid)
+        const bool bKeptCorner = FieldKept(I - 1, J - 1) || FieldKept(I, J - 1) || FieldKept(I - 1, J) || FieldKept(I, J);
+        if (!bEdgeX && !bRiverEdge && !bEdgeY && !bKeptCorner) X += R.FRandRange(-55.f, 55.f);
+        if (!bEdgeY && !bEdgeX && !bKeptCorner) Y += R.FRandRange(-60.f, 60.f);
         Grid[J * NX + I] = FVector2D(X, Y);
     }
+    CellSlab.Init(-1, FieldCols * FieldRows);
     auto Ground = [](float X, float Y) { return ApproachGround(X, Y) + .5f; };
     constexpr float Thick = 160.f, Joint = 1.6f;
     const FColor Violet(175, 95, 255, 255);
     for (int32 Col = 0; Col < FieldCols; ++Col) for (int32 Row = 0; Row < FieldRows; ++Row)
     {
+        if (FieldKept(Col, Row)) { ++KeptCells; continue; }   // (the ground round the breach)
         FVector2D Q[4] = {Grid[Row * NX + Col], Grid[Row * NX + Col + 1], Grid[(Row + 1) * NX + Col + 1], Grid[(Row + 1) * NX + Col]};
         FVector2D Cen(0, 0); for (const FVector2D& P : Q) Cen += P; Cen /= 4.f;
         for (FVector2D& P : Q) P += (Cen - P).GetSafeNormal() * Joint;
@@ -192,7 +199,8 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
         Mesh->RegisterComponent();
         Mesh->CreateMeshSection(0, M.V, M.T, M.N, M.UV, M.C, M.Tan, true);
         Mesh->CreateMeshSection(1, K.V, K.T, K.N, K.UV, K.C, K.Tan, false);
-        Mesh->SetMaterial(0, Basalt); Mesh->SetMaterial(1, Glow);
+        // (the processional's two rows in its flagstones, to the gate)
+        Mesh->SetMaterial(0, (Row == FieldRows / 2 - 1 || Row == FieldRows / 2) && PathMat ? PathMat : Basalt); Mesh->SetMaterial(1, Glow);
         Mesh->SetMeshSectionVisible(1, false);
         Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
         Mesh->SetCollisionProfileName(TEXT("BlockAll"));
@@ -200,8 +208,9 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
         FSlab S;
         S.Mesh = Mesh; S.Col = Col; S.Row = Row;
         S.Centre = FVector(Cen.X, Cen.Y, Ground(Cen.X, Cen.Y));
-        S.Zone = Col < MoatCols ? EZone::MoatBack : Col >= FieldCols - MoatCols ? EZone::MoatFront : (Row < MoatRows || Row >= FieldRows - MoatRows) ? EZone::MoatSide
+        S.Zone = Col < MoatCols ? EZone::MoatBack : Col >= FieldCols - MoatFrontCols ? EZone::MoatFront : (Row < MoatRows || Row >= FieldRows - MoatRows) ? EZone::MoatSide
                : (Col == RiverCol0 || Col == RiverCol1) ? EZone::River : EZone::Land;
+        CellSlab[Col * FieldRows + Row] = Slabs.Num();
         Slabs.Add(S);
         PlaceSlab(Slabs.Last());
     }
@@ -224,6 +233,27 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
         Wall(FVector2D(FieldX0, FieldY1), FVector2D(FieldX1, FieldY1), FVector(0, -1, 0));
         Wall(FVector2D(FieldX0, FieldY0), FVector2D(FieldX0, FieldY1), FVector(1, 0, 0));
         Wall(FVector2D(FieldX1, FieldY0), FVector2D(FieldX1, FieldY1), FVector(-1, 0, 0));
+        // (and round the kept ground by the breach, where it meets a slab)
+        for (int32 Col = 0; Col < FieldCols; ++Col) for (int32 Row = 0; Row < FieldRows; ++Row)
+        {
+            if (!FieldKept(Col, Row)) continue;
+            const float X0 = FieldX0 + Col * FieldColW, X1 = X0 + FieldColW, Y0 = FieldY0 + Row * FieldRowW, Y1 = Y0 + FieldRowW;
+            if (Col > 0 && !FieldKept(Col - 1, Row)) Wall(FVector2D(X0, Y0), FVector2D(X0, Y1), FVector(-1, 0, 0));
+            if (Col < FieldCols - 1 && !FieldKept(Col + 1, Row)) Wall(FVector2D(X1, Y0), FVector2D(X1, Y1), FVector(1, 0, 0));
+            if (Row > 0 && !FieldKept(Col, Row - 1)) Wall(FVector2D(X0, Y0), FVector2D(X1, Y0), FVector(0, -1, 0));
+            if (Row < FieldRows - 1 && !FieldKept(Col, Row + 1)) Wall(FVector2D(X0, Y1), FVector2D(X1, Y1), FVector(0, 1, 0));
+        }
+        // Where a death in it returns him: the kept ground nearest the river, clear of the breach's lip.
+        float BestX = 1e9f;
+        for (int32 Col = 0; Col < FieldCols; ++Col) for (int32 Row = 0; Row < FieldRows; ++Row)
+        {
+            if (!FieldKept(Col, Row)) continue;
+            for (int32 I = 0; I < 5; ++I) for (int32 J = 0; J < 5; ++J)
+            {
+                const float X = FieldX0 + (Col + .1f + .2f * I) * FieldColW, Y = FieldY0 + (Row + .1f + .2f * J) * FieldRowW;
+                if (BreachInside(X, Y) < -110.f && X < BestX) { BestX = X; RespawnLocal = FVector(X, Y, FortressTop); }
+            }
+        }
         M.Flat(FVector(FieldX0, FieldY0, VoidZ), FVector(FieldX1, FieldY0, VoidZ), FVector(FieldX1, FieldY1, VoidZ), FVector(FieldX0, FieldY1, VoidZ), FVector::UpVector, W);
         Void = NewObject<UProceduralMeshComponent>(this, TEXT("BleedVoid"));
         Void->SetupAttachment(RootComponent); Void->RegisterComponent();
@@ -325,7 +355,7 @@ void APhlegBleed::Rearm()
 {
     for (FSlab& S : Slabs)
     {
-        S.State = ESlab::Whole; S.Due = -1.f; S.PressedAt = -1.f; S.bForced = false;
+        S.State = ESlab::Whole; S.Due = -1.f; S.PressedAt = -1.f; S.bForced = false; S.CollapseDue = -1.f;
         S.Drop = S.Vel = FVector::ZeroVector; S.Rot = S.Spin = FRotator::ZeroRotator;
         if (UProceduralMeshComponent* M = S.Mesh.Get())
         {
@@ -357,21 +387,30 @@ int32 APhlegBleed::GetWhole(EZone Zone) const
     return N;
 }
 
+int32 APhlegBleed::SlabIndexAt(float X, float Y) const
+{
+    if (!Phleg::InSlabField(X, Y)) return -1;
+    const int32 Cell = Phleg::FieldColAt(X) * Phleg::FieldRows + Phleg::FieldRowAt(Y);
+    return CellSlab.IsValidIndex(Cell) ? CellSlab[Cell] : -1;
+}
+
+bool APhlegBleed::ArenaRespawn(FVector& OutWorld)
+{
+    const APhlegBleed* B = TheBleed.Get();
+    if (!B || B->Stage != EStage::Running || B->RespawnLocal.IsZero()) return false;
+    OutWorld = PhlegWorld(B->RespawnLocal + FVector(0, 0, 34.65f + 2.f));
+    return true;
+}
+
 bool APhlegBleed::OpenAt(float X, float Y) const
 {
-    if (!Phleg::InSlabField(X, Y)) return false;
-    const int32 Col = FMath::Clamp(FMath::FloorToInt((X - Phleg::FieldX0) / Phleg::FieldColW), 0, Phleg::FieldCols - 1);
-    const int32 Row = FMath::Clamp(FMath::FloorToInt((Y - Phleg::FieldY0) / Phleg::FieldRowW), 0, Phleg::FieldRows - 1);
-    const int32 I = Col * Phleg::FieldRows + Row;
+    const int32 I = SlabIndexAt(X, Y);
     return Slabs.IsValidIndex(I) && (Slabs[I].State == ESlab::Falling || Slabs[I].State == ESlab::Gone);
 }
 
 int32 APhlegBleed::SlabStateAt(float X, float Y) const
 {
-    if (!Phleg::InSlabField(X, Y)) return -1;
-    const int32 Col = FMath::Clamp(FMath::FloorToInt((X - Phleg::FieldX0) / Phleg::FieldColW), 0, Phleg::FieldCols - 1);
-    const int32 Row = FMath::Clamp(FMath::FloorToInt((Y - Phleg::FieldY0) / Phleg::FieldRowW), 0, Phleg::FieldRows - 1);
-    const int32 I = Col * Phleg::FieldRows + Row;
+    const int32 I = SlabIndexAt(X, Y);
     if (!Slabs.IsValidIndex(I)) return -1;
     return Slabs[I].State == ESlab::Whole ? 0 : Slabs[I].State == ESlab::Cracking ? 1 : 2;
 }
@@ -383,6 +422,23 @@ bool APhlegBleed::FindWhole(int32 Col, float NearY, FVector& Out) const
         if (S.Col == Col && S.State == ESlab::Whole && S.Row >= Phleg::MoatRows + 1 && S.Row < Phleg::FieldRows - Phleg::MoatRows - 1 && FMath::Abs(S.Centre.Y - NearY) < Best)
         { Best = static_cast<float>(FMath::Abs(S.Centre.Y - NearY)); Out = S.Centre; }
     return Best < 1e8f;
+}
+
+void APhlegBleed::GatherHolders()
+{
+    // The battle's feet (local XY): the trio, the fiend, the lemures on theirs.
+    Holders.Reset();
+    if (const ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(GetWorld()))
+        for (int32 R = 0; R < 3; ++R) if (const ATempleHero* H = B->GetHero(R)) { const FVector L = PhlegLocal(H->GetActorLocation()); Holders.Add(FVector2D(L.X, L.Y)); }
+    for (const TWeakObjectPtr<ATempleSkeleton>& S : ATempleSkeleton::All())
+        if (S.IsValid() && FCString::Strcmp(S->GetPost().Space, TEXT("fortress")) == 0 && !S->IsHidden())
+        { const FVector L = PhlegLocal(S->GetActorLocation()); Holders.Add(FVector2D(L.X, L.Y)); }
+}
+
+bool APhlegBleed::Held(const FSlab& S) const
+{
+    for (const FVector2D& P : Holders) if (FMath::Abs(P.X - S.Centre.X) < Phleg::FieldColW * .5f + 70.f && FMath::Abs(P.Y - S.Centre.Y) < Phleg::FieldRowW * .5f + 70.f) return true;
+    return false;
 }
 
 void APhlegBleed::PlayAt(USoundBase* Sound, const FVector& Local, float Volume, float Pitch)
@@ -446,8 +502,12 @@ void APhlegBleed::Tick(float Dt)
         return;
     }
     Clock += Dt;
-    // A death in it (into the Astral, the fiend's fire): it all comes back while the view is dark.
-    if (Stage == EStage::Running && Chuck->IsBodyHidden() && !Chuck->IsCarried()) { Rearm(); return; }
+    // A death in it (into the Astral, the fiend's blows): it goes on (2026-11-17, the user; it used to re-arm). He comes
+    // back on the ground by the breach (ArenaRespawn).
+    const bool bGoneNow = Stage == EStage::Running && Chuck->IsBodyHidden() && !Chuck->IsCarried();
+    if (bGoneNow && !bWasHidden) { ++DeathsIn; UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_DEATH n=%d clock=%.1f"), DeathsIn, Clock); }
+    bWasHidden = bGoneNow;
+    GatherHolders();
     TickSlabs(Dt, Chuck);
     TickRiver(Dt, Chuck);
     if (Stage == EStage::Swept) TickSweep(Dt, Chuck);
@@ -474,7 +534,7 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
             if (Index == 1 && R < 7 && H1 < .62f) Due = At + R * .22f + .4f * H2;
             else if (Index == 2 && R >= Rows - 7 && H1 < .62f) Due = At + (Rows - 1 - R) * .22f + .4f * H2;
             else if (Index == 3 && ((R >= 7 && R < Rows - 7 && H1 < .38f) || ((R < 7 || R >= Rows - 7) && H1 < .55f))) Due = At + 3.f * H2;
-            if (Due < 0) continue;
+            if (Due < 0 || Held(S)) continue;   // (not from under the battle's feet)
             Crack(S, Due, 1.6f, false); ++N;
         }
         if (USoundBase* S = Sounds[SndRumble]) UGameplayStatics::PlaySound2D(this, S, .45f, .5f);
@@ -492,7 +552,7 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
         {
             if (S.Zone != EZone::Land || S.State != ESlab::Whole) continue;
             const float D = static_cast<float>(FMath::Abs(S.Centre.Y - Him.Y) + .5f * FMath::Abs(S.Centre.X - Him.X));
-            Crack(S, CollapseAt + CollapseSpan * (1.f - D / Far), 1.3f, true); ++N;
+            S.CollapseDue = CollapseAt + CollapseSpan * (1.f - D / Far); ++N;   // (cracked when due, if no one of the battle stands on it)
         }
         if (USoundBase* S = Sounds[SndRumble]) UGameplayStatics::PlaySound2D(this, S, .6f, .42f);
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_COLLAPSE slabs=%d"), N);
@@ -511,8 +571,10 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
         switch (S.State)
         {
         case ESlab::Whole:
-            // In the collapse, whatever he stands on cracks at once (and goes in under a second).
+            // In the collapse, whatever he stands on cracks at once (and goes in under a second); the rest as each is due,
+            // unless one of the battle stands on it.
             if (bCollapse && bOnIt && S.Zone == EZone::Land) Crack(S, Clock, .9f, true);
+            else if (bCollapse && S.CollapseDue >= 0.f && Clock >= S.CollapseDue && !Held(S)) Crack(S, Clock, 1.3f, true);
             break;
         case ESlab::Cracking:
         {
@@ -527,6 +589,8 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
             PlaceSlab(S);
             const bool bPressed = S.PressedAt >= 0.f && Clock - S.PressedAt >= .6f;
             if (bPressed) ++PressedFalls;
+            // (one of the battle has stepped onto it: it holds a while longer)
+            if (Age >= S.CrackFor && !bPressed && !bOnIt && Held(S)) { S.CrackFor = Age + .5f; ++HeldFalls; break; }
             if (Age >= S.CrackFor || bPressed) Fall(S);
             break;
         }

@@ -314,7 +314,7 @@ void ATempleHero::TickFighter(float DeltaSeconds)
         BeholderContact();
         FiendContact();
         UpdateTrail(C->Blow != EBlow::Bash && T > C->Contact - .2f && T < C->Contact + .12f);
-        if (T >= C->Length - .12f) { BackToRest(); CounterOn = nullptr; NextAt = W + Random.FRandRange(.25f, .7f) + (bFiendCut ? Random.FRandRange(.8f, 1.6f) : 0.f); bFiendCut = false; }
+        if (T >= C->Length - .12f) { BackToRest(); CounterOn = nullptr; NextAt = W + Random.FRandRange(.25f, .7f) + (bFiendCut ? Random.FRandRange(.4f, .9f) : 0.f); bFiendCut = false; }   // (2026-11-17: after a cut at the fiend, was .8 to 1.6 s)
         break;
     }
     case EAct::React:
@@ -599,7 +599,7 @@ void ATempleHero::TickWizard(float DeltaSeconds)
             if (Battle->IsBigFoeFighting() && W >= NextBeholderShot)
             {
                 // (the seal has most of him; at the fortress, 2D's "repeated bolt fans", he turns on the fiend more often)
-                NextBeholderShot = W + (Battle->GetFiend() ? Random.FRandRange(6.f, 10.f) : Random.FRandRange(Seal ? 13.f : 8.f, Seal ? 19.f : 13.f));
+                NextBeholderShot = W + (Battle->GetFiend() ? Random.FRandRange(3.5f, 6.f) :   /* (2026-11-17: the fight more intense; was 6 to 10 s) */ Random.FRandRange(Seal ? 13.f : 8.f, Seal ? 19.f : 13.f));
                 Target = nullptr; Act = EAct::Attack; Play(TEXT("Cast"), false, .18f);
                 Battle->Sound(ATempleSanctumBattle::ESound::BoltCast, Mesh->GetBoneLocation(TEXT("hand_l")), .9f);
                 break;

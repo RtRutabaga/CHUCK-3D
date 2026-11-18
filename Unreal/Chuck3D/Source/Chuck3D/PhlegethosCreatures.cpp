@@ -282,24 +282,8 @@ void SpawnPhlegethosCreatures(APhlegethosSetting* Stage)
         P.Delay = .3f + I * .8f; P.ColumnDrop = 460.f;
         Devil(P);
     }
-    // The Pit Fiend (2D: the colossus, wholly avoidable; its battle with the heroes is not built): its round through the
-    // wastes, along the path itself, weaving across it. It notices him from 22 m in front of it.
-    {
-        const FVector2D Round[] = {{31200, 300}, {33600, -300}, {36000, 300}, {37800, -100}, {35800, -300}, {33400, 300}, {30600, -250}};   // (2026-11-16: along the path itself, weaving across it, where it is seen: 15 m off, it was hidden among the boulders)
-        FTempleSkeletonPost Post;
-        Post.Kind = 2; Post.Space = TEXT("wastes");
-        for (const FVector2D& R : Round)
-        {
-            // (on the broken ground, never in one of the lava hollows off the path: in toward the path until it is ground)
-            float Y = ApproachPathY(R.X) + R.Y, Z = GroundAt(World, R.X, Y);
-            for (float K = .85f; (Z < FortressTop - 400.f || Z > FortressTop + 150.f) && K > .1f; K -= .15f) { Y = ApproachPathY(R.X) + R.Y * K; Z = GroundAt(World, R.X, Y); }
-            Post.Route.Add(PhlegWorld(FVector(R.X, Y, Z)));
-        }
-        Post.Feet = Post.Route[0];
-        Post.Yaw = (Post.Route[1] - Post.Route[0]).Rotation().Yaw;
-        Post.Leash = FBox2D(FVector2D(29200, -3600), FVector2D(39800, 3600));
-        ATempleSkeleton::SpawnAt(World, Post);
-    }
+    // (2026-11-17, the user: "remove the earlier pit fiend, only one pit fiend in the encounter". Its round through the
+    // wastes is gone; the one Pit Fiend is the trio's, at the fortress.)
     // The trio's battle at the fortress (FortressBattle.cpp, 2026-11-16): streamed in as he crosses the wastes.
     ATempleSanctumBattle::SpawnFortress(World);
     // The bus stop's commuter (2026-11-17; PhlegethosBusStop.inl): on the pavement by the kerb, looking up the road for
@@ -329,7 +313,7 @@ int32 PhlegethosLemureCount()
 
 ATempleSkeleton* PhlegethosPitFiend()
 {
-    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsFiend() && !S->IsFortressFiend()) return S.Get();   // (the wastes' own, not the fortress's)
+    for (const auto& S : ATempleSkeleton::All()) if (S.IsValid() && S->IsFiend()) return S.Get();   // (2026-11-17: the only one, the fortress's)
     return nullptr;
 }
 
@@ -460,17 +444,25 @@ void APhlegSpinedDevil::Throw()
     if (ThrowSound) UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, S.Pos, .2f, 1.35f);   // (2026-11-17: quieter, the user; was .5)
 }
 
-void APhlegSpinedDevil::TakeAim(AChuckCharacter* Chuck)
+bool APhlegSpinedDevil::HasTarget(AChuckCharacter* Chuck) const
 {
-    // (2026-11-17, the user: "intentionally target chuck (poorly)".) As its tail winds back: at him if he is in front of it, in
-    // sight and in range, where he is now (it never leads him: on the move he is past it), and usually wide of him.
-    AimAt = Perch.Aim;
-    if (!Chuck || Chuck->IsAstral()) return;
+    // (2026-11-17, the user: "only start shooting when they target on proximity".) He is in front of it, in sight, in range.
+    if (!Chuck || Chuck->IsAstral()) return false;
     const FVector Chest = Chuck->GetActorLocation() - FVector(0, 0, Stand - 34.f), From = GetCentre();
     const FVector To = Chest - From;
-    if (To.Size() > AimRange || FVector::DotProduct(To.GetSafeNormal2D(), GetActorForwardVector()) < .1f) return;
+    if (To.Size() > AimRange || FVector::DotProduct(To.GetSafeNormal2D(), GetActorForwardVector()) < .1f) return false;
     FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(DevilAim), false, this); Q.AddIgnoredActor(Chuck);
-    if (GetWorld()->LineTraceSingleByChannel(Hit, From, Chest, ECC_Visibility, Q)) return;
+    return !GetWorld()->LineTraceSingleByChannel(Hit, From, Chest, ECC_Visibility, Q);
+}
+
+void APhlegSpinedDevil::TakeAim(AChuckCharacter* Chuck)
+{
+    // (2026-11-17, the user: "intentionally target chuck (poorly)".) As its tail winds back: where he is now (it never leads
+    // him: on the move he is past it), and usually wide of him.
+    AimAt = Perch.Aim;
+    if (!Chuck) return;
+    const FVector Chest = Chuck->GetActorLocation() - FVector(0, 0, Stand - 34.f), From = GetCentre();
+    const FVector To = Chest - From;
     const bool bWide = FMath::FRand() < MissChance;
     const float Miss = bWide ? FMath::FRandRange(35.f, 110.f) : FMath::FRandRange(0.f, 12.f), A = FMath::FRandRange(0.f, 2.f * PI);
     const FVector Side = FVector::CrossProduct(To.GetSafeNormal(), FVector::UpVector).GetSafeNormal();
@@ -546,7 +538,7 @@ void APhlegSpinedDevil::Tick(float DeltaSeconds)
     const FVector C = Chuck->GetActorLocation();
 
     // The beat: the tail winds back for a moment, then whips over its shoulder, and the spine goes at the whip.
-    const bool bThrowing = !APhlegFlameskull::bCalm && Stage->IsLive() && FVector::Dist(C, Perch.Seat) < 4500.f;
+    const bool bThrowing = !APhlegFlameskull::bCalm && Stage->IsLive() && FVector::Dist(C, Perch.Seat) < 4500.f && (FlickT >= 0 || HasTarget(Chuck));   // (only at him)
     if (bThrowing && FlickT < 0 && Clock >= NextThrow - .5f) { FlickT = 0; bReleased = false; TakeAim(Chuck); }
     float TailPitch = 4.f * FMath::Sin(Clock * 1.3f + Perch.Delay), TailYaw = 6.f * FMath::Sin(Clock * .8f + Perch.Delay * 2.f);
     if (FlickT >= 0)

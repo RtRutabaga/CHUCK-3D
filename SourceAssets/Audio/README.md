@@ -1,5 +1,14 @@
 # Docks soundtrack
 
+## Phlegethos fortress encounter — November 17, 2026 (Claude)
+
+`RitualOfTheBrokenSun.wav` was supplied by the user from `C:/Users/ashsm/Downloads/Ritual of the Broken Sun.wav` as the
+fortress encounter's soundtrack. Copied without modification. User-provided music, not a claim of a third-party licence.
+SHA-256 `7479A2919BBCB57544994B160B94EC4F833331454ED89633A430B6D5216961C4`; stereo PCM, 16-bit, 48,000 Hz, 87.3 s,
+16,771,578 bytes. `Tools/import_phleg_battle_music.py` (UE 5.7.4, `-AllowCommandletAudio`) imports it looping as
+`/Game/Art/Audio/SW_PhlegFortressBattle`; `DockGameMode.cpp` plays it from the trio's entrance on. WAV and uasset use the
+existing Git LFS rules.
+
 ## The ship's ambience — November 1, 2026 (Claude)
 
 Five original, seeded synthetic sounds from `Tools/gen_ship_sfx.py` (Python standard library; no recordings or third-party samples):

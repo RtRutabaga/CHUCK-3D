@@ -45,7 +45,7 @@ public:
     ATempleSkeleton();
     virtual void Tick(float DeltaSeconds) override;
     enum class EState : uint8 { Dormant, Rise, Guard, Chase, Attack, Recover, Return, Settle, Dead };
-    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, Smash, Hurl, None };   // (Smash: the Pit Fiend's mace; Hurl: its fire at a hero, the trio's battle; 2026-11-16)
+    enum class EAttack : uint8 { Kick, Grab, Swat, Strike, Smash, Hurl, Leap, Sweep, Buffet, None };   // (Smash: the Pit Fiend's mace; Hurl: its fire at a hero, the trio's battle; 2026-11-16. Leap, Sweep, Buffet: its moves on the trio, 2026-11-17)
     /** How a hero's blow lands (docs/CHULT-TEMPLE-HEROES.md). */
     enum class EBlow : uint8 { Cut, Cleave, Decapitate, Bash, Arrow, Bolt };
     EState GetState() const { return State; }
@@ -191,6 +191,14 @@ public:
     int32 GetHurls() const { return Hurls; }
     int32 GetHeroBlowsTaken() const { return FortHits; }
     int32 GetFortRoars() const { return FortRoars; }
+    // (2026-11-17, the user: "make the fight more intense, more animations especially from the fiend making this a cinematic
+    // fight between the trio and this formidable foe".) Its leap: a crouch, its wings driving it up and over at the fighter,
+    // the mace raised in the air and brought down as it lands. Its sweep: the mace swung back past its right hip and round
+    // across its front at the fighter at waist height. Its buffet: reared back, wings spread wide and beaten twice at the trio,
+    // the gust staggering them and throwing the lemures down.
+    int32 GetLeaps() const { return Leaps; }
+    int32 GetMaceSweeps() const { return MaceSweeps; }
+    int32 GetBuffets() const { return Buffets; }
     /** Tests: the next blow at a hero (0 smash the fighter, 1 hurl at the wizard, 2 hurl at the ranger), whatever the distance. */
     void ForceFortress(int32 Which) { FortForced = Which; }
     static constexpr float FiendScale = 2.4f;
@@ -225,7 +233,8 @@ private:
     // on it and its light.
     UPROPERTY() TObjectPtr<UPointLightComponent> MaceLight;
     UPROPERTY() TObjectPtr<UPointLightComponent> FillLight;
-    int32 MaceFlame = INDEX_NONE, MaceBone = INDEX_NONE;
+    int32 MaceFlame = INDEX_NONE, MaceFlame2 = INDEX_NONE, MaceBone = INDEX_NONE;
+    FVector MacePrev = FVector::ZeroVector;
     FVector MaceLocal = FVector::ZeroVector;
     void TickMace();
     struct FFiendMotion
@@ -263,7 +272,7 @@ private:
     float AttackReadyAt = 0;   // world time it may strike again (a pause after each attack)
     float StateTime = 0, Lost = 0, OutOfReach = 0, StepDistance = 0, TopSpeed = 0, WorstLeash = 0, LastStrikeGap = 1e9f, StuckTime = 0;
     int32 HitsTaken = 0, Strikes = 0, Rises = 0, Settles = 0, SoundsPlayed = 0;
-    int32 Attacks[6] = {0, 0, 0, 0, 0, 0}, Landed[6] = {0, 0, 0, 0, 0, 0};
+    int32 Attacks[9] = {}, Landed[9] = {};
     TWeakObjectPtr<ATempleSanctumBattle> Battle;
     TWeakObjectPtr<ATempleHero> Foe;
     UPROPERTY() TArray<UStaticMeshComponent*> StuckArrows;
@@ -274,6 +283,14 @@ private:
     void TickSanctum(float DeltaSeconds);
     bool TickFortress(float DeltaSeconds, float LocoSpeed);   // false: a blow at Chuck is under way (the ordinary attack runs it)
     void TickHurl(AChuckCharacter* Chuck, float DeltaSeconds);
+    void TickLeap(AChuckCharacter* Chuck, float DeltaSeconds);
+    void TickSweep(AChuckCharacter* Chuck, float DeltaSeconds);
+    void TickBuffet(AChuckCharacter* Chuck, float DeltaSeconds);
+    bool TickFortressAttack(AChuckCharacter* Chuck, float DeltaSeconds);   // a fortress blow under way: run it (true)
+    int32 FortBlow = -1, Leaps = 0, MaceSweeps = 0, Buffets = 0, BuffetBeats0 = 0;
+    FVector LeapGoal = FVector::ZeroVector;
+    float LeapLandT = -1.f;
+    bool bLaunched = false;
     void FortRoar();
     void FiendStruck(EBlow Kind, const FVector& From, const FVector& At);
     bool bOnChuck = false, bLoosed = false, bGathering = false, bChoseBlow = false, bWantSmash = false;

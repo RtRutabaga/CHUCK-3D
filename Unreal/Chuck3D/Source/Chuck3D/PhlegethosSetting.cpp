@@ -442,6 +442,9 @@ bool PhlegethosRespawn(const FVector& World, FVector& Out)
 {
     const int32 S = PhlegethosStretchAt(World);
     if (S < 0) return false;
+    // (2026-11-17, the user: "when chuck dies keep going don't reset the astral fall away": in the bleedthrough, back on
+    // the battle's side, on the ground by the breach that holds.)
+    if (S == int32(EPhlegSpawn::Forecourt) && APhlegBleed::ArenaRespawn(Out)) { UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_ARENA_RESPAWN at=%s"), *PhlegLocal(Out).ToString()); return true; }
     Out = PhlegethosSpawn(EPhlegSpawn(S));
     return true;
 }
@@ -459,12 +462,42 @@ bool PhlegethosLavaSwallows(const FVector& Feet)
     // (2026-11-17: down a small rupture by the bus stop, or through the bleedthrough's slab field where a slab has fallen)
     // (half a metre down: on its broken lip he can wedge part way in)
     if (FMath::Abs(L.X - BusStopX) < 2500.f && RiftInside(L.X, L.Y) > -10.f && L.Z < ApproachGround(L.X, L.Y) - 45.f) return true;
-    return InSlabField(L.X, L.Y) && L.Z < FortressTop - 110.f;
+    return OverSlab(L.X, L.Y) && L.Z < FortressTop - 110.f;
 }
 float Phleg::BreachRadius(float A)
 {
     return 255.f + 48.f * FMath::Sin(3.f * A + .7f) + 30.f * FMath::Sin(7.f * A + 2.1f) + 16.f * FMath::Sin(13.f * A + .3f);
 }
+namespace
+{
+    // (2026-11-17, the user: the braziers brighter.) A brazier's fire, larger, and the light it throws round it.
+    void PhlegBrazierFire(AActor* Owner, const FVector& Local)
+    {
+        AddDockFlame(Owner, PhlegWorld(Local), 62, 128);
+        auto* L = NewObject<UPointLightComponent>(Owner); L->SetupAttachment(Owner->GetRootComponent()); L->RegisterComponent();
+        L->SetWorldLocation(PhlegWorld(Local + FVector(0, 0, 70))); L->SetIntensityUnits(ELightUnits::Candelas); L->SetIntensity(22.f);
+        L->SetLightColor(FLinearColor(1.f, .5f, .18f)); L->SetAttenuationRadius(1100.f); L->SetCastShadows(false); L->SetSourceRadius(25.f);
+    }
+}
+
+bool Phleg::FieldKept(int32 Col, int32 Row)
+{
+    // (2026-11-17) Any of nine points of the cell within 1.4 m of the breach's outline.
+    static TArray<int8> Memo;
+    if (Memo.Num() != FieldCols * FieldRows)
+    {
+        Memo.SetNum(FieldCols * FieldRows);
+        for (int32 C = 0; C < FieldCols; ++C) for (int32 R = 0; R < FieldRows; ++R)
+        {
+            bool bKept = false;
+            for (int32 I = 0; I <= 2 && !bKept; ++I) for (int32 J = 0; J <= 2 && !bKept; ++J)
+                bKept = BreachInside(FieldX0 + (C + I * .5f) * FieldColW, FieldY0 + (R + J * .5f) * FieldRowW) > -140.f;
+            Memo[C * FieldRows + R] = bKept ? 1 : 0;
+        }
+    }
+    return Col >= 0 && Row >= 0 && Col < FieldCols && Row < FieldRows && Memo[Col * FieldRows + Row] != 0;
+}
+
 float Phleg::BreachInside(float X, float Y)
 {
     const float Dx = X - BreachX, Dy = Y - BreachY;
@@ -1014,7 +1047,10 @@ void APhlegethosSetting::Build()
                 if (BreachInside((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) > -40.f) continue;
                 // (the bus stop's small ruptures, the same; the bleedthrough's slab field is APhlegBleed's, over the Astral)
                 if (RiftInside((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) > -40.f) continue;
-                if (InSlabField((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f)) continue;
+                // (over a slab: the slabs' own; a quad touching the kept ground round the breach stays, so no gap opens there)
+                if (OverSlab((Xs[I] + Xs[I + 1]) * .5f, (Ys[J] + Ys[J + 1]) * .5f) && !(InSlabField(Xs[I], Ys[J]) && FieldKept(FieldColAt(Xs[I]), FieldRowAt(Ys[J])))
+                    && !(InSlabField(Xs[I + 1], Ys[J]) && FieldKept(FieldColAt(Xs[I + 1]), FieldRowAt(Ys[J]))) && !(InSlabField(Xs[I], Ys[J + 1]) && FieldKept(FieldColAt(Xs[I]), FieldRowAt(Ys[J + 1])))
+                    && !(InSlabField(Xs[I + 1], Ys[J + 1]) && FieldKept(FieldColAt(Xs[I + 1]), FieldRowAt(Ys[J + 1])))) continue;
                 FIntPoint Q[4] = {{I, J}, {I + 1, J}, {I + 1, J + 1}, {I, J + 1}};
                 if (FMath::Abs(Hz[J * NX + I + 1] - Hz[(J + 1) * NX + I]) < FMath::Abs(Hz[J * NX + I] - Hz[(J + 1) * NX + I + 1])) Q[0] = {I + 1, J}, Q[1] = {I + 1, J + 1}, Q[2] = {I, J + 1}, Q[3] = {I, J};
                 Land.Quad(Pt(Q[0].X, Q[0].Y), Pt(Q[1].X, Q[1].Y), Pt(Q[2].X, Q[2].Y), Pt(Q[3].X, Q[3].Y), Nm(Q[0].X, Q[0].Y), Nm(Q[1].X, Q[1].Y), Nm(Q[2].X, Q[2].Y), Nm(Q[3].X, Q[3].Y));
@@ -1165,7 +1201,7 @@ void APhlegethosSetting::Build()
                     const FVector Bz(X + 60, Y + Side * 40, ApproachGround(X + 60, Y + Side * 40));
                     Iron.Spar(Bz - FVector(0, 0, 10), Bz + FVector(0, 0, 80), 7, 5, 6);
                     Iron.Spar(Bz + FVector(0, 0, 80), Bz + FVector(0, 0, 112), 36, 46, 10);
-                    AddDockFlame(this, PhlegWorld(Bz + FVector(0, 0, 108)), 48, 95);
+                    PhlegBrazierFire(this, Bz + FVector(0, 0, 108));
                 }
             }
             // Steam off the hollows' lava.
@@ -1175,12 +1211,16 @@ void APhlegethosSetting::Build()
                 if (ApproachGround(X, Y) < LavaZ - 100 && OffPath(X, Y, 900)) Vents.Add(FVector(X, Y, 0));
             }
         }
-        // The idols: hulking horned figures on plinths either side of the processional, their eyes lit from within.
+        // The idols: hulking horned figures on plinths, their eyes lit from within. (2026-11-17: on the ledge at the wall's
+        // foot, across the slab field's front moat, facing the battle; they lined the processional to the gate, where the
+        // field now is.)
         int32 I = 0;
-        for (float X = ForecourtX + 1350; X < GateX - 300; X += 560, ++I)   // (2026-11-17: beyond the slab field; were from +500)
+        for (float Yi : {700.f, 1500.f, 2300.f})
             for (float S : {-1.f, 1.f})
             {
-                const FVector Base(X, S * 430, Z);
+                const float X = (FieldX1 + GateX) * .5f;
+                ++I;
+                const FVector Base(X, S * Yi, Z);
                 Dark.Paint = FColor(0, 0, 0, 255);
                 Rock.Paint = FColor(60, 200, 40, 255);
                 Rock.B(X - 110, X + 110, Base.Y - 110, Base.Y + 110, Z, Z + 120);                         // plinth
@@ -1190,20 +1230,20 @@ void APhlegethosSetting::Build()
                 {
                     // Horns sweeping up and back.
                     const FVector Root = Base + FVector(0, H * 40, 625);
-                    Rock.Spar(Root, Root + FVector(-30, H * 70, 90), 16, 6, 6);
-                    Rock.Spar(Root + FVector(-30, H * 70, 90), Root + FVector(-80, H * 80, 190), 6, .5f, 6);
+                    Rock.Spar(Root, Root + FVector(30, H * 70, 90), 16, 6, 6);
+                    Rock.Spar(Root + FVector(30, H * 70, 90), Root + FVector(80, H * 80, 190), 6, .5f, 6);
                     // Shoulders and fists on the knees.
                     Rock.Blob(Base + FVector(0, H * 95, 480), FVector(55, 50, 50), 90 + I + H);
-                    Rock.Blob(Base + FVector(60, H * 70, 200), FVector(42, 38, 44), 95 + I + H);
+                    Rock.Blob(Base + FVector(-60, H * 70, 200), FVector(42, 38, 44), 95 + I + H);
                     Glow.Paint = FColor(255, 70, 15, 255);
-                    const FVector Eye = Base + FVector(-S * 0, H * 22, 600) + FVector(56, 0, 0);
+                    const FVector Eye = Base + FVector(-S * 0, H * 22, 600) + FVector(-56, 0, 0);   // (facing the battle, -X)
                     Glow.Box(Eye, FVector(3, 0, 0), FVector(0, 10, 0), FVector(0, 0, 4));
                 }
-                // A brazier burning at its feet, toward the processional.
-                const FVector Bz = Base + FVector(0, -S * 170, 0);
+                // A brazier burning at its feet, toward the battle.
+                const FVector Bz = Base + FVector(-150, -S * 110, 0);
                 Iron.Spar(Bz, Bz + FVector(0, 0, 80), 7, 5, 6);
                 Iron.Spar(Bz + FVector(0, 0, 80), Bz + FVector(0, 0, 112), 36, 46, 10);
-                AddDockFlame(this, PhlegWorld(Bz + FVector(0, 0, 108)), 48, 95);
+                PhlegBrazierFire(this, Bz + FVector(0, 0, 108));
             }
         // The fortress wall, iron-black, with towers, slits lit red, spikes along its top; the gate shut.
         const float W0 = GateX, W1 = GateX + 500, Top = Z + 2600;
@@ -1744,7 +1784,8 @@ void APhlegethosSetting::ResetHazards()
         M.Touched = -1; M.Drop = 0; M.DownFor = 0; M.bCracked = false;
         if (auto* Mesh = M.Mesh.Get()) { Mesh->SetWorldLocation(PhlegethosOrigin()); Mesh->SetVisibility(true); Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); }
     }
-    if (Bleed) Bleed->Rearm();
+    // (2026-11-17, the user: "when chuck dies keep going don't reset the astral fall away": the bleedthrough is not re-armed
+    // by a death; only its sweep's end does that, for now)
     NextErupt = Clock + 2.f;
 }
 

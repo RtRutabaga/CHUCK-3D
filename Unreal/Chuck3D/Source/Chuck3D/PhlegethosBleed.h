@@ -33,7 +33,10 @@ class APhlegethosSetting;
  *    The river is all that is left.
  * Into the water (walked, jumped, from anywhere it runs): he is swept away down it and into the far tear, the view going
  * to black. (The river cutscene and the Feywild are later slices: for now he is returned to the forecourt's checkpoint,
- * as from an Astral death, and it all re-arms.) A fall into the Astral is an Astral death; it re-arms the same way.
+ * as from an Astral death, and it all re-arms.)
+ * (2026-11-17, the user: "when chuck dies keep going don't reset the astral fall away".) A death in it (a fall into the
+ * Astral, the fiend) does not re-arm it: he comes back on the ground by the breach that holds, and it goes on.
+ * The slabs under the trio, the fiend and the lemures hold while they stand on them; the river's columns never fall.
  */
 UCLASS()
 class CHUCK3D_API APhlegBleed : public AActor
@@ -47,6 +50,8 @@ public:
     void Build(APhlegethosSetting* InStage);
     /** Every slab back, the river and its tears gone, waiting for him on the island again. */
     void Rearm();
+    /** While it runs, where a death returns him (world, his centre): the ground by the breach that holds. */
+    static bool ArenaRespawn(FVector& OutWorld);
 
     enum class EZone : uint8 { MoatBack, MoatSide, MoatFront, Land, River };
     enum class EStage : uint8 { Waiting, Running, Swept };
@@ -69,6 +74,10 @@ public:
     int32 GetRearms() const { return Rearms; }
     int32 GetPressedFalls() const { return PressedFalls; }
     int32 GetMissing() const { return Missing; }
+    int32 GetKeptCells() const { return KeptCells; }
+    int32 GetDeathsIn() const { return DeathsIn; }
+    int32 GetHeldFalls() const { return HeldFalls; }
+    FVector GetRespawnLocal() const { return RespawnLocal; }
     /** Tests: the slab under a local point (by the unjittered grid): 0 whole, 1 cracking, 2 falling or gone, -1 none. */
     int32 SlabStateAt(float X, float Y) const;
     /** Tests: the middle of the whole slab in column Col of the island nearest NearY (false if none). */
@@ -95,6 +104,7 @@ private:
         ESlab State = ESlab::Whole;
         float Due = -1.f, CrackFor = 1.4f, At = 0.f, PressedAt = -1.f;
         bool bForced = false;   // falls when due even with him on it (the moat, the collapse)
+        float CollapseDue = -1.f;   // in the collapse, when it goes (if no one of the battle stands on it then)
         FVector Drop = FVector::ZeroVector, Vel = FVector::ZeroVector;
         FRotator Rot = FRotator::ZeroRotator, Spin = FRotator::ZeroRotator;
     };
@@ -108,6 +118,14 @@ private:
     void UpdateRiverMesh();
     void TickSweep(float Dt, AChuckCharacter* Chuck);
     void PlayAt(USoundBase* Sound, const FVector& Local, float Volume, float Pitch = 1.f);
+    int32 SlabIndexAt(float X, float Y) const;
+    /** One of the battle (a hero, the fiend, a lemure) stands on it: it holds. */
+    bool Held(const FSlab& S) const;
+    void GatherHolders();
+    TArray<FVector2D> Holders;
+    TArray<int32> CellSlab;   // Col * FieldRows + Row: its slab's index, -1 kept ground
+    FVector RespawnLocal = FVector::ZeroVector;
+    bool bWasHidden = false;
 
     UPROPERTY() APhlegethosSetting* Setting = nullptr;
     UPROPERTY() UProceduralMeshComponent* Void = nullptr;
@@ -129,5 +147,5 @@ private:
     // The sweep.
     float SweepT = 0.f, SweepSpeed = 0.f, FadeAt = -1.f;
     FVector SweepAt = FVector::ZeroVector;   // local, his capsule's centre
-    int32 Starts = 0, Sweeps = 0, SweepEnds = 0, Rearms = 0, PressedFalls = 0, Missing = 0;
+    int32 Starts = 0, Sweeps = 0, SweepEnds = 0, Rearms = 0, PressedFalls = 0, Missing = 0, KeptCells = 0, DeathsIn = 0, HeldFalls = 0;
 };

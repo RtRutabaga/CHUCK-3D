@@ -103,7 +103,8 @@ public:
     static constexpr float SpineSpeed = 950.f;   // cm/s (2D: 96 px/s; here a dart, but seen leaving the tail)
     static constexpr int32 SpineBurn = 1;        // of his 5 (2D: 18 of 100)
     // (2026-11-17, the user: they target him, poorly.) In front of it, in sight and this close, it throws at where he was as it
-    // wound up (no lead), and mostly wide: MissChance of its throws go 35 to 110 cm off him.
+    // wound up (no lead), and mostly wide: MissChance of its throws go 35 to 110 cm off him. (Same day: it throws only then,
+    // never at nothing.)
     static constexpr float AimRange = 2600.f;
     static constexpr float MissChance = .6f;
     static int32 Aimed;
@@ -136,6 +137,7 @@ private:
     FVector TailTip() const;
     void Throw();
     void TakeAim(class AChuckCharacter* Chuck);
+    bool HasTarget(class AChuckCharacter* Chuck) const;
     void TickSpines(float Dt, class AChuckCharacter* Chuck);
 };
 

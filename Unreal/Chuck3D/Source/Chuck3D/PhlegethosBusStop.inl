@@ -88,7 +88,7 @@ void APhlegethosSetting::BuildBusStop()
     // The advertising panel: a lit lightbox in a dark frame, lit on both faces (no picture: a plain cold glow).
     Paint.Paint = Dark;
     Bx(Paint, -186, 718, Z(-186, 120), 9, 68, 97);
-    Lit.Paint = FColor(62, 70, 84, 0);   // (a cold lightbox; at 205 it blew out white)
+    Lit.Paint = FColor(30, 34, 41, 0);   // (a cold lightbox; at 205 it blew out white; 2026-11-17 halved again, the user: the bus stop dimmer)
     for (float S : {-1.f, 1.f})
     {
         const float U = -186.f + S * 9.4f;
@@ -110,7 +110,7 @@ void APhlegethosSetting::BuildBusStop()
         for (float S : {-1.f, 1.f}) Paint.Flat(Foot + Up * 255.f + N3 * S * 1.3f - T3 * 25.f, Foot + Up * 255.f + N3 * S * 1.3f + T3 * 25.f, Foot + Up * 266.f + N3 * S * 1.3f + T3 * 25.f, Foot + Up * 266.f + N3 * S * 1.3f - T3 * 25.f, N3 * S);
         Paint.Paint = Alu;
         Paint.Box(Foot + Up * 148.f - N3 * 5.f, T3 * 17.f, N3 * 3.f, Up * 28.f);
-        Lit.Paint = FColor(70, 70, 62, 0);
+        Lit.Paint = FColor(34, 34, 30, 0);
         Lit.Flat(Foot + Up * 124.f - N3 * 8.2f - T3 * 14.f, Foot + Up * 124.f - N3 * 8.2f + T3 * 14.f, Foot + Up * 172.f - N3 * 8.2f + T3 * 14.f, Foot + Up * 172.f - N3 * 8.2f - T3 * 14.f, -N3);
         Paint.Paint = Green;
         const FVector Bin = P3(262, 585, Z(262, 0));
@@ -131,7 +131,7 @@ void APhlegethosSetting::BuildBusStop()
         L->SetWorldLocation(PhlegWorld(At)); L->SetIntensityUnits(ELightUnits::Candelas); L->SetIntensity(Candelas);
         L->SetLightColor(Col); L->SetAttenuationRadius(Radius); L->SetCastShadows(bShadow); L->SetSourceRadius(12.f);
     };
-    Light(P3(0, 700, Z(0, 238)), 30.f, FLinearColor(1.f, .9f, .76f), 750.f, true);
-    Light(P3(-150, 650, Z(-150, 120)), 9.f, FLinearColor(.75f, .85f, 1.f), 420.f, false);
+    Light(P3(0, 700, Z(0, 238)), 11.f, FLinearColor(1.f, .9f, .76f), 650.f, true);   // (2026-11-17: 30 and 9, dimmer, the user)
+    Light(P3(-150, 650, Z(-150, 120)), 3.5f, FLinearColor(.75f, .85f, 1.f), 380.f, false);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BUSSTOP at=%s level=%.0f rifts=%d"), *FVector(C.X, C.Y, Zb).ToString(), Zb, RiftCount);
 }
