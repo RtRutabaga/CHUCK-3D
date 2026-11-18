@@ -38,6 +38,7 @@ Research sources: [Roll20 Feywild guide](https://pages.roll20.net/dnd/feywild-gu
 | Open vistas | `open-vista` | Brightest. Long views, waterfalls, giant wisteria trees, a floating island |
 | Deep woods | `deepwood-lantern-path`, `deepwood-root-tunnels` | Darkest. Blue-teal, tunnels of branch and root, moss, light fog |
 | Lily mere | `lily-pad-mere` | Mirror water, gold on mist, a mossy bridge |
+| Maze and tower from above | `maze-tower-overlook` | The region's great reveal: the whole maze, the glowing stair and the tower on its cloud, under a blue sky with peach clouds |
 | Hedge maze | `maze-interior` | Dusk, mist, wet paving, blue lanterns, pan-pipe statues |
 | Redcap camp | `redcap-camp` | Firelight and dried blood, red toadstools, wrongness in the beauty |
 | Reactive flower | `hit-plant-closed`, `hit-plant-open` | Exact model target for the scratchable flower |
@@ -101,13 +102,19 @@ About **900 m by 900 m**, with roughly **50 hectares** of walkable country. Chul
 | Redcap Hollow | 3 ha | 8 | Optional camp within the Deepwood: avoid it, sneak past it or fight through it | dark |
 | Highmeadow and Rapids | 9 ha | 10, 12 | The way forward. The great vistas, the displacer beast, Chuck-sized refuges, waterfalls | open |
 | The Great Hedge Maze | 9 ha | 9 | See below | maze |
-| Cloud Staircase | at the maze's heart | cloud staircase map | Climbs out of the maze toward Zephyros' tower | maze, until his tracks arrive |
+| Cloud Staircase | rises from the maze's heart | cloud staircase map | A glowing, winding stair of cloud climbing out of the maze to the cloud under Zephyros' tower | maze, until his tracks arrive |
 
-Two loops and the Deepwood return to the Crossroads. Highmeadow leads onward. The player is never given a marker or minimap. Landmarks do that job: the Crossroads tree, the floating island and the maze's distant wall can be seen from far away.
+Two loops and the Deepwood return to the Crossroads. Highmeadow leads onward. The player is never given a marker or minimap. Landmarks do that job. **Zephyros' tower is the main one:** it hangs on its cloud above the maze, high enough to be seen from every open part of the region, so the player always has a far-off place to wonder about. The Crossroads tree and the floating islands support it.
+
+### The Maze Overlook
+
+Highmeadow ends at a high mossy rise under a great wisteria tree, composed to match `maze-tower-overlook`. The road comes out of the trees and the whole view opens at once: the maze spread below, waterfalls and mist around it, floating islands, the low sun, the glowing stair and the tower above. **This is the Feywild's signature moment.** Control stays with the player, with no cutscene. A stone path then winds down to the maze's main arch.
 
 ### The Great Hedge Maze
 
-- Living walls 6 to 8 m high, about 300 m across, with arches, lanterns, statues and wet paving as in the goal image.
+- **Shape:** curving, organic rings of hedge around the centre, as in `maze-tower-overlook`, not a square grid. Stone arches with blue lanterns mark the openings, and mossy statues, flowering wisteria, glowing mushrooms and low mist fill it.
+- **The goal is always visible.** The stair and tower can be seen above the walls from inside, so the player knows where to go but not how to get there.
+- Living walls 6 to 8 m high, about 300 m across, with arches, lanterns, statues and wet paving as in the goal images.
 - **Parkour inside it:** wall runs along trellised sections, brachiation under ivy arches, climbs to raised walkways and Chuck-sized gaps through the roots.
 - **Danger:** redcap patrols, spitting orchids covering long lanes, thorn mites, lantern moths and thorn hazards.
 - **Whimsy:** flowers that shift the hedge gates (always reversible and never a trap), and statues that seem to have turned when you look back.
@@ -175,7 +182,9 @@ This also serves the setting. Districts no longer have to fit together physicall
 - **Instanced plants with detail levels.** Thousands of copies draw cheaply, simplify with distance and disappear beyond a set range. Wind movement runs only near Chuck.
 - **Glow without real lights.** Mushrooms, lanterns and flowers glow through their materials. Each view gets a few real lights, and very few of those cast shadows.
 - **Effects near Chuck only.** Fireflies, petals and spores use the existing lightweight sprite system and exist only around him.
-- **Painted distance.** Far hills, giant trees and the floating island are a single simple backdrop for each district.
+- **Painted distance.** Far hills, giant trees and the floating islands are a single simple backdrop for each district.
+- **One cheap tower, seen everywhere.** The tower, its cloud and the stair exist as one simple far-view model that stays loaded across the region.
+- **A stand-in maze for the overlook.** From the overlook the maze is a single simplified model of its real layout. The real maze loads in quadrants as Chuck walks down the winding path, which works as this view's threshold.
 - **Layouts that hide things.** The Deepwood's tunnels and the maze's walls block long views. The maze is also split into quadrants that load separately. Highmeadow is the most demanding area, so it gets the strictest plant limits.
 
 ### Budgets
@@ -190,7 +199,7 @@ Stage 3 measures memory, frame rate and threshold load time in a packaged build 
 
 ## Out of scope for this plan
 
-Zephyros' tower (the user will supply references), talking NPCs (the user will decide), and anything explaining the collided worlds or Chuck's origin.
+Zephyros' tower beyond its distant exterior. `maze-tower-overlook` sets that exterior (pale stone spires on a cloud, under a blue, starred wizard's-hat roof), and the user will supply references for the explorable tower. Also out of scope: talking NPCs (the user will decide), and anything explaining the collided worlds or Chuck's origin.
 
 ## Decisions
 
@@ -205,7 +214,7 @@ Made by the user on 2026-11-17:
 
 ## Goal images
 
-Copied unchanged from the user's Downloads to `References/Feywild/`.
+Copied unchanged from the user's files to `References/Feywild/`.
 
 | File | Original name | SHA-256 |
 |---|---|---|
@@ -214,6 +223,7 @@ Copied unchanged from the user's Downloads to `References/Feywild/`.
 | `deepwood-lantern-path.png` | `Feywild_deepwod_2.png` | `507b5e71efb950f9294d444d0a096196addb5549af7a4e9bb8243801873db51f` |
 | `deepwood-root-tunnels.png` | `Feywild_deepwood_1.png` | `66b83eb15b997fa08cacd94770d528f9396337a5487941c16df501fa1711f451` |
 | `lily-pad-mere.png` | `Feywild_lillypads.png` | `47426416416124f75130be5263a3a2ab3453a76f810d2127de9a8b10d4ca4cf5` |
+| `maze-tower-overlook.png` | supplied in chat, 2026-11-17 | `a292c53fa12916a256d75cc44c6db76cfc97a23e424915102f3b79836f5907c8` |
 | `maze-interior.png` | `Feywild_maze_interior.png` | `f280dfd655f0a4c14da6f47333963e4b3f5cab4f17b22c1e331a4cdde0154921` |
 | `open-vista.png` | `Feywild_open.png` | `58e4c42658fe35472cadbcd877ccc02c07abf56005b0609eb642d1ea0efb27ce` |
 | `redcap-camp.png` | `Feywild_redcap_camp.png` | `935307f6e267c6083d75f62800de3ddcd851de3b5b98fac6e8be9c8d9a9b4c25` |
