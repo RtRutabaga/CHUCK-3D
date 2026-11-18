@@ -38,7 +38,7 @@ Research sources: [Roll20 Feywild guide](https://pages.roll20.net/dnd/feywild-gu
 | Open vistas | `open-vista` | Brightest. Long views, waterfalls, giant wisteria trees, a floating island |
 | Deep woods | `deepwood-lantern-path`, `deepwood-root-tunnels` | Darkest. Blue-teal, tunnels of branch and root, moss, light fog |
 | Lily mere | `lily-pad-mere` | Mirror water, gold on mist, a mossy bridge |
-| Maze and tower from above | `maze-tower-overlook` | The region's great reveal: the whole maze, the glowing stair and the tower on its cloud, under a blue sky with peach clouds |
+| Maze and tower from above | `maze-tower-overlook` | The region's great reveal: the whole maze, the cloud stair and the tower on its cloud, under a blue sky with peach clouds. **Unlike the image, the stair does not glow** |
 | Hedge maze | `maze-interior` | Dusk, mist, wet paving, blue lanterns, pan-pipe statues |
 | Redcap camp | `redcap-camp` | Firelight and dried blood, red toadstools, wrongness in the beauty |
 | Reactive flower | `hit-plant-closed`, `hit-plant-open` | Exact model target for the scratchable flower |
@@ -102,13 +102,13 @@ About **900 m by 900 m**, with roughly **50 hectares** of walkable country. Chul
 | Redcap Hollow | 3 ha | 8 | Optional camp within the Deepwood: avoid it, sneak past it or fight through it | dark |
 | Highmeadow and Rapids | 9 ha | 10, 12 | The way forward. The great vistas, the displacer beast, Chuck-sized refuges, waterfalls | open |
 | The Great Hedge Maze | 9 ha | 9 | See below | maze |
-| Cloud Staircase | rises from the maze's heart | cloud staircase map | A glowing, winding stair of cloud climbing out of the maze to the cloud under Zephyros' tower | maze, until his tracks arrive |
+| Cloud Staircase | rises from the maze's heart | cloud staircase map | A winding stair of natural, unlit cloud, catching only the low sun, climbing out of the maze to the cloud under Zephyros' tower | maze, until his tracks arrive |
 
 Two loops and the Deepwood return to the Crossroads. Highmeadow leads onward. The player is never given a marker or minimap. Landmarks do that job. **Zephyros' tower is the main one:** it hangs on its cloud above the maze, high enough to be seen from every open part of the region, so the player always has a far-off place to wonder about. The Crossroads tree and the floating islands support it.
 
 ### The Maze Overlook
 
-Highmeadow ends at a high mossy rise under a great wisteria tree, composed to match `maze-tower-overlook`. The road comes out of the trees and the whole view opens at once: the maze spread below, waterfalls and mist around it, floating islands, the low sun, the glowing stair and the tower above. **This is the Feywild's signature moment.** Control stays with the player, with no cutscene. A stone path then winds down to the maze's main arch.
+Highmeadow ends at a high mossy rise under a great wisteria tree, composed to match `maze-tower-overlook`. The road comes out of the trees and the whole view opens at once: the maze spread below, waterfalls and mist around it, floating islands, the low sun, the cloud stair and the tower above. **This is the Feywild's signature moment.** Control stays with the player, with no cutscene. A stone path then winds down to the maze's main arch.
 
 ### The Great Hedge Maze
 
@@ -211,6 +211,7 @@ Made by the user on 2026-11-17:
 4. **Free CC0 scanned assets are approved** for bark, rock, moss and plants. Licences are recorded per asset.
 5. **The cutscene's river is the Feywild river.**
 6. **Make the large area less taxing,** with loading at the Crossroads entrances considered: see [Keeping it light on the machine](#keeping-it-light-on-the-machine).
+7. **The Cloud Staircase does not glow,** unlike `maze-tower-overlook`.
 
 ## Goal images
 
