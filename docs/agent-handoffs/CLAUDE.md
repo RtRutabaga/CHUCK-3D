@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 18 — Feywild: the look slice, stage 1 (Claude)
+
+- **Asked:** build the Feywild once the Phlegethos session finished, from the plan approved in `docs/regions/FEYWILD.md` ("Proceed"). Stage 1 is one small finished piece, and the user approves the look before the world is built out.
+- **Source:** `main` at 9e650ae1.
+- **Changed:**
+  - New: `Tools/Fetch-Feywild.ps1`, `Tools/build_feywild_kit.py` (Blender 4.5.14), `Tools/create_feywild_assets.py`, `Tools/shots/feywild-look.txt`, `SourceAssets/Setting/Feywild/` (CC0 Poly Haven sources, README, manifest), `Content/Art/Feywild/`, `SW_FeywildMain`, `FeywildSetting.h/.cpp`.
+  - `DockMenu.cpp`: dev checkpoint `FeyLook`. `DockGameMode.cpp`: music mode 50 (17 tracks). `ChuckShots.cpp/.h`: `origin feywild`.
+- **Tested:** editor stills, `missing=0` (`Local/shots/feywild-look/`); purple-hue samples in the sky 5 of 6004 (`sky`), 0 of 10636 (`skyback`). Robot playtester on the package: `region=FeyLook seconds=90 cells=112 travel_m=217 jumps=29 inside=0 stuck=0 void=0 falls=0` (`Local/feylook-playtest.log`).
+- **Package:** `CHUCK_CANDIDATE_VERIFIED` (`Local/verify-package-20261118-074013.log`); the world audit and playtest baselines unchanged.
+- **Not tested:** by hand; frame rate; the light audit (the blue fill light is unshadowed, a risk to fur); the region's memory use.
+- **Remaining flaws:** the pond reflects the sky but not the scene; modelled mushrooms, leaves and foxgloves look smoother than the paintings; the rock ledge closes the view with no layered distance; Chuck wades chest-deep with no splash; no water sound; Oak0 is heavy (over 134k triangles before its fuller crown, with LODs); the moss clump is imported but not planted; the dev-menu route Phlegethos, Feywild, Phlegethos does not unhide the Phlegethos stage.
+- **Contract compatibility:** no changes to Chuck's rig, scale or controls. The Feywild has its own site, away from every other region.
+- **Launcher:** `Launch-Chuck.cmd` runs the promoted `FeywildLook` (receipt 9e650ae). The previous package is kept as `Builds/Windows-Previous-20261118-FeywildLook`, older ones pruned to two, no candidate folder left.
+
+Next part of the work can be done here, once the user has judged the look.
+
 ## November 17 — Phlegethos: trapped on the battle's side, a fiercer fight, one fiend, the encounter's track (Claude)
 
 - **Asked:** "make the spined devils only start shooting when they target on proximity dont have them just shooting nothing beforehand. reduce brightness of the bus stop. remove the earlier pit fiend, only one pit fiend in the encounter. light the fire in the braisures in this section so that its brighter also I dont see any fire coming from the fiends mace fix that too. I want chuck to be trapped on the side that the trio and fiend are on, not trapped before this section. make the fight more intense, more animations especially from the fiend making this a cinematic fight between the trio and this formidable foe. here is the encounter soundtrack. when chuck dies keep going don't reset the astral fall away" (with `C:\Users\ashsm\Downloads\Ritual of the Broken Sun.wav`).

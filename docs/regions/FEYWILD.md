@@ -1,6 +1,6 @@
 # The Feywild: 3D adaptation plan
 
-**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Nothing here is built yet.**
+**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look") and waits for the user's approval of the look. Nothing past it is built.**
 
 Sources: the user's Feywild vision and ten goal images (2026-11-17), the 2D game's `docs/development/PHASE-8.md` section 6 and 9 (river cutscene) and `PHASE-9.md` (thirteen maps), and the research below. Where the user's vision and the 2D game differ, the vision wins.
 
