@@ -359,6 +359,7 @@ namespace
 int32 APhlegSpinedDevil::Thrown = 0;
 int32 APhlegSpinedDevil::Hits = 0;
 int32 APhlegSpinedDevil::Scratched = 0;
+int32 APhlegSpinedDevil::Aimed = 0;
 const TArray<TWeakObjectPtr<APhlegSpinedDevil>>& APhlegSpinedDevil::All() { return GDevils; }
 
 APhlegSpinedDevil::APhlegSpinedDevil()
@@ -435,7 +436,7 @@ void APhlegSpinedDevil::Init(const FPerch& InPerch)
     SetActorLocationAndRotation(Perch.Seat, FRotator(0, Perch.Yaw, 0));
     Column->SetRelativeLocation(FVector(0, 0, -Perch.ColumnDrop));
     Column->SetRelativeRotation(FRotator(0, FMath::Frac(Perch.Seat.X * .013f) * 360.f, 0));
-    Clock = 0; NextThrow = Perch.Delay + Interval; FlickT = -1;
+    Clock = 0; NextThrow = Perch.Delay + Interval; FlickT = -1; AimAt = Perch.Aim;
     Flying.SetNum(SpinePool);
     if (AChuckFlames* Fire = AChuckFlames::Get(GetWorld()))
         for (FSpine& S : Flying) S.Flame = Fire->AddMoving(this, Perch.Seat - FVector(0, 0, 8000), 8.f, 12.f);
@@ -452,11 +453,29 @@ void APhlegSpinedDevil::Throw()
     if (Free == INDEX_NONE) return;
     FSpine& S = Flying[Free];
     S.Pos = TailTip();
-    S.Vel = (Perch.Aim - S.Pos).GetSafeNormal() * SpineSpeed;
+    S.Vel = (AimAt - S.Pos).GetSafeNormal() * SpineSpeed;
     S.Life = 3.f; S.Stuck = -1.f;
     SpineMeshes[Free]->SetHiddenInGame(false);
     ++Thrown;
-    if (ThrowSound) UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, S.Pos, .5f, 1.35f);
+    if (ThrowSound) UGameplayStatics::PlaySoundAtLocation(this, ThrowSound, S.Pos, .2f, 1.35f);   // (2026-11-17: quieter, the user; was .5)
+}
+
+void APhlegSpinedDevil::TakeAim(AChuckCharacter* Chuck)
+{
+    // (2026-11-17, the user: "intentionally target chuck (poorly)".) As its tail winds back: at him if he is in front of it, in
+    // sight and in range, where he is now (it never leads him: on the move he is past it), and usually wide of him.
+    AimAt = Perch.Aim;
+    if (!Chuck || Chuck->IsAstral()) return;
+    const FVector Chest = Chuck->GetActorLocation() - FVector(0, 0, Stand - 34.f), From = GetCentre();
+    const FVector To = Chest - From;
+    if (To.Size() > AimRange || FVector::DotProduct(To.GetSafeNormal2D(), GetActorForwardVector()) < .1f) return;
+    FHitResult Hit; FCollisionQueryParams Q(SCENE_QUERY_STAT(DevilAim), false, this); Q.AddIgnoredActor(Chuck);
+    if (GetWorld()->LineTraceSingleByChannel(Hit, From, Chest, ECC_Visibility, Q)) return;
+    const bool bWide = FMath::FRand() < MissChance;
+    const float Miss = bWide ? FMath::FRandRange(35.f, 110.f) : FMath::FRandRange(0.f, 12.f), A = FMath::FRandRange(0.f, 2.f * PI);
+    const FVector Side = FVector::CrossProduct(To.GetSafeNormal(), FVector::UpVector).GetSafeNormal();
+    AimAt = Chest + Side * FMath::Cos(A) * Miss + FVector::UpVector * FMath::Sin(A) * Miss * .5f;
+    ++Aimed;
 }
 
 void APhlegSpinedDevil::TickSpines(float Dt, AChuckCharacter* Chuck)
@@ -490,7 +509,7 @@ void APhlegSpinedDevil::TickSpines(float Dt, AChuckCharacter* Chuck)
                 if (Chuck->TakeBite(C - S.Vel.GetSafeNormal2D() * 100.f, SpineBurn, true, false))
                 {
                     ++Hits;
-                    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, PA, .55f, 1.2f);
+                    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, PA, .35f, 1.2f);
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_SPINE_HIT at=%s sanity=%d"), *PhlegLocal(C).ToString(), Chuck->GetSanity());
                 }
                 S.Life = -1.f; M->SetHiddenInGame(true);
@@ -504,7 +523,7 @@ void APhlegSpinedDevil::TickSpines(float Dt, AChuckCharacter* Chuck)
         if (GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Q))
         {
             S.Pos = Hit.ImpactPoint - S.Vel.GetSafeNormal() * 6.f; S.Life = -1.f; S.Stuck = 1.4f;
-            if (StoneSound) UGameplayStatics::PlaySoundAtLocation(this, StoneSound, S.Pos, .35f, 1.3f);
+            if (StoneSound) UGameplayStatics::PlaySoundAtLocation(this, StoneSound, S.Pos, .14f, 1.3f);
         }
         else S.Pos = To;
         if (bEnd && S.Stuck < 0) { S.Life = -1.f; M->SetHiddenInGame(true); if (Fire) Fire->SetBase(S.Flame, Perch.Seat - FVector(0, 0, 8000)); continue; }
@@ -528,7 +547,7 @@ void APhlegSpinedDevil::Tick(float DeltaSeconds)
 
     // The beat: the tail winds back for a moment, then whips over its shoulder, and the spine goes at the whip.
     const bool bThrowing = !APhlegFlameskull::bCalm && Stage->IsLive() && FVector::Dist(C, Perch.Seat) < 4500.f;
-    if (bThrowing && FlickT < 0 && Clock >= NextThrow - .5f) { FlickT = 0; bReleased = false; }
+    if (bThrowing && FlickT < 0 && Clock >= NextThrow - .5f) { FlickT = 0; bReleased = false; TakeAim(Chuck); }
     float TailPitch = 4.f * FMath::Sin(Clock * 1.3f + Perch.Delay), TailYaw = 6.f * FMath::Sin(Clock * .8f + Perch.Delay * 2.f);
     if (FlickT >= 0)
     {
@@ -540,7 +559,7 @@ void APhlegSpinedDevil::Tick(float DeltaSeconds)
         if (!bReleased && FlickT >= .6f)
         {
             bReleased = true; Throw(); Flap = 1.f;
-            if (HissSound && FMath::FRand() < .4f) UGameplayStatics::PlaySoundAtLocation(this, HissSound, GetCentre(), .25f, 1.6f);
+            if (HissSound && FMath::FRand() < .4f) UGameplayStatics::PlaySoundAtLocation(this, HissSound, GetCentre(), .1f, 1.6f);
         }
         if (FlickT > 1.3f) { FlickT = -1; NextThrow += Interval; while (NextThrow < Clock) NextThrow += Interval; }
     }
@@ -569,7 +588,7 @@ void APhlegSpinedDevil::Tick(float DeltaSeconds)
     if (!APhlegFlameskull::bCalm && TouchWait <= 0 && FVector::Dist(C, GetCentre()) < 42.f && Chuck->TakeBite(GetCentre(), 1, true, false))
     {
         TouchWait = 1.f; ++Hits;
-        if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, C, .4f, 1.4f);
+        if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, C, .28f, 1.4f);
     }
 }
 
@@ -584,8 +603,8 @@ bool APhlegSpinedDevil::TryScratch(AChuckCharacter* Chuck, const FVector& Locati
     if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead) < .3f && To.Size2D() > 20.f) return false;
     // (2D: scratching one immediately defeats Chuck.) Its spines through him: all of his sanity, through a dodge.
     ++Scratched;
-    if (HissSound) UGameplayStatics::PlaySoundAtLocation(this, HissSound, Cn, .7f, 1.2f);
-    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, Location, .7f, 1.f);
+    if (HissSound) UGameplayStatics::PlaySoundAtLocation(this, HissSound, Cn, .45f, 1.2f);
+    if (BurnSound) UGameplayStatics::PlaySoundAtLocation(this, BurnSound, Location, .5f, 1.f);
     Flap = 1.f;
     Chuck->TakeBite(Cn, Chuck->GetSanity(), false, true);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_DEVIL_SCRATCHED sanity=%d"), Chuck->GetSanity());

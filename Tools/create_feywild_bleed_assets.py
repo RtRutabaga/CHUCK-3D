@@ -212,7 +212,7 @@ def tear():
     c = custom(mat, TEAR, unreal.CustomMaterialOutputType.CMOT_FLOAT4, ('UV', 'T', 'Fade'))
     link(node(mat, unreal.MaterialExpressionTextureCoordinate), c, 'UV')
     link(node(mat, unreal.MaterialExpressionTime), c, 'T')
-    link(mask(mat, node(mat, unreal.MaterialExpressionVertexColor), 'a'), c, 'Fade')
+    link(node(mat, unreal.MaterialExpressionVertexColor), c, 'Fade', 'A')   # (its alpha pin: the default output is RGB only, 2026-11-17)
     LIB.connect_material_property(mask(mat, c, 'rgb'), '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     LIB.connect_material_property(mask(mat, c, 'a'), '', unreal.MaterialProperty.MP_OPACITY)
     return mat
@@ -221,10 +221,11 @@ def tear():
 def paint():
     mat = material('M_CityPaint')
     vc = node(mat, unreal.MaterialExpressionVertexColor)
-    metal = mask(mat, vc, 'a')
-    LIB.connect_material_property(mask(mat, vc, 'rgb'), '', unreal.MaterialProperty.MP_BASE_COLOR)
-    LIB.connect_material_property(metal, '', unreal.MaterialProperty.MP_METALLIC)
-    LIB.connect_material_property(lerp(mat, const(mat, .5), const(mat, .3), metal), '', unreal.MaterialProperty.MP_ROUGHNESS)
+    # (the alpha by its own pin: masking the default RGB output for A failed to compile, 2026-11-17)
+    LIB.connect_material_property(vc, '', unreal.MaterialProperty.MP_BASE_COLOR)
+    LIB.connect_material_property(vc, 'A', unreal.MaterialProperty.MP_METALLIC)
+    rough = node(mat, unreal.MaterialExpressionLinearInterpolate); link(const(mat, .5), rough, 'A'); link(const(mat, .3), rough, 'B'); link(vc, rough, 'Alpha', 'A')
+    LIB.connect_material_property(rough, '', unreal.MaterialProperty.MP_ROUGHNESS)
     return mat
 
 

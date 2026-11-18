@@ -2,6 +2,25 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 17 — Phlegethos: spined devils aim (poorly) and quieter; stake bars, ascent lava fall out; dimmer hot cracks (Claude)
+
+- **Asked:** "Have the spined devils intentionally  target chuck (poorly). Reduce spined devil volume. The path is lined with spikes that have a weird side bar sticking out of the top of them, remove the side bar. There's lava fall that directly and impossibly lands on stone close to where player walks, remove this lava fall. Decrease stone hot crack brightness"
+- **Source:** `main` at 2e9ff8d0; this commit.
+- **Changed:**
+  - `PhlegethosCreatures.h/.cpp`: `APhlegSpinedDevil::TakeAim` at each wind-up (in front, line of sight, `AimRange` 26 m; his chest then, no lead; `MissChance` .6 of throws 35-110 cm off, the rest within 12 cm); `Aimed` counter; every devil sound quieter.
+  - `PhlegethosSetting.cpp`: the stakes' cross bar removed (hills and wastes); the ascent's fall (`AscentX + 400`) removed.
+  - `Tools/create_phlegethos_assets.py`: `M_PhlegBasalt` plates' crack glow x.5, face seams 22 to 13; `CHUCK_PHLEG_ONLY` env var rebuilds only the named materials from the imported textures (run with `CHUCK_PHLEG_ONLY=M_PhlegBasalt`; only `M_PhlegBasalt.uasset` changed).
+  - `Tools/create_feywild_bleed_assets.py`: vertex-colour alpha by its own `A` pin in `M_FeyTear` and `M_CityPaint` (masking the RGB output for A failed to compile: both had shown the default material since they were made); all five materials rebuilt (`Local/fey-materials-4.log`).
+  - `PhlegethosTest.cpp`: `devils` waits up to 14 s for a hit and requires aimed throws.
+- **Tested (editor):** all 23 Phlegethos trials, twice (`Local/phleg-all-devils.log`, `Local/phleg-all-devils-2.log`; devils thrown 9, aimed 10, hits 3 then 2); no material compile failures in the second. Sheets `Local/devils-sheet-1.png` (ascent without its fall, dimmer cracks, bus stop, tear, gorge devil), `Local/devils-sheet-2.png` (plain stakes).
+- **Package:** Package: built and verified first time, 182 passes (`Local/verify-package-20261117-141739.log`, Phlegethos 23/23).
+- **Not tested:** by hand: how the devils' aim feels on the move; the sound levels by ear.
+- **Remaining flaws:** as the entry below; the cracks may still read bright at the hills' landing (halved, not restyled).
+- **Contract compatibility:** no changes to Chuck, controls or spawns.
+- **Launcher:** promoted as `PhlegethosDevilAim` (receipt names 2e9ff8d0, the source before this commit; previous kept as `Builds/Windows-Previous-20261117-PhlegethosDevilAim`, the TrioBattle backup pruned); `Launch-Chuck.cmd` is current.
+
+Next part of the work can be done by Claude only (the river cutscene and the Feywild riverbank; voice takes when supplied); preference: Claude, here.
+
 ## November 17 — Phlegethos: the bus stop and the Feywild bleedthrough to the river's sweep (Claude)
 
 - **Asked:** "Add the modern city bus stop with business man Npc with small astral ruptures to a sensible place along the plethegos path, similar to 2d game. No umbrella for the business man. Then, in the encounter, add the river appearance and sweep into feywild river (don't start the cutscene or feywild yet). We'll need a way to keep the player in the staging area during the encounter ... maybe ... similar with how the pressure plate fall away to astral rupture section worked in the temple?"

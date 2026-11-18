@@ -782,8 +782,7 @@ void APhlegethosSetting::Build()
         {
             const float Side = (int32(-X / 2100) & 1) ? 1.f : -1.f, Y = HillsPathY(X) + Side * 250;
             const FVector Foot(X, Y, HillsGround(X, Y) - 20);
-            Iron.Spar(Foot, Foot + FVector(HR.FRandRange(-15, 15), Side * HR.FRandRange(0, 25), 340), 9, 1.5f, 6);
-            Iron.Spar(Foot + FVector(0, 0, 270), Foot + FVector(0, -Side * 45, 270), 3, 3, 5);
+            Iron.Spar(Foot, Foot + FVector(HR.FRandRange(-15, 15), Side * HR.FRandRange(0, 25), 340), 9, 1.5f, 6);   // (2026-11-17: no cross bar, the user)
         }
         for (int32 K = 0, Added = 0; K < 120 && Added < 10; ++K)
         {
@@ -932,7 +931,7 @@ void APhlegethosSetting::Build()
         };
         for (float X : {GorgeX + 1100.f, GorgeX + 2600.f, 16900.f, 19200.f}) Fall(X, 1000, -1, G + 1200, 240 + 80 * Hash(X, 1));
         Fall((ChainX0 + ChainX1) * .5f + 200, -700, 1, CliffTop + 100, 300);
-        Fall(AscentX + 400, CliffY - 200, 1, CliffTop + 200, 200);
+        // (2026-11-17: the ascent's fall is gone, the user: it poured straight onto the stone beside the way.)
         // The gorge's far end, where the shelf comes out onto the ascent's foot.
         Rock.Paint = FColor(160, 50, 80, 255);
         Rock.Prism(Box2(ChainX1, AscentX + 650, -400, 300), [](float X, float) { return FMath::Lerp(ChainLand, G, FMath::Clamp((X - ChainX1 - 150) / 900.f, 0.f, 1.f)); }, Rim, 30, 0, 36, 8);
@@ -1160,8 +1159,7 @@ void APhlegethosSetting::Build()
                 const float Side = (int32(X / 1700) & 1) ? 1.f : -1.f, Y = ApproachPathY(X) + Side * 260;
                 const float Gz = ApproachGround(X, Y);
                 const FVector Foot(X, Y, Gz - 20);
-                Iron.Spar(Foot, Foot + FVector(WR.FRandRange(-15, 15), Side * WR.FRandRange(0, 25), 380), 9, 1.5f, 6);
-                Iron.Spar(Foot + FVector(0, 0, 300), Foot + FVector(0, -Side * 45, 300), 3, 3, 5);
+                Iron.Spar(Foot, Foot + FVector(WR.FRandRange(-15, 15), Side * WR.FRandRange(0, 25), 380), 9, 1.5f, 6);   // (2026-11-17: no cross bar, the user)
                 if (++Brazier % 2 == 0)
                 {
                     const FVector Bz(X + 60, Y + Side * 40, ApproachGround(X + 60, Y + Side * 40));

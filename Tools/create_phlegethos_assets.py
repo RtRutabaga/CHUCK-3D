@@ -23,10 +23,13 @@ into /Game/Art/Audio as SW_Phlegethos and SW_Phlegethos2 (looping), and builds:
                  glowing through the gaps; parameter Heat (1 alive, cooling to 0 when it dies).
 
 Run once after fetching; reruns rebuild only these assets. Existing materials are not touched.
+With the environment variable CHUCK_PHLEG_ONLY=M_PhlegBasalt[,M_...] it rebuilds only those materials, from the textures
+already imported (no music or texture import).
 """
 from pathlib import Path
 import hashlib
 import json
+import os
 import unreal
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +39,7 @@ TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 ASSETS = unreal.EditorAssetLibrary
 LIB = unreal.MaterialEditingLibrary
 ASSETS.make_directory(DEST)
+ONLY = [n.strip() for n in os.environ.get('CHUCK_PHLEG_ONLY', '').split(',') if n.strip()]
 
 
 def node(mat, cls, **props):
@@ -59,7 +63,7 @@ def const(mat, v):
 
 
 # ---------------------------------------------------------------- music
-for source, name in (('Phlegethos.wav', 'SW_Phlegethos'), ('Phlegethos2.wav', 'SW_Phlegethos2')):
+for source, name in (() if ONLY else (('Phlegethos.wav', 'SW_Phlegethos'), ('Phlegethos2.wav', 'SW_Phlegethos2'))):
     task = unreal.AssetImportTask()
     task.filename = str(ROOT / 'SourceAssets/Audio' / source); task.destination_path = '/Game/Art/Audio'; task.destination_name = name
     task.automated = True; task.replace_existing = True; task.save = True
@@ -77,6 +81,11 @@ for rec in json.loads((SOURCE / 'manifest.json').read_text(encoding='utf-8-sig')
     if hashlib.sha256(file.read_bytes()).hexdigest().upper() != rec['sha256']:
         raise RuntimeError(file.name + ' hash')
     name = 'T_' + file.stem.replace('-', '_')
+    if ONLY:
+        tex = unreal.load_asset(DEST + '/' + name)
+        if not tex: raise RuntimeError(name + ' not imported yet: run without CHUCK_PHLEG_ONLY first')
+        textures[rec['asset'], rec['role'].lower()] = tex
+        continue
     task = unreal.AssetImportTask(); task.filename = str(file); task.destination_path = DEST
     task.destination_name = name; task.automated = True; task.replace_existing = True; task.save = False
     TOOLS.import_asset_tasks([task]); tex = unreal.load_asset(DEST + '/' + name)
@@ -109,6 +118,7 @@ def custom(m, code, inputs, kind=unreal.CustomMaterialOutputType.CMOT_FLOAT3, ex
 
 
 def material(name, build):
+    if ONLY and name not in ONLY: return
     path = f'{DEST}/{name}'
     mat = unreal.load_asset(path)
     if mat: LIB.delete_all_material_expressions(mat)
@@ -223,7 +233,8 @@ if(hot>.003)
     lit=float3(1.,.62,.16)*core*hot*run*(3.5+3*lick)+float3(1.,.3,.05)*flame*hot*(1.6+1.6*run)
        +float3(.95,.22,.035)*glowLip*hot*(.25+.5*run)+float3(1.,.3,.05)*hairHot*hot*.3;
 }
-Emit=float3(1.,.28,.04)*(seam*seam*22*flick)+float3(.85,.16,.03)*under*(.6+.4*lum*3)+lit;
+// (2026-11-17, the user: the hot cracks dimmer. Seams were 22, the plates' cracks at full.)
+Emit=float3(1.,.28,.04)*(seam*seam*13*flick)+float3(.85,.16,.03)*under*(.6+.4*lum*3)+lit*.5;
 WN=normalize(n+lerp(Na,Nb,b2)*(1-ash*.6)*1.15);
 // (A glassy sheen on the basalt, as the goal art's: the lava's glow catches its edges.)
 AO=arm.r; Rough=lerp(lerp(.5,.78,arm.g),.92,ash);

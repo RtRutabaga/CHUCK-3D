@@ -80,7 +80,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     FString Only; FParse::Value(FCommandLine::Get(), TEXT("ChuckPhlegethosTest="), Only);
     struct FRun
     {
-        int32 Trial = 0, Sub = 0, Hop = 0, Failures = 0, Deaths0 = 0, Shots = 0, Chains0 = 0, SideRuns0 = 0, Passed = 0, Struck = -1;
+        int32 Trial = 0, Sub = 0, Hop = 0, Failures = 0, Deaths0 = 0, Shots = 0, Chains0 = 0, SideRuns0 = 0, Aimed0 = 0, Passed = 0, Struck = -1;
         double At = 0, Start = 0, TrialStart = 0, Next = 0;
         TArray<FString> Results; FTimerHandle Timer; bool bDone = false, bPlaced = false; FString Note;
     };
@@ -302,16 +302,17 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             {
                 const FVector A = PhlegLocal(Gorge->GetPerch().Aim);
                 Place(A.X + 15, -95, G, 90); Chuck->SetOrbitPitch(-8);
-                Run->Sub = 0; Run->Chains0 = APhlegSpinedDevil::Thrown; Run->SideRuns0 = APhlegSpinedDevil::Hits; Run->Hop = 0;
+                Run->Sub = 0; Run->Chains0 = APhlegSpinedDevil::Thrown; Run->SideRuns0 = APhlegSpinedDevil::Hits; Run->Aimed0 = APhlegSpinedDevil::Aimed; Run->Hop = 0;
                 break;
             }
             if (Run->Sub == 0)
             {
                 Chuck->SetSanity(5);
                 for (int32 K = 0; K < 3; ++K) if (Run->Hop == K && T > 1.f + K * .55f) { Shot(FString::Printf(TEXT("Devil_Gorge_%d"), K)); ++Run->Hop; }
-                if (T > 6.5f)
+                // (2026-11-17: they aim at him now, mostly wide: up to 14 s for a spine to find him standing in the lane.)
+                if (T > 6.5f && (APhlegSpinedDevil::Hits > Run->SideRuns0 || T > 14.f))
                 {
-                    Run->Note = FString::Printf(TEXT("thrown=%d hits=%d"), APhlegSpinedDevil::Thrown - Run->Chains0, APhlegSpinedDevil::Hits - Run->SideRuns0);
+                    Run->Note = FString::Printf(TEXT("thrown=%d aimed=%d hits=%d t=%.1f"), APhlegSpinedDevil::Thrown - Run->Chains0, APhlegSpinedDevil::Aimed - Run->Aimed0, APhlegSpinedDevil::Hits - Run->SideRuns0, T);
                     // Beside the wastes devil's column, facing it.
                     const FVector S = PhlegLocal(Waste->GetPerch().Seat), Aim = PhlegLocal(Waste->GetPerch().Aim);
                     const FVector2D Off = FVector2D(Aim.X - S.X, Aim.Y - S.Y).GetSafeNormal();
@@ -329,7 +330,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (Run->Sub == 1 && T > 2.4f)
             {
                 const int32 Scr = APhlegSpinedDevil::Scratched - Run->Hop;
-                const bool bThrown = APhlegSpinedDevil::Thrown - Run->Chains0 > 1, bHit = APhlegSpinedDevil::Hits - Run->SideRuns0 > 0;
+                const bool bThrown = APhlegSpinedDevil::Thrown - Run->Chains0 > 1 && Run->Note.Contains(TEXT("aimed=")) && !Run->Note.Contains(TEXT("aimed=0 ")), bHit = APhlegSpinedDevil::Hits - Run->SideRuns0 > 0;
                 Next(bThrown && bHit && Scr > 0 && (Chuck->GetSanity() == 0 || Chuck->IsAstral()), FString::Printf(TEXT("%s scratched=%d sanity=%d"), *Run->Note, Scr, Chuck->GetSanity()));
             }
             break;

@@ -102,6 +102,11 @@ public:
     static constexpr float Interval = 2.f;       // 2D: SPINED_DEVIL_INTERVAL
     static constexpr float SpineSpeed = 950.f;   // cm/s (2D: 96 px/s; here a dart, but seen leaving the tail)
     static constexpr int32 SpineBurn = 1;        // of his 5 (2D: 18 of 100)
+    // (2026-11-17, the user: they target him, poorly.) In front of it, in sight and this close, it throws at where he was as it
+    // wound up (no lead), and mostly wide: MissChance of its throws go 35 to 110 cm off him.
+    static constexpr float AimRange = 2600.f;
+    static constexpr float MissChance = .6f;
+    static int32 Aimed;
     static int32 Thrown;
     static int32 Hits;
     static int32 Scratched;
@@ -125,10 +130,12 @@ private:
     struct FSpine { FVector Pos = FVector::ZeroVector, Vel = FVector::ZeroVector; float Life = -1.f, Stuck = -1.f; int32 Flame = -1; };
     TArray<FSpine> Flying;
     FPerch Perch;
+    FVector AimAt = FVector::ZeroVector;   // this throw's aim (his chest as it wound up, plus its miss; or across its lane)
     float Clock = 0, NextThrow = 0, FlickT = -1, Flap = 0, LookYaw = 0, LookPitch = 0, TouchWait = 0;
     bool bAsleep = false, bReleased = false;
     FVector TailTip() const;
     void Throw();
+    void TakeAim(class AChuckCharacter* Chuck);
     void TickSpines(float Dt, class AChuckCharacter* Chuck);
 };
 
