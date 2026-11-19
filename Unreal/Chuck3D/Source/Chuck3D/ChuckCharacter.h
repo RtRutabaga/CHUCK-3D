@@ -38,6 +38,10 @@ public:
     /** Out of the burning rupture under the ship's bow (2026-11-14): the fall into Phlegethos (PhlegethosFall.h), and its end. */
     void BeginHellFall();
     void EndHellFall();
+    /** Out of Phlegethos's tear (2026-11-19): the Feywild river cutscene (FeyRiverScene.h), and its end on the pond's shore. */
+    void BeginFeyRiver();
+    void EndFeyRiver();
+    bool IsInFeyRiver() const { return FeyRiverScene.IsValid(); }
     /** Take hold of swing grip Index now (GetChuckSwingGrips; the ship's ending cutscene puts him on the fore topsail yard). */
     void CatchSwingGrip(int32 Index);
     /** The ship's storm ending (2026-11-09): the cutscene holds him (no gait, physics or collision) and places him each
@@ -468,11 +472,13 @@ protected:
 private:
     friend class AFallCutscene;
     friend class APhlegethosFall;
+    friend class AFeyRiverScene;
     bool bDemoEnded = false;
     bool bCutscene = false;
     bool bSceneHold = false;
     TWeakObjectPtr<class AFallCutscene> FallScene;
     TWeakObjectPtr<class APhlegethosFall> HellFallScene;
+    TWeakObjectPtr<class AFeyRiverScene> FeyRiverScene;
     void BeginFallCutscene();
     /** In the cutscene the pose is the clip it sets (Base/BaseTime), with no gait logic or foot IK. */
     void UpdateCutscenePose(float DeltaSeconds);

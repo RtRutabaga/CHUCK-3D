@@ -32,8 +32,7 @@ class APhlegethosSetting;
  *  - the collapse: the rest of the island falls in from its far ends toward him; anything he stands on cracks at once.
  *    The river is all that is left.
  * Into the water (walked, jumped, from anywhere it runs): he is swept away down it and into the far tear, the view going
- * to black. (The river cutscene and the Feywild are later slices: for now he is returned to the forecourt's checkpoint,
- * as from an Astral death, and it all re-arms.)
+ * to black, it all re-arms, and the river cutscene carries him on into the Feywild (2026-11-19, FeyRiverScene.h).
  * (2026-11-17, the user: "when chuck dies keep going don't reset the astral fall away".) A death in it (a fall into the
  * Astral, the fiend) does not re-arm it: he comes back on the ground by the breach that holds, and it goes on.
  * The slabs under the trio, the fiend and the lemures hold while they stand on them; the river's columns never fall.

@@ -32,6 +32,17 @@ namespace Fey
     float Vista(float Y);
     /** Where the overlook's edge begins. */
     float CliffX(float Y);
+    // The river the cutscene rides (FeyRiverScene.h; stage 2, 2026-11-19): its own set far south of the slice, out of sight
+    // of it, flowing east toward the low sun. S is cm along its middle from the root tunnel's dark end (0); the tunnel opens
+    // at RiverMouth. RiverAt is the middle at the water's surface; RiverSide points to the left bank.
+    constexpr float RiverStart = -800, RiverMouth = 2100, RiverEnd = 11800;
+    FVector RiverAt(float S);
+    FVector RiverSide(float S);
+    float RiverHalf(float S);
+    float RiverGround(float X, float Y);
+    /** Where he washes up on the pond's south shore (local, on the ground), and the way he faces there. */
+    FVector ShoreSpot();
+    float ShoreYaw();
 }
 
 FVector FeywildOrigin();
@@ -43,6 +54,9 @@ bool FeyWading(const FVector& Paw);
 /** The dev checkpoint "FeyLook" (world, his capsule's centre) and its facing. */
 FVector FeywildSpawn();
 float FeywildSpawnYaw();
+/** The arrival checkpoint "FeyArrival", where the river leaves him (world, his capsule's centre), and its facing. */
+FVector FeywildArrival();
+float FeywildArrivalYaw();
 
 UCLASS()
 class CHUCK3D_API AFeywildSetting : public AActor
@@ -54,6 +68,14 @@ public:
     /** Hide whatever stage stands and build the slice with its light (idempotent). */
     static AFeywildSetting* Enter(UWorld* World);
     static AFeywildSetting* Get(const UWorld* World);
+    /** The river's set for the cutscene (idempotent); Show false hides it again once he is past it. */
+    void BuildRiver();
+    void ShowRiver(bool bShow);
+    /** In the root tunnel: the sky's fill and the sky light down to K of themselves (the sun's shadow does the rest). */
+    void SetShade(float K);
+    /** Rings and drops on the pond where something hits it or moves in it (the cutscene's plunge and drift). */
+    void Splash(const FVector& World, float Hard);
+    int32 GetMissing() const { return Missing; }
 private:
     void Build();
     void BuildEnvironment();
@@ -72,12 +94,20 @@ private:
     UPROPERTY() UInstancedStaticMeshComponent* Mist = nullptr;
     UPROPERTY() UInstancedStaticMeshComponent* Rings = nullptr;     // ripples on the pond
     UPROPERTY() UProceduralMeshComponent* WaterMesh = nullptr;
+    UPROPERTY() UProceduralMeshComponent* StreamMesh = nullptr;   // the streams on the two rock steps
+    float AirShade = 1.f;                                         // the motes dim with SetShade (none in the root tunnel)
     UPROPERTY() UMaterialInstanceDynamic* FarMid = nullptr;
     UPROPERTY() USceneCaptureComponentCube* Probe = nullptr;
     UPROPERTY() UTextureRenderTargetCube* ProbeTarget = nullptr;
     UPROPERTY() UAudioComponent* FallsSound = nullptr;
     UPROPERTY() class USoundBase* SplashSound = nullptr;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> Kits;
+    UPROPERTY() TArray<USceneComponent*> RiverParts;
+    UPROPERTY() class UDirectionalLightComponent* FillLight = nullptr;
+    UPROPERTY() class USkyLightComponent* Sky = nullptr;
+    float FillBase = 1.7f, SkyBase = 1.7f;
+    bool bRiver = false;
+    int32 RiverVeil0 = -1;
     struct FSpark { FVector P, V; float Age = 0, Life = 1, Size = 1, Hue = 0, Phase = 0; bool bFly = false; };
     TArray<FSpark> Sparks;
     struct FVeil { FVector P; float Size = 500, Alpha = .15f, Seed = 0, Drift = 0; };

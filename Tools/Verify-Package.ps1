@@ -333,6 +333,16 @@ if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHU
    !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_TEST failures=0 handoff=1' -Quiet)) {
     throw "Fall to Phlegethos verification failed. Inspect $hellLog"
 }
+# The river into the Feywild (Claude, 2026-11-19, FeyRiverScene.h): the dark, the score at 7 s, the plunge, washed up on the
+# pond's shore and back on his feet, then playable there.
+$feyRiverLog=Join-Path $evidence ('verify-fey-river-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$feyRiverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckFeyRiverTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$feyRiverLog+'"')) -WindowStyle Hidden -Wait -PassThru
+if($feyRiverProcess.ExitCode -or !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_START music=1 rush=1 roar=1 splashes=6' -Quiet) -or
+   !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_SCORE at=7\.0' -Quiet) -or
+   !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_END at=36\.[0-9]+ skipped=0 surfacings=5 washed=1 rose=1' -Quiet) -or
+   !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_TEST failures=0 handoff=1 .* missing=0' -Quiet)) {
+    throw "Feywild river cutscene verification failed. Inspect $feyRiverLog"
+}
 $phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $phlegProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"')) -WindowStyle Hidden -Wait -PassThru
 if($phlegProcess.ExitCode -or !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_BUILD pass=1 missing=0' -Quiet) -or

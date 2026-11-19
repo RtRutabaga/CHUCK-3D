@@ -183,7 +183,9 @@ float pud=smoothstep(.77,.8,F.B(p/90.+4.))*saturate(VC.r*1.4)*saturate(VC.b*1.6+
 float wet=saturate(VC.b*.8);
 c*=lerp(1.,.58,wet);rg=lerp(rg,.52,wet);
 c=lerp(c,float3(.012,.018,.026),pud);rg=lerp(rg,.1,pud);tn*=1-pud*.8;
-Rough=rg;AO=ao;
+// Vertex alpha: how much light reaches it (1 in the open; low inside the river's root tunnel, 2026-11-19).
+c*=lerp(.03,1.,VA);
+Rough=rg;AO=ao*lerp(.25,1.,VA);
 WN=normalize(normalize(N)+float3(tn*1.2,0));
 return c;
 '''
@@ -191,7 +193,8 @@ return c;
 
 def ground(m):
     m.set_editor_property('tangent_space_normal', False)
-    inputs = {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VC': node(m, unreal.MaterialExpressionVertexColor),
+    vc = node(m, unreal.MaterialExpressionVertexColor)
+    inputs = {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VC': vc, 'VA': (vc, 'A'),
               'SD': chult(m, 'T_forest_ground_04_diff_2k', 'diffuse'), 'SN': chult(m, 'T_forest_ground_04_nor_dx_2k', 'nor_dx'), 'SA': chult(m, 'T_forest_ground_04_arm_2k', 'arm'),
               'MD': fey(m, 'brown_mud_leaves_01', 'diffuse'), 'MN': fey(m, 'brown_mud_leaves_01', 'nor_dx'), 'MA': fey(m, 'brown_mud_leaves_01', 'arm'),
               'RD': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_diff_2k'), 'diffuse'), 'RN': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_nor_dx_2k'), 'nor_dx')}
@@ -226,11 +229,15 @@ return normalize(n+dn*lerp(1.1,.25,mk));
 '''
 
 
-def bark(m):
+# The river's root tunnel (2026-11-19): the same bark, its light from vertex colour G (dark inside, open at the mouth).
+ROOT = BARK.replace('return normalize(n+dn', 'Base*=lerp(.03,1.,VC.g);AO*=lerp(.25,1.,VC.g);Glow*=lerp(.2,.4,VC.g);\nreturn normalize(n+dn')
+
+
+def bark(m, code=BARK):
     m.set_editor_property('tangent_space_normal', False)
     ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
     link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
-    c = custom(m, BARK, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': chult(m, 'T_tree_bark_03_diff_2k', 'diffuse'),
+    c = custom(m, code, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': chult(m, 'T_tree_bark_03_diff_2k', 'diffuse'),
                          'NM': chult(m, 'T_tree_bark_03_nor_dx_2k', 'nor_dx'), 'A': chult(m, 'T_tree_bark_03_arm_2k', 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
     wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     link(c, wn, '')
@@ -463,6 +470,39 @@ def water(m):
     out(c, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Mirror'); out(const(m, 0.), P.MP_SPECULAR)
 
 
+# The running water (2026-11-19): the cutscene's river (AFeywildSetting::BuildRiver) and the slice's streams above the falls.
+# A ribbon whose UV is (along, across)/200 cm, the current running along U at a speed set by its churn. Vertex colour: R
+# toward the banks, G churn, B light (low in the root tunnel). It reflects what is on screen (SSR, specular on), with only a
+# trace of the glade's capture where that finds nothing.
+RIVER = NOISE + r'''
+float2 q=UV*200.;
+float churn=saturate(VC.g),sp=lerp(170.,290.,churn),lit=saturate(VC.b);
+float2 a=float2(q.x-T*sp,q.y)/float2(150.,70.),b=float2(q.x-T*sp*1.3,q.y)/float2(48.,22.);
+float e=.03;float2 g;
+g.x=(F.B(a+float2(e,0))-F.B(a-float2(e,0)))*.55+(F.N(b+float2(e,0))-F.N(b-float2(e,0)))*.35;
+g.y=(F.B(a+float2(0,e))-F.B(a-float2(0,e)))*.55+(F.N(b+float2(0,e))-F.N(b-float2(0,e)))*.35;
+float streak=F.B(float2(q.x-T*sp,q.y*1.8)/float2(70.,20.));
+Foam=smoothstep(.66,.86,streak+churn*.2)*churn*(.35+.65*saturate(VC.r));
+Rough=lerp(lerp(.08,.22,churn),.55,Foam);
+Spec=.5*lit;
+float3 n=normalize(float3(-g*(.6+churn*1.5),1));
+Base=lerp(lerp(float3(.004,.014,.016),float3(.02,.045,.034),saturate(VC.r)),float3(.4,.5,.55),Foam)*lerp(.04,1.,lit);
+float3 v=normalize(Cam),r=reflect(-v,n);r.z=abs(r.z)+.02;r=normalize(r);
+float3 m=min(TextureCubeSampleLevel(Cube,CubeSampler,r,0.).rgb,float3(4.,4.,4.));
+float fr=saturate(.25+.75*pow(1.-saturate(dot(n,v)),4.));
+Mirror=m*fr*(1.-Foam)*max(lit,.08)*.12;
+return n;
+'''
+
+
+def river(m):
+    m.set_editor_property('tangent_space_normal', False)
+    cube = node(m, unreal.MaterialExpressionTextureObjectParameter, parameter_name='Reflection', texture=unreal.load_asset('/Engine/EngineResources/DefaultTextureCube'), sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    c = custom(m, RIVER, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'T': node(m, unreal.MaterialExpressionTime), 'VC': node(m, unreal.MaterialExpressionVertexColor), 'Cam': node(m, unreal.MaterialExpressionCameraVectorWS),
+                          'Cube': cube}, extra=[('Base', F3), ('Rough', F1), ('Foam', F1), ('Mirror', F3), ('Spec', F1)])
+    out(c, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Mirror'); out(c, P.MP_SPECULAR, 'Spec')
+
+
 FALL = NOISE + r'''
 float2 u=UV*float2(16.,3.);
 float s=F.B(float2(u.x,u.y-T*1.5))*.6+F.B(float2(u.x*2.3+4.,u.y*1.5-T*2.3))*.4;
@@ -502,7 +542,7 @@ def mist(m):
 
 
 mats = {}
-for name, fn in (('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+for name, fn in (('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),

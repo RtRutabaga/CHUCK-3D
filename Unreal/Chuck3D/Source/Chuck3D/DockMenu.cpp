@@ -77,8 +77,9 @@ namespace
         {TEXT("PhlegFortress"),TEXT("Phlegethos Fortress")},{TEXT("PhlegForecourt"),TEXT("Phlegethos Forecourt")}};
     static_assert(UE_ARRAY_COUNT(PhlegPoints)==PhlegSpawns,"a checkpoint for every Phlegethos spawn");
     constexpr int32 PhlegColumn=7;
-    // The Feywild's look slice (2026-11-18; FeywildSetting.h), under Phlegethos's last column.
-    const FChultPoint FeyPoints[]={{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
+    // The Feywild (2026-11-18; FeywildSetting.h), under Phlegethos's last column: the shore the river leaves him on
+    // (2026-11-19, its save point), the river cutscene itself, and the look slice's own start.
+    const FChultPoint FeyPoints[]={{TEXT("FeyArrival"),TEXT("Feywild Riverbank")},{TEXT("FeyRiver"),TEXT("Feywild River (dev)")},{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
@@ -123,11 +124,19 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
     FVector ShipAt;float ShipYaw=0;
-    if(C && Point==TEXT("FeyLook"))
+    if(C && (Point==TEXT("FeyLook") || Point==TEXT("FeyArrival")))
     {
         FadeOutMusic(.1f);
         AFeywildSetting::Enter(GetWorld());
-        C->ResetAtLocation(FeywildSpawn());C->SetActorRotation(FRotator(0,FeywildSpawnYaw(),0));C->Recenter();
+        const bool bLook=Point==TEXT("FeyLook");
+        C->ResetAtLocation(bLook?FeywildSpawn():FeywildArrival());C->SetActorRotation(FRotator(0,bLook?FeywildSpawnYaw():FeywildArrivalYaw(),0));C->Recenter();
+        UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
+        return true;
+    }
+    if(C && Point==TEXT("FeyRiver"))
+    {
+        // The river cutscene from the tear (it builds the Feywild under its dark opening).
+        C->BeginFeyRiver();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;
     }
@@ -226,7 +235,7 @@ bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
             FVector At;float Yaw;
             if(PhlegPoint(P.Point,At,Yaw)) Consider(P.Point,P.Label,At);
         }
-    if(AFeywildSetting::Get(World)) Consider(FeyPoints[0].Point,FeyPoints[0].Label,FeywildSpawn());
+    if(AFeywildSetting::Get(World)) Consider(FeyPoints[0].Point,FeyPoints[0].Label,FeywildArrival());
     // The docks after the sewer are the evening's.
     if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
     // The dev markers are dropped from the label the player sees.

@@ -1,7 +1,10 @@
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "FallCutscene.h"
+#include "FeyRiverScene.h"
 #include "ProceduralMeshComponent.h"
+#include "Algo/BinarySearch.h"
+#include "Async/ParallelFor.h"
 #include "EngineUtils.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Components/AudioComponent.h"
@@ -69,6 +72,91 @@ namespace
     }
 }
 
+// ------------------------------------------------------------------ the river (stage 2)
+namespace
+{
+    // The river's middle: a Catmull-Rom curve through these, the water's surface falling gently to the east. The second
+    // point is S = 0; the first only gives the tunnel's dark end its direction.
+    const FVector RiverKeys[] = {{-21800, -30000, 330}, {-21000, -30000, 320}, {-19950, -29870, 300}, {-18900, -30060, 275}, {-17650, -30520, 250},
+                                 {-16300, -30380, 225}, {-15000, -29760, 200}, {-13600, -29520, 175}, {-12250, -29960, 150}, {-11000, -30520, 125},
+                                 {-9750, -30620, 100}, {-8500, -30260, 80}, {-7400, -29700, 60}};
+    struct FCourse { TArray<FVector> P; TArray<float> S; };
+    const FCourse& Course()
+    {
+        static FCourse C = []()
+        {
+            FCourse Out; constexpr int32 N = UE_ARRAY_COUNT(RiverKeys), Sub = 24;
+            Out.P.Add(RiverKeys[0]);
+            for (int32 I = 0; I + 1 < N - 1; ++I)
+            {
+                const FVector& P0 = RiverKeys[FMath::Max(I - 1, 0)], &P1 = RiverKeys[I], &P2 = RiverKeys[I + 1], &P3 = RiverKeys[FMath::Min(I + 2, N - 1)];
+                for (int32 K = 1; K <= Sub; ++K)
+                {
+                    const float T = float(K) / Sub, T2 = T * T, T3 = T2 * T;
+                    Out.P.Add(I == 0 ? FMath::Lerp(P1, P2, T) : .5f * ((2.f * P1) + (-P0 + P2) * T + (2.f * P0 - 5.f * P1 + 4.f * P2 - P3) * T2 + (-P0 + 3.f * P1 - 3.f * P2 + P3) * T3));
+                }
+            }
+            float Run = 0; Out.S.Add(0);
+            for (int32 I = 1; I < Out.P.Num(); ++I) { Run += FVector::Dist2D(Out.P[I], Out.P[I - 1]); Out.S.Add(Run); }
+            const float Zero = Out.S[Sub];   // (RiverKeys[1])
+            for (float& S : Out.S) S -= Zero;
+            return Out;
+        }();
+        return C;
+    }
+    // The nearest point of the middle to (X, Y): its S and the signed distance across (+ to the left bank).
+    void RiverNearest(float X, float Y, float& OutS, float& OutD)
+    {
+        const FCourse& C = Course(); float Best = TNumericLimits<float>::Max(); OutS = 0; OutD = 0;
+        const FVector2D Q(X, Y);
+        for (int32 I = 0; I + 1 < C.P.Num(); ++I)
+        {
+            const FVector2D A(C.P[I]), B(C.P[I + 1]), AB = B - A; const float L2 = AB.SizeSquared();
+            const float U = L2 > 0 ? FMath::Clamp(FVector2D::DotProduct(Q - A, AB) / L2, 0.f, 1.f) : 0.f;
+            const FVector2D H = A + AB * U; const float D2 = FVector2D::DistSquared(Q, H);
+            if (D2 < Best) { Best = D2; OutS = FMath::Lerp(C.S[I], C.S[I + 1], U); const FVector2D T = AB.GetSafeNormal(); OutD = T.X * (Q.Y - H.Y) - T.Y * (Q.X - H.X); }
+        }
+    }
+    // Inside the river's set (for the air's motes and the region's bounds).
+    bool InRiverBox(const FVector& L) { return L.X > -26000.f && L.X < -5000.f && L.Y > -34500.f && L.Y < -25500.f && L.Z > -1500.f && L.Z < 6000.f; }
+}
+
+FVector Fey::RiverAt(float S)
+{
+    const FCourse& C = Course();
+    if (S <= C.S[0]) return C.P[0] + (C.P[1] - C.P[0]).GetSafeNormal() * (S - C.S[0]);
+    const int32 I = FMath::Clamp(Algo::UpperBound(C.S, S) - 1, 0, C.S.Num() - 2);
+    return FMath::Lerp(C.P[I], C.P[I + 1], FMath::Clamp((S - C.S[I]) / FMath::Max(C.S[I + 1] - C.S[I], 1.f), 0.f, 1.f));
+}
+FVector Fey::RiverSide(float S)
+{
+    const FVector T = (RiverAt(S + 40.f) - RiverAt(S - 40.f)).GetSafeNormal2D();
+    return FVector(-T.Y, T.X, 0.f);
+}
+float Fey::RiverHalf(float S)
+{
+    return 250.f + 140.f * Smooth(2200.f, 3400.f, S) + 50.f * Smooth(3800.f, 5200.f, S) - 150.f * Smooth(6600.f, 8200.f, S) + 22.f * FMath::Sin(S / 700.f);
+}
+float Fey::RiverGround(float X, float Y)
+{
+    float S, D; RiverNearest(X, Y, S, D);
+    const float A = FMath::Abs(D), W = RiverHalf(S), Zw = RiverAt(S).Z;
+    const float Rise = 340.f * Smooth(10300.f, 11200.f, S);   // (the river goes on under the ground past its last bend)
+    if (A < W) return Zw - 30.f - 70.f * (1.f - FMath::Square(A / W)) + Rise;
+    const float Hb = FMath::Lerp(190.f, 105.f, Smooth(3000.f, 5200.f, S)) * (1.f + .25f * Noise(X, Y, 600, 60));
+    return Rise + Zw - 10.f + Hb * Smooth(W, W + 260.f, A) + (650.f + 450.f * Noise(X, Y, 2400, 61)) * Smooth(W + 700.f, W + 2900.f, A) + 22.f * Noise(X, Y, 180, 62) * Smooth(W, W + 120.f, A);
+}
+FVector Fey::ShoreSpot()
+{
+    // From the falls' foot toward the south shore, to the first dry ground past the pond's edge.
+    const FVector2D Dir = FVector2D(-.42f, -1.f).GetSafeNormal();
+    FVector2D P(4600.f, 1250.f);
+    for (int32 I = 0; I < 800 && PondE(P.X, P.Y) < 1.03f; ++I) P += Dir * 5.f;
+    P += Dir * 8.f;   // (the grass starts a little further in)
+    return FVector(P.X, P.Y, Ground(P.X, P.Y));
+}
+float Fey::ShoreYaw() { return FMath::RadiansToDegrees(FMath::Atan2(-1.f, -.42f)); }   // (inland, the way the current set him down)
+
 float Fey::Vista(float Y) { return Smooth(500.f, -150.f, Y) * Smooth(-5200.f, -4250.f, Y); }
 float Fey::CliffX(float Y) { return 5560.f + 90.f * Noise(0, Y, 700, 13); }
 
@@ -107,7 +195,7 @@ FVector FeywildOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -3200
 bool InFeywild(const FVector& World)
 {
     const FVector L = FeyLocal(World);
-    return L.X > MinX - 2000 && L.X < MaxX + 4000 && FMath::Abs(L.Y) < HalfY + 2000 && L.Z > -1500 && L.Z < 9000;
+    return (L.X > MinX - 2000 && L.X < MaxX + 4000 && FMath::Abs(L.Y) < HalfY + 2000 && L.Z > -1500 && L.Z < 9000) || InRiverBox(L);
 }
 bool FeyWading(const FVector& Paw)
 {
@@ -117,6 +205,8 @@ bool FeyWading(const FVector& Paw)
 }
 FVector FeywildSpawn() { const float X = -300.f, Y = PathY(X); return FeyWorld(FVector(X, Y, Ground(X, Y) + Stand + 2.f)); }
 float FeywildSpawnYaw() { return 0.f; }
+FVector FeywildArrival() { return FeyWorld(ShoreSpot() + FVector(0, 0, Stand + 2.f)); }
+float FeywildArrivalYaw() { return ShoreYaw(); }
 
 // ------------------------------------------------------------------ mesh building
 struct FFeySurf
@@ -165,7 +255,7 @@ AFeywildSetting* AFeywildSetting::Enter(UWorld* World)
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* A = *It;
-        if (A == Chuck || A->GetAttachParentActor() == Chuck || A->IsA<AController>() || A->IsA<APlayerCameraManager>() || A->IsA<AHUD>()) continue;
+        if (A == Chuck || A->GetAttachParentActor() == Chuck || A->IsA<AController>() || A->IsA<APlayerCameraManager>() || A->IsA<AHUD>() || A->IsA<AFeyRiverScene>()) continue;
         if (A->GetClass()->GetName().Contains(TEXT("CameraActor"))) continue;
         TInlineComponentArray<UActorComponent*> Parts(A);
         auto Dark = [](UActorComponent* Part) { if (Part->IsA<ULightComponentBase>() || Part->IsA<UExponentialHeightFogComponent>() || Part->IsA<USkyAtmosphereComponent>() || Part->IsA<UVolumetricCloudComponent>()) Cast<USceneComponent>(Part)->SetVisibility(false); };
@@ -184,6 +274,7 @@ AFeywildSetting* AFeywildSetting::Enter(UWorld* World)
     FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     auto* Stage = World->SpawnActor<AFeywildSetting>(FeywildOrigin(), FRotator::ZeroRotator, P);
     Stage->Build();
+    if (FParse::Param(FCommandLine::Get(), TEXT("ChuckFeyRiverSet"))) Stage->BuildRiver();   // (stills of the river's set from a shot list)
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_ENTER hidden=%d triangles=%d planted=%d missing=%d"), Hidden, Stage->Triangles, Stage->Planted, Stage->Missing);
     return Stage;
 }
@@ -283,7 +374,7 @@ void AFeywildSetting::BuildEnvironment()
     }
     auto* Sun = NewObject<UDirectionalLightComponent>(this);
     Sun->SetMobility(EComponentMobility::Movable); Sun->SetAtmosphereSunLight(false);
-    Sun->SetIntensity(5.5f); Sun->SetLightColor(FLinearColor(1.f, .66f, .36f));
+    Sun->SetIntensity(5.5f); Sun->SetLightColor(FLinearColor(1.f, .66f, .36f)); Sun->SetForwardShadingPriority(1);
     Sun->DynamicShadowDistanceMovableLight = 9000; Sun->DynamicShadowCascades = 4; Sun->SetVolumetricScatteringIntensity(2.2f);
     Sun->SetEnableLightShaftBloom(true); Sun->SetBloomScale(.25f); Sun->SetBloomThreshold(.6f); Sun->SetBloomTint(FColor(255, 196, 130));
     Attach(Sun, FVector::ZeroVector, SunRot);
@@ -292,11 +383,13 @@ void AFeywildSetting::BuildEnvironment()
     SkyLight->SetIntensity(1.7f); SkyLight->SetLightColor(FLinearColor(.72f, .86f, 1.f));
     SkyLight->SetLowerHemisphereColor(FLinearColor(.05f, .09f, .1f)); SkyLight->bLowerHemisphereIsBlack = true;
     Attach(SkyLight);
+    Sky = SkyLight; SkyBase = SkyLight->Intensity;
     FTimerHandle Capture; GetWorldTimerManager().SetTimer(Capture, [SkyLight]() { SkyLight->RecaptureSky(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_SKY_CAPTURED")); }, .6f, false);
     auto* Fill = NewObject<UDirectionalLightComponent>(this);
     Fill->SetMobility(EComponentMobility::Movable); Fill->SetAtmosphereSunLight(false); Fill->SetForwardShadingPriority(0);
     Fill->SetIntensity(1.7f); Fill->SetLightColor(FLinearColor(.46f, .64f, 1.f)); Fill->SetCastShadows(false); Fill->SetVolumetricScatteringIntensity(0.f);
     Attach(Fill, FVector::ZeroVector, FRotator(-38.f, 20.f, 0.f));
+    FillLight = Fill; FillBase = Fill->Intensity;
     auto* Fog = NewObject<UExponentialHeightFogComponent>(this);
     Fog->SetFogDensity(.018f); Fog->SetFogHeightFalloff(.18f); Fog->SetFogMaxOpacity(.72f); Fog->FogCutoffDistance = 3000000.f; Fog->SetStartDistance(900.f);
     Fog->SetFogInscatteringColor(FLinearColor(.17f, .3f, .46f));
@@ -371,9 +464,27 @@ void AFeywildSetting::BuildLand()
             for (int32 I = 0; I < Nx; ++I) for (int32 J = 0; J < Ny; ++J) { const int32 A = Base + I * (Ny + 1) + J, B = A + Ny + 1; W.Quad(A, A + 1, B + 1, B); }
         };
         Sheet(PondX - PondRX * 1.2f, LedgeX + 40, PondY - PondRY * 1.2f, PondY + PondRY * 1.2f, WaterZ, 60, true);
-        Sheet(LedgeX + 40, Ledge2X + 40, FallY - FallHalf - 40, FallY + FallHalf + 40, LedgeTop - 14, 60, false);
-        Sheet(Ledge2X + 40, Ledge2X + 900, FallY - FallHalf - 40, FallY + FallHalf + 40, Ledge2Top - 14, 60, false);
         WaterMesh = Emit(TEXT("FeyWater"), W, Water, false, false);
+    }
+    // The stream on each rock step, running west to its lip (M_FeyRiver, 2026-11-19: the river cutscene rides them). Wide
+    // enough that their edges lie under the banks; on back east past where the cutscene films them from.
+    {
+        FFeySurf St; constexpr float Half = FallHalf + 150.f, Ds = 50.f; constexpr int32 Across = 10;
+        auto Stream = [&](float X0, float X1, float Z)
+        {
+            const int32 Base = St.V.Num(), Rows = FMath::CeilToInt((X1 - X0) / Ds);
+            for (int32 I = 0; I <= Rows; ++I)
+                for (int32 J = 0; J <= Across; ++J)
+                {
+                    const float X = FMath::Lerp(X1, X0, float(I) / Rows), D = FMath::Lerp(-Half, Half, float(J) / Across);
+                    const float Edge = FMath::Clamp(FMath::Abs(D) / FallHalf, 0.f, 1.f), Lip = Smooth(X0 + 500.f, X0, X);
+                    St.Vert(FVector(X, FallY + D, Z), FVector::UpVector, FVector2D(-X, D) / 200.f, FLinearColor(Edge, FMath::Clamp(.3f + .4f * Lip + .15f * Edge, 0.f, 1.f), 1, 1).ToFColor(false));
+                }
+            for (int32 I = 0; I < Rows; ++I) for (int32 J = 0; J < Across; ++J) { const int32 A = Base + I * (Across + 1) + J, B = A + Across + 1; St.Quad(A, B, B + 1, A + 1); }
+        };
+        Stream(LedgeX + 40, Ledge2X + 40, LedgeTop - 14);
+        Stream(Ledge2X + 40, Ledge2X + 1240, Ledge2Top - 14);
+        StreamMesh = Emit(TEXT("FeyStreams"), St, Mat(TEXT("/Game/Art/Feywild/M_FeyRiver.M_FeyRiver")), false, false);
     }
     // The falls: curtains curving out over each lip and down.
     {
@@ -467,6 +578,12 @@ void AFeywildSetting::BuildProbe()
         {
             auto* Mid = UMaterialInstanceDynamic::Create(Water, this);
             Mid->SetTextureParameterValue(TEXT("Reflection"), ProbeTarget); WaterMesh->SetMaterial(0, Mid);
+        }
+    if (StreamMesh)
+        if (UMaterialInterface* Running = StreamMesh->GetMaterial(0))
+        {
+            auto* Mid = UMaterialInstanceDynamic::Create(Running, this);
+            Mid->SetTextureParameterValue(TEXT("Reflection"), ProbeTarget); StreamMesh->SetMaterial(0, Mid);
         }
     // Once the sky light has settled, and again when the textures have streamed in.
     for (const float When : {1.f, 6.f})
@@ -612,6 +729,242 @@ void AFeywildSetting::BuildPlanting()
     }
 }
 
+// ------------------------------------------------------------------ the river's set (stage 2, 2026-11-19; FeyRiverScene.h)
+// A root tunnel he surfaces in, dark; its mouth; then the river between banks that grow from bare rock and root to moss,
+// fungi, flowers and old oaks, east toward the low sun. Only the cutscene sees it: built when it starts, hidden after.
+void AFeywildSetting::BuildRiver()
+{
+    if (bRiver) { ShowRiver(true); return; }
+    bRiver = true;
+    const double Started = FPlatformTime::Seconds();
+    const int32 KitsBefore = Kits.Num(), TrianglesBefore = Triangles, PlantedBefore = Planted;
+    auto Mat = [](const TCHAR* Path) { return LoadObject<UMaterialInterface>(nullptr, Path); };
+    auto Lush = [](float S) { return Smooth(RiverMouth + 300.f, RiverMouth + 2800.f, S); };
+    // How much light reaches into the root tunnel: little, until near its mouth.
+    auto TunnelLight = [](float S) { return FMath::Lerp(.05f, 1.f, Smooth(RiverMouth - 420.f, RiverMouth + 40.f, S)); };
+    // (front faces wound to the normal wanted, whichever way the rows run)
+    auto Face = [](FFeySurf& S, int32 A, int32 B, int32 C, int32 D)
+    {
+        const FVector Want = S.N[A] + S.N[C];
+        if (FVector::DotProduct(FVector::CrossProduct(S.V[B] - S.V[A], S.V[C] - S.V[A]), Want) > 0.f) S.Quad(A, D, C, B); else S.Quad(A, B, C, D);
+    };
+    // The valley: one grid, its height from the river's middle (RiverGround).
+    {
+        constexpr float X0 = -25000, X1 = -5400, Y0 = -33900, Y1 = -26300, Step = 75;
+        const int32 Nx = FMath::CeilToInt((X1 - X0) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step), Count = (Nx + 1) * (Ny + 1);
+        TArray<float> H, Ss, Ds; H.SetNumUninitialized(Count); Ss.SetNumUninitialized(Count); Ds.SetNumUninitialized(Count);
+        ParallelFor(Nx + 1, [&](int32 I)
+        {
+            for (int32 J = 0; J <= Ny; ++J)
+            {
+                const int32 K = I * (Ny + 1) + J; const float X = X0 + I * Step, Y = Y0 + J * Step;
+                H[K] = RiverGround(X, Y); RiverNearest(X, Y, Ss[K], Ds[K]);
+            }
+        });
+        FFeySurf L; L.V.Reserve(Count);
+        for (int32 I = 0; I <= Nx; ++I)
+            for (int32 J = 0; J <= Ny; ++J)
+            {
+                const int32 K = I * (Ny + 1) + J; const float X = X0 + I * Step, Y = Y0 + J * Step;
+                const float Hx0 = H[FMath::Max(I - 1, 0) * (Ny + 1) + J], Hx1 = H[FMath::Min(I + 1, Nx) * (Ny + 1) + J], Hy0 = H[I * (Ny + 1) + FMath::Max(J - 1, 0)], Hy1 = H[I * (Ny + 1) + FMath::Min(J + 1, Ny)];
+                const FVector Nn = FVector(Hx0 - Hx1, Hy0 - Hy1, 4.f * Step).GetSafeNormal();
+                const float W = RiverHalf(Ss[K]), A = FMath::Abs(Ds[K]);
+                const float Damp = Smooth(W + 260.f, W - 20.f, A);
+                const float Moss = FMath::Clamp(.25f + .65f * Lush(Ss[K]) + .45f * Noise(X, Y, 500, 63), 0.f, 1.f) * FMath::Lerp(.3f, 1.f, Nn.Z * Nn.Z);
+                const float Lit = A < 480.f ? TunnelLight(Ss[K]) : 1.f;   // (inside the root tunnel)
+                L.Vert(FVector(X, Y, H[K]), Nn, FVector2D(X, Y) / 300.f, FLinearColor(0, Moss, Damp, Lit).ToFColor(false));
+            }
+        for (int32 I = 0; I < Nx; ++I) for (int32 J = 0; J < Ny; ++J) { const int32 A = I * (Ny + 1) + J, B = A + Ny + 1; L.Quad(A, A + 1, B + 1, B); }
+        RiverParts.Add(Emit(TEXT("FeyRiverLand"), L, Mat(TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround")), false, true));
+    }
+    // The root tunnel: a long hollow of root and bark the water runs through, closed at its dark end, ragged at its mouth.
+    {
+        FFeySurf T; constexpr int32 Around = 30; constexpr float Ds = 60.f, Thick = 34.f;
+        const int32 Rows = FMath::CeilToInt((RiverMouth - RiverStart) / Ds);
+        TArray<int32> Inner, Outer;
+        for (int32 I = 0; I <= Rows; ++I)
+        {
+            const float S = FMath::Lerp(RiverStart, RiverMouth, float(I) / Rows);
+            const FVector C = RiverAt(S) + FVector(0, 0, 40.f), Side = RiverSide(S), Fwd = FVector::CrossProduct(FVector::UpVector, Side).GetSafeNormal() * -1.f;
+            for (int32 J = 0; J <= Around; ++J)
+            {
+                const float Th = 2.f * PI * J / Around, Tw = J == Around ? 0.f : Th;   // (the seam shares its noise)
+                float Rr = 430.f + 40.f * Noise(S, 0, 600, 70) + 42.f * Noise(Tw * 170.f, S, 380, 71) + 14.f * Noise(Tw * 420.f, S * 2.5f, 150, 72);
+                const FVector Dir = Side * FMath::Cos(Th) + FVector::UpVector * FMath::Sin(Th);
+                const float Ragged = I == Rows ? 150.f * (.5f + .5f * Noise(Tw * 300.f, 0, 260, 73)) : 0.f;
+                const FVector P = C + Dir * Rr + Fwd * Ragged;
+                const FVector2D Uv(Th * Rr / 160.f, S / 160.f);
+                Inner.Add(T.Vert(P, -Dir, Uv, FLinearColor(.25f, TunnelLight(S), 1, 1).ToFColor(false)));
+                Outer.Add(T.Vert(P + Dir * Thick, Dir, Uv, FLinearColor(.85f, 1, 1, 1).ToFColor(false)));
+            }
+        }
+        for (int32 I = 0; I < Rows; ++I)
+            for (int32 J = 0; J < Around; ++J)
+            {
+                const int32 A = I * (Around + 1) + J, B = A + 1, Cc = A + Around + 2, D = A + Around + 1;
+                Face(T, Inner[A], Inner[B], Inner[Cc], Inner[D]); Face(T, Outer[A], Outer[B], Outer[Cc], Outer[D]);
+            }
+        // The lip at the mouth, inner to outer.
+        for (int32 J = 0; J < Around; ++J)
+        {
+            const int32 A = Rows * (Around + 1) + J;
+            const FVector Fwd = FVector::CrossProduct(FVector::UpVector, RiverSide(RiverMouth)).GetSafeNormal() * -1.f;
+            // (copies: Vert grows the arrays these come from)
+            const FVector P[4] = {T.V[Inner[A]], T.V[Inner[A + 1]], T.V[Outer[A + 1]], T.V[Outer[A]]};
+            const FVector2D Uv[4] = {T.UV[Inner[A]], T.UV[Inner[A + 1]], T.UV[Outer[A + 1]], T.UV[Outer[A]]};
+            int32 Q[4]; for (int32 K = 0; K < 4; ++K) Q[K] = T.Vert(P[K], Fwd, Uv[K], FLinearColor(.5f, 1, 1, 1).ToFColor(false));
+            Face(T, Q[0], Q[1], Q[2], Q[3]);
+        }
+        // The dark end: shut.
+        {
+            const FVector Fwd = FVector::CrossProduct(FVector::UpVector, RiverSide(RiverStart)).GetSafeNormal() * -1.f;
+            const FColor Dark = FLinearColor(.25f, .05f, 1, 1).ToFColor(false);
+            const int32 Mid = T.Vert(RiverAt(RiverStart) + FVector(0, 0, 40.f), Fwd, FVector2D::ZeroVector, Dark);
+            for (int32 J = 0; J < Around; ++J)
+            {
+                const FVector Pa = T.V[Inner[J]], Pb = T.V[Inner[J + 1]]; const FVector2D Ua = T.UV[Inner[J]], Ub = T.UV[Inner[J + 1]];
+                const int32 A = T.Vert(Pa, Fwd, Ua, Dark), B = T.Vert(Pb, Fwd, Ub, Dark);
+                if (FVector::DotProduct(FVector::CrossProduct(T.V[A] - T.V[Mid], T.V[B] - T.V[Mid]), Fwd) > 0.f) T.T.Append({Mid, B, A}); else T.T.Append({Mid, A, B});
+            }
+        }
+        RiverParts.Add(Emit(TEXT("FeyRiverTunnel"), T, Mat(TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot")), false, true));
+    }
+    // The water: a ribbon along the middle, its foam running downstream (M_FeyRiver), dark under the tunnel.
+    {
+        FFeySurf W; constexpr float Ds = 60.f; constexpr int32 Across = 8;
+        const int32 Rows = FMath::CeilToInt((RiverEnd - RiverStart) / Ds);
+        for (int32 I = 0; I <= Rows; ++I)
+        {
+            const float S = FMath::Lerp(RiverStart, RiverEnd, float(I) / Rows), Half = RiverHalf(S) + 110.f;
+            const FVector C = RiverAt(S), Side = RiverSide(S);
+            const float Light = TunnelLight(S);
+            for (int32 J = 0; J <= Across; ++J)
+            {
+                const float D = FMath::Lerp(-Half, Half, float(J) / Across), Edge = FMath::Clamp(FMath::Abs(D) / (Half - 110.f), 0.f, 1.f);
+                const float Churn = FMath::Clamp(.2f + .45f * Smooth(6600.f, 8200.f, S) + .3f * FMath::Max(0.f, Noise(S, D, 900, 64)) + .25f * Smooth(.7f, 1.f, Edge), 0.f, 1.f);
+                W.Vert(C + Side * D, FVector::UpVector, FVector2D(S, D) / 200.f, FLinearColor(Edge, Churn, Light, 1).ToFColor(false));
+            }
+        }
+        for (int32 I = 0; I < Rows; ++I) for (int32 J = 0; J < Across; ++J) { const int32 A = I * (Across + 1) + J, B = A + Across + 1; Face(W, A, A + 1, B + 1, B); }
+        UMaterialInterface* RiverMat = Mat(TEXT("/Game/Art/Feywild/M_FeyRiver.M_FeyRiver"));
+        auto* Mesh = Emit(TEXT("FeyRiverWater"), W, RiverMat, false, false);
+        if (RiverMat && ProbeTarget) { auto* Mid = UMaterialInstanceDynamic::Create(RiverMat, this); Mid->SetTextureParameterValue(TEXT("Reflection"), ProbeTarget); Mesh->SetMaterial(0, Mid); }
+        RiverParts.Add(Mesh);
+    }
+    // The banks: bare rock and root at the tunnel's mouth, growing to moss, fungi, flowers and old oaks downstream.
+    {
+        FRandomStream R(919);
+        const FString Dir = TEXT("/Game/Art/Feywild/");
+        auto Path = [&Dir](const TCHAR* Name) { return Dir + Name + TEXT(".") + Name; };
+        auto Bank = [](float S, float D) { const FVector C = RiverAt(S), Side = RiverSide(S); const float X = C.X + Side.X * D, Y = C.Y + Side.Y * D; return FVector(X, Y, RiverGround(X, Y)); };
+        auto Put = [&](UHierarchicalInstancedStaticMeshComponent* H, const FVector& P, float Scale, float Sink, float Tilt)
+        {
+            H->AddInstance(FTransform(FRotator(R.FRandRange(-Tilt, Tilt), R.FRandRange(0.f, 360.f), R.FRandRange(-Tilt, Tilt)), P - FVector(0, 0, Sink), FVector(Scale))); ++Planted;
+        };
+        auto Side = [&R]() { return R.FRand() < .5f ? -1.f : 1.f; };
+        // (nothing grows against or inside the tunnel)
+        auto Clear = [](float S, float D) { return S > RiverMouth + 80.f || FMath::Abs(D) > 520.f; };
+        auto Scatter = [&](UHierarchicalInstancedStaticMeshComponent* H, int32 Count, float S0, float S1, float In, float Out, float Sc0, float Sc1, float Sink, float Tilt, TFunctionRef<float(float)> Chance)
+        {
+            for (int32 I = 0; I < Count; ++I)
+            {
+                const float S = R.FRandRange(S0, S1), D = Side() * (RiverHalf(S) + R.FRandRange(In, Out));
+                if (!Clear(S, D) || R.FRand() > Chance(S)) continue;
+                Put(H, Bank(S, D), R.FRandRange(Sc0, Sc1), Sink, Tilt);
+            }
+        };
+        auto Any = [](float) { return 1.f; };
+        auto Greening = [&Lush](float S) { return .12f + .88f * Lush(S); };
+        auto* Oak0 = Kit(*Path(TEXT("SM_FeyOak0")), 0, 0, true), *Oak1 = Kit(*Path(TEXT("SM_FeyOak1")), 0, 0, true);
+        Put(Oak0, Bank(RiverMouth - 300.f, RiverHalf(RiverMouth) + 1300.f), 1.6f, 20.f, 0.f);   // (back from the mouth: its low limbs stay off the river)
+        Put(Oak1, Bank(RiverMouth + 260.f, -(RiverHalf(RiverMouth) + 1150.f)), 1.45f, 20.f, 0.f);
+        for (const float S : {300.f, 950.f, 1550.f}) Put(Oak1, Bank(S, Side() * R.FRandRange(1100.f, 1500.f)), R.FRandRange(1.3f, 1.6f), 16.f, 0.f);
+        for (int32 K = 0; K < 15; ++K)
+        {
+            const float S = RiverMouth + 900.f + K * 640.f + R.FRandRange(-180.f, 180.f), D = (K % 2 ? 1.f : -1.f) * (RiverHalf(S) + R.FRandRange(650.f, 1600.f));
+            Put(K % 3 ? Oak0 : Oak1, Bank(S, D), R.FRandRange(1.f, 1.45f), 16.f, 0.f);
+        }
+        for (int32 K = 0; K < 16; ++K)
+        {
+            const float S = 600.f + K * 640.f + R.FRandRange(-200.f, 200.f), D = (K % 2 ? -1.f : 1.f) * (RiverHalf(S) + R.FRandRange(1700.f, 2700.f));
+            Put(K % 2 ? Oak0 : Oak1, Bank(S, D), R.FRandRange(1.1f, 1.5f), 24.f, 0.f);
+        }
+        auto* Amber = Kit(*Path(TEXT("SM_FeyCapAmber")), 0, 0, true);
+        for (int32 K = 0; K < 7; ++K) { const float S = 3200.f + K * 1100.f + R.FRandRange(-250.f, 250.f); Put(Amber, Bank(S, Side() * (RiverHalf(S) + R.FRandRange(520.f, 1700.f))), R.FRandRange(1.2f, 2.4f), 6.f, 2.f); }
+        Scatter(Kit(*Path(TEXT("SM_FeyCapBlue")), 7000, 11000, false), 560, RiverMouth - 150.f, RiverEnd - 300.f, 10.f, 380.f, .7f, 2.f, 1.f, 5.f, Any);
+        Scatter(Kit(*Path(TEXT("SM_FeyCapViolet")), 7000, 11000, false), 280, RiverMouth + 200.f, RiverEnd - 300.f, 40.f, 700.f, .8f, 1.9f, 1.f, 5.f, Greening);
+        for (int32 I = 0; I < 4; ++I)
+        {
+            const FString N = FString::Printf(TEXT("/Game/Art/ChultNature/SM_ChultFern%d.SM_ChultFern%d"), I, I);
+            Scatter(Kit(*N, 6000, 9000, false), 420, RiverMouth - 600.f, RiverEnd - 200.f, 120.f, 2700.f, 1.f, 2.2f, 2.f, 8.f, Greening);
+        }
+        Scatter(Kit(*Path(TEXT("SM_FeyBroadLeaf")), 6000, 9000, false), 240, RiverMouth, RiverEnd - 200.f, 90.f, 1200.f, .8f, 1.7f, 2.f, 6.f, Lush);
+        Scatter(Kit(*Path(TEXT("SM_FeyCrimsonLeaf")), 6000, 9000, false), 180, RiverMouth + 400.f, RiverEnd - 200.f, 90.f, 1200.f, .8f, 1.6f, 2.f, 6.f, Lush);
+        Scatter(Kit(*Path(TEXT("SM_FeyFoxglove")), 7000, 11000, false), 200, RiverMouth + 600.f, RiverEnd - 200.f, 150.f, 1400.f, .9f, 1.5f, 2.f, 4.f, Lush);
+        Scatter(Kit(*Path(TEXT("SM_FeyCelandine0")), 3200, 5000, false), 700, RiverMouth, RiverEnd - 200.f, 80.f, 1300.f, 1.6f, 2.8f, 1.f, 4.f, Lush);
+        Scatter(Kit(*Path(TEXT("SM_FeyCelandine1")), 3200, 5000, false), 700, RiverMouth, RiverEnd - 200.f, 80.f, 1300.f, 1.6f, 2.8f, 1.f, 4.f, Lush);
+        Scatter(Kit(*Path(TEXT("SM_FeyGrass0")), 3600, 5400, false), 5500, RiverMouth - 400.f, RiverEnd, 70.f, 2000.f, 2.6f, 4.4f, 1.f, 7.f, Greening);
+        Scatter(Kit(*Path(TEXT("SM_FeyGrass1")), 3600, 5400, false), 3800, RiverMouth - 400.f, RiverEnd, 90.f, 2000.f, 2.f, 3.6f, 1.f, 7.f, Greening);
+        UHierarchicalInstancedStaticMeshComponent* Rock[6];
+        for (int32 I = 0; I < 6; ++I) { const FString N = FString::Printf(TEXT("/Game/Art/ChultNature/SM_ChultRock%d.SM_ChultRock%d"), I, I); Rock[I] = Kit(*N, 14000, 22000, true); }
+        for (int32 I = 0; I < 130; ++I)
+        {
+            const float S = R.FRandRange(RiverMouth - 300.f, RiverEnd - 400.f), D = Side() * (RiverHalf(S) + R.FRandRange(-110.f, 200.f));
+            if (!Clear(S, D) || R.FRand() > .3f + .7f * (1.f - Lush(S))) continue;
+            if (S > RiverMouth - 100.f && S < RiverMouth + 1300.f && FMath::Abs(D) < RiverHalf(S) + 120.f) continue;   // (the cutscene's view of the mouth)
+            Put(Rock[R.RandRange(0, 5)], Bank(S, D), R.FRandRange(.6f, 1.9f), 16.f, 12.f);
+        }
+        // Pads in the wide, slow bend.
+        auto* Pads = Kit(*Path(TEXT("SM_FeyLilyPad")), 12000, 18000, false), *Lily = Kit(*Path(TEXT("SM_FeyLily")), 9000, 14000, false);
+        for (int32 I = 0; I < 90; ++I)
+        {
+            const float S = R.FRandRange(4200.f, 5800.f), D = Side() * (RiverHalf(S) - R.FRandRange(30.f, 170.f));
+            const FVector C = RiverAt(S) + RiverSide(S) * D + FVector(0, 0, .6f);
+            const float Sc = R.FRandRange(.5f, 1.3f);
+            Pads->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), C, FVector(Sc, Sc, 1))); ++Planted;
+            if (R.FRand() < .15f) { Lily->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), C + FVector(0, 0, 2.4f), FVector(R.FRandRange(.9f, 1.4f)))); ++Planted; }
+        }
+        // Low mist on the water.
+        RiverVeil0 = Veils.Num();
+        for (int32 I = 0; I < 26; ++I)
+        {
+            FVeil V; const float S = FMath::Lerp(RiverMouth - 200.f, RiverEnd - 600.f, (I + R.FRand()) / 26.f);
+            V.P = RiverAt(S) + RiverSide(S) * R.FRandRange(-300.f, 300.f) + FVector(0, 0, R.FRandRange(40.f, 160.f));
+            V.Size = R.FRandRange(320.f, 760.f); V.Alpha = R.FRandRange(.04f, .1f); V.Seed = R.FRand(); V.Drift = R.FRandRange(-10.f, 10.f);
+            Veils.Add(V);
+        }
+    }
+    for (int32 I = KitsBefore; I < Kits.Num(); ++I) { Kits[I]->BuildTreeIfOutdated(false, true); RiverParts.Add(Kits[I]); }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_RIVER_BUILT seconds=%.2f triangles=%d planted=%d missing=%d"), FPlatformTime::Seconds() - Started, Triangles - TrianglesBefore, Planted - PlantedBefore, Missing);
+}
+
+void AFeywildSetting::ShowRiver(bool bShow)
+{
+    for (USceneComponent* Part : RiverParts) if (Part) Part->SetVisibility(bShow, true);
+    if (!bShow && RiverVeil0 >= 0 && Veils.Num() > RiverVeil0) Veils.SetNum(RiverVeil0);
+}
+
+void AFeywildSetting::SetShade(float K)
+{
+    if (FillLight) FillLight->SetIntensity(FillBase * K);
+    if (Sky) Sky->SetIntensity(SkyBase * K);
+    AirShade = K;
+}
+
+void AFeywildSetting::Splash(const FVector& World, float Hard)
+{
+    const FVector L = FeyLocal(World), At(L.X, L.Y, WaterZ + 1.2f);
+    auto Ring = [this](const FVector& P, float Size, float Alpha, float Life) { if (Ripples.Num() < 70) { FRing N; N.P = P; N.Size = Size; N.Alpha = Alpha; N.Life = Life; Ripples.Add(N); } };
+    Ring(At, 160.f + 300.f * Hard, .95f, 2.2f); Ring(At, 90.f + 120.f * Hard, .75f, 1.3f);
+    const int32 Count = int32(10 + 40 * Hard); const float Speed = 200.f + 340.f * Hard;
+    for (int32 I = 0; I < Count && Drops.Num() < 90; ++I)
+    {
+        FDrop D; const float A = FMath::FRandRange(0.f, 2 * PI), Out = FMath::FRandRange(.15f, .7f) * Speed;
+        D.P = FeyWorld(At); D.V = FVector(FMath::Cos(A) * Out, FMath::Sin(A) * Out, FMath::FRandRange(.55f, 1.f) * Speed); D.Life = FMath::FRandRange(.35f, .7f); D.Size = FMath::FRandRange(2.f, 4.2f);
+        Drops.Add(D);
+    }
+}
+
 void AFeywildSetting::Tick(float Dt)
 {
     Super::Tick(Dt);
@@ -703,7 +1056,9 @@ void AFeywildSetting::TickAir(float Dt)
     {
         FSpark S; S.bFly = bFly; const float Rad = bFly ? 2100.f : 1300.f, A = FMath::FRandRange(0.f, 2 * PI), Rr = Rad * FMath::Sqrt(FMath::FRand());
         S.P = FVector(LEye.X + Rr * FMath::Cos(A), LEye.Y + Rr * FMath::Sin(A), 0);
-        S.P.Z = FMath::Max(Ground(S.P.X, S.P.Y), WaterZ) + (bFly ? FMath::FRandRange(20.f, 260.f) : FMath::FRandRange(30.f, 520.f));
+        float Land = FMath::Max(Ground(S.P.X, S.P.Y), WaterZ);
+        if (InRiverBox(LEye)) { float Rs, Rd; RiverNearest(S.P.X, S.P.Y, Rs, Rd); Land = FMath::Max(RiverGround(S.P.X, S.P.Y), static_cast<float>(RiverAt(Rs).Z)); }   // (on the river's set)
+        S.P.Z = Land + (bFly ? FMath::FRandRange(20.f, 260.f) : FMath::FRandRange(30.f, 520.f));
         S.V = FVector(FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(-12.f, 12.f), bFly ? 0.f : FMath::FRandRange(-5.f, 7.f));
         S.Life = bFly ? FMath::FRandRange(7.f, 16.f) : FMath::FRandRange(6.f, 13.f); S.Age = bAnywhere ? FMath::FRandRange(0.f, S.Life * .7f) : 0.f;
         S.Size = bFly ? FMath::FRandRange(7.f, 13.f) : FMath::FRandRange(1.6f, 3.4f); S.Hue = bFly && FMath::FRand() < .28f ? 1.f : 0.f; S.Phase = FMath::FRandRange(0.f, 6.28f);
@@ -723,7 +1078,7 @@ void AFeywildSetting::TickAir(float Dt)
         const float Fade = FMath::Clamp(S.Age / 1.2f, 0.f, 1.f) * FMath::Clamp((S.Life - S.Age) / 1.5f, 0.f, 1.f);
         const float Blink = S.bFly ? FMath::Pow(.5f + .5f * FMath::Sin(Clock * 1.7f + S.Phase * 3.f), 3.f) : .6f + .4f * FMath::Sin(Clock * 2.3f + S.Phase);
         // (one passing right by the eye would be a blinding ball)
-        Xf.Add(Facing(FeyWorld(S.P), S.Size)); Data.Add((S.bFly ? 9.f : 2.2f) * Fade * Blink * Smooth(70.f, 340.f, FVector::Dist(S.P, LEye))); Data.Add(S.Hue);
+        Xf.Add(Facing(FeyWorld(S.P), S.Size)); Data.Add((S.bFly ? 9.f : 2.2f) * Fade * Blink * Smooth(70.f, 340.f, FVector::Dist(S.P, LEye)) * Smooth(.15f, .7f, AirShade)); Data.Add(S.Hue);
     }
     for (const FDrop& Dp : Drops) { Xf.Add(Facing(Dp.P, Dp.Size)); Data.Add(1.5f * (1.f - Dp.Age / Dp.Life)); Data.Add(2.f); }
     if (Lights->GetInstanceCount() != Xf.Num()) { Lights->ClearInstances(); Lights->AddInstances(Xf, false, true); }

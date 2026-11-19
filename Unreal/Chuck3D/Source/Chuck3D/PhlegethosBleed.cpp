@@ -959,9 +959,8 @@ void APhlegBleed::TickSweep(float Dt, AChuckCharacter* Chuck)
     // (dark from the lip as the track falls away; gone as it ends)
     if (FadeAt >= 0.f && SweepT - FadeAt > EdgeToEnd)
     {
-        // Into the tear, gone. (The river cutscene and the Feywild are later slices: back to the forecourt's checkpoint.)
-        if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
-        Chuck->EndCarried();
+        // Into the tear, gone: the river carries him on into the Feywild (2026-11-19, FeyRiverScene.h; stage 2 of
+        // docs/regions/FEYWILD.md), out of the black the fall left on screen.
         ++SweepEnds;
         SweepEndClock = Clock; SweepEndMusic = -1.f;
         double M = 0; float Len = TrackLength;
@@ -969,5 +968,6 @@ void APhlegBleed::TickSweep(float Dt, AChuckCharacter* Chuck)
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SWEEP_END seconds=%.1f by=%s clock=%.2f end_at=%.2f music_loop=%.2f track=%.2f"), SweepT, bSweptBySurge ? TEXT("surge") : TEXT("river"),
             Clock, AtEnd, SweepEndMusic, Len);
         Rearm();
+        Chuck->BeginFeyRiver();
     }
 }

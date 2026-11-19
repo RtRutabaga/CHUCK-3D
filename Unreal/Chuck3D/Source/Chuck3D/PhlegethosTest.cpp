@@ -12,6 +12,9 @@
 #include "TempleSanctumBattle.h"
 #include "TempleHero.h"
 #include "PhlegethosBleed.h"
+#include "FeyRiverScene.h"
+#include "FeywildSetting.h"
+#include "EngineUtils.h"
 #include "DockNPC.h"
 #include "Components/CapsuleComponent.h"
 #include "ChultTempleInterior.h"
@@ -66,6 +69,34 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 FTimerHandle Quit; Owner->GetWorldTimerManager().SetTimer(Quit, [Failures, bPass]() { FPlatformMisc::RequestExitWithStatus(false, (Failures + !bPass) ? 1 : 0); }, 2.f, false);
             }
             else if (T > 90) { W->bDone = true; UE_LOG(LogTemp, Warning, TEXT("CHUCK_HELL_FALL_TEST failures=1 timeout=1")); FPlatformMisc::RequestExitWithStatus(false, 1); }
+        }, .1f, true);
+        return;
+    }
+
+    if (FParse::Param(FCommandLine::Get(), TEXT("ChuckFeyRiverTest")))
+    {
+        // The river cutscene alone (2026-11-19, FeyRiverScene.h): from the tear at Phlegethos's fortress, its shots, then the
+        // handoff on the Feywild's shore, on his feet and playable.
+        if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->ConsoleCommand(TEXT("t.MaxFPS 60"));
+        APhlegethosSetting::Enter(World, true);
+        Chuck->BeginFeyRiver();
+        struct FWait { FTimerHandle Timer; double Start = 0; bool bDone = false; };
+        auto W = MakeShared<FWait>(); W->Start = World->GetTimeSeconds();
+        Owner->GetWorldTimerManager().SetTimer(W->Timer, [Owner, Chuck, W, Failures]()
+        {
+            if (W->bDone) return;
+            const double T = Owner->GetWorld()->GetTimeSeconds() - W->Start;
+            const bool bOn = Chuck->GetCharacterMovement()->IsMovingOnGround();
+            if (!Chuck->IsInFallCutscene() && T > 3 && bOn)
+            {
+                W->bDone = true;
+                const AFeywildSetting* S = AFeywildSetting::Get(Owner->GetWorld());
+                const bool bPass = S && S->GetMissing() == 0 && InFeywild(Chuck->GetActorLocation()) && FVector::Dist(Chuck->GetActorLocation(), FeywildArrival()) < 60.f && !Chuck->IsAstral();
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("FeyRiver/Handoff.png"), true, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_RIVER_TEST failures=%d handoff=%d at=%s seconds=%.1f missing=%d"), Failures + !bPass, bPass, *FeyLocal(Chuck->GetActorLocation()).ToString(), T, S ? S->GetMissing() : -1);
+                FTimerHandle Quit; Owner->GetWorldTimerManager().SetTimer(Quit, [Failures, bPass]() { FPlatformMisc::RequestExitWithStatus(false, (Failures + !bPass) ? 1 : 0); }, 3.f, false);
+            }
+            else if (T > 90) { W->bDone = true; UE_LOG(LogTemp, Warning, TEXT("CHUCK_FEY_RIVER_TEST failures=1 timeout=1")); FPlatformMisc::RequestExitWithStatus(false, 1); }
         }, .1f, true);
         return;
     }
@@ -884,8 +915,17 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             if (Run->Sub == 6)
             {
-                if (Chuck->IsAstral() || !Ground || T < 1.f) { if (T > 10.f) Next(false, Run->Note + TEXT("no_return=1")); break; }
-                Shot(TEXT("Bleed_Returned"));
+                // (2026-11-19) The tear leads on: the river cutscene starts (skipped here; -ChuckFeyRiverTest plays it through)
+                // and leaves him on the Feywild's shore.
+                if (Chuck->IsInFeyRiver())
+                {
+                    if (T > 1.f && Once(TEXT("riverskip"))) for (TActorIterator<AFeyRiverScene> It(Chuck->GetWorld()); It; ++It) It->Skip();
+                    if (T > 15.f) Next(false, Run->Note + TEXT("river_stuck=1"));
+                    break;
+                }
+                if (Chuck->IsInFallCutscene() || Chuck->IsAstral() || !Ground || T < 1.f) { if (T > 15.f) Next(false, Run->Note + TEXT("no_return=1")); break; }
+                Shot(TEXT("Bleed_Feywild"));
+                const bool bShore = InFeywild(Chuck->GetActorLocation()) && FVector::Dist(Chuck->GetActorLocation(), FeywildArrival()) < 60.f;
                 const bool bMoat = Run->Note.Contains(FString::Printf(TEXT("moat=%d/%d/%d"), FieldRows * MoatCols, (FieldCols - MoatCols - MoatFrontCols) * 2 * MoatRows, FieldRows * MoatFrontCols));
                 int32 LandFallen = 0; { const int32 I = Run->Note.Find(TEXT("land_fallen=")); if (I >= 0) LandFallen = FCString::Atoi(*Run->Note.Mid(I + 12)); }
                 // (2026-11-17: one death in it, which did not re-arm it; back at the forecourt's checkpoint, before the field)
@@ -897,7 +937,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const bool bTrackEnd = !Bl->IsMusicTimed() || (Ml >= 0.f && (Ml > APhlegBleed::TrackSeconds - .8f || Ml < .8f));
                 const bool bOnPlan = bEarly || (Bl->WasSweptBySurge() && FMath::Abs(Bl->GetSweepEndClock() - Bl->GetEndAt()) < .6f);
                 const bool bPass = bMoat && LandFallen >= 15 && Bl->GetSweeps() == 1 && Bl->GetSweepEnds() == 1 && Bl->GetRearms() >= 1 && Bl->GetDeathsIn() >= 1   // (its own count: placing him resets the trial's)
-                    && Run->Note.Contains(TEXT("death_kept=1")) && P.X < FieldX0 && Bl->GetMissing() == 0 && Bl->GetSlabCount() + Bl->GetKeptCells() == FieldCols * FieldRows
+                    && Run->Note.Contains(TEXT("death_kept=1")) && bShore && Bl->GetMissing() == 0 && Bl->GetSlabCount() + Bl->GetKeptCells() == FieldCols * FieldRows
                     && bTrackEnd && bOnPlan;
                 Next(bPass, Run->Note + FString::Printf(TEXT("starts=%d rearms=%d pressed=%d held=%d kept=%d track_end=%d on_plan=%d at_return=%s"), Bl->GetStarts(), Bl->GetRearms(),
                     Bl->GetPressedFalls(), Bl->GetHeldFalls(), Bl->GetKeptCells(), bTrackEnd ? 1 : 0, bOnPlan ? 1 : 0, *P.ToString()));

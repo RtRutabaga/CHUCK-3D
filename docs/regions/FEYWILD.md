@@ -1,6 +1,6 @@
 # The Feywild: 3D adaptation plan
 
-**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first") and waits for the user's approval of the look. Nothing past it is built.**
+**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3 is next.**
 
 Sources: the user's Feywild vision and ten goal images (2026-11-17), the 2D game's `docs/development/PHASE-8.md` section 6 and 9 (river cutscene) and `PHASE-9.md` (thirteen maps), and the research below. Where the user's vision and the 2D game differ, the vision wins.
 
@@ -133,6 +133,23 @@ It replaces the current placeholder, where the sweep returns Chuck to the Foreco
 3. **The Feywild opens around the river.** Dark banks give way to moss, roots, wisteria, glowing fungi and low gold sun.
 4. **A short waterfall**, a plunge, and the current calms.
 5. **He washes onto the bank**, lies still for a beat, pushes himself up, and control returns. `Feywild_main` begins.
+
+**As built (2026-11-19).** The sweep's end at Phlegethos starts it (`APhlegBleed::TickSweep` → `AChuckCharacter::BeginFeyRiver`). It runs 36.5 s, from the sweep's end to the song's own end. The cuts fall on the score's bars.
+
+| Time | What happens |
+|---|---|
+| 0–7 s | Dark in a root tunnel. Rushing water is muffled under a low-pass filter on his four dunks and returns sharp at each surfacing. |
+| 7.0 s | The score enters at the first glimpse of the mouth's light. |
+| 7.9 s (bar 26) | Out of the mouth. |
+| 13.5 s / 17.3 s | Close on him, then behind him. |
+| 21.05 s (bar 33) | The cut to the slice's stream above the two-step falls. |
+| 26.7 s (bar 36) | The plunge into the pond. |
+| 30.45 s (bar 38) | He washes onto the south shore (`CrashLand`: still, then up). |
+| 34.2 s | The camera rises behind him. The game's camera takes over at 36.5 s. |
+
+- **The river set:** its own set about 300 m south of the slice, out of its sight (`AFeywildSetting::BuildRiver`). It is built when the cutscene starts and hidden at the cut to the slice. The banks run from bare rock and root to moss, fungi, flowers and wisteria oaks.
+- **Materials:** `M_FeyRiver` is running water with screen-space reflections, now also used for the slice's two streams. `M_FeyRoot` is the tunnel's bark, dark inside. `M_FeyGround` takes light from vertex alpha.
+- **Checkpoint:** "Feywild Riverbank" (`FeyArrival`) is the save point and the Feywild's respawn. The dev menu entry "Feywild River (dev)" plays the cutscene.
 
 ## Music
 

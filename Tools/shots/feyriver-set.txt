@@ -1,0 +1,18 @@
+# The Feywild river cutscene's set (FeyRiverScene.h, AFeywildSetting::BuildRiver), and its places in the slice.
+# Tools/Take-Shots.ps1 Tools/shots/feyriver-set.txt -Extra '-ChuckFeyRiverSet'
+at FeyLook
+origin feywild
+wait 14
+fov 62
+# Over the root tunnel and its mouth, and down the river from above.
+shot over_mouth -17200 -31800 1600   -19000 -30050 300
+shot over_river -18300 -28500 2200   -14000 -30000 200
+# The mouth from downstream, low; and out of it from inside.
+shot mouth_front -18200 -30150 330   -19200 -29990 450
+shot inside -19700 -29900 330   -18900 -30060 330
+# The banks midway, and far down toward the sun.
+shot banks -15600 -30000 420   -14200 -29600 200
+shot downstream -11500 -30200 600   -8500 -30300 100
+# The slice: low on the upper stream toward its lip, and the shore he washes onto.
+shot lip_low 7250 1305 974   6600 1350 830
+shot shore 4400 520 45   4170 230 15

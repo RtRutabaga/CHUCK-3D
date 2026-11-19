@@ -26,6 +26,7 @@
 #include "AstralSummon.h"
 #include "DockNPC.h"
 #include "FallCutscene.h"
+#include "FeyRiverScene.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Animation/AnimSequence.h"
 #include "Camera/CameraComponent.h"
@@ -409,6 +410,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     FVector Bridge;
     // In Phlegethos (2026-11-14): the start of the stretch he was in.
     if(PhlegethosRespawn(GetActorLocation(),Bridge)) return Bridge;
+    // In the Feywild (2026-11-19): the shore the river left him on.
+    if(InFeywild(GetActorLocation())) return FeywildArrival();
     // Aboard the ship (2026-11-01): the start of the space he was in.
     if(ShipRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
@@ -434,6 +437,7 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
     if (IsChultTempleInteriorSpawn(Location, UpriverYaw)) return UpriverYaw;   // facing on into the temple
     if (IsShipSpawn(Location, UpriverYaw)) return UpriverYaw;                  // aboard, facing on into the space
     if (IsPhlegethosSpawn(Location, UpriverYaw)) return UpriverYaw;            // in the Hells, facing on along the way
+    if (FVector::Dist(Location, FeywildArrival()) < 1.f) return FeywildArrivalYaw();   // on the Feywild's shore, facing inland
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;
@@ -3928,6 +3932,45 @@ void AChuckCharacter::EndHellFall()
     HellFallScene.Reset();
     UE_LOG(LogTemp,Display,TEXT("CHUCK_PHLEGETHOS_HANDOFF playable=1 live=%d at=%s sanity=%d"),Stage && Stage->IsLive(),*GetActorLocation().ToString(),Sanity);
 }
+void AChuckCharacter::BeginFeyRiver()
+{
+    // Gone into the tear at Phlegethos: the river carries him into the Feywild, out of his control.
+    bSceneHold=false; bDemoEnded=false; bCutscene=true;
+    auto* Movement=GetCharacterMovement();
+    Movement->StopMovementImmediately();
+    Movement->DisableMovement();
+    SetActorEnableCollision(false);
+    if(auto* PC=Cast<APlayerController>(Controller)) DisableInput(PC);
+    TalkingTo.Reset(); TalkLine=0;
+    LayerTime=FadingLayerTime=-1; SlashHitAt=-1; bSlashQueued=bSlashHeld=false; RunWeight=SprintWeight=0;
+    bSlideCamera=false; BodyPitch=0; WallSideTilt=0; bBodyQuatLive=bLegHeld=false; LadderIndex=-1;
+    Gait=EGait::Air; AstralPhase=EAstral::None; bAstralFaded=false; bPendingVanish=false;
+    if(bAstralHidden) SetAstralHidden(false);
+    NextExhaleAt=1e9f;
+    SetActorHiddenInGame(false);
+    GetMesh()->SetVisibility(true,true);
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    SetClip(EClip::FallFlail,0,.2f);
+    FeyRiverScene=AFeyRiverScene::Start(this);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_FEY_RIVER_BEGIN"));
+}
+void AChuckCharacter::EndFeyRiver()
+{
+    // On the pond's south shore where the river left him, playable, his sanity and stamina as they were.
+    const int32 KeptSanity=Sanity;
+    const float KeptStamina=Stamina, KeptLock=StaminaLockUntil;
+    if(!AFeywildSetting::Get(GetWorld())) AFeywildSetting::Enter(GetWorld());
+    bCutscene=false; bDemoEnded=false;
+    SetActorEnableCollision(true);
+    ResetAtLocation(FeywildArrival());
+    SetActorRotation(FRotator(0,FeywildArrivalYaw(),0)); Recenter();
+    Sanity=KeptSanity; Stamina=KeptStamina; StaminaLockUntil=KeptLock;
+    GetMesh()->SetRelativeLocationAndRotation(FVector(0,0,-32.5f),FRotator::ZeroRotator);
+    NextExhaleAt=GetWorld()->GetTimeSeconds()+8.f;
+    if(auto* PC=Cast<APlayerController>(Controller)) EnableInput(PC);
+    FeyRiverScene.Reset();
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_FEYWILD_HANDOFF playable=1 at=%s sanity=%d"),*FeyLocal(GetActorLocation()).ToString(),Sanity);
+}
 void AChuckCharacter::EndFallCutscene()
 {
     // The cinematic is finished before the preview helper hides its stage.
@@ -3984,6 +4027,7 @@ void AChuckCharacter::Tick(float DeltaSeconds)
     {
         if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && FallScene.IsValid()) FallScene->Skip();
         else if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && HellFallScene.IsValid()) HellFallScene->Skip();
+        else if(PC && PC->WasInputKeyJustPressed(EKeys::Escape) && FeyRiverScene.IsValid()) FeyRiverScene->Skip();
         UpdateCutscenePose(DeltaSeconds);
         UpdateExhale(DeltaSeconds);
         return;

@@ -2,6 +2,26 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 19 — Feywild: the river cutscene and the arrival, stage 2 (Claude)
+
+- **Asked:** "Approve, start stage 2" (the river cutscene and arrival in `docs/regions/FEYWILD.md`, with checkpoints and music); waited on the other session's Phlegethos work (8ab3f2b9) before building.
+- **Source:** `main` at 8ab3f2b9; this commit.
+- **Changed:**
+  - `FeyRiverScene.h/.cpp` (new): the cutscene. Beats on the song's bars (`FeyRiver::Bar`), dunks and surfacings, shots (dark, glimpse, mouth, face, ahead, lip, plunge, drift, shore, glade), the tunnel shade by clock, rush/roar loops low-passed under water, splashes, the landing, `Finish` blending to Chuck's camera.
+  - `FeywildSetting.h/.cpp`: `Fey::RiverAt/RiverSide/RiverHalf/RiverGround`, `ShoreSpot/ShoreYaw`, `FeywildArrival`, `InRiverBox`; `BuildRiver`, `ShowRiver`, `SetShade`, `Splash`, `GetMissing`; the streams as their own mesh with `M_FeyRiver`; motes over the river ground; the sun's forward-shading priority 1; `-ChuckFeyRiverSet`.
+  - `ChuckCharacter.h/.cpp`: `BeginFeyRiver/EndFeyRiver`, Esc skips, the area start and yaw at the arrival, `CHUCK_FEYWILD_HANDOFF`.
+  - `PhlegethosBleed.h/.cpp`: the sweep's end starts the cutscene (the Forecourt placeholder removed). `PhlegethosTest.cpp`: `bleed` waits for the scene, skips it and checks him on the shore; new `-ChuckFeyRiverTest`. `ChultLanding.cpp`: its dispatch. `DockMenu.cpp`: "Feywild Riverbank", "Feywild River (dev)", the save point.
+  - `Tools/create_feywild_assets.py`: `M_FeyRiver`, `M_FeyRoot` (new assets), `M_FeyGround` darkened by vertex alpha (re-saved). `Tools/Take-Shots.ps1` `-Extra`; `Tools/shots/feyriver-set.txt` (new); `Tools/Verify-Package.ps1`: the fey-river check (music, rush, roar, splashes, score at 7 s, end with five surfacings, washed, rose, the handoff, nothing missing).
+  - `docs/regions/FEYWILD.md` (as built), `docs/regions/PHLEGETHOS.md` (the placeholder notes).
+- **Tested (editor):** `-ChuckFeyRiverTest` passed in its last runs (`Local/feyriver-test-6.log`: score at 7.01, end at 36.5, surfacings 5, washed, rose, handoff at (4196, 288), `missing=0`, about 56 fps at 720p). Stills `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyRiver/`.
+- **Package:** built (`Local/feyriver-package.log`). Verification: the first run failed on the temple `wizard_seal` trial (max coverage .28); the launcher package failed it the same way (.29, `Local/heroes-launcher-1.log`) and the candidate passed it alone (.34, `Local/heroes-candidate-1.log`). The second failed once on the docks' gnome alchemist (wrist gap 9.3 cm, the flake recorded on 11-17). The third passed, 182 (`Local/verify-package-20261119-040325.log`; fey-river `Local/verify-fey-river-20261119-051244.log`, 56-57 fps). Baselines unchanged.
+- **Not tested:** by hand; the sound levels by ear; the full Phlegethos `bleed` trial into the scene on the package beyond the verification's run.
+- **Remaining flaws:** the tunnel mouth reads as darkness more than an arch; the upper lip edge looks blocky for about 1 s; he looks as if standing while he drifts in the shallow pond; the river is only the cutscene's corridor (the rest of the map is stage 3).
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged; the clips used are existing (FallFlail, Tumble, CrashLand, Idle). Verify-Package gains one check.
+- **Launcher:** `Launch-Chuck.cmd` runs `FeywildRiver` (`Tools/Promote-Build.ps1`: receipt, launcher check; PhlegethosRiverSurge kept as previous, FeywildLook2 pruned). The receipt names 8ab3f2b because it was built from the working tree before this commit. No candidate folder left.
+
+Next part of the work can be done here (Feywild stage 3, the whole map walkable in rough form).
+
 ## November 18 — Phlegethos: the encounter voiced, the fiend's Infernal in its script, its face, the unavoidable river timed to the track (Claude)
 
 - **Asked:** the five takes (`Fiend_00/01`, `Fighter_00`, `Wizard_00`, `Ranger_00` in Downloads): "I also added Fiend_00 and Fiend_01 for both subtitles use unintelligible Infernal text, dont decrease music volume as much when Fiend is talking. After you do this, do the unavoidable river (time it so the encounter soundtrack lines up with this end)"; then "have the fiends first line be the first line in the scene and his last line be the last line spoken"; "I want the fiends lines to be in infernal script like this" (a glyph strip); "And give the fiends face more detail like this" (a face image).

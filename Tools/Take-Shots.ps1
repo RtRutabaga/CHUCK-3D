@@ -5,7 +5,9 @@ param(
     [Parameter(Mandatory)][string]$ShotList,
     [int]$ResX = 1280,
     [int]$ResY = 720,
-    [string]$EngineRoot = 'C:\Program Files\Epic Games\UE_5.7'
+    [string]$EngineRoot = 'C:\Program Files\Epic Games\UE_5.7',
+    # More arguments for the game (e.g. -Extra '-ChuckFeyRiverSet' builds the Feywild river's set for its stills).
+    [string[]]$Extra = @()
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -17,7 +19,7 @@ $log = Join-Path $root "Local\shots\$name.log"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 $project = Join-Path $root 'Unreal\Chuck3D\Chuck3D.uproject'
 $editor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor.exe'
-& $editor $project -game -windowed "-ResX=$ResX" "-ResY=$ResY" -NoLiveCoding "-ChuckShots=$list" "-abslog=$log" | Out-Null
+& $editor $project -game -windowed "-ResX=$ResX" "-ResY=$ResY" -NoLiveCoding "-ChuckShots=$list" "-abslog=$log" @Extra | Out-Null
 $done = Select-String -LiteralPath $log -Pattern 'CHUCK_SHOTS_COMPLETE' | Select-Object -Last 1
 if (!$done) { throw "The shot run did not finish; inspect $log" }
 $from = Join-Path $root "Unreal\Chuck3D\Saved\Screenshots\WindowsEditor\Shots\$name"
