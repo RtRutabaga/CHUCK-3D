@@ -3,8 +3,8 @@ at FeyLook
 origin feywild
 wait 14
 fov 62
-# As general-waterfall-glade: the old oak on the left, the path, the pond and falls beyond.
-chuck glade -520 -260 95   3900 900 230
+# As general-waterfall-glade: the old oak on the left, the path, the falls on the right, the valley open between.
+chuck glade -520 -260 95   3900 300 230
 # Down the path at his height, among the mushrooms.
 chuck path 700 -60 105   3300 -620 120
 # Across the pond to the falls: the mirror water and lilies.
@@ -17,9 +17,17 @@ chuck fungi 1000 -430 105   1250 -900 40
 # Under the oak's wisteria.
 fov 70
 chuck oak 450 -700 130   1500 -1700 620
+# The overlook's edge and the country beyond it.
+fov 62
+shot overlook 4700 -560 150   9000 -1500 40
+shot vista 5400 -520 130   40000 -5000 700
 # The open sky: blue to peach, never purple.
 fov 80
 chuck sky 3000 1300 120   6000 -1400 1500
 chuck skyback 3000 1300 120   -2000 3200 1300
 fov 45
 chuck fallfoot 4300 1350 90   5150 1350 130
+# Close on a lily pad.
+fov 40
+chuck lily 2900 1200 55   3300 1450 0
+audit

@@ -11,18 +11,27 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/SceneCaptureComponentCube.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/TextureRenderTargetCube.h"
 #include "Engine/World.h"
 #include "GameFramework/HUD.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Info.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "RHI.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
 #include "UObject/ConstructorHelpers.h"
 
 // The Feywild's look slice (Claude, 2026-11-18; FeywildSetting.h, docs/regions/FEYWILD.md). The kit is Tools/build_feywild_kit.py
@@ -34,7 +43,7 @@ namespace
     float Noise(float X, float Y, float Scale, float Seed = 0) { return FMath::PerlinNoise2D(FVector2D(X / Scale + Seed * 3.71f + .31f, Y / Scale - Seed * 1.93f + .77f)); }
     float Smooth(float A, float B, float X) { const float T = FMath::Clamp((X - A) / (B - A), 0.f, 1.f); return T * T * (3 - 2 * T); }
     constexpr float Stand = 34.65f;
-    const FRotator SunRot(-10.f, 214.f, 0.f);   // the way its light travels: the sun itself is low ahead, a little to the right
+    const FRotator SunRot(-10.f, 168.f, 0.f);   // the way its light travels: the sun itself is low over the valley, ahead and a little to the left
 
     // How far out of the pond's edge (1 on the shore), the edge wandering.
     float PondE(float X, float Y)
@@ -42,8 +51,26 @@ namespace
         const float A = FMath::Atan2((Y - PondY) / PondRY, (X - PondX) / PondRX);
         return FVector2D((X - PondX) / PondRX, (Y - PondY) / PondRY).Size() / (1.f + .09f * FMath::Sin(3.f * A + 1.f) + .05f * FMath::Sin(7.f * A + 2.f));
     }
-    float PathK(float X, float Y) { return Smooth(210.f, 80.f, FMath::Abs(Y - PathY(X))) * Smooth(-1500.f, -900.f, X) * Smooth(5050.f, 4700.f, X); }
+    float PathK(float X, float Y) { return Smooth(210.f, 80.f, FMath::Abs(Y - PathY(X))) * Smooth(-1500.f, -900.f, X) * Smooth(5480.f, 5200.f, X); }
+
+    // The country beyond the overlook, out to some 6 km: a valley floor 26 m down, then ridge behind ridge, each a step higher,
+    // and a flat-topped rise with the great tree on it.
+    float FarLand(float X, float Y)
+    {
+        float H = -2600.f + 340.f * Noise(X, Y, 6400, 30) + 120.f * Noise(X, Y, 1500, 31);
+        auto Ridge = [&](float Cx, float W, float Top, float Seed)
+        {
+            const float C = Cx + W * .8f * Noise(0, Y, W * 3.f, Seed);
+            return Smooth(C - W, C + W * .3f, X) * Top * (.74f + .55f * Noise(X, Y, W * 1.3f, Seed + 1) + .22f * Noise(X, Y, W * .35f, Seed + 2));
+        };
+        H += Ridge(38000.f, 16000.f, 1800.f, 32) + Ridge(95000.f, 30000.f, 5200.f, 35) + Ridge(230000.f, 70000.f, 16000.f, 38) + Ridge(520000.f, 140000.f, 52000.f, 41);
+        const float D = FVector2D(X - GreatX, Y - GreatY).Size() + 900.f * Noise(X, Y, 3000, 44);
+        return FMath::Lerp(H, 1200.f + 90.f * Noise(X, Y, 1400, 45), Smooth(7000.f, 4300.f, D));
+    }
 }
+
+float Fey::Vista(float Y) { return Smooth(500.f, -150.f, Y) * Smooth(-5200.f, -4250.f, Y); }
+float Fey::CliffX(float Y) { return 5560.f + 90.f * Noise(0, Y, 700, 13); }
 
 float Fey::PathY(float X) { return 230.f * FMath::Sin(X / 880.f) - 430.f * Smooth(1100.f, 3200.f, X); }
 
@@ -58,7 +85,7 @@ float Fey::Ground(float X, float Y)
     // The pond and its shore.
     const float E = PondE(X, Y);
     H = FMath::Lerp(H, WaterZ + 9.f + 7.f * Noise(X, Y, 160, 8), Smooth(1.42f, 1.03f, E));
-    H = FMath::Lerp(H, WaterZ - 34.f, Smooth(1.02f, .84f, E));
+    H = FMath::Lerp(H, WaterZ - 14.f, Smooth(1.02f, .84f, E));   // (wading depth: he stays above it to the knee)
     // The path pressed into the ground.
     const float Pk = PathK(X, Y);
     if (Pk > 0) H = FMath::Lerp(H, 16.f + 12.f * Noise(X, 0, 700, 9) + 3.f * Noise(X, Y, 60, 10), Pk);
@@ -68,8 +95,12 @@ float Fey::Ground(float X, float Y)
     const float Step1 = Smooth(LedgeX - 90.f, LedgeX + 70.f, X + Edge) * (LedgeTop + 60.f * (1 - Cut) * Smooth(0.f, 500.f, FMath::Abs(Y - FallY)) - 34.f * Cut);
     const float Step2 = Smooth(Ledge2X - 90.f, Ledge2X + 70.f, X - Edge) * ((Ledge2Top - LedgeTop) + 80.f * (1 - Cut) - 34.f * Cut);
     const float Far = Smooth(7600.f, 9300.f, X) * 700.f + (X > LedgeX ? 40.f * Noise(X, Y, 380, 12) * (1 - Cut) : 0.f);
-    const float Raised = Step1 + Step2 + Far;
-    return Raised > 1.f ? FMath::Max(H, Raised) : H;
+    const float V = Vista(Y);
+    const float Raised = (Step1 + Step2 + Far) * (1.f - V);
+    float Out = Raised > 1.f ? FMath::Max(H, Raised) : H;
+    // East of the path the land ends at an edge and falls to the valley.
+    if (V > 0.f) { const float Cl = CliffX(Y); Out = FMath::Lerp(Out, FarLand(X, Y), V * Smooth(Cl, Cl + 1000.f, X)); }
+    return FMath::Lerp(Out, FarLand(X, Y), Smooth(7900.f, 8700.f, X));
 }
 
 FVector FeywildOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -3200000, 0); }
@@ -77,6 +108,12 @@ bool InFeywild(const FVector& World)
 {
     const FVector L = FeyLocal(World);
     return L.X > MinX - 2000 && L.X < MaxX + 4000 && FMath::Abs(L.Y) < HalfY + 2000 && L.Z > -1500 && L.Z < 9000;
+}
+bool FeyWading(const FVector& Paw)
+{
+    if (!InFeywild(Paw)) return false;
+    const FVector L = FeyLocal(Paw);
+    return L.Z < WaterZ + 10.f && PondE(L.X, L.Y) < 1.02f;
 }
 FVector FeywildSpawn() { const float X = -300.f, Y = PathY(X); return FeyWorld(FVector(X, Y, Ground(X, Y) + Stand + 2.f)); }
 float FeywildSpawnYaw() { return 0.f; }
@@ -108,6 +145,7 @@ AFeywildSetting::AFeywildSetting()
     };
     Lights = Air(TEXT("FeyLights"), 2);
     Mist = Air(TEXT("FeyMist"), 2);
+    Rings = Air(TEXT("FeyRings"), 2);
 }
 
 AFeywildSetting* AFeywildSetting::Get(const UWorld* World)
@@ -184,8 +222,10 @@ void AFeywildSetting::Build()
     const double Started = FPlatformTime::Seconds();
     if (auto* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyMote.M_FeyMote"))) Lights->SetMaterial(0, M); else ++Missing;
     if (auto* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyMist.M_FeyMist"))) Mist->SetMaterial(0, M); else ++Missing;
+    if (auto* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyRipple.M_FeyRipple"))) Rings->SetMaterial(0, M); else ++Missing;
     BuildEnvironment();
     BuildLand();
+    BuildFarLand();
     BuildPlanting();
     for (UHierarchicalInstancedStaticMeshComponent* H : Kits) H->BuildTreeIfOutdated(false, true);
     // Low veils of mist on the pond and at the falls' feet.
@@ -198,6 +238,16 @@ void AFeywildSetting::Build()
         W.Size = R.FRandRange(420.f, 900.f); W.Alpha = R.FRandRange(.035f, .09f); W.Seed = R.FRand(); W.Drift = R.FRandRange(-14.f, 14.f);
         Veils.Add(W);
     }
+    // And long banks of it lying in the valley, one behind another.
+    for (int32 I = 0; I < 18; ++I)
+    {
+        FVeil W; const float X = FMath::Lerp(6800.f, 70000.f, FMath::Square(R.FRand()));
+        W.P = FVector(X, R.FRandRange(-.9f, .55f) * (2500.f + X * .8f), FMath::Lerp(-1900.f, -300.f, R.FRand()));
+        W.Size = 2600.f + X * .22f; W.Alpha = R.FRandRange(.1f, .2f); W.Seed = R.FRand(); W.Drift = R.FRandRange(-20.f, 20.f);
+        Veils.Add(W);
+    }
+    BuildProbe();
+    BuildSound();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_BUILT seconds=%.2f"), FPlatformTime::Seconds() - Started);
 }
 
@@ -208,19 +258,19 @@ void AFeywildSetting::BuildEnvironment()
     { C->SetupAttachment(RootComponent); C->SetWorldLocationAndRotation(G0 + At, Rot); C->RegisterComponent(); };
     // The sky: a dome of M_FeySky, blue warming to peach and gold, never purple.
     {
-        FFeySurf Dome; constexpr int32 Rings = 18, Segs = 48; constexpr float Rad = 4000000.f;
+        FFeySurf Dome; constexpr int32 Bands = 18, Segs = 48; constexpr float Rad = 4000000.f;
         TArray<TArray<int32>> Grid;
-        for (int32 I = 0; I <= Rings; ++I)
+        for (int32 I = 0; I <= Bands; ++I)
         {
             TArray<int32>& Row = Grid.AddDefaulted_GetRef();
             for (int32 J = 0; J <= Segs; ++J)
             {
-                const float Th = FMath::Lerp(-.12f, HALF_PI, float(I) / Rings), Ph = 2 * PI * J / Segs;
+                const float Th = FMath::Lerp(-.12f, HALF_PI, float(I) / Bands), Ph = 2 * PI * J / Segs;
                 const FVector D(FMath::Cos(Ph) * FMath::Cos(Th), FMath::Sin(Ph) * FMath::Cos(Th), FMath::Sin(Th));
                 Row.Add(Dome.Vert(D * Rad, -D, FVector2D::ZeroVector, FColor::White));
             }
         }
-        for (int32 I = 0; I < Rings; ++I) for (int32 J = 0; J < Segs; ++J) Dome.Quad(Grid[I][J], Grid[I][J + 1], Grid[I + 1][J + 1], Grid[I + 1][J]);
+        for (int32 I = 0; I < Bands; ++I) for (int32 J = 0; J < Segs; ++J) Dome.Quad(Grid[I][J], Grid[I][J + 1], Grid[I + 1][J + 1], Grid[I + 1][J]);
         UMaterialInterface* SkyMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeySky.M_FeySky"));
         auto* Mesh = Emit(TEXT("FeySky"), Dome, SkyMat, false, false);
         Mesh->bNeverDistanceCull = true; Mesh->SetBoundsScale(4.f);
@@ -279,6 +329,10 @@ void AFeywildSetting::BuildEnvironment()
     const float Mx = (MinX + MaxX) * .5f, Hx = (MaxX - MinX) * .5f;
     Wall(FVector(MinX - 50, 0, 2000), FVector(50, HalfY + 100, 4000)); Wall(FVector(MaxX + 50, 0, 2000), FVector(50, HalfY + 100, 4000));
     Wall(FVector(Mx, HalfY + 50, 2000), FVector(Hx + 100, 50, 4000)); Wall(FVector(Mx, -HalfY - 50, 2000), FVector(Hx + 100, 50, 4000));
+    // The overlook's edge, and along the top of the falls' side where it drops to the valley.
+    constexpr float EdgeX = 5470, EdgeY = 540;
+    Wall(FVector(EdgeX + 50, (EdgeY - HalfY) * .5f, 2000), FVector(50, (EdgeY + HalfY) * .5f + 50, 4000));
+    Wall(FVector((EdgeX + MaxX) * .5f, EdgeY + 50, 2000), FVector((MaxX - EdgeX) * .5f + 50, 50, 4000));
 }
 
 void AFeywildSetting::BuildLand()
@@ -286,7 +340,7 @@ void AFeywildSetting::BuildLand()
     auto Mat = [](const TCHAR* Path) { return LoadObject<UMaterialInterface>(nullptr, Path); };
     // The land: a grid over the slice and well beyond it, so the bounds never show an edge.
     {
-        FFeySurf L; constexpr float X0 = -4200, X1 = 11000, Y0 = -7000, Y1 = 7000, Step = 44; const int32 Nx = FMath::CeilToInt((X1 - X0) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step);
+        FFeySurf L; constexpr float X0 = -4200, X1 = 8600, Y0 = -5600, Y1 = 5600, Step = 44; const int32 Nx = FMath::CeilToInt((X1 - X0) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step);
         L.V.Reserve((Nx + 1) * (Ny + 1));
         for (int32 I = 0; I <= Nx; ++I)
             for (int32 J = 0; J <= Ny; ++J)
@@ -319,7 +373,7 @@ void AFeywildSetting::BuildLand()
         Sheet(PondX - PondRX * 1.2f, LedgeX + 40, PondY - PondRY * 1.2f, PondY + PondRY * 1.2f, WaterZ, 60, true);
         Sheet(LedgeX + 40, Ledge2X + 40, FallY - FallHalf - 40, FallY + FallHalf + 40, LedgeTop - 14, 60, false);
         Sheet(Ledge2X + 40, Ledge2X + 900, FallY - FallHalf - 40, FallY + FallHalf + 40, Ledge2Top - 14, 60, false);
-        Emit(TEXT("FeyWater"), W, Water, false, false);
+        WaterMesh = Emit(TEXT("FeyWater"), W, Water, false, false);
     }
     // The falls: curtains curving out over each lip and down.
     {
@@ -348,6 +402,93 @@ void AFeywildSetting::BuildLand()
     }
 }
 
+// The valley and the ridges beyond the overlook: one fan of land opening eastward, and the far trees on it.
+void AFeywildSetting::BuildFarLand()
+{
+    auto* FarMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyFar.M_FeyFar")); Missing += !FarMat;
+    if (FarMat)
+    {
+        FarMid = UMaterialInstanceDynamic::Create(FarMat, this);
+        const FVector ToSun = -SunRot.Vector();
+        FarMid->SetVectorParameterValue(TEXT("SunDir"), FLinearColor(ToSun.X, ToSun.Y, ToSun.Z, 0)); FarMid->SetScalarParameterValue(TEXT("OriginX"), FeywildOrigin().X);
+    }
+    FFeySurf L; constexpr int32 Nu = 110, Nv = 200;
+    auto At = [](float U, float W) { const float X = 8200.f + 700000.f * FMath::Pow(U, 2.6f); return FVector2D(X, W * (6000.f + 1.3f * (X - 8000.f))); };
+    for (int32 I = 0; I <= Nu; ++I)
+        for (int32 J = 0; J <= Nv; ++J)
+        {
+            const FVector2D P = At(float(I) / Nu, float(J) / Nv * 2.f - 1.f);
+            const float E = FMath::Max(120.f, P.X * .012f), H = Ground(P.X, P.Y) - (I == 0 ? 30.f : 0.f);
+            const FVector Nn = FVector(Ground(P.X - E, P.Y) - Ground(P.X + E, P.Y), Ground(P.X, P.Y - E) - Ground(P.X, P.Y + E), 2 * E).GetSafeNormal();
+            L.Vert(FVector(P.X, P.Y, H), Nn, FVector2D::ZeroVector, FColor(150, 0, 0, 255));
+        }
+    for (int32 I = 0; I < Nu; ++I) for (int32 J = 0; J < Nv; ++J) { const int32 A = I * (Nv + 1) + J, B = A + Nv + 1; L.Quad(A, A + 1, B + 1, B); }
+    auto* Land = Emit(TEXT("FeyFarLand"), L, FarMid, false, false); Land->bNeverDistanceCull = true;
+    // Trees, thick in the valley and thinning to the second ridge, bigger far off so they still read as a forest.
+    FRandomStream R(203);
+    auto* Far = Kit(TEXT("/Game/Art/Feywild/SM_FeyFarTree.SM_FeyFarTree"), 0, 0, false); if (FarMid) Far->SetMaterial(0, FarMid);
+    for (int32 I = 0; I < 4200; ++I)
+    {
+        const float X = 15000.f + 118000.f * FMath::Pow(R.FRand(), 1.7f), Y = -1400.f + R.FRandRange(-1.f, 1.f) * (2600.f + X * .95f);
+        if (Noise(X, Y, 5200, 50) < -.28f) continue;
+        const float S = FMath::Lerp(.75f, 3.6f, FMath::Clamp((X - 15000.f) / 100000.f, 0.f, 1.f)) * R.FRandRange(.75f, 1.35f);
+        Far->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), FVector(X, Y, Ground(X, Y) - 30.f), FVector(S, S, S * R.FRandRange(.85f, 1.2f)))); ++Planted;
+    }
+    // The landmark: one vast old oak on the flat-topped rise, and amber giants standing up out of the valley's forest.
+    auto* Great = Kit(TEXT("/Game/Art/Feywild/SM_FeyOak0.SM_FeyOak0"), 0, 0, false);
+    Great->AddInstance(FTransform(FRotator(0, 40.f, 0), FVector(GreatX, GreatY, Ground(GreatX, GreatY) - 200.f), FVector(9.f))); ++Planted;
+    // Real oaks fill the valley right under the overlook, where the far trees would show as what they are.
+    auto* Under0 = Kit(TEXT("/Game/Art/Feywild/SM_FeyOak0.SM_FeyOak0"), 0, 0, false), *Under1 = Kit(TEXT("/Game/Art/Feywild/SM_FeyOak1.SM_FeyOak1"), 0, 0, false);
+    for (int32 I = 0; I < 26; ++I)
+    {
+        const float X = R.FRandRange(6900.f, 15000.f), Y = R.FRandRange(-4600.f, -300.f - (X - 6900.f) * -.2f);
+        if (Vista(Y) < .85f) continue;
+        const float S = R.FRandRange(1.f, 1.5f);   // (their crowns stay below the overlook's edge)
+        (I % 2 ? Under1 : Under0)->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), FVector(X, Y, Ground(X, Y) - 20.f), FVector(S))); ++Planted;
+    }
+    auto* Tall = Kit(TEXT("/Game/Art/Feywild/SM_FeyCapAmber.SM_FeyCapAmber"), 0, 0, false);
+    const FVector Caps[] = {{16500, -3300, 5.f}, {23000, 1200, 7.f}, {29000, -8200, 8.f}, {36000, -1500, 10.f}, {47000, -13500, 12.f}, {54000, 6500, 13.f}};
+    for (const FVector& C : Caps) { Tall->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), FVector(C.X, C.Y, Ground(C.X, C.Y) - 40.f), FVector(C.Z))); ++Planted; }
+}
+
+// A one-off capture of the finished glade from the pond's middle, for M_FeyWater to mirror: no scene is drawn twice per frame.
+void AFeywildSetting::BuildProbe()
+{
+    ProbeTarget = NewObject<UTextureRenderTargetCube>(this);
+    ProbeTarget->Init(1024, PF_FloatRGBA); ProbeTarget->ClearColor = FLinearColor::Black; ProbeTarget->UpdateResourceImmediate(true);
+    Probe = NewObject<USceneCaptureComponentCube>(this); Probe->SetupAttachment(RootComponent);
+    Probe->SetRelativeLocation(FVector(PondX, PondY, WaterZ + 60.f)); Probe->TextureTarget = ProbeTarget; Probe->CaptureSource = SCS_SceneColorHDR;
+    Probe->bCaptureEveryFrame = false; Probe->bCaptureOnMovement = false;
+    Probe->HideComponent(WaterMesh); Probe->HideComponent(Lights); Probe->HideComponent(Mist); Probe->HideComponent(Rings);
+    if (AActor* Chuck = UGameplayStatics::GetPlayerPawn(this, 0)) Probe->HideActorComponents(Chuck);
+    Probe->RegisterComponent();
+    if (WaterMesh)
+        if (UMaterialInterface* Water = WaterMesh->GetMaterial(0))
+        {
+            auto* Mid = UMaterialInstanceDynamic::Create(Water, this);
+            Mid->SetTextureParameterValue(TEXT("Reflection"), ProbeTarget); WaterMesh->SetMaterial(0, Mid);
+        }
+    // Once the sky light has settled, and again when the textures have streamed in.
+    for (const float When : {1.f, 6.f})
+    {
+        FTimerHandle Capture;
+        GetWorldTimerManager().SetTimer(Capture, FTimerDelegate::CreateWeakLambda(this, [this]() { Probe->CaptureScene(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_PROBE_CAPTURED")); }), When, false);
+    }
+}
+
+void AFeywildSetting::BuildSound()
+{
+    SplashSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_StreamSplash_02.SFX_StreamSplash_02"));
+    USoundBase* Falls = LoadObject<USoundBase>(nullptr, TEXT("/Game/Art/Audio/SFX/SFX_FeyFalls_00.SFX_FeyFalls_00")); Missing += !Falls;
+    if (!Falls) return;
+    FallsSound = NewObject<UAudioComponent>(this); FallsSound->SetupAttachment(RootComponent);
+    FallsSound->SetRelativeLocation(FVector(LedgeX - 160.f, FallY, 200.f)); FallsSound->SetSound(Falls); FallsSound->bAutoActivate = false;
+    FallsSound->bOverrideAttenuation = true;
+    FSoundAttenuationSettings& A = FallsSound->AttenuationOverrides;
+    A.bAttenuate = true; A.bSpatialize = true; A.AttenuationShape = EAttenuationShape::Sphere; A.AttenuationShapeExtents = FVector(650.f, 0.f, 0.f); A.FalloffDistance = 4200.f; A.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
+    FallsSound->SetVolumeMultiplier(.62f); FallsSound->RegisterComponent(); FallsSound->Play();
+}
+
 void AFeywildSetting::BuildPlanting()
 {
     FRandomStream R(77);
@@ -362,7 +503,10 @@ void AFeywildSetting::BuildPlanting()
     auto Free = [&](float X, float Y, float Clear)
     {
         if (PondE(X, Y) < 1.06f || FMath::Abs(Y - PathY(X)) < Clear || FVector2D(X + 300.f, Y).Size() < 200.f) return false;
-        if (X > LedgeX - 130.f && X < LedgeX + 160.f) return false;
+        const bool bOpen = Vista(Y) > .5f;
+        if (bOpen && X > CliffX(Y) - 110.f) return false;
+        if (!bOpen && X > 5100.f && X < LedgeX + 160.f) return false;
+        if (!bOpen && X > LedgeX - 130.f && X < LedgeX + 160.f) return false;
         if (FVector2D(X - LedgeX, Y - FallY).Size() < 700.f) return false;
         if (X > Ledge2X - 130.f && X < Ledge2X + 160.f) return false;
         if (X > LedgeX && FMath::Abs(Y - FallY) < FallHalf + 70.f) return false;
@@ -379,14 +523,14 @@ void AFeywildSetting::BuildPlanting()
     };
     auto Always = [](float, float) { return 1.f; };
     auto Clumps = [](float Scale, float Seed) { return [Scale, Seed](float X, float Y) { return Smooth(-.05f, .3f, Noise(X, Y, Scale, Seed)); }; };
-    constexpr float NX0 = -2000, NX1 = 5100, NY0 = -3900, NY1 = 3900;
+    constexpr float NX0 = -2000, NX1 = 5450, NY0 = -3900, NY1 = 3900;
 
     // ------------------------------ the ancient oaks: placed by hand to frame the path, as the goal images do
     auto* Oak0 = Kit(*Path(TEXT("SM_FeyOak0")), 16000, 26000, true), *Oak1 = Kit(*Path(TEXT("SM_FeyOak1")), 16000, 26000, true);
     auto* Col0 = Kit(*Path(TEXT("SM_FeyOak0Collision")), 0, 0, false, true, true), *Col1 = Kit(*Path(TEXT("SM_FeyOak1Collision")), 0, 0, false, true, true);
     struct FTree { int32 Kind; float X, Y, Scale, Yaw; };
     const FTree Trees[] = {{0, 1050, -1560, 1.3f, 40}, {1, 2500, -2650, 1.15f, 200}, {0, 4350, -2300, 1.25f, 120}, {1, 1500, 3050, 1.3f, 300}, {0, 4600, 3350, 1.45f, 10}, {1, -900, 2050, 1.1f, 80},
-                           {1, -1100, -2500, 1.2f, 150}, {0, 6000, -2300, 1.5f, 260}, {1, 7300, 3100, 1.7f, 30}, {0, 7900, -1000, 2.1f, 100}, {1, 8700, 1500, 2.3f, 210}, {0, 9700, -3200, 2.6f, 330}, {1, 10000, 3900, 2.8f, 60}};
+                           {1, -1100, -2500, 1.2f, 150}, {0, 5050, -3150, 1.5f, 260}, {1, 7300, 3100, 1.7f, 30}, {0, 7900, -1000, 2.1f, 100}, {1, 8700, 1500, 2.3f, 210}, {0, 9700, -3200, 2.6f, 330}, {1, 10000, 3900, 2.8f, 60}};
     for (const FTree& T : Trees)
     {
         Place(T.Kind ? Oak1 : Oak0, T.X, T.Y, T.Scale, T.Yaw, 14.f);
@@ -394,11 +538,11 @@ void AFeywildSetting::BuildPlanting()
     }
     // ------------------------------ the amber-gilled giants, near and, house-high, on the far rises
     auto* Amber = Kit(*Path(TEXT("SM_FeyCapAmber")), 22000, 30000, true);
-    const FVector Giants[] = {{2750, -1180, 1.f}, {3500, -1500, 1.45f}, {3050, -1950, .72f}, {380, 1500, 1.25f}, {-250, 1180, .7f}, {6900, 2500, 3.2f}, {8300, -2300, 5.f}, {9300, 500, 6.5f}, {7600, 3700, 4.2f}};
+    const FVector Giants[] = {{2750, -1180, 1.f}, {3500, -1500, 1.45f}, {3050, -1950, .72f}, {380, 1500, 1.25f}, {-250, 1180, .7f}, {6900, 2500, 3.2f}, {7600, 3700, 4.2f}};
     for (const FVector& G : Giants) Place(Amber, G.X, G.Y, G.Z, R.FRandRange(0.f, 360.f), 6.f, 2.f);
     // ------------------------------ bell-flower lamps along the path, each with a small real light
     auto* Bells = Kit(*Path(TEXT("SM_FeyBellLamp")), 9000, 14000, true);
-    const FVector2D Lamps[] = {{620, 210}, {1650, 215}, {2500, -215}, {3350, -160}, {4250, -170}};
+    const FVector2D Lamps[] = {{620, 210}, {1650, 215}, {2500, -215}, {3350, -160}, {4250, -170}, {5230, 190}};
     for (int32 I = 0; I < UE_ARRAY_COUNT(Lamps); ++I)
     {
         const float X = Lamps[I].X, Y = PathY(X) + Lamps[I].Y, Yaw = Lamps[I].Y > 0 ? -90.f : 90.f;
@@ -437,13 +581,16 @@ void AFeywildSetting::BuildPlanting()
     for (int32 I = 0; I < 110; ++I)
     {
         const float X = R.FRandRange(NX0, NX1), Y = R.FRandRange(NY0, NY1);
-        if (X < 2000.f && FMath::Abs(Y - PathY(X)) < 800.f) continue;
+        if (FMath::Abs(Y - PathY(X)) < 800.f || (X > 4200.f && Vista(Y) > .4f)) continue;   // (the walk and the view from the edge stay open)
         if (Free(X, Y, 260)) Place(Rock[R.RandRange(0, 5)], X, Y, R.FRandRange(.7f, 2.4f), R.FRandRange(0.f, 360.f), 18.f, 10.f);
     }
+    // Low stones along the overlook's edge, with gaps: it reads as an edge and the view stays open.
+    for (float Y = -4000.f; Y < 420.f; Y += R.FRandRange(240.f, 560.f))
+        Place(Rock[R.RandRange(0, 5)], CliffX(Y) - R.FRandRange(50.f, 110.f), Y, R.FRandRange(.6f, 1.15f), R.FRandRange(0.f, 360.f), 16.f, 10.f);
     for (int32 Step = 0; Step < 2; ++Step)
         for (float Y = -4300.f; Y < 4300.f; Y += R.FRandRange(150.f, 260.f))
         {
-            if (FMath::Abs(Y - FallY) < FallHalf + 190.f) continue;
+            if (FMath::Abs(Y - FallY) < FallHalf + 190.f || Vista(Y) > .2f) continue;
             const float X = (Step ? Ledge2X : LedgeX) + R.FRandRange(30.f, 90.f), Top = Step ? Ledge2Top : LedgeTop, Base = Step ? LedgeTop : WaterZ;
             for (int32 Row = 0; Row < 4; ++Row)
             {
@@ -469,7 +616,72 @@ void AFeywildSetting::Tick(float Dt)
 {
     Super::Tick(Dt);
     Clock += Dt;
+    TickWater(FMath::Min(Dt, .05f));
     TickAir(FMath::Min(Dt, .05f));
+    static const bool bPerf = FParse::Param(FCommandLine::Get(), TEXT("ChuckFeyPerf"));
+    if (bPerf)
+    {
+        PerfMs += Dt * 1000.; PerfGpu += FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles()); ++PerfFrames;
+        if (Clock - PerfAt >= 2.f)
+        {
+            const APlayerCameraManager* Cam = UGameplayStatics::GetPlayerCameraManager(this, 0);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_PERF eye=%s frames=%d mean_ms=%.2f gpu_ms=%.2f"), Cam ? *FeyLocal(Cam->GetCameraLocation()).ToCompactString() : TEXT("-"), PerfFrames, PerfMs / PerfFrames, PerfGpu / PerfFrames);
+            PerfMs = PerfGpu = 0; PerfFrames = 0; PerfAt = Clock;
+        }
+    }
+}
+
+// Ripples and drops: where he wades, and always a few at the falls' foot.
+void AFeywildSetting::TickWater(float Dt)
+{
+    auto Ring = [this](const FVector& P, float Size, float Alpha, float Life) { if (Ripples.Num() < 70) { FRing N; N.P = P; N.Size = Size; N.Alpha = Alpha; N.Life = Life; Ripples.Add(N); } };
+    auto Burst = [this](const FVector& P, int32 Count, float Speed)
+    {
+        for (int32 I = 0; I < Count && Drops.Num() < 90; ++I)
+        {
+            FDrop D; const float A = FMath::FRandRange(0.f, 2 * PI), Out = FMath::FRandRange(.15f, .7f) * Speed;
+            D.P = P; D.V = FVector(FMath::Cos(A) * Out, FMath::Sin(A) * Out, FMath::FRandRange(.55f, 1.f) * Speed); D.Life = FMath::FRandRange(.32f, .6f); D.Size = FMath::FRandRange(1.8f, 3.6f);
+            Drops.Add(D);
+        }
+    };
+    if (auto* Chuck = Cast<ACharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+    {
+        const FVector L = FeyLocal(Chuck->GetActorLocation()); const float Feet = L.Z - Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        const bool bWading = InFeywild(Chuck->GetActorLocation()) && Feet < WaterZ + 12.f && PondE(L.X, L.Y) < 1.f;
+        const float Speed = Chuck->GetVelocity().Size2D(); const FVector At(L.X, L.Y, WaterZ + 1.2f);
+        NextRing -= Dt;
+        if (bWading && !bWasWading)
+        {
+            const float Hard = FMath::Clamp(-Chuck->GetVelocity().Z / 500.f, .3f, 1.f);
+            Ring(At, 180.f + 160.f * Hard, .9f, 1.8f); Ring(At, 90.f, .7f, 1.1f); Burst(FeyWorld(At), int32(10 + 26 * Hard), 220.f + 240.f * Hard);
+            if (SplashSound) UGameplayStatics::PlaySoundAtLocation(this, SplashSound, Chuck->GetActorLocation(), .35f + .4f * Hard, FMath::FRandRange(.72f, .88f));
+        }
+        else if (bWading && NextRing <= 0.f)
+        {
+            const bool bMoving = Speed > 30.f;
+            NextRing = bMoving ? FMath::Lerp(.34f, .17f, FMath::Clamp(Speed / 500.f, 0.f, 1.f)) : 1.5f;
+            Ring(At + (bMoving ? Chuck->GetVelocity().GetSafeNormal2D() * 16.f : FVector::ZeroVector), bMoving ? 130.f : 95.f, bMoving ? .7f : .4f, 1.5f);
+            if (bMoving) Burst(FeyWorld(At), 5, 110.f + Speed * .25f);
+        }
+        bWasWading = bWading;
+    }
+    NextFallRing -= Dt;
+    if (NextFallRing <= 0.f)
+    {
+        NextFallRing = FMath::FRandRange(.14f, .3f);
+        Ring(FVector(LedgeX - FMath::FRandRange(250.f, 520.f), FallY + FMath::FRandRange(-FallHalf, FallHalf), WaterZ + 1.2f), FMath::FRandRange(110.f, 240.f), .55f, 1.6f);
+    }
+    TArray<FTransform> Xf; Xf.Reserve(Ripples.Num());
+    for (int32 I = Ripples.Num() - 1; I >= 0; --I) { Ripples[I].Age += Dt; if (Ripples[I].Age >= Ripples[I].Life) Ripples.RemoveAtSwap(I); }
+    for (const FRing& R : Ripples) Xf.Add(FTransform(FQuat::Identity, FeyWorld(R.P), FVector(R.Size / 100.f)));
+    if (Rings->GetInstanceCount() != Xf.Num()) { Rings->ClearInstances(); if (Xf.Num()) Rings->AddInstances(Xf, false, true); }
+    else if (Xf.Num()) Rings->BatchUpdateInstancesTransforms(0, Xf, true, true);
+    for (int32 I = 0; I < Ripples.Num(); ++I) { Rings->SetCustomDataValue(I, 0, Ripples[I].Age / Ripples[I].Life, false); Rings->SetCustomDataValue(I, 1, Ripples[I].Alpha, I == Ripples.Num() - 1); }
+    for (int32 I = Drops.Num() - 1; I >= 0; --I)
+    {
+        FDrop& D = Drops[I]; D.Age += Dt; D.V.Z -= 980.f * Dt; D.P += D.V * Dt;
+        if (D.Age >= D.Life || FeyLocal(D.P).Z < WaterZ) Drops.RemoveAtSwap(I);
+    }
 }
 
 void AFeywildSetting::TickAir(float Dt)
@@ -510,8 +722,10 @@ void AFeywildSetting::TickAir(float Dt)
         if (S.Age > S.Life || FVector::DistSquared2D(S.P, LEye) > FMath::Square(S.bFly ? 2500.f : 1600.f)) { Sparks.RemoveAtSwap(I); continue; }
         const float Fade = FMath::Clamp(S.Age / 1.2f, 0.f, 1.f) * FMath::Clamp((S.Life - S.Age) / 1.5f, 0.f, 1.f);
         const float Blink = S.bFly ? FMath::Pow(.5f + .5f * FMath::Sin(Clock * 1.7f + S.Phase * 3.f), 3.f) : .6f + .4f * FMath::Sin(Clock * 2.3f + S.Phase);
-        Xf.Add(Facing(FeyWorld(S.P), S.Size)); Data.Add((S.bFly ? 9.f : 2.2f) * Fade * Blink); Data.Add(S.Hue);
+        // (one passing right by the eye would be a blinding ball)
+        Xf.Add(Facing(FeyWorld(S.P), S.Size)); Data.Add((S.bFly ? 9.f : 2.2f) * Fade * Blink * Smooth(70.f, 340.f, FVector::Dist(S.P, LEye))); Data.Add(S.Hue);
     }
+    for (const FDrop& Dp : Drops) { Xf.Add(Facing(Dp.P, Dp.Size)); Data.Add(1.5f * (1.f - Dp.Age / Dp.Life)); Data.Add(2.f); }
     if (Lights->GetInstanceCount() != Xf.Num()) { Lights->ClearInstances(); Lights->AddInstances(Xf, false, true); }
     else Lights->BatchUpdateInstancesTransforms(0, Xf, true, true);
     for (int32 I = 0; I < Xf.Num(); ++I) { Lights->SetCustomDataValue(I, 0, Data[I * 2], false); Lights->SetCustomDataValue(I, 1, Data[I * 2 + 1], I == Xf.Num() - 1); }

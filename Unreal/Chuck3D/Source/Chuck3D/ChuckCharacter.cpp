@@ -1,4 +1,5 @@
 #include "ChuckCharacter.h"
+#include "FeywildSetting.h"
 #include "Engine/OverlapResult.h"
 #include "ShipStorm.h"
 #include "ChultLanding.h"
@@ -241,7 +242,7 @@ void AChuckCharacter::PlaySfx(const TArray<USoundBase*>& Set, ESfx Kind, float V
 }
 void AChuckCharacter::PlayStep(const FVector& Paw, float Speed)
 {
-    if(IsInDockSewerStream(Paw) && StreamSplashSounds.Num())
+    if((IsInDockSewerStream(Paw) || FeyWading(Paw)) && StreamSplashSounds.Num())
     {
         PlaySfx(StreamSplashSounds, ESfx::Step, Speed>ChuckClipData::WalkSpeed*1.25f ? .4f : .32f);
         ++StreamStepCount;

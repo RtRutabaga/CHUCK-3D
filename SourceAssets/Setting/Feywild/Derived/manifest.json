@@ -2,146 +2,6 @@
  "tool": "Blender 4.5.14",
  "assets": [
   {
-   "file": "SM_FeyCapBlue.fbx",
-   "source": "modelled",
-   "triangles": 3718,
-   "dimensions_cm": [
-    63.726,
-    48.61,
-    43.972
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "10671F0AE0365709AB074EAC8098603DB550DEBAFCD78E52EB01F5704D52BC83"
-  },
-  {
-   "file": "SM_FeyCapAmber.fbx",
-   "source": "modelled",
-   "triangles": 1974,
-   "dimensions_cm": [
-    295.666,
-    295.666,
-    306.126
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "5D3E4E6031DCD36A801A40545ABBED6D35F82B86928C040EE3857FE7AAACE6CF"
-  },
-  {
-   "file": "SM_FeyCapViolet.fbx",
-   "source": "modelled",
-   "triangles": 6276,
-   "dimensions_cm": [
-    101.545,
-    78.007,
-    55.501
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "BA7C8AFEAC8F12D8BB6536652C186B73CC68C081A9043AD23F994428B1EE4C9D"
-  },
-  {
-   "file": "SM_FeyBellLamp.fbx",
-   "source": "modelled",
-   "triangles": 765,
-   "dimensions_cm": [
-    130.347,
-    65.428,
-    176.373
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "79FCE3EFBB4E470CB3AE7BA167D1F5ACEC51BC30FB25DEC2FAFE7C8AA7AC25E8"
-  },
-  {
-   "file": "SM_FeyFoxglove.fbx",
-   "source": "modelled",
-   "triangles": 1932,
-   "dimensions_cm": [
-    57.805,
-    53.208,
-    128.106
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "839430FA06ACF8D3C3011CF51AFBE09DBFDD8DA209B0EC1D746AC24AC82A8490"
-  },
-  {
-   "file": "SM_FeyBroadLeaf.fbx",
-   "source": "modelled",
-   "triangles": 846,
-   "dimensions_cm": [
-    122.646,
-    129.088,
-    71.444
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "0CD6BFA354CF98E29500A649AD4493C751479D0C6CCB399196D261EFF1371A83"
-  },
-  {
-   "file": "SM_FeyCrimsonLeaf.fbx",
-   "source": "modelled",
-   "triangles": 752,
-   "dimensions_cm": [
-    116.515,
-    104.672,
-    58.54
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "B0612A7EDA8C92CD5CC4352CCBD97A4279475AD8480C6796D247B25724E587E0"
-  },
-  {
-   "file": "SM_FeyLilyPad.fbx",
-   "source": "modelled",
-   "triangles": 390,
-   "dimensions_cm": [
-    99.363,
-    99.897,
-    4.232
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "55357A6FF3191E8FBEFAE55571E27C7F71DCCEC4C1FCCB3AC6584AA6D596FB4A"
-  },
-  {
-   "file": "SM_FeyLily.fbx",
-   "source": "modelled",
-   "triangles": 1164,
-   "dimensions_cm": [
-    49.664,
-    50.43,
-    14.006
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "AC1A088AB410EC22358D54C61B5542CBE1BA6E3C6620423EE5BEFFF35BAE2151"
-  },
-  {
-   "file": "SM_FeyPetals.fbx",
-   "source": "modelled",
-   "triangles": 336,
-   "dimensions_cm": [
-    71.356,
-    52.91,
-    0.747
-   ],
-   "slots": [
-    "FeyPlant"
-   ],
-   "sha256": "FCDD0D4AFF1995351489FEF684EB926976E59F11844A1A2D17DEB69579A114E9"
-  },
-  {
    "file": "SM_FeyOak0.fbx",
    "source": "modelled",
    "triangles": 146214,
@@ -270,6 +130,166 @@
     "moss_01"
    ],
    "sha256": "CA55F763F17DC6AED4F0E156D00D5E8023B4EA6C05D838F4A753C6730385F35A"
+  },
+  {
+   "file": "SM_FeyBellLamp.fbx",
+   "source": "modelled",
+   "triangles": 1029,
+   "dimensions_cm": [
+    130.35,
+    65.428,
+    176.373
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyFungus",
+    "FeyBlade"
+   ],
+   "sha256": "2434DDCDD1E29D1261479982D40929D1DFF3BA14C2CF58DDD4E48C09D8312429"
+  },
+  {
+   "file": "SM_FeyFoxglove.fbx",
+   "source": "modelled",
+   "triangles": 2548,
+   "dimensions_cm": [
+    57.805,
+    53.208,
+    128.106
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyBlade"
+   ],
+   "sha256": "B878CF7525A52A5A7E8CABF5629E5A1C2721B0933080EB9932C2842CA1EAD14F"
+  },
+  {
+   "file": "SM_FeyBroadLeaf.fbx",
+   "source": "modelled",
+   "triangles": 1134,
+   "dimensions_cm": [
+    122.646,
+    129.088,
+    71.444
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyBlade"
+   ],
+   "sha256": "BD928FBEF54099885A0D2479C066F1992C77BC55877B40A64197CD917BEE435E"
+  },
+  {
+   "file": "SM_FeyCrimsonLeaf.fbx",
+   "source": "modelled",
+   "triangles": 1008,
+   "dimensions_cm": [
+    116.515,
+    104.672,
+    58.54
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyBladeRed"
+   ],
+   "sha256": "D2DDC4969363A4A4349ACA403AAF002987480EF2E1B336FFF1C46ADB44C44662"
+  },
+  {
+   "file": "SM_FeyLilyPad.fbx",
+   "source": "modelled",
+   "triangles": 1136,
+   "dimensions_cm": [
+    101.039,
+    100.447,
+    5.856
+   ],
+   "slots": [
+    "FeyPad"
+   ],
+   "sha256": "85AF18407CB4D1123B8B298BEFB6270DEB9AFA5258A776235DE1866E8DD6D717"
+  },
+  {
+   "file": "SM_FeyLily.fbx",
+   "source": "modelled",
+   "triangles": 1716,
+   "dimensions_cm": [
+    49.664,
+    50.43,
+    14.006
+   ],
+   "slots": [
+    "FeyPlant",
+    "FeyPetal"
+   ],
+   "sha256": "9E9D8E8FFE2E0C33467218CBC978DA177B413F7422AE9F65D1DA6E63268AE930"
+  },
+  {
+   "file": "SM_FeyPetals.fbx",
+   "source": "modelled",
+   "triangles": 504,
+   "dimensions_cm": [
+    71.356,
+    52.91,
+    0.747
+   ],
+   "slots": [
+    "FeyPetal"
+   ],
+   "sha256": "F7026E390BA1D2454CFCF8A5DD5CCC3A99CCC3CC387B0CBD6CEAF683BDC8AB90"
+  },
+  {
+   "file": "SM_FeyFarTree.fbx",
+   "source": "modelled",
+   "triangles": 178,
+   "dimensions_cm": [
+    902.864,
+    792.43,
+    954.0
+   ],
+   "slots": [
+    "FeyFar"
+   ],
+   "sha256": "EECE695D7C5916C3EDC654D2784211CE0043E5BE9A3FCD168F3797DBF01BE55B"
+  },
+  {
+   "file": "SM_FeyCapBlue.fbx",
+   "source": "modelled",
+   "triangles": 5752,
+   "dimensions_cm": [
+    64.426,
+    49.828,
+    44.07
+   ],
+   "slots": [
+    "FeyFungus"
+   ],
+   "sha256": "5B2ED21116A9568BD9733AFBDF52E5D6D42E13792A487DB7C267B08880E9343F"
+  },
+  {
+   "file": "SM_FeyCapAmber.fbx",
+   "source": "modelled",
+   "triangles": 3184,
+   "dimensions_cm": [
+    306.278,
+    304.756,
+    309.5
+   ],
+   "slots": [
+    "FeyFungusBig"
+   ],
+   "sha256": "E90C8129FA2B6CA752C6431FD001FF14AB752A0E106F994A260B51CECF722D7D"
+  },
+  {
+   "file": "SM_FeyCapViolet.fbx",
+   "source": "modelled",
+   "triangles": 9984,
+   "dimensions_cm": [
+    102.296,
+    78.594,
+    55.525
+   ],
+   "slots": [
+    "FeyFungus"
+   ],
+   "sha256": "65CF2E422F385A33A516DFD94583128892A623434061E118B9B4316BC91BDDD9"
   }
  ]
 }

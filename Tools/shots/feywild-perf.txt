@@ -1,0 +1,14 @@
+# Frame time at the slice's heaviest views, on the package: Chuck3D.exe -ChuckShots=<this file> -ChuckFeyPerf logs CHUCK_FEYWILD_PERF every 2 s.
+at FeyLook
+origin feywild
+wait 16
+fov 75
+shot arrival -520 -260 150   3900 300 230
+wait 12
+shot pond 2150 1050 120   5150 1350 300
+wait 12
+shot glade 2400 -300 150   5200 -200 200
+wait 12
+shot edge 5400 -520 150   40000 -5000 700
+wait 12
+shot back 5000 -600 160   -1000 300 200

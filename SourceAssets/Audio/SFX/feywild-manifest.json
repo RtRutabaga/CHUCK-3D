@@ -1,0 +1,12 @@
+{
+  "provenance": "Original deterministic synthetic waterfall loop; Tools/gen_feywild_sfx.py",
+  "sounds": [
+    {
+      "name": "SFX_FeyFalls_00",
+      "file": "SFX_FeyFalls_00.wav",
+      "duration": 16.0,
+      "sha256": "d4a43ca4091854e767aa42cd291258ff941e88ee45993a4c26e6fb5fe36af648",
+      "peak_dbfs": -3.0
+    }
+  ]
+}

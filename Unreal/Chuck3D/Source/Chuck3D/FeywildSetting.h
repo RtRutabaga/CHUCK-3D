@@ -4,6 +4,10 @@
 #include "FeywildSetting.generated.h"
 
 class UInstancedStaticMeshComponent;
+class UAudioComponent;
+class UMaterialInstanceDynamic;
+class USceneCaptureComponentCube;
+class UTextureRenderTargetCube;
 class UHierarchicalInstancedStaticMeshComponent;
 class UMaterialInterface;
 class UProceduralMeshComponent;
@@ -21,14 +25,21 @@ namespace Fey
     constexpr float PondX = 3400, PondY = 1300, PondRX = 1700, PondRY = 1150;
     constexpr float LedgeX = 5160, LedgeTop = 520, Ledge2X = 6400, Ledge2Top = 940, FallY = 1350, FallHalf = 230;
     constexpr float MinX = -2200, MaxX = 7000, HalfY = 4200;   // the slice's invisible bounds
+    constexpr float GreatX = 62000, GreatY = -9000;            // the great tree, far across the valley
     float PathY(float X);
     float Ground(float X, float Y);
+    /** 1 where the land east of the path falls away to the valley, 0 on the falls' side and the far headland. */
+    float Vista(float Y);
+    /** Where the overlook's edge begins. */
+    float CliffX(float Y);
 }
 
 FVector FeywildOrigin();
 inline FVector FeyWorld(const FVector& Local) { return FeywildOrigin() + Local; }
 inline FVector FeyLocal(const FVector& World) { return World - FeywildOrigin(); }
 bool InFeywild(const FVector& World);
+/** A paw in the pond's water (his steps splash). */
+bool FeyWading(const FVector& Paw);
 /** The dev checkpoint "FeyLook" (world, his capsule's centre) and its facing. */
 FVector FeywildSpawn();
 float FeywildSpawnYaw();
@@ -48,6 +59,10 @@ private:
     void BuildEnvironment();
     void BuildLand();
     void BuildPlanting();
+    void BuildFarLand();
+    void BuildProbe();
+    void BuildSound();
+    void TickWater(float Dt);
     UProceduralMeshComponent* Emit(const TCHAR* Name, FFeySurf& S, UMaterialInterface* Material, bool bSolid, bool bShadow);
     UHierarchicalInstancedStaticMeshComponent* Kit(const TCHAR* Path, float CullStart, float CullEnd, bool bShadow, bool bSolid = false, bool bInvisible = false);
     void TickAir(float Dt);
@@ -55,9 +70,23 @@ private:
     float Clock = 0;
     UPROPERTY() UInstancedStaticMeshComponent* Lights = nullptr;   // fireflies and gold dust
     UPROPERTY() UInstancedStaticMeshComponent* Mist = nullptr;
+    UPROPERTY() UInstancedStaticMeshComponent* Rings = nullptr;     // ripples on the pond
+    UPROPERTY() UProceduralMeshComponent* WaterMesh = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* FarMid = nullptr;
+    UPROPERTY() USceneCaptureComponentCube* Probe = nullptr;
+    UPROPERTY() UTextureRenderTargetCube* ProbeTarget = nullptr;
+    UPROPERTY() UAudioComponent* FallsSound = nullptr;
+    UPROPERTY() class USoundBase* SplashSound = nullptr;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> Kits;
     struct FSpark { FVector P, V; float Age = 0, Life = 1, Size = 1, Hue = 0, Phase = 0; bool bFly = false; };
     TArray<FSpark> Sparks;
     struct FVeil { FVector P; float Size = 500, Alpha = .15f, Seed = 0, Drift = 0; };
     TArray<FVeil> Veils;
+    struct FRing { FVector P; float Age = 0, Life = 1.4f, Size = 100, Alpha = .6f; };
+    TArray<FRing> Ripples;
+    struct FDrop { FVector P, V; float Age = 0, Life = .5f, Size = 3; };
+    TArray<FDrop> Drops;
+    float NextRing = 0, NextFallRing = 0;
+    bool bWasWading = false;
+    double PerfMs = 0, PerfGpu = 0; int32 PerfFrames = 0; float PerfAt = 0;
 };

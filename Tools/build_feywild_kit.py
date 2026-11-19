@@ -15,6 +15,7 @@ from pathlib import Path
 import hashlib
 import json
 import math
+import os
 import random
 
 import bmesh
@@ -26,6 +27,7 @@ SOURCE = ROOT / 'SourceAssets/Setting/Feywild'
 OUT = SOURCE / 'Derived'
 OUT.mkdir(parents=True, exist_ok=True)
 REPORT = []
+KIT_ONLY = [n.strip() for n in os.environ.get('CHUCK_FEY_KIT_ONLY', '').split(',') if n.strip()]   # rebuild only these, keeping the rest of the manifest
 
 
 def lerp(a, b, t): return a + (b - a) * t
@@ -95,17 +97,36 @@ def revolve(k, profile, segs=24, at=Vector((0, 0, 0)), axis=None, slot=0, shape=
     return rows
 
 
-def blade(k, base, direction, length, width, side, col, droop=.35, rows=7, fold=.3, slot=0, wave=0.):
+def ugrid(k, rows, v, slot=0):
+    """A closed ring grid whose U runs 0..1 round it and whose V is v(row): the fungus material reads both."""
+    n = len(rows[0])
+    for r in range(len(rows) - 1):
+        for i in range(n):
+            j = (i + 1) % n
+            k.face((rows[r][i], rows[r][j], rows[r + 1][j], rows[r + 1][i]), slot, [(i / n, v(r)), ((i + 1) / n, v(r)), ((i + 1) / n, v(r + 1)), (i / n, v(r + 1))])
+
+
+def slot_of(k, name): return k.slots.index(name) if name in k.slots else 0
+
+
+ACROSS = (-1, -.62, -.28, 0, .28, .62, 1)
+
+
+def blade(k, base, direction, length, width, side, col, droop=.35, rows=12, fold=.3, slot=None, wave=0.):
     """A solid leaf or petal: a folded blade drooping along its length. col(u along, v across -1..1) -> rgba."""
     d = direction.normalized(); s = side.normalized(); up = s.cross(d).normalized(); grid = []
     for r in range(rows + 1):
         u = r / rows; w = width * .5 * math.sin(math.pi * min(1, u ** .75)) ** .8
         ce = base + d * (length * u) - up * (droop * length * u * u) + s * (wave * length * math.sin(u * 7.) * u)
         row = []
-        for j in (-1, -.5, 0, .5, 1):
+        for j in ACROSS:
             row.append(k.vert(ce + s * (j * w) + up * (abs(j) * w * fold), col(u, j)))
         grid.append(row)
-    k.grid(grid, False, slot)
+    if slot is None: slot = next((i for i, n in enumerate(k.slots) if n.startswith(('FeyBlade', 'FeyPetal'))), 0)
+    for r in range(rows):
+        for a in range(len(ACROSS) - 1):
+            q = (grid[r][a], grid[r][a + 1], grid[r + 1][a + 1], grid[r + 1][a])
+            k.face(q, slot, [(r / rows, (ACROSS[a] + 1) / 2), (r / rows, (ACROSS[a + 1] + 1) / 2), ((r + 1) / rows, (ACROSS[a + 1] + 1) / 2), ((r + 1) / rows, (ACROSS[a] + 1) / 2)])
 
 
 # ---------------------------------------------------------------- the fungi
@@ -113,34 +134,46 @@ def spots(a, r, seed): return smooth(.45, .8, math.sin(a * 7 + seed) * math.cos(
 
 
 def mushroom(k, at, h, cap_r, top, under, stem, glow_cap, glow_under, lean=Vector((0, 0, 0)), seed=0., segs=24, gills=26):
-    tip = at + Vector((0, 0, h)) + lean
-    path = [at.lerp(tip, i / 6) + lean * (.25 * math.sin(math.pi * i / 6)) for i in range(7)]
-    tube(k, path, [cap_r * lerp(.24, .13, smooth(0, .5, i / 6)) for i in range(7)], 10,
-         lambda p, t, a: (*mix(stem, under, t ** 2), lerp(glow_under * .08, glow_under * .55, t ** 3)), 0, cap=False)
-    def ring_col(rr, zz, under_side):
-        return (*under, glow_under) if under_side else (*top, glow_cap)
-    pr = []
-    for i in range(7): t = i / 6; pr.append((cap_r * lerp(.12, .98, t), -cap_r * .03 + cap_r * .04 * t, (*under, glow_under)))    # gills, centre to rim
-    for i in range(1, 9): t = i / 8; pr.append((cap_r * math.cos(t * math.pi * .5) ** .75, cap_r * .02 + cap_r * .46 * math.sin(t * math.pi * .5), (*top, glow_cap)))  # the dome, rim to crown
-    def shape(ri, a):
-        if ri < 7:
-            g = .5 + .5 * math.cos(a * gills); t = ri / 6
-            return 1., -g * cap_r * .05 * math.sin(math.pi * t) , (*mix(under, stem, g * .55), glow_under * lerp(.45, 1., g) * lerp(1., .35, t))
-        t = (ri - 7) / 8; rr = cap_r * (1 - t); sp = spots(a, rr, seed)
-        rim = smooth(.1, 0., t)
-        return 1., 0., (*mix(mix(top, under, rim * .7), (1, 1, 1), sp * .3), glow_cap * (.25 + .75 * sp + rim))
-    rows = revolve(k, pr, segs * 2, tip, shape=shape)
-    k.face(tuple(rows[-1]))
+    """V says which part the fungus material is painting: 0-1 gills (stem to rim), 1-2 dome (rim to crown), 2-3 stem (foot to cap)."""
+    tip = at + Vector((0, 0, h)) + lean; n = 14; sides = 16; rows = []
+    for i in range(n + 1):
+        t = i / n; c = at.lerp(tip, t) + lean * (.25 * math.sin(math.pi * t))
+        r = cap_r * (lerp(.19, .115, smooth(0, .55, t)) + .11 * smooth(.2, 0, t) ** 2 + .03 * math.exp(-((t - .8) / .065) ** 2) + .05 * smooth(.9, 1., t))
+        row = []
+        for s_ in range(sides):
+            a = 2 * math.pi * s_ / sides; w = 1 + .05 * math.sin(a * 3 + seed + t * 4)
+            row.append(k.vert(c + Vector((r * w * math.cos(a), r * w * math.sin(a), 0)), (*mix(mix((.1, .08, .07), stem, smooth(0, .22, t)), under, smooth(.6, 1., t) * .6), lerp(glow_under * .1, glow_under * .6, t ** 2.5))))
+        rows.append(row)
+    ugrid(k, rows, lambda r: 2 + .98 * r / n)
+    wob = lambda a, t: 1 + .035 * t * math.sin(a * 3 + seed) + .02 * t * math.sin(a * 7 + seed * 2)
+    ring = segs * 2; under_rows = []
+    for ri in range(8):
+        t = ri / 7; row = []
+        for s_ in range(ring):
+            a = 2 * math.pi * s_ / ring; r = cap_r * lerp(.1, .985, t) * wob(a, t)
+            row.append(k.vert(tip + Vector((r * math.cos(a), r * math.sin(a), cap_r * (-.015 + .075 * math.sin(t * math.pi * .5) - .1 * smooth(.82, 1., t)))), (*under, glow_under)))
+        under_rows.append(row)
+    ugrid(k, under_rows, lambda r: .98 * r / 7)
+    dome = []
+    for ri in range(13):
+        t = ri / 12; th = t * math.pi * .5; row = []
+        lip = smooth(.16, 0., t)
+        for s_ in range(ring):
+            a = 2 * math.pi * s_ / ring; r = cap_r * (math.cos(th) ** .72 + .015 * lip) * wob(a, 1 - t)
+            z = cap_r * (-.1 * lip + .03 + .5 * math.sin(th) ** 1.15)
+            row.append(k.vert(tip + Vector((r * math.cos(a), r * math.sin(a), z)), (*mix(top, under, lip * .55), glow_cap * (.3 + lip))))
+        dome.append(row)
+    ugrid(k, dome, lambda r: 1 + .98 * r / 12)
 
 
 def fungus_blue(k):
-    mushroom(k, Vector((0, 0, 0)), 34, 19, (.03, .22, .85), (.25, .7, 1.), (.5, .8, 1.), 2.2, 3.4, seed=1.3)
-    mushroom(k, Vector((24, 8, 0)), 20, 11, (.03, .2, .8), (.25, .7, 1.), (.5, .8, 1.), 2.2, 3.4, Vector((4, 1, 0)), 2.7, 18)
-    mushroom(k, Vector((-14, 20, 0)), 14, 8, (.03, .2, .8), (.25, .7, 1.), (.5, .8, 1.), 2.2, 3.4, Vector((-3, 2, 0)), 4.1, 16)
+    mushroom(k, Vector((0, 0, 0)), 34, 19, (.05, .17, .55), (.2, .55, .95), (.26, .38, .52), 2.0, 3.0, seed=1.3)
+    mushroom(k, Vector((24, 8, 0)), 20, 11, (.05, .17, .55), (.2, .55, .95), (.26, .38, .52), 2.0, 3.0, Vector((4, 1, 0)), 2.7, 18)
+    mushroom(k, Vector((-14, 20, 0)), 14, 8, (.05, .17, .55), (.2, .55, .95), (.26, .38, .52), 2.0, 3.0, Vector((-3, 2, 0)), 4.1, 16)
 
 
 def fungus_amber(k):
-    mushroom(k, Vector((0, 0, 0)), 230, 150, (.2, .1, .28), (1., .55, .18), (.95, .72, .5), .12, 2.6, Vector((14, -6, 0)), 2.2, 32, 54)
+    mushroom(k, Vector((0, 0, 0)), 230, 150, (.17, .09, .16), (.95, .5, .17), (.55, .36, .24), .1, 2.1, Vector((14, -6, 0)), 2.2, 36, 54)
 
 
 def fungus_violet(k):
@@ -148,7 +181,7 @@ def fungus_violet(k):
     for i in range(6):
         a = i * 2.4; r = 6 + i * 8
         h = rng.uniform(22, 48); c = h * rng.uniform(.3, .4)
-        mushroom(k, Vector((r * math.cos(a), r * math.sin(a), 0)), h, c, (.22, .08, .5), (.95, .68, .85), (.92, .82, .85), .55, 1.8, Vector((rng.uniform(-5, 5), rng.uniform(-5, 5), 0)), i * 1.7, 16, 16)
+        mushroom(k, Vector((r * math.cos(a), r * math.sin(a), 0)), h, c, (.2, .08, .36), (.68, .42, .62), (.42, .34, .44), .4, 1.3, Vector((rng.uniform(-5, 5), rng.uniform(-5, 5), 0)), i * 1.7, 16, 16)
 
 
 def bracket(k, at, out, w, seed, col_top=(.32, .19, .1), col_under=(1., .6, .25)):
@@ -189,9 +222,12 @@ def bell_lamp(k):
             f = 1 + (ri >= 4) * (lobe - .5) * .36; zz = z - (ri == 5) * lobe * 7
             row.append(k.vert(tip + rot @ Vector((r * f * math.cos(a), r * f * math.sin(a), zz)), c))
         rows.append(row)
-    k.grid(rows, True)
+    fungus = slot_of(k, 'FeyFungus'); ugrid(k, rows, lambda r: 3 + .98 * r / 5, fungus)
     # The lit heart inside the bell.
-    revolve(k, [(.5, 0, (1, .85, .5, 9.)), (7, -3, (1, .85, .5, 9.)), (8, -11, (1, .9, .6, 9.)), (5, -20, (1, .95, .7, 9.)), (.5, -24, (1, .95, .7, 9.))], 12, tip + rot @ Vector((0, 0, -14)), rot @ Vector((0, 0, 1)))
+    heart = []
+    for r, z in ((.5, 0), (7, -3), (8, -11), (5, -20), (.5, -24)):
+        heart.append([k.vert(tip + rot @ Vector((r * math.cos(a * math.pi / 6), r * math.sin(a * math.pi / 6), z - 14)), (1, .88, .55, 9.)) for a in range(12)])
+    ugrid(k, heart, lambda r: 4.5, fungus)
     for i in range(3):
         a = i * 2.1; d = Vector((math.cos(a), math.sin(a), .35)).normalized()
         blade(k, Vector((2, 0, 18 + i * 22)), d, 42, 14, Vector((-math.sin(a), math.cos(a), 0)), lambda u, j: (*mix((.14, .32, .06), (.42, .58, .12), abs(j) * .4 + u * .4), 0.))
@@ -236,25 +272,19 @@ def leaf_plant(k, seed, count, length, width, col):
         blade(k, stalk[-1], Vector((math.cos(a), math.sin(a), rise * .5)), l, width * rng.uniform(.85, 1.15), Vector((-math.sin(a), math.cos(a), 0)), col, droop=rng.uniform(.3, .55), rows=8, wave=.02)
 
 
-def broad_col(u, j):
-    vein = smooth(.14, 0, abs(j)) + .55 * smooth(.2, .0, abs(math.sin(u * 22 - abs(j) * 5)))
-    return (*mix(mix((.07, .25, .03), (.38, .56, .06), u * .55 + abs(j) * .3), (.75, .85, .3), clamp(vein) * .55), 0.)
-
-
-def crimson_col(u, j):
-    vein = smooth(.14, 0, abs(j)) + .7 * smooth(.2, .0, abs(math.sin(u * 20 - abs(j) * 4)))
-    return (*mix(mix((.1, .015, .1), (.3, .03, .2), u), (.85, .07, .16), clamp(vein) * .85), 0.)
+def broad_col(u, j): return (*mix((.06, .2, .035), (.22, .38, .06), u * .55 + abs(j) * .3), 0.)
+def crimson_col(u, j): return (*mix((.07, .012, .07), (.2, .025, .14), u), 0.)
 
 
 def lily_pad(k):
-    rows = [[k.vert((0, 0, 1.5), (.14, .32, .06, 0.)) for s in range(40)]]
-    for r in range(1, 6):
-        t = r / 5; row = []
-        for s in range(40):
-            a = .14 + (2 * math.pi - .28) * s / 39; rib = smooth(.35, .0, abs(math.sin(a * 8)))
-            z = 1.5 + 3.5 * t ** 6 + .8 * rib; col = mix((.06, .24, .05), (.24, .46, .08), (1 - rib) * .5 + t * .3)
-            col = mix(col, (.5, .72, .2), rib * .6); col = mix(col, (.42, .1, .16), smooth(.86, 1., t))
-            row.append(k.vert((50 * t * math.cos(a), 50 * t * math.sin(a), z), (*col, 0.)))
+    """The FeyPad material paints the veins from the local position; the colour here is the pad's body."""
+    n = 72; rows = [[k.vert((0, 0, 1.2), (.1, .26, .05, 0.)) for s_ in range(n)]]
+    for r in range(1, 9):
+        t = r / 8; row = []
+        for s_ in range(n):
+            a = .1 + (2 * math.pi - .2) * s_ / (n - 1); w = 1 + .018 * math.sin(a * 5 + 1) + .012 * math.sin(a * 11)
+            z = 1.2 + .7 * math.sin(t * 7 + a * 3) * t * .5 + 5.2 * smooth(.88, 1., t) ** 1.5
+            row.append(k.vert((50 * t * w * math.cos(a), 50 * t * w * math.sin(a), z), (*mix((.08, .24, .05), (.2, .38, .08), t * .7), 0.)))
         rows.append(row)
     k.grid(rows, False)
 
@@ -273,6 +303,24 @@ def petals(k):
         a = rng.uniform(0, 6.28); r = rng.uniform(0, 42); c = Vector((r * math.cos(a), r * math.sin(a), .6)); t = rng.uniform(0, 6.28)
         d = Vector((math.cos(t), math.sin(t), .03)); s = Vector((-math.sin(t), math.cos(t), 0))
         blade(k, c, d, rng.uniform(5, 8), rng.uniform(3.5, 5), s, lambda u, j: (*mix((1., .55, .75), (.85, .14, .45), u), .03), droop=-.05, rows=3)
+
+
+def far_tree(k):
+    """A distant tree: a dark trunk and three lumpy crowns, about 9 m tall. Vertex colour R is how lit it is, from under the crown to its top."""
+    rng = random.Random(21)
+    for c, r in ((Vector((0, 0, 620)), 380), (Vector((230, 90, 500)), 270), (Vector((-210, -120, 470)), 250)):
+        rows = []
+        for i in range(1, 5):
+            th = math.pi * i / 5; row = []
+            for s_ in range(7):
+                a = 2 * math.pi * (s_ + i * .5) / 7; rr = r * rng.uniform(.82, 1.16)
+                row.append(k.vert(c + Vector((rr * math.sin(th) * math.cos(a), rr * math.sin(th) * math.sin(a), rr * .78 * math.cos(th))), (lerp(1., .22, i / 4), 0, 0, 0)))
+            rows.append(row)
+        k.grid(rows, True)
+        top = k.vert(c + Vector((0, 0, r * .8)), (1., 0, 0, 0)); bot = k.vert(c - Vector((0, 0, r * .7)), (.15, 0, 0, 0))
+        for s_ in range(7):
+            k.face((top, rows[0][(s_ + 1) % 7], rows[0][s_])); k.face((bot, rows[-1][s_], rows[-1][(s_ + 1) % 7]))
+    tube(k, [Vector((0, 0, -30)), Vector((0, 0, 460))], [70, 42], 5, lambda p, t, a: (.1, 0, 0, 0), cap=False)
 
 
 # ---------------------------------------------------------------- the ancient oaks
@@ -354,29 +402,38 @@ def export(ob, name, source):
     REPORT.append(rec); print('CHUCK_FEYWILD_KIT', rec)
 
 
+GLOWS = {'FeyPlant', 'FeyFungus', 'FeyFungusBig', 'FeyBlade', 'FeyBladeRed', 'FeyPetal', 'FeyPad'}
+
+
 def write(k, name):
     clear(); me = bpy.data.meshes.new(name); me.from_pydata(k.v, [], k.f); me.update()
-    for s in k.slots: me.materials.append(bpy.data.materials.new(s))
+    used = sorted(set(k.m)); remap = {old: new for new, old in enumerate(used)}
+    for i in used: me.materials.append(bpy.data.materials.new(k.slots[i]))
     uv = me.uv_layers.new(name='UVMap'); at = 0
     for poly, slot, face_uv in zip(me.polygons, k.m, k.uv):
-        poly.material_index = slot; poly.use_smooth = True
+        poly.material_index = remap[slot]; poly.use_smooth = True
         for li, u in zip(poly.loop_indices, face_uv): uv.data[li].uv = u
     col = me.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
-    for i, c in enumerate(k.c): col.data[i].color = (c[0], c[1], c[2], min(c[3] / 10., 1.) if 'FeyPlant' in k.slots else c[3])
+    for i, c in enumerate(k.c): col.data[i].color = (c[0], c[1], c[2], min(c[3] / 10., 1.) if GLOWS & set(k.slots) else c[3])
     bm = bmesh.new(); bm.from_mesh(me); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob); export(ob, name, 'modelled')
 
 
-def build(name, fn, *args):
-    k = Kit(['FeyPlant']); fn(k, *args); write(k, name)
+def wanted(name): return not KIT_ONLY or name in KIT_ONLY
 
 
-build('SM_FeyCapBlue', fungus_blue); build('SM_FeyCapAmber', fungus_amber); build('SM_FeyCapViolet', fungus_violet)
-build('SM_FeyBellLamp', bell_lamp); build('SM_FeyFoxglove', foxglove)
-build('SM_FeyBroadLeaf', leaf_plant, 4, 9, 62, 30, broad_col); build('SM_FeyCrimsonLeaf', leaf_plant, 7, 8, 52, 24, crimson_col)
-build('SM_FeyLilyPad', lily_pad); build('SM_FeyLily', lily_flower); build('SM_FeyPetals', petals)
+def build(name, slots, fn, *args):
+    if not wanted(name): return
+    k = Kit(slots); fn(k, *args); write(k, name)
+
+
+build('SM_FeyCapBlue', ['FeyFungus'], fungus_blue); build('SM_FeyCapAmber', ['FeyFungusBig'], fungus_amber); build('SM_FeyCapViolet', ['FeyFungus'], fungus_violet)
+build('SM_FeyBellLamp', ['FeyPlant', 'FeyFungus', 'FeyBlade'], bell_lamp); build('SM_FeyFoxglove', ['FeyPlant', 'FeyBlade'], foxglove)
+build('SM_FeyBroadLeaf', ['FeyPlant', 'FeyBlade'], leaf_plant, 4, 9, 62, 30, broad_col); build('SM_FeyCrimsonLeaf', ['FeyPlant', 'FeyBladeRed'], leaf_plant, 7, 8, 52, 24, crimson_col)
+build('SM_FeyLilyPad', ['FeyPad'], lily_pad); build('SM_FeyLily', ['FeyPlant', 'FeyPetal'], lily_flower); build('SM_FeyPetals', ['FeyPetal'], petals); build('SM_FeyFarTree', ['FeyFar'], far_tree)
 for index, (seed, hanging) in enumerate(((11, 46), (23, 0))):
-    tree, collision = oak(seed, hanging); write(tree, f'SM_FeyOak{index}'); write(collision, f'SM_FeyOak{index}Collision')
+    if wanted(f'SM_FeyOak{index}'):
+        tree, collision = oak(seed, hanging); write(tree, f'SM_FeyOak{index}'); write(collision, f'SM_FeyOak{index}Collision')
 
 
 # ---------------------------------------------------------------- derived from the scans
@@ -407,8 +464,12 @@ def moss_clump():
     bpy.context.scene.unit_settings.system = 'METRIC'; bpy.context.scene.unit_settings.scale_length = .01; export(ob, 'SM_FeyMoss', 'moss_01')
 
 
-scan('grass_medium_02', ['grass_medium_02_a', 'grass_medium_02_c'], .4)
-scan('celandine_01', ['celandine_01_a_LOD1', 'celandine_01_b_LOD1'], 1.)
-moss_clump()
+if not KIT_ONLY:
+    scan('grass_medium_02', ['grass_medium_02_a', 'grass_medium_02_c'], .4)
+    scan('celandine_01', ['celandine_01_a_LOD1', 'celandine_01_b_LOD1'], 1.)
+    moss_clump()
+else:
+    fresh = {r['file'] for r in REPORT}
+    REPORT = [r for r in json.loads((OUT / 'manifest.json').read_text(encoding='utf-8'))['assets'] if r['file'] not in fresh] + REPORT
 (OUT / 'manifest.json').write_text(json.dumps({'tool': 'Blender 4.5.14', 'assets': REPORT}, indent=1) + '\n', encoding='utf-8')
 print('CHUCK_FEYWILD_KIT_DONE', len(REPORT))
