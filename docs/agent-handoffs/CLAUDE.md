@@ -2,6 +2,23 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 18 — Feywild: the look slice, second pass (Claude)
+
+- **Asked:** "Fix the flaws first" (the first pass's list below), then "I also want the oak trees to have some slow fade to different colors changing lights in parts of the leaves and bark, maybe like subtle veins through parts, not too much".
+- **Source:** `main` at 6bcc3525; code in 556d1d33.
+- **Changed:**
+  - `FeywildSetting.h/.cpp`: `BuildProbe` (one-off `USceneCaptureComponentCube`, 1024 float, captured at 1 s and 6 s); `BuildFarLand` (valley, ridges to 5.2 km, 4200 far crowns, 26 valley oaks, the great oak, amber giants); the overlook (`Vista`, `CliffX`, walls on the cliff); `TickWater` (wading rings, drops, splash sound, falls-foot rings); `BuildSound`; `-ChuckFeyPerf`.
+  - `ChuckCharacter.cpp`: splash steps when `FeyWading`.
+  - `Tools/build_feywild_kit.py`: UV-encoded fungus parts, blade UVs, lily pad, `SM_FeyFarTree`, slot remap. `Tools/create_feywild_assets.py`: `M_FeyFungus/Big`, `M_FeyBlade/Red`, `M_FeyPetal`, `M_FeyPad`, `M_FeyFar`, `M_FeyRipple`; parallax mirror in `M_FeyWater`; bark veins and leaf wash (`Fade`); bluer sky; finer moss. New `Tools/gen_feywild_sfx.py` (`SFX_FeyFalls_00`), `Tools/shots/feywild-perf.txt`.
+- **Tested:** editor stills `missing=0`, light audit `lights=3 grooms=20 risky=0`. Package `CHUCK_PACKAGE_VERIFIED passes=182` (`Local/verify-package-20261118-181323.log`); baselines unchanged. Two earlier runs failed on a Waterdeep playtest fault (Cube inside at -235,211,27) and ShipArrival jitter 2/0+1; neither reproduced in three candidate runs, and the launcher package showed jitter 2 in one of three runs, so both are flakes. Robot playtester at FeyLook: `cells=102 travel_m=193 inside=0 stuck=0 void=0 falls=0` (`Local/feylook-playtest-2.log`). Frame time at 1080p windowed: 16.7 ms at every view (vsync-bound, so headroom unknown), ~18.6 ms for the second after each cut (`Local/feywild-perf.log`).
+- **Not tested:** by hand; memory use; headroom above vsync.
+- **Remaining flaws:** far crowns are simple shapes; the sky is cream round the sun; the bark veins are faint in stills (by request, adjustable); the robot does not reach the overlook edge; Oak0 is heavy; the Phlegethos dev-menu route flaw stands.
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged.
+- **Launcher:** promoted `FeywildLook2` (receipt 556d1d3); previous kept as `Builds/Windows-Previous-20261118-FeywildLook2`, older pruned to two, no candidate folder left.
+- **Not mine, left untouched:** `SourceAssets/NPCs/dialogue.json` changes and new fortress/PitFiend voice sources in the working tree.
+
+Next part of the work can be done here, once the user has judged the look.
+
 ## November 18 — Feywild: the look slice, stage 1 (Claude)
 
 - **Asked:** build the Feywild once the Phlegethos session finished, from the plan approved in `docs/regions/FEYWILD.md` ("Proceed"). Stage 1 is one small finished piece, and the user approves the look before the world is built out.
