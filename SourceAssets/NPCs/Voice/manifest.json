@@ -113,6 +113,14 @@
    "peaks": 18,
    "gain_db": -2.77
   },
+  "HeroFighter/fortress_00": {
+   "wav": "Voice/HeroFighter/fortress_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroFighter/VO_HeroFighter_fortress_00",
+   "seconds": 2.926,
+   "rate": 44100,
+   "peaks": 13,
+   "gain_db": -1.94
+  },
   "HeroWizard/entrance_00": {
    "wav": "Voice/HeroWizard/entrance_00.wav",
    "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_entrance_00",
@@ -145,6 +153,14 @@
    "peaks": 10,
    "gain_db": -6.95
   },
+  "HeroWizard/fortress_00": {
+   "wav": "Voice/HeroWizard/fortress_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroWizard/VO_HeroWizard_fortress_00",
+   "seconds": 5.146,
+   "rate": 44100,
+   "peaks": 18,
+   "gain_db": -3.15
+  },
   "HeroRanger/entrance_00": {
    "wav": "Voice/HeroRanger/entrance_00.wav",
    "asset": "/Game/Art/Audio/Voice/HeroRanger/VO_HeroRanger_entrance_00",
@@ -160,6 +176,14 @@
    "rate": 44100,
    "peaks": 11,
    "gain_db": -1.51
+  },
+  "HeroRanger/fortress_00": {
+   "wav": "Voice/HeroRanger/fortress_00.wav",
+   "asset": "/Game/Art/Audio/Voice/HeroRanger/VO_HeroRanger_fortress_00",
+   "seconds": 2.847,
+   "rate": 44100,
+   "peaks": 9,
+   "gain_db": -1.02
   },
   "PirateCaptain/CAP_P00": {
    "wav": "Voice/PirateCaptain/CAP_P00.wav",
@@ -816,6 +840,22 @@
    "rate": 44100,
    "peaks": 15,
    "gain_db": -0.57
+  },
+  "PitFiend/fiend_00": {
+   "wav": "Voice/PitFiend/fiend_00.wav",
+   "asset": "/Game/Art/Audio/Voice/PitFiend/VO_PitFiend_fiend_00",
+   "seconds": 4.754,
+   "rate": 44100,
+   "peaks": 16,
+   "gain_db": -1.47
+  },
+  "PitFiend/fiend_01": {
+   "wav": "Voice/PitFiend/fiend_01.wav",
+   "asset": "/Game/Art/Audio/Voice/PitFiend/VO_PitFiend_fiend_01",
+   "seconds": 7.158,
+   "rate": 44100,
+   "peaks": 21,
+   "gain_db": 0.72
   }
  }
 }

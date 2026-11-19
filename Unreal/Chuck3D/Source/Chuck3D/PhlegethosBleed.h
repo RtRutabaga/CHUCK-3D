@@ -37,6 +37,14 @@ class APhlegethosSetting;
  * (2026-11-17, the user: "when chuck dies keep going don't reset the astral fall away".) A death in it (a fall into the
  * Astral, the fiend) does not re-arm it: he comes back on the ground by the breach that holds, and it goes on.
  * The slabs under the trio, the fiend and the lemures hold while they stand on them; the river's columns never fall.
+ * (2026-11-18, the user: "do the unavoidable river (time it so the encounter soundtrack lines up with this end)".) The
+ * 2D's last beat: "eighteen additional blocks align across every playable arena row and sweep west as one full-height
+ * surge". After the collapse the source tear widens and the river comes down the whole island as one surge, the kept
+ * ground too, carrying him with it to the far tear: there is nowhere it does not reach. It is all timed to the encounter's
+ * track ("Ritual of the Broken Sun", 87.3 s): the collapse into its quiet bar (67 s), the surge on the full return
+ * (73 s), him over the far tear's lip as the track falls away (85.6 s), the dark as it ends. Its schedule is set when it
+ * starts, from the track's place then, toward the next end far enough off; the clock follows the track. Taken by the
+ * river earlier, the sweep is 7 s and the track is brought to its end with it.
  */
 UCLASS()
 class CHUCK3D_API APhlegBleed : public AActor
@@ -84,13 +92,32 @@ public:
     bool FindWhole(int32 Col, float NearY, FVector& Out) const;
     /** Tests: hold it off (the trio trial watches the battle undisturbed). */
     static bool bHold;
-    // The escalation, in seconds from the start.
+    // The escalation, in seconds from the start: nominal (scaled and delayed to fit the track: GetWaveAt and the rest).
     static constexpr float Wave1At = 9.f;
     static constexpr float Wave2At = 17.f;
     static constexpr float Wave3At = 24.f;
     static constexpr float RiverAt = 31.f;
     static constexpr float CollapseAt = 41.f;
     static constexpr float CollapseSpan = 9.f;
+    static constexpr float SurgeAt = 55.f;
+    // From the encounter's track's end (2026-11-18): the surge on its last return, him over the far tear's lip as it falls away.
+    static constexpr float TrackSeconds = 87.28f;
+    static constexpr float SurgeToEnd = 14.28f;
+    static constexpr float EdgeToEnd = 1.7f;
+    static constexpr float EarlySweep = 7.f;      // s down the river to the lip, taken before the surge (or after it has passed)
+    float GetWaveAt(int32 I) const { return AtWave[FMath::Clamp(I, 0, 2)]; }
+    float GetRiverAt() const { return AtRiver; }
+    float GetCollapseAt() const { return AtCollapse; }
+    float GetSurgeAt() const { return AtSurge; }
+    float GetEdgeAt() const { return AtEdge; }
+    float GetEndAt() const { return AtEnd; }
+    bool IsMusicTimed() const { return bMusicTimed; }
+    float GetSurgeFront() const { return SurgeFront; }
+    bool IsSurging() const { return bSurge; }
+    bool WasSweptBySurge() const { return bSweptBySurge; }
+    /** The clock when the last sweep ended, and the track's place in its loop then (-1 without it). */
+    float GetSweepEndClock() const { return SweepEndClock; }
+    float GetSweepEndMusic() const { return SweepEndMusic; }
     static constexpr float RiverSpeed = 800.f;   // cm/s, its front down the island
     static constexpr float WaterDepth = 24.f;    // cm over the slabs
 private:
@@ -117,6 +144,11 @@ private:
     void TickRiver(float Dt, AChuckCharacter* Chuck);
     void UpdateRiverMesh();
     void TickSweep(float Dt, AChuckCharacter* Chuck);
+    void TickSurge(float Dt, AChuckCharacter* Chuck);
+    void UpdateFloodMesh();
+    void BeginSweep(AChuckCharacter* Chuck, bool bBySurge);
+    /** The surge's front (local Y) at a clock. */
+    float SurgeFrontAt(float At) const;
     void PlayAt(USoundBase* Sound, const FVector& Local, float Volume, float Pitch = 1.f);
     int32 SlabIndexAt(float X, float Y) const;
     /** One of the battle (a hero, the fiend, a lemure) stands on it: it holds. */
@@ -130,6 +162,7 @@ private:
     UPROPERTY() APhlegethosSetting* Setting = nullptr;
     UPROPERTY() UProceduralMeshComponent* Void = nullptr;
     UPROPERTY() UProceduralMeshComponent* Water = nullptr;
+    UPROPERTY() UProceduralMeshComponent* Flood = nullptr;
     UPROPERTY() UProceduralMeshComponent* TearIn = nullptr;
     UPROPERTY() UProceduralMeshComponent* TearOut = nullptr;
     UPROPERTY() TArray<UPointLightComponent*> Lights;   // 0 the source tear, 1 the swallowing tear, 2 along the river, 3.. the void
@@ -144,8 +177,15 @@ private:
     TArray<FVector> Course;
     TArray<float> CourseS;   // metres along it
     int32 RunFirst = 0, RunLast = 0;
+    // The schedule (clock seconds), fitted to the encounter's track at the start.
+    float AtWave[3] = {Wave1At, Wave2At, Wave3At};
+    float AtRiver = RiverAt, AtCollapse = CollapseAt, SpanCollapse = CollapseSpan, AtSurge = SurgeAt, AtEdge = SurgeAt + SurgeToEnd - EdgeToEnd, AtEnd = SurgeAt + SurgeToEnd;
+    float PlanScale = 1.f, PlanDelay = 0.f, TrackLength = TrackSeconds;
+    double StartMusic = 0, MusicRun = 0;   // the track's place in its loop at the start; how far it has played on since
+    bool bMusicTimed = false, bSurge = false, bSweptBySurge = false, bSeeked = false;
+    float SurgeFront = 1e9f;
     // The sweep.
-    float SweepT = 0.f, SweepSpeed = 0.f, FadeAt = -1.f;
+    float SweepT = 0.f, SweepSpeed = 0.f, FadeAt = -1.f, SweepLen = EarlySweep, SweepFromY = 0.f, SweepEndClock = -1.f, SweepEndMusic = -1.f;
     FVector SweepAt = FVector::ZeroVector;   // local, his capsule's centre
     int32 Starts = 0, Sweeps = 0, SweepEnds = 0, Rearms = 0, PressedFalls = 0, Missing = 0, KeptCells = 0, DeathsIn = 0, HeldFalls = 0;
 };

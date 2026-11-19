@@ -1,4 +1,6 @@
 #include "PhlegethosBleed.h"
+#include "TempleBeholder.h"
+#include "DockGameMode.h"
 #include "PhlegethosSetting.h"
 #include "TempleSanctumBattle.h"
 #include "TempleHero.h"
@@ -282,6 +284,13 @@ void APhlegBleed::Build(APhlegethosSetting* InStage)
         Water->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         UpdateRiverMesh();
         Water->SetVisibility(false);
+        // (2026-11-18) The surge: the river down the whole island as one.
+        Flood = NewObject<UProceduralMeshComponent>(this, TEXT("BleedFlood"));
+        Flood->SetupAttachment(RootComponent); Flood->RegisterComponent();
+        Flood->SetWorldLocation(Origin);
+        Flood->SetMaterial(0, RiverMat); Flood->SetCastShadow(false);
+        Flood->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Flood->SetVisibility(false);
     }
     // ---- The tears: ragged openings standing over the side moats, across the river's line.
     auto MakeTear = [&](const TCHAR* Name, float Y, float Zc, float Rb, float Seed)
@@ -365,7 +374,9 @@ void APhlegBleed::Rearm()
         }
     }
     RiverOpen = 0.f; RiverFront = 1e9f; bTears = false; bCollapse = false; bMoatHeard = false; WaveDone = 0.f;
+    bSurge = false; bSeeked = false; SurgeFront = 1e9f;
     if (Water) Water->SetVisibility(false);
+    if (Flood) Flood->SetVisibility(false);
     for (UProceduralMeshComponent* T : {TearIn, TearOut}) if (T) { T->SetVisibility(false); T->SetWorldScale3D(FVector(.01f)); }
     for (UPointLightComponent* L : Lights) if (L) L->SetIntensity(0.f);
     if (RiverSound) RiverSound->Stop();
@@ -481,6 +492,34 @@ void APhlegBleed::Start(AChuckCharacter* Chuck)
         }
     }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_START at=%s"), *Him.ToString());
+    // (2026-11-18) Its schedule, fitted to the encounter's track: its end the track's next end at least MinRun off; the
+    // surge on the track's last return before it; what comes before the surge scaled to the time there is (a little
+    // faster or slower), any more waited out first (the fight goes on).
+    const ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(GetWorld());
+    double Now = 0; float Len = TrackSeconds;
+    bMusicTimed = ADockGameMode::GetEncounterMusicTime(GetWorld(), Now, &Len) && Len > 30.f;
+    if (!bMusicTimed) { Len = TrackSeconds; Now = B ? FMath::Max(0.0, B->GetEncounterTime()) : 0.0; }
+    // (only its place in its loop is trusted: the count of loops can be one off from its first report)
+    if (bMusicTimed) Now = FMath::Fmod(Now, static_cast<double>(Len));
+    TrackLength = Len; StartMusic = Now; MusicRun = 0;
+    constexpr float MinScale = .65f, MaxScale = 1.25f;   // (the entrance is about 26 s: he is on the island by about 30 s of the track)
+    const double MinRun = SurgeAt * MinScale + SurgeToEnd;
+    const double End = Len * FMath::Max(1.0, FMath::CeilToDouble((Now + MinRun) / Len));
+    AtEnd = static_cast<float>(End - Now); AtEdge = AtEnd - EdgeToEnd; AtSurge = AtEnd - SurgeToEnd;
+    PlanScale = FMath::Clamp(AtSurge / SurgeAt, MinScale, MaxScale);
+    PlanDelay = FMath::Max(0.f, AtSurge - SurgeAt * PlanScale);
+    AtWave[0] = PlanDelay + Wave1At * PlanScale; AtWave[1] = PlanDelay + Wave2At * PlanScale; AtWave[2] = PlanDelay + Wave3At * PlanScale;
+    AtRiver = PlanDelay + RiverAt * PlanScale; AtCollapse = PlanDelay + CollapseAt * PlanScale; SpanCollapse = CollapseSpan * PlanScale;
+    bSweptBySurge = false; bSeeked = false; SweepEndClock = SweepEndMusic = -1.f;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_PLAN music=%d start=%.2f track=%.2f end_in=%.2f scale=%.2f delay=%.2f river=%.1f collapse=%.1f surge=%.2f edge=%.2f"),
+        bMusicTimed ? 1 : 0, Now, Len, AtEnd, PlanScale, PlanDelay, AtRiver, AtCollapse, AtSurge, AtEdge);
+}
+
+float APhlegBleed::SurgeFrontAt(float At) const
+{
+    // Out of the widened tear slowly, then quicker and quicker down the island to the far edge at AtEdge.
+    const float U = FMath::Clamp((At - AtSurge) / FMath::Max(1.f, AtEdge - AtSurge), 0.f, 1.f);
+    return FMath::Lerp(Phleg::IslandY1 + 60.f, Phleg::IslandY0 + 40.f, U * (.55f + .45f * U));
 }
 
 void APhlegBleed::Tick(float Dt)
@@ -502,6 +541,21 @@ void APhlegBleed::Tick(float Dt)
         return;
     }
     Clock += Dt;
+    // (2026-11-18) The clock follows the encounter's track (paused with the game, and steady through a hitch).
+    if (bMusicTimed && !bSeeked)
+    {
+        double M = 0;
+        if (ADockGameMode::GetEncounterMusicTime(GetWorld(), M))
+        {
+            // Its place in its loop, followed on from the start (round its end and on).
+            const double In = FMath::Fmod(M, static_cast<double>(TrackLength));
+            double Step = In - FMath::Fmod(StartMusic + MusicRun, static_cast<double>(TrackLength));
+            if (Step < -TrackLength * .5) Step += TrackLength; else if (Step > TrackLength * .5) Step -= TrackLength;
+            MusicRun += Step;
+            const float Want = static_cast<float>(MusicRun);
+            Clock = FMath::Abs(Want - Clock) > 1.5f ? Want : Clock + (Want - Clock) * FMath::Min(1.f, Dt * 4.f);
+        }
+    }
     // A death in it (into the Astral, the fiend's blows): it goes on (2026-11-17, the user; it used to re-arm). He comes
     // back on the ground by the breach (ArenaRespawn).
     const bool bGoneNow = Stage == EStage::Running && Chuck->IsBodyHidden() && !Chuck->IsCarried();
@@ -510,6 +564,7 @@ void APhlegBleed::Tick(float Dt)
     GatherHolders();
     TickSlabs(Dt, Chuck);
     TickRiver(Dt, Chuck);
+    TickSurge(Dt, Chuck);
     if (Stage == EStage::Swept) TickSweep(Dt, Chuck);
 }
 
@@ -540,8 +595,8 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
         if (USoundBase* S = Sounds[SndRumble]) UGameplayStatics::PlaySound2D(this, S, .45f, .5f);
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_WAVE %d slabs=%d"), Index, N);
     };
-    Wave(Wave1At, 1); Wave(Wave2At, 2); Wave(Wave3At, 3);
-    if (!bCollapse && Clock >= CollapseAt)
+    Wave(AtWave[0], 1); Wave(AtWave[1], 2); Wave(AtWave[2], 3);
+    if (!bCollapse && Clock >= AtCollapse)
     {
         bCollapse = true;
         // What is left of the island falls in from its far ends toward him.
@@ -552,7 +607,7 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
         {
             if (S.Zone != EZone::Land || S.State != ESlab::Whole) continue;
             const float D = static_cast<float>(FMath::Abs(S.Centre.Y - Him.Y) + .5f * FMath::Abs(S.Centre.X - Him.X));
-            S.CollapseDue = CollapseAt + CollapseSpan * (1.f - D / Far); ++N;   // (cracked when due, if no one of the battle stands on it)
+            S.CollapseDue = AtCollapse + SpanCollapse * (1.f - D / Far); ++N;   // (cracked when due, if no one of the battle stands on it)
         }
         if (USoundBase* S = Sounds[SndRumble]) UGameplayStatics::PlaySound2D(this, S, .6f, .42f);
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_COLLAPSE slabs=%d"), N);
@@ -611,7 +666,7 @@ void APhlegBleed::TickSlabs(float Dt, AChuckCharacter* Chuck)
 void APhlegBleed::TickRiver(float Dt, AChuckCharacter* Chuck)
 {
     using namespace Phleg;
-    if (Clock < RiverAt) return;
+    if (Clock < AtRiver) return;
     if (!bTears)
     {
         bTears = true;
@@ -622,10 +677,10 @@ void APhlegBleed::TickRiver(float Dt, AChuckCharacter* Chuck)
         if (RiverSound) { RiverSound->Play(); RiverSound->SetVolumeMultiplier(0.f); }
         UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_RIVER open"));
     }
-    const float T = Clock - RiverAt;
+    const float T = Clock - AtRiver;
     // The tears open over a second (the far one a little later), the water out of the first after it.
     const float OpenIn = BleedEase(T / 1.1f), OpenOut = BleedEase((T - .5f) / 1.1f);
-    if (TearIn) TearIn->SetWorldScale3D(FVector(FMath::Max(.01f, OpenIn)));
+    if (TearIn && !bSurge) TearIn->SetWorldScale3D(FVector(FMath::Max(.01f, OpenIn)));
     if (TearOut) TearOut->SetWorldScale3D(FVector(FMath::Max(.01f, OpenOut)));
     RiverOpen = BleedEase((T - .8f) / .6f);
     const float Run = FMath::Max(0.f, T - 1.2f) * RiverSpeed;
@@ -654,21 +709,7 @@ void APhlegBleed::TickRiver(float Dt, AChuckCharacter* Chuck)
     {
         const FVector F = PhlegLocal(Chuck->GetActorLocation()) - FVector(0, 0, Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
         const bool bIn = F.X > RiverX0 - 12.f && F.X < RiverX1 + 12.f && F.Y < IslandY1 + 40.f && F.Y > RiverFront - 20.f && F.Z < GetWaterZ() + 22.f && F.Z > FortressTop - 120.f;
-        if (bIn)
-        {
-            Stage = EStage::Swept; SweepT = 0.f; FadeAt = -1.f; ++Sweeps;
-            SweepSpeed = FMath::Max(200.f, static_cast<float>(Chuck->GetVelocity().Size2D()) * .5f);
-            SweepAt = PhlegLocal(Chuck->GetActorLocation());
-            Chuck->BeginCarried();
-            PlayAt(Sounds[FMath::RandBool() ? SndSplash0 : SndSplash1], F, 1.f, .8f);
-            if (auto* PC = Cast<APlayerController>(Chuck->GetController()); PC && SweepCam)
-            {
-                const FVector Eye0 = Chuck->GetActorLocation() + FVector(120, 290, 140);
-                SweepCam->SetActorLocationAndRotation(Eye0, (Chuck->GetActorLocation() - Eye0).Rotation());
-                PC->SetViewTargetWithBlend(SweepCam, .45f);
-            }
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SWEPT at=%s clock=%.1f"), *F.ToString(), Clock);
-        }
+        if (bIn) BeginSweep(Chuck, false);
     }
 }
 
@@ -734,18 +775,165 @@ void APhlegBleed::UpdateRiverMesh()
     else Water->UpdateMeshSection(0, M.V, M.N, M.UV, M.C, M.Tan);
 }
 
+void APhlegBleed::BeginSweep(AChuckCharacter* Chuck, bool bBySurge)
+{
+    using namespace Phleg;
+    Stage = EStage::Swept; SweepT = 0.f; FadeAt = -1.f; ++Sweeps; bSweptBySurge = bBySurge;
+    SweepSpeed = FMath::Max(200.f, static_cast<float>(Chuck->GetVelocity().Size2D()) * .5f);
+    SweepAt = PhlegLocal(Chuck->GetActorLocation()); SweepFromY = static_cast<float>(SweepAt.Y);
+    const FVector F = SweepAt - FVector(0, 0, Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    // (2026-11-18) How long to the far tear's lip: to AtEdge, the track's fall, when that is a fair ride off (the surge
+    // carries him on its front to it); else EarlySweep, and the track brought to its end with him.
+    const float Left = AtEdge - Clock;
+    bSeeked = false;
+    if (!bBySurge && (Left < 3.5f || Left > 13.f))
+    {
+        SweepLen = EarlySweep;
+        if (bMusicTimed)
+        {
+            bSeeked = true;
+            constexpr float Dip = .5f;
+            ADockGameMode::SeekEncounterMusic(GetWorld(), TrackLength - EdgeToEnd - SweepLen + Dip, Dip);
+        }
+    }
+    else SweepLen = FMath::Max(1.f, Left);
+    Chuck->BeginCarried();
+    PlayAt(Sounds[FMath::RandBool() ? SndSplash0 : SndSplash1], F, 1.f, .8f);
+    if (auto* PC = Cast<APlayerController>(Chuck->GetController()); PC && SweepCam)
+    {
+        const FVector Eye0 = Chuck->GetActorLocation() + FVector(120, 290, 140);
+        SweepCam->SetActorLocationAndRotation(Eye0, (Chuck->GetActorLocation() - Eye0).Rotation());
+        PC->SetViewTargetWithBlend(SweepCam, .45f);
+    }
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SWEPT at=%s clock=%.1f by=%s ride=%.2f seek=%d"), *F.ToString(), Clock, bBySurge ? TEXT("surge") : TEXT("river"), SweepLen, bSeeked ? 1 : 0);
+}
+
+void APhlegBleed::TickSurge(float Dt, AChuckCharacter* Chuck)
+{
+    using namespace Phleg;
+    if (Stage == EStage::Waiting || Clock < AtSurge) return;
+    if (!bSurge)
+    {
+        bSurge = true;
+        // The source tear tears wide, a roar of water, the ground shaken; the river comes down the whole island.
+        if (TearIn) TearIn->SetVisibility(true);
+        if (Flood) Flood->SetVisibility(true);
+        PlayAt(Sounds[SndTear], FVector(BleedRiverXc, BleedTearInY, GetWaterZ() + 150.f), 1.f, .42f);
+        PlayAt(Sounds[SndSplash0], FVector((IslandX0 + IslandX1) * .5f, IslandY1, GetWaterZ()), 1.f, .55f);
+        if (USoundBase* S = Sounds[SndRumble]) UGameplayStatics::PlaySound2D(this, S, .8f, .38f);
+        BeholderShake(GetWorld(), PhlegWorld(FVector((IslandX0 + IslandX1) * .5f, IslandY1, FortressTop)), .55f, 9000.f, 1);
+        if (RiverSound) { if (!RiverSound->IsPlaying()) RiverSound->Play(); }
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SURGE clock=%.2f edge=%.2f"), Clock, AtEdge);
+    }
+    const float T = Clock - AtSurge;
+    SurgeFront = SurgeFrontAt(Clock);
+    const float Wide = 1.f + 1.7f * BleedEase(T / 1.6f);
+    if (TearIn) TearIn->SetWorldScale3D(FVector(Wide, 1.f, FMath::Lerp(1.f, 1.6f, BleedEase(T / 1.6f))));
+    if (Lights.Num() > 2)
+    {
+        if (Lights[0]) Lights[0]->SetIntensity(80.f * (.9f + .1f * FMath::Sin(Clock * 6.1f)));
+        if (Lights[2])
+        {
+            Lights[2]->SetWorldLocation(PhlegWorld(FVector((IslandX0 + IslandX1) * .5f, SurgeFront + 250.f, GetWaterZ() + 160.f)));
+            Lights[2]->SetAttenuationRadius(2200.f); Lights[2]->SetIntensity(30.f);
+        }
+    }
+    if (RiverSound)
+    {
+        const FVector Him = PhlegLocal(Chuck->GetActorLocation());
+        RiverSound->SetWorldLocation(PhlegWorld(FVector(FMath::Clamp(static_cast<float>(Him.X), IslandX0, IslandX1), FMath::Max(static_cast<float>(Him.Y), SurgeFront), GetWaterZ())));
+        RiverSound->SetVolumeMultiplier(1.6f);
+    }
+    UpdateFloodMesh();
+    // Behind its front it is everywhere: he is taken wherever he stands (back from a death too, on the kept ground).
+    if (Stage == EStage::Running && !Chuck->IsAstral() && !Chuck->IsBodyHidden())
+    {
+        const FVector F = PhlegLocal(Chuck->GetActorLocation()) - FVector(0, 0, Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+        const bool bIn = F.X > IslandX0 - 30.f && F.X < IslandX1 + 30.f && F.Y > SurgeFront - 30.f && F.Y < IslandY1 + 60.f && F.Z < GetWaterZ() + 60.f && F.Z > FortressTop - 120.f;
+        if (bIn) BeginSweep(Chuck, true);
+    }
+}
+
+void APhlegBleed::UpdateFloodMesh()
+{
+    using namespace Phleg;
+    if (!Flood) return;
+    // A sheet of the river over the island behind the front, a foaming crest at the front and a face down to the ground;
+    // sides falling to the moats; open over the breach.
+    const float Wz = GetWaterZ(), Front = SurgeFront, Tm = Clock;
+    constexpr int32 Across = 14;
+    TArray<float> Ds = {0.f, 18.f, 45.f, 85.f, 140.f, 220.f, 320.f};
+    for (float D = 440.f; Front + D < IslandY1 + 60.f; D += 120.f) Ds.Add(D);
+    Ds.Add(IslandY1 + 60.f - Front);
+    FBleedMesh M;
+    const int32 Rows = Ds.Num();
+    for (int32 K = 0; K < Rows; ++K)
+    {
+        const float D = FMath::Max(0.f, Ds[K]);
+        const float Y = Front + D;
+        const float Crest = D < 1.f ? 48.f : 66.f * FMath::Exp(-D / 150.f);
+        const float Foam = FMath::Clamp(1.f - D / 260.f, .3f, 1.f);
+        for (int32 A = 0; A <= Across; ++A)
+        {
+            const float U = float(A) / Across;
+            const float X = FMath::Lerp(IslandX0, IslandX1, U);
+            const float Wave = 3.f * FMath::Sin(.011f * Y - 7.5f * Tm + 1.7f * U) + 1.6f * FMath::Sin(.027f * X + .019f * Y - 10.f * Tm);
+            M.Vert(FVector(X, Y, Wz + 6.f + Crest + Wave), FVector::UpVector, FVector2D((X - IslandX0) / 200.f, (IslandY1 - Y) / 100.f), FColor(uint8(255 * Foam), 255, 0, 255));
+        }
+    }
+    for (int32 K = 0; K + 1 < Rows; ++K)
+        for (int32 A = 0; A < Across; ++A)
+        {
+            const int32 I = K * (Across + 1) + A;
+            const float Cx = (M.V[I].X + M.V[I + 1].X) * .5f, Cy = (M.V[I].Y + M.V[I + Across + 1].Y) * .5f;
+            if (BreachInside(Cx, Cy) > -40.f) continue;   // (it pours into the breach)
+            M.Quad(I, I + 1, I + Across + 2, I + Across + 1, FVector::UpVector);
+        }
+    // The front's face, leaning forward down to the ground; the sides down past the island's edge.
+    const int32 Top = M.V.Num();
+    for (int32 A = 0; A <= Across; ++A)
+    {
+        const FVector P = M.V[A];
+        M.Vert(P, FVector(0, -1, 0), FVector2D(P.X / 200.f, 0.f), FColor(255, 255, 0, 255));
+        M.Vert(FVector(P.X, P.Y - 35.f, FortressTop - 4.f), FVector(0, -1, 0), FVector2D(P.X / 200.f, .7f), FColor(255, 255, 0, 255));
+    }
+    for (int32 A = 0; A < Across; ++A) M.Quad(Top + A * 2, Top + A * 2 + 2, Top + A * 2 + 3, Top + A * 2 + 1, FVector(0, -1, 0));
+    for (int32 Sd = 0; Sd < 2; ++Sd)
+    {
+        const int32 Base = M.V.Num();
+        for (int32 K = 0; K < Rows; ++K)
+        {
+            const FVector P = M.V[K * (Across + 1) + (Sd ? Across : 0)];
+            const FVector Out(Sd ? 1 : -1, 0, 0);
+            M.Vert(P, Out, FVector2D((IslandY1 - P.Y) / 100.f, 0.f), FColor(150, 255, 0, 255));
+            M.Vert(FVector(P.X + Out.X * 30.f, P.Y, FortressTop - 140.f), Out, FVector2D((IslandY1 - P.Y) / 100.f, 1.2f), FColor(150, 255, 0, 255));
+        }
+        for (int32 K = 0; K + 1 < Rows; ++K) M.Quad(Base + K * 2, Base + K * 2 + 2, Base + K * 2 + 3, Base + K * 2 + 1, FVector(Sd ? 1 : -1, 0, 0));
+    }
+    Flood->ClearMeshSection(0);
+    Flood->CreateMeshSection(0, M.V, M.T, M.N, M.UV, M.C, M.Tan, false);
+}
+
 void APhlegBleed::TickSweep(float Dt, AChuckCharacter* Chuck)
 {
     using namespace Phleg;
     SweepT += Dt;
     const float Wz = GetWaterZ();
     const float Half = Chuck->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-    SweepSpeed = FMath::Min(SweepSpeed + 420.f * Dt, FMath::Min(650.f, RiverSpeed - 50.f));
-    // Down the current toward the far tear, drawn to its middle, rolled and turned by it.
-    SweepAt.Y -= SweepSpeed * Dt;
+    // Down the current toward the far tear, drawn to its middle, rolled and turned by it: on the surge's front, or paced to
+    // reach the lip in SweepLen (2026-11-18, the track's fall); past the lip, down into the tear.
+    const float Lip = IslandY0 + 40.f;
+    if (SweepAt.Y > Lip)
+    {
+        if (bSweptBySurge) SweepAt.Y = FMath::Min(static_cast<float>(SweepAt.Y), FMath::Max(SurgeFrontAt(Clock) - 70.f, Lip - 1.f));
+        else { const float U = FMath::Clamp(SweepT / SweepLen, 0.f, 1.f); SweepAt.Y = FMath::Max(FMath::Lerp(SweepFromY, Lip - 1.f, U * (.6f + .4f * U)), Lip - 1.f); }
+    }
+    else SweepAt.Y -= 260.f * Dt;
     SweepAt.X = FMath::FInterpTo(SweepAt.X, BleedRiverXc + 60.f * FMath::Sin(SweepT * 1.7f), Dt, 2.2f);
     float Z = Wz + Half - 30.f + 5.f * FMath::Sin(SweepT * 6.3f);
-    if (SweepAt.Y < IslandY0 + 40.f)
+    // (on the surge he rides its crest, not under it: UpdateFloodMesh's height where he is)
+    if (bSweptBySurge && bSurge && SweepAt.Y > Lip) Z += 6.f + 66.f * FMath::Exp(-FMath::Max(0.f, static_cast<float>(SweepAt.Y) - SurgeFront) / 150.f);
+    if (SweepAt.Y < Lip)
     {
         // Over the edge and down into the tear.
         const float U = FMath::Clamp((IslandY0 + 40.f - SweepAt.Y) / (IslandY0 + 40.f - BleedTearOutY), 0.f, 1.f);
@@ -764,17 +952,22 @@ void APhlegBleed::TickSweep(float Dt, AChuckCharacter* Chuck)
     {
         // Upstream of him and above, watching him go; it stops at the island's edge and watches him into the tear.
         const FVector Him = PhlegWorld(SweepAt);
-        const FVector WantEye = PhlegWorld(FVector(BleedRiverXc + 120.f, FMath::Max(static_cast<float>(SweepAt.Y) + 290.f, IslandY0 + 260.f), Wz + 140.f));
+        const FVector WantEye = PhlegWorld(FVector(SweepAt.X + 120.f, FMath::Max(static_cast<float>(SweepAt.Y) + 290.f, IslandY0 + 260.f), Wz + (bSweptBySurge ? 230.f : 140.f)));
         const FVector Eye = FMath::VInterpTo(SweepCam->GetActorLocation(), WantEye, Dt, 9.f);
         SweepCam->SetActorLocationAndRotation(Eye, (Him - Eye).Rotation());
     }
-    if (FadeAt >= 0.f && SweepT - FadeAt > 1.25f)
+    // (dark from the lip as the track falls away; gone as it ends)
+    if (FadeAt >= 0.f && SweepT - FadeAt > EdgeToEnd)
     {
         // Into the tear, gone. (The river cutscene and the Feywild are later slices: back to the forecourt's checkpoint.)
         if (auto* PC = Cast<APlayerController>(Chuck->GetController())) PC->SetViewTarget(Chuck);
         Chuck->EndCarried();
         ++SweepEnds;
-        UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SWEEP_END seconds=%.1f"), SweepT);
+        SweepEndClock = Clock; SweepEndMusic = -1.f;
+        double M = 0; float Len = TrackLength;
+        if (ADockGameMode::GetEncounterMusicTime(GetWorld(), M, &Len) && Len > 0.f) SweepEndMusic = static_cast<float>(FMath::Fmod(M, static_cast<double>(Len)));
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_PHLEG_BLEED_SWEEP_END seconds=%.1f by=%s clock=%.2f end_at=%.2f music_loop=%.2f track=%.2f"), SweepT, bSweptBySurge ? TEXT("surge") : TEXT("river"),
+            Clock, AtEnd, SweepEndMusic, Len);
         Rearm();
     }
 }

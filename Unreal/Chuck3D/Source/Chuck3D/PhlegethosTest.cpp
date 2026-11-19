@@ -134,7 +134,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         if (Run->Trial != int32(ET::Stills) && Run->Trial != int32(ET::LakeHops) && Run->Trial != int32(ET::BusStop) && Run->Trial != int32(ET::Bleed) && Run->Sub >= 0 && Deaths > 0 && Now - Run->At > .3f) { Next(false, FString::Printf(TEXT("died=1 sub=%d hop=%d %s"), Run->Sub, Run->Hop, *Run->Note)); return; }
         // (The wastes' walk is 155 m: about 70 s at his run; the stills are 13 spawns, 4 s each.)
         const bool bLong = Run->Trial == int32(ET::Approach) || Run->Trial == int32(ET::Stills) || Run->Trial == int32(ET::Hills) || Run->Trial == int32(ET::Trio) || Run->Trial == int32(ET::Bleed);
-        if (Now - Run->TrialStart > (bLong ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
+        if (Now - Run->TrialStart > (Run->Trial == int32(ET::Bleed) ? 180.f : bLong ? 130.f : 75.f)) { Next(false, FString::Printf(TEXT("timeout=1 sub=%d hop=%d gait=%s"), Run->Sub, Run->Hop, Chuck->GetGaitName())); return; }
         switch (ET(Run->Trial))
         {
         case ET::Stills:
@@ -657,10 +657,13 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             if (Run->Sub == 2)
             {
-                if (S > 1.6f && !Run->Note.Contains(TEXT("wide"))) { Shot(TEXT("Trio_Entrance_Wide")); Run->Note += TEXT("wide "); }
-                if (S > 3.2f && !Run->Note.Contains(TEXT("smash"))) { Shot(TEXT("Trio_Entrance_Smash")); Run->Note += TEXT("smash "); }
-                if (S > 6.5f && !Run->Note.Contains(TEXT("wizard"))) { Shot(TEXT("Trio_Entrance_Wizard")); Run->Note += TEXT("wizard "); }
-                if (S > 10.5f && !Run->Note.Contains(TEXT("ranger"))) { Shot(TEXT("Trio_Entrance_Ranger")); Run->Note += TEXT("ranger "); }
+                // (2026-11-18: the fiend's line first and last, the trio's between, on their takes' lengths: about 26 s)
+                if (S > 2.6f && !Run->Note.Contains(TEXT("fiendfirst"))) { Shot(TEXT("Trio_Entrance_Fiend")); Run->Note += TEXT("fiendfirst "); }
+                if (S > 6.6f && !Run->Note.Contains(TEXT("wide"))) { Shot(TEXT("Trio_Entrance_Wide")); Run->Note += TEXT("wide "); }
+                if (S > 8.2f && !Run->Note.Contains(TEXT("smash"))) { Shot(TEXT("Trio_Entrance_Smash")); Run->Note += TEXT("smash "); }
+                if (S > 11.8f && !Run->Note.Contains(TEXT("wizard"))) { Shot(TEXT("Trio_Entrance_Wizard")); Run->Note += TEXT("wizard "); }
+                if (S > 16.f && !Run->Note.Contains(TEXT("ranger"))) { Shot(TEXT("Trio_Entrance_Ranger")); Run->Note += TEXT("ranger "); }
+                if (S > 21.5f && !Run->Note.Contains(TEXT("fiendlast"))) { Shot(TEXT("Trio_Entrance_FiendLast")); Run->Note += TEXT("fiendlast "); }
                 if (!B->IsFortressScenePlaying())
                 {
                     Run->Sub = 3; Run->At = Now; Run->Note += FString::Printf(TEXT("scene=%.1f lines=%d "), S, B->GetFortressLinesSpoken());
@@ -668,7 +671,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     if (F) Chuck->SetActorRotation(FRotator(0, (F->GetActorLocation() - Chuck->GetActorLocation()).Rotation().Yaw - 12.f, 0));
                     Chuck->Recenter(); Chuck->SetOrbitPitch(4);
                 }
-                else if (S > 20.f) Next(false, TEXT("scene_stuck=1"));
+                else if (S > 34.f) Next(false, TEXT("scene_stuck=1"));
                 break;
             }
             // Watching from the forecourt's edge (his own camera) while the battle goes on.
@@ -691,7 +694,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             if (S < 60.f) break;
             const FVector Fl = F ? PhlegLocal(F->GetActorLocation()) : FVector::ZeroVector;
             const float InBreach = F ? BreachInside(Fl.X, Fl.Y) : 0.f;
-            const bool bPass = B->GetFortressEntrances() == Run->Chains0 + 1 && B->GetFortressLinesSpoken() == 3 && B->GetFiendArrows() > 0 && B->GetFiendBolts() > 0
+            const bool bPass = B->GetFortressEntrances() == Run->Chains0 + 1 && B->GetFortressLinesSpoken() == 5 && B->GetFiendArrows() > 0 && B->GetFiendBolts() > 0
                 && F && F->GetSmashes() > 0 && F->GetHurls() > 0 && B->GetFireBursts() > 0 && B->GetFallen() > 0 && InBreach < -100.f;
             Next(bPass, FString::Printf(TEXT("%sleaps=%d sweeps=%d buffets=%d arrows=%d bolts=%d cuts=%d smashes=%d hurls=%d bursts=%d fire_hits=%d fire_dodges=%d smash_dodges=%d fallen=%d roars=%d hero_blows=%d breach=%.0f heroes_hit=%d/%d/%d"),
                 *Run->Note, F ? F->GetLeaps() : 0, F ? F->GetMaceSweeps() : 0, F ? F->GetBuffets() : 0, B->GetFiendArrows(), B->GetFiendBolts(), B->GetFiendCuts(), F ? F->GetSmashes() : 0, F ? F->GetHurls() : 0, B->GetFireBursts(), B->GetFireHeroHits(),
@@ -747,9 +750,11 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         case ET::Bleed:
         {
             // (2026-11-17) The Feywild bleedthrough: on the island after the trio's entrance, standing on the river's columns
-            // while the moat and the waves fall (they never fall there); onto a whole slab before the river comes; in the
-            // collapse, his slab cracks under him and he goes into the river: swept down it into the far tear, and back at
-            // the forecourt's checkpoint with it all re-armed.
+            // while the moat and the waves fall (they never fall there); into the moat behind him (a death that does not
+            // re-arm it); onto a whole slab before the river comes. (2026-11-18) Then onto the ground by the breach that holds,
+            // the one place the collapse leaves: the surge comes down the whole island and takes him there,
+            // into the far tear as the encounter's track falls away, gone as it ends; back at the forecourt's checkpoint with
+            // it all re-armed.
             ATempleSanctumBattle* B = ATempleSanctumBattle::GetFortress(World);
             APhlegBleed* Bl = APhlegBleed::Get(World);
             if (!B || !Bl) { Next(false, TEXT("no_bleed=1")); break; }
@@ -788,11 +793,11 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     Run->Sub = 7; Run->At = Now;   // (2026-11-17: into the moat behind him: a death that does not re-arm it)
                 }
                 if (Cl > 7.f && Once(TEXT("faceneg"))) Face(-90.f, -14.f);
-                if (Cl > APhlegBleed::Wave1At + 2.5f && Once(TEXT("w1shot"))) Shot(TEXT("Bleed_Wave1"));
-                if (Cl > APhlegBleed::Wave2At - 1.f && Once(TEXT("facepos"))) Face(90.f, -14.f);
-                if (Cl > APhlegBleed::Wave2At + 2.5f && Once(TEXT("w2shot"))) Shot(TEXT("Bleed_Wave2"));
-                if (Cl > APhlegBleed::Wave3At + 2.f && Once(TEXT("w3shot"))) Shot(TEXT("Bleed_Wave3"));
-                if (Cl > APhlegBleed::RiverAt - 4.5f)
+                if (Cl > Bl->GetWaveAt(0) + 2.5f && Once(TEXT("w1shot"))) Shot(TEXT("Bleed_Wave1"));
+                if (Cl > Bl->GetWaveAt(1) - 1.f && Once(TEXT("facepos"))) Face(90.f, -14.f);
+                if (Cl > Bl->GetWaveAt(1) + 2.5f && Once(TEXT("w2shot"))) Shot(TEXT("Bleed_Wave2"));
+                if (Cl > Bl->GetWaveAt(2) + 2.f && Once(TEXT("w3shot"))) Shot(TEXT("Bleed_Wave3"));
+                if (Cl > Bl->GetRiverAt() - 4.5f)
                 {
                     Run->Note += FString::Printf(TEXT("land_fallen=%d "), Bl->GetFallen(APhlegBleed::EZone::Land));
                     FVector W;
@@ -803,7 +808,7 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 break;
             }
             // (2026-11-17: knocked into the river early by the battle - the lemures, a gust - it is the same sweep)
-            if (Run->Sub >= 2 && Run->Sub <= 4 && Bl->GetStage() == APhlegBleed::EStage::Swept) { Run->Note += FString::Printf(TEXT("swept_early=%.1f "), Cl); Run->Sub = 5; Run->At = Now; break; }
+            if (Run->Sub >= 2 && Run->Sub <= 4 && Bl->GetStage() == APhlegBleed::EStage::Swept && !Bl->WasSweptBySurge()) { Run->Note += FString::Printf(TEXT("swept_early=%.1f "), Cl); Run->Sub = 5; Run->At = Now; break; }
             if (Run->Sub == 7)
             {
                 // Back over the edge into the moat: an Astral death; back on the kept ground by the breach, the moat still gone.
@@ -831,34 +836,50 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             {
                 const float Wx = FieldX0 + FieldColW * (RiverCol1 + 1.5f), Wy = static_cast<float>(Run->Hop);
                 if (FMath::Abs(P.X - Wx) > 30.f || FMath::Abs(P.Y - Wy) > 40.f) Toward(Wx, Wy); else Stop();
-                if (Cl > APhlegBleed::RiverAt + 1.6f && Once(TEXT("faceriver"))) Face(70.f, -8.f);
-                if (Cl > APhlegBleed::RiverAt + 2.2f && Once(TEXT("rivershot0"))) Shot(TEXT("Bleed_River_Open"));
-                if (Cl > APhlegBleed::RiverAt + 4.5f && Once(TEXT("faceriver2"))) Face(-60.f, -10.f);
-                if (Cl > APhlegBleed::RiverAt + 5.5f && Once(TEXT("rivershot1"))) Shot(TEXT("Bleed_River"));
-                if (Cl > APhlegBleed::CollapseAt - 1.f && Once(TEXT("facecollapse"))) Face(160.f, -16.f);
-                if (Cl > APhlegBleed::CollapseAt + .3f)
+                if (Cl > Bl->GetRiverAt() + 1.6f && Once(TEXT("faceriver"))) Face(70.f, -8.f);
+                if (Cl > Bl->GetRiverAt() + 2.2f && Once(TEXT("rivershot0"))) Shot(TEXT("Bleed_River_Open"));
+                if (Cl > Bl->GetRiverAt() + 4.5f && Once(TEXT("faceriver2"))) Face(-60.f, -10.f);
+                if (Cl > Bl->GetRiverAt() + 5.5f && Once(TEXT("rivershot1"))) Shot(TEXT("Bleed_River"));
+                if (Cl > Bl->GetRiverAt() + 2.6f)
                 {
-                    const int32 Under = Bl->SlabStateAt(P.X, P.Y);
-                    Run->Note += FString::Printf(TEXT("collapse_under=%d front=%.0f "), Under, Bl->GetRiverFront());
-                    Shot(TEXT("Bleed_Collapse"));
+                    // (2026-11-18) Onto the ground by the breach that holds, its side away from the river (set there: the waves
+                    // have opened the way to it, and by the river the battle knocks him in); the surge is to take him even there.
+                    FVector2D Best(-1e9f, 0.f);
+                    for (float X = IslandX1 - 100.f; X > IslandX0 + 300.f && Best.X < -1e8f; X -= 25.f)
+                        for (float Y = BreachY - 1200.f; Y < BreachY + 1200.f; Y += 25.f)
+                            if (FieldKept(FieldColAt(X), FieldRowAt(Y)) && BreachInside(X, Y) < -120.f && OnIsland(X, Y)) { Best = FVector2D(X, Y); break; }
+                    if (Best.X < -1e8f) { const FVector R = Bl->GetRespawnLocal(); Best = FVector2D(R.X, R.Y); }
+                    Run->Note += FString::Printf(TEXT("kept_at=(%.0f,%.0f) "), Best.X, Best.Y);
+                    Place(static_cast<float>(Best.X), static_cast<float>(Best.Y), FortressTop, 90.f);
                     Run->Sub = 4; Run->At = Now;
                 }
                 break;
             }
             if (Run->Sub == 4)
             {
-                // Into the water.
-                Toward(Rx + 80.f, P.Y);
-                if (Bl->GetStage() == APhlegBleed::EStage::Swept) { Run->Sub = 5; Run->At = Now; Run->Note += FString::Printf(TEXT("swept_after=%.2f "), T); }
-                else if (T > 6.f) Next(false, Run->Note + TEXT("not_swept=1"));
+                Stop();
+                if (Cl > Bl->GetCollapseAt() + 2.f && Once(TEXT("collapseshot"))) { Face(150.f, -16.f); Shot(TEXT("Bleed_Collapse")); }
+                if (Cl > Bl->GetSurgeAt() - 1.5f && Once(TEXT("facesurge"))) Face(90.f, -6.f);
+                if (Bl->IsSurging() && Cl > Bl->GetSurgeAt() + 1.f && Once(TEXT("surgeshot0"))) Shot(TEXT("Bleed_Surge_0"));
+                if (Bl->IsSurging() && Cl > Bl->GetSurgeAt() + 2.6f && Once(TEXT("surgeshot1"))) Shot(TEXT("Bleed_Surge_1"));
+                if (Bl->GetStage() == APhlegBleed::EStage::Swept)
+                {
+                    Run->Sub = 5; Run->At = Now;
+                    Run->Note += FString::Printf(TEXT("swept_by=%s swept_at=%.2f surge=%.2f edge=%.2f "), Bl->WasSweptBySurge() ? TEXT("surge") : TEXT("river"), Cl, Bl->GetSurgeAt(), Bl->GetEdgeAt());
+                }
+                else if (Cl > Bl->GetEdgeAt() + 4.f) Next(false, Run->Note + TEXT("not_swept=1"));
                 break;
             }
             if (Run->Sub == 5)
             {
                 Stop();
-                for (int32 K = 0; K < 3; ++K) if (T > .7f + K * 1.1f && Once(FString::Printf(TEXT("sweptshot%d"), K))) Shot(FString::Printf(TEXT("Bleed_Swept_%d"), K));
-                if (Bl->GetSweepEnds() > 0) { Run->Sub = 6; Run->At = Now; Run->Note += FString::Printf(TEXT("sweep_s=%.1f "), T); }
-                else if (T > 14.f) Next(false, Run->Note + TEXT("sweep_stuck=1"));
+                for (int32 K = 0; K < 4; ++K) if (T > .7f + K * 2.4f && Once(FString::Printf(TEXT("sweptshot%d"), K))) Shot(FString::Printf(TEXT("Bleed_Swept_%d"), K));
+                if (Bl->GetSweepEnds() > 0)
+                {
+                    Run->Sub = 6; Run->At = Now;
+                    Run->Note += FString::Printf(TEXT("sweep_s=%.1f end_clock=%.2f end_at=%.2f music=%d music_loop=%.2f "), T, Bl->GetSweepEndClock(), Bl->GetEndAt(), Bl->IsMusicTimed() ? 1 : 0, Bl->GetSweepEndMusic());
+                }
+                else if (T > 22.f) Next(false, Run->Note + TEXT("sweep_stuck=1"));
                 break;
             }
             if (Run->Sub == 6)
@@ -868,9 +889,18 @@ void ReviewPhlegethos(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const bool bMoat = Run->Note.Contains(FString::Printf(TEXT("moat=%d/%d/%d"), FieldRows * MoatCols, (FieldCols - MoatCols - MoatFrontCols) * 2 * MoatRows, FieldRows * MoatFrontCols));
                 int32 LandFallen = 0; { const int32 I = Run->Note.Find(TEXT("land_fallen=")); if (I >= 0) LandFallen = FCString::Atoi(*Run->Note.Mid(I + 12)); }
                 // (2026-11-17: one death in it, which did not re-arm it; back at the forecourt's checkpoint, before the field)
-                const bool bPass = bMoat && LandFallen >= 15 && Bl->GetSweeps() == 1 && Bl->GetSweepEnds() == 1 && Bl->GetRearms() >= 1 && Deaths >= 1
-                    && Run->Note.Contains(TEXT("death_kept=1")) && P.X < FieldX0 && Bl->GetMissing() == 0 && Bl->GetSlabCount() + Bl->GetKeptCells() == FieldCols * FieldRows;
-                Next(bPass, Run->Note + FString::Printf(TEXT("starts=%d rearms=%d pressed=%d held=%d kept=%d at_return=%s"), Bl->GetStarts(), Bl->GetRearms(), Bl->GetPressedFalls(), Bl->GetHeldFalls(), Bl->GetKeptCells(), *P.ToString()));
+                // (2026-11-18: taken by the surge on the kept ground, after the fiend's line; gone as the track ends - its place
+                // then within .8 s of its end - and on the fitted clock within .6 s of the plan. Knocked into the river early by
+                // the battle, the track is brought to its end with him instead.)
+                const float Ml = Bl->GetSweepEndMusic();
+                const bool bEarly = Run->Note.Contains(TEXT("swept_early"));
+                const bool bTrackEnd = !Bl->IsMusicTimed() || (Ml >= 0.f && (Ml > APhlegBleed::TrackSeconds - .8f || Ml < .8f));
+                const bool bOnPlan = bEarly || (Bl->WasSweptBySurge() && FMath::Abs(Bl->GetSweepEndClock() - Bl->GetEndAt()) < .6f);
+                const bool bPass = bMoat && LandFallen >= 15 && Bl->GetSweeps() == 1 && Bl->GetSweepEnds() == 1 && Bl->GetRearms() >= 1 && Bl->GetDeathsIn() >= 1   // (its own count: placing him resets the trial's)
+                    && Run->Note.Contains(TEXT("death_kept=1")) && P.X < FieldX0 && Bl->GetMissing() == 0 && Bl->GetSlabCount() + Bl->GetKeptCells() == FieldCols * FieldRows
+                    && bTrackEnd && bOnPlan;
+                Next(bPass, Run->Note + FString::Printf(TEXT("starts=%d rearms=%d pressed=%d held=%d kept=%d track_end=%d on_plan=%d at_return=%s"), Bl->GetStarts(), Bl->GetRearms(),
+                    Bl->GetPressedFalls(), Bl->GetHeldFalls(), Bl->GetKeptCells(), bTrackEnd ? 1 : 0, bOnPlan ? 1 : 0, *P.ToString()));
             }
             break;
         }

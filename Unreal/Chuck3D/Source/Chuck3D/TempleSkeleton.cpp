@@ -500,7 +500,12 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     const bool bLocoState = State == EState::Chase || State == EState::Return || (IsFiend() && (State == EState::Guard || State == EState::Recover));
     Animator.Tick(DeltaSeconds, bLocoState ? Travelled + TurnStep : 0.f);
     if (MaceBone != INDEX_NONE) TickMace();
-    if (IsFortressFiend()) { if (TickFortress(DeltaSeconds, LocoSpeed)) return; }
+    if (IsFortressFiend())
+    {
+        const bool bDone = TickFortress(DeltaSeconds, LocoSpeed);
+        if (FortSpeech >= 0.f) Animator.SetJaw(6.f + FortSpeech);   // (its lines: over whatever it is doing)
+        if (bDone) return;
+    }
     else if (Battle.IsValid()) { TickSanctum(DeltaSeconds); return; }
     if (State == EState::Dead)
     {

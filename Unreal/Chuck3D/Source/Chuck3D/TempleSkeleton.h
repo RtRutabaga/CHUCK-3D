@@ -201,6 +201,10 @@ public:
     int32 GetBuffets() const { return Buffets; }
     /** Tests: the next blow at a hero (0 smash the fighter, 1 hurl at the wizard, 2 hurl at the ranger), whatever the distance. */
     void ForceFortress(int32 Which) { FortForced = Which; }
+    /** (2026-11-18) Its Infernal lines (FortressBattle.cpp): the jaw open by the line's loudness (deg), -1 not speaking. While
+     *  it speaks in the fight it stands and strikes at nothing. */
+    void SetFortSpeech(float JawDegrees) { FortSpeech = JawDegrees; }
+    bool IsFortSpeaking() const { return FortSpeech >= 0.f; }
     static constexpr float FiendScale = 2.4f;
     static constexpr float LemureScale = .93f;
     static constexpr float LemureSpeed = 50.f;       // (2D: 15 to the skeleton's 25)
@@ -296,7 +300,7 @@ private:
     bool bOnChuck = false, bLoosed = false, bGathering = false, bChoseBlow = false, bWantSmash = false;
     TWeakObjectPtr<ATempleHero> HurlAt;
     int32 Hurls = 0, FortHits = 0, FortRoars = 0, HitsSinceRoar = 0, FortForced = -1, NextHurl = 0;
-    float NextRoarAt = 0.f, NextFlareAt = 0.f, WalkUntil = 0.f;
+    float NextRoarAt = 0.f, NextFlareAt = 0.f, WalkUntil = 0.f, FortSpeech = -1.f;
     FVector WalkGoal = FVector::ZeroVector;
     void Fall(EBlow Kind, const FVector& From);
     bool bStruck = false, bSwung = false, bHeld = false;

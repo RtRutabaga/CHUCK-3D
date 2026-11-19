@@ -12,6 +12,8 @@
 #include "ChultTempleWind.h"
 #include "ChuckFlames.h"
 #include "DockSubtitles.h"
+#include "DockGameMode.h"
+#include "NPCVoiceData.h"
 #include "PhlegethosSetting.h"
 #include "PhlegethosCreatures.h"
 #include "PhlegethosBleed.h"
@@ -21,6 +23,7 @@
 #include "TempleSkeleton.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Components/AudioComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/LightComponent.h"
@@ -30,6 +33,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 
 namespace
 {
@@ -47,14 +52,45 @@ namespace
     constexpr int32 BallSlots = 2, BurstSlots = 3;
     const FVector Away(0, 0, -1e6);
     // The trio's lines (2D data/dialogue/phlegethos_fortress.json, "phlegethos_battle_entrance"), one to each of them in the
-    // order the sanctum's are (fighter, wizard, ranger). No takes yet: subtitles only, each up for its reading time.
-    struct FFortLine { int32 Hero; float At; const TCHAR* Text; };
+    // order the sanctum's are (fighter, wizard, ranger), between the fiend's two in Infernal (2026-11-18, the user's
+    // ElevenLabs takes; its subtitles are unintelligible Infernal, the user's ask; "have the fiends first line be the first
+    // line in the scene and his last line be the last line spoken"). The entrance plays them one after the other (Gap:
+    // seconds after the one before ends; the first's from the scene's start). Their words and lengths are NPCVoiceData's.
+    struct FFortLine { int32 Who; const TCHAR* Npc; const TCHAR* Id; float Gap; };   // Who: 0 fighter, 1 wizard, 2 ranger, 3 the fiend
     const FFortLine FortLines[] = {
-        {0, .7f, TEXT("The fractures are spreading faster than we can bind them!")},
-        {1, 5.f, TEXT("Then we hold this one shut. Keep that thing away from the breach!")},
-        {2, 9.4f, TEXT("I have the fiend. Finish the repair!")}};
-    const TCHAR* const FortSpeakers[] = {TEXT("Fighter"), TEXT("Wizard"), TEXT("Ranger")};
-    float LineSeconds(const TCHAR* Text) { return 1.f + .055f * FCString::Strlen(Text); }
+        {3, TEXT("PitFiend"), TEXT("fiend_00"), .7f},          // (Infernal: at them)
+        {0, TEXT("HeroFighter"), TEXT("fortress_00"), .45f},   // "The fractures are spreading faster than we can bind them!"
+        {1, TEXT("HeroWizard"), TEXT("fortress_00"), .35f},    // "Then we hold this one shut. Keep that thing away from the breach!"
+        {2, TEXT("HeroRanger"), TEXT("fortress_00"), .35f},    // "I have the fiend. Finish the repair!"
+        {3, TEXT("PitFiend"), TEXT("fiend_01"), .5f}};         // (Infernal: its answer, the last word)
+    constexpr int32 FortEntranceLines = UE_ARRAY_COUNT(FortLines);
+    const TCHAR* const FortSpeakers[] = {TEXT("Fighter"), TEXT("Wizard"), TEXT("Ranger"), TEXT("Pit Fiend")};
+    int32 FortVoice(int32 Line)
+    {
+        for (int32 I = 0; I < NPCVoiceData::LineCount; ++I)
+            if (FCString::Strcmp(NPCVoiceData::Lines[I].Npc, FortLines[Line].Npc) == 0 && FCString::Strcmp(NPCVoiceData::Lines[I].Id, FortLines[Line].Id) == 0) return I;
+        return INDEX_NONE;
+    }
+    const TCHAR* FortText(int32 Line) { const int32 V = FortVoice(Line); return V == INDEX_NONE ? TEXT("") : NPCVoiceData::Lines[V].Text; }
+    float FortSeconds(int32 Line) { const int32 V = FortVoice(Line); return V == INDEX_NONE ? 3.f : FMath::Max(1.f, NPCVoiceData::Lines[V].Seconds); }
+    /** When each entrance line starts on the scene's clock, and when the scene ends (after the fiend's answer). */
+    float FortLineAt(int32 Line)
+    {
+        float At = FortLines[0].Gap;
+        for (int32 K = 1; K <= Line && K < FortEntranceLines; ++K) At += FortSeconds(K - 1) + FortLines[K].Gap;
+        return At;
+    }
+    float FortSceneLength() { return FortLineAt(FortEntranceLines - 1) + FortSeconds(FortEntranceLines - 1) + .5f; }
+    float FortLoudness(int32 Line, float T)
+    {
+        const int32 V = FortVoice(Line);
+        if (V == INDEX_NONE || T < 0.f) return 0.f;
+        const NPCVoiceData::FLine& L = NPCVoiceData::Lines[V];
+        if (L.Frames < 2) return 0.f;
+        const float F = T * NPCVoiceData::EnvelopeRate;
+        const int32 A = FMath::Clamp(FMath::FloorToInt(F), 0, L.Frames - 1), B = FMath::Min(A + 1, L.Frames - 1);
+        return FMath::Lerp(static_cast<float>(L.Envelope[A]), static_cast<float>(L.Envelope[B]), F - FMath::FloorToFloat(F)) / 255.f;
+    }
 }
 
 FVector ATempleSanctumBattle::BigFoeCentre() const
@@ -164,6 +200,12 @@ void ATempleSanctumBattle::SpawnFortressCast()
     }
     // The forecourt's own camera for the entrance.
     FortCam = World->SpawnActor<ACameraActor>();
+    // (2026-11-18) A warm light on the fiend's face for its two shots in the entrance (it stands against the fires behind).
+    FaceLight = NewObject<UPointLightComponent>(this);
+    FaceLight->SetupAttachment(RootComponent); FaceLight->RegisterComponent();
+    FaceLight->SetIntensityUnits(ELightUnits::Candelas); FaceLight->SetIntensity(0.f);
+    FaceLight->SetLightColor(FLinearColor(1.f, .72f, .52f)); FaceLight->SetAttenuationRadius(900.f); FaceLight->SetCastShadows(false);
+    FaceLight->SetSourceRadius(80.f); FaceLight->SetLightingChannels(true, false, false);
     if (FortCam) { FortCam->GetCameraComponent()->SetFieldOfView(50.f); FortCam->GetCameraComponent()->bConstrainAspectRatio = false; }
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_BATTLE heroes=%d fiend=%d lemures=%d seal=%d flames=%d"), Heroes.Num(), TheFiend.IsValid() ? 1 : 0, Pool.Num(),
         TheSeal.IsValid() ? 1 : 0, BallFlames.Num() + BurstFlames.Num());
@@ -206,6 +248,7 @@ void ATempleSanctumBattle::TickFortress(float Dt, AChuckCharacter* Chuck, const 
         Dodges.RemoveAt(K);
     }
     TickFortressScene(Dt, Chuck);
+    TickFortressLines(Dt);
     TickFortressFire(Dt, Chuck);
     TickFlying(Dt, Eye);
     Draw(Eye);
@@ -397,44 +440,64 @@ void ATempleSanctumBattle::TickFortressScene(float Dt, AChuckCharacter* Chuck)
             Chuck->DisableInput(PC); Chuck->SetTestStick(FVector2D::ZeroVector); Chuck->SetRunHeld(false);
             PC->SetViewTarget(FortCam);
         }
-        // (the fiend brings its mace down on the fighter as he calls out, then throws at the ranger as she answers)
-        if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->ForceFortress(0);
+        // (the fiend speaks first; it brings its mace down on the fighter as he calls out, then throws at the ranger as she
+        // answers: FortSay)
         UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_ENTRANCE start"));
     }
     if (FortClock < 0.f) return;
     FortClock += Dt;
     if (!bFortReleased && Chuck)
         if (auto* PC = Cast<APlayerController>(Chuck->GetController()); PC && PC->WasInputKeyJustPressed(EKeys::Escape)) SkipFortressScene();
-    // The lines, each on its shot.
-    for (int32 K = FortLine + 1; K < UE_ARRAY_COUNT(FortLines); ++K)
-        if (FortClock >= FortLines[K].At && !bFortSkipping) { FortLine = K; FortTalkT = 0.f; ++FortSpoken; UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_LINE %d"), K); }
-    if (FortLine >= 0 && FortLine < UE_ARRAY_COUNT(FortLines))
+    // The lines, each on its shot, one after the other (TickFortressLines plays them).
     {
-        FortTalkT += Dt;
-        const float Len = LineSeconds(FortLines[FortLine].Text);
-        if (ATempleHero* H = GetHero(FortLines[FortLine].Hero)) H->SetSpeech(FortTalkT < Len - .3f ? 9.f * FMath::Abs(FMath::Sin(FortTalkT * 11.f)) * (.6f + .4f * FMath::Sin(FortTalkT * 3.1f)) : 0.f);
-        if (FortTalkT > Len) { if (ATempleHero* H = GetHero(FortLines[FortLine].Hero)) H->SetSpeech(0.f); if (FortLine == UE_ARRAY_COUNT(FortLines) - 1) FortLine = 99; }
+        const int32 K = FMath::Max(FortLine + 1, 0);
+        if (FortLine < FortEntranceLines - 1 && K < FortEntranceLines && FortClock >= FortLineAt(K) && !bFortSkipping) FortSay(K);
     }
-    if (FortLine == 2 && FortTalkT < Dt * 1.5f) if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->ForceFortress(2);
     if (bFortReleased) return;   // (the last line may still be finishing)
-    // The shots: wide from behind the fighter over the battle to the fiend; the wizard at the breach, the tear at our
-    // feet; over the ranger's shoulder at the fiend.
+    // The shots, one on each speaker's line.
     ATempleHero* F = GetHero(0); ATempleHero* Wz = GetHero(1); ATempleHero* Rg = GetHero(2);
     ATempleSkeleton* Fd = TheFiend.Get();
     if (!F || !Wz || !Rg || !Fd) { FortressRelease(Chuck); return; }
     const FVector Chest = BigFoeCentre();
     FVector Eye, Aim;
-    if (FortClock < 4.6f)
+    const float SceneEnd = FortSceneLength();
+    int32 Shot = 0;
+    while (Shot + 1 < FortEntranceLines && FortClock >= FortLineAt(Shot + 1) - .2f) ++Shot;
+    const float ShotFrom = Shot == 0 ? 0.f : FortLineAt(Shot) - .2f, ShotTo = Shot + 1 < FortEntranceLines ? FortLineAt(Shot + 1) - .2f : SceneEnd;
+    const float U = FMath::Clamp((FortClock - ShotFrom) / FMath::Max(.5f, ShotTo - ShotFrom), 0.f, 1.f);
+    const int32 Who = FortLines[Shot].Who;
+    if (Who == 3)
     {
-        const float U = FortClock / 4.6f;
-        // (from the open ground right of the processional, clear of the idols)
+        // The fiend: low before it, from the trio's side, looking up at its head as it speaks, slowly in (its first line
+        // wider, from further off and higher, the battle round it; its last close).
+        const bool bFirst = Shot == 0;
+        const FVector Head = Fd->GetMesh()->GetBoneLocation(TEXT("head"));
+        const FVector Fwd = Fd->GetActorForwardVector().GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, Fwd);
+        if (bFirst)
+        {
+            Eye = Fd->GetActorLocation() + Fwd * (1500.f - 220.f * U) + Side * (-340.f + 60.f * U) + FVector(0, 0, 190.f + 30.f * U);
+            Aim = FMath::Lerp(Chest, Head, .55f);
+        }
+        else
+        {
+            // (its face close, at its head's height, three-quarters from the side away from the mace it holds up)
+            const FVector HeadUp = Head - Fd->GetActorLocation();
+            const FVector Mace = Fd->GetMesh()->GetBoneLocation(TEXT("hand_r")) - Fd->GetActorLocation();
+            const float OffMace = FVector::DotProduct(Mace, Side) > 0.f ? -1.f : 1.f;
+            Eye = Fd->GetActorLocation() + Fwd * (600.f - 100.f * U) + Side * OffMace * (580.f - 40.f * U) + FVector(0, 0, HeadUp.Z * .95f);
+            Aim = Head + FVector(0, 0, -25.f);
+        }
+    }
+    else if (Who == 0)
+    {
+        // Wide from behind the fighter over the battle to the fiend (from the open ground right of the processional).
         const FVector Back = (F->GetActorLocation() - Fd->GetActorLocation()).GetSafeNormal2D();
         Eye = F->GetActorLocation() + Back * (900.f - 160.f * U) + FVector(0, 1, 0) * (420.f - 80.f * U) + FVector(0, 0, 330.f - 50.f * U);
         Aim = FMath::Lerp(F->GetActorLocation(), Chest, .62f) + FVector(0, 0, 40.f);
     }
-    else if (FortClock < 8.9f)
+    else if (Who == 1)
     {
-        const float U = (FortClock - 4.6f) / 4.3f;
+        // The wizard at the breach, the tear at our feet.
         const FVector Tear = PhlegWorld(FVector(Phleg::BreachX, Phleg::BreachY, Phleg::FortressTop));
         const FVector Back = (Wz->GetActorLocation() - Tear).GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, Back);
         Eye = Wz->GetActorLocation() + Back * (300.f - 50.f * U) + Side * (-120.f + 30.f * U) + FVector(0, 0, 150.f + 20.f * U);
@@ -442,7 +505,7 @@ void ATempleSanctumBattle::TickFortressScene(float Dt, AChuckCharacter* Chuck)
     }
     else
     {
-        const float U = (FortClock - 8.9f) / (FortSceneEnd - 8.9f);
+        // Over the ranger's shoulder at the fiend.
         const FVector Back = (Rg->GetActorLocation() - Fd->GetActorLocation()).GetSafeNormal2D(), Side = FVector::CrossProduct(FVector::UpVector, Back);
         Eye = Rg->GetActorLocation() + Back * (230.f + 60.f * U) + Side * 70.f + FVector(0, 0, 95.f);
         Aim = Chest - FVector(0, 0, 60.f);
@@ -457,7 +520,15 @@ void ATempleSanctumBattle::TickFortressScene(float Dt, AChuckCharacter* Chuck)
         for (int32 K = 0; K < 6 && GetWorld()->LineTraceSingleByChannel(Hit, Aim, Eye, ECC_Visibility, Q); ++K) Eye.Z += 120.f;
     }
     FortCam->SetActorLocationAndRotation(Eye, (Aim - Eye).Rotation());
-    if (FortClock >= FortSceneEnd) FortressRelease(Chuck);
+    if (FaceLight)
+    {
+        // (on the fiend's face from the camera's side while it speaks in the entrance)
+        const bool bOnFace = FortLines[Shot].Who == 3;
+        const FVector FaceAt = Fd->GetMesh()->GetBoneLocation(TEXT("head"));
+        FaceLight->SetWorldLocation(FaceAt + (Eye - FaceAt).GetSafeNormal() * 260.f + FVector(0, 0, 60.f));
+        FaceLight->SetIntensity(bOnFace ? 35.f : 0.f);
+    }
+    if (FortClock >= SceneEnd) FortressRelease(Chuck);
 }
 
 void ATempleSanctumBattle::FortressRelease(AChuckCharacter* Chuck)
@@ -469,6 +540,7 @@ void ATempleSanctumBattle::FortressRelease(AChuckCharacter* Chuck)
         PC->SetViewTargetWithBlend(Chuck, bFortSkipping ? 0.f : .8f, VTBlend_EaseInOut, 2.f);
         Chuck->EnableInput(PC);
     }
+    if (FaceLight) FaceLight->SetIntensity(0.f);
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_ENTRANCE end clock=%.1f skipped=%d lines=%d"), FortClock, bFortSkipping ? 1 : 0, FortSpoken);
 }
 
@@ -477,6 +549,8 @@ void ATempleSanctumBattle::SkipFortressScene()
     if (FortClock < 0.f || bFortReleased) return;
     bFortSkipping = true;
     for (int32 R = 0; R < 3; ++R) if (ATempleHero* H = GetHero(R)) H->SetSpeech(0.f);
+    if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->SetFortSpeech(-1.f);
+    if (FortVoiceAudio) { FortVoiceAudio->Stop(); FortVoiceAudio = nullptr; }
     FortLine = 99;
     FortressRelease(Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)));
 }
@@ -484,11 +558,86 @@ void ATempleSanctumBattle::SkipFortressScene()
 bool ATempleSanctumBattle::GetFortressSubtitle(FString& Speaker, FString& Text) const
 {
     if (FortLine < 0 || FortLine >= UE_ARRAY_COUNT(FortLines)) return false;
-    const FFortLine& L = FortLines[FortLine];
-    if (FortTalkT > LineSeconds(L.Text)) return false;
-    Speaker = FortSpeakers[L.Hero];
-    Text = DockSubtitles::At(L.Text, LineSeconds(L.Text), FortTalkT);
+    const float Len = FortSeconds(FortLine);
+    if (FortTalkT > Len) return false;
+    Speaker = FortSpeakers[FortLines[FortLine].Who];
+    Text = DockSubtitles::At(FortText(FortLine), Len, FortTalkT);
     return true;
+}
+
+bool ATempleSanctumBattle::IsFiendSpeaking() const
+{
+    return IsFortress() && FortLine >= 0 && FortLine < UE_ARRAY_COUNT(FortLines) && FortLines[FortLine].Who == 3 && FortTalkT <= FortSeconds(FortLine);
+}
+
+void ATempleSanctumBattle::FortSay(int32 Line)
+{
+    if (Line < 0 || Line >= UE_ARRAY_COUNT(FortLines)) return;
+    // The last one's speaker quiet; this one from its speaker's head, the subtitles running with it.
+    if (FortLine >= 0 && FortLine < UE_ARRAY_COUNT(FortLines))
+    {
+        if (FortLines[FortLine].Who < 3) { if (ATempleHero* H = GetHero(FortLines[FortLine].Who)) H->SetSpeech(0.f); }
+        else if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->SetFortSpeech(-1.f);
+    }
+    FortLine = Line; FortTalkT = 0.f; ++FortSpoken;
+    if (FortVoiceAudio) { FortVoiceAudio->Stop(); FortVoiceAudio = nullptr; }
+    if (!VoiceAttenuation)
+    {
+        // Their voices carry across the forecourt (the island is 50 m long), one beside him not panned hard to one ear.
+        VoiceAttenuation = NewObject<USoundAttenuation>(this);
+        VoiceAttenuation->Attenuation.bAttenuate = true;
+        VoiceAttenuation->Attenuation.bSpatialize = true;
+        VoiceAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+        VoiceAttenuation->Attenuation.AttenuationShapeExtents = FVector(2000.f, 0.f, 0.f);
+        VoiceAttenuation->Attenuation.FalloffDistance = 6000.f;
+        VoiceAttenuation->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_Default;
+        VoiceAttenuation->Attenuation.NonSpatializedRadiusStart = 600.f;
+        VoiceAttenuation->Attenuation.NonSpatializedRadiusEnd = 200.f;
+    }
+    const int32 V = FortVoice(Line);
+    if (FortSounds.Num() < UE_ARRAY_COUNT(FortLines)) FortSounds.SetNum(UE_ARRAY_COUNT(FortLines));
+    if (!FortSounds[Line] && V != INDEX_NONE && *NPCVoiceData::Lines[V].Sound) FortSounds[Line] = LoadObject<USoundBase>(nullptr, NPCVoiceData::Lines[V].Sound);
+    USoundBase* Sound = FortSounds[Line];
+    USkeletalMeshComponent* Mesh = nullptr;
+    if (FortLines[Line].Who < 3) { if (ATempleHero* H = GetHero(FortLines[Line].Who)) Mesh = H->GetMesh(); }
+    else if (ATempleSkeleton* Fd = TheFiend.Get()) Mesh = Fd->GetMesh();
+    if (Mesh && Sound)
+        FortVoiceAudio = UGameplayStatics::SpawnSoundAttached(Sound, Mesh, TEXT("head"), FVector(0.f, 0.f, 5.f), EAttachLocation::KeepRelativeOffset, true,
+            FortLines[Line].Who == 3 ? 1.25f : 1.f, 1.f, 0.f, VoiceAttenuation);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_LINE %d npc=%s id=%s sound=%d playing=%d seconds=%.2f"), Line, FortLines[Line].Npc, FortLines[Line].Id, Sound != nullptr ? 1 : 0,
+        FortVoiceAudio && FortVoiceAudio->IsPlaying() ? 1 : 0, FortSeconds(Line));
+    // (the fiend's mace down on the fighter as he calls out; it throws at the ranger as she answers)
+    if (FortLines[Line].Who == 0) if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->ForceFortress(0);
+    if (FortLines[Line].Who == 2) if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->ForceFortress(2);
+}
+
+void ATempleSanctumBattle::TickFortressLines(float Dt)
+{
+    // The line playing: its speaker's jaw with its loudness; done after its length.
+    if (FortLine < 0 || FortLine >= UE_ARRAY_COUNT(FortLines)) return;
+    FortTalkT += Dt;
+    const float Len = FortSeconds(FortLine);
+    const int32 Who = FortLines[FortLine].Who;
+    const float Loud = FortLoudness(FortLine, FortTalkT);
+    if (Who < 3) { if (ATempleHero* H = GetHero(Who)) H->SetSpeech(FortTalkT < Len ? Loud * 9.f : 0.f); }
+    else if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->SetFortSpeech(FortTalkT < Len ? Loud * 26.f : -1.f);
+    if (FortTalkT > Len + .1f && FortTalkT < 1e5f)
+    {
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FORTRESS_LINE_END %d"), FortLine);
+        if (Who < 3) { if (ATempleHero* H = GetHero(Who)) H->SetSpeech(0.f); }
+        else if (ATempleSkeleton* Fd = TheFiend.Get()) Fd->SetFortSpeech(-1.f);
+        // (between the entrance's lines it waits for the next; after its last, or a skip, it is done)
+        if (FortLine >= FortEntranceLines - 1 || bFortSkipping || bFortReleased) FortLine = 99;
+        FortVoiceAudio = nullptr; FortTalkT = 1e6f;   // (done: no subtitle, waiting for the next)
+    }
+}
+
+double ATempleSanctumBattle::GetEncounterTime() const
+{
+    // The encounter's track's place while it plays (its events are timed to it); else the entrance's own clock.
+    double M = 0;
+    if (ADockGameMode::GetEncounterMusicTime(GetWorld(), M)) return M;
+    return FortClock;
 }
 
 bool PhlegethosBattleMusic(const UWorld* World, const FVector& At, bool bWas)

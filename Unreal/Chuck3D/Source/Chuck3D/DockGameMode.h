@@ -34,6 +34,13 @@ public:
     void FadeOutMusic(float Seconds);
     /** No score for Seconds (the Fireball's silence, 2026-10-26); then the place's own comes back in. */
     void HoldMusic(float Seconds);
+    /** (2026-11-18) The fortress encounter's track ("Ritual of the Broken Sun"): seconds since it started, counted over its
+     *  loops, while it plays (false if it is not playing or not heard from); its length. The river's surge and the sweep's
+     *  end are timed to it (PhlegethosBleed.cpp). It pauses with the game. */
+    static bool GetEncounterMusicTime(const UWorld* World, double& OutSeconds, float* OutLength = nullptr);
+    /** Dips the encounter's track for Dip seconds, then plays it on from LoopPos (s into the track): the river taken
+     *  early, its end brought to the sweep's. */
+    static void SeekEncounterMusic(const UWorld* World, float LoopPos, float Dip);
     double MusicHoldUntil = -1;
 private:
     bool bSmokeTest = false;
@@ -66,7 +73,12 @@ private:
     // MusicDuckLevel (quickly), and back up once they've finished (slowly). Separate from the
     // tracks' own region fades, which use AdjustVolume/FadeIn.
     TArray<TWeakObjectPtr<class UAudioComponent>> MusicTracks;
-    float MusicDuck = 1.f, DuckLowest = 1.f, DuckQuiet = 0.f;
+    float MusicDuck = 1.f, DuckLowest = 1.f, DuckQuiet = 0.f, DuckLevelNow = .35f;
+    // The encounter's track: its place over its loops (from its playback percent).
+    TWeakObjectPtr<class UAudioComponent> EncounterTrack;
+    float EncounterLast = -1.f, EncounterLength = 0.f;
+    int32 EncounterLoops = 0;
+    double EncounterPos = 0, EncounterHeardAt = -1;
     int32 MusicRegion = 0;
     bool bDuckRecovered = false;
     // The ship's concertina version (2026-11-02): its loudness by the player, kept apart so the duck can multiply it in.
@@ -251,4 +263,8 @@ private:
     UPROPERTY() class UTexture2D* StaminaEmblem = nullptr;
     FString SubtitleReviewLine;
     UPROPERTY() class UFont* SubtitleFont = nullptr;
+    /** (2026-11-18) The Pit Fiend's lines in the user's Infernal script (Tools/build_infernal_script.py): its glyphs centred
+     *  above Bottom, wrapped; false if the script is not there (the text is drawn instead). */
+    bool DrawInfernalLine(const FString& Line, float UiScale, float Bottom);
+    UPROPERTY() class UTexture2D* InfernalScript = nullptr;
 };

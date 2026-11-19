@@ -75,9 +75,10 @@ def ell(c, r, axis=None):
 
 class Body:
     """Primitives, each owned by a bone (for the weights) and tagged (for the colour)."""
-    def __init__(self):
+    def __init__(self, tag_reach=1.6):
         self.parts = []   # (bone, tag, op)
         self.extra = []   # sub and disp ops
+        self.tag_reach = tag_reach   # how far (cm) past its own surface a tag's colour reaches
 
     def add(self, bone, tag, op):
         self.parts.append((bone, tag, op)); return op
@@ -126,7 +127,7 @@ class Body:
         for tag in {t for _, t, _ in self.parts}:
             idx = [i for i, (_, t, _) in enumerate(self.parts) if t == tag]
             dt = D[idx].min(0)
-            out[tag] = smooth(1.6, .2, dt - dmin)
+            out[tag] = smooth(self.tag_reach, self.tag_reach / 8., dt - dmin)
         return out
 
 
@@ -401,6 +402,61 @@ def lemure_look(body, ops, V, N):
 
 
 # ------------------------------------------------------------------ the Pit Fiend
+def fiend_head():
+    """(2026-11-18, the user: "give the fiends face more detail like this", References/Phlegethos/pit-fiend-face-goal.jpg)
+    The skull, face, jaw and ears as their own finer field (0.22 cm, the body's is 0.7): a heavy furrowed brow angled down
+    to the middle over deep-set yellow eyes, high cheekbones, a broad flat nose with flared nostrils and snarl creases,
+    an open snarl with fangs above and tusks below between rows of smaller teeth, a pointed chin with three small spikes,
+    long pointed ears swept out to the sides. The neck from the shoulders up is in it too, a little fuller than the body's
+    so it covers it (the join under the collar)."""
+    B = Body(tag_reach=.45)
+    B.tube('neck_01', [V3(-3, 0, 146), V3(2, 0, 154), V3(5, 0, 161)], [13.4, 11.4, 9.4], k=4)
+    # (all on the world's axes: X forward, Y its left, Z up)
+    # The skull and the upper jaw (the muzzle short of the nose, so the nose stands out of it).
+    B.ells('head', [ell((5, 0, 167), (10.5, 9.4, 10.5)), ell((11.5, 0, 162.4), (6.6, 7.0, 4.6))], k=2.5)
+    B.ells('head', [ell((14.8, 0, 169.7), (2.3, 2.2, 2.2))], k=1.)                                   # the brow's middle
+    # The nose: a broad flat bridge down to a wide tip, flared wings.
+    B.ells('head', [ell((16.4, 0, 166.6), (2.0, 1.9, 2.8))], k=1.2)
+    B.ells('head', [ell((18.3, 0, 163.9), (2.0, 3.2, 1.8))], k=1.)
+    for s in (1, -1):
+        # The brow: heavy, its inner end lower (the scowl), on to the temples.
+        B.tube('head', [V3(15.3, s * 1.4, 169.5), V3(14.6, s * 4.0, 170.6), V3(13.2, s * 6.8, 171.5), V3(11.0, s * 8.2, 172.0)], [1.9, 2.1, 1.7, 1.2], k=.9)
+        # High cheekbones; the snarl's folds from the nose's wings down past the mouth.
+        B.ells('head', [ell((13.8, s * 5.6, 165.4), (2.6, 2.7, 1.7))], k=1.1)
+        B.tube('head', [V3(17.7, s * 3.3, 164.0), V3(17.4, s * 4.8, 162.0), V3(16.4, s * 5.8, 159.6)], [.9, .8, .55], k=.6)
+        B.balls('head', [V3(17.9, s * 2.7, 163.5)], [1.5], k=.6)                                    # the nose's wings
+        # The ears: long and pointed, out to the side and back, flat, a hollow in each.
+        B.ells('head', [ell((2.0, s * 12.0, 170.0), (.9, 4.6, 2.0))], k=1.)
+        B.ells('head', [ell((.2, s * 16.6, 171.8), (.6, 2.9, 1.2))], k=.8)
+        B.tube('head', [V3(-.2, s * 18.4, 172.5), V3(-2.0, s * 22.6, 175.4)], [.95, .08], k=.6)       # its tip
+        # Upper teeth: a fang each side, two incisors.
+        B.tube('head', [V3(18.7, s * 3.2, 161.3), V3(19.1, s * 2.9, 157.2)], [1.05, .08], tag='tooth', k=.15)
+        for y in (.75, 1.85):
+            B.tube('head', [V3(19.3, s * y, 161.0), V3(19.4, s * y, 159.4)], [.5, .24], tag='tooth', k=.12)
+        # Lower jaw: tusks up out of it, small teeth between.
+        B.tube('jaw', [V3(18.2, s * 3.5, 157.6), V3(18.7, s * 3.9, 161.9)], [1.1, .08], tag='tooth', k=.15)
+        for y in (.75, 1.85):
+            B.tube('jaw', [V3(18.8, s * y, 158.0), V3(18.9, s * y, 159.1)], [.45, .2], tag='tooth', k=.12)
+        # The eyes: almond, under the brow, glowing.
+        B.ells('head', [ell((15.3, s * 3.5, 167.8), (.7, 1.25, .6))], tag='eye', k=.2)
+    # The upper lip drawn up; the lower jaw, its lip, a pointed chin, three short spikes from it.
+    B.ells('head', [ell((18.0, 0, 161.7), (1.5, 4.6, 1.0))], k=.7)
+    B.ells('jaw', [ell((12.8, 0, 156.9), (6.8, 6.1, 2.9), V3(1, 0, -.35))], k=2)
+    B.ells('jaw', [ell((17.9, 0, 157.4), (1.4, 4.2, 1.0))], k=.7)
+    B.ells('jaw', [ell((16.3, 0, 154.8), (2.4, 3.1, 2.4))], k=1.2)
+    for y in (-1.5, 0, 1.5):
+        B.tube('jaw', [V3(16.6, y, 153.1), V3(17.0, y * 1.15, 150.3)], [.62, .07], tag='horn', k=.3)
+    # Cut: the eye sockets round the eyes, the open mouth, the nostrils, the scowl's furrow, creases across the nose and
+    # the forehead, the hollow of each ear.
+    B.sub(Ellipsoids('sub', .5, [ell((16.0, s * 3.5, 167.9), (1.3, 1.9, 1.15)) for s in (1, -1)]))
+    B.sub(Ellipsoids('sub', .5, [ell((18.8, 0, 159.8), (4.2, 4.6, 1.7))]))
+    B.sub(Balls('sub', .3, [V3(20.0, 1.4, 163.4), V3(20.0, -1.4, 163.4)], [.75, .75]))
+    B.sub(Ellipsoids('sub', .35, [ell((16.4, 0, 170.6), (.6, .4, 1.8))] + [ell((18.0, 0, z), (.45, 1.8, .26)) for z in (165.3, 166.1, 166.9)]
+                     + [ell((14.0, 0, z), (.8, 5.4, .4)) for z in (173.9, 175.3)]))
+    B.sub(Ellipsoids('sub', .3, [ell((2.6, s * 12.6, 170.0), (.45, 3.4, 1.2)) for s in (1, -1)]))
+    return B
+
+
 def fiend_body():
     """(2026-11-16, second pass, toward the user's goal image References/Phlegethos/pit-fiend-goal.jpg) Crimson, heavily
     muscled; long horns sweeping out and up; charcoal armour: spiked pauldrons, a collar, spiked bracers, a belt hung with
@@ -421,25 +477,14 @@ def fiend_body():
         for z in (124, 129, 134):
             B.ells('spine_02', [ell((7, s * 15.5, z), (3, 3, 2.2), V3(.5, s * .3, -.6))], k=1.2)
     B.tube('neck_01', [V3(-3, 0, 146), V3(2, 0, 154), V3(5, 0, 161)], [13, 11, 9], k=4)
-    # Head: a heavy skull, a deep brow, a fanged snarling muzzle (the lower jaw on the rig's jaw bone), pointed ears.
-    B.ells('head', [ell((5, 0, 167), (10.5, 9.4, 10.5)), ell((12.5, 0, 163), (8, 7.4, 5.2)), ell((13, 0, 170.5), (3.8, 8.8, 2.7))], k=2.5)
-    B.ells('head', [ell((14.8, 0, 166), (3.2, 2.6, 3.3), V3(1, 0, -.5))], k=1.5)   # nose bridge
-    B.ells('jaw', [ell((12, 0, 157.4), (6.4, 5.8, 2.8), V3(1, 0, -.35))], k=2)
+    # Head: (2026-11-18) the skull, the face, the jaw and the ears are fiend_head's, a finer field of their own (the user's
+    # face goal, References/Phlegethos/pit-fiend-face-goal.jpg); the horns stay here, out of the crown.
     for s in (1, -1):
-        B.ells('head', [ell((1, s * 9.2, 168.5), (1.2, 2.4, 7.5), V3(-.6, s * .9, .45))], k=1.2)   # ears, swept back and out
-        B.ells('head', [ell((10, s * 6.5, 160.5), (4, 2.5, 3), V3(1, s * .4, 0))], k=1.5)          # snarling cheeks
         # The horns: thick from the crown, out to the side, then up and in, the tips turned inward.
         horn = catmull([V3(4, s * 4, 173), V3(1.5, s * 10, 178), V3(-3, s * 20, 180.5), V3(-6.5, s * 30, 184), V3(-8.5, s * 37, 192),
                         V3(-7.5, s * 39.5, 203), V3(-3.5, s * 36.5, 212), V3(1, s * 30.5, 217)], 40)
         ht = np.linspace(0, 1, len(horn))
         B.tube('head', horn, 6.2 * (1 - ht) ** .75 + .4, tag='horn', k=1.2)
-        # fangs, upper and lower
-        B.tube('head', [V3(16.8, s * 2.7, 160.4), V3(17.1, s * 2.5, 156.8)], [.85, .1], tag='tooth', k=.2)
-        B.tube('jaw', [V3(16.2, s * 2.3, 156.6), V3(16.5, s * 2.2, 159.8)], [.7, .08], tag='tooth', k=.2)
-        B.tube('head', [V3(16.6, s * 1.1, 160), V3(16.8, s * 1., 158.4)], [.45, .08], tag='tooth', k=.2)
-    B.sub(Balls('sub', .8, [V3(15, 3.4, 168), V3(15, -3.4, 168)], [1.9, 1.9]))
-    B.balls('head', [V3(14.6, 3.4, 167.9), V3(14.6, -3.4, 167.9)], [1.25, 1.25], tag='eye', k=.3)
-    B.sub(Ellipsoids('sub', .6, [ell((16.2, 0, 159.2), (4, 4, 1.3))]))    # the open snarl
     # The collar: a dark plate ring round the base of the neck.
     B.ells('spine_03', [ell((-1, 0, 148), (15.5, 21, 4.2))], tag='armour', k=.7)
     for S, s in (('l', 1), ('r', -1)):
@@ -624,12 +669,13 @@ def affine_weights(P, bones):
     return {b: round(float(x), 5) for b, x in zip(bones, w)}, float(np.linalg.cond(A))
 
 
-EYES_F = [V3(14.6, 3.4, 167.9), V3(14.6, -3.4, 167.9)]
+EYES_F = [V3(15.4, 3.5, 167.8), V3(15.4, -3.5, 167.8)]   # (2026-11-18: fiend_head's)
 
 
 def fiend_look(body, ops, V, N):
     D = body.part_dists(V)
     tags = body.tag_mask(V, D)
+    tags = {k: tags.get(k, np.zeros(len(V))) for k in ('armour', 'horn', 'wing', 'tip', 'claw', 'tooth', 'bone', 'eye', 'skin')} | tags   # (the head and the body each lack some)
     convex = np.clip(laplacian(ops, V, 2.) * 3., -1, 1)
     mott = fbm(V / 14., 2, 17) * .5 + .5
     col = lin(172, 46, 40)[None] * (1 - mott[:, None]) + lin(136, 30, 30)[None] * mott[:, None]
@@ -639,6 +685,9 @@ def fiend_look(body, ops, V, N):
     # dark blotches over the shoulders and upper chest (the goal's)
     blot = smooth(.62, .72, fbm(V / 3.2, 2, 23) * .5 + .5) * smooth(128, 138, V[:, 2]) * smooth(156, 148, V[:, 2])
     col = col * (1 - .8 * blot[:, None]) + lin(40, 8, 8)[None] * (.8 * blot[:, None])
+    # (2026-11-18) dark spots over the skull, the brow and the ears' backs, as on the face goal's horns and head
+    spots = smooth(.6, .7, fbm(V / 1.7, 2, 31) * .5 + .5) * smooth(166, 172, V[:, 2]) * smooth(12, 16, np.abs(V[:, 1]) + np.clip(V[:, 0] - 13, 0, 9) * 2)
+    col = col * (1 - .7 * spots[:, None]) + lin(54, 12, 12)[None] * (.7 * spots[:, None])
     # chest and gut a hotter red
     front = smooth(.4, .9, N[:, 0]) * smooth(98, 108, V[:, 2]) * smooth(150, 138, V[:, 2]) * smooth(22, 10, np.abs(V[:, 1]))
     col = col * (1 - .4 * front[:, None]) + lin(196, 74, 56)[None] * (.4 * front[:, None])
@@ -663,10 +712,10 @@ def fiend_look(body, ops, V, N):
     col = col * (1 - tags.get('bone', 0)[:, None]) + lin(200, 186, 156)[None] * (1 - .5 * lo) * tags.get('bone', 0)[:, None]
     ao = sdf_ao(V, N, ops)
     col = col * (.3 + .7 * ao)[:, None]
-    eye = np.max([smooth(1.7, 1., np.linalg.norm(V - e, axis=1)) for e in EYES_F], 0)
+    eye = np.max([smooth(1.3, .6, np.linalg.norm((V - e) * V3(1, .6, 1), axis=1)) for e in EYES_F], 0)
     col = col * (1 - eye[:, None]) + lin(255, 200, 80)[None] * eye[:, None]
-    mouth = smooth(1.6, .5, np.abs(V[:, 2] - 159.2)) * smooth(10, 14, V[:, 0]) * smooth(4.5, 2.5, np.abs(V[:, 1])) * smooth(.6, .2, ao)
-    alpha = np.clip(eye + .55 * mouth, 0, 1)
+    mouth = smooth(1.8, .5, np.abs(V[:, 2] - 159.8)) * smooth(13, 16.5, V[:, 0]) * smooth(4.8, 2.8, np.abs(V[:, 1])) * smooth(.6, .2, ao)
+    alpha = np.clip(eye + .25 * mouth, 0, 1)   # (2026-11-18: the mouth's glow down, so the teeth show in it; was .55)
     return col, alpha
 
 
@@ -994,6 +1043,14 @@ def review(ob, name, static=False):
         d = Vector(c) - cam.location
         cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
         s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)
+    if name == 'SK_PitFiend':
+        # (2026-11-18) The face close, against its goal (References/Phlegethos/pit-fiend-face-goal.jpg).
+        f = Vector((10., 0., 165.))
+        for tag, az, el in (('face', 0, .08), ('face34', 32, .12), ('faceside', 80, .05)):
+            a = math.radians(az)
+            cam.location = f + Vector((math.cos(a), math.sin(a), el)).normalized() * 62.
+            cam.rotation_euler = (f - cam.location).to_track_quat('-Z', 'Y').to_euler()
+            s.render.filepath = os.path.join(REVIEW, f'{name}_{tag}.png'); bpy.ops.render.render(write_still=True)
 
 
 # ------------------------------------------------------------------ main
@@ -1011,6 +1068,10 @@ def build_skinned():
         body, wing = fiend_body()
         ob, V = field_object('SK_PitFiend', body, .7, .42, fiend_look)
         add_weights(ob, body.weights(V))
+        hb = fiend_head()
+        head_ob, HV = field_object('fiend_head', hb, .22, .5, fiend_look)
+        add_weights(head_ob, hb.weights(HV))
+        ob = join([ob, head_ob], 'SK_PitFiend')
         add_bones(rig, fiend_bones(wing))
         wings = fiend_wings(wing)
         mb, head = fiend_mace()

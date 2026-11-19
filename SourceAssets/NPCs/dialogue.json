@@ -150,6 +150,12 @@
      "text": "... we're too close to an astral rip, we don't know what will happen",
      "source": "Voice/HeroFighter/source/ElevenLabs_2026-10-24_Fighter_fireball_00.mp3",
      "start": 0.0
+    },
+    {
+     "id": "fortress_00",
+     "text": "The fractures are spreading faster than we can bind them!",
+     "source": "Voice/HeroFighter/source/ElevenLabs_2026-11-18_Fighter_fortress_00.mp3",
+     "start": 0.0
     }
    ]
   },
@@ -180,6 +186,12 @@
      "text": "FIREBALL!!",
      "source": "Voice/HeroWizard/source/ElevenLabs_2026-10-24_Wizard_fireball_02.mp3",
      "start": 0.0
+    },
+    {
+     "id": "fortress_00",
+     "text": "Then we hold this one shut. Keep that thing away from the breach!",
+     "source": "Voice/HeroWizard/source/ElevenLabs_2026-11-18_Wizard_fortress_00.mp3",
+     "start": 0.0
     }
    ]
   },
@@ -196,6 +208,12 @@
      "id": "fireball_00",
      "text": "Wait, I know those sigils, you can't cast that here!",
      "source": "Voice/HeroRanger/source/ElevenLabs_2026-10-24_Ranger_fireball_00.mp3",
+     "start": 0.0
+    },
+    {
+     "id": "fortress_00",
+     "text": "I have the fiend. Finish the repair!",
+     "source": "Voice/HeroRanger/source/ElevenLabs_2026-11-18_Ranger_fortress_00.mp3",
      "start": 0.0
     }
    ]
@@ -776,6 +794,23 @@
      "id": "CHEF_01",
      "text": "Damn! Another rat got in, come er' you little bugger!",
      "source": "Voice/PirateChef/source/CHEF_01.mp3"
+    }
+   ]
+  },
+  "PitFiend": {
+   "voice": "ElevenLabs takes supplied by the user as 'Fiend_00/01.mp3' (user 2026-11-18): the Phlegethos fortress Pit Fiend speaking Infernal; the user asked for unintelligible Infernal subtitles, so the text is not words of any language",
+   "scene": [
+    {
+     "id": "fiend_00",
+     "text": "Kesh'vaal ur-dhoggath! Nul mor'zekh, thrass'u vey!",
+     "source": "Voice/PitFiend/source/ElevenLabs_2026-11-18_Fiend_00.mp3",
+     "start": 0.0
+    },
+    {
+     "id": "fiend_01",
+     "text": "Azh'rakkar... vel'nuun gor ithrazzh! Dhur'kaal mekh-thuun, sekhra vor'ullath ziin!",
+     "source": "Voice/PitFiend/source/ElevenLabs_2026-11-18_Fiend_01.mp3",
+     "start": 0.0
     }
    ]
   }

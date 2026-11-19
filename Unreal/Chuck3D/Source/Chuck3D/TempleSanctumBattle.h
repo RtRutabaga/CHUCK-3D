@@ -136,7 +136,10 @@ public:
     /** The entrance scene has played (or is off): the Feywild bleedthrough may start (PhlegethosBleed.cpp, 2026-11-17). */
     bool HasFortressSceneRun() const { return FortEntrances > 0 || !bFortScene; }
     bool IsFortressFighting() const { return bActive; }
-    static constexpr float FortSceneEnd = 13.4f;
+    /** (2026-11-18) The fiend is speaking one of its Infernal lines (the music ducks less under it). */
+    bool IsFiendSpeaking() const;
+    /** The encounter's time (s): the encounter track's place over its loops while it plays, else the entrance's clock. */
+    double GetEncounterTime() const;
 
     // The heroes' lines (TempleHeroTalk.cpp, user 2026-10-25): their calls when Chuck comes in, then the argument before the Fireball.
     /** A hero is speaking one of the scene's lines (the music ducks under it). */
@@ -191,10 +194,15 @@ private:
     void FireBurst(const FVector& At, ATempleHero* Struck);
     // The entrance and the lines.
     UPROPERTY() class ACameraActor* FortCam = nullptr;
+    UPROPERTY() UPointLightComponent* FaceLight = nullptr;
     float FortClock = -1.f, FortDwell = 0.f, FortTalkT = 0.f;
     bool bFortScene = true, bFortReleased = true, bFortSkipping = false;
     int32 FortEntrances = 0, FortLine = -1, FortSpoken = 0;
     void TickFortressScene(float DeltaSeconds, AChuckCharacter* Chuck);
+    void TickFortressLines(float DeltaSeconds);
+    void FortSay(int32 Line);
+    UPROPERTY() UAudioComponent* FortVoiceAudio = nullptr;
+    UPROPERTY() TArray<USoundBase*> FortSounds;
     void FortressRelease(AChuckCharacter* Chuck);
     bool GetFortressSubtitle(FString& Speaker, FString& Text) const;
     // Assets, hard-referenced so they cook.

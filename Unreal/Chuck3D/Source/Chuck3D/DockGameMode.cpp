@@ -68,6 +68,7 @@
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Canvas.h"
 #include "CanvasItem.h"
+#include "InfernalScriptData.h"
 #include "Engine/Font.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/SlateRenderer.h"
@@ -171,6 +172,21 @@ void ADockGameMode::StartPlay()
     // The fortress encounter (2026-11-17): the user's "Ritual of the Broken Sun", looping, from the trio's entrance on.
     auto* Phleg3Score=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_PhlegFortressBattle.SW_PhlegFortressBattle"));
     auto* Phleg3Component=Phleg3Score ? UGameplayStatics::CreateSound2D(World,Phleg3Score,1.f,1.f,0.f,nullptr,false,false) : nullptr;
+    if(Phleg3Component)
+    {
+        // (2026-11-18) The river's surge and the sweep's end are timed to it: its place is followed from its playback
+        // percent (bound before it first plays), and it pauses with the game (not a UI sound, as CreateSound2D makes it).
+        Phleg3Component->bIsUISound=false;
+        EncounterTrack=Phleg3Component; EncounterLength=Phleg3Score->Duration;
+        Phleg3Component->OnAudioPlaybackPercentNative.AddWeakLambda(this,[this](const UAudioComponent*,const USoundWave* Wave,const float Percent){
+            const float Length=Wave ? Wave->Duration : EncounterLength;
+            if(Length<=0.f) return;
+            const float At=Percent*Length;
+            if(EncounterLast>=0.f && At+Length*.5f<EncounterLast) ++EncounterLoops;   // (round to its start again)
+            EncounterLast=At; EncounterLength=Length;
+            EncounterPos=EncounterLoops*static_cast<double>(Length)+At; EncounterHeardAt=FPlatformTime::Seconds();
+        });
+    }
     // The Feywild (2026-11-18; docs/regions/FEYWILD.md): the user's Feywild_main, looping.
     auto* FeyScore=LoadObject<USoundWave>(nullptr,TEXT("/Game/Art/Audio/SW_FeywildMain.SW_FeywildMain"));
     auto* FeyComponent=FeyScore ? UGameplayStatics::CreateSound2D(World,FeyScore,1.f,1.f,0.f,nullptr,false,false) : nullptr;
@@ -1446,6 +1462,30 @@ void ADockGameMode::HoldMusic(float Seconds)
     MusicHoldUntil = GetWorld()->GetTimeSeconds() + Seconds;
     UE_LOG(LogTemp,Display,TEXT("CHUCK_MUSIC_HOLD seconds=%.1f"),Seconds);
 }
+bool ADockGameMode::GetEncounterMusicTime(const UWorld* World, double& OutSeconds, float* OutLength)
+{
+    const ADockGameMode* GM=World ? Cast<ADockGameMode>(World->GetAuthGameMode()) : nullptr;
+    if(!GM || !GM->EncounterTrack.IsValid() || !GM->EncounterTrack->IsPlaying() || GM->EncounterHeardAt<0) return false;
+    const double Since=FPlatformTime::Seconds()-GM->EncounterHeardAt;
+    if(Since>1.0) return false;
+    OutSeconds=GM->EncounterPos+FMath::Min(Since,.25);
+    if(OutLength) *OutLength=GM->EncounterLength;
+    return true;
+}
+void ADockGameMode::SeekEncounterMusic(const UWorld* World, float LoopPos, float Dip)
+{
+    ADockGameMode* GM=World ? Cast<ADockGameMode>(World->GetAuthGameMode()) : nullptr;
+    if(!GM || !GM->EncounterTrack.IsValid()) return;
+    UAudioComponent* Track=GM->EncounterTrack.Get();
+    if(Track->IsPlaying()) Track->AdjustVolume(Dip,0.f);
+    FTimerHandle Seek;
+    GM->GetWorldTimerManager().SetTimer(Seek,[Wk=TWeakObjectPtr<UAudioComponent>(Track),Self=TWeakObjectPtr<ADockGameMode>(GM),LoopPos](){
+        if(!Wk.IsValid()) return;
+        if(Self.IsValid()) Self->EncounterLast=-1.f;   // (a jump, not a loop)
+        Wk->FadeIn(.8f,.6f,LoopPos);
+    },FMath::Max(Dip,.01f),false);
+    UE_LOG(LogTemp,Display,TEXT("CHUCK_ENCOUNTER_MUSIC_SEEK to=%.2f dip=%.2f"),LoopPos,Dip);
+}
 void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
 {
     constexpr float MusicDuckLevel = .35f;            // about -9 dB under a speaking NPC
@@ -1458,11 +1498,16 @@ void ADockGameMode::UpdateMusicDuck(float DeltaSeconds)
     for(const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All()) bSpeech |= Entry.IsValid() && Entry->IsSpeaking() && (!Entry->IsAmbientSpeaking() || bInTavern);
     // The sanctum heroes' lines (TempleHeroTalk.cpp) duck the boss music the same way.
     if(const ATempleSanctumBattle* Battle=ATempleSanctumBattle::Get(GetWorld())) bSpeech |= Battle->IsHeroSpeaking();
-    if(const ATempleSanctumBattle* Fort=ATempleSanctumBattle::GetFortress(GetWorld())) bSpeech |= Fort->IsHeroSpeaking();   // (and the trio's at the fortress)
-    DuckQuiet = bSpeech ? 0.f : DuckQuiet + DeltaSeconds;
+    // (and the trio's at the fortress; the fiend's Infernal lines duck it much less, 2026-11-18, the user: "dont decrease music
+    // volume as much when Fiend is talking")
+    constexpr float FiendDuckLevel = .72f;            // about -3 dB
+    bool bFiend = false;
+    if(const ATempleSanctumBattle* Fort=ATempleSanctumBattle::GetFortress(GetWorld())) { bFiend = Fort->IsFiendSpeaking(); bSpeech |= Fort->IsHeroSpeaking() && !bFiend; }
+    if(bSpeech) DuckLevelNow = MusicDuckLevel; else if(bFiend) DuckLevelNow = FiendDuckLevel;
+    DuckQuiet = bSpeech || bFiend ? 0.f : DuckQuiet + DeltaSeconds;
     // At night, from the crate staircase to the tavern, the music stays down under the tavern's talk.
     const bool bByTavern = Listener && ADockNPC::NearTavernAtNight(Listener->GetActorLocation());
-    const float Target = DuckQuiet < DuckHold || bByTavern ? MusicDuckLevel : 1.f;
+    const float Target = bByTavern ? MusicDuckLevel : DuckQuiet < DuckHold ? DuckLevelNow : 1.f;
     MusicDuck = FMath::FInterpConstantTo(MusicDuck, Target, DeltaSeconds, Target < MusicDuck ? DuckDown : DuckUp);
     DuckLowest = FMath::Min(DuckLowest, MusicDuck);
     if(DuckLowest < .5f && MusicDuck > .99f) bDuckRecovered = true;
@@ -4380,6 +4425,84 @@ void ADockGameMode::Tick(float DeltaSeconds)
     }
 }
 
+bool ADockHUD::DrawInfernalLine(const FString& Line,float UiScale,float Bottom)
+{
+    using namespace InfernalScriptData;
+    if(!InfernalScript) InfernalScript=LoadObject<UTexture2D>(nullptr,TEXT("/Game/Art/UI/T_InfernalScript.T_InfernalScript"));
+    if(!InfernalScript || !InfernalScript->GetResource() || GlyphCount==0 || !Canvas) return false;
+    // Each letter of the made-up Infernal to one of the strip's glyphs (the same letter, the same glyph); its punctuation
+    // and hyphens a little space. The glyphs keep their places on the strip's line, its body about 46 px at 1080p.
+    const float Body=static_cast<float>(FMath::Max(1,BodyBottom-BodyTop));
+    const float S=82.f*UiScale/Body;   // (its glyphs about 90 px tall at 1080p)
+    const float Gap=.12f*Body*S, Space=.62f*Body*S, Mark=.3f*Body*S, MaxWidth=Canvas->SizeX*.8f;
+    struct FWord { TArray<int32> Glyphs; TArray<float> Offsets; float Len=0; };
+    TArray<FWord> Words;
+    TArray<FString> Parts; Line.ParseIntoArrayWS(Parts);
+    for(const FString& Part : Parts)
+    {
+        FWord Wd; float X=0;
+        for(const TCHAR Ch : Part)
+        {
+            if(FChar::IsAlpha(Ch))
+            {
+                const int32 Letter=FMath::Clamp(static_cast<int32>(FChar::ToLower(Ch))-'a',0,25);
+                int32 Mul=11; while(FMath::GreatestCommonDivisor(Mul,GlyphCount)!=1) ++Mul;   // (every glyph in use)
+                const int32 G=(Letter*Mul+3)%GlyphCount;
+                if(Wd.Glyphs.Num()) X+=Gap;
+                Wd.Glyphs.Add(G); Wd.Offsets.Add(X); X+=Glyphs[G].W*S;
+            }
+            else X+=Mark;
+        }
+        Wd.Len=X;
+        if(Wd.Glyphs.Num()) Words.Add(Wd);
+    }
+    if(!Words.Num()) return false;
+    // Rows, wrapped as the text is.
+    TArray<TArray<int32>> Rows; TArray<float> RowW;
+    for(int32 I=0;I<Words.Num();++I)
+    {
+        if(!Rows.Num() || RowW.Last()+Space+Words[I].Len>MaxWidth) { Rows.AddDefaulted(); RowW.Add(-Space); }
+        Rows.Last().Add(I); RowW.Last()+=Space+Words[I].Len;
+    }
+    const float RowH=Height*S*.92f;
+    const float Top=Bottom-Rows.Num()*RowH;
+    auto Tile=[&](const FGlyph& G,float X,float Y,const FLinearColor& Colour)
+    {
+        FCanvasTileItem Item(FVector2D(X,Y),InfernalScript->GetResource(),FVector2D(G.W*S,G.H*S),
+            FVector2D(float(G.X)/Width,float(G.Y)/Height),FVector2D(float(G.X+G.W)/Width,float(G.Y+G.H)/Height),Colour);
+        Item.BlendMode=SE_BLEND_Translucent;
+        Canvas->DrawItem(Item);
+    };
+    // Dark round it first, then the ink: as the text is drawn (its colour, its outline at .8, its drop shadow at .65 by
+    // (1, 2); the user, 2026-11-18: "the same exact shade/color as the normal subtitles").
+    const float O=1.f*UiScale;
+    const FVector2D Around[]={{-O,0},{O,0},{0,-O},{0,O},{-O,-O},{O,-O},{-O,O},{O,O}};
+    const FVector2D Shadow=FVector2D(1.f,2.f)*UiScale;
+    for(int32 Pass=0;Pass<2;++Pass)
+        for(int32 R=0;R<Rows.Num();++R)
+        {
+            float X=(Canvas->SizeX-RowW[R])*.5f;
+            const float Y=Top+R*RowH;
+            for(const int32 Wi : Rows[R])
+            {
+                const FWord& Wd=Words[Wi];
+                for(int32 K=0;K<Wd.Glyphs.Num();++K)
+                {
+                    const FGlyph& G=Glyphs[Wd.Glyphs[K]];
+                    const float Gx=X+Wd.Offsets[K], Gy=Y+G.Y*S;
+                    if(Pass==0)
+                    {
+                        Tile(G,Gx+Shadow.X,Gy+Shadow.Y,FLinearColor(0.f,0.f,0.f,.65f));
+                        for(const FVector2D& D : Around) Tile(G,Gx+D.X,Gy+D.Y,FLinearColor(0.f,0.f,0.f,.8f));
+                    }
+                    else Tile(G,Gx,Gy,FLinearColor(.97f,.95f,.90f));
+                }
+                X+=Wd.Len+Space;
+            }
+        }
+    return true;
+}
+
 void ADockHUD::DrawStamina(const AChuckCharacter* Chuck,float Px,float Top)
 {
     // The stamina ring (References/ArtDirection/Chuck-Stamina-Icon.png): the
@@ -4591,7 +4714,9 @@ void ADockHUD::DrawHUD()
             for(const FString& R : Rows) Fits &= Width(R)<=MaxWidth+.5f;
             UE_LOG(LogTemp,Display,TEXT("CHUCK_SUBTITLE_CUE t=%.2f speaker=%s rows=%d fits=%d text=%s"),GetWorld()->GetTimeSeconds(),*Speaker,Rows.Num(),Fits,*Line);
         }
-        for(int32 I=0;I<Rows.Num();++I) Centre(Rows[I],Top+I*RowH,Font,FLinearColor(.97f,.95f,.90f));
+        // (the Pit Fiend speaks Infernal: its lines in the user's Infernal script, 2026-11-18)
+        if(Speaker!=TEXT("Pit Fiend") || !DrawInfernalLine(Line,UiScale,Bottom))
+            for(int32 I=0;I<Rows.Num();++I) Centre(Rows[I],Top+I*RowH,Font,FLinearColor(.97f,.95f,.90f));
         // Only the spoken sentence and the small close control are displayed.
         const FSlateFontInfo Small=FCoreStyle::GetDefaultFontStyle("Regular",FMath::RoundToInt(16.f*UiScale));
         if(bTalk) Centre(TEXT("F"),Bottom+12.f*UiScale,Small,FLinearColor(.8f,.8f,.8f,.8f));

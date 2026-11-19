@@ -135,6 +135,17 @@ bool ATempleSkeleton::TickFortress(float Dt, float LocoSpeed)
         if (StateTime > 2.6f) bRoaring = false;
         return true;
     }
+    // (2026-11-18) Speaking (its Infernal lines): it stands, head up at the trio, and strikes at nothing until it is done.
+    if (FortSpeech >= 0.f)
+    {
+        Move->MaxWalkSpeed = 0;
+        Face(MarkAt - Here, 40.f, Dt);
+        Animator.SetLook(0.f, -12.f);
+        Animator.Locomote(LocoSpeed);
+        AttackReadyAt = FMath::Max(AttackReadyAt, W + .6f);
+        NextRoarAt = FMath::Max(NextRoarAt, W + 4.f);
+        return true;
+    }
     Animator.SetJaw(5.f);
     if (W >= NextRoarAt) { FortRoar(); return true; }
     // A threatening beat of its wings now and then as it stands.
