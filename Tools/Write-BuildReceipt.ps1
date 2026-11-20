@@ -4,6 +4,8 @@ $projectRoot=Split-Path $PSScriptRoot -Parent
 if(!$PackageRoot) { $PackageRoot=Join-Path $projectRoot 'Builds\Windows' }
 $game=Join-Path $PackageRoot 'Chuck3D\Binaries\Win64\Chuck3D.exe'
 $completion=if($TutorialReview) {'CHUCK_TUTORIAL_TEST_COMPLETE failures=0 prompts=11 run_once=1 later_sewer_rats=0 night_rats=0'} elseif($AstralCameraReview) {'CHUCK_ASTRAL_CAMERA_CHECK failures=0 walls=2 camera_samples=6'} else {'CHUCK_TEST_COMPLETE failures=0'}
+# (2026-11-19) A full verification run, every step passing (Verify-Package.ps1 writes this only then; -Only runs never).
+if(!$TutorialReview -and !$AstralCameraReview -and !(Select-String -LiteralPath $VerificationLog -Pattern 'CHUCK_PACKAGE_VERIFIED_ALL' -Quiet)) { throw 'The log is not from a complete verification run (no CHUCK_PACKAGE_VERIFIED_ALL).' }
 if($TutorialReview) {
     foreach($id in 0..10) {if(!(Select-String -LiteralPath $VerificationLog -Pattern ('CHUCK_TUTORIAL_DRAW id='+$id+' rows=\d+ fits=1') -Quiet)) {throw 'A tutorial prompt did not render or fit.'}}
     if(Select-String -LiteralPath $VerificationLog -Pattern 'CHUCK_TUTORIAL_DRAW.*fits=0' -Quiet) {throw 'Tutorial text did not fit.'}

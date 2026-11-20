@@ -31,7 +31,7 @@ if ($Package) {
     & $automationTool BuildCookRun "-project=$projectFile" -noP4 -platform=Win64 -clientconfig=Development -build -skipbuildeditor -cook -stage -pak -archive "-archivedirectory=$output" -unattended -utf8output '-UbtArgs=-MaxParallelActions=1 -NoUBA -NoUBTMakefiles'
     if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed.' }
     if ($ArchiveDirectory) {
-        & (Join-Path $PSScriptRoot 'Verify-Package.ps1') -PackageRoot (Join-Path $output 'Windows')
+        & (Join-Path $PSScriptRoot 'Verify-Package.ps1') -PackageRoot (Join-Path $output 'Windows') -RetryFailed
         Write-Output "CHUCK_CANDIDATE_VERIFIED $output log=$global:ChuckLastVerificationLog"
     } else {
         & (Join-Path $PSScriptRoot 'Verify-Package.ps1')

@@ -1,4 +1,4 @@
-param([switch]$NoCapture,[switch]$MotionCapture,[switch]$NoGroom,[string]$PackageRoot,[switch]$WorldAuditOnly)
+param([switch]$NoCapture,[switch]$MotionCapture,[switch]$NoGroom,[string]$PackageRoot,[switch]$WorldAuditOnly,[string[]]$Only,[switch]$RetryFailed,[string[]]$FixedStep=@())
 $ErrorActionPreference='Stop'
 if($NoCapture -and $MotionCapture) { throw 'MotionCapture requires captures; omit NoCapture.' }
 $projectRoot=Split-Path $PSScriptRoot -Parent
@@ -10,14 +10,80 @@ $evidence=Join-Path $projectRoot 'Local'
 New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 $log=Join-Path $evidence ('verify-package-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $arguments=@('-ChuckSmokeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$log+'"'))
+# ---- Steps (Claude, 2026-11-19, from the plan "Game verification efficiency"). Every check below is a named step. A
+# failing step no longer stops the run: all of them run, and the failures are listed together at the end.
+#   -Only a,b      runs only the named steps (the names are on the CHUCK_VERIFY_STEP lines). A partial run never prints
+#                  CHUCK_PACKAGE_VERIFIED and cannot be promoted.
+#   -RetryFailed   reruns each failed step once at the end, on the same candidate. A step that passes on its retry counts as
+#                  passed; the retry is written to the output and to the flake ledger, Local/verify-flakes.csv.
+#   -FixedStep a,b these steps run at a fixed frame step (-BENCHMARK -FPS=60), so their game time does not depend on how
+#                  loaded the machine is. None by default: the temple heroes' trials failed under it (their voices'
+#                  timing needs real time; 2026-11-19). Add a step only after it has passed this way.
+# A step that has passed only on its retry three times is reported (CHUCK_VERIFY_FLAKY): fix it at its source rather than
+# keep rerunning it. Never skip or loosen a check to get a pass. Promotion needs the full run's marker in the smoke test's
+# log (CHUCK_PACKAGE_VERIFIED_ALL), which only a complete run with every step passing writes.
+$script:StepResults=[System.Collections.Generic.List[object]]::new()
+$script:Retried=@(); $script:StepArgs=@(); $script:SmokePasses=0; $script:LastError=$null
+$flakeLedger=Join-Path $evidence 'verify-flakes.csv'
+# Each launch has a time limit (2026-11-19: a GPU hang, DXGI_ERROR_DEVICE_HUNG, left one frozen in its crash handler for ten
+# hours): past it the game and its crash reporter are stopped and the step fails, with the other steps still to run.
+$launchLimitMinutes=30
+function Start-Game($ArgumentList) {
+    $p=Start-Process -FilePath $game -ArgumentList (@($ArgumentList)+$script:StepArgs) -WindowStyle Hidden -PassThru
+    $null=$p.Handle   # (keeps the exit code readable after it exits)
+    if(!$p.WaitForExit($launchLimitMinutes*60000)) {
+        Get-Process CrashReportClient* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit(30000) | Out-Null
+        throw "The game did not finish within $launchLimitMinutes minutes (hung) and was stopped: $(@($ArgumentList) -join ' ')"
+    }
+    $p.WaitForExit(); return $p
+}
+function Invoke-Step($Step) {
+    $script:StepArgs=if($FixedStep -contains $Step.Name) {@('-BENCHMARK','-FPS=60')} else {@()}
+    $started=Get-Date; $script:LastError=$null
+    try { & $Step.Body $Step.Arg } catch { $script:LastError=$_.Exception.Message }
+    $script:StepArgs=@()
+    $line="CHUCK_VERIFY_STEP name=$($Step.Name) pass=$([int](!$script:LastError)) seconds=$([int]((Get-Date)-$started).TotalSeconds) fixed_step=$([int]($FixedStep -contains $Step.Name))"
+    if($script:LastError) { $line+=" error=$($script:LastError)" }
+    Write-Output $line
+}
+function Step {
+    param([Parameter(Position=0)][string]$Name,[Parameter(Position=1)][scriptblock]$Body,$Arg)
+    if($Only -and $Only -notcontains $Name) { return }
+    $s=[pscustomobject]@{Name=$Name;Body=$Body;Arg=$Arg}
+    Invoke-Step $s
+    $script:StepResults.Add([pscustomobject]@{Step=$s;Error=$script:LastError})
+}
+function Complete-Steps([switch]$Partial) {
+    if($RetryFailed) {
+        foreach($r in @($script:StepResults | Where-Object { $_.Error })) {
+            $first=$r.Error
+            Invoke-Step $r.Step
+            $again=$script:LastError
+            Write-Output "CHUCK_VERIFY_RETRY name=$($r.Step.Name) pass=$([int](!$again))"
+            Add-Content -LiteralPath $flakeLedger -Value ('"{0}","{1}","{2}","{3}","{4}"' -f (Get-Date -Format s),$PackageRoot,$r.Step.Name,($first -replace '"',''''),$(if($again){'failed again'}else{'passed on retry'}))
+            if(!$again) {
+                $script:Retried+=$r.Step.Name
+                $count=@(Select-String -LiteralPath $flakeLedger -Pattern ('"'+[regex]::Escape($r.Step.Name)+'",".*","passed on retry"')).Count
+                if($count -ge 3) { Write-Output "CHUCK_VERIFY_FLAKY name=$($r.Step.Name) retries=$count (fix it at its source; see $flakeLedger)" }
+            }
+            $r.Error=$again
+        }
+    }
+    $failed=@($script:StepResults | Where-Object { $_.Error })
+    Write-Output "CHUCK_VERIFY_SUMMARY steps=$($script:StepResults.Count) failed=$($failed.Count) retried=$($script:Retried.Count) partial=$([int]($Partial -or [bool]$Only))"
+    foreach($f in $failed) { Write-Output "CHUCK_VERIFY_FAILED name=$($f.Step.Name) error=$($f.Error)" }
+    if($failed) { throw "Package verification failed: $(($failed | ForEach-Object { $_.Step.Name }) -join ', '). The CHUCK_VERIFY_FAILED lines above say where to look." }
+    if($Only) { Write-Output "CHUCK_PACKAGE_PARTIAL steps=$(($script:StepResults | ForEach-Object { $_.Step.Name }) -join ',') (not a verification for promotion)"; exit 0 }
+}
 # The world audit (WorldAudit.cpp, docs/AUTOMATION-DEFECT-CATALOG.md): collision gaps and floating props in each region.
 # Both planted probes must be found (the audit is not blind), and neither count may rise above the region's known
 # findings, listed in the catalog; lower is better (lower the number here when a finding is fixed). Intended cases go in
 # Unreal/Chuck3D/Content/Data/Audit/Allow.txt with a reason, not here.
 $worldAudit=[ordered]@{ Waterdeep=@{Gaps=18;Floating=117}; Chult=@{Gaps=0;Floating=0}; ShipArrival=@{Gaps=0;Floating=0} }
-foreach($region in $worldAudit.Keys) {
+foreach($region in $worldAudit.Keys) { Step ('world-'+$region) -Arg $region {param($region)
     $auditLog=Join-Path $evidence ('verify-world-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckWorldAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $auditProcess=Start-Game @(('-ChuckWorldAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"'))
     $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_WORLD_AUDIT region='+$region+' .*') | Select-Object -Last 1
     if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'gaps=(\d+) .*floating=(\d+) .*probes_found=2/2') {
         throw "World audit of $region failed or was blind. Inspect $auditLog"
@@ -27,8 +93,8 @@ foreach($region in $worldAudit.Keys) {
     if($gaps -gt $limit.Gaps -or $floating -gt $limit.Floating) {
         throw "World audit of $region found new faults (gaps $gaps > $($limit.Gaps) or floating $floating > $($limit.Floating)). The list and a shot list are in $(Join-Path $PackageRoot 'Chuck3D\Saved\Audit'); inspect $auditLog"
     }
-}
-if($WorldAuditOnly) { Write-Output 'CHUCK_WORLD_AUDIT_VERIFIED'; return }
+}}
+if($WorldAuditOnly) { Complete-Steps -Partial; Write-Output 'CHUCK_WORLD_AUDIT_VERIFIED'; return }
 # The motion and sound audits (MotionAudit.cpp, SoundAudit.cpp; the catalog's step 2). Each must not be blind (the
 # motion detector's self-test and Chuck's own walk; the planted sound heard through the floor at half the places or
 # more), and its findings may not rise above the region's known ones plus a small margin: one-shot sounds and where
@@ -36,9 +102,9 @@ if($WorldAuditOnly) { Write-Output 'CHUCK_WORLD_AUDIT_VERIFIED'; return }
 # Lower the numbers here when findings are fixed. Intended cases go in Content/Data/Audit/Allow.txt ("motion", "sound").
 $motionAudit=[ordered]@{ Waterdeep=@{PopMeshes=4;JitterMeshes=0}; Chult=@{PopMeshes=1;JitterMeshes=0}; ShipArrival=@{PopMeshes=7;JitterMeshes=0} }
 $soundAudit=[ordered]@{ Waterdeep=4; Chult=20; ShipArrival=4 }
-foreach($region in $motionAudit.Keys) {
+foreach($region in $motionAudit.Keys) { Step ('motion-'+$region) -Arg $region {param($region)
     $auditLog=Join-Path $evidence ('verify-motion-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckMotionAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $auditProcess=Start-Game @(('-ChuckMotionAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"'))
     $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_MOTION_AUDIT region='+$region+' .*') | Select-Object -Last 1
     if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'pop_meshes=(\d+) jitter_meshes=(\d+) .*chuck_moved=1 .*selftest=1') {
         throw "Motion audit of $region failed or was blind. Inspect $auditLog"
@@ -48,10 +114,10 @@ foreach($region in $motionAudit.Keys) {
     if($pops -gt $limit.PopMeshes+1 -or $jitter -gt $limit.JitterMeshes+1) {
         throw "Motion audit of $region found new pops or jitter. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-motion.csv')); inspect $auditLog"
     }
-}
-foreach($region in $soundAudit.Keys) {
+}}
+foreach($region in $soundAudit.Keys) { Step ('sound-'+$region) -Arg $region {param($region)
     $auditLog=Join-Path $evidence ('verify-sound-audit-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckSoundAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $auditProcess=Start-Game @(('-ChuckSoundAudit='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"'))
     $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_SOUND_AUDIT region='+$region+' .*') | Select-Object -Last 1
     if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'places=(\d+) .*leaks=(\d+) .*probe_heard=(\d+)/') {
         throw "Sound audit of $region failed. Inspect $auditLog"
@@ -62,16 +128,16 @@ foreach($region in $soundAudit.Keys) {
     if($leaks -gt $limit+3) {
         throw "Sound audit of $region found new leaks. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-sound.csv')); inspect $auditLog"
     }
-}
+}}
 # The robot playtester (Claude, 2026-11-14; PlaytestAudit.cpp): 90 s of a robot player on each region, with each
 # region's own seed, so a run is repeatable up to the game's own variation. Its planted solid must be found and it must
 # cover ground (20+ cells of 2 m); faults (inside, stuck, out of the world) may not exceed the known ones. The ship's 2
 # are the arrival compartment's crawlway mouth and the hidden collision by it (docs/AUTOMATION-DEFECT-CATALOG.md).
 # Falls the game catches are listed, not counted. Intended cases go in Content/Data/Audit/Allow.txt ("playtest").
 $playtest=[ordered]@{ Waterdeep=0; Chult=0; ShipArrival=0 }
-foreach($region in $playtest.Keys) {
+foreach($region in $playtest.Keys) { Step ('playtest-'+$region) -Arg $region {param($region)
     $auditLog=Join-Path $evidence ('verify-playtest-'+$region+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-    $auditProcess=Start-Process -FilePath $game -ArgumentList @(('-ChuckPlaytest='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"')) -WindowStyle Hidden -Wait -PassThru
+    $auditProcess=Start-Game @(('-ChuckPlaytest='+$region),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$auditLog+'"'))
     $summary=Select-String -LiteralPath $auditLog -Pattern ('CHUCK_PLAYTEST region='+$region+' .*') | Select-Object -Last 1
     if($auditProcess.ExitCode -or !$summary -or $summary.Line -notmatch 'cells=(\d+) .*inside=(\d+) stuck=(\d+) void=(\d+) .*probe=2') {
         throw "Playtest of $region failed or was blind. Inspect $auditLog"
@@ -82,25 +148,28 @@ foreach($region in $playtest.Keys) {
     if($faults -gt $limit) {
         throw "Playtest of $region found new places he gets inside, stuck or out of the world. The list is $(Join-Path $PackageRoot ('Chuck3D\Saved\Audit\'+$region+'-playtest.csv')); inspect $auditLog"
     }
-}
+}}
 # The voice files' loudness (Tools/Check-VoiceLoudness.py), when Python is installed; reported, not a failure.
 if(Get-Command python -ErrorAction SilentlyContinue) {
     $voice=& python (Join-Path $PSScriptRoot 'Check-VoiceLoudness.py') 2>&1 | Out-String
     Write-Output ($voice.Trim())
 }
 
+Step 'riverZombie' {
 $riverZombieLog=Join-Path $evidence ('verify-river-zombies-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$riverZombieProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$riverZombieProcess=Start-Game @('-ChuckRiverZombieTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$riverZombieLog+'"'))
 if($riverZombieProcess.ExitCode -or !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIE_TEST failures=0 trials=5' -Quiet) -or
    !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_ZOMBIES total=67 road=8 flanks=24 path_attackers=11 opposite=24' -Quiet) -or
    !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_MILL_TEST pass=1 configured=19 moved=19 bounded=19 stationary=48' -Quiet) -or
    !(Select-String -LiteralPath $riverZombieLog -Pattern 'CHUCK_RIVER_MIST_CHECK pools=16 pass=1' -Quiet)) {
     throw "Far-bank zombies verification failed. Inspect $riverZombieLog"
 }
+}
 # The golden cigarettes: the run up the first giant, then the same up the second (trail round both feet).
+Step 'golden' {
 foreach($goldenTree in 0,1) {
 $goldenLog=Join-Path $evidence ('verify-golden-leaf-tree'+$goldenTree+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$goldenProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGoldenLeafTest',('-ChuckGoldenLeafTree='+$goldenTree),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$goldenLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$goldenProcess=Start-Game @('-ChuckGoldenLeafTest',('-ChuckGoldenLeafTree='+$goldenTree),'-windowed','-ResX=1280','-ResY=720',('-abslog="'+$goldenLog+'"'))
 if($goldenProcess.ExitCode -or !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_TEST failures=0 duration=45' -Quiet) -or
    !(Select-String -LiteralPath $goldenLog -Pattern ('CHUCK_GOLDEN_SETUP tree='+$goldenTree+' pickups=8') -Quiet) -or
    !(Select-String -LiteralPath $goldenLog -Pattern 'CHUCK_GOLDEN_CLIMB ' -Quiet) -or
@@ -110,13 +179,17 @@ if($goldenProcess.ExitCode -or !(Select-String -LiteralPath $goldenLog -Pattern 
     throw "Golden cigarette verification failed. Inspect $goldenLog"
 }
 }
+}
+Step 'impact' {
 $impactLog=Join-Path $evidence ('verify-zombie-impact-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$impactProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckZombieImpactTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$impactLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$impactProcess=Start-Game @('-ChuckZombieImpactTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$impactLog+'"'))
 if($impactProcess.ExitCode -or !(Select-String -LiteralPath $impactLog -Pattern 'CHUCK_ZOMBIE_IMPACT_TEST failures=0 trials=4 sounds=12' -Quiet)) {
     throw "Zombie impact verification failed. Inspect $impactLog"
 }
+}
+Step 'chult' {
 $chultLog=Join-Path $evidence ('verify-chult-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$chultProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$chultLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$chultProcess=Start-Game @('-ChuckChultTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$chultLog+'"'))
 if($chultProcess.ExitCode -or !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_LANDING .* missing_assets=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_WATERCOURSE .*missing_assets=0 falls_collision=0' -Quiet) -or
    !(Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RIVER .*missing_assets=0 water_collision=0' -Quiet) -or
@@ -182,26 +255,32 @@ $ruinSetup=Select-String -LiteralPath $chultLog -Pattern 'CHUCK_CHULT_RUINS_BUIL
 if(!$ruinSetup -or [double]::Parse($ruinSetup.Matches[0].Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture) -gt 10000) {
     throw "Rounded ruin setup exceeded its 10-second budget. Inspect $chultLog"
 }
+}
+Step 'path' {
 $pathLog=Join-Path $evidence ('verify-chult-path-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$pathProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPathReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pathLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$pathProcess=Start-Game @('-ChuckChultTest','-ChuckPathReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pathLog+'"'))
 if($pathProcess.ExitCode -or !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_REVIEW_COMPLETE failures=0 views=6' -Quiet) -or
    !(Select-String -LiteralPath $pathLog -Pattern 'CHUCK_CHULT_PATH_TEST failures=0 trials=10' -Quiet)) {
     throw "Ancient jungle road verification failed. Inspect $pathLog"
 }
+}
 # Upriver (Claude, 2026-10-15): the extended far bank, source fall, giant trees and deep jungle in cooked views.
+Step 'upriver' {
 $upriverLog=Join-Path $evidence ('verify-chult-upriver-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$upriverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckUpriverReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$upriverLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$upriverProcess=Start-Game @('-ChuckChultTest','-ChuckUpriverReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$upriverLog+'"'))
 if($upriverProcess.ExitCode -or !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $upriverLog -Pattern 'CHUCK_CHULT_UPRIVER_REVIEW_COMPLETE failures=0 views=12' -Quiet)) {
     throw "Upriver verification failed. Inspect $upriverLog"
+}
 }
 # The temple exterior (Claude, 2026-10-15): cooked views, then the real character
 # runs up the road (the temple score's swell must meet the reveal, 2026-10-17;
 # its loop is exercised from 2 s before the end) and climbs into the sanctuary,
 # then walks across the top terrace up the steps into a shrine (2026-10-18).
+Step 'temple' {
 $templeLog=Join-Path $evidence ('verify-chult-temple-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$templeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleReview','-ChuckTempleMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$templeProcess=Start-Game @('-ChuckChultTest','-ChuckTempleReview','-ChuckTempleMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$templeLog+'"'))
 if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_APPROACH failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
@@ -209,27 +288,32 @@ if($templeProcess.ExitCode -or !(Select-String -LiteralPath $templeLog -Pattern 
    !(Select-String -LiteralPath $templeLog -Pattern 'CHUCK_CHULT_TEMPLE_TEST failures=0 climb=1 legs=6' -Quiet)) {
     throw "Temple verification failed. Inspect $templeLog"
 }
+}
 # The temple interior (Claude, 2026-10-20): cooked views, then the real character walks in through
 # the sanctuary, down the hidden stair and round the well into the Great Hall; times the spike bands
 # (then stands in one), runs the collapsing slabs (then stops on one and falls), swings the rings over
 # the rift, times the dart gallery (then stands in a dart line) and runs off the well's gallery.
+Step 'interior' {
 $interiorLog=Join-Path $evidence ('verify-chult-temple-interior-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$interiorProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleInteriorReview','-ChuckTempleInteriorMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$interiorLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$interiorProcess=Start-Game @('-ChuckChultTest','-ChuckTempleInteriorReview','-ChuckTempleInteriorMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$interiorLog+'"'))
 if($interiorProcess.ExitCode -or !(Select-String -LiteralPath $interiorLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $interiorLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_TEST failures=0 descent=1 spikes=1 slab_run=1 slab_fall=1 rings=1 darts=1 well_fall=1 hearing=1' -Quiet) -or
    !(Select-String -LiteralPath $interiorLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Temple interior verification failed. Inspect $interiorLog"
 }
+}
 # The temple trap run (Claude, 2026-10-22; docs/CHULT-TEMPLE-RUN.md): stills, then the real character up the
 # rubble and the wall-jump chimney, side and chained wall runs over the spike pits (a sprint leap and a single
 # side run fall short), the axes and the fire read and run, rolls under the saws, a deliberate hit from each,
 # the gauntlet in one go, and once more on its beat without a stop.
+Step 'run' {
 $runLog=Join-Path $evidence ('verify-temple-run-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$runProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleRunTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$runLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$runProcess=Start-Game @('-ChuckChultTest','-ChuckTempleRunTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$runLog+'"'))
 if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_TEST failures=0 climb=1 pit_single=1 pit_chain=1 pit_twist=1 pit_fall=1 leap_short=1 side_short=1 axes=1 axe_hit=1 fire=1 fire_strip=1 fire_hit=1 saws=1 saw_hit=1 gauntlet=1 gauntlet_flow=1' -Quiet) -or
    !(Select-String -LiteralPath $runLog -Pattern 'CHUCK_TEMPLE_RUN_FLOW_RESULT leg=4 deaths=0 axe_hits=0 jet_hits=0 saw_hits=0 ' -Quiet)) {
     throw "Temple trap run verification failed. Inspect $runLog"
+}
 }
 # The Astral wind and the sanctum (Claude, 2026-10-22; docs/CHULT-TEMPLE-WIND.md): stills, then the real character over
 # each spike pit on wall runs kicked back and forth (one kick fewer falls short; leg 3 started on its broken wall falls),
@@ -237,8 +321,9 @@ if($runProcess.ExitCode -or !(Select-String -LiteralPath $runLog -Pattern 'CHUCK
 # its dais, and the whole way from the antechamber to the sanctum's gallery.
 # Since 2026-10-24 the sanctum's floor is broken: a sprint leap off the stair's head lands in the pool and dies, the same
 # leap from 5 m down clears it, and the sea tear by the wizard is a fall death; every hole is open and its rim holds.
+Step 'wind' {
 $windLog=Join-Path $evidence ('verify-temple-wind-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$windProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleWindTest','-ChuckTempleRunMusicTest','-ChuckSanctumMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$windProcess=Start-Game @('-ChuckChultTest','-ChuckTempleWindTest','-ChuckTempleRunMusicTest','-ChuckSanctumMusicTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$windLog+'"'))
 if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_CHECK lanes=8 ' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_TEMPLE_WIND_TEST failures=0 pit1=1 pit2=1 pit2_one_kick=1 pit3=1 pit3_wrong_wall=1 pit4=1 pit4_short=1 tear_fall=1 bends=1 stairs=1 top_leap=1 mid_leap=1 sea_fall=1 full=1' -Quiet) -or
@@ -246,6 +331,7 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_RUN_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
    !(Select-String -LiteralPath $windLog -Pattern 'CHUCK_CHULT_TEMPLE_BOSS_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Temple Astral wind verification failed. Inspect $windLog"
+}
 }
 # The temple heroes (Claude, 2026-10-23; docs/CHULT-TEMPLE-HEROES.md): cooked, the battle spawns with every
 # asset, each of the fighter's blows lands on a skeleton (and the level cut takes its skull), a blow on his
@@ -259,8 +345,9 @@ if($windProcess.ExitCode -or !(Select-String -LiteralPath $windLog -Pattern 'CHU
 # 2026-10-26, the cutscenes (TempleSanctumScene.h): the entrance's three shots and control back; the Fireball from the
 # argument to the blast, Chuck thrown into the rubble map at half Sanity with control back; the same skipped with Esc.
 # 2026-10-27, entrance_wait: walked in from the last leg, the entrance waits until he has been on his feet in the hall a while.
+Step 'hero' {
 $heroLog=Join-Path $evidence ('verify-temple-heroes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$heroProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$heroProcess=Start-Game @('-ChuckSanctumTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$heroLog+'"'))
 if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_BATTLE heroes=3 beholder=1 skeletons=12 meshes=3 clips=22 sounds=64 arrow=1 skull=1 fx=5 near_holes=0 beholder_fx=4 seal=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_BEHOLDER_FX ready=1' -Quiet) -or
    !(Select-String -LiteralPath $heroLog -Pattern 'CHUCK_SANCTUM_TRIAL trial=beholder_rays pass=1' -Quiet) -or
@@ -285,14 +372,17 @@ if($heroProcess.ExitCode -or !(Select-String -LiteralPath $heroLog -Pattern 'CHU
    (Select-String -LiteralPath $heroLog -Pattern 'Fatal error:|bUsedWithInstancedStaticMeshes|bUsedWithSkeletalMesh' -Quiet)) {
     throw "Temple heroes verification failed. Inspect $heroLog"
 }
+}
 # The rubble map (Claude, 2026-10-26; docs/CHULT-TEMPLE-RUBBLE.md): stills, then the real character walks the lane from where
 # the Fireball throws him to the crevice, crawls the crevice on all fours to its end and back out (standing again), and
 # walks into a rupture (an Astral death, back where he came to).
+Step 'rubble' {
 $rubbleLog=Join-Path $evidence ('verify-temple-rubble-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$rubbleProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckTempleRubbleTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$rubbleLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$rubbleProcess=Start-Game @('-ChuckChultTest','-ChuckTempleRubbleTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$rubbleLog+'"'))
 if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_CHULT_TEMPLE_INTERIOR_CHECK failures=0 .* spawns=21 ' -Quiet) -or
    !(Select-String -LiteralPath $rubbleLog -Pattern 'CHUCK_TEMPLE_RUBBLE_TEST failures=0 floating=0 heard=0 lane=1 crawl=1 rift_fall=1' -Quiet)) {
     throw "Temple rubble verification failed. Inspect $rubbleLog"
+}
 }
 # The pirate ship, milestone 1 (Claude, 2026-11-01; docs/SHIP.md): the real character crawls to the rubble crevice's end
 # and the escape plays onto the ship; the ship's checks; stills of every space; then aboard: through the doors to the
@@ -301,8 +391,9 @@ if($rubbleProcess.ExitCode -or !(Select-String -LiteralPath $rubbleLog -Pattern 
 # (2026-11-02): the weather deck's checks (rail, main top, ladders, grips, sails, sea); up and down the companion ladder
 # and the quarterdeck's; up the main shrouds' ratlines to the main top, onto the main yard and out to the yardarm, into the sea and
 # back on deck; the drop from the yard onto the deck; the rail holds him; across, down and off the ratlines, the topmast shrouds (2026-11-05).
+Step 'ship' {
 $shipLog=Join-Path $evidence ('verify-ship-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$shipProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$shipLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$shipProcess=Start-Game @('-ChuckChultTest','-ChuckShipTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$shipLog+'"'))
 if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_ESCAPE_TEST pass=1 plays=1 finishes=1 out=1 space=Arrival shots=3' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_CHECK failures=0 missing=0' -Quiet) -or
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet) -or
@@ -313,75 +404,102 @@ if($shipProcess.ExitCode -or !(Select-String -LiteralPath $shipLog -Pattern 'CHU
    !(Select-String -LiteralPath $shipLog -Pattern 'CHUCK_SHIP_TEST failures=0 trials=22 passed=22 ship_check=0 rats=16 jars=23 ladders=4 ' -Quiet)) {
     throw "Ship verification failed. Inspect $shipLog"
 }
+}
 # The ship's storm ending (Claude, 2026-11-08; docs/regions/SHIP-STORM-ENDING.md): the 61 voiced lines' sounds; the orders and
 # the guidance; both yardarms tied; the fore ratlines carried away; a jump without the leaf short of the fore top; the leaf;
 # the long leap from both lanes onto the fore top; up the fore topmast shrouds; the cutscene into the burning rupture.
+Step 'ending' {
 $endingLog=Join-Path $evidence ('verify-ship-ending-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$endingProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckShipEndingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$endingLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$endingProcess=Start-Game @('-ChuckChultTest','-ChuckShipEndingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$endingLog+'"'))
 if($endingProcess.ExitCode -or !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_LINES lines=61 sounds=61 pass=1' -Quiet) -or
    !(Select-String -LiteralPath $endingLog -Pattern 'CHUCK_SHIP_ENDING_TEST failures=0 trials=orders=1 reef_starboard=1 reef_larboard=1 fore_carry=1 jump_no_leaf=1 leaf=1 leap_starboard=1 leap_port=1 fore_climb=1 scene=1' -Quiet)) {
     throw "Ship ending verification failed. Inspect $endingLog"
+}
 }
 # Phlegethos (Claude, 2026-11-14; docs/regions/PHLEGETHOS.md): the fall from the burning rupture to the plain and its handoff;
 # then the real character through every challenge: the road's hops and sprint leap past the geysers, all 21 column hops, the
 # chained wall run between the slabs, the gorge's wall run and drop, the chains, the ramp, the crumbling steps, the
 # chimney, the last leap, the walk along the wastes' winding path (2026-11-16) and the shut gate; the trio's battle; the bus
 # stop's commuter and a fall into its rupture, and the Feywild bleedthrough to the river's sweep (2026-11-17).
+Step 'hell' {
 $hellLog=Join-Path $evidence ('verify-hell-fall-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$hellProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckHellFallTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$hellLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$hellProcess=Start-Game @('-ChuckChultTest','-ChuckHellFallTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$hellLog+'"'))
 if($hellProcess.ExitCode -or !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_END at=6[0-9]\.[0-9]+ skipped=0 landed=1 vanished=1 summoned=1 erupted=1 exhales=2' -Quiet) -or
    !(Select-String -LiteralPath $hellLog -Pattern 'CHUCK_HELL_FALL_TEST failures=0 handoff=1' -Quiet)) {
     throw "Fall to Phlegethos verification failed. Inspect $hellLog"
 }
+}
 # The river into the Feywild (Claude, 2026-11-19, FeyRiverScene.h): the dark, the score at 7 s, the plunge, washed up on the
 # pond's shore and back on his feet, then playable there.
+Step 'feyRiver' {
 $feyRiverLog=Join-Path $evidence ('verify-fey-river-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$feyRiverProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckFeyRiverTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$feyRiverLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$feyRiverProcess=Start-Game @('-ChuckChultTest','-ChuckFeyRiverTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$feyRiverLog+'"'))
 if($feyRiverProcess.ExitCode -or !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_START music=1 rush=1 roar=1 splashes=6' -Quiet) -or
    !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_SCORE at=7\.0' -Quiet) -or
    !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_END at=36\.[0-9]+ skipped=0 surfacings=5 washed=1 rose=1' -Quiet) -or
    !(Select-String -LiteralPath $feyRiverLog -Pattern 'CHUCK_FEY_RIVER_TEST failures=0 handoff=1 .* missing=0' -Quiet)) {
     throw "Feywild river cutscene verification failed. Inspect $feyRiverLog"
 }
+}
+# The rough Feywild map (Claude, 2026-11-19, FeyMap.h): walked from the shore through the first threshold to the orchard,
+# never stuck or late, at most two districts standing, the riverbank dropped behind him.
+Step 'feyMap' {
+$feyMapLog=Join-Path $evidence ('verify-fey-map-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$feyMapProcess=Start-Game @('-ChuckChultTest','-ChuckFeyMapTest=short','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$feyMapLog+'"'))
+if($feyMapProcess.ExitCode -or !(Select-String -LiteralPath $feyMapLog -Pattern 'CHUCK_FEY_DISTRICT_DROPPED name=Riverbank' -Quiet) -or
+   !(Select-String -LiteralPath $feyMapLog -Pattern 'CHUCK_FEY_MAP_TEST failures=0 stuck=0 void=0 late=0 max_loaded=[12] checkpoints_failed=0 missing=0 short=1' -Quiet)) {
+    throw "Feywild map verification failed. Inspect $feyMapLog"
+}
+}
+Step 'phleg' {
 $phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$phlegProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$phlegProcess=Start-Game @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"'))
 if($phlegProcess.ExitCode -or !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_BUILD pass=1 missing=0' -Quiet) -or
    !(Select-String -LiteralPath $phlegLog -Pattern 'CHUCK_PHLEGETHOS_TEST failures=0 passed=23 ' -Quiet)) {
     throw "Phlegethos verification failed. Inspect $phlegLog"
 }
+}
 # Props (Claude, 2026-10-27; docs/CHULT-PROP-AUDIT.md): every tree's foot on its ground (none over a drop), the fallen
 # logs solid and on the ground, no jar or urn inside the masonry; then the see-through undergrowth round Chuck.
+Step 'prop' {
 $propLog=Join-Path $evidence ('verify-chult-props-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$propProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckPropAudit','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$propLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$propProcess=Start-Game @('-ChuckChultTest','-ChuckPropAudit','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$propLog+'"'))
 if($propProcess.ExitCode -or !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_CHULT_GROUNDING trees=[1-9]' -Quiet) -or
    !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_PROP_AUDIT_COUNTS .*floating_trees=0 .*ledge_trees=0 logs=2 logs_walk_through=0 logs_floating=0 .*jars_in_stone=0 jars_floating=0 jars_touching=0' -Quiet) -or
    !(Select-String -LiteralPath $propLog -Pattern 'CHUCK_PROP_AUDIT failures=0 ' -Quiet)) {
     throw "Chult prop audit failed. Inspect $propLog"
 }
+}
+Step 'fade' {
 $fadeLog=Join-Path $evidence ('verify-foliage-fade-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$fadeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckFoliageFadeReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fadeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$fadeProcess=Start-Game @('-ChuckChultTest','-ChuckFoliageFadeReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fadeLog+'"'))
 if($fadeProcess.ExitCode -or !(Select-String -LiteralPath $fadeLog -Pattern 'CHUCK_FOLIAGE_FADE_REVIEW failures=0 collection=1 strength_on=1.00' -Quiet)) {
     throw "Foliage fade verification failed. Inspect $fadeLog"
 }
+}
 # The jungle wreck (Claude, 2026-10-18): cooked views, then the real character walks the road
 # past it, drops in at the breach and climbs out over the deck, walks into the cabin and into a rupture.
+Step 'wreck' {
 $wreckLog=Join-Path $evidence ('verify-chult-wreck-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$wreckProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckWreckReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$wreckLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$wreckProcess=Start-Game @('-ChuckChultTest','-ChuckWreckReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$wreckLog+'"'))
 if($wreckProcess.ExitCode -or !(Select-String -LiteralPath $wreckLog -Pattern 'CHUCK_CHULT_WRECK_CHECK failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $wreckLog -Pattern 'CHUCK_CHULT_WRECK_TEST failures=0 legs=4 road=1 hold_loop=1 cabin=1 rupture=1' -Quiet)) {
     throw "Jungle wreck verification failed. Inspect $wreckLog"
 }
+}
 # The macaws (Claude, 2026-10-19): clearance of every flight, stills, then the real character
 # crosses the bridge (the flock crosses in view, the pair passes close), runs up to the temple's
 # reveal (the flock goes up into the gyre) and stands on the avenue (pairs swoop across his view).
+Step 'bird' {
 $birdLog=Join-Path $evidence ('verify-chult-birds-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$birdProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckChultTest','-ChuckBirdReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$birdLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$birdProcess=Start-Game @('-ChuckChultTest','-ChuckBirdReview','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$birdLog+'"'))
 if($birdProcess.ExitCode -or !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_CHECK failures=0 birds=48 missing_meshes=0 clearance_hits=0 ' -Quiet) -or
    !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_BRIDGE failures=0 crossed=1 ' -Quiet) -or
    !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_REVEAL failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_SWOOPS failures=0 ' -Quiet) -or
    !(Select-String -LiteralPath $birdLog -Pattern 'CHUCK_CHULT_BIRDS_TEST failures=0' -Quiet)) {
     throw "Chult bird verification failed. Inspect $birdLog"
+}
 }
 if (!$NoCapture) { $arguments+='-ChuckCapture' }
 if ($NoGroom) { $arguments+='-ChuckNoGroom' }
@@ -396,18 +514,21 @@ if ($MotionCapture) {
         }
     }
 }
+Step 'demo' {
 $demoLog=Join-Path $evidence ('verify-demo-end-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$demoProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckDemoEndTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$demoLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$demoProcess=Start-Game @('-ChuckDemoEndTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$demoLog+'"'))
 if($demoProcess.ExitCode -or !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_END_TEST failures=0 sky_ends=1 floor_and_astral_continue=1 reset_blocked=1' -Quiet) -or
    !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_DEMO_SKIP_TEST failures=0 landing=1' -Quiet) -or
    !(Select-String -LiteralPath $demoLog -Pattern 'CHUCK_CHULT_INPUT_TEST failures=0 moved=1 local_reset=1' -Quiet) -or
    (Select-String -LiteralPath $demoLog -Pattern 'CHUCK_CHULT_INPUT_TEST failures=1|Fatal error:' -Quiet)) {
     throw "Cutscene skip, playable landing or local reset verification failed. Inspect $demoLog"
 }
+}
 # The fall to Chult played through (Claude, FallCutscene.h): music and cloud,
 # the crash, the astral death and return, two drags, then playable Chult.
+Step 'fall' {
 $fallLog=Join-Path $evidence ('verify-fall-cutscene-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$fallProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckFallCutsceneTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fallLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$fallProcess=Start-Game @('-ChuckFallCutsceneTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$fallLog+'"'))
 if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_START .* music=1 wind=1 crashes=3 flap=1 whistle=1 thud=1' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_MUSIC playing=1' -Quiet) -or
    !(Select-String -LiteralPath $fallLog -Pattern 'CHUCK_FALL_CUTSCENE_SCORE at=0\.0' -Quiet) -or
@@ -417,30 +538,37 @@ if($fallProcess.ExitCode -or !(Select-String -LiteralPath $fallLog -Pattern 'CHU
    (Select-String -LiteralPath $fallLog -Pattern 'Fatal error:' -Quiet)) {
     throw "Fall-to-Chult cutscene verification failed. Inspect $fallLog"
 }
+}
+Step 'pantry' {
 $pantryLog=Join-Path $evidence ('verify-pantry-adjustments-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $pantryArguments=@('-ChuckPantryAdjustmentsTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$pantryLog+'"'))
-$pantryProcess=Start-Process -FilePath $game -ArgumentList $pantryArguments -WindowStyle Hidden -Wait -PassThru
+$pantryProcess=Start-Game $pantryArguments
 if($pantryProcess.ExitCode -or !(Select-String -LiteralPath $pantryLog -Pattern 'CHUCK_PANTRY_ADJUSTMENTS_CHECK failures=0 oil_rims=6 noncolliding=1 cheese_blocks=1 cellar_talk=0 surface_talk=1' -Quiet)) {
     throw "Cellar talk, oil rims or cheese collision verification failed. Inspect $pantryLog"
 }
 if(!(Select-String -LiteralPath $pantryLog -Pattern 'CHUCK_PANTRY_ISLAND_CHECK failures=0 floor=1 underfloor_clear=1' -Quiet)) {
     throw "Suspended cellar floor verification failed. Inspect $pantryLog"
 }
+}
+Step 'leap' {
 $leapLog=Join-Path $evidence ('verify-leap-rift-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $leapArguments=@('-ChuckLeapRiftTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$leapLog+'"'))
 if (!$NoCapture) { $leapArguments+='-ChuckLeapRiftMotionCapture' }
-$leapProcess=Start-Process -FilePath $game -ArgumentList $leapArguments -WindowStyle Hidden -Wait -PassThru
+$leapProcess=Start-Game $leapArguments
 if ($leapProcess.ExitCode -or !(Select-String -LiteralPath $leapLog -Pattern 'CHUCK_LEAPRIFT_TEST_COMPLETE failures=0 trials=6 sprint=1 ordinary=3 wall_assisted=2 bypass_allowed=1' -Quiet)) {
     throw "Astral floor gap traversal verification failed. Inspect $leapLog"
+}
 }
 # Lamp alleys (user 2026-10-09): chimney climbs caught at the eave and pulled up
 # onto each alley's roof, a wall jump caught by a lantern ring, brachiation down
 # the alley and back, and a kick off a ring into a chimney climb to the roof.
+Step 'swing' {
 $swingLog=Join-Path $evidence ('verify-lamp-swing-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $swingArguments=@('-ChuckLampSwingTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$swingLog+'"'))
-$swingProcess=Start-Process -FilePath $game -ArgumentList $swingArguments -WindowStyle Hidden -Wait -PassThru
+$swingProcess=Start-Game $swingArguments
 if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern 'CHUCK_LAMPSWING_TEST_COMPLETE failures=0 trials=8 chimneys=3 catch=1 swings=2 kick=1 locked=1' -Quiet)) {
     throw "Lamp-alley climb and brachiation verification failed. Inspect $swingLog"
+}
 }
 # Chult canopy (Claude, 2026-10-13): the real character climbs a liana, catches
 # and brachiates all four chains tree to tree (branch-gap leaps, step-down
@@ -448,89 +576,108 @@ if ($swingProcess.ExitCode -or !(Select-String -LiteralPath $swingLog -Pattern '
 # swings out to the tip of every side branch (spur) and back, and follows the
 # line of trees into the open ground to its last tree and down its liana; dies
 # in a tree, under the line and on the landing loop and comes back in the right place.
+Step 'canopy' {
 $canopyLog=Join-Path $evidence ('verify-canopy-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$canopyProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$canopyLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$canopyProcess=Start-Game @('-ChuckCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$canopyLog+'"'))
 if ($canopyProcess.ExitCode -or !(Select-String -LiteralPath $canopyLog -Pattern 'CHUCK_CANOPY_TEST_COMPLETE failures=0 trials=48 static_failures=0' -Quiet)) {
     throw "Chult canopy brachiation verification failed. Inspect $canopyLog"
+}
 }
 # The giant trees upriver (Claude, 2026-10-15): from the first giant's crotch along
 # every chain to the last, stepping down at each, down its liana, deaths in a tree
 # and under them returning to the giants' spawn, and out to every spur's tip and back.
+Step 'giant' {
 $giantLog=Join-Path $evidence ('verify-giant-canopy-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$giantProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckGiantCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$giantLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$giantProcess=Start-Game @('-ChuckGiantCanopyTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$giantLog+'"'))
 if ($giantProcess.ExitCode -or !(Select-String -LiteralPath $giantLog -Pattern 'CHUCK_GIANT_CANOPY_TEST_COMPLETE failures=0 .*static_failures=0 chains=11' -Quiet)) {
     throw "Giant canopy brachiation verification failed. Inspect $giantLog"
+}
 }
 # The giants' T-rex (Claude, 2026-10-15): its loop clear of the trunks, its patrol,
 # a roar, chase and the one killing bite with the return to the Giant Trees spawn,
 # safe up in a giant while it stalks below, and it staying in its stretch.
+Step 'trex' {
 $trexLog=Join-Path $evidence ('verify-trex-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$trexProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckTRexTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$trexLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$trexProcess=Start-Game @('-ChuckTRexTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$trexLog+'"'))
 if ($trexProcess.ExitCode -or !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_TEST_COMPLETE failures=0 trials=4' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_ROUTE failures=0 segments=20 liana_exit_safe=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SOUNDS steps=3 roar=2 snap=1 growl=1' -Quiet) -or
     !(Select-String -LiteralPath $trexLog -Pattern 'CHUCK_TREX_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult T-rex verification failed. Inspect $trexLog"
 }
+}
 # The canopy raptor (Claude, 2026-10-14): its round, noticing him, the chase, tell
 # and bite, a roll through the tell, escaping up a tree and across a chain over it,
 # its territory, a death and the ruin-top return, ten scratches, and its sounds.
+Step 'raptor' {
 $raptorLog=Join-Path $evidence ('verify-raptor-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$raptorProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckRaptorTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$raptorLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$raptorProcess=Start-Game @('-ChuckRaptorTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$raptorLog+'"'))
 if ($raptorProcess.ExitCode -or !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_TEST_COMPLETE failures=0 trials=8' -Quiet) -or
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_ROUTE failures=0 segments=8' -Quiet) -or
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SOUNDS steps=3 hiss=1 snap=2 call=1 death=1' -Quiet) -or
     !(Select-String -LiteralPath $raptorLog -Pattern 'CHUCK_RAPTOR_SPAWN .* clips=6 mesh=1' -Quiet)) {
     throw "Chult raptor verification failed. Inspect $raptorLog"
 }
+}
 # The temple skeletons (Claude, 2026-10-21; docs/CHULT-TEMPLE-SKELETONS.md): the seventeen posts,
 # waking and the chase, each attack landing by its bones, a step back and a roll beating the kick,
 # a corridor skeleton kept to its gap, none reaching him on the rings, ten scratches and the fall.
 # Nine clips since 2026-11-12 (Throw: the grab's pitch by the leg).
+Step 'skeleton' {
 $skeletonLog=Join-Path $evidence ('verify-skeletons-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$skeletonProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSkeletonTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$skeletonLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$skeletonProcess=Start-Game @('-ChuckSkeletonTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$skeletonLog+'"'))
 if ($skeletonProcess.ExitCode -or !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_TEST_COMPLETE failures=0 trials=10' -Quiet) -or
     !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETONS spawned=17 of=17 lying=11' -Quiet) -or
     !(Select-String -LiteralPath $skeletonLog -Pattern 'CHUCK_TEMPLE_SKELETON_SPAWN .* clips=9 mesh=1 sounds=16' -Quiet)) {
     throw "Temple skeleton verification failed. Inspect $skeletonLog"
 }
+}
 # The temple snakes (Claude, 2026-10-21; docs/CHULT-TEMPLE-SNAKES.md): twenty coiled in the snake chamber,
 # the chase and the crawl keeping to its track, a strike landing, a roll and a step aside beating it,
 # one scratch killing, the chamber keeping them.
+Step 'snake' {
 $snakeLog=Join-Path $evidence ('verify-snakes-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$snakeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckSnakeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$snakeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$snakeProcess=Start-Game @('-ChuckSnakeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$snakeLog+'"'))
 if ($snakeProcess.ExitCode -or !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKE_TEST_COMPLETE failures=0 trials=7' -Quiet) -or
     !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKES spawned=20 of=20' -Quiet) -or
     !(Select-String -LiteralPath $snakeLog -Pattern 'CHUCK_TEMPLE_SNAKE_SPAWN bones=33 .* sounds=12 mesh=1' -Quiet)) {
     throw "Temple snake verification failed. Inspect $snakeLog"
 }
+}
 # The canyon's broken rope bridge (Claude, 2026-10-14): the real character catches
 # the first surviving plank, brachiates plank to plank to the far bank and steps
 # down, comes back steering with the stick, lets go over the gorge and returns
 # to the near bank, and can't stand on a plank; its own score over the bridge.
+Step 'bridge' {
 $bridgeLog=Join-Path $evidence ('verify-bridge-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$bridgeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckBridgeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$bridgeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$bridgeProcess=Start-Game @('-ChuckBridgeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$bridgeLog+'"'))
 if ($bridgeProcess.ExitCode -or !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_BRIDGE_TEST_COMPLETE failures=0 trials=11 static_failures=0 grips=31 music_far=1 music_back=1' -Quiet) -or
     !(Select-String -LiteralPath $bridgeLog -Pattern 'CHUCK_CHULT_BRIDGE_MUSIC_CHECK failures=0 looping=1 playing_after_boundary=1' -Quiet)) {
     throw "Chult bridge brachiation verification failed. Inspect $bridgeLog"
 }
+}
 # Chult's hostile life (Claude, 2026-10-14): fifteen zombies on the landing's side,
 # clear of the brachiation trees, idle until he comes near; five raptors on the trees' round.
+Step 'life' {
 $lifeLog=Join-Path $evidence ('verify-jungle-life-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$lifeProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckJungleLifeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$lifeLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$lifeProcess=Start-Game @('-ChuckJungleLifeTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$lifeLog+'"'))
 if ($lifeProcess.ExitCode -or !(Select-String -LiteralPath $lifeLog -Pattern 'CHUCK_CHULT_LIFE_TEST_COMPLETE failures=0' -Quiet) -or
     !(Select-String -LiteralPath $lifeLog -Pattern 'CHUCK_CHULT_LIFE zombies=15 ' -Quiet)) {
     throw "Chult jungle life verification failed. Inspect $lifeLog"
 }
+}
 # The zombie grab (Claude, 2026-10-14; forced every time here, 1 in 4 in play): seized,
 # lifted to its face with both hands on him, bitten to zero sanity, gone from its hands,
 # summoned back whole at the landing, and it lets go.
+Step 'grab' {
 $grabLog=Join-Path $evidence ('verify-zombie-grab-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
-$grabProcess=Start-Process -FilePath $game -ArgumentList @('-ChuckZombieGrabTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$grabLog+'"')) -WindowStyle Hidden -Wait -PassThru
+$grabProcess=Start-Game @('-ChuckZombieGrabTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$grabLog+'"'))
 if ($grabProcess.ExitCode -or !(Select-String -LiteralPath $grabLog -Pattern 'CHUCK_ZOMBIE_GRAB_TEST_COMPLETE failures=0' -Quiet)) {
     throw "Zombie grab verification failed. Inspect $grabLog"
 }
-$process=Start-Process -FilePath $game -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
+}
+Step 'smoke' {
+$process=Start-Game $arguments
 if (!(Test-Path -LiteralPath $log)) { throw "Game did not produce its test log: $log" }
 $failed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST FAIL|Failed to compile Material|valid ShaderMap|Default Material will be used in game|Fatal error:'
 $completed=Select-String -LiteralPath $log -Pattern 'CHUCK_TEST_COMPLETE failures=0'
@@ -585,6 +732,11 @@ if ($process.ExitCode -or $failed -or !$completed -or !$worldCompleted -or !$str
     if($failed) { $failed | ForEach-Object {$_.Line} }
     throw "Package verification failed (exit $($process.ExitCode), $passed passes; expected at least $expected). Inspect $log"
 }
-Write-Output "CHUCK_PACKAGE_VERIFIED passes=$passed log=$log"
+$script:SmokePasses=$passed
+}
+Complete-Steps
+# The full run's marker, which Write-BuildReceipt.ps1 requires before a promotion.
+Add-Content -LiteralPath $log -Value "CHUCK_PACKAGE_VERIFIED_ALL steps=$($script:StepResults.Count) retried=$($script:Retried -join ',')"
+Write-Output "CHUCK_PACKAGE_VERIFIED passes=$script:SmokePasses log=$log retried=$($script:Retried -join ',')"
 if (!$NoCapture) { Write-Output ('Captures: '+(Join-Path $PackageRoot 'Chuck3D\Saved\Screenshots\Windows')) }
 $global:ChuckLastVerificationLog=$log

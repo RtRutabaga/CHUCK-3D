@@ -2,6 +2,37 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 20 — Verification: named steps, retries, a launch time limit (Claude)
+
+- **Asked:** the cloud session "Game verification efficiency" sent a plan (rerun only what failed, fix flakes at the source, a manifest runner, fewer launches, one summary, archive old handoffs); the user: "Yes please do so".
+- **Source:** `main` at abaa8e25; the commit after the Feywild map's.
+- **Changed:** `Tools/Verify-Package.ps1` (each check wrapped as a named step by a one-off transform; checks themselves unchanged except the new `feyMap` step), `Tools/Build-Game.ps1` (`-RetryFailed`), `Tools/Write-BuildReceipt.ps1` (requires `CHUCK_PACKAGE_VERIFIED_ALL`).
+- **Tested:** `-Only impact` (partial, `CHUCK_PACKAGE_PARTIAL`); three full runs on the Feywild candidate: the first exposed the fixed step breaking the temple heroes (now opt-in) and the map test's exit freeze; the second the smoke test's music-track count (17 → 20); the third passed with one retry (`hero`, wizard_seal 0.29 then pass). The receipt accepted the marker on promotion.
+- **Not done:** the manifest-driven runner, batching trials into fewer launches, the per-run summary with contact sheets, archiving this file's old entries. The fixed step needs a step-by-step trial before any step uses it.
+- **Flake ledger so far:** `hero` passed on retry twice (11-19 22:13, 11-20 00:27). One more and it is reported as a flake to fix (wizard_seal coverage).
+
+Next part of the work can be done by either agent (the rest of the verification plan, Codex's area by AGENT-WORKFLOW); preference: Codex.
+
+## November 20 — Feywild: the whole map walkable in rough form, stage 3 (Claude)
+
+- **Asked:** "Proceed with feywild" (stage 3 of `docs/regions/FEYWILD.md`).
+- **Source:** `main` at abaa8e25; this commit.
+- **Changed:**
+  - `FeyMap.h/.cpp` (new): the district and threshold tables, each district's land, water, planting, blockout and bounds planned on a worker thread and put in place a few ms a frame (`AFeyDistrict`); `AFeyMap` (loading and dropping by threshold, late walls and mist, the painted distance and its per-district trees, the far tower and cloud stair, the maze's stand-in); checkpoints, respawn, music zones, `Walk` routes.
+  - `FeyMapTest.cpp` (new): `-ChuckFeyMapTest[=short]`, the walker, Chult baseline, per-district frame/GPU time and memory, checkpoint starts and stills.
+  - `FeywildSetting.h/.cpp`: the slice as the riverbank's east end (`LoadSlice`/`UnloadSlice`), the path on west, its west wall removed, `SetMistBoost`, motes on the map's ground, `InFeywild` over the map, the map started after the river.
+  - `ChuckCharacter.cpp` (respawn at the district's checkpoint), `DockMenu.cpp` (seven district checkpoints in a ninth column, font 16, save point by district), `DockGameMode.cpp` (dark/open/maze tracks by zone; the smoke test's track count 20), `ChultLanding.cpp` (dispatch).
+  - `Tools/create_feywild_assets.py` (`M_FeyBlock`, the three tracks with `CHUCK_FEY_MUSIC=1`); new `SW_FeywildDark/Open/Maze`, `M_FeyBlock`; the user's tracks copied to `SourceAssets/Audio/Feywild_dark/open/maze.wav` (LFS, about 100 MB).
+  - `docs/regions/FEYWILD.md` (as built).
+- **Tested:** editor full route (`Local/feymap-test-3.log`): 5.4 km, stuck 0, void 0, late 0, max loaded 2, districts ready in 0.5-1.1 s after entering their threshold, checkpoint starts under 0.5 s, all districts 16.7 ms (capped), worst threshold frame 25 ms, memory 4400-4550 MB against Chult's 4477 (includes Chult). Two earlier full runs found root tunnels without floors, kinked threshold mouths, the vast tree and big plants crowding paths (fixed). Package: `feyMap` short walk passes in verification.
+- **Package:** `Local/feymap-package-3.log`; verified `Local/verify-package-20261119-222217.log` (49 steps, 182 passes, `hero` retried); promoted `FeywildMap`. The overnight run before it hung on a GPU device hang in the upriver step (not reproduced).
+- **Not tested:** by hand; the music crossfades by ear; frame headroom above the cap.
+- **Remaining flaws:** all blockout; long walks; memory not isolated from Chult; the maze's hedge tops not yet guarded (bees are stage 6).
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged. Save points gain the district names; `FeyArrival` unchanged.
+- **Launcher:** `FeywildMap` (receipt abaa8e2, built from the working tree before this commit); FeywildRiver kept as previous; no candidate folder left.
+
+Next part of the work can be done here (Feywild stage 4, the kit and art pass, after the user has walked the rough map).
+
 ## November 19 — Feywild: the river cutscene and the arrival, stage 2 (Claude)
 
 - **Asked:** "Approve, start stage 2" (the river cutscene and arrival in `docs/regions/FEYWILD.md`, with checkpoints and music); waited on the other session's Phlegethos work (8ab3f2b9) before building.
