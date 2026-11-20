@@ -1,5 +1,6 @@
 #include "ChuckCharacter.h"
 #include "FeywildSetting.h"
+#include "FeyMap.h"
 #include "Engine/OverlapResult.h"
 #include "ShipStorm.h"
 #include "ChultLanding.h"
@@ -410,8 +411,8 @@ FVector AChuckCharacter::GetAreaStartLocation() const
     FVector Bridge;
     // In Phlegethos (2026-11-14): the start of the stretch he was in.
     if(PhlegethosRespawn(GetActorLocation(),Bridge)) return Bridge;
-    // In the Feywild (2026-11-19): the shore the river left him on.
-    if(InFeywild(GetActorLocation())) return FeywildArrival();
+    // In the Feywild (2026-11-19): the shore the river left him on; since stage 3, the checkpoint of the district he is in.
+    if(InFeywild(GetActorLocation())) return FeyRespawn(GetActorLocation());
     // Aboard the ship (2026-11-01): the start of the space he was in.
     if(ShipRespawn(GetActorLocation(),Bridge)) return Bridge;
     if(bChultRespawn && ChultBridgeRespawn(GetActorLocation(),Bridge)) return Bridge;
@@ -437,7 +438,7 @@ float AChuckCharacter::AreaStartYaw(const FVector& Location)
     if (IsChultTempleInteriorSpawn(Location, UpriverYaw)) return UpriverYaw;   // facing on into the temple
     if (IsShipSpawn(Location, UpriverYaw)) return UpriverYaw;                  // aboard, facing on into the space
     if (IsPhlegethosSpawn(Location, UpriverYaw)) return UpriverYaw;            // in the Hells, facing on along the way
-    if (FVector::Dist(Location, FeywildArrival()) < 1.f) return FeywildArrivalYaw();   // on the Feywild's shore, facing inland
+    if (IsFeyCheckpoint(Location, UpriverYaw)) return UpriverYaw;              // in the Feywild: the shore, facing inland, or a district's checkpoint
     if (Location.Z>=-150 || IsWithinDockPantry(Location)) return 0.f;
     if(FVector::Dist(Location,DockSewerLeapCheckpointLocation())<1.f) return DockSewerLeapCheckpointYaw();
     return FVector::Dist(Location,DockSewerCheckpointLocation())<1.f ? DockSewerCheckpointYaw() : 90.f;

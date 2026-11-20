@@ -76,6 +76,12 @@ public:
     /** Rings and drops on the pond where something hits it or moves in it (the cutscene's plunge and drift). */
     void Splash(const FVector& World, float Hard);
     int32 GetMissing() const { return Missing; }
+    /** The look slice's own land and planting, built again, or dropped (stage 3: it is the riverbank's east end, FeyMap.h). */
+    void LoadSlice();
+    void UnloadSlice();
+    bool IsSliceLoaded() const { return bSlice; }
+    /** Mist thickening (0 to 1) while a district ahead is still loading. */
+    void SetMistBoost(float K);
 private:
     void Build();
     void BuildEnvironment();
@@ -106,7 +112,9 @@ private:
     UPROPERTY() class UDirectionalLightComponent* FillLight = nullptr;
     UPROPERTY() class USkyLightComponent* Sky = nullptr;
     float FillBase = 1.7f, SkyBase = 1.7f;
-    bool bRiver = false;
+    bool bRiver = false, bSlice = false, bMapStarted = false;
+    UPROPERTY() TArray<UActorComponent*> SliceParts;
+    UPROPERTY() class UExponentialHeightFogComponent* Fog = nullptr;
     int32 RiverVeil0 = -1;
     struct FSpark { FVector P, V; float Age = 0, Life = 1, Size = 1, Hue = 0, Phase = 0; bool bFly = false; };
     TArray<FSpark> Sparks;

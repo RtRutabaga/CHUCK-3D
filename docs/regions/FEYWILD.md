@@ -1,6 +1,6 @@
 # The Feywild: 3D adaptation plan
 
-**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3 is next.**
+**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3, the whole map walkable in rough form, is built (2026-11-19, `FeyMap.h`; see [the rough map as built](#the-rough-map-as-built-stage-3)). Stage 4 is next.**
 
 Sources: the user's Feywild vision and ten goal images (2026-11-17), the 2D game's `docs/development/PHASE-8.md` section 6 and 9 (river cutscene) and `PHASE-9.md` (thirteen maps), and the research below. Where the user's vision and the 2D game differ, the vision wins.
 
@@ -207,6 +207,30 @@ This also serves the setting. Districts no longer have to fit together physicall
 ### Budgets
 
 Stage 3 measures memory, frame rate and threshold load time in a packaged build on this machine, with Chult as the baseline. No district may use more memory or run slower than Chult. Art passes must stay inside those limits.
+
+### The rough map as built (stage 3)
+
+Built 2026-11-19 (`FeyMap.h/.cpp`, test `FeyMapTest.cpp`). The land, planting and blockout are placeholders from the look slice's kit; stage 4 replaces them.
+
+- **Layout.** Each district stands in its own rectangle west of the look slice; every road between two of them is a threshold through the gap. The look slice is the riverbank's east end, and its path now runs on west into the Blooming Path.
+
+  | District | Size | Music | What stands in for now |
+  |---|---|---|---|
+  | Riverbank and Blooming Path | 198 x 112 m plus the slice | main | Path, oaks, bell-flower lamps, flowers |
+  | Orchard and Needle Garden | 245 x 250 m | main | Rows of small trees; lanes between low stone walls with tall foxgloves |
+  | Twilight Crossroads | 225 x 220 m | main | The vast old tree on a ring path, standing stones, a rune arch at each of its seven roads |
+  | Lily Mere and Moonmoth Fen | 265 x 265 m | open | Six shallow pools with lily pads, reeds |
+  | Deepwood with Redcap Hollow | 300 x 300 m | dark | Dense old oaks, ferns, fungi; the hollow's ring of stones and fire pit |
+  | Highmeadow and Rapids | 300 x 300 m | open | Open meadow climbing 20 m west; shallow rapids with a chute and a ford; the overlook under a great tree, open to the maze |
+  | The Great Hedge Maze | 300 x 300 m | maze | Four rings of 7 m hedge with stone arches, dead ends, statues; the Cloud Staircase's first steps, then a boundary |
+
+- **Thresholds.** Ten, each about 40 m: rock cuttings, root tunnels and the overlook's stone descent (20 m down). Each is an S whose middle hides both ends. The two loops (Orchard, Lily Mere), the Deepwood's two ways and its hidden way to Highmeadow are all there.
+- **Loading.** A district is planned on a worker thread when he enters a threshold toward it, then put in place a few milliseconds each frame. The district behind is dropped once he is past the bend and the one ahead is ready. If a district were late, mist would thicken and that end would stay shut. Checkpoint starts build their district at once.
+- **Distance.** A low painted land with forest under and between the districts, ridges closing the horizon, Zephyros' tower on its cloud above the maze with the cloud stair winding up to it, and a stand-in maze seen from the overlook.
+- **Checkpoints.** Each district has one, in the dev menu's new ninth column. A death returns him to the checkpoint of the district he is in.
+- **Music.** Main, dark, open and maze tracks by district, crossfading over 4 s and keeping their place. In a threshold whatever plays goes on.
+- **Measured (editor, 1280x720, 60 fps cap).** The whole route walked by the test, 5.4 km through all ten thresholds into the maze: never stuck, never late, at most two districts standing. Each district was ready 0.5 to 1.1 s after he entered its threshold; a checkpoint start takes under 0.5 s. Every district held 16.7 ms a frame (Chult's landing view, the baseline, averaged 23 ms); the worst frame crossing a threshold was 25 ms. The process's memory stayed between 4400 and 4550 MB in the districts against 4477 MB at Chult. That figure includes Chult, which stays loaded behind the Feywild, so it is not a clean per-district number.
+- **Walking time.** At his run (2.25 m/s) the whole route is about 40 minutes; a district takes one to two minutes to cross.
 
 ## Technical risks
 

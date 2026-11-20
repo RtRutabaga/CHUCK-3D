@@ -85,6 +85,16 @@ if not ONLY:
     wave.set_editor_property('looping', True); ASSETS.save_loaded_asset(wave, only_if_is_dirty=False)
     unreal.log(f'CHUCK_AUDIO_IMPORTED SW_FeywildMain duration={wave.get_editor_property("duration"):.2f}')
 
+# The district tracks (stage 3, 2026-11-19): the user's dark, open and maze tracks, looping.
+if not ONLY or os.environ.get('CHUCK_FEY_MUSIC') == '1':
+    for src, dst in (('Feywild_dark.wav', 'SW_FeywildDark'), ('Feywild_open.wav', 'SW_FeywildOpen'), ('Feywild_maze.wav', 'SW_FeywildMaze')):
+        task = unreal.AssetImportTask(); task.filename = str(ROOT / 'SourceAssets/Audio' / src); task.destination_path = '/Game/Art/Audio'
+        task.destination_name = dst; task.automated = True; task.replace_existing = True; task.save = True
+        TOOLS.import_asset_tasks([task]); wave = unreal.load_asset('/Game/Art/Audio/' + dst)
+        if not isinstance(wave, unreal.SoundWave): raise RuntimeError(dst + ' import failed')
+        wave.set_editor_property('looping', True); ASSETS.save_loaded_asset(wave, only_if_is_dirty=False)
+        unreal.log(f'CHUCK_AUDIO_IMPORTED {dst} duration={wave.get_editor_property("duration"):.2f}')
+
 if not ONLY or os.environ.get('CHUCK_FEY_SOUND') == '1':
     task = unreal.AssetImportTask(); task.filename = str(ROOT / 'SourceAssets/Audio/SFX/SFX_FeyFalls_00.wav'); task.destination_path = '/Game/Art/Audio/SFX'
     task.destination_name = 'SFX_FeyFalls_00'; task.automated = True; task.replace_existing = True; task.save = True
@@ -541,8 +551,22 @@ def mist(m):
     out(c, P.MP_EMISSIVE_COLOR); out(fade, P.MP_OPACITY)
 
 
+# ---------------------------------------------------------------- the rough map's blockout (stage 3, 2026-11-19)
+# Arches, hedges, the far tower and its cloud: their colour from vertex colour, broken up a little, until the art pass.
+BLOCK = NOISE + r'''
+float n=F.N(P.xy/90.+P.z/140.)*.6+F.N(P.yz/23.)*.4;
+Rough=lerp(.7,.95,n);
+return VC.rgb*lerp(.78,1.12,n);
+'''
+
+
+def block(m):
+    c = custom(m, BLOCK, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'VC': node(m, unreal.MaterialExpressionVertexColor)}, extra=[('Rough', F1)])
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .3), P.MP_SPECULAR)
+
+
 mats = {}
-for name, fn in (('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+for name, fn in (('M_FeyBlock', block),('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),

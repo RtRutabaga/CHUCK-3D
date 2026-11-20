@@ -37,6 +37,7 @@
 #include "ShipEscape.h"
 #include "PhlegethosSetting.h"
 #include "FeywildSetting.h"
+#include "FeyMap.h"
 #include "EngineUtils.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -79,7 +80,11 @@ namespace
     constexpr int32 PhlegColumn=7;
     // The Feywild (2026-11-18; FeywildSetting.h), under Phlegethos's last column: the shore the river leaves him on
     // (2026-11-19, its save point), the river cutscene itself, and the look slice's own start.
-    const FChultPoint FeyPoints[]={{TEXT("FeyArrival"),TEXT("Feywild Riverbank")},{TEXT("FeyRiver"),TEXT("Feywild River (dev)")},{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
+    // (2026-11-19, stage 3: in a ninth column, with a checkpoint for each district of the rough map, FeyMap.h)
+    const FChultPoint FeyPoints[]={{TEXT("FeyArrival"),TEXT("Feywild Riverbank")},{TEXT("FeyOrchard"),TEXT("Feywild Orchard")},{TEXT("FeyCrossroads"),TEXT("Feywild Crossroads")},
+        {TEXT("FeyMere"),TEXT("Feywild Lily Mere")},{TEXT("FeyDeepwood"),TEXT("Feywild Deepwood")},{TEXT("FeyHighmeadow"),TEXT("Feywild Highmeadow")},{TEXT("FeyMaze"),TEXT("Feywild Maze")},
+        {TEXT("FeyRiver"),TEXT("Feywild River (dev)")},{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
+    int32 FeyDistrictOf(const FString& Point){for(int32 D=0;D<FeyMap::Districts;++D) if(Point==FeyMap::District(D).Point) return D; return -1;}
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
@@ -124,18 +129,21 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
     FVector ShipAt;float ShipYaw=0;
-    if(C && (Point==TEXT("FeyLook") || Point==TEXT("FeyArrival")))
+    if(C && (Point==TEXT("FeyLook") || FeyDistrictOf(Point)>=0))
     {
         FadeOutMusic(.1f);
         AFeywildSetting::Enter(GetWorld());
-        const bool bLook=Point==TEXT("FeyLook");
-        C->ResetAtLocation(bLook?FeywildSpawn():FeywildArrival());C->SetActorRotation(FRotator(0,bLook?FeywildSpawnYaw():FeywildArrivalYaw(),0));C->Recenter();
+        // (stage 3) Only that district stands, built at once under the menu's cut.
+        const bool bLook=Point==TEXT("FeyLook");const int32 D=bLook?0:FeyDistrictOf(Point);
+        if(AFeyMap* Map=AFeyMap::Ensure(GetWorld())) Map->LoadNow(D);
+        C->ResetAtLocation(bLook?FeywildSpawn():FeyCheckpointWorld(D));C->SetActorRotation(FRotator(0,bLook?FeywildSpawnYaw():FeyMap::CheckpointYaw(D),0));C->Recenter();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;
     }
     if(C && Point==TEXT("FeyRiver"))
     {
-        // The river cutscene from the tear (it builds the Feywild under its dark opening).
+        // The river cutscene from the tear (it builds the Feywild under its dark opening; the riverbank only, if the map stands).
+        if(AFeyMap* Map=AFeyMap::Get(GetWorld())) Map->LoadNow(0);
         C->BeginFeyRiver();
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;
@@ -235,7 +243,7 @@ bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
             FVector At;float Yaw;
             if(PhlegPoint(P.Point,At,Yaw)) Consider(P.Point,P.Label,At);
         }
-    if(AFeywildSetting::Get(World)) Consider(FeyPoints[0].Point,FeyPoints[0].Label,FeywildArrival());
+    if(AFeywildSetting::Get(World)) for(int32 D=0;D<FeyMap::Districts;++D) Consider(FeyMap::District(D).Point,FeyMap::District(D).Label,FeyCheckpointWorld(D));
     // The docks after the sewer are the evening's.
     if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
     // The dev markers are dropped from the label the player sees.
@@ -441,7 +449,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
     TSharedPtr<SVerticalBox> Rows;
     MenuWidget=SNew(SBorder).BorderBackgroundColor(FLinearColor(.018f,.014f,.027f,1.f))
         .HAlign(HAlign_Center).VAlign(VAlign_Center)
-        [SNew(SBox).WidthOverride(Checkpoints?1900.f:360.f)   // six columns of checkpoints since 2026-11-01
+        [SNew(SBox).WidthOverride(Checkpoints?1910.f:360.f)   // six columns of checkpoints since 2026-11-01
             [SAssignNew(Rows,SVerticalBox)]];
     Rows->AddSlot().AutoHeight().Padding(0,0,0,32)
         [SNew(STextBlock).Text(FText::FromString(TEXT("CHUCK 3D")))
@@ -450,7 +458,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
     // The checkpoint page has five columns: Waterdeep, Chult, the temple interior, its trap run, the Astral wind.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh,Eighth;
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh,Eighth,Ninth;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
@@ -460,14 +468,15 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Fifth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Sixth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Seventh,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Eighth,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Eighth,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Ninth,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
         Target->AddSlot().AutoHeight().Padding(0,6)
             [SAssignNew(Button,SButton).HAlign(HAlign_Center).ContentPadding(FMargin(20,14))
             .OnClicked_Lambda(MoveTemp(Action))
-            [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",Checkpoints?18:20))]];
+            [SNew(STextBlock).Text(FText::FromString(Label)).Font(FCoreStyle::GetDefaultFontStyle("Regular",Checkpoints?16:20))]];
         if(!First.IsValid()) First=Button;
         MenuButtons.Add(Label,Button);
     };
@@ -524,7 +533,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
             Target=I<PhlegColumn?Seventh:Eighth;
             const TCHAR* Name=PhlegPoints[I].Point;Add(PhlegPoints[I].Label,[Start,Name](){return Start(Name);});
         }
-        Target=Eighth;
+        Target=Ninth;
         for(const FChultPoint& Point:FeyPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});

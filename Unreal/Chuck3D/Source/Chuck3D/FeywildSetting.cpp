@@ -2,6 +2,7 @@
 #include "ChuckCharacter.h"
 #include "FallCutscene.h"
 #include "FeyRiverScene.h"
+#include "FeyMap.h"
 #include "ProceduralMeshComponent.h"
 #include "Algo/BinarySearch.h"
 #include "Async/ParallelFor.h"
@@ -54,7 +55,8 @@ namespace
         const float A = FMath::Atan2((Y - PondY) / PondRY, (X - PondX) / PondRX);
         return FVector2D((X - PondX) / PondRX, (Y - PondY) / PondRY).Size() / (1.f + .09f * FMath::Sin(3.f * A + 1.f) + .05f * FMath::Sin(7.f * A + 2.f));
     }
-    float PathK(float X, float Y) { return Smooth(210.f, 80.f, FMath::Abs(Y - PathY(X))) * Smooth(-1500.f, -900.f, X) * Smooth(5480.f, 5200.f, X); }
+    // (2026-11-19: on west past the slice's old end, into the riverbank's Blooming Path)
+    float PathK(float X, float Y) { return Smooth(210.f, 80.f, FMath::Abs(Y - PathY(X))) * Smooth(-7900.f, -7300.f, X) * Smooth(5480.f, 5200.f, X); }
 
     // The country beyond the overlook, out to some 6 km: a valley floor 26 m down, then ridge behind ridge, each a step higher,
     // and a flat-topped rise with the great tree on it.
@@ -195,7 +197,7 @@ FVector FeywildOrigin() { return AFallCutscene::LandingSpot() + FVector(0, -3200
 bool InFeywild(const FVector& World)
 {
     const FVector L = FeyLocal(World);
-    return (L.X > MinX - 2000 && L.X < MaxX + 4000 && FMath::Abs(L.Y) < HalfY + 2000 && L.Z > -1500 && L.Z < 9000) || InRiverBox(L);
+    return (L.X > MinX - 2000 && L.X < MaxX + 4000 && FMath::Abs(L.Y) < HalfY + 2000 && L.Z > -1500 && L.Z < 9000) || InRiverBox(L) || InFeyMap(World);
 }
 bool FeyWading(const FVector& Paw)
 {
@@ -315,11 +317,24 @@ void AFeywildSetting::Build()
     if (auto* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyMist.M_FeyMist"))) Mist->SetMaterial(0, M); else ++Missing;
     if (auto* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Art/Feywild/M_FeyRipple.M_FeyRipple"))) Rings->SetMaterial(0, M); else ++Missing;
     BuildEnvironment();
+    LoadSlice();
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_BUILT seconds=%.2f"), FPlatformTime::Seconds() - Started);
+}
+
+// The look slice's own land, water, planting, mirror and falls (2026-11-19: since stage 3 the riverbank's east end, dropped
+// with the rest of the riverbank when he is two thresholds away and built again when he comes back).
+void AFeywildSetting::LoadSlice()
+{
+    if (bSlice) return;
+    const double Started = FPlatformTime::Seconds();
+    TSet<UActorComponent*> Before; for (UActorComponent* C : GetComponents()) Before.Add(C);
+    const int32 Tris0 = Triangles, Planted0 = Planted;
     BuildLand();
     BuildFarLand();
     BuildPlanting();
     for (UHierarchicalInstancedStaticMeshComponent* H : Kits) H->BuildTreeIfOutdated(false, true);
     // Low veils of mist on the pond and at the falls' feet.
+    Veils.Reset(); RiverVeil0 = -1;
     FRandomStream R(31);
     for (int32 I = 0; I < 34; ++I)
     {
@@ -339,7 +354,26 @@ void AFeywildSetting::Build()
     }
     BuildProbe();
     BuildSound();
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_BUILT seconds=%.2f"), FPlatformTime::Seconds() - Started);
+    SliceParts.Reset();
+    for (UActorComponent* C : GetComponents()) if (!Before.Contains(C)) SliceParts.Add(C);
+    bSlice = true;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_SLICE_LOADED seconds=%.2f parts=%d triangles=%d planted=%d"), FPlatformTime::Seconds() - Started, SliceParts.Num(), Triangles - Tris0, Planted - Planted0);
+}
+
+void AFeywildSetting::UnloadSlice()
+{
+    if (!bSlice) return;
+    for (UActorComponent* C : SliceParts) if (C) { if (auto* H = Cast<UHierarchicalInstancedStaticMeshComponent>(C)) Kits.Remove(H); C->DestroyComponent(); }
+    SliceParts.Reset();
+    WaterMesh = StreamMesh = nullptr; FallsSound = nullptr; Probe = nullptr; ProbeTarget = nullptr; FarMid = nullptr;
+    Veils.Reset(); RiverVeil0 = -1; Ripples.Reset(); Drops.Reset(); bWasWading = false;
+    bSlice = false;
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_SLICE_DROPPED"));
+}
+
+void AFeywildSetting::SetMistBoost(float K)
+{
+    if (Fog) Fog->SetFogDensity(.018f * (1.f + 5.f * FMath::Clamp(K, 0.f, 1.f)));
 }
 
 void AFeywildSetting::BuildEnvironment()
@@ -390,7 +424,7 @@ void AFeywildSetting::BuildEnvironment()
     Fill->SetIntensity(1.7f); Fill->SetLightColor(FLinearColor(.46f, .64f, 1.f)); Fill->SetCastShadows(false); Fill->SetVolumetricScatteringIntensity(0.f);
     Attach(Fill, FVector::ZeroVector, FRotator(-38.f, 20.f, 0.f));
     FillLight = Fill; FillBase = Fill->Intensity;
-    auto* Fog = NewObject<UExponentialHeightFogComponent>(this);
+    Fog = NewObject<UExponentialHeightFogComponent>(this);
     Fog->SetFogDensity(.018f); Fog->SetFogHeightFalloff(.18f); Fog->SetFogMaxOpacity(.72f); Fog->FogCutoffDistance = 3000000.f; Fog->SetStartDistance(900.f);
     Fog->SetFogInscatteringColor(FLinearColor(.17f, .3f, .46f));
     Fog->SetDirectionalInscatteringExponent(7.f); Fog->SetDirectionalInscatteringStartDistance(1200.f); Fog->SetDirectionalInscatteringColor(FLinearColor(.8f, .42f, .17f));
@@ -419,8 +453,10 @@ void AFeywildSetting::BuildEnvironment()
         auto* B = NewObject<UBoxComponent>(this); B->SetBoxExtent(Half); B->SetCollisionProfileName(TEXT("BlockAll")); B->SetHiddenInGame(true);
         Attach(B, Ce);
     };
-    const float Mx = (MinX + MaxX) * .5f, Hx = (MaxX - MinX) * .5f;
-    Wall(FVector(MinX - 50, 0, 2000), FVector(50, HalfY + 100, 4000)); Wall(FVector(MaxX + 50, 0, 2000), FVector(50, HalfY + 100, 4000));
+    // (2026-11-19, stage 3: open to the west, where the path goes on into the riverbank's Blooming Path, FeyMap.h)
+    constexpr float WestX = -4200;
+    const float Mx = (WestX + MaxX) * .5f, Hx = (MaxX - WestX) * .5f;
+    Wall(FVector(MaxX + 50, 0, 2000), FVector(50, HalfY + 100, 4000));
     Wall(FVector(Mx, HalfY + 50, 2000), FVector(Hx + 100, 50, 4000)); Wall(FVector(Mx, -HalfY - 50, 2000), FVector(Hx + 100, 50, 4000));
     // The overlook's edge, and along the top of the falls' side where it drops to the valley.
     constexpr float EdgeX = 5470, EdgeY = 540;
@@ -589,7 +625,7 @@ void AFeywildSetting::BuildProbe()
     for (const float When : {1.f, 6.f})
     {
         FTimerHandle Capture;
-        GetWorldTimerManager().SetTimer(Capture, FTimerDelegate::CreateWeakLambda(this, [this]() { Probe->CaptureScene(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_PROBE_CAPTURED")); }), When, false);
+        GetWorldTimerManager().SetTimer(Capture, FTimerDelegate::CreateWeakLambda(this, [this]() { if (!Probe) return; Probe->CaptureScene(); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEYWILD_PROBE_CAPTURED")); }), When, false);
     }
 }
 
@@ -969,6 +1005,10 @@ void AFeywildSetting::Tick(float Dt)
 {
     Super::Tick(Dt);
     Clock += Dt;
+    // The rough map (stage 3, FeyMap.h): once he is out of the river, its districts load and drop as he goes.
+    if (!bMapStarted)
+        if (auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+            if (!Chuck->IsInFeyRiver() && InFeywild(Chuck->GetActorLocation())) { bMapStarted = true; AFeyMap::Ensure(GetWorld()); }
     TickWater(FMath::Min(Dt, .05f));
     TickAir(FMath::Min(Dt, .05f));
     static const bool bPerf = FParse::Param(FCommandLine::Get(), TEXT("ChuckFeyPerf"));
@@ -1019,7 +1059,7 @@ void AFeywildSetting::TickWater(float Dt)
         bWasWading = bWading;
     }
     NextFallRing -= Dt;
-    if (NextFallRing <= 0.f)
+    if (NextFallRing <= 0.f && bSlice)
     {
         NextFallRing = FMath::FRandRange(.14f, .3f);
         Ring(FVector(LedgeX - FMath::FRandRange(250.f, 520.f), FallY + FMath::FRandRange(-FallHalf, FallHalf), WaterZ + 1.2f), FMath::FRandRange(110.f, 240.f), .55f, 1.6f);
@@ -1058,6 +1098,7 @@ void AFeywildSetting::TickAir(float Dt)
         S.P = FVector(LEye.X + Rr * FMath::Cos(A), LEye.Y + Rr * FMath::Sin(A), 0);
         float Land = FMath::Max(Ground(S.P.X, S.P.Y), WaterZ);
         if (InRiverBox(LEye)) { float Rs, Rd; RiverNearest(S.P.X, S.P.Y, Rs, Rd); Land = FMath::Max(RiverGround(S.P.X, S.P.Y), static_cast<float>(RiverAt(Rs).Z)); }   // (on the river's set)
+        else { float Z; if (FeyMap::GroundAt(S.P.X, S.P.Y, Z)) Land = FMath::Max(Z, 0.f); }                                                 // (on the rough map's land)
         S.P.Z = Land + (bFly ? FMath::FRandRange(20.f, 260.f) : FMath::FRandRange(30.f, 520.f));
         S.V = FVector(FMath::FRandRange(-12.f, 12.f), FMath::FRandRange(-12.f, 12.f), bFly ? 0.f : FMath::FRandRange(-5.f, 7.f));
         S.Life = bFly ? FMath::FRandRange(7.f, 16.f) : FMath::FRandRange(6.f, 13.f); S.Age = bAnywhere ? FMath::FRandRange(0.f, S.Life * .7f) : 0.f;
