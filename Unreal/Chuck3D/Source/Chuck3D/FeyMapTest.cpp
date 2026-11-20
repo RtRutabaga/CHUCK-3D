@@ -33,7 +33,7 @@ namespace
         int32 Next = 0, Stuck = 0, Void = 0, Phase = 0, Check = 0, CheckFails = 0;
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
-        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false; uint64 Frame = 0;
+        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false; uint64 Frame = 0;
         FStat Chult, Fey[Districts + 1], Cross;
         float ChultMem = 0, BeforeMem = 0;
     };
@@ -50,6 +50,20 @@ namespace
         for (int32 I = 0; I <= 16; ++I) { const float T = bForward ? I / 16.f : 1.f - I / 16.f; P.Add(ThresholdAtT(Th, FMath::Lerp(-.1f, 1.1f, T))); }
         AddLeg(R, FString::Printf(TEXT("threshold%d%s"), Th, bForward ? TEXT("") : TEXT("_back")), P);
     }
+    struct FShot { const TCHAR* Name; int32 D; FVector2D At, Look; };
+    const FShot Shots[] = {
+        {TEXT("CanyonOrchardEnd"), Orchard, {-30200.f, 900.f}, {-28000.f, 0.f}},           // the first threshold's end, from the orchard
+        {TEXT("CanyonInside"), Riverbank, {-23300.f, 100.f}, {-25500.f, 0.f}},            // looking into it from the riverbank
+        {TEXT("RootTunnelMouth"), Crossroads, {-62000.f, -8600.f}, {-62500.f, -11000.f}}, // a root tunnel's mouth in its bank
+        {TEXT("CrossroadsArch"), Crossroads, {-62200.f, -3400.f}, {-67750.f, 0.f}},
+        {TEXT("Pads"), LilyMere, {-73480.f, 16300.f}, {-72600.f, 19500.f}},
+        {TEXT("PadsAcross"), LilyMere, {-72300.f, 19600.f}, {-73500.f, 15500.f}},
+        {TEXT("DeepwoodPath"), Deepwood, {-68500.f, -25000.f}, {-75000.f, -30000.f}},
+        {TEXT("DeepwoodHollow"), Deepwood, {-80300.f, -37300.f}, {-82000.f, -40000.f}},
+        {TEXT("Overlook"), Highmeadow, {-111650.f, 12600.f}, {-134000.f, 5000.f}},
+        {TEXT("MazeGate"), Maze, {-119700.f, 4300.f}, {-134000.f, 5000.f}},
+        {TEXT("MazeCorridor"), Maze, {-134000.f + 11700.f, 5000.f + 2100.f}, {-134000.f, 5000.f}},
+    };
     void In(FRun& R, int32 D, int32 Ta, int32 Tb) { AddLeg(R, FString::Printf(TEXT("%s_%d_%d"), District(D).Name, Ta, Tb), Walk(D, Ta, Tb)); }
 }
 
@@ -58,7 +72,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     UWorld* World = Owner->GetWorld();
     auto R = MakeShared<FRun>();
     FString Mode; FParse::Value(FCommandLine::Get(), TEXT("ChuckFeyMapTest="), Mode);
-    R->bShort = Mode == TEXT("short");
+    R->bShort = Mode == TEXT("short"); R->bStillsOnly = Mode == TEXT("stills");
     auto* PC = Cast<APlayerController>(Chuck->GetController());
     if (PC) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -70,7 +84,8 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         In(*R, Riverbank, -3, 0);
     }
     Way(*R, 0, true); In(*R, Orchard, 0, R->bShort ? -1 : 1);
-    if (!R->bShort)
+    if (R->bStillsOnly) { R->Points.Reset(); R->PointLeg.Reset(); }
+    if (!R->bShort && !R->bStillsOnly)
     {
         Way(*R, 1, true); In(*R, Crossroads, 1, 2); Way(*R, 2, false); In(*R, Orchard, 2, 1); Way(*R, 1, true);
         In(*R, Crossroads, 1, 3); Way(*R, 3, true); In(*R, LilyMere, 3, 4); Way(*R, 4, false);
@@ -134,7 +149,11 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             FVector Target = R->Points[R->Next]; Target.Z = L.Z;
             const float Dist = FVector::Dist2D(L, Target);
-            if (Dist < (bWay ? 130.f : 210.f)) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
+            // The lily pads over the deep water: arrive near each one's middle, and jump for the next from a metre out.
+            const bool bPad = IsPad(Target.X, Target.Y);
+            if (bPad && Dist < 32.f) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
+            if (bPad && Dist > 45.f && Dist < 90.f && Chuck->GetCharacterMovement()->IsMovingOnGround() && (IsPad(L.X, L.Y) || !InDeepWater(L.X, L.Y))) Chuck->Jump();
+            if (!bPad && Dist < (bWay ? 130.f : 210.f)) { ++R->Next; R->Best = 1e9f; R->LastGain = W->GetTimeSeconds(); R->bJumped = false; return; }
             if (Dist < R->Best - 30.f) { R->Best = Dist; R->LastGain = W->GetTimeSeconds(); }
             const float Stall = W->GetTimeSeconds() - R->LastGain;
             if (Stall > 2.5f && !R->bJumped) { Chuck->Jump(); R->bJumped = true; }
@@ -157,7 +176,27 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         // ---- 2: each district's checkpoint, alone, with a still
         if (R->Phase == 2)
         {
-            if (R->bShort && R->Check == 0) R->Check = Districts;   // (the short walk skips them)
+            if (R->bShort && R->Check == 0) R->Check = Districts + UE_ARRAY_COUNT(Shots);   // (the short walk skips them)
+            if (R->Check >= Districts && R->Check < Districts + int32(UE_ARRAY_COUNT(Shots)))
+            {
+                // (2026-11-20) Stills of the art pass's places: him standing there, looking toward something.
+                const FShot& Sh = Shots[R->Check - Districts];
+                if (!R->bPlaced)
+                {
+                    if (!Map->IsReady(Sh.D) || Map->GetLoadedCount() != 1) Map->LoadNow(Sh.D);
+                    float Z = 0; GroundAt(Sh.At.X, Sh.At.Y, Z); if (IsPad(Sh.At.X, Sh.At.Y)) Z = 2.f;
+                    Chuck->ResetAtLocation(FeyWorld(FVector(Sh.At.X, Sh.At.Y, Z + Stand + 4.f)));
+                    const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Sh.Look.Y - Sh.At.Y, Sh.Look.X - Sh.At.X));
+                    Chuck->SetActorRotation(FRotator(0, Yaw, 0)); Chuck->Recenter();
+                    R->bPlaced = true; R->PhaseStart = FPlatformTime::Seconds(); return;
+                }
+                if (Since < 3.5f) return;
+                R->bPlaced = false;
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / FString::Printf(TEXT("FeyMap/Art_%s.png"), Sh.Name), false, false);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_SHOT name=%s"), Sh.Name);
+                ++R->Check; R->PhaseStart = Now; return;
+            }
+            if (R->bStillsOnly && R->Check < Districts) { R->Check = Districts; return; }
             if (R->Check >= Districts)
             {
                 int32 Fails = R->Stuck + R->Void + R->CheckFails + (Map ? (Map->GetMaxLoaded() > 2) + (Map->GetMissing() > 0) + Map->GetLateCount() : 1);
@@ -171,8 +210,8 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 int32 Slower = 0; for (int32 D = 0; D < Districts; ++D) if (R->Fey[D].Frames && (R->Fey[D].Ms / R->Fey[D].Frames > ChultMs + .5 || R->Fey[D].Gpu / R->Fey[D].Frames > ChultGpu + .5)) ++Slower;
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_DISTRICTS chult=%.2fms/gpu%.2fms/%.0fmb%s thresholds=%.2fms worst_threshold_ms=%.1f slower_than_chult=%d"),
                     ChultMs, ChultGpu, R->ChultMem, *Line, R->Cross.Ms / FMath::Max(1, R->Cross.Frames), R->Cross.Worst, Slower);
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_TEST failures=%d stuck=%d void=%d late=%d max_loaded=%d checkpoints_failed=%d missing=%d short=%d"),
-                    Failures + Fails, R->Stuck, R->Void, Map ? Map->GetLateCount() : -1, Map ? Map->GetMaxLoaded() : -1, R->CheckFails, Map ? Map->GetMissing() : -1, R->bShort);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_TEST failures=%d stuck=%d void=%d late=%d max_loaded=%d checkpoints_failed=%d missing=%d short=%d drowned=%d maze_way_m=%.0f"),
+                    Failures + Fails, R->Stuck, R->Void, Map ? Map->GetLateCount() : -1, Map ? Map->GetMaxLoaded() : -1, R->CheckFails, Map ? Map->GetMissing() : -1, R->bShort, Map ? Map->GetDrowned() : -1, MazeWay() / 100.f);
                 Done(Failures + Fails); return;
             }
             const int32 D = R->Check;

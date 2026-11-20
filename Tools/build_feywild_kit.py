@@ -327,10 +327,12 @@ def far_tree(k):
 LEAF_RECTS = [(.016, .02, .145, .40), (.165, .02, .34, .39), (.52, .05, .65, .36), (.70, .02, .82, .41), (.02, .63, .18, .96), (.22, .58, .355, .96)]
 
 
-def oak(seed, wisteria):
-    rng = random.Random(seed); k = Kit(['FeyBark', 'FeyLeaf', 'FeyPlant']); col = Kit(['FeyBark'])
+def oak(seed, wisteria, deep=False):
+    # deep (2026-11-20, the Deepwood): mossed to the crown, nearly twice the roots and heavier, some arching clear of the
+    # ground, and moss hanging in curtains from the limbs (slot FeyHangMoss: U across a curtain, V down it).
+    rng = random.Random(seed); k = Kit(['FeyBark', 'FeyLeaf', 'FeyPlant', 'FeyHangMoss'] if deep else ['FeyBark', 'FeyLeaf', 'FeyPlant']); col = Kit(['FeyBark'])
     def bark(p, t, a):
-        m = clamp(.75 - p.z / 620. + .3 * lumps(p.x * 3, p.y * 3, p.z * 2, seed) + .25 * math.cos(a)); return (m, 0, 0, 0)
+        m = clamp(.75 - p.z / (1500. if deep else 620.) + .3 * lumps(p.x * 3, p.y * 3, p.z * 2, seed) + .25 * math.cos(a) + (.35 if deep else 0.)); return (m, 0, 0, 0)
     lean = Vector((rng.uniform(-90, 90), rng.uniform(-90, 90), 0)); trunk = []
     for i in range(15):
         t = i / 14; twist = t * 3.1 + seed
@@ -338,13 +340,15 @@ def oak(seed, wisteria):
     radii = [lerp(165, 78, smooth(0, 1, i / 14)) * (1 + .22 * smooth(.3, 0, i / 14)) for i in range(15)]
     tube(k, trunk, radii, 24, bark, 0, .17, seed); tube(col, trunk[::2], radii[::2], 10, lambda p, t, a: (0, 0, 0, 0), 0, .1, seed)
     # Great roots running out over the ground.
-    for i in range(9):
-        a = i * 2 * math.pi / 9 + rng.uniform(-.2, .2); reach = rng.uniform(430, 820); d = Vector((math.cos(a), math.sin(a), 0)); s = Vector((-d.y, d.x, 0)); wob = rng.uniform(.5, 1.5)
-        path = [d * lerp(95, reach, j / 11) + s * (70 * math.sin(j * .7 + i) * j / 11 * wob) + Vector((0, 0, lerp(190, -22, smooth(0, .75, j / 11)) + 24 * math.sin(j * 1.1 + i))) for j in range(12)]
-        rad = [lerp(66, 9, (j / 11) ** .8) for j in range(12)]
+    roots = 16 if deep else 9
+    for i in range(roots):
+        a = i * 2 * math.pi / roots + rng.uniform(-.2, .2); reach = rng.uniform(600, 1250) if deep else rng.uniform(430, 820); d = Vector((math.cos(a), math.sin(a), 0)); s = Vector((-d.y, d.x, 0)); wob = rng.uniform(.5, 1.5)
+        arch = rng.uniform(40, 120) if deep and i % 3 == 0 else 0.   # (some run clear of the ground in a low arch)
+        path = [d * lerp(95, reach, j / 11) + s * (70 * math.sin(j * .7 + i) * j / 11 * wob) + Vector((0, 0, lerp(190, -22, smooth(0, .75, j / 11)) + 24 * math.sin(j * 1.1 + i) + arch * math.sin(math.pi * j / 11))) for j in range(12)]
+        rad = [lerp(66, 9, (j / 11) ** .8) * (1.35 if deep else 1.) for j in range(12)]
         tube(k, path, rad, 12, bark, 0, .16, seed + i); tube(col, path[::2], rad[::2], 6, lambda p, t, a: (0, 0, 0, 0), 0, .08, seed + i)
     # Limbs: long, low, twisting; branches off them; leaf clusters and wisteria at the ends.
-    tips = []
+    tips = []; hangs = []
     def limb(start, d, length, r, depth):
         n = 9 if depth == 0 else 6; p = start.copy(); path = [p.copy()]; dd = d.normalized()
         for j in range(n):
@@ -352,6 +356,7 @@ def oak(seed, wisteria):
             p = p + dd * (length / n); path.append(p.copy())
         rad = [lerp(r, r * .42, j / n) for j in range(n + 1)]
         tube(k, path, rad, max(5, 12 - depth * 3), bark, 0, .12, seed + depth)
+        if deep and depth < 2: hangs.extend(path[2:])
         if depth < 3:
             for j in range(2, n + 1, 1 if depth else 2):
                 side = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-.25, .55))).normalized()
@@ -368,6 +373,18 @@ def oak(seed, wisteria):
             u0, v0, u1, v1 = rng.choice(LEAF_RECTS); shade = rng.uniform(.65, 1.)
             q = [k.vert(c - s, (shade, 0, 0, 0)), k.vert(c + s, (shade, 0, 0, 0)), k.vert(c + s + f * ls, (shade, 0, 0, 0)), k.vert(c - s + f * ls, (shade, 0, 0, 0))]
             k.face(q, 1, [(u0, v1), (u1, v1), (u1, v0), (u0, v0)])
+    # Moss hanging in curtains from the limbs.
+    if deep:
+        mi = slot_of(k, 'FeyHangMoss'); rng.shuffle(hangs)
+        for p in hangs[:int(len(hangs) * .45)]:
+            if p.z < 260: continue
+            yaw = rng.uniform(0, math.pi); w = rng.uniform(30, 75); length = min(rng.uniform(90, 300), p.z - 60)
+            ax = Vector((math.cos(yaw), math.sin(yaw), 0)) * w * .5; bend = Vector((rng.uniform(-12, 12), rng.uniform(-12, 12), 0))
+            rows = []
+            for r in range(5):
+                v = r / 4; top = p + Vector((0, 0, -8)) + bend * v * v - Vector((0, 0, length * v))
+                rows.append([k.vert(top - ax, (v, 0, 0, 0)), k.vert(top + ax, (v, 0, 0, 0))])
+            for r in range(4): k.face((rows[r][0], rows[r][1], rows[r + 1][1], rows[r + 1][0]), mi, [(0, r / 4), (1, r / 4), (1, (r + 1) / 4), (0, (r + 1) / 4)])
     # Wisteria hanging from the lower ends, shelves up the trunk.
     if wisteria:
         low = sorted(tips, key=lambda x: x[0].z)[:int(len(tips) * .5)]; rng.shuffle(low)
@@ -434,6 +451,9 @@ build('SM_FeyLilyPad', ['FeyPad'], lily_pad); build('SM_FeyLily', ['FeyPlant', '
 for index, (seed, hanging) in enumerate(((11, 46), (23, 0))):
     if wanted(f'SM_FeyOak{index}'):
         tree, collision = oak(seed, hanging); write(tree, f'SM_FeyOak{index}'); write(collision, f'SM_FeyOak{index}Collision')
+for index, seed in enumerate((31, 47)):   # the Deepwood's (2026-11-20)
+    if wanted(f'SM_FeyOakDeep{index}'):
+        tree, collision = oak(seed, 0, True); write(tree, f'SM_FeyOakDeep{index}'); write(collision, f'SM_FeyOakDeep{index}Collision')
 
 
 # ---------------------------------------------------------------- derived from the scans

@@ -232,6 +232,19 @@ Built 2026-11-19 (`FeyMap.h/.cpp`, test `FeyMapTest.cpp`). The land, planting an
 - **Measured (editor, 1280x720, 60 fps cap).** The whole route walked by the test, 5.4 km through all ten thresholds into the maze: never stuck, never late, at most two districts standing. Each district was ready 0.5 to 1.1 s after he entered its threshold; a checkpoint start takes under 0.5 s. Every district held 16.7 ms a frame (Chult's landing view, the baseline, averaged 23 ms); the worst frame crossing a threshold was 25 ms. The process's memory stayed between 4400 and 4550 MB in the districts against 4477 MB at Chult. That figure includes Chult, which stays loaded behind the Feywild, so it is not a clean per-district number.
 - **Walking time.** At his run (2.25 m/s) the whole route is about 40 minutes; a district takes one to two minutes to cross.
 
+### The art pass and the user's changes (2026-11-20)
+
+The user asked for the art pass plus specific changes. As built:
+
+- **Thresholds are solid ground.** The floor and the rock either side are one heightfield measured from the way's middle (offset cross-sections folded over on the S-bends). A cutting has rock walls, broad mossy tops and outer slopes; a root tunnel runs between earth banks under a roof as long as the tube. Both sink into each district past its mouth. The painted distance keeps its trees 48 m clear of every threshold (they stood up through the canyons).
+- **Deep water crossed only on lily pads.** A deep half-moat round the Lily Mere's second threshold (from the Crossroads): 13 big pads about 1.2 m apart (a hop each) with collision under each. In the water he is put back on the last ground he stood on, with a splash.
+- **The Deepwood.** Its own oaks (`SM_FeyOakDeep0/1`, Blender kit): mossed to the crown, nearly twice the roots, some arching, moss hanging in curtains from the limbs (`M_FeyHangMoss`). About twice as many trees, moss clumps, glowing fungi, small blue lights low among the roots, drifting mist. Its gloom fades in through its thresholds: the sun dimmed and cooled, a bluer fill, less sky light, fog three to four times as thick and blue, lower exposure.
+- **Signs.** 13 wooden signposts (`M_FeySign`: weathered wood, nonsense glyphs cut into the arrows) lead from the riverbank through the orchard and Needle Garden, the Crossroads, the Lily Mere's fen and pads, Redcap Hollow and the hidden way, the ford and the overlook. From Highmeadow they start to lie (one points at the sky); the overlook's post points every way; the maze gate's eight arrows go every way, up and down included; at the heart one points straight up and one straight down.
+- **The maze at a person's scale.** Corridors 2.6 m wide between leafy hedges 8.4 m high and 1.2 m thick (`M_FeyHedge`), 29 rings and 3,097 cells grown by a randomised Prim's walk with a few loops, round the plaza with the cloud stair's foot. The shortest way through is 195 m. Mossy statues stand in some dead ends; stone arches with a few glowing runes at the gate and the heart. From the overlook the ground now falls away, so the maze shows below.
+- **Stone.** Arches, statues and the maze's arches are carved stone (`M_FeyStone`); the Crossroads' rune arches glow faintly. The orchard's rows are small wisteria-hung oaks.
+- **Music.** In the main areas Feywild_main and the user's Feywild_ (`SW_FeywildAlt`) take turns, each crossfading into the other near its end.
+- **Measured (editor, full route):** 5.0 km, stuck 0, drowned 0, late 0, at most two districts, all checkpoints OK, every district at the 60 fps cap (Deepwood 16.9 ms), worst threshold frame 28 ms.
+
 ## Technical risks
 
 - **Late loading.** If baked districts still load too slowly on this machine, thresholds get longer or use the fade. Stage 3 tests this before any art depends on it.

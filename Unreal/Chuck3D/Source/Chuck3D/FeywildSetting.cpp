@@ -373,8 +373,41 @@ void AFeywildSetting::UnloadSlice()
 
 void AFeywildSetting::SetMistBoost(float K)
 {
-    if (Fog) Fog->SetFogDensity(.018f * (1.f + 5.f * FMath::Clamp(K, 0.f, 1.f)));
+    const float Nk = FMath::Clamp(K, 0.f, 1.f);
+    if (FMath::IsNearlyEqual(Nk, MistK, .002f)) return;
+    MistK = Nk; ApplyFog();
 }
+
+void AFeywildSetting::ApplyFog()
+{
+    if (!Fog) return;
+    const float G = GloomNow;
+    Fog->SetFogDensity(.018f * (1.f + 5.f * MistK) * (1.f + 3.5f * G));
+    Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(.17f, .3f, .46f), FLinearColor(.045f, .1f, .21f), G));
+    Fog->SetDirectionalInscatteringColor(FMath::Lerp(FLinearColor(.8f, .42f, .17f), FLinearColor(.12f, .11f, .14f), G));
+    Fog->SetVolumetricFogAlbedo(FMath::Lerp(FLinearColor(FColor(225, 235, 255)), FLinearColor(.45f, .62f, 1.f), G).ToFColor(true));
+    Fog->SetVolumetricFogExtinctionScale(FMath::Lerp(.45f, 1.5f, G));
+}
+
+// The Deepwood (2026-11-20, the user: much darker, bluer, foggier, a very different part of the forest).
+void AFeywildSetting::SetGloom(float G)
+{
+    G = FMath::Clamp(G, 0.f, 1.f);
+    if (FMath::IsNearlyEqual(G, GloomNow, .002f)) return;
+    GloomNow = G;
+    if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .26f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.5f, .58f, .85f), G)); }
+    if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, .8f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }
+    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .5f, G));
+    if (PostComp)
+    {
+        PostComp->Settings.AutoExposureBias = -.35f * G;
+        PostComp->Settings.ColorGainShadows = FMath::Lerp(FVector4(.86f, .98f, 1.2f, 1.f), FVector4(.72f, .9f, 1.3f, 1.f), G);
+        PostComp->Settings.bOverride_ColorSaturation = true; PostComp->Settings.ColorSaturation = FVector4(1, 1, 1, FMath::Lerp(1.16f, .95f, G));
+    }
+    ApplyFog();
+}
+
+void AFeywildSetting::SetExtraVeils(const TArray<FVector4>& V) { ExtraVeils = V; bVeilsDirty = true; }
 
 void AFeywildSetting::BuildEnvironment()
 {
@@ -412,6 +445,7 @@ void AFeywildSetting::BuildEnvironment()
     Sun->DynamicShadowDistanceMovableLight = 9000; Sun->DynamicShadowCascades = 4; Sun->SetVolumetricScatteringIntensity(2.2f);
     Sun->SetEnableLightShaftBloom(true); Sun->SetBloomScale(.25f); Sun->SetBloomThreshold(.6f); Sun->SetBloomTint(FColor(255, 196, 130));
     Attach(Sun, FVector::ZeroVector, SunRot);
+    SunLight = Sun;
     auto* SkyLight = NewObject<USkyLightComponent>(this);
     SkyLight->SetMobility(EComponentMobility::Movable); SkyLight->bRealTimeCapture = false; SkyLight->SourceType = ESkyLightSourceType::SLS_CapturedScene; SkyLight->SkyDistanceThreshold = 100000.f;
     SkyLight->SetIntensity(1.7f); SkyLight->SetLightColor(FLinearColor(.72f, .86f, 1.f));
@@ -447,6 +481,7 @@ void AFeywildSetting::BuildEnvironment()
     P.bOverride_ColorGainHighlights = true; P.ColorGainHighlights = FVector4(1.06f, 1.f, .92f, 1.f);
     P.bOverride_AmbientOcclusionIntensity = true; P.AmbientOcclusionIntensity = .7f;
     Attach(Post);
+    PostComp = Post;
     // Invisible bounds of the slice.
     auto Wall = [&](const FVector& Ce, const FVector& Half)
     {
@@ -1126,12 +1161,22 @@ void AFeywildSetting::TickAir(float Dt)
     else Lights->BatchUpdateInstancesTransforms(0, Xf, true, true);
     for (int32 I = 0; I < Xf.Num(); ++I) { Lights->SetCustomDataValue(I, 0, Data[I * 2], false); Lights->SetCustomDataValue(I, 1, Data[I * 2 + 1], I == Xf.Num() - 1); }
     // The mist's veils, turned to the eye, drifting a little.
-    TArray<FTransform> Mf; Mf.Reserve(Veils.Num());
+    TArray<FTransform> Mf; Mf.Reserve(Veils.Num() + ExtraVeils.Num());
     for (const FVeil& V : Veils) Mf.Add(Facing(FeyWorld(V.P + FVector(FMath::Sin(Clock * .05f + V.Seed * 6.f) * V.Drift * 8.f, FMath::Cos(Clock * .04f + V.Seed * 9.f) * V.Drift * 8.f, 0)), V.Size));
-    if (Mist->GetInstanceCount() != Mf.Num())
+    for (int32 I = 0; I < ExtraVeils.Num(); ++I)   // (a district's own, the Deepwood's: only those near the eye)
     {
+        const FVector4& E = ExtraVeils[I]; const float Fade = FVector::Dist2D(FVector(E.X, E.Y, 0), LEye) < 9000.f ? 1.f : 0.f;
+        Mf.Add(Facing(FeyWorld(FVector(E.X + FMath::Sin(Clock * .05f + I) * 60.f, E.Y + FMath::Cos(Clock * .04f + I * 1.3f) * 60.f, E.Z)), float(E.W) * Fade + 1.f));
+    }
+    if (Mist->GetInstanceCount() != Mf.Num() || bVeilsDirty)
+    {
+        bVeilsDirty = false;
         Mist->ClearInstances(); Mist->AddInstances(Mf, false, true);
-        for (int32 I = 0; I < Veils.Num(); ++I) { Mist->SetCustomDataValue(I, 0, Veils[I].Alpha, false); Mist->SetCustomDataValue(I, 1, Veils[I].Seed, I == Veils.Num() - 1); }
+        for (int32 I = 0; I < Mf.Num(); ++I)
+        {
+            const bool bOwn = I < Veils.Num();
+            Mist->SetCustomDataValue(I, 0, bOwn ? Veils[I].Alpha : .11f, false); Mist->SetCustomDataValue(I, 1, bOwn ? Veils[I].Seed : float(I % 17) / 17.f, I == Mf.Num() - 1);
+        }
     }
     else Mist->BatchUpdateInstancesTransforms(0, Mf, true, true);
 }

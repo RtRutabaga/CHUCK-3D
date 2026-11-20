@@ -87,7 +87,7 @@ if not ONLY:
 
 # The district tracks (stage 3, 2026-11-19): the user's dark, open and maze tracks, looping.
 if not ONLY or os.environ.get('CHUCK_FEY_MUSIC') == '1':
-    for src, dst in (('Feywild_dark.wav', 'SW_FeywildDark'), ('Feywild_open.wav', 'SW_FeywildOpen'), ('Feywild_maze.wav', 'SW_FeywildMaze')):
+    for src, dst in (('Feywild_alt.wav', 'SW_FeywildAlt'), ('Feywild_dark.wav', 'SW_FeywildDark'), ('Feywild_open.wav', 'SW_FeywildOpen'), ('Feywild_maze.wav', 'SW_FeywildMaze')):
         task = unreal.AssetImportTask(); task.filename = str(ROOT / 'SourceAssets/Audio' / src); task.destination_path = '/Game/Art/Audio'
         task.destination_name = dst; task.automated = True; task.replace_existing = True; task.save = True
         TOOLS.import_asset_tasks([task]); wave = unreal.load_asset('/Game/Art/Audio/' + dst)
@@ -565,8 +565,93 @@ def block(m):
     out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .3), P.MP_SPECULAR)
 
 
+# ---------------------------------------------------------------- the art pass (stage 4, 2026-11-20)
+# Stone for arches, statues and stair: the gorge's cliff, triplanar, mossed where it faces up. Vertex colour B carries
+# glowing runes (the Crossroads' arches); R is a seed.
+GLYPH = r'''
+float Glyph(float2 f,float s){float d=1.;for(int k=0;k<3;k++){float2 a=float2(H(float2(s,k*3.1))-.5,H(float2(s+1.7,k*5.3))-.5)*.62,b=float2(H(float2(s+3.3,k*7.9))-.5,H(float2(s+9.1,k*2.3))-.5)*.62;
+ float2 pa=f-a,ba=b-a;float h=saturate(dot(pa,ba)/max(dot(ba,ba),1e-4));d=min(d,length(pa-ba*h));}
+ if(H(float2(s,11.))>.5)d=min(d,abs(length(f-float2(H(float2(s,13.))-.5,H(float2(s,17.))-.5)*.3)-.16));return d;}
+'''
+NOISE_G = NOISE.replace('struct Fn\n{', 'struct Fn\n{' + GLYPH)
+STONE = NOISE_G + r'''
+float3 n=normalize(N);float3 w=pow(abs(n),4.);w/=dot(w,1);float S=260.;
+float3 c=Texture2DSample(D,DSampler,P.yz/S).rgb*w.x+Texture2DSample(D,DSampler,P.xz/S).rgb*w.y+Texture2DSample(D,DSampler,P.xy/S).rgb*w.z;
+float2 nx=Texture2DSample(NM,NMSampler,P.yz/S).rg*2-1,ny=Texture2DSample(NM,NMSampler,P.xz/S).rg*2-1,nz=Texture2DSample(NM,NMSampler,P.xy/S).rg*2-1;
+float3 dn=float3(0,nx.x,nx.y)*w.x+float3(ny.x,0,ny.y)*w.y+float3(nz.x,nz.y,0)*w.z;
+float mk=smoothstep(.5,.85,n.z+(F.B(P.xy/60.)-.5)*.7);
+float3 moss=lerp(float3(.03,.07,.02),float3(.15,.24,.05),F.N(P.xy/9.));
+Base=lerp(c*float3(1.5,1.5,1.45),moss,mk);Rough=lerp(.82,.95,mk);
+float2 g=(abs(n.x)>abs(n.y)?P.yz:P.xz)/38.;float2 id=floor(g),f=frac(g)-.5;float s=F.H(id+VC.r*31.);
+float rune=smoothstep(.05,.022,F.Glyph(f,s*97.))*step(.86,s)*VC.b*(1.-step(.6,abs(n.z)));
+Glow=float3(.22,.75,1.)*rune*(3.+1.5*sin(T*.7+s*6.28));
+return normalize(n+dn*.8);
+'''
+
+
+def stone(m):
+    m.set_editor_property('tangent_space_normal', False)
+    c = custom(m, STONE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VC': node(m, unreal.MaterialExpressionVertexColor), 'T': node(m, unreal.MaterialExpressionTime),
+                          'D': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_diff_2k'), 'diffuse'), 'NM': tobj(m, unreal.load_asset('/Game/Art/ChultGorge/T_cliff_side_nor_dx_2k'), 'nor_dx')},
+               extra=[('Base', F3), ('Rough', F1), ('Glow', F3)])
+    out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(c, P.MP_NORMAL); out(const(m, .3), P.MP_SPECULAR)
+
+
+# The maze's hedges: dense dark leaves, triplanar at two scales, darker low down and in their depths.
+HEDGE = NOISE + r'''
+float3 n=normalize(N);float3 w=pow(abs(n),3.);w/=dot(w,1);
+float3 a=Texture2DSample(D,DSampler,P.yz/95.).rgb*w.x+Texture2DSample(D,DSampler,P.xz/95.).rgb*w.y+Texture2DSample(D,DSampler,P.xy/95.).rgb*w.z;
+float3 b=Texture2DSample(D,DSampler,P.yz/37.+.3).rgb*w.x+Texture2DSample(D,DSampler,P.xz/37.+.3).rgb*w.y+Texture2DSample(D,DSampler,P.xy/37.+.3).rgb*w.z;
+float v=F.B(float2(P.x+P.y,P.z)/140.);float l=F.N(float2(P.x-P.y,P.z)/6.)*.6+F.N(float2(P.x+P.y,P.z)/2.3)*.4;
+float lum=dot(a*.55+b*.45,float3(.3,.59,.11));
+// Leaves from the texture's light, over a green that never goes black; darker low down and in hollows of the clipped face.
+float3 leaf=lerp(float3(.07,.15,.045),float3(.26,.44,.11),saturate(lum*2.2+l*.45));
+Rough=lerp(.65,.9,l);
+return leaf*lerp(.55,1.,smoothstep(0.,260.,P.z))*lerp(.7,1.25,v)*lerp(.85,1.1,smoothstep(.2,.8,n.z));
+'''
+
+
+def hedge(m):
+    c = custom(m, HEDGE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'D': tobj(m, nat('T_island_tree_02_leaves_diff_2k'), 'diffuse')}, extra=[('Rough', F1)])
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .25), P.MP_SPECULAR)
+
+
+# The signs: weathered wood, nonsense glyphs cut into the boards (U along a board, V across it; VC R its seed, G 1 where cut).
+SIGN = NOISE_G + r'''
+float gr=F.N(float2(UV.x*5.,UV.y*7.+VC.r*20.))*.6+F.N(float2(UV.x*28.,UV.y*50.))*.4;
+float3 wood=lerp(float3(.13,.075,.04),float3(.33,.2,.1),gr)*lerp(.8,1.1,F.N(UV*float2(2.,1.)+VC.r*9.));
+float2 q=float2(UV.x*3.2,UV.y);float cell=floor(q.x);float2 f=float2(frac(q.x)-.5,q.y-.5)*float2(1.35,1.);
+float cut=smoothstep(.07,.035,F.Glyph(f,VC.r*91.+cell*7.3))*VC.g*step(UV.x,.8)*step(.08,UV.x);
+Rough=lerp(.75,.95,cut);
+return lerp(wood,wood*.28,cut);
+'''
+
+
+def sign(m):
+    c = custom(m, SIGN, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'VC': node(m, unreal.MaterialExpressionVertexColor)}, extra=[('Rough', F1)])
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .2), P.MP_SPECULAR)
+
+
+# Moss hanging from the Deepwood's limbs: strands of differing lengths, swaying a little at their ends.
+HANG = NOISE + r'''
+float k=UV.x*14.;float id=floor(k),s=frac(k);
+float len=.4+.6*F.H(float2(id,Rnd*13.));float w=.42*saturate(1.-UV.y/len);
+Op=step(UV.y,len)*smoothstep(w,w*.35,abs(s-.5))*(.65+.35*F.N(float2(id*3.,UV.y*18.)));
+Sub=float3(.2,.26,.12);
+return lerp(float3(.2,.25,.15),float3(.4,.46,.3),F.H(float2(id,4.)))*lerp(1.,.55,UV.y);
+'''
+
+
+def hang(m):
+    m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED); m.set_editor_property('two_sided', True)
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE); m.set_editor_property('opacity_mask_clip_value', .3)
+    c = custom(m, HANG, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Op', F1), ('Sub', F3)])
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_OPACITY_MASK, 'Op'); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .2), P.MP_SPECULAR)
+    out(custom(m, 'float k=sin(T*.8+W.x*.011+W.y*.013)*VC.r*VC.r*14.;return float3(k,k*.7,0);', {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'VC': node(m, unreal.MaterialExpressionVertexColor)}), P.MP_WORLD_POSITION_OFFSET)
+
+
 mats = {}
-for name, fn in (('M_FeyBlock', block),('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),
@@ -578,9 +663,9 @@ for name, fn in (('M_FeyBlock', block),('M_FeySky', sky), ('M_FeyGround', ground
 
 # ---------------------------------------------------------------- the kit
 if MESHES:
-    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss'}
+    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss', 'FeyHangMoss': 'M_FeyHangMoss'}
     subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
-    LODS = {'SM_FeyOak0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyCapViolet': [(1, 1.), (.3, .12)], 'SM_FeyCapBlue': [(1, 1.), (.3, .1)],
+    LODS = {'SM_FeyOakDeep0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOakDeep1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyCapViolet': [(1, 1.), (.3, .12)], 'SM_FeyCapBlue': [(1, 1.), (.3, .1)],
             'SM_FeyCapAmber': [(1, 1.), (.5, .1)], 'SM_FeyFoxglove': [(1, 1.), (.35, .14)], 'SM_FeyBroadLeaf': [(1, 1.), (.4, .14)], 'SM_FeyCrimsonLeaf': [(1, 1.), (.4, .14)], 'SM_FeyLily': [(1, 1.), (.4, .1)], 'SM_FeyLilyPad': [(1, 1.), (.5, .035)], 'SM_FeyFarTree': [(1, 1.), (.45, .03)]}
     derived = SOURCE / 'Derived'
     for rec in json.loads((derived / 'manifest.json').read_text(encoding='utf-8'))['assets']:

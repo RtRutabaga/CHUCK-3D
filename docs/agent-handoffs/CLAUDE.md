@@ -2,6 +2,22 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 20 — Feywild: the art pass and the user's changes (Claude)
+
+- **Asked:** "do the art pass plus these items" (canyon ends filled out, the distant vista intersecting the canyons, deep water passable only by hopping lily pads with collision, a much deeper and darker bluer Deepwood with dense rooty mossy trees, more fog and hanging moss, wooden arrow signs with nonsense glyphs leading through every element and turning silly at the end, a maze at Goblet of Fire scale for a person), then "have main sound track areas alternate between the Main track and the Feywild_ track".
+- **Source:** `main` at 6581798c; this commit.
+- **Changed:**
+  - `FeyMap.cpp/.h`: threshold floor and masses as one heightfield from the true distance to the way (tube style: banks plus an earth roof the tube's length); distance trees kept 48 m from thresholds; the polar Prim's maze (`MazeData`, 29 rings, 3,097 cells, 8.4 m hedges, 2.6 m corridors) in eight hedge meshes plus stone, and its stand-in; the deep moat, pads with collision discs, drowning back to the last safe ground; signposts (`SignPosts`, `SignBoard`); the Deepwood's oaks, density, moss, lights and veils; the gloom by district; the overlook's knoll and brink; stone arches with runes; orchard rows as wisteria oaks; `IsPad`, `InDeepWater`, maze stats.
+  - `FeywildSetting.h/.cpp`: `SetGloom`, `ApplyFog`, `SetExtraVeils`. `DockGameMode.cpp`: `SW_FeywildAlt` and the main/alt handover, the smoke test's track count 21. `FeyMapTest.cpp`: pad hops, `=stills` mode and the art stills.
+  - `Tools/build_feywild_kit.py` (`oak(..., deep=True)`, `SM_FeyOakDeep0/1` and collisions), `Tools/create_feywild_assets.py` (`M_FeyStone`, `M_FeyHedge`, `M_FeySign`, `M_FeyHangMoss`, the alt track); the new assets; `SourceAssets/Audio/Feywild_alt.wav` (the user's `Feywild_.wav`).
+- **Tested:** three full editor routes: the first found tunnel ends and the maze road blocked, the second rock masses folding across the S-bends and pads too far apart; the third passed (`Local/feyart-route-3.log`). Package: 49/49 first time.
+- **Not tested:** by hand; the alternation by ear (it was seen switching in the logs).
+- **Remaining flaws:** dark maze corridors; sky over the Deepwood's paths; the rest of the kit not yet art-passed.
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged. The Maze checkpoint moved beside the gate.
+- **Launcher:** `FeywildArt` (receipt 6581798, built from the working tree before this commit); FeywildMap kept as previous; no candidate folder left.
+
+Next part of the work can be done here (Feywild stage 5, mechanics and creatures, after the user has walked it).
+
 ## November 20 — Verification: named steps, retries, a launch time limit (Claude)
 
 - **Asked:** the cloud session "Game verification efficiency" sent a plan (rerun only what failed, fix flakes at the source, a manifest runner, fewer launches, one summary, archive old handoffs); the user: "Yes please do so".

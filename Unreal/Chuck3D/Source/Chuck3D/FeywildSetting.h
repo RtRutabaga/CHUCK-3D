@@ -82,7 +82,16 @@ public:
     bool IsSliceLoaded() const { return bSlice; }
     /** Mist thickening (0 to 1) while a district ahead is still loading. */
     void SetMistBoost(float K);
+    /** The Deepwood's gloom (0 to 1): the sun dimmed and cooled, bluer fill, deeper bluer fog, lower exposure. */
+    void SetGloom(float G);
+    /** Mist veils lying in a district (X, Y, Z local, size), drawn with the slice's own; empty clears them. */
+    void SetExtraVeils(const TArray<FVector4>& V);
 private:
+    void ApplyFog();
+    float MistK = 0, GloomNow = 0;
+    TArray<FVector4> ExtraVeils; bool bVeilsDirty = false;
+    UPROPERTY() class UDirectionalLightComponent* SunLight = nullptr;
+    UPROPERTY() class UPostProcessComponent* PostComp = nullptr;
     void Build();
     void BuildEnvironment();
     void BuildLand();

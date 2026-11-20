@@ -47,6 +47,12 @@ namespace FeyMap
     /** The walk through district D from its mouth on threshold Ta to its mouth on Tb (local points on the ground; -1 is
      *  its checkpoint), along its paths. For the route test. */
     TArray<FVector> Walk(int32 D, int32 Ta, int32 Tb);
+    /** A lily pad he hops across the Lily Mere's deep water (X, Y within one), and whether (X, Y) is over that water. */
+    bool IsPad(float X, float Y);
+    bool InDeepWater(float X, float Y);
+    /** The maze: its cells and the length of the way through. */
+    int32 MazeCells();
+    float MazeWay();
 }
 /** Inside the rough map's bounds (world). */
 bool InFeyMap(const FVector& World);
@@ -78,6 +84,8 @@ public:
     float GetPlanSeconds() const { return PlanSeconds; }
     float GetWorstStepMs() const { return WorstStepMs; }
     int32 Triangles = 0, Planted = 0, Missing = 0;
+    /** Mist veils lying in the district (X, Y, Z, size), once it is ready. */
+    TArray<FVector4> Veils;
     struct FPlan;
 private:
     bool Step(double BudgetMs);
@@ -123,9 +131,16 @@ private:
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> BackTrees;   // the distance's trees on each district's ground
     UPROPERTY() TArray<UBoxComponent*> LateWalls;                                // each threshold's two ends, shut while late
     UPROPERTY() UProceduralMeshComponent* StandIn = nullptr;                     // the maze seen from the overlook
+    UPROPERTY() UProceduralMeshComponent* StandInStone = nullptr;
     UPROPERTY() class UMaterialInstanceDynamic* FarMid = nullptr;
     int32 Current = -1, MaxLoaded = 0, Late = 0, Missing = 0, Triangles = 0;
-    float WorstReady = 0, Clock = 0, ReportAt = 0, Mist = 0;
+    float WorstReady = 0, Clock = 0, ReportAt = 0, Mist = 0, Gloom = 0;
+    FVector LastSafe = FVector::ZeroVector;   // the last ground he stood on outside the deep water (world)
+    int32 Drowned = 0;
+    bool bVeils = false;
+public:
+    int32 GetDrowned() const { return Drowned; }
+private:
     double WantAt[16] = {};
     TArray<bool> LateSeen;
     bool bSliceWanted = true;
