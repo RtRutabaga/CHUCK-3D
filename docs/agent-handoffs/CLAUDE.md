@@ -2,6 +2,24 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 21 — Feywild: canyon cracks, spots within districts, cloud stair, hedges, Deepwood (Claude)
+
+- **Asked:** fix the cracks you can see through in the first canyon; more spawn points for sub-regions of the big districts; a cloud platform and cloud stair that read as cloud (no gaps between steps, no straight lines and perfect angles); better hedge leaves; the Deepwood's blue ground light a bit brighter, more fog, much better hanging moss (it read as straight-edged rectangles that shimmered); free assets allowed.
+- **Source:** `main` at 9f7998aa; this commit.
+- **Changed:**
+  - `FeyMap.cpp/.h`: the threshold heightfield made once per threshold (`WayField`) and closed inside district rectangles (30 cm under the land) — it had left out the floor and wall feet there, so once the district behind was dropped (or before the one ahead loaded) the walls stood over holes; `FeyMap::SeeThrough` and `AFeyMap::LoadPair` for the check; spots (`FSpot`, `SpotAt/Yaw/Of`, `FeySpotWorld`, `FeyReachSpots`, `FeyForgetSpots`; respawn to the nearest reached spot in the district); the Cloud Staircase as data (`Stair()`), its walked footing covering each step's span; `FeyCloud` (icosphere puffs billowed by 3D noise, `FMapSurf::Closed`); `BuildTower` rebuilt (puff-heap cloud, one continuous stepped sweep for the stair with side and under billows, the foot as its own shadowed mesh); the hedge leaf shell instanced along every hedge (`KHedge`); the Deepwood's lights (80-130 cd, 14 m), 150 veils.
+  - `FeywildSetting.cpp`: gloom fog density x6.5 (was x4.5), extinction 2.1, veil alpha .15, fill a little brighter in the gloom.
+  - `DockMenu.cpp`: spots start, save and continue; a tenth column. `FeyMapTest.cpp`: `=cracks` mode, every spot checked in the full run, stills `MazeHedge`, `StairFoot`, `StairAlong`.
+  - `Tools/build_feywild_kit.py`: Deepwood oaks' moss as beards of crossed tapering strand ribbons and drapes; `SM_FeyHedgeLeaves` (sprig shell, the oaks' CC0 island_tree_02 leaf atlas). `Tools/create_feywild_assets.py`: `M_FeyCloud`, `M_FeyHedgeLeaf`, new `M_FeyHedge` and `M_FeyHangMoss`. Shot lists `Tools/shots/feywild-cloud.txt`, `feywild-deepwood.txt`.
+- **Tested:** `=cracks` (rays from every threshold's floor with both, near-only and far-only districts): before the fix 5,504 leaking sight-lines in the first canyon with the far district unloaded (`Local/feycracks-1.log`); after, 0 everywhere (`Local/feycracks-3.log`; run 2's remaining ~90 per rock cut were the check stepping badly through hidden bound boxes, fixed). Full editor route twice: run 1 one stuck after a missed pad hop (`Local/feyfix-route-1.log`), run 2 failures 0, stuck 0, void 0, late 0, all 17 spots OK (`Local/feyfix-route-2.log`); every district at the 60 fps cap except the Deepwood at 17.8-17.9 ms (was 16.9). Stills `Local/shots/feywild-cloud/`, `Local/shots/feywild-deepwood/`, `Unreal/Chuck3D/Saved/Screenshots/WindowsEditor/FeyMap/Art_*.png`.
+- **Package:** `Tools/Build-Game.ps1 -Package -SkipBaseAssets` (`Local/feyfix-package-1.log`), verified first time: 49 steps, 182 passes, no retries (`Local/verify-package-20261120-164026.log`).
+- **Not tested:** by hand; the dithered cloud edges in motion; the new spots by dying there (respawn logic only by code and the spot starts).
+- **Remaining flaws:** both route runs drowned once at the first lily pad (0 the day before; the walker recovers); the Deepwood is about 1 ms over the 60 fps frame; the stair's steps close to are smooth and a little faceted; the hedge shell shows faint seams where sections meet in sunlight; corridors still dark.
+- **Contract compatibility:** Chuck's rig, scale and controls unchanged. Save points gain the ten spot names; old saves still load.
+- **Launcher:** `FeywildFixes` (receipt 9f7998a, built from the working tree before this commit); FeywildArt kept as previous, FeywildMap pruned; no candidate folder left.
+
+Next part of the work can be done here (Feywild stage 5, after the user has walked these fixes).
+
 ## November 20 — Feywild: the art pass and the user's changes (Claude)
 
 - **Asked:** "do the art pass plus these items" (canyon ends filled out, the distant vista intersecting the canyons, deep water passable only by hopping lily pads with collision, a much deeper and darker bluer Deepwood with dense rooty mossy trees, more fog and hanging moss, wooden arrow signs with nonsense glyphs leading through every element and turning silly at the end, a maze at Goblet of Fire scale for a person), then "have main sound track areas alternate between the Main track and the Feywild_ track".

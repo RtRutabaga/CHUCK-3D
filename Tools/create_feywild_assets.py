@@ -597,23 +597,56 @@ def stone(m):
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(c, P.MP_NORMAL); out(const(m, .3), P.MP_SPECULAR)
 
 
-# The maze's hedges: dense dark leaves, triplanar at two scales, darker low down and in their depths.
-HEDGE = NOISE + r'''
-float3 n=normalize(N);float3 w=pow(abs(n),3.);w/=dot(w,1);
-float3 a=Texture2DSample(D,DSampler,P.yz/95.).rgb*w.x+Texture2DSample(D,DSampler,P.xz/95.).rgb*w.y+Texture2DSample(D,DSampler,P.xy/95.).rgb*w.z;
-float3 b=Texture2DSample(D,DSampler,P.yz/37.+.3).rgb*w.x+Texture2DSample(D,DSampler,P.xz/37.+.3).rgb*w.y+Texture2DSample(D,DSampler,P.xy/37.+.3).rgb*w.z;
-float v=F.B(float2(P.x+P.y,P.z)/140.);float l=F.N(float2(P.x-P.y,P.z)/6.)*.6+F.N(float2(P.x+P.y,P.z)/2.3)*.4;
-float lum=dot(a*.55+b*.45,float3(.3,.59,.11));
-// Leaves from the texture's light, over a green that never goes black; darker low down and in hollows of the clipped face.
-float3 leaf=lerp(float3(.07,.15,.045),float3(.26,.44,.11),saturate(lum*2.2+l*.45));
-Rough=lerp(.65,.9,l);
-return leaf*lerp(.55,1.,smoothstep(0.,260.,P.z))*lerp(.7,1.25,v)*lerp(.85,1.1,smoothstep(.2,.8,n.z));
-'''
+# The maze's hedges (2026-11-21): the box under the leaf shell (SM_FeyHedgeLeaves), and the whole hedge beyond the shell's
+# reach. Leaf sprigs from the oaks' atlas in four layers, each over the last, on a near-black green: dense leaves with depth
+# between them. UVs are each face's own plane in 2 m units (FMapSurf::Face), so they never smear round a turned hedge.
+HEDGE = NOISE + r"""
+float2 p=UV*200.;
+float3 c=float3(.012,.03,.01);float shade=1.;
+for(int k=0;k<4;k++){
+ float s=30.-k*5.;float an=k*1.7+.4;float2x2 R=float2x2(cos(an),-sin(an),sin(an),cos(an));
+ float2 q=mul(R,p)/s+float2(k*.37,k*.61);
+ float a=Texture2DSample(A,ASampler,q).r;float3 d=Texture2DSample(D,DSampler,q).rgb;
+ float lit=lerp(.42,1.,(k+1.)/4.)*lerp(.8,1.15,F.N(q*1.3+k));
+ c=lerp(c,d*float3(.62,.82,.42)*lit,smoothstep(.25,.6,a));}
+float v=F.B(p/170.);
+Rough=.72;
+return c*lerp(.5,1.,smoothstep(0.,300.,P.z))*lerp(.8,1.2,v);
+"""
 
 
 def hedge(m):
-    c = custom(m, HEDGE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'D': tobj(m, nat('T_island_tree_02_leaves_diff_2k'), 'diffuse')}, extra=[('Rough', F1)])
+    c = custom(m, HEDGE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate),
+                          'D': tobj(m, nat('T_island_tree_02_leaves_diff_2k'), 'diffuse'), 'A': tobj(m, nat('T_island_tree_02_leaves_alpha_2k'), 'alpha')}, extra=[('Rough', F1)])
     out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .25), P.MP_SPECULAR)
+
+
+# The Tower's cloud and the Cloud Staircase (2026-11-21): soft white, lavender-blue where it turns from the sun, warm where the
+# low sun catches it, a little light of its own so no side goes grey; VC R darkens its hollows. Its edges feather out
+# (dithered, where it turns from the eye) so one billow melts into the next, except on the treads.
+CLOUD = NOISE + r"""
+float3 n=normalize(N);float3 s=normalize(float3(.963,-.205,.174));float3 v=normalize(Cam);
+float up=saturate(n.z*.5+.5),sun=saturate(dot(n,s));
+float3 shade=float3(.66,.72,.9),lit=float3(1.,.985,.96);
+float3 c=lerp(shade,lit,saturate(up*.7+sun*.4+(F.B(P.xy/1400.+P.z/1700.)-.5)*.25));
+c*=lerp(.8,1.,saturate(VC.r));
+c=lerp(c,c*float3(1.,.88,.76),sun*.28);
+float rim=pow(1.-saturate(dot(n,v)),3.);
+Glow=c*.22+float3(.6,.65,.85)*rim*.12;
+float edge=smoothstep(.03,.22,abs(dot(n,v)));
+float op=max(edge*lerp(.75,1.,F.N(P.xy/90.+P.z/70.)),smoothstep(.6,.9,n.z));
+float2 px=SP*VS+float(View.StateFrameIndexMod8)*float2(5.588238,5.588238);
+float ign=frac(52.9829189*frac(dot(px,float2(.06711056,.00583715))));
+Op=op-ign+.5;
+return c;
+"""
+
+
+def cloud(m):
+    m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED); m.set_editor_property('opacity_mask_clip_value', .5)
+    c = custom(m, CLOUD, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'N': node(m, unreal.MaterialExpressionVertexNormalWS), 'VC': node(m, unreal.MaterialExpressionVertexColor),
+                          'Cam': node(m, unreal.MaterialExpressionCameraVectorWS), 'SP': node(m, unreal.MaterialExpressionScreenPosition), 'VS': node(m, unreal.MaterialExpressionViewSize)}, extra=[('Glow', F3), ('Op', F1)])
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(c, P.MP_OPACITY_MASK, 'Op'); out(const(m, 1.), P.MP_ROUGHNESS); out(const(m, .06), P.MP_SPECULAR)
 
 
 # The signs: weathered wood, nonsense glyphs cut into the boards (U along a board, V across it; VC R its seed, G 1 where cut).
@@ -632,26 +665,29 @@ def sign(m):
     out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .2), P.MP_SPECULAR)
 
 
-# Moss hanging from the Deepwood's limbs: strands of differing lengths, swaying a little at their ends.
-HANG = NOISE + r'''
-float k=UV.x*14.;float id=floor(k),s=frac(k);
-float len=.4+.6*F.H(float2(id,Rnd*13.));float w=.42*saturate(1.-UV.y/len);
-Op=step(UV.y,len)*smoothstep(w,w*.35,abs(s-.5))*(.65+.35*F.N(float2(id*3.,UV.y*18.)));
-Sub=float3(.2,.26,.12);
-return lerp(float3(.2,.25,.15),float3(.4,.46,.3),F.H(float2(id,4.)))*lerp(1.,.55,UV.y);
-'''
+# Moss hanging from the Deepwood's limbs (2026-11-21): ribbons of strands (SM_FeyOakDeep*), grey-green, paler and thinner
+# toward their ends, their edges eaten a little and slowly (no fine detail to shimmer), swaying at their ends.
+HANG = NOISE + r"""
+float e=abs(UV.x-.5)*2.;
+float bite=.72+.22*F.N(float2(UV.y*7.+Rnd*9.,UV.x*1.5));
+Op=1.-smoothstep(bite-.18,bite,e);
+float t=F.N(float2(UV.x*2.,UV.y*5.+Rnd*5.));
+Sub=float3(.22,.28,.12);
+return lerp(lerp(float3(.13,.17,.09),float3(.33,.38,.24),t),float3(.42,.46,.34),UV.y*.6)*lerp(.75,1.,1.-e*e);
+"""
 
 
 def hang(m):
     m.set_editor_property('blend_mode', unreal.BlendMode.BLEND_MASKED); m.set_editor_property('two_sided', True)
-    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE); m.set_editor_property('opacity_mask_clip_value', .3)
+    m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE); m.set_editor_property('opacity_mask_clip_value', .4)
     c = custom(m, HANG, {'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Op', F1), ('Sub', F3)])
-    out(c, P.MP_BASE_COLOR); out(c, P.MP_OPACITY_MASK, 'Op'); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .2), P.MP_SPECULAR)
-    out(custom(m, 'float k=sin(T*.8+W.x*.011+W.y*.013)*VC.r*VC.r*14.;return float3(k,k*.7,0);', {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'VC': node(m, unreal.MaterialExpressionVertexColor)}), P.MP_WORLD_POSITION_OFFSET)
+    out(c, P.MP_BASE_COLOR); out(c, P.MP_OPACITY_MASK, 'Op'); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .9), P.MP_ROUGHNESS); out(const(m, .15), P.MP_SPECULAR)
+    out(custom(m, 'float k=sin(T*.7+W.x*.011+W.y*.013)*VC.r*VC.r*6.;return float3(k,k*.7,0);', {'T': node(m, unreal.MaterialExpressionTime), 'W': node(m, unreal.MaterialExpressionWorldPosition), 'VC': node(m, unreal.MaterialExpressionVertexColor)}), P.MP_WORLD_POSITION_OFFSET)
 
 
 mats = {}
-for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cloud),
+                 ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),
@@ -663,9 +699,9 @@ for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeySign', sig
 
 # ---------------------------------------------------------------- the kit
 if MESHES:
-    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss', 'FeyHangMoss': 'M_FeyHangMoss'}
+    SLOTS = {'FeyBark': 'M_FeyBark', 'FeyLeaf': 'M_FeyLeaf', 'FeyPlant': 'M_FeyPlant', 'FeyFungus': 'M_FeyFungus', 'FeyFungusBig': 'M_FeyFungusBig', 'FeyBlade': 'M_FeyBlade', 'FeyBladeRed': 'M_FeyBladeRed', 'FeyPetal': 'M_FeyPetal', 'FeyPad': 'M_FeyPad', 'FeyFar': 'M_FeyFar', 'grass_medium_02': 'M_FeyGrass', 'celandine_01': 'M_FeyCelandine', 'moss_01': 'M_FeyMoss', 'FeyHangMoss': 'M_FeyHangMoss', 'FeyHedgeLeaf': 'M_FeyHedgeLeaf'}
     subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
-    LODS = {'SM_FeyOakDeep0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOakDeep1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyCapViolet': [(1, 1.), (.3, .12)], 'SM_FeyCapBlue': [(1, 1.), (.3, .1)],
+    LODS = {'SM_FeyHedgeLeaves': [(1, 1.), (.4, .3), (.12, .1)], 'SM_FeyOakDeep0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOakDeep1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak0': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyOak1': [(1, 1.), (.45, .5), (.16, .22), (.05, .08)], 'SM_FeyCapViolet': [(1, 1.), (.3, .12)], 'SM_FeyCapBlue': [(1, 1.), (.3, .1)],
             'SM_FeyCapAmber': [(1, 1.), (.5, .1)], 'SM_FeyFoxglove': [(1, 1.), (.35, .14)], 'SM_FeyBroadLeaf': [(1, 1.), (.4, .14)], 'SM_FeyCrimsonLeaf': [(1, 1.), (.4, .14)], 'SM_FeyLily': [(1, 1.), (.4, .1)], 'SM_FeyLilyPad': [(1, 1.), (.5, .035)], 'SM_FeyFarTree': [(1, 1.), (.45, .03)]}
     derived = SOURCE / 'Derived'
     for rec in json.loads((derived / 'manifest.json').read_text(encoding='utf-8'))['assets']:

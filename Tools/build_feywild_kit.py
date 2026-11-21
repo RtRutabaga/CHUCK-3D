@@ -373,18 +373,35 @@ def oak(seed, wisteria, deep=False):
             u0, v0, u1, v1 = rng.choice(LEAF_RECTS); shade = rng.uniform(.65, 1.)
             q = [k.vert(c - s, (shade, 0, 0, 0)), k.vert(c + s, (shade, 0, 0, 0)), k.vert(c + s + f * ls, (shade, 0, 0, 0)), k.vert(c - s + f * ls, (shade, 0, 0, 0))]
             k.face(q, 1, [(u0, v1), (u1, v1), (u1, v0), (u0, v0)])
-    # Moss hanging in curtains from the limbs.
+    # Moss hanging from the limbs (2026-11-21, the user: the curtains read as straight-edged rectangles that shimmered).
+    # Now beards of separate strands: each a thin ribbon crossed with another (so it has body from every side), tapering
+    # from a few centimetres to a thread, wandering a little as it falls, of differing lengths; a few drape in a sag between
+    # two points along the limb. Slot FeyHangMoss: U across a ribbon, V down it; vertex R how far down (for the sway).
     if deep:
         mi = slot_of(k, 'FeyHangMoss'); rng.shuffle(hangs)
-        for p in hangs[:int(len(hangs) * .45)]:
+        def strand(path, w0, w1, turn, level=False):
+            n = len(path) - 1
+            for cross in (0., math.pi / 2):
+                rows = []
+                for j, q in enumerate(path):
+                    v = j / n; a = turn + cross + v * rng.uniform(-.6, .6); w = lerp(w0, w1, v ** .7)
+                    side = (Vector((0, 0, 1)) if level and cross else Vector((math.cos(a), math.sin(a), 0))) * w * .5
+                    rows.append((k.vert(q - side, (v, 0, 0, 0)), k.vert(q + side, (v, 0, 0, 0))))
+                for j in range(n):
+                    k.face((rows[j][0], rows[j][1], rows[j + 1][1], rows[j + 1][0]), mi, [(0, j / n), (1, j / n), (1, (j + 1) / n), (0, (j + 1) / n)])
+        for p in hangs[:int(len(hangs) * .5)]:
             if p.z < 260: continue
-            yaw = rng.uniform(0, math.pi); w = rng.uniform(30, 75); length = min(rng.uniform(90, 300), p.z - 60)
-            ax = Vector((math.cos(yaw), math.sin(yaw), 0)) * w * .5; bend = Vector((rng.uniform(-12, 12), rng.uniform(-12, 12), 0))
-            rows = []
-            for r in range(5):
-                v = r / 4; top = p + Vector((0, 0, -8)) + bend * v * v - Vector((0, 0, length * v))
-                rows.append([k.vert(top - ax, (v, 0, 0, 0)), k.vert(top + ax, (v, 0, 0, 0))])
-            for r in range(4): k.face((rows[r][0], rows[r][1], rows[r + 1][1], rows[r + 1][0]), mi, [(0, r / 4), (1, r / 4), (1, (r + 1) / 4), (0, (r + 1) / 4)])
+            yaw = rng.uniform(0, math.pi); w = rng.uniform(30, 80); length = min(rng.uniform(80, 280), p.z - 60)
+            ax = Vector((math.cos(yaw), math.sin(yaw), 0)); deep_ax = Vector((-ax.y, ax.x, 0)); drift = Vector((rng.uniform(-14, 14), rng.uniform(-14, 14), 0))
+            for i in range(rng.randint(8, 14)):
+                top = p + ax * rng.uniform(-w, w) * .5 + deep_ax * rng.uniform(-8, 8) + Vector((0, 0, rng.uniform(-10, -2)))
+                ln = length * rng.uniform(.35, 1.); segs = 7; ph = rng.uniform(0, 6.3); amp = rng.uniform(2, 7)
+                path = [top + drift * (j / segs) ** 2 + (ax * math.sin(ph + j * .9) + deep_ax * math.cos(ph * 1.3 + j * .7)) * amp * (j / segs) - Vector((0, 0, ln * j / segs)) for j in range(segs + 1)]
+                strand(path, rng.uniform(3.5, 7.), rng.uniform(.6, 1.4), rng.uniform(0, math.pi))
+            for i in range(rng.randint(1, 3)):   # drapes: a sag between two points along the limb
+                a0 = rng.uniform(-w, 0) * .5; a1 = a0 + rng.uniform(25, 55); sag = rng.uniform(18, 55); segs = 8
+                path = [p + ax * lerp(a0, a1, j / segs) + Vector((0, 0, -6 - sag * math.sin(math.pi * j / segs))) for j in range(segs + 1)]
+                strand(path, rng.uniform(4., 7.), rng.uniform(3., 5.), yaw + math.pi / 2, True)
     # Wisteria hanging from the lower ends, shelves up the trunk.
     if wisteria:
         low = sorted(tips, key=lambda x: x[0].z)[:int(len(tips) * .5)]; rng.shuffle(low)
@@ -400,6 +417,41 @@ def oak(seed, wisteria, deep=False):
     base = len(k.v); k.v += pl.v; k.c += pl.c
     for f, uv in zip(pl.f, pl.uv): k.face(tuple(i + base for i in f), 2, uv)
     return k, col
+
+
+# The maze's hedges (2026-11-21, the user: make the hedges' leaves look better). A shell of leaf sprigs over one section of
+# hedge, 300 cm along (X), 120 cm through (Y), 840 cm tall (Z), centred on its middle, to stand over the hedge's own box
+# (which stays dark, the depth between the sprigs): sprigs rooted a little inside each face and leaning out of it, a ragged
+# crown along the top, darker low down and deep in. Instanced along every hedge (FeyMap.cpp), stretched a little to fit.
+def hedge_leaves(k):
+    rng = random.Random(1213); hx, hy, hz = 150., 60., 420.
+    def sprig(c, out, size, lean_up=0.):
+        a = rng.uniform(0, 6.28); t = Vector((math.cos(a), math.sin(a), rng.uniform(-.6, .6)))
+        t = (t - out * t.dot(out)).normalized()
+        f = (out * rng.uniform(.35, .75) + t * rng.uniform(.6, 1.) + Vector((0, 0, lean_up - .15))).normalized()
+        sv = f.cross(out); sv = (sv if sv.length > 1e-3 else f.cross(Vector((0, 0, 1)))).normalized() * size * .36
+        root = c - out * rng.uniform(1, 5)
+        depth = rng.uniform(0, 1); shade = rng.uniform(.7, 1.) * lerp(.68, 1., (c.z + hz) / (2 * hz)) * lerp(.8, 1., depth)
+        u0, v0, u1, v1 = rng.choice(LEAF_RECTS)
+        q = [k.vert(root - sv, (shade, 0, 0, 0)), k.vert(root + sv, (shade, 0, 0, 0)), k.vert(root + sv + f * size, (shade, 0, 0, 0)), k.vert(root - sv + f * size, (shade, 0, 0, 0))]
+        k.face(q, 0, [(u0, v1), (u1, v1), (u1, v0), (u0, v0)])
+    step = 13.   # (2026-11-21: small sprigs, close: a clipped hedge's small leaves, not a jungle's)
+    for side in (-1, 1):   # the long faces
+        out = Vector((0, side, 0)); nx = int(2 * hx / step); nz = int(2 * hz / step)
+        for i in range(nx):
+            for j in range(nz):
+                c = Vector((-hx + (i + rng.random()) * step, side * hy, -hz + (j + rng.random()) * step))
+                sprig(c, out, rng.uniform(12, 20))
+    for side in (-1, 1):   # the ends (shown where a hedge stops at a way through)
+        out = Vector((side, 0, 0))
+        for i in range(int(2 * hy / step)):
+            for j in range(int(2 * hz / step)):
+                sprig(Vector((side * hx, -hy + (i + rng.random()) * step, -hz + (j + rng.random()) * step)), out, rng.uniform(12, 19))
+    for i in range(int(2 * hx / 12.)):   # the top, and a ragged crown along its edges
+        for j in range(int(2 * hy / 12.)):
+            sprig(Vector((-hx + (i + rng.random()) * 12., -hy + (j + rng.random()) * 12., hz)), Vector((0, 0, 1)), rng.uniform(13, 21), .5)
+        for side in (-1, 1):
+            sprig(Vector((-hx + (i + rng.random()) * 12., side * hy * rng.uniform(.75, 1.), hz - rng.uniform(0, 10))), Vector((0, side * .6, .8)).normalized(), rng.uniform(16, 26), .6)
 
 
 # ---------------------------------------------------------------- export
@@ -447,6 +499,7 @@ def build(name, slots, fn, *args):
 build('SM_FeyCapBlue', ['FeyFungus'], fungus_blue); build('SM_FeyCapAmber', ['FeyFungusBig'], fungus_amber); build('SM_FeyCapViolet', ['FeyFungus'], fungus_violet)
 build('SM_FeyBellLamp', ['FeyPlant', 'FeyFungus', 'FeyBlade'], bell_lamp); build('SM_FeyFoxglove', ['FeyPlant', 'FeyBlade'], foxglove)
 build('SM_FeyBroadLeaf', ['FeyPlant', 'FeyBlade'], leaf_plant, 4, 9, 62, 30, broad_col); build('SM_FeyCrimsonLeaf', ['FeyPlant', 'FeyBladeRed'], leaf_plant, 7, 8, 52, 24, crimson_col)
+build('SM_FeyHedgeLeaves', ['FeyHedgeLeaf'], hedge_leaves)
 build('SM_FeyLilyPad', ['FeyPad'], lily_pad); build('SM_FeyLily', ['FeyPlant', 'FeyPetal'], lily_flower); build('SM_FeyPetals', ['FeyPetal'], petals); build('SM_FeyFarTree', ['FeyFar'], far_tree)
 for index, (seed, hanging) in enumerate(((11, 46), (23, 0))):
     if wanted(f'SM_FeyOak{index}'):

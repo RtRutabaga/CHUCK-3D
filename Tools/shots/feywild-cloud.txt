@@ -1,0 +1,17 @@
+# The Tower's cloud and the Cloud Staircase (2026-11-21, the user: no gaps between the steps, no straight lines or perfect
+# angles in the cloud). Tools/Take-Shots.ps1 Tools/shots/feywild-cloud.txt
+at FeyMazeHeart
+origin feywild
+wait 10
+fov 60
+# From the Maze Overlook, as he first sees it.
+shot towerfar -111700 12400 2650   -134000 5000 37000
+fov 70
+# The cloud close, from beside and from under it.
+shot cloudnear -121000 9000 33000   -134000 5000 37500
+shot cloudunder -126000 2000 30000   -134000 5000 36500
+# Halfway up the stair, and its foot from the heart's plaza looking up.
+shot stairmid -128000 12000 14000   -134000 5000 16000
+fov 80
+shot stairup -133150 5300 150   -134500 4500 3500
+chuck heart -133000 6300 380   -134700 4200 120

@@ -1,0 +1,11 @@
+# The Deepwood's hanging moss, light and fog (2026-11-21). Tools/Take-Shots.ps1 Tools/shots/feywild-deepwood.txt
+at FeyDeepwood
+origin feywild
+wait 12
+fov 70
+# Up at the rim's oaks along the district's west edge, where moss hangs from the low limbs.
+shot mosswest -87300 -30000 260   -89300 -30200 650
+shot mosswest2 -87300 -24000 220   -89300 -23500 700
+# Along the path, at his height.
+chuck path -70500 -26500 90   -75000 -30000 60
+shot mossnorth -75000 -16900 240   -75500 -15600 650

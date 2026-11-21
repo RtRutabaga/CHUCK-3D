@@ -33,7 +33,8 @@ namespace
         int32 Next = 0, Stuck = 0, Void = 0, Phase = 0, Check = 0, CheckFails = 0;
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
-        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false; uint64 Frame = 0;
+        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false; uint64 Frame = 0;
+        int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
         FStat Chult, Fey[Districts + 1], Cross;
         float ChultMem = 0, BeforeMem = 0;
     };
@@ -63,6 +64,10 @@ namespace
         {TEXT("Overlook"), Highmeadow, {-111650.f, 12600.f}, {-134000.f, 5000.f}},
         {TEXT("MazeGate"), Maze, {-119700.f, 4300.f}, {-134000.f, 5000.f}},
         {TEXT("MazeCorridor"), Maze, {-134000.f + 11700.f, 5000.f + 2100.f}, {-134000.f, 5000.f}},
+        // (2026-11-21) The hedges' leaves along the outer ring, and the Cloud Staircase's foot from the heart's plaza.
+        {TEXT("MazeHedge"), Maze, {-121421.f, 6512.f}, {-121690.f, 7788.f}},
+        {TEXT("StairFoot"), Maze, {-133389.f, 5222.f}, {-134077.f, 3903.f}},
+        {TEXT("StairAlong"), Maze, {-135500.f, 5600.f}, {-134900.f, 3700.f}},
     };
     void In(FRun& R, int32 D, int32 Ta, int32 Tb) { AddLeg(R, FString::Printf(TEXT("%s_%d_%d"), District(D).Name, Ta, Tb), Walk(D, Ta, Tb)); }
 }
@@ -72,7 +77,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     UWorld* World = Owner->GetWorld();
     auto R = MakeShared<FRun>();
     FString Mode; FParse::Value(FCommandLine::Get(), TEXT("ChuckFeyMapTest="), Mode);
-    R->bShort = Mode == TEXT("short"); R->bStillsOnly = Mode == TEXT("stills");
+    R->bShort = Mode == TEXT("short"); R->bStillsOnly = Mode == TEXT("stills") || Mode == TEXT("cracks"); R->bCracks = Mode == TEXT("cracks");
     auto* PC = Cast<APlayerController>(Chuck->GetController());
     if (PC) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -173,14 +178,64 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             Chuck->SetRunHeld(true); Chuck->SetTestStickWorld(Dir); Chuck->AddMovementInput(Dir, 1.f, true);
             return;
         }
+        // ---- 2 (=cracks, 2026-11-21): each threshold looked through, with both its districts standing and with only the one
+        // on either side (as when the one behind has been dropped past the bend); stills of the first canyon's leaks.
+        if (R->Phase == 2 && R->bCracks)
+        {
+            constexpr int32 States = 3;
+            if (R->CrackStep < Thresholds * States)
+            {
+                const int32 Th = R->CrackStep / States, St = R->CrackStep % States; const FThreshold& Wy = Threshold(Th);
+                if (!R->bPlaced)
+                {
+                    if (St == 0) Map->LoadPair(Wy.A, Wy.B); else Map->LoadNow(St == 1 ? Wy.A : Wy.B);
+                    Chuck->ResetAtLocation(FeyWorld(ThresholdAtT(Th, St == 0 ? .5f : St == 2 ? .9f : .1f) + FVector(0, 0, Stand + 4.f)));
+                    R->bPlaced = true; R->PhaseStart = Now; return;
+                }
+                if (Since < 1.5f) return;
+                TArray<FLeak> Leaks;
+                const int32 N = SeeThrough(W, Chuck, Th, St == 2 ? .6f : -.2f, St == 1 ? .4f : 1.2f, Leaks);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CRACKS threshold=%d state=%s leaks=%d"), Th, St == 0 ? TEXT("both") : St == 1 ? TEXT("a_only") : TEXT("b_only"), N);
+                for (int32 I = 0; I < FMath::Min(6, Leaks.Num()); ++I)
+                    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CRACK at=%s dir=%s dist=%.0f"), *Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].At.ToCompactString(), *Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].Dir.ToCompactString(), Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].Dist);
+                R->CrackLeaks += N;
+                if (Th == 0 && R->Shown.Num() < 4) for (int32 I = 0; I < Leaks.Num() && R->Shown.Num() < 4; I += FMath::Max(1, Leaks.Num() / 2)) R->Shown.Add(Leaks[I]);
+                R->bPlaced = false; ++R->CrackStep;
+                if (R->CrackStep == States) R->CrackStep = Thresholds * States + 100;   // (after the first canyon: its stills, then on)
+                return;
+            }
+            if (R->CrackStep >= Thresholds * States + 100)
+            {
+                // Stills along the leaks found in the first canyon (him at the ray's start, turned along it), then the rest.
+                if (R->CrackShots < R->Shown.Num())
+                {
+                    const FLeak& Lk = R->Shown[R->CrackShots];
+                    if (!R->bPlaced)
+                    {
+                        Map->LoadNow(Threshold(0).B);
+                        Chuck->ResetAtLocation(FeyWorld(FVector(Lk.At.X, Lk.At.Y, Lk.At.Z - (Lk.At.Z > 100.f ? 120.f : 0.f) + Stand - 36.f)));
+                        Chuck->SetActorRotation(FRotator(0, Lk.Dir.Rotation().Yaw, 0)); Chuck->Recenter();
+                        R->bPlaced = true; R->PhaseStart = Now; return;
+                    }
+                    if (Since < 2.5f) return;
+                    FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / FString::Printf(TEXT("FeyMap/Crack_%d.png"), R->CrackShots), false, false);
+                    R->bPlaced = false; ++R->CrackShots; R->PhaseStart = Now; return;
+                }
+                if (Since < 1.f) return;
+                R->CrackStep = States;   // the other thresholds
+                R->CrackShots = 1 << 20; return;
+            }
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CRACKS_DONE leaks=%d"), R->CrackLeaks);
+            Done(R->CrackLeaks > 0 ? 1 : 0); return;
+        }
         // ---- 2: each district's checkpoint, alone, with a still
         if (R->Phase == 2)
         {
-            if (R->bShort && R->Check == 0) R->Check = Districts + UE_ARRAY_COUNT(Shots);   // (the short walk skips them)
-            if (R->Check >= Districts && R->Check < Districts + int32(UE_ARRAY_COUNT(Shots)))
+            if (R->bShort && R->Check == 0) R->Check = SpotCount() + UE_ARRAY_COUNT(Shots);   // (the short walk skips them)
+            if (R->Check >= SpotCount() && R->Check < SpotCount() + int32(UE_ARRAY_COUNT(Shots)))
             {
                 // (2026-11-20) Stills of the art pass's places: him standing there, looking toward something.
-                const FShot& Sh = Shots[R->Check - Districts];
+                const FShot& Sh = Shots[R->Check - SpotCount()];
                 if (!R->bPlaced)
                 {
                     if (!Map->IsReady(Sh.D) || Map->GetLoadedCount() != 1) Map->LoadNow(Sh.D);
@@ -196,8 +251,8 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_SHOT name=%s"), Sh.Name);
                 ++R->Check; R->PhaseStart = Now; return;
             }
-            if (R->bStillsOnly && R->Check < Districts) { R->Check = Districts; return; }
-            if (R->Check >= Districts)
+            if (R->bStillsOnly && R->Check < SpotCount()) { R->Check = SpotCount(); return; }
+            if (R->Check >= SpotCount())
             {
                 int32 Fails = R->Stuck + R->Void + R->CheckFails + (Map ? (Map->GetMaxLoaded() > 2) + (Map->GetMissing() > 0) + Map->GetLateCount() : 1);
                 FString Line;
@@ -214,20 +269,20 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     Failures + Fails, R->Stuck, R->Void, Map ? Map->GetLateCount() : -1, Map ? Map->GetMaxLoaded() : -1, R->CheckFails, Map ? Map->GetMissing() : -1, R->bShort, Map ? Map->GetDrowned() : -1, MazeWay() / 100.f);
                 Done(Failures + Fails); return;
             }
-            const int32 D = R->Check;
+            const int32 Sp = R->Check, D = Spot(Sp).D;   // (2026-11-21: every spot, the districts' own first)
             if (!R->bPlaced)
             {
                 Map->LoadNow(D);
-                Chuck->ResetAtLocation(FeyCheckpointWorld(D)); Chuck->SetActorRotation(FRotator(0, CheckpointYaw(D), 0)); Chuck->Recenter();
+                Chuck->ResetAtLocation(FeySpotWorld(Sp)); Chuck->SetActorRotation(FRotator(0, SpotYaw(Sp), 0)); Chuck->Recenter();
                 R->bPlaced = true; R->PhaseStart = FPlatformTime::Seconds();
                 return;
             }
             if (Since < 4.f) return;
             R->bPlaced = false;
-            const bool bOk = Chuck->GetCharacterMovement()->IsMovingOnGround() && FVector::Dist(Chuck->GetActorLocation(), FeyCheckpointWorld(D)) < 80.f && Map->IsReady(D) && Map->GetLoadedCount() == 1;
+            const bool bOk = Chuck->GetCharacterMovement()->IsMovingOnGround() && FVector::Dist(Chuck->GetActorLocation(), FeySpotWorld(Sp)) < 80.f && Map->IsReady(D) && Map->GetLoadedCount() == 1;
             R->CheckFails += !bOk;
-            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / FString::Printf(TEXT("FeyMap/%d_%s.png"), D, District(D).Name), false, false);
-            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_CHECKPOINT name=%s ok=%d loaded=%d mem_mb=%.0f"), District(D).Name, bOk, Map->GetLoadedCount(), MemMb());
+            FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / FString::Printf(TEXT("FeyMap/%d_%s.png"), Sp, Spot(Sp).Point), false, false);
+            UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_CHECKPOINT name=%s ok=%d loaded=%d mem_mb=%.0f"), Spot(Sp).Point, bOk, Map->GetLoadedCount(), MemMb());
             ++R->Check; R->PhaseStart = Now;
         }
     }, .02f, true);

@@ -382,11 +382,11 @@ void AFeywildSetting::ApplyFog()
 {
     if (!Fog) return;
     const float G = GloomNow;
-    Fog->SetFogDensity(.018f * (1.f + 5.f * MistK) * (1.f + 3.5f * G));
+    Fog->SetFogDensity(.018f * (1.f + 5.f * MistK) * (1.f + 5.5f * G));   // (2026-11-21: the Deepwood foggier still)
     Fog->SetFogInscatteringColor(FMath::Lerp(FLinearColor(.17f, .3f, .46f), FLinearColor(.045f, .1f, .21f), G));
     Fog->SetDirectionalInscatteringColor(FMath::Lerp(FLinearColor(.8f, .42f, .17f), FLinearColor(.12f, .11f, .14f), G));
     Fog->SetVolumetricFogAlbedo(FMath::Lerp(FLinearColor(FColor(225, 235, 255)), FLinearColor(.45f, .62f, 1.f), G).ToFColor(true));
-    Fog->SetVolumetricFogExtinctionScale(FMath::Lerp(.45f, 1.5f, G));
+    Fog->SetVolumetricFogExtinctionScale(FMath::Lerp(.45f, 2.1f, G));
 }
 
 // The Deepwood (2026-11-20, the user: much darker, bluer, foggier, a very different part of the forest).
@@ -396,7 +396,7 @@ void AFeywildSetting::SetGloom(float G)
     if (FMath::IsNearlyEqual(G, GloomNow, .002f)) return;
     GloomNow = G;
     if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .26f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.5f, .58f, .85f), G)); }
-    if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, .8f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }
+    if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, 1.1f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }   // (2026-11-21: the Deepwood's blue fill a little brighter)
     if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .5f, G));
     if (PostComp)
     {
@@ -1175,7 +1175,7 @@ void AFeywildSetting::TickAir(float Dt)
         for (int32 I = 0; I < Mf.Num(); ++I)
         {
             const bool bOwn = I < Veils.Num();
-            Mist->SetCustomDataValue(I, 0, bOwn ? Veils[I].Alpha : .11f, false); Mist->SetCustomDataValue(I, 1, bOwn ? Veils[I].Seed : float(I % 17) / 17.f, I == Mf.Num() - 1);
+            Mist->SetCustomDataValue(I, 0, bOwn ? Veils[I].Alpha : .15f, false); Mist->SetCustomDataValue(I, 1, bOwn ? Veils[I].Seed : float(I % 17) / 17.f, I == Mf.Num() - 1);
         }
     }
     else Mist->BatchUpdateInstancesTransforms(0, Mf, true, true);

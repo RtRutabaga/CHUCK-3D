@@ -294,7 +294,7 @@
   {
    "file": "SM_FeyOakDeep0.fbx",
    "source": "modelled",
-   "triangles": 83592,
+   "triangles": 115712,
    "dimensions_cm": [
     2241.207,
     2316.624,
@@ -306,7 +306,7 @@
     "FeyPlant",
     "FeyHangMoss"
    ],
-   "sha256": "7DA22B4299554A5A6C1DB9F8B6C5EB03C665EF8D99FBC0D92D01BD2CDD1998A3"
+   "sha256": "690C8DB96FBBBA6FA03718599F9CA6F12E6C312FBB03C944798D7B9FB3222B69"
   },
   {
    "file": "SM_FeyOakDeep0Collision.fbx",
@@ -325,7 +325,7 @@
   {
    "file": "SM_FeyOakDeep1.fbx",
    "source": "modelled",
-   "triangles": 83608,
+   "triangles": 115528,
    "dimensions_cm": [
     2205.056,
     2180.48,
@@ -337,7 +337,7 @@
     "FeyPlant",
     "FeyHangMoss"
    ],
-   "sha256": "733A55723D2A5EECF005CD488B8FED2A86BAACEFE3DAE87A04F3BC7A564F9B79"
+   "sha256": "B607D68F69B71A3D7EEE693AD0A1789A2FE7680942CC5A9B35E398ACE0086E9A"
   },
   {
    "file": "SM_FeyOakDeep1Collision.fbx",
@@ -352,6 +352,20 @@
     "FeyBark"
    ],
    "sha256": "A51DEDF020EA521780866222486F6531CC771B46B19E36B43E26F0AAA8D5FE84"
+  },
+  {
+   "file": "SM_FeyHedgeLeaves.fbx",
+   "source": "modelled",
+   "triangles": 8792,
+   "dimensions_cm": [
+    333.382,
+    152.054,
+    876.857
+   ],
+   "slots": [
+    "FeyHedgeLeaf"
+   ],
+   "sha256": "7A427DFDEF082067EA56F0BBACE24075818E57A54CC1E554402E9342F2C17FBC"
   }
  ]
 }

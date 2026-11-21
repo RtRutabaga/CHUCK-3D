@@ -53,7 +53,26 @@ namespace FeyMap
     /** The maze: its cells and the length of the way through. */
     int32 MazeCells();
     float MazeWay();
+    /** (2026-11-21) The see-through check: rays cast from threshold Th's floor between T0 and T1, every way, at a rat's and
+     *  a camera's height; a leak is a ray that passes under the threshold's own rock (its intended surface) without striking
+     *  anything that shows. For FeyMapTest's =cracks mode. Local positions and directions. */
+    struct FLeak { FVector At, Dir; float Dist; };
+    int32 SeeThrough(UWorld* World, const AActor* Ignore, int32 Th, float T0, float T1, TArray<FLeak>& Out);
+
+    /** (2026-11-21, the user: more spawn points within the big districts.) Places within a district a death can return him
+     *  to once he has reached them, and that the dev menu and the save can start from. The district's own checkpoint is
+     *  its first. */
+    struct FSpot { int32 D; const TCHAR* Point; const TCHAR* Label; };
+    int32 SpotCount();
+    const FSpot& Spot(int32 I);
+    FVector SpotAt(int32 I);     // local, on the ground
+    float SpotYaw(int32 I);
+    int32 SpotOf(const FString& Point);
 }
+FVector FeySpotWorld(int32 Spot);
+/** Marks the spots within 4 m of a place (world) reached; forgets them all (a new game, the river again). */
+void FeyReachSpots(const FVector& World);
+void FeyForgetSpots();
 /** Inside the rough map's bounds (world). */
 bool InFeyMap(const FVector& World);
 /** Where a death in the Feywild returns him (world, his capsule's centre): the checkpoint of the district he is in, or of
@@ -111,6 +130,8 @@ public:
     static AFeyMap* Ensure(UWorld* World);
     /** Only district D, built at once (a checkpoint start or a respawn). */
     void LoadNow(int32 D);
+    /** Districts A and B both, built at once (the see-through check). */
+    void LoadPair(int32 A, int32 B);
     bool IsLoaded(int32 D) const;
     bool IsReady(int32 D) const;
     int32 GetLoadedCount() const;

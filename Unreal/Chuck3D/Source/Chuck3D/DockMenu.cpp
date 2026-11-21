@@ -84,7 +84,8 @@ namespace
     const FChultPoint FeyPoints[]={{TEXT("FeyArrival"),TEXT("Feywild Riverbank")},{TEXT("FeyOrchard"),TEXT("Feywild Orchard")},{TEXT("FeyCrossroads"),TEXT("Feywild Crossroads")},
         {TEXT("FeyMere"),TEXT("Feywild Lily Mere")},{TEXT("FeyDeepwood"),TEXT("Feywild Deepwood")},{TEXT("FeyHighmeadow"),TEXT("Feywild Highmeadow")},{TEXT("FeyMaze"),TEXT("Feywild Maze")},
         {TEXT("FeyRiver"),TEXT("Feywild River (dev)")},{TEXT("FeyLook"),TEXT("Feywild Look (dev)")}};
-    int32 FeyDistrictOf(const FString& Point){for(int32 D=0;D<FeyMap::Districts;++D) if(Point==FeyMap::District(D).Point) return D; return -1;}
+    // (2026-11-21) The spots within the districts, in a tenth column (FeyMap::Spot from Districts on).
+    constexpr int32 FeyExtraFirst=FeyMap::Districts;
     bool PhlegPoint(const FString& Point,FVector& Location,float& Yaw)
     {
         for(int32 I=0;I<UE_ARRAY_COUNT(PhlegPoints);++I)
@@ -129,14 +130,15 @@ bool ADockGameMode::StartFromMenu(const FString& Point)
     FVector ChultAt=FVector::ZeroVector,ChultRecovery=FVector::ZeroVector;float ChultYaw=-1000;
     const bool bChult=Point.StartsWith(TEXT("Chult"));
     FVector ShipAt;float ShipYaw=0;
-    if(C && (Point==TEXT("FeyLook") || FeyDistrictOf(Point)>=0))
+    if(C && (Point==TEXT("FeyLook") || FeyMap::SpotOf(Point)>=0))
     {
         FadeOutMusic(.1f);
         AFeywildSetting::Enter(GetWorld());
         // (stage 3) Only that district stands, built at once under the menu's cut.
-        const bool bLook=Point==TEXT("FeyLook");const int32 D=bLook?0:FeyDistrictOf(Point);
+        const bool bLook=Point==TEXT("FeyLook");const int32 Sp=bLook?0:FeyMap::SpotOf(Point);const int32 D=FeyMap::Spot(Sp).D;
         if(AFeyMap* Map=AFeyMap::Ensure(GetWorld())) Map->LoadNow(D);
-        C->ResetAtLocation(bLook?FeywildSpawn():FeyCheckpointWorld(D));C->SetActorRotation(FRotator(0,bLook?FeywildSpawnYaw():FeyMap::CheckpointYaw(D),0));C->Recenter();
+        C->ResetAtLocation(bLook?FeywildSpawn():FeySpotWorld(Sp));C->SetActorRotation(FRotator(0,bLook?FeywildSpawnYaw():FeyMap::SpotYaw(Sp),0));C->Recenter();
+        if(!bLook) FeyReachSpots(FeySpotWorld(Sp));
         UE_LOG(LogTemp,Display,TEXT("CHUCK_MENU_START point=%s"),*Point);
         return true;
     }
@@ -243,7 +245,7 @@ bool ADockGameMode::CurrentSavePoint(FString& Point,FString& Label) const
             FVector At;float Yaw;
             if(PhlegPoint(P.Point,At,Yaw)) Consider(P.Point,P.Label,At);
         }
-    if(AFeywildSetting::Get(World)) for(int32 D=0;D<FeyMap::Districts;++D) Consider(FeyMap::District(D).Point,FeyMap::District(D).Label,FeyCheckpointWorld(D));
+    if(AFeywildSetting::Get(World)) for(int32 I=0;I<FeyMap::SpotCount();++I) Consider(FeyMap::Spot(I).Point,FeyMap::Spot(I).Label,FeySpotWorld(I));
     // The docks after the sewer are the evening's.
     if(HasExitedDockSewer() && Point==TEXT("Waterdeep")) {Point=TEXT("Night");Label=TEXT("Waterdeep Night");}
     // The dev markers are dropped from the label the player sees.
@@ -340,7 +342,7 @@ void ADockHUD::Tick(float DeltaSeconds)
     }
     else if(MenuTestStage==1)
     {
-        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints)+UE_ARRAY_COUNT(PhlegPoints)+UE_ARRAY_COUNT(FeyPoints) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
+        Check(MenuWidget.IsValid() && MenuButtons.Num()==7+UE_ARRAY_COUNT(ChultPoints)+UE_ARRAY_COUNT(TemplePoints)+UE_ARRAY_COUNT(ShipPoints)+UE_ARRAY_COUNT(PhlegPoints)+UE_ARRAY_COUNT(FeyPoints)+(FeyMap::SpotCount()-FeyExtraFirst) && PC && PC->IsPaused(),TEXT("checkpoint page keeps the world paused"));
         // -MenuTestShot: a picture of the page (its five columns), held a moment before Back.
         if(FParse::Param(FCommandLine::Get(),TEXT("MenuTestShot")) && !bMenuShot)
         {
@@ -366,6 +368,7 @@ void ADockHUD::Tick(float DeltaSeconds)
         for(const FChultPoint& Point:ShipPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:PhlegPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
         for(const FChultPoint& Point:FeyPoints) if(MenuTestPoint==Point.Point) Label=Point.Label;
+        for(int32 I=0;I<FeyMap::SpotCount();++I) if(MenuTestPoint==FeyMap::Spot(I).Point) Label=FeyMap::Spot(I).Label;
         Click(Label);
     }
     else if(MenuTestStage==4)
@@ -458,7 +461,7 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         [SNew(STextBlock).Text(FText::FromString(TEXT("Dev Checkpoints"))).Justification(ETextJustify::Center)];
     TSharedPtr<SButton> First;
     // The checkpoint page has five columns: Waterdeep, Chult, the temple interior, its trap run, the Astral wind.
-    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh,Eighth,Ninth;
+    TSharedPtr<SVerticalBox> Target=Rows,Left,Right,Third,Fourth,Fifth,Sixth,Seventh,Eighth,Ninth,Tenth;
     if(Checkpoints) Rows->AddSlot().AutoHeight()
         [SNew(SHorizontalBox)
         +SHorizontalBox::Slot().FillWidth(1).Padding(0,0,12,0)[SAssignNew(Left,SVerticalBox)]
@@ -469,7 +472,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Sixth,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Seventh,SVerticalBox)]
         +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Eighth,SVerticalBox)]
-        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Ninth,SVerticalBox)]];
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,12,0)[SAssignNew(Ninth,SVerticalBox)]
+        +SHorizontalBox::Slot().FillWidth(1).Padding(12,0,0,0)[SAssignNew(Tenth,SVerticalBox)]];
     auto Add=[&](const TCHAR* Label,TFunction<FReply()> Action)
     {
         TSharedPtr<SButton> Button;
@@ -535,6 +539,8 @@ void ADockHUD::ShowMenu(bool Checkpoints)
         }
         Target=Ninth;
         for(const FChultPoint& Point:FeyPoints) {const TCHAR* Name=Point.Point;Add(Point.Label,[Start,Name](){return Start(Name);});}
+        Target=Tenth;
+        for(int32 I=FeyExtraFirst;I<FeyMap::SpotCount();++I) {const TCHAR* Name=FeyMap::Spot(I).Point;Add(FeyMap::Spot(I).Label,[Start,Name](){return Start(Name);});}
         Target=Rows;
         Add(TEXT("Back"),[this](){ShowMenu(false);return FReply::Handled();});
     }
