@@ -41,6 +41,7 @@ namespace
         bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false, bLife = false; uint64 Frame = 0;
         int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0, Hits1 = 0; float MinDist = 1e9f; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
         int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
+        float PkS0 = 0, PkRate = -1; double PkT0 = -1, PkLastJump = 0; int32 PkGrip = -1;   // (2026-11-23) the parkour checks
         FStat Chult, Fey[Districts + 1], Cross;
         float ChultMem = 0, BeforeMem = 0;
     };
@@ -540,7 +541,96 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (Since < 24.f) { Drive(FVector(-Rd.Y, Rd.X, 0.f) + FVector(Rd, 0.f) * FMath::Clamp((1100.f + 1100.f * FMath::Clamp((L.Z - 30.f) / 1900.f, 0.f, 1.f) - Rn) / 300.f, -.6f, .6f)); return; }
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_STAIR from=%.0f to=%.0f"), R->MinDist, L.Z);
                 Check(L.Z > R->MinDist + 250.f, TEXT("stair_climbs"));
-                R->bPlaced = false; R->CrackStep = 60; R->PhaseStart = Now; return;
+                R->bPlaced = false; R->CrackStep = 58; R->PhaseStart = Now; return;
+            }
+            // ---- (2026-11-23) the maze's parkour and thorns: 58 a short bed (slow, pricks), 59 the trellis run over a bed, 60 the
+            // ivy hoops, 61 the walkway (the ladder up, along, the steps down), 62 a root gap crawled through.
+            case 58: case 59: case 60: case 61:
+            {
+                const int32 Want = Step == 58 ? 3 : Step == 59 ? 0 : Step == 60 ? 1 : 2;
+                static const TCHAR* Names[] = {TEXT("trellis"), TEXT("hoops"), TEXT("walkway"), TEXT("thorns")};
+                const TArray<FMazeParkour>& Pks = MazeParkour(); int32 Pi = -1; for (int32 I = 0; I < Pks.Num() && Pi < 0; ++I) if (Pks[I].Kind == Want) Pi = I;
+                if (Pi < 0) { Check(false, *FString::Printf(TEXT("%s_built"), Names[Want])); R->bPlaced = false; R->CrackStep = Step + 1; R->PhaseStart = Now; return; }
+                const FMazeParkour& P = Pks[Pi];
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                auto Pt = [&](float S, float X) { const FVector2D Q = MazeParkourAt(P, S, X); return FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y)); };
+                auto Tan = [&](float S) { return (Pt(S + 5.f, 0.f) - Pt(S - 5.f, 0.f)).GetSafeNormal2D(); };
+                const FVector L = FeyLocal(Chuck->GetActorLocation()), Feet = L - FVector(0, 0, Stand);
+                const float S = FMath::FindDeltaAngleRadians(P.Ac, FMath::Atan2(L.Y - Hub.Y, L.X - Hub.X)) * P.R * P.Dir, Across = FVector2D::Distance(FVector2D(L), Hub) - P.R;
+                const float Up = Feet.Z - LandZ(Maze, Feet.X, Feet.Y);
+                auto Keep = [&](float X) { const FVector Out = (Pt(S, 10.f) - Pt(S, 0.f)).GetSafeNormal2D(); Drive(Tan(S) + Out * FMath::Clamp((X - Across) / 60.f, -.5f, .5f)); };   // along the way, held X across
+                const float Lane = Want == 0 ? P.Side * (TrellisFace - 38.f) : Want == 2 ? WalkAcross : 0.f;
+                const float From = Want == 0 ? P.Bed0 - 300.f : Want == 1 ? -(Hoops - 1) * .5f * HoopStep : Want == 2 ? LadderFoot - 60.f : P.Bed0 - 100.f;
+                if (!R->bPlaced)
+                {
+                    Put(Pt(From, Lane), Tan(From)); R->Hits0 = AFeyLife::ThornPricks; R->Hits1 = Want == 0 ? Chuck->GetWallSideRuns() : Want == 1 ? Chuck->GetSwingCatches() : Chuck->GetLadderMounts();
+                    R->MinDist = -1e9f; R->PkT0 = -1.; R->PkRate = -1.f; R->PkGrip = -1; R->PkLastJump = 0.; R->bJumped = false; R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return;
+                }
+                R->MinDist = FMath::Max(R->MinDist, Up);   // the highest his feet went
+                if (R->Frame % 15 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_PARKOUR %s s=%.0f across=%.0f up=%.0f gait=%s pricks=%d"), Names[Want], S, Across, Up, Chuck->GetGaitName(), AFeyLife::ThornPricks - R->Hits0);
+                auto ShotOnce = [&](bool bNow, const TCHAR* Name) { if (bNow && !R->bShort) { Shot(Name); R->bShort = true; } };
+                bool bGoing = false;
+                if (Want == 3)   // into the thorns and on through: how fast he gets across
+                {
+                    bGoing = Since < 5.f && S < P.Bed1 + 60.f;
+                    if (bGoing) Keep(0.f);
+                    const bool bIn = InMazeThorns(Feet);
+                    if (bIn && R->PkT0 < 0.) { R->PkT0 = Now; R->PkS0 = S; }
+                    if (R->PkT0 >= 0. && R->PkRate < 0.f && (S > P.Bed1 || !bGoing)) R->PkRate = (S - R->PkS0) / FMath::Max(.1f, float(Now - R->PkT0));
+                    ShotOnce(bIn && Now - R->PkT0 > .4f, TEXT("MazeThorns"));
+                }
+                else if (Want == 0)   // run beside the trellis, jump onto it just before the thorns
+                {
+                    bGoing = Since < 6.f && S < P.Bed1 + 120.f;
+                    if (bGoing) Keep(Lane);
+                    if (!R->bJumped && S > P.Bed0 - 50.f) { Chuck->JumpPressed(); R->bJumped = true; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TRELLIS_JUMP s=%.0f across=%.0f gait=%s"), S, Across, Chuck->GetGaitName()); }
+                    ShotOnce(Chuck->GetWallSideRuns() > R->Hits1 && FCString::Strcmp(Chuck->GetGaitName(), TEXT("WallSide")) == 0, TEXT("MazeTrellisRun"));
+                }
+                else if (Want == 1)   // a hop up to the first hoop, then hoop to hoop, and off the end
+                {
+                    bGoing = Since < 14.f && S < P.Bed1 + 120.f;
+                    if (bGoing && R->bJumped) Drive(Tan(S));
+                    if (!R->bJumped && Since > .8f && Chuck->GetCharacterMovement()->IsMovingOnGround()) { Chuck->JumpPressed(); R->bJumped = true; R->PkLastJump = Now; }
+                    else if (Chuck->IsSwinging() && Chuck->GetSwingGrip() != R->PkGrip && Now - R->PkLastJump > .55f) { R->PkGrip = Chuck->GetSwingGrip(); Chuck->JumpPressed(); R->PkLastJump = Now; }
+                    ShotOnce(Chuck->IsSwinging() && Chuck->GetSwingCatches() - R->Hits1 >= 2, TEXT("MazeHoops"));
+                }
+                else   // into the ladder's foot, up, along the walkway and down its steps
+                {
+                    bGoing = Since < 16.f && S < WalkTo + 320.f;
+                    if (bGoing) Keep(Lane);
+                    ShotOnce(Up > WalkUp - 20.f && S > WalkFrom + 120.f, TEXT("MazeWalkway"));
+                }
+                if (bGoing || (Since < 18.f && !Chuck->GetCharacterMovement()->IsMovingOnGround())) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_PARKOUR_END %s s=%.0f bed=%.0f..%.0f pricks=%d moves=%d top=%.0f rate=%.0f"), Names[Want], S, P.Bed0, P.Bed1, AFeyLife::ThornPricks - R->Hits0,
+                    (Want == 0 ? Chuck->GetWallSideRuns() : Want == 1 ? Chuck->GetSwingCatches() : Chuck->GetLadderMounts()) - R->Hits1, R->MinDist, R->PkRate);
+                if (Want == 3)
+                {
+                    Check(AFeyLife::ThornPricks > R->Hits0, TEXT("thorns_prick"));
+                    Check(R->PkRate > 0.f && R->PkRate < 160.f, TEXT("thorns_slow"));
+                }
+                else
+                {
+                    const int32 Moves = (Want == 0 ? Chuck->GetWallSideRuns() : Want == 1 ? Chuck->GetSwingCatches() : Chuck->GetLadderMounts()) - R->Hits1;
+                    Check(Want == 1 ? Moves >= Hoops - 1 : Moves > 0, *FString::Printf(TEXT("%s_move"), Names[Want]));
+                    if (Want == 2) Check(R->MinDist > WalkUp - 20.f, TEXT("walkway_up"));
+                    Check(AFeyLife::ThornPricks == R->Hits0, *FString::Printf(TEXT("%s_clears_thorns"), Names[Want]));
+                    Check(S > P.Bed1, *FString::Printf(TEXT("%s_past_thorns"), Names[Want]));
+                }
+                R->bPlaced = false; R->CrackStep = Step + 1; R->PhaseStart = Now; return;
+            }
+            case 62:   // a root gap: crawled through, low under the hedge
+            {
+                if (!MazeGaps().Num()) { Check(false, TEXT("gap_built")); R->CrackStep = 63; return; }
+                const FMazeGap& G = MazeGaps()[0]; const float Yr = FMath::DegreesToRadians(G.Yaw + 90.f); const FVector Th(FMath::Cos(Yr), FMath::Sin(Yr), 0.f), C(G.C, LandZ(Maze, G.C.X, G.C.Y));
+                if (!R->bPlaced) { Put(C - Th * 105.f, Th); R->Hits1 = Chuck->GetCrawls(); R->bShort = false; R->bPlaced = true; R->PhaseStart = Now; return; }
+                const FVector L = FeyLocal(Chuck->GetActorLocation()); const float Through = FVector::DotProduct(L - C, Th);
+                if (R->Frame % 15 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_GAP through=%.0f gait=%s"), Through, Chuck->GetGaitName());
+                if (Chuck->IsCrawling() && !R->bShort) { Shot(TEXT("MazeRootGap")); R->bShort = true; }
+                const FVector Side(-Th.Y, Th.X, 0.f);
+                if (Since < 6.f && Through < 110.f) { Drive(Th + Side * FMath::Clamp(FVector::DotProduct(C - L, Side) / 30.f, -.5f, .5f)); return; }
+                Check(Chuck->GetCrawls() > R->Hits1, TEXT("gap_crawls"));
+                Check(Through > 80.f, TEXT("gap_through"));
+                R->bPlaced = false; R->CrackStep = 63; R->PhaseStart = Now; return;
             }
             default:
                 if (Since < 1.f) return;

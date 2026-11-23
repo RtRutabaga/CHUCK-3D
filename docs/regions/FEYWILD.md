@@ -1,6 +1,6 @@
 # The Feywild: 3D adaptation plan
 
-**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3, the whole map walkable in rough form, is built (2026-11-19, `FeyMap.h`; see [the rough map as built](#the-rough-map-as-built-stage-3)). Stage 4, the art pass, is built (2026-11-20). Stage 5 is under way: [part one](#stage-5-part-one-the-first-mechanics-and-hazards-2026-11-21), the flowers, pollen, orchids and moths, is built (2026-11-21); [part two](#stage-5-part-two-the-creatures-2026-11-22), the thorn mites, redcaps, displacer beast and pad-raising flower, is built (2026-11-22). Stages 6 to 8 (the maze, the Cloud Staircase to its landing, polish) are built (2026-11-23; see [stages 6 to 8](#stages-6-to-8-the-maze-the-cloud-staircase-and-polish-2026-11-23)). The tower beyond the landing is not planned yet.**
+**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3, the whole map walkable in rough form, is built (2026-11-19, `FeyMap.h`; see [the rough map as built](#the-rough-map-as-built-stage-3)). Stage 4, the art pass, is built (2026-11-20). Stage 5 is under way: [part one](#stage-5-part-one-the-first-mechanics-and-hazards-2026-11-21), the flowers, pollen, orchids and moths, is built (2026-11-21); [part two](#stage-5-part-two-the-creatures-2026-11-22), the thorn mites, redcaps, displacer beast and pad-raising flower, is built (2026-11-22). Stages 6 to 8 (the maze, the Cloud Staircase to its landing, polish) are built (2026-11-23; see [stages 6 to 8](#stages-6-to-8-the-maze-the-cloud-staircase-and-polish-2026-11-23)), and the maze's [parkour and thorns](#the-mazes-parkour-and-thorns-2026-11-23) after them. The tower beyond the landing is not planned yet.**
 
 Sources: the user's Feywild vision and ten goal images (2026-11-17), the 2D game's `docs/development/PHASE-8.md` section 6 and 9 (river cutscene) and `PHASE-9.md` (thirteen maps), and the research below. Where the user's vision and the 2D game differ, the vision wins.
 
@@ -303,7 +303,35 @@ The user: "go ahead and do the next 3 stages". Built in `FeyMap` (the maze's sho
 - **The Cloud Staircase.** 56 steps of 34 cm wind up from the heart, from 11 m out to 22 m, over the hedges to a broad cloud landing 19 m up. A new respawn spot is there ("Feywild Cloud Landing"). Each tread is walked on a slab under it, not a column, so the maze's corridors under the stair stay open. Invisible rails keep him from stepping off the high part (from step 30). An invisible wall at the landing's far end is the boundary until the tower is planned; the stair beyond it is still scenery.
 - **Polish.** The 55 ms stutter on reaching the maze was its hedges: eight meshes of about 43,000 triangles, each taking about 45 ms to cook its collision in one frame. They are now 48 parts (eight sectors by six bands), none over about 9 ms (the maze's worst build step 48 ms before, 9.2 ms after). A one-frame spike of about 47 ms at some threshold remains, outside the build steps (not yet found). Each district's plants and creatures are also built a part at a time over several frames (within about 4 ms a frame). Any build part slower than 8 ms is logged (`CHUCK_FEY_SLOW_PART`). The thorn mites are lighter (they read near black).
 - **Checked** (route walk: 0 failures, 0 stuck, every district at the 60 fps cap except the Deepwood at 17.9 ms; `-ChuckFeyMapTest=life` with 0 failures, steps 50 to 57 new): plants appear while he is lost; a revealed plant opens its shortcut and he walks through; the heart's vines stop him, its plant opens them and he walks in; on a hedge top the bees knock him down to the ground; a statue turns; he stands on the landing, the boundary holds him on it, and he climbs the stair from its foot. Stills: `Life_MazeShortcut`, `Life_MazeHeartGate`, `Life_MazeBees`, `Life_CloudLanding`.
-- **Known flaws:** the bees are gold specks, not modelled bees; the statues' turn is a snap made while unseen; the parkour asked for in the maze (trellis wall runs, ivy brachiation, raised walkways, root gaps) is not built; thorn hazards are not built; the stair's treads are long (about 4.3 m each), so the climb is a long walk; nothing here has been played by hand.
+- **Known flaws:** the bees are gold specks, not modelled bees; the statues' turn is a snap made while unseen; the parkour and thorn hazards were not built here (built the same day, below); the stair's treads are long (about 4.3 m each), so the climb is a long walk; nothing here has been played by hand.
+
+## The maze's parkour and thorns (2026-11-23)
+
+The user: "Do the parkour and thorn hazards". Built in `FeyMap` (where they go, the dressing, his grips, ladders and crawl spaces) and `AFeyLife` (the thorns' effect), with his existing moves: the side wall run, brachiation, the ladder climb and the crawl.
+
+- **Thorns.** Beds of arching bramble canes across the whole corridor, thorned, with a few leaves and dark berries. On the ground among them he walks at 45 % speed and loses a Sanity point at most every 1.6 s, with a stumble back the way he came. Over them (on a trellis, a hoop, the walkway, in a jump) nothing happens. `FeyMap::InMazeThorns`, `AFeyLife::ThornPricks`.
+- **Over each bed, a way across:**
+  - **Trellis.** A wooden lattice with ivy along one hedge, 2.6 m either side of a 1.8 m bed, with a flat face for the run. Jump while running beside it and he wall-runs past the thorns.
+  - **Ivy hoops.** Five bent willow hoops across the corridor, 1.35 m apart, hung with ivy, over a 4.5 m bed. Their crowns (98 cm up) are swing grips: a standing hop catches the first, then he swings hoop to hoop and off the end.
+  - **Raised walkway.** A plank walkway 1.6 m up along the outer hedge over a 5.8 m bed, with a ladder at its start (walk into it to climb) and four steps down at its end.
+  - **Short beds** (1.2 m) are jumped.
+- **Where.** The way through winds, with few straight runs of three cells on one ring. So the way itself has two short beds to jump. The trellises, hoops and walkways (two of each) stand on straight runs off it, longest first. Where one end of such a run is a dead end, three cigarettes wait there past the thorns. None is placed by the orchids' lanes, the redcaps at the middle of the way, the gate, the heart or a shortcut.
+- **Root gaps.** Six low holes, 46 cm high, at the foot of hedges between cells that are not linked, each saving 4 to 13 cells. Each is roofed with a slab of root and framed by arching roots. Walking into one, he goes down on all fours and crawls through (a registered crawl space); the redcaps cannot follow.
+- **Checked** (`-ChuckFeyMapTest=life` from step 50, 0 failures, `Local/feypk-2.log`; steps 58 to 62 new):
+  - The short bed slows him (51 cm/s across it) and pricks him.
+  - Run beside the trellis and jump: he wall-runs and lands past the thorns with no prick.
+  - He catches the first hoop, swings along all five and lands past the thorns with no prick.
+  - He climbs the ladder, walks the walkway 1.6 m up and comes down its steps with no prick.
+  - He crawls through a root gap.
+
+  Stills: `Life_MazeThorns`, `Life_MazeTrellisRun`, `Life_MazeHoops`, `Life_MazeWalkway`, `Life_MazeRootGap`.
+- **Known flaws:**
+  - The walkway's planks and steps read as mossy green blocks (the bark material mosses every upward face).
+  - The brambles are thin canes, with the thorns small at a distance.
+  - The ivy leaves are simple cards.
+  - The trellis hides part of the view when the camera is beside it.
+  - The main parkour is off the way through, not on it.
+  - Nothing has been played by hand.
 
 ## The wonder pass (planned 2026-11-22)
 

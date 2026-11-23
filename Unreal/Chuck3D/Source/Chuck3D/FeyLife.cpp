@@ -126,6 +126,10 @@ namespace
                 const TArray<FVector2D>& De = MazeDeadEnds(); const TArray<FVector2D>& Rt = MazeRoute();
                 for (const int32 K : {De.Num() / 3, 2 * De.Num() / 3}) if (De.IsValidIndex(K)) for (int32 M = 0; M < 2; ++M) P.Mites.Add(FVector(De[K].X + M * 60.f, De[K].Y - M * 40.f, M * 140.f));
                 P.Patrol = Rt[Rt.Num() / 2];
+                // (2026-11-23) Cigarettes in the dead end past each parkour off the way through.
+                for (const FMazeParkour& Pk : MazeParkour()) if (Pk.bReward)
+                    for (const FVector2D& C : {FVector2D(-12.f, 0.f), FVector2D(10.f, 9.f), FVector2D(2.f, -13.f)})
+                    { const FVector2D Q = MazeParkourAt(Pk, Pk.Bed1 + 150.f + C.X, -70.f + C.Y); P.Cigs.Add(FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y))); }
                 for (int32 K = 0; K < 2; ++K) { const FVector2D Q = Rt[Rt.Num() / 2 + K * 2]; P.Redcaps.Add(FVector(Q.X, Q.Y, K * 180.f)); }
                 for (int32 K = 0; K < MazeLanes().Num(); ++K)
                 {
@@ -908,7 +912,7 @@ void AFeyLife::BuildPadRise()
 }
 
 // ------------------------------------------------------------------ stage 6 (2026-11-22): the Great Hedge Maze
-int32 AFeyLife::BeeKnocks = 0, AFeyLife::StatueTurns = 0, AFeyLife::Reveals = 0;
+int32 AFeyLife::BeeKnocks = 0, AFeyLife::StatueTurns = 0, AFeyLife::Reveals = 0, AFeyLife::ThornPricks = 0;
 float AFeyLife::RevealAfter = 240.f, AFeyLife::RevealEvery = 150.f;
 
 void AFeyLife::BuildMaze()
@@ -992,6 +996,15 @@ void AFeyLife::TickMaze(float Dt, AChuckCharacter* Chuck, const FVector& C)
     const FVector Feet = C - FVector(0, 0, Stand);
     const float R = FVector2D::Distance(FVector2D(Feet), Hub);
     const bool bInMaze = R > R0 - 50.f && R < Rmax + 100.f;
+    // (2026-11-23) Thorns across the way: on the ground among them he goes slowly (FeyGroundSpeedScale), and each second there
+    // costs a Sanity point (at most one each 1.6 s) and a stumble back the way he came. Over them (the trellis, the hoops, the
+    // walkway, a jump) nothing.
+    if (bInMaze && !bCalm && Clock >= NextPrick && Chuck->GetCharacterMovement()->IsMovingOnGround() && InMazeThorns(Feet))
+    {
+        const FVector V = Chuck->GetVelocity().GetSafeNormal2D();
+        if (Chuck->TakeBite(Chuck->GetActorLocation() + (V.IsNearlyZero() ? Chuck->GetActorForwardVector() : V) * 60.f, 1, true, false))
+        { ++ThornPricks; NextPrick = Clock + 1.6f; Play(SVines, Feet, .6f); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_THORN_PRICK sanity=%d"), Chuck->GetSanity()); }
+    }
     // Lost: time in the maze brings out the hit plants, nearest him first.
     if (bInMaze && !bCalm)
     {
@@ -1074,6 +1087,7 @@ float FeyGroundSpeedScale(const FVector& World)
     if (!InFeyMap(World)) return 1.f;
     const FVector L = FeyLocal(World) - FVector(0, 0, Stand);
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid() && P->InPollen(L)) return .5f;
+    if (InMazeThorns(L)) return .45f;   // (2026-11-23) pushing through thorns
     return 1.f;
 }
 

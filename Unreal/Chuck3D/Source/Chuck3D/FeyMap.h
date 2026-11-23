@@ -81,6 +81,23 @@ namespace FeyMap
     const TArray<FVector2D>& MazeRoute();
     void MazeRings(FVector2D& Hub, float& R0, float& Pitch, float& Rmax, float& Tall);
     float MazeHeartAngle();
+    /** (2026-11-23, stage 6) The maze's parkour, each over a bed of thorns across the way through (the whole corridor's width):
+     *  0 a trellis along one hedge to run (Side +1 the outer hedge, -1 the inner), 1 ivy hoops to swing along, 2 a raised
+     *  walkway on the outer side (a ladder up, steps down), 3 a short bed to jump. Along the way, S cm from its middle, is the
+     *  angle Ac + Dir * S / R (radians; Dir +1 where the way runs anticlockwise); Bed0 to Bed1 the thorns. */
+    struct FMazeParkour { int32 Kind = 3; float R = 0, Ac = 0, Dir = 1, Side = 1, Bed0 = 0, Bed1 = 0; bool bOffWay = false, bReward = false; };   // (off the way through; cigarettes beyond it, in the dead end)
+    /** Root gaps: low holes through a hedge, at its foot, he crawls through and the redcaps cannot (centre; the hedge's run, degrees). */
+    struct FMazeGap { FVector2D C = FVector2D::ZeroVector; float Yaw = 0; };
+    const TArray<FMazeParkour>& MazeParkour();
+    const TArray<FMazeGap>& MazeGaps();
+    /** A point S along the way of parkour P, Across cm out from the middle of the corridor (toward the outer hedge). */
+    FVector2D MazeParkourAt(const FMazeParkour& P, float S, float Across = 0.f);
+    /** Down among the thorns (his feet, local)? */
+    bool InMazeThorns(const FVector& Feet);
+    // Their measures (cm): the trellis's face out from the corridor's middle and its reach either way; the hoops' grips (Hoops
+    // of them, HoopStep apart, centred) and their height; the walkway (from, to, height, its middle across) and its ladder's foot.
+    constexpr float TrellisFace = 120.f, TrellisReach = 260.f, HoopStep = 135.f, GripUp = 98.f, WalkFrom = -380.f, WalkTo = 40.f, WalkUp = 160.f, WalkAcross = 80.f, LadderFoot = -408.f, GapHalf = 45.f, GapTall = 46.f;
+    constexpr int32 Hoops = 5;
 }
 FVector FeySpotWorld(int32 Spot);
 /** Marks the spots within 4 m of a place (world) reached; forgets them all (a new game, the river again). */

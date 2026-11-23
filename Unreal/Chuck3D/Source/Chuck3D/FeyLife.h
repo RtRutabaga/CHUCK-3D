@@ -63,6 +63,8 @@ public:
     static int32 BeeKnocks;
     static int32 StatueTurns;
     static int32 Reveals;
+    /** (2026-11-23) Thorn pricks: each second he is down among the maze's thorns (FeyMap::InMazeThorns). */
+    static int32 ThornPricks;
     static float RevealAfter;
     static float RevealEvery;
     /** The next rescue plant, nearest him (local), appears now. */
@@ -130,7 +132,7 @@ private:
     UPROPERTY() class UAudioComponent* BeeAudio = nullptr;
     TArray<float> ScUp, ScWant;
     TArray<float> StatueYaw;
-    float MazeTime = 0, NextReveal = 0, OnTop = 0, BeeShow = 0;
+    float MazeTime = 0, NextReveal = 0, OnTop = 0, BeeShow = 0, NextPrick = 0;
     FVector BeeAt = FVector::ZeroVector;
     void BuildCamp();
     void BuildRefuges();
