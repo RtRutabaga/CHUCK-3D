@@ -451,6 +451,15 @@ if($feyMapProcess.ExitCode -or !(Select-String -LiteralPath $feyMapLog -Pattern 
     throw "Feywild map verification failed. Inspect $feyMapLog"
 }
 }
+# (2026-11-21) The Feywild's stage 5 mechanics: the flower opens its vines and he walks into the nook, pollen slows him, an
+# orchid's seed and a moth's touch cost Sanity (FeyLife.h).
+Step 'feyLife' {
+$feyLifeLog=Join-Path $evidence ('verify-fey-life-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
+$feyLifeProcess=Start-Game @('-ChuckChultTest','-ChuckFeyMapTest=life','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$feyLifeLog+'"'))
+if($feyLifeProcess.ExitCode -or !(Select-String -LiteralPath $feyLifeLog -Pattern 'CHUCK_FEY_LIFE_TEST failures=0 ' -Quiet)) {
+    throw "Feywild life verification failed. Inspect $feyLifeLog"
+}
+}
 Step 'phleg' {
 $phlegLog=Join-Path $evidence ('verify-phlegethos-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.log')
 $phlegProcess=Start-Game @('-ChuckChultTest','-ChuckPhlegethosTest','-windowed','-ResX=1280','-ResY=720',('-abslog="'+$phlegLog+'"'))

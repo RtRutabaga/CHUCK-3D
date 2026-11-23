@@ -68,6 +68,10 @@ namespace FeyMap
     FVector SpotAt(int32 I);     // local, on the ground
     float SpotYaw(int32 I);
     int32 SpotOf(const FString& Point);
+    /** (2026-11-21, for FeyLife) A district's road from its mouth on threshold T in to its ring, its spur, its land. */
+    const TArray<FVector2D>& RoadOf(int32 D, int32 T);
+    const TArray<FVector2D>& SpurOf(int32 D);
+    float LandZ(int32 D, float X, float Y);
 }
 FVector FeySpotWorld(int32 Spot);
 /** Marks the spots within 4 m of a place (world) reached; forgets them all (a new game, the river again). */
@@ -115,6 +119,9 @@ private:
     float BuildSeconds = 0, PlanSeconds = 0, WorstStepMs = 0;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> Kits;
     UPROPERTY() TArray<UMaterialInterface*> Mats;
+    UPROPERTY() class AFeyLife* Life = nullptr;   // (2026-11-21) its flowers, pollen, orchids and moths, once it stands
+protected:
+    virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 };
 
 /** The map: which districts stand, the thresholds, the painted distance round them, the far tower over the maze. */
@@ -147,6 +154,7 @@ private:
     void BuildDistance();
     void BuildTower();
     void BuildStandIn();
+    void BuildBrink();
     UProceduralMeshComponent* Emit(const TCHAR* Name, FMapSurf& S, UMaterialInterface* Material, bool bSolid, bool bShadow);
     UPROPERTY() TArray<AFeyDistrict*> Districts;
     UPROPERTY() TArray<UHierarchicalInstancedStaticMeshComponent*> BackTrees;   // the distance's trees on each district's ground

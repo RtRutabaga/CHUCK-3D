@@ -4,6 +4,7 @@
 // district takes to load, how many stand at once, and whether he is ever stuck or late at a threshold; then it starts at
 // each district's checkpoint and takes a still there. -ChuckFeyMapTest=short walks only the shore to the orchard.
 #include "FeyMap.h"
+#include "FeyLife.h"
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -33,7 +34,8 @@ namespace
         int32 Next = 0, Stuck = 0, Void = 0, Phase = 0, Check = 0, CheckFails = 0;
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
-        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false; uint64 Frame = 0;
+        bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false, bLife = false; uint64 Frame = 0;
+        int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
         int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
         FStat Chult, Fey[Districts + 1], Cross;
         float ChultMem = 0, BeforeMem = 0;
@@ -68,6 +70,16 @@ namespace
         {TEXT("MazeHedge"), Maze, {-121421.f, 6512.f}, {-121690.f, 7788.f}},
         {TEXT("StairFoot"), Maze, {-133389.f, 5222.f}, {-134077.f, 3903.f}},
         {TEXT("StairAlong"), Maze, {-135500.f, 5600.f}, {-134900.f, 3700.f}},
+        // (2026-11-21, the user's stills of slits in the first canyon's walls) Along it both ways, T from its riverbank mouth;
+        // At.X < -1.9e5 marks one of these: At.Y is T, Look.X the direction (1 on towards the orchard, -1 back).
+        {TEXT("Canyon_05w"), Riverbank, {-2e5f, .05f}, {1.f, 0.f}}, {TEXT("Canyon_18w"), Riverbank, {-2e5f, .18f}, {1.f, 0.f}}, {TEXT("Canyon_32w"), Riverbank, {-2e5f, .32f}, {1.f, 0.f}},
+        {TEXT("Canyon_50w"), Riverbank, {-2e5f, .5f}, {1.f, 0.f}}, {TEXT("Canyon_68w"), Orchard, {-2e5f, .68f}, {1.f, 0.f}}, {TEXT("Canyon_85w"), Orchard, {-2e5f, .85f}, {1.f, 0.f}},
+        {TEXT("Canyon_95e"), Orchard, {-2e5f, .95f}, {-1.f, 0.f}}, {TEXT("Canyon_80e"), Orchard, {-2e5f, .8f}, {-1.f, 0.f}}, {TEXT("Canyon_62e"), Orchard, {-2e5f, .62f}, {-1.f, 0.f}},
+        {TEXT("Canyon_45e"), Riverbank, {-2e5f, .45f}, {-1.f, 0.f}}, {TEXT("Canyon_28e"), Riverbank, {-2e5f, .28f}, {-1.f, 0.f}}, {TEXT("Canyon_12e"), Riverbank, {-2e5f, .12f}, {-1.f, 0.f}},
+        // (2026-11-21, stage 5) The first flower and its vines, a pollen bed, the orchids over the road, the moths.
+        {TEXT("LifeFlower"), Riverbank, {-13650.f, -2350.f}, {-14300.f, -3300.f}}, {TEXT("LifePollen"), Orchard, {-30600.f, 400.f}, {-33500.f, 1300.f}},
+        {TEXT("LifeOrchids"), Orchard, {-48700.f, -4300.f}, {-48259.f, -5603.f}}, {TEXT("LifeMoths"), LilyMere, {-67300.f, 30200.f}, {-66779.f, 31555.f}},
+        {TEXT("TunnelMouthB"), Crossroads, {-2e5f, -2.f}, {5.f, 0.f}}, {TEXT("TunnelMouthA"), Deepwood, {-2e5f, -2.f}, {5.f, 1.f}},
     };
     void In(FRun& R, int32 D, int32 Ta, int32 Tb) { AddLeg(R, FString::Printf(TEXT("%s_%d_%d"), District(D).Name, Ta, Tb), Walk(D, Ta, Tb)); }
 }
@@ -77,7 +89,8 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
     UWorld* World = Owner->GetWorld();
     auto R = MakeShared<FRun>();
     FString Mode; FParse::Value(FCommandLine::Get(), TEXT("ChuckFeyMapTest="), Mode);
-    R->bShort = Mode == TEXT("short"); R->bStillsOnly = Mode == TEXT("stills") || Mode == TEXT("cracks"); R->bCracks = Mode == TEXT("cracks");
+    R->bShort = Mode == TEXT("short"); R->bStillsOnly = Mode == TEXT("stills") || Mode == TEXT("cracks") || Mode == TEXT("life"); R->bCracks = Mode == TEXT("cracks"); R->bLife = Mode == TEXT("life");
+    AFeyLife::bCalm = !R->bLife;   // (the walker crosses orchids and moths: they do not hurt him then)
     auto* PC = Cast<APlayerController>(Chuck->GetController());
     if (PC) { PC->ConsoleCommand(TEXT("t.MaxFPS 60")); Chuck->DisableInput(PC); }
 
@@ -180,6 +193,89 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
         }
         // ---- 2 (=cracks, 2026-11-21): each threshold looked through, with both its districts standing and with only the one
         // on either side (as when the one behind has been dropped past the bend); stills of the first canyon's leaks.
+        // ---- 2 (=life, 2026-11-21): stage 5's first mechanics and hazards, each tried.
+        if (R->Phase == 2 && R->bLife)
+        {
+            auto LifeOf = [&](int32 D) -> AFeyLife* { for (const TWeakObjectPtr<AFeyLife>& P : AFeyLife::All()) if (P.IsValid() && P->GetDistrict() == D) return P.Get(); return nullptr; };
+            auto Put = [&](const FVector& L, const FVector& Face) { float Z = L.Z; GroundAt(L.X, L.Y, Z); Chuck->ResetAtLocation(FeyWorld(FVector(L.X, L.Y, Z + Stand + 4.f))); Chuck->SetActorRotation(FRotator(0, Face.Rotation().Yaw, 0)); Chuck->Recenter(); Chuck->SetSanity(AChuckCharacter::MaxSanity); };
+            auto Drive = [&](const FVector& Dir) { const FVector Dw = Dir.GetSafeNormal2D(); Chuck->SetRunHeld(true); Chuck->SetTestStickWorld(Dw); Chuck->AddMovementInput(Dw, 1.f, true); };
+            auto Check = [&](bool bOk, const TCHAR* What) { R->LifeFails += !bOk; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_CHECK %s ok=%d"), What, bOk); };
+            const int32 Step = R->CrackStep;
+            if (Step == 0) { Map->LoadNow(Riverbank); R->CrackStep = 1; R->PhaseStart = Now; return; }
+            AFeyLife* Life = nullptr;
+            if (Step < 10) Life = LifeOf(Riverbank); else if (Step < 20) Life = LifeOf(Orchard); else Life = LifeOf(LilyMere);
+            if (!Life && Step != 10 && Step != 20 && Step < 30) { if (Since > 5.f) { Check(false, TEXT("life_built")); R->CrackStep = (Step / 10 + 1) * 10; } return; }
+            switch (Step)
+            {
+            case 1:   // the vines shut the nook; the flower opens them
+            {
+                const FFeyVines& V = Life->GetVines()[0]; const FFeyFlower& F = Life->GetFlowers()[0];
+                if (!R->bPlaced) { Put(V.C + FVector(0, 160.f, 0), FVector(0, -1, 0)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 1.5f) { Drive(FVector(0, -1, 0)); return; }
+                Check(FeyLocal(Chuck->GetActorLocation()).Y > V.C.Y + 20.f, TEXT("vines_block"));
+                Put(F.Pos + (V.C - F.Pos).GetSafeNormal2D() * 45.f, F.Pos - (F.Pos + (V.C - F.Pos).GetSafeNormal2D() * 45.f));
+                FeyScratch(Chuck, Chuck->GetActorLocation(), (FeyWorld(F.Pos) - Chuck->GetActorLocation()).GetSafeNormal2D(), 120.f);
+                R->bPlaced = false; R->CrackStep = 2; R->PhaseStart = Now; return;
+            }
+            case 2:
+            {
+                if (Since < 4.f) return;
+                const FFeyVines& V = Life->GetVines()[0];
+                Check(Life->GetFlowers()[0].Open > .95f && V.Up < .05f, TEXT("flower_opens_vines"));
+                R->Cigs0 = Chuck->GetCigarettes();
+                Put(V.C + FVector(0, 160.f, 0), FVector(0, -1, 0)); R->CrackStep = 3; R->PhaseStart = Now; return;
+            }
+            case 3:
+            {
+                const FVector Nook = Life->GetVines()[0].C - FVector(0, 440.f, 0);
+                if (Since < 4.f) { Drive(Nook - FeyLocal(Chuck->GetActorLocation())); return; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_NOOK at=%s nook=%s"), *FeyLocal(Chuck->GetActorLocation()).ToCompactString(), *Nook.ToCompactString());
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("FeyMap/Life_Nook.png"), false, false);
+                Check(FVector::Dist2D(FeyLocal(Chuck->GetActorLocation()), Nook) < 260.f, TEXT("walks_into_nook"));
+                Check(Chuck->GetCigarettes() > R->Cigs0, TEXT("cigarettes_inside"));
+                Map->LoadNow(Orchard); Chuck->ResetAtLocation(FeyCheckpointWorld(Orchard)); R->CrackStep = 10; R->PhaseStart = Now; return;
+            }
+            case 10: { if (Since < 1.f) return; R->CrackStep = 11; R->bPlaced = false; return; }
+            case 11:   // pollen: half speed on the ground in a bed
+            {
+                const FFeyPollen& Pb = Life->GetPollen()[1]; const FVector Ax = FQuat(FRotator(0, Pb.Yaw, 0)).GetForwardVector(), C0(Pb.C.X, Pb.C.Y, 0.f);
+                if (!R->bPlaced) { Put(C0 - Ax * (Pb.R.X + 700.f), Ax); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 6.f)
+                {
+                    Drive(Ax); const float Sp = Chuck->GetVelocity().Size2D(); const FVector L = FeyLocal(Chuck->GetActorLocation()) - FVector(0, 0, Stand);
+                    if (Since > 1.5f && Chuck->GetCharacterMovement()->IsMovingOnGround()) { if (Life->InPollen(L)) { R->SpeedIn += Sp; ++R->SpeedInN; } else if (FVector::Dist2D(L, C0) > Pb.R.X + 150.f) { R->SpeedOut += Sp; ++R->SpeedOutN; } }
+                    return;
+                }
+                const float In = R->SpeedIn / FMath::Max(1, R->SpeedInN), Out = R->SpeedOut / FMath::Max(1, R->SpeedOutN);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_POLLEN out=%.0f in=%.0f samples=%d/%d"), Out, In, R->SpeedOutN, R->SpeedInN);
+                Check(R->SpeedInN > 10 && R->SpeedOutN > 10 && In < Out * .65f, TEXT("pollen_slows"));
+                R->bPlaced = false; R->CrackStep = 12; R->PhaseStart = Now; return;
+            }
+            case 12:   // an orchid's seed, standing in its lane
+            {
+                const FFeyOrchid& O = Life->GetOrchids()[0];
+                if (!R->bPlaced) { Put(O.Pos + O.Dir * 450.f, -O.Dir); R->Hits0 = AFeyLife::OrchidHits; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 6.f) return;
+                Check(AFeyLife::OrchidShots > 0 && AFeyLife::OrchidHits > R->Hits0, TEXT("orchid_hits"));
+                Map->LoadNow(LilyMere); Chuck->ResetAtLocation(FeyCheckpointWorld(LilyMere)); R->bPlaced = false; R->CrackStep = 20; R->PhaseStart = Now; return;
+            }
+            case 20: { if (Since < 1.f) return; R->CrackStep = 21; return; }
+            case 21:   // a moth's touch, standing under its haunt
+            {
+                const FFeyMoth& M = Life->GetMoths()[0];
+                if (!R->bPlaced) { Put(M.Home - FVector(0, 0, 72.f), M.Axis); R->Hits0 = AFeyLife::MothTouches; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 9.f) return;
+                Check(AFeyLife::MothTouches > R->Hits0, TEXT("moth_touches"));
+                R->CrackStep = 30; R->PhaseStart = Now;
+                FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("FeyMap/Life_Moth.png"), false, false);
+                return;
+            }
+            default:
+                if (Since < 1.f) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches);
+                Done(R->LifeFails); return;
+            }
+        }
         if (R->Phase == 2 && R->bCracks)
         {
             constexpr int32 States = 3;
@@ -194,7 +290,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 }
                 if (Since < 1.5f) return;
                 TArray<FLeak> Leaks;
-                const int32 N = SeeThrough(W, Chuck, Th, St == 2 ? .6f : -.2f, St == 1 ? .4f : 1.2f, Leaks);
+                const int32 N = SeeThrough(W, Chuck, Th, St == 2 ? .6f : -.44f, St == 1 ? .4f : 1.44f, Leaks);
                 UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CRACKS threshold=%d state=%s leaks=%d"), Th, St == 0 ? TEXT("both") : St == 1 ? TEXT("a_only") : TEXT("b_only"), N);
                 for (int32 I = 0; I < FMath::Min(6, Leaks.Num()); ++I)
                     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_CRACK at=%s dir=%s dist=%.0f"), *Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].At.ToCompactString(), *Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].Dir.ToCompactString(), Leaks[I * Leaks.Num() / FMath::Min(6, Leaks.Num())].Dist);
@@ -239,9 +335,21 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (!R->bPlaced)
                 {
                     if (!Map->IsReady(Sh.D) || Map->GetLoadedCount() != 1) Map->LoadNow(Sh.D);
-                    float Z = 0; GroundAt(Sh.At.X, Sh.At.Y, Z); if (IsPad(Sh.At.X, Sh.At.Y)) Z = 2.f;
-                    Chuck->ResetAtLocation(FeyWorld(FVector(Sh.At.X, Sh.At.Y, Z + Stand + 4.f)));
-                    const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Sh.Look.Y - Sh.At.Y, Sh.Look.X - Sh.At.X));
+                    FVector2D At = Sh.At, Look = Sh.Look;
+                    if (At.X < -1.9e5f && At.Y > -1.f)   // along the first canyon
+                    {
+                        const FVector P = ThresholdAtT(0, At.Y), Q = ThresholdAtT(0, At.Y + .03f * Look.X);
+                        At = FVector2D(P); Look = FVector2D(P) + (FVector2D(Q) - FVector2D(P)).GetSafeNormal() * 1000.f;
+                    }
+                    else if (At.X < -1.9e5f)   // 4 m out from a root tunnel's mouth (Look.X its number, Look.Y 0 at its A end, 1 at B), facing it
+                    {
+                        const int32 Tt = int32(Look.X); const float Te = Look.Y < .5f ? -.12f : 1.12f;
+                        const FVector P = ThresholdAtT(Tt, Te), M = ThresholdAtT(Tt, Look.Y < .5f ? 0.f : 1.f);
+                        At = FVector2D(P + (P - M).GetSafeNormal2D() * 200.f); Look = FVector2D(M);
+                    }
+                    float Z = 0; GroundAt(At.X, At.Y, Z); if (IsPad(At.X, At.Y)) Z = 2.f;
+                    Chuck->ResetAtLocation(FeyWorld(FVector(At.X, At.Y, Z + Stand + 4.f)));
+                    const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Look.Y - At.Y, Look.X - At.X));
                     Chuck->SetActorRotation(FRotator(0, Yaw, 0)); Chuck->Recenter();
                     R->bPlaced = true; R->PhaseStart = FPlatformTime::Seconds(); return;
                 }

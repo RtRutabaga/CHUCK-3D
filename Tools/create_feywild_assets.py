@@ -234,7 +234,7 @@ float vn=0;for(int i=0;i<3;i++){float2 uv=pl[i].xy/float2(34.,120.);uv+=(float2(
  float r1=1.-abs(F.N(uv)*2.-1.),r2=1.-abs(F.N(uv*2.7+5.)*2.-1.);vn+=max(smoothstep(.958,.998,r1),.5*smoothstep(.97,.998,r2))*pl[i].z;}
 float zone=smoothstep(.55,.72,F.B(float2(P.x+P.y,P.z)/430.+Rnd*17.+T*.006));
 float pulse=.5+.5*sin(T*.3-P.z*.011+Rnd*6.28);
-Glow=F.Fade(T/62.+big*1.6+P.z/1500.+Rnd)*vn*zone*(1.-mk*.9)*lerp(.25,1.,pulse)*.5;
+Glow=F.Fade(T/62.+big*1.6+P.z/1500.+Rnd)*vn*zone*(1.-mk*.9)*lerp(.25,1.,pulse)*.5*VG;
 return normalize(n+dn*lerp(1.1,.25,mk));
 '''
 
@@ -248,7 +248,7 @@ def bark(m, code=BARK):
     ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
     link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
     c = custom(m, code, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': chult(m, 'T_tree_bark_03_diff_2k', 'diffuse'),
-                         'NM': chult(m, 'T_tree_bark_03_nor_dx_2k', 'nor_dx'), 'A': chult(m, 'T_tree_bark_03_arm_2k', 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
+                         'NM': chult(m, 'T_tree_bark_03_nor_dx_2k', 'nor_dx'), 'A': chult(m, 'T_tree_bark_03_arm_2k', 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom), 'VG': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='VeinGain', default_value=1.)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
     wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     link(c, wn, '')
     out(wn, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_AMBIENT_OCCLUSION, 'AO'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(const(m, .3), P.MP_SPECULAR)
@@ -258,7 +258,7 @@ def bark(m, code=BARK):
 def plant(m):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     vc = node(m, unreal.MaterialExpressionVertexColor)
-    c = custom(m, 'float3 L=pow(max(VC,.0001),1.9);Base=L;Sub=L*.65;return L*VA*VA*10.*Gain;', {'VC': vc, 'VA': (vc, 'A'), 'Gain': const(m, 2.2)}, extra=[('Base', F3), ('Sub', F3)])
+    c = custom(m, 'float3 L=pow(max(VC,.0001),1.9);Base=L;Sub=L*.65;return L*VA*VA*10.*Gain;', {'VC': vc, 'VA': (vc, 'A'), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)}, extra=[('Base', F3), ('Sub', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(const(m, .62), P.MP_ROUGHNESS); out(const(m, .25), P.MP_SPECULAR)
 
 
@@ -298,7 +298,7 @@ return L*VA*VA*10.*Gain*em;
 def fungus(m, count):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     vc = node(m, unreal.MaterialExpressionVertexColor)
-    c = custom(m, FUNGUS, {'VC': vc, 'VA': (vc, 'A'), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Count': const(m, count), 'Gain': const(m, 2.2)},
+    c = custom(m, FUNGUS, {'VC': vc, 'VA': (vc, 'A'), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'Count': const(m, count), 'Gain': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='GlowGain', default_value=2.2)},
                extra=[('Base', F3), ('Sub', F3), ('Rough', F1), ('TN', F3)])
     out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_EMISSIVE_COLOR); out(c, P.MP_SUBSURFACE_COLOR, 'Sub'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_NORMAL, 'TN'); out(const(m, .38), P.MP_SPECULAR)
 
@@ -611,12 +611,12 @@ for(int k=0;k<4;k++){
  c=lerp(c,d*float3(.62,.82,.42)*lit,smoothstep(.25,.6,a));}
 float v=F.B(p/170.);
 Rough=.72;
-return c*lerp(.5,1.,smoothstep(0.,300.,P.z))*lerp(.8,1.2,v);
+return 1.45*c*lerp(.5,1.,smoothstep(0.,300.,P.z))*lerp(.8,1.2,v)*lerp(.8,1.2,VC.r)*float3(lerp(1.06,.94,VC.r),1.,lerp(.9,1.1,VC.r));
 """
 
 
 def hedge(m):
-    c = custom(m, HEDGE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate),
+    c = custom(m, HEDGE, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'UV': node(m, unreal.MaterialExpressionTextureCoordinate), 'VC': node(m, unreal.MaterialExpressionVertexColor),
                           'D': tobj(m, nat('T_island_tree_02_leaves_diff_2k'), 'diffuse'), 'A': tobj(m, nat('T_island_tree_02_leaves_alpha_2k'), 'alpha')}, extra=[('Rough', F1)])
     out(c, P.MP_BASE_COLOR); out(c, P.MP_ROUGHNESS, 'Rough'); out(const(m, .25), P.MP_SPECULAR)
 

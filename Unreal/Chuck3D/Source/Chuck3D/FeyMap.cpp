@@ -1,4 +1,6 @@
 #include "FeyMap.h"
+#include "FeyMesh.h"
+#include "FeyLife.h"
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "ProceduralMeshComponent.h"
@@ -24,69 +26,6 @@
 
 // The Feywild in rough form (Claude, 2026-11-19; FeyMap.h, docs/regions/FEYWILD.md stage 3).
 using namespace FeyMap;
-
-struct FMapSurf
-{
-    TArray<FVector> V, N; TArray<int32> T; TArray<FVector2D> UV; TArray<FProcMeshTangent> Tan; TArray<FColor> C;
-    int32 Mat = 0; bool bSolid = true, bShadow = true, bHidden = false;
-    void TriFacing(int32 A, int32 B, int32 Cc, const FVector& Nn) { if (FVector::DotProduct(FVector::CrossProduct(V[B] - V[A], V[Cc] - V[A]), Nn) > 0.f) T.Append({A, Cc, B}); else T.Append({A, B, Cc}); }
-    int32 Vert(const FVector& P, const FVector& Nn, const FVector2D& Uv, const FColor& Col)
-    {
-        V.Add(P); N.Add(Nn); UV.Add(Uv); C.Add(Col);
-        Tan.Add(FProcMeshTangent(FVector::CrossProduct(FMath::Abs(Nn.Z) > .95f ? FVector::RightVector : FVector::UpVector, Nn).GetSafeNormal(), false));
-        return V.Num() - 1;
-    }
-    void Quad(int32 A, int32 B, int32 Cc, int32 D) { T.Append({A, B, Cc, A, Cc, D}); }
-    // A quad facing Nn whatever order its corners come in (the engine's front faces wind clockwise seen from in front).
-    void Face(const FVector& A, const FVector& B, const FVector& Cc, const FVector& D, const FVector& Nn, const FColor& Col, float UvScale = 200.f)
-    {
-        const FVector Tu = FVector::CrossProduct(FMath::Abs(Nn.Z) > .9f ? FVector::RightVector : FVector::UpVector, Nn).GetSafeNormal(), Tv = FVector::CrossProduct(Nn, Tu);
-        auto Uv = [&](const FVector& P) { return FVector2D(FVector::DotProduct(P, Tu), FVector::DotProduct(P, Tv)) / UvScale; };
-        const int32 I0 = Vert(A, Nn, Uv(A), Col), I1 = Vert(B, Nn, Uv(B), Col), I2 = Vert(Cc, Nn, Uv(Cc), Col), I3 = Vert(D, Nn, Uv(D), Col);
-        if (FVector::DotProduct(FVector::CrossProduct(B - A, Cc - A), Nn) > 0.f) Quad(I0, I3, I2, I1); else Quad(I0, I1, I2, I3);
-    }
-    void Box(const FVector& Ce, const FVector& H, float Yaw, const FColor& Col)
-    {
-        const FQuat Q(FRotator(0.f, Yaw, 0.f));
-        auto P = [&](float X, float Y, float Z) { return Ce + Q.RotateVector(FVector(X * H.X, Y * H.Y, Z * H.Z)); };
-        const FVector Xa = Q.RotateVector(FVector::ForwardVector), Ya = Q.RotateVector(FVector::RightVector);
-        Face(P(-1, -1, 1), P(-1, 1, 1), P(1, 1, 1), P(1, -1, 1), FVector::UpVector, Col);
-        Face(P(1, -1, -1), P(1, -1, 1), P(1, 1, 1), P(1, 1, -1), Xa, Col);
-        Face(P(-1, -1, -1), P(-1, 1, -1), P(-1, 1, 1), P(-1, -1, 1), -Xa, Col);
-        Face(P(-1, 1, -1), P(1, 1, -1), P(1, 1, 1), P(-1, 1, 1), Ya, Col);
-        Face(P(-1, -1, -1), P(-1, -1, 1), P(1, -1, 1), P(1, -1, -1), -Ya, Col);
-    }
-    // A surface of revolution from a profile given top to bottom (radius, height).
-    void Lathe(const FVector& Ce, TArrayView<const FVector2D> Profile, int32 Segs, const FColor& Col, float Squash = 1.f)
-    {
-        for (int32 I = 0; I + 1 < Profile.Num(); ++I)
-            for (int32 J = 0; J < Segs; ++J)
-            {
-                const float A0 = 2 * PI * J / Segs, A1 = 2 * PI * (J + 1) / Segs, Am = (A0 + A1) * .5f;
-                auto P = [&](const FVector2D& Rz, float A) { return Ce + FVector(Rz.X * FMath::Cos(A), Rz.X * FMath::Sin(A) * Squash, Rz.Y); };
-                const FVector2D& U = Profile[I]; const FVector2D& L = Profile[I + 1];
-                const float Dr = L.X - U.X, Dz = L.Y - U.Y;
-                FVector Nn(FMath::Cos(Am) * -Dz, FMath::Sin(Am) * -Dz, Dr); if (!Nn.Normalize()) Nn = FVector(FMath::Cos(Am), FMath::Sin(Am), 0);
-                if (U.X < 1.f && L.X < 1.f) continue;
-                Face(P(U, A0), P(U, A1), P(L, A1), P(L, A0), Nn, Col, 600.f);
-            }
-    }
-    // A closed smooth-shaded mesh: Out is roughly outward at each point (it only picks each triangle's facing).
-    void Closed(const TArray<FVector>& P, const TArray<FVector>& Out, TArray<int32> Tri, const TArray<FColor>& Col)
-    {
-        TArray<FVector> Nn; Nn.Init(FVector::ZeroVector, P.Num());
-        for (int32 I = 0; I + 2 < Tri.Num(); I += 3)
-        {
-            int32& A = Tri[I]; int32& B = Tri[I + 1]; int32& Cc = Tri[I + 2];
-            FVector X = FVector::CrossProduct(P[B] - P[A], P[Cc] - P[A]);
-            if (FVector::DotProduct(X, Out[A] + Out[B] + Out[Cc]) < 0.f) { Swap(B, Cc); X = -X; }
-            Nn[A] += X; Nn[B] += X; Nn[Cc] += X;
-        }
-        const int32 Base = V.Num();
-        for (int32 I = 0; I < P.Num(); ++I) { FVector N1 = Nn[I].GetSafeNormal(); if (N1.IsNearlyZero()) N1 = Out[I].GetSafeNormal(); Vert(P[I], N1, FVector2D(P[I].X + P[I].Z, P[I].Y - P[I].Z) / 400.f, Col[I]); }
-        for (int32 I = 0; I + 2 < Tri.Num(); I += 3) T.Append({Base + Tri[I], Base + Tri[I + 2], Base + Tri[I + 1]});   // (front faces wind clockwise)
-    }
-};
 
 // ---------------------------------------------------------------- cloud (2026-11-21, the user: the tower's cloud and its stair
 // read as blocks, with straight lines, perfect angles and gaps between the steps). Built from lumps: noise-billowed spheres
@@ -320,7 +259,7 @@ namespace
         if (D == Riverbank) E = FMath::Min(X - Ds.X0, FMath::Min(Y - Ds.Y0, Ds.Y1 - Y));
         float Open = 0;
         if (D == Highmeadow) Open = Smooth(6000.f, 7500.f, Y) * Smooth(18500.f, 17000.f, Y) * Smooth(Ds.X0 + 3500.f, Ds.X0 + 2000.f, X);
-        H += (900.f + 500.f * Noise(X, Y, 1300, D + 80)) * Smooth(1900.f, 0.f, E) * (1.f - Notch) * (1.f - Open);
+        H += (1250.f + 250.f * Noise(X, Y, 1300, D + 80)) * Smooth(1900.f, 0.f, E) * (1.f - Notch) * (1.f - Open);
         if (D == Highmeadow) H += Open * (260.f * Smooth(1000.f, 300.f, FVector2D::Distance(FVector2D(X, Y), Overlook)) - 2700.f * Smooth(Ds.X0 + 1000.f, Ds.X0 + 250.f, X));   // (a knoll at the brink, then the drop)   // (2026-11-20: the overlook's edge falls away, so the maze shows below)
         if (D == Riverbank) H = FMath::Lerp(H, Fey::Ground(X, Y), Smooth(-7500.f, -4300.f, X));   // (into the look slice's own land)
         if (D == LilyMere) { const float K = MoatK(X, Y); H = FMath::Lerp(H, -170.f, K); Wet = FMath::Max(Wet, K); }   // (the deep water, through the rim to the edge)
@@ -657,16 +596,41 @@ namespace
         return bTube ? Tube : Cut;
     }
     float WayRise(float T) { return FMath::Min(Smooth(-.24f, -.02f, T), Smooth(1.24f, 1.02f, T)); }   // (the masses sink to nothing a little past each mouth)
+    // (2026-11-21) A root tunnel's banks end in a steep face at each mouth, where the tube ends too.
+    float TubeRise(float T) { return FMath::Min(Smooth(-.12f, -.03f, T), Smooth(1.12f, 1.03f, T)); }
+    constexpr float RidgeReach = Half + 2600.f;   // how far either side of a way its ridge runs
+    // (the see-through check, before and after; read when first needed: a static read at load ran before the packaged game's
+    // command line existed and stopped it starting)
+    bool RidgeOn() { static const bool bOn = !FParse::Param(FCommandLine::Get(), TEXT("ChuckFeyNoRidge")); return bOn; }
+    // (2026-11-21, the user: views out of the canyons beside their mouths.) A way's walls used to slope away behind their
+    // crest to the gap between the districts, and near each mouth they sank into the district along with its rim (notched
+    // for the road): beside the opening the eye went past them to the gap, where the ground simply ends, and to the backs of
+    // the rims (one-sided, so they do not show). Now each way is cut through a ridge: past the crest the rock runs on as a
+    // broad plateau out to RidgeReach, tapering only at its far side; inside a district it holds its height near the edge
+    // (fading over the 16 m where the district's own rim stands) and so meets the rim; and just outside a district it is
+    // never lower than the district's edge, so no rim is seen from behind. Kept clear of the Lily Mere's moat and of the
+    // overlook's open brink.
+    float OuterMask(int32 D, float X, float Y)
+    {
+        const FDistrict& Ds = Table[D];
+        const float E = FMath::Min(FMath::Min(X - Ds.X0, Ds.X1 - X), FMath::Min(Y - Ds.Y0, Ds.Y1 - Y));
+        float K = Smooth(1700.f, 250.f, E);
+        if (D == LilyMere) K *= Smooth(MoatOut + 300.f, MoatOut + 900.f, FVector2D::Distance(FVector2D(X, Y), MoatC));
+        if (D == Highmeadow) K *= 1.f - Smooth(6000.f, 7500.f, Y) * Smooth(18500.f, 17000.f, Y) * Smooth(Ds.X0 + 3500.f, Ds.X0 + 2000.f, X);
+        return K;
+    }
     const FWayField& WayField(int32 Th)
     {
         static FWayField Cache[Thresholds];
         FWayField& F = Cache[Th];
         if (F.Nx) return F;
-        const TArray<FVector2D>& Prof = WayProfile(Ways[Th].Style == RootTunnel);
+        const bool bTube = Ways[Th].Style == RootTunnel;
+        F.Step = 70.f;
+        const TArray<FVector2D>& Prof = WayProfile(bTube);
         auto Mass2 = [&](float D) -> float { if (D <= Prof[0].X) return 0.f; for (int32 I = 0; I + 1 < Prof.Num(); ++I) if (D <= Prof[I + 1].X) return FMath::Lerp(Prof[I].Y, Prof[I + 1].Y, (D - Prof[I].X) / (Prof[I + 1].X - Prof[I].X)); return Prof.Last().Y; };
         TArray<FVector> Curve; TArray<float> CurveT;
-        for (int32 I = 0; I <= 500; ++I) { const float T = FMath::Lerp(-.24f, 1.24f, I / 500.f); Curve.Add(ThresholdAtT(Th, T)); CurveT.Add(T); F.Box += FVector2D(Curve.Last()); }
-        F.Box = F.Box.ExpandBy(Prof.Last().X + 250.f);
+        for (int32 I = 0; I <= 600; ++I) { const float T = FMath::Lerp(-.45f, 1.45f, I / 600.f); Curve.Add(ThresholdAtT(Th, T)); CurveT.Add(T); F.Box += FVector2D(Curve.Last()); }
+        F.Box = F.Box.ExpandBy(RidgeReach + 100.f);
         auto InRect = [](float X, float Y, int32& Which) { for (int32 D = 0; D < Districts; ++D) { const FDistrict& Ds = Table[D]; if (X > Ds.X0 + 1.f && X < Ds.X1 - 1.f && Y > Ds.Y0 + 1.f && Y < Ds.Y1 - 1.f) { Which = D; return true; } } Which = -1; return false; };
         F.Nx = FMath::CeilToInt(F.Box.GetSize().X / F.Step); F.Ny = FMath::CeilToInt(F.Box.GetSize().Y / F.Step);
         F.H.SetNum((F.Nx + 1) * (F.Ny + 1)); F.Skip.SetNum(F.H.Num()); F.IsFloor.SetNum(F.H.Num());
@@ -677,10 +641,25 @@ namespace
                 const float X = F.Box.Min.X + I * F.Step, Y = F.Box.Min.Y + J * F.Step; float Best = 1e12f; int32 Bi = 0;
                 for (int32 K = 0; K < Curve.Num(); K += 4) { const float Dd = FVector::DistSquared2D(Curve[K], FVector(X, Y, 0)); if (Dd < Best) { Best = Dd; Bi = K; } }
                 for (int32 K = FMath::Max(0, Bi - 4); K <= FMath::Min(Curve.Num() - 1, Bi + 4); ++K) { const float Dd = FVector::DistSquared2D(Curve[K], FVector(X, Y, 0)); if (Dd < Best) { Best = Dd; Bi = K; } }
-                const float D = FMath::Sqrt(Best), T = CurveT[Bi], Fz = Curve[Bi].Z - 4.f, M = Mass2(D), Up = M > 0.f ? M * WayRise(T) : M;
+                const float D = FMath::Sqrt(Best), T = CurveT[Bi], Fz = Curve[Bi].Z - 4.f, M = Mass2(D);
                 const int32 Ix = I * (F.Ny + 1) + J; int32 Which; const bool bIn = InRect(X, Y, Which);
+                // The way's own walls, then the ridge they are cut through.
+                const float Inner = M > 0.f ? M * (bTube ? TubeRise(T) : WayRise(T)) : 0.f;
+                const float Plateau = (bTube ? 780.f + 140.f * Noise(X, Y, 1400, Th + 40) : 1320.f + 240.f * Noise(X, Y, 1600, Th + 40)) + 60.f * Noise(X, Y, 330, Th + 41);
+                const float Ridge = Plateau * Smooth(bTube ? Half + 300.f : Half + 500.f, bTube ? Half + 650.f : Half + 950.f, D) * Smooth(RidgeReach, RidgeReach - 700.f, D) * (bIn ? OuterMask(Which, X, Y) : 1.f) * (RidgeOn() && Ways[Th].Style != StoneStair ? 1.f : 0.f);   // (no ridge on the stair down the brink: it would wall off the overlook's view)
+                const float Up = FMath::Max(Inner, Ridge);
                 F.IsFloor[Ix] = D <= Half + 20.f;
-                if (!bIn) { F.Skip[Ix] = 0; F.H[Ix] = Fz + Up; }
+                if (!bIn)
+                {
+                    F.Skip[Ix] = 0; F.H[Ix] = Fz + Up;
+                    // Never lower than a district's edge close by (its rim is one-sided: from out here it would not show).
+                    for (int32 Dn = 0; RidgeOn() && Dn < Districts; ++Dn)
+                    {
+                        const FDistrict& Ds = Table[Dn];
+                        const float Cx = FMath::Clamp(X, Ds.X0 + 5.f, Ds.X1 - 5.f), Cy = FMath::Clamp(Y, Ds.Y0 + 5.f, Ds.Y1 - 5.f);
+                        if (FVector2D::Distance(FVector2D(X, Y), FVector2D(Cx, Cy)) < 500.f) F.H[Ix] = FMath::Max(F.H[Ix], Land(Dn, Cx, Cy) - 5.f);
+                    }
+                }
                 else if (bClosedField) { F.Skip[Ix] = 0; F.H[Ix] = FMath::Max(Fz + FMath::Max(Up, 0.f), Land(Which, X, Y) - 30.f); if (Up < 2.f) F.H[Ix] = Land(Which, X, Y) - 30.f; }
                 else { F.Skip[Ix] = F.IsFloor[Ix] || Up < 2.f; F.H[Ix] = FMath::Max(Fz + Up, Land(Which, X, Y) + 3.f); }
             }
@@ -870,6 +849,9 @@ float FeyMap::SpotYaw(int32 I)
     FVector2D At, Look; SpotPlace(I - Districts, At, Look);
     return FMath::RadiansToDegrees(FMath::Atan2(Look.Y - At.Y, Look.X - At.X));
 }
+const TArray<FVector2D>& FeyMap::RoadOf(int32 D, int32 T) { return Data().RoadOf[FMath::Clamp(D, 0, Districts - 1)][FMath::Clamp(T, 0, Thresholds - 1)]; }
+const TArray<FVector2D>& FeyMap::SpurOf(int32 D) { return Data().SpurOf[FMath::Clamp(D, 0, Districts - 1)]; }
+float FeyMap::LandZ(int32 D, float X, float Y) { return Land(D, X, Y); }
 int32 FeyMap::SpotOf(const FString& Point) { for (int32 I = 0; I < SpotTotal; ++I) if (Point == Spot(I).Point) return I; return -1; }
 FVector FeySpotWorld(int32 I) { return I < Districts ? FeyCheckpointWorld(I) : FeyWorld(SpotAt(I) + FVector(0, 0, Stand + 2.f)); }
 void FeyReachSpots(const FVector& World)
@@ -927,6 +909,7 @@ struct AFeyDistrict::FPlan
     struct FWall { FVector C, H; float Yaw; };
     TArray<FWall> Walls;
     TArray<FVector4> Lights, Veils;   // (X, Y, Z, candelas) and (X, Y, Z, size)
+    TArray<FLinearColor> LightCols;   // each light's colour, its radius in A
     std::atomic<bool> bDone{false};
     float Seconds = 0;
 };
@@ -1019,7 +1002,7 @@ namespace
                     const FVector C = Hd.C + FVector(0, 0, Land(D, Hd.C.X, Hd.C.Y) - 6.f);
                     if (Hd.Kind) { St.Box(C, Hd.H, Hd.Yaw, Runes); continue; }
                     const float A = FMath::Atan2(Hd.C.Y - Table[Maze].Hub.Y, Hd.C.X - Table[Maze].Hub.X) + PI;
-                    Parts[FMath::Clamp(int32(A / (2 * PI) * 8.f), 0, 7)]->Box(C, Hd.H, Hd.Yaw, FColor::White);
+                    Parts[FMath::Clamp(int32(A / (2 * PI) * 8.f), 0, 7)]->Hedge(C, Hd.H, Hd.Yaw, float(&Hd - Mz.Hedges.GetData()) * .618f);
                     // Its leaves (2026-11-21): sections of the sprig shell along it, each stretched a little to fit.
                     const int32 N = FMath::Max(1, FMath::RoundToInt(2.f * Hd.H.X / 300.f)); const float Len = 2.f * Hd.H.X / N, Yr = FMath::DegreesToRadians(Hd.Yaw);
                     const FVector Along(FMath::Cos(Yr), FMath::Sin(Yr), 0.f);
@@ -1081,7 +1064,7 @@ namespace
                     for (float U = 0; U < FVector2D::Distance(L[I], L[I + 1]); U += 2400.f)
                     {
                         const FVector2D Tn = (L[I + 1] - L[I]).GetSafeNormal(), P = L[I] + Tn * U + FVector2D(-Tn.Y, Tn.X) * Rl.FRandRange(-700.f, 700.f);
-                        if (Rl.FRand() < .65f) Plan.Lights.Add(FVector4(P.X, P.Y, Land(D, P.X, P.Y) + Rl.FRandRange(40.f, 160.f), Rl.FRandRange(80.f, 130.f)));   // (2026-11-21: brighter)
+                        if (Rl.FRand() < .55f) { Plan.Lights.Add(FVector4(P.X, P.Y, Land(D, P.X, P.Y) + Rl.FRandRange(60.f, 160.f), Rl.FRandRange(22.f, 36.f))); Plan.LightCols.Add(FLinearColor(.28f, .55f, 1.f, 1000.f)); }   // (2026-11-21, again: these softer)
                     }
             for (int32 I = 0; I < 150; ++I)   // (2026-11-21: more of them, more along the paths)
             {
@@ -1107,12 +1090,23 @@ namespace
             if (D == Crossroads && FVector2D::Distance(FVector2D(X, Y), Ds.Hub) < 2600.f) return false;
             if (D == Maze && MazeRadius(X, Y) < (Clear > 300.f ? 15200.f : 13700.f)) return false;   // (trees clear of the outer hedge)
             if (D == Highmeadow && FVector2D::Distance(FVector2D(X, Y), Overlook) < 1200.f) return false;
+            for (const FVector& Cl : FeyLifeClearings()) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(Cl)) < FMath::Square(Cl.Z)) return false;   // (FeyLife's nooks and beds)
+            if (D == Highmeadow)   // (2026-11-21) nothing tall in the overlook's view down onto the maze
+            {
+                const FVector2D V = FVector2D(X, Y) - Overlook, To = (Table[Maze].Hub - Overlook).GetSafeNormal();
+                if (V.Size() < 14000.f && FVector2D::DotProduct(V.GetSafeNormal(), To) > .7f && Clear > 300.f) return false;
+            }
             if (D == Deepwood && FVector2D::Distance(FVector2D(X, Y), Redcap) < 2200.f && Clear > 300.f) return false;
             return true;
         };
         auto Oak = [&](float X, float Y, float S, float Gap)
         {
             for (const FVector& O : Oaks) if (FVector2D::DistSquared(FVector2D(X, Y), FVector2D(O)) < FMath::Square(Gap * FMath::Max(S, O.Z) * .5f + Gap * .5f)) return false;
+            if (D == Highmeadow)   // (2026-11-21) none in the overlook's view down onto the maze, whatever planted it
+            {
+                const FVector2D V = FVector2D(X, Y) - Overlook, To = (Table[Maze].Hub - Overlook).GetSafeNormal();
+                if (V.Size() < 16000.f && FVector2D::DotProduct(V.GetSafeNormal(), To) > .6f) { UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_OVERLOOK_CLEARED oak=%.0f,%.0f"), X, Y); return false; }
+            }
             const int32 Kind = R.RandRange(0, 1); const float Yaw = R.FRandRange(0.f, 360.f);
             const FTransform Xf(FRotator(0, Yaw, 0), FVector(X, Y, Land(D, X, Y) - 14.f), FVector(S));
             if (D == Deepwood) { Plan.Inst[Kind ? KDeep1 : KDeep0].Add(Xf); Plan.Inst[Kind ? KDCol1 : KDCol0].Add(Xf); }   // (the Deepwood's own: mossed, rooty, hung with moss)
@@ -1151,6 +1145,7 @@ namespace
                 else { P = FVector2D(Ds.X0, Ds.Y1 - (U - 2 * W - Hh)); In = FVector2D(1, 0); }
                 if (D == Riverbank && In.X < 0) continue;
                 if (D == Highmeadow && In.X > 0 && P.Y > 6000.f && P.Y < 18500.f) continue;
+                if (D == Maze && In.X < 0) continue;   // (2026-11-21: the maze's side facing the overlook stays open, as its stand-in shows it)
                 P += In * R.FRandRange(300.f, 1500.f);
                 if (MouthNear(D, P, 2600.f) >= 0) continue;
                 const float S = R.FRandRange(S0, S1);
@@ -1302,6 +1297,30 @@ namespace
             const float X = R.FRandRange(Ds.X0, Ds.X1), Y = R.FRandRange(Ds.Y0, Ds.Y1);
             if (Free(X, Y, 950.f)) Put(KRock0 + R.RandRange(0, 5), X, Y, R.FRandRange(.7f, 2.2f), R.FRandRange(0.f, 360.f), 18.f, 10.f);
         }
+        // ------------------------------ the Deepwood's light from its glowing things (2026-11-21, the user: less from the
+        // floor's lights, more from the mushrooms and the trees' glowing bits). Where its glowing caps gather, a soft light of
+        // their colour, stronger the more of them there are; its fungi and the veins in its oaks glow brighter (AFeyDistrict).
+        if (D == Deepwood)
+        {
+            constexpr float Cell = 1600.f; TMap<FIntPoint, FVector4> Sum;   // (X, Y, count blue, count violet)
+            for (const int32 K : {KBlue, KViolet, KAmber})
+                for (const FTransform& Xf : Plan.Inst[K])
+                {
+                    const FVector L = Xf.GetLocation(); FVector4& C = Sum.FindOrAdd(FIntPoint(FMath::FloorToInt(L.X / Cell), FMath::FloorToInt(L.Y / Cell)));
+                    const float Wt = K == KAmber ? 3.f : 1.f; C.X += L.X * Wt; C.Y += L.Y * Wt; (K == KBlue ? C.Z : C.W) += Wt;
+                }
+            TArray<FVector4> Clusters; for (const TPair<FIntPoint, FVector4>& Pr : Sum) Clusters.Add(Pr.Value);
+            Clusters.Sort([](const FVector4& A, const FVector4& B) { return A.Z + A.W > B.Z + B.W; });   // (the 140 richest clusters)
+            for (int32 Ci = 0; Ci < FMath::Min(140, Clusters.Num()); ++Ci)
+            {
+                const struct { FVector4 Value; } Pr{Clusters[Ci]};
+                const float N = Pr.Value.Z + Pr.Value.W; if (N < 4.f) continue;
+                const float X = Pr.Value.X / N, Y = Pr.Value.Y / N;   // (amber caps weigh more, roughly)
+                const float Cx = FMath::Clamp(X, Ds.X0 + 200.f, Ds.X1 - 200.f), Cy = FMath::Clamp(Y, Ds.Y0 + 200.f, Ds.Y1 - 200.f), V = Pr.Value.W / N;
+                Plan.Lights.Add(FVector4(Cx, Cy, Land(D, Cx, Cy) + 70.f, FMath::Min(14.f + 2.2f * N, 60.f)));
+                Plan.LightCols.Add(FLinearColor(FMath::Lerp(.25f, .62f, V), FMath::Lerp(.6f, .3f, V), 1.f, FMath::Min(700.f + 25.f * N, 1300.f)));
+            }
+        }
         // ------------------------------ invisible bounds at the rectangle, open at each threshold's mouth
         auto Edges = [&](const FVector2D& A, const FVector2D& B)
         {
@@ -1354,6 +1373,16 @@ bool AFeyDistrict::Step(double BudgetMs)
             H->SetCollisionEnabled(K.bSolid ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
             if (K.bSolid) H->SetCollisionProfileName(TEXT("BlockAll"));
             H->SetHiddenInGame(K.bInvisible); H->bAutoRebuildTreeOnInstanceChanges = false;
+            // (2026-11-21) The Deepwood's glowing caps, shelves and bark veins brighter than elsewhere (their own instances).
+            const int32 Ki = Kits.Num();
+            if (District == Deepwood && Mesh && (Ki == KBlue || Ki == KViolet || Ki == KAmber || Ki == KDeep0 || Ki == KDeep1))
+                for (int32 Sl = 0; Sl < Mesh->GetStaticMaterials().Num(); ++Sl)
+                {
+                    UMaterialInterface* M = Mesh->GetMaterial(Sl); if (!M) continue;
+                    const FString N = M->GetName();
+                    if (N.Contains(TEXT("Fungus")) || N.Contains(TEXT("Plant"))) H->CreateDynamicMaterialInstance(Sl, M)->SetScalarParameterValue(TEXT("GlowGain"), 2.2f * 2.6f);
+                    else if (N.Contains(TEXT("Bark"))) H->CreateDynamicMaterialInstance(Sl, M)->SetScalarParameterValue(TEXT("VeinGain"), 3.5f);
+                }
             H->RegisterComponent(); Kits.Add(H);
         }
         if (FPlatformTime::Seconds() > Until) return false;
@@ -1393,7 +1422,8 @@ bool AFeyDistrict::Step(double BudgetMs)
             for (const FVector4& Lt : Plan->Lights)
             {
                 auto* L = NewObject<UPointLightComponent>(this); L->SetupAttachment(RootComponent); L->SetRelativeLocation(FVector(Lt.X, Lt.Y, Lt.Z));
-                L->SetIntensityUnits(ELightUnits::Candelas); L->SetIntensity(float(Lt.W)); L->SetLightColor(FLinearColor(.28f, .55f, 1.f)); L->SetAttenuationRadius(1400.f);
+                L->SetIntensityUnits(ELightUnits::Candelas); const FLinearColor Lc = Plan->LightCols.IsValidIndex(int32(&Lt - Plan->Lights.GetData())) ? Plan->LightCols[int32(&Lt - Plan->Lights.GetData())] : FLinearColor(.28f, .55f, 1.f, 1000.f);
+                L->SetIntensity(float(Lt.W)); L->SetLightColor(FLinearColor(Lc.R, Lc.G, Lc.B)); L->SetAttenuationRadius(Lc.A);
                 L->SetCastShadows(false); L->SetVolumetricScatteringIntensity(2.f); L->RegisterComponent();
             }
             Veils = Plan->Veils;
@@ -1403,12 +1433,19 @@ bool AFeyDistrict::Step(double BudgetMs)
         {
             for (UHierarchicalInstancedStaticMeshComponent* H : Kits) if (H->GetInstanceCount() && !H->IsTreeFullyBuilt()) return false;
             bReady = true; BuildSeconds = float(FPlatformTime::Seconds() - Started); Plan.Reset();
+            { FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn; Life = GetWorld()->SpawnActor<AFeyLife>(FeywildOrigin(), FRotator::ZeroRotator, Sp); if (Life) Life->Build(District); }
             UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_DISTRICT_READY name=%s seconds=%.2f plan=%.2f worst_step_ms=%.1f triangles=%d planted=%d missing=%d mem_mb=%.0f"),
                 Table[District].Name, BuildSeconds, PlanSeconds, WorstStepMs, Triangles, Planted, Missing, FPlatformMemory::GetStats().UsedPhysical / 1048576.);
             return true;
         }
     }
     return false;
+}
+
+void AFeyDistrict::EndPlay(const EEndPlayReason::Type Reason)
+{
+    if (Life) { Life->Destroy(); Life = nullptr; }
+    Super::EndPlay(Reason);
 }
 
 void AFeyDistrict::Tick(float Dt)
@@ -1453,7 +1490,7 @@ AFeyMap* AFeyMap::Ensure(UWorld* World)
     FActorSpawnParameters P; P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
     auto* Map = World->SpawnActor<AFeyMap>(FeywildOrigin(), FRotator::ZeroRotator, P);
     Map->Districts.SetNum(FeyMap::Districts); FeyForgetSpots();
-    Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn();
+    Map->BuildThresholds(); Map->BuildDistance(); Map->BuildTower(); Map->BuildStandIn(); Map->BuildBrink();
     UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAP_BUILT seconds=%.2f triangles=%d missing=%d maze_cells=%d maze_way_m=%.0f maze_hedges=%d pads=%d signs=%d"), FPlatformTime::Seconds() - T0, Map->Triangles, Map->Missing,
         MazeCells(), MazeWay() / 100.f, MazeData().Hedges.Num(), MoatPads().Num(), SignPosts().Num());
     return Map;
@@ -1544,9 +1581,33 @@ void AFeyMap::BuildThresholds()
         if (bTube)
         {
             // Over the tube a roof of earth only as long as the tube, so the way in at each end is the tube's own mouth.
-            Strip(Mass, {{-Half - 140, 600}, {0, 650}, {Half + 140, 600}}, 1.f, -.18f, 1.18f, false, false, Mossy);
+            // (2026-11-21, the user: outside, the tunnels looked like impossibly thin tubes.) The tube no longer runs on out past
+            // its banks: it ends in each bank's steep face (TubeRise), the face closed round it, a thick lip of root about
+            // the opening, and great roots arching over it and down into the ground either side, as if under a vast tree.
+            constexpr float E0 = -.03f, E1 = 1.03f;
+            Strip(Mass, {{-Half - 140, 600}, {0, 650}, {Half + 140, 600}}, 1.f, E0, E1, false, false, Mossy);
             const TArray<FVector2D> Ring = {{Half, 0}, {Half + 70, 170}, {Half - 10, 360}, {130, 500}, {0, 530}, {-130, 500}, {-Half + 10, 360}, {-Half - 70, 170}, {-Half, 0}};
-            Strip(Tube, Ring, 1.f, -.18f, 1.18f, false, true, [](float U, int32) { return FLinearColor(.4f, FMath::Lerp(.45f, 1.f, FMath::Max(Smooth(.25f, -.12f, U), Smooth(.75f, 1.12f, U))), 0, 1).ToFColor(false); });
+            Strip(Tube, Ring, 1.f, E0, E1, false, true, [](float U, int32) { return FLinearColor(.4f, FMath::Lerp(.45f, 1.f, FMath::Max(Smooth(.25f, -.12f, U), Smooth(.75f, 1.12f, U))), 0, 1).ToFColor(false); });
+            const TArray<FVector2D> Bank = {{Half + 520, -40}, {Half + 600, 250}, {Half + 580, 520}, {Half + 380, 720}, {0, 830}, {-Half - 380, 720}, {-Half - 580, 520}, {-Half - 600, 250}, {-Half - 520, -40}};
+            const FColor Bark = FLinearColor(.4f, 1.f, 0, 1).ToFColor(false);
+            FRandomStream Rr(900 + Th);
+            for (const float Te : {E0, E1})
+            {
+                FVector C, Sd; Frame(Te, C, Sd);
+                const FVector Tn = (ThresholdAtT(Th, Te + .01f) - ThresholdAtT(Th, Te - .01f)).GetSafeNormal2D(), Od = Te < .5f ? -Tn : Tn;
+                auto At = [&](const FVector2D& Q, float Back) { return C + Sd * Q.X + FVector(0, 0, Q.Y) - Od * Back; };
+                for (int32 I = 0; I + 1 < Ring.Num(); ++I)   // the bank's face round the opening
+                    Mass.Face(At(Ring[I], 0.f), At(Ring[I + 1], 0.f), At(Bank[I + 1], 40.f), At(Bank[I], 40.f), Od, Rock, 300.f);
+                TArray<FVector> Lip; for (const FVector2D& Q : Ring) Lip.Add(At(Q, -12.f)); Lip[0].Z -= 40.f; Lip.Last().Z -= 40.f;
+                Tube.Pipe(Lip, 46.f, 46.f, 12, 4, Bark, Th * 3.1f + Te);
+                for (int32 K = 0; K < 6; ++K)   // roots over the mouth, down into the ground at either side
+                {
+                    const float S = K % 2 ? 1.f : -1.f, G = float(K / 2);
+                    const FVector Pts[] = {At(FVector2D(-S * (Half + 200.f + 120.f * G), 760.f - 30.f * G), 260.f), At(FVector2D(-S * (60.f + 50.f * G), 600.f - 40.f * G + Rr.FRandRange(-20.f, 20.f)), -40.f),
+                                           At(FVector2D(S * (Half + 60.f + 70.f * G), 380.f - 40.f * G), -90.f - 30.f * G), At(FVector2D(S * (Half + 200.f + 110.f * G), -60.f), -170.f - 60.f * G)};
+                    Tube.Pipe(Pts, FMath::Lerp(62.f, 40.f, G / 2.f), 16.f, 10, 7, Bark, Th * 7.3f + K + Te);
+                }
+            }
         }
         Emit(*FString::Printf(TEXT("FeyThresholdMass%d"), Th), Mass, Ground, true, true);
         if (bTube) Emit(*FString::Printf(TEXT("FeyThresholdRoots%d"), Th), Tube, Root, true, true);
@@ -1611,6 +1672,7 @@ void AFeyMap::BuildDistance()
         // (2026-11-20) None near a threshold, where one would stand up through its rock or show over it.
         bool bNear = false; for (const FThreshold& Wy : Ways) bNear |= SegDist(FVector2D(X, Y), Wy.PA, Wy.PB) < 4800.f;
         if (bNear) continue;
+        if (X > Table[Maze].X1 - 200.f && X < Table[Highmeadow].X0 + 200.f && Y > -10200.f && Y < 20200.f) continue;   // (the brink's valley stands there, BuildBrink)
         int32 Holder = FeyMap::Districts;
         for (int32 D = 0; D < FeyMap::Districts; ++D) { const FDistrict& Ds = Table[D]; if (X > Ds.X0 && X < Ds.X1 && Y > Ds.Y0 && Y < Ds.Y1) Holder = D; }
         if (Holder == Riverbank) continue;   // (it is never out of sight of its own trees)
@@ -1729,9 +1791,65 @@ void AFeyMap::BuildTower()
 // The maze as the overlook sees it, from the same hedges (the real one has its collision and planting).
 void AFeyMap::BuildStandIn()
 {
-    FMapSurf S, St; for (const FHedge& H : MazeData().Hedges) (H.Kind ? St : S).Box(H.C, H.H, H.Yaw, H.Kind ? Runes : FColor::White);
-    StandIn = Emit(TEXT("FeyMazeStandIn"), S, LoadObject<UMaterialInterface>(nullptr, MatPaths[MHedge]), false, false);
+    // (2026-11-21, the user: make the maze from above look better.) The same rounded hedges as within it, casting their shadows
+    // down the corridors in the low sun, which is what draws the maze's pattern from the overlook.
+    FMapSurf S, St; const TArray<FHedge>& Hs = MazeData().Hedges;
+    for (int32 I = 0; I < Hs.Num(); ++I) { const FHedge& H = Hs[I]; if (H.Kind) St.Box(H.C, H.H, H.Yaw, Runes); else S.Hedge(H.C, H.H, H.Yaw, I * .618f); }
+    StandIn = Emit(TEXT("FeyMazeStandIn"), S, LoadObject<UMaterialInterface>(nullptr, MatPaths[MHedge]), false, true);
     StandInStone = Emit(TEXT("FeyMazeStandInStone"), St, LoadObject<UMaterialInterface>(nullptr, MatPaths[MStone]), false, false);
+}
+
+// The ground between the Maze Overlook's brink and the maze (2026-11-21, the user: the maze from above). It was the painted
+// distance's low, plain ground; now a valley falling from Highmeadow's edge and rising to the maze's, its own land, rocks and
+// a few oaks kept off the overlook's line of sight, with the stone stair's ridge across it. Scenery only (out of his reach).
+void AFeyMap::BuildBrink()
+{
+    const FDistrict& Hm = Table[Highmeadow]; const FDistrict& Mz = Table[Maze];
+    const float Xa = Mz.X1, Xb = Hm.X0, Y0 = FMath::Max(Hm.Y0, Mz.Y0), Y1 = FMath::Min(Hm.Y1, Mz.Y1);
+    TArray<FVector> Way; for (int32 I = 0; I <= 80; ++I) Way.Add(ThresholdAtT(9, I / 80.f));
+    auto WayDist = [&](float X, float Y) { float B = 1e9f; for (int32 I = 0; I + 1 < Way.Num(); ++I) B = FMath::Min(B, SegDist(FVector2D(X, Y), FVector2D(Way[I]), FVector2D(Way[I + 1]))); return B; };
+    auto Height = [&](float X, float Y)
+    {
+        const float S = (X - Xa) / (Xb - Xa), Ha = Land(Maze, Xa - 5.f, Y), Hb = Land(Highmeadow, Xb + 5.f, Y);
+        return FMath::Lerp(Ha, Hb, Smooth(0.f, 1.f, S)) - 420.f * FMath::Sin(PI * FMath::Clamp(S, 0.f, 1.f)) + 70.f * Noise(X, Y, 900, 77) + 25.f * Noise(X, Y, 230, 78)
+            - 300.f * Smooth(Half + 900.f, Half + 300.f, WayDist(X, Y));   // (well under the stair's floor)
+    };
+    FMapSurf L; constexpr float Step = 100.f;
+    const int32 Nx = FMath::CeilToInt((Xb - Xa) / Step), Ny = FMath::CeilToInt((Y1 - Y0) / Step);
+    for (int32 I = 0; I <= Nx; ++I)
+        for (int32 J = 0; J <= Ny; ++J)
+        {
+            const float X = FMath::Min(Xa + I * Step, Xb), Y = FMath::Min(Y0 + J * Step, Y1), E = 50.f, H = Height(X, Y);
+            const FVector Nn = FVector(Height(X - E, Y) - Height(X + E, Y), Height(X, Y - E) - Height(X, Y + E), 2 * E).GetSafeNormal();
+            const float Moss = FMath::Clamp(.7f + .5f * Noise(X, Y, 500, 21), 0.f, 1.f) * FMath::Lerp(.35f, 1.f, Nn.Z * Nn.Z);
+            L.Vert(FVector(X, Y, H), Nn, FVector2D(X, Y) / 300.f, FLinearColor(0.f, Moss, .08f, 1.f).ToFColor(false));
+        }
+    for (int32 I = 0; I < Nx; ++I) for (int32 J = 0; J < Ny; ++J) { const int32 Q = I * (Ny + 1) + J, R = Q + Ny + 1; L.Quad(Q, Q + 1, R + 1, R); }
+    Emit(TEXT("FeyBrink"), L, LoadObject<UMaterialInterface>(nullptr, MatPaths[MGround]), false, false);
+    // Rocks along it and a few oaks at its ends (clear of the overlook's view down onto the maze).
+    auto Kit = [&](int32 K)
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, KitDefs[K].Path); Missing += !Mesh;
+        auto* H = NewObject<UHierarchicalInstancedStaticMeshComponent>(this); H->SetupAttachment(RootComponent); H->SetMobility(EComponentMobility::Movable);
+        H->SetStaticMesh(Mesh); H->SetCastShadow(true); H->SetCollisionEnabled(ECollisionEnabled::NoCollision); H->RegisterComponent(); return H;
+    };
+    UHierarchicalInstancedStaticMeshComponent* Rocks[6]; for (int32 K = 0; K < 6; ++K) Rocks[K] = Kit(KRock0 + K);
+    UHierarchicalInstancedStaticMeshComponent* Oaks[2] = {Kit(KOak0), Kit(KOak1)};
+    FRandomStream R(616);
+    for (int32 I = 0; I < 70; ++I)
+    {
+        const float X = R.FRandRange(Xa + 300.f, Xb - 300.f), Y = R.FRandRange(Y0 + 300.f, Y1 - 300.f);
+        if (WayDist(X, Y) < Half + 1200.f) continue;
+        Rocks[R.RandRange(0, 5)]->AddInstance(FTransform(FRotator(R.FRandRange(-10.f, 10.f), R.FRandRange(0.f, 360.f), R.FRandRange(-10.f, 10.f)), FVector(X, Y, Height(X, Y) - 30.f), FVector(R.FRandRange(.8f, 2.4f))));
+    }
+    for (int32 I = 0; I < 60; ++I)
+    {
+        const float X = R.FRandRange(Xa + 600.f, Xb - 600.f), Y = R.FRandRange(Y0 + 600.f, Y1 - 600.f);
+        if (WayDist(X, Y) < Half + 2600.f || (Y > 3500.f && Y < 17500.f)) continue;
+        Oaks[R.RandRange(0, 1)]->AddInstance(FTransform(FRotator(0, R.FRandRange(0.f, 360.f), 0), FVector(X, Y, Height(X, Y) - 20.f), FVector(R.FRandRange(1.1f, 1.7f))));
+    }
+    for (int32 K = 0; K < 6; ++K) Rocks[K]->BuildTreeIfOutdated(false, true);
+    Oaks[0]->BuildTreeIfOutdated(false, true); Oaks[1]->BuildTreeIfOutdated(false, true);
 }
 
 bool AFeyMap::IsLoaded(int32 D) const { return Districts.IsValidIndex(D) && Districts[D] != nullptr; }
@@ -1791,7 +1909,7 @@ int32 FeyMap::SeeThrough(UWorld* World, const AActor* Ignore, int32 Th, float T0
 {
     const FWayField& F = WayField(Th);
     FCollisionQueryParams Q(SCENE_QUERY_STAT(FeySeeThrough), true); if (Ignore) Q.AddIgnoredActor(Ignore);
-    int32 Rays = 0, Leaks = 0;
+    int32 Rays = 0, Leaks = 0, Escapes = 0, Backs = 0, Sides = 0;
     for (float T = T0; T <= T1 + 1e-3f; T += .02f)
     {
         const FVector C = ThresholdAtT(Th, T), Tn = (ThresholdAtT(Th, T + .01f) - ThresholdAtT(Th, T - .01f)).GetSafeNormal2D(), Side(-Tn.Y, Tn.X, 0.f);
@@ -1811,11 +1929,22 @@ int32 FeyMap::SeeThrough(UWorld* World, const AActor* Ignore, int32 Th, float T0
                             FHitResult Hit;
                             if (!World->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Qr)) break;
                             const UPrimitiveComponent* Pc = Hit.GetComponent();
-                            if (!Pc || (Pc->IsVisible() && !Pc->bHiddenInGame)) { HitAt = FVector::Dist(From, Hit.ImpactPoint); break; }
+                            if (!Pc || (Pc->IsVisible() && !Pc->bHiddenInGame))
+                            {
+                                HitAt = FVector::Dist(From, Hit.ImpactPoint);
+                                // (2026-11-21) The back of a one-sided surface does not show: the eye sees through it.
+                                if (FVector::DotProduct(Hit.ImpactNormal, (To - From).GetSafeNormal()) > .05f && Pc->IsA<UProceduralMeshComponent>())
+                                {
+                                    ++Leaks; ++Backs; if (Out.Num() < 4000) Out.Add({O, Dv, -2.f - HitAt});
+                                    HitAt = -1.f;
+                                }
+                                break;
+                            }
                             Qr.AddIgnoredComponent(Pc);   // (an unseen bound or collision shell: look on past it)
                         }
                         // (Well short of what it struck, and well under the rock: the mesh's triangles and the field's
                         // bilinear surface differ a little on the steep feet of the walls.)
+                        if (HitAt < 0.f) continue;
                         for (float S = 80.f; S < HitAt - 150.f; S += 30.f)
                         {
                             const FVector P = O + Dv * S; float Z; bool bPresent;
@@ -1826,10 +1955,32 @@ int32 FeyMap::SeeThrough(UWorld* World, const AActor* Ignore, int32 Th, float T0
                                 break;
                             }
                         }
+                        // (2026-11-21, the user's stills: a slit in a wall with the meadow beyond.) From within the way, a low
+                        // sight-line may reach a district only through the way's own mouth.
+                        if (T > .03f && T < .97f && HitAt > 0.f)
+                        {
+                            const FThreshold& Wy = Ways[Th];
+                            for (float S = 60.f; S < FMath::Min(HitAt, 6000.f); S += 30.f)
+                            {
+                                const FVector P = O + Dv * S;
+                                if (DistrictAt(P.X, P.Y) < 0) continue;
+                                if (P.Z < 900.f + FMath::Max(Wy.ZA, Wy.ZB) && FMath::Min(FVector2D::Distance(FVector2D(P), Wy.PA), FVector2D::Distance(FVector2D(P), Wy.PB)) > Half + 500.f)
+                                { ++Leaks; ++Sides; if (Out.Num() < 4000) Out.Add({O, Dv, -3.f - S}); }
+                                break;
+                            }
+                        }
+                        // (2026-11-21, the user again: views out of the canyons.) A low ray that strikes nothing and ends
+                        // outside every district, in the gaps between them where only the painted distance lies (it has no
+                        // collision), is a view out past the rock: also a leak.
+                        if (HitAt >= 6000.f && Pitch <= 6.f)
+                        {
+                            const FVector E = O + Dv * 6000.f;
+                            if (DistrictAt(E.X, E.Y) < 0) { ++Leaks; ++Escapes; if (Out.Num() < 4000) Out.Add({O, Dv, -1.f}); }
+                        }
                     }
             }
     }
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_SEE_THROUGH threshold=%d t=%.2f..%.2f rays=%d leaks=%d"), Th, T0, T1, Rays, Leaks);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_SEE_THROUGH threshold=%d t=%.2f..%.2f rays=%d leaks=%d escapes=%d backs=%d sides=%d"), Th, T0, T1, Rays, Leaks, Escapes, Backs, Sides);
     return Leaks;
 }
 

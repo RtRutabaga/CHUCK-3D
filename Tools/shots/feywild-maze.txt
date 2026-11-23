@@ -1,0 +1,12 @@
+# The Great Hedge Maze from above (2026-11-21, the user: make the high view of the maze look better).
+# Tools/Take-Shots.ps1 Tools/shots/feywild-maze.txt
+at FeyOverlook
+origin feywild
+wait 12
+fov 60
+# From the overlook's knoll, at his eye and a little above, down onto the maze, the stair and the tower.
+shot overlook -111300 12100 2420   -128000 7000 300
+shot overlookwide -111200 12300 2700   -134000 5000 1500
+shot overlookdown -111400 12000 2600   -124000 5500 0
+fov 45
+shot mazeclose -111400 12000 2600   -128000 9000 0

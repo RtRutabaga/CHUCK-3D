@@ -1,6 +1,6 @@
 # The Feywild: 3D adaptation plan
 
-**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3, the whole map walkable in rough form, is built (2026-11-19, `FeyMap.h`; see [the rough map as built](#the-rough-map-as-built-stage-3)). Stage 4 is next.**
+**Status: approved by the user 2026-11-17 with the changes recorded under [Decisions](#decisions). Stage 1, the look slice, is built (2026-11-18, dev checkpoint "Feywild Look"; second pass the same day, after "Fix the flaws first"). The user approved the look on 2026-11-18 ("Approve, start stage 2"). Stage 2, the river cutscene and arrival, is built (2026-11-19, `FeyRiverScene.h`; see [the river cutscene](#the-river-cutscene)). Stage 3, the whole map walkable in rough form, is built (2026-11-19, `FeyMap.h`; see [the rough map as built](#the-rough-map-as-built-stage-3)). Stage 4, the art pass, is built (2026-11-20). Stage 5 is under way: [part one](#stage-5-part-one-the-first-mechanics-and-hazards-2026-11-21), the flowers, pollen, orchids and moths, is built (2026-11-21); part two, the creatures, is next.**
 
 Sources: the user's Feywild vision and ten goal images (2026-11-17), the 2D game's `docs/development/PHASE-8.md` section 6 and 9 (river cutscene) and `PHASE-9.md` (thirteen maps), and the research below. Where the user's vision and the 2D game differ, the vision wins.
 
@@ -24,7 +24,7 @@ Research sources: [Roll20 Feywild guide](https://pages.roll20.net/dnd/feywild-gu
 
 ## Look and light
 
-**One rule for the sky: blue, warming to peach and gold at the horizon, never purple.** Purple belongs to the wisteria, foxgloves and mushroom caps. This is what keeps it from looking like a night-elf forest.
+**One rule for the sky: blue, warming to peach and gold at the horizon, never purple.** Purple belongs to the wisteria, foxgloves and mushroom caps. This is what keeps it from looking like a night-elf forest. (The user, 2026-11-22: the rule is against purple sky and purple light over everything, not against purple things. Purple creatures and features, such as the flying jellyfish, are fine.)
 
 - **Key light:** a low, warm, unmoving sun, giving gold rims on bark, moss and water.
 - **Fill:** cool blue from the sky, so shadows are blue and still readable. It is never truly dark.
@@ -118,6 +118,7 @@ Highmeadow ends at a high mossy rise under a great wisteria tree, composed to ma
 - **Parkour inside it:** wall runs along trellised sections, brachiation under ivy arches, climbs to raised walkways and Chuck-sized gaps through the roots.
 - **Danger:** redcap patrols, spitting orchids covering long lanes, thorn mites, lantern moths and thorn hazards.
 - **Whimsy:** flowers that shift the hedge gates (always reversible and never a trap), and statues that seem to have turned when you look back.
+- **Hit plants in the maze (the user, 2026-11-22):** a player who reaches the end in good time finishes by scratching a hit plant (the reactive flower) that opens the way into the heart. One who stays lost for a long time finds more hit plants appearing, each opening a new entrance through a hedge, so the maze grows easier the longer he is in it.
 - **No cheating over the top:** a bumblebee swarm lives on the hedge tops. A warning buzz sounds on arrival, then the swarm knocks Chuck back down into the maze. It sends him back rather than killing him.
 
 ### Carried over from the 2D game
@@ -253,6 +254,47 @@ The user asked for the art pass plus specific changes. As built:
 - **The hedges.** Each hedge carries a shell of small leaf sprigs (`SM_FeyHedgeLeaves`, Blender kit, the oaks' CC0 leaf atlas, `M_FeyHedgeLeaf`) rooted in its faces with a ragged crown, near only (out to 56 m); the box under it is four layers of the same sprigs on a near-black green (`M_FeyHedge`, each face's own UVs), which is all that shows beyond.
 - **The Deepwood.** Its blue lights among the roots are about 1.7 times as bright, reach 14 m and are a little more frequent; the blue fill is a little brighter in the gloom; its fog is denser (density 6.5 times the open woods', was 4.5) with 150 veils of mist (was 90), a third of them along the paths. The hanging moss on its oaks is now beards of separate strands, each a thin tapering ribbon crossed with another, wandering as it falls, a few draped in a sag along the limb (`M_FeyHangMoss`: opaque, edges eaten slowly, no fine detail to shimmer).
 
+### The user's second fixes (2026-11-21)
+
+- **Canyons cut through ridges.** The user still saw the outside from the first canyon (stills with a slit in a wall and the meadow beyond). Behind its crest a way's rock used to slope down to the gap between the districts, and near each mouth it sank into the district with the district's rim (notched for the road): beside the opening the eye went past it into the gap, where the ground simply ends, and to the backs of the rims, which are one-sided and do not show. Now every way except the maze's stair is cut through a ridge: past the crest a broad plateau (13 m over a cutting, 8 m over a root tunnel) runs out 26 m, holds its height inside a district near its edge where it meets the rim, and is never lower than a district's edge just outside it. District rims never fall below 10 m. The see-through check now also counts low sight-lines that end in the gaps, ones that reach a district other than through the way's mouth, and hits on the backs of surfaces; stills walk the first canyon both ways (`Art_Canyon_*`).
+- **Root tunnels.** The tube ends where its banks end, in a steep earth face closed round the opening, with a thick lip of root and great roots arching over the mouth and down into the ground either side.
+- **The Deepwood's light.** The floor's blue lights are far softer (22-36 cd); light comes instead from the glowing caps: a soft light of their colour over each of the 140 richest clusters, stronger where more grow; the Deepwood's own fungi, shelves and bark veins glow brighter (material parameters on its instances only: elsewhere unchanged); a little more sky light in its gloom.
+- **The maze from above.** Its hedges have rounded, lumpy crowns, each a slightly different green, and the overlook's stand-in casts their shadows down the corridors. The ground between the brink and the maze is now its own valley (`BuildBrink`) instead of the painted distance's low ground. No oaks in the overlook's view down onto the maze (neither Highmeadow's nor the maze's side facing it), and no ridge on the stair down the brink. The hedge core is brighter.
+
+## Stage 5, part one: the first mechanics and hazards (2026-11-21)
+
+Built in `FeyLife.h/.cpp` (one `AFeyLife` per loaded district, after PHASE-9.md sections 4, 5 and 7):
+
+- **Reactive flowers.** The bud on broad leaves of `hit-plant-closed/open`, modelled and animated in code. His scratch makes it pulse and shake, then open into a star with curled tips and stamens; only then does the curtain of vines it rules draw back into the ground. Scratched again it closes and the vines grow back, never over him. All back as they began when he respawns; nothing saved. **The first one** stands by the riverbank's road: its vines shut the only gap into a ring of boulders with three cigarettes inside.
+- **Slowing pollen.** Beds of small glowing gold flowers with spores drifting over them; on the ground in one he walks at half speed (measured 225 to 120 cm/s), at once and only while there. A strip over the orchard's road a jump clears, a broad bed after it, two more among the rows.
+- **Spitting orchids.** Three south of the Needle Garden's road, taller than he is: each swells and glows pink, then spits a hard seed north across the road every 2.4 s, a third of a beat after its neighbour; a seed stops at what it meets and costs a Sanity point. They are hazards to time, not to fight.
+- **Lantern moths.** Three over the way out to the Moonmoth Fen: wings wider than he is tall, amber at the root and teal at the edge with an eye, lit from within with a light of their own, weaving across the path at his shoulder; a touch costs a Sanity point; they cannot be scratched.
+- **Checked:** `-ChuckFeyMapTest=life` (vines block, the flower opens them, he walks in and takes the cigarettes, pollen halves his speed, an orchid's seed and a moth's touch hurt), also a step of the package's verification (`feyLife`). The route walker runs with them calmed.
+- **Part two (next):** thorn mites, redcaps (the camp in Redcap Hollow), the displacer beast in Highmeadow, flowers that raise lily pads, and more flowers through the districts.
+
+## The wonder pass (planned 2026-11-22)
+
+The user's request: more immersive and visually stunning elements distinct to each district, and more movement for whimsy. To be built alongside stages 5 to 8, district by district, each piece judged in stills against the goal images. Not built yet.
+
+| Element | Where | How (to keep it cheap) |
+|---|---|---|
+| **Distant floating islands** (as in `open-vista` and `maze-tower-overlook`), some with thin falls and trailing roots | Over Highmeadow and the overlook, glimpsed from the Crossroads and the Lily Mere | Low-detail always-present meshes on the painted distance's material, like the tower's cloud: no collision, a handful of them; a slow bob and drift in the material |
+| **A giant flower landmark per flower-heavy district** | Riverbank and Blooming Path, Orchard and Needle Garden, Lily Mere (giant lilies), Highmeadow (the great wisteria) | A few hero models per district (Blender kit, with levels of detail), loaded only with their district; glow from the material |
+| **A giant mushroom landmark per mushroom-heavy district** | Deepwood, Redcap Hollow (red toadstools), the Crossroads' edges | As above; some house-sized with shelves he may climb, on purpose, or kept clear of the routes |
+| **Gentle motion** | Everywhere | In the material, so the graphics card does it: flowers that slowly open and close, mushroom caps that bob and breathe, swaying fronds, drifting petals. Switched off at a distance (as now). Kept small on anything he can stand on, since collision does not move with it |
+| **Crows** | The Deepwood | A small group (about 6 to 12) after Chult's birds: mostly perched and watching, the odd one taking off with a call. Not dozens |
+| **Mirror water at the lily-pad crossing** (the user, 2026-11-22) | The Lily Mere's deep water crossed on the pads, and its pools | As the look slice's pond (`AFeywildSetting::BuildProbe`, `M_FeyWater`): a cube capture taken once from the water's middle when the district stands, the water reflecting it carried out to about the trees' distance. One capture per district, not per frame |
+| **Purple hanging moss outside the Deepwood** (the user: a purple version of the Deepwood's) | On some old oaks in parts of the other districts: by the Lily Mere's fen, the Crossroads' edges, the riverbank's oldest trees | A variant of the ordinary oak (Blender kit) hung with the Deepwood's strand moss coloured purple (a colour parameter on `M_FeyHangMoss`, so the Deepwood's stays grey-green), mixed in with the plain oaks rather than replacing them |
+| **Rounded archway ruins** (the user: separate from and in addition to the present rune arches) | Open areas, as in the goal images: Highmeadow, the Orchard's edges, the Lily Mere's shores | Round-topped stone arches, some broken or half fallen, mossed on top (`M_FeyStone`), with partial ivy hanging from them (strand and leaf cards like the vines); static, a few per district, clear of the routes or walked under on purpose |
+| **A flying giant jellyfish** (purple allowed) | High over one open area, Highmeadow or the Lily Mere | One, high and slow, its bell mostly solid and glowing with only its edge see-through, its tentacles waving in the material; one soft light at most |
+
+**Budgets and risks** (measured 2026-11-22: every district at the 60 fps cap except the Deepwood at about 17.9 ms, one district loaded at a time):
+
+- **Cheap:** islands, landmarks and material-driven motion, as above. Material motion costs a little more where its object casts a shadow.
+- **Watch:** lights (the Deepwood already has about 160; unshadowed lights near Chuck bleach his fur, so the light audit runs after adding any); shadows from giant pieces (a choice per piece, not the default); animated creatures in numbers.
+- **Risky:** large see-through surfaces filling the screen (the jellyfish close to the camera, more mist or light shafts in the Deepwood, which is the slowest district); new textures (memory matters more than drawing speed on this machine: reuse the kit's leaf, petal and bark materials and colour by vertex); building a district's extras in one frame (this round's flowers and creatures already cause a 55 ms stutter when a district finishes loading, so extras are spread over several frames).
+- **Tone and play:** motion stays slow and quiet (the brief asks for restrained animation); hero pieces either climbable on purpose or clear of the paths and the camera.
+
 ## Technical risks
 
 - **Late loading.** If baked districts still load too slowly on this machine, thresholds get longer or use the fade. Stage 3 tests this before any art depends on it.
@@ -274,6 +316,11 @@ Made by the user on 2026-11-17:
 5. **The cutscene's river is the Feywild river.**
 6. **Make the large area less taxing,** with loading at the Crossroads entrances considered: see [Keeping it light on the machine](#keeping-it-light-on-the-machine).
 7. **The Cloud Staircase does not glow,** unlike `maze-tower-overlook`.
+
+Made by the user on 2026-11-22:
+
+8. **A wonder pass** of district landmarks and gentle motion is planned: see [The wonder pass](#the-wonder-pass-planned-2026-11-22).
+9. **Purple is allowed on things,** only not as the sky's colour or the light over everything; the jellyfish may be purple.
 
 ## Goal images
 

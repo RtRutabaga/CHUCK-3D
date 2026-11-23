@@ -397,7 +397,7 @@ void AFeywildSetting::SetGloom(float G)
     GloomNow = G;
     if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .26f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.5f, .58f, .85f), G)); }
     if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, 1.1f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }   // (2026-11-21: the Deepwood's blue fill a little brighter)
-    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .5f, G));
+    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .62f, G));   // (2026-11-21: a little more light overall in the Deepwood)
     if (PostComp)
     {
         PostComp->Settings.AutoExposureBias = -.35f * G;

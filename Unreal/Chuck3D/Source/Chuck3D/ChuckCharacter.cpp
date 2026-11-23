@@ -1,6 +1,7 @@
 #include "ChuckCharacter.h"
 #include "FeywildSetting.h"
 #include "FeyMap.h"
+#include "FeyLife.h"
 #include "Engine/OverlapResult.h"
 #include "ShipStorm.h"
 #include "ChultLanding.h"
@@ -2154,6 +2155,8 @@ void AChuckCharacter::SlashHit()
     }
     // Phlegethos's spined devils (2026-11-16): a scratch at one is fatal to him.
     if (PhlegethosScratchDevils(this, Location, Ahead, SlashReach)) ++SlashRatHits;
+    // The Feywild's reactive flowers (2026-11-21): a scratch makes one pulse and change what it rules.
+    FeyScratch(this, Location, Ahead, SlashReach);
     // People: a scratch at the shins of anyone in reach. Nothing breaks; they react.
     for (const TWeakObjectPtr<ADockNPC>& Entry : ADockNPC::All())
     {
@@ -2884,6 +2887,8 @@ void AChuckCharacter::UpdateMotion(float DeltaSeconds)
     if (bInCrawlSpace && !bAirborne && (Gait == EGait::Idle || Gait == EGait::Start || Gait == EGait::Loop || Gait == EGait::Stop || Gait == EGait::Strafe || Gait == EGait::Land || Gait == EGait::Turn)) EnterCrawl();
     const bool bStrafe = StrafeHeld();
     if (!OwnsCapsule()) Movement->MaxWalkSpeed = IsSprinting() ? SprintSpeed : bStrafe ? (bRunHeld ? StrafeRunSpeed : StrafeSpeed) : (bRunHeld ? RunSpeed : WalkSpeed);
+    // The Feywild's pollen (2026-11-21): half speed while on the ground in a bed, at once and only while there.
+    if (!OwnsCapsule() && Movement->IsMovingOnGround()) Movement->MaxWalkSpeed *= FeyGroundSpeedScale(Location);
     Movement->MaxAcceleration = IsSprinting() ? SprintAcceleration : 550.f;
     // Strafing: the facing is held down the camera (Counter-Strike style)
     // instead of turning toward the movement.
