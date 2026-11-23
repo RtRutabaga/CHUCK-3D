@@ -2,6 +2,37 @@
 
 Per-session log, newest first. Template: [TEMPLATE.md](TEMPLATE.md). Prototype-era entries (character, rig, traversal, camera, sewer, NPCs) are in [../archive/agent-handoffs/CLAUDE-PROTOTYPE.md](../archive/agent-handoffs/CLAUDE-PROTOTYPE.md). October 2026 is in [../archive/agent-handoffs/CLAUDE-2026-10.md](../archive/agent-handoffs/CLAUDE-2026-10.md).
 
+## November 23 — Feywild: parkour on the way through, walkway timber, modelled bees (Claude)
+
+- **Asked:** "proceed" (after the parkour entry below, whose next-owner line offered modelled bees, a parkour piece on the way through and the walkway's material).
+- **Source:** `main` at 55335eb8; this commit. The package was built from the working tree on 55335eb, so its receipt names 55335eb.
+- **Changed:**
+  - `FeyMap.cpp/.h`: `FMazeParkour::NHoop`. One two-cell run of the way itself gets three hoops over a 1.8 m bed, only where the way enters before the first hoop and leaves after the last; the other keeps a short bed. The walkway, ladder and steps are on `M_FeyPlank`; the steps are boards (treads, risers, stringers) with collision boxes (`Plan.Walls`).
+  - `Tools/create_feywild_assets.py`: `M_FeyPlank` (the bark shader on `WeatheredTimber/T_rough_wood`, moss only from vertex R and in big patches, lighter, faint veins). Built alone with `CHUCK_FEY_ONLY=M_FeyPlank` (`Local/feyplank-mat.log`); `Content/Art/Feywild/M_FeyPlank.uasset` added.
+  - `FeyLife.cpp`: `Blob` and `Bee`. Each bee is a head, a thorax, three abdomen bands and two beating wings, facing along its flight.
+  - `FeyMapTest.cpp`: `=life` step 63 (the way's hoops; `way_hoops_*` checks; still `Life_MazeWayHoops`). Step 60 now takes the off-way hoops.
+  - `docs/regions/FEYWILD.md`: the second round.
+- **Tested:**
+  - `=life` from step 50: `Local/feypk-3.log` failed one check, because the way's hoops took both short beds (no jump left to test). Capped at one; then `Local/feypk-4.log` passed with 0 failures. Plan: way_hoops 1, jumps 1, off-way trellis, hoops and walkways 2 each. Way hoops: 3 catches, past the bed, 0 pricks. The other pieces are as before.
+  - Route (`Local/feypk-route2.log`): failures 0, stuck 0, void 0. Maze 16.68 ms, Deepwood 17.93 ms. The worst threshold frame was 43.7 ms.
+  - Stills `Life_MazeWalkway`, `Life_MazeBees` and `Life_MazeWayHoops` were looked at: grey timber with board seams; striped, winged bees.
+- **Package:** `FeyParkour2Candidate` packaged and verified: `CHUCK_VERIFY_SUMMARY steps=50 failed=0 retried=0 partial=0`, `CHUCK_PACKAGE_VERIFIED passes=182 log=Local/verify-package-20261123-115640.log`.
+- **Not tested:**
+  - By hand.
+  - Walking up the new steps from the floor (the test only comes down them).
+  - The bees' cost on a slow machine.
+- **Remaining flaws:**
+  - Only the three hoops are on the way through.
+  - The plank grain is world-aligned, not per board.
+  - The bees are rebuilt as geometry every frame they show.
+  - The brambles are thin.
+  - The ivy is cards.
+  - The trellis can block the camera.
+- **Contract compatibility:** unchanged. The rig, scale, moves and controls are as they were.
+- **Launcher:** promoted as FeywildMazeParkour2 (`CHUCK_PROMOTED FeywildMazeParkour2 previous=Windows-Previous-20261123-FeywildMazeParkour2 kept=2`). The candidate folder was removed.
+
+Next part of the work can be done here (thicker brambles and real ivy leaves, or the tower once it is planned; the tower needs the user's plan first).
+
 ## November 23 — Feywild: the maze's parkour and thorn hazards (Claude)
 
 - **Asked:** "Do the parkour and thorn hazards" (the Great Hedge Maze's parkour from `docs/regions/FEYWILD.md`: trellis wall runs, ivy brachiation, raised walkways, root gaps, plus thorns).

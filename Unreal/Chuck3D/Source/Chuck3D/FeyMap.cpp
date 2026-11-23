@@ -365,7 +365,7 @@ namespace
                 TSet<int32> NearSc; for (const TPair<uint64, int32>& Sp : ScOf) { NearSc.Add(int32(Sp.Key >> 32)); NearSc.Add(int32(Sp.Key & 0xffffffffu)); }
                 const FVector2D Middle = Out.Route[FMath::Min((Out.Route.Num() + 2) / 2, Out.Route.Num() - 1)];
                 const float Spans[4] = {600.f, 640.f, 800.f, 240.f}, Beds[4][2] = {{-90.f, 90.f}, {-225.f, 225.f}, {-360.f, 220.f}, {-60.f, 60.f}};
-                const int32 Wanted[4] = {2, 2, 2, 3}; int32 Have[4] = {0, 0, 0, 0}, Next = 0; TArray<FVector2D> Placed;
+                const int32 Wanted[4] = {2, 2, 2, 3}; int32 Have[4] = {0, 0, 0, 0}, Next = 0, ShortHoops = 0; TArray<FVector2D> Placed;
                 for (int32 W0 = 1; W0 < Way.Num(); )
                 {
                     int32 W1 = W0; while (W1 + 1 < Way.Num() && Ring(Way[W1 + 1]) == Ring(Way[W0])) ++W1;
@@ -381,6 +381,20 @@ namespace
                     bool bNear = false; for (const FVector2D& P : Placed) bNear |= FVector2D::Distance(P, Cp) < 2600.f;
                     if (bNear) continue;
                     int32 Kd = -1; float Side = 1.f;
+                    // (2026-11-23, second round) Two cells on one ring: three hoops over a 1.8 m bed, where the way comes in
+                    // before the first hoop and goes out after the last (so the way itself has brachiation over thorns).
+                    if (K == 2 && ShortHoops < 1 && Wa > 0 && W1 + 1 < Way.Num())
+                    {
+                        auto Sof = [&](int32 C, int32 B) { const float Lo = FMath::Max(A0(C), A0(B)), Hi = FMath::Min(A1(C), A1(B)); return FMath::FindDeltaAngleRadians(Ac, (Lo + Hi) * .5f) * Rm * Jd; };
+                        const bool bInRing = Ring(Way[Wa - 1]) == I, bOutRing = Ring(Way[W1 + 1]) == I;
+                        const float Sin = Sof(Way[Wa], Way[Wa - 1]), Sout = Sof(Way[W1], Way[W1 + 1]), Edge = FeyMap::HoopStep + 20.f;
+                        if (!bInRing && !bOutRing && Sin < -Edge && Sout > Edge)
+                        {
+                            FeyMap::FMazeParkour Pk; Pk.Kind = 1; Pk.NHoop = 3; Pk.R = Rm; Pk.Ac = Ac; Pk.Dir = Jd; Pk.Bed0 = -90.f; Pk.Bed1 = 90.f;
+                            Out.Parkour.Add(Pk); Placed.Add(Cp); ++ShortHoops;
+                            continue;
+                        }
+                    }
                     for (int32 T = 0; T < 4 && Kd < 0; ++T)
                     {
                         const int32 Kt = (Next + T) % 4;
@@ -463,7 +477,7 @@ namespace
                     Pk.bOffWay = true; Pk.bReward = bEnd0 || bEnd1;
                     Out.Parkour.Add(Pk); Placed.Add(Cp); ++Have[Pick]; ++OffWay;
                 }
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_PARKOUR_PLAN trellis=%d hoops=%d walkways=%d jumps=%d off_way=%d runs=%d"), Have[0], Have[1], Have[2], Have[3], OffWay, Runs.Num());
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_PARKOUR_PLAN trellis=%d hoops=%d walkways=%d jumps=%d off_way=%d runs=%d way_hoops=%d"), Have[0], Have[1], Have[2], Have[3], OffWay, Runs.Num(), ShortHoops);
             }
             // (2026-11-23) Root gaps: holes at the foot of a hedge, Chuck-sized (the redcaps cannot follow), between two cells that
             // are not linked, saving a few cells; never by the parkour, a shortcut or another gap.
@@ -754,8 +768,8 @@ namespace
     const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround"), TEXT("/Game/Art/Feywild/M_FeyWater.M_FeyWater"), TEXT("/Game/Art/Feywild/M_FeyRiver.M_FeyRiver"),
                                TEXT("/Game/Art/Feywild/M_FeyBlock.M_FeyBlock"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot"), TEXT("/Game/Art/Feywild/M_FeyStone.M_FeyStone"),
                                TEXT("/Game/Art/Feywild/M_FeyHedge.M_FeyHedge"), TEXT("/Game/Art/Feywild/M_FeySign.M_FeySign"),
-                               TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant")};
-    enum EMat { MGround, MWater, MRiver, MBlock, MRoot, MStone, MHedge, MSign, MPlant, MatCount };
+                               TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyPlank.M_FeyPlank")};
+    enum EMat { MGround, MWater, MRiver, MBlock, MRoot, MStone, MHedge, MSign, MPlant, MPlank, MatCount };
     // Stone's vertex colour: R a seed, B 1 for glowing runes.
     const FColor Runes(80, 0, 255, 255), Plain(140, 0, 0, 255);
     const FColor Stone(198, 192, 178), HedgeGreen(34, 64, 24), Cloud(236, 240, 248), RoofBlue(38, 62, 150), Grey(146, 150, 146);
@@ -1071,8 +1085,8 @@ namespace
             auto At = [&](float S, float X, float Z) { const FVector2D Q = FeyMap::MazeParkourAt(P, S, X); return FeyWorld(FVector(Q.X, Q.Y, Land(Maze, Q.X, Q.Y) + Z)); };
             auto Along = [&](float S) { return (At(S + 5.f, 0.f, 0.f) - At(S - 5.f, 0.f, 0.f)).GetSafeNormal2D(); };
             if (P.Kind == 1)
-                for (int32 K = 0; K < FeyMap::Hoops; ++K)
-                { const float S = (K - (FeyMap::Hoops - 1) * .5f) * FeyMap::HoopStep; FChuckSwingGrip G; G.Grip = At(S, 0.f, FeyMap::GripUp); G.Along = Along(S); AddChuckSwingGrip(G); ++Grips; }
+                for (int32 K = 0; K < P.NHoop; ++K)
+                { const float S = (K - (P.NHoop - 1) * .5f) * FeyMap::HoopStep; FChuckSwingGrip G; G.Grip = At(S, 0.f, FeyMap::GripUp); G.Along = Along(S); AddChuckSwingGrip(G); ++Grips; }
             if (P.Kind == 2)
             {
                 const float Sl = FeyMap::WalkFrom - 8.f;
@@ -1262,6 +1276,8 @@ namespace
                     FMapSurf& Wood = Plan.Surfs.AddDefaulted_GetRef(); Wood.Mat = MRoot;                                // walkway, ladder, steps, gap roofs
                     FMapSurf& Lath = Plan.Surfs.AddDefaulted_GetRef(); Lath.Mat = MRoot; Lath.bSolid = false;            // trellis, hoops, roots
                     FMapSurf& Ivy = Plan.Surfs.AddDefaulted_GetRef(); Ivy.Mat = MPlant; Ivy.bSolid = false; Ivy.bShadow = false;
+                    FMapSurf& Plank = Plan.Surfs.AddDefaulted_GetRef(); Plank.Mat = MPlank;                              // walkway timber
+                    const FColor PlankCol = FLinearColor(0.f, 1.f, 0.f, 1.f).ToFColor(false);
                     const FColor WoodCol = FLinearColor(.22f, 1.f, 0.f, 1.f).ToFColor(false), CaneCol = FLinearColor(0.f, 1.f, 0.f, 1.f).ToFColor(false);
                     const FColor IvyCol = FLinearColor(.16f, .34f, .1f, 0.f).ToFColor(false), IvyDark = FLinearColor(.1f, .24f, .07f, 0.f).ToFColor(false);
                     const FColor ThornCol = FLinearColor(.78f, .66f, .5f, 0.f).ToFColor(false), BerryCol = FLinearColor(.2f, .03f, .1f, 0.f).ToFColor(false), BLeaf = FLinearColor(.17f, .27f, .08f, 0.f).ToFColor(false);
@@ -1353,9 +1369,9 @@ namespace
                         else if (P.Kind == 1)   // ivy hoops across the corridor, their crowns the grips, garlands between
                         {
                             TArray<FVector> Crowns;
-                            for (int32 K = 0; K < FeyMap::Hoops; ++K)
+                            for (int32 K = 0; K < P.NHoop; ++K)
                             {
-                                const float S = (K - (FeyMap::Hoops - 1) * .5f) * FeyMap::HoopStep; TArray<FVector> Pts;
+                                const float S = (K - (P.NHoop - 1) * .5f) * FeyMap::HoopStep; TArray<FVector> Pts;
                                 for (int32 J = 0; J <= 10; ++J) { const float U = J / 10.f * 2.f - 1.f; Pts.Add(At(P, S, U * 132.f, -6.f + (FeyMap::GripUp + 6.f) * FMath::Sqrt(FMath::Max(0.f, 1.f - U * U)))); }
                                 Lath.Pipe(Pts, 3.4f, 3.4f, 7, 3, WoodCol, K * 3.1f);
                                 Crowns.Add(At(P, S, 0.f, FeyMap::GripUp));
@@ -1371,7 +1387,7 @@ namespace
                             for (int32 K = 0; K + 1 < Crowns.Num(); ++K)
                                 for (const float Xs : {-34.f, 30.f})
                                 {
-                                    const float Sa = (K - (FeyMap::Hoops - 1) * .5f) * FeyMap::HoopStep; const float U = Xs / 132.f, Zc = (FeyMap::GripUp + 6.f) * FMath::Sqrt(1.f - U * U) - 6.f;
+                                    const float Sa = (K - (P.NHoop - 1) * .5f) * FeyMap::HoopStep; const float U = Xs / 132.f, Zc = (FeyMap::GripUp + 6.f) * FMath::Sqrt(1.f - U * U) - 6.f;
                                     const FVector Gs[] = {At(P, Sa, Xs, Zc), At(P, Sa + FeyMap::HoopStep * .5f, Xs * 1.1f, Zc - 16.f), At(P, Sa + FeyMap::HoopStep, Xs, Zc)};
                                     IvyStem(Gs, FVector::UpVector, 14);
                                 }
@@ -1379,21 +1395,29 @@ namespace
                         else if (P.Kind == 2)   // a raised walkway on the outer side: a ladder up at its start, steps down at its end
                         {
                             const float Xm = FeyMap::WalkAcross, Up = FeyMap::WalkUp;
-                            for (float S = FeyMap::WalkFrom + 8.f; S < FeyMap::WalkTo; S += 16.f) Wood.Box(At(P, S, Xm, Up - 3.5f), FVector(7.f, 46.f, 3.5f), YawAt(P, S) + Rp.FRandRange(-1.f, 1.f), WoodCol);
+                            for (float S = FeyMap::WalkFrom + 8.f; S < FeyMap::WalkTo; S += 16.f) Plank.Box(At(P, S, Xm, Up - 3.5f + Rp.FRandRange(-.6f, .6f)), FVector(7.4f, 46.f + Rp.FRandRange(-2.f, 2.f), 3.5f), YawAt(P, S) + Rp.FRandRange(-1.5f, 1.5f), PlankCol);
                             for (float S = FeyMap::WalkFrom; S < FeyMap::WalkTo; S += 70.f)
-                                for (const float Xe : {Xm - 40.f, Xm + 40.f}) Wood.Box(At(P, S + 35.f, Xe, Up - 13.f), FVector(37.f, 4.f, 6.f), YawAt(P, S + 35.f), WoodCol);
+                                for (const float Xe : {Xm - 40.f, Xm + 40.f}) Plank.Box(At(P, S + 35.f, Xe, Up - 13.f), FVector(37.f, 4.f, 6.f), YawAt(P, S + 35.f), PlankCol);
                             for (float S = FeyMap::WalkFrom + 20.f; S <= FeyMap::WalkTo; S += 105.f)
-                                for (const float Xe : {Xm - 40.f, Xm + 40.f}) Wood.Box(At(P, S, Xe, (Up - 16.f) * .5f - 4.f), FVector(4.5f, 4.5f, (Up - 16.f) * .5f + 4.f), YawAt(P, S) + 8.f, WoodCol);
+                                for (const float Xe : {Xm - 40.f, Xm + 40.f}) Plank.Box(At(P, S, Xe, (Up - 16.f) * .5f - 4.f), FVector(4.5f, 4.5f, (Up - 16.f) * .5f + 4.f), YawAt(P, S) + 8.f, PlankCol);
                             // The ladder against its start: two rails, rungs every 28 cm, ivy up one side.
                             const float Sl = FeyMap::WalkFrom - 8.f;
-                            for (const float Xe : {Xm - 24.f, Xm + 24.f}) Wood.Box(At(P, Sl, Xe, (Up + 24.f) * .5f - 4.f), FVector(3.f, 3.f, (Up + 24.f) * .5f + 4.f), YawAt(P, Sl), WoodCol);
-                            for (float Z = 22.f; Z < Up; Z += 28.f) Lath.Box(At(P, Sl, Xm, Z), FVector(2.5f, 22.f, 2.f), YawAt(P, Sl), WoodCol);
+                            for (const float Xe : {Xm - 24.f, Xm + 24.f}) Plank.Box(At(P, Sl, Xe, (Up + 24.f) * .5f - 4.f), FVector(3.f, 3.f, (Up + 24.f) * .5f + 4.f), YawAt(P, Sl), PlankCol);
+                            for (float Z = 22.f; Z < Up; Z += 28.f) Plank.Box(At(P, Sl, Xm, Z), FVector(2.5f, 22.f, 2.f), YawAt(P, Sl), PlankCol);
                             { TArray<FVector> Pts; for (int32 J = 0; J <= 6; ++J) Pts.Add(At(P, Sl - 3.f, Xm + 26.f + 4.f * FMath::Sin(J * 1.7f), -2.f + J * 30.f)); IvyStem(Pts, (At(P, 5.f, 0, 0) - At(P, -5.f, 0, 0)).GetSafeNormal2D(), 24); }
-                            // Steps down: four of 32 cm, each 60 along, on solid blocks.
+                            // Steps down: four of 32 cm, each 60 along: a tread and a riser of boards on two stringers (open
+                            // beneath), each step's block kept as collision only.
                             for (int32 K = 0; K < 4; ++K)
                             {
                                 const float S = FeyMap::WalkTo + 30.f + 60.f * K, Top = Up - 32.f * (K + 1);
-                                Wood.Box(At(P, S, Xm, (Top - 6.f) * .5f), FVector(30.5f, 45.f, (Top + 6.f) * .5f), YawAt(P, S), WoodCol);
+                                Plan.Walls.Add({At(P, S, Xm, (Top - 6.f) * .5f), FVector(30.5f, 45.f, (Top + 6.f) * .5f), YawAt(P, S)});
+                                for (const float Dt2 : {-15.f, 15.f}) Plank.Box(At(P, S + Dt2, Xm, Top - 3.f), FVector(14.6f, 45.f + Rp.FRandRange(-1.5f, 1.5f), 3.f), YawAt(P, S + Dt2) + Rp.FRandRange(-1.f, 1.f), PlankCol);
+                                Plank.Box(At(P, S - 28.5f, Xm, Top + 16.f), FVector(2.f, 44.f, 16.f), YawAt(P, S - 28.5f), PlankCol);
+                            }
+                            for (const float Xe : {Xm - 41.f, Xm + 41.f})   // the stringers, from the walkway's end to the floor
+                            {
+                                const FVector A = At(P, FeyMap::WalkTo, Xe, Up - 8.f), B = At(P, FeyMap::WalkTo + 270.f, Xe, 4.f);
+                                TArray<FVector> Pts = {A, B}; Plank.Pipe(Pts, 4.5f, 4.5f, 4, 1, PlankCol, Xe);
                             }
                             // Ivy trailing along its outer edge.
                             { TArray<FVector> Pts; for (int32 J = 0; J <= 10; ++J) Pts.Add(At(P, FMath::Lerp(FeyMap::WalkFrom, FeyMap::WalkTo, J / 10.f), Xm + 44.f, Up - 6.f - 10.f * FMath::Abs(FMath::Sin(J * .9f)))); IvyStem(Pts, (At(P, 0, 10.f, 0) - At(P, 0, 0, 0)).GetSafeNormal2D(), 50); }

@@ -85,7 +85,7 @@ namespace FeyMap
      *  0 a trellis along one hedge to run (Side +1 the outer hedge, -1 the inner), 1 ivy hoops to swing along, 2 a raised
      *  walkway on the outer side (a ladder up, steps down), 3 a short bed to jump. Along the way, S cm from its middle, is the
      *  angle Ac + Dir * S / R (radians; Dir +1 where the way runs anticlockwise); Bed0 to Bed1 the thorns. */
-    struct FMazeParkour { int32 Kind = 3; float R = 0, Ac = 0, Dir = 1, Side = 1, Bed0 = 0, Bed1 = 0; bool bOffWay = false, bReward = false; };   // (off the way through; cigarettes beyond it, in the dead end)
+    struct FMazeParkour { int32 Kind = 3; float R = 0, Ac = 0, Dir = 1, Side = 1, Bed0 = 0, Bed1 = 0; bool bOffWay = false, bReward = false; int32 NHoop = 5; };   // (NHoop: how many hoops; three on the way through itself)   // (off the way through; cigarettes beyond it, in the dead end)
     /** Root gaps: low holes through a hedge, at its foot, he crawls through and the redcaps cannot (centre; the hedge's run, degrees). */
     struct FMazeGap { FVector2D C = FVector2D::ZeroVector; float Yaw = 0; };
     const TArray<FMazeParkour>& MazeParkour();

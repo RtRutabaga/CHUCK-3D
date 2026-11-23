@@ -263,6 +263,25 @@ def bark(m, code=BARK):
     out(wn, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_AMBIENT_OCCLUSION, 'AO'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(const(m, .3), P.MP_SPECULAR)
 
 
+# The maze's walkways and steps (2026-11-23): weathered timber, mossed only by vertex colour R and in a few big patches
+# (not on every face that looks up, as the bark is), a little of the bark's light in its grain.
+PLANK = BARK.replace('float mk=saturate(VC.r*.95+saturate(n.z)*.75+(big-.5)*1.3-.32)', 'float mk=saturate(VC.r*.95+(big-.5)*1.1-.42)').replace(
+    'float S=170.;', 'float S=110.;').replace('Base=lerp(c*float3(.42,.34,.3),moss,mk);', 'Base=lerp(c*float3(.78,.66,.55),moss,mk);').replace('*.5*VG;', '*.12*VG;')
+assert PLANK.count('S=110.') == 1 and PLANK.count('.78,.66,.55') == 1 and PLANK.count('-.42)') == 1 and PLANK.count('.12*VG') == 1
+
+
+def plank(m):
+    m.set_editor_property('tangent_space_normal', False)
+    W = '/Game/Art/Textures/WeatheredTimber/T_rough_wood'
+    ln = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_WORLD, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    link(node(m, unreal.MaterialExpressionVertexNormalWS), ln, '')
+    c = custom(m, PLANK, {'P': node(m, unreal.MaterialExpressionLocalPosition), 'LN': ln, 'VC': node(m, unreal.MaterialExpressionVertexColor), 'D': tobj(m, unreal.load_asset(f'{W}_diff_2k'), 'diffuse'),
+                         'NM': tobj(m, unreal.load_asset(f'{W}_nor_dx_2k'), 'nor_dx'), 'A': tobj(m, unreal.load_asset(f'{W}_arm_2k'), 'arm'), 'T': node(m, unreal.MaterialExpressionTime), 'Rnd': node(m, unreal.MaterialExpressionPerInstanceRandom), 'VG': node(m, unreal.MaterialExpressionScalarParameter, parameter_name='VeinGain', default_value=1.)}, extra=[('Base', F3), ('Rough', F1), ('AO', F1), ('Glow', F3)])
+    wn = node(m, unreal.MaterialExpressionTransform, transform_source_type=unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL, transform_type=unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    link(c, wn, '')
+    out(wn, P.MP_NORMAL); out(c, P.MP_BASE_COLOR, 'Base'); out(c, P.MP_ROUGHNESS, 'Rough'); out(c, P.MP_AMBIENT_OCCLUSION, 'AO'); out(c, P.MP_EMISSIVE_COLOR, 'Glow'); out(const(m, .3), P.MP_SPECULAR)
+
+
 # ---------------------------------------------------------------- plants and fungi: vertex colour RGB, glow in A
 def plant(m):
     m.set_editor_property('two_sided', True); m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
@@ -696,7 +715,7 @@ def hang(m):
 
 mats = {}
 for name, fn in (('M_FeyStone', stone), ('M_FeyHedge', hedge), ('M_FeyCloud', cloud),
-                 ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
+                 ('M_FeyHedgeLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.78, 1.02, .52), None, .3, 0)), ('M_FeySign', sign), ('M_FeyHangMoss', hang), ('M_FeyBlock', block), ('M_FeySky', sky), ('M_FeyGround', ground), ('M_FeyBark', bark), ('M_FeyPlant', plant), ('M_FeyWater', water), ('M_FeyRiver', river), ('M_FeyRoot', lambda m: bark(m, ROOT)), ('M_FeyPlank', plank), ('M_FeyFall', fall), ('M_FeyMote', mote), ('M_FeyMist', mist),
                  ('M_FeyLeaf', lambda m: foliage(m, nat('T_island_tree_02_leaves_diff_2k'), nat('T_island_tree_02_leaves_nor_dx_2k'), nat('T_island_tree_02_leaves_arm_2k'), nat('T_island_tree_02_leaves_alpha_2k'), (.95, 1.02, .5), None, 2.2, 0, light=True)),
                  ('M_FeyGrass', lambda m: foliage(m, textures['grass_medium_02', 'diffuse'], textures['grass_medium_02', 'nor_dx'], textures['grass_medium_02', 'arm'], textures['grass_medium_02', 'alpha'], (.62, .88, .42), None, 1.6, 22.)),
                  ('M_FeyCelandine', lambda m: foliage(m, textures['celandine_01', 'diffuse'], textures['celandine_01', 'nor_dx'], textures['celandine_01', 'arm'], textures['celandine_01', 'alpha'], (1., 1., .8), None, .8, 18.)),

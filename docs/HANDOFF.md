@@ -6,6 +6,11 @@ Started 2026-10-12, when the Waterdeep prototype was declared done. Newest entri
 
 - **Scope:** [PROJECT-BRIEF.md](PROJECT-BRIEF.md). Waterdeep is done ([regions/WATERDEEP.md](regions/WATERDEEP.md)). The user authorized Chult's landing, canopy grove, adjacent parkour ruins and October 14 northeast forest/stream and October 15 far-bank river extensions; later encounter/region milestones remain proposed ([regions/CHULT.md](regions/CHULT.md)). Partial western/southern boundary cliffs are built ([CHULT-CLIFFS.md](CHULT-CLIFFS.md)); the northeast canyon is verified ([CHULT-CANYON.md](CHULT-CANYON.md)) and its broken rope bridge is crossed by brachiation ([CHULT-BRIDGE.md](CHULT-BRIDGE.md)).
 - **Playing and building:** [PLAYING.md](PLAYING.md). The launcher is `Launch-Chuck.cmd`.
+- **Feywild: parkour on the way through, walkway timber, modelled bees (November 23, Claude):**
+  - Three ivy hoops over thorns on the maze's way through itself.
+  - The raised walkways in weathered timber (`M_FeyPlank`), with board steps.
+  - The hedge-top bees modelled (striped bodies, beating wings).
+  - Editor: `=life` 0 failures; route 0 failures. Package verified 50/50, 182 passes; promoted as FeywildMazeParkour2. Not played by hand.
 - **Feywild: the maze's parkour and thorn hazards (November 23, Claude):**
   - Bramble beds that slow him and cost Sanity on the ground; over them a trellis to wall-run, five ivy hoops to swing along, and a raised walkway with a ladder and steps (two of each, on straight runs off the way through, cigarettes past those ending in dead ends); two short beds on the way itself to jump; six root gaps he crawls through. See [regions/FEYWILD.md](regions/FEYWILD.md#the-mazes-parkour-and-thorns-2026-11-23).
   - Editor: `=life` from step 50, 0 failures (new thorn, trellis, hoop, walkway and gap checks); route 0 failures, 0 stuck. Package: FeyParkourCandidate verified 50/50 steps, 182 passes, no retries; promoted as FeywildMazeParkour. Not played by hand.

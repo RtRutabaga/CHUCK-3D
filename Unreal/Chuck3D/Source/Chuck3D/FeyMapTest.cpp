@@ -545,11 +545,11 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             }
             // ---- (2026-11-23) the maze's parkour and thorns: 58 a short bed (slow, pricks), 59 the trellis run over a bed, 60 the
             // ivy hoops, 61 the walkway (the ladder up, along, the steps down), 62 a root gap crawled through.
-            case 58: case 59: case 60: case 61:
+            case 58: case 59: case 60: case 61: case 63:   // (63: the hoops on the way through itself, three of them)
             {
-                const int32 Want = Step == 58 ? 3 : Step == 59 ? 0 : Step == 60 ? 1 : 2;
+                const int32 Want = Step == 58 ? 3 : Step == 59 ? 0 : Step == 60 || Step == 63 ? 1 : 2;
                 static const TCHAR* Names[] = {TEXT("trellis"), TEXT("hoops"), TEXT("walkway"), TEXT("thorns")};
-                const TArray<FMazeParkour>& Pks = MazeParkour(); int32 Pi = -1; for (int32 I = 0; I < Pks.Num() && Pi < 0; ++I) if (Pks[I].Kind == Want) Pi = I;
+                const TArray<FMazeParkour>& Pks = MazeParkour(); int32 Pi = -1; for (int32 I = 0; I < Pks.Num() && Pi < 0; ++I) if (Pks[I].Kind == Want && (Step != 60 || Pks[I].bOffWay) && (Step != 63 || !Pks[I].bOffWay)) Pi = I;
                 if (Pi < 0) { Check(false, *FString::Printf(TEXT("%s_built"), Names[Want])); R->bPlaced = false; R->CrackStep = Step + 1; R->PhaseStart = Now; return; }
                 const FMazeParkour& P = Pks[Pi];
                 FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
@@ -560,7 +560,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 const float Up = Feet.Z - LandZ(Maze, Feet.X, Feet.Y);
                 auto Keep = [&](float X) { const FVector Out = (Pt(S, 10.f) - Pt(S, 0.f)).GetSafeNormal2D(); Drive(Tan(S) + Out * FMath::Clamp((X - Across) / 60.f, -.5f, .5f)); };   // along the way, held X across
                 const float Lane = Want == 0 ? P.Side * (TrellisFace - 38.f) : Want == 2 ? WalkAcross : 0.f;
-                const float From = Want == 0 ? P.Bed0 - 300.f : Want == 1 ? -(Hoops - 1) * .5f * HoopStep : Want == 2 ? LadderFoot - 60.f : P.Bed0 - 100.f;
+                const float From = Want == 0 ? P.Bed0 - 300.f : Want == 1 ? -(P.NHoop - 1) * .5f * HoopStep : Want == 2 ? LadderFoot - 60.f : P.Bed0 - 100.f;
                 if (!R->bPlaced)
                 {
                     Put(Pt(From, Lane), Tan(From)); R->Hits0 = AFeyLife::ThornPricks; R->Hits1 = Want == 0 ? Chuck->GetWallSideRuns() : Want == 1 ? Chuck->GetSwingCatches() : Chuck->GetLadderMounts();
@@ -592,7 +592,7 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                     if (bGoing && R->bJumped) Drive(Tan(S));
                     if (!R->bJumped && Since > .8f && Chuck->GetCharacterMovement()->IsMovingOnGround()) { Chuck->JumpPressed(); R->bJumped = true; R->PkLastJump = Now; }
                     else if (Chuck->IsSwinging() && Chuck->GetSwingGrip() != R->PkGrip && Now - R->PkLastJump > .55f) { R->PkGrip = Chuck->GetSwingGrip(); Chuck->JumpPressed(); R->PkLastJump = Now; }
-                    ShotOnce(Chuck->IsSwinging() && Chuck->GetSwingCatches() - R->Hits1 >= 2, TEXT("MazeHoops"));
+                    ShotOnce(Chuck->IsSwinging() && Chuck->GetSwingCatches() - R->Hits1 >= 2, Step == 63 ? TEXT("MazeWayHoops") : TEXT("MazeHoops"));
                 }
                 else   // into the ladder's foot, up, along the walkway and down its steps
                 {
@@ -611,10 +611,10 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 else
                 {
                     const int32 Moves = (Want == 0 ? Chuck->GetWallSideRuns() : Want == 1 ? Chuck->GetSwingCatches() : Chuck->GetLadderMounts()) - R->Hits1;
-                    Check(Want == 1 ? Moves >= Hoops - 1 : Moves > 0, *FString::Printf(TEXT("%s_move"), Names[Want]));
+                    Check(Want == 1 ? Moves >= P.NHoop - 1 : Moves > 0, *FString::Printf(TEXT("%s%s_move"), Step == 63 ? TEXT("way_") : TEXT(""), Names[Want]));
                     if (Want == 2) Check(R->MinDist > WalkUp - 20.f, TEXT("walkway_up"));
-                    Check(AFeyLife::ThornPricks == R->Hits0, *FString::Printf(TEXT("%s_clears_thorns"), Names[Want]));
-                    Check(S > P.Bed1, *FString::Printf(TEXT("%s_past_thorns"), Names[Want]));
+                    Check(AFeyLife::ThornPricks == R->Hits0, *FString::Printf(TEXT("%s%s_clears_thorns"), Step == 63 ? TEXT("way_") : TEXT(""), Names[Want]));
+                    Check(S > P.Bed1, *FString::Printf(TEXT("%s%s_past_thorns"), Step == 63 ? TEXT("way_") : TEXT(""), Names[Want]));
                 }
                 R->bPlaced = false; R->CrackStep = Step + 1; R->PhaseStart = Now; return;
             }

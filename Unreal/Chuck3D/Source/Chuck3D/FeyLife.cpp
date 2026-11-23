@@ -308,6 +308,42 @@ namespace
         S.Pipe(Pts, 2.2f, 3.f, 8, 3, Col(.55f, .42f, .3f, .03f), 1.f);
         for (const float Sd : {-1.f, 1.f}) { const FVector A[] = {FVector(7.f, Sd * 1.f, 1.f), FVector(11.f, Sd * 4.f, 5.f), FVector(13.f, Sd * 7.f, 7.f)}; S.Pipe(A, .4f, .3f, 4, 3, Col(.9f, .8f, .5f, .3f), Sd); }
     }
+    // A small ellipsoid (6 round, 5 rings) on axes F (forward), Rt, Up with radii Rx, Ry, Rz.
+    void Blob(FMapSurf& S, const FVector& C, const FVector& F, const FVector& Rt, const FVector& Up, float Rx, float Ry, float Rz, const FColor& Cl)
+    {
+        const int32 B = S.V.Num();
+        for (int32 I = 0; I <= 4; ++I)
+        {
+            const float Ph = PI * I / 4.f, Cx = FMath::Cos(Ph), Sx = FMath::Sin(Ph);
+            for (int32 J = 0; J < 6; ++J)
+            {
+                const float Th = 2 * PI * J / 6.f; const FVector U(Cx, Sx * FMath::Cos(Th), Sx * FMath::Sin(Th));
+                S.Vert(C + F * (U.X * Rx) + Rt * (U.Y * Ry) + Up * (U.Z * Rz), (F * (U.X / Rx) + Rt * (U.Y / Ry) + Up * (U.Z / Rz)).GetSafeNormal(), FVector2D(J / 6.f, I / 4.f), Cl);
+            }
+        }
+        for (int32 I = 0; I < 4; ++I) for (int32 J = 0; J < 6; ++J)
+        { const int32 A = B + I * 6 + J, A1 = B + I * 6 + (J + 1) % 6; S.TriFacing(A, A1, A + 6, S.N[A]); S.TriFacing(A1, A1 + 6, A + 6, S.N[A1]); }
+    }
+    // A bumblebee (about 6 cm, fey-sized): dark head, furred gold thorax, banded abdomen, two pale wings beating.
+    void Bee(FMapSurf& S, const FVector& C, const FVector& Fwd, float Beat)
+    {
+        const FVector F = Fwd.GetSafeNormal(), Rt = FVector::CrossProduct(FVector::UpVector, F).GetSafeNormal(), Up = FVector::CrossProduct(F, Rt);
+        const FColor Gold = Col(.95f, .66f, .1f, .03f), Black = Col(.03f, .025f, .02f), Wing = Col(.75f, .8f, .85f, .06f);
+        Blob(S, C + F * 2.6f, F, Rt, Up, 1.1f, 1.1f, 1.f, Black);
+        Blob(S, C + F * .9f, F, Rt, Up, 1.4f, 1.55f, 1.45f, Gold);
+        Blob(S, C - F * 1.1f - Up * .2f, F, Rt, Up, 1.f, 1.7f, 1.6f, Black);
+        Blob(S, C - F * 2.4f - Up * .4f, F, Rt, Up, 1.f, 1.6f, 1.5f, Gold);
+        Blob(S, C - F * 3.5f - Up * .6f, F, Rt, Up, .9f, 1.1f, 1.f, Black);
+        for (const float Sd : {1.f, -1.f})
+        {
+            const FVector Root = C + F * .6f + Up * 1.3f + Rt * (Sd * .8f), Out = (Rt * Sd * FMath::Cos(Beat) + Up * FMath::Sin(Beat)).GetSafeNormal();
+            const FVector Nn = FVector::CrossProduct(F, Out).GetSafeNormal();
+            const FVector Q[4] = {Root, Root + Out * 3.4f + F * .5f, Root + Out * 3.9f - F * 1.4f, Root + Out * 1.2f - F * 1.8f};
+            for (const float Fc : {1.f, -1.f})
+            { const int32 I0 = S.Vert(Q[0], Nn * Fc, FVector2D(0, 0), Wing), I1 = S.Vert(Q[1], Nn * Fc, FVector2D(1, 0), Wing), I2 = S.Vert(Q[2], Nn * Fc, FVector2D(1, 1), Wing), I3 = S.Vert(Q[3], Nn * Fc, FVector2D(0, 1), Wing);
+              S.TriFacing(I0, I1, I2, Nn * Fc); S.TriFacing(I0, I2, I3, Nn * Fc); }
+        }
+    }
     void Octa(FMapSurf& S, const FVector& C, float R, const FColor& Cl)
     {
         const FVector D[] = {{R, 0, 0}, {-R, 0, 0}, {0, R, 0}, {0, -R, 0}, {0, 0, R}, {0, 0, -R}};
@@ -1075,7 +1111,9 @@ void AFeyLife::TickMaze(float Dt, AChuckCharacter* Chuck, const FVector& C)
             {
                 const float A = Clock * (2.f + (I % 5) * .4f) + I * 2.399f, Rr = 40.f + 50.f * FMath::Frac(I * .618f) + 18.f * FMath::Sin(Clock * 3.f + I);
                 const FVector Pb = BeeAt + FVector(Rr * FMath::Cos(A), Rr * FMath::Sin(A), 30.f * FMath::Sin(A * 1.7f + I));
-                Octa(S, Pb, 1.6f, I % 3 ? Col(.95f, .72f, .12f, .02f) : Col(.05f, .04f, .02f));
+                const float Wr = 2.f + (I % 5) * .4f;   // (the tangent of its circle, with its bob)
+                const FVector Vel(-Rr * FMath::Sin(A), Rr * FMath::Cos(A), 30.f * 1.7f * FMath::Cos(A * 1.7f + I) * .4f);
+                Bee(S, Pb, Vel * Wr, .5f * FMath::Sin(Clock * 95.f + I * 1.3f));
             }
         }
         Emit(BeeMesh, S, Mats[MPlant], false);

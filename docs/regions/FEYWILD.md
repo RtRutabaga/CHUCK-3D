@@ -303,7 +303,7 @@ The user: "go ahead and do the next 3 stages". Built in `FeyMap` (the maze's sho
 - **The Cloud Staircase.** 56 steps of 34 cm wind up from the heart, from 11 m out to 22 m, over the hedges to a broad cloud landing 19 m up. A new respawn spot is there ("Feywild Cloud Landing"). Each tread is walked on a slab under it, not a column, so the maze's corridors under the stair stay open. Invisible rails keep him from stepping off the high part (from step 30). An invisible wall at the landing's far end is the boundary until the tower is planned; the stair beyond it is still scenery.
 - **Polish.** The 55 ms stutter on reaching the maze was its hedges: eight meshes of about 43,000 triangles, each taking about 45 ms to cook its collision in one frame. They are now 48 parts (eight sectors by six bands), none over about 9 ms (the maze's worst build step 48 ms before, 9.2 ms after). A one-frame spike of about 47 ms at some threshold remains, outside the build steps (not yet found). Each district's plants and creatures are also built a part at a time over several frames (within about 4 ms a frame). Any build part slower than 8 ms is logged (`CHUCK_FEY_SLOW_PART`). The thorn mites are lighter (they read near black).
 - **Checked** (route walk: 0 failures, 0 stuck, every district at the 60 fps cap except the Deepwood at 17.9 ms; `-ChuckFeyMapTest=life` with 0 failures, steps 50 to 57 new): plants appear while he is lost; a revealed plant opens its shortcut and he walks through; the heart's vines stop him, its plant opens them and he walks in; on a hedge top the bees knock him down to the ground; a statue turns; he stands on the landing, the boundary holds him on it, and he climbs the stair from its foot. Stills: `Life_MazeShortcut`, `Life_MazeHeartGate`, `Life_MazeBees`, `Life_CloudLanding`.
-- **Known flaws:** the bees are gold specks, not modelled bees; the statues' turn is a snap made while unseen; the parkour and thorn hazards were not built here (built the same day, below); the stair's treads are long (about 4.3 m each), so the climb is a long walk; nothing here has been played by hand.
+- **Known flaws:** the bees were gold specks (modelled the same day, below); the statues' turn is a snap made while unseen; the parkour and thorn hazards were not built here (built the same day, below); the stair's treads are long (about 4.3 m each), so the climb is a long walk; nothing here has been played by hand.
 
 ## The maze's parkour and thorns (2026-11-23)
 
@@ -325,12 +325,18 @@ The user: "Do the parkour and thorn hazards". Built in `FeyMap` (where they go, 
   - He crawls through a root gap.
 
   Stills: `Life_MazeThorns`, `Life_MazeTrellisRun`, `Life_MazeHoops`, `Life_MazeWalkway`, `Life_MazeRootGap`.
+- **Second round** (the same day; the user: "proceed" on the flaws above):
+  - **On the way through.** One two-cell straight run of the way itself gets three ivy hoops over a 1.8 m bed, placed only where the way comes in before the first hoop and goes out after the last. The other such run keeps its short bed to jump. Checked (`=life` step 63): he catches all three and lands past the thorns with no prick. Still `Life_MazeWayHoops`.
+  - **The walkway** is weathered timber (`M_FeyPlank`: the bark's shader on the `T_rough_wood` set, mossed only in a few patches, not on every face that looks up). Its steps are boards (treads and risers on two stringers, open beneath), with each step's block kept as collision only.
+  - **The bees** are modelled: a dark head, a furred gold thorax, a banded abdomen and two pale wings beating, each flying along its circle. Still `Life_MazeBees`.
+  - Checked: `=life` from step 50, 0 failures (`Local/feypk-4.log`).
 - **Known flaws:**
-  - The walkway's planks and steps read as mossy green blocks (the bark material mosses every upward face).
   - The brambles are thin canes, with the thorns small at a distance.
   - The ivy leaves are simple cards.
   - The trellis hides part of the view when the camera is beside it.
-  - The main parkour is off the way through, not on it.
+  - Only one piece (the three hoops) is on the way through; the trellises and walkways stay off it.
+  - The walkway's grain follows the world, not each board.
+  - The bees are drawn in fresh geometry every frame they show (up to 56).
   - Nothing has been played by hand.
 
 ## The wonder pass (planned 2026-11-22)
