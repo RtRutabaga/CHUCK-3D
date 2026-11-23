@@ -1,0 +1,25 @@
+{
+  "provider": "ambientCG (https://ambientcg.com/view?id=Fabric084)",
+  "license": "CC0-1.0",
+  "source": "https://ambientcg.com/get?file=Fabric084_2K-JPG.zip",
+  "zip_sha256": "619cfd4c183f66711f890d1d96d3240ef4a0197a35651e0515e39465cff38a60",
+  "downloaded": "2026-11-22 (Claude, at the user's request)",
+  "files": [
+    {
+      "file": "Fabric084_2K-JPG_Color.jpg",
+      "sha256": "125894dd55ecab42867b1ffe607992da0897d69a6c86272b29040c5f2f7a2a60"
+    },
+    {
+      "file": "Fabric084_2K-JPG_NormalDX.jpg",
+      "sha256": "5dd83f77f67381d23059ef27628756196f06145a64be83589a11fb8616379b47"
+    },
+    {
+      "file": "Fabric084_2K-JPG_Roughness.jpg",
+      "sha256": "6728fbcda0dd585bbdbe79ab4f7a9282d7af89d2f16965640ad707772819af7b"
+    },
+    {
+      "file": "Fabric084_2K-JPG_AmbientOcclusion.jpg",
+      "sha256": "6a9c4d31a89f528f3e902e4ab79d60b5b9055cd3289a1dbe72ba72327417582b"
+    }
+  ]
+}

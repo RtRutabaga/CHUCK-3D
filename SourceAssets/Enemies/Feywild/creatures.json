@@ -1,0 +1,32 @@
+{
+ "SK_Redcap": {
+  "uv_cm": 378.11
+ },
+ "SM_DisplacerBody": {
+  "uv_cm": 309.61
+ },
+ "SM_DisplacerHead": {
+  "uv_cm": 101.88
+ },
+ "SM_DisplacerUpper": {
+  "uv_cm": 114.37
+ },
+ "SM_DisplacerLower": {
+  "uv_cm": 86.02
+ },
+ "SM_DisplacerTail": {
+  "uv_cm": 175.56
+ },
+ "SM_DisplacerTentacle": {
+  "uv_cm": 45.44
+ },
+ "SM_DisplacerPad": {
+  "uv_cm": 63.64
+ },
+ "SM_ThornMiteBody": {
+  "uv_cm": 45.18
+ },
+ "SM_ThornMiteLeg": {
+  "uv_cm": 17.24
+ }
+}

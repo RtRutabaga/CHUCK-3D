@@ -5,6 +5,13 @@
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "CigarettePickup.h"
+#include "TempleSkeleton.h"
+#include "ChultTempleInterior.h"
+#include "ChuckFlames.h"
+#include "Components/AudioComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/PointLightComponent.h"
@@ -23,15 +30,25 @@ namespace
     constexpr float Stand = 34.65f;
     float Smooth(float A, float B, float X) { const float T = FMath::Clamp((X - A) / (B - A), 0.f, 1.f); return T * T * (3 - 2 * T); }
     FColor Col(float R, float G, float B, float A = 0.f) { return FLinearColor(R, G, B, A).ToFColor(false); }
-    enum EMat { MPetal, MBlade, MPlant, MRoot };
-    const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyPetal.M_FeyPetal"), TEXT("/Game/Art/Feywild/M_FeyBlade.M_FeyBlade"), TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot")};
+    enum EMat { MPetal, MBlade, MPlant, MRoot, MGround, MHedge, MStone };
+    const TCHAR* MatPaths[] = {TEXT("/Game/Art/Feywild/M_FeyPetal.M_FeyPetal"), TEXT("/Game/Art/Feywild/M_FeyBlade.M_FeyBlade"), TEXT("/Game/Art/Feywild/M_FeyPlant.M_FeyPlant"), TEXT("/Game/Art/Feywild/M_FeyRoot.M_FeyRoot"),
+                               TEXT("/Game/Art/Feywild/M_FeyGround.M_FeyGround"), TEXT("/Game/Art/Feywild/M_FeyHedge.M_FeyHedge"), TEXT("/Game/Art/Feywild/M_FeyStone.M_FeyStone")};
     constexpr float OrchidBeat = 2.4f, OrchidWind = .7f, SeedSpeed = 1000.f, SeedRadius = 3.f, MothRadius = 22.f;
+    enum ESfx { SFlowerOpen, SFlowerClose, SVines, SOrchidSwell, SOrchidSpit, SOrchidHit, SPads, SMoth, SFire, SCauldron, SBees, SfxCount };
+    const TCHAR* SfxNames[] = {TEXT("SFX_FeyFlowerOpen_00"), TEXT("SFX_FeyFlowerClose_00"), TEXT("SFX_FeyVines_00"), TEXT("SFX_FeyOrchidSwell_00"), TEXT("SFX_FeyOrchidSpit_00"),
+                               TEXT("SFX_FeyOrchidHit_00"), TEXT("SFX_FeyPadsRise_00"), TEXT("SFX_FeyMothLoop_00"), TEXT("SFX_FeyFireLoop_00"), TEXT("SFX_FeyCauldronLoop_00"), TEXT("SFX_FeyBeeLoop_00")};
 
     // ------------------------------------------------------------------ what stands where (local Fey frame)
     struct FPlace
     {
         TArray<FFeyFlower> Flowers; TArray<FFeyVines> Vines; TArray<FVector> Rocks; TArray<FVector> Cigs;   // rocks (X, Y, scale)
         TArray<FFeyPollen> Pollen; TArray<FFeyOrchid> Orchids; TArray<FFeyMoth> Moths; TArray<FVector> Clear;
+        // (part two, 2026-11-22) mites (X, Y, yaw); the camp (X, Y; 0 none), its way out toward the ring, its redcaps (X, Y, yaw),
+        // the hollow behind it (X, Y, radius); the beast's round, the hollow logs (X, Y, yaw) and their refuges; pads a flower
+        // raises and the islet they reach (X, Y, radius).
+        TArray<FVector> Mites, Redcaps, Round, Logs; TArray<FFeyRefuge> Refuges; TArray<FFeyPadRise> Rises;
+        FVector2D Camp = FVector2D::ZeroVector, CampOut = FVector2D::ZeroVector; FVector Cache = FVector::ZeroVector, Islet = FVector::ZeroVector;
+        FVector2D Patrol = FVector2D::ZeroVector; TArray<FVector2D> Statues;   // (stage 6: the maze's redcaps keep near Patrol; statues that turn)
     };
     FVector2D Perp(const FVector2D& D) { return FVector2D(-D.Y, D.X); }
     const FPlace& Placed(int32 D)
@@ -62,6 +79,66 @@ namespace
                     const FVector2D At = FMath::Lerp(Na, Nb, .25f + .25f * K) - Pn * 650.f; FFeyOrchid O;
                     O.Pos = FVector(At.X, At.Y, LandZ(Orchard, At.X, At.Y)); O.Dir = FVector(Pn.X, Pn.Y, 0.f); O.Phase = K * OrchidBeat / 3.f; P.Orchids.Add(O); for (int32 Q = 0; Q < 6; ++Q) { const FVector2D Lp = At + Pn * (Q * 260.f); P.Clear.Add(FVector(Lp.X, Lp.Y, 220.f)); }
                 }
+            }
+            {   // (part two) Thorn mites after the pollen's lesson, by the way out to the root tunnel.
+                FPlace& P = Out[Orchard];
+                for (const FVector& M : {FVector(-44200.f, 3300.f, 200.f), FVector(-44600.f, 3700.f, 160.f), FVector(-44000.f, 3900.f, 230.f)}) P.Mites.Add(M);
+            }
+            {   // (part two) The Lily Mere: on the land inside the deep water, a flower whose scratch raises two pads to an islet
+                // (FeyMap.cpp's moat: centre (-73500, 15000), deep from 1500 to 2650 out). Cigarettes on the islet.
+                FPlace& P = Out[LilyMere]; const FVector2D Mc(-73500.f, 15000.f); const float A = FMath::DegreesToRadians(140.f), Af = FMath::DegreesToRadians(150.f);
+                const FVector2D Dir(FMath::Cos(A), FMath::Sin(A)), Fp = Mc + FVector2D(FMath::Cos(Af), FMath::Sin(Af)) * 1280.f, Ip = Mc + Dir * 1900.f;
+                FFeyPadRise Rise; for (const float R : {1572.f, 1690.f}) { const FVector2D Q = Mc + Dir * R; Rise.Pads.Add(FVector(Q.X, Q.Y, 48.f)); } P.Rises.Add(Rise);
+                P.Islet = FVector(Ip.X, Ip.Y, 165.f);
+                FFeyFlower F; F.Pos = FVector(Fp.X, Fp.Y, LandZ(LilyMere, Fp.X, Fp.Y)); F.Yaw = 300.f; F.Pads = 0; P.Flowers.Add(F); P.Clear.Add(FVector(Fp.X, Fp.Y, 180.f));
+                for (const FVector2D& C : {FVector2D(-20.f, 10.f), FVector2D(15.f, 18.f), FVector2D(5.f, -22.f)}) P.Cigs.Add(FVector(Ip.X + C.X, Ip.Y + C.Y, 24.f));
+            }
+            {   // (part two) The Deepwood: mites by two of its paths; Redcap Hollow's camp.
+                FPlace& P = Out[Deepwood];
+                for (const FVector& M : {FVector(-67100.f, -24300.f, 0.f), FVector(-66800.f, -24600.f, 90.f), FVector(-67400.f, -24650.f, 200.f),
+                                         FVector(-82600.f, -27400.f, 30.f), FVector(-82300.f, -27800.f, 250.f), FVector(-82900.f, -27900.f, 120.f)}) P.Mites.Add(M);
+                const TArray<FVector2D>& Sp = SpurOf(Deepwood); P.Camp = Sp.Last(); P.CampOut = (Sp[Sp.Num() - 2] - P.Camp).GetSafeNormal();
+                const FVector2D Dp = P.CampOut, Pp = Perp(Dp);
+                for (int32 K = -1; K <= 1; ++K) { const FVector2D R = P.Camp - Dp * 240.f + Pp * (K * 215.f); P.Redcaps.Add(FVector(R.X, R.Y, FMath::RadiansToDegrees(FMath::Atan2(P.Camp.Y - R.Y, P.Camp.X - R.X)))); }
+                const FVector2D Ch = P.Camp + Pp * 1150.f - Dp * 200.f; P.Cache = FVector(Ch.X, Ch.Y, 300.f);
+                for (const FVector2D& C : {FVector2D(-15.f, 8.f), FVector2D(12.f, 14.f), FVector2D(0.f, -16.f)}) P.Cigs.Add(FVector(Ch.X + C.X, Ch.Y + C.Y, LandZ(Deepwood, Ch.X + C.X, Ch.Y + C.Y)));
+                P.Clear.Add(FVector(Ch.X, Ch.Y, 560.f)); P.Clear.Add(FVector(P.Camp.X, P.Camp.Y, 1100.f));
+            }
+            {   // (part two) Highmeadow: the displacer beast's round across the way to the maze and the overlook's spur; hollow logs
+                // beside the road and the spur; pollen on the road to the stair.
+                FPlace& P = Out[Highmeadow];
+                for (const FVector& L : {FVector(-104639.f, 3865.f, 161.6f), FVector(-109800.f, 4670.f, 180.f), FVector(-104157.f, 7303.f, 129.8f), FVector(-108782.f, 11034.f, 149.3f)})
+                { P.Logs.Add(L); FFeyRefuge Rf; Rf.C = FVector2D(L.X, L.Y); Rf.R = 270.f; P.Refuges.Add(Rf); P.Clear.Add(FVector(L.X, L.Y, 420.f)); }
+                for (const FVector2D& Q : {FVector2D(-105500.f, 8600.f), FVector2D(-107500.f, 12600.f), FVector2D(-110800.f, 10600.f), FVector2D(-110200.f, 7600.f), FVector2D(-107200.f, 6900.f)})
+                    P.Round.Add(FVector(Q.X, Q.Y, LandZ(Highmeadow, Q.X, Q.Y)));
+                FFeyPollen Pb; Pb.C = FVector2D(-107800.f, 5000.f); Pb.R = FVector2D(260.f, 380.f); Pb.Yaw = 180.f; P.Pollen.Add(Pb); P.Clear.Add(FVector(Pb.C.X, Pb.C.Y, 440.f));
+            }
+            {   // (stage 6, 2026-11-22) The Great Hedge Maze: the heart behind vines a hit plant opens; a hidden hit plant at each
+                // shortcut, revealed the longer he is lost; mites in two dead ends; two redcaps near the middle of the way; orchids
+                // down straight runs; moths by the heart; statues in dead ends near the way.
+                FPlace& P = Out[Maze]; FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                const float Ha = MazeHeartAngle(); const FVector2D In(FMath::Cos(Ha), FMath::Sin(Ha)), Across(-In.Y, In.X);
+                const FVector2D Gate = Hub + In * R0, Fp = Hub + In * (R0 + 170.f) + Across * 230.f;
+                FFeyVines V; V.C = FVector(Gate.X, Gate.Y, LandZ(Maze, Gate.X, Gate.Y)); V.Yaw = FMath::RadiansToDegrees(Ha) + 90.f; V.Width = 300.f; V.Height = 330.f; P.Vines.Add(V);
+                FFeyFlower F; F.Pos = FVector(Fp.X, Fp.Y, LandZ(Maze, Fp.X, Fp.Y)); F.Yaw = 40.f; F.Vines = 0; P.Flowers.Add(F);
+                for (int32 K = 0; K < MazeShortcuts().Num(); ++K)
+                { const FVector2D Q = MazeShortcuts()[K].Plant; FFeyFlower Fs; Fs.Pos = FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y)); Fs.Yaw = K * 61.f; Fs.Sc = K; Fs.bHidden = true; P.Flowers.Add(Fs); }
+                const TArray<FVector2D>& De = MazeDeadEnds(); const TArray<FVector2D>& Rt = MazeRoute();
+                for (const int32 K : {De.Num() / 3, 2 * De.Num() / 3}) if (De.IsValidIndex(K)) for (int32 M = 0; M < 2; ++M) P.Mites.Add(FVector(De[K].X + M * 60.f, De[K].Y - M * 40.f, M * 140.f));
+                P.Patrol = Rt[Rt.Num() / 2];
+                for (int32 K = 0; K < 2; ++K) { const FVector2D Q = Rt[Rt.Num() / 2 + K * 2]; P.Redcaps.Add(FVector(Q.X, Q.Y, K * 180.f)); }
+                for (int32 K = 0; K < MazeLanes().Num(); ++K)
+                {
+                    const FVector& L = MazeLanes()[K]; FFeyOrchid O; const FVector2D D2(FMath::Cos(L.Z), FMath::Sin(L.Z));
+                    const FVector2D At = FVector2D(L.X, L.Y) - D2 * 60.f + FVector2D(-D2.Y, D2.X) * 70.f;
+                    O.Pos = FVector(At.X, At.Y, LandZ(Maze, At.X, At.Y)); O.Dir = FVector(D2.X, D2.Y, 0.f); O.Range = 900.f; O.Phase = K * .8f; P.Orchids.Add(O);
+                }
+                for (int32 K = 0; K < 2; ++K)
+                {
+                    const float A = Ha + (K ? -.35f : .35f); const FVector2D Q = Hub + FVector2D(FMath::Cos(A), FMath::Sin(A)) * (R0 + Pitch * 1.5f); FFeyMoth M;
+                    M.Home = FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y) + 72.f); M.Axis = FVector(-FMath::Sin(A), FMath::Cos(A), 0.f); M.Range = 260.f; M.Bob = 24.f; M.Rate = 1.5f + .2f * K; M.Phase = 2.1f * K; P.Moths.Add(M);
+                }
+                for (int32 K = 3; K < De.Num() && P.Statues.Num() < 5; K += FMath::Max(1, De.Num() / 5)) P.Statues.Add(De[K]);
             }
             {   // The Moonmoth Fen: moths across the way out to it.
                 FPlace& P = Out[LilyMere]; const TArray<FVector2D>& Sp = SpurOf(LilyMere); const FVector2D S0 = Sp[0], S1 = Sp.Last(), Ds = (S1 - S0).GetSafeNormal();
@@ -261,6 +338,9 @@ void AFeyLife::EndPlay(const EEndPlayReason::Type Reason)
 {
     GLife.RemoveAll([this](const TWeakObjectPtr<AFeyLife>& P) { return !P.IsValid() || P.Get() == this; });
     for (AActor* A : Spawned) if (IsValid(A)) A->Destroy();
+    for (AActor* A : Mites) if (IsValid(A)) A->Destroy();
+    for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
+    if (IsValid(Beast)) Beast->Destroy();
     Super::EndPlay(Reason);
 }
 
@@ -275,7 +355,14 @@ void AFeyLife::Build(int32 D)
     District = D; GLife.Add(this);
     const FPlace& P = Placed(D);
     for (const TCHAR* Path : MatPaths) Mats.Add(LoadObject<UMaterialInterface>(nullptr, Path));
+    for (const TCHAR* Name : SfxNames) Sfx.Add(LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Art/Audio/SFX/%s.%s"), Name, Name)));
+    Falloff = NewObject<USoundAttenuation>(this); Falloff->Attenuation.bAttenuate = Falloff->Attenuation.bSpatialize = true;
+    Falloff->Attenuation.AttenuationShape = EAttenuationShape::Sphere; Falloff->Attenuation.AttenuationShapeExtents = FVector(150.f); Falloff->Attenuation.FalloffDistance = 2200.f;
     Flowers = P.Flowers; Vines = P.Vines; Pollen = P.Pollen; Orchids = P.Orchids; Moths = P.Moths;
+    PadRises = P.Rises; Refuges = P.Refuges;
+    // (2026-11-22, stage 8) The rest is built a part at a time over the next frames (Tick), not all in this one.
+    Pending.Add([this, D, &P]()
+    {
     // Flowers: body (leaves, stem) once, the head rebuilt as it changes.
     for (int32 I = 0; I < Flowers.Num(); ++I)
     {
@@ -286,7 +373,8 @@ void AFeyLife::Build(int32 D)
         Emit(NewMesh(Pivot, *FString::Printf(TEXT("FlowerStem%d"), I)), Stem, Mats[MPlant]);
         auto* Head = NewMesh(Pivot, *FString::Printf(TEXT("FlowerHead%d"), I));
         auto* Stamen = NewMesh(Head, *FString::Printf(TEXT("FlowerStamens%d"), I));
-        FlowerHeads.Add(Head); FlowerHeads.Add(Stamen);
+        FlowerHeads.Add(Head); FlowerHeads.Add(Stamen); FlowerPivots.Add(Pivot);
+        if (Flowers[I].bHidden) { Flowers[I].Grow = 0.f; Pivot->SetVisibility(false, true); Pivot->SetRelativeScale3D(FVector(.01f)); }
         ShowFlower(I);
     }
     for (int32 I = 0; I < Vines.Num(); ++I)
@@ -313,6 +401,9 @@ void AFeyLife::Build(int32 D)
             R->SetCollisionProfileName(TEXT("BlockAll")); R->RegisterComponent();
         }
     for (const FVector& C : P.Cigs) if (ACigarettePickup* Cg = ACigarettePickup::Spawn(GetWorld(), FeyWorld(C + FVector(0, 0, 30.f)), FVector::ZeroVector, FeyWorld(C).Z)) Spawned.Add(Cg);   // (gone with the district)
+    });
+    Pending.Add([this, D, &P]()
+    {
     // Pollen: low gold flowers thick over each bed, and spores over it.
     if (Pollen.Num())
     {
@@ -335,6 +426,9 @@ void AFeyLife::Build(int32 D)
         Emit(NewMesh(nullptr, TEXT("PollenBlooms")), Bloom, Mats[MPlant], false);
         Spores = SporeBase; SporeMesh = NewMesh(nullptr, TEXT("PollenSpores"));
     }
+    });
+    Pending.Add([this, D, &P]()
+    {
     // Orchids.
     for (int32 I = 0; I < Orchids.Num(); ++I)
     {
@@ -366,10 +460,37 @@ void AFeyLife::Build(int32 D)
         auto* L = NewObject<UPointLightComponent>(this); L->SetupAttachment(Pivot); L->SetLightColor(FLinearColor(1.f, .78f, .5f)); L->SetIntensityUnits(ELightUnits::Candelas);
         L->SetIntensity(45.f); L->SetAttenuationRadius(480.f); L->SetCastShadows(false); L->RegisterComponent();
         MothPivots.Add(Pivot);
+        Loop(SMoth, Pivot, FVector::ZeroVector, .55f, 900.f);   // (its wings, softly)
         Moths[I].Last = Moths[I].Home;
     }
+    });
+    Pending.Add([this, D, &P]()
+    {
+    // (part two) The creatures (not while the walker is calmed), the camp, the refuges, the pads.
+    BuildPadRise(); BuildRefuges();
+    });
+    Pending.Add([this, D, &P]()
+    {
+    BuildCamp();
+    });
+    Pending.Add([this, D, &P]()
+    {
+    BuildMaze();
+    });
+    Pending.Add([this, D, &P]()
+    {
+
+    if (!bCalm)
+    {
+        FActorSpawnParameters Sp; Sp.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        for (const FVector& M : P.Mites) if (AFeyMite* Mt = GetWorld()->SpawnActor<AFeyMite>(FeyWorld(FVector(M.X, M.Y, LandZ(D, M.X, M.Y))), FRotator::ZeroRotator, Sp)) { Mt->Init(FVector(M.X, M.Y, LandZ(D, M.X, M.Y)), M.Z); Mites.Add(Mt); }
+        SpawnRedcaps();
+        if (P.Round.Num()) if ((Beast = GetWorld()->SpawnActor<AFeyDisplacer>(FeyWorld(P.Round[0]), FRotator::ZeroRotator, Sp)) != nullptr) Beast->Init(P.Round, Refuges);
+    }
     if (auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0))) Respawns = Chuck->GetRespawns();
-    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num());
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BUILT district=%s flowers=%d vines=%d pollen=%d orchids=%d moths=%d mites=%d redcaps=%d beast=%d refuges=%d pads=%d"), FeyMap::District(D).Name, Flowers.Num(), Vines.Num(), Pollen.Num(), Orchids.Num(), Moths.Num(),
+        Mites.Num(), Redcaps.Num(), Beast != nullptr, Refuges.Num(), PadRises.Num() ? PadRises[0].Pads.Num() : 0);
+    });
 }
 
 void AFeyLife::ShowFlower(int32 I)
@@ -387,9 +508,17 @@ void AFeyLife::ShowFlower(int32 I)
 
 void AFeyLife::ResetAll()
 {
+    if (Pending.Num()) return;   // (not built yet: nothing to reset)
     for (int32 I = 0; I < Flowers.Num(); ++I) { Flowers[I].Open = Flowers[I].Want = 0.f; Flowers[I].Pulse = -1.f; ShowFlower(I); }
     for (FFeyVines& V : Vines) V.Up = V.Want = 1.f;
+    for (FFeyPadRise& R : PadRises) R.Up = R.Want = 0.f;
+    for (int32 K = 0; K < ScUp.Num(); ++K) ScUp[K] = ScWant[K] = 1.f;   // (the shortcuts close again; the plants once revealed stay)
+    if (bCalm && District == Maze && Flowers.Num() && Vines.Num()) { Flowers[0].Open = Flowers[0].Want = 1.f; Vines[0].Up = Vines[0].Want = 0.f; ShowFlower(0); }   // (the walker goes straight in)
     Seeds.Reset();
+    for (AFeyMite* M : Mites) if (IsValid(M)) M->ResetMite();
+    if (IsValid(Beast)) Beast->ResetBeast();
+    for (AActor* A : Redcaps) if (IsValid(A)) A->Destroy();
+    Redcaps.Reset(); SpawnRedcaps();
 }
 
 bool AFeyLife::TryScratch(const FVector& Location, const FVector& Ahead, float Reach)
@@ -398,6 +527,7 @@ bool AFeyLife::TryScratch(const FVector& Location, const FVector& Ahead, float R
     for (int32 I = 0; I < Flowers.Num(); ++I)
     {
         FFeyFlower& F = Flowers[I]; const FVector To = F.Pos - L;
+        if (F.bHidden || F.Grow < .9f) continue;
         if (To.Size2D() - 24.f > Reach || FMath::Abs(To.Z + Stand) > 90.f) continue;
         if (FVector::DotProduct(To.GetSafeNormal2D(), Ahead.GetSafeNormal2D()) < .2f && To.Size2D() > 30.f) continue;
         bAny = true;
@@ -427,6 +557,12 @@ FVector AFeyLife::MothAt(int32 I) const
 void AFeyLife::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
+    if (Pending.Num())   // still building: a part or more each frame, within about 4 ms
+    {
+        const double T0 = FPlatformTime::Seconds();
+        do { TFunction<void()> F = MoveTemp(Pending[0]); Pending.RemoveAt(0); F(); } while (Pending.Num() && FPlatformTime::Seconds() - T0 < .004);
+        if (Pending.Num()) return;
+    }
     const float Dt = FMath::Clamp(DeltaSeconds, 0.f, .05f); Clock += Dt;
     auto* Chuck = Cast<AChuckCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
     if (!Chuck) return;
@@ -439,10 +575,19 @@ void AFeyLife::Tick(float DeltaSeconds)
         if (F.Pulse >= 0.f)
         {
             F.Pulse += Dt;
+            if (F.Pulse > .7f && F.Pulse - Dt <= .7f)
+            {
+                Play(F.Want > .5f ? SFlowerOpen : SFlowerClose, F.Pos + FVector(0, 0, 70.f));
+                if (F.Vines >= 0 && Vines.IsValidIndex(F.Vines)) Play(SVines, Vines[F.Vines].C + FVector(0, 0, 100.f));
+                if (F.Sc >= 0) Play(SVines, F.Pos + FVector(0, 0, 150.f));
+                if (F.Pads >= 0 && PadRises.IsValidIndex(F.Pads) && PadRises[F.Pads].Pads.Num()) Play(SPads, PadRises[F.Pads].Pads[0]);
+            }
             if (F.Pulse > .7f)
             {
                 F.Open = FMath::FInterpConstantTo(F.Open, F.Want, Dt, 1.2f);
                 if (F.Vines >= 0) Vines[F.Vines].Want = 1.f - F.Want;
+                if (F.Pads >= 0 && PadRises.IsValidIndex(F.Pads)) PadRises[F.Pads].Want = F.Want;
+                if (F.Sc >= 0 && ScWant.IsValidIndex(F.Sc)) ScWant[F.Sc] = 1.f - F.Want;
             }
             if (F.Pulse > .7f && FMath::IsNearlyEqual(F.Open, F.Want)) F.Pulse = -1.f;
         }
@@ -462,6 +607,23 @@ void AFeyLife::Tick(float DeltaSeconds)
         const bool bShut = V.Up > .5f;
         if ((VineBoxes[I]->GetCollisionEnabled() != ECollisionEnabled::NoCollision) != bShut) VineBoxes[I]->SetCollisionEnabled(bShut ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
     }
+    if (District == Maze) TickMaze(Dt, Chuck, C);
+    // (part two) Pads rising out of the deep water (and sinking back), solid once up; the camp's fire flickering.
+    for (int32 R = 0, Pi = 0; R < PadRises.Num(); ++R)
+    {
+        FFeyPadRise& Pr = PadRises[R]; Pr.Up = FMath::FInterpConstantTo(Pr.Up, Pr.Want, Dt, .6f);
+        for (int32 K = 0; K < Pr.Pads.Num(); ++K, ++Pi)
+        {
+            if (!RisePadMeshes.IsValidIndex(Pi)) break;
+            const float U = Smooth(K * .25f, K * .25f + .75f, Pr.Up);
+            const FVector& Pd = Pr.Pads[K];
+            RisePadMeshes[Pi]->SetRelativeLocationAndRotation(FVector(Pd.X, Pd.Y, FMath::Lerp(-70.f, .4f, U) + 2.f * FMath::Sin(Clock * 1.3f + K) * U), FRotator(FMath::Lerp(25.f, 0.f, U), K * 77.f, FMath::Lerp(-15.f, 0.f, U)));
+            RisePadMeshes[Pi]->SetVisibility(U > .02f);
+            const bool bSolid = U > .9f;
+            if ((RisePadBoxes[Pi]->GetCollisionEnabled() != ECollisionEnabled::NoCollision) != bSolid) RisePadBoxes[Pi]->SetCollisionEnabled(bSolid ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+        }
+    }
+    if (FireLight) { FireFlicker = FMath::FInterpTo(FireFlicker, FMath::FRandRange(.75f, 1.15f), Dt, 12.f); FireLight->SetIntensity(55.f * FireFlicker); }
     // Spores drift up and round, then begin again.
     if (SporeMesh && Spores.Num())
     {
@@ -481,9 +643,11 @@ void AFeyLife::Tick(float DeltaSeconds)
         const float T = FMath::Fmod(Clock + O.Phase, OrchidBeat), Wind = Smooth(OrchidBeat - OrchidWind, OrchidBeat, T), After = Smooth(.25f, 0.f, T);
         OrchidBulbs[I]->SetRelativeScale3D(FVector(1.f + .35f * Wind - .15f * After));
         OrchidLights[I]->SetIntensity(70.f * Wind + 25.f * After);
+        if (!OrchidSwelled.IsValidIndex(I)) OrchidSwelled.SetNumZeroed(Orchids.Num());
+        if (T > OrchidBeat - OrchidWind && !OrchidSwelled[I]) { OrchidSwelled[I] = true; Play(SOrchidSwell, O.Pos + FVector(0, 0, 100.f), .7f); }
         if (T < .1f && !O.bFired)
         {
-            O.bFired = true; ++OrchidShots;
+            O.bFired = true; ++OrchidShots; OrchidSwelled[I] = false; Play(SOrchidSpit, O.Pos + FVector(0, 0, 100.f));
             FFeySeed Sd; Sd.P = OrchidBulbs[I]->GetComponentLocation() - GetActorLocation() + O.Dir * 14.f; Sd.P.Z = O.Pos.Z + 48.f; Sd.V = O.Dir * SeedSpeed; Sd.Life = O.Range / SeedSpeed;
             Seeds.Add(Sd);
         }
@@ -500,10 +664,11 @@ void AFeyLife::Tick(float DeltaSeconds)
             const FVector Near = FMath::ClosestPointOnSegment(Sd.P, Feet + FVector(0, 0, 8.f), Feet + FVector(0, 0, 58.f));
             if (!bCalm && FVector::Dist(Sd.P, Near) < SeedRadius + 15.f && !Chuck->IsAstral())
             {
+                Play(SOrchidHit, Sd.P, .8f);
                 if (Chuck->TakeBite(FeyWorld(C - Sd.V.GetSafeNormal() * 100.f), 1, true, false)) { ++OrchidHits; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_ORCHID_HIT sanity=%d"), Chuck->GetSanity()); }
                 Seeds.RemoveAt(I); continue;
             }
-            if (bStop) Seeds.RemoveAt(I);
+            if (bStop) { if (Sd.Life > 0.f) Play(SOrchidHit, Sd.P, .5f); Seeds.RemoveAt(I); }
         }
         FMapSurf S; for (const FFeySeed& Sd : Seeds) Octa(S, Sd.P, SeedRadius, Col(.5f, .2f, .12f, .02f));
         Emit(SeedMesh, S, Mats[MPlant], false);
@@ -526,6 +691,384 @@ void AFeyLife::Tick(float DeltaSeconds)
     }
 }
 
+// ------------------------------------------------------------------ part two (2026-11-22): the camp, the refuges, the pads
+namespace
+{
+    // A hollow log along X, centred at the origin: bark outside, worn wood inside, open at both ends.
+    void HollowLog(FMapSurf& S, float Len, float Ro, float Ri, float Seed)
+    {
+        constexpr int32 Nx = 14, Na = 18;
+        auto Ring = [&](int32 I, float R0, bool bOut)
+        {
+            TArray<int32> Ids; const float X = FMath::Lerp(-Len * .5f, Len * .5f, float(I) / Nx);
+            for (int32 J = 0; J < Na; ++J)
+            {
+                const float A = 2 * PI * J / Na, N = FMath::PerlinNoise2D(FVector2D(X / 90.f + Seed, J * .7f));
+                const float R = R0 * (1.f + (bOut ? .07f : .04f) * N) * (1.f + (bOut ? .06f : 0.f) * FMath::Sin(X / 60.f + Seed));
+                const FVector Rd(0.f, FMath::Cos(A), FMath::Sin(A));
+                Ids.Add(S.Vert(FVector(X, 0, 0) + Rd * R, bOut ? Rd : -Rd, FVector2D(X / 120.f, J / float(Na) * 3.f), bOut ? Col(.33f, .62f + .12f * N, 0.f) : Col(.42f, .4f, 0.f)));
+            }
+            return Ids;
+        };
+        TArray<TArray<int32>> Out, In;
+        for (int32 I = 0; I <= Nx; ++I) { Out.Add(Ring(I, Ro, true)); In.Add(Ring(I, Ri, false)); }
+        for (int32 I = 0; I < Nx; ++I)
+            for (int32 J = 0; J < Na; ++J)
+            {
+                const int32 J1 = (J + 1) % Na;
+                const FVector Mo = (S.V[Out[I][J]] + S.V[Out[I + 1][J1]]) * .5f, Mi = (S.V[In[I][J]] + S.V[In[I + 1][J1]]) * .5f;
+                const FVector No = FVector(0, Mo.Y, Mo.Z).GetSafeNormal();
+                S.TriFacing(Out[I][J], Out[I + 1][J], Out[I + 1][J1], No); S.TriFacing(Out[I][J], Out[I + 1][J1], Out[I][J1], No);
+                const FVector Ni = -FVector(0, Mi.Y, Mi.Z).GetSafeNormal();
+                S.TriFacing(In[I][J], In[I + 1][J], In[I + 1][J1], Ni); S.TriFacing(In[I][J], In[I + 1][J1], In[I][J1], Ni);
+            }
+        for (const int32 I : {0, Nx})   // the ends: a ring of worn wood
+            for (int32 J = 0; J < Na; ++J)
+            {
+                const int32 J1 = (J + 1) % Na; const FVector Ne(I ? 1.f : -1.f, 0, 0);
+                S.TriFacing(Out[I][J], In[I][J], In[I][J1], Ne); S.TriFacing(Out[I][J], In[I][J1], Out[I][J1], Ne);
+            }
+    }
+    // Ragged cloth hung between two edges A0-A1 (top) and B0-B1 (bottom), sagging, its lower edge torn.
+    void Cloth(FMapSurf& S, const FVector& A0, const FVector& A1, const FVector& B0, const FVector& B1, const FColor& Cl, float Seed)
+    {
+        constexpr int32 Nu = 8, Nv = 6; const int32 Base = S.V.Num();
+        for (int32 V = 0; V <= Nv; ++V)
+            for (int32 U = 0; U <= Nu; ++U)
+            {
+                const float Uf = float(U) / Nu, Vf = float(V) / Nv;
+                const float Tear = V == Nv ? 18.f * FMath::Abs(FMath::Sin(Uf * 9.f + Seed)) : 0.f;
+                const FVector Top = FMath::Lerp(A0, A1, Uf), Bot = FMath::Lerp(B0, B1, Uf);
+                FVector P = FMath::Lerp(Top, Bot, Vf) - FVector(0, 0, 10.f * FMath::Sin(PI * Uf) * FMath::Sin(PI * Vf) + Tear);
+                const FVector N = FVector::CrossProduct(A1 - A0, B0 - A0).GetSafeNormal();
+                S.Vert(P, N, FVector2D(Uf, Vf), Cl);
+            }
+        for (int32 V = 0; V < Nv; ++V) for (int32 U = 0; U < Nu; ++U) { const int32 Q = Base + V * (Nu + 1) + U; S.Quad(Q, Q + 1, Q + Nu + 2, Q + Nu + 1); }
+    }
+    UProceduralMeshComponent* Solid(AFeyLife* Owner, UProceduralMeshComponent* M, FMapSurf& S, UMaterialInterface* Mat)
+    {
+        M->bUseComplexAsSimpleCollision = true;
+        M->CreateMeshSection(0, S.V, S.T, S.N, S.UV, S.C, S.Tan, true);
+        M->SetMaterial(0, Mat); M->SetCollisionProfileName(TEXT("BlockAll")); M->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        return M;
+    }
+}
+
+void AFeyLife::Play(int32 Which, const FVector& Local, float Volume)
+{
+    if (Sfx.IsValidIndex(Which) && Sfx[Which]) UGameplayStatics::PlaySoundAtLocation(this, Sfx[Which], FeyWorld(Local), Volume, FMath::FRandRange(.96f, 1.04f), 0.f, Falloff);
+}
+
+void AFeyLife::Loop(int32 Which, USceneComponent* At, const FVector& Local, float Volume, float Radius)
+{
+    if (!Sfx.IsValidIndex(Which) || !Sfx[Which]) return;
+    auto* A = NewObject<UAudioComponent>(this); A->SetupAttachment(At ? At : RootComponent.Get()); A->SetRelativeLocation(Local);
+    auto* F = NewObject<USoundAttenuation>(this); F->Attenuation = Falloff->Attenuation; F->Attenuation.FalloffDistance = Radius; F->Attenuation.AttenuationShapeExtents = FVector(Radius * .1f);
+    A->SetSound(Sfx[Which]); A->AttenuationSettings = F; A->SetVolumeMultiplier(Volume); A->bAutoActivate = false; A->RegisterComponent();
+    A->Play(FMath::FRandRange(0.f, 1.f)); Loops.Add(A);
+}
+
+FVector AFeyLife::GetIslet() const { return Placed(District).Islet; }
+FVector AFeyLife::GetCache() const { return Placed(District).Cache; }
+FVector AFeyLife::GetCamp() const { const FVector2D C = Placed(District).Camp; return FVector(C.X, C.Y, C.IsZero() ? 0.f : LandZ(District, C.X, C.Y)); }
+
+void AFeyLife::SpawnRedcaps()
+{
+    const FPlace& P = Placed(District);
+    if (bCalm || P.Redcaps.IsEmpty()) return;
+    for (const FVector& R : P.Redcaps)
+    {
+        FTempleSkeletonPost Post; Post.Kind = 3; Post.Space = TEXT("feywild"); Post.Yaw = R.Z;
+        Post.Feet = FeyWorld(FVector(R.X, R.Y, LandZ(District, R.X, R.Y)));
+        const FVector2D Lc = P.Camp.IsZero() ? P.Patrol : P.Camp; const float Lr = P.Camp.IsZero() ? 1300.f : 1900.f;
+        Post.Leash = FBox2D(Lc - FVector2D(Lr, Lr), Lc + FVector2D(Lr, Lr));
+        if (ATempleSkeleton* S = ATempleSkeleton::SpawnAt(GetWorld(), Post)) Redcaps.Add(S);
+    }
+}
+
+void AFeyLife::BuildCamp()
+{
+    const FPlace& P = Placed(District);
+    if (P.Camp.IsZero()) return;
+    const FVector2D C = P.Camp, Dp = P.CampOut, Pp = Perp(Dp);
+    const float Z = LandZ(District, C.X, C.Y);
+    // The fire in the ring of stones, its light; a tripod over it with a cauldron hung from it.
+    if (AChuckFlames* Fl = AChuckFlames::Get(GetWorld())) Fl->Add(this, FeyWorld(FVector(C.X, C.Y, Z + 4.f)), 40.f, 55.f);
+    FireLight = NewObject<UPointLightComponent>(this); FireLight->SetupAttachment(RootComponent); FireLight->SetRelativeLocation(FVector(C.X, C.Y, Z + 70.f));
+    FireLight->SetLightColor(FLinearColor(1.f, .48f, .18f)); FireLight->SetIntensityUnits(ELightUnits::Candelas); FireLight->SetIntensity(55.f);
+    FireLight->SetAttenuationRadius(1500.f); FireLight->SetCastShadows(false); FireLight->RegisterComponent();
+    Loop(SFire, nullptr, FVector(C.X, C.Y, Z + 20.f), .9f, 2400.f); Loop(SCauldron, nullptr, FVector(C.X, C.Y, Z + 110.f), .5f, 1200.f);
+    FMapSurf Wood, Iron, Rag;
+    const FColor Pole = Col(.38f, .8f, 0.f), Black = Col(.09f, .09f, .1f, 0.f), Red = Col(.42f, .07f, .07f, 0.f), Stew = Col(.4f, .14f, .06f, .12f);
+    const FVector Apex(C.X, C.Y, Z + 235.f);
+    for (int32 K = 0; K < 3; ++K)
+    {
+        const float A = 2 * PI * K / 3 + .4f; const FVector Foot(C.X + 135.f * FMath::Cos(A), C.Y + 135.f * FMath::Sin(A), Z - 10.f);
+        const FVector Pts[] = {Foot, FMath::Lerp(Foot, Apex, .5f) + FVector(0, 0, 3.f), Apex + (Apex - Foot).GetSafeNormal() * 22.f};
+        Wood.Pipe(Pts, 4.2f, 3.f, 7, 4, Pole, K * 1.9f);
+    }
+    { const FVector Ch[] = {Apex - FVector(0, 0, 4.f), FVector(C.X, C.Y, Z + 122.f)}; Iron.Pipe(Ch, .9f, .9f, 5, 2, Black, 0.f); }
+    {
+        const FVector2D Pot[] = {{25.f, 42.f}, {22.5f, 40.f}, {26.f, 33.f}, {27.f, 18.f}, {20.f, 5.f}, {1.f, 0.f}};
+        Iron.Lathe(FVector(C.X, C.Y, Z + 78.f), Pot, 16, Black);
+        const FVector2D Top[] = {{.5f, 38.5f}, {22.f, 38.5f}};
+        Iron.Lathe(FVector(C.X, C.Y, Z + 78.f), Top, 16, Stew);
+        for (const float Sd : {-1.f, 1.f}) { const FVector H[] = {FVector(C.X, C.Y + Sd * 25.f, Z + 120.f), FVector(C.X, C.Y + Sd * 14.f, Z + 124.f), FVector(C.X, C.Y, Z + 122.f)}; Iron.Pipe(H, .7f, .7f, 4, 3, Black, Sd); }
+    }
+    // Two lean-tos behind the fire: posts, a ridge pole, poles slanting back to the ground, ragged red cloth over them.
+    for (const float Sd : {-1.f, 1.f})
+    {
+        const FVector2D M = C - Dp * 680.f + Pp * (Sd * 430.f), Along = Pp, Back = -Dp;
+        const float Zm = LandZ(District, M.X, M.Y);
+        const FVector L0(M.X - Along.X * 120.f, M.Y - Along.Y * 120.f, Zm), L1(M.X + Along.X * 120.f, M.Y + Along.Y * 120.f, Zm);
+        const FVector Up(0, 0, 165.f), Bk(Back.X * 190.f, Back.Y * 190.f, 0.f);
+        for (const FVector& F : {L0, L1})
+        {
+            const FVector Post[] = {F - FVector(0, 0, 10.f), F + Up * .5f, F + Up + FVector(0, 0, 12.f)}; Wood.Pipe(Post, 4.f, 3.2f, 7, 3, Pole, F.X * .01f);
+            const FVector Slant[] = {F + Up, F + Up * .5f + Bk * .5f, F + Bk - FVector(0, 0, 8.f)}; Wood.Pipe(Slant, 3.2f, 2.6f, 6, 3, Pole, F.Y * .01f);
+        }
+        { const FVector Ridge[] = {L0 + Up - (L1 - L0).GetSafeNormal() * 20.f, (L0 + L1) * .5f + Up + FVector(0, 0, 2.f), L1 + Up + (L1 - L0).GetSafeNormal() * 20.f}; Wood.Pipe(Ridge, 3.5f, 3.f, 6, 3, Pole, Sd); }
+        Cloth(Rag, L0 + Up + FVector(0, 0, 4.f), L1 + Up + FVector(0, 0, 4.f), L0 + Bk + FVector(0, 0, 4.f), L1 + Bk + FVector(0, 0, 4.f), Red, Sd * 3.f);
+        Cloth(Rag, L0 + Up + FVector(0, 0, 2.f) - Bk * .02f, L1 + Up + FVector(0, 0, 2.f) - Bk * .02f, L0 + FVector(0, 0, 70.f) - Bk * .05f, L1 + FVector(0, 0, 70.f) - Bk * .05f, Col(.3f, .05f, .05f), Sd * 5.f);   // (a torn curtain at its front)
+    }
+    Emit(NewMesh(nullptr, TEXT("CampWood")), Wood, Mats[MRoot]);
+    Emit(NewMesh(nullptr, TEXT("CampIron")), Iron, Mats[MPlant]);
+    Emit(NewMesh(nullptr, TEXT("CampCloth")), Rag, Mats[MPlant]);
+    // The hollow behind the camp: a ring of boulders, its one way in under a root too low for a redcap.
+    const FVector2D H(P.Cache.X, P.Cache.Y); const float Hr = P.Cache.Z * .5f + 150.f;   // (rocks' ring: 300)
+    const FVector2D In = (C - H).GetSafeNormal(); const float A0 = FMath::Atan2(In.Y, In.X);
+    if (UStaticMesh* RockMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/ChultNature/SM_ChultRock2.SM_ChultRock2")))
+        for (int32 K = 0; K < 10; ++K)
+        {
+            const float A = A0 + FMath::DegreesToRadians(32.f + K * 296.f / 9.f); const FVector2D Q = H + FVector2D(FMath::Cos(A), FMath::Sin(A)) * Hr;
+            auto* R = NewObject<UStaticMeshComponent>(this); R->SetupAttachment(RootComponent); R->SetStaticMesh(RockMesh);
+            const FVector Ext = RockMesh->GetBounds().BoxExtent; const float Sx = 112.f / FMath::Max(1.f, FMath::Max(Ext.X, Ext.Y)), Sz = FMath::Max(Sx, 120.f / FMath::Max(1.f, Ext.Z));
+            R->SetRelativeTransform(FTransform(FRotator(0, K * 53.f, 0), FVector(Q.X, Q.Y, LandZ(District, Q.X, Q.Y) - 20.f), FVector(Sx, Sx, Sz)));
+            R->SetCollisionProfileName(TEXT("BlockAll")); R->RegisterComponent();
+        }
+    {
+        FMapSurf Gate; const FColor Root = Col(.36f, .75f, 0.f);
+        FVector Posts[2];
+        for (int32 K = 0; K < 2; ++K)
+        {
+            const float A = A0 + FMath::DegreesToRadians(K ? 21.f : -21.f); const FVector2D Q = H + FVector2D(FMath::Cos(A), FMath::Sin(A)) * Hr; const float Zq = LandZ(District, Q.X, Q.Y);
+            Posts[K] = FVector(Q.X, Q.Y, Zq);
+            const FVector Pts[] = {FVector(Q.X, Q.Y, Zq - 15.f), FVector(Q.X, Q.Y, Zq + 60.f), FVector(Q.X, Q.Y, Zq + 128.f)}; Gate.Pipe(Pts, 16.f, 12.f, 9, 3, Root, K * 2.3f);
+        }
+        const FVector Mid = (Posts[0] + Posts[1]) * .5f;
+        const FVector Lintel[] = {Posts[0] + FVector(0, 0, 100.f), Mid + FVector(0, 0, 94.f), Posts[1] + FVector(0, 0, 100.f)};
+        Gate.Pipe(Lintel, 11.f, 11.f, 9, 4, Root, 7.f);   // (its underside about 82 cm up: he passes, a redcap does not)
+        const FVector Over[] = {Posts[0] + FVector(0, 0, 125.f), Mid + FVector(0, 0, 150.f), Posts[1] + FVector(0, 0, 125.f)};
+        Gate.Pipe(Over, 13.f, 13.f, 9, 4, Root, 9.f);
+        Solid(this, NewMesh(nullptr, TEXT("CacheGate")), Gate, Mats[MRoot]);
+        auto* B = NewObject<UBoxComponent>(this); B->SetupAttachment(RootComponent);
+        const FVector Span = Posts[1] - Posts[0];
+        B->SetBoxExtent(FVector(30.f, Span.Size2D() * .5f + 20.f, 110.f));
+        B->SetRelativeLocationAndRotation(Mid + FVector(0, 0, 205.f), FRotator(0, FMath::RadiansToDegrees(FMath::Atan2(Span.Y, Span.X)) - 90.f, 0));
+        B->SetCollisionProfileName(TEXT("BlockAll")); B->SetHiddenInGame(true); B->RegisterComponent();
+    }
+}
+
+void AFeyLife::BuildRefuges()
+{
+    const FPlace& P = Placed(District);
+    for (int32 I = 0; I < P.Logs.Num(); ++I)
+    {
+        const FVector& L = P.Logs[I];
+        FMapSurf S; HollowLog(S, 520.f, 80.f, 60.f, I * 3.1f);
+        auto* M = NewMesh(nullptr, *FString::Printf(TEXT("RefugeLog%d"), I));
+        M->SetRelativeLocationAndRotation(FVector(L.X, L.Y, LandZ(District, L.X, L.Y) + 48.f), FRotator(0, L.Z, 0));
+        Solid(this, M, S, Mats[MRoot]);
+    }
+}
+
+void AFeyLife::BuildPadRise()
+{
+    const FPlace& P = Placed(District);
+    if (PadRises.IsEmpty()) return;
+    UStaticMesh* Pad = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/Feywild/SM_FeyLilyPad.SM_FeyLilyPad"));
+    for (const FFeyPadRise& R : PadRises)
+        for (const FVector& Pd : R.Pads)
+        {
+            auto* M = NewObject<UStaticMeshComponent>(this); M->SetupAttachment(RootComponent); M->SetStaticMesh(Pad);
+            M->SetRelativeScale3D(FVector(Pd.Z / 50.f, Pd.Z / 50.f, .6f)); M->SetCollisionEnabled(ECollisionEnabled::NoCollision); M->SetVisibility(false); M->RegisterComponent();
+            RisePadMeshes.Add(M);
+            auto* B = NewObject<UBoxComponent>(this); B->SetupAttachment(RootComponent); B->SetBoxExtent(FVector(Pd.Z * .8f, Pd.Z * .8f, 6.f));
+            B->SetRelativeLocation(FVector(Pd.X, Pd.Y, -4.f)); B->SetCollisionProfileName(TEXT("BlockAll")); B->SetCollisionEnabled(ECollisionEnabled::NoCollision); B->SetHiddenInGame(true); B->RegisterComponent();
+            RisePadBoxes.Add(B);
+        }
+    if (!P.Islet.IsZero())
+    {
+        // The islet: a low mossy mound out of the deep water.
+        FMapSurf S; const float R = P.Islet.Z;
+        const FVector2D Prof[] = {{.5f, 24.f}, {R * .35f, 22.f}, {R * .7f, 15.f}, {R * .92f, 5.f}, {R, -6.f}, {R * 1.12f, -90.f}};
+        S.Lathe(FVector(P.Islet.X, P.Islet.Y, 0.f), Prof, 28, FLinearColor(0.f, .9f, .3f, 1.f).ToFColor(false));
+        Solid(this, NewMesh(nullptr, TEXT("Islet")), S, Mats[MGround]);
+    }
+}
+
+// ------------------------------------------------------------------ stage 6 (2026-11-22): the Great Hedge Maze
+int32 AFeyLife::BeeKnocks = 0, AFeyLife::StatueTurns = 0, AFeyLife::Reveals = 0;
+float AFeyLife::RevealAfter = 240.f, AFeyLife::RevealEvery = 150.f;
+
+void AFeyLife::BuildMaze()
+{
+    if (District != Maze) return;
+    const FPlace& P = Placed(District);
+    FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+    // The shortcuts' hedges: each its own pivot at the ground, so it can sink away; leaves as the maze's own.
+    UStaticMesh* LeafMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Art/Feywild/SM_FeyHedgeLeaves.SM_FeyHedgeLeaves"));
+    for (int32 K = 0; K < MazeShortcuts().Num(); ++K)
+    {
+        const FMazeShortcut& Sc = MazeShortcuts()[K]; const float Zm = LandZ(Maze, Sc.Mid.X, Sc.Mid.Y);
+        auto* Pivot = NewObject<USceneComponent>(this); Pivot->SetupAttachment(RootComponent); Pivot->RegisterComponent();
+        Pivot->SetRelativeLocation(FVector(Sc.Mid.X, Sc.Mid.Y, Zm));
+        FMapSurf S; auto* Leaves = LeafMesh ? NewObject<UInstancedStaticMeshComponent>(this) : nullptr;
+        if (Leaves) { Leaves->SetupAttachment(Pivot); Leaves->SetStaticMesh(LeafMesh); Leaves->SetCollisionEnabled(ECollisionEnabled::NoCollision); Leaves->RegisterComponent(); }
+        FBox2D Foot(ForceInit);
+        for (const FVector4& H : Sc.Hedges)
+        {
+            const FVector C(H.X - Sc.Mid.X, H.Y - Sc.Mid.Y, Tall * .5f + LandZ(Maze, H.X, H.Y) - Zm - 6.f), Ext(H.Z, 60.f, Tall * .5f);
+            S.Hedge(C, Ext, H.W, K * 3.7f + H.X * .001f);
+            const float Yr = FMath::DegreesToRadians(H.W); const FVector Along(FMath::Cos(Yr), FMath::Sin(Yr), 0.f);
+            Foot += FVector2D(C + Along * H.Z); Foot += FVector2D(C - Along * H.Z);
+            if (Leaves)
+            {
+                const int32 N = FMath::Max(1, FMath::RoundToInt(2.f * H.Z / 300.f)); const float Len = 2.f * H.Z / N;
+                for (int32 J = 0; J < N; ++J) Leaves->AddInstance(FTransform(FRotator(0, H.W + (J % 2 ? 180.f : 0.f), 0), C + Along * ((J + .5f) * Len - H.Z), FVector(Len / 300.f, 1.f, Tall * .5f / 420.f)));
+            }
+        }
+        auto* M = NewMesh(Pivot, *FString::Printf(TEXT("ShortcutHedge%d"), K));
+        M->bUseComplexAsSimpleCollision = true; M->CreateMeshSection(0, S.V, S.T, S.N, S.UV, S.C, S.Tan, true);
+        M->SetMaterial(0, Mats[MHedge]); M->SetCollisionProfileName(TEXT("BlockAll"));
+        ShortcutPivots.Add(Pivot); ScUp.Add(1.f); ScWant.Add(1.f);
+    }
+    // Statues that turn to face him while he is not looking (stone, hooded, on a plinth).
+    for (int32 K = 0; K < P.Statues.Num(); ++K)
+    {
+        const FVector2D Q = P.Statues[K];
+        auto* Pivot = NewObject<USceneComponent>(this); Pivot->SetupAttachment(RootComponent); Pivot->RegisterComponent();
+        Pivot->SetRelativeLocationAndRotation(FVector(Q.X, Q.Y, LandZ(Maze, Q.X, Q.Y)), FRotator(0, K * 83.f, 0));
+        FMapSurf St; const FColor Stone(140, 0, 0, 255);
+        const FVector2D Plinth[] = {{.5f, 70.f}, {52.f, 70.f}, {56.f, 62.f}, {56.f, 8.f}, {62.f, 0.f}, {62.f, -10.f}};
+        St.Lathe(FVector::ZeroVector, Plinth, 12, Stone);
+        const FVector2D Robe[] = {{.5f, 238.f}, {14.f, 236.f}, {22.f, 222.f}, {24.f, 200.f}, {30.f, 170.f}, {36.f, 120.f}, {42.f, 72.f}};
+        St.Lathe(FVector::ZeroVector, Robe, 14, Stone);
+        const FVector2D Hood[] = {{.5f, 282.f}, {12.f, 278.f}, {19.f, 264.f}, {20.f, 246.f}, {15.f, 234.f}};
+        St.Lathe(FVector(2.f, 0, 0), Hood, 12, Stone);
+        const FVector Arm[] = {FVector(4.f, 20.f, 205.f), FVector(22.f, 26.f, 175.f), FVector(48.f, 12.f, 168.f)};   // (pointing, a little)
+        St.Pipe(Arm, 7.f, 5.f, 8, 4, Stone, K * 1.3f);
+        St.Box(FVector(18.f, 0.f, 262.f), FVector(6.f, 12.f, 9.f), 0.f, FColor(40, 0, 0, 255));   // (the shadow of its face)
+        auto* M = NewMesh(Pivot, *FString::Printf(TEXT("Statue%d"), K)); Emit(M, St, Mats[MStone]);
+        M->bUseComplexAsSimpleCollision = true; M->CreateMeshSection(0, St.V, St.T, St.N, St.UV, St.C, St.Tan, true); M->SetCollisionProfileName(TEXT("BlockAll"));
+        Statues.Add(Pivot); StatueYaw.Add(K * 83.f);
+    }
+    // The bees on the hedge tops: specks, shown only while they swarm; their buzz.
+    BeeMesh = NewMesh(nullptr, TEXT("Bees"));
+    if (Sfx.IsValidIndex(SBees) && Sfx[SBees])
+    {
+        BeeAudio = NewObject<UAudioComponent>(this); BeeAudio->SetupAttachment(RootComponent); BeeAudio->SetSound(Sfx[SBees]); BeeAudio->bAutoActivate = false;
+        BeeAudio->AttenuationSettings = Falloff; BeeAudio->RegisterComponent();
+    }
+    NextReveal = RevealAfter;
+    if (bCalm && Flowers.Num() && Vines.Num()) { Flowers[0].Open = Flowers[0].Want = 1.f; Vines[0].Up = Vines[0].Want = 0.f; ShowFlower(0); }   // (the walker goes straight in)
+}
+
+void AFeyLife::RevealNext(const FVector& Near)
+{
+    if (Pending.Num() || FlowerPivots.Num() != Flowers.Num()) return;
+    int32 Best = -1; float Bd = 1e12f;
+    for (int32 I = 0; I < Flowers.Num(); ++I) if (Flowers[I].bHidden) { const float D = FVector::DistSquared2D(Flowers[I].Pos, Near); if (D < Bd) { Bd = D; Best = I; } }
+    if (Best < 0) return;
+    Flowers[Best].bHidden = false; Flowers[Best].Grow = 0.f; ++Reveals;
+    FlowerPivots[Best]->SetVisibility(true, true);
+    Play(SFlowerOpen, Flowers[Best].Pos + FVector(0, 0, 60.f), 1.f);
+    UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_REVEAL flower=%d shortcut=%d at=%s maze_s=%.0f"), Best, Flowers[Best].Sc, *Flowers[Best].Pos.ToCompactString(), MazeTime);
+}
+
+void AFeyLife::TickMaze(float Dt, AChuckCharacter* Chuck, const FVector& C)
+{
+    FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+    const FVector Feet = C - FVector(0, 0, Stand);
+    const float R = FVector2D::Distance(FVector2D(Feet), Hub);
+    const bool bInMaze = R > R0 - 50.f && R < Rmax + 100.f;
+    // Lost: time in the maze brings out the hit plants, nearest him first.
+    if (bInMaze && !bCalm)
+    {
+        MazeTime += Dt;
+        if (MazeTime >= NextReveal) { RevealNext(Feet); NextReveal = MazeTime + RevealEvery; }
+    }
+    for (int32 I = 0; I < Flowers.Num(); ++I)
+        if (!Flowers[I].bHidden && Flowers[I].Grow < 1.f)
+        {
+            Flowers[I].Grow = FMath::Min(1.f, Flowers[I].Grow + Dt / 2.2f);
+            const float G = Smooth(0.f, 1.f, Flowers[I].Grow);
+            FlowerPivots[I]->SetRelativeScale3D(FVector(1.6f * FMath::Max(.01f, G)));
+        }
+    // The shortcuts' hedges sink into the ground (never rising over him).
+    for (int32 K = 0; K < ScUp.Num(); ++K)
+    {
+        const FVector2D Mid = MazeShortcuts()[K].Mid;
+        bool bOver = false; for (const FVector4& H : MazeShortcuts()[K].Hedges) bOver |= FVector2D::Distance(FVector2D(H.X, H.Y), FVector2D(Feet)) < H.Z + 90.f;
+        const float Want = ScWant[K] > ScUp[K] && bOver ? ScUp[K] : ScWant[K];
+        ScUp[K] = FMath::FInterpConstantTo(ScUp[K], Want, Dt, .45f);
+        USceneComponent* Pv = ShortcutPivots[K];
+        Pv->SetRelativeScale3D(FVector(1.f, 1.f, FMath::Max(.02f, Smooth(0.f, 1.f, ScUp[K]))));
+        Pv->SetVisibility(ScUp[K] > .03f, true);
+        for (USceneComponent* Ch : Pv->GetAttachChildren())
+            if (auto* Pm = Cast<UPrimitiveComponent>(Ch)) { const bool bSolid = ScUp[K] > .35f; if ((Pm->GetCollisionEnabled() != ECollisionEnabled::NoCollision) != bSolid && Cast<UProceduralMeshComponent>(Pm)) Pm->SetCollisionEnabled(bSolid ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision); }
+    }
+    // Statues: while he looks away, each near one turns to face him.
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        FVector Eye; FRotator View; PC->GetPlayerViewPoint(Eye, View); const FVector Look = View.Vector();
+        for (int32 K = 0; K < Statues.Num(); ++K)
+        {
+            const FVector Sw = Statues[K]->GetComponentLocation() + FVector(0, 0, 200.f);
+            const float D = FVector::Dist2D(Sw, Chuck->GetActorLocation());
+            if (D > 2600.f || D < 150.f) continue;
+            const bool bSeen = FVector::DotProduct((Sw - Eye).GetSafeNormal(), Look) > .35f;
+            const float Want = (Chuck->GetActorLocation() - Sw).Rotation().Yaw;
+            if (!bSeen && FMath::Abs(FMath::FindDeltaAngleDegrees(StatueYaw[K], Want)) > 25.f)
+            { StatueYaw[K] = Want; Statues[K]->SetRelativeRotation(FRotator(0, Want, 0)); ++StatueTurns; }
+        }
+    }
+    // Bees on the hedge tops: a warning buzz, then the swarm knocks him back down into the maze (never a death).
+    const float Gz = LandZ(Maze, Feet.X, Feet.Y);
+    const bool bTop = bInMaze && Feet.Z > Gz + Tall - 120.f && Feet.Z < Gz + Tall + 220.f && !Chuck->IsAstral();   // (on the hedges, not on the stair high over them)
+    OnTop = bTop ? OnTop + Dt : 0.f;
+    if (bTop && BeeAudio && !BeeAudio->IsPlaying()) BeeAudio->Play();
+    if (BeeAudio) { BeeAudio->SetRelativeLocation(Feet + FVector(0, 0, 60.f)); if (!bTop && BeeShow <= 0.f && BeeAudio->IsPlaying()) BeeAudio->FadeOut(.6f, 0.f); }
+    if (bTop) BeeShow = FMath::Max(BeeShow, .3f + FMath::Min(OnTop, 1.5f));
+    if (OnTop > 1.4f)
+    {
+        // Down into the nearest corridor.
+        const float Ring = FMath::Clamp(FMath::RoundToFloat((R - R0) / Pitch - .5f), 0.f, (Rmax - R0) / Pitch - 1.f);
+        const FVector2D Dir = (FVector2D(Feet) - Hub).GetSafeNormal(), To = Hub + Dir * (R0 + (Ring + .5f) * Pitch);
+        const FVector2D Push = (To - FVector2D(Feet)).Size() > 20.f ? (To - FVector2D(Feet)).GetSafeNormal() : Dir;
+        Chuck->LaunchCharacter(FVector(Push.X * 380.f, Push.Y * 380.f, 120.f), true, true);
+        ++BeeKnocks; OnTop = 0.f; BeeShow = 2.5f;
+        UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_MAZE_BEES knock=%d at=%s"), BeeKnocks, *Feet.ToCompactString());
+    }
+    if (BeeMesh)
+    {
+        BeeShow = FMath::Max(0.f, BeeShow - Dt);
+        FMapSurf S;
+        if (BeeShow > 0.f)
+        {
+            BeeAt = FMath::VInterpTo(BeeAt.IsZero() ? Feet : BeeAt, Feet + FVector(0, 0, 50.f), Dt, 4.f);
+            const int32 N = FMath::RoundToInt(16.f + 40.f * FMath::Min(1.f, BeeShow / 1.5f));
+            for (int32 I = 0; I < N; ++I)
+            {
+                const float A = Clock * (2.f + (I % 5) * .4f) + I * 2.399f, Rr = 40.f + 50.f * FMath::Frac(I * .618f) + 18.f * FMath::Sin(Clock * 3.f + I);
+                const FVector Pb = BeeAt + FVector(Rr * FMath::Cos(A), Rr * FMath::Sin(A), 30.f * FMath::Sin(A * 1.7f + I));
+                Octa(S, Pb, 1.6f, I % 3 ? Col(.95f, .72f, .12f, .02f) : Col(.05f, .04f, .02f));
+            }
+        }
+        Emit(BeeMesh, S, Mats[MPlant], false);
+    }
+}
+
 float FeyGroundSpeedScale(const FVector& World)
 {
     if (!InFeyMap(World)) return 1.f;
@@ -537,7 +1080,7 @@ float FeyGroundSpeedScale(const FVector& World)
 bool FeyScratch(AChuckCharacter* Chuck, const FVector& Location, const FVector& Ahead, float Reach)
 {
     if (!Chuck || !InFeyMap(Location)) return false;
-    bool bAny = false;
+    bool bAny = FeyCreaturesScratch(Location, Ahead, Reach);
     for (const TWeakObjectPtr<AFeyLife>& P : GLife) if (P.IsValid()) bAny |= P->TryScratch(Location, Ahead, Reach);
     return bAny;
 }

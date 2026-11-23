@@ -112,6 +112,7 @@ private:
     UPROPERTY() UProceduralMeshComponent* StreamMesh = nullptr;   // the streams on the two rock steps
     float AirShade = 1.f;                                         // the motes dim with SetShade (none in the root tunnel)
     UPROPERTY() UMaterialInstanceDynamic* FarMid = nullptr;
+    UPROPERTY() UMaterialInstanceDynamic* SkyMid = nullptr;   // (2026-11-22) its Overcast follows the Deepwood's gloom
     UPROPERTY() USceneCaptureComponentCube* Probe = nullptr;
     UPROPERTY() UTextureRenderTargetCube* ProbeTarget = nullptr;
     UPROPERTY() UAudioComponent* FallsSound = nullptr;

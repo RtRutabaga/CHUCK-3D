@@ -5,6 +5,10 @@
 // each district's checkpoint and takes a still there. -ChuckFeyMapTest=short walks only the shore to the orchard.
 #include "FeyMap.h"
 #include "FeyLife.h"
+#include "FeyCreatures.h"
+#include "TempleSkeleton.h"
+#include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
 #include "FeywildSetting.h"
 #include "ChuckCharacter.h"
 #include "Components/CapsuleComponent.h"
@@ -35,7 +39,7 @@ namespace
         double Last = 0, PhaseStart = 0, LastGain = 0, Start = 0;
         float Best = 1e9f, Walked = 0; FVector Prev = FVector::ZeroVector;
         bool bJumped = false, bShort = false, bPlaced = false, bFinished = false, bStillsOnly = false, bCracks = false, bLife = false; uint64 Frame = 0;
-        int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
+        int32 LifeFails = 0, Cigs0 = 0, Hits0 = 0, Hits1 = 0; float MinDist = 1e9f; float SpeedOut = 0, SpeedIn = 0; int32 SpeedOutN = 0, SpeedInN = 0;
         int32 CrackStep = 0, CrackLeaks = 0, CrackShots = 0; TArray<FLeak> Shown;
         FStat Chult, Fey[Districts + 1], Cross;
         float ChultMem = 0, BeforeMem = 0;
@@ -201,10 +205,29 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
             auto Drive = [&](const FVector& Dir) { const FVector Dw = Dir.GetSafeNormal2D(); Chuck->SetRunHeld(true); Chuck->SetTestStickWorld(Dw); Chuck->AddMovementInput(Dw, 1.f, true); };
             auto Check = [&](bool bOk, const TCHAR* What) { R->LifeFails += !bOk; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_CHECK %s ok=%d"), What, bOk); };
             const int32 Step = R->CrackStep;
-            if (Step == 0) { Map->LoadNow(Riverbank); R->CrackStep = 1; R->PhaseStart = Now; return; }
+            if (Step == 0)
+            {
+                // (2026-11-23, a developer's shortcut, not used by Verify-Package) CHUCK_FEY_LIFE_FROM=50 starts at that step.
+                const int32 From = FCString::Atoi(*FPlatformMisc::GetEnvironmentVariable(TEXT("CHUCK_FEY_LIFE_FROM")));
+                if (From > 0) { R->CrackStep = From; R->PhaseStart = Now; return; }
+                Map->LoadNow(Riverbank); R->CrackStep = 1; R->PhaseStart = Now; return;
+            }
             AFeyLife* Life = nullptr;
-            if (Step < 10) Life = LifeOf(Riverbank); else if (Step < 20) Life = LifeOf(Orchard); else Life = LifeOf(LilyMere);
-            if (!Life && Step != 10 && Step != 20 && Step < 30) { if (Since > 5.f) { Check(false, TEXT("life_built")); R->CrackStep = (Step / 10 + 1) * 10; } return; }
+            if (Step < 10) Life = LifeOf(Riverbank); else if (Step < 20) Life = LifeOf(Orchard); else if (Step < 30) Life = LifeOf(LilyMere); else if (Step < 40) Life = LifeOf(Deepwood); else if (Step < 50) Life = LifeOf(Highmeadow); else Life = LifeOf(Maze);
+            if (!Life && Step % 10 != 0 && Step < 60) { if (Since > 5.f) { Check(false, TEXT("life_built")); R->CrackStep = (Step / 10 + 1) * 10; } return; }
+            auto Shot = [&](const TCHAR* Name) { FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / FString::Printf(TEXT("FeyMap/Life_%s.png"), Name), false, false); };
+            // (part two) A free camera on a creature for its still (local eye and aim); Uncam gives the view back to him.
+            static TWeakObjectPtr<ACameraActor> GCam;
+            auto Cam = [&](const FVector& Eye, const FVector& Aim)
+            {
+                if (!GCam.IsValid()) GCam = Chuck->GetWorld()->SpawnActor<ACameraActor>();
+                if (!GCam.IsValid()) return;
+                GCam->GetCameraComponent()->SetFieldOfView(55.f);
+                GCam->SetActorLocationAndRotation(FeyWorld(Eye), (Aim - Eye).Rotation());
+                if (APlayerController* PC = Chuck->GetWorld()->GetFirstPlayerController()) if (PC->GetViewTarget() != GCam.Get()) PC->SetViewTarget(GCam.Get());
+            };
+            auto Uncam = [&]() { if (APlayerController* PC = Chuck->GetWorld()->GetFirstPlayerController()) PC->SetViewTarget(Chuck); };
+            auto FaceAt = [&](const FVector& L) { const FVector D = (L - FeyLocal(Chuck->GetActorLocation())).GetSafeNormal2D(); if (!D.IsNearlyZero()) { Chuck->SetActorRotation(FRotator(0, D.Rotation().Yaw, 0)); Chuck->Recenter(); } };
             switch (Step)
             {
             case 1:   // the vines shut the nook; the flower opens them
@@ -257,8 +280,41 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (!R->bPlaced) { Put(O.Pos + O.Dir * 450.f, -O.Dir); R->Hits0 = AFeyLife::OrchidHits; R->bPlaced = true; R->PhaseStart = Now; return; }
                 if (Since < 6.f) return;
                 Check(AFeyLife::OrchidShots > 0 && AFeyLife::OrchidHits > R->Hits0, TEXT("orchid_hits"));
-                Map->LoadNow(LilyMere); Chuck->ResetAtLocation(FeyCheckpointWorld(LilyMere)); R->bPlaced = false; R->CrackStep = 20; R->PhaseStart = Now; return;
+                R->bPlaced = false; R->CrackStep = 13; R->PhaseStart = Now; return;
             }
+            case 13:   // (part two) a thorn mite runs at him and bites
+            {
+                if (Life->GetMites().IsEmpty()) { Check(false, TEXT("mites_built")); R->CrackStep = 14; return; }
+                AFeyMite* M = Life->GetMites()[0];
+                if (!R->bPlaced) { M->ResetMite(); Put(M->GetLocal() + FVector(220.f, 0, 0), FVector(-1, 0, 0)); R->Hits0 = AFeyMite::Bites; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.f && Since < 1.05f) Shot(TEXT("Mite"));
+                if (AFeyMite::Bites == R->Hits0 && Since < 6.f) return;
+                Check(AFeyMite::Bites > R->Hits0, TEXT("mite_bites"));
+                R->bPlaced = false; R->CrackStep = 14; R->PhaseStart = Now; return;
+            }
+            case 14:   // one scratch kills it
+            {
+                if (Since < .5f || Life->GetMites().IsEmpty()) { if (Life->GetMites().IsEmpty()) R->CrackStep = 15; return; }
+                AFeyMite* M = Life->GetMites()[0]; M->ResetMite();
+                const FVector At = M->GetLocal() + FVector(32.f, 0, 0); Put(At, FVector(-1, 0, 0));
+                FeyScratch(Chuck, Chuck->GetActorLocation(), FVector(-1, 0, 0), AChuckCharacter::SlashReach);
+                Check(M->IsDead(), TEXT("mite_dies"));
+                R->bPlaced = false; R->CrackStep = 15; R->PhaseStart = Now; return;
+            }
+            case 15:   // a still of a living mite, close
+            {
+                if (Life->GetMites().Num() > 1)
+                {
+                    const FVector M = Life->GetMites()[1]->GetLocal();
+                    Cam(M + FVector(55.f, 40.f, 30.f), M + FVector(0, 0, 6.f));
+                    if (Since < 1.5f) return;
+                    if (!R->bPlaced) { Shot(TEXT("MiteClose")); R->bPlaced = true; }
+                    if (Since < 2.1f) return;
+                    R->bPlaced = false;
+                }
+                Uncam(); R->CrackStep = 16; R->PhaseStart = Now; return;
+            }
+            case 16: { Map->LoadNow(LilyMere); Chuck->ResetAtLocation(FeyCheckpointWorld(LilyMere)); R->bPlaced = false; R->CrackStep = 20; R->PhaseStart = Now; return; }
             case 20: { if (Since < 1.f) return; R->CrackStep = 21; return; }
             case 21:   // a moth's touch, standing under its haunt
             {
@@ -266,13 +322,230 @@ void ReviewFeyMap(AActor* Owner, AChuckCharacter* Chuck, int32 Failures)
                 if (!R->bPlaced) { Put(M.Home - FVector(0, 0, 72.f), M.Axis); R->Hits0 = AFeyLife::MothTouches; R->bPlaced = true; R->PhaseStart = Now; return; }
                 if (Since < 9.f) return;
                 Check(AFeyLife::MothTouches > R->Hits0, TEXT("moth_touches"));
-                R->CrackStep = 30; R->PhaseStart = Now;
+                R->CrackStep = 22; R->bPlaced = false; R->PhaseStart = Now;
                 FScreenshotRequest::RequestScreenshot(FPaths::ScreenShotDir() / TEXT("FeyMap/Life_Moth.png"), false, false);
                 return;
             }
+            case 22:   // (part two) a flower raises pads out of the deep water
+            {
+                if (Life->GetFlowers().IsEmpty() || Life->GetPadRises().IsEmpty()) { Check(false, TEXT("pad_flower_built")); R->CrackStep = 24; return; }
+                const FFeyFlower& F = Life->GetFlowers()[0]; const FVector To = (Life->GetIslet() - F.Pos).GetSafeNormal2D();
+                if (!R->bPlaced) { Put(F.Pos + To * 45.f, -To); FeyScratch(Chuck, Chuck->GetActorLocation(), -To, 120.f); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 1.f) return;
+                if (Since < 5.f) { if (Since > 2.f) FaceAt(Life->GetIslet()); if (Since > 3.f) { const FVector Is = Life->GetIslet(); Cam(F.Pos - To * 250.f + FVector(0, 0, 240.f), FVector(Is.X, Is.Y, 0.f) - To * 150.f); } if (Since > 4.3f && Since < 4.36f) Shot(TEXT("Pads")); return; }
+                Uncam();
+                Check(Life->GetPadRises()[0].Up > .95f, TEXT("pads_rise"));
+                R->Cigs0 = Chuck->GetCigarettes(); R->bPlaced = false; R->CrackStep = 23; R->PhaseStart = Now; return;
+            }
+            case 23:   // from the last pad onto the islet
+            {
+                const FVector Is = Life->GetIslet(); const FVector& Pd = Life->GetPadRises()[0].Pads.Last();
+                if (!R->bPlaced) { Chuck->ResetAtLocation(FeyWorld(FVector(Pd.X, Pd.Y, 2.f + Stand + 6.f))); FaceAt(Is); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 3.f) { Drive(FVector(Is.X, Is.Y, 0.f) - FeyLocal(Chuck->GetActorLocation())); return; }
+                const FVector L = FeyLocal(Chuck->GetActorLocation());
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_ISLET at=%s islet=%s drowned=%d"), *L.ToCompactString(), *Is.ToCompactString(), Map->GetDrowned());
+                Check(FVector::Dist2D(L, Is) < Is.Z && L.Z > -10.f, TEXT("reaches_islet"));
+                Check(Chuck->GetCigarettes() > R->Cigs0, TEXT("islet_cigarettes"));
+                R->CrackStep = 24; R->PhaseStart = Now; return;
+            }
+            case 24: { Map->LoadNow(Deepwood); Chuck->ResetAtLocation(FeyCheckpointWorld(Deepwood)); R->bPlaced = false; R->CrackStep = 30; R->PhaseStart = Now; return; }
+            case 30: { if (Since < 1.f) return; R->CrackStep = 31; R->bPlaced = false; return; }
+            case 31:   // a redcap at the camp sees him and comes
+            {
+                if (Life->GetRedcaps().IsEmpty()) { Check(false, TEXT("redcaps_built")); R->CrackStep = 34; return; }
+                ATempleSkeleton* Rc = Life->GetRedcaps()[0];
+                const FVector Rl = FeyLocal(Rc->GetActorLocation()), Fw = Rc->GetActorForwardVector().GetSafeNormal2D();
+                if (!R->bPlaced) { Put(Rl + Fw * 620.f, -Fw); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 2.f && Since < 2.05f) Shot(TEXT("Redcap"));
+                const FString St = Rc->GetStateName();
+                if (Since < 5.f && St != TEXT("Chase") && St != TEXT("Attack")) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_REDCAP state=%s"), *St);
+                Check(St == TEXT("Chase") || St == TEXT("Attack") || St == TEXT("Recover"), TEXT("redcap_chases"));
+                R->bPlaced = false; R->CrackStep = 32; R->PhaseStart = Now; return;
+            }
+            case 32:   // under the low root into the hollow: they cannot follow
+            {
+                const FVector H = Life->GetCache();
+                if (!R->bPlaced) { R->Cigs0 = Chuck->GetCigarettes(); Put(FVector(H.X, H.Y, 0.f), (Life->GetCamp() - H).GetSafeNormal2D()); R->MinDist = 1e9f; R->bPlaced = true; R->PhaseStart = Now; return; }
+                Chuck->SetSanity(AChuckCharacter::MaxSanity);
+                for (ATempleSkeleton* Rc : Life->GetRedcaps()) if (IsValid(Rc)) R->MinDist = FMath::Min(R->MinDist, (float)FVector::Dist2D(FeyLocal(Rc->GetActorLocation()), H));
+                if (Since > 3.f && Since < 3.05f) Shot(TEXT("Hollow"));
+                if (Since < 8.f) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_HOLLOW closest_redcap=%.0f"), R->MinDist);
+                Check(R->MinDist > 240.f, TEXT("redcaps_kept_out"));
+                Check(Chuck->GetCigarettes() > R->Cigs0, TEXT("hollow_cigarettes"));
+                R->CrackStep = 33; R->PhaseStart = Now; return;
+            }
+            case 33:   // five scratches put one down
+            {
+                ATempleSkeleton* Rc = nullptr; for (ATempleSkeleton* Q : Life->GetRedcaps()) if (IsValid(Q) && !Q->IsDead()) { Rc = Q; break; }
+                if (!Rc) { Check(false, TEXT("redcap_dies")); R->CrackStep = 34; return; }
+                const FVector Sw = (Rc->GetActorLocation() - Chuck->GetActorLocation()).GetSafeNormal2D();
+                for (int32 K = 0; K < ATempleSkeleton::RedcapHealth; ++K) Rc->TakeSlash(Sw);
+                Check(Rc->IsDead(), TEXT("redcap_dies"));
+                R->bPlaced = false; R->CrackStep = 35; R->PhaseStart = Now; return;
+            }
+            case 35:   // stills: a living redcap close, then the camp
+            {
+                ATempleSkeleton* Rc = nullptr; for (ATempleSkeleton* Q : Life->GetRedcaps()) if (IsValid(Q) && !Q->IsDead()) { Rc = Q; break; }
+                const FVector Cp = Life->GetCamp();
+                if (Rc && Since < 2.1f)
+                {
+                    const FVector Rl = FeyLocal(Rc->GetActorLocation()) - FVector(0, 0, 50.f), Fw = Rc->GetActorForwardVector().GetSafeNormal2D(), Rt(-Fw.Y, Fw.X, 0.f);
+                    Cam(Rl + Fw * 210.f + Rt * 90.f + FVector(0, 0, 75.f), Rl + FVector(0, 0, 62.f));
+                    if (Since > 1.5f && !R->bPlaced) { Shot(TEXT("RedcapClose")); R->bPlaced = true; }
+                    return;
+                }
+                const FVector Out(FVector2D(Life->GetCache() - Cp).GetSafeNormal(), 0.f);
+                Cam(Cp - Out * 900.f + FVector(0, 0, 260.f), Cp + FVector(0, 0, 60.f));
+                if (Since < 3.6f) { R->bPlaced = false; return; }
+                if (!R->bPlaced) { Shot(TEXT("Camp")); R->bPlaced = true; }
+                if (Since < 4.2f) return;
+                R->bPlaced = false; Uncam(); R->CrackStep = 34; R->PhaseStart = Now; return;
+            }
+            case 34: { Map->LoadNow(Highmeadow); Chuck->ResetAtLocation(FeyCheckpointWorld(Highmeadow)); R->bPlaced = false; R->CrackStep = 40; R->PhaseStart = Now; return; }
+            case 40: { if (Since < 1.f) return; R->CrackStep = 41; R->bPlaced = false; return; }
+            case 41:   // the beast sees him from far off, roars, and comes
+            {
+                AFeyDisplacer* B = Life->GetBeast(); if (!B) { Check(false, TEXT("beast_built")); R->CrackStep = 50; return; }
+                if (!R->bPlaced) { B->ResetBeast(); Put(B->GetLocal() + FVector(1200.f, -300.f, 0.f), FVector(-1, .25f, 0)); R->Hits0 = AFeyDisplacer::Notices; R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 2.2f && Since < 2.25f) Shot(TEXT("Beast"));
+                if (AFeyDisplacer::Notices == R->Hits0 && Since < 6.f) return;
+                Check(AFeyDisplacer::Notices > R->Hits0, TEXT("beast_notices"));
+                R->Hits0 = AFeyDisplacer::LashHits; R->CrackStep = 42; R->PhaseStart = Now; return;
+            }
+            case 42:   // standing in the open, he is lashed
+            {
+                AFeyDisplacer* B = Life->GetBeast(); FaceAt(B->GetImageLocal());
+                if (Since > 1.5f && Since < 1.55f) Shot(TEXT("BeastNear"));
+                if (AFeyDisplacer::LashHits == R->Hits0 && Since < 12.f) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BEAST state=%s lashes=%d hits=%d"), B->GetStateName(), AFeyDisplacer::Lashes, AFeyDisplacer::LashHits);
+                Check(AFeyDisplacer::LashHits > R->Hits0, TEXT("beast_lashes"));
+                Chuck->SetSanity(AChuckCharacter::MaxSanity); R->bPlaced = false; R->CrackStep = 43; R->PhaseStart = Now; return;
+            }
+            case 43:   // in a hollow log he is safe; it paces outside and gives up
+            {
+                AFeyDisplacer* B = Life->GetBeast(); const FFeyRefuge Rf = Life->GetRefuges()[2];
+                if (!R->bPlaced) { Put(FVector(Rf.C.X, Rf.C.Y, 0.f), (B->GetLocal() - FVector(Rf.C, 0.f)).GetSafeNormal2D()); R->Hits0 = AFeyDisplacer::LashHits; R->Hits1 = AFeyDisplacer::Paces; R->MinDist = 1e9f; R->bPlaced = true; R->PhaseStart = Now; return; }
+                Chuck->SetSanity(AChuckCharacter::MaxSanity);
+                R->MinDist = FMath::Min(R->MinDist, (float)FVector::Dist2D(B->GetLocal(), FVector(Rf.C, 0.f)));
+                if (Since > 4.f && Since < 4.05f) Shot(TEXT("Log"));
+                if (Since < 10.f) return;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_REFUGE closest=%.0f state=%s paces=%d"), R->MinDist, B->GetStateName(), AFeyDisplacer::Paces);
+                Check(R->MinDist > Rf.R, TEXT("beast_kept_out"));
+                Check(AFeyDisplacer::LashHits == R->Hits0, TEXT("safe_in_log"));
+                Check(AFeyDisplacer::Paces > R->Hits1, TEXT("beast_paces"));
+                R->bPlaced = false; R->CrackStep = 44; R->PhaseStart = Now; return;
+            }
+            case 44:   // stills of the beast walking: from its side, then ahead of it
+            {
+                AFeyDisplacer* B = Life->GetBeast(); const FVector I = B->GetImageLocal();
+                const FVector Fw = FRotator(0, B->GetActorRotation().Yaw, 0).Vector(), Rt(-Fw.Y, Fw.X, 0.f);
+                if (Since < 2.5f) { Cam(I + Rt * 720.f + Fw * 120.f + FVector(0, 0, 170.f), I + FVector(0, 0, 105.f)); if (Since > 1.8f && !R->bPlaced) { Shot(TEXT("BeastSide")); R->bPlaced = true; } return; }
+                if (Since < 2.6f) { R->bPlaced = false; return; }
+                if (Since < 5.f) { Cam(I + Fw * 650.f + Rt * 260.f + FVector(0, 0, 150.f), I + FVector(0, 0, 110.f)); if (Since > 4.3f && !R->bPlaced) { Shot(TEXT("BeastFront")); R->bPlaced = true; } return; }
+                R->bPlaced = false;
+                Uncam(); R->CrackStep = 50; R->PhaseStart = Now; return;
+            }
+            // ---- (stage 6 and 7, 2026-11-22) the maze and the stair
+            case 50: { AFeyLife::RevealAfter = 4.f; AFeyLife::RevealEvery = 6.f; Map->LoadNow(Maze); Chuck->ResetAtLocation(FeySpotWorld(SpotOf(TEXT("FeyMazeMiddle")))); R->bPlaced = false; R->CrackStep = 51; R->PhaseStart = Now; return; }
+            case 51:   // lost a while, hit plants appear
+            {
+                if (Since < 1.f) { R->Hits0 = AFeyLife::Reveals; return; }
+                if (AFeyLife::Reveals == R->Hits0 && Since < 12.f) return;
+                Check(AFeyLife::Reveals > R->Hits0, TEXT("lost_reveals"));
+                AFeyLife::RevealAfter = 240.f; AFeyLife::RevealEvery = 150.f; R->bPlaced = false; R->CrackStep = 52; R->PhaseStart = Now; return;
+            }
+            case 52:   // a revealed plant opens its shortcut, and he walks through
+            {
+                // (the plant is chosen once: another may be revealed while this one is tried)
+                static int32 Fi = -1; if (!R->bPlaced && Since < .1f) { Fi = -1; for (int32 I = 0; I < Life->GetFlowers().Num(); ++I) if (Life->GetFlowers()[I].Sc >= 0 && !Life->GetFlowers()[I].bHidden) { Fi = I; break; } }
+                if (Fi < 0) { Check(false, TEXT("shortcut_opens")); R->CrackStep = 53; return; }
+                const FFeyFlower& F = Life->GetFlowers()[Fi]; const FMazeShortcut& Sc = MazeShortcuts()[F.Sc]; const FVector Mid(Sc.Mid, 0.f);
+                const FVector To = (Mid - F.Pos).GetSafeNormal2D();
+                if (!R->bPlaced) { if (Since < 2.5f) return; Put(F.Pos - To * 45.f, To); FeyScratch(Chuck, Chuck->GetActorLocation(), To, 120.f); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.5f && Since < 1.55f) Shot(TEXT("MazeShortcut"));
+                if (Since < 4.5f) return;
+                if (Since < 4.6f) { Check(Life->GetShortcutUp()[F.Sc] < .05f, TEXT("shortcut_opens")); Put(F.Pos - To * 30.f, To); return; }
+                if (Since < 7.5f) { Drive(To); return; }
+                const float Past = FVector::DotProduct(FeyLocal(Chuck->GetActorLocation()) - Mid, To);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_SHORTCUT past=%.0f"), Past);
+                Check(Past > 60.f, TEXT("walks_through_shortcut"));
+                R->bPlaced = false; R->CrackStep = 53; R->PhaseStart = Now; return;
+            }
+            case 53:   // the heart behind its vines: blocked, then opened by its plant
+            {
+                const FFeyVines& V = Life->GetVines()[0]; const FFeyFlower& F = Life->GetFlowers()[0];
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                const FVector In = (FVector(Hub, 0.f) - V.C).GetSafeNormal2D();
+                if (!R->bPlaced) { Put(V.C - In * 150.f, In); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 2.f) { Drive(In); return; }
+                if (Since < 2.1f) { Check(FVector2D::Distance(FVector2D(FeyLocal(Chuck->GetActorLocation())), Hub) > R0 - 20.f, TEXT("heart_vines_block")); Shot(TEXT("MazeHeartGate")); return; }
+                if (Since < 2.6f) return;
+                if (Since < 2.7f) { const FVector Fd = (F.Pos - V.C).GetSafeNormal2D(); Put(F.Pos - Fd * 45.f, Fd); FeyScratch(Chuck, Chuck->GetActorLocation(), Fd, 120.f); return; }
+                if (Since < 7.f) return;
+                if (Since < 7.1f) { Check(V.Up < .05f, TEXT("heart_opens")); Put(V.C - In * 150.f, In); return; }
+                if (Since < 10.f) { Drive(In); return; }
+                Check(FVector2D::Distance(FVector2D(FeyLocal(Chuck->GetActorLocation())), Hub) < R0 - 120.f, TEXT("walks_into_heart"));
+                R->bPlaced = false; R->CrackStep = 54; R->PhaseStart = Now; return;
+            }
+            case 54:   // on a hedge top, the bees put him back down
+            {
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                const FVector2D Q = Hub + FVector2D(FMath::Cos(1.1f), FMath::Sin(1.1f)) * (R0 + 8.f * Pitch); const float Gz = LandZ(Maze, Q.X, Q.Y);
+                if (!R->bPlaced) { R->Hits0 = AFeyLife::BeeKnocks; Chuck->ResetAtLocation(FeyWorld(FVector(Q.X, Q.Y, Gz + Tall + Stand + 8.f))); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.f && Since < 1.05f) Shot(TEXT("MazeBees"));
+                if (Since < 5.f) return;
+                const float Fz = FeyLocal(Chuck->GetActorLocation()).Z - Stand;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BEES knocks=%d feet=%.0f ground=%.0f"), AFeyLife::BeeKnocks, Fz, Gz);
+                Check(AFeyLife::BeeKnocks > R->Hits0, TEXT("bees_knock"));
+                Check(Fz < Gz + 200.f, TEXT("bees_put_him_down"));
+                R->bPlaced = false; R->CrackStep = 55; R->PhaseStart = Now; return;
+            }
+            case 55:   // a statue turns while he looks away
+            {
+                const TArray<FVector2D>& De = MazeDeadEnds(); const FVector2D Sq = De.IsValidIndex(3) ? De[3] : FVector2D::ZeroVector;
+                if (!R->bPlaced) { R->Hits0 = AFeyLife::StatueTurns; Put(FVector(Sq, 0.f) + FVector(220.f, 0.f, 0.f), FVector(1, 0, 0)); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since < 2.f) return;
+                Check(AFeyLife::StatueTurns > R->Hits0, TEXT("statue_turns"));
+                R->bPlaced = false; R->CrackStep = 56; R->PhaseStart = Now; return;
+            }
+            case 56:   // the stair: up from the heart, onto the landing, and no further
+            {
+                const int32 Ls = SpotOf(TEXT("FeyCloudLanding")); const FVector Land = SpotAt(Ls);
+                if (!R->bPlaced) { Chuck->ResetAtLocation(FeyWorld(Land + FVector(0, 0, Stand + 6.f))); Chuck->SetActorRotation(FRotator(0, SpotYaw(Ls), 0)); Chuck->Recenter(); R->bPlaced = true; R->PhaseStart = Now; return; }
+                if (Since > 1.5f && Since < 1.55f) Shot(TEXT("CloudLanding"));
+                if (Since < 2.5f) return;
+                if (Since < 2.6f) { const float Fz = FeyLocal(Chuck->GetActorLocation()).Z - Stand; UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_LANDING feet=%.0f landing=%.0f"), Fz, Land.Z); Check(FMath::Abs(Fz - Land.Z) < 40.f, TEXT("landing_holds")); return; }
+                // Walk on along the stair's way: the boundary stops him.
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                const FVector2D Rd = (FVector2D(FeyLocal(Chuck->GetActorLocation())) - Hub).GetSafeNormal(); const FVector Tan(-Rd.Y, Rd.X, 0.f);
+                if (Since < 9.f) { Drive(Tan); if (R->Frame % 20 == 0) { const FVector L = FeyLocal(Chuck->GetActorLocation()); UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_LANDWALK r=%.0f a=%.1f z=%.0f"), FVector2D::Distance(FVector2D(L), Hub), FMath::RadiansToDegrees(FMath::Atan2(L.Y - Hub.Y, L.X - Hub.X)), L.Z - Stand); } return; }
+                const float Fz = FeyLocal(Chuck->GetActorLocation()).Z - Stand;
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_BOUNDARY feet=%.0f at=%s"), Fz, *FeyLocal(Chuck->GetActorLocation()).ToCompactString());
+                Check(Fz > Land.Z - 60.f, TEXT("boundary_holds"));
+                R->bPlaced = false; R->CrackStep = 57; R->PhaseStart = Now; return;
+            }
+            case 57:   // and the steps climb: from the heart, along the stair, up
+            {
+                const int32 Hs = SpotOf(TEXT("FeyMazeHeart"));
+                FVector2D Hub; float R0, Pitch, Rmax, Tall; MazeRings(Hub, R0, Pitch, Rmax, Tall);
+                // (from just before the first step, facing up the stair: it begins at 200 degrees, 11 m out, and turns anticlockwise)
+                const float A0 = FMath::DegreesToRadians(200.f) - 600.f / 1100.f; const FVector Foot(Hub + FVector2D(FMath::Cos(A0), FMath::Sin(A0)) * 1100.f, SpotAt(Hs).Z);
+                if (!R->bPlaced) { Put(Foot, FVector(-FMath::Sin(A0), FMath::Cos(A0), 0.f)); R->MinDist = FeyLocal(Chuck->GetActorLocation()).Z; R->bPlaced = true; R->PhaseStart = Now; return; }
+                const FVector L = FeyLocal(Chuck->GetActorLocation()); const FVector2D Rd = (FVector2D(L) - Hub).GetSafeNormal();
+                const float Rn = FVector2D::Distance(FVector2D(L), Hub);
+                // follow the spiral: along it, a little outward as it widens
+                if (Since < 24.f && R->Frame % 20 == 0) UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_STAIRWALK r=%.0f a=%.1f z=%.0f"), Rn, FMath::RadiansToDegrees(FMath::Atan2(Rd.Y, Rd.X)), L.Z - Stand);
+                if (Since < 24.f) { Drive(FVector(-Rd.Y, Rd.X, 0.f) + FVector(Rd, 0.f) * FMath::Clamp((1100.f + 1100.f * FMath::Clamp((L.Z - 30.f) / 1900.f, 0.f, 1.f) - Rn) / 300.f, -.6f, .6f)); return; }
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_STAIR from=%.0f to=%.0f"), R->MinDist, L.Z);
+                Check(L.Z > R->MinDist + 250.f, TEXT("stair_climbs"));
+                R->bPlaced = false; R->CrackStep = 60; R->PhaseStart = Now; return;
+            }
             default:
                 if (Since < 1.f) return;
-                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches);
+                UE_LOG(LogTemp, Display, TEXT("CHUCK_FEY_LIFE_TEST failures=%d toggles=%d orchid_shots=%d orchid_hits=%d moth_touches=%d mite_bites=%d mite_kills=%d beast_notices=%d lashes=%d lash_hits=%d paces=%d"), R->LifeFails, AFeyLife::FlowerToggles, AFeyLife::OrchidShots, AFeyLife::OrchidHits, AFeyLife::MothTouches,
+                    AFeyMite::Bites, AFeyMite::Kills, AFeyDisplacer::Notices, AFeyDisplacer::Lashes, AFeyDisplacer::LashHits, AFeyDisplacer::Paces);
                 Done(R->LifeFails); return;
             }
         }

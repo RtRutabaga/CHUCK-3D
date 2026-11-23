@@ -395,12 +395,14 @@ void AFeywildSetting::SetGloom(float G)
     G = FMath::Clamp(G, 0.f, 1.f);
     if (FMath::IsNearlyEqual(G, GloomNow, .002f)) return;
     GloomNow = G;
-    if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .26f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.5f, .58f, .85f), G)); }
-    if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, 1.1f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }   // (2026-11-21: the Deepwood's blue fill a little brighter)
-    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .62f, G));   // (2026-11-21: a little more light overall in the Deepwood)
+    // (2026-11-22, the user: the Deepwood overcast) a deck of cloud over it, so almost no sun, soft even light from the sky
+    if (SkyMid) SkyMid->SetScalarParameterValue(TEXT("Overcast"), Smooth(0.f, 1.f, G));
+    if (SunLight) { SunLight->SetIntensity(5.5f * FMath::Lerp(1.f, .05f, G)); SunLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, .66f, .36f), FLinearColor(.55f, .62f, .78f), G)); }
+    if (FillLight) { FillLight->SetIntensity(FillBase * FMath::Lerp(1.f, .8f, G)); FillLight->SetLightColor(FMath::Lerp(FLinearColor(.46f, .64f, 1.f), FLinearColor(.22f, .4f, 1.f), G)); }   // (2026-11-21: the Deepwood's blue fill a little brighter)
+    if (Sky) Sky->SetIntensity(SkyBase * FMath::Lerp(1.f, .56f, G));   // (2026-11-21: a little more light overall in the Deepwood; 2026-11-22, the user: less from the sky, more from its blue lanterns and fungi)
     if (PostComp)
     {
-        PostComp->Settings.AutoExposureBias = -.35f * G;
+        PostComp->Settings.AutoExposureBias = -.18f * G;   // (2026-11-22: under the overcast, a little less darkened)
         PostComp->Settings.ColorGainShadows = FMath::Lerp(FVector4(.86f, .98f, 1.2f, 1.f), FVector4(.72f, .9f, 1.3f, 1.f), G);
         PostComp->Settings.bOverride_ColorSaturation = true; PostComp->Settings.ColorSaturation = FVector4(1, 1, 1, FMath::Lerp(1.16f, .95f, G));
     }
@@ -436,7 +438,7 @@ void AFeywildSetting::BuildEnvironment()
         {
             auto* Mid = UMaterialInstanceDynamic::Create(SkyMat, this);
             const FVector ToSun = -SunRot.Vector();
-            Mid->SetVectorParameterValue(TEXT("SunDir"), FLinearColor(ToSun.X, ToSun.Y, ToSun.Z, 0)); Mesh->SetMaterial(0, Mid);
+            Mid->SetVectorParameterValue(TEXT("SunDir"), FLinearColor(ToSun.X, ToSun.Y, ToSun.Z, 0)); Mesh->SetMaterial(0, Mid); SkyMid = Mid;
         }
     }
     auto* Sun = NewObject<UDirectionalLightComponent>(this);

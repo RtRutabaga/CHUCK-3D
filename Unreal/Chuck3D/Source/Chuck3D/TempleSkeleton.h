@@ -154,10 +154,11 @@ public:
     // cannot be scratched, and it gives him up at the edge of its ground.
     bool IsLemure() const { return Post.Kind == 1; }
     bool IsFiend() const { return Post.Kind == 2; }
-    float KindScale() const { return IsFiend() ? FiendScale : IsLemure() ? LemureScale : 1.f; }
+    bool IsRedcap() const { return Post.Kind == 3; }   // (2026-11-22, the Feywild: FeyLife.cpp)
+    float KindScale() const { return IsFiend() ? FiendScale : IsLemure() ? LemureScale : IsRedcap() ? RedcapScale : 1.f; }
     float HalfHeightNow() const { return HalfHeight * KindScale(); }
     float RadiusNow() const { return Radius * KindScale(); }
-    int32 GetMaxHealth() const { return IsLemure() ? LemureHealth : Health; }
+    int32 GetMaxHealth() const { return IsLemure() ? LemureHealth : IsRedcap() ? RedcapHealth : Health; }
     int32 GetNotices() const { return Notices; }
     float GetMelt() const { return MeltT; }
     /** The Pit Fiend's mace head, world (zero for the others). */
@@ -207,6 +208,12 @@ public:
     bool IsFortSpeaking() const { return FortSpeech >= 0.f; }
     static constexpr float FiendScale = 2.4f;
     static constexpr float LemureScale = .93f;
+    // A redcap (2D PHASE-9.md 7.2): gnome-sized (about 1.2 m with its cap, well over him, well under a man), quicker than
+    // a skeleton and quick to notice, several scratches to put down; it cannot follow him under a low root.
+    static constexpr float RedcapScale = .55f;
+    static constexpr float RedcapSpeed = 112.f;
+    static constexpr float RedcapNotice = 950.f;
+    static constexpr int32 RedcapHealth = 5;
     static constexpr float LemureSpeed = 50.f;       // (2D: 15 to the skeleton's 25)
     static constexpr float FiendPatrol = 95.f;
     static constexpr float FiendChase = 170.f;
@@ -264,9 +271,9 @@ private:
     void FiendImpact(const FVector& At, float Strength, bool bEmbers, float BlastRadius, float Shake);
     FVector FrameOf(const FVector& World) const;
     FVector WorldOf(const FVector& Frame) const;
-    float ChaseSpeedNow() const { return IsFiend() ? FiendChase : IsLemure() ? LemureSpeed : ChaseSpeed; }
+    float ChaseSpeedNow() const { return IsFiend() ? FiendChase : IsLemure() ? LemureSpeed : IsRedcap() ? RedcapSpeed : ChaseSpeed; }
     float ReturnSpeedNow() const { return IsFiend() ? FiendPatrol * 1.2f : IsLemure() ? LemureSpeed * .9f : ReturnSpeed; }
-    float NoticeNow() const { return IsFiend() ? FiendNotice : NoticeRange; }
+    float NoticeNow() const { return IsFiend() ? FiendNotice : IsRedcap() ? RedcapNotice : NoticeRange; }
     float CloseNow() const { return IsFiend() ? FiendClose : CloseNotice; }
     FTempleSkeletonPost Post;
     FSkeletonAnimator Animator;

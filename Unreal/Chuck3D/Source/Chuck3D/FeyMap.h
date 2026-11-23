@@ -72,6 +72,15 @@ namespace FeyMap
     const TArray<FVector2D>& RoadOf(int32 D, int32 T);
     const TArray<FVector2D>& SpurOf(int32 D);
     float LandZ(int32 D, float X, float Y);
+    /** (2026-11-22, stage 6) The maze for FeyLife: its shortcuts (hedge sections X, Y, half length, yaw; where its hit plant
+     *  appears; how many cells it saves), dead ends, orchid lanes (X, Y, angle), the way through, its rings and the heart. */
+    struct FMazeShortcut { TArray<FVector4> Hedges; FVector2D Plant = FVector2D::ZeroVector, Mid = FVector2D::ZeroVector; int32 Gain = 0; };
+    const TArray<FMazeShortcut>& MazeShortcuts();
+    const TArray<FVector2D>& MazeDeadEnds();
+    const TArray<FVector>& MazeLanes();
+    const TArray<FVector2D>& MazeRoute();
+    void MazeRings(FVector2D& Hub, float& R0, float& Pitch, float& Rmax, float& Tall);
+    float MazeHeartAngle();
 }
 FVector FeySpotWorld(int32 Spot);
 /** Marks the spots within 4 m of a place (world) reached; forgets them all (a new game, the river again). */

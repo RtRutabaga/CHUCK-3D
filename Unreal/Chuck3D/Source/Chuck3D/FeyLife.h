@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "FeyCreatures.h"
 #include "FeyLife.generated.h"
 
 class UProceduralMeshComponent;
@@ -8,6 +9,9 @@ class UBoxComponent;
 class UPointLightComponent;
 class UMaterialInterface;
 class AChuckCharacter;
+class ATempleSkeleton;
+class AFeyMite;
+class AFeyDisplacer;
 
 // The Feywild's mechanics and small living hazards, stage 5 part one (Claude, 2026-11-21; docs/regions/FEYWILD.md, after the
 // 2D game's PHASE-9.md sections 4, 5 and 7). One per loaded district, built when the district stands and gone with it:
@@ -24,8 +28,13 @@ class AChuckCharacter;
 //
 // Placed: the first flower by the riverbank's road (its vines close the one way into a ring of boulders with cigarettes inside),
 // pollen over the orchard's road, orchids across the Needle Garden's road, moths along the way out to the Moonmoth Fen.
-// Thorn mites, redcaps, the displacer beast and the flowers that raise lily pads are part two.
-struct FFeyFlower { FVector Pos = FVector::ZeroVector; float Yaw = 0, Open = 0, Want = 0, Pulse = -1, Shown = -1; int32 Vines = -1; };
+// Part two (2026-11-22; FeyCreatures.h): thorn mites in the orchard and the Deepwood; the redcaps' camp in Redcap Hollow (a
+// fire, a cauldron, lean-tos, three redcaps round the fire, a hollow among rocks behind a low root they cannot pass, with
+// cigarettes in it); the displacer beast's round in Highmeadow across the way to the maze, with three hollow logs he can
+// shelter in and pollen on the road; and at the Lily Mere a flower that raises lily pads to an islet in the deep water.
+struct FFeyFlower { FVector Pos = FVector::ZeroVector; float Yaw = 0, Open = 0, Want = 0, Pulse = -1, Shown = -1; int32 Vines = -1, Pads = -1, Sc = -1; bool bHidden = false; float Grow = 1; };
+/** Pads a flower raises from the deep water (local X, Y, radius), and how far up they are. */
+struct FFeyPadRise { TArray<FVector> Pads; float Up = 0, Want = 0; };
 struct FFeyVines { FVector C = FVector::ZeroVector; float Yaw = 0, Width = 300, Height = 190, Up = 1, Want = 1; };
 struct FFeyPollen { FVector2D C = FVector2D::ZeroVector, R = FVector2D(100, 100); float Yaw = 0; };
 struct FFeySeed { FVector P = FVector::ZeroVector, V = FVector::ZeroVector; float Life = 0; };
@@ -49,11 +58,31 @@ public:
     static int32 OrchidShots;
     static int32 OrchidHits;
     static int32 MothTouches;
+    // (2026-11-22, stage 6) The maze: bees knocking him off the hedge tops, statues turning while unwatched, hit plants
+    // revealed the longer he is lost (first after RevealAfter seconds in the maze, then every RevealEvery).
+    static int32 BeeKnocks;
+    static int32 StatueTurns;
+    static int32 Reveals;
+    static float RevealAfter;
+    static float RevealEvery;
+    /** The next rescue plant, nearest him (local), appears now. */
+    void RevealNext(const FVector& Near);
+    float GetMazeTime() const { return MazeTime; }
+    const TArray<float>& GetShortcutUp() const { return ScUp; }
     const TArray<FFeyFlower>& GetFlowers() const { return Flowers; }
     const TArray<FFeyVines>& GetVines() const { return Vines; }
     const TArray<FFeyPollen>& GetPollen() const { return Pollen; }
     const TArray<FFeyOrchid>& GetOrchids() const { return Orchids; }
     const TArray<FFeyMoth>& GetMoths() const { return Moths; }
+    const TArray<FFeyPadRise>& GetPadRises() const { return PadRises; }
+    const TArray<FFeyRefuge>& GetRefuges() const { return Refuges; }
+    /** The islet (X, Y, radius) the pads lead to, the hollow behind the redcaps' camp (X, Y, radius), the camp's fire. */
+    FVector GetIslet() const;
+    FVector GetCache() const;
+    FVector GetCamp() const;
+    const TArray<AFeyMite*>& GetMites() const { return Mites; }
+    const TArray<ATempleSkeleton*>& GetRedcaps() const { return Redcaps; }
+    AFeyDisplacer* GetBeast() const { return Beast; }
     /** His scratch from Location (world) toward Ahead, within Reach: a flower in reach starts to change. */
     bool TryScratch(const FVector& Location, const FVector& Ahead, float Reach);
     /** On the ground in a pollen bed (local)? */
@@ -88,6 +117,40 @@ private:
     UProceduralMeshComponent* NewMesh(USceneComponent* Parent, const FName& Name);
     void ShowFlower(int32 I);
     void ResetAll();
+    void SpawnRedcaps();
+    void BuildMaze();
+    /** (2026-11-22, stage 8) What is still to be built, a part or two each frame (it was all in one frame: a 55 ms hitch). */
+    TArray<TFunction<void()>> Pending;
+    void TickMaze(float Dt, AChuckCharacter* Chuck, const FVector& C);
+    UPROPERTY() TArray<USceneComponent*> FlowerPivots;
+    UPROPERTY() TArray<USceneComponent*> ShortcutPivots;
+    UPROPERTY() TArray<UBoxComponent*> ShortcutBoxes;
+    UPROPERTY() TArray<USceneComponent*> Statues;
+    UPROPERTY() UProceduralMeshComponent* BeeMesh = nullptr;
+    UPROPERTY() class UAudioComponent* BeeAudio = nullptr;
+    TArray<float> ScUp, ScWant;
+    TArray<float> StatueYaw;
+    float MazeTime = 0, NextReveal = 0, OnTop = 0, BeeShow = 0;
+    FVector BeeAt = FVector::ZeroVector;
+    void BuildCamp();
+    void BuildRefuges();
+    void BuildPadRise();
+    TArray<FFeyPadRise> PadRises;
+    TArray<FFeyRefuge> Refuges;
+    float FireFlicker = 0;
+    UPROPERTY() TArray<UStaticMeshComponent*> RisePadMeshes;
+    UPROPERTY() TArray<UBoxComponent*> RisePadBoxes;
+    UPROPERTY() TArray<AFeyMite*> Mites;
+    UPROPERTY() TArray<ATempleSkeleton*> Redcaps;
+    UPROPERTY() AFeyDisplacer* Beast = nullptr;
+    UPROPERTY() UPointLightComponent* FireLight = nullptr;
+    // (2026-11-22) Its sounds (Tools/build_fey_sfx.py, CC0 recordings): one-shots and the loops (moths' wings, the camp).
+    UPROPERTY() TArray<class USoundBase*> Sfx;
+    UPROPERTY() class USoundAttenuation* Falloff = nullptr;
+    UPROPERTY() TArray<class UAudioComponent*> Loops;
+    TArray<bool> OrchidSwelled;
+    void Play(int32 Which, const FVector& Local, float Volume = 1.f);
+    void Loop(int32 Which, USceneComponent* At, const FVector& Local, float Volume, float Radius);
 };
 
 /** His walking speed's scale on the ground at World: half in a pollen bed, else 1. */

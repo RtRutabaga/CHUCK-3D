@@ -159,6 +159,14 @@ float sd=saturate(dot(d,s));
 c+=float3(1.6,.86,.36)*pow(sd,26.)*.42+float3(3.,1.8,.8)*pow(sd,120.)*1.1+float3(30.,20.,10.)*pow(sd,2600.);
 // Under the horizon, the far haze.
 c=lerp(lerp(float3(.34,.46,.56),float3(1.,.68,.42),pow(az,3.)),c,smoothstep(-.03,.012,d.z));
+// (2026-11-22, the user: the Deepwood overcast) A low deck of slate-blue cloud over everything, billowing and drifting, a
+// little lighter toward the horizon and where the sun is behind it; no sun disc. Ov from the Deepwood's gloom.
+float2 oq=d.xy/(max(d.z,0.)+.22);
+float bil=F.B(oq*1.1+float2(T*.004,T*.0015))*.6+F.B(oq*3.3-float2(T*.007,0))*.3+F.B(oq*9.)*.1;
+float3 deck=lerp(float3(.11,.13,.18),float3(.27,.3,.37),smoothstep(.3,.75,bil));
+deck=lerp(deck*1.35+float3(.03,.035,.04),deck,smoothstep(0.,.35,d.z));
+deck+=float3(.1,.09,.08)*pow(sd,6.)*.6;
+c=lerp(c,deck,Ov);
 return c*.42;
 '''
 
@@ -166,7 +174,8 @@ return c*.42;
 def sky(m):
     m.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT); m.set_editor_property('two_sided', True); m.set_editor_property('is_sky', True)
     sun = node(m, unreal.MaterialExpressionVectorParameter, parameter_name='SunDir', default_value=unreal.LinearColor(.985, .14, .1, 0))
-    out(custom(m, SKY, {'Dir': node(m, unreal.MaterialExpressionLocalPosition), 'T': node(m, unreal.MaterialExpressionTime), 'Sun': sun}), P.MP_EMISSIVE_COLOR)
+    ov = node(m, unreal.MaterialExpressionScalarParameter, parameter_name='Overcast', default_value=0.)
+    out(custom(m, SKY, {'Dir': node(m, unreal.MaterialExpressionLocalPosition), 'T': node(m, unreal.MaterialExpressionTime), 'Sun': sun, 'Ov': ov}), P.MP_EMISSIVE_COLOR)
 
 
 # ---------------------------------------------------------------- the ground. Vertex colour R the path, G moss, B damp

@@ -7,6 +7,8 @@
 #include "ChultTempleWind.h"
 #include "PhlegethosSetting.h"
 #include "PhlegethosCreatures.h"
+#include "FeywildSetting.h"
+#include "FeyLife.h"
 #include "ChuckFlames.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -112,7 +114,7 @@ ATempleSkeleton* ATempleSkeleton::SpawnAt(UWorld* World, const FTempleSkeletonPo
     if (!World) return nullptr;
     FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
     Params.bDeferConstruction = true;
-    const float Hh = HalfHeight * (InPost.Kind == 2 ? FiendScale : InPost.Kind == 1 ? LemureScale : 1.f);
+    const float Hh = HalfHeight * (InPost.Kind == 2 ? FiendScale : InPost.Kind == 1 ? LemureScale : InPost.Kind == 3 ? RedcapScale : 1.f);
     auto* S = World->SpawnActor<ATempleSkeleton>(InPost.Feet + FVector(0, 0, Hh + 2), FRotator(0, InPost.Yaw, 0), Params);
     if (!S) return nullptr;
     S->Post = InPost;
@@ -139,7 +141,7 @@ void ATempleSkeleton::BeginPlay()
     {
         // (2026-11-16) A lemure or the Pit Fiend: its own body on this rig (Tools/build_phleg_creatures.py), its own size,
         // lit by Phlegethos's light (channel 1 is the temple's torches).
-        const TCHAR* Path = IsFiend() ? TEXT("/Game/Art/Phlegethos/Creatures/SK_PitFiend.SK_PitFiend") : TEXT("/Game/Art/Phlegethos/Creatures/SK_Lemure.SK_Lemure");
+        const TCHAR* Path = IsFiend() ? TEXT("/Game/Art/Phlegethos/Creatures/SK_PitFiend.SK_PitFiend") : IsRedcap() ? TEXT("/Game/Art/Feywild/Creatures/SK_Redcap.SK_Redcap") : TEXT("/Game/Art/Phlegethos/Creatures/SK_Lemure.SK_Lemure");
         if (USkeletalMesh* Body = LoadObject<USkeletalMesh>(nullptr, Path)) GetMesh()->SetSkinnedAssetAndUpdate(Body);
         GetMesh()->SetLightingChannels(true, false, false);
         SetActorScale3D(FVector(KindScale()));
@@ -223,6 +225,12 @@ void ATempleSkeleton::BeginPlay()
         Load(StepSounds, TEXT("SFX_TRexStep"), 3); Load(RattleSounds, TEXT("SFX_BeholderGrowl"), 3); Load(SwingSounds, TEXT("SFX_ZombieSwing"), 2);
         Load(HitSounds, TEXT("SFX_FallThud"), 1); Load(RoarSounds, TEXT("SFX_TRexRoar"), 2); PitchScale = .72f;
     }
+    else if (IsRedcap())
+    {
+        // (iron boots heard before it is seen; a snarl when it sees him; the sickle's swish)
+        Load(StepSounds, TEXT("SFX_HeroArmourStep"), 3); Load(RattleSounds, TEXT("SFX_FeyRedcapCackle"), 2); Load(SwingSounds, TEXT("SFX_SwordSwish"), 1);   // (2026-11-22: a cackle, CC0)
+        Load(HitSounds, TEXT("SFX_ZombieClawHit"), 3); Load(CollapseSounds, TEXT("SFX_RatDeath"), 1); Load(RiseSounds, TEXT("SFX_FeyRedcapCackle"), 2); PitchScale = .8f;
+    }
     else
     {
         Load(StepSounds, TEXT("SFX_SkeletonStep"), 4); Load(RattleSounds, TEXT("SFX_SkeletonRattle"), 2); Load(SwingSounds, TEXT("SFX_SkeletonSwing"), 3);
@@ -234,7 +242,7 @@ void ATempleSkeleton::BeginPlay()
     Attenuation->Attenuation.bSpatialize = true;
     Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
     Attenuation->Attenuation.AttenuationShapeExtents = FVector(220.f, 0.f, 0.f);
-    Attenuation->Attenuation.FalloffDistance = IsFiend() ? 6000.f : 1800.f;
+    Attenuation->Attenuation.FalloffDistance = IsFiend() ? 6000.f : IsRedcap() ? 2800.f : 1800.f;
     ResetToPost();
     int32 Loaded = 0;
     for (const auto& Clip : Clips) Loaded += Clip.Value != nullptr;
@@ -300,8 +308,8 @@ void ATempleSkeleton::Sound(const TArray<USoundBase*>& Set, float Volume)
 
 float ATempleSkeleton::FeetZ() const { return static_cast<float>(GetActorLocation().Z) - HalfHeightNow(); }
 
-FVector ATempleSkeleton::FrameOf(const FVector& World) const { return Post.Kind ? PhlegLocal(World) : ChultTempleInteriorFrameOf(World); }
-FVector ATempleSkeleton::WorldOf(const FVector& Frame) const { return Post.Kind ? PhlegWorld(Frame) : ChultTempleInteriorWorldOf(Frame); }
+FVector ATempleSkeleton::FrameOf(const FVector& World) const { return IsRedcap() ? FeyLocal(World) : Post.Kind ? PhlegLocal(World) : ChultTempleInteriorFrameOf(World); }
+FVector ATempleSkeleton::WorldOf(const FVector& Frame) const { return IsRedcap() ? FeyWorld(Frame) : Post.Kind ? PhlegWorld(Frame) : ChultTempleInteriorWorldOf(Frame); }
 
 void ATempleSkeleton::Face(const FVector& Dir, float DegPerSecond, float DeltaSeconds)
 {
@@ -523,7 +531,7 @@ void ATempleSkeleton::Tick(float DeltaSeconds)
     }
     if (bHeld) { GetCharacterMovement()->MaxWalkSpeed = 0; return; }
     // (Phlegethos's trials of the moves: its creatures hold still.)
-    if (Post.Kind && APhlegFlameskull::bCalm) { GetCharacterMovement()->MaxWalkSpeed = 0; return; }
+    if (IsRedcap() ? AFeyLife::bCalm : Post.Kind && APhlegFlameskull::bCalm) { GetCharacterMovement()->MaxWalkSpeed = 0; return; }
     StateTime += DeltaSeconds;
     auto* Move = GetCharacterMovement();
     const float Speed = static_cast<float>(GetVelocity().Size2D());

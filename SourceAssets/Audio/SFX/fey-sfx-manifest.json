@@ -1,0 +1,145 @@
+{
+ "sources": "Feywild/Source/manifest.json and Dinos/Source/manifest.json (CC0)",
+ "sounds": {
+  "SFX_FeyBeastRoar_00": {
+   "seconds": 2.45,
+   "loop": false,
+   "sha256": "e936e5b6165fbc8ed541a066316e23771c35a5ab41cbe8f80e65b37cf2e46567"
+  },
+  "SFX_FeyBeastRoar_01": {
+   "seconds": 1.84,
+   "loop": false,
+   "sha256": "5fd4bb2e75b5d2fd02df704f6959542e936caa072fdfac3dc931023dc76e3a6d"
+  },
+  "SFX_FeyBeastGrowl_00": {
+   "seconds": 4.52,
+   "loop": false,
+   "sha256": "11c14badc2ac392b8762ad33ffaa188b92f058ad189a1acdcef5bbaa53ebad3c"
+  },
+  "SFX_FeyBeastGrowl_01": {
+   "seconds": 5.16,
+   "loop": false,
+   "sha256": "7b4de61df698fac97f068353837b7935f0462bb20ea9a79448dc02065c81512e"
+  },
+  "SFX_FeyBeastGrowl_02": {
+   "seconds": 5.97,
+   "loop": false,
+   "sha256": "801d33567cd9c4cb4035e43349cf7c2f5b99c673800360b1a349a04dea55eb5b"
+  },
+  "SFX_FeyBeastLash_00": {
+   "seconds": 0.82,
+   "loop": false,
+   "sha256": "68f529467bebba0572970e9e0638df8e85afec78d4f601500a62637baea99532"
+  },
+  "SFX_FeyBeastLash_01": {
+   "seconds": 0.82,
+   "loop": false,
+   "sha256": "205b6489c234e553f1f267c2da8f7666d40546037a7fb2978269fbeef89ee372"
+  },
+  "SFX_FeyBeastStep_00": {
+   "seconds": 0.68,
+   "loop": false,
+   "sha256": "d54b82ed6248c252da4cd6bd29860afad89f426a9d63406a6f9971afd77d3017"
+  },
+  "SFX_FeyBeastStep_01": {
+   "seconds": 0.73,
+   "loop": false,
+   "sha256": "8aff49a7ffba88cf83f385af9c7aedf55e88871809e2e8e2867cd14486d55866"
+  },
+  "SFX_FeyBeastStep_02": {
+   "seconds": 0.64,
+   "loop": false,
+   "sha256": "3bf199a0f0c3830858435784e82f6e6095f1b0d6a5b2305158ce4deca39f9938"
+  },
+  "SFX_FeyMiteChitter_00": {
+   "seconds": 0.41,
+   "loop": false,
+   "sha256": "751441e3eda7c3783033ee3e9abddde973a0245ac3ccac78ba4fa09bea461ea2"
+  },
+  "SFX_FeyMiteChitter_01": {
+   "seconds": 0.41,
+   "loop": false,
+   "sha256": "02d695da8bd257ac0861ec500a7ac9f1b993599850185cee5d28e5a352b99af3"
+  },
+  "SFX_FeyMiteChitter_02": {
+   "seconds": 0.41,
+   "loop": false,
+   "sha256": "26df0c68090201db787fedab7d9c7a62b12d39fcaa19a4b68f48f75913346ff7"
+  },
+  "SFX_FeyMiteClick_00": {
+   "seconds": 0.21,
+   "loop": false,
+   "sha256": "01a51865a566b7a4a83e52ad7153e275d5683ecf46db02161d286a057ef86f1a"
+  },
+  "SFX_FeyMiteDeath_00": {
+   "seconds": 0.46,
+   "loop": false,
+   "sha256": "be5bfdb2262e2ebc0b8550ebe757ffe67bb980fb69339e05b19caa0beb9ee2dc"
+  },
+  "SFX_FeyRedcapCackle_00": {
+   "seconds": 2.07,
+   "loop": false,
+   "sha256": "42b6065e47650005781dfc0d40ef9b7991ee61a156d81fede74753a0917e0509"
+  },
+  "SFX_FeyRedcapCackle_01": {
+   "seconds": 1.77,
+   "loop": false,
+   "sha256": "fb43c3b521759ab64ed4441b6ef8103b62cb062dffa93948fe7d25a066f6cfa7"
+  },
+  "SFX_FeyFireLoop_00": {
+   "seconds": 19.4,
+   "loop": true,
+   "sha256": "ac891ed5ad85787eca296cf04fc3bd5ea4096d3ba36dce671bf9d3dfc055f51b"
+  },
+  "SFX_FeyCauldronLoop_00": {
+   "seconds": 6.1,
+   "loop": true,
+   "sha256": "0efa37db78cb5335ffed1ed9ead5f252c38a83963cb06dedd72038aae99f1c8c"
+  },
+  "SFX_FeyMothLoop_00": {
+   "seconds": 1.01,
+   "loop": true,
+   "sha256": "9acc2adcde865bc683213dc56ab0675a6a7cb48f317ed68f92683bb2fbe93d0b"
+  },
+  "SFX_FeyFlowerOpen_00": {
+   "seconds": 2.03,
+   "loop": false,
+   "sha256": "6ba143bd965cb2a7785f6fde95bf150be6c26290d3252c2de5687b7b1b963be4"
+  },
+  "SFX_FeyFlowerClose_00": {
+   "seconds": 2.0,
+   "loop": false,
+   "sha256": "2d904b7576824f25fa3680eaf7ea587d725498de4a10ce145f2ec4060995a104"
+  },
+  "SFX_FeyVines_00": {
+   "seconds": 3.71,
+   "loop": false,
+   "sha256": "83874f7cd5b950ede2b39fab4cf352d4d841fa41041931c174c2ff2a853540f9"
+  },
+  "SFX_FeyOrchidSwell_00": {
+   "seconds": 1.04,
+   "loop": false,
+   "sha256": "0b9ca15286798da7fb3de0666d99201ca041c74dfd6999d898c2f5f04c09bc81"
+  },
+  "SFX_FeyOrchidSpit_00": {
+   "seconds": 0.45,
+   "loop": false,
+   "sha256": "9109a899d065b0f670124b012f77508218e42f0a375cabb06643f6f86674db95"
+  },
+  "SFX_FeyOrchidHit_00": {
+   "seconds": 0.19,
+   "loop": false,
+   "sha256": "8175b0ddce6722b2bd9188c00d9b084cc9c1ad0a6b5e400b025a05489c7a03f2"
+  },
+  "SFX_FeyPadsRise_00": {
+   "seconds": 2.7,
+   "loop": false,
+   "sha256": "982a3fae475df1df2858ab9d97391f7ce8e9d26f623d14ab01e4a536cec0be91"
+  },
+  "SFX_FeyBeeLoop_00": {
+   "seconds": 2.7,
+   "loop": true,
+   "sha256": "f0c0964e9337c0225a4b17eeea12e6dae6c194ef201378f036e8cd27050a80ac"
+  }
+ }
+}

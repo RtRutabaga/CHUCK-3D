@@ -63,3 +63,10 @@ and motion provenance is retained in the source repository's SourceAssets.
 
 Microsoft Visual C++ Redistributable installer: Microsoft Corporation.
 Its own installer presents its applicable license terms.
+
+Feywild creature sounds (2026-11-22): BigSoundBank (Joseph Sardin), CC0-1.0, 27 recordings
+(cat roars and growls, whip cracks, fireplace, broth in a pot, chattering teeth, tongue clicks, broken twigs,
+bird and pigeon wings, butterfly chimes, feet in leaves, champagne cork, straw suction, water bubbles, small
+splash, delirious laughter). https://bigsoundbank.com/licenses.html; each in
+SourceAssets/Audio/SFX/Feywild/Source/manifest.json.
+Displacer beast fur: ambientCG Fabric084, CC0-1.0. https://ambientcg.com/view?id=Fabric084
